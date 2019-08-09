@@ -28,6 +28,8 @@ app.use(function (req, res, next) {
     next();
 });
 
+app.use(express.static('./public'))
+
 var services = shell.ls('./services/');
 for (let i = 0; i < services.length; i += 1) {
   var id = services[i];

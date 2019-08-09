@@ -1,0 +1,116 @@
+
+function TextAnime() {
+  function modify(elem, rate, accel, target, callback) {
+    let size = Number.parseInt(elem.offsetHeight);
+    let isExpanding = size < target;
+    var height;
+
+    function incCond() {return height < target}
+    function decCond() {return height > target}
+
+    function inc() {
+      rate += accel;
+      size += rate;
+    }
+    function dec() {
+      rate -= accel;
+      size -= rate;
+    }
+
+    let funcs = {
+      update: {true: inc, false: dec},
+      condition: {true: incCond, false: decCond}
+    };
+    var tol = .01;
+    function itterate(update, reverse) {
+      height = Number.parseInt(elem.offsetHeight);
+      if (height > target - tol && height < target + tol) {
+        callback();
+      } else if (funcs.condition[isExpanding]()) {
+        funcs.update[isExpanding]();
+        elem.style = 'font-size: ' + size;
+        setTimeout(itterate, 20);
+      } else if (!funcs.condition[isExpanding]()){
+        modify(elem, rate/2, accel, target, callback);
+      }
+    }
+
+    setTimeout(itterate, 20);
+  }
+
+  function getTarget(elem) {
+    elem.style = 'display: block';
+    let target = elem.offsetHeight;
+    elem.style = 'display: none';
+    return target;
+  }
+
+  function grow(elem, rate, accel, delay, percentage, callback) {
+    let target = getTarget(elem);
+    function startGrow() {
+      if (percentage) {
+        elem.style = 'font-size: ' + target * percentage/100;
+      } else {
+        elem.style = 'font-size: ' + 0;
+      }
+      modify(elem, rate, accel, target, callback);
+    }
+    setTimeout(startGrow, delay * 1000);
+  }
+
+  function shrink(elem, rate, accel, delay, percentage, callback) {
+    var target = getTarget(elem);
+    if (!percentage) {
+      percentage = 200;
+    }
+
+    function startShrink() {
+      elem.style = 'font-size: ' + target * percentage/100;
+      modify(elem, rate, accel, target, callback);
+    }
+    setTimeout(startShrink, delay * 1000);
+  }
+
+  function resonant() {
+    var elem = document.getElementById('resonant');
+    var target = getTarget(elem);
+
+    var itteration = 0;
+    function callback() {
+      if (itteration < 10) {
+        funcs[itteration++ % 2 == 0]();
+      }
+    }
+
+    function shrinkElem() {shrink(elem, 1, .03, 0, 20, callback);}
+    function growElem() {grow(elem, 1, .03, 0, 180, callback);}
+    var funcs = {true: shrinkElem, false: growElem};
+
+    shrink(elem, 1, .03, 0, target, callback);
+  }
+
+  ANIMATIONS = {shrink, grow, resonant};
+
+  function animateAll() {
+    var elems = document.querySelectorAll('[text-animation]');
+    for (var index = 0; index < elems.length; index += 1) {
+      animate(elems[index]);
+    }
+  }
+
+  function animate(elem) {
+    if (typeof elem === 'string') {
+      elem = document.getElementById(elem);
+    }
+    var type = elem.getAttribute('text-animation');
+    var rate = Number.parseFloat(elem.getAttribute('rate'));
+    var accel = Number.parseFloat(elem.getAttribute('accel'));
+    var delay = Number.parseFloat(elem.getAttribute('delay'));
+    var percent = Number.parseFloat(elem.getAttribute('percent'));
+    ANIMATIONS[type](elem, rate, accel, delay, percent);
+  }
+
+  return {animate, animateAll, shrink, grow, resonant};
+}
+
+window.onload = TextAnime().animateAll;

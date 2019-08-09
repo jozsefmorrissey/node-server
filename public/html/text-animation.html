@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <script type='text/javascript' src="/js/text-animation.js"></script>
+  </head>
+  <body>
+    <div>
+      <h2 id='shrink' text-animation='shrink' rate='1' accel='.002' delay='3'
+            style='display: none' percent='400'>
+        Hello Animation!
+      </h2>
+      <input type='button' value='^Animate^' onclick="TextAnime().animate('shrink')">
+    </div>
+    <div>
+      <h2 id='grow' text-animation='grow' rate='.1' accel='.002' delay='10'
+            style='display: none' percent='10'>
+        Hello Animation!
+      </h2>
+      <input type='button' value='^Animate^' onclick="TextAnime().animate('grow')">
+    </div>
+    <div>
+      <h2 id='resonant' rate='.1' accel='.002' delay='10'
+            style='display: none' percent='10'>
+        Hello Animation!
+      </h2>
+      <input type='button' value='^Animate^' onclick="TextAnime().animate('resonant')">
+    </div>
+  </body>
+</html>
