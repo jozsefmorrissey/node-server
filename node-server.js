@@ -43,5 +43,5 @@ for (let i = 0; i < services.length; i += 1) {
 var httpServer = http.createServer(app);
 var httpsServer = https.createServer(https_options, app);
 
-httpServer.listen(80);
-httpsServer.listen(443);
+httpServer.listen(3000);
+httpsServer.listen(3001);

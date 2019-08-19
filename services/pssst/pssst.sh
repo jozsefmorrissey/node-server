@@ -6,9 +6,9 @@
 passServRelDir=$(dirname "${BASH_SOURCE[0]}")
 source ${passServRelDir}/BashScripts/debugLogger.sh
 
-dataDir=~/.opsc/PasswordServer
+dataDir=~/.opsc/pssst
 infoDir=$dataDir/info/
-propFile=${passServRelDir}/passwordServer.properties
+propFile=$dataDir/pssst.properties
 password=$(grep -oP "password=.*" $propFile | sed "s/.*=\(.*\)/\1/")
 tempExt='.txt'
 encryptExt='.des3'
@@ -17,6 +17,7 @@ defaultPort=8080
 mapFile=$(grep -oP "mapFile=.*" $propFile | sed "s/.*=\(.*\)/\1/")
 
 log() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   halfPart=$(echo -n -e "------------------------- ")
   oHalfPart=$(echo -n -e $halfPart | rev)
   d=$(date +%F_%H-%M-%S)
@@ -25,6 +26,7 @@ log() {
 }
 
 getFileName() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   if [ $1 == 'infoMap' ]
   then
     file=$mapFile;
@@ -40,16 +42,30 @@ getFileName() {
 }
 
 getTempName () {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   echo $dataDir/sd/$1'_temp'$tempExt
 }
 
 getEncryptName() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   echo $(getFileName $1)$encryptExt
 }
 
-getValue() {
+getKeys() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   decoded=$(decode "$1")
-  value=$(echo "$decoded" | grep -oP "$2=.*" | sed "s/.*=//g")
+  value=$(echo "$decoded" | sed "s/\(.*\)\?=.*/\1/g" | sort)
+  value=$(echo "$value" | sed -r '/^\s*$/d')
+  if [ ! -z "$value" ]
+  then
+    echo -e "$value"
+  fi
+}
+
+getValue() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  decoded=$(decode "$1")
+  value=$(echo "$decoded" | grep -oP "^$2=.*" | sed "s/.*=//g")
   if [ "$2" == "token" ]
   then
     updateTokens=$(getValue $1 updateTokens)
@@ -68,12 +84,13 @@ getValue() {
 }
 
 decode() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   encryptName=$(getEncryptName $1)
   if [ -f "$encryptName" ];
   then
     cmd="openssl des3 -d < $encryptName -pass pass:$password"
     # Unlock -> decrypt -> Lock.... TODO: Find a way to simplify this.
-    decoded=$(sudo chmod +r $encryptName && openssl des3 -d < $encryptName -pass pass:$password && sudo chmod -r $encryptName)
+    decoded=$(chmod +r $encryptName && openssl des3 -d < $encryptName -pass pass:$password && chmod go-rwx $encryptName)
     echo "$decoded"
   else
     echo "";
@@ -81,6 +98,7 @@ decode() {
 }
 
 setupTemp() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   tempName=$(getTempName $1)
   encryptName=$(getEncryptName $1)
   touch $tempName
@@ -89,6 +107,7 @@ setupTemp() {
 }
 
 getNewFileName() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   found=1
   newName=here
   while [ $found == 1 ]
@@ -108,6 +127,7 @@ getNewFileName() {
 }
 
 mapFile() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   getValue infoMap "$1"
   filename=$(getValue infoMap "$1")
   if [[ -z $filename ]] && [ $1 != "infoMap" ]
@@ -122,28 +142,32 @@ mapFile() {
 }
 
 saveAndRemoveTemp () {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   tempName=$(getTempName $1)
   encryptName=$(getEncryptName $1)
   # Unlock -> encrypt -> Lock.... TODO: Find a way to simplify this.
-  sudo chmod +rw $encryptName && openssl des3 < $tempName > $encryptName -pass pass:$password && sudo chmod -rw $encryptName
+  chmod +rw $encryptName && openssl des3 < $tempName > $encryptName -pass pass:$password && chmod go-rwx $encryptName
   rm $tempName
 }
 
 cleanFile() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   sed -i '/^[[:space:]]*$/d' $1
   sort $1 > ${1}_ && cp ${1}_ $1 && rm ${1}_
 }
 
 viewFile() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   filename=$(mapFile "$1")
   temporaryName=$(getTempName "$1")
   setupTemp "$1"
   cleanFile "$temporaryName"
   editor=gedit
-  $(eval "$editor $temporaryName")
+  eval "$editor $temporaryName" && saveAndRemoveTemp "$1" && echo true
 }
 
 appendToFile () {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   tempFileName=$(getTempName "$1")
   filename=$(mapFile "$1")
   setupTemp "$1"
@@ -152,6 +176,19 @@ appendToFile () {
 }
 
 update () {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  _rm "$@"
+  newVal=$3
+
+  if [ -z "$newVal" ]
+  then
+    newVal=$(pwgen 30 1)
+  fi
+  appendToFile "$1" "$2=$newVal"
+}
+
+_rm () {
+  Logger trace "$(sepArguments "Argurments: '" "', '" "$@")'"
   if [ ! -z "$2" ]
   then
     silence=$(mapFile "$1")
@@ -159,64 +196,67 @@ update () {
 
     setupTemp "$1"
     old=$(grep -oP "$2=.*" $tempFileName | sed "s/.*=\(.*\)/\1/")
-    sed -i "s/$2=.*//g" $tempFileName
+    sed -i "s/^$2=.*//g" $tempFileName
     log "$1" "$2" "$old" "Updated"
     saveAndRemoveTemp $1
-
-    newVal=$3
-    if [ -z "$newVal" ]
-    then
-      newVal=$(pwgen 30 1)
-    fi
-
-    appendToFile "$1" "$2=$newVal"
   fi
 }
 
 replace() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   value=$(getValue $1 $2)
   sed -i -re "s/_\{$2\}_/$value/g" $3
 }
 
 remove() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   value=$(getValue $1 $2)
   sed -i -re "s/$value/_{$2}_/g" $3
 }
 
 determinePort() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   numRe='^[0-9]{1,}$'
   if [[ $1 =~ $numRe ]]; then
     port=$1
   else
-    savedPort=$(getValue confidentalInfo port)
+    savedPort=$(getValue pssst port)
     if [[ $savedPort =~ $numRe ]]; then
       port=$savedPort
     else
       port=$defaultPort
     fi
   fi
-  update confidentalInfo port $port 1>/dev/null
+  update pssst port $port 1>/dev/null
   echo $port
 }
 
 getWithToken() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  validateToken "$@";
+  value=$(getValue $1 $2)
+  echo $value
+}
+
+validateToken() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   token=$(getValue $1 token)
-  if [ "$token" == "$3" ];then
-    value=$(getValue $1 $2)
-    echo $value
-  else
+  if [ "$token" != "$2" ];then
     echo '[Error:CI] Your not supposed to be here...'
+    exit 1;
   fi
 }
 
 getServerPid() {
-  sudo netstat -plten | grep $1 | awk '{print $9}' | sed "s/\(.*\)\/.*/\1/"
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  netstat -plten | grep $1 | awk '{print $9}' | sed "s/\(.*\)\/.*/\1/"
 }
 
 startServer() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   port=$(determinePort $1)
   serverPid=$(getServerPid $port)
-  confInfoToken=$(getValue confidentalInfo token)
+  confInfoToken=$(getValue pssst token)
   if [ -z $serverPid ]; then
     node ${passServRelDir}/password-server.js $port $confInfoToken
     echo Password server running on port: $port
@@ -227,6 +267,7 @@ declare -A cmdHelp
 declare -A moreDetail
 
 openHelpDoc() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   port=$(determinePort $2)
   serverPid=$(getServerPid $port)
   startServer
@@ -236,6 +277,7 @@ openHelpDoc() {
 }
 
 areYouSure() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   echo -e "$1"
   read -p "" yes
   echo $yes
@@ -246,6 +288,7 @@ areYouSure() {
 }
 
 generateProperties() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   areYouSure "Are you sure you want to regnerate Properties?(YES to proceed)\nAll Passwords will be lost."
   areYouSure "Seriosly there is no going back.... You have been warned?(YES to proceed)"
   rm $propFile
@@ -255,9 +298,8 @@ generateProperties() {
 }
 
 adminCheck() {
-  if  touch /usr/test.txt 2>/dev/null; then
-      rm /usr/test.txt
-  else
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  if  ! touch $propFile 2>/dev/null; then
     echo Must have admin privaliges to run this application.
     if [ "$1" != "true" ]
     then
@@ -267,6 +309,7 @@ adminCheck() {
 }
 
 selfDistruct() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   t=60
   if [ ! -z $2 ]
   then
@@ -278,16 +321,47 @@ selfDistruct() {
 }
 
 naFp() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   echo $dataDir/na/$1.txt
 }
 
-
 toJson() {
-  filepathNa=$(naFp "$1")
-  properties=$(grep -oP "^.{1,}" $filepathNa)
-  json="{\n"$(echo "$properties" | sed 's/\(.*\?\)=\(.*\)/\t\"\1\": "\2",/g')"\n"
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  json="{\n"
+  while read line
+  do
+    json+=$(echo "$line" | sed 's/^\(.*\?\)=\(.*\)/\t\"\1\": "\2",/g')"\n"
+  done
   echo -e "${json:0:-3}\n}"
+}
 
+clientConfig() {
+  config=${flags['config']}
+  host=${flags['host']}
+  token=${flags['token']}
+  group=${flags['group']}
+  pst update $config token $token
+  pst update $config group $group
+  pst update $config host $host
+}
+
+client() {
+  config=${flags['config']}
+  if [ ! -z "$config" ]
+  then
+    host=$(getValue "$config" host)
+    token=$(getValue "$config" token)
+    group=$(getValue "$config" group)
+  else
+    host=${flags['host']}
+    token=${flags['token']}
+    group=${flags['group']}
+  fi
+
+  xdg-open "$host/pssst/client?host=$host&token=$token&group=$group";
+  # json=$(pst tokens | pst toJson)
+  # script="\n\t<script type='text/javascript' src="http://localhost:3000/pssst/js/pssst-client.js"></script>\n\t"
+  # echo -e "<html><head>$script</head><body><pssst>$json</pssst></body></html>"
 }
 
 valueNonAdmin() {
@@ -311,6 +385,7 @@ valueNonAdmin() {
 }
 
 updateNonAdmin() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   adminErr=$(adminCheck "true")
   if [ ! -z "$adminErr" ]
   then
@@ -328,7 +403,23 @@ updateNonAdmin() {
   fi
 }
 
+tokens() {
+  groups=$(pst getKeys infoMap)
+  for group in ${groups[@]}
+  do
+    if [ "$group" != "log-history-unlikely-user-name" ]
+    then
+      if [ "$group" != "mapInfo" ]
+      then
+        token=$(getValue $group token)
+        echo $group=$token
+      fi
+    fi
+  done
+}
+
 insecureFunctions() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   case "$1" in
     dir)
       echo $passServRelDir
@@ -348,8 +439,8 @@ insecureFunctions() {
     help)
       openHelpDoc "$2"
     ;;
-    getWithToken)
-      getWithToken "$2" "$3" "$4"
+    validateToken)
+      validateToken "$2" "$3"
     ;;
     retTemp)
       retTemp "$2" "$3"
@@ -361,6 +452,7 @@ insecureFunctions() {
 }
 
 secureFunctions() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   case "$1" in
     replace)
       adminCheck
@@ -375,6 +467,9 @@ secureFunctions() {
       oldContents=$(viewFile "$2")
       log $2 "" "" "$oldContents"
       saveAndRemoveTemp "$2"
+    ;;
+    rm)
+      _rm "$2" "$3"
     ;;
     append)
       adminCheck
@@ -391,7 +486,7 @@ secureFunctions() {
     view)
       adminCheck
       viewFile "$2"
-      temporaryName=$(getTempName "$1")
+      temporaryName=$(getTempName "$2")
       rm "$temporaryName"
     ;;
     generateProperties)
@@ -415,7 +510,7 @@ secureFunctions() {
     stop-server)
       adminCheck
       port=$(determinePort $2)
-      sudo kill -9 $(getServerPid $port)
+      kill -9 $(getServerPid $port)
     ;;
     defaultPort)
       adminCheck
@@ -423,6 +518,18 @@ secureFunctions() {
     ;;
     selfDistruct)
       selfDistruct "$2" "$3"
+    ;;
+    getKeys)
+      getKeys "$2"
+    ;;
+    tokens)
+      tokens
+    ;;
+    client)
+      client
+    ;;
+    clientConfig)
+      clientConfig
     ;;
   esac
 }

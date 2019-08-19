@@ -13,7 +13,7 @@ function TextAnime() {
       size += rate;
     }
     function dec() {
-      rate -= accel;
+      rate += accel;
       size -= rate;
     }
 
@@ -21,7 +21,7 @@ function TextAnime() {
       update: {true: inc, false: dec},
       condition: {true: incCond, false: decCond}
     };
-    var tol = .01;
+    var tol = .0000001;
     function itterate(update, reverse) {
       height = Number.parseInt(elem.offsetHeight);
       if (height > target - tol && height < target + tol) {
@@ -40,7 +40,12 @@ function TextAnime() {
 
   function getTarget(elem) {
     elem.style = 'display: block';
-    let target = elem.offsetHeight;
+    let target = elem.getAttribute('target-size');
+    if (Number.isNaN(target)) {
+      target = elem.offsetHeight;
+    } else {
+      target = Number.parseFloat(target);
+    }
     elem.style = 'display: none';
     return target;
   }
@@ -60,6 +65,7 @@ function TextAnime() {
 
   function shrink(elem, rate, accel, delay, percentage, callback) {
     var target = getTarget(elem);
+
     if (!percentage) {
       percentage = 200;
     }
@@ -77,13 +83,13 @@ function TextAnime() {
 
     var itteration = 0;
     function callback() {
-      if (itteration < 10) {
+      if (itteration < 100) {
         funcs[itteration++ % 2 == 0]();
       }
     }
 
-    function shrinkElem() {shrink(elem, 1, .03, 0, 20, callback);}
-    function growElem() {grow(elem, 1, .03, 0, 180, callback);}
+    function shrinkElem() {shrink(elem, .0001, .03, 0, 20, callback);}
+    function growElem() {grow(elem, .0001, .03, 0, 180, callback);}
     var funcs = {true: shrinkElem, false: growElem};
 
     shrink(elem, 1, .03, 0, target, callback);

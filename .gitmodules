@@ -1,0 +1,3 @@
+[submodule "services/pssst/BashScripts"]
+	path = services/pssst/BashScripts
+	url = https://github.com/jozsefmorrissey/BashScripts.git
