@@ -1,8 +1,8 @@
 
 function TextAnime() {
   function modify(elem, rate, accel, target, callback) {
-    let size = Number.parseInt(elem.offsetHeight);
-    let isExpanding = size < target;
+    var size = Number.parseInt(elem.offsetHeight);
+    var isExpanding = size < target;
     var height;
 
     function incCond() {return height < target}
@@ -17,7 +17,7 @@ function TextAnime() {
       size -= rate;
     }
 
-    let funcs = {
+    var funcs = {
       update: {true: inc, false: dec},
       condition: {true: incCond, false: decCond}
     };
@@ -40,7 +40,7 @@ function TextAnime() {
 
   function getTarget(elem) {
     elem.style = 'display: block';
-    let target = elem.getAttribute('target-size');
+    var target = elem.getAttribute('target-size');
     if (!Number.isFinite(target)) {
       target = elem.offsetHeight;
     } else {
@@ -51,7 +51,7 @@ function TextAnime() {
   }
 
   function grow(elem, rate, accel, delay, percentage, callback) {
-    let target = getTarget(elem);
+    var target = getTarget(elem);
     function startGrow() {
       if (percentage) {
         elem.style = 'font-size: ' + target * percentage/100;
@@ -95,7 +95,7 @@ function TextAnime() {
     shrink(elem, 1, .03, 0, target, callback);
   }
 
-  ANIMATIONS = {shrink, grow, resonant};
+  ANIMATIONS = {shrink: shrink, grow: grow, resonant: resonant};
 
   function animateAll() {
     var elems = document.querySelectorAll('[text-animation]');
@@ -116,7 +116,13 @@ function TextAnime() {
     ANIMATIONS[type](elem, rate, accel, delay, percent);
   }
 
-  return {animate, animateAll, shrink, grow, resonant};
+  return {
+    animate: animate,
+    animateAll: animateAll,
+    shrink: shrink,
+    grow: grow,
+    resonant: resonant
+  };
 }
 
 window.onload = TextAnime().animateAll;
