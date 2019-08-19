@@ -5,8 +5,8 @@ function TextAnime() {
     var isExpanding = size < target;
     var height;
 
-    function incCond() {return height < target}
-    function decCond() {return height > target}
+    function incCond() {return height < target;}
+    function decCond() {return height > target;}
 
     function inc() {
       rate += accel;
@@ -21,7 +21,7 @@ function TextAnime() {
       update: {true: inc, false: dec},
       condition: {true: incCond, false: decCond}
     };
-    var tol = .0000001;
+    var tol = 0.0000001;
     function itterate(update, reverse) {
       height = Number.parseInt(elem.offsetHeight);
       if (height > target - tol && height < target + tol) {
@@ -88,14 +88,14 @@ function TextAnime() {
       }
     }
 
-    function shrinkElem() {shrink(elem, .0001, .03, 0, 20, callback);}
-    function growElem() {grow(elem, .0001, .03, 0, 180, callback);}
+    function shrinkElem() {shrink(elem, 0.0001, 0.03, 0, 20, callback);}
+    function growElem() {grow(elem, 0.0001, 0.03, 0, 180, callback);}
     var funcs = {true: shrinkElem, false: growElem};
 
-    shrink(elem, 1, .03, 0, target, callback);
+    shrink(elem, 1, 0.03, 0, target, callback);
   }
 
-  ANIMATIONS = {shrink: shrink, grow: grow, resonant: resonant};
+  var ANIMATIONS = {shrink: shrink, grow: grow, resonant: resonant};
 
   function animateAll() {
     var elems = document.querySelectorAll('[text-animation]');
