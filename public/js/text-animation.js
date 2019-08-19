@@ -35,13 +35,13 @@ function TextAnime() {
       }
     }
 
-    setTimeout(itterate, 20);
+    setTimeout(itterate, 10);
   }
 
   function getTarget(elem) {
     elem.style = 'display: block';
     let target = elem.getAttribute('target-size');
-    if (Number.isNaN(target)) {
+    if (!Number.isFinite(target)) {
       target = elem.offsetHeight;
     } else {
       target = Number.parseFloat(target);
