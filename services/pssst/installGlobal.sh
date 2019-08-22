@@ -1,5 +1,5 @@
 #!/bin/bash
-dataHome=~/.opsc/PasswordServer/
+dataHome=~/.opsc/pssst/
 mkdir -p $dataHome/info/
 mkdir -p $dataHome/na/
 mkdir -p $dataHome/sd/
