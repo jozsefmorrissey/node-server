@@ -510,6 +510,7 @@ secureFunctions() {
     stop-server)
       adminCheck
       port=$(determinePort $2)
+      echo port: $port
       kill -9 $(getServerPid $port)
     ;;
     defaultPort)
