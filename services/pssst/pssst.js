@@ -74,11 +74,34 @@ function endpoints(app, prefix) {
     const group = req.query.group;
     validate(host, token, group);
 
-    const cmd = "pst tokens | pst toJson";
-    const json = exicuteCmd(group, token, cmd);
+    exicuteCmd(group, token, "echo success");
     const script = `\n\t<script type='text/javascript' src="${host}/pssst/js/pssst-client.js"></script>\n\t`;
     const html = `<html><head>${script}</head><body><pssst></pssst></body></html>`;
     res.send(html);
+  });
+
+  app.get(prefix + "/get/json", function (req, res) {
+    const host = req.query.host;
+    const token = req.query.token;
+    const group = req.query.group;
+    validate(host, token, group);
+
+    const cmd = `pst key-values -group '${group}' | pst to-json`;
+    const json = JSON.parse(exicuteCmd(group, token, cmd));
+    res.setHeader('Content-Type', 'application/json');
+    res.send(json);
+  });
+
+  app.get(prefix + "/get/key-values", function (req, res) {
+    const host = req.query.host;
+    const token = req.query.token;
+    const group = req.query.group;
+    validate(host, token, group);
+
+    const cmd = `pst key-values -group '${group}'`;
+    const props = exicuteCmd(group, token, cmd);
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(props);
   });
 
   app.post(prefix + "/client", function (req, res) {
@@ -87,7 +110,7 @@ function endpoints(app, prefix) {
     const group = req.body.group;
     validate(host, token, group);
 
-    const cmd = "pst tokens | pst toJson";
+    const cmd = "pst key-values | pst to-json";
     const json = exicuteCmd(group, token, cmd);
     const script = `\n\t<script type='text/javascript' src="${host}/pssst/js/pssst-client.js"></script>\n\t`;
     const html = `<html><head>${script}</head><body><pssst>${json}</pssst></body></html>`;

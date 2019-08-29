@@ -325,17 +325,21 @@ naFp() {
   echo $dataDir/na/$1.txt
 }
 
-toJson() {
+to-json() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   json="{\n"
   while read line
   do
-    json+=$(echo "$line" | sed 's/^\(.*\?\)=\(.*\)/\t\"\1\": "\2",/g')"\n"
+    reg='^.*=.*$'
+    if [[ "$line" =~ $reg ]]
+    then
+      json+=$(echo "$line" | sed 's/^\(.*\?\)=\(.*\)/\t\"\1\": "\2",/g')"\n"
+    fi
   done
   echo -e "${json:0:-3}\n}"
 }
 
-clientConfig() {
+client-config() {
   config=${flags['config']}
   host=${flags['host']}
   token=${flags['token']}
@@ -359,9 +363,23 @@ client() {
   fi
 
   xdg-open "$host/pssst/client?host=$host&token=$token&group=$group";
-  # json=$(pst tokens | pst toJson)
-  # script="\n\t<script type='text/javascript' src="http://localhost:3000/pssst/js/pssst-client.js"></script>\n\t"
-  # echo -e "<html><head>$script</head><body><pssst>$json</pssst></body></html>"
+}
+
+remote() {
+  config=${flags['config']}
+  if [ ! -z "$config" ]
+  then
+    host=$(getValue "$config" host)
+    token=$(getValue "$config" token)
+    group=$(getValue "$config" group)
+  else
+    host=${flags['host']}
+    token=${flags['token']}
+    group=${flags['group']}
+  fi
+
+  # curl "$host/pssst/get/key-values?host=$host&token=$token&group=$group";
+  echo "$host/pssst/get/key-values?host=$host&token=$token&group=$group";
 }
 
 valueNonAdmin() {
@@ -403,16 +421,21 @@ updateNonAdmin() {
   fi
 }
 
-tokens() {
-  groups=$(pst getKeys infoMap)
-  for group in ${groups[@]}
+key-values() {
+  group=${flags[group]}
+  if [ -z "$group" ]
+  then
+    group=infoMap
+  fi
+  keys=$(pst getKeys $group)
+  for key in ${keys[@]}
   do
-    if [ "$group" != "log-history-unlikely-user-name" ]
+    if [ "$key" != "log-history-unlikely-user-name" ]
     then
-      if [ "$group" != "mapInfo" ]
+      if [ "$key" != "mapInfo" ]
       then
-        token=$(getValue $group token)
-        echo $group=$token
+        token=$(getValue $key token)
+        echo $key=$token
       fi
     fi
   done
@@ -445,8 +468,8 @@ insecureFunctions() {
     retTemp)
       retTemp "$2" "$3"
     ;;
-    toJson)
-      toJson "$2"
+    to-json)
+      to-json "$2"
     ;;
   esac
 }
@@ -523,14 +546,17 @@ secureFunctions() {
     getKeys)
       getKeys "$2"
     ;;
-    tokens)
-      tokens
+    key-values)
+      key-values
     ;;
     client)
       client
     ;;
-    clientConfig)
-      clientConfig
+    remote)
+      remote
+    ;;
+    client-config)
+      client-config
     ;;
   esac
 }

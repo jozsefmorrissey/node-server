@@ -59,6 +59,22 @@ function Pssst() {
     refresh();
   }
 
+  function copy(value) {
+    //https://localhost:3001/pssst/client?token=gailahng3Ao0QuuThaerae0Coo4cea&host=https://localhost:3001&group=value
+    var copyElem = document.getElementById('copy')
+    copyElem.value = value;
+    copyElem.select();
+    document.execCommand('copy');
+  }
+
+  function copyCmd() {
+    var host = PSSST_CONFIG.host;
+    var token = PSSST_CONFIG.token;
+    var group = PSSST_CONFIG.group;
+    var config = document.getElementById('config-id').value;
+    copy(`pst client-config -config '${config}' -token '${token}' -group '${group}' -host '${host}'`);
+  }
+
   var id;
   function show(index) {
     id = 'display';
@@ -71,10 +87,7 @@ function Pssst() {
       setTimeout(function () {
         document.getElementById(id).innerHTML = '';
       }, 10000);
-      var copyElem = document.getElementById('copy')
-      copyElem.value = value;
-      copyElem.select();
-      document.execCommand('copy');
+      copy(value);
     }
     return showIndex;
   }
@@ -120,6 +133,8 @@ function Pssst() {
     html += "<h1>" + PSSST_CONFIG.group + "</h1>";
     html += "<p>(Updating a value with no input gernates a random string)</p>";
     html += "<input type='text' style='display: block;' id='copy' readonly='readonly'>";
+    html += "<input type='text' id='config-id' placeholder='config id'>";
+    html += "<input type='button' value='Copy Cmd' onclick='Pssst().copyCmd()'>";
     // html += "<input type='button' value='Refresh' onclick='Pssst().refresh()'>";
     html += "<div><table id='table' style='margin: 20pt;'></table><div>"
     html += `<button onclick='Pssst().bulkUpdate()'><h3>Bulk Update</h3></button>
@@ -168,7 +183,7 @@ function Pssst() {
   }
 
   return {retrieve, build, keys, getIndex, update, refresh,
-    remove, add, bulkUpdate};
+    remove, add, bulkUpdate, copyCmd};
 }
 
 window.onload = Pssst().build
