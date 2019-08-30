@@ -90,8 +90,8 @@ function endpoints(app, prefix) {
 
     const cmd = `pst key-values -group '${group}' | pst to-json`;
     const jsonStr = exicuteCmd(group, token, cmd);
-    const json = JSON.parse(jsonStr);
     console.log(json);
+    const json = JSON.parse(jsonStr);
     res.setHeader('Content-Type', 'application/json');
     res.send(json);
   });
