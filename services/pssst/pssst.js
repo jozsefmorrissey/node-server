@@ -32,7 +32,6 @@ function endpoints(app, prefix) {
     const token = clean(req.body.token);
     var value = req.body.value;
     value = value ? value.trim() : '';
-    validate(group, pi, token);
     const cmd = 'pst update \'' + group + '\' \'' + pi + '\' \'' + value + '\'';
     const password = exicuteCmd(group, token, cmd);
     res.send(password.replace('\n', ''));
@@ -42,10 +41,9 @@ function endpoints(app, prefix) {
     const group = clean(req.body.group);
     const token = clean(req.body.token);
     var keyValues = req.body.keyValues;
-    validate(group, token);
     var keys = Object.keys(keyValues);
     for (let index = 0; index < keys.length; index += 1) {
-      const key = keys[index];
+      const key = clean(keys[index]);
       const cmd = 'pst update \'' + group + '\' \'' + key + '\' \'' + keyValues[key] + '\'';
       exicuteCmd(group, token, cmd);
     }
@@ -73,8 +71,8 @@ function endpoints(app, prefix) {
 
   app.get(prefix + '/client', function (req, res) {
     const host = clean(req.query.host);
-    const group = clean(req.body.group);
-    const token = clean(req.body.token);
+    const group = clean(req.query.group);
+    const token = clean(req.query.token);
 
     exicuteCmd(group, token, 'echo success');
     const script = `\n\t<script type='text/javascript' src='${host}/pssst/js/pssst-client.js'></script>\n\t`;
@@ -83,8 +81,8 @@ function endpoints(app, prefix) {
   });
 
   app.get(prefix + '/get/json', function (req, res) {
-    const group = clean(req.body.group);
-    const token = clean(req.body.token);
+    const group = clean(req.query.group);
+    const token = clean(req.query.token);
 
     const cmd = `pst key-values -group '${group}' | pst to-json`;
     const json = JSON.parse(exicuteCmd(group, token, cmd));
@@ -93,8 +91,8 @@ function endpoints(app, prefix) {
   });
 
   app.get(prefix + '/get/key-values', function (req, res) {
-    const group = clean(req.body.group);
-    const token = clean(req.body.token);
+    const group = clean(req.query.group);
+    const token = clean(req.query.token);
     validate(token, group);
 
     const cmd = `pst key-values -group '${group}'`;
@@ -104,9 +102,9 @@ function endpoints(app, prefix) {
   });
 
   app.post(prefix + '/client', function (req, res) {
-    const host = clean(req.body.host);
-    const group = clean(req.body.group);
-    const token = clean(req.body.token);
+    const host = clean(req.query.host);
+    const group = clean(req.query.group);
+    const token = clean(req.query.token);
 
     const cmd = 'pst key-values | pst to-json';
     const json = exicuteCmd(group, token, cmd);
