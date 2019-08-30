@@ -86,9 +86,12 @@ function endpoints(app, prefix) {
   app.get(prefix + '/get/json', function (req, res) {
     const group = clean(req.query.group);
     const token = clean(req.query.token);
+    console.log(group + "->" + token);
 
     const cmd = `pst key-values -group '${group}' | pst to-json`;
-    const json = JSON.parse(exicuteCmd(group, token, cmd));
+    const jsonStr = exicuteCmd(group, token, cmd);
+    const json = JSON.parse(jsonStr);
+    console.log(json);
     res.setHeader('Content-Type', 'application/json');
     res.send(json);
   });
