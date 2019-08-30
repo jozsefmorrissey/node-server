@@ -81,10 +81,9 @@ function endpoints(app, prefix) {
   });
 
   app.get(prefix + "/get/json", function (req, res) {
-    const host = req.query.host;
     const token = req.query.token;
     const group = req.query.group;
-    validate(host, token, group);
+    validate(token, group);
 
     const cmd = `pst key-values -group '${group}' | pst to-json`;
     const json = JSON.parse(exicuteCmd(group, token, cmd));
@@ -93,10 +92,9 @@ function endpoints(app, prefix) {
   });
 
   app.get(prefix + "/get/key-values", function (req, res) {
-    const host = req.query.host;
     const token = req.query.token;
     const group = req.query.group;
-    validate(host, token, group);
+    validate(token, group);
 
     const cmd = `pst key-values -group '${group}'`;
     const props = exicuteCmd(group, token, cmd);

@@ -378,8 +378,7 @@ remote() {
     group=${flags['group']}
   fi
 
-  # curl "$host/pssst/get/key-values?host=$host&token=$token&group=$group";
-  echo "$host/pssst/get/key-values?host=$host&token=$token&group=$group";
+  curl -X GET "$host/pssst/get/json?token=$token&group=$group"
 }
 
 valueNonAdmin() {
