@@ -54,7 +54,6 @@ function endpoints(app, prefix) {
     const group = clean(req.body.group);
     const pi = clean(req.body.id);
     const token = clean(req.body.token);
-    validate(group, pi, token);
     const cmd = 'pst rm \'' + group + '\' \'' + pi + '\'';
     const password = exicuteCmd(group, token, cmd);
     res.send(password.replace('\n', ''));
@@ -63,7 +62,6 @@ function endpoints(app, prefix) {
   app.post(prefix + '/keys', function(req, res){
     const group = clean(req.body.group);
     const token = clean(req.body.token);
-    validate(group, token);
     const cmd = 'pst getKeys \'' + group + '\'';
     const keys = exicuteCmd(group, token, cmd);
     res.send(keys.replace(/\n/g, '=='));
@@ -93,7 +91,6 @@ function endpoints(app, prefix) {
   app.get(prefix + '/get/key-values', function (req, res) {
     const group = clean(req.query.group);
     const token = clean(req.query.token);
-    validate(token, group);
 
     const cmd = `pst key-values -group '${group}'`;
     const props = exicuteCmd(group, token, cmd);
