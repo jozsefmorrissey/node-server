@@ -76,13 +76,16 @@ function Pssst() {
   }
 
   var id;
-  function show(index) {
+  function show(index, isToken) {
     id = 'display';
     if (index !== undefined) {
       id += '-' + index;
     }
 
     function showIndex(value) {
+      if (isToken) {
+        PSSST_CONFIG.token = value;
+      }
       document.getElementById(id).innerHTML = value;
       setTimeout(function () {
         document.getElementById(id).innerHTML = '';
@@ -93,7 +96,7 @@ function Pssst() {
   }
 
   function get(url, group, id, token, index, value) {
-    httpGetAsync(url, {group, id, token, value}, show(index));
+    httpGetAsync(url, {group, id, token, value}, show(index, id === 'token'));
   }
 
   function httpGetAsync(url, data, callback)
