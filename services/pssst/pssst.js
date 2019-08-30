@@ -16,14 +16,17 @@ function exicuteCmd(group, token, cmd) {
 }
 const tokenValCmd = ''
 
+function get(group, pi) {
+  const cmd = 'pst value \'' + group + '\' \'' + pi + '\'';
+  return exicuteCmd(group, token, cmd).replace('\n', '');
+}
+
 function endpoints(app, prefix) {
   app.post(prefix + '/get', function(req, res){
     const group = clean(req.body.group);
     const pi = clean(req.body.id);
     const token = clean(req.body.token);
-    const cmd = 'pst value \'' + group + '\' \'' + pi + '\'';
-    const password = exicuteCmd(group, token, cmd);
-    res.send(password.replace('\n', ''));
+    res.send(get(group, pi));
   });
 
   app.post(prefix + '/update', function(req, res){
@@ -33,8 +36,8 @@ function endpoints(app, prefix) {
     var value = req.body.value;
     value = value ? value.trim() : '';
     const cmd = 'pst update \'' + group + '\' \'' + pi + '\' \'' + value + '\'';
-    const password = exicuteCmd(group, token, cmd);
-    res.send(password.replace('\n', ''));
+    exicuteCmd(group, token, cmd);
+    res.send(get(group, pi));
   });
 
   app.post(prefix + '/update/all', function(req, res){
