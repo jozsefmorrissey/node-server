@@ -94,7 +94,7 @@ function DebugGui() {
   }
 
   function debug() {
-    return document.cookie.match("(;\\s*|^\\s*)DebugGui.debug=true;") !== null;
+    return document.cookie.match("(;\\s*|^\\s*)DebugGui.debug=true(;|$)") !== null;
   }
 
   function displayModalHtml(html) {
