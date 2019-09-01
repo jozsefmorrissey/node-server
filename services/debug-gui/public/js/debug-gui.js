@@ -93,6 +93,10 @@ function DebugGui() {
     displayModalHtml(html);
   }
 
+  function debug() {
+    return document.cookie.match("(;\\s*|^\\s*)DebugGui.debug=true;") !== null;
+  }
+
   function displayModalHtml(html) {
     DEBUG_GUI.POPUP.innerHTML = html;
     DEBUG_GUI.MODAL.style.display = 'block';
@@ -396,7 +400,7 @@ function DebugGui() {
   document.head.appendChild(style);
 
   window.addEventListener('load', onLoad);
-  return {refresh, displayModal, displayLogs,
+  return {refresh, displayModal, displayLogs, debug,
     toggleChecked, copyModal, getUrl, copyReport};
 }
 
