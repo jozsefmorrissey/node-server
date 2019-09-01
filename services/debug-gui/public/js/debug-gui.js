@@ -289,7 +289,7 @@ function DebugGui() {
   }
 
   function buildGui(data, fp) {
-    var acorn = '';
+    var acorn = '<br>';
     if (!data) {
       data = buildData();
     }
