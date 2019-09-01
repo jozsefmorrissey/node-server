@@ -45,6 +45,7 @@ function DebugGui() {
                   onclick="DebugGui().copyModal()"
                   style='float: right; margin-right: 20pt;'>
             </div>
+            <br>
             ${html}`;
   }
 
