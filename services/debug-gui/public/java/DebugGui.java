@@ -34,7 +34,8 @@ public class DebugGui {
 
 	private static String DEBUG_ID = "DebugGui.debug";
 
-	private static String host = "http://www.jozsefmorrissey.com/";
+	private static String httpHost = "http://www.jozsefmorrissey.com/debug-gui/";
+	private static String httpsHost = "https://www.jozsefmorrissey.com/debug-gui/";
 	private static String root = "DebugGui";
 	private static String id = "Default";
 
@@ -45,23 +46,47 @@ public class DebugGui {
 		this.debug = debug;
 	}
 
-    public DebugGui(HttpServletRequest req) {
-    	if (req.getHeader(DEBUG_ID) != null) {
-    		debug = true;
-    	} else {
-	        Cookie[] cookies = req.getCookies();
-	        if (cookies != null) {
-			    for (Cookie cookie : cookies) {
-			    	if (cookie.getName().equals(DEBUG_ID)) {
-			    		debug = true;
-			    	}
-			    }
-	        }
-    	}
-    }
+  public DebugGui(HttpServletRequest req) {
+  	if (req.getHeader(DEBUG_ID) != null) {
+  		debug = true;
+  	} else {
+        Cookie[] cookies = req.getCookies();
+        if (cookies != null) {
+		    for (Cookie cookie : cookies) {
+		    	if (cookie.getName().equals(DEBUG_ID)) {
+		    		debug = true;
+		    	}
+		    }
+        }
+  	}
+  }
+
+	private static class Worker implements Runnable {
+		String type;
+		String group;
+		Object obj;
+
+		private Worker(String type, String group, Object obj) {
+			this.type = type;
+			this.group = group;
+			this.obj = obj;
+		}
+
+		private static void dispatch(String type, String group, Object obj) {
+			Runnable runnable = new Worker (type, group, obj);
+			Thread thread = new Thread(runnable);
+			thread.start();
+		}
+
+		@Override
+		public void run() {
+			restPostCall(getUrl(type, getId(), getGroup(group), obj);
+			logObject(obj, group);
+		}
+	}
 
 	public static void setHost(String host) {
-		DebugGui.host = host;
+		DebugGui.httpHost = host;
 	}
 
 	public static void setRoot(String root) {
@@ -90,6 +115,18 @@ public class DebugGui {
 	      return "{}";
 	}
 
+	public static void value(String group, Object obj) {
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			String json = mapper.writeValueAsString(obj);
+			HashMap<String, Object> result = new ObjectMapper().readValue(json, HashMap.class);
+			for (String key : result.keySet()) {
+				value (group, key, result.get(key));
+			}
+		} catch (IOException e) {
+			exception(group, "Mapping ObjectError", new Error("Failed to map object values"));
+		}
+	}
 
 
 	private String getUrl(String ext, String id, String group) {
@@ -155,6 +192,7 @@ public class DebugGui {
 			con.setRequestMethod("POST");
 			con.setDoOutput(true);
 			con.setRequestProperty("Content-Type","application/json");
+			con.setConnectTimeout(2000);
 
 			byte[] outputInBytes = obj.toString().getBytes("UTF-8");
 			con.setRequestProperty("Content-Length", "" + Integer.toString(outputInBytes.length));
@@ -169,24 +207,34 @@ public class DebugGui {
 		}
 	}
 
+	private void logObject(Object obj, String group) {
+		String groupStr = " (" + getId() + "/" + getGroup(group) + ")";
+		String logStr = "DebugGuiLog - " + obj.toString + groupStr;
+		log.debug(logStr);
+	}
+
 	public DebugGui link(String group, String label, String url) {
 		if (!shouldDebug()) return this;
-		restPostCall(getUrl("link", getId(), getGroup(group)), new Link(label, url));
+		Link obj = new Link(label, url);
+		Worker.dispatch("link", group, obj);
 		return this;
 	}
 	public DebugGui value(String group, String key, Object value) {
 		if (!shouldDebug()) return this;
-		restPostCall(getUrl("value", getId(), getGroup(group)), new Value(key, toJson(value)));
+		Value obj = new Value(key, value);
+		Worker.dispatch("value", group, obj);
 		return this;
 	}
 	public DebugGui exception(String group, String errorId, Throwable error) {
 		if (!shouldDebug()) return this;
-		restPostCall(getUrl("exception", getId(), getGroup(group)), new Exception(errorId, error.getMessage(), ExceptionUtils.getStackTrace(error)));
+		Exception obj = new Exception(errorId, error);
+		Worker.dispatch("exception", group, obj);
 		return this;
 	}
 	public DebugGui log(String group, String log) {
 		if (!shouldDebug()) return this;
-		restPostCall(getUrl("log", getId()), new Log(log));
+		Log obj = new Log(log);
+		Worker.dispatch("log", group, obj);
 		return this;
 	}
 
