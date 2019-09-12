@@ -10,6 +10,7 @@ dataDir=~/.opsc/pssst
 infoDir=$dataDir/info/
 propFile=$dataDir/pssst.properties
 password=$(grep -oP "password=.*" $propFile | sed "s/.*=\(.*\)/\1/")
+encFlags=$(grep -oP "encFlags=.*" $propFile | sed "s/.*=\(.*\)/\1/")
 tempExt='.txt'
 encryptExt='.des3'
 logId="log-history-unlikely-user-name"
@@ -88,9 +89,10 @@ decode() {
   encryptName=$(getEncryptName $1)
   if [ -f "$encryptName" ];
   then
-    cmd="openssl des3 -d < $encryptName -pass pass:$password"
+    logger debug "flags: '$encFlags'"
+    cmd="openssl des3 $encFlags -d < $encryptName -pass pass:$password"
     # Unlock -> decrypt -> Lock.... TODO: Find a way to simplify this.
-    decoded=$(chmod +r $encryptName && openssl des3 -d < $encryptName -pass pass:$password && chmod go-rwx $encryptName)
+    decoded=$(chmod +r $encryptName && openssl des3 $encFlags -d < $encryptName -pass pass:$password && chmod go-rwx $encryptName)
     echo "$decoded"
   else
     echo "";
@@ -146,7 +148,7 @@ saveAndRemoveTemp () {
   tempName=$(getTempName $1)
   encryptName=$(getEncryptName $1)
   # Unlock -> encrypt -> Lock.... TODO: Find a way to simplify this.
-  chmod +rw $encryptName && openssl des3 < $tempName > $encryptName -pass pass:$password && chmod go-rwx $encryptName
+  chmod +rw $encryptName && openssl des3 $encFlags < $tempName > $encryptName -pass pass:$password && chmod go-rwx $encryptName
   rm $tempName
 }
 
@@ -433,8 +435,8 @@ key-values() {
     then
       if [ "$key" != "mapInfo" ]
       then
-        token=$(getValue $key token)
-        echo $key=$token
+        value=$(getValue $group $key)
+        echo $key=$value
       fi
     fi
   done
