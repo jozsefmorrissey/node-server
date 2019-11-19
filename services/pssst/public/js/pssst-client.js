@@ -1,4 +1,5 @@
 PSSST_CONFIG = {};
+PSSST_CONFIG.DONT_HIDE = 'dontHide';
 function Pssst() {
   var getUrl = window.location.origin + '/pssst/get';
   var updateUrl = window.location.origin + '/pssst/update';
@@ -67,6 +68,13 @@ function Pssst() {
     document.execCommand('copy');
   }
 
+  function url(dontHide) {
+    var host = PSSST_CONFIG.host;
+    var token = PSSST_CONFIG.token;
+    var group = PSSST_CONFIG.group;
+    return `${host}/pssst/client?token=${token}&group=${group}&host=${host}&${PSSST_CONFIG.DONT_HIDE}=${dontHide}`;
+  }
+
   function copyCmd() {
     var host = PSSST_CONFIG.host;
     var token = PSSST_CONFIG.token;
@@ -85,6 +93,7 @@ function Pssst() {
     function showIndex(value) {
       if (isToken) {
         PSSST_CONFIG.token = value;
+        window.location = url(true);
       }
       document.getElementById(id).innerHTML = value;
       setTimeout(function () {
@@ -118,7 +127,11 @@ function Pssst() {
   }
 
   function redirectClient(host, token, group) {
-    window.history.pushState('client-clean', 'Client', '/pssst/client');
+    // if ('true' !== query(PSSST_CONFIG.DONT_HIDE)) {
+    //   window.history.pushState('client-clean', 'Client', '/pssst/client');
+    // } else {
+      window.history.pushState('client-clean', 'Client', url(false));
+    // }
   }
 
   function build() {
@@ -186,7 +199,7 @@ function Pssst() {
   }
 
   return {retrieve, build, keys, getIndex, update, refresh,
-    remove, add, bulkUpdate, copyCmd};
+    remove, add, bulkUpdate, copyCmd, url};
 }
 
 window.onload = Pssst().build
