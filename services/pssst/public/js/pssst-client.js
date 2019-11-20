@@ -3,6 +3,7 @@ PSSST_CONFIG.DONT_HIDE = 'dontHide';
 function Pssst() {
   var getUrl = window.location.origin + '/pssst/get';
   var updateUrl = window.location.origin + '/pssst/update';
+  var adminUpdateUrl = window.location.origin + '/pssst/admin/update';
   var removeUrl = window.location.origin + '/pssst/remove';
 
   function retrieve() {
@@ -16,6 +17,7 @@ function Pssst() {
     var lines = document.getElementById('bulk-update').value.split('\n');
     var group = PSSST_CONFIG.group;
     var token = PSSST_CONFIG.token;
+    var pstPin = PSSST_CONFIG.pstPin;
     var keyValues = {};
 
     for (var index = 0; index < lines.length; index += 1) {
@@ -24,7 +26,7 @@ function Pssst() {
         keyValues[match[1]] = match[2];
       }
     }
-    httpGetAsync(updateUrl + '/all', {group, token, keyValues})
+    httpPostAsync(updateUrl + '/all', {group, token, pstPin, keyValues})
     refresh();
     document.getElementById('bulk-update').value = '';
   }
@@ -36,6 +38,22 @@ function Pssst() {
     var value = document.getElementById('input-' + index).value;
     if (confirm("Are you sure, you want to update " + id + "?")) {
       get(updateUrl, group, id, token, index, value);
+    }
+  }
+
+  function resetToken(group) {
+    adminUpdate(group, "token");
+  }
+
+  function resetPin(group) {
+    var pin = Math.random().toString().substring(2, 6);
+    adminUpdate(group, "pst-pin", pin);
+  }
+
+  function adminUpdate(group, id, value) {
+    var token = PSSST_CONFIG.token;
+    if (confirm("Are you sure, you want to update " + id + "?")) {
+      get(adminUpdateUrl, group, id, token, undefined, value);
     }
   }
 
@@ -84,20 +102,22 @@ function Pssst() {
   }
 
   var id;
-  function show(index, isToken) {
+  function show(index, identifier) {
     id = 'display';
     if (index !== undefined) {
       id += '-' + index;
     }
 
     function showIndex(value) {
-      if (isToken) {
+      if (identifier === 'token' && PSSST_CONFIG.group != 'admin' && value !== PSSST_CONFIG.token) {
         PSSST_CONFIG.token = value;
         window.location = url(true);
+      } else if (identifier === 'pst-pin') {
+        PSSST_CONFIG.pstPin = value;
       }
-      document.getElementById(id).innerHTML = value;
+      document.getElementById('copy').value = value;
       setTimeout(function () {
-        document.getElementById(id).innerHTML = '';
+        document.getElementById('copy').value = '';
       }, 10000);
       copy(value);
     }
@@ -105,10 +125,11 @@ function Pssst() {
   }
 
   function get(url, group, id, token, index, value) {
-    httpGetAsync(url, {group, id, token, value}, show(index, id === 'token'));
+    var pstPin = PSSST_CONFIG.pstPin;
+    httpPostAsync(url, {group, id, token, pstPin, value}, show(index, id));
   }
 
-  function httpGetAsync(url, data, callback)
+  function httpPostAsync(url, data, callback)
   {
       var xmlHttp = new XMLHttpRequest();
       xmlHttp.onreadystatechange = function() {
@@ -134,6 +155,20 @@ function Pssst() {
     // }
   }
 
+  function validatePin() {
+    var pstPin = document.getElementById('pst-pin-input').value;
+    console.log(pstPin);
+    function pinValidated() {
+      PSSST_CONFIG.pstPin = pstPin;
+      document.querySelector('pssst').style.display = '';
+      document.getElementById('pst-pin-flag').style.display = 'none';
+      header();
+    }
+    var group = PSSST_CONFIG.group;
+    var token = PSSST_CONFIG.token;
+    httpPostAsync("/pssst/validate", {group, token, pstPin}, pinValidated);
+  }
+
   function build() {
     var elem = document.getElementsByTagName('pssst')[0];
     if (query('host') || query('token') || query('group')) {
@@ -145,19 +180,38 @@ function Pssst() {
       PSSST_CONFIG=JSON.parse(elem.innerText);
       elem.innerHTML = "";
     }
-    html = "<div style='text-align: center'>";
+    if (document.getElementById('pst-pin-flag').getAttribute('value') === 'true') {
+      document.querySelector('pssst').style.display = 'none';
+      let pinPrompt = '<div style="margin: auto;display: block;max-width: 300px; text-align: center;"><br><br><br>';
+      pinPrompt += `<input type="text" id="pst-pin-input" class="form-control" placeholder="pst-pin"
+                        onkeydown = "if (event.keyCode == 13) Pssst().validatePin()"><br><br>`;
+      pinPrompt += '<button onclick="Pssst().validatePin()" class="btn btn-primary">Enter</button></div>';
+      document.getElementById('pst-pin-flag').innerHTML = pinPrompt;
+      return;
+    }
+    header();
+  }
+
+  function header() {
+    var elem = document.getElementsByTagName('pssst')[0];
+    var html = "<div style='text-align: center'>";
     html += "<h1>" + PSSST_CONFIG.group + "</h1>";
     html += "<p>(Updating a value with no input gernates a random string)</p>";
-    html += "<input type='text' style='display: block;' id='copy' readonly='readonly'>";
-    html += "<input type='text' id='config-id' placeholder='config id'>";
-    html += "<input type='button' value='Copy Cmd' onclick='Pssst().copyCmd()'>";
+    html += "<input type='text' class='form-control' style='margin: auto;display: block;max-width: 300px;' id='copy' readonly='readonly'>";
+    html += "<input type='text' class='form-control' id='config-id' placeholder='config id' style='margin: auto;display: block;max-width: 300px;'>";
+    html += "<input type='button' class='btn btn-primary' value='pst cmd' onclick='Pssst().copyCmd()'><br><br><br>";
     // html += "<input type='button' value='Refresh' onclick='Pssst().refresh()'>";
-    html += "<div><table id='table' style='margin: 20pt;'></table><div>"
-    html += `<button onclick='Pssst().bulkUpdate()'><h3>Bulk Update</h3></button>
+    html += "<div id='table' style='margin: auto;'></div>"
+    html += `<button class='btn btn-primary' onclick='Pssst().bulkUpdate()'><h3>Bulk Update</h3></button>
               <p>(format: [key]=[value])</p>
-              <textarea cols='100' rows='25' id='bulk-update'></textarea>`;
+              <textarea class='form-control' rows='25' id='bulk-update'></textarea>`;
     elem.innerHTML = html + "</div>";
-    Pssst().keys();
+    if (PSSST_CONFIG.group === 'admin') {
+      groups();
+    } else {
+      Pssst().keys();
+    }
+    document.getElementById('config-id').value = PSSST_CONFIG.group;
   }
 
   function refresh() {
@@ -178,28 +232,68 @@ function Pssst() {
 
     function displayKeys(data) {
       var elem = document.getElementById('table');
-      html = "";
-      var ks = data.split("==");
+      html = "<table style='width:100%; display:inline;' cellpadding='40'><tbody>";
+      var ks = JSON.parse(data);
       PSSST_CONFIG.keys = ks;
       for (var i = 0; i < ks.length; i += 1) {
         if (ks[i]) {
-          link = `<a href onclick='return Pssst().getIndex(${i})'>${ks[i]}</a><br>`;
-          input = `<input id='input-${i}'>
-          <input type='button' value='update' onclick='Pssst().update(${i})'>
-          <input type='button' value='X' onclick='Pssst().remove(${i})'>`;
-          display = `<b id='display-${i}'>`;
-          html += `<tr><td>${link}</td><td>${input}</td><td>${display}</td></tr>`;
+          link = `<br><a href onclick='return Pssst().getIndex(${i})'>${ks[i]}</a><br>
+                  <span><input class='form-control' id='input-${i}'>`;
+          input = `
+          <input type='button' class='btn btn-primary' value='update' onclick='Pssst().update(${i})'>
+          <input type='button' class='btn btn-primary' value='X' onclick='Pssst().remove(${i})'></span>`;
+          display = `<b id='display-${i}'></b>`;
+          html += `\n<tr><td style="    text-align: center;
+    padding-right: 40pt;
+    display: inherit;">${link}</td><td>${input}</td></tr>\n`;
         }
       }
-      html += '<input type="text" id="add"><input type="button" value="Add" onclick="Pssst().add()">';
+
+      html += '</tbody></table><br><br><input type="text" class="form-control" id="add">';
+      html += '<input class="btn btn-primary" type="button" value="Add" onclick="Pssst().add()"><br><br><br>';
       elem.innerHTML = html;
     }
 
-    httpGetAsync("/pssst/keys", {group, token}, displayKeys);
+    var pstPin = PSSST_CONFIG.pstPin;
+    httpPostAsync("/pssst/keys", {group, token, pstPin}, displayKeys);
+  }
+
+  function groups() {
+    var host = PSSST_CONFIG.host;
+    var group = PSSST_CONFIG.group;
+    var token = PSSST_CONFIG.token;
+
+    function displayKeys(data) {
+      var elem = document.getElementById('table');
+      html = "<table style='width:100%;'><tbody>";
+      var ks = JSON.parse(data);
+      PSSST_CONFIG.keys = ks;
+      for (var i = 0; i < ks.length; i += 1) {
+        if (ks[i]) {
+          const link = `<tr><td colspan="2" style='width: 100%; text-align: center;'>
+                          <a target='_blank' href="${host}/pssst/client?group=${ks[i]}&host=${host}&token=${token}">
+                          ${ks[i]}</a></td><tr>`;
+          const resetPin = `<tr><td style="width:50%; text-align: center;">
+                              <button onclick='Pssst().resetPin("${ks[i]}")' class='btn btn-primary'>
+                              Reset Pin</button><br><br></td>`;
+          const resetToken = `<td style="width:50%; text-align: center;">
+                              <button onclick='Pssst().resetToken("${ks[i]}")' class='btn btn-primary'>
+                              Reset Token</button><br><br></td></tr>`;
+          html += `${link}${resetPin}${resetToken}`;
+        }
+      }
+
+      html += '</tbody></table><br><br><input type="text" class="form-control" id="add">';
+      html += '<input class="btn btn-primary" type="button" value="Add" onclick="Pssst().add()"><br><br><br>';
+      elem.innerHTML = html;
+    }
+
+    var pstPin = PSSST_CONFIG.pstPin;
+    httpPostAsync("/pssst/get/groups", {group, token, pstPin}, displayKeys);
   }
 
   return {retrieve, build, keys, getIndex, update, refresh,
-    remove, add, bulkUpdate, copyCmd, url};
+    remove, add, bulkUpdate, copyCmd, url, validatePin, resetToken, resetPin};
 }
 
 window.onload = Pssst().build

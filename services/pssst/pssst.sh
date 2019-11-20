@@ -12,6 +12,7 @@ propFile=$dataDir/pssst.properties
 password=$(grep -oP "password=.*" $propFile | sed "s/.*=\(.*\)/\1/")
 encFlags=$(grep -oP "encFlags=.*" $propFile | sed "s/.*=\(.*\)/\1/")
 tempExt='.txt'
+backupLocation=$dataDir/backup/
 encryptExt='.des3'
 logId="log-history-unlikely-user-name"
 defaultPort=8080
@@ -52,7 +53,7 @@ getEncryptName() {
   echo $(getFileName $1)$encryptExt
 }
 
-getKeys() {
+get-keys() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   decoded=$(decode "$1")
   value=$(echo "$decoded" | sed "s/\(.*\)\?=.*/\1/g" | sort)
@@ -95,7 +96,7 @@ decode() {
     decoded=$(chmod +r $encryptName && openssl des3 $encFlags -d < $encryptName -pass pass:$password && chmod go-rwx $encryptName)
     echo "$decoded"
   else
-    echo "";
+    echo "";-pbkdf2
   fi
 }
 
@@ -107,6 +108,67 @@ setupTemp() {
   touch $encryptName
   echo "$(decode $1)" > $tempName
 }
+
+backup() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  mkdir -p "$backupLocation"
+  echo individual: $(pwd)
+  backupFileName=./$1.txt
+  touch $backupFileName
+  Logger debug "$backupFileName"
+  echo "$(decode $1)" > $backupFileName
+  t=10
+  if [ ! -z $2 ]
+  then
+    t=$2
+  fi
+  sleep $(($t)) && rm $backupFileName &
+}
+
+backup-all() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  keys=$(pst get-keys infoMap)
+  t=10
+  if [ ! -z $1 ]
+  then
+    t=$1
+  fi
+  expiration=$(date -d "today" +"%Y-%m-%d %H:%M" --date="+$t minutes")
+  backupZipDir=$(getZipDirectory "$expiration")
+  backupZipFile="$backupZipDir"/backup.zip
+  currentDirectory=$(pwd)
+  cd "$backupZipDir"
+  echo all: $(pwd)
+  for key in ${keys[@]}
+  do
+    logger debug "$key"
+    backup "$key"
+  done
+  zip "$backupZipFile" *
+  cd "$currentDirectory"
+  sleep $((($t + 1) * 60)) && rm -r -f "$backupZipDir" &
+}
+
+getZipDirectory() {
+  expirationDate=$1
+  zipDir="$backupLocation$expirationDate"
+  mkdir -p "$zipDir"
+  echo $zipDir
+}
+
+restore() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  expirationDate=$1
+  zipDir=$(getZipDirectory "$expirationDate")
+  unzip "$zipDir/backup.zip" -d "$zipDir"
+  find "$zipDir" -name "*.txt" -type f -print0 | while IFS= read -r -d '' filename; do
+    echo file: \"$filename\"
+    group=$(echo "$filename" | sed 's/^.*\/\(.*\).txt$/\1/')
+    echo \"$group\"
+    updateFileContents "$group" "$filename"
+  done
+}
+
 
 getNewFileName() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
@@ -143,12 +205,18 @@ mapFile() {
   echo $filename
 }
 
+updateFileContents() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  encryptName=$(getEncryptName $1)
+  touch "$encryptName"
+  chmod +rw $encryptName && openssl des3 $encFlags < "$2" > "$encryptName" -pass pass:$password && chmod go-rwx $encryptName
+}
+
 saveAndRemoveTemp () {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   tempName=$(getTempName $1)
-  encryptName=$(getEncryptName $1)
   # Unlock -> encrypt -> Lock.... TODO: Find a way to simplify this.
-  chmod +rw $encryptName && openssl des3 $encFlags < $tempName > $encryptName -pass pass:$password && chmod go-rwx $encryptName
+  updateFileContents "$1" "$tempName"
   rm $tempName
 }
 
@@ -187,6 +255,10 @@ update () {
     newVal=$(pwgen 30 1)
   fi
   appendToFile "$1" "$2=$newVal"
+  if [ "$2" == "token" ] || [ "$2" == "pst-pin" ]
+  then
+    echo $newVal
+  fi
 }
 
 _rm () {
@@ -243,9 +315,38 @@ getWithToken() {
 validateToken() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   token=$(getValue $1 token)
-  if [ "$token" != "$2" ];then
+  pstPin=$(getValue $1 pst-pin)
+  adminToken=$(getValue 'admin' token)
+  adminPin=$(getValue 'admin' pst-pin)
+  if [ "$1" == "admin" ] && [ "$3" != "$adminPin" ]
+  then
     echo '[Error:CI] Your not supposed to be here...'
     exit 1;
+  fi
+  if [ "$2" == "$adminToken" ]
+  then
+    exit 0
+  fi
+  if [ "$token" != "$2" ]
+  then
+    echo '[Error:CI] Your not supposed to be here...'
+    exit 1;
+  fi
+  if [ "yes" == "$(pst requires-pin test)" ] &&
+      [ "$3" != "$pstPin" ]
+  then
+    echo '[Error:CI] Your not supposed to be here...'
+    exit 1;
+  fi
+}
+
+requiresPin() {
+  pstPin=$(getValue $1 pst-pin)
+  if [ -z "$pstPin" ]
+  then
+    echo no
+  else
+    echo yes
   fi
 }
 
@@ -351,7 +452,7 @@ client-config() {
   pst update $config host $host
 }
 
-client() {
+url() {
   config=${flags['config']}
   if [ ! -z "$config" ]
   then
@@ -364,23 +465,24 @@ client() {
     group=${flags['group']}
   fi
 
-  xdg-open "$host/pssst/client?host=$host&token=$token&group=$group";
+  if [ -z "$group" ]
+  then
+    group=$config
+  fi
+
+  if [ -z "$host" ]
+  then
+    host="http://localhost:3000"
+  fi
+  echo "$host/pssst/client?host=$host&token=$token&group=$group";
+}
+
+client() {
+  xdg-open "$(url)";
 }
 
 remote() {
-  config=${flags['config']}
-  if [ ! -z "$config" ]
-  then
-    host=$(getValue "$config" host)
-    token=$(getValue "$config" token)
-    group=$(getValue "$config" group)
-  else
-    host=${flags['host']}
-    token=${flags['token']}
-    group=${flags['group']}
-  fi
-
-  curl -X GET "$host/pssst/get/json?token=$token&group=$group"
+  curl -X GET "$(url)"
 }
 
 valueNonAdmin() {
@@ -428,7 +530,7 @@ key-values() {
   then
     group=infoMap
   fi
-  keys=$(pst getKeys $group)
+  keys=$(pst get-keys $group)
   for key in ${keys[@]}
   do
     if [ "$key" != "log-history-unlikely-user-name" ]
@@ -464,7 +566,7 @@ insecureFunctions() {
       openHelpDoc "$2"
     ;;
     validateToken)
-      validateToken "$2" "$3"
+      validateToken "$2" "$3" "$4"
     ;;
     retTemp)
       retTemp "$2" "$3"
@@ -544,8 +646,12 @@ secureFunctions() {
     selfDistruct)
       selfDistruct "$2" "$3"
     ;;
-    getKeys)
-      getKeys "$2"
+    get-keys)
+      get-keys "$2"
+    ;;
+    key-array)
+      list=$(echo -e "$(get-keys "$2")" | sed "s/^\(.*\)$/\"\\1\",/g")
+      echo -e "[${list:0:-1}]"
     ;;
     key-values)
       key-values
@@ -553,11 +659,23 @@ secureFunctions() {
     client)
       client
     ;;
+    url)
+      url
+    ;;
     remote)
       remote
     ;;
     client-config)
       client-config
+    ;;
+    backup-all)
+      backup-all "$2"
+    ;;
+    restore)
+      restore "$2"
+    ;;
+    requires-pin)
+      requiresPin "$2"
     ;;
   esac
 }

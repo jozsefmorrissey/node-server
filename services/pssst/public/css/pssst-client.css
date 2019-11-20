@@ -1,0 +1,14 @@
+html { font-size: 1rem; }
+
+@media (min-width: 576px) {
+    html, a, b { font-size: 2rem; }
+}
+@media (min-width: 768px) {
+    html, a, b { font-size: 2rem; }
+}
+@media (min-width: 992px) {
+    html, a, b { font-size: 1.25rem; }
+}
+@media (min-width: 1200px) {
+    html, a, b { font-size: 1.25rem; }
+}
