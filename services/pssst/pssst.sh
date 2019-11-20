@@ -6,8 +6,11 @@
 passServRelDir=$(dirname "${BASH_SOURCE[0]}")
 source ${passServRelDir}/BashScripts/debugLogger.sh
 
-dataDir=~/.opsc/pssst
+dataDir=~/.opsc/pssst/$USER
 infoDir=$dataDir/info/
+mkdir -p "$dataDir/sd"
+mkdir -p "$dataDir/na"
+mkdir -p "$infoDir"
 propFile=$dataDir/pssst.properties
 password=$(grep -oP "password=.*" $propFile | sed "s/.*=\(.*\)/\1/")
 encFlags=$(grep -oP "encFlags=.*" $propFile | sed "s/.*=\(.*\)/\1/")
@@ -40,6 +43,8 @@ getFileName() {
   if [ "$file" ]
   then
     echo $infoDir$file
+  else
+    echo $infoDir$(mapFile "$1")
   fi
 }
 
@@ -96,7 +101,7 @@ decode() {
     decoded=$(chmod +r $encryptName && openssl des3 $encFlags -d < $encryptName -pass pass:$password && chmod go-rwx $encryptName)
     echo "$decoded"
   else
-    echo "";-pbkdf2
+    echo "";
   fi
 }
 
@@ -209,6 +214,8 @@ updateFileContents() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   encryptName=$(getEncryptName $1)
   touch "$encryptName"
+  Logger debug "EncName: $encryptName"
+  Logger debug "source: $2"
   chmod +rw $encryptName && openssl des3 $encFlags < "$2" > "$encryptName" -pass pass:$password && chmod go-rwx $encryptName
 }
 
