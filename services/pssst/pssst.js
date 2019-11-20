@@ -1,4 +1,5 @@
 var shell = require('shelljs')
+var failedAttempts = {};
 
 function validate() {
   for(var i = 0; i < arguments.length; ++i)
@@ -13,11 +14,37 @@ function clean (str) {
   return str.replace('\'', '\\\'').trim();
 }
 
+const LOCKED_OUT = 'You have exceeded the number of attempts. Sorry your account is locked';
+function lockout(group, errorCode) {
+  if (failedAttempts[group] <= 0){
+      throw new Error(LOCKED_OUT);
+  }
+  if (errorCode !== undefined) {
+    if (errorCode !== 0) {
+      if (failedAttempts[group] === undefined) {
+        failedAttempts[group] = 5;
+      }
+      failedAttempts[group] -= 1;
+      if (failedAttempts[group] > 0) {
+        throw new Error(`Your not supposed to be here... You have ${failedAttempts[group]} tries left`);
+      } else {
+        throw new Error(LOCKED_OUT);
+      }
+    }
+    failedAttempts[group] = undefined;
+  }
+}
+
 function exicuteCmd(group, token, pstPin, cmd) {
   if (token != null) {
-    cmd = `pst validateToken '${group}' '${token}' '${pstPin}' && ${cmd}`;
-    console.log(cmd);
-    return shell.exec(cmd, {silent: true});
+    let validateCmd = `pst validateToken '${group}' '${token}' '${pstPin}'`;
+    if (cmd != undefined) {
+      validateCmd += ` && ${cmd}`;
+    }
+    console.log(validateCmd);
+    const returnValue = shell.exec(validateCmd, {silent: true});
+    lockout(group, returnValue.code)
+    return returnValue;
   }
 }
 const tokenValCmd = ''
@@ -37,19 +64,22 @@ function endpoints(app, prefix) {
     res.send(get(group, token, pstPin, pi));
   });
 
-  app.post(prefix + '/validate', function(req, res){
+  app.post(prefix + '/validate', function(req, res, next){
     console.log(req.body);
     const group = clean(req.body.group);
     const token = clean(req.body.token);
     const pstPin = clean(req.body.pstPin);
     const cmd = `pst validateToken '${group}' '${token}' '${pstPin}'`;
     console.log(cmd);
-    const validated = "" === shell.exec(cmd, {silent: true}).trim();
-    console.log(validated)
-    if (validated) {
+    const validated = shell.exec(cmd, {silent: true});
+    try {
+      lockout(group, validated.code);
       res.send(validated);
-    } else {
-      throw new Error("Your not supposed to be here...");
+    } catch (e) {
+      console.log(("" + e));
+      res.statusMessage = e + "";
+      res.status(416);
+      res.send(e.msg);
     }
   });
 
@@ -122,7 +152,9 @@ function endpoints(app, prefix) {
     const group = clean(req.query.group);
     const token = clean(req.query.token);
 
-    exicuteCmd(group, token, 'echo success');
+    try {
+      exicuteCmd(group, token, '', 'echo success');
+    } catch (e) {/* this endpoint ignores errors endpoint */}
     const script = `\n\t<script type='text/javascript' src='${host}/pssst/js/pssst-client.js'></script>\n\t`;
     const html = `<html><head>${script}</head><body><pssst></pssst></body></html>`;
     res.send(userHtml(host, group, token));

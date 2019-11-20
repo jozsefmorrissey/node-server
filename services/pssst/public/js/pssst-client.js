@@ -129,12 +129,18 @@ function Pssst() {
     httpPostAsync(url, {group, id, token, pstPin, value}, show(index, id));
   }
 
-  function httpPostAsync(url, data, callback)
+  function httpPostAsync(url, data, callback, failureCallback)
   {
       var xmlHttp = new XMLHttpRequest();
       xmlHttp.onreadystatechange = function() {
-          if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-              callback(xmlHttp.responseText);
+        if (xmlHttp.readyState == 4)
+          if (xmlHttp.status == 200)
+            callback(xmlHttp.responseText);
+          else
+            failureCallback(xmlHttp);
+      }
+      xmlHttp.onerror = function() {
+        failureCallback(xmlHttp);
       }
       xmlHttp.open("POST", url, true); // true for asynchronous
       xmlHttp.setRequestHeader('Content-Type', 'application/json');
@@ -166,7 +172,25 @@ function Pssst() {
     }
     var group = PSSST_CONFIG.group;
     var token = PSSST_CONFIG.token;
-    httpPostAsync("/pssst/validate", {group, token, pstPin}, pinValidated);
+    httpPostAsync("/pssst/validate", {group, token, pstPin}, pinValidated, askForPin);
+  }
+
+  function askForPin(error) {
+    if (document.getElementById('pst-pin-flag').getAttribute('value') === 'true') {
+      if (error != undefined) {
+        document.getElementById('pin-error').innerHTML = error.statusText;
+      } else {
+        document.querySelector('pssst').style.display = 'none';
+        let pinPrompt = '<div style="margin: auto;display: block; text-align: center;"><br><br><br>';
+        pinPrompt += `<b id="pin-error" style='font-size: 16px; color:red;'></b><br>`;
+        pinPrompt += `<input type="text" id="pst-pin-input" style='margin: auto; max-width: 300px;' class="form-control" placeholder="pst-pin"
+        onkeydown = "if (event.keyCode == 13) Pssst().validatePin()"><br><br>`;
+        pinPrompt += '<button onclick="Pssst().validatePin()" class="btn btn-primary">Enter</button></div>';
+        document.getElementById('pst-pin-flag').innerHTML = pinPrompt;
+      }
+      return true;
+    }
+    return false;
   }
 
   function build() {
@@ -180,16 +204,7 @@ function Pssst() {
       PSSST_CONFIG=JSON.parse(elem.innerText);
       elem.innerHTML = "";
     }
-    if (document.getElementById('pst-pin-flag').getAttribute('value') === 'true') {
-      document.querySelector('pssst').style.display = 'none';
-      let pinPrompt = '<div style="margin: auto;display: block;max-width: 300px; text-align: center;"><br><br><br>';
-      pinPrompt += `<input type="text" id="pst-pin-input" class="form-control" placeholder="pst-pin"
-                        onkeydown = "if (event.keyCode == 13) Pssst().validatePin()"><br><br>`;
-      pinPrompt += '<button onclick="Pssst().validatePin()" class="btn btn-primary">Enter</button></div>';
-      document.getElementById('pst-pin-flag').innerHTML = pinPrompt;
-      return;
-    }
-    header();
+    askForPin() || header();
   }
 
   function header() {
