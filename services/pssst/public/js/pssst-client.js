@@ -302,7 +302,7 @@ function Pssst() {
       for (var i = 0; i < ks.length; i += 1) {
         if (ks[i]) {
           const link = `<tr><td colspan="2" style='width: 100%; text-align: center;'>
-                          <a target='_blank' href="${url(group)}">
+                          <a target='_blank' href="${url(ks[i])}">
                           ${ks[i]}</a></td><tr>`;
           const resetPin = `<tr><td style="width:50%; text-align: center;">
                               <button onclick='Pssst().resetPin("${ks[i]}")' class='btn btn-primary'>
