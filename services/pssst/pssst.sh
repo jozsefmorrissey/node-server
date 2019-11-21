@@ -38,7 +38,7 @@ log() {
 
 getFileName() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  if [ '$1' == 'infoMap' ]
+  if [ "$1" == 'infoMap' ]
   then
     file=$infoMapFile;
   else
@@ -136,7 +136,7 @@ backup() {
   then
     t=$2
   fi
-  sleep $(($t)) && rm $backupFileName &
+  # sleep $(($t)) && rm $backupFileName &
 	Logger trace "EXIT"
 }
 
@@ -160,7 +160,7 @@ backup-all() {
   done
   zip "$backupZipFile" *
   cd "$currentDirectory"
-  sleep $((($t + 1) * 60)) && rm -r -f "$backupZipDir" &
+  # sleep $((($t + 1) * 60)) && rm -r -f "$backupZipDir" &
 	Logger trace "EXIT"
 }
 
@@ -211,7 +211,7 @@ mapFile() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   mapFilename=$(getValue infoMap "$1")
   Logger debug "$mapFilename"
-  if [[ -z "$mapFilename" ]] && [ $1 != "infoMap" ]
+  if [ -z "$mapFilename" ] && [ "$1" != "infoMap" ]
   then
     genValue=$(getNewFileName)
     mapFilename="$genValue"
@@ -461,7 +461,7 @@ selfDistruct() {
   fi
   filepath=$(getTempName "$1")
   setupTemp "$1"
-  sleep $t && rm $filepath &
+  # sleep $t && rm $filepath &
 	Logger trace "EXIT"
 }
 
