@@ -38,7 +38,7 @@ log() {
 
 getFileName() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  if [ $1 == 'infoMap' ]
+  if [ '$1' == 'infoMap' ]
   then
     file=$infoMapFile;
   else
@@ -211,7 +211,7 @@ mapFile() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   mapFilename=$(getValue infoMap "$1")
   Logger debug "$mapFilename"
-  if [[ -z $mapFilename ]] && [ $1 != "infoMap" ]
+  if [[ -z "$mapFilename" ]] && [ $1 != "infoMap" ]
   then
     genValue=$(getNewFileName)
     mapFilename="$genValue"
