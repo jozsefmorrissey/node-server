@@ -86,11 +86,13 @@ function Pssst() {
     document.execCommand('copy');
   }
 
-  function url(dontHide) {
+  function url(group) {
     var host = PSSST_CONFIG.host;
     var token = PSSST_CONFIG.token;
-    var group = PSSST_CONFIG.group;
-    return `${host}/pssst/client?token=${token}&group=${group}&host=${host}&${PSSST_CONFIG.DONT_HIDE}=${dontHide}`;
+    if (group === undefined) {
+      group = PSSST_CONFIG.group;
+    }
+    return `${host}/pssst/client?token=${token}&group=${group}&host=${host}`;
   }
 
   function copyCmd() {
@@ -111,7 +113,7 @@ function Pssst() {
     function showIndex(value) {
       if (identifier === 'token' && PSSST_CONFIG.group != 'admin' && value !== PSSST_CONFIG.token) {
         PSSST_CONFIG.token = value;
-        window.location = url(true);
+        window.location = url();
       } else if (identifier === 'pst-pin') {
         PSSST_CONFIG.pstPin = value;
       }
@@ -157,7 +159,7 @@ function Pssst() {
     // if ('true' !== query(PSSST_CONFIG.DONT_HIDE)) {
     //   window.history.pushState('client-clean', 'Client', '/pssst/client');
     // } else {
-      window.history.pushState('client-clean', 'Client', url(false));
+      window.history.pushState('client-clean', 'Client', url());
     // }
   }
 
@@ -173,6 +175,14 @@ function Pssst() {
     var group = PSSST_CONFIG.group;
     var token = PSSST_CONFIG.token;
     httpPostAsync("/pssst/validate", {group, token, pstPin}, pinValidated, askForPin);
+  }
+
+  function deleteGroup() {
+    var token = PSSST_CONFIG.token;
+    var pstPin = PSSST_CONFIG.pstPin;
+    var group = document.getElementById('delete').value;
+    httpPostAsync("/pssst/remove/group", {group, token, pstPin});
+    var group = document.getElementById('delete').value = "";
   }
 
   function askForPin(error) {
@@ -273,6 +283,8 @@ function Pssst() {
     httpPostAsync("/pssst/keys", {group, token, pstPin}, displayKeys);
   }
 
+
+
   function groups() {
     var host = PSSST_CONFIG.host;
     var group = PSSST_CONFIG.group;
@@ -281,12 +293,16 @@ function Pssst() {
     function displayKeys(data) {
       var elem = document.getElementById('table');
       html = "<table style='width:100%;'><tbody>";
+      html += `<tr><td><input type="text" class="form-control" id="add" class='form-control' style='margin: auto;display: block;max-width: 300px;'>`;
+      html += `<input class="btn btn-primary" type="button" value="Add" onclick="Pssst().createGroup()" style='margin:auto;display: block;'><br><br></td>`;
+      html += `<td><input type="text" class="form-control" id="delete" class='form-control' style='margin: auto;display: block;max-width: 300px;'>`;
+      html += `<input class="btn btn-primary" type="button" value="Delete" onclick="Pssst().deleteGroup()" style='margin:auto;display: block;'><br><br></td></tr>`;
       var ks = JSON.parse(data);
       PSSST_CONFIG.keys = ks;
       for (var i = 0; i < ks.length; i += 1) {
         if (ks[i]) {
           const link = `<tr><td colspan="2" style='width: 100%; text-align: center;'>
-                          <a target='_blank' href="${host}/pssst/client?group=${ks[i]}&host=${host}&token=${token}">
+                          <a target='_blank' href="${url(group)}">
                           ${ks[i]}</a></td><tr>`;
           const resetPin = `<tr><td style="width:50%; text-align: center;">
                               <button onclick='Pssst().resetPin("${ks[i]}")' class='btn btn-primary'>
@@ -298,8 +314,6 @@ function Pssst() {
         }
       }
 
-      html += '</tbody></table><br><br><input type="text" class="form-control" id="add">';
-      html += '<input class="btn btn-primary" type="button" value="Add" onclick="Pssst().add()"><br><br><br>';
       elem.innerHTML = html;
     }
 
@@ -307,8 +321,17 @@ function Pssst() {
     httpPostAsync("/pssst/get/groups", {group, token, pstPin}, displayKeys);
   }
 
-  return {retrieve, build, keys, getIndex, update, refresh,
-    remove, add, bulkUpdate, copyCmd, url, validatePin, resetToken, resetPin};
+  function createGroup() {
+      const group = document.getElementById('add').value;
+      if (group) {
+        window.open(url(group),'_blank');
+        document.getElementById('add').value = '';
+      }
+  }
+
+  return {retrieve, build, keys, getIndex, update, refresh, createGroup,
+    remove, add, bulkUpdate, copyCmd, url, validatePin, resetToken, resetPin,
+    deleteGroup};
 }
 
 window.onload = Pssst().build

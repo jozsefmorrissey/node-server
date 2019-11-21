@@ -41,7 +41,7 @@ getFileName() {
     file=$infoMapFile;
   else
     file=$(mapFile "$1")
-    Logger debug "map call: \"$(mapFile \"$1\")\""
+    Logger debug "map call: \"$(mapFile "$1")\""
   fi
 
   Logger debug "infoDir: $infoDir, file: $file"
@@ -284,6 +284,10 @@ update () {
     echo $newVal
   fi
 	Logger trace "EXIT"
+}
+
+remove-group() {
+  _rm 'infoMap' "$1"
 }
 
 _rm () {
@@ -729,6 +733,9 @@ secureFunctions() {
     ;;
     requires-pin)
       requiresPin "$2"
+    ;;
+    remove-group)
+      remove-group "$2"
     ;;
   esac
 	Logger trace "EXIT"

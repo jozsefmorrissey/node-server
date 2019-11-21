@@ -194,6 +194,17 @@ function endpoints(app, prefix) {
     res.send(groups);
   });
 
+  app.post(prefix + '/remove/group', function (req, res) {
+    const group = clean(req.body.group);
+    const token = clean(req.body.token);
+    const pstPin = clean(req.body.pstPin);
+
+    const cmd = `pst remove-group '${group}'`;
+    console.log(cmd);
+    shell.exec(cmd, {silent: true});
+    res.send('success');
+  });
+
 
   app.post(prefix + '/client', function (req, res) {
     const host = clean(req.query.host);
