@@ -155,8 +155,6 @@ function endpoints(app, prefix) {
     try {
       exicuteCmd(group, token, '', 'echo success');
     } catch (e) {/* this endpoint ignores errors endpoint */}
-    const script = `\n\t<script type='text/javascript' src='${host}/pssst/js/pssst-client.js'></script>\n\t`;
-    const html = `<html><head>${script}</head><body><pssst></pssst></body></html>`;
     res.send(userHtml(host, group, token));
   });
 
