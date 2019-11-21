@@ -9,6 +9,7 @@ source ${passServRelDir}/BashScripts/debugLogger.sh
 
 Logger trace "verry start"
 dataDir=~/.opsc/pssst/$USER
+echo DataDir: $dataDir
 infoDir=$dataDir/info/
 mkdir -p "$dataDir/sd"
 mkdir -p "$dataDir/na"
