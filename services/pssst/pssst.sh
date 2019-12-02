@@ -3,26 +3,74 @@
 # All functions will deal with the same following properties
 #   @$1 - String Id
 #   @$2 - Property Key
-
 passServRelDir=$(dirname "${BASH_SOURCE[0]}")
 source ${passServRelDir}/BashScripts/debugLogger.sh
 
-dataDir=~/.opsc/pssst/$USER
-infoDir=$dataDir/info/
-mkdir -p "$dataDir/sd"
-mkdir -p "$dataDir/na"
-mkdir -p "$infoDir"
-propFile=$dataDir/pssst.properties
-Logger trace "before propFile"
-password=$(grep -oP "password=.*" $propFile | sed "s/.*=\(.*\)/\1/")
-encFlags=$(grep -oP "encFlags=.*" $propFile | sed "s/.*=\(.*\)/\1/")
-tempExt='.txt'
-backupLocation=$dataDir/backup/
-encryptExt='.des3'
-logId="log-history-unlikely-user-name"
-defaultPort=8080
-infoMapFile=$(grep -oP "infoMapFile=.*" $propFile | sed "s/.*=\(.*\)/\1/")
-Logger trace "after propFile"
+initFolders() {
+  dataDir=~/.opsc/pssst/$USER
+  infoDir=$dataDir/info/
+  mkdir -p "$dataDir/sd"
+  mkdir -p "$dataDir/na"
+  mkdir -p "$infoDir"
+}
+
+configureGlobals() {
+  propFile=$dataDir/pssst.properties
+  password=$(grep -oP "password=.*" $propFile | sed "s/.*=\(.*\)/\1/")
+  encFlags=$(grep -oP "encFlags=.*" $propFile | sed "s/.*=\(.*\)/\1/")
+  infoMapFile=$(grep -oP "infoMapFile=.*" $propFile | sed "s/.*=\(.*\)/\1/")
+
+  tempExt='.txt'
+  encryptExt='.des3'
+  backupLocation=$dataDir/backup/
+  defaultPort=8080
+
+  logId="log-history-unlikely-user-name"
+}
+
+tries=0;
+first() {
+  while [ -z "$1" ] && [ "$tries" -le 10 ]
+  do
+    shift
+    let "tries+=1"
+  done;
+  echo -e "$1"
+}
+
+globalArgs() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  config=${flags['config']}
+  if [ ! -z "$config" ]
+  then
+    host=$(getValue "$config" host)
+    token=$(getValue "$config" token)
+    group=$(getValue "$config" group)
+    pstPin=$(getValue "$config" pst-pin)
+  else
+    host=${flags['host']}
+    token=${flags['token']}
+    group=${flags['group']}
+    key=${flags['key']}
+    value=${flags['value']}
+    pstPin=${flags['pst-pin']}
+  fi
+
+  group=$(first "$group" "$2")
+  key=$(first "$key" "$3")
+  value=$(first "$value" "$4")
+
+  if [ -z "$group" ]
+  then
+    group=$config
+  fi
+
+  if [ -z "$host" ]
+  then
+    host="http://localhost:3000"
+  fi
+	Logger trace "EXIT"
+}
 
 log() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
@@ -41,7 +89,6 @@ getFileName() {
     file=$infoMapFile;
   else
     file=$(mapFile "$1")
-    Logger debug "map call: \"$(mapFile "$1")\""
   fi
 
   Logger debug "infoDir: $infoDir, file: $file"
@@ -134,7 +181,7 @@ backup() {
   then
     t=$2
   fi
-  # sleep $(($t)) && rm $backupFileName &
+  sleep $(($t)) && rm $backupFileName &
 	Logger trace "EXIT"
 }
 
@@ -158,7 +205,7 @@ backup-all() {
   done
   zip "$backupZipFile" *
   cd "$currentDirectory"
-  # sleep $((($t + 1) * 60)) && rm -r -f "$backupZipDir" &
+  sleep $((($t + 1) * 60)) && rm -r -f "$backupZipDir" &
 	Logger trace "EXIT"
 }
 
@@ -209,7 +256,7 @@ mapFile() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   mapFilename=$(getValue infoMap "$1")
   Logger debug "$mapFilename"
-  if [ -z "$mapFilename" ] && [ "$1" != "infoMap" ]
+  if [[ -z "$mapFilename" ]] && [ $1 != "infoMap" ]
   then
     genValue=$(getNewFileName)
     mapFilename="$genValue"
@@ -250,7 +297,7 @@ cleanFile() {
 
 viewFile() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  temporaryName=$(getTempName "$1")
+  temporaryName=$(getTempName "$group")
   setupTemp "$1"
   cleanFile "$temporaryName"
   editor=gedit
@@ -260,7 +307,7 @@ viewFile() {
 
 appendToFile () {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  tempFileName=$(getTempName "$1")
+  tempFileName=$(getTempName "$group")
   Logger debug "tempFileName: $tempFileName"
   setupTemp "$1"
   Logger debug "after setup: $tempFileName"
@@ -295,7 +342,7 @@ _rm () {
   if [ ! -z "$2" ]
   then
     silence=$(mapFile "$1")
-    tempFileName=$(getTempName "$1")
+    tempFileName=$(getTempName "$group")
 
     setupTemp "$1"
     old=$(grep -oP "$2=.*" $tempFileName | sed "s/.*=\(.*\)/\1/")
@@ -357,6 +404,7 @@ validateToken() {
     echo '[Error:CI] Your not supposed to be here...'
     exit 1;
   fi
+
   if [ "$2" == "$adminToken" ]
   then
     exit 0
@@ -438,6 +486,7 @@ generateProperties() {
   rm $propFile
   pass=$(pwgen 30)
   infoMapFile=$(pwgen 30)
+  echo $propFile
   echo -e "password=$pass\ninfoMapFile=$infoMapFile" > $propFile
 	Logger trace "EXIT"
 }
@@ -461,9 +510,9 @@ selfDistruct() {
   then
     t=$2
   fi
-  filepath=$(getTempName "$1")
+  filepath=$(getTempName "$group")
   setupTemp "$1"
-  # sleep $t && rm $filepath &
+  sleep $t && rm $filepath &
 	Logger trace "EXIT"
 }
 
@@ -500,49 +549,22 @@ client-config() {
 	Logger trace "EXIT"
 }
 
-url() {
-  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  config=${flags['config']}
-  if [ ! -z "$config" ]
-  then
-    host=$(getValue "$config" host)
-    token=$(getValue "$config" token)
-    group=$(getValue "$config" group)
-  else
-    host=${flags['host']}
-    token=${flags['token']}
-    group=${flags['group']}
-  fi
-
-  if [ -z "$group" ]
-  then
-    group=$config
-  fi
-
-  if [ -z "$host" ]
-  then
-    host="http://localhost:3000"
-  fi
-  echo "$host/pssst/client?host=$host&token=$token&group=$group";
-	Logger trace "EXIT"
-}
-
 client() {
-  xdg-open "$(url)";
+  xdg-open "$host/pssst/client?host=$host&token=$token&group=$group";
 	Logger trace "EXIT"
 }
 
 remote() {
-  curl -X GET "$(url)"
+  curl -X POST -H "Content-Type: application/json" -d "{\"group\": \"$group\",\"token\": \"$token\",\"pst-pin\": \"$pstPin\"}" "$host/pssst/get/json"
 	Logger trace "EXIT"
 }
 
 valueNonAdmin() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  filepathSd=$(getTempName "$1")
-  filepathNa=$(naFp "$1")
-  valSd=$(grep -oP "^$2=.*" $filepathSd 2>/dev/null | sed "s/^$2=\(.*\)/\1/")
-  valNa=$(grep -oP "^$2=.*" $filepathNa 2>/dev/null | sed "s/^$2=\(.*\)/\1/")
+  filepathSd=$(getTempName "$group")
+  filepathNa=$(naFp "$group")
+  valSd=$(grep -oP "^$key=.*" $filepathSd 2>/dev/null | sed "s/^$key=\(.*\)/\1/")
+  valNa=$(grep -oP "^$key=.*" $filepathNa 2>/dev/null | sed "s/^$key=\(.*\)/\1/")
   [ ! -z $valSd ] && [ ! -z $valNa ] &&
     Logger warn 'There is a secure and insecure Property with the same collection and identifier. One of these needs to be renamed'
 
@@ -552,8 +574,8 @@ valueNonAdmin() {
 
   [ ! -z "$valSd" ] && echo $valSd && Logger info "Secure value returned" && exit
 
-  Logger info "Property not found $1 - $2"
-  echo "[Error:CI] Property '$2' not found. - You may need to run selfDistruct with admin privaliges before execution."
+  Logger info "Property not found $group - $key"
+  echo "[Error:CI] Property '$key' not found. - You may need to run selfDistruct with admin privaliges before execution."
   exit
 	Logger trace "EXIT"
 }
@@ -607,7 +629,7 @@ insecureFunctions() {
       echo $passServRelDir
     ;;
     value)
-      valueNonAdmin "$2" "$3"
+      valueNonAdmin "$group" "$3"
     ;;
     update)
       updateNonAdmin "$2" "$3" "$4"
@@ -741,5 +763,8 @@ secureFunctions() {
 	Logger trace "EXIT"
 }
 
+initFolders
+configureGlobals
+globalArgs "$@"
 insecureFunctions "$@"
 secureFunctions "$@"

@@ -147,6 +147,20 @@ function endpoints(app, prefix) {
     res.send(keys);
   });
 
+  app.post(prefix + '/get/json', function(req, res){
+    const group = clean(req.body.group);
+    const token = clean(req.body.token);
+    const pstPin = clean(req.body["pst-pin"]);
+
+    console.log("Pinnnnnnn: " + pstPin)
+    const cmd = `pst key-values -group '${group}' | pst to-json`;
+    const jsonStr = exicuteCmd(group, token, pstPin, cmd);
+    console.log(jsonStr);
+    const json = JSON.parse(jsonStr);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(json);
+  });
+
   app.get(prefix + '/client', function (req, res) {
     const host = clean(req.query.host);
     const group = clean(req.query.group);
@@ -192,17 +206,6 @@ function endpoints(app, prefix) {
     const groups = JSON.parse(shell.exec(cmd, {silent: true}));
     res.setHeader('Content-Type', 'application/json');
     res.send(groups);
-  });
-
-  app.post(prefix + '/remove/group', function (req, res) {
-    const group = clean(req.body.group);
-    const token = clean(req.body.token);
-    const pstPin = clean(req.body.pstPin);
-
-    const cmd = `pst remove-group '${group}'`;
-    console.log(cmd);
-    shell.exec(cmd, {silent: true});
-    res.send('success');
   });
 
 
