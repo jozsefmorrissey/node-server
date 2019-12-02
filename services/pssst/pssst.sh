@@ -74,12 +74,13 @@ globalArgs() {
 
 log() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  halfPart=$(echo -n -e "------------------------- ")
-  oHalfPart=$(echo -n -e $halfPart | rev)
-  d=$(date +%F_%H-%M-%S)
-  lg=$(echo -n -e "\n\n$d\n$halfPart $1 $oHalfPart\n$2:$3\n$4")
-  appendToFile "$logId" "$lg"
-	Logger trace "EXIT"
+  # halfPart=$(echo -n -e "------------------------- ")
+  # oHalfPart=$(echo -n -e $halfPart | rev)
+  # d=$(date +%F_%H-%M-%S)
+  # lg=$(echo -n -e "\n\n$d\n$halfPart $1 $oHalfPart\n$2:$3\n$4")
+  # Logger info $logId
+  # appendToFile "$logId" "$lg"
+	# Logger trace "EXIT"
 }
 
 getFileName() {
@@ -543,9 +544,11 @@ client-config() {
   host=${flags['host']}
   token=${flags['token']}
   group=${flags['group']}
+  pstPin=${flags['pst-pin']}
   pst update $config token $token
   pst update $config group $group
   pst update $config host $host
+  pst update $config pst-pin $pstPin
 	Logger trace "EXIT"
 }
 
