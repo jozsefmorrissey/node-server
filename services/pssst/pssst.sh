@@ -489,7 +489,7 @@ generateProperties() {
   pass=$(pwgen 30)
   infoMapFile=$(pwgen 30)
   echo $propFile
-  echo -e "password=$pass\ninfoMapFile=$infoMapFile" > $propFile
+  echo -e "password=$pass\ninfoMapFile=$infoMapFile\nencFlags=${flags['encFlags']}" > $propFile
 	Logger trace "EXIT"
 }
 
