@@ -85,7 +85,7 @@ log() {
 
 getFileName() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  if [ "$1" == 'infoMap' ]
+  if [ $1 == 'infoMap' ]
   then
     file=$infoMapFile;
   else
@@ -298,7 +298,8 @@ cleanFile() {
 
 viewFile() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  temporaryName=$(getTempName "$group")
+  filename=$(mapFile "$1")
+  temporaryName=$(getTempName "$1")
   setupTemp "$1"
   cleanFile "$temporaryName"
   editor=gedit
@@ -308,7 +309,7 @@ viewFile() {
 
 appendToFile () {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  tempFileName=$(getTempName "$group")
+  tempFileName=$(getTempName "$1")
   Logger debug "tempFileName: $tempFileName"
   setupTemp "$1"
   Logger debug "after setup: $tempFileName"
@@ -343,7 +344,7 @@ _rm () {
   if [ ! -z "$2" ]
   then
     silence=$(mapFile "$1")
-    tempFileName=$(getTempName "$group")
+    tempFileName=$(getTempName "$1")
 
     setupTemp "$1"
     old=$(grep -oP "$2=.*" $tempFileName | sed "s/.*=\(.*\)/\1/")
@@ -511,7 +512,7 @@ selfDistruct() {
   then
     t=$2
   fi
-  filepath=$(getTempName "$group")
+  filepath=$(getTempName "$1")
   setupTemp "$1"
   sleep $t && rm $filepath &
 	Logger trace "EXIT"
@@ -548,7 +549,10 @@ client-config() {
   pst update $config token $token
   pst update $config group $group
   pst update $config host $host
-  pst update $config pst-pin $pstPin
+  if [ ! -z $pstPin ]
+  then
+    pst update $config pst-pin $pstPin
+  fi
 	Logger trace "EXIT"
 }
 
@@ -564,10 +568,10 @@ remote() {
 
 valueNonAdmin() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  filepathSd=$(getTempName "$group")
-  filepathNa=$(naFp "$group")
-  valSd=$(grep -oP "^$key=.*" $filepathSd 2>/dev/null | sed "s/^$key=\(.*\)/\1/")
-  valNa=$(grep -oP "^$key=.*" $filepathNa 2>/dev/null | sed "s/^$key=\(.*\)/\1/")
+  filepathSd=$(getTempName "$1")
+  filepathNa=$(naFp "$1")
+  valSd=$(grep -oP "^$2=.*" $filepathSd 2>/dev/null | sed "s/^$2=\(.*\)/\1/")
+  valNa=$(grep -oP "^$2=.*" $filepathNa 2>/dev/null | sed "s/^$2=\(.*\)/\1/")
   [ ! -z $valSd ] && [ ! -z $valNa ] &&
     Logger warn 'There is a secure and insecure Property with the same collection and identifier. One of these needs to be renamed'
 
@@ -577,8 +581,8 @@ valueNonAdmin() {
 
   [ ! -z "$valSd" ] && echo $valSd && Logger info "Secure value returned" && exit
 
-  Logger info "Property not found $group - $key"
-  echo "[Error:CI] Property '$key' not found. - You may need to run selfDistruct with admin privaliges before execution."
+  Logger info "Property not found $1 - $2"
+  echo "[Error:CI] Property '$2' not found. - You may need to run selfDistruct with admin privaliges before execution."
   exit
 	Logger trace "EXIT"
 }
@@ -632,7 +636,7 @@ insecureFunctions() {
       echo $passServRelDir
     ;;
     value)
-      valueNonAdmin "$group" "$3"
+      valueNonAdmin "$2" "$3"
     ;;
     update)
       updateNonAdmin "$2" "$3" "$4"
