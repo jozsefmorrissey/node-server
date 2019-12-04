@@ -95,7 +95,8 @@ function DebugGui() {
   }
 
   function debug() {
-    return document.cookie.match("(;\\s*|^\\s*)DebugGui.debug=true(;|$)") !== null;
+    return document.cookie.match("(;\\s*|^\\s*)DebugGui.debug=true(;|$)") !== null ||
+      window.location.href.match("(\\?|&)DebugGui.debug=[^&]{1,}(&|$)");
   }
 
   function displayModalHtml(html) {
@@ -242,6 +243,11 @@ function DebugGui() {
        } catch (e) {
          console.log(e.stack)
        }
+     }
+
+     var idStr = window.location.href.replace(new RegExp('^.*(\\?|&)DebugGui.ids=([^&]*?)(&.*|$)'), '$2');
+     if (idStr != window.location.href) {
+       DEBUG_GUI.IDS = DEBUG_GUI.IDS.concat(idStr.split(','))
      }
 
      return DEBUG_GUI.DATA;
