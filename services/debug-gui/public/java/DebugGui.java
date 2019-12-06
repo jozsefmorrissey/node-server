@@ -4,89 +4,54 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.slf4j.MDC;
 import org.springframework.http.HttpHeaders;
-
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class DebugGui {
 
-	public static void main(String...args) {
-		DebugGui.setHost("https://www.jozsefmorrissey.com/debug-gui");
+	private static Boolean defaultShouldDebug = true;
 
-		DebugGui debugGui = new DebugGui(true);
-		debugGui.link("beta", "mylabel", "http://www.google.com");
-		debugGui.link("delta.foxtrot", "my2ndlabel", "http://www.google.com");
-		debugGui.value("beta.charlie", "mylabel", "http://www.google.com");
-		debugGui.log("beta.charlie", "mylog1: http://www.google.com");
-		debugGui.log("beta.charlie", "mylog2: http://www.google.com");
-		debugGui.log("beta.charlie", "mylog3: http://www.google.com");
-		debugGui.log("beta.charlie", "mylog4: http://www.google.com");
-		debugGui.exception("beta.charlie.echo", "myException", new Error("my message"));
+	private static ThreadLocal<Boolean> debug = new ThreadLocal<Boolean>();
+	private static DebugGui instance;
+
+	public static void main(String...args) {
 	}
 
 	private static String DEBUG_ID = "DebugGui.debug";
 
-	private static String httpHost = "http://www.jozsefmorrissey.com/debug-gui/";
-	private static String httpsHost = "https://www.jozsefmorrissey.com/debug-gui/";
+	private static String host = "http://www.jozsefmorrissey.com/";
 	private static String root = "DebugGui";
 	private static String id = "Default";
 
-	private boolean debug = false;
 
-
-	public DebugGui(boolean debug) {
-		this.debug = debug;
+	public static void init() {
+		debug.set(Boolean.TRUE.equals(debug.get()) || defaultShouldDebug);
 	}
 
-  public DebugGui(HttpServletRequest req) {
-  	if (req.getHeader(DEBUG_ID) != null) {
-  		debug = true;
-  	} else {
-        Cookie[] cookies = req.getCookies();
-        if (cookies != null) {
-		    for (Cookie cookie : cookies) {
-		    	if (cookie.getName().equals(DEBUG_ID)) {
-		    		debug = true;
-		    	}
-		    }
-        }
-  	}
-  }
-
-	private static class Worker implements Runnable {
-		String type;
-		String group;
-		Object obj;
-
-		private Worker(String type, String group, Object obj) {
-			this.type = type;
-			this.group = group;
-			this.obj = obj;
-		}
-
-		private static void dispatch(String type, String group, Object obj) {
-			Runnable runnable = new Worker (type, group, obj);
-			Thread thread = new Thread(runnable);
-			thread.start();
-		}
-
-		@Override
-		public void run() {
-			restPostCall(getUrl(type, getId(), getGroup(group), obj);
-			logObject(obj, group);
-		}
+	public static void init(boolean d) {
+		debug.set(Boolean.TRUE.equals(debug.get()) || d);
 	}
+
+    public static void init(HttpServletRequest req) {
+    	Boolean d;
+    	if (req.getHeader(DEBUG_ID) != null) {
+    		d = true;
+    	} else {
+    		d = Util.getCookie(DEBUG_ID, req) != null;
+    	}
+    	debug.set(Boolean.TRUE.equals(debug.get()) || d);
+    }
 
 	public static void setHost(String host) {
-		DebugGui.httpHost = host;
+		DebugGui.host = host;
 	}
 
 	public static void setRoot(String root) {
@@ -97,47 +62,15 @@ public class DebugGui {
 		DebugGui.id = id;
 	}
 
-	private String toJson(Object obj) {
-	      ObjectMapper mapper = new ObjectMapper();
-	      try
-	      {
-	         return mapper.writeValueAsString(obj);
-	      } catch (JsonGenerationException e)
-	      {
-	         e.printStackTrace();
-	      } catch (JsonMappingException e)
-	      {
-	         e.printStackTrace();
-	      } catch (IOException e)
-	      {
-	         e.printStackTrace();
-	      }
-	      return "{}";
-	}
-
-	public static void value(String group, Object obj) {
-		ObjectMapper mapper = new ObjectMapper();
-		try {
-			String json = mapper.writeValueAsString(obj);
-			HashMap<String, Object> result = new ObjectMapper().readValue(json, HashMap.class);
-			for (String key : result.keySet()) {
-				value (group, key, result.get(key));
-			}
-		} catch (IOException e) {
-			exception(group, "Mapping ObjectError", new Error("Failed to map object values"));
-		}
-	}
-
-
-	private String getUrl(String ext, String id, String group) {
+	private static String getUrl(String ext, String id, String group) {
 		return getUrl(ext, id) + "/" + group;
 	}
 
-	private String getUrl(String ext, String id) {
+	private static String getUrl(String ext, String id) {
 		return host + (host.endsWith("/") ? "" : "/") + ext + "/" + id;
 	}
 
-	private class Link {
+	private static class Link {
 		public String label;
 		public String url;
 		public Link(String label, String url) {
@@ -145,11 +78,11 @@ public class DebugGui {
 			this.url = url;
 		}
 		public String toString() {
-			return toJson(this);
+			return Util.toJson(this);
 		}
 	}
 
-	private class Value {
+	private static class Value {
 		public String key;
 		public String value;
 		public Value(String key, String value) {
@@ -157,11 +90,11 @@ public class DebugGui {
 			this.value = value;
 		}
 		public String toString() {
-			return toJson(this);
+			return Util.toJson(this);
 		}
 	}
 
-	private class Exception {
+	private static class Exception {
 		public String id;
 		public String msg;
 		public String stacktrace;
@@ -171,17 +104,17 @@ public class DebugGui {
 			this.stacktrace = stacktrace;
 		}
 		public String toString() {
-			return toJson(this);
+			return Util.toJson(this);
 		}
 	}
 
-	private class Log {
+	private static class Log {
 		public String log;
 		public Log(String log) {
 			this.log = log;
 		}
 		public String toString() {
-			return toJson(this);
+			return Util.toJson(this);
 		}
 	}
 
@@ -192,7 +125,6 @@ public class DebugGui {
 			con.setRequestMethod("POST");
 			con.setDoOutput(true);
 			con.setRequestProperty("Content-Type","application/json");
-			con.setConnectTimeout(2000);
 
 			byte[] outputInBytes = obj.toString().getBytes("UTF-8");
 			con.setRequestProperty("Content-Length", "" + Integer.toString(outputInBytes.length));
@@ -207,47 +139,37 @@ public class DebugGui {
 		}
 	}
 
-	private void logObject(Object obj, String group) {
-		String groupStr = " (" + getId() + "/" + getGroup(group) + ")";
-		String logStr = "DebugGuiLog - " + obj.toString + groupStr;
-		log.debug(logStr);
+	public static DebugGui link(String group, String label, String url) {
+		if (!debug.get()) return instance;
+		restPostCall(getUrl("link", getId(), getGroup(group)), new Link(label, url));
+		return instance;
+	}
+	public static DebugGui value(String group, String key, Object value) {
+		if (!debug.get()) return instance;
+		restPostCall(getUrl("value", getId(), getGroup(group)), new Value(key, Util.toJson(value)));
+		return instance;
+	}
+	public static DebugGui exception(String group, String errorId, Throwable error) {
+		if (!debug.get()) return instance;
+		restPostCall(getUrl("exception", getId(), getGroup(group)), new Exception(errorId, error.getMessage(), ExceptionUtils.getStackTrace(error)));
+		return instance;
+	}
+	public static DebugGui log(String group, String log) {
+		if (!debug.get()) return instance;
+		restPostCall(getUrl("log", getId()), new Log(log));
+		return instance;
 	}
 
-	public DebugGui link(String group, String label, String url) {
-		if (!shouldDebug()) return this;
-		Link obj = new Link(label, url);
-		Worker.dispatch("link", group, obj);
-		return this;
-	}
-	public DebugGui value(String group, String key, Object value) {
-		if (!shouldDebug()) return this;
-		Value obj = new Value(key, value);
-		Worker.dispatch("value", group, obj);
-		return this;
-	}
-	public DebugGui exception(String group, String errorId, Throwable error) {
-		if (!shouldDebug()) return this;
-		Exception obj = new Exception(errorId, error);
-		Worker.dispatch("exception", group, obj);
-		return this;
-	}
-	public DebugGui log(String group, String log) {
-		if (!shouldDebug()) return this;
-		Log obj = new Log(log);
-		Worker.dispatch("log", group, obj);
-		return this;
-	}
-
-	private String getId() {
+	private static String getId() {
 		return id;
 	}
 
-	private String getGroup(String minor) {
+	private static String getGroup(String minor) {
 		return root + "." + minor;
 	}
 
-	private boolean shouldDebug() {
-		return debug;
+	public static Boolean debugging() {
+		return debug.get();
 	}
 
     public static void addCookie(HttpServletResponse response) {
@@ -259,8 +181,8 @@ public class DebugGui {
 
     }
 
-	public void addHeader(HttpHeaders httpHeaders) {
-	    if (debug) {
+	public static void addHeader(HttpHeaders httpHeaders) {
+	    if (debug.get()) {
 	    	httpHeaders.add(DEBUG_ID, "true");
 	    }
 	}
