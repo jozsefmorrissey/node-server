@@ -1,0 +1,24 @@
+{
+  "name": "node-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "node-server.js",
+  "dependencies": {
+    "express": "^4.17.1",
+    "shelljs": "^0.8.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jozsefmorrissey/node-server.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jozsefmorrissey/node-server/issues"
+  },
+  "homepage": "https://github.com/jozsefmorrissey/node-server#readme"
+}
