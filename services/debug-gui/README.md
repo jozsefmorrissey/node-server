@@ -12,7 +12,7 @@ provides a easy to use graphical interface that can be added to any html file.
 
   node ./node-server.js
 
-  xdg-open http://localhost:3000/debug-gui/html/debug-gui-client-test.html
+  navigate to http://localhost:3000/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=name
 
   press keys 'd' and 'g' at the same time to open.
 

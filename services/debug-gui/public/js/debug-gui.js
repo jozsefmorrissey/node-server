@@ -383,7 +383,7 @@ function DebugGui() {
       DEBUG_GUI.TIME_LIMIT = value;
     } else if (!DEBUG_GUI.TIME_LIMIT) {
       var param = getParameter('DebugGui.logWindow');
-      param = param.match(numberReg) ? param : undefined;
+      param = param && param.match(numberReg) ? param : undefined;
       DEBUG_GUI.TIME_LIMIT = param || elementValue || '20';
     } else if (elementValue) {
       DEBUG_GUI.TIME_LIMIT = elementValue;
