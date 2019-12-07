@@ -60,7 +60,7 @@ function DebugGuiClient() {
       xhr.send(JSON.stringify({log}));
     }
 
-    return {data, link, value, exception, setHost, log};
+    return {link, value, exception, setHost, log};
 }
 
 var dg = DebugGuiClient();

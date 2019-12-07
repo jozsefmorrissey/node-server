@@ -21,7 +21,7 @@ function DebugGui() {
   }
 
   function getParameter(name) {
-    var paramReg = new RegExp("(.*?(\\?|&))" + name + "=([^&]*?)(#|&|$)");
+    var paramReg = new RegExp("(.*?(\\?|&))" + name + "=([^&]*?)(#|&|$).*");
     if (window.location.href.match(paramReg)) {
       return window.location.href.replace(paramReg, "$3")
     }
@@ -41,16 +41,19 @@ function DebugGui() {
     }
     return DEBUG_GUI.ID;
   }
-  DEBUG_GUI.ID = getId();
 
 
   function toggleChecked() {
     DEBUG_GUI.CHECKED = DEBUG_GUI.CHECKED ? '' : 'checked';
   }
 
+  function updateId(value) {
+    DEBUG_GUI.ID = value;
+  }
+
   function buildHeader(html) {
     var host = DEBUG_GUI.HOST;
-    var tl = DEBUG_GUI.TIME_LIMIT;
+    var tl = getLogWindow();
     return `<div style='text-align: center;'>
               <div style='float: left; margin-left: 20pt;'>
                 <label>clean: </label>
@@ -64,10 +67,12 @@ function DebugGui() {
               <label>host: </label>
               <input type='text' id='debug-gui-host' value='${host}'>
               <label>id: </label>
-              <input type='text' id='debug-gui-id' value='${getId()}'>
-              <label>Time Limit(sec): </label>
-              <input type='text' id='debug-gui-time-limit' value='${tl}'
+              <input type='text' id='debug-gui-id' onchange='DebugGui.updateId(this.value)' value='${getId()}'>
+              <img style='height: 20px;' onclick='DebugGui.createCookie()' src='${host}/images/cookie.gif'>
+              <label>&nbsp;&nbsp;Logging Window </label>
+              <input type='text' id='debug-gui-log-window' value='${tl}'
                   style='width: 40pt;'>
+              <label>Seconds</label>
               <input type="button"
                   value="Copy Html Report"
                   onclick="DebugGui.copyModal()"
@@ -106,11 +111,20 @@ function DebugGui() {
     DEBUG_GUI.MODAL.id = 'debug-gui-modal';
     DEBUG_GUI.HAZE.onclick = hideModal;
     DEBUG_GUI.SCRIPT_URL = getScriptURL();
+    getLogWindow();
     hideModal();
 
     document.body.appendChild(DEBUG_GUI.MODAL);
     var html = buildHeader(buildGui(undefined, 'og'));
     DEBUG_GUI.SCC = ShortCutCointainer("debug-gui-scc", ['d', 'g'], html);
+    DEBUG_GUI.ID = getId();
+    document.getElementById('debug-gui-clean').checked = initShouldClean();
+
+    refresh();
+  }
+
+  function initShouldClean() {
+      return getParameter('DebugGui.clean') === 'true';
   }
 
   function hideEmpties() {
@@ -218,28 +232,6 @@ function DebugGui() {
     return url.substr(0, url.length - 1);
   }
 
-  function timeLimit(host, value) {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function () {
-        if (this.readyState != 4) return;
-
-        if (this.status == 200) {
-          if (!value && DEBUG_GUI.TIME_LIMIT != this.responseText) {
-            DEBUG_GUI.TIME_LIMIT = this.responseText;
-          }
-        }
-        render();
-    };
-
-    var url = host + "time/limit";
-    if (value) {
-      url += "/" + value;
-    }
-
-    xhr.open('GET', url, true);
-    xhr.send();
-  }
-
   function getData(host, id, onSuccess) {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function () {
@@ -256,7 +248,7 @@ function DebugGui() {
         }
     };
 
-    xhr.open('GET', getUrl(host, id), true);
+    xhr.open('GET', getUrl(host, id, getLogWindow()), true);
     xhr.send();
   }
 
@@ -271,7 +263,6 @@ function DebugGui() {
          var id = tag.getAttribute('dg-id');
          if (DEBUG_GUI.HOST != url) {
            DEBUG_GUI.HOST = url;
-           timeLimit(DEBUG_GUI.HOST);
          }
        }
        var innerHtml = tags[index].innerHTML.trim();
@@ -383,9 +374,30 @@ function DebugGui() {
     DEBUG_GUI.SCC.innerHtml(html);
   }
 
-  function refresh(data, clean) {
+  var numberReg = new RegExp('^[0-9]*$');
+  function getLogWindow(value) {
+    var element = document.getElementById('debug-gui-log-window');
+    var elementValue = element && element.value.match(numberReg) ? element.value : undefined;
+
+    if (value && value.match(numberReg)) {
+      DEBUG_GUI.TIME_LIMIT = value;
+    } else if (!DEBUG_GUI.TIME_LIMIT) {
+      var param = getParameter('DebugGui.logWindow');
+      param = param.match(numberReg) ? param : undefined;
+      DEBUG_GUI.TIME_LIMIT = param || elementValue || '20';
+    } else if (elementValue) {
+      DEBUG_GUI.TIME_LIMIT = elementValue;
+    }
+    return DEBUG_GUI.TIME_LIMIT;
+  }
+
+  function shouldClean() {
+    return document.getElementById('debug-gui-clean').checked;
+  }
+
+  function refresh(data) {
     if (data) {
-        if (clean) {
+        if (shouldClean()) {
           DEBUG_GUI.DATA = data;
         } else {
           mergeObject(data);
@@ -393,20 +405,12 @@ function DebugGui() {
 
         render();
     } else {
-      var value = document.getElementById('debug-gui-time-limit').value;
-      if (value != DEBUG_GUI.TIME_LIMIT) {
-        timeLimit(DEBUG_GUI.HOST, value);
-      }
-
-      if (document.getElementById('debug-gui-clean').checked) {
-        DEBUG_GUI.DATA = {};
-      }
-
-      DEBUG_GUI.ID = document.getElementById('debug-gui-id').value;
       getData(DEBUG_GUI.HOST, DEBUG_GUI.ID);
-
-      timeLimit(DEBUG_GUI.HOST);
     }
+  }
+
+  function createCookie() {
+    document.cookie = 'DebugGui.debug=' + getId() + ';';
   }
 
 
@@ -446,8 +450,8 @@ function DebugGui() {
   document.head.appendChild(style);
 
   window.addEventListener('load', onLoad);
-  return {refresh, displayModal, displayLogs, debug,
-    toggleChecked, copyModal, getUrl, copyReport, getId};
+  return {refresh, displayModal, displayLogs, debug, createCookie,
+    toggleChecked, copyModal, getUrl, copyReport, getId, updateId};
 }
 
 DebugGui = DebugGui();

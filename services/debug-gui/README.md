@@ -3,6 +3,21 @@
 This application is a process specific, cross application logging tool that
 provides a easy to use graphical interface that can be added to any html file.
 
+# Quick Start
+  git clone https://github.com/jozsefmorrissey/node-server.git
+
+  cd ./node-server
+
+  npm install
+
+  node ./node-server.js
+
+  xdg-open http://localhost:3000/debug-gui/html/debug-gui-client-test.html
+
+  press keys 'd' and 'g' at the same time to open.
+
+  use buttons Generate and Refesh to test server and javascript client.
+
 ## Key Concepts
   id - A unique identifier for you, so that you don't get someone else's logs.
 
@@ -32,13 +47,32 @@ provides a easy to use graphical interface that can be added to any html file.
   </table>
 
 ### Server
-
+  Simple server that just sends and recieves logging information with two
+  endpoints to modify the time window of the logs you wish to view. By default
+  the server deletes all logging information that is older than 5 minutes.
+  this can be changes by modifying the config.json file.
 
 ### Gui
-
+ A simple interface with the following functionality.
+  - refresh - pulls new data from the server.
+  - clean - removes cached logs by the browser on refresh.
+  - logs - shows the simple log messages
+  - host - enables the gui to communicate with any server
+  - id - process unique identifier typically set by the key 'DebugGui.debug'
+    auto detected via parameter or cookie. With a preference for parameter,
+    since it is more clearly visible to the user.
+  - Cookie - Click the cookie to create to activate debugging.
+  - Logging Window - The window of time you wish in which you wish to view logs.
+  - Copy Html Report - Adds a valid html to the clipboard with the current
+    logs attached.
 
 ### Javascript Client
-
+    A simple client interface with the following functions.
+    - dg.value(group, key, value)
+    - dg.link(group, lable, url)
+    - dg.exception(group, exception)
+    - dg.log(logMessage)
+    - dg.setHost(newHostUrl)
 
 ### Java Client
   To configure simply set your application root on startup. If you are wanting

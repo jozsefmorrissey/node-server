@@ -30,6 +30,10 @@ app.use(function (req, res, next) {
 
 app.use(express.static('./public'))
 
+app.get("/git", function (req, res) {
+  res.redirect('https://github.com/jozsefmorrissey/node-server');
+});
+
 var services = shell.ls('./services/');
 for (let i = 0; i < services.length; i += 1) {
   var id = services[i];

@@ -10,10 +10,11 @@ app.use(express.static('public'));
 var http = require('http');
 var https = require('https');
 
+var config = require('./config.json');
+
 function endpoints(app, prefix) {
   var dataMap = {};
-  var removeAfter = 5 * 60000;
-  var timeLimit = 20000;
+  var removeAfter = config.removeIntervalMinutes * 60 * 1000;
   var LOGS = "__LOGS";
   const createdAt = {};
 
@@ -90,8 +91,20 @@ function endpoints(app, prefix) {
   }
 
   // TODO: itterate through and remove expired
+  var removeInterval = removeAfter * 2;
+  var lastRemoval = 0;
   function deleteOutdated() {
-    //getRelevantMap(map, timeLimit)
+    if (lastRemoval < new Date().getTime() - removeInterval) {
+      lastRemoval = new Date().getTime();
+      var ids = Object.keys(dataMap);
+      for (var index = 0; index < ids.length; index += 1) {
+        var id = ids[index];
+        dataMap[id] = getRelevantMap(dataMap[id], removeAfter);
+      }
+      console.log(lastRemoval);
+      console.log(new Date().getTime() - removeInterval);
+      console.log('cleaned');
+    }
   }
 
   function getMap(id, groupRaw) {
@@ -165,36 +178,23 @@ function endpoints(app, prefix) {
   });
 
   app.post(prefix + "/log/:id", function (req, res) {
-      const id = req.params.id;
-      const log = req.body.log;
-      const time = new Date().getTime();
-      getMap(id)[LOGS].push({ log, time });
+    const id = req.params.id;
+    const log = req.body.log;
+    const time = new Date().getTime();
+    getMap(id)[LOGS].push({ log, time });
 
-      res.send('success');
+    res.send('success');
   });
 
-  app.get(prefix + "/:id", function (req, res) {
-      const id = req.params.id;
+  app.get(prefix + "/:id/:logWindow", function (req, res) {
+    const id = req.params.id;
+    const logWindow = Number.parseInt(req.params.logWindow);
 
-      var map = getMap(id);
+    var map = getMap(id);
 
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(getRelevantMap(map, timeLimit)));
-      deleteOutdated();
-  });
-
-  app.get(prefix + "/time/limit", function (req, res) {
-    res.send("" + timeLimit / 1000);
-  });
-
-  app.get(prefix + "/time/limit/:newTime", function (req, res) {
-    var newTime = Number.parseInt(req.params.newTime);
-    if (Number.isInteger(newTime)) {
-      timeLimit = newTime * 1000;
-      res.send(200);
-    } else {
-      res.send(400);
-    }
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(getRelevantMap(map, logWindow * 1000)));
+    deleteOutdated();
   });
 }
 
