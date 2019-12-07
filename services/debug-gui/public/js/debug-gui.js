@@ -1,6 +1,5 @@
 var DEBUG_GUI = {};
 DEBUG_GUI.EXCEPTION_LOOKUP = {};
-DEBUG_GUI.IDS = [];
 
 function DebugGui() {
   var exceptionId = 0;
@@ -14,35 +13,64 @@ function DebugGui() {
       return function() { return myScript.src; };
   })();
 
+  function getCookie(name) {
+    var cookieReg = new RegExp("(.*?; |^)" + name + "=(.*?)(;.*|$)");
+    if (document.cookie.match(cookieReg)) {
+      return document.cookie.replace(cookieReg, '$2');
+    }
+  }
+
+  function getParameter(name) {
+    var paramReg = new RegExp("(.*?(\\?|&))" + name + "=([^&]*?)(#|&|$)");
+    if (window.location.href.match(paramReg)) {
+      return window.location.href.replace(paramReg, "$3")
+    }
+  }
+
+  function getId() {
+    if (DEBUG_GUI.ID) {
+      return DEBUG_GUI.ID;
+    }
+    var cookie = getCookie('DebugGui.debug');
+    var param = getParameter('DebugGui.debug');
+    if (cookie) {
+      DEBUG_GUI.ID = cookie;
+    }
+    if (param) {
+      DEBUG_GUI.ID = param;
+    }
+    return DEBUG_GUI.ID;
+  }
+  DEBUG_GUI.ID = getId();
+
 
   function toggleChecked() {
     DEBUG_GUI.CHECKED = DEBUG_GUI.CHECKED ? '' : 'checked';
   }
 
   function buildHeader(html) {
-    var ids = DEBUG_GUI.IDS.join(',');
     var host = DEBUG_GUI.HOST;
     var tl = DEBUG_GUI.TIME_LIMIT;
     return `<div style='text-align: center;'>
               <div style='float: left; margin-left: 20pt;'>
                 <label>clean: </label>
-                <input type='checkbox' onclick='DebugGui().toggleChecked()'
+                <input type='checkbox' onclick='DebugGui.toggleChecked()'
                     ${DEBUG_GUI.CHECKED} id='debug-gui-clean'>
                 <input type='button' value='refresh'
-                    onclick='DebugGui().refresh()'>
-                <input type='button' onclick='DebugGui().displayLogs()'
+                    onclick='DebugGui.refresh()'>
+                <input type='button' onclick='DebugGui.displayLogs()'
                     value='Logs'>
               </div>
               <label>host: </label>
               <input type='text' id='debug-gui-host' value='${host}'>
-              <label>ids: </label>
-              <input type='text' id='debug-gui-ids' value='${ids}'>
+              <label>id: </label>
+              <input type='text' id='debug-gui-id' value='${getId()}'>
               <label>Time Limit(sec): </label>
               <input type='text' id='debug-gui-time-limit' value='${tl}'
                   style='width: 40pt;'>
               <input type="button"
                   value="Copy Html Report"
-                  onclick="DebugGui().copyModal()"
+                  onclick="DebugGui.copyModal()"
                   style='float: right; margin-right: 20pt;'>
             </div>
             <br>
@@ -85,6 +113,17 @@ function DebugGui() {
     DEBUG_GUI.SCC = ShortCutCointainer("debug-gui-scc", ['d', 'g'], html);
   }
 
+  function hideEmpties() {
+    var accordions = document.querySelectorAll('#accordionExample');
+    for (let index = 0; index < accordions.length; index += 1) {
+      var ctn = accordions[index].parentElement;
+      console.log(ctn.innerText + "\n\n");
+      if (ctn.innerText.trim() === "") {
+        ctn.style = 'display:none';
+      }
+    }
+  }
+
   function displayLogs() {
     var logs = DEBUG_GUI.DATA[LOGS];
     var html = '';
@@ -121,7 +160,7 @@ function DebugGui() {
 
   function copyModal() {
     DEBUG_GUI.EXCEPTION_LOOKUP[reportInfo] = '<input id="' + reportInfoTitleId + '" placeholder="title">' +
-        '<input type="button" value="Copy" onclick="DebugGui().copyReport()">' +
+        '<input type="button" value="Copy" onclick="DebugGui.copyReport()">' +
         '<textarea placeholder="Text to copy" id="' + copyTextId + '" style="float: right;"></textarea>' +
         "<textarea cols=120 rows=20 id='" + reportInfoDescId + "' placeholder='Description'></textarea><br>";
     displayModal(reportInfo);
@@ -169,10 +208,10 @@ function DebugGui() {
     }
   }
 
-  function getUrl(host, id, group, ext) {
+  function getUrl(host, ext, id, group) {
     host = path(host);
-    id = path(id);
     ext = path(ext);
+    id = path(id);
     group = path(group);
 
     var url = host + ext + id + group;
@@ -230,35 +269,32 @@ function DebugGui() {
        if (tag.getAttribute('url')) {
          var url = tag.getAttribute('url');
          var id = tag.getAttribute('dg-id');
-         getData(url, id);
-         DEBUG_GUI.IDS.push(id);
          if (DEBUG_GUI.HOST != url) {
            DEBUG_GUI.HOST = url;
            timeLimit(DEBUG_GUI.HOST);
          }
        }
-       try {
-         var json = JSON.parse(tags[index].innerHTML);
-         mergeObject(json);
-       } catch (e) {
-         console.log(e.stack)
+       var innerHtml = tags[index].innerHTML.trim();
+       if (innerHtml !== "") {
+         try {
+           var json = JSON.parse(innerHtml);
+           mergeObject(json);
+         } catch (e) {
+           console.log(e.stack)
+         }
        }
-     }
-
-     var idStr = window.location.href.replace(new RegExp('^.*(\\?|&)DebugGui.ids=([^&]*?)(&.*|$)'), '$2');
-     if (idStr != window.location.href) {
-       DEBUG_GUI.IDS = DEBUG_GUI.IDS.concat(idStr.split(','))
      }
 
      return DEBUG_GUI.DATA;
   }
 
   function buildValueList(values) {
+    if (!values) return "";
     var valueKeys = Object.keys(values);
     var valueList = '<div><label>Values</label><ul>';
     for (let vIndex = 0; vIndex < valueKeys.length; vIndex += 1) {
       var key = valueKeys[vIndex];
-      valueList += "<li>'" + key + "' => '" + values[key] + "'</li>";
+      valueList += "<li>'" + key + "' => '" + values[key].value + "'</li>";
     }
     if (valueKeys.length > 0) {
       return valueList + '</ul></div>';
@@ -267,11 +303,12 @@ function DebugGui() {
   }
 
   function buildLinkList(links) {
+    if (!links) return "";
     var linkKeys = Object.keys(links);
     var linkList = "<span><label>Links: </label>&nbsp;&nbsp;&nbsp;";
     for (let lIndex = 0; lIndex < linkKeys.length; lIndex += 1) {
       var key = linkKeys[lIndex];
-      linkList += "<a href='" + links[key] + "' target='_blank'>" + key + "</a> | ";
+      linkList += "<a href='" + links[key].url + "' target='_blank'>" + key + "</a> | ";
     }
     if (linkKeys.length > 0) {
       return linkList.substr(0, linkList.length - 3) + '</span>';
@@ -280,10 +317,11 @@ function DebugGui() {
   }
 
   function buildExceptions(exceptions) {
+    if (!exceptions) return "";
     var acorn = '<div><label>Exceptions</label><ul>';
     for (let index = 0; index < exceptions.length; index += 1) {
       var except = exceptions[index];
-      acorn += `<li><a href='#' onclick='DebugGui().displayModal(${exceptionId})'>
+      acorn += `<li><a href='#' onclick='DebugGui.displayModal(${exceptionId})'>
                   ${except.id} - ${except.msg}
                 </a></li>`;
       DEBUG_GUI.EXCEPTION_LOOKUP[exceptionId++] = `<h4>${except.msg}</h4><p>${except.stacktrace}</p>`;
@@ -295,7 +333,7 @@ function DebugGui() {
   }
 
   function buildGui(data, fp) {
-    var acorn = '<br>';
+    var acorn = '';
     if (!data) {
       data = buildData();
     }
@@ -341,6 +379,7 @@ function DebugGui() {
 
   function render() {
     var html = buildHeader(buildGui(DEBUG_GUI.DATA, 'og'));
+    hideEmpties();
     DEBUG_GUI.SCC.innerHtml(html);
   }
 
@@ -359,15 +398,13 @@ function DebugGui() {
         timeLimit(DEBUG_GUI.HOST, value);
       }
 
-      var idsArr = document.getElementById('debug-gui-ids').value.split(',');
       if (document.getElementById('debug-gui-clean').checked) {
         DEBUG_GUI.DATA = {};
       }
 
-      DEBUG_GUI.IDS = idsArr;
-      for (var index = 0; index < idsArr.length; index += 1) {
-        getData(DEBUG_GUI.HOST, idsArr[index].trim());
-      }
+      DEBUG_GUI.ID = document.getElementById('debug-gui-id').value;
+      getData(DEBUG_GUI.HOST, DEBUG_GUI.ID);
+
       timeLimit(DEBUG_GUI.HOST);
     }
   }
@@ -410,7 +447,7 @@ function DebugGui() {
 
   window.addEventListener('load', onLoad);
   return {refresh, displayModal, displayLogs, debug,
-    toggleChecked, copyModal, getUrl, copyReport};
+    toggleChecked, copyModal, getUrl, copyReport, getId};
 }
 
-DebugGui();
+DebugGui = DebugGui();

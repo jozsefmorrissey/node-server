@@ -20,6 +20,8 @@ public class DebugGui {
 	private static Boolean defaultShouldDebug = true;
 
 	private static ThreadLocal<Boolean> debug = new ThreadLocal<Boolean>();
+	private static ThreadLocal<String> id = new ThreadLocal<String>();
+
 	private static DebugGui instance;
 
 	public static void main(String...args) {
@@ -40,15 +42,47 @@ public class DebugGui {
 		debug.set(Boolean.TRUE.equals(debug.get()) || d);
 	}
 
-    public static void init(HttpServletRequest req) {
-    	Boolean d;
-    	if (req.getHeader(DEBUG_ID) != null) {
-    		d = true;
-    	} else {
-    		d = Util.getCookie(DEBUG_ID, req) != null;
-    	}
-    	debug.set(Boolean.TRUE.equals(debug.get()) || d);
-    }
+  public static void init(HttpServletRequest req) {
+  	Boolean d = false;
+		String identifier = null;
+		String header = req.getHeader(DEBUG_ID);
+		String cookie = getCookie(DEBUG_ID, req);
+		String param = req.getParameter(DEBUG_ID);
+  	if (header != null) {
+  		d = true;
+			id = param;
+  	} else if (cookie != null) {
+  		d = true;
+			id = param;
+  	} else if (param != null) {
+			d = true;
+			id = param;
+		}
+  	debug.set(Boolean.TRUE.equals(debug.get()) || d);
+		id.set(identifier);
+	}
+
+	private static String getCookie(String name, HttpServletRequest req) {
+		Cookie[] co = req.getCookies();
+		if (co != null) {
+			for (int i = 0; i < co.length; i++) {
+				if (name.equals(co[i].getName)) {
+					return co[i].getValue();
+				}
+			}
+		}
+		return null;
+	}
+
+	private static String toJson(Object obj) {
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			return mapper.writeValueAsString(obj);
+		} catch (e) {
+			e.printStackTrace();
+		}
+		return "{}";
+	}
 
 	public static void setHost(String host) {
 		DebugGui.host = host;
@@ -56,10 +90,6 @@ public class DebugGui {
 
 	public static void setRoot(String root) {
 		DebugGui.root = root;
-	}
-
-	public static void setId(String id) {
-		DebugGui.id = id;
 	}
 
 	private static String getUrl(String ext, String id, String group) {
@@ -161,7 +191,7 @@ public class DebugGui {
 	}
 
 	private static String getId() {
-		return id;
+		return id.get();
 	}
 
 	private static String getGroup(String minor) {
@@ -172,18 +202,26 @@ public class DebugGui {
 		return debug.get();
 	}
 
-    public static void addCookie(HttpServletResponse response) {
-    	if (response != null) {
-		    Cookie cookie = new Cookie(DEBUG_ID, "true");
-		    cookie.setMaxAge(60 * 60);
-		    response.addCookie(cookie);
-    	}
-
-    }
+  public static void addCookie(HttpServletResponse response) {
+  	if (response != null) {
+	    Cookie cookie = new Cookie(DEBUG_ID, "true");
+	    cookie.setMaxAge(60 * 60);
+	    response.addCookie(cookie);
+  	}
+  }
 
 	public static void addHeader(HttpHeaders httpHeaders) {
 	    if (debug.get()) {
 	    	httpHeaders.add(DEBUG_ID, "true");
 	    }
+	}
+
+	public static String toHtml() {
+		if (!Boolean.TRUE.equals(debug.get())) {
+			return "";
+		}
+		return "<script type='text/javascript' src='" + host +
+						"js/debug-gui.js'></script><debug-gui-data url='" +
+						host + "' dg-id='" + id + "' style='display:none;'></debug-gui-data>";
 	}
 }

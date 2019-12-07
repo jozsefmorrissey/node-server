@@ -12,8 +12,10 @@ var https = require('https');
 
 function endpoints(app, prefix) {
   var dataMap = {};
-  var timeLimit = 60000;
+  var removeAfter = 5 * 60000;
+  var timeLimit = 20000;
   var LOGS = "__LOGS";
+  const createdAt = {};
 
   function emptyObj(map) {
       map.exceptions = [];
@@ -21,40 +23,75 @@ function endpoints(app, prefix) {
       map.links = {};
   }
 
-  function removeOld(map) {
+  function getRelevantMap(map, addedTime) {
+    var targetTime = new Date().getTime() - addedTime;
+    var relMap = getRelevantKeys(targetTime, map);
+    relMap[LOGS] = getRelevantLogs(targetTime, map);
+    return relMap;
+  }
+
+  function cleanArray(targetTime, array) {
+    var cleanArr = [];
+    for (let index = 0; index < array.length; index += 1) {
+      if (array[index].time > targetTime) {
+        cleanArr.push(array[index]);
+      }
+    }
+
+    return cleanArr;
+  }
+
+  function cleanObject(targetTime, object) {
+    var cleanObj = {};
+    const keys = Object.keys(object);
+    for (let index = 0; index < keys.length; index += 1) {
+      const key = keys[index];
+      if (object[key].time > targetTime) {
+        cleanObj[key] = object[key];
+      }
+    }
+    return cleanObj;
+  }
+
+  function getRelevantKeys(targetTime, map) {
+    if (map == undefined) return {};
+    const relMap = {};
     var keys = Object.keys(map);
-    var isEmpty = true;
     var time = new Date().getTime();
     for (var index = 0; index < keys.length; index += 1) {
         var key = keys[index];
-        if (key !== LOGS) {
+        if (key !== LOGS && map[key]) {
+          relMap[key] = {};
           var obj = map[key];
-          var childEmpty = removeOld(obj.children);
-          if (obj.exp < time) {
-            emptyObj(obj);
-          }
-          if (childEmpty && obj.exceptions.length == 0 &&
-              Object.keys(obj.values).length == 0 &&
-              Object.keys(obj.links).length == 0) {
-                delete map[key];
-          } else {
-            isEmpty = false;
+          relMap[key].children = getRelevantKeys(targetTime, obj.children);
+          relMap[key].exceptions = cleanArray(targetTime, obj.exceptions);
+          relMap[key].links = cleanObject(targetTime, obj.links);
+          relMap[key].values = cleanObject(targetTime, obj.values);
+          if (relMap[key].exceptions.length == 0 &&
+              Object.keys(relMap[key].values).length == 0 &&
+              Object.keys(relMap[key].children).length == 0 &&
+              Object.keys(relMap[key].links).length == 0) {
+            delete relMap[key];
           }
         }
     }
-    return isEmpty;
+    return relMap;
   }
 
-  function removeOldLogs(map) {
+  function getRelevantLogs(targetTime, map) {
     var logs = map[LOGS];
-    var time = new Date().getTime();
-    var healthy = [];
+    var relevant = [];
     for (var index = 0; index < logs.length; index += 1) {
-      if (logs[index].exp > time) {
-        healthy.push(logs[index]);
+      if (logs[index].time > targetTime) {
+        relevant.push(logs[index]);
       }
     }
-    map[LOGS] = healthy;
+    return relevant;
+  }
+
+  // TODO: itterate through and remove expired
+  function deleteOutdated() {
+    //getRelevantMap(map, timeLimit)
   }
 
   function getMap(id, groupRaw) {
@@ -80,16 +117,26 @@ function endpoints(app, prefix) {
       }
     }
 
-    map[group].exp = new Date().getTime() + timeLimit;
     if (map[group]) {
       return map[group];
     }
     return {};
   }
 
+  function updateCreatedAt(type, id, group) {
+    if (createdAt[type] === undefined) {
+      createdAt[type] = {};
+    }
+    if (createdAt[type][id] === undefined) {
+      createdAt[type][group] = {};
+    }
+    createdAt
+  }
+
   app.post(prefix + "/exception/:id/:group", function (req, res) {
       const id = req.params.id;
       const group = req.params.group;
+      req.body.time = new Date().getTime();
       getMap(id, group).exceptions.push(req.body);
 
       res.send('success');
@@ -100,7 +147,8 @@ function endpoints(app, prefix) {
       const group = req.params.group;
       const label = req.body.label;
       const url = req.body.url;
-      getMap(id, group).links[label] = url;
+      const time = new Date().getTime();
+      getMap(id, group).links[label] = { url, time };
 
       res.send('success');
   });
@@ -110,7 +158,8 @@ function endpoints(app, prefix) {
       const group = req.params.group;
       const key = req.body.key;
       const value = req.body.value;
-      getMap(id, group).values[key] = value;
+      const time = new Date().getTime();
+      getMap(id, group).values[key] = { value, time };
 
       res.send('success');
   });
@@ -118,7 +167,8 @@ function endpoints(app, prefix) {
   app.post(prefix + "/log/:id", function (req, res) {
       const id = req.params.id;
       const log = req.body.log;
-      getMap(id)[LOGS].push({log, exp: new Date().getTime() + timeLimit});
+      const time = new Date().getTime();
+      getMap(id)[LOGS].push({ log, time });
 
       res.send('success');
   });
@@ -127,23 +177,14 @@ function endpoints(app, prefix) {
       const id = req.params.id;
 
       var map = getMap(id);
-      console.log("map: " + JSON.stringify(map, null, 2))
-
-      removeOld(map);
-      removeOldLogs(map);
 
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(map));
+      res.end(JSON.stringify(getRelevantMap(map, timeLimit)));
+      deleteOutdated();
   });
 
   app.get(prefix + "/time/limit", function (req, res) {
     res.send("" + timeLimit / 1000);
-  });
-
-  app.get(prefix + "/msg/:msg", function (req, res) {
-    const msg = req.params.msg;
-    console.log(msg);
-    res.send("success");
   });
 
   app.get(prefix + "/time/limit/:newTime", function (req, res) {
@@ -151,8 +192,9 @@ function endpoints(app, prefix) {
     if (Number.isInteger(newTime)) {
       timeLimit = newTime * 1000;
       res.send(200);
+    } else {
+      res.send(400);
     }
-    res.send(400);
   });
 }
 

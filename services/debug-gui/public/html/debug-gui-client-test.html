@@ -22,26 +22,22 @@
         return urls[Math.floor(Math.random() * urls.length)];
       }
 
-      function getId() {
-        return document.getElementById('id').value;
-      }
-
       function addException() {
 
-        DebugGuiClient().exception(getId(), getGroup(), getException());
+        DebugGuiClient().exception(getGroup(), getException());
       }
 
       function addLink() {
-        DebugGuiClient().link(getId(), getGroup(), getGroup(), getUrl());
+        DebugGuiClient().link(getGroup(), getGroup(), getUrl());
       }
       function addValue() {
-          DebugGuiClient().value(getId(), getGroup(), getGroup(), getGroup());
+          DebugGuiClient().value(getGroup(), getGroup(), getGroup());
       }
       function addLog() {
-        DebugGuiClient().log(getId(), '[' + new Date() + ']:\t' + getGroup());
+        DebugGuiClient().log('[' + new Date() + ']:\t' + getGroup());
       }
       function randomAdd() {
-        var count = Math.random() * 10;
+        var count = 150;
         for (var it = 0; it < count; it += 1) {
           var index = Math.random() * 4;
           if (index < 3) {
@@ -58,8 +54,7 @@
     </script>
   </head>
   <body>
-    <input type='text' id='id' value='test'>
-    <input type='button' onclick="randomAdd()" value='Add'>
+    <input type='button' onclick="randomAdd()" value='Generate'>
     <debug-gui-data url='/debug-gui/' dg-id='test'></debug-gui-data>
   </body>
 </html>
