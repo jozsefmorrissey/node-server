@@ -52,7 +52,7 @@ provides a easy to use graphical interface that can be added to any html file.
 ### Server
   Simple server that just sends and recieves logging information. By default
   the server deletes all logging information that is older than 5 minutes.
-  this can be changes by modifying the config.json file.
+  this can be changed by modifying the config.json file.
 
 ### Gui
  A simple interface with the following functionality.
@@ -89,9 +89,18 @@ provides a easy to use graphical interface that can be added to any html file.
   beginning of a process simply call init(request) and all code executed by that
   process or processes that are spawned will have debugging enabled.
 
-  If you are not running a server process, you will have to create your own.
-  Trigger mechanisms to activate the debugger. The init function also accepts
+  If you are not running a server process, you will have to create your own
+  trigger mechanisms to activate the debugger. The init function also accepts
   a boolean and id.
+
+### Java Client Test
+  DebugGuiTest.java Deploys multiple stand alone threads that send data, as well as verifies that
+  a threads are inheriting the debug state of their parent. The junit test is not multi threaded
+  so a "successful" run does not mean success. There should be no exceptions thrown and at
+  the end a list of links that contains logs will be displayed. You have 60 seconds to verify
+  those links, the last one is the most important. You should see "projects" 10-19 reporting
+  to this id. Dont forget the shortcut command d+g.
+
 
 ### Test Html
   This can be used to generate test data to make sure your server and javascript

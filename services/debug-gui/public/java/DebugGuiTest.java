@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.junit.Test;
 
+import lombok.Synchronized;
+
 public class DebugGuiTest {
 	private final int PARENT_ID = Integer.MAX_VALUE;
 
@@ -13,14 +15,16 @@ public class DebugGuiTest {
 		private int limit = 4;
 		private String id;
 		private boolean shouldInit = true;
+		private String project;
 
-		public DebugThreads(int index, boolean debug) {
+		public DebugThreads(int id, int projectId, boolean debug) {
 			this.debug = debug;
-			id = this.getClass().getSimpleName() + "-" + index;
+			this.id = getThreadId(id);
+			project = getThreadId(projectId);
 		}
 
-		public DebugThreads(int index, boolean debug, boolean shouldInit) {
-			this(index, debug);
+		public DebugThreads(int id, int projectId, boolean debug, boolean shouldInit) {
+			this(id, projectId, debug);
 			this.shouldInit = shouldInit;
 		}
 
@@ -31,13 +35,13 @@ public class DebugGuiTest {
 			}
 			int current = 0;
 			while (limit > current) {
-				System.out.println(debug + "==" + DebugGui.debugging());
-				System.out.println(id + "==" + DebugGui.getId());
+//				System.out.println(debug + "==" + DebugGui.debugging());
+//				System.out.println(id + "==" + DebugGui.getId());
 				assert(debug.equals(DebugGui.debugging()));
 				assert(this.id.equals(DebugGui.getId()));
 				try {
-					Thread.sleep((long)Math.floor(Math.random() * 3000));
-					log();
+					Thread.sleep((long)Math.floor(Math.random() * 1000));
+					log(project);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -47,14 +51,25 @@ public class DebugGuiTest {
 
 	}
 
+	public static String getThreadId(int id) {
+		return "DebugThreads-" + id;
+	}
+
 	List<Thread> threads = new ArrayList<Thread>();
+	List<DebugThreads> debugThreads = new ArrayList<DebugThreads>();
+
+	public String getHost() {
+		return "http://localhost:3000/debug-gui";
+	}
 
 	@Test
 	public void threadCheck() {
-		DebugGui.setHost("https://www.jozsefmorrissey.com/debug-gui");
+		DebugGui.setHost(getHost());
 		for (int i = 0; i < 10; i++) {
 			boolean debug = Math.random() < .5;
-			threads.add(new Thread(new DebugThreads(i, debug)));
+			DebugThreads debugThread = new DebugThreads(i, i, debug);
+			threads.add(new Thread(debugThread));
+			debugThreads.add(debugThread);
 			threads.get(i).start();
 		}
 		for (int i = 0; i < 10; i++) {
@@ -66,14 +81,28 @@ public class DebugGuiTest {
 		}
 		inheritanceThreadCheck(true, 10);
 		inheritanceThreadCheck(false, 20);
+
+		String host = DebugGui.getHost();
+		for (int i = 0; i < 10; i++) {
+			String threadId = getThreadId(i);
+			if (debugThreads.get(i).debug) {
+				printUrl(host, threadId);
+			}
+		}
+		System.out.print("Multi Threaded ");
+		printUrl(host, "DebugThreads-" + PARENT_ID);
+	}
+
+	private void printUrl(String host, String id) {
+		String clientUrl = host + "/html/debug-gui-client-test.html?DebugGui.logWindow=60&DebugGui.debug=" + id;
+		System.out.println(id + " Url: \n\t" + clientUrl);
 	}
 
 	public void inheritanceThreadCheck(boolean debug, int startIndex) {
-		DebugGui.setHost("https://www.jozsefmorrissey.com/debug-gui");
-		DebugGui.init(debug, "DebugThreads-" + PARENT_ID);
+		DebugGui.init(debug, getThreadId(PARENT_ID));
 
 		for (int i = startIndex; i < startIndex + 10; i++) {
-			threads.add(new Thread(new DebugThreads(PARENT_ID, DebugGui.debugging(), false)));
+			threads.add(new Thread(new DebugThreads(PARENT_ID, i, DebugGui.debugging(), false)));
 			threads.get(i).start();
 		}
 		for (int i = startIndex; i < startIndex + 10; i++) {
@@ -85,9 +114,8 @@ public class DebugGuiTest {
 		}
 	}
 
-
-	public void log() throws InterruptedException {
-		DebugGui.setRoot(DebugGui.getId());
+	public synchronized void log(String id) throws InterruptedException {
+		DebugGui.setRoot(id);
 		DebugGui.link("beta", "mylabel", "http://www.google.com")
 			.link("delta.foxtrot", "my2ndlabel", "http://www.google.com")
 			.value("beta.charlie", "mylabel", "http://www.google.com")
@@ -96,8 +124,5 @@ public class DebugGuiTest {
 			.log("beta.charlie", "mylog3: http://www.google.com")
 			.log("beta.charlie", "mylog4: http://www.google.com")
 			.exception("beta.charlie.echo", "myException", new Error("my message"));
-
-		// Check below url for results
-		// https://www.jozsefmorrissey.com/debug-gui/html/debug-gui-client-example.html?DebugGui.debug=t&DebugGui.ids=DebugThreads-0,DebugThreads-1,DebugThreads-2,DebugThreads-3,DebugThreads-4,DebugThreads-5,DebugThreads-6,DebugThreads-7,DebugThreads-8,DebugThreads-9
 	}
 }
