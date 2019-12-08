@@ -94,10 +94,10 @@ provides a easy to use graphical interface that can be added to any html file.
   a boolean and id.
 
 ### Java Client Test
-  DebugGuiTest.java Deploys multiple stand alone threads that send data, as well as verifies that
+  DebugGuiTest.java deploys multiple stand alone threads that send data, as well as verifies that
   a threads are inheriting the debug state of their parent. The junit test is not multi threaded
   so a "successful" run does not mean success. There should be no exceptions thrown and at
-  the end a list of links that contains logs will be displayed. You have 60 seconds to verify
+  the end, a list of links that contains logs will be displayed. You have 60 seconds to verify
   those links, the last one is the most important. You should see "projects" 10-19 reporting
   to this id. Dont forget the shortcut command d+g.
 
