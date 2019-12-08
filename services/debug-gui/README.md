@@ -16,7 +16,9 @@ provides a easy to use graphical interface that can be added to any html file.
 
   press keys 'd' and 'g' at the same time to open.
 
-  use buttons Generate and Refesh to test server and javascript client.
+  Use buttons Generate and Refesh to test server and javascript client.
+
+  Happy Logging!
 
 ## Key Concepts
   id - A unique identifier for you, so that you don't get someone else's logs.
@@ -27,11 +29,11 @@ provides a easy to use graphical interface that can be added to any html file.
   root - This should be your application id, it will become the root for your
   subsequent groups.
 
-  value - a simple key value pair.
+  value - Displays a simple key value pair.
 
-  link - creates a link to any url that might come in handy during debugging
+  link - Creates a link to any url that might come in handy during debugging.
 
-  exception - Creates a popup with you exception information.
+  exception - Creates a popup with your exception information.
 
   log - Just a standard string that will be accessible in sequential order.
 
@@ -41,6 +43,7 @@ provides a easy to use graphical interface that can be added to any html file.
     <tr><td>Gui</td><td>./js/debug-gui.js</td></tr>
     <tr><td>Javascript Client</td><td>./js/debug-gui-client.js</td></tr>
     <tr><td>Java Client</td><td>./java/DebugGui.java</td></tr>
+    <tr><td>Java Test Class</td><td>./java/DebugGuiTest.java</td></tr>
     <tr><td>Test Html</td><td>./debug-gui-client-test.html</td></tr>
     <tr><td>Server Html</td><td>./debug-gui-server.html</td></tr>
     <tr><td>Parse Html</td><td>./debug-gui-parse.html</td></tr>
@@ -54,12 +57,10 @@ provides a easy to use graphical interface that can be added to any html file.
 ### Gui
  A simple interface with the following functionality.
   - refresh - pulls new data from the server.
-  - clean - removes cached logs by the browser on refresh.
   - logs - shows the simple log messages
   - host - enables the gui to communicate with any server
   - id - process unique identifier typically set by the key 'DebugGui.debug'
-    auto detected via parameter or cookie. With a preference for parameter,
-    since it is more clearly visible to the user.
+    auto detected via parameter or cookie. Exception is thrown if a contradiction exists.
   - Cookie - Click the cookie to create and activate debugging.
   - Logging Window - The number of seconds in the past in which you wish to view logs.
   - Copy Html Report - Adds a valid html to the clipboard with the current
@@ -72,7 +73,10 @@ provides a easy to use graphical interface that can be added to any html file.
     - dg.exception(group, exception)
     - dg.log(logMessage)
     - dg.setHost(newHostUrl)
-    - db.setRoot(rootGroupName)
+    - dg.setRoot(rootGroupName)
+
+    If you dont want to use dg or you want to use seperate debuggers in different locations,
+    a new debug configuration can be created with debugGuiClient(root).
 
 ### Java Client
   To configure simply set your application root on startup. If you are wanting
@@ -81,10 +85,12 @@ provides a easy to use graphical interface that can be added to any html file.
   - Header
   - Parameter
 
-  The Key for all three is 'DebugGui.debug', the value will become your id.
+  The Key for all three is 'DebugGui.debug', the value will become your id. At the
+  beginning of a process simply call init(request) and all code executed by that
+  process or processes that are spawned will have debugging enabled.
 
   If you are not running a server process, you will have to create your own.
-  Trigger mechinisms to activate the debugger. The init function also accepts
+  Trigger mechanisms to activate the debugger. The init function also accepts
   a boolean and id.
 
 ### Test Html

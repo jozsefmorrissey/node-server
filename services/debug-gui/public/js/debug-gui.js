@@ -33,6 +33,12 @@ function DebugGui() {
     }
     var cookie = getCookie('DebugGui.debug');
     var param = getParameter('DebugGui.debug');
+    if (cookie && param && cookie !== param){
+      throw new Error('Contradication exists between DebugGui.debug cookie ' +
+        'and parameter. This contraction must be fixed, it could be triggering' +
+        ' different applications to use different identifiers.\n\t\tCookie: ' +
+        cookie + "\n\t\tParameter: " + param);
+    }
     if (cookie) {
       DEBUG_GUI.ID = cookie;
     }
@@ -40,11 +46,6 @@ function DebugGui() {
       DEBUG_GUI.ID = param;
     }
     return DEBUG_GUI.ID;
-  }
-
-
-  function toggleChecked() {
-    DEBUG_GUI.CHECKED = DEBUG_GUI.CHECKED ? '' : 'checked';
   }
 
   function updateId(value) {
@@ -56,9 +57,6 @@ function DebugGui() {
     var tl = getLogWindow();
     return `<div style='text-align: center;'>
               <div style='float: left; margin-left: 20pt;'>
-                <label>clean: </label>
-                <input type='checkbox' onclick='DebugGui.toggleChecked()'
-                    ${DEBUG_GUI.CHECKED} id='debug-gui-clean'>
                 <input type='button' value='refresh'
                     onclick='DebugGui.refresh()'>
                 <input type='button' onclick='DebugGui.displayLogs()'
@@ -118,13 +116,8 @@ function DebugGui() {
     var html = buildHeader(buildGui(undefined, 'og'));
     DEBUG_GUI.SCC = ShortCutCointainer("debug-gui-scc", ['d', 'g'], html);
     DEBUG_GUI.ID = getId();
-    document.getElementById('debug-gui-clean').checked = initShouldClean();
 
     refresh();
-  }
-
-  function initShouldClean() {
-      return getParameter('DebugGui.clean') === 'true';
   }
 
   function hideEmpties() {
@@ -141,7 +134,7 @@ function DebugGui() {
   function displayLogs() {
     var logs = DEBUG_GUI.DATA[LOGS];
     var html = '';
-    for (var index = 0; index < logs.length; index += 1) {
+    for (var index = logs.length - 1; index > -1; index -= 1) {
       html += logs[index].log + '<br>';
     }
     displayModalHtml(html);
@@ -215,11 +208,8 @@ function DebugGui() {
       var id = keys[oIndex];
       DEBUG_GUI.DATA[id] = newData[keys[oIndex]];
     }
-    if (DEBUG_GUI.DATA[LOGS]) {
-      DEBUG_GUI.DATA[LOGS] = DEBUG_GUI.DATA[LOGS].concat(newData[LOGS]);
-    } else {
-      DEBUG_GUI.DATA[LOGS] = newData[LOGS];
-    }
+
+    DEBUG_GUI.DATA[LOGS] = newData[LOGS];
   }
 
   function getUrl(host, ext, id, group) {
@@ -391,17 +381,9 @@ function DebugGui() {
     return DEBUG_GUI.TIME_LIMIT;
   }
 
-  function shouldClean() {
-    return document.getElementById('debug-gui-clean').checked;
-  }
-
   function refresh(data) {
     if (data) {
-        if (shouldClean()) {
-          DEBUG_GUI.DATA = data;
-        } else {
-          mergeObject(data);
-        }
+        DEBUG_GUI.DATA = data;
 
         render();
     } else {
@@ -451,7 +433,7 @@ function DebugGui() {
 
   window.addEventListener('load', onLoad);
   return {refresh, displayModal, displayLogs, debug, createCookie,
-    toggleChecked, copyModal, getUrl, copyReport, getId, updateId};
+      copyModal, getUrl, copyReport, getId, updateId};
 }
 
 DebugGui = DebugGui();
