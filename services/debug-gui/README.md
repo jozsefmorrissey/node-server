@@ -47,8 +47,7 @@ provides a easy to use graphical interface that can be added to any html file.
   </table>
 
 ### Server
-  Simple server that just sends and recieves logging information with two
-  endpoints to modify the time window of the logs you wish to view. By default
+  Simple server that just sends and recieves logging information. By default
   the server deletes all logging information that is older than 5 minutes.
   this can be changes by modifying the config.json file.
 
@@ -61,8 +60,8 @@ provides a easy to use graphical interface that can be added to any html file.
   - id - process unique identifier typically set by the key 'DebugGui.debug'
     auto detected via parameter or cookie. With a preference for parameter,
     since it is more clearly visible to the user.
-  - Cookie - Click the cookie to create to activate debugging.
-  - Logging Window - The window of time you wish in which you wish to view logs.
+  - Cookie - Click the cookie to create and activate debugging.
+  - Logging Window - The number of seconds in the past in which you wish to view logs.
   - Copy Html Report - Adds a valid html to the clipboard with the current
     logs attached.
 
@@ -73,6 +72,7 @@ provides a easy to use graphical interface that can be added to any html file.
     - dg.exception(group, exception)
     - dg.log(logMessage)
     - dg.setHost(newHostUrl)
+    - db.setRoot(rootGroupName)
 
 ### Java Client
   To configure simply set your application root on startup. If you are wanting
@@ -80,6 +80,7 @@ provides a easy to use graphical interface that can be added to any html file.
   - Cookie
   - Header
   - Parameter
+
   The Key for all three is 'DebugGui.debug', the value will become your id.
 
   If you are not running a server process, you will have to create your own.
@@ -95,6 +96,6 @@ provides a easy to use graphical interface that can be added to any html file.
 
 ### Parse Html
   The main purpose of this functionality is to support sharing of logging
-  information. On the gui you will see a "Copy Html Report" button in the upper
-  left hand corner. It will create a static html file that you can share with
+  information. On the gui you will see a "Copy Html Report" button, in the upper
+  right hand corner. It will copy to the clipboard static html file that you can share with
   colleges.

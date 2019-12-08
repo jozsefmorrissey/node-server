@@ -4,6 +4,7 @@
     <script type='text/javascript' src="/debug-gui/js/debug-gui.js"></script>
     <script>
       var groups = ['computer', 'login', 'verification', 'system', 'cabage', 'teapot'];
+      dg.setRoot('debug-gui-client-test');
       function getGroup() {
         var count = Math.floor(Math.random() * 3 + 1);
         var group = "";
@@ -24,17 +25,17 @@
 
       function addException() {
 
-        DebugGuiClient().exception(getGroup(), getException());
+        dg.exception(getGroup(), getException());
       }
 
       function addLink() {
-        DebugGuiClient().link(getGroup(), getGroup(), getUrl());
+        dg.link(getGroup(), getGroup(), getUrl());
       }
       function addValue() {
-          DebugGuiClient().value(getGroup(), getGroup(), getGroup());
+          dg.value(getGroup(), getGroup(), getGroup());
       }
       function addLog() {
-        DebugGuiClient().log('[' + new Date() + ']:\t' + getGroup());
+        dg.log('[' + new Date() + ']:\t' + getGroup());
       }
       function randomAdd() {
         var count = 150;
