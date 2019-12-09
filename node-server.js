@@ -46,11 +46,11 @@ app.post('/upload', function(req, res) {
   res.send('success');
 });
 
+var dirReg = /(^.*\/).*$/;
 app.post('/copy', function(req, res) {
   console.log(req.body.name.replace(/(^.*\/).*$/, '$1'));
-  var dir = './uploads/' + req.body.name.replace(/(^.*\/).*$/, '$1');
-  if (dir !== req.body.name) {
-    shell.mkdir('-p', dir);
+  if (req.body.name.match(dirReg)) {
+    shell.mkdir('-p', './uploads/' + req.body.name.replace(dirReg, '$1'));
   }
   fs.writeFileSync('./uploads/' + req.body.name, req.body.text);
   res.send('success');
