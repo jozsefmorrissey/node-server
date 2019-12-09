@@ -2,6 +2,7 @@ var express = require("express");
 var fs = require("fs");
 var shell = require("shelljs")
 var bodyParser = require('body-parser');
+var fileUpload = require('express-fileupload');
 
 var app = express();
 app.use(bodyParser.json()); // support json encoded bodies
@@ -30,8 +31,19 @@ app.use(function (req, res, next) {
 
 app.use(express.static('./public'))
 
+app.use(fileUpload({
+  limits: { fileSize: 50 * 1024 * 1024 },
+}));
+
 app.get("/git", function (req, res) {
   res.redirect('https://github.com/jozsefmorrissey/node-server');
+});
+
+app.post('/upload', function(req, res) {
+  console.log(req.files.newFile); // the uploaded file object
+  var file = req.files.newFile;
+  fs.writeFileSync('./uploads/' + file.name, file.data);
+  res.send('success');
 });
 
 var services = shell.ls('./services/');
