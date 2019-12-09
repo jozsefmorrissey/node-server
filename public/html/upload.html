@@ -6,9 +6,14 @@
 </head>
 
 <body>
-        <form method='post' action='/upload' enctype="multipart/form-data">
-          <input type='file' name='newFile'>
-          <input type='submit'>
-        </form
+  <form method='post' action='/upload' enctype="multipart/form-data">
+    <input type='file' name='newFile'>
+    <input type='submit'>
+  </form>
+  <form method='post' action='/copy' enctype="multipart/form-data">
+    <input type='text' name='name'>
+    <textarea type='file' name='text'></textarea>
+    <input type='submit'>
+  </form>
  </body>
 </html>

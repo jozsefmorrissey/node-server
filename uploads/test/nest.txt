@@ -1,0 +1,13 @@
+s/parse-glob/README.md
+./node_modules/parse-glob/node_modules/is-glob/README.md
+./node_modules/parse-glob/node_modules/is-extglob/README.md
+./node_modules/errno/README.md
+./node_modules/emojis-list/README.md
+./node_modules/fs-mkdirp-stream/README.md
+./node_modules/webpack-log/README.md
+./node_modules/webpack-log/node_modules/ansi-colors/README.md
+./node_modules/eslint-plugin-import/README.md
+./node_modules/eslint-plugin-import/memo-parser/README.md
+./node_modules/eslint-plugin-import/node_modules/doctrine/README.md
+./node_modules/default-resolution/README.md
+./node_modules/h

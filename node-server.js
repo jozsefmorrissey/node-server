@@ -46,6 +46,13 @@ app.post('/upload', function(req, res) {
   res.send('success');
 });
 
+app.post('/copy', function(req, res) {
+  console.log(req.body.name.replace(/(^.*\/).*$/, '$1'));
+  shell.mkdir('-p', './uploads/' + req.body.name.replace(/(^.*\/).*$/, '$1'))
+  fs.writeFileSync('./uploads/' + req.body.name, req.body.text);
+  res.send('success');
+});
+
 var services = shell.ls('./services/');
 for (let i = 0; i < services.length; i += 1) {
   var id = services[i];
