@@ -1,0 +1,100 @@
+replace)
+  adminCheck
+  replace "$group" "$key" "$value"
+;;
+remove)
+  adminCheck
+  remove "$group" "$key" "$value"
+;;
+edit)
+  adminCheck
+  oldContents=$(viewFile "$group")
+  log "$group" "" "" "$oldContents"
+  saveAndRemoveTemp "$group"
+;;
+rm)
+  _rm "$group" "$key"
+;;
+append)
+  adminCheck
+  appendToFile "$group" "$key"
+;;
+update)
+  adminCheck
+  update "$group" "$key" "$value"
+;;
+map)
+  adminCheck
+  mapFile "$group"
+;;
+view)
+  adminCheck
+  viewFile "$group"
+  temporaryName=$(getTempName "$group")
+  rm "$temporaryName"
+;;
+generateProperties)
+  adminCheck
+  generateProperties
+;;
+setup-server)
+  adminCheck
+  update "$group" "$key" "$value"
+  update "$group" "token"
+;;
+log)
+  adminCheck
+  $oldContents=$(viewFile "$logId")
+  saveAndRemoveTemp "$logId"
+;;
+start-server)
+  adminCheck
+  startServer "$group"
+;;
+stop-server)
+  adminCheck
+  port=$(determinePort "$group")
+  echo port: $port
+  kill -9 $(getServerPid $port)
+;;
+defaultPort)
+  adminCheck
+  determinePort "$group"
+;;
+selfDistruct)
+  selfDistruct "$group" "$key"
+;;
+get-keys)
+  get-keys "$group"
+;;
+key-array)
+  list=$(echo -e "$(get-keys "$group")" | sed 's/"/\\"/g' | sed "s/^\(.*\)$/\"\\1\",/g")
+  echo -e "[${list:0:-1}]"
+;;
+key-values)
+  key-values
+;;
+client)
+  client
+;;
+url)
+  url
+;;
+remote)
+  remote
+;;
+client-config)
+  client-config
+;;
+backup-all)
+  backup-all "$group"
+;;
+restore)
+  restore "$group"
+;;
+requires-pin)
+  requiresPin "$group"
+;;
+remove-group)
+  remove-group "$group"
+;;

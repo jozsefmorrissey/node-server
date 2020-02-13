@@ -1,7 +1,7 @@
-
+var fs = require("fs");
 var config = require('./config.json');
 
-function endpoints(app, prefix) {
+function endpoints(app, prefix, ip) {
   var dataMap = {};
   var removeAfter = config.removeIntervalMinutes * 60 * 1000;
   var LOGS = "__LOGS";
@@ -181,6 +181,22 @@ function endpoints(app, prefix) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(getRelevantMap(map, logWindow * 1000)));
     deleteOutdated();
+  });
+
+  // Resource endpoints
+  app.get(prefix + "/gui", function (req, res) {
+    var clientHtml = fs.readFileSync('./services/debug-gui/public/js/debug-gui.js', 'utf8');
+    clientHtml = clientHtml.replace(/\$\{DebugGui.ip\}/g, ip);
+    res.setHeader('Content-Type', 'text/javascript');
+    res.send(clientHtml);
+  });
+
+  app.get(prefix + "/java/template/:projectName", function (req, res) {
+    var clientHtml = fs.readFileSync('./services/debug-gui/public/java/DebugGui.java', 'utf8');
+    clientHtml = clientHtml.replace(/\$\{DebugGui.ip\}/g, ip);
+    clientHtml = clientHtml.replace(/\$\{DebugGui.projectName\}/g, req.params.projectName);
+    res.setHeader('Content-Type', 'text/raw');
+    res.send(clientHtml);
   });
 }
 

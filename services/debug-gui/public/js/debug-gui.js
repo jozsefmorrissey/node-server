@@ -14,9 +14,16 @@ function DebugGui() {
   })();
 
   function getCookie(name) {
-    var cookieReg = new RegExp("(.*?; |^)" + name + "=(.*?)(;.*|$)");
+    var cookieReg = new RegExp("^(.*?; |)DebugGui=(id=.*?)(;.*$|$)");
     if (document.cookie.match(cookieReg)) {
-      return document.cookie.replace(cookieReg, '$2');
+      var value = document.cookie.replace(cookieReg, '$2');
+      var keyValues = value.split("|");
+      var json = {};
+      for (var index = 0; index < keyValues.length; index += 1) {
+          var keyValue = keyValues[index].split("=");
+          json[keyValue[0]] = keyValue[1];
+      }
+      return json;
     }
   }
 
@@ -31,16 +38,20 @@ function DebugGui() {
     if (DEBUG_GUI.ID) {
       return DEBUG_GUI.ID;
     }
-    var cookie = getCookie('DebugGui.debug');
-    var param = getParameter('DebugGui.debug');
-    if (cookie && param && cookie !== param){
-      throw new Error('Contradication exists between DebugGui.debug cookie ' +
-        'and parameter. This contraction must be fixed, it could be triggering' +
+    var cookie = getCookie('DebugGui');
+    var param = getParameter('DebugGui.id');
+    if (cookie && param && cookie.id !== param){
+      try{
+        throw new Error('Contradication exists between DebugGui cookie ' +
+        'and id parameter. This contraction must be fixed, it could be triggering' +
         ' different applications to use different identifiers.\n\t\tCookie: ' +
-        cookie + "\n\t\tParameter: " + param);
+        cookie.id + "\n\t\tParameter: " + param);
+      } catch (e) {
+        console.error(e);
+      }
     }
     if (cookie) {
-      DEBUG_GUI.ID = cookie;
+      DEBUG_GUI.ID = cookie.id;
     }
     if (param) {
       DEBUG_GUI.ID = param;
@@ -124,7 +135,6 @@ function DebugGui() {
     var accordions = document.querySelectorAll('#accordionExample');
     for (let index = 0; index < accordions.length; index += 1) {
       var ctn = accordions[index].parentElement;
-      console.log(ctn.innerText + "\n\n");
       if (ctn.innerText.trim() === "") {
         ctn.style = 'display:none';
       }
@@ -141,8 +151,8 @@ function DebugGui() {
   }
 
   function debug() {
-    return document.cookie.match("(;\\s*|^\\s*)DebugGui.debug=(.{1,})(;|$)") !== null ||
-      window.location.href.match("(\\?|&)DebugGui.debug=[^&]{1,}(&|$)");
+    return document.cookie.match("(;\\s*|^\\s*)DebugGui=(.{1,})(;|$)") !== null ||
+      window.location.href.match("(\\?|&)DebugGui.id=[^&]{1,}(&|$)");
   }
 
   function displayModalHtml(html) {
@@ -173,17 +183,28 @@ function DebugGui() {
     displayModal(reportInfo);
   }
 
+  function retTab(count) {
+    var tab = '\n';
+    for (var index = 0; index < count; index += 1) {
+      tab += '\t';
+    }
+    return tab;
+  }
+
   function copyReport() {
 
     var title = document.getElementById(reportInfoTitleId).value;
     var desc = document.getElementById(reportInfoDescId).value;
     var copyText = document.getElementById(copyTextId);
+    var host = DEBUG_GUI.SCRIPT_URL.replace('/gui', '');
 
-    copyText.value = '<html><head><title>' + title + '</title>' +
-      '<script type=\'text/javascript\' src="' + DEBUG_GUI.SCRIPT_URL + '"></script>' +
-      '</head><body><h1>' + title + '</h1><b>(Press d + g to open debug-gui)</b><p>' + desc + '</p>' +
-      '<' + TAG_NAME + ">" + JSON.stringify(DEBUG_GUI.DATA, null, 2) + "</" + TAG_NAME + ">" +
-      '</body></html>';
+    copyText.value = '<html>\n\t<head>\n\t\t<title>' + title + '</title>' +
+      '\n\t\t<script type=\'text/javascript\' src="' + DEBUG_GUI.SCRIPT_URL +
+      '"></script>' + '\n\t</head>\n\t<body>\n\t\t<h1>' + title +
+      '</h1>\n\t\t<b>(Press d + g to open debug-gui)</b>\n\t\t<p>' + desc +
+      '</p>' + '\n\t\t<' + TAG_NAME + " url='" + host + "' debug-gui-id='" + DEBUG_GUI.ID +
+      "'>\n" + JSON.stringify(DEBUG_GUI.DATA, null, 2) + "\n\t\t</" + TAG_NAME + ">" +
+      '\n\t</body>\n</html>';
     copyText.select();
 
 
@@ -197,7 +218,7 @@ function DebugGui() {
         return str + "/";
       }
       return str;
-    }https://stackoverflow.com/questions/20020902/android-httpurlconnection-how-to-set-post-data-in-http-body
+    }
     return "";
   }
 
@@ -229,7 +250,6 @@ function DebugGui() {
 
         if (this.status == 200) {
             var data = JSON.parse(this.responseText);
-            console.log(data);
             if (onSuccess) {
               onSuccess(data);
             } else {
@@ -259,6 +279,7 @@ function DebugGui() {
        if (innerHtml !== "") {
          try {
            var json = JSON.parse(innerHtml);
+           DEBUG_GUI.DONT_REFRESH = true;
            mergeObject(json);
          } catch (e) {
            console.log(e.stack)
@@ -386,18 +407,54 @@ function DebugGui() {
         DEBUG_GUI.DATA = data;
 
         render();
-    } else {
+    } else if (!DEBUG_GUI.DONT_REFRESH) {
       getData(DEBUG_GUI.HOST, DEBUG_GUI.ID);
     }
   }
 
   function createCookie() {
-    document.cookie = 'DebugGui.debug=' + getId() + ';';
+    var id = getId();
+    var host = window.location.href.replace(/(http(s|):\/\/.*?)\/.*/, "$1");
+    var portReg = /(http(s|)(:\/\/[^:]*?:[0-9]{4})\/)/;
+    var httpHost;
+    var httpsHost;
+    var portMatch = window.location.href.match(portReg);
+    if (portMatch) {
+      var rootValue = portMatch[3].substr(0, portMatch[3].length - 1);
+      httpHost = "http" + rootValue + 0 + "/debug-gui/";
+      httpsHost = "https" + rootValue + 1 + "/debug-gui/";
+    }
+    var cookie = "id=" + id;
+    var setupCookie = "document.cookie = 'DebugGui=" + cookie + "|host=" +
+        host + "|httpHost="  + httpHost + "|httpsHost=" + httpsHost + "'";
+
+    if (document.getElementById('debug-gui-id').value) {
+      document.cookie = 'DebugGui=' + cookie;
+    } else {
+      document.cookie = 'DebugGui=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    }
+    if (window.location.href.indexOf('/debug-gui/') > -1) {
+      copyToClipboard(setupCookie, "Setup cookie copied to clipboard");
+    }
+  }
+
+  function copyToClipboard(value, msg) {
+    var input = document.createElement('input')
+    input.value = value;
+    document.querySelectorAll('body')[0].append(input);
+    input.select();
+    document.execCommand('copy');
+
+    input.style = 'display: none';
+    msg && alert(msg);
   }
 
 
+
   function onLoad() {
-    if (debug()) {
+    var elem = document.querySelectorAll('debug-gui-data');
+    var isParse = (elem.length > 0 && elem[0].innerText.trim());
+    if (debug() || isParse) {
       var script = document.createElement("script");
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js';
       script.integrity = "sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1";
@@ -421,7 +478,7 @@ function DebugGui() {
   document.head.appendChild(script);
 
   script = document.createElement("script");
-  script.src = 'https://www.jozsefmorrissey.com/js/short-cut-container.js';
+  script.src = 'https://www.jozsefmorrissey.com:3001/js/short-cut-container.js';
   document.head.appendChild(script);
 
   var style = document.createElement("link");

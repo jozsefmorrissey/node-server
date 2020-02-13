@@ -11,7 +11,25 @@ app.use(bodyParser.urlencoded({ extended: true }));
 var http = require('http');
 var https = require('https');
 
+function getIp() {
+  var ipconfig = shell.exec('ipconfig', {silent: true}).stdout;
+  var lines = ipconfig.split('\r\n')
+  var index = 0;
+  var line = lines[index].replace(/(.*IPv4.*?: ([0-9.]*).*)/g, '$2');
+  while (line == lines[index]) {
+    index++;
+    line = lines[index].replace(/(.*IPv4.*?: ([0-9.]*).*)/g, '$2');
+  }
+  return line;
+}
 
+function getUser() {
+  var user = shell.exec('echo %UserProfile%', {silent: true}).stdout.replace(/^.*\\([^\\]*)$/, '$1').trim();
+  if (user.indexOf('%UserProfile%') === -1) {
+    return user;
+  }
+  return shell.exec('echo ${UserProfile}', {silent: true}).stdout.replace(/^.*\\([^\\]*)$/, '$1').trim();
+}
 var https_options = {
   key: fs.readFileSync("./cert/jozsefmorrissey_com.key"),
   cert: fs.readFileSync("./cert/jozsefmorrissey_com.crt"),
@@ -56,6 +74,7 @@ app.post('/copy', function(req, res) {
   res.send('success');
 });
 
+var ip = '192.168.254.10';
 var services = shell.ls('./services/');
 for (let i = 0; i < services.length; i += 1) {
   var id = services[i];
@@ -63,7 +82,7 @@ for (let i = 0; i < services.length; i += 1) {
   var dir = './services' + loc;
   var project = dir + loc;
   app.use(loc, express.static(dir + '/public'))
-  require(project).endpoints(app, loc);
+  require(project).endpoints(app, loc, ip);
 }
 
 var httpServer = http.createServer(app);
@@ -71,3 +90,6 @@ var httpsServer = https.createServer(https_options, app);
 
 httpServer.listen(3000);
 httpsServer.listen(3001);
+
+var user = getUser();
+shell.exec("xdg-open \"https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.id=" + user + "\"");

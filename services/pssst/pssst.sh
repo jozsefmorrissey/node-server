@@ -38,6 +38,7 @@ first() {
   echo -e "$1"
 }
 
+# TODO: Script needs to be fixed to accept flag args.
 globalArgs() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   config=${flags['config']}
@@ -562,8 +563,15 @@ client() {
 }
 
 remote() {
-  curl -X POST -H "Content-Type: application/json" -d "{\"group\": \"$group\",\"token\": \"$token\",\"pst-pin\": \"$pstPin\"}" "$host/pssst/get/json"
+  json=$(curl -X POST -H "Content-Type: application/json" -d "{\"group\": \"$group\",\"token\": \"$token\",\"pst-pin\": \"$pstPin\"}" "$host/pssst/get/json")
 	Logger trace "EXIT"
+  key=${flags['key']}
+  if [ ! -z "$key" ]
+  then
+    echo "$json" | grep -zoP "\"$key\":\s*\"\K[^\s,]*(?=\s*\")";
+  else
+    echo "$json"
+  fi
 }
 
 valueNonAdmin() {
@@ -629,6 +637,41 @@ key-values() {
 	Logger trace "EXIT"
 }
 
+key-array() {
+  list=$(echo -e "$(get-keys "$1")" | sed 's/"/\\"/g' | sed "s/^\(.*\)$/\"\\1\",/g")
+  echo -e "[${list:0:-1}]"
+}
+
+stop-server() {
+  port=$(determinePort "$1")
+  echo port: $2
+  kill -9 $(getServerPid $2)
+}
+
+edit() {
+  oldContents=$(viewFile "$1")
+  log "$1" "" "" "$oldContents"
+  saveAndRemoveTemp "$1"
+}
+
+view() {
+  viewFile "$1"
+  temporaryName=$(getTempName "$1")
+  rm "$temporaryName"
+}
+
+_help() {
+  cat $passServRelDir/pssst.sh |
+  tr "\n" " " |
+  tr "\t" " " |
+  grep -oP "[a-zA-Z-]*\).*?;;" |
+  sed 's/ \{1,\}/ /g' |
+  sed 's/\([a-zA-Z-]\{2,\}\)) [a-zA-Z\_-]*\(.\{2,\}\?\) ;;/pst \1 \2\n/g' |
+  sort |
+  sed 's/ \{1,\}/ /g' |
+  grep -oP "^pst.*"
+}
+
 insecureFunctions() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   case "$1" in
@@ -636,28 +679,23 @@ insecureFunctions() {
       echo $passServRelDir
     ;;
     value)
-      valueNonAdmin "$2" "$3"
+      valueNonAdmin "$group" "$key"
     ;;
     update)
-      updateNonAdmin "$2" "$3" "$4"
-    ;;
-    --help)
-      openHelpDoc "$2"
-    ;;
-    -help)
-      openHelpDoc "$2"
+      updateNonAdmin "$group" "$key" "$value"
     ;;
     help)
-      openHelpDoc "$2"
+      echo here
+      _help
     ;;
     validateToken)
-      validateToken "$2" "$3" "$4"
+      validateToken "$group" "$key" "$value"
     ;;
     retTemp)
-      retTemp "$2" "$3"
+      retTemp "$group" "$key"
     ;;
     to-json)
-      to-json "$2"
+      to-json "$group"
     ;;
   esac
 	Logger trace "EXIT"
@@ -667,77 +705,49 @@ secureFunctions() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   case "$1" in
     replace)
-      adminCheck
-      replace $2 $3 $4
+      replace "$group" "$key" "$value"
     ;;
     remove)
-      adminCheck
-      remove $2 $3 $4
+      remove "$group" "$key" "$value"
     ;;
     edit)
-      adminCheck
-      oldContents=$(viewFile "$2")
-      log $2 "" "" "$oldContents"
-      saveAndRemoveTemp "$2"
+      edit "$group"
     ;;
     rm)
-      _rm "$2" "$3"
+      _rm "$group" "$key"
     ;;
     append)
-      adminCheck
-      appendToFile "$2" "$3"
+      appendToFile "$group" "$key"
     ;;
     update)
-      adminCheck
-      update "$2" "$3" "$4"
+      update "$group" "$key" "$value"
     ;;
     map)
-      adminCheck
-      mapFile "$2"
+      mapFile "$group"
     ;;
     view)
-      adminCheck
-      viewFile "$2"
-      temporaryName=$(getTempName "$2")
-      rm "$temporaryName"
+      view "$group"
     ;;
     generateProperties)
-      adminCheck
       generateProperties
     ;;
-    setup-server)
-      adminCheck
-      update "$2" "$3" "$4"
-      update "$2" "token"
-    ;;
-    log)
-      adminCheck
-      $oldContents=$(viewFile "$logId")
-      saveAndRemoveTemp "$logId"
-    ;;
     start-server)
-      adminCheck
-      startServer $2
+      startServer "$group"
     ;;
     stop-server)
-      adminCheck
-      port=$(determinePort $2)
-      echo port: $port
-      kill -9 $(getServerPid $port)
+      stop-server "$group" "$port" #port optional
     ;;
     defaultPort)
-      adminCheck
-      determinePort $2
+      determinePort "$group"
     ;;
     selfDistruct)
-      selfDistruct "$2" "$3"
+      selfDistruct "$group" "$key"
     ;;
     get-keys)
-      get-keys "$2"
+      get-keys "$group"
     ;;
     key-array)
-      list=$(echo -e "$(get-keys "$2")" | sed 's/"/\\"/g' | sed "s/^\(.*\)$/\"\\1\",/g")
-      echo -e "[${list:0:-1}]"
+      key-array "$group"
     ;;
     key-values)
       key-values
@@ -755,16 +765,16 @@ secureFunctions() {
       client-config
     ;;
     backup-all)
-      backup-all "$2"
+      backup-all "$group"
     ;;
     restore)
-      restore "$2"
+      restore "$group"
     ;;
     requires-pin)
-      requiresPin "$2"
+      requiresPin "$group"
     ;;
     remove-group)
-      remove-group "$2"
+      remove-group "$group"
     ;;
   esac
 	Logger trace "EXIT"
