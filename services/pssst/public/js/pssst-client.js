@@ -98,7 +98,6 @@ function PssstInit() {
   }
 
   function copy(id) {
-    //https://localhost:3001/pssst/client?token=gailahng3Ao0QuuThaerae0Coo4cea&host=https://localhost:3001&group=value
     var copyElem = document.getElementById(id)
     copyElem.select();
     document.execCommand('copy');
@@ -188,9 +187,12 @@ function PssstInit() {
     // }
   }
 
-  function validatePin() {
+  function validatePin(group, token, pstPin, success, fail) {
+    httpPostAsync("/pssst/validate", {group, token, pstPin}, success, fail);
+  }
+
+  function validateThisPin() {
     var pstPin = document.getElementById('pst-pin-input').value;
-    console.log(pstPin);
     function pinValidated() {
       PSSST_CONFIG.pstPin = pstPin;
       document.querySelector('pssst').style.display = '';
@@ -199,7 +201,23 @@ function PssstInit() {
     }
     var group = PSSST_CONFIG.group;
     var token = PSSST_CONFIG.token;
-    httpPostAsync("/pssst/validate", {group, token, pstPin}, pinValidated, askForPin);
+    validatePin(group, token, pstPin, pinValidated, askForPin);
+  }
+
+  function getPinPrompt(onclick) {
+    let pinPrompt = '' +
+      '<div style="margin: auto;display: block; text-align: center;">' +
+        '<br><br><br>' +
+        '<b class="error-msg" id="pin-error"></b><br>' +
+        '<input type="password" id="pst-pin-input" class="form-control" ' +
+            'style="margin: auto; max-width: 300px;"" placeholder="pst-pin" ' +
+            'onkeydown="if (event.keyCode == 13) ' + onclick + '">' +
+        '<br><br>' +
+        '<button onclick="' + onclick + '" class="btn btn-primary">' +
+          'Enter'
+        '</button>'
+      '</div>';
+    return pinPrompt;
   }
 
   function askForPin(error) {
@@ -208,12 +226,8 @@ function PssstInit() {
         document.getElementById('pin-error').innerHTML = error.statusText;
       } else {
         document.querySelector('pssst').style.display = 'none';
-        let pinPrompt = '<div style="margin: auto;display: block; text-align: center;"><br><br><br>';
-        pinPrompt += `<b id="pin-error" style='font-size: 16px; color:red;'></b><br>`;
-        pinPrompt += `<input type="text" id="pst-pin-input" style='margin: auto; max-width: 300px;' class="form-control" placeholder="pst-pin"
-        onkeydown = "if (event.keyCode == 13) Pssst.validatePin()"><br><br>`;
-        pinPrompt += '<button onclick="Pssst.validatePin()" class="btn btn-primary">Enter</button></div>';
-        document.getElementById('pst-pin-flag').innerHTML = pinPrompt;
+        document.getElementById('pst-pin-flag').innerHTML =
+            getPinPrompt('Pssst.validateThisPin()');
       }
       return true;
     }
@@ -222,16 +236,18 @@ function PssstInit() {
 
   function build() {
     var elem = document.getElementsByTagName('pssst')[0];
-    if (query('host') || query('token') || query('group')) {
-      PSSST_CONFIG.host = query('host');
-      PSSST_CONFIG.token = query('token');
-      PSSST_CONFIG.group = query('group');
-      redirectClient(PSSST_CONFIG.host, PSSST_CONFIG.token, PSSST_CONFIG.group);
-    } else {
-      PSSST_CONFIG=JSON.parse(elem.innerText);
-      elem.innerHTML = "";
+    if (elem) {
+      if (query('host') || query('token') || query('group')) {
+        PSSST_CONFIG.host = query('host');
+        PSSST_CONFIG.token = query('token');
+        PSSST_CONFIG.group = query('group');
+        redirectClient(PSSST_CONFIG.host, PSSST_CONFIG.token, PSSST_CONFIG.group);
+      } else {
+        PSSST_CONFIG=JSON.parse(elem.innerText);
+        elem.innerHTML = "";
+      }
+      askForPin() || header();
     }
-    askForPin() || header();
   }
 
   function header() {
@@ -361,8 +377,9 @@ function PssstInit() {
     httpPostAsync("/pssst/get/groups", {group, token, pstPin}, updateAdminDisplay);
   }
 
-  Pssst = {retrieve, build, keys, getIndex, update, refresh, addPin,
-    remove, add, bulkUpdate, copyCmd, url, validatePin, resetToken, resetPin};
+  Pssst = {retrieve, url, keys, getIndex, update, refresh, addPin, getPinPrompt,
+    remove, add, bulkUpdate, copyCmd, build, validatePin, resetToken, resetPin,
+    validateThisPin};
   return Pssst;
 }
 

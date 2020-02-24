@@ -12,3 +12,9 @@ html { font-size: 1rem; }
 @media (min-width: 1200px) {
     html, a, b { font-size: 1.25rem; }
 }
+
+.error-msg {
+  font-size: 16px;
+  color:
+  red;
+}

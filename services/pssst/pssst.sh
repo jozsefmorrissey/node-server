@@ -6,26 +6,32 @@
 passServRelDir=$(dirname "${BASH_SOURCE[0]}")
 source ${passServRelDir}/BashScripts/debugLogger.sh
 
+dataDir=~/.opsc/pssst/$USER
+propFile=$dataDir/pssst.properties
+infoDir=$dataDir/info/
+
 initFolders() {
-  dataDir=~/.opsc/pssst/$USER
-  infoDir=$dataDir/info/
   mkdir -p "$dataDir/sd"
   mkdir -p "$dataDir/na"
   mkdir -p "$infoDir"
 }
 
 configureGlobals() {
-  propFile=$dataDir/pssst.properties
-  password=$(grep -oP "password=.*" $propFile | sed "s/.*=\(.*\)/\1/")
-  encFlags=$(grep -oP "encFlags=.*" $propFile | sed "s/.*=\(.*\)/\1/")
-  infoMapFile=$(grep -oP "infoMapFile=.*" $propFile | sed "s/.*=\(.*\)/\1/")
+  if [ ! -f "$propFile" ]
+  then
+    _help
+    exit
+  fi
+    password=$(grep -oP "password=.*" $propFile | sed "s/.*=\(.*\)/\1/")
+    encFlags=$(grep -oP "encFlags=.*" $propFile | sed "s/.*=\(.*\)/\1/")
+    infoMapFile=$(grep -oP "infoMapFile=.*" $propFile | sed "s/.*=\(.*\)/\1/")
 
-  tempExt='.txt'
-  encryptExt='.des3'
-  backupLocation=$dataDir/backup/
-  defaultPort=8080
+    tempExt='.txt'
+    encryptExt='.des3'
+    backupLocation=$dataDir/backup/
+    defaultPort=8080
 
-  logId="log-history-unlikely-user-name"
+    logId="log-history-unlikely-user-name"
 }
 
 tries=0;
@@ -417,6 +423,7 @@ validateToken() {
     echo '[Error:CI] Your not supposed to be here...'
     exit 1;
   fi
+  Logger debug "booolean: "
   if [ "yes" == "$(pst requires-pin $1)" ] &&
       [ "$3" != "$pstPin" ]
   then
@@ -482,10 +489,14 @@ areYouSure() {
 	Logger trace "EXIT"
 }
 
-generateProperties() {
+confirmGenerateProperties() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   areYouSure "Are you sure you want to regnerate Properties?(YES to proceed)\nAll Passwords will be lost."
   areYouSure "Seriosly there is no going back.... You have been warned?(YES to proceed)"
+  generateProperties
+}
+
+generateProperties() {
   rm $propFile
   pass=$(pwgen 30)
   infoMapFile=$(pwgen 30)
@@ -675,6 +686,9 @@ _help() {
 insecureFunctions() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   case "$1" in
+    install)
+      initFolders
+    ;;
     dir)
       echo $passServRelDir
     ;;
@@ -729,7 +743,7 @@ secureFunctions() {
       view "$group"
     ;;
     generateProperties)
-      generateProperties
+      confirmGenerateProperties
     ;;
     start-server)
       startServer "$group"
@@ -780,8 +794,18 @@ secureFunctions() {
 	Logger trace "EXIT"
 }
 
-initFolders
-configureGlobals
-globalArgs "$@"
-insecureFunctions "$@"
-secureFunctions "$@"
+if [ "${booleans['-help']}" == 'true' ] || [ -z "${args[0]}" ]
+then
+  _help
+else
+  if [ "$1" == "install" ]
+  then
+    initFolders
+    generateProperties
+    exit
+  fi
+  configureGlobals "$@"
+  globalArgs "$@"
+  insecureFunctions "$@"
+  secureFunctions "$@"
+fi

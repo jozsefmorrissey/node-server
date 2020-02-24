@@ -36,6 +36,7 @@ function lockout(group, errorCode) {
 }
 
 function exicuteCmd(group, token, pstPin, cmd) {
+  console.log (cmd);
   if (token != null) {
     let validateCmd = `pst validateToken '${group}' '${token}' '${pstPin}'`;
     if (cmd != undefined) {
@@ -236,3 +237,4 @@ function endpoints(app, prefix) {
 }
 
 exports.endpoints = endpoints;
+exports.exicuteCmd = exicuteCmd;

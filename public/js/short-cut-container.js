@@ -1,6 +1,10 @@
+var SHORT_CUT_CONTAINERS = [];
+
 function ShortCutCointainer(id, keys, html) {
   let currentKeys = {};
   var size = 200;
+  var container;
+  var resizeBar;
 
   function resizeBarId() {
     return 'ssc-resizeBar-' + id;
@@ -8,24 +12,28 @@ function ShortCutCointainer(id, keys, html) {
   function htmlContainerId() {
     return 'ssc-html-container-' + id;
   }
-  var barCss = 'border-top-style: double;' +
-    'border-top-width: 5pt;' +
-    'cursor: row-resize;' +
-    'border-color: #4dce55;';
 
-  var ssc = document.createElement('div');
-  ssc.id = id;
+  function getResizeBarCss() {
+    return 'border-top-style: double;' +
+      'border-top-width: 5pt;' +
+      'cursor: row-resize;' +
+      'border-color: #4dce55;';
+  }
 
-  var resizeBar = document.createElement('div');
-  resizeBar.id = resizeBarId();
-  resizeBar.style.cssText = barCss;
-  ssc.append(resizeBar);
+  function createResizeBar() {
+    resizeBar = document.createElement('div');
+    resizeBar.id = resizeBarId();
+    resizeBar.style.cssText = getResizeBarCss();
+    return resizeBar;
+  }
 
-  var container = document.createElement('div');
-  container.id = htmlContainerId();
-  container.innerHTML = html;
-  container.style.cssText = 'max-height: ' + size + 'px; overflow: scroll;';
-  ssc.append(container);
+  function createContainer(html) {
+    container = document.createElement('div');
+    container.id = htmlContainerId();
+    container.innerHTML = html;
+    container.style.cssText = 'max-height: ' + size + 'px; overflow: scroll;';
+    return container;
+  }
 
   var noHeight = 'display: block;' +
     'width: 100%;' +
@@ -37,13 +45,11 @@ function ShortCutCointainer(id, keys, html) {
     'left: 0;' +
     'background-color: white;';
 
-  ssc.style.cssText = noHeight + 'height: ' + size + 'px;';
-  ssc.style.display = 'none';
 
   function resize(element) {
     if (shouldResize > 0) {
-      const minHeight = 80;
-      const maxHeight = window.innerHeight - 50;
+      var minHeight = 80;
+      var maxHeight = window.innerHeight - 50;
       let dx = window.innerHeight - element.clientY;
       dx = dx < minHeight ? minHeight : dx;
       dx = dx > maxHeight ? maxHeight : dx;
@@ -72,7 +78,7 @@ function ShortCutCointainer(id, keys, html) {
   let displayCount = 0;
   function toggleContentEditor() {
         displayCount++;
-        const ce = document.getElementById(id);
+        var ce = document.getElementById(id);
         if (displayCount %2 == 1) {
           ce.style.display = 'block';
           triggerEvent(getEventName('open'));
@@ -130,11 +136,48 @@ function ShortCutCointainer(id, keys, html) {
     container.innerHTML = html;
   }
 
-  window.onmouseup = mouseup;
-  window.onmousedown = mousedown;
-  window.onmousemove = resize;
-  window.onkeyup = keyUpListener;
-  window.onkeydown = keyDownListener;
+  var ssc = document.createElement('div');
+  ssc.id = id;
+  ssc.append(createResizeBar());
+  ssc.append(createContainer(html));
+  ssc.style.cssText = noHeight + 'height: ' + size + 'px;';
+  ssc.style.display = 'none';
+
   onLoad();
-  return {innerHtml};
+  retObject = {innerHtml, mouseup, mousedown, resize, keyUpListener, keyDownListener};
+  SHORT_CUT_CONTAINERS.push(retObject);
+  return retObject;
 }
+
+function callOnAll(func, e) {
+  for (let index = 0; index < SHORT_CUT_CONTAINERS.length; index += 1) {
+    SHORT_CUT_CONTAINERS[index][func](e);
+  }
+}
+
+function mouseup(e) { callOnAll('mouseup', e); }
+function mousedown(e) { callOnAll('mousedown', e); }
+function resize(e) { callOnAll('resize', e); }
+function keyUpListener(e) { callOnAll('keyUpListener', e); }
+function keyDownListener(e) { callOnAll('keyDownListener', e); }
+
+window.onmouseup = mouseup;
+window.onmousedown = mousedown;
+window.onmousemove = resize;
+window.onkeyup = keyUpListener;
+window.onkeydown = keyDownListener;
+
+function onLoad() {
+  let containers = document.querySelectorAll('short-cut-container');
+  for (let index = 0; index < containers.length; index += 1) {
+    var elem = containers[index];
+    if (elem.getAttribute('keys'))
+    var keys = elem.getAttribute('keys').split(',')
+    id = elem.id || 'ssc-' + index;
+    html = elem.innerHTML;
+    ShortCutCointainer(id, keys, html);
+    elem.parentNode.removeChild(elem);
+  }
+}
+
+window.addEventListener('load', onLoad);

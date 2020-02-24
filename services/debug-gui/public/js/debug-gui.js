@@ -478,7 +478,7 @@ function DebugGui() {
   document.head.appendChild(script);
 
   script = document.createElement("script");
-  script.src = 'https://www.jozsefmorrissey.com:3001/js/short-cut-container.js';
+  script.src = '/js/short-cut-container.js';
   document.head.appendChild(script);
 
   var style = document.createElement("link");
