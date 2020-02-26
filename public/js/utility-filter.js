@@ -11,7 +11,6 @@ UTF.dataId = 1;
 UTF.states = {};
 UTF.states[SEARCH_TYPES.ALL] = {};
 UTF.objectLookup = [];
-UTF.enableEdit = {};
 
 function UtilityFilter() {
   function save(id) {
@@ -31,7 +30,7 @@ function UtilityFilter() {
     switch (type) {
       case SEARCH_TYPES.REGEX:
         try {
-          const matches = asStr.match(new RegExp(userValue, 'g'));
+          const matches = asStr.toLowerCase().match(new RegExp(userValue, 'g'));
           return (matches && matches.length) > 0 ? matches.length : -1;
         } catch (e) {
           return 0;
@@ -169,28 +168,51 @@ function UtilityFilter() {
     return columns;
   }
 
-  function buildHeader(id) {
-    let uniqueId = buildId('radio', UTF.dataMap[id].id, SEARCH_TYPES.ALL);
-    const inputId = buildId('input', UTF.dataMap[id].id, SEARCH_TYPES.ALL);
+  function buildHeader(dataId) {
+    let uniqueId = buildId('radio', UTF.dataMap[dataId].id, SEARCH_TYPES.ALL);
+    const inputId = buildId('input', UTF.dataMap[dataId].id, SEARCH_TYPES.ALL);
     const likeId = buildId(uniqueId, SEARCH_TYPES.LIKE);
     const regexId = buildId(uniqueId, SEARCH_TYPES.REGEX);
     let header = `<div class='search-all-ctn'>
-                <label>Search All: </label>
-                <input id='${inputId}' type='text'>
+                <label>${UTF.dataMap[dataId].searchAllLabel || 'Search All: '}</label>
+                <input class='utf-input' id='${inputId}' type='text' maxlength='30'
+                    onkeydown="if (event.keyCode == 13) UTF.onSearchEnter(event)">
                 <label>Like</label>
-                <input type='radio' name='${uniqueId}' id='${likeId}' value='${SEARCH_TYPES.LIKE}' checked>
+                <input class='utf-input' type='radio' name='${uniqueId}' id='${likeId}' value='${SEARCH_TYPES.LIKE}' checked>
                 <label>Regex</label>
-                <input type='radio' name='${uniqueId}' id='${regexId}' value='${SEARCH_TYPES.REGEX}'>
+                <input class='utf-input' type='radio' name='${uniqueId}' id='${regexId}' value='${SEARCH_TYPES.REGEX}'>
                 <a id='utf-edit' hidden href='#' style='float: right;'>
                   Edit
                 </a>
               </div>`;
 
-    UTF.states[id] = {};
-    UTF.states[id][SEARCH_TYPES.ALL] = {};
-    UTF.states[id][SEARCH_TYPES.ALL].type = SEARCH_TYPES.LIKE;
+    UTF.states[dataId] = {};
+    UTF.states[dataId][SEARCH_TYPES.ALL] = {};
+    UTF.states[dataId][SEARCH_TYPES.ALL].type = SEARCH_TYPES.LIKE;
 
     return header;
+  }
+
+  function runFuncs(funcs, arg) {
+    for (let index = 0; index < funcs.length; index += 1) {
+      const func = funcs[index];
+      if ((typeof func) === 'function') {
+        func.call(null, arg);
+      } else if (func.trim().match(/^.*\(.*\)$/)) {
+        eval(func);
+      } else if ((typeof arg) === 'object') {
+        eval(func + '(' + JSON.stringify(arg) + ')');
+      } else if ((typeof arg) === 'string') {
+        eval(func + '("' + arg + '")');
+      } else {
+        eval(func + '(' + arg + ')');
+      }
+    }
+  }
+
+  function onSearchEnter (e) {
+    const funcs = UTF.dataMap[splitId(e.target.id)[1]].onSearchAll;
+    runFuncs(funcs, e);
   }
 
   function updateAllState(e) {
@@ -243,8 +265,7 @@ function UtilityFilter() {
     const columns = [];
     for (let index = 0; index < columnCandidates.length; index += 1) {
       const column = columnCandidates[index];
-      if (column != 'id' &&
-          column != '_utf_updated') {
+      if (column != 'id') {
         columns.push(column);
       }
     }
@@ -273,16 +294,16 @@ function UtilityFilter() {
       menu += `<th class='relative column-${index}'>
       <label>${column}</label>
       <br>
-      <input hidden type='text' id='${textId}'>
+      <input class='utf-input' hidden type='text' id='${textId}'>
       ${datalist}
       <br>
       <div class='search-radio-ctn'>
         <label>s</label>
-        <input type='radio' name='${uniqueId}' id='${selectId}' value='${SEARCH_TYPES.SELECT}' checked>
+        <input class='utf-input' type='radio' name='${uniqueId}' id='${selectId}' value='${SEARCH_TYPES.SELECT}' checked>
         <label>l</label>
-        <input type='radio' name='${uniqueId}' id='${likeId}' value='${SEARCH_TYPES.LIKE}'>
+        <input class='utf-input' type='radio' name='${uniqueId}' id='${likeId}' value='${SEARCH_TYPES.LIKE}'>
         <label>r</label>
-        <input type='radio' name='${uniqueId}' id='${regexId}' value='${SEARCH_TYPES.REGEX}'>
+        <input class='utf-input' type='radio' name='${uniqueId}' id='${regexId}' value='${SEARCH_TYPES.REGEX}'>
       </div>
       <button class='close-btn' onclick='removeColumn("${id}", ${index})'>X</button>
       </th>`;
@@ -312,7 +333,7 @@ function UtilityFilter() {
       const clazz = count++ % 2 === 0 ? 'tr-even' : 'tr-odd';
       dataElem = data[index];
       lookUpRow[lookUpId] = {dataId, data: data[index]};
-      const editAttr = UTF.enableEdit[dataId] ? "onclick='UTF.exec.openPopUp(this)'" : '';
+      const editAttr = UTF.dataMap[dataId].enableEdit ? "onclick='UTF.openPopUp(this)'" : '';
       body += `<tr look-up-id='${lookUpId++}' ${editAttr} class='${clazz}'>`;
       for(let kIndex = 0; kIndex < keys.length; kIndex += 1) {
         const column = keys[kIndex];
@@ -322,7 +343,9 @@ function UtilityFilter() {
         }
         let elem = String(data[index][column]) || '';
         elem = elem === 'undefined' ? '' : elem;
-        elem = elem.replace(/\[(.*?)\]\((.*?)\)/g, `<a target='_blank' href='$2'>$1</a>`);
+        elem = elem.replace(/[@]\[(.*?)\]\((.*?)\)/g, `<a class='utf-link' target='_blank' href='$2'>$1</a>`);
+        elem = elem.replace(/(([^@]|))\[(.*?)\]\((.*?)\)/g, `$1<a class='utf-link' href='$4'>$3</a>`);
+
 
         body += `<td style='display: ${display};' class='column-${kIndex}'>${elem}</td>`;
       }
@@ -379,7 +402,7 @@ function UtilityFilter() {
       if (i === 0) {
         clazz += ' tab-active';
       }
-      tabs.push(`<li class="active"><a id='tab-${id.dataId}' class='${clazz}' onclick='UTF.exec.displayTable("${id.dataId}", this)'>${id.id}</a></li>`);
+      tabs.push(`<li class="active"><a id='tab-${id.dataId}' class='${clazz}' onclick='UTF.displayTable("${id.dataId}", this)'>${id.id}</a></li>`);
     }
     tabs.push(`<li class="active"><a id='tab-add' class='tab' onclick='addTable(this)'>+</a></li>`);
     return tabs.join('') + "</ul>";
@@ -393,8 +416,8 @@ function UtilityFilter() {
   }
 
   function updateData(elem, rowId, label) {
-    lookUpRow[rowId].data[label] = elem.value;
-    lookUpRow[rowId].data['_utf_updated'] = true;
+    lookUpRow[rowId].data[label] = elem.value.trim();
+    UTF.dataMap[lookUpRow[rowId].dataId].updated = true;
     deactivateSelects(lookUpRow[rowId].dataId);
   }
 
@@ -406,10 +429,13 @@ function UtilityFilter() {
       for (let index = 0; index < headers.length; index += 1) {
         const label = headers[index].querySelector('label').innerText.trim();
         let value = values[label];
+        value = value === undefined ? '' : value.trim();
         body += `<label>
                     ${label}:
                 </label>`;
-        body += `<br><textarea onchange='UTF.exec.updateData(this, ${id}, "${label}")'>${value}</textarea><br>`;
+        body += `<br><textarea rows=5 cols=150
+            onchange='UTF.updateData(this, ${id}, "${label}")'>${value}</textarea>
+            <br>`;
       }
       document.querySelector('#pop-up').innerHTML = body;
       document.querySelector('#pop-up-haze').style.display = 'block';
@@ -420,7 +446,7 @@ function UtilityFilter() {
     haze.id = 'pop-up-haze';
     haze.onclick = closePopUp;
     haze.style.display = 'none';
-    haze.innerHTML = `<div onclick='event.stopPropagation()' id='pop-up'><h2>Pop Up</h2></div></div>`;
+    haze.innerHTML = `<div onclick='event.stopPropagation()' id='pop-up'><h2>Pop Up</h2></div>`;
     return haze;
   }
 
@@ -449,8 +475,10 @@ function UtilityFilter() {
   function buildDataTable(dataId) {
     let display = buildHeader(dataId);
     display += buildTable(dataId, UTF.dataMap[String(dataId)].data);
-    display += `<button onclick='UTF.exec.addRow("${dataId}")'>add</button>`;
-    display += `<button onclick='UTF.exec.save("${dataId}")'>Save</button></div>`;
+    if (UTF.dataMap[dataId].enableEdit) {
+      display += `<button onclick='UTF.addRow("${dataId}")'>add</button>`;
+      display += `<button onclick='UTF.save("${dataId}")'>Save</button></div>`;
+    }
     return display;
   }
 
@@ -466,8 +494,9 @@ function UtilityFilter() {
     const dataId = UTF.dataId++;
     elem.id = elem.id ? elem.id : `utility-filter-${dataId}`;
     const save = elem.getAttribute('save');
+    const enableEdit = elem.getAttribute('edit') === 'true';
     UTF.dataMap[dataId] = { elem, ufId: elem.id, hide:[], data, id: dataId,
-          columns: mapArray(data), name, save };
+          columns: mapArray(data), name, save, onSearchAll: [], enableEdit };
     UTF.objectLookup[elem.id] = data;
     elem.style.display = 'block';
     return dataId;
@@ -482,7 +511,8 @@ function UtilityFilter() {
     for (let index = 0; index < keys.length; index += 1) {
       const key = keys[index];
       dataId = initDataMapElem(elem, data[key], key);
-      UTF.enableEdit[dataId] = canEdit !== undefined ? canEdit : UTF.enableEdit[dataId];
+      UTF.dataMap[dataId].enableEdit = canEdit !== undefined ? canEdit :
+            UTF.dataMap[dataId].enableEdit;
       startDataId = startDataId || dataId;
       ids.push({ id: key, dataId });
 
@@ -498,13 +528,31 @@ function UtilityFilter() {
 
   function buildDisplay(elem, data, canEdit) {
     data = data || JSON.parse(elem.innerText);
+    setEventHandlers(elem);
     if (Array.isArray(data)) {
       const dataId = initDataMapElem(elem, data);
-      UTF.enableEdit[dataId] = canEdit !== undefined ? canEdit : UTF.enableEdit[dataId];
+      UTF.dataMap[dataId].enableEdit = canEdit !== undefined ? canEdit :
+            UTF.dataMap[dataId].enableEdit;
       elem.innerHTML = buildDataTable(dataId);
       setTimeout(multiSelectSetup(dataId), 0);
     } else if (typeof data === 'object') {
       buildTabularDisplay(elem, data, canEdit);
+    }
+  }
+
+  function setEventHandlers(elem) {
+    elem.onclick = function(e){
+       e=window.event? event.srcElement: e.target;
+       if(e.className == 'utf-input' && e.type.toLowerCase() === 'radio')radioUpdate(e);
+    }
+    elem.onkeyup = function(e){
+       e=window.event? event.srcElement: e.target;
+       if(e.className == 'utf-input' && e.type.toLowerCase() === 'text')columnInputUpdate(e);
+    }
+
+    elem.onchange = function(e){
+       e=window.event? event.srcElement: e.target;
+       if(e.className == 'utf-input' && e.className === 'multiselect-checkbox')selectInputUpdate(e);
     }
   }
 
@@ -519,19 +567,19 @@ function UtilityFilter() {
     document.querySelector('#pop-up').addEventListener('click', function(event){
       event.stopPropagation();
     });
-    document.body.onclick= function(e){
-       e=window.event? event.srcElement: e.target;
-       if(e.tagName.toLowerCase() == 'input' && e.type.toLowerCase() === 'radio')radioUpdate(e);
-    }
-    document.body.onkeyup= function(e){
-       e=window.event? event.srcElement: e.target;
-       if(e.tagName.toLowerCase() == 'input' && e.type.toLowerCase() === 'text')columnInputUpdate(e);
-    }
-
-    document.body.onchange = function(e){
-       e=window.event? event.srcElement: e.target;
-       if(e.tagName.toLowerCase() == 'input' && e.className === 'multiselect-checkbox')selectInputUpdate(e);
-    }
+    // document.body.onclick= function(e){
+    //    e=window.event? event.srcElement: e.target;
+    //    if(e.className == 'utf-input' && e.type.toLowerCase() === 'radio')radioUpdate(e);
+    // }
+    // document.body.onkeyup= function(e){
+    //    e=window.event? event.srcElement: e.target;
+    //    if(e.className == 'utf-input' && e.type.toLowerCase() === 'text')columnInputUpdate(e);
+    // }
+    //
+    // document.body.onchange = function(e){
+    //    e=window.event? event.srcElement: e.target;
+    //    if(e.className == 'utf-input' && e.className === 'multiselect-checkbox')selectInputUpdate(e);
+    // }
 
     document.multiselect('#testSelect1');
   }
@@ -644,13 +692,20 @@ function UtilityFilter() {
 
   function refresh(dataId, canEdit) {
     const elem = UTF.dataMap[dataId].elem;
-    multiselects = [];
-    UTF.enableEdit[dataId] = canEdit !== undefined ? canEdit : UTF.enableEdit[dataId];
+    UTF.dataMap[dataId].enableEdit = canEdit !== undefined ? canEdit :
+          UTF.dataMap[dataId].enableEdit;
     inputUpdate(dataId);
   }
 
   function setEdit(id, canEdit) {
     refresh(getDataId(id), canEdit);
+  }
+
+  function searchAllOnEnter(id, func, label) {
+    const dataId = getDataId(id);
+
+    UTF.dataMap[dataId].searchAllLabel = label || UTF.dataMap[dataId].searchAllLabel;
+    UTF.dataMap[dataId].onSearchAll.push(func);
   }
 
   function getData(ufId) {
@@ -687,8 +742,22 @@ function UtilityFilter() {
   document.head.appendChild(style);
 
   window.addEventListener('load', onLoad);
-  return {setEdit, openPopUp, closePopUp, updateData, getData, addRow,
-    displayTable, save};
+
+  UTF.setEdit = setEdit;
+  UTF.openPopUp = openPopUp;
+  UTF.closePopUp = closePopUp;
+  UTF.updateData = updateData;
+  UTF.getData = getData;
+  UTF.addRow = addRow;
+  UTF.displayTable = displayTable;
+  UTF.save = save;
+  UTF.onSearchEnter = onSearchEnter;
+  UTF.searchAllOnEnter = searchAllOnEnter;
+
+  this.test = function () {
+    console.log('testin');
+  }
+
 }
 
-UTF.exec = UtilityFilter();
+UtilityFilter();

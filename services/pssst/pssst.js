@@ -36,13 +36,11 @@ function lockout(group, errorCode) {
 }
 
 function exicuteCmd(group, token, pstPin, cmd) {
-  console.log (cmd);
   if (token != null) {
     let validateCmd = `pst validateToken '${group}' '${token}' '${pstPin}'`;
     if (cmd != undefined) {
       validateCmd += ` && ${cmd}`;
     }
-    console.log(validateCmd);
     const returnValue = shell.exec(validateCmd, {silent: true});
     lockout(group, returnValue.code)
     return returnValue;
@@ -52,7 +50,6 @@ const tokenValCmd = ''
 
 function get(group, token, pstPin, pi) {
   const cmd = 'pst value \'' + group + '\' \'' + pi + '\'';
-  console.log(`${group}-${token}-${pi}`)
   return exicuteCmd(group, token, pstPin, cmd).replace('\n', '');
 }
 
@@ -66,18 +63,15 @@ function endpoints(app, prefix) {
   });
 
   app.post(prefix + '/validate', function(req, res, next){
-    console.log(req.body);
     const group = clean(req.body.group);
     const token = clean(req.body.token);
     const pstPin = clean(req.body.pstPin);
     const cmd = `pst validateToken '${group}' '${token}' '${pstPin}'`;
-    console.log(cmd);
     const validated = shell.exec(cmd, {silent: true});
     try {
       lockout(group, validated.code);
       res.send(validated);
     } catch (e) {
-      console.log(("" + e));
       res.statusMessage = e + "";
       res.status(416);
       res.send(e.msg);
@@ -144,7 +138,6 @@ function endpoints(app, prefix) {
     const cmd = 'pst key-array \'' + group + '\'';
     const keys = JSON.parse(exicuteCmd(group, token, pstPin, cmd));
     res.setHeader('Content-Type', 'application/json');
-    console.log(`${group}-${token}\n${cmd}\n${keys}`)
     res.send(keys);
   });
 
@@ -153,10 +146,8 @@ function endpoints(app, prefix) {
     const token = clean(req.body.token);
     const pstPin = clean(req.body["pst-pin"]);
 
-    console.log("Pinnnnnnn: " + pstPin)
     const cmd = `pst key-values -group '${group}' | pst to-json`;
     const jsonStr = exicuteCmd(group, token, pstPin, cmd);
-    console.log(jsonStr);
     const json = JSON.parse(jsonStr);
     res.setHeader('Content-Type', 'application/json');
     res.send(json);
@@ -177,11 +168,9 @@ function endpoints(app, prefix) {
     const group = clean(req.query.group);
     const token = clean(req.query.token);
     const pstPin = clean(req.body.pstPin);
-    console.log(group + "->" + token);
 
     const cmd = `pst key-values -group '${group}' | pst to-json`;
     const jsonStr = exicuteCmd(group, token, pstPin, cmd);
-    console.log(jsonStr);
     const json = JSON.parse(jsonStr);
     res.setHeader('Content-Type', 'application/json');
     res.send(json);

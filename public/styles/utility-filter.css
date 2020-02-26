@@ -1,9 +1,15 @@
+.utf-link {
+	font-size: 13pt;
+}
+
 .tr-odd {
 	background-color: gainsboro;
+	height: 10pt;
 }
 
 .tr-even {
 	background-color: white;
+	height: 10pt;
 }
 
 .tr-odd:hover {
@@ -68,4 +74,9 @@
   right: 0;
   top: 0;
   padding: 10pt;
+}
+
+utility-filter {
+	display: block;
+	text-align: center;
 }

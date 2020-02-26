@@ -4,7 +4,6 @@ function VideoDirectoryClient() {
   let pstPin;
 
   function pinValid() {
-    console.log('pinValid');
     document.getElementById('main-body').style.display = 'block';
     document.getElementById('pin-prompt').style.display = 'none';
   }
@@ -23,7 +22,6 @@ function VideoDirectoryClient() {
   }
 
   function askForPin(error) {
-    console.log('asking');
     if (error != undefined) {
       document.getElementById('pin-error').innerHTML = error.statusText;
     } else {
@@ -33,9 +31,18 @@ function VideoDirectoryClient() {
     }
   }
 
+  function addNewTopic(e) {
+    const value = e.target.value;
+    window.location.href = '/video-directory/request/' + value;
+  }
+
+  const reqTopicsId = 'request-topics';
   function onLoad() {
-    if (query('token')) {
-      UTF.exec.setEdit(vdId, true);
+    UTF.searchAllOnEnter(reqTopicsId, addNewTopic);
+    document.getElementById(reqTopicsId)
+      .querySelectorAll('label')[0].innerHTML = 'Add/Search for Topic:';
+    if (query('token') && window.location.pathname === '/video-directory/edit') {
+      UTF.setEdit(vdId, true);
       askForPin();
     }
   }
@@ -44,7 +51,7 @@ function VideoDirectoryClient() {
       var body = {
         token,
         pstPin,
-        config: UTF.exec.getData(vdId),
+        vidDir: UTF.getData(vdId),
       }
       var xhr = new XMLHttpRequest();
       var url = '/video-directory/update';

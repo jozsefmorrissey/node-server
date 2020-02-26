@@ -1,0 +1,145 @@
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+
+<html>
+    <head>
+        <title>Sample code for syntaxhighlighter usage</title>
+        <link rel="stylesheet" href="/syntaxhighlighter/shCore.css">
+        <link rel="stylesheet" href="/syntaxhighlighter/shThemeDefault.css">
+        <script type="text/javascript" src="/syntaxhighlighter/shCore.js"></script>
+        <script type="text/javascript" src="/syntaxhighlighter/shBrushJScript.js"></script>
+        <script type="text/javascript" src="/syntaxhighlighter/shBrushXml.js"></script>
+        <script type="text/javascript" src="/syntaxhighlighter/shBrushJava.js"></script>
+        <script type="text/javascript" src="/syntaxhighlighter/shBrushPython.js"></script>
+    </head>
+
+    <body>
+
+        <h3>Display HTML </h3>
+            <pre class="brush: html; first-line: 1;">
+                &lt;html&gt;
+                    &lt;head&gt;
+                        &lt;title&gt;This is title
+                        &lt;/title&gt;
+                    &lt;/head&gt;
+                    &lt;body&gt;
+                        Hello world
+                        &lt;!--This is comment section for demo--&gt;
+                     &lt;/body&gt;
+                &lt;/html&gt;
+            </pre>
+
+        <h3>Display JQuery / JavaScript </h3> (highlight line number: [2,4,6,7])
+            <pre class="brush: js; html-script: false; first-line: 1;  highlight: [2,4,6,7]">
+                $(document).ready(function(){
+                    $("#msgid").html("This is Hello World by JQuery");
+                    //This is single line comment section for demo
+                    /*
+                    This is multiline
+                    comment
+                    */
+                });
+            </pre>
+        <h3>Display Java </h3>
+
+            <pre class="brush: java; html-script: false;">
+                package helloworld;
+                public class HelloWorld {
+                    public static void main(String[] args) {
+                        // Comment: Prints "Hello, World" to the terminal window.
+                        System.out.println("Hello, World");
+                    }
+                }
+            </pre>
+
+        <h3>Display Python </h3>(line numbering started from -1)
+            <pre class="brush: python; first-line: -1;">
+                #! python
+                '''
+                Multiline comment demo
+                '''
+                # range function
+                print range(10)
+                print range(5, 10)
+                print range(0, 10, 3)
+                a = ['Mary', 'had', 'a', 'little', 'lamb']
+                for i in range(len(a)):
+                    print i, a[i]
+            </pre>
+
+            <!-- Highlight all -->
+            <script type="text/javascript">
+                SyntaxHighlighter.all()
+            </script>
+    </body>
+</html>

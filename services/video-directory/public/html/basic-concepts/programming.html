@@ -1,0 +1,346 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="/video-directory/css/cheat-sheet.css">
+    <link rel="stylesheet" href="/syntaxhighlighter/shCore.css">
+    <link rel="stylesheet" href="/syntaxhighlighter/shThemeDefault.css">
+    <script type="text/javascript" src="/syntaxhighlighter/shCore.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/shBrushJScript.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/shBrushXml.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/shBrushJava.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/shBrushPython.js"></script>
+  </head>
+  <body>
+    <ol>
+      <h1>Programming Basic Concepts</h1>
+      <li>
+        <h2>Operators</h2>
+        <p>
+          These are primarily mathematical operators. However some languages
+          allow the the programmer to implement them to work with more complex
+          variables.
+        </p>
+        <ul>
+          <li>
+            <h3 class='light-padding'>+ (Addition)</h3>
+            <p class='light-padding'>
+              Addition operator is universally used for string concatination
+              aswell.
+            </p>
+            <pre class='light-padding'>
+              "hello" + " " + "world" == "hello world"
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>- (Subtraction)</h3>
+					</li>
+          <li>
+			      <h3 class='light-padding'>* (Multiplication)</h3>
+					</li>
+          <li>
+					  <h3 class='light-padding'>/ (Division)</h3>
+					</li>
+          <li>
+						<h3 class='light-padding'>= (Assignment)</h3>
+            <p class='light-padding'>
+              The assignment opperator is used to set the value of a variable
+            </p>
+					</li>
+          <li>
+						<h3 class='light-padding'>== (Equality)</h3>
+            <p class='light-padding'>
+              Equality is almost allways and operation that can be defined for
+              more complex variables.
+            </p>
+					</li>
+          <li>
+						<h3 class='light-padding'>! (Not)</h3>
+            <p class='light-padding'>
+            </p>
+              Not negates any boolean expressions:
+              <pre class='light-padding'>
+                !boolean - true and false are reversed
+                != - not equal to
+              </pre>
+					</li>
+          <li>
+						<h3 class='light-padding'>& (And)</h3>
+            <pre class='light-padding'>
+              this & that - this and that (test both)
+              this && that && somthing else - stop test at first false expression
+            </pre>
+					</li>
+          <li>
+						<h3 class='light-padding'>| (Or)</h3>
+            <pre class='light-padding'>
+              this | that - this or that (test both)
+              this || that || somthing else - stop test at first true expression
+            </pre>
+					</li>
+        </ul>
+      </li>
+
+      <li>
+        <h2>Variables</h2>
+        <p>Variables simply represent data of various types.</p>
+        <ul>
+          <li>
+            <h3 class='light-padding'>Null</h3>
+            <p class='light-padding'>Nothing</p>
+          </li>
+          <li>
+            <h3 class='light-padding'>Boolean</h3>
+            <p class='light-padding'>True/False</p>
+          </li>
+          <li>
+            <h3 class='light-padding'>Number</h3>
+          </li>
+          <li>
+            <h3 class='light-padding'>String</h3>
+            <p class='light-padding'>a sequence of characters</p>
+          </li>
+          <li>
+            <h3 class='light-padding'>Object</h3>
+            <p class='light-padding'>
+              Found only in Object oriented languages and can represent
+              anything from any of the above data types to something as complex
+              as a nasa space shuttle.
+            </p>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <h2>Conditional</h2>
+        <p>Change the direction of the code based on a boolean value</p>
+        <ul>
+          <li>
+            <h3 class='light-padding'>if/else</h3>
+            <p class='light-padding'>
+              If else statments are universially availible in all languages.
+              And the most common way to direct the flow of a program.
+            </p>
+            <pre class='light-padding'>
+              if (going to walmart) {
+                go right
+              } else if (going to whole foods) {
+                go left
+              } else {
+                cause a traffic jam
+              }
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>switch</h3>
+            <p class='light-padding'>
+              switch statments are availible in most langagues and can make your
+              code much easier to read.
+            </p>
+            <pre class='light-padding'>
+              switch (going to) {
+                dinner: take the tesla
+                work: take the truck
+                fishing: take the boat
+                christmas: take the rv
+              }
+            </pre>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <h2>Loops</h2>
+        <p>Repetitive cycles of code consisting of:<br>
+          (an initial value; a test; a limit)<br>
+        </p>
+        <ul>
+          <li>
+            <h3 class='light-padding'>For</h3>
+            <p class='light-padding'>
+              Availible in most langagues and it is great for simple itterative
+              processes.<br>
+            </p>
+            <pre class='light-padding'>
+              for(index = 0; index < 100; index++) {
+                print(index)
+              }
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>While</h3>
+            <p class='light-padding'>
+              Good to use when the itteration step is more complex.
+            </p>
+            <pre class='light-padding'>
+              iterator = parent;
+              while (iterator.value != searchValue) {
+                if (iterator.value > searchValue) {
+                  iterator = iterator.leftChild();
+                } else {
+                  iterator = iterator.rightChild();
+                }
+              }
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>Do While</h3>
+            <p class='light-padding'>
+              Can make your code easier to read in rare cases where you need
+              to run the loop atleast once without running the test;
+            </p>
+            <pre class='light-padding'>
+              cmd = null;
+              do {
+                cmd = (enter command)
+                run(cmd)
+              } while (cmd != esc)
+            </pre>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <h2>Functions</h2>
+        <p>
+          Primary tool for abstracting out complexity from your programs, making
+          it easier to read, understand and fix. For you aswell as others.
+          <br>
+          <br>
+          A function in high level languages always has atleast 3 parts
+          <pre class='light-padding'>
+            name - a referance value, basically a varible that corresponds to a function.
+            arguments - variables to be passed in to the function.
+            return - varible/s to be returned from the function.
+          </pre>
+          <pre class='light-padding'>
+            [name](arguments){
+              return [value]
+            }
+          </pre>
+          <p>
+            Note: Assembly languages function calls are a little more complex.
+            If you want a video on the basics of assembly languages you can vote
+            <a disabled href='/video-directory/request/Assembly language basics'>here</a>.
+          </p>
+        </p>
+        <p class='light-padding'>
+          The following is meant to illustrate how functions can make a program
+          easier to digest
+        </p>
+        <div class='inline-flex'>
+          <div class='width40'>
+            <h3>Abstracted</h3>
+            <pre class='brush: js'>
+              function doLaundry() {
+                clothes = collectClothes();
+                takeClothesToTheBasment(clothes);
+                sortClothes();
+                finished = false;
+                pileIndex = 0;
+                while (!finished) {
+                  while (pile[i]) {
+                    laundryThing(pile[i]);
+                    if (!pile.hasClothes()) {
+                      i = i + 1
+                    }
+                  }
+                  foldLaundryForMinutes(45);
+                }
+              }
+
+              function collectClothes() {
+                clothes = giantHamper;
+                goToYourRoom();
+                clothes.add(gatherLaundry());
+                goToYourDaughtersRoom();
+                clothes.add(gatherLaundry());
+                .....
+                return clothes
+              }
+
+              function takeClothesToTheBasment(clothes) {
+                goToTheBasement();
+                basementPile.add(clothes);
+              }
+
+              function sortClothes() {
+                while (basementPile.hasClothes()) {
+                  article = basementPile.getArticle();
+                  switch (article) {
+                    white: pile[0].addArticle(article)
+                    jean: pile[1].addArticle(article)
+                    color: pile[2].addArticle(article)
+                    ....
+                  }
+                }
+              }
+
+              function laundryThing(pile) {
+                if (dryer.done() && dryer.full()) {
+                  clothes = dryer.removeClothes()();
+                  takeToLivingRoom(clothes);
+                }
+                if (washer.done() && washer.full() && dryer.empty()) {
+                  moveToDryer();
+                }
+                if (washer.empty() && pile.hasClothes()) {
+                  addToWasher(pile);
+                  startWasher(pile.type());
+                }
+              }
+            </pre>
+          </div>
+
+          <div class='width40'>
+            <h3>One function</h3>
+            <pre class='brush: js width40'>
+              function doLaundry() {
+                clothes = giantHamper;
+                goToYourRoom();
+                clothes.add(gatherLaundry());
+                goToYourDaughtersRoom();
+                clothes.add(gatherLaundry());
+                .....
+                goToTheBasement();
+                basementPile.add(clothes);
+                while (basementPile.hasClothes()) {
+                  article = basementPile.getArticle();
+                  switch (article) {
+                    white: pile[0].addArticle(article)
+                    jean: pile[1].addArticle(article)
+                    color: pile[2].addArticle(article)
+                    ....
+                  }
+                }
+                finished = false;
+                pileIndex = 0;
+                while (!finished) {
+                  while (pile[i]) {
+                    if (dryer.done() && dryer.full()) {
+                      clothes = dryer.removeClothes()();
+                      takeToLivingRoom(clothes);
+                    }
+                    if (washer.done() && washer.full() && dryer.empty()) {
+                      moveToDryer();
+                    }
+                    if (washer.empty() && pile.hasClothes()) {
+                      addToWasher(pile[i]);
+                      startWasher(pile[i].type());
+                    }
+                    if (!pile.hasClothes()) {
+                      i = i + 1
+                    }
+                  }
+                  foldLaundryForMinutes(45);
+                }
+              }
+            </pre>
+          </div>
+        </div>
+      </li>
+    </ol>
+    <!-- Highlight all -->
+    <script type="text/javascript">
+        SyntaxHighlighter.all()
+    </script>
+  </body>
+</html>

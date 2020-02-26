@@ -1,0 +1,12 @@
+.light-padding {
+  margin: 0;
+  padding: 2;
+}
+
+.width40 {
+  max-width: 40%
+}
+
+.inline-flex {
+  display: inline-flex;
+}
