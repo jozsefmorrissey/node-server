@@ -37,19 +37,12 @@ function STD_LIB_UTILS () {
     return newStr;
   }
 
-  function parseMultiline(str, spacesPerTab) {
-    spacesPerTab = spacesPerTab || 2;
-    var tab = Array(spacesPerTab).fill(" ").join("");
-    str = str.replaceWithin(tab, "\\t");
-    str = str.replaceWithin("\t", "\\t");
+  function parseMultiline(str) {
     return JSON.parse(str.replaceWithin("\n", "\\n"));
   }
 
   function stringifyMultiline(jsonObj, spacesPerTab) {
     var str = JSON.stringify(jsonObj);
-    spacesPerTab = spacesPerTab || 2;
-    var tab = Array(spacesPerTab).fill(" ").join("");
-    str = str.replaceWithin("\\\\t", tab);
     return str.replaceWithin("\\\\n", "\n");
   }
 
