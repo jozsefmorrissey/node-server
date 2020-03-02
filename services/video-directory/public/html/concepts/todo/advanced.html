@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <link rel="stylesheet" href="/video-directory/css/cheat-sheet.css">
+    <link rel="stylesheet" href="/syntaxhighlighter/shCore.css">
+    <link rel="stylesheet" href="/syntaxhighlighter/shThemeDefault.css">
+    <script type="text/javascript" src="/syntaxhighlighter/shCore.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushJScript.js"></script>
+    <title>Advanced Concepts</title>
+  </head>
+  <body>
+    <h1>Advanced Concepts</h1>
+    <js-template>
+      <h2>[ID]</h2
+      <p>[description]</p>
+      <pre>[form]</p>
+      <h3>Examples:</h3>
+      <pre>[examples]</h3>
+    </js-template>
+    <js-template-data>
+ID(
+        Import:
+)description(
+  my desc
+  line 2
+  line 3
+)
+
+
+
+    Import
+    Access Modifiers
+    Data Blocks
+    Object
+    Overloading
+    Inheritance/Shadowing
+    Multi-Threading
+  </body>
+</html>
+
+ID: ~~~        Import:
+
+https://stackoverflow.com/questions/2392766/multiline-strings-in-json
+
+str.replace(/\n/g, '~~~').match(/([a-zA-Z0-9-_]*)\((.*?)~~~\)/g)
+matches[0].replace(/\n/g, '~~~').match(/([a-zA-Z0-9-_]*)\((.*?)~~~\)/)

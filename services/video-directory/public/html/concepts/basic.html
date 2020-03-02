@@ -4,10 +4,7 @@
     <link rel="stylesheet" href="/syntaxhighlighter/shCore.css">
     <link rel="stylesheet" href="/syntaxhighlighter/shThemeDefault.css">
     <script type="text/javascript" src="/syntaxhighlighter/shCore.js"></script>
-    <script type="text/javascript" src="/syntaxhighlighter/shBrushJScript.js"></script>
-    <script type="text/javascript" src="/syntaxhighlighter/shBrushXml.js"></script>
-    <script type="text/javascript" src="/syntaxhighlighter/shBrushJava.js"></script>
-    <script type="text/javascript" src="/syntaxhighlighter/shBrushPython.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushJScript.js"></script>
   </head>
   <body>
     <ol>
@@ -40,16 +37,38 @@
 					  <h3 class='light-padding'>/ (Division)</h3>
 					</li>
           <li>
+					  <h3 class='light-padding'>% (Modulus)</h3>
+            <p class='light-padding'>
+              Modulus gives you the division remainder.
+            </p>
+            <pre>
+              doubleEveryOtherOne(number, index) {
+                if (index % 2 == 0) {
+                  return number * 2
+                }
+                return number
+              }
+            </pre>
+					</li>
+          <li>
+					  <h3 class='light-padding'>** | ^ (Exponential)</h3>
+					</li>
+          <li>
 						<h3 class='light-padding'>= (Assignment)</h3>
             <p class='light-padding'>
               The assignment opperator is used to set the value of a variable
             </p>
 					</li>
           <li>
-						<h3 class='light-padding'>== (Equality)</h3>
+						<h3 class='light-padding'>==, >, >=, <, <= (Relation)</h3>
             <p class='light-padding'>
-              Equality is almost allways and operation that can be defined for
-              more complex variables.
+              <ul>
+                <li>== - Equality</li>
+                <li>>  - Greater Than</li>
+                <li>>= - Greater Than or Equal To</li>
+                <li><  - Less Than</li>
+                <li><= - Less Than or Equal To</li>
+              </ul>
             </p>
 					</li>
           <li>
@@ -97,6 +116,10 @@
           <li>
             <h3 class='light-padding'>String</h3>
             <p class='light-padding'>a sequence of characters</p>
+          </li>
+          <li>
+            <h3 class='light-padding'>Array</h3>
+            <p class='light-padding'>A list of types</p>
           </li>
           <li>
             <h3 class='light-padding'>Object</h3>

@@ -1,0 +1,358 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="/syntaxhighlighter/shCore.css">
+    <link rel="stylesheet" href="/syntaxhighlighter/shThemeDefault.css">
+    <link rel="stylesheet" href="/video-directory/css/cheat-sheet.css">
+    <script type="text/javascript" src="/syntaxhighlighter/shCore.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushBash.js"></script>
+  </head>
+  <body>
+    <ol>
+      <h1>Bash Basic Concepts</h1>
+      <li>
+        <h2>Operators</h2>
+        <p>
+          I have only included the basics for further reading you can use this
+          <a href='https://ss64.com/bash/test.html' target='_blank'>reference</a>.
+        </p>
+        <ul>
+          <li>
+            <h3 class='light-padding'>+ (Addition)</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              var=$(($var + [number]))
+              let "var += [number]"
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>- (Subtraction)</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              var=$(($var - [number]))
+              let "var -= [number]"
+            </pre>
+					</li>
+          <li>
+			      <h3 class='light-padding'>* (Multiplication)</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              var=$(($var * [number]))
+              let "var *= [number]"
+            </pre>
+					</li>
+          <li>
+					  <h3 class='light-padding'>/ (Division)</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              var=$(($var / [number]))
+              let "var /= [number]"
+            </pre>
+					</li>
+          <li>
+            <h3 class='light-padding'>% (Modulus)</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              var=$(($var % [number]))
+              let "var %= [number]"
+            </pre>
+					</li>
+          <li>
+					  <h3 class='light-padding'>** (Exponential)</h3>
+            <pre class='brush: bash'>
+              var=$(($var ** [number]))
+              expr "var *= [number]"
+            </pre>
+					</li>
+          <li>
+						<h3 class='light-padding'>= (Assignment)</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              var=[value]
+              var=$one$two
+            </pre>
+					</li>
+          <li>
+						<h3 class='light-padding'>==, >, >=, <, <= (Relation)</h3>
+            <p class='light-padding'>
+              <ul>
+                <li>== - Equality</li>
+                <pre class='brush: bash'>
+                  [[ $var == "string" ]] && echo true
+                  (( var == 5 )) && echo true
+                </pre>
+                <li>>  - Greater Than</li>
+                <pre class='brush: bash'>
+                  [[ $var > 5 ]] && echo true
+                </pre>
+                <li>>= - Greater Than or Equal To</li>
+                <pre class='brush: bash'>
+                  [[ $var >= 5 ]] && echo true
+                </pre>
+                <li><  - Less Than</li>
+                <pre class='brush: bash'>
+                  [[ $var < 5 ]] && echo true
+                </pre>
+                <li><= - Less Than or Equal To</li>
+                <pre class='brush: bash'>
+                  [[ $var <= 5 ]] && echo true
+                </pre>
+              </ul>
+            </p>
+					</li>
+          <li>
+						<h3 class='light-padding'>! (Not)</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              ! [[ $var == 5 ]] && echo true
+              ! -z '$var' #not empty string
+              "$var" != "string"
+              $var != 5
+            </pre>
+					</li>
+          <li>
+						<h3 class='light-padding'>& (And)</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              [[ $var == 5 ]] && [[ $str == "string" ]] && echo true
+              [[ $var == 5 ]] & [[ $str == "string" ]] && echo true
+            </pre>
+					</li>
+          <li>
+						<h3 class='light-padding'>| (Or)</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              [[ $var == 5 ]] || [[ $str == "string" ]] && echo true
+              [[ $var == 5 ]] | [[ $str == "string" ]] && echo true
+            </pre>
+					</li>
+        </ul>
+      </li>
+
+      <li>
+        <h2>Variables</h2>
+        <p>Variables simply represent data of various types.</p>
+        <ul>
+          <li>
+            <h3 class='light-padding'>Null</h3>
+            <p class='light-padding'>
+              All of the below values are null I always use the first one.
+            </p>
+            <pre class='brush: bash'>
+              var=
+              var=''
+              var=""
+              var=$'\0'
+              var=$'\u0000'
+              var=$'\c@'
+              var=$'\x00'
+              var=$'\0\0\0\0\0'
+            </pre>
+            <p class='light-padding'>To test:</p>
+            <pre class='brush: bash'>
+              [[ -z "$var" ]] && echo true
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>Boolean</h3>
+            <p class='light-padding'>
+              You can do booleans, but I avoid them just use equality when you
+              need to branch.
+            </p>
+            <pre class='brush: bash'>
+              isFalse=0
+              isTrue=1 #Any number other than 0
+              (( $isTrue )) && echo will print
+              (( $isFalse )) && echo will not print
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>Number</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              number=2
+              number=$(( number + number ))
+              (( number == 4 )) && echo true
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>String</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              var=this
+              str="$var and then some" #This and then some
+              str='$var and then some' #$var and then some
+              length=${#str} #Length of string
+              subString=${#str:$startIndex:$endIndex}
+              suffix=${#str:$startIndex:}
+              indexOfChar=$(expr index 'a' 'alpha') #0
+              indexOfChar=$(expr index 'zlh' 'alpha') #1
+              replace=$($var/some/some more) #Replace first 'some' with 'some more'
+              replace=$($var//a/?) #Replace both a's with ?
+              replace=$($var/%a/?) #Replace back match ?
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>Array</h3>
+            <p class='light-padding'>
+              <a target="_blank" href='http://www.yourownlinux.com/2016/12/bash-scripting-arrays-examples.html'>
+                give credit where credits due
+              </a>
+            </p>
+            <pre class='brush: bash'>
+              declare -a arrayName=(value1, value2, value3,...valueN)
+              valueAtIndex=${arrayName[i]} #(0 indexed)
+              wholeThing=${arrayName[@]} #Whole array
+              length=${#arrayName[@]}
+              subArray=${#arrayName[@]$startIndex:$endIndex}
+              searchedAndReplaced=${#arrayName[@]$searchText:$replacement}
+              copy=("${arrayName1[@]}")
+              concatication=("${arrayName1[@]}" "${arrayName1[@]}" "Last Element")
+              removeThirdElement=("${arrayName1[@]:0:2}" "${arrayName1[@]:3}")
+              removeWordsWithAz=(${arrayName[@]/*z*/})
+              unset arrayName #Delete
+
+              for value in "${arrayName[@]}"; do echo $value; done;
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>Associative Array</h3>
+            <p class='light-padding'>
+              <a target="_blank" href='https://riptutorial.com/bash/example/6886/associative-arrays'>
+                give credit where credits due
+              </a>
+            </p>
+            <pre class='brush: bash'>
+              declare -A assocArray=([hello]=world [ab]=cd ["key with space"]="hello world")
+              assocArray[nospace]=no space
+              assocArray["key with space"]="'more spaces'"
+              value=${assocArray[key]}
+              listKeys=${!assocArray[@]}
+              listValues=${assocArray[@]}
+              numberOfElements=${#assocArray[@]}
+
+              for key in "${!assoc[@]}"; do echo $key; done;
+              for key in "${assoc[@]}"; do echo $value; done;
+            </pre>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <h2>Conditional</h2>
+        <p>Change the direction of the code based on a boolean value</p>
+        <ul>
+          <li>
+            <h3 class='light-padding'>if/else</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              test='complex'
+              test='simple'
+              test='defalut'
+              if ([ ! -z true ]  && [ ! -z '' ]) | [ "$test" == 'complex' ]
+              then
+                echo complex
+              elif [ "$test" == "simple" ]
+              then
+                echo simple
+              else
+                echo default
+              fi
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>switch</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              test=
+              test=false
+              test=true
+              case "$test" in
+                  '' )
+                      echo empty ;;
+                  'false' )
+                      echo false ;;
+                  'true' )
+                      echo true ;;
+              esac
+            </pre>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <h2>Loops</h2>
+        <p>Repetitive cycles of code consisting of:<br>
+          (an initial value; a test; a limit)<br>
+        </p>
+        <ul>
+          <li>
+            <h3 class='light-padding'>For</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              #Numerical
+              for (( c=1; c<=5; c++ )); do echo $c; done;
+
+              #Array
+              for value in "${arrayName[@]}"; do echo $value; done;
+
+              #Associative Array
+              for key in "${!assoc[@]}"; do echo $key; done;
+              for key in "${assoc[@]}"; do echo $value; done;
+
+              #Files And Directories
+              for fileDir in ./*; do echo $fileDir; done;
+
+              #Directories
+              for dir in ./*/; do echo $dir; done;
+            </pre>
+          </li>
+          <li>
+            <h3 class='light-padding'>While</h3>
+            <p class='light-padding'></p>
+            <pre class='brush: bash'>
+              i=0
+              while (( i < 5 )); do (( i += 1 )); echo $i; done;
+            </pre>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <h2>Functions</h2>
+        <p class='light-padding'>
+          I am not really a fan of how arguments work in bash. I would recommend
+          using my
+          <a target="_blank" href='https://github.com/jozsefmorrissey/BashScripts/blob/master/commandParser.sh'>
+            commandParser.sh
+          </a>
+          for larger scripts.
+          <br><br>
+          Also for debugging and logging purposes my
+          <a target="_blank" href='https://github.com/jozsefmorrissey/BashScripts/blob/master/debugLogger.sh'>
+            debugLogger.sh
+          </a>
+          script also comes in handy (even more than the command parser).
+        </p>
+        <br>
+        <pre class='brush: bash'>
+          myFunction() {
+              >&2 echo arg1: $1
+              >&2 echo arg2: $2
+              shift
+              shift
+              >&2 echo arg3: $1
+              echo my return
+              echo value
+          }
+
+          retVal=$(myFunction argument1 "a r g 2" "third arg")
+          echo -e "retVal: $retVal"
+        </pre>
+      </li>
+    </ol>
+    <!-- Highlight all -->
+    <script type="text/javascript">
+        SyntaxHighlighter.all()
+    </script>
+  </body>
+</html>

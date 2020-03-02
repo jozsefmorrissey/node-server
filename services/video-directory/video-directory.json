@@ -26,16 +26,6 @@
     "id": 5981077416655194
   },
   {
-    "Title": "C++ kickstarter",
-    "Description": "Covers the C++ implementation of the basic and advanced concepts.",
-    "id": 538274466101653
-  },
-  {
-    "Title": "C kickstarter",
-    "Description": "Covers the C implementation of the basic and advanced concepts.",
-    "id": 4348330505341604
-  },
-  {
     "Title": "Bash kickstarter",
     "Description": "Covers the bash implementation of the basic and advanced concepts.",
     "id": 2599400265633547
@@ -60,5 +50,10 @@
     "Title": "syntaxhighlighter",
     "Description": "Code highlighting javascript/css for html",
     "id": 7325574386636795
+  },
+  {
+    "Title": "Linux Terminal Kickstarter",
+    "Description": "The essential commands I use on a daily basis",
+    "id": 8559629897680907
   }
 ]
