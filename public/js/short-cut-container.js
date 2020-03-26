@@ -1,7 +1,10 @@
 var SHORT_CUT_CONTAINERS = [];
 
 function ShortCutCointainer(id, keys, html) {
-  let currentKeys = {};
+  var SPACER_ID = 'ssc-html-spacer';
+  var OPEN = 'ssc-open';
+  var CLOSE = 'ssc-close';
+  var currentKeys = {};
   var size = 200;
   var container;
   var resizeBar;
@@ -15,9 +18,9 @@ function ShortCutCointainer(id, keys, html) {
 
   function getResizeBarCss() {
     return 'border-top-style: double;' +
-      'border-top-width: 5pt;' +
+      'border-top-width: 10px;' +
       'cursor: row-resize;' +
-      'border-color: #4dce55;';
+      'border-color: rgb(22, 44, 166);';
   }
 
   function createResizeBar() {
@@ -35,6 +38,17 @@ function ShortCutCointainer(id, keys, html) {
     return container;
   }
 
+  function padBottom(height) {
+    var spacer = document.getElementById(SPACER_ID);
+    if (spacer) {
+      spacer.remove();
+    }
+    spacer = document.createElement('div');
+    spacer.id = SPACER_ID;
+    spacer.style = 'height: ' + height;
+    document.querySelector('body').append(spacer);
+  }
+
   var noHeight = 'display: block;' +
     'width: 100%;' +
     'margin: 0;' +
@@ -42,6 +56,7 @@ function ShortCutCointainer(id, keys, html) {
     'position: fixed;' +
     'width: 100%;' +
     'bottom: 0;' +
+    'z-index: 10000;' +
     'left: 0;' +
     'background-color: white;';
 
@@ -53,9 +68,12 @@ function ShortCutCointainer(id, keys, html) {
       let dx = window.innerHeight - element.clientY;
       dx = dx < minHeight ? minHeight : dx;
       dx = dx > maxHeight ? maxHeight : dx;
-      container.style.cssText = 'overflow: scroll; max-height: ' + dx + 'px;';
-      ssc.style.cssText  = noHeight + 'height: ' + dx + 'px;'
+      var height = dx + 'px;';
+      container.style.cssText = 'overflow: scroll; max-height: ' + height;
+      ssc.style.cssText  = noHeight + 'height: ' + height;
+      padBottom(height);
     }
+    return element.height;
   }
 
   var shouldResize = 0;
@@ -71,9 +89,6 @@ function ShortCutCointainer(id, keys, html) {
     }
   }
 
-  function getEventName(type) {
-    return 'ssc-' + id + "-" + type;
-  }
 
   let displayCount = 0;
   function toggleContentEditor() {
@@ -81,10 +96,13 @@ function ShortCutCointainer(id, keys, html) {
         var ce = document.getElementById(id);
         if (displayCount %2 == 1) {
           ce.style.display = 'block';
-          triggerEvent(getEventName('open'));
+          var height = ce.style.height;
+          padBottom(height);
+          triggerEvent(OPEN, id);
         } else {
           ce.style.display = 'none';
-          triggerEvent(getEventName('close'));
+          padBottom('0px;');
+          triggerEvent(CLOSE, id);
         }
   }
 
@@ -104,7 +122,12 @@ function ShortCutCointainer(id, keys, html) {
     return true;
   }
 
-  function triggerEvent(name) {
+  function onOpen(id) {
+    console.log(id);
+  }
+
+
+  function triggerEvent(name, id) {
     var event; // The custom event that will be created
 
     if (document.createEvent) {
@@ -142,7 +165,7 @@ function ShortCutCointainer(id, keys, html) {
   ssc.append(createContainer(html));
   ssc.style.cssText = noHeight + 'height: ' + size + 'px;';
   ssc.style.display = 'none';
-
+  ssc.addEventListener(OPEN, onOpen);
   onLoad();
   retObject = {innerHtml, mouseup, mousedown, resize, keyUpListener, keyDownListener};
   SHORT_CUT_CONTAINERS.push(retObject);

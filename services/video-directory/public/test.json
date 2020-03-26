@@ -1,0 +1,16 @@
+[{
+  "id": "import",
+  "description": "\\n            All languages support referencing external code.\\n          ",
+  "form": "[keyword] [file location/reference value]",
+  "examples": "\\n            #bash\\n\\n          "
+},{
+  "id": "test",
+  "description": "desc",
+  "form": "form",
+  "examples": "exp..."
+},{
+  "id": "",
+  "description": "",
+  "form": "",
+  "examples": ""
+}]

@@ -55,5 +55,11 @@
     "Title": "Linux Terminal Kickstarter",
     "Description": "The essential commands I use on a daily basis",
     "id": 8559629897680907
+  },
+  {
+    "Title": "Advanced Bash Scripting (External)",
+    "Description": "Advanced bash scripting guide",
+    "Link": "http://tldp.org/LDP/abs/html/abs-guide.html",
+    "id": 5853155354486148
   }
 ]

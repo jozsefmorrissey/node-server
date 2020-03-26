@@ -1,0 +1,6 @@
+{
+  "root": "node-server",
+  "host": "http://localhost:3000/debug-gui",
+  "id": "default",
+  "debugArg": "-d(=(.*)|)"
+}

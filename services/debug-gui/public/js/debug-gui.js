@@ -1,5 +1,6 @@
 var DEBUG_GUI = {};
 DEBUG_GUI.EXCEPTION_LOOKUP = {};
+DEBUG_GUI.client = new DebugGuiClient.browser();
 
 function DebugGui() {
   var exceptionId = 0;
@@ -13,20 +14,6 @@ function DebugGui() {
       return function() { return myScript.src; };
   })();
 
-  function getCookie(name) {
-    var cookieReg = new RegExp("^(.*?; |)DebugGui=(id=.*?)(;.*$|$)");
-    if (document.cookie.match(cookieReg)) {
-      var value = document.cookie.replace(cookieReg, '$2');
-      var keyValues = value.split("|");
-      var json = {};
-      for (var index = 0; index < keyValues.length; index += 1) {
-          var keyValue = keyValues[index].split("=");
-          json[keyValue[0]] = keyValue[1];
-      }
-      return json;
-    }
-  }
-
   function getParameter(name) {
     var paramReg = new RegExp("(.*?(\\?|&))" + name + "=([^&]*?)(#|&|$).*");
     if (window.location.href.match(paramReg)) {
@@ -35,37 +22,16 @@ function DebugGui() {
   }
 
   function getId() {
-    if (DEBUG_GUI.ID) {
-      return DEBUG_GUI.ID;
-    }
-    var cookie = getCookie('DebugGui');
-    var param = getParameter('DebugGui.id');
-    if (cookie && param && cookie.id !== param){
-      try{
-        throw new Error('Contradication exists between DebugGui cookie ' +
-        'and id parameter. This contraction must be fixed, it could be triggering' +
-        ' different applications to use different identifiers.\n\t\tCookie: ' +
-        cookie.id + "\n\t\tParameter: " + param);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    if (cookie) {
-      DEBUG_GUI.ID = cookie.id;
-    }
-    if (param) {
-      DEBUG_GUI.ID = param;
-    }
-    return DEBUG_GUI.ID;
+    return DEBUG_GUI.client.getId();
   }
 
   function updateId(value) {
-    DEBUG_GUI.ID = value;
+    DEBUG_GUI.client.setId(value);
   }
 
   function buildHeader(html) {
-    var host = DEBUG_GUI.HOST;
-    var tl = getLogWindow();
+    var host = getHost();
+    var tl = logWindow();
     return `<div style='text-align: center;'>
               <div style='float: left; margin-left: 20pt;'>
                 <input type='button' value='refresh'
@@ -77,7 +43,7 @@ function DebugGui() {
               <input type='text' id='debug-gui-host' value='${host}'>
               <label>id: </label>
               <input type='text' id='debug-gui-id' onchange='DebugGui.updateId(this.value)' value='${getId()}'>
-              <img style='height: 20px;' onclick='DebugGui.createCookie()' src='${host}/images/cookie.gif'>
+              <img style='height: 20px;' onclick='DebugGui.createCookie(true)' src='${host}/images/cookie.gif'>
               <label>&nbsp;&nbsp;Logging Window </label>
               <input type='text' id='debug-gui-log-window' value='${tl}'
                   style='width: 40pt;'>
@@ -120,13 +86,12 @@ function DebugGui() {
     DEBUG_GUI.MODAL.id = 'debug-gui-modal';
     DEBUG_GUI.HAZE.onclick = hideModal;
     DEBUG_GUI.SCRIPT_URL = getScriptURL();
-    getLogWindow();
+    logWindow();
     hideModal();
 
     document.body.appendChild(DEBUG_GUI.MODAL);
     var html = buildHeader(buildGui(undefined, 'og'));
     DEBUG_GUI.SCC = ShortCutCointainer("debug-gui-scc", ['d', 'g'], html);
-    DEBUG_GUI.ID = getId();
 
     refresh();
   }
@@ -147,12 +112,13 @@ function DebugGui() {
     for (var index = logs.length - 1; index > -1; index -= 1) {
       html += logs[index].log + '<br>';
     }
+    console.log('dgisb', DEBUG_GUI.client.isDebugging());
+
     displayModalHtml(html);
   }
 
   function debug() {
-    return document.cookie.match("(;\\s*|^\\s*)DebugGui=(.{1,})(;|$)") !== null ||
-      window.location.href.match("(\\?|&)DebugGui.id=[^&]{1,}(&|$)");
+    return DEBUG_GUI.client.isDebugging();
   }
 
   function displayModalHtml(html) {
@@ -202,7 +168,7 @@ function DebugGui() {
       '\n\t\t<script type=\'text/javascript\' src="' + DEBUG_GUI.SCRIPT_URL +
       '"></script>' + '\n\t</head>\n\t<body>\n\t\t<h1>' + title +
       '</h1>\n\t\t<b>(Press d + g to open debug-gui)</b>\n\t\t<p>' + desc +
-      '</p>' + '\n\t\t<' + TAG_NAME + " url='" + host + "' debug-gui-id='" + DEBUG_GUI.ID +
+      '</p>' + '\n\t\t<' + TAG_NAME + " url='" + host + "' debug-gui-id='" + getId() +
       "'>\n" + JSON.stringify(DEBUG_GUI.DATA, null, 2) + "\n\t\t</" + TAG_NAME + ">" +
       '\n\t</body>\n</html>';
     copyText.select();
@@ -258,7 +224,7 @@ function DebugGui() {
         }
     };
 
-    xhr.open('GET', getUrl(host, id, getLogWindow()), true);
+    xhr.open('GET', getUrl(host, id, logWindow()), true);
     xhr.send();
   }
 
@@ -271,8 +237,8 @@ function DebugGui() {
        if (tag.getAttribute('url')) {
          var url = tag.getAttribute('url');
          var id = tag.getAttribute('dg-id');
-         if (DEBUG_GUI.HOST != url) {
-           DEBUG_GUI.HOST = url;
+         if (getHost() != url) {
+           DEBUG_GUI.client.setHost(url);
          }
        }
        var innerHtml = tags[index].innerHTML.trim();
@@ -386,7 +352,7 @@ function DebugGui() {
   }
 
   var numberReg = new RegExp('^[0-9]*$');
-  function getLogWindow(value) {
+  function logWindow(value) {
     var element = document.getElementById('debug-gui-log-window');
     var elementValue = element && element.value.match(numberReg) ? element.value : undefined;
 
@@ -405,35 +371,44 @@ function DebugGui() {
   function refresh(data) {
     if (data) {
         DEBUG_GUI.DATA = data;
-
         render();
     } else if (!DEBUG_GUI.DONT_REFRESH) {
-      getData(DEBUG_GUI.HOST, DEBUG_GUI.ID);
+      getData(getHost(), getId());
     }
   }
 
-  function createCookie() {
+  function getHost() {
+    return DEBUG_GUI.client.getHost();
+  }
+
+  function createCookie(copy) {
     var id = getId();
-    var host = window.location.href.replace(/(http(s|):\/\/.*?)\/.*/, "$1");
-    var portReg = /(http(s|)(:\/\/[^:]*?:[0-9]{4})\/)/;
+    var host = getHost();
+    if (!id || !host) return;
+    var portReg = /(http(s|)(:\/\/[^:]*?:[0-9]{4})\/)(.*)$/;
     var httpHost;
     var httpsHost;
-    var portMatch = window.location.href.match(portReg);
+    var portMatch = host.match(portReg);
     if (portMatch) {
+      // localhost
       var rootValue = portMatch[3].substr(0, portMatch[3].length - 1);
-      httpHost = "http" + rootValue + 0 + "/debug-gui/";
-      httpsHost = "https" + rootValue + 1 + "/debug-gui/";
+      httpHost = "http" + rootValue + 0 + portMatch[4];
+      httpsHost = "https" + rootValue + 1 + portMatch[4];
+    } else {
+      // production
+      httpHost = host.replace(/https/, 'http');
+      httpsHost = host.replace(/http/, 'https');
     }
     var cookie = "id=" + id;
     var setupCookie = "document.cookie = 'DebugGui=" + cookie + "|host=" +
-        host + "|httpHost="  + httpHost + "|httpsHost=" + httpsHost + "'";
+        host + "|httpHost="  + httpHost + "|httpsHost=" + httpsHost + "|debug=true'";
 
-    if (document.getElementById('debug-gui-id').value) {
-      document.cookie = 'DebugGui=' + cookie;
+    if (DEBUG_GUI.client.isDebugging()) {
+      document.cookie = 'DebugGui=' + setupCookie;
     } else {
       document.cookie = 'DebugGui=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     }
-    if (window.location.href.indexOf('/debug-gui/') > -1) {
+    if (copy) {
       copyToClipboard(setupCookie, "Setup cookie copied to clipboard");
     }
   }
@@ -468,6 +443,7 @@ function DebugGui() {
       document.head.appendChild(script);
       init();
     }
+    createCookie();
   }
 
 

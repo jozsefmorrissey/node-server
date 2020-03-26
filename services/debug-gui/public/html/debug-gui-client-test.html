@@ -3,6 +3,8 @@
     <script type='text/javascript' src="/debug-gui/js/debug-gui-client.js"></script>
     <script type='text/javascript' src="/debug-gui/js/debug-gui.js"></script>
     <script>
+      var dg = DebugGuiClient.browser();
+
       var groups = ['computer', 'login', 'verification', 'system', 'cabage', 'teapot'];
       dg.setRoot('debug-gui-client-test');
       function getGroup() {
@@ -56,6 +58,6 @@
   </head>
   <body>
     <input type='button' onclick="randomAdd()" value='Generate'>
-    <debug-gui-data url='/debug-gui/' dg-id='test'></debug-gui-data>
+    <debug-gui-data url='https://localhost:3001/debug-gui' dg-id='test'></debug-gui-data>
   </body>
 </html>
