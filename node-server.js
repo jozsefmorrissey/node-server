@@ -36,9 +36,11 @@ function getUser() {
   }
   return shell.exec('echo ${UserProfile}', {silent: true}).stdout.replace(/^.*\\([^\\]*)$/, '$1').trim();
 }
+
+shell.exec('[ -d "~/cert" ] || cp -r ./cert/ ~/.cert');
 var https_options = {
-  key: fs.readFileSync("/cert/jozsefmorrissey_com.key"),
-  cert: fs.readFileSync("/cert/jozsefmorrissey_com.crt"),
+  key: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim()),
+  cert: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim()),
   ca: []
 };
 
@@ -110,11 +112,12 @@ try {
     var project = dir + loc;
     app.use(loc, express.static(dir + '/public'))
     require(project).endpoints(app, loc, ip);
-  }
-} catch (e) { console.log(e); }
 
-var httpServer = http.createServer(app);
-var httpsServer = https.createServer(https_options, app);
+    var httpServer = http.createServer(app);
+    var httpsServer = https.createServer(https_options, app);
+  }
+} catch (e) { console.log('error: ', e); }
+
 
 httpServer.listen(3000);
 httpsServer.listen(3001);
