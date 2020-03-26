@@ -37,7 +37,7 @@ function getUser() {
   return shell.exec('echo ${UserProfile}', {silent: true}).stdout.replace(/^.*\\([^\\]*)$/, '$1').trim();
 }
 
-shell.exec('[ -d "~/cert" ] || cp -r ./cert/ ~/.cert');
+shell.exec('[ -d "~/cert" ] || mkdir ~/.cert/ && cp ./cert/* ~/.cert/');
 var https_options = {
   key: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim()),
   cert: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim()),
