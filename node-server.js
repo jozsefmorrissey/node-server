@@ -107,16 +107,18 @@ app.post('/copy', function(req, res) {
 
 var ip = '192.168.254.10';
 var services = shell.ls('./services/');
+var exclude = ['uss', 'uus'];
 try {
-  // for (let i = 0; i < services.length; i += 1) {
-  //   var id = services[i];
-  //   var loc = '/' + id;
-  //   var dir = './services' + loc;
-  //   var project = dir + loc;
-  //   app.use(loc, express.static(dir + '/public'))
-  //   require(project).endpoints(app, loc, ip);
-  //
-  // }
+  for (let i = 0; i < services.length; i += 1) {
+    var id = services[i];
+    if (exclude.indexOf(id) == -1) {
+      var loc = '/' + id;
+      var dir = './services' + loc;
+      var project = dir + loc;
+      app.use(loc, express.static(dir + '/public'))
+      require(project).endpoints(app, loc, ip);
+    }
+  }
 } catch (e) { console.log('error: ', e); }
 
 var httpServer = http.createServer(app);
