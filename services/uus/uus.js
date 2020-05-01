@@ -4,8 +4,8 @@ const DebugGuiClient = require('../debug-gui/public/js/debug-gui-client.js').Deb
 const dg = DebugGuiClient.node(process.argv);
 
 dg.log('hello dgs');
-dg.exception('my.group', new Error('hard error'));
-dg.exception('my.group', new Error('soft error'), true);
+// dg.exception('my.group', new Error('hard error'));
+// dg.exception('my.group', new Error('soft error'), true);
 
 // console.log(JSON.hf.parseCookie('key1=value1;key2=value1;key3=value=anothervalue=five'));
 

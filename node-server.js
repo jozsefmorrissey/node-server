@@ -4,7 +4,7 @@ var shell = require("shelljs")
 var bodyParser = require('body-parser');
 var fileUpload = require('express-fileupload');
 const cookieParser = require("cookie-parser");
-
+try{
 global.__basedir = __dirname;
 
 console.log(process.argv);
@@ -37,7 +37,10 @@ function getUser() {
   return shell.exec('echo ${UserProfile}', {silent: true}).stdout.replace(/^.*\\([^\\]*)$/, '$1').trim();
 }
 
-shell.exec('[ -d "~/.cert" ] || mkdir ~/.cert/ && cp ./cert/* ~/.cert/');
+if (!shell.exec('[ -d "~/.cert" ]')) {
+  shell.exec('mkdir ~/.cert/ && cp ./cert/* ~/.cert/');
+}
+
 var https_options = {
   key: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim()),
   cert: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim()),
@@ -105,22 +108,23 @@ app.post('/copy', function(req, res) {
 var ip = '192.168.254.10';
 var services = shell.ls('./services/');
 try {
-  for (let i = 0; i < services.length; i += 1) {
-    var id = services[i];
-    var loc = '/' + id;
-    var dir = './services' + loc;
-    var project = dir + loc;
-    app.use(loc, express.static(dir + '/public'))
-    require(project).endpoints(app, loc, ip);
-
-    var httpServer = http.createServer(app);
-    var httpsServer = https.createServer(https_options, app);
-  }
+  // for (let i = 0; i < services.length; i += 1) {
+  //   var id = services[i];
+  //   var loc = '/' + id;
+  //   var dir = './services' + loc;
+  //   var project = dir + loc;
+  //   app.use(loc, express.static(dir + '/public'))
+  //   require(project).endpoints(app, loc, ip);
+  //
+  // }
 } catch (e) { console.log('error: ', e); }
 
-
+var httpServer = http.createServer(app);
+var httpsServer = https.createServer(https_options, app);
 httpServer.listen(3000);
 httpsServer.listen(3001);
 
 var user = getUser();
 //shell.exec("xdg-open \"https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.id=" + user + "\"");
+
+} catch (e) { console.log('error:ssss ', e); }
