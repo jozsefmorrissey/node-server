@@ -133,15 +133,16 @@ function PssstInit() {
       }
       setTimeout(function () {
         var index = findInput(identifier);
-        if (index) {
-          id = 'input-' + index;
+        if (Number.isInteger(index) && index > -1) {
+          var id = 'input-' + index;
+          var copyBtnId = 'copy-btn-' + index;
           var origValue = document.getElementById(id).value;
-          document.getElementById(id).disabled = true;
+          document.getElementById(copyBtnId).style.display = 'inline';
           document.getElementById(id).value = value;
           copy(id);
           setTimeout(function () {
             document.getElementById(id).value = origValue;
-            document.getElementById(id).disabled = false;
+            document.getElementById(copyBtnId).style.display = 'none';
           }, 10000);
         }
       }, 500);
@@ -300,7 +301,8 @@ function PssstInit() {
     var ks = PSSST_CONFIG.keys;
     for (var i = 0; i < ks.length; i += 1) {
       if (ks[i]) {
-        link = `<br><a href id='link-${i}' onclick='return Pssst.getIndex(${i})'>${ks[i]}</a><br>
+        link = `<br><a href id='link-${i}' onclick='return Pssst.getIndex(${i})'>${ks[i]}</a>
+                <button class='btn btn-primary copy-btn' id='copy-btn-${i}' onclick='Pssst.copy("input-${i}")'>Copy</button><br>
                 <span><input class='form-control' id='input-${i}'>`;
         input = `
         <input type='button' class='btn btn-primary' value='update' onclick='Pssst.update(${i})'>
@@ -379,7 +381,7 @@ function PssstInit() {
 
   Pssst = {retrieve, url, keys, getIndex, update, refresh, addPin, getPinPrompt,
     remove, add, bulkUpdate, copyCmd, build, validatePin, resetToken, resetPin,
-    validateThisPin};
+    validateThisPin, copy};
   return Pssst;
 }
 

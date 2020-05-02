@@ -654,9 +654,8 @@ key-array() {
 }
 
 stop-server() {
-  port=$(determinePort "$1")
-  echo port: $2
-  kill -9 $(getServerPid $2)
+  echo port: $1
+  kill -9 $(getServerPid $1)
 }
 
 edit() {
@@ -749,7 +748,7 @@ secureFunctions() {
       startServer "$group"
     ;;
     stop-server)
-      stop-server "$group" "$port" #port optional
+      stop-server "$1"
     ;;
     defaultPort)
       determinePort "$group"

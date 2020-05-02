@@ -18,3 +18,10 @@ html { font-size: 1rem; }
   color:
   red;
 }
+
+.copy-btn {
+  display:none;
+  font-size: x-small;
+  padding: 4pt;
+  margin: 10pt;
+}
