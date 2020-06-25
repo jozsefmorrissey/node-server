@@ -27,6 +27,12 @@ function DebugGui() {
 
   function updateId(value) {
     DEBUG_GUI.client.setId(value);
+    createCookie();
+  }
+
+  function updateHost(value) {
+    DEBUG_GUI.client.setHost(value);
+    createCookie();
   }
 
   function buildHeader(html) {
@@ -40,7 +46,7 @@ function DebugGui() {
                     value='Logs'>
               </div>
               <label>host: </label>
-              <input type='text' id='debug-gui-host' value='${host}'>
+              <input type='text' id='debug-gui-host' onchange='DebugGui.updateHost(this.value)' value='${host}'>
               <label>id: </label>
               <input type='text' id='debug-gui-id' onchange='DebugGui.updateId(this.value)' value='${getId()}'>
               <img style='height: 20px;' onclick='DebugGui.createCookie(true)' src='${host}/images/cookie.gif'>
@@ -92,7 +98,7 @@ function DebugGui() {
     document.body.appendChild(DEBUG_GUI.MODAL);
     var html = buildHeader(buildGui(undefined, 'og'));
     DEBUG_GUI.SCC = ShortCutCointainer("debug-gui-scc", ['d', 'g'], html);
-
+    createCookie();
     refresh();
   }
 
@@ -112,7 +118,6 @@ function DebugGui() {
     for (var index = logs.length - 1; index > -1; index -= 1) {
       html += logs[index].log + '<br>';
     }
-    console.log('dgisb', DEBUG_GUI.client.isDebugging());
 
     displayModalHtml(html);
   }
@@ -175,7 +180,6 @@ function DebugGui() {
 
 
     document.execCommand("copy");
-    console.log('copied')
   }
 
   function path(str) {
@@ -292,7 +296,8 @@ function DebugGui() {
       acorn += `<li><a href='#' onclick='DebugGui.displayModal(${exceptionId})'>
                   ${except.id} - ${except.msg}
                 </a></li>`;
-      DEBUG_GUI.EXCEPTION_LOOKUP[exceptionId++] = `<h4>${except.msg}</h4><p>${except.stacktrace}</p>`;
+      var stacktrace = except.stacktrace === undefined ? "" : except.stacktrace.replace(/\n/g, "<br>");
+      DEBUG_GUI.EXCEPTION_LOOKUP[exceptionId++] = `<h4>${except.msg}</h4><p>${stacktrace}</p>`;
     }
     if (exceptions.length > 0) {
       return acorn + '</ul></div>';
@@ -300,8 +305,10 @@ function DebugGui() {
     return "";
   }
 
-  function buildGui(data, fp) {
+  function buildGui(data, fp, accordionId) {
     var acorn = '';
+    accordionId = (accordionId ? accordionId : 0);
+    const acordId = 'dg-accordion-' + accordionId;
     if (!data) {
       data = buildData();
     }
@@ -313,22 +320,23 @@ function DebugGui() {
     }
     for (let index = 0; index < keys.length; index += 1) {
       var id = keys[index];
-      var childBlock = buildGui(data[id].children, fp + "-" + id);
+      var cleanId = id.replace(/[:+=\/]/g, '-');
+      var childBlock = buildGui(data[id].children, fp + "-" + id, accordionId+1);
       if (childBlock.trim()) {
         childBlock = `<div style='border-style: double;'>
                         ${childBlock}
                       </div>`
       }
       acorn += `  <div class="card">
-          <div class="card-header" id="heading-${fp}-${id}">
-            <h2 class="mb-${fp}-${id}">
-              <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapse-${fp}-${id}" aria-expanded="true" aria-controls="collapse-${fp}-${id}">
+          <div class="card-header" id="heading-${fp}-${cleanId}">
+            <h2 class="mb-${fp}-${cleanId}">
+              <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapse-${fp}-${cleanId}" aria-expanded="true" aria-controls="collapse-${fp}-${cleanId}">
                 ${id}
               </button>
             </h2>
           </div>
 
-          <div id="collapse-${fp}-${id}" class="collapse" aria-labelledby="heading-${fp}-${id}" data-parent="#accordionExample">
+          <div id="collapse-${fp}-${cleanId}" class="collapse" aria-labelledby="heading-${fp}-${cleanId}" data-parent="#${acordId}">
             <div class="card-body">
               ${buildLinkList(data[id].links)}
               ${buildValueList(data[id].values)}
@@ -340,7 +348,7 @@ function DebugGui() {
     }
 
     if (acorn) {
-      return `<div class="accordion" id="accordionExample"></div>${acorn}`;
+      return `<div class="accordion" id="${acordId}">${acorn}</div>`;
     }
     return acorn;
   }
@@ -385,31 +393,34 @@ function DebugGui() {
     var id = getId();
     var host = getHost();
     if (!id || !host) return;
-    var portReg = /(http(s|)(:\/\/[^:]*?:[0-9]{4})\/)(.*)$/;
+    noProtocol=host.replace(/^(http|https):\/\//, "")
+    var portReg = /([^:]*?:[0-9]{4})(\/.*)$/;
     var httpHost;
     var httpsHost;
-    var portMatch = host.match(portReg);
+    var portMatch = noProtocol.match(portReg);
     if (portMatch) {
       // localhost
-      var rootValue = portMatch[3].substr(0, portMatch[3].length - 1);
-      httpHost = "http" + rootValue + 0 + portMatch[4];
-      httpsHost = "https" + rootValue + 1 + portMatch[4];
+      var rootValue = portMatch[1].substr(0, portMatch[1].length - 1);
+      httpHost = "http://" + rootValue + 0 + portMatch[2];
+      httpsHost = "https://" + rootValue + 1 + portMatch[2];
     } else {
       // production
       httpHost = host.replace(/https/, 'http');
       httpsHost = host.replace(/http/, 'https');
     }
     var cookie = "id=" + id;
-    var setupCookie = "document.cookie = 'DebugGui=" + cookie + "|host=" +
-        host + "|httpHost="  + httpHost + "|httpsHost=" + httpsHost + "|debug=true'";
+    var setupCookie = cookie + "|host=" +
+        host + "|httpHost="  + httpHost + "|httpsHost=" + httpsHost + "|debug=" + debug();
+    var cookieCmd = "document.cookie = 'DebugGui=" + setupCookie + "'";
 
     if (DEBUG_GUI.client.isDebugging()) {
+      eval(cookieCmd);
       document.cookie = 'DebugGui=' + setupCookie;
     } else {
       document.cookie = 'DebugGui=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     }
     if (copy) {
-      copyToClipboard(setupCookie, "Setup cookie copied to clipboard");
+      copyToClipboard(cookieCmd, "Setup cookie copied to clipboard");
     }
   }
 
@@ -436,11 +447,11 @@ function DebugGui() {
       script.setAttribute('crossorigin', 'anonymous');
       document.head.appendChild(script);
 
-      script = document.createElement("script");
-      script.src = 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js';
-      script.integrity = "sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM";
-      script.setAttribute('crossorigin', 'anonymous');
-      document.head.appendChild(script);
+      // script = document.createElement("script");
+      // script.src = 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js';
+      // script.integrity = "sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM";
+      // script.setAttribute('crossorigin', 'anonymous');
+      // document.head.appendChild(script);
       init();
     }
     createCookie();
@@ -457,16 +468,16 @@ function DebugGui() {
   script.src = '/js/short-cut-container.js';
   document.head.appendChild(script);
 
-  var style = document.createElement("link");
-  style.rel = 'stylesheet';
-  style.href = 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css';
-  style.integrity = "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T";
-  style.setAttribute('crossorigin', 'anonymous');
-  document.head.appendChild(style);
+  // var style = document.createElement("link");
+  // style.rel = 'stylesheet';
+  // style.href = 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css';
+  // style.integrity = "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T";
+  // style.setAttribute('crossorigin', 'anonymous');
+  // document.head.appendChild(style);
 
   window.addEventListener('load', onLoad);
   return {refresh, displayModal, displayLogs, debug, createCookie,
-      copyModal, getUrl, copyReport, getId, updateId};
+      copyModal, getUrl, copyReport, getId, updateId, updateHost};
 }
 
 DebugGui = DebugGui();

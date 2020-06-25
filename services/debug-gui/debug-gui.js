@@ -153,7 +153,6 @@ function endpoints(app, prefix, ip) {
   });
 
   app.post(prefix + "/value/:id/:group", function (req, res) {
-    console.log('recieved value');
       const id = req.params.id;
       const group = req.params.group;
       const key = req.body.key;

@@ -1,7 +1,10 @@
 <html>
   <head>
-    <script type='text/javascript' src="/debug-gui/js/debug-gui-client.js"></script>
-    <script type='text/javascript' src="/debug-gui/js/debug-gui.js"></script>
+    <script type='text/javascript' src="/debug-gui/js/debug-gui-client.js"
+        identity='id3'
+        host='http://localhost:3000/debug-gui'
+        debug='true';
+        window='23'></script>
     <script>
       var dg = DebugGuiClient.browser();
 
@@ -26,7 +29,6 @@
       }
 
       function addException() {
-
         dg.exception(getGroup(), getException());
       }
 

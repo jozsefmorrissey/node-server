@@ -1,4 +1,7 @@
 var shell = require('shelljs')
+var cookieParser = require('cookie-parser')
+const DebugGuiClient = require('../debug-gui/public/js/debug-gui-client.js').DebugGuiClient;
+
 var failedAttempts = {};
 
 function validate() {
@@ -12,6 +15,16 @@ function clean (str) {
     return "";
   }
   return str.replace('\'', '\\\'').trim();
+}
+
+function cleanObj(obj) {
+  const keys = Object.keys(obj);
+  const cleanObj = {};
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
+    cleanObj[key] = clean(obj[key]);
+  }
+  return cleanObj;
 }
 
 const LOCKED_OUT = 'You have exceeded the number of attempts. Sorry your account is locked';
@@ -35,41 +48,79 @@ function lockout(group, errorCode) {
   }
 }
 
-function exicuteCmd(group, token, pstPin, cmd) {
-  if (token != null) {
-    let validateCmd = `pst validateToken '${group}' '${token}' '${pstPin}'`;
+function bashDebugStr(req) {
+  cookieObj = DebugGuiClient.getCookieFromValue(req.cookies.DebugGui);
+  if (cookieObj.debug || cookieObj.debug === "true") {
+    let id = cookieObj.id;
+    let host = cookieObj.host || cookieObj.httpsHost || cookieObj.httpHost;
+    shell.exec(`debuggui config -id "${id}" -host "${host}"`);
+    return ` -d error -dg-id "${id}"`
+  }
+  return "";
+}
+
+function exicuteCmd(cmd, req) {
+  const clBody = cleanObj(req.body);
+
+  if (clBody.token != null) {
+    let validateCmd = `pst validateToken '${clBody.group}' '${clBody.token}' '${clBody.pstPin}'`;
+    const debugStr = bashDebugStr(req);
+    validateCmd += debugStr;
     if (cmd != undefined) {
-      validateCmd += ` && ${cmd}`;
+      validateCmd += ` && ${cmd}${debugStr}`;
     }
-    const returnValue = shell.exec(validateCmd, {silent: true});
-    lockout(group, returnValue.code)
+
+    const returnValue = shell.exec(validateCmd, {silent: false});
+    lockout(clBody.group, returnValue.code)
     return returnValue;
   }
 }
 const tokenValCmd = ''
 
-function get(group, token, pstPin, pi) {
+function get(group, token, pstPin, pi, req) {
   const cmd = 'pst value \'' + group + '\' \'' + pi + '\'';
-  return exicuteCmd(group, token, pstPin, cmd).replace('\n', '');
+  return exicuteCmd(cmd, req).replace('\n', '');
+}
+
+
+function debugValues(req, group, data, description) {
+  description = description || {};
+  debugGui = DebugGuiClient.express(req, 'pssst.js');
+  if (debugGui.isDebugging()) {
+    const keys = Object.keys(data);
+    for (let index = 0; index < keys.length; index += 1) {
+      const key = keys[index];
+      let desc = description[key];
+      desc = desc ? ` (${desc})` : '';
+      debugGui.value(group, `${key}${desc}`, data[key]);
+    }
+  }
 }
 
 function endpoints(app, prefix) {
   app.post(prefix + '/get', function(req, res){
-    const group = clean(req.body.group);
-    const pi = clean(req.body.id);
-    const token = clean(req.body.token);
-    const pstPin = clean(req.body.pstPin);
-    res.send(get(group, token, pstPin, pi));
-  });
+  debugValues(req, '/update', req.body, {group: 'required', id: 'required', pstPin: 'required if set', token: 'required'});
+  const clBody = cleanObj(req.body);
+  res.send(get(clBody.group, clBody.token, clBody.pstPin, clBody.id, req));
+});
+
+function getJson(req, res) {
+  debugValues(req, '/get/json', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
+  const clBody = cleanObj(req.body);
+  const cmd = `pst key-values -group '${clBody.group}' | pst to-json`;
+  const jsonStr = exicuteCmd(cmd, req);
+  const json = JSON.parse(jsonStr);
+  res.setHeader('Content-Type', 'application/json');
+  res.send(json);
+}
 
   app.post(prefix + '/validate', function(req, res, next){
-    const group = clean(req.body.group);
-    const token = clean(req.body.token);
-    const pstPin = clean(req.body.pstPin);
-    const cmd = `pst validateToken '${group}' '${token}' '${pstPin}'`;
+    debugValues(req, '/validate', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
+    const clBody = cleanObj(req.body);
+    const cmd = `pst validateToken '${clBody.group}' '${clBody.token}' '${clBody.pstPin}'`;
     const validated = shell.exec(cmd, {silent: true});
     try {
-      lockout(group, validated.code);
+      lockout(clBody.group, validated.code);
       res.send(validated);
     } catch (e) {
       res.statusMessage = e + "";
@@ -79,148 +130,118 @@ function endpoints(app, prefix) {
   });
 
   app.post(prefix + '/update', function(req, res){
-    const group = clean(req.body.group);
-    const pi = clean(req.body.id);
-    let token = clean(req.body.token);
-    let pstPin = clean(req.body.pstPin);
-    var value = req.body.value;
-    value = value ? value.trim() : '';
-    const cmd = 'pst update \'' + group + '\' \'' + pi + '\' \'' + value + '\'';
-    const output = exicuteCmd(group, token, pstPin, cmd).replace('\n', '');
-    if (pi === 'token') {
-      token = output;
-    } else if (pi === 'pst-pin') {
-      pstPin = output;
+    const clBody = cleanObj(req.body);
+    debugValues(req, '/update', req.body, {group: 'required', id: 'required', value: 'optional', pstPin: 'required if set', token: 'required'});
+
+    const cmd = 'pst update \'' + clBody.group + '\' \'' + clBody.id + '\' \'' + clBody.value + '\'';
+    const output = exicuteCmd(cmd, req).replace('\n', '');
+    if (clBody.id === 'token') {
+      clBody.token = output;
+    } else if (clBody.id === 'pst-pin') {
+      clBody.pstPin = output;
     }
-    res.send(get(group, token, pstPin, pi));
+    res.send(get(clBody.group, clBody.token, clBody.pstPin, clBody.id, req));
   });
 
   app.post(prefix + '/admin/update', function(req, res){
-    const group = clean(req.body.group);
-    const pi = clean(req.body.id);
-    let token = clean(req.body.token);
-    let pstPin = clean(req.body.pstPin);
-    var value = req.body.value;
-    value = value ? value.trim() : '';
-    const cmd = 'pst update \'' + group + '\' \'' + pi + '\' \'' + value + '\'';
-    const output = exicuteCmd(group, token, pstPin, cmd).replace('\n', '');
-    res.send(get(group, token, pstPin, pi));
+    debugValues(req, '/admin/update', req.body, {group: 'required', id: 'required', value: 'optional', pstPin: 'required if set', token: 'required'});
+
+    const clBody = cleanObj(req.body);
+    const cmd = 'pst update \'' + clBody.group + '\' \'' + clBody.id + '\' \'' + clBody.value + '\'';
+    const output = exicuteCmd(cmd, req).replace('\n', '');
+    res.send(get(clBody.group, clBody.token, clBody.pstPin, clBody.id, req));
   });
 
   app.post(prefix + '/update/all', function(req, res){
-    const group = clean(req.body.group);
-    const token = clean(req.body.token);
-    const pstPin = clean(req.body.pstPin);
+    debugValues(req, '/update/all', req.body, {group: 'required', keyValues: 'required', pstPin: 'required if set', token: 'required'});
+    const clBody = cleanObj(req.body);
     var keyValues = req.body.keyValues;
     var keys = Object.keys(keyValues);
     for (let index = 0; index < keys.length; index += 1) {
       const key = clean(keys[index]);
-      const cmd = 'pst update \'' + group + '\' \'' + key + '\' \'' + keyValues[key] + '\'';
-      exicuteCmd(group, token, pstPin, cmd);
+      const value = clean(keyValues[key]);
+      const cmd = 'pst update \'' + clBody.group + '\' \'' + key + '\' \'' + value + '\'';
+      exicuteCmd(cmd, req);
     }
     res.send('success');
   });
 
   app.post(prefix + '/remove', function(req, res){
-    const group = clean(req.body.group);
-    const pi = clean(req.body.id);
-    const token = clean(req.body.token);
-    const pstPin = clean(req.body.pstPin);
-    const cmd = 'pst rm \'' + group + '\' \'' + pi + '\'';
-    const password = exicuteCmd(group, token, pstPin, cmd);
+    debugValues(req, '/remove', req.body, {group: 'required', id: 'required', pstPin: 'required if set', token: 'required'});
+    const clBody = cleanObj(req.body);
+    const cmd = 'pst rm \'' + clBody.group + '\' \'' + clBody.id + '\'';
+    const password = exicuteCmd(cmd, req);
     res.send(password.replace('\n', ''));
   });
 
   app.post(prefix + '/keys', function(req, res){
-    const group = clean(req.body.group);
-    const token = clean(req.body.token);
-    const pstPin = clean(req.body.pstPin);
-    const cmd = 'pst key-array \'' + group + '\'';
-    const keys = JSON.parse(exicuteCmd(group, token, pstPin, cmd));
+    debugValues(req, '/keys', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
+    const clBody = cleanObj(req.body);
+    const cmd = 'pst key-array \'' + clBody.group + '\'';
+    const keys = JSON.parse(exicuteCmd(cmd, req));
     res.setHeader('Content-Type', 'application/json');
     res.send(keys);
   });
 
   app.post(prefix + '/get/json', function(req, res){
-    const group = clean(req.body.group);
-    const token = clean(req.body.token);
-    const pstPin = clean(req.body["pst-pin"]);
-
-    const cmd = `pst key-values -group '${group}' | pst to-json`;
-    const jsonStr = exicuteCmd(group, token, pstPin, cmd);
-    const json = JSON.parse(jsonStr);
-    res.setHeader('Content-Type', 'application/json');
-    res.send(json);
+    getJson(req, res);
   });
 
   app.get(prefix + '/client', function (req, res) {
-    const host = clean(req.query.host);
-    const group = clean(req.query.group);
-    const token = clean(req.query.token);
+    debugValues(req, '/client', req.query, {host: 'required', group: 'required', pstPin: 'required if set', token: 'required'});
+    const clQuery = cleanObj(req.query);
 
     try {
       exicuteCmd(group, token, '', 'echo success');
     } catch (e) {/* this endpoint ignores errors endpoint */}
-    res.send(userHtml(host, group, token));
+    res.send(userHtml(clQuery.host, clQuery.group, clQuery.token));
   });
 
   app.get(prefix + '/get/json', function (req, res) {
-    const group = clean(req.query.group);
-    const token = clean(req.query.token);
-    const pstPin = clean(req.body.pstPin);
-
-    const cmd = `pst key-values -group '${group}' | pst to-json`;
-    const jsonStr = exicuteCmd(group, token, pstPin, cmd);
-    const json = JSON.parse(jsonStr);
-    res.setHeader('Content-Type', 'application/json');
-    res.send(json);
+    getJson(req, res);
   });
 
   app.get(prefix + '/get/key-values', function (req, res) {
-    const group = clean(req.query.group);
-    const token = clean(req.query.token);
-    const pstPin = clean(req.body.pstPin);
-
-    const cmd = `pst key-values -group '${group}'`;
-    const props = exicuteCmd(group, token, pstPin, cmd);
+    debugValues(req, '/get/key-values', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
+    const cmd = `pst key-values -group '${clBody.group}'`;
+    const props = exicuteCmd(cmd, req);
     res.setHeader('Content-Type', 'text/plain');
     res.send(props);
   });
 
   app.post(prefix + '/get/groups', function (req, res) {
-    const group = clean(req.query.group);
-    const token = clean(req.query.token);
-    const pstPin = clean(req.body.pstPin);
+    debugValues(req, '/get/groups', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
+    const clBody = cleanObj(req.body);
 
-    const cmd = `pst key-array infoMap`;
-    const groups = JSON.parse(shell.exec(cmd, {silent: true}));
+    const validationCmd = `pst validateToken admin '${clBody.token}' '${clBody.pstPin}'`
+    const cmd = `pst key-array infoMap ${bashDebugStr(req)}`;
+    const groups = JSON.parse(shell.exec(`${validationCmd} && ${cmd}`, {silent: true}));
     res.setHeader('Content-Type', 'application/json');
     res.send(groups);
   });
 
 
   app.post(prefix + '/client', function (req, res) {
-    const host = clean(req.query.host);
-    const group = clean(req.query.group);
-    const token = clean(req.query.token);
-    const pstPin = clean(req.body.pstPin);
+    debugValues(req, '/client', req.body, {host: 'required', group: 'required', pstPin: 'required if set', token: 'required'});
+    const clBody = cleanObj(req.body);
 
     const cmd = 'pst key-values | pst to-json';
-    const json = exicuteCmd(group, token, pstPin, cmd);
-    res.send(userHtml(json));
+    const json = exicuteCmd(cmd, req);
+    res.send(userHtml(clBody.host, clBody.group, clBody.token, json));
   });
 
   function userHtml(host, group, token, json) {
     const cmd = `pst requires-pin '${group}'`;
     const needsPin = 'yes' == shell.exec(cmd, {silent: true}).trim();
     const pinflag = `<pst-pin id="pst-pin-flag" value="${needsPin}"></pst-pin>`;
-    const script = `\n\t<script type='text/javascript' src='${host}/pssst/js/pssst-client.js'></script>\n\t`;
+    const script = `\n\t<script type='text/javascript' src='${host}/pssst/js/pssst-client.js'></script>
+                    \n\t<script type='text/javascript' src='${host}/debug-gui/js/debug-gui-client.js'></script>`;
     const bootstrap = `<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-        <link rel="stylesheet"
-              href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/css/bootstrap-datetimepicker.min.css">
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>`;
+      <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/css/bootstrap-datetimepicker.min.css">
+      <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">`;
     const css = `<link rel="stylesheet" href="${host}/pssst/css/pssst-client.css">`;
+    const debugGui = `<debug-gui-data url='${host}/debug-gui/' dg-id='test'></debug-gui-data>`;
     return `<html><head>${bootstrap}${script}${css}</head><body>${pinflag}<pssst>${json}</pssst></body></html>`;
   }
 }

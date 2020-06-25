@@ -1,4 +1,5 @@
 #!/bin/bash
+dgGroup="pssst.sh.$(date +"%H:%M:%S")-$1"
 
 # All functions will deal with the same following properties
 #   @$1 - String Id
@@ -327,13 +328,14 @@ appendToFile () {
 
 update () {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  _rm "$@"
   newVal=$3
 
   if [ -z "$newVal" ]
   then
     newVal=$(pwgen 30 1)
   fi
+  ifDebugging "debuggui keyValue 'updated $2' 'from $(getValue "$1" "$2") to $newVal' -group '$dgGroup' -id '${flags[dg-id]}'"
+  _rm "$@"
   appendToFile "$1" "$2=$newVal"
   if [ "$2" == "token" ] || [ "$2" == "pst-pin" ]
   then
@@ -414,8 +416,9 @@ validateToken() {
     exit 1;
   fi
 
-  if [ "$2" == "$adminToken" ]
+  if [ "$2" == "$adminToken" ] && [ "$1" != "admin" ]
   then
+    validateToken admin "$2" "$3"
     exit 0
   fi
   if [ "$token" != "$2" ]
@@ -606,26 +609,6 @@ valueNonAdmin() {
 	Logger trace "EXIT"
 }
 
-updateNonAdmin() {
-  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
-  adminErr=$(adminCheck "true")
-  if [ ! -z "$adminErr" ]
-  then
-    val=$3
-    if [ -z $val ]
-    then
-      val=$(pwgen 30 1)
-    fi
-    filepath=$(naFp $1)
-    mkdir -p $(dirname $filepath)
-    sed -i "s/^$2=.*//" $filepath
-    echo $2=$val >> $filepath
-    cleanFile $filepath
-    exit
-  fi
-	Logger trace "EXIT"
-}
-
 key-values() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   group=${flags[group]}
@@ -655,7 +638,7 @@ key-array() {
 
 stop-server() {
   echo port: $1
-  kill -9 $(getServerPid $1)
+  sudo kill -9 $(getServerPid $1)
 }
 
 edit() {
@@ -671,6 +654,8 @@ view() {
 }
 
 _help() {
+  echo -e "For debuggui output use flag -dg-id \"[id]\"\n"
+
   cat $passServRelDir/pssst.sh |
   tr "\n" " " |
   tr "\t" " " |
@@ -692,13 +677,11 @@ insecureFunctions() {
       echo $passServRelDir
     ;;
     value)
-      valueNonAdmin "$group" "$key"
-    ;;
-    update)
-      updateNonAdmin "$group" "$key" "$value"
+      output=$(valueNonAdmin "$group" "$key")
+      ifDebugging "debuggui keyValue 'Return Value' '$output' -group '$dgGroup' -id '${flags[dg-id]}'"
+      echo -e "$output"
     ;;
     help)
-      echo here
       _help
     ;;
     validateToken)
@@ -797,6 +780,10 @@ if [ "${booleans['-help']}" == 'true' ] || [ -z "${args[0]}" ]
 then
   _help
 else
+  ifDebugging "debuggui keyValue command '$1' -group '$dgGroup' -id '${flags[dg-id]}'"
+  ifDebugging "debuggui keyValue 'arg1(probably group)' '$2' -group '$dgGroup' -id '${flags[dg-id]}'"
+  ifDebugging "debuggui keyValue 'arg2(probably key)' '$3' -group '$dgGroup' -id '${flags[dg-id]}'"
+  ifDebugging "debuggui keyValue 'arg3(probably value)' '$4' -group '$dgGroup' -id '${flags[dg-id]}'"
   if [ "$1" == "install" ]
   then
     initFolders

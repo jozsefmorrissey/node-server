@@ -28,7 +28,7 @@ public class DebugGui {
 
 	private static String DEBUG_ID = "DebugGui.debug";
 
-	private static String host = "https://www.jozsefmorrissey.com/";
+	private static String host = "https://node.jozsefmorrissey.com/";
 	private static String root = "DebugGui";
 	private static String defaultId = "Default";
 

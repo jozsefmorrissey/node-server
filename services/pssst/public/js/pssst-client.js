@@ -1,5 +1,4 @@
 PSSST_CONFIG = {};
-PSSST_CONFIG.DONT_HIDE = 'dontHide';
 var Pssst;
 function PssstInit() {
   var getUrl = window.location.origin + '/pssst/get';
@@ -63,10 +62,12 @@ function PssstInit() {
     var token = PSSST_CONFIG.token;
     var id = 'pst-pin';
     var value = Math.random().toString().substring(2, 6);
-    get(updateUrl, group, id, token, index, value);
+    document.getElementById('add-id').value = id;
+    document.getElementById('add-value').value = value;
+    add();
   }
 
-  function add(index) {
+  function add() {
     var group = PSSST_CONFIG.group;
     var token = PSSST_CONFIG.token;
     var id = document.getElementById('add-id').value;
@@ -78,7 +79,7 @@ function PssstInit() {
       if (exists) {
         confirm(`'${id}' already exists you must use the update button instead.`);
       } else {
-        get(updateUrl, group, id, token, index, value);
+        get(updateUrl, group, id, token, undefined, value);
         PSSST_CONFIG.keys.push(id);
       }
     }
@@ -97,17 +98,20 @@ function PssstInit() {
     }
   }
 
-  function copy(id) {
-    var copyElem = document.getElementById(id)
-    copyElem.select();
-    document.execCommand('copy');
+  function copy(id, timeout) {
+    // setTimeout(function execCopy() {
+    //
+      var copyElem = document.getElementById(id)
+      copyElem.select();
+      document.execCommand('copy');
+    // }, timeout ? 0 : timeout);
   }
 
-  function url(dontHide) {
+  function url() {
     var host = PSSST_CONFIG.host;
     var token = PSSST_CONFIG.token;
     var group = PSSST_CONFIG.group;
-    return `${host}/pssst/client?token=${token}&group=${group}&host=${host}&${PSSST_CONFIG.DONT_HIDE}=${dontHide}`;
+    return `${host}/pssst/client?token=${token}&group=${group}&host=${host}`;
   }
 
   function copyCmd() {
@@ -131,21 +135,28 @@ function PssstInit() {
       } else if (identifier === 'pst-pin') {
         PSSST_CONFIG.pstPin = value;
       }
-      setTimeout(function () {
-        var index = findInput(identifier);
-        if (Number.isInteger(index) && index > -1) {
-          var id = 'input-' + index;
-          var copyBtnId = 'copy-btn-' + index;
-          var origValue = document.getElementById(id).value;
-          document.getElementById(copyBtnId).style.display = 'inline';
-          document.getElementById(id).value = value;
-          copy(id);
-          setTimeout(function () {
-            document.getElementById(id).value = origValue;
-            document.getElementById(copyBtnId).style.display = 'none';
-          }, 10000);
+      var index = findInput(identifier);
+      if (Number.isInteger(index) && index > -1) {
+        var id = 'input-' + index;
+        var inputElem = document.getElementById(id);
+        var targetY = inputElem.parentNode.parentNode.getBoundingClientRect().y + window.scrollY;
+        if (targetY < window.scrollY) {
+          window.scrollTo(0, targetY - 30);
+        } else if (targetY > window.scrollY + window.innerHeight) {
+          window.scrollTo(0, targetY -window.innerHeight + 200);
         }
-      }, 500);
+        setTimeout(function () {
+            var copyBtnId = 'copy-btn-' + index;
+            var origValue = inputElem.value;
+            document.getElementById(id).value = value;
+            copy(id);
+            document.getElementById(copyBtnId).style.display = 'inline';
+            setTimeout(function () {
+              document.getElementById(id).value = origValue;
+              document.getElementById(copyBtnId).style.display = 'none';
+            }, 10000);
+        }, 500);
+      }
       updateUserDisplay();
     }
     return showIndex;
@@ -184,7 +195,7 @@ function PssstInit() {
     // if ('true' !== query(PSSST_CONFIG.DONT_HIDE)) {
     //   window.history.pushState('client-clean', 'Client', '/pssst/client');
     // } else {
-      window.history.pushState('client-clean', 'Client', url(false));
+    //  window.history.pushState('client-clean', 'Client', url(false));
     // }
   }
 
@@ -257,7 +268,7 @@ function PssstInit() {
     html += "<h1>" + PSSST_CONFIG.group + "</h1>";
     html += "<p>(Updating a value with no input gernates a random string)</p>";
     if (PSSST_CONFIG.pstPin === undefined) {
-      html += "<p>You should set a pin, otherwise anyone with this url can access you data</p>"
+      html += "<p>You should set a pin, otherwise anyone with this url can access your data</p>"
       html += "<button class='btn btn-primary' onclick='Pssst.addPin()'>Add Pin</button><br><br>"
     }
     html += "<div id='table' style='margin: auto;'></div>"

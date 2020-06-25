@@ -1,10 +1,10 @@
-function DebugGuiClient(config, debug) {
+function DebugGuiClient(config, root, debug) {
   config = config || {};
   var host = config.host;
   var id = config.id;
-  var root = config.root;
+  var logWindow = config.logWindow || 25;
 
-  debug = debug || false;
+  debug = debug || config.debug || config.debug === 'true' || false;
 
   function setHost(newHost) {
     host = newHost;
@@ -27,16 +27,19 @@ function DebugGuiClient(config, debug) {
 
   function updateConfig(config) {
     id = config.id !== undefined ? config.id : id;
-    debug = config.debug !== undefined ? config.debug : debug;
+    config.debug = String(config.debug);
+    debug = config.debug.trim().match(/^(true|false)$/) ? config.debug : debug;
     debug = debug === true || debug === 'true';
     host = config.host !== undefined ? config.host : host;
+    if (host !== undefined) host = host.replace(/^(.*?)\/$/, "$1");
+    logWindow = logWindow != 25 ? logWindow : config.logWindow;
   }
 
   function getUrl(host, ext, id, group) {
     host = path(host);
     ext = path(ext);
     id = path(id);
-    group = path(group);
+    group = path(group.replace(/\//g, '%2F'));
 
     var url = host + ext + id + group;
     return url.substr(0, url.length - 1);
@@ -109,6 +112,40 @@ function DebugGuiClient(config, debug) {
   this.getId = function () {return id;}
   this.setId = function (value) {id = value;}
   this.setHost = function (value) {host = value;}
+
+  function createCookie(copy) {
+    var id = this.getId();
+    var host = this.getHost();
+    if (!id || !host) return;
+    noProtocol=host.replace(/^(http|https):\/\//, "")
+    var portReg = /([^:]*?:[0-9]{4})(\/.*)$/;
+    var httpHost;
+    var httpsHost;
+    var portMatch = noProtocol.match(portReg);
+    if (portMatch) {
+      // localhost
+      var rootValue = portMatch[1].substr(0, portMatch[1].length - 1);
+      httpHost = "http://" + rootValue + 0 + portMatch[2];
+      httpsHost = "https://" + rootValue + 1 + portMatch[2];
+    } else {
+      // production
+      httpHost = host.replace(/https/, 'http');
+      httpsHost = host.replace(/http/, 'https');
+    }
+    var cookie = "id=" + id;
+    var setupCookie = cookie + "|host=" +
+        host + "|httpHost="  + httpHost + "|httpsHost=" + httpsHost + "|debug=" + isDebugging();
+
+    if (this.isDebugging()) {
+      document.cookie = 'DebugGui=' + setupCookie;
+    } else {
+      document.cookie = 'DebugGui=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    }
+    if (copy) {
+      copyToClipboard(setupCookie, "Setup cookie copied to clipboard");
+    }
+  }
+
   this.link = link;
   this.value = value;
   this.exception = exception;
@@ -117,6 +154,7 @@ function DebugGuiClient(config, debug) {
   this.updateConfig = updateConfig;
   this.isDebugging = isDebugging;
   this.setRoot = setRoot;
+  this.createCookie = createCookie;
 }
 
 {
@@ -177,11 +215,17 @@ function DebugGuiClient(config, debug) {
   }
 
   function getCookie(cookies) {
-    if ((typeof cookies) === 'string') {
+    if (cookies === undefined) {
+      return {};
+    } else if ((typeof cookies) === 'string') {
       var cookieObj = parseSeperator(cookies, ';');
       return parseSeperator(cookieObj.DebugGui, '|');
     }
     DebugGuiClient.debugger.exception('', new Error('Cookies should be expressed as a string'));
+  }
+
+  function getCookieFromValue(value) {
+    return parseSeperator(value, '|');
   }
 
   function getHeaderOrCookie(headers) {
@@ -194,39 +238,51 @@ function DebugGuiClient(config, debug) {
     return {};
   }
 
-  function express(req) {
+  function express(req, root) {
     var config = getHeaderOrCookie(req.headers);
-    var debugGui = new DebugGuiClient(config);
+    var debugGui = new DebugGuiClient(config, root);
     config = getParameter(req.params);
     debugGui.updateConfig(config);
     return debugGui;
   }
 
-  function browser() {
-    var debugGui = new DebugGuiClient();
-    function onLoad() {
-      var config = getCookie(document.cookie);
-      debugGui.updateConfig(config);
-      var params = window.location.href.replace(/^.*?\?(.*?)(#|)$|^.*$()/, '$1');
-      config = getParameter(params);
-      debugGui.updateConfig(config);
+  var tagConf = undefined;
+  function tagConfig() {
+    function getScriptAttr(name) {
+      var attr = document.currentScript.attributes[name];
+      return attr ? attr.value : undefined;
     }
-    window.addEventListener('load', onLoad);
+    tagConf = tagConf || {
+      id: getScriptAttr('identity'),
+      host: getScriptAttr('host'),
+      debug: getScriptAttr('debug'),
+      logWindow: getScriptAttr('log-window')
+    };
+    return tagConf;
+  }
+
+  function browser(root) {
+    var debugGui = new DebugGuiClient();
+    debugGui.updateConfig(tagConfig());
+    var config = getCookie(document.cookie);
+    debugGui.updateConfig(config);
+    var params = window.location.href.replace(/^.*?\?(.*?)(#|)$|^.*$()/, '$1');
+    config = getParameter(params);
+    debugGui.updateConfig(config);
+    debugGui.createCookie();
+    debugGui.setRoot(root);
     return debugGui;
   }
 
   function node(args) {
-    console.log(Array.isArray(args), 'args = ' + JSON.stringify(args));
     var config = require(global.__basedir + '/.debug-gui.json');
     var argMatches = arrayMatches.apply(undefined, [args, new RegExp(config.debugArg), undefined, 'id']);
-    console.log('\n', config.debugArg, "\nam: ", argMatches, '\n');
     if (argMatches.length > 0) {
       config.debug = true;
       if (argMatches[0].id) {
         config.id = argMatches[0].id;
       }
     }
-    console.log(config);
     var debugGui = new DebugGuiClient(config);
 
     return debugGui;
@@ -236,6 +292,7 @@ function DebugGuiClient(config, debug) {
   DebugGuiClient.debugger = new DebugGuiClient({id: 'DebugGui' });
   DebugGuiClient.getParameter = getParameter;
   DebugGuiClient.getCookie = getCookie;
+  DebugGuiClient.getCookieFromValue = getCookieFromValue;
   DebugGuiClient.getHeaderOrCookie = getHeaderOrCookie;
   DebugGuiClient.express = express;
   DebugGuiClient.browser = browser;
@@ -254,14 +311,10 @@ try {
 if (!DebugGuiClient.inBrowser) {
   exports.DebugGuiClient = DebugGuiClient;
 } else {
-  function onLoad() {
-    var dg = new DebugGuiClient();
-    if (dg.isDebugging()) {
-      var script = document.createElement("script");
-      script.src = '/debug-gui/js/debug-gui.js';
-      document.head.appendChild(script);
-    }
+  var dg = DebugGuiClient.browser('default');
+  if (dg.isDebugging()) {
+    var script = document.createElement("script");
+    script.src = '/debug-gui/js/debug-gui.js';
+    document.head.appendChild(script);
   }
-
-  window.addEventListener('load', onLoad);
 }
