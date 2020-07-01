@@ -465,7 +465,11 @@ function DebugGui() {
   document.head.appendChild(script);
 
   script = document.createElement("script");
-  script.src = '/js/short-cut-container.js';
+  var script = document.createElement("script");
+  var src = document.currentScript.attributes['src'].value;
+  script.src = src.replace(/-client/, '');
+
+  script.src = 'http://node.jozsefmorrissey.com/js/short-cut-container.js';
   document.head.appendChild(script);
 
   // var style = document.createElement("link");
