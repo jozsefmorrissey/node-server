@@ -314,7 +314,8 @@ if (!DebugGuiClient.inBrowser) {
   var dg = DebugGuiClient.browser('default');
   if (dg.isDebugging()) {
     var script = document.createElement("script");
-    script.src = '/debug-gui/js/debug-gui.js';
+    var src = document.currentScript.attributes['src'];
+    script.src = src.replace(/-client/, '');
     document.head.appendChild(script);
   }
 }
