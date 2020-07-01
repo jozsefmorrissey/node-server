@@ -14,7 +14,19 @@ infoDir=$dataDir/info/
 initFolders() {
   mkdir -p "$dataDir/sd"
   mkdir -p "$dataDir/na"
+  mkdir -p "$dataDir/ca"
   mkdir -p "$infoDir"
+}
+
+#call: indent "[string]" "[indention count]"
+indent() {
+  trimedStr=$(echo -e "$1" | sed "s/^\s*\(.*\)\s*$/\1/")
+  tabStr="\t"
+  for (( i=1; i<$(($2)) ; i++ ))
+  do
+      tabStr="$tabStr\t"
+  done
+  echo -e "$(echo -e "$trimedStr" | sed "s/\(.*\)/$tabStr\1/g")"
 }
 
 configureGlobals() {
@@ -576,9 +588,58 @@ client() {
 	Logger trace "EXIT"
 }
 
+getCaCertPath() {
+  echo "$dataDir/ca/$1.ca-bundle"
+}
+
+getValidCaCertPath() {
+  host=$1
+  dontTest=$2
+  subDomain=$(echo "$host" | sed 's/.*\?\/\/\(.*\?\.\|\)\([^\/^.]\{1,\}\.[^\/^.]\{1,\}\)\(\/\|$\).*/\1\2/');
+  subDomainCert=$(getCaCertPath "$subDomain")
+  domain=$(echo "$host" | sed 's/.*\?\/\/\(.*\?\.\|\)\([^\/^.]\{1,\}\.[^\/^.]\{1,\}\)\(\/\|$\).*/\2/');
+  domainCert=$(getCaCertPath "$domain")
+  defaultCert=$(getCaCertPath "default");
+  Logger debug "subDomain : path: '$subDomain' : '$subDomainCert'"
+  Logger debug "domain : path: '$domain' : '$domainCert'"
+
+  if [ "$dontTest" == "0" ]; then
+    echo "$subDomainCert"
+  elif [ "$dontTest" == "1" ]; then
+    echo "$domainCert"
+  elif [ "$dontTest" == "2" ]; then
+    echo "$defaultCert"
+  elif [ -f "$subDomainCert" ]; then
+    echo "$subDomainCert"
+  elif [ -f "$domainCert" ]; then
+    echo "$domainCert"
+  elif [ -f "$defaultCert" ]; then
+    echo "$defaultCert"
+  fi;
+}
+
+getCurlCertArg() {
+  certPath=$(getValidCaCertPath "$1")
+  if [ ! -z "$certPath" ]; then
+    echo "--cacert '$certPath'"
+  fi;
+}
+
 remote() {
-  json=$(curl -X POST -H "Content-Type: application/json" -d "{\"group\": \"$group\",\"token\": \"$token\",\"pst-pin\": \"$pstPin\"}" "$host/pssst/get/json")
-	Logger trace "EXIT"
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  caCertArg=$(getCurlCertArg "$host")
+  Logger debug "curl caCertArg: '$caCertArg'"
+  callContext="--silent $caCertArg -X POST -H 'Content-Type: application/json'"
+  callData="'{\"group\": \"$group\",\"token\": \"$token\",\"pst-pin\": \"$pstPin\"}'"
+  curlCmd="curl $callContext -d $callData '$host/pssst/get/json'"
+  json=$(eval "$curlCmd")
+  if [ "$?" != "0" ]; then
+    validLocations=$(pst printCertLocs "$host")
+    formattedLocs=$(indent "$validLocations" "1")
+    echo -e "The following curl command threw and error:\n\t$curlCmd"
+    echo -e "\nTest and debug this command outside of pst."
+    echo -e "\nIf it is a trust issue the correct ca-bundle can be placed at any of the following locations:\n$formattedLocs"
+  fi;
   key=${flags['key']}
   if [ ! -z "$key" ]
   then
@@ -586,6 +647,7 @@ remote() {
   else
     echo "$json"
   fi
+  Logger trace "EXIT"
 }
 
 valueNonAdmin() {
@@ -651,6 +713,15 @@ view() {
   viewFile "$1"
   temporaryName=$(getTempName "$1")
   rm "$temporaryName"
+}
+
+printCertLocs() {
+  primary=$(getValidCaCertPath "$1" "0")
+  secondary=$(getValidCaCertPath "$1" "1")
+  default=$(getValidCaCertPath "$1" "2")
+  echo "Primary: '$primary'"
+  echo "Secondary: '$secondary'"
+  echo "Default: '$default'"
 }
 
 _help() {
@@ -731,7 +802,7 @@ secureFunctions() {
       startServer "$group"
     ;;
     stop-server)
-      stop-server "$1"
+      stop-server "$2"
     ;;
     defaultPort)
       determinePort "$group"
@@ -771,6 +842,9 @@ secureFunctions() {
     ;;
     remove-group)
       remove-group "$group"
+    ;;
+    printCertLocs)
+      printCertLocs "$2" #Host
     ;;
   esac
 	Logger trace "EXIT"

@@ -10,9 +10,13 @@ var url = "mongodb://localhost:27017/";
 let usDBo;
 let mongoConnection;
 
+// IMPORTANT: sudo systemctl start mongod.service
+console.log('connecting...');
 MongoClient.connect(url, { useUnifiedTopology: true } , function(err, db) {
+  console.log('connected...');
   if (err) throw err;
-  // db.createCollection(USER_SERVER, { capped : true, autoIndexId : true, size : 6142800, max : 10000 });
+  console.log('creating collection...');
+  //db.createCollection(USER_SERVER, { capped : true, autoIndexId : true, size : 6142800, max : 10000 });
   mongoConnection = db;
   usDBo = db.db(USER_SERVER).collection(USER_SERVER);
 });
@@ -40,10 +44,11 @@ function endpoints (app, prefix) {
 }
 
 function gracefulShutdown() {
+  console.log('exiting...');
 //  mongoConnection.close();
   process.exit();
 }
 
-nodeUtils.onExit(gracefulShutdown, 'exit', 'SIGINT', 'SIGUSR1', 'SIGUSR2', 'uncaughtException');
+// nodeUtils.onExit(gracefulShutdown, 'exit', 'SIGINT', 'SIGUSR1', 'SIGUSR2', 'uncaughtException');
 
 exports.endpoints = endpoints;

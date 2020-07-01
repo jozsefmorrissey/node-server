@@ -107,7 +107,7 @@ app.post('/copy', function(req, res) {
 
 var ip = '192.168.254.10';
 var services = shell.ls('./services/');
-var exclude = ['uss', 'uus'];
+var exclude = ['video-directory', 'pssst', 'debug-gui'];
 try {
   for (let i = 0; i < services.length; i += 1) {
     var id = services[i];
