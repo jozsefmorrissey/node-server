@@ -1,0 +1,222 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="/info-directory/css/cheat-sheet.css">
+    <link rel="stylesheet" href="/syntaxhighlighter/shCore.css">
+    <link rel="stylesheet" href="/syntaxhighlighter/shThemeDefault.css">
+    <script type="text/javascript" src="/syntaxhighlighter/shCore.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushBash.js"></script>
+  </head>
+  <body>
+    <h1>Terminal Commands</h1>
+    <h2>Beginner</h2>
+    <ol>
+      <li>
+        <h2>cd</h2>
+        <p class='light-padding'>
+          Change directory
+        </p>
+        <pre class='brush: bash'>
+          cd ./directory
+          #Go back twice
+          cd ../..
+          #Root directory
+          cd /
+          cd ~/directory/in/user/home
+        </pre>
+      </li>
+      <li>
+        <h2>ls</h2>
+        <p class='light-padding'>
+          list files/directories
+        </p>
+        <pre class='brush: bash'>
+          ls -a
+        </pre>
+      </li>
+      <li>
+        <h2>rm</h2>
+        <p class='light-padding'>
+          Remove
+        </p>
+        <pre class='brush: bash'>
+          #Recursive/Force
+          rm -f ./file-that-is.protected
+          rm -rf ./directory/
+        </pre>
+      </li>
+      <li>
+        <h2>xdg-open</h2>
+        <p class='light-padding'>
+          Open a file with the default application
+        </p>
+        <pre class='brush: bash'>
+          xdg-open [file/or/directory]
+        </pre>
+      </li>
+      <li>
+        <h2>mkdir</h2>
+        <p class='light-padding'>
+          Make a directory
+        </p>
+        <pre class='brush: bash'>
+          mkdir -p ./none/of/these/folders/exist
+          #But now they do....
+        </pre>
+      </li>
+      <li>
+        <h2>touch</h2>
+        <p class='light-padding'>
+          create a file if it does not exist
+        </p>
+        <pre class='brush: bash'>
+          touch ./file.name
+        </pre>
+      </li>
+      <li>
+        <h2>cat</h2>
+        <p class='light-padding'>
+          Print contents of file
+        </p>
+        <pre class='brush: bash'>
+          cat ./a.file
+        </pre>
+      </li>
+      <li>
+        <h2>chmod</h2>
+        <p class='light-padding'>
+          Change file permissions
+        </p>
+        <pre class='brush: bash'>
+          chmod +w ./add-write.access
+          chmod +r ./add-read.access
+          chmod +x ./add-exicution.access
+        </pre>
+      </li>
+      <li>
+        <h2>echo</h2>
+        <p class='light-padding'>
+          Print the arguments/often used to pipe data into another command.
+        </p>
+        <pre class='brush: bash'>
+          #-e causes echo to resolve backslash characters \n \t
+          echo -e "line one\nline 2\nline III"
+          echo -n "no new line appended"
+          echo "garbageHello Worldgarbage" | grep -oP "H.*d"
+        </pre>
+      </li>
+      <li>
+        <h2>unzip</h2>
+        <p class='light-padding'>
+          Unzip....
+        </p>
+        <pre class='brush: bash'>
+          unzip ./zip.file
+        </pre>
+      </li>
+      <li>
+        <h2>zip </h2>
+        <p class='light-padding'>
+          Zip...
+        </p>
+        <pre class='brush: bash'>
+          Zip ./zip.file
+          Zip -r ./directory/
+        </pre>
+      </li>
+    </ol>
+    <br><br>
+    <h2>"Advanced"</h2>
+    <ol>
+      <li>
+        <h2>find</h2>
+        <p class='light-padding'>
+          search for files
+        </p>
+        <pre class='brush: bash'>
+          #Files only with matching name
+          find . -name "./*/wild*cards*" -type f
+          #Directories only not recursive
+          find . -maxdepth 1 -type d
+          #Exclude a file path
+          find -not -path "*/junk*"
+        </pre>
+      </li>
+      <li>
+        <h2>grep</h2>
+        <p class='light-padding'>
+          Search text
+        </p>
+        <pre class='brush: bash'>
+          #Search a file
+          grep "search text" ./file.txt
+          #Search files
+          grep -r "search text" ./directory/
+          #search with pearl regex
+          grep -P "search.*text" ./file.txt
+          #Show match only (only useful with regex... I usually use it recursivly)
+          grep -r -oP "search.*text" ./directory/
+          #No file name
+          grep -h "search text" ./file.txt
+          #File name only
+          grep -l "search text" ./file.txt
+        </pre>
+      </li>
+      <li>
+        <h2>sed</h2>
+        <p class='light-padding'>
+          Find and replace
+        </p>
+        <pre class='brush: bash'>
+          #Replace inline only first match per line.
+          sed -i "s/search\(.*\)regex/replacement \1 text/" ./file.txt
+          #Replace all matches. Not inline
+          sed "s/search\(.*\)regex/replacement \1 text/g" ./file.txt
+        </pre>
+      </li>
+      <li>
+        <h2>kill</h2>
+        <p class='light-padding'>
+          kill a process by pid
+        </p>
+        <pre class='brush: bash'>
+          #Get all processes | grab only targetProcesses | only pid column
+          pid=$(ps -A | grep targetProcessName | awk '{print $1}')
+          kill -9 $pid
+        </pre>
+      </li>
+      <li>
+        <h2>tr</h2>
+        <p class='light-padding'>
+          replace characters
+        </p>
+        <pre class='brush: bash'>
+          #Replace tab with a space
+          tr "\t" " "
+        </pre>
+      </li>
+      <li>
+        <h2>curl</h2>
+        <p class='light-padding'>
+          Pull some crap from the internet!
+        </p>
+        <pre class='brush: bash'>
+          brushListUrl='http://alexgorbatchev.com/SyntaxHighlighter/manual/brushes/'
+          brushRootUrl='https://agorbatchev.typepad.com/pub/sh/3_0_83/scripts/'
+
+          brushes=$(curl "$brushListUrl" 2>/dev/null |
+                    grep -oP "shBrush.*\.js")
+
+          for brush in ${brushes[@]}
+          do
+            curl "$brushRootUrl$brush" > ./brushes/$brush
+            sleep 1
+          done
+        </pre>
+      </li>
+    </ol>
+    <!-- Highlight all -->
+    <script type="text/javascript">
+        SyntaxHighlighter.all()
+    </script>
+  </body>
+</html>

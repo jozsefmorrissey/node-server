@@ -49,7 +49,8 @@ function lockout(group, errorCode) {
 }
 
 function bashDebugStr(req) {
-  cookieObj = DebugGuiClient.getCookieFromValue(req.cookies.DebugGui);
+  const dgCookieStr = req.cookies ? req.cookies.DebugGui : '';
+  cookieObj = DebugGuiClient.getCookieFromValue(dgCookieStr);
   if (cookieObj.debug || cookieObj.debug === "true") {
     let id = cookieObj.id;
     let host = cookieObj.host || cookieObj.httpsHost || cookieObj.httpHost;

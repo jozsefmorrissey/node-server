@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <link rel="stylesheet" href="/info-directory/css/cheat-sheet.css">
+    <link rel="stylesheet" href="/syntaxhighlighter/shCore.css">
+    <link rel="stylesheet" href="/syntaxhighlighter/shThemeDefault.css">
+    <script type="text/javascript" src="/js/jsst.js"></script>
+    <script type="text/javascript" src="/js/std-lib-utils.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/shCore.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushJScript.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushJava.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushPython.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushBash.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushXml.js"></script>
+    <script type="text/javascript" src="/syntaxhighlighter/brushes/shBrushCpp.js"></script>
+    <title>Advanced Concepts</title>
+  </head>
+  <body>
+    <h1>Advanced Concepts</h1>
+    <jsst>
+      <jsst-template id='${me}'>
+        <h2>${.id}</h2>
+        <p>${.description}</p>
+        <pre>${.form}</pre>
+        <h3>Examples:</h3>
+        <pre jsst='.examples' class='${.class}'>
+          ${.code}
+        </pre>
+        <br><br>
+      </jsst-template>
+      <jsst-data>
+          <pre>
+          [{
+            "id": "import",
+            "description": "
+              All languages support referencing external code.
+            ",
+            "form": "[keyword] [file location/reference value]",
+            "examples": [{
+              "class": "brush: bash",
+              "code": "#bash
+                  source ./file/location.sh"
+            },{
+              "class": "brush: python",
+              "code": "#python
+                  import os
+                  os.system('python yourfile.py')
+                  execfile('./another/script/location.py')"
+            },{
+              "class": "brush: javascript",
+              "code": "//JavaScript
+                  var userLib = require('./user/lib/location');
+                  // npm is a popular dependency manager
+                  // npm install --save fs
+                  var fs = require('fs');
+              "
+            },{
+              "class": "brush: html",
+              "code": "&lt;!-- html js import --&gt;
+                  &amp;lt;link rel='stylesheet' href='/csses/file/location.css'&gt;
+                  &lt;script type='text/javascript' src='/javascript/file/location.js'&gt;&lt;/script&gt;"
+            },{
+              "class": "brush: java",
+              "code": "//Java
+                  import fully.qualified.clazz.name;
+                  import you.can.use.wild.cards.*;"
+            }]
+          },{
+            "id": "Encapsulation",
+            "description": "Most languages have ways of hiding variables and
+                            functions from the rest of the program.",
+            "form": "",
+            "examples": [{
+              "class": "brush: java",
+              "code": "//Java
+                  public static class className () {
+                    private static final String = \"Cannot be changed\";
+                    protected string name;
+                    private className(String name) {
+                      this.name = name;
+                    }
+                    public static getInstance(String name) {
+                      return new className(name);
+                    }
+                  }"
+            },{
+              "class": "brush: c",
+              "code": "//C
+                    int visibleToAllFiles = 22;
+                    static int visibleOnlyToThisFile = 33;
+
+                    int main(int argc, char * argv[]){
+                      staticFunc();
+                    }
+
+                    static void staticFunc() {
+                      static int staticallyAllocatedCount = 0;
+                      printf(\"Not visible to other files: call #%i\", staticallyAllocatedCount++);
+                    }
+
+                    void nonStaticFunc() {
+                      printf(\"Visible to other files\");
+                    }"
+            },{
+              "class": "brush: javascript",
+              "code": "//JavaScript
+                    function counter(name) {
+                      var value = 0;
+
+                      function printValue() {
+                        console.log(name + ': ' + value);
+                      }
+
+                      this.increment = function() {
+                        value++;
+                        printValue();
+                      }
+
+                      this.decrement = function() {
+                        value--;
+                        printValue();
+                      }
+
+                      this.getValue = function() {
+                        return value;
+                      }
+                      return this;
+                    }"
+            }]
+          },{
+            "id": "Data Blocks",
+            "description": "In all languages there will be some way to store
+                            multiple data elements in a larger structure. At
+                            the very least you should be able to store an array
+                            of data or atleast pointers to data.",
+            "form": "",
+            "examples": [{
+              "class": "brush: bash",
+              "code": "#Bash
+                    declare -a arrayName=(value1, value2, value3,...valueN)
+                    declare -A assocArray=([hello]=world [ab]=cd [ \"key with space\"]=\"hello world\")"
+            },{
+              "class": "brush: c",
+              "code": "//C
+              typedef struct{
+                char issuer[32];
+                int number;
+              }id;
+
+              typedef struct{
+                id ids[5];
+                char firstname[32];
+                char lastname[32];
+                short dataOfBirth[3];
+              }person;"
+            }]
+          },{
+            "id": "Object",
+            "description": "Most high level languages are now object oriented.
+                            What this means is, the program can be sturctured
+                            in such a way that it is composed of isolated data
+                            structures with specific functionality.",
+            "form": "",
+            "examples": [{
+              "class": "",
+              "code": ""
+            },{
+              "class": "",
+              "id": "",
+              "code": ""
+            }]
+          },{
+            "id": "Overloading",
+            "description": "desc",
+            "form": "form",
+            "examples": [{
+              "class": "",
+              "id": "",
+              "code": ""
+            },{
+              "class": "",
+              "id": "",
+              "code": ""
+            }]
+          },{
+            "id": "Inheritance/Shadowing",
+            "description": "",
+            "form": "",
+            "examples": [{
+              "class": "",
+              "id": "",
+              "code": ""
+            },{
+              "class": "",
+              "id": "",
+              "code": ""
+            }]
+          },{
+            "id": "Multi-Threading",
+            "description": "",
+            "form": "",
+            "examples": [{
+              "class": "",
+              "id": "",
+              "code": ""
+            },{
+              "class": "",
+              "id": "",
+              "code": ""
+            }]
+          }]
+        </pre>
+      </jsst-data>
+    </jsst>
+    <!-- Highlight all -->
+    <script type="text/javascript">
+        SyntaxHighlighter.all()
+    </script>
+  </body>
+</html>

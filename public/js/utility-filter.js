@@ -36,8 +36,10 @@ function UtilityFilter() {
           return 0;
         }
       case SEARCH_TYPES.LIKE:
+        let diff = asStr.length > userValue.length ? asStr.length - userValue.length : userValue.length - asStr.length;
         let max = asStr.length > userValue.length ? asStr.length : userValue.length;
-        return 1 - (levenshteinDistance(asStr.toLowerCase(), userValue.toLowerCase()) / max);
+        let levDist = levenshteinDistance(asStr.toLowerCase(), userValue.toLowerCase());
+        return 1 - ((levDist / diff) + (levDist / max));
       case SEARCH_TYPES.SELECT:
         return userValue.indexOf(asStr) != -1 ? 1 : -1;
     }
@@ -305,7 +307,7 @@ function UtilityFilter() {
         <label>r</label>
         <input class='utf-input' type='radio' name='${uniqueId}' id='${regexId}' value='${SEARCH_TYPES.REGEX}'>
       </div>
-      <button class='close-btn' onclick='removeColumn("${id}", ${index})'>X</button>
+      <button class='close-btn' onclick='UTF.removeColumn("${id}", ${index})'>X</button>
       </th>`;
     }
     return menu;
@@ -325,14 +327,23 @@ function UtilityFilter() {
 
   let lookUpId = 0;
   const lookUpRow = {};
+
+  function getDataObj(id, value) {
+    const intId = Number.parseInt(id);
+    if (value !== undefined) {
+      lookUpRow[intId] = value;
+    } else {
+      return lookUpRow[intId];
+    }
+  }
+
   function buildBody(data, dataId) {
     let body = '';
     const keys = getColumns(dataId);
     let count = 1;
     for (let index = 0; index < data.length; index += 1) {
       const clazz = count++ % 2 === 0 ? 'tr-even' : 'tr-odd';
-      dataElem = data[index];
-      lookUpRow[lookUpId] = {dataId, data: data[index]};
+      getDataObj(lookUpId, { dataId, data: data[index] });
       const editAttr = UTF.dataMap[dataId].enableEdit ? "onclick='UTF.openPopUp(this)'" : '';
       body += `<tr look-up-id='${lookUpId++}' ${editAttr} class='${clazz}'>`;
       for(let kIndex = 0; kIndex < keys.length; kIndex += 1) {
@@ -411,20 +422,36 @@ function UtilityFilter() {
   function closePopUp() {
       const haze = document.querySelector('#pop-up-haze');
       const rowId = haze.querySelector('look-up-id').id;
-      sort(lookUpRow[rowId].dataId);
+      sort(getDataObj(rowId).dataId);
       haze.style.display = 'none';
   }
 
   function updateData(elem, rowId, label) {
-    lookUpRow[rowId].data[label] = elem.value.trim();
-    UTF.dataMap[lookUpRow[rowId].dataId].updated = true;
-    deactivateSelects(lookUpRow[rowId].dataId);
+    getDataObj(rowId).data[label] = elem.value.trim();
+    UTF.dataMap[getDataObj(rowId).dataId].updated = true;
+    deactivateSelects(getDataObj(rowId).dataId);
   }
+
+  const attrInputId = 'obj-attr-input-id';
+  function addToObject(id) {
+    const label = document.getElementById(attrInputId).value;
+    if (label) {
+      const haze = document.querySelector('#pop-up-haze');
+      const rowId = haze.querySelector('look-up-id').id;
+      const dataId = getDataObj(rowId).dataId;
+      const elem = UTF.dataMap[dataId].elem;
+      const data = UTF.dataMap[dataId].data[0][label] = '';
+      save(dataId);
+      window.location.reload();
+    }
+  }
+
+  UTF.addToObject = addToObject;
 
   function openPopUp(elem) {
       let headers = elem.parentElement.parentElement.querySelectorAll('th');
       const id = elem.attributes['look-up-id'].value;
-      let values = lookUpRow[id].data;
+      let values = getDataObj(id).data;
       let body = `<look-up-id id='${id}'></look-up-id>`;
       for (let index = 0; index < headers.length; index += 1) {
         const label = headers[index].querySelector('label').innerText.trim();
@@ -435,8 +462,9 @@ function UtilityFilter() {
                 </label>`;
         body += `<br><textarea rows=5 cols=150
             onchange='UTF.updateData(this, ${id}, "${label}")'>${value}</textarea>
-            <br>`;
+            <br><br>`;
       }
+      body += `<input id='${attrInputId}' type="text"><button onClick='UTF.addToObject(${id})'>Add</button>`;
       document.querySelector('#pop-up').innerHTML = body;
       document.querySelector('#pop-up-haze').style.display = 'block';
   }
@@ -513,7 +541,7 @@ function UtilityFilter() {
       dataId = initDataMapElem(elem, data[key], key);
       UTF.dataMap[dataId].enableEdit = canEdit !== undefined ? canEdit :
             UTF.dataMap[dataId].enableEdit;
-      startDataId = startDataId || dataId;
+      startDataId = Number.parseInt(startDataId || dataId);
       ids.push({ id: key, dataId });
 
       display += `<div class='tab-ctn' id='${getTabCtnId(dataId)}'>`;
@@ -747,6 +775,7 @@ function UtilityFilter() {
   UTF.openPopUp = openPopUp;
   UTF.closePopUp = closePopUp;
   UTF.updateData = updateData;
+  UTF.removeColumn = removeColumn;
   UTF.getData = getData;
   UTF.addRow = addRow;
   UTF.displayTable = displayTable;

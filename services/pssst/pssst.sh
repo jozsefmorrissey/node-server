@@ -20,6 +20,7 @@ initFolders() {
 configureGlobals() {
   if [ ! -f "$propFile" ]
   then
+    echo wtf
     _help
     exit
   fi
@@ -334,7 +335,7 @@ update () {
   then
     newVal=$(pwgen 30 1)
   fi
-  ifDebugging "debuggui keyValue 'updated $2' 'from $(getValue "$1" "$2") to $newVal' -group '$dgGroup' -id '${flags[dg-id]}'"
+  # ifDebugging "debuggui keyValue 'updated $2' 'from $(getValue "$1" "$2") to $newVal' -group '$dgGroup' -id '${flags[dg-id]}'"
   _rm "$@"
   appendToFile "$1" "$2=$newVal"
   if [ "$2" == "token" ] || [ "$2" == "pst-pin" ]
@@ -716,6 +717,7 @@ secureFunctions() {
       appendToFile "$group" "$key"
     ;;
     update)
+      ifDebugging "exicuting update"
       update "$group" "$key" "$value"
     ;;
     map)
@@ -731,6 +733,7 @@ secureFunctions() {
       startServer "$group"
     ;;
     stop-server)
+      echo 'stopping'
       stop-server "$1"
     ;;
     defaultPort)

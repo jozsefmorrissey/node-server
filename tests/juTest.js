@@ -212,10 +212,6 @@ function validateTypesTest(callback) {
   }
 }
 
-function testsComplete() {
-  console.log(testsComplete);
-}
-
 testing.run([
   stringReplaceWithinSimpleTest,
   stringReplaceWithinSameCharTest,

@@ -234,7 +234,7 @@ function DebugGuiClient(config, root, debug) {
     } else if (headers.cookie) {
       return getCookie(headers.cookie);
     }
-    DebugGuiClient.debugger.exception('', new Error('Neither a cookie "DebugGui" or a header "debug-gui" are defined'));
+    // DebugGuiClient.debugger.exception('', new Error('Neither a cookie "DebugGui" or a header "debug-gui" are defined'));
     return {};
   }
 

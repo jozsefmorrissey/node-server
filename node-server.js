@@ -55,7 +55,7 @@ app.use(function (req, res, next) {
     next();
 });
 
-app.use(express.static('./public'))
+app.use(express.static('./public'));
 
 app.use(fileUpload({
   limits: { fileSize: 50 * 1024 * 1024 },

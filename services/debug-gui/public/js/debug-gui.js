@@ -464,11 +464,7 @@ function DebugGui() {
   script.setAttribute('crossorigin', 'anonymous');
   document.head.appendChild(script);
 
-  script = document.createElement("script");
   var script = document.createElement("script");
-  var src = document.currentScript.attributes['src'].value;
-  script.src = src.replace(/-client/, '');
-
   script.src = 'http://node.jozsefmorrissey.com/js/short-cut-container.js';
   document.head.appendChild(script);
 
