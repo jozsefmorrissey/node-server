@@ -37,7 +37,7 @@ function getUser() {
   return shell.exec('echo ${UserProfile}', {silent: true}).stdout.replace(/^.*\\([^\\]*)$/, '$1').trim();
 }
 
-if (!shell.exec('[ -d "~/.cert" ]')) {
+if (shell.exec('[ -d ~/.cert ] && echo true', {silent: true}).stdout.trim() !== 'true') {
   shell.exec('mkdir ~/.cert/ && cp ./cert/* ~/.cert/');
 }
 

@@ -20,6 +20,17 @@ class InvalidRequestError extends Error {
   }
 }
 
+function saved(res, next) {
+  function callback(err) {
+    if (err) {
+      next(err);
+    } else {
+      res.send('success');
+    }
+  }
+  return callback
+}
+
 function consistentType(array, type) {
   for (let index = 0; index < array.length; index += 1)  {
     if ((typeof array[index]) !== type) {
@@ -34,13 +45,17 @@ class Explanation {
     this.words = req.params.words;
     this.explanation = req.body.explanation;
     this.author = req.body.author;
+    this.likes = 0;
+    this.dislikes = 0;
+    this.pageLikes = {};
+    this.pageDislikes = {};
     this.tags = req.body.tags;
     if ((typeof this.words) !== 'string' ||
         (typeof this.explanation) !== 'string' ||
         (typeof this.author) !== 'string' ||
         !Array.isArray(this.tags) || !consistentType(this.tags, 'string')) {
       throw new InvalidRequestError('Type constraints violated: words(string) explanation(string) author(string) tags(array[of strings])')
-        }
+    }
   }
 }
 
@@ -61,6 +76,10 @@ function atleast(str, length, prefix, suffix) {
   return str;
 }
 
+function cleanUrl(url) {
+  return url.replace(/(.*?)\?.*/, '$1');
+}
+
 const cleanRegEx = /[^a-z/]|((e|)s|ed|ing)$/gi;
 function cleanStr(str) {
   if ((typeof str) !== 'string') {
@@ -79,6 +98,30 @@ function getFile(string) {
   }
   hash = atleast(hash, 4, 0);
   return `${EXP_DIR}${hash.substr(0,2)}/${hash.substr(2)}.json`;
+}
+
+function increment(likeDis, req, res, next) {
+  const words = req.params.words;
+  const file = getFile(words);
+  function modify(err, contents) {
+    if (err) {
+      next(err);
+    } else {
+      const obj = JSON.parse(contents);
+      const index = req.params.index;
+      const url = cleanUrl(req.query.url);
+      const targetElem = obj[cleanStr(words)][index];
+      const pageLikeDis = `${likeDis}Page`;
+      targetElem[likeDis]++;
+      if (targetElem[pageLikeDis][url] === undefined) {
+        targetElem[pageLikeDis][url] = 0;
+      }
+      targetElem[pageLikeDis][url]++;
+      fs.writeFile(file, JSON.stringify(obj, null, 2), saved(res, next));
+    }
+  }
+  fs.readFile(file, modify);
+  return modify;
 }
 
 function sendData(words, res, next) {
@@ -102,14 +145,6 @@ function sendData(words, res, next) {
 }
 
 function saveData(req, res, next) {
-  function saved(err) {
-    if (err) {
-      next(err);
-    } else {
-      res.send('success');
-    }
-  }
-
   function modify(obj) {
     try {
       const expl = new Explanation(req);
@@ -124,7 +159,7 @@ function saveData(req, res, next) {
 
       console.log(filename.replace(/^(.*\/).*$/, '$1'));
       shell.mkdir('-p', filename.replace(/^(.*\/).*$/, '$1'));
-      fs.writeFile(filename, JSON.stringify(obj, null, 2), saved)
+      fs.writeFile(filename, JSON.stringify(obj, null, 2), saved(res, next));
     } catch (e) {
       next(e);
     }
@@ -142,7 +177,6 @@ function saveData(req, res, next) {
   }
 
   return read;
-
 }
 
 function endpoints(app, prefix, ip) {
@@ -158,6 +192,13 @@ console.log('prefix: ' + prefix)
     const words = req.params.words;
     const file = getFile(words);
     fs.readFile(file, sendData(words, res, next));
+  });
+
+  app.get(prefix + "/like/:words/:index", function(req, res, next) {
+    increment('likes', req, res, next);
+  });
+  app.get(prefix + "/dislike/:words/:index", function(req, res, next) {
+    increment('dislikes', req, res, next);
   });
 }
 

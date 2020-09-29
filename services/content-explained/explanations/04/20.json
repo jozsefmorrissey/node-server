@@ -4,6 +4,12 @@
       "words": "hash",
       "explanation": "my explanation",
       "author": "jozsefmorrissey",
+      "likes": 34,
+      "dislikes": 3,
+      "likesPage": {
+        "http//:www.google.com": 4
+      },
+      "dislikesPage": {},
       "tags": [
         "self",
         "help"
@@ -13,6 +19,10 @@
       "words": "hash",
       "explanation": "my explanation",
       "author": "jozsefmorrissey",
+      "likes": 560,
+      "dislikes": 33,
+      "likesPage": {},
+      "dislikesPage": {},
       "tags": [
         "self",
         "help"
@@ -22,6 +32,10 @@
       "words": "hash",
       "explanation": "my explanation",
       "author": "jozsefmorrissey",
+      "likes": 30,
+      "dislikes": 43,
+      "likesPage": {},
+      "dislikesPage": {},
       "tags": [
         "self",
         "help"
@@ -31,6 +45,10 @@
       "words": "hashs",
       "explanation": "my explanation",
       "author": "jozsefmorrissey",
+      "likes": 300,
+      "dislikes": 5,
+      "likesPage": {},
+      "dislikesPage": {},
       "tags": [
         "self",
         "help"
