@@ -115,6 +115,38 @@ function getJson(req, res) {
   res.send(json);
 }
 
+function mixUp(array) {
+  let validIndecies = Array.from(Array(array.length), (d, i) => i);
+  let mixed = '';
+  for (let index = 0; index < array.length; index += 1) {
+    const index = Math.floor(Math.random() * validIndecies.length);
+    mixed += array[validIndecies[index]];
+    validIndecies.splice(index, 1);
+    console.log(validIndecies);
+    console.log(array);
+  }
+  return mixed;
+}
+
+function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
+  Array.from(Array(10), (d, i) => i);
+  let parts = [];
+  for (let index = 0; index < numberLen; index += 1)
+    parts.push(Math.floor(Math.random() * 10));
+  for (let index = 0; index < specCharLen; index += 1)
+    parts.push(specChars.charAt(Math.floor(Math.random() * specChars.length)));
+  const wordLength = len - numberLen - specCharLen;
+  const cmd = `grep -oP "^[a-z]{${wordLength}}$" ./public/json/word-list.json`;
+  console.log(cmd);
+  const wordList = shell.exec(cmd, {silent: true}).split('\n');
+  let word = wordList[Math.floor(Math.random() * wordList.length)];
+  for (let index = 0; index < capLetLen; index += 1)
+    word = word.substr(0, index) + word.substr(index, 1).toUpperCase() + word.substr(index + 1);
+  parts.push(word);
+  console.log('sending')
+  return mixUp(parts);
+}
+
   app.post(prefix + '/validate', function(req, res, next){
     debugValues(req, '/validate', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
     const clBody = cleanObj(req.body);
@@ -230,6 +262,18 @@ function getJson(req, res) {
     const json = exicuteCmd(cmd, req);
     res.send(userHtml(clBody.host, clBody.group, clBody.token, json));
   });
+
+  app.get(prefix + "/random/password/:length/:numberCount/:capitalLetterCount/:specialcharacterCount/:specialCharacters", function (req, res) {
+    console.log('rand word')
+    const length = req.params.length;
+    const numberCnt = req.params.numberCount;
+    const capitalCnt = req.params.capitalLetterCount;
+    const specialCharCnt = req.params.specialcharacterCount;
+    const specChars = req.params.specialCharacters;
+    console.log('sending')
+    res.send(randPassword(length, numberCnt, capitalCnt, specialCharCnt, specChars));
+  });
+
 
   function userHtml(host, group, token, json) {
     const cmd = `pst requires-pin '${group}'`;

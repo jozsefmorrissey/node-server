@@ -1,0 +1,21 @@
+{
+  "jozsefmorrissey": {
+    "username": "jozsefmorrissey",
+    "favoriteLists": [],
+    "explanations": [],
+    "siteOpinions": {
+      "http://www.jozsefmorrissey.com": {
+        "hash": true
+      },
+      "http://www.google.com": {
+        "hash": true
+      },
+      "http://www.googly.com": {
+        "hash": false
+      }
+    },
+    "likes": 0,
+    "dislikes": 0,
+    "secret": "3meCRrqnY6EWeETTzVHCn7ffzKw0vjQugGFKOljWsD0GlvCNgfViFYOd6NzHQLOF"
+  }
+}
