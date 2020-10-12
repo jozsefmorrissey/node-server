@@ -543,6 +543,13 @@ naFp() {
 to-json() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   json="{\n"
+  groupname=$1
+  if [ "$1" == "" ]
+  then
+    groupname='infoMap';
+  fi
+  tempname=$(getTempName $groupname)
+  setupTemp "$groupname"
   while read line
   do
     reg='^.*=.*$'
@@ -550,7 +557,7 @@ to-json() {
     then
       json+=$(echo "$line" | sed 's/^\(.*\?\)=\(.*\)/\t\"\1\": "\2",/g')"\n"
     fi
-  done
+  done < $tempname;
   echo -e "${json:0:-3}\n}"
 	Logger trace "EXIT"
 }

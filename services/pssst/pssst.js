@@ -108,7 +108,7 @@ function endpoints(app, prefix) {
 function getJson(req, res) {
   debugValues(req, '/get/json', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
   const clBody = cleanObj(req.body);
-  const cmd = `pst key-values -group '${clBody.group}' | pst to-json`;
+  const cmd = `pst to-json '${clBody.group}'`;
   const jsonStr = exicuteCmd(cmd, req);
   const json = JSON.parse(jsonStr);
   res.setHeader('Content-Type', 'application/json');
@@ -258,7 +258,7 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
     debugValues(req, '/client', req.body, {host: 'required', group: 'required', pstPin: 'required if set', token: 'required'});
     const clBody = cleanObj(req.body);
 
-    const cmd = 'pst key-values | pst to-json';
+    const cmd = 'pst to-json';
     const json = exicuteCmd(cmd, req);
     res.send(userHtml(clBody.host, clBody.group, clBody.token, json));
   });
