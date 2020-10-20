@@ -2,8 +2,14 @@ var fs = require("fs");
 var shell = require("shelljs");
 var config = require('./config.json');
 
+const Crud = require('./services/database/mySqlWrapper').Crud;
+const { User, Explanation, Site, Opinion, List, ListItem } =
+        require('./services/database/objects');
+
 const EXPL_DIR = './services/content-explained/explanations/';
 const USER_DIR = './services/content-explained/users/';
+
+const merriamApiKey = shell.exec('pst value CE merriamApiKey', {silent: true}).trim();
 
 class UsernameAlreadyTaken extends Error {
   constructor(username) {
@@ -51,24 +57,24 @@ function consistentType(array, type) {
   return true;
 }
 
-class Explanation {
-  constructor(req) {
-    this.words = req.params.words;
-    this.explanation = req.body.explanation;
-    this.author = req.body.author;
-    this.likes = 0;
-    this.dislikes = 0;
-    this.pageLikes = {};
-    this.pageDislikes = {};
-    this.tags = req.body.tags;
-    if ((typeof this.words) !== 'string' ||
-        (typeof this.explanation) !== 'string' ||
-        (typeof this.author) !== 'string' ||
-        !Array.isArray(this.tags) || !consistentType(this.tags, 'string')) {
-      throw new InvalidRequestError('Type constraints violated: words(string) explanation(string) author(string) tags(array[of strings])')
-    }
-  }
-}
+// class Explanation {
+//   constructor(req) {
+//     this.words = req.params.words;
+//     this.explanation = req.body.explanation;
+//     this.author = req.body.author;
+//     this.likes = 0;
+//     this.dislikes = 0;
+//     this.pageLikes = {};
+//     this.pageDislikes = {};
+//     this.tags = req.body.tags;
+//     if ((typeof this.words) !== 'string' ||
+//         (typeof this.explanation) !== 'string' ||
+//         (typeof this.author) !== 'string' ||
+//         !Array.isArray(this.tags) || !consistentType(this.tags, 'string')) {
+//       throw new InvalidRequestError('Type constraints violated: words(string) explanation(string) author(string) tags(array[of strings])')
+//     }
+//   }
+// }
 
 function randomString(length, characterSetRegEx, regEx) {
   let generatedString = "";
@@ -85,24 +91,24 @@ function randomString(length, characterSetRegEx, regEx) {
     return generatedString;
 }
 
-class Opinion {
-  constructor(site, favorable) {
-    this.site = site;
-    this.favorable = favorable;
-  }
-}
-
-class User {
-  constructor(username) {
-    this.username = username
-    this.favoriteLists = [];
-    this.explanations = [];
-    this.siteOpinions = {};
-    this.likes = 0;
-    this.dislikes = 0;
-    this.secret = randomString(64, /[a-zA-Z0-9]/, /.{64}/);
-  }
-}
+// class Opinion {
+//   constructor(site, favorable) {
+//     this.site = site;
+//     this.favorable = favorable;
+//   }
+// }
+//
+// class User {
+//   constructor(username) {
+//     this.username = username
+//     this.favoriteLists = [];
+//     this.explanations = [];
+//     this.siteOpinions = {};
+//     this.likes = 0;
+//     this.dislikes = 0;
+//     this.secret = randomString(64, /[a-zA-Z0-9]/, /.{64}/);
+//   }
+// }
 
 const explanationNotFound = new Error('No explanations found');
 
@@ -287,6 +293,38 @@ function saveUser(username, res, next) {
   return save;
 }
 
+function getMerriamResponse(searchText, res, next) {
+  const XMLhr = require('xmlhttprequest').XMLHttpRequest;
+  const xhr = new XMLhr();
+
+  const url = `https://www.dictionaryapi.com/api/v3/references/collegiate/json/${searchText}?key=${merriamApiKey}`;
+  xhr.onreadystatechange = function () {
+      if (this.readyState != 4) return;
+
+      if (this.status == 200) {
+          res.setHeader('Content-Type', 'application/json');
+          var data = JSON.parse(this.responseText);
+          res.send(data);
+      } else {
+        next(new Error ('Merriam Request Failed'));
+      }
+  };
+
+  xhr.open('GET', url, true);
+  xhr.send();
+}
+
+function returnQuery(res, next) {
+  return function (results, error) {
+    if (error) {
+      next(new Error(error));
+    } else {
+      res.setHeader('Content-Type', 'application/json');
+      res.send(results);
+    }
+  }
+}
+
 function endpoints(app, prefix, ip) {
   app.post(prefix + "/:words", function (req, res, next) {
     const words = req.params.words;
@@ -312,6 +350,15 @@ console.log('prefix: ' + prefix)
   app.get(prefix + "/add/user/:username", function (req, res, next) {
     const username = req.params.username;
     getUser(username, saveUser(username, res, next));
+  });
+
+  app.get(prefix + "/merriam/webster/:searchText", function (req, res, next) {
+    getMerriamResponse(req.params.searchText, res, next);
+  });
+
+  app.get(prefix + "/list/:id", function (req, res, next) {
+    const crud = new Crud({silent: false, mutex: true});
+    crud.select(new List(Number.parseInt(req.params.id)), returnQuery(res, next));
   });
 }
 
