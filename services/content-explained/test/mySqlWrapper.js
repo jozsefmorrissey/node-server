@@ -3,7 +3,8 @@ var Mutex = require('async-mutex').Mutex;
 const testMutex = new Mutex();
 
 const Crud = require('../services/database/mySqlWrapper').Crud;
-const { User, Explanation, Site, Opinion, List, ListItem } =
+const { User, Explanation, Site, Opinion, List, ListItem, Credential, DataObject,
+        Ip, UserAgent} =
         require('../services/database/objects');
 
 function validateObj (validationObj, obj) {
@@ -16,13 +17,10 @@ function validateObj (validationObj, obj) {
   }
 }
 
-function crudCallback(validateResult, validateError, test) {
-  return function (result, error) {
-    if (validateError) {
-      validateObj(validateError, error);
-    } else if (validateResult) {
-      validateObj(validateResult, result);
-    } else if ((typeof test) === 'function') {
+function crudCallback(validateResponse, test) {
+  return function (response) {
+    validateObj(validateResponse, response);
+    if ((typeof test) === 'function') {
       test(result, error);
     }
 
@@ -56,7 +54,6 @@ function testRelationCrud(callback) {
     testMutex.acquire().then(function (release) {
       const username = Math.random().toString(36).substring(2);
       const secret = 'lkjasdflkjaslk';
-      // const userId = Number.parseInt(Math.random().toString().substring(4));
       const user = new User(username, secret);
 
       function pushUser(result) {
@@ -64,7 +61,7 @@ function testRelationCrud(callback) {
         users.push(user);
       }
 
-      function selectCallBack(result, error) {
+      function selectCallBack(result) {
         if (mainTestStarted) {
           return;
         }
@@ -80,7 +77,7 @@ function testRelationCrud(callback) {
         } else {
           mainTestStarted = true;
           crud.delete(users[2], crudCallback({affectedRows:1}));
-          crud.insert(new Explanation('My explanation 1', users[2]), crudCallback(undefined, {errno: 1452}));
+          crud.insert(new Explanation('My explanation 1', users[2]), undefined, crudCallback({errno: 1452}));
           crud.insert(new Explanation('My explanation 2', users[0]), crudCallback({affectedRows: 1}));
           crud.insert(new Explanation('My explanation 3', users[0]), crudCallback({affectedRows: 1}));
           crud.insert(new Explanation('My explanation 4', users[1]), crudCallback({affectedRows: 1}));
@@ -92,7 +89,7 @@ function testRelationCrud(callback) {
         release();
       }
       release();
-      crud.select(new User(username, undefined, undefined), selectCallBack, true);
+      crud.select(new User(username, undefined, undefined), selectCallBack, undefined, true);
     });
   }
 
@@ -100,98 +97,22 @@ function testRelationCrud(callback) {
   createQuery();
 }
 
-function populateDb() {
-  const crud = new Crud({silent: false, mutex: true});
-  const secret = 'password';
-  const users = [];
-  const explanations = [];
-  const sites = [];
-  const opinions = [];
-  const lists = [];
-
-  function setId(dataObj, array) {
-    array.push(dataObj);
-    return function (result) {
-      if (dataObj) {
-        dataObj.setId(result.insertId);
-      }
-    }
-  }
-
-  function addUsers() {
-    for(let index = 0; index < 5; index += 1) {
-      const username = Math.random().toString(36).substring(2);
-      const user = new User(username, secret);
-      crud.insert(user, setId(user, users));
-    }
-  }
-
-  function addExplanations() {
-    for (let index = 0; index < 50; index += 1) {
-      let author = users[index % 5];
-      let explanation = new Explanation('My explanation ' + index, author);
-      crud.insert(explanation, setId(explanation, explanations));
-    }
-  }
-
-  function addSites() {
-    for (let index = 0; index < 100; index += 1) {
-      let site = new Site(`http://www.myUrl${index}.com`);
-        crud.insert(site, setId(site, sites));
-      }
-  }
-
-  function addOpinions() {
-    for (let index = 0; index < 1000; index += 1) {
-      let user = users[Math.floor(Math.random() * 5)];
-      let explanation = explanations[Math.floor(Math.random() * 50)];
-      let site = sites[Math.floor(Math.random() * 100)];
-      let favorable = Math.floor(Math.random() * 5) > 0;
-
-      let opinion = new Opinion(user, explanation, site, favorable);
-      crud.insert(opinion, setId(undefined, opinions));
-    }
-  }
-
-  function addList() {
-    for (let index = 0; index < 10; index += 1) {
-      let list = new List(`name-${index}`);
-      crud.insert(list, setId(list, lists));
-    }
-  }
-
-  const listItems = [];
-  function addListItems() {
-    for (let index = 0; index < 100; index += 1) {
-      let listId = lists[index % 10].id;
-      let explanation = explanations[Math.floor(Math.random() * 50)]
-      let listItem = new ListItem(listId, explanation);
-      crud.insert(listItem, setId(listItem, listItems));
-    }
-  }
-
-  function callAfter(time) {
-    let index = 1;
-    const args = arguments;
-    function nextOnStandBy() {
-      if ((typeof args[index]) === 'function') {
-        args[index++]();
-        setTimeout(nextOnStandBy, time);
-      }
-    }
-
-    nextOnStandBy();
-  }
-
-  callAfter(2000, addUsers, addExplanations, addSites, addOpinions, addList, addListItems);
-}
-
 // populateDb();
 // testing.run([testCrud]);
-testing.run([testRelationCrud]);
-// testing.run([testCrud, testRelationCrud]);
+// testing.run([testRelationCrud]);
+testing.run([testCrud, testRelationCrud]);
 
-
+// crud.select(new List(5))
+//   .success(success, 'hide')
+//   .fail(failure, 'show')
+//   .success('hide', successHide, 'sucHide')
+//   .fail('show', showFail)
+//   .success('sucHide', sucSucHide)
+//   .fail('sucHide', sucFailHide);
 
 // const crud = new Crud({silent: false, mutex: true});
 // crud.select(new List(5), crudCallback());
+// crud.insert(new Credential('shhhhh', '234:221:2:110', 'postman', 5));
+// crud.insert(new Credential('shhhhh', '234:221:2:10', 'postman', 5));
+// crud.insert(new Credential('shhhhh', '234:221:2:11', 'postman', 5));
+// crud.insert(new Credential('shhhhh', '234:221::110', 'postman', 5));
