@@ -1,7 +1,4 @@
-const mailgun = require("mailgun-js");
-const apiKey = '95e6230697c0fbce7ff87930a96ba76e-53c13666-d0268765';
-const domain = 'sandbox2a4114292de04440b7fbbb203477e0f1.mailgun.org';
-const mg = mailgun({ apiKey, domain });
+
 
 
 function send (data, callback) {

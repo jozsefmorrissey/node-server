@@ -36,6 +36,26 @@ class CallbackTree {
       }
     }
 
+    const argReg = /^\$cbtArg\[([0-9]*)\]((\.[a-zA-Z0-9\.]*|)$)/;
+    function renderArg(tempArgs, args, index) {
+      const arg = args[index];
+      if ((typeof arg) !== 'string') return tempArgs[index];
+      const match = arg.match(argReg);
+      if (match) {
+        let targetArg = tempArgs[match[1]];
+        const path = match[2].split('.').filter((value) => value !== '' )
+        for (let index = 0; index < path.length; index += 1) {
+          if (targetArg === undefined) {
+            return undefined;
+          }
+          targetArg = targetArg[path[index]]
+        }
+        return targetArg;
+      } else {
+        return tempArgs[index];
+      }
+    }
+
     this.setSuccess = function (successFunc) {success = successFunc};
     this.setFail = function (failFunc) {failure = failFunc};
     this.setArgs = function (...newArgs) {args = newArgs};
@@ -48,7 +68,12 @@ class CallbackTree {
         instance.addPath()
       }
 
-      const tempArgs = arguments.length > 0 ? arguments : args;
+      let tempArgs = Array.from(args);
+      if (arguments.length > 0) {
+        tempArgs = [];
+        Array.from(arguments).map(
+          (value, index) => tempArgs.push(renderArg(arguments, args, index)));
+      }
       // console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${this.getId()}'.`);
       if (func instanceof Error) throw func;
       const successCallback = callbackFunction(success);

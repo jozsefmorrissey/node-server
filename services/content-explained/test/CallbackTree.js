@@ -135,7 +135,7 @@ function argumentTest (testCallback) {
 
   function four(goto, failStr, success, four) {
     testing.assertEquals(goto, 'goto');
-    testing.assertEquals(failStr, 'fail');
+    testing.assertEquals(failStr, '$cbtArg[0]');
     testing.assertEquals(success, true);
     testing.assertEquals(four, 4);
     testing.assertEquals(cbTree.getLastPath(), 'one->two->three->four->', testCallback);
@@ -145,7 +145,7 @@ function argumentTest (testCallback) {
   const cbTree = new CallbackTree(one, undefined, true)
     .success(two, 'two')
     .fail('two', three, 'three', '$cbtArg[1].msg.msg', '$cbtArg[0]')
-    .fail('three', four, 'four', 'goto', 'fail', true, 4);
+    .fail('three', four, 'four', 'goto', '$cbtArg[0]', true, 4);
   cbTree.execute();
 }
 
