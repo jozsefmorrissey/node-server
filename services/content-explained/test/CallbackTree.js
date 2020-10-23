@@ -118,7 +118,7 @@ function argumentTest (testCallback) {
     if (false) {
       success();
     } else {
-      fail('goto', 'fail', 3)
+      fail('fail', {msg: {msg:'goto'}}, 3)
     }
   }
 
@@ -144,7 +144,7 @@ function argumentTest (testCallback) {
 
   const cbTree = new CallbackTree(one, undefined, true)
     .success(two, 'two')
-    .fail('two', three, 'three')
+    .fail('two', three, 'three', '$cbtArg[1].msg.msg', '$cbtArg[0]')
     .fail('three', four, 'four', 'goto', 'fail', true, 4);
   cbTree.execute();
 }
