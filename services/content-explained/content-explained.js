@@ -57,25 +57,6 @@ function consistentType(array, type) {
   return true;
 }
 
-// class Explanation {
-//   constructor(req) {
-//     this.words = req.params.words;
-//     this.explanation = req.body.explanation;
-//     this.author = req.body.author;
-//     this.likes = 0;
-//     this.dislikes = 0;
-//     this.pageLikes = {};
-//     this.pageDislikes = {};
-//     this.tags = req.body.tags;
-//     if ((typeof this.words) !== 'string' ||
-//         (typeof this.explanation) !== 'string' ||
-//         (typeof this.author) !== 'string' ||
-//         !Array.isArray(this.tags) || !consistentType(this.tags, 'string')) {
-//       throw new InvalidRequestError('Type constraints violated: words(string) explanation(string) author(string) tags(array[of strings])')
-//     }
-//   }
-// }
-
 function randomString(length, characterSetRegEx, regEx) {
   let generatedString = "";
   while (!generatedString.match(regEx)) {
@@ -90,25 +71,6 @@ function randomString(length, characterSetRegEx, regEx) {
   }
     return generatedString;
 }
-
-// class Opinion {
-//   constructor(site, favorable) {
-//     this.site = site;
-//     this.favorable = favorable;
-//   }
-// }
-//
-// class User {
-//   constructor(username) {
-//     this.username = username
-//     this.favoriteLists = [];
-//     this.explanations = [];
-//     this.siteOpinions = {};
-//     this.likes = 0;
-//     this.dislikes = 0;
-//     this.secret = randomString(64, /[a-zA-Z0-9]/, /.{64}/);
-//   }
-// }
 
 const explanationNotFound = new Error('No explanations found');
 
@@ -360,6 +322,8 @@ console.log('prefix: ' + prefix)
     const crud = new Crud({silent: false, mutex: true});
     crud.select(new List(Number.parseInt(req.params.id)), returnQuery(res, next));
   });
+
+  require('./services/dataApi.js').endpoints(app, `${prefix}/data`, ip);
 }
 
 console.log(getFile('hash', EXPL_DIR));
