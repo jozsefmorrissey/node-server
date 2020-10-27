@@ -585,7 +585,10 @@ client() {
 }
 
 remote() {
-  json=$(curl -X POST -H "Content-Type: application/json" -d "{\"group\": \"$group\",\"token\": \"$token\",\"pst-pin\": \"$pstPin\"}" "$host/pssst/get/json")
+  url="$host/pssst/get/json"
+  data="{\"group\": \"$group\",\"token\": \"$token\",\"pstPin\": \"$pstPin\"}"
+  echo -e "$url\n$data"
+  json=$(curl -X POST -H "Content-Type: application/json" -d "$data"  $url)
 	Logger trace "EXIT"
   key=${flags['key']}
   if [ ! -z "$key" ]
@@ -741,7 +744,7 @@ secureFunctions() {
     ;;
     stop-server)
       echo 'stopping'
-      stop-server "$1"
+      stop-server "$2"
     ;;
     defaultPort)
       determinePort "$group"

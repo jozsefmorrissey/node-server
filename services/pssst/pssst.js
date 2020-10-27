@@ -65,12 +65,14 @@ function exicuteCmd(cmd, req) {
 
   if (clBody.token != null) {
     let validateCmd = `pst validateToken '${clBody.group}' '${clBody.token}' '${clBody.pstPin}'`;
+    console.log(validateCmd);
     const debugStr = bashDebugStr(req);
     validateCmd += debugStr;
     if (cmd != undefined) {
       validateCmd += ` && ${cmd}${debugStr}`;
     }
 
+    console.log(validateCmd);
     const returnValue = shell.exec(validateCmd, {silent: false});
     lockout(clBody.group, returnValue.code)
     return returnValue;
@@ -109,6 +111,7 @@ function getJson(req, res) {
   debugValues(req, '/get/json', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
   const clBody = cleanObj(req.body);
   const cmd = `pst to-json '${clBody.group}'`;
+  console.log("cmd: ", cmd);
   const jsonStr = exicuteCmd(cmd, req);
   const json = JSON.parse(jsonStr);
   res.setHeader('Content-Type', 'application/json');

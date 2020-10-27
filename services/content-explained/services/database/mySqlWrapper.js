@@ -603,6 +603,31 @@ class Crud {
       deleteRecurse(object);
       getMutex(deleteQuery);
     }
+
+    function updateObj (object) {
+      const fields = object.$d.getFields('primitives');
+      obj = {values: [], setArr: []};
+      for (let index = 0; index < fields.length; index += 1) {
+        const field = fields[index];
+        if (field.name !== 'id') {
+          obj.setArr.push(`${field.name}='?'`);
+          obj.values.push(field.getValue());
+        }
+      }
+      obj.values.push(object.id);
+    }
+
+    this.update = function (object, success, fail) {
+      function updateQuery() {
+        print('\nUpdate:')
+        const table = object.$d().writeTable();
+        const upObj = updateObj(object);
+        const queryString = `update ${table} set ${upObj.setArr.join()} where id='?'`;
+        print(queryString, '\n', upObj.setArr);
+        query(queryString, upObj.values, success, fail);
+      }
+      getMutex(updateQuery);
+    }
   }
 }
 

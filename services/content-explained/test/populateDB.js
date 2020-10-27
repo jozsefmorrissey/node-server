@@ -1,3 +1,9 @@
+
+const Crud = require('../services/database/mySqlWrapper').Crud;
+const { User, Explanation, Site, Opinion, List, ListItem, Credential, DataObject,
+        Ip, UserAgent} =
+        require('../services/database/objects');
+        
 function populateDb() {
   const crud = new Crud({silent: true, mutex: true});
   const secret = 'password';
