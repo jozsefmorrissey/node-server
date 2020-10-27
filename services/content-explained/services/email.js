@@ -1,4 +1,8 @@
-
+const shell = require('shelljs');
+const mailgun = require("mailgun-js");
+const apiKey = shell.exec('pst value mailgun apiKey');
+const domain = shell.exec('pst value domain apiKey');
+const mg = mailgun({ apiKey, domain });
 
 
 function send (data, callback) {
