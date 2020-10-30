@@ -29,7 +29,6 @@ function cleanStrTest(callback) {
 }
 
 function getFileTest(callback) {
-  console.log(ce.getFile('hash'));
   for (let index = 0; index < 100; index += 1) {
     const str = randomString(25, /.*/, /.{1,}/);
     const file = ce.getFile(str);

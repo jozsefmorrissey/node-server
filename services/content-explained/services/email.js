@@ -1,31 +1,37 @@
 const shell = require('shelljs');
 const mailgun = require("mailgun-js");
-const apiKey = shell.exec('pst value mailgun apiKey');
-const domain = shell.exec('pst value domain apiKey');
+const ENV = require('./properties').ENV;
+const apiKey = shell.exec('pst value mailgun apiKey').stdout.trim();
+const domain = shell.exec('pst value mailgun domain').stdout.trim();
 const mg = mailgun({ apiKey, domain });
 
 
-function send (data, callback) {
+function send (data, success, failure) {
   function respond (error, body) {
     if (error) {
-      throw new Error('mailgun email failed to send\n' + error.msg);
+      // TODO: unncomment// failure(error);
+      success();
     }
     if ((typeof callback) === 'function') {
-      callback(body);
+      success(body);
     }
   }
   mg.messages().send(data, respond);
 }
 
-function sendActivationEmail(to, callback) {
+function sendActivationEmail(user, credential, success, failure) {
+  const userId = credential.userId;
+  const actSecret = credential.activationSecret;
+  const activationUrl = `${ENV.get('host')}/data/credential/activate/${userId}/${actSecret}`;
+  console.log('activation url:', activationUrl);
   send({
     from: 'CE <ce@jozsefmorrissey.com>',
-    to,
+    to: user.getEmail(),
     subject: 'Activate Account',
     html: `<p>Thanks for creating an account to activate it simply
               <br>
-              <button>Click Here</button>` },
-    callback);
+              <button onclick='window.open("${activationUrl}","_blank")'>Click Here</button>`
+    }, success, failure);
 }
 
 function sendResetSecret(to, callback) {
@@ -39,7 +45,6 @@ function sendResetSecret(to, callback) {
             functionality, from a connected device.</p>
             <br/><button>Reset Secret</button>` }, callback);
 }
-
 
 
 

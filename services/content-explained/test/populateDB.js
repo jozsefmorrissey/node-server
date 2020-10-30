@@ -1,5 +1,5 @@
 const Crud = require('../services/database/mySqlWrapper').Crud;
-const { User, Explanation, Site, Opinion, List, ListItem, Credential, DataObject,
+const { User, Explanation, Site, Opinion, SiteExplanation, Credential, DataObject,
         Ip, UserAgent} =
         require('../services/database/objects');
 
@@ -10,7 +10,7 @@ function populateDb() {
   const explanations = [];
   const sites = [];
   const opinions = [];
-  const lists = [];
+  const sites = [];
 
   function setId(dataObj, array) {
     array.push(dataObj);
@@ -56,20 +56,20 @@ function populateDb() {
     }
   }
 
-  function addList() {
+  function addSite() {
     for (let index = 0; index < 10; index += 1) {
-      let list = new List(`name-${index}`);
-      crud.insert(list, setId(list, lists));
+      let site = new Site(`name-${index}`);
+      crud.insert(site, setId(site, sites));
     }
   }
 
-  const listItems = [];
-  function addListItems() {
+  const SiteExplanations = [];
+  function addSiteExplanations() {
     for (let index = 0; index < 100; index += 1) {
-      let listId = lists[index % 10].id;
+      let siteId = sites[index % 10].id;
       let explanation = explanations[Math.floor(Math.random() * 50)]
-      let listItem = new ListItem(listId, explanation);
-      crud.insert(listItem, setId(listItem, listItems));
+      let siteExplanation = new SiteExplanation(siteId, explanation);
+      crud.insert(SiteExplanation, setId(SiteExplanation, SiteExplanations));
     }
   }
 
@@ -86,7 +86,7 @@ function populateDb() {
     nextOnStandBy();
   }
 
-  callAfter(2000, addUsers, addExplanations, addSites, addOpinions, addList, addListItems);
+  callAfter(2000, addUsers, addExplanations, addSites, addOpinions, addSite, addSiteExplanations);
 }
 
 populateDb();

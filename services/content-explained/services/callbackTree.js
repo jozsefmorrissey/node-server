@@ -1,10 +1,52 @@
+
+class CallbackTreeRootInvalid extends Error {
+  constructor() {
+    super(`The root of a CallbackTree must be another CallbackTree.`);
+    this.name = "CallbackTreeRootInvalid";
+  }
+}
+
+class CallbackTreeLeafNotDefined extends Error {
+  constructor(root, leaf) {
+    super(`Within CallbackTree '${root}' leaf '${leaf} does not exist.'`);
+    this.name = "CallbackTreeLeafNotDefined";
+  }
+}
+
 class CallbackTree {
   constructor(func, id, ...args) {
-    let success, failure, root;
+    if (func === undefined) throw new Error('func must be defined');
+    let success, failure, root, resolve, promise;
     this.name = id;
     let lastPath = '';
-    this.getLastPath = function () {return lastPath;};
     const instance = this;
+    const terminationPoints = [];
+
+    function retInterface (inst) {
+      const root = instance.getRoot();
+      const success = root.success;
+      const fail = root.fail;
+      const execute = root.execute;
+      const terminate = inst ? root.terminate(inst) : undefined;
+      return {success, fail, execute, terminate};
+    }
+
+    this.terminate = function (cbTree, retValue) {
+      if (arguments.length === 2) {
+        if (terminationPoints.indexOf(cbTree) !== -1) {
+          resolve(retValue);
+        }
+      } else {
+        return function () {
+          terminationPoints.push(cbTree);
+          return retInterface();
+        }
+      }
+    };
+
+    this.getLastPath = function () {return lastPath;};
+    this.getPromise = function () {return promise;};
+
     function setLeaf(setFunc, target, func, id, ...args) {
       if ((target instanceof Error || (typeof target) === 'function') &&
             ((typeof func) === 'string' || func === undefined)) {
@@ -18,14 +60,16 @@ class CallbackTree {
       const cbTree = new CallbackTree(func, id, ...args);
       cbTree.setRoot(instance.getRoot());
       leaf[setFunc](cbTree);
-      return instance.getRoot();
+      return retInterface(cbTree);
     }
 
     function callbackFunction(callback) {
-      return function () {
-        if (callback instanceof CallbackTree) {
+      if (callback instanceof CallbackTree) {
+        return function () {
           callback.execute(...arguments);
         }
+      } else {
+        return undefined;
       }
     }
     this.addPath = function (value) {
@@ -39,7 +83,7 @@ class CallbackTree {
     const argReg = /^\$cbtArg\[([0-9]*)\]((\.[a-zA-Z0-9\.]*|)$)/;
     function renderArg(tempArgs, args, index) {
       const arg = args[index];
-      if ((typeof arg) !== 'string') return tempArgs[index];
+      if ((typeof arg) !== 'string') return args[index];
       const match = arg.match(argReg);
       if (match) {
         let targetArg = tempArgs[match[1]];
@@ -52,7 +96,7 @@ class CallbackTree {
         }
         return targetArg;
       } else {
-        return tempArgs[index];
+        return args[index];
       }
     }
 
@@ -62,25 +106,39 @@ class CallbackTree {
     this.execute = function () {
       if (instance.isRoot()) {
         lastPath = '';
+        promise = new Promise(r => resolve = r)
         instance.addPath(instance.getId());
-      }
-      else {
+      } else {
         instance.addPath()
       }
 
-      let tempArgs = Array.from(args);
-      if (arguments.length > 0) {
+      let tempArgs = Array.from(arguments);
+      if (args.length > 0 && args[0] !== undefined) {
         tempArgs = [];
-        Array.from(arguments).map(
+        Array.from(args).map(
           (value, index) => tempArgs.push(renderArg(arguments, args, index)));
       }
-      // console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${this.getId()}'.`);
+      console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.`);
+      const rt = instance.getRoot();
       if (func instanceof Error) throw func;
-      const successCallback = callbackFunction(success);
-      successCallback.nam = success && success.name;
-      const failureCallback = callbackFunction(failure);
-      failureCallback.nam = failure && failure.name;
-      func(...tempArgs, successCallback, failureCallback);
+      else if((typeof func) === 'string') func = instance.find(func);
+      else {
+        const successCallback = callbackFunction(success);
+        const failureCallback = callbackFunction(failure);
+        let retVal;
+        if (successCallback && failureCallback) {
+          retVal = func(...tempArgs, successCallback, failureCallback);
+        } else if (failureCallback) {
+          retVal = func(...tempArgs, undefined, failureCallback);
+        } else if (successCallback) {
+          retVal = func(...tempArgs, successCallback);
+        } else {
+          retVal = func(...tempArgs);
+        }
+
+        rt.terminate(instance, retVal);
+        return rt.getPromise();
+      }
     }
     this.success = function (target, func, id, ...args) {
       return setLeaf('setSuccess', target, func, id, ...args);
@@ -93,12 +151,12 @@ class CallbackTree {
 
     this.find = function (stringOrFunc) {
       const found = instance.getRoot().findChild(stringOrFunc);
-      if (found === undefined) throw new Error(`'${stringOrFunc}' not found within CallbackTree.`);
+      if (found === undefined) throw new CallbackTreeLeafNotDefined(instance.getRoot, stringOrFunc);
       return found;
     }
     this.setRoot = function (callbackTree) {
       if (!callbackTree instanceof CallbackTree) {
-        throw new Error('The root of a CallbackTree must be another CallbackTree.');
+        throw new CallbackTreeRootInvalid();
       }
       root = callbackTree;
     }

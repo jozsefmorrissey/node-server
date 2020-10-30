@@ -2,38 +2,17 @@ var fs = require("fs");
 var shell = require("shelljs");
 var config = require('./config.json');
 
+const { UsernameAlreadyTaken, ExplanationNotFound, MerriamRequestFailed } =
+        require('./services/exceptions.js');
+
 const Crud = require('./services/database/mySqlWrapper').Crud;
-const { User, Explanation, Site, Opinion, List, ListItem } =
+const { User, Explanation, Site, Opinion, SiteExplanation } =
         require('./services/database/objects');
 
 const EXPL_DIR = './services/content-explained/explanations/';
 const USER_DIR = './services/content-explained/users/';
 
 const merriamApiKey = shell.exec('pst value CE merriamApiKey', {silent: true}).trim();
-
-class UsernameAlreadyTaken extends Error {
-  constructor(username) {
-    super(`Username '${username}' has already been taken`);
-    this.name = "UsernameAlreadyTaken";
-    this.status = 400;
-  }
-}
-
-class ExplanationNotFound extends Error {
-  constructor(words) {
-    super(`No explanation found for '${words}'.`);
-    this.name = "ExplanationNotFound";
-    this.status = 404;
-  }
-}
-
-class InvalidRequestError extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "InvalidRequestError";
-    this.status = 400;
-  }
-}
 
 function saved(res, next, data) {
   data ? data : {status: 'success'};
@@ -72,8 +51,6 @@ function randomString(length, characterSetRegEx, regEx) {
     return generatedString;
 }
 
-const explanationNotFound = new Error('No explanations found');
-
 function ensureLength(str, length, prefix, suffix) {
   str = str.length > length ? str.substr(0, length) : str + '';
   prefix = prefix === undefined ? '' : prefix + '';
@@ -98,7 +75,7 @@ function cleanStr(str) {
 
 function hash(string) {
   let hash = 0;
-  for (let i = 0; i < string.length; i += 1) {
+  for (let i = 0; string && i < string.length; i += 1) {
     const character = string.charCodeAt(i);
     hash = ((hash << 11) - hash) + character;
   }
@@ -129,8 +106,6 @@ function increment(likeDis, req, res, next) {
       next(err);
       return;
     } else {
-      const obj = JSON.parse(contents);
-      console.log(JSON.stringify(obj, null, 2))
       if (obj[author].siteOpinions[url] === undefined) {
         obj[author].siteOpinions[url] = {}
       } else if (obj[author].siteOpinions[url][words] !== undefined) {
@@ -178,11 +153,9 @@ function increment(likeDis, req, res, next) {
 
 function sendData(words, res, next) {
   function send(err, contents) {
-    console.log(err);
     if (err) {
       next(new ExplanationNotFound(words));
     } else {
-      console.log('contents: ' + contents)
       const obj = JSON.parse(contents);
       const data = obj[cleanStr(words)];
       if (!data) {
@@ -206,10 +179,8 @@ function saveData(req, res, next) {
       } else {
         obj[key] = [expl];
       }
-      console.log('file: ' + getFile(expl.words, EXPL_DIR))
       var filename = getFile(expl.words, EXPL_DIR);
 
-      console.log(filename.replace(/^(.*\/).*$/, '$1'));
       shell.mkdir('-p', filename.replace(/^(.*\/).*$/, '$1'));
       fs.writeFile(filename, JSON.stringify(obj, null, 2), saved(res, next));
     } catch (e) {
@@ -220,7 +191,6 @@ function saveData(req, res, next) {
   function read(err, contents) {
     let obj;
     if (err) {
-      console.log('not')
       obj = {};
     } else {
       obj = JSON.parse(contents);
@@ -268,7 +238,7 @@ function getMerriamResponse(searchText, res, next) {
           var data = JSON.parse(this.responseText);
           res.send(data);
       } else {
-        next(new Error ('Merriam Request Failed'));
+        next(new MerriamRequestFailed());
       }
   };
 
@@ -288,45 +258,42 @@ function returnQuery(res, next) {
 }
 
 function endpoints(app, prefix, ip) {
-  app.post(prefix + "/:words", function (req, res, next) {
-    const words = req.params.words;
-    const file = getFile(words, EXPL_DIR);
-    console.log('readingFile: ' + file);
-    fs.readFile(file, saveData(req, res, next));
-  });
+  // app.post(prefix + "/:words", function (req, res, next) {
+  //   const words = req.params.words;
+  //   const file = getFile(words, EXPL_DIR);
+  //   fs.readFile(file, saveData(req, res, next));
+  // });
 
-console.log('prefix: ' + prefix)
-  app.get(prefix + "/:words", function (req, res, next) {
-    const words = req.params.words;
-    const file = getFile(words, EXPL_DIR);
-    fs.readFile(file, sendData(words, res, next));
-  });
+  // app.get(prefix + "/:words", function (req, res, next) {
+  //   const words = req.params.words;
+  //   const file = getFile(words, EXPL_DIR);
+  //   fs.readFile(file, sendData(words, res, next));
+  // });
+  //
+  // app.get(prefix + "/like/:words/:index", function(req, res, next) {
+  //   increment(true, req, res, next);
+  // });
+  // app.get(prefix + "/dislike/:words/:index", function(req, res, next) {
+  //   increment(false, req, res, next);
+  // });
+  //
+  // app.get(prefix + "/add/user/:username", function (req, res, next) {
+  //   const username = req.params.username;
+  //   getUser(username, saveUser(username, res, next));
+  // });
+  //
+  // app.get(prefix + "/merriam/webster/:searchText", function (req, res, next) {
+  //   getMerriamResponse(req.params.searchText, res, next);
+  // });
+  //
+  // app.get(prefix + "/SITE/:id", function (req, res, next) {
+  //   const crud = new Crud({silent: false, mutex: true});
+  //   crud.select(new SITE(Number.parseInt(req.params.id)), returnQuery(res, next));
+  // });
 
-  app.get(prefix + "/like/:words/:index", function(req, res, next) {
-    increment(true, req, res, next);
-  });
-  app.get(prefix + "/dislike/:words/:index", function(req, res, next) {
-    increment(false, req, res, next);
-  });
-
-  app.get(prefix + "/add/user/:username", function (req, res, next) {
-    const username = req.params.username;
-    getUser(username, saveUser(username, res, next));
-  });
-
-  app.get(prefix + "/merriam/webster/:searchText", function (req, res, next) {
-    getMerriamResponse(req.params.searchText, res, next);
-  });
-
-  app.get(prefix + "/list/:id", function (req, res, next) {
-    const crud = new Crud({silent: false, mutex: true});
-    crud.select(new List(Number.parseInt(req.params.id)), returnQuery(res, next));
-  });
-
-  require('./services/dataApi.js').endpoints(app, `${prefix}/data`, ip);
+  require('./services/dataApi.js').endpoints(app, prefix, ip);
 }
 
-console.log(getFile('hash', EXPL_DIR));
 
 exports.endpoints = endpoints;
 exports.cleanStr = cleanStr;

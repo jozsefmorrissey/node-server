@@ -3,7 +3,7 @@ var Mutex = require('async-mutex').Mutex;
 const testMutex = new Mutex();
 
 const Crud = require('../services/database/mySqlWrapper').Crud;
-const { User, Explanation, Site, Opinion, List, ListItem, Credential, DataObject,
+const { User, Explanation, Site, Opinion, SiteExplanation, Credential, DataObject,
         Ip, UserAgent} =
         require('../services/database/objects');
 
@@ -13,7 +13,7 @@ function validateObj (validationObj, obj) {
     const key = keys[index];
     testing.assertEquals(typeof obj, 'object', `${validationObj[key]}`);
     testing.assertEquals(obj[key], validationObj[key], `\n\t${keys}`);
-    console.log(`${key}: ${validationObj[key]} === ${obj[key]}`);
+    // console.log(`${key}: ${validationObj[key]} === ${obj[key]}`);
   }
 }
 
@@ -23,10 +23,6 @@ function crudCallback(validateResponse, test) {
     if ((typeof test) === 'function') {
       test(result, error);
     }
-
-    // console.log('ret: ', String.fromCharCode.apply(null, result[0].listItems[0].explanation.content));
-    // console.log(result[0].listItems[0].explanation.content instanceof Buffer);
-    // console.log(result[0].listItems[0].explanation);
   }
 }
 
@@ -97,22 +93,4 @@ function testRelationCrud(callback) {
   createQuery();
 }
 
-// populateDb();
-// testing.run([testCrud]);
-// testing.run([testRelationCrud]);
 testing.run([testCrud, testRelationCrud]);
-
-// crud.select(new List(5))
-//   .success(success, 'hide')
-//   .fail(failure, 'show')
-//   .success('hide', successHide, 'sucHide')
-//   .fail('show', showFail)
-//   .success('sucHide', sucSucHide)
-//   .fail('sucHide', sucFailHide);
-
-// const crud = new Crud({silent: false, mutex: true});
-// crud.select(new List(5), crudCallback());
-// crud.insert(new Credential('shhhhh', '234:221:2:110', 'postman', 5));
-// crud.insert(new Credential('shhhhh', '234:221:2:10', 'postman', 5));
-// crud.insert(new Credential('shhhhh', '234:221:2:11', 'postman', 5));
-// crud.insert(new Credential('shhhhh', '234:221::110', 'postman', 5));

@@ -1,0 +1,4 @@
+{
+  "host": "https://localhost:3001/content-explained",
+  "test": {"func": {"value": 7}}
+}

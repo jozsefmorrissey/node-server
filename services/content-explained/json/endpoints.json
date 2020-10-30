@@ -1,0 +1,28 @@
+{
+  "user": {
+    "add": "/user",
+    "get": "/user/:ids",
+    "login": "/user/login",
+    "update": "/user"
+  },
+  "credential": {
+    "add": "/credential/:userId",
+    "activate": "/credential/activate/:userId/:activationSecret",
+    "delete": "/credential/:credId",
+    "get": "/credential/:userId"
+  },
+  "site": {
+    "add": "/site",
+    "get": "/site/:name"
+  },
+  "explanation": {
+    "add": "/explanation",
+    "get": "/explanation/:words",
+    "author": "/explanation/author/:authorId"
+  },
+  "_secure": [
+    "credential.get",
+    "credential.delete",
+    "list.add"
+  ]
+}

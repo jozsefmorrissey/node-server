@@ -27,6 +27,8 @@ class Field {
     this.isPrimative = function () {return o.class === undefined;};
     this.getClass = function () {return o.class;};
     this.getRelation = function () {return o.relation;};
+    this.isReadOnly = function() {return o.readOnly === true;};
+    this.isWriteOnly = function() {return o.writeOnly === true;};
     this.isValid = function (value) {
       return (!o.type || ((typeof value) == o.type)) &&
             (!o.class || (value instanceof o.class ));
@@ -43,7 +45,9 @@ class Field {
         }
         value = newValue;
       }
-      parent[this.name] = this.getValue();
+      if (!o.writeOnly) {
+        parent[this.name] = this.getValue();
+      }
     }
 
     this.uniqueName = function () {
@@ -124,6 +128,29 @@ class Field {
       }
     }
     this.getValue = function () {return value;}
+  }
+}
+
+function mapObject (instance) {
+  return function (id) {
+    const mapObj = new (instance.constructor)(...arguments);
+    mapObj.$d().setMapId(id);
+    return mapObj;
+  }
+}
+
+function fromObject (instance) {
+  return function(object) {
+    const c = instance.constructor.mapObject();
+    const flds = c.$d().getFields();
+    for (let index = 0; index < flds.length; index += 1) {
+      const field = flds[index];
+      const value = object[field.name];
+      c.$d().setValueFunc(field.name)(value);
+    }
+    console.log('og: ', instance);
+    console.log('clone: ', c);
+    return c;
   }
 }
 
@@ -213,11 +240,15 @@ class DataObject {
 
     $d.getValueFunc = function (name) {
       return function () {
-        return instance[name];
+        return fields[name].getValue();
       }
     }
 
     $d.init = function(args) {
+      if (instance.constructor.mapObject === undefined) {
+        instance.constructor.mapObject = mapObject(instance);
+        instance.constructor.fromObject = fromObject(instance);
+      }
       const idConstructor = args.length === 1  && Number.isInteger(args[0]);
       if (idConstructor) {
         $d.setValueFunc('id')(args[0]);
@@ -236,22 +267,29 @@ class DataObject {
         if (field.isPrimative()) {
           primitives.push(field);
         } else {
-          DataObject.prototype.addChildTable(instance, field);
+          DataObject.addChildTable(instance, field);
           relations.push(field);
         }
       }
     }
 
     $d.setMapId = function (id) {
-      if (mapId !== undefined) throw Error('Attempting to map a single object to two tables');
+      // if (mapId !== undefined) throw Error('Attempting to map a single object to two tables');
       mapId = id;
     }
     $d.getInstance = function () {return new instance.constructor()}
     $d.getMapId = function() {return mapId;}
-    $d.mapObject = function (id) {
-      const obj = new instance.constructor();
-      obj.$d().setMapId(id);
-      return obj;
+
+    $d.clone = function () {
+      const c = instance.constructor.mapObject();
+      const flds = $d.getFields();
+      for (let index = 0; index < flds.length; index += 1) {
+        const field = flds[index];
+        c.$d().setValueFunc(field.name)(field.getValue());
+      }
+      console.log('og: ', instance);
+      console.log('clone: ', c);
+      return c;
     }
 
     $d.fromResult = function (result) {
@@ -305,8 +343,9 @@ const childTableFuncs = function () {
   return {add, get}
 }()
 
-DataObject.prototype.addChildTable = childTableFuncs.add;
-DataObject.prototype.getChildTables = childTableFuncs.get;
+DataObject.addChildTable = childTableFuncs.add;
+DataObject.getChildTables = childTableFuncs.get;
+
 
 class Crud {
   constructor(options) {
@@ -353,13 +392,9 @@ class Crud {
     }
 
     // TODO: Refactor
-    function mapResults(objects, success) {
+    function mapResults(objects, success, one, fail) {
       return function (results) {
         if (success === undefined) return;
-        if (results.length === 0) {
-            success(results);
-            return;
-        }
         const resultMap = {};
         const mappedResults = results && results.length ? [] : results;
         for (let index = 0; results && index < results.length; index += 1) {
@@ -374,7 +409,7 @@ class Crud {
               }
               if (!resultMap[mapping][id]) {
                 const mapId = mappedObj.$d().getMapId();
-                const newObj = mappedObj.$d().mapObject(mapId);
+                const newObj = mappedObj.constructor.mapObject(mapId);
                 const fields = newObj.$d().getFields();
                 for (let fIndex = 0; fIndex < fields.length; fIndex += 1) {
                   const field = fields[fIndex];
@@ -397,10 +432,18 @@ class Crud {
           }
         }
         const targetObj = objects[0].$d().getField('id').uniqueName();
-        const objResults = Object.values(resultMap[targetObj]);
-        print('\nMapped object results:\n', objResults)
+        const objResults = resultMap[targetObj] ? Object.values(resultMap[targetObj]) : [];
+        print('\nMapped object results:\n', objResults);
 
-        success(objResults);
+        if (one) {
+          if (objResults.length !== 1) {
+            fail(objResults);
+            return;
+          }
+          success(objResults[0]);
+        } else {
+          success(objResults);
+        }
       }
     }
 
@@ -424,9 +467,13 @@ class Crud {
           if (lastQueryId === currQueryId) {
             updateConnection();
           }
-          const callFailed = error !== undefined;
-          if (callFailed && (typeof success) === 'function') success(results);
-          if (!callFailed && (typeof fail) === 'function') fail(error)
+          const callFailed = error !== null;
+          if (!callFailed && (typeof success) === 'function'){
+            success(results);
+          }
+          if (callFailed && (typeof fail) === 'function') {
+            fail(error);
+          }
         };
 
         function submitQuery() {
@@ -452,13 +499,13 @@ class Crud {
 
     this.insert = function (object, success, fail) {
       function insertQuery() {
-        print('\nInsert:')
+        print('\nInsert:', object)
         const keys = [];
         const values = [];
         object.$d().getFields().map((field) => pushKeyAndValue(field, keys, values));
 
         const qs = new Array(keys.length).fill('?').join(',');
-        const table = object.$d().writeTable();
+        const table = object.$d().writeTable(true);
         const queryString = `insert into ${table} (${keys.join(',')}) values (${qs})`;
         print(queryString, '\n', values);
         query(queryString, values, success, fail);
@@ -470,9 +517,10 @@ class Crud {
       const sqlKey = field.sqlKey(notSelect);
       const value = field.getValue();
       if (Array.isArray(value)) {
+        console.log('here432');
         const qs = new Array(value.length).fill('?').join(', ');
         conds.push(`${sqlKey} in (${qs})`);
-        values = values.concat(value);
+        value.map((value) => values.push(value));
       } else if (value instanceof RegExp) {
         const regStr = value.toString();
         const sqlReg = regStr.substr(1, regStr.length - 2);
@@ -519,7 +567,7 @@ class Crud {
 
       let mapObject = object;
       if (depth === undefined) {
-        mapObject = object.$d().mapObject(tableIdInc++);
+        mapObject = object.constructor.mapObject(tableIdInc++);
         mapObject.$d().getFields().map(addSqlString);
       }
       const relations = mapObject.$d().getFields('relation');
@@ -528,8 +576,7 @@ class Crud {
       depth = depth || 2;
       for (let index = 0; index < relations.length; index += 1) {
         const field = relations[index];
-        const mapRelObj = new (field.getClass().prototype.constructor)().$d().mapObject(tableIdInc++, );
-        // mapObject.$d().setValueFunc(field.name)(mapRelObj);
+        const mapRelObj = field.getClass().prototype.constructor.mapObject(tableIdInc++, );
 
         const table = mapRelObj.$d().readTable(true);
         mapRelObj.$d().getFields().map(addSqlString);
@@ -555,28 +602,44 @@ class Crud {
       return { joinString, objects };
     }
 
+    function select(object, or) {
+      const joinStr = or ? ' OR ' : ' AND ';
+      const keys = [];
+      const table = object.$d().readTable(true);
+      const joinVal = joinLogic(object, keys);
+      const tableId = joinVal.objects[0].$d().readTable();
+      const joins = joinVal.joinString;
+      object.$d().setMapId(joinVal.objects[0].$d().getMapId());
+      const condObj = conditionalObj.apply(this, [object, joinStr]);
+      const queryString = `select ${keys.join(',\n')}\n` +
+                            `\tfrom ${table} as ${tableId}\n` +
+                            `${joins}\twhere ${condObj.string}`;
+      print(queryString, '\n', condObj.values);
+      return {query: queryString, values: condObj.values, objects: joinVal.objects};
+    }
+
     this.select = function (object, success, fail, or) {
       function selectQuery() {
         print('\nSelect:')
-        const joinStr = or ? ' OR ' : ' AND ';
-        const keys = [];
-        const table = object.$d().readTable(true);
-        const joinVal = joinLogic(object, keys);
-        const tableId = joinVal.objects[0].$d().readTable();
-        const joins = joinVal.joinString;
-        object.$d().setMapId(joinVal.objects[0].$d().getMapId());
-        const condObj = conditionalObj.apply(this, [object, joinStr]);
-        const queryString = `select ${keys.join(',\n')}\n` +
-                              `\tfrom ${table} as ${tableId}\n` +
-                              `${joins}\twhere ${condObj.string}`;
-        print(queryString, '\n', condObj.values);
-        query(queryString, condObj.values, mapResults(joinVal.objects, success), fail);
+        const selectObj = select(object, or);
+        const mapSuccess = mapResults(selectObj.objects, success);
+        query(selectObj.query, selectObj.values, mapSuccess, fail);
+      }
+      getMutex(selectQuery);
+    }
+
+    this.selectOne = function (object, success, fail, or) {
+      function selectQuery() {
+        print('\nSelectOne:')
+        const selectObj = select(object, or);
+        const mapSuccess = mapResults(selectObj.objects, success, true, fail);
+        query(selectObj.query, selectObj.values, mapSuccess, fail);
       }
       getMutex(selectQuery);
     }
 
     function deleteRecurse(object) {
-      const relations = DataObject.prototype.getChildTables(object);
+      const relations = DataObject.getChildTables(object);
       for (let index = 0; index < relations.length; index += 1) {
         const relInstance = relations[index].instance;
         const field = relations[index].field;
@@ -593,37 +656,40 @@ class Crud {
     this.delete = function (object, success, fail, or) {
       function deleteQuery() {
         print('\nDelete:')
+        console.log(object)
         const joinStr = or ? ' OR ' : ' AND ';
-        const table = object.$d().writeTable();
+        const table = object.$d().writeTable(true);
         const condObj = conditionalObj.apply(this, [object, joinStr, true]);
         const queryString = `delete from ${table} where ${condObj.string}`;
         print(queryString, '\n', condObj.values);
         query(queryString, condObj.values, success, fail);
       }
-      deleteRecurse(object);
+      // deleteRecurse(object);
       getMutex(deleteQuery);
     }
 
     function updateObj (object) {
-      const fields = object.$d.getFields('primitives');
-      obj = {values: [], setArr: []};
+      const fields = object.$d().getFields('primative');
+      const obj = {values: [], setArr: []};
       for (let index = 0; index < fields.length; index += 1) {
         const field = fields[index];
-        if (field.name !== 'id') {
-          obj.setArr.push(`${field.name}='?'`);
-          obj.values.push(field.getValue());
+        const value = field.getValue();
+        if (field.name !== 'id' && value !== undefined && !field.isList() && !field.isReadOnly()) {
+          obj.setArr.push(`${field.sqlKey(true)}=?`);
+          obj.values.push(value);
         }
       }
       obj.values.push(object.id);
+      return obj;
     }
 
     this.update = function (object, success, fail) {
       function updateQuery() {
         print('\nUpdate:')
-        const table = object.$d().writeTable();
+        const table = object.$d().writeTable(true);
         const upObj = updateObj(object);
-        const queryString = `update ${table} set ${upObj.setArr.join()} where id='?'`;
-        print(queryString, '\n', upObj.setArr);
+        const queryString = `update ${table} set ${upObj.setArr.join()} where id=?`;
+        print(queryString, '\n', upObj.values);
         query(queryString, upObj.values, success, fail);
       }
       getMutex(updateQuery);
