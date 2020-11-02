@@ -13,7 +13,7 @@ const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
 
-const crud = new Crud({silent: false, mutex: true});
+const crud = new Crud({silent: true, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   const cbTree = new CallbackTree(crud.selectOne, 'retrieveOrInsertDataObject', dataObject)
@@ -34,14 +34,17 @@ function getUserAgent(userAgent, next, success) {
 function getWords(words, next, success) {
   retrieveOrInsert(new Words(words), next, success);
 }
+function getSite(url, next, success) {
+  retrieveOrInsert(new Site(url), next, success);
+}
 
 
 async function buildRequestCredential(req, next) {
   const cred = new Credential();
   const userAgentVal = req.headers['user-agent'];
 
-  function setIp(ip, success) {console.log('setIP'); cred.setIp(ip); success();};
-  function setUserAgent (ua, success) {console.log('setUA'); cred.setUserAgent(ua); success();};
+  function setIp(ip, success) {cred.setIp(ip); success();};
+  function setUserAgent (ua, success) {cred.setUserAgent(ua); success();};
 
   const hold = await new CallbackTree(getIp, 'tarGetIp', req.ip, next)
     .success(setIp, 'settingIp')
@@ -50,7 +53,6 @@ async function buildRequestCredential(req, next) {
     .success('settingUserAgent', ()=>{}, undefined, cred).terminate()
     .execute();
 
-  console.log('returned cred: ', cred);
   return cred;
 }
 
@@ -64,7 +66,6 @@ function authVal(type, id, secret, next, success, fail) {
 }
 async function auth(req, next, success, fail) {
   const val = req.headers['authorization'];
-  console.log('auth str', val)
   const match = val === undefined ? null : val.match(authReg);
   if (match === null) {
     fail(new UnAuthorized());
@@ -77,7 +78,6 @@ async function auth(req, next, success, fail) {
 
   function validateAuthorization(user) {
     const credentials = user.getCredentials();
-    console.log("Creds!!!:", credentials);
     for (let index = 0; index < credentials.length; index += 1) {
       const credential = credentials[index];
       const secretEq = credential.secret === secret;
@@ -85,7 +85,6 @@ async function auth(req, next, success, fail) {
       const ipEq = credential.ip.value === req.ip;
       const isActive = credential.activationSecret === null;
       if (secretEq && userAgentEq && ipEq && isActive) {
-        console.log("failed:", credential)
         success(user);
         return;
       }
@@ -111,7 +110,6 @@ function returnVal(res, value) {
     if ((typeof value) === 'object') {
       res.setHeader('Content-Type', 'application/json');
     }
-    console.log('returning val');
     res.send(value);
   }
 }
@@ -119,14 +117,12 @@ function returnVal(res, value) {
 function returnQuery(res) {
   return function (results) {
     res.setHeader('Content-Type', 'application/json');
-    console.log('returning query');
     res.send(results);
   }
 }
 
 function returnError(next, error) {
   return function(e) {
-    console.log('returning error');
     next(error || e);
   }
 }
@@ -139,7 +135,6 @@ function parseIds(idsStr) {
 }
 
 async function createCredential(req, next, userId, success, fail) {
-  console.log(arguments);
   const userAgentVal = req.headers['user-agent'];
   const secret = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
   const activationSecret = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
@@ -179,6 +174,18 @@ function insertTags(tags, success, failure) {
   success();
 }
 
+function addOpinion(favorable, explanationId, siteId, success, fail) {
+  const opinion = new Opinion(favorable, explanationId, siteId);
+  function setUserId(user, success) {opinion.setUserId(user.id); success()}
+  new CallbackTree(auth, 'submittingOpinion', req, next)
+    .fail(fail)
+    .success(setUserId, 'settingUser')
+    .success('settingUser', crud.insert, 'insertingOpinion', opinion)
+    .success('insertingOpinion', success)
+    .fail('insertingOpinion', fail)
+    .execute();
+}
+
 function endpoints(app, prefix, ip) {
 
   //  ------------------------- User Api -------------------------  //
@@ -197,7 +204,6 @@ function endpoints(app, prefix, ip) {
         const username = req.body.username;
         const email = req.body.email;
         const user = new User(username, email);
-        console.log(`username/email: ${username}/${email}\n`, user);
         new CallbackTree(crud.insert, 'insertUser', user)
           .success(createCredential, 'createCredential', req, next, '$cbtArg[0].insertId')
           .fail(returnError(next))
@@ -291,9 +297,7 @@ function endpoints(app, prefix, ip) {
 
   app.get(prefix + EPNTS.explanation.get(), function (req, res, next) {
     const explanation = new Explanation(req.body.content);
-    function setWords(words, success) {explanation.setWords(words); success();
-      console.log(req.params.words, words);
-    };
+    function setWords(words, success) {explanation.setWords(words); success();};
     new CallbackTree(crud.selectOne, 'gettingExplanations', new Words(req.params.words))
       .success(setWords, 'settingWord')
       .fail(returnError(next, new ExplanationNotFound(req.params.words)))
@@ -312,9 +316,7 @@ function endpoints(app, prefix, ip) {
   app.post(prefix + EPNTS.explanation.add(), function (req, res, next) {
     const explanation = new Explanation(req.body.content);
     function setAuthor(author, success) {explanation.setAuthor(author); success();};
-    function setWords(words, success) {explanation.setWords(words); success()
-      console.log('print expl!!!', explanation)
-    };
+    function setWords(words, success) {explanation.setWords(words); success();};
 
     new CallbackTree(auth, 'addSite', req, next)
       .success(setAuthor, 'settingAuthor')
@@ -329,33 +331,60 @@ function endpoints(app, prefix, ip) {
       .execute();
   });
 
+  // TODO: Test!
+  app.put(prefix + EPNTS.explanation.update(), function (req, res, next) {
+    const idOnly = new Explanation(Number.parseInt(req.body.id));
+    function validateUser(id, success, fail) {
+      if (id === req.body.authorId) {
+        success();
+      } else {
+        fail();
+      }
+    }
+    new CallbackTree(auth, 'updateExpl', req, next)
+      .success(validateUser, 'validatingLoginUser', '$cbtArg[0].id')
+      .success('validatingLoginUser', crud.selectOne, 'gettingExpl', idOnly)
+      .success('gettingExpl', validateUser, 'validatingAuthor', '$cbtArg[0].author.id')
+      .success('validatingAuthor', crud.update, 'updateExpl', Explanation.fromObject(req.body))
+      .success(returnVal(res, 'success'))
+      .execute();
+  });
+
   //  ------------------------- SiteExplanation Api -------------------------  //
 
+  // TODO: Test!
+  app.get(prefix + EPNTS.siteExplanation.add(), function (req, res, next) {
+    const explanationId = Number.parseInt(req.params.explanationId);
+    const siteUrl = req.params.siteUrl;
+    const siteExpl = new SiteExplanation();
+    function setSiteId(site, success) {siteExpl.setSiteId(site.id); success();}
+    function setExplanation(expl, success) {siteExpl.setExplanation(expl); success();}
+    new CallbackTree(auth, 'addSiteExpl', req, next)
+      .success(crud.selectOne, 'gettingExpl', new Explanation(explanationId))
+      .success(setExplanation, 'settingExpl')
+      .success('settingExpl', getSite, 'gettingSite', siteUrl)
+      .success('gettingSite', setSiteId, 'settingSite')
+      .success('settingSite', crud.insert, 'addingSiteExpl', siteExpl)
+      .success(returnVal(res, 'success'))
+      .execute();
+    });
 
 
-  //  -------------------------  -------------------------  //
+  //  ------------------------- Opinion Api -------------------------  //
 
-  app.get(prefix + "/user/:id", function (req, res, next) {
-    const id = Number.parseInt(req.params.id);
-    crud.select(new User(id), returnQuery(res, next));
+  // TODO: Test!
+  app.get(prefix + EPNTS.opinion.like(), function (req, res, next) {
+    const explanationId = Number.parseInt(req.params.explanationId);
+    const siteId =  Number.parseInt(req.params.siteId);
+    addOpinion(true, explanationId, siteId, returnVal(res, 'success'), returnError(next));
   });
 
-  app.get(prefix + "/site/:id", function (req, res, next) {
-    crud.select(new Site(Number.parseInt(req.params.id)), returnQuery(res, next));
+  // TODO: Test!
+  app.get(prefix + EPNTS.opinion.dislike(), function (req, res, next) {
+    const explanationId = Number.parseInt(req.params.explanationId);
+    const siteId =  Number.parseInt(req.params.siteId);
+    addOpinion(false, explanationId, siteId, returnVal(res, 'success'), returnError(next));
   });
-
-  app.post(prefix + "/site/:url", function (req, res, next) {
-    crud.insert(new Site(req.params.url), returnQuery(res, next));
-  });
-
-  app.get(prefix + "/send", function (req, res, next) {
-    res.send("Hi to " + req.device.type + ' running ' + req.headers['user-agent'] + ' at ' + req.ip + " User");
-    // email.sendActivationEmail('jozsef.morrissey@gmail.com');
-    // email.sendResetSecret('jozsef.morrissey@gmail.com');
-    // email.sendActivationEmail('me@jozsefmorrissey.com');
-    // email.sendResetSecret('me@jozsefmorrissey.com');
-    // res.send('success');
-  })
 }
 
 

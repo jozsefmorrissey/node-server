@@ -148,8 +148,6 @@ function fromObject (instance) {
       const value = object[field.name];
       c.$d().setValueFunc(field.name)(value);
     }
-    console.log('og: ', instance);
-    console.log('clone: ', c);
     return c;
   }
 }
@@ -287,8 +285,6 @@ class DataObject {
         const field = flds[index];
         c.$d().setValueFunc(field.name)(field.getValue());
       }
-      console.log('og: ', instance);
-      console.log('clone: ', c);
       return c;
     }
 
@@ -373,6 +369,7 @@ class Crud {
             password: options.password || 'ITSJUSTATESTDB',
             database: options.database || 'CE'
           });
+          console.log('updatingConnection!!')
           connection.connect();
         }
         release();
@@ -517,7 +514,6 @@ class Crud {
       const sqlKey = field.sqlKey(notSelect);
       const value = field.getValue();
       if (Array.isArray(value)) {
-        console.log('here432');
         const qs = new Array(value.length).fill('?').join(', ');
         conds.push(`${sqlKey} in (${qs})`);
         value.map((value) => values.push(value));
@@ -656,7 +652,6 @@ class Crud {
     this.delete = function (object, success, fail, or) {
       function deleteQuery() {
         print('\nDelete:')
-        console.log(object)
         const joinStr = or ? ' OR ' : ' AND ';
         const table = object.$d().writeTable(true);
         const condObj = conditionalObj.apply(this, [object, joinStr, true]);

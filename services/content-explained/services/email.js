@@ -1,8 +1,8 @@
 const shell = require('shelljs');
 const mailgun = require("mailgun-js");
 const ENV = require('./properties').ENV;
-const apiKey = shell.exec('pst value mailgun apiKey').stdout.trim();
-const domain = shell.exec('pst value mailgun domain').stdout.trim();
+const apiKey = 'hello';//shell.exec('pst value mailgun apiKey').stdout.trim();
+const domain = 'shishkabab';//shell.exec('pst value mailgun domain').stdout.trim();
 const mg = mailgun({ apiKey, domain });
 
 
@@ -23,7 +23,7 @@ function sendActivationEmail(user, credential, success, failure) {
   const userId = credential.userId;
   const actSecret = credential.activationSecret;
   const activationUrl = `${ENV.get('host')}/data/credential/activate/${userId}/${actSecret}`;
-  console.log('activation url:', activationUrl);
+  // console.log('activation url:', activationUrl);
   send({
     from: 'CE <ce@jozsefmorrissey.com>',
     to: user.getEmail(),

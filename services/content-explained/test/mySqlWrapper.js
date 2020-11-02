@@ -13,7 +13,6 @@ function validateObj (validationObj, obj) {
     const key = keys[index];
     testing.assertEquals(typeof obj, 'object', `${validationObj[key]}`);
     testing.assertEquals(obj[key], validationObj[key], `\n\t${keys}`);
-    // console.log(`${key}: ${validationObj[key]} === ${obj[key]}`);
   }
 }
 

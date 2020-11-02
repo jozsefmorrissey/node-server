@@ -17,12 +17,26 @@
   },
   "explanation": {
     "add": "/explanation",
+    "author": "/explanation/author/:authorId",
     "get": "/explanation/:words",
-    "author": "/explanation/author/:authorId"
+    "update": "/explanation"
+  },
+  "siteExplanation": {
+    "add": "/site/explanation/:explanationId/:siteUrl"
+  },
+  "opinion": {
+    "like": "/like/:explanationId/:siteId",
+    "dislike": "/dislike/:explanationId/:siteId"
   },
   "_secure": [
+    "user.update",
     "credential.get",
     "credential.delete",
-    "list.add"
+    "site.add",
+    "explanation.add",
+    "explanation.update",
+    "siteExplanation.add",
+    "opinion.like",
+    "opinion.dislike"
   ]
 }

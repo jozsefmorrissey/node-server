@@ -99,10 +99,10 @@ new Explanation();
 class Opinion extends DataObject {
   constructor() {
     super();
-    this.$d().addField('userId');
+    this.$d().addField('favorable');
     this.$d().addField('explanationId');
     this.$d().addField('siteId');
-    this.$d().addField('favorable');
+    this.$d().addField('userId');
     this.$d().init(arguments);
   }
 }
