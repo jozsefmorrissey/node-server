@@ -13,7 +13,7 @@
   },
   "site": {
     "add": "/site",
-    "get": "/site/:name"
+    "get": "/site/get"
   },
   "explanation": {
     "add": "/explanation",
@@ -22,11 +22,12 @@
     "update": "/explanation"
   },
   "siteExplanation": {
-    "add": "/site/explanation/:explanationId/:siteUrl"
+    "add": "/site/explanation/:explanationId"
   },
   "opinion": {
     "like": "/like/:explanationId/:siteId",
-    "dislike": "/dislike/:explanationId/:siteId"
+    "dislike": "/dislike/:explanationId/:siteId",
+    "bySite": "/opinion/:siteId/:userId"
   },
   "_secure": [
     "user.update",

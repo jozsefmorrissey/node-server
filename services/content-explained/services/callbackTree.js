@@ -118,7 +118,7 @@ class CallbackTree {
         Array.from(args).map(
           (value, index) => tempArgs.push(renderArg(arguments, args, index)));
       }
-      // console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.`);
+      console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.`);
       const rt = instance.getRoot();
       if (func instanceof Error) throw func;
       else if((typeof func) === 'string') func = instance.find(func);

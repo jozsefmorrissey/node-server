@@ -103,6 +103,7 @@ class Opinion extends DataObject {
     this.$d().addField('explanationId');
     this.$d().addField('siteId');
     this.$d().addField('userId');
+    this.$d().addField('id', {writeOnly: true});
     this.$d().init(arguments);
   }
 }

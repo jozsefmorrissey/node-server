@@ -7,6 +7,7 @@ const { randomString } = require('../services/tools.js');
 const { CallbackTree } = require('../services/callbackTree.js');
 const { EPNTS } = require('../services/EPNTS.js');
 
+const startTime = new Date().getTime();
 const users = [];
 
 function sleep(time) {
@@ -312,7 +313,8 @@ const siteObj = {
   urls: [`${randomString(64, /[a-zA-Z0-9]/, /.{1,}/)}`,
     `${randomString(50, /[a-zA-Z0-9]/, /.{1,}/)}`,
     `${randomString(50, /[a-zA-Z0-9]/, /.{1,}/)}`,
-    `${randomString(50, /[a-zA-Z0-9]/, /.{1,}/)}`]
+    `${randomString(50, /[a-zA-Z0-9]/, /.{1,}/)}`],
+  ids: []
 }
 
 function testAddSite(callback) {
@@ -337,8 +339,9 @@ function testGetSite(callback) {
   for (let index = 0; index < count; index += 1) {
     const url = siteObj.urls[index];
     var xhr = new xmlhr();
-    xhr.onreadystatechange = handler(undefined, 200, count, index, testSuccess(callback), testFail(callback));
-    xhr.open("GET", getUrl(EPNTS.site.get(url)));
+    xhr.onreadystatechange = handler(siteObj.ids, 200, count, index, testSuccess(callback), testFail(callback));
+    xhr.open("POST", getUrl(EPNTS.site.get()));
+    xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.send(JSON.stringify({url}));
   }
 }
@@ -394,12 +397,189 @@ function testGetExplanations(callback) {
   }
 }
 
-const explsPerUser = ((len + 1) * (wordsCount / 4));
-function checkExplanationLength(callback) {
-  for (let index = 0; index < userObj.authored.length; index += 1) {
-    testing.assertEquals(userObj.authored[0].length, explsPerUser);
+function testUpdateExplanations(callback) {
+  const count = userObj.users.length
+  returned = 0;
+  for (let index = 0; index < count; index += 1) {
+    const author = userObj.users[index];
+    const secret = userObj.secrets[index];
+    const expl = userObj.authored[index][0];
+    const content = `My explanation (updated)-${index}\n\t${author.username}`;
+    expl.content = content;
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+    xhr.open("PUT", getUrl(EPNTS.explanation.update()));
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('user-agent', userObj.userAgent);
+    xhr.setRequestHeader('authorization', secret);
+    xhr.send(JSON.stringify({id: expl.id, content, authorId: author.id}));
   }
-  testing.success(callback)
+}
+
+function testUpdateExplanationsWrongUser(callback) {
+  const count = userObj.users.length
+  returned = 0;
+  for (let index = 0; index < count; index += 1) {
+    const author = userObj.users[(index + 1) % count];
+    const secret = userObj.secrets[(index + 1) % count];
+    const expl = userObj.authored[index][0];
+    const content = `This value should not exist in database`;
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = handler(undefined, 401, count, 0, testSuccess(callback), testFail(callback));
+    xhr.open("PUT", getUrl(EPNTS.explanation.update()));
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('user-agent', userObj.userAgent);
+    xhr.setRequestHeader('authorization', secret);
+    xhr.send(JSON.stringify({id: expl.id, content, authorId: author.id}));
+  }
+}
+
+function testUpdateExplanationsNotLoggedIn(callback) {
+  const count = userObj.users.length
+  returned = 0;
+  for (let index = 0; index < count; index += 1) {
+    const author = userObj.users[(index + 1) % count];
+    const expl = userObj.authored[index][0];
+    const content = `This value should not exist in database`;
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = handler(undefined, 401, count, 0, testSuccess(callback), testFail(callback));
+    xhr.open("PUT", getUrl(EPNTS.explanation.update()));
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('user-agent', userObj.userAgent);
+    xhr.send(JSON.stringify({id: expl.id, content, authorId: author.id}));
+  }
+}
+
+function testUpdateExplanationsInvalidExplId(callback) {
+  const count = userObj.users.length
+  returned = 0;
+  for (let index = 0; index < count; index += 1) {
+    const author = userObj.users[(index + 1) % count];
+    const expl = userObj.authored[index][0];
+    const content = `This value should not exist in database`;
+    const secret = userObj.secrets[(index + 1) % count];
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = handler(undefined, 404, count, 0, testSuccess(callback), testFail(callback));
+    xhr.open("PUT", getUrl(EPNTS.explanation.update()));
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('user-agent', userObj.userAgent);
+    xhr.setRequestHeader('authorization', secret);
+    xhr.send(JSON.stringify({id: -1, content, authorId: author.id}));
+  }
+}
+
+function testUpdatedExplanations(callback) {
+  let checked = 0;
+  function equalExpl(localExpls) {
+    return function (remoteExpls) {
+      testing.assertEquals(localExpls.length, remoteExpls.length);
+      for (let index = 0; index < localExpls.length; index += 1) {
+        const localExpl = localExpls[index];
+        const remoteExpl = remoteExpls[index];
+        testing.assertEquals(localExpl.content, remoteExpl.content);
+        testing.assertEquals(localExpl.author.id, remoteExpl.author.id);
+        testing.assertEquals(localExpl.words.id, remoteExpl.words.id);
+        checked++;
+        if (checked === count) {
+          testing.success(callback);
+        }
+      }
+    }
+  }
+  const count = userObj.users.length
+  for (let index = 0; index < count; index += 1) {
+    let authorId = userObj.users[index].id;
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = simpleHandler(200, equalExpl(userObj.authored[index]), testFail(callback));
+    xhr.open("GET", getUrl(EPNTS.explanation.author(authorId)));
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send();
+  }
+}
+
+function testAddSiteExpl(callback) {
+  const eCount = 20;
+  const count = eCount * siteObj.urls.length;
+  const user = userObj.users[0];
+  const secret = userObj.secrets[0];
+  returned = 0;
+  for (let index = 0; index < siteObj.urls.length; index += 1) {
+    const siteUrl = siteObj.urls[index];
+    for (let eIndex = 0; eIndex < eCount; eIndex += 1) {
+      let explId = userObj.authored[eIndex % userObj.users.length][eIndex].id;
+      let xhr = new xmlhr();
+      xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+      xhr.open("POST", getUrl(EPNTS.siteExplanation.add(explId)));
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('user-agent', userObj.userAgent);
+      xhr.setRequestHeader('authorization', secret);
+      xhr.send(JSON.stringify({siteUrl}));
+    }
+  }
+}
+
+function testAddExistingSiteExpl(callback) {
+  function checkResp(resp) {
+    testing.assertNotEquals(resp.indexOf(':'), -1);
+    testing.success(callback)
+  };
+  const user = userObj.users[0];
+  const secret = userObj.secrets[0];
+  const siteUrl = siteObj.urls[0];
+  let explId = userObj.authored[0][0].id;
+  let xhr = new xmlhr();
+  xhr.onreadystatechange = simpleHandler(200, checkResp, testFail(callback));
+  xhr.open("POST", getUrl(EPNTS.siteExplanation.add(explId)));
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('user-agent', userObj.userAgent);
+  xhr.setRequestHeader('authorization', secret);
+  xhr.send(JSON.stringify({siteUrl}));
+}
+
+function testOpinionUrls(callback) {
+  let explanations = []
+  for (let index = 0; index < userObj.users.length; index += 1) {
+    explanations = explanations.concat(userObj.authored[index]);
+  }
+  returned = 0;
+  const count = explanations.length * userObj.users.length;
+  for (let uIndex = 0; uIndex < userObj.users.length; uIndex += 1) {
+    const secret = userObj.secrets[uIndex];
+    for (let index = 0; index < explanations.length; index += 1) {
+      const explId = explanations[index % explanations.length].id;
+      const siteId = siteObj.ids[Math.floor(Math.random() * siteObj.urls.length)].id;
+      const url = Math.random() < 0.2 ? EPNTS.opinion.dislike(explId, siteId) : EPNTS.opinion.like(explId, siteId);
+      let xhr = new xmlhr();
+      xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+      xhr.open("GET", getUrl(url));
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('user-agent', userObj.userAgent);
+      xhr.setRequestHeader('authorization', secret);
+      xhr.send();
+    }
+  }
+}
+
+function testOpinionNotLoggedIn(callback) {
+  const explId = userObj.authored[0].id;
+  const siteId = siteObj.ids[0].id;
+  const secret = userObj.secrets[0];
+  const url = EPNTS.opinion.like(explId, siteId);
+  let xhr = new xmlhr();
+  xhr.onreadystatechange = simpleHandler(401, testSuccess(callback), testFail(callback));
+  xhr.open("GET", getUrl(url));
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('user-agent', userObj.userAgent);
+  xhr.setRequestHeader('authorization', secret + '3');
+  xhr.send();
+}
+
+
+
+
+function finishTests(callback) {
+  const endTime = new Date().getTime();
+  testing.success(`Tests ran for ${(endTime - startTime) / 1000} seconds`, callback);
 }
 
 testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUserId,
@@ -408,5 +588,11 @@ testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUs
             testDeleteCredFailure, testDeleteCred, testGetCredentials,
             testUpdateUsers, testLoginUsers, testGetUsers, validateUserNames,
             testAddSite, testGetSite, testAddExplanation,
-            testAddMoreExplanations, testGetExplanations,
-            checkExplanationLength]);
+            testAddMoreExplanations, testGetExplanations, testUpdateExplanations,
+            testUpdateExplanationsWrongUser, testUpdateExplanationsNotLoggedIn,
+            testUpdateExplanationsInvalidExplId, testUpdatedExplanations,
+            testAddSiteExpl, testAddExistingSiteExpl, testOpinionUrls,
+            testOpinionNotLoggedIn,
+
+
+            finishTests]);

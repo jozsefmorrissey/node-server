@@ -56,8 +56,8 @@ class InvalidDataFormat extends Error {
 exports.InvalidDataFormat = InvalidDataFormat;
 
 class UnAuthorized extends Error {
-  constructor() {
-    super('Access Denied');
+  constructor(msg) {
+    super(msg || 'Access Denied');
     this.name = 'UnAuthorized';
     this.status = 401;
   }
@@ -121,6 +121,15 @@ class DuplacateUniqueValue extends Error {
   }
 }
 exports.DuplacateUniqueValue = DuplacateUniqueValue;
+
+class NotFound extends Error {
+  constructor(type, id) {
+    super(arguments.length === 1 ? type : `No '${type}' found with id ${id}`);
+    this.name = "NotFound";
+    this.status = 404;
+  }
+}
+exports.NotFound = NotFound;
 
 // class  extends Error {
 //   constructor(words) {

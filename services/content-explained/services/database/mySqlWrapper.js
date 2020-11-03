@@ -352,30 +352,20 @@ class Crud {
     let crudRelease;
     const instance = this;
 
-    function updateConnection(callback) {
-      connMutex.acquire().then(function (release) {
-        if (callback === undefined) {
-          if (connection !== null) {
-            connection.end();
-            connection = null;
-            tableIdInc = 0;
-          }
-          release();
-          return;
-        } else if (connection === null) {
-          connection = mySql.createConnection({
-            host: options.host || 'localhost',
-            user: options.user || 'CE',
-            password: options.password || 'ITSJUSTATESTDB',
-            database: options.database || 'CE'
-          });
-          console.log('updatingConnection!!')
-          connection.connect();
-        }
-        release();
-        callback();
+    function closeConnection () {connection.end();process.exit()}
+    process.on('SIGINT', closeConnection);
+
+    function connect() {
+      connection = mySql.createConnection({
+        host: options.host || 'localhost',
+        user: options.user || 'CE',
+        password: options.password || 'ITSJUSTATESTDB',
+        database: options.database || 'CE'
       });
+      console.log('updatingConnection!!')
+      connection.connect();
     }
+    connect();
 
     function getMutex(callback) {
       if (options.mutex) {
@@ -461,9 +451,6 @@ class Crud {
           }
           print('\nRaw mySql:\nerror:\n', error, '\nresults:\n', results);
 
-          if (lastQueryId === currQueryId) {
-            updateConnection();
-          }
           const callFailed = error !== null;
           if (!callFailed && (typeof success) === 'function'){
             success(results);
@@ -473,11 +460,7 @@ class Crud {
           }
         };
 
-        function submitQuery() {
-          connection.query(queryString, values, closeConnection);
-        }
-
-        updateConnection(submitQuery);
+        connection.query(queryString, values, closeConnection);
       }
     }
 
