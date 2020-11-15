@@ -588,7 +588,7 @@ remote() {
   url="$host/pssst/get/json"
   data="{\"group\": \"$group\",\"token\": \"$token\",\"pstPin\": \"$pstPin\"}"
   echo -e "$url\n$data"
-  json=$(curl -X POST -H "Content-Type: application/json" -d "$data"  $url)
+  json=$(curl -X POST -H "Content-Type: application/json" -d "$data" --insecure $url)
 	Logger trace "EXIT"
   key=${flags['key']}
   if [ ! -z "$key" ]

@@ -1,29 +1,35 @@
 const shell = require('shelljs');
 const mailgun = require("mailgun-js");
+const { EPNTS } = require('./EPNTS.js');
 const ENV = require('./properties').ENV;
-const apiKey = 'hello';//shell.exec('pst value mailgun apiKey').stdout.trim();
-const domain = 'shishkabab';//shell.exec('pst value mailgun domain').stdout.trim();
+const apiKey = shell.exec('pst value mailgun apiKey').stdout.trim();
+const domain = shell.exec('pst value mailgun domain').stdout.trim();
 const mg = mailgun({ apiKey, domain });
 
 
 function send (data, success, failure) {
   function respond (error, body) {
     if (error) {
-      // TODO: unncomment// failure(error);
-      success();
+      failure(error);
     }
-    if ((typeof callback) === 'function') {
+    if ((typeof success) === 'function') {
       success(body);
     }
   }
-  mg.messages().send(data, respond);
+  if (global.ENV === 'local') {
+    respond();
+  } else {
+    mg.messages().send(data, respond);
+  }
 }
 
 function sendActivationEmail(user, credential, success, failure) {
   const userId = credential.userId;
   const actSecret = credential.activationSecret;
-  const activationUrl = `${ENV.get('host')}/data/credential/activate/${userId}/${actSecret}`;
-  // console.log('activation url:', activationUrl);
+  const activationUrl = `${ENV.get('host')}${EPNTS.credential.activate(userId,actSecret)}`;
+  if (global.ENV === 'local') {
+    console.log('activation url:', activationUrl);
+  }
   send({
     from: 'CE <ce@jozsefmorrissey.com>',
     to: user.getEmail(),
@@ -46,8 +52,27 @@ function sendResetSecret(to, callback) {
             <br/><button>Reset Secret</button>` }, callback);
 }
 
+function sendUpdateUserEmail(user, secret, success, failure) {
+  const id = user.id;
+  const username = user.username;
+  const email = user.getEmail();
+  const updateUrl = `${ENV.get('host')}${EPNTS.user.update(secret)}`;
+  if (global.ENV === 'local') {
+    console.log('update email:', updateUrl);
+  }
+  send({
+    from: 'CE <ce@jozsefmorrissey.com>',
+    to: user.getEmail(),
+    subject: 'Activate Account',
+    html: `<p>User update requested please confirm.
+              <br>
+              <button onclick='window.open("${updateUrl}","_blank")'>Confirm</button>`
+    }, success, failure);
+}
+
 
 
 exports.sendActivationEmail = sendActivationEmail;
+exports.sendUpdateUserEmail = sendUpdateUserEmail;
 exports.sendResetSecret = sendResetSecret;
 exports.send = send;

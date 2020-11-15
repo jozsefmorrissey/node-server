@@ -1,5 +1,4 @@
 
-
 class Properties {
   constructor(obj) {
     this.get = function (id) {
@@ -14,4 +13,5 @@ class Properties {
   }
 }
 
-exports.ENV = new Properties(require(`../json/env/${process.argv[2]}.json`));
+global.ENV = process.argv[2];
+exports.ENV = new Properties(require(`../json/env/${global.ENV}.json`));

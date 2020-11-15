@@ -1,15 +1,17 @@
 {
   "user": {
     "add": "/user",
-    "get": "/user/:ids",
+    "get": "/user/:idsOemail",
     "login": "/user/login",
-    "update": "/user"
+    "update": "/user/update/:updateSecret",
+    "requestUpdate": "/user/update/request"
   },
   "credential": {
-    "add": "/credential/:userId",
+    "add": "/credential/add/:userId",
     "activate": "/credential/activate/:userId/:activationSecret",
-    "delete": "/credential/:credId",
-    "get": "/credential/:userId"
+    "delete": "/credential/:idOauthorization",
+    "get": "/credential/:userId",
+    "status": "/credential/status/:authorization"
   },
   "site": {
     "add": "/site",
@@ -22,12 +24,17 @@
     "update": "/explanation"
   },
   "siteExplanation": {
-    "add": "/site/explanation/:explanationId"
+    "add": "/site/explanation/:explanationId",
+    "get": "/site/explanation"
   },
   "opinion": {
     "like": "/like/:explanationId/:siteId",
     "dislike": "/dislike/:explanationId/:siteId",
     "bySite": "/opinion/:siteId/:userId"
+  },
+  "endpoints": {
+    "json": "/html/endpoints.json",
+    "EPNTS": "/EPNTS"
   },
   "_secure": [
     "user.update",

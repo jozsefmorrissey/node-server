@@ -5,6 +5,8 @@ var config = require('./config.json');
 const { UsernameAlreadyTaken, ExplanationNotFound, MerriamRequestFailed } =
         require('./services/exceptions.js');
 
+const { EPNTS } = require('./services/EPNTS');
+const ENV = require('./services/properties').ENV;
 const Crud = require('./services/database/mySqlWrapper').Crud;
 const { User, Explanation, Site, Opinion, SiteExplanation } =
         require('./services/database/objects');
@@ -258,6 +260,32 @@ function returnQuery(res, next) {
 }
 
 function endpoints(app, prefix, ip) {
+  app.get(prefix + EPNTS.endpoints.EPNTS(), function(req, res, next) {
+    let endpoints, enpts;
+    const jsonFile = './services/content-explained/public/json/endpoints.json';
+    const jsFile = './services/content-explained/services/EPNTS.js';
+    function returnJs(file) {
+      return function (err, contents) {
+        switch (file) {
+          case jsonFile:
+            endpoints = contents;
+            break;
+          case jsFile:
+            enpts = contents;
+            break;
+        }
+        console.log(err);
+        if (endpoints && enpts) {
+          const newEnpts = `new Endpoints(${endpoints}, '${ENV.get('host')}')`;
+          const js = `${enpts}\nconst EPNTS = ${newEnpts}.getFuncObj();`
+          res.setHeader('Content-Type', 'text/plain');
+          res.send(js);
+        }
+      }
+    }
+    fs.readFile(jsonFile, returnJs(jsonFile));
+    fs.readFile(jsFile, returnJs(jsFile));
+  });
   // app.post(prefix + "/:words", function (req, res, next) {
   //   const words = req.params.words;
   //   const file = getFile(words, EXPL_DIR);
@@ -282,9 +310,9 @@ function endpoints(app, prefix, ip) {
   //   getUser(username, saveUser(username, res, next));
   // });
   //
-  // app.get(prefix + "/merriam/webster/:searchText", function (req, res, next) {
-  //   getMerriamResponse(req.params.searchText, res, next);
-  // });
+  app.get(prefix + "/merriam/webster/:searchText", function (req, res, next) {
+    getMerriamResponse(req.params.searchText, res, next);
+  });
   //
   // app.get(prefix + "/SITE/:id", function (req, res, next) {
   //   const crud = new Crud({silent: false, mutex: true});

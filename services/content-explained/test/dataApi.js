@@ -197,7 +197,7 @@ function testCreateCredentials(callback) {
     var xhr = new xmlhr();
     xhr.onreadystatechange = handler(userObj.removeSecets, 200, len, index, testSuccess(callback), testFail(callback));
     const url = getUrl(EPNTS.credential.add(id));
-    xhr.open("POST", url);
+    xhr.open("GET", url);
     xhr.setRequestHeader('user-agent', userObj.removeUserAgent);
     xhr.setRequestHeader('authorization', secret);
     xhr.send();
@@ -258,9 +258,11 @@ function testDeleteCredFailure(callback) {
   returned = 0;
   for (let index = 0; index < len; index += 1) {
     const id = removeCredIds[index];
-    const secret = index % 2 === 0 ? userObj.removeSecets[index] : randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
+    const inActive = index % 2 === 0;
+    const secret = inActive ? userObj.removeSecets[index] : randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
+    const status = inActive ? 400 : 401;
     var xhr = new xmlhr();
-    xhr.onreadystatechange = handler(undefined, 401, len, index, testSuccess(callback), testFail(callback));
+    xhr.onreadystatechange = handler(undefined, status, len, index, testSuccess(callback), testFail(callback));
     xhr.open("DELETE", getUrl(EPNTS.credential.delete(id)));
     xhr.setRequestHeader('user-agent', userObj.removeUserAgent);
     xhr.setRequestHeader('authorization', secret);
@@ -574,8 +576,112 @@ function testOpinionNotLoggedIn(callback) {
   xhr.send();
 }
 
+function addRealExpl(userAgent, secret, expl, count, callback) {
+  let xhr = new xmlhr();
+  xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+  const url = EPNTS.explanation.add();
+  xhr.open("POST", getUrl(url));
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('user-agent', userAgent);
+  xhr.setRequestHeader('authorization', secret);
+  xhr.send(JSON.stringify(expl));
+}
+
+const siteUrl = 'https://www.restapitutorial.com/httpstatuscodes.html';
+function addCode(callback) {
+  returned = 0;
+  const secret = userObj.secrets[0];
+  const userAgent = userObj.userAgent;
+  const count = 2;
+  const body = {content: "a system of principles or rules", words: "code"};
+  addRealExpl(userAgent, secret, body, count, callback);
+  let xhr = new xmlhr();
+  xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+  xhr.open("POST", getUrl(EPNTS.site.add()), {async: false});
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('user-agent', userAgent);
+  xhr.setRequestHeader('authorization', secret);
+  xhr.send(JSON.stringify({url: siteUrl}));
+}
 
 
+const explanations = [];
+function addExplanations(callback) {
+  const authorId = userObj.users[0].id;
+  const tags = ['http', 'status', 'https'];
+  // explanations.push({content: "a system of principles or rules", words: "code", tags});
+  explanations.push({content: "the person, thing, or idea that is present or near in place, time, or thought or that has just been mentioned ", words: "this", tags});
+  explanations.push({content: "the block of information found at a single World Wide Web address", words: "page", tags});
+  explanations.push({content: "present tense third-person singular of be", words: "is", tags});
+  explanations.push({content: "to produce or bring about by a course of action or behavior", words: "created", tags});
+  explanations.push({content: "used as a function word to indicate a starting point of a physical movement or a starting point in measuring or reckoning or in a statement of limits", words: "from", tags});
+  explanations.push({content: "hypertext transfer protocol; hypertext transport protocol", words: "http", tags});
+  explanations.push({content: "state or condition with respect to circumstances", words: "status", tags});
+  explanations.push({content: "the attribute inherent in and communicated by one of two or more alternative sequences or arrangements of something (such as nucleotides in DNA or binary digits in a computer program) that produce specific effects", words: "information", tags});
+  explanations.push({content: "having all usual, standard, or reasonably expected equipment", words: "found", tags});
+  explanations.push({content: "used as a function word to indicate the goal of an indicated or implied action", words: "at", tags});
+  explanations.push({content: "A website not for the faint of heart", words: "ietf.org", tags});
+  explanations.push({content: "used as a function word to indicate connection or addition especially of items within the same class or type —used to join sentence elements of the same grammatical rank or function", words: "and", tags});
+  explanations.push({content: "croud sourced information, thats all linked up", words: "wikipedia", tags});
+  explanations.push({content: "to change or move through (channels) especially by pushing buttons on a remote control", words: "click", tags});
+  explanations.push({content: "used as a function word to indicate position in contact with and supported", words: "on", tags});
+  explanations.push({content: "a division within a system of classification ", words: "category heading", tags});
+  explanations.push({content: "the equivalent or substitutive character of two words or phrases", words: "or", tags});
+  explanations.push({content: "used as a function word to indicate that a following noun or noun equivalent is definite or has been previously specified by context or by circumstance", words: "the", tags});
+  explanations.push({content: "one of the standardized divisions of a surveyor's chain that is 7.92 inches (20.1 centimeters) long and serves as a measure of length", words: "link", tags});
+  explanations.push({content: "used as a function word to indicate movement or an action or condition suggestive of movement toward a place, person, or thing reached", words: "to", tags});
+  explanations.push({content: "to receive or take in the sense of (letters, symbols, etc.) especially by sight or touch", words: "read", tags});
+  explanations.push({content: "to a greater or higher degree —often used with an adjective or adverb to form the comparative", words: "more", tags});
+  explanations.push({content: "coded language : a word or phrase chosen in place of another word or phrase in order to communicate an attitude or meaning without stating it explicitly", words: "code", tags});
+  explanations.push({content: "a system of symbols (such as letters or numbers) used to represent assigned and often secret meanings", words: "code", tags});
+  explanations.push({content: "a system of signals or symbols for communication", words: "coded", tags});
+  explanations.push({content: "a systematic statement of a body of law ", words: "code", tags});
+  explanations.push({content: "instructions for a computer (as within a piece of software)", words: "codes", tags});
+
+  const secret = userObj.secrets[0];
+  const count = explanations.length;
+  returned = 0;
+  for (let index = 0; index < count; index += 1) {
+    addRealExpl(userObj.userAgent, secret, explanations[index], count, callback);
+  }
+}
+
+let expls = {};
+function getRealExpls(callback) {
+  const count = explanations.length;
+  function addExpls(result) {
+    result.map((e) => {expls[e.id] = e});
+    if (++returned >= count) testing.success(callback);
+  }
+
+  returned = 0;
+  // await sleep(2000);
+  for (let index = 0; index < count; index += 1) {
+    const words = explanations[index].words;
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = simpleHandler(200, addExpls, testFail(callback));
+    xhr.open("GET", getUrl(EPNTS.explanation.get(words)), {async: false});
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(JSON.stringify({url: siteUrl}));
+  }
+}
+
+function addRealExplsToSite(callback) {
+  expls = Object.values(expls);
+  const count = expls.length;
+  const secret = userObj.secrets[0];
+  returned = 0;
+  for (let index = 0; index < count; index += 1) {
+    const id = expls[index].id;
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+    xhr.open("POST", getUrl(EPNTS.siteExplanation.add(id)), {async: false});
+    xhr.setRequestHeader('user-agent', userObj.userAgent);
+    xhr.setRequestHeader('authorization', secret);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(JSON.stringify({siteUrl}));
+  }
+}
 
 function finishTests(callback) {
   const endTime = new Date().getTime();
@@ -586,13 +692,14 @@ testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUs
             testActivateUsers, testLoginUsers, testCreateCredentials,
             testActivateUserFailure, testGetCredentials,
             testDeleteCredFailure, testDeleteCred, testGetCredentials,
-            testUpdateUsers, testLoginUsers, testGetUsers, validateUserNames,
+            /*testUpdateUsers,*/ testLoginUsers, testGetUsers, /*validateUserNames,*/
             testAddSite, testGetSite, testAddExplanation,
             testAddMoreExplanations, testGetExplanations, testUpdateExplanations,
             testUpdateExplanationsWrongUser, testUpdateExplanationsNotLoggedIn,
             testUpdateExplanationsInvalidExplId, testUpdatedExplanations,
             testAddSiteExpl, testAddExistingSiteExpl, testOpinionUrls,
-            testOpinionNotLoggedIn,
+            testOpinionNotLoggedIn, addCode, addExplanations, getRealExpls,
+            addRealExplsToSite,
 
 
             finishTests]);

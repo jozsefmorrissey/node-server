@@ -26,6 +26,7 @@ class Field {
     this.index = options.index;
     this.isPrimative = function () {return o.class === undefined;};
     this.getClass = function () {return o.class;};
+    this.merge = function () {return o.merge;};
     this.getRelation = function () {return o.relation;};
     this.isReadOnly = function() {return o.readOnly === true;};
     this.isWriteOnly = function() {return o.writeOnly === true;};
@@ -33,6 +34,9 @@ class Field {
       return (!o.type || ((typeof value) == o.type)) &&
             (!o.class || (value instanceof o.class ));
     };
+
+    this.getValue = function () {return value;}
+
     this.setValue = function (newValue) {
       if (this.isList()) {
         value = value || [];
@@ -62,7 +66,7 @@ class Field {
       return o.relation ? o.relation.trim().toLowerCase()
                               .split('to')[1] === 'many' : false;
     }
-
+    if (this.isList()) this.setValue();
 
 
     this.sqlKeyDefine = function () {
@@ -127,7 +131,6 @@ class Field {
         this.setValue(instance.$d().fromResult(result));
       }
     }
-    this.getValue = function () {return value;}
   }
 }
 
@@ -412,7 +415,13 @@ class Crud {
                 if (map) {
                   const parentId = result[map.objectId];
                   const parentObj = resultMap[map.objectId][parentId];
-                  parentObj.$d().setValueFunc(map.fieldName)(resultMap[mapping][id]);
+                  const childObj = resultMap[mapping][id];
+                  const mergeAttr = parentObj.$d().getField(map.fieldName).merge();
+                  if (mergeAttr) {
+                    parentObj.$d().setValueFunc(map.fieldName)(childObj[mergeAttr]);
+                  } else {
+                    parentObj.$d().setValueFunc(map.fieldName)(childObj);
+                  }
                 }
               }
             }

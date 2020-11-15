@@ -131,6 +131,16 @@ class NotFound extends Error {
 }
 exports.NotFound = NotFound;
 
+class CredentialNotActive extends Error {
+  constructor() {
+    super('Account needs activated check your email');
+    this.name = "CredentialNotActive";
+    this.status = 400;
+  }
+}
+exports.CredentialNotActive = CredentialNotActive;
+
+
 // class  extends Error {
 //   constructor(words) {
 //     super(``);

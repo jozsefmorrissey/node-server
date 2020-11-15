@@ -26,8 +26,8 @@ class Credential extends DataObject {
     this.$d().addField('secret');
     this.$d().addField('userId');
     this.$d().addField('activationSecret');
-    this.$d().addField('ip', {class: Ip, relation: 'manyToOne', merge: true});
-    this.$d().addField('userAgent', {class: UserAgent, relation: 'manyToOne', merge: true});
+    this.$d().addField('ip', {class: Ip, relation: 'manyToOne', merge: 'value'});
+    this.$d().addField('userAgent', {class: UserAgent, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('id');
     this.$d().init(arguments);
   }
@@ -49,6 +49,19 @@ class User extends DataObject {
 }
 new User();
 
+class PendingUserUpdate extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('updateSecret');
+    this.$d().addField('username');
+    this.$d().addField('email');
+    this.$d().addField('user', {class: User, relation: 'manyToOne'});
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new PendingUserUpdate();
+
 class Tag extends DataObject {
   constructor() {
     super();
@@ -62,7 +75,7 @@ new Tag();
 class ExplanationTag extends DataObject {
   constructor() {
     super();
-    this.$d().addField('tag', {class: Tag, relation: 'manyToOne', merge: true});
+    this.$d().addField('tag', {class: Tag, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('explanationId')
     this.$d().addField('id');
     this.$d().init(arguments);
@@ -83,12 +96,14 @@ new Words();
 class Explanation extends DataObject {
   constructor() {
     super();
+    this
     this.$d().setTableNames('EXPLANATION_DETAIL')
     this.$d().addField('content');
-    this.$d().addField('id');
-    this.$d().addField('words', {class: Words, relation: 'manyToOne'});
+    this.$d().addField('words', {class: Words, relation: 'manyToOne', merge: 'value'});
+    this.$d().addField('searchWords', {class: Words, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('author', {class: User, relation: 'manyToOne'});
-    this.$d().addField('tags', {class: ExplanationTag, relation: 'oneToMany', merge: true});
+    this.$d().addField('tags', {class: ExplanationTag, relation: 'oneToMany', merge: 'tag'});
+    this.$d().addField('id');
     this.$d().addField('likes', {readOnly: true});
     this.$d().addField('dislikes', {readOnly: true});
     this.$d().init(arguments);
@@ -143,4 +158,5 @@ exports.SiteExplanation = SiteExplanation;
 exports.DataObject = DataObject;
 exports.Words = Words;
 exports.Tag = Tag;
+exports.PendingUserUpdate = PendingUserUpdate;
 exports.ExplanationTag = ExplanationTag;

@@ -1,6 +1,7 @@
 
 class Endpoints {
-  constructor(object) {
+  constructor(object, host) {
+    host = host || '';
     const endPointFuncs = {}
     this.getFuncObj = function () {return endPointFuncs;};
 
@@ -9,7 +10,7 @@ class Endpoints {
       const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
       return function () {
         let values = [];
-        if ((typeof arguments[0]) !== 'object') {
+        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
           values = arguments;
         } else {
           const obj = arguments[0];
@@ -20,11 +21,11 @@ class Endpoints {
           const arg = values[index];
           let value = '';
           if (index < pieces.length - 1) {
-            value = arg !== undefined ? arg : labels[index];
+            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
           }
           endpoint += pieces[index] + value;
         }
-        return endpoint;
+        return `${host}${endpoint}`;
       }
     }
 
@@ -48,4 +49,6 @@ class Endpoints {
   }
 }
 
-exports.EPNTS = new Endpoints(require('../json/endpoints.json')).getFuncObj();
+try {
+  exports.EPNTS = new Endpoints(require('../public/json/endpoints.json')).getFuncObj();
+} catch (e) {}
