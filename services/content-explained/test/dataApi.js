@@ -593,7 +593,7 @@ function addCode(callback) {
   const secret = userObj.secrets[0];
   const userAgent = userObj.userAgent;
   const count = 2;
-  const body = {content: "a system of principles or rules", words: "code"};
+  const body = {content: "a system of principles or rules\n\n#og#right", words: "code"};
   addRealExpl(userAgent, secret, body, count, callback);
   let xhr = new xmlhr();
   xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
@@ -608,35 +608,36 @@ function addCode(callback) {
 const explanations = [];
 function addExplanations(callback) {
   const authorId = userObj.users[0].id;
-  const tags = ['http', 'status', 'https'];
-  // explanations.push({content: "a system of principles or rules", words: "code", tags});
-  explanations.push({content: "the person, thing, or idea that is present or near in place, time, or thought or that has just been mentioned ", words: "this", tags});
-  explanations.push({content: "the block of information found at a single World Wide Web address", words: "page", tags});
-  explanations.push({content: "present tense third-person singular of be", words: "is", tags});
-  explanations.push({content: "to produce or bring about by a course of action or behavior", words: "created", tags});
-  explanations.push({content: "used as a function word to indicate a starting point of a physical movement or a starting point in measuring or reckoning or in a statement of limits", words: "from", tags});
-  explanations.push({content: "hypertext transfer protocol; hypertext transport protocol", words: "http", tags});
-  explanations.push({content: "state or condition with respect to circumstances", words: "status", tags});
-  explanations.push({content: "the attribute inherent in and communicated by one of two or more alternative sequences or arrangements of something (such as nucleotides in DNA or binary digits in a computer program) that produce specific effects", words: "information", tags});
-  explanations.push({content: "having all usual, standard, or reasonably expected equipment", words: "found", tags});
-  explanations.push({content: "used as a function word to indicate the goal of an indicated or implied action", words: "at", tags});
-  explanations.push({content: "A website not for the faint of heart", words: "ietf.org", tags});
-  explanations.push({content: "used as a function word to indicate connection or addition especially of items within the same class or type —used to join sentence elements of the same grammatical rank or function", words: "and", tags});
-  explanations.push({content: "croud sourced information, thats all linked up", words: "wikipedia", tags});
-  explanations.push({content: "to change or move through (channels) especially by pushing buttons on a remote control", words: "click", tags});
-  explanations.push({content: "used as a function word to indicate position in contact with and supported", words: "on", tags});
-  explanations.push({content: "a division within a system of classification ", words: "category heading", tags});
-  explanations.push({content: "the equivalent or substitutive character of two words or phrases", words: "or", tags});
-  explanations.push({content: "used as a function word to indicate that a following noun or noun equivalent is definite or has been previously specified by context or by circumstance", words: "the", tags});
-  explanations.push({content: "one of the standardized divisions of a surveyor's chain that is 7.92 inches (20.1 centimeters) long and serves as a measure of length", words: "link", tags});
-  explanations.push({content: "used as a function word to indicate movement or an action or condition suggestive of movement toward a place, person, or thing reached", words: "to", tags});
-  explanations.push({content: "to receive or take in the sense of (letters, symbols, etc.) especially by sight or touch", words: "read", tags});
-  explanations.push({content: "to a greater or higher degree —often used with an adjective or adverb to form the comparative", words: "more", tags});
-  explanations.push({content: "coded language : a word or phrase chosen in place of another word or phrase in order to communicate an attitude or meaning without stating it explicitly", words: "code", tags});
-  explanations.push({content: "a system of symbols (such as letters or numbers) used to represent assigned and often secret meanings", words: "code", tags});
-  explanations.push({content: "a system of signals or symbols for communication", words: "coded", tags});
-  explanations.push({content: "a systematic statement of a body of law ", words: "code", tags});
-  explanations.push({content: "instructions for a computer (as within a piece of software)", words: "codes", tags});
+  const tags = ['http', 'status', 'https', 'html', 'css', 'error'];
+  function randHashTag () {return `\n\n#${tags[Math.floor(Math.random() * tags.length)]}#${tags[Math.floor(Math.random() * tags.length)]}`}
+  // explanations.push({content: `a system of principles or rules${randHashTag()}`, words: "code"});
+  explanations.push({content: `the person, thing, or idea that is present or near in place, time, or thought or that has just been mentioned ${randHashTag()}`, words: "this"});
+  explanations.push({content: `the block of information found at a single World Wide Web address${randHashTag()}`, words: "page"});
+  explanations.push({content: `present tense third-person singular of be${randHashTag()}`, words: "is"});
+  explanations.push({content: `to produce or bring about by a course of action or behavior${randHashTag()}`, words: "created"});
+  explanations.push({content: `used as a function word to indicate a starting point of a physical movement or a starting point in measuring or reckoning or in a statement of limits${randHashTag()}`, words: "from"});
+  explanations.push({content: `hypertext transfer protocol; hypertext transport protocol${randHashTag()}`, words: "http"});
+  explanations.push({content: `state or condition with respect to circumstances${randHashTag()}`, words: "status"});
+  explanations.push({content: `the attribute inherent in and communicated by one of two or more alternative sequences or arrangements of something (such as nucleotides in DNA or binary digits in a computer program) that produce specific effects${randHashTag()}`, words: "information"});
+  explanations.push({content: `having all usual, standard, or reasonably expected equipment${randHashTag()}`, words: "found"});
+  explanations.push({content: `used as a function word to indicate the goal of an indicated or implied action${randHashTag()}`, words: "at"});
+  explanations.push({content: `A website not for the faint of heart${randHashTag()}`, words: "ietf.org"});
+  explanations.push({content: `used as a function word to indicate connection or addition especially of items within the same class or type —used to join sentence elements of the same grammatical rank or function${randHashTag()}`, words: "and"});
+  explanations.push({content: `croud sourced information, thats all linked up${randHashTag()}`, words: "wikipedia"});
+  explanations.push({content: `to change or move through (channels) especially by pushing buttons on a remote control${randHashTag()}`, words: "click"});
+  explanations.push({content: `used as a function word to indicate position in contact with and supported${randHashTag()}`, words: "on"});
+  explanations.push({content: `a division within a system of classification ${randHashTag()}`, words: "category heading"});
+  explanations.push({content: `the equivalent or substitutive character of two words or phrases${randHashTag()}`, words: "or"});
+  explanations.push({content: `used as a function word to indicate that a following noun or noun equivalent is definite or has been previously specified by context or by circumstance${randHashTag()}`, words: "the"});
+  explanations.push({content: `one of the standardized divisions of a surveyor's chain that is 7.92 inches (20.1 centimeters) long and serves as a measure of length${randHashTag()}`, words: "link"});
+  explanations.push({content: `used as a function word to indicate movement or an action or condition suggestive of movement toward a place, person, or thing reached${randHashTag()}`, words: "to"});
+  explanations.push({content: `to receive or take in the sense of (letters, symbols, etc.) especially by sight or touch${randHashTag()}`, words: "read"});
+  explanations.push({content: `to a greater or higher degree —often used with an adjective or adverb to form the comparative${randHashTag()}`, words: "more"});
+  explanations.push({content: `coded language : a word or phrase chosen in place of another word or phrase in order to communicate an attitude or meaning without stating it explicitly${randHashTag()}`, words: "code"});
+  explanations.push({content: `a system of symbols (such as letters or numbers) used to represent assigned and often secret meanings${randHashTag()}`, words: "code"});
+  explanations.push({content: `a system of signals or symbols for communication${randHashTag()}`, words: "coded"});
+  explanations.push({content: `a systematic statement of a body of law ${randHashTag()}`, words: "code"});
+  explanations.push({content: `instructions for a computer (as within a piece of software)${randHashTag()}`, words: "codes"});
 
   const secret = userObj.secrets[0];
   const count = explanations.length;
@@ -694,9 +695,9 @@ testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUs
             testDeleteCredFailure, testDeleteCred, testGetCredentials,
             /*testUpdateUsers,*/ testLoginUsers, testGetUsers, /*validateUserNames,*/
             testAddSite, testGetSite, testAddExplanation,
-            testAddMoreExplanations, testGetExplanations, testUpdateExplanations,
+            testAddMoreExplanations, testGetExplanations, /*testUpdateExplanations,
             testUpdateExplanationsWrongUser, testUpdateExplanationsNotLoggedIn,
-            testUpdateExplanationsInvalidExplId, testUpdatedExplanations,
+            testUpdateExplanationsInvalidExplId, testUpdatedExplanations,*/
             testAddSiteExpl, testAddExistingSiteExpl, testOpinionUrls,
             testOpinionNotLoggedIn, addCode, addExplanations, getRealExpls,
             addRealExplsToSite,

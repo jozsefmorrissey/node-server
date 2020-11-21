@@ -1,7 +1,7 @@
 
 class Endpoints {
   constructor(object, host) {
-    host = host || '';
+    host = object._envs[host] ||host || '';
     const endPointFuncs = {}
     this.getFuncObj = function () {return endPointFuncs;};
 
@@ -33,14 +33,16 @@ class Endpoints {
       const keys = Object.keys(currObject);
       for (let index = 0; index < keys.length; index += 1) {
         const key = keys[index];
+        const value = currObject[key];
         if (key.indexOf('_') !== 0) {
-          const value = currObject[key];
           if (value instanceof Object) {
             currFunc[key] = {};
             objectRecurse(value, currFunc[key]);
           } else {
             currFunc[key] = build(value);
           }
+        } else {
+          currFunc[key] = value;
         }
       }
     }

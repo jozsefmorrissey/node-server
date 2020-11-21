@@ -461,6 +461,7 @@ class Crud {
           print('\nRaw mySql:\nerror:\n', error, '\nresults:\n', results);
 
           const callFailed = error !== null;
+          console.log('error: ', error, (typeof success), (typeof fail))
           if (!callFailed && (typeof success) === 'function'){
             success(results);
           }
@@ -621,6 +622,7 @@ class Crud {
         print('\nSelectOne:')
         const selectObj = select(object, or);
         const mapSuccess = mapResults(selectObj.objects, success, true, fail);
+        console.log('types: ', object.constructor.name, (typeof success), (typeof fail))
         query(selectObj.query, selectObj.values, mapSuccess, fail);
       }
       getMutex(selectQuery);

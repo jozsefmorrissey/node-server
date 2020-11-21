@@ -13,7 +13,7 @@ const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
 
-const crud = new Crud({silent: true, mutex: false});
+const crud = new Crud({silent: false, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   console.log("UA", dataObject)
@@ -247,12 +247,14 @@ function cleanStr(str) {
 }
 
 function addExplToSite(explId, siteUrl, next, success) {
-  console.log('args:', arguments)
-  const explanationId = Number.parseInt(explId);
-  const siteExpl = new SiteExplanation();
-  function setSiteId(site, callback) {siteExpl.setSiteId(site.id); callback();}
-  function setExplanation(expl, callback) {siteExpl.setExplanation(expl); callback();}
-  new CallbackTree(crud.selectOne, 'gettingExpl', new Explanation(explanationId))
+  if (siteUrl !== undefined) {
+    console.log('args:', arguments)
+    console.log('explan id', explId);
+    const explanationId = Number.parseInt(explId);
+    const siteExpl = new SiteExplanation();
+    function setSiteId(site, callback) {siteExpl.setSiteId(site.id); callback();}
+    function setExplanation(expl, callback) {siteExpl.setExplanation(expl); callback();}
+    new CallbackTree(crud.selectOne, 'gettingExpl', new Explanation(explanationId))
     .success('gettingExpl', setExplanation, 'settingExpl')
     .success('settingExpl', getSite, 'gettingSite', siteUrl, next)
     .success('gettingSite', setSiteId, 'settingSite')
@@ -260,6 +262,9 @@ function addExplToSite(explId, siteUrl, next, success) {
     .success('addingSiteExpl', success, undefined, 'success')
     .fail('addingSiteExpl', success, undefined, 'success: Explanation already mapped to this site.')
     .execute();
+  } else {
+    success();
+  }
 }
 
 function endpoints(app, prefix, ip) {
@@ -374,8 +379,8 @@ function endpoints(app, prefix, ip) {
           const obj = {};
           obj.id = value.getId();
           obj.status = activationStatus(value);
-          obj.application = value.getUserAgent().getValue();
-          obj.ip = value.getIp().getValue();
+          obj.application = value.getUserAgent();
+          obj.ip = value.getIp();
           clean.push(obj);
         }
         results.map(addToClean);
@@ -474,15 +479,15 @@ function endpoints(app, prefix, ip) {
 
   app.post(prefix + EPNTS.explanation.add(), function (req, res, next) {
     const explanation = new Explanation(req.body.content);
+    const idOnly = new Explanation();
     console.log('EXPL:::', explanation);
     console.log('adding', req.body.words, req.body.content);
     function setAuthor(author, success) {explanation.setAuthor(author); success();};
     function setWords(words, success) {explanation.setWords(words); success();};
+    function setId(id, success) {idOnly.setId(id); success();};
     function setSearchWords(success, fail) {
       function set(words) {
-        console.log(arguments);
         explanation.setSearchWords(words);
-        console.log(explanation)
         success();
       };
       const cleanWords = cleanStr(req.body.words);
@@ -496,16 +501,20 @@ function endpoints(app, prefix, ip) {
 
     try{
       new CallbackTree(auth, 'addExplanation', req, next)
-      .success(setAuthor, 'settingAuthor')
-      .success('settingAuthor', getWords, 'gettingWords', req.body.words, next)
-      .success('gettingWords', setWords, 'settingWords')
-      .success('settingWords', setSearchWords, 'settingSearchWords')
-      .success('settingSearchWords', crud.insert, 'insertExpl', explanation)
-      .success('insertExpl', insertTags, 'insertingTags', req.body.tags)
-      .fail('insertExpl', returnError(next))
-      .success('insertingTags', returnVal(res, 'success'))
-      .fail('insertingTags', returnError(next))
-      .execute();
+        .success(setAuthor, 'settingAuthor')
+        .success('settingAuthor', getWords, 'gettingWords', req.body.words, next)
+        .success('gettingWords', setWords, 'settingWords')
+        .success('settingWords', setSearchWords, 'settingSearchWords')
+        .success('settingSearchWords', crud.insert, 'insertExpl', explanation)
+        .success('insertExpl', setId, 'settingId', '$cbtArg.explId = $cbtArg[0].insertId')
+        .fail('insertExpl', returnError(next))
+        .success('settingId', addExplToSite, 'addingToSite', '$cbtArg.explId', req.body.siteUrl, next)
+        .success('addingToSite', crud.selectOne, 'gettingExplss', idOnly)
+        .fail('addingToSite', returnError(next))
+        .success('gettingExplss', returnQuery(res), 'returnin')
+        // .fail('gettingExplss', new Error('wtf'), 'retWtf')
+        .fail('gettingExplss', returnError(next), 'retErr')
+        .execute();
     } catch (e) {
       console.log('targ err', e)
     }
@@ -542,7 +551,7 @@ function endpoints(app, prefix, ip) {
     console.log('here!')
     new CallbackTree(auth, 'addSiteExplApi', req, next)
       .success(addExplToSite, 'adding', req.params.explanationId, req.body.siteUrl, next)
-      .success('adding', returnVal(res, 'success'), 'returning')
+      .success('adding', returnVal(res), 'returning')
       .execute();
     });
 
@@ -553,10 +562,13 @@ function endpoints(app, prefix, ip) {
         siteId = site.id;
         crud.select(new SiteExplanation(site.id, undefined), success);
       }
+
       function createExplList(results, success) {
         const list = {};
         results.map((siteExpl) => {
           const words = cleanStr(siteExpl.explanation.searchWords);
+          siteExpl.explanation.likes = siteExpl.likes;
+          siteExpl.explanation.dislikes = siteExpl.dislikes;
           if (list[words] === undefined) { list[words] = []; }
           list[words].push(siteExpl.explanation);
         });

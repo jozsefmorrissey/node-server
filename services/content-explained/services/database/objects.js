@@ -125,11 +125,15 @@ class Opinion extends DataObject {
 new Opinion();
 
 class SiteExplanation extends DataObject {
-  constructor(id, explanation) {
+  constructor() {
     super();
+    this.$d().setTableNames('SITE_EXPLANATION_DETAIL')
     this.$d().addField('siteId');
     this.$d().addField('explanation', {class: Explanation, relation: 'manyToOne'});
     this.$d().addField('id');
+    this.$d().addField('url', {readOnly: true});
+    this.$d().addField('likes', {readOnly: true});
+    this.$d().addField('dislikes', {readOnly: true});
     this.$d().init(arguments);
   }
 }

@@ -14,4 +14,3 @@ class Properties {
 }
 
 global.ENV = process.argv[2];
-exports.ENV = new Properties(require(`../json/env/${global.ENV}.json`));

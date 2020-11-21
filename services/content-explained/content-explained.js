@@ -6,7 +6,6 @@ const { UsernameAlreadyTaken, ExplanationNotFound, MerriamRequestFailed } =
         require('./services/exceptions.js');
 
 const { EPNTS } = require('./services/EPNTS');
-const ENV = require('./services/properties').ENV;
 const Crud = require('./services/database/mySqlWrapper').Crud;
 const { User, Explanation, Site, Opinion, SiteExplanation } =
         require('./services/database/objects');
@@ -276,7 +275,9 @@ function endpoints(app, prefix, ip) {
         }
         console.log(err);
         if (endpoints && enpts) {
-          const newEnpts = `new Endpoints(${endpoints}, '${ENV.get('host')}')`;
+          console.log(JSON.stringify(EPNTS));
+          const host = req.params.env || EPNTS._envs[global.ENV];
+          const newEnpts = `new Endpoints(${endpoints}, '${host}')`;
           const js = `${enpts}\nconst EPNTS = ${newEnpts}.getFuncObj();`
           res.setHeader('Content-Type', 'text/plain');
           res.send(js);

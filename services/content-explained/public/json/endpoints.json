@@ -1,4 +1,9 @@
 {
+  "_envs": {
+    "local": "https://localhost:3001/content-explained",
+    "dev": "https://node.jozsefmorrissey.com/context-explained",
+    "prod": "https://node.jozsefmorrissey.com/context-explained"
+  },
   "user": {
     "add": "/user",
     "get": "/user/:idsOemail",
@@ -34,7 +39,13 @@
   },
   "endpoints": {
     "json": "/html/endpoints.json",
-    "EPNTS": "/EPNTS"
+    "EPNTS": "/EPNTS/:env"
+  },
+  "images": {
+    "logo": "/images/icons/logo.png",
+    "wiki": "/images/icons/wikapedia.png",
+    "txt": "/images/icons/txt.png",
+    "merriam": "/images/icons/Merriam-Webster.png"
   },
   "_secure": [
     "user.update",
