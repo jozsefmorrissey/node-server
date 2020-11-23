@@ -1,9 +1,18 @@
 
 class Endpoints {
-  constructor(object, host) {
-    host = object._envs[host] ||host || '';
-    const endPointFuncs = {}
+  constructor(config, host) {
+    host = host || '';
+    this.setHost = (newHost) => {
+      if ((typeof newHost) === 'string') {
+        host = config._envs[newHost] || newHost;
+      }
+    };
+    this.setHost(host);
+    this.getHost = () => host;
+
+    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost};
     this.getFuncObj = function () {return endPointFuncs;};
+
 
     function build(str) {
       const pieces = str.split(/:[a-zA-Z0-9]*/g);
@@ -29,15 +38,15 @@ class Endpoints {
       }
     }
 
-    function objectRecurse(currObject, currFunc) {
-      const keys = Object.keys(currObject);
+    function configRecurse(currConfig, currFunc) {
+      const keys = Object.keys(currConfig);
       for (let index = 0; index < keys.length; index += 1) {
         const key = keys[index];
-        const value = currObject[key];
+        const value = currConfig[key];
         if (key.indexOf('_') !== 0) {
           if (value instanceof Object) {
             currFunc[key] = {};
-            objectRecurse(value, currFunc[key]);
+            configRecurse(value, currFunc[key]);
           } else {
             currFunc[key] = build(value);
           }
@@ -47,7 +56,7 @@ class Endpoints {
       }
     }
 
-    objectRecurse(object, endPointFuncs);
+    configRecurse(config, endPointFuncs);
   }
 }
 

@@ -4,19 +4,19 @@ const { EPNTS } = require('./EPNTS.js');
 const ENV = require('./properties').ENV;
 const apiKey = shell.exec('pst value mailgun apiKey').stdout.trim();
 const domain = shell.exec('pst value mailgun domain').stdout.trim();
-const mg = mailgun({ apiKey, domain });
+const emailServiceActive = global.ENV === 'prod';
+const mg = emailServiceActive ? mailgun({ apiKey, domain }) : undefined;
 
 
 function send (data, success, failure) {
   function respond (error, body) {
     if (error) {
       failure(error);
-    }
-    if ((typeof success) === 'function') {
+    } else if ((typeof success) === 'function') {
       success(body);
     }
   }
-  if (global.ENV === 'local') {
+  if (emailServiceActive) {
     respond();
   } else {
     mg.messages().send(data, respond);

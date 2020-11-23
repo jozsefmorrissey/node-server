@@ -13,6 +13,8 @@ const { User, Explanation, Site, Opinion, SiteExplanation } =
 const EXPL_DIR = './services/content-explained/explanations/';
 const USER_DIR = './services/content-explained/users/';
 
+const serverId = Math.floor(Math.random() * 1000000000);
+
 const merriamApiKey = shell.exec('pst value CE merriamApiKey', {silent: true}).trim();
 
 function saved(res, next, data) {
@@ -259,10 +261,16 @@ function returnQuery(res, next) {
 }
 
 function endpoints(app, prefix, ip) {
+  app.get('/*',function(req,res,next){
+    res.header('ce-server-id', serverId);
+    next();
+  });
+
   app.get(prefix + EPNTS.endpoints.EPNTS(), function(req, res, next) {
     let endpoints, enpts;
     const jsonFile = './services/content-explained/public/json/endpoints.json';
     const jsFile = './services/content-explained/services/EPNTS.js';
+    res.header('ce-server-id', serverId);
     function returnJs(file) {
       return function (err, contents) {
         switch (file) {

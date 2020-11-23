@@ -1,0 +1,9 @@
+{
+  "length": 30,
+  "width": "32",
+  "height": "20",
+  "topThickness": 1.5,
+  "legWidth": 2,
+  "top": "$length, $width, $topThickness, 1",
+  "legs": "hight - $topThickness, $legWidth, $legWidth, 4"
+}
