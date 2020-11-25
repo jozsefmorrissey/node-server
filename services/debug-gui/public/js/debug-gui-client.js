@@ -39,7 +39,7 @@ function DebugGuiClient(config, root, debug) {
     host = path(host);
     ext = path(ext);
     id = path(id);
-    group = path(group.replace(/\//g, '%2F'));
+    group = path(group);
 
     var url = host + ext + id + group;
     return url.substr(0, url.length - 1);

@@ -64,42 +64,55 @@ function DebugGui() {
   }
 
   function init() {
-    DEBUG_GUI.MODAL = document.createElement('div');
+    if (!document.getElementById("debug-gui-scc")) {
+      DEBUG_GUI.MODAL = document.createElement('div');
 
-    DEBUG_GUI.HAZE = document.createElement('div');
-    DEBUG_GUI.HAZE.style.cssText = `position: fixed;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            background:rgba(0,0,0,0.6);
-            z-index: 1;
-            padding: 20pt;`;
-    DEBUG_GUI.MODAL.appendChild(DEBUG_GUI.HAZE);
+      DEBUG_GUI.HAZE = document.createElement('div');
+      DEBUG_GUI.HAZE.style.cssText = `position: fixed;
+              left: 0;
+              top: 0;
+              width: 100%;
+              height: 100%;
+              text-align: center;
+              background:rgba(0,0,0,0.6);
+              z-index: 1;
+              padding: 20pt;`;
+      DEBUG_GUI.MODAL.appendChild(DEBUG_GUI.HAZE);
 
-    DEBUG_GUI.POPUP = document.createElement('div');
-    DEBUG_GUI.POPUP.style.cssText = `background-color: white;
-            padding: 10pt 20pt;
-            display: inline-block;
-            max-width: 80%;
-            text-align: left;
-            max-height: 80%;
-            overflow: scroll;
-            border-radius: 2pt;`;
-    DEBUG_GUI.POPUP.setAttribute('onclick', 'event.stopPropagation()');
-    DEBUG_GUI.HAZE.appendChild(DEBUG_GUI.POPUP);
-    DEBUG_GUI.MODAL.id = 'debug-gui-modal';
-    DEBUG_GUI.HAZE.onclick = hideModal;
-    DEBUG_GUI.SCRIPT_URL = getScriptURL();
-    logWindow();
-    hideModal();
+      DEBUG_GUI.POPUP = document.createElement('div');
+      DEBUG_GUI.POPUP.style.cssText = `background-color: white;
+              padding: 10pt 20pt;
+              display: inline-block;
+              max-width: 80%;
+              text-align: left;
+              max-height: 80%;
+              overflow: scroll;
+              border-radius: 2pt;`;
+      DEBUG_GUI.POPUP.setAttribute('onclick', 'event.stopPropagation()');
+      DEBUG_GUI.HAZE.appendChild(DEBUG_GUI.POPUP);
+      DEBUG_GUI.MODAL.id = 'debug-gui-modal';
+      DEBUG_GUI.HAZE.onclick = hideModal;
+      DEBUG_GUI.SCRIPT_URL = getScriptURL();
+      logWindow();
+      hideModal();
 
-    document.body.appendChild(DEBUG_GUI.MODAL);
-    var html = buildHeader(buildGui(undefined, 'og'));
-    DEBUG_GUI.SCC = ShortCutCointainer("debug-gui-scc", ['d', 'g'], html);
-    createCookie();
-    refresh();
+      document.body.appendChild(DEBUG_GUI.MODAL);
+      var html = buildHeader(buildGui(undefined, 'og'));
+      DEBUG_GUI.SCC = ShortCutCointainer("debug-gui-scc", ['d', 'g'], html);
+      document.getElementById ('debug-gui-scc').addEventListener('click', (e) => {
+        if (e.target.matches('.btn-link')) {
+          var target = document.querySelector(e.target.getAttribute('data-target'));
+          if (target.style.display === 'none') {
+            collapseAllDescendents(document.querySelector(e.target.getAttribute('data-parent')));
+            target.style.display = 'block';
+          } else {
+            target.style.display = 'none';
+          }
+        }
+      });
+      createCookie();
+      refresh();
+    }
   }
 
   function hideEmpties() {
@@ -307,7 +320,7 @@ function DebugGui() {
 
   function buildGui(data, fp, accordionId) {
     var acorn = '';
-    accordionId = (accordionId ? accordionId : 0);
+    accordionId = Math.floor(Math.random() * 1000000000);
     const acordId = 'dg-accordion-' + accordionId;
     if (!data) {
       data = buildData();
@@ -321,23 +334,23 @@ function DebugGui() {
     for (let index = 0; index < keys.length; index += 1) {
       var id = keys[index];
       var cleanId = id.replace(/[:+=\/]/g, '-');
-      var childBlock = buildGui(data[id].children, fp + "-" + id, accordionId+1);
+      var childBlock = buildGui(data[id].children, fp + "-" + id);
+      var targetId = `dg-collapse-${fp}-${cleanId}`;
+      var headingId = `dg-heading-${fp}-${cleanId}`;
       if (childBlock.trim()) {
         childBlock = `<div style='border-style: double;'>
                         ${childBlock}
                       </div>`
       }
       acorn += `  <div class="card">
-          <div class="card-header" id="heading-${fp}-${cleanId}">
-            <h2 class="mb-${fp}-${cleanId}">
-              <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapse-${fp}-${cleanId}" aria-expanded="true" aria-controls="collapse-${fp}-${cleanId}">
+          <div class="card-header" id="${headingId}" style='font-size: larger;font-weight: 700;text-align: center;background-color: blue;padding: 2pt;'>
+              <div class="btn btn-link collapsed" data-parent="#${acordId}" type="button" data-toggle="collapse" data-target="#${targetId}" aria-expanded="true" aria-controls="${targetId}">
                 ${id}
-              </button>
-            </h2>
+              </div>
           </div>
 
-          <div id="collapse-${fp}-${cleanId}" class="collapse" aria-labelledby="heading-${fp}-${cleanId}" data-parent="#${acordId}">
-            <div class="card-body">
+          <div id="${targetId}" class="collapse" aria-labelledby="${headingId}" data-parent="#${acordId}">
+            <div class="card-body" style='padding: 2pt;'>
               ${buildLinkList(data[id].links)}
               ${buildValueList(data[id].values)}
               ${buildExceptions(data[id].exceptions)}
@@ -353,10 +366,16 @@ function DebugGui() {
     return acorn;
   }
 
+  function collapseAllDescendents(elem) {
+    Array.from(elem.querySelectorAll('.collapse'))
+          .forEach((elem) => elem.style.display = 'none');
+  }
+
   function render() {
     var html = buildHeader(buildGui(DEBUG_GUI.DATA, 'og'));
     hideEmpties();
     DEBUG_GUI.SCC.innerHtml(html);
+    collapseAllDescendents(document);
   }
 
   var numberReg = new RegExp('^[0-9]*$');
@@ -441,39 +460,14 @@ function DebugGui() {
     var elem = document.querySelectorAll('debug-gui-data');
     var isParse = (elem.length > 0 && elem[0].innerText.trim());
     if (debug() || isParse) {
-      var script = document.createElement("script");
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js';
-      script.integrity = "sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1";
-      script.setAttribute('crossorigin', 'anonymous');
-      document.head.appendChild(script);
-
-      // script = document.createElement("script");
-      // script.src = 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js';
-      // script.integrity = "sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM";
-      // script.setAttribute('crossorigin', 'anonymous');
-      // document.head.appendChild(script);
       init();
     }
     createCookie();
   }
 
-
   var script = document.createElement("script");
-  script.src = 'https://code.jquery.com/jquery-3.3.1.slim.min.js';
-  script.integrity = "sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo";
-  script.setAttribute('crossorigin', 'anonymous');
+  script.src = 'https://node.jozsefmorrissey.com/js/short-cut-container.js';
   document.head.appendChild(script);
-
-  var script = document.createElement("script");
-  script.src = 'http://node.jozsefmorrissey.com/js/short-cut-container.js';
-  document.head.appendChild(script);
-
-  // var style = document.createElement("link");
-  // style.rel = 'stylesheet';
-  // style.href = 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css';
-  // style.integrity = "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T";
-  // style.setAttribute('crossorigin', 'anonymous');
-  // document.head.appendChild(style);
 
   window.addEventListener('load', onLoad);
   return {refresh, displayModal, displayLogs, debug, createCookie,

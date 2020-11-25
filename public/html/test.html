@@ -3,213 +3,27 @@
   <head>
     <meta charset="utf-8">
     <title></title>
-    <script type="text/javascript">
-    const funcs = [];
-    class CallbackTree {
-      constructor(func, id, ...args) {
-        funcs.push(func);
-        console.log('funcname: ', func.name)
-        let success, failure, root;
-        this.name = id;
-        let lastPath = '';
-        this.getLastPath = function () {return lastPath;};
-        const instance = this;
-        function setLeaf(setFunc, target, func, id, ...args) {
-          if ((target instanceof Error || (typeof target) === 'function') &&
-                ((typeof func) === 'string' || func === undefined)) {
-            args = [id].concat(args);
-            id = func;
-            func = target;
-            target = undefined;
-          }
-          let leaf = instance.getRoot();
-          if (target !== undefined) leaf = instance.find(target);
-          const cbTree = new CallbackTree(func, id, ...args);
-          cbTree.setRoot(instance.getRoot());
-          leaf[setFunc](cbTree);
-          return instance.getRoot();
-        }
-
-        function callbackFunction(callback) {
-          return function () {
-            if (callback instanceof CallbackTree) {
-              callback.execute(...arguments);
-            }
-          }
-        }
-        this.addPath = function (value) {
-          if (this.isRoot()) {
-            lastPath += `${value}->`
-          } else {
-            instance.getRoot().addPath(instance.getId());
-          }
-        }
-
-        this.setSuccess = function (successFunc) {success = successFunc};
-        this.setFail = function (failFunc) {failure = failFunc};
-        this.setArgs = function (...newArgs) {args = newArgs};
-        this.execute = function (tempArgs) {
-          if (instance.isRoot()) {
-            lastPath = '';
-            instance.addPath(instance.getId());
-          }
-          else {
-            instance.addPath()
-          }
-
-          tempArgs = tempArgs || args;
-          // console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${this.getId()}'.`);
-          if (func instanceof Error) throw func;
-          const successCallback = callbackFunction(success);
-          successCallback.nam = success && success.name;
-          const failureCallback = callbackFunction(failure);
-          failureCallback.nam = failure && failure.name;
-          func(...args, successCallback, failureCallback);
-        }
-        this.success = function (target, func, id, ...args) {
-          return setLeaf('setSuccess', target, func, id, ...args);
-        };
-        this.getId = function () {return id || func.name;}
-
-        this.fail = function (target, func, id, ...args) {
-          return setLeaf('setFail', target, func, id, ...args);
-        };
-
-        this.find = function (stringOrFunc) {
-          const found = instance.getRoot().findChild(stringOrFunc);
-          if (found === undefined) throw new Error(`'${stringOrFunc}' not found within CallbackTree.`);
-          return found;
-        }
-        this.setRoot = function (callbackTree) {
-          if (!callbackTree instanceof CallbackTree) {
-            throw new Error('The root of a CallbackTree must be another CallbackTree.');
-          }
-          root = callbackTree;
-        }
-        this.getRoot = function () {return root || instance;};
-        this.isRoot = function () {return instance === instance.getRoot();};
-        this.findChild = function (stringOrFunc) {
-          let found;
-          const idsMatch = (typeof stringOrFunc) === 'string' &&
-                            id === stringOrFunc;
-          const funcsMatch = (typeof stringOrFunc) === 'function' &&
-                            func === stringOrFunc;;
-          if (idsMatch || funcsMatch) {
-            found = instance;
-          }
-
-          if (success)
-            found = found || success.findChild(stringOrFunc);
-          if (failure)
-            found = found || failure.findChild(stringOrFunc);
-          return found;
-        }
-      }
-    }
-
-    function timeout(name, argCount) {
-      return function (success) {
-        return function () {
-          const args = arguments;
-          function printName() {
-            if (success) {
-              args[argCount](arguments);
-            } else {
-              args[argCount + 1](arguments);
-            }
-          }
-          setTimeout(printName, Math.floor(Math.random * 2500));
-        }
-      }
-    }
-    const crud = {};
-    crud.exists = timeout('exists', 1);
-    crud.read = timeout('read', 2);
-    crud.write = timeout('write', 3);
-    crud.touch = timeout('touch', 1)
-    const dne = crud.exists(false);
-    const exists = crud.exists(true);
-    const cantTouch = crud.touch(false);
-    const canTouch = crud.touch(true);
-    const cantRead = crud.read(false);
-    const canRead = crud.read(true);
-    const cantWrite = crud.write(false);
-    const canWrite = crud.write(true);
-
-    const callbackError = new Error('Failed to follow callback tree');
-    const testTrees = {};
-    // testTrees.accessDenied = new CallbackTree(exists, 'exists', 'dummy')
-    //   .success(cantRead, 'cantRead', 'dummy', 'arg')
-    //   .fail('cantRead', cantTouch, 'cantTouch', 'dummy')
-    //
-    //   .fail(callbackError, 'existsButShouldNot', 'filename')
-    //   .success('cantRead', callbackError, 'readRestricted', 'dummy')
-    //   .success('cantTouch', callbackError, 'readRestricted', 'dummy');
-    // testTrees.accessDenied.expectedPath = 'exists->cantRead->cantTouch->';
-    //
-    // testTrees.createWriteRead = new CallbackTree(dne, 'doesNotExist', 'dummy')
-    //   .fail(canTouch, 'canTouch', 'dummy')
-    //   .success('canTouch', canWrite, 'canWrite', 4, 'readRestricted', 'dummy')
-    //   .success('canWrite', canRead, 'canRead', 4, 2)
-    //
-    //   .success(callbackError)
-    //   .fail('canTouch', callbackError)
-    //   .fail('canWrite', callbackError)
-    //   .fail('canRead', callbackError);
-    // testTrees.createWriteRead.expectedPath = 'doesNotExist->canTouch->canWrite->canRead->';
-
-    testTrees.fullTrain = new CallbackTree(dne, 'doesNotExist', 'dummy')
-      .fail(exists, 'exists', 'dummy')
-      .success('exists', cantTouch, 'cantTouch', 4)
-      .fail('cantTouch', canTouch, 'canTouch', 4)
-      .success('canTouch', cantRead, 'cantRead', 4, 2)
-      .fail('cantRead', canRead, 'canRead', 4, 2)
-      .success('canRead', cantWrite, 'cantWrite', 5, 4, 2)
-      .fail('cantWrite', canWrite, 'canWrite', 4, 2, 2)
-
-      .success(callbackError)
-      .fail('exists', callbackError)
-      .success('cantTouch', callbackError)
-      .fail('canTouch', callbackError)
-      .success('cantRead', callbackError)
-      .fail('canRead', callbackError)
-      .success('cantWrite', callbackError)
-      .fail('canWrite', callbackError);
-
-    testTrees.fullTrain.expectedPath = 'doesNotExist->exists->cantTouch->canTouch->cantRead->canRead->cantWrite->canWrite->';
-
-    function executeTrees() {
-      const keys = Object.keys(testTrees);
-      for (let index = 0; index < keys.length; index += 1) {
-        const key = keys[index];
-        const tree = testTrees[key];
-        tree.execute();
-      }
-      console.log('All testTrees Passed!!!');
-    }
-
-    function printPaths() {
-      const keys = Object.keys(testTrees);
-      for (let index = 0; index < keys.length; index += 1) {
-        const key = keys[index];
-        const callback = testTrees[key];
-        const expectedPath = callback.expectedPath;
-        if (callback.getLastPath() !== expectedPath) {
-          throw new Error(`testTree '${key}' faild to follow expectedPath.
-              expected: ${expectedPath}
-              followed: ${callback.getLastPath()}`);
-        }
-      }
-      console.log('All testTrees Passed!!!');
-    }
-
-    executeTrees();
-    setTimeout(printPaths, 10000);
-
-
-    </script>
   </head>
   <body>
+    <ul>
+      <li>one</li>
+      <li>two</li>
+      <li>three</li>
+      <li>four</li>
+      <li>five</li>
+    </ul>
 
+    <div style="position: absolute;">
+      <div style='position: relative;'>header</div>
+      <div style='position: static;'>
+        <ul>
+          <li>1</li>
+          <li>2</li>
+          <li>3</li>
+          <li>4</li>
+          <li>5</li>
+        </ul>
+      </div>
+    </div>
   </body>
 </html>
