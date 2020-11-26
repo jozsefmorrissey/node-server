@@ -67,8 +67,8 @@ class CallbackTree {
       const cbTree = new CallbackTree(func, id, ...args);
       cbTree.setRoot(instance.getRoot());
       leaf[setFunc](cbTree);
-      console.log('leaf success', !leaf.getSuccess() ? undefined: leaf.getSuccess().name);
-      console.log('leaf fail', !leaf.getFail() ? undefined : leaf.getFail().name);
+      // console.log('leaf success', !leaf.getSuccess() ? undefined: leaf.getSuccess().name);
+      // console.log('leaf fail', !leaf.getFail() ? undefined : leaf.getFail().name);
       return retInterface(cbTree);
     }
 
@@ -113,7 +113,6 @@ class CallbackTree {
 
       match = arg.match(refReg)
       if (match) {
-        console.log('refff', match[1], instance.getRoot().getRef(match[1]));
         return instance.getRoot().getRef(match[1]);
       }
 
@@ -145,12 +144,11 @@ class CallbackTree {
         Array.from(args).map(
           (value, index) => tempArgs.push(renderArg(arguments, args, index)));
       }
-      console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.`);
+      // console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.`);
       const rt = instance.getRoot();
       if (func instanceof Error) throw func;
       else if((typeof func) === 'string') func = instance.find(func);
       else {
-        console.log('cbt:', instance.name, (typeof success), (typeof failure))
         const successCallback = callbackFunction(success);
         const failureCallback = callbackFunction(failure);
         let retVal;
@@ -179,7 +177,7 @@ class CallbackTree {
 
     this.find = function (stringOrFunc, soft) {
       const found = instance.getRoot().findChild(stringOrFunc);
-      console.log('looking for:', stringOrFunc, ' found:', found);
+      // console.log('looking for:', stringOrFunc, ' found:', found);
       if (!soft && found === undefined) throw new CallbackTreeLeafNotDefined(instance.getRoot, stringOrFunc);
       return found;
     }

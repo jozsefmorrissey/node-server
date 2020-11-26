@@ -75,7 +75,7 @@ function DebugGui() {
               height: 100%;
               text-align: center;
               background:rgba(0,0,0,0.6);
-              z-index: 1;
+              z-index: 1000000;
               padding: 20pt;`;
       DEBUG_GUI.MODAL.appendChild(DEBUG_GUI.HAZE);
 
@@ -92,7 +92,6 @@ function DebugGui() {
       DEBUG_GUI.HAZE.appendChild(DEBUG_GUI.POPUP);
       DEBUG_GUI.MODAL.id = 'debug-gui-modal';
       DEBUG_GUI.HAZE.onclick = hideModal;
-      DEBUG_GUI.SCRIPT_URL = getScriptURL();
       logWindow();
       hideModal();
 
@@ -129,7 +128,10 @@ function DebugGui() {
     var logs = DEBUG_GUI.DATA[LOGS];
     var html = '';
     for (var index = logs.length - 1; index > -1; index -= 1) {
-      html += logs[index].log + '<br>';
+      const log = logs[index];
+      html += new Date(log.time) + '<br>' + log.log.replace(/\n/g, '<br>')
+          .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;')
+          .replace(/\s/g, '&nbsp;') + '<br>';
     }
 
     displayModalHtml(html);
@@ -180,11 +182,11 @@ function DebugGui() {
     var title = document.getElementById(reportInfoTitleId).value;
     var desc = document.getElementById(reportInfoDescId).value;
     var copyText = document.getElementById(copyTextId);
-    var host = DEBUG_GUI.SCRIPT_URL.replace('/gui', '');
+    var host = DEBUG_GUI.client.getHost();
 
     copyText.value = '<html>\n\t<head>\n\t\t<title>' + title + '</title>' +
-      '\n\t\t<script type=\'text/javascript\' src="' + DEBUG_GUI.SCRIPT_URL +
-      '"></script>' + '\n\t</head>\n\t<body>\n\t\t<h1>' + title +
+      '\n\t\t<script type=\'text/javascript\' src="' + DEBUG_GUI.client.getHost() +
+      '/js/debug-gui-client.js"></script>' + '\n\t</head>\n\t<body>\n\t\t<h1>' + title +
       '</h1>\n\t\t<b>(Press d + g to open debug-gui)</b>\n\t\t<p>' + desc +
       '</p>' + '\n\t\t<' + TAG_NAME + " url='" + host + "' debug-gui-id='" + getId() +
       "'>\n" + JSON.stringify(DEBUG_GUI.DATA, null, 2) + "\n\t\t</" + TAG_NAME + ">" +
@@ -333,7 +335,7 @@ function DebugGui() {
     }
     for (let index = 0; index < keys.length; index += 1) {
       var id = keys[index];
-      var cleanId = id.replace(/[:+=\/]/g, '-');
+      var cleanId = id.substr(id.length - 50).replace(/[^a-z^A-Z^0-9]{1,}/g, '-');
       var childBlock = buildGui(data[id].children, fp + "-" + id);
       var targetId = `dg-collapse-${fp}-${cleanId}`;
       var headingId = `dg-heading-${fp}-${cleanId}`;
@@ -343,7 +345,7 @@ function DebugGui() {
                       </div>`
       }
       acorn += `  <div class="card">
-          <div class="card-header" id="${headingId}" style='font-size: larger;font-weight: 700;text-align: center;background-color: blue;padding: 2pt;'>
+          <div class="card-header" id="${headingId}" style='font-size: larger;font-weight: 700;text-align: center;background-color: blue;color: white;padding: 2pt;'>
               <div class="btn btn-link collapsed" data-parent="#${acordId}" type="button" data-toggle="collapse" data-target="#${targetId}" aria-expanded="true" aria-controls="${targetId}">
                 ${id}
               </div>
@@ -409,37 +411,9 @@ function DebugGui() {
   }
 
   function createCookie(copy) {
-    var id = getId();
-    var host = getHost();
-    if (!id || !host) return;
-    noProtocol=host.replace(/^(http|https):\/\//, "")
-    var portReg = /([^:]*?:[0-9]{4})(\/.*)$/;
-    var httpHost;
-    var httpsHost;
-    var portMatch = noProtocol.match(portReg);
-    if (portMatch) {
-      // localhost
-      var rootValue = portMatch[1].substr(0, portMatch[1].length - 1);
-      httpHost = "http://" + rootValue + 0 + portMatch[2];
-      httpsHost = "https://" + rootValue + 1 + portMatch[2];
-    } else {
-      // production
-      httpHost = host.replace(/https/, 'http');
-      httpsHost = host.replace(/http/, 'https');
-    }
-    var cookie = "id=" + id;
-    var setupCookie = cookie + "|host=" +
-        host + "|httpHost="  + httpHost + "|httpsHost=" + httpsHost + "|debug=" + debug();
-    var cookieCmd = "document.cookie = 'DebugGui=" + setupCookie + "'";
-
-    if (DEBUG_GUI.client.isDebugging()) {
-      eval(cookieCmd);
-      document.cookie = 'DebugGui=' + setupCookie;
-    } else {
-      document.cookie = 'DebugGui=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    }
+    var cookie = DEBUG_GUI.client.createCookie();
     if (copy) {
-      copyToClipboard(cookieCmd, "Setup cookie copied to clipboard");
+      copyToClipboard(cookie, "Setup cookie copied to clipboard");
     }
   }
 
@@ -469,6 +443,7 @@ function DebugGui() {
   script.src = 'https://node.jozsefmorrissey.com/js/short-cut-container.js';
   document.head.appendChild(script);
 
+console.log('dg here')
   window.addEventListener('load', onLoad);
   return {refresh, displayModal, displayLogs, debug, createCookie,
       copyModal, getUrl, copyReport, getId, updateId, updateHost};

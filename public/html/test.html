@@ -2,6 +2,29 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
+    <script type="text/javascript">
+      function one() {
+        new Error().stack.value = 'hoopla';
+        console.log(new Error().stack)
+        two();
+      }
+      function two() {
+        console.log(new Error().stack)
+        three();
+      }
+      function three() {
+        console.log(new Error().stack)
+        four();
+      }
+      function four() {
+        console.log(new Error().stack)
+        five();
+      }
+      function five() {
+        console.log(new Error().stack)
+      }
+      one();
+    </script>
     <title></title>
   </head>
   <body>

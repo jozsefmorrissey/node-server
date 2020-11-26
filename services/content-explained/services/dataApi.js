@@ -13,7 +13,7 @@ const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
 
-const crud = new Crud({silent: false, mutex: false});
+const crud = new Crud({silent: true, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   console.log("UA", dataObject)
@@ -268,6 +268,15 @@ function addExplToSite(explId, siteUrl, next, success) {
 }
 
 function endpoints(app, prefix, ip) {
+  app.all(prefix + '/*',function(req,res,next){
+    console.log('checkDebugger', req.debugGui)
+    if (req.debugGui.isDebugging()) {
+      crud.setLogger(req.debugGui.logs);
+    } else {
+      crud.setLogger(undefined);
+    }
+    next();
+  });
 
   //  ------------------------- User Api -------------------------  //
 

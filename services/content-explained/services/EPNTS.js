@@ -8,7 +8,7 @@ class Endpoints {
       }
     };
     this.setHost(host);
-    this.getHost = () => host;
+    this.getHost = (env) => env === undefined ? host : config._envs[env];
 
     const endPointFuncs = {setHost: this.setHost, getHost: this.getHost};
     this.getFuncObj = function () {return endPointFuncs;};

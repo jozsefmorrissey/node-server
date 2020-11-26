@@ -6,56 +6,61 @@
         debug='true';
         window='23'></script>
     <script>
-      var dg = DebugGuiClient.browser();
+      function dgTest() {
+        var dg = DebugGuiClient.browser();
 
-      var groups = ['computer', 'login', 'verification', 'system', 'cabage', 'teapot'];
-      dg.setRoot('debug-gui-client-test');
-      function getGroup() {
-        var count = Math.floor(Math.random() * 3 + 1);
-        var group = "";
-        for (var index = 0; index < count; index += 1) {
-          group += groups[Math.floor(Math.random() * groups.length)] + ".";
+        var groups = ['computer', 'login', 'verification', 'system', 'cabage', 'teapot'];
+        console.log('root')
+        dg.setRoot('debug-gui-client-test');
+        function getGroup() {
+          var count = Math.floor(Math.random() * 3 + 1);
+          var group = "";
+          for (var index = 0; index < count; index += 1) {
+            group += groups[Math.floor(Math.random() * groups.length)] + ".";
+          }
+          return group.substr(0, group.length - 1);
         }
-        return group.substr(0, group.length - 1);
-      }
 
-      function getException() {
-        return new Error(getGroup());
-      }
+        function getException() {
+          return new Error(getGroup());
+        }
 
-      var urls = ['http://www.wizardry.io', 'http://www.aetna.com', 'http://www.pentagon.gov', 'http://www.amazon.com', 'http://www.google.com']
-      function getUrl() {
-        return urls[Math.floor(Math.random() * urls.length)];
-      }
+        var urls = ['http://www.wizardry.io', 'http://www.aetna.com', 'http://www.pentagon.gov', 'http://www.amazon.com', 'http://www.google.com']
+        function getUrl() {
+          return urls[Math.floor(Math.random() * urls.length)];
+        }
 
-      function addException() {
-        dg.exception(getGroup(), getException());
-      }
+        function addException() {
+          dg.exception(getGroup(), getException());
+        }
 
-      function addLink() {
-        dg.link(getGroup(), getGroup(), getUrl());
-      }
-      function addValue() {
+        function addLink() {
+          dg.link(getGroup(), getGroup(), getUrl());
+        }
+        function addValue() {
           dg.value(getGroup(), getGroup(), getGroup());
-      }
-      function addLog() {
-        dg.log('[' + new Date() + ']:\t' + getGroup());
-      }
-      function randomAdd() {
-        var count = 150;
-        for (var it = 0; it < count; it += 1) {
-          var index = Math.random() * 4;
-          if (index < 3) {
-            addLog();
-          } else if (index < 3.4) {
-            addValue();
-          } else if (index < 3.8){
-            addLink();
-          } else {
-            addException();
+        }
+        function addLog() {
+          dg.log('[' + new Date() + ']:\t' + getGroup());
+        }
+        function randomAdd() {
+          var count = 150;
+          for (var it = 0; it < count; it += 1) {
+            var index = Math.random() * 4;
+            if (index < 3) {
+              addLog();
+            } else if (index < 3.4) {
+              addValue();
+            } else if (index < 3.8){
+              addLink();
+            } else {
+              addException();
+            }
           }
         }
+        return randomAdd;
       }
+      const randomAdd = dgTest();
     </script>
   </head>
   <body>

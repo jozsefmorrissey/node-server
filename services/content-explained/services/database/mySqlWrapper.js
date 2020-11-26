@@ -365,7 +365,6 @@ class Crud {
         password: options.password || 'ITSJUSTATESTDB',
         database: options.database || 'CE'
       });
-      console.log('updatingConnection!!')
       connection.connect();
     }
     connect();
@@ -443,9 +442,14 @@ class Crud {
       }
     }
 
+    let logger;
+    this.setLogger = (l) => logger = l;
     function print() {
       if (!options.silent) {
         console.log.apply(null, arguments);
+      }
+      if (logger) {
+        logger.apply(null, arguments);
       }
     }
 

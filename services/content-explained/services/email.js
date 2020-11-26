@@ -17,16 +17,16 @@ function send (data, success, failure) {
     }
   }
   if (emailServiceActive) {
-    respond();
-  } else {
     mg.messages().send(data, respond);
+  } else {
+    respond();
   }
 }
 
 function sendActivationEmail(user, credential, success, failure) {
   const userId = credential.userId;
   const actSecret = credential.activationSecret;
-  const activationUrl = `${ENV.get('host')}${EPNTS.credential.activate(userId,actSecret)}`;
+  const activationUrl = `${EPNTS.getHost(global.ENV)}${EPNTS.credential.activate(userId,actSecret)}`;
   if (global.ENV === 'local') {
     console.log('activation url:', activationUrl);
   }

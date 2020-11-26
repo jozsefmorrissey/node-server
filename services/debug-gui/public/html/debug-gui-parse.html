@@ -1,516 +1,1653 @@
-<html><head><title>testing nested version</title><script type='text/javascript' src="http://localhost:3333/js/debug-gui.js"></script></head><body><h1>testing nested version</h1><b>(Press d + g to open debug-gui)</b><p>Last and final fucking test for crying out bitch tits loud.</p><debug-gui-data>{
-  "login": {
-    "exceptions": [
-      {
-        "id": "javadoc",
-        "msg": "Error: computer.cabage",
-        "stacktrace": "Error: computer.cabage\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-      }
-    ],
-    "values": {},
-    "links": {
-      "login.cabage.cabage": "http://www.aetna.com",
-      "teapot.teapot.login": "http://www.wizardry.io"
-    },
+<html>
+	<head>
+		<title>test</title>
+		<script type='text/javascript' src="https://localhost:3001/debug-gui/js/debug-gui-client.js"></script>
+	</head>
+	<body>
+		<h1>test</h1>
+		<b>(Press d + g to open debug-gui)</b>
+		<p>desc</p>
+		<debug-gui-data url='https://localhost:3001/debug-gui' debug-gui-id='id3'>
+{
+  "default": {
     "children": {
-      "login": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
+      "verification": {
+        "children": {
+          "teapot": {
+            "children": {
+              "login": {
+                "children": {},
+                "exceptions": [],
+                "links": {
+                  "login.login.cabage": {
+                    "url": "http://www.wizardry.io",
+                    "time": 1606326087440
+                  }
+                },
+                "values": {}
+              }
+            },
+            "exceptions": [],
+            "links": {
+              "system.verification": {
+                "url": "http://www.wizardry.io",
+                "time": 1606326087961
+              }
+            },
+            "values": {}
+          },
+          "verification": {
+            "children": {
+              "verification": {
+                "children": {},
+                "exceptions": [
+                  {
+                    "id": "id3",
+                    "msg": "Error: system.system",
+                    "stacktrace": "Error: system.system\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+                    "time": 1606326087845
+                  }
+                ],
+                "links": {},
+                "values": {}
+              }
+            },
+            "exceptions": [],
+            "links": {},
+            "values": {
+              "cabage.system.login": {
+                "value": "verification",
+                "time": 1606326087433
+              },
+              "system.login.system": {
+                "value": "cabage",
+                "time": 1606326087927
+              },
+              "system.cabage": {
+                "value": "verification.cabage.teapot",
+                "time": 1606326087977
+              }
+            }
+          },
+          "system": {
+            "children": {
+              "verification": {
+                "children": {},
+                "exceptions": [],
+                "links": {
+                  "login.system": {
+                    "url": "http://www.aetna.com",
+                    "time": 1606326087491
+                  }
+                },
+                "values": {}
+              }
+            },
+            "exceptions": [],
+            "links": {
+              "cabage": {
+                "url": "http://www.wizardry.io",
+                "time": 1606326087545
+              }
+            },
+            "values": {}
+          },
+          "cabage": {
+            "children": {
+              "login": {
+                "children": {},
+                "exceptions": [],
+                "links": {
+                  "verification.system.login": {
+                    "url": "http://www.google.com",
+                    "time": 1606326087518
+                  }
+                },
+                "values": {}
+              },
+              "teapot": {
+                "children": {},
+                "exceptions": [],
+                "links": {},
+                "values": {
+                  "computer": {
+                    "value": "teapot",
+                    "time": 1606326087994
+                  }
+                }
+              }
+            },
+            "exceptions": [],
+            "links": {},
+            "values": {
+              "computer.computer.system": {
+                "value": "cabage.cabage.computer",
+                "time": 1606326087531
+              }
+            }
+          },
+          "login": {
+            "children": {
+              "computer": {
+                "children": {},
+                "exceptions": [],
+                "links": {},
+                "values": {
+                  "system.teapot.login": {
+                    "value": "cabage",
+                    "time": 1606326087876
+                  }
+                }
+              }
+            },
+            "exceptions": [],
+            "links": {
+              "login.computer.system": {
+                "url": "http://www.aetna.com",
+                "time": 1606326087903
+              }
+            },
+            "values": {}
+          },
+          "computer": {
+            "children": {
+              "cabage": {
+                "children": {},
+                "exceptions": [],
+                "links": {
+                  "teapot.cabage.computer": {
+                    "url": "http://www.amazon.com",
+                    "time": 1606326087983
+                  }
+                },
+                "values": {}
+              }
+            },
+            "exceptions": [],
+            "links": {},
+            "values": {
+              "verification.computer.verification": {
+                "value": "cabage",
+                "time": 1606326087978
+              }
+            }
+          }
+        },
+        "exceptions": [
+          {
+            "id": "id3",
+            "msg": "Error: system",
+            "stacktrace": "Error: system\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+            "time": 1606326087884
+          },
+          {
+            "id": "id3",
+            "msg": "Error: cabage.teapot.cabage",
+            "stacktrace": "Error: cabage.teapot.cabage\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+            "time": 1606326087979
+          }
+        ],
+        "links": {
+          "login": {
+            "url": "http://www.google.com",
+            "time": 1606326087481
+          }
+        },
+        "values": {}
+      },
+      "system": {
         "children": {
           "login": {
+            "children": {},
             "exceptions": [],
-            "values": {},
             "links": {
-              "teapot": "http://www.google.com"
-            },
-            "children": {}
-          }
-        }
-      },
-      "teapot": {
-        "exceptions": [
-          {
-            "id": "javadoc",
-            "msg": "Error: login.system.verification",
-            "stacktrace": "Error: login.system.verification\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-          }
-        ],
-        "values": {},
-        "links": {},
-        "children": {
-          "verification": {
-            "exceptions": [],
-            "values": {
-              "cabage.teapot": "login.login.cabage"
-            },
-            "links": {},
-            "children": {}
-          }
-        }
-      },
-      "system": {
-        "exceptions": [],
-        "values": {
-          "verification": "system.login"
-        },
-        "links": {},
-        "children": {
-          "verification": {
-            "exceptions": [],
-            "values": {},
-            "links": {
-              "cabage": "http://www.amazon.com"
-            },
-            "children": {}
-          }
-        }
-      },
-      "verification": {
-        "exceptions": [
-          {
-            "id": "javadoc",
-            "msg": "Error: cabage.system",
-            "stacktrace": "Error: cabage.system\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-          }
-        ],
-        "values": {},
-        "links": {},
-        "children": {}
-      }
-    }
-  },
-  "system": {
-    "exceptions": [
-      {
-        "id": "javadoc",
-        "msg": "Error: teapot",
-        "stacktrace": "Error: teapot\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-      },
-      {
-        "id": "javadoc",
-        "msg": "Error: system.verification.system",
-        "stacktrace": "Error: system.verification.system\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-      },
-      {
-        "id": "javadoc",
-        "msg": "Error: system",
-        "stacktrace": "Error: system\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-      }
-    ],
-    "values": {
-      "teapot": "computer.system",
-      "verification.system": "cabage"
-    },
-    "links": {
-      "login.computer": "http://www.wizardry.io",
-      "computer": "http://www.google.com"
-    },
-    "children": {
-      "system": {
-        "exceptions": [
-          {
-            "id": "javadoc",
-            "msg": "Error: cabage.teapot.system",
-            "stacktrace": "Error: cabage.teapot.system\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-          }
-        ],
-        "values": {},
-        "links": {},
-        "children": {
-          "computer": {
-            "exceptions": [],
-            "values": {},
-            "links": {
-              "cabage.login.verification": "http://www.wizardry.io"
-            },
-            "children": {}
-          }
-        }
-      },
-      "teapot": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
-        "children": {
-          "verification": {
-            "exceptions": [
-              {
-                "id": "javadoc",
-                "msg": "Error: computer.computer.system",
-                "stacktrace": "Error: computer.computer.system\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
+              "verification.teapot.verification": {
+                "url": "http://www.aetna.com",
+                "time": 1606326087863
               }
-            ],
-            "values": {},
-            "links": {},
-            "children": {}
-          }
-        }
-      },
-      "cabage": {
-        "exceptions": [],
-        "values": {
-          "login.cabage.system": "login.login"
-        },
-        "links": {},
-        "children": {
-          "computer": {
-            "exceptions": [],
-            "values": {},
-            "links": {
-              "teapot.cabage": "http://www.amazon.com"
             },
-            "children": {}
+            "values": {}
+          },
+          "verification": {
+            "children": {
+              "cabage": {
+                "children": {},
+                "exceptions": [],
+                "links": {
+                  "verification.login.login": {
+                    "url": "http://www.amazon.com",
+                    "time": 1606326087443
+                  }
+                },
+                "values": {}
+              }
+            },
+            "exceptions": [],
+            "links": {},
+            "values": {}
+          },
+          "computer": {
+            "children": {
+              "teapot": {
+                "children": {},
+                "exceptions": [
+                  {
+                    "id": "id3",
+                    "msg": "Error: verification.computer.system",
+                    "stacktrace": "Error: verification.computer.system\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+                    "time": 1606326087987
+                  }
+                ],
+                "links": {},
+                "values": {}
+              }
+            },
+            "exceptions": [],
+            "links": {},
+            "values": {}
           },
           "teapot": {
-            "exceptions": [],
-            "values": {
-              "computer.computer.computer": "teapot.computer.system"
+            "children": {
+              "system": {
+                "children": {},
+                "exceptions": [],
+                "links": {},
+                "values": {
+                  "verification": {
+                    "value": "cabage.cabage.teapot",
+                    "time": 1606326087508
+                  }
+                }
+              },
+              "cabage": {
+                "children": {},
+                "exceptions": [],
+                "links": {},
+                "values": {
+                  "system.cabage.system": {
+                    "value": "teapot.computer.login",
+                    "time": 1606326087931
+                  }
+                }
+              },
+              "teapot": {
+                "children": {},
+                "exceptions": [],
+                "links": {},
+                "values": {
+                  "computer.teapot": {
+                    "value": "computer.teapot.teapot",
+                    "time": 1606326087962
+                  }
+                }
+              }
             },
+            "exceptions": [],
             "links": {},
-            "children": {}
+            "values": {}
           },
-          "verification": {
+          "system": {
+            "children": {},
             "exceptions": [],
-            "values": {},
             "links": {
-              "login": "http://www.google.com"
+              "verification": {
+                "url": "http://www.amazon.com",
+                "time": 1606326087835
+              }
             },
-            "children": {}
+            "values": {
+              "cabage": {
+                "value": "teapot.cabage",
+                "time": 1606326087535
+              }
+            }
+          }
+        },
+        "exceptions": [],
+        "links": {},
+        "values": {
+          "computer.system.login": {
+            "value": "verification",
+            "time": 1606326087523
+          },
+          "teapot": {
+            "value": "cabage.verification",
+            "time": 1606326087845
+          },
+          "cabage.teapot.verification": {
+            "value": "verification",
+            "time": 1606326087946
           }
         }
       },
       "login": {
-        "exceptions": [],
-        "values": {
-          "teapot.verification": "system.login.computer",
-          "cabage": "cabage.system"
-        },
-        "links": {},
-        "children": {}
-      },
-      "verification": {
-        "exceptions": [],
-        "values": {
-          "teapot.system": "teapot.verification"
-        },
-        "links": {},
-        "children": {}
-      },
-      "computer": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
         "children": {
-          "teapot": {
+          "login": {
+            "children": {},
             "exceptions": [
               {
-                "id": "javadoc",
+                "id": "id3",
                 "msg": "Error: verification",
-                "stacktrace": "Error: verification\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
+                "stacktrace": "Error: verification\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+                "time": 1606326087548
               }
             ],
-            "values": {},
             "links": {},
-            "children": {}
+            "values": {
+              "teapot": {
+                "value": "login.verification",
+                "time": 1606326087480
+              }
+            }
+          },
+          "verification": {
+            "children": {},
+            "exceptions": [],
+            "links": {
+              "teapot.verification.cabage": {
+                "url": "http://www.wizardry.io",
+                "time": 1606326087500
+              }
+            },
+            "values": {}
+          },
+          "teapot": {
+            "children": {},
+            "exceptions": [],
+            "links": {
+              "login": {
+                "url": "http://www.google.com",
+                "time": 1606326087955
+              },
+              "teapot": {
+                "url": "http://www.amazon.com",
+                "time": 1606326087958
+              }
+            },
+            "values": {}
+          },
+          "cabage": {
+            "children": {},
+            "exceptions": [
+              {
+                "id": "id3",
+                "msg": "Error: verification.teapot",
+                "stacktrace": "Error: verification.teapot\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+                "time": 1606326087402
+              }
+            ],
+            "links": {},
+            "values": {}
+          },
+          "system": {
+            "children": {
+              "login": {
+                "children": {},
+                "exceptions": [
+                  {
+                    "id": "id3",
+                    "msg": "Error: cabage.teapot.verification",
+                    "stacktrace": "Error: cabage.teapot.verification\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+                    "time": 1606326087962
+                  }
+                ],
+                "links": {},
+                "values": {
+                  "verification.cabage": {
+                    "value": "computer.teapot.system",
+                    "time": 1606326087489
+                  }
+                }
+              }
+            },
+            "exceptions": [],
+            "links": {
+              "teapot.teapot.cabage": {
+                "url": "http://www.pentagon.gov",
+                "time": 1606326087988
+              }
+            },
+            "values": {}
+          },
+          "computer": {
+            "children": {},
+            "exceptions": [],
+            "links": {
+              "system.computer": {
+                "url": "http://www.pentagon.gov",
+                "time": 1606326087973
+              }
+            },
+            "values": {}
+          }
+        },
+        "exceptions": [
+          {
+            "id": "id3",
+            "msg": "Error: computer.cabage",
+            "stacktrace": "Error: computer.cabage\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+            "time": 1606326087538
+          },
+          {
+            "id": "id3",
+            "msg": "Error: computer",
+            "stacktrace": "Error: computer\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+            "time": 1606326087921
+          },
+          {
+            "id": "id3",
+            "msg": "Error: verification",
+            "stacktrace": "Error: verification\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+            "time": 1606326087949
+          }
+        ],
+        "links": {
+          "cabage": {
+            "url": "http://www.amazon.com",
+            "time": 1606326087923
+          }
+        },
+        "values": {
+          "system.system.verification": {
+            "value": "cabage.cabage.login",
+            "time": 1606326087974
           }
         }
-      }
-    }
-  },
-  "computer": {
-    "exceptions": [],
-    "values": {},
-    "links": {},
-    "children": {
-      "login": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
+      },
+      "computer": {
         "children": {
           "login": {
-            "exceptions": [
-              {
-                "id": "javadoc",
-                "msg": "Error: cabage.cabage",
-                "stacktrace": "Error: cabage.cabage\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-              }
-            ],
-            "values": {},
-            "links": {},
-            "children": {}
-          }
-        }
-      },
-      "system": {
-        "exceptions": [],
-        "values": {
-          "teapot": "system"
-        },
-        "links": {
-          "verification.login": "http://www.wizardry.io"
-        },
-        "children": {
-          "system": {
+            "children": {},
             "exceptions": [],
-            "values": {
-              "system": "system"
+            "links": {
+              "system.cabage.login": {
+                "url": "http://www.wizardry.io",
+                "time": 1606326087848
+              }
             },
+            "values": {}
+          },
+          "system": {
+            "children": {},
+            "exceptions": [],
             "links": {},
-            "children": {}
+            "values": {
+              "system.system": {
+                "value": "cabage",
+                "time": 1606326087488
+              }
+            }
+          },
+          "teapot": {
+            "children": {
+              "teapot": {
+                "children": {},
+                "exceptions": [],
+                "links": {},
+                "values": {
+                  "computer": {
+                    "value": "computer",
+                    "time": 1606326087877
+                  }
+                }
+              }
+            },
+            "exceptions": [],
+            "links": {},
+            "values": {}
           }
-        }
-      },
-      "computer": {
-        "exceptions": [],
-        "values": {},
-        "links": {
-          "computer.system": "http://www.amazon.com"
         },
-        "children": {}
-      },
-      "teapot": {
         "exceptions": [
           {
-            "id": "javadoc",
-            "msg": "Error: cabage",
-            "stacktrace": "Error: cabage\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
+            "id": "id3",
+            "msg": "Error: computer.system.computer",
+            "stacktrace": "Error: computer.system.computer\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+            "time": 1606326087526
           },
           {
-            "id": "javadoc",
-            "msg": "Error: teapot.teapot.cabage",
-            "stacktrace": "Error: teapot.teapot.cabage\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
+            "id": "id3",
+            "msg": "Error: computer.login",
+            "stacktrace": "Error: computer.login\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+            "time": 1606326087993
           }
         ],
-        "values": {},
-        "links": {},
-        "children": {}
-      },
-      "cabage": {
-        "exceptions": [],
-        "values": {
-          "teapot.verification": "cabage"
+        "links": {
+          "computer.teapot.cabage": {
+            "url": "http://www.pentagon.gov",
+            "time": 1606326087970
+          }
         },
-        "links": {},
-        "children": {}
+        "values": {}
       },
-      "verification": {
-        "exceptions": [],
-        "values": {
-          "cabage": "computer"
-        },
-        "links": {},
-        "children": {
-          "teapot": {
-            "exceptions": [],
-            "values": {
-              "cabage.verification": "system.login"
-            },
-            "links": {},
-            "children": {}
-          }
-        }
-      }
-    }
-  },
-  "teapot": {
-    "exceptions": [
-      {
-        "id": "javadoc",
-        "msg": "Error: verification.system",
-        "stacktrace": "Error: verification.system\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-      }
-    ],
-    "values": {},
-    "links": {
-      "verification.verification": "http://www.google.com"
-    },
-    "children": {
-      "cabage": {
-        "exceptions": [
-          {
-            "id": "javadoc",
-            "msg": "Error: teapot.teapot.cabage",
-            "stacktrace": "Error: teapot.teapot.cabage\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-          }
-        ],
-        "values": {
-          "cabage": "verification.system.system"
-        },
-        "links": {},
-        "children": {}
-      },
-      "computer": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
-        "children": {
-          "teapot": {
-            "exceptions": [],
-            "values": {
-              "teapot.system": "cabage.system"
-            },
-            "links": {},
-            "children": {}
-          }
-        }
-      },
-      "system": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
-        "children": {
-          "verification": {
-            "exceptions": [
-              {
-                "id": "javadoc",
-                "msg": "Error: teapot",
-                "stacktrace": "Error: teapot\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-              }
-            ],
-            "values": {},
-            "links": {},
-            "children": {}
-          }
-        }
-      }
-    }
-  },
-  "cabage": {
-    "exceptions": [],
-    "values": {},
-    "links": {
-      "login.login.verification": "http://www.aetna.com"
-    },
-    "children": {
-      "system": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
-        "children": {
-          "system": {
-            "exceptions": [
-              {
-                "id": "javadoc",
-                "msg": "Error: teapot.verification",
-                "stacktrace": "Error: teapot.verification\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-              }
-            ],
-            "values": {},
-            "links": {},
-            "children": {}
-          },
-          "verification": {
-            "exceptions": [
-              {
-                "id": "javadoc",
-                "msg": "Error: computer",
-                "stacktrace": "Error: computer\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-              }
-            ],
-            "values": {},
-            "links": {},
-            "children": {}
-          }
-        }
-      },
-      "verification": {
-        "exceptions": [],
-        "values": {
-          "verification.teapot.teapot": "computer"
-        },
-        "links": {},
-        "children": {}
-      },
-      "login": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
-        "children": {
-          "verification": {
-            "exceptions": [],
-            "values": {
-              "computer.cabage": "login.verification.system"
-            },
-            "links": {},
-            "children": {}
-          }
-        }
-      }
-    }
-  },
-  "verification": {
-    "exceptions": [
-      {
-        "id": "javadoc",
-        "msg": "Error: verification",
-        "stacktrace": "Error: verification\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-      }
-    ],
-    "values": {
-      "computer": "teapot"
-    },
-    "links": {},
-    "children": {
       "teapot": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
         "children": {
           "teapot": {
-            "exceptions": [
-              {
-                "id": "javadoc",
-                "msg": "Error: login.cabage",
-                "stacktrace": "Error: login.cabage\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
+            "children": {
+              "login": {
+                "children": {},
+                "exceptions": [
+                  {
+                    "id": "id3",
+                    "msg": "Error: verification",
+                    "stacktrace": "Error: verification\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+                    "time": 1606326087439
+                  }
+                ],
+                "links": {},
+                "values": {
+                  "cabage.teapot.teapot": {
+                    "value": "login",
+                    "time": 1606326087531
+                  }
+                }
               }
-            ],
-            "values": {},
-            "links": {},
-            "children": {}
-          }
-        }
-      },
-      "verification": {
-        "exceptions": [],
-        "values": {
-          "system.computer": "cabage",
-          "verification": "cabage.computer"
-        },
-        "links": {},
-        "children": {}
-      },
-      "login": {
-        "exceptions": [
-          {
-            "id": "javadoc",
-            "msg": "Error: cabage.computer.teapot",
-            "stacktrace": "Error: cabage.computer.teapot\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
-          }
-        ],
-        "values": {},
-        "links": {},
-        "children": {}
-      },
-      "computer": {
-        "exceptions": [],
-        "values": {},
-        "links": {},
-        "children": {
+            },
+            "exceptions": [],
+            "links": {
+              "login": {
+                "url": "http://www.pentagon.gov",
+                "time": 1606326087528
+              },
+              "verification.computer.cabage": {
+                "url": "http://www.google.com",
+                "time": 1606326087934
+              }
+            },
+            "values": {}
+          },
+          "login": {
+            "children": {
+              "verification": {
+                "children": {},
+                "exceptions": [],
+                "links": {},
+                "values": {
+                  "cabage.verification": {
+                    "value": "computer.verification.login",
+                    "time": 1606326087522
+                  }
+                }
+              }
+            },
+            "exceptions": [],
+            "links": {
+              "cabage": {
+                "url": "http://www.wizardry.io",
+                "time": 1606326087992
+              }
+            },
+            "values": {}
+          },
+          "cabage": {
+            "children": {
+              "computer": {
+                "children": {},
+                "exceptions": [
+                  {
+                    "id": "id3",
+                    "msg": "Error: login",
+                    "stacktrace": "Error: login\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+                    "time": 1606326087538
+                  }
+                ],
+                "links": {},
+                "values": {}
+              }
+            },
+            "exceptions": [],
+            "links": {
+              "computer.system": {
+                "url": "http://www.wizardry.io",
+                "time": 1606326087464
+              }
+            },
+            "values": {}
+          },
           "computer": {
+            "children": {},
+            "exceptions": [],
+            "links": {
+              "verification.cabage": {
+                "url": "http://www.amazon.com",
+                "time": 1606326087471
+              }
+            },
+            "values": {}
+          }
+        },
+        "exceptions": [],
+        "links": {
+          "computer": {
+            "url": "http://www.amazon.com",
+            "time": 1606326087905
+          },
+          "computer.computer": {
+            "url": "http://www.wizardry.io",
+            "time": 1606326087948
+          }
+        },
+        "values": {
+          "system.computer": {
+            "value": "computer.verification",
+            "time": 1606326087519
+          },
+          "login": {
+            "value": "computer",
+            "time": 1606326087920
+          },
+          "login.cabage": {
+            "value": "teapot.computer.cabage",
+            "time": 1606326087952
+          },
+          "verification.system.cabage": {
+            "value": "verification.cabage.teapot",
+            "time": 1606326087973
+          }
+        }
+      },
+      "cabage": {
+        "children": {
+          "cabage": {
+            "children": {},
+            "exceptions": [],
+            "links": {
+              "verification.teapot": {
+                "url": "http://www.wizardry.io",
+                "time": 1606326087510
+              }
+            },
+            "values": {}
+          },
+          "system": {
+            "children": {
+              "login": {
+                "children": {},
+                "exceptions": [],
+                "links": {
+                  "teapot": {
+                    "url": "http://www.wizardry.io",
+                    "time": 1606326087438
+                  }
+                },
+                "values": {
+                  "computer": {
+                    "value": "cabage.computer",
+                    "time": 1606326087494
+                  }
+                }
+              }
+            },
+            "exceptions": [],
+            "links": {},
+            "values": {}
+          },
+          "login": {
+            "children": {
+              "login": {
+                "children": {},
+                "exceptions": [],
+                "links": {
+                  "system.teapot.computer": {
+                    "url": "http://www.aetna.com",
+                    "time": 1606326087963
+                  }
+                },
+                "values": {}
+              }
+            },
+            "exceptions": [],
+            "links": {},
+            "values": {
+              "computer": {
+                "value": "verification.cabage.login",
+                "time": 1606326087493
+              },
+              "computer.computer.teapot": {
+                "value": "system.system",
+                "time": 1606326087924
+              }
+            }
+          },
+          "verification": {
+            "children": {},
             "exceptions": [
               {
-                "id": "javadoc",
-                "msg": "Error: system.cabage.teapot",
-                "stacktrace": "Error: system.cabage.teapot\n    at getException (http://localhost:3333/html/debug-gui-client-example.html:17:16)\n    at addException (http://localhost:3333/html/debug-gui-client-example.html:30:57)\n    at randomAdd (http://localhost:3333/html/debug-gui-client-example.html:48:13)\n    at HTMLInputElement.onclick (http://localhost:3333/html/debug-gui-client-example.html#:59:60)"
+                "id": "id3",
+                "msg": "Error: verification",
+                "stacktrace": "Error: verification\n    at getException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:23:16)\n    at addException (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:32:34)\n    at randomAdd (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:55:13)\n    at HTMLInputElement.onclick (https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=true:62:65)",
+                "time": 1606326087904
               }
             ],
-            "values": {},
             "links": {},
-            "children": {}
+            "values": {}
+          }
+        },
+        "exceptions": [],
+        "links": {
+          "verification.system": {
+            "url": "http://www.wizardry.io",
+            "time": 1606326087469
+          },
+          "computer": {
+            "url": "http://www.pentagon.gov",
+            "time": 1606326087536
+          },
+          "cabage.teapot": {
+            "url": "http://www.pentagon.gov",
+            "time": 1606326087541
+          },
+          "system.cabage.cabage": {
+            "url": "http://www.google.com",
+            "time": 1606326087832
+          }
+        },
+        "values": {
+          "cabage.cabage.cabage": {
+            "value": "teapot.teapot.computer",
+            "time": 1606326087914
           }
         }
       }
+    },
+    "exceptions": [],
+    "links": {},
+    "values": {}
+  },
+  "__LOGS": [
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.login",
+      "time": 1606326087384
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087386
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.verification",
+      "time": 1606326087388
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.verification.login",
+      "time": 1606326087394
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.system.login",
+      "time": 1606326087394
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.computer",
+      "time": 1606326087396
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087403
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.verification",
+      "time": 1606326087403
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.system.login",
+      "time": 1606326087411
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.system.teapot",
+      "time": 1606326087413
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.verification.teapot",
+      "time": 1606326087414
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.cabage.teapot",
+      "time": 1606326087415
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.system.teapot",
+      "time": 1606326087422
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087426
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087427
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087428
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087430
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087434
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.system.login",
+      "time": 1606326087435
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087435
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.cabage",
+      "time": 1606326087435
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087436
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.system",
+      "time": 1606326087439
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.cabage",
+      "time": 1606326087441
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087442
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.teapot.login",
+      "time": 1606326087448
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.computer.teapot",
+      "time": 1606326087449
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.teapot",
+      "time": 1606326087450
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.login.teapot",
+      "time": 1606326087450
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.computer.computer",
+      "time": 1606326087451
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.verification.system",
+      "time": 1606326087452
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.system",
+      "time": 1606326087458
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087459
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.cabage.login",
+      "time": 1606326087460
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.cabage.teapot",
+      "time": 1606326087460
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.login.system",
+      "time": 1606326087461
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087462
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.computer.system",
+      "time": 1606326087463
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.system.system",
+      "time": 1606326087465
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.system.teapot",
+      "time": 1606326087466
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087466
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.cabage.verification",
+      "time": 1606326087467
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087468
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087470
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087472
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.login",
+      "time": 1606326087473
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087473
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.login",
+      "time": 1606326087474
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.teapot",
+      "time": 1606326087476
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087476
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.cabage",
+      "time": 1606326087477
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087479
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.login.cabage",
+      "time": 1606326087479
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.login",
+      "time": 1606326087482
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.login.login",
+      "time": 1606326087482
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.cabage",
+      "time": 1606326087483
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.system",
+      "time": 1606326087484
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087485
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087485
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.system",
+      "time": 1606326087487
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.computer.login",
+      "time": 1606326087490
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.computer.teapot",
+      "time": 1606326087490
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.computer",
+      "time": 1606326087495
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.computer",
+      "time": 1606326087495
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.verification.cabage",
+      "time": 1606326087496
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.verification.verification",
+      "time": 1606326087497
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.teapot.computer",
+      "time": 1606326087498
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.computer.cabage",
+      "time": 1606326087500
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.login",
+      "time": 1606326087501
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.login",
+      "time": 1606326087502
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.login.verification",
+      "time": 1606326087502
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087503
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087504
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.verification",
+      "time": 1606326087505
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087506
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.login.system",
+      "time": 1606326087507
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.computer.system",
+      "time": 1606326087507
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087509
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.system.cabage",
+      "time": 1606326087510
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087511
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087512
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.login.computer",
+      "time": 1606326087513
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087514
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.login",
+      "time": 1606326087515
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.cabage.cabage",
+      "time": 1606326087515
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.computer",
+      "time": 1606326087516
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087517
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.verification",
+      "time": 1606326087518
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087519
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.verification.verification",
+      "time": 1606326087520
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087521
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087522
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.computer.verification",
+      "time": 1606326087522
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.login",
+      "time": 1606326087523
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087525
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087526
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087527
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.computer.system",
+      "time": 1606326087528
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.teapot.computer",
+      "time": 1606326087530
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087530
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087532
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.login.teapot",
+      "time": 1606326087533
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.login",
+      "time": 1606326087534
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.computer",
+      "time": 1606326087535
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.verification.verification",
+      "time": 1606326087537
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.system",
+      "time": 1606326087537
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087539
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.cabage",
+      "time": 1606326087541
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.cabage",
+      "time": 1606326087542
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.verification.verification",
+      "time": 1606326087542
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.verification",
+      "time": 1606326087543
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.system",
+      "time": 1606326087543
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087546
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.verification.login",
+      "time": 1606326087546
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.teapot",
+      "time": 1606326087547
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.computer",
+      "time": 1606326087547
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087833
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087836
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087846
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.verification.computer",
+      "time": 1606326087848
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087849
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087850
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.login",
+      "time": 1606326087850
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.system",
+      "time": 1606326087851
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087859
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.login.verification",
+      "time": 1606326087860
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.teapot.system",
+      "time": 1606326087861
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.teapot",
+      "time": 1606326087862
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087862
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087875
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087876
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.teapot",
+      "time": 1606326087877
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087878
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.verification",
+      "time": 1606326087883
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.login",
+      "time": 1606326087884
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.cabage",
+      "time": 1606326087887
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.teapot",
+      "time": 1606326087889
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.login.cabage",
+      "time": 1606326087895
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087900
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087904
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.teapot.cabage",
+      "time": 1606326087904
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.login",
+      "time": 1606326087905
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.login",
+      "time": 1606326087908
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.login",
+      "time": 1606326087908
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.login.teapot",
+      "time": 1606326087909
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.computer",
+      "time": 1606326087909
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.system.system",
+      "time": 1606326087910
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087910
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087913
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.system",
+      "time": 1606326087914
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.verification.computer",
+      "time": 1606326087915
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.computer.teapot",
+      "time": 1606326087915
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087916
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.system",
+      "time": 1606326087919
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.computer",
+      "time": 1606326087919
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.system.cabage",
+      "time": 1606326087921
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087921
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087924
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087925
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087925
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.verification",
+      "time": 1606326087928
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.teapot.system",
+      "time": 1606326087928
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.verification",
+      "time": 1606326087929
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.verification",
+      "time": 1606326087930
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.login",
+      "time": 1606326087930
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.login",
+      "time": 1606326087933
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.verification",
+      "time": 1606326087933
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087934
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087935
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.computer",
+      "time": 1606326087935
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.computer",
+      "time": 1606326087937
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.verification.cabage",
+      "time": 1606326087937
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.cabage.cabage",
+      "time": 1606326087938
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087938
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087939
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087939
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087941
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.cabage",
+      "time": 1606326087942
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.login.system",
+      "time": 1606326087942
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087943
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.login",
+      "time": 1606326087943
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087943
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087945
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.verification",
+      "time": 1606326087946
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.cabage.computer",
+      "time": 1606326087947
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.login",
+      "time": 1606326087947
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087950
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087951
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.system",
+      "time": 1606326087953
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.login",
+      "time": 1606326087954
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.system.verification",
+      "time": 1606326087954
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087955
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087956
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.computer.login",
+      "time": 1606326087957
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.login",
+      "time": 1606326087958
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087959
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.login",
+      "time": 1606326087960
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.system",
+      "time": 1606326087961
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage",
+      "time": 1606326087964
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem",
+      "time": 1606326087965
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087966
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.teapot",
+      "time": 1606326087967
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.teapot",
+      "time": 1606326087968
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.computer.system",
+      "time": 1606326087968
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer.computer",
+      "time": 1606326087968
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification",
+      "time": 1606326087969
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.cabage.computer",
+      "time": 1606326087972
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.teapot.system",
+      "time": 1606326087972
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087974
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087976
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.computer.login",
+      "time": 1606326087977
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin.computer",
+      "time": 1606326087980
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot",
+      "time": 1606326087981
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.verification.verification",
+      "time": 1606326087982
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087982
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.system.system",
+      "time": 1606326087983
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.system",
+      "time": 1606326087984
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcomputer",
+      "time": 1606326087988
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tlogin",
+      "time": 1606326087989
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tteapot.teapot",
+      "time": 1606326087989
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tsystem.verification",
+      "time": 1606326087990
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tverification.teapot.system",
+      "time": 1606326087992
+    },
+    {
+      "log": "[Wed Nov 25 2020 11:41:27 GMT-0600 (Central Standard Time)]:\tcabage.teapot",
+      "time": 1606326087993
     }
-  }
-}</debug-gui-data></body></html>
+  ]
+}
+		</debug-gui-data>
+	</body>
+</html>

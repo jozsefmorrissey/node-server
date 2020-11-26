@@ -1,18 +1,23 @@
 function DebugGuiClient(config, root, debug) {
   config = config || {};
+  var instance = this;
   var host = config.host;
+  var httpHost = config.httpHost;
+  var httpsHost = config.httpsHost;
   var id = config.id;
   var logWindow = config.logWindow || 25;
 
   debug = debug || config.debug || config.debug === 'true' || false;
 
-  function setHost(newHost) {
-    host = newHost;
-  }
+  this.getId = function () {return id;}
+  this.setId = function (value) {id = value; createCookie();}
+  this.setHost = function (value) {host = value; createCookie();}
 
-  function setRoot(r) {
-    root = r;
-  }
+  function secure() {host = httpsHost;}
+  function insecure() {host = httpHost;}
+  function getHost() {return host;}
+  function setRoot(r) {root = r;}
+  function getRoot() {return root;}
 
   function path(str) {
     if (str) {
@@ -25,20 +30,44 @@ function DebugGuiClient(config, root, debug) {
     return root + "." + group;
   }
 
+  function softUpdate(config) {
+    config.id = id || config.id;
+    config.host = host || config.host;
+    config.httpHost = httpHost || config.httpHost;
+    config.httpsHost = httpsHost || config.httpsHost;
+    updateConfig(config);
+  }
+
   function updateConfig(config) {
     id = config.id !== undefined ? config.id : id;
+    httpHost = config.httpHost || httpHost;
+    httpsHost = config.httpsHost || httpsHost;
     config.debug = String(config.debug);
     debug = config.debug.trim().match(/^(true|false)$/) ? config.debug : debug;
     debug = debug === true || debug === 'true';
     host = config.host !== undefined ? config.host : host;
     if (host !== undefined) host = host.replace(/^(.*?)\/$/, "$1");
     logWindow = logWindow != 25 ? logWindow : config.logWindow;
+    if (host && isDebugging() && DebugGuiClient.inBrowser) {
+      var script;
+      if (!document.head.innerHTML.match(/ src=('|")[^'^"]*\/js\/debug-gui-client.js('|")/)) {
+        script = document.createElement("script");
+        script.src = `${getHost()}/js/debug-gui-client.js`;
+        document.head.appendChild(script);
+      } else if (!document.head.innerHTML.match(/ src=('|")[^'^"]*\/js\/debug-gui.js('|")/)) {
+          script = document.createElement("script");
+          script.src = `${getHost()}/js/debug-gui.js`;
+          document.head.appendChild(script);
+      }
+    }
+    createCookie();
   }
 
   function getUrl(host, ext, id, group) {
     host = path(host);
     ext = path(ext);
     id = path(id);
+    group = group ? group.replace(/\//g, '%2F').replace(/\s/g, '%20') : undefined;
     group = path(group);
 
     var url = host + ext + id + group;
@@ -61,6 +90,7 @@ function DebugGuiClient(config, root, debug) {
     xhr.onreadystatechange = function () {
         if (this.readyState != 4) return;
 
+        console.error('dg resp', this.responseText);
         if (this.status == 200) {
             var data = JSON.parse(this.responseText);
             if (onSuccess) {
@@ -80,7 +110,7 @@ function DebugGuiClient(config, root, debug) {
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify({label, url}));
     }
-    return this;
+    return instance;
   }
 
   function value(group, key, value) {
@@ -88,35 +118,43 @@ function DebugGuiClient(config, root, debug) {
       var xhr = new DebugGuiClient.xmlhr();
       xhr.open("POST", getUrl(host, "value", id, prefixRoot(group)), true);
       xhr.setRequestHeader('Content-Type', 'application/json');
+      if ((typeof value) === 'object') value = JSON.stringify(value, null, 2);
       xhr.send(JSON.stringify({key, value}));
     }
-    return this;
+    return instance;
   }
 
-  function log(log) {
+
+  function logs() {
     if (debug) {
+      var log = '';
+      for (let i = 0; i < arguments.length; i++) {
+        if ((typeof arguments[i]) === 'object') {
+          log += JSON.stringify(arguments[i], null, 6);
+        } else {
+          log += arguments[i];
+        }
+      }
       var xhr = new DebugGuiClient.xmlhr();
       var url = getUrl(host, "log", id);
       xhr.open("POST", url, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify({log}));
     }
-    return this;
+    return instance;
+  }
+
+  function log(log) {
+    logs([log]);
   }
 
   function isDebugging() {
     return debug;
   }
 
-  this.getHost = function () {return host;}
-  this.getId = function () {return id;}
-  this.setId = function (value) {id = value;}
-  this.setHost = function (value) {host = value;}
-
-  function createCookie(copy) {
-    var id = this.getId();
-    var host = this.getHost();
-    if (!id || !host) return;
+  this.toString = function () {
+    var id = instance.getId() || '';
+    var host = instance.getHost() || '';
     noProtocol=host.replace(/^(http|https):\/\//, "")
     var portReg = /([^:]*?:[0-9]{4})(\/.*)$/;
     var httpHost;
@@ -133,27 +171,41 @@ function DebugGuiClient(config, root, debug) {
       httpsHost = host.replace(/http/, 'https');
     }
     var cookie = "id=" + id;
-    var setupCookie = cookie + "|host=" +
+    return cookie + "|host=" +
         host + "|httpHost="  + httpHost + "|httpsHost=" + httpsHost + "|debug=" + isDebugging();
+  }
 
-    if (this.isDebugging()) {
-      document.cookie = 'DebugGui=' + setupCookie;
-    } else {
-      document.cookie = 'DebugGui=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    }
-    if (copy) {
-      copyToClipboard(setupCookie, "Setup cookie copied to clipboard");
+  this.addHeaderXhr = function (xhr) {
+    xhr.setRequestHeader('debug-gui', instance.toString());
+  }
+
+  function createCookie() {
+    if (!instance.getId() || !instance.getHost()) return;
+    if (DebugGuiClient.inBrowser) {
+      var cookie;
+      if (instance.isDebugging()) {
+        cookie = 'DebugGui=' + instance.toString() + "; SameSite=None;";
+      } else {
+        cookie = 'DebugGui=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      }
+      document.cookie = cookie;
+      return cookie;
     }
   }
 
   this.link = link;
   this.value = value;
   this.exception = exception;
-  this.setHost = setHost;
+  this.getHost = getHost;
+  this.logs = logs;
   this.log = log;
   this.updateConfig = updateConfig;
+  this.softUpdate = softUpdate;
   this.isDebugging = isDebugging;
+  this.secure = secure;
+  this.insecure = insecure;
   this.setRoot = setRoot;
+  this.getRoot = getRoot;
   this.createCookie = createCookie;
 }
 
@@ -169,7 +221,7 @@ function DebugGuiClient(config, root, debug) {
     var keyValues = str.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
     var json = {};
     for (let index = 0; keyValues && index < keyValues.length; index += 1) {
-      var split = keyValues[index].match(new RegExp('(.*?)=(.*?)(' + seperator + '|$)'));
+      var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
       if (split) {
         json[split[1]] = split[2];
       }
@@ -239,31 +291,37 @@ function DebugGuiClient(config, root, debug) {
   }
 
   function express(req, root) {
+    if (req.debugGui) return req.debugGui;
     var config = getHeaderOrCookie(req.headers);
     var debugGui = new DebugGuiClient(config, root);
     config = getParameter(req.params);
     debugGui.updateConfig(config);
+    req.debugGui = debugGui;
     return debugGui;
   }
 
   var tagConf = undefined;
   function tagConfig() {
-    function getScriptAttr(name) {
-      var attr = document.currentScript.attributes[name];
-      return attr ? attr.value : undefined;
+    if (document.currentScript) {
+      function getScriptAttr(name) {
+        var attr = document.currentScript.attributes[name];
+        return attr ? attr.value : undefined;
+      }
+      tagConf = tagConf || {
+        id: getScriptAttr('identity'),
+        host: getScriptAttr('host'),
+        debug: getScriptAttr('debug'),
+        logWindow: getScriptAttr('log-window')
+      };
+      return tagConf;
     }
-    tagConf = tagConf || {
-      id: getScriptAttr('identity'),
-      host: getScriptAttr('host'),
-      debug: getScriptAttr('debug'),
-      logWindow: getScriptAttr('log-window')
-    };
-    return tagConf;
+    return {};
   }
 
-  function browser(root) {
+  function browser(root, programaticConfig) {
     var debugGui = new DebugGuiClient();
     debugGui.updateConfig(tagConfig());
+    if (programaticConfig) debugGui.updateConfig(programaticConfig);
     var config = getCookie(document.cookie);
     debugGui.updateConfig(config);
     var params = window.location.href.replace(/^.*?\?(.*?)(#|)$|^.*$()/, '$1');
@@ -312,10 +370,4 @@ if (!DebugGuiClient.inBrowser) {
   exports.DebugGuiClient = DebugGuiClient;
 } else {
   var dg = DebugGuiClient.browser('default');
-  if (dg.isDebugging()) {
-    var script = document.createElement("script");
-    var src = document.currentScript.attributes['src'].value;
-    script.src = src.replace(/-client/, '');
-    document.head.appendChild(script);
-  }
 }

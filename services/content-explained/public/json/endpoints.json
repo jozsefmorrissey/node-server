@@ -47,6 +47,9 @@
     "txt": "/images/icons/txt.png",
     "merriam": "/images/icons/Merriam-Webster.png"
   },
+  "merriam": {
+    "search": "/merriam/webster/:searchText"
+  },
   "_secure": [
     "user.update",
     "credential.get",
