@@ -124,7 +124,6 @@ function DebugGuiClient(config, root, debug) {
     return instance;
   }
 
-
   function logs() {
     if (debug) {
       var log = '';
@@ -147,6 +146,7 @@ function DebugGuiClient(config, root, debug) {
   function log(log) {
     logs([log]);
   }
+
 
   function isDebugging() {
     return debug;
@@ -206,10 +206,31 @@ function DebugGuiClient(config, root, debug) {
   this.insecure = insecure;
   this.setRoot = setRoot;
   this.getRoot = getRoot;
+  this.cache = () => DebugGuiClient.clients[id] = this;
+  this.trash = () => DebugGuiClient.clients[id] = undefined;
   this.createCookie = createCookie;
 }
 
 {
+  const dummyClient = new DebugGuiClient();
+  function staticCall(funcName) {
+    return (id) => {
+      const args = Array.from(arguments).splice(1);
+      const realClient = DebugGuiClient.clients[id];
+      realClient ? realClient[funcName].apply(realClient, args) :
+          dummyClient[funcName].apply(dummyClient, args);
+    }
+  }
+
+  DebugGuiClient.clients = {};
+  function createStaticInterface() {
+    const funcNames = Object.keys(dummyClient);
+    for (var index = 0; index < funcNames.length; index += 1) {
+      const funcName = funcNames[index];
+      DebugGuiClient[funcName] = staticCall(funcName);
+    }
+  }
+
   // Copied from https://jozsefmorrissey.com/js/ju.js
   function parseSeperator (str, seperator, isRegex) {
     if ((typeof str) !== 'string') {
