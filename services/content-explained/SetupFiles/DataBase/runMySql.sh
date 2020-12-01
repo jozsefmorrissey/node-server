@@ -3,24 +3,25 @@
 source ./commandParser.sh
 source ./properties.sh
 
-user=${flags[user]}
-password=${flags[password]}
+user=$(pst value ce-mysql user)
+password=$(pst value ce-mysql password)
 unset flags[password]
 unset flags[user]
 
+echo $user/$password
 rootPassword=$(pst value system mysql)
 
-if [ -z $user ]
+propFile=./mysql.properties
+echo ${booleans[test]}
+if [ ${booleans[test]} ]
 then
-  testPropFile=./mysql.properties
-  password=$(getValue mysql.password $testPropFile)
-  database=$(getValue mysql.database $testPropFile)
-  host=$(getValue mysql.host $testPropFile)
-  user=$(getValue mysql.user $testPropFile)
+  password=$(getValue mysql.test.password $propFile)
+  database=$(getValue mysql.database $propFile)
+  host=$(getValue mysql.host $propFile)
+  user=$(getValue mysql.test.user $propFile)
 else
-  propFile=../../config/prod.properties
-  host=$(getValue host $propFile)
-  database=$(getValue database $propFile)
+  host=$(getValue mysql.host $propFile)
+  database=$(getValue mysql.database $propFile)
 fi
 
 echo -e "user $user\npassword $password\ndatabase $database"

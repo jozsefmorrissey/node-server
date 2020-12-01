@@ -14,9 +14,13 @@ const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
 
-const password = global.ENV !== 'local' ?
-      shell.exec('pst value system mysql').stdout : undefined;
-const crud = new Crud({password, silent: true, mutex: false});
+let user, password;
+if (global.ENV !== 'local') {
+  user = shell.exec('pst value ce-mysql user').stdout.trim();
+  password = shell.exec('pst value ce-mysql password').stdout.trim();
+}
+
+const crud = new Crud({password, user, silent: true, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   const context = Context.fromFunc(success);
