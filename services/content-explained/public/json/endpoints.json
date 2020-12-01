@@ -1,8 +1,8 @@
 {
   "_envs": {
     "local": "https://localhost:3001/content-explained",
-    "dev": "https://dev.jozsefmorrissey.com/context-explained",
-    "prod": "https://node.jozsefmorrissey.com/context-explained"
+    "dev": "https://dev.jozsefmorrissey.com/content-explained",
+    "prod": "https://node.jozsefmorrissey.com/content-explained"
   },
   "user": {
     "add": "/user",
