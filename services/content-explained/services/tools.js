@@ -1,4 +1,6 @@
 
+const { DebugGuiClient } = require('../../debug-gui/public/js/debug-gui-client');
+
 function randomString(length, characterSetRegEx, regEx) {
   let generatedString = "";
   while (!generatedString.match(regEx)) {

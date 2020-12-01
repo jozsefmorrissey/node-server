@@ -430,6 +430,7 @@ class Crud {
         const objResults = resultMap[targetObj] ? Object.values(resultMap[targetObj]) : [];
         print('\nMapped object results:\n', objResults);
 
+        console.log('trying to call!');
         if (one) {
           if (objResults.length !== 1) {
             fail(objResults);
@@ -437,6 +438,7 @@ class Crud {
           }
           success(objResults[0]);
         } else {
+          console.log('calledSuccess!');
           success(objResults);
         }
       }

@@ -5,8 +5,8 @@ var config = require('./config.json');
 const { UsernameAlreadyTaken, ExplanationNotFound, MerriamRequestFailed } =
         require('./services/exceptions.js');
 
-const { DebugGuiClient } = require('../debug-gui/public/js/debug-gui-client');
 const { EPNTS } = require('./services/EPNTS');
+const { Context } = require('./services/context');
 
 const serverId = Math.floor(Math.random() * 1000000000);
 
@@ -74,9 +74,7 @@ function getMerriamResponse(searchText, res, next) {
 function endpoints(app, prefix, ip) {
   app.all(prefix + '/*',function(req,res,next){
     res.header('ce-server-id', serverId);
-    DebugGuiClient.express(req);
-    if (global.ENV !== 'prod') req.debugGui.insecure();
-    req.debugGui.setRoot('ce-server');
+    new Context(req);
     next();
   });
 
@@ -95,12 +93,11 @@ function endpoints(app, prefix, ip) {
             enpts = contents;
             break;
         }
-        console.log(err);
         if (endpoints && enpts) {
-          console.log(JSON.stringify(EPNTS));
           const host = req.params.env || EPNTS._envs[global.ENV];
           const newEnpts = `new Endpoints(${endpoints}, '${host}')`;
-          const js = `${enpts}\nconst EPNTS = ${newEnpts}.getFuncObj();`
+          const exportBlock = '\ntry {exports.EPNTS = EPNTS;}catch(e){}'
+          const js = `${enpts}\nconst EPNTS = ${newEnpts}.getFuncObj();${exportBlock}`;
           res.setHeader('Content-Type', 'text/plain');
           res.send(js);
         }

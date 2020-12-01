@@ -1,8 +1,8 @@
 const bcrypt = require('bcryptjs');
 const Crud = require('./database/mySqlWrapper').Crud;
-const { CallbackTree } = require('../services/callbackTree.js');
 
-const { EPNTS } = require('./EPNTS.js');
+const { EPNTS } = require('./EPNTS');
+const { Context } = require('./context');
 const { InvalidDataFormat, InvalidType, UnAuthorized, SqlOperationFailed,
         EmailServiceFailure, ShouldNeverHappen, DuplacateUniqueValue,
         NoSiteFound, ExplanationNotFound, NotFound, CredentialNotActive} =
@@ -16,14 +16,15 @@ const email = require('./email.js');
 const crud = new Crud({silent: true, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
-  console.log("UA", dataObject)
-  const cbTree = new CallbackTree(crud.selectOne, 'retrieveOrInsertDataObject', dataObject)
-    .success(success)
+  const context = Context.fromFunc(success);
+  function s(found) {success(found)}
+  context.callbackTree(crud.selectOne, 'retrieveOrInsertDataObject', dataObject)
+    .success(s)
     .fail(crud.insert, 'insert', dataObject)
     .success('insert', crud.selectOne, 'select', dataObject)
-    .success('select', success)
-    .fail('insert', returnError(next, new SqlOperationFailed('insert', 'UserAgent')));
-  cbTree.execute();
+    .success('select', s)
+    .fail('insert', returnError(next, new SqlOperationFailed('insert', 'UserAgent')))
+    .execute();
 }
 
 function cleanSiteUrl(url) {
@@ -45,13 +46,14 @@ function getSite(url, next, success) {
 
 
 async function buildRequestCredential(req, next) {
+  const context = Context.fromReq(req);
   const cred = new Credential();
   const userAgentVal = req.headers['user-agent'];
 
   function setIp(ip, success) {cred.setIp(ip); success();};
   function setUserAgent (ua, success) {cred.setUserAgent(ua); success();};
 
-  const hold = await new CallbackTree(getIp, 'tarGetIp', req.ip, next)
+  const hold = await context.callbackTree(getIp, 'tarGetIp', req.ip, next)
     .success(setIp, 'settingIp')
     .success('settingIp', getUserAgent, 'getUserAgent', userAgentVal, next)
     .success('getUserAgent', setUserAgent, 'settingUserAgent', '$cbtArg[0]')
@@ -70,6 +72,7 @@ function authVal(type, id, secret, next, success, fail) {
   success(val);
 }
 async function auth(req, next, success) {
+  const context = Context.fromReq(req);
 
   function failure(error) {returnError(next, error)(new UnAuthorized());}
   const val = req.headers['authorization'];
@@ -82,7 +85,6 @@ async function auth(req, next, success) {
   const type = match[1];
   const id = Number.parseInt(match[2]);
   const secret = match[3];
-  console.log('creds:', secret, id, req.headers['user-agent']);
 
   function validateAuthorization(user) {
     const credentials = user.getCredentials();
@@ -91,8 +93,6 @@ async function auth(req, next, success) {
       const secretEq = credential.secret === secret;
       const userAgentEq = credential.userAgent === req.headers['user-agent'];
       const ipEq = credential.ip === req.ip;
-      console.log(req.ip);
-      console.log('test:', secretEq, userAgentEq, ipEq)
       if (secretEq && userAgentEq && ipEq) {
         const isActive = credential.activationSecret === null;
         if (isActive) {
@@ -109,7 +109,7 @@ async function auth(req, next, success) {
   switch (type) {
     case 'User':
       const user = new User(id);
-      new CallbackTree(crud.selectOne, 'authorizationTree', user)
+      context.callbackTree(crud.selectOne, 'authorizationTree', user)
         .success(validateAuthorization)
         .fail(failure, undefined, new UnAuthorized())
         .execute();
@@ -122,11 +122,9 @@ async function auth(req, next, success) {
 function returnVal(res, value) {
   return function (resVal) {
     value = value || resVal;
-    console.log('retVal', value)
     if ((typeof value) === 'object') {
       res.setHeader('Content-Type', 'application/json');
     }
-    console.log('retVal')
     res.send(value);
   }
 }
@@ -141,9 +139,7 @@ function returnQuery(res) {
 function returnError(next, error) {
   return function(e) {
     const err = error === undefined ? e : error;
-    console.log('retErr', err)
     next(err);
-    console.log('retErr')
   }
 }
 
@@ -159,6 +155,7 @@ function createSecret() {
 }
 
 async function createCredential(req, next, userId, success, fail) {
+  const context = Context.fromReq(req);
   const userAgentVal = req.headers['user-agent'];
   const secret = createSecret();
   const activationSecret = createSecret();
@@ -177,7 +174,7 @@ async function createCredential(req, next, userId, success, fail) {
     user.setEmail(u.getEmail()); success()
   };
 
-  const cbTree = new CallbackTree(crud.selectOne, 'postCredential', user)
+  const cbTree = context.callbackTree(crud.selectOne, 'postCredential', user)
     .success(setUser, 'settingUser')
     .fail(new SqlOperationFailed('select', 'User', {USER_ID: user.id}))
     .success('settingUser', crud.delete, 'removeOld', deleteCred)
@@ -199,6 +196,7 @@ function insertTags(tags, success, failure) {
 }
 
 function addOpinion(req, next, favorable, explanationId, siteId, success, fail) {
+  const context = Context.fromReq(req);
   const opinion = new Opinion(favorable, explanationId, siteId);
   const delOpinion = new Opinion(undefined, explanationId, siteId);
   function setUserId(user, success) {
@@ -206,7 +204,7 @@ function addOpinion(req, next, favorable, explanationId, siteId, success, fail) 
     opinion.setUserId(user.id);
     success();
   }
-  new CallbackTree(auth, 'submittingOpinion', req, next)
+  new context.callbackTree(auth, 'submittingOpinion', req, next)
     .fail(fail)
     .success(setUserId, 'settingUser')
     .success('settingUser', crud.delete, 'deletingOpinion', delOpinion)
@@ -248,20 +246,19 @@ function cleanStr(str) {
 
 function addExplToSite(explId, siteUrl, next, success) {
   if (siteUrl !== undefined) {
-    console.log('args:', arguments)
-    console.log('explan id', explId);
+    const context = Context.fromReq(req);
     const explanationId = Number.parseInt(explId);
     const siteExpl = new SiteExplanation();
     function setSiteId(site, callback) {siteExpl.setSiteId(site.id); callback();}
     function setExplanation(expl, callback) {siteExpl.setExplanation(expl); callback();}
-    new CallbackTree(crud.selectOne, 'gettingExpl', new Explanation(explanationId))
-    .success('gettingExpl', setExplanation, 'settingExpl')
-    .success('settingExpl', getSite, 'gettingSite', siteUrl, next)
-    .success('gettingSite', setSiteId, 'settingSite')
-    .success('settingSite', crud.insert, 'addingSiteExpl', siteExpl)
-    .success('addingSiteExpl', success, undefined, 'success')
-    .fail('addingSiteExpl', success, undefined, 'success: Explanation already mapped to this site.')
-    .execute();
+    context.callbackTree(crud.selectOne, 'gettingExpl', new Explanation(explanationId))
+      .success('gettingExpl', setExplanation, 'settingExpl')
+      .success('settingExpl', getSite, 'gettingSite', siteUrl, next)
+      .success('gettingSite', setSiteId, 'settingSite')
+      .success('settingSite', crud.insert, 'addingSiteExpl', siteExpl)
+      .success('addingSiteExpl', success, undefined, 'success')
+      .fail('addingSiteExpl', success, undefined, 'success: Explanation already mapped to this site.')
+      .execute();
   } else {
     success();
   }
@@ -269,9 +266,10 @@ function addExplToSite(explId, siteUrl, next, success) {
 
 function endpoints(app, prefix, ip) {
   app.all(prefix + '/*',function(req,res,next){
-    console.log('checkDebugger', req.debugGui)
-    if (req.debugGui.isDebugging()) {
-      crud.setLogger(req.debugGui.logs);
+    const context = Context.fromReq(req);
+    console.log('checkDebugger', context.dg.isDebugging())
+    if (context.dg.isDebugging()) {
+      crud.setLogger(context.dg.log);
     } else {
       crud.setLogger(undefined);
     }
@@ -289,10 +287,11 @@ function endpoints(app, prefix, ip) {
       });
 
       app.post(prefix + EPNTS.user.add(), function (req, res, next) {
+        const context = Context.fromReq(req);
         const username = req.body.username;
         const email = req.body.email;
         const user = new User(username, email);
-        new CallbackTree(crud.insert, 'insertUser', user)
+        context.callbackTree(crud.insert, 'insertUser', user)
           .success(createCredential, 'createCredential', req, next, '$cbtArg[0].insertId')
           .fail(returnError(next))
           .success('createCredential', returnQuery(res))
@@ -301,6 +300,7 @@ function endpoints(app, prefix, ip) {
       });
 
       app.post(prefix + EPNTS.user.requestUpdate(), function (req, res, next) {
+        const context = Context.fromReq(req);
         const user = User.fromObject(req.body.user);
 
 
@@ -325,7 +325,7 @@ function endpoints(app, prefix, ip) {
           }
         }
         console.log(userUpdate);
-        new CallbackTree(auth, 'requestUpdate', req, next)
+        context.callbackTree(auth, 'requestUpdate', req, next)
           .success(validateUpdatingLoggedInUser, 'validating')
           .fail(returnError(next))
           .success('validating', crud.selectOne, 'checkingForUniqueUsername', )
@@ -339,6 +339,7 @@ function endpoints(app, prefix, ip) {
       });
 
       app.get(prefix + EPNTS.user.update(), function (req, res, next) {
+        const context = Context.fromReq(req);
         const userUpdate = new PendingUserUpdate(req.params.updateSecret);
         function createUser(dbUserUpdate, success) {
           const user = new User();
@@ -347,7 +348,7 @@ function endpoints(app, prefix, ip) {
           user.setEmail(dbUserUpdate.email || undefined);
           success(user);
         }
-        new CallbackTree(crud.selectOne, 'updateUser', userUpdate)
+        context.callbackTree(crud.selectOne, 'updateUser', userUpdate)
           .success(createUser, 'creatingUser')
           .success('creatingUser', crud.update, 'updating')
           .fail(returnError(next))
@@ -359,13 +360,15 @@ function endpoints(app, prefix, ip) {
   //  ------------------------- Credential Api -------------------------  //
 
     app.get(prefix + EPNTS.credential.add(), async function (req, res, next) {
-      new CallbackTree(createCredential, 'createCredentialRequest', req, next, req.params.userId)
+      const context = Context.fromReq(req);
+      context.callbackTree(createCredential, 'createCredentialRequest', req, next, req.params.userId)
         .success(returnQuery(res))
         .fail(returnError(next))
         .execute();
     });
 
     app.get(prefix + EPNTS.credential.activate(), function (req, res, next) {
+      const context = Context.fromReq(req);
       const cred =  new Credential();
       cred.setActivationSecret(req.params.activationSecret);
       cred.setUserId(Number.parseInt(req.params.userId));
@@ -375,10 +378,10 @@ function endpoints(app, prefix, ip) {
         crud.update(credential, returnVal(res, 'success'), returnError(next));
       };
 
-      const cbTree = new CallbackTree(crud.selectOne, 'selectCred', cred)
+      context.callbackTree(crud.selectOne, 'selectCred', cred)
         .success(activate, 'settingIp')
-        .fail(returnError(next, new UnAuthorized()));
-      cbTree.execute();
+        .fail(returnError(next, new UnAuthorized()))
+        .execute();
     });
 
     app.get(prefix + EPNTS.credential.get(), function (req, res, next) {
@@ -401,6 +404,7 @@ function endpoints(app, prefix, ip) {
     });
 
     app.get(prefix + EPNTS.credential.status(), function (req, res, next) {
+      const context = Context.fromReq(req);
       const authorization = req.params.authorization;
       const match = authorization.match(authReg);
       if (match === null) {
@@ -417,13 +421,14 @@ function endpoints(app, prefix, ip) {
       cred.setUserId(id);
       cred.setSecret(secret);
       console.log(id, secret)
-      new CallbackTree(crud.selectOne, 'getCredentialStatus', cred)
+      context.callbackTree(crud.selectOne, 'getCredentialStatus', cred)
       .success(returnStatus)
       .fail(returnError(next, new NotFound('Credential')))
       .execute();
     });
 
     app.delete(prefix + EPNTS.credential.delete(), function (req, res, next) {
+      const context = Context.fromReq(req);
       const credential = new Credential();
       const idOauth = req.params.idOauthorization;
       if (idOauth.match(idStrReg)) {
@@ -437,7 +442,7 @@ function endpoints(app, prefix, ip) {
         credential.setUserId(match[2]);
         credential.setSecret(match[3])
       }
-      new CallbackTree(auth, 'deleteCredential', req, next)
+      context.callbackTree(auth, 'deleteCredential', req, next)
         .fail(returnError(next, new UnAuthorized()))
         .success(crud.delete, 'removeCredential', credential)
         .fail('removeCredential', returnError())
@@ -448,7 +453,8 @@ function endpoints(app, prefix, ip) {
   //  ------------------------- Site Api -------------------------  //
 
   app.post(prefix + EPNTS.site.add(), function (req, res, next) {
-    new CallbackTree(auth, 'addSite', req, next)
+    const context = Context.fromReq(req);
+    context.callbackTree(auth, 'addSite', req, next)
       .fail(returnError(next, new UnAuthorized()))
       .success(addSite, 'insertSite', req.body.url)
       .fail('insertSite', returnError(next, new DuplacateUniqueValue()))
@@ -457,8 +463,8 @@ function endpoints(app, prefix, ip) {
   });
 
   app.post(prefix + EPNTS.site.get(), function (req, res, next) {
-    console.log('booody',req.body)
-    new CallbackTree(crud.selectOne, 'getSite', new Site(req.body.url))
+    const context = Context.fromReq(req);
+    context.callbackTree(crud.selectOne, 'getSite', new Site(req.body.url))
       .fail(returnError(next, new NoSiteFound(req.body.url)))
       .success(returnQuery(res))
       .execute();
@@ -467,10 +473,11 @@ function endpoints(app, prefix, ip) {
   //  ------------------------- Explanation Api -------------------------  //
 
   app.get(prefix + EPNTS.explanation.get(), function (req, res, next) {
+    const context = Context.fromReq(req);
     const explanation = new Explanation();
     const clean = cleanStr(req.params.words);
     function setWords(words, success) {explanation.setSearchWords(words); success();};
-    new CallbackTree(crud.selectOne, 'gettingExplanations', new Words(clean))
+    context.callbackTree(crud.selectOne, 'gettingExplanations', new Words(clean))
       .success(setWords, 'settingWord')
       .fail(returnError(next, new ExplanationNotFound(clean)))
       .success('settingWord', crud.select, 'gettingExpl', explanation)
@@ -487,6 +494,7 @@ function endpoints(app, prefix, ip) {
   });
 
   app.post(prefix + EPNTS.explanation.add(), function (req, res, next) {
+    const context = Context.fromReq(req);
     const explanation = new Explanation(req.body.content);
     const idOnly = new Explanation();
     console.log('EXPL:::', explanation);
@@ -509,7 +517,7 @@ function endpoints(app, prefix, ip) {
     }
 
     try{
-      new CallbackTree(auth, 'addExplanation', req, next)
+      context.callbackTree(auth, 'addExplanation', req, next)
         .success(setAuthor, 'settingAuthor')
         .success('settingAuthor', getWords, 'gettingWords', req.body.words, next)
         .success('gettingWords', setWords, 'settingWords')
@@ -530,6 +538,7 @@ function endpoints(app, prefix, ip) {
   });
 
   app.put(prefix + EPNTS.explanation.update(), function (req, res, next) {
+    const context = Context.fromReq(req);
     const idOnly = new Explanation(Number.parseInt(req.body.id));
     const contentOnly = idOnly.$d().clone();
     contentOnly.setContent(req.body.content);
@@ -541,7 +550,7 @@ function endpoints(app, prefix, ip) {
       }
     }
     console.log('here: ', req.body)
-    new CallbackTree(auth, 'updateExpl', req, next)
+    context.callbackTree(auth, 'updateExpl', req, next)
       .success(validateUser, 'validatingLoginUser', '$cbtArg[0].id')
       .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
       .success('validatingLoginUser', crud.selectOne, 'gettingExpl', idOnly)
@@ -557,19 +566,21 @@ function endpoints(app, prefix, ip) {
   //  ------------------------- SiteExplanation Api -------------------------  //
 
   app.post(prefix + EPNTS.siteExplanation.add(), function (req, res, next) {
-    console.log('here!')
-    new CallbackTree(auth, 'addSiteExplApi', req, next)
+    const context = Context.fromReq(req);
+    context.callbackTree(auth, 'addSiteExplApi', req, next)
       .success(addExplToSite, 'adding', req.params.explanationId, req.body.siteUrl, next)
       .success('adding', returnVal(res), 'returning')
       .execute();
     });
 
     app.post(prefix + EPNTS.siteExplanation.get(), function (req, res, next) {
+      const context = Context.fromReq(req);
       const siteUrl = req.body.siteUrl;
       let siteId;
-      function getExplanations(site, success) {
+      function getExplanations(site, success, fail) {
         siteId = site.id;
-        crud.select(new SiteExplanation(site.id, undefined), success);
+        console.log('aaaargs:', arguments);
+        crud.select(new SiteExplanation(site.id, undefined), success, fail);
       }
 
       function createExplList(results, success) {
@@ -583,11 +594,12 @@ function endpoints(app, prefix, ip) {
         });
         success({siteId, list});
       }
-      new CallbackTree(getSite, 'gettingSiteExpls', siteUrl, next)
+      context.callbackTree(getSite, 'gettingSiteExpls', siteUrl, next)
         .fail(returnVal(req, []))
         .success(getExplanations, 'gettingExplanations')
-        .success('gettingExplanations', createExplList, 'creatingList')
-        .success('creatingList', returnQuery(res))
+        .success('gettingExplanations', createExplList, 'creatingLists')
+        .fail('gettingExplanations', returnError(next))
+        .success('creatingLists', returnQuery(res))
         .execute();
     });
 

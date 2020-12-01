@@ -1,3 +1,4 @@
+
 function DebugGuiClient(config, root, debug) {
   config = config || {};
   var instance = this;
@@ -50,11 +51,11 @@ function DebugGuiClient(config, root, debug) {
     logWindow = logWindow != 25 ? logWindow : config.logWindow;
     if (host && isDebugging() && DebugGuiClient.inBrowser) {
       var script;
-      if (!document.head.innerHTML.match(/ src=('|")[^'^"]*\/js\/debug-gui-client.js('|")/)) {
+      if ((typeof DebugGuiClient) === 'undefined') {
         script = document.createElement("script");
         script.src = `${getHost()}/js/debug-gui-client.js`;
         document.head.appendChild(script);
-      } else if (!document.head.innerHTML.match(/ src=('|")[^'^"]*\/js\/debug-gui.js('|")/)) {
+      } else if ((typeof DebugGui) === undefined) {
           script = document.createElement("script");
           script.src = `${getHost()}/js/debug-gui.js`;
           document.head.appendChild(script);
@@ -184,7 +185,7 @@ function DebugGuiClient(config, root, debug) {
     if (DebugGuiClient.inBrowser) {
       var cookie;
       if (instance.isDebugging()) {
-        cookie = 'DebugGui=' + instance.toString() + "; SameSite=None;";
+        cookie = 'DebugGui=' + instance.toString() + ";";
       } else {
         cookie = 'DebugGui=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
       }
@@ -312,12 +313,12 @@ function DebugGuiClient(config, root, debug) {
   }
 
   function express(req, root) {
+    if (req === undefined) return new DebugGuiClient({}, root);
     if (req.debugGui) return req.debugGui;
     var config = getHeaderOrCookie(req.headers);
     var debugGui = new DebugGuiClient(config, root);
     config = getParameter(req.params);
     debugGui.updateConfig(config);
-    req.debugGui = debugGui;
     return debugGui;
   }
 

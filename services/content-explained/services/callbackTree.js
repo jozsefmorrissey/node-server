@@ -14,27 +14,36 @@ class CallbackTreeLeafNotDefined extends Error {
 }
 
 class CallbackTree {
-  constructor(func, id, ...args) {
+  constructor(paths, func, id, ...args) {
+    if (!Array.isArray(paths)) {
+      args = [id].concat(args);
+      id = func;
+      func = paths;
+      paths = ['success', 'fail'];
+    }
+    this.instId = Math.floor(Math.random() * 100);
     if (func === undefined) throw new Error('func must be defined');
     let root, resolve, promise;
-    this.name = id;
+    this.name = id || func.name;
     let lastPath = '';
     const instance = this;
     const terminationPoints = [];
     const references = {};
-    let paths;
     let funcs = {};
     let cbTrees = {};
     let context;
 
+    this.getId = () => instance.name;
     this.options = () => funcs;
-    this.getContext = () => context;
+    this.getLogger = () => root === undefined ? instance.logger : instance.getRoot().getLogger();
+    this.getContext = () => root === undefined ? context : instance.getRoot().getContext();
     this.setContext = (c) => {
       if (root) {
         instance.getRoot().setContext(context);
       } else {
         context = c;
       }
+      return retInterface(instance);
     }
     this.setRef = (key, value) => references[key] = value;
     this.getRef = (key) => references[key];
@@ -42,7 +51,11 @@ class CallbackTree {
     function retInterface (inst) {
       const root = instance.getRoot();
       const retInt = root.options();
+      retInt.setDebug = root.setDebug;
       retInt.execute = root.execute;
+      retInt.getLastPath = root.getLastPath;
+      retInt.setLogger = root.setLogger;
+      retInt.setContext = root.setContext;
       retInt.terminate = inst ? root.terminate(inst) : undefined;
       return retInt;
     }
@@ -74,42 +87,47 @@ class CallbackTree {
       let leaf = instance.getRoot();
       if (instance.find(id, true) !== undefined) throw new Error(`id '${id}' already exists within callback tree`);
       if (target !== undefined) leaf = instance.find(target);
-      const cbTree = new CallbackTree(func, id, ...args);
+      const cbTree = new CallbackTree(instance.getRoot().getPaths(), func, id, ...args);
       cbTree.setRoot(instance.getRoot());
-      cbTree.setPaths(getRoot().getPaths());
       leaf[setFunc](cbTree);
       return retInterface(cbTree);
     }
 
+    this.setDebug = (d) => { instance.debug = d; return retInterface(); };
+    this.setLogger = (l) => { instance.logger = l; return retInterface(); };
+
     function info(key, value) {
-      if (instance.debug) {
-        if (instance.logger) {
+      if (instance.getRoot().debug) {
+        if (instance.getLogger()) {
           const info = {
             rootId: instance.getRoot().getId(),
+            instId: instance.getRoot().instId,
             id: instance.getId(),
             key, value
           }
-          instance.logger(info);
-        } else {
-          console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.` +
-              `\t\t${key} = ${value}`);
+          instance.getLogger()(info);
         }
+      } else {
+        console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.` +
+            `\n\t\t${key} = ${value}`);
       }
     }
 
-    function callbackFunctions(callback) {
+    function callbackFunctions() {
       const cbFuncs = [];
-      cbTrees.forEach((cbTree, i) => {
+      paths.forEach((i) => {
+        const cbTree = cbTrees[i];
         let func;
-        if (callback instanceof CallbackTree) {
-          func = () => {
+        if (cbTree instanceof CallbackTree) {
+          func = function () {
             info(`'${i}' path called`, true);
-            callback.execute(...arguments)
-        };
+            cbTree.execute(...arguments)
+          };
         } else {
-          func = () => info(`'${i}' path undefined`, true);
+          func = function () {info(`'${i}' path undefined`, true)};
         }
-        func.cbTreeContext = getContext();
+        func.cbTreeContext = instance.getContext();
+        func.cbName = instance.name;
         cbFuncs.push(func);
       });
       return cbFuncs;
@@ -161,6 +179,7 @@ class CallbackTree {
 
     this.setArgs = function (...newArgs) {args = newArgs};
     this.execute = function () {
+      info('lastPath', instance.getRoot().getLastPath());
       info('exicute', true);
       if (instance.isRoot()) {
         lastPath = '';
@@ -181,6 +200,7 @@ class CallbackTree {
       else if((typeof func) === 'string') func = instance.find(func);
       else {
         tempArgs = tempArgs.concat(callbackFunctions());
+
         let retVal = func(...tempArgs);
 
         rt.terminate(instance, retVal);
@@ -189,28 +209,28 @@ class CallbackTree {
     }
 
     function funcName(prefix, value) {
-      return `${prefix}${value.substr(0,1).toUppercase()}${value.substr(1)}`;
+      return `${prefix}${value.substr(0,1).toUpperCase()}${value.substr(1)}`;
     }
 
-    this.setPaths = (p) => {
-      paths.forEach((p) => instance[path] = undefined);
-      if (Array.isArray(p)) {
-        paths = p;
+    function setPaths (ps) {
+      if (Array.isArray(ps)) {
+        paths.forEach((path) => instance[path] = undefined);
+        paths = ps;
+        funcs = {};
+        paths.forEach((path) => {
+          const setterName = funcName('set', path);
+          instance[setterName] = (cbTree) => cbTrees[path] = cbTree;
+          instance[funcName('get', path)] = (cbTree) => cbTrees[path] = cbTree;
+          funcs[path] = (target, func, id, ...args) => setLeaf(setterName, target, func, id, ...args);
+          instance[path] = funcs[path];
+        });
       }
-      funcs = {};
-      paths.forEach((path) => {
-        const setterName = funcName('set', path);
-        instance[setterName] = (cbTree) => cbTrees[path] = cbTree;
-        instance[funcName('get', path)] = (cbTree) => cbTrees[path] = cbTree;
-        funcs[path] = (target, func, id, ...args) => setLeaf(setterName, target, func, id, ...args);
-      };
     }
 
     this.getPaths = () => paths;
 
     this.find = function (stringOrFunc, soft) {
       const found = instance.getRoot().findChild(stringOrFunc);
-      // console.log('looking for:', stringOrFunc, ' found:', found);
       if (!soft && found === undefined) throw new CallbackTreeLeafNotDefined(instance.getRoot, stringOrFunc);
       return found;
     }
@@ -225,18 +245,18 @@ class CallbackTree {
     this.findChild = function (stringOrFunc) {
       let found;
       const idsMatch = (typeof stringOrFunc) === 'string' &&
-                        id === stringOrFunc;
+                        this.name === stringOrFunc;
       const funcsMatch = (typeof stringOrFunc) === 'function' &&
                         func === stringOrFunc;;
       if (idsMatch || funcsMatch) {
         found = instance;
       }
 
-      Object.values(callbackTrees)
+      Object.values(cbTrees)
           .forEach((cbTree) => found = found || cbTree.findChild(stringOrFunc));
       return found;
     }
-    this.setPaths(['success', 'fail']);
+    setPaths(paths);
   }
 }
 

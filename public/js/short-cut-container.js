@@ -1,6 +1,6 @@
 var SHORT_CUT_CONTAINERS = [];
 
-function ShortCutCointainer(id, keys, html) {
+function ShortCutContainer(id, keys, html) {
   var SPACER_ID = 'ssc-html-spacer';
   var OPEN = 'ssc-open';
   var CLOSE = 'ssc-close';
@@ -198,7 +198,7 @@ function onLoad() {
     var keys = elem.getAttribute('keys').split(',')
     id = elem.id || 'ssc-' + index;
     html = elem.innerHTML;
-    ShortCutCointainer(id, keys, html);
+    ShortCutContainer(id, keys, html);
     elem.parentNode.removeChild(elem);
   }
 }

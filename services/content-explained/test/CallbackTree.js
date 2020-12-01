@@ -43,7 +43,7 @@ function testPaths(testCallback) {
     testing.assertEquals(callback.getLastPath(), expectedPath,
           `\ntestTree '${key}' faild to follow expectedPath.
                 expected: ${expectedPath}
-                followed: ${callback.getLastPath()}`);
+                followed: ${callback.getLastPath()}`, testCallback);
     testing.success(`\n\ttestTree ${key} succeeded!!!`);
     if (printCount === Object.keys(testTrees).length) testing.success('\n\tAll Tree Paths Passed!!!', testCallback);
   }
@@ -56,7 +56,7 @@ function testPaths(testCallback) {
 
     .fail(callbackError, 'existsButShouldNot', 'filename')
     .success('cantRead', callbackError, 'readRestricted', 'dummy')
-    .success('cantTouch', callbackError, 'readRestricted', 'dummy');
+    .success('cantTouch', callbackError, 'touchRestricted', 'dummy');
 
   expectedPath = 'doesNotExist->canTouch->canWrite->canRead->printPaths->';
   testTrees.createWriteRead = new CallbackTree(dne, 'doesNotExist', 'dummy')
@@ -79,7 +79,7 @@ function testPaths(testCallback) {
     .fail('cantRead', canRead, 'canRead', 4, 2)
     .success('canRead', cantWrite, 'cantWrite', 5, 4, 2)
     .fail('cantWrite', canWrite, 'canWrite', 4, 2, 2)
-    .success('canWrite', printPaths, undefined, 'fullTrain', expectedPath)
+    .success('canWrite', printPaths, 'printPaths', 'fullTrain', expectedPath)
 
     .success(callbackError)
     .fail('exists', callbackError)
@@ -105,6 +105,8 @@ function testPaths(testCallback) {
 function argumentTest (testCallback) {
   function one(shouldSucceed, success, fail) {
     testing.assertEquals((typeof shouldSucceed), 'boolean');
+    testing.assertEquals(success.cbTreeContext, 4);
+    testing.assertEquals(fail.cbTreeContext, 4);
     if (shouldSucceed) {
       success('goto', 2);
     } else {
@@ -115,6 +117,8 @@ function argumentTest (testCallback) {
   function two(goto, two, success, fail) {
     testing.assertEquals(goto, 'goto');
     testing.assertEquals(two, 2);
+    testing.assertEquals(success.cbTreeContext, 4);
+    testing.assertEquals(fail.cbTreeContext, 4);
     if (false) {
       success();
     } else {
@@ -126,6 +130,8 @@ function argumentTest (testCallback) {
     testing.assertEquals(goto, 'goto');
     testing.assertEquals(failStr, 'fail');
     testing.assertEquals(three, 3);
+    testing.assertEquals(success.cbTreeContext, 4);
+    testing.assertEquals(fail.cbTreeContext, 4);
     if (false) {
       success();
     } else {
@@ -133,20 +139,39 @@ function argumentTest (testCallback) {
     }
   }
 
-  function four(goto, failStr, success, four) {
+  function four(goto, failStr, soup, four, success, fail) {
     testing.assertEquals(goto, 'goto');
-    testing.assertEquals(failStr, '$cbtArg[0]');
-    testing.assertEquals(success, true);
+    testing.assertEquals(failStr, undefined);
+    testing.assertEquals(soup, true);
     testing.assertEquals(four, 4);
+    testing.assertEquals(success.cbTreeContext, 4);
+    testing.assertEquals(fail.cbTreeContext, 4);
     testing.assertEquals(cbTree.getLastPath(), 'one->two->three->four->', testCallback);
     testing.success('\n\tAll Args Correct!!!', testCallback);
   }
 
-  const cbTree = new CallbackTree(one, undefined, true)
+  const cbTree = new CallbackTree(one, 'one', true)
+    .setContext(4)
     .success(two, 'two')
-    .fail('two', three, 'three', '$cbtArg[1].msg.msg', '$cbtArg[0]')
+    .fail('two', three, 'three', '$cbtArg[1].msg.msg', '$cbtArg[0]', 3)
     .fail('three', four, 'four', 'goto', '$cbtArg[0]', true, 4);
   cbTree.execute();
 }
 
-testing.run([testPaths, argumentTest]);
+function testCustomPaths(testCallback) {
+  let total = 0;
+  function assertTotal() {
+    testing.assertEquals(total, 1+2+3+4+5+6);
+    testing.success(testCallback);
+  }
+  new CallbackTree(['one', 'two', 'three', 'four', 'five', 'six'],
+        (one, two) => {total += 1; two()}, 'one')
+        .two('one', (one, two, three) => {total += 2; three();}, 'two')
+        .three('two', (one, two, three, four) => {total += 3; four();}, 'three')
+        .four('three', (one, two, three, four, five, six) => {total += 4; six()}, 'five')
+        .six('five', (one, two, three, four, five, six) => {total += 5; one()}, 'six')
+        .one('six', () => {total += 6; assertTotal();})
+        .execute();
+}
+
+testing.run([testPaths, argumentTest, testCustomPaths]);

@@ -1,6 +1,3 @@
-var DEBUG_GUI = {};
-DEBUG_GUI.EXCEPTION_LOOKUP = {};
-DEBUG_GUI.client = new DebugGuiClient.browser();
 
 function DebugGui() {
   var exceptionId = 0;
@@ -22,19 +19,20 @@ function DebugGui() {
   }
 
   function getId() {
-    return DEBUG_GUI.client.getId();
+    return DebugGui.client.getId();
   }
 
   function updateId(value) {
-    DEBUG_GUI.client.setId(value);
+    DebugGui.client.setId(value);
     createCookie();
   }
 
   function updateHost(value) {
-    DEBUG_GUI.client.setHost(value);
+    DebugGui.client.setHost(value);
     createCookie();
   }
 
+  const COOKIE_BTN_ID = 'dg-cookie-btn-id';
   function buildHeader(html) {
     var host = getHost();
     var tl = logWindow();
@@ -49,7 +47,7 @@ function DebugGui() {
               <input type='text' id='debug-gui-host' onchange='DebugGui.updateHost(this.value)' value='${host}'>
               <label>id: </label>
               <input type='text' id='debug-gui-id' onchange='DebugGui.updateId(this.value)' value='${getId()}'>
-              <img style='height: 20px;' onclick='DebugGui.createCookie(true)' src='${host}/images/cookie.gif'>
+              <img style='height: 20px;' id='${COOKIE_BTN_ID}' src='${host}/images/cookie.gif'>
               <label>&nbsp;&nbsp;Logging Window </label>
               <input type='text' id='debug-gui-log-window' value='${tl}'
                   style='width: 40pt;'>
@@ -65,10 +63,10 @@ function DebugGui() {
 
   function init() {
     if (!document.getElementById("debug-gui-scc")) {
-      DEBUG_GUI.MODAL = document.createElement('div');
+      DebugGui.MODAL = document.createElement('div');
 
-      DEBUG_GUI.HAZE = document.createElement('div');
-      DEBUG_GUI.HAZE.style.cssText = `position: fixed;
+      DebugGui.HAZE = document.createElement('div');
+      DebugGui.HAZE.style.cssText = `position: fixed;
               left: 0;
               top: 0;
               width: 100%;
@@ -77,10 +75,10 @@ function DebugGui() {
               background:rgba(0,0,0,0.6);
               z-index: 1000000;
               padding: 20pt;`;
-      DEBUG_GUI.MODAL.appendChild(DEBUG_GUI.HAZE);
+      DebugGui.MODAL.appendChild(DebugGui.HAZE);
 
-      DEBUG_GUI.POPUP = document.createElement('div');
-      DEBUG_GUI.POPUP.style.cssText = `background-color: white;
+      DebugGui.POPUP = document.createElement('div');
+      DebugGui.POPUP.style.cssText = `background-color: white;
               padding: 10pt 20pt;
               display: inline-block;
               max-width: 80%;
@@ -88,16 +86,16 @@ function DebugGui() {
               max-height: 80%;
               overflow: scroll;
               border-radius: 2pt;`;
-      DEBUG_GUI.POPUP.setAttribute('onclick', 'event.stopPropagation()');
-      DEBUG_GUI.HAZE.appendChild(DEBUG_GUI.POPUP);
-      DEBUG_GUI.MODAL.id = 'debug-gui-modal';
-      DEBUG_GUI.HAZE.onclick = hideModal;
+      DebugGui.POPUP.setAttribute('onclick', 'event.stopPropagation()');
+      DebugGui.HAZE.appendChild(DebugGui.POPUP);
+      DebugGui.MODAL.id = 'debug-gui-modal';
+      DebugGui.HAZE.onclick = hideModal;
       logWindow();
       hideModal();
 
-      document.body.appendChild(DEBUG_GUI.MODAL);
+      document.body.appendChild(DebugGui.MODAL);
       var html = buildHeader(buildGui(undefined, 'og'));
-      DEBUG_GUI.SCC = ShortCutCointainer("debug-gui-scc", ['d', 'g'], html);
+      DebugGui.SCC = ShortCutContainer("debug-gui-scc", ['d', 'g'], html);
       document.getElementById ('debug-gui-scc').addEventListener('click', (e) => {
         if (e.target.matches('.btn-link')) {
           var target = document.querySelector(e.target.getAttribute('data-target'));
@@ -125,7 +123,7 @@ function DebugGui() {
   }
 
   function displayLogs() {
-    var logs = DEBUG_GUI.DATA[LOGS];
+    var logs = DebugGui.DATA[LOGS];
     var html = '';
     for (var index = logs.length - 1; index > -1; index -= 1) {
       const log = logs[index];
@@ -138,22 +136,22 @@ function DebugGui() {
   }
 
   function debug() {
-    return DEBUG_GUI.client.isDebugging();
+    return DebugGui.client.isDebugging();
   }
 
   function displayModalHtml(html) {
-    DEBUG_GUI.POPUP.innerHTML = html;
-    DEBUG_GUI.MODAL.style.display = 'block';
+    DebugGui.POPUP.innerHTML = html;
+    DebugGui.MODAL.style.display = 'block';
   }
 
   function displayModal(id) {
-    DEBUG_GUI.POPUP.innerHTML = DEBUG_GUI.EXCEPTION_LOOKUP[id];
-    DEBUG_GUI.MODAL.style.display = 'block';
+    DebugGui.POPUP.innerHTML = DebugGui.EXCEPTION_LOOKUP[id];
+    DebugGui.MODAL.style.display = 'block';
   }
 
   function hideModal() {
-    DEBUG_GUI.POPUP.innerHTML = '';
-    DEBUG_GUI.MODAL.style.display = 'none';
+    DebugGui.POPUP.innerHTML = '';
+    DebugGui.MODAL.style.display = 'none';
   }
 
   var reportInfo = '__REPORT_INFO';
@@ -162,7 +160,7 @@ function DebugGui() {
   var copyTextId = 'debug-gui-copy-text';
 
   function copyModal() {
-    DEBUG_GUI.EXCEPTION_LOOKUP[reportInfo] = '<input id="' + reportInfoTitleId + '" placeholder="title">' +
+    DebugGui.EXCEPTION_LOOKUP[reportInfo] = '<input id="' + reportInfoTitleId + '" placeholder="title">' +
         '<input type="button" value="Copy" onclick="DebugGui.copyReport()">' +
         '<textarea placeholder="Text to copy" id="' + copyTextId + '" style="float: right;"></textarea>' +
         "<textarea cols=120 rows=20 id='" + reportInfoDescId + "' placeholder='Description'></textarea><br>";
@@ -182,14 +180,14 @@ function DebugGui() {
     var title = document.getElementById(reportInfoTitleId).value;
     var desc = document.getElementById(reportInfoDescId).value;
     var copyText = document.getElementById(copyTextId);
-    var host = DEBUG_GUI.client.getHost();
+    var host = DebugGui.client.getHost();
 
     copyText.value = '<html>\n\t<head>\n\t\t<title>' + title + '</title>' +
-      '\n\t\t<script type=\'text/javascript\' src="' + DEBUG_GUI.client.getHost() +
+      '\n\t\t<script type=\'text/javascript\' src="' + DebugGui.client.getHost() +
       '/js/debug-gui-client.js"></script>' + '\n\t</head>\n\t<body>\n\t\t<h1>' + title +
       '</h1>\n\t\t<b>(Press d + g to open debug-gui)</b>\n\t\t<p>' + desc +
       '</p>' + '\n\t\t<' + TAG_NAME + " url='" + host + "' debug-gui-id='" + getId() +
-      "'>\n" + JSON.stringify(DEBUG_GUI.DATA, null, 2) + "\n\t\t</" + TAG_NAME + ">" +
+      "'>\n" + JSON.stringify(DebugGui.DATA, null, 2) + "\n\t\t</" + TAG_NAME + ">" +
       '\n\t</body>\n</html>';
     copyText.select();
 
@@ -212,10 +210,10 @@ function DebugGui() {
     keys.splice(keys.indexOf(LOGS), 1);
     for (let oIndex = 0; oIndex < keys.length; oIndex += 1) {
       var id = keys[oIndex];
-      DEBUG_GUI.DATA[id] = newData[keys[oIndex]];
+      DebugGui.DATA[id] = newData[keys[oIndex]];
     }
 
-    DEBUG_GUI.DATA[LOGS] = newData[LOGS];
+    DebugGui.DATA[LOGS] = newData[LOGS];
   }
 
   function getUrl(host, ext, id, group) {
@@ -249,7 +247,7 @@ function DebugGui() {
 
   function buildData() {
      var tags = document.getElementsByTagName(TAG_NAME);
-     DEBUG_GUI.DATA = {};
+     DebugGui.DATA = {};
      for (let index = 0; index < tags.length; index += 1) {
        var tag = tags[index];
        tag.style.display = 'none';
@@ -257,14 +255,14 @@ function DebugGui() {
          var url = tag.getAttribute('url');
          var id = tag.getAttribute('dg-id');
          if (getHost() != url) {
-           DEBUG_GUI.client.setHost(url);
+           DebugGui.client.setHost(url);
          }
        }
        var innerHtml = tags[index].innerHTML.trim();
        if (innerHtml !== "") {
          try {
            var json = JSON.parse(innerHtml);
-           DEBUG_GUI.DONT_REFRESH = true;
+           DebugGui.DONT_REFRESH = true;
            mergeObject(json);
          } catch (e) {
            console.log(e.stack)
@@ -272,7 +270,7 @@ function DebugGui() {
        }
      }
 
-     return DEBUG_GUI.DATA;
+     return DebugGui.DATA;
   }
 
   function buildValueList(values) {
@@ -312,7 +310,7 @@ function DebugGui() {
                   ${except.id} - ${except.msg}
                 </a></li>`;
       var stacktrace = except.stacktrace === undefined ? "" : except.stacktrace.replace(/\n/g, "<br>");
-      DEBUG_GUI.EXCEPTION_LOOKUP[exceptionId++] = `<h4>${except.msg}</h4><p>${stacktrace}</p>`;
+      DebugGui.EXCEPTION_LOOKUP[exceptionId++] = `<h4>${except.msg}</h4><p>${stacktrace}</p>`;
     }
     if (exceptions.length > 0) {
       return acorn + '</ul></div>';
@@ -374,9 +372,10 @@ function DebugGui() {
   }
 
   function render() {
-    var html = buildHeader(buildGui(DEBUG_GUI.DATA, 'og'));
+    var html = buildHeader(buildGui(DebugGui.DATA, 'og'));
     hideEmpties();
-    DEBUG_GUI.SCC.innerHtml(html);
+    DebugGui.SCC.innerHtml(html);
+    document.getElementById(COOKIE_BTN_ID).onclick = createCookie.bind(true);
     collapseAllDescendents(document);
   }
 
@@ -386,32 +385,32 @@ function DebugGui() {
     var elementValue = element && element.value.match(numberReg) ? element.value : undefined;
 
     if (value && value.match(numberReg)) {
-      DEBUG_GUI.TIME_LIMIT = value;
-    } else if (!DEBUG_GUI.TIME_LIMIT) {
+      DebugGui.TIME_LIMIT = value;
+    } else if (!DebugGui.TIME_LIMIT) {
       var param = getParameter('DebugGui.logWindow');
       param = param && param.match(numberReg) ? param : undefined;
-      DEBUG_GUI.TIME_LIMIT = param || elementValue || '20';
+      DebugGui.TIME_LIMIT = param || elementValue || '20';
     } else if (elementValue) {
-      DEBUG_GUI.TIME_LIMIT = elementValue;
+      DebugGui.TIME_LIMIT = elementValue;
     }
-    return DEBUG_GUI.TIME_LIMIT;
+    return DebugGui.TIME_LIMIT;
   }
 
   function refresh(data) {
     if (data) {
-        DEBUG_GUI.DATA = data;
+        DebugGui.DATA = data;
         render();
-    } else if (!DEBUG_GUI.DONT_REFRESH) {
+    } else if (!DebugGui.DONT_REFRESH) {
       getData(getHost(), getId());
     }
   }
 
   function getHost() {
-    return DEBUG_GUI.client.getHost();
+    return DebugGui.client.getHost();
   }
 
   function createCookie(copy) {
-    var cookie = DEBUG_GUI.client.createCookie();
+    var cookie = DebugGui.client.createCookie();
     if (copy) {
       copyToClipboard(cookie, "Setup cookie copied to clipboard");
     }
@@ -433,15 +432,18 @@ function DebugGui() {
   function onLoad() {
     var elem = document.querySelectorAll('debug-gui-data');
     var isParse = (elem.length > 0 && elem[0].innerText.trim());
+    DebugGui.client = new DebugGuiClient.browser();
     if (debug() || isParse) {
       init();
     }
     createCookie();
   }
 
-  var script = document.createElement("script");
-  script.src = 'https://node.jozsefmorrissey.com/js/short-cut-container.js';
-  document.head.appendChild(script);
+  if ((typeof ShortCutContainer) === 'undefined') {
+    var script = document.createElement("script");
+    script.src = 'https://node.jozsefmorrissey.com/js/short-cut-container.js';
+    document.head.appendChild(script);
+  }
 
 console.log('dg here')
   window.addEventListener('load', onLoad);
@@ -450,3 +452,4 @@ console.log('dg here')
 }
 
 DebugGui = DebugGui();
+DebugGui.EXCEPTION_LOOKUP = {};
