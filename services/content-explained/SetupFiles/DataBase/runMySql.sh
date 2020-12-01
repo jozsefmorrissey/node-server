@@ -8,11 +8,9 @@ password=$(pst value ce-mysql password)
 unset flags[password]
 unset flags[user]
 
-echo $user/$password
 rootPassword=$(pst value system mysql)
 
 propFile=./mysql.properties
-echo ${booleans[test]}
 if [ ${booleans[test]} ]
 then
   password=$(getValue mysql.test.password $propFile)

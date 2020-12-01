@@ -334,7 +334,7 @@ function DebugGui() {
     for (let index = 0; index < keys.length; index += 1) {
       var id = keys[index];
       var cleanId = id.substr(id.length - 50).replace(/[^a-z^A-Z^0-9]{1,}/g, '-');
-      var childBlock = buildGui(data[id].children, fp + "-" + id);
+      var childBlock = buildGui(data[id].children, fp + "-" + cleanId);
       var targetId = `dg-collapse-${fp}-${cleanId}`;
       var headingId = `dg-heading-${fp}-${cleanId}`;
       if (childBlock.trim()) {
