@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const shell = require('shelljs');
 const Crud = require('./database/mySqlWrapper').Crud;
 
 const { EPNTS } = require('./EPNTS');
@@ -13,7 +14,9 @@ const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
 
-const crud = new Crud({silent: true, mutex: false});
+const password = global.ENV !== 'local' ?
+      shell.exec('pst value system mysql').stdout : undefined;
+const crud = new Crud({password, silent: true, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   const context = Context.fromFunc(success);

@@ -359,12 +359,14 @@ class Crud {
     process.on('SIGINT', closeConnection);
 
     function connect() {
-      connection = mySql.createConnection({
+      const connInfo = {
         host: options.host || 'localhost',
         user: options.user || 'CE',
         password: options.password || 'ITSJUSTATESTDB',
         database: options.database || 'CE'
-      });
+      };
+      console.log(connInfo);
+      connection = mySql.createConnection(connInfo);
       connection.connect();
     }
     connect();

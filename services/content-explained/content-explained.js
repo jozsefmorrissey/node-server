@@ -8,6 +8,7 @@ const { UsernameAlreadyTaken, ExplanationNotFound, MerriamRequestFailed } =
 const { EPNTS } = require('./services/EPNTS');
 const { Context } = require('./services/context');
 
+global.ENV = process.argv[2];
 const serverId = Math.floor(Math.random() * 1000000000);
 
 const merriamApiKey = shell.exec('pst value CE merriamApiKey', {silent: true}).trim();

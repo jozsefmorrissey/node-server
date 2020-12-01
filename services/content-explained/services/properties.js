@@ -12,5 +12,3 @@ class Properties {
     }
   }
 }
-
-global.ENV = process.argv[2];
