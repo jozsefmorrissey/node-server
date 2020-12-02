@@ -65,14 +65,12 @@ function exicuteCmd(cmd, req) {
 
   if (clBody.token != null) {
     let validateCmd = `pst validateToken '${clBody.group}' '${clBody.token}' '${clBody.pstPin}'`;
-    console.log(validateCmd);
     const debugStr = bashDebugStr(req);
     validateCmd += debugStr;
     if (cmd != undefined) {
       validateCmd += ` && ${cmd}${debugStr}`;
     }
 
-    console.log(validateCmd);
     const returnValue = shell.exec(validateCmd, {silent: false});
     lockout(clBody.group, returnValue.code)
     return returnValue;
@@ -111,7 +109,6 @@ function getJson(req, res) {
   debugValues(req, '/get/json', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
   const clBody = cleanObj(req.body);
   const cmd = `pst to-json '${clBody.group}'`;
-  console.log("cmd: ", cmd);
   const jsonStr = exicuteCmd(cmd, req);
   const json = JSON.parse(jsonStr);
   res.setHeader('Content-Type', 'application/json');
@@ -125,8 +122,6 @@ function mixUp(array) {
     const index = Math.floor(Math.random() * validIndecies.length);
     mixed += array[validIndecies[index]];
     validIndecies.splice(index, 1);
-    console.log(validIndecies);
-    console.log(array);
   }
   return mixed;
 }
@@ -140,13 +135,11 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
     parts.push(specChars.charAt(Math.floor(Math.random() * specChars.length)));
   const wordLength = len - numberLen - specCharLen;
   const cmd = `grep -oP "^[a-z]{${wordLength}}$" ./public/json/word-list.json`;
-  console.log(cmd);
   const wordList = shell.exec(cmd, {silent: true}).split('\n');
   let word = wordList[Math.floor(Math.random() * wordList.length)];
   for (let index = 0; index < capLetLen; index += 1)
     word = word.substr(0, index) + word.substr(index, 1).toUpperCase() + word.substr(index + 1);
   parts.push(word);
-  console.log('sending')
   return mixUp(parts);
 }
 
@@ -267,7 +260,6 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
   });
 
   app.get(prefix + "/random/password/:length/:numberCount/:capitalLetterCount/:specialcharacterCount/:specialCharacters", function (req, res) {
-    console.log('rand word')
     const length = req.params.length;
     const numberCnt = req.params.numberCount;
     const capitalCnt = req.params.capitalLetterCount;
