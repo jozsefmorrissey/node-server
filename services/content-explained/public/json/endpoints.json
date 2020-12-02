@@ -13,7 +13,7 @@
   },
   "credential": {
     "add": "/credential/add/:userId",
-    "activate": "/credential/activate/:userId/:activationSecret",
+    "activate": "/credential/activate/:id/:userId/:activationSecret",
     "delete": "/credential/:idOauthorization",
     "get": "/credential/:userId",
     "status": "/credential/status/:authorization"

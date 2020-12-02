@@ -7,7 +7,6 @@ const { randomString } = require('../services/tools.js');
 const { CallbackTree } = require('../services/callbackTree.js');
 const { EPNTS } = require('../services/EPNTS.js');
 
-const startTime = new Date().getTime();
 const users = [];
 
 function sleep(time) {
@@ -91,6 +90,7 @@ function insertUser(username, email, userAgent, count, callback) {
   var xhr = new xmlhr();
   xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
   xhr.open("POST", getUrl(EPNTS.user.add()), {async: false});
+  console.log(getUrl(EPNTS.user.add()))
   xhr.setRequestHeader('Content-Type', 'application/json');
   xhr.setRequestHeader('user-agent', userAgent);
   xhr.send(JSON.stringify({username, email}));
@@ -684,6 +684,7 @@ function addRealExplsToSite(callback) {
   }
 }
 
+const startTime = new Date().getTime();
 function finishTests(callback) {
   const endTime = new Date().getTime();
   testing.success(`Tests ran for ${(endTime - startTime) / 1000} seconds`, callback);

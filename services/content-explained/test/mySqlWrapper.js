@@ -84,7 +84,7 @@ function testRelationCrud(callback) {
         release();
       }
       release();
-      crud.select(new User(username, undefined, undefined), selectCallBack, undefined, true);
+      crud.select(new User(username, undefined, undefined), true, selectCallBack, undefined);
     });
   }
 

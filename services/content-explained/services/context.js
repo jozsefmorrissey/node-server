@@ -13,7 +13,8 @@ class Context {
 
     this.callbackTree = function () {
       return new CallbackTree(...arguments)
-          .setContext(id).setDebug(this.dg.isDebugging()).setLogger(this.cbtLogger);
+          .setContext(id).setDebug(instance.dg.isDebugging())
+          .setLogger(instance.cbtLogger);
     }
 
     this.getId = () => id;

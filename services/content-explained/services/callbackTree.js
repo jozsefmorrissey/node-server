@@ -106,19 +106,21 @@ class CallbackTree {
             key, value
           }
           instance.getLogger()(info);
+        } else {
+          console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.` +
+              `\n\t\t${key} = ${value}`);
         }
-      } else {
-        console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.` +
-            `\n\t\t${key} = ${value}`);
       }
     }
 
     function callbackFunctions() {
       const cbFuncs = [];
+      let oneDefinded = false;
       paths.forEach((i) => {
         const cbTree = cbTrees[i];
         let func;
         if (cbTree instanceof CallbackTree) {
+          oneDefinded = true;
           func = function () {
             info(`'${i}' path called`, true);
             cbTree.execute(...arguments)
@@ -130,7 +132,7 @@ class CallbackTree {
         func.cbName = instance.name;
         cbFuncs.push(func);
       });
-      return cbFuncs;
+      return oneDefinded ? cbFuncs : [];
     }
     this.addPath = function (value) {
       if (this.isRoot()) {

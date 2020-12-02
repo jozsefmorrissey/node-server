@@ -51,11 +51,11 @@ function DebugGuiClient(config, root, debug) {
     logWindow = logWindow != 25 ? logWindow : config.logWindow;
     if (host && isDebugging() && DebugGuiClient.inBrowser) {
       var script;
-      if ((typeof DebugGuiClient) === 'undefined') {
+      if (!document.head.innerHTML.match(/ src=('|")[^'^"]*\/js\/debug-gui-client.js('|")/)) {
         script = document.createElement("script");
         script.src = `${getHost()}/js/debug-gui-client.js`;
         document.head.appendChild(script);
-      } else if ((typeof DebugGui) === undefined) {
+      } else if (!document.head.innerHTML.match(/ src=('|")[^'^"]*\/js\/debug-gui.js('|")/)) {
           script = document.createElement("script");
           script.src = `${getHost()}/js/debug-gui.js`;
           document.head.appendChild(script);
@@ -145,7 +145,7 @@ function DebugGuiClient(config, root, debug) {
   }
 
   function log(log) {
-    logs([log]);
+    logs(log);
   }
 
 

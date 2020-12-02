@@ -1,4 +1,11 @@
 
+class CustomError extends Error {
+  constructor(msg, code) {
+    super(msg + (code ? `\nError Code:${code}` : ''))
+    console.log('heerrr', msg + (code ? `<br>Error Code:${code}` : ''));
+  }
+}
+
 class UsernameAlreadyTaken extends Error {
   constructor(username) {
     super(`Username '${username}' has already been taken`);
@@ -26,19 +33,19 @@ class NoSiteFound extends Error {
 }
 exports.NoSiteFound = NoSiteFound;
 
-class InvalidRequest extends Error {
-  constructor(msg) {
-    super(msg);
+class InvalidRequest extends CustomError {
+  constructor(msg, errorCode) {
+    super(msg, errorCode);
     this.name = "InvalidRequest";
-    this.status = 400;
+    this.status = 400.1;
   }
 }
 exports.InvalidRequest = InvalidRequest;
 
 
-class MerriamRequestFailed extends Error {
+class MerriamRequestFailed extends CustomError {
   constructor() {
-    super(`Merriam Request Failed`);
+    super(`Merriam Request Failed`, 666);
     this.name = "MerriamRequestFailed";
     this.status = 500;
   }

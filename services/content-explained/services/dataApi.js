@@ -6,7 +6,8 @@ const { EPNTS } = require('./EPNTS');
 const { Context } = require('./context');
 const { InvalidDataFormat, InvalidType, UnAuthorized, SqlOperationFailed,
         EmailServiceFailure, ShouldNeverHappen, DuplacateUniqueValue,
-        NoSiteFound, ExplanationNotFound, NotFound, CredentialNotActive} =
+        NoSiteFound, ExplanationNotFound, NotFound, CredentialNotActive,
+        InvalidRequest} =
         require('./exceptions.js');
 const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
         DataObject, Ip, UserAgent, Words, PendingUserUpdate} =
@@ -174,6 +175,8 @@ async function createCredential(req, next, userId, success, fail) {
   cred.setSecret(secret);
   cred.setActivationSecret(activationSecret);
 
+  function setId(credId, success) {cred.setId(credId);success();}
+
   function setUser(u, success) {
     if (u.getEmail().match(/^test[0-9]*@jozsefmorrissey.com$/)) {
       cred.setActivationSecret('shhh');
@@ -186,8 +189,9 @@ async function createCredential(req, next, userId, success, fail) {
     .fail(new SqlOperationFailed('select', 'User', {USER_ID: user.id}))
     .success('settingUser', crud.delete, 'removeOld', deleteCred)
     .success('removeOld', crud.insert, 'insert', cred)
-    .success('insert', email.sendActivationEmail, 'sendEmail', user, cred)
+    .success('insert', setId, 'settingId', '$cbtArg[0].insertId')
     .fail('insert', fail)
+    .success('settingId', email.sendActivationEmail, 'sendEmail', user, cred)
     .success('sendEmail', authVal, 'getAuthKey', 'User', user.id, secret, next)
     .success('getAuthKey', success)
     .fail('sendEmail', fail, undefined, new EmailServiceFailure())
@@ -253,7 +257,7 @@ function cleanStr(str) {
 
 function addExplToSite(explId, siteUrl, next, success) {
   if (siteUrl !== undefined) {
-    const context = Context.fromReq(req);
+    const context = Context.fromFunc(success);
     const explanationId = Number.parseInt(explId);
     const siteExpl = new SiteExplanation();
     function setSiteId(site, callback) {siteExpl.setSiteId(site.id); callback();}
@@ -274,7 +278,6 @@ function addExplToSite(explId, siteUrl, next, success) {
 function endpoints(app, prefix, ip) {
   app.all(prefix + '/*',function(req,res,next){
     const context = Context.fromReq(req);
-    console.log('checkDebugger', context.dg.isDebugging())
     if (context.dg.isDebugging()) {
       crud.setLogger(context.dg.log);
     } else {
@@ -309,37 +312,56 @@ function endpoints(app, prefix, ip) {
       app.post(prefix + EPNTS.user.requestUpdate(), function (req, res, next) {
         const context = Context.fromReq(req);
         const user = User.fromObject(req.body.user);
+        const noId = User.fromObject(req.body.user);
+        noId.setId(undefined);
 
 
         const secret = createSecret();
         const userUpdate = new PendingUserUpdate(secret, user.username, user.getEmail(), {id: user.id});
-        console.log('email:', user.getEmail() === undefined, user.getEmail());
 
         function validateUpdatingLoggedInUser(authUser, success, fail) {
-          function emailAndUsernameUnique(results) {
-            if (results.length === 0) success(); else fail();
-          }
-
           if (authUser.id !== user.id) {
-            fail(new UnAuthorized());
-          } if (authUser.getEmail() !== req.body.originalEmail) {
-            fail(new UnAuthorized('Wrong original email'));
-          } else {
-            const usernameAndEmail = new User(req.body.user);
-            usernameAndEmail.setEmail(user.getEmail() || undefined);
-            usernameAndEmail.setUsername(user.username || undefined);
-            crud.select(usernameAndEmail, emailAndUsernameUnique, fail, true);
+            fail(new InvalidRequest('Wrong user id', 'vZrr1Z'));
+            return;
+          } else if (authUser.getEmail() !== req.body.originalEmail) {
+            fail(new InvalidRequest('Wrong original email', 'fAWVYm'));
+            return;
+        } else if (authUser.getEmail() === user.getEmail()) {
+          if (user.username === undefined) {
+            fail(new InvalidRequest('Your email is already set to that silly', 'MgmwsI'));
+            return;
           }
+          userUpdate.setEmail(undefined);
         }
-        console.log(userUpdate);
+          success();
+        }
+        function emptyResults(results, success, fail) {
+          if (results.length === 0) { success(); return; }
+          let emailMatch, usernameMatch;
+          results.forEach((result) => {
+            if (result.username === user.username) usernameMatch = true;
+            if (result.getEmail() === user.getEmail()) emailMatch = true;
+          });
+          if (usernameMatch && emailMatch)
+            fail(new InvalidRequest('Email is already registered and Username already taken', 'EVb230'));
+          else if (usernameMatch)
+            fail(new InvalidRequest('Username is already taken', 'UgT3nn'));
+          else if (emailMatch)
+            fail(new InvalidRequest('Email is already registered', 'ft2xJd'));
+          else
+            fail(new ShouldNeverHappen('... Check your query'))
+        }
+
         context.callbackTree(auth, 'requestUpdate', req, next)
           .success(validateUpdatingLoggedInUser, 'validating')
           .fail(returnError(next))
-          .success('validating', crud.selectOne, 'checkingForUniqueUsername', )
-          .success('validating', crud.insert, 'insertingUpdate', userUpdate)
-          .fail('validating', returnError(next), 'insertingUpdateFailed',)
+          .success('validating', crud.select, 'checkingForUnique', noId, true)
+          .fail('validating', returnError(next), 'validationFailed')
+          .success('checkingForUnique', emptyResults, 'emptyResults')
+          .success('emptyResults', crud.insert, 'insertingUpdate', userUpdate)
+          .fail('emptyResults', returnError(next), 'NotUnique',)
           .success('insertingUpdate', email.sendUpdateUserEmail, 'sendEmail', user, secret)
-          .fail('insertingUpdate', returnError(next), 'validationFailed',)
+          .fail('insertingUpdate', returnError(next), 'updateInsertFailed',)
           .success('sendEmail', returnVal(res, 'success'), 'emailSent')
           .fail('sendEmail', returnError(next), 'failedToSendEmail')
           .execute();
@@ -359,7 +381,7 @@ function endpoints(app, prefix, ip) {
           .success(createUser, 'creatingUser')
           .success('creatingUser', crud.update, 'updating')
           .fail(returnError(next))
-          .success('updating', returnQuery(res))
+          .success('updating', returnVal(res, 'success'))
           .fail('updating', returnError(next))
           .execute();
       });
@@ -377,17 +399,23 @@ function endpoints(app, prefix, ip) {
     app.get(prefix + EPNTS.credential.activate(), function (req, res, next) {
       const context = Context.fromReq(req);
       const cred =  new Credential();
-      cred.setActivationSecret(req.params.activationSecret);
       cred.setUserId(Number.parseInt(req.params.userId));
+      cred.setId(Number.parseInt(req.params.id));
 
       function activate(credential) {
-        credential.setActivationSecret(null);
-        crud.update(credential, returnVal(res, 'success'), returnError(next));
+        if (credential.getActivationSecret() === null) {
+          returnVal(res, 'success')();
+        } else if (credential.getActivationSecret() === req.params.activationSecret) {
+          credential.setActivationSecret(null);
+          crud.update(credential, returnVal(res, 'success'), returnError(next));
+        } else {
+          returnError(next, new UnAuthorized('ActivationSecret is not correct'));
+        }
       };
 
       context.callbackTree(crud.selectOne, 'selectCred', cred)
         .success(activate, 'settingIp')
-        .fail(returnError(next, new UnAuthorized()))
+        .fail(returnError(next, new UnAuthorized()), 'credActivationFailed')
         .execute();
     });
 
@@ -427,9 +455,8 @@ function endpoints(app, prefix, ip) {
       const cred = new Credential();
       cred.setUserId(id);
       cred.setSecret(secret);
-      console.log(id, secret)
       context.callbackTree(crud.selectOne, 'getCredentialStatus', cred)
-      .success(returnStatus)
+      .success(returnStatus, 'returnCredStatus')
       .fail(returnError(next, new NotFound('Credential')))
       .execute();
     });
@@ -493,7 +520,6 @@ function endpoints(app, prefix, ip) {
   });
 
   app.get(prefix + EPNTS.explanation.author(), function (req, res, next) {
-    console.log('auth id: ', req.params.authorId)
     const explanation = new Explanation();
     const authorId = Number.parseInt(req.params.authorId);
     explanation.setAuthor(new User(authorId));
@@ -504,8 +530,6 @@ function endpoints(app, prefix, ip) {
     const context = Context.fromReq(req);
     const explanation = new Explanation(req.body.content);
     const idOnly = new Explanation();
-    console.log('EXPL:::', explanation);
-    console.log('adding', req.body.words, req.body.content);
     function setAuthor(author, success) {explanation.setAuthor(author); success();};
     function setWords(words, success) {explanation.setWords(words); success();};
     function setId(id, success) {idOnly.setId(id); success();};
@@ -536,7 +560,6 @@ function endpoints(app, prefix, ip) {
         .success('addingToSite', crud.selectOne, 'gettingExplss', idOnly)
         .fail('addingToSite', returnError(next))
         .success('gettingExplss', returnQuery(res), 'returnin')
-        // .fail('gettingExplss', new Error('wtf'), 'retWtf')
         .fail('gettingExplss', returnError(next), 'retErr')
         .execute();
     } catch (e) {
@@ -556,7 +579,6 @@ function endpoints(app, prefix, ip) {
         fail();
       }
     }
-    console.log('here: ', req.body)
     context.callbackTree(auth, 'updateExpl', req, next)
       .success(validateUser, 'validatingLoginUser', '$cbtArg[0].id')
       .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
@@ -586,7 +608,6 @@ function endpoints(app, prefix, ip) {
       let siteId;
       function getExplanations(site, success, fail) {
         siteId = site.id;
-        console.log('aaaargs:', arguments);
         crud.select(new SiteExplanation(site.id, undefined), success, fail);
       }
 

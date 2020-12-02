@@ -365,7 +365,6 @@ class Crud {
         password: options.password || 'ITSJUSTATESTDB',
         database: options.database || 'CE'
       };
-      console.log(connInfo);
       connection = mySql.createConnection(connInfo);
       connection.connect();
     }
@@ -432,7 +431,6 @@ class Crud {
         const objResults = resultMap[targetObj] ? Object.values(resultMap[targetObj]) : [];
         print('\nMapped object results:\n', objResults);
 
-        console.log('trying to call!');
         if (one) {
           if (objResults.length !== 1) {
             fail(objResults);
@@ -440,7 +438,6 @@ class Crud {
           }
           success(objResults[0]);
         } else {
-          console.log('calledSuccess!');
           success(objResults);
         }
       }
@@ -469,7 +466,6 @@ class Crud {
           print('\nRaw mySql:\nerror:\n', error, '\nresults:\n', results);
 
           const callFailed = error !== null;
-          console.log('error: ', error, (typeof success), (typeof fail))
           if (!callFailed && (typeof success) === 'function'){
             success(results);
           }
@@ -615,7 +611,12 @@ class Crud {
       return {query: queryString, values: condObj.values, objects: joinVal.objects};
     }
 
-    this.select = function (object, success, fail, or) {
+    this.select = function (object, or, success, fail) {
+      if ((typeof or) === 'function') {
+        fail = success;
+        success = or;
+        or = undefined;
+      }
       function selectQuery() {
         print('\nSelect:')
         const selectObj = select(object, or);
@@ -625,12 +626,16 @@ class Crud {
       getMutex(selectQuery);
     }
 
-    this.selectOne = function (object, success, fail, or) {
+    this.selectOne = function (object, or, success, fail) {
+      if ((typeof or) === 'function') {
+        fail = success;
+        success = or;
+        or = undefined;
+      }
       function selectQuery() {
         print('\nSelectOne:')
         const selectObj = select(object, or);
         const mapSuccess = mapResults(selectObj.objects, success, true, fail);
-        console.log('types: ', object.constructor.name, (typeof success), (typeof fail))
         query(selectObj.query, selectObj.values, mapSuccess, fail);
       }
       getMutex(selectQuery);
@@ -651,7 +656,12 @@ class Crud {
       }
     }
 
-    this.delete = function (object, success, fail, or) {
+    this.delete = function (object, or, success, fail) {
+      if ((typeof or) === 'function') {
+        fail = success;
+        success = or;
+        or = undefined;
+      }
       function deleteQuery() {
         print('\nDelete:')
         const joinStr = or ? ' OR ' : ' AND ';

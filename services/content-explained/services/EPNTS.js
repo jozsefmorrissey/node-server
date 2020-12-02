@@ -1,6 +1,7 @@
 
 class Endpoints {
   constructor(config, host) {
+    const instance = this;
     host = host || '';
     this.setHost = (newHost) => {
       if ((typeof newHost) === 'string') {

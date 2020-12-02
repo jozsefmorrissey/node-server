@@ -1,6 +1,7 @@
 const shell = require('shelljs');
 const mailgun = require("mailgun-js");
 const { EPNTS } = require('./EPNTS.js');
+const { Context } = require('./context.js');
 const ENV = require('./properties').ENV;
 const apiKey = shell.exec('pst value mailgun apiKey').stdout.trim();
 const domain = shell.exec('pst value mailgun domain').stdout.trim();
@@ -24,11 +25,13 @@ function send (data, success, failure) {
 }
 
 function sendActivationEmail(user, credential, success, failure) {
+  const id = credential.getId();
   const userId = credential.userId;
   const actSecret = credential.activationSecret;
-  const activationUrl = `${EPNTS.getHost(global.ENV)}${EPNTS.credential.activate(userId,actSecret)}`;
+  const activationUrl = `${EPNTS.getHost(global.ENV)}${EPNTS.credential.activate(id,userId,actSecret)}`;
   if (global.ENV === 'local') {
     console.log('activation url:', activationUrl);
+    Context.fromFunc(success).dg.link('User', 'activationUrl', activationUrl);
   }
   send({
     from: 'CE <ce@jozsefmorrissey.com>',
@@ -56,9 +59,11 @@ function sendUpdateUserEmail(user, secret, success, failure) {
   const id = user.id;
   const username = user.username;
   const email = user.getEmail();
-  const updateUrl = `${ENV.get('host')}${EPNTS.user.update(secret)}`;
+  const updateConfirmationUrl = `${EPNTS.getHost(global.ENV)}${EPNTS.user.update(secret)}`;
   if (global.ENV === 'local') {
-    console.log('update email:', updateUrl);
+    console.log('update email:', updateConfirmationUrl);
+    Context.fromFunc(success)
+        .dg.link('User', 'updateConfirmationUrl', updateConfirmationUrl);
   }
   send({
     from: 'CE <ce@jozsefmorrissey.com>',
@@ -66,7 +71,7 @@ function sendUpdateUserEmail(user, secret, success, failure) {
     subject: 'Activate Account',
     html: `<p>User update requested please confirm.
               <br>
-              <button onclick='window.open("${updateUrl}","_blank")'>Confirm</button>`
+              <button onclick='window.open("${updateConfirmationUrl}","_blank")'>Confirm</button>`
     }, success, failure);
 }
 
