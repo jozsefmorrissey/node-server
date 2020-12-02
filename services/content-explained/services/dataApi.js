@@ -215,10 +215,22 @@ function addOpinion(req, next, favorable, explanationId, siteId, success, fail) 
     opinion.setUserId(user.id);
     success();
   }
+  function notAuthor(expl, success, fail) {
+    console.log(`${expl.author.id} === ${opinion.getUserId()}`)
+    if (expl.author.id === opinion.getUserId()) {
+      fail(new UnAuthorized('Authors cannot rate thier own work', '8yUDpd'));
+    } else {
+      success();
+    }
+  }
   new context.callbackTree(auth, 'submittingOpinion', req, next)
     .fail(fail)
     .success(setUserId, 'settingUser')
-    .success('settingUser', crud.delete, 'deletingOpinion', delOpinion)
+    .success('settingUser', crud.selectOne, 'gettingExpl', new Explanation(explanationId))
+    .success('gettingExpl', notAuthor, 'checkingUserNotAuthor')
+    .fail('gettingExpl', returnError(next), 'explanationNotFound')
+    .success('checkingUserNotAuthor', crud.delete, 'deletingOpinion', delOpinion)
+    .fail('checkingUserNotAuthor', returnError(next), 'authorWeighingIn')
     .success('deletingOpinion', crud.insert, 'insertingOpinion', opinion)
     .success('insertingOpinion', success)
     .fail('insertingOpinion', fail)
