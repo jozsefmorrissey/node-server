@@ -39,7 +39,7 @@ function sendActivationEmail(user, credential, success, failure) {
     subject: 'Activate Account',
     html: `<p>Thanks for creating an account to activate it simply
               <br>
-              <button onclick='window.open("${activationUrl}","_blank")'>Click Here</button>`
+              <a href='${activationUrl}' target='_blank'>Click Here</button>`
     }, success, failure);
 }
 
