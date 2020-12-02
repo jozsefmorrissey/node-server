@@ -273,7 +273,7 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
     const capitalCnt = req.params.capitalLetterCount;
     const specialCharCnt = req.params.specialcharacterCount;
     const specChars = req.params.specialCharacters;
-    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Type', 'text/html');
     const pass = randPassword(length, numberCnt, capitalCnt, specialCharCnt, specChars);
     res.send(`<h1>${pass}</h1>`);
   });
