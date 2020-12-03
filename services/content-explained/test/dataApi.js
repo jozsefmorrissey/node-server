@@ -90,9 +90,9 @@ function insertUser(username, email, userAgent, count, callback) {
   var xhr = new xmlhr();
   xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
   xhr.open("POST", getUrl(EPNTS.user.add()), {async: false});
-  console.log(getUrl(EPNTS.user.add()))
   xhr.setRequestHeader('Content-Type', 'application/json');
   xhr.setRequestHeader('user-agent', userAgent);
+  userObj.activationSecrets.push(`${email}-${userAgent}`);
   xhr.send(JSON.stringify({username, email}));
 }
 
@@ -122,19 +122,23 @@ const userObj= {emails: ['test1@jozsefmorrissey.com',
     `${randomString(50, /[a-zA-Z0-9]/, /.{1,}/)}-test-name-4`],
   userAgent: 'CE-data-api-test',
   removeUserAgent: 'CE-data-api-test-remove',
-  secrets: [], ids: [], removeSecets: [], authored: []};
+  secrets: [], ids: [], removeSecets: [], authored: [], activationUrls: [],
+  activationSecrets: []
+};
 
 function testInsertUsers(callback) {
   const count = userObj.emails.length;
   for (let index = 0; index < count; index += 1) {
     returned = 0;
+    const email = userObj.emails[index];
     const username = randomString(64, /[a-zA-Z0-9]/, /.{1,}/);
     var xhr = new xmlhr();
     xhr.onreadystatechange = handler(userObj.secrets, 200, count, index, testSuccess(callback), testFail(callback));
+    userObj.activationSecrets.push(`${email}-${userObj.userAgent}`);
     xhr.open("POST", getUrl(EPNTS.user.add()), {async: false});
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('user-agent', userObj.userAgent);
-    xhr.send(JSON.stringify({username, email: userObj.emails[index]}));
+    xhr.send(JSON.stringify({username, email}));
   }
 }
 
@@ -194,24 +198,38 @@ function testCreateCredentials(callback) {
     returned = 0;
     const id = userObj.ids[index];
     const secret = userObj.secrets[index];
+    const email = userObj.emails[index];
     var xhr = new xmlhr();
     xhr.onreadystatechange = handler(userObj.removeSecets, 200, len, index, testSuccess(callback), testFail(callback));
     const url = getUrl(EPNTS.credential.add(id));
     xhr.open("GET", url);
+    userObj.activationSecrets.push(`${email}-${userObj.removeUserAgent}`);
     xhr.setRequestHeader('user-agent', userObj.removeUserAgent);
     xhr.setRequestHeader('authorization', secret);
     xhr.send();
   }
 }
 
+function getActivationUrls(callback) {
+  const len = userObj.activationSecrets.length;
+  for (let index = 0; index < len; index += 1) {
+    const activationSecret = userObj.activationSecrets[index];
+    returned = 0;
+    var xhr = new xmlhr();
+    xhr.onreadystatechange = handler(userObj.activationUrls, 200, len, index, testSuccess(callback), testFail(callback));
+    const url = getUrl(EPNTS.credential.activationUrl(activationSecret));
+    xhr.open("GET", url);
+    xhr.send();
+  }
+}
+
 function testActivateUsers(callback) {
-  const len = userObj.ids.length;
+  const len = userObj.activationUrls.length;
   for (let index = 0; index < len; index += 1) {
     returned = 0;
-    const id = userObj.ids[index];
+    const url = userObj.activationUrls[index].replace(/https:/, 'http:').replace(':3001', ':3000');
     var xhr = new xmlhr();
     xhr.onreadystatechange = handler(undefined, 200, len, index, testSuccess(callback), testFail(callback));
-    const url = getUrl(EPNTS.credential.activate(id, 'shhh'));
     xhr.open("GET", url);
     xhr.send();
   }
@@ -547,12 +565,15 @@ function testOpinionUrls(callback) {
   const count = explanations.length * userObj.users.length;
   for (let uIndex = 0; uIndex < userObj.users.length; uIndex += 1) {
     const secret = userObj.secrets[uIndex];
+    const userId = userObj.users[uIndex].id;
     for (let index = 0; index < explanations.length; index += 1) {
-      const explId = explanations[index % explanations.length].id;
+      const expl = explanations[index % explanations.length];
+      const explId = expl.id;
+      const status = expl.author.id === userId ? 401 : 200;
       const siteId = siteObj.ids[Math.floor(Math.random() * siteObj.urls.length)].id;
       const url = Math.random() < 0.2 ? EPNTS.opinion.dislike(explId, siteId) : EPNTS.opinion.like(explId, siteId);
       let xhr = new xmlhr();
-      xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+      xhr.onreadystatechange = handler(undefined, status, count, 0, testSuccess(callback), testFail(callback));
       xhr.open("GET", getUrl(url));
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.setRequestHeader('user-agent', userObj.userAgent);
@@ -691,14 +712,14 @@ function finishTests(callback) {
 }
 
 testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUserId,
-            testActivateUsers, testLoginUsers, testCreateCredentials,
+            getActivationUrls, testActivateUsers, testLoginUsers, testCreateCredentials,
             testActivateUserFailure, testGetCredentials,
             testDeleteCredFailure, testDeleteCred, testGetCredentials,
             /*testUpdateUsers,*/ testLoginUsers, testGetUsers, /*validateUserNames,*/
             testAddSite, testGetSite, testAddExplanation,
-            testAddMoreExplanations, testGetExplanations, /*testUpdateExplanations,
+            testAddMoreExplanations, testGetExplanations, testUpdateExplanations,
             testUpdateExplanationsWrongUser, testUpdateExplanationsNotLoggedIn,
-            testUpdateExplanationsInvalidExplId, testUpdatedExplanations,*/
+            testUpdateExplanationsInvalidExplId, testUpdatedExplanations,
             testAddSiteExpl, testAddExistingSiteExpl, testOpinionUrls,
             testOpinionNotLoggedIn, addCode, addExplanations, getRealExpls,
             addRealExplsToSite,

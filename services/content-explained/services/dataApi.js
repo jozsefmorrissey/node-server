@@ -179,7 +179,7 @@ async function createCredential(req, next, userId, success, fail) {
 
   function setUser(u, success) {
     if (u.getEmail().match(/^test[0-9]*@jozsefmorrissey.com$/)) {
-      cred.setActivationSecret('shhh');
+      cred.setActivationSecret(`${u.getEmail()}-${userAgentVal}`);
     }
     user.setEmail(u.getEmail()); success()
   };
@@ -216,7 +216,6 @@ function addOpinion(req, next, favorable, explanationId, siteId, success, fail) 
     success();
   }
   function notAuthor(expl, success, fail) {
-    console.log(`${expl.author.id} === ${opinion.getUserId()}`)
     if (expl.author.id === opinion.getUserId()) {
       fail(new UnAuthorized('Authors cannot rate thier own work', '8yUDpd'));
     } else {
@@ -408,6 +407,17 @@ function endpoints(app, prefix, ip) {
         .execute();
     });
 
+    app.get(prefix + EPNTS.credential.activationUrl(), function (req, res, next) {
+      const credential = new Credential();
+      credential.setActivationSecret(req.params.activationSecret);
+      function returnUrl (cred) {
+        const host = EPNTS.getHost(global.ENV);
+        const url = EPNTS.credential.activate(cred.getId(),cred.getUserId(),cred.getActivationSecret());
+        res.send(`${host}${url}`);
+      }
+      crud.selectOne(credential, returnUrl, returnError(next));
+    });
+
     app.get(prefix + EPNTS.credential.activate(), function (req, res, next) {
       const context = Context.fromReq(req);
       const cred =  new Credential();
@@ -595,11 +605,11 @@ function endpoints(app, prefix, ip) {
       .success(validateUser, 'validatingLoginUser', '$cbtArg[0].id')
       .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
       .success('validatingLoginUser', crud.selectOne, 'gettingExpl', idOnly)
-      .fail('validatingLoginUser', returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
+      .fail('validatingLoginUser', returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth2')
       .success('gettingExpl', validateUser, 'validatingAuthor', '$cbtArg[0].author.id')
       .fail('gettingExpl', returnError(next, new NotFound('Explanation', req.body.id)), 'nf')
       .success('validatingAuthor', crud.update, 'updating', contentOnly)
-      .fail('validatingAuthor', returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
+      .fail('validatingAuthor', returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth3')
       .success('updating', returnVal(res, 'success'))
       .execute();
   });
