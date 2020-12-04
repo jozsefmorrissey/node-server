@@ -3,12 +3,46 @@ function DebugGui() {
   var exceptionId = 0;
   var TAG_NAME = 'debug-gui-data';
   var LOGS = '__LOGS';
+  var REFRESH_BTN_ID = 'dg-refresh-btn-id';
+  var DISPLAY_LOGS_BTN_ID = 'dg-display-logs-id';
+  var COPY_MODAL_BTN_ID = 'dg-copy-modal-btn-id';
+  var COPY_BTN_ID = 'dg-copy-btn-id';
+  var DISPLAY_MODAL_BTN_ID = 'dg-display-modal-btn-id';
+  var HOST_INPUT_ID = 'dg-host-input-id';
+  var ID_INPUT_ID = 'dg-id-input-id';
 
-  var getScriptURL = (function() {
+
+  const events = {};
+  function on(eventName, selector, func) {
+    if ((typeof eventName) !== 'string') throw new Error('eventName (arg1) must be a string!');
+    if ((typeof selector) !== 'string') throw new Error('selector (arg2) must be a string!');
+    if ((typeof func) !== 'function') throw new Error('func (arg3) must be a function!');
+
+    function call(event) {
+      if (events[event.type]) {
+        Object.keys(events[event.type]).forEach((selector) => {
+          if (event.target.matches && event.target.matches(selector)) {
+            events[event.type][selector].forEach((func) => func(event));
+          }
+        });
+      }
+    }
+
+    if (events[eventName] === undefined) {
+      DebugGui.SCC.addEventListener(eventName, call);
+      events[eventName] = {};
+    }
+    if (events[eventName][selector] === undefined) {
+      events[eventName][selector] = [];
+    }
+    events[eventName][selector].push(func);
+  }
+
+  var getScriptURL = (function () {
       var scripts = document.getElementsByTagName('script');
       var index = scripts.length - 1;
       var myScript = scripts[index];
-      return function() { return myScript.src; };
+      return function () { return myScript.src; };
   })();
 
   function getParameter(name) {
@@ -16,6 +50,14 @@ function DebugGui() {
     if (window.location.href.match(paramReg)) {
       return window.location.href.replace(paramReg, "$3")
     }
+  }
+
+  const jsAttrReg = / on[a-zA-Z]*\s*=/g;
+  function safeInnerHtml(text, elem) {
+    const clean = text.replace(/<script[^<]*?>/, '').replace(jsAttrReg, '');
+    if (clean !== text) throw Error('ddddddddiiiiiiiiiiiiiirrrrrrrrrrrrtttttttttttty');
+    if (elem !== undefined) elem.innerHTML = clean;
+    return clean;
   }
 
   function getId() {
@@ -32,21 +74,23 @@ function DebugGui() {
     createCookie();
   }
 
+  function sendValue(func) {
+    return (event) => func(event.target.value);
+  }
+
   const COOKIE_BTN_ID = 'dg-cookie-btn-id';
   function buildHeader(html) {
     var host = getHost();
     var tl = logWindow();
     return `<div style='text-align: center;'>
               <div style='float: left; margin-left: 20pt;'>
-                <input type='button' value='refresh'
-                    onclick='DebugGui.refresh()'>
-                <input type='button' onclick='DebugGui.displayLogs()'
-                    value='Logs'>
+                <input type='button' value='refresh' id='${REFRESH_BTN_ID}'>
+                <input type='button' id='${DISPLAY_LOGS_BTN_ID}' value='Logs'>
               </div>
               <label>host: </label>
-              <input type='text' id='debug-gui-host' onchange='DebugGui.updateHost(this.value)' value='${host}'>
+              <input type='text' id='${HOST_INPUT_ID}' value='${host}'>
               <label>id: </label>
-              <input type='text' id='debug-gui-id' onchange='DebugGui.updateId(this.value)' value='${getId()}'>
+              <input type='text' id='${ID_INPUT_ID}' value='${getId()}'>
               <img style='height: 20px;' id='${COOKIE_BTN_ID}' src='${host}/images/cookie.gif'>
               <label>&nbsp;&nbsp;Logging Window </label>
               <input type='text' id='debug-gui-log-window' value='${tl}'
@@ -54,7 +98,7 @@ function DebugGui() {
               <label>Seconds</label>
               <input type="button"
                   value="Copy Html Report"
-                  onclick="DebugGui.copyModal()"
+                  id='${COPY_MODAL_BTN_ID}'
                   style='float: right; margin-right: 20pt;'>
             </div>
             <br>
@@ -78,6 +122,7 @@ function DebugGui() {
       DebugGui.MODAL.appendChild(DebugGui.HAZE);
 
       DebugGui.POPUP = document.createElement('div');
+      DebugGui.POPUP.id = 'pu';
       DebugGui.POPUP.style.cssText = `background-color: white;
               padding: 10pt 20pt;
               display: inline-block;
@@ -86,25 +131,33 @@ function DebugGui() {
               max-height: 80%;
               overflow: scroll;
               border-radius: 2pt;`;
-      DebugGui.POPUP.setAttribute('onclick', 'event.stopPropagation()');
+      DebugGui.POPUP.onclick = (event) => event.stopPropagation();
       DebugGui.HAZE.appendChild(DebugGui.POPUP);
       DebugGui.MODAL.id = 'debug-gui-modal';
       DebugGui.HAZE.onclick = hideModal;
+      DebugGui.HAZE.onmouseup = (event) => event.stopPropagation();
+      DebugGui.HAZE.onmousedown = (event) => event.stopPropagation();
       logWindow();
       hideModal();
 
       document.body.appendChild(DebugGui.MODAL);
       var html = buildHeader(buildGui(undefined, 'og'));
       DebugGui.SCC = ShortCutContainer("debug-gui-scc", ['d', 'g'], html);
-      document.getElementById ('debug-gui-scc').addEventListener('click', (e) => {
-        if (e.target.matches('.btn-link')) {
-          var target = document.querySelector(e.target.getAttribute('data-target'));
-          if (target.style.display === 'none') {
-            collapseAllDescendents(document.querySelector(e.target.getAttribute('data-parent')));
-            target.style.display = 'block';
-          } else {
-            target.style.display = 'none';
-          }
+      on('change', '#' + HOST_INPUT_ID, sendValue(updateHost));
+      on('change', '#' + ID_INPUT_ID, sendValue(updateId));
+      on('click', '#' + REFRESH_BTN_ID, refresh);
+      on('click', '#' + DISPLAY_LOGS_BTN_ID, displayLogs);
+      on('click', '#' + COPY_MODAL_BTN_ID, copyModal);
+      on('click', '#' + COPY_BTN_ID, copyReport);
+      on('click', '.' + DISPLAY_MODAL_BTN_ID, displayExeptionModal);
+
+      on('click', '.btn-link', (e) => {
+        var target = document.querySelector(e.target.getAttribute('data-target'));
+        if (target.style.display === 'none') {
+          collapseAllDescendents(document.querySelector(e.target.getAttribute('data-parent')));
+          target.style.display = 'block';
+        } else {
+          target.style.display = 'none';
         }
       });
       createCookie();
@@ -140,31 +193,31 @@ function DebugGui() {
   }
 
   function displayModalHtml(html) {
-    DebugGui.POPUP.innerHTML = html;
+    safeInnerHtml(html, DebugGui.POPUP);
     DebugGui.MODAL.style.display = 'block';
   }
 
-  function displayModal(id) {
-    DebugGui.POPUP.innerHTML = DebugGui.EXCEPTION_LOOKUP[id];
+  function displayExeptionModal() {
+    const id = event.target.getAttribute('except-id');
+    safeInnerHtml(DebugGui.EXCEPTION_LOOKUP[id], DebugGui.POPUP);
     DebugGui.MODAL.style.display = 'block';
   }
 
   function hideModal() {
-    DebugGui.POPUP.innerHTML = '';
+    safeInnerHtml('', DebugGui.POPUP);
     DebugGui.MODAL.style.display = 'none';
   }
 
-  var reportInfo = '__REPORT_INFO';
   var reportInfoTitleId = 'debug-gui-report-info-title';
   var reportInfoDescId = 'debug-gui-report-info-desc';
   var copyTextId = 'debug-gui-copy-text';
 
   function copyModal() {
-    DebugGui.EXCEPTION_LOOKUP[reportInfo] = '<input id="' + reportInfoTitleId + '" placeholder="title">' +
-        '<input type="button" value="Copy" onclick="DebugGui.copyReport()">' +
+    var reportInfo = '<input id="' + reportInfoTitleId + '" placeholder="title">' +
+        '<input type="button" value="Copy" id="' + COPY_BTN_ID + '">' +
         '<textarea placeholder="Text to copy" id="' + copyTextId + '" style="float: right;"></textarea>' +
         "<textarea cols=120 rows=20 id='" + reportInfoDescId + "' placeholder='Description'></textarea><br>";
-    displayModal(reportInfo);
+    displayModalHtml(reportInfo);
   }
 
   function retTab(count) {
@@ -306,7 +359,7 @@ function DebugGui() {
     var acorn = '<div><label>Exceptions</label><ul>';
     for (let index = 0; index < exceptions.length; index += 1) {
       var except = exceptions[index];
-      acorn += `<li><a href='#' onclick='DebugGui.displayModal(${exceptionId})'>
+      acorn += `<li><a href='#' except-id='${exceptionId}' class='${DISPLAY_MODAL_BTN_ID}'>
                   ${except.id} - ${except.msg}
                 </a></li>`;
       var stacktrace = except.stacktrace === undefined ? "" : except.stacktrace.replace(/\n/g, "<br>");
@@ -397,7 +450,7 @@ function DebugGui() {
   }
 
   function refresh(data) {
-    if (data) {
+    if (data && !(data instanceof MouseEvent)) {
         DebugGui.DATA = data;
         render();
     } else if (!DebugGui.DONT_REFRESH) {
@@ -447,9 +500,15 @@ function DebugGui() {
 
 console.log('dg here')
   window.addEventListener('load', onLoad);
-  return {refresh, displayModal, displayLogs, debug, createCookie,
+  return {refresh, displayModalHtml, displayLogs, debug, createCookie,
       copyModal, getUrl, copyReport, getId, updateId, updateHost};
 }
 
 DebugGui = DebugGui();
 DebugGui.EXCEPTION_LOOKUP = {};
+DebugGui.UI_EXISTANCE_ID = 'debug-gui-ui-exists-globally-unique-id';
+
+if (document.currentScript &&
+  document.currentScript.src.match(/^.*\/debug-gui.js$/)) {
+  document.currentScript.id = DebugGui.UI_EXISTANCE_ID;
+}

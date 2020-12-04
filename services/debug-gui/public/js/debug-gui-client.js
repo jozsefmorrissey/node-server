@@ -39,6 +39,16 @@ function DebugGuiClient(config, root, debug) {
     updateConfig(config);
   }
 
+  function addScript(id, src) {
+    if (!document.getElementById(id)) {
+      const script = document.createElement("script");
+      script.id = id;
+      script.src = src;
+      document.head.appendChild(script);
+    }
+  }
+
+  var guiAdded = false;
   function updateConfig(config) {
     id = config.id !== undefined ? config.id : id;
     httpHost = config.httpHost || httpHost;
@@ -49,17 +59,10 @@ function DebugGuiClient(config, root, debug) {
     host = config.host !== undefined ? config.host : host;
     if (host !== undefined) host = host.replace(/^(.*?)\/$/, "$1");
     logWindow = logWindow != 25 ? logWindow : config.logWindow;
-    if (host && isDebugging() && DebugGuiClient.inBrowser) {
-      var script;
-      if (!document.head.innerHTML.match(/ src=('|")[^'^"]*\/js\/debug-gui-client.js('|")/)) {
-        script = document.createElement("script");
-        script.src = `${getHost()}/js/debug-gui-client.js`;
-        document.head.appendChild(script);
-      } else if (!document.head.innerHTML.match(/ src=('|")[^'^"]*\/js\/debug-gui.js('|")/)) {
-          script = document.createElement("script");
-          script.src = `${getHost()}/js/debug-gui.js`;
-          document.head.appendChild(script);
-      }
+    if (!guiAdded && host && isDebugging() && DebugGuiClient.inBrowser) {
+      guiAdded = true;
+      addScript(DebugGuiClient.EXISTANCE_ID, `${getHost()}/js/debug-gui-client.js`);
+      addScript(DebugGuiClient.UI_EXISTANCE_ID, `${getHost()}/js/debug-gui.js`);
     }
     createCookie();
   }
@@ -213,6 +216,9 @@ function DebugGuiClient(config, root, debug) {
 }
 
 {
+
+  DebugGuiClient.EXISTANCE_ID = 'debug-gui-exists-globally-unique-id';
+
   const dummyClient = new DebugGuiClient();
   function staticCall(funcName) {
     return (id) => {
@@ -330,7 +336,6 @@ function DebugGuiClient(config, root, debug) {
         return attr ? attr.value : undefined;
       }
       tagConf = tagConf || {
-        id: getScriptAttr('identity'),
         host: getScriptAttr('host'),
         debug: getScriptAttr('debug'),
         logWindow: getScriptAttr('log-window')
@@ -391,5 +396,10 @@ try {
 if (!DebugGuiClient.inBrowser) {
   exports.DebugGuiClient = DebugGuiClient;
 } else {
+  DebugGuiClient.UI_EXISTANCE_ID = 'debug-gui-ui-exists-globally-unique-id';
+  if (document.currentScript &&
+    document.currentScript.src.match(/^.*\/debug-gui-client.js$/)) {
+    document.currentScript.id = DebugGuiClient.EXISTANCE_ID;
+  }
   var dg = DebugGuiClient.browser('default');
 }
