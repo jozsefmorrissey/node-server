@@ -372,16 +372,17 @@ class Crud {
           setTimeout(connect, 2000);
         }
       });
+
+      connection.on('error', function (err) {
+        if(err.code === 'PROTOCOL_CONNECTION_LOST') {
+          connect();
+        } else {
+          throw err;
+        }
+      });
     }
     connect();
 
-    function connection.on('error', function (err) {
-      if(err.code === 'PROTOCOL_CONNECTION_LOST') {
-        connect();
-      } else {
-        throw err;
-      }
-    });
 
     function getMutex(callback) {
       if (options.mutex) {
