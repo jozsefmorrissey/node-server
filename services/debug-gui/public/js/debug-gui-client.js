@@ -180,7 +180,9 @@ function DebugGuiClient(config, root, debug) {
   }
 
   this.addHeaderXhr = function (xhr) {
-    xhr.setRequestHeader('debug-gui', instance.toString());
+    if (debug) {
+      xhr.setRequestHeader('debug-gui', instance.toString());
+    }
   }
 
   function createCookie() {

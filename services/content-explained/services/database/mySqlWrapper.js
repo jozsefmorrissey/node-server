@@ -366,9 +366,22 @@ class Crud {
         database: options.database || 'CE'
       };
       connection = mySql.createConnection(connInfo);
-      connection.connect();
+      connection.connect((err) => {
+        if(err) {
+          console.log('error when connecting to db:', err);
+          setTimeout(connect, 2000);
+        }
+      });
     }
     connect();
+
+    function connection.on('error', function (err) {
+      if(err.code === 'PROTOCOL_CONNECTION_LOST') {
+        connect();
+      } else {
+        throw err;
+      }
+    });
 
     function getMutex(callback) {
       if (options.mutex) {
