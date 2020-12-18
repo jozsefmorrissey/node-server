@@ -529,6 +529,7 @@ function endpoints(app, prefix, ip) {
   //  ------------------------- Explanation Api -------------------------  //
 
   app.get(prefix + EPNTS.explanation.get(), function (req, res, next) {
+    console.log('gettin!')
     const context = Context.fromReq(req);
     const explanation = new Explanation();
     const clean = cleanStr(req.params.words);
