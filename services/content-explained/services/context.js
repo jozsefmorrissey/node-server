@@ -33,7 +33,12 @@ Context.open = {};
 Context.default = new Context()
 Context.fromReq = (req) => Context.open[req.ceContextId] || Context.default;
 Context.fromRes = Context.fromReq;
-Context.fromFunc = (func) => Context.open[func.cbTreeContext] || Context.default;
+Context.fromFunc = (func) => {
+  if ((typeof func) === 'function') {
+    return Context.open[func.cbTreeContext] || Context.default
+  }
+  return Context.default;
+};
 Context.fromCbTree = (cbTree) => Context.open[cbTree.getContext()] || Context.default;
 
 exports.Context = Context;

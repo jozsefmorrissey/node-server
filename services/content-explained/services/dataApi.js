@@ -10,7 +10,7 @@ const { InvalidDataFormat, InvalidType, UnAuthorized, SqlOperationFailed,
         InvalidRequest} =
         require('./exceptions.js');
 const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
-        DataObject, Ip, UserAgent, Words, PendingUserUpdate} =
+        DataObject, Ip, UserAgent, Words, PendingUserUpdate, Comment} =
                 require('../services/database/objects');
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
@@ -21,7 +21,7 @@ if (global.ENV !== 'local') {
   password = shell.exec('pst value ce-mysql password').stdout.trim();
 }
 
-const crud = new Crud({password, user, silent: true, mutex: false});
+const crud = new Crud({password, user, silent: false, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   const context = Context.fromFunc(success);
@@ -592,26 +592,44 @@ function endpoints(app, prefix, ip) {
 
   app.put(prefix + EPNTS.explanation.update(), function (req, res, next) {
     const context = Context.fromReq(req);
+    console.log(req.body)
     const idOnly = new Explanation(Number.parseInt(req.body.id));
     const contentOnly = idOnly.$d().clone();
+    let userId;
     contentOnly.setContent(req.body.content);
+    function recordUserId(id, success) {userId = id; success();}
     function validateUser(id, success, fail) {
-      if (id === req.body.authorId) {
+      if (id === userId) {
         success();
       } else {
         fail();
       }
     }
+    console.log(idOnly)
     context.callbackTree(auth, 'updateExpl', req, next)
-      .success(validateUser, 'validatingLoginUser', '$cbtArg[0].id')
+      .success(recordUserId, 'recordingLoggedInUser', '$cbtArg[0].id')
       .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
-      .success('validatingLoginUser', crud.selectOne, 'gettingExpl', idOnly)
-      .fail('validatingLoginUser', returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth2')
+      .success('recordingLoggedInUser', crud.selectOne, 'gettingExpl', idOnly)
       .success('gettingExpl', validateUser, 'validatingAuthor', '$cbtArg[0].author.id')
       .fail('gettingExpl', returnError(next, new NotFound('Explanation', req.body.id)), 'nf')
       .success('validatingAuthor', crud.update, 'updating', contentOnly)
       .fail('validatingAuthor', returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth3')
       .success('updating', returnVal(res, 'success'))
+      .execute();
+  });
+
+  //  ------------------------- Comment Api -------------------------  //
+
+  app.post(prefix + EPNTS.comment.add(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    const comment = new Comment(req.body.value, req.body.explanationId, req.body.siteId, req.body.commentId);
+    function recordUserId(author, success) {comment.setAuthor(author); success();}
+    context.callbackTree(auth, 'addComment', req, next)
+      .success(recordUserId, 'recordingAuthorId', '$cbtArg[0]')
+      .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
+      .success('recordingAuthorId', crud.insert, 'insertingComment', comment)
+      .success('insertingComment', returnVal(res, 'success'))
+      .fail('insertingComment', returnError(next))
       .execute();
   });
 

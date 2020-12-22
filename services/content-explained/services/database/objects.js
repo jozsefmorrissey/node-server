@@ -93,6 +93,20 @@ class Words extends DataObject {
 }
 new Words();
 
+class Comment extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('value');
+    this.$d().addField('explanationId');
+    this.$d().addField('siteId');
+    this.$d().addField('commentId');
+    this.$d().addField('author', {class: User, relation: 'manyToOne'});
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new Comment();
+
 class Explanation extends DataObject {
   constructor() {
     super();
@@ -103,6 +117,7 @@ class Explanation extends DataObject {
     this.$d().addField('searchWords', {class: Words, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('author', {class: User, relation: 'manyToOne'});
     this.$d().addField('tags', {class: ExplanationTag, relation: 'oneToMany', merge: 'tag'});
+    this.$d().addField('comments', {class: Comment, relation: 'oneToMany'});
     this.$d().addField('id');
     this.$d().addField('likes', {readOnly: true});
     this.$d().addField('dislikes', {readOnly: true});
@@ -152,6 +167,7 @@ new Site();
 
 exports.Ip = Ip;
 exports.UserAgent = UserAgent;
+exports.Comment = Comment;
 exports.Credential = Credential;
 exports.User = User;
 exports.Explanation = Explanation;

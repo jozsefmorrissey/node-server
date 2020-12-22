@@ -705,6 +705,26 @@ function addRealExplsToSite(callback) {
   }
 }
 
+function addCommentsToExpls(callback) {
+  const count = expls.length * 3;
+  returned = 0;
+  const commentId = undefined;
+  for (let index = 0; index < count; index += 1) {
+    const value = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
+    const explanationId = expls[Math.floor(expls.length * Math.random())].id;
+    const siteId = siteObj.ids[Math.floor(siteObj.ids.length * Math.random())].id;
+    const secret = userObj.secrets[Math.floor(userObj.secrets.length * Math.random())];
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+    xhr.open("POST", getUrl(EPNTS.comment.add()), {async: false});
+    xhr.setRequestHeader('user-agent', userObj.userAgent);
+    xhr.setRequestHeader('authorization', secret);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    const body = {value, siteId, explanationId, commentId};
+    xhr.send(JSON.stringify(body));
+  }
+}
+
 const startTime = new Date().getTime();
 function finishTests(callback) {
   const endTime = new Date().getTime();
@@ -722,7 +742,7 @@ testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUs
             testUpdateExplanationsInvalidExplId, testUpdatedExplanations,
             testAddSiteExpl, testAddExistingSiteExpl, testOpinionUrls,
             testOpinionNotLoggedIn, addCode, addExplanations, getRealExpls,
-            addRealExplsToSite,
+            addRealExplsToSite, addCommentsToExpls,
 
 
             finishTests]);
