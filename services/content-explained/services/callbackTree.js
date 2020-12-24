@@ -111,6 +111,8 @@ class CallbackTree {
               `\n\t\t${key} = ${value}`);
         }
       }
+      console.log(`Executing CallbackTree '${instance.getRoot().getId()}' on leaf '${instance.getId()}'.` +
+          `\n\t\t${key} = ${value}`);
     }
 
     function callbackFunctions() {

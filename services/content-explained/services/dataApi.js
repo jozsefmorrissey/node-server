@@ -21,7 +21,7 @@ if (global.ENV !== 'local') {
   password = shell.exec('pst value ce-mysql password').stdout.trim();
 }
 
-const crud = new Crud({password, user, silent: true, mutex: false});
+const crud = new Crud({password, user, silent: false, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   const context = Context.fromFunc(success);
