@@ -21,7 +21,7 @@ if (global.ENV !== 'local') {
   password = shell.exec('pst value ce-mysql password').stdout.trim();
 }
 
-const crud = new Crud({password, user, silent: false, mutex: false});
+const crud = new Crud({password, user, silent: true, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   const context = Context.fromFunc(success);
@@ -36,7 +36,7 @@ function retrieveOrInsert(dataObject, next, success) {
 }
 
 function cleanSiteUrl(url) {
-  return url.replace(/^(.*?)(\#|\?).*$/, '$1')
+  return url.replace(/^(.*?)(\#|\?).*$/, '$1').replace(/^http(s|):\/\//, '');
 }
 
 function getIp(ip, next, success) {
@@ -199,7 +199,7 @@ async function createCredential(req, next, userId, success, fail) {
 }
 
 function addSite(url, success, failure) {
-  crud.insert(new Site(url), success, failure);
+  crud.insert(new Site(cleanSiteUrl(url)), success, failure);
 }
 
 function insertTags(tags, success, failure) {
@@ -520,7 +520,7 @@ function endpoints(app, prefix, ip) {
 
   app.post(prefix + EPNTS.site.get(), function (req, res, next) {
     const context = Context.fromReq(req);
-    context.callbackTree(crud.selectOne, 'getSite', new Site(req.body.url))
+    context.callbackTree(crud.selectOne, 'getSite', new Site(cleanSiteUrl(req.body.url)))
       .fail(returnError(next, new NoSiteFound(req.body.url)))
       .success(returnQuery(res))
       .execute();
@@ -529,7 +529,6 @@ function endpoints(app, prefix, ip) {
   //  ------------------------- Explanation Api -------------------------  //
 
   app.get(prefix + EPNTS.explanation.get(), function (req, res, next) {
-    console.log('gettin!')
     const context = Context.fromReq(req);
     const explanation = new Explanation();
     const clean = cleanStr(req.params.words);
@@ -592,7 +591,6 @@ function endpoints(app, prefix, ip) {
 
   app.put(prefix + EPNTS.explanation.update(), function (req, res, next) {
     const context = Context.fromReq(req);
-    console.log(req.body)
     const idOnly = new Explanation(Number.parseInt(req.body.id));
     const contentOnly = idOnly.$d().clone();
     let userId;
@@ -605,7 +603,6 @@ function endpoints(app, prefix, ip) {
         fail();
       }
     }
-    console.log(idOnly)
     context.callbackTree(auth, 'updateExpl', req, next)
       .success(recordUserId, 'recordingLoggedInUser', '$cbtArg[0].id')
       .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')

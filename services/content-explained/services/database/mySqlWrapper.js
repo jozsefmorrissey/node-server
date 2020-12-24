@@ -527,7 +527,6 @@ class Crud {
         function got(data) {
           success(data);
         }
-        console.log(object)
         const idOnly = object.$d().getInstance();
         idOnly.setId(data.insertId);
         instance.selectOne(idOnly, success, () => {throw new Error('this should never happen')});
