@@ -40,7 +40,8 @@ class Field {
     this.setValue = function (newValue) {
       if (this.isList()) {
         value = value || [];
-        if (newValue !== undefined) {
+        // TODO: try to get rid of indexOf... Hacky Fix
+        if (newValue !== undefined && value.indexOf(newValue) === -1) {
           value.push(newValue);
         }
       } else {
@@ -519,6 +520,19 @@ class Crud {
         query(queryString, values, success, fail);
       }
       getMutex(insertQuery);
+    }
+
+    this.insertGet = function (object, success, fail) {
+      function inserted(data) {
+        function got(data) {
+          success(data);
+        }
+        console.log(object)
+        const idOnly = object.$d().getInstance();
+        idOnly.setId(data.insertId);
+        instance.selectOne(idOnly, success, () => {throw new Error('this should never happen')});
+      }
+      instance.insert(object, inserted, fail);
     }
 
     function pushPrimativeCondition(field, conds, values, notSelect) {

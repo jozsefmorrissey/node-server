@@ -21,7 +21,7 @@ if (global.ENV !== 'local') {
   password = shell.exec('pst value ce-mysql password').stdout.trim();
 }
 
-const crud = new Crud({password, user, silent: false, mutex: false});
+const crud = new Crud({password, user, silent: true, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   const context = Context.fromFunc(success);
@@ -627,11 +627,28 @@ function endpoints(app, prefix, ip) {
     context.callbackTree(auth, 'addComment', req, next)
       .success(recordUserId, 'recordingAuthorId', '$cbtArg[0]')
       .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
-      .success('recordingAuthorId', crud.insert, 'insertingComment', comment)
-      .success('insertingComment', returnVal(res, 'success'))
+      .success('recordingAuthorId', crud.insertGet, 'insertingComment', comment)
+      .success('insertingComment', returnVal(res))
       .fail('insertingComment', returnError(next))
       .execute();
   });
+
+  // app.post(prefix + EPNTS.comment.add(), function (req, res, next) {
+  //   const context = Context.fromReq(req);
+  //   const comment = new Comment(req.body.value, req.body.explanationId, req.body.siteId, req.body.commentId);
+  //   const idOnly = new Comment();
+  //   function setId(id, success) {idOnly.setId(id); success();}
+  //   function recordUserId(author, success) {comment.setAuthor(author); success();}
+  //   context.callbackTree(auth, 'addComment', req, next)
+  //     .success(recordUserId, 'recordingAuthorId', '$cbtArg[0]')
+  //     .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
+  //     .success('recordingAuthorId', crud.insert, 'insertingComment', comment)
+  //     .success('insertingComment', setId, 'settingId', '$cbtArg[0].insertId')
+  //     .success('insertingComment', crud.selectOne, 'gettingComment', idOnly)
+  //     .success('insertingComment', returnVal(res, 'success'))
+  //     .fail('insertingComment', returnError(next))
+  //     .execute();
+  // });
 
   //  ------------------------- SiteExplanation Api -------------------------  //
 
