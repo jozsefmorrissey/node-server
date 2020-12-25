@@ -58,9 +58,13 @@ function getMerriamResponse(searchText, res, next) {
       if (this.readyState != 4) return;
 
       if (this.status == 200) {
+        try {
           res.setHeader('Content-Type', 'application/json');
           var data = JSON.parse(this.responseText);
           res.send(data);
+        } catch (e) {
+          next(new MerriamRequestFailed());
+        }
       } else {
         next(new MerriamRequestFailed());
       }
