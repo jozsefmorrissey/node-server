@@ -18,6 +18,7 @@ function send (data, success, failure) {
     }
   }
   if (emailServiceActive) {
+    console.log('sending: ', data);
     mg.messages().send(data, respond);
   } else {
     respond();
@@ -33,6 +34,7 @@ function sendActivationEmail(user, credential, success, failure) {
     console.log('activation url:', activationUrl);
     Context.fromFunc(success).dg.link('User', 'activationUrl', activationUrl);
   }
+
   send({
     from: 'CE <ce@jozsefmorrissey.com>',
     to: user.getEmail(),
