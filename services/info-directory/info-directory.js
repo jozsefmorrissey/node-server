@@ -3,8 +3,17 @@ const fs = require('fs');
 const shell = require('shelljs');
 
 const pssst = require('../pssst/pssst.js');
-let vidDir = require('./public/json/info-directory.json');
-const reqTopics = require('./public/json/requested-topics.json');
+
+let vidDir;
+let reqTopics;
+if (global.ENV === 'local') {
+  vidDir = require('./public/json/info-directory.json');
+  reqTopics = require('./public/json/requested-topics.json');
+} else {
+  vidDir = JSON.parse(shell.cat('~/.opsc/info-directory/info-directory.json'));
+  reqTopics = JSON.parse(shell.cat('~/.opsc/info-directory/requested-topics.json'));
+}
+
 let displayVidDir;
 
 function setDisplayVidDir() {
@@ -13,14 +22,16 @@ function setDisplayVidDir() {
     const cfg = vidDir[index];
     const dspCfg = {};
     const title = cfg.Title;
-    if (cfg.Link) {
-      dspCfg.Title = `@[${title}](${cfg.Link})`
-    } else {
-      dspCfg.Title = `${title} [Vote(${reqTopics[title] ? reqTopics[title].votes : 0})](/info-directory/request/${title})`;
+    if (cfg.Title) {
+      if (cfg.Link) {
+        dspCfg.Title = `@[${title}](${cfg.Link})`
+      } else {
+        dspCfg.Title = `${title} [Vote(${reqTopics[title] ? reqTopics[title].votes : 0})](/info-directory/request/${title})`;
+      }
+      dspCfg.Description = cfg.Description;
+      dspCfg.type = cfg.type;
+      displayVidDir.push(dspCfg);
     }
-    dspCfg.Description = cfg.Description;
-    dspCfg.type = cfg.type;
-    displayVidDir.push(dspCfg);
   }
 }
 
@@ -54,7 +65,7 @@ function buildHtml(cfg, edit, errorMsg) {
       <div id='main-body'>
         <div class='error-msg'>${errorMsg}</div>
         <a onclick="POP_UP.open('request-topics')" href='#'>Request/UpVote topics</a>
-        <utility-filter id='info-directory-utf' save='vdc.save()' edit='${edit}' hidden>
+        <utility-filter id='info-directory-utf' save='vdc.save()' required='Title' edit='${edit}' hidden>
           ${JSON.stringify(cfg)}
         </utility-filter>
       </div>
@@ -86,6 +97,7 @@ function vote(topic) {
       JSON.stringify(reqTopics, null, 2));
   setDisplayVidDir();
 }
+564173
 
 function getAdminUrl() {
   return "/" + shell.exec('pst value info-directory url', {silent: true}).trim()
@@ -151,7 +163,7 @@ function endpoints(app, prefix) {
   });
 
   app.get(prefix + "/request/:topic", function (req, res) {
-    vote(topic);
+    vote(req.params.topic);
     res.redirect('/info-directory/home');
   });
 }

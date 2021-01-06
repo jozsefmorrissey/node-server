@@ -6,6 +6,7 @@ var fileUpload = require('express-fileupload');
 const cookieParser = require("cookie-parser");
 try{
 global.__basedir = __dirname;
+global.ENV = process.argv[2];
 
 console.log(process.argv);
 

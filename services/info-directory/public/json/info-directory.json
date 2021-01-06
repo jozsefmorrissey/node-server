@@ -1,77 +1,27 @@
 [
   {
-    "Title": "Video Directory",
-    "Description": "Simple node application to track past, future, and requested projects.",
-    "Link": "http://www.google.com",
-    "id": 6,
-    "boot": ""
+    "Title": "Introduction",
+    "Description": "Vision for my work and videos",
+    "Link": "",
+    "id": 7144414198540678
   },
   {
-    "Title": "Programming Basic Concepts",
-    "Description": "Cover the four basic concepts (variables, operators, loops, and functions) that are inherent in every programing and scripting language.",
-    "id": 6
+    "id": 5596964201619172
   },
   {
-    "id": 8183530664424208,
-    "Title": "Programing advanced concepts",
-    "Description": "Exploring the concepts of Abstraction, Object, Static, Inheritance, Overloading"
+    "id": 7046198032359199
   },
   {
-    "id": 9138714022389022,
-    "Title": "Java Kickstarter",
-    "Description": "Covers the java implementation of the basic and advanced concepts."
+    "id": 4488325893700220
   },
   {
-    "Title": "Javascript kickstarter",
-    "Description": "Covers the Javascript implementation of the basic and advanced concepts.\n ",
-    "id": 5981077416655194
+    "Title": "Pizza",
+    "id": 1044270292724161
   },
   {
-    "Title": "Bash kickstarter",
-    "Description": "Covers the bash implementation of the basic and advanced concepts.[google](http://www.google.com)",
-    "id": 2599400265633547,
-    "type": "video"
+    "id": 8268485281543274
   },
   {
-    "Title": "Introduction to JackOfAllCodes",
-    "Description": "My vision for my the youtube channel JackOfAllCodes",
-    "id": 6106547474076589,
-    "type": "video",
-    "Link": "http://www.helloworld.com"
-  },
-  {
-    "Title": "Html Kickstarter",
-    "Description": "Just what you need to know to get started writing html",
-    "id": 3412454700847302
-  },
-  {
-    "Title": "External syntaxhighliter reference",
-    "Description": "Instructions I used to setup syntaxhighliter",
-    "type": "resource",
-    "Link": "https://www.snippetnuggets.com/howtos/webTipsAndTricks/miscellaneous/use-syntax-highlighter-in-website-blog-html.html",
-    "id": 7573971252189486
-  },
-  {
-    "Title": "syntaxhighlighter",
-    "Description": "Code highlighting javascript/css for html",
-    "id": 7325574386636795
-  },
-  {
-    "Title": "Linux Terminal Kickstarter",
-    "Description": "The essential commands I use on a daily basissss",
-    "id": 8559629897680907,
-    "Link": "http://www.tombrady.com",
-    "type": "change"
-  },
-  {
-    "Title": "Advanced Bash Scripting (External)",
-    "Description": "Advanced bash scripting guide",
-    "Link": "http://tldp.org/LDP/abs/html/abs-guide.html",
-    "id": 5853155354486148,
-    "type": "changed"
-  },
-  {
-    "id": 8231076969611042,
-    "Title": "bootlegging"
+    "id": 3626144689001291
   }
 ]

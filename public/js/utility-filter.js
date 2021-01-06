@@ -127,23 +127,25 @@ function UtilityFilter() {
     const visible = {};
     for (let dIndex = 0; dIndex < data.length; dIndex += 1 ) {
       let candidate = data[dIndex];
-      let rowRating = 0;
-      let eliminated = false;
-      for (let cIndex = 0; cIndex < columns.length; cIndex += 1) {
-        const column = columns[cIndex];
-        if (column !== SEARCH_TYPES.ALL) {
-          rating = rateColumn(state, candidate, column);
-          if (rating == -1) {
-            eliminateColumn(state, candidate, column);
-            eliminated = true;
-          } else {
-            rowRating += rating;
+      if (candidate) {
+        let rowRating = 0;
+        let eliminated = false;
+        for (let cIndex = 0; cIndex < columns.length; cIndex += 1) {
+          const column = columns[cIndex];
+          if (column !== SEARCH_TYPES.ALL) {
+            rating = rateColumn(state, candidate, column);
+            if (rating == -1) {
+              eliminateColumn(state, candidate, column);
+              eliminated = true;
+            } else {
+              rowRating += rating;
+            }
           }
         }
-      }
-      if (!eliminated) {
-        filtered.push({candidate, rowRating});
-        protect(state, candidate);
+        if (!eliminated) {
+          filtered.push({candidate, rowRating});
+          protect(state, candidate);
+        }
       }
     }
     filterSelects(id);
@@ -325,7 +327,12 @@ function UtilityFilter() {
     }
   }
 
-  let lookUpId = 0;
+  function removeFromObject(dataId, index) {
+    delete UTF.dataMap[dataId].data[index];
+    refresh(dataId);
+  }
+
+  let lookUpInc = 0;
   const lookUpRow = {};
 
   function getDataObj(id, value) {
@@ -337,30 +344,49 @@ function UtilityFilter() {
     }
   }
 
+  function requiredNotEmpty(dataObj) {
+    const obj = UTF.dataMap[dataObj.dataId];
+    for (let index = 0; index < obj.required.length; index += 1) {
+      if (!dataObj.data[obj.required[index]]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   function buildBody(data, dataId) {
     let body = '';
     const keys = getColumns(dataId);
     let count = 1;
     for (let index = 0; index < data.length; index += 1) {
       const clazz = count++ % 2 === 0 ? 'tr-even' : 'tr-odd';
-      getDataObj(lookUpId, { dataId, data: data[index] });
-      const editAttr = UTF.dataMap[dataId].enableEdit ? "onclick='UTF.openPopUp(this)'" : '';
-      body += `<tr look-up-id='${lookUpId++}' ${editAttr} class='${clazz}'>`;
-      for(let kIndex = 0; kIndex < keys.length; kIndex += 1) {
-        const column = keys[kIndex];
-        let display = 'table-cell';
-        if (UTF.dataMap[dataId].hide.indexOf(kIndex) !== -1) {
-          display = 'none';
-        }
-        let elem = String(data[index][column]) || '';
-        elem = elem === 'undefined' ? '' : elem;
-        elem = elem.replace(/[@]\[(.*?)\]\((.*?)\)/g, `<a class='utf-link' target='_blank' href='$2'>$1</a>`);
-        elem = elem.replace(/(([^@]|))\[(.*?)\]\((.*?)\)/g, `$1<a class='utf-link' href='$4'>$3</a>`);
-
-
-        body += `<td style='display: ${display};' class='column-${kIndex}'>${elem}</td>`;
+      let lookUpId;
+      if (data[index].lookUpId === undefined) {
+        lookUpId = lookUpInc++;
+      } else {
+        lookUpId = data[index].lookUpId;
       }
-      body += '</tr>';
+      dataObj = { dataId, data: data[index], lookUpId, index };
+      getDataObj(lookUpId, dataObj);
+      const editAttr = UTF.dataMap[dataId].enableEdit ? "onclick='UTF.openPopUp(this)'" : '';
+      if (true || requiredNotEmpty(dataObj)) {
+        body += `<tr look-up-id='${lookUpId}' ${editAttr} class='${clazz}'>`;
+        for(let kIndex = 0; kIndex < keys.length; kIndex += 1) {
+          const column = keys[kIndex];
+          let display = 'table-cell';
+          if (UTF.dataMap[dataId].hide.indexOf(kIndex) !== -1) {
+            display = 'none';
+          }
+          let elem = String(data[index][column]) || '';
+          elem = elem === 'undefined' ? '' : elem;
+          elem = elem.replace(/[@]\[(.*?)\]\((.*?)\)/g, `<a class='utf-link' target='_blank' href='$2'>$1</a>`);
+          elem = elem.replace(/(([^@]|))\[(.*?)\]\((.*?)\)/g, `$1<a class='utf-link' href='$4'>$3</a>`);
+
+
+          body += `<td style='display: ${display};' class='column-${kIndex}'>${elem}</td>`;
+        }
+        body += '</tr>';
+      }
     }
     return body;
   }
@@ -433,7 +459,7 @@ function UtilityFilter() {
   }
 
   const attrInputId = 'obj-attr-input-id';
-  function addToObject(id) {
+  function addField(id) {
     const label = document.getElementById(attrInputId).value;
     if (label) {
       const haze = document.querySelector('#pop-up-haze');
@@ -446,12 +472,13 @@ function UtilityFilter() {
     }
   }
 
-  UTF.addToObject = addToObject;
+  UTF.addField = addField;
 
   function openPopUp(elem) {
       let headers = elem.parentElement.parentElement.querySelectorAll('th');
       const id = elem.attributes['look-up-id'].value;
-      let values = getDataObj(id).data;
+      let dataObj = getDataObj(id);
+      let values = dataObj.data;
       let body = `<look-up-id id='${id}'></look-up-id>`;
       for (let index = 0; index < headers.length; index += 1) {
         const label = headers[index].querySelector('label').innerText.trim();
@@ -464,7 +491,8 @@ function UtilityFilter() {
             onchange='UTF.updateData(this, ${id}, "${label}")'>${value}</textarea>
             <br><br>`;
       }
-      body += `<input id='${attrInputId}' type="text"><button onClick='UTF.addToObject(${id})'>Add</button>`;
+      body += `<input id='${attrInputId}' type="text"><button onClick='UTF.addField(${id})'>Add Field</button>`;
+      body += `<button onClick="UTF.removeFromObject(${dataObj.dataId}, ${dataObj.index})">Remove Object</button>`;
       document.querySelector('#pop-up').innerHTML = body;
       document.querySelector('#pop-up-haze').style.display = 'block';
   }
@@ -524,9 +552,12 @@ function UtilityFilter() {
     const dataId = UTF.dataId++;
     elem.id = elem.id ? elem.id : `utility-filter-${dataId}`;
     const save = elem.getAttribute('save');
+    let required = elem.getAttribute('required');
+    required = (typeof required) === 'string' ? required.split(',') : [];
     const enableEdit = elem.getAttribute('edit') === 'true';
     UTF.dataMap[dataId] = { elem, ufId: elem.id, hide:[], data, id: dataId,
-          columns: mapArray(data), name, save, onSearchAll: [], enableEdit };
+          columns: mapArray(data), name, save, onSearchAll: [], enableEdit,
+          required};
     UTF.objectLookup[elem.id] = data;
     elem.style.display = 'block';
     return dataId;
@@ -778,6 +809,7 @@ function UtilityFilter() {
   UTF.removeColumn = removeColumn;
   UTF.getData = getData;
   UTF.addRow = addRow;
+  UTF.removeFromObject = removeFromObject;
   UTF.displayTable = displayTable;
   UTF.save = save;
   UTF.onSearchEnter = onSearchEnter;
