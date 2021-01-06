@@ -492,12 +492,6 @@ function DebugGui() {
     createCookie();
   }
 
-  if ((typeof ShortCutContainer) === 'undefined') {
-    var script = document.createElement("script");
-    script.src = 'https://node.jozsefmorrissey.com/js/short-cut-container.js';
-    document.head.appendChild(script);
-  }
-
 console.log('dg here')
   window.addEventListener('load', onLoad);
   return {refresh, displayModalHtml, displayLogs, debug, createCookie,

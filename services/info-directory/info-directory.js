@@ -75,6 +75,18 @@ function setId(cfg) {
   }
 }
 
+function vote(topic) {
+  if (reqTopics[topic]) {
+    reqTopics[topic].votes += 1;
+  } else {
+    reqTopics[topic] = {};
+    reqTopics[topic].votes = 1;
+  }
+  fs.writeFileSync('./services/info-directory/public/json/requested-topics.json',
+      JSON.stringify(reqTopics, null, 2));
+  setDisplayVidDir();
+}
+
 function getAdminUrl() {
   return "/" + shell.exec('pst value info-directory url', {silent: true}).trim()
 }
@@ -124,6 +136,7 @@ function endpoints(app, prefix) {
       if (found.Link) {
         res.redirect(found.Link);
       } else {
+        vote(found.Title);
         res.redirect('/info-directory/home?error=\'' + title + '\' video title still needs to be created. Check back after a few days/weeks to see if its been uploaded');
       }
     } else {
@@ -138,15 +151,7 @@ function endpoints(app, prefix) {
   });
 
   app.get(prefix + "/request/:topic", function (req, res) {
-    if (reqTopics[req.params.topic]) {
-      reqTopics[req.params.topic].votes += 1;
-    } else {
-      reqTopics[req.params.topic] = {};
-      reqTopics[req.params.topic].votes = 1;
-    }
-    fs.writeFileSync('./services/info-directory/public/json/requested-topics.json',
-        JSON.stringify(reqTopics, null, 2));
-    setDisplayVidDir();
+    vote(topic);
     res.redirect('/info-directory/home');
   });
 }

@@ -501,12 +501,14 @@ function UtilityFilter() {
   }
 
   function buildDataTable(dataId) {
-    let display = buildHeader(dataId);
+    let display = `<div class='tab-ctn' id='${getTabCtnId(dataId)}'>`;
+    display += buildHeader(dataId);
     display += buildTable(dataId, UTF.dataMap[String(dataId)].data);
     if (UTF.dataMap[dataId].enableEdit) {
       display += `<button onclick='UTF.addRow("${dataId}")'>add</button>`;
       display += `<button onclick='UTF.save("${dataId}")'>Save</button></div>`;
     }
+    display += '</div>';
     return display;
   }
 
@@ -544,9 +546,7 @@ function UtilityFilter() {
       startDataId = Number.parseInt(startDataId || dataId);
       ids.push({ id: key, dataId });
 
-      display += `<div class='tab-ctn' id='${getTabCtnId(dataId)}'>`;
       display += buildDataTable(dataId);
-      display += '</div>';
       setTimeout(multiSelectSetup(dataId), 0);
     }
     display = buildTabs(ids) + display;

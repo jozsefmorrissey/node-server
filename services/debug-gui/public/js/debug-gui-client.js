@@ -39,15 +39,6 @@ function DebugGuiClient(config, root, debug) {
     updateConfig(config);
   }
 
-  function addScript(id, src) {
-    if (!document.getElementById(id)) {
-      const script = document.createElement("script");
-      script.id = id;
-      script.src = src;
-      document.head.appendChild(script);
-    }
-  }
-
   var guiAdded = false;
   function updateConfig(config) {
     id = config.id !== undefined ? config.id : id;
@@ -59,11 +50,6 @@ function DebugGuiClient(config, root, debug) {
     host = config.host !== undefined ? config.host : host;
     if (host !== undefined) host = host.replace(/^(.*?)\/$/, "$1");
     logWindow = logWindow != 25 ? logWindow : config.logWindow;
-    if (!guiAdded && host && isDebugging() && DebugGuiClient.inBrowser) {
-      guiAdded = true;
-      addScript(DebugGuiClient.EXISTANCE_ID, `${getHost()}/js/debug-gui-client.js`);
-      addScript(DebugGuiClient.UI_EXISTANCE_ID, `${getHost()}/js/debug-gui.js`);
-    }
     createCookie();
   }
 
@@ -393,7 +379,6 @@ try {
   DebugGuiClient.inBrowser = false;
   DebugGuiClient.xmlhr = require('xmlhttprequest').XMLHttpRequest;
 }
-
 
 if (!DebugGuiClient.inBrowser) {
   exports.DebugGuiClient = DebugGuiClient;
