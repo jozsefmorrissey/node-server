@@ -147,6 +147,7 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
     debugValues(req, '/validate', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
     const clBody = cleanObj(req.body);
     const cmd = `pst validateToken '${clBody.group}' '${clBody.token}' '${clBody.pstPin}'`;
+    console.log(cmd)
     const validated = shell.exec(cmd, {silent: false});
     try {
       lockout(clBody.group, validated.code);
