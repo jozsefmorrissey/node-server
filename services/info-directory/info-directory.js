@@ -4,15 +4,19 @@ const shell = require('shelljs');
 
 const pssst = require('../pssst/pssst.js');
 
-let vidDir;
-let reqTopics;
+let vidDirLoc;
+let reqTopicsLoc;
 if (global.ENV === 'local') {
-  vidDir = require('./public/json/info-directory.json');
-  reqTopics = require('./public/json/requested-topics.json');
+  vidDirLoc = './services/info-directory/public/json/info-directory.json';
+  reqTopicsLoc = './services/info-directory/public/json/requested-topics.json';
 } else {
-  vidDir = JSON.parse(shell.cat('~/.opsc/info-directory/info-directory.json'));
-  reqTopics = JSON.parse(shell.cat('~/.opsc/info-directory/requested-topics.json'));
+  vidDirLoc = shell.exec('realpath ~/.opsc/info-directory/info-directory.json', {silent: true}).stdout.trim();
+  reqTopicsLoc = shell.exec('realpath ~/.opsc/info-directory/requested-topics.json', {silent: true}).stdout.trim();
 }
+
+let vidDir = JSON.parse(shell.cat(vidDirLoc));
+let reqTopics = JSON.parse(shell.cat(reqTopicsLoc));;
+
 
 let displayVidDir;
 
@@ -93,7 +97,7 @@ function vote(topic) {
     reqTopics[topic] = {};
     reqTopics[topic].votes = 1;
   }
-  fs.writeFileSync('./services/info-directory/public/json/requested-topics.json',
+  fs.writeFileSync(reqTopicsLoc,
       JSON.stringify(reqTopics, null, 2));
   setDisplayVidDir();
 }
@@ -128,7 +132,7 @@ function endpoints(app, prefix) {
     res.setHeader('Content-Type', 'text/json');
     pssst.exicuteCmd(undefined, {body: { group, token, pstPin }});
     setId(req.body.vidDir);
-    fs.writeFileSync('./services/info-directory/public/json/info-directory.json',
+    fs.writeFileSync(vidDirLoc,
         JSON.stringify(req.body.vidDir, null, 2));
     vidDir = req.body.vidDir;
     setDisplayVidDir();
