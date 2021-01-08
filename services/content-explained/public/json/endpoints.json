@@ -54,6 +54,12 @@
   "comment": {
     "add": "/comment/add"
   },
+  "question": {
+    "add": "/question/add"
+  },
+  "notification": {
+    "get": "/notifications"
+  },
   "_secure": [
     "user.update",
     "credential.get",

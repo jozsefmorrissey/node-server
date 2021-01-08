@@ -10,7 +10,7 @@ const { InvalidDataFormat, InvalidType, UnAuthorized, SqlOperationFailed,
         InvalidRequest} =
         require('./exceptions.js');
 const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
-        DataObject, Ip, UserAgent, Words, PendingUserUpdate, Comment} =
+        DataObject, Ip, UserAgent, Words, PendingUserUpdate, Comment, Question} =
                 require('../services/database/objects');
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
@@ -31,7 +31,16 @@ function retrieveOrInsert(dataObject, next, success) {
     .fail(crud.insert, 'insert', dataObject)
     .success('insert', crud.selectOne, 'select', dataObject)
     .success('select', s)
-    .fail('insert', returnError(next, new SqlOperationFailed('insert', 'UserAgent')))
+    .fail('insert', returnError(next, new SqlOperationFailed('insert', dataObject.constructor.name)))
+    .execute();
+}
+
+function retrieve(dataObject, next, success, fail) {
+  const context = Context.fromFunc(success);
+  function s(found) {success(found)}
+  context.callbackTree(crud.selectOne, 'retrieveOrInsertDataObject', dataObject)
+    .success(s)
+    .fail(fail)
     .execute();
 }
 
@@ -52,6 +61,9 @@ function getSite(url, next, success) {
   retrieveOrInsert(new Site(cleanSiteUrl(url)), next, success);
 }
 
+function retrieveSite(url, next, success, fail) {
+  retrieve(new Site(cleanSiteUrl(url)), next, success, fail);
+}
 
 async function buildRequestCredential(req, next) {
   const context = Context.fromReq(req);
@@ -178,8 +190,8 @@ async function createCredential(req, next, userId, success, fail) {
   function setId(credId, success) {cred.setId(credId);success();}
 
   function setUser(u, success) {
-    if (u.getEmail().match(/^test[0-9]*@jozsefmorrissey.com$/)) {
-      cred.setActivationSecret(`${u.getEmail()}-${userAgentVal}`);
+    if (global.ENV !== 'prod' && u.getEmail().match(/^test[0-9]*@jozsefmorrissey.com$/)) {
+      cred.setActivationSecret(`${u.getEmail()}-${userAgentVal}`.substr(0, 128));
     }
     user.setEmail(u.getEmail()); success()
   };
@@ -223,7 +235,6 @@ function addOpinion(req, next, favorable, explanationId, siteId, success, fail) 
     }
   }
   new context.callbackTree(auth, 'submittingOpinion', req, next)
-    .fail(fail)
     .success(setUserId, 'settingUser')
     .success('settingUser', crud.selectOne, 'gettingExpl', new Explanation(explanationId))
     .success('gettingExpl', notAuthor, 'checkingUserNotAuthor')
@@ -365,7 +376,6 @@ function endpoints(app, prefix, ip) {
 
         context.callbackTree(auth, 'requestUpdate', req, next)
           .success(validateUpdatingLoggedInUser, 'validating')
-          .fail(returnError(next))
           .success('validating', crud.select, 'checkingForUnique', noId, true)
           .fail('validating', returnError(next), 'validationFailed')
           .success('checkingForUnique', emptyResults, 'emptyResults')
@@ -499,7 +509,6 @@ function endpoints(app, prefix, ip) {
         credential.setSecret(match[3])
       }
       context.callbackTree(auth, 'deleteCredential', req, next)
-        .fail(returnError(next, new UnAuthorized()))
         .success(crud.delete, 'removeCredential', credential)
         .fail('removeCredential', returnError())
         .success('removeCredential', returnVal(res, 'success'))
@@ -511,7 +520,6 @@ function endpoints(app, prefix, ip) {
   app.post(prefix + EPNTS.site.add(), function (req, res, next) {
     const context = Context.fromReq(req);
     context.callbackTree(auth, 'addSite', req, next)
-      .fail(returnError(next, new UnAuthorized()))
       .success(addSite, 'insertSite', req.body.url)
       .fail('insertSite', returnError(next, new DuplacateUniqueValue()))
       .success('insertSite', returnVal(res, 'success'))
@@ -520,7 +528,8 @@ function endpoints(app, prefix, ip) {
 
   app.post(prefix + EPNTS.site.get(), function (req, res, next) {
     const context = Context.fromReq(req);
-    context.callbackTree(crud.selectOne, 'getSite', new Site(cleanSiteUrl(req.body.url)))
+    context.callbackTree(retrieveSite, 'retrieveSite', req.body.url, next)
+      // .fail(returnQuery(res))
       .fail(returnError(next, new NoSiteFound(req.body.url)))
       .success(returnQuery(res))
       .execute();
@@ -605,7 +614,6 @@ function endpoints(app, prefix, ip) {
     }
     context.callbackTree(auth, 'updateExpl', req, next)
       .success(recordUserId, 'recordingLoggedInUser', '$cbtArg[0].id')
-      .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
       .success('recordingLoggedInUser', crud.selectOne, 'gettingExpl', idOnly)
       .success('gettingExpl', validateUser, 'validatingAuthor', '$cbtArg[0].author.id')
       .fail('gettingExpl', returnError(next, new NotFound('Explanation', req.body.id)), 'nf')
@@ -623,7 +631,53 @@ function endpoints(app, prefix, ip) {
     function recordUserId(author, success) {comment.setAuthor(author); success();}
     context.callbackTree(auth, 'addComment', req, next)
       .success(recordUserId, 'recordingAuthorId', '$cbtArg[0]')
-      .fail(returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth1')
+      .success('recordingAuthorId', crud.insertGet, 'insertingComment', comment)
+      .success('insertingComment', returnVal(res))
+      .fail('insertingComment', returnError(next))
+      .execute();
+  });
+
+  //  ------------------------- Question Api -------------------------  //
+
+  function setValue(object, fieldName) {
+    return function(value, success) {
+      if (object instanceof DataObject) {
+        object.$d().setValueFunc(fieldName)(value);
+      } else {
+        object[fieldName] = value;
+      }
+      success(value);
+    }
+  }
+
+  app.post(prefix + EPNTS.question.add(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    const question = new Question(req.body.content);
+    const idOnly = new Question();
+
+    context.callbackTree(auth, 'addQuestion', req, next)
+      .success(setValue(question, 'asker'), 'settingAsker')
+      .success('settingAsker', getSite, 'gettingSiteId', req.body.siteUrl, next)
+      .success('gettingSiteId', setValue(question, 'siteId'), 'settingSiteId', '$cbtArg[0].id')
+      .success('settingSiteId', getWords, 'gettingWords', req.body.words, next)
+      .success('gettingWords', setValue(question, 'words'), 'settingWords')
+      .success('settingWords', crud.insert, 'insertExpl', question)
+      .success('insertExpl', setValue(question, 'id'), 'settingQid', '$cbtArg.questionId = $cbtArg[0].insertId')
+      .success('settingQid', setValue(idOnly, 'id'), 'settingOid', '$cbtArg.questionId')
+      .success('settingOid', crud.selectOne, 'gettingQuestion', idOnly)
+      .success('gettingQuestion', returnQuery(res), 'returnin')
+      .fail('gettingQuestion', returnError(next), 'retErr')
+      .execute();
+    });
+
+  //  ------------------------- Notification Api -------------------------  //
+
+  app.post(prefix + EPNTS.notification.get(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    const comment = new Comment(req.body.value, req.body.explanationId, req.body.siteId, req.body.commentId);
+    function recordUserId(author, success) {comment.setAuthor(author); success();}
+    context.callbackTree(auth, 'addComment', req, next)
+      .success(recordUserId, 'recordingAuthorId', '$cbtArg[0]')
       .success('recordingAuthorId', crud.insertGet, 'insertingComment', comment)
       .success('insertingComment', returnVal(res))
       .fail('insertingComment', returnError(next))
@@ -643,26 +697,40 @@ function endpoints(app, prefix, ip) {
     app.post(prefix + EPNTS.siteExplanation.get(), function (req, res, next) {
       const context = Context.fromReq(req);
       const siteUrl = req.body.siteUrl;
-      let siteId;
+      const retObj = {};
+      function getQuestions(site, success, fail) {
+        retObj.siteId = site.id;
+        crud.select(new Question(undefined, retObj.siteId), success, fail);
+      }
+
       function getExplanations(site, success, fail) {
-        siteId = site.id;
-        crud.select(new SiteExplanation(site.id, undefined), success, fail);
+        crud.select(new SiteExplanation(retObj.siteId, undefined), success, fail);
       }
 
       function createExplList(results, success) {
-        const list = {};
+        retObj.list = {};
         results.map((siteExpl) => {
+          const releventComments = [];
+          console.log(siteExpl);
+          const expl = siteExpl.explanation;
+          expl.comments.map((comment) => comment.siteId === retObj.siteId &&
+                                              releventComments.push(comment));
           const words = cleanStr(siteExpl.explanation.searchWords);
-          siteExpl.explanation.likes = siteExpl.likes;
-          siteExpl.explanation.dislikes = siteExpl.dislikes;
-          if (list[words] === undefined) { list[words] = []; }
-          list[words].push(siteExpl.explanation);
+          expl.likes = siteExpl.likes;
+          expl.dislikes = siteExpl.dislikes;
+          expl.comments = releventComments;
+
+          if (retObj.list[words] === undefined) { retObj.list[words] = []; }
+          retObj.list[words].push(expl);
         });
-        success({siteId, list});
+        success(retObj);
       }
-      context.callbackTree(getSite, 'gettingSiteExpls', siteUrl, next)
-        .fail(returnVal(req, []))
-        .success(getExplanations, 'gettingExplanations')
+      console.log('here')
+      context.callbackTree(retrieveSite, 'gettingSiteExpls', siteUrl, next)
+        .fail(returnVal(res, []))
+        .success(getQuestions, 'gettingQuestions')
+        .success('gettingQuestions', setValue(retObj, 'questions'), 'settingQuestions')
+        .success('settingQuestions', getExplanations, 'gettingExplanations')
         .success('gettingExplanations', createExplList, 'creatingLists')
         .fail('gettingExplanations', returnError(next))
         .success('creatingLists', returnQuery(res))

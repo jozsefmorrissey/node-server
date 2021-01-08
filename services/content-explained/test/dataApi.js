@@ -86,6 +86,10 @@ function getUrl(suffix) {
   return `${host}${suffix}`;
 }
 
+function randomElement(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 function insertUser(username, email, userAgent, count, callback) {
   var xhr = new xmlhr();
   xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
@@ -613,16 +617,9 @@ function addCode(callback) {
   returned = 0;
   const secret = userObj.secrets[0];
   const userAgent = userObj.userAgent;
-  const count = 2;
-  const body = {content: "a system of principles or rules\n\n#og#right", words: "code"};
+  const count = 1;
+  const body = {content: "a system of principles or rules\n\n#og#right", words: "code", siteUrl};
   addRealExpl(userAgent, secret, body, count, callback);
-  let xhr = new xmlhr();
-  xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
-  xhr.open("POST", getUrl(EPNTS.site.add()), {async: false});
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.setRequestHeader('user-agent', userAgent);
-  xhr.setRequestHeader('authorization', secret);
-  xhr.send(JSON.stringify({url: siteUrl}));
 }
 
 
@@ -631,7 +628,6 @@ function addExplanations(callback) {
   const authorId = userObj.users[0].id;
   const tags = ['http', 'status', 'https', 'html', 'css', 'error'];
   function randHashTag () {return `\n\n#${tags[Math.floor(Math.random() * tags.length)]}#${tags[Math.floor(Math.random() * tags.length)]}`}
-  // explanations.push({content: `a system of principles or rules${randHashTag()}`, words: "code"});
   explanations.push({content: `the person, thing, or idea that is present or near in place, time, or thought or that has just been mentioned ${randHashTag()}`, words: "this"});
   explanations.push({content: `the block of information found at a single World Wide Web address${randHashTag()}`, words: "page"});
   explanations.push({content: `present tense third-person singular of be${randHashTag()}`, words: "is"});
@@ -725,6 +721,39 @@ function addCommentsToExpls(callback) {
   }
 }
 
+
+
+const questions = [];
+function testAddQuestions(callback) {
+  questions.push({siteUrl, words: "this"});
+  questions.push({siteUrl, words: "page"});
+  questions.push({siteUrl, words: "is"});
+
+  questions.push({siteUrl, words: "permanently"});
+  questions.push({siteUrl, words: "moved"});
+  questions.push({siteUrl, words: "Accepted"});
+  questions.push({siteUrl, words: "Multiple Choices"});
+  questions.push({siteUrl, words: "Client Error"});
+  questions.push({siteUrl, words: "Server Error"});
+
+  const count = questions.length;
+  returned = 0;
+  for (let index = 0; index < count; index += 1) {
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+    const url = EPNTS.question.add();
+    const secret = randomElement(userObj.secrets);
+    xhr.open("POST", getUrl(url));
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('user-agent', userObj.userAgent);
+    xhr.setRequestHeader('authorization', secret);
+    xhr.send(JSON.stringify(questions[index]));
+  }
+}
+
+
+
+
 const startTime = new Date().getTime();
 function finishTests(callback) {
   const endTime = new Date().getTime();
@@ -742,7 +771,7 @@ testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUs
             testUpdateExplanationsInvalidExplId, testUpdatedExplanations,
             testAddSiteExpl, testAddExistingSiteExpl, testOpinionUrls,
             testOpinionNotLoggedIn, addCode, addExplanations, getRealExpls,
-            addRealExplsToSite, addCommentsToExpls,
+            addRealExplsToSite, addCommentsToExpls, testAddQuestions,
 
 
             finishTests]);

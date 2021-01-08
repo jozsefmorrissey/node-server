@@ -378,7 +378,7 @@ function UtilityFilter() {
             display = 'none';
           }
           let elem = String(data[index][column]) || '';
-          elem = elem === 'undefined' ? '' : elem;
+          elem = elem === 'undefined' ? '' : elem.replace(/\n/g, '<br>');
           elem = elem.replace(/[@]\[(.*?)\]\((.*?)\)/g, `<a class='utf-link' target='_blank' href='$2'>$1</a>`);
           elem = elem.replace(/(([^@]|))\[(.*?)\]\((.*?)\)/g, `$1<a class='utf-link' href='$4'>$3</a>`);
 
@@ -425,7 +425,11 @@ function UtilityFilter() {
         column = columns[index];
         for (let uIndex = 0; uIndex < columnsObj[column].length; uIndex += 1) {
           let multiSelectId = getSelectId(UTF.dataMap[id].id, column);
-          document.multiselect(`#${multiSelectId}`);
+          console.log(multiSelectId);
+          let multiSelect = document.multiselect(`#${multiSelectId}`);
+          let radioBtn = document.getElementById(buildId('radio', id, column, 'SELECT'));
+          multiSelect._item.nextElementSibling
+                .addEventListener('change', (e) => radioUpdate(radioBtn));
         }
       }
     }
@@ -586,7 +590,7 @@ function UtilityFilter() {
   }
 
   function buildDisplay(elem, data, canEdit) {
-    data = data || JSON.parse(elem.innerText);
+    data = data || JSON.parse(elem.innerHTML);
     setEventHandlers(elem);
     if (Array.isArray(data)) {
       const dataId = initDataMapElem(elem, data);

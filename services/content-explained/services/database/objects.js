@@ -165,6 +165,34 @@ class Site extends DataObject {
 }
 new Site();
 
+class Question extends DataObject {
+  constructor() {
+    super();
+    this
+    this.$d().addField('words', {class: Words, relation: 'manyToOne', merge: 'value'});
+    this.$d().addField('siteId');
+    this.$d().addField('asker', {class: User, relation: 'manyToOne'});
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new Question();
+
+class Notification extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('userId');
+    this.$d().addField('explanationId');
+    this.$d().addField('questionId');
+    this.$d().addField('commentId');
+    this.$d().addField('siteId');
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new Notification();
+
+
 exports.Ip = Ip;
 exports.UserAgent = UserAgent;
 exports.Comment = Comment;
@@ -180,3 +208,5 @@ exports.Words = Words;
 exports.Tag = Tag;
 exports.PendingUserUpdate = PendingUserUpdate;
 exports.ExplanationTag = ExplanationTag;
+exports.Question = Question;
+exports.Notification = Notification;

@@ -55,6 +55,7 @@ function buildPopUp() {
 
 function buildHtml(cfg, edit, errorMsg) {
   errorMsg = errorMsg || '';
+  console.log(JSON.stringify(cfg, null, 2));
   return `
   <html>
     <head>
