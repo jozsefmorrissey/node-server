@@ -407,7 +407,8 @@ class Crud {
           for (let oIndex = 0; oIndex < objects.length; oIndex += 1) {
             const mappedObj = objects[oIndex];
             const mapping = mappedObj.$d().getField('id').uniqueName();
-            const id = result[mapping];
+            // TODO: remove when composite key is supported.
+            const id = result[mapping];// || Math.floor(Math.random() * 9999999999);
             if (id != null && id !== undefined) {
               if (!resultMap[mapping]) {
                 resultMap[mapping] = {};
@@ -506,19 +507,37 @@ class Crud {
       }
     }
 
-    this.insert = function (object, success, fail) {
-      function insertQuery() {
-        print('\nInsert:', object)
+    this.insert = function (array, success, fail) {
+      function buildQuery(dataObj) {
+        print('\nInsert:', dataObj)
         const keys = [];
         const values = [];
-        object.$d().getFields().map((field) => pushKeyAndValue(field, keys, values));
+        dataObj.$d().getFields().map((field) => pushKeyAndValue(field, keys, values));
 
         const qs = new Array(keys.length).fill('?').join(',');
-        const table = object.$d().writeTable(true);
-        const queryString = `insert into ${table} (${keys.join(',')}) values (${qs})`;
-        print(queryString, '\n', values);
-        query(queryString, values, success, fail);
+        const table = dataObj.$d().writeTable(true);
+        const query = `insert into ${table} (${keys.join(',')}) values (${qs});\n`;
+        // console.log('here', query)
+        return {query, values};
       }
+
+      function insertQuery() {
+        if (!Array.isArray(array)) {
+          array = [array];
+        }
+        let queryStr = '';
+        let values = [];
+        array.forEach((dataObj) => {
+          const queryObj = buildQuery(dataObj);
+          queryStr += queryObj.query;
+          // console.log('qs:', queryObj)
+          values = values.concat(queryObj.values);
+        });
+        print(queryStr, '\n', values);
+        query(queryStr, values, success, fail);
+      }
+
+
       getMutex(insertQuery);
     }
 
@@ -730,6 +749,10 @@ class Crud {
     }
   }
 }
+
+Crud.instances = {};
+Crud.set = (name, options) => Crud.instances[name] = new Crud(options);
+Crud.instance = (name) => Crud.instances[name];
 
 exports.Crud = Crud;
 exports.DataObject = DataObject;

@@ -2,7 +2,15 @@ const bcrypt = require('bcryptjs');
 const shell = require('shelljs');
 const Crud = require('./database/mySqlWrapper').Crud;
 
+let user, password;
+if (global.ENV !== 'local') {
+  user = shell.exec('pst value ce-mysql user').stdout.trim();
+  password = shell.exec('pst value ce-mysql password').stdout.trim();
+}
+const crud = Crud.set('CE', {password, user, silent: false, mutex: false});
+
 const { EPNTS } = require('./EPNTS');
+const { Notify } = require('./notification');
 const { Context } = require('./context');
 const { InvalidDataFormat, InvalidType, UnAuthorized, SqlOperationFailed,
         EmailServiceFailure, ShouldNeverHappen, DuplacateUniqueValue,
@@ -14,14 +22,6 @@ const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
                 require('../services/database/objects');
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
-
-let user, password;
-if (global.ENV !== 'local') {
-  user = shell.exec('pst value ce-mysql user').stdout.trim();
-  password = shell.exec('pst value ce-mysql password').stdout.trim();
-}
-
-const crud = new Crud({password, user, silent: true, mutex: false});
 
 function retrieveOrInsert(dataObject, next, success) {
   const context = Context.fromFunc(success);
@@ -590,8 +590,9 @@ function endpoints(app, prefix, ip) {
         .success('settingId', addExplToSite, 'addingToSite', '$cbtArg.explId', req.body.siteUrl, next)
         .success('addingToSite', crud.selectOne, 'gettingExplss', idOnly)
         .fail('addingToSite', returnError(next))
-        .success('gettingExplss', returnQuery(res), 'returnin')
+        .success('gettingExplss', Notify, 'notifying', '$cbtArg.expl = $cbtArg[0]')
         .fail('gettingExplss', returnError(next), 'retErr')
+        .success('notifying', returnQuery(res), 'returnin', '$cbtArg.expl')
         .execute();
     } catch (e) {
       console.log('targ err', e)
@@ -600,13 +601,16 @@ function endpoints(app, prefix, ip) {
 
   app.put(prefix + EPNTS.explanation.update(), function (req, res, next) {
     const context = Context.fromReq(req);
-    const idOnly = new Explanation(Number.parseInt(req.body.id));
+    const explId = Number.parseInt(req.body.id);
+    const idOnly = new Explanation(explId);
     const contentOnly = idOnly.$d().clone();
+    const notifyObj = new Explanation(explId);
     let userId;
     contentOnly.setContent(req.body.content);
     function recordUserId(id, success) {userId = id; success();}
-    function validateUser(id, success, fail) {
-      if (id === userId) {
+    function validateUser(author, success, fail) {
+      if (author.id === userId) {
+        notifyObj.setAuthor(author);
         success();
       } else {
         fail();
@@ -615,11 +619,13 @@ function endpoints(app, prefix, ip) {
     context.callbackTree(auth, 'updateExpl', req, next)
       .success(recordUserId, 'recordingLoggedInUser', '$cbtArg[0].id')
       .success('recordingLoggedInUser', crud.selectOne, 'gettingExpl', idOnly)
-      .success('gettingExpl', validateUser, 'validatingAuthor', '$cbtArg[0].author.id')
+      .success('gettingExpl', validateUser, 'validatingAuthor', '$cbtArg[0].author')
       .fail('gettingExpl', returnError(next, new NotFound('Explanation', req.body.id)), 'nf')
       .success('validatingAuthor', crud.update, 'updating', contentOnly)
       .fail('validatingAuthor', returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth3')
-      .success('updating', returnVal(res, 'success'))
+      .success('updating', Notify, 'notifying', notifyObj)
+      .fail('updating', returnError(next))
+      .success('notifying', returnVal(res, 'success'), 'returning', '$cbtArg.comment')
       .execute();
   });
 
@@ -632,8 +638,9 @@ function endpoints(app, prefix, ip) {
     context.callbackTree(auth, 'addComment', req, next)
       .success(recordUserId, 'recordingAuthorId', '$cbtArg[0]')
       .success('recordingAuthorId', crud.insertGet, 'insertingComment', comment)
-      .success('insertingComment', returnVal(res))
+      .success('insertingComment', Notify, 'notifying', '$cbtArg.comment = $cbtArg[0]')
       .fail('insertingComment', returnError(next))
+      .success('notifying', returnVal(res))
       .execute();
   });
 

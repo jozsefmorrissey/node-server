@@ -182,16 +182,49 @@ class Notification extends DataObject {
   constructor() {
     super();
     this.$d().addField('userId');
-    this.$d().addField('explanationId');
-    this.$d().addField('questionId');
-    this.$d().addField('commentId');
+    this.$d().addField('targetId');
     this.$d().addField('siteId');
+    this.$d().addField('type');
+    this.$d().addField('refType');
+    this.$d().addField('refId');
+    this.$d().addField('seen');
+    this.$d().addField('poppedup');
     this.$d().addField('id');
     this.$d().init(arguments);
   }
 }
 new Notification();
 
+class CommentConnections extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('commentId');
+    this.$d().addField('siteId');
+    this.$d().addField('guyD');
+    this.$d().addField('explanationAuthorId');
+    this.$d().addField('childCommentorId');
+    this.$d().addField('siblingCommentorId');
+    this.$d().addField('parentCommentorId');
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new CommentConnections();
+
+class ExplanationConnections extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('explanationId');
+    this.$d().addField('commentorId');
+    this.$d().addField('commentorSiteId');
+    this.$d().addField('askerId');
+    this.$d().addField('questionId');
+    this.$d().addField('questionSiteId');
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new ExplanationConnections();
 
 exports.Ip = Ip;
 exports.UserAgent = UserAgent;
@@ -210,3 +243,5 @@ exports.PendingUserUpdate = PendingUserUpdate;
 exports.ExplanationTag = ExplanationTag;
 exports.Question = Question;
 exports.Notification = Notification;
+exports.CommentConnections = CommentConnections;
+exports.ExplanationConnections = ExplanationConnections;
