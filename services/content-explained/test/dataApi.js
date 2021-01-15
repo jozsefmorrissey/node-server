@@ -612,7 +612,7 @@ function addRealExpl(userAgent, secret, expl, count, callback) {
   xhr.send(JSON.stringify(expl));
 }
 
-const siteUrl = 'https://www.restapitutorial.com/httpstatuscodes.html';
+const siteUrl = 'https://www.restapitutorial.com/httpstatuscodes.html?poop=stinky&DebugGui.debug=true#PEEPEE';
 function addCode(callback) {
   returned = 0;
   const secret = userObj.secrets[0];

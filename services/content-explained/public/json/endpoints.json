@@ -58,7 +58,7 @@
     "add": "/question/add"
   },
   "notification": {
-    "get": "/notifications"
+    "get": "/notifications/:userId"
   },
   "_secure": [
     "user.update",

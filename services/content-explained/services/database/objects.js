@@ -72,17 +72,6 @@ class Tag extends DataObject {
 }
 new Tag();
 
-class ExplanationTag extends DataObject {
-  constructor() {
-    super();
-    this.$d().addField('tag', {class: Tag, relation: 'manyToOne', merge: 'value'});
-    this.$d().addField('explanationId')
-    this.$d().addField('id');
-    this.$d().init(arguments);
-  }
-}
-new ExplanationTag();
-
 class Words extends DataObject {
   constructor() {
     super();
@@ -116,7 +105,6 @@ class Explanation extends DataObject {
     this.$d().addField('words', {class: Words, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('searchWords', {class: Words, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('author', {class: User, relation: 'manyToOne'});
-    this.$d().addField('tags', {class: ExplanationTag, relation: 'oneToMany', merge: 'tag'});
     this.$d().addField('comments', {class: Comment, relation: 'oneToMany'});
     this.$d().addField('id');
     this.$d().addField('likes', {readOnly: true});
@@ -125,6 +113,31 @@ class Explanation extends DataObject {
   }
 }
 new Explanation();
+
+class GroupExplanationTag extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('tag', {class: Tag, relation: 'manyToOne', merge: 'value'});
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new GroupExplanationTag();
+
+class GroupExplanation extends DataObject {
+  constructor() {
+    super();
+    this.$d().setTableNames('GROUP_EXPLANATION_DETAIL')
+    this.$d().addField('gId');
+    this.$d().addField('explanation', {class: Explanation, relation: 'manyToOne'});
+    this.$d().addField('id');
+    this.$d().addField('url', {readOnly: true});
+    this.$d().addField('likes', {readOnly: true});
+    this.$d().addField('dislikes', {readOnly: true});
+    this.$d().init(arguments);
+  }
+}
+new GroupExplanation();
 
 class Opinion extends DataObject {
   constructor() {
@@ -154,12 +167,27 @@ class SiteExplanation extends DataObject {
 }
 new SiteExplanation();
 
+class SiteParts extends DataObject {
+  constructor(value) {
+    super();
+    this.$d().addField('value');
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new SiteParts();
+
 class Site extends DataObject {
   constructor(id, url) {
     super();
-    this.$d().addField('url');
+    this.$d().setTableNames('SITE_DETAIL')
+    this.$d().addField('heart', {readOnly: true});
+    this.$d().addField('url', {readOnly: true});
+    this.$d().addField('one_id');
+    this.$d().addField('two_id');
+    this.$d().addField('three_id');
+    this.$d().addField('four_id');
     this.$d().addField('id');
-    this.$d().addField('SiteExplanations', {class: SiteExplanation, relation: 'OneToMany'});
     this.$d().init(arguments);
   }
 }
@@ -182,30 +210,51 @@ class Notification extends DataObject {
   constructor() {
     super();
     this.$d().addField('userId');
-    this.$d().addField('targetId');
-    this.$d().addField('siteId');
-    this.$d().addField('type');
-    this.$d().addField('refType');
-    this.$d().addField('refId');
-    this.$d().addField('seen');
-    this.$d().addField('poppedup');
-    this.$d().addField('id');
-    this.$d().init(arguments);
+    this.$d().addField('site', {class: Site, relation: 'manyToOne'});
+    this.$d().addField('seen', {default: true});
+    this.$d().addField('poppedup', {default: true});
+    this.$d().addField('id', {default: true});
   }
 }
 new Notification();
 
+class ExplanationNotification extends Notification {
+  constructor() {
+    super();
+    this.$d().addField('explanation', {class: Explanation, relation: 'manyToOne'});
+    this.$d().init(arguments);
+  }
+}
+new ExplanationNotification();
+
+class CommentNotification extends Notification {
+  constructor() {
+    super();
+    this.$d().addField('comment', {class: Comment, relation: 'manyToOne'});
+    this.$d().init(arguments);
+  }
+}
+new CommentNotification();
+
+class QuestionNotification extends Notification {
+  constructor() {
+    super();
+    this.$d().addField('question', {class: Question, relation: 'manyToOne'});
+    this.$d().addField('explanation', {class: Explanation, relation: 'manyToOne'});
+    this.$d().init(arguments);
+  }
+}
+new QuestionNotification();
+
 class CommentConnections extends DataObject {
   constructor() {
     super();
-    this.$d().addField('commentId');
-    this.$d().addField('siteId');
-    this.$d().addField('guyD');
-    this.$d().addField('explanationAuthorId');
-    this.$d().addField('childCommentorId');
-    this.$d().addField('siblingCommentorId');
-    this.$d().addField('parentCommentorId');
-    this.$d().addField('id');
+    this.$d().addField('commentId', {key: true});
+    this.$d().addField('siteId', {key: true});
+    this.$d().addField('explanationAuthorId', {key: true});
+    this.$d().addField('childCommentorId', {key: true});
+    this.$d().addField('siblingCommentorId', {key: true});
+    this.$d().addField('parentCommentorId', {key: true});
     this.$d().init(arguments);
   }
 }
@@ -214,13 +263,12 @@ new CommentConnections();
 class ExplanationConnections extends DataObject {
   constructor() {
     super();
-    this.$d().addField('explanationId');
-    this.$d().addField('commentorId');
-    this.$d().addField('commentorSiteId');
-    this.$d().addField('askerId');
-    this.$d().addField('questionId');
-    this.$d().addField('questionSiteId');
-    this.$d().addField('id');
+    this.$d().addField('explanationId', {key: true});
+    this.$d().addField('commentorId', {key: true});
+    this.$d().addField('commentSiteId', {key: true});
+    this.$d().addField('askerId', {key: true});
+    this.$d().addField('questionId', {key: true});
+    this.$d().addField('questionSiteId', {key: true});
     this.$d().init(arguments);
   }
 }
@@ -232,6 +280,7 @@ exports.Comment = Comment;
 exports.Credential = Credential;
 exports.User = User;
 exports.Explanation = Explanation;
+exports.SiteParts = SiteParts;
 exports.Site = Site;
 exports.Opinion = Opinion;
 exports.Site = Site;
@@ -240,8 +289,10 @@ exports.DataObject = DataObject;
 exports.Words = Words;
 exports.Tag = Tag;
 exports.PendingUserUpdate = PendingUserUpdate;
-exports.ExplanationTag = ExplanationTag;
 exports.Question = Question;
 exports.Notification = Notification;
 exports.CommentConnections = CommentConnections;
 exports.ExplanationConnections = ExplanationConnections;
+exports.QuestionNotification = QuestionNotification;
+exports.CommentNotification = CommentNotification;
+exports.ExplanationNotification = ExplanationNotification;

@@ -18,34 +18,69 @@ const { InvalidDataFormat, InvalidType, UnAuthorized, SqlOperationFailed,
         InvalidRequest} =
         require('./exceptions.js');
 const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
-        DataObject, Ip, UserAgent, Words, PendingUserUpdate, Comment, Question} =
+        DataObject, Ip, UserAgent, Words, PendingUserUpdate, Comment, Question,
+        QuestionNotification, CommentNotification, ExplanationNotification,
+        SiteParts } =
                 require('../services/database/objects');
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
 
-function retrieveOrInsert(dataObject, next, success) {
+
+function returnVal(res, value) {
+  return function (resVal) {
+    value = value || resVal;
+    if ((typeof value) === 'object') {
+      res.setHeader('Content-Type', 'application/json');
+    }
+    res.send(value);
+  }
+}
+
+function returnQuery(res) {
+  return function (results) {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(results);
+  }
+}
+
+function returnError(next, error) {
+  return function(e) {
+    const err = error === undefined ? e : error;
+    next(err);
+  }
+}
+
+const sqlErrorFunc = (next, type, dataObject) =>
+    returnError(next, new SqlOperationFailed(type, dataObject.constructor.name));
+
+//TODO: decouple next at some point
+function retrieveOrInsert(dataObject, next, success, fail) {
   const context = Context.fromFunc(success);
   function s(found) {success(found)}
+  const onFail = fail || sqlErrorFunc(next, 'insert', dataObject);
   context.callbackTree(crud.selectOne, 'retrieveOrInsertDataObject', dataObject)
     .success(s)
     .fail(crud.insert, 'insert', dataObject)
     .success('insert', crud.selectOne, 'select', dataObject)
     .success('select', s)
-    .fail('insert', returnError(next, new SqlOperationFailed('insert', dataObject.constructor.name)))
+    .fail('insert', onFail)
     .execute();
 }
 
 function retrieve(dataObject, next, success, fail) {
   const context = Context.fromFunc(success);
   function s(found) {success(found)}
-  context.callbackTree(crud.selectOne, 'retrieveOrInsertDataObject', dataObject)
+  context.callbackTree(crud.selectOne, 'retrieveDataObject', dataObject)
     .success(s)
     .fail(fail)
     .execute();
 }
 
-function cleanSiteUrl(url) {
-  return url.replace(/^(.*?)(\#|\?).*$/, '$1').replace(/^http(s|):\/\//, '');
+const siteUrlReg = /^(http(s|):\/\/)(.*?)((\#|\?)(.*))((\#)(.*))$/;
+function parseSiteUrl(url) {
+  const match = url.match(siteUrlReg);
+  if (!match) return [undefined, url];
+  return [match[1], match[3], match[4], match[7]];
 }
 
 function getIp(ip, next, success) {
@@ -58,11 +93,46 @@ function getWords(words, next, success) {
   retrieveOrInsert(new Words(words), next, success);
 }
 function getSite(url, next, success) {
-  retrieveOrInsert(new Site(cleanSiteUrl(url)), next, success);
+  const insertObj = new Site();
+  const breakdown = parseSiteUrl(url);
+  let count = 0;
+  let insertSite = false;
+  const setValue = (name) => (sitePart) => {
+    console.log('insertSite')
+    insertObj.$d().setValueFunc(name)(sitePart.id);
+    if (++count === 4)  {
+      if (insertSite) {
+        crud.insertGet(insertObj, success, sqlErrFunc('insert', insertObj));
+      } else {
+        retrieveOrInsert(insertObj, next, success);
+      }
+    }
+  };
+  const insert = (sitePart, attr) => () => {
+    console.log('setValue', sitePart, '-', attr)
+    insertSite = true;
+    crud.insertGet(sitePart, setValue(attr), sqlErrorFunc(insert, sitePart))
+  };
+  const get = (index, attr) => {
+    const text = breakdown[index];
+    const sp = new SiteParts(text);
+    if (text) {
+      console.log('1fun')
+      retrieveOrInsert(sp, next, setValue(attr), insert(sp, attr));
+    } else {
+      console.log('2goo')
+      setValue(attr)({});
+    }
+  }
+
+  get(0, 'one_id');
+  get(1, 'two_id');
+  get(2, 'three_id');
+  get(3, 'four_id');
 }
 
 function retrieveSite(url, next, success, fail) {
-  retrieve(new Site(cleanSiteUrl(url)), next, success, fail);
+  retrieve(new Site(parseSiteUrl(url)[1]), next, success, fail);
 }
 
 async function buildRequestCredential(req, next) {
@@ -108,6 +178,7 @@ async function auth(req, next, success) {
 
   function validateAuthorization(user) {
     const credentials = user.getCredentials();
+    console.log('userCredentials:\n', credentials);
     for (let index = 0; index < credentials.length; index += 1) {
       const credential = credentials[index];
       const secretEq = credential.secret === secret;
@@ -136,30 +207,6 @@ async function auth(req, next, success) {
       break;
     default:
       throw new InvalidType('Authorization', type, 'User');
-  }
-}
-
-function returnVal(res, value) {
-  return function (resVal) {
-    value = value || resVal;
-    if ((typeof value) === 'object') {
-      res.setHeader('Content-Type', 'application/json');
-    }
-    res.send(value);
-  }
-}
-
-function returnQuery(res) {
-  return function (results) {
-    res.setHeader('Content-Type', 'application/json');
-    res.send(results);
-  }
-}
-
-function returnError(next, error) {
-  return function(e) {
-    const err = error === undefined ? e : error;
-    next(err);
   }
 }
 
@@ -208,10 +255,6 @@ async function createCredential(req, next, userId, success, fail) {
     .success('getAuthKey', success)
     .fail('sendEmail', fail, undefined, new EmailServiceFailure())
     .execute();
-}
-
-function addSite(url, success, failure) {
-  crud.insert(new Site(cleanSiteUrl(url)), success, failure);
 }
 
 function insertTags(tags, success, failure) {
@@ -520,7 +563,7 @@ function endpoints(app, prefix, ip) {
   app.post(prefix + EPNTS.site.add(), function (req, res, next) {
     const context = Context.fromReq(req);
     context.callbackTree(auth, 'addSite', req, next)
-      .success(addSite, 'insertSite', req.body.url)
+      .success(getSite, 'insertSite', req.body.url, next)
       .fail('insertSite', returnError(next, new DuplacateUniqueValue()))
       .success('insertSite', returnVal(res, 'success'))
       .execute();
@@ -679,22 +722,31 @@ function endpoints(app, prefix, ip) {
 
   //  ------------------------- Notification Api -------------------------  //
 
-  app.post(prefix + EPNTS.notification.get(), function (req, res, next) {
+  app.get(prefix + EPNTS.notification.get(), function (req, res, next) {
     const context = Context.fromReq(req);
-    const comment = new Comment(req.body.value, req.body.explanationId, req.body.siteId, req.body.commentId);
-    function recordUserId(author, success) {comment.setAuthor(author); success();}
-    context.callbackTree(auth, 'addComment', req, next)
-      .success(recordUserId, 'recordingAuthorId', '$cbtArg[0]')
-      .success('recordingAuthorId', crud.insertGet, 'insertingComment', comment)
-      .success('insertingComment', returnVal(res))
-      .fail('insertingComment', returnError(next))
-      .execute();
+    let count = 0;
+    const userId = Number.parseInt(req.params.userId);
+    const body = {};
+    const explNotes = new ExplanationNotification(userId, undefined);
+    const commentNotes = new CommentNotification(userId, undefined);
+    const questionNotes = new QuestionNotification(userId, undefined);
+    const addToBody = (name) => (results) => {
+      body[name] = results.reverse();
+      if (++count === 3) {
+        res.send(body);
+      }
+    }
+
+    crud.select(explNotes, addToBody('Explanation'), returnError(next));
+    crud.select(commentNotes, addToBody('Comment'), returnError(next));
+    crud.select(questionNotes, addToBody('Question'), returnError(next));
   });
 
   //  ------------------------- SiteExplanation Api -------------------------  //
 
   app.post(prefix + EPNTS.siteExplanation.add(), function (req, res, next) {
     const context = Context.fromReq(req);
+    console.log(siteId)
     context.callbackTree(auth, 'addSiteExplApi', req, next)
       .success(addExplToSite, 'adding', req.params.explanationId, req.body.siteUrl, next)
       .success('adding', returnVal(res), 'returning')
