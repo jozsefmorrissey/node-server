@@ -45,7 +45,7 @@
         document.getElementById('p').innerHTML = Math.floor(100 * (right / (right+wrong))) + "%";
       }
       function submit() {
-        const ans = document.getElementById('a').value.replace(/\s/g, '');
+        const ans = document.getElementById('a').value.replace(/\s/g, '').replace(/^\+/, '');
         if (ans === solution) {
           right++;
           calc();
