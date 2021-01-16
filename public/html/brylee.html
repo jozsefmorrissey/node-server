@@ -44,7 +44,7 @@
         document.getElementById('q').innerHTML = question;
         document.getElementById('r').innerHTML = 'Right: ' + right;
         document.getElementById('w').innerHTML = 'Wrong: ' + wrong;
-        document.getElementById('p').innerHTML = Math.floor(100 * (right / (right+wrong))) + "%";
+        document.getElementById('p').innerHTML = Math.floor(100 * (right / ((right+wrong) || 1))) + "%";
       }
       function submit() {
         const ans = document.getElementById('a').value.replace(/\s/g, '').replace(/^\+/, '');
