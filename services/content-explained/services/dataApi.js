@@ -730,15 +730,17 @@ function endpoints(app, prefix, ip) {
     const context = Context.fromReq(req);
     let count = 0;
     const userId = req.body.userId;
-    const userHeart = parseSiteUrl(req.body.siteUrl)[2];
-    const body = {};
+    const userHeart = parseSiteUrl(req.body.siteUrl)[1];
+    console.log('userHeart:', userHeart)
+    const body = {currPage: [], otherPage: []};
     const explNotes = new ExplanationNotification(userId, undefined);
     const commentNotes = new CommentNotification(userId, undefined);
     const questionNotes = new QuestionNotification(userId, undefined);
     const addToBody = (name) => (results) => {
-      results.forEach(notification, () => {
-        if (notification.heart === userHeart) {
-          body.currPage.push(notifcation);
+      results.forEach((notification) => {
+        console.log(notification)
+        if (notification.site.heart === userHeart) {
+          body.currPage.push(notification);
         } else {
           body.otherPage.push(notification);
         }
@@ -759,7 +761,6 @@ function endpoints(app, prefix, ip) {
 
   app.post(prefix + EPNTS.siteExplanation.add(), function (req, res, next) {
     const context = Context.fromReq(req);
-    console.log(siteId)
     context.callbackTree(auth, 'addSiteExplApi', req, next)
       .success(addExplToSite, 'adding', req.params.explanationId, req.body.siteUrl, next)
       .success('adding', returnVal(res), 'returning')
