@@ -237,9 +237,9 @@ async function createCredential(req, next, userId, success, fail) {
   function setId(credId, success) {cred.setId(credId);success();}
 
   function setUser(u, success) {
-    if (global.ENV !== 'prod' && u.getEmail().match(/^test[0-9]*@jozsefmorrissey.com$/)) {
+    // if (global.ENV !== 'prod' && u.getEmail().match(/^test[0-9]*@jozsefmorrissey.com$/)) {
       cred.setActivationSecret(`${u.getEmail()}-${userAgentVal}`.substr(0, 128));
-    }
+    // }
     user.setEmail(u.getEmail()); success()
   };
 
