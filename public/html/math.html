@@ -58,25 +58,48 @@
         let p =  prefix === pol ? '' : '-';
         return `${p}${xexpr}x${s}${consts}`
       }
+
+      function percent() {
+        return Math.floor(100 * (right / ((right+wrong) || 1)));
+      }
+
       function display() {
-        const percent = Math.floor(100 * (right / ((right+wrong) || 1))) + "%";
         document.getElementById('t').innerHTML = type + ' Practice';
         document.getElementById('q').innerHTML = question;
-        document.getElementById('w').innerHTML = `${right} / ${right + wrong} - ${percent}`;
-        if (mistakes > 2) {
-            document.getElementById('ans').innerHTML = "Answer: " + answer;
-        } else {
-          document.getElementById('ans').innerHTML = "";
-        }
+        document.getElementById('w').innerHTML = `${right} / ${right + wrong} - ${percent()}%`;
       }
-      function submit() {
+
+      function toggleSubmitBtnEnable() {
+        document.getElementById('b').disabled = document.getElementById('a').value === '';
+      }
+
+      function correct() {
+        return answer === document.getElementById('a').value.replace(/\s/g, '').replace(/^\+/, '');
+      }
+
+      let checks = 0;
+      function check() {
+        const p = percent();
+        const msg = 'Are you sure?';
+        const hint = (right + wrong) !== 0 && (checks < (90 - p) / 10) && !correct();
+
+        if (hint) {
+          alert('Try agin');
+          checks++;
+        } else {
+          checks = 0;
+          submit();
+        }
+        document.getElementById('a').focus();
+      }
+
+     function submit() {
         const ans = document.getElementById('a').value.replace(/\s/g, '').replace(/^\+/, '');
         if (ans === answer) {
           right++;
           types[type]();
           mistakes = 0;
           document.getElementById('a').value = '';
-          document.getElementById('ans').innerHTML = '';
         } else {
           wrong++;
           mistakes++;
@@ -114,7 +137,7 @@
         display();
         let pathType = window.location.href.replace(/^.*?#(.*)$/, '$1');
         if(types[pathType]) change(pathType);
-
+        document.getElementById('a').focus();
       }
 
       function pathag() {
@@ -131,11 +154,11 @@
     <h1 id='t'></h1>
     <div id='m' hidden>
       <h1 id='q'></h1>
-      <h1 id='ans'></h1>
       <h4 id='r'></h4>
       <h4 id='w'></h4>
       <h4 id='p'></h4>
-      <input id='a' onkeyup='event.keyCode === 13 && submit()'>
+      <input id='a' onkeyup="toggleSubmitBtnEnable()">
+      <button id='b' type="button" disabled name="button" onclick="check()">Submit</button>
     </div>
   </body>
 </html>

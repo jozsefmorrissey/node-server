@@ -722,17 +722,30 @@ function endpoints(app, prefix, ip) {
 
   //  ------------------------- Notification Api -------------------------  //
 
-  app.get(prefix + EPNTS.notification.get(), function (req, res, next) {
+  function byAttr(attr) {
+    return (obj1, obj2) => obj1[attr] - obj2[attr];
+  }
+
+  app.post(prefix + EPNTS.notification.get(), function (req, res, next) {
     const context = Context.fromReq(req);
     let count = 0;
-    const userId = Number.parseInt(req.params.userId);
+    const userId = req.body.userId;
+    const userHeart = parseSiteUrl(req.body.siteUrl)[2];
     const body = {};
     const explNotes = new ExplanationNotification(userId, undefined);
     const commentNotes = new CommentNotification(userId, undefined);
     const questionNotes = new QuestionNotification(userId, undefined);
     const addToBody = (name) => (results) => {
-      body[name] = results.reverse();
+      results.forEach(notification) {
+        if (notification.heart === userHeart) {
+          body.currPage.push(notifcation);
+        } else {
+          body.otherPage.push(notification);
+        }
+      }
       if (++count === 3) {
+        body.currPage.sort(byAttr('id'));
+        body.otherPage.sort(byAttr('id'));
         res.send(body);
       }
     }

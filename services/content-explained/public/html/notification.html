@@ -1,0 +1,37 @@
+<div class="">
+  <style media="screen">
+    .one {
+      background-color: red;
+    }
+    .two {
+      background-color: white;
+    }
+    .three {
+      background-color: blue;
+    }
+  </style>
+  <script type="text/javascript">
+    const count = 1;
+    classes=['one', 'two', 'three'];
+    function getText() {
+      return `This is text ${count++}`;
+    }
+    function getClass() {
+      return classes[count];
+    }
+  </script>
+  <ul>
+    <li class='{{getClass(notification)}}'>
+        <h4>{{notification.explanation.words}}</h4>
+        {{getText(notification)}}
+    </li>
+    <li class='{{getClass(notification)}}'>
+        <h4>{{notification.explanation.words}}</h4>
+        {{getText(notification)}}
+    </li>
+    <li class='{{getClass(notification)}}'>
+        <h4>{{notification.explanation.words}}</h4>
+        {{getText(notification)}}
+    </li>
+  </ul>
+</div>

@@ -52,6 +52,7 @@ function notifyComment (comment) {
   const id = comment.id;
   const ignoreId = comment.author.id;
   console.log('notifying comment')
+  const explId = comment.explId;
   function insertNotifications(connectionArr) {
     console.log('connarr', connectionArr)
     let notifications = {};

@@ -214,6 +214,7 @@ class Notification extends DataObject {
     this.$d().addField('seen', {default: true});
     this.$d().addField('poppedup', {default: true});
     this.$d().addField('id', {default: true});
+    this.$d().addField('explanation', {class: Explanation, relation: 'manyToOne'});
   }
 }
 new Notification();
@@ -221,7 +222,7 @@ new Notification();
 class ExplanationNotification extends Notification {
   constructor() {
     super();
-    this.$d().addField('explanation', {class: Explanation, relation: 'manyToOne'});
+    this.type = 'Explanation';
     this.$d().init(arguments);
   }
 }
@@ -230,6 +231,7 @@ new ExplanationNotification();
 class CommentNotification extends Notification {
   constructor() {
     super();
+    this.type = 'Comment';
     this.$d().addField('comment', {class: Comment, relation: 'manyToOne'});
     this.$d().init(arguments);
   }
@@ -239,8 +241,8 @@ new CommentNotification();
 class QuestionNotification extends Notification {
   constructor() {
     super();
+    this.type = 'Question';
     this.$d().addField('question', {class: Question, relation: 'manyToOne'});
-    this.$d().addField('explanation', {class: Explanation, relation: 'manyToOne'});
     this.$d().init(arguments);
   }
 }
