@@ -58,7 +58,6 @@ class Field {
     }
 
     this.uniqueName = function () {
-      // console.log('un', parent.$d().readTable(), '|', this.name)
       if (this.isPrimative()) {
         return toPascal(`${parent.$d().readTable()}_${this.name}`);
       } else {
@@ -137,12 +136,16 @@ class Field {
         this.setValue(instance.$d().fromResult(result));
       }
     }
+
+    if (this.isList()) {
+      value = [];
+    }
   }
 }
 
 function mapObject (instance) {
   return function (id) {
-    const mapObj = new (instance.constructor)(...arguments);
+    const mapObj = new (instance.constructor)();
     mapObj.$d().setMapId(id);
     return mapObj;
   }
@@ -347,8 +350,18 @@ class DataObject {
 
     $d.uniqueName = function (result) {
       let values = '';
+      let invalidId = false;
       if (result) {
-        ids.forEach((field) => values += `_${result[field.uniqueName()]}`);
+        ids.forEach((field) => {
+          const value = result[field.uniqueName()];
+          if (value === null) {
+            invalidId = true;
+          }
+          values += `_${value}`;
+        });
+      }
+      if (invalidId) {
+        return null;
       }
       return toPascal(`${$d.readTable()}${values}`);
     }
@@ -475,6 +488,7 @@ class Crud {
     // TODO: Refactor
     function mapResults(objects, success, one, fail) {
       return function (results) {
+        console.log('objjjs:', objects);
         if (success === undefined) return;
         const resultMap = {};
         const mappedResults = results && results.length ? [] : results;
@@ -510,15 +524,19 @@ class Crud {
                   // TODO: make composite resolving function
                   const uniqueIdParent = mappedObj.$d().uniqueName();
                   const uniqueIdChild = map.$d().uniqueName();
+                  console.log();
                   const parentObj = resultMap[uniqueIdParent][id];
                   const childId = map.$d().uniqueName(result);
-                  const fieldName = map.field.name;
-                  const childObj = resultMap[uniqueIdChild][childId];
-                  const mergeAttr = map.field.merge();
-                  if (mergeAttr) {
-                    parentObj.$d().setValueFunc(fieldName)(childObj[mergeAttr]);
-                  } else {
-                    parentObj.$d().setValueFunc(fieldName)(childObj);
+                  if (childId !== null && childId !== null) {
+                    const fieldName = map.field.name;
+                    const childObj = resultMap[uniqueIdChild][childId];
+                    console.log('child id/obj: ', childId, childObj);
+                    const mergeAttr = map.field.merge();
+                    if (mergeAttr) {
+                      parentObj.$d().setValueFunc(fieldName)(childObj[mergeAttr]);
+                    } else {
+                      parentObj.$d().setValueFunc(fieldName)(childObj);
+                    }
                   }
                 }
               }
@@ -593,7 +611,6 @@ class Crud {
         print('\nInsert:', dataObj)
         const keys = [];
         const values = [];
-        console.log(dataObj);
         dataObj.$d().getFields().map((field) => pushKeyAndValue(field, keys, values));
 
         const qs = new Array(keys.length).fill('?').join(',');

@@ -76,11 +76,11 @@ function retrieve(dataObject, next, success, fail) {
     .execute();
 }
 
-const siteUrlReg = /^(http(s|):\/\/)(.*?)((\#|\?)(.*))((\#)(.*))$/;
+const siteUrlReg = /^(http(s|):\/\/)(.*?)(((\#|\?)([^#]*))(((\#)(.*))|)|)$/;
 function parseSiteUrl(url) {
   const match = url.match(siteUrlReg);
   if (!match) return [undefined, url];
-  return [match[1], match[3], match[4], match[7]];
+  return [match[1], match[3], match[5], match[9]];
 }
 
 function getIp(ip, next, success) {
@@ -771,13 +771,27 @@ function endpoints(app, prefix, ip) {
       const context = Context.fromReq(req);
       const siteUrl = req.body.siteUrl;
       const retObj = {};
-      function getQuestions(site, success, fail) {
-        retObj.siteId = site.id;
-        crud.select(new Question(undefined, retObj.siteId), success, fail);
+      const idArr = [];
+      function getQuestions(sites, success, fail) {
+        sites.forEach((site) => {
+          idArr.push(site.id);
+        });
+        retObj.siteId = idArr[0];
+        console.log('1 idArr:', idArr);
+        if (idArr.length > 0) {
+          crud.select(new Question(undefined, idArr), success, fail);
+        } else {
+          success([]);
+        }
       }
 
-      function getExplanations(site, success, fail) {
-        crud.select(new SiteExplanation(retObj.siteId, undefined), success, fail);
+      function getExplanations(sites, success, fail) {
+        console.log('2 idArr:', idArr);
+        if (idArr.length > 0) {
+          crud.select(new SiteExplanation(idArr, undefined), success, fail);
+        } else {
+          success([]);
+        }
       }
 
       function createExplList(results, success) {
@@ -786,6 +800,7 @@ function endpoints(app, prefix, ip) {
           const releventComments = [];
           console.log(siteExpl);
           const expl = siteExpl.explanation;
+          console.log('probExpl:', expl)
           expl.comments.map((comment) => comment.siteId === retObj.siteId &&
                                               releventComments.push(comment));
           const words = cleanStr(siteExpl.explanation.searchWords);
@@ -798,8 +813,10 @@ function endpoints(app, prefix, ip) {
         });
         success(retObj);
       }
-      console.log('here')
-      context.callbackTree(retrieveSite, 'gettingSiteExpls', siteUrl, next)
+      const heart = parseSiteUrl(siteUrl)[1];
+      console.log('heart:', heart)
+      const site = new Site(heart);
+      context.callbackTree(crud.select, 'gettingSiteExpls', site)
         .fail(returnVal(res, []))
         .success(getQuestions, 'gettingQuestions')
         .success('gettingQuestions', setValue(retObj, 'questions'), 'settingQuestions')
