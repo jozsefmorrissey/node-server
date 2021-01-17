@@ -736,13 +736,13 @@ function endpoints(app, prefix, ip) {
     const commentNotes = new CommentNotification(userId, undefined);
     const questionNotes = new QuestionNotification(userId, undefined);
     const addToBody = (name) => (results) => {
-      results.forEach(notification) {
+      results.forEach(notification, () => {
         if (notification.heart === userHeart) {
           body.currPage.push(notifcation);
         } else {
           body.otherPage.push(notification);
         }
-      }
+      });
       if (++count === 3) {
         body.currPage.sort(byAttr('id'));
         body.otherPage.sort(byAttr('id'));
