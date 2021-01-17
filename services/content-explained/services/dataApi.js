@@ -98,7 +98,6 @@ function getSite(url, next, success) {
   let count = 0;
   let insertSite = false;
   const setValue = (name) => (sitePart) => {
-    console.log('insertSite')
     insertObj.$d().setValueFunc(name)(sitePart.id);
     if (++count === 4)  {
       if (insertSite) {
@@ -109,7 +108,6 @@ function getSite(url, next, success) {
     }
   };
   const insert = (sitePart, attr) => () => {
-    console.log('setValue', sitePart, '-', attr)
     insertSite = true;
     crud.insertGet(sitePart, setValue(attr), sqlErrorFunc(insert, sitePart))
   };
@@ -117,10 +115,8 @@ function getSite(url, next, success) {
     const text = breakdown[index];
     const sp = new SiteParts(text);
     if (text) {
-      console.log('1fun')
       retrieveOrInsert(sp, next, setValue(attr), insert(sp, attr));
     } else {
-      console.log('2goo')
       setValue(attr)({});
     }
   }
@@ -178,7 +174,6 @@ async function auth(req, next, success) {
 
   function validateAuthorization(user) {
     const credentials = user.getCredentials();
-    console.log('userCredentials:\n', credentials);
     for (let index = 0; index < credentials.length; index += 1) {
       const credential = credentials[index];
       const secretEq = credential.secret === secret;
@@ -731,14 +726,12 @@ function endpoints(app, prefix, ip) {
     let count = 0;
     const userId = req.body.userId;
     const userHeart = parseSiteUrl(req.body.siteUrl)[1];
-    console.log('userHeart:', userHeart)
     const body = {currPage: [], otherPage: []};
     const explNotes = new ExplanationNotification(userId, undefined);
     const commentNotes = new CommentNotification(userId, undefined);
     const questionNotes = new QuestionNotification(userId, undefined);
     const addToBody = (name) => (results) => {
       results.forEach((notification) => {
-        console.log(notification)
         if (notification.site.heart === userHeart) {
           body.currPage.push(notification);
         } else {
@@ -777,7 +770,6 @@ function endpoints(app, prefix, ip) {
           idArr.push(site.id);
         });
         retObj.siteId = idArr[0];
-        console.log('1 idArr:', idArr);
         if (idArr.length > 0) {
           crud.select(new Question(undefined, idArr), success, fail);
         } else {
@@ -786,7 +778,6 @@ function endpoints(app, prefix, ip) {
       }
 
       function getExplanations(sites, success, fail) {
-        console.log('2 idArr:', idArr);
         if (idArr.length > 0) {
           crud.select(new SiteExplanation(idArr, undefined), success, fail);
         } else {
@@ -798,9 +789,7 @@ function endpoints(app, prefix, ip) {
         retObj.list = {};
         results.map((siteExpl) => {
           const releventComments = [];
-          console.log(siteExpl);
           const expl = siteExpl.explanation;
-          console.log('probExpl:', expl)
           expl.comments.map((comment) => comment.siteId === retObj.siteId &&
                                               releventComments.push(comment));
           const words = cleanStr(siteExpl.explanation.searchWords);
@@ -814,7 +803,6 @@ function endpoints(app, prefix, ip) {
         success(retObj);
       }
       const heart = parseSiteUrl(siteUrl)[1];
-      console.log('heart:', heart)
       const site = new Site(heart);
       context.callbackTree(crud.select, 'gettingSiteExpls', site)
         .fail(returnVal(res, []))

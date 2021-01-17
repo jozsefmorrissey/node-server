@@ -488,7 +488,6 @@ class Crud {
     // TODO: Refactor
     function mapResults(objects, success, one, fail) {
       return function (results) {
-        console.log('objjjs:', objects);
         if (success === undefined) return;
         const resultMap = {};
         const mappedResults = results && results.length ? [] : results;
@@ -524,13 +523,11 @@ class Crud {
                   // TODO: make composite resolving function
                   const uniqueIdParent = mappedObj.$d().uniqueName();
                   const uniqueIdChild = map.$d().uniqueName();
-                  console.log();
                   const parentObj = resultMap[uniqueIdParent][id];
                   const childId = map.$d().uniqueName(result);
                   if (childId !== null && childId !== null) {
                     const fieldName = map.field.name;
                     const childObj = resultMap[uniqueIdChild][childId];
-                    console.log('child id/obj: ', childId, childObj);
                     const mergeAttr = map.field.merge();
                     if (mergeAttr) {
                       parentObj.$d().setValueFunc(fieldName)(childObj[mergeAttr]);
