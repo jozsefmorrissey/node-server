@@ -24,7 +24,8 @@
       let type = 'Math';
       let types = {
         Sign: signGen,
-        Pathag: pathag
+        Variable: variablePractice,
+        Pathagorean: pathag
       }
 
       function randInt(limit) {
@@ -34,17 +35,25 @@
       function signGen() {
         xexpr = randInt(8) + 2;
         consts = randInt(8) + 2;
-        sign = randInt(1.2);
-        prefix = randInt(1.2);
+        sign = randInt(2);
+        prefix = randInt(0.2) + 1;
         pol = randInt(2);
         answer = signAnswer();
         expr = signExpr();
         question = signExpr();
       }
+
+      function getSign(bool, boolOshowPlus, showPlus) {
+        if (boolOshowPlus === 1 || boolOshowPlus === 0) {
+          return bool === boolOshowPlus ? (showPlus === true ? '+' : '') : '-';
+        }
+        return bool === 0 ? (boolOshowPlus === true ? '+' : '') : '-'
+      }
+
       function signExpr() {
-        const pre = prefix === 1 ? '' : '-';
-        const s = sign == 1 ? '+' : '-';
-        const p = pol == 1 ? '' : '-';
+        const pre = getSign(prefix);
+        const s = getSign(sign, true);
+        const p = getSign(pol);
         return `${pre} (${p}${xexpr}x ${s} ${consts})`;
       }
       function signAnswer() {
@@ -54,8 +63,8 @@
         } else {
           x = xexpr;
         }
-        let s =  prefix === sign ? '+' : '-';
-        let p =  prefix === pol ? '' : '-';
+        let s =  getSign(prefix, sign, true);
+        let p =  getSign(prefix, pol);
         return `${p}${xexpr}x${s}${consts}`
       }
 
@@ -74,7 +83,11 @@
       }
 
       function correct() {
-        return answer === document.getElementById('a').value.replace(/\s/g, '').replace(/^\+/, '');
+        const userSolution = document.getElementById('a').value.replace(/\s/g, '').replace(/^\+/, '');
+        if (answer instanceof RegExp) {
+          return userSolution.match(answer) !== null;
+        }
+        return answer === userSolution;
       }
 
       let checks = 0;
@@ -94,8 +107,7 @@
       }
 
      function submit() {
-        const ans = document.getElementById('a').value.replace(/\s/g, '').replace(/^\+/, '');
-        if (ans === answer) {
+        if (correct()) {
           right++;
           types[type]();
           mistakes = 0;
@@ -145,6 +157,44 @@
         const b = randInt(9) + 1;
         question = `a=${a}<br>b=${b}`;
         answer = '' + Math.round(Math.sqrt(a*a + b*b)*10) / 10;
+      }
+
+      function signReg(bool, appliedBool, showPlus) {
+        const sign = getSign(bool, appliedBool, showPlus);
+        if (sign === '-') {
+          return '-';
+        }
+        if (showPlus) {
+          return '\\+';
+        }
+        return '(|\\+)';
+      }
+
+      function signDetermination() {
+        let total = 0;
+        Array.from(arguments).forEach((bool) => total += bool);
+        return total % 2;
+      }
+
+      function variablePractice() {
+        const varSign = 0;
+        const variable = String.fromCharCode(randInt(25) + 97);
+        const varSide = randInt(50) + 1;
+        const varSideSign = randInt(2);
+        const loner = randInt(50) + 1;
+        const lonerSign = randInt(2);
+        if (randInt(2) === 0) {
+          question = `${getSign(varSign) + variable} ${getSign(varSideSign, true)} ${varSide} = ${getSign(lonerSign) + loner}`;
+        } else {
+          question = `${getSign(lonerSign) + loner} = ${getSign(varSign) + variable} ${getSign(varSideSign, true)} ${varSide}`;
+        }
+
+        const a = Number.parseInt(getSign(lonerSign, varSign) + loner);
+        const b = Number.parseInt(getSign(varSign, signDetermination(varSideSign, 1)) + varSide);
+
+        rightAnswer = `${a+b}=${variable}`;
+        leftAnswer = `${variable}=${a+b}`;
+        answer = new RegExp(`^(${rightAnswer})|(${leftAnswer})$`);
       }
       window.onload = setup;
     </script>
