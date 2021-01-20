@@ -17,6 +17,9 @@
         background-color: gainsboro;
         border-radius: 10pt;
       }
+      #b:disabled {
+        display: no
+      }
     </style>
     <script>
       let xexpr, consts, sign, prefix, question, answer;
@@ -80,6 +83,8 @@
 
       function toggleSubmitBtnEnable() {
         document.getElementById('b').disabled = document.getElementById('a').value === '';
+        const input = document.getElementById('a');
+        input.value = input.value.toLowerCase();
       }
 
       function correct() {
