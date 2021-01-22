@@ -254,6 +254,7 @@ class CommentConnections extends DataObject {
     this.$d().addField('commentId', {key: true});
     this.$d().addField('siteId', {key: true});
     this.$d().addField('explanationAuthorId', {key: true});
+    this.$d().addField('explanationId', {key: true});
     this.$d().addField('childCommentorId', {key: true});
     this.$d().addField('siblingCommentorId', {key: true});
     this.$d().addField('parentCommentorId', {key: true});

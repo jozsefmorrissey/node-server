@@ -333,20 +333,30 @@ function validateUserNames(callback) {
   testing.success(callback);
 }
 
-const siteObj = {
-  urls: [`${randomString(64, /[a-zA-Z0-9]/, /.{1,}/)}`,
-    `${randomString(50, /[a-zA-Z0-9]/, /.{1,}/)}`,
-    `${randomString(50, /[a-zA-Z0-9]/, /.{1,}/)}`,
-    `${randomString(50, /[a-zA-Z0-9]/, /.{1,}/)}`],
-  ids: []
+const urlExpl = {
+  'http://www.amazon.com/': {
+    'amazon': 'shopping goliath',
+    'deal': 'a price that is better than usual',
+    'book': 'the internet on paper',
+    'prime': 'somthing you dont need'
+  },
+  'https://www.ebay.com/': {
+    'motors': 'the only section that matters',
+    'toys': 'for babies',
+    'ebay': 'online auction site',
+    'stores': 'Not physical locations'
+  }
 }
+
+siteObjs = []
 
 function testAddSite(callback) {
   const secret = userObj.secrets[0];
-  const count = siteObj.urls.length;
+  const urls = Object.keys(urlExpl);
+  const count = urls.length;
   returned = 0;
   for (let index = 0; index < count; index += 1) {
-    const url = siteObj.urls[index];
+    const url = urls[index];
     var xhr = new xmlhr();
     xhr.onreadystatechange = handler(undefined, 200, count, index, testSuccess(callback), testFail(callback));
     xhr.open("POST", getUrl(EPNTS.site.add()), {async: false});
@@ -358,53 +368,54 @@ function testAddSite(callback) {
 }
 
 function testGetSite(callback) {
-  const count = siteObj.urls.length;
+  const urls = Object.keys(urlExpl);
+  const count = urls.length;
   returned = 0;
   for (let index = 0; index < count; index += 1) {
-    const url = siteObj.urls[index];
+    const url = urls[index];
     var xhr = new xmlhr();
-    xhr.onreadystatechange = handler(siteObj.ids, 200, count, index, testSuccess(callback), testFail(callback));
+    xhr.onreadystatechange = handler(siteObjs, 200, count, index, testSuccess(callback), testFail(callback));
     xhr.open("POST", getUrl(EPNTS.site.get()));
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.send(JSON.stringify({url}));
   }
 }
 
-function addExplanation(words, content, author, secret, status, count, callback) {
+function addExplanation(siteUrl, words, content, author, secret, status, count, callback) {
   var xhr = new xmlhr();
   xhr.onreadystatechange = handler(undefined, status, count, 0, testSuccess(callback), testFail(callback));
   xhr.open("POST", getUrl(EPNTS.explanation.add()));
   xhr.setRequestHeader('Content-Type', 'application/json');
   xhr.setRequestHeader('user-agent', userObj.userAgent);
   xhr.setRequestHeader('authorization', secret);
-  xhr.send(JSON.stringify({words, content}));
+  xhr.send(JSON.stringify({siteUrl, words, content}));
 }
 
 const wordsCount = 20;
+const pageExpls = {};
 function testAddExplanation(callback, offset, count) {
   offset = offset || 0;
   const len = userObj.ids.length;
   if (count === undefined) {
-    count = wordsCount * 2;
+    count = 0;
+    Object.values(urlExpl).forEach((list) =>
+      Object.keys(list).forEach(() => count += 2));
     returned = 0;
   }
-  for (let index = 0; index < wordsCount; index += 1) {
-    const author = userObj.users[index % len];
-    const secret = userObj.secrets[index % len];
-    const words = 'my words-' + ((index + offset) % (wordsCount));
-    const content = `My explanation-${index}\n\t${author.username}`;
-    addExplanation(words, content, author.id, secret, 200, count, callback)
-    addExplanation(words, content, author.id, 'User 1000-hello', 401, count, callback)
-  }
-}
-
-const len = 10;
-function testAddMoreExplanations(callback) {
-  const count = len * 2 * wordsCount;
-  returned = 0;
-  for (let index = 0; index < len; index += 1) {
-    const offset = Math.floor(Math.random() * wordsCount);
-    testAddExplanation(callback, offset, count);
+  const urls = Object.keys(urlExpl);
+  for (let index = 0; index < urls.length; index += 1) {
+    const siteUrl = urls[index];
+    const wordList = Object.keys(urlExpl[siteUrl]);
+    for (let wIndex = 0; wIndex < wordList.length; wIndex += 1) {
+      const uIndex = (index + wIndex) % userObj.users.length;
+      const author = userObj.users[uIndex];
+      const secret = userObj.secrets[uIndex];
+      const words = wordList[wIndex];
+      const content = `${urlExpl[siteUrl][words]}-${wIndex}`;
+      pageExpls[content] = {siteUrl};
+      addExplanation(siteUrl, words, content, author.id, secret, 200, count, callback)
+      addExplanation(siteUrl, words, content, author.id, 'User 1000-hello', 401, count, callback)
+    }
   }
 }
 
@@ -415,20 +426,32 @@ function testGetExplanations(callback) {
     let authorId = userObj.users[index].id;
     let xhr = new xmlhr();
     xhr.onreadystatechange = handler(userObj.authored, 200, count, index, testSuccess(callback), testFail(callback));
-    xhr.open("GET", getUrl(EPNTS.explanation.author(authorId)));
+    const url = getUrl(EPNTS.explanation.author(authorId));
+    xhr.open("GET", url);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.send();
   }
 }
 
+const siteExplList = [];
+function buildSiteExplList(callback) {
+  userObj.authored.forEach((list) => list.forEach((expl) => {
+    pageExpls[expl.content].expl = expl;
+    siteExplList.push(pageExpls[expl.content])
+  }));
+  testing.success(callback);
+}
+
 function testUpdateExplanations(callback) {
-  const count = userObj.users.length
+  const count = userObj.users.length * 4;
   returned = 0;
   for (let index = 0; index < count; index += 1) {
-    const author = userObj.users[index];
-    const secret = userObj.secrets[index];
-    const expl = userObj.authored[index][0];
-    const content = `My explanation (updated)-${index}\n\t${author.username}`;
+    const len = userObj.users.length;
+    const author = userObj.users[index % len];
+    const secret = userObj.secrets[index % len];
+    const authored = userObj.authored[index % len];
+    const expl = randomElement(authored);
+    const content = `${expl.content} (updated)`;
     expl.content = content;
     let xhr = new xmlhr();
     xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
@@ -521,35 +544,37 @@ function testUpdatedExplanations(callback) {
   }
 }
 
-function testAddSiteExpl(callback) {
-  const eCount = 20;
-  const count = eCount * siteObj.urls.length;
-  const user = userObj.users[0];
-  const secret = userObj.secrets[0];
-  returned = 0;
-  for (let index = 0; index < siteObj.urls.length; index += 1) {
-    const siteUrl = siteObj.urls[index];
-    for (let eIndex = 0; eIndex < eCount; eIndex += 1) {
-      let explId = userObj.authored[eIndex % userObj.users.length][eIndex].id;
-      let xhr = new xmlhr();
-      xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
-      xhr.open("POST", getUrl(EPNTS.siteExplanation.add(explId)));
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.setRequestHeader('user-agent', userObj.userAgent);
-      xhr.setRequestHeader('authorization', secret);
-      xhr.send(JSON.stringify({siteUrl}));
-    }
-  }
-}
+// function testAddSiteExpl(callback) {
+//   const eCount = 20;
+//   const urls = Object.keys(urlExpl);
+//   const count = eCount * urls.length;
+//   const user = userObj.users[0];
+//   const secret = userObj.secrets[0];
+//   returned = 0;
+//   for (let index = 0; index < urls.length; index += 1) {
+//     const siteUrl = urls[index];
+//     for (let eIndex = 0; eIndex < eCount; eIndex += 1) {
+//       let explId = userObj.authored[eIndex % userObj.users.length][eIndex].id;
+//       let xhr = new xmlhr();
+//       xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+//       xhr.open("POST", getUrl(EPNTS.siteExplanation.add(explId)));
+//       xhr.setRequestHeader('Content-Type', 'application/json');
+//       xhr.setRequestHeader('user-agent', userObj.userAgent);
+//       xhr.setRequestHeader('authorization', secret);
+//       xhr.send(JSON.stringify({siteUrl}));
+//     }
+//   }
+// }
 
 function testAddExistingSiteExpl(callback) {
   function checkResp(resp) {
     testing.assertNotEquals(resp.indexOf(':'), -1);
     testing.success(callback)
   };
+  const urls = Object.keys(urlExpl);
   const user = userObj.users[0];
   const secret = userObj.secrets[0];
-  const siteUrl = siteObj.urls[0];
+  const siteUrl = urls[0];
   let explId = userObj.authored[0][0].id;
   let xhr = new xmlhr();
   xhr.onreadystatechange = simpleHandler(200, checkResp, testFail(callback));
@@ -574,7 +599,7 @@ function testOpinionUrls(callback) {
       const expl = explanations[index % explanations.length];
       const explId = expl.id;
       const status = expl.author.id === userId ? 401 : 200;
-      const siteId = siteObj.ids[Math.floor(Math.random() * siteObj.urls.length)].id;
+      const siteId = siteObjs[Math.floor(Math.random() * siteObjs.length)].id;
       const url = Math.random() < 0.2 ? EPNTS.opinion.dislike(explId, siteId) : EPNTS.opinion.like(explId, siteId);
       let xhr = new xmlhr();
       xhr.onreadystatechange = handler(undefined, status, count, 0, testSuccess(callback), testFail(callback));
@@ -589,7 +614,7 @@ function testOpinionUrls(callback) {
 
 function testOpinionNotLoggedIn(callback) {
   const explId = userObj.authored[0].id;
-  const siteId = siteObj.ids[0].id;
+  const siteId = siteObjs[0].id;
   const secret = userObj.secrets[0];
   const url = EPNTS.opinion.like(explId, siteId);
   let xhr = new xmlhr();
@@ -656,10 +681,11 @@ function addExplanations(callback) {
   explanations.push({content: `a systematic statement of a body of law ${randHashTag()}`, words: "code"});
   explanations.push({content: `instructions for a computer (as within a piece of software)${randHashTag()}`, words: "codes"});
 
-  const secret = userObj.secrets[0];
-  const count = explanations.length;
   returned = 0;
+  const count = explanations.length;
   for (let index = 0; index < count; index += 1) {
+    const userIndex = Math.floor(Math.random() * userObj.secrets.length);
+    const secret = userObj.secrets[userIndex];
     addRealExpl(userObj.userAgent, secret, explanations[index], count, callback);
   }
 }
@@ -702,13 +728,15 @@ function addRealExplsToSite(callback) {
 }
 
 function addCommentsToExpls(callback) {
-  const count = expls.length * 3;
+  expls.forEach((expl) => siteExplList.push({expl, siteUrl}));
+  const count = siteExplList.length * 3;
   returned = 0;
   const commentId = undefined;
   for (let index = 0; index < count; index += 1) {
     const value = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
-    const explanationId = expls[Math.floor(expls.length * Math.random())].id;
-    const siteId = siteObj.ids[Math.floor(siteObj.ids.length * Math.random())].id;
+    const siteExpl = siteExplList[index % siteExplList.length];
+    const explanationId = siteExpl.expl.id;
+    const siteUrl = siteExpl.siteUrl;
     const secret = userObj.secrets[Math.floor(userObj.secrets.length * Math.random())];
     let xhr = new xmlhr();
     xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
@@ -716,25 +744,29 @@ function addCommentsToExpls(callback) {
     xhr.setRequestHeader('user-agent', userObj.userAgent);
     xhr.setRequestHeader('authorization', secret);
     xhr.setRequestHeader('Content-Type', 'application/json');
-    const body = {value, siteId, explanationId, commentId};
+    const body = {value, siteUrl, explanationId, commentId};
     xhr.send(JSON.stringify(body));
   }
 }
 
 
-
 const questions = [];
 function testAddQuestions(callback) {
-  questions.push({siteUrl, words: "this"});
-  questions.push({siteUrl, words: "page"});
-  questions.push({siteUrl, words: "is"});
+  let url = Object.keys(urlExpl)[0];
+  let wordList = Object.keys(urlExpl[url]);
+  questions.push({siteUrl: url, words: wordList[0]});
+  questions.push({siteUrl: url, words: wordList[1]});
+  questions.push({siteUrl: url, words: wordList[2]});
+  questions.push({siteUrl: url, words: wordList[3]});
 
-  questions.push({siteUrl, words: "permanently"});
-  questions.push({siteUrl, words: "moved"});
-  questions.push({siteUrl, words: "Accepted"});
-  questions.push({siteUrl, words: "Multiple Choices"});
-  questions.push({siteUrl, words: "Client Error"});
-  questions.push({siteUrl, words: "Server Error"});
+  url = Object.keys(urlExpl)[1];
+  wordList = Object.keys(urlExpl[url]);
+  questions.push({siteUrl: url, words: wordList[0]});
+  questions.push({siteUrl: url, words: wordList[1]});
+  questions.push({siteUrl: url, words: wordList[2]});
+  questions.push({siteUrl: url, words: wordList[3]});
+
+  console.log(questions)
 
   const count = questions.length;
   returned = 0;
@@ -766,12 +798,13 @@ testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUs
             testDeleteCredFailure, testDeleteCred, testGetCredentials,
             /*testUpdateUsers,*/ testLoginUsers, testGetUsers, /*validateUserNames,*/
             testAddSite, testGetSite, testAddExplanation,
-            testAddMoreExplanations, testGetExplanations, testUpdateExplanations,
+            testGetExplanations, buildSiteExplList, testUpdateExplanations,
             testUpdateExplanationsWrongUser, testUpdateExplanationsNotLoggedIn,
             testUpdateExplanationsInvalidExplId, testUpdatedExplanations,
-            testAddSiteExpl, testAddExistingSiteExpl, testOpinionUrls,
+            /*testAddSiteExpl,*/ testAddExistingSiteExpl, testOpinionUrls,
             testOpinionNotLoggedIn, addCode, addExplanations, getRealExpls,
             addRealExplsToSite, addCommentsToExpls, testAddQuestions,
+            testUpdateExplanations,
 
 
             finishTests]);

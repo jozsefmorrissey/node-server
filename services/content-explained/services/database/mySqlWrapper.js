@@ -350,18 +350,11 @@ class DataObject {
 
     $d.uniqueName = function (result) {
       let values = '';
-      let invalidId = false;
       if (result) {
         ids.forEach((field) => {
           const value = result[field.uniqueName()];
-          if (value === null) {
-            invalidId = true;
-          }
           values += `_${value}`;
         });
-      }
-      if (invalidId) {
-        return null;
       }
       return toPascal(`${$d.readTable()}${values}`);
     }

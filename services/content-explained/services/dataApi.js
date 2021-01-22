@@ -7,7 +7,7 @@ if (global.ENV !== 'local') {
   user = shell.exec('pst value ce-mysql user').stdout.trim();
   password = shell.exec('pst value ce-mysql password').stdout.trim();
 }
-const crud = Crud.set('CE', {password, user, silent: true, mutex: false});
+const crud = Crud.set('CE', {password, user, silent: false, mutex: false});
 
 const { EPNTS } = require('./EPNTS');
 const { Notify } = require('./notification');
@@ -50,6 +50,17 @@ function returnError(next, error) {
   }
 }
 
+function setValue(object, fieldName) {
+  return function(value, success) {
+    if (object instanceof DataObject) {
+      object.$d().setValueFunc(fieldName)(value);
+    } else {
+      object[fieldName] = value;
+    }
+    success(value);
+  }
+}
+
 const sqlErrorFunc = (next, type, dataObject) =>
     returnError(next, new SqlOperationFailed(type, dataObject.constructor.name));
 
@@ -76,11 +87,11 @@ function retrieve(dataObject, next, success, fail) {
     .execute();
 }
 
-const siteUrlReg = /^(http(s|):\/\/)(.*?)(((\#|\?)([^#]*))(((\#)(.*))|)|)$/;
+const siteUrlReg = /^(http(s|):\/\/)(.*?\/)((((\#|\?)([^#]*))(((\#)(.*))|)|))$/;
 function parseSiteUrl(url) {
   const match = url.match(siteUrlReg);
   if (!match) return [undefined, url];
-  return [match[1], match[3], match[5], match[9]];
+  return [match[1], match[3], match[6], match[9]];
 }
 
 function getIp(ip, next, success) {
@@ -671,11 +682,13 @@ function endpoints(app, prefix, ip) {
 
   app.post(prefix + EPNTS.comment.add(), function (req, res, next) {
     const context = Context.fromReq(req);
-    const comment = new Comment(req.body.value, req.body.explanationId, req.body.siteId, req.body.commentId);
+    const comment = new Comment(req.body.value, req.body.explanationId, undefined, req.body.commentId);
     function recordUserId(author, success) {comment.setAuthor(author); success();}
     context.callbackTree(auth, 'addComment', req, next)
       .success(recordUserId, 'recordingAuthorId', '$cbtArg[0]')
-      .success('recordingAuthorId', crud.insertGet, 'insertingComment', comment)
+      .success('recordingAuthorId', getSite, 'gettingSite', req.body.siteUrl, next)
+      .success('gettingSite', setValue(comment, 'siteId'), 'settingSite', '$cbtArg[0].id')
+      .success('settingSite', crud.insertGet, 'insertingComment', comment)
       .success('insertingComment', Notify, 'notifying', '$cbtArg.comment = $cbtArg[0]')
       .fail('insertingComment', returnError(next))
       .success('notifying', returnVal(res))
@@ -683,17 +696,6 @@ function endpoints(app, prefix, ip) {
   });
 
   //  ------------------------- Question Api -------------------------  //
-
-  function setValue(object, fieldName) {
-    return function(value, success) {
-      if (object instanceof DataObject) {
-        object.$d().setValueFunc(fieldName)(value);
-      } else {
-        object[fieldName] = value;
-      }
-      success(value);
-    }
-  }
 
   app.post(prefix + EPNTS.question.add(), function (req, res, next) {
     const context = Context.fromReq(req);
@@ -721,18 +723,22 @@ function endpoints(app, prefix, ip) {
     return (obj1, obj2) => obj1[attr] - obj2[attr];
   }
 
+
+
   app.post(prefix + EPNTS.notification.get(), function (req, res, next) {
     const context = Context.fromReq(req);
     let count = 0;
     const userId = req.body.userId;
-    const userHeart = parseSiteUrl(req.body.siteUrl)[1];
     const body = {currPage: [], otherPage: []};
     const explNotes = new ExplanationNotification(userId, undefined);
     const commentNotes = new CommentNotification(userId, undefined);
     const questionNotes = new QuestionNotification(userId, undefined);
+    const userSite = req.body.siteUrl.replace(/^http(s):\/\//, 'http://');
     const addToBody = (name) => (results) => {
       results.forEach((notification) => {
-        if (notification.site.heart === userHeart) {
+        console.log(notification)
+        const noteSite = notification.site.url.replace(/^http(s):\/\//, 'http://')
+        if (noteSite === userSite) {
           body.currPage.push(notification);
         } else {
           body.otherPage.push(notification);

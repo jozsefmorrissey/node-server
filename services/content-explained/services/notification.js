@@ -3,7 +3,8 @@ const Crud = require('./database/mySqlWrapper').Crud;
 const crud = Crud.instance('CE');
 
 const { QuestionNotification, CommentNotification, ExplanationNotification,
-        ExplanationConnections, CommentConnections, Site } =
+        ExplanationConnections, CommentConnections, Site, Explanation,
+        Question } =
                 require('./database/objects');
 
 function notNotified(connection, notified, ignoreId, idAttr) {
@@ -19,74 +20,63 @@ function notNotified(connection, notified, ignoreId, idAttr) {
 }
 
 function notifyExpl (explanation) {
-  const id = explanation.id;
   const ignoreId = explanation.author.id;
-  console.log('notifyExpl');
   function insertNotifications(connectionArr) {
-    console.log(connectionArr);
     const notifications = {};
     const notified = {};
     connectionArr.forEach((connection) => {
       if (notNotified(connection, notifications, ignoreId, 'commentorId')) {
         const commentorId = connection.commentorId;
-        const siteId = connection.commentorSiteId;
-        crud.insert(new ExplanationNotification(commetorId, siteId, id))
+        const site = new Site(connection.commentSiteId);
+        crud.insert(new ExplanationNotification(commentorId, site, explanation))
       }
-      console.log('cni:\n', connection, '\n\n', notifications, '\n\n', ignoreId)
-      console.log('asker', connection.askerId)
       if (notNotified(connection, notifications, ignoreId, 'askerId')) {
         const askerId = connection.askerId;
-        console.log('notNotified', askerId);
-        const siteId = connection.questionSiteId;
-        const questionId = connection.questionId;
-        crud.insert(new QuestionNotification(askerId, siteId, questionId, id))
+        const question = new Question(connection.questionId);
+        const site = new Site(connection.questionSiteId);
+        crud.insert(new QuestionNotification(askerId, site, explanation, question))
       }
     });
   }
 
-  crud.select(new ExplanationConnections(id, undefined), insertNotifications,
-        (err) => console.log(err));
+  crud.select(new ExplanationConnections(explanation.id, undefined), insertNotifications,
+        (err) => console.error(err));
 }
 
 function notifyComment (comment) {
   const id = comment.id;
   const ignoreId = comment.author.id;
-  console.log('notifying comment')
   const explId = comment.explId;
   function insertNotifications(connectionArr) {
-    console.log('connarr', connectionArr)
     let notifications = {};
     connectionArr.forEach((connection) => {
-      const siteId = connection.siteId;
+      const site = new Site(connection.siteId);
+      const explanation = new Explanation(connection.explanationId);
+      function insertComment(userId) {
+        crud.insert(new CommentNotification(userId, site, explanation, comment));
+      }
       if (notNotified(connection, notifications, ignoreId, 'explanationAuthorId')) {
-        const userId = connection.explanationAuthorId;
-        crud.insert(new CommentNotification(userId, new Site(siteId), id))
+        insertComment(connection.explanationAuthorId);
       }
       if (notNotified(connection, notifications, ignoreId, 'childCommentorId')) {
-        const userId = connection.childCommentorId;
-        crud.insert(new CommentNotification(userId, new Site(siteId), id))
+        insertComment(connection.childCommentorId);
       }
       if (notNotified(connection, notifications, ignoreId, 'siblingCommentorId')) {
-        const userId = connection.siblingCommentorId;
-        crud.insert(new CommentNotification(userId, new Site(siteId), id))
+        insertComment(connection.siblingCommentorId);
       }
       if (notNotified(connection, notifications, ignoreId, 'parentCommentorId')) {
-        const userId = connection.parentCommentorId;
-        crud.insert(new CommentNotification(userId, new Site(siteId), id))
+        insertComment(connection.parentCommentorId);
       }
     });
   }
 
-  const commentConnect = new CommentConnections(id - 1, undefined);
-  console.log(commentConnect);
+  const commentConnect = new CommentConnections(id, undefined);
   crud.select(commentConnect, insertNotifications);
 }
 
 function Notify(dataObject, success) {
-  console.log('notifying', dataObject.constructor.name, dataObject.id)
   switch (dataObject.constructor.name) {
     case 'Explanation':
-      console.log('call expl')
       notifyExpl(dataObject);
       success(dataObject);
       break;
