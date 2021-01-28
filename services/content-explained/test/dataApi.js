@@ -86,6 +86,20 @@ function getUrl(suffix) {
   return `${host}${suffix}`;
 }
 
+function randomSubSet(arr, size) {
+  if (arr.length < size) return arr;
+  const subSet = [];
+  const added = {};
+  while (subSet.length < size) {
+    const index = Math.floor(Math.random() * arr.length);
+    if (!added[index]) {
+      added[index] = true;
+      subSet.push(arr[index]);
+    }
+  }
+  return subSet;
+}
+
 function randomElement(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -345,6 +359,12 @@ const urlExpl = {
     'toys': 'for babies',
     'ebay': 'online auction site',
     'stores': 'Not physical locations'
+  },
+  'https://www.restapitutorial.com/httpstatuscodes.html?poop=stinky&DebugGui.debug=true#PEEPEE': {
+    'fake': randomString(128, /[a-zA-Z0-9]/, /.{1,}/),
+    'values': randomString(128, /[a-zA-Z0-9]/, /.{1,}/),
+    'doesnt': randomString(128, /[a-zA-Z0-9]/, /.{1,}/),
+    'matter': randomString(128, /[a-zA-Z0-9]/, /.{1,}/)
   }
 }
 
@@ -439,6 +459,8 @@ function buildSiteExplList(callback) {
     pageExpls[expl.content].expl = expl;
     siteExplList.push(pageExpls[expl.content])
   }));
+
+
   testing.success(callback);
 }
 
@@ -727,11 +749,10 @@ function addRealExplsToSite(callback) {
   }
 }
 
+const comments = [];
 function addCommentsToExpls(callback) {
   expls.forEach((expl) => siteExplList.push({expl, siteUrl}));
-  const count = siteExplList.length * 3;
-  returned = 0;
-  const commentId = undefined;
+  const count = siteExplList.length * 3; returned = 0;
   for (let index = 0; index < count; index += 1) {
     const value = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
     const siteExpl = siteExplList[index % siteExplList.length];
@@ -739,7 +760,32 @@ function addCommentsToExpls(callback) {
     const siteUrl = siteExpl.siteUrl;
     const secret = userObj.secrets[Math.floor(userObj.secrets.length * Math.random())];
     let xhr = new xmlhr();
-    xhr.onreadystatechange = handler(undefined, 200, count, 0, testSuccess(callback), testFail(callback));
+    xhr.onreadystatechange = handler(comments, 200, count, index, testSuccess(callback), testFail(callback));
+    xhr.open("POST", getUrl(EPNTS.comment.add()), {async: false});
+    xhr.setRequestHeader('user-agent', userObj.userAgent);
+    xhr.setRequestHeader('authorization', secret);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    const body = {value, siteUrl, explanationId};
+    xhr.send(JSON.stringify(body));
+  }
+}
+
+let subSet;
+function addCommentsToComments(callback) {
+  const siteById = {};
+  siteObjs.forEach((site) => siteById[site.id] = site);
+  const count = 20;
+  subSet = subSet || randomSubSet(comments, count);
+  returned = 0;
+  for (let index = 0; index < count; index += 1) {
+    const comment = randomElement(subSet);
+    const value = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
+    const explanationId = comment.explanationId;
+    const commentId = comment.id;
+    const siteUrl = siteById[comment.siteId].url;
+    const secret = userObj.secrets[Math.floor(userObj.secrets.length * Math.random())];
+    let xhr = new xmlhr();
+    xhr.onreadystatechange = handler(subSet, 200, count, subSet.length + index - 1, testSuccess(callback), testFail(callback));
     xhr.open("POST", getUrl(EPNTS.comment.add()), {async: false});
     xhr.setRequestHeader('user-agent', userObj.userAgent);
     xhr.setRequestHeader('authorization', secret);
@@ -749,24 +795,23 @@ function addCommentsToExpls(callback) {
   }
 }
 
-
 const questions = [];
 function testAddQuestions(callback) {
   let url = Object.keys(urlExpl)[0];
   let wordList = Object.keys(urlExpl[url]);
-  questions.push({siteUrl: url, words: wordList[0]});
-  questions.push({siteUrl: url, words: wordList[1]});
-  questions.push({siteUrl: url, words: wordList[2]});
-  questions.push({siteUrl: url, words: wordList[3]});
+  questions.push({siteUrl: url, words: wordList[0], elaboration: 'elab-0'});
+  questions.push({siteUrl: url, words: wordList[1], elaboration: randomString(250, /[a-zA-Z0-9]/, /.{1,}/)});
+  questions.push({siteUrl: url, words: 'gift', elaboration: 'elab-3'});
+  questions.push({siteUrl: url, words: 'service', elaboration: 'elab-3'});
 
   url = Object.keys(urlExpl)[1];
   wordList = Object.keys(urlExpl[url]);
-  questions.push({siteUrl: url, words: wordList[0]});
-  questions.push({siteUrl: url, words: wordList[1]});
-  questions.push({siteUrl: url, words: wordList[2]});
+  questions.push({siteUrl: url, words: wordList[0], elaboration: 'elab-4'});
   questions.push({siteUrl: url, words: wordList[3]});
 
-  console.log(questions)
+  questions.push({siteUrl: url, words: 'sell', elaboration: randomString(250, /[a-zA-Z0-9]/, /.{1,}/)});
+  questions.push({siteUrl: url, words: 'buy'});
+
 
   const count = questions.length;
   returned = 0;
@@ -804,6 +849,7 @@ testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUs
             /*testAddSiteExpl,*/ testAddExistingSiteExpl, testOpinionUrls,
             testOpinionNotLoggedIn, addCode, addExplanations, getRealExpls,
             addRealExplsToSite, addCommentsToExpls, testAddQuestions,
+            addCommentsToComments, addCommentsToComments, addCommentsToComments, addCommentsToComments, addCommentsToComments,
             testUpdateExplanations,
 
 

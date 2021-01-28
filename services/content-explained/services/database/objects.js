@@ -90,6 +90,7 @@ class Comment extends DataObject {
     this.$d().addField('siteId');
     this.$d().addField('commentId');
     this.$d().addField('author', {class: User, relation: 'manyToOne'});
+    this.$d().addField('lastUpdate');
     this.$d().addField('id');
     this.$d().init(arguments);
   }
@@ -99,13 +100,13 @@ new Comment();
 class Explanation extends DataObject {
   constructor() {
     super();
-    this
     this.$d().setTableNames('EXPLANATION_DETAIL')
     this.$d().addField('content');
     this.$d().addField('words', {class: Words, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('searchWords', {class: Words, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('author', {class: User, relation: 'manyToOne'});
     this.$d().addField('comments', {class: Comment, relation: 'oneToMany'});
+    this.$d().addField('lastUpdate');
     this.$d().addField('id');
     this.$d().addField('likes', {readOnly: true});
     this.$d().addField('dislikes', {readOnly: true});
@@ -114,9 +115,20 @@ class Explanation extends DataObject {
 }
 new Explanation();
 
+class Group extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('name');
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new Group();
+
 class GroupExplanationTag extends DataObject {
   constructor() {
     super();
+    this.$d().addField('groupId');
     this.$d().addField('tag', {class: Tag, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('id');
     this.$d().init(arguments);
@@ -124,11 +136,22 @@ class GroupExplanationTag extends DataObject {
 }
 new GroupExplanationTag();
 
+class GroupOpinion extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('favorable');
+    this.$d().addField('explanationId');
+    this.$d().addField('userId');
+    this.$d().addField('id', {writeOnly: true});
+    this.$d().init(arguments);
+  }
+}
+
 class GroupExplanation extends DataObject {
   constructor() {
     super();
     this.$d().setTableNames('GROUP_EXPLANATION_DETAIL')
-    this.$d().addField('gId');
+    this.$d().addField('groupId');
     this.$d().addField('explanation', {class: Explanation, relation: 'manyToOne'});
     this.$d().addField('id');
     this.$d().addField('url', {readOnly: true});
@@ -193,13 +216,37 @@ class Site extends DataObject {
 }
 new Site();
 
+class QuestionOpinion extends DataObject {
+    constructor() {
+      this.$d().addField('questionId');
+      this.$d().addField('unclear');
+      this.$d().addField('answered');
+      this.$d().addField('userId');
+      this.$d().addField('id');
+    }
+}
+
+class QuestionComment extends DataObject {
+  constructor() {
+    this.$d().addField('value');
+    this.$d().addField('questionId');
+    this.$d().addField('commentId');
+    this.$d().addField('authorId');
+    this.$d().addField('lastUpdate');
+    this.$d().addField('id');
+  }
+}
+
 class Question extends DataObject {
   constructor() {
     super();
-    this
     this.$d().addField('words', {class: Words, relation: 'manyToOne', merge: 'value'});
+    this.$d().addField('elaboration');
     this.$d().addField('siteId');
     this.$d().addField('asker', {class: User, relation: 'manyToOne'});
+    this.$d().addField('lastUpdate');
+    this.$d().addField('unclearVotes');
+    this.$d().addField('answeredVotes');
     this.$d().addField('id');
     this.$d().init(arguments);
   }

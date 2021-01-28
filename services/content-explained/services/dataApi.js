@@ -43,6 +43,14 @@ function returnQuery(res) {
   }
 }
 
+function forEach(func, returnObj) {
+  return function (list, success) {
+    console.log('questions:', list)
+    list.forEach((item) => func(item));
+    success(returnObj);
+  }
+}
+
 function returnError(next, error) {
   return function(e) {
     const err = error === undefined ? e : error;
@@ -609,6 +617,7 @@ function endpoints(app, prefix, ip) {
   app.post(prefix + EPNTS.explanation.add(), function (req, res, next) {
     const context = Context.fromReq(req);
     const explanation = new Explanation(req.body.content);
+    explanation.setLastUpdate(new Date());
     const idOnly = new Explanation();
     function setAuthor(author, success) {explanation.setAuthor(author); success();};
     function setWords(words, success) {explanation.setWords(words); success();};
@@ -653,6 +662,7 @@ function endpoints(app, prefix, ip) {
     const explId = Number.parseInt(req.body.id);
     const idOnly = new Explanation(explId);
     const contentOnly = idOnly.$d().clone();
+    contentOnly.setLastUpdate(new Date());
     const notifyObj = new Explanation(explId);
     let userId;
     contentOnly.setContent(req.body.content);
@@ -683,6 +693,7 @@ function endpoints(app, prefix, ip) {
   app.post(prefix + EPNTS.comment.add(), function (req, res, next) {
     const context = Context.fromReq(req);
     const comment = new Comment(req.body.value, req.body.explanationId, undefined, req.body.commentId);
+    comment.setLastUpdate(new Date());
     function recordUserId(author, success) {comment.setAuthor(author); success();}
     context.callbackTree(auth, 'addComment', req, next)
       .success(recordUserId, 'recordingAuthorId', '$cbtArg[0]')
@@ -699,7 +710,8 @@ function endpoints(app, prefix, ip) {
 
   app.post(prefix + EPNTS.question.add(), function (req, res, next) {
     const context = Context.fromReq(req);
-    const question = new Question(req.body.content);
+    const question = new Question(req.body.content, req.body.elaboration);
+    question.setLastUpdate(new Date());
     const idOnly = new Question();
 
     context.callbackTree(auth, 'addQuestion', req, next)
@@ -729,24 +741,15 @@ function endpoints(app, prefix, ip) {
     const context = Context.fromReq(req);
     let count = 0;
     const userId = req.body.userId;
-    const body = {currPage: [], otherPage: []};
+    const body = [];
     const explNotes = new ExplanationNotification(userId, undefined);
     const commentNotes = new CommentNotification(userId, undefined);
     const questionNotes = new QuestionNotification(userId, undefined);
     const userSite = req.body.siteUrl.replace(/^http(s):\/\//, 'http://');
     const addToBody = (name) => (results) => {
-      results.forEach((notification) => {
-        console.log(notification)
-        const noteSite = notification.site.url.replace(/^http(s):\/\//, 'http://')
-        if (noteSite === userSite) {
-          body.currPage.push(notification);
-        } else {
-          body.otherPage.push(notification);
-        }
-      });
+      results.forEach((notification) => body.push(notification));
       if (++count === 3) {
-        body.currPage.sort(byAttr('id'));
-        body.otherPage.sort(byAttr('id'));
+        body.sort(byAttr('id'));
         res.send(body);
       }
     }
@@ -769,21 +772,23 @@ function endpoints(app, prefix, ip) {
     app.post(prefix + EPNTS.siteExplanation.get(), function (req, res, next) {
       const context = Context.fromReq(req);
       const siteUrl = req.body.siteUrl;
-      const retObj = {};
+      const retObj = {list: {}, questions: []};
       const idArr = [];
       function getQuestions(sites, success, fail) {
-        sites.forEach((site) => {
-          idArr.push(site.id);
-        });
         retObj.siteId = idArr[0];
         if (idArr.length > 0) {
-          crud.select(new Question(undefined, idArr), success, fail);
+          const question = new Question();
+          question.setSiteId(idArr);
+          crud.select(question, success, fail);
         } else {
           success([]);
         }
       }
 
       function getExplanations(sites, success, fail) {
+        sites.forEach((site) => {
+          idArr.push(site.id);
+        });
         if (idArr.length > 0) {
           crud.select(new SiteExplanation(idArr, undefined), success, fail);
         } else {
@@ -791,33 +796,50 @@ function endpoints(app, prefix, ip) {
         }
       }
 
+      function init(words) {
+        const cleanWords = cleanStr(words);
+        if (retObj.list[cleanWords] === undefined) retObj.list[cleanWords] = {explanations: [], questions: []};
+        return cleanWords;
+      }
+
+      function addQuestion(question) {
+        const cleanWords = cleanStr(question.words);
+        if (retObj.list[cleanWords]) {
+          retObj.list[cleanWords].questions.push(question)
+        } else {
+          retObj.questions.push(question);
+        }
+      }
+
       function createExplList(results, success) {
-        retObj.list = {};
         results.map((siteExpl) => {
           const releventComments = [];
           const expl = siteExpl.explanation;
-          expl.comments.map((comment) => comment.siteId === retObj.siteId &&
-                                              releventComments.push(comment));
-          const words = cleanStr(siteExpl.explanation.searchWords);
+          expl.comments.map((comment) => {
+            if (idArr.indexOf(comment.siteId) !== -1) {
+              releventComments.push(comment);
+            }
+            console.log('siteIid:', comment.siteId, 'in', idArr)
+          });
+          const words = init(siteExpl.explanation.searchWords);
           expl.likes = siteExpl.likes;
           expl.dislikes = siteExpl.dislikes;
           expl.comments = releventComments;
-
-          if (retObj.list[words] === undefined) { retObj.list[words] = []; }
-          retObj.list[words].push(expl);
+          retObj.list[words].explanations.push(expl);
         });
         success(retObj);
       }
       const heart = parseSiteUrl(siteUrl)[1];
       const site = new Site(heart);
-      context.callbackTree(crud.select, 'gettingSiteExpls', site)
+      context.callbackTree(crud.select, 'gettingSites', site)
         .fail(returnVal(res, []))
-        .success(getQuestions, 'gettingQuestions')
-        .success('gettingQuestions', setValue(retObj, 'questions'), 'settingQuestions')
-        .success('settingQuestions', getExplanations, 'gettingExplanations')
+        .success(getExplanations, 'gettingExplanations')
+        // .success('gettingQuestions', setValue(retObj, 'questions'), 'settingQuestions')
         .success('gettingExplanations', createExplList, 'creatingLists')
-        .fail('gettingExplanations', returnError(next))
-        .success('creatingLists', returnQuery(res))
+        .success('creatingLists', getQuestions, 'gettingQuestions')
+        .success('gettingQuestions', forEach(addQuestion, retObj), 'settingQuestions')
+        .fail('settingQuestions', returnError(next))
+        .success('settingQuestions', returnQuery(res))
         .execute();
     });
 
