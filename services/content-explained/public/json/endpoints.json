@@ -60,6 +60,15 @@
   "notification": {
     "get": "/notifications"
   },
+  "group": {
+    "explanation": {
+      "add": "/group/explanation/add/:groupId/:explanationId"j,
+      "opinion": {
+        "like": "/group/explanation/opinion/like/:groupId/:explanationId",
+        "dislike": "/group/explanation/opinion/dislike/:groupId/:explanationId"
+      }
+    }
+  }
   "_secure": [
     "user.update",
     "credential.get",

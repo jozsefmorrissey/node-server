@@ -275,6 +275,37 @@ function insertTags(tags, success, failure) {
   success();
 }
 
+function addGroupOpinion(req, next, favorable, explanationId, groupId, success, fail) {
+  const context = Context.fromReq(req);
+  const opinion = new GroupOpinion(favorable, explanationId, groupId);
+  const delOpinion = new Opinion(undefined, explanationId, groupId);
+
+  function setUserId(user, success) {
+    delOpinion.setUserId(user.id);
+    opinion.setUserId(user.id);
+    success();
+  }
+  function notAuthor(expl, success, fail) {
+    if (expl.author.id === opinion.getUserId()) {
+      fail(new UnAuthorized('Authors cannot rate thier own work', '8yUDpd'));
+    } else {
+      success();
+    }
+  }
+  new context.callbackTree(auth, 'submittingGroupOpinion', req, next)
+    .success(setUserId, 'settingUser')
+    .success('settingUser', crud.selectOne, 'gettingExpl', new Explanation(explanationId))
+    .success('gettingExpl', notAuthor, 'checkingUserNotAuthor')
+    .fail('gettingExpl', returnError(next), 'explanationNotFound')
+    .success('checkingUserNotAuthor', crud.delete, 'deletingOpinion', delOpinion)
+    .fail('checkingUserNotAuthor', returnError(next), 'authorWeighingIn')
+    .success('deletingOpinion', crud.insert, 'insertingOpinion', opinion)
+    .success('insertingOpinion', success)
+    .fail('insertingOpinion', fail)
+    .execute();
+}
+
+
 function addOpinion(req, next, favorable, explanationId, siteId, success, fail) {
   const context = Context.fromReq(req);
   const opinion = new Opinion(favorable, explanationId, siteId);
@@ -834,7 +865,6 @@ function endpoints(app, prefix, ip) {
       context.callbackTree(crud.select, 'gettingSites', site)
         .fail(returnVal(res, []))
         .success(getExplanations, 'gettingExplanations')
-        // .success('gettingQuestions', setValue(retObj, 'questions'), 'settingQuestions')
         .success('gettingExplanations', createExplList, 'creatingLists')
         .success('creatingLists', getQuestions, 'gettingQuestions')
         .success('gettingQuestions', forEach(addQuestion, retObj), 'settingQuestions')
@@ -864,6 +894,103 @@ function endpoints(app, prefix, ip) {
     opinion.setUserId(req.params.userId);
     crud.select(opinion, returnQuery(res));
   });
+
+  //  ------------------------- Group Api -------------------------  //
+
+  function getGroup(groupId, success, fail) {
+    const group = new group(Number.parseInt(groupId));
+    crud.select(group, success, fail);
+  }
+
+  function isAdmin(userId, groupId, success, fail) {
+    function checkAdmin(group) {
+      if (group.creatorId === userId) return true;
+      for (let index = 0; index < group.contributors.length; index += 1) {
+        const contributer = group.contributors[index];
+        if (contributer.admin && contributer.user.id === userId) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    getGroup(groupId, checkAdmin, fail);
+  }
+
+  app.get(prefix + EPNTS.group.add.contributer(), function (req, res, next) {
+    const user = new User(req.params.userId);
+    const admin = req.params.admin === 'true';
+    const groupId = req.params.groupId;
+    const groupContributor = new GroupContributor(user, admin, groupId);
+
+    context.callbackTree(auth, 'addContributer', req, next)
+      .success(isAdmin, 'checkingAdminStatus', '$cbtArg[0].id', groupId)
+      .success('checkingAdminStatus', crud.insert, 'insertingGroupContributer', group)
+      .fail('checkingAdminStatus', returnError(res), 'adminCheckFailed')
+      .success('insertingGroupContributer', returnQuery(res), 'insertSuccessful')
+      .fail('insertingGroupContributer', returnError(next), 'insertFailed')
+      .execute();
+  });
+
+  app.get(prefix + EPNTS.group.remove.contributer(), function (req, res, next) {
+    const user = new User(req.params.userId);
+    const groupId = req.params.groupId;
+    const groupContributor = new GroupContributor(user, undefined, groupId);
+
+    context.callbackTree(auth, 'deleteContributer', req, next)
+      .success(isAdmin, 'checkingAdminStatus', '$cbtArg[0].id', groupId)
+      .success('checkingAdminStatus', crud.delete, 'deleteGroupContributer', group)
+      .fail('checkingAdminStatus', returnError(res), 'adminCheckFailed')
+
+giberish
+      .success('deleteGroupContributer', returnQuery(res), 'deleteSuccessful')
+      .fail('deleteGroupContributer', returnError(next), 'deleteFailed')
+      .execute();
+  });
+
+  app.post(prefix + EPNTS.group.create(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    const name = req.body.name;
+    const description = req.body.description;
+    const group = new Group(name, description);
+    addGroupOpinion(req, next, true, explanationId, groupId, returnVal(res, 'success'), returnError(next));
+    setValue(question, 'siteId')
+
+    context.callbackTree(auth, 'createGroup', req, next)
+      .success(setValue(group, 'creatorId'), 'settingCreatorId', '$cbtArg[0].id')
+      .success('settingCreatorId', crud.insert, 'insertingGroup', group)
+      .success('insertingGroup', returnQuery(res), 'insertSuccessful')
+      .fail('insertingGroup', returnError(next), 'insertFailed')
+      .execute();
+  });
+
+  app.get(prefix + EPNTS.group.explanation.opinion.like(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    const groupId = req.params.groupId;
+    const explId = req.params.explanationId;
+    addGroupOpinion(req, next, true, explanationId, groupId, returnVal(res, 'success'), returnError(next));
+  });
+
+  app.get(prefix + EPNTS.group.explanation.opinion.dislike(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    const groupId = req.params.groupId;
+    const explId = req.params.explanationId;
+    addGroupOpinion(req, next, false, explanationId, groupId, returnVal(res, 'success'), returnError(next));
+  });
+
+
+  app.get(prefix + EPNTS.group.explanation.add(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    const groupId = req.params.groupId;
+    const expl = new Explanation(req.params.explanationId);
+    const GroupExplanation = new GroupExplanation(groupId, explId);
+
+    context.callbackTree(auth, 'addQuestion', req, next)
+      .success(crud.insert, 'insertingGroupExplanation')
+      .success('insertingGroupExplanation', returnVal(res, 'success'), 'insertSuccessful')
+      .fail('insertingGroupExplanation', returnError(next), 'insertFailed')
+      .exicute();
+  );
 }
 
 

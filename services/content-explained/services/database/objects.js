@@ -119,28 +119,33 @@ class Group extends DataObject {
   constructor() {
     super();
     this.$d().addField('name');
+    this.$d().addField('discription');
+    this.$d().addField('creatorId', {class: User, relation: 'manyToOne'});
+    this.$d().addField('contributors', {class:  GroupContributor, relation: 'OneToMany'});
     this.$d().addField('id');
     this.$d().init(arguments);
   }
 }
 new Group();
 
-class GroupExplanationTag extends DataObject {
+class GroupContributor extends DataObject {
   constructor() {
     super();
+    this.$d().addField('user', {class: User, relation: 'manyToOne'});
+    this.$d().addField('admin');
     this.$d().addField('groupId');
-    this.$d().addField('tag', {class: Tag, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('id');
     this.$d().init(arguments);
   }
 }
-new GroupExplanationTag();
+new GroupContributor();
 
 class GroupOpinion extends DataObject {
   constructor() {
     super();
     this.$d().addField('favorable');
     this.$d().addField('explanationId');
+    this.$d().addField('groupId');
     this.$d().addField('userId');
     this.$d().addField('id', {writeOnly: true});
     this.$d().init(arguments);
@@ -154,7 +159,6 @@ class GroupExplanation extends DataObject {
     this.$d().addField('groupId');
     this.$d().addField('explanation', {class: Explanation, relation: 'manyToOne'});
     this.$d().addField('id');
-    this.$d().addField('url', {readOnly: true});
     this.$d().addField('likes', {readOnly: true});
     this.$d().addField('dislikes', {readOnly: true});
     this.$d().init(arguments);

@@ -114,18 +114,3 @@ provides a easy to use graphical interface that can be added to any html file.
   information. On the gui you will see a "Copy Html Report" button, in the upper
   right hand corner. It will copy to the clipboard static html file that you can share with
   colleges.
-
-
-# TODO v1.2
-CREATE NOTIFICATION INTERFACE
-CREATE NAMED LIST API
-add question commenttest
-add question opiniontest
-create view answered/unclear opinions
-track users open sites
-create question menue
-allow users to subscribe to tagged questions
-
-
-# TODO later
-ADD ORDER, DESC, AND LIMIT to mySqlWrapper

@@ -77,6 +77,33 @@ function sendUpdateUserEmail(user, secret, success, failure) {
     }, success, failure);
 }
 
+function sendContributorUpdateEmail(confirmationUrl, user, groupContributor, group, remove, success, failure) {
+  const username = groupContributor.user.username;
+  const admin = groupContributor.admin;
+  const email = user.getEmail();
+
+  let subject, html;
+  if(remove) {
+    subject = `Remove Contrigutor From ${group}`;
+    html = `<h4>${user.username} has requested that ${username} be removed from ${group.name}</h4>
+            <h4><a href='${confirmationUrl}'>Click Here</a> to confirm</h4>`;
+  } else {
+    subject = `Add Contributer To ${group}`
+    html = `<h4>${user.username} has requested that ${username} be added to ${group.name}</h4>
+            <h4><a href='${confirmationUrl}'>Click Here</a> to confirm</h4>`;
+  }
+  const updateConfirmationUrl = `${EPNTS.getHost(global.ENV)}${EPNTS.user.update(secret)}`;
+  if (global.ENV === 'local') {
+    console.log('update email:', confirmationUrl);
+    Context.fromFunc(success)
+        .dg.link('GroupContributerUrl', 'confirmationUrl', confirmationUrl);
+  }
+
+  send({
+    from: 'CE <ce@jozsefmorrissey.com>',
+    to: user.getEmail(),
+    subject, html}, success, failure);
+}
 
 
 exports.sendActivationEmail = sendActivationEmail;
