@@ -650,7 +650,18 @@ function endpoints(app, prefix, ip) {
     const explanation = new Explanation(req.body.content);
     explanation.setLastUpdate(new Date());
     const idOnly = new Explanation();
-    function setAuthor(author, success) {explanation.setAuthor(author); success();};
+    function setAuthor(author, success) {
+      function setGroup(group) {
+        explanation.setGroup(group);
+        success();
+      }
+      explanation.setAuthor(author);
+      if (req.body.groupId) {
+        crud.selectOne(new GroupContributor(author), req.body.groupId), setGroup, returnError(next));
+      } else {
+        success();
+      }
+    };
     function setWords(words, success) {explanation.setWords(words); success();};
     function setId(id, success) {idOnly.setId(id); success();};
     function setSearchWords(success, fail) {

@@ -97,24 +97,6 @@ class Comment extends DataObject {
 }
 new Comment();
 
-class Explanation extends DataObject {
-  constructor() {
-    super();
-    this.$d().setTableNames('EXPLANATION_DETAIL')
-    this.$d().addField('content');
-    this.$d().addField('words', {class: Words, relation: 'manyToOne', merge: 'value'});
-    this.$d().addField('searchWords', {class: Words, relation: 'manyToOne', merge: 'value'});
-    this.$d().addField('author', {class: User, relation: 'manyToOne'});
-    this.$d().addField('comments', {class: Comment, relation: 'oneToMany'});
-    this.$d().addField('lastUpdate');
-    this.$d().addField('id');
-    this.$d().addField('likes', {readOnly: true});
-    this.$d().addField('dislikes', {readOnly: true});
-    this.$d().init(arguments);
-  }
-}
-new Explanation();
-
 class Group extends DataObject {
   constructor() {
     super();
@@ -128,12 +110,33 @@ class Group extends DataObject {
 }
 new Group();
 
+class Explanation extends DataObject {
+  constructor() {
+    super();
+    this.$d().setTableNames('EXPLANATION_DETAIL')
+    this.$d().addField('content');
+    this.$d().addField('words', {class: Words, relation: 'manyToOne', merge: 'value'});
+    this.$d().addField('searchWords', {class: Words, relation: 'manyToOne', merge: 'value'});
+    this.$d().addField('author', {class: User, relation: 'manyToOne'});
+    this.$d().addField('group', {class: Group, relation: 'manyToOne'});
+    this.$d().addField('comments', {class: Comment, relation: 'oneToMany'});
+    this.$d().addField('lastUpdate');
+    this.$d().addField('id');
+    this.$d().addField('likes', {readOnly: true});
+    this.$d().addField('dislikes', {readOnly: true});
+    this.$d().init(arguments);
+  }
+}
+new Explanation();
+
+
 class GroupContributor extends DataObject {
   constructor() {
     super();
     this.$d().addField('user', {class: User, relation: 'manyToOne'});
-    this.$d().addField('admin');
     this.$d().addField('groupId');
+    this.$d().addField('admin');
+    this.$d().addField('notify');
     this.$d().addField('id');
     this.$d().init(arguments);
   }
