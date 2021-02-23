@@ -28,7 +28,6 @@ function end() {
   queryCount++;
   if (queryCount === limit) {
     const time = (new Date().getTime() - start.getTime()) / 1000;
-    console.log('open  mysql:', time);
   }
 }
 
@@ -49,7 +48,6 @@ function mysql() {
   }
 
   const time = (new Date().getTime() - start.getTime()) / 1000;
-  console.log('close mysql:', time);
   mysqlOpen();
 }
 
@@ -57,7 +55,6 @@ function add() {
   count++;
   if (count === limit) {
     const time = (new Date().getTime() - start.getTime()) / 1000;
-    console.log('clean:', time);
     mysql();
   }
 }
@@ -66,7 +63,6 @@ async function acyncAdd(release) {
   count++;
   if (count === limit) {
     const time = (new Date().getTime() - start.getTime()) / 1000;
-    console.log('mutex:', time);
     count = 0;
     start = new Date();
     for (let i = 0; i < limit; i++) {
@@ -82,7 +78,6 @@ for (let i = 0; i < limit; i++) {
 }
 
 function clean() {
-  console.log('cleaning:', arguments);
   openConn.end();
 };
 

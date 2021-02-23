@@ -4,7 +4,8 @@ const crud = Crud.instance('CE');
 
 const { QuestionNotification, CommentNotification, ExplanationNotification,
         ExplanationConnections, CommentConnections, Site, Explanation,
-        Question } =
+        ExplanationTagFollower, QuestionTagFollower, CommentTagFollower,
+        Follower, GroupFollower, Question } =
                 require('./database/objects');
 
 function notNotified(connection, notified, ignoreId, idAttr) {
@@ -74,15 +75,96 @@ function notifyComment (comment) {
   crud.select(commentConnect, insertNotifications);
 }
 
+function notifyCommentFollowers(comment) {
+  function notifyFollowers(followers) {
+    for (let index = 0; index < followers.length; index += 1) {
+      const uId = followers[index].userId;
+      const site = new Site(comment.siteId);
+      const expl = new Explanation(comment.explanationId);
+      const note = new CommentNotification(uId, site, expl, comment);
+      crud.insert(note);
+    }
+  }
+
+  crud.select(new CommentTagFollower(undefined, comment.tags));
+}
+
+function notifyExplanationFollowers(expl) {
+  function notifyFollowers(followers) {
+    for (let index = 0; index < followers.length; index += 1) {
+      const uId = followers[index].userId;
+      const site = new Site(expl.siteId);
+      const note = new ExplanationNotification(uId, site, expl);
+      crud.insert(note);
+    }
+  }
+
+  crud.select(new ExplanationTagFollower(undefined, expl.tags));
+}
+
+function notifyQuestionFollowers(question) {
+  function notifyFollowers(followers) {
+    for (let index = 0; index < followers.length; index += 1) {
+      const uId = followers[index].userId;
+      const site = new Site(question.siteId);
+      const note = new QuestionNotification(uId, site, question);
+      crud.insert(note);
+    }
+  }
+
+  crud.select(new QuestionTagFollower(undefined, question.tags));
+}
+
+
+function cloneNotifyUser(list, userIdAttr, notification) {
+  for (let index = 0; index < list.length; index += 1) {
+    const userId = list[index][userIdAttr];
+    const userNote = notification.$d().clone();
+    userNote.setUserId(userId);
+    crud.insert(userNote);
+  }
+}
+
+function notifyGroupFollowers(dataObj, notification) {
+  if (dataObj.group && dataObj.group.id) {
+    cloneNotifyUser([dataObj.group.creator], 'id', notification);
+    const notify = (followers) => cloneNotifyUser(followers, 'userId', notification);
+    crud.select(new GroupFollower(undefined, dataObj.group.id), notify);
+  }
+}
+
+function notifyFollowers(authorId, notification) {
+  console.log('\nhere\n',notification)
+  const notify = (followers) => cloneNotifyUser(followers, 'userId', notification);
+  crud.select(new Follower(undefined, authorId), notify);
+}
+
 function Notify(dataObject, success) {
+  let note, authorId, expl, site;
   switch (dataObject.constructor.name) {
     case 'Explanation':
       notifyExpl(dataObject);
-      success(dataObject);
+      notifyExplanationFollowers(dataObject);
+      expl = dataObject;
+      site = new Site(expl.siteId);
+      note = new ExplanationNotification(undefined, site, expl);
+      authorId = expl.author.id;
       break;
     case 'Comment':
       notifyComment(dataObject);
-      success(dataObject);
+      notifyCommentFollowers(dataObject);
+      const comment = dataObject;
+      expl = new Explanation(comment.explanationId);
+      site = new Site(comment.siteId);
+      note = new CommentNotification(undefined, site, expl, comment);
+      authorId = comment.author.id;
+      break;
+    case 'Question':
+      notifyQuestionFollowers(dataObject);
+      const question = dataObject;
+      site = new Site(question.siteId);
+      note = new QuestionNotification(undefined, site, question);
+      authorId = question.asker.id;
       break;
     case 'Number':
       crud.select(new Notification(dataObject, undefined), success);
@@ -90,6 +172,8 @@ function Notify(dataObject, success) {
     default:
     console.error(`Unknown notification Object: '${dataObject.constructor.name}'`);
   }
+  notifyGroupFollowers(dataObject, note);
+  notifyFollowers(authorId, note);
 }
 
 exports.Notify = Notify;

@@ -1,0 +1,9 @@
+
+-- ==========================  VALUES  =====================--
+
+INSERT INTO NOTIFICATION_TYPE (ID, VALUE) VALUES (1, 'Comment');
+INSERT INTO NOTIFICATION_TYPE (ID, VALUE) VALUES (2, 'Explanation');
+INSERT INTO NOTIFICATION_TYPE (ID, VALUE) VALUES (3, 'Question');
+
+INSERT INTO SITE_PARTS (ID, VALUE) VALUES (1, 'http://');
+INSERT INTO SITE_PARTS (ID, VALUE) VALUES (2, 'https://');

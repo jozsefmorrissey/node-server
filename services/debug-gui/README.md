@@ -10,7 +10,7 @@ provides a easy to use graphical interface that can be added to any html file.
 
   npm install
 
-  node ./node-server.js
+  node ./server.js
 
   navigate to http://localhost:3000/debug-gui/html/debug-gui-client-test.html?DebugGui.debug=name
 

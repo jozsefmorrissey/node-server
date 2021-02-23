@@ -9,7 +9,8 @@
     "get": "/user/:idsOemail",
     "login": "/user/login",
     "update": "/user/update/:updateSecret",
-    "requestUpdate": "/user/update/request"
+    "requestUpdate": "/user/update/request",
+    "find": "/user/find/:username"
   },
   "credential": {
     "add": "/credential/add/:userId",
@@ -21,22 +22,24 @@
   },
   "site": {
     "add": "/site",
-    "get": "/site/get"
+    "get": "/site/get",
+    "view": "/site/view/:isViewing",
+    "viewing": "/site/viewing"
   },
   "explanation": {
     "add": "/explanation",
     "author": "/explanation/author/:authorId",
     "get": "/explanation/:words",
-    "update": "/explanation"
+    "update": "/explanation",
+    "opinion": {
+      "like": "/explanation/like/:explanationId/:siteId",
+      "dislike": "/explanation/dislike/:explanationId/:siteId",
+      "bySite": "/explanation/opinion/:siteId/:userId"
+    }
   },
   "siteExplanation": {
     "add": "/site/explanation/:explanationId",
     "get": "/site/explanation"
-  },
-  "opinion": {
-    "like": "/like/:explanationId/:siteId",
-    "dislike": "/dislike/:explanationId/:siteId",
-    "bySite": "/opinion/:siteId/:userId"
   },
   "endpoints": {
     "json": "/html/endpoints.json",
@@ -52,23 +55,48 @@
     "search": "/merriam/webster/:searchText"
   },
   "comment": {
-    "add": "/comment/add"
+    "add": "/comment",
+    "update": "/comment"
   },
   "question": {
-    "add": "/question/add"
+    "get": "/question/:id",
+    "add": "/question",
+    "update": "/question",
+    "unclear": "/question/opinion/unclear/:id",
+    "answered": "/question/opinion/answered/:id",
+    "resetOpinion": "/question/opinion/reset/:id"
   },
   "notification": {
-    "get": "/notifications"
+    "get": "/notifications/:userId"
+  },
+  "tag": {
+    "find": "/tag/:searchVal",
+    "all": "/tag"
   },
   "group": {
+    "get": "/group/:groupId",
+    "create": "/group",
+    "transferRequest": "/group/transfer/request",
+    "transfer": "/group/transfer/confirmed",
+    "contributor": {
+      "add": "/group/contributor/:userIds/:groupId/:emailNotify/:inAppNotify/:level",
+      "remove": "/group/contributor/:userIds/:groupId",
+      "changeLevel": "/group/contributor/:userIds/:groupId/:change"
+    },
     "explanation": {
-      "add": "/group/explanation/add/:groupId/:explanationId"j,
+      "get": "/group/explanation/:id",
+      "add": "/group/explanation/add/:groupId/:explanationId",
       "opinion": {
         "like": "/group/explanation/opinion/like/:groupId/:explanationId",
         "dislike": "/group/explanation/opinion/dislike/:groupId/:explanationId"
       }
-    }
-  }
+    },
+    "notify": "/group/notify/:groupId/:emailNotify/:inAppNotify"
+  },
+  "follow": {
+    "update": "/follow/update",
+    "get": "/follow"
+  },
   "_secure": [
     "user.update",
     "credential.get",

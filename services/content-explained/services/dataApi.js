@@ -1,26 +1,34 @@
 const bcrypt = require('bcryptjs');
 const shell = require('shelljs');
-const Crud = require('./database/mySqlWrapper').Crud;
+const { Crud, DataObject } = require('./database/mySqlWrapper');
 
 let user, password;
 if (global.ENV !== 'local') {
   user = shell.exec('pst value ce-mysql user').stdout.trim();
   password = shell.exec('pst value ce-mysql password').stdout.trim();
+  ignoreAuthintication = true;
 }
-const crud = Crud.set('CE', {password, user, silent: false, mutex: false});
+const crud = Crud.set('CE', {password, user, silent: !global['debug'], mutex: false});
 
 const { EPNTS } = require('./EPNTS');
 const { Notify } = require('./notification');
+const TagSvc = require('./repo/tag');
 const { Context } = require('./context');
 const { InvalidDataFormat, InvalidType, UnAuthorized, SqlOperationFailed,
         EmailServiceFailure, ShouldNeverHappen, DuplacateUniqueValue,
         NoSiteFound, ExplanationNotFound, NotFound, CredentialNotActive,
-        InvalidRequest} =
+        InvalidRequest, BulkUpdateFailure, SignalError } =
         require('./exceptions.js');
-const { User, Explanation, Site, Opinion, SiteExplanation, Credential,
-        DataObject, Ip, UserAgent, Words, PendingUserUpdate, Comment, Question,
-        QuestionNotification, CommentNotification, ExplanationNotification,
-        SiteParts } =
+const { Ip, UserAgent, Credential, User, PendingUserUpdate, Tag, Words,
+        CommentTag, CommentTagFollower, OpenSite, Comment, GroupTag,
+        Group, ExplanationTag, ExplanationTagFollower,
+        Explanation, GroupContributor, GroupedOpinion, GroupedExplanation,
+        GroupFollower, Follower, Opinion, SiteExplanation, SiteParts, Site,
+        QuestionOpinion, QuestionComment, QuestionTag, QuestionTagFollower,
+        Question, Notification, ExplanationNotification, CommentNotification,
+        QuestionNotification, CommentConnections, ExplanationConnections,
+        UserName, Following, GroupedExplanationDetail, AccessibleGroup,
+        ConciseUser } =
                 require('../services/database/objects');
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
@@ -36,16 +44,52 @@ function returnVal(res, value) {
   }
 }
 
-function returnQuery(res) {
+function callAfter(count, getBody, success, failure) {
+  getBody = getBody || ((r) => r);
+  const returnArr = [];
+  let processed = 0;
   return function (results) {
+    returnArr.push(results);
+    if (++processed === count) {
+      const returnVal = getBody(returnArr);
+      if (returnVal instanceof Error) {
+        failure(returnVal);
+      } else {
+        success(returnVal);
+      }
+    }
+  }
+}
+
+function returnQuery(res) {
+  const parentArgs = arguments;
+  return function (results) {
+    let body;
+    if (parentArgs.length === 1) {
+      body = results;
+    } else if (parentArgs.length === 2) {
+      body = [];
+      for (let index = 0; index < results.length; index += 1) {
+        body.push(results[index][parentArgs[1]]);
+      }
+    } else {
+      body = [];
+      for (let index = 0; index < results.length; index += 1) {
+        const elem = {};
+        for (let aIndex = 1; aIndex < arguments.length; aIndex += 1) {
+          const attr = parentArgs[aIndex];
+          elem[attr] = result[index][attr];
+        }
+        body.push(elem);
+      }
+    }
     res.setHeader('Content-Type', 'application/json');
-    res.send(results);
+    res.send(body);
   }
 }
 
 function forEach(func, returnObj) {
   return function (list, success) {
-    console.log('questions:', list)
     list.forEach((item) => func(item));
     success(returnObj);
   }
@@ -55,6 +99,24 @@ function returnError(next, error) {
   return function(e) {
     const err = error === undefined ? e : error;
     next(err);
+  }
+}
+
+function alwaysSucceed(func) {
+  return function () {
+    func.apply(null, arguments);
+    arguments[arguments.length - 2]();
+  }
+}
+
+function conditionalFunc(condition, func) {
+  return function () {
+    if(condition) {
+      func.apply(null, arguments)
+    } else {
+      const args = Array.from(arguments).splice(0, arguments.length - 2);
+      arguments[arguments.length - 2].apply(null, args);
+    }
   }
 }
 
@@ -95,11 +157,11 @@ function retrieve(dataObject, next, success, fail) {
     .execute();
 }
 
-const siteUrlReg = /^(http(s|):\/\/)(.*?\/)((((\#|\?)([^#]*))(((\#)(.*))|)|))$/;
+const siteUrlReg = /^(http(s|):\/\/)(.{1,}?(\/|))((((\#|\?)([^#]*))(((\#)(.*))|)|))$/;
 function parseSiteUrl(url) {
   const match = url.match(siteUrlReg);
   if (!match) return [undefined, url];
-  return [match[1], match[3], match[6], match[9]];
+  return [match[1], match[3], match[7], match[10]];
 }
 
 function getIp(ip, next, success) {
@@ -188,10 +250,14 @@ async function auth(req, next, success) {
   }
 
   const type = match[1];
-  const id = Number.parseInt(match[2]);
+  const id = int(match[2]);
   const secret = match[3];
 
   function validateAuthorization(user) {
+    if (global['bypass.auth']) {
+      success(user);
+      return;
+    }
     const credentials = user.getCredentials();
     for (let index = 0; index < credentials.length; index += 1) {
       const credential = credentials[index];
@@ -227,7 +293,7 @@ async function auth(req, next, success) {
 function parseIds(idsStr) {
   const idsStrArr = idsStr.split(',');
   const ids = [];
-  idsStrArr.map((value) => ids.push(Number.parseInt(value)));
+  idsStrArr.map((value) => ids.push(int(value)));
   return ids;
 }
 
@@ -240,7 +306,7 @@ async function createCredential(req, next, userId, success, fail) {
   const userAgentVal = req.headers['user-agent'];
   const secret = createSecret();
   const activationSecret = createSecret();
-  let user = new User(Number.parseInt(userId));
+  let user = new User(int(userId));
 
   const cred = await buildRequestCredential(req, next);
   cred.setUserId(user.id);
@@ -275,11 +341,11 @@ function insertTags(tags, success, failure) {
   success();
 }
 
-function addGroupOpinion(req, next, favorable, explanationId, groupId, success, fail) {
-  const context = Context.fromReq(req);
-  const opinion = new GroupOpinion(favorable, explanationId, groupId);
-  const delOpinion = new Opinion(undefined, explanationId, groupId);
+function int(value) {
+  return Number.parseInt(value);
+}
 
+function addOpinion(req, next, explanationId, opinion, delOpinion, success, fail) {
   function setUserId(user, success) {
     delOpinion.setUserId(user.id);
     opinion.setUserId(user.id);
@@ -292,7 +358,9 @@ function addGroupOpinion(req, next, favorable, explanationId, groupId, success, 
       success();
     }
   }
-  new context.callbackTree(auth, 'submittingGroupOpinion', req, next)
+
+  const context = Context.fromReq(req);
+  context.callbackTree(auth, 'submittingOpinion', req, next)
     .success(setUserId, 'settingUser')
     .success('settingUser', crud.selectOne, 'gettingExpl', new Explanation(explanationId))
     .success('gettingExpl', notAuthor, 'checkingUserNotAuthor')
@@ -305,34 +373,26 @@ function addGroupOpinion(req, next, favorable, explanationId, groupId, success, 
     .execute();
 }
 
+function addGroupedOpinion(req, next, favorable, explanationId, groupId, success, fail) {
+  explanationId = int(explanationId);
+  groupId = int(groupId);
 
-function addOpinion(req, next, favorable, explanationId, siteId, success, fail) {
-  const context = Context.fromReq(req);
-  const opinion = new Opinion(favorable, explanationId, siteId);
-  const delOpinion = new Opinion(undefined, explanationId, siteId);
-  function setUserId(user, success) {
-    delOpinion.setUserId(user.id);
-    opinion.setUserId(user.id);
-    success();
-  }
-  function notAuthor(expl, success, fail) {
-    if (expl.author.id === opinion.getUserId()) {
-      fail(new UnAuthorized('Authors cannot rate thier own work', '8yUDpd'));
-    } else {
-      success();
-    }
-  }
-  new context.callbackTree(auth, 'submittingOpinion', req, next)
-    .success(setUserId, 'settingUser')
-    .success('settingUser', crud.selectOne, 'gettingExpl', new Explanation(explanationId))
-    .success('gettingExpl', notAuthor, 'checkingUserNotAuthor')
-    .fail('gettingExpl', returnError(next), 'explanationNotFound')
-    .success('checkingUserNotAuthor', crud.delete, 'deletingOpinion', delOpinion)
-    .fail('checkingUserNotAuthor', returnError(next), 'authorWeighingIn')
-    .success('deletingOpinion', crud.insert, 'insertingOpinion', opinion)
-    .success('insertingOpinion', success)
-    .fail('insertingOpinion', fail)
-    .execute();
+
+  const like = favorable === true;
+  const dislike = favorable === false;
+  let opinion = new GroupedOpinion(explanationId, groupId, like, dislike);
+  let delOpinion = new GroupedOpinion(explanationId, groupId);
+
+  addOpinion(req, next, explanationId, opinion, delOpinion, success, fail);
+}
+
+function addSiteOpinion(req, next, favorable, explanationId, siteId, success, fail) {
+  explanationId = int(explanationId);
+  siteId = int(siteId);
+
+  let opinion = new Opinion(favorable, explanationId, siteId);
+  let delOpinion = new Opinion(undefined, explanationId, siteId);
+  addOpinion(req, next, explanationId, opinion, delOpinion, success, fail);
 }
 
 function activationStatus(credential) {
@@ -345,7 +405,7 @@ function getUsers(idsOemail, success, fail) {
   // TODO: test get by email
   if (idsOemail.match(idStrReg)) {
     if (idsOemail.indexOf(',') === -1) {
-      user.setId(Number.parseInt(idsOemail));
+      user.setId(int(idsOemail));
       crud.selectOne(user, success, fail);
     } else {
       user.setId(parseIds(idsOemail));
@@ -368,7 +428,7 @@ function cleanStr(str) {
 function addExplToSite(explId, siteUrl, next, success) {
   if (siteUrl !== undefined) {
     const context = Context.fromFunc(success);
-    const explanationId = Number.parseInt(explId);
+    const explanationId = int(explId);
     const siteExpl = new SiteExplanation();
     function setSiteId(site, callback) {siteExpl.setSiteId(site.id); callback();}
     function setExplanation(expl, callback) {siteExpl.setExplanation(expl); callback();}
@@ -404,6 +464,21 @@ function endpoints(app, prefix, ip) {
 
       app.get(prefix + EPNTS.user.get(), function (req, res, next) {
         getUsers(req.params.idsOemail, returnQuery(res), returnError(next, new NotFound('User')));
+      });
+
+      const searchReg = (str) => new RegExp(`.*${str.split('').join('.*')}.*`);
+      app.get(prefix + EPNTS.user.find(), function (req, res, next) {
+        const reg = searchReg(req.params.username);
+        const map = {};
+        const createMap = (results, success) =>
+          results.map((result) => map[result.username] = result.id) && success();
+        const searchUser = new UserName();
+        searchUser.setUsername(reg);
+        const context = Context.fromReq(req);
+        context.callbackTree(crud.select, 'findingUsers', searchUser)
+          .success(createMap, 'creatingMap')
+          .success('creatingMap', returnVal(res, map))
+          .execute();
       });
 
       app.post(prefix + EPNTS.user.add(), function (req, res, next) {
@@ -464,7 +539,7 @@ function endpoints(app, prefix, ip) {
 
         context.callbackTree(auth, 'requestUpdate', req, next)
           .success(validateUpdatingLoggedInUser, 'validating')
-          .success('validating', crud.select, 'checkingForUnique', noId, true)
+          .success('validating', crud.select, 'checkingForUnique', noId, {or: true})
           .fail('validating', returnError(next), 'validationFailed')
           .success('checkingForUnique', emptyResults, 'emptyResults')
           .success('emptyResults', crud.insert, 'insertingUpdate', userUpdate)
@@ -519,8 +594,8 @@ function endpoints(app, prefix, ip) {
     app.get(prefix + EPNTS.credential.activate(), function (req, res, next) {
       const context = Context.fromReq(req);
       const cred =  new Credential();
-      cred.setUserId(Number.parseInt(req.params.userId));
-      cred.setId(Number.parseInt(req.params.id));
+      cred.setUserId(int(req.params.userId));
+      cred.setId(int(req.params.id));
 
       function activate(credential) {
         if (credential.getActivationSecret() === null) {
@@ -586,7 +661,7 @@ function endpoints(app, prefix, ip) {
       const credential = new Credential();
       const idOauth = req.params.idOauthorization;
       if (idOauth.match(idStrReg)) {
-        credential.setId(Number.parseInt(idOauth));
+        credential.setId(int(idOauth));
       } else {
         const match = idOauth.match(authReg);
         if (match === null) {
@@ -640,7 +715,7 @@ function endpoints(app, prefix, ip) {
 
   app.get(prefix + EPNTS.explanation.author(), function (req, res, next) {
     const explanation = new Explanation();
-    const authorId = Number.parseInt(req.params.authorId);
+    const authorId = int(req.params.authorId);
     explanation.setAuthor(new User(authorId));
     crud.select(explanation, returnQuery(res), returnError(next));
   });
@@ -651,13 +726,15 @@ function endpoints(app, prefix, ip) {
     explanation.setLastUpdate(new Date());
     const idOnly = new Explanation();
     function setAuthor(author, success) {
-      function setGroup(group) {
-        explanation.setGroup(group);
+      function setGroup(gc) {
+        const accessibleGroup = new AccessibleGroup(gc.groupId);
+        explanation.setGroupAuthor(accessibleGroup);
         success();
       }
       explanation.setAuthor(author);
       if (req.body.groupId) {
-        crud.selectOne(new GroupContributor(author), req.body.groupId), setGroup, returnError(next));
+        const groupCont = new GroupContributor(author, int(req.body.groupId));
+        crud.selectOne(groupCont, setGroup, returnError(next));
       } else {
         success();
       }
@@ -681,7 +758,9 @@ function endpoints(app, prefix, ip) {
     try{
       context.callbackTree(auth, 'addExplanation', req, next)
         .success(setAuthor, 'settingAuthor')
-        .success('settingAuthor', getWords, 'gettingWords', req.body.words, next)
+        .success('settingAuthor', getSite, 'gettingSite', req.body.siteUrl, next)
+        .success('gettingSite', setValue(explanation, 'siteId'), 'settingSite', '$cbtArg[0].id')
+        .success('settingSite', getWords, 'gettingWords', req.body.words, next)
         .success('gettingWords', setWords, 'settingWords')
         .success('settingWords', setSearchWords, 'settingSearchWords')
         .success('settingSearchWords', crud.insert, 'insertExpl', explanation)
@@ -690,7 +769,8 @@ function endpoints(app, prefix, ip) {
         .success('settingId', addExplToSite, 'addingToSite', '$cbtArg.explId', req.body.siteUrl, next)
         .success('addingToSite', crud.selectOne, 'gettingExplss', idOnly)
         .fail('addingToSite', returnError(next))
-        .success('gettingExplss', Notify, 'notifying', '$cbtArg.expl = $cbtArg[0]')
+        .success('gettingExplss', alwaysSucceed(TagSvc.updateObj), 'updatingTags', '$cbtArg.expl = $cbtArg[0]', req.body.tagStr)
+        .success('updatingTags', alwaysSucceed(Notify), 'notifying', '$cbtArg.expl')
         .fail('gettingExplss', returnError(next), 'retErr')
         .success('notifying', returnQuery(res), 'returnin', '$cbtArg.expl')
         .execute();
@@ -699,33 +779,58 @@ function endpoints(app, prefix, ip) {
     }
   });
 
+  function has(list, valueObj) {
+    const keys = Object.keys(valueObj);
+    for (let lIndex = 0; list && lIndex < list.length; lIndex += 1) {
+      const item = list[lIndex];
+      let found = true;
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        const value = valueObj[key];
+        if (item[key] !== value) {
+          found = false;
+        }
+      }
+      if (found) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   app.put(prefix + EPNTS.explanation.update(), function (req, res, next) {
     const context = Context.fromReq(req);
-    const explId = Number.parseInt(req.body.id);
+    const explId = int(req.body.id);
     const idOnly = new Explanation(explId);
     const contentOnly = idOnly.$d().clone();
     contentOnly.setLastUpdate(new Date());
     const notifyObj = new Explanation(explId);
-    let userId;
+    let user;
     contentOnly.setContent(req.body.content);
-    function recordUserId(id, success) {userId = id; success();}
-    function validateUser(author, success, fail) {
-      if (author.id === userId) {
-        notifyObj.setAuthor(author);
+    function recordUser(u, success) {user = u; success();}
+    function validateUser(expl, success, fail) {
+      if (expl.author.id === user.id) {
+        notifyObj.setAuthor(user);
+        success();
+      } else if (expl.groupAuthor && has(user.groups, {id: expl.groupAuthor.id})) {
+        notifyObj.setAuthor(user);
         success();
       } else {
         fail();
       }
     }
+
     context.callbackTree(auth, 'updateExpl', req, next)
-      .success(recordUserId, 'recordingLoggedInUser', '$cbtArg[0].id')
+      .success(recordUser, 'recordingLoggedInUser', '$cbtArg[0]')
       .success('recordingLoggedInUser', crud.selectOne, 'gettingExpl', idOnly)
-      .success('gettingExpl', validateUser, 'validatingAuthor', '$cbtArg[0].author')
+      .fail('gettingExpl', returnError(new InvalidRequest('Invalid explanationId')), 'failedToSelect')
+      .success('gettingExpl', validateUser, 'validatingAuthor', '$cbtArg[0]')
       .fail('gettingExpl', returnError(next, new NotFound('Explanation', req.body.id)), 'nf')
       .success('validatingAuthor', crud.update, 'updating', contentOnly)
-      .fail('validatingAuthor', returnError(next, new UnAuthorized('Updates can only be made by the author.')), 'unAuth3')
-      .success('updating', Notify, 'notifying', notifyObj)
+      .fail('validatingAuthor', returnError(next, new UnAuthorized('Updates can only be made by the author or a member of the groupAuthor.')), 'unAuth3')
+      .success('updating', alwaysSucceed(TagSvc.updateObj), 'updatingTags', contentOnly, req.body.tagStr)
       .fail('updating', returnError(next))
+      .success('updatingTags', alwaysSucceed(Notify), 'notifying', notifyObj)
       .success('notifying', returnVal(res, 'success'), 'returning', '$cbtArg.comment')
       .execute();
   });
@@ -742,9 +847,36 @@ function endpoints(app, prefix, ip) {
       .success('recordingAuthorId', getSite, 'gettingSite', req.body.siteUrl, next)
       .success('gettingSite', setValue(comment, 'siteId'), 'settingSite', '$cbtArg[0].id')
       .success('settingSite', crud.insertGet, 'insertingComment', comment)
-      .success('insertingComment', Notify, 'notifying', '$cbtArg.comment = $cbtArg[0]')
+      .success('insertingComment', alwaysSucceed(TagSvc.updateObj), 'updatingTags', '$cbtArg.comment = $cbtArg[0]', req.body.tagStr)
       .fail('insertingComment', returnError(next))
-      .success('notifying', returnVal(res))
+      .success('updatingTags', alwaysSucceed(Notify), 'notifying', '$cbtArg.comment')
+      .success('notifying', returnQuery(res), 'success', '$cbtArg.comment')
+      .execute();
+  });
+
+  app.put(prefix + EPNTS.comment.update(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    let dataObj = {};
+    let comment;
+    function assertAuthor(cmt, success, fail) {
+      comment = cmt;
+      if (comment.author.id === dataObj.userId) {
+        comment.setValue(req.body.value);
+        comment.setLastUpdate(new Date());
+        success(comment);
+      } else {
+        fail();
+      }
+    }
+    context.callbackTree(auth, 'updateComment', req, next)
+      .success(setValue(dataObj, 'userId'), 'savingUserId', '$cbtArg[0].id')
+      .success('savingUserId', crud.selectOne, 'gettingComment', new Comment(req.body.id))
+      .success('gettingComment', assertAuthor, 'assertingAuthor')
+      .fail('gettingComment', returnError(next))
+      .success('assertingAuthor', crud.updateGet, 'updatingComment', comment)
+      .fail('assertingAuthor', returnError(next, new UnAuthorized('You are not the author of this comment')))
+      .success('updatingComment', returnQuery(res))
+      .fail('updatingComment', returnError(next))
       .execute();
   });
 
@@ -752,9 +884,8 @@ function endpoints(app, prefix, ip) {
 
   app.post(prefix + EPNTS.question.add(), function (req, res, next) {
     const context = Context.fromReq(req);
-    const question = new Question(req.body.content, req.body.elaboration);
+    const question = new Question(req.body.elaboration);
     question.setLastUpdate(new Date());
-    const idOnly = new Question();
 
     context.callbackTree(auth, 'addQuestion', req, next)
       .success(setValue(question, 'asker'), 'settingAsker')
@@ -762,14 +893,87 @@ function endpoints(app, prefix, ip) {
       .success('gettingSiteId', setValue(question, 'siteId'), 'settingSiteId', '$cbtArg[0].id')
       .success('settingSiteId', getWords, 'gettingWords', req.body.words, next)
       .success('gettingWords', setValue(question, 'words'), 'settingWords')
-      .success('settingWords', crud.insert, 'insertExpl', question)
-      .success('insertExpl', setValue(question, 'id'), 'settingQid', '$cbtArg.questionId = $cbtArg[0].insertId')
-      .success('settingQid', setValue(idOnly, 'id'), 'settingOid', '$cbtArg.questionId')
-      .success('settingOid', crud.selectOne, 'gettingQuestion', idOnly)
-      .success('gettingQuestion', returnQuery(res), 'returnin')
-      .fail('gettingQuestion', returnError(next), 'retErr')
+      .success('settingWords', crud.insertGet, 'insertQuestion', question)
+      .success('insertQuestion', alwaysSucceed(TagSvc.updateObj), 'updatingTags', '$cbtArg.question = $cbtArg[0]', req.body.tagStr)
+      .success('updatingTags', returnQuery(res), 'returnin', '$cbtArg.question')
+      .fail('insertQuestion', returnError(next), 'retErr')
       .execute();
     });
+
+  function removeQuestionOpinion(questionId, userId, success, fail) {
+    const uIdOnly = new QuestionOpinion(questionId, userId);
+    crud.deleteGet(uIdOnly, success, fail);
+  }
+
+  function submitQuestionOpinion(userId, questionId, unclear, answered, success, fail) {
+    unclear = unclear === true;
+    answered = !unclear && answered === true;
+    if (answered || unclear) {
+      removeQuestionOpinion(questionId, userId, (deleted) => {
+        const newOpinion = new QuestionOpinion(questionId, userId, unclear, answered);
+        crud.insert(newOpinion, success, fail);
+      }, fail);
+    }
+  }
+
+  function assertEquals(val1, val2, success, fail) {
+    if (val1 === val2) {
+      success();
+    } else {
+      fail();
+    }
+  }
+
+  app.put(prefix + EPNTS.question.update(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    const question = new Question(req.body.elaboration);
+    question.setId(req.body.id);
+    context.callbackTree(auth, 'updateQuestion', req, next)
+      .success(crud.selectOne, 'gettingQuestion', new Question(question.id), '//$cbtArg.userId = $cbtArg[0].id')
+      .success('gettingQuestion', assertEquals, 'verifyingAuthor', '$cbtArg[0].asker.id', '$cbtArg.userId')
+      .fail('gettingQuestion', returnError(next, new InvalidRequest('Invalid id: ' + question.id)), 'invalidId')
+      .success('verifyingAuthor', crud.updateGet, 'updating', question)
+      .fail('verifyingAuthor', returnError(next, new UnAuthorized()), 'notAuthorized')
+      .success('updating', returnQuery(res), 'returnin')
+      .fail('updating', returnError(next, new ShouldNeverHappen()), 'pigsFlew')
+      .execute();
+  });
+
+  app.get(prefix + EPNTS.question.get(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    const question = new Question(int(req.params.id));
+    context.callbackTree(crud.select, 'gettingQuestion', question)
+      .success('gettingQuestion', returnQuery(res), 'found')
+      .fail('gettingQuestion', returnError(next), 'notFound')
+      .execute();
+  });
+
+  app.get(prefix + EPNTS.question.unclear(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    context.callbackTree(auth, 'unclearQuestion', req, next)
+      .success('unclearQuestion', submitQuestionOpinion, 'submittingOpinion', '$cbtArg[0].id', req.params.id, true, null)
+      .success('submittingOpinion', returnVal(res, 'success'), 'returnin')
+      .fail('submittingOpinion', returnError(next), 'retErr')
+      .execute();
+  });
+
+  app.get(prefix + EPNTS.question.answered(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    context.callbackTree(auth, 'answeredQuestion', req, next)
+      .success('answeredQuestion', submitQuestionOpinion, 'submittingOpinion', '$cbtArg[0].id', req.params.id, null, true)
+      .success('submittingOpinion', returnVal(res, 'success'), 'returnin')
+      .fail('submittingOpinion', returnError(next), 'retErr')
+      .execute();
+  });
+
+  app.get(prefix + EPNTS.question.resetOpinion(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    context.callbackTree(auth, 'resetQuestionOpinion', req, next)
+      .success(removeQuestionOpinion, 'resetingOpinion', req.params.id, '$cbtArg[0].id')
+      .success('resetingOpinion', returnVal(res, 'success'), 'returnin')
+      .fail('resetingOpinion', returnError(next), 'retErr')
+      .execute();
+  });
 
   //  ------------------------- Notification Api -------------------------  //
 
@@ -779,26 +983,13 @@ function endpoints(app, prefix, ip) {
 
 
 
-  app.post(prefix + EPNTS.notification.get(), function (req, res, next) {
-    const context = Context.fromReq(req);
-    let count = 0;
-    const userId = req.body.userId;
-    const body = [];
-    const explNotes = new ExplanationNotification(userId, undefined);
-    const commentNotes = new CommentNotification(userId, undefined);
-    const questionNotes = new QuestionNotification(userId, undefined);
-    const userSite = req.body.siteUrl.replace(/^http(s):\/\//, 'http://');
-    const addToBody = (name) => (results) => {
-      results.forEach((notification) => body.push(notification));
-      if (++count === 3) {
-        body.sort(byAttr('id'));
-        res.send(body);
-      }
+  app.get(prefix + EPNTS.notification.get(), function (req, res, next) {
+    const notes = new Notification(req.params.userId, undefined);
+    const sortAndReturn = (results) => {
+      results.sort(byAttr('id'));
+      res.send(results);
     }
-
-    crud.select(explNotes, addToBody('Explanation'), returnError(next));
-    crud.select(commentNotes, addToBody('Comment'), returnError(next));
-    crud.select(questionNotes, addToBody('Question'), returnError(next));
+    crud.select(notes, sortAndReturn, returnError(next));
   });
 
   //  ------------------------- SiteExplanation Api -------------------------  //
@@ -857,15 +1048,16 @@ function endpoints(app, prefix, ip) {
         results.map((siteExpl) => {
           const releventComments = [];
           const expl = siteExpl.explanation;
-          expl.comments.map((comment) => {
-            if (idArr.indexOf(comment.siteId) !== -1) {
-              releventComments.push(comment);
-            }
-            console.log('siteIid:', comment.siteId, 'in', idArr)
-          });
+          if (expl.comments !== undefined) {
+            expl.comments.map((comment) => {
+              if (idArr.indexOf(comment.siteId) !== -1) {
+                releventComments.push(comment);
+              }
+            });
+          }
           const words = init(siteExpl.explanation.searchWords);
-          expl.likes = siteExpl.likes;
-          expl.dislikes = siteExpl.dislikes;
+          expl.siteLikes = siteExpl.likes;
+          expl.siteDislikes = siteExpl.dislikes;
           expl.comments = releventComments;
           retObj.list[words].explanations.push(expl);
         });
@@ -887,19 +1079,19 @@ function endpoints(app, prefix, ip) {
 
   //  ------------------------- Opinion Api -------------------------  //
 
-  app.get(prefix + EPNTS.opinion.like(), function (req, res, next) {
-    const explanationId = Number.parseInt(req.params.explanationId);
-    const siteId =  Number.parseInt(req.params.siteId);
-    addOpinion(req, next, true, explanationId, siteId, returnVal(res, 'success'), returnError(next));
+  app.get(prefix + EPNTS.explanation.opinion.like(), function (req, res, next) {
+    const explanationId = int(req.params.explanationId);
+    const siteId =  int(req.params.siteId);
+    addSiteOpinion(req, next, true, explanationId, siteId, returnVal(res, 'success'), returnError(next));
   });
 
-  app.get(prefix + EPNTS.opinion.dislike(), function (req, res, next) {
-    const explanationId = Number.parseInt(req.params.explanationId);
-    const siteId =  Number.parseInt(req.params.siteId);
-    addOpinion(req, next, false, explanationId, siteId, returnVal(res, 'success'), returnError(next));
+  app.get(prefix + EPNTS.explanation.opinion.dislike(), function (req, res, next) {
+    const explanationId = int(req.params.explanationId);
+    const siteId =  int(req.params.siteId);
+    addSiteOpinion(req, next, false, explanationId, siteId, returnVal(res, 'success'), returnError(next));
   });
 
-  app.get(prefix + EPNTS.opinion.bySite(), function (req, res, next) {
+  app.get(prefix + EPNTS.explanation.opinion.bySite(), function (req, res, next) {
     const opinion = new Opinion();
     opinion.setSiteId(req.params.siteId);
     opinion.setUserId(req.params.userId);
@@ -909,53 +1101,57 @@ function endpoints(app, prefix, ip) {
   //  ------------------------- Group Api -------------------------  //
 
   function getGroup(groupId, success, fail) {
-    const group = new group(Number.parseInt(groupId));
-    crud.select(group, success, fail);
+    const group = new Group(int(groupId));
+    crud.selectOne(group, success, fail);
   }
 
-  function isAdmin(userId, groupId, success, fail) {
+  function isSuperiorAdmin(userId, newContributor, success, fail) {
     function checkAdmin(group) {
-      if (group.creatorId === userId) return true;
-      for (let index = 0; index < group.contributors.length; index += 1) {
-        const contributer = group.contributors[index];
-        if (contributer.admin && contributer.user.id === userId) {
-          return true;
+      let existingContRec = undefined;
+      for (let index = 0; group.contributors && index < group.contributors.length; index += 1) {
+        const contributor = group.contributors[index];
+        if (contributor.user.id === newContributor.user.id) {
+          existingContRec = contributor;
         }
       }
-      return false;
+      if (existingContRec !== undefined && userId === newContributor.user.id) {
+        return fail(new SignalError('user is trying to modify thier own information', '2he6yP'));
+      }
+      if (group.creator.id === newContributor.user.id) {
+        return fail(new InvalidRequest('This user is the creator not just a contributor'))
+      }
+
+      if (group.creator.id === userId) {
+        return success();
+      }
+
+
+      for (let index = 0; group.contributors && index < group.contributors.length; index += 1) {
+        const contributor = group.contributors[index];
+        if (contributor.user.id === userId) {
+          if (contributor.level > group.adminLevel) {
+            return fail(new InvalidRequest('You are not an adminstrator'));
+          } else if ((newContributor.level === undefined || contributor.level < newContributor.level) &&
+              (existingContRec === undefined || contributor.level < existingContRec.level)) {
+            return success();
+          } else {
+            return fail(new InvalidRequest('Your level is not high enough'));
+          }
+        }
+      }
+      return fail(new InvalidRequest('You are not a contributor to this group'));
     }
 
-    getGroup(groupId, checkAdmin, fail);
+    getGroup(newContributor.groupId, checkAdmin, fail);
   }
 
-  app.get(prefix + EPNTS.group.add.contributer(), function (req, res, next) {
-    const user = new User(req.params.userId);
-    const admin = req.params.admin === 'true';
+  app.get(prefix + EPNTS.group.get(), function (req, res, next) {
+    const context = Context.fromReq(req);
     const groupId = req.params.groupId;
-    const groupContributor = new GroupContributor(user, admin, groupId);
 
-    context.callbackTree(auth, 'addContributer', req, next)
-      .success(isAdmin, 'checkingAdminStatus', '$cbtArg[0].id', groupId)
-      .success('checkingAdminStatus', crud.insert, 'insertingGroupContributer', group)
-      .fail('checkingAdminStatus', returnError(res), 'adminCheckFailed')
-      .success('insertingGroupContributer', returnQuery(res), 'insertSuccessful')
-      .fail('insertingGroupContributer', returnError(next), 'insertFailed')
-      .execute();
-  });
-
-  app.get(prefix + EPNTS.group.remove.contributer(), function (req, res, next) {
-    const user = new User(req.params.userId);
-    const groupId = req.params.groupId;
-    const groupContributor = new GroupContributor(user, undefined, groupId);
-
-    context.callbackTree(auth, 'deleteContributer', req, next)
-      .success(isAdmin, 'checkingAdminStatus', '$cbtArg[0].id', groupId)
-      .success('checkingAdminStatus', crud.delete, 'deleteGroupContributer', group)
-      .fail('checkingAdminStatus', returnError(res), 'adminCheckFailed')
-
-giberish
-      .success('deleteGroupContributer', returnQuery(res), 'deleteSuccessful')
-      .fail('deleteGroupContributer', returnError(next), 'deleteFailed')
+    context.callbackTree(getGroup, 'getGroup', groupId)
+      .success(returnQuery(res), 'found')
+      .fail(returnError(next, new InvalidRequest(`No group with id ${groupId}`)), 'notFound')
       .execute();
   });
 
@@ -963,45 +1159,369 @@ giberish
     const context = Context.fromReq(req);
     const name = req.body.name;
     const description = req.body.description;
-    const group = new Group(name, description);
-    addGroupOpinion(req, next, true, explanationId, groupId, returnVal(res, 'success'), returnError(next));
-    setValue(question, 'siteId')
+    const adminLevel = req.body.adminLevel;
+    const image = req.body.image;
+    const group = new Group(name, description, adminLevel, image);
 
     context.callbackTree(auth, 'createGroup', req, next)
-      .success(setValue(group, 'creatorId'), 'settingCreatorId', '$cbtArg[0].id')
-      .success('settingCreatorId', crud.insert, 'insertingGroup', group)
-      .success('insertingGroup', returnQuery(res), 'insertSuccessful')
+      .success(setValue(group, 'creator'), 'settingCreatorId', '$cbtArg[0]')
+      .success('settingCreatorId', crud.insertGet, 'insertingGroup', group)
+      .success('insertingGroup', alwaysSucceed(TagSvc.updateObj), 'updatingTags', '$cbtArg.group = $cbtArg[0]', req.body.tagStr)
+      .success('updatingTags', returnQuery(res), 'insertSuccessful', '$cbtArg.group')
       .fail('insertingGroup', returnError(next), 'insertFailed')
       .execute();
   });
 
+  //  ------------------------- Group Contributor Api -------------------------  //
+
+  function validContributors(userId, contributors, admin, success) {
+    const results = {succeeded: [], failed: []};
+    let count = 0;
+    const returned = () => {
+      if (++count === contributors.length) {
+        success(results);
+      }
+    }
+
+    const context = Context.fromFunc(success);
+    const onSuccess = (groupCnt) => () => {
+      results.succeeded.push(groupCnt);
+      returned();
+    };
+    const onFail = (contributor) => (error) => {
+      if (admin || error.code !== '2he6yP') {
+        results.failed.push({contributor, error})
+      } else {
+        results.succeeded.push(contributor);
+      }
+      returned();
+    };
+    for (let index = 0; index < contributors.length; index += 1) {
+      const contributor = contributors[index];
+      const user = contributor.user;
+      const groupId = contributor.groupId;
+      const removeContributor = new GroupContributor(user, groupId);
+      context.callbackTree(isSuperiorAdmin, 'checkingAdminStatus', userId, contributor)
+      .success(onSuccess(contributor), 'successful')
+      .fail(onFail(contributor), 'failure')
+      .execute();
+    }
+  }
+
+  function modifyContributors(userId, contributors, admin, func, success) {
+    const context = Context.fromFunc(success);
+
+    function applyFunction(results) {
+      const cleanContributors = results.succeeded;
+
+      if (cleanContributors.length === 0) return success(results);
+      const count = cleanContributors.length;
+      const bulkCall = callAfter(count, ()=> results, success);
+      for (let index = 0; index < count; index += 1) {
+        const contributor = cleanContributors[index];
+        const user = contributor.user;
+        const groupId = contributor.groupId;
+        const funcId = 'callingFunc: ' + func.name;
+        const removeContributor = new GroupContributor(user, groupId);
+        context.callbackTree(func, 'modifyContributor', contributor)
+        .success('modifyContributor', bulkCall, funcId, contributor)
+        .execute();
+      }
+    }
+
+    context.callbackTree(validContributors, 'modifyContributor', userId, contributors, admin)
+      .success(applyFunction, 'applying')
+      .execute();
+  }
+
+  function valueMinMax(value, min, max) {
+    return value < min ? min : (value > max ? max : value);
+  }
+
+  function parseIntMinMax(strNum, min, max) {
+    const match = strNum.match(/^(-|)[0-9]{1,}$/);
+    if (match === null) return max;
+    const parsedVal = int(match[0]);
+    return valueMinMax(parsedVal, min, max);
+  }
+
+  function formatModifyContrib(results, success, fail) {
+    console.log('resultsss:', results)
+    if (results.failed.length > 0) {
+      fail(new BulkUpdateFailure('Failed to modify some contributors', results, 'oCxZYr'));
+    } else {
+      success(results);
+    }
+  }
+
+  app.post(prefix + EPNTS.group.contributor.add(), function (req, res, next) {
+    const userIds = parseIds(req.params.userIds);
+    const insertContributors = [];
+    const deleteContributors = [];
+    const level = parseIntMinMax(req.params.level, 0, 9);
+    const emailNotify = req.params.emailNotify === 'true';
+    const inAppNotify = req.params.inAppNotify === 'true';
+    const groupId = req.params.groupId;
+    userIds.map((id) => deleteContributors.push(
+      new GroupContributor(new User(id), groupId)
+    ));
+    userIds.map((id) => insertContributors.push(
+      new GroupContributor(new User(id), groupId, emailNotify, inAppNotify, level)
+    ));
+
+    Context.fromReq(req).callbackTree(auth, 'addContributor', req, next)
+      .success(modifyContributors, 'removingExistingReferences', '$cbtArg.userId = $cbtArg[0].id', deleteContributors, true, crud.delete)
+      .success('removingExistingReferences', modifyContributors, 'insertingContributor', '$cbtArg.userId', insertContributors, true, crud.insert)
+      .success('insertingContributor', formatModifyContrib, 'formatting')
+      .success('formatting', returnVal(res), 'success')
+      .fail('formatting', returnError(next), 'fail')
+      .execute();
+  });
+
+  app.delete(prefix + EPNTS.group.contributor.remove(), function (req, res, next) {
+    const userIds = parseIds(req.params.userIds);
+    const deleteContributors = [];
+    const groupId = req.params.groupId;
+    userIds.map((id) => deleteContributors.push(
+      new GroupContributor(new User(id), groupId)
+    ));
+
+    Context.fromReq(req).callbackTree(auth, 'addContributor', req, next)
+      .success(modifyContributors, 'removingExistingReferences', '$cbtArg.userId = $cbtArg[0].id', deleteContributors, false, crud.delete)
+      .success('removingExistingReferences', returnVal(res), 'insertingGroupedExplanation')
+      .execute();
+  });
+
+  const incReg = /^(-|\+)[0-9]{1,}$/;
+  const setReg = /^[0-9]{1,}$/;
+  function changeLevelFunc(change) {
+    let match = int(change.match(incReg));
+    if (match) return (cont) => cont.setLevel(valueMinMax(cont.level + match, 0, 64));
+    match = int(change.match(setReg));
+    if (match) return (cont) => cont.setLevel(valueMinMax(match, 0, 64));
+    return new InvalidRequest(`change '${change}' is not a valid input`);
+  }
+
+  app.put(prefix + EPNTS.group.contributor.changeLevel(), function (req, res, next) {
+    const changeFunc = changeLevelFunc(req.params.change);
+    if (changeFunc instanceof Error) {
+      returnError(next)(changeFunc);
+      return;
+    }
+    const userIds = parseIds(req.params.userIds);
+    const groupId = req.params.groupId;
+    const users = [];
+    userIds.map((id) => users.push(new User(id)));
+    const selectContributor = new GroupContributor(users, groupId)
+    Context.fromReq(req).callbackTree(auth, 'changingGroupContributorLevels', req, next)
+      .success(crud.select, 'gettingContributors', selectContributor, '//$cbtArg.userId = $cbtArg[0].id')
+      .success('gettingContributors', forEach(changeFunc), 'changing', '$cbtArg.contribs = $cbtArg[0]')
+      .success('changing', modifyContributors, 'modifying', '$cbtArg.userId', '$cbtArg.contribs', true, crud.updateGet)
+      .success('modifying', returnVal(res), 'success')
+      .execute();
+  });
+
+  app.get(prefix + EPNTS.group.notify(), function (req, res, next) {
+    let settingContrib = new GroupContributor();
+    const email = req.params.emailNotify === 'true';
+    const inApp = req.params.inAppNotify === 'true';
+    const groupId = int(req.params.groupId);
+    let updateObj;
+
+    const setSettingContrib = (contrib, success) => {
+      settingContrib.setId(contrib.id);
+      settingContrib.setNotify(notify);
+      success(settingContrib);
+    };
+
+    function setUpdateObj(accessGroup, success) {
+      console.log('Acccess:', accessGroup)
+      console.log(accessible);
+      switch (accessGroup.level) {
+        case -1:
+          updateObj = new Group (groupId);
+         break;
+        default:
+          const cu = new ConciseUser(accessGroup.contributorId);
+          console.log(cu);
+          updateObj = new GroupContributor(cu.id);
+      }
+      updateObj.setEmailNotify(email);
+      updateObj.setInAppNotify(inApp);
+      crud.update(updateObj, returnVal(res, 'success'), returnError(next));
+    }
+    console.log('gggid', groupId);
+    const accessible = new AccessibleGroup(groupId)
+    Context.fromReq(req).callbackTree(auth, 'updatingGroupNotifications', req, next)
+      .success(setValue(accessible, 'userId'), 'settingUser', '$cbtArg[0].id')
+      .success('settingUser', crud.selectOne, 'gettingAccessible', accessible)
+      .fail('gettingAccessible', returnError(next, new InvalidRequest(`You are not a authorized to access group ${groupId}`)))
+      .success('gettingAccessible', setUpdateObj, 'settingUpdateObj', '$cbtArg[0]')
+      .execute();
+  });
+
+  //  ------------------------- Tag Api -------------------------  //
+
+  app.get(prefix + EPNTS.tag.all(), function (req, res, next) {
+    const tag = new Tag();
+    crud.select(tag, returnQuery(res));
+  });
+
+  app.get(prefix + EPNTS.tag.find(), function (req, res, next) {
+    const tag = new Tag(searchReg(req.params.searchVal));
+    crud.select(tag, returnQuery(res));
+  });
+
+  //  ------------------------- Group Explanation Api -------------------------  //
+
   app.get(prefix + EPNTS.group.explanation.opinion.like(), function (req, res, next) {
-    const context = Context.fromReq(req);
     const groupId = req.params.groupId;
     const explId = req.params.explanationId;
-    addGroupOpinion(req, next, true, explanationId, groupId, returnVal(res, 'success'), returnError(next));
+    addGroupedOpinion(req, next, true, explId, groupId, returnVal(res, 'success'), returnError(next));
   });
 
   app.get(prefix + EPNTS.group.explanation.opinion.dislike(), function (req, res, next) {
-    const context = Context.fromReq(req);
     const groupId = req.params.groupId;
     const explId = req.params.explanationId;
-    addGroupOpinion(req, next, false, explanationId, groupId, returnVal(res, 'success'), returnError(next));
+    addGroupedOpinion(req, next, false, explId, groupId, returnVal(res, 'success'), returnError(next));
   });
 
+  app.get(prefix + EPNTS.group.explanation.get(), function (req, res, next) {
+    function formatResponse(results) {
+      const response = {groupId: id, explanations: []};
+      for (let index = 0; index < results.length; index += 1) {
+        const groupExpl = results[index];
+        const expl = groupExpl.explanation
+        expl.groupLikes = groupExpl.likes;
+        expl.groupDislikes = groupExpl.dislikes;
+        response.explanations.push(expl);
+      }
+      returnVal(res)(response);
+    }
+    const id = req.params.id;
+    if (id.trim().match(/^[0-9]{1,}$/)) {
+      const groupExpl = new GroupedExplanation(int(id));
+      crud.select(groupExpl, formatResponse);
+    } else {
+      returnError(next, new InvalidRequest(`Id not '${id}' formatted properly`))
+    }
+  });
 
   app.get(prefix + EPNTS.group.explanation.add(), function (req, res, next) {
     const context = Context.fromReq(req);
     const groupId = req.params.groupId;
-    const expl = new Explanation(req.params.explanationId);
-    const GroupExplanation = new GroupExplanation(groupId, explId);
+    const expl = new Explanation(int(req.params.explanationId));
+    const groupExplanation = new GroupedExplanation(groupId, expl);
 
     context.callbackTree(auth, 'addQuestion', req, next)
-      .success(crud.insert, 'insertingGroupExplanation')
-      .success('insertingGroupExplanation', returnVal(res, 'success'), 'insertSuccessful')
-      .fail('insertingGroupExplanation', returnError(next), 'insertFailed')
-      .exicute();
-  );
+      .success(crud.insertIgnoreDup, 'insertingGroupedExplanation', groupExplanation)
+      .success('insertingGroupedExplanation', returnVal(res, 'success'), 'insertSuccessful')
+      .fail('insertingGroupedExplanation', returnError(next), 'insertFailed')
+      .execute();
+  });
+
+  //  ------------------------- Follower Api -------------------------  //
+  function formatFollowing(results, success) {
+    const formatted = {users: {}, groups: {}, commentTags: {}, explanationTags: {}, questionTags: {}}
+    for (let index = 0; index < results.length; index += 1) {
+      const result = results[index];
+      const user = result.target;
+      formatted.users[user.id] = user;
+
+      const group = result.group;
+      formatted.groups[group.id] = group;
+
+      const explTag = result.explanationTag;
+      formatted.explanationTags[explTag.id] = explTag;
+
+      const commentTag = result.commentTag;
+      formatted.commentTags[commentTag.id] = commentTag;
+
+      const questionTag = result.questionTag;
+      formatted.questionTags[questionTag.id] = questionTag;
+    }
+    formatted.users = Object.values(formatted.users);
+    formatted.groups = Object.values(formatted.groups);
+    formatted.explanationTags = Object.values(formatted.explanationTags);
+    formatted.commentTags = Object.values(formatted.commentTags);
+    formatted.questionTags = Object.values(formatted.questionTags);
+    success(formatted);
+  }
+
+  app.get(prefix + EPNTS.follow.get(), function (req, res, next) {
+    const following = new Following();
+
+    Context.fromReq(req).callbackTree(auth, 'addQuestion', req, next)
+      .success(setValue(following, 'userId'), 'settingUserId', '$cbtArg[0].id')
+      .success('settingUserId', crud.select, 'gettingFollowing', following)
+      .success('gettingFollowing', formatFollowing, 'formatting')
+      .success('formatting', returnVal(res), 'success')
+      .execute();
+  });
+
+  app.post(prefix + EPNTS.follow.update(), function (req, res, next) {
+
+    function followObjects(list, listAttr, dataClass, userId, objects) {
+      objects = objects || [];
+      if (list) {
+        const followObject = dataClass.fromObject({});
+        followObject.setUserId(userId);
+        crud.delete(followObject);
+        const fields = followObject.$d().getFields();
+        for (let index = 0; index < list.length; index += 1) {
+          const follower = dataClass.fromObject({});
+          follower.$d().setValueFunc(listAttr)(list[index]);
+          follower.setUserId(userId);
+          objects.push(follower);
+        }
+      }
+      return objects;
+    }
+
+    function updateDefinedList(user, success, failure) {
+      const allObjects = [];
+      followObjects(req.body.groups, 'groupId', GroupFollower, user.id, allObjects);
+      followObjects(req.body.individuals, 'targetId', Follower, user.id, allObjects);
+      followObjects(req.body.questions, 'tagId', QuestionTagFollower, user.id, allObjects);
+      followObjects(req.body.comments, 'tagId', CommentTagFollower, user.id, allObjects);
+      followObjects(req.body.explanations, 'tagId', ExplanationTagFollower, user.id, allObjects);
+      if (allObjects.length > 0) {
+        crud.insert(allObjects, success, failure);
+      }
+    }
+
+    const context = Context.fromReq(req);
+    context.callbackTree(auth, 'updateFollowing', req, next)
+      .success(updateDefinedList, 'processDefinedLists')
+      .success('processDefinedLists', returnVal(res, 'success'), 'updateSuccessful')
+      .fail('processDefinedLists', returnError(next), 'updateFailed')
+      .execute();
+  });
+
+  //  ------------------------- Open Sites Api -------------------------  //
+
+  app.post(prefix + EPNTS.site.view(), function (req, res, next) {
+    const openSite = new OpenSite(req.body.siteUrl);
+    const context = Context.fromReq(req);
+    const inserting = req.params.isViewing === 'true';
+    context.callbackTree(auth, 'insertingViewing', req, next)
+      .success(setValue(openSite, 'userId'), 'settingUserId', '$cbtArg[0].id')
+      .success('settingUserId', crud.delete, 'deleteExisting', openSite)
+      .success('deleteExisting', conditionalFunc(inserting, crud.insert), 'insertion', openSite)
+      .success('insertion', returnVal(res, 'success'), 'successful')
+      .fail('insertion', returnVal(res, 'success'), 'failed')
+      .execute();
+  });
+
+  app.get(prefix + EPNTS.site.viewing(), function (req, res, next) {
+    const openSite = new OpenSite();
+    const context = Context.fromReq(req);
+    context.callbackTree(auth, 'insertingViewing', req, next)
+      .success(setValue(openSite, 'userId'), 'settingUserId', '$cbtArg[0].id')
+      .success('settingUserId', crud.select, 'gettingOpenSites', openSite)
+      .success('gettingOpenSites', returnQuery(res, 'url'), 'successful')
+      .execute();
+  });
 }
 
 
