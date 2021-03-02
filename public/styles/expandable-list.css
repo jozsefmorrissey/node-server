@@ -1,0 +1,39 @@
+
+.expandable-item-rm-btn {
+  float: right;
+  padding: 0 2pt;
+  font-size: larger;
+  font-weight: bold;
+  border-radius: 10pt;
+  color: red;
+  background-color: white;
+  margin: 3pt;
+  display: none;
+}
+
+.expand-header {
+  padding-left: 20pt;
+  border-radius: 10pt;
+}
+
+.expand-body {
+  padding-left: 20pt;
+  border-radius: 0pt 0pt 10pt 10pt;
+  background-color: whitesmoke;
+  display: none;
+  padding-bottom: 10pt;
+}
+
+.expand-header.active {
+  background-color: blue;
+  color: white;
+  font-weight: bolder;
+  border-radius: 10pt 10pt 0pt 0pt;
+  padding: 5pt 20pt;
+}
+
+.expand-header:hover {
+  background-color: #ccaeae;
+  color: white;
+  font-weight: bolder;
+}

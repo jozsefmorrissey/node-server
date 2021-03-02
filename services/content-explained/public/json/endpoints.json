@@ -62,13 +62,13 @@
   },
   "group": {
     "explanation": {
-      "add": "/group/explanation/add/:groupId/:explanationId"j,
+      "add": "/group/explanation/add/:groupId/:explanationId",
       "opinion": {
         "like": "/group/explanation/opinion/like/:groupId/:explanationId",
         "dislike": "/group/explanation/opinion/dislike/:groupId/:explanationId"
       }
     }
-  }
+  },
   "_secure": [
     "user.update",
     "credential.get",
