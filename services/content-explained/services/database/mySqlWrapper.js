@@ -40,6 +40,7 @@ class Field {
     this.default = () => o.default;
     this.init = () => o.init === undefined || o.init === true;
     this.isId = () => o.key;
+    this.inGroup = (group) => o.group === group;
     this.isPrimative = function () {return o.class === undefined;};
     this.getClass = function () {return o.class;};
     this.merge = function () {return o.merge;};
@@ -209,11 +210,15 @@ class DataObject {
     let mapId;
     this.$d = function () {return $d;};
     let fieldIndex = 0;
-    $d.addField = function (name, options) {
-      options = options || {};
-      options.index = fieldIndex++;
-      const field = new Field(name, options, instance);
-      fields[name] = field;
+    $d.addField = function (names, options) {
+      if (!Array.isArray(names)) names = [names];
+      for (let index = 0; index < names.length; index += 1) {
+        const name = names[index];
+        options = options || {};
+        options.index = fieldIndex++;
+        const field = new Field(name, options, instance);
+        fields[name] = field;
+      }
     }
 
     $d.getIdFields = () => ids;
@@ -307,12 +312,21 @@ class DataObject {
       switch (type) {
         case 'relation':
           return relations;
-          break;
         case 'primative':
           return primitives;
-          break;
-        default:
+        case undefined:
           return Object.values(fields);
+        default:
+          const fieldNames = Object.keys(fields);
+          const grouped = [];
+          for (let index = 0; index < fieldNames.length; index += 1) {
+            const field = fields[fieldNames[index]];
+            console.log('fields::', field.name, instance.constructor);
+            if (field.inGroup(type)) {
+              grouped.push(field);
+            }
+          }
+          return grouped;
       }
     };
 
@@ -347,7 +361,7 @@ class DataObject {
       let exclude;
       let excluding = false;
       const idConstructor = args.length === 1  && Number.isInteger(args[0]) &&
-              fields['id'] !== undefined;
+            fields['id'] !== undefined;
       if (args[0] instanceof Exclude) {
         exclude = args[0];
         excluding = true;
@@ -400,12 +414,15 @@ class DataObject {
     $d.uniqueName = function (result) {
       let values = '';
       if (result) {
+        let hasValue = false;
         for (let index = 0; index < ids.length; index += 1) {
           let field = ids[index];
           const value = result[field.uniqueName()];
-          if (value === null) return null;
+          if (value !== null) hasValue = true;
           values += `_${value}`;
         }
+        // TODO: remove hacky fix
+        if (hasValue === false) return null;
       }
       return toPascal(`${$d.readTable()}${values}`);
     }

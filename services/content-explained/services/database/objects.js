@@ -166,7 +166,7 @@ class Words extends DataObject {
 }
 new Words();
 
-class CommentTag extends DataObject {
+class ExplanationCommentTag extends DataObject {
   constructor() {
     super();
     this.$d().addField('tag', {class: Tag, relation: 'manyToOne', merge: 'value'});
@@ -175,7 +175,18 @@ class CommentTag extends DataObject {
     this.$d().init(arguments);
   }
 }
-new CommentTag();
+new ExplanationCommentTag();
+
+class QuestionCommentTag extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('tag', {class: Tag, relation: 'manyToOne', merge: 'value'});
+    this.$d().addField('referenceId');
+    this.$d().addField('id');
+    this.$d().init(arguments);
+  }
+}
+new QuestionCommentTag();
 
 class CommentTagFollower extends DataObject {
   constructor() {
@@ -204,18 +215,48 @@ class Comment extends DataObject {
   constructor() {
     super();
     this.$d().addField('value');
+    this.$d().addField('commentId');
+    this.$d().addField('lastUpdate', {init: false});
+    this.$d().addField('groupAuthor', {init: false, class: Group, exclude: ['creator', 'contributors', 'tags'], relation: 'manyToOne'});
+    this.$d().addField('author', {init: false, class: ConciseUser, relation: 'manyToOne'});
+    this.$d().addField('id', {init: false});
+  }
+}
+new Comment();
+
+class ExplanationComment extends Comment {
+  constructor() {
+    super();
     this.$d().addField('explanationId');
     this.$d().addField('siteId');
-    this.$d().addField('commentId');
-    this.$d().addField('group', {class: Group, exclude: ['creator', 'contributors', 'tags'], relation: 'manyToOne'});
-    this.$d().addField('author', {class: ConciseUser, relation: 'manyToOne'});
-    this.$d().addField('lastUpdate');
-    this.$d().addField('tags', {map: {id: 'REFERENCE_ID'}, class: CommentTag, relation: 'OneToMany', readOnly: true, merge: 'tag'});
+    this.$d().addField('tags', {map: {id: 'REFERENCE_ID'}, class: ExplanationCommentTag, relation: 'OneToMany', readOnly: true, merge: 'tag'});
+    this.$d().init(arguments);
+  }
+}
+new ExplanationComment();
+
+class ConciseQuestion extends DataObject {
+  constructor() {
+    super();
+    this.$d().setTableNames('QUESTION');
+    this.$d().addField('elaboration');
+    this.$d().addField('words', {class: Words, relation: 'manyToOne', merge: 'value'});
+    this.$d().addField('siteId');
     this.$d().addField('id');
     this.$d().init(arguments);
   }
 }
-new Comment();
+new ConciseQuestion();
+
+class QuestionComment extends Comment {
+  constructor() {
+    super();
+    this.$d().addField('question', {class: ConciseQuestion, relation: 'manyToOne'});
+    this.$d().addField('tags', {map: {id: 'REFERENCE_ID'}, class: QuestionCommentTag, relation: 'OneToMany', readOnly: true, merge: 'tag'});
+    this.$d().init(arguments);
+  }
+}
+new QuestionComment();
 
 class ExplanationTag extends DataObject {
   constructor() {
@@ -248,7 +289,8 @@ class Following extends DataObject {
                                   exclude: ['creator', 'contributors', 'tags', 'adminLevel']});
     this.$d().addField('questionTag', {class: Tag, relation: 'manyToOne', key: true});
     this.$d().addField('explanationTag', {class: Tag, relation: 'manyToOne', key: true});
-    this.$d().addField('commentTag', {class: Tag, relation: 'manyToOne', key: true});
+    this.$d().addField('explanationCommentTag', {class: Tag, relation: 'manyToOne', key: true});
+    this.$d().addField('questionCommentTag', {class: Tag, relation: 'manyToOne', key: true});
     this.$d().init(arguments);
   }
 }
@@ -264,7 +306,7 @@ class Explanation extends DataObject {
     this.$d().addField('author', {class: ConciseUser, relation: 'manyToOne'});
     this.$d().addField('groupAuthor', {class: Group, exclude: ['creator', 'contributors', 'tags'], relation: 'manyToOne'});
     this.$d().addField('siteId');
-    this.$d().addField('comments', {class: Comment, relation: 'oneToMany'});
+    this.$d().addField('comments', {class: ExplanationComment, relation: 'oneToMany'});
     this.$d().addField('lastUpdate');
     this.$d().addField('id');
     this.$d().addField('tags', {class: ExplanationTag, map: {id: 'REFERENCE_ID'}, relation: 'OneToMany', readOnly: true, merge: 'tag'});
@@ -273,7 +315,6 @@ class Explanation extends DataObject {
     this.$d().init(arguments);
   }
 }
-new Explanation();
 
 class GroupedOpinion extends DataObject {
   constructor() {
@@ -389,17 +430,8 @@ class QuestionOpinion extends DataObject {
       this.$d().init(arguments);
     }
 }
+new QuestionOpinion();
 
-class QuestionComment extends DataObject {
-  constructor() {
-    this.$d().addField('value');
-    this.$d().addField('questionId');
-    this.$d().addField('commentId');
-    this.$d().addField('authorId');
-    this.$d().addField('lastUpdate');
-    this.$d().addField('id');
-  }
-}
 
 class QuestionTag extends DataObject {
   constructor() {
@@ -439,7 +471,6 @@ class Question extends DataObject {
     this.$d().init(arguments);
   }
 }
-new Question();
 
 class NotificationType extends DataObject {
   constructor() {
@@ -460,8 +491,9 @@ class Notification extends DataObject {
       class: Explanation, relation: 'manyToOne',
       exclude: ['comments', 'tags']
     });
-    this.$d().addField('comment', {class: Comment, relation: 'manyToOne', exclude: ['tags']});
+    this.$d().addField('explanationComment', {class: ExplanationComment, relation: 'manyToOne', exclude: ['tags']});
     this.$d().addField('question', {class: Question, relation: 'manyToOne', exclude: ['tags']});
+    this.$d().addField('questionComment', {class: QuestionComment, relation: 'manyToOne', exclude: ['tags']});
     this.$d().addField('type', {class: NotificationType, relation: 'manyToOne', merge: 'value'});
     this.$d().addField('seen', {init: false});
     this.$d().addField('at', {init: false});
@@ -472,58 +504,95 @@ class Notification extends DataObject {
 }
 new Notification();
 
+function objAttr(obj, attr) {
+  const path = attr.split('.');
+  let curr = obj;
+  let index = 0;
+  while (curr instanceof Object && index < path.length) curr = curr[path[index++]];
+  return curr;
+}
+
 class ExplanationNotification extends Notification {
-  constructor(userId, site, explanation) {
-    super(userId, site, explanation);
-    this.setType(new NotificationType(2, 'Explanation'))
+  constructor(userId, explanation) {
+    super(userId, new Site(objAttr(explanation, 'siteId')), explanation);
+    this.setType(new NotificationType(1, 'Explanation'))
   }
 }
 new ExplanationNotification();
 
-class CommentNotification extends Notification {
-  constructor(userId, site, explanation, comment) {
-    super(userId, site, explanation, comment);
-    this.setType(new NotificationType(1, 'Comment'))
+class ExplanationCommentNotification extends Notification {
+  constructor(userId, comment) {
+    super(userId, new Site(objAttr(comment, 'siteId')), new Explanation(objAttr(comment, 'explanationId')), comment);
+    this.setType(new NotificationType(2, 'ExplanationComment'))
   }
 }
-new CommentNotification();
+new ExplanationCommentNotification();
 
 class QuestionNotification extends Notification {
-  constructor(userId, site, question) {
-    super(userId, site, undefined, question);
+  constructor(userId, question) {
+    super(userId, new Site(objAttr(question, 'siteId')), undefined, undefined, question);
     this.setType(new NotificationType(3, 'Question'))
   }
 }
 new QuestionNotification();
 
-class CommentConnections extends DataObject {
-  constructor() {
-    super();
-    this.$d().addField('commentId', {key: true});
-    this.$d().addField('siteId', {key: true});
-    this.$d().addField('explanationAuthorId', {key: true});
-    this.$d().addField('explanationId', {key: true});
-    this.$d().addField('childCommentorId', {key: true});
-    this.$d().addField('siblingCommentorId', {key: true});
-    this.$d().addField('parentCommentorId', {key: true});
-    this.$d().init(arguments);
+class QuestionCommentNotification extends Notification {
+  constructor(userId, comment) {
+    super(userId, new Site(objAttr(comment, 'question.siteId')), undefined, undefined, objAttr(comment, 'question'), comment);
+    this.setType(new NotificationType(4, 'QuestionComment'))
   }
 }
-new CommentConnections();
+new QuestionCommentNotification();
 
 class ExplanationConnections extends DataObject {
   constructor() {
     super();
     this.$d().addField('explanationId', {key: true});
-    this.$d().addField('commentorId', {key: true});
-    this.$d().addField('commentSiteId', {key: true});
-    this.$d().addField('askerId', {key: true});
-    this.$d().addField('questionId', {key: true});
-    this.$d().addField('questionSiteId', {key: true});
+    this.$d().addField(['authorFollowerId', 'groupFollowerId', 'tagFollowerId',
+        'commentAuthorId', 'groupContributorId', 'questionAskerId'],
+        {key: true, group: 'userId'});
     this.$d().init(arguments);
   }
 }
 new ExplanationConnections();
+
+class ExplanationCommentConnections extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('commentId', {key: true});
+    this.$d().addField(['explanationAuthorId', 'parentCommentAuthorId',
+      'siblingCommentAuthorId', 'childCommentAuthorId', 'groupContributorId',
+      'authorFollowerId', 'groupFollowerId', 'tagFollowerId'], 
+      {key: true, group: 'userId'});
+    this.$d().init(arguments);
+  }
+}
+new ExplanationCommentConnections();
+
+class QuestionConnections extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('questionId', {key: true});
+    this.$d().addField(['askerFollowerId', 'groupFollowerId', 'tagFollowerId',
+        'commentAuthorId', 'groupContributorId'], {key: true, group: 'userId'});
+    this.$d().init(arguments);
+  }
+}
+new QuestionConnections();
+
+class QuestionCommentConnections extends DataObject {
+  constructor() {
+    super();
+    this.$d().addField('commentId', {key: true});
+    this.$d().addField('siteId', {key: true});
+    this.$d().addField(['askerId', 'parentCommentAuthorId',
+      'siblingCommentAuthorId', 'childCommentAuthorId', 'groupContributorId',
+      'authorFollowerId', 'groupFollowerId', 'tagFollowerId'],
+      {key: true, group: 'userId'});
+    this.$d().init(arguments);
+  }
+}
+new QuestionCommentConnections();
 
 exports.Ip = Ip;
 exports.UserAgent = UserAgent;
@@ -534,10 +603,11 @@ exports.User = User;
 exports.PendingUserUpdate = PendingUserUpdate;
 exports.Tag = Tag;
 exports.Words = Words;
-exports.CommentTag = CommentTag;
 exports.CommentTagFollower = CommentTagFollower;
 exports.OpenSite = OpenSite;
-exports.Comment = Comment;
+exports.ExplanationComment = ExplanationComment;
+exports.ExplanationCommentNotification = ExplanationCommentNotification;
+exports.QuestionCommentNotification = QuestionCommentNotification;
 exports.GroupTag = GroupTag;
 exports.AccessibleGroup = AccessibleGroup;
 exports.Group = Group;
@@ -560,8 +630,11 @@ exports.QuestionTagFollower = QuestionTagFollower;
 exports.Question = Question;
 exports.Notification = Notification;
 exports.ExplanationNotification = ExplanationNotification;
-exports.CommentNotification = CommentNotification;
 exports.QuestionNotification = QuestionNotification;
-exports.CommentConnections = CommentConnections;
 exports.ExplanationConnections = ExplanationConnections;
+exports.ExplanationCommentTag = ExplanationCommentTag;
+exports.QuestionCommentTag = QuestionCommentTag;
 exports.Following = Following;
+exports.ExplanationCommentConnections = ExplanationCommentConnections;
+exports.QuestionCommentConnections = QuestionCommentConnections;
+exports.QuestionConnections = QuestionConnections;

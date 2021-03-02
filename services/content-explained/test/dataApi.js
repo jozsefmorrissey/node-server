@@ -287,6 +287,15 @@ const userObj= {emails: ['test1@jozsefmorrissey.com',
   activationSecrets: []
 };
 
+function secretByUserId(userId) {
+  for (let index = 0; index < userObj.ids.length; index += 1) {
+    if (userObj.ids[index] === userId) {
+      return userObj.secrets[index];
+    }
+  }
+  throw new Error('Unkown userId: ' + userId);
+}
+
 const userCount = 4;
 
 userObj.emails.forEach((item, i) =>
@@ -303,7 +312,7 @@ function testInsertUsers(cb) {
     h(count, 200, index);
     const body = {username, email};
     userObj.activationSecrets.push(`${email}-${userObj.userAgent}`);
-    req('post', EPNTS.user.add(), h(200, index), null, body)
+    req('post', EPNTS.user.add(), h(200, index), null, body);
   }
 }
 
@@ -315,7 +324,7 @@ function testGetUsers(cb) {
     const secret = userObj.secrets[index];
     const id = Number.parseInt(secret.replace(/^User ([0-9]*)-.*$/, '$1'));
     userObj.ids[index] = id;
-    req('get', EPNTS.user.get(id), h(200, index), secret)
+    req('get', EPNTS.user.get(id), h(200, index), secret);
   }
 }
 
@@ -333,7 +342,7 @@ function testLoginUsers(cb) {
   const h = handler(undefined, len, cb);
   for (let index = 0; index < len; index += 1) {
     const secret = userObj.secrets[index];
-    req('get', EPNTS.user.login(), h(200, index), secret)
+    req('get', EPNTS.user.login(), h(200, index), secret);
   }
 }
 
@@ -342,7 +351,7 @@ function testGetIds(cb) {
     testing.assertEquals(JSON.parse(results).length, userObj.ids.length);
   }
   const h = bulkHandler(1, checkLength, cb);
-  req('get', EPNTS.user.get(userObj.ids.join()), h(200, 0))
+  req('get', EPNTS.user.get(userObj.ids.join()), h(200, 0));
 }
 
 function testCreateCredentials(cb) {
@@ -382,8 +391,8 @@ function testActivateUserFailure(cb) {
   const id = userObj.ids[0];
   const h = handler(undefined, 2, cb);
 
-  req('get', EPNTS.credential.activate(id, 'shhhh'), h(401))
-  req('get', EPNTS.credential.activate(1000, 'shhh'), h(401))
+  req('get', EPNTS.credential.activate(id, 'shhhh'), h(401));
+  req('get', EPNTS.credential.activate(1000, 'shhh'), h(401));
 }
 
 const removeCredIds = [];
@@ -406,7 +415,7 @@ async function testGetCredentials(cb) {
 
 function testDeleteCredFailure(cb) {
   const len = removeCredIds.length;
-  const h = handler(undefined, len, cb)
+  const h = handler(undefined, len, cb);
   for (let index = 0; index < len; index += 1) {
     const id = removeCredIds[index];
     const inActive = index % 2 === 0;
@@ -456,7 +465,7 @@ function testAddSite(cb) {
   const h = handler(undefined, count, cb);
   for (let index = 0; index < count; index += 1) {
     const url = urls[index];
-    req('post', EPNTS.site.add(), h(200), secret, {url})
+    req('post', EPNTS.site.add(), h(200), secret, {url});
   }
 }
 
@@ -483,7 +492,7 @@ function addAllTags(cb) {
   pageExpls[content] = {siteUrl};
   const tagStr = '#' + tagObj.tags.join('#');
   const secret = userObj.secrets[0];
-  const h = handler(undefined, 1, cb)
+  const h = handler(undefined, 1, cb);
   addExplanation(siteUrl, words, content, tagStr, secret, h(200), cb);
 }
 
@@ -497,7 +506,7 @@ function testAddExplanation(cb, offset, count) {
       Object.keys(list).forEach(() => count += 2));
   }
   const urls = Object.keys(urlExplObj);
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < urls.length; index += 1) {
     const siteUrl = urls[index];
     const wordList = Object.keys(urlExplObj[siteUrl]);
@@ -508,18 +517,18 @@ function testAddExplanation(cb, offset, count) {
       const words = wordList[wIndex];
       const content = `${urlExplObj[siteUrl][words]}-${wIndex}`;
       pageExpls[content] = {siteUrl};
-      addExplanation(siteUrl, words, content, randHashTagStr(), secret, h(200), cb)
-      addExplanation(siteUrl, words, content, randHashTagStr(), 'User 1000-hello', h(401), cb)
+      addExplanation(siteUrl, words, content, randHashTagStr(), secret, h(200), cb);
+      addExplanation(siteUrl, words, content, randHashTagStr(), 'User 1000-hello', h(401), cb);
     }
   }
 }
 
 function testGetExplanations(cb) {
   const count = userObj.users.length
-  const h = handler(userObj.authored, count, cb)
+  const h = handler(userObj.authored, count, cb);
   for (let index = 0; index < count; index += 1) {
     let authorId = userObj.users[index].id;
-    req('get', EPNTS.explanation.author(authorId), h(200, index))
+    req('get', EPNTS.explanation.author(authorId), h(200, index));
   }
 }
 
@@ -565,26 +574,26 @@ function testUpdateExplanationsWrongUser(cb) {
 
 function testUpdateExplanationsNotLoggedIn(cb) {
   const count = userCount;
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < count; index += 1) {
     const author = userObj.users[(index + 1) % count];
     const expl = userObj.authored[index][0];
     const content = `This value should not exist in database`;
     const body = {id: expl.id, content, authorId: author.id};
-    req('put', EPNTS.explanation.update(), h(401), null, body)
+    req('put', EPNTS.explanation.update(), h(401), null, body);
   }
 }
 
 function testUpdateExplanationsInvalidExplId(cb) {
   const count = userCount;
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < count; index += 1) {
     const author = userObj.users[(index + 1) % count];
     const expl = userObj.authored[index][0];
     const content = `This value should not exist in database`;
     const secret = userObj.secrets[(index + 1) % count];
     const body = {id: -1, content, authorId: author.id};
-    req('put', EPNTS.explanation.update(), h(404, 0), secret, body)
+    req('put', EPNTS.explanation.update(), h(404, 0), secret, body);
   }
 }
 
@@ -609,7 +618,7 @@ function testUpdatedExplanations(cb) {
   for (let index = 0; index < count; index += 1) {
     const hand = simpleHandler(200, equalExpl(userObj.authored[index]), testF(cb));
     let authorId = userObj.users[index].id;
-    req('get', EPNTS.explanation.author(authorId), hand)
+    req('get', EPNTS.explanation.author(authorId), hand);
   }
 }
 
@@ -624,8 +633,8 @@ function testUpdatedExplanations(cb) {
 //     for (let eIndex = 0; eIndex < eCount; eIndex += 1) {
 //       let explId = userObj.authored[eIndex % userObj.users.length][eIndex].id;
 //       let xhr = new xmlhr();
-// const h = handler(undefined, count, cb)
-// h(200, 0)
+// const h = handler(undefined, count, cb);
+// h(200, 0);
 //       xhr.open("POST", getUrl(EPNTS.siteExplanation.add(explId)));
 //       xhr.setRequestHeader('Content-Type', 'application/json');
 //       xhr.setRequestHeader('user-agent', userObj.userAgent);
@@ -638,7 +647,7 @@ function testUpdatedExplanations(cb) {
 function testAddExistingSiteExpl(cb) {
   function checkResp(resp) {
     testing.assertNotEquals(resp.indexOf(':'), -1, cb);
-    testing.success(cb)
+    testing.success(cb);
   };
   const urls = Object.keys(urlExplObj);
   const user = userObj.users[0];
@@ -655,7 +664,7 @@ function testOpinionUrls(cb) {
     explanations = explanations.concat(userObj.authored[index]);
   }
   const count = explanations.length * userObj.users.length;
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let uIndex = 0; uIndex < userObj.users.length; uIndex += 1) {
     const secret = userObj.secrets[uIndex];
     const userId = userObj.users[uIndex].id;
@@ -676,13 +685,13 @@ function testOpinionNotLoggedIn(cb) {
   const secret = userObj.secrets[0];
   const url = EPNTS.explanation.opinion.like(explId, siteId);
   const handler = simpleHandler(401, testS(cb), testF(cb));
-  req('get', url, handler, secret + '3')
+  req('get', url, handler, secret + '3');
 }
 
 function addRealExpl(userAgent, secret, expl, handler, cb) {
   const postUrl = EPNTS.explanation.add();
   expl.siteUrl = url();
-  req('post', postUrl, handler, secret, expl, userAgent)
+  req('post', postUrl, handler, secret, expl, userAgent);
 }
 
 const siteUrl = 'https://www.restapitutorial.com/httpstatuscodes.html?poop=stinky&DebugGui.debug=true#PEEPEE';
@@ -691,7 +700,7 @@ function addCode(cb) {
   const userAgent = userObj.userAgent;
   const count = 1;
   const body = {content: "a system of principles or rules\n\n#og#right", words: "code", siteUrl};
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   addRealExpl(userAgent, secret, body, h(200, 0), cb);
 }
 
@@ -728,7 +737,7 @@ function addExplanations(cb) {
   explanations.push({content: `instructions for a computer (as within a piece of software)${randHashTagStr()}`, words: "codes"});
 
   const count = explanations.length;
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < count; index += 1) {
     const userIndex = Math.floor(Math.random() * userObj.secrets.length);
     const secret = userObj.secrets[userIndex];
@@ -754,10 +763,10 @@ function addRealExplsToSite(cb) {
   expls = Object.values(expls);
   const count = expls.length;
   const secret = userObj.secrets[0];
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < count; index += 1) {
     const id = expls[index].id;
-    req('post', EPNTS.siteExplanation.add(id), h(200), secret, {siteUrl})
+    req('post', EPNTS.siteExplanation.add(id), h(200), secret, {siteUrl});
   }
 }
 
@@ -765,7 +774,7 @@ const comments = [];
 function addCommentsToExpls(cb) {
   expls.forEach((expl) => siteExplList.push({expl, siteUrl}));
   const count = siteExplList.length * 3;
-  const h = handler(comments, count, cb)
+  const h = handler(comments, count, cb);
   for (let index = 0; index < count; index += 1) {
     const value = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
     const siteExpl = siteExplList[index % siteExplList.length];
@@ -774,17 +783,17 @@ function addCommentsToExpls(cb) {
     const siteUrl = siteExpl.siteUrl;
     const secret = userObj.secrets[Math.floor(userObj.secrets.length * Math.random())];
     const body = {value, siteUrl, explanationId, tagStr};
-    req('post', EPNTS.comment.add(), h(200, index), secret, body)
+    req('post', EPNTS.comment.explanation.add(), h(200, index), secret, body);
   }
 }
 
 let subSet;
+const siteById = {};
 function addCommentsToComments(cb) {
-  const siteById = {};
   siteObjs.forEach((site) => siteById[site.id] = site);
   const count = 20;
   subSet = subSet || randomSubSet(comments, count);
-  const h = handler(subSet, count, cb)
+  const h = handler(subSet, count, cb);
   for (let index = 0; index < count; index += 1) {
     const comment = randomElement(subSet);
     const value = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
@@ -794,70 +803,153 @@ function addCommentsToComments(cb) {
     const siteUrl = siteById[comment.siteId].url;
     const secret = userObj.secrets[Math.floor(userObj.secrets.length * Math.random())];
     const body = {value, siteUrl, explanationId, commentId, tagStr};
-    req('post', EPNTS.comment.add(), h(200, subSet.length + index - 1), secret, body);
+    req('post', EPNTS.comment.explanation.add(), h(200, subSet.length + index - 1), secret, body);
   }
 }
 
-const questions = [];
+const questions = {init: [], db: [], updated: []};
 function testAddQuestions(cb) {
   let url = Object.keys(urlExplObj)[0];
   let wordList = Object.keys(urlExplObj[url]);
-  questions.push({siteUrl: url, words: wordList[0], elaboration: 'elab-0'});
-  questions.push({siteUrl: url, words: wordList[1], elaboration: randomString(250, /[a-zA-Z0-9]/, /.{1,}/)});
-  questions.push({siteUrl: url, words: 'gift', elaboration: 'elab-3'});
-  questions.push({siteUrl: url, words: 'service', elaboration: 'elab-3'});
+  questions.init.push({siteUrl: url, words: wordList[0], elaboration: 'elab-0'});
+  questions.init.push({siteUrl: url, words: wordList[1], elaboration: randomString(250, /[a-zA-Z0-9]/, /.{1,}/)});
+  questions.init.push({siteUrl: url, words: 'gift', elaboration: 'elab-3'});
+  questions.init.push({siteUrl: url, words: 'service', elaboration: 'elab-3'});
 
   url = Object.keys(urlExplObj)[1];
   wordList = Object.keys(urlExplObj[url]);
-  questions.push({siteUrl: url, words: wordList[0], elaboration: 'elab-4'});
-  questions.push({siteUrl: url, words: wordList[3]});
+  questions.init.push({siteUrl: url, words: wordList[0], elaboration: 'elab-4'});
+  questions.init.push({siteUrl: url, words: wordList[3]});
 
-  questions.push({siteUrl: url, words: 'sell', elaboration: randomString(250, /[a-zA-Z0-9]/, /.{1,}/)});
-  questions.push({siteUrl: url, words: 'buy'});
+  questions.init.push({siteUrl: url, words: 'sell', elaboration: randomString(250, /[a-zA-Z0-9]/, /.{1,}/)});
+  questions.init.push({siteUrl: url, words: 'buy'});
 
 
-  const count = questions.length;
-  const h = handler(undefined, count, cb)
+  const count = questions.init.length;
+  const h = handler(questions.db, count, cb);
   for (let index = 0; index < count; index += 1) {
-    questions[index].tagStr = randHashTagStr();
+    const question = questions.init[index];
+    question.tagStr = randHashTagStr();
     const secret = randomElement(userObj.secrets);
-    req('post', EPNTS.question.add(), h(200), secret, questions[index]);
+    req('post', EPNTS.question.add(), h(200, index), secret, question);
   }
 }
 
+const questionComments = [];
+function addCommentsToQuestions(cb) {
+  const count = questions.db.length;
+  const h = handler(questionComments, count, cb);
+  for (let index = 0; index < count; index += 1) {
+    const value = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
+    const i = index % count;
+    const questionId = questions.db[i].id;
+    const tagStr = randHashTagStr();
+    const siteUrl = questions.init[i].siteUrl;
+    const secret = userObj.secrets[Math.floor(userObj.secrets.length * Math.random())];
+    const body = {value, siteUrl, questionId, tagStr};
+    const url = EPNTS.comment.question.add();
+    req('post', url, h(200, index), secret, body);
+  }
+}
+
+function addCommentsToQuestionComments(cb) {
+  const count = 5;
+  const h = handler(questionComments, count, cb);
+  for (let index = 0; index < count; index += 1) {
+    const comment = randomElement(questionComments);
+    const value = randomString(128, /[a-zA-Z0-9]/, /.{1,}/);
+    const questionId = comment.question.id;
+    const commentId = comment.id;
+    const tagStr = randHashTagStr();
+    const siteUrl = siteById[comment.question.siteId].url;
+    const secret = userObj.secrets[Math.floor(userObj.secrets.length * Math.random())];
+    const body = {value, siteUrl, questionId, commentId, tagStr};
+    req('post', EPNTS.comment.question.add(), h(200, questionComments.length + index - 1), secret, body);
+  }
+}
+
+function testUpdateExplComments(cb) {
+  const count = Math.floor(comments.length / 6);
+  const h = handler(comments, count, cb);
+  for (let index = 0; index < count; index += 1) {
+    const i = randInt(0, comments.length);
+    const comment = comments[i];
+    const currValue = comment.value ? comment.value : '';
+    const value = currValue.substr(0, 16) + ' (updated!)';
+    const tagStr = randHashTagStr();
+    const id = comment.id;
+    const siteUrl = siteById[comment.siteId].url;
+    const secret = secretByUserId(comment.author.id);
+    const body = {value, siteUrl, id, tagStr};
+    req('post', EPNTS.comment.explanation.update(), h(200, i), secret, body);
+  }
+}
+
+function testUpdateQuestionComments(cb) {
+  const count = Math.floor(questionComments.length / 6);
+  const h = handler(questionComments, count, cb);
+  for (let index = 0; index < count; index += 1) {
+    const i = randInt(0, questionComments.length);
+    const comment = questionComments[i];
+    const currValue = comment.value ? comment.value : '';
+    const value = currValue.substr(0, 16) + ' (updated!)';
+    const tagStr = randHashTagStr();
+    const id = comment.id;
+    const secret = secretByUserId(comment.author.id);
+    const body = {value, id, tagStr};
+    req('post', EPNTS.comment.question.update(), h(200, i), secret, body);
+  }
+}
+
+function testUpdateQuestions(cb) {
+  const count = 3;
+  const h = handler(questions.updated, count, cb);
+  for (let index = 0; index < count; index += 1) {
+    const question = randomElement(questions.db);
+    const currElab = question.elaboration ? question.elaboration : '';
+    const elaboration = currElab.substr(0, 238) + ' (updated)!';
+    const id = question.id;
+    const tagStr = randHashTagStr();
+    const secret = secretByUserId(question.asker.id);
+    const body = {elaboration, id, tagStr};
+    req('put', EPNTS.question.update(), h(200, questionComments.length + index - 1), secret, body);
+  }
+}
+
+
 function addOpenSites(cb) {
   const count = userObj.secrets.length * 2;
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < userObj.secrets.length; index += 1) {
     const secret = userObj.secrets[index];
-    req('post', EPNTS.site.view(true), h(200), secret, {siteUrl:  url(0)})
-    req('post', EPNTS.site.view(true), h(200), secret, {siteUrl: url(1)})
+    req('post', EPNTS.site.view(true), h(200), secret, {siteUrl:  url(0)});
+    req('post', EPNTS.site.view(true), h(200), secret, {siteUrl: url(1)});
   }
 }
 
 function addAlreadyOpenSites(cb) {
   const count = userObj.secrets.length;
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < count; index += 1) {
     const secret = userObj.secrets[index];
-    req('post', EPNTS.site.view(true), h(200), secret, {siteUrl: url(0)})
+    req('post', EPNTS.site.view(true), h(200), secret, {siteUrl: url(0)});
   }
 }
 
 function removeOpenSites(cb) {
   const count = userObj.secrets.length;
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < userObj.secrets.length / 2; index += 1) {
     const secret = userObj.secrets[index];
-    req('post', EPNTS.site.view(false), h(200), secret, {siteUrl: url(2)})
-    req('post', EPNTS.site.view(false), h(200), secret, {siteUrl: url(1)})
+    req('post', EPNTS.site.view(false), h(200), secret, {siteUrl: url(2)});
+    req('post', EPNTS.site.view(false), h(200), secret, {siteUrl: url(1)});
   }
 }
 
 userObj.viewing = [];
 function getViewing(cb) {
   const count = userObj.secrets.length;
-  const h = handler(userObj.viewing, count, cb)
+  const h = handler(userObj.viewing, count, cb);
   for (let index = 0; index < userObj.secrets.length; index += 1) {
     const secret = userObj.secrets[index];
     req('get', EPNTS.site.viewing(), h(200, index), secret, {siteUrl});
@@ -882,7 +974,7 @@ const groupMaps = {
 const groupObj = {groups: [], expls: {}};
 function testAddGroups(cb) {
   const groupNames = Object.keys(groupMaps);
-  const h = handler(groupObj.groups, groupNames.length, cb)
+  const h = handler(groupObj.groups, groupNames.length, cb);
   for (let index = 0; index < groupNames.length; index += 1) {
     const name = groupNames[index];
     const description = groupMaps[name];
@@ -904,7 +996,7 @@ function validateGroups(cb) {
 function testAddContributors(cb) {
   const count = 6;
   const secret = userObj.secrets[0];
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < count / 2; index += 1) {
     const groupId = groupObj.groups[index].id;
     const users = userObj.users;
@@ -922,7 +1014,7 @@ function testAddContributors(cb) {
 
 function testContAddingContributors(cb) {
   const count = 2;
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   const groupId = groupObj.groups[0].id;
   const level = 5;
   const users = userObj.users;
@@ -940,7 +1032,7 @@ function testContAddingContributors(cb) {
 function testAddGroupExpls(cb) {
   const addedMap = {};
   const count = groupObj.groups.length * 20;
-  const h = handler(undefined, count, cb)
+  const h = handler(undefined, count, cb);
   for (let index = 0; index < count; index += 1) {
     const secret = userObj.secrets[randInt(0, 4)];
     const groupId = groupObj.groups[randInt(0, groupObj.groups.length)].id;
@@ -1047,8 +1139,8 @@ function testAddFollowing(cb) {
 //     const url = EPNTS.group.explanation.add(groupId, explId);
 //     const addId = `${groupId}:${explId}`;
 //     status = addedMap[addId] ? 400 : 200;
-// const h = handler(undefined, count, cb)
-// h(200, undefined)
+// const h = handler(undefined, count, cb);
+// h(200, undefined);
 //     addedMap[addId] = true;
 //     req('get', url, hand, secret);
 //   }
@@ -1070,10 +1162,14 @@ testing.run([init1, init2, testInsertUsers, testGetUsers, testGetIds, validateUs
             testGetExplanations, buildSiteExplList, testUpdateExplanations,
             testUpdateExplanationsWrongUser, testUpdateExplanationsNotLoggedIn,
             testUpdateExplanationsInvalidExplId, testUpdatedExplanations,
-            /*testAddSiteExpl,*/ testAddExistingSiteExpl, testOpinionUrls,
+            testAddExistingSiteExpl, testOpinionUrls,
             testOpinionNotLoggedIn, addCode, addExplanations, getRealExpls,
             addRealExplsToSite, addCommentsToExpls, testAddQuestions,
             addCommentsToComments, addCommentsToComments, addCommentsToComments, addCommentsToComments, addCommentsToComments,
+            addCommentsToQuestions,
+            addCommentsToQuestionComments, addCommentsToQuestionComments, addCommentsToQuestionComments, addCommentsToQuestionComments,
+            testUpdateExplComments, testUpdateQuestionComments,
+            testUpdateQuestions,
             addOpenSites, addAlreadyOpenSites, removeOpenSites,
             testUpdateExplanations, getViewing, checkViewing, testAddGroups,
             validateGroups, testAddContributors, testContAddingContributors,

@@ -55,8 +55,14 @@
     "search": "/merriam/webster/:searchText"
   },
   "comment": {
-    "add": "/comment",
-    "update": "/comment"
+    "question": {
+      "add": "/comment/question",
+      "update": "/comment/question"
+    },
+    "explanation": {
+      "add": "/comment/explanation",
+      "update": "/comment/explanation"
+    }
   },
   "question": {
     "get": "/question/:id",

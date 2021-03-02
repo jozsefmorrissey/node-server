@@ -20,7 +20,7 @@ const { InvalidDataFormat, InvalidType, UnAuthorized, SqlOperationFailed,
         InvalidRequest, BulkUpdateFailure, SignalError } =
         require('./exceptions.js');
 const { Ip, UserAgent, Credential, User, PendingUserUpdate, Tag, Words,
-        CommentTag, CommentTagFollower, OpenSite, Comment, GroupTag,
+        CommentTagFollower, OpenSite, Comment, GroupTag,
         Group, ExplanationTag, ExplanationTagFollower,
         Explanation, GroupContributor, GroupedOpinion, GroupedExplanation,
         GroupFollower, Follower, Opinion, SiteExplanation, SiteParts, Site,
@@ -28,7 +28,7 @@ const { Ip, UserAgent, Credential, User, PendingUserUpdate, Tag, Words,
         Question, Notification, ExplanationNotification, CommentNotification,
         QuestionNotification, CommentConnections, ExplanationConnections,
         UserName, Following, GroupedExplanationDetail, AccessibleGroup,
-        ConciseUser } =
+        ConciseUser, ExplanationComment } =
                 require('../services/database/objects');
 const { randomString } = require('./tools.js');
 const email = require('./email.js');
@@ -104,6 +104,7 @@ function returnError(next, error) {
 
 function alwaysSucceed(func) {
   return function () {
+    console.log('arrrgs:', arguments);
     func.apply(null, arguments);
     arguments[arguments.length - 2]();
   }
@@ -432,8 +433,8 @@ function addExplToSite(explId, siteUrl, next, success) {
     const siteExpl = new SiteExplanation();
     function setSiteId(site, callback) {siteExpl.setSiteId(site.id); callback();}
     function setExplanation(expl, callback) {siteExpl.setExplanation(expl); callback();}
-    context.callbackTree(crud.selectOne, 'gettingExpl', new Explanation(explanationId))
-      .success('gettingExpl', setExplanation, 'settingExpl')
+    context.callbackTree(crud.selectOne, 'addExplToSite', new Explanation(explanationId))
+      .success('addExplToSite', setExplanation, 'settingExpl')
       .success('settingExpl', getSite, 'gettingSite', siteUrl, next)
       .success('gettingSite', setSiteId, 'settingSite')
       .success('settingSite', crud.insert, 'addingSiteExpl', siteExpl)
@@ -837,9 +838,9 @@ function endpoints(app, prefix, ip) {
 
   //  ------------------------- Comment Api -------------------------  //
 
-  app.post(prefix + EPNTS.comment.add(), function (req, res, next) {
+  app.post(prefix + EPNTS.comment.explanation.add(), function (req, res, next) {
     const context = Context.fromReq(req);
-    const comment = new Comment(req.body.value, req.body.explanationId, undefined, req.body.commentId);
+    const comment = new ExplanationComment(req.body.value, req.body.commentId, req.body.explanationId);
     comment.setLastUpdate(new Date());
     function recordUserId(author, success) {comment.setAuthor(author); success();}
     context.callbackTree(auth, 'addComment', req, next)
@@ -854,7 +855,42 @@ function endpoints(app, prefix, ip) {
       .execute();
   });
 
-  app.put(prefix + EPNTS.comment.update(), function (req, res, next) {
+  function hasGroupAccess(user, groupId, success, fail) {
+    if (groupId === undefined) {
+      success();
+      return;
+    }
+    for (let index = 0; index < user.groups.length; index += 1) {
+      const group = user.groups[index];
+      if (group.id === groupId) {
+        success();
+        return;
+      }
+    }
+    fail();
+  }
+
+  app.post(prefix + EPNTS.comment.question.add(), function (req, res, next) {
+    console.log('here')
+    const groupId = req.body.groupId;
+    const group = groupId === undefined ? undefined : new Group(groupId);
+    const question = new Question(req.body.questionId);
+    const comment = new QuestionComment(req.body.value, req.body.commentId, question);
+
+    comment.setLastUpdate(new Date());
+    Context.fromReq(req).callbackTree(auth, 'addQuestionComment', req, next)
+      .success(hasGroupAccess, 'checkingGroupAccess', '$cbtArg.user = $cbtArg[0]', groupId)
+      .success('checkingGroupAccess', setValue(comment, 'author'), 'settingAuthor', '$cbtArg.user')
+      .fail('checkingGroupAccess', returnError(next, new UnAuthorized(`You are not authorized for group '${groupId}'`)), 'failGroupAccessCheck')
+      .success('settingAuthor', crud.insertGet, 'insertingComment', comment)
+      .success('insertingComment', alwaysSucceed(TagSvc.updateObj), 'updatingTags', '$cbtArg.comment = $cbtArg[0]', req.body.tagStr)
+      .fail('insertingComment', returnError(next))
+      .success('updatingTags', alwaysSucceed(Notify), 'notifying', '$cbtArg.comment')
+      .success('notifying', returnQuery(res), 'success', '$cbtArg.comment')
+      .execute();
+  });
+
+  app.put(prefix + EPNTS.comment.explanation.update(), function (req, res, next) {
     const context = Context.fromReq(req);
     let dataObj = {};
     let comment;
@@ -868,15 +904,45 @@ function endpoints(app, prefix, ip) {
         fail();
       }
     }
-    context.callbackTree(auth, 'updateComment', req, next)
+    context.callbackTree(auth, 'updateExplComment', req, next)
       .success(setValue(dataObj, 'userId'), 'savingUserId', '$cbtArg[0].id')
-      .success('savingUserId', crud.selectOne, 'gettingComment', new Comment(req.body.id))
+      .success('savingUserId', crud.selectOne, 'gettingComment', new ExplanationComment(req.body.id))
+      .success('gettingComment', assertAuthor, 'assertingAuthor')
+      .fail('gettingComment', returnError(next))
+      .success('assertingAuthor', getSite, 'gettingSite', req.body.siteUrl, next)
+      .fail('assertingAuthor', returnError(next, new UnAuthorized('You are not the author of this comment')))
+      .success('gettingSite', setValue(comment, 'siteId'), 'settingSite', '$cbtArg[0].id')
+      .success('settingSite', crud.updateGet, 'updatingComment', comment)
+      .success('updatingComment', alwaysSucceed(TagSvc.updateObj), 'updatingTags', '$cbtArg.comment = $cbtArg[0]', req.body.tagStr)
+      .fail('updatingComment', returnError(next))
+      .success('updatingTags', returnQuery(res))
+      .execute();
+  });
+
+  app.put(prefix + EPNTS.comment.question.update(), function (req, res, next) {
+    const context = Context.fromReq(req);
+    let dataObj = {};
+    let comment;
+    function assertAuthor(cmt, success, fail) {
+      comment = cmt;
+      if (comment.author.id === dataObj.userId) {
+        comment.setValue(req.body.value);
+        comment.setLastUpdate(new Date());
+        success(comment);
+      } else {
+        fail();
+      }
+    }
+    context.callbackTree(auth, 'updateQuestionComment', req, next)
+      .success(setValue(dataObj, 'userId'), 'savingUserId', '$cbtArg[0].id')
+      .success('savingUserId', crud.selectOne, 'gettingComment', new QuestionComment(req.body.id))
       .success('gettingComment', assertAuthor, 'assertingAuthor')
       .fail('gettingComment', returnError(next))
       .success('assertingAuthor', crud.updateGet, 'updatingComment', comment)
       .fail('assertingAuthor', returnError(next, new UnAuthorized('You are not the author of this comment')))
-      .success('updatingComment', returnQuery(res))
+      .success('updatingComment', alwaysSucceed(TagSvc.updateObj), 'updatingTags', '$cbtArg.comment = $cbtArg[0]', req.body.tagStr)
       .fail('updatingComment', returnError(next))
+      .success('updatingTags', returnQuery(res))
       .execute();
   });
 
@@ -934,8 +1000,9 @@ function endpoints(app, prefix, ip) {
       .fail('gettingQuestion', returnError(next, new InvalidRequest('Invalid id: ' + question.id)), 'invalidId')
       .success('verifyingAuthor', crud.updateGet, 'updating', question)
       .fail('verifyingAuthor', returnError(next, new UnAuthorized()), 'notAuthorized')
-      .success('updating', returnQuery(res), 'returnin')
+      .success('updating', alwaysSucceed(TagSvc.updateObj), 'updatingTags', '$cbtArg.question = $cbtArg[0]', req.body.tagStr)
       .fail('updating', returnError(next, new ShouldNeverHappen()), 'pigsFlew')
+      .success('updatingTags', returnQuery(res), 'returnin', '$cbtArg.question')
       .execute();
   });
 
@@ -1422,7 +1489,9 @@ function endpoints(app, prefix, ip) {
 
   //  ------------------------- Follower Api -------------------------  //
   function formatFollowing(results, success) {
-    const formatted = {users: {}, groups: {}, commentTags: {}, explanationTags: {}, questionTags: {}}
+    const formatted = {users: {}, groups: {}, explanationCommentTags: {},
+        questionCommentTags: {}, explanationTags: {}, questionTags: {}};
+
     for (let index = 0; index < results.length; index += 1) {
       const result = results[index];
       const user = result.target;
@@ -1434,8 +1503,11 @@ function endpoints(app, prefix, ip) {
       const explTag = result.explanationTag;
       formatted.explanationTags[explTag.id] = explTag;
 
-      const commentTag = result.commentTag;
-      formatted.commentTags[commentTag.id] = commentTag;
+      const explCommentTag = result.explanationCommentTag;
+      formatted.explanationCommentTags[explCommentTag.id] = explCommentTag;
+
+      const questionCommentTag = result.questionCommentTag;
+      formatted.questionCommentTags[questionCommentTag.id] = questionCommentTag;
 
       const questionTag = result.questionTag;
       formatted.questionTags[questionTag.id] = questionTag;
@@ -1443,7 +1515,8 @@ function endpoints(app, prefix, ip) {
     formatted.users = Object.values(formatted.users);
     formatted.groups = Object.values(formatted.groups);
     formatted.explanationTags = Object.values(formatted.explanationTags);
-    formatted.commentTags = Object.values(formatted.commentTags);
+    formatted.explanationCommentTags = Object.values(formatted.explanationCommentTags);
+    formatted.questionCommentTags = Object.values(formatted.questionCommentTags);
     formatted.questionTags = Object.values(formatted.questionTags);
     success(formatted);
   }

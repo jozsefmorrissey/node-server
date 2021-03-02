@@ -7,8 +7,8 @@ const { Notify } = require('../notification');
 const { Context } = require('../context');
 const { InvalidDataFormat } =
         require('../exceptions.js');
-const { Tag, CommentTag, ExplanationTag, GroupTag, QuestionTag, Comment,
-        Explanation, Group, Question } =
+const { Tag, ExplanationTag, GroupTag, QuestionTag, ExplanationComment, QuestionComment,
+        Explanation, Group, Question, QuestionCommentTag, ExplanationCommentTag } =
         require('../database/objects');
 
 exports.list = (success, fail) => {
@@ -18,9 +18,13 @@ exports.list = (success, fail) => {
 function typeSpecificValues(dataObj, tagStr) {
   tagStr = tagStr || '';
   let getInstance;
-  if (dataObj instanceof Comment) {
+  console.log('aaagrs:', arguments)
+  if (dataObj instanceof ExplanationComment) {
     tagStr += ' ' + dataObj.value;
-    getInstance = () => new CommentTag(undefined, dataObj.id);
+    getInstance = () => new ExplanationCommentTag(undefined, dataObj.id);
+  } else if (dataObj instanceof QuestionComment) {
+    tagStr += ' ' + dataObj.value;
+    getInstance = () => new QuestionCommentTag(undefined, dataObj.id);
   } else if (dataObj instanceof Explanation) {
     tagStr += ' ' + dataObj.content;
     getInstance = () => new ExplanationTag(undefined, dataObj.id);
