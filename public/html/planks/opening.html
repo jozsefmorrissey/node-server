@@ -1,0 +1,30 @@
+<div>
+  <label>Dividers:</label>
+  <input type="number" min="1" max="10" step="1"
+      class='open-division-input' opening-id='{{opening.id}}'
+      value='{{opening.dividerCount()}}'>
+  <span class='open-orientation-radio-cnt hidden'>
+
+    <label for='open-orientation-horiz-{{opening.id}}'>Horizontal:</label>
+    <input type='radio' name='orientation-{{opening.id}}' value='horizontal'
+        open-id='{{opening.id}}' id='open-orientation-horiz-{{opening.id}}'
+        class='open-orientation-radio'>
+
+    <label for='open-orientation-vert-{{opening.id}}'>Vertical:</label>
+    <input type='radio' name='orientation-{{opening.id}}' value='vertical'
+        open-id='{{opening.id}}' id='open-orientation-vert-{{opening.id}}'
+        class='open-orientation-radio'>
+
+  </span>
+  <select class='open-pattern-select {{ opening.dividerCount() > 0 ? '' : 'hidden'}}'
+        id='{{selectPatternId}}'>
+    {{patterns}}
+  </select>
+  <span>
+    {{inputHtml}}
+  </span>
+</div>
+<div id='{{openDispId}}'>
+  Divisions:
+  {{opening.dividerCount()}}
+</div>

@@ -1,0 +1,24 @@
+
+<div class="expandable-list {{type}}" ex-list-id='{{id}}'>
+  <div class="expand-list-cnt {{type}}" ex-list-id='{{id}}'>
+    <div:t repeat='item in list' class="expandable-list-body"  index='{{$index}}'>
+      <div class="expand-item">
+        <div class='expand-rm-btn-cnt'>
+          <button class='expandable-item-rm-btn' ex-list-id='{{id}}' index='{{$index}}'>X</button>
+        </div>
+        <div class="expand-header {{type}}" ex-list-id='{{id}}' index='{{$index}}'>
+          {{getHeader(item, $index)}}
+        </div>
+      </div>
+    </div:t>
+    <button ex-list-id='{{id}}' class='expandable-list-add-btn'
+    {{hideAddBtn ? 'hidden' : ''}}>
+    Add {{listElemLable}}
+  </button>
+  </div>
+  <div>
+  </div>
+  <div class="expand-body {{type}}">
+    Hello World!
+  </div>
+</div>

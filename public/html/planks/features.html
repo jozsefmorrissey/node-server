@@ -1,0 +1,12 @@
+<div class='tab'>
+  <div:t repeat='feature in features'>
+    <label>{{feature.name}}</label>
+    <input class='feature-radio' type='radio' name='{{id}}' value='{{feature.id}}'
+        {{feature.isRoot(id) || features.length === 1 ? "hidden disabled" : ""}}>
+    <div {{feature.isRoot(id) || features.length === 1 ? '' : 'hidden'}}>
+      <input type='text' placeholder="Unique Notes"
+        {{feature.isRoot(id) || features.length === 1 ? "hidden disabled" : ""}}>
+      {{new $t('./public/html/planks/features.html').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})}}
+    </div>
+  </div:t>
+</div>

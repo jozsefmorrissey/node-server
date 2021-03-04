@@ -1,0 +1,36 @@
+
+.hidden {
+  display: none;
+}
+
+.center {
+  text-align: center;
+}
+
+.tab {
+  margin-left: 10pt;
+}
+
+.left {
+  float: left;
+}
+
+.right {
+  float: right;
+}
+
+.cabinet-header {
+  display: inline-flex;
+}
+
+.cabinet-input.dem {
+  width: 40pt;
+}
+
+.cabinet-input[type='id'] {
+  margin-right: 30pt;
+}
+
+.cabinet-dem-cnt {
+  margin-left: 10pt;
+}

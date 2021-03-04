@@ -334,7 +334,8 @@ class $t {
 		const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
 		const ternaryProps = {opening: /\?/};
 		const keyWordProps = {opening: /(new|null|undefined|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-		const ignoreProps = {opening: /new \$t\('.*?'\).render\(get\('scope'\), '(.*?)', get\)/};
+    //TODO: Figure out a proper way to recuse!!!!
+		const ignoreProps = {opening: /(new \$t\('.*?'\).render\(get\('scope'\), '(.*?)', get\)|new \$t\('.*?'\).render\(\{.*?\}\))/};
 		const commaProps = {opening: /,/};
 		const colonProps = {opening: /:/};
 		const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
@@ -660,13 +661,25 @@ class $t {
 
 		function compile() {
 			const blocks = isolateBlocks(template);
+			console.log('length:', blocks.length)
+			console.log('template:', template)
 			let str = template;
+			let bits = [];
 			for (let index = 0; index < blocks.length; index += 1) {
 				const block = blocks[index];
 				const parced = ExprDef.parse(expression, block);
-				str = str.replace(`{{${block}}}`, `\` + (${parced}) + \``);
+				console.log(index, ') Block:', block);
+				console.log(index, ') Parced:', parced);
+				const replaceStr = `{{${block}}}`;
+				const blockIndex = str.indexOf(replaceStr);
+				const prefix = str.substr(0, blockIndex) + `\` + (${parced}) + \``;
+				str = str.substr(blockIndex + replaceStr.length);
+				bits.push(prefix);
+				// str = str.replace(`{{${block}}}`, `\` + (${parced}) + \``);
+				console.log('string:', bits.join('') + str);
+				console.log();
 			}
-			return `\`${str}\``;
+			return `\`${bits.join('') + str}\``;
 		}
 
 		const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')([^>^\4]*?)\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
@@ -739,3 +752,4 @@ $t.dumpTemplates = function () {
 try{
 	exports.$t = $t;
 } catch (e) {}
+exports.$t = $t;

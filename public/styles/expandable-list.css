@@ -1,8 +1,26 @@
 
+.expand-list-cnt.pill {
+  display: inline-flex;
+}
+
+.expand-item {
+  position: relative;
+}
+
+.expandable-list.sidebar {
+  display: inline-flex;
+}
+
+.expand-rm-btn-cnt {
+  position: absolute;
+  pointer-events: none;
+  width: 100%;
+}
+
 .expandable-item-rm-btn {
   float: right;
   padding: 0 2pt;
-  font-size: larger;
+  font-size: small;
   font-weight: bold;
   border-radius: 10pt;
   color: red;
@@ -12,8 +30,14 @@
 }
 
 .expand-header {
-  padding-left: 20pt;
+  padding: 5pt 20pt;
+  background-color: darkgray;
   border-radius: 10pt;
+}
+
+.expand-header.pill {
+  display: inline-block;
+  border-radius: 10pt 10pt 0pt 0pt;
 }
 
 .expand-body {
@@ -24,16 +48,29 @@
   padding-bottom: 10pt;
 }
 
+.expand-body.pill {
+  display: inline-block;
+  padding-left: 20pt;
+  border-radius: 0pt 0pt 10pt 10pt;
+  background-color: whitesmoke;
+  display: none;
+  padding-bottom: 10pt;
+}
+
+
 .expand-header.active {
   background-color: blue;
   color: white;
   font-weight: bolder;
   border-radius: 10pt 10pt 0pt 0pt;
-  padding: 5pt 20pt;
+}
+
+.expand-header.sidebar {
+  border-radius: 10pt 0 0 10pt;
 }
 
 .expand-header:hover {
-  background-color: #ccaeae;
+  background-color: black;
   color: white;
   font-weight: bolder;
 }
