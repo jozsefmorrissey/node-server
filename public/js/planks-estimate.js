@@ -189,8 +189,9 @@ class OpenSection extends SpaceSection {
     this.divide = (dividerCount) => {
       if (!Number.isNaN(dividerCount)) {
         const currDividerCount = this.dividerCount();
-        if (dividerCount < currDividerCount / 2) {
-          this.sections.splice(dividerCount * 2 - 1);
+        if (dividerCount < currDividerCount) {
+          const diff = currDividerCount - dividerCount;
+          this.sections.splice(dividerCount * 2 + 1);
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = 0; index < diff; index +=1) {
