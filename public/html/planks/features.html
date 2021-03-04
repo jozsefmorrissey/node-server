@@ -1,11 +1,13 @@
 <div class='tab'>
   <div:t repeat='feature in features'>
     <label>{{feature.name}}</label>
+    <input type='checkbox' name='{{id + '-checkbox'}}'
+        {{feature.checkbox() ? '': 'hidden'}}>
     <input class='feature-radio' type='radio' name='{{id}}' value='{{feature.id}}'
-        {{feature.isRoot(id) || features.length === 1 ? "hidden disabled" : ""}}>
-    <div {{feature.isRoot(id) || features.length === 1 ? '' : 'hidden'}}>
+        {{!feature.isRadio(features, id) ? "hidden disabled" : ""}}>
+    <div {{!feature.isRadio(features, id) ? '' : 'hidden'}}>
       <input type='text' placeholder="Unique Notes"
-        {{feature.isRoot(id) || features.length === 1 ? "hidden disabled" : ""}}>
+        {{!feature.isRadio(features, id) ? "hidden disabled" : ""}}>
       {{new $t('./public/html/planks/features.html').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})}}
     </div>
   </div:t>

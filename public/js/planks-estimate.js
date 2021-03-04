@@ -78,6 +78,8 @@ class Feature {
     this.features = [];
     this.isRoot = (path) => path === 'root';
     this.multipleFeatures = () => this.features.length > 1;
+    this.checkbox = () => this.id.indexOf('has') === 0;
+    this.isRadio = (siblings, path) => !(this.checkbox() || this.isRoot(path) || siblings.length === 1);
     this.addFeature = (id) => this.features.push(Feature.tree[id]);
     Feature.tree[id] = this;
     properties.forEach((featureId) => this.addFeature(featureId))
@@ -95,12 +97,10 @@ new Feature('1/4');
 new Feature('1/2');
 new Feature('roundOver', ['1/8', '1/4', '1/2']);
 new Feature('knockedOff');
-new Feature('hasFrame');
-new Feature('hasPanel');
+new Feature('hasFrame', ['thickness']);
+new Feature('hasPanel', ['thickness']);
 new Feature('insetProfile');
 new Feature('glass');
-new Feature('hasFrame.thickness');
-new Feature('hasPanel.thickness');
 new Feature('edgeProfile', ['roundOver', 'knockedOff']);
 new Feature('drawerFront', ['edgeProfile'])
 new Feature('doveTail');
@@ -124,7 +124,7 @@ new DrawerSection();
 class DividerSection extends PartitionSection {
   constructor(parentList, width, height, depth) {
     super(sectionFilePath('divider'), parentList, width, height, depth);
-    this.addFeatures(['hasFrame', 'hasPanel', 'hasFrame.thickness', 'hasPanel.thickness'])
+    this.addFeatures(['hasFrame', 'hasPanel'])
   }
 }
 new DividerSection();
