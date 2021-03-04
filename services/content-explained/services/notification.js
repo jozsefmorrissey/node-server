@@ -4,91 +4,65 @@ const crud = Crud.instance('CE');
 
 const { QuestionNotification, CommentNotification, ExplanationNotification,
         ExplanationConnections, CommentConnections, Site, Explanation,
-        Question } =
+        ExplanationTagFollower, QuestionTagFollower, CommentTagFollower,
+        Follower, GroupFollower, Question, ExplanationComment,
+        QuestionComment, ExplanationCommentConnections,
+        QuestionCommentConnections, QuestionConnections,
+        ExplanationCommentNotification, QuestionCommentNotification } =
                 require('./database/objects');
 
-function notNotified(connection, notified, ignoreId, idAttr) {
-  const id = connection[idAttr];
-  if (id && id !== ignoreId) {
-    if (notified[id]) {
-      return false;
+function notifyAll(notifyFunc, userIdFields, ignoreUserId) {
+  return function (connections) {
+    console.log('herrrr', userIdFields, connections);
+    let connectionMap = [];
+    for (let index = 0; index < connections.length; index += 1) {
+      for (let uIndex = 0; uIndex < userIdFields.length; uIndex += 1) {
+        const conn = connections[index];
+        const field = userIdFields[uIndex];
+        console.log(field.name);
+        const userId = conn.$d().getValueFunc(field.name)();
+        if (connectionMap[userId] === undefined && userId !== ignoreUserId) {
+          connectionMap[userId] = notifyFunc(userId);
+        }
+      }
     }
-    notified[id] = true;
-    return true;
+    crud.insert(connectionMap);
   }
-  return false;
 }
 
-function notifyExpl (explanation) {
-  const ignoreId = explanation.author.id;
-  function insertNotifications(connectionArr) {
-    const notifications = {};
-    const notified = {};
-    connectionArr.forEach((connection) => {
-      if (notNotified(connection, notifications, ignoreId, 'commentorId')) {
-        const commentorId = connection.commentorId;
-        const site = new Site(connection.commentSiteId);
-        crud.insert(new ExplanationNotification(commentorId, site, explanation))
-      }
-      if (notNotified(connection, notifications, ignoreId, 'askerId')) {
-        const askerId = connection.askerId;
-        const question = new Question(connection.questionId);
-        const site = new Site(connection.questionSiteId);
-        crud.insert(new QuestionNotification(askerId, site, explanation, question))
-      }
-    });
+function notifyConfiguration(dataObj) {
+  let connectionObj, notificationFunc, ignoreUserId;
+  switch (dataObj.constructor) {
+    case Explanation:
+      ignoreUserId = dataObj.author.id;
+      connectionObj = new ExplanationConnections(dataObj.id);
+      notificationFunc = (userId) => new ExplanationNotification(userId, dataObj);
+      break;
+    case Question:
+      ignoreUserId = dataObj.asker.id;
+      connectionObj = new QuestionConnections(dataObj.id);
+      notificationFunc = (userId) => new QuestionNotification(userId, dataObj);
+      break;
+    case ExplanationComment:
+      ignoreUserId = dataObj.author.id;
+      connectionObj = new ExplanationCommentConnections(dataObj.id);
+      notificationFunc = (userId) => new ExplanationCommentNotification(userId, dataObj);
+      break;
+    case QuestionComment:
+      ignoreUserId = dataObj.author.id;
+      connectionObj = new QuestionCommentConnections(dataObj.id);
+      notificationFunc = (userId) => new QuestionCommentNotification(userId, dataObj);
   }
-
-  crud.select(new ExplanationConnections(explanation.id, undefined), insertNotifications,
-        (err) => console.error(err));
+  return {connectionObj, notificationFunc, ignoreUserId};
 }
 
-function notifyComment (comment) {
-  const id = comment.id;
-  const ignoreId = comment.author.id;
-  const explId = comment.explId;
-  function insertNotifications(connectionArr) {
-    let notifications = {};
-    connectionArr.forEach((connection) => {
-      const site = new Site(connection.siteId);
-      const explanation = new Explanation(connection.explanationId);
-      function insertComment(userId) {
-        crud.insert(new CommentNotification(userId, site, explanation, comment));
-      }
-      if (notNotified(connection, notifications, ignoreId, 'explanationAuthorId')) {
-        insertComment(connection.explanationAuthorId);
-      }
-      if (notNotified(connection, notifications, ignoreId, 'childCommentorId')) {
-        insertComment(connection.childCommentorId);
-      }
-      if (notNotified(connection, notifications, ignoreId, 'siblingCommentorId')) {
-        insertComment(connection.siblingCommentorId);
-      }
-      if (notNotified(connection, notifications, ignoreId, 'parentCommentorId')) {
-        insertComment(connection.parentCommentorId);
-      }
-    });
-  }
-
-  const commentConnect = new CommentConnections(id, undefined);
-  crud.select(commentConnect, insertNotifications);
-}
-
-function Notify(dataObject, success) {
-  switch (dataObject.constructor.name) {
-    case 'Explanation':
-      notifyExpl(dataObject);
-      success(dataObject);
-      break;
-    case 'Comment':
-      notifyComment(dataObject);
-      success(dataObject);
-      break;
-    case 'Number':
-      crud.select(new Notification(dataObject, undefined), success);
-      break;
-    default:
-    console.error(`Unknown notification Object: '${dataObject.constructor.name}'`);
+function Notify(dataObj, success) {
+  const notifyConfig = notifyConfiguration(dataObj);
+  const connObj = notifyConfig.connectionObj;
+  if (notifyConfig.connectionObj !== undefined) {
+    const notifyFunc = notifyConfig.notificationFunc;
+    const userIdFields = connObj.$d().getFields('userId');
+    crud.select(connObj, notifyAll(notifyFunc, userIdFields, notifyConfig.ignoreUserId));
   }
 }
 

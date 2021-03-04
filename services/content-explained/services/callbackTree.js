@@ -13,6 +13,8 @@ class CallbackTreeLeafNotDefined extends Error {
   }
 }
 
+class CBNotAnArg { constructor() {}}
+
 class CallbackTree {
   constructor(paths, func, id, ...args) {
     if (!Array.isArray(paths)) {
@@ -48,9 +50,23 @@ class CallbackTree {
     this.setRef = (key, value) => references[key] = value;
     this.getRef = (key) => references[key];
 
+    let errorHandler;
+    this.onError = (e) => {
+      if (errorHandler) {
+        errorHandler(e);
+      } else {
+        throw e;
+      }
+    }
+    this.errorHandler = (errHandler) => {
+      errorHandler = errHandler;
+      return retInterface()
+    };
+
     function retInterface (inst) {
       const root = instance.getRoot();
       const retInt = root.options();
+      retInt.errorHandler = inst ? inst.errorHandler : instance.errorHandler;
       retInt.setDebug = root.setDebug;
       retInt.execute = root.execute;
       retInt.getLastPath = root.getLastPath;
@@ -158,6 +174,7 @@ class CallbackTree {
     const argReg = /^\$cbtArg\[([0-9]*)\]((\.[a-zA-Z0-9\.]*|)$)/;
     const refReg = /^\$cbtArg\.([a-zA-Z0-9]*|)$/
     const refAssignReg = /^\$cbtArg\.([a-zA-Z0-9]*|) = \$cbtArg\[([0-9]*)\]((\.[a-zA-Z0-9\.]*|)$)/
+    const passiveRefAssignReg = /^\/\/\$cbtArg\.([a-zA-Z0-9]*|) = \$cbtArg\[([0-9]*)\]((\.[a-zA-Z0-9\.]*|)$)/
     function renderArg(tempArgs, args, index) {
       const arg = args[index];
       if ((typeof arg) !== 'string') return args[index];
@@ -169,6 +186,13 @@ class CallbackTree {
       match = arg.match(refReg)
       if (match) {
         return instance.getRoot().getRef(match[1]);
+      }
+
+      match = arg.match(passiveRefAssignReg)
+      if (match) {
+        const value = objectStrPath(tempArgs[match[2]], match[3]);
+        instance.getRoot().setRef(match[1], value);
+        return new CBNotAnArg();
       }
 
       match = arg.match(refAssignReg);
@@ -197,7 +221,12 @@ class CallbackTree {
       if (args.length > 0 && args[0] !== undefined) {
         tempArgs = [];
         Array.from(args).map(
-          (value, index) => tempArgs.push(renderArg(arguments, args, index)));
+          (value, index) => {
+            const renderedArg = renderArg(arguments, args, index);
+            if (!(renderArg instanceof CBNotAnArg)) {
+              tempArgs.push(renderedArg);
+            }
+          });
       }
       const rt = instance.getRoot();
       if (func instanceof Error) throw func;
@@ -205,7 +234,12 @@ class CallbackTree {
       else {
         tempArgs = tempArgs.concat(callbackFunctions());
 
-        let retVal = func(...tempArgs);
+        let retVal;
+        try {
+          retVal = func(...tempArgs);
+        } catch (e) {
+          instance.onError(e);
+        }
 
         rt.terminate(instance, retVal);
         return rt.getPromise();

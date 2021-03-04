@@ -2,6 +2,8 @@
 const mySql = require('mysql');
 var Mutex = require('async-mutex').Mutex;
 
+const { callAfter } = require('../callbackUtils');
+
 function toPascal(string) {
   if ((typeof string) !== 'string') return string;
   function fixSeperation(match, one, two) {
@@ -10,6 +12,16 @@ function toPascal(string) {
   return string.replace(/[^a-z^A-Z]/, '_')
               .replace(/([a-z])([A-Z])/g, fixSeperation)
               .toUpperCase();
+}
+
+class Exclude {
+  constructor(array) {
+    const obj = {};
+    for (let index = 0; index < array.length; index += 1) {
+      obj[array[index]] = true;
+    }
+    this.should = (id) => obj[id] === true;
+  }
 }
 
 class Field {
@@ -22,10 +34,13 @@ class Field {
   constructor(name, options, parent) {
     const o = options || {};
     let value;
+    const instance = this;
     this.name = name;
     this.index = options.index;
     this.default = () => o.default;
+    this.init = () => o.init === undefined || o.init === true;
     this.isId = () => o.key;
+    this.inGroup = (group) => o.group === group;
     this.isPrimative = function () {return o.class === undefined;};
     this.getClass = function () {return o.class;};
     this.merge = function () {return o.merge;};
@@ -37,13 +52,27 @@ class Field {
             (!o.class || (value instanceof o.class ));
     };
 
-    this.getValue = function () {return value;}
+    const exclude = o.exclude && new Exclude(o.exclude);
+    this.exclude = () => exclude;
 
-    this.setValue = function (newValue) {
-      if (this.isList()) {
-        value = value || [];
+    this.getValue = function () {return value;}
+    this.getSqlValue = function () {
+      if (o.conversion) {
+        o.conversion.jsToSql(instance.getValue());
+      } else return instance.getValue();
+    }
+    this.convertSqlValue = function (value) {
+      if (o.conversion) {
+        o.conversion.sqlToJs(value);
+      } else return value;
+
+    }
+    this.sqlMapping = (fieldName) => o.map && o.map[fieldName];
+
+    this.setValue = function (newValue, append) {
+      if (append === true && this.isList()) {
         // TODO: try to get rid of indexOf... Hacky Fix
-        if (newValue !== undefined && value.indexOf(newValue) === -1) {
+        if (newValue !== undefined) {
           value.push(newValue);
         }
       } else {
@@ -70,6 +99,10 @@ class Field {
                               .split('to')[1] === 'many' : false;
     }
 
+    if (this.isList()) {
+      value = [];
+      if (!o.writeOnly) parent[this.name] = this.getValue();
+    }
 
     this.sqlKeyDefine = function () {
       if (this.isList()) {
@@ -144,8 +177,8 @@ class Field {
 }
 
 function mapObject (instance) {
-  return function (id) {
-    const mapObj = new (instance.constructor)();
+  return function (id, excludeFields) {
+    const mapObj = new (instance.constructor)(excludeFields);
     mapObj.$d().setMapId(id);
     return mapObj;
   }
@@ -177,11 +210,15 @@ class DataObject {
     let mapId;
     this.$d = function () {return $d;};
     let fieldIndex = 0;
-    $d.addField = function (name, options) {
-      options = options || {};
-      options.index = fieldIndex++;
-      const field = new Field(name, options, instance);
-      fields[name] = field;
+    $d.addField = function (names, options) {
+      if (!Array.isArray(names)) names = [names];
+      for (let index = 0; index < names.length; index += 1) {
+        const name = names[index];
+        options = options || {};
+        options.index = fieldIndex++;
+        const field = new Field(name, options, instance);
+        fields[name] = field;
+      }
     }
 
     $d.getIdFields = () => ids;
@@ -191,13 +228,13 @@ class DataObject {
       return attrs;
     }
 
-    $d.oneToManyCondStr = (mapRelObj, conditions) => {
+    $d.oneToManyCondStr = (mapRelObj, targetField, conditions) => {
       conditions = conditions || [];
       for (let index = 0; index < ids.length; index += 1) {
         const field = ids[index];
-        const refIdVar = mapRelObj.$d().refId(instance.constructor.name, field.name);
         const idVar = field.sqlKey();
-        conditions.push(`${idVar} = ${refIdVar}`)
+        const refIdVar = mapRelObj.$d().refId(instance.constructor.name, targetField, field);
+        conditions.push(`${idVar} = ${refIdVar}`);
       }
       return conditions;
     }
@@ -207,7 +244,7 @@ class DataObject {
       const relIds = mapRelObj.$d().getIdFields();
       for (let index = 0; index < relIds.length; index += 1) {
         const field = relIds[index];
-        const refIdVar = $d.refId(targetField.name, field.name);
+        const refIdVar = $d.refId(targetField.name, targetField, field);
         const idVar = field.sqlKey();
         conditions.push(`${idVar} = ${refIdVar}`)
       }
@@ -219,9 +256,8 @@ class DataObject {
       let idAttrs = $d.getIdAttrs();
       const name = field.name;
       if (field.isList()) {
-        $d.oneToManyCondStr(mapRelObj, conditions);
+        $d.oneToManyCondStr(mapRelObj, field, conditions);
       } else {
-        // TODO: make this call on instance function
         $d.manyToOneCondStr(mapRelObj, field, conditions);
       }
       conditions = conditions.join(' AND ');
@@ -261,9 +297,13 @@ class DataObject {
     $d.writeTable = function (onlyTableName) {return table('write', onlyTableName)};
 
 
-    $d.refId = function (namePrefix, name) {
-      const prefix = mapId ? `${$d.readTable()}.` : '';
-      name = name.substr(0,1) + name.substr(1);
+    $d.refId = function (namePrefix, targetField, field) {
+      const prefix = mapId !== undefined ? `${$d.readTable()}.` : '';
+      const manualMapping = targetField.sqlMapping(field.name)
+      const name = field.name.substr(0,1) + field.name.substr(1);
+      if (manualMapping) {
+        return toPascal(`${prefix}${manualMapping}`);
+      }
       return toPascal(`${prefix}${namePrefix}_${name}`);
     };
     $d.getField = function (id) {return fields[id];};
@@ -272,12 +312,21 @@ class DataObject {
       switch (type) {
         case 'relation':
           return relations;
-          break;
         case 'primative':
           return primitives;
-          break;
-        default:
+        case undefined:
           return Object.values(fields);
+        default:
+          const fieldNames = Object.keys(fields);
+          const grouped = [];
+          for (let index = 0; index < fieldNames.length; index += 1) {
+            const field = fields[fieldNames[index]];
+            console.log('fields::', field.name, instance.constructor);
+            if (field.inGroup(type)) {
+              grouped.push(field);
+            }
+          }
+          return grouped;
       }
     };
 
@@ -293,8 +342,8 @@ class DataObject {
     };
 
     $d.setValueFunc = function (name) {
-      return function (value) {
-        fields[name].setValue(value);
+      return function (value, append) {
+        fields[name].setValue(value, append);
       }
     }
 
@@ -309,8 +358,15 @@ class DataObject {
         instance.constructor.mapObject = mapObject(instance);
         instance.constructor.fromObject = fromObject(instance);
       }
+      let exclude;
+      let excluding = false;
       const idConstructor = args.length === 1  && Number.isInteger(args[0]) &&
-              fields['id'] !== undefined;
+            fields['id'] !== undefined;
+      if (args[0] instanceof Exclude) {
+        exclude = args[0];
+        excluding = true;
+      }
+
       if (idConstructor) {
         $d.setValueFunc('id')(args[0]);
       }
@@ -318,22 +374,30 @@ class DataObject {
       let argsIndex = 0;
       for (let index = 0; index < fieldNames.length; index += 1) {
         const field = fields[fieldNames[index]];
-        if (!idConstructor && !field.default()) {
-          $d.setValueFunc(field.name)(args[argsIndex++]);
-        }
-        const upperFirst = `${field.name.substr(0,1).toUpperCase()}${field.name.substr(1)}`;
-        const getterName = `get${upperFirst}`
-        const setterName = `set${upperFirst}`
-        instance[getterName] = $d.getValueFunc(field.name);
-        instance[setterName] = $d.setValueFunc(field.name);
-        if (field.isPrimative()) {
-          primitives.push(field);
-        } else {
-          DataObject.addChildTable(instance, field);
-          relations.push(field);
-        }
-        if (field.isId()) {
-          ids.push(field);
+
+        if (!excluding || !exclude.should(fieldNames[index])) {
+          if (!excluding) {
+            if (field.default()) {
+              $d.setValueFunc(field.name)(field.default());
+            } else if (args.length > argsIndex &&
+                        !idConstructor && field.init()) {
+              $d.setValueFunc(field.name)(args[argsIndex++]);
+            }
+          }
+          const upperFirst = `${field.name.substr(0,1).toUpperCase()}${field.name.substr(1)}`;
+          const getterName = `get${upperFirst}`
+          const setterName = `set${upperFirst}`
+          instance[getterName] = $d.getValueFunc(field.name);
+          instance[setterName] = $d.setValueFunc(field.name);
+          if (field.isPrimative()) {
+            primitives.push(field);
+          } else {
+            DataObject.addChildTable(instance, field);
+            relations.push(field);
+          }
+          if (field.isId()) {
+            ids.push(field);
+          }
         }
       }
       if (ids.length === 0) {
@@ -342,7 +406,6 @@ class DataObject {
     }
 
     $d.setMapId = function (id) {
-      // if (mapId !== undefined) throw Error('Attempting to map a single object to two tables');
       mapId = id;
     }
     $d.getInstance = function () {return new instance.constructor()}
@@ -351,10 +414,15 @@ class DataObject {
     $d.uniqueName = function (result) {
       let values = '';
       if (result) {
-        ids.forEach((field) => {
+        let hasValue = false;
+        for (let index = 0; index < ids.length; index += 1) {
+          let field = ids[index];
           const value = result[field.uniqueName()];
+          if (value !== null) hasValue = true;
           values += `_${value}`;
-        });
+        }
+        // TODO: remove hacky fix
+        if (hasValue === false) return null;
       }
       return toPascal(`${$d.readTable()}${values}`);
     }
@@ -387,6 +455,20 @@ class DataObject {
         fs[index].setFromResult(result, instance);
       }
       return instance;
+    }
+
+    $d.orderByClause = function (properties) {
+      const order = properties && properties.order;
+      if (order === undefined) return '';
+      let clause = ' ORDER BY';
+      for (let index = 0; index < order.length; index += 1) {
+        const parts = order[index].trim().split(/\s/);
+        const field = fields[parts[0]];
+        const direction = parts[1].toUpperCase();
+        if (field === undefined) throw new Error(`Invalid Field name '${parts[0]}' parsed from string order[index]\n\tformat: [fieldName] [ASC|DESC]`);
+        clause += ` ${field.sqlKey()} ${direction},`;
+      }
+      return clause.substr(0, clause.length - 1);
     }
 
     $d.constructors = function () {
@@ -478,61 +560,81 @@ class Crud {
       }
     }
 
+    function linkRelatedObjs(resultMap, relationMappings) {
+      for (let index = 0; index < relationMappings.length; index += 1) {
+        const map = relationMappings[index];
+        const parentObj = resultMap[map.uniqueIdParent][map.pid];
+        const childObj = resultMap[map.uniqueIdChild][map.childId];
+        const fieldName = map.field.name;
+        const mergeAttr = map.field.merge();
+        if (mergeAttr && childObj) {
+          parentObj.$d().setValueFunc(fieldName)(childObj[mergeAttr], true);
+        } else {
+          parentObj.$d().setValueFunc(fieldName)(childObj, true);
+        }
+      }
+    }
+
+    function buildMappingList(mappedObj, pid, result, relationMappings) {
+      const mappings = mappedObj.$d().getMappings();
+      for (let index = 0; mappings && index < mappings.length; index += 1) {
+        const map = mappings[index];
+        if (map) {
+          // TODO: make composite resolving function
+          const uniqueIdParent = mappedObj.$d().uniqueName();
+          const uniqueIdChild = map.$d().uniqueName();
+          const childId = map.$d().uniqueName(result);
+          const mappingId = `${uniqueIdParent}:${pid}=>${uniqueIdChild}:${childId}`;
+          if (!relationMappings[mappingId] && childId !== null) {
+            relationMappings[mappingId] = true;
+            relationMappings[mappingId] = {uniqueIdParent, pid, uniqueIdChild, childId, field: map.field};
+          }
+        }
+      }
+    }
+
+    function buildPrimitiveResultObject(mappedObj, pid, result, resultMap, uniqueId) {
+      if (!resultMap[uniqueId]) {
+        resultMap[uniqueId] = {};
+      }
+      if (!resultMap[uniqueId][pid]) {
+        const mapId = mappedObj.$d().getMapId();
+        const newObj = mappedObj.constructor.mapObject(mapId);
+        const fields = newObj.$d().getFields();
+        for (let fIndex = 0; fIndex < fields.length; fIndex += 1) {
+          const field = fields[fIndex];
+          if (field.isPrimative()) {
+            field.setValue(result[field.uniqueName()]);
+          }
+        }
+        resultMap[uniqueId][pid] = newObj;
+      }
+    }
+
+
     // TODO: Refactor
     function mapResults(objects, success, one, fail) {
       return function (results) {
         if (success === undefined) return;
         const resultMap = {};
-        const mappedResults = results && results.length ? [] : results;
+        const relationMappings = {};
         let targetObj;
         for (let index = 0; results && index < results.length; index += 1) {
           const result = results[index];
           for (let oIndex = objects.length - 1; oIndex > -1; oIndex -= 1) {
             const mappedObj = objects[oIndex];
-            const mapping = mappedObj.$d().uniqueName();
+            const uniqueId = mappedObj.$d().uniqueName();
             // TODO: remove when composite key is supported.
-            const id = mappedObj.$d().uniqueName(result);// || Math.floor(Math.random() * 9999999999);
-            if (oIndex === 0) targetObj = mapping;
-            if (id != null && id !== undefined) {
-              if (!resultMap[mapping]) {
-                resultMap[mapping] = {};
-              }
-              if (!resultMap[mapping][id]) {
-                const mapId = mappedObj.$d().getMapId();
-                const newObj = mappedObj.constructor.mapObject(mapId);
-                const fields = newObj.$d().getFields();
-                for (let fIndex = 0; fIndex < fields.length; fIndex += 1) {
-                  const field = fields[fIndex];
-                  if (field.isPrimative()) {
-                    field.setValue(result[field.uniqueName()]);
-                  }
-                }
-                resultMap[mapping][id] = newObj;
-              }
-              const mappings = mappedObj.$d().getMappings();
-              for (let index = 0; mappings && index < mappings.length; index += 1) {
-                const map = mappings[index];
-                if (map) {
-                  // TODO: make composite resolving function
-                  const uniqueIdParent = mappedObj.$d().uniqueName();
-                  const uniqueIdChild = map.$d().uniqueName();
-                  const parentObj = resultMap[uniqueIdParent][id];
-                  const childId = map.$d().uniqueName(result);
-                  if (childId !== null && childId !== null) {
-                    const fieldName = map.field.name;
-                    const childObj = resultMap[uniqueIdChild][childId];
-                    const mergeAttr = map.field.merge();
-                    if (mergeAttr) {
-                      parentObj.$d().setValueFunc(fieldName)(childObj[mergeAttr]);
-                    } else {
-                      parentObj.$d().setValueFunc(fieldName)(childObj);
-                    }
-                  }
-                }
-              }
+            const pid = mappedObj.$d().uniqueName(result);// || Math.floor(Math.random() * 9999999999);
+            if (oIndex === 0) targetObj = uniqueId;
+            if (pid != null && pid !== undefined) {
+              buildPrimitiveResultObject(mappedObj, pid, result, resultMap, uniqueId);
+              buildMappingList(mappedObj, pid, result, relationMappings);
             }
           }
         }
+
+        linkRelatedObjs(resultMap, Object.values(relationMappings));
         const objResults = resultMap[targetObj] ? Object.values(resultMap[targetObj]) : [];
         print('\nMapped object results:\n', objResults);
 
@@ -588,7 +690,7 @@ class Crud {
       if (field.getValue() !== undefined) {
         if (field.isPrimative()) {
           keys.push(sqlKey);
-          values.push(field.getValue());
+          values.push(field.getSqlValue());
         } else if (!field.isList()) {
           keys.push(sqlKey);
           values.push(field.getValue().id);
@@ -613,26 +715,35 @@ class Crud {
         if (!Array.isArray(array)) {
           array = [array];
         }
-        let queryStr = '';
-        let values = [];
+        const callback = callAfter(array.length, null, success, fail);
         array.forEach((dataObj) => {
           const queryObj = buildQuery(dataObj);
-          queryStr += queryObj.query;
-          values = values.concat(queryObj.values);
+          print(queryObj.query, '\n', queryObj.values);
+          if (array.length > 1) {
+            query(queryObj.query, queryObj.values, callback, callback);
+          } else {
+            query(queryObj.query, queryObj.values, success, fail);
+          }
         });
-        print(queryStr, '\n', values);
-        query(queryStr, values, success, fail);
       }
 
 
       getMutex(insertQuery);
     }
 
+    this.insertIgnoreDup = function (object, success, fail) {
+      function checkError(err) {
+        if (err.message.indexOf('ER_DUP_ENTRY') !== -1) {
+          success();
+        } else {
+          fail();
+        }
+      }
+      instance.insert(object, () => success(), checkError);
+    }
+
     this.insertGet = function (object, success, fail) {
       function inserted(data) {
-        function got(data) {
-          success(data);
-        }
         const idOnly = object.$d().getInstance();
         idOnly.setId(data.insertId);
         instance.selectOne(idOnly, success, () => {throw new Error('this should never happen')});
@@ -642,7 +753,7 @@ class Crud {
 
     function pushPrimativeCondition(field, conds, values, notSelect) {
       const sqlKey = field.sqlKey(notSelect);
-      const value = field.getValue();
+      const value = field.getSqlValue();
       if (Array.isArray(value)) {
         const qs = new Array(value.length).fill('?').join(', ');
         conds.push(`${sqlKey} in (${qs})`);
@@ -659,11 +770,22 @@ class Crud {
     }
 
     function pushRelationCondition(field, conds, values, notSelect) {
+      function dataObjCond(dataObj) {
+        return dataObj.id;
+      }
+
+
       if (!field.isList()) {
         const sqlKey = field.sqlKey(notSelect);
-        const value = field.getValue().id;
-        conds.push(`${sqlKey} = ?`);
-        values.push(value);
+        const value = field.getSqlValue();
+        if (Array.isArray(value)) {
+          let qStr = new Array(value.length).fill('?').join(',');
+          value.map((dataObj) => values.push(dataObjCond(dataObj)));
+          conds.push(`${sqlKey} in (${qStr})`);
+        } else {
+          conds.push(`${sqlKey} = ?`);
+          values.push(dataObjCond(value));
+        }
       }
     }
 
@@ -715,7 +837,7 @@ class Crud {
       depth = depth || 2;
       for (let index = 0; index < relations.length; index += 1) {
         const field = relations[index];
-        const mapRelObj = field.getClass().prototype.constructor.mapObject(tableIdInc++);
+        const mapRelObj = field.getClass().prototype.constructor.mapObject(tableIdInc++, field.exclude());
 
         mapRelObj.$d().getFields().map(addSqlString);
         mapObject.$d().addMapping(mapRelObj, field);
@@ -728,8 +850,8 @@ class Crud {
       return { joinString, objects };
     }
 
-    function select(object, or) {
-      const joinStr = or ? ' OR ' : ' AND ';
+    function select(object, properties) {
+      const joinStr = properties && properties.or ? ' OR ' : ' AND ';
       const keys = [];
       const table = object.$d().readTable(true);
       const joinVal = joinLogic(object, keys);
@@ -738,37 +860,40 @@ class Crud {
       object.$d().setMapId(joinVal.objects[0].$d().getMapId());
       const condObj = conditionalObj.apply(this, [object, joinStr]);
       const whereClause = condObj.string ? `\tWHERE ${condObj.string}` : "";
+      const orderByClause = joinVal.objects[0].$d().orderByClause(properties);
+      const limitClause = !properties || properties.limit === undefined ? '' :
+            ` LIMIT ${properties.limit.lower},${properties.limit.upper}`;
       const queryString = `SELECT ${keys.join(',\n')}\n` +
                             `\tFROM ${table} as ${tableId}\n` +
-                            `${joins + whereClause}`;
+                            `${joins + whereClause + orderByClause + limitClause}`;
       print(queryString, '\n', condObj.values);
       return {query: queryString, values: condObj.values, objects: joinVal.objects};
     }
 
-    this.select = function (object, or, success, fail) {
-      if ((typeof or) === 'function') {
+    this.select = function (object, properties, success, fail) {
+      if ((typeof properties) === 'function') {
         fail = success;
-        success = or;
-        or = undefined;
+        success = properties;
+        properties = undefined;
       }
       function selectQuery() {
         print('\nSelect:')
-        const selectObj = select(object, or);
+        const selectObj = select(object, properties);
         const mapSuccess = mapResults(selectObj.objects, success);
         query(selectObj.query, selectObj.values, mapSuccess, fail);
       }
       getMutex(selectQuery);
     }
 
-    this.selectOne = function (object, or, success, fail) {
-      if ((typeof or) === 'function') {
+    this.selectOne = function (object, properties, success, fail) {
+      if ((typeof properties) === 'function') {
         fail = success;
-        success = or;
-        or = undefined;
+        success = properties;
+        properties = undefined;
       }
       function selectQuery() {
         print('\nSelectOne:')
-        const selectObj = select(object, or);
+        const selectObj = select(object, properties);
         const mapSuccess = mapResults(selectObj.objects, success, true, fail);
         query(selectObj.query, selectObj.values, mapSuccess, fail);
       }
@@ -790,15 +915,27 @@ class Crud {
       }
     }
 
-    this.delete = function (object, or, success, fail) {
-      if ((typeof or) === 'function') {
+    this.deleteGet = function (object, properties, success, fail) {
+      if ((typeof properties) === 'function') {
         fail = success;
-        success = or;
-        or = undefined;
+        success = properties;
+        properties = undefined;
+      }
+      function removeAndReturn(willRemove) {
+        instance.delete(object, properties, () => success(willRemove), fail);
+      }
+      instance.select(object, properties, removeAndReturn);
+    }
+
+    this.delete = function (object, properties, success, fail) {
+      if ((typeof properties) === 'function') {
+        fail = success;
+        success = properties;
+        properties = undefined;
       }
       function deleteQuery() {
         print('\nDelete:')
-        const joinStr = or ? ' OR ' : ' AND ';
+        const joinStr = properties && properties.or ? ' OR ' : ' AND ';
         const table = object.$d().writeTable(true);
         const condObj = conditionalObj.apply(this, [object, joinStr, true]);
         const queryString = `delete from ${table} where ${condObj.string}`;
@@ -814,7 +951,7 @@ class Crud {
       const obj = {values: [], setArr: []};
       for (let index = 0; index < fields.length; index += 1) {
         const field = fields[index];
-        const value = field.getValue();
+        const value = field.getSqlValue();
         if (field.name !== 'id' && value !== undefined && !field.isList() && !field.isReadOnly()) {
           obj.setArr.push(`${field.sqlKey(true)}=?`);
           obj.values.push(value);
@@ -834,6 +971,15 @@ class Crud {
         query(queryString, upObj.values, success, fail);
       }
       getMutex(updateQuery);
+    }
+
+    this.updateGet = function (object, success, fail) {
+      function updated() {
+        const idOnly = object.$d().getInstance();
+        idOnly.setId(object.id);
+        instance.selectOne(idOnly, success, () => {throw new Error('this should never happen')});
+      }
+      instance.update(object, updated, fail);
     }
   }
 }

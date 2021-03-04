@@ -88,7 +88,7 @@ function sendContributorUpdateEmail(confirmationUrl, user, groupContributor, gro
     html = `<h4>${user.username} has requested that ${username} be removed from ${group.name}</h4>
             <h4><a href='${confirmationUrl}'>Click Here</a> to confirm</h4>`;
   } else {
-    subject = `Add Contributer To ${group}`
+    subject = `Add contributor To ${group}`
     html = `<h4>${user.username} has requested that ${username} be added to ${group.name}</h4>
             <h4><a href='${confirmationUrl}'>Click Here</a> to confirm</h4>`;
   }
@@ -96,7 +96,7 @@ function sendContributorUpdateEmail(confirmationUrl, user, groupContributor, gro
   if (global.ENV === 'local') {
     console.log('update email:', confirmationUrl);
     Context.fromFunc(success)
-        .dg.link('GroupContributerUrl', 'confirmationUrl', confirmationUrl);
+        .dg.link('GroupcContributorUrl', 'confirmationUrl', confirmationUrl);
   }
 
   send({

@@ -2,7 +2,8 @@
 class CustomError extends Error {
   constructor(msg, code) {
     super(msg + (code ? `\nError Code:${code}` : ''))
-    console.log('heerrr', msg + (code ? `<br>Error Code:${code}` : ''));
+    this.msg = msg;
+    this.code = code;
   }
 }
 
@@ -42,6 +43,31 @@ class InvalidRequest extends CustomError {
 }
 exports.InvalidRequest = InvalidRequest;
 
+class BulkUpdateFailure extends CustomError {
+  constructor(msg, results, errorCode) {
+    super(BulkUpdateFailure.buildMessage(msg, results), errorCode);
+    this.name = "BulkUpdateFailure";
+    this.succeeded = results.succeeded;
+    this.failed = results.failed;
+    this.status = 400;
+  }
+}
+BulkUpdateFailure.buildMessage = (msg, results) => {
+  let errorStr = `${msg}\n\t userId - errorMessage\n`;
+  results.failed.map((obj) => errorStr += `\t${obj.contributor.user.id} - ${obj.error.message}`);
+  return errorStr;
+}
+
+exports.BulkUpdateFailure = BulkUpdateFailure;
+
+class SignalError extends CustomError {
+  constructor(msg, errorCode) {
+    super(msg, errorCode);
+    this.name = "SignalError";
+    this.status = 300;
+  }
+}
+exports.SignalError = SignalError;
 
 class MerriamRequestFailed extends CustomError {
   constructor() {

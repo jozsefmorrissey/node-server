@@ -2,7 +2,7 @@
   "name": "node-server",
   "version": "1.0.0",
   "description": "",
-  "main": "node-server.js",
+  "main": "server.js",
   "dependencies": {
     "async-mutex": "^0.2.4",
     "bcryptjs": "^2.4.3",
