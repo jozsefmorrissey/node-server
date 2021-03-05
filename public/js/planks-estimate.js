@@ -1,17 +1,35 @@
 
 class Assembly {
   constructor(width, height, depth, defaultSizes) {
+    const subAssemblies = [];
+    let features = Feature.get(this.constructor.name);
     if (defaultSizes === undefined) defaultSizes = {};
     this.width = width !== undefined ? width : defaultSizes.width;
     this.height = height !== undefined ? height : defaultSizes.height;
     this.depth = depth !== undefined ? depth : defaultSizes.depth;
+    this.addSubAssembly = (assembly) => subAssemblies.push(assembly);
+    this.addFeature= (features) => feature.push(feature);
     const objId = this.constructor.name;
     if (Assembly.idCounters[objId] === undefined) {
       Assembly.idCounters[objId] = 0;
     }
     this.id = ++Assembly.idCounters[objId];
+    Assebly.add(this);
   }
 }
+
+Assebly.add = (assembly) => {
+  const name = assembly.constructor.name;
+  if (Assembly.list[name] === undefined) Assembly.list[name] = [];
+  Assembly.list[name].push(assembly);
+}
+Assebly.all = () => {
+  const list = [];
+  const keys = Object.keys(Assembly.list);
+  keys.forEach((key) => list.push(Assembly.list[key]));
+  return list;
+}
+Assembly.lists = {};
 Assembly.idCounters = {};
 
 class Section extends Assembly {
@@ -22,9 +40,6 @@ class Section extends Assembly {
     this.parentList = () => parentList;
     if (templatePath === undefined) {
       throw new Error('template path must be defined');
-    }
-    this.addFeatures = (names) => {
-      names.forEach((name) =>this.features.push(Feature.tree[name]));
     }
     this.constructorId = this.constructor.name;
     this.name = this.constructorId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
@@ -72,6 +87,7 @@ const sectionFilePath = (filename) => `./public/html/planks/sections/${filename}
 class Feature {
   constructor(id, properties) {
     properties = properties || [];
+    this.enabled = false;
     this.name = id.replace(/([a-z])([A-Z])/g, '$1.$2')
                   .replace(/\.([a-zA-Z0-9])/g, Feature.formatName);
     this.id = id;
@@ -81,13 +97,25 @@ class Feature {
     this.checkbox = () => this.id.indexOf('has') === 0;
     this.isRadio = (siblings, path) => !(this.checkbox() || this.isRoot(path) || siblings.length === 1);
     this.addFeature = (id) => this.features.push(Feature.tree[id]);
-    Feature.tree[id] = this;
     properties.forEach((featureId) => this.addFeature(featureId))
+    Feature.byId[id] = this;
   }
 }
 
+Feature.byId = {};
+Feature.objMap = {};
+Feature.addRelations = (id, names) => {
+  names.forEach((name) => {
+    if (Feature.map[id] === undefined) Feature.map[id] = [];
+    Feature.map[id].push(Feature.byId(name));
+  });
+};
+Feature.getList = () => {
+  const list = [];
+  Feature.byId(id).forEach((feature) => list.push(new feature.constructor());
+  return list;
+}
 Feature.formatName = (match) => ` ${match[1].toUpperCase()}`;
-Feature.tree = {};
 
 new Feature('thickness');
 new Feature('inset');
@@ -111,12 +139,114 @@ new Feature('solid');
 new Feature('doorType', ['fullOverlay', 'inset']);
 new Feature('doorStyle', ['insetPanel', 'solid'])
 new Feature('drawerType', ['fullOverlay', 'inset']);
-console.log(JSON.stringify(Feature.tree, null, 2))
+console.log(JSON.stringify(Feature.tree, null, 2));
+
+Feature.addRelations('Drawer', ['drawerType', 'drawerFront', 'drawerBox']);
+Feature.addRelations('PartitionSection', ['hasFrame', 'hasPanel']);
+Feature.addRelations('Door', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
+Feature.addRelations('DoubleDoor', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
+Feature.addRelations('FalseFront', ['drawerType', 'edgeProfile']);
+
+class Cost {
+  constructor(id, formula, options) {
+    formula = formula || 0;
+    const optionalPercentage = options.optionalPercentage;
+    const demMutliplier = options.demMutliplier;
+    let percentage = 100;
+    const getMutliplier = (attr) => {
+      if (options.demMutliplier !== undefined) {
+        return options.demMutliplier;
+      }
+      return 'llwwdd';
+    }
+    this.calc(assembly) => {
+      let priceStr = formula.toLowerCase();
+      for (let index = 0; index < 6; index += 1) {
+        const char = priceStr[index];
+        let multiplier;
+        switch (char) {
+          case 'l': value = assembly['length'] break;
+          case 'w': value = assembly['width'] break;
+          case 'd': value = assembly['depth'] break;
+          default: value = 1;
+        }
+        priceStr.replace(new RegExp(`/${char}/`), assembly[value]);
+      }
+      try {
+        const price = eval(priceStr)
+        if (optionalPercentage) price*percentage;
+        return price;
+      } catch (e) {
+        return -0.01;
+      }
+    }
+
+    const cName = this.constructor.name;
+    if (Cost.lists[cName]) Cost.lists[cName] = {};
+    if (Cost.lists[cName][id]) Cost.lists[cName][id] = [];
+    Cost.lists[cName][id].push(this);
+
+  }
+}
+Cost.lists = {};
+Const.objMap = {}
+Const.get = (name) => {
+  const obj = Cost.lists[id];
+  if (obj === undefined) return null;
+  return new obj.constructor();
+}
+Cost.addRelations = (type, id, name) {
+  names.forEach((name) => {
+    if (objMap[id] === undefined) Cost.objMap[id] = {Labor: [], Material: []}
+    if (type === Labor) Cost.objMap[id].Labor.push(Cost.get(name));
+    if (type === Material) Cost.objMap[id].Material.push(Cost.get(name));
+  });
+}
+class Labor extends Cost {
+  constructor (id, formula, optionalPercentage) {
+  }
+}
+Labor.addRelations = (id, name) => Cost.addRelations(Labor, id, name);
+
+class Material extends Cost {
+  constructor (id, formula, optionalPercentage) {
+  }
+}
+Material.addRelations = (id, name) => Cost.addRelations(Material, id, name);
+
+new Labor('Pannel', '1+(0.05*l*w'));
+new Labor('Frame', '0.25');
+new Labor('GlueFrame', '0.25');
+new Labor('SandFrame', '0.05*l*l*w*w*d*d');
+new Labor('SandPanel', '(0.25*l*w)/12');
+new Labor('GlueMiter', '(0.25*l*l*w*w)');
+new Labor('InstallBlumotionGuides', '2');
+new Labor('InstallOtherGuides', '2');
+new Labor('InstallFushHinges', '2');
+new Labor('installOverLayHinges', '2');
+new Labor('Paint', '(l*l*w*w*.1)/12');
+new Labor('Stain', '(l*l*w*w*.25)/12');
+new Labor('InstallDrawerFront', '2');
+new Labor('InstallPullout', 10);
+
+new Material('Wood');
+new Material('Wood.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Wood.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Wood.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood');
+new Material('Plywood.SoftMapel.PaintGrade', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.Hickory.PaintGrade', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.Oak.PaintGrade', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.SoftMapel.StainGrade', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.Hickory.StainGrade', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.Oak.StainGrade', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Glass');
+new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
+new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
 class DrawerSection extends SpaceSection {
   constructor(parentList, width, height, depth) {
     super(sectionFilePath('drawer'), parentList, width, height, depth);
-    this.addFeatures(['drawerType', 'drawerFront', 'drawerBox'])
   }
 }
 new DrawerSection();
@@ -124,7 +254,6 @@ new DrawerSection();
 class DividerSection extends PartitionSection {
   constructor(parentList, width, height, depth) {
     super(sectionFilePath('divider'), parentList, width, height, depth);
-    this.addFeatures(['hasFrame', 'hasPanel'])
   }
 }
 new DividerSection();
@@ -132,7 +261,6 @@ new DividerSection();
 class DoorSection extends SpaceSection {
   constructor(parentList, width, height, depth) {
     super(sectionFilePath('door'), parentList, width, height, depth);
-    this.addFeatures(['doorType', 'doorStyle', 'edgeProfile', 'thickness'])
   }
 }
 new DoorSection();
@@ -141,7 +269,6 @@ console.log(JSON.stringify(new DoorSection().features, null, 2))
 class DualDoorSection extends SpaceSection {
   constructor(parentList, width, height, depth) {
     super(sectionFilePath('dual-door'), parentList, width, height, depth);
-    this.addFeatures(['doorType', 'doorStyle', 'edgeProfile', 'thickness'])
   }
 }
 new DualDoorSection();
@@ -149,7 +276,6 @@ new DualDoorSection();
 class FalseFrontSection extends SpaceSection {
   constructor(parentList, width, height, depth) {
     super(sectionFilePath('false-front'), parentList, width, height, depth);
-    this.addFeatures(['drawerType', 'edgeProfile'])
   }
 }
 new FalseFrontSection();
@@ -231,22 +357,6 @@ class Cabinet extends Assembly {
     }
   }
 }
-
-// class Labor {
-//   constructor (name, base, sizeAttr, multiplier) {
-//     multiplier = multiplier || 1;
-//     sizeAttr = sizeAttr ? size[sizeAttr]() : () => 1;
-//     this.name = name;
-//     this.calculate = (size) => {
-//       return base * multiplier * sizeAttr();
-//     }
-//   }
-// }
-//
-// new Labor('Cut Pannel', 2.00, .5, 'lengthXwidth');
-// new Labor('Cut frame', 1, 1, 'pieces');
-// new Labor('Glue Frame', 5, 2, 'pieces');
-// new Labor('and')
 
 
 
