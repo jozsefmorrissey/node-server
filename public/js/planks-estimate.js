@@ -1,29 +1,33 @@
 
+function formatConstructorId (obj) {
+  return obj.constructor.name.replace(/Section$/, '');
+}
+
 class Assembly {
   constructor(width, height, depth, defaultSizes) {
     const subAssemblies = [];
-    let features = Feature.get(this.constructor.name);
+    this.features = Feature.getList(formatConstructorId(this));
     if (defaultSizes === undefined) defaultSizes = {};
     this.width = width !== undefined ? width : defaultSizes.width;
     this.height = height !== undefined ? height : defaultSizes.height;
     this.depth = depth !== undefined ? depth : defaultSizes.depth;
     this.addSubAssembly = (assembly) => subAssemblies.push(assembly);
-    this.addFeature= (features) => feature.push(feature);
     const objId = this.constructor.name;
     if (Assembly.idCounters[objId] === undefined) {
       Assembly.idCounters[objId] = 0;
     }
     this.id = ++Assembly.idCounters[objId];
-    Assebly.add(this);
+    Assembly.add(this);
   }
 }
 
-Assebly.add = (assembly) => {
+Assembly.list = {};
+Assembly.add = (assembly) => {
   const name = assembly.constructor.name;
   if (Assembly.list[name] === undefined) Assembly.list[name] = [];
   Assembly.list[name].push(assembly);
 }
-Assebly.all = () => {
+Assembly.all = () => {
   const list = [];
   const keys = Object.keys(Assembly.list);
   keys.forEach((key) => list.push(Assembly.list[key]));
@@ -35,7 +39,6 @@ Assembly.idCounters = {};
 class Section extends Assembly {
   constructor(templatePath, parentList, isPartition, width, height, depth) {
     super(templatePath, isPartition, width, height, depth);
-    this.features = [];
     this.isPartition = () => isPartition;
     this.parentList = () => parentList;
     if (templatePath === undefined) {
@@ -60,7 +63,7 @@ Section.keys = () => Object.keys(Section.sections);
 Section.templates = {};
 Section.new = (constructorId) => new (Section.sections[constructorId]).constructor();
 Section.render = (opening, scope) => {
-  scope.featureDisplay = new FeatureDisplay(opening.features).html();
+  scope.featureDisplay = new FeatureDisplay(opening).html();
   const cId = opening.constructorId;
   if (cId === 'OpenSection') {
     return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
@@ -85,7 +88,7 @@ class SpaceSection extends Section {
 const sectionFilePath = (filename) => `./public/html/planks/sections/${filename}.html`;
 
 class Feature {
-  constructor(id, properties) {
+  constructor(id, properties, features) {
     properties = properties || [];
     this.enabled = false;
     this.name = id.replace(/([a-z])([A-Z])/g, '$1.$2')
@@ -96,7 +99,10 @@ class Feature {
     this.multipleFeatures = () => this.features.length > 1;
     this.checkbox = () => this.id.indexOf('has') === 0;
     this.isRadio = (siblings, path) => !(this.checkbox() || this.isRoot(path) || siblings.length === 1);
-    this.addFeature = (id) => this.features.push(Feature.tree[id]);
+    this.addFeature = (id) => {
+      if (Feature.byId[id] === undefined) Feature.byId[id] = [];
+      this.features.push(Feature.byId[id])
+    };
     properties.forEach((featureId) => this.addFeature(featureId))
     Feature.byId[id] = this;
   }
@@ -104,15 +110,26 @@ class Feature {
 
 Feature.byId = {};
 Feature.objMap = {};
-Feature.addRelations = (id, names) => {
-  names.forEach((name) => {
-    if (Feature.map[id] === undefined) Feature.map[id] = [];
-    Feature.map[id].push(Feature.byId(name));
+Feature.addRelations = (objId, featureIds) => {
+  featureIds.forEach((id) => {
+    if (Feature.objMap[objId] === undefined) Feature.objMap[objId] = [];
+    if (!(Feature.byId[id] instanceof Feature)) console.error(`Bad Feature: '${id}'`);
+    else Feature.objMap[objId].push(Feature.byId[id]);
   });
 };
-Feature.getList = () => {
+Feature.clone = (feature) => {
+  const clone = new feature.constructor(feature.id, feature.properties);
+  console.log('feature:', feature);
+  feature.features.forEach((f) => feature.addFeature(Feature.clone(f)));
+  return clone;
+}
+Feature.getList = (id) => {
+  const masterList = Feature.objMap[id];
+  if (masterList === undefined) return [];
+  console.log('no pass go')
   const list = [];
-  Feature.byId(id).forEach((feature) => list.push(new feature.constructor());
+  console.log('masterList:', masterList)
+  masterList.forEach((feature) => list.push(Feature.clone(feature)));
   return list;
 }
 Feature.formatName = (match) => ` ${match[1].toUpperCase()}`;
@@ -139,16 +156,17 @@ new Feature('solid');
 new Feature('doorType', ['fullOverlay', 'inset']);
 new Feature('doorStyle', ['insetPanel', 'solid'])
 new Feature('drawerType', ['fullOverlay', 'inset']);
-console.log(JSON.stringify(Feature.tree, null, 2));
 
 Feature.addRelations('Drawer', ['drawerType', 'drawerFront', 'drawerBox']);
 Feature.addRelations('PartitionSection', ['hasFrame', 'hasPanel']);
 Feature.addRelations('Door', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
 Feature.addRelations('DoubleDoor', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
 Feature.addRelations('FalseFront', ['drawerType', 'edgeProfile']);
+console.log('features:', Feature.objMap);
 
 class Cost {
   constructor(id, formula, options) {
+    options = options || {};
     formula = formula || 0;
     const optionalPercentage = options.optionalPercentage;
     const demMutliplier = options.demMutliplier;
@@ -158,16 +176,16 @@ class Cost {
         return options.demMutliplier;
       }
       return 'llwwdd';
-    }
-    this.calc(assembly) => {
+    };
+    this.calc = (assembly) => {
       let priceStr = formula.toLowerCase();
       for (let index = 0; index < 6; index += 1) {
         const char = priceStr[index];
         let multiplier;
         switch (char) {
-          case 'l': value = assembly['length'] break;
-          case 'w': value = assembly['width'] break;
-          case 'd': value = assembly['depth'] break;
+          case 'l': value = assembly['length']; break;
+          case 'w': value = assembly['width']; break;
+          case 'd': value = assembly['depth']; break;
           default: value = 1;
         }
         priceStr.replace(new RegExp(`/${char}/`), assembly[value]);
@@ -182,20 +200,20 @@ class Cost {
     }
 
     const cName = this.constructor.name;
-    if (Cost.lists[cName]) Cost.lists[cName] = {};
-    if (Cost.lists[cName][id]) Cost.lists[cName][id] = [];
+    if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
+    if (Cost.lists[cName][id] === undefined) Cost.lists[cName][id] = [];
     Cost.lists[cName][id].push(this);
 
   }
 }
 Cost.lists = {};
-Const.objMap = {}
-Const.get = (name) => {
+Cost.objMap = {}
+Cost.get = (name) => {
   const obj = Cost.lists[id];
   if (obj === undefined) return null;
   return new obj.constructor();
 }
-Cost.addRelations = (type, id, name) {
+Cost.addRelations = (type, id, name) => {
   names.forEach((name) => {
     if (objMap[id] === undefined) Cost.objMap[id] = {Labor: [], Material: []}
     if (type === Labor) Cost.objMap[id].Labor.push(Cost.get(name));
@@ -203,18 +221,20 @@ Cost.addRelations = (type, id, name) {
   });
 }
 class Labor extends Cost {
-  constructor (id, formula, optionalPercentage) {
+  constructor (id, formula, options) {
+    super(id, formula, options)
   }
 }
 Labor.addRelations = (id, name) => Cost.addRelations(Labor, id, name);
 
 class Material extends Cost {
-  constructor (id, formula, optionalPercentage) {
+  constructor (id, formula, options) {
+    super(id, formula, options)
   }
 }
 Material.addRelations = (id, name) => Cost.addRelations(Material, id, name);
 
-new Labor('Pannel', '1+(0.05*l*w'));
+new Labor('Panel', '1+(0.05*l*w');
 new Labor('Frame', '0.25');
 new Labor('GlueFrame', '0.25');
 new Labor('SandFrame', '0.05*l*l*w*w*d*d');
@@ -807,8 +827,9 @@ CabinetDisplay.bodyTemplate = new $t('./public/html/planks/cabinet-body.html');
 CabinetDisplay.headTemplate = new $t('./public/html/planks/cabinet-head.html');
 
 class FeatureDisplay {
-  constructor(features, parentSelector) {
-    this.html = () => FeatureDisplay.template.render({features, id: 'root'});
+  constructor(section, parentSelector) {
+    console.log('features', section.features)
+    this.html = () => FeatureDisplay.template.render({features: section.features, id: 'root'});
     this.refresh = () => {
       const container = document.querySelector(parentSelector);
       container.innerHTML = this.html;
