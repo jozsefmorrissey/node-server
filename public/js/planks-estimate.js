@@ -88,22 +88,34 @@ class SpaceSection extends Section {
 const sectionFilePath = (filename) => `./public/html/planks/sections/${filename}.html`;
 
 class Feature {
-  constructor(id, properties, features) {
-    properties = properties || [];
+  constructor(id, subFeatures, properties, parent) {
+    subFeatures = subFeatures || [];
+    this.properties = properties || {};
     this.enabled = false;
+    this.features = [];
+    const radioFeatures = [];
     this.name = id.replace(/([a-z])([A-Z])/g, '$1.$2')
                   .replace(/\.([a-zA-Z0-9])/g, Feature.formatName);
     this.id = id;
-    this.features = [];
     this.isRoot = (path) => path === 'root';
     this.multipleFeatures = () => this.features.length > 1;
-    this.checkbox = () => this.id.indexOf('has') === 0;
-    this.isRadio = (siblings, path) => !(this.checkbox() || this.isRoot(path) || siblings.length === 1);
-    this.addFeature = (id) => {
-      if (Feature.byId[id] === undefined) Feature.byId[id] = [];
-      this.features.push(Feature.byId[id])
+    this.isInput = () => (typeof this.properties.inputValidation) === 'function';
+    this.showInput = () => (this.isInput() && !this.isCheckbox() && !this.isRadio())
+                          || (this.enabled && (this.isCheckbox() || this.isRadio()));
+    this.isCheckbox = () => this.id.indexOf('has') === 0;
+    this.radioFeature = (feature) => radioFeatures.length > 1 && radioFeatures.indexOf[feature] !== -1;
+    this.isRadio = () => (!this.isCheckbox() && parent !== undefined && parent.radioFeature(this));
+    this.addFeature = (featureOrId) => {
+      let feature;
+      if (featureOrId instanceof Feature) feature = featureOrId;
+      else feature = Feature.byId[featureOrId];
+      if (!(feature instanceof Feature)) {
+        throw new Error(`Invalid feature '${id}'`);
+      }
+      this.features.push(feature);
+      if (!feature.isCheckbox()) radioFeatures.push(feature);
     };
-    properties.forEach((featureId) => this.addFeature(featureId))
+    subFeatures.forEach((featureId) => this.addFeature(featureId))
     Feature.byId[id] = this;
   }
 }
@@ -113,28 +125,108 @@ Feature.objMap = {};
 Feature.addRelations = (objId, featureIds) => {
   featureIds.forEach((id) => {
     if (Feature.objMap[objId] === undefined) Feature.objMap[objId] = [];
-    if (!(Feature.byId[id] instanceof Feature)) console.error(`Bad Feature: '${id}'`);
-    else Feature.objMap[objId].push(Feature.byId[id]);
+    const feature = Feature.byId[id];
+    if (!(feature instanceof Feature)) {
+      throw new Error('Trying to add none Feature object');
+    }
+    else Feature.objMap[objId].push(feature);
   });
 };
-Feature.clone = (feature) => {
-  const clone = new feature.constructor(feature.id, feature.properties);
-  console.log('feature:', feature);
-  feature.features.forEach((f) => feature.addFeature(Feature.clone(f)));
+Feature.clone = (feature, parent) => {
+  const clone = new feature.constructor(feature.id, undefined, feature.properties, parent);
+  feature.features.forEach((f) => clone.addFeature(Feature.clone(f, feature)));
   return clone;
 }
 Feature.getList = (id) => {
   const masterList = Feature.objMap[id];
   if (masterList === undefined) return [];
-  console.log('no pass go')
   const list = [];
-  console.log('masterList:', masterList)
   masterList.forEach((feature) => list.push(Feature.clone(feature)));
   return list;
 }
 Feature.formatName = (match) => ` ${match[1].toUpperCase()}`;
 
-new Feature('thickness');
+function regexToObject (str, reg) {
+  const match = str.match(reg);
+  if (match === null) return null;
+  const returnVal = {};
+  for (let index = 2; index < arguments.length; index += 1) {
+    const attr = arguments[index];
+    if (attr) returnVal[attr] = match[index - 1];
+  }
+  return returnVal;
+}
+
+class Measurment {
+  constructor(value) {
+    let decimal = 0;
+    let nan = false;
+    this.isNaN = () => nan;
+
+    const parseFraction = (str) => {
+      const regObj = regexToObject(str, Measurment.regex, 'integer', null, 'numerator', 'denominator');
+      regObj.integer = Number.parseInt(regObj.integer) || 0;
+      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+      if(regObj.denominator === 0) {
+        regObj.numerator = 0;
+        regObj.denominator = 1;
+      }
+      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+      return regObj;
+    };
+
+    function reduce(numerator, denominator) {
+      let reduced = true;
+      while (reduced) {
+        reduced = false;
+        for (let index = 0; index < Measurment.primes.length; index += 1) {
+          const prime = Measurment.primes[index];
+          if (prime >= denominator) break;
+          if (numerator % prime === 0 && denominator % prime === 0) {
+            numerator = numerator / prime;
+            denominator = denominator / prime;
+            reduced = true;
+            break;
+          }
+        }
+      }
+      return `${numerator}/${denominator}`;
+    }
+
+    this.fraction = (accuracy) => {
+      const fracObj = parseFraction(accuracy);
+      if (fracObj.decimal === 0 || fracObj.integer > 0 || fracObj.denominator > 1000) {
+        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+      }
+      const integer = Math.floor(decimal);
+      let remainder = decimal - integer;
+      let currRemainder = remainder;
+      let value = 0;
+      let numerator = 0;
+      while (currRemainder > 0) {
+        numerator++;
+        currRemainder -= fracObj.decimal;
+      }
+      const diff1 = remainder - ((numerator - 1) / fracObj.denominator);
+      const diff2 = (numerator / fracObj.denominator) - remainder;
+      numerator -= diff1 < diff2 ? 1 : 0;
+      return `${integer} ${reduce(numerator, fracObj.denominator)}`;
+    }
+
+    if (value instanceof Number) {
+      decimal = value;
+    } else if ((typeof value) === 'string') {
+      decimal = parseFraction(value).decimal;
+    } else {
+      nan = true;
+    }
+  }
+}
+Measurment.regex = /^\s*([0-9]*)\s*(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+Measurment.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+
+new Feature('thickness', undefined, {inputValidation: (value) => !new Measurment(value).isNaN()});
 new Feature('inset');
 new Feature('fullOverlay');
 new Feature('1/8');
@@ -162,7 +254,7 @@ Feature.addRelations('PartitionSection', ['hasFrame', 'hasPanel']);
 Feature.addRelations('Door', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
 Feature.addRelations('DoubleDoor', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
 Feature.addRelations('FalseFront', ['drawerType', 'edgeProfile']);
-console.log('features:', Feature.objMap);
+console.log('objMap:', Feature.objMap);
 
 class Cost {
   constructor(id, formula, options) {
@@ -828,7 +920,6 @@ CabinetDisplay.headTemplate = new $t('./public/html/planks/cabinet-head.html');
 
 class FeatureDisplay {
   constructor(section, parentSelector) {
-    console.log('features', section.features)
     this.html = () => FeatureDisplay.template.render({features: section.features, id: 'root'});
     this.refresh = () => {
       const container = document.querySelector(parentSelector);

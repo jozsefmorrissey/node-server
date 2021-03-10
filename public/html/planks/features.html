@@ -2,12 +2,13 @@
   <div:t repeat='feature in features'>
     <label>{{feature.name}}</label>
     <input type='checkbox' name='{{id + '-checkbox'}}'
-        {{feature.checkbox() ? '': 'hidden'}}>
+        {{feature.isCheckbox() ? '': 'hidden'}}>
+    <input type='text' name='{{id + '-input'}}' {{feature.showInput() ? '' : 'hidden'}}>
     <input class='feature-radio' type='radio' name='{{id}}' value='{{feature.id}}'
-        {{!feature.isRadio(features, id) ? "hidden disabled" : ""}}>
-    <div {{!feature.isRadio(features, id) ? '' : 'hidden'}}>
+        {{!feature.isRadio() ? "hidden disabled" : ""}}>
+    <div {{!feature.isRadio() ? '' : 'hidden'}}>
       <input type='text' placeholder="Unique Notes"
-        {{!feature.isRadio(features, id) ? "hidden disabled" : ""}}>
+        {{!feature.isRadio() ? "hidden disabled" : ""}}>
       {{new $t('./public/html/planks/features.html').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})}}
     </div>
   </div:t>
