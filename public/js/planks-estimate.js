@@ -612,8 +612,8 @@ class Position {
       switch (axis) {
         case 'x':
           temp =  attr.z;
-          attr.z = attr.x;
-          attr.x = temp;
+          attr.z = attr.y;
+          attr.y = temp;
           break;
         case 'y':
           temp =  attr.z;
