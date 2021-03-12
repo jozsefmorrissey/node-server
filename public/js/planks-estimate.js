@@ -1,22 +1,31 @@
 
+const removeSuffixes = ['Part', 'Section'].join('|');
 function formatConstructorId (obj) {
-  return obj.constructor.name.replace(/Section$/, '');
+  return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
 }
 
 class Assembly {
   constructor(width, height, depth, defaultSizes) {
-    const subAssemblies = [];
+    this.subAssemblies = [];
     this.features = Feature.getList(formatConstructorId(this));
     if (defaultSizes === undefined) defaultSizes = {};
     this.width = width !== undefined ? width : defaultSizes.width;
     this.height = height !== undefined ? height : defaultSizes.height;
     this.depth = depth !== undefined ? depth : defaultSizes.depth;
-    this.addSubAssembly = (assembly) => subAssemblies.push(assembly);
-    const objId = this.constructor.name;
-    if (Assembly.idCounters[objId] === undefined) {
-      Assembly.idCounters[objId] = 0;
+    this.addSubAssembly = (assembly) => this.subAssemblies.push(assembly);
+    this.objId = this.constructor.name;
+    this.getSubAssemblies = () => {
+      let assemblies = [];
+      this.subAssemblies.forEach((assem) => {
+        assemblies.push(assem);
+        assemblies = assemblies.concat(assem.getSubAssemblies());
+      });
+      return assemblies;
     }
-    this.id = ++Assembly.idCounters[objId];
+    if (Assembly.idCounters[this.objId] === undefined) {
+      Assembly.idCounters[this.objId] = 0;
+    }
+    this.id = ++Assembly.idCounters[this.objId];
     Assembly.add(this);
   }
 }
@@ -71,6 +80,24 @@ Section.render = (opening, scope) => {
   return Section.templates[cId].render(scope);
 }
 
+class Pull extends Assembly {
+  constructor(width, height, depth, defaultSizes) {
+    super(width, height, depth, defaultSizes);
+  }
+}
+
+class Door extends Assembly {
+  constructor(width, height, depth, defaultSizes) {
+    super(width, height, depth, defaultSizes);
+    this.addSubAssembly(new Pull());
+  }
+}
+
+class Drawer extends Assembly {
+  constructor(width, height, depth, defaultSizes) {
+    super(width, height, depth, defaultSizes);
+  }
+}
 
 class PartitionSection extends Section {
   constructor(templatePath, parentList, width, height, depth) {
@@ -363,6 +390,14 @@ class DrawerSection extends SpaceSection {
 }
 new DrawerSection();
 
+class Divider extends Assembly {
+  constructor(width, height, depth) {
+    super(width, height, depth);
+    this.addSubAssembly(new Panel());
+    this.addSubAssembly(new Frame());
+  }
+}
+
 class DividerSection extends PartitionSection {
   constructor(parentList, width, height, depth) {
     super(sectionFilePath('divider'), parentList, width, height, depth);
@@ -373,6 +408,8 @@ new DividerSection();
 class DoorSection extends SpaceSection {
   constructor(parentList, width, height, depth) {
     super(sectionFilePath('door'), parentList, width, height, depth);
+    this.addSubAssembly(new Door());
+    this.addSubAssembly(new Drawer());
   }
 }
 new DoorSection();
@@ -445,6 +482,13 @@ class OpenSection extends SpaceSection {
   }
 }
 
+const OVERLAY = {};
+OVERLAY.FULL = 'Full';
+OVERLAY.HALF = 'Half';
+OVERLAY.INSET = 'Inset';
+
+const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
+
 const framedFrameWidth = 1.5;
 const framelessFrameWidth = 3/4;
 const defaultCabinetSize = {width: 22, height: 24, depth: 21}
@@ -455,6 +499,8 @@ class Cabinet extends Assembly {
     let toeKickHeight = 4;
     let verticelSections = [];
     let horizontalSections = [];
+    this.overlay = OVERLAY.HALF;
+    this.type = CABINET_TYPE.FRAMED;
     const panels = 0;
     this.opening = new OpenSection();
     const framePieces = 0;
@@ -467,13 +513,292 @@ class Cabinet extends Assembly {
       const h = height - toeKickHeight - (frameWidth * 2);
       return {width: w, height: h};
     }
+
+    const backPanel = new Panel('pb', 'Panel.Back',
+      '@pr.x1 - j(pr).cp, tkb.w, c.w - t',
+      'c.h - tkb.h, pr.x1 - j(pr).cp, .5');
+    const rightPanel = new Panel('pr', 'Panel.Right',
+        'y@1/8, 0, rr.t - j(rr).cp',
+        'c.h,c.w - rr.t + j(rr).cp, .75');
+    const leftPanel = new Panel('pl', 'Panel.Left',
+        'y@c.w - 1/8 - t, 0, pr.z0',
+        'pr.l,pr.w,.75');
+    const bottomPanel = new Panel('pbt', 'Panel.Bottom',
+        'x@pr.x0 - j(pr).cp, tkb.w, pl.z0',
+        '(rp.x0 + j(rp).cp) - (lp.x1 - j(lp).cp)');
+
+    const rightRail = new Divider('rr', 'Frame.Right',
+        '@0,br.y0,0',
+        'tr.x1 - br.x0, 1.5, 3/4');
+    const topRail = new Divider('tr', 'Frame.Top',
+        'x@br.x0,br.y0 + rr.l - rr.w,0',
+        'rr.x0 - lr.x1, 1.5, 3/4');
+    const bottomRail = new Divider('br', 'Frame.Bottom',
+        'x@rr.w,tkb.w - 1/8,0',
+        'tr.l, 1.5, 3/4');
+    const leftRail = new Divider('lr', 'Frame.Left',
+        '@rr.x0,rr.y0,0',
+        'rr.l,1.5,3/4');
+
+    const toeKickBacker = new Panel('tkb', 'Panel.ToeKickBacker',
+        'z@j(pr).d0,0,3.5',
+        '(pr.x0 + j(pr).cp) - (pl.x1 - j(pl).cp), 3, 1/2');
+
+    const pb2pr = new Rabbet('pb->pr');
+    const pb2pl = new Rabbet('pb->pl');
+    const pb2pbt = new Butt('pb->pbt');
+
+    const prTotkb = new Rabbet('pr->tkb');
+    const pr2rr = new Dado('pr->rr');
+
+    const pl2tkb = new Rabbet('pl->tkb');
+    const pl2lr = new Dado('pl->tkb');
+
+    const pbt2pr = new Dado('pbt->pr');
+    const pbt2pl = new Dado('pbt->pl');
+
+    const pbt2br = new Dado('pbt->br');
+    const pbt2rr = new Dado('pbt->rr');
+    const pbt2lr = new Dado('pbt->lr');
+
+    const tr2rr = new Butt('tr->rr');
+    const tr2lr = new Butt('tr->lr');
+    const br2rr = new Butt('br->rr');
+    const br2lr = new Butt('br->lr');
+
+    addSubAssembly(new Divider('c.w,1.5,29/32', 'Frame.top'));
+    addSubAssembly(new Divider('Frame.bottom', [j1], 'c.w'));
+    addSubAssembly(new Divider('c.w,1.5,29/32', 'Frame.top'));
+    addSubAssembly(new Divider('c.w,1.5,29/32', 'Frame.top'));
   }
 }
 
+class Position {
+  constructor(posStr) {
+    const attr = {};
+    attr.y = 'length';
+    attr.x = 'width';
+    attr.z = 'thickness';
+
+    const getDemension = (axis) => attr[axis];
+
+    const match = posStr.match(Position.regex);
+    const rotateAxis = match[1].split('');
+    const o = {};
+    o.x = match[2];
+    o.y = match[3];
+    o.z = match[4];
+    console.log(o)
+    const resolve = (str) => eval(str);
+
+    this.pointObj = (x, y, z) => ({x, y, z});
+    this.get = (obj) => {
+      const dem = (axis) => resolve(o[axis]) + obj[attr[axis]];
+      const orig = (axis) => resolve(o[axis]);
+      const points = [];
+      points.push(this.pointObj(orig('x'), orig('y'), orig('z')));
+      points.push(this.pointObj(dem('x'), orig('y'), orig('z')));
+      points.push(this.pointObj(dem('x'), dem('y'), orig('z')));
+      points.push(this.pointObj(dem('x'), dem('y'), dem('z')));
+      points.push(this.pointObj(orig('x'), dem('y'), dem('z')));
+      points.push(this.pointObj(orig('x'), dem('y'), orig('z')));
+      points.push(this.pointObj(orig('x'), orig('y'), dem('z')));
+      points.push(this.pointObj(dem('x'), orig('y'), dem('z')));
+      return points;
+    }
+
+    rotateAxis.forEach((axis) => {
+      let temp;
+      switch (axis) {
+        case 'x':
+          temp =  attr.z;
+          attr.z = attr.x;
+          attr.x = temp;
+          break;
+        case 'y':
+          temp =  attr.z;
+          attr.z = attr.x;
+          attr.x = temp;
+          break;
+        case 'z':
+          temp =  attr.y;
+          attr.y = attr.x;
+          attr.x = temp;
+          break;
+      }
+    })
+
+  }
+}
+Position.regex = /^\s*([xyz]*)\s*\@\s*(.*?)\s*,\s*(.*?)\s*,\s*(.*?)\s*$/;
+'y@origin.x + lr.x,c.h - x,origin.z'
+
+class Expression {
+  constructor() {
+  }
+}
+Expression.getValue = (assembly, objTypeId, attr) => {
+  let obj;
+  if (objId === '') {
+    obj = assembly;
+  } else {
+    obj = assembly.getAssembly(objTypeId);
+  }
+
+  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
+    return obj.length();
+  } else if (attr === 'w' || attr === 'width') {
+    return obj.width();
+  } else if (attr === 'depth' || attr = 'thickness' || attr === 'd' || attr === 't') {
+    return obj.thickness();
+  } else if (attr === 'x0') return obj.getPosition().x[0];
+  } else if (attr === 'x1') return obj.getPosition().x[1];
+  } else if (attr === 'y0') return obj.getPosition().y[0];
+  } else if (attr === 'y1') return obj.getPosition().y[1];
+  } else if (attr === 'z0') return obj.getPosition().z[0];
+  } else if (attr === 'z1') return obj.getPosition().z[1];
+}
+
+Expression.jointRegStr = 'j\\(([a-zA-Z0-1]{1,}?)\\)\\.([a-zA-Z0-1]{1,}?)';
+Expression.jointRegex = new RegExp(Expression.jointRegStr, 'g');
+Expression.jointBreakdownReg = new RegExp(Expression.jointRegStr);
+Expression.refRegStr = '(([a-zA-Z0-9]{1,})\.|)([a-zA-Z0-9])';
+Expression.refRegex = new RegExp(refRegStr, 'g';
+Expression.breakdownReg = new RegExp(refRegStr);
+Expression.replace = (assembly, expression) => {
+  const references = expression.match(Expression.refRegex);
+  references.forEach((ref) => {
+    const match = ref.match(Expression.breakdownReg);
+    const objTypeId = match[2];
+    const attr = match[3];
+    const value = Expression.getValue(assembly, objTypeId, attr);
+    expression = expression.replace(ref, value);
+  });
+
+  const jointRefs = expression.match(Expression.jointRegex);
+  jointRefs.forEach((jRef) => {
+    const match = jRef.match(Expression.jointBreakdownReg);
+    const objTypeId = match[1];
+    const attr = match[2];
+    const value = assembly.getJoint(assembly.typeId, objTypeId)[attr]();
+    expression = expression.replace(ref, value);
+  });
+}
 
 
+class Joint {
+  constructor(joinStr) {
+    const match = joinStr.match(Joint.regex);
+    this.maleTypeId = match[1];
+    this.femaleTypeId = match[1];
 
+    const getFemale = (assembly) => assembly.getAssembly(this.femaleTypeId);
+    const getMale = (assembly) => assembly.getAssembly(this.maleTypeId);
 
+    const maleOffset = () => 0;
+    const femaleOffset = () => 0;
+
+    this.getDemensions = () => {
+      const malePos = getAssembly(maleTypeId);
+      const femalePos = getAssembly(femaleTypeId);
+      // I created a loop but it was harder to understand
+      return Joint.inPlane(malePos, 'x', femalePos, 'x') ||
+            Joint.inPlane(malePos, 'x', femalePos, 'y') ||
+            Joint.inPlane(malePos, 'x', femalePos, 'z') ||
+            Joint.inPlane(malePos, 'y', femalePos, 'x') ||
+            Joint.inPlane(malePos, 'y', femalePos, 'y') ||
+            Joint.inPlane(malePos, 'y', femalePos, 'z') ||
+            Joint.inPlane(malePos, 'z', femalePos, 'x') ||
+            Joint.inPlane(malePos, 'z', femalePos, 'y') ||
+            Joint.inPlane(malePos, 'z', femalePos, 'z');
+    }
+
+    if (Joint.list[maleTypeId] === undefined) Joint.list[maleTypeId] = [];
+    if (Joint.list[femaleTypeId] === undefined) Joint.list[femaleTypeId] = [];
+    Joint.list[maleTypeId].push(this);
+    Joint.list[femaleTypeId].push(this);
+  }
+}
+// (z===) ? (inbounds(x) ? (y1 > y0 ? -y : y) : inbounds(y) ? x1 > x0 ? -x : x)
+// z -> x -> y -> z
+Joint.list = {};
+Joint.regex = /([a-z0-1\.]*)\.(x|y|z)->([a-z0-1\.]*)\.(x|y|z)/;
+Joint.cornerJoint = (malePos, femalePos, axis) => {
+  const buildRetObj = (mAxis, mDir, fAxis, fDir) =>
+        male: {axis: mAxis, dir: mDir} female: {axis: fAxis, dir: fDir};
+
+  const p0 = `${axis}0`;
+  const p1 = `${axis}1`;
+  const mp0 = malePos[p0];
+  const mp1 = malePos[p1];
+  const fp0 = femalePos[p0];
+  const fp1 = femalePos[p1];
+  if (mp0 === fp0 && mp1 === fp1 && mp1 === fp0) {
+    const oAxis = ['x', 'y', 'z'];
+    const rAxis = oAxis.split(oAxis.indexOf(axis), 1);
+    const attr0 = rAxis[0];
+    const attr1 = rAxis[1];
+    const mp00 = malePos[`${attr0}0`];
+    const mp01 = malePos[`${attr0}1`];
+    const mp10 = malePos[`${attr1}0`];
+    const mp11 = malePos[`${attr1}1`];
+    const fp00 = femalePos[`${attr0}0`];
+    const fp01 = femalePos[`${attr0}1`];
+    const fp10 = femalePos[`${attr1}0`];
+    const fp11 = femalePos[`${attr1}1`];
+    if (mp00 < fp00 && fp10 < mp10) return buildRetObj(attr0, '-', attr1, '-');
+    if (mp00 < fp00 && fp11 > mp11) return buildRetObj(attr0, '-', attr1, '+');
+    if (mp01 > fp01 && fp10 < mp10) return buildRetObj(attr0, '+', attr1, '-');
+    if (mp01 > fp01 && fp11 > mp11) return buildRetObj(attr0, '+', attr1, '+');
+    return undefined;
+  }
+}
+Joint.inPlane = (malePos, maleAxis, femalePos, femaleAxis) {
+
+}
+
+function calculatePoints(position, dems) {
+
+}
+
+class Dado extends Joint {
+  constructor(joinStr, defaultDepth) {
+    super(joinStr);
+    const maleOffset(assembly) {
+      if (defaultDepth) return defaultDepth;
+      return getFemale(assembly)[femailDemention]() / 2;
+    }
+  }
+}
+
+class Rabbet extends Joint {
+  constructor(joinStr, defaultDepth) {
+    super(joinStr);
+    const calcProtrusion(assembly) {
+      if (defaultDepth) return defaultDepth;
+      const female = assembly.getAssembly(this.femaleTypeId);
+      return female[femailDemention]() / 2;
+    }
+  }
+}
+
+class Butt extends Joint {
+  constructor(joinStr) {
+    super(joinStr);
+    const calcProtrusion(assembly) {
+      return 0;
+    }
+  }
+}
+
+class Miter extends Butt {
+  constructor(joinStr) {
+    super(joinStr);
+    const calcProtrusion(assembly) {
+      return 0;
+    }
+  }
+}
 
 
 // ----------------------------------  Display  ---------------------------//
@@ -839,7 +1164,9 @@ OpenSectionDisplay.getList = (root) => {
   }
   const getBody = (opening) => {
     const list = OpenSectionDisplay.getList(root);
-    return Section.render(opening, {opening, list, sections});
+    const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
+    const assemblies = opening.getSubAssemblies();
+    return Section.render(opening, {assemblies, getFeatureDisplay, opening, list, sections});
   }
   const findElement = (selector, target) => down(selector, up('.expandable-list', target));
   const expListProps = {
@@ -919,8 +1246,8 @@ CabinetDisplay.bodyTemplate = new $t('./public/html/planks/cabinet-body.html');
 CabinetDisplay.headTemplate = new $t('./public/html/planks/cabinet-head.html');
 
 class FeatureDisplay {
-  constructor(section, parentSelector) {
-    this.html = () => FeatureDisplay.template.render({features: section.features, id: 'root'});
+  constructor(assembly, parentSelector) {
+    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
     this.refresh = () => {
       const container = document.querySelector(parentSelector);
       container.innerHTML = this.html;
