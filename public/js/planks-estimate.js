@@ -281,7 +281,7 @@ Feature.addRelations('PartitionSection', ['hasFrame', 'hasPanel']);
 Feature.addRelations('Door', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
 Feature.addRelations('DoubleDoor', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
 Feature.addRelations('FalseFront', ['drawerType', 'edgeProfile']);
-console.log('objMap:', Feature.objMap);
+// console.log('objMap:', Feature.objMap);
 
 class Cost {
   constructor(id, formula, options) {
@@ -413,7 +413,7 @@ class DoorSection extends SpaceSection {
   }
 }
 new DoorSection();
-console.log(JSON.stringify(new DoorSection().features, null, 2))
+// console.log(JSON.stringify(new DoorSection().features, null, 2))
 
 class DualDoorSection extends SpaceSection {
   constructor(parentList, width, height, depth) {
@@ -588,7 +588,7 @@ class Position {
     o.x = match[2];
     o.y = match[3];
     o.z = match[4];
-    console.log(o)
+    // console.log(o)
     const resolve = (str) => eval(str);
 
     this.pointObj = (x, y, z) => ({x, y, z});
@@ -596,6 +596,8 @@ class Position {
       const dem = (axis) => resolve(o[axis]) + obj[attr[axis]];
       const orig = (axis) => resolve(o[axis]);
       const points = [];
+      const ret = {x0: orig('x'), x1: dem('x'), y0: orig('y'), y1: dem('y'),
+                    z0: orig('z'), z1: dem('z'), points};
       points.push(this.pointObj(orig('x'), orig('y'), orig('z')));
       points.push(this.pointObj(dem('x'), orig('y'), orig('z')));
       points.push(this.pointObj(dem('x'), dem('y'), orig('z')));
@@ -604,7 +606,8 @@ class Position {
       points.push(this.pointObj(orig('x'), dem('y'), orig('z')));
       points.push(this.pointObj(orig('x'), orig('y'), dem('z')));
       points.push(this.pointObj(dem('x'), orig('y'), dem('z')));
-      return points;
+      console.log(ret);
+      return ret;
     }
 
     rotateAxis.forEach((axis) => {
@@ -631,7 +634,6 @@ class Position {
   }
 }
 Position.regex = /^\s*([xyz]*)\s*\@\s*(.*?)\s*,\s*(.*?)\s*,\s*(.*?)\s*$/;
-'y@origin.x + lr.x,c.h - x,origin.z'
 
 class Expression {
   constructor() {
@@ -649,22 +651,22 @@ Expression.getValue = (assembly, objTypeId, attr) => {
     return obj.length();
   } else if (attr === 'w' || attr === 'width') {
     return obj.width();
-  } else if (attr === 'depth' || attr = 'thickness' || attr === 'd' || attr === 't') {
+  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
     return obj.thickness();
   } else if (attr === 'x0') return obj.getPosition().x[0];
-  } else if (attr === 'x1') return obj.getPosition().x[1];
-  } else if (attr === 'y0') return obj.getPosition().y[0];
-  } else if (attr === 'y1') return obj.getPosition().y[1];
-  } else if (attr === 'z0') return obj.getPosition().z[0];
-  } else if (attr === 'z1') return obj.getPosition().z[1];
+  else if (attr === 'x1') return obj.getPosition().x[1];
+  else if (attr === 'y0') return obj.getPosition().y[0];
+  else if (attr === 'y1') return obj.getPosition().y[1];
+  else if (attr === 'z0') return obj.getPosition().z[0];
+  else if (attr === 'z1') return obj.getPosition().z[1];
 }
 
 Expression.jointRegStr = 'j\\(([a-zA-Z0-1]{1,}?)\\)\\.([a-zA-Z0-1]{1,}?)';
 Expression.jointRegex = new RegExp(Expression.jointRegStr, 'g');
 Expression.jointBreakdownReg = new RegExp(Expression.jointRegStr);
 Expression.refRegStr = '(([a-zA-Z0-9]{1,})\.|)([a-zA-Z0-9])';
-Expression.refRegex = new RegExp(refRegStr, 'g';
-Expression.breakdownReg = new RegExp(refRegStr);
+Expression.refRegex = new RegExp(Expression.refRegStr, 'g');
+Expression.breakdownReg = new RegExp(Expression.refRegStr);
 Expression.replace = (assembly, expression) => {
   const references = expression.match(Expression.refRegex);
   references.forEach((ref) => {
@@ -702,15 +704,10 @@ class Joint {
       const malePos = getAssembly(maleTypeId);
       const femalePos = getAssembly(femaleTypeId);
       // I created a loop but it was harder to understand
-      return Joint.inPlane(malePos, 'x', femalePos, 'x') ||
-            Joint.inPlane(malePos, 'x', femalePos, 'y') ||
-            Joint.inPlane(malePos, 'x', femalePos, 'z') ||
-            Joint.inPlane(malePos, 'y', femalePos, 'x') ||
-            Joint.inPlane(malePos, 'y', femalePos, 'y') ||
-            Joint.inPlane(malePos, 'y', femalePos, 'z') ||
-            Joint.inPlane(malePos, 'z', femalePos, 'x') ||
-            Joint.inPlane(malePos, 'z', femalePos, 'y') ||
-            Joint.inPlane(malePos, 'z', femalePos, 'z');
+      return Joint.cornerJoint(malePos, femalePos, 'x') ||
+            Joint.cornerJoint(malePos, femalePos, 'y') ||
+            Joint.cornerJoint(malePos, femalePos, 'z') ||
+            undefined;
     }
 
     if (Joint.list[maleTypeId] === undefined) Joint.list[maleTypeId] = [];
@@ -725,7 +722,7 @@ Joint.list = {};
 Joint.regex = /([a-z0-1\.]*)\.(x|y|z)->([a-z0-1\.]*)\.(x|y|z)/;
 Joint.cornerJoint = (malePos, femalePos, axis) => {
   const buildRetObj = (mAxis, mDir, fAxis, fDir) =>
-        male: {axis: mAxis, dir: mDir} female: {axis: fAxis, dir: fDir};
+        ({male: {axis: mAxis, dir: mDir}, female: {axis: fAxis, dir: fDir}});
 
   const p0 = `${axis}0`;
   const p1 = `${axis}1`;
@@ -733,11 +730,11 @@ Joint.cornerJoint = (malePos, femalePos, axis) => {
   const mp1 = malePos[p1];
   const fp0 = femalePos[p0];
   const fp1 = femalePos[p1];
-  if (mp0 === fp0 && mp1 === fp1 && mp1 === fp0) {
+  if (mp0 === fp0 && mp1 === fp1) {
     const oAxis = ['x', 'y', 'z'];
-    const rAxis = oAxis.split(oAxis.indexOf(axis), 1);
-    const attr0 = rAxis[0];
-    const attr1 = rAxis[1];
+    oAxis.splice(oAxis.indexOf(axis), 1);
+    const attr0 = oAxis[0];
+    const attr1 = oAxis[1];
     const mp00 = malePos[`${attr0}0`];
     const mp01 = malePos[`${attr0}1`];
     const mp10 = malePos[`${attr1}0`];
@@ -746,25 +743,44 @@ Joint.cornerJoint = (malePos, femalePos, axis) => {
     const fp01 = femalePos[`${attr0}1`];
     const fp10 = femalePos[`${attr1}0`];
     const fp11 = femalePos[`${attr1}1`];
-    if (mp00 < fp00 && fp10 < mp10) return buildRetObj(attr0, '-', attr1, '-');
-    if (mp00 < fp00 && fp11 > mp11) return buildRetObj(attr0, '-', attr1, '+');
-    if (mp01 > fp01 && fp10 < mp10) return buildRetObj(attr0, '+', attr1, '-');
-    if (mp01 > fp01 && fp11 > mp11) return buildRetObj(attr0, '+', attr1, '+');
+    if (mp00 < fp00 && mp01 === fp00 && mp11 === fp10) return buildRetObj(attr0, '+', attr1, '-');
+    if (mp00 > fp00 && mp00 === fp01 && mp11 === fp10) return buildRetObj(attr0, '-', attr1, '-');
+    if (mp00 < fp00 && fp00 === mp01 && fp01 === mp11) return buildRetObj(attr0, '+', attr1, '+');
+    if (mp00 > fp00 && fp11 === mp10 && fp01 === mp00) return buildRetObj(attr0, '-', attr1, '+');
     return undefined;
   }
 }
-Joint.inPlane = (malePos, maleAxis, femalePos, femaleAxis) {
 
+function eq(val1, val2) {
+  if (val1 !== val2) throw new Error(`Values not equal ${val1} !== ${val2}`);
 }
-
-function calculatePoints(position, dems) {
-
+function testJoints () {
+  let info = Joint.cornerJoint(new Position('z@0,15,0').get({length: 10, width: 2, thickness: .75}), new Position('@-2,0,0').get({length: 15, width: 2, thickness: .75}), 'z');
+  eq(info.male.dir, '-');
+  eq(info.female.dir, '+');
+  eq(info.male.axis, 'x');
+  eq(info.female.axis, 'y');
+  info = Joint.cornerJoint(new Position('z@-10,0,0').get({length: 10, width: 2, thickness: .75}), new Position('@0,-15,0').get({length: 15, width: 2, thickness: .75}), 'z')
+  eq(info.male.dir, '+');
+  eq(info.female.dir, '+');
+  eq(info.male.axis, 'x');
+  eq(info.female.axis, 'y');
+  info = Joint.cornerJoint(new Position('z@2,0,0').get({length: 10, width: 2, thickness: .75}), new Position('@0,2,0').get({length: 15, width: 2, thickness: .75}), 'z');
+  eq(info.male.dir, '-');
+  eq(info.female.dir, '-');
+  eq(info.male.axis, 'x');
+  eq(info.female.axis, 'y');
+  info = Joint.cornerJoint(new Position('z@-10,0,0').get({length: 10, width: 2, thickness: .75}), new Position('@0,2,0').get({length: 15, width: 2, thickness: .75}), 'z');
+  eq(info.male.dir, '+');
+  eq(info.female.dir, '-');
+  eq(info.male.axis, 'x');
+  eq(info.female.axis, 'y');
 }
 
 class Dado extends Joint {
   constructor(joinStr, defaultDepth) {
     super(joinStr);
-    const maleOffset(assembly) {
+    this.maleOffset = (assembly) => {
       if (defaultDepth) return defaultDepth;
       return getFemale(assembly)[femailDemention]() / 2;
     }
@@ -774,7 +790,7 @@ class Dado extends Joint {
 class Rabbet extends Joint {
   constructor(joinStr, defaultDepth) {
     super(joinStr);
-    const calcProtrusion(assembly) {
+    this.maleOffset = (assembly) => {
       if (defaultDepth) return defaultDepth;
       const female = assembly.getAssembly(this.femaleTypeId);
       return female[femailDemention]() / 2;
@@ -785,18 +801,12 @@ class Rabbet extends Joint {
 class Butt extends Joint {
   constructor(joinStr) {
     super(joinStr);
-    const calcProtrusion(assembly) {
-      return 0;
-    }
   }
 }
 
 class Miter extends Butt {
   constructor(joinStr) {
     super(joinStr);
-    const calcProtrusion(assembly) {
-      return 0;
-    }
   }
 }
 
