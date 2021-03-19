@@ -720,35 +720,44 @@ class Joint {
 // z -> x -> y -> z
 Joint.list = {};
 Joint.regex = /([a-z0-1\.]*)\.(x|y|z)->([a-z0-1\.]*)\.(x|y|z)/;
-Joint.cornerJoint = (malePos, femalePos, axis) => {
-  const buildRetObj = (mAxis, mDir, fAxis, fDir) =>
-        ({male: {axis: mAxis, dir: mDir}, female: {axis: fAxis, dir: fDir}});
-
-  const p0 = `${axis}0`;
-  const p1 = `${axis}1`;
-  const mp0 = malePos[p0];
-  const mp1 = malePos[p1];
-  const fp0 = femalePos[p0];
-  const fp1 = femalePos[p1];
-  if (mp0 === fp0 && mp1 === fp1) {
-    const oAxis = ['x', 'y', 'z'];
-    oAxis.splice(oAxis.indexOf(axis), 1);
-    const attr0 = oAxis[0];
-    const attr1 = oAxis[1];
-    const mp00 = malePos[`${attr0}0`];
-    const mp01 = malePos[`${attr0}1`];
-    const mp10 = malePos[`${attr1}0`];
-    const mp11 = malePos[`${attr1}1`];
-    const fp00 = femalePos[`${attr0}0`];
-    const fp01 = femalePos[`${attr0}1`];
-    const fp10 = femalePos[`${attr1}0`];
-    const fp11 = femalePos[`${attr1}1`];
-    if (mp00 < fp00 && mp01 === fp00 && mp11 === fp10) return buildRetObj(attr0, '+', attr1, '-');
-    if (mp00 > fp00 && mp00 === fp01 && mp11 === fp10) return buildRetObj(attr0, '-', attr1, '-');
-    if (mp00 < fp00 && fp00 === mp01 && fp01 === mp11) return buildRetObj(attr0, '+', attr1, '+');
-    if (mp00 > fp00 && fp11 === mp10 && fp01 === mp00) return buildRetObj(attr0, '-', attr1, '+');
-    return undefined;
+Joint.cornerJoint = (malePos, femalePos) => {
+  const buildRetObj = (axis1, dir1, axis2, dir2, maleFirst) => {
+    return {male: {axis: axis1, dir: dir1}, female: {axis: axis2, dir: dir2}};
   }
+  function checkAxis(firstPos, secondPos, axis, maleFirst) {
+    const p0 = `${axis}0`;
+    const p1 = `${axis}1`;
+    const mp0 = firstPos[p0];
+    const mp1 = firstPos[p1];
+    const fp0 = secondPos[p0];
+    const fp1 = secondPos[p1];
+    if (mp0 === fp0 && mp1 === fp1) {
+      const oAxis = ['x', 'y', 'z'];
+      oAxis.splice(oAxis.indexOf(axis), 1);
+      const attr0 = oAxis[0];
+      const attr1 = oAxis[1];
+      const mp00 = firstPos[`${attr0}0`];
+      const mp01 = firstPos[`${attr0}1`];
+      const mp10 = firstPos[`${attr1}0`];
+      const mp11 = firstPos[`${attr1}1`];
+      const fp00 = secondPos[`${attr0}0`];
+      const fp01 = secondPos[`${attr0}1`];
+      const fp10 = secondPos[`${attr1}0`];
+      const fp11 = secondPos[`${attr1}1`];
+      if (mp00 < fp00 && mp01 === fp00 && mp11 === fp10) return buildRetObj(attr0, '+', attr1, '-');
+      if (mp00 > fp00 && mp00 === fp01 && mp11 === fp10) return buildRetObj(attr0, '-', attr1, '-');
+      if (mp00 < fp00 && fp00 === mp01 && fp01 === mp11) return buildRetObj(attr0, '+', attr1, '+');
+      if (mp00 > fp00 && mp10 > fp10 && fp11 === mp10 && fp01 === mp00) return buildRetObj(attr0, '-', attr1, '+');
+      if (mp00 > fp00 && mp10 < fp10 && fp11 === mp10 && fp01 === mp00) return buildRetObj(attr1, '+', attr2, '-');
+    }
+  }
+
+  return checkAxis(malePos, femalePos, 'x', true) ||
+          checkAxis(femalePos, malePos, 'x') ||
+          checkAxis(malePos, femalePos, 'y', true) ||
+          checkAxis(femalePos, malePos, 'y') ||
+          checkAxis(malePos, femalePos, 'z', true) ||
+          checkAxis(femalePos, malePos, 'z');
 }
 
 function eq(val1, val2) {
@@ -775,6 +784,11 @@ function testJoints () {
   eq(info.female.dir, '-');
   eq(info.male.axis, 'x');
   eq(info.female.axis, 'y');
+  info = Joint.cornerJoint(new Position('@0,2,0').get({length: 15, width: 2, thickness: .75}), new Position('z@-10,0,0').get({length: 10, width: 2, thickness: .75}), 'z');
+  eq(info.male.dir, '-');
+  eq(info.female.dir, '+');
+  eq(info.male.axis, 'y');
+  eq(info.female.axis, 'x');
 }
 
 class Dado extends Joint {
