@@ -4,16 +4,281 @@ function formatConstructorId (obj) {
   return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
 }
 
+const CONSTANTS = {
+  pwt34: {name: 'Plywood 3/4 Thickness', value: 25/32},
+  pwt12: {name: 'Plywood 1/2 Thickness', value: 1/2},
+  pwt14: {name: 'Plywood 1/4 Thickness', value: 1/4},
+  brh: {name: 'Bottom rail height', value: 4.5},
+  frw: {name: 'Frame Rail Width', value: 1.5},
+  frt: {name: 'Frame Rail Thickness', value: 3/4},
+  tkbw: {name: 'Toe Kick Backer Width', value: 1/2},
+  pbt: {name: 'Panel Back Thickness', value: 1/2},
+  brr: {name: 'Bottom Rail Reveal', value: 1/8},
+}
+function getDefaultSize(instance) {
+  const constructorName = instance.constructor.name;
+  if (constructorName === 'Cabinet') return {length: 24, width: 22, thickness: 21};
+  return {length: 0, width: 0, thickness: 0};
+}
+
+class Expression {
+  constructor(target, str, identificationFunc, attrResolveFunc) {
+    this.target = () => target;
+    this.str = () => str;
+    this.identify = (objTypeId) => identificationFunc(objTypeId);
+    this.resolve = attrResolveFunc || ((obj, attr) => obj[attr]);
+    this.getValue = (objTypeId, attr) => {
+      const idStr = `${objTypeId}.${attr}`;
+      // if (Expression.requestedIds[idStr] === true) throw new Error(`Circular dependency detected @${idStr}: ${JSON.stringify(Object.keys(Expression.requestedIds))}`)
+      Expression.requestedIds[idStr] = true;
+      let obj;
+      if (objTypeId === undefined) {
+        obj = target;
+      } else {
+        obj = this.identify(objTypeId);
+      }
+      const returnVal = this.resolve(obj, attr);
+      delete Expression.requestedIds[idStr];
+      return returnVal;
+    }
+    this.replace = () => {
+      let retStr = str;
+      const references = retStr.match(Expression.refRegex) || [];
+      references.forEach((ref) => {
+        const match = ref.match(Expression.breakdownReg);
+        const objTypeId = match[4];
+        const attr = match[5];
+        const value = this.getValue(objTypeId, attr);
+        if (value !== undefined) {
+          retStr = retStr.replace(match[2], value);
+        }
+      });
+      return retStr;
+    }
+
+    this.eval = () =>
+      eval(this.replace(target, str));  }
+
+}
+
+Expression.requestedIds = {}
+Expression.refRegStr = '(^|[\\s\\+-\\\\(\\\\)])((([a-zA-Z][a-zA-Z0-9]*)\\.|)([a-zA-Z][a-zA-Z0-9]*))($|[\\s\\+-\\\\(\\\\)])';
+Expression.refRegex = new RegExp(Expression.refRegStr, 'g');
+Expression.breakdownReg = new RegExp(Expression.refRegStr);
+Expression.list = function (target, identificationFunc, attrResolveFunc) {
+  const list = [];
+  for (let index = 3; index < arguments.length; index +=1) {
+    const str = arguments[index];
+    list.push(new Expression(target, str, identificationFunc, attrResolveFunc));
+  }
+  return list;
+}
+class Position {
+  constructor(rotateStr, origXexp, origYexp, origZexp) {
+    rotateStr = rotateStr || '';
+    const attr = {};
+    attr.y = 'length';
+    attr.x = 'width';
+    attr.z = 'thickness';
+
+    this.getDemension = (axis) => attr[axis];
+
+    const match = rotateStr.match(Position.regex);
+    const rotateAxis = match === null ? [] : match[1].split('');
+    const o = {};
+    o.x = origXexp;
+    o.y = origYexp;
+    o.z = origZexp;
+    // console.log(o)
+    const resolve = (str) => eval(str);
+
+    this.pointObj = (x, y, z) => ({x, y, z});
+    this.get = (obj, targetAttr) => {
+      const dem = (axis) => o[axis].eval() + obj[attr[axis]]();
+      const orig = (axis) => o[axis].eval();
+      if (targetAttr !== undefined) {
+        if (targetAttr.match(/^([xyz])0$/)) return orig(targetAttr.match(/^([xyz])0$/)[1]);
+        if (targetAttr.match(/^([xyz])1$/)) return dem(targetAttr.match(/^([xyz])1$/)[1]);
+      }
+
+      const points = [];
+      const ret = {x0: orig('x'), x1: dem('x'), y0: orig('y'), y1: dem('y'),
+                    z0: orig('z'), z1: dem('z'), points};
+      points.push(this.pointObj(dem('x'), orig('y'), dem('z')));
+      points.push(this.pointObj(dem('x'), orig('y'), orig('z')));
+      points.push(this.pointObj(dem('x'), dem('y'), orig('z')));
+      points.push(this.pointObj(dem('x'), dem('y'), dem('z')));
+      points.push(this.pointObj(orig('x'), dem('y'), dem('z')));
+      points.push(this.pointObj(orig('x'), dem('y'), orig('z')));
+      points.push(this.pointObj(orig('x'), orig('y'), orig('z')));
+      points.push(this.pointObj(orig('x'), orig('y'), dem('z')));
+      console.log(ret);
+      return ret;
+    }
+
+    rotateAxis.forEach((axis) => {
+      let temp;
+      switch (axis) {
+        case 'x':
+          temp =  attr.z;
+          attr.z = attr.y;
+          attr.y = temp;
+          break;
+        case 'y':
+          temp =  attr.z;
+          attr.z = attr.x;
+          attr.x = temp;
+          break;
+        case 'z':
+          temp =  attr.y;
+          attr.y = attr.x;
+          attr.x = temp;
+          break;
+      }
+    })
+
+  }
+}
+Position.regex = /^([xyz]{1,})$/;
+Position.touching = (pos1, pos2) => {
+  const touchingAxis = (axis) => {
+    if (pos1[`${axis}1`] === pos2[`${axis}0`])
+      return {axis: `${axis}`, direction: '+'};
+    if (pos1[`${axis}0`] === pos2[`${axis}1`])
+      return {axis: `${axis}`, direction: '-'};
+  }
+  if (!Position.within(pos1, pos2)) return null;
+  return touchingAxis('x') || touchingAxis('y') || touchingAxis('z') || null;
+}
+Position.within = (pos1, pos2, axises) => {
+  const axisTouching = (axis) => {
+    if (axises !== undefined && axises.index(axis) === -1) return true;
+    const p10 = pos1[`${axis}0`];
+    const p11 = pos1[`${axis}1`];
+    const p20 = pos2[`${axis}0`];
+    const p21 = pos2[`${axis}1`];
+    return (p10 >= p20 && p10 <= p21) ||
+            (p11 <= p21 && p11 >= p20);
+  }
+  return axisTouching('x') && axisTouching('y') && axisTouching('z');
+}
+
+Position.parseCoordinates = function() {
+  let coordinateMatch = null;
+  for (let index = 0; coordinateMatch === null && index < arguments.length; index += 1) {
+    const str = arguments[index];
+    if (index > 0 && arguments.length - 1 === index) {
+      //console.error(`Attempted to parse invalid coordinateStr: '${JSON.stringify(arguments)}'`);
+    }
+    if (typeof str === 'string') {
+      coordinateMatch = str.match(Assembly.demsionRegex);
+    }
+  }
+  if (coordinateMatch === null) {
+    throw new Error(`Unable to parse coordinates`);
+  }
+  return {
+    x: coordinateMatch[1],
+    y: coordinateMatch[2],
+    z: coordinateMatch[3]
+  }
+}
+
 class Assembly {
-  constructor(width, height, depth, defaultSizes) {
-    this.subAssemblies = [];
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    this.getAssembly = (partCode, callingAssem) => {
+      if (callingAssem === this) return undefined;
+      if (this.partCode === partCode) return this;
+      if (this.subAssemblies[partCode]) return this.subAssemblies[partCode];
+      if (callingAssem !== undefined) {
+        const children = Object.values(this.subAssemblies);
+        for (let index = 0; index < children.length; index += 1) {
+          const assem = children[index].getAssembly(partCode, this);
+          if (assem !== undefined) return assem;
+        }
+      }
+      if (this.parentAssembly !== undefined && this.parentAssembly !== callingAssem)
+        return this.parentAssembly.getAssembly(partCode, this);
+      return undefined;
+    }
+
+
+    const origLoc = Position.parseCoordinates(originStr, '0,0,0');
+    const origExp = Expression.list(this, this.getAssembly, Assembly.resolveAttr,
+      origLoc.x, origLoc.y, origLoc.z);
+    const originalPosition = new Position(rotationStr, origExp[0], origExp[1], origExp[2]);
+    this.getPosition = (attr) => originalPosition.get(this, attr);
+    const defSizes = getDefaultSize(this);
+    let dems = Position.parseCoordinates(demensionStr,
+        `${defSizes.length},${defSizes.width},${defSizes.thickness}`,
+        '0,0,0');
+    let demExp = Expression.list(this, this.getAssembly, Assembly.resolveAttr,
+          dems.x, dems.y, dems.z);
+    this.partCode = partCode;
+    this.partName = partName;
+    this.joints = [];
+    this.positionObj = () => originalPosition.get(this);
+    this.getJoints = (partCode, joints) => {
+      joints = joints || {male: [], female: []};
+      this.joints.forEach((joint) => {
+        if (joint.malePartCode === partCode) {
+          joints.male.push(joint);
+        } else if (joint.femalePartCode === partCode) {
+          joints.female.push(joint);
+        }
+      });
+      if (this.parentAssembly !== undefined)
+        this.parentAssembly.getJoints(partCode, joints);
+      return joints;
+    }
+    this.getCutDemensions = () => {
+      const joints = this.getJoints(this.partCode);
+      const dems = {
+        length: this.length,
+        width: this.width,
+        thickness: this.thickness
+      }
+      const jointOffsets = {};
+      joints.male.forEach((maleJoint) => {
+        const femalePart = this.getAssembly(maleJoint.femalePartCode);
+        const attr = Position.touches(this, femalePart);
+        const axis = attr.axis;
+        const dir = attr.direction;
+        const axisDirStr = `${dir}${axis}`;
+        const dem = this.getDemension(axis);
+        const value = maleJoint.maleOffset;
+        if (jointOffset[axisDirStr] === undefined ||
+              jointOffset[axisDirStr].maleOffset < value)
+          jointOffset[axisDirStr] = {dem, value};
+      });
+      Object.values(jointOffsets).forEach((offset) => {
+        dems[offset.dem] += offset.value;
+      })
+      return dems;
+    }
+    this.subAssemblies = {};
+    this.setParentAssembly = (pa) => this.parentAssembly = pa;
     this.features = Feature.getList(formatConstructorId(this));
-    if (defaultSizes === undefined) defaultSizes = {};
-    this.width = width !== undefined ? width : defaultSizes.width;
-    this.height = height !== undefined ? height : defaultSizes.height;
-    this.depth = depth !== undefined ? depth : defaultSizes.depth;
-    this.addSubAssembly = (assembly) => this.subAssemblies.push(assembly);
+    this.addSubAssembly = (assembly) => {
+      this.subAssemblies[assembly.partCode] = assembly;
+      assembly.setParentAssembly(this);
+    }
     this.objId = this.constructor.name;
+
+    this.addJoints = function () {
+      for (let i = 0; i < arguments.length; i += 1) {
+        const joint = arguments[i];
+        this.joints.push(joint);
+        joint.setParentAssembly(this);
+      }
+    }
+
+    this.addSubAssemblies = function () {
+      for (let i = 0; i < arguments.length; i += 1) {
+        this.addSubAssembly(arguments[i]);
+      }
+    }
+
     this.getSubAssemblies = () => {
       let assemblies = [];
       this.subAssemblies.forEach((assem) => {
@@ -27,9 +292,16 @@ class Assembly {
     }
     this.id = ++Assembly.idCounters[this.objId];
     Assembly.add(this);
+    const lengthExp = demExp[0];
+    const widthExp = demExp[1];
+    const thicknessExp = demExp[2];
+    this.length = () => lengthExp.eval();
+    this.width = () => widthExp.eval();
+    this.thickness = () => thicknessExp.eval();
   }
 }
 
+Assembly.demsionRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
 Assembly.list = {};
 Assembly.add = (assembly) => {
   const name = assembly.constructor.name;
@@ -42,12 +314,27 @@ Assembly.all = () => {
   keys.forEach((key) => list.push(Assembly.list[key]));
   return list;
 }
+Assembly.resolveAttr = (assembly, attr) => {
+  if (CONSTANTS[attr]) return CONSTANTS[attr].value;
+  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
+    return assembly.length();
+  } else if (attr === 'w' || attr === 'width') {
+    return assembly.width();
+  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
+    return assembly.thickness();
+  } else if (attr === 'x0') return assembly.getPosition('x0');
+  else if (attr === 'x1') return assembly.getPosition('x1');
+  else if (attr === 'y0') return assembly.getPosition('y0');
+  else if (attr === 'y1') return assembly.getPosition('y1');
+  else if (attr === 'z0') return assembly.getPosition('z0');
+  else if (attr === 'z1') return assembly.getPosition('z1');
+}
 Assembly.lists = {};
 Assembly.idCounters = {};
 
 class Section extends Assembly {
-  constructor(templatePath, parentList, isPartition, width, height, depth) {
-    super(templatePath, isPartition, width, height, depth);
+  constructor(templatePath, parentList, isPartition, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(templatePath, isPartition, partCode, partName, originStr, demensionStr, rotationStr);
     this.isPartition = () => isPartition;
     this.parentList = () => parentList;
     if (templatePath === undefined) {
@@ -81,33 +368,45 @@ Section.render = (opening, scope) => {
 }
 
 class Pull extends Assembly {
-  constructor(width, height, depth, defaultSizes) {
-    super(width, height, depth, defaultSizes);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 
 class Door extends Assembly {
-  constructor(width, height, depth, defaultSizes) {
-    super(width, height, depth, defaultSizes);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(partCode, partName, originStr, demensionStr, rotationStr);
     this.addSubAssembly(new Pull());
   }
 }
 
+class Panel extends Assembly {
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(partCode, partName, originStr, demensionStr, rotationStr);
+  }
+}
+
+class Frame extends Assembly {
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(partCode, partName, originStr, demensionStr, rotationStr);
+  }
+}
+
 class Drawer extends Assembly {
-  constructor(width, height, depth, defaultSizes) {
-    super(width, height, depth, defaultSizes);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 
 class PartitionSection extends Section {
-  constructor(templatePath, parentList, width, height, depth) {
-    super(templatePath, parentList, true, width, height, depth);
+  constructor(templatePath, parentList, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(templatePath, parentList, true, partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 
 class SpaceSection extends Section {
-  constructor(templatePath, parentList, width, height, depth) {
-    super(templatePath,  parentList, false, width, height, depth);
+  constructor(templatePath, parentList, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(templatePath,  parentList, false, partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 
@@ -384,30 +683,30 @@ new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
 new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
 class DrawerSection extends SpaceSection {
-  constructor(parentList, width, height, depth) {
-    super(sectionFilePath('drawer'), parentList, width, height, depth);
+  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('drawer'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 new DrawerSection();
 
 class Divider extends Assembly {
-  constructor(width, height, depth) {
-    super(width, height, depth);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(partCode, partName, originStr, demensionStr, rotationStr);
     this.addSubAssembly(new Panel());
     this.addSubAssembly(new Frame());
   }
 }
 
 class DividerSection extends PartitionSection {
-  constructor(parentList, width, height, depth) {
-    super(sectionFilePath('divider'), parentList, width, height, depth);
+  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('divider'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 new DividerSection();
 
 class DoorSection extends SpaceSection {
-  constructor(parentList, width, height, depth) {
-    super(sectionFilePath('door'), parentList, width, height, depth);
+  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('door'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
     this.addSubAssembly(new Door());
     this.addSubAssembly(new Drawer());
   }
@@ -416,22 +715,22 @@ new DoorSection();
 // console.log(JSON.stringify(new DoorSection().features, null, 2))
 
 class DualDoorSection extends SpaceSection {
-  constructor(parentList, width, height, depth) {
-    super(sectionFilePath('dual-door'), parentList, width, height, depth);
+  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('dual-door'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 new DualDoorSection();
 
 class FalseFrontSection extends SpaceSection {
-  constructor(parentList, width, height, depth) {
-    super(sectionFilePath('false-front'), parentList, width, height, depth);
+  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('false-front'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 new FalseFrontSection();
 
 class FrameDivider extends Assembly {
-  constructor (width, height, depth) {
-    super(width, height, depth);
+  constructor (partCode, partName, originStr, demensionStr, rotationStr) {
+    super(partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 
@@ -446,11 +745,9 @@ const setHorizontalDivSet = (id, sizes) => (id, sizes, 'horizontal');
 const setVerticalDivSet = (id, sizes) => (id, sizes, 'vertical');
 
 class OpenSection extends SpaceSection {
-  constructor(parentList, width, height, depth) {
-    super(sectionFilePath('open'), parentList, width, height, depth);
+  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('open'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
     this.parent = parent;
-    this.width = width;
-    this.height = height;
     this.vertical = true;
     this.sections = [];
     this.dividerCount = () => (this.sections.length - 1) / 2
@@ -491,10 +788,9 @@ const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
 
 const framedFrameWidth = 1.5;
 const framelessFrameWidth = 3/4;
-const defaultCabinetSize = {width: 22, height: 24, depth: 21}
 class Cabinet extends Assembly {
-  constructor(width, height, depth) {
-    super(width, height, depth, defaultCabinetSize);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(partCode, partName, originStr, demensionStr, rotationStr);
     let frameWidth = framedFrameWidth;
     let toeKickHeight = 4;
     let verticelSections = [];
@@ -514,289 +810,138 @@ class Cabinet extends Assembly {
       return {width: w, height: h};
     }
 
-    const backPanel = new Panel('pb', 'Panel.Back',
-      '@pr.x1 - j(pr).cp, tkb.w, c.w - t',
-      'c.h - tkb.h, pr.x1 - j(pr).cp, .5');
-    const rightPanel = new Panel('pr', 'Panel.Right',
-        'y@1/8, 0, rr.t - j(rr).cp',
-        'c.h,c.w - rr.t + j(rr).cp, .75');
-    const leftPanel = new Panel('pl', 'Panel.Left',
-        'y@c.w - 1/8 - t, 0, pr.z0',
-        'pr.l,pr.w,.75');
-    const bottomPanel = new Panel('pbt', 'Panel.Bottom',
-        'x@pr.x0 - j(pr).cp, tkb.w, pl.z0',
-        '(rp.x0 + j(rp).cp) - (lp.x1 - j(lp).cp)');
+    this.addSubAssemblies(new Divider('lr', 'Frame.Left',
+                            '0,brh - w,0',
+                            'c.l - (brh - w), frw, frt'),
+                          new Panel('pl', 'Panel.Right',
+                            '1/8, 0, rr.t',
+                            'c.h,c.t - rr.t, pwt34',
+                            'y'),
+                          new Panel('pr', 'Panel.Left',
+                            'c.w - 1/8 - t, 0, pl.z0',
+                            'pl.l,pl.w, pwt34',
+                            'y'),
 
-    const rightRail = new Divider('rr', 'Frame.Right',
-        '@0,br.y0,0',
-        'tr.x1 - br.x0, 1.5, 3/4');
-    const topRail = new Divider('tr', 'Frame.Top',
-        'x@br.x0,br.y0 + rr.l - rr.w,0',
-        'rr.x0 - lr.x1, 1.5, 3/4');
-    const bottomRail = new Divider('br', 'Frame.Bottom',
-        'x@rr.w,tkb.w - 1/8,0',
-        'tr.l, 1.5, 3/4');
-    const leftRail = new Divider('lr', 'Frame.Left',
-        '@rr.x0,rr.y0,0',
-        'rr.l,1.5,3/4');
+                          new Panel('tkb', 'Panel.ToeKickBacker',
+                            'pl.x1,0,3.5',
+                            'pr.x0 - pl.x1, 3, tkbw',
+                            'z'),
 
-    const toeKickBacker = new Panel('tkb', 'Panel.ToeKickBacker',
-        'z@j(pr).d0,0,3.5',
-        '(pr.x0 + j(pr).cp) - (pl.x1 - j(pl).cp), 3, 1/2');
+                          new Panel('pb', 'Panel.Back',
+                            'pl.x1, tkb.w, c.t - t',
+                            'c.l - tkb.w, pr.x0 - pl.x1, pbt'),
 
-    const pb2pr = new Rabbet('pb->pr');
-    const pb2pl = new Rabbet('pb->pl');
-    const pb2pbt = new Butt('pb->pbt');
+                          new Panel('pbt', 'Panel.Bottom',
+                            'pl.x1, tkb.w, pl.z0',
+                            'pr.x0 - pl.x1, pr.w - pwt12, pwt34',
+                            'zx'),
 
-    const prTotkb = new Rabbet('pr->tkb');
-    const pr2rr = new Dado('pr->rr');
+                          new Divider('rr', 'Frame.Right',
+                            'c.w - w,lr.y0,0',
+                            'lr.l,frw,frt'),
 
-    const pl2tkb = new Rabbet('pl->tkb');
-    const pl2lr = new Dado('pl->tkb');
 
-    const pbt2pr = new Dado('pbt->pr');
-    const pbt2pl = new Dado('pbt->pl');
 
-    const pbt2br = new Dado('pbt->br');
-    const pbt2rr = new Dado('pbt->rr');
-    const pbt2lr = new Dado('pbt->lr');
 
-    const tr2rr = new Butt('tr->rr');
-    const tr2lr = new Butt('tr->lr');
-    const br2rr = new Butt('br->rr');
-    const br2lr = new Butt('br->lr');
+                          new Divider('tr', 'Frame.Top',
+                            'br.x0,c.l - w,0',
+                            'br.l,frw,frt',
+                            'z'),
+                          new Divider('br', 'Frame.Bottom',
+                            'rr.w,brh - w,0',
+                            'rr.x0 - lr.x1,frw,frt',
+                            'z'));
 
-    addSubAssembly(new Divider('c.w,1.5,29/32', 'Frame.top'));
-    addSubAssembly(new Divider('Frame.bottom', [j1], 'c.w'));
-    addSubAssembly(new Divider('c.w,1.5,29/32', 'Frame.top'));
-    addSubAssembly(new Divider('c.w,1.5,29/32', 'Frame.top'));
+
+    this.addJoints(new Rabbet('pb->pr', 3/8),
+                      new Rabbet('pb->pl', 3/8),
+                      new Butt('pb->pbt'),
+
+                      new Rabbet('pr->tkb', 3/8),
+                      new Dado('pr->rr', 3/8),
+
+                      new Rabbet('pl->tkb', 3/8),
+                      new Dado('pl->tkb', 3/8),
+
+                      new Dado('pbt->pr', 3/8),
+                      new Dado('pbt->pl', 3/8),
+
+                      new Dado('pbt->br', 3/8),
+                      new Dado('pbt->rr', 3/8),
+                      new Dado('pbt->lr', 3/8),
+
+                      new Butt('tr->rr'),
+                      new Butt('tr->lr'),
+                      new Butt('br->rr'),
+                      new Butt('br->lr'));
   }
 }
-
-class Position {
-  constructor(posStr) {
-    const attr = {};
-    attr.y = 'length';
-    attr.x = 'width';
-    attr.z = 'thickness';
-
-    const getDemension = (axis) => attr[axis];
-
-    const match = posStr.match(Position.regex);
-    const rotateAxis = match[1].split('');
-    const o = {};
-    o.x = match[2];
-    o.y = match[3];
-    o.z = match[4];
-    // console.log(o)
-    const resolve = (str) => eval(str);
-
-    this.pointObj = (x, y, z) => ({x, y, z});
-    this.get = (obj) => {
-      const dem = (axis) => resolve(o[axis]) + obj[attr[axis]];
-      const orig = (axis) => resolve(o[axis]);
-      const points = [];
-      const ret = {x0: orig('x'), x1: dem('x'), y0: orig('y'), y1: dem('y'),
-                    z0: orig('z'), z1: dem('z'), points};
-      points.push(this.pointObj(orig('x'), orig('y'), orig('z')));
-      points.push(this.pointObj(dem('x'), orig('y'), orig('z')));
-      points.push(this.pointObj(dem('x'), dem('y'), orig('z')));
-      points.push(this.pointObj(dem('x'), dem('y'), dem('z')));
-      points.push(this.pointObj(orig('x'), dem('y'), dem('z')));
-      points.push(this.pointObj(orig('x'), dem('y'), orig('z')));
-      points.push(this.pointObj(orig('x'), orig('y'), dem('z')));
-      points.push(this.pointObj(dem('x'), orig('y'), dem('z')));
-      console.log(ret);
-      return ret;
-    }
-
-    rotateAxis.forEach((axis) => {
-      let temp;
-      switch (axis) {
-        case 'x':
-          temp =  attr.z;
-          attr.z = attr.y;
-          attr.y = temp;
-          break;
-        case 'y':
-          temp =  attr.z;
-          attr.z = attr.x;
-          attr.x = temp;
-          break;
-        case 'z':
-          temp =  attr.y;
-          attr.y = attr.x;
-          attr.x = temp;
-          break;
-      }
-    })
-
-  }
-}
-Position.regex = /^\s*([xyz]*)\s*\@\s*(.*?)\s*,\s*(.*?)\s*,\s*(.*?)\s*$/;
-
-class Expression {
-  constructor() {
-  }
-}
-Expression.getValue = (assembly, objTypeId, attr) => {
-  let obj;
-  if (objId === '') {
-    obj = assembly;
-  } else {
-    obj = assembly.getAssembly(objTypeId);
-  }
-
-  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
-    return obj.length();
-  } else if (attr === 'w' || attr === 'width') {
-    return obj.width();
-  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
-    return obj.thickness();
-  } else if (attr === 'x0') return obj.getPosition().x[0];
-  else if (attr === 'x1') return obj.getPosition().x[1];
-  else if (attr === 'y0') return obj.getPosition().y[0];
-  else if (attr === 'y1') return obj.getPosition().y[1];
-  else if (attr === 'z0') return obj.getPosition().z[0];
-  else if (attr === 'z1') return obj.getPosition().z[1];
-}
-
-Expression.jointRegStr = 'j\\(([a-zA-Z0-1]{1,}?)\\)\\.([a-zA-Z0-1]{1,}?)';
-Expression.jointRegex = new RegExp(Expression.jointRegStr, 'g');
-Expression.jointBreakdownReg = new RegExp(Expression.jointRegStr);
-Expression.refRegStr = '(([a-zA-Z0-9]{1,})\.|)([a-zA-Z0-9])';
-Expression.refRegex = new RegExp(Expression.refRegStr, 'g');
-Expression.breakdownReg = new RegExp(Expression.refRegStr);
-Expression.replace = (assembly, expression) => {
-  const references = expression.match(Expression.refRegex);
-  references.forEach((ref) => {
-    const match = ref.match(Expression.breakdownReg);
-    const objTypeId = match[2];
-    const attr = match[3];
-    const value = Expression.getValue(assembly, objTypeId, attr);
-    expression = expression.replace(ref, value);
-  });
-
-  const jointRefs = expression.match(Expression.jointRegex);
-  jointRefs.forEach((jRef) => {
-    const match = jRef.match(Expression.jointBreakdownReg);
-    const objTypeId = match[1];
-    const attr = match[2];
-    const value = assembly.getJoint(assembly.typeId, objTypeId)[attr]();
-    expression = expression.replace(ref, value);
-  });
-}
-
 
 class Joint {
   constructor(joinStr) {
     const match = joinStr.match(Joint.regex);
-    this.maleTypeId = match[1];
-    this.femaleTypeId = match[1];
+    this.malePartCode = match[1];
+    this.femalePartCode = match[2];
 
-    const getFemale = (assembly) => assembly.getAssembly(this.femaleTypeId);
-    const getMale = (assembly) => assembly.getAssembly(this.maleTypeId);
+    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
+    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
 
-    const maleOffset = () => 0;
-    const femaleOffset = () => 0;
+    this.maleOffset = () => 0;
+    this.femaleOffset = () => 0;
+    this.setParentAssembly = (pa) => this.parentAssembly = pa;
 
     this.getDemensions = () => {
-      const malePos = getAssembly(maleTypeId);
-      const femalePos = getAssembly(femaleTypeId);
+      const malePos = getMale();
+      const femalePos = getFemale();
       // I created a loop but it was harder to understand
-      return Joint.cornerJoint(malePos, femalePos, 'x') ||
-            Joint.cornerJoint(malePos, femalePos, 'y') ||
-            Joint.cornerJoint(malePos, femalePos, 'z') ||
-            undefined;
+      console.log('here')
+      return undefined;
     }
 
-    if (Joint.list[maleTypeId] === undefined) Joint.list[maleTypeId] = [];
-    if (Joint.list[femaleTypeId] === undefined) Joint.list[femaleTypeId] = [];
-    Joint.list[maleTypeId].push(this);
-    Joint.list[femaleTypeId].push(this);
+    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
+    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
+    Joint.list[this.malePartCode].push(this);
+    Joint.list[this.femalePartCode].push(this);
   }
 }
-// (z===) ? (inbounds(x) ? (y1 > y0 ? -y : y) : inbounds(y) ? x1 > x0 ? -x : x)
-// z -> x -> y -> z
 Joint.list = {};
-Joint.regex = /([a-z0-1\.]*)\.(x|y|z)->([a-z0-1\.]*)\.(x|y|z)/;
-Joint.cornerJoint = (malePos, femalePos) => {
-  const buildRetObj = (axis1, dir1, axis2, dir2, maleFirst) => {
-    return {male: {axis: axis1, dir: dir1}, female: {axis: axis2, dir: dir2}};
-  }
-  function checkAxis(firstPos, secondPos, axis, maleFirst) {
-    const p0 = `${axis}0`;
-    const p1 = `${axis}1`;
-    const mp0 = firstPos[p0];
-    const mp1 = firstPos[p1];
-    const fp0 = secondPos[p0];
-    const fp1 = secondPos[p1];
-    if (mp0 === fp0 && mp1 === fp1) {
-      const oAxis = ['x', 'y', 'z'];
-      oAxis.splice(oAxis.indexOf(axis), 1);
-      const attr0 = oAxis[0];
-      const attr1 = oAxis[1];
-      const mp00 = firstPos[`${attr0}0`];
-      const mp01 = firstPos[`${attr0}1`];
-      const mp10 = firstPos[`${attr1}0`];
-      const mp11 = firstPos[`${attr1}1`];
-      const fp00 = secondPos[`${attr0}0`];
-      const fp01 = secondPos[`${attr0}1`];
-      const fp10 = secondPos[`${attr1}0`];
-      const fp11 = secondPos[`${attr1}1`];
-      if (mp00 < fp00 && mp01 === fp00 && mp11 === fp10) return buildRetObj(attr0, '+', attr1, '-');
-      if (mp00 > fp00 && mp00 === fp01 && mp11 === fp10) return buildRetObj(attr0, '-', attr1, '-');
-      if (mp00 < fp00 && fp00 === mp01 && fp01 === mp11) return buildRetObj(attr0, '+', attr1, '+');
-      if (mp00 > fp00 && mp10 > fp10 && fp11 === mp10 && fp01 === mp00) return buildRetObj(attr0, '-', attr1, '+');
-      if (mp00 > fp00 && mp10 < fp10 && fp11 === mp10 && fp01 === mp00) return buildRetObj(attr1, '+', attr2, '-');
-    }
-  }
+Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
 
-  return checkAxis(malePos, femalePos, 'x', true) ||
-          checkAxis(femalePos, malePos, 'x') ||
-          checkAxis(malePos, femalePos, 'y', true) ||
-          checkAxis(femalePos, malePos, 'y') ||
-          checkAxis(malePos, femalePos, 'z', true) ||
-          checkAxis(femalePos, malePos, 'z');
-}
-
-function eq(val1, val2) {
-  if (val1 !== val2) throw new Error(`Values not equal ${val1} !== ${val2}`);
+function eq(val1, val2, testName) {
+  if (val1 !== val2) throw new Error(`${testName} Failed: Values not equal ${val1} !== ${val2}`);
 }
 function testJoints () {
-  let info = Joint.cornerJoint(new Position('z@0,15,0').get({length: 10, width: 2, thickness: .75}), new Position('@-2,0,0').get({length: 15, width: 2, thickness: .75}), 'z');
-  eq(info.male.dir, '-');
-  eq(info.female.dir, '+');
-  eq(info.male.axis, 'x');
-  eq(info.female.axis, 'y');
-  info = Joint.cornerJoint(new Position('z@-10,0,0').get({length: 10, width: 2, thickness: .75}), new Position('@0,-15,0').get({length: 15, width: 2, thickness: .75}), 'z')
-  eq(info.male.dir, '+');
-  eq(info.female.dir, '+');
-  eq(info.male.axis, 'x');
-  eq(info.female.axis, 'y');
-  info = Joint.cornerJoint(new Position('z@2,0,0').get({length: 10, width: 2, thickness: .75}), new Position('@0,2,0').get({length: 15, width: 2, thickness: .75}), 'z');
-  eq(info.male.dir, '-');
-  eq(info.female.dir, '-');
-  eq(info.male.axis, 'x');
-  eq(info.female.axis, 'y');
-  info = Joint.cornerJoint(new Position('z@-10,0,0').get({length: 10, width: 2, thickness: .75}), new Position('@0,2,0').get({length: 15, width: 2, thickness: .75}), 'z');
-  eq(info.male.dir, '+');
-  eq(info.female.dir, '-');
-  eq(info.male.axis, 'x');
-  eq(info.female.axis, 'y');
-  info = Joint.cornerJoint(new Position('@0,2,0').get({length: 15, width: 2, thickness: .75}), new Position('z@-10,0,0').get({length: 10, width: 2, thickness: .75}), 'z');
-  eq(info.male.dir, '-');
-  eq(info.female.dir, '+');
-  eq(info.male.axis, 'y');
-  eq(info.female.axis, 'x');
+  const obj1 = {length: 10, width: 2, thickness: .75};
+  const obj2 = {length: 15, width: 2, thickness: .75};
+  const axDir = (axis, dir) => ({axis, dir});
+  const test = (p1, p2, wVal, tVal, testName) => {
+    eq(Position.within(p1, p2), wVal, `${testName} - within`);
+    if (tVal === null) {
+      eq(Position.touching(p1,p2), null, `${testName} - touching`);
+    } else {
+      eq(Position.touching(p1,p2).axis, tVal.axis, `${testName} - touching:axis`);
+      eq(Position.touching(p1,p2).direction, tVal.dir, `${testName} - touching:dir`);
+    }
+  }
+  const pObj = (pStr, obj) => new Position(pStr).get(obj);
+
+  test(pObj('@0,2,0', obj1), pObj('@0,2,0', obj2), true, null, 'Same Position');
+  test(pObj('@-2,2,0', obj1), pObj('@0,2,0', obj2), true, axDir('x', '+'), 'Left X');
+  test(pObj('@2,2,0', obj1), pObj('@0,2,0', obj2), true, axDir('x', '-'), 'Right X');
+  test(pObj('@0,15,0', obj1), pObj('@0,0,0', obj2), true, axDir('y', '-'), 'Top Y');
+  test(pObj('@0,-10,0', obj1), pObj('@0,0,0', obj2), true, axDir('y', '+'), 'Bottom Y');
+  test(pObj('@0,0,-.75', obj1), pObj('@0,0,0', obj2), true, axDir('z', '+'), 'Front Z');
+  test(pObj('@0,2,.75', obj1), pObj('@0,2,0', obj2), true, axDir('z', '-'), 'Back Z');
+  test(pObj('@-3,2,0', obj1), pObj('@0,2,0', obj2), false, null, 'X Not Connected');
+  test(pObj('@0,18,0', obj1), pObj('@0,2,0', obj2), false, null, 'Y Not Connected');
+  test(pObj('@0,0,.76', obj1), pObj('@0,2,0', obj2), false, null, 'Z Not Connected');
 }
 
 class Dado extends Joint {
   constructor(joinStr, defaultDepth) {
     super(joinStr);
     this.maleOffset = (assembly) => {
-      if (defaultDepth) return defaultDepth;
-      return getFemale(assembly)[femailDemention]() / 2;
+      return defaultDepth;
     }
   }
 }
@@ -805,9 +950,7 @@ class Rabbet extends Joint {
   constructor(joinStr, defaultDepth) {
     super(joinStr);
     this.maleOffset = (assembly) => {
-      if (defaultDepth) return defaultDepth;
-      const female = assembly.getAssembly(this.femaleTypeId);
-      return female[femailDemention]() / 2;
+      return defaultDepth;
     }
   }
 }
@@ -864,7 +1007,7 @@ function down(selector, node) {
 
 function closest(selector, node) {
   const visited = [];
-  function recurse (currNode, distance) {
+  function recurse (currNode, dilengthstance) {
     let found = { distance: Number.MAX_SAFE_INTEGER };
     if (!currNode || (typeof currNode.matches) !== 'function') {
       return found;
