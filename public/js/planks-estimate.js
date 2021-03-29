@@ -112,7 +112,6 @@ class Position {
       points.push(this.pointObj(orig('x'), dem('y'), orig('z')));
       points.push(this.pointObj(orig('x'), orig('y'), orig('z')));
       points.push(this.pointObj(orig('x'), orig('y'), dem('z')));
-      console.log(ret);
       return ret;
     }
 
@@ -208,6 +207,7 @@ class Assembly {
       origLoc.x, origLoc.y, origLoc.z);
     const originalPosition = new Position(rotationStr, origExp[0], origExp[1], origExp[2]);
     this.getPosition = (attr) => originalPosition.get(this, attr);
+    this.getDemension = (axis) => originalPosition.getDemension(axis);
     const defSizes = getDefaultSize(this);
     let dems = Position.parseCoordinates(demensionStr,
         `${defSizes.length},${defSizes.width},${defSizes.thickness}`,
@@ -218,42 +218,65 @@ class Assembly {
     this.partName = partName;
     this.joints = [];
     this.positionObj = () => originalPosition.get(this);
-    this.getJoints = (partCode, joints) => {
+    this.fullDem = () => {
+      const maleJoints = this.getJoints().male;
+      const pos = this.getPosition();
+      maleJoints.forEach((joint) => {
+        const femPos = this.getAssembly(joint.femalePartCode).getPosition();
+        const axis = Position.touching(pos, femPos);
+        console.log(axis);
+      });
+    }
+    this.getJoints = (pc, joints) => {
+      pc = pc || partCode;
       joints = joints || {male: [], female: []};
       this.joints.forEach((joint) => {
-        if (joint.malePartCode === partCode) {
+        if (joint.malePartCode === pc) {
           joints.male.push(joint);
-        } else if (joint.femalePartCode === partCode) {
+        } else if (joint.femalePartCode === pc) {
           joints.female.push(joint);
         }
       });
       if (this.parentAssembly !== undefined)
-        this.parentAssembly.getJoints(partCode, joints);
+        this.parentAssembly.getJoints(pc, joints);
       return joints;
     }
-    this.getCutDemensions = () => {
-      const joints = this.getJoints(this.partCode);
-      const dems = {
-        length: this.length,
-        width: this.width,
-        thickness: this.thickness
+    function initObj(value) {
+      const obj = {};
+      for (let index = 1; index < arguments.length; index += 1) {
+        obj[arguments[index]] = value;
       }
-      const jointOffsets = {};
-      joints.male.forEach((maleJoint) => {
-        const femalePart = this.getAssembly(maleJoint.femalePartCode);
-        const attr = Position.touches(this, femalePart);
+      return obj;
+    }
+    this.jointOffsets = () => {
+      const joints = this.getJoints(this.partCode);
+      const jointOffsets = initObj({value: 0}, '-x', '+x', '-y', '+y', '-z', '+z');
+      const pos = this.getPosition();
+      joints.male.forEach((joint) => {
+        const femalePos = this.getAssembly(joint.femalePartCode).getPosition();
+        const femalePart = this.getAssembly(joint.femalePartCode);
+        const attr = Position.touching(pos, femalePos);
         const axis = attr.axis;
         const dir = attr.direction;
         const axisDirStr = `${dir}${axis}`;
         const dem = this.getDemension(axis);
-        const value = maleJoint.maleOffset;
-        if (jointOffset[axisDirStr] === undefined ||
-              jointOffset[axisDirStr].maleOffset < value)
-          jointOffset[axisDirStr] = {dem, value};
+        const value = joint.maleOffset();
+        if (jointOffsets[axisDirStr].value < value)
+          jointOffsets[axisDirStr] = {dem, value};
       });
+      return jointOffsets;
+    }
+    this.getCutDemensions = () => {
+      const dems = {
+        length: this.length(),
+        width: this.width(),
+        thickness: this.thickness()
+      }
+      const jointOffsets = this.jointOffsets();
       Object.values(jointOffsets).forEach((offset) => {
-        dems[offset.dem] += offset.value;
-      })
+        if (offset.value !== 0)
+          dems[offset.dem] += offset.value;
+      });
       return dems;
     }
     this.subAssemblies = {};
@@ -281,7 +304,7 @@ class Assembly {
 
     this.getSubAssemblies = () => {
       let assemblies = [];
-      this.subAssemblies.forEach((assem) => {
+      Object.values(this.subAssemblies).forEach((assem) => {
         assemblies.push(assem);
         assemblies = assemblies.concat(assem.getSubAssemblies());
       });
@@ -333,10 +356,9 @@ Assembly.lists = {};
 Assembly.idCounters = {};
 
 class Section extends Assembly {
-  constructor(templatePath, parentList, isPartition, partCode, partName, originStr, demensionStr, rotationStr) {
+  constructor(templatePath, isPartition, partCode, partName, originStr, demensionStr, rotationStr) {
     super(templatePath, isPartition, partCode, partName, originStr, demensionStr, rotationStr);
     this.isPartition = () => isPartition;
-    this.parentList = () => parentList;
     if (templatePath === undefined) {
       throw new Error('template path must be defined');
     }
@@ -399,14 +421,14 @@ class Drawer extends Assembly {
 }
 
 class PartitionSection extends Section {
-  constructor(templatePath, parentList, partCode, partName, originStr, demensionStr, rotationStr) {
-    super(templatePath, parentList, true, partCode, partName, originStr, demensionStr, rotationStr);
+  constructor(templatePath, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(templatePath, true, partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 
 class SpaceSection extends Section {
-  constructor(templatePath, parentList, partCode, partName, originStr, demensionStr, rotationStr) {
-    super(templatePath,  parentList, false, partCode, partName, originStr, demensionStr, rotationStr);
+  constructor(templatePath, partCode, partName, originStr, demensionStr, rotationStr) {
+    super(templatePath, false, partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 
@@ -683,8 +705,8 @@ new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
 new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
 class DrawerSection extends SpaceSection {
-  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
-    super(sectionFilePath('drawer'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('drawer'), partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 new DrawerSection();
@@ -698,15 +720,15 @@ class Divider extends Assembly {
 }
 
 class DividerSection extends PartitionSection {
-  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
-    super(sectionFilePath('divider'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('divider'), partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 new DividerSection();
 
 class DoorSection extends SpaceSection {
-  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
-    super(sectionFilePath('door'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('door'), partCode, partName, originStr, demensionStr, rotationStr);
     this.addSubAssembly(new Door());
     this.addSubAssembly(new Drawer());
   }
@@ -715,15 +737,15 @@ new DoorSection();
 // console.log(JSON.stringify(new DoorSection().features, null, 2))
 
 class DualDoorSection extends SpaceSection {
-  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
-    super(sectionFilePath('dual-door'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('dual-door'), partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 new DualDoorSection();
 
 class FalseFrontSection extends SpaceSection {
-  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
-    super(sectionFilePath('false-front'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('false-front'), partCode, partName, originStr, demensionStr, rotationStr);
   }
 }
 new FalseFrontSection();
@@ -745,8 +767,8 @@ const setHorizontalDivSet = (id, sizes) => (id, sizes, 'horizontal');
 const setVerticalDivSet = (id, sizes) => (id, sizes, 'vertical');
 
 class OpenSection extends SpaceSection {
-  constructor(parentList, partCode, partName, originStr, demensionStr, rotationStr) {
-    super(sectionFilePath('open'), parentList, partCode, partName, originStr, demensionStr, rotationStr);
+  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('open'), partCode, partName, originStr, demensionStr, rotationStr);
     this.parent = parent;
     this.vertical = true;
     this.sections = [];
@@ -755,7 +777,7 @@ class OpenSection extends SpaceSection {
 
     this.init = () => {
       if (this.sections.length === 0) {
-        this.sections.push(new OpenSection(undefined, undefined, undefined, this));
+        this.sections.push(new OpenSection());
       }
     }
     this.divide = (dividerCount) => {
@@ -767,8 +789,8 @@ class OpenSection extends SpaceSection {
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = 0; index < diff; index +=1) {
-            this.sections.push(new DividerSection(this));
-            this.sections.push(new OpenSection(this));
+            this.sections.push(new DividerSection());
+            this.sections.push(new OpenSection());
           }
         }
       }
@@ -894,7 +916,6 @@ class Joint {
       const malePos = getMale();
       const femalePos = getFemale();
       // I created a loop but it was harder to understand
-      console.log('here')
       return undefined;
     }
 
@@ -1007,7 +1028,7 @@ function down(selector, node) {
 
 function closest(selector, node) {
   const visited = [];
-  function recurse (currNode, dilengthstance) {
+  function recurse (currNode, distance) {
     let found = { distance: Number.MAX_SAFE_INTEGER };
     if (!currNode || (typeof currNode.matches) !== 'function') {
       return found;
