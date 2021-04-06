@@ -446,7 +446,10 @@ class $t {
 				if (currObj !== undefined) return currObj;
 				const parentScopeVal = parentScope(name);
 				if (parentScopeVal !== undefined) return parentScopeVal;
-				return '';
+        else {
+          const globalVal = $t.global(name);
+          return globalVal === undefined ? '' : globalVal;
+        }
 			}
 			return get;
 		}
@@ -737,6 +740,20 @@ $t.dumpTemplates = function () {
 	}
 	return templateFunctions;
 }
+
+function createGlobalsInterface() {
+  const GLOBALS = {};
+  const isMotifiable = () => GLOBALS[name] === undefined ||
+        GLOBALS[name].imutable !== 'true';
+  $t.global = function (name, value, imutable) {
+    if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
+    if (isMotifiable()) GLOBALS[name] = {value, imutable};
+  }
+  $t.rmGlobal = function(name) {
+    if (isMotifiable()) delete GLOBALS[name];
+  }
+}
+createGlobalsInterface();
 
 try{
 	exports.$t = $t;

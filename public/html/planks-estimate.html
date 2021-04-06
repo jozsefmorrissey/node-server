@@ -2,13 +2,20 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
+    <script src="/js/3d-modeling/lightgl.js"></script>
+    <script src="/js/3d-modeling/csg.js"></script>
+    <script src="/js/3d-modeling/viewer.js"></script>
     <script type="text/javascript" src='/js/$t.js'></script>
     <script type="text/javascript" src='/js/html-templates/planks.js'></script>
     <script type="text/javascript" src='/js/planks-estimate.js'></script>
     <link rel="stylesheet" href="/styles/expandable-list.css">
     <link rel="stylesheet" href="/styles/planks.css">
-    <title>Planks Exstamate</title>
+    <title>Planks Exstamates</title>
   </head>
   <body>
+    <div>
+      <div id="three-d-model" class="viewer"></div>
+    </div>
+    <div id='add-cabinet-cnt'></div>
   </body>
 </html>

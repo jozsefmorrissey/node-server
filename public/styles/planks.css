@@ -1,4 +1,12 @@
 
+#three-d-model {
+  background-position: -1px -1px;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
 .hidden {
   display: none;
 }

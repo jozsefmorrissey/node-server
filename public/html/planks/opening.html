@@ -1,30 +1,30 @@
 <div>
   <label>Dividers:</label>
   <input type="number" min="0" max="10" step="1"
-      class='open-division-input' opening-id='{{opening.id}}'
+      class='open-division-input' opening-id='{{opening.uniqueId}}'
       value='{{opening.dividerCount()}}'>
   <span class='open-orientation-radio-cnt hidden'>
 
-    <label for='open-orientation-horiz-{{opening.id}}'>Horizontal:</label>
-    <input type='radio' name='orientation-{{opening.id}}' value='horizontal'
-        open-id='{{opening.id}}' id='open-orientation-horiz-{{opening.id}}'
+    <label for='open-orientation-horiz-{{opening.uniqueId}}'>Horizontal:</label>
+    <input type='radio' name='orientation-{{opening.uniqueId}}' value='horizontal'
+        open-id='{{opening.uniqueId}}' id='open-orientation-horiz-{{opening.uniqueId}}'
         class='open-orientation-radio'>
 
-    <label for='open-orientation-vert-{{opening.id}}'>Vertical:</label>
-    <input type='radio' name='orientation-{{opening.id}}' value='vertical'
-        open-id='{{opening.id}}' id='open-orientation-vert-{{opening.id}}'
+    <label for='open-orientation-vert-{{opening.uniqueId}}'>Vertical:</label>
+    <input type='radio' name='orientation-{{opening.uniqueId}}' value='vertical'
+        open-id='{{opening.uniqueId}}' id='open-orientation-vert-{{opening.uniqueId}}'
         class='open-orientation-radio'>
 
   </span>
   <select class='open-pattern-select {{ opening.dividerCount() > 0 ? '' : 'hidden'}}'
-        id='{{selectPatternId}}'>
+        id='{{selectPatternId}}' prop-update='pattern' divisions={{opening.dividerCount()}}>
     {{patterns}}
   </select>
+  PATTERN: {{opening.pattern()}} ||
+  {{opening.sectionProperties()}}
   <span>
     {{inputHtml}}
   </span>
 </div>
 <div id='{{openDispId}}'>
-  Divisions:
-  {{opening.dividerCount()}}
 </div>

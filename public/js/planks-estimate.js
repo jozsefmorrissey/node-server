@@ -4,6 +4,12 @@ function formatConstructorId (obj) {
   return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
 }
 
+function randomString(len) {
+  let str = '';
+  while (str.length < len) str += Math.random().toString(36).substr(2);
+  return str.substr(0, len);
+}
+
 const CONSTANTS = {
   pwt34: {name: 'Plywood 3/4 Thickness', value: 25/32},
   pwt12: {name: 'Plywood 1/2 Thickness', value: 1/2},
@@ -12,12 +18,29 @@ const CONSTANTS = {
   frw: {name: 'Frame Rail Width', value: 1.5},
   frt: {name: 'Frame Rail Thickness', value: 3/4},
   tkbw: {name: 'Toe Kick Backer Width', value: 1/2},
+  tkh: {name: 'Toe Kick Height', value: 3},
   pbt: {name: 'Panel Back Thickness', value: 1/2},
   brr: {name: 'Bottom Rail Reveal', value: 1/8},
+
+  trv: {name: 'Top Reveal', value: 1/2},
+  brv: {name: 'Bottom Reveal', value: 1/4},
+  lrv: {name: 'Left Reveal', value: 1/2},
+  rrv: {name: 'Right Reveal', value: 1/2},
+  fs: {name: 'Face Spacing??', value: 1/8},
+  is: {name: 'Inset Spacing??', value: 1/16},
+  vffs: {name: 'Vertical First Front Size', value: 5.5},
+
 }
+
+function getValue(code, obj) {
+  if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
+  return CONSTANTS[code].value;
+}
+$t.global('getValue', getValue, true);
+
 function getDefaultSize(instance) {
   const constructorName = instance.constructor.name;
-  if (constructorName === 'Cabinet') return {length: 24, width: 22, thickness: 21};
+  if (constructorName === 'Cabinet') return {length: 24, width: 50, thickness: 21};
   return {length: 0, width: 0, thickness: 0};
 }
 
@@ -217,6 +240,7 @@ class Assembly {
     this.partCode = partCode;
     this.partName = partName;
     this.joints = [];
+    this.values = {};
     this.positionObj = () => originalPosition.get(this);
     this.fullDem = () => {
       const maleJoints = this.getJoints().male;
@@ -247,6 +271,16 @@ class Assembly {
         obj[arguments[index]] = value;
       }
       return obj;
+    }
+    this.value = (code, value) => {
+      if (value !== undefined) {
+        this.values[code] = value;
+      } else {
+        if (this.values[code] !== undefined && this.values[code] !== null) {
+          return this.values[code];
+        }
+        return CONSTANTS[code].value;
+      }
     }
     this.jointOffsets = () => {
       const joints = this.getJoints(this.partCode);
@@ -310,10 +344,10 @@ class Assembly {
       });
       return assemblies;
     }
+    this.uniqueId = randomString(32);
     if (Assembly.idCounters[this.objId] === undefined) {
       Assembly.idCounters[this.objId] = 0;
     }
-    this.id = ++Assembly.idCounters[this.objId];
     Assembly.add(this);
     const lengthExp = demExp[0];
     const widthExp = demExp[1];
@@ -383,7 +417,7 @@ Section.new = (constructorId) => new (Section.sections[constructorId]).construct
 Section.render = (opening, scope) => {
   scope.featureDisplay = new FeatureDisplay(opening).html();
   const cId = opening.constructorId;
-  if (cId === 'OpenSection') {
+  if (cId === 'DivideSection') {
     return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
   }
   return Section.templates[cId].render(scope);
@@ -562,7 +596,7 @@ class Measurment {
       return `${integer} ${reduce(numerator, fracObj.denominator)}`;
     }
 
-    if (value instanceof Number) {
+    if ((typeof value) === 'number') {
       decimal = value;
     } else if ((typeof value) === 'string') {
       decimal = parseFraction(value).decimal;
@@ -766,19 +800,38 @@ const setDivSet = (id, sizes) => {
 const setHorizontalDivSet = (id, sizes) => (id, sizes, 'horizontal');
 const setVerticalDivSet = (id, sizes) => (id, sizes, 'vertical');
 
-class OpenSection extends SpaceSection {
-  constructor(partCode, partName, originStr, demensionStr, rotationStr) {
-    super(sectionFilePath('open'), partCode, partName, originStr, demensionStr, rotationStr);
+let dvs;
+
+class DivideSection extends SpaceSection {
+  constructor(sectionProperties, originStr, demensionStr, rotationStr) {
+    super(sectionFilePath('open'), 'dvds', 'divideSection', originStr, demensionStr, rotationStr);
     this.parent = parent;
+    dvs = dvs || this;
     this.vertical = true;
     this.sections = [];
+    this.vPattern = 'Equal';
+    this.hPattern = 'Equal';
+    this.pattern = (pattern) => {
+      if (pattern === undefined) return this.vertical ? this.vPattern : this.hPattern;
+      if (this.vertical) this.vPattern = pattern;
+      else this.hPattern = pattern;
+    }
+    this.measurments = [];
     this.dividerCount = () => (this.sections.length - 1) / 2
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical;
-
+    this.sectionProperties = () => JSON.stringify(sectionProperties);
     this.init = () => {
       if (this.sections.length === 0) {
-        this.sections.push(new OpenSection());
+        this.sections.push(new DivideSection());
       }
+    }
+    this.calcSections = () => {
+      const length = sectionProperties.length;
+      const width = sectionProperties.width;
+      const count = this.dividerCount() + 1;
+      const patternFunc = DivisionPattern.patterns[this.pattern()].resolution;
+      const answer = patternFunc(length, 0, this.value('vffs'), count);
+      console.log(answer);
     }
     this.divide = (dividerCount) => {
       if (!Number.isNaN(dividerCount)) {
@@ -790,13 +843,16 @@ class OpenSection extends SpaceSection {
           const diff = dividerCount - currDividerCount;
           for (let index = 0; index < diff; index +=1) {
             this.sections.push(new DividerSection());
-            this.sections.push(new OpenSection());
+            this.sections.push(new DivideSection());
           }
         }
       }
     }
     this.size = () => {
       return {width: this.width, height: this.height};
+    }
+    this.sizes = () => {
+      return 'val';
     }
   }
 }
@@ -813,14 +869,12 @@ const framelessFrameWidth = 3/4;
 class Cabinet extends Assembly {
   constructor(partCode, partName, originStr, demensionStr, rotationStr) {
     super(partCode, partName, originStr, demensionStr, rotationStr);
+    const instance = this;
     let frameWidth = framedFrameWidth;
     let toeKickHeight = 4;
-    let verticelSections = [];
-    let horizontalSections = [];
     this.overlay = OVERLAY.HALF;
     this.type = CABINET_TYPE.FRAMED;
     const panels = 0;
-    this.opening = new OpenSection();
     const framePieces = 0;
     const addFramePiece = (piece) => framePieces.push(piece);
     const framePieceCount = () => pieces.length;
@@ -830,6 +884,33 @@ class Cabinet extends Assembly {
       const w = width - (frameWidth * 2);
       const h = height - toeKickHeight - (frameWidth * 2);
       return {width: w, height: h};
+    }
+
+    function drawerAreaOverlay() {
+      const rrv = instance.value('rrv');
+      const trv = instance.value('trv');
+      const brv = instance.value('brv');
+      const fs = instance.value('fs');
+      const lrv = instance.value('lrv');
+      let length = instance.length() - trv - brv + fs;
+      let width = instance.width() - lrv - rrv + fs;
+      const right = instance.getAssembly('rr').width() - rrv;
+      const left = instance.getAssembly('lr').width() - lrv;
+      const top = instance.getAssembly('tr').width() - trv;
+      const bottom = instance.getAssembly('br').width() - brv;
+      return {width, length, overlap: {right, left, top, bottom}};
+    }
+
+    function drawerAreaInset() {
+      const topAndBottomRailWidth = getAssembly('tr').width() + getAssembly('br').width();
+      const leftAndRightWidth = getAssembly('lr').width() + getAssembly('rr').width();
+      let length = this.length() - topAndBottomRailWidth;
+      let width = this.width() - leftAndRightWidth;
+      return {width, length};
+    }
+    this.openingDemensions = () => {
+      if (this.type === CABINET_TYPE.INSET) return drawerAreaInset();
+      else return drawerAreaOverlay();
     }
 
     this.addSubAssemblies(new Divider('lr', 'Frame.Left',
@@ -896,6 +977,7 @@ class Cabinet extends Assembly {
                       new Butt('tr->lr'),
                       new Butt('br->rr'),
                       new Butt('br->lr'));
+    this.opening = new DivideSection(this.openingDemensions());
   }
 }
 
@@ -990,6 +1072,19 @@ class Miter extends Butt {
 
 
 // ----------------------------------  Display  ---------------------------//
+
+function REGEX() {
+  types = {};
+  types.int = '^[0-9]{1,}$';
+  types.float = `^((\\.[0-9]{1,})|([0-9]{1,}\\.[0-9]{1,}))$|(${types.int})`;
+  types.fraction = '^[0-9]{1,}/[0-9]{1,}$';
+  types.size = `(${types.float})|(${types.fraction})`;
+
+  let obj = {};
+  Object.keys(types).forEach((type) => obj[type] = new RegExp(types[type]));
+  return obj;
+}
+REGEX = REGEX();
 
 function createElement(tagname, attributes) {
   const elem = document.createElement(tagname);
@@ -1103,14 +1198,15 @@ class DivisionPattern {
   constructor() {
     this.patterns = {};
     const instance = this;
-    this.filter = (dividerCount) => {
+    this.filter = (dividerCount, selected) => {
       const sectionCount = dividerCount + 1;
       if (sectionCount < 2) return '';
       let filtered = '';
       let patternArr = Object.values(this.patterns);
       patternArr.forEach((pattern) => {
         if (pattern.restrictions === undefined || pattern.restrictions.indexOf(sectionCount) !== -1) {
-          filtered += `<option value='${pattern.name}'>${pattern.name}</option>`;
+          const name = pattern.name;
+          filtered += `<option value='${name}' ${selected === name ? 'selected' : ''}>${name}</option>`;
         }
       });
       this.inputStr
@@ -1135,8 +1231,10 @@ class DivisionPattern {
       const value = Number.parseFloat(target.value);
       const inputs = target.parentElement.querySelectorAll('.division-pattern-input');
       const pattern = instance.patterns[name];
+      const sectionCount = Number.parseInt(target.parentElement.parentElement.children[1].value) + 1;
 
-      const values = pattern.resolution(24, 1.5, index, value);
+      //todo factor in divider length;
+      const values = pattern.resolution(24, index, value, sectionCount).fill;
       for (let index = 0; index < values.length; index += 1){
         const value = values[index];
         if(value) inputs[index].value = value;
@@ -1153,31 +1251,56 @@ matchRun('change', '.feature-radio', (target) => {
 
 DivisionPattern = new DivisionPattern();
 
-DivisionPattern.add('Unique',(length, array) => {
+DivisionPattern.add('Unique',() => {
 
 });
 
-DivisionPattern.add('Equal', (length, index, value) => {
-
+DivisionPattern.add('Equal', (length, index, value, sectionCount) => {
+  const newVal = length / sectionCount;
+  const list = new Array(sectionCount).fill(newVal);
+  return {list};
 });
 
-DivisionPattern.add('1 to 2', (length, dividerLength, index, value) => {
+DivisionPattern.add('1 to 2', (length, index, value, sectionCount) => {
   if (index === 0) {
-    const twoValue = (length - dividerLength * 2 - value) / 2;
-    return [, twoValue];
+    const twoValue = (length - value) / 2;
+    const list = [value, twoValue, twoValue];
+    const fill = [, twoValue];
+    return {list, fill};
   } else {
-    const oneValue = (length - (value + dividerLength) * 2);
-    return [oneValue];
+    const oneValue = (length - (value * 2));
+    const list = [oneValue, value, value];
+    const fill = [oneValue];
+    return {list, fill};
   }
-}, ['first(1):', 'next(2)'], [3]);
+}, ['first(1):', 'next(2)'], [3], [5.5]);
 
-DivisionPattern.add('2 to 2', (length, array) => {
-
+DivisionPattern.add('2 to 2', (length, index, value, sectionCount) => {
+  const newValue = (length - (value * 2)) / 2;
+  if (index === 0) {
+    const list = [value, value, newValue, newValue];
+    const fill = [, newValue];
+    return {list, fill};
+  } else {
+    const list = [newValue, newValue, value, value];
+    const fill = [newValue];
+    return {list, fill};
+  }
 }, ['first(2):', 'next(2)'], [4]);
 
-DivisionPattern.add('1 to 3', (length, array) => {
-
-}, ['first(1):', 'next(3)'], [4]);
+DivisionPattern.add('1 to 3', (length, index, value, sectionCount) => {
+  if (index === 0) {
+    const threeValue = (length - value) / 3;
+    const list = [value, threeValue, threeValue, threeValue];
+    const fill = [, threeValue];
+    return {list, fill};
+  } else {
+    const oneValue = (length - (value * 3));
+    const list = [oneValue, value, value, value];
+    const fill = [oneValue];
+    return {list, fill};
+  }
+}, ['first(1):', 'next(3)'], [4], 5.5);
 
 // properties
 //  required: {
@@ -1238,7 +1361,7 @@ class ExpandableList {
       storage[index][key] = value;
     }
     this.set = (index, value) => props.list[index] = value;
-    this.htmlBody = (index) => props.getBody(props.list[index]);
+    this.htmlBody = (index) => props.getBody(props.list[index], index);
     this.refresh();
   }
 }
@@ -1320,24 +1443,25 @@ const OpenSectionDisplay = {};
 OpenSectionDisplay.html = (opening, list, sections) => {
   const openDispId = OpenSectionDisplay.getId(opening);
   opening.init();
-  OpenSectionDisplay.sections[opening.id] = opening;
-  const patterns = DivisionPattern.filter(opening.dividerCount());
+  OpenSectionDisplay.sections[opening.uniqueId] = opening;
+  const patterns = DivisionPattern.filter(opening.dividerCount(), opening.pattern());
   const selectPatternId = OpenSectionDisplay.getSelectId(opening);
+  bindField(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/)
   setTimeout(() => OpenSectionDisplay.refresh(opening), 100);
   const storage = {};
   return OpenSectionDisplay.template.render({opening, openDispId, patterns, selectPatternId, storage, list, sections});
 }
 
-OpenSectionDisplay.getSelectId = (opening) => `opin-division-patturn-select-${opening.id}`;
+OpenSectionDisplay.getSelectId = (opening) => `opin-division-patturn-select-${opening.uniqueId}`;
 OpenSectionDisplay.template = new $t('./public/html/planks/opening.html');
 OpenSectionDisplay.listBodyTemplate = new $t('./public/html/planks/opening-list-body.html');
 OpenSectionDisplay.listHeadTemplate = new $t('./public/html/planks/opening-list-head.html');
 OpenSectionDisplay.sections = {};
 OpenSectionDisplay.lists = {};
-OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.id}`;
+OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId}`;
 
 OpenSectionDisplay.getList = (root) => {
-  let openId = root.id;
+  let openId = root.uniqueId;
   if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
   const sections = Object.values(Section.sections);
   const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
@@ -1367,7 +1491,7 @@ OpenSectionDisplay.getList = (root) => {
 }
 
 OpenSectionDisplay.refresh = (opening) => {
-  const orientations = document.querySelectorAll(`[name="orientation-${opening.id}"]`);
+  const orientations = document.querySelectorAll(`[name="orientation-${opening.uniqueId}"]`);
   const orientParent = orientations[0].parentElement;
   if (opening.isVertical() === true) {
     orientations[1].checked = true;
@@ -1386,7 +1510,7 @@ OpenSectionDisplay.refresh = (opening) => {
   if (opening.dividerCount() < 1) select.style.display = 'none';
   else {
     select.style.display = 'inline-block';
-    select.innerHTML = DivisionPattern.filter(opening.dividerCount());
+    select.innerHTML = DivisionPattern.filter(opening.dividerCount(), opening.pattern());
   }
 }
 OpenSectionDisplay.onChange = (target) => {
@@ -1399,7 +1523,7 @@ OpenSectionDisplay.onChange = (target) => {
 };
 
 OpenSectionDisplay.onOrientation = (target) => {
-  const openId = Number.parseInt(target.getAttribute('open-id'));
+  const openId = target.getAttribute('open-id');
   const value = target.value;
   const opening = OpenSectionDisplay.sections[openId];
   opening.vertical =  value === 'vertical';
@@ -1418,20 +1542,57 @@ matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
 
 class CabinetDisplay {
   constructor(parentSelector) {
-    const getHeader = (cabinet, index) => CabinetDisplay.headTemplate.render(cabinet);
+    const getHeader = (cabinet, $index) =>
+        CabinetDisplay.headTemplate.render({cabinet, $index});
     const showTypes = Show.listTypes();
-    const getBody = (cabinet, index) =>
-      CabinetDisplay.bodyTemplate.render({cabinet, showTypes, OpenSectionDisplay});
-    const getObject = () => new Cabinet();
+    const getBody = (cabinet, $index) => {
+      new ThreeDModel(cabinet);
+      return CabinetDisplay.bodyTemplate.render({$index, cabinet, showTypes, OpenSectionDisplay});
+    }
+    const getObject = () => new Cabinet('c', 'Cabinet');
     const expListProps = {
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Cabinet'
     };
     new ExpandableList(expListProps);
+    const valueUpdate = (path, value) => {
+      const split = path.split('.');
+      const index = split[0];
+      const key = split[1];
+      expListProps.list[index].value(key, value);
+    }
+
+    bindField('.cabinet-input', valueUpdate, REGEX.size)
   }
 }
 CabinetDisplay.bodyTemplate = new $t('./public/html/planks/cabinet-body.html');
 CabinetDisplay.headTemplate = new $t('./public/html/planks/cabinet-head.html');
+
+function bindField(selector, objOrFunc, validationRegex) {
+  function update(elem) {
+    const updatePath = elem.getAttribute('prop-update');
+    if (updatePath !== null) {
+      const newValue = elem.value;
+      if (newValue.match(validationRegex) === null) {
+        console.error('badValue')
+      } else if ((typeof objOrFunc) === 'function') {
+        objOrFunc(updatePath, elem.value);
+      } else {
+        const attrs = updatePath.split('.');
+        const lastIndex = attrs.length - 1;
+        let currObj = objOrFunc;
+        for (let index = 0; index < lastIndex; index += 1) {
+          let attr = attrs[index];
+          if (currObj[attr] === undefined) currObj[attr] = {};
+          currObj = currObj[attr];
+        }
+        currObj[attrs[lastIndex]] = elem.value;
+      }
+    }
+  }
+  matchRun('keyup', selector, update);
+  matchRun('change', selector, update);
+}
 
 class FeatureDisplay {
   constructor(assembly, parentSelector) {
@@ -1444,7 +1605,56 @@ class FeatureDisplay {
 }
 FeatureDisplay.template = new $t('./public/html/planks/features.html');
 
+
+function pull(length, height) {
+  var rspx = length - .75;
+  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+  return mainCyl.union(lCyl).union(rCyl);
+}
+
+class ThreeDModel {
+  constructor(assem) {
+    const radius = [assem.width(), assem.length(), assem.thickness()];
+    const a = CSG.cube({ center: assem.center, radius });
+    a.setColor(1, 0, 0);
+    ThreeDModel.viewer.mesh = a.toMesh();
+    ThreeDModel.viewer.gl.ondraw();
+  }
+}
+ThreeDModel.init = () => {
+  ThreeDModel.viewer = new Viewer(pull(5,2), 300, 150, 50);
+  addViewer(ThreeDModel.viewer, 'three-d-model');
+}
+
+function threeDModeling() {
+  var viewer;
+  // Test simple cases
+  var a = CSG.cube({ center: [-0.25, -0.25, -0.25], radius: [2,5,.75] });
+  var b = CSG.sphere({ radius: 1.3, center: [0.25, 0.25, 0.25] });
+
+  // c = rectangle(15,3,2);
+  // c = c.subtract(rectangle(1,3,1));
+  let c = pull(4, 1);
+  a.setColor(1, 0, 0);
+  b.setColor(0, 0, 1);
+  c.setColor(0, 0, 0);
+  var operations = [
+    a,
+    c,
+    a.union(b),
+    a.subtract(b),
+    a.intersect(b)
+  ];
+  viewer = new Viewer(operations[1], 300, 150, 20);
+  addViewer(viewer, 'three-d-model');
+}
+
+
+
 window.onload = () => {
   const dummyText = (prefix) => (item, index) => `${prefix} ${index}`;
-  const cabinetDisplay = new CabinetDisplay('body');
+  const cabinetDisplay = new CabinetDisplay('#add-cabinet-cnt');
+  ThreeDModel.init();
 };

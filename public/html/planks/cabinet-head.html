@@ -1,12 +1,18 @@
 <div class='cabinet-header'>
-  <input class='cabinet-input' type='id' value='{{id}}'>
+  <input class='cabinet-input' type='id' value='{{cabinet.id || $index}}'>
   Size:
   <div class='cabinet-dem-cnt'>
     <label>W:</label>
-    <input class='cabinet-input dem' type='width' value='{{width}}'>
+    <input class='cabinet-input dem' type='width' value='{{cabinet.width()}}'>
     <label>H:</label>
-    <input class='cabinet-input dem' type='height' value='{{height}}'>
+    <input class='cabinet-input dem' type='height' value='{{cabinet.length()}}'>
     <label>D:</label>
-    <input class='cabinet-input dem' type='depth' value='{{depth}}'>
+    <input class='cabinet-input dem' type='depth' value='{{cabinet.thickness()}}'>
   </div>
+  H: {{cabinet.openingDemensions().length}}
+  W: {{cabinet.openingDemensions().width}}
+  r: {{cabinet.openingDemensions().overlap.right}}
+  l: {{cabinet.openingDemensions().overlap.left}}
+  t: {{cabinet.openingDemensions().overlap.top}}
+  b: {{cabinet.openingDemensions().overlap.bottom}}
 </div>

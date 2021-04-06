@@ -3,20 +3,20 @@
     <label>Reveal:</label>
     <div class='cabinet-dem-cnt'>
       <label>Top:</label>
-      <input class='cabinet-input dem' type='width' value='{{width}}'>
+      <input class='cabinet-input dem' prop-update='{{$index}}.trv' value='{{cabinet.value("trv")}}'>
       <label>Bottom:</label>
-      <input class='cabinet-input dem' type='height' value='{{height}}'>
+      <input class='cabinet-input dem' prop-update='{{$index}}.trv' value='{{cabinet.value("brv")}}'>
       <label>Left:</label>
-      <input class='cabinet-input dem' type='depth' value='{{depth}}'>
+      <input class='cabinet-input dem' prop-update='{{$index}}.trv' value='{{cabinet.value("lrv")}}'>
       <label>Right:</label>
-      <input class='cabinet-input dem' type='depth' value='{{depth}}'>
+      <input class='cabinet-input dem' prop-update='{{$index}}.trv' value='{{cabinet.value("rrv")}}'>
     </div>
   </div>
   <br>
   <div class='cabinet-header'>
     <label>Toe Kick Height:</label>
     <div class='cabinet-dem-cnt'>
-      <input class='cabinet-input dem' type='width' value='{{width}}'>
+      <input class='cabinet-input dem' prop-update='{{$index}}.trv' value='{{cabinet.value("tkh")}}'>
     </div>
   </div>
 
