@@ -105,44 +105,48 @@ function Viewer(csg, width, height, depth) {
     }\
   ');
 
+  function rotateEvent(e) {
+    angleY += e.deltaX * 2;
+    angleX += e.deltaY * 2;
+    angleX = Math.max(-90, Math.min(90, angleX));
+  }
+
   gl.onmousemove = function(e) {
     if (e.dragging) {
-      angleY += e.deltaX * 2;
-      angleX += e.deltaY * 2;
-      angleX = Math.max(-90, Math.min(90, angleX));
-
-      viewers.map(function(viewer) {
-        viewer.gl.ondraw();
-      });
+      if (shiftHeld) panEvent(e);
+      else rotateEvent(e);
+      gl.ondraw();
     }
   };
 
   function zoomEvent(e) {
     const st = document.documentElement.scrollTop;
     if (e.deltaY < 0) {
-      zoom();
-    } else {
       zoom(true);
+    } else {
+      zoom();
     }
   }
 
   function panEvent(e) {
     const st = document.documentElement.scrollTop;
-    pan(e.deltaX / 10, e.deltaY / 10)
+    pan(e.deltaX, e.deltaY)
   }
 
   let lastScrollTop = 0;
   gl.canvas.onwheel = function (e) {
-    // zoomEvent(e);
-    if (shiftHeld) panEvent(e);
-    else zoomEvent(e);
+    zoomEvent(e);
     gl.ondraw();
   }
   disableScroll(gl.canvas);
 
   let shiftHeld = false;
-  document.onkeydown = (e) => shiftHeld = e.key === "Shift" ? true : false;
-  document.onkeyup = (e) => shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
+  window.onkeydown = (e) => {
+    shiftHeld = e.key === "Shift" ? true : false;
+  }
+  window.onkeyup = (e) => {
+    shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
+  }
 
   var that = this;
   gl.ondraw = function() {

@@ -272,14 +272,19 @@ class Assembly {
       }
       return obj;
     }
+    const funcAttrs = ['length', 'width', 'thickness'];
     this.value = (code, value) => {
-      if (value !== undefined) {
-        this.values[code] = value;
+      if (code.match(new RegExp(funcAttrs.join('|')))) {
+        this[code](value);
       } else {
-        if (this.values[code] !== undefined && this.values[code] !== null) {
-          return this.values[code];
+        if (value !== undefined) {
+          this.values[code] = value;
+        } else {
+          if (this.values[code] !== undefined && this.values[code] !== null) {
+            return this.values[code];
+          }
+          return CONSTANTS[code].value;
         }
-        return CONSTANTS[code].value;
       }
     }
     this.jointOffsets = () => {
@@ -349,12 +354,13 @@ class Assembly {
       Assembly.idCounters[this.objId] = 0;
     }
     Assembly.add(this);
-    const lengthExp = demExp[0];
-    const widthExp = demExp[1];
-    const thicknessExp = demExp[2];
-    this.length = () => lengthExp.eval();
-    this.width = () => widthExp.eval();
-    this.thickness = () => thicknessExp.eval();
+    const updateDem = (type, value) => {
+      if (value !== undefined) demExp[type] = new Expression(this, value, this.getAssembly, Assembly.resolveAttr);
+      return demExp[type].eval();
+    }
+    this.length = (value) => updateDem(0, value);
+    this.width = (value) => updateDem(1, value);
+    this.thickness = (value) => updateDem(2, value);
   }
 }
 

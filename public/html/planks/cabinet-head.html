@@ -1,13 +1,13 @@
 <div class='cabinet-header'>
-  <input class='cabinet-input' type='id' value='{{cabinet.id || $index}}'>
+  <input class='cabinet-input' prop-update='id' value='{{cabinet.id || $index}}'>
   Size:
   <div class='cabinet-dem-cnt'>
     <label>W:</label>
-    <input class='cabinet-input dem' type='width' value='{{cabinet.width()}}'>
+    <input class='cabinet-input dem' prop-update='{{$index}}.width' value='{{cabinet.width()}}'>
     <label>H:</label>
-    <input class='cabinet-input dem' type='height' value='{{cabinet.length()}}'>
+    <input class='cabinet-input dem' prop-update='{{$index}}.height' value='{{cabinet.length()}}'>
     <label>D:</label>
-    <input class='cabinet-input dem' type='depth' value='{{cabinet.thickness()}}'>
+    <input class='cabinet-input dem' prop-update='{{$index}}.depth' value='{{cabinet.thickness()}}'>
   </div>
   H: {{cabinet.openingDemensions().length}}
   W: {{cabinet.openingDemensions().width}}
