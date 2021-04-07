@@ -157,11 +157,11 @@ class Position {
           attr.x = temp;
           break;
       }
-    })
+    });
 
   }
 }
-Position.regex = /^([xyz]{1,})$/;
+Position.regex = /^(([xyz](|([0-9]))){1,})$/;
 Position.touching = (pos1, pos2) => {
   const touchingAxis = (axis) => {
     if (pos1[`${axis}1`] === pos2[`${axis}0`])
@@ -206,8 +206,42 @@ Position.parseCoordinates = function() {
   }
 }
 
+Position.rotatePoint = function (point, degreestheta, radius)
+{
+  theta = degreestheta * Math.PI/180;
+  let p = point;
+  let r = radius;
+   let q = {x: 0.0, y: 0.0, z: 0.0};
+   let costheta,sintheta;
+
+   const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
+   Normalise(r, 'x',);
+   Normalise(r, 'y',);
+   Normalise(r, 'z',);
+
+   costheta = Math.cos(theta);
+   sintheta = Math.sin(theta);
+
+   q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
+   q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
+   q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
+
+   q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
+   q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
+   q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
+
+   q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
+   q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
+   q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
+
+   return(q);
+}
+
 class Assembly {
   constructor(partCode, partName, originStr, demensionStr, rotationStr) {
+    this.display = true;
+    this.part = true;
+    this.included = true;
     this.getAssembly = (partCode, callingAssem) => {
       if (callingAssem === this) return undefined;
       if (this.partCode === partCode) return this;
@@ -349,6 +383,9 @@ class Assembly {
       });
       return assemblies;
     }
+    this.getParts = () => {
+      return this.getSubAssemblies().filter((a) => a.part && a.included );
+    }
     this.uniqueId = randomString(32);
     if (Assembly.idCounters[this.objId] === undefined) {
       Assembly.idCounters[this.objId] = 0;
@@ -403,6 +440,8 @@ class Section extends Assembly {
       throw new Error('template path must be defined');
     }
     this.constructorId = this.constructor.name;
+    this.part = false;
+    this.display = false;
     this.name = this.constructorId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
     Section.sections[this.constructorId] = this;
     Section.templates[this.constructorId] = new $t(templatePath);
@@ -878,6 +917,8 @@ class Cabinet extends Assembly {
     const instance = this;
     let frameWidth = framedFrameWidth;
     let toeKickHeight = 4;
+    this.part = false;
+    this.display = false;
     this.overlay = OVERLAY.HALF;
     this.type = CABINET_TYPE.FRAMED;
     const panels = 0;
@@ -1552,7 +1593,7 @@ class CabinetDisplay {
         CabinetDisplay.headTemplate.render({cabinet, $index});
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
-      new ThreeDModel(cabinet);
+      new ThreeDModel(cabinet.getParts());
       return CabinetDisplay.bodyTemplate.render({$index, cabinet, showTypes, OpenSectionDisplay});
     }
     const getObject = () => new Cabinet('c', 'Cabinet');
@@ -1621,10 +1662,22 @@ function pull(length, height) {
 }
 
 class ThreeDModel {
-  constructor(assem) {
-    const radius = [assem.width(), assem.length(), assem.thickness()];
-    const a = CSG.cube({ center: assem.center, radius });
-    a.setColor(1, 0, 0);
+  constructor(assemblies) {
+    function buildObject(assem) {
+      const radius = [assem.width(), assem.length(), assem.thickness()];
+      const a = CSG.cube({ center: assem.center, radius });
+      a.setColor(1, 0, 0);
+      return a;
+    }
+    const assem1 = assemblies[0];
+    const assem2 = assemblies[2];
+    console.log(assem1, assem2);
+    let a1 = buildObject(assem1);
+    let a2 = buildObject(assem2);
+    // for (let index = 1; index < assemblies.length; index += 1) {
+    //   a = a.union(buildObject(assemblies[index]));
+    // }
+    let a = a1.union(a2);
     ThreeDModel.viewer.mesh = a.toMesh();
     ThreeDModel.viewer.gl.ondraw();
   }
@@ -1632,6 +1685,37 @@ class ThreeDModel {
 ThreeDModel.init = () => {
   ThreeDModel.viewer = new Viewer(pull(5,2), 300, 150, 50);
   addViewer(ThreeDModel.viewer, 'three-d-model');
+}
+
+ThreeDModel.arbitraryRotate = function (point, degreestheta, radius)
+{
+  theta = degreestheta * Math.PI/180;
+  let p = point;
+  let r = radius;
+   let q = {x: 0.0, y: 0.0, z: 0.0};
+   let costheta,sintheta;
+
+   const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
+   Normalise(r, 'x',);
+   Normalise(r, 'y',);
+   Normalise(r, 'z',);
+
+   costheta = Math.cos(theta);
+   sintheta = Math.sin(theta);
+
+   q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
+   q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
+   q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
+
+   q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
+   q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
+   q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
+
+   q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
+   q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
+   q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
+
+   return(q);
 }
 
 function threeDModeling() {
