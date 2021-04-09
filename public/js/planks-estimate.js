@@ -140,6 +140,32 @@ class Position {
                             y: centerExpressions.y.eval(),
                             z: centerExpressions.z.eval()}
                             : centerExpressions[attr].eval());
+    this.limits = (targetStr) => {
+      if (targetStr !== undefined) {
+        const match = targetStr.match(/^(\+|-|)([xyz])$/)
+        const attr = match[2];
+        const c = this.center(attr);
+        const d = this.demension(attr)/2;
+        const pos = `+${attr}`;
+        const neg = `-${attr}`;
+        const limits = {};
+        limits[pos] = c+d;
+        if (match[1] === '+') return limits[pos];
+        limits[neg] = c-d;
+        if (match[1] === '-') return limits[neg];
+        return  limits;
+      }
+      const c = this.center();
+      const d = this.demension();
+      return  {
+        x: c.x + d.x / 2,
+        '-x': c.x - d.x / 2,
+        y: c.y + d.y / 2,
+        '-y': c.y - d.y / 2,
+        z: c.z + d.z / 2,
+        '-z': c.z - d.z / 2,
+      }
+    }
 
     const axisStrs = (assembly.rotationStr() || '').match(Position.rotateStrRegex);
     for (let index = 0; axisStrs && index < axisStrs.length; index += 1) {
@@ -440,8 +466,44 @@ Assembly.lists = {};
 Assembly.idCounters = {};
 
 class Section extends Assembly {
-  constructor(templatePath, isPartition, partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(templatePath, isPartition, partCode, partName, centerStr, demensionStr, rotationStr);
+  constructor(templatePath, isPartition, partCode, partName, sectionProperties) {
+    super(templatePath, isPartition, partCode, partName);
+    this.centerStr = () => {
+      const props = sectionProperties();
+      const topPos = props.borders.top.position();
+      const botPos = props.borders.bottom.position();
+      const leftPos = props.borders.left.position();
+      const rightPos = props.borders.right.position();
+      const x = leftPos.center('x') + (rightPos.center('x') - leftPos.center('x'));
+      const y = botPos.center('y') + (topPos.center('y') - botPos.center('y'));
+      const z = topPos.center('z');
+      return `${x},${y},${z}`;
+    }
+
+    this.outerSize = () => {
+      const props = sectionProperties();
+      const topPos = props.borders.top.position();
+      const botPos = props.borders.bottom.position();
+      const leftPos = props.borders.left.position();
+      const rightPos = props.borders.right.position();
+      const x = leftPos.center('x') - rightPos.center('x');
+      const y = topPos.center('y') - botPos.center('y');
+      const z = topPos.center('z');
+      return {x,y,z};
+    }
+
+    this.innerSize = () => {
+      const props = sectionProperties();
+      const topPos = props.borders.top.position();
+      const botPos = props.borders.bottom.position();
+      const leftPos = props.borders.left.position();
+      const rightPos = props.borders.right.position();
+      const x = leftPos.limits('-x') - rightPos.limits('+x');
+      const y = topPos.limits('-y') - botPos.limits('+y');
+      const z = topPos.center('z');
+      return {x,y,z};
+    }
+
     this.isPartition = () => isPartition;
     if (templatePath === undefined) {
       throw new Error('template path must be defined');
@@ -507,14 +569,14 @@ class Drawer extends Assembly {
 }
 
 class PartitionSection extends Section {
-  constructor(templatePath, partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(templatePath, true, partCode, partName, centerStr, demensionStr, rotationStr);
+  constructor(templatePath, partCode, partName, sectionProperties) {
+    super(templatePath, true, partCode, partName, sectionProperties);
   }
 }
 
 class SpaceSection extends Section {
-  constructor(templatePath, partCode, partName) {
-    super(templatePath, false, partCode, partName);
+  constructor(templatePath, partCode, partName, sectionProperties) {
+    super(templatePath, false, partCode, partName, sectionProperties);
   }
 }
 
@@ -806,8 +868,18 @@ class Divider extends Assembly {
 }
 
 class DividerSection extends PartitionSection {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(sectionFilePath('divider'), partCode, partName, centerStr, demensionStr, rotationStr);
+  constructor(partCode, sectionProperties) {
+    super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties);
+    const props = sectionProperties;
+    const instance = this;
+    this.centerStr = () => {
+      const center = instance.position().center();
+      return `${center.x},${center.y},${center.z}`
+    };
+    this.demensionStr = () => `frw, ${this.props.dividerLength}, frt`;
+    // if (sectionProperties) {
+    //   console.log(this.centerStr(), this.innerSize(), this.outerSize());
+    // }
   }
 }
 new DividerSection();
@@ -856,8 +928,7 @@ let dvs;
 
 class DivideSection extends SpaceSection {
   constructor(sectionProperties) {
-    super(sectionFilePath('open'), 'dvds', 'divideSection');
-    this.parent = parent;
+    super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties);
     dvs = dvs || this;
     this.vertical = true;
     this.sections = [];
@@ -874,7 +945,7 @@ class DivideSection extends SpaceSection {
     this.sectionProperties = () => JSON.stringify(sectionProperties);
     this.init = () => {
       if (this.sections.length === 0) {
-        this.sections.push(new DivideSection(this.sectionProperties(0)));
+        this.sections.push(new DivideSection(this.borders(0)));
       }
     }
     this.childRails = (index) => {
@@ -886,6 +957,53 @@ class DivideSection extends SpaceSection {
         console.log();
       } else {
 
+      }
+    }
+    this.borders = (index) => {
+      return () => {
+        const props = sectionProperties();
+
+        let top = props.borders.top;
+        let bottom = props.borders.bottom;
+        let left = props.borders.left;
+        let right = props.borders.right;
+        if (this.vertical) {
+          if (index !== 0) {
+            left = this.sections[index * 2 - 2];
+          } if (index !== this.dividerCount()) {
+            right = this.sections[index * 2];
+          }
+        } else {
+          if (index !== 0) {
+            top = this.sections[index * 2 - 2];
+          } if (index !== this.dividerCount()) {
+            bottom = this.sections[index * 2];
+          }
+        }
+
+        const depth = props.depth;
+        return {borders: {top, bottom, right, left}, depth};
+      }
+    }
+    this.dividerProps = (index) => {
+      return () => {
+        const answer = this.calcSections();
+        let offset = 0;
+        for (let i = 0; i < index; i += 1) offset += answer[i];
+        let props = sectionProperties();
+        const pos = this.position();
+        const innerSize = this.innerSize();
+        let center = pos.center();
+        let dividerLength;
+        if (this.vertical) {
+          center.x += offset;
+          dividerLength = innerSize.y;
+        } else {
+          center.y += offset;
+          dividerLength = innerSize.x;
+        }
+
+        return center;
       }
     }
     this.calcSections = (pattern, index, value) => {
@@ -912,9 +1030,10 @@ class DivideSection extends SpaceSection {
           return true;
         } else {
           const diff = dividerCount - currDividerCount;
-          for (let index = 0; index < diff; index +=1) {
-            this.sections.push(new DividerSection(this.sectionProperties(index)));
-            this.sections.push(new DivideSection(this.sectionProperties(index + 1)));
+          for (let index = currDividerCount; index < dividerCount; index +=1) {
+            this.sections.push(new DividerSection(`dv${index}`, this.dividerProps(index)));
+            this.sections.push(new DivideSection(this.borders(index + 1)));
+            console.log(index, ':',this.dividerProps(index)())
           }
           return diff !== 0;
         }
@@ -926,44 +1045,6 @@ class DivideSection extends SpaceSection {
     }
     this.sizes = () => {
       return 'val';
-    }
-
-    this.sectionProperties = (index) => {
-      return () => {
-        // const props = sectionProperties();
-        // let length, width, rigth, left, top, bottom;
-        // let rRail, lRail, tRail, bRail;
-        // let centerX, centerY;
-        // if (this.vertical) {
-        //   length = props.length;
-        //   width = props.width / this.dividerCount + 1;
-        //   beforeRail = {width: () => props.left};
-        //   afterRail = {width: () => props.right};
-        //   startX = props.center.x - (props.width / 2);
-        //   startY = props.center.y - (props.length / 2);
-        // } else {
-        //   length = props.length / this.dividerCount + 1;
-        //   width = props.width;
-        // }
-        //
-        // if (index === 0) {
-        //
-        // }
-        //
-        //
-        //
-        // const right = instance.getAssembly('rr').width() - rrv;
-        // const left = instance.getAssembly('lr').width() - lrv;
-        // const top = instance.getAssembly('tr').width() - trv;
-        // const bottom = instance.getAssembly('br').width() - brv;
-        // const center = {
-        //   x: offset.x + (fs / 2) + (width / 2),
-        //   y: offset.y + (fs / 2) + (length / 2),
-        //   z: 0
-        // };
-        // const overlap = {right, left, top, bottom};
-        // return {width, length, center, overlap};
-      }
     }
   }
 }
@@ -1017,8 +1098,10 @@ class Cabinet extends Assembly {
         y: brh + (length / 2),
         z: 0
       };
+
       const overlap = {right, left, top, bottom};
-      return {width, length, center, overlap};
+
+      // return {borders: {top, bottom, right, left}, depth};
     }
 
     function drawerAreaInset() {
@@ -1028,9 +1111,14 @@ class Cabinet extends Assembly {
       let width = this.width() - leftAndRightWidth;
       return {width, length};
     }
-    this.openingDemensions = () => {
-      if (this.type === CABINET_TYPE.INSET) return drawerAreaInset();
-      else return drawerAreaOverlay();
+    this.borders = () => {
+      const right = instance.getAssembly('rr');
+      const left = instance.getAssembly('lr');
+      const top = instance.getAssembly('tr');
+      const bottom = instance.getAssembly('br');
+      const pb = instance.getAssembly('pb');
+      const depth = pb.position().limits('-z') - right.position().limits('-z');
+      return {borders: {top, bottom, right, left}, depth};
     }
 
     this.value('brh', 'tkb.w + pb.t + brr - br.w', true);
@@ -1110,7 +1198,8 @@ class Cabinet extends Assembly {
                       new Butt('tr->lr'),
                       new Butt('br->rr'),
                       new Butt('br->lr'));
-    this.opening = new DivideSection(this.openingDemensions);
+    this.opening = new DivideSection(this.borders);
+    this.borders();
   }
 }
 
