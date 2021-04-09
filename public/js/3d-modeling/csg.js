@@ -157,6 +157,56 @@ CSG.prototype = {
     var csg = this.clone();
     csg.polygons.map(function(p) { p.flip(); });
     return csg;
+  },
+  endpoints: function () {
+    const endpoints = {};
+    const endpoint = (attr, value) => {
+      const max = endpoints[attr];
+      endpoints[attr] = max === undefined || max < value ? value : max;
+      const minAttr = `-${attr}`;
+      const min = endpoints[minAttr];
+      endpoints[minAttr] = min === undefined || min > value ? value : min;
+    }
+    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+      endpoint('x', vertex.pos.x);
+      endpoint('y', vertex.pos.y);
+      endpoint('z', vertex.pos.z);
+    }));
+    return endpoints;
+  },
+  distCenter: function () {
+    const endpoints = this.endpoints();
+    const x = ((endpoints.x + endpoints['-x']) / 2);
+    const y = ((endpoints.y + endpoints['-y']) / 2);
+    const z = ((endpoints.z + endpoints['-z']) / 2);
+    return {x,y,z};
+  },
+
+  rotate: function (rotations) {
+    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+      let newPos = ArbitraryRotate(vertex.pos, rotations.x, {x: 1, y:0, z:0});
+      newPos = ArbitraryRotate(newPos, rotations.y, {x: 0, y:1, z:0});
+      newPos = ArbitraryRotate(newPos, rotations.z, {x: 0, y:0, z:1});
+      return new CSG.Vertex(newPos, vertex.normal);
+    }));
+  },
+
+  translate: function (offset) {
+    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+      vertex.pos.x += offset.x;
+      vertex.pos.y += offset.y;
+      vertex.pos.z += offset.z;
+    }));
+  },
+
+  center: function (newCenter) {
+    const center = this.distCenter();
+    const offset = {
+      x: newCenter.x - center.x,
+      y: newCenter.y - center.y,
+      z: newCenter.z - center.z
+    }
+    this.translate(offset);
   }
 };
 
@@ -503,6 +553,13 @@ CSG.Polygon.prototype = {
   flip: function() {
     this.vertices.reverse().map(function(v) { v.flip(); });
     this.plane.flip();
+  },
+  forEachVertex: function (func) {
+    for (let vIndex = 0; vIndex < this.vertices.length; vIndex += 1) {
+      const vertex = this.vertices[vIndex];
+      const newVertex = func(vertex);
+      this.vertices[vIndex] = newVertex instanceof CSG.Vertex ? newVertex : vertex;
+    }
   }
 };
 
@@ -597,6 +654,10 @@ CSG.Node.prototype = {
   }
 };
 
+function round(value, percision) {
+  const multiplier = Math.pow(10, percision);
+  return Math.round(value * multiplier, 5) / multiplier;
+}
 
 /*
    Rotate a point p by angle theta around an arbitrary axis r
@@ -605,8 +666,9 @@ CSG.Node.prototype = {
    towards the origin.
    Assume right hand coordinate system.
 */
-function ArbitraryRotate(point, theta, radius)
+function ArbitraryRotate(point, degreestheta, radius)
 {
+  theta = degreestheta * Math.PI/180;
   let p = point;
   let r = radius;
    let q = {x: 0.0, y: 0.0, z: 0.0};
@@ -623,14 +685,17 @@ function ArbitraryRotate(point, theta, radius)
    q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
    q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
    q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
+   q.x = round(q.x, 10);
 
    q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
    q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
    q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
+   q.y = round(q.y, 10);
 
    q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
    q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
    q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
+   q.z = round(q.z, 10);
 
    return(q);
 }

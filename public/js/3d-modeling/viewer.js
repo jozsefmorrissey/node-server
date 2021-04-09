@@ -26,7 +26,7 @@ CSG.prototype.toMesh = function() {
 };
 
 var angleX = 0;
-var angleY = 0;
+var angleY = 180;
 var viewers = [];
 
 // Set to true so lines don't use the depth buffer
@@ -87,8 +87,8 @@ function Viewer(csg, width, height, depth) {
     varying vec3 normal;\
     varying vec3 light;\
     void main() {\
-      const vec3 lightDir = vec3(1.0, 2.0, 3.0) / 3.741657386773941;\
-      light = (gl_ModelViewMatrix * vec4(lightDir, 0.0)).xyz;\
+      const vec3 lightDir = vec3(3.0, -2.0, -3.0) / 3.741657386773941;\
+      light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;\
       color = gl_Color.rgb;\
       normal = gl_NormalMatrix * gl_Normal;\
       gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
@@ -164,12 +164,14 @@ function Viewer(csg, width, height, depth) {
 
     if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
-    that.blackShader.draw(that.mesh, gl.LINES);
+    // that.blackShader.draw(that.mesh, gl.LINES);
     gl.disable(gl.BLEND);
     if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
   };
 
   gl.ondraw();
+  // gl.canvas.width = '100vw';
+  // gl.canvas.height = '100vh';
 }
 
 var nextID = 0;
