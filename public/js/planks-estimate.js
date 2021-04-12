@@ -116,85 +116,76 @@ Expression.list = function (target, identificationFunc, attrResolveFunc) {
 }
 class Position {
   constructor(assembly) {
-    const rotation = {};
     const defSizes = getDefaultSize(assembly);
-    const center = Position.parseCoordinates(assembly.centerStr(), '0,0,0');
-    let centerExpressions = Expression.list(assembly, assembly.getAssembly,
-      Assembly.resolveAttr, center.x, center.y, center.z);
-    centerExpressions = {x: centerExpressions[0], y: centerExpressions[1], z: centerExpressions[2]}
+    const centerExpressions = () => Position.parseExpressions(assembly, assembly.centerStr(), '0,0,0');
 
-    let demensions = Position.parseCoordinates(assembly.demensionStr(),
+    const demExpressions = () => Position.parseExpressions(assembly, assembly.demensionStr(),
       `${defSizes.width},${defSizes.length},${defSizes.thickness}`,
       '0,0,0');
-    let demExpressions = Expression.list(assembly, assembly.getAssembly,
-      Assembly.resolveAttr, demensions.x, demensions.y, demensions.z);
-    demExpressions = {x: demExpressions[0], y: demExpressions[1], z: demExpressions[2]}
 
     this.demension = (attr) => (attr === undefined ?
-                          {x: demExpressions.x.eval(),
-                          y: demExpressions.y.eval(),
-                          z: demExpressions.z.eval()}
-                          : demExpressions[attr].eval());
+                          {x: demExpressions().x.eval(),
+                          y: demExpressions().y.eval(),
+                          z: demExpressions().z.eval()}
+                          : demExpressions()[attr].eval());
     this.center = (attr) => (attr === undefined ?
-                            {x: centerExpressions.x.eval(),
-                            y: centerExpressions.y.eval(),
-                            z: centerExpressions.z.eval()}
-                            : centerExpressions[attr].eval());
+                            {x: centerExpressions().x.eval(),
+                            y: centerExpressions().y.eval(),
+                            z: centerExpressions().z.eval()}
+                            : centerExpressions()[attr].eval());
     this.limits = (targetStr) => {
       if (targetStr !== undefined) {
         const match = targetStr.match(/^(\+|-|)([xyz])$/)
         const attr = match[2];
-        const c = this.center(attr);
         const d = this.demension(attr)/2;
         const pos = `+${attr}`;
         const neg = `-${attr}`;
         const limits = {};
-        limits[pos] = c+d;
+        limits[pos] = d;
         if (match[1] === '+') return limits[pos];
-        limits[neg] = c-d;
+        limits[neg] = -d;
         if (match[1] === '-') return limits[neg];
         return  limits;
       }
-      const c = this.center();
       const d = this.demension();
       return  {
-        x: c.x + d.x / 2,
-        '-x': c.x - d.x / 2,
-        y: c.y + d.y / 2,
-        '-y': c.y - d.y / 2,
-        z: c.z + d.z / 2,
-        '-z': c.z - d.z / 2,
+        x: d.x / 2,
+        '-x': -d.x / 2,
+        y: d.y / 2,
+        '-y': -d.y / 2,
+        z: d.z / 2,
+        '-z': -d.z / 2,
       }
     }
 
-    const axisStrs = (assembly.rotationStr() || '').match(Position.rotateStrRegex);
-    for (let index = 0; axisStrs && index < axisStrs.length; index += 1) {
-      const match = axisStrs[index].match(Position.axisStrRegex);
-      rotation[match[2]] = match[4] ? Number.parseInt[match[4]] : 90;
-    }
 
-    const getRotation = (attr) => rotation[attr] || 0;
-    this.rotation = () => (
-        {x: getRotation('x'), y: getRotation('y'), z: getRotation('z')}
-    );
+    this.rotation = () => {
+      const rotation = {x: 0, y: 0, z: 0};
+      const axisStrs = (assembly.rotationStr() || '').match(Position.rotateStrRegex);
+      for (let index = 0; axisStrs && index < axisStrs.length; index += 1) {
+        const match = axisStrs[index].match(Position.axisStrRegex);
+        rotation[match[2]] = match[4] ? Number.parseInt[match[4]] : 90;
+      }
+      return rotation;
+    };
 
     this.setDemension = (type, value) => {
       if (value !== undefined)
-        demExpressions[type] = new Expression(assembly, value, assembly.getAssembly,
+        demExpressions()[type] = new Expression(assembly, value, assembly.getAssembly,
             Assembly.resolveAttr);
       try {
-        return demExpressions[type].eval();
+        return demExpressions()[type].eval();
       } catch (e) {
-        console.error(`Failed to evaluate '${demExpressions[type].str()}'`);
+        console.error(`Failed to evaluate '${demExpressions()[type].str()}'`);
         return NaN;
       }
     }
 
     const setCenter = (type, value) => {
       if (value !== undefined)
-        centerExpressions[type] = new Expression(this, value, this.getAssembly,
+        centerExpressions()[type] = new Expression(this, value, this.getAssembly,
             Assembly.resolveAttr);
-      return centerExpressions[type].eval();
+      return centerExpressions()[type].eval();
     }
   }
 }
@@ -222,6 +213,13 @@ Position.within = (pos1, pos2, axises) => {
   }
   return axisTouching('x') && axisTouching('y') && axisTouching('z');
 }
+
+Position.parseExpressions = function(assembly) {
+  const coordinates = Position.parseCoordinates.apply(null, Array.from(arguments).slice(1));
+  let expressions = Expression.list(assembly, assembly.getAssembly,
+    Assembly.resolveAttr, coordinates.x, coordinates.y, coordinates.z);
+  return {x: expressions[0], y: expressions[1], z: expressions[2]}
+};
 
 Position.parseCoordinates = function() {
   let coordinateMatch = null;
@@ -303,9 +301,7 @@ class Assembly {
     this.display = true;
     this.part = true;
     this.included = true;
-    this.centerStr = () => centerStr;
-    this.demensionStr = () => demensionStr;
-    this.rotationStr = () => rotationStr;
+    funcOvalue.apply(this, ['centerStr', centerStr, 'demensionStr',  demensionStr, 'rotationStr', rotationStr]);
     this.getAssembly = (partCode, callingAssem) => {
       if (callingAssem === this) return undefined;
       if (this.partCode === partCode) return this;
@@ -321,7 +317,7 @@ class Assembly {
         return this.parentAssembly.getAssembly(partCode, this);
       return undefined;
     }
-
+    this.parent = () => parentAssembly;
     const position = new Position(this);
     this.position = () => position;
     this.partCode = partCode;
@@ -474,8 +470,8 @@ class Section extends Assembly {
       const botPos = props.borders.bottom.position();
       const leftPos = props.borders.left.position();
       const rightPos = props.borders.right.position();
-      const x = leftPos.center('x') + (rightPos.center('x') - leftPos.center('x'));
-      const y = botPos.center('y') + (topPos.center('y') - botPos.center('y'));
+      const x = leftPos.center('x') + ((rightPos.center('x') - leftPos.center('x')));
+      const y = botPos.center('y') + ((topPos.center('y') - botPos.center('y')) / 2);
       const z = topPos.center('z');
       return `${x},${y},${z}`;
     }
@@ -498,11 +494,13 @@ class Section extends Assembly {
       const botPos = props.borders.bottom.position();
       const leftPos = props.borders.left.position();
       const rightPos = props.borders.right.position();
-      const x = leftPos.limits('-x') - rightPos.limits('+x');
-      const y = topPos.limits('-y') - botPos.limits('+y');
+      const x = leftPos.center('x') + leftPos.limits('-x') - (rightPos.center('x') + rightPos.limits('-x'));
+      const y = topPos.center('y') + topPos.limits('-x') - ((botPos.center('y') + botPos.limits('+x')));
       const z = topPos.center('z');
       return {x,y,z};
     }
+
+    this.rotationStr = () => sectionProperties().rotationFunc();
 
     this.isPartition = () => isPartition;
     if (templatePath === undefined) {
@@ -763,8 +761,7 @@ class Cost {
       if (options.demMutliplier !== undefined) {
         return options.demMutliplier;
       }
-      return 'llwwdd';
-    };
+      return 'llwwdd'; };
     this.calc = (assembly) => {
       let priceStr = formula.toLowerCase();
       for (let index = 0; index < 6; index += 1) {
@@ -862,24 +859,53 @@ new DrawerSection();
 class Divider extends Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
-    this.addSubAssembly(new Panel());
-    this.addSubAssembly(new Frame());
+
+    // const panelCenterFunc = () => {return '0,0,0'};
+    // const panelDemFunc = () => {return '0,0,0'};
+    // const panelRotFunc = () => {return '0,0,0'};
+    //
+    // const frameCenterFunc = () => {return '-2,-2,-2'};
+    // const frameDemFunc = () => {return '4,5,1'};
+    // const frameRotFunc = () => {return ''};
+    //
+    //
+    // this.addSubAssembly(new Panel(`dp-${++Divider.count}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc));
+    // this.addSubAssembly(new Frame(`df-${Divider.count}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc));
+    //
   }
 }
+Divider.count = 0;
 
 class DividerSection extends PartitionSection {
   constructor(partCode, sectionProperties) {
     super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties);
+    if (sectionProperties === undefined) return;
     const props = sectionProperties;
     const instance = this;
     this.centerStr = () => {
-      const center = instance.position().center();
+      const center = props().center;
       return `${center.x},${center.y},${center.z}`
     };
-    this.demensionStr = () => `frw, ${this.props.dividerLength}, frt`;
-    // if (sectionProperties) {
-    //   console.log(this.centerStr(), this.innerSize(), this.outerSize());
-    // }
+    this.demensionStr = () => `frw, ${props().dividerLength / 2}, frt`;
+    const panelCenterFunc = () => {return '0,0,0'};
+    const panelDemFunc = () => {return '0,0,0'};
+    const panelRotFunc = () => {return '0,0,0'};
+
+    const frameCenterFunc = () => {
+      const x = sectionProperties().center.x;
+      const y = sectionProperties().center.y;
+      const z = sectionProperties().center.z;
+      return `${x},${y},${z}`;
+    };
+    const frameDemFunc = () => {
+      const y = sectionProperties().dividerLength;
+      return `frw,${y},frt`;
+    };
+    const frameRotFunc = () => sectionProperties().rotationFunc();
+
+
+    this.addSubAssembly(new Panel(`dp-${Divider.count}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc));
+    this.addSubAssembly(new Frame(`df-${Divider.count}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc));
   }
 }
 new DividerSection();
@@ -946,18 +972,14 @@ class DivideSection extends SpaceSection {
     this.init = () => {
       if (this.sections.length === 0) {
         this.sections.push(new DivideSection(this.borders(0)));
+        this.sections[0].setParentAssembly(this);
       }
     }
-    this.childRails = (index) => {
-      if (this.vertical) {
-        beforeRail = {width: () => props.left};
-        afterRail = {width: () => props.right};
-       }
-      if (index === 0) {
-        console.log();
-      } else {
-
-      }
+    const parentGetSubAssemblies = this.getSubAssemblies;
+    this.getSubAssemblies = () => {
+      let assemblies = parentGetSubAssemblies().concat(this.sections);
+      this.sections.forEach((assem) => assemblies = assemblies.concat(assem.getSubAssemblies()));
+      return assemblies;
     }
     this.borders = (index) => {
       return () => {
@@ -969,15 +991,15 @@ class DivideSection extends SpaceSection {
         let right = props.borders.right;
         if (this.vertical) {
           if (index !== 0) {
-            left = this.sections[index * 2 - 2];
-          } if (index !== this.dividerCount()) {
-            right = this.sections[index * 2];
+            left = this.sections[index - 1];
+          } if (index !== this.sections.length - 1) {
+            right = this.sections[index + 1];
           }
         } else {
           if (index !== 0) {
-            top = this.sections[index * 2 - 2];
-          } if (index !== this.dividerCount()) {
-            bottom = this.sections[index * 2];
+            top = this.sections[index - 1];
+          } if (index !== this.sections.length - 1) {
+            bottom = this.sections[index + 1];
           }
         }
 
@@ -987,9 +1009,9 @@ class DivideSection extends SpaceSection {
     }
     this.dividerProps = (index) => {
       return () => {
-        const answer = this.calcSections();
+        const answer = this.calcSections().list;
         let offset = 0;
-        for (let i = 0; i < index; i += 1) offset += answer[i];
+        for (let i = 0; i < index + 1; i += 1) offset += answer[i];
         let props = sectionProperties();
         const pos = this.position();
         const innerSize = this.innerSize();
@@ -1002,8 +1024,9 @@ class DivideSection extends SpaceSection {
           center.y += offset;
           dividerLength = innerSize.x;
         }
+        const rotationFunc = () =>  this.vertical ? '' : 'z';
 
-        return center;
+        return {center, dividerLength, rotationFunc};
       }
     }
     this.calcSections = (pattern, index, value) => {
@@ -1015,7 +1038,7 @@ class DivideSection extends SpaceSection {
 
       const config = this.pattern();
       const props = sectionProperties();
-      const distance = this.vertical ? props.width : props.length;
+      const distance = this.vertical ? this.outerSize().x : this.outerSize().y;
       const count = this.dividerCount() + 1;
       const answer = pattern.resolution(distance, config.index, config.value, count);
       config.fill = answer.fill;
@@ -1032,7 +1055,9 @@ class DivideSection extends SpaceSection {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
             this.sections.push(new DividerSection(`dv${index}`, this.dividerProps(index)));
+            this.sections[index].setParentAssembly(this);
             this.sections.push(new DivideSection(this.borders(index + 1)));
+            this.sections[index + 1].setParentAssembly(this);
             console.log(index, ':',this.dividerProps(index)())
           }
           return diff !== 0;
@@ -1080,37 +1105,6 @@ class Cabinet extends Assembly {
       return {width: w, height: h};
     }
 
-    function drawerAreaOverlay() {
-      const rrv = instance.value('rrv');
-      const lrv = instance.value('lrv');
-      const trv = instance.value('trv');
-      const brv = instance.value('brv');
-      const brh = instance.value('brh');
-      const fs = instance.value('fs');
-      let length = instance.length() - trv - brv - brh + fs;
-      let width = instance.width() - lrv - rrv + fs;
-      const right = (instance.getAssembly('rr').width() * 2) - rrv;
-      const left = (instance.getAssembly('lr').width() * 2) - lrv;
-      const top = (instance.getAssembly('tr').width() * 2) - trv;
-      const bottom = (instance.getAssembly('br').width() * 2) - brv;
-      const center = {
-        x: rrv - (fs / 2) + (width / 2),
-        y: brh + (length / 2),
-        z: 0
-      };
-
-      const overlap = {right, left, top, bottom};
-
-      // return {borders: {top, bottom, right, left}, depth};
-    }
-
-    function drawerAreaInset() {
-      const topAndBottomRailWidth = getAssembly('tr').width() + getAssembly('br').width();
-      const leftAndRightWidth = getAssembly('lr').width() + getAssembly('rr').width();
-      let length = this.length() - topAndBottomRailWidth;
-      let width = this.width() - leftAndRightWidth;
-      return {width, length};
-    }
     this.borders = () => {
       const right = instance.getAssembly('rr');
       const left = instance.getAssembly('lr');
@@ -1199,6 +1193,7 @@ class Cabinet extends Assembly {
                       new Butt('br->rr'),
                       new Butt('br->lr'));
     this.opening = new DivideSection(this.borders);
+    this.addSubAssembly(this.opening);
     this.borders();
   }
 }
@@ -1752,6 +1747,8 @@ OpenSectionDisplay.onChange = (target) => {
     OpenSectionDisplay.refresh(opening);
     target.focus();
   }
+  const cabinet = opening.getAssembly('c');
+  new ThreeDModel(cabinet.getParts());
 };
 
 OpenSectionDisplay.onOrientation = (target) => {
@@ -1848,37 +1845,58 @@ function pull(length, height) {
   return mainCyl.union(lCyl).union(rCyl);
 }
 
+function drawerBox(length, width, depth) {
+  const bottomHeight = 7/8;
+  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+  box.setColor(1, 0, 0);
+  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+  inside.setColor(0, 0, 1);
+  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+  bInside.setColor(0, 0, 1);
+
+  return box.subtract(bInside).subtract(inside);
+}
+
 class ThreeDModel {
   constructor(assemblies) {
-    function buildObject(assem) {
-      const radius = [assem.width() / 2, assem.length() / 2, assem.thickness() / 2];
-      let a = CSG.cube({ radius });
-      a.rotate(assem.position().rotation());
-      a.center(assem.position().center());
-      if (assem.partName && assem.partName.match(/.*Frame.*/))a.setColor(0, 0, 1);
-      else a.setColor(1, 0, 0);
-      return a;
-    }
-    const assem1 = assemblies[0];
-    const assem2 = assemblies[1];
-    let a = buildObject(assem1);
-    // console.log(assem1.partName, a.distCenter(), '-', a.endpoints());
-    for (let index = 1; index < assemblies.length; index += 1) {
-      const assem = assemblies[index];
-      const b = buildObject(assem);
-      // console.log(assem.partName, b.distCenter(), '-', b.endpoints());
-      if (assem.length() && assem.width() && assem.thickness()) {
-        a = a.union(b);
+    const call = ++ThreeDModel.call;
+
+    function render() {
+      if (ThreeDModel.call !== call) return;
+      function buildObject(assem) {
+        const radius = [assem.width() / 2, assem.length() / 2, assem.thickness() / 2];
+        let a = CSG.cube({ radius });
+        a.rotate(assem.position().rotation());
+        a.center(assem.position().center());
+        if (assem.partName && assem.partName.match(/.*Divider.Frame.*/))a.setColor(0, 1, 0);
+        else if (assem.partName && assem.partName.match(/.*Frame.*/))a.setColor(0, 0, 1);
+        else a.setColor(1, 0, 0);
+        return a;
       }
+      const assem1 = assemblies[0];
+      const assem2 = assemblies[1];
+      let a = buildObject(assem1);
+      // console.log(assem1.partName, a.distCenter(), '-', a.endpoints());
+      for (let index = 1; index < assemblies.length; index += 1) {
+        const assem = assemblies[index];
+        const b = buildObject(assem);
+        // console.log(assem.partName, b.distCenter(), '-', b.endpoints());
+        if (assem.length() && assem.width() && assem.thickness()) {
+          a = a.union(b);
+        }
+      }
+      ThreeDModel.viewer.mesh = a.toMesh();
+      ThreeDModel.viewer.gl.ondraw();
     }
-    ThreeDModel.viewer.mesh = a.toMesh();
-    ThreeDModel.viewer.gl.ondraw();
+    setTimeout(render, 500);
   }
 }
 const cube = new CSG.cube({radius: [3,5,1]});
+ThreeDModel.call = 0;
 ThreeDModel.init = () => {
   const p = pull(5,2);
-  ThreeDModel.viewer = new Viewer(p, 300, 150, 50);
+  const db = drawerBox(10, 15, 22);
+  ThreeDModel.viewer = new Viewer(db, 300, 150, 50);
   addViewer(ThreeDModel.viewer, 'three-d-model');
 }
 
@@ -1912,31 +1930,6 @@ ThreeDModel.arbitraryRotate = function (point, degreestheta, radius)
 
    return(q);
 }
-
-function threeDModeling() {
-  var viewer;
-  // Test simple cases
-  var a = CSG.cube({ center: [-0.25, -0.25, -0.25], radius: [2,5,.75] });
-  var b = CSG.sphere({ radius: 1.3, center: [0.25, 0.25, 0.25] });
-
-  // c = rectangle(15,3,2);
-  // c = c.subtract(rectangle(1,3,1));
-  let c = pull(4, 1);
-  a.setColor(1, 0, 0);
-  b.setColor(0, 0, 1);
-  c.setColor(0, 0, 0);
-  var operations = [
-    a,
-    c,
-    a.union(b),
-    a.subtract(b),
-    a.intersect(b)
-  ];
-  viewer = new Viewer(operations[1], 300, 150, 20);
-  addViewer(viewer, 'three-d-model');
-}
-
-
 
 window.onload = () => {
   const dummyText = (prefix) => (item, index) => `${prefix} ${index}`;

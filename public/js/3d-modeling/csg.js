@@ -228,6 +228,9 @@ CSG.cube = function(options) {
   var c = new CSG.Vector(options.center || [0, 0, 0]);
   var r = !options.radius ? [1, 1, 1] : options.radius.length ?
            options.radius : [options.radius, options.radius, options.radius];
+  if (options.demensions) {
+    r = [options.demensions[0]/2, options.demensions[1]/2, options.demensions[2]/2];
+  }
   return CSG.fromPolygons([
     [[0, 4, 6, 2], [-1, 0, 0]],
     [[1, 3, 7, 5], [+1, 0, 0]],
