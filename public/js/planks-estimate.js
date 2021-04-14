@@ -50,6 +50,7 @@ class Expression {
   constructor(target, str, identificationFunc, attrResolveFunc) {
     let lastEvaluation;
     const savedRefs = {};
+    let value;
     this.target = () => target;
     this.str = () => str;
     this.identify = (objTypeId) => identificationFunc(objTypeId);
@@ -72,24 +73,14 @@ class Expression {
       let retStr = str;
       let evaluate = false;
       const references = retStr.match(Expression.refRegex) || [];
-      const currDate = new Date().getTime();
-      if (!lastEvaluation || lastEvaluation + 200 < currDate) {
-        lastEvaluation = currDate;
-        evaluate = true;
-      }
       references.forEach((ref) => {
         const match = ref.match(Expression.breakdownReg);
         const objTypeId = match[4];
         const attr = match[5];
         const cleanRef = `${objTypeId}.${attr}`;
         let value;
-        if (evaluate) {
-          value = this.getValue(objTypeId, attr);
-          // console.log(ref, value)
-          savedRefs[cleanRef] = value;
-        } else {
-          value = savedRefs[cleanRef];
-        }
+        value = this.getValue(objTypeId, attr);
+        savedRefs[cleanRef] = value;
         if (value !== undefined) {
           retStr = retStr.replace(match[2], value);
         }
@@ -97,11 +88,18 @@ class Expression {
       return retStr;
     }
 
-    this.eval = () =>
-      eval(this.replace(target, str));  }
-
+    this.eval = () => {
+      const currDate = new Date().getTime();
+      if (!lastEvaluation || lastEvaluation + 500 < currDate) {
+        value = eval(this.replace(target, str));
+        lastEvaluation = currDate;
+      }
+      return value;
+    }
+  }
 }
 
+Expression.evalCount = 0;
 Expression.requestedIds = {}
 Expression.refRegStr = '(^|[\\s\\+-\\\\(\\\\)])((([a-zA-Z][a-zA-Z0-9]*)\\.|)([a-zA-Z][a-zA-Z0-9]*))($|[\\s\\+-\\\\(\\\\)])';
 Expression.refRegex = new RegExp(Expression.refRegStr, 'g');
@@ -317,7 +315,6 @@ class Assembly {
         return this.parentAssembly.getAssembly(partCode, this);
       return undefined;
     }
-    this.parent = () => parentAssembly;
     const position = new Position(this);
     this.position = () => position;
     this.partCode = partCode;
@@ -470,7 +467,7 @@ class Section extends Assembly {
       const botPos = props.borders.bottom.position();
       const leftPos = props.borders.left.position();
       const rightPos = props.borders.right.position();
-      const x = leftPos.center('x') + ((rightPos.center('x') - leftPos.center('x')));
+      const x = leftPos.center('x') - ((leftPos.center('x') - rightPos.center('x')) / 2);
       const y = botPos.center('y') + ((topPos.center('y') - botPos.center('y')) / 2);
       const z = topPos.center('z');
       return `${x},${y},${z}`;
@@ -748,7 +745,6 @@ Feature.addRelations('PartitionSection', ['hasFrame', 'hasPanel']);
 Feature.addRelations('Door', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
 Feature.addRelations('DoubleDoor', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
 Feature.addRelations('FalseFront', ['drawerType', 'edgeProfile']);
-// console.log('objMap:', Feature.objMap);
 
 class Cost {
   constructor(id, formula, options) {
@@ -877,9 +873,10 @@ class Divider extends Assembly {
 Divider.count = 0;
 
 class DividerSection extends PartitionSection {
-  constructor(partCode, sectionProperties) {
+  constructor(partCode, sectionProperties, parent) {
     super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties);
     if (sectionProperties === undefined) return;
+    this.parentAssembly = parent;
     const props = sectionProperties;
     const instance = this;
     this.centerStr = () => {
@@ -918,7 +915,6 @@ class DoorSection extends SpaceSection {
   }
 }
 new DoorSection();
-// console.log(JSON.stringify(new DoorSection().features, null, 2))
 
 class DualDoorSection extends SpaceSection {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
@@ -953,10 +949,11 @@ const setVerticalDivSet = (id, sizes) => (id, sizes, 'vertical');
 let dvs;
 
 class DivideSection extends SpaceSection {
-  constructor(sectionProperties) {
+  constructor(sectionProperties, parent) {
     super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties);
     dvs = dvs || this;
     this.vertical = true;
+    this.parentAssembly = parent;
     this.sections = [];
     this.vPattern = {name: 'Equal'};
     this.hPattern = {name: 'Equal'};
@@ -971,8 +968,7 @@ class DivideSection extends SpaceSection {
     this.sectionProperties = () => JSON.stringify(sectionProperties);
     this.init = () => {
       if (this.sections.length === 0) {
-        this.sections.push(new DivideSection(this.borders(0)));
-        this.sections[0].setParentAssembly(this);
+        this.sections.push(new DivideSection(this.borders(0), this));
       }
     }
     const parentGetSubAssemblies = this.getSubAssemblies;
@@ -1018,10 +1014,14 @@ class DivideSection extends SpaceSection {
         let center = pos.center();
         let dividerLength;
         if (this.vertical) {
-          center.x += offset;
+          let start = sectionProperties().borders.right.position().center('x');
+          start += sectionProperties().borders.right.position().limits('+x');
+          center.x = start + offset;
           dividerLength = innerSize.y;
         } else {
-          center.y += offset;
+          let start = sectionProperties().borders.bottom.position().center('y');
+          start += sectionProperties().borders.bottom.position().limits('+x');
+          center.y = start + offset;
           dividerLength = innerSize.x;
         }
         const rotationFunc = () =>  this.vertical ? '' : 'z';
@@ -1054,11 +1054,8 @@ class DivideSection extends SpaceSection {
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
-            this.sections.push(new DividerSection(`dv${index}`, this.dividerProps(index)));
-            this.sections[index].setParentAssembly(this);
-            this.sections.push(new DivideSection(this.borders(index + 1)));
-            this.sections[index + 1].setParentAssembly(this);
-            console.log(index, ':',this.dividerProps(index)())
+            this.sections.push(new DividerSection(`dv${index}`, this.dividerProps(index), this));
+            this.sections.push(new DivideSection(this.borders(index + 2), this));
           }
           return diff !== 0;
         }
@@ -1414,7 +1411,6 @@ function updateDivisions (target) {
     const value = values[index];
     if(value) inputs[index].value = value;
   }
-  console.log('updating')
 }
 
 matchRun('change', '.open-orientation-radio,.open-division-input', updateDivisions);
@@ -1876,11 +1872,9 @@ class ThreeDModel {
       const assem1 = assemblies[0];
       const assem2 = assemblies[1];
       let a = buildObject(assem1);
-      // console.log(assem1.partName, a.distCenter(), '-', a.endpoints());
       for (let index = 1; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
         const b = buildObject(assem);
-        // console.log(assem.partName, b.distCenter(), '-', b.endpoints());
         if (assem.length() && assem.width() && assem.thickness()) {
           a = a.union(b);
         }
@@ -1936,3 +1930,250 @@ window.onload = () => {
   const cabinetDisplay = new CabinetDisplay('#add-cabinet-cnt');
   ThreeDModel.init();
 };
+
+    function mathEval (expr, resolver, splitter) {
+      const allowVars = (typeof resolver) === 'function';
+      let operands = [];
+      let values = [];
+      let prevWasOpperand = true;
+      for (let index = 0; index < expr.length; index += 1) {
+        const char = expr[index];
+        if (char === ' ') continue;
+
+        if (prevWasOpperand) {
+          let newIndex = mathEval.isolateParenthesis(expr, index, values, operands, resolver, splitter) ||
+                        mathEval.isolateNumber(expr, index, values, operands) ||
+                        (allowVars && mathEval.isolateVar(expr, index, values, operands, resolver, splitter));
+          if (newIndex !== undefined) {
+            index = newIndex - 1;
+            prevWasOpperand = false;
+          }
+        } else {
+          prevWasOpperand = mathEval.isolateOperand(char, operands);
+        }
+      }
+      let value = values[0];
+      for (let index = 0; index < values.length - 1; index += 1) {
+        value = operands[index](values[index], values[index + 1]);
+        values[index + 1] = value;
+      }
+      return value;
+    }
+
+    mathEval.numReg = /^(-|)[0-9\.]{1,}/;
+    mathEval.varReg = /^[a-zA-Z][a-zA-Z0-9\.]*/;
+    mathEval.mathFuncReg = /^([a-zA-Z][a-zA-Z0-9\.]*)\.([a-zA-Z][a-zA-Z0-9\.]*)\(/;
+    mathEval.multi = (n1, n2) => n1 * n2;
+    mathEval.div = (n1, n2) => n1 / n2;
+    mathEval.add = (n1, n2) => n1 + n2;
+    mathEval.sub = (n1, n2) => n1 - n2;
+    mathEval.multiplyOrDivide = function (values, operands) {
+      const op = operands[operands.length - 1];
+      if (op === mathEval.multi || op === mathEval.div) {
+        const len = values.length;
+        values[len - 2] = op(values[len - 2], values[len - 1])
+        values.pop();
+        operands.pop();
+      }
+    }
+    mathEval.getArguments = function (expr, index, values, operands) {
+      const match = expr.substr(index).match(mathEval.mathFuncReg);
+      if (match) {
+        const args = [];
+        let endIndex = index += match[0].length;
+        let openParenCount = 0;
+        while(args.length < 3) {
+          const currChar = expr[endIndex++];
+          if (currChar === '(') openParenCount++;
+          if (openParenCount > 0 && currChar === ')') openParenCount--;
+          if (openParenCount === 0) {
+            if (args.length < 2 && currChar === ',') {
+              args.push(expr.substr(index, endIndex - index - 1));
+              index = endIndex;
+            } else if (args.length == 2 && currChar === ')') {
+              args.push(expr.substr(index, endIndex - index - 1));
+              endIndex++;
+            }
+          }
+        }
+        const path = match[2].split('.');
+        const varName = match[1];
+        return {args, endIndex, varName, path};
+      }
+    };
+    mathEval.isolateParenthesis = function (expr, index, values, operands, resolver, splitter) {
+      const char = expr[index];
+      if (char === '(') {
+        openParenCount = 1;
+        let endIndex = index + 1;
+        while(openParenCount > 0) {
+          const currChar = expr[endIndex++];
+          if (currChar === '(') openParenCount++;
+          if (currChar === ')') openParenCount--;
+        }
+        const len = endIndex - index - 2;
+        values.push(mathEval(expr.substr(index + 1, len), resolver, splitter));
+        mathEval.multiplyOrDivide(values, operands);
+        return endIndex;
+      }
+    };
+    mathEval.isolateMathFunc = function (expr, index, values, operands) {
+    }
+    mathEval.isolateOperand = function (char, operands) {
+      switch (char) {
+        case '*':
+        operands.push(mathEval.multi);
+        return true;
+        break;
+        case '/':
+        operands.push(mathEval.div);
+        return true;
+        break;
+        case '+':
+        operands.push(mathEval.add);
+        return true;
+        break;
+        case '-':
+        operands.push(mathEval.sub);
+        return true;
+        break;
+      }
+      return false;
+    }
+    mathEval.isolateValueReg = function(reg, globalResolver, globalSplitter) {
+      return function (expr, index, values, operands, resolver, splitter) {
+        resolver = resolver || globalResolver;
+        splitter = splitter || globalSplitter;
+        const match = expr.substr(index).match(reg);
+        if (match) {
+          const str = match[0];
+          if (splitter) {
+            args = str.split(splitter);
+          } else {
+            args = [str];
+          }
+          values.push(resolver.apply(null, args));
+          mathEval.multiplyOrDivide(values, operands);
+          return index + str.length;
+        }
+      }
+    }
+    mathEval.isolateNumber = mathEval.isolateValueReg(mathEval.numReg, Number.parseFloat);
+    mathEval.isolateVar = mathEval.isolateValueReg(mathEval.varReg);
+
+function testMathEval(count) {
+  function timeCall(func) {
+    let args = Array.from(arguments).splice(1);
+    let start = new Date().getTime();
+    func.apply(null, args);
+    const timeTaken = new Date().getTime() - start;
+    return timeTaken;
+  }
+
+  function testValue(func) {
+    for (let index = 0; index < 100; index += 1) {
+      let str = `-4.893 + (${index + 4.6173}+${index - 3.3342})-(${index} / (${index+2} * -8))`;
+      let answer = eval(str);
+      let response = func(str);
+      if (answer !== response) {
+        console.error('error');
+      }
+
+      answer = index;
+      str = `${index}`;
+      response = func(str);
+      if (answer !== response) {
+        console.error('error');
+      }
+
+      let value = (index % 2 === 0 ? -1 : 1) * (index + 0.3334);
+      answer = value;
+      str = `${value}`;
+      response = func(str);
+      if (answer !== response) {
+        console.error('error');
+      }
+    }
+  }
+
+  function testSpeed1(func) {
+    const str = `4`;
+    for (let index = 0; index < count; index += 1) {
+      func(str);
+    }
+  }
+
+  function simpleEquationTest(func) {
+    const str = `4+-3`;
+    for (let index = 0; index < count; index += 1) {
+      func(str);
+    }
+  }
+
+  function complexEquationTest(func) {
+    const str = `(16 / 44 * 2) + ((4 + (4+3)-(12- 6)) / (2 * 8))`;
+    for (let index = 0; index < count; index += 1) {
+      func(str);
+    }
+  }
+
+  function variableEvaluationTest(values, func, resolve, splitter) {
+    const str = `2 + 5.5 + 3.5 + values.one + values.two + values.four.nested`;
+    for (let index = 0; index < count; index += 1) {
+      if (func) {
+        func(str, resolve, splitter)
+      } else {
+        eval(str);
+      }
+    }
+  }
+
+  const results = [];
+  function printResults(testname, time, control) {
+    const timeTaken = Math.round(time) / 1000;
+    const evalTimeTaken = Math.round(control) / 1000;
+    let controlStr;
+    if (control === undefined){
+      controlStr = '';
+    } else {
+        const percent = Math.round(time/control * 10000) / 100;
+        controlStr = ` - mathEval ${100 - percent}% faster`;
+    }
+    results.push(`\n${testname}\n(${timeTaken}/${evalTimeTaken})Sec${controlStr}`);
+
+  }
+
+  const scope = {
+    values: {
+      one: 1,
+      two: 2,
+      three: [3],
+      four: {
+        nested: 4
+      }
+    }
+  };
+  const resolve = function () {
+    let currObj = scope;
+    for (let index = 0; index < arguments.length; index += 1) {
+      currObj = currObj[arguments[index]];
+    }
+    return currObj;
+  }
+
+  testValue(mathEval);
+  results.push(`\n\n\t${count} itterations (mathEval/eval)`)
+  const control1 = timeCall(testSpeed1, eval);
+  printResults('Integer Test', timeCall(testSpeed1, mathEval), control1);
+
+  const control2 = timeCall(simpleEquationTest, eval);
+  printResults('Simple Equation Test', timeCall(simpleEquationTest, mathEval), control2);
+
+  const control3 = timeCall(complexEquationTest, eval);
+  printResults('Complex Equation Test', timeCall(complexEquationTest, mathEval), control3);
+
+  const control4 = timeCall(variableEvaluationTest, scope.values);
+  printResults('Variable Evaluation Test', timeCall(variableEvaluationTest, scope, mathEval, resolve, '.'), control4);
+
+  console.log(results.join('\n'));
+}
