@@ -1,7 +1,12 @@
 // Set the color of all polygons in this solid
 CSG.prototype.setColor = function(r, g, b) {
   this.toPolygons().map(function(polygon) {
-    polygon.shared = [r, g, b];
+    if (Array.isArray(r)) {
+      g = r[1];
+      b = r[2];
+      r = r[0];
+    }
+    polygon.shared = [r/255, g/255, b/255];
   });
 };
 
@@ -26,7 +31,7 @@ CSG.prototype.toMesh = function() {
 };
 
 var angleX = 0;
-var angleY = 180;
+var angleY = 0;
 var viewers = [];
 
 // Set to true so lines don't use the depth buffer
@@ -87,7 +92,7 @@ function Viewer(csg, width, height, depth) {
     varying vec3 normal;\
     varying vec3 light;\
     void main() {\
-      const vec3 lightDir = vec3(3.0, -2.0, -3.0) / 3.741657386773941;\
+      const vec3 lightDir = vec3(3.0, 2.0, 3.0) / 3.741657386773941;\
       light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;\
       color = gl_Color.rgb;\
       normal = gl_NormalMatrix * gl_Normal;\

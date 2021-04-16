@@ -667,7 +667,7 @@ class Section extends Assembly {
       const botPos = props.borders.bottom.position();
       const leftPos = props.borders.left.position();
       const rightPos = props.borders.right.position();
-      const x = leftPos.center('x') + leftPos.limits('-x') - (rightPos.center('x') + rightPos.limits('-x'));
+      const x = leftPos.center('x') + leftPos.limits('-x') - (rightPos.center('x') + rightPos.limits('+x'));
       const y = topPos.center('y') + topPos.limits('-x') - ((botPos.center('y') + botPos.limits('+x')));
       const z = topPos.center('z');
       return {x,y,z};
@@ -698,7 +698,7 @@ Section.getSections = (isPartition) => {
 }
 Section.keys = () => Object.keys(Section.sections);
 Section.templates = {};
-Section.new = (constructorId) => new (Section.sections[constructorId]).constructor();
+Section.new = (constructorId, divideProps) => new (Section.sections[constructorId]).constructor();
 Section.render = (opening, scope) => {
   scope.featureDisplay = new FeatureDisplay(opening).html();
   const cId = opening.constructorId;
@@ -733,11 +733,18 @@ class Frame extends Assembly {
   }
 }
 
-class Drawer extends Assembly {
+class DrawerBox extends Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
   }
 }
+
+class DrawerFront extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+
 
 class PartitionSection extends Section {
   constructor(templatePath, partCode, partName, sectionProperties) {
@@ -751,6 +758,29 @@ class SpaceSection extends Section {
   }
 }
 
+class OpeningCoverSection extends SpaceSection {
+  constructor(filePath, partCode, partName, divideProps) {
+    super(filePath, partCode, partName, divideProps);
+    if (divideProps === undefined) return;
+    const instance = this;
+    this.coverDems = function(attr) {
+      const props = divideProps();
+      const dems = instance.innerSize()
+      dems.z = instance.value('pwt34');
+      dems.x = dems.x + 1;
+      dems.y = dems.y + 1;
+      return attr ? dems[attr] : dems;
+    }
+
+    this.coverCenter = function (attr) {
+      const props = divideProps();
+      const dems = instance.coverDems();
+      const center = instance.center();
+      center.z -= (props.borders.top.position().demension('z') + dems.z) / 2 - 1/8;
+      return attr ? center[attr] : center;
+    }
+  }
+}
 
 const sectionFilePath = (filename) => `./public/html/planks/sections/${filename}.html`;
 
@@ -916,7 +946,7 @@ new Feature('doorType', ['fullOverlay', 'inset']);
 new Feature('doorStyle', ['insetPanel', 'solid'])
 new Feature('drawerType', ['fullOverlay', 'inset']);
 
-Feature.addRelations('Drawer', ['drawerType', 'drawerFront', 'drawerBox']);
+Feature.addRelations('DrawerBox', ['drawerType', 'drawerFront', 'drawerBox']);
 Feature.addRelations('PartitionSection', ['hasFrame', 'hasPanel']);
 Feature.addRelations('Door', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
 Feature.addRelations('DoubleDoor', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
@@ -1021,9 +1051,48 @@ new Material('Glass');
 new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
 new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
-class DrawerSection extends SpaceSection {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(sectionFilePath('drawer'), partCode, partName, centerStr, demensionStr, rotationStr);
+class DrawerSection extends OpeningCoverSection {
+  constructor(partCode, divideProps, parent) {
+    super(sectionFilePath('drawer'), partCode, 'Drawer.Section', divideProps);
+    const instance = this;
+    if (divideProps === undefined) return;
+    function getDrawerDepth(depth) {
+      if (depth < 3) return 0;
+      return Math.ceil((depth - 1)/2) * 2;
+    }
+
+    function drawerCenter(attr) {
+      const props = divideProps();
+      const dems = drawerDems();
+      const center = instance.center();
+      center.z += (dems.z - props.borders.top.position().demension('z')) / 2 - 1/8;
+      return attr ? center[attr] : center;
+    }
+
+    function drawerDems(attr) {
+      const props = divideProps();
+      const dems = instance.innerSize()
+      dems.z = getDrawerDepth(props.depth);
+      dems.x = dems.x - 1/2;
+      dems.y = dems.y - 1/2;
+      return attr ? dems[attr] : dems;
+    }
+
+    function pullCenter(attr) {
+      const center = instance.coverCenter(attr);
+      const dems = pullDems();
+      center.z -= (instance.coverDems('z') + dems.z) / 2;
+      return center;
+    }
+
+    function pullDems(attr) {
+      const dems = {x: 10, y: 10, z: 1};
+      return attr ? dems[attr] : dems;
+    }
+
+    this.addSubAssembly(new DrawerBox('db', 'DrawerBox', drawerCenter, drawerDems));
+    this.addSubAssembly(new DrawerFront('df', 'DrawerFront', this.coverCenter, this.coverDems));
+    this.addSubAssembly(new Pull('dp', 'DrawerPull', pullCenter, pullDems));
   }
 }
 new DrawerSection();
@@ -1031,19 +1100,6 @@ new DrawerSection();
 class Divider extends Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
-
-    // const panelCenterFunc = () => {return '0,0,0'};
-    // const panelDemFunc = () => {return '0,0,0'};
-    // const panelRotFunc = () => {return '0,0,0'};
-    //
-    // const frameCenterFunc = () => {return '-2,-2,-2'};
-    // const frameDemFunc = () => {return '4,5,1'};
-    // const frameRotFunc = () => {return ''};
-    //
-    //
-    // this.addSubAssembly(new Panel(`dp-${++Divider.count}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc));
-    // this.addSubAssembly(new Frame(`df-${Divider.count}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc));
-    //
   }
 }
 Divider.count = 0;
@@ -1094,25 +1150,25 @@ class DividerSection extends PartitionSection {
 }
 new DividerSection();
 
-class DoorSection extends SpaceSection {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(sectionFilePath('door'), partCode, partName, centerStr, demensionStr, rotationStr);
-    this.addSubAssembly(new Door());
-    this.addSubAssembly(new Drawer());
+class DoorSection extends OpeningCoverSection {
+  constructor(partCode, divideProps, parent) {
+    super(sectionFilePath('door'), partCode, 'Door.Section', divideProps);
+    this.addSubAssembly(new Door('d', 'DrawerFront', this.coverCenter, this.coverDems));
   }
 }
 new DoorSection();
 
-class DualDoorSection extends SpaceSection {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(sectionFilePath('dual-door'), partCode, partName, centerStr, demensionStr, rotationStr);
+class DualDoorSection extends OpeningCoverSection {
+  constructor(partCode, divideProps, parent) {
+    super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
   }
 }
 new DualDoorSection();
 
-class FalseFrontSection extends SpaceSection {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(sectionFilePath('false-front'), partCode, partName, centerStr, demensionStr, rotationStr);
+class FalseFrontSection extends OpeningCoverSection {
+  constructor(partCode, divideProps, parent) {
+    super(sectionFilePath('false-front'), partCode, 'False.Front.Section', divideProps);
+    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems));
   }
 }
 new FalseFrontSection();
@@ -1205,9 +1261,9 @@ class DivideSection extends SpaceSection {
           center.x = start + offset;
           dividerLength = innerSize.y;
         } else {
-          let start = sectionProperties().borders.bottom.position().center('y');
-          start += sectionProperties().borders.bottom.position().limits('+x');
-          center.y = start + offset;
+          let start = sectionProperties().borders.top.position().center('y');
+          start += sectionProperties().borders.top.position().limits('+x');
+          center.y = start - offset;
           dividerLength = innerSize.x;
         }
         const rotationFunc = () =>  this.vertical ? '' : 'z';
@@ -1247,6 +1303,11 @@ class DivideSection extends SpaceSection {
         }
       }
       return false;
+    }
+    this.setSection = (constructorId, index) => {
+      const section = new (Section.sections[constructorId]).constructor('dr', this.borders(index));
+      section.setParentAssembly(this);
+      this.sections[index] = section;
     }
     this.size = () => {
       return {width: this.width, height: this.height};
@@ -1294,7 +1355,7 @@ class Cabinet extends Assembly {
       const top = instance.getAssembly('tr');
       const bottom = instance.getAssembly('br');
       const pb = instance.getAssembly('pb');
-      const depth = pb.position().limits('+z');
+      const depth = pb.position().center('z') + pb.position().limits('-z');
       return {borders: {top, bottom, right, left}, depth};
     }
 
@@ -1448,6 +1509,35 @@ class Miter extends Butt {
 
 
 // ----------------------------------  Display  ---------------------------//
+
+const colors = {
+  indianred: [205, 92, 92],
+  lightcoral: [240, 128, 128],
+  salmon: [250, 128, 114],
+  darksalmon: [233, 150, 122],
+  lightsalmon: [255, 160, 122],
+  white: [255, 255, 255],
+  silver: [192, 192, 192],
+  gray: [128, 128, 128],
+  black: [0, 0, 0],
+  red: [255, 0, 0],
+  maroon: [128, 0, 0],
+  yellow: [255, 255, 0],
+  olive: [128, 128, 0],
+  lime: [0, 255, 0],
+  green: [0, 128, 0],
+  aqua: [0, 255, 255],
+  teal: [0, 128, 128],
+  blue: [0, 0, 255],
+  navy: [0, 0, 128],
+  fuchsia: [255, 0, 255],
+  purple: [128, 0, 128]
+}
+
+function getColor(name) {
+  if(colors[name]) return colors[name];
+  return [0,0,0];
+}
 
 function REGEX() {
   types = {};
@@ -1770,6 +1860,7 @@ class ExpandableList {
       storage[index][key] = value;
     }
     this.set = (index, value) => props.list[index] = value;
+    this.get = (index) => props.list[index];
     this.htmlBody = (index) => props.getBody(props.list[index], index);
     this.refresh();
   }
@@ -1780,13 +1871,18 @@ ExpandableList.pillTemplate = new $t('./public/html/planks/expandable-pill.html'
 ExpandableList.sidebarTemplate = new $t('./public/html/planks/expandable-sidebar.html');
 ExpandableList.getIdAndIndex = (target) => {
   const cnt = up('.expand-header,.expand-body', target);
-  const id = cnt.getAttribute('ex-list-id');
-  const index = cnt.getAttribute('index');
+  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
+  const index = Number.parseInt(cnt.getAttribute('index'));
   return {id, index};
 }
 ExpandableList.getValueFunc = (target) => {
   const idIndex = ExpandableList.getIdAndIndex(target);
   return ExpandableList.lists[idIndex.id].value(idIndex.index);
+}
+
+ExpandableList.get = (target, value) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  return ExpandableList.lists[idIndex.id].get(idIndex.index);
 }
 
 ExpandableList.set = (target, value) => {
@@ -1819,7 +1915,7 @@ matchRun('click', '.expand-header', (target, event) => {
     list.findElement('.expand-body', target).style.display = 'none';
     list.activeIndex(null);
     target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-  } else {
+  } else if (!isActive) {
     const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
     const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
     const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
@@ -1934,10 +2030,10 @@ OpenSectionDisplay.onChange = (target) => {
   const opening = OpenSectionDisplay.sections[id];
   if (opening.divide(value)) {
     OpenSectionDisplay.refresh(opening);
+    const cabinet = opening.getAssembly('c');
+    new ThreeDModel(cabinet.getParts());
     target.focus();
   }
-  const cabinet = opening.getAssembly('c');
-  new ThreeDModel(cabinet.getParts());
 };
 
 OpenSectionDisplay.onOrientation = (target) => {
@@ -1950,7 +2046,9 @@ OpenSectionDisplay.onOrientation = (target) => {
 
 OpenSectionDisplay.onSectionChange = (target) => {
   ExpandableList.value('selected', target.value, target);
-  ExpandableList.set(target, Section.new(target.value));
+  const section = ExpandableList.get(target);
+  const index = ExpandableList.getIdAndIndex(target).index;
+  section.parentAssembly.setSection(target.value, index);
 }
 
 matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
@@ -1960,11 +2058,15 @@ matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
 
 class CabinetDisplay {
   constructor(parentSelector) {
+    let displayCabinetIndex;
     const getHeader = (cabinet, $index) =>
         CabinetDisplay.headTemplate.render({cabinet, $index});
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
-      new ThreeDModel(cabinet.getParts());
+      if (displayCabinetIndex !== $index) {
+        new ThreeDModel(cabinet.getParts());
+        displayCabinetIndex = $index;
+      }
       return CabinetDisplay.bodyTemplate.render({$index, cabinet, showTypes, OpenSectionDisplay});
     }
     const getObject = () => new Cabinet('c', 'Cabinet');
@@ -2051,9 +2153,21 @@ class ThreeDModel {
     const call = ++ThreeDModel.call;
 
     function debugColoring(part) {
-      if (part.partName && part.partName.match(/.*Divider.Frame.*/)) return [0, 1, 0];
-      else if (part.partName && part.partName.match(/.*Frame.*/)) return [0, 0, 1];
-      return [1, 0, 0];
+      if (part.partName && part.partName.match(/.*Frame.*/)) return getColor('blue');
+      else if (part.partName && part.partName.match(/.*DrawerBox.*/)) return getColor('green');
+      else if (part.partName && part.partName.match(/.*Pull.*/)) return getColor('silver');
+      return getColor('red');
+    }
+
+    function getModel(assem) {
+      if (assem instanceof DrawerBox) {
+        return drawerBox(assem.length(), assem.width(), assem.thickness());
+      }
+      if (assem instanceof Pull) {
+        return pull(assem.length(), assem.thickness());
+      }
+      const radius = [assem.width() / 2, assem.length() / 2, assem.thickness() / 2];
+      return CSG.cube({ radius });
     }
 
 
@@ -2061,11 +2175,11 @@ class ThreeDModel {
       const startTime = new Date().getTime();
       if (ThreeDModel.call !== call) return;
       function buildObject(assem) {
-        // if (assem.partName.match(/.*Panel.*/)) return;
-        const radius = [assem.width() / 2, assem.length() / 2, assem.thickness() / 2];
-        let a = CSG.cube({ radius });
+        let a = getModel(assem);
         a.rotate(assem.position().rotation());
-        a.center(assem.position().center());
+        const center = assem.position().center();
+        center.z *= -1;
+        a.center(center);
         a.setColor(...debugColoring(assem));
         // else a.setColor(1, 0, 0);
         return a;
@@ -2095,37 +2209,6 @@ ThreeDModel.init = () => {
   const db = drawerBox(10, 15, 22);
   ThreeDModel.viewer = new Viewer(db, 300, 150, 50);
   addViewer(ThreeDModel.viewer, 'three-d-model');
-}
-
-ThreeDModel.arbitraryRotate = function (point, degreestheta, radius)
-{
-  theta = degreestheta * Math.PI/180;
-  let p = point;
-  let r = radius;
-   let q = {x: 0.0, y: 0.0, z: 0.0};
-   let costheta,sintheta;
-
-   const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
-   Normalise(r, 'x',);
-   Normalise(r, 'y',);
-   Normalise(r, 'z',);
-
-   costheta = Math.cos(theta);
-   sintheta = Math.sin(theta);
-
-   q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
-   q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
-   q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
-
-   q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
-   q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
-   q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
-
-   q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
-   q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
-   q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
-
-   return(q);
 }
 
 window.onload = () => {
