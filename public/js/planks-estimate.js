@@ -24,6 +24,7 @@ const CONSTANTS = {
   pbt: {name: 'Panel Back Thickness', value: 1/2},
   brr: {name: 'Bottom Rail Reveal', value: 1/8},
 
+  iph: {name: 'Ideal Pull Height', value: 42},
   trv: {name: 'Top Reveal', value: 1/2},
   brv: {name: 'Bottom Reveal', value: 1/4},
   lrv: {name: 'Left Reveal', value: 1/2},
@@ -294,6 +295,18 @@ class Position {
     this.center = (attr) => center(attr);
     this.demension = (attr) => demension(attr);
 
+    this.current = () => {
+      const position = {
+        center: this.center(),
+        demension: this.demension(),
+        rotation: this.rotation()
+      };
+      assembly.getJoints().male.forEach((joint) =>
+        joint.updatePosition(position)
+      );
+      return position;
+    }
+
 
     this.limits = (targetStr) => {
       if (targetStr !== undefined) {
@@ -396,38 +409,6 @@ Position.parseCoordinates = function() {
   }
 }
 Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
-
-
-Position.rotatePoint = function (point, degreestheta, radius)
-{
-  theta = degreestheta * Math.PI/180;
-  let p = point;
-  let r = radius;
-   let q = {x: 0.0, y: 0.0, z: 0.0};
-   let costheta,sintheta;
-
-   const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
-   Normalise(r, 'x',);
-   Normalise(r, 'y',);
-   Normalise(r, 'z',);
-
-   costheta = Math.cos(theta);
-   sintheta = Math.sin(theta);
-
-   q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
-   q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
-   q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
-
-   q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
-   q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
-   q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
-
-   q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
-   q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
-   q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
-
-   return(q);
-}
 
 function setterGetter () {
   let attrs = {};
@@ -717,7 +698,6 @@ class Pull extends Assembly {
 class Door extends Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
-    this.addSubAssembly(new Pull());
   }
 }
 
@@ -758,11 +738,42 @@ class SpaceSection extends Section {
   }
 }
 
+const PULL_TYPE = {
+  DRAWER: 'Drawer',
+  DOOR: 'Door'
+}
+
 class OpeningCoverSection extends SpaceSection {
-  constructor(filePath, partCode, partName, divideProps) {
+  constructor(filePath, partCode, partName, divideProps, pullType) {
     super(filePath, partCode, partName, divideProps);
-    if (divideProps === undefined) return;
+
     const instance = this;
+    const parentGetSubAssemblies = this.getSubAssemblies;
+    this.getSubAssemblies = () => {
+      let assemblies = parentGetSubAssemblies().concat(this.sections);
+      this.sections.forEach((assem) => assemblies = assemblies.concat(assem.getSubAssemblies()));
+      return assemblies;
+    }
+    pullType = pullType || PULL_TYPE.DOOR;
+    let pulls = [];
+
+    this.getSubAssemblies = () =>
+        parentGetSubAssemblies().concat(pulls);
+    this.setPullType = (pt) => pullType = pt;
+    if (divideProps === undefined) return;
+
+    this.updatePulls = (count) => {
+      pulls = [];
+      if (pullType === PULL_TYPE.DRAWER) {
+        count = count || instance.drawerPullCount();
+        for (let index = 0; index < count; index += 1) {
+          pulls.push(new Pull(`dwp-${index}`, 'Drawer.Pull', instance.drawerPullCenter(index, count), instance.pullDems));
+        }
+      } else {
+        pulls.push(new Pull(`dp`, 'Door.Pull', instance.doorPullCenter, instance.pullDems, 'z'));
+      }
+    }
+
     this.coverDems = function(attr) {
       const props = divideProps();
       const dems = instance.innerSize()
@@ -779,6 +790,58 @@ class OpeningCoverSection extends SpaceSection {
       center.z -= (props.borders.top.position().demension('z') + dems.z) / 2 - 1/8;
       return attr ? center[attr] : center;
     }
+
+    this.drawerPullCount = () => {
+      if (instance.coverDems().x < 30) return 1;
+      return 2;
+    }
+
+    this.hingeSide = () => {
+      const props = divideProps();
+      return props.borders.right.partCode === 'rr' ? '+x' : '-x';
+    }
+
+    function closest(target) {
+      let winner = {value: arguments[1], diff: Math.abs(target - arguments[1])};
+      for (let index = 2; index < arguments.length; index += 1) {
+        const value = arguments[index];
+        const diff = Math.abs(target - value);
+        if (diff < winner.diff) {
+          winner = {diff, value}
+        }
+      }
+      return winner.value;
+    }
+
+    this.drawerPullCenter = (index, count) =>
+      (attr) => {
+        const center = instance.coverCenter(attr);
+        const dems = instance.coverDems();
+        const spacing = (dems.x / (count));
+        center.x += -(dems.x/2) + spacing / 2 + spacing * (index);
+        center.z -= (instance.coverDems('z') + dems.z) / 2;
+        return center;
+    };
+
+    this.pullDems = (attr) => {
+      const dems = {x: 1, y: 5, z: 2};
+      return attr ? dems[attr] : dems;
+    }
+
+    this.doorPullCenter = () => {
+      const idealPullHeight = instance.value('iph');
+      const dems = this.coverDems();
+      const center = this.coverCenter();
+      const top = center.y +  dems.y / 2 - 4;
+      const bottom = center.y -  dems.y / 2 + 4;
+      const xOffset = dems.x / 2 - 1.5;
+      center.x = center.x - xOffset * (this.hingeSide() === '-x' ? 1 : -1);
+      center.y = closest(idealPullHeight, top, center.y, bottom);
+      center.z -= (instance.coverDems('z') + dems.z) / 2;
+      return center;
+    }
+
+    this.updatePulls();
   }
 }
 
@@ -1053,9 +1116,10 @@ new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
 class DrawerSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
-    super(sectionFilePath('drawer'), partCode, 'Drawer.Section', divideProps);
-    const instance = this;
+    super(sectionFilePath('drawer'), partCode, 'Drawer.Section', divideProps, PULL_TYPE.DRAWER);
     if (divideProps === undefined) return;
+    const instance = this;
+
     function getDrawerDepth(depth) {
       if (depth < 3) return 0;
       return Math.ceil((depth - 1)/2) * 2;
@@ -1078,21 +1142,8 @@ class DrawerSection extends OpeningCoverSection {
       return attr ? dems[attr] : dems;
     }
 
-    function pullCenter(attr) {
-      const center = instance.coverCenter(attr);
-      const dems = pullDems();
-      center.z -= (instance.coverDems('z') + dems.z) / 2;
-      return center;
-    }
-
-    function pullDems(attr) {
-      const dems = {x: 10, y: 10, z: 1};
-      return attr ? dems[attr] : dems;
-    }
-
-    this.addSubAssembly(new DrawerBox('db', 'DrawerBox', drawerCenter, drawerDems));
-    this.addSubAssembly(new DrawerFront('df', 'DrawerFront', this.coverCenter, this.coverDems));
-    this.addSubAssembly(new Pull('dp', 'DrawerPull', pullCenter, pullDems));
+    this.addSubAssembly(new DrawerBox('db', 'Drawer.Box', drawerCenter, drawerDems));
+    this.addSubAssembly(new DrawerFront('df', 'Drawer.Front', this.coverCenter, this.coverDems));
   }
 }
 new DrawerSection();
@@ -1167,7 +1218,7 @@ new DualDoorSection();
 
 class FalseFrontSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
-    super(sectionFilePath('false-front'), partCode, 'False.Front.Section', divideProps);
+    super(sectionFilePath('false-front'), partCode, 'False.Front.Section', divideProps, PULL_TYPE.DRAWER);
     this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems));
   }
 }
@@ -1372,20 +1423,20 @@ class Cabinet extends Assembly {
 
 
 
-                          new Divider('rr', 'Frame.Right',
+                          new Frame('rr', 'Frame.Right',
                             'w / 2,brh + (l / 2), t / 2',
                             'frw, c.l - brh, frt'),
-                          new Divider('lr', 'Frame.Left',
+                          new Frame('lr', 'Frame.Left',
                             'c.w - (w / 2),brh + (l / 2), t / 2',
                             'frw, c.l - brh, frt'),
-                          new Divider('br', 'Frame.Bottom',
+                          new Frame('br', 'Frame.Bottom',
                             'lr.w + (l / 2),brh + (w / 2), t / 2',
                             'frw,c.w - lr.w - rr.w,frt',
                             'z'),
 
 
 
-                          new Divider('tr', 'Frame.Top',
+                          new Frame('tr', 'Frame.Top',
                             'lr.w + (l / 2), c.l - (w/2),t / 2',
                             'frw,br.l,frt',
                             'z'),
@@ -1420,12 +1471,12 @@ class Cabinet extends Assembly {
                       new Butt('pb->pbt'),
 
                       new Rabbet('pr->tkb', 3/8),
-                      new Dado('pr->rr', 3/8),
+                      new Dado('pr->rr', 3/8, 'x', '-z'),
 
                       new Rabbet('pl->tkb', 3/8),
-                      new Dado('pl->tkb', 3/8),
+                      new Dado('pl->lr', 3/8, 'x', '-z'),
 
-                      new Dado('pbt->pr', 3/8),
+                      new Dado('pbt->pr', 3/8, 'y', '-x'),
                       new Dado('pbt->pl', 3/8),
 
                       new Dado('pbt->br', 3/8),
@@ -1447,6 +1498,8 @@ class Joint {
     const match = joinStr.match(Joint.regex);
     this.malePartCode = match[1];
     this.femalePartCode = match[2];
+
+    this.updatePosition = () => {};
 
     this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
     this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
@@ -1478,11 +1531,22 @@ function testJoints () {
 }
 
 class Dado extends Joint {
-  constructor(joinStr, defaultDepth) {
+  constructor(joinStr, defaultDepth, axis, centerOffset) {
     super(joinStr);
+
     this.maleOffset = (assembly) => {
       return defaultDepth;
     }
+
+    if (axis === undefined) return;
+
+    this.updatePosition = (position) => {
+      const direction = centerOffset[0] === '-' ? -1 : 1;
+      const centerAxis = centerOffset[1];
+      position.demension[axis] += defaultDepth;
+      position.center[centerAxis] += defaultDepth/2 * direction;
+    };
+
   }
 }
 
@@ -1663,15 +1727,41 @@ function matchRun(event, selector, func, target) {
   selectors[matchRunTargetId][event][selector].push(func);
 }
 
+function groupParts(cabinet) {
+  const grouping = {parts: []};
+  const parts = cabinet.getParts();
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index];
+    const namePieces = part.partName.split('.');
+    let currObj = grouping;
+    for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
+      const piece = namePieces[nIndex];
+      if (currObj[piece] === undefined) currObj[piece] = {parts: []};
+      currObj = currObj[piece];
+    }
+    currObj.parts.push(part);
+  }
+  return grouping;
+}
+
+const modelContTemplate = new $t('./public/html/planks/model-controller.html')
 const stateReg = /( |^)(small|large)( |$)/;
 matchRun('click', '#max-min-btn', (target) => {
   const className = target.parentElement.className;
+  const controller = document.getElementById('model-controller');
   const state = className.match(stateReg);
   const clean = className.replace(new RegExp(stateReg, 'g'), '').trim();
   if (state[2] === 'small') {
     target.parentElement.className = `${clean} large`;
+    const cabinet = cabinetDisplay.active();
+    if (cabinet) {
+      const parts = groupParts(cabinet);
+      controller.innerHTML = modelContTemplate.render({parts});
+    }
+    controller.hidden = false;
   } else {
     target.parentElement.className = `${clean} small`;
+    controller.hidden = true;
   }
 });
 
@@ -2049,6 +2139,7 @@ OpenSectionDisplay.onSectionChange = (target) => {
   const section = ExpandableList.get(target);
   const index = ExpandableList.getIdAndIndex(target).index;
   section.parentAssembly.setSection(target.value, index);
+  updateModel(section);
 }
 
 matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
@@ -2070,6 +2161,7 @@ class CabinetDisplay {
       return CabinetDisplay.bodyTemplate.render({$index, cabinet, showTypes, OpenSectionDisplay});
     }
     const getObject = () => new Cabinet('c', 'Cabinet');
+    this.active = () => expListProps.list[displayCabinetIndex];
     const expListProps = {
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Cabinet'
@@ -2154,20 +2246,26 @@ class ThreeDModel {
 
     function debugColoring(part) {
       if (part.partName && part.partName.match(/.*Frame.*/)) return getColor('blue');
-      else if (part.partName && part.partName.match(/.*DrawerBox.*/)) return getColor('green');
+      else if (part.partName && part.partName.match(/.*Drawer.Box.*/)) return getColor('green');
       else if (part.partName && part.partName.match(/.*Pull.*/)) return getColor('silver');
       return getColor('red');
     }
 
     function getModel(assem) {
+      const pos = assem.position().current();
+      let model;
       if (assem instanceof DrawerBox) {
-        return drawerBox(assem.length(), assem.width(), assem.thickness());
+        model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
+      } else if (assem instanceof Pull) {
+        model = pull(pos.demension.y, pos.demension.z);
+      } else {
+        const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
+        model = CSG.cube({ radius });
       }
-      if (assem instanceof Pull) {
-        return pull(assem.length(), assem.thickness());
-      }
-      const radius = [assem.width() / 2, assem.length() / 2, assem.thickness() / 2];
-      return CSG.cube({ radius });
+      model.rotate(pos.rotation);
+      pos.center.z *= -1;
+      model.center(pos.center);
+      return model;
     }
 
 
@@ -2176,16 +2274,17 @@ class ThreeDModel {
       if (ThreeDModel.call !== call) return;
       function buildObject(assem) {
         let a = getModel(assem);
-        a.rotate(assem.position().rotation());
-        const center = assem.position().center();
-        center.z *= -1;
-        a.center(center);
         a.setColor(...debugColoring(assem));
+        assem.getJoints().female.forEach((joint) => {
+          const male = joint.getMale();
+          console.log(joint.malePartCode, male);
+          const m = getModel(male, male.position().current());
+          a = a.subtract(m);
+        });
         // else a.setColor(1, 0, 0);
         return a;
       }
-      const assem1 = assemblies[2];
-      const assem2 = assemblies[1];
+      const assem1 = assemblies[0];
       let a = buildObject(assem1);
       for (let index = 1; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
@@ -2211,8 +2310,10 @@ ThreeDModel.init = () => {
   addViewer(ThreeDModel.viewer, 'three-d-model');
 }
 
+let cabinetDisplay;
+
 window.onload = () => {
   const dummyText = (prefix) => (item, index) => `${prefix} ${index}`;
-  const cabinetDisplay = new CabinetDisplay('#add-cabinet-cnt');
+  cabinetDisplay = new CabinetDisplay('#add-cabinet-cnt');
   ThreeDModel.init();
 };

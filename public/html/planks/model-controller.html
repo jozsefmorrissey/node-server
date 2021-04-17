@@ -1,0 +1,10 @@
+<div:t repeat='key, parts in parts'
+        $t-id='./public/html/planks/model-controller.html'
+        {{key === 'parts' ? 'hidden' : ''}}>
+  <div>
+    {{key}}
+  </div>
+  <div:t class='indent' repeat='part in parts.parts'>
+    {{part.partName}}
+  </div:t>
+</div:t>

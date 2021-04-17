@@ -1,4 +1,16 @@
 
+#model-controller {
+  position: absolute;
+  left: 20px;
+  top: 0;
+  background-color: #ffffff94;
+  z-index: 20;
+}
+
+.indent {
+  padding-left: 15pt;
+}
+
 #three-d-model {
   background-position: -1px -1px;
   position: fixed;
@@ -8,6 +20,7 @@
 }
 
 #three-d-model.small {
+  background-color: #ffffff94;
   width: 25vw;
   height: 25vh;
 }

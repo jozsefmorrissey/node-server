@@ -6,8 +6,23 @@ $t.functions['202297006'] = function (get) {
 $t.functions['633282157'] = function (get) {
 	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> <div class="expand-header ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> <div class="expand-body ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getBody")(get("item"), get("$index"))) + ` </div> </div> </div>`
 }
+$t.functions['814496148'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'parts' ? 'hidden' : '') + `> ` + (get("$key")) + ` ` + (get("parts")) + ` </div>`
+}
+$t.functions['862301568'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'children' ? 'hidden' : '') + `> </div>`
+}
 $t.functions['990870856'] = function (get) {
 	return `<div class='inline' > <h3>` + (get("assem").objId) + `</h3> <div> ` + (get("getFeatureDisplay")(get("assem"))) + ` </div> </div>`
+}
+$t.functions['1458139271'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'parts' ? 'hidden' : '') + `> <div> ` + (get("key")) + ` </div> ` + (new $t('<div class=\'indent\' > {{part.partName}} </div>').render(get('scope'), 'part in parts.parts', get)) + ` </div>`
+}
+$t.functions['1907864248'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'parts' ? 'hidden' : '') + `> <div> ` + (get("key")) + ` </div> ` + (new $t('<div > {{part.partName}} </div>').render(get('scope'), 'part in parts.parts', get)) + ` </div>`
+}
+$t.functions['2099014424'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html'> </div>`
 }
 $t.functions['./public/html/planks/cabinet-body.html'] = function (get) {
 	return `<div> <div class='cabinet-header'> <label>Reveal:</label> <div class='cabinet-dem-cnt'> <label>Top:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("trv")) + `'> <label>Bottom:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("brv")) + `'> <label>Left:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("lrv")) + `'> <label>Right:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("rrv")) + `'> </div> </div> <br> <div class='cabinet-header'> <label>Toe Kick Height:</label> <div class='cabinet-dem-cnt'> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("tkh")) + `'> </div> </div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> </div> <input type="radio" name="frame-type-` + (get("cabinet").id) + `" value='framed' checked id='cabinet-framed-radio-` + (get("cabinet").id) + `'> <label for='cabinet-framed-radio-` + (get("cabinet").id) + `'>Framed</label> <input type="radio" name="frame-type-` + (get("cabinet").id) + `" id='cabinet-frameless-radio-` + (get("cabinet").id) + `' value='frameless'> <label for='cabinet-frameless-radio-` + (get("cabinet").id) + `'>Frameless</label> <div class='right'> <select class="show-right-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> <label>Show Right</label> </div> </div> <div>` + (get("OpenSectionDisplay").html(get("cabinet").opening)) + `</div> </div> `
@@ -74,4 +89,43 @@ $t.functions['-935556873'] = function (get) {
 }
 $t.functions['-1178631413'] = function (get) {
 	return `<span class='input-html-cnt-` + (get("opening").uniqueId) + `' > <label>` + (get("label")) + `</label> <input class='division-pattern-input' name='` + (get("pattern").name) + `' index='` + (get("$index")) + `' value='` + (get("fill") ? get("fill")[get("$index")] : "") + `'> </span>`
+}
+$t.functions['./public/html/planks/model-controler.html'] = function (get) {
+	return `` + (new $t('<div > {{part.partName}} </div>').render(get('scope'), 'part in parts', get)) + ` `
+}
+$t.functions['-636956937'] = function (get) {
+	return `<div > ` + (get("part").id) + ` </div>`
+}
+$t.functions['-484298540'] = function (get) {
+	return `<div > ` + (get("part").partName) + ` </div>`
+}
+$t.functions['./public/html/planks/model-controller.html'] = function (get) {
+	return `` + (new $t('<div  $t-id=\'./public/html/planks/model-controller.html\' {{key === \'parts\' ? \'hidden\' : \'\'}}> <div> {{key}} </div> {{new $t(\'<div class=\\\'indent\\\' > {{part.partName}} </div>\').render(get(\'scope\'), \'part in parts.parts\', get)}} </div>').render(get('scope'), 'key, parts in parts', get)) + ` `
+}
+$t.functions['-1090941471'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'children' ? 'hidden' : '') + `> ` + (get("key")) + ` </div>`
+}
+$t.functions['-1142421051'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'children' ? 'hidden' : '') + `> ` + (get("$key")) + ` </div>`
+}
+$t.functions['-2138415182'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'children' ? 'hidden' : '') + `> ` + (get("$index")) + ` </div>`
+}
+$t.functions['-1215284174'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'parts' ? 'hidden' : '') + `> ` + (get("key")) + ` </div>`
+}
+$t.functions['-895665439'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'parts' ? 'hidden' : '') + `> ` + (get("key").key) + ` </div>`
+}
+$t.functions['-1355275598'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'parts' ? 'hidden' : '') + `> ` + (get("key")) + ` ` + (get("parts")) + ` </div>`
+}
+$t.functions['-458747109'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'parts' ? 'hidden' : '') + `> <div> ` + (get("key")) + ` </div> <div> ` + (get("parts").children) + ` </div> </div>`
+}
+$t.functions['-1164406652'] = function (get) {
+	return `<div $t-id='./public/html/planks/model-controller.html' ` + (get("key") === 'parts' ? 'hidden' : '') + `> <div> ` + (get("key")) + ` </div> <div> ` + (get("parts").parts) + ` </div> </div>`
+}
+$t.functions['-1312311835'] = function (get) {
+	return `<div class='indent' > ` + (get("part").partName) + ` </div>`
 }

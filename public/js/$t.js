@@ -492,11 +492,12 @@ class $t {
 			for (let index = 0; index < keys.length; index += 1) {
 				const key = keys[index];
 				const childScope = {};
-				childScope[keyName] = {key};
+				childScope[keyName] = key;
 				childScope[valueName] = obj[key];
 				childScope.$index = index;
-				built += new $t(template).render(obj, undefined, get);
+				built += new $t(template).render(childScope, undefined, get);
 			}
+      return built;
 		}
 
 		function rangeExp(itExp, get) {
