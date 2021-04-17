@@ -682,9 +682,10 @@ class $t {
 			while (match = string.match(repeatReg)) {
 				let tagContents = match[2] + match[6];
 				let template = `<${match[1]}${tagContents}${match[1]}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-				let templateName = tagContents.replace(/.*\$t-id=('|")([a-zA-Z-_\/]*?)(\1).*/, '$2');
+				let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
         let scope = tagContents.replace(/.*\$t-scope=('|")([a-zA-Z-_\/]*?)(\1).*/, '$2') || 'scope';
 				template = templateName !== tagContents ? templateName : template;
+        console.log('\n\n\ntn: ', tempName, '-', template)
 				string = string.replace(match[0], `{{new $t('${template}').render(get('${scope}'), '${match[5]}', get)}}`);
 				// console.log('\n\n\nformrepeat: ', string, '\n\n\n')
 				eval(`new $t(\`${template}\`)`);

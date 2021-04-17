@@ -1,10 +1,11 @@
-<div:t repeat='key, parts in parts'
-        $t-id='./public/html/planks/model-controller.html'
+<div:t repeat='label, group in parts'
         {{key === 'parts' ? 'hidden' : ''}}>
-  <div>
-    {{key}}
+  <div class='model-selector'>
+    <label>{{label}}</label>
+    <input type='checkbox'>
+    <div:t repeat='label in group.labels' $t-id='./public/html/planks/model-controller.html' {{key === 'parts' ? 'hidden' : ''}}>
+
+
+    </div:t>
   </div>
-  <div:t class='indent' repeat='part in parts.parts'>
-    {{part.partName}}
-  </div:t>
 </div:t>

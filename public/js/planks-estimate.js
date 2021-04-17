@@ -1416,7 +1416,7 @@ class Cabinet extends Assembly {
     this.value('st', '(str + stl)', true);
     this.addSubAssemblies(
 
-                          new Panel('tkb', 'Panel.ToeKickBacker',
+                          new Panel('tkb', 'Panel.Toe.Kick.Backer',
                             'pl.t + frorl + (l / 2), w / 2, tkd + (t / 2)',
                             'tkh, c.w - st, tkbw',
                             'z'),
@@ -1728,7 +1728,7 @@ function matchRun(event, selector, func, target) {
 }
 
 function groupParts(cabinet) {
-  const grouping = {parts: []};
+  const grouping = {labels: {}, parts: []};
   const parts = cabinet.getParts();
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
@@ -1736,8 +1736,8 @@ function groupParts(cabinet) {
     let currObj = grouping;
     for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
       const piece = namePieces[nIndex];
-      if (currObj[piece] === undefined) currObj[piece] = {parts: []};
-      currObj = currObj[piece];
+      if (currObj.labels[piece] === undefined) currObj.labels[piece] = {labels: {}, parts: []};
+      currObj = currObj.labels[piece];
     }
     currObj.parts.push(part);
   }

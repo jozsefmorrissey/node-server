@@ -586,6 +586,7 @@ class $t {
 		}
 
 		function render(scope, itExp, parentScope) {
+      if (scope === undefined) return '';
 			let rendered = '';
 			const get = getter(scope, parentScope);
 			switch (type(scope, itExp)) {
@@ -690,7 +691,7 @@ class $t {
 			while (match = string.match(repeatReg)) {
 				let tagContents = match[2] + match[6];
 				let template = `<${match[1]}${tagContents}${match[1]}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-				let templateName = tagContents.replace(/.*\$t-id=('|")([a-zA-Z-_\/]*?)(\1).*/, '$2');
+				let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 				template = templateName !== tagContents ? templateName : template;
 				string = string.replace(match[0], `{{new $t('${template}').render(get('scope'), '${match[5]}', get)}}`);
 				// console.log('\n\n\nformrepeat: ', string, '\n\n\n')
