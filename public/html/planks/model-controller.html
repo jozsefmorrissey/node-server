@@ -1,11 +1,11 @@
-<div:t repeat='label, group in parts'
+<div:t repeat='label, group in groups'
         {{key === 'parts' ? 'hidden' : ''}}>
   <div class='model-selector'>
     <label>{{label}}</label>
     <input type='checkbox'>
-    <div:t repeat='label in group.labels' $t-id='./public/html/planks/model-controller.html' {{key === 'parts' ? 'hidden' : ''}}>
+    <div repeat='groups in group.groups' $t-id='./public/html/planks/model-controller.html' {{key === 'parts' ? 'hidden' : ''}}>
 
 
-    </div:t>
+    </div>
   </div>
 </div:t>

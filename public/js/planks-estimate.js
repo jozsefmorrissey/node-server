@@ -689,9 +689,92 @@ Section.render = (opening, scope) => {
   return Section.templates[cId].render(scope);
 }
 
+/*
+    a,b,c
+    d,e,f
+    g,h,i
+*/
+Pull.location.TOP_RIGHT = {rotate: true};
+Pull.location.TOP_LEFT = {rotate: true};
+Pull.location.BOTTOM_RIGHT = {rotate: true};
+Pull.location.BOTTOM_LEFT = {rotate: true};
+Pull.location.TOP = {multiple: true};
+Pull.location.BOTTOM = {multiple: true};
+Pull.location.RIGHT = {multiple: true};
+Pull.location.LEFT = {multiple: true};
+Pull.location.CENTER = {multiple: true, rotate: true};
 class Pull extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  constructor(partCode, partName, door, location, index, count) {
+    super(partCode, 'Pull');
+
+    function offset(center, distance) {
+      const spacing = distance / count;
+      return center - (distance / 2) + spacing / 2 + spacing * (index);
+    }
+
+    function demension() {
+      return {x: 1, y: 3, z: 1.5};
+    }
+
+    this.pullCenter = (index, count) =>
+      (center) => {
+        let center = door.position().center();
+        let doorDems = door.position().demension();
+        let pullDems = demensions();
+        center.z -= (doorDems.z + pullDems.z) / 2;
+        switch (location) {
+          case Pull.location.TOP_RIGHT:
+          center.x = ;
+          center.y = ;
+					break;
+          case Pull.location.TOP_LEFT:
+          center.x = ;
+          center.y = ;
+					break;
+          case Pull.location.BOTTOM_RIGHT:
+          center.x = ;
+          center.y = ;
+					break;
+          case Pull.location.BOTTOM_LEFT:
+          center.x = ;
+          center.y = ;
+					break;
+          case Pull.location.TOP:
+            center.x = offset(center.x, doorDems.x);
+            center.y -= doorDems.y / 2;
+					break;
+          case Pull.location.BOTTOM:
+            center.x = offset(center.x, doorDems.x);
+            center.y += doorDems.y / 2;
+					break;
+          case Pull.location.RIGHT:
+          center.x = ;
+          center.y = ;
+					break;
+          case Pull.location.LEFT:
+          center.x = ;
+          center.y = ;
+					break;
+          case Pull.location.CENTER:
+            center.x = offset(center.x, doorDems.x);
+					break;
+          default:
+            throw new Error('Invalid pull location');
+        }
+    };
+
+    function center() {
+      const pos = door.position();
+      const center = pos.center();
+      const dems = pos.demension();
+      switch (expression) {
+        case expression:
+
+          break;
+        default:
+
+      }
+    }
   }
 }
 
@@ -800,6 +883,26 @@ class OpeningCoverSection extends SpaceSection {
       const props = divideProps();
       return props.borders.right.partCode === 'rr' ? '+x' : '-x';
     }
+
+
+    const gap = 1/16;
+    function duelDoorDems() {
+      const dems = instance.coverDems();
+      dems.x = (dems.x - gap) / 2;
+      return dems;
+    }
+    this.duelDoorDems = duelDoorDems;
+
+    function duelDoorCenter(right) {
+      return function () {
+        const direction = right ? -1 : 1;
+        const center = instance.coverCenter();
+        const dems = duelDoorDems();
+        center.x += (dems.x + gap) / 2 * direction;
+        return center;
+      }
+    }
+    this.duelDoorCenter = duelDoorCenter;
 
     function closest(target) {
       let winner = {value: arguments[1], diff: Math.abs(target - arguments[1])};
@@ -1212,6 +1315,9 @@ new DoorSection();
 class DualDoorSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
     super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
+    if (divideProps === undefined) return;
+    this.addSubAssembly(new Door('dr', 'DrawerFront', this.duelDoorCenter(true), this.duelDoorDems));
+    this.addSubAssembly(new Door('dl', 'DrawerFront', this.duelDoorCenter(), this.duelDoorDems));
   }
 }
 new DualDoorSection();
@@ -1728,7 +1834,7 @@ function matchRun(event, selector, func, target) {
 }
 
 function groupParts(cabinet) {
-  const grouping = {labels: {}, parts: []};
+  const grouping = {groups: {}, parts: []};
   const parts = cabinet.getParts();
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
@@ -1736,8 +1842,8 @@ function groupParts(cabinet) {
     let currObj = grouping;
     for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
       const piece = namePieces[nIndex];
-      if (currObj.labels[piece] === undefined) currObj.labels[piece] = {labels: {}, parts: []};
-      currObj = currObj.labels[piece];
+      if (currObj.groups[piece] === undefined) currObj.groups[piece] = {groups: {}, parts: []};
+      currObj = currObj.groups[piece];
     }
     currObj.parts.push(part);
   }
@@ -1755,8 +1861,8 @@ matchRun('click', '#max-min-btn', (target) => {
     target.parentElement.className = `${clean} large`;
     const cabinet = cabinetDisplay.active();
     if (cabinet) {
-      const parts = groupParts(cabinet);
-      controller.innerHTML = modelContTemplate.render({parts});
+      const group = groupParts(cabinet);
+      controller.innerHTML = modelContTemplate.render({group});
     }
     controller.hidden = false;
   } else {
