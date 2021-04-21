@@ -1,79 +1,16 @@
 // ./src/index/services/$t.js
 
-$t.functions['174218848'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
 $t.functions['202297006'] = function (get) {
 	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> </div> <div class="expand-header ` + (get("type")) + ` ` + (get("$index") === get("activeIndex") ? ' active' : '') + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> </div> </div>`
-}
-$t.functions['223172067'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("part").partName) + `</label> <input type='checkbox' ` + (get("displayPart")(get("part")) ? 'selected' : '') + `> </div>`
-}
-$t.functions['315440948'] = function (get) {
-	return `<div > <div class='model-selector'> <label>` + (get("label")) + `</label> <input type='checkbox'> ` + (new $t('./public/html/planks/model-controller.html').render(get('scope'), 'label, groups in group.groups', get)) + ` </div> </div>`
-}
-$t.functions['398635311'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'parts-cnt\' > <label>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['400000078'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("label")) + `</label> <input type='checkbox' ` + (get("displayPart")(get("part")) ? 'checked' : '') + `> ` + (new $t('<div class=\'parts-cnt\' > <label>{{part.partCode}}</label> <input type=\'checkbox\'> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['408125731'] = function (get) {
-	return `<div class='parts-cnt indent' > <label>` + (get("part").partName) + `</label> <input type='checkbox' ` + (get("displayPart")(get("part")) ? 'checked' : '') + `> </div>`
-}
-$t.functions['443697857'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("part").partName) + `</label> <input type='checkbox' ` + (get("displayPart")(get("part")) ? 'checked' : '') + `> </div>`
-}
-$t.functions['523928828'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("label")) + `</label> <input type='checkbox' ` + (get("displayPart")(get("part")) ? 'checked' : '') + `> </div>`
 }
 $t.functions['633282157'] = function (get) {
 	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> <div class="expand-header ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> <div class="expand-body ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getBody")(get("item"), get("$index"))) + ` </div> </div> </div>`
 }
-$t.functions['724182799'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("partName")) + `</label> <input type='checkbox' ` + (get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'parts-cnt\' > <label>{{part.partCode}}</label> <input type=\'checkbox\'> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['926106335'] = function (get) {
-	return `<div class='parts-cnt indent' > <label>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
 $t.functions['990870856'] = function (get) {
 	return `<div class='inline' > <h3>` + (get("assem").objId) + `</h3> <div> ` + (get("getFeatureDisplay")(get("assem"))) + ` </div> </div>`
 }
-$t.functions['1081669070'] = function (get) {
-	return `<div class='model-label indent' ` + (get("partList").length > 1 ? "" : "hidden") + `> <label type='part-code'>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
-$t.functions['1119067572'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("partName")) + `</label> <input type='checkbox' ` + (get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'parts-cnt\' > <label>{{part.partCode}}</label> <input type=\'checkbox\' {{tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['1384532325'] = function (get) {
-	return `<div class='parts-cnt indent' ` + (get("partList").length > 1 ? "" : "hidden") + `> <label class='model-label'>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
-$t.functions['1422500700'] = function (get) {
-	return `<div class='parts-cnt' > <label class='model-label'>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'parts-cnt indent\' {{partList.length > 1 ? "" : "hidden"}}> <label class=\'model-label\'>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['1422724479'] = function (get) {
-	return `<div ` + (get("key") === 'parts' ? 'hidden' : '') + `> <div class='model-selector'> <label>` + (get("label")) + `</label> <input type='checkbox'> ` + (new $t('./public/html/planks/model-controller.html').render(get('scope'), 'groups in group.groups', get)) + ` </div> </div>`
-}
-$t.functions['1589183910'] = function (get) {
-	return `<div class='model-label' > <label type='part-name'>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'model-label indent\' {{partList.length > 1 ? "" : "hidden"}}> <label type=\'part-code\'>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['1781068332'] = function (get) {
-	return `<div class='model-label' > <label type='part-name'>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\' {{partList.length > 1 ? "" : "hidden"}}> <label type=\'part-code\'>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['1893552188'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("part").partCode) + `</label> <input type='checkbox' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
-$t.functions['2037324406'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("partName")) + `</label> <input type='checkbox' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'parts-cnt\' > <label>{{part.partCode}}</label> <input type=\'checkbox\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['2097782397'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
-$t.functions['2141531264'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'parts-cnt indent\' {{partList.length > 1 ? "" : "hidden"}}> <label>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
 $t.functions['./public/html/planks/cabinet-body.html'] = function (get) {
-	return `<div> <div class='cabinet-header'> <label>Reveal:</label> <div class='cabinet-dem-cnt'> <label>Top:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("trv")) + `'> <label>Bottom:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("brv")) + `'> <label>Left:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("lrv")) + `'> <label>Right:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("rrv")) + `'> </div> </div> <br> <div class='cabinet-header'> <label>Toe Kick Height:</label> <div class='cabinet-dem-cnt'> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.trv' value='` + (get("cabinet").value("tkh")) + `'> </div> </div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> </div> <input type="radio" name="frame-type-` + (get("cabinet").id) + `" value='framed' checked id='cabinet-framed-radio-` + (get("cabinet").id) + `'> <label for='cabinet-framed-radio-` + (get("cabinet").id) + `'>Framed</label> <input type="radio" name="frame-type-` + (get("cabinet").id) + `" id='cabinet-frameless-radio-` + (get("cabinet").id) + `' value='frameless'> <label for='cabinet-frameless-radio-` + (get("cabinet").id) + `'>Frameless</label> <div class='right'> <select class="show-right-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> <label>Show Right</label> </div> </div> <div>` + (get("OpenSectionDisplay").html(get("cabinet").opening)) + `</div> </div> `
+	return `<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> </div> <div class='right'> <select class="show-right-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> <label>Show Right</label> </div> </div> <br> <div>` + (get("OpenSectionDisplay").html(get("cabinet").opening)) + `</div> </div> `
 }
 $t.functions['-970877277'] = function (get) {
 	return `<option >` + (get("showType").name) + `</option>`
@@ -96,20 +33,29 @@ $t.functions['./public/html/planks/expandable-pill.html'] = function (get) {
 $t.functions['-520175802'] = function (get) {
 	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> </div> <div class="expand-header ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> </div> </div>`
 }
-$t.functions['./public/html/planks/features.html'] = function (get) {
-	return `<div class='tab'> ` + (new $t('<div > <label>{{feature.name}}</label> <input type=\'checkbox\' name=\'{{id + \'-checkbox\'}}\' {{feature.isCheckbox() ? \'\': \'hidden\'}}> <input type=\'text\' name=\'{{id + \'-input\'}}\' {{feature.showInput() ? \'\' : \'hidden\'}}> <input class=\'feature-radio\' type=\'radio\' name=\'{{id}}\' value=\'{{feature.id}}\' {{!feature.isRadio() ? "hidden disabled" : ""}}> <div {{!feature.isRadio() ? \'\' : \'hidden\'}}> <input type=\'text\' placeholder="Unique Notes" {{!feature.isRadio() ? "hidden disabled" : ""}}> {{new $t(\'./public/html/planks/features.html\').render({features: get(\'feature.features\'), id: get(\'id\') + \'.\' + get(\'feature.id\')})}} </div> </div>').render(get('scope'), 'feature in features', get)) + ` </div> `
-}
-$t.functions['-344212861'] = function (get) {
-	return `<div > <label>` + (get("feature").name) + `</label> <input type='checkbox' name='` + (get("id") + '-checkbox') + `' ` + (get("feature").isCheckbox() ? '': 'hidden') + `> <input type='text' name='` + (get("id") + '-input') + `' ` + (get("feature").showInput() ? '' : 'hidden') + `> <input class='feature-radio' type='radio' name='` + (get("id")) + `' value='` + (get("feature").id) + `' ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> <div ` + (!get("feature").isRadio() ? '' : 'hidden') + `> <input type='text' placeholder="Unique Notes" ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> ` + (new $t('./public/html/planks/features.html').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})) + ` </div> </div>`
-}
 $t.functions['./public/html/planks/expandable-sidebar.html'] = function (get) {
 	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> <div class="expand-list-cnt ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <div class=\'expand-rm-btn-cnt\'> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> </div> <div class="expand-header {{type}} {{$index === activeIndex ? \' active\' : \'\'}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> <div> </div> <div class="expand-body ` + (get("type")) + `"> Hello World! </div> </div> `
 }
 $t.functions['./public/html/planks/model-controller.html'] = function (get) {
 	return `<div> <div class='model-selector'> <div> <div class='` + (get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") + ` ` + (get("label") ? "prefix-switch model-label" : "") + `' ` + (!get("label") ? 'hidden' : '') + `> <label type='prefix'>` + (get("label")) + `</label> <input type='checkbox' class='prefix-checkbox' prefix='` + (get("group").prefix) + `' ` + (!get("tdm").hidePrefix(get("label")) ? 'checked' : '') + `> </div> <div class='` + (get("label") ? "prefix-body indent" : "") + `'> ` + (new $t('<div class=\'model-label{{tdm.isTarget("part-name", partName) ? " active" : ""}}\' > <label type=\'part-name\'>{{partName}}</label> <input type=\'checkbox\' class=\'part-name-checkbox\' part-name=\'{{partName}}\' {{!tdm.hidePartName(partName) ? \'checked\' : \'\'}}> {{new $t(\'<div class=\\\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\\\'  {{partList.length > 1 ? "" : "hidden"}}> <label type=\\\'part-code\\\'>{{part.partCode}}</label> <input type=\\\'checkbox\\\' class=\\\'part-code-checkbox\\\' part-code=\\\'{{part.partCode}}\\\' {{!tdm.hidePartCode(part.partCode) ? \\\'checked\\\' : \\\'\\\'}}> </div>\').render(get(\'scope\'), \'part in partList\', get)}} </div>').render(get('scope'), 'partName, partList in group.parts', get)) + ` ` + (new $t('./public/html/planks/model-controller.html').render(get('scope'), 'label, group in group.groups', get)) + ` </div> </div> </div> </div> `
 }
+$t.functions['-1397238508'] = function (get) {
+	return `<div class='` + (get("tdm").isTarget("part-code", get("part").partCode) ? "active " : "") + ` model-label indent' ` + (get("partList").length > 1 ? "" : "hidden") + `> <label type='part-code'>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
+}
+$t.functions['-443173449'] = function (get) {
+	return `<div class='model-label` + (get("tdm").isTarget("part-name", get("partName")) ? " active" : "") + `' > <label type='part-name'>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\' {{partList.length > 1 ? "" : "hidden"}}> <label type=\'part-code\'>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
+}
 $t.functions['-1649592998'] = function (get) {
 	return `./public/html/planks/model-controller.html`
+}
+$t.functions['./public/html/planks/opening-list-body.html'] = function (get) {
+	return `<h2>` + (get("list").activeIndex()) + `</h2> val: ` + (get("list").value()('selected')) + ` `
+}
+$t.functions['./public/html/planks/features.html'] = function (get) {
+	return `<div class='tab'> ` + (new $t('<div > <label>{{feature.name}}</label> <input type=\'checkbox\' name=\'{{id + \'-checkbox\'}}\' {{feature.isCheckbox() ? \'\': \'hidden\'}}> <input type=\'text\' name=\'{{id + \'-input\'}}\' {{feature.showInput() ? \'\' : \'hidden\'}}> <input class=\'feature-radio\' type=\'radio\' name=\'{{id}}\' value=\'{{feature.id}}\' {{!feature.isRadio() ? "hidden disabled" : ""}}> <div {{!feature.isRadio() ? \'\' : \'hidden\'}}> <input type=\'text\' placeholder="Unique Notes" {{!feature.isRadio() ? "hidden disabled" : ""}}> {{new $t(\'./public/html/planks/features.html\').render({features: get(\'feature.features\'), id: get(\'id\') + \'.\' + get(\'feature.id\')})}} </div> </div>').render(get('scope'), 'feature in features', get)) + ` </div> `
+}
+$t.functions['-344212861'] = function (get) {
+	return `<div > <label>` + (get("feature").name) + `</label> <input type='checkbox' name='` + (get("id") + '-checkbox') + `' ` + (get("feature").isCheckbox() ? '': 'hidden') + `> <input type='text' name='` + (get("id") + '-input') + `' ` + (get("feature").showInput() ? '' : 'hidden') + `> <input class='feature-radio' type='radio' name='` + (get("id")) + `' value='` + (get("feature").id) + `' ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> <div ` + (!get("feature").isRadio() ? '' : 'hidden') + `> <input type='text' placeholder="Unique Notes" ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> ` + (new $t('./public/html/planks/features.html').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})) + ` </div> </div>`
 }
 $t.functions['./public/html/planks/opening-list-head.html'] = function (get) {
 	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.constructor.name}}\' {{opening.constructorId === section.constructorId ? \'selected\' : \'\'}}> {{section.name}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
@@ -120,11 +66,20 @@ $t.functions['-412627865'] = function (get) {
 $t.functions['./public/html/planks/opening.html'] = function (get) {
 	return `<div class='opening-cnt' opening-id='` + (get("opening").uniqueId) + `'> <div class='divider-controls'> </div> </div> <div id='` + (get("openDispId")) + `'> </div> `
 }
+$t.functions['./public/html/planks/room-body.html'] = function (get) {
+	return `<div> <select> ` + (new $t('<option >{{type}}</option>').render(get('scope'), 'type in propertyTypes', get)) + ` </select> <div class='cabinet-cnt' room-id='` + (get("room").id) + `'></div> </div> `
+}
+$t.functions['-1674837651'] = function (get) {
+	return `<option >` + (get("type")) + `</option>`
+}
+$t.functions['./public/html/planks/room-head.html'] = function (get) {
+	return `<b>` + (get("$index")) + `</b> `
+}
+$t.functions['./public/html/planks/order.html'] = function (get) {
+	return `<div> <label>Order Name</label> <input type='text'> <div id='room-pills'></div> </div> `
+}
 $t.functions['./public/html/planks/sections/divider.html'] = function (get) {
 	return `<h2>Divider: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
-}
-$t.functions['./public/html/planks/opening-list-body.html'] = function (get) {
-	return `<h2>` + (get("list").activeIndex()) + `</h2> val: ` + (get("list").value()('selected')) + ` `
 }
 $t.functions['./public/html/planks/sections/door.html'] = function (get) {
 	return `<h2>DoorSection(` + (get("list").activeIndex()) + `):</h2> <br><br> <div> ` + (new $t('<div class=\'inline\' > <h3>{{assem.objId}}</h3> <div> {{getFeatureDisplay(assem)}} </div> </div>').render(get('scope'), 'assem in assemblies', get)) + ` </div> `
@@ -140,52 +95,4 @@ $t.functions['./public/html/planks/sections/false-front.html'] = function (get) 
 }
 $t.functions['./public/html/planks/sections/open.html'] = function (get) {
 	return `<h2>Open: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
-}
-$t.functions['-1299172580'] = function (get) {
-	return `<div > <div class='model-selector'> <label>` + (get("label")) + `</label> <input type='checkbox'> ` + (new $t('./public/html/planks/model-controller.html').render(get('scope'), 'groups in group.groups', get)) + ` </div> </div>`
-}
-$t.functions['-1401975002'] = function (get) {
-	return `<div > <div class='model-selector'> <label>` + (get("label")) + `</label> <input type='checkbox'> ` + (new $t('./public/html/planks/model-controller.html').render(get('scope'), 'label, groups in group', get)) + ` </div> </div>`
-}
-$t.functions['-1844800237'] = function (get) {
-	return `<div > <div class='model-selector'> <label>` + (get("label")) + `</label> ` + (get("group")) + ` <input type='checkbox'> ` + (new $t('./public/html/planks/model-controller.html').render(get('scope'), 'label, groups in group.groups', get)) + ` </div> </div>`
-}
-$t.functions['-23057891'] = function (get) {
-	return `<div > <div class='model-selector'> <label>` + (get("label")) + `</label> ` + (get("group")) + ` <input type='checkbox'> ` + (new $t('./public/html/planks/model-controller.html').render(get('scope'), 'groups in group.groups', get)) + ` </div> </div>`
-}
-$t.functions['-2014447757'] = function (get) {
-	return `<div > <div class='model-selector'> <label>` + (get("label")) + `</label> ` + (get("group").groups) + ` <input type='checkbox'> ` + (new $t('./public/html/planks/model-controller.html').render(get('scope'), 'groups in group.groups', get)) + ` </div> </div>`
-}
-$t.functions['-849436768'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("part").partName) + `</label> <input type='checkbox'> </div>`
-}
-$t.functions['-1038671234'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("part").partCode) + `</label> <input type='checkbox'> </div>`
-}
-$t.functions['-498724957'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("part").partCode) + `</label> <input type='checkbox' ` + (get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
-$t.functions['-423881740'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'parts-cnt\' > <label>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['-880058661'] = function (get) {
-	return `<div class='parts-cnt' > <label>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'parts-cnt indent\' > <label>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['-791231188'] = function (get) {
-	return `<div class='parts-cnt indent' ` + (get("partList").length > 1 ? "" : "hidden") + `> <label>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
-$t.functions['-371517120'] = function (get) {
-	return `<div class='model-label indent' ` + (get("partList").length > 1 ? "" : "hidden") + `> <label>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
-$t.functions['-370406592'] = function (get) {
-	return `<div class='model-label' > <label>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'model-label indent\' {{partList.length > 1 ? "" : "hidden"}}> <label>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['-1397238508'] = function (get) {
-	return `<div class='` + (get("tdm").isTarget("part-code", get("part").partCode) ? "active " : "") + ` model-label indent' ` + (get("partList").length > 1 ? "" : "hidden") + `> <label type='part-code'>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
-}
-$t.functions['-309728481'] = function (get) {
-	return `<div class='model-label` + (get("tdm").isTarget("part-name", get("partName")) ? "active" : "") + `' > <label type='part-name'>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\' {{partList.length > 1 ? "" : "hidden"}}> <label type=\'part-code\'>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
-}
-$t.functions['-443173449'] = function (get) {
-	return `<div class='model-label` + (get("tdm").isTarget("part-name", get("partName")) ? " active" : "") + `' > <label type='part-name'>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\' {{partList.length > 1 ? "" : "hidden"}}> <label type=\'part-code\'>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
 }

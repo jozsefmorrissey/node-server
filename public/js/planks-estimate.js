@@ -10,7 +10,7 @@ function randomString(len) {
   return str.substr(0, len);
 }
 
-const CONSTANTS = {
+const DEFAULT_PROPS = {
   pwt34: {name: 'Plywood 3/4 Thickness', value: 25/32},
   pwt12: {name: 'Plywood 1/2 Thickness', value: 1/2},
   pwt14: {name: 'Plywood 1/4 Thickness', value: 1/4},
@@ -29,11 +29,44 @@ const CONSTANTS = {
   brv: {name: 'Bottom Reveal', value: 1/4},
   lrv: {name: 'Left Reveal', value: 1/2},
   rrv: {name: 'Right Reveal', value: 1/2},
-  fs: {name: 'Face Spacing??', value: 1/8},
-  is: {name: 'Inset Spacing??', value: 1/16},
+  fs: {name: 'Face Spacing', value: 1/8},
+  is: {name: 'Inset Spacing', value: 1/16},
   vffs: {name: 'Vertical First Front Size', value: 5.5},
+};
+
+function properties(name, values) {
+  if (values === undefined)
+    return JSON.parse(JSON.stringify(properties.list[name]));
+
+  const props = JSON.parse(JSON.stringify(DEFAULT_PROPS));
+  const overwrites = JSON.parse(JSON.stringify(values));
+  if (name !== undefined) properties.list[name] = props;
+  Object.keys(overwrites).forEach((key) => props[key] = overwrites[key]);
 
 }
+properties.list = {};
+
+
+properties('Half Overlay', {});
+const CONSTANTS = properties('Half Overlay');
+
+properties('Full Overlay', {
+  trv: {name: 'Top Reveal', value: 1/16},
+  brv: {name: 'Bottom Reveal', value: 1/16},
+  lrv: {name: 'Left Reveal', value: 1/16},
+  rrv: {name: 'Right Reveal', value: 1/16},
+  fs: {name: 'Face Spacing', value: 1/16},
+  vffs: {name: 'Vertical First Front Size', value: 5.5},
+});
+
+properties('Inset', {
+  trv: {name: 'Top Reveal', value: -1/16},
+  brv: {name: 'Bottom Reveal', value: -1/16},
+  lrv: {name: 'Left Reveal', value: -1/16},
+  rrv: {name: 'Right Reveal', value: -1/16},
+  fs: {name: 'Face Spacing', value: -1/16},
+  vffs: {name: 'Vertical First Front Size', value: 5.5},
+});
 
 function getValue(code, obj) {
   if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
@@ -437,6 +470,11 @@ class Assembly {
     this.part = true;
     this.included = true;
     this.parentAssembly = parent;
+    let propId = 'Full Overlay';
+    this.propertyId = (id) => {
+      if (id === undefined) return propId;
+      propId = id;
+    }
     let instance = this;
     funcOvalue.apply(this, ['centerStr', centerStr, 'demensionStr',  demensionStr, 'rotationStr', rotationStr]);
 
@@ -517,12 +555,16 @@ class Assembly {
         } else {
           const instVal = this.values[code];
           if (instVal !== undefined && instVal !== null) {
-            return sme.eval(instVal);
+            if ((typeof instVal) === 'number' || (typeof instVal) === 'string') {
+              return sme.eval(instVal);
+            } else {
+              return instVal;
+            }
           }
           if (this.parentAssembly) return this.parentAssembly.value(code);
           else {
             try {
-              return CONSTANTS[code].value;
+              return properties(propId)[code].value;
             } catch (e) {
               console.error(`Failed to resolve code: ${code}`);
               return NaN;
@@ -561,9 +603,11 @@ class Assembly {
       }
     }
 
+    this.children = () => Object.values(this.subAssemblies);
+
     this.getSubAssemblies = () => {
       let assemblies = [];
-      Object.values(this.subAssemblies).forEach((assem) => {
+      this.children().forEach((assem) => {
         assemblies.push(assem);
         assemblies = assemblies.concat(assem.getSubAssemblies());
       });
@@ -576,6 +620,24 @@ class Assembly {
     if (Assembly.idCounters[this.objId] === undefined) {
       Assembly.idCounters[this.objId] = 0;
     }
+    this.toJson = function (json) {
+      json = json || {};
+      json.type = this.constructor.name;
+      if (this.important) {
+        this.important.forEach((attr) =>
+            json[attr] = (typeof this.attr) === 'function' ? this.attr() : this.attr);
+
+        json.length = this.length();
+        json.width = this.width();
+        json.thickness = this.thickness();
+      }
+      json.values = JSON.parse(JSON.stringify(this.values));
+      json.subAssemblies = [];
+      const subAssems = this.children();
+      subAssems.forEach((assem) => json.subAssemblies.push(assem.toJson()));
+      return json;
+    }
+
     Assembly.add(this);
 
     this.width = (value) => position.setDemension('x', value);
@@ -616,6 +678,7 @@ Assembly.resolveAttr = (assembly, attr) => {
 }
 Assembly.lists = {};
 Assembly.idCounters = {};
+
 
 class Section extends Assembly {
   constructor(templatePath, isPartition, partCode, partName, sectionProperties) {
@@ -825,7 +888,7 @@ class DrawerFront extends Assembly {
       return dems;
     };
 
-    this.getSubAssemblies = () => this.updatePulls();
+    this.children = () => this.updatePulls();
 
     this.updatePulls = (dems, count) => {
       count = count || pullCount(this.demensionStr());
@@ -862,17 +925,10 @@ class OpeningCoverSection extends SpaceSection {
     super(filePath, partCode, partName, divideProps);
 
     const instance = this;
-    const parentGetSubAssemblies = this.getSubAssemblies;
-    this.getSubAssemblies = () => {
-      let assemblies = parentGetSubAssemblies().concat(this.sections);
-      this.sections.forEach((assem) => assemblies = assemblies.concat(assem.getSubAssemblies()));
-      return assemblies;
-    }
+
     pullType = pullType || PULL_TYPE.DOOR;
     let pulls = [];
 
-    this.getSubAssemblies = () =>
-        parentGetSubAssemblies().concat(pulls);
     this.setPullType = (pt) => pullType = pt;
     if (divideProps === undefined) return;
 
@@ -1377,30 +1433,27 @@ class DivideSection extends SpaceSection {
     super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties, parent);
     this.setParentAssembly(parent);
     dvs = dvs || this;
-    this.vertical = true;
+    this.vertical = (is) => this.value('vertical', is);
+    this.vertical(true);
     this.sections = [];
-    this.vPattern = {name: 'Equal'};
-    this.hPattern = {name: 'Equal'};
+    this.value('vPattern', {name: 'Equal'});
+    this.value('hPattern', {name: 'Equal'});
     this.pattern = (name, index, value) => {
-      if (name === undefined) return this.vertical ? this.vPattern : this.hPattern;
-      if (this.vertical) this.vPattern = {name, index, value};
-      else this.hPattern = {name, index, value};
+      if (name === undefined) return this.vertical() ? this.value('vPattern') : this.value('hPattern');
+      if (this.vertical()) this.value('vPattern', {name, index, value});
+      else this.value('hPattern', {name, index, value});
     }
     this.measurments = [];
     this.dividerCount = () => (this.sections.length - 1) / 2
-    this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical;
+    this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
     this.sectionProperties = () => JSON.stringify(sectionProperties);
     this.init = () => {
       if (this.sections.length === 0) {
         this.sections.push(new DivideSection(this.borders(0), this));
       }
     }
-    const parentGetSubAssemblies = this.getSubAssemblies;
-    this.getSubAssemblies = () => {
-      let assemblies = parentGetSubAssemblies().concat(this.sections);
-      this.sections.forEach((assem) => assemblies = assemblies.concat(assem.getSubAssemblies()));
-      return assemblies;
-    }
+
+    this.children = () => this.sections;
     this.borders = (index) => {
       return () => {
         const props = sectionProperties();
@@ -1409,7 +1462,7 @@ class DivideSection extends SpaceSection {
         let bottom = props.borders.bottom;
         let left = props.borders.left;
         let right = props.borders.right;
-        if (this.vertical) {
+        if (this.vertical()) {
           if (index !== 0) {
             right = this.sections[index - 1];
           } if (index !== this.sections.length - 1) {
@@ -1436,7 +1489,7 @@ class DivideSection extends SpaceSection {
         const innerSize = this.innerSize();
         let center = this.center();
         let dividerLength;
-        if (this.vertical) {
+        if (this.vertical()) {
           let start = sectionProperties().borders.right.position().center('x');
           start += sectionProperties().borders.right.position().limits('+x');
           center.x = start + offset;
@@ -1447,7 +1500,7 @@ class DivideSection extends SpaceSection {
           center.y = start - offset;
           dividerLength = innerSize.x;
         }
-        const rotationFunc = () =>  this.vertical ? '' : 'z';
+        const rotationFunc = () =>  this.vertical() ? '' : 'z';
 
         return {center, dividerLength, rotationFunc};
       }
@@ -1461,7 +1514,7 @@ class DivideSection extends SpaceSection {
 
       const config = this.pattern();
       const props = sectionProperties();
-      const distance = this.vertical ? this.outerSize().x : this.outerSize().y;
+      const distance = this.vertical() ? this.outerSize().x : this.outerSize().y;
       const count = this.dividerCount() + 1;
       const answer = pattern.resolution(distance, config.index, config.value, count);
       config.fill = answer.fill;
@@ -1469,6 +1522,8 @@ class DivideSection extends SpaceSection {
     }
     this.divide = (dividerCount) => {
       if (!Number.isNaN(dividerCount)) {
+        dividerCount = dividerCount > 10 ? 10 : dividerCount;
+        dividerCount = dividerCount < 0 ? 0 : dividerCount;
         const currDividerCount = this.dividerCount();
         if (dividerCount < currDividerCount) {
           const diff = currDividerCount - dividerCount;
@@ -1509,8 +1564,10 @@ const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
 const framedFrameWidth = 1.5;
 const framelessFrameWidth = 3/4;
 class Cabinet extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  constructor(partCode, partName, propsId) {
+    super(partCode, partName);
+    this.propertyId(propsId);
+    this.important = ['length', 'width', 'thickness', 'propertyId'];
     const instance = this;
     let frameWidth = framedFrameWidth;
     let toeKickHeight = 4;
@@ -1541,13 +1598,13 @@ class Cabinet extends Assembly {
     }
 
     this.value('brh', 'tkb.w + pb.t + brr - br.w', true);
-    this.value('stl', '(frorl + pl.t)', true);
-    this.value('str', '(frorr + pr.t)', true);
+    this.value('stl', '(frorl + pr.t)', true);
+    this.value('str', '(frorr + pl.t)', true);
     this.value('st', '(str + stl)', true);
     this.addSubAssemblies(
 
                           new Panel('tkb', 'Panel.Toe.Kick.Backer',
-                            'pl.t + frorl + (l / 2), w / 2, tkd + (t / 2)',
+                            'pr.t + frorl + (l / 2), w / 2, tkd + (t / 2)',
                             'tkh, c.w - st, tkbw',
                             'z'),
 
@@ -1574,11 +1631,11 @@ class Cabinet extends Assembly {
 
 
 
-                          new Panel('pl', 'Panel.Right',
+                          new Panel('pr', 'Panel.Right',
                             'c.w - frorl - (t / 2),l / 2,(w / 2) + lr.t',
                             'c.t - lr.t,c.l,pwt34',
                             'y'),
-                          new Panel('pr', 'Panel.Left',
+                          new Panel('pl', 'Panel.Left',
                             'frorr + (t / 2), l / 2, (w/2) + rr.t',
                             'c.t - lr.t,c.l,pwt34',
                             'y'),
@@ -1596,18 +1653,18 @@ class Cabinet extends Assembly {
                             'yx'));
 
 
-    this.addJoints(new Rabbet('pb->pr', 3/8, 'y', '-x'),
-                      new Rabbet('pb->pl', 3/8),
+    this.addJoints(new Rabbet('pb->pl', 3/8, 'y', '-x'),
+                      new Rabbet('pb->pr', 3/8, 'y', '+x'),
                       new Butt('pb->pbt'),
 
-                      new Dado('tkb->pr', 3/8, 'y', '-x'),
-                      new Dado('pr->rr', 3/8, 'x', '-z'),
+                      new Dado('tkb->pl', 3/8, 'y', '-x'),
+                      new Dado('pl->rr', 3/8, 'x', '-z'),
 
-                      new Dado('tkb->pl', 3/8, 'y', '+x'),
-                      new Dado('pl->lr', 3/8, 'x', '-z'),
+                      new Dado('tkb->pr', 3/8, 'y', '+x'),
+                      new Dado('pr->lr', 3/8, 'x', '-z'),
 
-                      new Dado('pbt->pr', 3/8, 'y', '-x'),
-                      new Dado('pbt->pl', 3/8, 'y', '+x'),
+                      new Dado('pbt->pl', 3/8, 'y', '-x'),
+                      new Dado('pbt->pr', 3/8, 'y', '+x'),
 
                       new Dado('pbt->br', 3/8),
                       new Dado('pbt->rr', 3/8),
@@ -1911,7 +1968,7 @@ matchRun('click', '#max-min-btn', (target) => {
   const clean = className.replace(new RegExp(stateReg, 'g'), '').trim();
   if (state[2] === 'small') {
     target.parentElement.className = `${clean} large`;
-    const cabinet = cabinetDisplay.active();
+    const cabinet = roomDisplay.cabinet();
     if (cabinet) {
       const grouping = groupParts(cabinet);
       grouping.tdm = ThreeDModel.get(cabinet);
@@ -1955,7 +2012,7 @@ matchRun('click', '.model-label', (target) => {
   let type = label.getAttribute('type');
   let value = type !== 'prefix' ? label.innerText :
         label.nextElementSibling.getAttribute('prefix');
-  const cabinet = cabinetDisplay.active();
+  const cabinet = roomDisplay.cabinet();
   const tdm = ThreeDModel.get(cabinet);
   tdm.inclusiveTarget(type, has ? undefined : value);
   tdm.render();
@@ -1971,19 +2028,19 @@ matchRun('click', '.prefix-switch', (target, event) => {
 });
 
 matchRun('change', '.prefix-checkbox', (target) => {
-  const cabinet = cabinetDisplay.active();
+  const cabinet = roomDisplay.cabinet();
   const attr = target.getAttribute('prefix');
   ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
 });
 
 matchRun('change', '.part-name-checkbox', (target) => {
-  const cabinet = cabinetDisplay.active();
+  const cabinet = roomDisplay.cabinet();
   const attr = target.getAttribute('part-name');
   ThreeDModel.get(cabinet).hidePartName(attr, !target.checked);
 });
 
 matchRun('change', '.part-code-checkbox', (target) => {
-  const cabinet = cabinetDisplay.active();
+  const cabinet = roomDisplay.cabinet();
   const attr = target.getAttribute('part-code');
   ThreeDModel.get(cabinet).hidePartCode(attr, !target.checked);
 })
@@ -2167,7 +2224,9 @@ class ExpandableList {
       }
     };
     this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
+    this.active = () => props.list[this.activeIndex()];
     this.value = (index) => (key, value) => {
+      if (props.activeIndex === undefined) props.activeIndex = 0;
       if (index === undefined) index = props.activeIndex;
       if (storage[index] === undefined) storage[index] = {};
       if (value === undefined) return storage[index][key];
@@ -2354,7 +2413,7 @@ OpenSectionDisplay.onOrientation = (target) => {
   const openId = target.getAttribute('open-id');
   const value = target.value;
   const opening = OpenSectionDisplay.sections[openId];
-  opening.vertical =  value === 'vertical';
+  opening.vertical(value === 'vertical');
   OpenSectionDisplay.refresh(opening);
 };
 
@@ -2371,26 +2430,86 @@ matchRun('click', '.division-count-input', OpenSectionDisplay.onChange);
 matchRun('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
 matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
 
+class Order {
+  constructor(name) {
+    this.name = name;
+    this.rooms = []
+    this.toJson = () => {
+      const json = {name, rooms: []};
+      this.rooms.forEach((room) => json.rooms.push(room.toJson()));
+      return json;
+    }
+  }
+}
+
+class Room {
+  constructor(name) {
+    this.name = name || `Room ${Room.count++}`;
+    this.id = randomString(32);
+    this.cabinets = [];
+    this.toJson = () => {
+      const json = {name: this.name, id: this.id, cabinets: []};
+      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
+      return json;
+    };
+  }
+};
+Room.count = 0;
+
+class RoomDisplay {
+  constructor(parentSelector, rooms) {
+    const cabinetDisplays = {};
+    const getHeader = (room, $index) =>
+        RoomDisplay.headTemplate.render({room, $index});
+
+    const getBody = (room, $index) => {
+      let propertyTypes = Object.keys(properties.list);
+      setTimeout(this.cabinetDisplay().refresh, 100);
+      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
+    }
+    const getObject = () => {
+      const room = new Room();
+      cabinetDisplays[room.id] = new CabinetDisplay(room);
+      return room;
+    }
+    this.active = () => expandList.active();
+    this.cabinetDisplay = () => cabinetDisplays[this.active().id];
+    this.cabinet = () => this.cabinetDisplay().active();
+    const expListProps = {
+      list: rooms,
+      parentSelector, getHeader, getBody, getObject,
+      listElemLable: 'Room', type: 'pill'
+    };
+    const expandList = new ExpandableList(expListProps);
+  }
+}
+RoomDisplay.bodyTemplate = new $t('./public/html/planks/room-body.html');
+RoomDisplay.headTemplate = new $t('./public/html/planks/room-head.html');
+
 class CabinetDisplay {
-  constructor(parentSelector) {
-    let displayCabinetIndex;
+  constructor(room) {
+    const parentSelector = `[room-id="${room.id}"].cabinet-cnt`;
+    let propId = 'Half Overlay';
+    this.propId = (id) => {
+      if (id ===  undefined) return propId;
+      propId = id;
+    }
     const getHeader = (cabinet, $index) =>
         CabinetDisplay.headTemplate.render({cabinet, $index});
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
-      if (displayCabinetIndex !== $index) {
-        ThreeDModel.render(cabinet);
-        displayCabinetIndex = $index;
-      }
+      ThreeDModel.render(cabinet);
       return CabinetDisplay.bodyTemplate.render({$index, cabinet, showTypes, OpenSectionDisplay});
     }
-    const getObject = () => new Cabinet('c', 'Cabinet');
-    this.active = () => expListProps.list[displayCabinetIndex];
+    const getObject = () => new Cabinet('c', 'Cabinet', propId);
+    this.active = () => expandList.active();
     const expListProps = {
+      list: room.cabinets,
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Cabinet'
     };
-    new ExpandableList(expListProps);
+    const expandList = new ExpandableList(expListProps);
+    this.refresh = () => expandList.refresh();
     const valueUpdate = (path, value) => {
       const split = path.split('.');
       const index = split[0];
@@ -2610,10 +2729,12 @@ ThreeDModel.get = (assembly) => {
 }
 ThreeDModel.render = (part) => ThreeDModel.get(part).render();
 
-let cabinetDisplay;
+let roomDisplay;
+let order;
 
 window.onload = () => {
+  order = new Order();
+  roomDisplay = new RoomDisplay('#room-pills', order.rooms);
   const dummyText = (prefix) => (item, index) => `${prefix} ${index}`;
-  cabinetDisplay = new CabinetDisplay('#add-cabinet-cnt');
   ThreeDModel.init();
 };
