@@ -1,11 +1,30 @@
-<div:t repeat='label, group in groups'
-        {{key === 'parts' ? 'hidden' : ''}}>
+<div>
   <div class='model-selector'>
-    <label>{{label}}</label>
-    <input type='checkbox'>
-    <div repeat='groups in group.groups' $t-id='./public/html/planks/model-controller.html' {{key === 'parts' ? 'hidden' : ''}}>
-
-
+    <div>
+      <div class='{{tdm.isTarget("prefix", group.prefix) ? "active " : ""}}
+                  {{label ? "prefix-switch model-label" : ""}}'
+            {{!label ? 'hidden' : ''}}>
+        <label type='prefix'>{{label}}</label>
+        <input type='checkbox' class='prefix-checkbox' prefix='{{group.prefix}}'
+            {{!tdm.hidePrefix(label) ? 'checked' : ''}}>
+      </div>
+      <div class='{{label ? "prefix-body indent" : ""}}'>
+        <div:t class='model-label{{tdm.isTarget("part-name", partName) ? " active" : ""}}'
+                repeat='partName, partList in group.parts'>
+          <label type='part-name'>{{partName}}</label>
+          <input type='checkbox' class='part-name-checkbox' part-name='{{partName}}'
+              {{!tdm.hidePartName(partName) ? 'checked' : ''}}>
+          <div:t class='{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}}
+                        model-label indent'
+              repeat='part in partList'
+              {{partList.length > 1 ? "" : "hidden"}}>
+            <label type='part-code'>{{part.partCode}}</label>
+            <input type='checkbox' class='part-code-checkbox' part-code='{{part.partCode}}'
+                {{!tdm.hidePartCode(part.partCode) ? 'checked' : ''}}>
+          </div:t>
+        </div:t>
+        <div:t repeat='label, group in group.groups' $t-id='./public/html/planks/model-controller.html'></div:t>
+      </div>
     </div>
   </div>
-</div:t>
+</div>

@@ -1,7 +1,10 @@
 
+.model-label.active {
+  background-color: blue;
+}
+
 #model-controller {
   position: absolute;
-  left: 20px;
   top: 0;
   background-color: #ffffff94;
   z-index: 20;

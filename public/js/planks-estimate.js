@@ -279,7 +279,7 @@ class Position {
       const defSizes = getDefaultSize(assembly);
       demCoords = Position.parseCoordinates(assembly.demensionStr(),
       `${defSizes.width},${defSizes.length},${defSizes.thickness}`,
-      '0,0,0');;
+      '0,0,0');
       demension = (attr) => getSme(attr, demCoords);
     } else new Promise(function(resolve, reject) {
       demension = assembly.demensionStr
@@ -432,10 +432,11 @@ function funcOvalue () {
 }
 
 class Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
     this.display = true;
     this.part = true;
     this.included = true;
+    this.parentAssembly = parent;
     let instance = this;
     funcOvalue.apply(this, ['centerStr', centerStr, 'demensionStr',  demensionStr, 'rotationStr', rotationStr]);
 
@@ -476,8 +477,9 @@ class Assembly {
         return this.parentAssembly.getAssembly(partCode, this);
       return undefined;
     }
-    const position = new Position(this, sme);
+    let position = new Position(this, sme);
     this.position = () => position;
+    this.updatePosition = () => position = new Position(this, sme);
     this.partCode = partCode;
     this.partName = partName;
     this.joints = [];
@@ -533,6 +535,10 @@ class Assembly {
     }
 
     this.subAssemblies = {};
+    this.setSubAssemblies = (assemblies) => {
+      this.subAssemblies = {};
+      assemblies.forEach((assem) => this.subAssemblies[assem.partCode] = assem);
+    };
     this.setParentAssembly = (pa) => this.parentAssembly = pa;
     this.features = Feature.getList(formatConstructorId(this));
     this.addSubAssembly = (assembly) => {
@@ -694,50 +700,44 @@ Section.render = (opening, scope) => {
     d,e,f
     g,h,i
 */
-Pull.location.TOP_RIGHT = {rotate: true};
-Pull.location.TOP_LEFT = {rotate: true};
-Pull.location.BOTTOM_RIGHT = {rotate: true};
-Pull.location.BOTTOM_LEFT = {rotate: true};
-Pull.location.TOP = {multiple: true};
-Pull.location.BOTTOM = {multiple: true};
-Pull.location.RIGHT = {multiple: true};
-Pull.location.LEFT = {multiple: true};
-Pull.location.CENTER = {multiple: true, rotate: true};
 class Pull extends Assembly {
   constructor(partCode, partName, door, location, index, count) {
     super(partCode, 'Pull');
+    this.setParentAssembly(door);
 
     function offset(center, distance) {
       const spacing = distance / count;
       return center - (distance / 2) + spacing / 2 + spacing * (index);
     }
 
-    function demension() {
-      return {x: 1, y: 3, z: 1.5};
+
+    this.demensionStr = (attr) => {
+      const dems = {x: 1, y: 3, z: 1.5};
+      return attr ? dems[attr] : dems;
     }
 
-    this.pullCenter = (index, count) =>
-      (center) => {
+    const edgeOffset = 1;
+    this.centerStr = (attr) => {
         let center = door.position().center();
         let doorDems = door.position().demension();
-        let pullDems = demensions();
+        let pullDems = this.demensionStr();
         center.z -= (doorDems.z + pullDems.z) / 2;
         switch (location) {
           case Pull.location.TOP_RIGHT:
-          center.x = ;
-          center.y = ;
+            center.x = center.x + doorDems.x / 2 -  edgeOffset;
+            center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
 					break;
           case Pull.location.TOP_LEFT:
-          center.x = ;
-          center.y = ;
+          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+          center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
 					break;
           case Pull.location.BOTTOM_RIGHT:
-          center.x = ;
-          center.y = ;
+          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+          center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
 					break;
           case Pull.location.BOTTOM_LEFT:
-          center.x = ;
-          center.y = ;
+          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+          center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
 					break;
           case Pull.location.TOP:
             center.x = offset(center.x, doorDems.x);
@@ -748,12 +748,12 @@ class Pull extends Assembly {
             center.y += doorDems.y / 2;
 					break;
           case Pull.location.RIGHT:
-          center.x = ;
-          center.y = ;
+            center.y = offset(center.y, doorDems.y);
+            center.x += doorDems.x / 2;
 					break;
           case Pull.location.LEFT:
-          center.x = ;
-          center.y = ;
+            center.y = offset(center.y, doorDems.y);
+            center.x -= doorDems.x / 2;
 					break;
           case Pull.location.CENTER:
             center.x = offset(center.x, doorDems.x);
@@ -761,26 +761,31 @@ class Pull extends Assembly {
           default:
             throw new Error('Invalid pull location');
         }
+        return attr ? center[attr] : center;
     };
 
-    function center() {
-      const pos = door.position();
-      const center = pos.center();
-      const dems = pos.demension();
-      switch (expression) {
-        case expression:
-
-          break;
-        default:
-
-      }
-    }
+    this.updatePosition();
   }
 }
+Pull.location = {};
+Pull.location.TOP_RIGHT = {rotate: true};
+Pull.location.TOP_LEFT = {rotate: true};
+Pull.location.BOTTOM_RIGHT = {rotate: true};
+Pull.location.BOTTOM_LEFT = {rotate: true};
+Pull.location.TOP = {multiple: true};
+Pull.location.BOTTOM = {multiple: true};
+Pull.location.RIGHT = {multiple: true};
+Pull.location.LEFT = {multiple: true};
+Pull.location.CENTER = {multiple: true, rotate: true};
 
 class Door extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  constructor(partCode, partName, door, ) {
+    super(partCode, partName);
+    this.pull =
+
+    this.updatePull = () => {
+      pulls.push(new Pull(`dp`, 'Door.Pull', instance.doorPullCenter, instance.pullDems, 'z'));
+    }
   }
 }
 
@@ -803,8 +808,34 @@ class DrawerBox extends Assembly {
 }
 
 class DrawerFront extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
+    this.setParentAssembly(parent);
+    const instance = this;
+    let pulls;
+    if (demensionStr === undefined) return;
+
+    function pullCount(dems) {
+      if (dems.x < 30) return 1;
+      return 2;
+    }
+
+    this.demensionStr = (attr) => {
+      const dems = demensionStr();
+      return dems;
+    };
+
+    this.getSubAssemblies = () => this.updatePulls();
+
+    this.updatePulls = (dems, count) => {
+      count = count || pullCount(this.demensionStr());
+      pulls = [];
+      for (let index = 0; index < count; index += 1) {
+        pulls.push(new Pull(`${partCode}-dfp-${index}`, 'Drawer.Pull', this, Pull.location.CENTER, index, count));
+      }
+      return pulls;
+    };
+    this.updatePosition();
   }
 }
 
@@ -874,11 +905,6 @@ class OpeningCoverSection extends SpaceSection {
       return attr ? center[attr] : center;
     }
 
-    this.drawerPullCount = () => {
-      if (instance.coverDems().x < 30) return 1;
-      return 2;
-    }
-
     this.hingeSide = () => {
       const props = divideProps();
       return props.borders.right.partCode === 'rr' ? '+x' : '-x';
@@ -944,7 +970,6 @@ class OpeningCoverSection extends SpaceSection {
       return center;
     }
 
-    this.updatePulls();
   }
 }
 
@@ -1246,7 +1271,7 @@ class DrawerSection extends OpeningCoverSection {
     }
 
     this.addSubAssembly(new DrawerBox('db', 'Drawer.Box', drawerCenter, drawerDems));
-    this.addSubAssembly(new DrawerFront('df', 'Drawer.Front', this.coverCenter, this.coverDems));
+    this.addSubAssembly(new DrawerFront('df', 'Drawer.Front', this.coverCenter, this.coverDems, '', this));
   }
 }
 new DrawerSection();
@@ -1260,9 +1285,8 @@ Divider.count = 0;
 
 class DividerSection extends PartitionSection {
   constructor(partCode, sectionProperties, parent) {
-    super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties);
+    super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties, parent);
     if (sectionProperties === undefined) return;
-    this.parentAssembly = parent;
     const props = sectionProperties;
     const instance = this;
     this.position().center = (attr) => {
@@ -1325,7 +1349,7 @@ new DualDoorSection();
 class FalseFrontSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
     super(sectionFilePath('false-front'), partCode, 'False.Front.Section', divideProps, PULL_TYPE.DRAWER);
-    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems));
+    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems, '', this));
   }
 }
 new FalseFrontSection();
@@ -1350,10 +1374,10 @@ let dvs;
 
 class DivideSection extends SpaceSection {
   constructor(sectionProperties, parent) {
-    super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties);
+    super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties, parent);
+    this.setParentAssembly(parent);
     dvs = dvs || this;
     this.vertical = true;
-    this.parentAssembly = parent;
     this.sections = [];
     this.vPattern = {name: 'Equal'};
     this.hPattern = {name: 'Equal'};
@@ -1550,11 +1574,11 @@ class Cabinet extends Assembly {
 
 
 
-                          new Panel('pl', 'Panel.Left',
+                          new Panel('pl', 'Panel.Right',
                             'c.w - frorl - (t / 2),l / 2,(w / 2) + lr.t',
                             'c.t - lr.t,c.l,pwt34',
                             'y'),
-                          new Panel('pr', 'Panel.Right',
+                          new Panel('pr', 'Panel.Left',
                             'frorr + (t / 2), l / 2, (w/2) + rr.t',
                             'c.t - lr.t,c.l,pwt34',
                             'y'),
@@ -1572,18 +1596,18 @@ class Cabinet extends Assembly {
                             'yx'));
 
 
-    this.addJoints(new Rabbet('pb->pr', 3/8),
+    this.addJoints(new Rabbet('pb->pr', 3/8, 'y', '-x'),
                       new Rabbet('pb->pl', 3/8),
                       new Butt('pb->pbt'),
 
-                      new Rabbet('pr->tkb', 3/8),
+                      new Dado('tkb->pr', 3/8, 'y', '-x'),
                       new Dado('pr->rr', 3/8, 'x', '-z'),
 
-                      new Rabbet('pl->tkb', 3/8),
+                      new Dado('tkb->pl', 3/8, 'y', '+x'),
                       new Dado('pl->lr', 3/8, 'x', '-z'),
 
                       new Dado('pbt->pr', 3/8, 'y', '-x'),
-                      new Dado('pbt->pl', 3/8),
+                      new Dado('pbt->pl', 3/8, 'y', '+x'),
 
                       new Dado('pbt->br', 3/8),
                       new Dado('pbt->rr', 3/8),
@@ -1657,11 +1681,20 @@ class Dado extends Joint {
 }
 
 class Rabbet extends Joint {
-  constructor(joinStr, defaultDepth) {
+  constructor(joinStr, defaultDepth, axis, centerOffset) {
     super(joinStr);
     this.maleOffset = (assembly) => {
       return defaultDepth;
     }
+
+    if (axis === undefined) return;
+
+    this.updatePosition = (position) => {
+      const direction = centerOffset[0] === '-' ? -1 : 1;
+      const centerAxis = centerOffset[1];
+      position.demension[axis] += defaultDepth;
+      position.center[centerAxis] += defaultDepth/2 * direction;
+    };
   }
 }
 
@@ -1737,6 +1770,16 @@ function up(selector, node) {
       return up(selector, node.parentNode);
     }
   }
+}
+
+function upAll(selector, node) {
+  const elems = [];
+  let elem = node;
+  while(elem = up(selector, elem)) {
+    elems.push(elem);
+    elem = elem.parentElement;
+  }
+  return elems;
 }
 
 function down(selector, node) {
@@ -1833,19 +1876,28 @@ function matchRun(event, selector, func, target) {
   selectors[matchRunTargetId][event][selector].push(func);
 }
 
+function displayPart(part) {
+  return true;
+}
+
 function groupParts(cabinet) {
-  const grouping = {groups: {}, parts: []};
+  const grouping = {displayPart, group: {groups: {}, parts: {}}};
   const parts = cabinet.getParts();
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
     const namePieces = part.partName.split('.');
-    let currObj = grouping;
+    let currObj = grouping.group;
+    let prefix = '';
     for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
       const piece = namePieces[nIndex];
+      prefix += piece;
       if (currObj.groups[piece] === undefined) currObj.groups[piece] = {groups: {}, parts: []};
       currObj = currObj.groups[piece];
+      currObj.prefix = prefix;
+      prefix += '.'
     }
-    currObj.parts.push(part);
+    if (currObj.parts[part.partName] === undefined) currObj.parts[part.partName] = [];
+    currObj.parts[part.partName].push(part);
   }
   return grouping;
 }
@@ -1861,8 +1913,9 @@ matchRun('click', '#max-min-btn', (target) => {
     target.parentElement.className = `${clean} large`;
     const cabinet = cabinetDisplay.active();
     if (cabinet) {
-      const group = groupParts(cabinet);
-      controller.innerHTML = modelContTemplate.render({group});
+      const grouping = groupParts(cabinet);
+      grouping.tdm = ThreeDModel.get(cabinet);
+      controller.innerHTML = modelContTemplate.render(grouping);
     }
     controller.hidden = false;
   } else {
@@ -1871,9 +1924,74 @@ matchRun('click', '#max-min-btn', (target) => {
   }
 });
 
+function addClass(target, clazz) {
+  target.className += ` ${clazz}`;
+}
+
+function classReg(clazz) {
+  return new RegExp(`(^| )${clazz}( |$)`, 'g');
+}
+
+function removeClass(target, clazz) {
+  target.className = target.className.replace(classReg(clazz), '');
+}
+
+function hasClass(target, clazz) {
+  return target.className.match(classReg(clazz));
+}
+
+function toggleClass(target, clazz) {
+  if (hasClass(target, clazz)) removeClass(target, clazz);
+  else addClass(target, clazz);
+}
+
+matchRun('click', '.model-label', (target) => {
+  if (event.target.tagName === 'INPUT') return;
+  const has = hasClass(target, 'active');
+  document.querySelectorAll('.model-label')
+    .forEach((elem) => removeClass(elem, 'active'))
+  !has ? addClass(target, 'active') : removeClass(target, 'active');
+  let label = target.children[0]
+  let type = label.getAttribute('type');
+  let value = type !== 'prefix' ? label.innerText :
+        label.nextElementSibling.getAttribute('prefix');
+  const cabinet = cabinetDisplay.active();
+  const tdm = ThreeDModel.get(cabinet);
+  tdm.inclusiveTarget(type, has ? undefined : value);
+  tdm.render();
+});
+
+matchRun('click', '.prefix-switch', (target, event) => {
+  const eventTarg = event.target;
+  const active = upAll('.model-selector', target);
+  active.push(target.parentElement.parentElement);
+  const all = document.querySelectorAll('.prefix-body');
+  all.forEach((pb) => pb.hidden = true);
+  active.forEach((ms) => ms.children[0].children[1].hidden = false);
+});
+
+matchRun('change', '.prefix-checkbox', (target) => {
+  const cabinet = cabinetDisplay.active();
+  const attr = target.getAttribute('prefix');
+  ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
+});
+
+matchRun('change', '.part-name-checkbox', (target) => {
+  const cabinet = cabinetDisplay.active();
+  const attr = target.getAttribute('part-name');
+  ThreeDModel.get(cabinet).hidePartName(attr, !target.checked);
+});
+
+matchRun('change', '.part-code-checkbox', (target) => {
+  const cabinet = cabinetDisplay.active();
+  const attr = target.getAttribute('part-code');
+  ThreeDModel.get(cabinet).hidePartCode(attr, !target.checked);
+})
+
+
 function updateModel(part) {
   const cabinet = part.getAssembly('c');
-  new ThreeDModel(cabinet.getParts());
+  ThreeDModel.render(cabinet);
 }
 
 function updateDivisions (target) {
@@ -2227,7 +2345,7 @@ OpenSectionDisplay.onChange = (target) => {
   if (opening.divide(value)) {
     OpenSectionDisplay.refresh(opening);
     const cabinet = opening.getAssembly('c');
-    new ThreeDModel(cabinet.getParts());
+    ThreeDModel.render(cabinet);
     target.focus();
   }
 };
@@ -2261,7 +2379,7 @@ class CabinetDisplay {
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
       if (displayCabinetIndex !== $index) {
-        new ThreeDModel(cabinet.getParts());
+        ThreeDModel.render(cabinet);
         displayCabinetIndex = $index;
       }
       return CabinetDisplay.bodyTemplate.render({$index, cabinet, showTypes, OpenSectionDisplay});
@@ -2279,7 +2397,7 @@ class CabinetDisplay {
       const key = split[1];
       const cabinet = expListProps.list[index];
       cabinet.value(key, value);
-      new ThreeDModel(cabinet.getParts());
+      ThreeDModel.render(cabinet);
     }
 
     bindField('.cabinet-input', valueUpdate, REGEX.size)
@@ -2347,14 +2465,81 @@ function drawerBox(length, width, depth) {
 }
 
 class ThreeDModel {
-  constructor(assemblies) {
-    const call = ++ThreeDModel.call;
+  constructor(assembly) {
+    const hiddenPartCodes = {};
+    const hiddenPartNames = {};
+    const hiddenPrefixes = {};
+    const instance = this;
+    let hiddenPrefixReg;
+    let inclusiveTarget = {};
 
-    function debugColoring(part) {
+    this.isTarget = (type, value) => {
+      return inclusiveTarget.type === type && inclusiveTarget.value === value;
+    }
+    this.inclusiveTarget = function(type, value) {
+      let prefixReg;
+      if (type === 'prefix') prefixReg = new RegExp(`^${value}`)
+      inclusiveTarget = {type, value, prefixReg};
+    }
+
+    function inclusiveMatch(part) {
+      if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
+      switch (inclusiveTarget.type) {
+        case 'prefix':
+          return part.partName.match(inclusiveTarget.prefixReg) !== null;
+          break;
+        case 'part-name':
+          return part.partName === inclusiveTarget.value;
+        case 'part-code':
+          return part.partCode === inclusiveTarget.value;
+        default:
+          throw new Error('unknown inclusiveTarget type');
+      }
+    }
+
+    function manageHidden(object) {
+      return function (attr, value) {
+        if (value === undefined) return object[attr] === true;
+       object[attr] = value === true;
+       instance.render();
+      }
+    }
+
+    function buildHiddenPrefixReg() {
+      const list = [];
+      const keys = Object.keys(hiddenPrefixes);
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        if (hiddenPrefixes[key] === true) {
+          list.push(key);
+        }
+      }
+      hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
+    }
+
+    this.hidePartCode = manageHidden(hiddenPartCodes);
+    this.hidePartName = manageHidden(hiddenPartNames);
+    this.hidePrefix = manageHidden(hiddenPrefixes);
+
+    function hidden(part) {
+      const im = inclusiveMatch(part);
+      if (im !== null) return !im;
+      if (instance.hidePartCode(part.partCode)) return true;
+      if (instance.hidePartName(part.partName)) return true;
+      if (hiddenPrefixReg && part.partName.match(hiddenPrefixReg)) return true;
+      return false;
+    }
+
+    function coloring(part) {
       if (part.partName && part.partName.match(/.*Frame.*/)) return getColor('blue');
       else if (part.partName && part.partName.match(/.*Drawer.Box.*/)) return getColor('green');
       else if (part.partName && part.partName.match(/.*Pull.*/)) return getColor('silver');
       return getColor('red');
+    }
+
+    const randInt = (start, range) => start + Math.floor(Math.random() * range);
+    function debugColoring() {
+      return [randInt(0, 255),randInt(0, 255),randInt(0, 255)];
     }
 
     function getModel(assem) {
@@ -2375,28 +2560,30 @@ class ThreeDModel {
     }
 
 
-    function render() {
+    this.render = function () {
       const startTime = new Date().getTime();
-      if (ThreeDModel.call !== call) return;
+      buildHiddenPrefixReg();
       function buildObject(assem) {
         let a = getModel(assem);
         a.setColor(...debugColoring(assem));
         assem.getJoints().female.forEach((joint) => {
           const male = joint.getMale();
-          console.log(joint.malePartCode, male);
           const m = getModel(male, male.position().current());
           a = a.subtract(m);
         });
         // else a.setColor(1, 0, 0);
         return a;
       }
-      const assem1 = assemblies[0];
-      let a = buildObject(assem1);
-      for (let index = 1; index < assemblies.length; index += 1) {
+      const assemblies = assembly.getParts();
+      let a;
+      for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
-        const b = buildObject(assem);
-        if (b && assem.length() && assem.width() && assem.thickness()) {
-          a = a.union(b);
+        if (!hidden(assem)) {
+          const b = buildObject(assem);
+          if (a === undefined) a = b;
+          else if (b && assem.length() && assem.width() && assem.thickness()) {
+            a = a.union(b);
+          }
         }
       }
       console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
@@ -2404,17 +2591,24 @@ class ThreeDModel {
       ThreeDModel.viewer.gl.ondraw();
       console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
     }
-    setTimeout(render, 500);
   }
 }
 const cube = new CSG.cube({radius: [3,5,1]});
-ThreeDModel.call = 0;
 ThreeDModel.init = () => {
   const p = pull(5,2);
   const db = drawerBox(10, 15, 22);
   ThreeDModel.viewer = new Viewer(db, 300, 150, 50);
   addViewer(ThreeDModel.viewer, 'three-d-model');
 }
+
+ThreeDModel.models = {};
+ThreeDModel.get = (assembly) => {
+  if (ThreeDModel.models[assembly.uniqueId] === undefined) {
+    ThreeDModel.models[assembly.uniqueId] = new ThreeDModel(assembly);
+  }
+  return ThreeDModel.models[assembly.uniqueId];
+}
+ThreeDModel.render = (part) => ThreeDModel.get(part).render();
 
 let cabinetDisplay;
 
