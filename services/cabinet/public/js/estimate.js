@@ -1029,7 +1029,7 @@ class OpeningCoverSection extends SpaceSection {
   }
 }
 
-const sectionFilePath = (filename) => `./public/html/planks/sections/${filename}.html`;
+const sectionFilePath = (filename) => `sections/${filename}`;
 
 class Feature {
   constructor(id, subFeatures, properties, parent) {
@@ -1959,7 +1959,7 @@ function groupParts(cabinet) {
   return grouping;
 }
 
-const modelContTemplate = new $t('./public/html/planks/model-controller.html')
+const modelContTemplate = new $t('model-controller')
 const stateReg = /( |^)(small|large)( |$)/;
 matchRun('click', '#max-min-btn', (target) => {
   const className = target.parentElement.className;
@@ -2239,9 +2239,9 @@ class ExpandableList {
   }
 }
 ExpandableList.lists = [];
-ExpandableList.listTemplate = new $t('./public/html/planks/expandable-list.html');
-ExpandableList.pillTemplate = new $t('./public/html/planks/expandable-pill.html');
-ExpandableList.sidebarTemplate = new $t('./public/html/planks/expandable-sidebar.html');
+ExpandableList.listTemplate = new $t('expandable/list');
+ExpandableList.pillTemplate = new $t('expandable/pill');
+ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
 ExpandableList.getIdAndIndex = (target) => {
   const cnt = up('.expand-header,.expand-body', target);
   const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
@@ -2328,9 +2328,9 @@ OpenSectionDisplay.html = (opening) => {
 }
 
 OpenSectionDisplay.getSelectId = (opening) => `opin-division-patturn-select-${opening.uniqueId}`;
-OpenSectionDisplay.template = new $t('./public/html/planks/opening.html');
-OpenSectionDisplay.listBodyTemplate = new $t('./public/html/planks/opening-list-body.html');
-OpenSectionDisplay.listHeadTemplate = new $t('./public/html/planks/opening-list-head.html');
+OpenSectionDisplay.template = new $t('opening');
+OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
+OpenSectionDisplay.listHeadTemplate = new $t('divide/head');
 OpenSectionDisplay.sections = {};
 OpenSectionDisplay.lists = {};
 OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId}`;
@@ -2364,7 +2364,7 @@ OpenSectionDisplay.getList = (root) => {
   OpenSectionDisplay.lists[openId] = exList;
   return exList;
 }
-OpenSectionDisplay.dividerControlTemplate = new $t('./public/html/planks/divider-controls.html');
+OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
 OpenSectionDisplay.updateDividers = (opening) => {
   const selector = `[opening-id="${opening.uniqueId}"].opening-cnt > .divider-controls`;
   const dividerControlsCnt = document.querySelector(selector);
@@ -2483,8 +2483,8 @@ class RoomDisplay {
     const expandList = new ExpandableList(expListProps);
   }
 }
-RoomDisplay.bodyTemplate = new $t('./public/html/planks/room-body.html');
-RoomDisplay.headTemplate = new $t('./public/html/planks/room-head.html');
+RoomDisplay.bodyTemplate = new $t('room/body');
+RoomDisplay.headTemplate = new $t('room/head');
 
 class CabinetDisplay {
   constructor(room) {
@@ -2522,8 +2522,8 @@ class CabinetDisplay {
     bindField('.cabinet-input', valueUpdate, REGEX.size)
   }
 }
-CabinetDisplay.bodyTemplate = new $t('./public/html/planks/cabinet-body.html');
-CabinetDisplay.headTemplate = new $t('./public/html/planks/cabinet-head.html');
+CabinetDisplay.bodyTemplate = new $t('cabinet/body');
+CabinetDisplay.headTemplate = new $t('cabinet/head');
 
 function bindField(selector, objOrFunc, validationRegex) {
   function update(elem) {
@@ -2560,7 +2560,7 @@ class FeatureDisplay {
     }
   }
 }
-FeatureDisplay.template = new $t('./public/html/planks/features.html');
+FeatureDisplay.template = new $t('features');
 
 
 function pull(length, height) {

@@ -9,7 +9,7 @@
     <div {{!feature.isRadio() ? '' : 'hidden'}}>
       <input type='text' placeholder="Unique Notes"
         {{!feature.isRadio() ? "hidden disabled" : ""}}>
-      {{new $t('./public/html/planks/features.html').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})}}
+      {{new $t('features').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})}}
     </div>
   </div:t>
 </div>
