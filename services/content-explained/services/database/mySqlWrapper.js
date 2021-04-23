@@ -530,6 +530,7 @@ class Crud {
         password: options.password || 'ITSJUSTATESTDB',
         database: options.database || 'CE'
       };
+      console.log(JSON.stringify(connInfo, null, 2))
       connection = mySql.createConnection(connInfo);
       connection.connect((err) => {
         if(err) {

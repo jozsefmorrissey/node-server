@@ -3,6 +3,7 @@ const shell = require('shelljs');
 const { Crud, DataObject } = require('./database/mySqlWrapper');
 
 let user, password;
+console.log('ENV:', global.ENV);
 if (global.ENV !== 'local') {
   user = shell.exec('pst value ce-mysql user').stdout.trim();
   password = shell.exec('pst value ce-mysql password').stdout.trim();
