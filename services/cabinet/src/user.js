@@ -37,6 +37,15 @@ class Invalid extends BadRequest {
     super(`Invalid ${attr}: ${value}`, Invalid.codes[attr.toUpperCase()]);
   }
 }
+
+class UnAuthorized extends Error {
+  constructor(msg) {
+    super(msg || 'Credentials not valid');
+    this.status = 401;
+    this.msg = msg;
+  }
+}
+
 Invalid.codes = {};
 Invalid.codes.EMAIL = 'Hohs8E';
 Invalid.codes.PASSWORD = 'ooqu0N';
@@ -55,17 +64,17 @@ class User {
     let token;
 
     const replaceSpecial = (match) => match.charCodeAt(0);
-    function userDirectory() {
-      const cleanEmail = email.replace(/[^a-z^A-Z^0-9]/g, replaceSpecial);
-      return `${User.directory}${cleanEmail}/`;
-    }
 
-    function userDataFilePath() {
+    function userDataFilePath(name) {
       if (email === undefined) return false;
-      return `${instance.dataDirectory()}userInfo.json`;
+      name = name || 'userInfo';
+      name = name.replace(/\./g, '/');
+      return `${instance.dataDirectory()}${name}.json`;
     }
 
-    this.dataDirectory = () => {
+    this.dataDirectory = (path) => {
+      path = path || '';
+      path.replace(/\./g, '/');
       const cleanEmail = email.replace(/[^a-z^A-Z^0-9]/g, replaceSpecial);
       return `${User.directory}${cleanEmail}/`;
     }
@@ -141,6 +150,41 @@ class User {
       }
     }
 
+    this.saveData = (path, data) => {
+      if (!this.validate(true)) throw new UnAuthorized();
+      try {
+        const dirPath = path.split(".");
+        dirPath = dirPath.splice(0, path.length - 1).join('.');
+        const filePath = userDataFilePath(path);
+        const directory = this.dataDirectory(dirPath);
+        shell.mkdir('-p', directory);
+        fs.writeFileSync(filePath, data);
+        return true;
+      } catch(e) {
+        console.error('saveError', e);
+        return false;
+      }
+    }
+
+    this.loadData = (name) => {
+      try {
+        return JSON.parse(fs.readFileSync(userDataFilePath(name)));
+      } catch (e) {
+        console.error(e);
+        return undefined;
+      }
+    }
+
+    this.saveAttribute = (name, attr, attrData) => {
+      let data = this.loadData(name) || {};
+      data[attr] = attrData;
+      return this.saveData(name, data);
+    }
+
+    this.dataList = (dirPath) => {
+      return shell.ls(dirPath).stdout;
+    }
+
     function createActivationToken(p) {
       const user = get() || { email, activated: false };
       const s = User.randomString(32);
@@ -160,7 +204,7 @@ class User {
 
     this.login = function () {
       secret = User.randomString(32);
-      if (!this.validate())
+      if (!this.validate(true))
         throw new Invalid('password', password);
       addToken(getToken());
       save();
@@ -176,15 +220,22 @@ class User {
       return createActivationToken();
     }
 
-    this.validate = function () {
+    this.validate = function (soft) {
       const user = get();
-      if (!user || user.activated === false) return false;
+      if (!user || user.activated === false) {
+        if (soft) return false;
+        throw new UnAuthorized();
+      }
 
       if (password !== undefined) {
         if (bcrypt.compareSync(password, user.password)) return true;
       }
 
-      return validToken();
+      const token = validToken();
+      if (token === false) {
+        if (soft) return false;
+        throw new UnAuthorized();
+      }
     }
 
     this.activate = function () {
@@ -242,3 +293,4 @@ User.randomString = function (len) {
 }
 
 exports.User = User;
+exports.UnAuthorized = UnAuthorized;

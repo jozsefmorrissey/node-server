@@ -1,20 +1,12 @@
 
 const fs = require('fs');
 const shell = require('shelljs');
-const { User } = require('./src/user');
+const { User, UnAuthorized } = require('./src/user');
 const { emailSvc } = require('./src/email');
 const { EPNTS } = require('./src/EPNTS');
 
 const success = (res) => () => res.send('success');
 const fail = (next) => (e) => next(e);
-
-class UnAuthorized extends Error {
-  constructor(msg) {
-    super(msg);
-    this.status = 401;
-    this.msg = msg;
-  }
-}
 
 const getUser = (req) => {
   const authStr = req.headers['authorization'];
@@ -22,10 +14,8 @@ const getUser = (req) => {
   const split = authStr.split(':');
 
   const user = new User(split[0], split[1]);
-  if (user.validate()) {
-    return user;
-  }
-  throw new UnAuthorized('Invalid User Authorization');
+  user.validate();
+  return user;
 }
 
 const setCredentials = (res, email, secret) => {
@@ -79,25 +69,28 @@ function endpoints(app, prefix) {
 
   //  ---------------------------- Cabinet -----------------------------//
 
-  app.get(prefix + '/id', function (req, res) {
+  app.post(prefix + '/:id', function (req, res) {
     const user = getUser();
-    res.send('on');
+    user.saveAttribute('cabinet', req.params.id, cabinet);
+    res.send('success');
   });
 
-  app.get(prefix + '/list', function (req, res) {
-    res.send('on');
+  app.get(prefix + '/all', function (req, res) {
+    const user = getUser();
+    res.setHeader('Content-Type', 'application/json');
+    res.send(user.loadData('cabinet'));
   });
 
-  app.post(prefix + '/save', function (req, res) {
-    res.send('on');
+  //  ---------------------------- Order -----------------------------//
+
+  app.get(prefix + '/list/orders', function (req, res) {
+    res.send(getUser().list('order'));
   });
 
-  app.get(prefix + '/room/id', function (req, res) {
-    res.send('on');
-  });
-
-  app.post(prefix + '/room/save', function (req, res) {
-    res.send('on');
+  app.post(prefix + '/save/order/:id', function (req, res) {
+    const orderId = req.params.id.replace(/[^a-z^A-Z^0-9^ ]/g, '');
+    getUser().saveData(`order.${orderId}`);
+    res.send('success');
   });
 }
 
