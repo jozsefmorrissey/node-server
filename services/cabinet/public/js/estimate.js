@@ -1416,16 +1416,6 @@ class FrameDivider extends Assembly {
   }
 }
 
-const divSet = {horizontal: [], vertical: []};
-const getHorizontalDivSet = (id) => divSet.horizontal[id];
-const getVerticalDivSet = (id) => divSet.vertical[id];
-const setDivSet = (id, sizes) => {
-  if (divSet[type][sizes.length] === undefined) divSet[type][sizes.length] = [];
-  divSet[type][sizes.length] = sizes;
-}
-const setHorizontalDivSet = (id, sizes) => (id, sizes, 'horizontal');
-const setVerticalDivSet = (id, sizes) => (id, sizes, 'vertical');
-
 let dvs;
 
 class DivideSection extends SpaceSection {

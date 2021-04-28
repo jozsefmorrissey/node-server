@@ -5,11 +5,12 @@ const $t = require('../bin/builder').$t;
 const { Bundler } = require('../bundler');
 
 class HtmlBundler extends Bundler {
-  constructor(fileDumpLoc) {
+  constructor(fileDumpLoc, cleanNameFunc) {
     super();
+    cleanNameFunc = cleanNameFunc || ((name) => name.replace(/^(.*)\.html$/, '$1'));
     this.change = (filename, contents) => {
       if (!filename) return;
-      new $t(contents, filename.replace(/^(.*)\.html$/, '$1'));
+      new $t(contents, cleanNameFunc(filename));
     }
 
     this.write = () => {

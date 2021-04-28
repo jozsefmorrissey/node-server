@@ -63,12 +63,14 @@ class JsBundler extends Bundler {
     }
 
     function change(filename, contents, position) {
+      console.log('filename:', filename)
       if (!fileExistes(filename)) {
         delete jsFiles[filename];
         delete allJsFiles[filename];
       } else if (allJsFiles[filename]) {
         allJsFiles[filename].updateContents(contents);
       } else {
+        console.log('created new file!')
         new JsFile(filename, contents, position);
       }
     }
@@ -84,7 +86,7 @@ class JsBundler extends Bundler {
 
     function write() {
       let bundle = `let ${id} = function () {\nconst afterLoad = []\n`;
-
+      console.log(JSON.stringify(jsFiles));
       function addAfterFiles(filename) {
         if (afterFiles[filename]) {
           Object.values(afterFiles[filename]).forEach((child, i) => {
@@ -109,7 +111,7 @@ class JsBundler extends Bundler {
         } catch (e) {
             console.log(e);
         }`;
-      console.log(`Writing ./${id}.js`);
+      console.log(`Writingsss ./${id}.js`);
       fs.writeFile(`./${file}.js`, bundle, () => {});
     }
 

@@ -3,8 +3,7 @@ const shell = require('shelljs');
 const { Mutex, Semaphore } = require('async-mutex');
 
 class Watcher {
-  constructor(onChange, onUpdate, prefix) {
-    prefix = prefix || '';
+  constructor(onChange, onUpdate) {
     const largNumber = Number.MAX_SAFE_INTEGER;
     const semaphore = new Semaphore(largNumber);
     const mutex = new Mutex();
@@ -23,8 +22,7 @@ class Watcher {
             console.error(err);
           }
           console.log('ran file: ', `${file.name} - ${position}`);
-          let saveName = file.name.replace(new RegExp(`^${prefix}`), '')
-          onChange(saveName, contents, position);
+          onChange(file.name, contents, position);
           setTimeout(notify, 300);
         }
         fs.readFile(file.name, 'utf8', read);
@@ -85,14 +83,13 @@ class Watcher {
 
     let position = 0;
     this.add = function (fileOdir) {
-      fileOdir = prefix + fileOdir;
       fileOdir = fileOdir.trim().replace(/^(.*?)\/*$/, '$1');
       positions[fileOdir] = position++;
       const stat = fs.stat(fileOdir, function(err, stats) {
         console.log(fileOdir)
         stats.name = fileOdir;
         if (stats.isDirectory() || stats.isFile()){
-          watch(stats, fileOdir);
+          watch(stats);
         }
       });
       return this;
@@ -102,8 +99,22 @@ class Watcher {
 }
 
 const { HtmlBundler } = require('./building/bundlers/html.js');
-const htmlDumpLoc = './public/js/html-templates/estimate.js';
-const htmlBundler = new HtmlBundler(htmlDumpLoc);
+const htmlDumpLoc = './public/js/html-templates.js';
+const cleanName = (name) => name.replace(/\.\/public\/html\/templates\/(.*).html/, '$1');
+const htmlBundler = new HtmlBundler(htmlDumpLoc, cleanName);
 
-new Watcher(htmlBundler.change, htmlBundler.write, './public/html/templates/')
-        .add('');
+new Watcher(htmlBundler.change, htmlBundler.write)
+        .add('./public/html/templates/');
+
+
+
+
+const { JsBundler } = require('./building/bundlers/js.js');
+const jsDumpLoc = './public/js/index';
+const jsBundler = new JsBundler(jsDumpLoc, []);
+
+new Watcher(jsBundler.change, jsBundler.write)
+        .add('./public/js/3d-modeling/lightgl.js')
+        .add('./public/js/3d-modeling/csg.js')
+        .add('./public/js/3d-modeling/viewer.js')
+        .add('./app-src');

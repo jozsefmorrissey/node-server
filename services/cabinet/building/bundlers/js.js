@@ -63,12 +63,14 @@ class JsBundler extends Bundler {
     }
 
     function change(filename, contents, position) {
+      console.log('filename', filename)
       if (!fileExistes(filename)) {
         delete jsFiles[filename];
         delete allJsFiles[filename];
       } else if (allJsFiles[filename]) {
         allJsFiles[filename].updateContents(contents);
       } else {
+        console.log('creating new', filename)
         new JsFile(filename, contents, position);
       }
     }
@@ -97,7 +99,7 @@ class JsBundler extends Bundler {
         }
       }
       Object.values(jsFiles).sort(sortFileNames).forEach((item, i) => {
-            bundle += item.contents + ';';
+            bundle += item.contents + '\n\n';
             console.log(item.filename)
             addAfterFiles(item.filename);
       });
