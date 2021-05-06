@@ -3,7 +3,8 @@ const sectionFilePath = (filename) => `sections/${filename}`;
 
 class Section extends Assembly {
   constructor(templatePath, isPartition, partCode, partName, sectionProperties) {
-    super(templatePath, isPartition, partCode, partName);
+    super(partCode, partName);
+    this.important = ['partCode', 'partName'];
     this.center = (attr) => {
       const props = sectionProperties();
       const topPos = props.borders.top.position();
@@ -44,32 +45,37 @@ class Section extends Assembly {
       return {x,y,z};
     }
 
-    this.rotationStr = () => sectionProperties().rotationFunc();
-
-    this.isPartition = () => isPartition;
     if (templatePath === undefined) {
       throw new Error('template path must be defined');
     }
+    this.isPartition = () => isPartition;
     this.constructorId = this.constructor.name;
     this.part = false;
     this.display = false;
     this.name = this.constructorId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
-    Section.sections[this.constructorId] = this;
     Section.templates[this.constructorId] = new $t(templatePath);
   }
 }
-Section.sections = {};
+Section.isPartition = () => false;
+Section.abstractClasses = ['PartitionSection', 'OpeningCoverSection', 'SpaceSection']
+Section.sectionInstance = (clazz) => clazz.prototype instanceof Section &&
+  Section.abstractClasses.indexOf(clazz.name) === -1;
+Section.sections = () => Assembly.classList(Section.sectionInstance);
 Section.getSections = (isPartition) => {
   const sections = [];
-  Object.values(Section.sections).forEach((section) => {
+  Section.sections().forEach((section) => {
     const part = section.isPartition();
     if(isPartition === undefined || part === isPartition) sections.push(section);
   });
   return sections;
 }
-Section.keys = () => Object.keys(Section.sections);
+Section.keys = () => Assembly.classIds(Section.sectionInstance);
 Section.templates = {};
-Section.new = (constructorId, divideProps) => new (Section.sections[constructorId]).constructor();
+Section.new = function (constructorId) {
+  const section = Assembly.new.apply(null, arguments);
+  if (section instanceof Section) return section;
+  throw new Error(`Invalid section Id: '${constructorId}'`);
+}
 Section.render = (opening, scope) => {
   scope.featureDisplay = new FeatureDisplay(opening).html();
   const cId = opening.constructorId;
@@ -78,3 +84,5 @@ Section.render = (opening, scope) => {
   }
   return Section.templates[cId].render(scope);
 }
+
+Assembly.register(Section);

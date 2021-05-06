@@ -111,3 +111,5 @@ class OpeningCoverSection extends SpaceSection {
 
   }
 }
+
+Assembly.register(OpeningCoverSection);

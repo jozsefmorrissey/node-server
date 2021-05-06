@@ -1,5 +1,8 @@
 let index = function () {
 const afterLoad = []
+APP_ID = 'cabinet-builder';
+
+
 /*
  * lightgl.js
  * http://github.com/evanw/lightgl.js/
@@ -1002,6 +1005,1002 @@ function enableScroll(element) {
 }
 
 
+
+let idCount = 0;
+class ExprDef {
+  constructor(name, options, notify, stages, alwaysPossible) {
+    this.id = idCount++;
+    let id = this.id;
+    let string;
+    let modified = '';
+    let start;
+    let end;
+    alwaysPossible = alwaysPossible ? alwaysPossible : [];
+    stages = stages ? stages : {};
+    let currStage = stages;
+
+    function getRoutes(prefix, stage) {
+      let routes = [];
+      let keys = Object.keys(stage);
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        if (key !== '_meta') {
+          let newPrefix;
+          if (prefix) {
+            newPrefix = `${prefix}.${key}`;
+          } else {
+            newPrefix = key;
+          }
+          const deepRoutes = getRoutes(newPrefix, stage[key]);
+          if (deepRoutes.length > 0) {
+            routes = routes.concat(deepRoutes);
+          }
+          if (stage[key]._meta && stage[key]._meta.end) {
+            routes.push(newPrefix + '.end');
+          }
+          if (stage[key]._meta && stage[key]._meta.repeat) {
+            routes.push(newPrefix + '.repeat');
+          }
+        }
+      }
+      return routes;
+    }
+
+    this.always = function () {
+      for (let index = 0; index < arguments.length; index += 1) {
+        alwaysPossible.push(arguments[index]);
+      }
+    };
+    this.getAlways = function (exprDef) {return alwaysPossible;};
+
+    this.allRoutes = function () {
+      return getRoutes(null, stages);
+    }
+
+    function getNotice (exprDef) {
+      let isInAlways = false;
+      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
+      if (isInAlways) return;
+      if (!exprDef.closed()) {
+        if (currStage[exprDef.getName()] === undefined) {
+          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
+        }
+        currStage = currStage[exprDef.getName()];
+      }
+    }
+    this.getNotice = getNotice;
+
+    function getName () {return name;};
+    this.getName = getName;
+    this.onClose = function (start, end) {
+      return function (str, start, end) {
+        if (notify) notify(this);
+        options.onClose(str, start, end);
+      }
+    }
+
+    function setMeta(targetNodes, attr, value) {
+      return function () {
+        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+          targetNodes[lIndex]._meta[attr] = value;
+        }
+      }
+    }
+
+    function then (targetNodes) {
+      return function () {
+        const createdNodes = [];
+        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+          const targetNode = targetNodes[lIndex];
+          for (let index = 0; index < arguments.length; index += 1) {
+            const exprDef = arguments[index];
+            if (!exprDef instanceof ExprDef) {
+              throw new Error(`Argument is not an instanceof ExprDef`);
+            }
+            const nextExpr = exprDef.clone(getNotice);
+            if (targetNode[nextExpr.getName()] === undefined) {
+              targetNode[nextExpr.getName()] = {
+                _meta: {
+                  expr: nextExpr
+                }
+              };
+            }
+            createdNodes.push(targetNode[nextExpr.getName()]);
+          }
+        }
+        return {
+          then: then(createdNodes),
+          repeat: setMeta(createdNodes, 'repeat', true),
+          end: setMeta(createdNodes, 'end', true),
+        };
+      }
+    }
+
+    this.if = function () {return then([stages]).apply(this, arguments);}
+
+    function isEscaped(str, index) {
+      if (options.escape === undefined) {
+        return false;
+      }
+      let count = -1;
+      let firstIndex, secondIndex;
+      do {
+        count += 1;
+        firstIndex = index - (options.escape.length * (count + 1));
+        secondIndex = options.escape.length;
+      } while (str.substr(firstIndex, secondIndex) === options.escape);
+      return count % 2 == 0;
+    }
+
+    function foundCall(onFind, sub) {
+      if ((typeof notify) === 'function') {
+        notify(this);
+      }
+      if ((typeof onFind) === 'function') {
+        return onFind(sub);
+      } else {
+        return sub;
+      }
+    }
+
+    this.find = function (str, index) {
+      let startedThisCall = false;
+      let needle = options.closing;
+      let starting = false;
+      if (start === undefined) {
+        needle = options.opening;
+        starting = true;
+      }
+      const sub = str.substr(index);
+      let needleLength;
+      if (needle instanceof RegExp) {
+        const match = sub.match(needle);
+        if (match && match.index === 0) {
+          needleLength = match[0].length;
+        }
+      } else if ((typeof needle) === 'string') {
+        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
+          needleLength = needle.length;
+      } else if (needle === undefined || needle === null) {
+        needleLength = 0;
+      } else {
+        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
+      }
+      needleLength += options.tailOffset ? options.tailOffset : 0;
+      let changes = '';
+      if (start === undefined && starting && (needleLength || needle === null)) {
+        string = str;
+        start = index;
+        startedThisCall = true;
+        if (needle === null) {
+          if ((typeof notify) === 'function') {
+            notify(this);
+          }          return {index, changes}
+        } else {
+          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
+        }
+      }
+      if ((!startedThisCall && needleLength) ||
+            (startedThisCall && options.closing === undefined) ||
+            (!startedThisCall && options.closing === null)) {
+        if (str !== string) {
+          throw new Error ('Trying to apply an expression to two different strings.');
+        }
+        end = index + needleLength;
+        if (options.closing === null) {
+          return {index, changes}
+        }
+        if (!startedThisCall) {
+          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
+        }
+        return { index: end, changes };
+      }
+
+      return start !== undefined ? { index: start + needleLength, changes } :
+                      { index: -1, changes };
+    }
+
+    this.clone = function (notify) {
+      return new ExprDef(name, options, notify, stages, alwaysPossible);
+    };
+    this.name = this.getName();
+    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
+    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
+    this.location = function () {return {start, end, length: end - start}};
+    this.closed = function () {return end !== undefined;}
+    this.open = function () {return start !== undefined;}
+    this.next =  function () {
+      const expressions = [];
+      if (currStage._meta && currStage._meta.repeat) {
+        currStage = stages;
+      }
+      Object.values(currStage).map(
+        function (val) {if (val._meta) expressions.push(val._meta.expr);}
+      )
+      return alwaysPossible.concat(expressions);
+    };
+  }
+}
+
+function parse(exprDef, str) {
+  exprDef = exprDef.clone();
+  let index = 0;
+  let modified = '';
+  const breakDown = [];
+  const stack = [];
+
+  function topOfStack() {
+    return stack[stack.length - 1];
+  }
+
+  function closeCheck(exprDef) {
+    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
+      let result = exprDef.find(str, index);
+      if (result.index) {
+        modified += result.changes;
+        return result.index;
+      }
+    }
+  }
+
+  function checkArray(exprDef, array) {
+    if (exprDef.endDefined()) {
+      let nextIndex = closeCheck(exprDef);
+      if (nextIndex) return nextIndex;
+    }
+    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
+      const childExprDef = array[aIndex].clone(exprDef.getNotice);
+      const result = childExprDef.find(str, index);
+      if (result.index !== -1) {
+        modified += result.changes;
+        if (childExprDef.closed()) {
+          breakDown.push(childExprDef);
+        } else {
+          stack.push(childExprDef);
+        }
+        return result.index;
+      }
+    }
+    if (exprDef.canEnd()) {
+      nextIndex = closeCheck(exprDef);
+      if (nextIndex) return nextIndex;
+    }
+    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
+  }
+
+  function open(exprDef, index) {
+    const always = exprDef.getAlways();
+    while (!exprDef.open()) {
+      let result = exprDef.find(str, index);
+      modified += result.changes;
+      if(result.index === -1) {
+        let newIndex = checkArray(exprDef, always);
+        index = newIndex;
+      } else {
+        if (exprDef.closed()) {
+          breakDown.push(exprDef);
+        } else {
+          stack.push(exprDef);
+        }
+        index = result.index;
+      }
+    }
+    return index;
+  }
+
+  let loopCount = 0;
+  index = open(exprDef, index);
+  progress = [-3, -2, -1];
+  while (topOfStack() !== undefined) {
+    const tos = topOfStack();
+    if (progress[0] === index) {
+      throw new Error(`ExprDef stopped making progress`);
+    }
+    let stackIds = '';
+    let options = '';
+    stack.map(function (value) {stackIds+=value.getName() + ','});
+    tos.next().map(function (value) {options+=value.getName() + ','})
+    index = checkArray(tos, tos.next());
+    if (tos.closed()) {
+      stack.pop();
+    }
+    loopCount++;
+  }
+  // if (index < str.length) {
+  //   throw new Error("String not fully read");
+  // }
+  return modified;
+}
+
+
+ExprDef.parse = parse;
+try {
+  exports.ExprDef = ExprDef;
+} catch (e) {}
+
+class $t {
+	constructor(template, id) {
+		function varReg(prefix, suffix) {
+		  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
+		  prefix = prefix ? prefix : '';
+		  suffix = suffix ? suffix : '';
+		  return new RegExp(`${prefix}${vReg}${suffix}`)
+		};
+
+		function replace(needleRegEx, replaceStr, exceptions) {
+		  return function (sub) {
+		    if (!exceptions || exceptions.indexOf(sub) === -1) {
+		      return sub.replace(needleRegEx, replaceStr)
+		    } else {
+		      return sub;
+		    }
+		  }
+		}
+
+		const signProps = {opening: /([-+\!])/};
+		const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
+		const ternaryProps = {opening: /\?/};
+		const keyWordProps = {opening: /(new|null|undefined|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
+		const ignoreProps = {opening: /new \$t\('.*?'\).render\(get\('scope'\), '(.*?)', get\)/};
+		const commaProps = {opening: /,/};
+		const colonProps = {opening: /:/};
+		const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
+		const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
+		const spaceProps = {opening: /\s{1}/};
+		const numberProps = {opening: /[0-9]*((\.)[0-9]*|)/};
+		const objectProps = {opening: '{', closing: '}'};
+		const objectLabelProps = {opening: varReg(null, '\\:')};
+		const groupProps = {opening: /\(/, closing: /\)/};
+		const expressionProps = {opening: null, closing: null};
+		const attrProps = {opening: varReg('(\\.', '){1,}')};
+
+		// const funcProps = {
+		//   opening: varReg(null, '\\('),
+		//   onOpen: replace(varReg(null, '\\('), 'get("$1")('),
+		//   closing: /\)/
+		// };
+		const arrayProps = {
+		  opening: varReg(null, '\\['),
+		  onOpen: replace(varReg(null, '\\['), 'get("$1")['),
+		  closing: /\]/
+		};
+		const variableProps = {
+		  opening: varReg(),
+		  onOpen: replace(varReg(), 'get("$1")'),
+		};
+		const objectShorthandProps = {
+		  opening: varReg(),
+		  onOpen: replace(varReg(), '$1: get("$1")'),
+		};
+
+
+		const expression = new ExprDef('expression', expressionProps);
+		const ternary = new ExprDef('ternary', ternaryProps);
+		const relational = new ExprDef('relational', relationalProps);
+		const comma = new ExprDef('comma', commaProps);
+		const colon = new ExprDef('colon', colonProps);
+		const attr = new ExprDef('attr', attrProps);
+		// const func = new ExprDef('func', funcProps);
+		const string = new ExprDef('string', stringProps);
+		const space = new ExprDef('space', spaceProps);
+		const keyWord = new ExprDef('keyWord', keyWordProps);
+		const group = new ExprDef('group', groupProps);
+		const object = new ExprDef('object', objectProps);
+		const array = new ExprDef('array', arrayProps);
+		const number = new ExprDef('number', numberProps);
+		const multiplier = new ExprDef('multiplier', multiplierProps);
+		const sign = new ExprDef('sign', signProps);
+		const ignore = new ExprDef('ignore', ignoreProps);
+		const variable = new ExprDef('variable', variableProps);
+		const objectLabel = new ExprDef('objectLabel', objectLabelProps);
+		const objectShorthand = new ExprDef('objectShorthand', objectShorthandProps);
+
+		expression.always(space, ignore, keyWord);
+		expression.if(string, number, group, array, variable)
+		      .then(multiplier, sign, relational, group)
+		      .repeat();
+		expression.if(string, group, array, variable)
+					.then(attr)
+		      .then(multiplier, sign, relational, expression)
+					.repeat();
+		expression.if(string, group, array, variable)
+					.then(attr)
+					.end();
+		expression.if(sign)
+		      .then(expression)
+		      .then(multiplier, sign, relational, group)
+		      .repeat();
+		expression.if(string, number, group, array, variable)
+		      .then(ternary)
+		      .then(expression)
+		      .then(colon)
+		      .then(expression)
+		      .end();
+		expression.if(ternary)
+		      .then(expression)
+		      .then(colon)
+		      .then(expression)
+		      .end();
+		expression.if(object, string, number, group, array, variable)
+		      .end();
+		expression.if(sign)
+		      .then(number)
+		      .end();
+
+		object.always(space, ignore, keyWord);
+		object.if(objectLabel).then(expression).then(comma).repeat();
+		object.if(objectShorthand).then(comma).repeat();
+		object.if(objectLabel).then(expression).end();
+		object.if(objectShorthand).end();
+
+		group.always(space, ignore, keyWord);
+		group.if(expression).then(comma).repeat();
+		group.if(expression).end();
+
+		array.always(space, ignore, keyWord);
+		array.if(expression).then(comma).repeat();
+		array.if(expression).end();
+
+		function getter(scope, parentScope) {
+			parentScope = parentScope || function () {return undefined};
+			function get(name) {
+				if (name === 'scope') return scope;
+				const split = new String(name).split('.');
+				let currObj = scope;
+				for (let index = 0; currObj != undefined && index < split.length; index += 1) {
+					currObj = currObj[split[index]];
+				}
+				if (currObj !== undefined) return currObj;
+				const parentScopeVal = parentScope(name);
+				if (parentScopeVal !== undefined) return parentScopeVal;
+        else {
+          const globalVal = $t.global(name);
+          return globalVal === undefined ? '' : globalVal;
+        }
+			}
+			return get;
+		}
+
+		function defaultArray(elemName, get) {
+			let resp = '';
+			for (let index = 0; index < get('scope').length; index += 1) {
+				if (elemName) {
+					const obj = {};
+					obj[elemName] = get(index);
+					resp += new $t(template).render(obj, undefined, get);
+				} else {
+					resp += new $t(template).render(get(index), undefined, get);
+				}
+			}
+			return `${resp}`;
+		}
+
+		function arrayExp(itExp, get) {
+			const match = itExp.match($t.arrayItExpReg);
+			const varName = match[1];
+			const array = get(match[2]);
+			let built = '';
+			for (let index = 0; index < array.length; index += 1) {
+				const obj = {};
+				obj[varName] = array[index];
+				obj.$index = index;
+				built += new $t(template).render(obj, undefined, get);
+			}
+			return built;
+		}
+
+		function itOverObject(itExp, get) {
+			const match = itExp.match($t.objItExpReg);
+			const keyName = match[1];
+			const valueName = match[2];
+			const obj = get(match[3]);
+			const keys = Object.keys(obj);
+			let built = '';
+			for (let index = 0; index < keys.length; index += 1) {
+				const key = keys[index];
+				const childScope = {};
+				childScope[keyName] = key;
+				childScope[valueName] = obj[key];
+				childScope.$index = index;
+				built += new $t(template).render(childScope, undefined, get);
+			}
+      return built;
+		}
+
+		function rangeExp(itExp, get) {
+			const match = itExp.match($t.rangeItExpReg);
+			const elemName = match[1];
+			let startIndex = (typeof match[2]) === 'number' ||
+						match[2].match(/^[0-9]*$/) ?
+						match[2] : get(`${match[2]}`);
+			let endIndex = (typeof match[3]) === 'number' ||
+						match[3].match(/^[0-9]*$/) ?
+						match[3] : get(`${match[3]}`);
+			if (((typeof startIndex) !== 'string' &&
+							(typeof	startIndex) !== 'number') ||
+								(typeof endIndex) !== 'string' &&
+								(typeof endIndex) !== 'number') {
+									throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+			}
+
+			try {
+				startIndex = Number.parseInt(startIndex);
+			} catch (e) {
+				throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+			}
+			try {
+				endIndex = Number.parseInt(endIndex);
+			} catch (e) {
+				throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+			}
+
+			let index = startIndex;
+			let built = '';
+			while (true) {
+				let increment = 1;
+				if (startIndex > endIndex) {
+					if (index <= endIndex) {
+						break;
+					}
+					increment = -1;
+				} else if (index >= endIndex) {
+					break;
+				}
+				const obj = {$index: index};
+				obj[elemName] = index;
+				built += new $t(template).render(obj, undefined, get);
+				index += increment;
+			}
+			return built;
+		}
+
+		function evaluate(get) {
+			if ($t.functions[id]) {
+				try {
+					return $t.functions[id](get);
+				} catch (e) {
+				  console.error(e);
+				}
+			} else {
+				return eval($t.templates[id])
+			}
+		}
+
+		function type(scope, itExp) {
+			if ((typeof itExp) === 'string' && itExp.match($t.rangeAttemptExpReg)) {
+				if (itExp.match($t.rangeItExpReg)) {
+					return 'rangeExp'
+				}
+				return 'rangeExpFormatError';
+			} else if (Array.isArray(scope)) {
+				if (itExp === undefined) {
+					return 'defaultArray';
+				} else if (itExp.match($t.nameScopeExpReg)) {
+					return 'nameArrayExp';
+				} else {
+					return 'invalidArray';
+				}
+			} else if ((typeof scope) === 'object') {
+				if (itExp === undefined) {
+					return 'defaultObject';
+				} else if (itExp.match($t.objItExpReg)){
+					return 'itOverObject';
+				} else if (itExp.match($t.arrayItExpReg)){
+					return 'arrayExp';
+				} else {
+					return 'invalidObject';
+				}
+			} else {
+				return 'defaultObject';
+			}
+		}
+
+		function render(scope, itExp, parentScope) {
+      if (scope === undefined) return '';
+			let rendered = '';
+			const get = getter(scope, parentScope);
+			switch (type(scope, itExp)) {
+				case 'rangeExp':
+					rendered = rangeExp(itExp, get);
+					break;
+				case 'rangeExpFormatError':
+					throw new Error(`Invalid range itteration expression "${itExp}"`);
+				case 'defaultArray':
+					rendered = defaultArray(itExp, get);
+					break;
+				case 'nameArrayExp':
+					rendered = defaultArray(itExp, get);
+					break;
+				case 'arrayExp':
+					rendered = arrayExp(itExp, get);
+					break;
+				case 'invalidArray':
+					throw new Error(`Invalid iterative expression for an array "${itExp}"`);
+				case 'defaultObject':
+					rendered = evaluate(get);
+					break;
+				case 'itOverObject':
+					rendered = itOverObject(itExp, get);
+					break;
+				case 'invalidObject':
+					throw new Error(`Invalid iterative expression for an object "${itExp}"`);
+				default:
+					throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
+			}
+			return rendered;
+		}
+
+
+//---------------------  Compile Functions ---------------//
+
+		function stringHash(string) {
+			let hashString = string;
+			let hash = 0;
+			for (let i = 0; i < hashString.length; i += 1) {
+				const character = hashString.charCodeAt(i);
+				hash = ((hash << 5) - hash) + character;
+				hash &= hash; // Convert to 32bit integer
+			}
+			return hash;
+		}
+
+		function isolateBlocks(template) {
+			let inBlock = false;
+			let openBracketCount = 0;
+			let block = '';
+			let blocks = [];
+			let str = template;
+			for (let index = 0; index < str.length; index += 1) {
+				if (inBlock) {
+					block += str[index];
+				}
+				if (!inBlock && index > 0 &&
+					str[index] == '{' && str[index - 1] == '{') {
+					inBlock = true;
+				} else if (inBlock && str[index] == '{') {
+					openBracketCount++;
+				} else if (openBracketCount > 0 && str[index] == '}') {
+					openBracketCount--;
+				} else if (str[index + 1] == '}' && str[index] == '}' ) {
+					inBlock = false;
+					blocks.push(`${block.substr(0, block.length - 1)}`);
+					block = '';
+				}
+			}
+			return blocks;
+		}
+
+		function compile() {
+			const blocks = isolateBlocks(template);
+			let str = template;
+			for (let index = 0; index < blocks.length; index += 1) {
+				const block = blocks[index];
+				const parced = ExprDef.parse(expression, block);
+				str = str.replace(`{{${block}}}`, `\` + (${parced}) + \``);
+			}
+			return `\`${str}\``;
+		}
+
+		const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')([^>^\4]*?)\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+		function formatRepeat(string) {
+			// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
+			// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
+			let match;
+			while (match = string.match(repeatReg)) {
+				let tagContents = match[2] + match[6];
+				let template = `<${match[1]}${tagContents}${match[1]}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+				let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+        let scope = tagContents.replace(/.*\$t-scope=('|")([a-zA-Z-_\/]*?)(\1).*/, '$2') || 'scope';
+				template = templateName !== tagContents ? templateName : template;
+        console.log('\n\n\ntn: ', tempName, '-', template)
+				string = string.replace(match[0], `{{new $t('${template}').render(get('${scope}'), '${match[5]}', get)}}`);
+				// console.log('\n\n\nformrepeat: ', string, '\n\n\n')
+				eval(`new $t(\`${template}\`)`);
+			}
+			return string;
+		}
+
+		if (id) {
+			$t.templates[id] = undefined;
+			$t.functions[id] = undefined;
+		}
+
+		template = template.replace(/\s{1,}/g, ' ');
+		id = $t.functions[template] ? template : id || stringHash(template);
+		if (!$t.functions[id]) {
+			if (!$t.templates[id]) {
+				template = template.replace(/\s{2,}|\n/g, ' ');
+				template = formatRepeat(template);
+				$t.templates[id] = compile();
+			}
+		}
+		this.compiled = function () { return $t.templates[id];}
+		this.render = render;
+		this.type = type;
+		this.isolateBlocks = isolateBlocks;
+	}
+}
+
+$t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
+$t.functions = {};
+$t.arrayItExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*in\s*([a-zA-Z][a-z0-9A-Z\.]*)\s*$/;
+$t.objItExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*in\s*([a-zA-Z][a-z\.0-9A-Z]*)\s*$/;
+$t.rangeAttemptExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*(.*\.\..*)\s*$/;
+$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*([a-z0-9A-Z]*)\.\.([a-z0-9A-Z]*)\s*$/;
+$t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+$t.quoteStr = function (str) {
+		str = str.replace(/\\`/g, '\\\\\\`')
+		str = str.replace(/([^\\])`/g, '$1\\\`')
+		return `\`${str.replace(/``/g, '`\\`')}\``;
+	}
+$t.formatName = function (string) {
+    function toCamel(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
+    return string.replace(/([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g, toCamel);
+}
+$t.dumpTemplates = function () {
+	let templateFunctions = '';
+	let tempNames = Object.keys($t.templates);
+	for (let index = 0; index < tempNames.length; index += 1) {
+		const tempName = tempNames[index];
+		if (tempName) {
+			const template = $t.templates[tempName];
+			templateFunctions += `\n$t.functions['${tempName}'] = function (get) {\n\treturn ${template}\n}`;
+		}
+	}
+	return templateFunctions;
+}
+
+function createGlobalsInterface() {
+  const GLOBALS = {};
+  const isMotifiable = () => GLOBALS[name] === undefined ||
+        GLOBALS[name].imutable !== 'true';
+  $t.global = function (name, value, imutable) {
+    if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
+    if (isMotifiable()) GLOBALS[name] = {value, imutable};
+  }
+  $t.rmGlobal = function(name) {
+    if (isMotifiable()) delete GLOBALS[name];
+  }
+}
+createGlobalsInterface();
+
+try{
+	exports.$t = $t;
+} catch (e) {}
+
+
+
+$t.functions['202297006'] = function (get) {
+	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> </div> <div class="expand-header ` + (get("type")) + ` ` + (get("$index") === get("activeIndex") ? ' active' : '') + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> </div> </div>`
+}
+$t.functions['375408173'] = function (get) {
+	return `<option value='` + (get("section").prototype.constructor.name) + `' ` + (get("opening").name === get("section").name ? 'selected' : '') + `> ` + (get("clean")(get("section").name)) + ` </option>`
+}
+$t.functions['443122713'] = function (get) {
+	return `<option value='` + (get("section").prototype.constructor.name) + `' ` + (get("opening").constructorId === get("section").name ? 'selected' : '') + `> ` + (get("clean")(get("section").name)) + ` </option>`
+}
+$t.functions['633282157'] = function (get) {
+	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> <div class="expand-header ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> <div class="expand-body ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getBody")(get("item"), get("$index"))) + ` </div> </div> </div>`
+}
+$t.functions['990870856'] = function (get) {
+	return `<div class='inline' > <h3>` + (get("assem").objId) + `</h3> <div> ` + (get("getFeatureDisplay")(get("assem"))) + ` </div> </div>`
+}
+$t.functions['1801522599'] = function (get) {
+	return `<option value='` + (get("section").prototype.constructor.name) + `' ` + (get("opening").name === get("section").constructorId ? 'selected' : '') + `> ` + (get("clean")(get("section").name)) + ` </option>`
+}
+$t.functions['cabinet/body'] = function (get) {
+	return `<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> </div> <button class='save-cabinet-btn' index='` + (get("$index")) + `'>Save</button> <div class='right'> <select class="show-right-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> <label>Show Right</label> </div> </div> <br> <div>` + (get("OpenSectionDisplay").html(get("cabinet").opening)) + `</div> </div> `
+}
+$t.functions['-970877277'] = function (get) {
+	return `<option >` + (get("showType").name) + `</option>`
+}
+$t.functions['cabinet/head'] = function (get) {
+	return `<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` + (get("$index")) + `.id' index='` + (get("$index")) + `' value='` + (get("cabinet").id || get("$index")) + `'> Size: <div class='cabinet-dem-cnt'> <label>W:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.width' value='` + (get("cabinet").width()) + `'> <label>H:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.length' value='` + (get("cabinet").length()) + `'> <label>D:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.thickness' value='` + (get("cabinet").thickness()) + `'> </div> </div> `
+}
+$t.functions['divide/body'] = function (get) {
+	return `<h2>` + (get("list").activeIndex()) + `</h2> val: ` + (get("list").value()('selected')) + ` `
+}
+$t.functions['divide/head'] = function (get) {
+	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.prototype.constructor.name}}\' {{opening.constructorId === section.name ? \'selected\' : \'\'}}> {{clean(section.name)}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
+}
+$t.functions['-881298725'] = function (get) {
+	return `<option value='` + (get("section").prototype.constructor.name) + `' ` + (get("opening").constructorId === get("section").constructorId ? 'selected' : '') + `> ` + (get("section").name) + ` </option>`
+}
+$t.functions['divider-controls'] = function (get) {
+	return `<div> <label>Dividers:</label> <input type="number" min="0" max="10" step="1" class='division-count-input' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").dividerCount()) + `'> <span class="open-orientation-radio-cnt ` + (get("opening").dividerCount() > 0 ? '' : 'hidden') + `"> <label for='open-orientation-horiz-` + (get("opening").uniqueId) + `'>Horizontal:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='horizontal' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-horiz-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? '' : 'checked') + `> <label for='open-orientation-vert-` + (get("opening").uniqueId) + `'>Vertical:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='vertical' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-vert-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? 'checked' : '') + `> </span> <select class='open-pattern-select ` + ( get("opening").dividerCount() > 0 ? '' : 'hidden') + `' id='` + (get("selectPatternId")) + `' prop-update='pattern' divisions=` + (get("opening").dividerCount()) + `> ` + (get("patterns")) + ` </select> ` + (new $t('<span class=\'input-html-cnt-{{opening.uniqueId}}\' > <label>{{label}}</label> <input class=\'division-pattern-input\' name=\'{{pattern.name}}\' index=\'{{$index}}\' value=\'{{fill ? fill[$index] : ""}}\'> </span>').render(get('scope'), 'label in pattern.inputArr', get)) + ` </div> `
+}
+$t.functions['-1178631413'] = function (get) {
+	return `<span class='input-html-cnt-` + (get("opening").uniqueId) + `' > <label>` + (get("label")) + `</label> <input class='division-pattern-input' name='` + (get("pattern").name) + `' index='` + (get("$index")) + `' value='` + (get("fill") ? get("fill")[get("$index")] : "") + `'> </span>`
+}
+$t.functions['expandable/list'] = function (get) {
+	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> <div class="expand-body {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getBody(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <div> <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> </div> `
+}
+$t.functions['expandable/pill'] = function (get) {
+	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> <div class="expand-list-cnt ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <div class=\'expand-rm-btn-cnt\'> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> </div> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> <div> </div> <div class="expand-body ` + (get("type")) + `"> Hello World! </div> </div> `
+}
+$t.functions['-520175802'] = function (get) {
+	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> </div> <div class="expand-header ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> </div> </div>`
+}
+$t.functions['expandable/sidebar'] = function (get) {
+	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> <div class="expand-list-cnt ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <div class=\'expand-rm-btn-cnt\'> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> </div> <div class="expand-header {{type}} {{$index === activeIndex ? \' active\' : \'\'}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> <div> </div> <div class="expand-body ` + (get("type")) + `"> Hello World! </div> </div> `
+}
+$t.functions['features'] = function (get) {
+	return `<div class='tab'> ` + (new $t('<div > <label>{{feature.name}}</label> <input type=\'checkbox\' name=\'{{id + \'-checkbox\'}}\' {{feature.isCheckbox() ? \'\': \'hidden\'}}> <input type=\'text\' name=\'{{id + \'-input\'}}\' {{feature.showInput() ? \'\' : \'hidden\'}}> <input class=\'feature-radio\' type=\'radio\' name=\'{{id}}\' value=\'{{feature.id}}\' {{!feature.isRadio() ? "hidden disabled" : ""}}> <div {{!feature.isRadio() ? \'\' : \'hidden\'}}> <input type=\'text\' placeholder="Unique Notes" {{!feature.isRadio() ? "hidden disabled" : ""}}> {{new $t(\'features\').render({features: get(\'feature.features\'), id: get(\'id\') + \'.\' + get(\'feature.id\')})}} </div> </div>').render(get('scope'), 'feature in features', get)) + ` </div> `
+}
+$t.functions['-666497277'] = function (get) {
+	return `<div > <label>` + (get("feature").name) + `</label> <input type='checkbox' name='` + (get("id") + '-checkbox') + `' ` + (get("feature").isCheckbox() ? '': 'hidden') + `> <input type='text' name='` + (get("id") + '-input') + `' ` + (get("feature").showInput() ? '' : 'hidden') + `> <input class='feature-radio' type='radio' name='` + (get("id")) + `' value='` + (get("feature").id) + `' ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> <div ` + (!get("feature").isRadio() ? '' : 'hidden') + `> <input type='text' placeholder="Unique Notes" ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> ` + (new $t('features').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})) + ` </div> </div>`
+}
+$t.functions['login/confirmation-message'] = function (get) {
+	return `<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+}
+$t.functions['login/create-account'] = function (get) {
+	return `<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` + (get("email")) + `'> <input type='password' placeholder="password" name='password' value='` + (get("password")) + `'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
+}
+$t.functions['login/login'] = function (get) {
+	return `<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` + (get("email")) + `'> <input type='password' placeholder="password" name='password' value='` + (get("password")) + `'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+}
+$t.functions['login/reset-password'] = function (get) {
+	return `<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` + (get("email")) + `'> <input type='password' placeholder="password" name='password' value='` + (get("password")) + `'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+}
+$t.functions['model-controller'] = function (get) {
+	return `<div> <div class='model-selector'> <div> <div class='` + (get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") + ` ` + (get("label") ? "prefix-switch model-label" : "") + `' ` + (!get("label") ? 'hidden' : '') + `> <label type='prefix'>` + (get("label")) + `</label> <input type='checkbox' class='prefix-checkbox' prefix='` + (get("group").prefix) + `' ` + (!get("tdm").hidePrefix(get("label")) ? 'checked' : '') + `> </div> <div class='` + (get("label") ? "prefix-body indent" : "") + `'> ` + (new $t('<div class=\'model-label{{tdm.isTarget("part-name", partName) ? " active" : ""}}\' > <label type=\'part-name\'>{{partName}}</label> <input type=\'checkbox\' class=\'part-name-checkbox\' part-name=\'{{partName}}\' {{!tdm.hidePartName(partName) ? \'checked\' : \'\'}}> {{new $t(\'<div class=\\\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\\\'  {{partList.length > 1 ? "" : "hidden"}}> <label type=\\\'part-code\\\'>{{part.partCode}}</label> <input type=\\\'checkbox\\\' class=\\\'part-code-checkbox\\\' part-code=\\\'{{part.partCode}}\\\' {{!tdm.hidePartCode(part.partCode) ? \\\'checked\\\' : \\\'\\\'}}> </div>\').render(get(\'scope\'), \'part in partList\', get)}} </div>').render(get('scope'), 'partName, partList in group.parts', get)) + ` ` + (new $t('model-controller').render(get('scope'), 'label, group in group.groups', get)) + ` </div> </div> </div> </div> `
+}
+$t.functions['-1397238508'] = function (get) {
+	return `<div class='` + (get("tdm").isTarget("part-code", get("part").partCode) ? "active " : "") + ` model-label indent' ` + (get("partList").length > 1 ? "" : "hidden") + `> <label type='part-code'>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
+}
+$t.functions['-443173449'] = function (get) {
+	return `<div class='model-label` + (get("tdm").isTarget("part-name", get("partName")) ? " active" : "") + `' > <label type='part-name'>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\' {{partList.length > 1 ? "" : "hidden"}}> <label type=\'part-code\'>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
+}
+$t.functions['-424251200'] = function (get) {
+	return `model-controller`
+}
+$t.functions['opening'] = function (get) {
+	return `<div class='opening-cnt' opening-id='` + (get("opening").uniqueId) + `'> <div class='divider-controls'> </div> </div> <div id='` + (get("openDispId")) + `'> </div> `
+}
+$t.functions['order/body'] = function (get) {
+	return `<div> <label>Order Name</label> <input class='order-name-input' type='text' value='` + (get("order").name) + `' index='` + (get("$index")) + `'> <button class='save-order-btn' index='` + (get("$index")) + `'>Save</button> <div id='room-pills'></div> </div> `
+}
+$t.functions['order/head'] = function (get) {
+	return `<h3 class='margin-zero'> ` + (get("order").name) + ` </h3> `
+}
+$t.functions['order'] = function (get) {
+	return `<div> <label>Order Name</label> <input type='text'> <div id='room-pills'></div> </div> `
+}
+$t.functions['room/body'] = function (get) {
+	return `<div> <select> ` + (new $t('<option >{{type}}</option>').render(get('scope'), 'type in propertyTypes', get)) + ` </select> <div class='cabinet-cnt' room-id='` + (get("room").id) + `'></div> </div> `
+}
+$t.functions['-1674837651'] = function (get) {
+	return `<option >` + (get("type")) + `</option>`
+}
+$t.functions['room/head'] = function (get) {
+	return `<b>` + (get("$index")) + `</b> `
+}
+$t.functions['sections/divider'] = function (get) {
+	return `<h2>Divider: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['sections/door'] = function (get) {
+	return `<h2>DoorSection(` + (get("list").activeIndex()) + `):</h2> <br><br> <div> ` + (new $t('<div class=\'inline\' > <h3>{{assem.objId}}</h3> <div> {{getFeatureDisplay(assem)}} </div> </div>').render(get('scope'), 'assem in assemblies', get)) + ` </div> `
+}
+$t.functions['sections/drawer'] = function (get) {
+	return `<h2>Drawer: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['sections/dual-door'] = function (get) {
+	return `<h2>Dual Door: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['sections/false-front'] = function (get) {
+	return `<h2>False Front: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['sections/open'] = function (get) {
+	return `<h2>Open: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['-1793017541'] = function (get) {
+	return `<option value='` + (get("section").prototype.constructor.name) + `' ` + (get("opening").constructorId === get("section").constructorId ? 'selected' : '') + `> ` + (get("clean")(get("section").name)) + ` </option>`
+}
+
+
+class Endpoints {
+  constructor(config, host) {
+    const instance = this;
+
+    if ((typeof config) !== 'object') {
+      host = config;
+      config = Endpoints.defaultConfig;
+    }
+
+    host = host || '';
+    this.setHost = (newHost) => {
+      if ((typeof newHost) === 'string') {
+        host = config._envs[newHost] || newHost;
+      }
+    };
+    this.setHost(host);
+    this.getHost = (env) => env === undefined ? host : config._envs[env];
+
+    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost};
+    this.getFuncObj = function () {return endPointFuncs;};
+
+
+    function build(str) {
+      const pieces = str.split(/:[a-zA-Z0-9]*/g);
+      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
+      return function () {
+        let values = [];
+        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
+          values = arguments;
+        } else {
+          const obj = arguments[0];
+          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
+        }
+        let endpoint = '';
+        for (let index = 0; index < pieces.length; index += 1) {
+          const arg = values[index];
+          let value = '';
+          if (index < pieces.length - 1) {
+            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
+          }
+          endpoint += pieces[index] + value;
+        }
+        return `${host}${endpoint}`;
+      }
+    }
+
+    function configRecurse(currConfig, currFunc) {
+      const keys = Object.keys(currConfig);
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        const value = currConfig[key];
+        if (key.indexOf('_') !== 0) {
+          if (value instanceof Object) {
+            currFunc[key] = {};
+            configRecurse(value, currFunc[key]);
+          } else {
+            currFunc[key] = build(value);
+          }
+        } else {
+          currFunc[key] = value;
+        }
+      }
+    }
+
+    configRecurse(config, endPointFuncs);
+  }
+}
+
+try {
+  Endpoints.defaultConfig = require('../public/json/endpoints.json');
+  exports.EPNTS = new Endpoints(Endpoints.defaultConfig).getFuncObj();
+  exports.Endpoints = Endpoints;
+} catch (e) {}
+
+const EPNTS = new Endpoints({
+  "_envs": {
+    "local": "http://localhost:3000/cabinet",
+    "dev": "https://dev.jozsefmorrissey.com/cabinet",
+    "prod": "https://node.jozsefmorrissey.com/cabinet"
+  },
+  "user": {
+    "register": "/register",
+    "resendActivation": "/resend/activation",
+    "activate": "/activate/:email/:secret",
+    "validate": "/validate",
+    "login": "/login",
+    "status": "/status",
+    "resetPasswordRequest": "/reset/password/request",
+    "resetPassword": "/reset/password/:email/:secret"
+  },
+  "cabinet": {
+    "add": "/:id",
+    "list": "/all"
+  },
+  "order": {
+    "add": "/order/:id",
+    "get": "/order/:id",
+    "list": "/list/orders"
+  }
+}
+, 'http://localhost:3000/cabinet').getFuncObj();
+try {exports.EPNTS = EPNTS;}catch(e){}
+
 class StringMathEvaluator {
   constructor(globalScope, resolver) {
     globalScope = globalScope || {};
@@ -1216,6 +2215,77 @@ Show.listTypes = () => Object.values(Show.types);
 new Show('None');
 new Show('Flat');
 new Show('Inset Panel');
+
+
+
+Request = {
+    onStateChange: function (success, failure, id) {
+      return function () {
+        if (this.readyState == 4) {
+          if (this.status == 200) {
+            try {
+              resp = JSON.parse(this.responseText);
+            } catch (e){
+              resp = this.responseText;
+            }
+            if (success) {
+              success(resp, this);
+            }
+          } else if (failure) {
+            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
+            if (errorMsgMatch) {
+              this.errorMsg = errorMsgMatch[1].trim();
+            }
+            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
+            if (errorCodeMatch) {
+              this.errorCode = errorCodeMatch[1];
+
+            }
+            failure(this);
+          }
+          var resp = this.responseText;
+        }
+      }
+    },
+
+    id: function (url, method) {
+      return `request.${method}.${url.replace(/\./g, ',')}`;
+    },
+
+    get: function (url, success, failure) {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", url, true);
+      const id = Request.id(url, 'GET');
+      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', User.credential());
+      xhr.send();
+      return xhr;
+    },
+
+    hasBody: function (method) {
+      return function (url, body, success, failure) {
+        const xhr = new XMLHttpRequest();
+        xhr.open(method, url, true);
+        const id = Request.id(url, method);
+        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', User.credential());
+        xhr.send(JSON.stringify(body));
+        return xhr;
+      }
+    },
+
+    post: function () {Request.hasBody('POST')(...arguments)},
+    delete: function () {Request.hasBody('DELETE')(...arguments)},
+    options: function () {Request.hasBody('OPTIONS')(...arguments)},
+    head: function () {Request.hasBody('HEAD')(...arguments)},
+    put: function () {Request.hasBody('PUT')(...arguments)},
+    connect: function () {Request.hasBody('CONNECT')(...arguments)},
+}
+
+Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
+Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
 
 
 const DEFAULT_PROPS = {
@@ -1610,9 +2680,7 @@ let order;
 
 afterLoad.push(() => {
   order = new Order();
-  roomDisplay = new RoomDisplay('#room-pills', order.rooms);
-  const dummyText = (prefix) => (item, index) => `${prefix} ${index}`;
-  // ThreeDModel.init();
+  orderDisplay = new OrderDisplay('#app');
   setTimeout(ThreeDModel.init, 1000);
 });
 
@@ -1706,112 +2774,6 @@ Feature.addRelations('DoubleDoor', ['doorType', 'doorStyle', 'edgeProfile', 'thi
 Feature.addRelations('FalseFront', ['drawerType', 'edgeProfile']);
 
 
-class DivisionPattern {
-  constructor() {
-    this.patterns = {};
-    const instance = this;
-    this.filter = (dividerCount, config) => {
-      const sectionCount = dividerCount + 1;
-      if (sectionCount < 2) return '';
-      let filtered = '';
-      let patternArr = Object.values(this.patterns);
-      patternArr.forEach((pattern) => {
-        if (pattern.restrictions === undefined || pattern.restrictions.indexOf(sectionCount) !== -1) {
-          const name = pattern.name;
-          filtered += `<option value='${name}' ${config.name === name ? 'selected' : ''}>${name}</option>`;
-        }
-      });
-      this.inputStr
-      return filtered;
-    }
-    this.add = (name, resolution, inputArr, restrictions) => {
-      inputArr = inputArr || [];
-      let inputHtml =  (fill) => {
-        let html = '';
-        inputArr.forEach((label, index) => {
-          const value = fill ? fill[index] : '';
-          const labelTag = ``;
-          const inputTag = ``;
-          html += labelTag + inputTag;
-        });
-        return html;
-      }
-      this.patterns[name] = {name, resolution, restrictions, inputHtml, inputArr};
-    }
-
-    afterLoad.push(() => {
-      matchRun('change', '.open-pattern-select', (target) => {
-        const openingId = up('.opening-cnt', target).getAttribute('opening-id');
-        const opening = OpenSectionDisplay.sections[openingId];
-        OpenSectionDisplay.refresh(opening);
-      });
-
-      matchRun('keyup', '.division-pattern-input', updateDivisions);
-    });
-  }
-}
-
-DivisionPattern = new DivisionPattern();
-
-DivisionPattern.add('Unique',() => {
-
-});
-
-DivisionPattern.add('Equal', (length, index, value, sectionCount) => {
-  const newVal = length / sectionCount;
-  const list = new Array(sectionCount).fill(newVal);
-  return {list};
-});
-
-DivisionPattern.add('1 to 2', (length, index, value, sectionCount) => {
-  if (index === 0) {
-    const twoValue = (length - value) / 2;
-    const list = [value, twoValue, twoValue];
-    const fill = [value, twoValue];
-    return {list, fill};
-  } else {
-    const oneValue = (length - (value * 2));
-    const list = [oneValue, value, value];
-    const fill = [oneValue, value];
-    return {list, fill};
-  }
-}, ['first(1):', 'next(2)'], [3], [5.5]);
-
-DivisionPattern.add('2 to 2', (length, index, value, sectionCount) => {
-  const newValue = (length - (value * 2)) / 2;
-  if (index === 0) {
-    const list = [value, value, newValue, newValue];
-    const fill = [value, newValue];
-    return {list, fill};
-  } else {
-    const list = [newValue, newValue, value, value];
-    const fill = [newValue, value];
-    return {list, fill};
-  }
-}, ['first(2):', 'next(2)'], [4]);
-
-DivisionPattern.add('1 to 3', (length, index, value, sectionCount) => {
-  if (index === 0) {
-    const threeValue = (length - value) / 3;
-    const list = [value, threeValue, threeValue, threeValue];
-    const fill = [value, threeValue];
-    return {list, fill};
-  } else {
-    const oneValue = (length - (value * 3));
-    const list = [oneValue, value, value, value];
-    const fill = [oneValue, value];
-    return {list, fill};
-  }
-}, ['first(1):', 'next(3)'], [4], 5.5);
-
-afterLoad.push(() => matchRun('change', '.feature-radio', (target) => {
-  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
-  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
-  target.nextElementSibling.hidden = !target.checked;
-})
-)
-
-
 function createElement(tagname, attributes) {
   const elem = document.createElement(tagname);
   const keys = Object.keys(attributes);
@@ -1826,6 +2788,17 @@ function up(selector, node) {
     } else {
       return up(selector, node.parentNode);
     }
+  }
+}
+
+function appendError(target, message) {
+  return function (e) {
+    const parent = target.parentNode;
+    const error = document.createElement('div');
+    error.className = 'error';
+    error.innerHTML = message;
+    parent.insertBefore(error, target.nextElementSibling)
+    console.log('here')
   }
 }
 
@@ -1960,7 +2933,7 @@ function bindField(selector, objOrFunc, validation) {
     const updatePath = elem.getAttribute('prop-update');
     if (updatePath !== null) {
       const newValue = elem.value;
-      if (!validation(newValue)) {
+      if ((typeof validation) === 'function' && !validation(newValue)) {
         console.error('badValue')
       } else if ((typeof objOrFunc) === 'function') {
         objOrFunc(updatePath, elem.value);
@@ -1998,201 +2971,301 @@ function updateDivisions (target) {
   updateModel(opening);
 }
 
+function parseSeperator (str, seperator, isRegex) {
+  if ((typeof str) !== 'string') {
+    return {};
+  }
+  if (isRegex !== true) {
+    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
+  }
+  var keyValues = str.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
+  var json = {};
+  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
+    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
+    if (split) {
+      json[split[1]] = split[2];
+    }
+  }
+  return json;
+}
+
+function getCookie(name, seperator) {
+  const cookie = parseSeperator(document.cookie, ';')[name];
+  if (seperator === undefined) return cookie;
+  const values = cookie === undefined ? [] : cookie.split(seperator);
+  if (arguments.length < 3) return values;
+  let obj = {};
+  for (let index = 2; index < arguments.length; index += 1) {
+    const key = arguments[index];
+    const value = values[index - 2];
+    obj[key] = value;
+  }
+  return obj;
+}
+
+
+function getParam(name) {
+  if (getParam.params === undefined) {
+    const url = window.location.href;
+    const paramStr = url.substr(url.indexOf('?') + 1);
+    getParam.params = parseSeperator(paramStr, '&');
+  }
+  return decodeURI(getParam.params[name]);
+}
+
+
+function removeCookie(name) {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+}
+
 matchRun('change', '.open-orientation-radio,.open-division-input', updateDivisions);
 
 
-class RoomDisplay {
-  constructor(parentSelector, rooms) {
-    const cabinetDisplays = {};
-    const getHeader = (room, $index) =>
-        RoomDisplay.headTemplate.render({room, $index});
-
-    const getBody = (room, $index) => {
-      let propertyTypes = Object.keys(properties.list);
-      setTimeout(this.cabinetDisplay().refresh, 100);
-      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
+class DivisionPattern {
+  constructor() {
+    this.patterns = {};
+    const instance = this;
+    this.filter = (dividerCount, config) => {
+      const sectionCount = dividerCount + 1;
+      if (sectionCount < 2) return '';
+      let filtered = '';
+      let patternArr = Object.values(this.patterns);
+      patternArr.forEach((pattern) => {
+        if (pattern.restrictions === undefined || pattern.restrictions.indexOf(sectionCount) !== -1) {
+          const name = pattern.name;
+          filtered += `<option value='${name}' ${config.name === name ? 'selected' : ''}>${name}</option>`;
+        }
+      });
+      this.inputStr
+      return filtered;
     }
-    const getObject = () => {
-      const room = new Room();
-      cabinetDisplays[room.id] = new CabinetDisplay(room);
-      return room;
-    }
-    this.active = () => expandList.active();
-    this.cabinetDisplay = () => cabinetDisplays[this.active().id];
-    this.cabinet = () => this.cabinetDisplay().active();
-    const expListProps = {
-      list: rooms,
-      parentSelector, getHeader, getBody, getObject,
-      listElemLable: 'Room', type: 'pill'
-    };
-    const expandList = new ExpandableList(expListProps);
-  }
-}
-RoomDisplay.bodyTemplate = new $t('room/body');
-RoomDisplay.headTemplate = new $t('room/head');
-
-
-// properties
-//  required: {
-//  getHeader: function returns html header string,
-//  getBody: function returns html body string,
-//}
-//  optional: {
-//  list: list to use, creates on undefined
-//  getObject: function returns new list object default is generic js object,
-//  parentSelector: cssSelector only reqired for refresh function,
-//  listElemLable: nameOfElementType changes add button label,
-//  hideAddBtn: defaults to false,
-//  type: defaults to list,
-//  selfCloseTab: defalts to true - allows clicking on header to close body,
-//  findElement: used to find elemenents related to header - defaults to closest
-//}
-class ExpandableList {
-  constructor(props) {
-    props.list = props.list || [];
-    props.type = props.type || 'list';
-    props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
-    this.findElement = props.findElement;
-    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
-    props.getObject = props.getObject || (() => {});
-    props.id = ExpandableList.lists.length;
-    this.id = () => props.id;
-    let pendingRefresh = false;
-    let lastRefresh = new Date().getTime();
-    const storage = {};
-    props.activeIndex = 0;
-    ExpandableList.lists[props.id] = this;
-    this.add = () => {
-      props.list.push(props.getObject());
-      this.refresh();
-    };
-    this.isSelfClosing = () => props.selfCloseTab;
-    this.remove = (index) => {
-      props.list.splice(index, 1);
-      this.refresh();
-    }
-    this.refresh = (type) => {
-      props.type = (typeof type) === 'string' ? type : props.type;
-      if (!pendingRefresh) {
-        pendingRefresh = true;
-        setTimeout(() => {
-          const parent = document.querySelector(props.parentSelector);
-          const html = ExpandableList[`${props.type}Template`].render(props);
-
-          if (parent && html !== undefined) parent.innerHTML = html;
-          pendingRefresh = false;
-        }, 100);
+    this.add = (name, resolution, inputArr, restrictions) => {
+      inputArr = inputArr || [];
+      let inputHtml =  (fill) => {
+        let html = '';
+        inputArr.forEach((label, index) => {
+          const value = fill ? fill[index] : '';
+          const labelTag = ``;
+          const inputTag = ``;
+          html += labelTag + inputTag;
+        });
+        return html;
       }
-    };
-    this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
-    this.active = () => props.list[this.activeIndex()];
-    this.value = (index) => (key, value) => {
-      if (props.activeIndex === undefined) props.activeIndex = 0;
-      if (index === undefined) index = props.activeIndex;
-      if (storage[index] === undefined) storage[index] = {};
-      if (value === undefined) return storage[index][key];
-      storage[index][key] = value;
+      this.patterns[name] = {name, resolution, restrictions, inputHtml, inputArr};
     }
-    this.set = (index, value) => props.list[index] = value;
-    this.get = (index) => props.list[index];
-    this.htmlBody = (index) => props.getBody(props.list[index], index);
-    this.refresh();
+
+    afterLoad.push(() => {
+      matchRun('change', '.open-pattern-select', (target) => {
+        const openingId = up('.opening-cnt', target).getAttribute('opening-id');
+        const opening = OpenSectionDisplay.sections[openingId];
+        OpenSectionDisplay.refresh(opening);
+      });
+
+      matchRun('keyup', '.division-pattern-input', updateDivisions);
+    });
   }
 }
-ExpandableList.lists = [];
-ExpandableList.listTemplate = new $t('expandable/list');
-ExpandableList.pillTemplate = new $t('expandable/pill');
-ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
-ExpandableList.getIdAndIndex = (target) => {
-  const cnt = up('.expand-header,.expand-body', target);
-  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-  const index = Number.parseInt(cnt.getAttribute('index'));
-  return {id, index};
-}
-ExpandableList.getValueFunc = (target) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  return ExpandableList.lists[idIndex.id].value(idIndex.index);
-}
 
-ExpandableList.get = (target, value) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  return ExpandableList.lists[idIndex.id].get(idIndex.index);
-}
+DivisionPattern = new DivisionPattern();
 
-ExpandableList.set = (target, value) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  ExpandableList.lists[idIndex.id].set(idIndex.index, value);
-}
+DivisionPattern.add('Unique',() => {
 
-ExpandableList.value = (key, value, target) => {
-  return ExpandableList.getValueFunc(target)(key, value);
-}
-matchRun('click', '.expandable-list-add-btn', (target) => {
-  const id = target.getAttribute('ex-list-id');
-  ExpandableList.lists[id].add();
 });
-matchRun('click', '.expandable-item-rm-btn', (target) => {
-  const id = target.getAttribute('ex-list-id');
-  const index = target.getAttribute('index');
-  ExpandableList.lists[id].remove(index);
-});
-ExpandableList.closeAll = (header) => {
-  const hello = 'world';
-}
 
-matchRun('click', '.expand-header', (target, event) => {
-  const isActive = target.matches('.active');
-  const id = target.getAttribute('ex-list-id');
-  const list = ExpandableList.lists[id];
-  if (isActive && event.target === target) {
-    target.className = target.className.replace(/(^| )active( |$)/g, '');
-    list.findElement('.expand-body', target).style.display = 'none';
-    list.activeIndex(null);
-    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-  } else if (!isActive) {
-    const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
-    const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
-    const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-    headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-    bodys.forEach((body) => body.style.display = 'none');
-    rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-    const body = list.findElement('.expand-body', target);
-    body.style.display = 'block';
-    const index = target.getAttribute('index');
-    list.activeIndex(index);
-    body.innerHTML = list.htmlBody(index);
-    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-    target.className += ' active';
+DivisionPattern.add('Equal', (length, index, value, sectionCount) => {
+  const newVal = length / sectionCount;
+  const list = new Array(sectionCount).fill(newVal);
+  return {list};
+});
+
+DivisionPattern.add('1 to 2', (length, index, value, sectionCount) => {
+  if (index === 0) {
+    const twoValue = (length - value) / 2;
+    const list = [value, twoValue, twoValue];
+    const fill = [value, twoValue];
+    return {list, fill};
+  } else {
+    const oneValue = (length - (value * 2));
+    const list = [oneValue, value, value];
+    const fill = [oneValue, value];
+    return {list, fill};
   }
-});
+}, ['first(1):', 'next(2)'], [3], [5.5]);
 
-
-
-class Room {
-  constructor(name) {
-    this.name = name || `Room ${Room.count++}`;
-    this.id = randomString(32);
-    this.cabinets = [];
-    this.toJson = () => {
-      const json = {name: this.name, id: this.id, cabinets: []};
-      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
-      return json;
-    };
+DivisionPattern.add('2 to 2', (length, index, value, sectionCount) => {
+  const newValue = (length - (value * 2)) / 2;
+  if (index === 0) {
+    const list = [value, value, newValue, newValue];
+    const fill = [value, newValue];
+    return {list, fill};
+  } else {
+    const list = [newValue, newValue, value, value];
+    const fill = [newValue, value];
+    return {list, fill};
   }
+}, ['first(2):', 'next(2)'], [4]);
+
+DivisionPattern.add('1 to 3', (length, index, value, sectionCount) => {
+  if (index === 0) {
+    const threeValue = (length - value) / 3;
+    const list = [value, threeValue, threeValue, threeValue];
+    const fill = [value, threeValue];
+    return {list, fill};
+  } else {
+    const oneValue = (length - (value * 3));
+    const list = [oneValue, value, value, value];
+    const fill = [oneValue, value];
+    return {list, fill};
+  }
+}, ['first(1):', 'next(3)'], [4], 5.5);
+
+afterLoad.push(() => matchRun('change', '.feature-radio', (target) => {
+  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+  target.nextElementSibling.hidden = !target.checked;
+})
+)
+
+
+
+class User {
+  constructor() {
+    const stateAttr = 'user-state';
+    let state, cnt, email, password;
+
+    function updateDisplay(s) {
+      state = s ? User.states[s] : state;
+      cnt = cnt || document.getElementById('login-cnt');
+      cnt.innerHTML = state.template.render({email, password});
+    }
+
+    const hideLogin = () => document.getElementById('login').hidden = true;
+    const showLogin = () => document.getElementById('login').hidden = false;
+    function successfulRegistration(body) {
+      updateDisplay('CONFIRMATION_MESSAGE');
+    }
+
+    function register(target) {password
+      const fail = appendError(target, 'Registration Failed: Email already registered');
+      const body = {email, password};
+      document.cookie = `${APP_ID}=${email}:invalid`;
+      Request.post(EPNTS.user.register(), body, successfulRegistration, fail);
+    }
+
+    function successfulLogin(body, res) {
+      const newAuth = res.getResponseHeader('authorization');
+      document.cookie = `${APP_ID}=${newAuth}`;
+      console.log(newAuth);
+      hideLogin();
+    }
+
+    const getEmail = () => getCookie(APP_ID, ':', 'email').email;
+    this.credential = User.credential;
+
+    function login(target) {
+      const fail = appendError(target, 'Login Failed: Invalid Email and/or Password');
+      const body = {email, password};
+      Request.post(EPNTS.user.login(), body, successfulLogin, fail);
+    }
+
+    function resendActivation(target) {
+      const fail = appendError(target, 'Email Not Registered Or Already Active');
+      const body = {email: getEmail()};
+      Request.post(EPNTS.user.resendActivation(), body, successfulRegistration, fail);
+    }
+
+    function logout() {
+      removeCookie(APP_ID);
+      showLogin();
+      updateDisplay('LOGIN')
+    }
+
+    function resetPassword(target) {
+      const fail = appendError(target, 'Server Error Must have occured... try again in a few minutes');
+      const body = {email, newPassword: password};
+      Request.post(EPNTS.user.resetPasswordRequest(), body, successfulRegistration, fail);
+    }
+
+    matchRun('click', `[${stateAttr}]`, (elem) => {
+      const stateId = elem.getAttribute(stateAttr);
+      if (User.states[stateId]) {
+        updateDisplay(stateId);
+      } else console.error(`Invalid State: '${stateId}'`);
+    });
+
+    matchRun('click', '#register', register);
+    matchRun('click', '#login-btn', login);
+    matchRun('click', '#resend-activation', resendActivation);
+    matchRun('click', '#reset-password', resetPassword);
+    matchRun('click', '#logout-btn', logout);
+
+    matchRun('change', 'input[name="email"]', (elem) => email = elem.value);
+    matchRun('change', 'input[name="password"]', (elem) => password = elem.value);
+
+    function statusCheck(body) {
+      switch (body) {
+        case 'Not Registered':
+          updateDisplay('LOGIN')
+          break;
+        case 'Not Activated':
+          updateDisplay('CONFIRMATION_MESSAGE');
+          break;
+        case 'Logged In':
+          hideLogin();
+          break;
+        case 'Logged Out':
+          updateDisplay('LOGIN')
+          break;
+        default:
+
+      }
+      console.log('sc:::', body);
+    }
+
+
+    if (this.credential()) Request.get(EPNTS.user.status(), statusCheck);
+    else updateDisplay('LOGIN');
+  }
+}
+
+User.states = {};
+User.states.LOGIN = {
+  template: new $t('login/login')
 };
-Room.count = 0;
+User.states.CONFIRMATION_MESSAGE = {
+  template: new $t('login/confirmation-message')
+};
+User.states.CREATE_ACCOUNT = {
+  template: new $t('login/create-account')
+};
+User.states.RESET_PASSWORD = {
+  template: new $t('login/reset-password')
+};
+
+User.credential = () => getCookie(APP_ID);
+
+
+User = new User();
 
 
 class Order {
-  constructor(name) {
-    this.name = name;
+  constructor(name, id) {
+    this.name = name || ++Order.count;
+    this.id = id || randomString(32);
     this.rooms = []
     this.toJson = () => {
-      const json = {name, rooms: []};
+      const json = {name: this.name, rooms: []};
       this.rooms.forEach((room) => json.rooms.push(room.toJson()));
       return json;
     }
   }
+}
+
+Order.count = 0;
+Order.fromJson = (orderJson) => {
+  const order = new Order(orderJson.name, orderJson.id);
+  orderJson.rooms.forEach((roomJson) => order.rooms.push(Room.fromJson(roomJson)));
+  return order;
 }
 
 
@@ -2217,16 +3290,17 @@ OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId
 OpenSectionDisplay.getList = (root) => {
   let openId = root.uniqueId;
   if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
-  const sections = Object.values(Section.sections);
+  const sections = Section.sections();
   const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
   const parentSelector = `#${OpenSectionDisplay.getId(root)}`
   const list = root.sections;
   const hideAddBtn = true;
   const selfCloseTab = true;
   let exList;
+  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
   const getHeader = (opening, index) => {
     const sections = index % 2 === 0 ? Section.getSections(false) : [];
-    return OpenSectionDisplay.listHeadTemplate.render({opening, sections});
+    return OpenSectionDisplay.listHeadTemplate.render({opening, sections, clean});
   }
   const getBody = (opening) => {
     const list = OpenSectionDisplay.getList(root);
@@ -2271,7 +3345,7 @@ OpenSectionDisplay.refresh = (opening) => {
       OpenSectionDisplay.updateDividers(opening);
       OpenSectionDisplay.getList(opening).refresh(type);
       const dividerSelector = `[opening-id='${opening.uniqueId}'].division-count-input`;
-      listCnt.querySelector(dividerSelector).focus();
+      // listCnt.querySelector(dividerSelector).focus();
     }
   }, 500);
 }
@@ -2284,7 +3358,6 @@ OpenSectionDisplay.onChange = (target) => {
     OpenSectionDisplay.refresh(opening);
     const cabinet = opening.getAssembly('c');
     ThreeDModel.render(cabinet);
-    target.focus();
   }
 };
 
@@ -2308,63 +3381,6 @@ matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
 matchRun('click', '.division-count-input', OpenSectionDisplay.onChange);
 matchRun('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
 matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
-
-
-class Cost {
-  constructor(id, formula, options) {
-    options = options || {};
-    formula = formula || 0;
-    const optionalPercentage = options.optionalPercentage;
-    const demMutliplier = options.demMutliplier;
-    let percentage = 100;
-    const getMutliplier = (attr) => {
-      if (options.demMutliplier !== undefined) {
-        return options.demMutliplier;
-      }
-      return 'llwwdd'; };
-    this.calc = (assembly) => {
-      let priceStr = formula.toLowerCase();
-      for (let index = 0; index < 6; index += 1) {
-        const char = priceStr[index];
-        let multiplier;
-        switch (char) {
-          case 'l': value = assembly['length']; break;
-          case 'w': value = assembly['width']; break;
-          case 'd': value = assembly['depth']; break;
-          default: value = 1;
-        }
-        priceStr.replace(new RegExp(`/${char}/`), assembly[value]);
-      }
-      try {
-        const price = eval(priceStr)
-        if (optionalPercentage) price*percentage;
-        return price;
-      } catch (e) {
-        return -0.01;
-      }
-    }
-
-    const cName = this.constructor.name;
-    if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
-    if (Cost.lists[cName][id] === undefined) Cost.lists[cName][id] = [];
-    Cost.lists[cName][id].push(this);
-
-  }
-}
-Cost.lists = {};
-Cost.objMap = {}
-Cost.get = (name) => {
-  const obj = Cost.lists[id];
-  if (obj === undefined) return null;
-  return new obj.constructor();
-}
-Cost.addRelations = (type, id, name) => {
-  names.forEach((name) => {
-    if (objMap[id] === undefined) Cost.objMap[id] = {Labor: [], Material: []}
-    if (type === Labor) Cost.objMap[id].Labor.push(Cost.get(name));
-    if (type === Material) Cost.objMap[id].Material.push(Cost.get(name));
-  });
-}
 
 
 class FeatureDisplay {
@@ -2684,6 +3700,27 @@ function updateModel(part) {
 }
 
 
+
+class Room {
+  constructor(name, id) {
+    this.name = name || `Room ${Room.count++}`;
+    this.id = id || randomString(32);
+    this.cabinets = [];
+    this.toJson = () => {
+      const json = {name: this.name, id: this.id, cabinets: []};
+      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
+      return json;
+    };
+  }
+};
+Room.count = 0;
+Room.fromJson = (roomJson) => {
+  const room = new Room(roomJson.name, roomJson.id);
+  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
+  return order;
+}
+
+
 class CabinetDisplay {
   constructor(room) {
     const parentSelector = `[room-id="${room.id}"].cabinet-cnt`;
@@ -2708,20 +3745,331 @@ class CabinetDisplay {
     };
     const expandList = new ExpandableList(expListProps);
     this.refresh = () => expandList.refresh();
-    const valueUpdate = (path, value) => {
+
+    const cabinetKey = (path) => {
       const split = path.split('.');
       const index = split[0];
       const key = split[1];
       const cabinet = expListProps.list[index];
-      cabinet.value(key, new Measurment(value).decimal());
-      ThreeDModel.render(cabinet);
+      return {cabinet, key};
+    }
+
+    const valueUpdate = (path, value) => {
+      const cabKey = cabinetKey(path);
+      cabKey.cabinet.value(cabKey.key, new Measurment(value).decimal());
+      ThreeDModel.render(cabKey.cabinet);
+    }
+
+    const attrUpdate = (path, value) => {
+      const cabKey = cabinetKey(path);
+      cabKey.cabinet[cabKey.key] = value;
+    }
+
+    const saveSuccess = () => console.log('success');
+    const saveFail = () => console.log('failure');
+    const save = (target) => {
+      const index = target.getAttribute('index');
+      const cabinet = expListProps.list[index];
+      Request.post(EPNTS.cabinet.add(cabinet.id), cabinet.toJson(), saveSuccess, saveFail);
+      console.log('saving');
     }
 
     bindField('.cabinet-input', valueUpdate, Measurment.validation('(0,)'));
+    bindField('.cabinet-id-input', attrUpdate);
+    matchRun('click', '.save-cabinet-btn', save);
   }
 }
 CabinetDisplay.bodyTemplate = new $t('cabinet/body');
 CabinetDisplay.headTemplate = new $t('cabinet/head');
+
+
+class Cost {
+  constructor(id, formula, options) {
+    options = options || {};
+    formula = formula || 0;
+    const optionalPercentage = options.optionalPercentage;
+    const demMutliplier = options.demMutliplier;
+    let percentage = 100;
+    const getMutliplier = (attr) => {
+      if (options.demMutliplier !== undefined) {
+        return options.demMutliplier;
+      }
+      return 'llwwdd'; };
+    this.calc = (assembly) => {
+      let priceStr = formula.toLowerCase();
+      for (let index = 0; index < 6; index += 1) {
+        const char = priceStr[index];
+        let multiplier;
+        switch (char) {
+          case 'l': value = assembly['length']; break;
+          case 'w': value = assembly['width']; break;
+          case 'd': value = assembly['depth']; break;
+          default: value = 1;
+        }
+        priceStr.replace(new RegExp(`/${char}/`), assembly[value]);
+      }
+      try {
+        const price = eval(priceStr)
+        if (optionalPercentage) price*percentage;
+        return price;
+      } catch (e) {
+        return -0.01;
+      }
+    }
+
+    const cName = this.constructor.name;
+    if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
+    if (Cost.lists[cName][id] === undefined) Cost.lists[cName][id] = [];
+    Cost.lists[cName][id].push(this);
+
+  }
+}
+Cost.lists = {};
+Cost.objMap = {}
+Cost.get = (name) => {
+  const obj = Cost.lists[id];
+  if (obj === undefined) return null;
+  return new obj.constructor();
+}
+Cost.addRelations = (type, id, name) => {
+  names.forEach((name) => {
+    if (objMap[id] === undefined) Cost.objMap[id] = {Labor: [], Material: []}
+    if (type === Labor) Cost.objMap[id].Labor.push(Cost.get(name));
+    if (type === Material) Cost.objMap[id].Material.push(Cost.get(name));
+  });
+}
+
+
+class OrderDisplay {
+  constructor(parentSelector, orders) {
+    const roomDisplays = {};
+    const getHeader = (order, $index) =>
+        OrderDisplay.headTemplate.render({order, $index});
+
+    function initOrder(order) {
+      roomDisplays[order.id] = new RoomDisplay('#room-pills', order);
+      return order;
+    }
+
+    function loadOrder(index) {
+      return function (orderData) {
+        console.log(orderData);
+      }
+    }
+
+    const getBody = (order, $index) => {
+      if (order instanceof Order) {
+        let propertyTypes = Object.keys(properties.list);
+        setTimeout(roomDisplays[order.id].refresh, 100);
+        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
+      } else {
+        Request.get(EPNTS.order.get(order.name), loadOrder($index), console.error);
+        return 'Loading...';
+      }
+    }
+    const getObject = () => initOrder(new Order());
+
+    const expListProps = {
+      list: orders,
+      parentSelector, getHeader, getBody, getObject,
+      listElemLable: 'Order', type: 'sidebar'
+    };
+    const expandList = new ExpandableList(expListProps);
+
+    const saveSuccess = () => console.log('success');
+    const saveFail = () => console.log('failure');
+    const save = (target) => {
+      const index = target.getAttribute('index');
+      const order = expandList.get(index);
+      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
+      console.log('saving');
+    }
+
+    const attrUpdate = (attr) => (target) => {
+      const index = target.getAttribute('index');
+      const order = expandList.get(index);
+      order[attr] = target.value;
+    };
+
+    function addOrders(names) {
+      names.forEach((name) => expListProps.list.push({ name }));
+      expandList.refresh();
+    }
+    Request.get(EPNTS.order.list(), addOrders);
+
+    matchRun('change', '.order-name-input', attrUpdate('name'));
+    matchRun('click', '.save-order-btn', save);
+  }
+}
+OrderDisplay.bodyTemplate = new $t('order/body');
+OrderDisplay.headTemplate = new $t('order/head');
+
+
+class RoomDisplay {
+  constructor(parentSelector, order) {
+    const cabinetDisplays = {};
+    const getHeader = (room, $index) =>
+        RoomDisplay.headTemplate.render({room, $index});
+
+    const getBody = (room, $index) => {
+      let propertyTypes = Object.keys(properties.list);
+      setTimeout(this.cabinetDisplay().refresh, 100);
+      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
+    }
+    const getObject = () => {
+      const room = new Room();
+      cabinetDisplays[room.id] = new CabinetDisplay(room);
+      return room;
+    }
+    this.active = () => expandList.active();
+    this.cabinetDisplay = () => cabinetDisplays[this.active().id];
+    this.cabinet = () => this.cabinetDisplay().active();
+    const expListProps = {
+      list: order.rooms,
+      parentSelector, getHeader, getBody, getObject,
+      listElemLable: 'Room', type: 'pill'
+    };
+    const expandList = new ExpandableList(expListProps);
+    this.refresh = () => expandList.refresh();
+  }
+}
+RoomDisplay.bodyTemplate = new $t('room/body');
+RoomDisplay.headTemplate = new $t('room/head');
+
+
+// properties
+//  required: {
+//  getHeader: function returns html header string,
+//  getBody: function returns html body string,
+//}
+//  optional: {
+//  list: list to use, creates on undefined
+//  getObject: function returns new list object default is generic js object,
+//  parentSelector: cssSelector only reqired for refresh function,
+//  listElemLable: nameOfElementType changes add button label,
+//  hideAddBtn: defaults to false,
+//  type: defaults to list,
+//  selfCloseTab: defalts to true - allows clicking on header to close body,
+//  findElement: used to find elemenents related to header - defaults to closest
+//}
+class ExpandableList {
+  constructor(props) {
+    props.list = props.list || [];
+    props.type = props.type || 'list';
+    props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
+    this.findElement = props.findElement;
+    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
+    props.getObject = props.getObject || (() => {});
+    props.id = ExpandableList.lists.length;
+    this.id = () => props.id;
+    let pendingRefresh = false;
+    let lastRefresh = new Date().getTime();
+    const storage = {};
+    props.activeIndex = 0;
+    ExpandableList.lists[props.id] = this;
+    this.add = () => {
+      props.list.push(props.getObject());
+      this.refresh();
+    };
+    this.isSelfClosing = () => props.selfCloseTab;
+    this.remove = (index) => {
+      props.list.splice(index, 1);
+      this.refresh();
+    }
+    this.refresh = (type) => {
+      props.type = (typeof type) === 'string' ? type : props.type;
+      if (!pendingRefresh) {
+        pendingRefresh = true;
+        setTimeout(() => {
+          const parent = document.querySelector(props.parentSelector);
+          const html = ExpandableList[`${props.type}Template`].render(props);
+
+          if (parent && html !== undefined) parent.innerHTML = html;
+          pendingRefresh = false;
+        }, 100);
+      }
+    };
+    this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
+    this.active = () => props.list[this.activeIndex()];
+    this.value = (index) => (key, value) => {
+      if (props.activeIndex === undefined) props.activeIndex = 0;
+      if (index === undefined) index = props.activeIndex;
+      if (storage[index] === undefined) storage[index] = {};
+      if (value === undefined) return storage[index][key];
+      storage[index][key] = value;
+    }
+    this.set = (index, value) => props.list[index] = value;
+    this.get = (index) => props.list[index];
+    this.htmlBody = (index) => props.getBody(props.list[index], index);
+    this.refresh();
+  }
+}
+ExpandableList.lists = [];
+ExpandableList.listTemplate = new $t('expandable/list');
+ExpandableList.pillTemplate = new $t('expandable/pill');
+ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
+ExpandableList.getIdAndIndex = (target) => {
+  const cnt = up('.expand-header,.expand-body', target);
+  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
+  const index = Number.parseInt(cnt.getAttribute('index'));
+  return {id, index};
+}
+ExpandableList.getValueFunc = (target) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  return ExpandableList.lists[idIndex.id].value(idIndex.index);
+}
+
+ExpandableList.get = (target, value) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  return ExpandableList.lists[idIndex.id].get(idIndex.index);
+}
+
+ExpandableList.set = (target, value) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  ExpandableList.lists[idIndex.id].set(idIndex.index, value);
+}
+
+ExpandableList.value = (key, value, target) => {
+  return ExpandableList.getValueFunc(target)(key, value);
+}
+matchRun('click', '.expandable-list-add-btn', (target) => {
+  const id = target.getAttribute('ex-list-id');
+  ExpandableList.lists[id].add();
+});
+matchRun('click', '.expandable-item-rm-btn', (target) => {
+  const id = target.getAttribute('ex-list-id');
+  const index = target.getAttribute('index');
+  ExpandableList.lists[id].remove(index);
+});
+ExpandableList.closeAll = (header) => {
+  const hello = 'world';
+}
+
+matchRun('click', '.expand-header', (target, event) => {
+  const isActive = target.matches('.active');
+  const id = target.getAttribute('ex-list-id');
+  const list = ExpandableList.lists[id];
+  if (isActive && event.target === target) {
+    target.className = target.className.replace(/(^| )active( |$)/g, '');
+    list.findElement('.expand-body', target).style.display = 'none';
+    list.activeIndex(null);
+    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
+  } else if (!isActive) {
+    const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
+    const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
+    const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
+    headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
+    bodys.forEach((body) => body.style.display = 'none');
+    rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
+    const body = list.findElement('.expand-body', target);
+    body.style.display = 'block';
+    const index = target.getAttribute('index');
+    list.activeIndex(index);
+    body.innerHTML = list.htmlBody(index);
+    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+    target.className += ' active';
+  }
+});
 
 
 class Material extends Cost {
@@ -2748,6 +4096,19 @@ new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
 new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
 
+function drawerBox(length, width, depth) {
+  const bottomHeight = 7/8;
+  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+  box.setColor(1, 0, 0);
+  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+  inside.setColor(0, 0, 1);
+  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+  bInside.setColor(0, 0, 1);
+
+  return box.subtract(bInside).subtract(inside);
+}
+
+
 function pull(length, height) {
   var rspx = length - .75;
   var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
@@ -2757,41 +4118,10 @@ function pull(length, height) {
 }
 
 
-class Joint {
-  constructor(joinStr) {
-    const match = joinStr.match(Joint.regex);
-    this.malePartCode = match[1];
-    this.femalePartCode = match[2];
-
-    this.updatePosition = () => {};
-
-    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
-    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
-
-    this.maleOffset = () => 0;
-    this.femaleOffset = () => 0;
-    this.setParentAssembly = (pa) => this.parentAssembly = pa;
-
-    this.getDemensions = () => {
-      const malePos = getMale();
-      const femalePos = getFemale();
-      // I created a loop but it was harder to understand
-      return undefined;
-    }
-
-    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
-    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
-    Joint.list[this.malePartCode].push(this);
-    Joint.list[this.femalePartCode].push(this);
-  }
-}
-Joint.list = {};
-Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
-
-
 class Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
     this.display = true;
+    this.important = ['partCode', 'partName', 'centerStr', 'demensionStr', 'rotationStr'];
     this.part = true;
     this.included = true;
     this.parentAssembly = parent;
@@ -2950,11 +4280,7 @@ class Assembly {
       json.type = this.constructor.name;
       if (this.important) {
         this.important.forEach((attr) =>
-            json[attr] = (typeof this.attr) === 'function' ? this.attr() : this.attr);
-
-        json.length = this.length();
-        json.width = this.width();
-        json.thickness = this.thickness();
+            json[attr] = (typeof this[attr]) === 'function' ? this[attr]() : this[attr]);
       }
       json.values = JSON.parse(JSON.stringify(this.values));
       json.subAssemblies = [];
@@ -3001,8 +4327,65 @@ Assembly.resolveAttr = (assembly, attr) => {
   }
   return assembly.value(attr);
 }
+Assembly.fromJson = (roomJson) => {
+  new (Date.prototype.constructor)(...[])
+  const room = new Room(roomJson.name, roomJson.id);
+  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
+  return order;
+}
+Assembly.classes = {};
+Assembly.new = function (id) {
+  return new Assembly.classes[id](...Array.from(arguments).slice(1));
+}
+Assembly.classObj = (filterFunc) => {
+  if ((typeof filterFunc) !== 'function') return Assembly.classes;
+  const classIds = Object.keys(Assembly.classes);
+  const classes = Assembly.classes;
+  const obj = [];
+  for (let index = 0; index < classIds.length; index += 1) {
+    const id = classIds[index];
+    if (filterFunc(classes[id])) obj[id]= classes[id];
+  }
+  return obj;
+}
+Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
+Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
+Assembly.register = (clazz) =>
+    Assembly.classes[clazz.prototype.constructor.name] = clazz;
 Assembly.lists = {};
 Assembly.idCounters = {};
+
+
+class Joint {
+  constructor(joinStr) {
+    const match = joinStr.match(Joint.regex);
+    this.malePartCode = match[1];
+    this.femalePartCode = match[2];
+
+    this.updatePosition = () => {};
+
+    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
+    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
+
+    this.maleOffset = () => 0;
+    this.femaleOffset = () => 0;
+    this.setParentAssembly = (pa) => this.parentAssembly = pa;
+
+    this.getDemensions = () => {
+      const malePos = getMale();
+      const femalePos = getFemale();
+      // I created a loop but it was harder to understand
+      return undefined;
+    }
+
+    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
+    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
+    Joint.list[this.malePartCode].push(this);
+    Joint.list[this.femalePartCode].push(this);
+  }
+}
+Joint.list = {};
+Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
 
 
 class Labor extends Cost {
@@ -3025,26 +4408,6 @@ new Labor('Paint', '(l*l*w*w*.1)/12');
 new Labor('Stain', '(l*l*w*w*.25)/12');
 new Labor('InstallDrawerFront', '2');
 new Labor('InstallPullout', 10);
-
-
-function drawerBox(length, width, depth) {
-  const bottomHeight = 7/8;
-  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-  box.setColor(1, 0, 0);
-  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-  inside.setColor(0, 0, 1);
-  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-  bInside.setColor(0, 0, 1);
-
-  return box.subtract(bInside).subtract(inside);
-}
-
-
-class Butt extends Joint {
-  constructor(joinStr) {
-    super(joinStr);
-  }
-}
 
 
 class DrawerFront extends Assembly {
@@ -3078,6 +4441,124 @@ class DrawerFront extends Assembly {
     this.updatePosition();
   }
 }
+
+Assembly.register(DrawerFront);
+
+
+class FrameDivider extends Assembly {
+  constructor (partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+
+Assembly.register(FrameDivider);
+
+
+class Frame extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+
+Assembly.register(Frame);
+
+
+class Panel extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+
+Assembly.register(Panel);
+
+
+/*
+    a,b,c
+    d,e,f
+    g,h,i
+*/
+class Pull extends Assembly {
+  constructor(partCode, partName, door, location, index, count) {
+    super(partCode, 'Pull');
+    this.setParentAssembly(door);
+    index = index || 0;
+    count = count || 1;
+    this.setLocation = (l) => location = l;
+
+    function offset(center, distance) {
+      const spacing = distance / count;
+      return center - (distance / 2) + spacing / 2 + spacing * (index);
+    }
+
+
+    this.demensionStr = (attr) => {
+      const dems = {x: 1, y: 3, z: 1.5};
+      return attr ? dems[attr] : dems;
+    }
+
+    const edgeOffset = 1;
+    this.centerStr = (attr) => {
+        let center = door.position().center();
+        let doorDems = door.position().demension();
+        let pullDems = this.demensionStr();
+        center.z -= (doorDems.z + pullDems.z) / 2;
+        switch (location) {
+          case Pull.location.TOP_RIGHT:
+            center.x = center.x + doorDems.x / 2 -  edgeOffset;
+            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+					break;
+          case Pull.location.TOP_LEFT:
+          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+					break;
+          case Pull.location.BOTTOM_RIGHT:
+          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+					break;
+          case Pull.location.BOTTOM_LEFT:
+          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+					break;
+          case Pull.location.TOP:
+            center.x = offset(center.x, doorDems.x);
+            center.y -= doorDems.y / 2;
+					break;
+          case Pull.location.BOTTOM:
+            center.x = offset(center.x, doorDems.x);
+            center.y += doorDems.y / 2;
+					break;
+          case Pull.location.RIGHT:
+            center.y = offset(center.y, doorDems.y);
+            center.x += doorDems.x / 2;
+					break;
+          case Pull.location.LEFT:
+            center.y = offset(center.y, doorDems.y);
+            center.x -= doorDems.x / 2;
+					break;
+          case Pull.location.CENTER:
+            center.x = offset(center.x, doorDems.x);
+					break;
+          default:
+            throw new Error('Invalid pull location');
+        }
+        return attr ? center[attr] : center;
+    };
+
+    this.updatePosition();
+  }
+}
+Pull.location = {};
+Pull.location.TOP_RIGHT = {rotate: true};
+Pull.location.TOP_LEFT = {rotate: true};
+Pull.location.BOTTOM_RIGHT = {rotate: true};
+Pull.location.BOTTOM_LEFT = {rotate: true};
+Pull.location.TOP = {multiple: true};
+Pull.location.BOTTOM = {multiple: true};
+Pull.location.RIGHT = {multiple: true};
+Pull.location.LEFT = {multiple: true};
+Pull.location.CENTER = {multiple: true, rotate: true};
+
+Assembly.register(Pull);
 
 
 const OVERLAY = {};
@@ -3206,121 +4687,35 @@ class Cabinet extends Assembly {
   }
 }
 
+Assembly.register(Cabinet);
+
+
+class Divider extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+Divider.count = 0;
+
+Assembly.register(Divider);
+
 
 
 class Door extends Assembly {
-  constructor(partCode, partName, door, ) {
-    super(partCode, partName);
-    this.pull =
-
-    this.updatePull = () => {
-      pulls.push(new Pull(`dp`, 'Door.Pull', instance.doorPullCenter, instance.pullDems, 'z'));
-    }
+  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
+    super(partCode, partName, coverCenter, coverDems, rotationStr);
+    let location = Pull.location.TOP_RIGHT;
+    let pull = new Pull(`${partCode}-dp`, 'Door.Pull', this, location);
+    this.addSubAssembly(pull);
   }
 }
 
-
-/*
-    a,b,c
-    d,e,f
-    g,h,i
-*/
-class Pull extends Assembly {
-  constructor(partCode, partName, door, location, index, count) {
-    super(partCode, 'Pull');
-    this.setParentAssembly(door);
-
-    function offset(center, distance) {
-      const spacing = distance / count;
-      return center - (distance / 2) + spacing / 2 + spacing * (index);
-    }
+Assembly.register(Door);
 
 
-    this.demensionStr = (attr) => {
-      const dems = {x: 1, y: 3, z: 1.5};
-      return attr ? dems[attr] : dems;
-    }
-
-    const edgeOffset = 1;
-    this.centerStr = (attr) => {
-        let center = door.position().center();
-        let doorDems = door.position().demension();
-        let pullDems = this.demensionStr();
-        center.z -= (doorDems.z + pullDems.z) / 2;
-        switch (location) {
-          case Pull.location.TOP_RIGHT:
-            center.x = center.x + doorDems.x / 2 -  edgeOffset;
-            center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
-					break;
-          case Pull.location.TOP_LEFT:
-          center.x = center.x + doorDems.x / 2 -  edgeOffset;
-          center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
-					break;
-          case Pull.location.BOTTOM_RIGHT:
-          center.x = center.x + doorDems.x / 2 -  edgeOffset;
-          center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
-					break;
-          case Pull.location.BOTTOM_LEFT:
-          center.x = center.x + doorDems.x / 2 -  edgeOffset;
-          center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
-					break;
-          case Pull.location.TOP:
-            center.x = offset(center.x, doorDems.x);
-            center.y -= doorDems.y / 2;
-					break;
-          case Pull.location.BOTTOM:
-            center.x = offset(center.x, doorDems.x);
-            center.y += doorDems.y / 2;
-					break;
-          case Pull.location.RIGHT:
-            center.y = offset(center.y, doorDems.y);
-            center.x += doorDems.x / 2;
-					break;
-          case Pull.location.LEFT:
-            center.y = offset(center.y, doorDems.y);
-            center.x -= doorDems.x / 2;
-					break;
-          case Pull.location.CENTER:
-            center.x = offset(center.x, doorDems.x);
-					break;
-          default:
-            throw new Error('Invalid pull location');
-        }
-        return attr ? center[attr] : center;
-    };
-
-    this.updatePosition();
-  }
-}
-Pull.location = {};
-Pull.location.TOP_RIGHT = {rotate: true};
-Pull.location.TOP_LEFT = {rotate: true};
-Pull.location.BOTTOM_RIGHT = {rotate: true};
-Pull.location.BOTTOM_LEFT = {rotate: true};
-Pull.location.TOP = {multiple: true};
-Pull.location.BOTTOM = {multiple: true};
-Pull.location.RIGHT = {multiple: true};
-Pull.location.LEFT = {multiple: true};
-Pull.location.CENTER = {multiple: true, rotate: true};
-
-
-class FrameDivider extends Assembly {
-  constructor (partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-  }
-}
-
-
-class Frame extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-  }
-}
-
-
-class DrawerBox extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
+class Butt extends Joint {
+  constructor(joinStr) {
+    super(joinStr);
   }
 }
 
@@ -3346,7 +4741,7 @@ class Dado extends Joint {
 }
 
 
-class Miter extends Butt {
+class Miter extends Joint {
   constructor(joinStr) {
     super(joinStr);
   }
@@ -3372,19 +4767,13 @@ class Rabbet extends Joint {
 }
 
 
-class Divider extends Assembly {
+class DrawerBox extends Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
   }
 }
-Divider.count = 0;
 
-
-class Panel extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-  }
-}
+Assembly.register(DrawerBox);
 
 
 
@@ -3392,7 +4781,8 @@ const sectionFilePath = (filename) => `sections/${filename}`;
 
 class Section extends Assembly {
   constructor(templatePath, isPartition, partCode, partName, sectionProperties) {
-    super(templatePath, isPartition, partCode, partName);
+    super(partCode, partName);
+    this.important = ['partCode', 'partName'];
     this.center = (attr) => {
       const props = sectionProperties();
       const topPos = props.borders.top.position();
@@ -3433,32 +4823,37 @@ class Section extends Assembly {
       return {x,y,z};
     }
 
-    this.rotationStr = () => sectionProperties().rotationFunc();
-
-    this.isPartition = () => isPartition;
     if (templatePath === undefined) {
       throw new Error('template path must be defined');
     }
+    this.isPartition = () => isPartition;
     this.constructorId = this.constructor.name;
     this.part = false;
     this.display = false;
     this.name = this.constructorId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
-    Section.sections[this.constructorId] = this;
     Section.templates[this.constructorId] = new $t(templatePath);
   }
 }
-Section.sections = {};
+Section.isPartition = () => false;
+Section.abstractClasses = ['PartitionSection', 'OpeningCoverSection', 'SpaceSection']
+Section.sectionInstance = (clazz) => clazz.prototype instanceof Section &&
+  Section.abstractClasses.indexOf(clazz.name) === -1;
+Section.sections = () => Assembly.classList(Section.sectionInstance);
 Section.getSections = (isPartition) => {
   const sections = [];
-  Object.values(Section.sections).forEach((section) => {
+  Section.sections().forEach((section) => {
     const part = section.isPartition();
     if(isPartition === undefined || part === isPartition) sections.push(section);
   });
   return sections;
 }
-Section.keys = () => Object.keys(Section.sections);
+Section.keys = () => Assembly.classIds(Section.sectionInstance);
 Section.templates = {};
-Section.new = (constructorId, divideProps) => new (Section.sections[constructorId]).constructor();
+Section.new = function (constructorId) {
+  const section = Assembly.new.apply(null, arguments);
+  if (section instanceof Section) return section;
+  throw new Error(`Invalid section Id: '${constructorId}'`);
+}
 Section.render = (opening, scope) => {
   scope.featureDisplay = new FeatureDisplay(opening).html();
   const cId = opening.constructorId;
@@ -3468,12 +4863,16 @@ Section.render = (opening, scope) => {
   return Section.templates[cId].render(scope);
 }
 
+Assembly.register(Section);
+
 
 class SpaceSection extends Section {
   constructor(templatePath, partCode, partName, sectionProperties) {
     super(templatePath, false, partCode, partName, sectionProperties);
   }
 }
+
+Assembly.register(SpaceSection);
 
 
 class PartitionSection extends Section {
@@ -3482,12 +4881,14 @@ class PartitionSection extends Section {
   }
 }
 
+PartitionSection.isPartition = () => true;
+
 
 let dvs;
 
 class DivideSection extends SpaceSection {
   constructor(sectionProperties, parent) {
-    super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties, parent);
+    super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties);
     this.setParentAssembly(parent);
     dvs = dvs || this;
     this.vertical = (is) => this.value('vertical', is);
@@ -3598,7 +4999,7 @@ class DivideSection extends SpaceSection {
       return false;
     }
     this.setSection = (constructorId, index) => {
-      const section = new (Section.sections[constructorId]).constructor('dr', this.borders(index));
+      const section = Section.new(constructorId, 'dr', this.borders(index));
       section.setParentAssembly(this);
       this.sections[index] = section;
     }
@@ -3610,6 +5011,8 @@ class DivideSection extends SpaceSection {
     }
   }
 }
+
+Assembly.register(DivideSection);
 
 
 class DividerSection extends PartitionSection {
@@ -3655,7 +5058,6 @@ class DividerSection extends PartitionSection {
     this.addSubAssembly(new Frame(`df-${Divider.count}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc));
   }
 }
-new DividerSection();
 
 
 const PULL_TYPE = {
@@ -3772,6 +5174,8 @@ class OpeningCoverSection extends SpaceSection {
   }
 }
 
+Assembly.register(OpeningCoverSection);
+
 
 class FalseFrontSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
@@ -3779,7 +5183,8 @@ class FalseFrontSection extends OpeningCoverSection {
     this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems, '', this));
   }
 }
-new FalseFrontSection();
+
+Assembly.register(FalseFrontSection);
 
 
 class DrawerSection extends OpeningCoverSection {
@@ -3814,35 +5219,41 @@ class DrawerSection extends OpeningCoverSection {
     this.addSubAssembly(new DrawerFront('df', 'Drawer.Front', this.coverCenter, this.coverDems, '', this));
   }
 }
-new DrawerSection();
+
+Assembly.register(DrawerSection);
 
 
 class DoorSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
     super(sectionFilePath('door'), partCode, 'Door.Section', divideProps);
-    this.addSubAssembly(new Door('d', 'DrawerFront', this.coverCenter, this.coverDems));
+    this.addSubAssembly(new Door('d', 'Door', this.coverCenter, this.coverDems));
   }
 }
-new DoorSection();
+
+Assembly.register(DoorSection);
 
 
 class DualDoorSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
     super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
     if (divideProps === undefined) return;
-    this.addSubAssembly(new Door('dr', 'DrawerFront', this.duelDoorCenter(true), this.duelDoorDems));
-    this.addSubAssembly(new Door('dl', 'DrawerFront', this.duelDoorCenter(), this.duelDoorDems));
+    this.addSubAssembly(new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems));
+    this.addSubAssembly(new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems));
   }
 }
-new DualDoorSection();
+
+Assembly.register(DualDoorSection);
 
 
 
 return {afterLoad};
-        }
-        try {
-          index = index();
-          index.afterLoad.forEach((item) => {item();});
-        } catch (e) {
-            console.log(e);
-        }
+}
+
+window.onload = () => {
+  try {
+    index = index();
+    index.afterLoad.forEach((item) => {item();});
+  } catch (e) {
+      console.log(e);
+  }
+}

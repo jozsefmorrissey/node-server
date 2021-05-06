@@ -2,9 +2,9 @@
   <select value='{{opening.name}}'
         class='open-divider-select{{sections.length === 0 ? ' hidden' : ''}}'>
     <option:t repeat='section in sections'
-          value='{{section.constructor.name}}'
-          {{opening.constructorId === section.constructorId ? 'selected' : ''}}>
-      {{section.name}}
+          value='{{section.prototype.constructor.name}}'
+          {{opening.constructorId === section.name ? 'selected' : ''}}>
+      {{clean(section.name)}}
     </option:t>
   </select>
   <div class='open-divider-select{{sections.length === 0 ? '' : ' hidden'}}'>

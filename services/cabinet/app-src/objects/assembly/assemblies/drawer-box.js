@@ -3,3 +3,5 @@ class DrawerBox extends Assembly {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
   }
 }
+
+Assembly.register(DrawerBox);

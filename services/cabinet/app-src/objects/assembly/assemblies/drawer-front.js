@@ -29,3 +29,5 @@ class DrawerFront extends Assembly {
     this.updatePosition();
   }
 }
+
+Assembly.register(DrawerFront);

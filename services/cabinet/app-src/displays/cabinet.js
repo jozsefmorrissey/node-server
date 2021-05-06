@@ -22,16 +22,38 @@ class CabinetDisplay {
     };
     const expandList = new ExpandableList(expListProps);
     this.refresh = () => expandList.refresh();
-    const valueUpdate = (path, value) => {
+
+    const cabinetKey = (path) => {
       const split = path.split('.');
       const index = split[0];
       const key = split[1];
       const cabinet = expListProps.list[index];
-      cabinet.value(key, new Measurment(value).decimal());
-      ThreeDModel.render(cabinet);
+      return {cabinet, key};
+    }
+
+    const valueUpdate = (path, value) => {
+      const cabKey = cabinetKey(path);
+      cabKey.cabinet.value(cabKey.key, new Measurment(value).decimal());
+      ThreeDModel.render(cabKey.cabinet);
+    }
+
+    const attrUpdate = (path, value) => {
+      const cabKey = cabinetKey(path);
+      cabKey.cabinet[cabKey.key] = value;
+    }
+
+    const saveSuccess = () => console.log('success');
+    const saveFail = () => console.log('failure');
+    const save = (target) => {
+      const index = target.getAttribute('index');
+      const cabinet = expListProps.list[index];
+      Request.post(EPNTS.cabinet.add(cabinet.id), cabinet.toJson(), saveSuccess, saveFail);
+      console.log('saving');
     }
 
     bindField('.cabinet-input', valueUpdate, Measurment.validation('(0,)'));
+    bindField('.cabinet-id-input', attrUpdate);
+    matchRun('click', '.save-cabinet-btn', save);
   }
 }
 CabinetDisplay.bodyTemplate = new $t('cabinet/body');

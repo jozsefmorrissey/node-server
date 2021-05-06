@@ -19,16 +19,17 @@ OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId
 OpenSectionDisplay.getList = (root) => {
   let openId = root.uniqueId;
   if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
-  const sections = Object.values(Section.sections);
+  const sections = Section.sections();
   const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
   const parentSelector = `#${OpenSectionDisplay.getId(root)}`
   const list = root.sections;
   const hideAddBtn = true;
   const selfCloseTab = true;
   let exList;
+  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
   const getHeader = (opening, index) => {
     const sections = index % 2 === 0 ? Section.getSections(false) : [];
-    return OpenSectionDisplay.listHeadTemplate.render({opening, sections});
+    return OpenSectionDisplay.listHeadTemplate.render({opening, sections, clean});
   }
   const getBody = (opening) => {
     const list = OpenSectionDisplay.getList(root);
@@ -73,7 +74,7 @@ OpenSectionDisplay.refresh = (opening) => {
       OpenSectionDisplay.updateDividers(opening);
       OpenSectionDisplay.getList(opening).refresh(type);
       const dividerSelector = `[opening-id='${opening.uniqueId}'].division-count-input`;
-      listCnt.querySelector(dividerSelector).focus();
+      // listCnt.querySelector(dividerSelector).focus();
     }
   }, 500);
 }
@@ -86,7 +87,6 @@ OpenSectionDisplay.onChange = (target) => {
     OpenSectionDisplay.refresh(opening);
     const cabinet = opening.getAssembly('c');
     ThreeDModel.render(cabinet);
-    target.focus();
   }
 };
 

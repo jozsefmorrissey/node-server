@@ -1,3 +1,20 @@
+.error {
+  font-size: small;
+    font-weight: 700;
+    color: red;
+}
+
+.margin-zero {
+  margin: 0;
+}
+
+#logout-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  margin: 2pt;
+}
+
 #login {
   position: fixed;
   height: 100vh;
@@ -22,6 +39,10 @@ a {
 
 .model-label.active {
   background-color: blue;
+}
+
+.open-divider-select {
+  margin: 5pt;
 }
 
 #model-controller {

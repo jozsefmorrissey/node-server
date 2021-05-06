@@ -2,7 +2,7 @@ let dvs;
 
 class DivideSection extends SpaceSection {
   constructor(sectionProperties, parent) {
-    super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties, parent);
+    super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties);
     this.setParentAssembly(parent);
     dvs = dvs || this;
     this.vertical = (is) => this.value('vertical', is);
@@ -113,7 +113,7 @@ class DivideSection extends SpaceSection {
       return false;
     }
     this.setSection = (constructorId, index) => {
-      const section = new (Section.sections[constructorId]).constructor('dr', this.borders(index));
+      const section = Section.new(constructorId, 'dr', this.borders(index));
       section.setParentAssembly(this);
       this.sections[index] = section;
     }
@@ -125,3 +125,5 @@ class DivideSection extends SpaceSection {
     }
   }
 }
+
+Assembly.register(DivideSection);

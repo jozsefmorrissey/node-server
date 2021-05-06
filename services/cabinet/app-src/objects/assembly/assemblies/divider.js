@@ -4,3 +4,5 @@ class Divider extends Assembly {
   }
 }
 Divider.count = 0;
+
+Assembly.register(Divider);

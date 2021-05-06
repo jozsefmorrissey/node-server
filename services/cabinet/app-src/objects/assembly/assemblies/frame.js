@@ -3,3 +3,5 @@ class Frame extends Assembly {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
   }
 }
+
+Assembly.register(Frame);

@@ -123,3 +123,5 @@ class Cabinet extends Assembly {
     this.borders();
   }
 }
+
+Assembly.register(Cabinet);

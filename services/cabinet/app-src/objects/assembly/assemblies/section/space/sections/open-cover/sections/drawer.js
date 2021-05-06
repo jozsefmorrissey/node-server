@@ -30,4 +30,5 @@ class DrawerSection extends OpeningCoverSection {
     this.addSubAssembly(new DrawerFront('df', 'Drawer.Front', this.coverCenter, this.coverDems, '', this));
   }
 }
-new DrawerSection();
+
+Assembly.register(DrawerSection);

@@ -1,6 +1,6 @@
 {
   "_envs": {
-    "local": "https://localhost:3001/cabinet",
+    "local": "http://localhost:3000/cabinet",
     "dev": "https://dev.jozsefmorrissey.com/cabinet",
     "prod": "https://node.jozsefmorrissey.com/cabinet"
   },
@@ -10,7 +10,17 @@
     "activate": "/activate/:email/:secret",
     "validate": "/validate",
     "login": "/login",
+    "status": "/status",
     "resetPasswordRequest": "/reset/password/request",
     "resetPassword": "/reset/password/:email/:secret"
+  },
+  "cabinet": {
+    "add": "/:id",
+    "list": "/all"
+  },
+  "order": {
+    "add": "/order/:id",
+    "get": "/order/:id",
+    "list": "/list/orders"
   }
 }

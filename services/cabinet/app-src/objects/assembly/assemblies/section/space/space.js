@@ -3,3 +3,5 @@ class SpaceSection extends Section {
     super(templatePath, false, partCode, partName, sectionProperties);
   }
 }
+
+Assembly.register(SpaceSection);

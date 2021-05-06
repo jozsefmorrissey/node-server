@@ -3,3 +3,5 @@ class FrameDivider extends Assembly {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
   }
 }
+
+Assembly.register(FrameDivider);

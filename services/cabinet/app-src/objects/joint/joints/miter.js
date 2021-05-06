@@ -1,4 +1,4 @@
-class Miter extends Butt {
+class Miter extends Joint {
   constructor(joinStr) {
     super(joinStr);
   }

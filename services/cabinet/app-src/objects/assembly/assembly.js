@@ -1,6 +1,7 @@
 class Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
     this.display = true;
+    this.important = ['partCode', 'partName', 'centerStr', 'demensionStr', 'rotationStr'];
     this.part = true;
     this.included = true;
     this.parentAssembly = parent;
@@ -159,11 +160,7 @@ class Assembly {
       json.type = this.constructor.name;
       if (this.important) {
         this.important.forEach((attr) =>
-            json[attr] = (typeof this.attr) === 'function' ? this.attr() : this.attr);
-
-        json.length = this.length();
-        json.width = this.width();
-        json.thickness = this.thickness();
+            json[attr] = (typeof this[attr]) === 'function' ? this[attr]() : this[attr]);
       }
       json.values = JSON.parse(JSON.stringify(this.values));
       json.subAssemblies = [];
@@ -210,5 +207,30 @@ Assembly.resolveAttr = (assembly, attr) => {
   }
   return assembly.value(attr);
 }
+Assembly.fromJson = (roomJson) => {
+  new (Date.prototype.constructor)(...[])
+  const room = new Room(roomJson.name, roomJson.id);
+  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
+  return order;
+}
+Assembly.classes = {};
+Assembly.new = function (id) {
+  return new Assembly.classes[id](...Array.from(arguments).slice(1));
+}
+Assembly.classObj = (filterFunc) => {
+  if ((typeof filterFunc) !== 'function') return Assembly.classes;
+  const classIds = Object.keys(Assembly.classes);
+  const classes = Assembly.classes;
+  const obj = [];
+  for (let index = 0; index < classIds.length; index += 1) {
+    const id = classIds[index];
+    if (filterFunc(classes[id])) obj[id]= classes[id];
+  }
+  return obj;
+}
+Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
+Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
+Assembly.register = (clazz) =>
+    Assembly.classes[clazz.prototype.constructor.name] = clazz;
 Assembly.lists = {};
 Assembly.idCounters = {};

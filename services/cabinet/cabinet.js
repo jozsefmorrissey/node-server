@@ -8,13 +8,13 @@ const { EPNTS } = require('./src/EPNTS');
 const success = (res) => () => res.send('success');
 const fail = (next) => (e) => next(e);
 
-const getUser = (req) => {
+const getUser = (req, soft) => {
   const authStr = req.headers['authorization'];
   console.log('as:', authStr);
   const split = authStr.split(':');
 
   const user = new User(split[0], split[1]);
-  user.validate();
+  if (!soft) user.validate();
   return user;
 }
 
@@ -40,6 +40,10 @@ function endpoints(app, prefix) {
   app.get(prefix + EPNTS.user.activate(), function (req, res, next) {
     new User(req.params.email, req.params.secret).activate();
     res.send('success');
+  });
+
+  app.get(prefix + EPNTS.user.status(), function (req, res, next) {
+    res.send(getUser(req, true).status());
   });
 
   app.get(prefix + EPNTS.user.validate(), function (req, res, next) {
@@ -69,29 +73,68 @@ function endpoints(app, prefix) {
 
   //  ---------------------------- Cabinet -----------------------------//
 
-  app.post(prefix + '/:id', function (req, res) {
-    const user = getUser();
-    user.saveAttribute('cabinet', req.params.id, cabinet);
+  app.post(prefix + EPNTS.cabinet.add(), function (req, res) {
+    const user = getUser(req);
+    user.saveAttribute('cabinet', req.params.id, req.body);
     res.send('success');
   });
 
-  app.get(prefix + '/all', function (req, res) {
-    const user = getUser();
+  app.get(prefix + EPNTS.cabinet.list(), function (req, res) {
+    const user = getUser(req);
     res.setHeader('Content-Type', 'application/json');
     res.send(user.loadData('cabinet'));
   });
 
   //  ---------------------------- Order -----------------------------//
 
-  app.get(prefix + '/list/orders', function (req, res) {
-    res.send(getUser().list('order'));
+  app.get(prefix + EPNTS.order.list(), function (req, res) {
+    res.send(getUser(req).list('order'));
   });
 
-  app.post(prefix + '/save/order/:id', function (req, res) {
+  app.get(prefix + EPNTS.order.get(), function (req, res) {
     const orderId = req.params.id.replace(/[^a-z^A-Z^0-9^ ]/g, '');
-    getUser().saveData(`order.${orderId}`);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(getUser(req).loadData(`order.${orderId}`));
+  });
+
+  app.post(prefix + EPNTS.order.add(), function (req, res) {
+    console.log('here')
+    const orderId = req.params.id.replace(/[^a-z^A-Z^0-9^ ]/g, '');
+    getUser(req).saveData(`order.${orderId}`, req.body);
     res.send('success');
   });
+
+
+
+  //  ---------------------------- Endpoints -----------------------------//
+
+  app.get(prefix + '/endpoints', function(req, res, next) {
+  let endpoints, enpts;
+  const jsonFile = './services/cabinet/public/json/endpoints.json';
+  const jsFile = './services/cabinet/src/EPNTS.js';
+  function returnJs(file) {
+    return function (err, contents) {
+      switch (file) {
+        case jsonFile:
+          endpoints = contents;
+          break;
+        case jsFile:
+          enpts = contents;
+          break;
+      }
+      if (endpoints && enpts) {
+        const host = EPNTS._envs[global.ENV];
+        const newEnpts = `new Endpoints(${endpoints}, '${host}')`;
+        const exportBlock = '\ntry {exports.EPNTS = EPNTS;}catch(e){}'
+        const js = `${enpts}\nconst EPNTS = ${newEnpts}.getFuncObj();${exportBlock}`;
+        res.setHeader('Content-Type', 'text/plain');
+        res.send(js);
+      }
+    }
+  }
+  fs.readFile(jsonFile, returnJs(jsonFile));
+  fs.readFile(jsFile, returnJs(jsFile));
+});
 }
 
 exports.endpoints = endpoints;

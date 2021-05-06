@@ -2,6 +2,20 @@ const fs = require('fs');
 const shell = require('shelljs');
 const { Mutex, Semaphore } = require('async-mutex');
 
+const host = process.argv[2];
+
+function HachyImport(url, dest) {
+  const curlCmd = `curl -X GET --insecure '${url}'`;
+  console.log(curlCmd)
+  const code = shell.exec(curlCmd, {silent: true}).stdout;
+  if (code !== '') {
+    fs.writeFile(`./generated/hacky/${dest}`, code, () =>
+        console.warn(`HackyImport: \n\t./generated/hacky/${dest}\n\t${url}`));
+  }
+}
+
+HachyImport(`${host}/endpoints`, 'EPNTS.js');
+
 class Watcher {
   constructor(onChange, onUpdate) {
     const largNumber = Number.MAX_SAFE_INTEGER;
@@ -99,7 +113,7 @@ class Watcher {
 }
 
 const { HtmlBundler } = require('./building/bundlers/html.js');
-const htmlDumpLoc = './public/js/html-templates.js';
+const htmlDumpLoc = './generated/html-templates.js';
 const cleanName = (name) => name.replace(/\.\/public\/html\/templates\/(.*).html/, '$1');
 const htmlBundler = new HtmlBundler(htmlDumpLoc, cleanName);
 
@@ -114,7 +128,11 @@ const jsDumpLoc = './public/js/index';
 const jsBundler = new JsBundler(jsDumpLoc, []);
 
 new Watcher(jsBundler.change, jsBundler.write)
+        .add('./globals/')
         .add('./public/js/3d-modeling/lightgl.js')
         .add('./public/js/3d-modeling/csg.js')
         .add('./public/js/3d-modeling/viewer.js')
+        .add('../../public/js/$t.js')
+        .add(htmlDumpLoc)
+        .add('./generated/hacky/EPNTS.js')
         .add('./app-src');

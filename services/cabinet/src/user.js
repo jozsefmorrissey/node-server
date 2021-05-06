@@ -76,7 +76,7 @@ class User {
       path = path || '';
       path.replace(/\./g, '/');
       const cleanEmail = email.replace(/[^a-z^A-Z^0-9]/g, replaceSpecial);
-      return `${User.directory}${cleanEmail}/`;
+      return `${User.directory}${cleanEmail}/${path}`;
     }
 
     function get() {
@@ -89,6 +89,15 @@ class User {
       }
 
       return user;
+    }
+
+    this.status = () => {
+      let user = get();
+      if (user === false) return 'Not Registered';
+      if (user.activated === false) return 'Not Activated';
+      console.log(email, secret);
+      if (this.validate(true)) return 'Logged In';
+      return 'Logged Out';
     }
 
     function getToken(s, e) {
@@ -153,12 +162,13 @@ class User {
     this.saveData = (path, data) => {
       if (!this.validate(true)) throw new UnAuthorized();
       try {
-        const dirPath = path.split(".");
-        dirPath = dirPath.splice(0, path.length - 1).join('.');
+        let dirPath = path.split(".");
+        dirPath = dirPath.splice(0, dirPath.length - 1).join('.');
         const filePath = userDataFilePath(path);
         const directory = this.dataDirectory(dirPath);
+        console.log('dir:', dirPath, directory)
         shell.mkdir('-p', directory);
-        fs.writeFileSync(filePath, data);
+        fs.writeFileSync(filePath, JSON.stringify(data));
         return true;
       } catch(e) {
         console.error('saveError', e);
@@ -181,8 +191,14 @@ class User {
       return this.saveData(name, data);
     }
 
-    this.dataList = (dirPath) => {
-      return shell.ls(dirPath).stdout;
+    this.list = (dirPath) => {
+      let list = shell.ls(this.dataDirectory(dirPath)).stdout;
+      if (!list) return [];
+      list = list.trim().split('\n');
+      for(let index = 0; index < list.length; index += 1) {
+        list[index] = list[index].replace(/\.json$/, '');
+      }
+      return list;
     }
 
     function createActivationToken(p) {
@@ -204,6 +220,7 @@ class User {
 
     this.login = function () {
       secret = User.randomString(32);
+      console.log(get());
       if (!this.validate(true))
         throw new Invalid('password', password);
       addToken(getToken());
@@ -236,6 +253,7 @@ class User {
         if (soft) return false;
         throw new UnAuthorized();
       }
+      return true;
     }
 
     this.activate = function () {
@@ -264,6 +282,7 @@ class User {
         secret: bcrypt.hashSync(secret, salt),
         type: User.RESET,
         password: bcrypt.hashSync(newPassword, salt),
+        passwordRaw: newPassword,
         expire
       };
       addToken(resetToken);
@@ -276,6 +295,7 @@ class User {
       if (!token || token.type !== User.RESET)
         throw new Invalid('secret', secret);
       get().password = token.password;
+      get().rawPass = token.passwordRaw;
       this.removeToken(secret);
       save();
     }

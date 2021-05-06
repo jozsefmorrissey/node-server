@@ -7,6 +7,9 @@ class Pull extends Assembly {
   constructor(partCode, partName, door, location, index, count) {
     super(partCode, 'Pull');
     this.setParentAssembly(door);
+    index = index || 0;
+    count = count || 1;
+    this.setLocation = (l) => location = l;
 
     function offset(center, distance) {
       const spacing = distance / count;
@@ -28,19 +31,19 @@ class Pull extends Assembly {
         switch (location) {
           case Pull.location.TOP_RIGHT:
             center.x = center.x + doorDems.x / 2 -  edgeOffset;
-            center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
+            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
           case Pull.location.TOP_LEFT:
           center.x = center.x + doorDems.x / 2 -  edgeOffset;
-          center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
+          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
           case Pull.location.BOTTOM_RIGHT:
           center.x = center.x + doorDems.x / 2 -  edgeOffset;
-          center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
+          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
           case Pull.location.BOTTOM_LEFT:
           center.x = center.x + doorDems.x / 2 -  edgeOffset;
-          center.y = center.y + doorDems.y / 2 - (pullDems / 2 + edgeOffset);
+          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
           case Pull.location.TOP:
             center.x = offset(center.x, doorDems.x);
@@ -80,3 +83,5 @@ Pull.location.BOTTOM = {multiple: true};
 Pull.location.RIGHT = {multiple: true};
 Pull.location.LEFT = {multiple: true};
 Pull.location.CENTER = {multiple: true, rotate: true};
+
+Assembly.register(Pull);

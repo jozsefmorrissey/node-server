@@ -103,14 +103,15 @@ class JsBundler extends Bundler {
             console.log(item.filename)
             addAfterFiles(item.filename);
       });
-      bundle += `\nreturn {${externals.join()}};
-        }
-        try {
-          ${id} = ${id}();
-          ${id}.afterLoad.forEach((item) => {item();});
-        } catch (e) {
-            console.log(e);
-        }`;
+      bundle += `\nreturn {${externals.join()}};\n}
+\nwindow.onload = () => {
+  try {
+    ${id} = ${id}();
+    ${id}.afterLoad.forEach((item) => {item();});
+  } catch (e) {
+      console.log(e);
+  }
+}`;
       console.log(`Writing ./${id}.js`);
       fs.writeFile(`./${file}.js`, bundle, () => {});
     }

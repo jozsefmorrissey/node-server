@@ -2,24 +2,19 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
-    <script type="text/javascript" src='/js/$t.js'></script>
-    <script type="text/javascript" src='/cabinet/js/html-templates.js'></script>
     <script type="text/javascript" src='/cabinet/js/index.js'></script>
     <link rel="stylesheet" href="/cabinet/styles/expandable-list.css">
     <link rel="stylesheet" href="/cabinet/styles/estimate.css">
     <title>Estimate</title>
   </head>
   <body>
-    <div id='login' hidden><div id='login-cnt' class='center-all'></div></div>
-    <div id='app'>
+    <button id='logout-btn'>Logout</button>
+    <div id='login'><div id='login-cnt' class='center-all'></div></div>
+    <div id='app'></div>
+    <div class='tree-d-model-cnt'>
       <div id="model-controller" hidden></div>
       <div id="three-d-model" class="viewer small">
         <button id='max-min-btn'>+</button>
-      </div>
-      <div>
-        <label>Order Name</label>
-        <input type='text'>
-        <div id='room-pills'></div>
       </div>
     </div>
   </body>

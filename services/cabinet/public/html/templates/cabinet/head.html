@@ -1,5 +1,6 @@
 <div class='cabinet-header'>
-  <input class='cabinet-input' prop-update='id' value='{{cabinet.id || $index}}'>
+  <input class='cabinet-id-input' prop-update='{{$index}}.id'
+        index='{{$index}}' value='{{cabinet.id || $index}}'>
   Size:
   <div class='cabinet-dem-cnt'>
     <label>W:</label>

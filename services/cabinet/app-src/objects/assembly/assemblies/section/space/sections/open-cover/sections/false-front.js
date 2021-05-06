@@ -4,4 +4,5 @@ class FalseFrontSection extends OpeningCoverSection {
     this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems, '', this));
   }
 }
-new FalseFrontSection();
+
+Assembly.register(FalseFrontSection);

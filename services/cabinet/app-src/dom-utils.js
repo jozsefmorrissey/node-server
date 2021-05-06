@@ -15,6 +15,17 @@ function up(selector, node) {
   }
 }
 
+function appendError(target, message) {
+  return function (e) {
+    const parent = target.parentNode;
+    const error = document.createElement('div');
+    error.className = 'error';
+    error.innerHTML = message;
+    parent.insertBefore(error, target.nextElementSibling)
+    console.log('here')
+  }
+}
+
 function upAll(selector, node) {
   const elems = [];
   let elem = node;
@@ -146,7 +157,7 @@ function bindField(selector, objOrFunc, validation) {
     const updatePath = elem.getAttribute('prop-update');
     if (updatePath !== null) {
       const newValue = elem.value;
-      if (!validation(newValue)) {
+      if ((typeof validation) === 'function' && !validation(newValue)) {
         console.error('badValue')
       } else if ((typeof objOrFunc) === 'function') {
         objOrFunc(updatePath, elem.value);
@@ -182,6 +193,53 @@ function updateDivisions (target) {
     if(value) inputs[index].value = value;
   }
   updateModel(opening);
+}
+
+function parseSeperator (str, seperator, isRegex) {
+  if ((typeof str) !== 'string') {
+    return {};
+  }
+  if (isRegex !== true) {
+    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
+  }
+  var keyValues = str.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
+  var json = {};
+  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
+    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
+    if (split) {
+      json[split[1]] = split[2];
+    }
+  }
+  return json;
+}
+
+function getCookie(name, seperator) {
+  const cookie = parseSeperator(document.cookie, ';')[name];
+  if (seperator === undefined) return cookie;
+  const values = cookie === undefined ? [] : cookie.split(seperator);
+  if (arguments.length < 3) return values;
+  let obj = {};
+  for (let index = 2; index < arguments.length; index += 1) {
+    const key = arguments[index];
+    const value = values[index - 2];
+    obj[key] = value;
+  }
+  return obj;
+}
+
+
+function getParam(name) {
+  if (getParam.params === undefined) {
+    const url = window.location.href;
+    const paramStr = url.substr(url.indexOf('?') + 1);
+    getParam.params = parseSeperator(paramStr, '&');
+  }
+  return decodeURI(getParam.params[name]);
+}
+
+
+function removeCookie(name) {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
 }
 
 matchRun('change', '.open-orientation-radio,.open-division-input', updateDivisions);

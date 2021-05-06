@@ -41,4 +41,3 @@ class DividerSection extends PartitionSection {
     this.addSubAssembly(new Frame(`df-${Divider.count}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc));
   }
 }
-new DividerSection();

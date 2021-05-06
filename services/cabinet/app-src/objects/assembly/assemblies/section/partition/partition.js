@@ -3,3 +3,5 @@ class PartitionSection extends Section {
     super(templatePath, true, partCode, partName, sectionProperties);
   }
 }
+
+PartitionSection.isPartition = () => true;

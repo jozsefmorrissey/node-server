@@ -1,5 +1,5 @@
 class RoomDisplay {
-  constructor(parentSelector, rooms) {
+  constructor(parentSelector, order) {
     const cabinetDisplays = {};
     const getHeader = (room, $index) =>
         RoomDisplay.headTemplate.render({room, $index});
@@ -18,11 +18,12 @@ class RoomDisplay {
     this.cabinetDisplay = () => cabinetDisplays[this.active().id];
     this.cabinet = () => this.cabinetDisplay().active();
     const expListProps = {
-      list: rooms,
+      list: order.rooms,
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Room', type: 'pill'
     };
     const expandList = new ExpandableList(expListProps);
+    this.refresh = () => expandList.refresh();
   }
 }
 RoomDisplay.bodyTemplate = new $t('room/body');
