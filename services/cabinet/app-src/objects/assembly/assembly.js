@@ -207,11 +207,19 @@ Assembly.resolveAttr = (assembly, attr) => {
   }
   return assembly.value(attr);
 }
-Assembly.fromJson = (roomJson) => {
-  new (Date.prototype.constructor)(...[])
-  const room = new Room(roomJson.name, roomJson.id);
-  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
-  return order;
+Assembly.fromJson = (assemblyJson) => {
+  const demensionStr = assemblyJson.demensionStr;
+  const centerStr = assemblyJson.centerStr;
+  const rotationStr = assemblyJson.rotationStr;
+  const partCode = assemblyJson.partCode;
+  const partName = assemblyJson.partName;
+  const assembly = Assembly.new(assemblyJson.type, partCode, partName, centerStr, demensionStr, rotationStr);
+  const clazz = assembly.constructor;
+  assemblyJson.subAssemblies.forEach((json) => assembly.addSubAssembly(clazz.fromJson(json)));
+  if (assemblyJson.length) assembly.length(assemblyJson.length);
+  if (assemblyJson.width) assembly.width(assemblyJson.width);
+  if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
+  return assembly;
 }
 Assembly.classes = {};
 Assembly.new = function (id) {

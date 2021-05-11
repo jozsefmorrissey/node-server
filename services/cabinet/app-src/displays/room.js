@@ -9,13 +9,20 @@ class RoomDisplay {
       setTimeout(this.cabinetDisplay().refresh, 100);
       return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
     }
+
     const getObject = () => {
       const room = new Room();
-      cabinetDisplays[room.id] = new CabinetDisplay(room);
       return room;
     }
     this.active = () => expandList.active();
-    this.cabinetDisplay = () => cabinetDisplays[this.active().id];
+    this.cabinetDisplay = () => {
+      const room = this.active();
+      const id = room.id;
+      if (cabinetDisplays[id] === undefined) {
+        cabinetDisplays[id] = new CabinetDisplay(room);
+      }
+      return cabinetDisplays[id];
+    }
     this.cabinet = () => this.cabinetDisplay().active();
     const expListProps = {
       list: order.rooms,

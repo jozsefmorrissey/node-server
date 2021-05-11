@@ -1,0 +1,9 @@
+<div class='center'>
+  <input type=text class='property-filter'>
+  <div class='property-container'>
+    <div:t repeat='key, prop in properties'>
+      <label>{{prop.name}}</label>
+      <input type="text" name="{{key}}" value="{{prop.value}}">
+    </div:t>
+  </div>
+</div>

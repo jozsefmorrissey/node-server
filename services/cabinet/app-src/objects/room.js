@@ -15,5 +15,5 @@ Room.count = 0;
 Room.fromJson = (roomJson) => {
   const room = new Room(roomJson.name, roomJson.id);
   roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
-  return order;
+  return room;
 }

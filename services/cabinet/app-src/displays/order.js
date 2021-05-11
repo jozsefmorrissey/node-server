@@ -11,7 +11,10 @@ class OrderDisplay {
 
     function loadOrder(index) {
       return function (orderData) {
-        console.log(orderData);
+        const order = Order.fromJson(orderData);
+        console.log(order);
+        initOrder(order);
+        expandList.set(index, order);
       }
     }
 

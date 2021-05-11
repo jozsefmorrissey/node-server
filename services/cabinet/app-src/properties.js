@@ -20,6 +20,9 @@ const DEFAULT_PROPS = {
   fs: {name: 'Face Spacing', value: 1/8},
   is: {name: 'Inset Spacing', value: 1/16},
   vffs: {name: 'Vertical First Front Size', value: 5.5},
+  Plywood: {name: 'Plywood', value: 'SoftMapel'},
+  wood: {name: 'Wood', value: 'SoftMapel'},
+  glass: {name: 'glass', value: 'Flat'}
 };
 
 function properties(name, values) {

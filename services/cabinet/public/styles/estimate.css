@@ -8,6 +8,16 @@
   margin: 0;
 }
 
+.property-container {
+  height: 20vh;
+  overflow: scroll;
+  border-style: groove;
+  text-align: center;
+  padding: 5pt;
+  border-radius: 10pt;
+  margin: 2pt;
+}
+
 #logout-btn {
   position: absolute;
   right: 0;

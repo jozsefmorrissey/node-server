@@ -7,11 +7,11 @@ class CabinetDisplay {
       propId = id;
     }
     const getHeader = (cabinet, $index) =>
-        CabinetDisplay.headTemplate.render({cabinet, $index});
+        CabinetDisplay.headTemplate.render({room, cabinet, $index});
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
       ThreeDModel.render(cabinet);
-      return CabinetDisplay.bodyTemplate.render({$index, cabinet, showTypes, OpenSectionDisplay});
+      return CabinetDisplay.bodyTemplate.render({room, $index, cabinet, showTypes, OpenSectionDisplay});
     }
     const getObject = () => new Cabinet('c', 'Cabinet', propId);
     this.active = () => expandList.active();
@@ -51,8 +51,8 @@ class CabinetDisplay {
       console.log('saving');
     }
 
-    bindField('.cabinet-input', valueUpdate, Measurment.validation('(0,)'));
-    bindField('.cabinet-id-input', attrUpdate);
+    bindField(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurment.validation('(0,)'));
+    bindField(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
     matchRun('click', '.save-cabinet-btn', save);
   }
 }

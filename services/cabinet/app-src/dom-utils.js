@@ -154,7 +154,7 @@ function matchRun(event, selector, func, target) {
 
 function bindField(selector, objOrFunc, validation) {
   function update(elem) {
-    const updatePath = elem.getAttribute('prop-update');
+    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
     if (updatePath !== null) {
       const newValue = elem.value;
       if ((typeof validation) === 'function' && !validation(newValue)) {
