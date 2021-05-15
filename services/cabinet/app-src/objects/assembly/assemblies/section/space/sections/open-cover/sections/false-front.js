@@ -5,4 +5,6 @@ class FalseFrontSection extends OpeningCoverSection {
   }
 }
 
+FalseFrontSection.abbriviation = 'ffs';
+
 Assembly.register(FalseFrontSection);

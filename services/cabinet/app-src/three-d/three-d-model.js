@@ -239,7 +239,7 @@ matchRun('click', '#max-min-btn', (target) => {
   const clean = className.replace(new RegExp(stateReg, 'g'), '').trim();
   if (state[2] === 'small') {
     target.parentElement.className = `${clean} large`;
-    const cabinet = roomDisplay.cabinet();
+    const cabinet = orderDisplay.active().cabinet();
     if (cabinet) {
       const grouping = groupParts(cabinet);
       grouping.tdm = ThreeDModel.get(cabinet);
@@ -256,18 +256,25 @@ matchRun('click', '#max-min-btn', (target) => {
 matchRun('click', '.model-label', (target) => {
   if (event.target.tagName === 'INPUT') return;
   const has = hasClass(target, 'active');
-  document.querySelectorAll('.model-label')
-    .forEach((elem) => removeClass(elem, 'active'))
+  deselectPrefix();
   !has ? addClass(target, 'active') : removeClass(target, 'active');
   let label = target.children[0]
   let type = label.getAttribute('type');
   let value = type !== 'prefix' ? label.innerText :
         label.nextElementSibling.getAttribute('prefix');
-  const cabinet = roomDisplay.cabinet();
+  const cabinet = orderDisplay.active().cabinet();
   const tdm = ThreeDModel.get(cabinet);
   tdm.inclusiveTarget(type, has ? undefined : value);
   tdm.render();
 });
+
+function deselectPrefix() {
+  document.querySelectorAll('.model-label')
+    .forEach((elem) => removeClass(elem, 'active'));
+  const cabinet = orderDisplay.active().cabinet();
+  const tdm = ThreeDModel.get(cabinet);
+  tdm.inclusiveTarget(undefined, undefined);
+}
 
 matchRun('click', '.prefix-switch', (target, event) => {
   const eventTarg = event.target;
@@ -279,21 +286,28 @@ matchRun('click', '.prefix-switch', (target, event) => {
 });
 
 matchRun('change', '.prefix-checkbox', (target) => {
-  const cabinet = roomDisplay.cabinet();
+  const cabinet = orderDisplay.active().cabinet();
   const attr = target.getAttribute('prefix');
+  deselectPrefix();
   ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
 });
 
 matchRun('change', '.part-name-checkbox', (target) => {
-  const cabinet = roomDisplay.cabinet();
+  const cabinet = orderDisplay.active().cabinet();
   const attr = target.getAttribute('part-name');
-  ThreeDModel.get(cabinet).hidePartName(attr, !target.checked);
+  deselectPrefix();
+  const tdm = ThreeDModel.get(cabinet);
+  tdm.hidePartName(attr, !target.checked);
+  tdm.render();
 });
 
 matchRun('change', '.part-code-checkbox', (target) => {
-  const cabinet = roomDisplay.cabinet();
+  const cabinet = orderDisplay.active().cabinet();
   const attr = target.getAttribute('part-code');
-  ThreeDModel.get(cabinet).hidePartCode(attr, !target.checked);
+  deselectPrefix();
+  const tdm = ThreeDModel.get(cabinet);
+  tdm.hidePartCode(attr, !target.checked);
+  tdm.render();
 })
 
 

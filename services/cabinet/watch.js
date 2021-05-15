@@ -135,4 +135,5 @@ new Watcher(jsBundler.change, jsBundler.write)
         .add('../../public/js/$t.js')
         .add(htmlDumpLoc)
         .add('./generated/hacky/EPNTS.js')
+        .add('./public/json/cabinets.json')
         .add('./app-src');

@@ -1,8 +1,9 @@
 let dvs;
-
+let dsCount = 0;
 class DivideSection extends SpaceSection {
   constructor(sectionProperties, parent) {
-    super(sectionFilePath('open'), 'dvds', 'divideSection', sectionProperties);
+    super(sectionFilePath('open'), `dvds-${dsCount++}`, 'divideSection', sectionProperties);
+    this.important = ['partCode', 'partName', 'borderIds', 'index'];
     this.setParentAssembly(parent);
     dvs = dvs || this;
     this.vertical = (is) => this.value('vertical', is);
@@ -16,7 +17,7 @@ class DivideSection extends SpaceSection {
       else this.value('hPattern', {name, index, value});
     }
     this.measurments = [];
-    this.dividerCount = () => (this.sections.length - 1) / 2
+    this.dividerCount = () => Math.ceil((this.sections.length - 1) / 2);
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
     this.sectionProperties = () => JSON.stringify(sectionProperties);
     this.init = () => {
@@ -26,6 +27,8 @@ class DivideSection extends SpaceSection {
     }
 
     this.children = () => this.sections;
+    this.partitions = () => this.sections.filter((e, index) => index % 2 === 1);
+    this.spaces = () => this.sections.filter((e, index) => index % 2 === 0);
     this.borders = (index) => {
       return () => {
         const props = sectionProperties();
@@ -49,7 +52,7 @@ class DivideSection extends SpaceSection {
         }
 
         const depth = props.depth;
-        return {borders: {top, bottom, right, left}, depth};
+        return {borders: {top, bottom, right, left}, depth, index};
       }
     }
     this.dividerProps = (index) => {
@@ -74,7 +77,7 @@ class DivideSection extends SpaceSection {
         }
         const rotationFunc = () =>  this.vertical() ? '' : 'z';
 
-        return {center, dividerLength, rotationFunc};
+        return {center, dividerLength, rotationFunc, index};
       }
     }
     this.calcSections = (pattern, index, value) => {
@@ -104,16 +107,21 @@ class DivideSection extends SpaceSection {
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
-            this.sections.push(new DividerSection(`dv${index}`, this.dividerProps(index), this));
-            this.sections.push(new DivideSection(this.borders(dividerCount + index + 1), this));
+            this.sections.push(new DividerSection(`dv${index}`, this.dividerProps(index)));
+            const divideIndex = dividerCount + index + 1;
+            this.sections.push(new DivideSection(this.borders(divideIndex)));
+            this.sections[index].setParentAssembly(this);
+            this.sections[divideIndex].setParentAssembly(this);
           }
           return diff !== 0;
         }
       }
       return false;
     }
-    this.setSection = (constructorId, index) => {
-      const section = Section.new(constructorId, 'dr', this.borders(index));
+    this.setSection = (constructorIdOobject, index) => {
+      const section = (typeof constructorIdOobject) === 'string' ?
+          Section.new(constructorIdOobject, 'dr', this.borders(index)) :
+          constructorIdOobject;
       section.setParentAssembly(this);
       this.sections[index] = section;
     }
@@ -125,5 +133,27 @@ class DivideSection extends SpaceSection {
     }
   }
 }
+
+DivideSection.fromJson = (json, parent) => {
+  const sectionProps = parent.borders(json.borderIds || json.index);
+  const assembly = new DivideSection(sectionProps, parent);
+  const subAssems = json.subAssemblies;
+  for (let index = 0; index < subAssems.length / 2; index += 1) {
+    const partIndex = index * 2 + 1;
+    if (partIndex < subAssems.length) {
+      const partJson = subAssems[partIndex];
+      const partition = Assembly.class(partJson.type).fromJson(partJson, assembly);
+      assembly.setSection(partition, partIndex);
+    }
+
+    const spaceIndex = index * 2;
+    const spaceJson = subAssems[spaceIndex];
+    const space = Assembly.class(spaceJson.type).fromJson(spaceJson, assembly);
+    assembly.setSection(space, spaceIndex);
+  }
+  return assembly;
+}
+
+DivideSection.abbriviation = 'ds';
 
 Assembly.register(DivideSection);

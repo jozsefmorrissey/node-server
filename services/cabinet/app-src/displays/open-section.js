@@ -35,7 +35,7 @@ OpenSectionDisplay.getList = (root) => {
     const list = OpenSectionDisplay.getList(root);
     const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
     const assemblies = opening.getSubAssemblies();
-    return Section.render(opening, {assemblies, getFeatureDisplay, opening, list, sections});
+    return Section.render({assemblies, getFeatureDisplay, opening, list, sections});
   }
   const findElement = (selector, target) => down(selector, up('.expandable-list', target));
   const expListProps = {
@@ -60,11 +60,12 @@ OpenSectionDisplay.updateDividers = (opening) => {
           {opening, fill, pattern, selectPatternId, patterns});
 }
 
-OpenSectionDisplay.changeId = 0;
+OpenSectionDisplay.changeIds = {};
 OpenSectionDisplay.refresh = (opening) => {
-  const changeId = ++OpenSectionDisplay.changeId;
+  let changeId = (OpenSectionDisplay.changeIds[opening.uniqueId] || 0) + 1;
+  OpenSectionDisplay.changeIds[opening.uniqueId] = changeId;
   setTimeout(()=> {
-    if (changeId === OpenSectionDisplay.changeId) {
+    if (changeId === OpenSectionDisplay.changeIds[opening.uniqueId]) {
       const id = OpenSectionDisplay.getId(opening);
       const target = document.getElementById(id);
       const listCnt = up('.expandable-list', target);

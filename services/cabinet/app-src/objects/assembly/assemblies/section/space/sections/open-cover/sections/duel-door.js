@@ -7,4 +7,6 @@ class DualDoorSection extends OpeningCoverSection {
   }
 }
 
+DualDoorSection.abbriviation = 'dds';
+
 Assembly.register(DualDoorSection);

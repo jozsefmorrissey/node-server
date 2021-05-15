@@ -30,4 +30,6 @@ class DrawerFront extends Assembly {
   }
 }
 
+DrawerFront.abbriviation = 'df';
+
 Assembly.register(DrawerFront);

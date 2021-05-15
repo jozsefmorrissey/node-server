@@ -1,6 +1,7 @@
 class OrderDisplay {
   constructor(parentSelector, orders) {
     const roomDisplays = {};
+    let active;
     const getHeader = (order, $index) =>
         OrderDisplay.headTemplate.render({order, $index});
 
@@ -21,6 +22,7 @@ class OrderDisplay {
     const getBody = (order, $index) => {
       if (order instanceof Order) {
         let propertyTypes = Object.keys(properties.list);
+        active = roomDisplays[order.id];
         setTimeout(roomDisplays[order.id].refresh, 100);
         return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
       } else {
@@ -29,6 +31,7 @@ class OrderDisplay {
       }
     }
     const getObject = () => initOrder(new Order());
+    this.active = () => active;
 
     const expListProps = {
       list: orders,

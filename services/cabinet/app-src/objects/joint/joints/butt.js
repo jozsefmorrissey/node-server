@@ -3,3 +3,5 @@ class Butt extends Joint {
     super(joinStr);
   }
 }
+
+Joint.register(Butt);

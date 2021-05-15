@@ -8,6 +8,13 @@
   margin: 0;
 }
 
+.divison-section-cnt {
+  border-style: groove;
+  padding: 2pt;
+  border-radius: 10pt;
+  margin: 2pt;
+}
+
 .property-container {
   height: 20vh;
   overflow: scroll;

@@ -84,4 +84,6 @@ Pull.location.RIGHT = {multiple: true};
 Pull.location.LEFT = {multiple: true};
 Pull.location.CENTER = {multiple: true, rotate: true};
 
+Pull.abbriviation = 'pu';
+
 Assembly.register(Pull);

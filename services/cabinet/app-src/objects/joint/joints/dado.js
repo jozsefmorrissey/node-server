@@ -17,3 +17,5 @@ class Dado extends Joint {
 
   }
 }
+
+Joint.register(Dado);

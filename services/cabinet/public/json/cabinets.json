@@ -1,5 +1,5 @@
-[
-  {
+const cabinetBuildConfig = {
+  "standard": {
     "type": "standard",
     "values": {
       "brh": "tkb.w + pb.t + brr - br.w",
@@ -8,163 +8,158 @@
       "st":"str + stl"
     },
     "subAssemblies": {
-      "Toe Kick Backer": {
+      "Panel.ToeKickBacker": {
         "type": "Panel",
         "code": "tkb",
-        "demensions": ["pr.t + frorl + (l / 2)", "w / 2", "tkd + (t / 2)"],
-        "center": ["tkh", "c.w - st", "tkbw"],
+        "center": ["pr.t + frorl + (l / 2)", "w / 2", "tkd + (t / 2)"],
+        "demensions": ["tkh", "c.w - st", "tkbw"],
         "rotation": "z"
       },
-      "Right": {
+      "Frame.Right": {
+        "type": "Frame",
         "code": "rr",
-        "dememsions": ["w / 2", "brh + (l / 2)", "t / 2"],
-        "center": ["frw", "c.l - brh", "frt"]
+        "center": ["w / 2", "brh + (l / 2)", "t / 2"],
+        "demensions": ["frw", "c.l - brh", "frt"]
       },
-      "": {
-        "type": "",
-        "code": "",
-        "demensions": [],
-        "center": [],
-        "rotation":
-      },
-      "Left": {
+      "Frame.Left": {
         "type": "Frame",
         "code": "lr",
-        "dememsions": ["c.w - (w / 2)", " brh + (l / 2)", " t / 2"],
-        "center": ["frw", " c.l - brh", " frt"]
+        "center": ["c.w - (w / 2)", " brh + (l / 2)", " t / 2"],
+        "demensions": ["frw", " c.l - brh", " frt"]
       },
-      "Frame Bottom": {
+      "Frame.Bottom": {
         "type": "Frame",
         "code": "br",
-        "dememsions": ["lr.w + (l / 2)", " brh + (w / 2)", " t / 2"],
-        "center": ["frw", " c.w - lr.w - rr.w", "frt"],
+        "center": ["lr.w + (l / 2)", " brh + (w / 2)", " t / 2"],
+        "demensions": ["frw", " c.w - lr.w - rr.w", "frt"],
         "rotation": "z"
       },
-      "Frame Top": {
+      "Frame.Top": {
         "type": "Frame",
         "code": "tr",
-        "dememsions": ["lr.w + (l / 2)", " c.l - (w/2)", "t / 2"],
-        "center": ["frw", "br.l", "frt"],
+        "center": ["lr.w + (l / 2)", " c.l - (w/2)", "t / 2"],
+        "demensions": ["frw", "br.l", "frt"],
         "rotation": "z"
       },
-      "Panel Right": {
+      "Panel.Right": {
         "type": "Panel",
         "code": "pr",
-        "dememsions": ["c.w - frorl - (t / 2)", "l / 2", "(w / 2) + lr.t"],
-        "center": ["c.t - lr.t", "c.l", "pwt34"],
+        "center": ["c.w - frorl - (t / 2)", "l / 2", "(w / 2) + lr.t"],
+        "demensions": ["c.t - lr.t", "c.l", "pwt34"],
         "rotation": "y"
       },
-      "Panel Left": {
+      "Panel.Left": {
         "type": "Panel",
         "code": "pl",
-        "dememsions": ["frorr + (t / 2)", " l / 2", " (w/2) + rr.t"],
-        "center": ["f'c.t - lr.t", "c.l", "pwt34"]
+        "center": ["frorr + (t / 2)", " l / 2", " (w/2) + rr.t"],
+        "demensions": ["c.t - lr.t", "c.l", "pwt34"],
+        "rotation": "y"
       },
-      "Panel Back": {
+      "Panel.Back": {
         "type": "Panel",
         "code": "pb",
-        "dememsions": ["l / 2 + stl", " (w / 2) + tkb.w", " c.t - (t / 2)"],
-        "center": ["c.l - tkb.w", " c.w - st", " pwt34"],
+        "center": ["l / 2 + stl", " (w / 2) + tkb.w", " c.t - (t / 2)"],
+        "demensions": ["c.l - tkb.w", " c.w - st", " pwt34"],
         "rotation": "z"
       },
-      "Panel Bottom": {
+      "Panel.Bottom": {
         "type": "Panel",
         "code": "pbt",
-        "dememsions": ["(l / 2) + stl", " brh + br.w - (t / 2) - brr", "br.t + (w / 2)"],
-        "center": ["c.t - br.t - pb.t", "c.w - st", "pwt34"],
-        "rotation": 'yx'
+        "center": ["(l / 2) + stl", " brh + br.w - (t / 2) - brr", "br.t + (w / 2)"],
+        "demensions": ["c.t - br.t - pb.t", "c.w - st", "pwt34"],
+        "rotation": "yx"
       }
     },
     "joints": {
-      "pb->pl": [
+      "pb->pl":
         {
           "type": "Rabbet",
           "depth": 3/8,
           "DemensionToOffset": "y",
           "centerOffset": "-x"
         },
-        "pb->pr": {
-          "type": "Rabbet",
-          "Depth": 3/8,
-          "DemensionToOffset":"y",
-          "centerOffset": "+x"
-        },
-        "tkb->pl": {
-          "type": "Dado",
-          "Depth": 3/8,
-          "DemensionToOffset":"y",
-          "centerOffset": "-x"
-        },
-        "pl->rr": {
-          "type": "Dado",
-          "Depth": 3/8,
-          "DemensionToOffset":"x",
-          "centerOffset": "-z"
-        },
-        "tkb->pr": {
-          "type": "Dado",
-          "Depth": 3/8,
-          "DemensionToOffset":"y",
-          "centerOffset": "+x"
-        },
-        "pr->lr": {
-          "type": "Dado",
-          "Depth": 3/8,
-          "DemensionToOffset":"x",
-          "centerOffset": "-z"
-        },
-        "pbt->pl": {
-          "type": "Dado",
-          "Depth": 3/8,
-          "DemensionToOffset":"y",
-          "centerOffset": "-x"
-        },
-        "pbt->pr": {
-          "type": "Dado",
-          "Depth": 3/8,
-          "DemensionToOffset":"y",
-          "centerOffset": "+x"
-        },
-        "pbt->br": {
-          "type": "Dado",
-          "Depth": 3/8
-        },
-        "pbt->rr": {
-          "type": "Dado",
-          "Depth": 3/8
-        },
-        "pbt->lr": {
-          "type": "Dado",
-          "Depth": 3/8
-        },
-        "pb->pbt'": {
-          "type": "Butt"
-        },
-        "tr->rr": {
-          "type": "Butt"
-        },
-        "tr->lr": {
-          "type": "Butt"
-        },
-        "br->rr": {
-          "type": "Butt"
-        },
-        "br->lr": {
-          "type": "Butt"
-        }
-      ]
+      "pb->pr": {
+        "type": "Rabbet",
+        "depth": 3/8,
+        "DemensionToOffset":"y",
+        "centerOffset": "+x"
+      },
+      "tkb->pl": {
+        "type": "Dado",
+        "depth": 3/8,
+        "DemensionToOffset":"y",
+        "centerOffset": "-x"
+      },
+      "pl->rr": {
+        "type": "Dado",
+        "depth": 3/8,
+        "DemensionToOffset":"x",
+        "centerOffset": "-z"
+      },
+      "tkb->pr": {
+        "type": "Dado",
+        "depth": 3/8,
+        "DemensionToOffset":"y",
+        "centerOffset": "+x"
+      },
+      "pr->lr": {
+        "type": "Dado",
+        "depth": 3/8,
+        "DemensionToOffset":"x",
+        "centerOffset": "-z"
+      },
+      "pbt->pl": {
+        "type": "Dado",
+        "depth": 3/8,
+        "DemensionToOffset":"y",
+        "centerOffset": "-x"
+      },
+      "pbt->pr": {
+        "type": "Dado",
+        "depth": 3/8,
+        "DemensionToOffset":"y",
+        "centerOffset": "+x"
+      },
+      "pbt->br": {
+        "type": "Dado",
+        "depth": 3/8
+      },
+      "pbt->rr": {
+        "type": "Dado",
+        "depth": 3/8
+      },
+      "pbt->lr": {
+        "type": "Dado",
+        "depth": 3/8
+      },
+      "pb->pbt'": {
+        "type": "Butt"
+      },
+      "tr->rr": {
+        "type": "Butt"
+      },
+      "tr->lr": {
+        "type": "Butt"
+      },
+      "br->rr": {
+        "type": "Butt"
+      },
+      "br->lr": {
+        "type": "Butt"
+      }
     },
-    "divisionSections": [
+    "bordersIdMap": [
       {
         "top": "tr",
         "bottom": "br",
         "left": "lr",
-        "right": "rr"
+        "right": "rr",
+        "back": "pb"
       }
     ]
   },
 
-  {
+  "Frame Only": {
     "type": "Frame Only",
     "values": {
       "brh": "0",
@@ -174,31 +169,31 @@
     },
     "subAssemblies": {
       "Right": {
-        "type": "Frome",
+        "type": "Frame",
         "code": "rr",
-        "dememsions": ["w / 2", " brh + (l / 2)", " t / 2"],
-        "center": ["frw", " c.l - brh", " frt"],
+        "center": ["w / 2", " brh + (l / 2)", " t / 2"],
+        "demensions": ["frw", " c.l - brh", " frt"],
       },
 
       "Left": {
         "type": "Frame",
         "code": "lr",
-        "dememsions": ["c.w - (w / 2)", " brh + (l / 2)", " t / 2'"],
-        "center": ["frw", " c.l - brh", " frt"]
+        "center": ["c.w - (w / 2)", " brh + (l / 2)", " t / 2'"],
+        "demensions": ["frw", " c.l - brh", " frt"]
       },
 
       "Bottom": {
         "type": "Frame",
         "code": "br",
-        "dememsions": ["lr.w + (l / 2)", " brh + (w / 2)", " t / 2'"],
-        "center": ["frw", " c.w - lr.w - rr.w", "frt"],
+        "center": ["lr.w + (l / 2)", " brh + (w / 2)", " t / 2'"],
+        "demensions": ["frw", " c.w - lr.w - rr.w", "frt"],
         "rotation": "z"
       },
       "Top": {
         "type": "Frame",
         "code": "tr",
-        "dememsions": ["lr.w + (l / 2)", " c.l - (w/2)", "t / 2"],
-        "center": ["frw", "br.l", "frt"],
+        "center": ["lr.w + (l / 2)", " c.l - (w/2)", "t / 2"],
+        "demensions": ["frw", "br.l", "frt"],
         "rotation": "z"
       },
 
@@ -217,13 +212,14 @@
     "type": "Butt"
     }
     },
-    "divisionSections": [
+    "bordersIdMap": [
       {
         "top": "tr",
         "bottom": "br",
         "left": "lr",
-        "right": "rr"
+        "right": "rr",
+        "back": "rr"
       }
     ]
   }
-]
+}

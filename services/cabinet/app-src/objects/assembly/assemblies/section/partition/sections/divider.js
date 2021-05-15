@@ -41,3 +41,7 @@ class DividerSection extends PartitionSection {
     this.addSubAssembly(new Frame(`df-${Divider.count}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc));
   }
 }
+
+DividerSection.abbriviation = 'dvrs';
+
+Assembly.register(DividerSection);

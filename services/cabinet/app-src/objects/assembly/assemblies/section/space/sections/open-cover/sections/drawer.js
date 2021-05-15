@@ -31,4 +31,6 @@ class DrawerSection extends OpeningCoverSection {
   }
 }
 
+DrawerSection.abbriviation = 'dws';
+
 Assembly.register(DrawerSection);

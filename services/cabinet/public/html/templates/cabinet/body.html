@@ -15,5 +15,7 @@
     </div>
   </div>
   <br>
-  <div>{{OpenSectionDisplay.html(cabinet.opening)}}</div>
+  <div:t repeat='opening in cabinet.openings' class='divison-section-cnt'>
+    {{OpenSectionDisplay.html(opening)}}
+  </div:t>
 </div>

@@ -116,12 +116,21 @@ class Assembly {
       this.subAssemblies = {};
       assemblies.forEach((assem) => this.subAssemblies[assem.partCode] = assem);
     };
-    this.setParentAssembly = (pa) => this.parentAssembly = pa;
+
+    // TODO: wierd dependency on inherited class.... fix!!!
+    const defaultPartCode = () =>
+      instance.partCode = instance.partCode || Cabinet.partCode(this);
+
+    this.setParentAssembly = (pa) => {
+      this.parentAssembly = pa;
+      defaultPartCode();
+    }
     this.features = Feature.getList(formatConstructorId(this));
     this.addSubAssembly = (assembly) => {
       this.subAssemblies[assembly.partCode] = assembly;
       assembly.setParentAssembly(this);
     }
+
     this.objId = this.constructor.name;
 
     this.addJoints = function () {
@@ -164,8 +173,10 @@ class Assembly {
       }
       json.values = JSON.parse(JSON.stringify(this.values));
       json.subAssemblies = [];
-      const subAssems = this.children();
-      subAssems.forEach((assem) => json.subAssemblies.push(assem.toJson()));
+      if (!Assembly.class(json.type).dontSaveChildren) {
+        const subAssems = this.children();
+        subAssems.forEach((assem) => json.subAssemblies.push(assem.toJson()));
+      }
       return json;
     }
 
@@ -174,6 +185,7 @@ class Assembly {
     this.width = (value) => position.setDemension('x', value);
     this.length = (value) => position.setDemension('y', value);
     this.thickness = (value) => position.setDemension('z', value);
+    defaultPartCode();
   }
 }
 
@@ -215,16 +227,25 @@ Assembly.fromJson = (assemblyJson) => {
   const partName = assemblyJson.partName;
   const assembly = Assembly.new(assemblyJson.type, partCode, partName, centerStr, demensionStr, rotationStr);
   const clazz = assembly.constructor;
-  assemblyJson.subAssemblies.forEach((json) => assembly.addSubAssembly(clazz.fromJson(json)));
+  assembly.values = assemblyJson.values;
+    assemblyJson.subAssemblies.forEach((json) =>
+      assembly.addSubAssembly(Assembly.class(json.type)
+                                .fromJson(json, assembly)));
   if (assemblyJson.length) assembly.length(assemblyJson.length);
   if (assemblyJson.width) assembly.width(assemblyJson.width);
   if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
   return assembly;
 }
 Assembly.classes = {};
+Assembly.register = (clazz) =>
+  Assembly.classes[clazz.prototype.constructor.name] = clazz;
 Assembly.new = function (id) {
   return new Assembly.classes[id](...Array.from(arguments).slice(1));
 }
+Assembly.class = function (id) {
+  return Assembly.classes[id];
+}
+
 Assembly.classObj = (filterFunc) => {
   if ((typeof filterFunc) !== 'function') return Assembly.classes;
   const classIds = Object.keys(Assembly.classes);
@@ -238,7 +259,5 @@ Assembly.classObj = (filterFunc) => {
 }
 Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
 Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
-Assembly.register = (clazz) =>
-    Assembly.classes[clazz.prototype.constructor.name] = clazz;
 Assembly.lists = {};
 Assembly.idCounters = {};

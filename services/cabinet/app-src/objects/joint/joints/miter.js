@@ -3,3 +3,5 @@ class Miter extends Joint {
     super(joinStr);
   }
 }
+
+Joint.register(Miter);

@@ -4,4 +4,6 @@ class FrameDivider extends Assembly {
   }
 }
 
+FrameDivider.abbriviation = 'fd';
+
 Assembly.register(FrameDivider);

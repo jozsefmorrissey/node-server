@@ -6,7 +6,6 @@ const PULL_TYPE = {
 class OpeningCoverSection extends SpaceSection {
   constructor(filePath, partCode, partName, divideProps, pullType) {
     super(filePath, partCode, partName, divideProps);
-
     const instance = this;
 
     pullType = pullType || PULL_TYPE.DOOR;
@@ -111,5 +110,7 @@ class OpeningCoverSection extends SpaceSection {
 
   }
 }
+
+OpeningCoverSection.dontSaveChildren = true;
 
 Assembly.register(OpeningCoverSection);

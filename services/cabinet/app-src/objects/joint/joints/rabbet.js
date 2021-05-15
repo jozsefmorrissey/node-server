@@ -15,3 +15,5 @@ class Rabbet extends Joint {
     };
   }
 }
+
+Joint.register(Rabbet);

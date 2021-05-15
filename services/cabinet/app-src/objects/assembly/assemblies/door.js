@@ -8,4 +8,6 @@ class Door extends Assembly {
   }
 }
 
+Door.abbriviation = 'dr';
+
 Assembly.register(Door);

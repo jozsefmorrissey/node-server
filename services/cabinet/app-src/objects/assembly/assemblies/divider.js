@@ -5,4 +5,6 @@ class Divider extends Assembly {
 }
 Divider.count = 0;
 
+Divider.abbriviation = 'dv';
+
 Assembly.register(Divider);

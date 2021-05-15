@@ -4,7 +4,7 @@ const sectionFilePath = (filename) => `sections/${filename}`;
 class Section extends Assembly {
   constructor(templatePath, isPartition, partCode, partName, sectionProperties) {
     super(partCode, partName);
-    this.important = ['partCode', 'partName'];
+    this.index = () => sectionProperties().index;
     this.center = (attr) => {
       const props = sectionProperties();
       const topPos = props.borders.top.position();
@@ -76,9 +76,9 @@ Section.new = function (constructorId) {
   if (section instanceof Section) return section;
   throw new Error(`Invalid section Id: '${constructorId}'`);
 }
-Section.render = (opening, scope) => {
-  scope.featureDisplay = new FeatureDisplay(opening).html();
-  const cId = opening.constructorId;
+Section.render = (scope) => {
+  scope.featureDisplay = new FeatureDisplay(scope.opening).html();
+  const cId = scope.opening.constructorId;
   if (cId === 'DivideSection') {
     return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
   }

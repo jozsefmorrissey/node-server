@@ -5,4 +5,5 @@ class DoorSection extends OpeningCoverSection {
   }
 }
 
+DoorSection.abbriviation = 'drs';
 Assembly.register(DoorSection);
