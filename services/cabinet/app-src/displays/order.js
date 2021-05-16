@@ -10,13 +10,13 @@ class OrderDisplay {
       return order;
     }
 
-    function loadOrder(index) {
+    function loadOrder(index, start) {
       return function (orderData) {
         const order = Order.fromJson(orderData);
-        console.log(order);
         initOrder(order);
         expandList.set(index, order);
         expandList.refresh();
+        console.log('load Time:', new Date().getTime() - start);
       }
     }
 
@@ -26,7 +26,8 @@ class OrderDisplay {
         active = roomDisplays[order.id];
         return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
       } else {
-        Request.get(EPNTS.order.get(order.name), loadOrder($index), console.error);
+        const start = new Date().getTime();
+        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
         return 'Loading...';
       }
     }

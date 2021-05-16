@@ -3,6 +3,7 @@ class StringMathEvaluator {
     globalScope = globalScope || {};
     const instance = this;
     let splitter = '.';
+    let cache = {};
 
     function resolve (path, currObj, globalCheck) {
       if (path === '') return currObj;
@@ -159,8 +160,17 @@ class StringMathEvaluator {
     const isolateNumber = isolateValueReg(StringMathEvaluator.numReg, Number.parseFloat);
     const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
 
+    this.cache = (expr) => {
+      const time = new Date().getTime();
+      if (cache[expr] && cache[expr].time > time - 200) {
+        cache[expr].time = time;
+        return cache[expr].value;
+      }
+      return null
+    }
 
     this.eval = function (expr, scope) {
+      if (this.cache(expr) !== null) return this.cache(expr);
       if (Number.isFinite(expr))
         return expr;
       scope = scope || globalScope;
@@ -186,6 +196,10 @@ class StringMathEvaluator {
       for (let index = 0; index < values.length - 1; index += 1) {
         value = operands[index](values[index], values[index + 1]);
         values[index + 1] = value;
+      }
+
+      if (Number.isFinite(value)) {
+        cache[expr] = {time: new Date().getTime(), value};
       }
       return value;
     }

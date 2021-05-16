@@ -2,6 +2,7 @@ class CabinetDisplay {
   constructor(room) {
     const parentSelector = `[room-id="${room.id}"].cabinet-cnt`;
     let propId = 'Half Overlay';
+    const instance = this;
     this.propId = (id) => {
       if (id ===  undefined) return propId;
       propId = id;
@@ -10,7 +11,8 @@ class CabinetDisplay {
         CabinetDisplay.headTemplate.render({room, cabinet, $index});
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
-      ThreeDModel.render(cabinet);
+      if (expandList.activeIndex() === $index)
+        ThreeDModel.render(cabinet);
       return CabinetDisplay.bodyTemplate.render({room, $index, cabinet, showTypes, OpenSectionDisplay});
     }
     const getObject = () => Cabinet.build('standard');

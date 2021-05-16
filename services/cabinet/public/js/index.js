@@ -2288,6 +2288,7 @@ class StringMathEvaluator {
     globalScope = globalScope || {};
     const instance = this;
     let splitter = '.';
+    let cache = {};
 
     function resolve (path, currObj, globalCheck) {
       if (path === '') return currObj;
@@ -2444,8 +2445,17 @@ class StringMathEvaluator {
     const isolateNumber = isolateValueReg(StringMathEvaluator.numReg, Number.parseFloat);
     const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
 
+    this.cache = (expr) => {
+      const time = new Date().getTime();
+      if (cache[expr] && cache[expr].time > time - 200) {
+        cache[expr].time = time;
+        return cache[expr].value;
+      }
+      return null
+    }
 
     this.eval = function (expr, scope) {
+      if (this.cache(expr) !== null) return this.cache(expr);
       if (Number.isFinite(expr))
         return expr;
       scope = scope || globalScope;
@@ -2471,6 +2481,10 @@ class StringMathEvaluator {
       for (let index = 0; index < values.length - 1; index += 1) {
         value = operands[index](values[index], values[index + 1]);
         values[index + 1] = value;
+      }
+
+      if (Number.isFinite(value)) {
+        cache[expr] = {time: new Date().getTime(), value};
       }
       return value;
     }
@@ -3569,13 +3583,13 @@ class OrderDisplay {
       return order;
     }
 
-    function loadOrder(index) {
+    function loadOrder(index, start) {
       return function (orderData) {
         const order = Order.fromJson(orderData);
-        console.log(order);
         initOrder(order);
         expandList.set(index, order);
         expandList.refresh();
+        console.log('load Time:', new Date().getTime() - start);
       }
     }
 
@@ -3585,7 +3599,8 @@ class OrderDisplay {
         active = roomDisplays[order.id];
         return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
       } else {
-        Request.get(EPNTS.order.get(order.name), loadOrder($index), console.error);
+        const start = new Date().getTime();
+        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
         return 'Loading...';
       }
     }
@@ -4114,6 +4129,7 @@ class CabinetDisplay {
   constructor(room) {
     const parentSelector = `[room-id="${room.id}"].cabinet-cnt`;
     let propId = 'Half Overlay';
+    const instance = this;
     this.propId = (id) => {
       if (id ===  undefined) return propId;
       propId = id;
@@ -4122,7 +4138,8 @@ class CabinetDisplay {
         CabinetDisplay.headTemplate.render({room, cabinet, $index});
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
-      ThreeDModel.render(cabinet);
+      if (expandList.activeIndex() === $index)
+        ThreeDModel.render(cabinet);
       return CabinetDisplay.bodyTemplate.render({room, $index, cabinet, showTypes, OpenSectionDisplay});
     }
     const getObject = () => Cabinet.build('standard');
