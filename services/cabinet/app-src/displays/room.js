@@ -6,7 +6,6 @@ class RoomDisplay {
 
     const getBody = (room, $index) => {
       let propertyTypes = Object.keys(properties.list);
-      setTimeout(this.cabinetDisplay().refresh, 100);
       return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
     }
 
@@ -30,6 +29,7 @@ class RoomDisplay {
       listElemLable: 'Room', type: 'pill'
     };
     const expandList = new ExpandableList(expListProps);
+    expandList.afterRender(() => this.cabinetDisplay().refresh());
     this.refresh = () => expandList.refresh();
   }
 }

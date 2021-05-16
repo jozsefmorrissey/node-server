@@ -15,6 +15,9 @@
 //}
 class ExpandableList {
   constructor(props) {
+    const afterRenderEvent = new CustomEvent('afterRender');
+    const afterAddEvent = new CustomEvent('afterAdd');
+    const afterRefreshEvent = new CustomEvent('afterRefresh');
     props.list = props.list || [];
     props.type = props.type || 'list';
     props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
@@ -30,13 +33,17 @@ class ExpandableList {
     ExpandableList.lists[props.id] = this;
     this.add = () => {
       props.list.push(props.getObject());
+      this.activeIndex(props.list.length - 1);
       this.refresh();
+      afterAddEvent.trigger();
     };
     this.isSelfClosing = () => props.selfCloseTab;
     this.remove = (index) => {
       props.list.splice(index, 1);
       this.refresh();
     }
+    this.afterRender = (func) => afterRenderEvent.on(func);
+    this.afterAdd = (func) => afterAddEvent.on(func);
     this.refresh = (type) => {
       props.type = (typeof type) === 'string' ? type : props.type;
       if (!pendingRefresh) {
@@ -45,7 +52,10 @@ class ExpandableList {
           const parent = document.querySelector(props.parentSelector);
           const html = ExpandableList[`${props.type}Template`].render(props);
 
-          if (parent && html !== undefined) parent.innerHTML = html;
+          if (parent && html !== undefined) {
+            parent.innerHTML = html;
+            afterRefreshEvent.trigger();
+          }
           pendingRefresh = false;
         }, 100);
       }
@@ -61,6 +71,30 @@ class ExpandableList {
     }
     this.set = (index, value) => props.list[index] = value;
     this.get = (index) => props.list[index];
+    this.renderBody = (target) => {
+      const headerSelector = `.expand-header[ex-list-id='${props.id}'][index='${this.activeIndex()}']`;
+      target = target || document.querySelector(headerSelector);
+      if (target !== null) {
+        const id = target.getAttribute('ex-list-id');
+        const list = ExpandableList.lists[id];
+        const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
+        const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
+        const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
+        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
+        bodys.forEach((body) => body.style.display = 'none');
+        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
+        const body = list.findElement('.expand-body', target);
+        body.style.display = 'block';
+        const index = target.getAttribute('index');
+        this.activeIndex(index);
+        body.innerHTML = this.htmlBody(index);
+        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+        target.className += ' active';
+        afterRenderEvent.trigger();
+      }
+    };
+    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+
     this.htmlBody = (index) => props.getBody(props.list[index], index);
     this.refresh();
   }
@@ -116,18 +150,6 @@ matchRun('click', '.expand-header', (target, event) => {
     list.activeIndex(null);
     target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
   } else if (!isActive) {
-    const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
-    const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
-    const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-    headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-    bodys.forEach((body) => body.style.display = 'none');
-    rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-    const body = list.findElement('.expand-body', target);
-    body.style.display = 'block';
-    const index = target.getAttribute('index');
-    list.activeIndex(index);
-    body.innerHTML = list.htmlBody(index);
-    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-    target.className += ' active';
+    list.renderBody(target);
   }
 });

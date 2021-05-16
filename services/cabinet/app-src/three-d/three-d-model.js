@@ -113,7 +113,18 @@ class ThreeDModel {
     this.hidePartName = manageHidden(hiddenPartNames);
     this.hidePrefix = manageHidden(hiddenPrefixes);
 
-    function hidden(part) {
+    function hasHidden(hiddenObj) {
+      const keys = Object.keys(hiddenObj);
+      for(let i = 0; i < hiddenObj.length; i += 1)
+        if (hidden[keys[index]])return true;
+      return false;
+    }
+    this.noneHidden = () => !hasHidden(hiddenPartCodes) &&
+        !hasHidden(hiddenPartNames) && !hasHidden(hiddenPrefixes);
+
+    this.depth = (label) => label.split('.').length - 1;
+
+    function hidden(part, level) {
       const im = inclusiveMatch(part);
       if (im !== null) return !im;
       if (instance.hidePartCode(part.partCode)) return true;
@@ -209,18 +220,20 @@ function displayPart(part) {
 }
 
 function groupParts(cabinet) {
-  const grouping = {displayPart, group: {groups: {}, parts: {}}};
+  const grouping = {displayPart, group: {groups: {}, parts: {}, level: 0}};
   const parts = cabinet.getParts();
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
     const namePieces = part.partName.split('.');
     let currObj = grouping.group;
+    let level = 0;
     let prefix = '';
     for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
       const piece = namePieces[nIndex];
       prefix += piece;
       if (currObj.groups[piece] === undefined) currObj.groups[piece] = {groups: {}, parts: []};
       currObj = currObj.groups[piece];
+      currObj.groups = ++level;
       currObj.prefix = prefix;
       prefix += '.'
     }

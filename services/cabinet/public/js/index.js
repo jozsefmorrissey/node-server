@@ -1006,6 +1006,44 @@ function enableScroll(element) {
 
 
 
+class CustomEvent {
+  constructor(name) {
+    const watchers = [];
+    this.name = name;
+
+    const runFuncs = (e) => watchers.forEach((func) => func(e));
+
+    this.on = function (func) {
+      if ((typeof func) === 'function') {
+        watchers.push(func);
+      } else {
+        return 'on' + name;
+      }
+    }
+
+    this.trigger = function (element) {
+      element = element === undefined ? window : element;
+      runFuncs(element);
+      if(document.createEvent){
+          element.dispatchEvent(this.event);
+      } else {
+          element.fireEvent("on" + this.event.eventType, this.event);
+      }
+    }
+//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+    this.event;
+    if(document.createEvent){
+        this.event = document.createEvent("HTMLEvents");
+        this.event.initEvent(name, true, true);
+        this.event.eventName = name;
+    } else {
+        this.event = document.createEventObject();
+        this.event.eventName = name;
+        this.event.eventType = name;
+    }
+  }
+}
+
 let idCount = 0;
 class ExprDef {
   constructor(name, options, notify, stages, alwaysPossible) {
@@ -1319,7 +1357,10 @@ try {
 } catch (e) {}
 
 class $t {
-	constructor(template, id) {
+	constructor(template, id, selector) {
+    const afterRenderEvent = new CustomEvent('afterRender');
+    const beforeRenderEvent = new CustomEvent('beforeRender');
+
 		function varReg(prefix, suffix) {
 		  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
 		  prefix = prefix ? prefix : '';
@@ -1627,6 +1668,15 @@ class $t {
 				default:
 					throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
 			}
+
+      if (selector) {
+        const elem = document.querySelector(selector);
+        if (elem !== null) {
+          beforeRenderEvent.trigger();
+          elem.innerHTML = rendered;
+          afterRenderEvent.trigger();
+        }
+      }
 			return rendered;
 		}
 
@@ -1716,6 +1766,8 @@ class $t {
 		}
 		this.compiled = function () { return $t.templates[id];}
 		this.render = render;
+    this.afterRender = (func) => afterRenderEvent.on(func);
+    this.beforeRender = (func) => beforeRenderEvent.on(func);
 		this.type = type;
 		this.isolateBlocks = isolateBlocks;
 	}
@@ -1782,6 +1834,9 @@ $t.functions['633282157'] = function (get) {
 $t.functions['990870856'] = function (get) {
 	return `<div class='inline' > <h3>` + (get("assem").objId) + `</h3> <div> ` + (get("getFeatureDisplay")(get("assem"))) + ` </div> </div>`
 }
+$t.functions['1620102472'] = function (get) {
+	return `<div class='model-label` + (get("tdm").isTarget("part-name", get("partName")) ? " active" : "") + `' ` + (get("tdm").noneHidden() ? 'hidden' : '') + ` > <label type='part-name'>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\' {{partList.length > 1 ? "" : "hidden"}}> <label type=\'part-code\'>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
+}
 $t.functions['cabinet/body'] = function (get) {
 	return `<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> </div> <button class='save-cabinet-btn' index='` + (get("$index")) + `'>Save</button> <div class='right'> <select class="show-right-select"> ` + (new $t('<option >{{showType.name}}</option>').render(get('scope'), 'showType in showTypes', get)) + ` </select> <label>Show Right</label> </div> </div> <br> ` + (new $t('<div  class=\'divison-section-cnt\'> {{OpenSectionDisplay.html(opening)}} </div>').render(get('scope'), 'opening in cabinet.openings', get)) + ` </div> `
 }
@@ -1794,11 +1849,11 @@ $t.functions['-1702305177'] = function (get) {
 $t.functions['cabinet/head'] = function (get) {
 	return `<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` + (get("$index")) + `.id' index='` + (get("$index")) + `' room-id='` + (get("room").id) + `' value='` + (get("cabinet").id || get("$index")) + `'> Size: <div class='cabinet-dem-cnt'> <label>W:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.width' room-id='` + (get("room").id) + `' value='` + (get("cabinet").width()) + `'> <label>H:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.length' room-id='` + (get("room").id) + `' value='` + (get("cabinet").length()) + `'> <label>D:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.thickness' room-id='` + (get("room").id) + `' value='` + (get("cabinet").thickness()) + `'> </div> </div> `
 }
-$t.functions['divide/body'] = function (get) {
-	return `<h2>` + (get("list").activeIndex()) + `</h2> val: ` + (get("list").value()('selected')) + ` `
-}
 $t.functions['divide/head'] = function (get) {
 	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.prototype.constructor.name}}\' {{opening.constructorId === section.name ? \'selected\' : \'\'}}> {{clean(section.name)}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
+}
+$t.functions['divide/body'] = function (get) {
+	return `<h2>` + (get("list").activeIndex()) + `</h2> val: ` + (get("list").value()('selected')) + ` `
 }
 $t.functions['divider-controls'] = function (get) {
 	return `<div> <label>Dividers:</label> <input type="number" min="0" max="10" step="1" class='division-count-input' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").dividerCount()) + `'> <span class="open-orientation-radio-cnt ` + (get("opening").dividerCount() > 0 ? '' : 'hidden') + `"> <label for='open-orientation-horiz-` + (get("opening").uniqueId) + `'>Horizontal:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='horizontal' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-horiz-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? '' : 'checked') + `> <label for='open-orientation-vert-` + (get("opening").uniqueId) + `'>Vertical:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='vertical' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-vert-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? 'checked' : '') + `> </span> <select class='open-pattern-select ` + ( get("opening").dividerCount() > 0 ? '' : 'hidden') + `' id='` + (get("selectPatternId")) + `' prop-update='pattern' divisions=` + (get("opening").dividerCount()) + `> ` + (get("patterns")) + ` </select> ` + (new $t('<span class=\'input-html-cnt-{{opening.uniqueId}}\' > <label>{{label}}</label> <input class=\'division-pattern-input\' name=\'{{pattern.name}}\' index=\'{{$index}}\' value=\'{{fill ? fill[$index] : ""}}\'> </span>').render(get('scope'), 'label in pattern.inputArr', get)) + ` </div> `
@@ -1818,14 +1873,14 @@ $t.functions['expandable/pill'] = function (get) {
 $t.functions['-520175802'] = function (get) {
 	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> </div> <div class="expand-header ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> </div> </div>`
 }
+$t.functions['login/confirmation-message'] = function (get) {
+	return `<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+}
 $t.functions['features'] = function (get) {
 	return `<div class='tab'> ` + (new $t('<div > <label>{{feature.name}}</label> <input type=\'checkbox\' name=\'{{id + \'-checkbox\'}}\' {{feature.isCheckbox() ? \'\': \'hidden\'}}> <input type=\'text\' name=\'{{id + \'-input\'}}\' {{feature.showInput() ? \'\' : \'hidden\'}}> <input class=\'feature-radio\' type=\'radio\' name=\'{{id}}\' value=\'{{feature.id}}\' {{!feature.isRadio() ? "hidden disabled" : ""}}> <div {{!feature.isRadio() ? \'\' : \'hidden\'}}> <input type=\'text\' placeholder="Unique Notes" {{!feature.isRadio() ? "hidden disabled" : ""}}> {{new $t(\'features\').render({features: get(\'feature.features\'), id: get(\'id\') + \'.\' + get(\'feature.id\')})}} </div> </div>').render(get('scope'), 'feature in features', get)) + ` </div> `
 }
 $t.functions['-666497277'] = function (get) {
 	return `<div > <label>` + (get("feature").name) + `</label> <input type='checkbox' name='` + (get("id") + '-checkbox') + `' ` + (get("feature").isCheckbox() ? '': 'hidden') + `> <input type='text' name='` + (get("id") + '-input') + `' ` + (get("feature").showInput() ? '' : 'hidden') + `> <input class='feature-radio' type='radio' name='` + (get("id")) + `' value='` + (get("feature").id) + `' ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> <div ` + (!get("feature").isRadio() ? '' : 'hidden') + `> <input type='text' placeholder="Unique Notes" ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> ` + (new $t('features').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})) + ` </div> </div>`
-}
-$t.functions['login/confirmation-message'] = function (get) {
-	return `<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
 }
 $t.functions['login/create-account'] = function (get) {
 	return `<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` + (get("email")) + `'> <input type='password' placeholder="password" name='password' value='` + (get("password")) + `'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
@@ -1836,11 +1891,8 @@ $t.functions['login/login'] = function (get) {
 $t.functions['login/reset-password'] = function (get) {
 	return `<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` + (get("email")) + `'> <input type='password' placeholder="password" name='password' value='` + (get("password")) + `'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 }
-$t.functions['order/body'] = function (get) {
-	return `<div> <label>Order Name</label> <input class='order-name-input' type='text' value='` + (get("order").name) + `' index='` + (get("$index")) + `'> <button class='save-order-btn' index='` + (get("$index")) + `'>Save</button> <div id='room-pills'></div> </div> `
-}
 $t.functions['model-controller'] = function (get) {
-	return `<div> <div class='model-selector'> <div> <div class='` + (get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") + ` ` + (get("label") ? "prefix-switch model-label" : "") + `' ` + (!get("label") ? 'hidden' : '') + `> <label type='prefix'>` + (get("label")) + `</label> <input type='checkbox' class='prefix-checkbox' prefix='` + (get("group").prefix) + `' ` + (!get("tdm").hidePrefix(get("label")) ? 'checked' : '') + `> </div> <div class='` + (get("label") ? "prefix-body indent" : "") + `'> ` + (new $t('<div class=\'model-label{{tdm.isTarget("part-name", partName) ? " active" : ""}}\' > <label type=\'part-name\'>{{partName}}</label> <input type=\'checkbox\' class=\'part-name-checkbox\' part-name=\'{{partName}}\' {{!tdm.hidePartName(partName) ? \'checked\' : \'\'}}> {{new $t(\'<div class=\\\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\\\'  {{partList.length > 1 ? "" : "hidden"}}> <label type=\\\'part-code\\\'>{{part.partCode}}</label> <input type=\\\'checkbox\\\' class=\\\'part-code-checkbox\\\' part-code=\\\'{{part.partCode}}\\\' {{!tdm.hidePartCode(part.partCode) ? \\\'checked\\\' : \\\'\\\'}}> </div>\').render(get(\'scope\'), \'part in partList\', get)}} </div>').render(get('scope'), 'partName, partList in group.parts', get)) + ` ` + (new $t('model-controller').render(get('scope'), 'label, group in group.groups', get)) + ` </div> </div> </div> </div> `
+	return `<div> <div class='model-selector'> <div ` + (get("group").level > 0 ? 'hidden' : '') + `> <div class='` + (get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") + ` ` + (get("label") ? "prefix-switch model-label" : "") + `' ` + (!get("label") ? 'hidden' : '') + `> <label type='prefix'>` + (get("label")) + `</label> <input type='checkbox' class='prefix-checkbox' prefix='` + (get("group").prefix) + `' ` + (!get("tdm").hidePrefix(get("label")) ? 'checked' : '') + `> </div> <div class='` + (get("label") ? "prefix-body indent" : "") + `' ` + (get("label") ? 'hidden' : '') + `> ` + (new $t('<div class=\'model-label{{tdm.isTarget("part-name", partName) ? " active" : ""}}\' > <label type=\'part-name\'>{{partName}}</label> <input type=\'checkbox\' class=\'part-name-checkbox\' part-name=\'{{partName}}\' {{!tdm.hidePartName(partName) ? \'checked\' : \'\'}}> {{new $t(\'<div class=\\\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\\\'  {{partList.length > 1 ? "" : "hidden"}}> <label type=\\\'part-code\\\'>{{part.partCode}}</label> <input type=\\\'checkbox\\\' class=\\\'part-code-checkbox\\\' part-code=\\\'{{part.partCode}}\\\' {{!tdm.hidePartCode(part.partCode) ? \\\'checked\\\' : \\\'\\\'}}> </div>\').render(get(\'scope\'), \'part in partList\', get)}} </div>').render(get('scope'), 'partName, partList in group.parts', get)) + ` ` + (new $t('model-controller').render(get('scope'), 'label, group in group.groups', get)) + ` </div> </div> </div> </div> `
 }
 $t.functions['-1397238508'] = function (get) {
 	return `<div class='` + (get("tdm").isTarget("part-code", get("part").partCode) ? "active " : "") + ` model-label indent' ` + (get("partList").length > 1 ? "" : "hidden") + `> <label type='part-code'>` + (get("part").partCode) + `</label> <input type='checkbox' class='part-code-checkbox' part-code='` + (get("part").partCode) + `' ` + (!get("tdm").hidePartCode(get("part").partCode) ? 'checked' : '') + `> </div>`
@@ -1853,6 +1905,9 @@ $t.functions['-424251200'] = function (get) {
 }
 $t.functions['opening'] = function (get) {
 	return `<div class='opening-cnt' opening-id='` + (get("opening").uniqueId) + `'> <div class='divider-controls'> </div> </div> <div id='` + (get("openDispId")) + `'> </div> `
+}
+$t.functions['order/body'] = function (get) {
+	return `<div> <label>Order Name</label> <input class='order-name-input' type='text' value='` + (get("order").name) + `' index='` + (get("$index")) + `'> <button class='save-order-btn' index='` + (get("$index")) + `'>Save</button> <div id='room-pills'></div> </div> `
 }
 $t.functions['order/head'] = function (get) {
 	return `<h3 class='margin-zero'> ` + (get("order").name) + ` </h3> `
@@ -1892,6 +1947,9 @@ $t.functions['sections/false-front'] = function (get) {
 }
 $t.functions['sections/open'] = function (get) {
 	return `<h2>Open: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['-1690665681'] = function (get) {
+	return `<div class='model-label` + (get("tdm").isTarget("part-name", get("partName")) ? " active" : "") + `' hidden > <label type='part-name'>` + (get("partName")) + `</label> <input type='checkbox' class='part-name-checkbox' part-name='` + (get("partName")) + `' ` + (!get("tdm").hidePartName(get("partName")) ? 'checked' : '') + `> ` + (new $t('<div class=\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\' {{partList.length > 1 ? "" : "hidden"}}> <label type=\'part-code\'>{{part.partCode}}</label> <input type=\'checkbox\' class=\'part-code-checkbox\' part-code=\'{{part.partCode}}\' {{!tdm.hidePartCode(part.partCode) ? \'checked\' : \'\'}}> </div>').render(get('scope'), 'part in partList', get)) + ` </div>`
 }
 
 
@@ -2915,112 +2973,6 @@ afterLoad.push(() => {
 });
 
 
-class DivisionPattern {
-  constructor() {
-    this.patterns = {};
-    const instance = this;
-    this.filter = (dividerCount, config) => {
-      const sectionCount = dividerCount + 1;
-      if (sectionCount < 2) return '';
-      let filtered = '';
-      let patternArr = Object.values(this.patterns);
-      patternArr.forEach((pattern) => {
-        if (pattern.restrictions === undefined || pattern.restrictions.indexOf(sectionCount) !== -1) {
-          const name = pattern.name;
-          filtered += `<option value='${name}' ${config.name === name ? 'selected' : ''}>${name}</option>`;
-        }
-      });
-      this.inputStr
-      return filtered;
-    }
-    this.add = (name, resolution, inputArr, restrictions) => {
-      inputArr = inputArr || [];
-      let inputHtml =  (fill) => {
-        let html = '';
-        inputArr.forEach((label, index) => {
-          const value = fill ? fill[index] : '';
-          const labelTag = ``;
-          const inputTag = ``;
-          html += labelTag + inputTag;
-        });
-        return html;
-      }
-      this.patterns[name] = {name, resolution, restrictions, inputHtml, inputArr};
-    }
-
-    afterLoad.push(() => {
-      matchRun('change', '.open-pattern-select', (target) => {
-        const openingId = up('.opening-cnt', target).getAttribute('opening-id');
-        const opening = OpenSectionDisplay.sections[openingId];
-        OpenSectionDisplay.refresh(opening);
-      });
-
-      matchRun('keyup', '.division-pattern-input', updateDivisions);
-    });
-  }
-}
-
-DivisionPattern = new DivisionPattern();
-
-DivisionPattern.add('Unique',() => {
-
-});
-
-DivisionPattern.add('Equal', (length, index, value, sectionCount) => {
-  const newVal = length / sectionCount;
-  const list = new Array(sectionCount).fill(newVal);
-  return {list};
-});
-
-DivisionPattern.add('1 to 2', (length, index, value, sectionCount) => {
-  if (index === 0) {
-    const twoValue = (length - value) / 2;
-    const list = [value, twoValue, twoValue];
-    const fill = [value, twoValue];
-    return {list, fill};
-  } else {
-    const oneValue = (length - (value * 2));
-    const list = [oneValue, value, value];
-    const fill = [oneValue, value];
-    return {list, fill};
-  }
-}, ['first(1):', 'next(2)'], [3], [5.5]);
-
-DivisionPattern.add('2 to 2', (length, index, value, sectionCount) => {
-  const newValue = (length - (value * 2)) / 2;
-  if (index === 0) {
-    const list = [value, value, newValue, newValue];
-    const fill = [value, newValue];
-    return {list, fill};
-  } else {
-    const list = [newValue, newValue, value, value];
-    const fill = [newValue, value];
-    return {list, fill};
-  }
-}, ['first(2):', 'next(2)'], [4]);
-
-DivisionPattern.add('1 to 3', (length, index, value, sectionCount) => {
-  if (index === 0) {
-    const threeValue = (length - value) / 3;
-    const list = [value, threeValue, threeValue, threeValue];
-    const fill = [value, threeValue];
-    return {list, fill};
-  } else {
-    const oneValue = (length - (value * 3));
-    const list = [oneValue, value, value, value];
-    const fill = [oneValue, value];
-    return {list, fill};
-  }
-}, ['first(1):', 'next(3)'], [4], 5.5);
-
-afterLoad.push(() => matchRun('change', '.feature-radio', (target) => {
-  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
-  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
-  target.nextElementSibling.hidden = !target.checked;
-})
-)
-
-
 class Feature {
   constructor(id, subFeatures, properties, parent) {
     subFeatures = subFeatures || [];
@@ -3357,6 +3309,112 @@ function removeCookie(name) {
 matchRun('change', '.open-orientation-radio,.open-division-input', updateDivisions);
 
 
+class DivisionPattern {
+  constructor() {
+    this.patterns = {};
+    const instance = this;
+    this.filter = (dividerCount, config) => {
+      const sectionCount = dividerCount + 1;
+      if (sectionCount < 2) return '';
+      let filtered = '';
+      let patternArr = Object.values(this.patterns);
+      patternArr.forEach((pattern) => {
+        if (pattern.restrictions === undefined || pattern.restrictions.indexOf(sectionCount) !== -1) {
+          const name = pattern.name;
+          filtered += `<option value='${name}' ${config.name === name ? 'selected' : ''}>${name}</option>`;
+        }
+      });
+      this.inputStr
+      return filtered;
+    }
+    this.add = (name, resolution, inputArr, restrictions) => {
+      inputArr = inputArr || [];
+      let inputHtml =  (fill) => {
+        let html = '';
+        inputArr.forEach((label, index) => {
+          const value = fill ? fill[index] : '';
+          const labelTag = ``;
+          const inputTag = ``;
+          html += labelTag + inputTag;
+        });
+        return html;
+      }
+      this.patterns[name] = {name, resolution, restrictions, inputHtml, inputArr};
+    }
+
+    afterLoad.push(() => {
+      matchRun('change', '.open-pattern-select', (target) => {
+        const openingId = up('.opening-cnt', target).getAttribute('opening-id');
+        const opening = OpenSectionDisplay.sections[openingId];
+        OpenSectionDisplay.refresh(opening);
+      });
+
+      matchRun('keyup', '.division-pattern-input', updateDivisions);
+    });
+  }
+}
+
+DivisionPattern = new DivisionPattern();
+
+DivisionPattern.add('Unique',() => {
+
+});
+
+DivisionPattern.add('Equal', (length, index, value, sectionCount) => {
+  const newVal = length / sectionCount;
+  const list = new Array(sectionCount).fill(newVal);
+  return {list};
+});
+
+DivisionPattern.add('1 to 2', (length, index, value, sectionCount) => {
+  if (index === 0) {
+    const twoValue = (length - value) / 2;
+    const list = [value, twoValue, twoValue];
+    const fill = [value, twoValue];
+    return {list, fill};
+  } else {
+    const oneValue = (length - (value * 2));
+    const list = [oneValue, value, value];
+    const fill = [oneValue, value];
+    return {list, fill};
+  }
+}, ['first(1):', 'next(2)'], [3], [5.5]);
+
+DivisionPattern.add('2 to 2', (length, index, value, sectionCount) => {
+  const newValue = (length - (value * 2)) / 2;
+  if (index === 0) {
+    const list = [value, value, newValue, newValue];
+    const fill = [value, newValue];
+    return {list, fill};
+  } else {
+    const list = [newValue, newValue, value, value];
+    const fill = [newValue, value];
+    return {list, fill};
+  }
+}, ['first(2):', 'next(2)'], [4]);
+
+DivisionPattern.add('1 to 3', (length, index, value, sectionCount) => {
+  if (index === 0) {
+    const threeValue = (length - value) / 3;
+    const list = [value, threeValue, threeValue, threeValue];
+    const fill = [value, threeValue];
+    return {list, fill};
+  } else {
+    const oneValue = (length - (value * 3));
+    const list = [oneValue, value, value, value];
+    const fill = [oneValue, value];
+    return {list, fill};
+  }
+}, ['first(1):', 'next(3)'], [4], 5.5);
+
+afterLoad.push(() => matchRun('change', '.feature-radio', (target) => {
+  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+  target.nextElementSibling.hidden = !target.checked;
+})
+)
+
+
 
 class User {
   constructor() {
@@ -3517,6 +3575,7 @@ class OrderDisplay {
         console.log(order);
         initOrder(order);
         expandList.set(index, order);
+        expandList.refresh();
       }
     }
 
@@ -3524,7 +3583,6 @@ class OrderDisplay {
       if (order instanceof Order) {
         let propertyTypes = Object.keys(properties.list);
         active = roomDisplays[order.id];
-        setTimeout(roomDisplays[order.id].refresh, 100);
         return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
       } else {
         Request.get(EPNTS.order.get(order.name), loadOrder($index), console.error);
@@ -3540,6 +3598,7 @@ class OrderDisplay {
       listElemLable: 'Order', type: 'sidebar'
     };
     const expandList = new ExpandableList(expListProps);
+    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
 
     const saveSuccess = () => console.log('success');
     const saveFail = () => console.log('failure');
@@ -3612,7 +3671,7 @@ OpenSectionDisplay.getList = (root) => {
   const findElement = (selector, target) => down(selector, up('.expandable-list', target));
   const expListProps = {
     parentSelector, getHeader, getBody, getObject, list, hideAddBtn,
-    selfCloseTab, findElement
+    selfCloseTab, findElement, startClosed: true
   }
   exList = new ExpandableList(expListProps);
   OpenSectionDisplay.lists[openId] = exList;
@@ -3676,6 +3735,7 @@ OpenSectionDisplay.onSectionChange = (target) => {
   const section = ExpandableList.get(target);
   const index = ExpandableList.getIdAndIndex(target).index;
   section.parentAssembly.setSection(target.value, index);
+  OpenSectionDisplay.refresh(section.parentAssembly);
   updateModel(section);
 }
 
@@ -3812,7 +3872,18 @@ class ThreeDModel {
     this.hidePartName = manageHidden(hiddenPartNames);
     this.hidePrefix = manageHidden(hiddenPrefixes);
 
-    function hidden(part) {
+    function hasHidden(hiddenObj) {
+      const keys = Object.keys(hiddenObj);
+      for(let i = 0; i < hiddenObj.length; i += 1)
+        if (hidden[keys[index]])return true;
+      return false;
+    }
+    this.noneHidden = () => !hasHidden(hiddenPartCodes) &&
+        !hasHidden(hiddenPartNames) && !hasHidden(hiddenPrefixes);
+
+    this.depth = (label) => label.split('.').length - 1;
+
+    function hidden(part, level) {
       const im = inclusiveMatch(part);
       if (im !== null) return !im;
       if (instance.hidePartCode(part.partCode)) return true;
@@ -3908,18 +3979,20 @@ function displayPart(part) {
 }
 
 function groupParts(cabinet) {
-  const grouping = {displayPart, group: {groups: {}, parts: {}}};
+  const grouping = {displayPart, group: {groups: {}, parts: {}, level: 0}};
   const parts = cabinet.getParts();
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
     const namePieces = part.partName.split('.');
     let currObj = grouping.group;
+    let level = 0;
     let prefix = '';
     for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
       const piece = namePieces[nIndex];
       prefix += piece;
       if (currObj.groups[piece] === undefined) currObj.groups[piece] = {groups: {}, parts: []};
       currObj = currObj.groups[piece];
+      currObj.groups = ++level;
       currObj.prefix = prefix;
       prefix += '.'
     }
@@ -4052,7 +4125,7 @@ class CabinetDisplay {
       ThreeDModel.render(cabinet);
       return CabinetDisplay.bodyTemplate.render({room, $index, cabinet, showTypes, OpenSectionDisplay});
     }
-    const getObject = () => Cabinet.build('standard');//new Cabinet('c', 'Cabinet', propId);
+    const getObject = () => Cabinet.build('standard');
     this.active = () => expandList.active();
     const expListProps = {
       list: room.cabinets,
@@ -4193,6 +4266,9 @@ PropertyDisplay.template = new $t('properties/properties');
 //}
 class ExpandableList {
   constructor(props) {
+    const afterRenderEvent = new CustomEvent('afterRender');
+    const afterAddEvent = new CustomEvent('afterAdd');
+    const afterRefreshEvent = new CustomEvent('afterRefresh');
     props.list = props.list || [];
     props.type = props.type || 'list';
     props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
@@ -4208,13 +4284,17 @@ class ExpandableList {
     ExpandableList.lists[props.id] = this;
     this.add = () => {
       props.list.push(props.getObject());
+      this.activeIndex(props.list.length - 1);
       this.refresh();
+      afterAddEvent.trigger();
     };
     this.isSelfClosing = () => props.selfCloseTab;
     this.remove = (index) => {
       props.list.splice(index, 1);
       this.refresh();
     }
+    this.afterRender = (func) => afterRenderEvent.on(func);
+    this.afterAdd = (func) => afterAddEvent.on(func);
     this.refresh = (type) => {
       props.type = (typeof type) === 'string' ? type : props.type;
       if (!pendingRefresh) {
@@ -4223,7 +4303,10 @@ class ExpandableList {
           const parent = document.querySelector(props.parentSelector);
           const html = ExpandableList[`${props.type}Template`].render(props);
 
-          if (parent && html !== undefined) parent.innerHTML = html;
+          if (parent && html !== undefined) {
+            parent.innerHTML = html;
+            afterRefreshEvent.trigger();
+          }
           pendingRefresh = false;
         }, 100);
       }
@@ -4239,6 +4322,30 @@ class ExpandableList {
     }
     this.set = (index, value) => props.list[index] = value;
     this.get = (index) => props.list[index];
+    this.renderBody = (target) => {
+      const headerSelector = `.expand-header[ex-list-id='${props.id}'][index='${this.activeIndex()}']`;
+      target = target || document.querySelector(headerSelector);
+      if (target !== null) {
+        const id = target.getAttribute('ex-list-id');
+        const list = ExpandableList.lists[id];
+        const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
+        const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
+        const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
+        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
+        bodys.forEach((body) => body.style.display = 'none');
+        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
+        const body = list.findElement('.expand-body', target);
+        body.style.display = 'block';
+        const index = target.getAttribute('index');
+        this.activeIndex(index);
+        body.innerHTML = this.htmlBody(index);
+        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+        target.className += ' active';
+        afterRenderEvent.trigger();
+      }
+    };
+    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+
     this.htmlBody = (index) => props.getBody(props.list[index], index);
     this.refresh();
   }
@@ -4294,19 +4401,7 @@ matchRun('click', '.expand-header', (target, event) => {
     list.activeIndex(null);
     target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
   } else if (!isActive) {
-    const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
-    const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
-    const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-    headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-    bodys.forEach((body) => body.style.display = 'none');
-    rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-    const body = list.findElement('.expand-body', target);
-    body.style.display = 'block';
-    const index = target.getAttribute('index');
-    list.activeIndex(index);
-    body.innerHTML = list.htmlBody(index);
-    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-    target.className += ' active';
+    list.renderBody(target);
   }
 });
 
@@ -4319,7 +4414,6 @@ class RoomDisplay {
 
     const getBody = (room, $index) => {
       let propertyTypes = Object.keys(properties.list);
-      setTimeout(this.cabinetDisplay().refresh, 100);
       return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
     }
 
@@ -4343,6 +4437,7 @@ class RoomDisplay {
       listElemLable: 'Room', type: 'pill'
     };
     const expandList = new ExpandableList(expListProps);
+    expandList.afterRender(() => this.cabinetDisplay().refresh());
     this.refresh = () => expandList.refresh();
   }
 }
@@ -4350,38 +4445,26 @@ RoomDisplay.bodyTemplate = new $t('room/body');
 RoomDisplay.headTemplate = new $t('room/head');
 
 
-class Material extends Cost {
+class Labor extends Cost {
   constructor (id, formula, options) {
     super(id, formula, options)
   }
 }
-Material.addRelations = (id, name) => Cost.addRelations(Material, id, name);
-Material.pricePerSquareInch = (lengthFeet, widthFeet, cost) => {
-  const squareInchRatio = 1 / ((lengthFeet * 12) + (widthFeet * 12))
-  return `l*w*${cost}*${squareInchRatio}`
-};
-Material.pricePerCubicInch = (lengthFeet, widthFeet, depthFeet, cost) => {
-  const squareInchRatio = 1 / ((lengthFeet * 12) + (widthFeet * 12) + (depthFeet * 12))
-  return `l*w*d*${cost}*${squareInchRatio}`
-};
-
-Material.sheet = (name, width, length, cost) => new Material(name, Material.pricePerSquareInch(width, length, cost));
-Material.volume = (name, width, length, depth, cost) => new Material(name, Material.pricePerSquareInch(width, length, depth, cost));
-
-new Material('Wood');
-new Material('Wood.SoftMapel', 'sheet 4x8 75.00', {optionalPercentage: true});
-new Material('Wood.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-new Material('Wood.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-new Material('Plywood');
-new Material('Plywood.PaintGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
-new Material('Plywood.PaintGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-new Material('Plywood.PaintGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-new Material('Plywood.StainGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
-new Material('Plywood.StainGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-new Material('Plywood.StainGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-new Material('Glass');
-new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
-new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
+Labor.addRelations = (id, name) => Cost.addRelations(Labor, id, name);
+new Labor('Panel', '1+(0.05*l*w');
+new Labor('Frame', '0.25');
+new Labor('GlueFrame', '0.25');
+new Labor('SandFrame', '0.05*l*l*w*w*d*d');
+new Labor('SandPanel', '(0.25*l*w)/12');
+new Labor('GlueMiter', '(0.25*l*l*w*w)');
+new Labor('InstallBlumotionGuides', '2');
+new Labor('InstallOtherGuides', '2');
+new Labor('InstallFushHinges', '2');
+new Labor('installOverLayHinges', '2');
+new Labor('Paint', '(l*l*w*w*.1)/12');
+new Labor('Stain', '(l*l*w*w*.25)/12');
+new Labor('InstallDrawerFront', '2');
+new Labor('InstallPullout', 10);
 
 
 function drawerBox(length, width, depth) {
@@ -4634,11 +4717,10 @@ Assembly.fromJson = (assemblyJson) => {
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const assembly = Assembly.new(assemblyJson.type, partCode, partName, centerStr, demensionStr, rotationStr);
-  const clazz = assembly.constructor;
   assembly.values = assemblyJson.values;
-    assemblyJson.subAssemblies.forEach((json) =>
-      assembly.addSubAssembly(Assembly.class(json.type)
-                                .fromJson(json, assembly)));
+  assemblyJson.subAssemblies.forEach((json) =>
+    assembly.addSubAssembly(Assembly.class(json.type)
+                              .fromJson(json, assembly)));
   if (assemblyJson.length) assembly.length(assemblyJson.length);
   if (assemblyJson.width) assembly.width(assemblyJson.width);
   if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
@@ -4710,26 +4792,38 @@ Joint.new = function (id) {
 }
 
 
-class Labor extends Cost {
+class Material extends Cost {
   constructor (id, formula, options) {
     super(id, formula, options)
   }
 }
-Labor.addRelations = (id, name) => Cost.addRelations(Labor, id, name);
-new Labor('Panel', '1+(0.05*l*w');
-new Labor('Frame', '0.25');
-new Labor('GlueFrame', '0.25');
-new Labor('SandFrame', '0.05*l*l*w*w*d*d');
-new Labor('SandPanel', '(0.25*l*w)/12');
-new Labor('GlueMiter', '(0.25*l*l*w*w)');
-new Labor('InstallBlumotionGuides', '2');
-new Labor('InstallOtherGuides', '2');
-new Labor('InstallFushHinges', '2');
-new Labor('installOverLayHinges', '2');
-new Labor('Paint', '(l*l*w*w*.1)/12');
-new Labor('Stain', '(l*l*w*w*.25)/12');
-new Labor('InstallDrawerFront', '2');
-new Labor('InstallPullout', 10);
+Material.addRelations = (id, name) => Cost.addRelations(Material, id, name);
+Material.pricePerSquareInch = (lengthFeet, widthFeet, cost) => {
+  const squareInchRatio = 1 / ((lengthFeet * 12) + (widthFeet * 12))
+  return `l*w*${cost}*${squareInchRatio}`
+};
+Material.pricePerCubicInch = (lengthFeet, widthFeet, depthFeet, cost) => {
+  const squareInchRatio = 1 / ((lengthFeet * 12) + (widthFeet * 12) + (depthFeet * 12))
+  return `l*w*d*${cost}*${squareInchRatio}`
+};
+
+Material.sheet = (name, width, length, cost) => new Material(name, Material.pricePerSquareInch(width, length, cost));
+Material.volume = (name, width, length, depth, cost) => new Material(name, Material.pricePerSquareInch(width, length, depth, cost));
+
+new Material('Wood');
+new Material('Wood.SoftMapel', 'sheet 4x8 75.00', {optionalPercentage: true});
+new Material('Wood.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Wood.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood');
+new Material('Plywood.PaintGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.PaintGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.PaintGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.StainGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.StainGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Plywood.StainGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+new Material('Glass');
+new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
+new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
 
 class DrawerFront extends Assembly {
@@ -4981,8 +5075,24 @@ Cabinet.build = (type) => {
 }
 
 Cabinet.fromJson = (assemblyJson) => {
-  const cabinet = Assembly.fromJson(assemblyJson);
-  return cabinet;
+  const partCode = assemblyJson.partCode;
+  const partName = assemblyJson.partName;
+  const assembly = new Cabinet(partCode, partName);
+  assembly.values = assemblyJson.values;
+  assemblyJson.subAssemblies.forEach((json) => {
+    const clazz = Assembly.class(json.type);
+    if (clazz !== DivideSection) {
+      assembly.addSubAssembly(clazz.fromJson(json, assembly));
+    } else {
+      const divideSection = clazz.fromJson(json, assembly); 
+      assembly.openings.push(divideSection);
+      assembly.addSubAssembly(divideSection);
+    }
+  });
+  assembly.length(assemblyJson.length);
+  assembly.width(assemblyJson.width);
+  assembly.thickness(assemblyJson.thickness);
+  return assembly;
 }
 
 Cabinet.partCode = (assembly) => {
@@ -5010,19 +5120,15 @@ Divider.abbriviation = 'dv';
 Assembly.register(Divider);
 
 
-
-class Door extends Assembly {
-  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
-    super(partCode, partName, coverCenter, coverDems, rotationStr);
-    let location = Pull.location.TOP_RIGHT;
-    let pull = new Pull(`${partCode}-dp`, 'Door.Pull', this, location);
-    this.addSubAssembly(pull);
+class DrawerBox extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
   }
 }
 
-Door.abbriviation = 'dr';
+DrawerBox.abbriviation = 'db';
 
-Assembly.register(Door);
+Assembly.register(DrawerBox);
 
 
 class Butt extends Joint {
@@ -5087,15 +5193,19 @@ class Rabbet extends Joint {
 Joint.register(Rabbet);
 
 
-class DrawerBox extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
+
+class Door extends Assembly {
+  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
+    super(partCode, partName, coverCenter, coverDems, rotationStr);
+    let location = Pull.location.TOP_RIGHT;
+    let pull = new Pull(`${partCode}-dp`, 'Door.Pull', this, location);
+    this.addSubAssembly(pull);
   }
 }
 
-DrawerBox.abbriviation = 'db';
+Door.abbriviation = 'dr';
 
-Assembly.register(DrawerBox);
+Assembly.register(Door);
 
 
 
@@ -5205,6 +5315,7 @@ SpaceSection.fromJson = (json, parent) => {
           Assembly.new(json.type, sectionProps, parent);
   assembly.partCode = json.partCode;
   assembly.partName = json.partName;
+  assembly.values = json.values;
   json.subAssemblies.forEach((json) =>
     assembly.addSubAssembly(Assembly.class(json.type)
                               .fromJson(json, assembly)));
@@ -5228,9 +5339,7 @@ PartitionSection.fromJson = (json, parent) => {
   const assembly = Assembly.new(json.type, json.partCode, sectionProps, parent);
   assembly.partCode = json.partCode;
   assembly.partName = json.partName;
-  json.subAssemblies.forEach((json) =>
-    assembly.addSubAssembly(Assembly.class(json.type)
-                              .fromJson(json, assembly)));
+  assembly.values = json.values;
   return assembly;
 }
 
@@ -5277,18 +5386,20 @@ class DivideSection extends SpaceSection {
         if (this.vertical()) {
           if (index !== 0) {
             right = this.sections[index - 1];
-          } if (index !== this.sections.length - 1) {
+          } if (this.sections[index + 1] !== undefined) {
             left = this.sections[index + 1];
           }
         } else {
           if (index !== 0) {
             top = this.sections[index - 1];
-          } if (index !== this.sections.length - 1) {
+          } if (this.sections[index + 1] !== undefined) {
             bottom = this.sections[index + 1];
           }
         }
 
         const depth = props.depth;
+        if (!top || !bottom || !right || !left)
+          throw new Error('Border not defined');
         return {borders: {top, bottom, right, left}, depth, index};
       }
     }
@@ -5356,9 +5467,16 @@ class DivideSection extends SpaceSection {
       return false;
     }
     this.setSection = (constructorIdOobject, index) => {
-      const section = (typeof constructorIdOobject) === 'string' ?
-          Section.new(constructorIdOobject, 'dr', this.borders(index)) :
-          constructorIdOobject;
+      let section;
+      if ((typeof constructorIdOobject) === 'string') {
+        if (constructorIdOobject === 'DivideSection') {
+          section = new DivideSection(this.borders(index));
+        } else {
+          section = Section.new(constructorIdOobject, 'dr', this.borders(index));
+        }
+      } else {
+        section = constructorIdOobject;
+      }
       section.setParentAssembly(this);
       this.sections[index] = section;
     }
@@ -5375,6 +5493,7 @@ DivideSection.fromJson = (json, parent) => {
   const sectionProps = parent.borders(json.borderIds || json.index);
   const assembly = new DivideSection(sectionProps, parent);
   const subAssems = json.subAssemblies;
+  assembly.values = json.values;
   for (let index = 0; index < subAssems.length / 2; index += 1) {
     const partIndex = index * 2 + 1;
     if (partIndex < subAssems.length) {

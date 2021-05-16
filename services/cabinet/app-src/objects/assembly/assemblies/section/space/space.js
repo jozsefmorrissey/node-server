@@ -15,6 +15,7 @@ SpaceSection.fromJson = (json, parent) => {
           Assembly.new(json.type, sectionProps, parent);
   assembly.partCode = json.partCode;
   assembly.partName = json.partName;
+  assembly.values = json.values;
   json.subAssemblies.forEach((json) =>
     assembly.addSubAssembly(Assembly.class(json.type)
                               .fromJson(json, assembly)));

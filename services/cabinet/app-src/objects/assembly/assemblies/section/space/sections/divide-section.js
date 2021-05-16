@@ -40,18 +40,20 @@ class DivideSection extends SpaceSection {
         if (this.vertical()) {
           if (index !== 0) {
             right = this.sections[index - 1];
-          } if (index !== this.sections.length - 1) {
+          } if (this.sections[index + 1] !== undefined) {
             left = this.sections[index + 1];
           }
         } else {
           if (index !== 0) {
             top = this.sections[index - 1];
-          } if (index !== this.sections.length - 1) {
+          } if (this.sections[index + 1] !== undefined) {
             bottom = this.sections[index + 1];
           }
         }
 
         const depth = props.depth;
+        if (!top || !bottom || !right || !left)
+          throw new Error('Border not defined');
         return {borders: {top, bottom, right, left}, depth, index};
       }
     }
@@ -119,9 +121,16 @@ class DivideSection extends SpaceSection {
       return false;
     }
     this.setSection = (constructorIdOobject, index) => {
-      const section = (typeof constructorIdOobject) === 'string' ?
-          Section.new(constructorIdOobject, 'dr', this.borders(index)) :
-          constructorIdOobject;
+      let section;
+      if ((typeof constructorIdOobject) === 'string') {
+        if (constructorIdOobject === 'DivideSection') {
+          section = new DivideSection(this.borders(index));
+        } else {
+          section = Section.new(constructorIdOobject, 'dr', this.borders(index));
+        }
+      } else {
+        section = constructorIdOobject;
+      }
       section.setParentAssembly(this);
       this.sections[index] = section;
     }
@@ -138,6 +147,7 @@ DivideSection.fromJson = (json, parent) => {
   const sectionProps = parent.borders(json.borderIds || json.index);
   const assembly = new DivideSection(sectionProps, parent);
   const subAssems = json.subAssemblies;
+  assembly.values = json.values;
   for (let index = 0; index < subAssems.length / 2; index += 1) {
     const partIndex = index * 2 + 1;
     if (partIndex < subAssems.length) {

@@ -86,8 +86,24 @@ Cabinet.build = (type) => {
 }
 
 Cabinet.fromJson = (assemblyJson) => {
-  const cabinet = Assembly.fromJson(assemblyJson);
-  return cabinet;
+  const partCode = assemblyJson.partCode;
+  const partName = assemblyJson.partName;
+  const assembly = new Cabinet(partCode, partName);
+  assembly.values = assemblyJson.values;
+  assemblyJson.subAssemblies.forEach((json) => {
+    const clazz = Assembly.class(json.type);
+    if (clazz !== DivideSection) {
+      assembly.addSubAssembly(clazz.fromJson(json, assembly));
+    } else {
+      const divideSection = clazz.fromJson(json, assembly); 
+      assembly.openings.push(divideSection);
+      assembly.addSubAssembly(divideSection);
+    }
+  });
+  assembly.length(assemblyJson.length);
+  assembly.width(assemblyJson.width);
+  assembly.thickness(assemblyJson.thickness);
+  return assembly;
 }
 
 Cabinet.partCode = (assembly) => {

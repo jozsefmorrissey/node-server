@@ -1,6 +1,6 @@
 <div>
   <div class='model-selector'>
-    <div>
+    <div {{group.level > 0 ? 'hidden' : ''}}>
       <div class='{{tdm.isTarget("prefix", group.prefix) ? "active " : ""}}
                   {{label ? "prefix-switch model-label" : ""}}'
             {{!label ? 'hidden' : ''}}>
@@ -8,7 +8,8 @@
         <input type='checkbox' class='prefix-checkbox' prefix='{{group.prefix}}'
             {{!tdm.hidePrefix(label) ? 'checked' : ''}}>
       </div>
-      <div class='{{label ? "prefix-body indent" : ""}}'>
+      <div class='{{label ? "prefix-body indent" : ""}}'
+            {{label ? 'hidden' : ''}}>
         <div:t class='model-label{{tdm.isTarget("part-name", partName) ? " active" : ""}}'
                 repeat='partName, partList in group.parts'>
           <label type='part-name'>{{partName}}</label>

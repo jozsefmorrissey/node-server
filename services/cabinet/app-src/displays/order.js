@@ -16,6 +16,7 @@ class OrderDisplay {
         console.log(order);
         initOrder(order);
         expandList.set(index, order);
+        expandList.refresh();
       }
     }
 
@@ -23,7 +24,6 @@ class OrderDisplay {
       if (order instanceof Order) {
         let propertyTypes = Object.keys(properties.list);
         active = roomDisplays[order.id];
-        setTimeout(roomDisplays[order.id].refresh, 100);
         return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
       } else {
         Request.get(EPNTS.order.get(order.name), loadOrder($index), console.error);
@@ -39,6 +39,7 @@ class OrderDisplay {
       listElemLable: 'Order', type: 'sidebar'
     };
     const expandList = new ExpandableList(expListProps);
+    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
 
     const saveSuccess = () => console.log('success');
     const saveFail = () => console.log('failure');

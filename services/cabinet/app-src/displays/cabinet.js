@@ -13,7 +13,7 @@ class CabinetDisplay {
       ThreeDModel.render(cabinet);
       return CabinetDisplay.bodyTemplate.render({room, $index, cabinet, showTypes, OpenSectionDisplay});
     }
-    const getObject = () => Cabinet.build('standard');//new Cabinet('c', 'Cabinet', propId);
+    const getObject = () => Cabinet.build('standard');
     this.active = () => expandList.active();
     const expListProps = {
       list: room.cabinets,

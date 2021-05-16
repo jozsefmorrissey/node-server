@@ -226,11 +226,10 @@ Assembly.fromJson = (assemblyJson) => {
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const assembly = Assembly.new(assemblyJson.type, partCode, partName, centerStr, demensionStr, rotationStr);
-  const clazz = assembly.constructor;
   assembly.values = assemblyJson.values;
-    assemblyJson.subAssemblies.forEach((json) =>
-      assembly.addSubAssembly(Assembly.class(json.type)
-                                .fromJson(json, assembly)));
+  assemblyJson.subAssemblies.forEach((json) =>
+    assembly.addSubAssembly(Assembly.class(json.type)
+                              .fromJson(json, assembly)));
   if (assemblyJson.length) assembly.length(assemblyJson.length);
   if (assemblyJson.width) assembly.width(assemblyJson.width);
   if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);

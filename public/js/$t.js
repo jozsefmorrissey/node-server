@@ -1,4 +1,42 @@
 
+class CustomEvent {
+  constructor(name) {
+    const watchers = [];
+    this.name = name;
+
+    const runFuncs = (e) => watchers.forEach((func) => func(e));
+
+    this.on = function (func) {
+      if ((typeof func) === 'function') {
+        watchers.push(func);
+      } else {
+        return 'on' + name;
+      }
+    }
+
+    this.trigger = function (element) {
+      element = element === undefined ? window : element;
+      runFuncs(element);
+      if(document.createEvent){
+          element.dispatchEvent(this.event);
+      } else {
+          element.fireEvent("on" + this.event.eventType, this.event);
+      }
+    }
+//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+    this.event;
+    if(document.createEvent){
+        this.event = document.createEvent("HTMLEvents");
+        this.event.initEvent(name, true, true);
+        this.event.eventName = name;
+    } else {
+        this.event = document.createEventObject();
+        this.event.eventName = name;
+        this.event.eventType = name;
+    }
+  }
+}
+
 let idCount = 0;
 class ExprDef {
   constructor(name, options, notify, stages, alwaysPossible) {
@@ -312,7 +350,10 @@ try {
 } catch (e) {}
 
 class $t {
-	constructor(template, id) {
+	constructor(template, id, selector) {
+    const afterRenderEvent = new CustomEvent('afterRender');
+    const beforeRenderEvent = new CustomEvent('beforeRender');
+
 		function varReg(prefix, suffix) {
 		  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
 		  prefix = prefix ? prefix : '';
@@ -620,6 +661,15 @@ class $t {
 				default:
 					throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
 			}
+
+      if (selector) {
+        const elem = document.querySelector(selector);
+        if (elem !== null) {
+          beforeRenderEvent.trigger();
+          elem.innerHTML = rendered;
+          afterRenderEvent.trigger();
+        }
+      }
 			return rendered;
 		}
 
@@ -709,6 +759,8 @@ class $t {
 		}
 		this.compiled = function () { return $t.templates[id];}
 		this.render = render;
+    this.afterRender = (func) => afterRenderEvent.on(func);
+    this.beforeRender = (func) => beforeRenderEvent.on(func);
 		this.type = type;
 		this.isolateBlocks = isolateBlocks;
 	}

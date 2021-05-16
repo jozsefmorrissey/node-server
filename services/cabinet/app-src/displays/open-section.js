@@ -40,7 +40,7 @@ OpenSectionDisplay.getList = (root) => {
   const findElement = (selector, target) => down(selector, up('.expandable-list', target));
   const expListProps = {
     parentSelector, getHeader, getBody, getObject, list, hideAddBtn,
-    selfCloseTab, findElement
+    selfCloseTab, findElement, startClosed: true
   }
   exList = new ExpandableList(expListProps);
   OpenSectionDisplay.lists[openId] = exList;
@@ -104,6 +104,7 @@ OpenSectionDisplay.onSectionChange = (target) => {
   const section = ExpandableList.get(target);
   const index = ExpandableList.getIdAndIndex(target).index;
   section.parentAssembly.setSection(target.value, index);
+  OpenSectionDisplay.refresh(section.parentAssembly);
   updateModel(section);
 }
 
