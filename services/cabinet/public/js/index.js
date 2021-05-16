@@ -1849,8 +1849,8 @@ $t.functions['cabinet/head'] = function (get) {
 $t.functions['divide/body'] = function (get) {
 	return `<h2>` + (get("list").activeIndex()) + `</h2> val: ` + (get("list").value()('selected')) + ` `
 }
-$t.functions['expandable/list'] = function (get) {
-	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> <div class="expand-body {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getBody(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <div> <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> </div> `
+$t.functions['divide/head'] = function (get) {
+	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.prototype.constructor.name}}\' {{opening.constructorId === section.name ? \'selected\' : \'\'}}> {{clean(section.name)}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
 }
 $t.functions['divider-controls'] = function (get) {
 	return `<div> <label>Dividers:</label> <input type="number" min="0" max="10" step="1" class='division-count-input' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").dividerCount()) + `'> <span class="open-orientation-radio-cnt ` + (get("opening").dividerCount() > 0 ? '' : 'hidden') + `"> <label for='open-orientation-horiz-` + (get("opening").uniqueId) + `'>Horizontal:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='horizontal' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-horiz-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? '' : 'checked') + `> <label for='open-orientation-vert-` + (get("opening").uniqueId) + `'>Vertical:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='vertical' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-vert-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? 'checked' : '') + `> </span> <select class='open-pattern-select ` + ( get("opening").dividerCount() > 0 ? '' : 'hidden') + `' id='` + (get("selectPatternId")) + `' prop-update='pattern' divisions=` + (get("opening").dividerCount()) + `> ` + (get("patterns")) + ` </select> ` + (new $t('<span class=\'input-html-cnt-{{opening.uniqueId}}\' > <label>{{label}}</label> <input class=\'division-pattern-input\' name=\'{{pattern.name}}\' index=\'{{$index}}\' value=\'{{fill ? fill[$index] : ""}}\'> </span>').render(get('scope'), 'label in pattern.inputArr', get)) + ` </div> `
@@ -1858,8 +1858,8 @@ $t.functions['divider-controls'] = function (get) {
 $t.functions['-1178631413'] = function (get) {
 	return `<span class='input-html-cnt-` + (get("opening").uniqueId) + `' > <label>` + (get("label")) + `</label> <input class='division-pattern-input' name='` + (get("pattern").name) + `' index='` + (get("$index")) + `' value='` + (get("fill") ? get("fill")[get("$index")] : "") + `'> </span>`
 }
-$t.functions['divide/head'] = function (get) {
-	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.prototype.constructor.name}}\' {{opening.constructorId === section.name ? \'selected\' : \'\'}}> {{clean(section.name)}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
+$t.functions['expandable/list'] = function (get) {
+	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> <div class="expand-body {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getBody(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <div> <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> </div> `
 }
 $t.functions['expandable/pill'] = function (get) {
 	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> <div class="expand-list-cnt ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <div class=\'expand-rm-btn-cnt\'> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> </div> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> <div> </div> <div class="expand-body ` + (get("type")) + `"> Hello World! </div> </div> `
@@ -1885,6 +1885,9 @@ $t.functions['login/create-account'] = function (get) {
 $t.functions['login/login'] = function (get) {
 	return `<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` + (get("email")) + `'> <input type='password' placeholder="password" name='password' value='` + (get("password")) + `'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 }
+$t.functions['login/reset-password'] = function (get) {
+	return `<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` + (get("email")) + `'> <input type='password' placeholder="password" name='password' value='` + (get("password")) + `'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+}
 $t.functions['model-controller'] = function (get) {
 	return `<div> <div class='model-selector'> <div ` + (get("group").level > 0 ? 'hidden' : '') + `> <div class='` + (get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") + ` ` + (get("label") ? "prefix-switch model-label" : "") + `' ` + (!get("label") ? 'hidden' : '') + `> <label type='prefix'>` + (get("label")) + `</label> <input type='checkbox' class='prefix-checkbox' prefix='` + (get("group").prefix) + `' ` + (!get("tdm").hidePrefix(get("label")) ? 'checked' : '') + `> </div> <div class='` + (get("label") ? "prefix-body indent" : "") + `' ` + (get("label") ? 'hidden' : '') + `> ` + (new $t('<div class=\'model-label{{tdm.isTarget("part-name", partName) ? " active" : ""}}\' > <label type=\'part-name\'>{{partName}}</label> <input type=\'checkbox\' class=\'part-name-checkbox\' part-name=\'{{partName}}\' {{!tdm.hidePartName(partName) ? \'checked\' : \'\'}}> {{new $t(\'<div class=\\\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\\\'  {{partList.length > 1 ? "" : "hidden"}}> <label type=\\\'part-code\\\'>{{part.partCode}}</label> <input type=\\\'checkbox\\\' class=\\\'part-code-checkbox\\\' part-code=\\\'{{part.partCode}}\\\' {{!tdm.hidePartCode(part.partCode) ? \\\'checked\\\' : \\\'\\\'}}> </div>\').render(get(\'scope\'), \'part in partList\', get)}} </div>').render(get('scope'), 'partName, partList in group.parts', get)) + ` ` + (new $t('model-controller').render(get('scope'), 'label, group in group.groups', get)) + ` </div> </div> </div> </div> `
 }
@@ -1896,9 +1899,6 @@ $t.functions['-443173449'] = function (get) {
 }
 $t.functions['-424251200'] = function (get) {
 	return `model-controller`
-}
-$t.functions['login/reset-password'] = function (get) {
-	return `<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` + (get("email")) + `'> <input type='password' placeholder="password" name='password' value='` + (get("password")) + `'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 }
 $t.functions['opening'] = function (get) {
 	return `<div class='opening-cnt' opening-id='` + (get("opening").uniqueId) + `'> <div class='divider-controls'> </div> </div> <div id='` + (get("openDispId")) + `'> </div> `
@@ -1912,17 +1912,17 @@ $t.functions['order/head'] = function (get) {
 $t.functions['order'] = function (get) {
 	return `<div> <label>Order Name</label> <input type='text'> <div id='room-pills'></div> </div> `
 }
-$t.functions['properties/properties'] = function (get) {
-	return `<div class='center'> <input type=text class='property-filter'> <div class='property-container'> ` + (new $t('<div > <label>{{prop.name}}</label> <input type="text" name="{{key}}" value="{{prop.value}}"> </div>').render(get('scope'), 'key, prop in properties', get)) + ` </div> </div> `
-}
-$t.functions['-783531553'] = function (get) {
-	return `<div > <label>` + (get("prop").name) + `</label> <input type="text" name="` + (get("key")) + `" value="` + (get("prop").value) + `"> </div>`
-}
 $t.functions['room/body'] = function (get) {
 	return `<div> <select> ` + (new $t('<option >{{type}}</option>').render(get('scope'), 'type in propertyTypes', get)) + ` </select> <div class='cabinet-cnt' room-id='` + (get("room").id) + `'></div> </div> `
 }
 $t.functions['-1674837651'] = function (get) {
 	return `<option >` + (get("type")) + `</option>`
+}
+$t.functions['properties/properties'] = function (get) {
+	return `<div class='center'> <input type=text class='property-filter'> <div class='property-container'> ` + (new $t('<div > <label>{{prop.name}}</label> <input type="text" name="{{key}}" value="{{prop.value}}"> </div>').render(get('scope'), 'key, prop in properties', get)) + ` </div> </div> `
+}
+$t.functions['-783531553'] = function (get) {
+	return `<div > <label>` + (get("prop").name) + `</label> <input type="text" name="` + (get("key")) + `" value="` + (get("prop").value) + `"> </div>`
 }
 $t.functions['room/head'] = function (get) {
 	return `<b>` + (get("$index")) + `</b> `
@@ -2047,7 +2047,7 @@ const EPNTS = new Endpoints({
     "list": "/list/orders"
   }
 }
-, 'https://node.jozsefmorrissey.com/cabinet').getFuncObj();
+, 'http://localhost:3000/cabinet').getFuncObj();
 try {exports.EPNTS = EPNTS;}catch(e){}
 
 const cabinetBuildConfig = {
@@ -3423,43 +3423,125 @@ afterLoad.push(() => matchRun('change', '.feature-radio', (target) => {
 )
 
 
-class RoomDisplay {
-  constructor(parentSelector, order) {
-    const cabinetDisplays = {};
-    const getHeader = (room, $index) =>
-        RoomDisplay.headTemplate.render({room, $index});
 
-    const getBody = (room, $index) => {
-      let propertyTypes = Object.keys(properties.list);
-      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
+class User {
+  constructor() {
+    const stateAttr = 'user-state';
+    let state, cnt, email, password;
+
+    function updateDisplay(s) {
+      state = s ? User.states[s] : state;
+      cnt = cnt || document.getElementById('login-cnt');
+      cnt.innerHTML = state.template.render({email, password});
     }
 
-    const getObject = () => {
-      const room = new Room();
-      return room;
+    const hideLogin = () => document.getElementById('login').hidden = true;
+    const showLogin = () => document.getElementById('login').hidden = false;
+    function successfulRegistration(body) {
+      updateDisplay('CONFIRMATION_MESSAGE');
     }
-    this.active = () => expandList.active();
-    this.cabinetDisplay = () => {
-      const room = this.active();
-      const id = room.id;
-      if (cabinetDisplays[id] === undefined) {
-        cabinetDisplays[id] = new CabinetDisplay(room);
+
+    function register(target) {password
+      const fail = appendError(target, 'Registration Failed: Email already registered');
+      const body = {email, password};
+      document.cookie = `${APP_ID}=${email}:invalid`;
+      Request.post(EPNTS.user.register(), body, successfulRegistration, fail);
+    }
+
+    function successfulLogin(body, res) {
+      const newAuth = res.getResponseHeader('authorization');
+      document.cookie = `${APP_ID}=${newAuth}`;
+      console.log(newAuth);
+      hideLogin();
+    }
+
+    const getEmail = () => getCookie(APP_ID, ':', 'email').email;
+    this.credential = User.credential;
+
+    function login(target) {
+      const fail = appendError(target, 'Login Failed: Invalid Email and/or Password');
+      const body = {email, password};
+      Request.post(EPNTS.user.login(), body, successfulLogin, fail);
+    }
+
+    function resendActivation(target) {
+      const fail = appendError(target, 'Email Not Registered Or Already Active');
+      const body = {email: getEmail()};
+      Request.post(EPNTS.user.resendActivation(), body, successfulRegistration, fail);
+    }
+
+    function logout() {
+      removeCookie(APP_ID);
+      showLogin();
+      updateDisplay('LOGIN')
+    }
+
+    function resetPassword(target) {
+      const fail = appendError(target, 'Server Error Must have occured... try again in a few minutes');
+      const body = {email, newPassword: password};
+      Request.post(EPNTS.user.resetPasswordRequest(), body, successfulRegistration, fail);
+    }
+
+    matchRun('click', `[${stateAttr}]`, (elem) => {
+      const stateId = elem.getAttribute(stateAttr);
+      if (User.states[stateId]) {
+        updateDisplay(stateId);
+      } else console.error(`Invalid State: '${stateId}'`);
+    });
+
+    matchRun('click', '#register', register);
+    matchRun('click', '#login-btn', login);
+    matchRun('click', '#resend-activation', resendActivation);
+    matchRun('click', '#reset-password', resetPassword);
+    matchRun('click', '#logout-btn', logout);
+
+    matchRun('change', 'input[name="email"]', (elem) => email = elem.value);
+    matchRun('change', 'input[name="password"]', (elem) => password = elem.value);
+
+    function statusCheck(body) {
+      switch (body) {
+        case 'Not Registered':
+          updateDisplay('LOGIN')
+          break;
+        case 'Not Activated':
+          updateDisplay('CONFIRMATION_MESSAGE');
+          break;
+        case 'Logged In':
+          hideLogin();
+          break;
+        case 'Logged Out':
+          updateDisplay('LOGIN')
+          break;
+        default:
+
       }
-      return cabinetDisplays[id];
+      console.log('sc:::', body);
     }
-    this.cabinet = () => this.cabinetDisplay().active();
-    const expListProps = {
-      list: order.rooms,
-      parentSelector, getHeader, getBody, getObject,
-      listElemLable: 'Room', type: 'pill'
-    };
-    const expandList = new ExpandableList(expListProps);
-    expandList.afterRender(() => this.cabinetDisplay().refresh());
-    this.refresh = () => expandList.refresh();
+
+
+    if (this.credential()) Request.get(EPNTS.user.status(), statusCheck);
+    else updateDisplay('LOGIN');
   }
 }
-RoomDisplay.bodyTemplate = new $t('room/body');
-RoomDisplay.headTemplate = new $t('room/head');
+
+User.states = {};
+User.states.LOGIN = {
+  template: new $t('login/login')
+};
+User.states.CONFIRMATION_MESSAGE = {
+  template: new $t('login/confirmation-message')
+};
+User.states.CREATE_ACCOUNT = {
+  template: new $t('login/create-account')
+};
+User.states.RESET_PASSWORD = {
+  template: new $t('login/reset-password')
+};
+
+User.credential = () => getCookie(APP_ID);
+
+
+User = new User();
 
 
 class Order {
@@ -3554,18 +3636,6 @@ class OrderDisplay {
 }
 OrderDisplay.bodyTemplate = new $t('order/body');
 OrderDisplay.headTemplate = new $t('order/head');
-
-
-class FeatureDisplay {
-  constructor(assembly, parentSelector) {
-    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
-    this.refresh = () => {
-      const container = document.querySelector(parentSelector);
-      container.innerHTML = this.html;
-    }
-  }
-}
-FeatureDisplay.template = new $t('features');
 
 
 const OpenSectionDisplay = {};
@@ -3682,6 +3752,18 @@ matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
 matchRun('click', '.division-count-input', OpenSectionDisplay.onChange);
 matchRun('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
 matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
+
+
+class FeatureDisplay {
+  constructor(assembly, parentSelector) {
+    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
+    this.refresh = () => {
+      const container = document.querySelector(parentSelector);
+      container.innerHTML = this.html;
+    }
+  }
+}
+FeatureDisplay.template = new $t('features');
 
 
 const colors = {
@@ -4335,125 +4417,43 @@ matchRun('click', '.expand-header', (target, event) => {
 });
 
 
+class RoomDisplay {
+  constructor(parentSelector, order) {
+    const cabinetDisplays = {};
+    const getHeader = (room, $index) =>
+        RoomDisplay.headTemplate.render({room, $index});
 
-class User {
-  constructor() {
-    const stateAttr = 'user-state';
-    let state, cnt, email, password;
-
-    function updateDisplay(s) {
-      state = s ? User.states[s] : state;
-      cnt = cnt || document.getElementById('login-cnt');
-      cnt.innerHTML = state.template.render({email, password});
+    const getBody = (room, $index) => {
+      let propertyTypes = Object.keys(properties.list);
+      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
     }
 
-    const hideLogin = () => document.getElementById('login').hidden = true;
-    const showLogin = () => document.getElementById('login').hidden = false;
-    function successfulRegistration(body) {
-      updateDisplay('CONFIRMATION_MESSAGE');
+    const getObject = () => {
+      const room = new Room();
+      return room;
     }
-
-    function register(target) {password
-      const fail = appendError(target, 'Registration Failed: Email already registered');
-      const body = {email, password};
-      document.cookie = `${APP_ID}=${email}:invalid`;
-      Request.post(EPNTS.user.register(), body, successfulRegistration, fail);
-    }
-
-    function successfulLogin(body, res) {
-      const newAuth = res.getResponseHeader('authorization');
-      document.cookie = `${APP_ID}=${newAuth}`;
-      console.log(newAuth);
-      hideLogin();
-    }
-
-    const getEmail = () => getCookie(APP_ID, ':', 'email').email;
-    this.credential = User.credential;
-
-    function login(target) {
-      const fail = appendError(target, 'Login Failed: Invalid Email and/or Password');
-      const body = {email, password};
-      Request.post(EPNTS.user.login(), body, successfulLogin, fail);
-    }
-
-    function resendActivation(target) {
-      const fail = appendError(target, 'Email Not Registered Or Already Active');
-      const body = {email: getEmail()};
-      Request.post(EPNTS.user.resendActivation(), body, successfulRegistration, fail);
-    }
-
-    function logout() {
-      removeCookie(APP_ID);
-      showLogin();
-      updateDisplay('LOGIN')
-    }
-
-    function resetPassword(target) {
-      const fail = appendError(target, 'Server Error Must have occured... try again in a few minutes');
-      const body = {email, newPassword: password};
-      Request.post(EPNTS.user.resetPasswordRequest(), body, successfulRegistration, fail);
-    }
-
-    matchRun('click', `[${stateAttr}]`, (elem) => {
-      const stateId = elem.getAttribute(stateAttr);
-      if (User.states[stateId]) {
-        updateDisplay(stateId);
-      } else console.error(`Invalid State: '${stateId}'`);
-    });
-
-    matchRun('click', '#register', register);
-    matchRun('click', '#login-btn', login);
-    matchRun('click', '#resend-activation', resendActivation);
-    matchRun('click', '#reset-password', resetPassword);
-    matchRun('click', '#logout-btn', logout);
-
-    matchRun('change', 'input[name="email"]', (elem) => email = elem.value);
-    matchRun('change', 'input[name="password"]', (elem) => password = elem.value);
-
-    function statusCheck(body) {
-      switch (body) {
-        case 'Not Registered':
-          updateDisplay('LOGIN')
-          break;
-        case 'Not Activated':
-          updateDisplay('CONFIRMATION_MESSAGE');
-          break;
-        case 'Logged In':
-          hideLogin();
-          break;
-        case 'Logged Out':
-          updateDisplay('LOGIN')
-          break;
-        default:
-
+    this.active = () => expandList.active();
+    this.cabinetDisplay = () => {
+      const room = this.active();
+      const id = room.id;
+      if (cabinetDisplays[id] === undefined) {
+        cabinetDisplays[id] = new CabinetDisplay(room);
       }
-      console.log('sc:::', body);
+      return cabinetDisplays[id];
     }
-
-
-    if (this.credential()) Request.get(EPNTS.user.status(), statusCheck);
-    else updateDisplay('LOGIN');
+    this.cabinet = () => this.cabinetDisplay().active();
+    const expListProps = {
+      list: order.rooms,
+      parentSelector, getHeader, getBody, getObject,
+      listElemLable: 'Room', type: 'pill'
+    };
+    const expandList = new ExpandableList(expListProps);
+    expandList.afterRender(() => this.cabinetDisplay().refresh());
+    this.refresh = () => expandList.refresh();
   }
 }
-
-User.states = {};
-User.states.LOGIN = {
-  template: new $t('login/login')
-};
-User.states.CONFIRMATION_MESSAGE = {
-  template: new $t('login/confirmation-message')
-};
-User.states.CREATE_ACCOUNT = {
-  template: new $t('login/create-account')
-};
-User.states.RESET_PASSWORD = {
-  template: new $t('login/reset-password')
-};
-
-User.credential = () => getCookie(APP_ID);
-
-
-User = new User();
+RoomDisplay.bodyTemplate = new $t('room/body');
+RoomDisplay.headTemplate = new $t('room/head');
 
 
 class Material extends Cost {
@@ -4998,18 +4998,6 @@ Pull.abbriviation = 'pu';
 Assembly.register(Pull);
 
 
-class Divider extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-  }
-}
-Divider.count = 0;
-
-Divider.abbriviation = 'dv';
-
-Assembly.register(Divider);
-
-
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
 OVERLAY.HALF = 'Half';
@@ -5129,6 +5117,18 @@ Cabinet.partCode = (assembly) => {
 
 
 Assembly.register(Cabinet);
+
+
+class Divider extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+Divider.count = 0;
+
+Divider.abbriviation = 'dv';
+
+Assembly.register(Divider);
 
 
 
