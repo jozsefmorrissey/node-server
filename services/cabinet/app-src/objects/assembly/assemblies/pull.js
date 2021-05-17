@@ -34,7 +34,7 @@ class Pull extends Assembly {
             center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
           case Pull.location.TOP_LEFT:
-          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+          center.x = center.x - doorDems.x / 2 -  edgeOffset;
           center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
           case Pull.location.BOTTOM_RIGHT:

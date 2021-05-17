@@ -36,7 +36,10 @@ $t.functions['-1178631413'] = function (get) {
 	return `<span class='input-html-cnt-` + (get("opening").uniqueId) + `' > <label>` + (get("label")) + `</label> <input class='division-pattern-input' name='` + (get("pattern").name) + `' index='` + (get("$index")) + `' value='` + (get("fill") ? get("fill")[get("$index")] : "") + `'> </span>`
 }
 $t.functions['expandable/list'] = function (get) {
-	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> <div class="expand-body {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getBody(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <div> <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> </div> `
+	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> <div class="expand-body {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getBody(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <div> <input list='auto-fill-list' id='` + (get("INPUT_ID")) + `' type='text' ` + (get("input") ? '' : 'hidden') + `> <datalist id="auto-fill-list"> ` + (new $t('<option value="{{option}}" ></option>').render(get('scope'), 'option in inputOptions', get)) + ` </datalist> <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> </div> `
+}
+$t.functions['-1921787246'] = function (get) {
+	return `<option value="` + (get("option")) + `" ></option>`
 }
 $t.functions['expandable/pill'] = function (get) {
 	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> <div class="expand-list-cnt ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <div class=\'expand-rm-btn-cnt\'> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> </div> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> <div> </div> <div class="expand-body ` + (get("type")) + `"> Hello World! </div> </div> `
@@ -89,17 +92,17 @@ $t.functions['order/head'] = function (get) {
 $t.functions['order'] = function (get) {
 	return `<div> <label>Order Name</label> <input type='text'> <div id='room-pills'></div> </div> `
 }
-$t.functions['room/body'] = function (get) {
-	return `<div> <select> ` + (new $t('<option >{{type}}</option>').render(get('scope'), 'type in propertyTypes', get)) + ` </select> <div class='cabinet-cnt' room-id='` + (get("room").id) + `'></div> </div> `
-}
-$t.functions['-1674837651'] = function (get) {
-	return `<option >` + (get("type")) + `</option>`
-}
 $t.functions['properties/properties'] = function (get) {
 	return `<div class='center'> <input type=text class='property-filter'> <div class='property-container'> ` + (new $t('<div > <label>{{prop.name}}</label> <input type="text" name="{{key}}" value="{{prop.value}}"> </div>').render(get('scope'), 'key, prop in properties', get)) + ` </div> </div> `
 }
 $t.functions['-783531553'] = function (get) {
 	return `<div > <label>` + (get("prop").name) + `</label> <input type="text" name="` + (get("key")) + `" value="` + (get("prop").value) + `"> </div>`
+}
+$t.functions['room/body'] = function (get) {
+	return `<div> <select> ` + (new $t('<option >{{type}}</option>').render(get('scope'), 'type in propertyTypes', get)) + ` </select> <div class='cabinet-cnt' room-id='` + (get("room").id) + `'></div> </div> `
+}
+$t.functions['-1674837651'] = function (get) {
+	return `<option >` + (get("type")) + `</option>`
 }
 $t.functions['room/head'] = function (get) {
 	return `<b>` + (get("$index")) + `</b> `

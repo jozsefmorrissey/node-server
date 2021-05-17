@@ -12,6 +12,10 @@
     </div>
   </div:t>
   <div>
+    <input list='auto-fill-list' id='{{INPUT_ID}}' type='text' {{input ? '' : 'hidden'}}>
+    <datalist id="auto-fill-list">
+      <option:t value="{{option}}" repeat='option in inputOptions'></option:t>
+    </datalist>
     <button ex-list-id='{{id}}' class='expandable-list-add-btn'
           {{hideAddBtn ? 'hidden' : ''}}>
       Add {{listElemLable}}

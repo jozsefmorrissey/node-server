@@ -4,6 +4,7 @@ class Door extends Assembly {
     super(partCode, partName, coverCenter, coverDems, rotationStr);
     let location = Pull.location.TOP_RIGHT;
     let pull = new Pull(`${partCode}-dp`, 'Door.Pull', this, location);
+    this.setPullLocation = (l) => location = l;
     this.addSubAssembly(pull);
   }
 }

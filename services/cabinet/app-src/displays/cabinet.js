@@ -15,10 +15,16 @@ class CabinetDisplay {
         ThreeDModel.render(cabinet);
       return CabinetDisplay.bodyTemplate.render({room, $index, cabinet, showTypes, OpenSectionDisplay});
     }
-    const getObject = () => Cabinet.build('standard');
+    const getObject = (name) => {
+      const config = CabinetConfig.get(name);
+      if (config) return Cabinet.fromJson(config);
+      return Cabinet.build('standard');
+    };
     this.active = () => expandList.active();
     const expListProps = {
       list: room.cabinets,
+      input: true,
+      inputOptions: CabinetConfig.list(),
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Cabinet'
     };
@@ -53,6 +59,7 @@ class CabinetDisplay {
       console.log('saving');
     }
 
+    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
     bindField(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurment.validation('(0,)'));
     bindField(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
     matchRun('click', '.save-cabinet-btn', save);

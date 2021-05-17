@@ -153,26 +153,34 @@ function matchRun(event, selector, func, target) {
 }
 
 function bindField(selector, objOrFunc, validation) {
+  let lastInputTime = {};
   function update(elem) {
-    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
-    if (updatePath !== null) {
-      const newValue = elem.value;
-      if ((typeof validation) === 'function' && !validation(newValue)) {
-        console.error('badValue')
-      } else if ((typeof objOrFunc) === 'function') {
-        objOrFunc(updatePath, elem.value);
-      } else {
-        const attrs = updatePath.split('.');
-        const lastIndex = attrs.length - 1;
-        let currObj = objOrFunc;
-        for (let index = 0; index < lastIndex; index += 1) {
-          let attr = attrs[index];
-          if (currObj[attr] === undefined) currObj[attr] = {};
-          currObj = currObj[attr];
+    elem.id = elem.id || randomString(7);
+    const thisInputTime = new Date().getTime();
+    lastInputTime[elem.id] = thisInputTime;
+    setTimeout(() => {
+      if (thisInputTime === lastInputTime[elem.id]) {
+        const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
+        if (updatePath !== null) {
+          const newValue = elem.value;
+          if ((typeof validation) === 'function' && !validation(newValue)) {
+            console.error('badValue')
+          } else if ((typeof objOrFunc) === 'function') {
+            objOrFunc(updatePath, elem.value);
+          } else {
+            const attrs = updatePath.split('.');
+            const lastIndex = attrs.length - 1;
+            let currObj = objOrFunc;
+            for (let index = 0; index < lastIndex; index += 1) {
+              let attr = attrs[index];
+              if (currObj[attr] === undefined) currObj[attr] = {};
+              currObj = currObj[attr];
+            }
+            currObj[attrs[lastIndex]] = elem.value;
+          }
         }
-        currObj[attrs[lastIndex]] = elem.value;
       }
-    }
+    }, 2000);
   }
   matchRun('keyup', selector, update);
   matchRun('change', selector, update);

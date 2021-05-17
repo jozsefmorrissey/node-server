@@ -9,6 +9,9 @@
 //  parentSelector: cssSelector only reqired for refresh function,
 //  listElemLable: nameOfElementType changes add button label,
 //  hideAddBtn: defaults to false,
+//  startClosed: all tabs are closed on list open.
+//  input: true - require user to enter text before adding new
+//  inputOptions: array of autofill inputs
 //  type: defaults to list,
 //  selfCloseTab: defalts to true - allows clicking on header to close body,
 //  findElement: used to find elemenents related to header - defaults to closest
@@ -19,6 +22,7 @@ class ExpandableList {
     const afterAddEvent = new CustomEvent('afterAdd');
     const afterRefreshEvent = new CustomEvent('afterRefresh');
     props.list = props.list || [];
+    props.INPUT_ID = randomString(7);
     props.type = props.type || 'list';
     props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
     this.findElement = props.findElement;
@@ -32,7 +36,8 @@ class ExpandableList {
     props.activeIndex = 0;
     ExpandableList.lists[props.id] = this;
     this.add = () => {
-      props.list.push(props.getObject());
+      const name = document.getElementById(props.INPUT_ID).value;
+      props.list.push(props.getObject(name));
       this.activeIndex(props.list.length - 1);
       this.refresh();
       afterAddEvent.trigger();
