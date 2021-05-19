@@ -3,6 +3,10 @@
   display: inline-flex;
 }
 
+.expand-list-sidebar-input {
+  width: 80%;
+}
+
 .expand-item {
   position: relative;
 }

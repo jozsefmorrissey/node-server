@@ -12,6 +12,8 @@
 //  startClosed: all tabs are closed on list open.
 //  input: true - require user to enter text before adding new
 //  inputOptions: array of autofill inputs
+//  inputs: [{placeholder, autofill},...]
+//  inputValidation: function to validate input fields
 //  type: defaults to list,
 //  selfCloseTab: defalts to true - allows clicking on header to close body,
 //  findElement: used to find elemenents related to header - defaults to closest
@@ -22,7 +24,8 @@ class ExpandableList {
     const afterAddEvent = new CustomEvent('afterAdd');
     const afterRefreshEvent = new CustomEvent('afterRefresh');
     props.list = props.list || [];
-    props.INPUT_ID = randomString(7);
+    props.inputs = props.inputs || [];
+    props.ERROR_CNT_ID = `error-msg-cnt-${randomString(7)}`;
     props.type = props.type || 'list';
     props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
     this.findElement = props.findElement;
@@ -35,12 +38,35 @@ class ExpandableList {
     const storage = {};
     props.activeIndex = 0;
     ExpandableList.lists[props.id] = this;
+
+    function setErrorMsg(msg) {
+        document.getElementById(props.ERROR_CNT_ID).innerHTML = msg;
+    }
+
     this.add = () => {
-      const name = document.getElementById(props.INPUT_ID).value;
-      props.list.push(props.getObject(name));
-      this.activeIndex(props.list.length - 1);
-      this.refresh();
-      afterAddEvent.trigger();
+      const inputValues = {};
+      props.inputs.forEach((input) =>
+        inputValues[input.placeholder] = document.getElementById(input.id).value);
+      if ((typeof props.inputValidation) !== 'function' ||
+              props.inputValidation(inputValues) === true) {
+        props.list.push(props.getObject(inputValues));
+
+        console.log(Cost.fromJson(props.list[0].toJson()));
+        // props.list[0].calc(new Panel('p','panel', undefined, '4*12,8*12,.75'));
+        this.activeIndex(props.list.length - 1);
+        this.refresh();
+        afterAddEvent.trigger();
+      } else {
+        const errors = props.inputValidation(inputValues);
+        let errorStr;
+        if ((typeof errors) === 'object') {
+          const keys = Object.keys(errors);
+          errorStr = Object.values(errors).join('<br>');
+        } else {
+          errorStr = `Error: ${errors}`;
+        }
+        setErrorMsg(errorStr);
+      }
     };
     this.isSelfClosing = () => props.selfCloseTab;
     this.remove = (index) => {
@@ -54,6 +80,7 @@ class ExpandableList {
       if (!pendingRefresh) {
         pendingRefresh = true;
         setTimeout(() => {
+          props.inputs.forEach((input) => input.id = input.id || randomString(7));
           const parent = document.querySelector(props.parentSelector);
           const html = ExpandableList[`${props.type}Template`].render(props);
 
@@ -101,6 +128,7 @@ class ExpandableList {
     afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
 
     this.htmlBody = (index) => props.getBody(props.list[index], index);
+    this.getList = () => props.list;
     this.refresh();
   }
 }

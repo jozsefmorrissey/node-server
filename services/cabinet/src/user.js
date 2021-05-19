@@ -161,6 +161,7 @@ class User {
 
     this.saveData = (path, data) => {
       if (!this.validate(true)) throw new UnAuthorized();
+      // console.log(JSON.stringify(data))
       try {
         let dirPath = path.split(".");
         dirPath = dirPath.splice(0, dirPath.length - 1).join('.');
@@ -168,6 +169,7 @@ class User {
         const directory = this.dataDirectory(dirPath);
         console.log('dir:', dirPath, directory)
         shell.mkdir('-p', directory);
+        shell.touch(filePath);
         fs.writeFileSync(filePath, JSON.stringify(data));
         return true;
       } catch(e) {

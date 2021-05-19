@@ -15,17 +15,22 @@ class CabinetDisplay {
         ThreeDModel.render(cabinet);
       return CabinetDisplay.bodyTemplate.render({room, $index, cabinet, showTypes, OpenSectionDisplay});
     }
-    const getObject = (name) => {
-      const config = CabinetConfig.get(name);
-      if (config) return Cabinet.fromJson(config);
-      return Cabinet.build('standard');
+
+    function inputValidation(values) {
+      const validName = values.name !== undefined;
+      const validType = CabinetConfig.list().indexOf(values.type) !== -1;
+      if(validType) return true;
+      return {type: 'You must select a defined type.'};
+    }
+    const getObject = (values) => {
+      return CabinetConfig.get(values.type);
     };
     this.active = () => expandList.active();
     const expListProps = {
       list: room.cabinets,
-      input: true,
-      inputOptions: CabinetConfig.list(),
-      parentSelector, getHeader, getBody, getObject,
+      inputs: [{placeholder: 'name'},
+                {placeholder: 'type', autofill: CabinetConfig.list()}],
+      parentSelector, getHeader, getBody, getObject, inputValidation,
       listElemLable: 'Cabinet'
     };
     const expandList = new ExpandableList(expListProps);
@@ -55,8 +60,12 @@ class CabinetDisplay {
     const save = (target) => {
       const index = target.getAttribute('index');
       const cabinet = expListProps.list[index];
-      Request.post(EPNTS.cabinet.add(cabinet.id), cabinet.toJson(), saveSuccess, saveFail);
-      console.log('saving');
+      if (cabinet.name !== undefined) {
+        Request.post(EPNTS.cabinet.add(cabinet.id), cabinet.toJson(), saveSuccess, saveFail);
+        console.log('saving');
+      } else {
+        alert('Please enter a name if you want to save the cabinet.')
+      }
     }
 
     CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());

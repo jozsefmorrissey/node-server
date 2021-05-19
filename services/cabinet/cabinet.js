@@ -104,7 +104,21 @@ function endpoints(app, prefix) {
     res.send('success');
   });
 
+  //  ---------------------------- Cabinet -----------------------------//
 
+  app.post(prefix + EPNTS.costs.save(), function (req, res) {
+    const user = getUser(req);
+    console.log('body:', req.body);
+    getUser(req).saveData(`costs`, req.body);
+    res.send('success');
+  });
+
+  app.get(prefix + EPNTS.costs.get(), function (req, res) {
+    const user = getUser(req);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Type', 'application/json');
+    res.send(user.loadData('costs'));
+  });
 
   //  ---------------------------- Endpoints -----------------------------//
 

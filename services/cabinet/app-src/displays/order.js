@@ -31,11 +31,14 @@ class OrderDisplay {
         return 'Loading...';
       }
     }
-    const getObject = () => initOrder(new Order());
+    const getObject = (values) => initOrder(new Order(values.name));
     this.active = () => active;
 
     const expListProps = {
       list: orders,
+      inputs: [{placeholder: 'name'}],
+      inputValidation: (values) => values.name ? true :
+          'You must Define a name',
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Order', type: 'sidebar'
     };

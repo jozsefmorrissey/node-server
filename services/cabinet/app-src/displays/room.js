@@ -9,8 +9,8 @@ class RoomDisplay {
       return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
     }
 
-    const getObject = () => {
-      const room = new Room();
+    const getObject = (values) => {
+      const room = new Room(values.name);
       return room;
     }
     this.active = () => expandList.active();
@@ -26,6 +26,8 @@ class RoomDisplay {
     const expListProps = {
       list: order.rooms,
       parentSelector, getHeader, getBody, getObject,
+      inputs: [{placeholder: 'name'}],
+      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
       listElemLable: 'Room', type: 'pill'
     };
     const expandList = new ExpandableList(expListProps);

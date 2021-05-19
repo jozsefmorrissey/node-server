@@ -10,8 +10,19 @@
   <body>
     <button id='logout-btn'>Logout</button>
     <div id='login'><div id='login-cnt' class='center-all'></div></div>
-    <div id='app'></div>
-    <div id='property-display'></div>
+    <div id='app' hidden></div>
+
+    <div id='cost-manager'>
+      <div class="center">
+        <h2 id='cost-manager-header'>
+          Cost Manager
+          <button id='cost-manager-save-btn'>Save</button>
+        </h2>
+      </div>
+      <div id="cost-manager-body"></div>
+    </div>
+
+    <div id='property-display' hidden></div>
     <div class='tree-d-model-cnt'>
       <div id="model-controller" hidden></div>
       <div id="three-d-model" class="viewer small">

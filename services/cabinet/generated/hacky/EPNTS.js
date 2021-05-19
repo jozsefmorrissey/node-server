@@ -93,6 +93,10 @@ const EPNTS = new Endpoints({
     "add": "/:id",
     "list": "/all"
   },
+  "costs": {
+    "save": "/costs/save",
+    "get": "/costs/get"
+  },
   "order": {
     "add": "/order/:id",
     "get": "/order/:id",
