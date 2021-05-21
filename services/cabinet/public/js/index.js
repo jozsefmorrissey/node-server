@@ -1905,6 +1905,9 @@ $t.functions['632351395'] = function (get) {
 $t.functions['633282157'] = function (get) {
 	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> <div class="expand-header ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> <div class="expand-body ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getBody")(get("item"), get("$index"))) + ` </div> </div> </div>`
 }
+$t.functions['897110708'] = function (get) {
+	return `<div > ` + (get("input").html()) + ` <div id='` + (get("childCntId")) + `'></div> </div>`
+}
 $t.functions['990870856'] = function (get) {
 	return `<div class='inline' > <h3>` + (get("assem").objId) + `</h3> <div> ` + (get("getFeatureDisplay")(get("assem"))) + ` </div> </div>`
 }
@@ -1955,6 +1958,21 @@ $t.functions['features'] = function (get) {
 }
 $t.functions['-666497277'] = function (get) {
 	return `<div > <label>` + (get("feature").name) + `</label> <input type='checkbox' name='` + (get("id") + '-checkbox') + `' ` + (get("feature").isCheckbox() ? '': 'hidden') + `> <input type='text' name='` + (get("id") + '-input') + `' ` + (get("feature").showInput() ? '' : 'hidden') + `> <input class='feature-radio' type='radio' name='` + (get("id")) + `' value='` + (get("feature").id) + `' ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> <div ` + (!get("feature").isRadio() ? '' : 'hidden') + `> <input type='text' placeholder="Unique Notes" ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> ` + (new $t('features').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})) + ` </div> </div>`
+}
+$t.functions['input/input'] = function (get) {
+	return `<div> <input class='` + (get("class")) + `' list='input-list-` + (get("id")) + `' id='` + (get("id")) + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `'> <datalist id="input-list-` + (get("id")) + `"> ` + (new $t('<option value="{{item}}" ></option>').render(get('scope'), 'item in list', get)) + ` </datalist> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
+}
+$t.functions['-994603408'] = function (get) {
+	return `<option value="` + (get("item")) + `" ></option>`
+}
+$t.functions['input/select'] = function (get) {
+	return `<div> <select class='` + (get("class")) + `' id='` + (get("id")) + `' name='` + (get("name")) + `'> ` + (new $t('<option  value=\'{{value}}\'>{{key}}</option>').render(get('scope'), 'key, value in list', get)) + ` </select> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
+}
+$t.functions['-1623324941'] = function (get) {
+	return `<option value='` + (get("value")) + `'>` + (get("key")) + `</option>`
+}
+$t.functions['input/decision/decision'] = function (get) {
+	return ` <span id='` + (get("id")) + `' class='` + (get("scope").constructor.class) + `' node-id=` + (get("_nodeId")) + `> ` + (new $t('<div > {{input.html()}} <div id=\'{{childCntId}}\'></div> </div>').render(get('scope'), 'input in inputArray', get)) + ` <span> `
 }
 $t.functions['login/confirmation-message'] = function (get) {
 	return `<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
@@ -2030,6 +2048,9 @@ $t.functions['sections/false-front'] = function (get) {
 }
 $t.functions['sections/open'] = function (get) {
 	return `<h2>Open: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['input/decision/decisionTree'] = function (get) {
+	return `<div class='` + (get("class")) + `' tree-id='` + (get("treeId")) + `'> ` + (get("html")()) + ` <button id='` + (get("buttonId")) + `'>Submit</button> </div> `
 }
 
 
@@ -2391,6 +2412,52 @@ class CabinetConfig {
 }
 
 CabinetConfig = new CabinetConfig();
+
+
+const removeSuffixes = ['Part', 'Section'].join('|');
+function formatConstructorId (obj) {
+  return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
+}
+
+function randomString(len) {
+  len = len || 7;
+  let str = '';
+  while (str.length < len) str += Math.random().toString(36).substr(2);
+  return str.substr(0, len);
+}
+
+function getValue(code, obj) {
+  if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
+  return CONSTANTS[code].value;
+}
+$t.global('getValue', getValue, true);
+
+function getDefaultSize(instance) {
+  const constructorName = instance.constructor.name;
+  if (constructorName === 'Cabinet') return {length: 24, width: 50, thickness: 21};
+  return {length: 0, width: 0, thickness: 0};
+}
+
+function setterGetter () {
+  let attrs = {};
+  for (let index = 0; index < arguments.length; index += 1) {
+    const attr = arguments[index];
+    this[attr] = (value) => {
+      if (value === undefined) return attrs[attr];
+      attrs[attr] = value;
+    }
+  }
+}
+
+function funcOvalue () {
+  let attrs = {};
+  for (let index = 0; index < arguments.length; index += 2) {
+    const attr = arguments[index];
+    const funcOval = arguments[index + 1];
+    if ((typeof funcOval) === 'function') this[attr] = funcOval;
+    else this[attr] = () => funcOval;
+  }
+}
 
 
 class StringMathEvaluator {
@@ -2845,47 +2912,86 @@ Position.parseCoordinates = function() {
 Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
 
 
-const removeSuffixes = ['Part', 'Section'].join('|');
-function formatConstructorId (obj) {
-  return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
-}
 
-function randomString(len) {
-  let str = '';
-  while (str.length < len) str += Math.random().toString(36).substr(2);
-  return str.substr(0, len);
-}
+// terminology
+// name - String to define state;
+// payload - data returned for a given state
+// stateObject - object defining states {name: [payload]...}
+// states - array of availible state names.
+// node - {name, states, payload, then, addState, addStates};
+// then(name) - a function to set a following state.
+// next(name) - a function to get the next state.
+// back() - a function to move back up the tree.
+// top() - a function to get root;
+//
+// returns all functions return current node;
+class DecisionTree {
+  constructor(name, payload) {
+    name = name || 'root';
+    const stateConfigs = {};
+    const tree = {};
+    const nodeMap = {};
 
-function getValue(code, obj) {
-  if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
-  return CONSTANTS[code].value;
-}
-$t.global('getValue', getValue, true);
-
-function getDefaultSize(instance) {
-  const constructorName = instance.constructor.name;
-  if (constructorName === 'Cabinet') return {length: 24, width: 50, thickness: 21};
-  return {length: 0, width: 0, thickness: 0};
-}
-
-function setterGetter () {
-  let attrs = {};
-  for (let index = 0; index < arguments.length; index += 1) {
-    const attr = arguments[index];
-    this[attr] = (value) => {
-      if (value === undefined) return attrs[attr];
-      attrs[attr] = value;
+    function addState(name, payload) {
+      return stateConfigs[name] = payload;
     }
-  }
-}
 
-function funcOvalue () {
-  let attrs = {};
-  for (let index = 0; index < arguments.length; index += 2) {
-    const attr = arguments[index];
-    const funcOval = arguments[index + 1];
-    if ((typeof funcOval) === 'function') this[attr] = funcOval;
-    else this[attr] = () => funcOval;
+    function addStates(sts) {
+      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
+      const keys = Object.keys(sts);
+      keys.forEach((key) => stateConfigs[key] = sts[key]);
+      console.log(stateConfigs);
+    }
+
+    function getState(name, parent) {
+      return new DecisionNode(name, stateConfigs[name], parent);
+    }
+
+
+    class DecisionNode {
+      constructor(name, payload, parent) {
+        const states = {};
+        let jump;
+        payload = payload || {};
+        payload._nodeId = `decision-node-${randomString(7)}`;
+        nodeMap[payload._nodeId] = this;
+        this.getNode = (nodeId) => nodeMap[nodeId];
+        this.name = name;
+        this.states = states;
+        this.payload = payload;
+        this.jump = (name) => {
+          if (name) jump = getState(name);
+          return jump;
+        };
+        this.then = (name, payload) => {
+          payload = payload ? addState(name, payload) : stateConfigs[name];
+          states[name] = (getState(name, this));
+          const state = states[name];
+          return state === undefined ? undefined : state.jump() || state;
+        }
+        this.addState = (name, payload) => addState(name, payload) && this;
+        this.addStates = (sts) => addStates(sts) && this;
+        this.next = (name) => {
+          const state = states[name];
+          return state === undefined ? undefined : state.jump() || state;
+        }
+
+        this.routePayloads = () => {
+          let currNode = this;
+          const payloads = [];
+          while(currNode !== null) {
+            payloads.push(currNode.payload);
+            currNode = currNode.back();
+          }
+          return payloads.reverse();
+        }
+        this.back = () => parent;
+        this.top = () => rootNode;
+      }
+    }
+
+    const rootNode = new DecisionNode(name, payload, null);
+    return rootNode;
   }
 }
 
@@ -3476,26 +3582,6 @@ afterLoad.push(() => matchRun('change', '.feature-radio', (target) => {
 )
 
 
-class PropertyDisplay {
-  constructor(containerSelector) {
-    let currProps;
-
-    this.update = (properties) => {
-      currProps = properties;
-      const contianer = document.querySelector(containerSelector);
-      contianer.innerHTML = PropertyDisplay.template.render({properties});
-    };
-
-    function updateProperties(name, value) {
-      currProps[name] = value;
-    }
-    bindField(containerSelector, updateProperties);
-  }
-}
-
-PropertyDisplay.template = new $t('properties/properties');
-
-
 class RoomDisplay {
   constructor(parentSelector, order) {
     const cabinetDisplays = {};
@@ -3535,6 +3621,103 @@ class RoomDisplay {
 }
 RoomDisplay.bodyTemplate = new $t('room/body');
 RoomDisplay.headTemplate = new $t('room/head');
+
+
+class Order {
+  constructor(name, id) {
+    this.name = name || ++Order.count;
+    this.id = id || randomString(32);
+    this.rooms = []
+    this.toJson = () => {
+      const json = {name: this.name, rooms: []};
+      this.rooms.forEach((room) => json.rooms.push(room.toJson()));
+      return json;
+    }
+  }
+}
+
+Order.count = 0;
+Order.fromJson = (orderJson) => {
+  const order = new Order(orderJson.name, orderJson.id);
+  orderJson.rooms.forEach((roomJson) => order.rooms.push(Room.fromJson(roomJson)));
+  return order;
+}
+
+
+class OrderDisplay {
+  constructor(parentSelector, orders) {
+    const roomDisplays = {};
+    let active;
+    const getHeader = (order, $index) =>
+        OrderDisplay.headTemplate.render({order, $index});
+
+    function initOrder(order) {
+      roomDisplays[order.id] = new RoomDisplay('#room-pills', order);
+      return order;
+    }
+
+    function loadOrder(index, start) {
+      return function (orderData) {
+        const order = Order.fromJson(orderData);
+        initOrder(order);
+        expandList.set(index, order);
+        expandList.refresh();
+        console.log('load Time:', new Date().getTime() - start);
+      }
+    }
+
+    const getBody = (order, $index) => {
+      if (order instanceof Order) {
+        let propertyTypes = Object.keys(properties.list);
+        active = roomDisplays[order.id];
+        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
+      } else {
+        const start = new Date().getTime();
+        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
+        return 'Loading...';
+      }
+    }
+    const getObject = (values) => initOrder(new Order(values.name));
+    this.active = () => active;
+
+    const expListProps = {
+      list: orders,
+      inputs: [{placeholder: 'name'}],
+      inputValidation: (values) => values.name ? true :
+          'You must Define a name',
+      parentSelector, getHeader, getBody, getObject,
+      listElemLable: 'Order', type: 'sidebar'
+    };
+    const expandList = new ExpandableList(expListProps);
+    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
+
+    const saveSuccess = () => console.log('success');
+    const saveFail = () => console.log('failure');
+    const save = (target) => {
+      const index = target.getAttribute('index');
+      const order = expandList.get(index);
+      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
+      console.log('saving');
+    }
+
+    const attrUpdate = (attr) => (target) => {
+      const index = target.getAttribute('index');
+      const order = expandList.get(index);
+      order[attr] = target.value;
+    };
+
+    function addOrders(names) {
+      names.forEach((name) => expListProps.list.push({ name }));
+      expandList.refresh();
+    }
+    Request.get(EPNTS.order.list(), addOrders);
+
+    matchRun('change', '.order-name-input', attrUpdate('name'));
+    matchRun('click', '.save-order-btn', save);
+  }
+}
+OrderDisplay.bodyTemplate = new $t('order/body');
+OrderDisplay.headTemplate = new $t('order/head');
 
 
 const OpenSectionDisplay = {};
@@ -3653,16 +3836,87 @@ matchRun('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
 matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
 
 
-class FeatureDisplay {
-  constructor(assembly, parentSelector) {
-    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
-    this.refresh = () => {
-      const container = document.querySelector(parentSelector);
-      container.innerHTML = this.html;
-    }
+
+class Room {
+  constructor(name, id) {
+    this.name = name || `Room ${Room.count++}`;
+    this.id = id || randomString(32);
+    this.cabinets = [];
+    this.toJson = () => {
+      const json = {name: this.name, id: this.id, cabinets: []};
+      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
+      return json;
+    };
+  }
+};
+Room.count = 0;
+Room.fromJson = (roomJson) => {
+  const room = new Room(roomJson.name, roomJson.id);
+  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
+  return room;
+}
+
+
+
+class Input {
+  constructor(props) {
+    const instance = this;
+    this.type = props.type;
+    this.name = props.name;
+    this.id = props.id || `input-${randomString(7)}`;
+    this.placeholder = props.placeholder;
+    this.class = props.class;
+    this.list = props.list || [];
+    this.valid = false;
+
+    props.errorMsg = props.errorMsg || 'Error';
+
+    this.errorMsgId = props.errorMsgId || `error-msg-${this.id}`;
+    const idSelector = `#${this.id}`;
+
+    const html = this.constructor.html(this);
+    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
+    this.html = html;
+
+    this.on = (eventType, func) => matchRun(eventType, idSelector, func);
+    this.validation = (value) => {
+      if (props.validation instanceof RegExp) {
+        return value.match(props.validation) !== null;
+      }
+      if ((typeof props.validation) === 'function') {
+        return props.validation(value);
+      }
+      if (Array.isArray(props.validation)) {
+        return props.validation.indexOf(value) !== -1;
+      }
+
+      return true;
+    };
+
+    matchRun(`change`, `#${this.id}`, (target) => {
+      if (this.validation(target.value)) {
+        document.getElementById(this.errorMsgId).innerHTML = '';
+      } else {
+        document.getElementById(this.errorMsgId).innerHTML = props.errorMsg;
+      }
+    });
   }
 }
-FeatureDisplay.template = new $t('features');
+
+Input.template = new $t('input/input');
+Input.html = (instance) => () => Input.template.render(instance);
+
+// afterLoad.push(() =>
+// document.body.innerHTML = new Input({
+//   type: 'select',
+//   placeholder: '1 || 2 || 3',
+//   name: 'var',
+//   class: 'center',
+//   list: ['one', 'two', 'three', 'four'],
+//   validation: /^(one|two|four)$/,
+//   errorMsg: 'lucky number...'
+// }).html()
+// );
 
 
 class CabinetDisplay {
@@ -3743,6 +3997,332 @@ class CabinetDisplay {
 }
 CabinetDisplay.bodyTemplate = new $t('cabinet/body');
 CabinetDisplay.headTemplate = new $t('cabinet/head');
+
+
+// properties
+//  required: {
+//  getHeader: function returns html header string,
+//  getBody: function returns html body string,
+//}
+//  optional: {
+//  list: list to use, creates on undefined
+//  getObject: function returns new list object default is generic js object,
+//  parentSelector: cssSelector only reqired for refresh function,
+//  listElemLable: nameOfElementType changes add button label,
+//  hideAddBtn: defaults to false,
+//  startClosed: all tabs are closed on list open.
+//  input: true - require user to enter text before adding new
+//  inputOptions: array of autofill inputs
+//  inputs: [{placeholder, autofill},...]
+//  inputValidation: function to validate input fields
+//  type: defaults to list,
+//  selfCloseTab: defalts to true - allows clicking on header to close body,
+//  findElement: used to find elemenents related to header - defaults to closest
+//}
+class ExpandableList {
+  constructor(props) {
+    const afterRenderEvent = new CustomEvent('afterRender');
+    const afterAddEvent = new CustomEvent('afterAdd');
+    const afterRefreshEvent = new CustomEvent('afterRefresh');
+    props.list = props.list || [];
+    props.inputs = props.inputs || [];
+    props.ERROR_CNT_ID = `error-msg-cnt-${randomString(7)}`;
+    props.type = props.type || 'list';
+    props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
+    this.findElement = props.findElement;
+    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
+    props.getObject = props.getObject || (() => {});
+    props.id = ExpandableList.lists.length;
+    this.id = () => props.id;
+    let pendingRefresh = false;
+    let lastRefresh = new Date().getTime();
+    const storage = {};
+    props.activeIndex = 0;
+    ExpandableList.lists[props.id] = this;
+
+    function setErrorMsg(msg) {
+        document.getElementById(props.ERROR_CNT_ID).innerHTML = msg;
+    }
+
+    this.add = () => {
+      const inputValues = {};
+      props.inputs.forEach((input) =>
+        inputValues[input.placeholder] = document.getElementById(input.id).value);
+      if ((typeof props.inputValidation) !== 'function' ||
+              props.inputValidation(inputValues) === true) {
+        props.list.push(props.getObject(inputValues));
+
+        console.log(Cost.fromJson(props.list[0].toJson()));
+        // props.list[0].calc(new Panel('p','panel', undefined, '4*12,8*12,.75'));
+        this.activeIndex(props.list.length - 1);
+        this.refresh();
+        afterAddEvent.trigger();
+      } else {
+        const errors = props.inputValidation(inputValues);
+        let errorStr;
+        if ((typeof errors) === 'object') {
+          const keys = Object.keys(errors);
+          errorStr = Object.values(errors).join('<br>');
+        } else {
+          errorStr = `Error: ${errors}`;
+        }
+        setErrorMsg(errorStr);
+      }
+    };
+    this.isSelfClosing = () => props.selfCloseTab;
+    this.remove = (index) => {
+      props.list.splice(index, 1);
+      this.refresh();
+    }
+    this.afterRender = (func) => afterRenderEvent.on(func);
+    this.afterAdd = (func) => afterAddEvent.on(func);
+    this.refresh = (type) => {
+      props.type = (typeof type) === 'string' ? type : props.type;
+      if (!pendingRefresh) {
+        pendingRefresh = true;
+        setTimeout(() => {
+          props.inputs.forEach((input) => input.id = input.id || randomString(7));
+          const parent = document.querySelector(props.parentSelector);
+          const html = ExpandableList[`${props.type}Template`].render(props);
+
+          if (parent && html !== undefined) {
+            parent.innerHTML = html;
+            afterRefreshEvent.trigger();
+          }
+          pendingRefresh = false;
+        }, 100);
+      }
+    };
+    this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
+    this.active = () => props.list[this.activeIndex()];
+    this.value = (index) => (key, value) => {
+      if (props.activeIndex === undefined) props.activeIndex = 0;
+      if (index === undefined) index = props.activeIndex;
+      if (storage[index] === undefined) storage[index] = {};
+      if (value === undefined) return storage[index][key];
+      storage[index][key] = value;
+    }
+    this.set = (index, value) => props.list[index] = value;
+    this.get = (index) => props.list[index];
+    this.renderBody = (target) => {
+      const headerSelector = `.expand-header[ex-list-id='${props.id}'][index='${this.activeIndex()}']`;
+      target = target || document.querySelector(headerSelector);
+      if (target !== null) {
+        const id = target.getAttribute('ex-list-id');
+        const list = ExpandableList.lists[id];
+        const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
+        const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
+        const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
+        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
+        bodys.forEach((body) => body.style.display = 'none');
+        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
+        const body = list.findElement('.expand-body', target);
+        body.style.display = 'block';
+        const index = target.getAttribute('index');
+        this.activeIndex(index);
+        body.innerHTML = this.htmlBody(index);
+        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+        target.className += ' active';
+        afterRenderEvent.trigger();
+      }
+    };
+    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+
+    this.htmlBody = (index) => props.getBody(props.list[index], index);
+    this.getList = () => props.list;
+    this.refresh();
+  }
+}
+ExpandableList.lists = [];
+ExpandableList.listTemplate = new $t('expandable/list');
+ExpandableList.pillTemplate = new $t('expandable/pill');
+ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
+ExpandableList.getIdAndIndex = (target) => {
+  const cnt = up('.expand-header,.expand-body', target);
+  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
+  const index = Number.parseInt(cnt.getAttribute('index'));
+  return {id, index};
+}
+ExpandableList.getValueFunc = (target) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  return ExpandableList.lists[idIndex.id].value(idIndex.index);
+}
+
+ExpandableList.get = (target, value) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  return ExpandableList.lists[idIndex.id].get(idIndex.index);
+}
+
+ExpandableList.set = (target, value) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  ExpandableList.lists[idIndex.id].set(idIndex.index, value);
+}
+
+ExpandableList.value = (key, value, target) => {
+  return ExpandableList.getValueFunc(target)(key, value);
+}
+matchRun('click', '.expandable-list-add-btn', (target) => {
+  const id = target.getAttribute('ex-list-id');
+  ExpandableList.lists[id].add();
+});
+matchRun('click', '.expandable-item-rm-btn', (target) => {
+  const id = target.getAttribute('ex-list-id');
+  const index = target.getAttribute('index');
+  ExpandableList.lists[id].remove(index);
+});
+ExpandableList.closeAll = (header) => {
+  const hello = 'world';
+}
+
+matchRun('click', '.expand-header', (target, event) => {
+  const isActive = target.matches('.active');
+  const id = target.getAttribute('ex-list-id');
+  const list = ExpandableList.lists[id];
+  if (isActive && event.target === target) {
+    target.className = target.className.replace(/(^| )active( |$)/g, '');
+    list.findElement('.expand-body', target).style.display = 'none';
+    list.activeIndex(null);
+    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
+  } else if (!isActive) {
+    list.renderBody(target);
+  }
+});
+
+
+class FeatureDisplay {
+  constructor(assembly, parentSelector) {
+    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
+    this.refresh = () => {
+      const container = document.querySelector(parentSelector);
+      container.innerHTML = this.html;
+    }
+  }
+}
+FeatureDisplay.template = new $t('features');
+
+
+class Cost {
+  constructor(id, method, size, cost) {
+    const configuration = Cost.configure(method, size, cost);
+    const formula = configuration.formula;
+    const unitCost = configuration.unitCost;
+    let percentage = 100;
+    this.id = () => id;
+    this.method = () => method;
+    this.size = () => size;
+    this.cost = () => cost;
+    this.unitCost = () => JSON.parse(JSON.stringify(unitCost));
+
+    this.calc = (assembly) => Cost.evaluator.eval(formula, assembly);
+
+    const cName = this.constructor.name;
+    if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
+    if (Cost.lists[cName][id] === undefined) Cost.lists[cName][id] = [];
+    Cost.lists[cName][id].push(this);
+
+    this.toJson = () => {
+      return {
+        type: this.constructor.name,
+        id, method, size, cost
+      };
+    }
+  }
+}
+Cost.lists = {};
+Cost.objMap = {};
+Cost.types = [];
+Cost.methods = {
+  LINEAR_FEET: 'Linear Feet',
+  SQUARE_FEET: 'Square Feet',
+  CUBIC_FEET: 'Cubic Feet',
+  UNIT: 'Unit'
+},
+Cost.methodList = Object.values(Cost.methods);
+Cost.configure = (method, size, cost) => {
+  const splitSize = size.toLowerCase().split('x');
+  const length = splitSize[0];
+  const width = splitSize[1];
+  const depth = splitSize[2];
+  const retValue = {unitCost: {}};
+  switch (method) {
+    case Cost.methods.LINEAR_FEET:
+      const perLinearInch = Cost.evaluator.eval(`${cost}/(${length} * 12)`);
+      retValue.unitCost.name = 'Linear Inch';
+      retValue.unitCost.value = perLinearInch;
+      retValue.formula = `${perLinearInch}*l*w`;
+      return retValue;
+    case Cost.methods.SQUARE_FEET:
+      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*144)`);
+      retValue.unitCost.name = 'Square Inch';
+      retValue.unitCost.value = perSquareInch;
+      retValue.formula = `${perSquareInch}*l*w`;
+      return retValue;
+    case Cost.methods.CUBIC_FEET:
+      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth}*1728)`);
+      retValue.unitCost.name = 'Cubic Inch';
+      retValue.unitCost.value = perCubicInch;
+      retValue.formula = `${perCubicInch}*l*w*d`;
+      return retValue;
+    case Cost.methods.UNIT:
+      retValue.unitCost.name = 'Unit';
+      retValue.unitCost.value = cost;
+      retValue.formula = cost;
+      return retValue;
+    default:
+      throw new Error('wtf');
+      retValue.unitCost.name = 'Unknown';
+      retValue.unitCost = -0.01;
+      retValue.formula = -0.01;
+      return retValue;
+  }
+};
+
+Cost.get = (name) => {
+  const obj = Cost.lists[id];
+  if (obj === undefined) return null;
+  return new obj.constructor();
+}
+Cost.addRelations = (type, id, name) => {
+  names.forEach((name) => {
+    if (objMap[id] === undefined) Cost.objMap[id] = {Labor: [], Material: []}
+    if (type === Labor) Cost.objMap[id].Labor.push(Cost.get(name));
+    if (type === Material) Cost.objMap[id].Material.push(Cost.get(name));
+  });
+}
+
+Cost.register = (clazz) => {
+  Cost.types[clazz.prototype.constructor.name] = clazz;
+  Cost.typeList = Object.keys(Cost.types);
+}
+
+Cost.new = function(type, id, method, size, cost) {
+  return new Cost.types[type](...Array.from(arguments).slice(1))
+}
+
+Cost.fromJson = (objOrArray) => {
+  function instanceFromJson(obj) {
+    return Cost.new(obj.type, obj.id, obj.method, obj.size, obj.cost);
+  }
+  if (!Array.isArray(objOrArray)) return instanceFromJson(objOrArray);
+
+  const list = [];
+  objOrArray.forEach((obj) => list.push(instanceFromJson(obj)));
+  return list;
+}
+
+Cost.toJson = (array) => {
+  if (!Array.isArray(array)) throw new Error('Input argument must be of type Array');
+  const list = [];
+  array.forEach((cost) => {
+    if (!(cost instanceof Cost)) throw new Error('All array object must be of type Cost');
+    list.push(cost.toJson())
+  });
+  return list;
+}
+
+afterLoad.push(() =>
+  Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
+);
 
 
 const colors = {
@@ -4077,204 +4657,24 @@ function updateModel(part) {
 }
 
 
-class OrderDisplay {
-  constructor(parentSelector, orders) {
-    const roomDisplays = {};
-    let active;
-    const getHeader = (order, $index) =>
-        OrderDisplay.headTemplate.render({order, $index});
+class PropertyDisplay {
+  constructor(containerSelector) {
+    let currProps;
 
-    function initOrder(order) {
-      roomDisplays[order.id] = new RoomDisplay('#room-pills', order);
-      return order;
-    }
-
-    function loadOrder(index, start) {
-      return function (orderData) {
-        const order = Order.fromJson(orderData);
-        initOrder(order);
-        expandList.set(index, order);
-        expandList.refresh();
-        console.log('load Time:', new Date().getTime() - start);
-      }
-    }
-
-    const getBody = (order, $index) => {
-      if (order instanceof Order) {
-        let propertyTypes = Object.keys(properties.list);
-        active = roomDisplays[order.id];
-        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
-      } else {
-        const start = new Date().getTime();
-        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
-        return 'Loading...';
-      }
-    }
-    const getObject = (values) => initOrder(new Order(values.name));
-    this.active = () => active;
-
-    const expListProps = {
-      list: orders,
-      inputs: [{placeholder: 'name'}],
-      inputValidation: (values) => values.name ? true :
-          'You must Define a name',
-      parentSelector, getHeader, getBody, getObject,
-      listElemLable: 'Order', type: 'sidebar'
-    };
-    const expandList = new ExpandableList(expListProps);
-    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
-
-    const saveSuccess = () => console.log('success');
-    const saveFail = () => console.log('failure');
-    const save = (target) => {
-      const index = target.getAttribute('index');
-      const order = expandList.get(index);
-      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
-      console.log('saving');
-    }
-
-    const attrUpdate = (attr) => (target) => {
-      const index = target.getAttribute('index');
-      const order = expandList.get(index);
-      order[attr] = target.value;
+    this.update = (properties) => {
+      currProps = properties;
+      const contianer = document.querySelector(containerSelector);
+      contianer.innerHTML = PropertyDisplay.template.render({properties});
     };
 
-    function addOrders(names) {
-      names.forEach((name) => expListProps.list.push({ name }));
-      expandList.refresh();
+    function updateProperties(name, value) {
+      currProps[name] = value;
     }
-    Request.get(EPNTS.order.list(), addOrders);
-
-    matchRun('change', '.order-name-input', attrUpdate('name'));
-    matchRun('click', '.save-order-btn', save);
+    bindField(containerSelector, updateProperties);
   }
 }
-OrderDisplay.bodyTemplate = new $t('order/body');
-OrderDisplay.headTemplate = new $t('order/head');
 
-
-class Cost {
-  constructor(id, method, size, cost) {
-    const configuration = Cost.configure(method, size, cost);
-    const formula = configuration.formula;
-    const unitCost = configuration.unitCost;
-    let percentage = 100;
-    this.id = () => id;
-    this.method = () => method;
-    this.size = () => size;
-    this.cost = () => cost;
-    this.unitCost = () => JSON.parse(JSON.stringify(unitCost));
-
-    this.calc = (assembly) => Cost.evaluator.eval(formula, assembly);
-
-    const cName = this.constructor.name;
-    if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
-    if (Cost.lists[cName][id] === undefined) Cost.lists[cName][id] = [];
-    Cost.lists[cName][id].push(this);
-
-    this.toJson = () => {
-      return {
-        type: this.constructor.name,
-        id, method, size, cost
-      };
-    }
-  }
-}
-Cost.lists = {};
-Cost.objMap = {};
-Cost.types = [];
-Cost.methods = {
-  LINEAR_FEET: 'Linear Feet',
-  SQUARE_FEET: 'Square Feet',
-  CUBIC_FEET: 'Cubic Feet',
-  UNIT: 'Unit'
-},
-Cost.methodList = Object.values(Cost.methods);
-Cost.configure = (method, size, cost) => {
-  const splitSize = size.toLowerCase().split('x');
-  const length = splitSize[0];
-  const width = splitSize[1];
-  const depth = splitSize[2];
-  const retValue = {unitCost: {}};
-  switch (method) {
-    case Cost.methods.LINEAR_FEET:
-      const perLinearInch = Cost.evaluator.eval(`${cost}/(${length} * 12)`);
-      retValue.unitCost.name = 'Linear Inch';
-      retValue.unitCost.value = perLinearInch;
-      retValue.formula = `${perLinearInch}*l*w`;
-      return retValue;
-    case Cost.methods.SQUARE_FEET:
-      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*144)`);
-      retValue.unitCost.name = 'Square Inch';
-      retValue.unitCost.value = perSquareInch;
-      retValue.formula = `${perSquareInch}*l*w`;
-      return retValue;
-    case Cost.methods.CUBIC_FEET:
-      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth}*1728)`);
-      retValue.unitCost.name = 'Cubic Inch';
-      retValue.unitCost.value = perCubicInch;
-      retValue.formula = `${perCubicInch}*l*w*d`;
-      return retValue;
-    case Cost.methods.UNIT:
-      retValue.unitCost.name = 'Unit';
-      retValue.unitCost.value = cost;
-      retValue.formula = cost;
-      return retValue;
-    default:
-      throw new Error('wtf');
-      retValue.unitCost.name = 'Unknown';
-      retValue.unitCost = -0.01;
-      retValue.formula = -0.01;
-      return retValue;
-  }
-};
-
-Cost.get = (name) => {
-  const obj = Cost.lists[id];
-  if (obj === undefined) return null;
-  return new obj.constructor();
-}
-Cost.addRelations = (type, id, name) => {
-  names.forEach((name) => {
-    if (objMap[id] === undefined) Cost.objMap[id] = {Labor: [], Material: []}
-    if (type === Labor) Cost.objMap[id].Labor.push(Cost.get(name));
-    if (type === Material) Cost.objMap[id].Material.push(Cost.get(name));
-  });
-}
-
-Cost.register = (clazz) => {
-  Cost.types[clazz.prototype.constructor.name] = clazz;
-  Cost.typeList = Object.keys(Cost.types);
-}
-
-Cost.new = function(type, id, method, size, cost) {
-  return new Cost.types[type](...Array.from(arguments).slice(1))
-}
-
-Cost.fromJson = (objOrArray) => {
-  function instanceFromJson(obj) {
-    return Cost.new(obj.type, obj.id, obj.method, obj.size, obj.cost);
-  }
-  if (!Array.isArray(objOrArray)) return instanceFromJson(objOrArray);
-
-  const list = [];
-  objOrArray.forEach((obj) => list.push(instanceFromJson(obj)));
-  return list;
-}
-
-Cost.toJson = (array) => {
-  if (!Array.isArray(array)) throw new Error('Input argument must be of type Array');
-  const list = [];
-  array.forEach((cost) => {
-    if (!(cost instanceof Cost)) throw new Error('All array object must be of type Cost');
-    list.push(cost.toJson())
-  });
-  return list;
-}
-
-afterLoad.push(() =>
-  Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
-);
+PropertyDisplay.template = new $t('properties/properties');
 
 
 
@@ -4398,244 +4798,16 @@ User.credential = () => getCookie(APP_ID);
 User = new User();
 
 
-// properties
-//  required: {
-//  getHeader: function returns html header string,
-//  getBody: function returns html body string,
-//}
-//  optional: {
-//  list: list to use, creates on undefined
-//  getObject: function returns new list object default is generic js object,
-//  parentSelector: cssSelector only reqired for refresh function,
-//  listElemLable: nameOfElementType changes add button label,
-//  hideAddBtn: defaults to false,
-//  startClosed: all tabs are closed on list open.
-//  input: true - require user to enter text before adding new
-//  inputOptions: array of autofill inputs
-//  inputs: [{placeholder, autofill},...]
-//  inputValidation: function to validate input fields
-//  type: defaults to list,
-//  selfCloseTab: defalts to true - allows clicking on header to close body,
-//  findElement: used to find elemenents related to header - defaults to closest
-//}
-class ExpandableList {
-  constructor(props) {
-    const afterRenderEvent = new CustomEvent('afterRender');
-    const afterAddEvent = new CustomEvent('afterAdd');
-    const afterRefreshEvent = new CustomEvent('afterRefresh');
-    props.list = props.list || [];
-    props.inputs = props.inputs || [];
-    props.ERROR_CNT_ID = `error-msg-cnt-${randomString(7)}`;
-    props.type = props.type || 'list';
-    props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
-    this.findElement = props.findElement;
-    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
-    props.getObject = props.getObject || (() => {});
-    props.id = ExpandableList.lists.length;
-    this.id = () => props.id;
-    let pendingRefresh = false;
-    let lastRefresh = new Date().getTime();
-    const storage = {};
-    props.activeIndex = 0;
-    ExpandableList.lists[props.id] = this;
+function drawerBox(length, width, depth) {
+  const bottomHeight = 7/8;
+  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+  box.setColor(1, 0, 0);
+  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+  inside.setColor(0, 0, 1);
+  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+  bInside.setColor(0, 0, 1);
 
-    function setErrorMsg(msg) {
-        document.getElementById(props.ERROR_CNT_ID).innerHTML = msg;
-    }
-
-    this.add = () => {
-      const inputValues = {};
-      props.inputs.forEach((input) =>
-        inputValues[input.placeholder] = document.getElementById(input.id).value);
-      if ((typeof props.inputValidation) !== 'function' ||
-              props.inputValidation(inputValues) === true) {
-        props.list.push(props.getObject(inputValues));
-
-        console.log(Cost.fromJson(props.list[0].toJson()));
-        // props.list[0].calc(new Panel('p','panel', undefined, '4*12,8*12,.75'));
-        this.activeIndex(props.list.length - 1);
-        this.refresh();
-        afterAddEvent.trigger();
-      } else {
-        const errors = props.inputValidation(inputValues);
-        let errorStr;
-        if ((typeof errors) === 'object') {
-          const keys = Object.keys(errors);
-          errorStr = Object.values(errors).join('<br>');
-        } else {
-          errorStr = `Error: ${errors}`;
-        }
-        setErrorMsg(errorStr);
-      }
-    };
-    this.isSelfClosing = () => props.selfCloseTab;
-    this.remove = (index) => {
-      props.list.splice(index, 1);
-      this.refresh();
-    }
-    this.afterRender = (func) => afterRenderEvent.on(func);
-    this.afterAdd = (func) => afterAddEvent.on(func);
-    this.refresh = (type) => {
-      props.type = (typeof type) === 'string' ? type : props.type;
-      if (!pendingRefresh) {
-        pendingRefresh = true;
-        setTimeout(() => {
-          props.inputs.forEach((input) => input.id = input.id || randomString(7));
-          const parent = document.querySelector(props.parentSelector);
-          const html = ExpandableList[`${props.type}Template`].render(props);
-
-          if (parent && html !== undefined) {
-            parent.innerHTML = html;
-            afterRefreshEvent.trigger();
-          }
-          pendingRefresh = false;
-        }, 100);
-      }
-    };
-    this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
-    this.active = () => props.list[this.activeIndex()];
-    this.value = (index) => (key, value) => {
-      if (props.activeIndex === undefined) props.activeIndex = 0;
-      if (index === undefined) index = props.activeIndex;
-      if (storage[index] === undefined) storage[index] = {};
-      if (value === undefined) return storage[index][key];
-      storage[index][key] = value;
-    }
-    this.set = (index, value) => props.list[index] = value;
-    this.get = (index) => props.list[index];
-    this.renderBody = (target) => {
-      const headerSelector = `.expand-header[ex-list-id='${props.id}'][index='${this.activeIndex()}']`;
-      target = target || document.querySelector(headerSelector);
-      if (target !== null) {
-        const id = target.getAttribute('ex-list-id');
-        const list = ExpandableList.lists[id];
-        const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
-        const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
-        const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-        bodys.forEach((body) => body.style.display = 'none');
-        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-        const body = list.findElement('.expand-body', target);
-        body.style.display = 'block';
-        const index = target.getAttribute('index');
-        this.activeIndex(index);
-        body.innerHTML = this.htmlBody(index);
-        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-        target.className += ' active';
-        afterRenderEvent.trigger();
-      }
-    };
-    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
-
-    this.htmlBody = (index) => props.getBody(props.list[index], index);
-    this.getList = () => props.list;
-    this.refresh();
-  }
-}
-ExpandableList.lists = [];
-ExpandableList.listTemplate = new $t('expandable/list');
-ExpandableList.pillTemplate = new $t('expandable/pill');
-ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
-ExpandableList.getIdAndIndex = (target) => {
-  const cnt = up('.expand-header,.expand-body', target);
-  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-  const index = Number.parseInt(cnt.getAttribute('index'));
-  return {id, index};
-}
-ExpandableList.getValueFunc = (target) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  return ExpandableList.lists[idIndex.id].value(idIndex.index);
-}
-
-ExpandableList.get = (target, value) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  return ExpandableList.lists[idIndex.id].get(idIndex.index);
-}
-
-ExpandableList.set = (target, value) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  ExpandableList.lists[idIndex.id].set(idIndex.index, value);
-}
-
-ExpandableList.value = (key, value, target) => {
-  return ExpandableList.getValueFunc(target)(key, value);
-}
-matchRun('click', '.expandable-list-add-btn', (target) => {
-  const id = target.getAttribute('ex-list-id');
-  ExpandableList.lists[id].add();
-});
-matchRun('click', '.expandable-item-rm-btn', (target) => {
-  const id = target.getAttribute('ex-list-id');
-  const index = target.getAttribute('index');
-  ExpandableList.lists[id].remove(index);
-});
-ExpandableList.closeAll = (header) => {
-  const hello = 'world';
-}
-
-matchRun('click', '.expand-header', (target, event) => {
-  const isActive = target.matches('.active');
-  const id = target.getAttribute('ex-list-id');
-  const list = ExpandableList.lists[id];
-  if (isActive && event.target === target) {
-    target.className = target.className.replace(/(^| )active( |$)/g, '');
-    list.findElement('.expand-body', target).style.display = 'none';
-    list.activeIndex(null);
-    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-  } else if (!isActive) {
-    list.renderBody(target);
-  }
-});
-
-
-
-class Room {
-  constructor(name, id) {
-    this.name = name || `Room ${Room.count++}`;
-    this.id = id || randomString(32);
-    this.cabinets = [];
-    this.toJson = () => {
-      const json = {name: this.name, id: this.id, cabinets: []};
-      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
-      return json;
-    };
-  }
-};
-Room.count = 0;
-Room.fromJson = (roomJson) => {
-  const room = new Room(roomJson.name, roomJson.id);
-  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
-  return room;
-}
-
-
-class Order {
-  constructor(name, id) {
-    this.name = name || ++Order.count;
-    this.id = id || randomString(32);
-    this.rooms = []
-    this.toJson = () => {
-      const json = {name: this.name, rooms: []};
-      this.rooms.forEach((room) => json.rooms.push(room.toJson()));
-      return json;
-    }
-  }
-}
-
-Order.count = 0;
-Order.fromJson = (orderJson) => {
-  const order = new Order(orderJson.name, orderJson.id);
-  orderJson.rooms.forEach((roomJson) => order.rooms.push(Room.fromJson(roomJson)));
-  return order;
-}
-
-
-function pull(length, height) {
-  var rspx = length - .75;
-  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
-  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
-  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
-  return mainCyl.union(lCyl).union(rCyl);
+  return box.subtract(bInside).subtract(inside);
 }
 
 
@@ -4662,6 +4834,30 @@ Cost.register(Labor);
 // new Labor('Stain', '(l*l*w*w*.25)/12');
 // new Labor('InstallDrawerFront', '2');
 // new Labor('InstallPullout', 10);
+
+
+class Material extends Cost {
+  constructor (id, method, size, cost) {
+    super(id, method, size, cost);
+  }
+}
+
+Cost.register(Material);
+
+// new Material('Wood');
+// new Material('Wood.SoftMapel', 'sheet 4x8 75.00', {optionalPercentage: true});
+// new Material('Wood.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Wood.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood');
+// new Material('Plywood.PaintGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.PaintGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.PaintGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.StainGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.StainGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.StainGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Glass');
+// new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
+// new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
 
 class CostManager {
@@ -4755,67 +4951,144 @@ afterLoad.push(() => {
 });
 
 
-class Joint {
-  constructor(joinStr) {
-    const match = joinStr.match(Joint.regex);
-    this.malePartCode = match[1];
-    this.femalePartCode = match[2];
+class Select extends Input {
+  constructor(props) {
+    super(props)
+  }
+}
 
-    this.updatePosition = () => {};
+Select.template = new $t('input/select');
+Select.html = (instance) => () => Select.template.render(instance);
 
-    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
-    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
+// afterLoad.push(() =>
+// document.body.innerHTML = new Select({
+//   type: 'select',
+//   name: 'var',
+//   class: 'center',
+//   list: {one: 1, two: 2, three: 3, four: 4},
+//   validation: /^[1-3]$/,
+//   errorMsg: 'you know you fucked up right?'
+// }).html()
+// );
 
-    this.maleOffset = () => 0;
-    this.femaleOffset = () => 0;
-    this.setParentAssembly = (pa) => this.parentAssembly = pa;
 
-    this.getDemensions = () => {
-      const malePos = getMale();
-      const femalePos = getFemale();
-      // I created a loop but it was harder to understand
-      return undefined;
+
+class DecisionInput {
+  constructor(name, inputArrayOinstance, decisionTreeId) {
+    this.name = name;
+    this.decisionTreeId = decisionTreeId;
+    this.id = `decision-input-node-${randomString()}`;
+    this.childCntId = `decision-child-ctn-${randomString()}`
+    this.inputArray = DecisionInput.validateInput(inputArrayOinstance);
+
+    this.html = () => DecisionInput.template.render(this);
+  }
+}
+
+DecisionInput.class = 'decision-input'
+
+class DecisionInputTree extends DecisionTree{
+  constructor(targetId, name, inputArrayOinstance) {
+    super(name, new DecisionInput(name, inputArrayOinstance, `decision-tree-${randomString()}`));
+    if ((typeof name) !== 'string') throw Error('name(arg2) must be defined as a string');
+
+    this.treeId = randomString();
+    this.class = `decision-input-tree`;
+    const parentAddState = this.addState;
+    const parentAddStates = this.addStates;
+
+    this.addState = (name, payload) => parentAddState(name, new DecisionInput(name, payload)) && this;
+    this.addStates = (sts) => {
+      const states = {};
+      const keys = Object.keys(sts);
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        states[key] = new DecisionInput(key, sts[key]);
+      }
+      return parentAddStates(states)
     }
 
-    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
-    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
-    Joint.list[this.malePartCode].push(this);
-    Joint.list[this.femalePartCode].push(this);
+    this.onChange = (target) => {
+      const parentDecisionCnt = up('.decision-input', target);
+      if (parentDecisionCnt) {
+        const nodeId = parentDecisionCnt.getAttribute('node-id');
+        const currentNode = this.getNode(nodeId);
+        if (currentNode) {
+          const nextState = currentNode.next(target.value);
+          const childCnt = document.getElementById(currentNode.payload.childCntId);
+          if (nextState) {
+            const payload =
+            childCnt.innerHTML = DecisionInput.template.render(nextState.payload);
+          } else {
+            childCnt.innerHTML = '';
+          }
+        }
+      }
+
+      console.log(targetId);
+    }
+
+    this.html = () => this.payload.html();
+
+    const inputIds = this.payload.inputArray.map((input) => input.id);
+    matchRun('change', `input`, this.onChange);
+    if (this.back() === null) {
+      const targetElem = document.getElementById(targetId);
+      targetElem.innerHTML = DecisionInputTree.template.render(this);
+    }
   }
 }
-Joint.list = {};
-Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
 
-Joint.classes = {};
-Joint.register = (clazz) =>
-  Joint.classes[clazz.prototype.constructor.name] = clazz;
-Joint.new = function (id) {
-  return new Joint.classes[id](...Array.from(arguments).slice(1));
-}
-
-
-class Material extends Cost {
-  constructor (id, method, size, cost) {
-    super(id, method, size, cost);
+DecisionInput.validateInput = (inputArrayOinstance) => {
+  if (Array.isArray(inputArrayOinstance)) {
+    inputArrayOinstance.forEach((instance) => {
+      if (!(instance instanceof Input)) throw new Error('arg3 must be an array exclusivly of/or instance of Input');
+    });
+    return inputArrayOinstance;
   }
+  if (!(inputArrayOinstance instanceof Input)) throw new Error('arg3 must be an array exclusivly of/or instance of Input');
+  return [inputArrayOinstance];
 }
 
-Cost.register(Material);
+DecisionInput.template = new $t('input/decision/decision');
+DecisionInputTree.template = new $t('input/decision/decisionTree');
 
-// new Material('Wood');
-// new Material('Wood.SoftMapel', 'sheet 4x8 75.00', {optionalPercentage: true});
-// new Material('Wood.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Wood.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood');
-// new Material('Plywood.PaintGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.PaintGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.PaintGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.StainGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.StainGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.StainGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Glass');
-// new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
-// new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
+afterLoad.push(() =>{
+  const decisionInput = new DecisionInputTree('booty', 'count', [
+    new Input({
+        type: 'select',
+        placeholder: 'count sucka',
+        name: 'var',
+        class: 'center',
+        list: ['one', 'two', 'three', 'four'],
+        validation: /^(one|two|four)$/,
+        errorMsg: 'lucky number...'
+      }
+    )]);
+  decisionInput.addStates({
+    var2: new Input({
+      type: 'select',
+      placeholder: 'count again sucka',
+      name: 'var2',
+      class: 'center',
+      list: ['five', 'six', 'seven', 'eight'],
+      validation: /^(five|six|seven)$/,
+      errorMsg: 'lucky number...'
+    }),
+    var3: new Input({
+      type: 'select',
+      placeholder: 'count againnn sucka',
+      name: 'var2',
+      class: 'center',
+      list: ['five', 'six', 'seven', 'nine'],
+      validation: /^(five|six|seven)$/,
+      errorMsg: 'lucky number...'
+    }
+  )});
+  decisionInput.then('four').jump('var2').then('six').jump('var3');
+  document.body.innerHTML = decisionInput.payload.html();
+
+});
 
 
 class Assembly {
@@ -5082,16 +5355,51 @@ Assembly.lists = {};
 Assembly.idCounters = {};
 
 
-function drawerBox(length, width, depth) {
-  const bottomHeight = 7/8;
-  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-  box.setColor(1, 0, 0);
-  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-  inside.setColor(0, 0, 1);
-  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-  bInside.setColor(0, 0, 1);
+class Joint {
+  constructor(joinStr) {
+    const match = joinStr.match(Joint.regex);
+    this.malePartCode = match[1];
+    this.femalePartCode = match[2];
 
-  return box.subtract(bInside).subtract(inside);
+    this.updatePosition = () => {};
+
+    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
+    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
+
+    this.maleOffset = () => 0;
+    this.femaleOffset = () => 0;
+    this.setParentAssembly = (pa) => this.parentAssembly = pa;
+
+    this.getDemensions = () => {
+      const malePos = getMale();
+      const femalePos = getFemale();
+      // I created a loop but it was harder to understand
+      return undefined;
+    }
+
+    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
+    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
+    Joint.list[this.malePartCode].push(this);
+    Joint.list[this.femalePartCode].push(this);
+  }
+}
+Joint.list = {};
+Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
+
+Joint.classes = {};
+Joint.register = (clazz) =>
+  Joint.classes[clazz.prototype.constructor.name] = clazz;
+Joint.new = function (id) {
+  return new Joint.classes[id](...Array.from(arguments).slice(1));
+}
+
+
+function pull(length, height) {
+  var rspx = length - .75;
+  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+  return mainCyl.union(lCyl).union(rCyl);
 }
 
 
@@ -5104,43 +5412,6 @@ class DrawerBox extends Assembly {
 DrawerBox.abbriviation = 'db';
 
 Assembly.register(DrawerBox);
-
-
-class DrawerFront extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-    this.setParentAssembly(parent);
-    const instance = this;
-    let pulls;
-    if (demensionStr === undefined) return;
-
-    function pullCount(dems) {
-      if (dems.x < 30) return 1;
-      return 2;
-    }
-
-    this.demensionStr = (attr) => {
-      const dems = demensionStr();
-      return dems;
-    };
-
-    this.children = () => this.updatePulls();
-
-    this.updatePulls = (dems, count) => {
-      count = count || pullCount(this.demensionStr());
-      pulls = [];
-      for (let index = 0; index < count; index += 1) {
-        pulls.push(new Pull(`${partCode}-dfp-${index}`, 'Drawer.Pull', this, Pull.location.CENTER, index, count));
-      }
-      return pulls;
-    };
-    this.updatePosition();
-  }
-}
-
-DrawerFront.abbriviation = 'df';
-
-Assembly.register(DrawerFront);
 
 
 class FrameDivider extends Assembly {
@@ -5476,6 +5747,43 @@ class Rabbet extends Joint {
 }
 
 Joint.register(Rabbet);
+
+
+class DrawerFront extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+    this.setParentAssembly(parent);
+    const instance = this;
+    let pulls;
+    if (demensionStr === undefined) return;
+
+    function pullCount(dems) {
+      if (dems.x < 30) return 1;
+      return 2;
+    }
+
+    this.demensionStr = (attr) => {
+      const dems = demensionStr();
+      return dems;
+    };
+
+    this.children = () => this.updatePulls();
+
+    this.updatePulls = (dems, count) => {
+      count = count || pullCount(this.demensionStr());
+      pulls = [];
+      for (let index = 0; index < count; index += 1) {
+        pulls.push(new Pull(`${partCode}-dfp-${index}`, 'Drawer.Pull', this, Pull.location.CENTER, index, count));
+      }
+      return pulls;
+    };
+    this.updatePosition();
+  }
+}
+
+DrawerFront.abbriviation = 'df';
+
+Assembly.register(DrawerFront);
 
 
 

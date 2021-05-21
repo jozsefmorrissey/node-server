@@ -11,6 +11,9 @@ $t.functions['632351395'] = function (get) {
 $t.functions['633282157'] = function (get) {
 	return `<div class="expandable-list-body" index='` + (get("$index")) + `'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'>X</button> <div class="expand-header ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getHeader")(get("item"), get("$index"))) + ` </div> <div class="expand-body ` + (get("type")) + `" ex-list-id='` + (get("id")) + `' index='` + (get("$index")) + `'> ` + (get("getBody")(get("item"), get("$index"))) + ` </div> </div> </div>`
 }
+$t.functions['897110708'] = function (get) {
+	return `<div > ` + (get("input").html()) + ` <div id='` + (get("childCntId")) + `'></div> </div>`
+}
 $t.functions['990870856'] = function (get) {
 	return `<div class='inline' > <h3>` + (get("assem").objId) + `</h3> <div> ` + (get("getFeatureDisplay")(get("assem"))) + ` </div> </div>`
 }
@@ -61,6 +64,21 @@ $t.functions['features'] = function (get) {
 }
 $t.functions['-666497277'] = function (get) {
 	return `<div > <label>` + (get("feature").name) + `</label> <input type='checkbox' name='` + (get("id") + '-checkbox') + `' ` + (get("feature").isCheckbox() ? '': 'hidden') + `> <input type='text' name='` + (get("id") + '-input') + `' ` + (get("feature").showInput() ? '' : 'hidden') + `> <input class='feature-radio' type='radio' name='` + (get("id")) + `' value='` + (get("feature").id) + `' ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> <div ` + (!get("feature").isRadio() ? '' : 'hidden') + `> <input type='text' placeholder="Unique Notes" ` + (!get("feature").isRadio() ? "hidden disabled" : "") + `> ` + (new $t('features').render({features: get('feature.features'), id: get('id') + '.' + get('feature.id')})) + ` </div> </div>`
+}
+$t.functions['input/input'] = function (get) {
+	return `<div> <input class='` + (get("class")) + `' list='input-list-` + (get("id")) + `' id='` + (get("id")) + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `'> <datalist id="input-list-` + (get("id")) + `"> ` + (new $t('<option value="{{item}}" ></option>').render(get('scope'), 'item in list', get)) + ` </datalist> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
+}
+$t.functions['-994603408'] = function (get) {
+	return `<option value="` + (get("item")) + `" ></option>`
+}
+$t.functions['input/select'] = function (get) {
+	return `<div> <select class='` + (get("class")) + `' id='` + (get("id")) + `' name='` + (get("name")) + `'> ` + (new $t('<option  value=\'{{value}}\'>{{key}}</option>').render(get('scope'), 'key, value in list', get)) + ` </select> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
+}
+$t.functions['-1623324941'] = function (get) {
+	return `<option value='` + (get("value")) + `'>` + (get("key")) + `</option>`
+}
+$t.functions['input/decision/decision'] = function (get) {
+	return ` <span id='` + (get("id")) + `' class='` + (get("scope").constructor.class) + `' node-id=` + (get("_nodeId")) + `> ` + (new $t('<div > {{input.html()}} <div id=\'{{childCntId}}\'></div> </div>').render(get('scope'), 'input in inputArray', get)) + ` <span> `
 }
 $t.functions['login/confirmation-message'] = function (get) {
 	return `<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
@@ -136,4 +154,7 @@ $t.functions['sections/false-front'] = function (get) {
 }
 $t.functions['sections/open'] = function (get) {
 	return `<h2>Open: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['input/decision/decisionTree'] = function (get) {
+	return `<div class='` + (get("class")) + `' tree-id='` + (get("treeId")) + `'> ` + (get("html")()) + ` <button id='` + (get("buttonId")) + `'>Submit</button> </div> `
 }
