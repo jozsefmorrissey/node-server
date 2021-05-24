@@ -46,7 +46,7 @@ class DecisionTree {
         this.states = states;
         this.payload = payload;
         this.jump = (name) => {
-          if (name) jump = getState(name);
+          if (name) jump = getState(name, parent);
           return jump;
         };
         this.then = (name, payload) => {

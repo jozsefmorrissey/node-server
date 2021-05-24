@@ -104,7 +104,7 @@ function endpoints(app, prefix) {
     res.send('success');
   });
 
-  //  ---------------------------- Cabinet -----------------------------//
+  //  ---------------------------- Cost -----------------------------//
 
   app.post(prefix + EPNTS.costs.save(), function (req, res) {
     const user = getUser(req);
@@ -117,7 +117,7 @@ function endpoints(app, prefix) {
     const user = getUser(req);
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Type', 'application/json');
-    res.send(user.loadData('costs'));
+    res.send(user.loadData('costs') || []);
   });
 
   //  ---------------------------- Endpoints -----------------------------//

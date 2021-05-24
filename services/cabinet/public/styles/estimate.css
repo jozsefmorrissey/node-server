@@ -8,6 +8,26 @@
   margin: 0;
 }
 
+.display-manager-item > input {
+  width: 100%;
+  margin: 1pt;
+  border-radius: 5pt;
+  font-weight: 600;
+  background-color: darkgrey;
+  border-width: 1pt;
+}
+
+.display-manager-item > input:hover {
+  border-width: 3pt;
+}
+
+.display-manager-item > input.active {
+  background-color: blue;
+  border-width: 1pt;
+  color: white;
+}
+
+
 .divison-section-cnt {
   border-style: groove;
   padding: 2pt;
@@ -30,11 +50,29 @@
   margin: 2pt;
 }
 
-#logout-btn {
+#menu-btn {
   position: absolute;
   right: 0;
   top: 0;
+  margin: 10pt;
+  font-size: 20pt;
+  border-radius: 20pt;
+  padding: 3pt 10pt;
+  background-color: whitesmoke;
+  border-color: aliceblue;
+}
+
+#menu {
+  position: absolute;
+  right: 0;
+  top: 45pt;
+  border-color: ivory;
+  border-style: ridge;
+  border-radius: 5pt;
+  border-width: 1pt;
   margin: 2pt;
+  padding: 0 5pt;
+
 }
 
 #login {

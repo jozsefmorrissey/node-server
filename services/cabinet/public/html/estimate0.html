@@ -7,22 +7,26 @@
     <link rel="stylesheet" href="/cabinet/styles/estimate.css">
     <title>Estimate</title>
   </head>
-  <body id='booty'>
-    <button id='logout-btn'>Logout</button>
+  <body>
+    <button id='menu-btn'>&#8801;</button>
+    <div id='menu' hidden>hey hey hey</div>
     <div id='login'><div id='login-cnt' class='center-all'></div></div>
-    <div id='app' hidden></div>
-
-    <div id='cost-manager'>
-      <div class="center">
-        <h2 id='cost-manager-header'>
-          Cost Manager
-          <button id='cost-manager-save-btn'>Save</button>
-        </h2>
+    <div id='display-ctn'>
+      <div id='app' name='Orders'></div>
+      <div id='cost-manager' name='Cost Manager'>
+        <div class="center">
+          <h2 id='cost-manager-header'>
+            Cost Manager
+            <button id='cost-manager-save-btn'>Save</button>
+          </h2>
+        </div>
+        <div id="cost-manager-body"></div>
       </div>
-      <div id="cost-manager-body"></div>
+      <div id='booty'></div>
+      <div id='property-display'></div>
     </div>
 
-    <div id='property-display' hidden></div>
+
     <div class='tree-d-model-cnt'>
       <div id="model-controller" hidden></div>
       <div id="three-d-model" class="viewer small">

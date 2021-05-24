@@ -1,7 +1,8 @@
 
-<span id='{{id}}' class='{{scope.constructor.class}}' node-id={{_nodeId}}>
-  <div:t repeat='input in inputArray'>
+<span id='{{id}}'>
+  <div:t repeat='input in inputArray'  class='{{class}}'
+        node-id='{{_nodeId}}' index='{{$index}}'>
     {{input.html()}}
-    <div id='{{childCntId}}'></div>
+    <div id='{{input.childCntId}}'></div>
   </div:t>
 <span>
