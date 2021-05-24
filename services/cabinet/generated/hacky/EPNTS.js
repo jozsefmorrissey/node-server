@@ -103,5 +103,5 @@ const EPNTS = new Endpoints({
     "list": "/list/orders"
   }
 }
-, 'http://localhost:3000/cabinet').getFuncObj();
+, 'https://node.jozsefmorrissey.com/cabinet').getFuncObj();
 try {exports.EPNTS = EPNTS;}catch(e){}

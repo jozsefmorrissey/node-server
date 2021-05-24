@@ -71,7 +71,11 @@
   border-radius: 5pt;
   border-width: 1pt;
   margin: 2pt;
+  z-index: 100;
   padding: 0 5pt;
+  background-color: white;
+}
+
 
 }
 
