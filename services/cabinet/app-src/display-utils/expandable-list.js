@@ -23,16 +23,17 @@ class ExpandableList {
     const afterRenderEvent = new CustomEvent('afterRender');
     const afterAddEvent = new CustomEvent('afterAdd');
     const afterRefreshEvent = new CustomEvent('afterRefresh');
+    props.id = ExpandableList.lists.length;
+    this.id = () => props.id;
     props.list = props.list || [];
     props.inputs = props.inputs || [];
-    props.ERROR_CNT_ID = `error-msg-cnt-${randomString(7)}`;
+    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${this.id}`;
+    props.inputTreeId = `expandable-input-tree-cnt-${this.id}`
     props.type = props.type || 'list';
     props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
     this.findElement = props.findElement;
     props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
     props.getObject = props.getObject || (() => {});
-    props.id = ExpandableList.lists.length;
-    this.id = () => props.id;
     let pendingRefresh = false;
     let lastRefresh = new Date().getTime();
     const storage = {};

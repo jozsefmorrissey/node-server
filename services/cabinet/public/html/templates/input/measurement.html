@@ -1,0 +1,18 @@
+<div class='fit'>
+  <label>{{label}}</label>
+  <input class='measurement-input {{class}}' id='{{id}}'
+      placeholder='{{placeholder}}' type='{{type}}' name='{{name}}'>
+  <div class='flex'>
+    <div class='measurement-radio-cnt'>
+      <input type='radio' name='unit' value='Inch'>
+      <br>
+      Inch
+    </div>
+    <div class='measurement-radio-cnt'>
+      <input type='radio' name='unit' value='Feet'>
+      <br>
+      Feet
+    </div>
+  </div>
+  <div class='error' id='{{errorMsgId}}'>{{errorMsg}}</div>
+</div>

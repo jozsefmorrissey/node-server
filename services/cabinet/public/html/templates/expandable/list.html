@@ -12,6 +12,7 @@
     </div>
   </div:t>
   <div>
+    <div id='input-tree-cnt'>{{inputTree ? inputTree.html() : ''}}</div>
     <span:t repeat='input in inputs'>
       <input list='auto-fill-list-{{input.id}}' id='{{input.id}}'
           placeholder='{{input.placeholder}}' type='text'>

@@ -3,6 +3,7 @@ class Input {
   constructor(props) {
     const instance = this;
     this.type = props.type;
+    this.label = props.label;
     this.name = props.name;
     this.id = props.id || `input-${randomString(7)}`;
     this.placeholder = props.placeholder;
@@ -21,17 +22,19 @@ class Input {
 
     this.on = (eventType, func) => matchRun(eventType, idSelector, func);
     this.validation = (value) => {
+      let valid = true;
       if (props.validation instanceof RegExp) {
-        return value.match(props.validation) !== null;
+        valid = value.match(props.validation) !== null;
       }
-      if ((typeof props.validation) === 'function') {
-        return props.validation(value);
+      else if ((typeof props.validation) === 'function') {
+        valid = props.validation(value);
       }
-      if (Array.isArray(props.validation)) {
-        return props.validation.indexOf(value) !== -1;
+      else if (Array.isArray(props.validation)) {
+        valid = props.validation.indexOf(value) !== -1;
       }
 
-      return true;
+      if (valid) this.value = value;
+      return valid;
     };
 
     matchRun(`change`, `#${this.id}`, (target) => {
@@ -47,14 +50,18 @@ class Input {
 Input.template = new $t('input/input');
 Input.html = (instance) => () => Input.template.render(instance);
 
-// afterLoad.push(() =>
-// document.body.innerHTML = new Input({
-//   type: 'select',
-//   placeholder: '1 || 2 || 3',
-//   name: 'var',
-//   class: 'center',
-//   list: ['one', 'two', 'three', 'four'],
-//   validation: /^(one|two|four)$/,
-//   errorMsg: 'lucky number...'
-// }).html()
-// );
+Input.id = () => new Input({
+    type: 'text',
+    placeholder: 'Id',
+    name: 'id',
+    class: 'center',
+    validation: /^\s*[^\s]{1,}$/,
+    errorMsg: 'You must enter an Id'
+  });
+
+Input.color = () => new Input({
+    type: 'color',
+    placeholder: 'color',
+    name: 'color',
+    class: 'center'
+  });

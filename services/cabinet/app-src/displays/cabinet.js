@@ -46,7 +46,7 @@ class CabinetDisplay {
 
     const valueUpdate = (path, value) => {
       const cabKey = cabinetKey(path);
-      cabKey.cabinet.value(cabKey.key, new Measurment(value).decimal());
+      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
       ThreeDModel.render(cabKey.cabinet);
     }
 
@@ -69,7 +69,7 @@ class CabinetDisplay {
     }
 
     CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-    bindField(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurment.validation('(0,)'));
+    bindField(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
     bindField(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
     matchRun('click', '.save-cabinet-btn', save);
   }

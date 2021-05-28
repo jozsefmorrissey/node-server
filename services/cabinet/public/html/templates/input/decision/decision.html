@@ -1,8 +1,12 @@
 
-<span id='{{id}}'>
-  <div:t repeat='input in inputArray'  class='{{class}}'
-        node-id='{{_nodeId}}' index='{{$index}}'>
-    {{input.html()}}
-    <div id='{{input.childCntId}}'></div>
+<div>
+  <span id='{{id}}' class='inline-flex'>
+    <span:t repeat='input in inputArray' class='pad {{class}}'
+          node-id='{{_nodeId}}' index='{{$index}}'>
+      {{input.html()}}
+    </span:t>
+  </span>
+  <div:t repeat='input in inputArray' id='{{input.childCntId}}'>
+    {{childHtml($index)}}
   </div:t>
-<span>
+</div>

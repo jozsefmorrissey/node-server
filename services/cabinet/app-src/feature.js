@@ -57,7 +57,7 @@ Feature.getList = (id) => {
 }
 Feature.formatName = (match) => ` ${match[1].toUpperCase()}`;
 
-new Feature('thickness', undefined, {inputValidation: (value) => !new Measurment(value).isNaN()});
+new Feature('thickness', undefined, {inputValidation: (value) => !new Measurement(value).isNaN()});
 new Feature('inset');
 new Feature('fullOverlay');
 new Feature('1/8');

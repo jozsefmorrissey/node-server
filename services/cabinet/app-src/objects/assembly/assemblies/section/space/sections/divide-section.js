@@ -16,7 +16,6 @@ class DivideSection extends SpaceSection {
       if (this.vertical()) this.value('vPattern', {name, index, value});
       else this.value('hPattern', {name, index, value});
     }
-    this.measurments = [];
     this.dividerCount = () => Math.ceil((this.sections.length - 1) / 2);
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
     this.sectionProperties = () => JSON.stringify(sectionProperties);

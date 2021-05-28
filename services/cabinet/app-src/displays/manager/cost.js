@@ -1,3 +1,4 @@
+
 class CostManager {
   constructor(id, costs) {
     costs = costs || [];
@@ -54,11 +55,7 @@ class CostManager {
 
     const expListProps = {
       list: costs,
-      inputs: [{placeholder: 'Id'},
-                {placeholder: 'Type', autofill: Cost.typeList},
-                {placeholder: 'Method', autofill: Cost.methodList},
-                {placeholder: 'Size'},
-                {placeholder: 'Cost'}],
+      inputTree: CostManager.inputTree(console.log),
       parentSelector, getHeader, getBody, getObject, inputValidation,
       listElemLable: 'Cost'
     };
@@ -78,6 +75,39 @@ class CostManager {
 
 CostManager.bodyTemplate = new $t('managers/cost/body');
 CostManager.headTemplate = new $t('managers/cost/header');
+CostManager.inputTree = (callback) => {
+  const idTypeMethod = [Input.id(), Select.type(), Select.method()];
+
+  const length = MeasurementInput.len();
+  const width = MeasurementInput.width();
+  const depth = MeasurementInput.depth();
+  const cost = MeasurementInput.cost();
+  const lengthCost = [length, cost];
+  const lengthWidthCost = [length, width, cost];
+  const lengthWidthDepthCost = [length, width, depth, cost];
+  const color = [Input.color()];
+
+  const decisionInput = new DecisionInputTree('id',
+    idTypeMethod, callback);
+
+  decisionInput.addStates({
+    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
+  });
+
+  decisionInput.then(`method:${Cost.methods.LINEAR_FEET}`)
+        .jump('lengthCost');
+  decisionInput.then(`method:${Cost.methods.SQUARE_FEET}`)
+        .jump('lengthWidthCost');
+  decisionInput.then(`method:${Cost.methods.CUBIC_FEET}`)
+        .jump('lengthWidthDepthCost');
+  decisionInput.then(`method:${Cost.methods.UNIT}`)
+        .jump('cost');
+  decisionInput.then('type:Material').jump('color');
+
+  document.getElementById('booty').innerHTML = decisionInput.html();
+  return decisionInput;
+
+}
 
 afterLoad.push(() => {
   function loadCosts(costsJson) {

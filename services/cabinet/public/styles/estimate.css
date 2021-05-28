@@ -8,6 +8,21 @@
   margin: 0;
 }
 
+.measurement-input {
+    width: 50pt;
+}
+
+.measurement-radio-cnt {
+  text-align: center;
+  margin: auto;
+  font-size: 6pt;
+}
+
+.measurement-radio-cnt > input {
+  width: 6pt;
+  height: 6pt;
+}
+
 .display-manager-item > input {
   width: 100%;
   margin: 1pt;
@@ -109,6 +124,10 @@ a {
   margin: 5pt;
 }
 
+.pad {
+  padding: 3pt;
+}
+
 #model-controller {
   position: absolute;
   top: 0;
@@ -178,6 +197,18 @@ canvas {
 
 .right {
   float: right;
+}
+
+.flex {
+  display: flex;
+}
+
+.inline-flex {
+  display: inline-flex;
+}
+
+.fit {
+  width: fit-content;
 }
 
 .cabinet-header {
