@@ -40,7 +40,8 @@ class OrderDisplay {
       inputValidation: (values) => values.name ? true :
           'You must Define a name',
       parentSelector, getHeader, getBody, getObject,
-      listElemLable: 'Order', type: 'sidebar'
+      listElemLable: 'Order', type: 'sidebar',
+      inputTree: new DecisionInputTree('Order', Input.Name(), console.log)
     };
     const expandList = new ExpandableList(expListProps);
     expandList.afterRender(() => {if (active !== undefined) active.refresh()});

@@ -8,7 +8,7 @@ OpenSectionDisplay.html = (opening) => {
   return OpenSectionDisplay.template.render({opening, openDispId});
 }
 
-OpenSectionDisplay.getSelectId = (opening) => `opin-division-patturn-select-${opening.uniqueId}`;
+OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.uniqueId}`;
 OpenSectionDisplay.template = new $t('opening');
 OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
 OpenSectionDisplay.listHeadTemplate = new $t('divide/head');

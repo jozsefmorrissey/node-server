@@ -13,21 +13,21 @@ MeasurementInput.evaluator = new StringMathEvaluator(Math);
 MeasurementInput.len = () => new MeasurementInput({
   type: 'text',
   placeholder: 'Length',
-  name: 'size',
+  name: 'length',
   class: 'center',
 });
 MeasurementInput.width = () => new MeasurementInput({
   type: 'text',
   label: 'x',
   placeholder: 'Width',
-  name: 'size',
+  name: 'width',
   class: 'center',
 });
 MeasurementInput.depth = () => new MeasurementInput({
   type: 'text',
   label: 'x',
   placeholder: 'Depth',
-  name: 'size',
+  name: 'depth',
   class: 'center',
 });
 MeasurementInput.cost = () => new MeasurementInput({

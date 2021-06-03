@@ -194,6 +194,7 @@ class User {
     }
 
     this.list = (dirPath) => {
+      console.log('dir:', this.dataDirectory(dirPath))
       let list = shell.ls(this.dataDirectory(dirPath)).stdout;
       if (!list) return [];
       list = list.trim().split('\n');
@@ -305,7 +306,8 @@ class User {
 }
 
 User.fromJson = (json) => new User(json.email, json.password, json.token);
-User.directory = shell.exec('realpath ~/.opsc/cabinet/user/').stdout.trim() + '/';
+User.homeDirectory = shell.exec('realpath ~').stdout.trim();
+User.directory = `${User.homeDirectory}/.opsc/cabinet/user/}`;
 User.RESET = 'reset';
 User.experation = () => new Date().getTime() + 15552000000; // 6 Months
 User.randomString = function (len) {

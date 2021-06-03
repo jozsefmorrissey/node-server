@@ -9,7 +9,7 @@ class DecisionInputTree extends DecisionTree{
         this.childCntId = `decision-child-ctn-${randomString()}`
         this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance);
         this.class = DecisionInput.class;
-        this.getValue = (index) => this.inputArray[index].value;
+        this.getValue = (index) => this.inputArray[index].value();
 
         this.html = () => {
           console.log('NODE:', getNode(this._nodeId));
@@ -30,8 +30,11 @@ class DecisionInputTree extends DecisionTree{
     if ((typeof name) !== 'string') throw Error('name(arg2) must be defined as a string');
 
 
-
+    const root = this;
+    const onCompletion = [];
     this.treeId = randomString();
+    this.buttonClass = `tree-submit`;
+    const buttonSelector = `.${this.buttonClass}[tree-id='${this.treeId}']`;
     this.class = `decision-input-tree`;
     const getNode = this.getNode;
     const parentAddState = this.addState;
@@ -48,12 +51,6 @@ class DecisionInputTree extends DecisionTree{
       return parentAddStates(states)
     }
 
-    this.values = (node) => {
-      const values = {};
-      node.routePayloads().forEach((input) => values[input.name] = input.value);
-      return values;
-    };
-
     const stepId = (node, index) => {
       const inputArray = node.payload.inputArray;
       const input = inputArray[index];
@@ -62,15 +59,43 @@ class DecisionInputTree extends DecisionTree{
       return inputArray.length === 1 ? value : `${name}:${value}`;
     }
 
+    function forEachInput(func) {
+      let nodes = [root];
+      while (nodes.length !== 0) {
+        const node = nodes[0];
+        const inputs = node.payload.inputArray;
+        for (let index = 0; index < inputs.length; index += 1) {
+          const input = inputs[index];
+          func(inputs[index]);
+          const nextNode = node.next(stepId(node, index));
+          if (nextNode) nodes.push(nextNode);
+        }
+        nodes.splice(0, 1);
+      }
+    }
+
+    function formFilled() {
+      let filled = true;
+      forEachInput((input) => filled = filled && input.valid());
+      return filled;
+    }
+
+    function values() {
+      const values = {};
+      forEachInput((input) => values[input.name] = input.value());
+      return values;
+    }
+    this.values = values;
+
     this.onChange = (target) => {
       const parentDecisionCnt = up(`.${DecisionInput.class}`, target);
       if (parentDecisionCnt) {
         const nodeId = parentDecisionCnt.getAttribute('node-id');
         const index = parentDecisionCnt.getAttribute('index');
         const currentNode = this.getNode(nodeId);
-        const currentInput = currentNode.payload.inputArray[index];
         if (currentNode) {
-          currentInput.value = target.value;
+          const currentInput = currentNode.payload.inputArray[index];
+          currentInput.setValue(target.value);
           const stepLen = Object.keys(currentNode.states).length;
           if (stepLen) {
             const inputCount = currentNode.payload.inputArray.length;
@@ -82,17 +107,29 @@ class DecisionInputTree extends DecisionTree{
             } else {
               childCnt.innerHTML = '';
             }
-          } else {
-            onComplete(this.values(currentNode));
           }
         }
       }
+
+      document.querySelector(buttonSelector).disabled = !formFilled();
     }
 
     this.html = () => DecisionInputTree.template.render(this);
+    this.onComplete = (func) => {
+      if ((typeof func) === 'function') onCompletion.push(func);
+    };
+    this.onComplete(onComplete);
 
     const inputIds = this.payload.inputArray.map((input) => input.id);
-    matchRun('change', `input,select`, this.onChange);
+    const inputSelector = `#${inputIds.join(',#')}`;
+    matchRun('change', inputSelector, this.onChange);
+    matchRun('keyup', inputSelector, this.onChange);
+    matchRun('click', buttonSelector, () => {
+      const vals = values();
+      for(let index = 0; index < onCompletion.length; index += 1) {
+        onCompletion[index](vals);
+      }
+    });
   }
 }
 

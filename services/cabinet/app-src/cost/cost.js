@@ -1,12 +1,14 @@
 class Cost {
-  constructor(id, method, size, cost) {
-    const configuration = Cost.configure(method, size, cost);
+  constructor(id, method, cost, length, width, depth) {
+    const configuration = Cost.configure(method, cost, length, width, depth);
     const formula = configuration.formula;
     const unitCost = configuration.unitCost;
     let percentage = 100;
     this.id = () => id;
     this.method = () => method;
-    this.size = () => size;
+    this.length = () => length;
+    this.width = () => width;
+    this.depth = () => depth;
     this.cost = () => cost;
     this.unitCost = () => JSON.parse(JSON.stringify(unitCost));
 
@@ -20,7 +22,7 @@ class Cost {
     this.toJson = () => {
       return {
         type: this.constructor.name,
-        id, method, size, cost
+        id, method, length, width, depth, cost
       };
     }
   }
@@ -35,18 +37,14 @@ Cost.methods = {
   UNIT: 'Unit'
 },
 Cost.methodList = Object.values(Cost.methods);
-Cost.configure = (method, size, cost) => {
-  const splitSize = size.toLowerCase().split('x');
-  const length = splitSize[0];
-  const width = splitSize[1];
-  const depth = splitSize[2];
+Cost.configure = (method, cost, length, width, depth) => {
   const retValue = {unitCost: {}};
   switch (method) {
     case Cost.methods.LINEAR_FEET:
       const perLinearInch = Cost.evaluator.eval(`${cost}/(${length} * 12)`);
       retValue.unitCost.name = 'Linear Inch';
       retValue.unitCost.value = perLinearInch;
-      retValue.formula = `${perLinearInch}*l*w`;
+      retValue.formula = `${perLinearInch}*l`;
       return retValue;
     case Cost.methods.SQUARE_FEET:
       const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*144)`);
@@ -92,13 +90,13 @@ Cost.register = (clazz) => {
   Cost.typeList = Object.keys(Cost.types);
 }
 
-Cost.new = function(type, id, method, size, cost) {
+Cost.new = function(type) {
   return new Cost.types[type](...Array.from(arguments).slice(1))
 }
 
 Cost.fromJson = (objOrArray) => {
   function instanceFromJson(obj) {
-    return Cost.new(obj.type, obj.id, obj.method, obj.size, obj.cost);
+    return Cost.new(obj.type, obj.id, obj.method, obj.cost, obj.length, obj.width, obj.depth);
   }
   if (!Array.isArray(objOrArray)) return instanceFromJson(objOrArray);
 

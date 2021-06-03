@@ -12,6 +12,15 @@ class CabinetConfig {
 
     this.onUpdate = (func) => updateEvent.on(func);
     this.list = () => configKeys.concat(cabinetKeys);
+    this.inputTree = () => {
+      const typeInput = new Select({
+        placeholder: 'Type',
+        name: 'type',
+        class: 'center',
+        list: this.list()
+      });
+      return new DecisionInputTree('Cabinet', [Input.id(), typeInput], console.log);
+    }
     this.get = (name) => {
       if (configKeys.indexOf(name) !== -1) return Cabinet.build(name);
       return Cabinet.fromJson(cabinetList[name]);

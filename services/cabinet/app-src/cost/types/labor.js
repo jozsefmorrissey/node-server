@@ -1,6 +1,6 @@
 class Labor extends Cost {
-  constructor (id, method, size, cost) {
-    super(id, method, size, cost)
+  constructor (id, method, cost, length, width, depth) {
+    super(id, method, cost, length, width, depth);
   }
 }
 

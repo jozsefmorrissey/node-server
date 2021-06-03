@@ -9,7 +9,7 @@ class Input {
     this.placeholder = props.placeholder;
     this.class = props.class;
     this.list = props.list || [];
-    this.valid = false;
+    let valid, value;
 
     props.errorMsg = props.errorMsg || 'Error';
 
@@ -21,43 +21,75 @@ class Input {
     this.html = html;
 
     this.on = (eventType, func) => matchRun(eventType, idSelector, func);
-    this.validation = (value) => {
-      let valid = true;
+    this.valid = () => valid !== undefined ? this.setValue() : valid;
+    this.setValue = (val) => {
+      if (val === undefined){
+        const elem = document.getElementById(this.id);
+        if (elem) val = elem.value;
+      }
+      if(this.validation(val)) {
+        valid = true;
+        value = val;
+        return true;
+      }
+      valid = false;
+      value = undefined;
+      return false;
+    }
+    this.value = () => value;
+    this.validation = (val) => {
+      if (val === undefined) return false;
+      if (val === value) return valid;
+      let valValid = true;
       if (props.validation instanceof RegExp) {
-        valid = value.match(props.validation) !== null;
+        valValid = val.match(props.validation) !== null;
       }
       else if ((typeof props.validation) === 'function') {
-        valid = props.validation(value);
+        valValid = props.validation(val);
       }
       else if (Array.isArray(props.validation)) {
-        valid = props.validation.indexOf(value) !== -1;
+        valValid = props.validation.indexOf(val) !== -1;
       }
 
-      if (valid) this.value = value;
-      return valid;
+      return valValid;
     };
 
-    matchRun(`change`, `#${this.id}`, (target) => {
-      if (this.validation(target.value)) {
+    const validate = (target) => {
+      if (this.setValue(target.value)) {
         document.getElementById(this.errorMsgId).innerHTML = '';
+        valid = true;
       } else {
         document.getElementById(this.errorMsgId).innerHTML = props.errorMsg;
+        valid = false;
       }
-    });
+    }
+
+    matchRun(`change`, `#${this.id}`, validate);
+    matchRun(`keyup`, `#${this.id}`, validate);
   }
 }
 
 Input.template = new $t('input/input');
 Input.html = (instance) => () => Input.template.render(instance);
 
+
 Input.id = () => new Input({
-    type: 'text',
-    placeholder: 'Id',
-    name: 'id',
-    class: 'center',
-    validation: /^\s*[^\s]{1,}$/,
-    errorMsg: 'You must enter an Id'
-  });
+  type: 'text',
+  placeholder: 'Id',
+  name: 'id',
+  class: 'center',
+  validation: /^\s*[^\s]{1,}\s*$/,
+  errorMsg: 'You must enter an Id'
+});
+
+Input.Name = () => new Input({
+  type: 'text',
+  placeholder: 'Name',
+  name: 'name',
+  class: 'center',
+  validation: /^\s*[^\s].*$/,
+  errorMsg: 'You must enter a Name'
+});
 
 Input.color = () => new Input({
     type: 'color',

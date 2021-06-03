@@ -23,6 +23,7 @@ class ExpandableList {
     const afterRenderEvent = new CustomEvent('afterRender');
     const afterAddEvent = new CustomEvent('afterAdd');
     const afterRefreshEvent = new CustomEvent('afterRefresh');
+    const instance = this;
     props.id = ExpandableList.lists.length;
     this.id = () => props.id;
     props.list = props.list || [];
@@ -44,16 +45,20 @@ class ExpandableList {
         document.getElementById(props.ERROR_CNT_ID).innerHTML = msg;
     }
 
-    this.add = () => {
-      const inputValues = {};
+    function values() {
+      if (instance.hasInputTree()) return props.inputTree.values();
+      const values = {};
       props.inputs.forEach((input) =>
-        inputValues[input.placeholder] = document.getElementById(input.id).value);
+        values[input.placeholder] = document.getElementById(input.id).value);
+      return values;
+    }
+
+    this.add = () => {
+      const inputValues = values();
       if ((typeof props.inputValidation) !== 'function' ||
               props.inputValidation(inputValues) === true) {
         props.list.push(props.getObject(inputValues));
 
-        console.log(Cost.fromJson(props.list[0].toJson()));
-        // props.list[0].calc(new Panel('p','panel', undefined, '4*12,8*12,.75'));
         this.activeIndex(props.list.length - 1);
         this.refresh();
         afterAddEvent.trigger();
@@ -69,6 +74,11 @@ class ExpandableList {
         setErrorMsg(errorStr);
       }
     };
+    this.hasInputTree = () =>
+      props.inputTree && props.inputTree.constructor.name === 'DecisionNode';
+    if (this.hasInputTree()) props.inputTree.onComplete(this.add);
+    props.hasInputTree = this.hasInputTree;
+
     this.isSelfClosing = () => props.selfCloseTab;
     this.remove = (index) => {
       props.list.splice(index, 1);

@@ -28,6 +28,7 @@ class CabinetDisplay {
     this.active = () => expandList.active();
     const expListProps = {
       list: room.cabinets,
+      inputTree:   CabinetConfig.inputTree(),
       inputs: [{placeholder: 'name'},
                 {placeholder: 'type', autofill: CabinetConfig.list()}],
       parentSelector, getHeader, getBody, getObject, inputValidation,

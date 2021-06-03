@@ -107,17 +107,53 @@ function endpoints(app, prefix) {
   //  ---------------------------- Cost -----------------------------//
 
   app.post(prefix + EPNTS.costs.save(), function (req, res) {
-    const user = getUser(req);
-    console.log('body:', req.body);
     getUser(req).saveData(`costs`, req.body);
     res.send('success');
   });
 
   app.get(prefix + EPNTS.costs.get(), function (req, res) {
-    const user = getUser(req);
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Type', 'application/json');
-    res.send(user.loadData('costs') || []);
+    res.send(getUser(req).loadData('costs') || []);
+  });
+
+  //  ---------------------------- Template -----------------------------//
+
+  app.post(prefix + EPNTS.templates.save(), function (req, res) {
+    getUser(req).saveData(`templates`, req.body);
+    res.send('success');
+  });
+
+  app.get(prefix + EPNTS.templates.get(), function (req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Type', 'application/json');
+    res.send(getUser(req).loadData('templates') || []);
+  });
+
+  //  ---------------------------- Properties -----------------------------//
+
+  app.post(prefix + EPNTS.properties.save(), function (req, res) {
+    getUser(req).saveData(`properties`, req.body);
+    res.send('success');
+  });
+
+  app.get(prefix + EPNTS.properties.get(), function (req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Type', 'application/json');
+    res.send(getUser(req).loadData('properties') || []);
+  });
+
+  //  ---------------------------- Pattern -----------------------------//
+
+  app.post(prefix + EPNTS.patterns.save(), function (req, res) {
+    getUser(req).saveData(`patterns`, req.body);
+    res.send('success');
+  });
+
+  app.get(prefix + EPNTS.patterns.get(), function (req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Type', 'application/json');
+    res.send(getUser(req).loadData('patterns') || []);
   });
 
   //  ---------------------------- Endpoints -----------------------------//

@@ -97,6 +97,18 @@ const EPNTS = new Endpoints({
     "save": "/costs/save",
     "get": "/costs/get"
   },
+  "patterns": {
+    "save": "/patterns/save",
+    "get": "/patterns/get"
+  },
+  "properties": {
+    "save": "/properties/save",
+    "get": "/properties/get"
+  },
+  "templates": {
+    "save": "/templates/save",
+    "get": "/templates/get"
+  },
   "order": {
     "add": "/order/:id",
     "get": "/order/:id",
