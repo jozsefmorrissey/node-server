@@ -29,7 +29,7 @@ class RoomDisplay {
       inputs: [{placeholder: 'name'}],
       inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
       listElemLable: 'Room', type: 'pill',
-      inputTree: new DecisionInputTree('Cabinet', Input.Name(), console.log)
+      inputTree: new DecisionInputTree('Room', Input.Name(), console.log)
     };
     const expandList = new ExpandableList(expListProps);
     expandList.afterRender(() => this.cabinetDisplay().refresh());

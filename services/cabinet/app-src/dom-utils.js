@@ -145,11 +145,14 @@ function matchRun(event, selector, func, target) {
     selectors[matchRunTargetId][event] = {};
     target.addEventListener(event, runMatch);
   }
-  if (selectors[matchRunTargetId][event][selector] === undefined) {
+  if ( selectors[matchRunTargetId][event][selector] === undefined) {
     selectors[matchRunTargetId][event][selector] = [];
   }
 
-  selectors[matchRunTargetId][event][selector].push(func);
+  const selectorArray = selectors[matchRunTargetId][event][selector];
+  // if (selectorArray.indexOf(func) !== -1) {
+    selectorArray.push(func);
+  // }
 }
 
 function bindField(selector, objOrFunc, validation) {

@@ -53,12 +53,9 @@ OpenSectionDisplay.updateDividers = (opening) => {
   const dividerControlsCnt = document.querySelector(selector);
   const selectPatternId = OpenSectionDisplay.getSelectId(opening);
   bindField(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/);
-  const patternConfig = opening.dividerLayout();
-  const fill = patternConfig.fill;
-  const pattern = opening.pattern();
   const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
   dividerControlsCnt.innerHTML = OpenSectionDisplay.dividerControlTemplate.render(
-          {opening, fill, pattern, selectPatternId, patternInputHtml});
+          {opening, selectPatternId, patternInputHtml});
 }
 
 OpenSectionDisplay.changeIds = {};
@@ -81,14 +78,24 @@ OpenSectionDisplay.refresh = (opening) => {
   }, 500);
 }
 
+OpenSectionDisplay.patternContainerSelector = (opening) =>
+  `.open-pattern-input-cnt[opening-id='${opening.uniqueId}']`;
+
 OpenSectionDisplay.patterInputHtml = (opening) => {
   const pattern = opening.pattern();
+  const patCntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+
   let inputHtml = '';
   for (let index = 0; index < pattern.unique.length; index += 1) {
     const id = pattern.unique[index];
-    const measInput = MeasurementInput.pattern(id, pattern.value(id))
+    let fill = opening.dividerLayout().fill;
+    const measInput = MeasurementInput.pattern(id, fill[index]);
     measInput.on('keyup', (target) => {
       opening.pattern().value(target.name, OpenSectionDisplay.evaluator.eval(target.value));
+      fill = opening.dividerLayout().fill;
+      const patternCnt = document.querySelector(patCntSelector);
+      const inputs = patternCnt.querySelectorAll('input');
+      fill.forEach((value, index) => inputs[index].value = value);
       if (opening.pattern().satisfied()) {
         const cabinet = opening.getAssembly('c');
         ThreeDModel.render(cabinet);
@@ -99,15 +106,32 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
   return inputHtml;
 };
 
+OpenSectionDisplay.getOpening = (target) => {
+  const openId = target.getAttribute('opening-id');
+  return OpenSectionDisplay.sections[openId];
+}
+
 OpenSectionDisplay.evaluator = new StringMathEvaluator();
 OpenSectionDisplay.patternInputChange = (target) => {
-  const openId = up('.open-pattern-input-cnt', target);
-  const opening = OpenSectionDisplay.sections[openId];
+  const opening = OpenSectionDisplay.getOpening(up('.open-pattern-input-cnt', target));
   opening.pattern().value(target.name, OpenSectionDisplay.evaluator(target.value));
   if (opening.pattern().satisfied()) {
     OpenSectionDisplay.refresh(opening);
   }
 };
+
+OpenSectionDisplay.patternInputSelector = (opening) =>
+  `[name='pattern'][opening-id='${opening.uniqueId}']`;
+
+OpenSectionDisplay.onPatternChange = (target) => {
+  const opening = OpenSectionDisplay.getOpening(target);
+  const newVal = target.value;
+  if (newVal !== opening.pattern().str && newVal === opening.pattern(newVal).str) {
+    const cntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+    const html = OpenSectionDisplay.patterInputHtml(opening);
+    document.querySelector(cntSelector).innerHTML = html;
+  }
+}
 
 OpenSectionDisplay.onChange = (target) => {
   const id = target.getAttribute('opening-id');
@@ -119,7 +143,7 @@ OpenSectionDisplay.onChange = (target) => {
     ThreeDModel.render(cabinet);
   }
 
-  const patternInput = document.querySelector(`[name='pattern'][opening-id='${opening.uniqueId}']`);
+  const patternInput = document.querySelector(OpenSectionDisplay.patternInputSelector(opening));
   const patternStr = patternInput.value;
   const pattern = opening.pattern(patternStr);
   patternInput.value = pattern.str;
@@ -142,6 +166,7 @@ OpenSectionDisplay.onSectionChange = (target) => {
   updateModel(section);
 }
 
+matchRun('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
 matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
 matchRun('keyup', '.patternInput', OpenSectionDisplay.patternInputChange);
 matchRun('click', '.division-count-input', OpenSectionDisplay.onChange);

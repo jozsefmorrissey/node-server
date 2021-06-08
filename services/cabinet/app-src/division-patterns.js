@@ -72,7 +72,6 @@ class Pattern {
       for (let index = 0; index < str.length; index += 1)
         list[index] = values[str[index]];
       const retObj = {values, list, fill};
-      console.log('retObj:', retObj);
       return retObj;
     }
 
@@ -94,7 +93,6 @@ class Pattern {
 
     this.elements = elements;
     this.calc = calc;
-    console.log('breakdown:', this);
   }
 }
 

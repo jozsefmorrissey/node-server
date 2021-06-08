@@ -1,6 +1,6 @@
 <div class='fit'>
   <label>{{label}}</label>
-  <input class='measurement-input {{class}}' id='{{id}}'
+  <input class='measurement-input {{class}}' id='{{id}}' value='{{value() ? value() : ""}}'
       placeholder='{{placeholder}}' type='{{type}}' name='{{name}}'>
   <div class='error' id='{{errorMsgId}}'>{{errorMsg}}</div>
 </div>

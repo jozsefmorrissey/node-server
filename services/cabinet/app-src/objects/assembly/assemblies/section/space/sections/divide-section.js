@@ -11,11 +11,11 @@ class DivideSection extends SpaceSection {
     this.sections = [];
     this.pattern = (patternStr) => {
       const patternProp = this.vertical() ? 'vPattern' : 'hPattern';
-      if ((typeof patternStr) === 'string') {
+      const count = this.sectionCount();
+      if ((typeof patternStr) === 'string' && patternStr.length === count) {
         this.value(patternProp, new Pattern(patternStr));
       } else {
         const pat = this.value(patternProp);
-        const count = this.sectionCount();
         if (!pat || pat.str.length !== count)
           this.value(patternProp, new Pattern(new Array(count).fill('a').join('')));
       }

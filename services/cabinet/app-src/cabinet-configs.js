@@ -26,7 +26,7 @@ class CabinetConfig {
       return Cabinet.fromJson(cabinetList[name]);
     };
     setTimeout(() =>
-      Request.get(EPNTS.cabinet.list(), setList), 200);
+      Request.get(EPNTS.cabinet.list(), setList, () => setList([])), 200);
   }
 }
 

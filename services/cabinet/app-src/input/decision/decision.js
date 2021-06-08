@@ -12,7 +12,6 @@ class DecisionInputTree extends DecisionTree{
         this.getValue = (index) => this.inputArray[index].value();
 
         this.html = () => {
-          console.log('NODE:', getNode(this._nodeId));
           return DecisionInput.template.render(this);
         }
 
