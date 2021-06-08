@@ -9,12 +9,17 @@ class DivideSection extends SpaceSection {
     this.vertical = (is) => this.value('vertical', is);
     this.vertical(true);
     this.sections = [];
-    this.value('vPattern', {name: 'Equal'});
-    this.value('hPattern', {name: 'Equal'});
-    this.pattern = (name, index, value) => {
-      if (name === undefined) return this.vertical() ? this.value('vPattern') : this.value('hPattern');
-      if (this.vertical()) this.value('vPattern', {name, index, value});
-      else this.value('hPattern', {name, index, value});
+    this.pattern = (patternStr) => {
+      const patternProp = this.vertical() ? 'vPattern' : 'hPattern';
+      if ((typeof patternStr) === 'string') {
+        this.value(patternProp, new Pattern(patternStr));
+      } else {
+        const pat = this.value(patternProp);
+        const count = this.sectionCount();
+        if (!pat || pat.str.length !== count)
+          this.value(patternProp, new Pattern(new Array(count).fill('a').join('')));
+      }
+      return this.value(patternProp);
     }
     this.dividerCount = () => Math.ceil((this.sections.length - 1) / 2);
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
@@ -58,7 +63,7 @@ class DivideSection extends SpaceSection {
     }
     this.dividerProps = (index) => {
       return () => {
-        const answer = this.calcSections().list;
+        const answer = this.dividerLayout().list;
         let offset = 0;
         for (let i = 0; i < index + 1; i += 1) offset += answer[i];
         let props = sectionProperties();
@@ -81,21 +86,12 @@ class DivideSection extends SpaceSection {
         return {center, dividerLength, rotationFunc, index};
       }
     }
-    this.calcSections = (pattern, index, value) => {
-      if (pattern && (typeof pattern.name) === 'string' && typeof(index + value) === 'number') {
-        this.pattern(pattern.name, index, value);
-      } else {
-        pattern = DivisionPattern.patterns[this.pattern().name];
-      }
 
-      const config = this.pattern();
-      const props = sectionProperties();
+    this.sectionCount = () => this.dividerCount() + 1;
+    this.dividerLayout = () => {
       const distance = this.vertical() ? this.outerSize().x : this.outerSize().y;
-      const count = this.dividerCount() + 1;
-      const answer = pattern.resolution(distance, config.index, config.value, count);
-      config.fill = answer.fill;
-      return answer;
-    }
+      return this.pattern().calc(distance);
+    };
     this.divide = (dividerCount) => {
       if (!Number.isNaN(dividerCount)) {
         dividerCount = dividerCount > 10 ? 10 : dividerCount;

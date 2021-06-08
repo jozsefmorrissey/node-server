@@ -211,8 +211,13 @@ ThreeDModel.get = (assembly) => {
   }
   return ThreeDModel.models[assembly.uniqueId];
 }
-ThreeDModel.render = (part) => ThreeDModel.get(part).render();
-
+ThreeDModel.render = (part) => {
+  const renderId = randomString();
+  ThreeDModel.renderId = renderId;
+  setTimeout(() => {
+    if(ThreeDModel.renderId === renderId) ThreeDModel.get(part).render();
+  }, 250);
+};
 
 
 function displayPart(part) {

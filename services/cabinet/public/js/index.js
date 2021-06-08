@@ -1933,7 +1933,7 @@ $t.functions['divide/head'] = function (get) {
 	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.prototype.constructor.name}}\' {{opening.constructorId === section.name ? \'selected\' : \'\'}}> {{clean(section.name)}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
 }
 $t.functions['divider-controls'] = function (get) {
-	return `<div> <label>Dividers:</label> <input type="number" min="0" max="10" step="1" class='division-count-input' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").dividerCount()) + `'> <span class="open-orientation-radio-cnt ` + (get("opening").dividerCount() > 0 ? '' : 'hidden') + `"> <label for='open-orientation-horiz-` + (get("opening").uniqueId) + `'>Horizontal:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='horizontal' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-horiz-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? '' : 'checked') + `> <label for='open-orientation-vert-` + (get("opening").uniqueId) + `'>Vertical:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='vertical' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-vert-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? 'checked' : '') + `> </span> <select class='open-pattern-select ` + ( get("opening").dividerCount() > 0 ? '' : 'hidden') + `' id='` + (get("selectPatternId")) + `' prop-update='pattern' divisions=` + (get("opening").dividerCount()) + `> ` + (get("patterns")) + ` </select> ` + (new $t('<span class=\'input-html-cnt-{{opening.uniqueId}}\' > <label>{{label}}</label> <input class=\'division-pattern-input\' name=\'{{pattern.name}}\' index=\'{{$index}}\' value=\'{{fill ? fill[$index] : ""}}\'> </span>').render(get('scope'), 'label in pattern.inputArr', get)) + ` </div> `
+	return `<div> <label>Dividers:</label> <input type="number" min="0" max="10" step="1" class='division-count-input' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").dividerCount()) + `'> <span class="open-orientation-radio-cnt ` + (get("opening").dividerCount() > 0 ? '' : 'hidden') + `"> <label for='open-orientation-horiz-` + (get("opening").uniqueId) + `'>Horizontal:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='horizontal' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-horiz-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? '' : 'checked') + `> <label for='open-orientation-vert-` + (get("opening").uniqueId) + `'>Vertical:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='vertical' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-vert-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? 'checked' : '') + `> </span> <span> <input type='text' name='pattern' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").pattern().str) + `'> <div class='open-pattern-input-cnt' opening-id='` + (get("opening").uniqueId) + `'> ` + (get("patternInputHtml")) + ` </div> </div> `
 }
 $t.functions['-1178631413'] = function (get) {
 	return `<span class='input-html-cnt-` + (get("opening").uniqueId) + `' > <label>` + (get("label")) + `</label> <input class='division-pattern-input' name='` + (get("pattern").name) + `' index='` + (get("$index")) + `' value='` + (get("fill") ? get("fill")[get("$index")] : "") + `'> </span>`
@@ -1981,7 +1981,7 @@ $t.functions['-994603408'] = function (get) {
 	return `<option value="` + (get("item")) + `" ></option>`
 }
 $t.functions['input/measurement'] = function (get) {
-	return `<div class='fit'> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='flex'> <div class='measurement-radio-cnt'> <input type='radio' name='unit' value='Inch'> <br> Inch </div> <div class='measurement-radio-cnt'> <input type='radio' name='unit' value='Feet'> <br> Feet </div> </div> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
+	return `<div class='fit'> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
 }
 $t.functions['input/select'] = function (get) {
 	return `<div> <select class='` + (get("class")) + `' id='` + (get("id")) + `' name='` + (get("name")) + `' value='` + (get("value")) + `'> ` + (new $t('<option  value=\'{{item}}\' {{value === item ? \'selected\' : \'\'}}> {{item}} </option>').render(get('scope'), 'item in list', get)) + ` </select> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
@@ -2001,10 +2001,25 @@ $t.functions['login/login'] = function (get) {
 $t.functions['login/reset-password'] = function (get) {
 	return `<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` + (get("email")) + `'> <input type='password' placeholder="password" name='password' value='` + (get("password")) + `'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 }
+$t.functions['managers/abstract-manager'] = function (get) {
+	return `<div> <div class="center"> <h2 id='` + (get("headerId")) + `'> ` + (get("header")) + ` <button id='` + (get("saveBtnId")) + `'>Save</button> </h2> </div> <div id="` + (get("bodyId")) + `"></div> </div> `
+}
 $t.functions['managers/cost/body'] = function (get) {
 	return `<div> <span> <input value='` + (get("instance").length()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").width()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").depth()) + `'> </span> <label>Cost</label> <input value='` + (get("instance").cost()) + `'> <br> <label>Per ` + (get("instance").unitCost().name) + ` = ` + (get("instance").unitCost().value) + ` </div> `
 }
 $t.functions['managers/cost/header'] = function (get) {
+	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
+}
+$t.functions['managers/property/body'] = function (get) {
+	return `<div> No Need </div> `
+}
+$t.functions['managers/property/header'] = function (get) {
+	return `<div> <b>` + (get("instance").name) + ` (` + (get("instance").constructor.code) + `) - ` + (get("instance").value) + `</b> </div> `
+}
+$t.functions['managers/template/body'] = function (get) {
+	return `<div> <span> <input value='` + (get("instance").length()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").width()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").depth()) + `'> </span> <label>Cost</label> <input value='` + (get("instance").cost()) + `'> <br> <label>Per ` + (get("instance").unitCost().name) + ` = ` + (get("instance").unitCost().value) + ` </div> `
+}
+$t.functions['managers/template/header'] = function (get) {
 	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
 }
 $t.functions['model-controller'] = function (get) {
@@ -2063,33 +2078,6 @@ $t.functions['sections/false-front'] = function (get) {
 }
 $t.functions['sections/open'] = function (get) {
 	return `<h2>Open: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
-}
-$t.functions['managers/abstract-manager'] = function (get) {
-	return `<div> <div class="center"> <h2 id='` + (get("headerId")) + `'> ` + (get("header")) + ` <button id='` + (get("saveBtnId")) + `'>Save</button> </h2> </div> <div id="` + (get("bodyId")) + `"></div> </div> `
-}
-$t.functions['managers/cost0/body'] = function (get) {
-	return `<div> <span> <input value='` + (get("instance").length()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").width()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").depth()) + `'> </span> <label>Cost</label> <input value='` + (get("instance").cost()) + `'> <br> <label>Per ` + (get("instance").unitCost().name) + ` = ` + (get("instance").unitCost().value) + ` </div> `
-}
-$t.functions['managers/cost0/header'] = function (get) {
-	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
-}
-$t.functions['managers/cost1/body'] = function (get) {
-	return `<div> <span> <input value='` + (get("instance").length()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").width()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").depth()) + `'> </span> <label>Cost</label> <input value='` + (get("instance").cost()) + `'> <br> <label>Per ` + (get("instance").unitCost().name) + ` = ` + (get("instance").unitCost().value) + ` </div> `
-}
-$t.functions['managers/cost1/header'] = function (get) {
-	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
-}
-$t.functions['managers/template/body'] = function (get) {
-	return `<div> <span> <input value='` + (get("instance").length()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").width()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").depth()) + `'> </span> <label>Cost</label> <input value='` + (get("instance").cost()) + `'> <br> <label>Per ` + (get("instance").unitCost().name) + ` = ` + (get("instance").unitCost().value) + ` </div> `
-}
-$t.functions['managers/template/header'] = function (get) {
-	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
-}
-$t.functions['managers/property/body'] = function (get) {
-	return `<div> No Need </div> `
-}
-$t.functions['managers/property/header'] = function (get) {
-	return `<div> <b>` + (get("instance").name) + ` (` + (get("instance").constructor.code) + `) - ` + (get("instance").value) + `</b> </div> `
 }
 
 
@@ -2439,6 +2427,362 @@ const cabinetBuildConfig = {
 }
 
 
+class Show {
+  constructor(name) {
+    this.name = name;
+    Show.types[name] = this;
+  }
+}
+Show.types = {};
+Show.listTypes = () => Object.values(Show.types);
+new Show('None');
+new Show('Flat');
+new Show('Inset Panel');
+
+
+function createElement(tagname, attributes) {
+  const elem = document.createElement(tagname);
+  const keys = Object.keys(attributes);
+  keys.forEach((key) => elem.setAttribute(key, attributes[key]));
+  return elem;
+}
+
+function up(selector, node) {
+  if (node instanceof HTMLElement) {
+    if (node.matches(selector)) {
+      return node;
+    } else {
+      return up(selector, node.parentNode);
+    }
+  }
+}
+
+function appendError(target, message) {
+  return function (e) {
+    const parent = target.parentNode;
+    const error = document.createElement('div');
+    error.className = 'error';
+    error.innerHTML = message;
+    parent.insertBefore(error, target.nextElementSibling)
+    console.log('here')
+  }
+}
+
+function upAll(selector, node) {
+  const elems = [];
+  let elem = node;
+  while(elem = up(selector, elem)) {
+    elems.push(elem);
+    elem = elem.parentElement;
+  }
+  return elems;
+}
+
+function down(selector, node) {
+    function recurse (currNode, distance) {
+      if (node instanceof HTMLElement) {
+        if (currNode.matches(selector)) {
+          return { node: currNode, distance };
+        } else {
+          let found = { distance: Number.MAX_SAFE_INTEGER };
+          for (let index = 0; index < currNode.children.length; index += 1) {
+            distance++;
+            const child = currNode.children[index];
+            const maybe = recurse(child, distance);
+            found = maybe && maybe.distance < found.distance ? maybe : found;
+          }
+          return found;
+        }
+      }
+      return { distance: Number.MAX_SAFE_INTEGER };
+    }
+    return recurse(node, 0).node;
+}
+
+function closest(selector, node) {
+  const visited = [];
+  function recurse (currNode, distance) {
+    let found = { distance: Number.MAX_SAFE_INTEGER };
+    if (!currNode || (typeof currNode.matches) !== 'function') {
+      return found;
+    }
+    visited.push(currNode);
+    if (currNode.matches(selector)) {
+      return { node: currNode, distance };
+    } else {
+      for (let index = 0; index < currNode.children.length; index += 1) {
+        const child = currNode.children[index];
+        if (visited.indexOf(child) === -1) {
+          const maybe = recurse(child, distance + index + 1);
+          found = maybe && maybe.distance < found.distance ? maybe : found;
+        }
+      }
+      if (visited.indexOf(currNode.parentNode) === -1) {
+        const maybe = recurse(currNode.parentNode, distance + 1);
+        found = maybe && maybe.distance < found.distance ? maybe : found;
+      }
+      return found;
+    }
+  }
+
+  return recurse(node, 0).node;
+}
+
+
+const selectors = {};
+let matchRunIdCount = 0;
+function getTargetId(target) {
+  if((typeof target.getAttribute) === 'function') {
+    let targetId = target.getAttribute('ce-match-run-id');
+    if (targetId === null || targetId === undefined) {
+      targetId = matchRunIdCount + '';
+      target.setAttribute('ce-match-run-id', matchRunIdCount++)
+    }
+    return targetId;
+  }
+  return target === document ?
+        '#document' : target === window ? '#window' : undefined;
+}
+
+function runMatch(event) {
+  const  matchRunTargetId = getTargetId(event.currentTarget);
+  const selectStrs = Object.keys(selectors[matchRunTargetId][event.type]);
+  selectStrs.forEach((selectStr) => {
+    const target = up(selectStr, event.target);
+    if (target) {
+      selectors[matchRunTargetId][event.type][selectStr].forEach((func) => func(target, event));
+    }
+  })
+}
+
+
+function addClass(target, clazz) {
+  target.className += ` ${clazz}`;
+}
+
+function classReg(clazz) {
+  return new RegExp(`(^| )${clazz}( |$)`, 'g');
+}
+
+function removeClass(target, clazz) {
+  target.className = target.className.replace(classReg(clazz), '');
+}
+
+function hasClass(target, clazz) {
+  return target.className.match(classReg(clazz));
+}
+
+function toggleClass(target, clazz) {
+  if (hasClass(target, clazz)) removeClass(target, clazz);
+  else addClass(target, clazz);
+}
+
+function matchRun(event, selector, func, target) {
+  target = target || document;
+  const  matchRunTargetId = getTargetId(target);
+  if (selectors[matchRunTargetId] === undefined) {
+    selectors[matchRunTargetId] = {};
+  }
+  if (selectors[matchRunTargetId][event] === undefined) {
+    selectors[matchRunTargetId][event] = {};
+    target.addEventListener(event, runMatch);
+  }
+  if (selectors[matchRunTargetId][event][selector] === undefined) {
+    selectors[matchRunTargetId][event][selector] = [];
+  }
+
+  selectors[matchRunTargetId][event][selector].push(func);
+}
+
+function bindField(selector, objOrFunc, validation) {
+  let lastInputTime = {};
+  function update(elem) {
+    elem.id = elem.id || randomString(7);
+    const thisInputTime = new Date().getTime();
+    lastInputTime[elem.id] = thisInputTime;
+    setTimeout(() => {
+      if (thisInputTime === lastInputTime[elem.id]) {
+        const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
+        if (updatePath !== null) {
+          const newValue = elem.value;
+          if ((typeof validation) === 'function' && !validation(newValue)) {
+            console.error('badValue')
+          } else if ((typeof objOrFunc) === 'function') {
+            objOrFunc(updatePath, elem.value);
+          } else {
+            const attrs = updatePath.split('.');
+            const lastIndex = attrs.length - 1;
+            let currObj = objOrFunc;
+            for (let index = 0; index < lastIndex; index += 1) {
+              let attr = attrs[index];
+              if (currObj[attr] === undefined) currObj[attr] = {};
+              currObj = currObj[attr];
+            }
+            currObj[attrs[lastIndex]] = elem.value;
+          }
+        }
+      }
+    }, 2000);
+  }
+  matchRun('keyup', selector, update);
+  matchRun('change', selector, update);
+}
+
+
+function updateDivisions (target) {
+  const name = target.getAttribute('name');
+  const index = Number.parseInt(target.getAttribute('index'));
+  const value = Number.parseFloat(target.value);
+  const inputs = target.parentElement.parentElement.querySelectorAll('.division-pattern-input');
+  const uniqueId = up('.opening-cnt', target).getAttribute('opening-id');
+  const opening = Assembly.get(uniqueId);
+  const values = opening.dividerLayout().fill;
+  for (let index = 0; values && index < inputs.length; index += 1){
+    const value = values[index];
+    if(value) inputs[index].value = value;
+  }
+  updateModel(opening);
+}
+
+function parseSeperator (str, seperator, isRegex) {
+  if ((typeof str) !== 'string') {
+    return {};
+  }
+  if (isRegex !== true) {
+    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
+  }
+  var keyValues = str.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
+  var json = {};
+  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
+    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
+    if (split) {
+      json[split[1]] = split[2];
+    }
+  }
+  return json;
+}
+
+function getCookie(name, seperator) {
+  const cookie = parseSeperator(document.cookie, ';')[name];
+  if (seperator === undefined) return cookie;
+  const values = cookie === undefined ? [] : cookie.split(seperator);
+  if (arguments.length < 3) return values;
+  let obj = {};
+  for (let index = 2; index < arguments.length; index += 1) {
+    const key = arguments[index];
+    const value = values[index - 2];
+    obj[key] = value;
+  }
+  return obj;
+}
+
+
+function getParam(name) {
+  if (getParam.params === undefined) {
+    const url = window.location.href;
+    const paramStr = url.substr(url.indexOf('?') + 1);
+    getParam.params = parseSeperator(paramStr, '&');
+  }
+  return decodeURI(getParam.params[name]);
+}
+
+
+function removeCookie(name) {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+}
+
+matchRun('change', '.open-orientation-radio,.open-division-input', updateDivisions);
+
+
+class Feature {
+  constructor(id, subFeatures, properties, parent) {
+    subFeatures = subFeatures || [];
+    this.properties = properties || {};
+    this.enabled = false;
+    this.features = [];
+    const radioFeatures = [];
+    this.name = id.replace(/([a-z])([A-Z])/g, '$1.$2')
+                  .replace(/\.([a-zA-Z0-9])/g, Feature.formatName);
+    this.id = id;
+    this.isRoot = (path) => path === 'root';
+    this.multipleFeatures = () => this.features.length > 1;
+    this.isInput = () => (typeof this.properties.inputValidation) === 'function';
+    this.showInput = () => (this.isInput() && !this.isCheckbox() && !this.isRadio())
+                          || (this.enabled && (this.isCheckbox() || this.isRadio()));
+    this.isCheckbox = () => this.id.indexOf('has') === 0;
+    this.radioFeature = (feature) => radioFeatures.length > 1 && radioFeatures.indexOf[feature] !== -1;
+    this.isRadio = () => (!this.isCheckbox() && parent !== undefined && parent.radioFeature(this));
+    this.addFeature = (featureOrId) => {
+      let feature;
+      if (featureOrId instanceof Feature) feature = featureOrId;
+      else feature = Feature.byId[featureOrId];
+      if (!(feature instanceof Feature)) {
+        throw new Error(`Invalid feature '${id}'`);
+      }
+      this.features.push(feature);
+      if (!feature.isCheckbox()) radioFeatures.push(feature);
+    };
+    subFeatures.forEach((featureId) => this.addFeature(featureId))
+    Feature.byId[id] = this;
+  }
+}
+
+Feature.byId = {};
+Feature.objMap = {};
+Feature.addRelations = (objId, featureIds) => {
+  featureIds.forEach((id) => {
+    if (Feature.objMap[objId] === undefined) Feature.objMap[objId] = [];
+    const feature = Feature.byId[id];
+    if (!(feature instanceof Feature)) {
+      throw new Error('Trying to add none Feature object');
+    }
+    else Feature.objMap[objId].push(feature);
+  });
+};
+Feature.clone = (feature, parent) => {
+  const clone = new feature.constructor(feature.id, undefined, feature.properties, parent);
+  feature.features.forEach((f) => clone.addFeature(Feature.clone(f, feature)));
+  return clone;
+}
+Feature.getList = (id) => {
+  const masterList = Feature.objMap[id];
+  if (masterList === undefined) return [];
+  const list = [];
+  masterList.forEach((feature) => list.push(Feature.clone(feature)));
+  return list;
+}
+Feature.formatName = (match) => ` ${match[1].toUpperCase()}`;
+
+new Feature('thickness', undefined, {inputValidation: (value) => !new Measurement(value).isNaN()});
+new Feature('inset');
+new Feature('fullOverlay');
+new Feature('1/8');
+new Feature('1/4');
+new Feature('1/2');
+new Feature('roundOver', ['1/8', '1/4', '1/2']);
+new Feature('knockedOff');
+new Feature('hasFrame', ['thickness']);
+new Feature('hasPanel', ['thickness']);
+new Feature('insetProfile');
+new Feature('glass');
+new Feature('edgeProfile', ['roundOver', 'knockedOff']);
+new Feature('drawerFront', ['edgeProfile'])
+new Feature('doveTail');
+new Feature('miter');
+new Feature('drawerBox', ['doveTail', 'miter'])
+new Feature('insetPanel', ['glass', 'insetProfile'])
+new Feature('solid');
+new Feature('doorType', ['fullOverlay', 'inset']);
+new Feature('doorStyle', ['insetPanel', 'solid'])
+new Feature('drawerType', ['fullOverlay', 'inset']);
+
+Feature.addRelations('DrawerBox', ['drawerType', 'drawerFront', 'drawerBox']);
+Feature.addRelations('PartitionSection', ['hasFrame', 'hasPanel']);
+Feature.addRelations('Door', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
+Feature.addRelations('DoubleDoor', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
+Feature.addRelations('FalseFront', ['drawerType', 'edgeProfile']);
+
+
 
 let roomDisplay;
 let order;
@@ -2453,6 +2797,250 @@ afterLoad.push(() => {
   propertyDisplay.update(DEFAULT_PROPS);
   mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
 });
+
+
+
+// terminology
+// name - String to define state;
+// payload - data returned for a given state
+// stateObject - object defining states {name: [payload]...}
+// states - array of availible state names.
+// node - {name, states, payload, then, addState, addStates};
+// then(name) - a function to set a following state.
+// next(name) - a function to get the next state.
+// back() - a function to move back up the tree.
+// top() - a function to get root;
+//
+// returns all functions return current node;
+class DecisionTree {
+  constructor(name, payload) {
+    name = name || 'root';
+    const stateConfigs = {};
+    const tree = {};
+    const nodeMap = {};
+
+    function addState(name, payload) {
+      return stateConfigs[name] = payload;
+    }
+
+    function addStates(sts) {
+      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
+      const keys = Object.keys(sts);
+      keys.forEach((key) => stateConfigs[key] = sts[key]);
+      console.log(stateConfigs);
+    }
+
+    function getState(name, parent) {
+      return new DecisionNode(name, stateConfigs[name], parent);
+    }
+
+
+    class DecisionNode {
+      constructor(name, payload, parent) {
+        const states = {};
+        let jump;
+        payload = payload || {};
+        payload._nodeId = `decision-node-${randomString(7)}`;
+        nodeMap[payload._nodeId] = this;
+        this.getNode = (nodeId) => nodeMap[nodeId];
+        this.name = name;
+        this.states = states;
+        this.payload = payload;
+        this.jump = (name) => {
+          if (name) jump = getState(name, parent);
+          return jump;
+        };
+        this.then = (name, payload) => {
+          payload = payload ? addState(name, payload) : stateConfigs[name];
+          states[name] = (getState(name, this));
+          const state = states[name];
+          return state === undefined ? undefined : state.jump() || state;
+        }
+        this.addState = (name, payload) => addState(name, payload) && this;
+        this.addStates = (sts) => addStates(sts) && this;
+        this.next = (name) => {
+          const state = states[name];
+          return state === undefined ? undefined : state.jump() || state;
+        }
+
+        this.routePayloads = () => {
+          let currNode = this;
+          const payloads = [];
+          while(currNode !== null) {
+            payloads.push(currNode.payload);
+            currNode = currNode.back();
+          }
+          return payloads.reverse();
+        }
+        this.back = () => parent;
+        this.top = () => rootNode;
+      }
+    }
+
+    const rootNode = new DecisionNode(name, payload, null);
+    return rootNode;
+  }
+}
+
+
+class Position {
+  constructor(assembly, sme) {
+
+    function getSme(attr, obj) {
+      if (attr === undefined) {
+        return {x: sme.eval(obj.x),
+          y: sme.eval(obj.y),
+          z: sme.eval(obj.z)}
+      } else {
+        return sme.eval(obj[attr]);
+      }
+    }
+
+    let center, demension;
+    let demCoords = {};
+    let centerCoords = {};
+
+    if ((typeof assembly.centerStr()) !== 'object') {
+      centerCoords = Position.parseCoordinates(assembly.centerStr(), '0,0,0');
+      center = (attr) => getSme(attr, centerCoords);
+    } else {
+      center = assembly.centerStr;
+    }
+
+    if ((typeof assembly.demensionStr()) !== 'object') {
+      const defSizes = getDefaultSize(assembly);
+      demCoords = Position.parseCoordinates(assembly.demensionStr(),
+      `${defSizes.width},${defSizes.length},${defSizes.thickness}`,
+      '0,0,0');
+      demension = (attr) => getSme(attr, demCoords);
+    } else new Promise(function(resolve, reject) {
+      demension = assembly.demensionStr
+    });
+
+
+
+    function get(func, sme) {
+      if ((typeof func) === 'function' && (typeof func()) === 'object') return func;
+      return sme;
+    }
+
+    this.center = (attr) => center(attr);
+    this.demension = (attr) => demension(attr);
+
+    this.current = () => {
+      const position = {
+        center: this.center(),
+        demension: this.demension(),
+        rotation: this.rotation()
+      };
+      assembly.getJoints().male.forEach((joint) =>
+        joint.updatePosition(position)
+      );
+      return position;
+    }
+
+
+    this.limits = (targetStr) => {
+      if (targetStr !== undefined) {
+        const match = targetStr.match(/^(\+|-|)([xyz])$/)
+        const attr = match[2];
+        const d = this.demension(attr)/2;
+        const pos = `+${attr}`;
+        const neg = `-${attr}`;
+        const limits = {};
+        limits[pos] = d;
+        if (match[1] === '+') return limits[pos];
+        limits[neg] = -d;
+        if (match[1] === '-') return limits[neg];
+        return  limits;
+      }
+      const d = this.demension();
+      return  {
+        x: d.x / 2,
+        '-x': -d.x / 2,
+        y: d.y / 2,
+        '-y': -d.y / 2,
+        z: d.z / 2,
+        '-z': -d.z / 2,
+      }
+    }
+
+
+    this.rotation = () => {
+      const rotation = {x: 0, y: 0, z: 0};
+      const axisStrs = (assembly.rotationStr() || '').match(Position.rotateStrRegex);
+      for (let index = 0; axisStrs && index < axisStrs.length; index += 1) {
+        const match = axisStrs[index].match(Position.axisStrRegex);
+        rotation[match[2]] = match[4] ? Number.parseInt[match[4]] : 90;
+      }
+      return rotation;
+    };
+
+    this.set = (obj, type, value) => {
+      if (value !== undefined) obj[type] = value;
+      return demension(type);
+    }
+
+    this.setDemension = (type, value) => this.set(demCoords, type, value);
+    this.setCenter = (type, value) => this.set(centerCoords, type, value);
+  }
+}
+
+Position.targeted = (attr, x, y, z) => {
+  const all = attr === undefined;
+  const dem = {
+    x: all || attr === 'x' && x(),
+    y: all || attr === 'y' && y(),
+    z: all || attr === 'z' && z()
+  };
+  return all ? {x,y,z} : dem[attr];
+}
+Position.axisStrRegex = /(([xyz])(\(([0-9]*)\)|))/;
+Position.rotateStrRegex = new RegExp(Position.axisStrRegex, 'g');
+Position.touching = (pos1, pos2) => {
+  const touchingAxis = (axis) => {
+    if (pos1[`${axis}1`] === pos2[`${axis}0`])
+      return {axis: `${axis}`, direction: '+'};
+    if (pos1[`${axis}0`] === pos2[`${axis}1`])
+      return {axis: `${axis}`, direction: '-'};
+  }
+  if (!Position.within(pos1, pos2)) return null;
+  return touchingAxis('x') || touchingAxis('y') || touchingAxis('z') || null;
+}
+Position.within = (pos1, pos2, axises) => {
+  const axisTouching = (axis) => {
+    if (axises !== undefined && axises.index(axis) === -1) return true;
+    const p10 = pos1[`${axis}0`];
+    const p11 = pos1[`${axis}1`];
+    const p20 = pos2[`${axis}0`];
+    const p21 = pos2[`${axis}1`];
+    return (p10 >= p20 && p10 <= p21) ||
+            (p11 <= p21 && p11 >= p20);
+  }
+  return axisTouching('x') && axisTouching('y') && axisTouching('z');
+}
+
+Position.parseCoordinates = function() {
+  let coordinateMatch = null;
+  for (let index = 0; coordinateMatch === null && index < arguments.length; index += 1) {
+    const str = arguments[index];
+    if (index > 0 && arguments.length - 1 === index) {
+      //console.error(`Attempted to parse invalid coordinateStr: '${JSON.stringify(arguments)}'`);
+    }
+    if (typeof str === 'string') {
+      coordinateMatch = str.match(Position.demsRegex);
+    }
+  }
+  if (coordinateMatch === null) {
+    throw new Error(`Unable to parse coordinates`);
+  }
+  return {
+    x: coordinateMatch[1],
+    y: coordinateMatch[2],
+    z: coordinateMatch[3]
+  }
+}
+Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
 
 
 const removeSuffixes = ['Part', 'Section'].join('|');
@@ -2497,6 +3085,131 @@ function funcOvalue () {
     const funcOval = arguments[index + 1];
     if ((typeof funcOval) === 'function') this[attr] = funcOval;
     else this[attr] = () => funcOval;
+  }
+}
+
+
+function regexToObject (str, reg) {
+  const match = str.match(reg);
+  if (match === null) return null;
+  const returnVal = {};
+  for (let index = 2; index < arguments.length; index += 1) {
+    const attr = arguments[index];
+    if (attr) returnVal[attr] = match[index - 1];
+  }
+  return returnVal;
+}
+
+class Measurement {
+  constructor(value) {
+    if ((typeof value) === 'string') {
+      value += ' '; // Hacky fix for regularExpression
+    }
+
+    let decimal = 0;
+    let nan = false;
+    this.isNaN = () => nan;
+
+    const parseFraction = (str) => {
+      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
+      console.log('')
+      regObj.integer = Number.parseInt(regObj.integer) || 0;
+      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+      if(regObj.denominator === 0) {
+        regObj.numerator = 0;
+        regObj.denominator = 1;
+      }
+      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+      return regObj;
+    };
+
+    function reduce(numerator, denominator) {
+      let reduced = true;
+      while (reduced) {
+        reduced = false;
+        for (let index = 0; index < Measurement.primes.length; index += 1) {
+          const prime = Measurement.primes[index];
+          if (prime >= denominator) break;
+          if (numerator % prime === 0 && denominator % prime === 0) {
+            numerator = numerator / prime;
+            denominator = denominator / prime;
+            reduced = true;
+            break;
+          }
+        }
+      }
+      if (numerator === 0) {
+        return '';
+      }
+      return ` ${numerator}/${denominator}`;
+    }
+
+    function calculateValue(accuracy) {
+      accuracy = accuracy || '1/1000'
+      const fracObj = parseFraction(accuracy);
+      const denominator = fracObj.denominator;
+      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+      }
+      let remainder = decimal;
+      let currRemainder = remainder;
+      let value = 0;
+      let numerator = 0;
+      while (currRemainder > 0) {
+        numerator += fracObj.numerator;
+        currRemainder -= fracObj.decimal;
+      }
+      const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
+      const diff2 = (numerator / denominator) - decimal;
+      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+      const integer = Math.floor(numerator / denominator);
+      numerator = numerator % denominator;
+      return {integer, numerator, denominator};
+    }
+
+    this.fraction = (accuracy) => {
+      if (nan) return NaN;
+      const obj = calculateValue(accuracy);
+      return `${obj.integer}${reduce(obj.numerator, obj.denominator)}`;
+    }
+
+    this.decimal = (accuracy) => {
+      if (nan) return NaN;
+      const obj = calculateValue(accuracy);
+      return obj.integer + (obj.numerator / obj.denominator);
+    }
+
+    if ((typeof value) === 'number') {
+      decimal = value;
+    } else if ((typeof value) === 'string') {
+      try {
+        decimal = parseFraction(value).decimal;
+      } catch (e) {
+        nan = true;
+      }
+    } else {
+      nan = true;
+    }
+  }
+}
+
+Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
+
+Measurement.validation = function (range) {
+  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
+  let min = obj.min.trim() !== '' ?
+        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
+  let max = obj.max.trim() !== '' ?
+        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
+  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
+  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
+  return function (value) {
+    const decimal = new Measurement(value).decimal();
+    if (decimal === NaN) return false;
+    return minCheck(decimal) && maxCheck(decimal);
   }
 }
 
@@ -2807,19 +3520,6 @@ StringMathEvaluator.toFraction = function (decimal, accuracy) {
 }
 
 
-class Show {
-  constructor(name) {
-    this.name = name;
-    Show.types[name] = this;
-  }
-}
-Show.types = {};
-Show.listTypes = () => Object.values(Show.types);
-new Show('None');
-new Show('Flat');
-new Show('Inset Panel');
-
-
 const DEFAULT_PROPS = {
   pwt34: {name: 'Plywood 3/4 Thickness', value: 25/32},
   pwt12: {name: 'Plywood 1/2 Thickness', value: 1/2},
@@ -2882,164 +3582,115 @@ properties('Inset', {
 });
 
 
-class Position {
-  constructor(assembly, sme) {
+afterLoad.push(() => matchRun('change', '.feature-radio', (target) => {
+  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+  target.nextElementSibling.hidden = !target.checked;
+})
+)
 
-    function getSme(attr, obj) {
-      if (attr === undefined) {
-        return {x: sme.eval(obj.x),
-          y: sme.eval(obj.y),
-          z: sme.eval(obj.z)}
+class Pattern {
+  constructor(str) {
+    this.str = str;
+    let unique = {};
+    for (let index = 0; index < str.length; index += 1) {
+      unique[str[index]] = true;
+    }
+    unique = Object.keys(unique).join('');
+    this.unique = unique;
+    console.log('uniq', unique);
+    class Element {
+      constructor(id, index, count) {
+        this.id = id;
+        this.count = count || 1;
+        this.indexes = [index];
+      }
+    }
+
+    if ((typeof str) !== 'string' || str.length === 0)
+      throw new Error('Must define str (arg0) as string of length > 1');
+
+    const elements = {};
+    for (let index = 0; index < str.length; index += 1) {
+      const char = str[index];
+      if (elements[char]) {
+        elements[char].count++;
+        elements[char].indexes.push(index);
       } else {
-        return sme.eval(obj[attr]);
+        elements[char] = new Element(char, index);
       }
     }
 
-    let center, demension;
-    let demCoords = {};
-    let centerCoords = {};
+    const values = {};
+    const updateOrder = [];
+    this.ids = Object.keys(elements);
+    this.size = str.length;
+    let lastElem;
+    this.satisfied = () => updateOrder.length === unique.length - 1;
 
-    if ((typeof assembly.centerStr()) !== 'object') {
-      centerCoords = Position.parseCoordinates(assembly.centerStr(), '0,0,0');
-      center = (attr) => getSme(attr, centerCoords);
-    } else {
-      center = assembly.centerStr;
-    }
-
-    if ((typeof assembly.demensionStr()) !== 'object') {
-      const defSizes = getDefaultSize(assembly);
-      demCoords = Position.parseCoordinates(assembly.demensionStr(),
-      `${defSizes.width},${defSizes.length},${defSizes.thickness}`,
-      '0,0,0');
-      demension = (attr) => getSme(attr, demCoords);
-    } else new Promise(function(resolve, reject) {
-      demension = assembly.demensionStr
-    });
-
-
-
-    function get(func, sme) {
-      if ((typeof func) === 'function' && (typeof func()) === 'object') return func;
-      return sme;
-    }
-
-    this.center = (attr) => center(attr);
-    this.demension = (attr) => demension(attr);
-
-    this.current = () => {
-      const position = {
-        center: this.center(),
-        demension: this.demension(),
-        rotation: this.rotation()
-      };
-      assembly.getJoints().male.forEach((joint) =>
-        joint.updatePosition(position)
-      );
-      return position;
-    }
-
-
-    this.limits = (targetStr) => {
-      if (targetStr !== undefined) {
-        const match = targetStr.match(/^(\+|-|)([xyz])$/)
-        const attr = match[2];
-        const d = this.demension(attr)/2;
-        const pos = `+${attr}`;
-        const neg = `-${attr}`;
-        const limits = {};
-        limits[pos] = d;
-        if (match[1] === '+') return limits[pos];
-        limits[neg] = -d;
-        if (match[1] === '-') return limits[neg];
-        return  limits;
+    const calc = (dist) => {
+      const values = {};
+      updateOrder.forEach((id) => {
+        const elem = elements[id];
+        dist -= elem.count * elem.value;
+        values[elem.id] = elem.value;
+      });
+      if (lastElem === undefined) {
+        for (let index = 0; index < unique.length; index += 1) {
+          const char = unique[index];
+          if (!values[char]) {
+            if (lastElem === undefined) lastElem = elements[char];
+            else {lastElem = undefined; break;}
+          }
+        }
       }
-      const d = this.demension();
-      return  {
-        x: d.x / 2,
-        '-x': -d.x / 2,
-        y: d.y / 2,
-        '-y': -d.y / 2,
-        z: d.z / 2,
-        '-z': -d.z / 2,
+      if (lastElem !== undefined) {
+        lastElem.value = dist / lastElem.count;
+        values[lastElem.id] = lastElem.value;
+      }
+      const list = [];
+      const fill = [];
+      if (lastElem)
+        for (let index = 0; index < unique.length; index += 1)
+          fill[index] = values[unique[index]];
+      for (let index = 0; index < str.length; index += 1)
+        list[index] = values[str[index]];
+      const retObj = {values, list, fill};
+      console.log('retObj:', retObj);
+      return retObj;
+    }
+
+    this.value = (id, value) => {
+      if ((typeof id) === 'number') id = unique[id];
+      if ((typeof value) === 'number') {
+        const index = updateOrder.indexOf(id);
+        if (index !== -1) updateOrder.splice(index, 1);
+        updateOrder.push(id);
+        if (updateOrder.length === this.ids.length) {
+          lastElem = elements[updateOrder[0]];
+          updateOrder.splice(0, 1);
+        }
+        elements[id].value = value;
+      } else {
+        return elements[id].value;
       }
     }
 
-
-    this.rotation = () => {
-      const rotation = {x: 0, y: 0, z: 0};
-      const axisStrs = (assembly.rotationStr() || '').match(Position.rotateStrRegex);
-      for (let index = 0; axisStrs && index < axisStrs.length; index += 1) {
-        const match = axisStrs[index].match(Position.axisStrRegex);
-        rotation[match[2]] = match[4] ? Number.parseInt[match[4]] : 90;
-      }
-      return rotation;
-    };
-
-    this.set = (obj, type, value) => {
-      if (value !== undefined) obj[type] = value;
-      return demension(type);
-    }
-
-    this.setDemension = (type, value) => this.set(demCoords, type, value);
-    this.setCenter = (type, value) => this.set(centerCoords, type, value);
+    this.elements = elements;
+    this.calc = calc;
+    console.log('breakdown:', this);
   }
 }
 
-Position.targeted = (attr, x, y, z) => {
-  const all = attr === undefined;
-  const dem = {
-    x: all || attr === 'x' && x(),
-    y: all || attr === 'y' && y(),
-    z: all || attr === 'z' && z()
-  };
-  return all ? {x,y,z} : dem[attr];
-}
-Position.axisStrRegex = /(([xyz])(\(([0-9]*)\)|))/;
-Position.rotateStrRegex = new RegExp(Position.axisStrRegex, 'g');
-Position.touching = (pos1, pos2) => {
-  const touchingAxis = (axis) => {
-    if (pos1[`${axis}1`] === pos2[`${axis}0`])
-      return {axis: `${axis}`, direction: '+'};
-    if (pos1[`${axis}0`] === pos2[`${axis}1`])
-      return {axis: `${axis}`, direction: '-'};
-  }
-  if (!Position.within(pos1, pos2)) return null;
-  return touchingAxis('x') || touchingAxis('y') || touchingAxis('z') || null;
-}
-Position.within = (pos1, pos2, axises) => {
-  const axisTouching = (axis) => {
-    if (axises !== undefined && axises.index(axis) === -1) return true;
-    const p10 = pos1[`${axis}0`];
-    const p11 = pos1[`${axis}1`];
-    const p20 = pos2[`${axis}0`];
-    const p21 = pos2[`${axis}1`];
-    return (p10 >= p20 && p10 <= p21) ||
-            (p11 <= p21 && p11 >= p20);
-  }
-  return axisTouching('x') && axisTouching('y') && axisTouching('z');
-}
-
-Position.parseCoordinates = function() {
-  let coordinateMatch = null;
-  for (let index = 0; coordinateMatch === null && index < arguments.length; index += 1) {
-    const str = arguments[index];
-    if (index > 0 && arguments.length - 1 === index) {
-      //console.error(`Attempted to parse invalid coordinateStr: '${JSON.stringify(arguments)}'`);
-    }
-    if (typeof str === 'string') {
-      coordinateMatch = str.match(Position.demsRegex);
-    }
-  }
-  if (coordinateMatch === null) {
-    throw new Error(`Unable to parse coordinates`);
-  }
-  return {
-    x: coordinateMatch[1],
-    y: coordinateMatch[2],
-    z: coordinateMatch[3]
-  }
-}
-Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
+const p1 = new Pattern('babcdaf');
+p1.value('b', 2);
+p1.value('a', 2);
+p1.value('c', 3);
+p1.value('d', 4);
+p1.value('b', 2);
+p1.value('f', 5);
+p1.calc(20);
+const p2 = new Pattern(' // ^^%');
 
 
 class CabinetConfig {
@@ -3075,829 +3726,6 @@ class CabinetConfig {
 }
 
 CabinetConfig = new CabinetConfig();
-
-
-function regexToObject (str, reg) {
-  const match = str.match(reg);
-  if (match === null) return null;
-  const returnVal = {};
-  for (let index = 2; index < arguments.length; index += 1) {
-    const attr = arguments[index];
-    if (attr) returnVal[attr] = match[index - 1];
-  }
-  return returnVal;
-}
-
-class Measurement {
-  constructor(value) {
-    if ((typeof value) === 'string') {
-      value += ' '; // Hacky fix for regularExpression
-    }
-
-    let decimal = 0;
-    let nan = false;
-    this.isNaN = () => nan;
-
-    const parseFraction = (str) => {
-      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
-      console.log('')
-      regObj.integer = Number.parseInt(regObj.integer) || 0;
-      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-      if(regObj.denominator === 0) {
-        regObj.numerator = 0;
-        regObj.denominator = 1;
-      }
-      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-      return regObj;
-    };
-
-    function reduce(numerator, denominator) {
-      let reduced = true;
-      while (reduced) {
-        reduced = false;
-        for (let index = 0; index < Measurement.primes.length; index += 1) {
-          const prime = Measurement.primes[index];
-          if (prime >= denominator) break;
-          if (numerator % prime === 0 && denominator % prime === 0) {
-            numerator = numerator / prime;
-            denominator = denominator / prime;
-            reduced = true;
-            break;
-          }
-        }
-      }
-      if (numerator === 0) {
-        return '';
-      }
-      return ` ${numerator}/${denominator}`;
-    }
-
-    function calculateValue(accuracy) {
-      accuracy = accuracy || '1/1000'
-      const fracObj = parseFraction(accuracy);
-      const denominator = fracObj.denominator;
-      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-      }
-      let remainder = decimal;
-      let currRemainder = remainder;
-      let value = 0;
-      let numerator = 0;
-      while (currRemainder > 0) {
-        numerator += fracObj.numerator;
-        currRemainder -= fracObj.decimal;
-      }
-      const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
-      const diff2 = (numerator / denominator) - decimal;
-      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-      const integer = Math.floor(numerator / denominator);
-      numerator = numerator % denominator;
-      return {integer, numerator, denominator};
-    }
-
-    this.fraction = (accuracy) => {
-      if (nan) return NaN;
-      const obj = calculateValue(accuracy);
-      return `${obj.integer}${reduce(obj.numerator, obj.denominator)}`;
-    }
-
-    this.decimal = (accuracy) => {
-      if (nan) return NaN;
-      const obj = calculateValue(accuracy);
-      return obj.integer + (obj.numerator / obj.denominator);
-    }
-
-    if ((typeof value) === 'number') {
-      decimal = value;
-    } else if ((typeof value) === 'string') {
-      try {
-        decimal = parseFraction(value).decimal;
-      } catch (e) {
-        nan = true;
-      }
-    } else {
-      nan = true;
-    }
-  }
-}
-
-Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
-
-Measurement.validation = function (range) {
-  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
-  let min = obj.min.trim() !== '' ?
-        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
-  let max = obj.max.trim() !== '' ?
-        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
-  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
-  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
-  return function (value) {
-    const decimal = new Measurement(value).decimal();
-    if (decimal === NaN) return false;
-    return minCheck(decimal) && maxCheck(decimal);
-  }
-}
-
-
-
-// terminology
-// name - String to define state;
-// payload - data returned for a given state
-// stateObject - object defining states {name: [payload]...}
-// states - array of availible state names.
-// node - {name, states, payload, then, addState, addStates};
-// then(name) - a function to set a following state.
-// next(name) - a function to get the next state.
-// back() - a function to move back up the tree.
-// top() - a function to get root;
-//
-// returns all functions return current node;
-class DecisionTree {
-  constructor(name, payload) {
-    name = name || 'root';
-    const stateConfigs = {};
-    const tree = {};
-    const nodeMap = {};
-
-    function addState(name, payload) {
-      return stateConfigs[name] = payload;
-    }
-
-    function addStates(sts) {
-      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
-      const keys = Object.keys(sts);
-      keys.forEach((key) => stateConfigs[key] = sts[key]);
-      console.log(stateConfigs);
-    }
-
-    function getState(name, parent) {
-      return new DecisionNode(name, stateConfigs[name], parent);
-    }
-
-
-    class DecisionNode {
-      constructor(name, payload, parent) {
-        const states = {};
-        let jump;
-        payload = payload || {};
-        payload._nodeId = `decision-node-${randomString(7)}`;
-        nodeMap[payload._nodeId] = this;
-        this.getNode = (nodeId) => nodeMap[nodeId];
-        this.name = name;
-        this.states = states;
-        this.payload = payload;
-        this.jump = (name) => {
-          if (name) jump = getState(name, parent);
-          return jump;
-        };
-        this.then = (name, payload) => {
-          payload = payload ? addState(name, payload) : stateConfigs[name];
-          states[name] = (getState(name, this));
-          const state = states[name];
-          return state === undefined ? undefined : state.jump() || state;
-        }
-        this.addState = (name, payload) => addState(name, payload) && this;
-        this.addStates = (sts) => addStates(sts) && this;
-        this.next = (name) => {
-          const state = states[name];
-          return state === undefined ? undefined : state.jump() || state;
-        }
-
-        this.routePayloads = () => {
-          let currNode = this;
-          const payloads = [];
-          while(currNode !== null) {
-            payloads.push(currNode.payload);
-            currNode = currNode.back();
-          }
-          return payloads.reverse();
-        }
-        this.back = () => parent;
-        this.top = () => rootNode;
-      }
-    }
-
-    const rootNode = new DecisionNode(name, payload, null);
-    return rootNode;
-  }
-}
-
-
-class DivisionPattern {
-  constructor() {
-    this.patterns = {};
-    const instance = this;
-    this.filter = (dividerCount, config) => {
-      const sectionCount = dividerCount + 1;
-      if (sectionCount < 2) return '';
-      let filtered = '';
-      let patternArr = Object.values(this.patterns);
-      patternArr.forEach((pattern) => {
-        if (pattern.restrictions === undefined || pattern.restrictions.indexOf(sectionCount) !== -1) {
-          const name = pattern.name;
-          filtered += `<option value='${name}' ${config.name === name ? 'selected' : ''}>${name}</option>`;
-        }
-      });
-      this.inputStr
-      return filtered;
-    }
-    this.add = (name, resolution, inputArr, restrictions) => {
-      inputArr = inputArr || [];
-      let inputHtml =  (fill) => {
-        let html = '';
-        inputArr.forEach((label, index) => {
-          const value = fill ? fill[index] : '';
-          const labelTag = ``;
-          const inputTag = ``;
-          html += labelTag + inputTag;
-        });
-        return html;
-      }
-      this.patterns[name] = {name, resolution, restrictions, inputHtml, inputArr};
-    }
-
-    afterLoad.push(() => {
-      matchRun('change', '.open-pattern-select', (target) => {
-        const openingId = up('.opening-cnt', target).getAttribute('opening-id');
-        const opening = OpenSectionDisplay.sections[openingId];
-        OpenSectionDisplay.refresh(opening);
-      });
-
-      matchRun('keyup', '.division-pattern-input', updateDivisions);
-    });
-  }
-}
-
-DivisionPattern = new DivisionPattern();
-
-DivisionPattern.add('Unique',() => {
-
-});
-
-DivisionPattern.add('Equal', (length, index, value, sectionCount) => {
-  const newVal = length / sectionCount;
-  const list = new Array(sectionCount).fill(newVal);
-  return {list};
-});
-
-DivisionPattern.add('1 to 2', (length, index, value, sectionCount) => {
-  if (index === 0) {
-    const twoValue = (length - value) / 2;
-    const list = [value, twoValue, twoValue];
-    const fill = [value, twoValue];
-    return {list, fill};
-  } else {
-    const oneValue = (length - (value * 2));
-    const list = [oneValue, value, value];
-    const fill = [oneValue, value];
-    return {list, fill};
-  }
-}, ['first(1):', 'next(2)'], [3], [5.5]);
-
-DivisionPattern.add('2 to 2', (length, index, value, sectionCount) => {
-  const newValue = (length - (value * 2)) / 2;
-  if (index === 0) {
-    const list = [value, value, newValue, newValue];
-    const fill = [value, newValue];
-    return {list, fill};
-  } else {
-    const list = [newValue, newValue, value, value];
-    const fill = [newValue, value];
-    return {list, fill};
-  }
-}, ['first(2):', 'next(2)'], [4]);
-
-DivisionPattern.add('1 to 3', (length, index, value, sectionCount) => {
-  if (index === 0) {
-    const threeValue = (length - value) / 3;
-    const list = [value, threeValue, threeValue, threeValue];
-    const fill = [value, threeValue];
-    return {list, fill};
-  } else {
-    const oneValue = (length - (value * 3));
-    const list = [oneValue, value, value, value];
-    const fill = [oneValue, value];
-    return {list, fill};
-  }
-}, ['first(1):', 'next(3)'], [4], 5.5);
-
-afterLoad.push(() => matchRun('change', '.feature-radio', (target) => {
-  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
-  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
-  target.nextElementSibling.hidden = !target.checked;
-})
-)
-
-class Pattern {
-  constructor(str) {
-    this.str = str;
-    class Element {
-      constructor(id, index) {
-        this.id = id;
-        this.count = 1;
-        this.indexes = [index];
-      }
-    }
-
-    if ((typeof str) !== 'string' || str.length === 0)
-      throw new Error('Must define str (arg0) as string of length > 1');
-
-    const elements = {};
-    for (let index = 0; index < str.length; index += 1) {
-      const char = str[index];
-      if (elements[char]) {
-        elements[char].count++;
-        elements[char].indexes.push(index);
-      } else {
-        elements[char] = new Element(char, index);
-      }
-    }
-
-    const values = {};
-    const updateOrder = [];
-    this.ids = Object.keys(elements);
-    this.size = str.length;
-    let lastElem;
-
-    const calc = (dist) => {
-      const values = {};
-      updateOrder.forEach((id) => {
-        const elem = elements[id];
-        dist -= elem.count * elem.value;
-        values[elem.id] = elem.value;
-      });
-      if (lastElem !== undefined) {
-        lastElem.value = dist / lastElem.count;
-        values[lastElem.id] = lastElem.value;
-      }
-      console.log('vals:', values);
-      return values;
-    }
-
-    this.value = (id, value) => {
-      if ((typeof value) === 'number') {
-        const index = updateOrder.indexOf(id);
-        if (index !== -1) updateOrder.splice(index, 1);
-        updateOrder.push(id);
-        if (updateOrder.length === this.ids.length) {
-          lastElem = elements[updateOrder[0]];
-          updateOrder.splice(0, 1);
-        } else if (updateOrder.length === this.ids.length - 1) {
-          updateOrder.forEach((id) => {
-            if (elements[id].value === undefined) {
-              lastElem = elements[id];
-            }
-          })
-        }
-        elements[id].value = value;
-      } else {
-        return elements[id].value;
-      }
-    }
-
-    this.calc = calc;
-    this.elements = elements;
-    console.log('breakdown:', this);
-  }
-}
-
-const p1 = new Pattern('aabcdf');
-p1.value('b', 2);
-p1.value('a', 2);
-p1.value('c', 3);
-p1.value('d', 4);
-p1.value('b', 2);
-p1.value('f', 5);
-p1.calc(20);
-const p2 = new Pattern(' // ^^%');
-
-
-function createElement(tagname, attributes) {
-  const elem = document.createElement(tagname);
-  const keys = Object.keys(attributes);
-  keys.forEach((key) => elem.setAttribute(key, attributes[key]));
-  return elem;
-}
-
-function up(selector, node) {
-  if (node instanceof HTMLElement) {
-    if (node.matches(selector)) {
-      return node;
-    } else {
-      return up(selector, node.parentNode);
-    }
-  }
-}
-
-function appendError(target, message) {
-  return function (e) {
-    const parent = target.parentNode;
-    const error = document.createElement('div');
-    error.className = 'error';
-    error.innerHTML = message;
-    parent.insertBefore(error, target.nextElementSibling)
-    console.log('here')
-  }
-}
-
-function upAll(selector, node) {
-  const elems = [];
-  let elem = node;
-  while(elem = up(selector, elem)) {
-    elems.push(elem);
-    elem = elem.parentElement;
-  }
-  return elems;
-}
-
-function down(selector, node) {
-    function recurse (currNode, distance) {
-      if (node instanceof HTMLElement) {
-        if (currNode.matches(selector)) {
-          return { node: currNode, distance };
-        } else {
-          let found = { distance: Number.MAX_SAFE_INTEGER };
-          for (let index = 0; index < currNode.children.length; index += 1) {
-            distance++;
-            const child = currNode.children[index];
-            const maybe = recurse(child, distance);
-            found = maybe && maybe.distance < found.distance ? maybe : found;
-          }
-          return found;
-        }
-      }
-      return { distance: Number.MAX_SAFE_INTEGER };
-    }
-    return recurse(node, 0).node;
-}
-
-function closest(selector, node) {
-  const visited = [];
-  function recurse (currNode, distance) {
-    let found = { distance: Number.MAX_SAFE_INTEGER };
-    if (!currNode || (typeof currNode.matches) !== 'function') {
-      return found;
-    }
-    visited.push(currNode);
-    if (currNode.matches(selector)) {
-      return { node: currNode, distance };
-    } else {
-      for (let index = 0; index < currNode.children.length; index += 1) {
-        const child = currNode.children[index];
-        if (visited.indexOf(child) === -1) {
-          const maybe = recurse(child, distance + index + 1);
-          found = maybe && maybe.distance < found.distance ? maybe : found;
-        }
-      }
-      if (visited.indexOf(currNode.parentNode) === -1) {
-        const maybe = recurse(currNode.parentNode, distance + 1);
-        found = maybe && maybe.distance < found.distance ? maybe : found;
-      }
-      return found;
-    }
-  }
-
-  return recurse(node, 0).node;
-}
-
-
-const selectors = {};
-let matchRunIdCount = 0;
-function getTargetId(target) {
-  if((typeof target.getAttribute) === 'function') {
-    let targetId = target.getAttribute('ce-match-run-id');
-    if (targetId === null || targetId === undefined) {
-      targetId = matchRunIdCount + '';
-      target.setAttribute('ce-match-run-id', matchRunIdCount++)
-    }
-    return targetId;
-  }
-  return target === document ?
-        '#document' : target === window ? '#window' : undefined;
-}
-
-function runMatch(event) {
-  const  matchRunTargetId = getTargetId(event.currentTarget);
-  const selectStrs = Object.keys(selectors[matchRunTargetId][event.type]);
-  selectStrs.forEach((selectStr) => {
-    const target = up(selectStr, event.target);
-    if (target) {
-      selectors[matchRunTargetId][event.type][selectStr].forEach((func) => func(target, event));
-    }
-  })
-}
-
-
-function addClass(target, clazz) {
-  target.className += ` ${clazz}`;
-}
-
-function classReg(clazz) {
-  return new RegExp(`(^| )${clazz}( |$)`, 'g');
-}
-
-function removeClass(target, clazz) {
-  target.className = target.className.replace(classReg(clazz), '');
-}
-
-function hasClass(target, clazz) {
-  return target.className.match(classReg(clazz));
-}
-
-function toggleClass(target, clazz) {
-  if (hasClass(target, clazz)) removeClass(target, clazz);
-  else addClass(target, clazz);
-}
-
-function matchRun(event, selector, func, target) {
-  target = target || document;
-  const  matchRunTargetId = getTargetId(target);
-  if (selectors[matchRunTargetId] === undefined) {
-    selectors[matchRunTargetId] = {};
-  }
-  if (selectors[matchRunTargetId][event] === undefined) {
-    selectors[matchRunTargetId][event] = {};
-    target.addEventListener(event, runMatch);
-  }
-  if (selectors[matchRunTargetId][event][selector] === undefined) {
-    selectors[matchRunTargetId][event][selector] = [];
-  }
-
-  selectors[matchRunTargetId][event][selector].push(func);
-}
-
-function bindField(selector, objOrFunc, validation) {
-  let lastInputTime = {};
-  function update(elem) {
-    elem.id = elem.id || randomString(7);
-    const thisInputTime = new Date().getTime();
-    lastInputTime[elem.id] = thisInputTime;
-    setTimeout(() => {
-      if (thisInputTime === lastInputTime[elem.id]) {
-        const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
-        if (updatePath !== null) {
-          const newValue = elem.value;
-          if ((typeof validation) === 'function' && !validation(newValue)) {
-            console.error('badValue')
-          } else if ((typeof objOrFunc) === 'function') {
-            objOrFunc(updatePath, elem.value);
-          } else {
-            const attrs = updatePath.split('.');
-            const lastIndex = attrs.length - 1;
-            let currObj = objOrFunc;
-            for (let index = 0; index < lastIndex; index += 1) {
-              let attr = attrs[index];
-              if (currObj[attr] === undefined) currObj[attr] = {};
-              currObj = currObj[attr];
-            }
-            currObj[attrs[lastIndex]] = elem.value;
-          }
-        }
-      }
-    }, 2000);
-  }
-  matchRun('keyup', selector, update);
-  matchRun('change', selector, update);
-}
-
-
-function updateDivisions (target) {
-  const name = target.getAttribute('name');
-  const index = Number.parseInt(target.getAttribute('index'));
-  const value = Number.parseFloat(target.value);
-  const inputs = target.parentElement.parentElement.querySelectorAll('.division-pattern-input');
-  const pattern = DivisionPattern.patterns[name];
-  const uniqueId = up('.opening-cnt', target).getAttribute('opening-id');
-  const opening = Assembly.get(uniqueId);
-  const values = opening.calcSections(pattern, index, value).fill;
-  for (let index = 0; values && index < inputs.length; index += 1){
-    const value = values[index];
-    if(value) inputs[index].value = value;
-  }
-  updateModel(opening);
-}
-
-function parseSeperator (str, seperator, isRegex) {
-  if ((typeof str) !== 'string') {
-    return {};
-  }
-  if (isRegex !== true) {
-    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
-  }
-  var keyValues = str.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
-  var json = {};
-  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
-    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
-    if (split) {
-      json[split[1]] = split[2];
-    }
-  }
-  return json;
-}
-
-function getCookie(name, seperator) {
-  const cookie = parseSeperator(document.cookie, ';')[name];
-  if (seperator === undefined) return cookie;
-  const values = cookie === undefined ? [] : cookie.split(seperator);
-  if (arguments.length < 3) return values;
-  let obj = {};
-  for (let index = 2; index < arguments.length; index += 1) {
-    const key = arguments[index];
-    const value = values[index - 2];
-    obj[key] = value;
-  }
-  return obj;
-}
-
-
-function getParam(name) {
-  if (getParam.params === undefined) {
-    const url = window.location.href;
-    const paramStr = url.substr(url.indexOf('?') + 1);
-    getParam.params = parseSeperator(paramStr, '&');
-  }
-  return decodeURI(getParam.params[name]);
-}
-
-
-function removeCookie(name) {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
-}
-
-matchRun('change', '.open-orientation-radio,.open-division-input', updateDivisions);
-
-
-class Feature {
-  constructor(id, subFeatures, properties, parent) {
-    subFeatures = subFeatures || [];
-    this.properties = properties || {};
-    this.enabled = false;
-    this.features = [];
-    const radioFeatures = [];
-    this.name = id.replace(/([a-z])([A-Z])/g, '$1.$2')
-                  .replace(/\.([a-zA-Z0-9])/g, Feature.formatName);
-    this.id = id;
-    this.isRoot = (path) => path === 'root';
-    this.multipleFeatures = () => this.features.length > 1;
-    this.isInput = () => (typeof this.properties.inputValidation) === 'function';
-    this.showInput = () => (this.isInput() && !this.isCheckbox() && !this.isRadio())
-                          || (this.enabled && (this.isCheckbox() || this.isRadio()));
-    this.isCheckbox = () => this.id.indexOf('has') === 0;
-    this.radioFeature = (feature) => radioFeatures.length > 1 && radioFeatures.indexOf[feature] !== -1;
-    this.isRadio = () => (!this.isCheckbox() && parent !== undefined && parent.radioFeature(this));
-    this.addFeature = (featureOrId) => {
-      let feature;
-      if (featureOrId instanceof Feature) feature = featureOrId;
-      else feature = Feature.byId[featureOrId];
-      if (!(feature instanceof Feature)) {
-        throw new Error(`Invalid feature '${id}'`);
-      }
-      this.features.push(feature);
-      if (!feature.isCheckbox()) radioFeatures.push(feature);
-    };
-    subFeatures.forEach((featureId) => this.addFeature(featureId))
-    Feature.byId[id] = this;
-  }
-}
-
-Feature.byId = {};
-Feature.objMap = {};
-Feature.addRelations = (objId, featureIds) => {
-  featureIds.forEach((id) => {
-    if (Feature.objMap[objId] === undefined) Feature.objMap[objId] = [];
-    const feature = Feature.byId[id];
-    if (!(feature instanceof Feature)) {
-      throw new Error('Trying to add none Feature object');
-    }
-    else Feature.objMap[objId].push(feature);
-  });
-};
-Feature.clone = (feature, parent) => {
-  const clone = new feature.constructor(feature.id, undefined, feature.properties, parent);
-  feature.features.forEach((f) => clone.addFeature(Feature.clone(f, feature)));
-  return clone;
-}
-Feature.getList = (id) => {
-  const masterList = Feature.objMap[id];
-  if (masterList === undefined) return [];
-  const list = [];
-  masterList.forEach((feature) => list.push(Feature.clone(feature)));
-  return list;
-}
-Feature.formatName = (match) => ` ${match[1].toUpperCase()}`;
-
-new Feature('thickness', undefined, {inputValidation: (value) => !new Measurement(value).isNaN()});
-new Feature('inset');
-new Feature('fullOverlay');
-new Feature('1/8');
-new Feature('1/4');
-new Feature('1/2');
-new Feature('roundOver', ['1/8', '1/4', '1/2']);
-new Feature('knockedOff');
-new Feature('hasFrame', ['thickness']);
-new Feature('hasPanel', ['thickness']);
-new Feature('insetProfile');
-new Feature('glass');
-new Feature('edgeProfile', ['roundOver', 'knockedOff']);
-new Feature('drawerFront', ['edgeProfile'])
-new Feature('doveTail');
-new Feature('miter');
-new Feature('drawerBox', ['doveTail', 'miter'])
-new Feature('insetPanel', ['glass', 'insetProfile'])
-new Feature('solid');
-new Feature('doorType', ['fullOverlay', 'inset']);
-new Feature('doorStyle', ['insetPanel', 'solid'])
-new Feature('drawerType', ['fullOverlay', 'inset']);
-
-Feature.addRelations('DrawerBox', ['drawerType', 'drawerFront', 'drawerBox']);
-Feature.addRelations('PartitionSection', ['hasFrame', 'hasPanel']);
-Feature.addRelations('Door', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
-Feature.addRelations('DoubleDoor', ['doorType', 'doorStyle', 'edgeProfile', 'thickness']);
-Feature.addRelations('FalseFront', ['drawerType', 'edgeProfile']);
-
-
-class CabinetDisplay {
-  constructor(room) {
-    const parentSelector = `[room-id="${room.id}"].cabinet-cnt`;
-    let propId = 'Half Overlay';
-    const instance = this;
-    this.propId = (id) => {
-      if (id ===  undefined) return propId;
-      propId = id;
-    }
-    const getHeader = (cabinet, $index) =>
-        CabinetDisplay.headTemplate.render({room, cabinet, $index});
-    const showTypes = Show.listTypes();
-    const getBody = (cabinet, $index) => {
-      if (expandList.activeIndex() === $index)
-        ThreeDModel.render(cabinet);
-      return CabinetDisplay.bodyTemplate.render({room, $index, cabinet, showTypes, OpenSectionDisplay});
-    }
-
-    function inputValidation(values) {
-      const validName = values.name !== undefined;
-      const validType = CabinetConfig.list().indexOf(values.type) !== -1;
-      if(validType) return true;
-      return {type: 'You must select a defined type.'};
-    }
-    const getObject = (values) => {
-      return CabinetConfig.get(values.type);
-    };
-    this.active = () => expandList.active();
-    const expListProps = {
-      list: room.cabinets,
-      inputTree:   CabinetConfig.inputTree(),
-      inputs: [{placeholder: 'name'},
-                {placeholder: 'type', autofill: CabinetConfig.list()}],
-      parentSelector, getHeader, getBody, getObject, inputValidation,
-      listElemLable: 'Cabinet'
-    };
-    const expandList = new ExpandableList(expListProps);
-    this.refresh = () => expandList.refresh();
-
-    const cabinetKey = (path) => {
-      const split = path.split('.');
-      const index = split[0];
-      const key = split[1];
-      const cabinet = expListProps.list[index];
-      return {cabinet, key};
-    }
-
-    const valueUpdate = (path, value) => {
-      const cabKey = cabinetKey(path);
-      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
-      ThreeDModel.render(cabKey.cabinet);
-    }
-
-    const attrUpdate = (path, value) => {
-      const cabKey = cabinetKey(path);
-      cabKey.cabinet[cabKey.key] = value;
-    }
-
-    const saveSuccess = () => console.log('success');
-    const saveFail = () => console.log('failure');
-    const save = (target) => {
-      const index = target.getAttribute('index');
-      const cabinet = expListProps.list[index];
-      if (cabinet.name !== undefined) {
-        Request.post(EPNTS.cabinet.add(cabinet.id), cabinet.toJson(), saveSuccess, saveFail);
-        console.log('saving');
-      } else {
-        alert('Please enter a name if you want to save the cabinet.')
-      }
-    }
-
-    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-    bindField(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
-    bindField(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
-    matchRun('click', '.save-cabinet-btn', save);
-  }
-}
-CabinetDisplay.bodyTemplate = new $t('cabinet/body');
-CabinetDisplay.headTemplate = new $t('cabinet/head');
 
 
 
@@ -4021,24 +3849,838 @@ User.credential = () => getCookie(APP_ID);
 User = new User();
 
 
-class PropertyDisplay {
-  constructor(containerSelector) {
-    let currProps;
-
-    this.update = (properties) => {
-      currProps = properties;
-      const contianer = document.querySelector(containerSelector);
-      contianer.innerHTML = PropertyDisplay.template.render({properties});
-    };
-
-    function updateProperties(name, value) {
-      currProps[name] = value;
+class DisplayManager {
+  constructor(displayId, listId, switchId) {
+    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
+    const id = randomString();
+    const instance = this;
+    this.list = (func) => {
+      const list = [];
+      const runFunc = (typeof func) === 'function';
+      const displayElems = document.getElementById(displayId).children;
+      for (let index = 0; index < displayElems.length; index += 1) {
+        const elem = displayElems[index];
+        let id = elem.id || randomString(7);
+        elem.id = id;
+        name = elem.getAttribute('name') || id;
+        const item = {id, name};
+        if (runFunc) func(elem);
+        list.push(item);
+      }
+      return list;
     }
-    bindField(containerSelector, updateProperties);
+
+    function updateActive(id) {
+      const items = document.querySelectorAll('.display-manager-input');
+      for (let index = 0; index < items.length; index += 1) {
+        const elem = items[index];
+        elem.getAttribute('display-id') === id ?
+              addClass(elem, 'active') : removeClass(elem, 'active');
+      }
+    }
+
+    function open(id) {
+      const displayElems = document.getElementById(displayId).children;
+      for (let index = 0; index < displayElems.length; index += 1) {
+        const elem = displayElems[index];
+        if (elem.id === id) elem.hidden = false;
+        else elem.hidden = true;
+      }
+      updateActive(id);
+    }
+
+    this.open = open;
+
+    const children = document.getElementById(displayId).children;
+
+    if (children.length > 0) {
+      this.list();
+      open(children[0].id);
+      if (listId) {
+        document.getElementById(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
+      }
+    }
+
+    if (switchId) {
+      matchRun('click', `#${switchId}`, (target, event) => {
+        const listElem = document.getElementById(listId);
+        listElem.hidden = !listElem.hidden;
+      });
+      document.addEventListener('click', (event) => {
+        const listElem = document.getElementById(listId);
+        const target = event.target;
+        const withinList = up(`#${listId}`, target) !== undefined;
+        if (!withinList && target.id !== switchId &&listElem)
+          listElem.hidden = true;
+      });
+    }
+    DisplayManager.instances[id] = this;
   }
 }
 
-PropertyDisplay.template = new $t('properties/properties');
+DisplayManager.instances = {};
+DisplayManager.template = new $t('display-manager');
+
+matchRun('click', '.display-manager', (target, event) => {
+  const displayManagerId = target.id;
+  const displayId = event.target.getAttribute('display-id');
+  DisplayManager.instances[displayManagerId].open(displayId);
+});
+
+
+// properties
+//  required: {
+//  getHeader: function returns html header string,
+//  getBody: function returns html body string,
+//}
+//  optional: {
+//  list: list to use, creates on undefined
+//  getObject: function returns new list object default is generic js object,
+//  parentSelector: cssSelector only reqired for refresh function,
+//  listElemLable: nameOfElementType changes add button label,
+//  hideAddBtn: defaults to false,
+//  startClosed: all tabs are closed on list open.
+//  input: true - require user to enter text before adding new
+//  inputOptions: array of autofill inputs
+//  inputs: [{placeholder, autofill},...]
+//  inputValidation: function to validate input fields
+//  type: defaults to list,
+//  selfCloseTab: defalts to true - allows clicking on header to close body,
+//  findElement: used to find elemenents related to header - defaults to closest
+//}
+class ExpandableList {
+  constructor(props) {
+    const afterRenderEvent = new CustomEvent('afterRender');
+    const afterAddEvent = new CustomEvent('afterAdd');
+    const afterRefreshEvent = new CustomEvent('afterRefresh');
+    const instance = this;
+    props.id = ExpandableList.lists.length;
+    this.id = () => props.id;
+    props.list = props.list || [];
+    props.inputs = props.inputs || [];
+    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${this.id}`;
+    props.inputTreeId = `expandable-input-tree-cnt-${this.id}`
+    props.type = props.type || 'list';
+    props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
+    this.findElement = props.findElement;
+    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
+    props.getObject = props.getObject || (() => {});
+    let pendingRefresh = false;
+    let lastRefresh = new Date().getTime();
+    const storage = {};
+    props.activeIndex = 0;
+    ExpandableList.lists[props.id] = this;
+
+    function setErrorMsg(msg) {
+        document.getElementById(props.ERROR_CNT_ID).innerHTML = msg;
+    }
+
+    function values() {
+      if (instance.hasInputTree()) return props.inputTree.values();
+      const values = {};
+      props.inputs.forEach((input) =>
+        values[input.placeholder] = document.getElementById(input.id).value);
+      return values;
+    }
+
+    this.add = () => {
+      const inputValues = values();
+      if ((typeof props.inputValidation) !== 'function' ||
+              props.inputValidation(inputValues) === true) {
+        props.list.push(props.getObject(inputValues));
+
+        this.activeIndex(props.list.length - 1);
+        this.refresh();
+        afterAddEvent.trigger();
+      } else {
+        const errors = props.inputValidation(inputValues);
+        let errorStr;
+        if ((typeof errors) === 'object') {
+          const keys = Object.keys(errors);
+          errorStr = Object.values(errors).join('<br>');
+        } else {
+          errorStr = `Error: ${errors}`;
+        }
+        setErrorMsg(errorStr);
+      }
+    };
+    this.hasInputTree = () =>
+      props.inputTree && props.inputTree.constructor.name === 'DecisionNode';
+    if (this.hasInputTree()) props.inputTree.onComplete(this.add);
+    props.hasInputTree = this.hasInputTree;
+
+    this.isSelfClosing = () => props.selfCloseTab;
+    this.remove = (index) => {
+      props.list.splice(index, 1);
+      this.refresh();
+    }
+    this.afterRender = (func) => afterRenderEvent.on(func);
+    this.afterAdd = (func) => afterAddEvent.on(func);
+    this.refresh = (type) => {
+      props.type = (typeof type) === 'string' ? type : props.type;
+      if (!pendingRefresh) {
+        pendingRefresh = true;
+        setTimeout(() => {
+          props.inputs.forEach((input) => input.id = input.id || randomString(7));
+          const parent = document.querySelector(props.parentSelector);
+          const html = ExpandableList[`${props.type}Template`].render(props);
+
+          if (parent && html !== undefined) {
+            parent.innerHTML = html;
+            afterRefreshEvent.trigger();
+          }
+          pendingRefresh = false;
+        }, 100);
+      }
+    };
+    this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
+    this.active = () => props.list[this.activeIndex()];
+    this.value = (index) => (key, value) => {
+      if (props.activeIndex === undefined) props.activeIndex = 0;
+      if (index === undefined) index = props.activeIndex;
+      if (storage[index] === undefined) storage[index] = {};
+      if (value === undefined) return storage[index][key];
+      storage[index][key] = value;
+    }
+    this.set = (index, value) => props.list[index] = value;
+    this.get = (index) => props.list[index];
+    this.renderBody = (target) => {
+      const headerSelector = `.expand-header[ex-list-id='${props.id}'][index='${this.activeIndex()}']`;
+      target = target || document.querySelector(headerSelector);
+      if (target !== null) {
+        const id = target.getAttribute('ex-list-id');
+        const list = ExpandableList.lists[id];
+        const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
+        const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
+        const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
+        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
+        bodys.forEach((body) => body.style.display = 'none');
+        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
+        const body = list.findElement('.expand-body', target);
+        body.style.display = 'block';
+        const index = target.getAttribute('index');
+        this.activeIndex(index);
+        body.innerHTML = this.htmlBody(index);
+        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+        target.className += ' active';
+        afterRenderEvent.trigger();
+      }
+    };
+    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+
+    this.htmlBody = (index) => props.getBody(props.list[index], index);
+    this.getList = () => props.list;
+    this.refresh();
+  }
+}
+ExpandableList.lists = [];
+ExpandableList.listTemplate = new $t('expandable/list');
+ExpandableList.pillTemplate = new $t('expandable/pill');
+ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
+ExpandableList.getIdAndIndex = (target) => {
+  const cnt = up('.expand-header,.expand-body', target);
+  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
+  const index = Number.parseInt(cnt.getAttribute('index'));
+  return {id, index};
+}
+ExpandableList.getValueFunc = (target) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  return ExpandableList.lists[idIndex.id].value(idIndex.index);
+}
+
+ExpandableList.get = (target, value) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  return ExpandableList.lists[idIndex.id].get(idIndex.index);
+}
+
+ExpandableList.set = (target, value) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  ExpandableList.lists[idIndex.id].set(idIndex.index, value);
+}
+
+ExpandableList.value = (key, value, target) => {
+  return ExpandableList.getValueFunc(target)(key, value);
+}
+matchRun('click', '.expandable-list-add-btn', (target) => {
+  const id = target.getAttribute('ex-list-id');
+  ExpandableList.lists[id].add();
+});
+matchRun('click', '.expandable-item-rm-btn', (target) => {
+  const id = target.getAttribute('ex-list-id');
+  const index = target.getAttribute('index');
+  ExpandableList.lists[id].remove(index);
+});
+ExpandableList.closeAll = (header) => {
+  const hello = 'world';
+}
+
+matchRun('click', '.expand-header', (target, event) => {
+  const isActive = target.matches('.active');
+  const id = target.getAttribute('ex-list-id');
+  const list = ExpandableList.lists[id];
+  if (isActive && event.target === target) {
+    target.className = target.className.replace(/(^| )active( |$)/g, '');
+    list.findElement('.expand-body', target).style.display = 'none';
+    list.activeIndex(null);
+    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
+  } else if (!isActive) {
+    list.renderBody(target);
+  }
+});
+
+
+
+class AbstractManager {
+  constructor(id, name) {
+    let list;
+    const manager = this;
+    this.saveBtnId = `${name}-manager-save-btn`;
+    this.headerId = `${name}-manager-header-cnt`;
+    this.bodyId = `${name}-manager-body-cnt`;
+    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
+    const parentSelector = `#${this.bodyId}`;
+    const template = new $t('managers/abstract-manager');
+    const bodyTemplate = new $t(`managers/${name}/body`);
+    const headTemplate = new $t(`managers/${name}/header`);
+
+    const getHeader = (instance) => headTemplate.render({instance, manager});
+    const getBody = (instance) => bodyTemplate.render({instance, manager});
+
+    const getObject = (values) => manager.getObject(values);
+
+    function init(json) {
+      document.getElementById(id).innerHTML = template.render(manager);
+      list = manager.fromJson(json) || [];
+      const expListProps = {
+        inputTree: manager.constructor.inputTree(),
+        parentSelector, getHeader, getBody, getObject, list,
+        listElemLable: 'Template'
+      };
+      const expandList = new ExpandableList(expListProps);
+
+      const saveSuccess = () => console.log('success save');
+      const saveFail = () => console.log('failed save');
+      const save = (target) => {
+        const body = manager.toJson(costs);
+        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
+      }
+      matchRun('click', `#${manager.saveBtnId}`, save);
+    }
+
+    afterLoad.push(() => Request.get(manager.loadPoint(), init));
+  }
+}
+
+
+class CabinetDisplay {
+  constructor(room) {
+    const parentSelector = `[room-id="${room.id}"].cabinet-cnt`;
+    let propId = 'Half Overlay';
+    const instance = this;
+    this.propId = (id) => {
+      if (id ===  undefined) return propId;
+      propId = id;
+    }
+    const getHeader = (cabinet, $index) =>
+        CabinetDisplay.headTemplate.render({room, cabinet, $index});
+    const showTypes = Show.listTypes();
+    const getBody = (cabinet, $index) => {
+      if (expandList.activeIndex() === $index)
+        ThreeDModel.render(cabinet);
+      return CabinetDisplay.bodyTemplate.render({room, $index, cabinet, showTypes, OpenSectionDisplay});
+    }
+
+    function inputValidation(values) {
+      const validName = values.name !== undefined;
+      const validType = CabinetConfig.list().indexOf(values.type) !== -1;
+      if(validType) return true;
+      return {type: 'You must select a defined type.'};
+    }
+    const getObject = (values) => {
+      return CabinetConfig.get(values.type);
+    };
+    this.active = () => expandList.active();
+    const expListProps = {
+      list: room.cabinets,
+      inputTree:   CabinetConfig.inputTree(),
+      inputs: [{placeholder: 'name'},
+                {placeholder: 'type', autofill: CabinetConfig.list()}],
+      parentSelector, getHeader, getBody, getObject, inputValidation,
+      listElemLable: 'Cabinet'
+    };
+    const expandList = new ExpandableList(expListProps);
+    this.refresh = () => expandList.refresh();
+
+    const cabinetKey = (path) => {
+      const split = path.split('.');
+      const index = split[0];
+      const key = split[1];
+      const cabinet = expListProps.list[index];
+      return {cabinet, key};
+    }
+
+    const valueUpdate = (path, value) => {
+      const cabKey = cabinetKey(path);
+      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
+      ThreeDModel.render(cabKey.cabinet);
+    }
+
+    const attrUpdate = (path, value) => {
+      const cabKey = cabinetKey(path);
+      cabKey.cabinet[cabKey.key] = value;
+    }
+
+    const saveSuccess = () => console.log('success');
+    const saveFail = () => console.log('failure');
+    const save = (target) => {
+      const index = target.getAttribute('index');
+      const cabinet = expListProps.list[index];
+      if (cabinet.name !== undefined) {
+        Request.post(EPNTS.cabinet.add(cabinet.id), cabinet.toJson(), saveSuccess, saveFail);
+        console.log('saving');
+      } else {
+        alert('Please enter a name if you want to save the cabinet.')
+      }
+    }
+
+    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
+    bindField(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
+    bindField(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
+    matchRun('click', '.save-cabinet-btn', save);
+  }
+}
+CabinetDisplay.bodyTemplate = new $t('cabinet/body');
+CabinetDisplay.headTemplate = new $t('cabinet/head');
+
+
+class Order {
+  constructor(name, id) {
+    this.name = name || ++Order.count;
+    this.id = id || randomString(32);
+    this.rooms = []
+    this.toJson = () => {
+      const json = {name: this.name, rooms: []};
+      this.rooms.forEach((room) => json.rooms.push(room.toJson()));
+      return json;
+    }
+  }
+}
+
+Order.count = 0;
+Order.fromJson = (orderJson) => {
+  const order = new Order(orderJson.name, orderJson.id);
+  orderJson.rooms.forEach((roomJson) => order.rooms.push(Room.fromJson(roomJson)));
+  return order;
+}
+
+
+class FeatureDisplay {
+  constructor(assembly, parentSelector) {
+    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
+    this.refresh = () => {
+      const container = document.querySelector(parentSelector);
+      container.innerHTML = this.html;
+    }
+  }
+}
+FeatureDisplay.template = new $t('features');
+
+
+
+class Input {
+  constructor(props) {
+    const instance = this;
+    this.type = props.type;
+    this.label = props.label;
+    this.name = props.name;
+    this.id = props.id || `input-${randomString(7)}`;
+    this.placeholder = props.placeholder;
+    this.class = props.class;
+    this.list = props.list || [];
+    let valid, value;
+
+    props.errorMsg = props.errorMsg || 'Error';
+
+    this.errorMsgId = props.errorMsgId || `error-msg-${this.id}`;
+    const idSelector = `#${this.id}`;
+
+    const html = this.constructor.html(this);
+    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
+    this.html = html;
+
+    this.on = (eventType, func) => matchRun(eventType, idSelector, func);
+    this.valid = () => valid !== undefined ? this.setValue() : valid;
+    this.setValue = (val) => {
+      if (val === undefined){
+        const elem = document.getElementById(this.id);
+        if (elem) val = elem.value;
+      }
+      if(this.validation(val)) {
+        valid = true;
+        value = val;
+        return true;
+      }
+      valid = false;
+      value = undefined;
+      return false;
+    }
+    this.value = () => value;
+    this.validation = (val) => {
+      if (val === undefined) return false;
+      if (val === value) return valid;
+      let valValid = true;
+      if (props.validation instanceof RegExp) {
+        valValid = val.match(props.validation) !== null;
+      }
+      else if ((typeof props.validation) === 'function') {
+        valValid = props.validation(val);
+      }
+      else if (Array.isArray(props.validation)) {
+        valValid = props.validation.indexOf(val) !== -1;
+      }
+
+      return valValid;
+    };
+
+    const validate = (target) => {
+      if (this.setValue(target.value)) {
+        document.getElementById(this.errorMsgId).innerHTML = '';
+        valid = true;
+      } else {
+        document.getElementById(this.errorMsgId).innerHTML = props.errorMsg;
+        valid = false;
+      }
+    }
+
+    matchRun(`change`, `#${this.id}`, validate);
+    matchRun(`keyup`, `#${this.id}`, validate);
+  }
+}
+
+Input.template = new $t('input/input');
+Input.html = (instance) => () => Input.template.render(instance);
+
+
+Input.id = () => new Input({
+  type: 'text',
+  placeholder: 'Id',
+  name: 'id',
+  class: 'center',
+  validation: /^\s*[^\s]{1,}\s*$/,
+  errorMsg: 'You must enter an Id'
+});
+
+Input.Name = () => new Input({
+  type: 'text',
+  placeholder: 'Name',
+  name: 'name',
+  class: 'center',
+  validation: /^\s*[^\s].*$/,
+  errorMsg: 'You must enter a Name'
+});
+
+Input.color = () => new Input({
+    type: 'color',
+    placeholder: 'color',
+    name: 'color',
+    class: 'center'
+  });
+
+
+
+class Room {
+  constructor(name, id) {
+    this.name = name || `Room ${Room.count++}`;
+    this.id = id || randomString(32);
+    this.cabinets = [];
+    this.toJson = () => {
+      const json = {name: this.name, id: this.id, cabinets: []};
+      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
+      return json;
+    };
+  }
+};
+Room.count = 0;
+Room.fromJson = (roomJson) => {
+  const room = new Room(roomJson.name, roomJson.id);
+  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
+  return room;
+}
+
+
+
+
+class Cost {
+  constructor(id, method, cost, length, width, depth) {
+    const configuration = Cost.configure(method, cost, length, width, depth);
+    const formula = configuration.formula;
+    const unitCost = configuration.unitCost;
+    let percentage = 100;
+    this.id = () => id;
+    this.method = () => method;
+    this.length = () => length;
+    this.width = () => width;
+    this.depth = () => depth;
+    this.cost = () => cost;
+    this.unitCost = () => JSON.parse(JSON.stringify(unitCost));
+
+    this.calc = (assembly) => Cost.evaluator.eval(formula, assembly);
+
+    const cName = this.constructor.name;
+    if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
+    if (Cost.lists[cName][id] === undefined) Cost.lists[cName][id] = [];
+    Cost.lists[cName][id].push(this);
+
+    this.toJson = () => {
+      return {
+        type: this.constructor.name,
+        id, method, length, width, depth, cost
+      };
+    }
+  }
+}
+Cost.lists = {};
+Cost.objMap = {};
+Cost.types = [];
+Cost.methods = {
+  LINEAR_FEET: 'Linear Feet',
+  SQUARE_FEET: 'Square Feet',
+  CUBIC_FEET: 'Cubic Feet',
+  UNIT: 'Unit'
+},
+Cost.methodList = Object.values(Cost.methods);
+Cost.configure = (method, cost, length, width, depth) => {
+  const retValue = {unitCost: {}};
+  switch (method) {
+    case Cost.methods.LINEAR_FEET:
+      const perLinearInch = Cost.evaluator.eval(`${cost}/(${length} * 12)`);
+      retValue.unitCost.name = 'Linear Inch';
+      retValue.unitCost.value = perLinearInch;
+      retValue.formula = `${perLinearInch}*l`;
+      return retValue;
+    case Cost.methods.SQUARE_FEET:
+      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*144)`);
+      retValue.unitCost.name = 'Square Inch';
+      retValue.unitCost.value = perSquareInch;
+      retValue.formula = `${perSquareInch}*l*w`;
+      return retValue;
+    case Cost.methods.CUBIC_FEET:
+      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth}*1728)`);
+      retValue.unitCost.name = 'Cubic Inch';
+      retValue.unitCost.value = perCubicInch;
+      retValue.formula = `${perCubicInch}*l*w*d`;
+      return retValue;
+    case Cost.methods.UNIT:
+      retValue.unitCost.name = 'Unit';
+      retValue.unitCost.value = cost;
+      retValue.formula = cost;
+      return retValue;
+    default:
+      throw new Error('wtf');
+      retValue.unitCost.name = 'Unknown';
+      retValue.unitCost = -0.01;
+      retValue.formula = -0.01;
+      return retValue;
+  }
+};
+
+Cost.get = (name) => {
+  const obj = Cost.lists[id];
+  if (obj === undefined) return null;
+  return new obj.constructor();
+}
+Cost.addRelations = (type, id, name) => {
+  names.forEach((name) => {
+    if (objMap[id] === undefined) Cost.objMap[id] = {Labor: [], Material: []}
+    if (type === Labor) Cost.objMap[id].Labor.push(Cost.get(name));
+    if (type === Material) Cost.objMap[id].Material.push(Cost.get(name));
+  });
+}
+
+Cost.register = (clazz) => {
+  Cost.types[clazz.prototype.constructor.name] = clazz;
+  Cost.typeList = Object.keys(Cost.types);
+}
+
+Cost.new = function(type) {
+  return new Cost.types[type](...Array.from(arguments).slice(1))
+}
+
+Cost.fromJson = (objOrArray) => {
+  function instanceFromJson(obj) {
+    return Cost.new(obj.type, obj.id, obj.method, obj.cost, obj.length, obj.width, obj.depth);
+  }
+  if (!Array.isArray(objOrArray)) return instanceFromJson(objOrArray);
+
+  const list = [];
+  objOrArray.forEach((obj) => list.push(instanceFromJson(obj)));
+  return list;
+}
+
+Cost.toJson = (array) => {
+  if (!Array.isArray(array)) throw new Error('Input argument must be of type Array');
+  const list = [];
+  array.forEach((cost) => {
+    if (!(cost instanceof Cost)) throw new Error('All array object must be of type Cost');
+    list.push(cost.toJson())
+  });
+  return list;
+}
+
+afterLoad.push(() =>
+  Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
+);
+
+
+const OpenSectionDisplay = {};
+
+OpenSectionDisplay.html = (opening) => {
+  const openDispId = OpenSectionDisplay.getId(opening);
+  opening.init();
+  OpenSectionDisplay.sections[opening.uniqueId] = opening;
+  setTimeout(() => OpenSectionDisplay.refresh(opening), 100);
+  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
+  return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml});
+}
+
+OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.uniqueId}`;
+OpenSectionDisplay.template = new $t('opening');
+OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
+OpenSectionDisplay.listHeadTemplate = new $t('divide/head');
+OpenSectionDisplay.sections = {};
+OpenSectionDisplay.lists = {};
+OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId}`;
+
+OpenSectionDisplay.getList = (root) => {
+  let openId = root.uniqueId;
+  if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
+  const sections = Section.sections();
+  const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
+  const parentSelector = `#${OpenSectionDisplay.getId(root)}`
+  const list = root.sections;
+  const hideAddBtn = true;
+  const selfCloseTab = true;
+  let exList;
+  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
+  const getHeader = (opening, index) => {
+    const sections = index % 2 === 0 ? Section.getSections(false) : [];
+    return OpenSectionDisplay.listHeadTemplate.render({opening, sections, clean});
+  }
+  const getBody = (opening) => {
+    const list = OpenSectionDisplay.getList(root);
+    const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
+    const assemblies = opening.getSubAssemblies();
+    return Section.render({assemblies, getFeatureDisplay, opening, list, sections});
+  }
+  const findElement = (selector, target) => down(selector, up('.expandable-list', target));
+  const expListProps = {
+    parentSelector, getHeader, getBody, getObject, list, hideAddBtn,
+    selfCloseTab, findElement, startClosed: true
+  }
+  exList = new ExpandableList(expListProps);
+  OpenSectionDisplay.lists[openId] = exList;
+  return exList;
+}
+OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
+OpenSectionDisplay.updateDividers = (opening) => {
+  const selector = `[opening-id="${opening.uniqueId}"].opening-cnt > .divider-controls`;
+  const dividerControlsCnt = document.querySelector(selector);
+  const selectPatternId = OpenSectionDisplay.getSelectId(opening);
+  bindField(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/);
+  const patternConfig = opening.dividerLayout();
+  const fill = patternConfig.fill;
+  const pattern = opening.pattern();
+  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
+  dividerControlsCnt.innerHTML = OpenSectionDisplay.dividerControlTemplate.render(
+          {opening, fill, pattern, selectPatternId, patternInputHtml});
+}
+
+OpenSectionDisplay.changeIds = {};
+OpenSectionDisplay.refresh = (opening) => {
+  let changeId = (OpenSectionDisplay.changeIds[opening.uniqueId] || 0) + 1;
+  OpenSectionDisplay.changeIds[opening.uniqueId] = changeId;
+  setTimeout(()=> {
+    if (changeId === OpenSectionDisplay.changeIds[opening.uniqueId]) {
+      const id = OpenSectionDisplay.getId(opening);
+      const target = document.getElementById(id);
+      const listCnt = up('.expandable-list', target);
+      const listId = Number.parseInt(listCnt.getAttribute('ex-list-id'));
+
+      const type = opening.isVertical() === true ? 'pill' : 'sidebar';
+      OpenSectionDisplay.updateDividers(opening);
+      OpenSectionDisplay.getList(opening).refresh(type);
+      const dividerSelector = `[opening-id='${opening.uniqueId}'].division-count-input`;
+      // listCnt.querySelector(dividerSelector).focus();
+    }
+  }, 500);
+}
+
+OpenSectionDisplay.patterInputHtml = (opening) => {
+  const pattern = opening.pattern();
+  let inputHtml = '';
+  for (let index = 0; index < pattern.unique.length; index += 1) {
+    const id = pattern.unique[index];
+    const measInput = MeasurementInput.pattern(id, pattern.value(id))
+    measInput.on('keyup', (target) => {
+      opening.pattern().value(target.name, OpenSectionDisplay.evaluator.eval(target.value));
+      if (opening.pattern().satisfied()) {
+        const cabinet = opening.getAssembly('c');
+        ThreeDModel.render(cabinet);
+      }
+    });
+    inputHtml += measInput.html();
+  }
+  return inputHtml;
+};
+
+OpenSectionDisplay.evaluator = new StringMathEvaluator();
+OpenSectionDisplay.patternInputChange = (target) => {
+  const openId = up('.open-pattern-input-cnt', target);
+  const opening = OpenSectionDisplay.sections[openId];
+  opening.pattern().value(target.name, OpenSectionDisplay.evaluator(target.value));
+  if (opening.pattern().satisfied()) {
+    OpenSectionDisplay.refresh(opening);
+  }
+};
+
+OpenSectionDisplay.onChange = (target) => {
+  const id = target.getAttribute('opening-id');
+  const value = Number.parseInt(target.value);
+  const opening = OpenSectionDisplay.sections[id];
+  if (opening.divide(value)) {
+    OpenSectionDisplay.refresh(opening);
+    const cabinet = opening.getAssembly('c');
+    ThreeDModel.render(cabinet);
+  }
+
+  const patternInput = document.querySelector(`[name='pattern'][opening-id='${opening.uniqueId}']`);
+  const patternStr = patternInput.value;
+  const pattern = opening.pattern(patternStr);
+  patternInput.value = pattern.str;
+};
+
+OpenSectionDisplay.onOrientation = (target) => {
+  const openId = target.getAttribute('open-id');
+  const value = target.value;
+  const opening = OpenSectionDisplay.sections[openId];
+  opening.vertical(value === 'vertical');
+  OpenSectionDisplay.refresh(opening);
+};
+
+OpenSectionDisplay.onSectionChange = (target) => {
+  ExpandableList.value('selected', target.value, target);
+  const section = ExpandableList.get(target);
+  const index = ExpandableList.getIdAndIndex(target).index;
+  section.parentAssembly.setSection(target.value, index);
+  OpenSectionDisplay.refresh(section.parentAssembly);
+  updateModel(section);
+}
+
+matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
+matchRun('keyup', '.patternInput', OpenSectionDisplay.patternInputChange);
+matchRun('click', '.division-count-input', OpenSectionDisplay.onChange);
+matchRun('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
+matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
 
 
 class OrderDisplay {
@@ -4118,134 +4760,66 @@ OrderDisplay.bodyTemplate = new $t('order/body');
 OrderDisplay.headTemplate = new $t('order/head');
 
 
-const OpenSectionDisplay = {};
+class PropertyDisplay {
+  constructor(containerSelector) {
+    let currProps;
 
-OpenSectionDisplay.html = (opening) => {
-  const openDispId = OpenSectionDisplay.getId(opening);
-  opening.init();
-  OpenSectionDisplay.sections[opening.uniqueId] = opening;
-  setTimeout(() => OpenSectionDisplay.refresh(opening), 100);
-  return OpenSectionDisplay.template.render({opening, openDispId});
-}
+    this.update = (properties) => {
+      currProps = properties;
+      const contianer = document.querySelector(containerSelector);
+      contianer.innerHTML = PropertyDisplay.template.render({properties});
+    };
 
-OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.uniqueId}`;
-OpenSectionDisplay.template = new $t('opening');
-OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
-OpenSectionDisplay.listHeadTemplate = new $t('divide/head');
-OpenSectionDisplay.sections = {};
-OpenSectionDisplay.lists = {};
-OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId}`;
-
-OpenSectionDisplay.getList = (root) => {
-  let openId = root.uniqueId;
-  if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
-  const sections = Section.sections();
-  const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
-  const parentSelector = `#${OpenSectionDisplay.getId(root)}`
-  const list = root.sections;
-  const hideAddBtn = true;
-  const selfCloseTab = true;
-  let exList;
-  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
-  const getHeader = (opening, index) => {
-    const sections = index % 2 === 0 ? Section.getSections(false) : [];
-    return OpenSectionDisplay.listHeadTemplate.render({opening, sections, clean});
-  }
-  const getBody = (opening) => {
-    const list = OpenSectionDisplay.getList(root);
-    const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
-    const assemblies = opening.getSubAssemblies();
-    return Section.render({assemblies, getFeatureDisplay, opening, list, sections});
-  }
-  const findElement = (selector, target) => down(selector, up('.expandable-list', target));
-  const expListProps = {
-    parentSelector, getHeader, getBody, getObject, list, hideAddBtn,
-    selfCloseTab, findElement, startClosed: true
-  }
-  exList = new ExpandableList(expListProps);
-  OpenSectionDisplay.lists[openId] = exList;
-  return exList;
-}
-OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
-OpenSectionDisplay.updateDividers = (opening) => {
-  const selector = `[opening-id="${opening.uniqueId}"].opening-cnt > .divider-controls`;
-  const dividerControlsCnt = document.querySelector(selector);
-  const patterns = DivisionPattern.filter(opening.dividerCount(), opening.pattern());
-  const selectPatternId = OpenSectionDisplay.getSelectId(opening);
-  bindField(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/);
-  const patternConfig = opening.pattern();
-  const pattern = DivisionPattern.patterns[patternConfig.name];
-  const fill = patternConfig.fill;
-  dividerControlsCnt.innerHTML = OpenSectionDisplay.dividerControlTemplate.render(
-          {opening, fill, pattern, selectPatternId, patterns});
-}
-
-OpenSectionDisplay.changeIds = {};
-OpenSectionDisplay.refresh = (opening) => {
-  let changeId = (OpenSectionDisplay.changeIds[opening.uniqueId] || 0) + 1;
-  OpenSectionDisplay.changeIds[opening.uniqueId] = changeId;
-  setTimeout(()=> {
-    if (changeId === OpenSectionDisplay.changeIds[opening.uniqueId]) {
-      const id = OpenSectionDisplay.getId(opening);
-      const target = document.getElementById(id);
-      const listCnt = up('.expandable-list', target);
-      const listId = Number.parseInt(listCnt.getAttribute('ex-list-id'));
-
-      const type = opening.isVertical() === true ? 'pill' : 'sidebar';
-      OpenSectionDisplay.updateDividers(opening);
-      OpenSectionDisplay.getList(opening).refresh(type);
-      const dividerSelector = `[opening-id='${opening.uniqueId}'].division-count-input`;
-      // listCnt.querySelector(dividerSelector).focus();
+    function updateProperties(name, value) {
+      currProps[name] = value;
     }
-  }, 500);
-}
-
-OpenSectionDisplay.onChange = (target) => {
-  const id = target.getAttribute('opening-id');
-  const value = Number.parseInt(target.value);
-  const opening = OpenSectionDisplay.sections[id];
-  if (opening.divide(value)) {
-    OpenSectionDisplay.refresh(opening);
-    const cabinet = opening.getAssembly('c');
-    ThreeDModel.render(cabinet);
+    bindField(containerSelector, updateProperties);
   }
-};
-
-OpenSectionDisplay.onOrientation = (target) => {
-  const openId = target.getAttribute('open-id');
-  const value = target.value;
-  const opening = OpenSectionDisplay.sections[openId];
-  opening.vertical(value === 'vertical');
-  OpenSectionDisplay.refresh(opening);
-};
-
-OpenSectionDisplay.onSectionChange = (target) => {
-  ExpandableList.value('selected', target.value, target);
-  const section = ExpandableList.get(target);
-  const index = ExpandableList.getIdAndIndex(target).index;
-  section.parentAssembly.setSection(target.value, index);
-  OpenSectionDisplay.refresh(section.parentAssembly);
-  updateModel(section);
 }
 
-matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
-matchRun('click', '.division-count-input', OpenSectionDisplay.onChange);
-matchRun('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
-matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
+PropertyDisplay.template = new $t('properties/properties');
 
 
+class RoomDisplay {
+  constructor(parentSelector, order) {
+    const cabinetDisplays = {};
+    const getHeader = (room, $index) =>
+        RoomDisplay.headTemplate.render({room, $index});
 
-
-class FeatureDisplay {
-  constructor(assembly, parentSelector) {
-    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
-    this.refresh = () => {
-      const container = document.querySelector(parentSelector);
-      container.innerHTML = this.html;
+    const getBody = (room, $index) => {
+      let propertyTypes = Object.keys(properties.list);
+      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
     }
+
+    const getObject = (values) => {
+      const room = new Room(values.name);
+      return room;
+    }
+    this.active = () => expandList.active();
+    this.cabinetDisplay = () => {
+      const room = this.active();
+      const id = room.id;
+      if (cabinetDisplays[id] === undefined) {
+        cabinetDisplays[id] = new CabinetDisplay(room);
+      }
+      return cabinetDisplays[id];
+    }
+    this.cabinet = () => this.cabinetDisplay().active();
+    const expListProps = {
+      list: order.rooms,
+      parentSelector, getHeader, getBody, getObject,
+      inputs: [{placeholder: 'name'}],
+      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
+      listElemLable: 'Room', type: 'pill',
+      inputTree: new DecisionInputTree('Cabinet', Input.Name(), console.log)
+    };
+    const expandList = new ExpandableList(expListProps);
+    expandList.afterRender(() => this.cabinetDisplay().refresh());
+    this.refresh = () => expandList.refresh();
   }
 }
-FeatureDisplay.template = new $t('features');
+RoomDisplay.bodyTemplate = new $t('room/body');
+RoomDisplay.headTemplate = new $t('room/head');
 
 
 const colors = {
@@ -4461,8 +5035,13 @@ ThreeDModel.get = (assembly) => {
   }
   return ThreeDModel.models[assembly.uniqueId];
 }
-ThreeDModel.render = (part) => ThreeDModel.get(part).render();
-
+ThreeDModel.render = (part) => {
+  const renderId = randomString();
+  ThreeDModel.renderId = renderId;
+  setTimeout(() => {
+    if(ThreeDModel.renderId === renderId) ThreeDModel.get(part).render();
+  }, 250);
+};
 
 
 function displayPart(part) {
@@ -4580,634 +5159,124 @@ function updateModel(part) {
 }
 
 
-
-class Input {
+class MeasurementInput extends Input {
   constructor(props) {
-    const instance = this;
-    this.type = props.type;
-    this.label = props.label;
-    this.name = props.name;
-    this.id = props.id || `input-${randomString(7)}`;
-    this.placeholder = props.placeholder;
-    this.class = props.class;
-    this.list = props.list || [];
-    let valid, value;
-
-    props.errorMsg = props.errorMsg || 'Error';
-
-    this.errorMsgId = props.errorMsgId || `error-msg-${this.id}`;
-    const idSelector = `#${this.id}`;
-
-    const html = this.constructor.html(this);
-    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
-    this.html = html;
-
-    this.on = (eventType, func) => matchRun(eventType, idSelector, func);
-    this.valid = () => valid !== undefined ? this.setValue() : valid;
-    this.setValue = (val) => {
-      if (val === undefined){
-        const elem = document.getElementById(this.id);
-        if (elem) val = elem.value;
-      }
-      if(this.validation(val)) {
-        valid = true;
-        value = val;
-        return true;
-      }
-      valid = false;
-      value = undefined;
-      return false;
-    }
-    this.value = () => value;
-    this.validation = (val) => {
-      if (val === undefined) return false;
-      if (val === value) return valid;
-      let valValid = true;
-      if (props.validation instanceof RegExp) {
-        valValid = val.match(props.validation) !== null;
-      }
-      else if ((typeof props.validation) === 'function') {
-        valValid = props.validation(val);
-      }
-      else if (Array.isArray(props.validation)) {
-        valValid = props.validation.indexOf(val) !== -1;
-      }
-
-      return valValid;
-    };
-
-    const validate = (target) => {
-      if (this.setValue(target.value)) {
-        document.getElementById(this.errorMsgId).innerHTML = '';
-        valid = true;
-      } else {
-        document.getElementById(this.errorMsgId).innerHTML = props.errorMsg;
-        valid = false;
-      }
-    }
-
-    matchRun(`change`, `#${this.id}`, validate);
-    matchRun(`keyup`, `#${this.id}`, validate);
+    super(props);
+    props.validation = (value) => typeof MeasurementInput.evaluator.eval(value) === 'number';
+    props.errorMsg = 'Invalid Mathematical Expression';
   }
 }
 
-Input.template = new $t('input/input');
-Input.html = (instance) => () => Input.template.render(instance);
+MeasurementInput.template = new $t('input/measurement');
+MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+MeasurementInput.evaluator = new StringMathEvaluator(Math);
 
-
-Input.id = () => new Input({
+MeasurementInput.len = () => new MeasurementInput({
   type: 'text',
-  placeholder: 'Id',
-  name: 'id',
+  placeholder: 'Length',
+  name: 'length',
   class: 'center',
-  validation: /^\s*[^\s]{1,}\s*$/,
-  errorMsg: 'You must enter an Id'
+});
+MeasurementInput.width = () => new MeasurementInput({
+  type: 'text',
+  label: 'x',
+  placeholder: 'Width',
+  name: 'width',
+  class: 'center',
+});
+MeasurementInput.depth = () => new MeasurementInput({
+  type: 'text',
+  label: 'x',
+  placeholder: 'Depth',
+  name: 'depth',
+  class: 'center',
+});
+MeasurementInput.cost = () => new MeasurementInput({
+  type: 'number',
+  label: '$',
+  placeholder: 'Cost',
+  name: 'cost'
+});
+MeasurementInput.pattern = (id, value) => new MeasurementInput({
+  type: 'text',
+  label: id,
+  value,
+  placeholder: id,
+  name: id,
+  class: 'pattern-input',
 });
 
-Input.Name = () => new Input({
-  type: 'text',
-  placeholder: 'Name',
-  name: 'name',
-  class: 'center',
-  validation: /^\s*[^\s].*$/,
-  errorMsg: 'You must enter a Name'
-});
 
-Input.color = () => new Input({
-    type: 'color',
-    placeholder: 'color',
-    name: 'color',
-    class: 'center'
-  });
-
-
-class RoomDisplay {
-  constructor(parentSelector, order) {
-    const cabinetDisplays = {};
-    const getHeader = (room, $index) =>
-        RoomDisplay.headTemplate.render({room, $index});
-
-    const getBody = (room, $index) => {
-      let propertyTypes = Object.keys(properties.list);
-      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
-    }
-
-    const getObject = (values) => {
-      const room = new Room(values.name);
-      return room;
-    }
-    this.active = () => expandList.active();
-    this.cabinetDisplay = () => {
-      const room = this.active();
-      const id = room.id;
-      if (cabinetDisplays[id] === undefined) {
-        cabinetDisplays[id] = new CabinetDisplay(room);
-      }
-      return cabinetDisplays[id];
-    }
-    this.cabinet = () => this.cabinetDisplay().active();
-    const expListProps = {
-      list: order.rooms,
-      parentSelector, getHeader, getBody, getObject,
-      inputs: [{placeholder: 'name'}],
-      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
-      listElemLable: 'Room', type: 'pill',
-      inputTree: new DecisionInputTree('Cabinet', Input.Name(), console.log)
-    };
-    const expandList = new ExpandableList(expListProps);
-    expandList.afterRender(() => this.cabinetDisplay().refresh());
-    this.refresh = () => expandList.refresh();
-  }
-}
-RoomDisplay.bodyTemplate = new $t('room/body');
-RoomDisplay.headTemplate = new $t('room/head');
-
-
-
-class AbstractManager {
-  constructor(id, name) {
-    let list;
-    const manager = this;
-    this.saveBtnId = `${name}-manager-save-btn`;
-    this.headerId = `${name}-manager-header-cnt`;
-    this.bodyId = `${name}-manager-body-cnt`;
-    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
-    const parentSelector = `#${this.bodyId}`;
-    const template = new $t('managers/abstract-manager');
-    const bodyTemplate = new $t(`managers/${name}/body`);
-    const headTemplate = new $t(`managers/${name}/header`);
-
-    const getHeader = (instance) => headTemplate.render({instance, manager});
-    const getBody = (instance) => bodyTemplate.render({instance, manager});
-
-    const getObject = (values) => manager.getObject(values);
-
-    function init(json) {
-      document.getElementById(id).innerHTML = template.render(manager);
-      list = manager.fromJson(json) || [];
-      const expListProps = {
-        inputTree: manager.constructor.inputTree(),
-        parentSelector, getHeader, getBody, getObject, list,
-        listElemLable: 'Template'
-      };
-      const expandList = new ExpandableList(expListProps);
-
-      const saveSuccess = () => console.log('success save');
-      const saveFail = () => console.log('failed save');
-      const save = (target) => {
-        const body = manager.toJson(costs);
-        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
-      }
-      matchRun('click', `#${manager.saveBtnId}`, save);
-    }
-
-    afterLoad.push(() => Request.get(manager.loadPoint(), init));
+class Material extends Cost {
+  constructor (id, method, cost, length, width, depth) {
+    super(id, method, cost, length, width, depth);
   }
 }
 
+Cost.register(Material);
 
-class Order {
-  constructor(name, id) {
-    this.name = name || ++Order.count;
-    this.id = id || randomString(32);
-    this.rooms = []
-    this.toJson = () => {
-      const json = {name: this.name, rooms: []};
-      this.rooms.forEach((room) => json.rooms.push(room.toJson()));
-      return json;
-    }
-  }
-}
-
-Order.count = 0;
-Order.fromJson = (orderJson) => {
-  const order = new Order(orderJson.name, orderJson.id);
-  orderJson.rooms.forEach((roomJson) => order.rooms.push(Room.fromJson(roomJson)));
-  return order;
-}
+// new Material('Wood');
+// new Material('Wood.SoftMapel', 'sheet 4x8 75.00', {optionalPercentage: true});
+// new Material('Wood.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Wood.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood');
+// new Material('Plywood.PaintGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.PaintGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.PaintGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.StainGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.StainGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Plywood.StainGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
+// new Material('Glass');
+// new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
+// new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
 
-
-class Room {
-  constructor(name, id) {
-    this.name = name || `Room ${Room.count++}`;
-    this.id = id || randomString(32);
-    this.cabinets = [];
-    this.toJson = () => {
-      const json = {name: this.name, id: this.id, cabinets: []};
-      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
-      return json;
-    };
-  }
-};
-Room.count = 0;
-Room.fromJson = (roomJson) => {
-  const room = new Room(roomJson.name, roomJson.id);
-  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
-  return room;
-}
-
-
-// properties
-//  required: {
-//  getHeader: function returns html header string,
-//  getBody: function returns html body string,
-//}
-//  optional: {
-//  list: list to use, creates on undefined
-//  getObject: function returns new list object default is generic js object,
-//  parentSelector: cssSelector only reqired for refresh function,
-//  listElemLable: nameOfElementType changes add button label,
-//  hideAddBtn: defaults to false,
-//  startClosed: all tabs are closed on list open.
-//  input: true - require user to enter text before adding new
-//  inputOptions: array of autofill inputs
-//  inputs: [{placeholder, autofill},...]
-//  inputValidation: function to validate input fields
-//  type: defaults to list,
-//  selfCloseTab: defalts to true - allows clicking on header to close body,
-//  findElement: used to find elemenents related to header - defaults to closest
-//}
-class ExpandableList {
+class Select extends Input {
   constructor(props) {
-    const afterRenderEvent = new CustomEvent('afterRender');
-    const afterAddEvent = new CustomEvent('afterAdd');
-    const afterRefreshEvent = new CustomEvent('afterRefresh');
-    const instance = this;
-    props.id = ExpandableList.lists.length;
-    this.id = () => props.id;
-    props.list = props.list || [];
-    props.inputs = props.inputs || [];
-    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${this.id}`;
-    props.inputTreeId = `expandable-input-tree-cnt-${this.id}`
-    props.type = props.type || 'list';
-    props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
-    this.findElement = props.findElement;
-    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
-    props.getObject = props.getObject || (() => {});
-    let pendingRefresh = false;
-    let lastRefresh = new Date().getTime();
-    const storage = {};
-    props.activeIndex = 0;
-    ExpandableList.lists[props.id] = this;
-
-    function setErrorMsg(msg) {
-        document.getElementById(props.ERROR_CNT_ID).innerHTML = msg;
-    }
-
-    function values() {
-      if (instance.hasInputTree()) return props.inputTree.values();
-      const values = {};
-      props.inputs.forEach((input) =>
-        values[input.placeholder] = document.getElementById(input.id).value);
-      return values;
-    }
-
-    this.add = () => {
-      const inputValues = values();
-      if ((typeof props.inputValidation) !== 'function' ||
-              props.inputValidation(inputValues) === true) {
-        props.list.push(props.getObject(inputValues));
-
-        this.activeIndex(props.list.length - 1);
-        this.refresh();
-        afterAddEvent.trigger();
-      } else {
-        const errors = props.inputValidation(inputValues);
-        let errorStr;
-        if ((typeof errors) === 'object') {
-          const keys = Object.keys(errors);
-          errorStr = Object.values(errors).join('<br>');
-        } else {
-          errorStr = `Error: ${errors}`;
-        }
-        setErrorMsg(errorStr);
-      }
-    };
-    this.hasInputTree = () =>
-      props.inputTree && props.inputTree.constructor.name === 'DecisionNode';
-    if (this.hasInputTree()) props.inputTree.onComplete(this.add);
-    props.hasInputTree = this.hasInputTree;
-
-    this.isSelfClosing = () => props.selfCloseTab;
-    this.remove = (index) => {
-      props.list.splice(index, 1);
-      this.refresh();
-    }
-    this.afterRender = (func) => afterRenderEvent.on(func);
-    this.afterAdd = (func) => afterAddEvent.on(func);
-    this.refresh = (type) => {
-      props.type = (typeof type) === 'string' ? type : props.type;
-      if (!pendingRefresh) {
-        pendingRefresh = true;
-        setTimeout(() => {
-          props.inputs.forEach((input) => input.id = input.id || randomString(7));
-          const parent = document.querySelector(props.parentSelector);
-          const html = ExpandableList[`${props.type}Template`].render(props);
-
-          if (parent && html !== undefined) {
-            parent.innerHTML = html;
-            afterRefreshEvent.trigger();
-          }
-          pendingRefresh = false;
-        }, 100);
-      }
-    };
-    this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
-    this.active = () => props.list[this.activeIndex()];
-    this.value = (index) => (key, value) => {
-      if (props.activeIndex === undefined) props.activeIndex = 0;
-      if (index === undefined) index = props.activeIndex;
-      if (storage[index] === undefined) storage[index] = {};
-      if (value === undefined) return storage[index][key];
-      storage[index][key] = value;
-    }
-    this.set = (index, value) => props.list[index] = value;
-    this.get = (index) => props.list[index];
-    this.renderBody = (target) => {
-      const headerSelector = `.expand-header[ex-list-id='${props.id}'][index='${this.activeIndex()}']`;
-      target = target || document.querySelector(headerSelector);
-      if (target !== null) {
-        const id = target.getAttribute('ex-list-id');
-        const list = ExpandableList.lists[id];
-        const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
-        const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
-        const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-        bodys.forEach((body) => body.style.display = 'none');
-        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-        const body = list.findElement('.expand-body', target);
-        body.style.display = 'block';
-        const index = target.getAttribute('index');
-        this.activeIndex(index);
-        body.innerHTML = this.htmlBody(index);
-        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-        target.className += ' active';
-        afterRenderEvent.trigger();
-      }
-    };
-    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
-
-    this.htmlBody = (index) => props.getBody(props.list[index], index);
-    this.getList = () => props.list;
-    this.refresh();
+    super(props);
+    const value = props.index && props.list[props.index] ?
+      props.list[props.index] : props.list[0];
+    this.setValue(value);
   }
 }
-ExpandableList.lists = [];
-ExpandableList.listTemplate = new $t('expandable/list');
-ExpandableList.pillTemplate = new $t('expandable/pill');
-ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
-ExpandableList.getIdAndIndex = (target) => {
-  const cnt = up('.expand-header,.expand-body', target);
-  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-  const index = Number.parseInt(cnt.getAttribute('index'));
-  return {id, index};
-}
-ExpandableList.getValueFunc = (target) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  return ExpandableList.lists[idIndex.id].value(idIndex.index);
-}
 
-ExpandableList.get = (target, value) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  return ExpandableList.lists[idIndex.id].get(idIndex.index);
-}
+Select.template = new $t('input/select');
+Select.html = (instance) => () => Select.template.render(instance);
 
-ExpandableList.set = (target, value) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  ExpandableList.lists[idIndex.id].set(idIndex.index, value);
-}
-
-ExpandableList.value = (key, value, target) => {
-  return ExpandableList.getValueFunc(target)(key, value);
-}
-matchRun('click', '.expandable-list-add-btn', (target) => {
-  const id = target.getAttribute('ex-list-id');
-  ExpandableList.lists[id].add();
+Select.type = () => new Select({
+  placeholder: 'Type',
+  name: 'type',
+  class: 'center',
+  list: Cost.typeList
 });
-matchRun('click', '.expandable-item-rm-btn', (target) => {
-  const id = target.getAttribute('ex-list-id');
-  const index = target.getAttribute('index');
-  ExpandableList.lists[id].remove(index);
-});
-ExpandableList.closeAll = (header) => {
-  const hello = 'world';
-}
 
-matchRun('click', '.expand-header', (target, event) => {
-  const isActive = target.matches('.active');
-  const id = target.getAttribute('ex-list-id');
-  const list = ExpandableList.lists[id];
-  if (isActive && event.target === target) {
-    target.className = target.className.replace(/(^| )active( |$)/g, '');
-    list.findElement('.expand-body', target).style.display = 'none';
-    list.activeIndex(null);
-    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-  } else if (!isActive) {
-    list.renderBody(target);
-  }
+Select.method = () => new Select({
+  name: 'method',
+  class: 'center',
+  list: Cost.methodList,
 });
 
 
-class DisplayManager {
-  constructor(displayId, listId, switchId) {
-    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
-    const id = randomString();
-    const instance = this;
-    this.list = (func) => {
-      const list = [];
-      const runFunc = (typeof func) === 'function';
-      const displayElems = document.getElementById(displayId).children;
-      for (let index = 0; index < displayElems.length; index += 1) {
-        const elem = displayElems[index];
-        let id = elem.id || randomString(7);
-        elem.id = id;
-        name = elem.getAttribute('name') || id;
-        const item = {id, name};
-        if (runFunc) func(elem);
-        list.push(item);
-      }
-      return list;
-    }
-
-    function updateActive(id) {
-      const items = document.querySelectorAll('.display-manager-input');
-      for (let index = 0; index < items.length; index += 1) {
-        const elem = items[index];
-        elem.getAttribute('display-id') === id ?
-              addClass(elem, 'active') : removeClass(elem, 'active');
-      }
-    }
-
-    function open(id) {
-      const displayElems = document.getElementById(displayId).children;
-      for (let index = 0; index < displayElems.length; index += 1) {
-        const elem = displayElems[index];
-        if (elem.id === id) elem.hidden = false;
-        else elem.hidden = true;
-      }
-      updateActive(id);
-    }
-
-    this.open = open;
-
-    const children = document.getElementById(displayId).children;
-
-    if (children.length > 0) {
-      this.list();
-      open(children[0].id);
-      if (listId) {
-        document.getElementById(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
-      }
-    }
-
-    if (switchId) {
-      matchRun('click', `#${switchId}`, (target, event) => {
-        const listElem = document.getElementById(listId);
-        listElem.hidden = !listElem.hidden;
-      });
-      document.addEventListener('click', (event) => {
-        const listElem = document.getElementById(listId);
-        const target = event.target;
-        const withinList = up(`#${listId}`, target) !== undefined;
-        if (!withinList && target.id !== switchId &&listElem)
-          listElem.hidden = true;
-      });
-    }
-    DisplayManager.instances[id] = this;
-  }
+function pull(length, height) {
+  var rspx = length - .75;
+  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+  return mainCyl.union(lCyl).union(rCyl);
 }
 
-DisplayManager.instances = {};
-DisplayManager.template = new $t('display-manager');
 
-matchRun('click', '.display-manager', (target, event) => {
-  const displayManagerId = target.id;
-  const displayId = event.target.getAttribute('display-id');
-  DisplayManager.instances[displayManagerId].open(displayId);
-});
+function drawerBox(length, width, depth) {
+  const bottomHeight = 7/8;
+  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+  box.setColor(1, 0, 0);
+  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+  inside.setColor(0, 0, 1);
+  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+  bInside.setColor(0, 0, 1);
 
-
-class Cost {
-  constructor(id, method, cost, length, width, depth) {
-    const configuration = Cost.configure(method, cost, length, width, depth);
-    const formula = configuration.formula;
-    const unitCost = configuration.unitCost;
-    let percentage = 100;
-    this.id = () => id;
-    this.method = () => method;
-    this.length = () => length;
-    this.width = () => width;
-    this.depth = () => depth;
-    this.cost = () => cost;
-    this.unitCost = () => JSON.parse(JSON.stringify(unitCost));
-
-    this.calc = (assembly) => Cost.evaluator.eval(formula, assembly);
-
-    const cName = this.constructor.name;
-    if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
-    if (Cost.lists[cName][id] === undefined) Cost.lists[cName][id] = [];
-    Cost.lists[cName][id].push(this);
-
-    this.toJson = () => {
-      return {
-        type: this.constructor.name,
-        id, method, length, width, depth, cost
-      };
-    }
-  }
+  return box.subtract(bInside).subtract(inside);
 }
-Cost.lists = {};
-Cost.objMap = {};
-Cost.types = [];
-Cost.methods = {
-  LINEAR_FEET: 'Linear Feet',
-  SQUARE_FEET: 'Square Feet',
-  CUBIC_FEET: 'Cubic Feet',
-  UNIT: 'Unit'
-},
-Cost.methodList = Object.values(Cost.methods);
-Cost.configure = (method, cost, length, width, depth) => {
-  const retValue = {unitCost: {}};
-  switch (method) {
-    case Cost.methods.LINEAR_FEET:
-      const perLinearInch = Cost.evaluator.eval(`${cost}/(${length} * 12)`);
-      retValue.unitCost.name = 'Linear Inch';
-      retValue.unitCost.value = perLinearInch;
-      retValue.formula = `${perLinearInch}*l`;
-      return retValue;
-    case Cost.methods.SQUARE_FEET:
-      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*144)`);
-      retValue.unitCost.name = 'Square Inch';
-      retValue.unitCost.value = perSquareInch;
-      retValue.formula = `${perSquareInch}*l*w`;
-      return retValue;
-    case Cost.methods.CUBIC_FEET:
-      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth}*1728)`);
-      retValue.unitCost.name = 'Cubic Inch';
-      retValue.unitCost.value = perCubicInch;
-      retValue.formula = `${perCubicInch}*l*w*d`;
-      return retValue;
-    case Cost.methods.UNIT:
-      retValue.unitCost.name = 'Unit';
-      retValue.unitCost.value = cost;
-      retValue.formula = cost;
-      return retValue;
-    default:
-      throw new Error('wtf');
-      retValue.unitCost.name = 'Unknown';
-      retValue.unitCost = -0.01;
-      retValue.formula = -0.01;
-      return retValue;
-  }
-};
-
-Cost.get = (name) => {
-  const obj = Cost.lists[id];
-  if (obj === undefined) return null;
-  return new obj.constructor();
-}
-Cost.addRelations = (type, id, name) => {
-  names.forEach((name) => {
-    if (objMap[id] === undefined) Cost.objMap[id] = {Labor: [], Material: []}
-    if (type === Labor) Cost.objMap[id].Labor.push(Cost.get(name));
-    if (type === Material) Cost.objMap[id].Material.push(Cost.get(name));
-  });
-}
-
-Cost.register = (clazz) => {
-  Cost.types[clazz.prototype.constructor.name] = clazz;
-  Cost.typeList = Object.keys(Cost.types);
-}
-
-Cost.new = function(type) {
-  return new Cost.types[type](...Array.from(arguments).slice(1))
-}
-
-Cost.fromJson = (objOrArray) => {
-  function instanceFromJson(obj) {
-    return Cost.new(obj.type, obj.id, obj.method, obj.cost, obj.length, obj.width, obj.depth);
-  }
-  if (!Array.isArray(objOrArray)) return instanceFromJson(objOrArray);
-
-  const list = [];
-  objOrArray.forEach((obj) => list.push(instanceFromJson(obj)));
-  return list;
-}
-
-Cost.toJson = (array) => {
-  if (!Array.isArray(array)) throw new Error('Input argument must be of type Array');
-  const list = [];
-  array.forEach((cost) => {
-    if (!(cost instanceof Cost)) throw new Error('All array object must be of type Cost');
-    list.push(cost.toJson())
-  });
-  return list;
-}
-
-afterLoad.push(() =>
-  Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
-);
 
 
 class Assembly {
@@ -5474,86 +5543,6 @@ Assembly.lists = {};
 Assembly.idCounters = {};
 
 
-
-class TemplateManager extends AbstractManager {
-  constructor(id, name) {
-    super(id, name);
-    const getObject = (values) => mangager.getObject(values);
-    this.loadPoint = () => EPNTS.templates.get();
-    this.savePoint = () => EPNTS.templates.save();
-    this.fromJson = Cost.fromJson;
-  }
-}
-
-new TemplateManager('template-manager', 'template');
-
-TemplateManager.inputTree = (callback) => {
-  const idTypeMethod = [Input.id(), Select.type(), Select.method()];
-
-  const length = MeasurementInput.len();
-  const width = MeasurementInput.width();
-  const depth = MeasurementInput.depth();
-  const cost = MeasurementInput.cost();
-  const lengthCost = [length, cost];
-  const lengthWidthCost = [length, width, cost];
-  const lengthWidthDepthCost = [length, width, depth, cost];
-  const color = [Input.color()];
-
-  const decisionInput = new DecisionInputTree('cost',
-    idTypeMethod, callback);
-
-  decisionInput.addStates({
-    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
-  });
-
-  decisionInput.then(`method:${Cost.methods.LINEAR_FEET}`)
-        .jump('lengthCost');
-  decisionInput.then(`method:${Cost.methods.SQUARE_FEET}`)
-        .jump('lengthWidthCost');
-  decisionInput.then(`method:${Cost.methods.CUBIC_FEET}`)
-        .jump('lengthWidthDepthCost');
-  decisionInput.then(`method:${Cost.methods.UNIT}`)
-        .jump('cost');
-  decisionInput.then('type:Material').jump('color');
-
-  return decisionInput;
-}
-
-
-class Labor extends Cost {
-  constructor (id, method, cost, length, width, depth) {
-    super(id, method, cost, length, width, depth);
-  }
-}
-
-Cost.register(Labor);
-
-
-// new Labor('Panel', '1+(0.05*l*w');
-// new Labor('Frame', '0.25');
-// new Labor('GlueFrame', '0.25');
-// new Labor('SandFrame', '0.05*l*l*w*w*d*d');
-// new Labor('SandPanel', '(0.25*l*w)/12');
-// new Labor('GlueMiter', '(0.25*l*l*w*w)');
-// new Labor('InstallBlumotionGuides', '2');
-// new Labor('InstallOtherGuides', '2');
-// new Labor('InstallFushHinges', '2');
-// new Labor('installOverLayHinges', '2');
-// new Labor('Paint', '(l*l*w*w*.1)/12');
-// new Labor('Stain', '(l*l*w*w*.25)/12');
-// new Labor('InstallDrawerFront', '2');
-// new Labor('InstallPullout', 10);
-
-
-function pull(length, height) {
-  var rspx = length - .75;
-  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
-  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
-  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
-  return mainCyl.union(lCyl).union(rCyl);
-}
-
-
 class Joint {
   constructor(joinStr) {
     const match = joinStr.match(Joint.regex);
@@ -5744,67 +5733,50 @@ DecisionInputTree.validateInput = (inputArrayOinstance) => {
 DecisionInputTree.template = new $t('input/decision/decisionTree');
 
 
-function drawerBox(length, width, depth) {
-  const bottomHeight = 7/8;
-  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-  box.setColor(1, 0, 0);
-  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-  inside.setColor(0, 0, 1);
-  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-  bInside.setColor(0, 0, 1);
 
-  return box.subtract(bInside).subtract(inside);
-}
-
-
-class Material extends Cost {
-  constructor (id, method, cost, length, width, depth) {
-    super(id, method, cost, length, width, depth);
+class TemplateManager extends AbstractManager {
+  constructor(id, name) {
+    super(id, name);
+    const getObject = (values) => mangager.getObject(values);
+    this.loadPoint = () => EPNTS.templates.get();
+    this.savePoint = () => EPNTS.templates.save();
+    this.fromJson = Cost.fromJson;
   }
 }
 
-Cost.register(Material);
+new TemplateManager('template-manager', 'template');
 
-// new Material('Wood');
-// new Material('Wood.SoftMapel', 'sheet 4x8 75.00', {optionalPercentage: true});
-// new Material('Wood.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Wood.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood');
-// new Material('Plywood.PaintGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.PaintGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.PaintGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.StainGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.StainGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.StainGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Glass');
-// new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
-// new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
+TemplateManager.inputTree = (callback) => {
+  const idTypeMethod = [Input.id(), Select.type(), Select.method()];
 
+  const length = MeasurementInput.len();
+  const width = MeasurementInput.width();
+  const depth = MeasurementInput.depth();
+  const cost = MeasurementInput.cost();
+  const lengthCost = [length, cost];
+  const lengthWidthCost = [length, width, cost];
+  const lengthWidthDepthCost = [length, width, depth, cost];
+  const color = [Input.color()];
 
-class Select extends Input {
-  constructor(props) {
-    super(props);
-    const value = props.index && props.list[props.index] ?
-      props.list[props.index] : props.list[0];
-    this.setValue(value);
-  }
+  const decisionInput = new DecisionInputTree('cost',
+    idTypeMethod, callback);
+
+  decisionInput.addStates({
+    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
+  });
+
+  decisionInput.then(`method:${Cost.methods.LINEAR_FEET}`)
+        .jump('lengthCost');
+  decisionInput.then(`method:${Cost.methods.SQUARE_FEET}`)
+        .jump('lengthWidthCost');
+  decisionInput.then(`method:${Cost.methods.CUBIC_FEET}`)
+        .jump('lengthWidthDepthCost');
+  decisionInput.then(`method:${Cost.methods.UNIT}`)
+        .jump('cost');
+  decisionInput.then('type:Material').jump('color');
+
+  return decisionInput;
 }
-
-Select.template = new $t('input/select');
-Select.html = (instance) => () => Select.template.render(instance);
-
-Select.type = () => new Select({
-  placeholder: 'Type',
-  name: 'type',
-  class: 'center',
-  list: Cost.typeList
-});
-
-Select.method = () => new Select({
-  name: 'method',
-  class: 'center',
-  list: Cost.methodList,
-});
 
 
 
@@ -5971,336 +5943,29 @@ CostManager.inputTree = (callback) => {
 // });
 
 
-class MeasurementInput extends Input {
-  constructor(props) {
-    super(props);
-    props.validation = (value) => typeof MeasurementInput.evaluator.eval(value) === 'number';
-    props.errorMsg = 'Invalid Mathematical Expression';
+class Labor extends Cost {
+  constructor (id, method, cost, length, width, depth) {
+    super(id, method, cost, length, width, depth);
   }
 }
 
-MeasurementInput.template = new $t('input/measurement');
-MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
-MeasurementInput.evaluator = new StringMathEvaluator(Math);
-
-MeasurementInput.len = () => new MeasurementInput({
-  type: 'text',
-  placeholder: 'Length',
-  name: 'length',
-  class: 'center',
-});
-MeasurementInput.width = () => new MeasurementInput({
-  type: 'text',
-  label: 'x',
-  placeholder: 'Width',
-  name: 'width',
-  class: 'center',
-});
-MeasurementInput.depth = () => new MeasurementInput({
-  type: 'text',
-  label: 'x',
-  placeholder: 'Depth',
-  name: 'depth',
-  class: 'center',
-});
-MeasurementInput.cost = () => new MeasurementInput({
-  type: 'number',
-  label: '$',
-  placeholder: 'Cost',
-  name: 'cost'
-});
-
-
-
-class Door extends Assembly {
-  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
-    super(partCode, partName, coverCenter, coverDems, rotationStr);
-    let location = Pull.location.TOP_RIGHT;
-    let pull = new Pull(`${partCode}-dp`, 'Door.Pull', this, location);
-    this.setPullLocation = (l) => location = l;
-    this.addSubAssembly(pull);
-  }
-}
-
-Door.abbriviation = 'dr';
-
-Assembly.register(Door);
-
-
-class DrawerBox extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-  }
-}
-
-DrawerBox.abbriviation = 'db';
-
-Assembly.register(DrawerBox);
-
-
-class Butt extends Joint {
-  constructor(joinStr) {
-    super(joinStr);
-  }
-}
-
-Joint.register(Butt);
-
-
-class Dado extends Joint {
-  constructor(joinStr, defaultDepth, axis, centerOffset) {
-    super(joinStr);
-
-    this.maleOffset = (assembly) => {
-      return defaultDepth;
-    }
-
-    if (axis === undefined) return;
-
-    this.updatePosition = (position) => {
-      const direction = centerOffset[0] === '-' ? -1 : 1;
-      const centerAxis = centerOffset[1];
-      position.demension[axis] += defaultDepth;
-      position.center[centerAxis] += defaultDepth/2 * direction;
-    };
-
-  }
-}
-
-Joint.register(Dado);
-
-
-class Miter extends Joint {
-  constructor(joinStr) {
-    super(joinStr);
-  }
-}
-
-Joint.register(Miter);
-
-
-class Panel extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-  }
-}
-
-Panel.abbriviation = 'pn';
-
-Assembly.register(Panel);
-
-
-class DrawerFront extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-    this.setParentAssembly(parent);
-    const instance = this;
-    let pulls;
-    if (demensionStr === undefined) return;
-
-    function pullCount(dems) {
-      if (dems.x < 30) return 1;
-      return 2;
-    }
-
-    this.demensionStr = (attr) => {
-      const dems = demensionStr();
-      return dems;
-    };
-
-    this.children = () => this.updatePulls();
-
-    this.updatePulls = (dems, count) => {
-      count = count || pullCount(this.demensionStr());
-      pulls = [];
-      for (let index = 0; index < count; index += 1) {
-        pulls.push(new Pull(`${partCode}-dfp-${index}`, 'Drawer.Pull', this, Pull.location.CENTER, index, count));
-      }
-      return pulls;
-    };
-    this.updatePosition();
-  }
-}
-
-DrawerFront.abbriviation = 'df';
-
-Assembly.register(DrawerFront);
-
-
-class FrameDivider extends Assembly {
-  constructor (partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-  }
-}
-
-FrameDivider.abbriviation = 'fd';
-
-Assembly.register(FrameDivider);
-
-
-class Frame extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-  }
-}
-
-Frame.abbriviation = 'fr';
-
-Assembly.register(Frame);
-
-
-class Rabbet extends Joint {
-  constructor(joinStr, defaultDepth, axis, centerOffset) {
-    super(joinStr);
-    this.maleOffset = (assembly) => {
-      return defaultDepth;
-    }
-
-    if (axis === undefined) return;
-
-    this.updatePosition = (position) => {
-      const direction = centerOffset[0] === '-' ? -1 : 1;
-      const centerAxis = centerOffset[1];
-      position.demension[axis] += defaultDepth;
-      position.center[centerAxis] += defaultDepth/2 * direction;
-    };
-  }
-}
-
-Joint.register(Rabbet);
-
-
-const OVERLAY = {};
-OVERLAY.FULL = 'Full';
-OVERLAY.HALF = 'Half';
-OVERLAY.INSET = 'Inset';
-
-const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
-
-const framedFrameWidth = 1.5;
-const framelessFrameWidth = 3/4;
-class Cabinet extends Assembly {
-  constructor(partCode, partName, propsId) {
-    super(partCode, partName);
-    this.propertyId(propsId);
-    this.important = ['partCode', 'partName', 'length', 'width', 'thickness', 'propertyId'];
-    const instance = this;
-    let frameWidth = framedFrameWidth;
-    let toeKickHeight = 4;
-    this.part = false;
-    this.display = false;
-    this.overlay = OVERLAY.HALF;
-    this.openings = [];
-    this.type = CABINET_TYPE.FRAMED;
-    const panels = 0;
-    const framePieces = 0;
-    const addFramePiece = (piece) => framePieces.push(piece);
-    const framePieceCount = () => pieces.length;
-    const addPanel = (panel) => panels.push(panel);
-    const panelCount = () => panels.length;
-    const opening = () => {
-      const w = width - (frameWidth * 2);
-      const h = height - toeKickHeight - (frameWidth * 2);
-      return {width: w, height: h};
-    }
-
-    this.borders = (borderIds) => {
-      const right = instance.getAssembly(borderIds.right);
-      const left = instance.getAssembly(borderIds.left);
-      const top = instance.getAssembly(borderIds.top);
-      const bottom = instance.getAssembly(borderIds.bottom);
-      const pb = instance.getAssembly(borderIds.back);
-      return () => {
-        const depth = pb.position().center('z') + pb.position().limits('-z');
-        return {borders: {top, bottom, right, left}, depth, borderIds};
-      }
-    }
-  }
-}
-
-Cabinet.build = (type) => {
-  const cabinet = new Cabinet('c', 'type');
-  cabinet.partCode = 'c';
-  const config = cabinetBuildConfig[type];
-
-  const valueIds = Object.keys(config.values);
-  valueIds.forEach((valueId) => cabinet.value(valueId, config.values[valueId]));
-
-  const subNames = Object.keys(config.subAssemblies);
-  subNames.forEach((name) => {
-    subAssemConfig = config.subAssemblies[name];
-    const type = subAssemConfig.type;
-    const demStr = subAssemConfig.demensions.join(',');
-    const centerStr = subAssemConfig.center.join(',');
-    const rotationStr = subAssemConfig.rotation;
-    const subAssem = Assembly.new(type, subAssemConfig.code, name, centerStr, demStr, rotationStr);
-    subAssem.partCode = subAssemConfig.code;
-    cabinet.addSubAssembly(subAssem);
-  });
-
-  const joinRelations = Object.keys(config.joints);
-  joinRelations.forEach((relation) => {
-    relationConfig = config.joints[relation];
-    const type = relationConfig.type;
-    const depth = relationConfig.depth;
-    const demensionToOffset = relationConfig.DemensionToOffset;
-    const centerOffset = relationConfig.centerOffset;
-    const joint = Joint.new(type, relation, depth, demensionToOffset, centerOffset);
-    cabinet.addJoints(joint);
-  });
-
-  config.bordersIdMap.forEach((idMap) => {
-    const divideSection = new DivideSection(cabinet.borders(idMap), cabinet);
-    cabinet.openings.push(divideSection);
-    cabinet.addSubAssembly(divideSection);
-  });
-  return cabinet;
-}
-
-Cabinet.fromJson = (assemblyJson) => {
-  const partCode = assemblyJson.partCode;
-  const partName = assemblyJson.partName;
-  const assembly = new Cabinet(partCode, partName);
-  assembly.values = assemblyJson.values;
-  assemblyJson.subAssemblies.forEach((json) => {
-    const clazz = Assembly.class(json.type);
-    if (clazz !== DivideSection) {
-      assembly.addSubAssembly(clazz.fromJson(json, assembly));
-    } else {
-      const divideSection = clazz.fromJson(json, assembly); 
-      assembly.openings.push(divideSection);
-      assembly.addSubAssembly(divideSection);
-    }
-  });
-  assembly.length(assemblyJson.length);
-  assembly.width(assemblyJson.width);
-  assembly.thickness(assemblyJson.thickness);
-  return assembly;
-}
-
-Cabinet.partCode = (assembly) => {
-  const cabinet = assembly.getAssembly('c');
-  if (cabinet) {
-    const name = assembly.constructor.name;
-    cabinet.partIndex = cabinet.partIndex || 0;
-    return `${assembly.constructor.abbriviation}-${cabinet.partIndex++}`;
-  }
-}
-
-
-Assembly.register(Cabinet);
-
-
-class Divider extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
-  }
-}
-Divider.count = 0;
-
-Divider.abbriviation = 'dv';
-
-Assembly.register(Divider);
+Cost.register(Labor);
+
+
+// new Labor('Panel', '1+(0.05*l*w');
+// new Labor('Frame', '0.25');
+// new Labor('GlueFrame', '0.25');
+// new Labor('SandFrame', '0.05*l*l*w*w*d*d');
+// new Labor('SandPanel', '(0.25*l*w)/12');
+// new Labor('GlueMiter', '(0.25*l*l*w*w)');
+// new Labor('InstallBlumotionGuides', '2');
+// new Labor('InstallOtherGuides', '2');
+// new Labor('InstallFushHinges', '2');
+// new Labor('installOverLayHinges', '2');
+// new Labor('Paint', '(l*l*w*w*.1)/12');
+// new Labor('Stain', '(l*l*w*w*.25)/12');
+// new Labor('InstallDrawerFront', '2');
+// new Labor('InstallPullout', 10);
 
 
 /*
@@ -6392,6 +6057,297 @@ Pull.location.CENTER = {multiple: true, rotate: true};
 Pull.abbriviation = 'pu';
 
 Assembly.register(Pull);
+
+
+class Divider extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+Divider.count = 0;
+
+Divider.abbriviation = 'dv';
+
+Assembly.register(Divider);
+
+
+
+class Door extends Assembly {
+  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
+    super(partCode, partName, coverCenter, coverDems, rotationStr);
+    let location = Pull.location.TOP_RIGHT;
+    let pull = new Pull(`${partCode}-dp`, 'Door.Pull', this, location);
+    this.setPullLocation = (l) => location = l;
+    this.addSubAssembly(pull);
+  }
+}
+
+Door.abbriviation = 'dr';
+
+Assembly.register(Door);
+
+
+class DrawerBox extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+
+DrawerBox.abbriviation = 'db';
+
+Assembly.register(DrawerBox);
+
+
+class Butt extends Joint {
+  constructor(joinStr) {
+    super(joinStr);
+  }
+}
+
+Joint.register(Butt);
+
+
+class Dado extends Joint {
+  constructor(joinStr, defaultDepth, axis, centerOffset) {
+    super(joinStr);
+
+    this.maleOffset = (assembly) => {
+      return defaultDepth;
+    }
+
+    if (axis === undefined) return;
+
+    this.updatePosition = (position) => {
+      const direction = centerOffset[0] === '-' ? -1 : 1;
+      const centerAxis = centerOffset[1];
+      position.demension[axis] += defaultDepth;
+      position.center[centerAxis] += defaultDepth/2 * direction;
+    };
+
+  }
+}
+
+Joint.register(Dado);
+
+
+class Miter extends Joint {
+  constructor(joinStr) {
+    super(joinStr);
+  }
+}
+
+Joint.register(Miter);
+
+
+class Rabbet extends Joint {
+  constructor(joinStr, defaultDepth, axis, centerOffset) {
+    super(joinStr);
+    this.maleOffset = (assembly) => {
+      return defaultDepth;
+    }
+
+    if (axis === undefined) return;
+
+    this.updatePosition = (position) => {
+      const direction = centerOffset[0] === '-' ? -1 : 1;
+      const centerAxis = centerOffset[1];
+      position.demension[axis] += defaultDepth;
+      position.center[centerAxis] += defaultDepth/2 * direction;
+    };
+  }
+}
+
+Joint.register(Rabbet);
+
+
+class DrawerFront extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+    this.setParentAssembly(parent);
+    const instance = this;
+    let pulls;
+    if (demensionStr === undefined) return;
+
+    function pullCount(dems) {
+      if (dems.x < 30) return 1;
+      return 2;
+    }
+
+    this.demensionStr = (attr) => {
+      const dems = demensionStr();
+      return dems;
+    };
+
+    this.children = () => this.updatePulls();
+
+    this.updatePulls = (dems, count) => {
+      count = count || pullCount(this.demensionStr());
+      pulls = [];
+      for (let index = 0; index < count; index += 1) {
+        pulls.push(new Pull(`${partCode}-dfp-${index}`, 'Drawer.Pull', this, Pull.location.CENTER, index, count));
+      }
+      return pulls;
+    };
+    this.updatePosition();
+  }
+}
+
+DrawerFront.abbriviation = 'df';
+
+Assembly.register(DrawerFront);
+
+
+class FrameDivider extends Assembly {
+  constructor (partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+
+FrameDivider.abbriviation = 'fd';
+
+Assembly.register(FrameDivider);
+
+
+class Frame extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+
+Frame.abbriviation = 'fr';
+
+Assembly.register(Frame);
+
+
+const OVERLAY = {};
+OVERLAY.FULL = 'Full';
+OVERLAY.HALF = 'Half';
+OVERLAY.INSET = 'Inset';
+
+const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
+
+const framedFrameWidth = 1.5;
+const framelessFrameWidth = 3/4;
+class Cabinet extends Assembly {
+  constructor(partCode, partName, propsId) {
+    super(partCode, partName);
+    this.propertyId(propsId);
+    this.important = ['partCode', 'partName', 'length', 'width', 'thickness', 'propertyId'];
+    const instance = this;
+    let frameWidth = framedFrameWidth;
+    let toeKickHeight = 4;
+    this.part = false;
+    this.display = false;
+    this.overlay = OVERLAY.HALF;
+    this.openings = [];
+    this.type = CABINET_TYPE.FRAMED;
+    const panels = 0;
+    const framePieces = 0;
+    const addFramePiece = (piece) => framePieces.push(piece);
+    const framePieceCount = () => pieces.length;
+    const addPanel = (panel) => panels.push(panel);
+    const panelCount = () => panels.length;
+    const opening = () => {
+      const w = width - (frameWidth * 2);
+      const h = height - toeKickHeight - (frameWidth * 2);
+      return {width: w, height: h};
+    }
+
+    this.borders = (borderIds) => {
+      const right = instance.getAssembly(borderIds.right);
+      const left = instance.getAssembly(borderIds.left);
+      const top = instance.getAssembly(borderIds.top);
+      const bottom = instance.getAssembly(borderIds.bottom);
+      const pb = instance.getAssembly(borderIds.back);
+      return () => {
+        const depth = pb.position().center('z') + pb.position().limits('-z');
+        return {borders: {top, bottom, right, left}, depth, borderIds};
+      }
+    }
+  }
+}
+
+Cabinet.build = (type) => {
+  const cabinet = new Cabinet('c', type);
+  const config = cabinetBuildConfig[type];
+
+  const valueIds = Object.keys(config.values);
+  valueIds.forEach((valueId) => cabinet.value(valueId, config.values[valueId]));
+
+  const subNames = Object.keys(config.subAssemblies);
+  subNames.forEach((name) => {
+    subAssemConfig = config.subAssemblies[name];
+    const type = subAssemConfig.type;
+    const demStr = subAssemConfig.demensions.join(',');
+    const centerStr = subAssemConfig.center.join(',');
+    const rotationStr = subAssemConfig.rotation;
+    const subAssem = Assembly.new(type, subAssemConfig.code, name, centerStr, demStr, rotationStr);
+    subAssem.partCode = subAssemConfig.code;
+    cabinet.addSubAssembly(subAssem);
+  });
+
+  const joinRelations = Object.keys(config.joints);
+  joinRelations.forEach((relation) => {
+    relationConfig = config.joints[relation];
+    const type = relationConfig.type;
+    const depth = relationConfig.depth;
+    const demensionToOffset = relationConfig.DemensionToOffset;
+    const centerOffset = relationConfig.centerOffset;
+    const joint = Joint.new(type, relation, depth, demensionToOffset, centerOffset);
+    cabinet.addJoints(joint);
+  });
+
+  config.bordersIdMap.forEach((idMap) => {
+    const divideSection = new DivideSection(cabinet.borders(idMap), cabinet);
+    cabinet.openings.push(divideSection);
+    cabinet.addSubAssembly(divideSection);
+  });
+  return cabinet;
+}
+
+Cabinet.fromJson = (assemblyJson) => {
+  const partCode = assemblyJson.partCode;
+  const partName = assemblyJson.partName;
+  const assembly = new Cabinet(partCode, partName);
+  assembly.values = assemblyJson.values;
+  assemblyJson.subAssemblies.forEach((json) => {
+    const clazz = Assembly.class(json.type);
+    if (clazz !== DivideSection) {
+      assembly.addSubAssembly(clazz.fromJson(json, assembly));
+    } else {
+      const divideSection = clazz.fromJson(json, assembly);
+      assembly.openings.push(divideSection);
+      assembly.addSubAssembly(divideSection);
+    }
+  });
+  assembly.length(assemblyJson.length);
+  assembly.width(assemblyJson.width);
+  assembly.thickness(assemblyJson.thickness);
+  return assembly;
+}
+
+Cabinet.partCode = (assembly) => {
+  const cabinet = assembly.getAssembly('c');
+  if (cabinet) {
+    const name = assembly.constructor.name;
+    cabinet.partIndex = cabinet.partIndex || 0;
+    return `${assembly.constructor.abbriviation}-${cabinet.partIndex++}`;
+  }
+}
+
+
+Assembly.register(Cabinet);
+
+
+class Panel extends Assembly {
+  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  }
+}
+
+Panel.abbriviation = 'pn';
+
+Assembly.register(Panel);
 
 
 
@@ -6541,12 +6497,17 @@ class DivideSection extends SpaceSection {
     this.vertical = (is) => this.value('vertical', is);
     this.vertical(true);
     this.sections = [];
-    this.value('vPattern', {name: 'Equal'});
-    this.value('hPattern', {name: 'Equal'});
-    this.pattern = (name, index, value) => {
-      if (name === undefined) return this.vertical() ? this.value('vPattern') : this.value('hPattern');
-      if (this.vertical()) this.value('vPattern', {name, index, value});
-      else this.value('hPattern', {name, index, value});
+    this.pattern = (patternStr) => {
+      const patternProp = this.vertical() ? 'vPattern' : 'hPattern';
+      if ((typeof patternStr) === 'string') {
+        this.value(patternProp, new Pattern(patternStr));
+      } else {
+        const pat = this.value(patternProp);
+        const count = this.sectionCount();
+        if (!pat || pat.str.length !== count)
+          this.value(patternProp, new Pattern(new Array(count).fill('a').join('')));
+      }
+      return this.value(patternProp);
     }
     this.dividerCount = () => Math.ceil((this.sections.length - 1) / 2);
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
@@ -6590,7 +6551,7 @@ class DivideSection extends SpaceSection {
     }
     this.dividerProps = (index) => {
       return () => {
-        const answer = this.calcSections().list;
+        const answer = this.dividerLayout().list;
         let offset = 0;
         for (let i = 0; i < index + 1; i += 1) offset += answer[i];
         let props = sectionProperties();
@@ -6613,21 +6574,12 @@ class DivideSection extends SpaceSection {
         return {center, dividerLength, rotationFunc, index};
       }
     }
-    this.calcSections = (pattern, index, value) => {
-      if (pattern && (typeof pattern.name) === 'string' && typeof(index + value) === 'number') {
-        this.pattern(pattern.name, index, value);
-      } else {
-        pattern = DivisionPattern.patterns[this.pattern().name];
-      }
 
-      const config = this.pattern();
-      const props = sectionProperties();
+    this.sectionCount = () => this.dividerCount() + 1;
+    this.dividerLayout = () => {
       const distance = this.vertical() ? this.outerSize().x : this.outerSize().y;
-      const count = this.dividerCount() + 1;
-      const answer = pattern.resolution(distance, config.index, config.value, count);
-      config.fill = answer.fill;
-      return answer;
-    }
+      return this.pattern().calc(distance);
+    };
     this.divide = (dividerCount) => {
       if (!Number.isNaN(dividerCount)) {
         dividerCount = dividerCount > 10 ? 10 : dividerCount;

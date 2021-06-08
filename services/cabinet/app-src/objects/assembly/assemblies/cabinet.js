@@ -47,8 +47,7 @@ class Cabinet extends Assembly {
 }
 
 Cabinet.build = (type) => {
-  const cabinet = new Cabinet('c', 'type');
-  cabinet.partCode = 'c';
+  const cabinet = new Cabinet('c', type);
   const config = cabinetBuildConfig[type];
 
   const valueIds = Object.keys(config.values);
@@ -95,7 +94,7 @@ Cabinet.fromJson = (assemblyJson) => {
     if (clazz !== DivideSection) {
       assembly.addSubAssembly(clazz.fromJson(json, assembly));
     } else {
-      const divideSection = clazz.fromJson(json, assembly); 
+      const divideSection = clazz.fromJson(json, assembly);
       assembly.openings.push(divideSection);
       assembly.addSubAssembly(divideSection);
     }

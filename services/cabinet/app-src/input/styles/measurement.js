@@ -36,3 +36,11 @@ MeasurementInput.cost = () => new MeasurementInput({
   placeholder: 'Cost',
   name: 'cost'
 });
+MeasurementInput.pattern = (id, value) => new MeasurementInput({
+  type: 'text',
+  label: id,
+  value,
+  placeholder: id,
+  name: id,
+  class: 'pattern-input',
+});
