@@ -1971,14 +1971,14 @@ $t.functions['-1362189101'] = function (get) {
 $t.functions['input/decision/decisionTree'] = function (get) {
 	return `<div class='` + (get("class")) + `' tree-id='` + (get("treeId")) + `'> ` + (get("payload").html()) + ` <button class='` + (get("buttonClass")) + `' disabled tree-id='` + (get("treeId")) + `'>` + (get("name")) + `</button> </div> `
 }
+$t.functions['input/measurement'] = function (get) {
+	return `<div class='fit'> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' value='` + (get("value")() ? get("value")() : "") + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
+}
 $t.functions['input/input'] = function (get) {
 	return `<div> <input class='` + (get("class")) + `' list='input-list-` + (get("id")) + `' id='` + (get("id")) + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <datalist id="input-list-` + (get("id")) + `"> ` + (new $t('<option value="{{item}}" ></option>').render(get('scope'), 'item in list', get)) + ` </datalist> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
 }
 $t.functions['-994603408'] = function (get) {
 	return `<option value="` + (get("item")) + `" ></option>`
-}
-$t.functions['input/measurement'] = function (get) {
-	return `<div class='fit'> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' value='` + (get("value")() ? get("value")() : "") + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
 }
 $t.functions['input/select'] = function (get) {
 	return `<div> <select class='` + (get("class")) + `' id='` + (get("id")) + `' name='` + (get("name")) + `' value='` + (get("value")) + `'> ` + (new $t('<option  value=\'{{item}}\' {{value === item ? \'selected\' : \'\'}}> {{item}} </option>').render(get('scope'), 'item in list', get)) + ` </select> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
@@ -2194,7 +2194,7 @@ const EPNTS = new Endpoints({
     "list": "/list/orders"
   }
 }
-, 'http://localhost:3000/cabinet').getFuncObj();
+, 'https://node.jozsefmorrissey.com/cabinet').getFuncObj();
 try {exports.EPNTS = EPNTS;}catch(e){}
 
 const cabinetBuildConfig = {
@@ -3728,6 +3728,83 @@ Measurement.validation = function (range) {
 
 
 
+class OrderDisplay {
+  constructor(parentSelector, orders) {
+    const roomDisplays = {};
+    let active;
+    const getHeader = (order, $index) =>
+        OrderDisplay.headTemplate.render({order, $index});
+
+    function initOrder(order) {
+      roomDisplays[order.id] = new RoomDisplay('#room-pills', order);
+      return order;
+    }
+
+    function loadOrder(index, start) {
+      return function (orderData) {
+        const order = Order.fromJson(orderData);
+        initOrder(order);
+        expandList.set(index, order);
+        expandList.refresh();
+        console.log('load Time:', new Date().getTime() - start);
+      }
+    }
+
+    const getBody = (order, $index) => {
+      if (order instanceof Order) {
+        let propertyTypes = Object.keys(properties.list);
+        active = roomDisplays[order.id];
+        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
+      } else {
+        const start = new Date().getTime();
+        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
+        return 'Loading...';
+      }
+    }
+    const getObject = (values) => initOrder(new Order(values.name));
+    this.active = () => active;
+
+    const expListProps = {
+      list: orders,
+      inputs: [{placeholder: 'name'}],
+      inputValidation: (values) => values.name ? true :
+          'You must Define a name',
+      parentSelector, getHeader, getBody, getObject,
+      listElemLable: 'Order', type: 'sidebar',
+      inputTree: new DecisionInputTree('Order', Input.Name(), console.log)
+    };
+    const expandList = new ExpandableList(expListProps);
+    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
+
+    const saveSuccess = () => console.log('success');
+    const saveFail = () => console.log('failure');
+    const save = (target) => {
+      const index = target.getAttribute('index');
+      const order = expandList.get(index);
+      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
+      console.log('saving');
+    }
+
+    const attrUpdate = (attr) => (target) => {
+      const index = target.getAttribute('index');
+      const order = expandList.get(index);
+      order[attr] = target.value;
+    };
+
+    function addOrders(names) {
+      names.forEach((name) => expListProps.list.push({ name }));
+      expandList.refresh();
+    }
+    Request.get(EPNTS.order.list(), addOrders);
+
+    matchRun('change', '.order-name-input', attrUpdate('name'));
+    matchRun('click', '.save-order-btn', save);
+  }
+}
+OrderDisplay.bodyTemplate = new $t('order/body');
+OrderDisplay.headTemplate = new $t('order/head');
+
+
 class PropertyDisplay {
   constructor(containerSelector) {
     let currProps;
@@ -3788,182 +3865,6 @@ class RoomDisplay {
 }
 RoomDisplay.bodyTemplate = new $t('room/body');
 RoomDisplay.headTemplate = new $t('room/head');
-
-
-const OpenSectionDisplay = {};
-
-OpenSectionDisplay.html = (opening) => {
-  const openDispId = OpenSectionDisplay.getId(opening);
-  opening.init();
-  OpenSectionDisplay.sections[opening.uniqueId] = opening;
-  setTimeout(() => OpenSectionDisplay.refresh(opening), 100);
-  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
-  return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml});
-}
-
-OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.uniqueId}`;
-OpenSectionDisplay.template = new $t('opening');
-OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
-OpenSectionDisplay.listHeadTemplate = new $t('divide/head');
-OpenSectionDisplay.sections = {};
-OpenSectionDisplay.lists = {};
-OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId}`;
-
-OpenSectionDisplay.getList = (root) => {
-  let openId = root.uniqueId;
-  if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
-  const sections = Section.sections();
-  const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
-  const parentSelector = `#${OpenSectionDisplay.getId(root)}`
-  const list = root.sections;
-  const hideAddBtn = true;
-  const selfCloseTab = true;
-  let exList;
-  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
-  const getHeader = (opening, index) => {
-    const sections = index % 2 === 0 ? Section.getSections(false) : [];
-    return OpenSectionDisplay.listHeadTemplate.render({opening, sections, clean});
-  }
-  const getBody = (opening) => {
-    const list = OpenSectionDisplay.getList(root);
-    const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
-    const assemblies = opening.getSubAssemblies();
-    return Section.render({assemblies, getFeatureDisplay, opening, list, sections});
-  }
-  const findElement = (selector, target) => down(selector, up('.expandable-list', target));
-  const expListProps = {
-    parentSelector, getHeader, getBody, getObject, list, hideAddBtn,
-    selfCloseTab, findElement, startClosed: true
-  }
-  exList = new ExpandableList(expListProps);
-  OpenSectionDisplay.lists[openId] = exList;
-  return exList;
-}
-OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
-OpenSectionDisplay.updateDividers = (opening) => {
-  const selector = `[opening-id="${opening.uniqueId}"].opening-cnt > .divider-controls`;
-  const dividerControlsCnt = document.querySelector(selector);
-  const selectPatternId = OpenSectionDisplay.getSelectId(opening);
-  bindField(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/);
-  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
-  dividerControlsCnt.innerHTML = OpenSectionDisplay.dividerControlTemplate.render(
-          {opening, selectPatternId, patternInputHtml});
-}
-
-OpenSectionDisplay.changeIds = {};
-OpenSectionDisplay.refresh = (opening) => {
-  let changeId = (OpenSectionDisplay.changeIds[opening.uniqueId] || 0) + 1;
-  OpenSectionDisplay.changeIds[opening.uniqueId] = changeId;
-  setTimeout(()=> {
-    if (changeId === OpenSectionDisplay.changeIds[opening.uniqueId]) {
-      const id = OpenSectionDisplay.getId(opening);
-      const target = document.getElementById(id);
-      const listCnt = up('.expandable-list', target);
-      const listId = Number.parseInt(listCnt.getAttribute('ex-list-id'));
-
-      const type = opening.isVertical() === true ? 'pill' : 'sidebar';
-      OpenSectionDisplay.updateDividers(opening);
-      OpenSectionDisplay.getList(opening).refresh(type);
-      const dividerSelector = `[opening-id='${opening.uniqueId}'].division-count-input`;
-      // listCnt.querySelector(dividerSelector).focus();
-    }
-  }, 500);
-}
-
-OpenSectionDisplay.patternContainerSelector = (opening) =>
-  `.open-pattern-input-cnt[opening-id='${opening.uniqueId}']`;
-
-OpenSectionDisplay.patterInputHtml = (opening) => {
-  const pattern = opening.pattern();
-  const patCntSelector = OpenSectionDisplay.patternContainerSelector(opening);
-
-  let inputHtml = '';
-  for (let index = 0; index < pattern.unique.length; index += 1) {
-    const id = pattern.unique[index];
-    let fill = opening.dividerLayout().fill;
-    const measInput = MeasurementInput.pattern(id, fill[index]);
-    measInput.on('keyup', (target) => {
-      opening.pattern().value(target.name, OpenSectionDisplay.evaluator.eval(target.value));
-      fill = opening.dividerLayout().fill;
-      const patternCnt = document.querySelector(patCntSelector);
-      const inputs = patternCnt.querySelectorAll('input');
-      fill.forEach((value, index) => inputs[index].value = value);
-      if (opening.pattern().satisfied()) {
-        const cabinet = opening.getAssembly('c');
-        ThreeDModel.render(cabinet);
-      }
-    });
-    inputHtml += measInput.html();
-  }
-  return inputHtml;
-};
-
-OpenSectionDisplay.getOpening = (target) => {
-  const openId = target.getAttribute('opening-id');
-  return OpenSectionDisplay.sections[openId];
-}
-
-OpenSectionDisplay.evaluator = new StringMathEvaluator();
-OpenSectionDisplay.patternInputChange = (target) => {
-  const opening = OpenSectionDisplay.getOpening(up('.open-pattern-input-cnt', target));
-  opening.pattern().value(target.name, OpenSectionDisplay.evaluator(target.value));
-  if (opening.pattern().satisfied()) {
-    OpenSectionDisplay.refresh(opening);
-  }
-};
-
-OpenSectionDisplay.patternInputSelector = (opening) =>
-  `[name='pattern'][opening-id='${opening.uniqueId}']`;
-
-OpenSectionDisplay.onPatternChange = (target) => {
-  const opening = OpenSectionDisplay.getOpening(target);
-  const newVal = target.value;
-  if (newVal !== opening.pattern().str && newVal === opening.pattern(newVal).str) {
-    const cntSelector = OpenSectionDisplay.patternContainerSelector(opening);
-    const html = OpenSectionDisplay.patterInputHtml(opening);
-    document.querySelector(cntSelector).innerHTML = html;
-  }
-}
-
-OpenSectionDisplay.onChange = (target) => {
-  const id = target.getAttribute('opening-id');
-  const value = Number.parseInt(target.value);
-  const opening = OpenSectionDisplay.sections[id];
-  if (opening.divide(value)) {
-    OpenSectionDisplay.refresh(opening);
-    const cabinet = opening.getAssembly('c');
-    ThreeDModel.render(cabinet);
-  }
-
-  const patternInput = document.querySelector(OpenSectionDisplay.patternInputSelector(opening));
-  const patternStr = patternInput.value;
-  const pattern = opening.pattern(patternStr);
-  patternInput.value = pattern.str;
-};
-
-OpenSectionDisplay.onOrientation = (target) => {
-  const openId = target.getAttribute('open-id');
-  const value = target.value;
-  const opening = OpenSectionDisplay.sections[openId];
-  opening.vertical(value === 'vertical');
-  OpenSectionDisplay.refresh(opening);
-};
-
-OpenSectionDisplay.onSectionChange = (target) => {
-  ExpandableList.value('selected', target.value, target);
-  const section = ExpandableList.get(target);
-  const index = ExpandableList.getIdAndIndex(target).index;
-  section.parentAssembly.setSection(target.value, index);
-  OpenSectionDisplay.refresh(section.parentAssembly);
-  updateModel(section);
-}
-
-matchRun('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
-matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
-matchRun('keyup', '.patternInput', OpenSectionDisplay.patternInputChange);
-matchRun('click', '.division-count-input', OpenSectionDisplay.onChange);
-matchRun('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
-matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
 
 
 
@@ -4180,81 +4081,180 @@ CabinetDisplay.bodyTemplate = new $t('cabinet/body');
 CabinetDisplay.headTemplate = new $t('cabinet/head');
 
 
-class OrderDisplay {
-  constructor(parentSelector, orders) {
-    const roomDisplays = {};
-    let active;
-    const getHeader = (order, $index) =>
-        OrderDisplay.headTemplate.render({order, $index});
+const OpenSectionDisplay = {};
 
-    function initOrder(order) {
-      roomDisplays[order.id] = new RoomDisplay('#room-pills', order);
-      return order;
+OpenSectionDisplay.html = (opening) => {
+  const openDispId = OpenSectionDisplay.getId(opening);
+  opening.init();
+  OpenSectionDisplay.sections[opening.uniqueId] = opening;
+  setTimeout(() => OpenSectionDisplay.refresh(opening), 100);
+  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
+  return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml});
+}
+
+OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.uniqueId}`;
+OpenSectionDisplay.template = new $t('opening');
+OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
+OpenSectionDisplay.listHeadTemplate = new $t('divide/head');
+OpenSectionDisplay.sections = {};
+OpenSectionDisplay.lists = {};
+OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId}`;
+
+OpenSectionDisplay.getList = (root) => {
+  let openId = root.uniqueId;
+  if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
+  const sections = Section.sections();
+  const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
+  const parentSelector = `#${OpenSectionDisplay.getId(root)}`
+  const list = root.sections;
+  const hideAddBtn = true;
+  const selfCloseTab = true;
+  let exList;
+  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
+  const getHeader = (opening, index) => {
+    const sections = index % 2 === 0 ? Section.getSections(false) : [];
+    return OpenSectionDisplay.listHeadTemplate.render({opening, sections, clean});
+  }
+  const getBody = (opening) => {
+    const list = OpenSectionDisplay.getList(root);
+    const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
+    const assemblies = opening.getSubAssemblies();
+    return Section.render({assemblies, getFeatureDisplay, opening, list, sections});
+  }
+  const findElement = (selector, target) => down(selector, up('.expandable-list', target));
+  const expListProps = {
+    parentSelector, getHeader, getBody, getObject, list, hideAddBtn,
+    selfCloseTab, findElement, startClosed: true
+  }
+  exList = new ExpandableList(expListProps);
+  OpenSectionDisplay.lists[openId] = exList;
+  return exList;
+}
+OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
+OpenSectionDisplay.updateDividers = (opening) => {
+  const selector = `[opening-id="${opening.uniqueId}"].opening-cnt > .divider-controls`;
+  const dividerControlsCnt = document.querySelector(selector);
+  const selectPatternId = OpenSectionDisplay.getSelectId(opening);
+  bindField(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/);
+  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
+  dividerControlsCnt.innerHTML = OpenSectionDisplay.dividerControlTemplate.render(
+          {opening, selectPatternId, patternInputHtml});
+}
+
+OpenSectionDisplay.changeIds = {};
+OpenSectionDisplay.refresh = (opening) => {
+  let changeId = (OpenSectionDisplay.changeIds[opening.uniqueId] || 0) + 1;
+  OpenSectionDisplay.changeIds[opening.uniqueId] = changeId;
+  setTimeout(()=> {
+    if (changeId === OpenSectionDisplay.changeIds[opening.uniqueId]) {
+      const id = OpenSectionDisplay.getId(opening);
+      const target = document.getElementById(id);
+      const listCnt = up('.expandable-list', target);
+      const listId = Number.parseInt(listCnt.getAttribute('ex-list-id'));
+
+      const type = opening.isVertical() === true ? 'pill' : 'sidebar';
+      OpenSectionDisplay.updateDividers(opening);
+      OpenSectionDisplay.getList(opening).refresh(type);
+      const dividerSelector = `[opening-id='${opening.uniqueId}'].division-count-input`;
+      // listCnt.querySelector(dividerSelector).focus();
     }
+  }, 500);
+}
 
-    function loadOrder(index, start) {
-      return function (orderData) {
-        const order = Order.fromJson(orderData);
-        initOrder(order);
-        expandList.set(index, order);
-        expandList.refresh();
-        console.log('load Time:', new Date().getTime() - start);
+OpenSectionDisplay.patternContainerSelector = (opening) =>
+  `.open-pattern-input-cnt[opening-id='${opening.uniqueId}']`;
+
+OpenSectionDisplay.patterInputHtml = (opening) => {
+  const pattern = opening.pattern();
+  const patCntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+
+  let inputHtml = '';
+  for (let index = 0; index < pattern.unique.length; index += 1) {
+    const id = pattern.unique[index];
+    let fill = opening.dividerLayout().fill;
+    const measInput = MeasurementInput.pattern(id, fill[index]);
+    measInput.on('keyup', (target) => {
+      opening.pattern().value(target.name, OpenSectionDisplay.evaluator.eval(target.value));
+      fill = opening.dividerLayout().fill;
+      const patternCnt = document.querySelector(patCntSelector);
+      const inputs = patternCnt.querySelectorAll('input');
+      fill.forEach((value, index) => inputs[index].value = value);
+      if (opening.pattern().satisfied()) {
+        const cabinet = opening.getAssembly('c');
+        ThreeDModel.render(cabinet);
       }
-    }
+    });
+    inputHtml += measInput.html();
+  }
+  return inputHtml;
+};
 
-    const getBody = (order, $index) => {
-      if (order instanceof Order) {
-        let propertyTypes = Object.keys(properties.list);
-        active = roomDisplays[order.id];
-        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
-      } else {
-        const start = new Date().getTime();
-        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
-        return 'Loading...';
-      }
-    }
-    const getObject = (values) => initOrder(new Order(values.name));
-    this.active = () => active;
+OpenSectionDisplay.getOpening = (target) => {
+  const openId = target.getAttribute('opening-id');
+  return OpenSectionDisplay.sections[openId];
+}
 
-    const expListProps = {
-      list: orders,
-      inputs: [{placeholder: 'name'}],
-      inputValidation: (values) => values.name ? true :
-          'You must Define a name',
-      parentSelector, getHeader, getBody, getObject,
-      listElemLable: 'Order', type: 'sidebar',
-      inputTree: new DecisionInputTree('Order', Input.Name(), console.log)
-    };
-    const expandList = new ExpandableList(expListProps);
-    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
+OpenSectionDisplay.evaluator = new StringMathEvaluator();
+OpenSectionDisplay.patternInputChange = (target) => {
+  const opening = OpenSectionDisplay.getOpening(up('.open-pattern-input-cnt', target));
+  opening.pattern().value(target.name, OpenSectionDisplay.evaluator(target.value));
+  if (opening.pattern().satisfied()) {
+    OpenSectionDisplay.refresh(opening);
+  }
+};
 
-    const saveSuccess = () => console.log('success');
-    const saveFail = () => console.log('failure');
-    const save = (target) => {
-      const index = target.getAttribute('index');
-      const order = expandList.get(index);
-      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
-      console.log('saving');
-    }
+OpenSectionDisplay.patternInputSelector = (opening) =>
+  `[name='pattern'][opening-id='${opening.uniqueId}']`;
 
-    const attrUpdate = (attr) => (target) => {
-      const index = target.getAttribute('index');
-      const order = expandList.get(index);
-      order[attr] = target.value;
-    };
-
-    function addOrders(names) {
-      names.forEach((name) => expListProps.list.push({ name }));
-      expandList.refresh();
-    }
-    Request.get(EPNTS.order.list(), addOrders);
-
-    matchRun('change', '.order-name-input', attrUpdate('name'));
-    matchRun('click', '.save-order-btn', save);
+OpenSectionDisplay.onPatternChange = (target) => {
+  const opening = OpenSectionDisplay.getOpening(target);
+  const newVal = target.value;
+  if (newVal !== opening.pattern().str && newVal === opening.pattern(newVal).str) {
+    const cntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+    const html = OpenSectionDisplay.patterInputHtml(opening);
+    document.querySelector(cntSelector).innerHTML = html;
   }
 }
-OrderDisplay.bodyTemplate = new $t('order/body');
-OrderDisplay.headTemplate = new $t('order/head');
+
+OpenSectionDisplay.onChange = (target) => {
+  const id = target.getAttribute('opening-id');
+  const value = Number.parseInt(target.value);
+  const opening = OpenSectionDisplay.sections[id];
+  if (opening.divide(value)) {
+    OpenSectionDisplay.refresh(opening);
+    const cabinet = opening.getAssembly('c');
+    ThreeDModel.render(cabinet);
+  }
+
+  const patternInput = document.querySelector(OpenSectionDisplay.patternInputSelector(opening));
+  const patternStr = patternInput.value;
+  const pattern = opening.pattern(patternStr);
+  patternInput.value = pattern.str;
+};
+
+OpenSectionDisplay.onOrientation = (target) => {
+  const openId = target.getAttribute('open-id');
+  const value = target.value;
+  const opening = OpenSectionDisplay.sections[openId];
+  opening.vertical(value === 'vertical');
+  OpenSectionDisplay.refresh(opening);
+};
+
+OpenSectionDisplay.onSectionChange = (target) => {
+  ExpandableList.value('selected', target.value, target);
+  const section = ExpandableList.get(target);
+  const index = ExpandableList.getIdAndIndex(target).index;
+  section.parentAssembly.setSection(target.value, index);
+  OpenSectionDisplay.refresh(section.parentAssembly);
+  updateModel(section);
+}
+
+matchRun('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
+matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
+matchRun('keyup', '.patternInput', OpenSectionDisplay.patternInputChange);
+matchRun('click', '.division-count-input', OpenSectionDisplay.onChange);
+matchRun('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
+matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
 
 
 
@@ -4358,47 +4358,205 @@ Input.color = () => new Input({
   });
 
 
+// properties
+//  required: {
+//  getHeader: function returns html header string,
+//  getBody: function returns html body string,
+//}
+//  optional: {
+//  list: list to use, creates on undefined
+//  getObject: function returns new list object default is generic js object,
+//  parentSelector: cssSelector only reqired for refresh function,
+//  listElemLable: nameOfElementType changes add button label,
+//  hideAddBtn: defaults to false,
+//  startClosed: all tabs are closed on list open.
+//  input: true - require user to enter text before adding new
+//  inputOptions: array of autofill inputs
+//  inputs: [{placeholder, autofill},...]
+//  inputValidation: function to validate input fields
+//  type: defaults to list,
+//  selfCloseTab: defalts to true - allows clicking on header to close body,
+//  findElement: used to find elemenents related to header - defaults to closest
+//}
+class ExpandableList {
+  constructor(props) {
+    const afterRenderEvent = new CustomEvent('afterRender');
+    const afterAddEvent = new CustomEvent('afterAdd');
+    const afterRefreshEvent = new CustomEvent('afterRefresh');
+    const instance = this;
+    props.id = ExpandableList.lists.length;
+    this.id = () => props.id;
+    props.list = props.list || [];
+    props.inputs = props.inputs || [];
+    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${this.id}`;
+    props.inputTreeId = `expandable-input-tree-cnt-${this.id}`
+    props.type = props.type || 'list';
+    props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
+    this.findElement = props.findElement;
+    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
+    props.getObject = props.getObject || (() => {});
+    let pendingRefresh = false;
+    let lastRefresh = new Date().getTime();
+    const storage = {};
+    props.activeIndex = 0;
+    ExpandableList.lists[props.id] = this;
 
-class AbstractManager {
-  constructor(id, name) {
-    let list;
-    const manager = this;
-    this.saveBtnId = `${name}-manager-save-btn`;
-    this.headerId = `${name}-manager-header-cnt`;
-    this.bodyId = `${name}-manager-body-cnt`;
-    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
-    const parentSelector = `#${this.bodyId}`;
-    const template = new $t('managers/abstract-manager');
-    const bodyTemplate = new $t(`managers/${name}/body`);
-    const headTemplate = new $t(`managers/${name}/header`);
-
-    const getHeader = (instance) => headTemplate.render({instance, manager});
-    const getBody = (instance) => bodyTemplate.render({instance, manager});
-
-    const getObject = (values) => manager.getObject(values);
-
-    function init(json) {
-      document.getElementById(id).innerHTML = template.render(manager);
-      list = manager.fromJson(json) || [];
-      const expListProps = {
-        inputTree: manager.constructor.inputTree(),
-        parentSelector, getHeader, getBody, getObject, list,
-        listElemLable: 'Template'
-      };
-      const expandList = new ExpandableList(expListProps);
-
-      const saveSuccess = () => console.log('success save');
-      const saveFail = () => console.log('failed save');
-      const save = (target) => {
-        const body = manager.toJson(costs);
-        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
-      }
-      matchRun('click', `#${manager.saveBtnId}`, save);
+    function setErrorMsg(msg) {
+        document.getElementById(props.ERROR_CNT_ID).innerHTML = msg;
     }
 
-    afterLoad.push(() => Request.get(manager.loadPoint(), init));
+    function values() {
+      if (instance.hasInputTree()) return props.inputTree.values();
+      const values = {};
+      props.inputs.forEach((input) =>
+        values[input.placeholder] = document.getElementById(input.id).value);
+      return values;
+    }
+
+    this.add = () => {
+      const inputValues = values();
+      if ((typeof props.inputValidation) !== 'function' ||
+              props.inputValidation(inputValues) === true) {
+        props.list.push(props.getObject(inputValues));
+
+        this.activeIndex(props.list.length - 1);
+        this.refresh();
+        afterAddEvent.trigger();
+      } else {
+        const errors = props.inputValidation(inputValues);
+        let errorStr;
+        if ((typeof errors) === 'object') {
+          const keys = Object.keys(errors);
+          errorStr = Object.values(errors).join('<br>');
+        } else {
+          errorStr = `Error: ${errors}`;
+        }
+        setErrorMsg(errorStr);
+      }
+    };
+    this.hasInputTree = () =>
+      props.inputTree && props.inputTree.constructor.name === 'DecisionNode';
+    if (this.hasInputTree()) props.inputTree.onComplete(this.add);
+    props.hasInputTree = this.hasInputTree;
+
+    this.isSelfClosing = () => props.selfCloseTab;
+    this.remove = (index) => {
+      props.list.splice(index, 1);
+      this.refresh();
+    }
+    this.afterRender = (func) => afterRenderEvent.on(func);
+    this.afterAdd = (func) => afterAddEvent.on(func);
+    this.refresh = (type) => {
+      props.type = (typeof type) === 'string' ? type : props.type;
+      if (!pendingRefresh) {
+        pendingRefresh = true;
+        setTimeout(() => {
+          props.inputs.forEach((input) => input.id = input.id || randomString(7));
+          const parent = document.querySelector(props.parentSelector);
+          const html = ExpandableList[`${props.type}Template`].render(props);
+
+          if (parent && html !== undefined) {
+            parent.innerHTML = html;
+            afterRefreshEvent.trigger();
+          }
+          pendingRefresh = false;
+        }, 100);
+      }
+    };
+    this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
+    this.active = () => props.list[this.activeIndex()];
+    this.value = (index) => (key, value) => {
+      if (props.activeIndex === undefined) props.activeIndex = 0;
+      if (index === undefined) index = props.activeIndex;
+      if (storage[index] === undefined) storage[index] = {};
+      if (value === undefined) return storage[index][key];
+      storage[index][key] = value;
+    }
+    this.set = (index, value) => props.list[index] = value;
+    this.get = (index) => props.list[index];
+    this.renderBody = (target) => {
+      const headerSelector = `.expand-header[ex-list-id='${props.id}'][index='${this.activeIndex()}']`;
+      target = target || document.querySelector(headerSelector);
+      if (target !== null) {
+        const id = target.getAttribute('ex-list-id');
+        const list = ExpandableList.lists[id];
+        const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
+        const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
+        const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
+        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
+        bodys.forEach((body) => body.style.display = 'none');
+        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
+        const body = list.findElement('.expand-body', target);
+        body.style.display = 'block';
+        const index = target.getAttribute('index');
+        this.activeIndex(index);
+        body.innerHTML = this.htmlBody(index);
+        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+        target.className += ' active';
+        afterRenderEvent.trigger();
+      }
+    };
+    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+
+    this.htmlBody = (index) => props.getBody(props.list[index], index);
+    this.getList = () => props.list;
+    this.refresh();
   }
 }
+ExpandableList.lists = [];
+ExpandableList.listTemplate = new $t('expandable/list');
+ExpandableList.pillTemplate = new $t('expandable/pill');
+ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
+ExpandableList.getIdAndIndex = (target) => {
+  const cnt = up('.expand-header,.expand-body', target);
+  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
+  const index = Number.parseInt(cnt.getAttribute('index'));
+  return {id, index};
+}
+ExpandableList.getValueFunc = (target) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  return ExpandableList.lists[idIndex.id].value(idIndex.index);
+}
+
+ExpandableList.get = (target, value) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  return ExpandableList.lists[idIndex.id].get(idIndex.index);
+}
+
+ExpandableList.set = (target, value) => {
+  const idIndex = ExpandableList.getIdAndIndex(target);
+  ExpandableList.lists[idIndex.id].set(idIndex.index, value);
+}
+
+ExpandableList.value = (key, value, target) => {
+  return ExpandableList.getValueFunc(target)(key, value);
+}
+matchRun('click', '.expandable-list-add-btn', (target) => {
+  const id = target.getAttribute('ex-list-id');
+  ExpandableList.lists[id].add();
+});
+matchRun('click', '.expandable-item-rm-btn', (target) => {
+  const id = target.getAttribute('ex-list-id');
+  const index = target.getAttribute('index');
+  ExpandableList.lists[id].remove(index);
+});
+ExpandableList.closeAll = (header) => {
+  const hello = 'world';
+}
+
+matchRun('click', '.expand-header', (target, event) => {
+  const isActive = target.matches('.active');
+  const id = target.getAttribute('ex-list-id');
+  const list = ExpandableList.lists[id];
+  if (isActive && event.target === target) {
+    target.className = target.className.replace(/(^| )active( |$)/g, '');
+    list.findElement('.expand-body', target).style.display = 'none';
+    list.activeIndex(null);
+    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
+  } else if (!isActive) {
+    list.renderBody(target);
+  }
+});
 
 
 const colors = {
@@ -4860,249 +5018,6 @@ afterLoad.push(() =>
 );
 
 
-// properties
-//  required: {
-//  getHeader: function returns html header string,
-//  getBody: function returns html body string,
-//}
-//  optional: {
-//  list: list to use, creates on undefined
-//  getObject: function returns new list object default is generic js object,
-//  parentSelector: cssSelector only reqired for refresh function,
-//  listElemLable: nameOfElementType changes add button label,
-//  hideAddBtn: defaults to false,
-//  startClosed: all tabs are closed on list open.
-//  input: true - require user to enter text before adding new
-//  inputOptions: array of autofill inputs
-//  inputs: [{placeholder, autofill},...]
-//  inputValidation: function to validate input fields
-//  type: defaults to list,
-//  selfCloseTab: defalts to true - allows clicking on header to close body,
-//  findElement: used to find elemenents related to header - defaults to closest
-//}
-class ExpandableList {
-  constructor(props) {
-    const afterRenderEvent = new CustomEvent('afterRender');
-    const afterAddEvent = new CustomEvent('afterAdd');
-    const afterRefreshEvent = new CustomEvent('afterRefresh');
-    const instance = this;
-    props.id = ExpandableList.lists.length;
-    this.id = () => props.id;
-    props.list = props.list || [];
-    props.inputs = props.inputs || [];
-    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${this.id}`;
-    props.inputTreeId = `expandable-input-tree-cnt-${this.id}`
-    props.type = props.type || 'list';
-    props.findElement = props.findElement || ((selector, target) =>  closest(selector, target));
-    this.findElement = props.findElement;
-    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
-    props.getObject = props.getObject || (() => {});
-    let pendingRefresh = false;
-    let lastRefresh = new Date().getTime();
-    const storage = {};
-    props.activeIndex = 0;
-    ExpandableList.lists[props.id] = this;
-
-    function setErrorMsg(msg) {
-        document.getElementById(props.ERROR_CNT_ID).innerHTML = msg;
-    }
-
-    function values() {
-      if (instance.hasInputTree()) return props.inputTree.values();
-      const values = {};
-      props.inputs.forEach((input) =>
-        values[input.placeholder] = document.getElementById(input.id).value);
-      return values;
-    }
-
-    this.add = () => {
-      const inputValues = values();
-      if ((typeof props.inputValidation) !== 'function' ||
-              props.inputValidation(inputValues) === true) {
-        props.list.push(props.getObject(inputValues));
-
-        this.activeIndex(props.list.length - 1);
-        this.refresh();
-        afterAddEvent.trigger();
-      } else {
-        const errors = props.inputValidation(inputValues);
-        let errorStr;
-        if ((typeof errors) === 'object') {
-          const keys = Object.keys(errors);
-          errorStr = Object.values(errors).join('<br>');
-        } else {
-          errorStr = `Error: ${errors}`;
-        }
-        setErrorMsg(errorStr);
-      }
-    };
-    this.hasInputTree = () =>
-      props.inputTree && props.inputTree.constructor.name === 'DecisionNode';
-    if (this.hasInputTree()) props.inputTree.onComplete(this.add);
-    props.hasInputTree = this.hasInputTree;
-
-    this.isSelfClosing = () => props.selfCloseTab;
-    this.remove = (index) => {
-      props.list.splice(index, 1);
-      this.refresh();
-    }
-    this.afterRender = (func) => afterRenderEvent.on(func);
-    this.afterAdd = (func) => afterAddEvent.on(func);
-    this.refresh = (type) => {
-      props.type = (typeof type) === 'string' ? type : props.type;
-      if (!pendingRefresh) {
-        pendingRefresh = true;
-        setTimeout(() => {
-          props.inputs.forEach((input) => input.id = input.id || randomString(7));
-          const parent = document.querySelector(props.parentSelector);
-          const html = ExpandableList[`${props.type}Template`].render(props);
-
-          if (parent && html !== undefined) {
-            parent.innerHTML = html;
-            afterRefreshEvent.trigger();
-          }
-          pendingRefresh = false;
-        }, 100);
-      }
-    };
-    this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
-    this.active = () => props.list[this.activeIndex()];
-    this.value = (index) => (key, value) => {
-      if (props.activeIndex === undefined) props.activeIndex = 0;
-      if (index === undefined) index = props.activeIndex;
-      if (storage[index] === undefined) storage[index] = {};
-      if (value === undefined) return storage[index][key];
-      storage[index][key] = value;
-    }
-    this.set = (index, value) => props.list[index] = value;
-    this.get = (index) => props.list[index];
-    this.renderBody = (target) => {
-      const headerSelector = `.expand-header[ex-list-id='${props.id}'][index='${this.activeIndex()}']`;
-      target = target || document.querySelector(headerSelector);
-      if (target !== null) {
-        const id = target.getAttribute('ex-list-id');
-        const list = ExpandableList.lists[id];
-        const headers = up('.expandable-list', target).querySelectorAll('.expand-header');
-        const bodys = up('.expandable-list', target).querySelectorAll('.expand-body');
-        const rmBtns = up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-        bodys.forEach((body) => body.style.display = 'none');
-        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-        const body = list.findElement('.expand-body', target);
-        body.style.display = 'block';
-        const index = target.getAttribute('index');
-        this.activeIndex(index);
-        body.innerHTML = this.htmlBody(index);
-        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-        target.className += ' active';
-        afterRenderEvent.trigger();
-      }
-    };
-    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
-
-    this.htmlBody = (index) => props.getBody(props.list[index], index);
-    this.getList = () => props.list;
-    this.refresh();
-  }
-}
-ExpandableList.lists = [];
-ExpandableList.listTemplate = new $t('expandable/list');
-ExpandableList.pillTemplate = new $t('expandable/pill');
-ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
-ExpandableList.getIdAndIndex = (target) => {
-  const cnt = up('.expand-header,.expand-body', target);
-  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-  const index = Number.parseInt(cnt.getAttribute('index'));
-  return {id, index};
-}
-ExpandableList.getValueFunc = (target) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  return ExpandableList.lists[idIndex.id].value(idIndex.index);
-}
-
-ExpandableList.get = (target, value) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  return ExpandableList.lists[idIndex.id].get(idIndex.index);
-}
-
-ExpandableList.set = (target, value) => {
-  const idIndex = ExpandableList.getIdAndIndex(target);
-  ExpandableList.lists[idIndex.id].set(idIndex.index, value);
-}
-
-ExpandableList.value = (key, value, target) => {
-  return ExpandableList.getValueFunc(target)(key, value);
-}
-matchRun('click', '.expandable-list-add-btn', (target) => {
-  const id = target.getAttribute('ex-list-id');
-  ExpandableList.lists[id].add();
-});
-matchRun('click', '.expandable-item-rm-btn', (target) => {
-  const id = target.getAttribute('ex-list-id');
-  const index = target.getAttribute('index');
-  ExpandableList.lists[id].remove(index);
-});
-ExpandableList.closeAll = (header) => {
-  const hello = 'world';
-}
-
-matchRun('click', '.expand-header', (target, event) => {
-  const isActive = target.matches('.active');
-  const id = target.getAttribute('ex-list-id');
-  const list = ExpandableList.lists[id];
-  if (isActive && event.target === target) {
-    target.className = target.className.replace(/(^| )active( |$)/g, '');
-    list.findElement('.expand-body', target).style.display = 'none';
-    list.activeIndex(null);
-    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-  } else if (!isActive) {
-    list.renderBody(target);
-  }
-});
-
-
-
-class Room {
-  constructor(name, id) {
-    this.name = name || `Room ${Room.count++}`;
-    this.id = id || randomString(32);
-    this.cabinets = [];
-    this.toJson = () => {
-      const json = {name: this.name, id: this.id, cabinets: []};
-      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
-      return json;
-    };
-  }
-};
-Room.count = 0;
-Room.fromJson = (roomJson) => {
-  const room = new Room(roomJson.name, roomJson.id);
-  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
-  return room;
-}
-
-
-class Order {
-  constructor(name, id) {
-    this.name = name || ++Order.count;
-    this.id = id || randomString(32);
-    this.rooms = []
-    this.toJson = () => {
-      const json = {name: this.name, rooms: []};
-      this.rooms.forEach((room) => json.rooms.push(room.toJson()));
-      return json;
-    }
-  }
-}
-
-Order.count = 0;
-Order.fromJson = (orderJson) => {
-  const order = new Order(orderJson.name, orderJson.id);
-  orderJson.rooms.forEach((roomJson) => order.rooms.push(Room.fromJson(roomJson)));
-  return order;
-}
-
-
 class DisplayManager {
   constructor(displayId, listId, switchId) {
     if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
@@ -5182,6 +5097,91 @@ matchRun('click', '.display-manager', (target, event) => {
 });
 
 
+
+class Room {
+  constructor(name, id) {
+    this.name = name || `Room ${Room.count++}`;
+    this.id = id || randomString(32);
+    this.cabinets = [];
+    this.toJson = () => {
+      const json = {name: this.name, id: this.id, cabinets: []};
+      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
+      return json;
+    };
+  }
+};
+Room.count = 0;
+Room.fromJson = (roomJson) => {
+  const room = new Room(roomJson.name, roomJson.id);
+  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
+  return room;
+}
+
+
+class Order {
+  constructor(name, id) {
+    this.name = name || ++Order.count;
+    this.id = id || randomString(32);
+    this.rooms = []
+    this.toJson = () => {
+      const json = {name: this.name, rooms: []};
+      this.rooms.forEach((room) => json.rooms.push(room.toJson()));
+      return json;
+    }
+  }
+}
+
+Order.count = 0;
+Order.fromJson = (orderJson) => {
+  const order = new Order(orderJson.name, orderJson.id);
+  orderJson.rooms.forEach((roomJson) => order.rooms.push(Room.fromJson(roomJson)));
+  return order;
+}
+
+
+
+class AbstractManager {
+  constructor(id, name) {
+    let list;
+    const manager = this;
+    this.saveBtnId = `${name}-manager-save-btn`;
+    this.headerId = `${name}-manager-header-cnt`;
+    this.bodyId = `${name}-manager-body-cnt`;
+    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
+    const parentSelector = `#${this.bodyId}`;
+    const template = new $t('managers/abstract-manager');
+    const bodyTemplate = new $t(`managers/${name}/body`);
+    const headTemplate = new $t(`managers/${name}/header`);
+
+    const getHeader = (instance) => headTemplate.render({instance, manager});
+    const getBody = (instance) => bodyTemplate.render({instance, manager});
+
+    const getObject = (values) => manager.getObject(values);
+
+    function init(json) {
+      document.getElementById(id).innerHTML = template.render(manager);
+      list = manager.fromJson(json) || [];
+      const expListProps = {
+        inputTree: manager.constructor.inputTree(),
+        parentSelector, getHeader, getBody, getObject, list,
+        listElemLable: 'Template'
+      };
+      const expandList = new ExpandableList(expListProps);
+
+      const saveSuccess = () => console.log('success save');
+      const saveFail = () => console.log('failed save');
+      const save = (target) => {
+        const body = manager.toJson(costs);
+        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
+      }
+      matchRun('click', `#${manager.saveBtnId}`, save);
+    }
+
+    afterLoad.push(() => Request.get(manager.loadPoint(), init));
+  }
+}
+
+
 function pull(length, height) {
   var rspx = length - .75;
   var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
@@ -5202,6 +5202,31 @@ function drawerBox(length, width, depth) {
 
   return box.subtract(bInside).subtract(inside);
 }
+
+
+class Labor extends Cost {
+  constructor (id, method, cost, length, width, depth) {
+    super(id, method, cost, length, width, depth);
+  }
+}
+
+Cost.register(Labor);
+
+
+// new Labor('Panel', '1+(0.05*l*w');
+// new Labor('Frame', '0.25');
+// new Labor('GlueFrame', '0.25');
+// new Labor('SandFrame', '0.05*l*l*w*w*d*d');
+// new Labor('SandPanel', '(0.25*l*w)/12');
+// new Labor('GlueMiter', '(0.25*l*l*w*w)');
+// new Labor('InstallBlumotionGuides', '2');
+// new Labor('InstallOtherGuides', '2');
+// new Labor('InstallFushHinges', '2');
+// new Labor('installOverLayHinges', '2');
+// new Labor('Paint', '(l*l*w*w*.1)/12');
+// new Labor('Stain', '(l*l*w*w*.25)/12');
+// new Labor('InstallDrawerFront', '2');
+// new Labor('InstallPullout', 10);
 
 
 
@@ -5366,31 +5391,6 @@ CostManager.inputTree = (callback) => {
 //   }
 //   Request.get(EPNTS.costs.get(), loadCosts);
 // });
-
-
-class Labor extends Cost {
-  constructor (id, method, cost, length, width, depth) {
-    super(id, method, cost, length, width, depth);
-  }
-}
-
-Cost.register(Labor);
-
-
-// new Labor('Panel', '1+(0.05*l*w');
-// new Labor('Frame', '0.25');
-// new Labor('GlueFrame', '0.25');
-// new Labor('SandFrame', '0.05*l*l*w*w*d*d');
-// new Labor('SandPanel', '(0.25*l*w)/12');
-// new Labor('GlueMiter', '(0.25*l*l*w*w)');
-// new Labor('InstallBlumotionGuides', '2');
-// new Labor('InstallOtherGuides', '2');
-// new Labor('InstallFushHinges', '2');
-// new Labor('installOverLayHinges', '2');
-// new Labor('Paint', '(l*l*w*w*.1)/12');
-// new Labor('Stain', '(l*l*w*w*.25)/12');
-// new Labor('InstallDrawerFront', '2');
-// new Labor('InstallPullout', 10);
 
 
 class Material extends Cost {

@@ -77,14 +77,14 @@ $t.functions['-1362189101'] = function (get) {
 $t.functions['input/decision/decisionTree'] = function (get) {
 	return `<div class='` + (get("class")) + `' tree-id='` + (get("treeId")) + `'> ` + (get("payload").html()) + ` <button class='` + (get("buttonClass")) + `' disabled tree-id='` + (get("treeId")) + `'>` + (get("name")) + `</button> </div> `
 }
+$t.functions['input/measurement'] = function (get) {
+	return `<div class='fit'> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' value='` + (get("value")() ? get("value")() : "") + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
+}
 $t.functions['input/input'] = function (get) {
 	return `<div> <input class='` + (get("class")) + `' list='input-list-` + (get("id")) + `' id='` + (get("id")) + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <datalist id="input-list-` + (get("id")) + `"> ` + (new $t('<option value="{{item}}" ></option>').render(get('scope'), 'item in list', get)) + ` </datalist> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
 }
 $t.functions['-994603408'] = function (get) {
 	return `<option value="` + (get("item")) + `" ></option>`
-}
-$t.functions['input/measurement'] = function (get) {
-	return `<div class='fit'> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' value='` + (get("value")() ? get("value")() : "") + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
 }
 $t.functions['input/select'] = function (get) {
 	return `<div> <select class='` + (get("class")) + `' id='` + (get("id")) + `' name='` + (get("name")) + `' value='` + (get("value")) + `'> ` + (new $t('<option  value=\'{{item}}\' {{value === item ? \'selected\' : \'\'}}> {{item}} </option>').render(get('scope'), 'item in list', get)) + ` </select> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
