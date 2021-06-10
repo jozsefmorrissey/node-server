@@ -172,8 +172,8 @@ class StringMathEvaluator {
 
     function convertFeetInchNotation(expr) {
       expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
-      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
       expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
+      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
       return expr = expr.replace(StringMathEvaluator.mixedNumberReg, '($1+$2)') || expr;;
     }
 

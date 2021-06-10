@@ -8,6 +8,10 @@
   margin: 0;
 }
 
+.open-pattern-input-cnt > div {
+  display: inline-flex;
+}
+
 .measurement-input {
     width: 50pt;
 }

@@ -9,7 +9,8 @@ class Input {
     this.placeholder = props.placeholder;
     this.class = props.class;
     this.list = props.list || [];
-    let valid, value;
+    let valid;
+    let value = props.value;
 
     props.errorMsg = props.errorMsg || 'Error';
 

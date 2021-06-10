@@ -1,9 +1,9 @@
 <div>
   <label>Dividers:</label>
-  <input type="number" min="0" max="10" step="1"
-      class='division-count-input' opening-id='{{opening.uniqueId}}'
-      value='{{opening.dividerCount()}}'>
-  <span class="open-orientation-radio-cnt {{opening.dividerCount() > 0 ? '' : 'hidden'}}">
+  <input class='division-pattern-input' type='text' name='pattern'
+      opening-id='{{opening.uniqueId}}' value='{{opening.pattern().str}}'>
+
+  <span class="open-orientation-radio-cnt">
 
     <label for='open-orientation-horiz-{{opening.uniqueId}}'>Horizontal:</label>
     <input type='radio' name='orientation-{{opening.uniqueId}}' value='horizontal'
@@ -16,10 +16,8 @@
         class='open-orientation-radio' {{opening.value('vertical') ? 'checked' : ''}}>
 
   </span>
-  <span>
-    <input class='division-pattern-input' type='text' name='pattern'
-        opening-id='{{opening.uniqueId}}' value='{{opening.pattern().str}}'>
-    <div class='open-pattern-input-cnt' opening-id='{{opening.uniqueId}}'>
-      {{patternInputHtml}}
-    </div>
+  <div class='open-pattern-input-cnt' opening-id='{{opening.uniqueId}}'
+      {{opening.pattern().equal ? 'hidden' : ''}}>
+    {{patternInputHtml}}
+  </div>
 </div>

@@ -1918,7 +1918,7 @@ $t.functions['-1702305177'] = function (get) {
 	return `<div class='divison-section-cnt'> ` + (get("OpenSectionDisplay").html(get("opening"))) + ` </div>`
 }
 $t.functions['cabinet/head'] = function (get) {
-	return `<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` + (get("$index")) + `.id' index='` + (get("$index")) + `' room-id='` + (get("room").id) + `' value='` + (get("cabinet").id || get("$index")) + `'> Size: <div class='cabinet-dem-cnt'> <label>W:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.width' room-id='` + (get("room").id) + `' value='` + (get("cabinet").width()) + `'> <label>H:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.length' room-id='` + (get("room").id) + `' value='` + (get("cabinet").length()) + `'> <label>D:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.thickness' room-id='` + (get("room").id) + `' value='` + (get("cabinet").thickness()) + `'> </div> </div> `
+	return `<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` + (get("$index")) + `.name' index='` + (get("$index")) + `' room-id='` + (get("room").id) + `' value='` + (get("cabinet").name || get("$index")) + `'> Size: <div class='cabinet-dem-cnt'> <label>W:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.width' room-id='` + (get("room").id) + `' value='` + (get("cabinet").width()) + `'> <label>H:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.length' room-id='` + (get("room").id) + `' value='` + (get("cabinet").length()) + `'> <label>D:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.thickness' room-id='` + (get("room").id) + `' value='` + (get("cabinet").thickness()) + `'> </div> </div> `
 }
 $t.functions['display-manager'] = function (get) {
 	return `<div class='display-manager' id='` + (get("id")) + `'> ` + (new $t('<div  class=\'display-manager-item\'> <input class=\'display-manager-input{{$index === 0 ? " active" : ""}}\' type=\'button\' display-id=\'{{item.id}}\' value=\'{{item.name}}\'/> </div>').render(get('scope'), 'item in list', get)) + ` </div> `
@@ -1926,14 +1926,14 @@ $t.functions['display-manager'] = function (get) {
 $t.functions['-1519826343'] = function (get) {
 	return `<div class='display-manager-item'> <input class='display-manager-input` + (get("$index") === 0 ? " active" : "") + `' type='button' display-id='` + (get("item").id) + `' value='` + (get("item").name) + `'/> </div>`
 }
-$t.functions['divide/head'] = function (get) {
-	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.prototype.constructor.name}}\' {{opening.constructorId === section.name ? \'selected\' : \'\'}}> {{clean(section.name)}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
-}
 $t.functions['divide/body'] = function (get) {
 	return `<h2>` + (get("list").activeIndex()) + `</h2> val: ` + (get("list").value()('selected')) + ` `
 }
+$t.functions['divide/head'] = function (get) {
+	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.prototype.constructor.name}}\' {{opening.constructorId === section.name ? \'selected\' : \'\'}}> {{clean(section.name)}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
+}
 $t.functions['divider-controls'] = function (get) {
-	return `<div> <label>Dividers:</label> <input type="number" min="0" max="10" step="1" class='division-count-input' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").dividerCount()) + `'> <span class="open-orientation-radio-cnt ` + (get("opening").dividerCount() > 0 ? '' : 'hidden') + `"> <label for='open-orientation-horiz-` + (get("opening").uniqueId) + `'>Horizontal:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='horizontal' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-horiz-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? '' : 'checked') + `> <label for='open-orientation-vert-` + (get("opening").uniqueId) + `'>Vertical:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='vertical' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-vert-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? 'checked' : '') + `> </span> <span> <input class='division-pattern-input' type='text' name='pattern' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").pattern().str) + `'> <div class='open-pattern-input-cnt' opening-id='` + (get("opening").uniqueId) + `'> ` + (get("patternInputHtml")) + ` </div> </div> `
+	return `<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").pattern().str) + `'> <span class="open-orientation-radio-cnt"> <label for='open-orientation-horiz-` + (get("opening").uniqueId) + `'>Horizontal:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='horizontal' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-horiz-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? '' : 'checked') + `> <label for='open-orientation-vert-` + (get("opening").uniqueId) + `'>Vertical:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='vertical' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-vert-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? 'checked' : '') + `> </span> <div class='open-pattern-input-cnt' opening-id='` + (get("opening").uniqueId) + `' ` + (get("opening").pattern().equal ? 'hidden' : '') + `> ` + (get("patternInputHtml")) + ` </div> </div> `
 }
 $t.functions['expandable/list'] = function (get) {
 	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> <div class="expand-body {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getBody(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` <div> <div id='input-tree-cnt'>` + (get("inputTree") ? get("inputTree").html() : '') + `</div> <div ` + (!get("hasInputTree")() ? '' : 'hidden') + `> ` + (new $t('<span > <input list=\'auto-fill-list-{{input.id}}\' id=\'{{input.id}}\' placeholder=\'{{input.placeholder}}\' type=\'text\'> <datalist id="auto-fill-list-{{input.id}}"> <option:t value="{{option}}" repeat=\'option in input.autofill\'></option:t> </datalist> </span>').render(get('scope'), 'input in inputs', get)) + ` <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> </div> <div class='error' id='` + (get("ERROR_CNT_ID")) + `'></div> </div> `
@@ -1968,17 +1968,17 @@ $t.functions['-2022747631'] = function (get) {
 $t.functions['-1362189101'] = function (get) {
 	return `<div id='` + (get("input").childCntId) + `'> ` + (get("childHtml")(get("$index"))) + ` </div>`
 }
-$t.functions['input/decision/decisionTree'] = function (get) {
-	return `<div class='` + (get("class")) + `' tree-id='` + (get("treeId")) + `'> ` + (get("payload").html()) + ` <button class='` + (get("buttonClass")) + `' disabled tree-id='` + (get("treeId")) + `'>` + (get("name")) + `</button> </div> `
-}
-$t.functions['input/measurement'] = function (get) {
-	return `<div class='fit'> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' value='` + (get("value")() ? get("value")() : "") + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
-}
 $t.functions['input/input'] = function (get) {
 	return `<div> <input class='` + (get("class")) + `' list='input-list-` + (get("id")) + `' id='` + (get("id")) + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <datalist id="input-list-` + (get("id")) + `"> ` + (new $t('<option value="{{item}}" ></option>').render(get('scope'), 'item in list', get)) + ` </datalist> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
 }
 $t.functions['-994603408'] = function (get) {
 	return `<option value="` + (get("item")) + `" ></option>`
+}
+$t.functions['input/decision/decisionTree'] = function (get) {
+	return `<div class='` + (get("class")) + `' tree-id='` + (get("treeId")) + `'> ` + (get("payload").html()) + ` <button class='` + (get("buttonClass")) + `' disabled tree-id='` + (get("treeId")) + `'>` + (get("name")) + `</button> </div> `
+}
+$t.functions['input/measurement'] = function (get) {
+	return `<div class='fit'> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' value='` + (get("value")() ? get("value")() : "") + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
 }
 $t.functions['input/select'] = function (get) {
 	return `<div> <select class='` + (get("class")) + `' id='` + (get("id")) + `' name='` + (get("name")) + `' value='` + (get("value")) + `'> ` + (new $t('<option  value=\'{{item}}\' {{value === item ? \'selected\' : \'\'}}> {{item}} </option>').render(get('scope'), 'item in list', get)) + ` </select> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
@@ -2001,11 +2001,11 @@ $t.functions['login/reset-password'] = function (get) {
 $t.functions['managers/abstract-manager'] = function (get) {
 	return `<div> <div class="center"> <h2 id='` + (get("headerId")) + `'> ` + (get("header")) + ` <button id='` + (get("saveBtnId")) + `'>Save</button> </h2> </div> <div id="` + (get("bodyId")) + `"></div> </div> `
 }
-$t.functions['managers/cost/body'] = function (get) {
-	return `<div> <span> <input value='` + (get("instance").length()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").width()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").depth()) + `'> </span> <label>Cost</label> <input value='` + (get("instance").cost()) + `'> <br> <label>Per ` + (get("instance").unitCost().name) + ` = ` + (get("instance").unitCost().value) + ` </div> `
-}
 $t.functions['managers/cost/header'] = function (get) {
 	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
+}
+$t.functions['managers/cost/body'] = function (get) {
+	return `<div> <span> <input value='` + (get("instance").length()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").width()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").depth()) + `'> </span> <label>Cost</label> <input value='` + (get("instance").cost()) + `'> <br> <label>Per ` + (get("instance").unitCost().name) + ` = ` + (get("instance").unitCost().value) + ` </div> `
 }
 $t.functions['managers/property/body'] = function (get) {
 	return `<div> No Need </div> `
@@ -2194,7 +2194,7 @@ const EPNTS = new Endpoints({
     "list": "/list/orders"
   }
 }
-, 'https://node.jozsefmorrissey.com/cabinet').getFuncObj();
+, 'http://localhost:3000/cabinet').getFuncObj();
 try {exports.EPNTS = EPNTS;}catch(e){}
 
 const cabinetBuildConfig = {
@@ -2424,41 +2424,6 @@ const cabinetBuildConfig = {
 }
 
 
-class CabinetConfig {
-  constructor() {
-    let cabinetList = {};
-    let cabinetKeys, configKeys;
-    const updateEvent = new CustomEvent('update');
-    function setList(cabinets) {
-      cabinetList = cabinets;
-      configKeys = Object.keys(cabinetBuildConfig);
-      cabinetKeys = Object.keys(cabinetList);
-      updateEvent.trigger();
-    }
-
-    this.onUpdate = (func) => updateEvent.on(func);
-    this.list = () => configKeys.concat(cabinetKeys);
-    this.inputTree = () => {
-      const typeInput = new Select({
-        placeholder: 'Type',
-        name: 'type',
-        class: 'center',
-        list: this.list()
-      });
-      return new DecisionInputTree('Cabinet', [Input.id(), typeInput], console.log);
-    }
-    this.get = (name) => {
-      if (configKeys.indexOf(name) !== -1) return Cabinet.build(name);
-      return Cabinet.fromJson(cabinetList[name]);
-    };
-    setTimeout(() =>
-      Request.get(EPNTS.cabinet.list(), setList, () => setList([])), 200);
-  }
-}
-
-CabinetConfig = new CabinetConfig();
-
-
 
 function regexToObject (str, reg) {
   const match = str.match(reg);
@@ -2633,8 +2598,8 @@ class StringMathEvaluator {
 
     function convertFeetInchNotation(expr) {
       expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
-      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
       expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
+      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
       return expr = expr.replace(StringMathEvaluator.mixedNumberReg, '($1+$2)') || expr;;
     }
 
@@ -2776,6 +2741,71 @@ Show.listTypes = () => Object.values(Show.types);
 new Show('None');
 new Show('Flat');
 new Show('Inset Panel');
+
+
+class CabinetConfig {
+  constructor() {
+    let cabinetList = {};
+    let cabinetKeys = {};
+    let configKeys;
+    const updateEvent = new CustomEvent('update');
+    function setLists(cabinets) {
+      const allCabinetKeys = Object.keys(cabinets);
+      allCabinetKeys.forEach((key) => {
+        const type = cabinets[key].partName;
+        if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
+        if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
+        cabinetKeys[type][key] = cabinets[key];
+      });
+
+      cabinetList = cabinets;
+      configKeys = Object.keys(cabinetBuildConfig);
+      updateEvent.trigger();
+    }
+
+    this.valid = (type, id) => (id === undefined ?
+    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
+
+    this.onUpdate = (func) => updateEvent.on(func);
+    this.inputTree = () => {
+      const typeInput = new Select({
+        name: 'type',
+        class: 'center',
+        list: JSON.parse(JSON.stringify(configKeys))
+      });
+      const propertyInput = new Select({
+        name: 'propertyId',
+        class: 'center',
+        list: Object.keys(properties.list)
+      });
+      const inputs = [Input.id(), typeInput, propertyInput];
+      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
+      const cabinetTypes = Object.keys(cabinetKeys);
+      cabinetTypes.forEach((type) => {
+        const cabinetInput = new Select({
+          label: 'Layout (Optional)',
+          name: 'layout',
+          class: 'center',
+          list: Object.keys(cabinetKeys[type])
+        });
+        inputTree.addState(type, cabinetInput);
+        inputTree.then(`type:${type}`).jump(type);
+      });
+      return inputTree;
+    }
+    this.get = (type, layout, propertyId) => {
+      let cabinet;
+      if (layout === undefined) cabinet = Cabinet.build(type);
+      else cabinet = Cabinet.fromJson(cabinetList[layout]);
+      if (propertyId !== undefined) cabinet.propertyId(propertyId);
+      return cabinet;
+    };
+    setTimeout(() =>
+      Request.get(EPNTS.cabinet.list(), setLists, () => setLists([])), 200);
+  }
+}
+
+CabinetConfig = new CabinetConfig();
 
 
 const DEFAULT_PROPS = {
@@ -3508,12 +3538,21 @@ class Pattern {
     }
     unique = Object.keys(unique).join('');
     this.unique = unique;
+    this.equal = this.unique.length === 1;
     console.log('uniq', unique);
     class Element {
       constructor(id, index, count) {
+        let value;
         this.id = id;
         this.count = count || 1;
         this.indexes = [index];
+        this.value = (val) => {
+          if (val !== undefined) {
+            Pattern.mostResent[id] = val;
+            value = val;
+          }
+          return value;
+        }
       }
     }
 
@@ -3521,18 +3560,22 @@ class Pattern {
       throw new Error('Must define str (arg0) as string of length > 1');
 
     const elements = {};
-    for (let index = 0; index < str.length; index += 1) {
+    const values = {};
+    const updateOrder = [];
+    for (let index = str.length - 1; index > -1; index -= 1) {
       const char = str[index];
       if (elements[char]) {
         elements[char].count++;
         elements[char].indexes.push(index);
       } else {
         elements[char] = new Element(char, index);
+        if (Pattern.mostResent[char] !== undefined) {
+          elements[char].value(Pattern.mostResent[char]);
+          updateOrder.push(char);
+        }
       }
     }
 
-    const values = {};
-    const updateOrder = [];
     this.ids = Object.keys(elements);
     this.size = str.length;
     let lastElem;
@@ -3542,8 +3585,8 @@ class Pattern {
       const values = {};
       updateOrder.forEach((id) => {
         const elem = elements[id];
-        dist -= elem.count * elem.value;
-        values[elem.id] = elem.value;
+        dist -= elem.count * elem.value();
+        values[elem.id] = elem.value();
       });
       if (lastElem === undefined) {
         for (let index = 0; index < unique.length; index += 1) {
@@ -3555,8 +3598,8 @@ class Pattern {
         }
       }
       if (lastElem !== undefined) {
-        lastElem.value = dist / lastElem.count;
-        values[lastElem.id] = lastElem.value;
+        lastElem.value(dist / lastElem.count);
+        values[lastElem.id] = lastElem.value();
       }
       const list = [];
       const fill = [];
@@ -3565,7 +3608,7 @@ class Pattern {
           fill[index] = values[unique[index]];
       for (let index = 0; index < str.length; index += 1)
         list[index] = values[str[index]];
-      const retObj = {values, list, fill};
+      const retObj = {values, list, fill, str};
       return retObj;
     }
 
@@ -3579,16 +3622,31 @@ class Pattern {
           lastElem = elements[updateOrder[0]];
           updateOrder.splice(0, 1);
         }
-        elements[id].value = value;
+        elements[id].value(value);
       } else {
-        return elements[id].value;
+        return elements[id].value();
       }
+    }
+
+    this.toJson = () => {
+      const json = this.calc();
+      json.list = undefined;
+      json.fill = undefined;
+      return json;
     }
 
     this.elements = elements;
     this.calc = calc;
   }
 }
+
+Pattern.fromJson = (json) => {
+  const pattern = new Pattern(json.str);
+  const keys = Object.keys(pattern.values);
+  keys.foEach((key) => pattern.value(key, pattern.values[key]));
+  return json;
+};
+Pattern.mostResent = {};
 
 const p1 = new Pattern('babcdaf');
 p1.value('b', 2);
@@ -4020,19 +4078,17 @@ class CabinetDisplay {
 
     function inputValidation(values) {
       const validName = values.name !== undefined;
-      const validType = CabinetConfig.list().indexOf(values.type) !== -1;
+      const validType = CabinetConfig.valid(values.type, values.layout);
       if(validType) return true;
       return {type: 'You must select a defined type.'};
     }
     const getObject = (values) => {
-      return CabinetConfig.get(values.type);
+      return CabinetConfig.get(values.type, values.layout, values.propertyId);
     };
     this.active = () => expandList.active();
     const expListProps = {
       list: room.cabinets,
       inputTree:   CabinetConfig.inputTree(),
-      inputs: [{placeholder: 'name'},
-                {placeholder: 'type', autofill: CabinetConfig.list()}],
       parentSelector, getHeader, getBody, getObject, inputValidation,
       listElemLable: 'Cabinet'
     };
@@ -4064,7 +4120,7 @@ class CabinetDisplay {
       const index = target.getAttribute('index');
       const cabinet = expListProps.list[index];
       if (cabinet.name !== undefined) {
-        Request.post(EPNTS.cabinet.add(cabinet.id), cabinet.toJson(), saveSuccess, saveFail);
+        Request.post(EPNTS.cabinet.add(cabinet.name), cabinet.toJson(), saveSuccess, saveFail);
         console.log('saving');
       } else {
         alert('Please enter a name if you want to save the cabinet.')
@@ -4164,6 +4220,7 @@ OpenSectionDisplay.refresh = (opening) => {
 OpenSectionDisplay.patternContainerSelector = (opening) =>
   `.open-pattern-input-cnt[opening-id='${opening.uniqueId}']`;
 
+OpenSectionDisplay.lastInputValues = {};
 OpenSectionDisplay.patterInputHtml = (opening) => {
   const pattern = opening.pattern();
   const patCntSelector = OpenSectionDisplay.patternContainerSelector(opening);
@@ -4172,13 +4229,16 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
   for (let index = 0; index < pattern.unique.length; index += 1) {
     const id = pattern.unique[index];
     let fill = opening.dividerLayout().fill;
-    const measInput = MeasurementInput.pattern(id, fill[index]);
+    const measInput = MeasurementInput.pattern(id, pattern.value(id));
     measInput.on('keyup', (target) => {
       opening.pattern().value(target.name, OpenSectionDisplay.evaluator.eval(target.value));
       fill = opening.dividerLayout().fill;
       const patternCnt = document.querySelector(patCntSelector);
       const inputs = patternCnt.querySelectorAll('input');
-      fill.forEach((value, index) => inputs[index].value = value);
+      fill.forEach((value, index) => {
+        if (inputs[index] !== target)
+          inputs[index].value = value;
+      });
       if (opening.pattern().satisfied()) {
         const cabinet = opening.getAssembly('c');
         ThreeDModel.render(cabinet);
@@ -4208,29 +4268,21 @@ OpenSectionDisplay.patternInputSelector = (opening) =>
 
 OpenSectionDisplay.onPatternChange = (target) => {
   const opening = OpenSectionDisplay.getOpening(target);
-  const newVal = target.value;
-  if (newVal !== opening.pattern().str && newVal === opening.pattern(newVal).str) {
-    const cntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+  const newVal = target.value || 'a';
+  const cntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+  const inputCnt = document.querySelector(OpenSectionDisplay.patternContainerSelector(opening));
+  if (opening.pattern().str !== newVal) {
+    opening.pattern(newVal).str;
     const html = OpenSectionDisplay.patterInputHtml(opening);
     document.querySelector(cntSelector).innerHTML = html;
-  }
-}
-
-OpenSectionDisplay.onChange = (target) => {
-  const id = target.getAttribute('opening-id');
-  const value = Number.parseInt(target.value);
-  const opening = OpenSectionDisplay.sections[id];
-  if (opening.divide(value)) {
     OpenSectionDisplay.refresh(opening);
     const cabinet = opening.getAssembly('c');
     ThreeDModel.render(cabinet);
   }
-
-  const patternInput = document.querySelector(OpenSectionDisplay.patternInputSelector(opening));
-  const patternStr = patternInput.value;
-  const pattern = opening.pattern(patternStr);
-  patternInput.value = pattern.str;
-};
+  if (inputCnt !== null) {
+    inputCnt.hidden = opening.pattern().equal;
+  }
+}
 
 OpenSectionDisplay.onOrientation = (target) => {
   const openId = target.getAttribute('open-id');
@@ -4250,9 +4302,7 @@ OpenSectionDisplay.onSectionChange = (target) => {
 }
 
 matchRun('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
-matchRun('keyup', '.division-count-input', OpenSectionDisplay.onChange);
 matchRun('keyup', '.patternInput', OpenSectionDisplay.patternInputChange);
-matchRun('click', '.division-count-input', OpenSectionDisplay.onChange);
 matchRun('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
 matchRun('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
 
@@ -4268,7 +4318,8 @@ class Input {
     this.placeholder = props.placeholder;
     this.class = props.class;
     this.list = props.list || [];
-    let valid, value;
+    let valid;
+    let value = props.value;
 
     props.errorMsg = props.errorMsg || 'Error';
 
@@ -5204,31 +5255,6 @@ function drawerBox(length, width, depth) {
 }
 
 
-class Labor extends Cost {
-  constructor (id, method, cost, length, width, depth) {
-    super(id, method, cost, length, width, depth);
-  }
-}
-
-Cost.register(Labor);
-
-
-// new Labor('Panel', '1+(0.05*l*w');
-// new Labor('Frame', '0.25');
-// new Labor('GlueFrame', '0.25');
-// new Labor('SandFrame', '0.05*l*l*w*w*d*d');
-// new Labor('SandPanel', '(0.25*l*w)/12');
-// new Labor('GlueMiter', '(0.25*l*l*w*w)');
-// new Labor('InstallBlumotionGuides', '2');
-// new Labor('InstallOtherGuides', '2');
-// new Labor('InstallFushHinges', '2');
-// new Labor('installOverLayHinges', '2');
-// new Labor('Paint', '(l*l*w*w*.1)/12');
-// new Labor('Stain', '(l*l*w*w*.25)/12');
-// new Labor('InstallDrawerFront', '2');
-// new Labor('InstallPullout', 10);
-
-
 
 
 class CostManager extends AbstractManager {
@@ -5391,6 +5417,31 @@ CostManager.inputTree = (callback) => {
 //   }
 //   Request.get(EPNTS.costs.get(), loadCosts);
 // });
+
+
+class Labor extends Cost {
+  constructor (id, method, cost, length, width, depth) {
+    super(id, method, cost, length, width, depth);
+  }
+}
+
+Cost.register(Labor);
+
+
+// new Labor('Panel', '1+(0.05*l*w');
+// new Labor('Frame', '0.25');
+// new Labor('GlueFrame', '0.25');
+// new Labor('SandFrame', '0.05*l*l*w*w*d*d');
+// new Labor('SandPanel', '(0.25*l*w)/12');
+// new Labor('GlueMiter', '(0.25*l*l*w*w)');
+// new Labor('InstallBlumotionGuides', '2');
+// new Labor('InstallOtherGuides', '2');
+// new Labor('InstallFushHinges', '2');
+// new Labor('installOverLayHinges', '2');
+// new Labor('Paint', '(l*l*w*w*.1)/12');
+// new Labor('Stain', '(l*l*w*w*.25)/12');
+// new Labor('InstallDrawerFront', '2');
+// new Labor('InstallPullout', 10);
 
 
 class Material extends Cost {
@@ -6565,20 +6616,21 @@ class DivideSection extends SpaceSection {
     this.important = ['partCode', 'partName', 'borderIds', 'index'];
     this.setParentAssembly(parent);
     dvs = dvs || this;
+    let pattern;
+    let sectionCount = 1;
     this.vertical = (is) => this.value('vertical', is);
     this.vertical(true);
     this.sections = [];
     this.pattern = (patternStr) => {
-      const patternProp = this.vertical() ? 'vPattern' : 'hPattern';
-      const count = this.sectionCount();
-      if ((typeof patternStr) === 'string' && patternStr.length === count) {
-        this.value(patternProp, new Pattern(patternStr));
+      if ((typeof patternStr) === 'string') {
+        sectionCount = patternStr.length;
+        this.divide(sectionCount - 1);
+        pattern = new Pattern(patternStr);
       } else {
-        const pat = this.value(patternProp);
-        if (!pat || pat.str.length !== count)
-          this.value(patternProp, new Pattern(new Array(count).fill('a').join('')));
+        if (!pattern || pattern.str.length !== sectionCount)
+          pattern = new Pattern(new Array(sectionCount).fill('a').join(''));
       }
-      return this.value(patternProp);
+      return pattern;
     }
     this.dividerCount = () => Math.ceil((this.sections.length - 1) / 2);
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
@@ -6694,6 +6746,12 @@ class DivideSection extends SpaceSection {
     this.sizes = () => {
       return 'val';
     }
+    const assemToJson = this.toJson;
+    this.toJson = () => {
+      const json = assemToJson.apply(this);
+      json.pattern = this.pattern().toJson();
+      return json;
+    }
   }
 }
 
@@ -6715,6 +6773,10 @@ DivideSection.fromJson = (json, parent) => {
     const space = Assembly.class(spaceJson.type).fromJson(spaceJson, assembly);
     assembly.setSection(space, spaceIndex);
   }
+  assembly.pattern(json.pattern.str);
+  const pattern = assembly.pattern();
+  const patternIds = Object.keys(json.pattern.values);
+  patternIds.forEach((id) => pattern.value(id, json.pattern.values[id]));
   return assembly;
 }
 

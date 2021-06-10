@@ -6,20 +6,21 @@ class DivideSection extends SpaceSection {
     this.important = ['partCode', 'partName', 'borderIds', 'index'];
     this.setParentAssembly(parent);
     dvs = dvs || this;
+    let pattern;
+    let sectionCount = 1;
     this.vertical = (is) => this.value('vertical', is);
     this.vertical(true);
     this.sections = [];
     this.pattern = (patternStr) => {
-      const patternProp = this.vertical() ? 'vPattern' : 'hPattern';
-      const count = this.sectionCount();
-      if ((typeof patternStr) === 'string' && patternStr.length === count) {
-        this.value(patternProp, new Pattern(patternStr));
+      if ((typeof patternStr) === 'string') {
+        sectionCount = patternStr.length;
+        this.divide(sectionCount - 1);
+        pattern = new Pattern(patternStr);
       } else {
-        const pat = this.value(patternProp);
-        if (!pat || pat.str.length !== count)
-          this.value(patternProp, new Pattern(new Array(count).fill('a').join('')));
+        if (!pattern || pattern.str.length !== sectionCount)
+          pattern = new Pattern(new Array(sectionCount).fill('a').join(''));
       }
-      return this.value(patternProp);
+      return pattern;
     }
     this.dividerCount = () => Math.ceil((this.sections.length - 1) / 2);
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
@@ -135,6 +136,12 @@ class DivideSection extends SpaceSection {
     this.sizes = () => {
       return 'val';
     }
+    const assemToJson = this.toJson;
+    this.toJson = () => {
+      const json = assemToJson.apply(this);
+      json.pattern = this.pattern().toJson();
+      return json;
+    }
   }
 }
 
@@ -156,6 +163,10 @@ DivideSection.fromJson = (json, parent) => {
     const space = Assembly.class(spaceJson.type).fromJson(spaceJson, assembly);
     assembly.setSection(space, spaceIndex);
   }
+  assembly.pattern(json.pattern.str);
+  const pattern = assembly.pattern();
+  const patternIds = Object.keys(json.pattern.values);
+  patternIds.forEach((id) => pattern.value(id, json.pattern.values[id]));
   return assembly;
 }
 

@@ -1,32 +1,62 @@
 class CabinetConfig {
   constructor() {
     let cabinetList = {};
-    let cabinetKeys, configKeys;
+    let cabinetKeys = {};
+    let configKeys;
     const updateEvent = new CustomEvent('update');
-    function setList(cabinets) {
+    function setLists(cabinets) {
+      const allCabinetKeys = Object.keys(cabinets);
+      allCabinetKeys.forEach((key) => {
+        const type = cabinets[key].partName;
+        if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
+        if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
+        cabinetKeys[type][key] = cabinets[key];
+      });
+
       cabinetList = cabinets;
       configKeys = Object.keys(cabinetBuildConfig);
-      cabinetKeys = Object.keys(cabinetList);
       updateEvent.trigger();
     }
 
+    this.valid = (type, id) => (id === undefined ?
+    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
+
     this.onUpdate = (func) => updateEvent.on(func);
-    this.list = () => configKeys.concat(cabinetKeys);
     this.inputTree = () => {
       const typeInput = new Select({
-        placeholder: 'Type',
         name: 'type',
         class: 'center',
-        list: this.list()
+        list: JSON.parse(JSON.stringify(configKeys))
       });
-      return new DecisionInputTree('Cabinet', [Input.id(), typeInput], console.log);
+      const propertyInput = new Select({
+        name: 'propertyId',
+        class: 'center',
+        list: Object.keys(properties.list)
+      });
+      const inputs = [Input.id(), typeInput, propertyInput];
+      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
+      const cabinetTypes = Object.keys(cabinetKeys);
+      cabinetTypes.forEach((type) => {
+        const cabinetInput = new Select({
+          label: 'Layout (Optional)',
+          name: 'layout',
+          class: 'center',
+          list: Object.keys(cabinetKeys[type])
+        });
+        inputTree.addState(type, cabinetInput);
+        inputTree.then(`type:${type}`).jump(type);
+      });
+      return inputTree;
     }
-    this.get = (name) => {
-      if (configKeys.indexOf(name) !== -1) return Cabinet.build(name);
-      return Cabinet.fromJson(cabinetList[name]);
+    this.get = (type, layout, propertyId) => {
+      let cabinet;
+      if (layout === undefined) cabinet = Cabinet.build(type);
+      else cabinet = Cabinet.fromJson(cabinetList[layout]);
+      if (propertyId !== undefined) cabinet.propertyId(propertyId);
+      return cabinet;
     };
     setTimeout(() =>
-      Request.get(EPNTS.cabinet.list(), setList, () => setList([])), 200);
+      Request.get(EPNTS.cabinet.list(), setLists, () => setLists([])), 200);
   }
 }
 
