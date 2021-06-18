@@ -22,8 +22,7 @@ class AbstractManager {
       list = manager.fromJson(json) || [];
       const expListProps = {
         inputTree: manager.constructor.inputTree(),
-        parentSelector, getHeader, getBody, getObject, list,
-        listElemLable: 'Template'
+        parentSelector, getHeader, getBody, getObject, list
       };
       const expandList = new ExpandableList(expListProps);
 
@@ -39,3 +38,5 @@ class AbstractManager {
     afterLoad.push(() => Request.get(manager.loadPoint(), init));
   }
 }
+
+AbstractManager.inputTree = () => undefined;

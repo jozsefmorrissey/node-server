@@ -99,6 +99,9 @@ class Assembly {
           if (this.parentAssembly) return this.parentAssembly.value(code);
           else {
             try {
+              if (code.match(/trv|brv|lrv|rrv|fs/)) {
+                const nothing = true;
+              }
               return properties(propId)[code].value;
             } catch (e) {
               console.error(`Failed to resolve code: ${code}`);

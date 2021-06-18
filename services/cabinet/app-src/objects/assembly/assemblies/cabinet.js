@@ -33,14 +33,24 @@ class Cabinet extends Assembly {
     }
 
     this.borders = (borderIds) => {
-      const right = instance.getAssembly(borderIds.right);
-      const left = instance.getAssembly(borderIds.left);
-      const top = instance.getAssembly(borderIds.top);
-      const bottom = instance.getAssembly(borderIds.bottom);
+      const borders = {};
+      borders.right = instance.getAssembly(borderIds.right);
+      borders.left = instance.getAssembly(borderIds.left);
+      borders.top = instance.getAssembly(borderIds.top);
+      borders.bottom = instance.getAssembly(borderIds.bottom);
+
       const pb = instance.getAssembly(borderIds.back);
+
       return () => {
         const depth = pb.position().center('z') + pb.position().limits('-z');
-        return {borders: {top, bottom, right, left}, depth, borderIds};
+
+        const position = {};
+        position.right = borders.right.position().centerAdjust('x', '-x') + this.value('rrv');
+        position.left = borders.left.position().centerAdjust('x', '+x') - this.value('lrv');
+        position.top = borders.top.position().centerAdjust('y', '+x') - this.value('trv');
+        position.bottom = borders.bottom.position().centerAdjust('y', '-x') + this.value('brv');
+
+        return {borders, position, depth, borderIds};
       }
     }
   }

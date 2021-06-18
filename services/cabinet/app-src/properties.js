@@ -26,8 +26,10 @@ const DEFAULT_PROPS = {
 };
 
 function properties(name, values) {
-  if (values === undefined)
-    return JSON.parse(JSON.stringify(properties.list[name]));
+  if (values === undefined) {
+    const props = properties.list[name] || properties.list['Half Overlay'];
+    return JSON.parse(JSON.stringify(props));
+  }
 
   const props = JSON.parse(JSON.stringify(DEFAULT_PROPS));
   const overwrites = JSON.parse(JSON.stringify(values));

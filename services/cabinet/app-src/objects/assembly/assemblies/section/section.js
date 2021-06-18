@@ -21,16 +21,52 @@ class Section extends Assembly {
       return attr ? center[attr] : center;
     }
 
+    const calculateRevealOffset = (borderPos, direction) => {
+      let reveal;
+      switch (direction) {
+        case '+x': reveal = this.value('rrv'); break;
+        case '-x': reveal = this.value('lrv'); break;
+        case '+y': reveal = this.value('trv'); break;
+        case '-y': reveal = this.value('brv'); break;
+        default:
+          throw new Error(`Invalid direction: ${direction}`);
+      }
+      const positive = direction.indexOf('-') === -1;
+      const sign = positive ? '+' : '-';
+      const axis = direction.replace(/\+|-/, '');
+      const magnitude = positive ? 1 : -1;
+      const borderLimit = borderPos.centerAdjust(axis, `${sign}x`);
+      return  borderLimit - ((reveal * magnitude) / 2);
+    }
+
     this.outerSize = () => {
       const props = sectionProperties();
+      const pos = props.position;
+
       const topPos = props.borders.top.position();
       const botPos = props.borders.bottom.position();
       const leftPos = props.borders.left.position();
       const rightPos = props.borders.right.position();
-      const x = leftPos.center('x') - rightPos.center('x');
-      const y = topPos.center('y') - botPos.center('y');
-      const z = topPos.center('z');
-      return {x,y,z};
+
+      const limits = {};
+      limits.x = pos.right || calculateRevealOffset(rightPos, '+x');
+      limits['-x'] = pos.left || calculateRevealOffset(leftPos, '-x');
+      limits.y = pos.top || calculateRevealOffset(topPos, '+y');
+      limits['-y'] = pos.bottom || calculateRevealOffset(botPos, '-y');
+      limits['-z'] = topPos.limits('-z');
+      limits.z = props.depth - limits['-z'];
+
+      const center = {};
+      center.x = limits.x + ((limits.x - limits['-x']) / 2);
+      center.y = limits.y + ((limits.y - limits['-y']) / 2);
+      center.z = limits.z + ((limits.z - limits['-z']) / 2);
+
+      const dems = {};
+      dems.x = limits.x - limits['-x'];
+      dems.y = limits.y - limits['-y'];
+      dems.z = props.depth;
+
+      return {limits, center, dems};
     }
 
     this.innerSize = () => {
@@ -39,7 +75,7 @@ class Section extends Assembly {
       const botPos = props.borders.bottom.position();
       const leftPos = props.borders.left.position();
       const rightPos = props.borders.right.position();
-      const x = leftPos.center('x') + leftPos.limits('-x') - (rightPos.center('x') + rightPos.limits('+x'));
+      const x = rightPos.center('x') + rightPos.limits('-x') - (leftPos.center('x') + leftPos.limits('+x'));
       const y = topPos.center('y') + topPos.limits('-x') - ((botPos.center('y') + botPos.limits('+x')));
       const z = topPos.center('z');
       return {x,y,z};

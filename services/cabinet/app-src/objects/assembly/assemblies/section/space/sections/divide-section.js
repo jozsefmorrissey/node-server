@@ -37,6 +37,12 @@ class DivideSection extends SpaceSection {
     this.borders = (index) => {
       return () => {
         const props = sectionProperties();
+        const position = {
+          top: props.position.top,
+          bottom: props.position.bottom,
+          left: props.position.left,
+          right: props.position.right
+        };
 
         let top = props.borders.top;
         let bottom = props.borders.bottom;
@@ -45,21 +51,25 @@ class DivideSection extends SpaceSection {
         if (this.vertical()) {
           if (index !== 0) {
             right = this.sections[index - 1];
+            position.left = undefined;
           } if (this.sections[index + 1] !== undefined) {
             left = this.sections[index + 1];
+            position.right = undefined;
           }
         } else {
           if (index !== 0) {
             top = this.sections[index - 1];
+            position.top = undefined;
           } if (this.sections[index + 1] !== undefined) {
             bottom = this.sections[index + 1];
+            position.bottom = undefined;
           }
         }
 
         const depth = props.depth;
         if (!top || !bottom || !right || !left)
           throw new Error('Border not defined');
-        return {borders: {top, bottom, right, left}, depth, index};
+        return {borders: {top, bottom, right, left}, position, depth, index};
       }
     }
     this.dividerProps = (index) => {
@@ -72,8 +82,8 @@ class DivideSection extends SpaceSection {
         let center = this.center();
         let dividerLength;
         if (this.vertical()) {
-          let start = sectionProperties().borders.right.position().center('x');
-          start += sectionProperties().borders.right.position().limits('+x');
+          let start = sectionProperties().borders.left.position().center('x');
+          start += sectionProperties().borders.left.position().limits('+x');
           center.x = start + offset;
           dividerLength = innerSize.y;
         } else {
@@ -90,7 +100,7 @@ class DivideSection extends SpaceSection {
 
     this.sectionCount = () => this.dividerCount() + 1;
     this.dividerLayout = () => {
-      const distance = this.vertical() ? this.outerSize().x : this.outerSize().y;
+      const distance = this.vertical() ? this.outerSize().dems.x : this.outerSize().dems.y;
       return this.pattern().calc(distance);
     };
     this.divide = (dividerCount) => {

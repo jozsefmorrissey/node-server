@@ -27,19 +27,13 @@ class OpeningCoverSection extends SpaceSection {
     }
 
     this.coverDems = function(attr) {
-      const props = divideProps();
-      const dems = instance.innerSize()
-      dems.z = instance.value('pwt34');
-      dems.x = dems.x + 1;
-      dems.y = dems.y + 1;
+      const dems = instance.outerSize().dems;
+      dems.z = 3/4;
       return attr ? dems[attr] : dems;
     }
 
     this.coverCenter = function (attr) {
-      const props = divideProps();
-      const dems = instance.coverDems();
-      const center = instance.center();
-      center.z -= (props.borders.top.position().demension('z') + dems.z) / 2 - 1/8;
+      const center = instance.outerSize().center;
       return attr ? center[attr] : center;
     }
 

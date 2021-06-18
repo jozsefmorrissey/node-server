@@ -15,7 +15,6 @@ class Pattern {
     unique = Object.keys(unique).join('');
     this.unique = unique;
     this.equal = this.unique.length === 1;
-    console.log('uniq', unique);
     class Element {
       constructor(id, index, count) {
         let value;

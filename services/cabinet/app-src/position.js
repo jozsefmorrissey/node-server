@@ -54,6 +54,11 @@ class Position {
       return position;
     }
 
+    this.centerAdjust = (center, direction) => {
+      const magnitude = direction[0] === '-' ? -1 : 1;
+      const axis = direction.replace(/\+|-/, '');
+      return this.center(center) + (magnitude * this.demension(axis) / 2);
+    }
 
     this.limits = (targetStr) => {
       if (targetStr !== undefined) {

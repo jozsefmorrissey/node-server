@@ -84,6 +84,7 @@ class ExpandableList {
       props.list.splice(index, 1);
       this.refresh();
     }
+    this.html = () => ExpandableList[`${props.type}Template`].render(props);
     this.afterRender = (func) => afterRenderEvent.on(func);
     this.afterAdd = (func) => afterAddEvent.on(func);
     this.refresh = (type) => {
@@ -93,8 +94,7 @@ class ExpandableList {
         setTimeout(() => {
           props.inputs.forEach((input) => input.id = input.id || randomString(7));
           const parent = document.querySelector(props.parentSelector);
-          const html = ExpandableList[`${props.type}Template`].render(props);
-
+          const html = this.html();
           if (parent && html !== undefined) {
             parent.innerHTML = html;
             afterRefreshEvent.trigger();

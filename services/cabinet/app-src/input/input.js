@@ -19,7 +19,8 @@ class Input {
 
     const html = this.constructor.html(this);
     if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
-    this.html = html;
+    this.html = () =>
+     html();
 
     this.on = (eventType, func) => matchRun(eventType, idSelector, func);
     this.valid = () => valid !== undefined ? this.setValue() : valid;
@@ -40,7 +41,7 @@ class Input {
     this.value = () => value;
     this.validation = (val) => {
       if (val === undefined) return false;
-      if (val === value) return valid;
+      if (valid !== undefined && val === value) return valid;
       let valValid = true;
       if (props.validation instanceof RegExp) {
         valValid = val.match(props.validation) !== null;
@@ -93,8 +94,14 @@ Input.Name = () => new Input({
 });
 
 Input.color = () => new Input({
-    type: 'color',
-    placeholder: 'color',
-    name: 'color',
-    class: 'center'
-  });
+  type: 'color',
+  placeholder: 'color',
+  name: 'color',
+  class: 'center'
+});
+
+Input.optional = () => new Input({
+  label: 'Optional',
+  name: 'optional',
+  type: 'checkbox'
+});

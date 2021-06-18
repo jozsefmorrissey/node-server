@@ -6,7 +6,7 @@
         <option:t repeat='showType in showTypes'>{{showType.name}}</option:t>
       </select>
     </div>
-    <button class='save-cabinet-btn' index='{{$index}}'>Save</button>
+    <div class='property-id-container center inline-flex'>{{selectHtml}}</div>
     <div class='right'>
       <select class="show-right-select">
         <option:t repeat='showType in showTypes'>{{showType.name}}</option:t>
@@ -15,6 +15,9 @@
     </div>
   </div>
   <br>
+  <div class='center'>
+    <button class='save-cabinet-btn' index='{{$index}}'>Save</button>
+  </div>
   <div:t repeat='opening in cabinet.openings' class='divison-section-cnt'>
     {{OpenSectionDisplay.html(opening)}}
   </div:t>
