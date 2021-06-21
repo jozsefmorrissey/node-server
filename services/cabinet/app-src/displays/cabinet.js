@@ -25,12 +25,12 @@ class CabinetDisplay {
 
     function inputValidation(values) {
       const validName = values.name !== undefined;
-      const validType = CabinetConfig.valid(values.type, values.layout);
+      const validType = CabinetConfig.valid(values.type, values.id);
       if(validType) return true;
       return {type: 'You must select a defined type.'};
     }
     const getObject = (values) => {
-      return CabinetConfig.get(values.type, values.layout, values.propertyId);
+      return CabinetConfig.get(values.name, values.type, values.propertyId, values.id);
     };
     this.active = () => expandList.active();
     const expListProps = {

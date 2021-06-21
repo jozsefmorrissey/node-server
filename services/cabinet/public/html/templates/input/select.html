@@ -1,4 +1,5 @@
 <div>
+  <label>{{label}}</label>
   <select class='{{class}}' id='{{id}}' name='{{name}}' value='{{value()}}'>
     <option:t repeat='item in list' value='{{item}}'
         {{selected(item) ? 'selected' : ''}}>

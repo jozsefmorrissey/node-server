@@ -11,6 +11,7 @@ class Input {
     this.list = props.list || [];
     let valid;
     let value = props.value;
+    props.targetAttr = props.targetAttr || 'value';
 
     props.errorMsg = props.errorMsg || 'Error';
 
@@ -27,7 +28,7 @@ class Input {
     this.setValue = (val) => {
       if (val === undefined){
         const elem = document.getElementById(this.id);
-        if (elem) val = elem.value;
+        if (elem) val = elem[props.targetAttr] || props.value;
       }
       if(this.validation(val)) {
         valid = true;
@@ -57,7 +58,7 @@ class Input {
     };
 
     const validate = (target) => {
-      if (this.setValue(target.value)) {
+      if (this.setValue(target[props.targetAttr])) {
         document.getElementById(this.errorMsgId).innerHTML = '';
         valid = true;
       } else {
@@ -95,6 +96,7 @@ Input.Name = () => new Input({
 
 Input.color = () => new Input({
   type: 'color',
+  validation: /.*/,
   placeholder: 'color',
   name: 'color',
   class: 'center'
@@ -103,5 +105,8 @@ Input.color = () => new Input({
 Input.optional = () => new Input({
   label: 'Optional',
   name: 'optional',
-  type: 'checkbox'
+  type: 'checkbox',
+  value: false,
+  validation: [true, false],
+  targetAttr: 'checked'
 });

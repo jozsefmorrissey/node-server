@@ -18,7 +18,7 @@ class CabinetConfig {
       updateEvent.trigger();
     }
 
-    this.valid = (type, id) => (id === undefined ?
+    this.valid = (type, id) => (id === '' ?
     cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
 
     this.onUpdate = (func) => updateEvent.on(func);
@@ -33,26 +33,27 @@ class CabinetConfig {
         class: 'center',
         list: Object.keys(properties.list)
       });
-      const inputs = [Input.id(), typeInput, propertyInput];
+      const inputs = [Input.Name(), typeInput, propertyInput];
       const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
       const cabinetTypes = Object.keys(cabinetKeys);
       cabinetTypes.forEach((type) => {
         const cabinetInput = new Select({
           label: 'Layout (Optional)',
-          name: 'layout',
+          name: 'id',
           class: 'center',
-          list: Object.keys(cabinetKeys[type])
+          list: [''].concat(Object.keys(cabinetKeys[type]))
         });
         inputTree.addState(type, cabinetInput);
         inputTree.then(`type:${type}`).jump(type);
       });
       return inputTree;
     }
-    this.get = (type, layout, propertyId) => {
+    this.get = (name, type, propertyId, id) => {
       let cabinet;
-      if (true || layout === undefined) cabinet = Cabinet.build(type);
-      else cabinet = Cabinet.fromJson(cabinetList[layout]);
+      if (id === '') cabinet = Cabinet.build(type);
+      else cabinet = Cabinet.fromJson(cabinetList[id]);
       if (propertyId !== undefined) cabinet.propertyId(propertyId);
+      cabinet.name = name;
       return cabinet;
     };
     setTimeout(() =>
