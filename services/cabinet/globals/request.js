@@ -34,24 +34,27 @@ Request = {
     },
 
     get: function (url, success, failure) {
-      const xhr = new XMLHttpRequest();
+      const xhr = new Request.xmlhr();
       xhr.open("GET", url, true);
       const id = Request.id(url, 'GET');
       xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
       xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.setRequestHeader('Authorization', User.credential());
+      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+      if ((typeof User) !== 'undefined')
+        xhr.setRequestHeader('Authorization', User.credential());
       xhr.send();
       return xhr;
     },
 
     hasBody: function (method) {
       return function (url, body, success, failure) {
-        const xhr = new XMLHttpRequest();
+        const xhr = new Request.xmlhr();
         xhr.open(method, url, true);
         const id = Request.id(url, method);
         xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
         xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('Authorization', User.credential());
+        if ((typeof User) !== 'undefined')
+          xhr.setRequestHeader('Authorization', User.credential());
         xhr.send(JSON.stringify(body));
         return xhr;
       }
@@ -67,3 +70,11 @@ Request = {
 
 Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
 Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
+
+
+try {
+  Request.xmlhr = XMLHttpRequest;
+} catch (e) {
+  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
+  exports.Request = Request;
+}

@@ -32,11 +32,11 @@ class Section extends Assembly {
           throw new Error(`Invalid direction: ${direction}`);
       }
       const positive = direction.indexOf('-') === -1;
-      const sign = positive ? '+' : '-';
+      const inverseSign = !positive ? '+' : '-';
       const axis = direction.replace(/\+|-/, '');
       const magnitude = positive ? 1 : -1;
-      const borderLimit = borderPos.centerAdjust(axis, `${sign}x`);
-      return  borderLimit - ((reveal * magnitude) / 2);
+      const borderCenter = borderPos.center(axis);
+      return  borderCenter - ((reveal * magnitude) / 2);
     }
 
     this.outerSize = () => {
@@ -57,9 +57,9 @@ class Section extends Assembly {
       limits.z = props.depth - limits['-z'];
 
       const center = {};
-      center.x = limits.x + ((limits.x - limits['-x']) / 2);
-      center.y = limits.y + ((limits.y - limits['-y']) / 2);
-      center.z = limits.z + ((limits.z - limits['-z']) / 2);
+      center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
+      center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
+      center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
 
       const dems = {};
       dems.x = limits.x - limits['-x'];

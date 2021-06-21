@@ -34,6 +34,7 @@ class OpeningCoverSection extends SpaceSection {
 
     this.coverCenter = function (attr) {
       const center = instance.outerSize().center;
+      center.z = -3/4;
       return attr ? center[attr] : center;
     }
 

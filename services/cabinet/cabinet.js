@@ -4,6 +4,7 @@ const shell = require('shelljs');
 const { User, UnAuthorized } = require('./src/user');
 const { emailSvc } = require('./src/email');
 const { EPNTS } = require('./src/EPNTS');
+require('./src/scrape/scrape');
 
 const success = (res) => () => res.send('success');
 const fail = (next) => (e) => next(e);

@@ -50,10 +50,10 @@ class DivideSection extends SpaceSection {
         let right = props.borders.right;
         if (this.vertical()) {
           if (index !== 0) {
-            right = this.sections[index - 1];
+            left = this.sections[index - 1];
             position.left = undefined;
           } if (this.sections[index + 1] !== undefined) {
-            left = this.sections[index + 1];
+            right = this.sections[index + 1];
             position.right = undefined;
           }
         } else {
