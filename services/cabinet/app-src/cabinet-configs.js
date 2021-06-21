@@ -50,7 +50,7 @@ class CabinetConfig {
     }
     this.get = (name, type, propertyId, id) => {
       let cabinet;
-      if (id === '') cabinet = Cabinet.build(type);
+      if (!id) cabinet = Cabinet.build(type);
       else cabinet = Cabinet.fromJson(cabinetList[id]);
       if (propertyId !== undefined) cabinet.propertyId(propertyId);
       cabinet.name = name;
