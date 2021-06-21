@@ -2461,7 +2461,7 @@ class CabinetConfig {
       updateEvent.trigger();
     }
 
-    this.valid = (type, id) => (id === '' ?
+    this.valid = (type, id) => (!id ?
     cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
 
     this.onUpdate = (func) => updateEvent.on(func);
