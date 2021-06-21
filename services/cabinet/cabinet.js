@@ -83,7 +83,7 @@ function endpoints(app, prefix) {
   app.get(prefix + EPNTS.cabinet.list(), function (req, res) {
     const user = getUser(req);
     res.setHeader('Content-Type', 'application/json');
-    res.send(user.loadData('cabinet'));
+    res.send(user.loadData('cabinet') || '[]');
   });
 
   //  ---------------------------- Order -----------------------------//
