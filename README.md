@@ -23,3 +23,7 @@
   boolean=true|false
   number=[0-9]*
   array=^([^,]*(,|$)){1,} Example: hello,true,false,,444
+
+### Existing bugs
+## $t
+- func().attr is not rendering properly

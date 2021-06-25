@@ -76,7 +76,8 @@ class ExpandableList {
     };
     this.hasInputTree = () =>
       props.inputTree && props.inputTree.constructor.name === 'DecisionNode';
-    if (this.hasInputTree()) props.inputTree.onComplete(this.add);
+    if (this.hasInputTree())
+      props.inputTree.onComplete(this.add);
     props.hasInputTree = this.hasInputTree;
 
     this.isSelfClosing = () => props.selfCloseTab;
@@ -188,7 +189,7 @@ matchRun('click', '.expand-header', (target, event) => {
   const isActive = target.matches('.active');
   const id = target.getAttribute('ex-list-id');
   const list = ExpandableList.lists[id];
-  if (isActive && event.target === target) {
+  if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
     target.className = target.className.replace(/(^| )active( |$)/g, '');
     list.findElement('.expand-body', target).style.display = 'none';
     list.activeIndex(null);

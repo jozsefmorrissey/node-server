@@ -5,6 +5,7 @@ class Input {
     this.type = props.type;
     this.label = props.label;
     this.name = props.name;
+    this.hide = props.hide;
     this.id = props.id || `input-${randomString(7)}`;
     this.placeholder = props.placeholder;
     this.class = props.class;
@@ -24,11 +25,12 @@ class Input {
      html();
 
     this.on = (eventType, func) => matchRun(eventType, idSelector, func);
-    this.valid = () => valid !== undefined ? this.setValue() : valid;
+    this.valid = () => valid === undefined ? this.setValue() : valid;
     this.setValue = (val) => {
       if (val === undefined){
         const elem = document.getElementById(this.id);
-        if (elem) val = elem[props.targetAttr] || props.value;
+        if (elem) val = elem[props.targetAttr]
+        if (val === undefined) val = props.default;
       }
       if(this.validation(val)) {
         valid = true;
@@ -106,7 +108,7 @@ Input.optional = () => new Input({
   label: 'Optional',
   name: 'optional',
   type: 'checkbox',
-  value: false,
+  default: false,
   validation: [true, false],
   targetAttr: 'checked'
 });

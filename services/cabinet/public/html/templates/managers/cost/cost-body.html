@@ -1,17 +1,17 @@
 <div>
   <span>
-    <input value='{{instance.length()}}'>
+    <input value='{{length()}}'>
   </span>
   <span>
     <label>X</label>
-    <input value='{{instance.width()}}'>
+    <input value='{{width()}}'>
   </span>
   <span>
     <label>X</label>
-    <input value='{{instance.depth()}}'>
+    <input value='{{depth()}}'>
   </span>
   <label>Cost</label>
-  <input value='{{instance.cost()}}'>
+  <input value='{{cost()}}'>
   <br>
-  <label>Per {{instance.unitCost().name}} = {{instance.unitCost().value}}
+  <label>Per {{unitCost('name')}} = {{unitCost('value')}}
 </div>

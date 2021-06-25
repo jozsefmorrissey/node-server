@@ -112,6 +112,7 @@ class StringMathEvaluator {
 
     function isolateParenthesis(expr, index, values, operands, scope) {
       const char = expr[index];
+      if (char === ')') throw new Error('UnExpected closing parenthesis');
       if (char === '(') {
         let openParenCount = 1;
         let endIndex = index + 1;
@@ -120,6 +121,7 @@ class StringMathEvaluator {
           if (currChar === '(') openParenCount++;
           if (currChar === ')') openParenCount--;
         }
+        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
         const len = endIndex - index - 2;
         values.push(instance.eval(expr.substr(index + 1, len), scope));
         multiplyOrDivide(values, operands);
@@ -128,6 +130,7 @@ class StringMathEvaluator {
     };
 
     function isolateOperand (char, operands) {
+      if (char === ')') throw new Error('UnExpected closing parenthesis');
       switch (char) {
         case '*':
         operands.push(StringMathEvaluator.multi);
@@ -176,7 +179,12 @@ class StringMathEvaluator {
       expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
       return expr = expr.replace(StringMathEvaluator.mixedNumberReg, '($1+$2)') || expr;;
     }
-
+    function addUnexpressedMultiplicationSigns(expr) {
+      expr = expr.replace(/([0-9]{1,})([a-zA-Z]{1,})/g, '$1*$2');
+      expr = expr.replace(/([a-zA-Z]{1,})([0-9]{1,})/g, '$1*$2');
+      expr = expr.replace(/\)([^+^-^*^\/])/g, ')*$1');
+      return expr.replace(/([^+^-^*^\/])\(/g, '$1*(');
+    }
 
     const isolateNumber = isolateValueReg(StringMathEvaluator.numReg, Number.parseFloat);
     const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
@@ -194,6 +202,7 @@ class StringMathEvaluator {
       if (this.cache(expr) !== null) return this.cache(expr);
       if (Number.isFinite(expr))
         return expr;
+      expr = addUnexpressedMultiplicationSigns(expr);
       expr = convertFeetInchNotation(expr);
       scope = scope || globalScope;
       const allowVars = (typeof scope) === 'object';
@@ -203,17 +212,25 @@ class StringMathEvaluator {
       for (let index = 0; index < expr.length; index += 1) {
         const char = expr[index];
         if (prevWasOpperand) {
-          let newIndex = isolateParenthesis(expr, index, values, operands, scope) ||
-                        isolateNumber(expr, index, values, operands, scope) ||
-                        (allowVars && isolateVar(expr, index, values, operands, scope));
-          if (Number.isInteger(newIndex)) {
-            index = newIndex - 1;
-            prevWasOpperand = false;
+          try {
+            if (isolateOperand(char, operands)) throw new Error('Invalid operand location');
+            let newIndex = isolateParenthesis(expr, index, values, operands, scope) ||
+                isolateNumber(expr, index, values, operands, scope) ||
+                (allowVars && isolateVar(expr, index, values, operands, scope));
+            if (Number.isInteger(newIndex)) {
+              index = newIndex - 1;
+              prevWasOpperand = false;
+            }
+          } catch (e) {
+            console.error(e);
+            return NaN;
           }
         } else {
           prevWasOpperand = isolateOperand(char, operands);
         }
       }
+      if (prevWasOpperand) return NaN;
+      
       let value = values[0];
       for (let index = 0; index < values.length - 1; index += 1) {
         value = operands[index](values[index], values[index + 1]);
@@ -222,8 +239,9 @@ class StringMathEvaluator {
 
       if (Number.isFinite(value)) {
         cache[expr] = {time: new Date().getTime(), value};
+        return value;
       }
-      return value;
+      return NaN;
     }
   }
 }

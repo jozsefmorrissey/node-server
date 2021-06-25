@@ -1,6 +1,7 @@
 
 class DecisionInputTree extends DecisionTree{
   constructor(name, inputArrayOinstance, onComplete) {
+    const rootClass = `decision-input-${randomString()}`;
     class DecisionInput {
       constructor(name, inputArrayOinstance, decisionTreeId) {
         this.name = name;
@@ -8,7 +9,7 @@ class DecisionInputTree extends DecisionTree{
         this.id = `decision-input-node-${randomString()}`;
         this.childCntId = `decision-child-ctn-${randomString()}`
         this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance);
-        this.class = DecisionInput.class;
+        this.class = rootClass;
         this.getValue = (index) => this.inputArray[index].value();
 
         this.html = () => {
@@ -17,13 +18,12 @@ class DecisionInputTree extends DecisionTree{
 
         this.childHtml = (index) => {
           const node = getNode(this._nodeId);
-          const nextNode = node.next(stepId(node, index));
+          const nextNode = next(node, index);
           return nextNode !== undefined ? nextNode.payload.html() : '';
         }
       }
     }
     DecisionInput.template = new $t('input/decision/decision');
-    DecisionInput.class = 'decision-input';
 
     super(name, new DecisionInput(name, inputArrayOinstance, `decision-tree-${randomString()}`));
     if ((typeof name) !== 'string') throw Error('name(arg2) must be defined as a string');
@@ -31,6 +31,7 @@ class DecisionInputTree extends DecisionTree{
 
     const root = this;
     const onCompletion = [];
+    const onChange = [];
     this.treeId = randomString();
     this.buttonClass = `tree-submit`;
     const buttonSelector = `.${this.buttonClass}[tree-id='${this.treeId}']`;
@@ -50,12 +51,12 @@ class DecisionInputTree extends DecisionTree{
       return parentAddStates(states)
     }
 
-    const stepId = (node, index) => {
+    const next = (node, index) => {
       const inputArray = node.payload.inputArray;
       const input = inputArray[index];
       const name = input.name;
       const value = node.payload.getValue(index);
-      return inputArray.length === 1 ? value : `${name}:${value}`;
+      return node.next(`${name}:${value}`) || node.next(name);
     }
 
     function forEachInput(func) {
@@ -66,7 +67,7 @@ class DecisionInputTree extends DecisionTree{
         for (let index = 0; index < inputs.length; index += 1) {
           const input = inputs[index];
           func(inputs[index]);
-          const nextNode = node.next(stepId(node, index));
+          const nextNode = next(node, index);
           if (nextNode) nodes.push(nextNode);
         }
         nodes.splice(0, 1);
@@ -86,19 +87,20 @@ class DecisionInputTree extends DecisionTree{
     }
     this.values = values;
 
-    this.onChange = (target) => {
-      const parentDecisionCnt = up(`.${DecisionInput.class}`, target);
+    this.update = (target) => {
+      const parentDecisionCnt = up(`.${rootClass}`, target);
       if (parentDecisionCnt) {
         const nodeId = parentDecisionCnt.getAttribute('node-id');
         const index = parentDecisionCnt.getAttribute('index');
         const currentNode = this.getNode(nodeId);
         if (currentNode) {
           const currentInput = currentNode.payload.inputArray[index];
-          currentInput.setValue(target.value);
+          currentInput.setValue();
+          runFunctions(onChange, currentInput.name, currentInput.value(), target);
           const stepLen = Object.keys(currentNode.states).length;
           if (stepLen) {
             const inputCount = currentNode.payload.inputArray.length;
-            const nextState = currentNode.next(stepId(currentNode, index));
+            const nextState = next(currentNode, index);
             const childCntId = currentNode.payload.inputArray[index].childCntId;
             const childCnt = document.getElementById(childCntId);
             if (nextState) {
@@ -114,20 +116,26 @@ class DecisionInputTree extends DecisionTree{
     }
 
     this.html = () => DecisionInputTree.template.render(this);
-    this.onComplete = (func) => {
-      if ((typeof func) === 'function') onCompletion.push(func);
+    function on(func, funcArray) {
+      if ((typeof func) === 'function') funcArray.push(func);
     };
+    this.onChange = (func) => on(func, onChange);
+    this.onComplete = (func) => on(func, onCompletion);
+
     this.onComplete(onComplete);
 
-    const inputIds = this.payload.inputArray.map((input) => input.id);
-    const inputSelector = `#${inputIds.join(',#')}`;
-    matchRun('change', inputSelector, this.onChange);
-    matchRun('keyup', inputSelector, this.onChange);
+    function runFunctions(funcArray, ...args) {
+      for(let index = 0; index < funcArray.length; index += 1) {
+        funcArray[index].apply(null, args);
+      }
+    }
+
+    const inputSelector = `.${rootClass} > div > input,select`;
+    matchRun('change', inputSelector, this.update);
+    matchRun('keyup', inputSelector, this.update);
     matchRun('click', buttonSelector, () => {
       const vals = values();
-      for(let index = 0; index < onCompletion.length; index += 1) {
-        onCompletion[index](vals);
-      }
+      runFunctions(onCompletion, values);
     });
   }
 }

@@ -1,28 +1,39 @@
 class Cost {
-  constructor(id, method, cost, length, width, depth) {
-    const configuration = Cost.configure(method, cost, length, width, depth);
-    const formula = configuration.formula;
-    const unitCost = configuration.unitCost;
-    let percentage = 100;
+  //constructor(id, Cost, formula)
+  constructor(id, method, cost, length, width, depth, formula) {
+    const referenceCost = method instanceof Cost ? method : undefined;
+    formula = referenceCost ? referenceCost.formula() : formula;
+    const instance = this;
+    this.formula = () => formula;
     this.id = () => id;
-    this.method = () => method;
-    this.length = () => length;
-    this.width = () => width;
-    this.depth = () => depth;
-    this.cost = () => cost;
-    this.unitCost = () => JSON.parse(JSON.stringify(unitCost));
+    this.method = referenceCost ? referenceCost.method : () => method;
+    this.length = referenceCost ? referenceCost.length : () => length;
+    this.width = referenceCost ? referenceCost.width : () => width;
+    this.depth = referenceCost ? referenceCost.depth : () => depth;
+    this.cost = referenceCost ? referenceCost.cost : () => cost;
+    // TODO: make unitcost reference parent;
+    const unitCost = Cost.configure(instance.method(), instance.cost(),
+      instance.length(), instance.width(), instance.depth());
+    this.unitCost = referenceCost ? referenceCost.unitCost : (attr) => {
+      const copy = JSON.parse(JSON.stringify(unitCost));
+      if (attr) return copy[attr];
+      return copy;
+    }
 
-    this.calc = (assembly) => Cost.evaluator.eval(formula, assembly);
+    this.calc = (assemblyOrCount) => {
+      if (assemblyOrCount instanceof Assembly)
+        return Cost.evaluator.eval(`${this.unitCost}*${this.formula()}`, assembly);
+      else return Cost.evaluator.eval(`${this.unitCost}*${assemblyOrCount}`);
+    }
 
     const cName = this.constructor.name;
     if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
-    if (Cost.lists[cName][id] === undefined) Cost.lists[cName][id] = [];
-    Cost.lists[cName][id].push(this);
+    Cost.lists[cName][id] = this;
 
     this.toJson = () => {
       return {
         type: this.constructor.name,
-        id, method, length, width, depth, cost
+        id, method, length, width, depth, cost, formula
       };
     }
   }
@@ -36,6 +47,14 @@ Cost.methods = {
   CUBIC_FEET: 'Cubic Feet',
   UNIT: 'Unit'
 },
+Cost.get = (id) => {
+  const listsKeys = Object.keys(Cost.lists);
+  for (let index = 0; index < listsKeys.length; index += 1) {
+    if (Cost.lists[listsKeys[index]][id]) return Cost.lists[listsKeys[index]][id];
+  }
+  return undefined;
+};
+Cost.freeId = (id) => Cost.get(id) === undefined;
 Cost.methodList = Object.values(Cost.methods);
 Cost.configure = (method, cost, length, width, depth) => {
   const retValue = {unitCost: {}};
@@ -44,24 +63,20 @@ Cost.configure = (method, cost, length, width, depth) => {
       const perLinearInch = Cost.evaluator.eval(`${cost}/(${length} * 12)`);
       retValue.unitCost.name = 'Linear Inch';
       retValue.unitCost.value = perLinearInch;
-      retValue.formula = `${perLinearInch}*l`;
       return retValue;
     case Cost.methods.SQUARE_FEET:
       const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*144)`);
       retValue.unitCost.name = 'Square Inch';
       retValue.unitCost.value = perSquareInch;
-      retValue.formula = `${perSquareInch}*l*w`;
       return retValue;
     case Cost.methods.CUBIC_FEET:
       const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth}*1728)`);
       retValue.unitCost.name = 'Cubic Inch';
       retValue.unitCost.value = perCubicInch;
-      retValue.formula = `${perCubicInch}*l*w*d`;
       return retValue;
     case Cost.methods.UNIT:
       retValue.unitCost.name = 'Unit';
       retValue.unitCost.value = cost;
-      retValue.formula = cost;
       return retValue;
     default:
       throw new Error('wtf');
@@ -71,19 +86,6 @@ Cost.configure = (method, cost, length, width, depth) => {
       return retValue;
   }
 };
-
-Cost.get = (name) => {
-  const obj = Cost.lists[id];
-  if (obj === undefined) return null;
-  return new obj.constructor();
-}
-Cost.addRelations = (type, id, name) => {
-  names.forEach((name) => {
-    if (objMap[id] === undefined) Cost.objMap[id] = {Labor: [], Material: []}
-    if (type === Labor) Cost.objMap[id].Labor.push(Cost.get(name));
-    if (type === Material) Cost.objMap[id].Material.push(Cost.get(name));
-  });
-}
 
 Cost.register = (clazz) => {
   Cost.types[clazz.prototype.constructor.name] = clazz;
@@ -96,7 +98,8 @@ Cost.new = function(type) {
 
 Cost.fromJson = (objOrArray) => {
   function instanceFromJson(obj) {
-    return Cost.new(obj.type, obj.id, obj.method, obj.cost, obj.length, obj.width, obj.depth);
+    return Cost.new(obj.type, obj.id, obj.method,
+        obj.cost, obj.length, obj.width, obj.depth, obj.formula);
   }
   if (!Array.isArray(objOrArray)) return instanceFromJson(objOrArray);
 
