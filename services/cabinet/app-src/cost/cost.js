@@ -1,16 +1,40 @@
+
+// constructors
+// Cost({id, Method: Cost.methods.LINEAR_FEET, cost, length})
+// Cost({id, Method: Cost.methods.SQUARE_FEET, cost, length, width})
+// Cost({id, Method: Cost.methods.CUBIC_FEET, cost, length, width, depth})
+// Cost({id, Method: Cost.methods.UNIT, cost})
+// Cost((id, Cost, formula));
+// props. - (optional*)
+// id - Cost identifier
+// method - Method for calculating cost
+// length - length of piece used to calculate unit cost
+// width - width of piece used to calculate unit cost
+// depth - depth of piece used to calculate unit cost
+// cost - cost of piece used to calculate unit cost
+// formula* - formula used to apply cost to part
+// company* - Company to order from.
+// partNumber* - Part number to order part from company
+// Cost* - Reference Cost.
+
 class Cost {
   //constructor(id, Cost, formula)
-  constructor(id, method, cost, length, width, depth, formula) {
-    const referenceCost = method instanceof Cost ? method : undefined;
-    formula = referenceCost ? referenceCost.formula() : formula;
+  constructor(props) {
+    const referenceCost = props.method instanceof Cost ? props.method : undefined;
+    props.formula = referenceCost ? referenceCost.formula() : props.formula;
+    this.children = [];
     const instance = this;
-    this.formula = () => formula;
-    this.id = () => id;
-    this.method = referenceCost ? referenceCost.method : () => method;
-    this.length = referenceCost ? referenceCost.length : () => length;
-    this.width = referenceCost ? referenceCost.width : () => width;
-    this.depth = referenceCost ? referenceCost.depth : () => depth;
-    this.cost = referenceCost ? referenceCost.cost : () => cost;
+    this.formula = () => props.formula;
+    this.id = () => props.id;
+    this.company = () => props.company;
+    this.partNumber = () =>props.partNumber;
+    this.addChild = (cost) => this.children.push(cost);
+    this.method = referenceCost ? referenceCost.method : () => props.method;
+    this.length = referenceCost ? referenceCost.length : () => props.length;
+    this.width = referenceCost ? referenceCost.width : () => props.width;
+    this.depth = referenceCost ? referenceCost.depth : () => props.depth;
+    this.cost = referenceCost ? referenceCost.cost : () => props.cost;
+    this.childListHtml = () => 'Hello Children';
     // TODO: make unitcost reference parent;
     const unitCost = Cost.configure(instance.method(), instance.cost(),
       instance.length(), instance.width(), instance.depth());
@@ -28,12 +52,23 @@ class Cost {
 
     const cName = this.constructor.name;
     if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
-    Cost.lists[cName][id] = this;
+    Cost.lists[cName][props.id] = this;
 
     this.toJson = () => {
+      const children = [];
+      this.children.forEach((child) => children.push(child.toJson()));
       return {
         type: this.constructor.name,
-        id, method, length, width, depth, cost, formula
+        id: this.id(),
+        company: this.company(),
+        partNumber: this.partNumber(),
+        method: this.method(),
+        length: this.length(),
+        width: this.width(),
+        depth: this.depth(),
+        cost: this.cost(),
+        formula: this.formula(),
+        children
       };
     }
   }
@@ -92,14 +127,15 @@ Cost.register = (clazz) => {
   Cost.typeList = Object.keys(Cost.types);
 }
 
-Cost.new = function(type) {
-  return new Cost.types[type](...Array.from(arguments).slice(1))
+Cost.new = function(props) {
+  return new Cost.types[props.type](props)
 }
 
 Cost.fromJson = (objOrArray) => {
   function instanceFromJson(obj) {
-    return Cost.new(obj.type, obj.id, obj.method,
-        obj.cost, obj.length, obj.width, obj.depth, obj.formula);
+    const cost = Cost.new(obj);
+    obj.children.forEach((childJson) => cost.addChild(Cost.fromJson(childJson)));
+    return cost;
   }
   if (!Array.isArray(objOrArray)) return instanceFromJson(objOrArray);
 

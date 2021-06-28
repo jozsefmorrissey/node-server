@@ -1,17 +1,18 @@
 <div>
   <span>
-    <input value='{{length()}}'>
+    <input value='{{cost.length()}}'>
   </span>
   <span>
     <label>X</label>
-    <input value='{{width()}}'>
+    <input value='{{cost.width()}}'>
   </span>
   <span>
     <label>X</label>
-    <input value='{{depth()}}'>
+    <input value='{{cost.depth()}}'>
   </span>
   <label>Cost</label>
-  <input value='{{cost()}}'>
+  <input value='{{cost.cost()}}'>
   <br>
-  <label>Per {{unitCost('name')}} = {{unitCost('value')}}
+  <label>Per {{cost.unitCost('name')}} = {{cost.unitCost('value')}}</label>
+  <div id='{{parentId}}'>{{expandList.html()}}</div>
 </div>

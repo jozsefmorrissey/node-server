@@ -112,3 +112,9 @@ Input.optional = () => new Input({
   validation: [true, false],
   targetAttr: 'checked'
 });
+
+Input.partNumber = () => new Input({
+  label: 'Part Number',
+  name: 'partNumber',
+  type: 'text'
+});

@@ -33,3 +33,11 @@ Select.propertyId = (name) => new Select({
   list: Object.keys(properties.list),
   value: name
 });
+
+Select.company = () => new Select({
+  name: 'company',
+  label: 'Company',
+  class: 'center',
+  list: [''].concat(Object.keys(Company.list)),
+  value: ''
+});

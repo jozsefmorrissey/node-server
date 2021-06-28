@@ -1,4 +1,10 @@
 
+.expandable-list {
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 10pt;
+}
+
 .expand-list-cnt.pill {
   display: inline-flex;
 }

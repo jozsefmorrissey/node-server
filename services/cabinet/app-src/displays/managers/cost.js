@@ -1,25 +1,11 @@
 
 
+const costTypes = ['Custom'];
 class CostManager extends AbstractManager {
   constructor(id, name) {
     super(id, name);
     const costs = {};
-    const costTypes = ['Custom'];
     const cntClass = 'cost-manager-reference-cnt';
-
-    const getCostObject = (id) => (values) => {
-      const obj = CostManager.getObject(values);
-      if (id === 'Define') costTypes.push(values.id);
-      return obj;
-    }
-
-    const onUpdate = (name, value, target) => {
-      if (name === 'costType') {
-        const refCnt = up(`.${cntClass}`, target).children[1];
-        if (value !== 'Custom') refCnt.hidden = false;
-        else refCnt.hidden = true;
-      }
-    }
 
     this.loadPoint = () => EPNTS.costs.get();
     this.savePoint = () => EPNTS.costs.save();
@@ -35,10 +21,10 @@ class CostManager extends AbstractManager {
           inputValidation: () => true,
           parentId,
           parentSelector: `#${parentId}`,
-          inputTree:   CostManager.costInputTree(costTypes, id === 'Define', onUpdate),
+          inputTree:   CostManager.costInputTree(costTypes, id === 'Define', CostManager.onUpdate),
           getHeader: CostManager.costHeader,
           getBody: CostManager.costBody,
-          getObject: getCostObject(id),
+          getObject: CostManager.getCostObject(id),
           listElemLable: 'Cost'
         };
         const expandList = new ExpandableList(expListProps);
@@ -65,12 +51,46 @@ CostManager.bodyTemplate = new $t('managers/cost/body');
 CostManager.costHeadTemplate = new $t('managers/cost/cost-head');
 CostManager.costBodyTemplate = new $t('managers/cost/cost-body');
 
-CostManager.costHeader = (scope) => CostManager.costHeadTemplate.render(scope);
-CostManager.costBody = (scope) => CostManager.costBodyTemplate.render(scope);
+CostManager.onUpdate = (name, value, target) => {
+  if (name === 'costType') {
+    const refCnt = up(`.${cntClass}`, target).children[1];
+    if (value !== 'Custom') refCnt.hidden = false;
+    else refCnt.hidden = true;
+  }
+};
+
+CostManager.childScopes = {};
+CostManager.childScope = (cost) => {
+  if (CostManager.childScopes[cost.id()] === undefined) {
+    const parentId = `cost-child-group-${randomString()}`;
+    const expListProps = {
+      list: cost.children,
+      inputValidation: () => true,
+      parentSelector: `#${parentId}`,
+      inputTree:   CostManager.costInputTree(costTypes, cost.id() === 'Define', CostManager.onUpdate),
+      getHeader: CostManager.costHeader,
+      getBody: CostManager.costBody,
+      getObject: CostManager.getCostObject(cost.id()),
+      listElemLable: 'Cost'
+    };
+    const expandList = new ExpandableList(expListProps);
+    CostManager.childScopes[cost.id()] = {expandList, cost, parentId};
+  }
+
+  return CostManager.childScopes[cost.id()];
+}
+
+CostManager.getCostObject = (id) => (values) => {
+  const obj = CostManager.getObject(values);
+  if (id === 'Define') costTypes.push(values.id);
+  return obj;
+};
+
+CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(cost);
+CostManager.costBody = (cost) => CostManager.costBodyTemplate.render(CostManager.childScope(cost));
 CostManager.getObject = (values) => {
   if (values.costType === 'Custom') {
-    return Cost.new(values.type, values.id, values.method, values.cost,
-            values.length, values.width, values.depth, values.formula);
+    return Cost.new(values);
   } else {
     const refCost = Cost.get(values.costType);
     if (refCost === undefined) throw new Error('Invalid Cost reference name');
@@ -106,7 +126,7 @@ CostManager.costInputTree = (costTypes, hideCostTypes, onUpdate) => {
 
 costTypeSelect
   const idTypeMethod = [id, Select.type(), Select.method(),
-          formula, Input.optional()];
+          formula, Input.optional(), Select.company(), Input.partNumber()];
   const idFormula = [id, formula];
 
   const length = MeasurementInput.len();
