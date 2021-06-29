@@ -87,6 +87,15 @@ Input.id = () => new Input({
   errorMsg: 'You must enter an Id'
 });
 
+Input.CostId = () => new Input({
+  type: 'text',
+  placeholder: 'Id',
+  name: 'id',
+  class: 'center',
+  validation: (id) => Object.keys(Cost.unique).indexOf(id)  === -1,
+  errorMsg: 'You must enter an Id'
+});
+
 Input.Name = () => new Input({
   type: 'text',
   placeholder: 'Name',
@@ -117,4 +126,11 @@ Input.partNumber = () => new Input({
   label: 'Part Number',
   name: 'partNumber',
   type: 'text'
+});
+
+Input.count = (value) => new Input({
+  label: 'Count',
+  name: 'count',
+  type: 'number',
+  value: value || 0
 });

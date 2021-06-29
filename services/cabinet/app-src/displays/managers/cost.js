@@ -4,20 +4,29 @@ const costTypes = ['Custom'];
 class CostManager extends AbstractManager {
   constructor(id, name) {
     super(id, name);
-    const costs = {};
+    const list = [];
     const cntClass = 'cost-manager-reference-cnt';
+
+    this.toJson = () => {
+      const json = {};
+      list.forEach((listObj) => {
+        json[listObj.partId] = [];
+          listObj.expandList.getList().forEach((cost) =>
+              json[listObj.partId].push(cost.toJson()));
+      });
+      return json;
+    };
 
     this.loadPoint = () => EPNTS.costs.get();
     this.savePoint = () => EPNTS.costs.save();
-    this.fromJson = () => {
+    this.fromJson = (json) => {
       CostManager.partList = CostManager.partList ||
-          ['Define'].concat(Object.keys(Assembly.classes)
+          [].concat(Object.keys(Assembly.classes)
               .filter((id) => !id.match(/^.*Section$/)));
-      const list = [];
       CostManager.partList.forEach((id) => {
         const parentId = `cost-group-${randomString()}`;
         const expListProps = {
-          list: [],
+          list: json[id] ? Cost.fromJson(json[id]) : [],
           inputValidation: () => true,
           parentId,
           parentSelector: `#${parentId}`,
@@ -82,7 +91,7 @@ CostManager.childScope = (cost) => {
 
 CostManager.getCostObject = (id) => (values) => {
   const obj = CostManager.getObject(values);
-  if (id === 'Define') costTypes.push(values.id);
+  if (values.costType === 'Custom') costTypes.push(values.id);
   return obj;
 };
 
@@ -125,41 +134,64 @@ CostManager.costInputTree = (costTypes, hideCostTypes, onUpdate) => {
   const id = Input.id();
 
 costTypeSelect
-  const idTypeMethod = [id, Select.type(), Select.method(),
-          formula, Input.optional(), Select.company(), Input.partNumber()];
-  const idFormula = [id, formula];
+  const idType = [id, Select.costType()];
+  const materialInput = [Select.method(), Select.company(), Input.partNumber()];
+  const laborInput = [Select.method()];
 
   const length = MeasurementInput.len();
   const width = MeasurementInput.width();
   const depth = MeasurementInput.depth();
   const cost = MeasurementInput.cost();
-  const lengthCost = [length, cost];
-  const lengthWidthCost = [length, width, cost];
-  const lengthWidthDepthCost = [length, width, depth, cost];
+  const count = Input.count();
+  const costCount = [cost, count, formula];
+  const lengthCost = [length, cost, formula];
+  const lengthWidthCost = [length, width, cost, formula];
+  const lengthWidthDepthCost = [length, width, depth, cost, formula];
   const color = [Input.color()];
+  const optional = Input.optional();
 
   const decisionInput = new DecisionInputTree('cost',
     costTypeSelect);
   decisionInput.onChange(onUpdate);
 
   decisionInput.addStates({
-    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color,idTypeMethod, idFormula
+    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color,idType,
+    laborInput, costCount, optional, materialInput
   });
 
-  decisionInput.then('costType').jump('idFormula');
-  const idTypeMethNode = decisionInput.then('costType:Custom')
-        .jump('idTypeMethod');
+  const idTypeNode = decisionInput.then('costType:Custom')
+        .jump('idType');
 
-  idTypeMethNode.then(`method:${Cost.methods.LINEAR_FEET}`)
+
+  const materialNode = idTypeNode.then('type:Material')
+        .jump('materialInput');
+  const laborNode = idTypeNode.then('type:Labor')
+        .jump('laborInput');
+  idTypeNode.then('type:Category').jump('optional');
+
+
+  materialNode.then(`method:${Cost.methods.LINEAR_FEET}`)
         .jump('lengthCost');
-  idTypeMethNode.then(`method:${Cost.methods.SQUARE_FEET}`)
+  materialNode.then(`method:${Cost.methods.SQUARE_FEET}`)
         .jump('lengthWidthCost');
-  idTypeMethNode.then(`method:${Cost.methods.CUBIC_FEET}`)
+  materialNode.then(`method:${Cost.methods.CUBIC_FEET}`)
         .jump('lengthWidthDepthCost');
-  idTypeMethNode.then(`method:${Cost.methods.UNIT}`)
-        .jump('cost');
+  materialNode.then(`method:${Cost.methods.UNIT}`)
+        .jump('costCount');
 
-  idTypeMethNode.then('type:Material').jump('color');
+  materialNode.then('type:Material').jump('color');
+
+
+  laborNode.then(`method:${Cost.methods.LINEAR_FEET}`)
+        .jump('lengthCost');
+  laborNode.then(`method:${Cost.methods.SQUARE_FEET}`)
+        .jump('lengthWidthCost');
+  laborNode.then(`method:${Cost.methods.CUBIC_FEET}`)
+        .jump('lengthWidthDepthCost');
+  laborNode.then(`method:${Cost.methods.UNIT}`)
+        .jump('costCount');
+
+  laborNode.then('type:Material').jump('color');
 
   return decisionInput;
 }

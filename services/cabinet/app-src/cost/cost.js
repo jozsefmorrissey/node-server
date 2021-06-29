@@ -21,6 +21,7 @@ class Cost {
   //constructor(id, Cost, formula)
   constructor(props) {
     const referenceCost = props.method instanceof Cost ? props.method : undefined;
+    Cost.unique[props.id] = referenceCost === undefined  ? this : unique;
     props.formula = referenceCost ? referenceCost.formula() : props.formula;
     this.children = [];
     const instance = this;
@@ -35,10 +36,10 @@ class Cost {
     this.depth = referenceCost ? referenceCost.depth : () => props.depth;
     this.cost = referenceCost ? referenceCost.cost : () => props.cost;
     this.childListHtml = () => 'Hello Children';
-    // TODO: make unitcost reference parent;
-    const unitCost = Cost.configure(instance.method(), instance.cost(),
-      instance.length(), instance.width(), instance.depth());
+
     this.unitCost = referenceCost ? referenceCost.unitCost : (attr) => {
+      const unitCost = Cost.configure(instance.method(), instance.cost(),
+        instance.length(), instance.width(), instance.depth());
       const copy = JSON.parse(JSON.stringify(unitCost));
       if (attr) return copy[attr];
       return copy;
@@ -46,8 +47,8 @@ class Cost {
 
     this.calc = (assemblyOrCount) => {
       if (assemblyOrCount instanceof Assembly)
-        return Cost.evaluator.eval(`${this.unitCost}*${this.formula()}`, assembly);
-      else return Cost.evaluator.eval(`${this.unitCost}*${assemblyOrCount}`);
+        return Cost.evaluator.eval(`${this.unitCost().value}*${this.formula()}`, assembly);
+      else return Cost.evaluator.eval(`${this.unitCost().value}*${assemblyOrCount}`);
     }
 
     const cName = this.constructor.name;
@@ -58,7 +59,7 @@ class Cost {
       const children = [];
       this.children.forEach((child) => children.push(child.toJson()));
       return {
-        type: this.constructor.name,
+        type: Cost.constructorId(this.constructor.name),
         id: this.id(),
         company: this.company(),
         partNumber: this.partNumber(),
@@ -73,6 +74,8 @@ class Cost {
     }
   }
 }
+
+Cost.unique = {};
 Cost.lists = {};
 Cost.objMap = {};
 Cost.types = [];
@@ -122,13 +125,14 @@ Cost.configure = (method, cost, length, width, depth) => {
   }
 };
 
+Cost.constructorId = (name) => name.replace(/Cost$/, '');
 Cost.register = (clazz) => {
-  Cost.types[clazz.prototype.constructor.name] = clazz;
-  Cost.typeList = Object.keys(Cost.types);
+  Cost.types[Cost.constructorId(clazz.prototype.constructor.name)] = clazz;
+  Cost.typeList = Object.keys(Cost.types).sort();
 }
 
 Cost.new = function(props) {
-  return new Cost.types[props.type](props)
+  return new Cost.types[Cost.constructorId(props.type)](props)
 }
 
 Cost.fromJson = (objOrArray) => {

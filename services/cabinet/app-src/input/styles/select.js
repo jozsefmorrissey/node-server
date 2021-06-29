@@ -14,7 +14,7 @@ class Select extends Input {
 Select.template = new $t('input/select');
 Select.html = (instance) => () => Select.template.render(instance);
 
-Select.type = () => new Select({
+Select.costType = () => new Select({
   placeholder: 'Type',
   name: 'type',
   class: 'center',

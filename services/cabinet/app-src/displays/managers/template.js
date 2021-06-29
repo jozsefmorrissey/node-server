@@ -12,7 +12,7 @@ class TemplateManager extends AbstractManager {
 new TemplateManager('template-manager', 'template');
 
 TemplateManager.inputTree = (callback) => {
-  const idTypeMethod = [Input.id(), Select.type(), Select.method()];
+  const idTypeMethod = [Input.id(), Select.costType(), Select.method()];
 
   const length = MeasurementInput.len();
   const width = MeasurementInput.width();

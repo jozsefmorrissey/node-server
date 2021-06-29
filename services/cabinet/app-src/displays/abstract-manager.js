@@ -29,7 +29,7 @@ class AbstractManager {
       const saveSuccess = () => console.log('success save');
       const saveFail = () => console.log('failed save');
       const save = (target) => {
-        const body = manager.toJson(costs);
+        const body = manager.toJson();
         Request.post(manager.savePoint(), body, saveSuccess, saveFail);
       }
       matchRun('click', `#${manager.saveBtnId}`, save);
