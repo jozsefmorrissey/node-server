@@ -135,6 +135,7 @@ function incrementalAdd(initial, increment, percentGrowth) {
   let totalDays = 0;
   let cost = initial;
   percentGrowth = !Number.isFinite(percentGrowth) ? 0 : percentGrowth;
+  let roundDown = (num) => Math.floor(num * 100) / 100;
   return {
     increment: (count) => {
       count = !Number.isFinite(count) || count < 1 ? 1 : count;
@@ -144,12 +145,12 @@ function incrementalAdd(initial, increment, percentGrowth) {
         increment *= 1+(percentGrowth/100);
       }
       totalDays += count;
-      cost = Math.floor(cost * 100) / 100;
-      total = Math.floor(total * 100) / 100
+      cost = roundDown(cost);
+      total = roundDown(total);
       return total;
     },
     adjustBalance: ((value) => total = Math.round((total + value) * 100) / 100),
-    total: (offset) => new String(total + (offset || 0)).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
+    total: (offset) => new String(roundDown(total + (offset || 0))).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
     cost: () => new String(cost).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
     percentGrowth: () => percentGrowth,
     incrementValue: () => increment,
