@@ -148,7 +148,7 @@ function incrementalAdd(initial, increment, percentGrowth) {
       total = Math.floor(total * 100) / 100
       return total;
     },
-    adjustBalance: ((value) => total = Math.round(total + value)),
+    adjustBalance: ((value) => total = Math.round((total + value) * 100) / 100),
     total: () => new String(total).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
     cost: () => new String(cost).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
     percentGrowth: () => percentGrowth,
