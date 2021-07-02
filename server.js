@@ -149,7 +149,7 @@ function incrementalAdd(initial, increment, percentGrowth) {
       return total;
     },
     adjustBalance: ((value) => total = Math.round((total + value) * 100) / 100),
-    total: (offset) => new String(total + offset || 0).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
+    total: (offset) => new String(total + (offset || 0)).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
     cost: () => new String(cost).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
     percentGrowth: () => percentGrowth,
     incrementValue: () => increment,
