@@ -149,7 +149,7 @@ function incrementalAdd(initial, increment, percentGrowth) {
       return total;
     },
     adjustBalance: ((value) => total = Math.round((total + value) * 100) / 100),
-    total: () => new String(total).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
+    total: (offset) => new String(total + offset).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
     cost: () => new String(cost).replace(/\.([1-9])$/, '.$10').replace(/^(-[0-9]*)$/, '$1.00'),
     percentGrowth: () => percentGrowth,
     incrementValue: () => increment,
@@ -178,7 +178,7 @@ function evanHtml(id) {
   for (let index = 0; index < increments.length; index += 1) {
     day += increments[index];
     const perjection = ia.perjection(day);
-    perjections += `<br><b>Day ${day + ia.totalDays()} - \$${perjection.cost()} | \$${ia.total() + perjection.total()}</b>`;
+    perjections += `<br><b>Day ${day + ia.totalDays()} - \$${perjection.cost()} | \$${perjection.total(ia.total())}</b>`;
   }
   const adjustUrl = `/evan/adjust`;
   const incUrl = `/evan/increment/${id}`;
