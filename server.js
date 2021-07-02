@@ -178,7 +178,7 @@ function evanHtml(id) {
   for (let index = 0; index < increments.length; index += 1) {
     day += increments[index];
     const perjection = ia.perjection(day);
-    perjections += `<br><b>Day ${day + ia.totalDays()} - \$${perjection.cost()} | \$${perjection.total()}</b>`;
+    perjections += `<br><b>Day ${day + ia.totalDays()} - \$${perjection.cost()} | \$${ia.total() + perjection.total()}</b>`;
   }
   const adjustUrl = `/evan/adjust`;
   const incUrl = `/evan/increment/${id}`;
