@@ -42,3 +42,16 @@ function funcOvalue () {
     else this[attr] = () => funcOval;
   }
 }
+
+function arraySet(array, values, start, end) {
+  if (start!== undefined && end !== undefined && start > end) {
+    const temp = start;
+    start = end;
+    end = temp;
+  }
+  start = start || 0;
+  end = end || values.length;
+  for (let index = start; index < end; index += 1)
+    array[index] = values[index];
+  return array;
+}

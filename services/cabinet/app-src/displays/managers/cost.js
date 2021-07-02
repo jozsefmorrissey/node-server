@@ -5,7 +5,6 @@ class CostManager extends AbstractManager {
   constructor(id, name) {
     super(id, name);
     const list = [];
-    const cntClass = 'cost-manager-reference-cnt';
 
     this.toJson = () => {
       const json = {};
@@ -37,7 +36,7 @@ class CostManager extends AbstractManager {
           listElemLable: 'Cost'
         };
         const expandList = new ExpandableList(expListProps);
-        list.push({partId: id, expandList, cntClass, parentId});
+        list.push({partId: id, expandList, cntClass: CostManager.cntClass, parentId});
       });
       return list;
     }
@@ -59,10 +58,11 @@ CostManager.headTemplate = new $t('managers/cost/head');
 CostManager.bodyTemplate = new $t('managers/cost/body');
 CostManager.costHeadTemplate = new $t('managers/cost/cost-head');
 CostManager.costBodyTemplate = new $t('managers/cost/cost-body');
+CostManager.cntClass = 'cost-manager-reference-cnt';
 
 CostManager.onUpdate = (name, value, target) => {
   if (name === 'costType') {
-    const refCnt = up(`.${cntClass}`, target).children[1];
+    const refCnt = up(`.${CostManager.cntClass}`, target).children[1];
     if (value !== 'Custom') refCnt.hidden = false;
     else refCnt.hidden = true;
   }
@@ -70,7 +70,7 @@ CostManager.onUpdate = (name, value, target) => {
 
 CostManager.childScopes = {};
 CostManager.childScope = (cost) => {
-  if (CostManager.childScopes[cost.id()] === undefined) {
+  if (CostManager.childScopes[cost.uniqueId()] === undefined) {
     const parentId = `cost-child-group-${randomString()}`;
     const expListProps = {
       list: cost.children,
@@ -83,10 +83,10 @@ CostManager.childScope = (cost) => {
       listElemLable: 'Cost'
     };
     const expandList = new ExpandableList(expListProps);
-    CostManager.childScopes[cost.id()] = {expandList, cost, parentId};
+    CostManager.childScopes[cost.uniqueId()] = {expandList, cost, parentId};
   }
 
-  return CostManager.childScopes[cost.id()];
+  return CostManager.childScopes[cost.uniqueId()];
 }
 
 CostManager.getCostObject = (id) => (values) => {
@@ -101,9 +101,9 @@ CostManager.getObject = (values) => {
   if (values.costType === 'Custom') {
     return Cost.new(values);
   } else {
-    const refCost = Cost.get(values.costType);
-    if (refCost === undefined) throw new Error('Invalid Cost reference name');
-    return new Cost(values.id, refCost, values.formula);
+    const referenceCost = Cost.get(values.costType);
+    if (referenceCost === undefined) throw new Error('Invalid Cost reference name');
+    return Cost.new({type: referenceCost.constructor.name, referenceCost, formula: values.formula});
   }
 }
 
@@ -122,7 +122,7 @@ CostManager.costInputTree = (costTypes, hideCostTypes, onUpdate) => {
     value: 'Custom',
     hide: hideCostTypes,
     class: 'center',
-    list: costTypes
+    list: Cost.defined
   });
   const formula = new Input({
     name: 'formula',
@@ -131,7 +131,7 @@ CostManager.costInputTree = (costTypes, hideCostTypes, onUpdate) => {
     class: 'center',
     errorMsg: 'Invalid Formula: allowed variables [lwd]'
   });
-  const id = Input.id();
+  const id = Input.CostId();
 
 costTypeSelect
   const idType = [id, Select.costType()];

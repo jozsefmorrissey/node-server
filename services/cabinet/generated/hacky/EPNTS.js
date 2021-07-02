@@ -113,7 +113,10 @@ const EPNTS = new Endpoints({
     "add": "/order/:id",
     "get": "/order/:id",
     "list": "/list/orders"
+  },
+  "export": {
+    "dxf": "/export/dxf"
   }
 }
-, 'http://localhost:3000/cabinet').getFuncObj();
+, 'https://node.jozsefmorrissey.com/cabinet').getFuncObj();
 try {exports.EPNTS = EPNTS;}catch(e){}

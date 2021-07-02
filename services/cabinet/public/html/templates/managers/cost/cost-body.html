@@ -21,7 +21,7 @@
   </div>
   <div{{cost.constructor.name === 'SelectCost' || cost.constructor.name === 'Category' ? '' : ' hidden'}}>
     <div{{cost.constructor.name === 'SelectCost' ? '' : ' hidden'}}>
-      <label>Selected</label>
+      <label>Selected ({{cost.constructor.name}})</label>
       <input type='number'
         value='{{cost.constructor.name === 'SelectCost' ? cost.selected() : '-1'}}'>
     </div>

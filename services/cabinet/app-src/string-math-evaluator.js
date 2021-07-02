@@ -180,10 +180,10 @@ class StringMathEvaluator {
       return expr = expr.replace(StringMathEvaluator.mixedNumberReg, '($1+$2)') || expr;;
     }
     function addUnexpressedMultiplicationSigns(expr) {
-      expr = expr.replace(/([0-9]{1,})([a-zA-Z]{1,})/g, '$1*$2');
-      expr = expr.replace(/([a-zA-Z]{1,})([0-9]{1,})/g, '$1*$2');
-      expr = expr.replace(/\)([^+^-^*^\/])/g, ')*$1');
-      return expr.replace(/([^+^-^*^\/])\(/g, '$1*(');
+      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
+      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
+      expr = expr.replace(/\)([^\s^+^-^*^\/])/g, ')*$1');
+      return expr.replace(/([^\s^+^-^*^\/])\(/g, '$1*(');
     }
 
     const isolateNumber = isolateValueReg(StringMathEvaluator.numReg, Number.parseFloat);
@@ -230,7 +230,7 @@ class StringMathEvaluator {
         }
       }
       if (prevWasOpperand) return NaN;
-      
+
       let value = values[0];
       for (let index = 0; index < values.length - 1; index += 1) {
         value = operands[index](values[index], values[index + 1]);

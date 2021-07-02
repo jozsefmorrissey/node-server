@@ -92,8 +92,8 @@ Input.CostId = () => new Input({
   placeholder: 'Id',
   name: 'id',
   class: 'center',
-  validation: (id) => Object.keys(Cost.unique).indexOf(id)  === -1,
-  errorMsg: 'You must enter an Id'
+  validation: (id) => id !== '' && Cost.defined.indexOf(id)  === -1,
+  errorMsg: 'You must enter a unique Id'
 });
 
 Input.Name = () => new Input({
@@ -132,5 +132,5 @@ Input.count = (value) => new Input({
   label: 'Count',
   name: 'count',
   type: 'number',
-  value: value || 0
+  value: value || 1
 });

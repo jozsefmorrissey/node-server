@@ -20,13 +20,18 @@
 class Cost {
   //constructor(id, Cost, formula)
   constructor(props) {
-    const referenceCost = props.method instanceof Cost ? props.method : undefined;
-    Cost.unique[props.id] = referenceCost === undefined  ? this : unique;
+    const referenceCost = props.referenceCost instanceof Cost ? props.referenceCost : undefined;
+    const uniqueId = randomString();
+    this.uniqueId = () => uniqueId;
+    this.id = referenceCost ? referenceCost.id : () => props.id;
+    this.children = referenceCost ? referenceCost.children : [];
+    if (referenceCost === undefined) {
+      Cost.unique[props.id] = this;
+      Cost.defined.push(this.id())
+    }
     props.formula = referenceCost ? referenceCost.formula() : props.formula;
-    this.children = [];
     const instance = this;
     this.formula = () => props.formula;
-    this.id = () => props.id;
     this.company = () => props.company;
     this.partNumber = () =>props.partNumber;
     this.addChild = (cost) => this.children.push(cost);
@@ -76,6 +81,7 @@ class Cost {
 }
 
 Cost.unique = {};
+Cost.defined = ['Custom'];
 Cost.lists = {};
 Cost.objMap = {};
 Cost.types = [];
@@ -131,8 +137,12 @@ Cost.register = (clazz) => {
   Cost.typeList = Object.keys(Cost.types).sort();
 }
 
-Cost.new = function(props) {
-  return new Cost.types[Cost.constructorId(props.type)](props)
+Cost.new = function(propsOreference) {
+  let constructer;
+  if (propsOreference instanceof Cost)
+    constructer = Cost.types[Cost.constructorId];
+  else constructer = Cost.types[Cost.constructorId(propsOreference.type)]
+  return new constructer(propsOreference)
 }
 
 Cost.fromJson = (objOrArray) => {

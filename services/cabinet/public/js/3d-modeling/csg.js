@@ -59,6 +59,17 @@ CSG.fromPolygons = function(polygons) {
   return csg;
 };
 
+CSG.toString = function () {
+  const list = [];
+  this.polygons.forEach((polygon) => {
+    const obj = {vertices: []};
+    polygon.vertices.forEach((vertex) =>
+        obj.vertices.push({x: vertex.pos.x, y: vertex.pos.y, z: vertex.pos.z}));
+    list.push(obj);
+  });
+  return JSON.stringify(list, null, 2);
+}
+
 CSG.prototype = {
   clone: function() {
     var csg = new CSG();

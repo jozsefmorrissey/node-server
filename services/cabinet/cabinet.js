@@ -1,6 +1,7 @@
 
 const fs = require('fs');
 const shell = require('shelljs');
+const dxfDownloadLink = require('./src/export/dxf').downloadLink;
 const { User, UnAuthorized } = require('./src/user');
 const { emailSvc } = require('./src/email');
 const { EPNTS } = require('./src/EPNTS');
@@ -155,6 +156,20 @@ function endpoints(app, prefix) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Type', 'application/json');
     res.send(getUser(req).loadData('patterns') || []);
+  });
+
+  //  ---------------------------- Export -----------------------------//
+
+  app.post(prefix + EPNTS.export.dxf(), function (req, res, next) {
+    const user = getUser(req);
+    const order = req.body.order;
+    const csg = req.body.csg;
+    try {
+      const link = dxfDownloadLink(user, order, csg, {});
+      res.send(link);
+    } catch (e) {
+      next(e);
+    }
   });
 
   //  ---------------------------- Endpoints -----------------------------//

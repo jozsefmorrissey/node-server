@@ -63,6 +63,18 @@ class User {
     let user;
     let token;
 
+    // TODO: change this, implement a consitant id; 
+    this.id = function () {
+			let hashString = email;
+			let hash = 0;
+			for (let i = 0; i < hashString.length; i += 1) {
+				const character = hashString.charCodeAt(i);
+				hash = ((hash << 5) - hash) + character;
+				hash &= hash; // Convert to 32bit integer
+			}
+			return hash;
+		}
+
     const replaceSpecial = (match) => match.charCodeAt(0);
 
     function userDataFilePath(name) {
