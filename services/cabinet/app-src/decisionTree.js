@@ -26,7 +26,6 @@ class DecisionTree {
       if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
       const keys = Object.keys(sts);
       keys.forEach((key) => stateConfigs[key] = sts[key]);
-      console.log(stateConfigs);
     }
 
     function getState(name, parent) {

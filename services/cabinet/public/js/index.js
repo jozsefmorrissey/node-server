@@ -1,6 +1,17 @@
 let index = function () {
 const afterLoad = []
-APP_ID = 'cabinet-builder';
+const APP_ID = 'cabinet-builder';
+
+
+const PULL_TYPE = {
+  DRAWER: 'Drawer',
+  DOOR: 'Door'
+};
+
+const CoverStartPoints = {
+  INSIDE_RAIL: 'InsideRail',
+  OUTSIDE_RAIL: 'OutsideRail'
+}
 
 
 
@@ -4087,7 +4098,6 @@ ${corner13.z}
 let PolygonsTo3DFaces = (csg, options) => {
   let str = ''
   const polygons = csg.polygons
-  console.log(csg.toPolygons());
   // const objectColor = getColorNumber(object, options)
   polygons.forEach((polygon, i) => {
     const polyColor = 0;//polygon.color ? getColorNumber(polygon, options) : objectColor
@@ -5179,14 +5189,17 @@ $t.functions['-1702305177'] = function (get) {
 $t.functions['cabinet/head'] = function (get) {
 	return `<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` + (get("$index")) + `.name' index='` + (get("$index")) + `' room-id='` + (get("room").id) + `' value='` + (get("cabinet").name || get("$index")) + `'> Size: <div class='cabinet-dem-cnt'> <label>W:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.width' room-id='` + (get("room").id) + `' value='` + (get("cabinet").width()) + `'> <label>H:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.length' room-id='` + (get("room").id) + `' value='` + (get("cabinet").length()) + `'> <label>D:</label> <input class='cabinet-input dem' prop-update='` + (get("$index")) + `.thickness' room-id='` + (get("room").id) + `' value='` + (get("cabinet").thickness()) + `'> </div> </div> `
 }
-$t.functions['divide/body'] = function (get) {
-	return `<h2>` + (get("list").activeIndex()) + `</h2> val: ` + (get("list").value()('selected')) + ` `
-}
 $t.functions['display-manager'] = function (get) {
 	return `<div class='display-manager' id='` + (get("id")) + `'> ` + (new $t('<div  class=\'display-manager-item\'> <input class=\'display-manager-input{{$index === 0 ? " active" : ""}}\' type=\'button\' display-id=\'{{item.id}}\' value=\'{{item.name}}\'/> </div>').render(get('scope'), 'item in list', get)) + ` </div> `
 }
 $t.functions['-1519826343'] = function (get) {
 	return `<div class='display-manager-item'> <input class='display-manager-input` + (get("$index") === 0 ? " active" : "") + `' type='button' display-id='` + (get("item").id) + `' value='` + (get("item").name) + `'/> </div>`
+}
+$t.functions['divide/body'] = function (get) {
+	return `<h2>` + (get("list").activeIndex()) + `</h2> val: ` + (get("list").value()('selected')) + ` `
+}
+$t.functions['divide/head'] = function (get) {
+	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.prototype.constructor.name}}\' {{opening.constructorId === section.name ? \'selected\' : \'\'}}> {{clean(section.name)}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
 }
 $t.functions['divider-controls'] = function (get) {
 	return `<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` + (get("opening").uniqueId) + `' value='` + (get("opening").pattern().str) + `'> <span class="open-orientation-radio-cnt"> <label for='open-orientation-horiz-` + (get("opening").uniqueId) + `'>Horizontal:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='horizontal' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-horiz-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? '' : 'checked') + `> <label for='open-orientation-vert-` + (get("opening").uniqueId) + `'>Vertical:</label> <input type='radio' name='orientation-` + (get("opening").uniqueId) + `' value='vertical' open-id='` + (get("opening").uniqueId) + `' id='open-orientation-vert-` + (get("opening").uniqueId) + `' class='open-orientation-radio' ` + (get("opening").value('vertical') ? 'checked' : '') + `> </span> <div class='open-pattern-input-cnt' opening-id='` + (get("opening").uniqueId) + `' ` + (get("opening").pattern().equal ? 'hidden' : '') + `> ` + (get("patternInputHtml")) + ` </div> </div> `
@@ -5199,9 +5212,6 @@ $t.functions['-1921787246'] = function (get) {
 }
 $t.functions['-1756076485'] = function (get) {
 	return `<span > <input list='auto-fill-list-` + (get("input").id) + `' id='` + (get("input").id) + `' placeholder='` + (get("input").placeholder) + `' type='text'> <datalist id="auto-fill-list-` + (get("input").id) + `"> ` + (new $t('<option value="{{option}}" ></option>').render(get('scope'), 'option in input.autofill', get)) + ` </datalist> </span>`
-}
-$t.functions['divide/head'] = function (get) {
-	return `<div> <select value='` + (get("opening").name) + `' class='open-divider-select` + (get("sections").length === 0 ? ' hidden' : '') + `'> ` + (new $t('<option  value=\'{{section.prototype.constructor.name}}\' {{opening.constructorId === section.name ? \'selected\' : \'\'}}> {{clean(section.name)}} </option>').render(get('scope'), 'section in sections', get)) + ` </select> <div class='open-divider-select` + (get("sections").length === 0 ? '' : ' hidden') + `'> D </div> </div> `
 }
 $t.functions['expandable/pill'] = function (get) {
 	return ` <div class="expandable-list ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> <div class="expand-list-cnt ` + (get("type")) + `" ex-list-id='` + (get("id")) + `'> ` + (new $t('<div  class="expandable-list-body" index=\'{{$index}}\'> <div class="expand-item"> <div class=\'expand-rm-btn-cnt\'> <button class=\'expandable-item-rm-btn\' ex-list-id=\'{{id}}\' index=\'{{$index}}\'>X</button> </div> <div class="expand-header {{type}}" ex-list-id=\'{{id}}\' index=\'{{$index}}\'> {{getHeader(item, $index)}} </div> </div> </div>').render(get('scope'), 'item in list', get)) + ` </div> <div> <div id='input-tree-cnt'>` + (get("inputTree") ? get("inputTree").html() : '') + `</div> <div ` + (!get("hasInputTree")() ? '' : 'hidden') + `> ` + (new $t('<span > <input list=\'auto-fill-list-{{input.id}}\' id=\'{{input.id}}\' placeholder=\'{{input.placeholder}}\' type=\'text\'> <datalist id="auto-fill-list-{{input.id}}"> <option:t value="{{option}}" repeat=\'option in input.autofill\'></option:t> </datalist> </span>').render(get('scope'), 'input in inputs', get)) + ` <button ex-list-id='` + (get("id")) + `' class='expandable-list-add-btn' ` + (get("hideAddBtn") ? 'hidden' : '') + `> Add ` + (get("listElemLable")) + ` </button> </div> <br> <div class='error' id='` + (get("ERROR_CNT_ID")) + `'></div> </div> <div class="expand-body ` + (get("type")) + `"></div> </div> `
@@ -5230,14 +5240,14 @@ $t.functions['-1362189101'] = function (get) {
 $t.functions['input/decision/decisionTree'] = function (get) {
 	return `<div class='` + (get("class")) + `' tree-id='` + (get("treeId")) + `'> ` + (get("payload").html()) + ` <button class='` + (get("buttonClass")) + `' disabled tree-id='` + (get("treeId")) + `'>` + (get("name")) + `</button> </div> `
 }
-$t.functions['input/measurement'] = function (get) {
-	return `<div class='fit'` + (get("hide") ? ' hidden' : '') + `> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' value='` + (get("value")() ? get("value")() : "") + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
-}
 $t.functions['input/input'] = function (get) {
 	return `<div` + (get("hide") ? ' hidden' : '') + `> <label>` + (get("label")) + `</label> <input class='` + (get("class")) + `' list='input-list-` + (get("id")) + `' id='` + (get("id")) + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <datalist id="input-list-` + (get("id")) + `"> ` + (new $t('<option value="{{item}}" ></option>').render(get('scope'), 'item in list', get)) + ` </datalist> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
 }
 $t.functions['-994603408'] = function (get) {
 	return `<option value="` + (get("item")) + `" ></option>`
+}
+$t.functions['input/measurement'] = function (get) {
+	return `<div class='fit'` + (get("hide") ? ' hidden' : '') + `> <label>` + (get("label")) + `</label> <input class='measurement-input ` + (get("class")) + `' id='` + (get("id")) + `' value='` + (get("value")() ? get("value")() : "") + `' placeholder='` + (get("placeholder")) + `' type='` + (get("type")) + `' name='` + (get("name")) + `'> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
 }
 $t.functions['input/select'] = function (get) {
 	return `<div` + (get("hide") ? ' hidden' : '') + `> <label>` + (get("label")) + `</label> <select class='` + (get("class")) + `' id='` + (get("id")) + `' name='` + (get("name")) + `' value='` + (get("value")()) + `'> ` + (new $t('<option  value=\'{{item}}\' {{selected(item) ? \'selected\' : \'\'}}> {{item}} </option>').render(get('scope'), 'item in list', get)) + ` </select> <div class='error' id='` + (get("errorMsgId")) + `'>` + (get("errorMsg")) + `</div> </div> `
@@ -5257,9 +5267,6 @@ $t.functions['login/reset-password'] = function (get) {
 $t.functions['managers/abstract-manager'] = function (get) {
 	return `<div> <div class="center"> <h2 id='` + (get("headerId")) + `'> ` + (get("header")) + ` <button id='` + (get("saveBtnId")) + `'>Save</button> </h2> </div> <div id="` + (get("bodyId")) + `"></div> </div> `
 }
-$t.functions['managers/cost/cost-head'] = function (get) {
-	return `<b> ` + (get("id")()) + ` - ` + (get("constructor").constructorId(get("constructor").name)) + ` <b` + (get("method")() ? '' : ' hidden') + `>(` + (get("method")()) + `)</b> </b> `
-}
 $t.functions['managers/cost/body'] = function (get) {
 	return `<div class='` + (get("instance").cntClass) + `' > <div id='` + (get("instance").parentId) + `'>` + (get("instance").expandList.html()) + `</div> <div hidden>hi</div> </div> `
 }
@@ -5269,6 +5276,9 @@ $t.functions['managers/cost/cost-body'] = function (get) {
 $t.functions['managers/cost/header'] = function (get) {
 	return `<b>` + (get("instance").partId) + `</b> `
 }
+$t.functions['managers/cost/cost-head'] = function (get) {
+	return `<b> ` + (get("id")()) + ` - ` + (get("constructor").constructorId(get("constructor").name)) + ` <b` + (get("method")() ? '' : ' hidden') + `>(` + (get("method")()) + `)</b> </b> `
+}
 $t.functions['managers/property/body'] = function (get) {
 	return `<div> No Need </div> `
 }
@@ -5277,9 +5287,6 @@ $t.functions['managers/property/header'] = function (get) {
 }
 $t.functions['managers/template/body'] = function (get) {
 	return `<div> <span> <input value='` + (get("instance").length()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").width()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").depth()) + `'> </span> <label>Cost</label> <input value='` + (get("instance").cost()) + `'> <br> <label>Per ` + (get("instance").unitCost().name) + ` = ` + (get("instance").unitCost().value) + ` </div> `
-}
-$t.functions['managers/template/header'] = function (get) {
-	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
 }
 $t.functions['model-controller'] = function (get) {
 	return `<div> <div class='model-selector'> <div ` + (get("group").level > 0 ? 'hidden' : '') + `> <div class='` + (get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") + ` ` + (get("label") ? "prefix-switch model-label" : "") + `' ` + (!get("label") ? 'hidden' : '') + `> <label type='prefix'>` + (get("label")) + `</label> <input type='checkbox' class='prefix-checkbox' prefix='` + (get("group").prefix) + `' ` + (!get("tdm").hidePrefix(get("label")) ? 'checked' : '') + `> </div> <div class='` + (get("label") ? "prefix-body indent" : "") + `' ` + (get("label") ? 'hidden' : '') + `> ` + (new $t('<div class=\'model-label{{tdm.isTarget("part-name", partName) ? " active" : ""}}\' > <label type=\'part-name\'>{{partName}}</label> <input type=\'checkbox\' class=\'part-name-checkbox\' part-name=\'{{partName}}\' {{!tdm.hidePartName(partName) ? \'checked\' : \'\'}}> {{new $t(\'<div class=\\\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\\\'  {{partList.length > 1 ? "" : "hidden"}}> <label type=\\\'part-code\\\'>{{part.partCode}}</label> <input type=\\\'checkbox\\\' class=\\\'part-code-checkbox\\\' part-code=\\\'{{part.partCode}}\\\' {{!tdm.hidePartCode(part.partCode) ? \\\'checked\\\' : \\\'\\\'}}> </div>\').render(get(\'scope\'), \'part in partList\', get)}} </div>').render(get('scope'), 'partName, partList in group.parts', get)) + ` ` + (new $t('model-controller').render(get('scope'), 'label, group in group.groups', get)) + ` </div> </div> </div> </div> `
@@ -5292,6 +5299,9 @@ $t.functions['-443173449'] = function (get) {
 }
 $t.functions['-424251200'] = function (get) {
 	return `model-controller`
+}
+$t.functions['managers/template/header'] = function (get) {
+	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
 }
 $t.functions['opening'] = function (get) {
 	return `<div class='opening-cnt' opening-id='` + (get("opening").uniqueId) + `'> <div class='divider-controls'> </div> </div> <div id='` + (get("openDispId")) + `'> </div> `
@@ -5459,14 +5469,14 @@ const EPNTS = new Endpoints({
     "dxf": "/export/dxf"
   }
 }
-, 'https://node.jozsefmorrissey.com/cabinet').getFuncObj();
+, 'http://localhost:3000/cabinet').getFuncObj();
 try {exports.EPNTS = EPNTS;}catch(e){}
 
 const cabinetBuildConfig = {
   "standard": {
     "type": "standard",
     "values": {
-      "brh": "tkb.w + pb.t + brr - br.w",
+      "brh": "tkb.w + pback.t + brr - fb.w",
       "stl": "frorl + pr.t",
       "str": "frorr + pl.t",
       "st":"str + stl"
@@ -5481,68 +5491,68 @@ const cabinetBuildConfig = {
       },
       "Frame.Left": {
         "type": "Frame",
-        "code": "lr",
+        "code": "fl",
         "center": ["w / 2", "brh + (l / 2)", "t / 2"],
         "demensions": ["frw", "c.l - brh", "frt"]
       },
       "Frame.Right": {
         "type": "Frame",
-        "code": "rr",
+        "code": "fr",
         "center": ["c.w - (w / 2)", " brh + (l / 2)", " t / 2"],
         "demensions": ["frw", " c.l - brh", " frt"]
       },
       "Frame.Bottom": {
         "type": "Frame",
-        "code": "br",
-        "center": ["rr.w + (l / 2)", " brh + (w / 2)", " t / 2"],
-        "demensions": ["frw", " c.w - rr.w - lr.w", "frt"],
+        "code": "fb",
+        "center": ["fr.w + (l / 2)", " brh + (w / 2)", " t / 2"],
+        "demensions": ["frw", " c.w - fr.w - fl.w", "frt"],
         "rotation": "z"
       },
       "Frame.Top": {
         "type": "Frame",
-        "code": "tr",
-        "center": ["rr.w + (l / 2)", " c.l - (w/2)", "t / 2"],
-        "demensions": ["frw", "br.l", "frt"],
+        "code": "ft",
+        "center": ["fr.w + (l / 2)", " c.l - (w/2)", "t / 2"],
+        "demensions": ["frw", "fb.l", "frt"],
         "rotation": "z"
       },
       "Panel.Right": {
         "type": "Panel",
         "code": "pr",
-        "center": ["c.w - frorl - (t / 2)", "l / 2", "(w / 2) + rr.t"],
-        "demensions": ["c.t - rr.t", "c.l", "pwt34"],
+        "center": ["c.w - frorl - (t / 2)", "l / 2", "(w / 2) + fr.t"],
+        "demensions": ["c.t - fr.t", "c.l", "pwt34"],
         "rotation": "y"
       },
       "Panel.Left": {
         "type": "Panel",
         "code": "pl",
-        "center": ["frorr + (t / 2)", " l / 2", " (w/2) + lr.t"],
-        "demensions": ["c.t - rr.t", "c.l", "pwt34"],
+        "center": ["frorr + (t / 2)", " l / 2", " (w/2) + fl.t"],
+        "demensions": ["c.t - fr.t", "c.l", "pwt34"],
         "rotation": "y"
       },
       "Panel.Back": {
         "type": "Panel",
-        "code": "pb",
+        "code": "pback",
         "center": ["l / 2 + stl", " (w / 2) + tkb.w", " c.t - (t / 2)"],
         "demensions": ["c.l - tkb.w", " c.w - st", " pwt34"],
         "rotation": "z"
       },
       "Panel.Bottom": {
         "type": "Panel",
-        "code": "pbt",
-        "center": ["(l / 2) + stl", " brh + br.w - (t / 2) - brr", "br.t + (w / 2)"],
-        "demensions": ["c.t - br.t - pb.t", "c.w - st", "pwt34"],
+        "code": "pb",
+        "center": ["(l / 2) + stl", " brh + fb.w - (t / 2) - brr", "fb.t + (w / 2)"],
+        "demensions": ["c.t - fb.t - pback.t", "c.w - st", "pwt34"],
         "rotation": "yx"
       }
     },
     "joints": {
-      "pb->pl":
+      "pback->pl":
         {
           "type": "Rabbet",
           "depth": 3/8,
           "DemensionToOffset": "y",
           "centerOffset": "-x"
         },
-      "pb->pr": {
+      "pback->pr": {
         "type": "Rabbet",
         "depth": 3/8,
         "DemensionToOffset":"y",
@@ -5572,53 +5582,53 @@ const cabinetBuildConfig = {
         "DemensionToOffset":"x",
         "centerOffset": "-z"
       },
-      "pbt->pl": {
+      "pb->pl": {
         "type": "Dado",
         "depth": 3/8,
         "DemensionToOffset":"y",
         "centerOffset": "-x"
       },
-      "pbt->pr": {
+      "pb->pr": {
         "type": "Dado",
         "depth": 3/8,
         "DemensionToOffset":"y",
         "centerOffset": "+x"
       },
-      "pbt->br": {
+      "pb->br": {
         "type": "Dado",
         "depth": 3/8
       },
-      "pbt->rr": {
+      "pb->rr": {
         "type": "Dado",
         "depth": 3/8
       },
-      "pbt->lr": {
+      "pb->lr": {
         "type": "Dado",
         "depth": 3/8
       },
-      "pb->pbt'": {
+      "pback->pb'": {
         "type": "Butt"
       },
-      "tr->rr": {
+      "ft->rr": {
         "type": "Butt"
       },
-      "tr->lr": {
+      "ft->lr": {
         "type": "Butt"
       },
-      "br->rr": {
+      "fb->rr": {
         "type": "Butt"
       },
-      "br->lr": {
+      "fb->lr": {
         "type": "Butt"
       }
     },
     "bordersIdMap": [
       {
-        "top": "tr",
-        "bottom": "br",
-        "left": "lr",
-        "right": "rr",
-        "back": "pb"
+        "top": "ft",
+        "bottom": "fb",
+        "left": "fl",
+        "right": "fr",
+        "back": "pback"
       }
     ]
   },
@@ -5634,55 +5644,55 @@ const cabinetBuildConfig = {
     "subAssemblies": {
       "Left": {
         "type": "Frame",
-        "code": "lr",
-        "center": ["w / 2", " brh + (l / 2)", " t / 2"],
-        "demensions": ["frw", " c.l - brh", " frt"],
+        "code": "fl",
+        "center": ["w / 2", "brh + (l / 2)", "t / 2"],
+        "demensions": ["frw", "c.l - brh", "frt"]
       },
 
       "Right": {
         "type": "Frame",
-        "code": "rr",
-        "center": ["c.w - (w / 2)", " brh + (l / 2)", " t / 2'"],
+        "code": "fr",
+        "center": ["c.w - (w / 2)", " brh + (l / 2)", " t / 2"],
         "demensions": ["frw", " c.l - brh", " frt"]
       },
 
       "Bottom": {
         "type": "Frame",
-        "code": "br",
-        "center": ["lr.w + (l / 2)", " brh + (w / 2)", " t / 2'"],
-        "demensions": ["frw", " c.w - rr.w - lr.w", "frt"],
+        "code": "fb",
+        "center": ["fr.w + (l / 2)", " brh + (w / 2)", " t / 2"],
+        "demensions": ["frw", " c.w - fr.w - fl.w", "frt"],
         "rotation": "z"
       },
       "Top": {
         "type": "Frame",
-        "code": "tr",
-        "center": ["lr.w + (l / 2)", " c.l - (w/2)", "t / 2"],
-        "demensions": ["frw", "br.l", "frt"],
+        "code": "ft",
+        "center": ["fr.w + (l / 2)", " c.l - (w/2)", "t / 2"],
+        "demensions": ["frw", "fb.l", "frt"],
         "rotation": "z"
       },
 
     },
     "joints": {
-      "tr->rr": {
+      "ft->rr": {
     "type": "Butt"
     },
-    "tr->lr": {
+    "ft->lr": {
     "type": "Butt"
     },
-    "br->rr": {
+    "fb->rr": {
     "type": "Butt"
     },
-    "br->lr": {
+    "fb->lr": {
     "type": "Butt"
     }
     },
     "bordersIdMap": [
       {
-        "top": "tr",
-        "bottom": "br",
-        "left": "lr",
-        "right": "rr",
-        "back": "rr"
+        "top": "ft",
+        "bottom": "fb",
+        "left": "fl",
+        "right": "fr",
+        "back": "fr"
       }
     ]
   }
@@ -5747,8 +5757,9 @@ class CabinetConfig {
       cabinet.name = name;
       return cabinet;
     };
-    setTimeout(() =>
-      Request.get(EPNTS.cabinet.list(), setLists, () => setLists([])), 200);
+
+    afterLoad.push(() =>
+      Request.get(EPNTS.cabinet.list(), setLists, () => setLists([])));
   }
 }
 
@@ -6105,18 +6116,17 @@ const DEFAULT_PROPS = {
   tkh: {name: 'Toe Kick Height', value: 3},
   pbt: {name: 'Panel Back Thickness', value: 1/2},
   brr: {name: 'Bottom Rail Reveal', value: 1/8},
-
   iph: {name: 'Ideal Pull Height', value: 42},
-  trv: {name: 'Top Reveal', value: 1/2},
-  brv: {name: 'Bottom Reveal', value: 1/4},
-  lrv: {name: 'Left Reveal', value: 1/2},
-  rrv: {name: 'Right Reveal', value: 1/2},
-  fs: {name: 'Face Spacing', value: 1/8},
-  is: {name: 'Inset Spacing', value: 1/16},
+  trv: {name: 'Top Reveal', value: 1},
+  brv: {name: 'Bottom Reveal', value: 1},
+  lrv: {name: 'Left Reveal', value: 1},
+  rrv: {name: 'Right Reveal', value: 1},
+  r: {name: 'Reveal', value: 1/2},
   vffs: {name: 'Vertical First Front Size', value: 5.5},
   Plywood: {name: 'Plywood', value: 'SoftMapel'},
   wood: {name: 'Wood', value: 'SoftMapel'},
-  glass: {name: 'glass', value: 'Flat'}
+  glass: {name: 'glass', value: 'Flat'},
+  csp: {name: 'Cover Start Point', value: CoverStartPoints.OUTSIDE_RAIL, options: Object.keys(CoverStartPoints)}
 };
 
 function properties(name, values) {
@@ -6142,6 +6152,7 @@ properties('Full Overlay', {
   brv: {name: 'Bottom Reveal', value: 1/16},
   lrv: {name: 'Left Reveal', value: 1/16},
   rrv: {name: 'Right Reveal', value: 1/16},
+  r: {name: 'Reveal', value: 1/16},
   fs: {name: 'Face Spacing', value: 1/16},
   vffs: {name: 'Vertical First Front Size', value: 5.5},
 });
@@ -6151,8 +6162,9 @@ properties('Inset', {
   brv: {name: 'Bottom Reveal', value: -1/16},
   lrv: {name: 'Left Reveal', value: -1/16},
   rrv: {name: 'Right Reveal', value: -1/16},
-  fs: {name: 'Face Spacing', value: -1/16},
+  r: {name: 'Reveal', value: -1/16},
   vffs: {name: 'Vertical First Front Size', value: 5.5},
+  csp: {name: 'Cover Start Point', value: CoverStartPoints.INSIDE_RAIL, CoverStartPoints}
 });
 
 
@@ -6321,90 +6333,6 @@ Position.parseCoordinates = function() {
 Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
 
 
-
-// terminology
-// name - String to define state;
-// payload - data returned for a given state
-// stateObject - object defining states {name: [payload]...}
-// states - array of availible state names.
-// node - {name, states, payload, then, addState, addStates};
-// then(name) - a function to set a following state.
-// next(name) - a function to get the next state.
-// back() - a function to move back up the tree.
-// top() - a function to get root;
-//
-// returns all functions return current node;
-class DecisionTree {
-  constructor(name, payload) {
-    name = name || 'root';
-    const stateConfigs = {};
-    const tree = {};
-    const nodeMap = {};
-
-    function addState(name, payload) {
-      return stateConfigs[name] = payload;
-    }
-
-    function addStates(sts) {
-      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
-      const keys = Object.keys(sts);
-      keys.forEach((key) => stateConfigs[key] = sts[key]);
-      console.log(stateConfigs);
-    }
-
-    function getState(name, parent) {
-      return new DecisionNode(name, stateConfigs[name], parent);
-    }
-
-
-    class DecisionNode {
-      constructor(name, payload, parent) {
-        const states = {};
-        let jump;
-        payload = payload || {};
-        payload._nodeId = `decision-node-${randomString(7)}`;
-        nodeMap[payload._nodeId] = this;
-        this.getNode = (nodeId) => nodeMap[nodeId];
-        this.name = name;
-        this.states = states;
-        this.payload = payload;
-        this.jump = (name) => {
-          if (name) jump = getState(name, parent);
-          return jump;
-        };
-        this.then = (name, payload) => {
-          payload = payload ? addState(name, payload) : stateConfigs[name];
-          states[name] = (getState(name, this));
-          const state = states[name];
-          return state === undefined ? undefined : state.jump() || state;
-        }
-        this.addState = (name, payload) => addState(name, payload) && this;
-        this.addStates = (sts) => addStates(sts) && this;
-        this.next = (name) => {
-          const state = states[name];
-          return state === undefined ? undefined : state.jump() || state;
-        }
-
-        this.routePayloads = () => {
-          let currNode = this;
-          const payloads = [];
-          while(currNode !== null) {
-            payloads.push(currNode.payload);
-            currNode = currNode.back();
-          }
-          return payloads.reverse();
-        }
-        this.back = () => parent;
-        this.top = () => rootNode;
-      }
-    }
-
-    const rootNode = new DecisionNode(name, payload, null);
-    return rootNode;
-  }
-}
-
-
 function regexToObject (str, reg) {
   const match = str.match(reg);
   if (match === null) return null;
@@ -6428,7 +6356,6 @@ class Measurement {
 
     const parseFraction = (str) => {
       const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
-      console.log('')
       regObj.integer = Number.parseInt(regObj.integer) || 0;
       regObj.numerator = Number.parseInt(regObj.numerator) || 0;
       regObj.denominator = Number.parseInt(regObj.denominator) || 0;
@@ -6526,6 +6453,89 @@ Measurement.validation = function (range) {
     const decimal = new Measurement(value).decimal();
     if (decimal === NaN) return false;
     return minCheck(decimal) && maxCheck(decimal);
+  }
+}
+
+
+
+// terminology
+// name - String to define state;
+// payload - data returned for a given state
+// stateObject - object defining states {name: [payload]...}
+// states - array of availible state names.
+// node - {name, states, payload, then, addState, addStates};
+// then(name) - a function to set a following state.
+// next(name) - a function to get the next state.
+// back() - a function to move back up the tree.
+// top() - a function to get root;
+//
+// returns all functions return current node;
+class DecisionTree {
+  constructor(name, payload) {
+    name = name || 'root';
+    const stateConfigs = {};
+    const tree = {};
+    const nodeMap = {};
+
+    function addState(name, payload) {
+      return stateConfigs[name] = payload;
+    }
+
+    function addStates(sts) {
+      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
+      const keys = Object.keys(sts);
+      keys.forEach((key) => stateConfigs[key] = sts[key]);
+    }
+
+    function getState(name, parent) {
+      return new DecisionNode(name, stateConfigs[name], parent);
+    }
+
+
+    class DecisionNode {
+      constructor(name, payload, parent) {
+        const states = {};
+        let jump;
+        payload = payload || {};
+        payload._nodeId = `decision-node-${randomString(7)}`;
+        nodeMap[payload._nodeId] = this;
+        this.getNode = (nodeId) => nodeMap[nodeId];
+        this.name = name;
+        this.states = states;
+        this.payload = payload;
+        this.jump = (name) => {
+          if (name) jump = getState(name, parent);
+          return jump;
+        };
+        this.then = (name, payload) => {
+          payload = payload ? addState(name, payload) : stateConfigs[name];
+          states[name] = (getState(name, this));
+          const state = states[name];
+          return state === undefined ? undefined : state.jump() || state;
+        }
+        this.addState = (name, payload) => addState(name, payload) && this;
+        this.addStates = (sts) => addStates(sts) && this;
+        this.next = (name) => {
+          const state = states[name];
+          return state === undefined ? undefined : state.jump() || state;
+        }
+
+        this.routePayloads = () => {
+          let currNode = this;
+          const payloads = [];
+          while(currNode !== null) {
+            payloads.push(currNode.payload);
+            currNode = currNode.back();
+          }
+          return payloads.reverse();
+        }
+        this.back = () => parent;
+        this.top = () => rootNode;
+      }
+    }
+
+    const rootNode = new DecisionNode(name, payload, null);
+    return rootNode;
   }
 }
 
@@ -6718,7 +6728,6 @@ function appendError(target, message) {
     error.className = 'error';
     error.innerHTML = message;
     parent.insertBefore(error, target.nextElementSibling)
-    console.log('here')
   }
 }
 
@@ -7088,47 +7097,89 @@ const p2 = new Pattern(' // ^^%');
 
 
 
-class AbstractManager {
-  constructor(id, name) {
-    let list;
-    const manager = this;
-    this.saveBtnId = `${name}-manager-save-btn`;
-    this.headerId = `${name}-manager-header-cnt`;
-    this.bodyId = `${name}-manager-body-cnt`;
-    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
-    const parentSelector = `#${this.bodyId}`;
-    const template = new $t('managers/abstract-manager');
-    const bodyTemplate = new $t(`managers/${name}/body`);
-    const headTemplate = new $t(`managers/${name}/header`);
 
-    const getHeader = (instance) => headTemplate.render({instance, manager});
-    const getBody = (instance) => bodyTemplate.render({instance, manager});
-
-    const getObject = (values) => manager.getObject(values);
-
-    function init(json) {
-      document.getElementById(id).innerHTML = template.render(manager);
-      list = manager.fromJson(json) || [];
-      const expListProps = {
-        inputTree: manager.constructor.inputTree(),
-        parentSelector, getHeader, getBody, getObject, list
-      };
-      const expandList = new ExpandableList(expListProps);
-
-      const saveSuccess = () => console.log('success save');
-      const saveFail = () => console.log('failed save');
-      const save = (target) => {
-        const body = manager.toJson();
-        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
-      }
-      matchRun('click', `#${manager.saveBtnId}`, save);
+class CabinetDisplay {
+  constructor(room) {
+    const propertySelectors = {};
+    const parentSelector = `[room-id="${room.id}"].cabinet-cnt`;
+    let propId = 'Half Overlay';
+    const instance = this;
+    this.propId = (id) => {
+      if (id ===  undefined) return propId;
+      propId = id;
+    }
+    const getHeader = (cabinet, $index) =>
+        CabinetDisplay.headTemplate.render({room, cabinet, $index});
+    const showTypes = Show.listTypes();
+    const getBody = (cabinet, $index) => {
+      if (propertySelectors[cabinet.uniqueId] === undefined)
+        propertySelectors[cabinet.uniqueId] = Select.propertyId(cabinet.propertyId());
+      if (expandList.activeIndex() === $index)
+        ThreeDModel.render(cabinet);
+      const selectHtml = propertySelectors[cabinet.uniqueId].html();
+      const scope = {room, $index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
+      return CabinetDisplay.bodyTemplate.render(scope);
     }
 
-    afterLoad.push(() => Request.get(manager.loadPoint(), init));
+    function inputValidation(values) {
+      const validName = values.name !== undefined;
+      const validType = CabinetConfig.valid(values.type, values.id);
+      if(validType) return true;
+      return {type: 'You must select a defined type.'};
+    }
+    const getObject = (values) => {
+      return CabinetConfig.get(values.name, values.type, values.propertyId, values.id);
+    };
+    this.active = () => expandList.active();
+    const expListProps = {
+      list: room.cabinets,
+      inputTree:   CabinetConfig.inputTree(),
+      parentSelector, getHeader, getBody, getObject, inputValidation,
+      listElemLable: 'Cabinet'
+    };
+    const expandList = new ExpandableList(expListProps);
+    this.refresh = () => expandList.refresh();
+
+    const cabinetKey = (path) => {
+      const split = path.split('.');
+      const index = split[0];
+      const key = split[1];
+      const cabinet = expListProps.list[index];
+      return {cabinet, key};
+    }
+
+    const valueUpdate = (path, value) => {
+      const cabKey = cabinetKey(path);
+      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
+      ThreeDModel.render(cabKey.cabinet);
+    }
+
+    const attrUpdate = (path, value) => {
+      const cabKey = cabinetKey(path);
+      cabKey.cabinet[cabKey.key] = value;
+    }
+
+    const saveSuccess = () => console.log('success');
+    const saveFail = () => console.log('failure');
+    const save = (target) => {
+      const index = target.getAttribute('index');
+      const cabinet = expListProps.list[index];
+      if (cabinet.name !== undefined) {
+        Request.post(EPNTS.cabinet.add(cabinet.name), cabinet.toJson(), saveSuccess, saveFail);
+        console.log('saving');
+      } else {
+        alert('Please enter a name if you want to save the cabinet.')
+      }
+    }
+
+    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
+    bindField(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
+    bindField(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
+    matchRun('click', '.save-cabinet-btn', save);
   }
 }
-
-AbstractManager.inputTree = () => undefined;
+CabinetDisplay.bodyTemplate = new $t('cabinet/body');
+CabinetDisplay.headTemplate = new $t('cabinet/head');
 
 
 class Company {
@@ -7485,7 +7536,6 @@ class User {
     function successfulLogin(body, res) {
       const newAuth = res.getResponseHeader('authorization');
       document.cookie = `${APP_ID}=${newAuth}`;
-      console.log(newAuth);
       hideLogin();
     }
 
@@ -7549,7 +7599,6 @@ class User {
         default:
 
       }
-      console.log('sc:::', body);
     }
 
 
@@ -7588,94 +7637,6 @@ class FeatureDisplay {
   }
 }
 FeatureDisplay.template = new $t('features');
-
-
-
-
-class CabinetDisplay {
-  constructor(room) {
-    const propertySelectors = {};
-    const parentSelector = `[room-id="${room.id}"].cabinet-cnt`;
-    let propId = 'Half Overlay';
-    const instance = this;
-    this.propId = (id) => {
-      if (id ===  undefined) return propId;
-      propId = id;
-    }
-    const getHeader = (cabinet, $index) =>
-        CabinetDisplay.headTemplate.render({room, cabinet, $index});
-    const showTypes = Show.listTypes();
-    const getBody = (cabinet, $index) => {
-      if (propertySelectors[cabinet.uniqueId] === undefined)
-        propertySelectors[cabinet.uniqueId] = Select.propertyId(cabinet.propertyId());
-      if (expandList.activeIndex() === $index)
-        ThreeDModel.render(cabinet);
-      const selectHtml = propertySelectors[cabinet.uniqueId].html();
-      const scope = {room, $index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
-      return CabinetDisplay.bodyTemplate.render(scope);
-    }
-
-    function inputValidation(values) {
-      const validName = values.name !== undefined;
-      const validType = CabinetConfig.valid(values.type, values.id);
-      if(validType) return true;
-      return {type: 'You must select a defined type.'};
-    }
-    const getObject = (values) => {
-      return CabinetConfig.get(values.name, values.type, values.propertyId, values.id);
-    };
-    this.active = () => expandList.active();
-    const expListProps = {
-      list: room.cabinets,
-      inputTree:   CabinetConfig.inputTree(),
-      parentSelector, getHeader, getBody, getObject, inputValidation,
-      listElemLable: 'Cabinet'
-    };
-    const expandList = new ExpandableList(expListProps);
-    this.refresh = () => expandList.refresh();
-
-    const cabinetKey = (path) => {
-      const split = path.split('.');
-      const index = split[0];
-      const key = split[1];
-      const cabinet = expListProps.list[index];
-      return {cabinet, key};
-    }
-
-    const valueUpdate = (path, value) => {
-      const cabKey = cabinetKey(path);
-      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
-      ThreeDModel.render(cabKey.cabinet);
-    }
-
-    const attrUpdate = (path, value) => {
-      const cabKey = cabinetKey(path);
-      cabKey.cabinet[cabKey.key] = value;
-    }
-
-    const saveSuccess = () => console.log('success');
-    const saveFail = () => console.log('failure');
-    const save = (target) => {
-      const index = target.getAttribute('index');
-      const cabinet = expListProps.list[index];
-      if (cabinet.name !== undefined) {
-        Request.post(EPNTS.cabinet.add(cabinet.name), cabinet.toJson(), saveSuccess, saveFail);
-        console.log('saving');
-      } else {
-        alert('Please enter a name if you want to save the cabinet.')
-      }
-    }
-
-    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-    bindField(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
-    bindField(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
-    matchRun('click', '.save-cabinet-btn', save);
-  }
-}
-CabinetDisplay.bodyTemplate = new $t('cabinet/body');
-CabinetDisplay.headTemplate = new $t('cabinet/head');
-
-
 
 
 // properties
@@ -7878,6 +7839,52 @@ matchRun('click', '.expand-header', (target, event) => {
     list.renderBody(target);
   }
 });
+
+
+
+
+
+class AbstractManager {
+  constructor(id, name) {
+    let list;
+    const manager = this;
+    this.saveBtnId = `${name}-manager-save-btn`;
+    this.headerId = `${name}-manager-header-cnt`;
+    this.bodyId = `${name}-manager-body-cnt`;
+    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
+    const parentSelector = `#${this.bodyId}`;
+    const template = new $t('managers/abstract-manager');
+    const bodyTemplate = new $t(`managers/${name}/body`);
+    const headTemplate = new $t(`managers/${name}/header`);
+
+    const getHeader = (instance) => headTemplate.render({instance, manager});
+    const getBody = (instance) => bodyTemplate.render({instance, manager});
+
+    const getObject = (values) => manager.getObject(values);
+
+    function init(json) {
+      document.getElementById(id).innerHTML = template.render(manager);
+      list = manager.fromJson(json) || [];
+      const expListProps = {
+        inputTree: manager.constructor.inputTree(),
+        parentSelector, getHeader, getBody, getObject, list
+      };
+      const expandList = new ExpandableList(expListProps);
+
+      const saveSuccess = () => console.log('success save');
+      const saveFail = () => console.log('failed save');
+      const save = (target) => {
+        const body = manager.toJson();
+        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
+      }
+      matchRun('click', `#${manager.saveBtnId}`, save);
+    }
+
+    afterLoad.push(() => Request.get(manager.loadPoint(), init));
+  }
+}
+
+AbstractManager.inputTree = () => undefined;
 
 
 
@@ -8258,7 +8265,7 @@ class ThreeDModel {
       model.rotate(pos.rotation);
       pos.center.z *= -1;
       model.center(pos.center);
-      serialize({}, model);
+      // serialize({}, model);
       return model;
     }
 
@@ -8987,24 +8994,6 @@ Cost.register(Material);
 // new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
 
 
-class SelectCost extends Cost {
-  constructor (id, method, cost, length, width, depth) {
-    super(id, method, cost, length, width, depth);
-    const selected = 0;
-    this.selected = (index) =>
-        index === undefined ? selected : selected = index;
-
-    this.calc = (assemblyOrCount) => this.children[selected] ?
-        this.children[selected].calc(assemblyOrCount) : -0.01;
-
-    this.unitCost = () => this.children[selected] ?
-        this.children[selected].unitCost() : -0.01;
-  }
-}
-
-Cost.register(SelectCost);
-
-
 
 class DecisionInputTree extends DecisionTree{
   constructor(name, inputArrayOinstance, onComplete) {
@@ -9161,6 +9150,24 @@ DecisionInputTree.validateInput = (inputArrayOinstance) => {
 }
 
 DecisionInputTree.template = new $t('input/decision/decisionTree');
+
+
+class SelectCost extends Cost {
+  constructor (id, method, cost, length, width, depth) {
+    super(id, method, cost, length, width, depth);
+    const selected = 0;
+    this.selected = (index) =>
+        index === undefined ? selected : selected = index;
+
+    this.calc = (assemblyOrCount) => this.children[selected] ?
+        this.children[selected].calc(assemblyOrCount) : -0.01;
+
+    this.unitCost = () => this.children[selected] ?
+        this.children[selected].unitCost() : -0.01;
+  }
+}
+
+Cost.register(SelectCost);
 
 
 
@@ -9710,10 +9717,22 @@ class Cabinet extends Assembly {
         const depth = pb.position().center('z') + pb.position().limits('-z');
 
         const position = {};
-        position.right = borders.right.position().centerAdjust('x', '-x') + this.value('rrv');
-        position.left = borders.left.position().centerAdjust('x', '+x') - this.value('lrv');
-        position.top = borders.top.position().centerAdjust('y', '+x') - this.value('trv');
-        position.bottom = borders.bottom.position().centerAdjust('y', '-x') + this.value('brv');
+        const start = {};
+        if (CoverStartPoints.INSIDE_RAIL === borders.top.value('csp')) {
+          position.right = borders.right.position().centerAdjust('x', '-x');
+          position.left = borders.left.position().centerAdjust('x', '+x');
+          position.top = borders.top.position().centerAdjust('y', '-x');
+          position.bottom = borders.bottom.position().centerAdjust('y', '+x');
+        } else {
+          position.right = borders.right.position().centerAdjust('x', '+x');
+          position.left = borders.left.position().centerAdjust('x', '-x');
+          position.top = borders.top.position().centerAdjust('y', '+x');
+          position.bottom = borders.bottom.position().centerAdjust('y', '-x');
+        }
+        position.right -= this.value('rrv');
+        position.left += this.value('lrv')
+        position.top -= this.value('trv');
+        position.bottom += this.value('brv');
 
         return {borders, position, depth, borderIds};
       }
@@ -9964,39 +9983,37 @@ class Section extends Assembly {
       return attr ? center[attr] : center;
     }
 
-    const calculateRevealOffset = (borderPos, direction) => {
-      let reveal;
-      switch (direction) {
-        case '+x': reveal = this.value('rrv'); break;
-        case '-x': reveal = this.value('lrv'); break;
-        case '+y': reveal = this.value('trv'); break;
-        case '-y': reveal = this.value('brv'); break;
-        default:
-          throw new Error(`Invalid direction: ${direction}`);
-      }
-      const positive = direction.indexOf('-') === -1;
-      const inverseSign = !positive ? '+' : '-';
+    const calculateRevealOffset = (border, direction) => {
+      const borderPos = border.position();
+      let reveal = border.value('r');
+      const insideRailStart = CoverStartPoints.INSIDE_RAIL === border.value('csp');
+      const positive = insideRailStart ? direction.indexOf('-') !== -1 :
+                          direction.indexOf('-') === -1;
       const axis = direction.replace(/\+|-/, '');
       const magnitude = positive ? 1 : -1;
-      const borderCenter = borderPos.center(axis);
-      return  borderCenter - ((reveal * magnitude) / 2);
+      const divisor = insideRailStart ? 1 : 2;
+      const borderOrigin = !insideRailStart ? borderPos.center(axis) :
+        (positive ? borderPos.centerAdjust(`${axis}`, '-x') :
+                    borderPos.centerAdjust(`${axis}`, '+x'));
+      return  borderOrigin + ((reveal * magnitude) / divisor);
     }
+
 
     this.outerSize = () => {
       const props = sectionProperties();
       const pos = props.position;
 
-      const topPos = props.borders.top.position();
-      const botPos = props.borders.bottom.position();
-      const leftPos = props.borders.left.position();
-      const rightPos = props.borders.right.position();
+      const top = props.borders.top;
+      const bot = props.borders.bottom;
+      const left = props.borders.left;
+      const right = props.borders.right;
 
       const limits = {};
-      limits.x = pos.right || calculateRevealOffset(rightPos, '+x');
-      limits['-x'] = pos.left || calculateRevealOffset(leftPos, '-x');
-      limits.y = pos.top || calculateRevealOffset(topPos, '+y');
-      limits['-y'] = pos.bottom || calculateRevealOffset(botPos, '-y');
-      limits['-z'] = topPos.limits('-z');
+      limits.x = pos.right || calculateRevealOffset(right, '-x');
+      limits['-x'] = pos.left || calculateRevealOffset(left, '+x');
+      limits.y = pos.top || calculateRevealOffset(top, '-y');
+      limits['-y'] = pos.bottom || calculateRevealOffset(bot, '+y');
+      limits['-z'] = top.position().limits('-z');
       limits.z = props.depth - limits['-z'];
 
       const center = {};
@@ -10090,9 +10107,63 @@ class SpaceSection extends Section {
   constructor(templatePath, partCode, partName, sectionProperties) {
     super(templatePath, false, partCode, partName, sectionProperties);
     if ((typeof sectionProperties) !== 'function')
-      console.log('sectionProps', sectionProperties);
     this.important = ['partCode', 'partName', 'index'];
     this.borderIds = () => sectionProperties().borderIds;
+    const instance = this;
+
+    const parentValue = this.value;
+    this.value = (attr, value) => {
+      const props = sectionProperties();
+      const top = props.borders.top;
+      const bottom = props.borders.bottom;
+      const right = props.borders.right;
+      const left = props.borders.left;
+      let panel;
+      switch (attr) {
+        case 'opt':
+          if (props.position.top) return props.position.top;
+          return top.position().center('y');
+        case 'opb':
+          if (props.position.bottom) return props.position.bottom;
+          return bottom.position().center('y');
+        case 'opr':
+          if (props.position.right) return props.position.right;
+          return right.position().center('x');
+        case 'opl':
+          if (props.position.left) return props.position.left;
+          return left.position().center('x');
+        case 'ppt':
+          return top.position().center('y') - top.width() / 2;
+        case 'ppb':
+          return bottom.position().center('y') + bottom.width() / 2;
+        case 'ppr':
+          return right.position().center('x') - right.width() / 2;
+        case 'ppl':
+          return left.position().center('x') + left.width() / 2;
+        case 'ipt':
+          panel = top.getAssembly(top.partCode.replace(/f/, 'p'));
+          return panel === undefined ?
+            top.position().centerAdjust('y', '-x') :
+            panel.position().centerAdjust('y', '-z');
+        case 'ipb':
+          panel = bottom.getAssembly(bottom.partCode.replace(/f/, 'p'));
+          return panel === undefined ?
+            bottom.position().centerAdjust('y', '+x') :
+            panel.position().centerAdjust('y', '+z');
+        case 'ipr':
+          panel = right.getAssembly(right.partCode.replace(/f/, 'p'));
+          return panel === undefined ?
+            right.position().centerAdjust('x', '-x') :
+            panel.position().centerAdjust('x', '-z');
+        case 'ipl':
+          panel = left.getAssembly(left.partCode.replace(/f/, 'p'));
+          return panel === undefined ?
+            left.position().centerAdjust('x', '+x') :
+            panel.position().centerAdjust('x', '+z');
+        default:
+          return parentValue(attr, value);
+      }
+    }
   }
 }
 
@@ -10117,6 +10188,7 @@ class DividerSection extends PartitionSection {
   constructor(partCode, sectionProperties, parent) {
     super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties, parent);
     if (sectionProperties === undefined) return;
+    this.setParentAssembly(parent);
     const props = sectionProperties;
     const instance = this;
     this.position().center = (attr) => {
@@ -10126,9 +10198,30 @@ class DividerSection extends PartitionSection {
     this.position().demension = (attr) =>
       Position.targeted(attr, () => this.value('frw'),
           () => props().dividerLength / 2, () => this.value('frt'));
-    const panelCenterFunc = () => {return '0,0,0'};
-    const panelDemFunc = () => {return '0,0,0'};
-    const panelRotFunc = () => {return '0,0,0'};
+    const panelCenterFunc = (attr) => {
+      const props = sectionProperties();
+      const dem = {
+        x: props.center.x,
+        y: props.center.y,
+        z: props.depth / 2
+      };
+      return attr ? dem[attr] : dem;
+    };
+    const panelDemFunc = (attr) => {
+      if (attr === 'z') return this.value('pwt34');
+      const props = sectionProperties();
+      const dem = {
+        x: props.depth - frameDemFunc('z'),
+        y: props.dividerLength,
+        z: this.value('pwt34')
+      };
+      return attr ? dem[attr] : dem;
+    };
+    const panelRotFunc = () => {
+      const isVertical = sectionProperties().vertical;
+      if (isVertical) return 'xyz';
+      else return 'xy';
+    }
 
     const frameCenterFunc = (attr) => {
       const props = sectionProperties();
@@ -10141,19 +10234,41 @@ class DividerSection extends PartitionSection {
     };
 
     const frameDemFunc = (attr) => {
+      const reqHeight = attr === 'y' || attr === undefined;
       const dem = {
         x: this.value('frw'),
-        y: sectionProperties().dividerLength,
+        y: reqHeight ? sectionProperties().dividerLength : undefined,
         z: this.value('frt'),
       };
       return attr ? dem[attr] : dem;
     }
 
-    const frameRotFunc = () => sectionProperties().rotationFunc();
+    const frameRotFunc = () => props().rotationFunc();
 
+    const lastWidthCalc = {date: Number.MAX_SAFE_INTEGER};
+    this.maxWidth = () => {
+      const currentDate = new Date().getTime();
+      if (lastWidthCalc.date < currentDate + 1000) {
+        return lastWidthCalc.value;
+      }
+      if (!panel.included && !frame.included) return 0;
 
-    this.addSubAssembly(new Panel(`dp-${Divider.count}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc));
-    this.addSubAssembly(new Frame(`df-${Divider.count}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc));
+      let value;
+      const panelWidth = panel.position().demension('z');
+      const frameWidth = frame.position().demension('x');
+      if (value === undefined && !frame.included) return panelWidth;
+      if (value === undefined && !panel.included) return frameWidth;
+      if (value === undefined) value = panelWidth > frameWidth ? panelWidth : frameWidth;
+      lastWidthCalc.date = currentDate;
+      lastWidthCalc.value = value;
+      return value;
+    }
+
+    const index = props().index;
+    const panel = new Panel(`dp-${index}-${this.uniqueId}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
+    const frame = new Frame(`df-${index}-${this.uniqueId}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
+    this.addSubAssembly(panel);
+    this.addSubAssembly(frame);
   }
 }
 
@@ -10166,13 +10281,14 @@ let dvs;
 let dsCount = 0;
 class DivideSection extends SpaceSection {
   constructor(sectionProperties, parent) {
-    super(sectionFilePath('open'), `dvds-${dsCount++}`, 'divideSection', sectionProperties);
+    super(sectionFilePath('open'), `dvds-${parent.uniqueId}-${sectionProperties().index}`, 'divideSection', sectionProperties);
     this.important = ['partCode', 'partName', 'borderIds', 'index'];
+    const instance = this;
     this.setParentAssembly(parent);
     dvs = dvs || this;
     let pattern;
     let sectionCount = 1;
-    this.vertical = (is) => this.value('vertical', is);
+    this.vertical = (is) => instance.value('vertical', is);
     this.vertical(true);
     this.sections = [];
     this.pattern = (patternStr) => {
@@ -10200,6 +10316,9 @@ class DivideSection extends SpaceSection {
     this.spaces = () => this.sections.filter((e, index) => index % 2 === 0);
     this.borders = (index) => {
       return () => {
+        if (index === 1) {
+          console.log('center');
+        }
         const props = sectionProperties();
         const position = {
           top: props.position.top,
@@ -10238,6 +10357,9 @@ class DivideSection extends SpaceSection {
     }
     this.dividerProps = (index) => {
       return () => {
+        if (index === 1) {
+          console.log('center');
+        }
         const answer = this.dividerLayout().list;
         let offset = 0;
         for (let i = 0; i < index + 1; i += 1) offset += answer[i];
@@ -10258,13 +10380,22 @@ class DivideSection extends SpaceSection {
         }
         const rotationFunc = () =>  this.vertical() ? '' : 'z';
 
-        return {center, dividerLength, rotationFunc, index};
+        const depth = props.depth;
+        const vertical = this.vertical();
+        return {center, dividerLength, rotationFunc, index, depth, vertical};
       }
     }
 
     this.sectionCount = () => this.dividerCount() + 1;
     this.dividerLayout = () => {
-      const distance = this.vertical() ? this.outerSize().dems.x : this.outerSize().dems.y;
+      let distance;
+      if (CoverStartPoints.INSIDE_RAIL === this.value('csp')) {
+        distance = this.vertical() ? this.innerSize().x : this.innerSize().y;
+        this.sections.forEach((section) =>
+          distance -= section instanceof DividerSection ? section.maxWidth() : 0);
+      } else {
+        distance = this.vertical() ? this.outerSize().dems.x : this.outerSize().dems.y;
+      }
       return this.pattern().calc(distance);
     };
     this.divide = (dividerCount) => {
@@ -10279,11 +10410,9 @@ class DivideSection extends SpaceSection {
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
-            this.sections.push(new DividerSection(`dv${index}`, this.dividerProps(index)));
+            this.sections.push(new DividerSection(`dv-${this.uniqueId}-${index}`, this.dividerProps(index), instance));
             const divideIndex = dividerCount + index + 1;
-            this.sections.push(new DivideSection(this.borders(divideIndex)));
-            this.sections[index].setParentAssembly(this);
-            this.sections[divideIndex].setParentAssembly(this);
+            this.sections.push(new DivideSection(this.borders(divideIndex), instance));
           }
           return diff !== 0;
         }
@@ -10294,14 +10423,14 @@ class DivideSection extends SpaceSection {
       let section;
       if ((typeof constructorIdOobject) === 'string') {
         if (constructorIdOobject === 'DivideSection') {
-          section = new DivideSection(this.borders(index));
+          section = new DivideSection(this.borders(index), instance);
         } else {
           section = Section.new(constructorIdOobject, 'dr', this.borders(index));
         }
       } else {
         section = constructorIdOobject;
       }
-      section.setParentAssembly(this);
+      section.setParentAssembly(instance);
       this.sections[index] = section;
     }
     this.size = () => {
@@ -10334,6 +10463,7 @@ DivideSection.fromJson = (json, parent) => {
 
     const spaceIndex = index * 2;
     const spaceJson = subAssems[spaceIndex];
+    spaceJson.index = spaceIndex;
     const space = Assembly.class(spaceJson.type).fromJson(spaceJson, assembly);
     assembly.setSection(space, spaceIndex);
   }
@@ -10349,10 +10479,6 @@ DivideSection.abbriviation = 'ds';
 Assembly.register(DivideSection);
 
 
-const PULL_TYPE = {
-  DRAWER: 'Drawer',
-  DOOR: 'Door'
-}
 
 class OpeningCoverSection extends SpaceSection {
   constructor(filePath, partCode, partName, divideProps, pullType) {
@@ -10385,13 +10511,14 @@ class OpeningCoverSection extends SpaceSection {
 
     this.coverCenter = function (attr) {
       const center = instance.outerSize().center;
-      center.z = -3/4;
+      const inset = CoverStartPoints.INSIDE_RAIL === instance.value('csp');
+      center.z = inset ? 3/8 : -3/4;
       return attr ? center[attr] : center;
     }
 
     this.hingeSide = () => {
       const props = divideProps();
-      return props.borders.right.partCode === 'rr' ? '+x' : '-x';
+      return props.borders.right.partCode === 'fr' ? '+x' : '-x';
     }
 
 

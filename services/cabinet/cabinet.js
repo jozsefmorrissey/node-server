@@ -12,7 +12,6 @@ const fail = (next) => (e) => next(e);
 
 const getUser = (req, soft) => {
   const authStr = req.headers['authorization'];
-  console.log('as:', authStr);
   const split = authStr.split(':');
 
   const user = new User(split[0], split[1]);
@@ -100,7 +99,6 @@ function endpoints(app, prefix) {
   });
 
   app.post(prefix + EPNTS.order.add(), function (req, res) {
-    console.log('here')
     const orderId = req.params.id.replace(/[^a-z^A-Z^0-9^ ]/g, '');
     getUser(req).saveData(`order.${orderId}`, req.body);
     res.send('success');

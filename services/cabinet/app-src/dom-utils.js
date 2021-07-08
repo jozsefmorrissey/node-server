@@ -22,7 +22,6 @@ function appendError(target, message) {
     error.className = 'error';
     error.innerHTML = message;
     parent.insertBefore(error, target.nextElementSibling)
-    console.log('here')
   }
 }
 

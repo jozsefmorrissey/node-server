@@ -56,8 +56,9 @@ class CabinetConfig {
       cabinet.name = name;
       return cabinet;
     };
-    setTimeout(() =>
-      Request.get(EPNTS.cabinet.list(), setLists, () => setLists([])), 200);
+
+    afterLoad.push(() =>
+      Request.get(EPNTS.cabinet.list(), setLists, () => setLists([])));
   }
 }
 

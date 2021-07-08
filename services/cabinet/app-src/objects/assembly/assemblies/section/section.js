@@ -21,39 +21,37 @@ class Section extends Assembly {
       return attr ? center[attr] : center;
     }
 
-    const calculateRevealOffset = (borderPos, direction) => {
-      let reveal;
-      switch (direction) {
-        case '+x': reveal = this.value('rrv'); break;
-        case '-x': reveal = this.value('lrv'); break;
-        case '+y': reveal = this.value('trv'); break;
-        case '-y': reveal = this.value('brv'); break;
-        default:
-          throw new Error(`Invalid direction: ${direction}`);
-      }
-      const positive = direction.indexOf('-') === -1;
-      const inverseSign = !positive ? '+' : '-';
+    const calculateRevealOffset = (border, direction) => {
+      const borderPos = border.position();
+      let reveal = border.value('r');
+      const insideRailStart = CoverStartPoints.INSIDE_RAIL === border.value('csp');
+      const positive = insideRailStart ? direction.indexOf('-') !== -1 :
+                          direction.indexOf('-') === -1;
       const axis = direction.replace(/\+|-/, '');
       const magnitude = positive ? 1 : -1;
-      const borderCenter = borderPos.center(axis);
-      return  borderCenter - ((reveal * magnitude) / 2);
+      const divisor = insideRailStart ? 1 : 2;
+      const borderOrigin = !insideRailStart ? borderPos.center(axis) :
+        (positive ? borderPos.centerAdjust(`${axis}`, '-x') :
+                    borderPos.centerAdjust(`${axis}`, '+x'));
+      return  borderOrigin + ((reveal * magnitude) / divisor);
     }
+
 
     this.outerSize = () => {
       const props = sectionProperties();
       const pos = props.position;
 
-      const topPos = props.borders.top.position();
-      const botPos = props.borders.bottom.position();
-      const leftPos = props.borders.left.position();
-      const rightPos = props.borders.right.position();
+      const top = props.borders.top;
+      const bot = props.borders.bottom;
+      const left = props.borders.left;
+      const right = props.borders.right;
 
       const limits = {};
-      limits.x = pos.right || calculateRevealOffset(rightPos, '+x');
-      limits['-x'] = pos.left || calculateRevealOffset(leftPos, '-x');
-      limits.y = pos.top || calculateRevealOffset(topPos, '+y');
-      limits['-y'] = pos.bottom || calculateRevealOffset(botPos, '-y');
-      limits['-z'] = topPos.limits('-z');
+      limits.x = pos.right || calculateRevealOffset(right, '-x');
+      limits['-x'] = pos.left || calculateRevealOffset(left, '+x');
+      limits.y = pos.top || calculateRevealOffset(top, '-y');
+      limits['-y'] = pos.bottom || calculateRevealOffset(bot, '+y');
+      limits['-z'] = top.position().limits('-z');
       limits.z = props.depth - limits['-z'];
 
       const center = {};

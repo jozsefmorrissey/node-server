@@ -45,10 +45,22 @@ class Cabinet extends Assembly {
         const depth = pb.position().center('z') + pb.position().limits('-z');
 
         const position = {};
-        position.right = borders.right.position().centerAdjust('x', '-x') + this.value('rrv');
-        position.left = borders.left.position().centerAdjust('x', '+x') - this.value('lrv');
-        position.top = borders.top.position().centerAdjust('y', '+x') - this.value('trv');
-        position.bottom = borders.bottom.position().centerAdjust('y', '-x') + this.value('brv');
+        const start = {};
+        if (CoverStartPoints.INSIDE_RAIL === borders.top.value('csp')) {
+          position.right = borders.right.position().centerAdjust('x', '-x');
+          position.left = borders.left.position().centerAdjust('x', '+x');
+          position.top = borders.top.position().centerAdjust('y', '-x');
+          position.bottom = borders.bottom.position().centerAdjust('y', '+x');
+        } else {
+          position.right = borders.right.position().centerAdjust('x', '+x');
+          position.left = borders.left.position().centerAdjust('x', '-x');
+          position.top = borders.top.position().centerAdjust('y', '+x');
+          position.bottom = borders.bottom.position().centerAdjust('y', '-x');
+        }
+        position.right -= this.value('rrv');
+        position.left += this.value('lrv')
+        position.top -= this.value('trv');
+        position.bottom += this.value('brv');
 
         return {borders, position, depth, borderIds};
       }

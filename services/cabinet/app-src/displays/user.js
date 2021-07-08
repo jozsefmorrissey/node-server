@@ -26,7 +26,6 @@ class User {
     function successfulLogin(body, res) {
       const newAuth = res.getResponseHeader('authorization');
       document.cookie = `${APP_ID}=${newAuth}`;
-      console.log(newAuth);
       hideLogin();
     }
 
@@ -90,7 +89,6 @@ class User {
         default:
 
       }
-      console.log('sc:::', body);
     }
 
 

@@ -11,18 +11,17 @@ const DEFAULT_PROPS = {
   tkh: {name: 'Toe Kick Height', value: 3},
   pbt: {name: 'Panel Back Thickness', value: 1/2},
   brr: {name: 'Bottom Rail Reveal', value: 1/8},
-
   iph: {name: 'Ideal Pull Height', value: 42},
-  trv: {name: 'Top Reveal', value: 1/2},
-  brv: {name: 'Bottom Reveal', value: 1/4},
-  lrv: {name: 'Left Reveal', value: 1/2},
-  rrv: {name: 'Right Reveal', value: 1/2},
-  fs: {name: 'Face Spacing', value: 1/8},
-  is: {name: 'Inset Spacing', value: 1/16},
+  trv: {name: 'Top Reveal', value: 1},
+  brv: {name: 'Bottom Reveal', value: 1},
+  lrv: {name: 'Left Reveal', value: 1},
+  rrv: {name: 'Right Reveal', value: 1},
+  r: {name: 'Reveal', value: 1/2},
   vffs: {name: 'Vertical First Front Size', value: 5.5},
   Plywood: {name: 'Plywood', value: 'SoftMapel'},
   wood: {name: 'Wood', value: 'SoftMapel'},
-  glass: {name: 'glass', value: 'Flat'}
+  glass: {name: 'glass', value: 'Flat'},
+  csp: {name: 'Cover Start Point', value: CoverStartPoints.OUTSIDE_RAIL, options: Object.keys(CoverStartPoints)}
 };
 
 function properties(name, values) {
@@ -48,6 +47,7 @@ properties('Full Overlay', {
   brv: {name: 'Bottom Reveal', value: 1/16},
   lrv: {name: 'Left Reveal', value: 1/16},
   rrv: {name: 'Right Reveal', value: 1/16},
+  r: {name: 'Reveal', value: 1/16},
   fs: {name: 'Face Spacing', value: 1/16},
   vffs: {name: 'Vertical First Front Size', value: 5.5},
 });
@@ -57,6 +57,7 @@ properties('Inset', {
   brv: {name: 'Bottom Reveal', value: -1/16},
   lrv: {name: 'Left Reveal', value: -1/16},
   rrv: {name: 'Right Reveal', value: -1/16},
-  fs: {name: 'Face Spacing', value: -1/16},
+  r: {name: 'Reveal', value: -1/16},
   vffs: {name: 'Vertical First Front Size', value: 5.5},
+  csp: {name: 'Cover Start Point', value: CoverStartPoints.INSIDE_RAIL, CoverStartPoints}
 });

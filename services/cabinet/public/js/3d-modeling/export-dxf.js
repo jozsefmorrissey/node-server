@@ -3219,7 +3219,6 @@ ${corner13.z}
 let PolygonsTo3DFaces = (csg, options) => {
   let str = ''
   const polygons = csg.polygons
-  console.log(csg.toPolygons());
   // const objectColor = getColorNumber(object, options)
   polygons.forEach((polygon, i) => {
     const polyColor = 0;//polygon.color ? getColorNumber(polygon, options) : objectColor

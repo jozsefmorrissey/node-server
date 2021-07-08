@@ -2,13 +2,14 @@ let dvs;
 let dsCount = 0;
 class DivideSection extends SpaceSection {
   constructor(sectionProperties, parent) {
-    super(sectionFilePath('open'), `dvds-${dsCount++}`, 'divideSection', sectionProperties);
+    super(sectionFilePath('open'), `dvds-${parent.uniqueId}-${sectionProperties().index}`, 'divideSection', sectionProperties);
     this.important = ['partCode', 'partName', 'borderIds', 'index'];
+    const instance = this;
     this.setParentAssembly(parent);
     dvs = dvs || this;
     let pattern;
     let sectionCount = 1;
-    this.vertical = (is) => this.value('vertical', is);
+    this.vertical = (is) => instance.value('vertical', is);
     this.vertical(true);
     this.sections = [];
     this.pattern = (patternStr) => {
@@ -36,6 +37,9 @@ class DivideSection extends SpaceSection {
     this.spaces = () => this.sections.filter((e, index) => index % 2 === 0);
     this.borders = (index) => {
       return () => {
+        if (index === 1) {
+          console.log('center');
+        }
         const props = sectionProperties();
         const position = {
           top: props.position.top,
@@ -74,6 +78,9 @@ class DivideSection extends SpaceSection {
     }
     this.dividerProps = (index) => {
       return () => {
+        if (index === 1) {
+          console.log('center');
+        }
         const answer = this.dividerLayout().list;
         let offset = 0;
         for (let i = 0; i < index + 1; i += 1) offset += answer[i];
@@ -94,13 +101,22 @@ class DivideSection extends SpaceSection {
         }
         const rotationFunc = () =>  this.vertical() ? '' : 'z';
 
-        return {center, dividerLength, rotationFunc, index};
+        const depth = props.depth;
+        const vertical = this.vertical();
+        return {center, dividerLength, rotationFunc, index, depth, vertical};
       }
     }
 
     this.sectionCount = () => this.dividerCount() + 1;
     this.dividerLayout = () => {
-      const distance = this.vertical() ? this.outerSize().dems.x : this.outerSize().dems.y;
+      let distance;
+      if (CoverStartPoints.INSIDE_RAIL === this.value('csp')) {
+        distance = this.vertical() ? this.innerSize().x : this.innerSize().y;
+        this.sections.forEach((section) =>
+          distance -= section instanceof DividerSection ? section.maxWidth() : 0);
+      } else {
+        distance = this.vertical() ? this.outerSize().dems.x : this.outerSize().dems.y;
+      }
       return this.pattern().calc(distance);
     };
     this.divide = (dividerCount) => {
@@ -115,11 +131,9 @@ class DivideSection extends SpaceSection {
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
-            this.sections.push(new DividerSection(`dv${index}`, this.dividerProps(index)));
+            this.sections.push(new DividerSection(`dv-${this.uniqueId}-${index}`, this.dividerProps(index), instance));
             const divideIndex = dividerCount + index + 1;
-            this.sections.push(new DivideSection(this.borders(divideIndex)));
-            this.sections[index].setParentAssembly(this);
-            this.sections[divideIndex].setParentAssembly(this);
+            this.sections.push(new DivideSection(this.borders(divideIndex), instance));
           }
           return diff !== 0;
         }
@@ -130,14 +144,14 @@ class DivideSection extends SpaceSection {
       let section;
       if ((typeof constructorIdOobject) === 'string') {
         if (constructorIdOobject === 'DivideSection') {
-          section = new DivideSection(this.borders(index));
+          section = new DivideSection(this.borders(index), instance);
         } else {
           section = Section.new(constructorIdOobject, 'dr', this.borders(index));
         }
       } else {
         section = constructorIdOobject;
       }
-      section.setParentAssembly(this);
+      section.setParentAssembly(instance);
       this.sections[index] = section;
     }
     this.size = () => {
@@ -170,6 +184,7 @@ DivideSection.fromJson = (json, parent) => {
 
     const spaceIndex = index * 2;
     const spaceJson = subAssems[spaceIndex];
+    spaceJson.index = spaceIndex;
     const space = Assembly.class(spaceJson.type).fromJson(spaceJson, assembly);
     assembly.setSection(space, spaceIndex);
   }

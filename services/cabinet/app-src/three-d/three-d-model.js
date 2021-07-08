@@ -159,7 +159,7 @@ class ThreeDModel {
       model.rotate(pos.rotation);
       pos.center.z *= -1;
       model.center(pos.center);
-      serialize({}, model);
+      // serialize({}, model);
       return model;
     }
 

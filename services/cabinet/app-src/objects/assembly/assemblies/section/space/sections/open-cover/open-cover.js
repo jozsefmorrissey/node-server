@@ -1,7 +1,3 @@
-const PULL_TYPE = {
-  DRAWER: 'Drawer',
-  DOOR: 'Door'
-}
 
 class OpeningCoverSection extends SpaceSection {
   constructor(filePath, partCode, partName, divideProps, pullType) {
@@ -34,13 +30,14 @@ class OpeningCoverSection extends SpaceSection {
 
     this.coverCenter = function (attr) {
       const center = instance.outerSize().center;
-      center.z = -3/4;
+      const inset = CoverStartPoints.INSIDE_RAIL === instance.value('csp');
+      center.z = inset ? 3/8 : -3/4;
       return attr ? center[attr] : center;
     }
 
     this.hingeSide = () => {
       const props = divideProps();
-      return props.borders.right.partCode === 'rr' ? '+x' : '-x';
+      return props.borders.right.partCode === 'fr' ? '+x' : '-x';
     }
 
 

@@ -21,7 +21,6 @@ class Measurement {
 
     const parseFraction = (str) => {
       const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
-      console.log('')
       regObj.integer = Number.parseInt(regObj.integer) || 0;
       regObj.numerator = Number.parseInt(regObj.numerator) || 0;
       regObj.denominator = Number.parseInt(regObj.denominator) || 0;
