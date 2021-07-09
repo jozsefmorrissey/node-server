@@ -113,11 +113,11 @@ $t.functions['managers/cost/body'] = function (get) {
 $t.functions['managers/cost/cost-body'] = function (get) {
 	return `<div> <div` + (get("cost").constructor.name === 'Labor' || get("cost").constructor.name === 'Material' ? '' : ' hidden') + `> <span` + (get("cost").length() === undefined ? ' hidden' : '') + `> <input value='` + (get("cost").length()) + `'> </span> <span` + (get("cost").width() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").width()) + `'> </span> <span` + (get("cost").depth() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").depth()) + `'> </span> <br> <div> <label>Cost</label> <input value='` + (get("cost").cost()) + `'> <label>Per ` + (get("cost").unitCost('name')) + ` = ` + (get("cost").unitCost('value')) + `</label> </div> </div> <div` + (get("cost").constructor.name === 'SelectCost' || get("cost").constructor.name === 'Category' ? '' : ' hidden') + `> <div` + (get("cost").constructor.name === 'SelectCost' ? '' : ' hidden') + `> <label>Selected (` + (get("cost").constructor.name) + `)</label> <input type='number' value='` + (get("cost").constructor.name === 'SelectCost' ? get("cost").selected() : '-1') + `'> </div> <div id='` + (get("parentId")) + `'>` + (get("expandList").html()) + `</div> </div> </div> `
 }
-$t.functions['managers/cost/header'] = function (get) {
-	return `<b>` + (get("instance").partId) + `</b> `
-}
 $t.functions['managers/cost/cost-head'] = function (get) {
 	return `<b> ` + (get("id")()) + ` - ` + (get("constructor").constructorId(get("constructor").name)) + ` <b` + (get("method")() ? '' : ' hidden') + `>(` + (get("method")()) + `)</b> </b> `
+}
+$t.functions['managers/cost/header'] = function (get) {
+	return `<b>` + (get("instance").partId) + `</b> `
 }
 $t.functions['managers/property/body'] = function (get) {
 	return `<div> No Need </div> `
@@ -127,6 +127,9 @@ $t.functions['managers/property/header'] = function (get) {
 }
 $t.functions['managers/template/body'] = function (get) {
 	return `<div> <span> <input value='` + (get("instance").length()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").width()) + `'> </span> <span> <label>X</label> <input value='` + (get("instance").depth()) + `'> </span> <label>Cost</label> <input value='` + (get("instance").cost()) + `'> <br> <label>Per ` + (get("instance").unitCost().name) + ` = ` + (get("instance").unitCost().value) + ` </div> `
+}
+$t.functions['managers/template/header'] = function (get) {
+	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
 }
 $t.functions['model-controller'] = function (get) {
 	return `<div> <div class='model-selector'> <div ` + (get("group").level > 0 ? 'hidden' : '') + `> <div class='` + (get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") + ` ` + (get("label") ? "prefix-switch model-label" : "") + `' ` + (!get("label") ? 'hidden' : '') + `> <label type='prefix'>` + (get("label")) + `</label> <input type='checkbox' class='prefix-checkbox' prefix='` + (get("group").prefix) + `' ` + (!get("tdm").hidePrefix(get("label")) ? 'checked' : '') + `> </div> <div class='` + (get("label") ? "prefix-body indent" : "") + `' ` + (get("label") ? 'hidden' : '') + `> ` + (new $t('<div class=\'model-label{{tdm.isTarget("part-name", partName) ? " active" : ""}}\' > <label type=\'part-name\'>{{partName}}</label> <input type=\'checkbox\' class=\'part-name-checkbox\' part-name=\'{{partName}}\' {{!tdm.hidePartName(partName) ? \'checked\' : \'\'}}> {{new $t(\'<div class=\\\'{{tdm.isTarget("part-code", part.partCode) ? "active " : ""}} model-label indent\\\'  {{partList.length > 1 ? "" : "hidden"}}> <label type=\\\'part-code\\\'>{{part.partCode}}</label> <input type=\\\'checkbox\\\' class=\\\'part-code-checkbox\\\' part-code=\\\'{{part.partCode}}\\\' {{!tdm.hidePartCode(part.partCode) ? \\\'checked\\\' : \\\'\\\'}}> </div>\').render(get(\'scope\'), \'part in partList\', get)}} </div>').render(get('scope'), 'partName, partList in group.parts', get)) + ` ` + (new $t('model-controller').render(get('scope'), 'label, group in group.groups', get)) + ` </div> </div> </div> </div> `
@@ -140,20 +143,17 @@ $t.functions['-443173449'] = function (get) {
 $t.functions['-424251200'] = function (get) {
 	return `model-controller`
 }
-$t.functions['managers/template/header'] = function (get) {
-	return `<div> <b>` + (get("instance").id()) + ` - ` + (get("instance").constructor.name) + ` (` + (get("instance").method()) + `)</b> </div> `
-}
 $t.functions['opening'] = function (get) {
 	return `<div class='opening-cnt' opening-id='` + (get("opening").uniqueId) + `'> <div class='divider-controls'> </div> </div> <div id='` + (get("openDispId")) + `'> </div> `
 }
 $t.functions['order/body'] = function (get) {
-	return `<div> <b>` + (get("order").name) + `</b> <button class='save-order-btn' index='` + (get("$index")) + `'>Save</button> <div id='room-pills'></div> </div> `
+	return `<div> <b>` + (get("order").name) + `</b> <div id='order-nav'></div> </div> `
 }
 $t.functions['order/head'] = function (get) {
 	return `<h3 class='margin-zero'> ` + (get("order").name) + ` </h3> `
 }
 $t.functions['order'] = function (get) {
-	return `<div> <label>Order Name</label> <input type='text'> <div id='room-pills'></div> </div> `
+	return `f `
 }
 $t.functions['properties/properties'] = function (get) {
 	return `<div class='center'> <input type=text class='property-filter'> <div class='property-container'> ` + (new $t('<div > <label>{{prop.name}}</label> <input type="text" name="{{key}}" value="{{prop.value}}"> </div>').render(get('scope'), 'key, prop in properties', get)) + ` </div> </div> `
@@ -187,4 +187,13 @@ $t.functions['sections/false-front'] = function (get) {
 }
 $t.functions['sections/open'] = function (get) {
 	return `<h2>Open: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['order/information/head'] = function (get) {
+	return `<b>Information</b> `
+}
+$t.functions['order/builder/body'] = function (get) {
+	return `<div> <b>` + (get("order").name) + `</b> <button class='save-order-btn' index='` + (get("$index")) + `'>Save</button> <div id='room-pills'></div> </div> `
+}
+$t.functions['order/builder/head'] = function (get) {
+	return `<h3 class='margin-zero'> ` + (get("order").name) + ` </h3> `
 }
