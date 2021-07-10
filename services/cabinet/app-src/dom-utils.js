@@ -114,11 +114,12 @@ function runMatch(event) {
 
 
 function addClass(target, clazz) {
+  removeClass(target, clazz);
   target.className += ` ${clazz}`;
 }
 
 function classReg(clazz) {
-  return new RegExp(`(^| )${clazz}( |$)`, 'g');
+  return new RegExp(`(^| )(${clazz}( |$))*`, 'g');
 }
 
 function removeClass(target, clazz) {

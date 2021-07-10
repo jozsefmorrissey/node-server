@@ -79,7 +79,8 @@ class Measurement {
     this.fraction = (accuracy) => {
       if (nan) return NaN;
       const obj = calculateValue(accuracy);
-      return `${obj.integer}${reduce(obj.numerator, obj.denominator)}`;
+      const integer = obj.integer !== 0 ? obj.integer : '';
+      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
     }
 
     this.decimal = (accuracy) => {

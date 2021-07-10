@@ -5,15 +5,23 @@ class OrderDisplay {
     const getHeader = (order, $index) =>
         OrderDisplay.headTemplate.render({order, $index});
 
-    function initOrder(order) {
+    const setInfo = (order, index) => () => {
+      const elem = document.getElementById(`uf-info-${index}`);
+      if (elem)
+        UTF.buildDisplay(elem, new UFObj(order));
+    }
+
+    function initOrder(order, index) {
       roomDisplays[order.id] = new RoomDisplay('#room-pills', order);
+      ToggleDisplayList.onShow(`information-display-${index}`, );
+      expandList.afterRender(setInfo(order, index));
       return order;
     }
 
     function loadOrder(index, start) {
       return function (orderData) {
         const order = Order.fromJson(orderData);
-        initOrder(order);
+        initOrder(order, index);
         expandList.set(index, order);
         expandList.refresh();
         console.log('load Time:', new Date().getTime() - start);
@@ -73,3 +81,7 @@ class OrderDisplay {
 }
 OrderDisplay.bodyTemplate = new $t('order/body');
 OrderDisplay.headTemplate = new $t('order/head');
+OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
+OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
+OrderDisplay.infoBodyTemplate = new $t('order/information/body');
+OrderDisplay.infoHeadTemplate = new $t('order/information/head');

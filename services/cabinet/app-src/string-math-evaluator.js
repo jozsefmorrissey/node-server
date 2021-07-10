@@ -239,7 +239,7 @@ class StringMathEvaluator {
 
       if (Number.isFinite(value)) {
         cache[expr] = {time: new Date().getTime(), value};
-        return value;
+        return new Measurement(value).decimal('1/32');
       }
       return NaN;
     }

@@ -22,7 +22,7 @@ class DrawerFront extends Assembly {
       count = count || pullCount(this.demensionStr());
       pulls = [];
       for (let index = 0; index < count; index += 1) {
-        pulls.push(new Pull(`${partCode}-dfp-${index}`, 'Drawer.Pull', this, Pull.location.CENTER, index, count));
+        pulls.push(new Pull(`${partCode}-p-${index}`, 'Drawer.Pull', this, Pull.location.CENTER, index, count));
       }
       return pulls;
     };

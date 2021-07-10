@@ -11,7 +11,7 @@ class Cabinet extends Assembly {
   constructor(partCode, partName, propsId) {
     super(partCode, partName);
     this.propertyId(propsId);
-    this.important = ['partCode', 'partName', 'length', 'width', 'thickness', 'propertyId'];
+    this.important = ['partCode', 'name', 'partName', 'length', 'width', 'thickness', 'propertyId'];
     const instance = this;
     let frameWidth = framedFrameWidth;
     let toeKickHeight = 4;

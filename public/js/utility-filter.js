@@ -806,6 +806,7 @@ function UtilityFilter() {
 
   window.addEventListener('load', onLoad);
 
+  UTF.buildDisplay = buildDisplay;
   UTF.setEdit = setEdit;
   UTF.openPopUp = openPopUp;
   UTF.closePopUp = closePopUp;

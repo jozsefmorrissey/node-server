@@ -79,8 +79,8 @@ class DividerSection extends PartitionSection {
     }
 
     const index = props().index;
-    const panel = new Panel(`dp-${index}-${this.uniqueId}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
-    const frame = new Frame(`df-${index}-${this.uniqueId}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
+    const panel = new Panel(`dp-${index}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
+    const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
     this.addSubAssembly(panel);
     this.addSubAssembly(frame);
   }

@@ -1,4 +1,24 @@
 <div>
   <b>{{order.name}}</b>
-  <div id='order-nav'></div>
+  <ul id='order-nav' class='center toggle-display-list'>
+    <li class='toggle-display-item active'
+        display-id='builder-display-{{$index}}'>Builder</li>
+    <li class='toggle-display-item'
+        display-id='information-display-{{$index}}'>Information</li>
+  </ul>
+  <div id='builder-display-{{$index}}'>
+    <b>{{order.name}}</b>
+    <button class='save-order-btn' index='{{$index}}'>Save</button>
+    <div id='room-pills'>RoomPills!</div>
+  </div>
+  <div id='information-display-{{$index}}' hidden>
+    <utility-filter id='uf-info-{{$index}}'>
+      [
+        {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988},
+        {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933},
+        {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960},
+        {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443},
+        {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}]
+    </utility-filter>
+  </div>
 </div>
