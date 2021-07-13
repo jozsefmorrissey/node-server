@@ -29,7 +29,7 @@ class CostManager extends AbstractManager {
           inputValidation: () => true,
           parentId,
           parentSelector: `#${parentId}`,
-          inputTree:   CostManager.costInputTree(costTypes, id === 'Define', CostManager.onUpdate),
+          inputTree:   CostManager.costInputTree(costTypes, id, CostManager.onUpdate),
           getHeader: CostManager.costHeader,
           getBody: CostManager.costBody,
           getObject: CostManager.getCostObject(id),
@@ -76,7 +76,7 @@ CostManager.childScope = (cost) => {
       list: cost.children,
       inputValidation: () => true,
       parentSelector: `#${parentId}`,
-      inputTree:   CostManager.costInputTree(costTypes, cost.id() === 'Define', CostManager.onUpdate),
+      inputTree:   CostManager.costInputTree(costTypes, undefined, CostManager.onUpdate),
       getHeader: CostManager.costHeader,
       getBody: CostManager.costBody,
       getObject: CostManager.getCostObject(cost.id()),
@@ -116,13 +116,17 @@ afterLoad.push(() => {
     };
 });
 
-CostManager.costInputTree = (costTypes, hideCostTypes, onUpdate) => {
+CostManager.costInputTree = (costTypes, objId, onUpdate) => {
   const costTypeSelect = new Select({
     name: 'costType',
     value: 'Custom',
-    hide: hideCostTypes,
     class: 'center',
     list: Cost.defined
+  });
+  const objectId = new Input({
+    name: 'objectId',
+    hidden: true,
+    value: objId
   });
   const formula = new Input({
     name: 'formula',
@@ -134,7 +138,7 @@ CostManager.costInputTree = (costTypes, hideCostTypes, onUpdate) => {
   const id = Input.CostId();
 
 costTypeSelect
-  const idType = [id, Select.costType()];
+  const idType = [objectId, id, Select.costType()];
   const materialInput = [Select.method(), Select.company(), Input.partNumber()];
   const laborInput = [Select.method()];
 

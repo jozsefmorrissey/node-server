@@ -23,6 +23,11 @@ class Cost {
     const referenceCost = props.referenceCost instanceof Cost ? props.referenceCost : undefined;
     const uniqueId = randomString();
     this.uniqueId = () => uniqueId;
+    this.objectId = () => props.objectId;
+    if (props.objectId !== undefined) {
+      if (Cost.objMap[props.objectId] === undefined) Cost.objMap[props.objectId] = [];
+      Cost.objMap[props.objectId].push(this);
+    }
     this.id = referenceCost ? referenceCost.id : () => props.id;
     this.children = referenceCost ? referenceCost.children : [];
     if (referenceCost === undefined) {
@@ -68,6 +73,7 @@ class Cost {
         id: this.id(),
         company: this.company(),
         partNumber: this.partNumber(),
+        objectId: this.objectId(),
         method: this.method(),
         length: this.length(),
         width: this.width(),
@@ -167,6 +173,10 @@ Cost.toJson = (array) => {
   });
   return list;
 }
+
+// Cost.calc(assembly) => {
+//
+// }
 
 afterLoad.push(() =>
   Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))

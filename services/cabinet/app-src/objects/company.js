@@ -10,6 +10,9 @@ class Company {
 }
 
 Company.list = {};
+new Company({name: 'Central Door'});
+new Company({name: 'Central Wood'});
 new Company({name: 'ADC'});
+new Company({name: 'Accessa'});
 new Company({name: 'Top Knobs'});
 new Company({name: 'Richelieu'});
