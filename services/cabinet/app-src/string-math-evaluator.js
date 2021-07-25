@@ -19,6 +19,8 @@ class StringMathEvaluator {
 
     function resolve (path, currObj, globalCheck) {
       if (path === '') return currObj;
+      const resolved = !globalCheck && resolver && resolver(path, currObj);
+      if (resolved) return resolved;
       try {
         if ((typeof path) === 'string') path = path.split(splitter);
         for (let index = 0; index < path.length; index += 1) {
@@ -30,8 +32,6 @@ class StringMathEvaluator {
         return resolve(path, globalScope, true);
       }
     }
-
-    resolve = resolver || resolve;
 
     function multiplyOrDivide (values, operands) {
       const op = operands[operands.length - 1];

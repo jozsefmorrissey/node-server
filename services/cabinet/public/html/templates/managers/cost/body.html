@@ -1,4 +1,9 @@
 <div class='{{instance.cntClass}}' >
+  <div class='global-prop-cnt'>
+    <p repeat='id, prop in instance.requiredProps.global'
+        prop-id=id>
+      prop.name()
+    </p>
+  </div>
   <div id='{{instance.parentId}}'>{{instance.expandList.html()}}</div>
-  <div hidden>hi</div>
 </div>

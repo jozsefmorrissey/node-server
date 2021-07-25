@@ -55,3 +55,23 @@ function arraySet(array, values, start, end) {
     array[index] = values[index];
   return array;
 }
+
+
+JSON.clone = (obj) => {
+  const keys = Object.keys(obj);
+  const clone = ((typeof obj.clone) === 'function') ? obj.clone() : {};
+  for(let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
+    const member = obj[key];
+    if ((typeof memeber) === 'object') {
+      if ((typeof member.clone) === 'function') {
+        clone[key] = member.clone();
+      } else {
+        clone[key] = JSON.clone(member);
+      }
+    } else {
+      clone[key] = member;
+    }
+  }
+  return clone;
+}

@@ -62,6 +62,7 @@ class ExpandableList {
         this.activeIndex(props.list.length - 1);
         this.refresh();
         afterAddEvent.trigger();
+        if (this.hasInputTree) props.inputTree.formFilled();
       } else {
         const errors = props.inputValidation(inputValues);
         let errorStr;
@@ -135,6 +136,7 @@ class ExpandableList {
         target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
         target.className += ' active';
         afterRenderEvent.trigger();
+        // scrollIntoView(target.parentElement, 3, 25, document.body);
       }
     };
     afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});

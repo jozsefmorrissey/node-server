@@ -1,9 +1,16 @@
 <div class='center'>
-  <input type=text class='property-filter'>
-  <div class='property-container'>
-    <div:t repeat='key, prop in properties'>
-      <label>{{prop.name}}</label>
-      <input type="text" name="{{key}}" value="{{prop.value}}">
-    </div:t>
+  <div class='{{key ? "property-container" : ""}}' radio-id='{{radioId}}'>
+    <div>
+      {{key}}
+    </div>
+    <div{{key ? ' hidden' : ''}}>
+      <div:t repeat='property in properties'>
+        <label>{{property.name()}}</label>
+        <input type="text" name="{{key}}" value="{{property.value()}}">
+      </div:t>
+      <div:t repeat='key, group in groups'>
+        {{recurse(key, group)}}
+      </div:t>
+    </div>
   </div>
 </div>

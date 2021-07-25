@@ -1,6 +1,6 @@
 class Material extends Cost {
-  constructor (id, method, cost, length, width, depth) {
-    super(id, method, cost, length, width, depth);
+  constructor (props) {
+    super(props);
   }
 }
 

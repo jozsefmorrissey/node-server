@@ -247,6 +247,78 @@ function getParam(name) {
   return decodeURI(getParam.params[name]);
 }
 
+function temporaryStyle(elem, time, style) {
+  const save = {};
+  const keys = Object.keys(style);
+  keys.forEach((key) => {
+    save[key] = elem.style[key];
+    elem.style[key] = style[key];
+  });
+
+  setTimeout(() => {
+    keys.forEach((key) => {
+      elem.style[key] = save[key];
+    });
+  }, time);
+}
+
+function center(elem) {
+  const rect = elem.getBoundingClientRect();
+  const x = rect.x + (rect.height / 2);
+  const y = rect.y + (rect.height / 2);
+  return {x, y, top: rect.top};
+}
+
+function isScrollable(elem) {
+    const horizontallyScrollable = elem.scrollWidth > elem.clientWidth;
+    const verticallyScrollable = elem.scrollHeight > elem.clientHeight;
+    return elem.scrollWidth > elem.clientWidth || elem.scrollHeight > elem.clientHeight;
+};
+
+function scrollableParents(elem) {
+  let scrollable = [];
+  if (elem instanceof HTMLElement) {
+    if (isScrollable(elem)) {
+      scrollable.push(elem);
+    }
+    return scrollableParents(elem.parentNode).concat(scrollable);
+  }
+  return scrollable;
+}
+
+function scrollIntoView(elem, divisor, delay, scrollElem) {
+  let scrollPidCounter = 0;
+  const lastPosition = {};
+  let highlighted = false;
+  function scroll(scrollElem) {
+    return function() {
+      const scrollCenter = center(scrollElem);
+      const elemCenter = center(elem);
+      const fullDist = Math.abs(scrollCenter.y - elemCenter.y);
+      const scrollDist = fullDist > 5 ? fullDist/divisor : fullDist;
+      const yDiff = scrollDist * (elemCenter.y < scrollCenter.y ? -1 : 1);
+      scrollElem.scroll(0, scrollElem.scrollTop + yDiff);
+      if (elemCenter.top !== lastPosition[scrollElem.scrollPid]
+            && (scrollCenter.y < elemCenter.y - 2 || scrollCenter.y > elemCenter.y + 2)) {
+        lastPosition[scrollElem.scrollPid] = elemCenter.top;
+        setTimeout(scroll(scrollElem), delay);
+      } else if(!highlighted) {
+        highlighted = true;
+        temporaryStyle(elem, 2000, {
+          borderStyle: 'solid',
+          borderColor: '#07ff07',
+          borderWidth: '5px'
+        });
+      }
+    }
+  }
+  const scrollParents = scrollableParents(elem);
+  scrollParents.forEach((scrollParent) => {
+    scrollParent.scrollPid = scrollPidCounter++;
+    setTimeout(scroll(scrollParent), 100);
+  });
+}
+
 
 function removeCookie(name) {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;

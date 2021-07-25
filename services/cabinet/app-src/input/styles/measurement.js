@@ -44,3 +44,25 @@ MeasurementInput.pattern = (id, value) => new MeasurementInput({
   name: id,
   class: 'pattern-input',
 });
+
+MeasurementInput.offsetLen = () => new MeasurementInput({
+  type: 'text',
+  label: 'Offset',
+  placeholder: 'Length',
+  name: 'offsetLength',
+  class: 'center',
+});
+MeasurementInput.offsetWidth = () => new MeasurementInput({
+  type: 'text',
+  label: 'x',
+  placeholder: 'Width',
+  name: 'offsetWidth',
+  class: 'center',
+});
+MeasurementInput.offsetDepth = () => new MeasurementInput({
+  type: 'text',
+  label: 'x',
+  placeholder: 'Depth',
+  name: 'offsetDepth',
+  class: 'center',
+});

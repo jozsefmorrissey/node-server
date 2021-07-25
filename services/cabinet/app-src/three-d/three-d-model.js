@@ -136,7 +136,7 @@ class ThreeDModel {
     function coloring(part) {
       if (part.partName && part.partName.match(/.*Frame.*/)) return getColor('blue');
       else if (part.partName && part.partName.match(/.*Drawer.Box.*/)) return getColor('green');
-      else if (part.partName && part.partName.match(/.*Pull.*/)) return getColor('silver');
+      else if (part.partName && part.partName.match(/.*Handle.*/)) return getColor('silver');
       return getColor('red');
     }
 
@@ -150,7 +150,7 @@ class ThreeDModel {
       let model;
       if (assem instanceof DrawerBox) {
         model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
-      } else if (assem instanceof Pull) {
+      } else if (assem instanceof Handle) {
         model = pull(pos.demension.y, pos.demension.z);
       } else {
         const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];

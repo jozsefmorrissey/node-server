@@ -8,7 +8,8 @@ class DecisionInputTree extends DecisionTree{
         this.decisionTreeId = decisionTreeId;
         this.id = `decision-input-node-${randomString()}`;
         this.childCntId = `decision-child-ctn-${randomString()}`
-        this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance);
+        this.values = () => root.values()
+        this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
         this.class = rootClass;
         this.getValue = (index) => this.inputArray[index].value();
 
@@ -51,6 +52,17 @@ class DecisionInputTree extends DecisionTree{
       return parentAddStates(states)
     }
 
+    function getInput(name) {
+      let answer;
+      forEachInput((input) => answer = input.name === name ? input : answer);
+      return answer;
+    }
+
+    this.set = (name, value) => {
+      const input = getInput(name);
+      input.setValue(value);
+    }
+
     const next = (node, index) => {
       const inputArray = node.payload.inputArray;
       const input = inputArray[index];
@@ -76,9 +88,13 @@ class DecisionInputTree extends DecisionTree{
 
     function formFilled() {
       let filled = true;
-      forEachInput((input) => filled = filled && input.valid());
+      forEachInput((input) => filled = filled && input.doubleCheck());
+      const addBtn = document.querySelector(buttonSelector);
+      if (addBtn) addBtn.disabled = !filled;
       return filled;
     }
+
+    this.formFilled = formFilled;
 
     function values() {
       const values = {};
@@ -86,6 +102,12 @@ class DecisionInputTree extends DecisionTree{
       return values;
     }
     this.values = values;
+
+    const contengencies = {};
+    this.contengency = (subject, master) => {
+      if (contengencies[master] === undefined) contengencies[master] = [];
+      contengencies[master].push(subject);
+    }
 
     this.update = (target) => {
       const parentDecisionCnt = up(`.${rootClass}`, target);
@@ -96,6 +118,11 @@ class DecisionInputTree extends DecisionTree{
         if (currentNode) {
           const currentInput = currentNode.payload.inputArray[index];
           currentInput.setValue();
+          (contengencies[currentInput.name] || []).forEach((inputName) => {
+            const contengentInput = getInput(inputName);
+            if (contengentInput)
+              contengentInput.doubleCheck();
+          });
           runFunctions(onChange, currentInput.name, currentInput.value(), target);
           const stepLen = Object.keys(currentNode.states).length;
           if (stepLen) {
@@ -112,7 +139,7 @@ class DecisionInputTree extends DecisionTree{
         }
       }
 
-      document.querySelector(buttonSelector).disabled = !formFilled();
+      formFilled();
     }
 
     this.html = () => DecisionInputTree.template.render(this);
@@ -140,10 +167,12 @@ class DecisionInputTree extends DecisionTree{
   }
 }
 
-DecisionInputTree.validateInput = (inputArrayOinstance) => {
+DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
   if (Array.isArray(inputArrayOinstance)) {
     inputArrayOinstance.forEach((instance) => {
       if (!(instance instanceof Input)) throw new Error('arg3 must be an array exclusivly of/or instance of Input');
+      const parentValidate = instance.validation;
+      instance.validation = (value) => parentValidate(value, valuesFunc());
       instance.childCntId = `decision-child-ctn-${randomString()}`
     });
     return inputArrayOinstance;

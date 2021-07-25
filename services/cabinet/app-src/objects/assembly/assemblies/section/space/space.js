@@ -27,30 +27,30 @@ class SpaceSection extends Section {
         case 'opl':
           if (props.position.left) return props.position.left;
           return left.position().center('x');
-        case 'ppt':
+        case 'fpt':
           return top.position().center('y') - top.width() / 2;
-        case 'ppb':
+        case 'fpb':
           return bottom.position().center('y') + bottom.width() / 2;
-        case 'ppr':
+        case 'fpr':
           return right.position().center('x') - right.width() / 2;
-        case 'ppl':
+        case 'fpl':
           return left.position().center('x') + left.width() / 2;
-        case 'ipt':
+        case 'ppt':
           panel = top.getAssembly(top.partCode.replace(/f/, 'p'));
           return panel === undefined ?
             top.position().centerAdjust('y', '-x') :
             panel.position().centerAdjust('y', '-z');
-        case 'ipb':
+        case 'ppb':
           panel = bottom.getAssembly(bottom.partCode.replace(/f/, 'p'));
           return panel === undefined ?
             bottom.position().centerAdjust('y', '+x') :
             panel.position().centerAdjust('y', '+z');
-        case 'ipr':
+        case 'ppr':
           panel = right.getAssembly(right.partCode.replace(/f/, 'p'));
           return panel === undefined ?
             right.position().centerAdjust('x', '-x') :
             panel.position().centerAdjust('x', '-z');
-        case 'ipl':
+        case 'ppl':
           panel = left.getAssembly(left.partCode.replace(/f/, 'p'));
           return panel === undefined ?
             left.position().centerAdjust('x', '+x') :

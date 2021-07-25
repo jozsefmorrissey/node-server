@@ -1,3 +1,37 @@
+
+class Property {
+  // clone constructor(id, value) {
+  constructor(id, name, props) {
+    let value;
+    const existingProp = Property.list[id];
+    let clone = false;
+    if (existingProp) {
+      this.name = existingProp.name();
+      props = existingProp.properties();
+      value = name;
+      clone = true;
+    } else {
+      props = props || {};
+      value = props.value;
+    }
+    this.id = () => id;
+    this.name = () => name;
+    this.values = () => JSON.parse(JSON.stringify(props.values));
+    this.description = () => props.description;
+    this.value = (val) => {
+      if (val !== undefined) value = val;
+      return value;
+    }
+    this.properties = () => props;
+    this.clone = (val) => {
+      return new Property(id, name, val, props);
+    }
+    if(!clone) Property.list[id] = this;
+  }
+}
+
+Property.list = {};
+
 const DEFAULT_PROPS = {
   pwt34: {name: 'Plywood 3/4 Thickness', value: 25/32},
   pwt12: {name: 'Plywood 1/2 Thickness', value: 1/2},
@@ -11,18 +45,68 @@ const DEFAULT_PROPS = {
   tkh: {name: 'Toe Kick Height', value: 3},
   pbt: {name: 'Panel Back Thickness', value: 1/2},
   brr: {name: 'Bottom Rail Reveal', value: 1/8},
-  iph: {name: 'Ideal Pull Height', value: 42},
+  iph: {name: 'Ideal Handle Height', value: 42},
   trv: {name: 'Top Reveal', value: 1},
   brv: {name: 'Bottom Reveal', value: 1},
   lrv: {name: 'Left Reveal', value: 1},
   rrv: {name: 'Right Reveal', value: 1},
   r: {name: 'Reveal', value: 1/2},
-  vffs: {name: 'Vertical First Front Size', value: 5.5},
   Plywood: {name: 'Plywood', value: 'SoftMapel'},
   wood: {name: 'Wood', value: 'SoftMapel'},
   glass: {name: 'glass', value: 'Flat'},
   csp: {name: 'Cover Start Point', value: CoverStartPoints.OUTSIDE_RAIL, options: Object.keys(CoverStartPoints)}
 };
+
+const assemProps = {
+  Cabinet: {
+    global: {},
+    instance: {
+      Frame: {
+        Scribe: {
+          frorr: new Property('frorr', 'Right'),
+          frorl: new Property('frorl', 'Left'),
+        },
+        Reveal: {
+          brr: new Property('brr', 'Inside Bottom'),
+          Cover: {
+            trv: new Property('trv', 'Top'),
+            brv: new Property('brv', 'Bottom'),
+            lrv: new Property('lrv', 'Left'),
+            rrv: new Property('rrv', 'Right'),
+            r: new Property('r', 'Reveal')
+          }
+        },
+        frw: new Property('frw', 'Frame Rail Width'),
+        frt: new Property('frt', 'Frame Rail Thickness'),
+      },
+      'Toe Kick': {
+        tkbw: new Property('tkbw', 'Toe Kick Backer Width'),
+        tkd: new Property('tkd', 'Toe Kick Depth'),
+        tkh: new Property('tkh', 'Toe Kick Height'),
+      },
+      Panel: {
+        pbt: new Property('pbt', 'Panel Back Thickness'),
+
+      },
+      iph: new Property('iph', 'Ideal Handle Height'),
+      csp: new Property('csp', 'Cover Start Point', undefined,
+          {values: Object.keys(CoverStartPoints)})
+    }
+  },
+  Guides: {
+    global: {
+      tos: new Property('tos', 'Top Offset'),
+    },
+    instance: {
+      sos: new Property('sos', 'Side Offest'),
+      bos: new Property('bos', 'Bottom Offset')
+    }
+  }
+}
+
+function assemProperties(clazz) {
+  return assemProps[clazz] || {global: {}, instance: {}};
+}
 
 function properties(name, values) {
   if (values === undefined) {
@@ -49,7 +133,6 @@ properties('Full Overlay', {
   rrv: {name: 'Right Reveal', value: 1/16},
   r: {name: 'Reveal', value: 1/16},
   fs: {name: 'Face Spacing', value: 1/16},
-  vffs: {name: 'Vertical First Front Size', value: 5.5},
 });
 
 properties('Inset', {
@@ -58,6 +141,5 @@ properties('Inset', {
   lrv: {name: 'Left Reveal', value: -1/16},
   rrv: {name: 'Right Reveal', value: -1/16},
   r: {name: 'Reveal', value: -1/16},
-  vffs: {name: 'Vertical First Front Size', value: 5.5},
   csp: {name: 'Cover Start Point', value: CoverStartPoints.INSIDE_RAIL, CoverStartPoints}
 });

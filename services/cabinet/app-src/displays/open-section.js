@@ -91,7 +91,7 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
     const id = pattern.unique[index];
     let fill = opening.dividerLayout().fill;
     const measInput = MeasurementInput.pattern(id, pattern.value(id));
-    measInput.on('keyup', (target) => {
+    measInput.on('keyup', (value, target) => {
       opening.pattern().value(target.name, OpenSectionDisplay.evaluator.eval(target.value));
       fill = opening.dividerLayout().fill;
       const patternCnt = document.querySelector(patCntSelector);

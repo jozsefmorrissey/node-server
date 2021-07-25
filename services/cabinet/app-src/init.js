@@ -8,7 +8,6 @@ afterLoad.push(() => {
   order = new Order();
   orderDisplay = new OrderDisplay('#app');
   setTimeout(ThreeDModel.init, 1000);
-  let propertyDisplay = new PropertyDisplay('#property-manager');
-  propertyDisplay.update(DEFAULT_PROPS);
+  propertyDisplay = new PropertyDisplay('#property-manager');
   mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
 });

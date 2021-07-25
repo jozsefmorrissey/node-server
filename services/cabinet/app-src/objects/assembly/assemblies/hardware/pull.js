@@ -3,9 +3,9 @@
     d,e,f
     g,h,i
 */
-class Pull extends Assembly {
+class Handle extends Assembly {
   constructor(partCode, partName, door, location, index, count) {
-    super(partCode, 'Pull');
+    super(partCode, 'Handle');
     this.setParentAssembly(door);
     index = index || 0;
     count = count || 1;
@@ -29,39 +29,39 @@ class Pull extends Assembly {
         let pullDems = this.demensionStr();
         center.z -= (doorDems.z + pullDems.z) / 2;
         switch (location) {
-          case Pull.location.TOP_RIGHT:
+          case Handle.location.TOP_RIGHT:
             center.x = center.x + doorDems.x / 2 -  edgeOffset;
             center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
-          case Pull.location.TOP_LEFT:
+          case Handle.location.TOP_LEFT:
           center.x = center.x - doorDems.x / 2 -  edgeOffset;
           center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
-          case Pull.location.BOTTOM_RIGHT:
+          case Handle.location.BOTTOM_RIGHT:
           center.x = center.x + doorDems.x / 2 -  edgeOffset;
           center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
-          case Pull.location.BOTTOM_LEFT:
+          case Handle.location.BOTTOM_LEFT:
           center.x = center.x + doorDems.x / 2 -  edgeOffset;
           center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
 					break;
-          case Pull.location.TOP:
+          case Handle.location.TOP:
             center.x = offset(center.x, doorDems.x);
             center.y -= doorDems.y / 2;
 					break;
-          case Pull.location.BOTTOM:
+          case Handle.location.BOTTOM:
             center.x = offset(center.x, doorDems.x);
             center.y += doorDems.y / 2;
 					break;
-          case Pull.location.RIGHT:
+          case Handle.location.RIGHT:
             center.y = offset(center.y, doorDems.y);
             center.x += doorDems.x / 2;
 					break;
-          case Pull.location.LEFT:
+          case Handle.location.LEFT:
             center.y = offset(center.y, doorDems.y);
             center.x -= doorDems.x / 2;
 					break;
-          case Pull.location.CENTER:
+          case Handle.location.CENTER:
             center.x = offset(center.x, doorDems.x);
 					break;
           default:
@@ -73,17 +73,17 @@ class Pull extends Assembly {
     this.updatePosition();
   }
 }
-Pull.location = {};
-Pull.location.TOP_RIGHT = {rotate: true};
-Pull.location.TOP_LEFT = {rotate: true};
-Pull.location.BOTTOM_RIGHT = {rotate: true};
-Pull.location.BOTTOM_LEFT = {rotate: true};
-Pull.location.TOP = {multiple: true};
-Pull.location.BOTTOM = {multiple: true};
-Pull.location.RIGHT = {multiple: true};
-Pull.location.LEFT = {multiple: true};
-Pull.location.CENTER = {multiple: true, rotate: true};
+Handle.location = {};
+Handle.location.TOP_RIGHT = {rotate: true};
+Handle.location.TOP_LEFT = {rotate: true};
+Handle.location.BOTTOM_RIGHT = {rotate: true};
+Handle.location.BOTTOM_LEFT = {rotate: true};
+Handle.location.TOP = {multiple: true};
+Handle.location.BOTTOM = {multiple: true};
+Handle.location.RIGHT = {multiple: true};
+Handle.location.LEFT = {multiple: true};
+Handle.location.CENTER = {multiple: true, rotate: true};
 
-Pull.abbriviation = 'pu';
+Handle.abbriviation = 'pu';
 
-Assembly.register(Pull);
+Assembly.register(Handle);

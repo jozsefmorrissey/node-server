@@ -60,7 +60,7 @@
 }
 
 .property-container {
-  height: 20vh;
+  height: 100%;
   overflow: scroll;
   border-style: groove;
   text-align: center;
@@ -70,7 +70,8 @@
 }
 
 #menu-btn {
-  position: absolute;
+  position: fixed;
+  z-index: 100;
   right: 0;
   top: 0;
   margin: 10pt;
@@ -81,8 +82,14 @@
   border-color: aliceblue;
 }
 
+.manager-save-btn {
+  position: fixed;
+  right: 25vw;
+  z-index: 100;
+}
+
 #menu {
-  position: absolute;
+  position: fixed;
   right: 0;
   top: 45pt;
   border-color: ivory;

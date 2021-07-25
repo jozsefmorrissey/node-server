@@ -1,8 +1,30 @@
 class Labor extends Cost {
-  constructor (id, method, cost, length, width, depth) {
-    super(id, method, cost, length, width, depth);
+  constructor (props) {
+    super(props);
+    const type = props.laborType;
+    const parentCalc = this.calc;
+    this.calc = (assembly) => parentCalc(assembly) * Labor.hourlyRates[type];
+    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
+    Labor.hourlyRate(type, props.hourlyRate || Labor.defaultRate);
+
+    const parentToJson = this.toJson;
+    this.toJson = () => {
+      const json = parentToJson();
+      json.hourlyRate = Labor.hourlyRates[type];
+      json.type = type;
+      return json;
+    }
   }
 }
+
+Labor.defaultRate = 40;
+Labor.hourlyRate = (type, rate) => {
+  rate = Cost.evaluator.eval(new String(rate));
+  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
+  return Labor.hourlyRates[type] || Labor.defaultRate;
+}
+Labor.hourlyRates = {};
+Labor.types = [];
 
 Cost.register(Labor);
 
@@ -20,4 +42,4 @@ Cost.register(Labor);
 // new Labor('Paint', '(l*l*w*w*.1)/12');
 // new Labor('Stain', '(l*l*w*w*.25)/12');
 // new Labor('InstallDrawerFront', '2');
-// new Labor('InstallPullout', 10);
+// new Labor('InstallHandleout', 10);

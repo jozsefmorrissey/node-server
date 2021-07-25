@@ -213,6 +213,7 @@ Assembly.all = () => {
   return list;
 }
 Assembly.resolveAttr = (assembly, attr) => {
+  if (!(assembly instanceof Assembly)) return undefined;
   if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
     return assembly.length();
   } else if (attr === 'w' || attr === 'width') {

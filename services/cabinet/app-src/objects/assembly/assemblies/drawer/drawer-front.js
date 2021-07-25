@@ -16,13 +16,13 @@ class DrawerFront extends Assembly {
       return dems;
     };
 
-    this.children = () => this.updatePulls();
+    this.children = () => this.updateHandles();
 
-    this.updatePulls = (dems, count) => {
+    this.updateHandles = (dems, count) => {
       count = count || pullCount(this.demensionStr());
       pulls = [];
       for (let index = 0; index < count; index += 1) {
-        pulls.push(new Pull(`${partCode}-p-${index}`, 'Drawer.Pull', this, Pull.location.CENTER, index, count));
+        pulls.push(new Handle(`${partCode}-p-${index}`, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
       }
       return pulls;
     };

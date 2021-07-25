@@ -7,18 +7,18 @@ class OpeningCoverSection extends SpaceSection {
     pullType = pullType || PULL_TYPE.DOOR;
     let pulls = [];
 
-    this.setPullType = (pt) => pullType = pt;
+    this.setHandleType = (pt) => pullType = pt;
     if (divideProps === undefined) return;
 
-    this.updatePulls = (count) => {
+    this.updateHandles = (count) => {
       pulls = [];
       if (pullType === PULL_TYPE.DRAWER) {
-        count = count || instance.drawerPullCount();
+        count = count || instance.drawerHandleCount();
         for (let index = 0; index < count; index += 1) {
-          pulls.push(new Pull(`dwp-${index}`, 'Drawer.Pull', instance.drawerPullCenter(index, count), instance.pullDems));
+          pulls.push(new Handle(`dwp-${index}`, 'Drawer.Handle', instance.drawerHandleCenter(index, count), instance.pullDems));
         }
       } else {
-        pulls.push(new Pull(`dp`, 'Door.Pull', instance.doorPullCenter, instance.pullDems, 'z'));
+        pulls.push(new Handle(`dp`, 'Door.Handle', instance.doorHandleCenter, instance.pullDems, 'z'));
       }
     }
 
@@ -72,7 +72,7 @@ class OpeningCoverSection extends SpaceSection {
       return winner.value;
     }
 
-    this.drawerPullCenter = (index, count) =>
+    this.drawerHandleCenter = (index, count) =>
       (attr) => {
         const center = instance.coverCenter(attr);
         const dems = instance.coverDems();
@@ -87,15 +87,15 @@ class OpeningCoverSection extends SpaceSection {
       return attr ? dems[attr] : dems;
     }
 
-    this.doorPullCenter = () => {
-      const idealPullHeight = instance.value('iph');
+    this.doorHandleCenter = () => {
+      const idealHandleHeight = instance.value('iph');
       const dems = this.coverDems();
       const center = this.coverCenter();
       const top = center.y +  dems.y / 2 - 4;
       const bottom = center.y -  dems.y / 2 + 4;
       const xOffset = dems.x / 2 - 1.5;
       center.x = center.x - xOffset * (this.hingeSide() === '-x' ? 1 : -1);
-      center.y = closest(idealPullHeight, top, center.y, bottom);
+      center.y = closest(idealHandleHeight, top, center.y, bottom);
       center.z -= (instance.coverDems('z') + dems.z) / 2;
       return center;
     }

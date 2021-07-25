@@ -22,6 +22,8 @@ class Cost {
   constructor(props) {
     const referenceCost = props.referenceCost instanceof Cost ? props.referenceCost : undefined;
     const uniqueId = randomString();
+    const lastUpdated = props.lastUpdated || new Date().getTime();
+    this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
     this.uniqueId = () => uniqueId;
     this.objectId = () => props.objectId;
     if (props.objectId !== undefined) {
@@ -32,7 +34,7 @@ class Cost {
     this.children = referenceCost ? referenceCost.children : [];
     if (referenceCost === undefined) {
       Cost.unique[props.id] = this;
-      Cost.defined.push(this.id())
+      if (props.referenceable) Cost.defined.push(this.id());
     }
     props.formula = referenceCost ? referenceCost.formula() : props.formula;
     const instance = this;
@@ -75,6 +77,7 @@ class Cost {
         partNumber: this.partNumber(),
         objectId: this.objectId(),
         method: this.method(),
+        lastUpdated: lastUpdated,
         length: this.length(),
         width: this.width(),
         depth: this.depth(),

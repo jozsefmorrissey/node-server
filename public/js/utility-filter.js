@@ -487,7 +487,7 @@ function UtilityFilter() {
       for (let index = 0; index < headers.length; index += 1) {
         const label = headers[index].querySelector('label').innerText.trim();
         let value = values[label];
-        value = value === undefined ? '' : value.trim();
+        value = value === undefined ? '' : new String(value).trim();
         body += `<label>
                     ${label}:
                 </label>`;

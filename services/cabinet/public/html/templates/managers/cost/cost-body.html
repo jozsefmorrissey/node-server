@@ -1,4 +1,7 @@
 <div>
+  <div class='instance-props-cnt'>
+    <p repeat='id, prop in instanceProps'>prop.name()</p>
+  </div>
   <div{{cost.constructor.name === 'Labor' || cost.constructor.name === 'Material' ? '' : ' hidden'}}>
     <span{{cost.length() === undefined ? ' hidden' : ''}}>
       <input value='{{cost.length()}}'>
