@@ -1,6 +1,6 @@
 class SelectCost extends Cost {
-  constructor (id, method, cost, length, width, depth) {
-    super(id, method, cost, length, width, depth);
+  constructor (props) {
+    super(props);
     const selected = 0;
     this.selected = (index) =>
         index === undefined ? selected : selected = index;

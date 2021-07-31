@@ -191,12 +191,14 @@ matchRun('click', '.expand-header', (target, event) => {
   const isActive = target.matches('.active');
   const id = target.getAttribute('ex-list-id');
   const list = ExpandableList.lists[id];
-  if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
-    target.className = target.className.replace(/(^| )active( |$)/g, '');
-    list.findElement('.expand-body', target).style.display = 'none';
-    list.activeIndex(null);
-    target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-  } else if (!isActive) {
-    list.renderBody(target);
+  if (list) {
+    if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
+      target.className = target.className.replace(/(^| )active( |$)/g, '');
+      list.findElement('.expand-body', target).style.display = 'none';
+      list.activeIndex(null);
+      target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
+    } else if (!isActive) {
+      list.renderBody(target);
+    }
   }
 });

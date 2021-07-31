@@ -4,6 +4,18 @@
     color: red;
 }
 
+.information-bar {
+  position: fixed;
+  top: 0;
+  background-color: whitesmoke;
+  left: 0;
+  padding: 0 10pt;
+  right: 0;
+  border-bottom: gray;
+  border-bottom-style: groove;
+  border-bottom-width: 1pt;
+}
+
 .margin-zero {
   margin: 0;
 }

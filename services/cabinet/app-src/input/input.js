@@ -1,15 +1,26 @@
 
 class Input {
   constructor(props) {
+    let hidden = props.hide || false;
     const instance = this;
     this.type = props.type;
     this.label = props.label;
     this.name = props.name;
-    this.hide = props.hide;
     this.id = props.id || `input-${randomString(7)}`;
+    const forAll = Input.forAll(this.id);
+    this.hidden = () => hidden;
+    this.hide = () => forAll((elem) => {
+      const cnt = up('.input-cnt', elem);
+      hidden = cnt.hidden = true;
+    });
+    this.show = () => forAll((elem) => {
+      const cnt = up('.input-cnt', elem);
+      hidden = cnt.hidden = false;
+    });
     this.placeholder = props.placeholder;
     this.class = props.class;
     this.list = props.list || [];
+
     let valid;
     let value = props.value;
     props.targetAttr = props.targetAttr || 'value';
@@ -43,7 +54,7 @@ class Input {
       if(this.validation(val)) {
         valid = true;
         value = val;
-        if (elem) elem.value = val;
+        if (elem) elem[props.targetAttr] = val;
         return true;
       }
       valid = false;
@@ -99,6 +110,16 @@ class Input {
   }
 }
 
+Input.forAll = (id) => {
+  const idStr = `#${id}`;
+  return (func) => {
+    const elems = document.querySelectorAll(idStr);
+    for (let index = 0; index < elems.length; index += 1) {
+      func(elems[index]);
+    }
+  }
+}
+
 Input.template = new $t('input/input');
 Input.html = (instance) => () => Input.template.render(instance);
 Input.flagAttrs = ['checked', 'selected'];
@@ -116,6 +137,22 @@ Input.id = () => new Input({
   class: 'center',
   validation: /^\s*[^\s]{1,}\s*$/,
   errorMsg: 'You must enter an Id'
+});
+
+Input.propertyId = () => new Input({
+  type: 'text',
+  placeholder: 'Property Id',
+  name: 'propertyId',
+  class: 'center',
+  validation: /^[a-zA-Z\.]{1}$/,
+  errorMsg: 'Alpha Numeric Value seperated by \'.\'.<br>I.E. Cabinet=>1/2 Overlay = Cabinet.12Overlay'
+});
+
+Input.propertyValue = () => new Input({
+  type: 'text',
+  placeholder: 'Property Value',
+  name: 'propertyValue',
+  class: 'center'
 });
 
 Input.CostId = () => new Input({

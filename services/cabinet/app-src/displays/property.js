@@ -2,9 +2,15 @@ class PropertyDisplay {
   constructor(containerSelector) {
     let currProps;
 
+    const noChildren = (properties, groups) => () =>
+          properties.length === 0 && Object.keys(groups).length === 0;
+
     function getScope(key, group) {
       let radioId = group.radioId || PropertyDisplay.counter++;
-      const scope = {key, properties: [], groups: [], recurse, radioId};
+      const properties = [];
+      const groups = [];
+      const scope = {key, properties, groups, recurse, radioId,
+                      noChildren: noChildren(properties, groups)};
       const keys = Object.keys(group.values);
       radioId = PropertyDisplay.counter++;
       for( let index = 0; index < keys.length; index += 1) {

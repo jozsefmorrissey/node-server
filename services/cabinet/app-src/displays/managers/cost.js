@@ -30,12 +30,13 @@ class CostManager extends AbstractManager {
           inputValidation: () => true,
           parentId,
           parentSelector: `#${parentId}`,
-          inputTree:   CostManager.costInputTree(costTypes, id, CostManager.onUpdate),
+          inputTree:   CostManager.costInputTree(costTypes, id),
           getHeader: CostManager.costHeader,
           getBody: CostManager.costBody,
           getObject: CostManager.getCostObject(id),
           listElemLable: 'Cost'
         };
+        new Category({id, referenceable: true, children: expListProps.list});
         const requiredProps = assemProperties(id);
         const expandList = new ExpandableList(expListProps);
         list.push({partId: id, expandList, requiredProps, cntClass: CostManager.cntClass, parentId});
@@ -64,13 +65,13 @@ CostManager.costHeadTemplate = new $t('managers/cost/cost-head');
 CostManager.costBodyTemplate = new $t('managers/cost/cost-body');
 CostManager.cntClass = 'cost-manager-reference-cnt';
 
-CostManager.onUpdate = (name, value, target) => {
-  if (name === 'costType') {
-    const refCnt = up(`.${CostManager.cntClass}`, target).children[1];
-    if (value !== 'Custom') refCnt.hidden = false;
-    else refCnt.hidden = true;
-  }
-};
+// CostManager.onUpdate = (name, value, target) => {
+//   if (name === 'costType') {
+//     const refCnt = up(`.${CostManager.cntClass}`, target).children[1];
+//     if (value !== 'Custom') refCnt.hidden = false;
+//     else refCnt.hidden = true;
+//   }
+// };
 
 CostManager.setInstanceProps = (scope) => {
   const parent = document.getElementById(scope.parentId);
@@ -96,7 +97,7 @@ CostManager.childScope = (cost) => {
       list: cost.children,
       inputValidation: () => true,
       parentSelector: `#${parentId}`,
-      inputTree:   CostManager.costInputTree(costTypes, undefined, CostManager.onUpdate),
+      inputTree:   CostManager.costInputTree(costTypes, undefined),
       getHeader: CostManager.costHeader,
       getBody: CostManager.costBody,
       getObject: CostManager.getCostObject(cost.id()),
@@ -198,6 +199,16 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
     value: objId
   });
 
+  costTypeSelect.on('change',
+    (val) => {
+      if (val !== 'Custom') {
+        reference.setValue(false);
+        reference.hide();
+      } else {
+        reference.show();
+      }
+    });
+
   const id = Input.CostId();
   const laborType = Input.laborType();
   const hourlyRate = Input.hourlyRate();
@@ -218,6 +229,8 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
   const modifyDemension = Input.modifyDemension();
   const selectInfo = [CostManager.formulaInput(objId, 'Select'),
                       RelationInput, optional];
+  const conditionalInfo = [Input.propertyId(), Select.propertyConditions(),
+        Input.propertyValue()];
   const color = [Input.color()];
 
   // Todo: ????
@@ -242,13 +255,16 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
   decisionInput.addStates({
     lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color,idType,
     laborInput, costCount, optional, materialInput, selectInfo, hourlyCount,
-    lengthHourly, lengthWidthHourly, lengthWidthDepthHourly, modifyDemension
+    lengthHourly, lengthWidthHourly, lengthWidthDepthHourly, modifyDemension,
+    conditionalInfo
   });
 
   const idTypeNode = decisionInput.then('costType:Custom')
         .jump('idType');
 
 
+  const conditionalNode = idTypeNode.then('type:Conditional')
+        .jump('conditionalInfo');
   const materialNode = idTypeNode.then('type:Material')
         .jump('materialInput');
   const selectNode = idTypeNode.then('type:Select')

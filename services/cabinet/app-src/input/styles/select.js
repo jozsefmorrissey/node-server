@@ -27,6 +27,12 @@ Select.method = () => new Select({
   list: Cost.methodList,
 });
 
+Select.propertyConditions = () => new Select({
+  name: 'propertyCondition',
+  class: 'center',
+  list: Object.values(ConditionalCost.conditions)
+});
+
 Select.propertyId = (name) => new Select({
   name: 'propertyId',
   class: 'center',

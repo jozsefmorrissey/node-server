@@ -35,26 +35,43 @@ function upAll(selector, node) {
   return elems;
 }
 
-function down(selector, node) {
-    function recurse (currNode, distance) {
-      if (node instanceof HTMLElement) {
-        if (currNode.matches(selector)) {
-          return { node: currNode, distance };
-        } else {
-          let found = { distance: Number.MAX_SAFE_INTEGER };
-          for (let index = 0; index < currNode.children.length; index += 1) {
-            distance++;
-            const child = currNode.children[index];
-            const maybe = recurse(child, distance);
-            found = maybe && maybe.distance < found.distance ? maybe : found;
-          }
-          return found;
-        }
+function depth(node) {return upAll('*', node).length};
+
+function downInfo(selector, leafSelector, node, distance) {
+  const nodes = node instanceof HTMLCollection ? node : [node];
+  distance = distance || 0;
+
+  function recurse (node, distance) {
+    if (node instanceof HTMLElement) {
+      if (node.matches(selector)) {
+        return { node, distance, matches: [{node, distance}]};
       }
-      return { distance: Number.MAX_SAFE_INTEGER };
     }
-    return recurse(node, 0).node;
+    return { distance: Number.MAX_SAFE_INTEGER, matches: [] };
+  }
+
+  let matches = [];
+  let found = { distance: Number.MAX_SAFE_INTEGER };
+  for (let index = 0; index < nodes.length; index += 1) {
+    const currNode = nodes[index];
+    const maybe = recurse(currNode, ++distance);
+    if (maybe.node) {
+      matches = matches.concat(maybe.matches);
+      found = maybe.distance < found.distance ? maybe : found;
+
+    }
+    if (!leafSelector || !currNode.matches(leafSelector)) {
+      const childRes = downInfo(selector, leafSelector, currNode.children, distance + 1);
+      matches = matches.concat(childRes.matches);
+      found = childRes.distance < found.distance ? childRes : found;
+    }
+  }
+  found.matches = matches;
+  return found;
 }
+
+function down(selector, node) {return downInfo(selector, node).node};
+function downAll(selector, node) {return downInfo(selector, node).matches};
 
 function closest(selector, node) {
   const visited = [];
@@ -106,7 +123,8 @@ function runMatch(event) {
   const selectStrs = Object.keys(selectors[matchRunTargetId][event.type]);
   selectStrs.forEach((selectStr) => {
     const target = up(selectStr, event.target);
-    if (target) {
+    const everything = selectStr === '*';
+    if (everything || target) {
       selectors[matchRunTargetId][event.type][selectStr].forEach((func) => func(target, event));
     }
   })
@@ -118,12 +136,17 @@ function addClass(target, clazz) {
   target.className += ` ${clazz}`;
 }
 
+function swapClass(target, newClass, oldClass) {
+  removeClass(target, oldClass);
+  addClass(target, newClass)
+}
+
 function classReg(clazz) {
-  return new RegExp(`(^| )(${clazz}( |$))*`, 'g');
+  return new RegExp(`(^| )(${clazz}( |$)){1,}`, 'g');
 }
 
 function removeClass(target, clazz) {
-  target.className = target.className.replace(classReg(clazz), '');
+  target.className = target.className.replace(classReg(clazz), ' ').trim();
 }
 
 function hasClass(target, clazz) {

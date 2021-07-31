@@ -1,6 +1,7 @@
 <div class='center'>
-  <div class='{{key ? "property-container" : ""}}' radio-id='{{radioId}}'>
-    <div>
+  <div class='{{key ? "property-container close" : ""}}' radio-id='{{radioId}}'
+        {{noChildren() ? 'hidden' : ''}}>
+    <div class='{{key ? "expand-header" : ""}}'>
       {{key}}
     </div>
     <div{{key ? ' hidden' : ''}}>

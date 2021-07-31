@@ -31,7 +31,7 @@ class Cost {
       Cost.objMap[props.objectId].push(this);
     }
     this.id = referenceCost ? referenceCost.id : () => props.id;
-    this.children = referenceCost ? referenceCost.children : [];
+    this.children = referenceCost ? referenceCost.children : props.children || [];
     if (referenceCost === undefined) {
       Cost.unique[props.id] = this;
       if (props.referenceable) Cost.defined.push(this.id());

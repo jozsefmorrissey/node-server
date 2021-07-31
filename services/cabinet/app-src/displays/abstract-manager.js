@@ -15,14 +15,16 @@ class AbstractManager {
     const getHeader = (instance) => headTemplate.render({instance, manager});
     const getBody = (instance) => bodyTemplate.render({instance, manager});
 
-    const getObject = (values) => manager.getObject(values);
+    const getObject = (typeof manager.getObject) === 'function' ?
+                        (values) => manager.getObject(values) : undefined;
 
     function init(json) {
       document.getElementById(id).innerHTML = template.render(manager);
       list = manager.fromJson(json) || [];
       const expListProps = {
         inputTree: manager.constructor.inputTree(),
-        parentSelector, getHeader, getBody, getObject, list
+        parentSelector, getHeader, getBody, getObject, list,
+        hideAddBtn: true
       };
       const expandList = new ExpandableList(expListProps);
 

@@ -142,7 +142,8 @@ class DecisionInputTree extends DecisionTree{
       formFilled();
     }
 
-    this.html = () => DecisionInputTree.template.render(this);
+    this.html = () =>
+      DecisionInputTree.template.render(this);
     function on(func, funcArray) {
       if ((typeof func) === 'function') funcArray.push(func);
     };

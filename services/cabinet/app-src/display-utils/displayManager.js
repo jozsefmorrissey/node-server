@@ -70,8 +70,9 @@ class DisplayManager {
 DisplayManager.instances = {};
 DisplayManager.template = new $t('display-manager');
 
-matchRun('click', '.display-manager', (target, event) => {
-  const displayManagerId = target.id;
-  const displayId = event.target.getAttribute('display-id');
+matchRun('click', '.display-manager-input', (target, event) => {
+  const displayManager = up('.display-manager', target);
+  const displayManagerId = displayManager.id;
+  const displayId = target.getAttribute('display-id');
   DisplayManager.instances[displayManagerId].open(displayId);
 });
