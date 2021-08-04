@@ -47,3 +47,14 @@ Select.company = () => new Select({
   list: [''].concat(Object.keys(Company.list)),
   value: ''
 });
+
+Select.cost = (cost) => {
+  const childIds = ['None'].concat(cost.children.map((obj) => obj.id()));
+  return new Select({
+    name: 'child',
+    label: 'Default',
+    class: 'center',
+    list: childIds,
+    value: cost.selectedId()
+  })
+};

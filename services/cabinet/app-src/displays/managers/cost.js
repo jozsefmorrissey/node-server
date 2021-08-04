@@ -18,6 +18,7 @@ class CostManager extends AbstractManager {
 
     this.loadPoint = () => EPNTS.costs.get();
     this.savePoint = () => EPNTS.costs.save();
+    this.costTypeHtml = CostManager.costTypeHtml;
     this.fromJson = (json) => {
       CostManager.partList = CostManager.partList ||
           ['Opening'].concat(Object.keys(Assembly.classes)
@@ -36,10 +37,11 @@ class CostManager extends AbstractManager {
           getObject: CostManager.getCostObject(id),
           listElemLable: 'Cost'
         };
-        new Category({id, referenceable: true, children: expListProps.list});
+        const cost = new SelectCost({id, referenceable: true, children: expListProps.list});
         const requiredProps = assemProperties(id);
         const expandList = new ExpandableList(expListProps);
-        list.push({partId: id, expandList, requiredProps, cntClass: CostManager.cntClass, parentId});
+        list.push({partId: id, expandList, requiredProps,
+          CostManager: CostManager, parentId, cost});
       });
       propertyDisplay.update();
       return list;
@@ -48,8 +50,8 @@ class CostManager extends AbstractManager {
     this.Cost = Cost;
     this.globalProps = () => assemProperties(name)
 
-    const getHeader = (costGroup) => CostManager.costHeadTemplate(costGroup);
-    const getBody = (costGroup) => CostManager.costBodyTemplate(costGroup);
+    const getHeader = (costGroup) => CostManager.costHeadTemplate(costGroup.instance);
+    const getBody = (costGroup) => CostManager.costBodyTemplate(costGroup.instance);
     const getObject = (values) => {
       const obj = {partId: values.partId, costs: []};
       return obj;
@@ -57,21 +59,12 @@ class CostManager extends AbstractManager {
   }
 }
 
-new CostManager('cost-manager', 'cost');
-
 CostManager.headTemplate = new $t('managers/cost/head');
 CostManager.bodyTemplate = new $t('managers/cost/body');
 CostManager.costHeadTemplate = new $t('managers/cost/cost-head');
 CostManager.costBodyTemplate = new $t('managers/cost/cost-body');
 CostManager.cntClass = 'cost-manager-reference-cnt';
-
-// CostManager.onUpdate = (name, value, target) => {
-//   if (name === 'costType') {
-//     const refCnt = up(`.${CostManager.cntClass}`, target).children[1];
-//     if (value !== 'Custom') refCnt.hidden = false;
-//     else refCnt.hidden = true;
-//   }
-// };
+CostManager.selectInput = (cost) => Select.cost(cost);
 
 CostManager.setInstanceProps = (scope) => {
   const parent = document.getElementById(scope.parentId);
@@ -118,6 +111,22 @@ CostManager.getCostObject = (id) => (values) => {
   if (values.referenceable) costTypes.push(values.id);
   return obj;
 };
+
+CostManager.typeTemplates = {};
+CostManager.costTypeHtml = (cost, scope) => {
+  const constName = cost.constructor.name;
+  if (CostManager.typeTemplates[constName])
+    return CostManager.typeTemplates[constName].render(scope);
+  const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
+  if ($t.isTemplate(fileId)) {
+    template = new $t(fileId);
+    CostManager.typeTemplates[constName] = template;
+    return template.render(scope);
+  }
+  return 'nada';
+}
+
+
 
 CostManager.isInstance = (target) => upAll('.expandable-list', el).length === 2;
 CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(cost);
@@ -303,3 +312,5 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
 
   return decisionInput;
 }
+
+new CostManager('cost-manager', 'cost');

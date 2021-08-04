@@ -1,33 +1,3 @@
 <div>
-  <div class='instance-props-cnt'>
-    <p repeat='id, prop in instanceProps'>prop.name()</p>
-  </div>
-  <div{{cost.constructor.name === 'Labor' || cost.constructor.name === 'Material' ? '' : ' hidden'}}>
-    <span{{cost.length() === undefined ? ' hidden' : ''}}>
-      <input value='{{cost.length()}}'>
-    </span>
-    <span{{cost.width() === undefined ? ' hidden' : ''}}>
-      <label>X</label>
-      <input value='{{cost.width()}}'>
-    </span>
-    <span{{cost.depth() === undefined ? ' hidden' : ''}}>
-      <label>X</label>
-      <input value='{{cost.depth()}}'>
-    </span>
-
-    <br>
-    <div>
-      <label>Cost</label>
-      <input value='{{cost.cost()}}'>
-      <label>Per {{cost.unitCost('name')}} = {{cost.unitCost('value')}}</label>
-    </div>
-  </div>
-  <div{{cost.constructor.name === 'SelectCost' || cost.constructor.name === 'Category' ? '' : ' hidden'}}>
-    <div{{cost.constructor.name === 'SelectCost' ? '' : ' hidden'}}>
-      <label>Selected ({{cost.constructor.name}})</label>
-      <input type='number'
-        value='{{cost.constructor.name === 'SelectCost' ? cost.selected() : '-1'}}'>
-    </div>
-    <div id='{{parentId}}'>{{expandList.html()}}</div>
-  </div>
+  {{CostManager.costTypeHtml(cost, scope)}}
 </div>

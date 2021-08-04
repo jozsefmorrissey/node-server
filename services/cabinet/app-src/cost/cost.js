@@ -149,7 +149,7 @@ Cost.register = (clazz) => {
 Cost.new = function(propsOreference) {
   let constructer;
   if (propsOreference instanceof Cost)
-    constructer = Cost.types[Cost.constructorId];
+    constructer = Cost.types[Cost.constructorId(propsOreference.constructor.name)];
   else constructer = Cost.types[Cost.constructorId(propsOreference.type)]
   return new constructer(propsOreference)
 }

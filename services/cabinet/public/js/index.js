@@ -5112,6 +5112,7 @@ class $t {
 
 $t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
 $t.functions = {};
+$t.isTemplate = (id) => $t.functions[id] !== undefined;
 $t.arrayItExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*in\s*([a-zA-Z][a-z0-9A-Z\.]*)\s*$/;
 $t.objItExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*in\s*([a-zA-Z][a-z\.0-9A-Z]*)\s*$/;
 $t.rangeAttemptExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*(.*\.\..*)\s*$/;
@@ -5271,10 +5272,10 @@ $t.functions['managers/abstract-manager'] = function (get) {
 	return `<div> <div class="center"> <h2 id='` + (get("headerId")) + `'> ` + (get("header")) + ` <button class='manager-save-btn' id='` + (get("saveBtnId")) + `'>Save</button> </h2> </div> <div id="` + (get("bodyId")) + `"></div> </div> `
 }
 $t.functions['managers/cost/body'] = function (get) {
-	return `<div class='` + (get("instance").cntClass) + `' > <div class='global-prop-cnt'> <p repeat='id, prop in instance.requiredProps.global' prop-id=id> prop.name() </p> </div> <div id='` + (get("instance").parentId) + `'>` + (get("instance").expandList.html()) + `</div> </div> `
+	return `<div class='` + (get("instance").CostManager.cntClass) + `' > ` + (get("instance").CostManager.costTypeHtml(get("instance").cost, get("instance"))) + ` </div> `
 }
 $t.functions['managers/cost/cost-body'] = function (get) {
-	return `<div> <div class='instance-props-cnt'> <p repeat='id, prop in instanceProps'>prop.name()</p> </div> <div` + (get("cost").constructor.name === 'Labor' || get("cost").constructor.name === 'Material' ? '' : ' hidden') + `> <span` + (get("cost").length() === undefined ? ' hidden' : '') + `> <input value='` + (get("cost").length()) + `'> </span> <span` + (get("cost").width() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").width()) + `'> </span> <span` + (get("cost").depth() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").depth()) + `'> </span> <br> <div> <label>Cost</label> <input value='` + (get("cost").cost()) + `'> <label>Per ` + (get("cost").unitCost('name')) + ` = ` + (get("cost").unitCost('value')) + `</label> </div> </div> <div` + (get("cost").constructor.name === 'SelectCost' || get("cost").constructor.name === 'Category' ? '' : ' hidden') + `> <div` + (get("cost").constructor.name === 'SelectCost' ? '' : ' hidden') + `> <label>Selected (` + (get("cost").constructor.name) + `)</label> <input type='number' value='` + (get("cost").constructor.name === 'SelectCost' ? get("cost").selected() : '-1') + `'> </div> <div id='` + (get("parentId")) + `'>` + (get("expandList").html()) + `</div> </div> </div> `
+	return `<div> ` + (get("CostManager").costTypeHtml(get("cost"), get("scope"))) + ` </div> `
 }
 $t.functions['managers/cost/cost-head'] = function (get) {
 	return `<b> ` + (get("id")()) + ` - ` + (get("constructor").constructorId(get("constructor").name)) + ` <b` + (get("method")() ? '' : ' hidden') + `>(` + (get("method")()) + `)</b> </b> `
@@ -5362,6 +5363,27 @@ $t.functions['sections/false-front'] = function (get) {
 }
 $t.functions['sections/open'] = function (get) {
 	return `<h2>Open: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['./public/html/templates/managers/cost/types/select.js'] = function (get) {
+	return `<b>Select</b> `
+}
+$t.functions['./public/html/templates/managers/cost/types/category.js'] = function (get) {
+	return `<b>Catagory</b> `
+}
+$t.functions['managers/cost/types/select'] = function (get) {
+	return `<div> <b>Select</b> <div> ` + (get("CostManager").selectInput(get("cost")).html()) + ` </div> <div id='` + (get("parentId")) + `'>` + (get("expandList").html()) + `</div> </div> `
+}
+$t.functions['managers/cost/types/category'] = function (get) {
+	return `<div> <b>Catagory</b> <div id='` + (get("parentId")) + `'>` + (get("expandList").html()) + `</div> </div> `
+}
+$t.functions['managers/cost/types/conditional'] = function (get) {
+	return `<div> <b>Conditional</b> <div id='` + (get("parentId")) + `'>` + (get("expandList").html()) + `</div> </div> `
+}
+$t.functions['managers/cost/types/labor'] = function (get) {
+	return `<div> <b>Labor</b> <span` + (get("cost").length() === undefined ? ' hidden' : '') + `> <input value='` + (get("cost").length()) + `'> </span> <span` + (get("cost").width() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").width()) + `'> </span> <span` + (get("cost").depth() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").depth()) + `'> </span> <br> <div> <label>Cost</label> <input value='` + (get("cost").cost()) + `'> <label>Per ` + (get("cost").unitCost('name')) + ` = ` + (get("cost").unitCost('value')) + `</label> </div> </div> `
+}
+$t.functions['managers/cost/types/material'] = function (get) {
+	return `<div> <b>Material</b> <span` + (get("cost").length() === undefined ? ' hidden' : '') + `> <input value='` + (get("cost").length()) + `'> </span> <span` + (get("cost").width() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").width()) + `'> </span> <span` + (get("cost").depth() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").depth()) + `'> </span> <br> <div> <label>Cost</label> <input value='` + (get("cost").cost()) + `'> <label>Per ` + (get("cost").unitCost('name')) + ` = ` + (get("cost").unitCost('value')) + `</label> </div> </div> `
 }
 
 
@@ -8788,7 +8810,7 @@ Cost.register = (clazz) => {
 Cost.new = function(propsOreference) {
   let constructer;
   if (propsOreference instanceof Cost)
-    constructer = Cost.types[Cost.constructorId];
+    constructer = Cost.types[Cost.constructorId(propsOreference.constructor.name)];
   else constructer = Cost.types[Cost.constructorId(propsOreference.type)]
   return new constructer(propsOreference)
 }
@@ -9283,13 +9305,31 @@ Select.company = () => new Select({
   value: ''
 });
 
+Select.cost = (cost) => {
+  const childIds = ['None'].concat(cost.children.map((obj) => obj.id()));
+  return new Select({
+    name: 'child',
+    label: 'Default',
+    class: 'center',
+    list: childIds,
+    value: cost.selectedId()
+  })
+};
+
 
 class SelectCost extends Cost {
   constructor (props) {
     super(props);
     const selected = 0;
-    this.selected = (index) =>
-        index === undefined ? selected : selected = index;
+    this.selected = (index) => {
+      if (index !== undefined) selected = index;
+      return this.children[selected];
+    }
+
+    this.selectedId = () => {
+      const child = this.selected();
+      return child === undefined ? '' : child.id();
+    }
 
     this.calc = (assemblyOrCount) => this.children[selected] ?
         this.children[selected].calc(assemblyOrCount) : -0.01;
@@ -9324,6 +9364,10 @@ function drawerBox(length, width, depth) {
 }
 
 
+
+/**
+  A branching cost that will incorporate
+**/
 class Category extends Cost {
   constructor (props) {
     super(props);
@@ -9338,6 +9382,8 @@ class Category extends Cost {
   }
 }
 
+Category.explanation = `A branching cost that will incorporate all child costs 
+                        in its total`
 Cost.register(Category);
 
 
@@ -9354,6 +9400,9 @@ ConditionalCost.conditions.LESS_THAN = 'Less Than';
 ConditionalCost.conditions.GREATER_THAN = 'Greater Than';
 ConditionalCost.conditions.LESS_THAN_EQUAL = 'Less Than Or Equal';
 ConditionalCost.conditions.GREATER_THAN_EQUAL = 'Greater Than Or Equal';
+
+ConditionalCost.explanation = `A cost that is applied if the a defined
+                                condition is met`;
 
 Cost.register(ConditionalCost);
 
@@ -9385,24 +9434,9 @@ Labor.hourlyRate = (type, rate) => {
 }
 Labor.hourlyRates = {};
 Labor.types = [];
+Labor.explanation = `Cost to be calculated hourly`;
 
 Cost.register(Labor);
-
-
-// new Labor('Panel', '1+(0.05*l*w');
-// new Labor('Frame', '0.25');
-// new Labor('GlueFrame', '0.25');
-// new Labor('SandFrame', '0.05*l*l*w*w*d*d');
-// new Labor('SandPanel', '(0.25*l*w)/12');
-// new Labor('GlueMiter', '(0.25*l*l*w*w)');
-// new Labor('InstallBlumotionGuides', '2');
-// new Labor('InstallOtherGuides', '2');
-// new Labor('InstallFushHinges', '2');
-// new Labor('installOverLayHinges', '2');
-// new Labor('Paint', '(l*l*w*w*.1)/12');
-// new Labor('Stain', '(l*l*w*w*.25)/12');
-// new Labor('InstallDrawerFront', '2');
-// new Labor('InstallHandleout', 10);
 
 
 
@@ -9601,20 +9635,7 @@ class Material extends Cost {
 
 Cost.register(Material);
 
-// new Material('Wood');
-// new Material('Wood.SoftMapel', 'sheet 4x8 75.00', {optionalPercentage: true});
-// new Material('Wood.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Wood.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood');
-// new Material('Plywood.PaintGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.PaintGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.PaintGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.StainGrade.SoftMapel', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.StainGrade.Hickory', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Plywood.StainGrade.Oak', '(l*w*d)*(.2)', {optionalPercentage: true});
-// new Material('Glass');
-// new Material('Glass.Flat', '(l*w*d)*.2', {optionalPercentage: true});
-// new Material('Glass.textured', '(l*w*d)*.2', {optionalPercentage: true});
+Material.explanation = `Cost to be calculated by number of units or demensions`;
 
 
 
@@ -9683,6 +9704,7 @@ class CostManager extends AbstractManager {
 
     this.loadPoint = () => EPNTS.costs.get();
     this.savePoint = () => EPNTS.costs.save();
+    this.costTypeHtml = CostManager.costTypeHtml;
     this.fromJson = (json) => {
       CostManager.partList = CostManager.partList ||
           ['Opening'].concat(Object.keys(Assembly.classes)
@@ -9701,10 +9723,11 @@ class CostManager extends AbstractManager {
           getObject: CostManager.getCostObject(id),
           listElemLable: 'Cost'
         };
-        new Category({id, referenceable: true, children: expListProps.list});
+        const cost = new SelectCost({id, referenceable: true, children: expListProps.list});
         const requiredProps = assemProperties(id);
         const expandList = new ExpandableList(expListProps);
-        list.push({partId: id, expandList, requiredProps, cntClass: CostManager.cntClass, parentId});
+        list.push({partId: id, expandList, requiredProps,
+          CostManager: CostManager, parentId, cost});
       });
       propertyDisplay.update();
       return list;
@@ -9713,8 +9736,8 @@ class CostManager extends AbstractManager {
     this.Cost = Cost;
     this.globalProps = () => assemProperties(name)
 
-    const getHeader = (costGroup) => CostManager.costHeadTemplate(costGroup);
-    const getBody = (costGroup) => CostManager.costBodyTemplate(costGroup);
+    const getHeader = (costGroup) => CostManager.costHeadTemplate(costGroup.instance);
+    const getBody = (costGroup) => CostManager.costBodyTemplate(costGroup.instance);
     const getObject = (values) => {
       const obj = {partId: values.partId, costs: []};
       return obj;
@@ -9722,21 +9745,12 @@ class CostManager extends AbstractManager {
   }
 }
 
-new CostManager('cost-manager', 'cost');
-
 CostManager.headTemplate = new $t('managers/cost/head');
 CostManager.bodyTemplate = new $t('managers/cost/body');
 CostManager.costHeadTemplate = new $t('managers/cost/cost-head');
 CostManager.costBodyTemplate = new $t('managers/cost/cost-body');
 CostManager.cntClass = 'cost-manager-reference-cnt';
-
-// CostManager.onUpdate = (name, value, target) => {
-//   if (name === 'costType') {
-//     const refCnt = up(`.${CostManager.cntClass}`, target).children[1];
-//     if (value !== 'Custom') refCnt.hidden = false;
-//     else refCnt.hidden = true;
-//   }
-// };
+CostManager.selectInput = (cost) => Select.cost(cost);
 
 CostManager.setInstanceProps = (scope) => {
   const parent = document.getElementById(scope.parentId);
@@ -9783,6 +9797,22 @@ CostManager.getCostObject = (id) => (values) => {
   if (values.referenceable) costTypes.push(values.id);
   return obj;
 };
+
+CostManager.typeTemplates = {};
+CostManager.costTypeHtml = (cost, scope) => {
+  const constName = cost.constructor.name;
+  if (CostManager.typeTemplates[constName])
+    return CostManager.typeTemplates[constName].render(scope);
+  const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
+  if ($t.isTemplate(fileId)) {
+    template = new $t(fileId);
+    CostManager.typeTemplates[constName] = template;
+    return template.render(scope);
+  }
+  return 'nada';
+}
+
+
 
 CostManager.isInstance = (target) => upAll('.expandable-list', el).length === 2;
 CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(cost);
@@ -9968,6 +9998,8 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
 
   return decisionInput;
 }
+
+new CostManager('cost-manager', 'cost');
 
 
 class Joint {

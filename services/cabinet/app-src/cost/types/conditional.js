@@ -12,4 +12,7 @@ ConditionalCost.conditions.GREATER_THAN = 'Greater Than';
 ConditionalCost.conditions.LESS_THAN_EQUAL = 'Less Than Or Equal';
 ConditionalCost.conditions.GREATER_THAN_EQUAL = 'Greater Than Or Equal';
 
+ConditionalCost.explanation = `A cost that is applied if the a defined
+                                condition is met`;
+
 Cost.register(ConditionalCost);

@@ -111,10 +111,10 @@ $t.functions['managers/abstract-manager'] = function (get) {
 	return `<div> <div class="center"> <h2 id='` + (get("headerId")) + `'> ` + (get("header")) + ` <button class='manager-save-btn' id='` + (get("saveBtnId")) + `'>Save</button> </h2> </div> <div id="` + (get("bodyId")) + `"></div> </div> `
 }
 $t.functions['managers/cost/body'] = function (get) {
-	return `<div class='` + (get("instance").cntClass) + `' > <div class='global-prop-cnt'> <p repeat='id, prop in instance.requiredProps.global' prop-id=id> prop.name() </p> </div> <div id='` + (get("instance").parentId) + `'>` + (get("instance").expandList.html()) + `</div> </div> `
+	return `<div class='` + (get("instance").CostManager.cntClass) + `' > ` + (get("instance").CostManager.costTypeHtml(get("instance").cost, get("instance"))) + ` </div> `
 }
 $t.functions['managers/cost/cost-body'] = function (get) {
-	return `<div> <div class='instance-props-cnt'> <p repeat='id, prop in instanceProps'>prop.name()</p> </div> <div` + (get("cost").constructor.name === 'Labor' || get("cost").constructor.name === 'Material' ? '' : ' hidden') + `> <span` + (get("cost").length() === undefined ? ' hidden' : '') + `> <input value='` + (get("cost").length()) + `'> </span> <span` + (get("cost").width() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").width()) + `'> </span> <span` + (get("cost").depth() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").depth()) + `'> </span> <br> <div> <label>Cost</label> <input value='` + (get("cost").cost()) + `'> <label>Per ` + (get("cost").unitCost('name')) + ` = ` + (get("cost").unitCost('value')) + `</label> </div> </div> <div` + (get("cost").constructor.name === 'SelectCost' || get("cost").constructor.name === 'Category' ? '' : ' hidden') + `> <div` + (get("cost").constructor.name === 'SelectCost' ? '' : ' hidden') + `> <label>Selected (` + (get("cost").constructor.name) + `)</label> <input type='number' value='` + (get("cost").constructor.name === 'SelectCost' ? get("cost").selected() : '-1') + `'> </div> <div id='` + (get("parentId")) + `'>` + (get("expandList").html()) + `</div> </div> </div> `
+	return `<div> ` + (get("CostManager").costTypeHtml(get("cost"), get("scope"))) + ` </div> `
 }
 $t.functions['managers/cost/cost-head'] = function (get) {
 	return `<b> ` + (get("id")()) + ` - ` + (get("constructor").constructorId(get("constructor").name)) + ` <b` + (get("method")() ? '' : ' hidden') + `>(` + (get("method")()) + `)</b> </b> `
@@ -202,4 +202,25 @@ $t.functions['sections/false-front'] = function (get) {
 }
 $t.functions['sections/open'] = function (get) {
 	return `<h2>Open: ` + (get("list").activeIndex()) + `</h2> <div class='section-feature-ctn'> ` + (get("featureDisplay")) + ` </div> `
+}
+$t.functions['./public/html/templates/managers/cost/types/select.js'] = function (get) {
+	return `<b>Select</b> `
+}
+$t.functions['./public/html/templates/managers/cost/types/category.js'] = function (get) {
+	return `<b>Catagory</b> `
+}
+$t.functions['managers/cost/types/select'] = function (get) {
+	return `<div> <b>Select</b> <div> ` + (get("CostManager").selectInput(get("cost")).html()) + ` </div> <div id='` + (get("parentId")) + `'>` + (get("expandList").html()) + `</div> </div> `
+}
+$t.functions['managers/cost/types/category'] = function (get) {
+	return `<div> <b>Catagory</b> <div id='` + (get("parentId")) + `'>` + (get("expandList").html()) + `</div> </div> `
+}
+$t.functions['managers/cost/types/conditional'] = function (get) {
+	return `<div> <b>Conditional</b> <div id='` + (get("parentId")) + `'>` + (get("expandList").html()) + `</div> </div> `
+}
+$t.functions['managers/cost/types/labor'] = function (get) {
+	return `<div> <b>Labor</b> <span` + (get("cost").length() === undefined ? ' hidden' : '') + `> <input value='` + (get("cost").length()) + `'> </span> <span` + (get("cost").width() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").width()) + `'> </span> <span` + (get("cost").depth() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").depth()) + `'> </span> <br> <div> <label>Cost</label> <input value='` + (get("cost").cost()) + `'> <label>Per ` + (get("cost").unitCost('name')) + ` = ` + (get("cost").unitCost('value')) + `</label> </div> </div> `
+}
+$t.functions['managers/cost/types/material'] = function (get) {
+	return `<div> <b>Material</b> <span` + (get("cost").length() === undefined ? ' hidden' : '') + `> <input value='` + (get("cost").length()) + `'> </span> <span` + (get("cost").width() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").width()) + `'> </span> <span` + (get("cost").depth() === undefined ? ' hidden' : '') + `> <label>X</label> <input value='` + (get("cost").depth()) + `'> </span> <br> <div> <label>Cost</label> <input value='` + (get("cost").cost()) + `'> <label>Per ` + (get("cost").unitCost('name')) + ` = ` + (get("cost").unitCost('value')) + `</label> </div> </div> `
 }

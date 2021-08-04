@@ -768,6 +768,7 @@ class $t {
 
 $t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
 $t.functions = {};
+$t.isTemplate = (id) => $t.functions[id] !== undefined;
 $t.arrayItExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*in\s*([a-zA-Z][a-z0-9A-Z\.]*)\s*$/;
 $t.objItExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*in\s*([a-zA-Z][a-z\.0-9A-Z]*)\s*$/;
 $t.rangeAttemptExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*(.*\.\..*)\s*$/;
