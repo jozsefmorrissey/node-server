@@ -30,13 +30,13 @@ TemplateManager.inputTree = (callback) => {
     lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
   });
 
-  decisionInput.then(`method:${Cost.methods.LINEAR_FEET}`)
+  decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
         .jump('lengthCost');
-  decisionInput.then(`method:${Cost.methods.SQUARE_FEET}`)
+  decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
         .jump('lengthWidthCost');
-  decisionInput.then(`method:${Cost.methods.CUBIC_FEET}`)
+  decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
         .jump('lengthWidthDepthCost');
-  decisionInput.then(`method:${Cost.methods.UNIT}`)
+  decisionInput.then(`method:${Material.methods.UNIT}`)
         .jump('cost');
   decisionInput.then('type:Material').jump('color');
 

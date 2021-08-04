@@ -1,10 +1,14 @@
 class SelectCost extends Cost {
   constructor (props) {
     super(props);
+    props = this.props();
+    this.modifyDemension = Cost.getterSetter(props, 'modifyDemension');
+    this.default = Cost.getterSetter(props, 'default');
+
     const selected = 0;
     this.selected = (index) => {
-      if (index !== undefined) selected = index;
-      return this.children[selected];
+      if (index !== undefined) this.selected(index);
+      return this.children[this.selected()];
     }
 
     this.selectedId = () => {
@@ -17,7 +21,16 @@ class SelectCost extends Cost {
 
     this.unitCost = () => this.children[selected] ?
         this.children[selected].unitCost() : -0.01;
+
+    const selectedId = this.selectedId();
+    if (selectedId) {
+      this.children.forEach((child, index) => {
+        if (child.id() === selectedId) selected = index;
+      });
+    }
   }
 }
+
+SelectCost.requiredProps = ['modifyDemension', 'default', 'selectedId'];
 
 Cost.register(SelectCost);

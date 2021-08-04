@@ -117,7 +117,7 @@ $t.functions['managers/cost/cost-body'] = function (get) {
 	return `<div> ` + (get("CostManager").costTypeHtml(get("cost"), get("scope"))) + ` </div> `
 }
 $t.functions['managers/cost/cost-head'] = function (get) {
-	return `<b> ` + (get("id")()) + ` - ` + (get("constructor").constructorId(get("constructor").name)) + ` <b` + (get("method")() ? '' : ' hidden') + `>(` + (get("method")()) + `)</b> </b> `
+	return `<b> ` + (get("id")()) + ` - ` + (get("constructor").constructorId(get("constructor").name)) + ` </b> `
 }
 $t.functions['managers/cost/header'] = function (get) {
 	return `<b part-id='` + (get("instance").partId) + `'>` + (get("instance").partId) + `</b> `

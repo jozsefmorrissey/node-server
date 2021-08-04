@@ -37,7 +37,7 @@ class CostManager extends AbstractManager {
           getObject: CostManager.getCostObject(id),
           listElemLable: 'Cost'
         };
-        const cost = new SelectCost({id, referenceable: true, children: expListProps.list});
+        const cost = new Category({id, referenceable: true, children: expListProps.list});
         const requiredProps = assemProperties(id);
         const expandList = new ExpandableList(expListProps);
         list.push({partId: id, expandList, requiredProps,
@@ -234,10 +234,9 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
   const cost = MeasurementInput.cost();
   const hours = Input.hours();
   const count = Input.count();
-  const optional = Input.optional();
   const modifyDemension = Input.modifyDemension();
   const selectInfo = [CostManager.formulaInput(objId, 'Select'),
-                      RelationInput, optional];
+                      RelationInput];
   const conditionalInfo = [Input.propertyId(), Select.propertyConditions(),
         Input.propertyValue()];
   const color = [Input.color()];
@@ -263,7 +262,7 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
 
   decisionInput.addStates({
     lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color,idType,
-    laborInput, costCount, optional, materialInput, selectInfo, hourlyCount,
+    laborInput, costCount, materialInput, selectInfo, hourlyCount,
     lengthHourly, lengthWidthHourly, lengthWidthDepthHourly, modifyDemension,
     conditionalInfo
   });
@@ -280,32 +279,31 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
         .jump('selectInfo');
   const laborNode = idTypeNode.then('type:Labor')
         .jump('laborInput');
-  idTypeNode.then('type:Category').jump('optional');
 
   idTypeNode.then('id:length').jump('modifyDemension');
   idTypeNode.then('id:width').jump('modifyDemension');
   idTypeNode.then('id:depth').jump('modifyDemension');
 
 
-  materialNode.then(`method:${Cost.methods.LINEAR_FEET}`)
+  materialNode.then(`method:${Material.methods.LINEAR_FEET}`)
         .jump('lengthCost');
-  materialNode.then(`method:${Cost.methods.SQUARE_FEET}`)
+  materialNode.then(`method:${Material.methods.SQUARE_FEET}`)
         .jump('lengthWidthCost');
-  materialNode.then(`method:${Cost.methods.CUBIC_FEET}`)
+  materialNode.then(`method:${Material.methods.CUBIC_FEET}`)
         .jump('lengthWidthDepthCost');
-  materialNode.then(`method:${Cost.methods.UNIT}`)
+  materialNode.then(`method:${Material.methods.UNIT}`)
         .jump('costCount');
 
   materialNode.then('type:Material').jump('color');
 
 
-  laborNode.then(`method:${Cost.methods.LINEAR_FEET}`)
+  laborNode.then(`method:${Material.methods.LINEAR_FEET}`)
         .jump('lengthHourly');
-  laborNode.then(`method:${Cost.methods.SQUARE_FEET}`)
+  laborNode.then(`method:${Material.methods.SQUARE_FEET}`)
         .jump('lengthWidthHourly');
-  laborNode.then(`method:${Cost.methods.CUBIC_FEET}`)
+  laborNode.then(`method:${Material.methods.CUBIC_FEET}`)
         .jump('lengthWidthDepthHourly');
-  laborNode.then(`method:${Cost.methods.UNIT}`)
+  laborNode.then(`method:${Material.methods.UNIT}`)
         .jump('hourlyCount');
 
   laborNode.then('type:Material').jump('color');

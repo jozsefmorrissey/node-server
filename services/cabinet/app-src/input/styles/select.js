@@ -24,7 +24,7 @@ Select.costType = () => new Select({
 Select.method = () => new Select({
   name: 'method',
   class: 'center',
-  list: Cost.methodList,
+  list: Material.methodList,
 });
 
 Select.propertyConditions = () => new Select({

@@ -1,22 +1,19 @@
-class Labor extends Cost {
+class Labor extends Material {
   constructor (props) {
     super(props);
     const type = props.laborType;
+    this.type = () => type;
+    this.hourlyRate = () => Labor.hourlyRates[type];
     const parentCalc = this.calc;
     this.calc = (assembly) => parentCalc(assembly) * Labor.hourlyRates[type];
     if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
     Labor.hourlyRate(type, props.hourlyRate || Labor.defaultRate);
 
     const parentToJson = this.toJson;
-    this.toJson = () => {
-      const json = parentToJson();
-      json.hourlyRate = Labor.hourlyRates[type];
-      json.type = type;
-      return json;
-    }
   }
 }
 
+Labor.requiredProps = Material.requiredProps.concat(['type', 'hourlyRate']);
 Labor.defaultRate = 40;
 Labor.hourlyRate = (type, rate) => {
   rate = Cost.evaluator.eval(new String(rate));
