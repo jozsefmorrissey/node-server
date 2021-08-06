@@ -60,7 +60,8 @@ class Cost {
       };
       const children = [];
       this.children.forEach((child) => children.push(child.toJson()));
-      const reqProps = this.constructor.requiredProps || [];
+      let allProps = this.constructor.staticProps || [];
+      allProps = allProps.concat(this.constructor.instanceProps);
       reqProps.forEach((prop) => json[prop] = this[prop]());
       return json;
     }

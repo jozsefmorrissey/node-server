@@ -1,19 +1,26 @@
+
+// unitCost.value = (hourlyRate*hours)/length
+// calc(assembly) = unitCost.value * formula
+
 class Labor extends Material {
   constructor (props) {
     super(props);
+    props = this.props();
     const type = props.laborType;
     this.type = () => type;
     this.hourlyRate = () => Labor.hourlyRates[type];
     const parentCalc = this.calc;
-    this.calc = (assembly) => parentCalc(assembly) * Labor.hourlyRates[type];
+    this.cost = () => this.hourlyRate() * props.hours;
     if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
-    Labor.hourlyRate(type, props.hourlyRate || Labor.defaultRate);
+    Labor.hourlyRate(type, props.hourlyRate);
 
     const parentToJson = this.toJson;
   }
 }
 
-Labor.requiredProps = Material.requiredProps.concat(['type', 'hourlyRate']);
+
+Labor.instanceProps = Material.instanceProps.concat(['type', 'hourlyRate']);
+Labor.staticProps = Material.staticProps.concat(['type', 'hourlyRate']);
 Labor.defaultRate = 40;
 Labor.hourlyRate = (type, rate) => {
   rate = Cost.evaluator.eval(new String(rate));

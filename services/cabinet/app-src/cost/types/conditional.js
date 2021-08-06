@@ -11,7 +11,7 @@ class ConditionalCost extends Category {
   }
 }
 
-ConditionalCost.requiredProps = ['propertyId', 'propertyValue', 'propertyCondition'];
+ConditionalCost.staticProps = ['propertyId', 'propertyValue', 'propertyCondition'];
 ConditionalCost.toKey = (value) => new String(value).replace(/ /g, '_').toUpperCase();
 
 ConditionalCost.conditions = {};

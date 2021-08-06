@@ -127,7 +127,7 @@ const { JsBundler } = require('./building/bundlers/js.js');
 const jsDumpLoc = './public/js/index';
 const jsBundler = new JsBundler(jsDumpLoc, []);
 
-new Watcher(jsBundler.change, jsBundler.write)
+const jsWatcher = new Watcher(jsBundler.change, jsBundler.write)
         .add('./globals/')
         .add('./public/js/3d-modeling/lightgl.js')
         .add('./public/js/3d-modeling/csg.js')
@@ -138,3 +138,7 @@ new Watcher(jsBundler.change, jsBundler.write)
         .add('./generated/hacky/EPNTS.js')
         .add('./public/json/cabinets.json')
         .add('./app-src');
+
+if (host.indexOf('localhost') !== -1) {
+  jsWatcher.add('./test')
+}

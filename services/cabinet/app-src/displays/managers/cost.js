@@ -38,9 +38,9 @@ class CostManager extends AbstractManager {
           listElemLable: 'Cost'
         };
         const cost = new Category({id, referenceable: true, children: expListProps.list});
-        const requiredProps = assemProperties(id);
+        const staticProps = assemProperties(id);
         const expandList = new ExpandableList(expListProps);
-        list.push({partId: id, expandList, requiredProps,
+        list.push({partId: id, expandList, staticProps,
           CostManager: CostManager, parentId, cost});
       });
       propertyDisplay.update();
@@ -236,7 +236,7 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
   const count = Input.count();
   const modifyDemension = Input.modifyDemension();
   const selectInfo = [CostManager.formulaInput(objId, 'Select'),
-                      RelationInput];
+                      RelationInput.selector];
   const conditionalInfo = [Input.propertyId(), Select.propertyConditions(),
         Input.propertyValue()];
   const color = [Input.color()];

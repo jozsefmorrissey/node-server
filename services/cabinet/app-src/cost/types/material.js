@@ -13,8 +13,8 @@ class Material extends Cost {
     this.cost = Cost.getterSetter(props, 'cost');
 
 
-    this.unitCost = referenceCost ? referenceCost.unitCost : (attr) => {
-      const unitCost = Cost.configure(instance.method(), instance.cost(),
+    this.unitCost = (attr) => {
+      const unitCost = Material.configure(instance.method(), instance.cost(),
         instance.length(), instance.width(), instance.depth());
       const copy = JSON.parse(JSON.stringify(unitCost));
       if (attr) return copy[attr];
@@ -23,13 +23,14 @@ class Material extends Cost {
 
     this.calc = (assemblyOrCount) => {
       if (assemblyOrCount instanceof Assembly)
-        return Cost.evaluator.eval(`${this.unitCost().value}*${this.formula()}`, assembly);
+        return Cost.evaluator.eval(`${this.unitCost().value}*${this.formula()}`, assemblyOrCount);
       else return Cost.evaluator.eval(`${this.unitCost().value}*${assemblyOrCount}`);
     }
   }
 }
 
-Material.requiredProps = ['method', 'cost', 'formula', 'length', 'width',
+Material.instanceProps = ['formula'];
+Material.staticProps = ['method', 'cost', 'length', 'width',
                           'depth', 'company', 'partNumber'];
 
 Material.methods = {
@@ -43,33 +44,33 @@ Material.methodList = Object.values(Material.methods);
 
 
 Material.configure = (method, cost, length, width, depth) => {
-  const retValue = {unitCost: {}};
+  const unitCost = {};
   switch (method) {
     case Material.methods.LINEAR_FEET:
-      const perLinearInch = Cost.evaluator.eval(`${cost}/(${length} * 12)`);
-      retValue.unitCost.name = 'Linear Inch';
-      retValue.unitCost.value = perLinearInch;
-      return retValue;
+      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
+      unitCost.name = 'Linear Inch';
+      unitCost.value = perLinearInch;
+      return unitCost;
     case Material.methods.SQUARE_FEET:
-      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*144)`);
-      retValue.unitCost.name = 'Square Inch';
-      retValue.unitCost.value = perSquareInch;
-      return retValue;
+      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
+      unitCost.name = 'Square Inch';
+      unitCost.value = perSquareInch;
+      return unitCost;
     case Material.methods.CUBIC_FEET:
-      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth}*1728)`);
-      retValue.unitCost.name = 'Cubic Inch';
-      retValue.unitCost.value = perCubicInch;
-      return retValue;
+      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
+      unitCost.name = 'Cubic Inch';
+      unitCost.value = perCubicInch;
+      return unitCost;
     case Material.methods.UNIT:
-      retValue.unitCost.name = 'Unit';
-      retValue.unitCost.value = cost;
-      return retValue;
+      unitCost.name = 'Unit';
+      unitCost.value = cost;
+      return unitCost;
     default:
       throw new Error('wtf');
-      retValue.unitCost.name = 'Unknown';
-      retValue.unitCost = -0.01;
-      retValue.formula = -0.01;
-      return retValue;
+      unitCost.name = 'Unknown';
+      unitCost = -0.01;
+      formula = -0.01;
+      return unitCost;
   }
 };
 

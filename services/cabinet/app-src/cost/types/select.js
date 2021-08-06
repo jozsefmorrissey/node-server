@@ -31,6 +31,6 @@ class SelectCost extends Cost {
   }
 }
 
-SelectCost.requiredProps = ['modifyDemension', 'default', 'selectedId'];
+SelectCost.instanceProps = ['modifyDemension', 'default', 'selectedId'];
 
 Cost.register(SelectCost);

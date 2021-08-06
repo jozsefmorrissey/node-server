@@ -198,10 +198,11 @@ class StringMathEvaluator {
       return null
     }
 
-    this.eval = function (expr, scope) {
+    this.eval = function (expr, scope, percision) {
       if (this.cache(expr) !== null) return this.cache(expr);
       if (Number.isFinite(expr))
         return expr;
+      expr = new String(expr);
       expr = addUnexpressedMultiplicationSigns(expr);
       expr = convertFeetInchNotation(expr);
       scope = scope || globalScope;
@@ -239,13 +240,18 @@ class StringMathEvaluator {
 
       if (Number.isFinite(value)) {
         cache[expr] = {time: new Date().getTime(), value};
-        return new Measurement(value).decimal('1/32');
+        return StringMathEvaluator.round(value);
       }
       return NaN;
     }
   }
 }
 
+StringMathEvaluator.round = (value, percision) => {
+  if (percision)
+    return new Measurement(value).decimal(percision);
+  return Math.round(value * 10000000) / 10000000;
+}
 StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
 
 StringMathEvaluator.mixedNumberReg = /([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
