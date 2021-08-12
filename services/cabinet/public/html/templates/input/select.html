@@ -1,9 +1,9 @@
 <div class='input-cnt'{{hidden() ? ' hidden' : ''}}>
   <label>{{label}}</label>
   <select class='{{class}}' id='{{id}}' name='{{name}}' value='{{value()}}'>
-    <option:t repeat='item in list' value='{{item}}'
+    <option:t repeat='key, value in list' value='{{isArray() ? value : key}}'
         {{selected(item) ? 'selected' : ''}}>
-      {{item}}
+      {{value}}
     </option:t>
   </select>
   <div class='error' id='{{errorMsgId}}'>{{errorMsg}}</div>

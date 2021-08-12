@@ -2,6 +2,7 @@ class Material extends Cost {
   constructor (props) {
     super(props);
     props = this.props();
+    props.cost = props.cost / (props.count || 1);
     const instance = this;
     this.company = Cost.getterSetter(props, 'company');
     this.formula = Cost.getterSetter(props, 'formula');
@@ -22,9 +23,14 @@ class Material extends Cost {
     }
 
     this.calc = (assemblyOrCount) => {
+      const unitCost = this.unitCost();
+      const formula = this.formula() || unitCost.formula;
       if (assemblyOrCount instanceof Assembly)
-        return Cost.evaluator.eval(`${this.unitCost().value}*${this.formula()}`, assemblyOrCount);
-      else return Cost.evaluator.eval(`${this.unitCost().value}*${assemblyOrCount}`);
+        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
+      else if (Number.isFinite(assemblyOrCount))
+        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
+      else
+        throw new Error('calc argument must be a number or Assembly');
     }
   }
 }
@@ -50,16 +56,19 @@ Material.configure = (method, cost, length, width, depth) => {
       const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
       unitCost.name = 'Linear Inch';
       unitCost.value = perLinearInch;
+      unitCost.formula = 'l';
       return unitCost;
     case Material.methods.SQUARE_FEET:
       const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
       unitCost.name = 'Square Inch';
       unitCost.value = perSquareInch;
+      unitCost.formula = 'l*w';
       return unitCost;
     case Material.methods.CUBIC_FEET:
       const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
       unitCost.name = 'Cubic Inch';
       unitCost.value = perCubicInch;
+      unitCost.formula = 'l*w*d';
       return unitCost;
     case Material.methods.UNIT:
       unitCost.name = 'Unit';

@@ -32,11 +32,11 @@ class PropertyDisplay {
         const props = assemProps[key];
         const propObj = {global: props.global, instance: {}};
         propertyObjs[key] = propObj;
-        const assems = Cost.objMap[key] || [];
-        for (let aIndex = 0; aIndex < assems.length; aIndex += 1) {
-          const aProps = JSON.clone(props.instance);
-          propObj.instance[assems[aIndex].id()] = aProps;
-        }
+        // const assems = Cost.group().objectMap[key] || [];
+        // for (let aIndex = 0; aIndex < assems.length; aIndex += 1) {
+        //   const aProps = JSON.clone(props.instance);
+        //   propObj.instance[assems[aIndex].id()] = aProps;
+        // }
       }
       const values = {values: propertyObjs};
       const contianer = document.querySelector(containerSelector);

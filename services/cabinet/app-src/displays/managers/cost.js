@@ -132,7 +132,7 @@ CostManager.isInstance = (target) => upAll('.expandable-list', el).length === 2;
 CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(cost);
 CostManager.costBody = (cost) => CostManager.costBodyTemplate.render(CostManager.childScope(cost));
 CostManager.getObject = (values) => {
-  if (values.costType === 'Custom') {
+  if (values.costType === '/dev/nul') {
     return Cost.new(values);
   } else {
     const referenceCost = Cost.get(values.costType);
@@ -187,11 +187,12 @@ afterLoad.push(() => {
 });
 
 CostManager.costInputTree = (costTypes, objId, onUpdate) => {
+
   const costTypeSelect = new Select({
     name: 'costType',
-    value: 'Custom',
+    value: '/dev/nul',
     class: 'center',
-    list: Cost.defined
+    list: Cost.group().defined
   });
   const reference = new Input({
     name: 'referenceable',
@@ -210,7 +211,7 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
 
   costTypeSelect.on('change',
     (val) => {
-      if (val !== 'Custom') {
+      if (val !== '/dev/nul') {
         reference.setValue(false);
         reference.hide();
       } else {
@@ -267,7 +268,7 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
     conditionalInfo
   });
 
-  const idTypeNode = decisionInput.then('costType:Custom')
+  const idTypeNode = decisionInput.then('costType:/dev/nul')
         .jump('idType');
 
 

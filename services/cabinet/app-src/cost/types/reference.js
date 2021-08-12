@@ -4,7 +4,8 @@ class ReferenceCost extends Cost {
     super(referenceCost.props());
     const props = this.props();
     this.children = [];
-    referenceCost.children.forEach((child) => this.children.push(child));
+    referenceCost.children.forEach((child) =>
+        this.children.push(new ReferenceCost(child)));
 
     this.id = referenceCost.id;
     this.calc = referenceCost.calc;

@@ -161,7 +161,7 @@ Input.CostId = () => new Input({
   name: 'id',
   class: 'center',
   validation: (id, values) =>
-      id !== '' && (!values.referenceable || Cost.defined.indexOf(id)  === -1),
+      id !== '' && (!values.referenceable || Object.values(Cost.defined).indexOf(id) === -1),
   errorMsg: 'You must an Id: value must be unique if Referencable.'
 });
 

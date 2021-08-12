@@ -7,85 +7,70 @@
   const referenceable = true;
   const group = 'localTest30487';
 
-  let unitCostValue = smeRound((35*.017)/(8*12));
-  let costValue = smeRound(unitCostValue * 196 * 12);
+  let unitCostValue = smeRound(15.37/(8*12));
+  let costValue = smeRound(unitCostValue * 2 * 196 * 12);
   let assembly = frame;
   props.linear = {
-    id: 'Sand Frame',
+    id: 'frame',
     method: 'Linear Feet',
-    laborType: 'Sand',
     objectId: 'Frame',
-    hourlyRate: '35',
     length: '8\'',
-    hours: '.017',
-    formula: 'l',
+    cost: '15.37',
+    formula: '2*l',
     referenceable, unitCostValue, costValue, assembly, group
   };
 
-  unitCostValue = smeRound((35*.08)/(48*48));
+  unitCostValue = smeRound((75.13)/(96*48));
   costValue = smeRound(unitCostValue * 24 * 10);
   assembly = panel;
   props.square = {
-    id: 'Sand Panel',
+    id: 'panel0',
     method: 'Square Feet',
-    laborType: 'Sand',
-    length: '48',
     objectId: 'Panel',
+    length: '96',
     width: '48',
-    hours: '.08',
-    formula: 'l*w',
+    cost: 75.13,
     referenceable, unitCostValue, costValue, assembly, group
   };
 
-  unitCostValue = smeRound((35*.06)/(12*6*1));
+  unitCostValue = smeRound(29.86/(12*6*1));
   costValue = smeRound(unitCostValue * 24 * 10 * .75);
   props.cubic = {
-    id: 'Sand Block',
+    id: 'metal',
     method: 'Cubic Feet',
-    laborType: 'Sand',
-    hourlyRate: '35',
     objectId: 'Panel',
     length: '12',
     width: '6',
     depth: '1',
-    hours: '.06',
-    formula: 'l*w*d',
+    cost: 29.86,
     referenceable, unitCostValue, costValue, assembly, group
   };
 
-  unitCostValue = smeRound(20*.66);
+  unitCostValue = smeRound(50.12/10);
   costValue = smeRound(unitCostValue * 13);
   console.log('costValue', costValue)
   props.unit = {
-    id: 'instalation',
+    id: 'parts',
     method: 'Unit',
     laborType: 'Instalation',
     hourlyRate: '20',
     hours: '.66',
+    cost: '50.12',
+    count: '10',
     referenceable, unitCostValue, costValue, group,
     assembly: 13
   };
 
-  Test.add('LaborCost: unitCost/calc',(ts) => {
+  Test.add('MaterialCost: unitCost/calc',(ts) => {
     const costs = [];
     function testProps(props) {
-      const labor = new Labor(props);
+      const labor = new Material(props);
       costs.push(labor);
-      ts.assertTolerance(labor.unitCost().value, props.unitCostValue, .00001);
-      ts.assertTolerance(labor.calc(props.assembly), props.costValue, .00001);
+      ts.assertTolerance(labor.unitCost().value, props.unitCostValue, .0001);
+      ts.assertTolerance(labor.calc(props.assembly), props.costValue, .0001);
     }
     Object.values(props).forEach(testProps);
     costs.forEach((cost) => cost.delete());
     ts.success();
   });
-
-  // Test.add('LaborCost: argument validation',(ts) => {
-  //   const args = [props.linear];
-  //   const func = function (args) {new (Labor.prototype.constructor)(...arguments);}
-  //   new FunctionArgumentTest(ts, func, args)
-  //       .setIndex(0)
-  //       .add('id', undefined)
-  //       .run();
-  //   ts.success();
-  // });
 }

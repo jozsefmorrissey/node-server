@@ -22,33 +22,26 @@ class Cost {
   constructor(props) {
     this.props = () => JSON.parse(JSON.stringify(props));
     props = this.props();
+    let deleted = false;
     const instance = this;
     const uniqueId = randomString();
     const lastUpdated = props.lastUpdated || new Date().getTime();
     this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
+    this.delete = () => deleted = true;
+    this.deleted = () => deleted;
+    this.group = Cost.getterSetter(props, 'group');
     this.uniqueId = () => uniqueId;
     this.objectId = Cost.getterSetter(props, 'objectId');
     this.id = Cost.getterSetter(props, 'id');
     this.children = props.children || [];
 
-    if (props.objectId !== undefined) {
-      if (Cost.objMap[props.objectId] === undefined) Cost.objMap[props.objectId] = [];
-      Cost.objMap[props.objectId].push(this);
-    }
-
-    if (!(this instanceof ReferenceCost)) {
-      Cost.unique[props.id] = this;
-      if (props.referenceable) Cost.defined.push(this.id());
-    }
+    Cost.group(props, this);
 
     this.addChild = (cost) => {
       if (cost instanceof Cost) {
         this.children.push(cost);
       }
     }
-    const cName = this.constructor.name;
-    if (Cost.lists[cName] === undefined) Cost.lists[cName] = {};
-    Cost.lists[cName][props.id] = this;
 
     this.toJson = () => {
       const json = {
@@ -74,20 +67,52 @@ Cost.getterSetter = (obj, attr, validation) => (val) => {
   if (validation && !validation(obj[attr])) throw new Error(`Invalid Cost Value ${obj[attr]}`);
   return obj[attr];
 }
-Cost.unique = {};
-Cost.defined = ['Custom'];
-Cost.lists = {};
-Cost.objMap = {};
+
+
+Cost.group = (() => {
+  const groups = {};
+  return (props, cost) => {
+    const isSetter = cost instanceof Cost;
+    const name = isSetter ? props.group : props;
+    if (isSetter) {
+      if (groups[name] === undefined)
+      groups[name] = {unique: {}, objectMap: {}, defined: {'/dev/nul': 'Custom'}};
+      const group = groups[name];
+
+      const unique = group.unique;
+      const defined = group.defined;
+      const objectMap = group.objectMap;
+      if (unique[cost.uniqueId()] !== undefined)
+      throw new Error('Invalid Unique Id');
+
+      unique[cost.uniqueId()] = cost;
+
+      if (props.objectId !== undefined) {
+        if (objectMap[props.objectId] === undefined)
+          objectMap[props.objectId] = [];
+        objectMap[props.objectId].push(cost.uniqueId());
+      }
+
+      if (!(cost instanceof ReferenceCost)) {
+        if (props.referenceable) {
+          if (Object.values(defined).indexOf(cost.id()) !== -1)
+          throw new Error(`referenceable cost must have a unique Id: '${cost.id()}'`);
+          defined[cost.uniqueId()] = cost.id();
+        }
+      }
+    }
+
+    return groups[name]
+  }
+})();
+
 Cost.types = [];
 Cost.get = (id) => {
-  const listsKeys = Object.keys(Cost.lists);
-  for (let index = 0; index < listsKeys.length; index += 1) {
-    if (Cost.lists[listsKeys[index]][id]) return Cost.lists[listsKeys[index]][id];
-  }
-  return undefined;
+  return Cost.uniqueId(uniqueId);
 };
 
-Cost.freeId = (id) => Cost.get(id) === undefined;
+Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
+Cost.remove = (uniqueId) => Cost.get(uniqueId).remove();
 
 Cost.constructorId = (name) => name.replace(/Cost$/, '');
 Cost.register = (clazz) => {
