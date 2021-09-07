@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript">
+      let count = 0;
+      function create(name, children) {
+        children = children || [];
+        name = `${name}(${count++})`;
+        return {name, children};
+      }
+      const obj = create('root', [
+        create('1', [
+          create('1', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('2', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('3', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('4', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+        ]),
+        create('2', [
+          create('1', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('2', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('3', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('4', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+        ]),
+        create('3', [
+          create('1', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('2', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('3', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('4', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+        ]),
+        create('4', [
+          create('1', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('2', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('3', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+          create('4', [
+            create('1', []),create('2', []),create('3', []),create('4', [])
+          ]),
+        ]),
+      ]);
+
+      function html(obj) {
+        return `<b>${obj.name}</b>`;
+      }
+
+      function drawArrow(positionFrom, positionTo) {
+        var c = document.getElementById("myCanvas");
+        var ctx = c.getContext("2d");
+        ctx.beginPath();
+        ctx.moveTo(positionFrom.top, positionFrom.left);
+        ctx.lineTo(positionTo.top, positionTo.left);
+        ctx.stroke();
+      }
+
+      const tabSpace = 100;
+      function place(obj, childAttr, htmlFunc, top, left) {
+        const children = obj[childAttr];
+        const half = Math.floor(children.length / 2);
+        const childPositions = [];
+        left += tabSpace;
+        for (let index = 0; index < half; index += 1) {
+          const child = obj[childAttr][index];
+          position = place(child, childAttr, htmlFunc, top, left);
+          childPositions.push(position);
+          top = position.top;
+        }
+        left -= tabSpace;
+        const rootPosition = {top, left};
+        const cnt = document.createElement('DIV');
+        cnt.innerHTML = htmlFunc(obj);
+        document.body.append(cnt);
+        top += cnt.getBoundingClientRect().height;
+        cnt.style =  `top: ${top}px;left: ${left}px;position: absolute;`;
+        left += tabSpace;
+        for (let index = half; index < children.length; index += 1) {
+          const child = obj[childAttr][index];
+          position = place(child, childAttr, htmlFunc, top, left);
+          childPositions.push(position);
+          top = position.top;
+        }
+        left -= tabSpace;
+
+        childPositions.forEach((position) => drawArrow(rootPosition, position));
+
+        return {top, left};
+      }
+      function placin() {place(obj, 'children', html, 0, 0);}
+      window.onload = placin;
+    </script>
+    <title></title>
+  </head>
+  <body>
+    <canvas id='myCanvas'></canvas>
+    <ul>
+      <li>one</li>
+      <li>two</li>
+      <li>three</li>
+      <li>four</li>
+      <li>five</li>
+    </ul>
+
+    <div style="position: absolute;">
+      <div style='position: relative;'>header</div>
+      <div style='position: static;'>
+        <ul>
+          <li>1</li>
+          <li>2</li>
+          <li>3</li>
+          <li>4</li>
+          <li>5</li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

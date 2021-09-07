@@ -1,0 +1,16 @@
+<div class='cabinet-header'>
+  <input class='cabinet-id-input' prop-update='{{$index}}.name'
+        index='{{$index}}' room-id='{{room.id}}' value='{{cabinet.name || $index}}'>
+  Size:
+  <div class='cabinet-dem-cnt'>
+    <label>W:</label>
+    <input class='cabinet-input dem' prop-update='{{$index}}.width'
+        room-id='{{room.id}}' value='{{cabinet.width()}}'>
+    <label>H:</label>
+    <input class='cabinet-input dem' prop-update='{{$index}}.length'
+        room-id='{{room.id}}' value='{{cabinet.length()}}'>
+    <label>D:</label>
+    <input class='cabinet-input dem' prop-update='{{$index}}.thickness'
+        room-id='{{room.id}}' value='{{cabinet.thickness()}}'>
+  </div>
+</div>

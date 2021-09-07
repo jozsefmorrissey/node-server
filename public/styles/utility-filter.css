@@ -47,23 +47,25 @@
 
 #pop-up {
   background-color: white;
-  width: max-content;
-  padding: 10pt 20pt;
+  max-width: 80vw;
+  max-height: 75vh;
+  padding: 5vh 5vw;
   display: inline-block;
   border-radius: 20pt;
+  scroll-behavior: auto;
+  overflow: scroll;
 }
 
 #pop-up-haze {
   position: fixed;
   left: 0;
   top: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   text-align: center;
-  background:rgba(0,0,0,0.6);
-  padding: 20pt;
+  background: rgba(0,0,0,0.6);
+  padding: 5vh 1vw;
 }
-
 .search-all-ctn {
 	position: relative;
 	padding: 10pt;

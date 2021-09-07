@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src='/premier/js/index.js'></script>
+    <link rel="stylesheet" href="/styles/expandable-list.css">
+    <link rel="stylesheet" href="/premier/styles/premier.css">
+    <title></title>
+  </head>
+  <body>
+    <div id='order-info-cnt'></div>
+    <br><br>
+    <div class='dont-print'>
+      <div id='cost-tree'></div>
+      <div id='current-cost'></div>
+    </div>
+    <br><br>
+    <div id='drawer-form'>
+      <style>
+        table {border-collapse: collapse;}
+        th, td {
+          border: 1px solid black;
+          text-align: center;
+          padding: 0 2pt;
+        }
+        .no-border {border: none;}
+        .inline-block {display: inline-block;}
+        .dynamic {display: inline-block;}
+        .label-cnt {position: relative;padding: 5pt 5pt 0 5pt;display: table-cell;}
+        .label-cnt > label {
+          position: absolute;
+          left: 0;
+          top: 0;
+          font-size: 8pt;
+          font-weight: bold;
+          color: grey;
+          }
+      </style>
+      <div id='order-cnt'></div>
+      <br><br>
+      <div id='table-cnt'></div>
+      <b>Total:</b><p id='total-cost'></p>
+    </div>
+    <button id='submit'>Email</buttom>
+  </body>
+</html>

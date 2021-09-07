@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src='/cabinet/js/index.js'></script>
+    <link rel="stylesheet" href="/styles/expandable-list.css">
+    <link rel="stylesheet" href="/cabinet/styles/estimate.css">
+    <script src="/js/utility-filter.js" run-type='auto'></script>
+    <title>Estimate</title>
+  </head>
+  <body>
+    <button id='menu-btn'>&#8801;</button>
+    <div id='menu' hidden></div>
+    <div id='login'><div id='login-cnt' class='center-all'></div></div>
+    <div id='display-ctn'>
+      <div id='app' name='Orders'></div>
+      <div id='cost-manager' name='Cost Manager'>
+        <div class="center">
+          <h2 id='cost-manager-header'>
+            Cost Manager
+            <button id='cost-manager-save-btn'>Save</button>
+          </h2>
+        </div>
+        <div id="cost-manager-body"></div>
+      </div>
+      <div id='template-manager' name='Template Manager'>Temp Man</div>
+      <div id='property-manager' name='Property Manager'>Prop Man</div>
+      <div id='pattern-manager' name='Pattern Manager'>Pat Man</div>
+    </div>
+
+    <div class='tree-d-model-cnt'>
+      <div id="model-controller" hidden></div>
+      <div id="three-d-model" class="viewer small">
+        <button id='max-min-btn'>+</button>
+      </div>
+    </div>
+  </body>
+</html>

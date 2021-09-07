@@ -1,0 +1,65 @@
+<div class='drawer-group'>
+  <table>
+    <tr>
+      <td class='label-cnt'>
+        <label>Style</label>
+        <span prop-update='style'>{{style()['id']()}}</span>
+      </td>
+      <td class='label-cnt'>
+        <label>Finishing</label>
+        {{finishing()['id']()}}
+      </td>
+      <td class='label-cnt'>
+        <label>Sides</label>
+        {{sides().id()}}
+      </td>
+      <td class='label-cnt'>
+        <label>Bottom</label>
+        {{bottom().id()}}
+      </td>
+    </tr>
+  </table>
+
+  <div {{options.length > 0 ? 'class="options-cnt"' : ' hidden'}}>
+    <b class='tab'>Options</b>
+    <div style='padding-left: 20pt;'>
+      <div:t repeat='option in options'>
+        {{option.name()}}
+      </div:t>
+    </div>
+  </div>
+
+  <table>
+    <tr>
+      <th>#</th>
+      <th>Quantity</th>
+      <th>Length</th>
+      <th>Width</th>
+      <th>Depth</th>
+      <th>Notes</th>
+      <th>Ea</th>
+      <th>Total</th>
+    </tr>
+    <tr:t repeat='drawer in list'>
+      <td>{{drawer.index()}}</td>
+      <td>{{drawer.quantity()}}</td>
+      <td>{{drawer.widthPrint()}}</td>
+      <td>{{drawer.heightPrint()}}</td>
+      <td>{{drawer.depthPrint()}}</td>
+      <td>{{drawer.notes() || ''}}</td>
+      <td>{{drawer.each()}}</td>
+      <td>{{drawer.cost()}}</td>
+    </tr:t>
+    <tr>
+      <td class='no-border'></td>
+      <td class='no-border'></td>
+      <td class='no-border'></td>
+      <td class='no-border'></td>
+      <td class='no-border'></td>
+      <td class='no-border'></td>
+      <td class='no-border'></td>
+      <td>{{cost()}}</td>
+    </tr>
+  </table>
+  <br><br>
+</div>

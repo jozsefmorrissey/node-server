@@ -1,0 +1,37 @@
+
+<div class="expandable-list {{type}}" ex-list-id='{{id}}'>
+  <div class="expand-list-cnt {{type}}" ex-list-id='{{id}}'>
+    <div:t repeat='item in list' class="expandable-list-body"  index='{{$index}}'>
+      <div class="expand-item">
+        <div class='expand-rm-btn-cnt'>
+          <button class='expandable-item-rm-btn' ex-list-id='{{id}}' index='{{$index}}'>X</button>
+        </div>
+        <div class="expand-header {{type}} {{$index === activeIndex ? ' active' : ''}}"
+                ex-list-id='{{id}}' index='{{$index}}'>
+          {{getHeader(item, $index)}}
+        </div>
+      </div>
+    </div:t>
+    <div id='input-tree-cnt'>{{inputTree ? inputTree.html() : ''}}</div>
+    <div {{!hasInputTree() ? '' : 'hidden'}}>
+      <div:t repeat='input in inputs'>
+        <input class='expand-list-sidebar-input'
+            list='auto-fill-list-{{input.id}}' id='{{input.id}}'
+            placeholder='{{input.placeholder}}' type='text'>
+        <datalist id="auto-fill-list-{{input.id}}">
+          <option:t value="{{option}}" repeat='option in input.autofill'></option:t>
+        </datalist>
+      </div:t>
+      <button ex-list-id='{{id}}' class='expandable-list-add-btn'
+          {{hideAddBtn ? 'hidden' : ''}}>
+        Add {{listElemLable}}
+      </button>
+      <div class='error' id='{{ERROR_CNT_ID}}'></div>
+    </div>
+  </div>
+  <div>
+  </div>
+  <div class="expand-body {{type}}">
+    Hello World!
+  </div>
+</div>
