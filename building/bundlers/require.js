@@ -159,7 +159,7 @@ MapScript.upFolderRegex = /(\/|^)([^/]{3,}|[^.]|[^.].|.[^.])\/\.\.\//g;
 MapScript.simplifyPath = function (path) {
   path = path.replace(/^\.\//, '');
   path = path.replace(/\/.\//, '/');
-  path += path.match(/^.*\.js$/) ? '' : '.js';
+  path += path.match(/^.*\.(js|json)$/) ? '' : '.js';
   let simplified = path;
   let currSimplify = path;
   while(currSimplify.match(MapScript.upFolderRegex)) {
@@ -195,18 +195,50 @@ class RequireJS {
 
     projectDir = projectDir || guessProjectDir();
     const scripts = {};
+    const prefixReg = /^\.\//;
+    const trimPrefix = (path) => path.replace(prefixReg, '');
 
-    function requireWrapper (absDir, relitivePath) {
+    const nameReg = /^(.*)\/(.*)$/;
+    function guessFilePath (wrongPath, currFile) {
+      const guesses = [];
+      const fileName = wrongPath.replace(nameReg, '$2');
+      Object.keys(scripts).forEach((path) => {
+        const name = path.replace(nameReg, '$2');
+        if (name === fileName) guesses.push(determinRelitivePath(currFile, path));
+      });
+      return guesses;
+    }
+
+    function determinRelitivePath(from, to) {
+      from = trimPrefix(MapScript.simplifyPath(from))
+      from = from.replace(nameReg, '$1');
+      from = from.split('/');
+      to = trimPrefix(MapScript.simplifyPath(to))
+      to = to.split('/');
+      let index = 0;
+      while (from[index] && from[index] === to[index]) {
+        index += 1;
+      }
+      const backPages = from.length - index;
+      const relPathArr = backPages === 0  ? `./${to.slice(to.length - 1)}` :
+                          new Array(backPages).fill('..').concat(to.slice(index)).join('/');
+      return relPathArr;
+    }
+
+    function requireWrapper (absDir, relitivePath, filePath) {
       relitivePath = MapScript.simplifyPath(relitivePath);
       const path = MapScript.simplifyPath(`${absDir}${relitivePath}`);
       if (scripts[path] instanceof Unloaded) {
         scripts[path] = scripts[path].load();
       }
+      if (scripts[path] === undefined) console.warn(`Trying to load a none exisant js file
+\t'${relitivePath}' from file '${filePath}'
+\t\tDid you mean:\n\t\t\t${guessFilePath(relitivePath, filePath).join('\n\t\t\t')}`);
       return scripts[path];
     }
 
-    function requireFunc (absoluteDir) {
-      return (relitivePath) => requireWrapper(absoluteDir, relitivePath);
+    function requireFunc (absoluteDir, filePath) {
+      return (relitivePath) => requireWrapper(absoluteDir, relitivePath, filePath);
     }
 
     const loadPath = [];
@@ -218,7 +250,7 @@ class RequireJS {
           if (loadPath.indexOf(path) !== -1) throw Error(`Circular Reference: \n\t\t${loadPath.join('\n\t\t')}`);
           loadPath.push(path);
           console.log('loading: ', path);
-          func(requireFunc(absoluteDir), modulee.exports, modulee);
+          func(requireFunc(absoluteDir, path), modulee.exports, modulee);
           loadPath.splice(loadPath.indexOf(path), 1);
           return modulee.exports;
         };
@@ -244,18 +276,34 @@ class RequireJS {
     let guess = false;
     this.guess = (g) => guess = (typeof g) === 'boolean' ? g : !guess;
 
+    function resolveBody (script) {
+      async function resolver(resolve) {
+        try {
+          JSON.parse(script);
+          resolve(`module.exports = ${script.trim()};`);
+        } catch (e) {
+          if (guess) {
+            const reqStr = await map.requireStr();
+            const expStr = map.exportStr();
+            resolve(`${reqStr}\n${script}${expStr}\n`);
+          } else {
+            resolve(script);
+          }
+        }
+      }
+      return new Promise(resolver);
+    }
+
 
     const startTime = new Date().getTime();
     const pathCache = {};
-    async function encapsulate(absolutePath, script) {
+    function encapsulate(absolutePath, script) {
       const map = new MapScript(absolutePath, script);
       async function resolver (resolve) {
         if (pathCache[absolutePath] === undefined) {
           pathCache[absolutePath] = await MapScript.toRelitivePath(absolutePath, projectDir);
         }
-        const reqStr = await map.requireStr();
-        const expStr = map.exportStr();
-        const body = guess ? `${reqStr}\n${script}${expStr}\n` : script;
+        const body = await resolveBody(script);
         const encaps = `RequireJS.addFunction('${pathCache[absolutePath]}',
 function (require, exports, module) {
 ${body.replace(/(^|\n)/g, '\n\t').substr(1)}

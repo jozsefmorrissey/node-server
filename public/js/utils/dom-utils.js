@@ -1,20 +1,30 @@
 
+const frag = document.createDocumentFragment();
+function validSelector (selector) {
+  try {
+    frag.querySelector(selector)
+    return selector;
+  } catch (e) {
+    const errMsg = `Invalid Selector: '${selector}'` ;
+    console.error(errMsg);
+    return errMsg;
+  }
+};
+const VS = validSelector;
 
-
-// const Input = require('./input/input.js');
-// const getValue = require('../../../services/cabinet/app-src/utils.js').getValue;
 
 const du = {create: {}, find: {}, class: {}, cookie: {}, param: {}, style: {},
       scroll: {}, input: {}, on: {}};
 
 du.create.element = function (tagname, attributes) {
   const elem = document.createElement(tagname);
-  const keys = Object.keys(attributes);
+  const keys = Object.keys(attributes || {});
   keys.forEach((key) => elem.setAttribute(key, attributes[key]));
   return elem;
 }
 
 du.find.up = function (selector, node) {
+  selector = VS(selector);
   if (node instanceof HTMLElement) {
     if (node.matches(selector)) {
       return node;
@@ -39,6 +49,7 @@ du.appendError = (target, message) => {
 du.find.upAll = function(selector, node) {
   const elems = [];
   let elem = node;
+  selector = VS(selector);
   while(elem = du.find.up(selector, elem)) {
     elems.push(elem);
     elem = elem.parentElement;
@@ -51,6 +62,7 @@ du.depth = function(node) {return upAll('*', node).length};
 du.find.downInfo = function (selector, node, distance, leafSelector) {
   const nodes = node instanceof HTMLCollection ? node : [node];
   distance = distance || 0;
+  selector = VS(selector);
 
   function recurse (node, distance) {
     if (node instanceof HTMLElement) {
@@ -86,6 +98,7 @@ du.find.downAll = function(selector, node) {return du.find.downInfo(selector, no
 
 du.find.closest = function(selector, node) {
   const visited = [];
+  selector = VS(selector);
   function recurse (currNode, distance) {
     let found = { distance: Number.MAX_SAFE_INTEGER };
     if (!currNode || (typeof currNode.matches) !== 'function') {
@@ -171,6 +184,7 @@ du.class.toggle = function(target, clazz) {
 
 du.on.match = function(event, selector, func, target) {
   target = target || document;
+  selector = VS(selector);
   const  matchRunTargetId = getTargetId(target);
   if (selectors[matchRunTargetId] === undefined) {
     selectors[matchRunTargetId] = {};
@@ -189,85 +203,6 @@ du.on.match = function(event, selector, func, target) {
   // }
 }
 
-// const defaultDynamInput = (value, type) => new Input({type, value});
-//
-// du.input.bind = function(selector, objOrFunc, props) {
-//   let lastInputTime = {};
-//   props = props || {};
-//   const validations = props.validations || {};
-//   const inputs = props.inputs || {};
-//
-//   const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
-//   const getValue = (updatePath, elem) => {
-//     const input = inputs.pathValue(updatePath);
-//     return input ? input.value() : elem.value;
-//   }
-//   const getValidation = (updatePath) => {
-//     let validation = validations.pathValue(updatePath);
-//     const input = inputs.pathValue(updatePath);
-//     if (input) {
-//       validation = input.validation;
-//     }
-//     return validation;
-//   }
-//
-//   function update(elem) {
-//     const target = resolveTarget(elem);
-//     elem = du.find.down('input,select,textarea', elem);
-//     const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
-//     elem.id = elem.id || String.random(7);
-//     const thisInputTime = new Date().getTime();
-//     lastInputTime[elem.id] = thisInputTime;
-//     setTimeout(() => {
-//       if (thisInputTime === lastInputTime[elem.id]) {
-//         const validation = getValidation(updatePath);
-//         if (updatePath !== null) {
-//           const newValue = getValue(updatePath, elem);
-//           if ((typeof validation) === 'function' && !validation(newValue)) {
-//             console.error('badValue')
-//           } else if ((typeof objOrFunc) === 'function') {
-//             objOrFunc(updatePath, elem.value);
-//           } else {
-//             objOrFunc.pathValue(updatePath, elem.value);
-//           }
-//
-//           if (target.tagname !== 'INPUT' && target.children.length === 0) {
-//             target.innerHTML = newValue;
-//           }
-//         }
-//       }
-//     }, 2000);
-//   }
-//   const makeDynamic = (target) => {
-//     target = resolveTarget(target);
-//     if (target.getAttribute('resolved') === null) {
-//       target.setAttribute('resolved', 'dynam-input');
-//       const value = target.innerText;
-//       const type = target.getAttribute('type');
-//       const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
-//       const input = inputs.pathValue(updatePath) || defaultDynamInput(value, type);
-//
-//       target.innerHTML = input.html();
-//       const inputElem = du.find.down(`#${input.id}`, target);
-//       du.class.add(inputElem, 'dynam-input');
-//       inputElem.setAttribute('prop-update', updatePath);
-//       inputElem.focus();
-//     }
-//   }
-//
-//   du.on.match('keyup', selector, update);
-//   du.on.match('change', selector, update);
-//   du.on.match('click', selector, makeDynamic);
-// }
-
-
-const undoDynamic = (target) => {
-  const parent = du.find.up('[resolved="dynam-input"]', target)
-  parent.innerText = target.value;
-  parent.removeAttribute('resolved');
-}
-
-du.on.match('focusout', '.dynam-input', undoDynamic);
 
 du.cookie.get = function(name, seperator) {
   const cookie = document.cookie.parseSeperator(';')[name];

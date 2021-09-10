@@ -1,6 +1,6 @@
 
 
-
+const CSG = require('../../../public/js/3d-modeling/csg');
 
 function pull(length, height) {
   var rspx = length - .75;
@@ -10,7 +10,3 @@ function pull(length, height) {
   return mainCyl.union(lCyl).union(rCyl);
 }
 module.exports = pull
-
-
-
-

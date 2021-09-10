@@ -4,7 +4,7 @@ const Lookup = require('../lookup.js');
 class Option extends Lookup {
   constructor(name, cost) {
     super(name, cost);
-    this.getSet('cost');
+    Object.getSet(this, 'cost');
     this.cost(cost);
     let input;
 

@@ -1,10 +1,9 @@
 
-
-
 const du = require('../../../../public/js/utils/dom-utils.js');
 const APP_ID = require('../../globals/CONSTANTS.js').APP_ID;
 const Request = require('../../../../public/js/utils/request.js');
-
+const EPNTS = require('../../generated/EPNTS');
+const $t = require('../../../../public/js/utils/$t.js');
 
 class User {
   constructor() {
@@ -98,7 +97,7 @@ class User {
       }
     }
 
-
+    Request.globalHeader('Authorization', this.credential);
     if (this.credential()) Request.get(EPNTS.user.status(), statusCheck);
     else updateDisplay('LOGIN');
   }
@@ -123,7 +122,3 @@ User.credential = () => du.cookie.get(APP_ID);
 
 User = new User();
 module.exports = User
-
-
-
-

@@ -3,6 +3,7 @@
 
 const du = require('../../../../../public/js/utils/dom-utils.js');
 const CSG = require('./csg.js');
+const GL = require('./lightgl.js');
 
 // Set the color of all polygons in this solid
 CSG.prototype.setColor = function(r, g, b) {

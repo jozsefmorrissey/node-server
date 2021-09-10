@@ -1,6 +1,6 @@
 
 
-
+const CSG = require('../../../public/js/3d-modeling/csg');
 
 function drawerBox(length, width, depth) {
   const bottomHeight = 7/8;
@@ -14,7 +14,3 @@ function drawerBox(length, width, depth) {
   return box.subtract(bInside).subtract(inside);
 }
 module.exports = drawerBox
-
-
-
-

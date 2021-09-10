@@ -4,11 +4,14 @@
 const Section = require('../objects/assembly/assemblies/section/section.js');
 const FeatureDisplay = require('./feature.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
+const bind = require('../../../../public/js/utils/input/bind.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
 const $t = require('../../../../public/js/utils/$t.js');
+const Inputs = require('../../input/inputs.js');
+
 
 const OpenSectionDisplay = {};
 
@@ -64,7 +67,7 @@ OpenSectionDisplay.updateDividers = (opening) => {
   const selector = `[opening-id="${opening.uniqueId}"].opening-cnt > .divider-controls`;
   const dividerControlsCnt = document.querySelector(selector);
   const selectPatternId = OpenSectionDisplay.getSelectId(opening);
-  du.input.bind(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/);
+  bind(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/);
   const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
   dividerControlsCnt.innerHTML = OpenSectionDisplay.dividerControlTemplate.render(
           {opening, selectPatternId, patternInputHtml});
@@ -102,7 +105,12 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
   for (let index = 0; index < pattern.unique.length; index += 1) {
     const id = pattern.unique[index];
     let fill = opening.dividerLayout().fill;
-    const measInput = MeasurementInput.pattern(id, pattern.value(id));
+    const measInput = Inputs('pattern', {
+      label: id,
+      placeholder: id,
+      name: id,
+      value: pattern.value(id)
+    });
     measInput.on('keyup', (value, target) => {
       opening.pattern().value(target.name, OpenSectionDisplay.evaluator.eval(target.value));
       fill = opening.dividerLayout().fill;

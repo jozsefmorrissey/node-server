@@ -10,6 +10,8 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 const Input = require('../../../../public/js/utils/input/input.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 const $t = require('../../../../public/js/utils/$t.js');
+const EPNTS = require('../../generated/EPNTS.js')
+const Inputs = require('../input/inputs.js');
 
 class OrderDisplay {
   constructor(parentSelector, orders) {
@@ -62,7 +64,7 @@ class OrderDisplay {
           'You must Define a name',
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Order', type: 'sidebar',
-      inputTree: new DecisionInputTree('Order', Input.Name(), console.log)
+      inputTree: new DecisionInputTree('Order', Inputs('name'), console.log)
     };
     const expandList = new ExpandableList(expListProps);
     expandList.afterRender(() => {if (active !== undefined) active.refresh()});

@@ -39,55 +39,105 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     return str.substr(0, len);
 }, true);
 
+Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
+  return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
+}, true);
+
+const classLookup = {};
+const identifierAttr = '_TYPE';
+const immutableAttr = '_IMMUTABLE';
+
 Function.safeStdLibAddition(Object, 'getSet',   function () {
+  let attrs = arguments;
+  let obj = attrs[0];
+  const cxtrName = obj.constructor.name;
+  if (classLookup[cxtrName] === undefined) {
+    classLookup[cxtrName] = obj.constructor;
+  } else if (classLookup[cxtrName] !== obj.constructor) {
+    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
+  }
+  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
   let values = {};
-  let attrs = Array.from(arguments);
-  attrs.forEach((attr) => {
-    this[attr] = (value) => {
-      if (value === undefined) {
-        const noDefaults = (typeof this.defaultGetterValue) !== 'function';
-        if (values[attr] !== undefined || noDefaults)
-        return values[attr];
-        return this.defaultGetterValue(attr);
-      }
-      values[attr] = value;
+  let startIndex = 1;
+  let immutable = false;
+  if ((typeof attrs[1]) === 'object') {
+    values = JSON.clone(attrs[1]);
+    immutable = values[immutableAttr] === true;
+    startIndex = 2;
+    if (immutable) {
+      attrs = Object.keys(values);
+      startIndex = 0;
     }
-  });
-  const origToJson = this.toJson;
-  this.toJson = () => {
-    const json = (typeof origToJson === 'function') ? origToJson() : {};
-    json._TYPE = this.constructor.name;
-    attrs.forEach((attr) => {
-      const value = this[attr]();
-      if ((typeof value) === 'object') {
-        if ((typeof value.toJson) === 'function') {
-          json[attr] = value.toJson();
-        } else if (Array.isArray(value)){
-          const arr = [];
-          value.forEach((val) => {
-            if ((typeof val.toJson) === 'function') {
-              arr.push(val.toJson());
-            } else {
-              arr.push(val);
-            }
-          });
-          json[attr] = arr;
-        } else {
-          json[attr] = JSON.clone(value);
+  }
+
+  for (let index = startIndex; index < attrs.length; index += 1) {
+    const attr = attrs[index];
+    if (attr !== immutableAttr) {
+      if (immutable) obj[attr] = () => values[attr];
+      else {
+        obj[attr] = (value) => {
+          if (value === undefined) {
+            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
+            if (values[attr] !== undefined || noDefaults)
+            return values[attr];
+            return obj.defaultGetterValue(attr);
+          }
+          values[attr] = value;
         }
-      } else {
-        json[attr] = value;
       }
-    });
+    }
+  }
+
+  const origToJson = obj.toJson;
+  obj.toJson = () => {
+    const json = (typeof origToJson === 'function') ? origToJson() : {};
+    json[identifierAttr] = obj.constructor.name;
+    for (let index = startIndex; index < attrs.length; index += 1) {
+      const attr = attrs[index];
+      if (attr !== immutableAttr) {
+        const value = obj[attr]();
+        if ((typeof value) === 'object') {
+          if ((typeof value.toJson) === 'function') {
+            json[attr] = value.toJson();
+          } else if (Array.isArray(value)){
+            const arr = [];
+            value.forEach((val) => {
+              if ((typeof val.toJson) === 'function') {
+                arr.push(val.toJson());
+              } else {
+                arr.push(val);
+              }
+            });
+            json[attr] = arr;
+          } else {
+            json[attr] = JSON.clone(value);
+          }
+        } else {
+          json[attr] = value;
+        }
+      }
+    }
     return json;
   }
-  this.fromJson = (json) => {
-    attrs.forEach((attr) => {
-      this[attr](json[attr]);
-    });
-    return this;
+  obj.fromJson = (json) => {
+    for (let index = startIndex; index < attrs.length; index += 1) {
+      const attr = attrs[index];
+      if (attr !== immutableAttr) {
+        obj[attr](json[attr]);
+      }
+    };
+    return obj;
   }
-});
+}, true);
+
+Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
+  if (otherObj === undefined) return;
+  if ((typeof otherObj) !== 'object') {
+    throw new Error('Requires one argument of type object or undefined for meaningless call');
+  }
+  const keys = Object.keys(otherObj);
+  keys.forEach((key) => obj[key] = otherObj[key]);
+}, true);
 
 Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
   if (start!== undefined && end !== undefined && start > end) {
@@ -100,7 +150,7 @@ Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end)
   for (let index = start; index < end; index += 1)
     array[index] = values[index];
   return array;
-});
+}, true);
 
 Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
   const keys = Object.keys(obj);
@@ -123,9 +173,6 @@ Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
 }, true);
 
 Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
-  if ((typeof this) !== 'string') {
-    return {};
-  }
   if (isRegex !== true) {
     seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
   }
@@ -140,10 +187,10 @@ Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isR
   return json;
 });
 
-Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
+Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
   const attrs = path.split('.');
   const lastIndex = attrs.length - 1;
-  let currObj = this;
+  let currObj = obj;
   for (let index = 0; index < lastIndex; index += 1) {
     let attr = attrs[index];
     if (currObj[attr] === undefined) currObj[attr] = {};
@@ -157,9 +204,4 @@ Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
     currObj[lastAttr] = value;
   }
   return currObj[lastAttr];
-});
-module.exports = safeStdLibAddition
-
-
-
-
+}, true);

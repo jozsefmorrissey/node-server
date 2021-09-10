@@ -1,6 +1,6 @@
 
 
-
+const GL = require('./lightgl.js');
 
 // Constructive Solid Geometry (CSG) is a modeling technique that uses Boolean
 // operations like union and intersection to combine 3D solids. This library

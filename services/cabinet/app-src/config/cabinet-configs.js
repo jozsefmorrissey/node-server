@@ -4,7 +4,7 @@
 const CustomEvent = require('../../../public/js/utils/custom-error.js');
 const cabinetBuildConfig = require('../public/json/cabinets.json.js');
 const Select = require('../../../public/js/utils/input/styles/select.js');
-const Input = require('../../../public/js/utils/input/input.js');
+const Inputs = require('./input/inputs.js');
 const DecisionInputTree = require('../../../public/js/utils/input/decision/decision.js');
 const Cabinet = require('./objects/assembly/assemblies/cabinet.js');
 const Request = require('../../../public/js/utils/request.js');
@@ -45,7 +45,7 @@ class CabinetConfig {
         class: 'center',
         list: Object.keys(properties.list)
       });
-      const inputs = [Input.Name(), typeInput, propertyInput];
+      const inputs = [Inputs('name'), typeInput, propertyInput];
       const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
       const cabinetTypes = Object.keys(cabinetKeys);
       cabinetTypes.forEach((type) => {

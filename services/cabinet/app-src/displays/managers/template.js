@@ -8,6 +8,7 @@ const Select = require('../../../../../public/js/utils/input/styles/select.js');
 const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
 const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
 const Material = require('../../cost/types/material.js');
+const Inputs = require('../../input/inputs.js');
 
 
 class TemplateManager extends AbstractManager {
@@ -23,16 +24,16 @@ class TemplateManager extends AbstractManager {
 new TemplateManager('template-manager', 'template');
 
 TemplateManager.inputTree = (callback) => {
-  const idTypeMethod = [Input.id(), Select.costType(), Select.method()];
+  const idTypeMethod = [Inputs('id'), Inputs('costType'), Inputs('method')];
 
-  const length = MeasurementInput.len();
-  const width = MeasurementInput.width();
-  const depth = MeasurementInput.depth();
-  const cost = MeasurementInput.cost();
+  const length = Inputs('length');
+  const width = Inputs('width');
+  const depth = Inputs('depth');
+  const cost = Inputs('cost');
   const lengthCost = [length, cost];
   const lengthWidthCost = [length, width, cost];
   const lengthWidthDepthCost = [length, width, depth, cost];
-  const color = [Input.color()];
+  const color = [Inputs('color')];
 
   const decisionInput = new DecisionInputTree('cost',
     idTypeMethod, callback);
@@ -54,7 +55,3 @@ TemplateManager.inputTree = (callback) => {
   return decisionInput;
 }
 module.exports = TemplateManager
-
-
-
-

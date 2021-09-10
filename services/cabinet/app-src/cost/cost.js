@@ -42,6 +42,9 @@ class Cost {
     this.objectId = Cost.getterSetter(props, 'objectId');
     this.id = Cost.getterSetter(props, 'id');
     this.children = props.children || [];
+    // TODO: None does not make sence here.
+    this.childIds = () =>
+        ['None'].concat(cost.children.map((obj) => obj.id()));
 
     Cost.group(props, this);
 

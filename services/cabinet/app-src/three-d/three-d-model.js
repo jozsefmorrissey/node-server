@@ -5,7 +5,9 @@ const CSG = require('../../public/js/3d-modeling/csg');
 const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
 const pull = require('./models/pull.js');
+const drawerBox = require('./models/drawer-box.js');
 const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
+const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
 
@@ -211,8 +213,8 @@ class ThreeDModel {
 const cube = new CSG.cube({radius: [3,5,1]});
 ThreeDModel.init = () => {
   const p = pull(5,2);
-  const db = drawerBox(10, 15, 22);
-  ThreeDModel.viewer = new Viewer(db, 300, 150, 50);
+  // const db = drawerBox(10, 15, 22);
+  ThreeDModel.viewer = new Viewer(p, 300, 150, 50);
   addViewer(ThreeDModel.viewer, 'three-d-model');
 }
 

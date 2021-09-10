@@ -7,6 +7,7 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 const Input = require('../../../../public/js/utils/input/input.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 const $t = require('../../../../public/js/utils/$t.js');
+const Inputs = require('../input/inputs.js');
 
 class RoomDisplay {
   constructor(parentSelector, order) {
@@ -39,7 +40,7 @@ class RoomDisplay {
       inputs: [{placeholder: 'name'}],
       inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
       listElemLable: 'Room', type: 'pill',
-      inputTree: new DecisionInputTree('Room', Input.Name(), console.log)
+      inputTree: new DecisionInputTree('Room', Inputs('name'), console.log)
     };
     const expandList = new ExpandableList(expListProps);
     expandList.afterRender(() => this.cabinetDisplay().refresh());

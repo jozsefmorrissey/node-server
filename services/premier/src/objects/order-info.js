@@ -4,9 +4,9 @@ const DrawerList = require('./drawer-list');
 class OrderInfo {
   constructor() {
     this.defaultGetterValue = () => '';
-    Function.getSet.apply(this, ['jobName', 'todaysDate', 'dueDate', 'companyName',
+    Object.getSet(this, 'jobName', 'todaysDate', 'dueDate', 'companyName',
     'shippingAddress', 'billingAddress', 'phone', 'fax', 'salesRep', 'email',
-    'shipVia', 'invoiceNumber', 'poNumber']);
+    'shipVia', 'invoiceNumber', 'poNumber');
 
     const drawerList = new DrawerList();
     this.todaysDate(new Date().toISOString().split('T')[0]);

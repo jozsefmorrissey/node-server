@@ -155,7 +155,7 @@ class TestStatus {
   }
 }
 
-Test = {
+const Test = {
   tests: {},
   add: (name, func) => {
     if ((typeof func) === 'function') {
@@ -176,12 +176,8 @@ Test = {
   }
 }
 
-afterLoad.push(() => Test.run());
-exports.ArgumentAttributeTest = ArgumentAttributeTest
-exports.FunctionArgumentTestError = FunctionArgumentTestError
-exports.FunctionArgumentTest = FunctionArgumentTest
-exports.TestStatus = TestStatus
-
-
-
-
+exports.ArgumentAttributeTest = ArgumentAttributeTest;
+exports.FunctionArgumentTestError = FunctionArgumentTestError;
+exports.FunctionArgumentTest = FunctionArgumentTest;
+exports.TestStatus = TestStatus;
+exports.Test = Test;

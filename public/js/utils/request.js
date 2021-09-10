@@ -42,11 +42,11 @@ Request = {
       const xhr = new Request.xmlhr();
       xhr.open("GET", url, true);
       const id = Request.id(url, 'GET');
-      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
-      if ((typeof User) !== 'undefined')
-        xhr.setRequestHeader('Authorization', User.credential());
+      Request.setGlobalHeaders(xhr);
+      if (success === undefined && failure === undefined) return xhr;
+      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
       xhr.send();
       return xhr;
     },
@@ -56,27 +56,34 @@ Request = {
         const xhr = new Request.xmlhr();
         xhr.open(method, url, true);
         const id = Request.id(url, method);
-        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
         xhr.setRequestHeader('Content-Type', 'application/json');
-        if ((typeof User) !== 'undefined')
-          xhr.setRequestHeader('Authorization', User.credential());
+        Request.setGlobalHeaders(xhr);
+        if (success === undefined && failure === undefined) return xhr;
+        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
         xhr.send(JSON.stringify(body));
         return xhr;
       }
     },
 
-    post: function () {Request.hasBody('POST')(...arguments)},
-    delete: function () {Request.hasBody('DELETE')(...arguments)},
-    options: function () {Request.hasBody('OPTIONS')(...arguments)},
-    head: function () {Request.hasBody('HEAD')(...arguments)},
-    put: function () {Request.hasBody('PUT')(...arguments)},
-    connect: function () {Request.hasBody('CONNECT')(...arguments)},
+    post: function () {return Request.hasBody('POST')(...arguments)},
+    delete: function () {return Request.hasBody('DELETE')(...arguments)},
+    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
+    head: function () {return Request.hasBody('HEAD')(...arguments)},
+    put: function () {return Request.hasBody('PUT')(...arguments)},
+    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
 }
 
 Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
 Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
-
-
+const globalHeaders = {};
+Request.globalHeader = (header, funcOval) => {
+  globalHeaders[header] = funcOval;
+}
+Request.setGlobalHeaders = (xhr) => {
+  const headers = Object.keys(globalHeaders);
+  headers.forEach((header) =>
+    xhr.setRequestHeader(header, Function.orVal(globalHeaders[header], xhr)));
+}
 try {
   Request.xmlhr = XMLHttpRequest;
 } catch (e) {

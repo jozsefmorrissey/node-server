@@ -1,8 +1,10 @@
+
+
 class Lookup {
   constructor(id) {
     id = id || String.random();
     console.log('creating lookup: ', id)
-    this.getSet('id');
+    Object.getSet(this, 'id');
     this.id = () => id;
     const cxtr = this.constructor;
     if(cxtr.selectList === Lookup.selectList) {

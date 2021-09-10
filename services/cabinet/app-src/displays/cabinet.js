@@ -11,7 +11,9 @@ const ExpandableList = require('../../../../public/js/utils/lists/expandable-lis
 const Measurement = require('../../../../public/js/utils/measurment.js');
 const Request = require('../../../../public/js/utils/request.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
+const bind = require('../../../../public/js/utils/input/bind.js');
 const $t = require('../../../../public/js/utils/$t.js');
+const Inputs = require('./input/inputs.js');
 
 
 
@@ -30,7 +32,7 @@ class CabinetDisplay {
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
       if (propertySelectors[cabinet.uniqueId] === undefined)
-        propertySelectors[cabinet.uniqueId] = Select.propertyId(cabinet.propertyId());
+        propertySelectors[cabinet.uniqueId] = Inputs('propertyIds', { value: cabinet.propertyId() });
       if (expandList.activeIndex() === $index)
         ThreeDModel.render(cabinet);
       const selectHtml = propertySelectors[cabinet.uniqueId].html();
@@ -90,8 +92,8 @@ class CabinetDisplay {
     }
 
     CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-    du.input.bind(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
-    du.input.bind(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
+    bind(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
+    bind(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
     du.on.match('click', '.save-cabinet-btn', save);
   }
 }

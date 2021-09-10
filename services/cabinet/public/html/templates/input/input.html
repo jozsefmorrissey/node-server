@@ -1,10 +1,10 @@
-<div class='input-cnt'{{hidden() ? ' hidden' : ''}}>
-  <label>{{label}}</label>
-  <input class='{{class}}' list='input-list-{{id}}' id='{{id}}'
-      placeholder='{{placeholder}}' type='{{type}}' name='{{name}}'
+<div class='input-cnt'{{hidden() ? ' hidden()' : ''}}>
+  <label>{{label()}}</label>
+  <input class='{{class()}}' list='input-list-{{id}}' id='{{id}}'
+      placeholder='{{placeholder()}}' type='{{type()}}' name='{{name()}}'
       {{attrString()}}>
-  <datalist id="input-list-{{id}}">
-    <option:t value="{{item}}" repeat='item in list'></option:t>
+  <datalist id="input-list-{{id()}}">
+    <option:t value="{{item}}" repeat='item in list()'></option:t>
   </datalist>
-  <div class='error' id='{{errorMsgId}}'>{{errorMsg}}</div>
+  <div class='error' id='{{errorMsgId()}}'>{{errorMsg()}}</div>
 </div>

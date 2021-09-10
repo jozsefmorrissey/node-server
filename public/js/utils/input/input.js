@@ -5,7 +5,6 @@
 
 const $t = require('../$t');
 const du = require('../dom-utils');
-
 /*
 supported attributes: type, placeholder, name, class, value
 label: creates a text label preceeding input.
@@ -23,14 +22,31 @@ errorMsg: Message that shows when validation fails.
 */
 class Input {
   constructor(props) {
-    let hidden = props.hide || false;
+    props.hidden = props.hide || false;
+    props.list = props.list || [];
+    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
+                            'class', 'list', 'value');
+
+    const immutableProps = {
+      _immutable: true,
+      id: props.id || `input-${String.random(7)}`,
+      targetAttr: props.targetAttr || 'value',
+      errorMsg: props.errorMsg || 'Error',
+      errorMsgId: props.errorMsgId || `error-msg-${this.id()}`,
+    }
+    Object.getSet(this, immutableProps)
+
+    this.clone = (properties) => {
+      const json = this.toJson();
+      delete json.id;
+      delete json.errorMsgId;
+      Object.set(json, properties);
+      return new this.constructor(json);
+    }
+
     const instance = this;
-    this.type = props.type;
-    this.label = props.label;
-    this.name = props.name;
-    this.id = props.id || `input-${String.random(7)}`;
-    const forAll = Input.forAll(this.id);
-    this.hidden = () => hidden;
+    const forAll = Input.forAll(this.id());
+
     this.hide = () => forAll((elem) => {
       const cnt = du.find.up('.input-cnt', elem);
       hidden = cnt.hidden = true;
@@ -39,19 +55,11 @@ class Input {
       const cnt = du.find.up('.input-cnt', elem);
       hidden = cnt.hidden = false;
     });
-    this.placeholder = props.placeholder;
-    this.class = props.class;
-    this.list = props.list || [];
 
     let valid;
     let value = props.value;
-    props.targetAttr = props.targetAttr || 'value';
-    this.targetAttr = () => props.targetAttr;
 
-    props.errorMsg = props.errorMsg || 'Error';
-
-    this.errorMsgId = props.errorMsgId || `error-msg-${this.id}`;
-    const idSelector = `#${this.id}`;
+    const idSelector = `#${this.id()}`;
 
     const html = this.constructor.html(this);
     if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
@@ -64,12 +72,12 @@ class Input {
     this.attrString = () => Input.attrString(this.targetAttr(), this.value());
 
     function getElem(id) {return document.getElementById(id);}
-    this.get = () => getElem(this.id);
+    this.get = () => getElem(this.id());
 
     this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
     this.valid = () => valid === undefined ? this.setValue() : valid;
     this.setValue = (val) => {
-      const elem = getElem(this.id);
+      const elem = getElem(this.id());
       if (val === undefined){
         if (elem) val = elem[props.targetAttr]
         if (val === undefined) val = props.default;
@@ -126,13 +134,13 @@ class Input {
     }
 
     if (props.clearOnClick) {
-      du.on.match(`mousedown`, `#${this.id}`, () => {
-        const elem = getElem(this.id);
+      du.on.match(`mousedown`, `#${this.id()}`, () => {
+        const elem = getElem(this.id());
         if (elem) elem.value = '';
       });
     }
-    du.on.match(`change`, `#${this.id}`, validate);
-    du.on.match(`keyup`, `#${this.id}`, validate);
+    du.on.match(`change`, `#${this.id()}`, validate);
+    du.on.match(`keyup`, `#${this.id()}`, validate);
   }
 }
 
@@ -157,7 +165,3 @@ Input.attrString = (targetAttr, value) =>{
 }
 
 module.exports = Input;
-
-
-
-

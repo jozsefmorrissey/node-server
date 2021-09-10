@@ -5,7 +5,7 @@ const Lookup = require('../lookup.js');
 class BottomMaterial extends Lookup {
   constructor (name, cost) {
     super(name);
-    this.getSet('cost');
+    Object.getSet(this, 'cost');
     this.cost(cost);
   }
 }

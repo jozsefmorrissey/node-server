@@ -4,7 +4,7 @@ const Lookup = require('../lookup.js');
 class Style extends Lookup {
   constructor (name, cost) {
     super(name);
-    this.getSet('cost');
+    Object.getSet(this, 'cost');
     this.cost(cost);
   }
 }

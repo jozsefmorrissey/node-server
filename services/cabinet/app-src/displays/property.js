@@ -4,6 +4,7 @@
 const Property = require('../properties.js');
 const Cost = require('../cost/cost.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
+const bind = require('../../../../public/js/utils/input/bind.js');
 const RadioDisplay = require('../display-utils/radioDisplay.js');
 const $t = require('../../../../public/js/utils/$t.js');
 
@@ -59,7 +60,7 @@ class PropertyDisplay {
 
     function updateProperties(name, value) {
     }
-    du.input.bind(containerSelector, updateProperties);
+    bind(containerSelector, updateProperties);
     new RadioDisplay('property-container', 'radio-id');
   }
 }

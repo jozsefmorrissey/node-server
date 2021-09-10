@@ -4,14 +4,15 @@ const shell = require('shelljs');
 const dxfDownloadLink = require('./src/export/dxf').downloadLink;
 const { User, UnAuthorized } = require('./src/user');
 const { emailSvc } = require('./src/email');
-const { EPNTS } = require('./src/EPNTS');
+const Endpoints = require('../../public/js/utils/endpoints');
+const EPNTS = new Endpoints(require('./public/json/endpoints.json')).getFuncObj();
 // require('./src/scrape/scrape');
 
 const success = (res) => () => res.send('success');
 const fail = (next) => (e) => next(e);
 
 const getUser = (req, soft) => {
-  const authStr = req.headers['authorization'];
+  const authStr = req.headers['authorization'] || '';
   const split = authStr.split(':');
 
   const user = new User(split[0], split[1]);

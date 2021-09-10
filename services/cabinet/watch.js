@@ -1,19 +1,33 @@
 const fs = require('fs');
 const shell = require('shelljs');
 const { Mutex, Semaphore } = require('async-mutex');
+require('../../arguement-parcer')
 
 const host = process.argv[2];
 
-function HachyImport(url, dest) {
-  const curlCmd = `curl -X GET --insecure '${url}'`;
-  const code = shell.exec(curlCmd, {silent: true}).stdout;
-  if (code !== '') {
-    fs.writeFile(`./generated/hacky/${dest}`, code, () =>
-        console.warn(`HackyImport: \n\t./generated/hacky/${dest}\n\t${url}`));
+// function HachyImport(url, dest) {
+//   const curlCmd = `curl -X GET --insecure '${url}'`;
+//   const code = shell.exec(curlCmd, {silent: true}).stdout;
+//   if (code !== '') {
+//     fs.writeFile(`./generated/hacky/${dest}`, code, () =>
+//         console.warn(`HackyImport: \n\t./generated/hacky/${dest}\n\t${url}`));
+//   }
+// }
+//
+// HachyImport(`${host}/endpoints`, 'EPNTS.js');
+
+const valueRegex = /[A-Z.a-z]{1,}=.*$/;
+function argParser() {
+  for (let index = 2; index < process.argv.length; index += 1) {
+    const arg = process.argv[index];
+    if (arg.match(valueRegex)) {
+      const varName = arg.split('=', 1)[0];
+      const valueStr = arg.substr(varName.length + 1);
+      console.log('arg:', arg, valueStr)
+      global[varName] = getValue(valueStr.trim());
+    }
   }
 }
-
-HachyImport(`${host}/endpoints`, 'EPNTS.js');
 
 class Watcher {
   constructor(onChange, onUpdate) {
@@ -110,35 +124,45 @@ class Watcher {
   }
 }
 
-// const { HtmlBundler } = require('../../building/bundlers/html.js');
+
+const { HtmlBundler } = require('../../building/bundlers/html.js');
 const htmlDumpLoc = './generated/html-templates.js';
-//
-// const cleanName = (name) => name.replace(/\.\/public\/html\/templates\/(.*).html/, '$1');
-// const htmlBundler = new HtmlBundler(htmlDumpLoc, cleanName);
-//
-// new Watcher(htmlBundler.change, htmlBundler.write)
-//         // .add('../../public/html/templates/')
-//         .add('./public/html/templates/');
-//
-//
-//
+
+const cleanName = (name) => name.replace(/\.\/public\/html\/templates\/(.*).html/, '$1');
+const htmlBundler = new HtmlBundler(htmlDumpLoc, cleanName);
+
+new Watcher(htmlBundler.change, htmlBundler.write)
+        .add('../../public/html/templates/')
+        .add('./public/html/templates/');
+
+
+
+
+
+const ENPTSTemplate = `const Endpoints = require('../../../public/js/utils/endpoints.js');
+const json = require('../public/json/endpoints.json');
+module.exports = new Endpoints(json, '${global.ENV}').getFuncObj();`;
+fs.writeFile(`./generated/EPNTS.js`, ENPTSTemplate);
+
+
 const { JsBundler } = require('../../building/bundlers/js.js');
 const jsDumpLoc = './public/js/index';
 const jsBundler = new JsBundler(jsDumpLoc, [], {main: 'app-src/init.js'});
 
 const jsWatcher = new Watcher(jsBundler.change, jsBundler.write)
         .add('./globals/')
+        .add('./public/json/endpoints.json')
+        .add('./generated/EPNTS.js')
         .add('./public/js/3d-modeling/lightgl.js')
         .add('./public/js/3d-modeling/csg.js')
         .add('./public/js/3d-modeling/export-dxf.js')
         .add('./public/js/3d-modeling/viewer.js')
         .add('../../public/js/utils/')
         .add(htmlDumpLoc)
-        .add('./generated/hacky/EPNTS.js')
         .add('./public/json/cabinets.json')
         .add('./app-src');
 
-if (host.indexOf('localhost') !== -1) {
+if (global.ENV === 'local') {
   jsWatcher.add('./test')
 }
 

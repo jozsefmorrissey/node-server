@@ -16,6 +16,9 @@ const Style = require('../src/objects/lookup/style.js');
 const DecisionInputTree = require('./../../../public/js/utils/input/decision/decision')
 const DrawerList = require('../src/objects/drawer-list')
 const FROM_JSON = require('../src/utils').FROM_JSON;
+const du = require('../../../public/js/utils/dom-utils.js');
+const bind = require('../../../public/js/utils/input/bind.js');
+const Inputs = require('../input/inputs.js');
 
 const orderInfo = new OrderInfo();
 orderInfo.jobName('plankys');
@@ -42,9 +45,9 @@ const phoneNum = new Input({
   }
 });
 
-const width = MeasurementInput.width(15);
-const height = MeasurementInput.height(6);
-const depth = MeasurementInput.depth(21);
+const width = Inputs('width', {value: 15});
+const height = Inputs('height', {value: 6});
+const depth = Inputs('depth', {value: 21});
 const dems = [width, height, depth];
 
 new BoxMaterial('Select White Soft Maple', 6, 6.65);
@@ -188,7 +191,7 @@ decisionInput.onComplete(() => {
 
 
 du.id('order-info-cnt').innerHTML = orderTemplate.render(orderInfo);
-du.input.bind('.dynamic', orderInfo, {inputs: {phone: phoneNum}});
+bind('.dynamic', orderInfo, {inputs: {phone: phoneNum}});
 
 // const headTemplate = new $t('drawer-box/head');
 // const bodyTemplate = new $t('drawer-box/body');
@@ -204,4 +207,4 @@ du.input.bind('.dynamic', orderInfo, {inputs: {phone: phoneNum}});
 du.id('cost-tree').innerHTML = decisionInput.html();
 
 this.editClass = () => `drawer-list`;
-du.input.bind(`.${this.editClass()}`, this, {inputs: {style}});
+bind(`.${this.editClass()}`, this, {inputs: {style}});

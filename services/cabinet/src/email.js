@@ -1,11 +1,11 @@
 const shell = require('shelljs');
 const mailgun = require("mailgun-js");
-const { Endpoints } = require('./EPNTS.js');
 const apiKey = shell.exec('pst value mailgun apiKey').stdout.trim();
 const domain = shell.exec('pst value mailgun domain').stdout.trim();
 const emailServiceActive = global.ENV === 'prod';
 const mg = emailServiceActive ? mailgun({ apiKey, domain }) : undefined;
-const ENPTS = new Endpoints(global.ENV).getFuncObj();
+const Endpoints = require('../../../public/js/utils/endpoints');
+const ENPTS = new Endpoints(require('../public/json/endpoints.json'), global.ENV).getFuncObj();
 
 class EmailFailedToSend extends Error {
   constructor(error) {

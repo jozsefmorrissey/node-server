@@ -20,6 +20,7 @@ const MeasurementInput = require('../../../../../public/js/utils/input/styles/me
 const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation.js');
 const Material = require('../../cost/types/material.js');
 const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+const Inputs = require('../input/inputs.js');
 
 
 
@@ -87,7 +88,7 @@ CostManager.bodyTemplate = new $t('managers/cost/body');
 CostManager.costHeadTemplate = new $t('managers/cost/cost-head');
 CostManager.costBodyTemplate = new $t('managers/cost/cost-body');
 CostManager.cntClass = 'cost-manager-reference-cnt';
-CostManager.selectInput = (cost) => Select.cost(cost);
+CostManager.selectInput = (cost) => Inputs('childCost', { value: cost.selectedId, list: cost.childIds() });
 
 CostManager.setInstanceProps = (scope) => {
   const parent = du.id(scope.parentId);
@@ -242,28 +243,28 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
       }
     });
 
-  const id = Input.CostId();
-  const laborType = Input.laborType();
-  const hourlyRate = Input.hourlyRate();
+  const id = Inputs('costId');
+  const laborType = Inputs('laborType');
+  const hourlyRate = Inputs('hourlyRate');
 
-  const idType = [objectId, id, Select.costType()];
-  const materialInput = [Select.method(), Select.company(), Input.partNumber()];
-  const laborInput = [Select.method(), laborType, hourlyRate];
+  const idType = [objectId, id, Inputs('costType')];
+  const materialInput = [Inputs('method'), Inputs('company'), Inputs('partNumber')];
+  const laborInput = [Inputs('method'), laborType, hourlyRate];
   laborType.on('keyup',
     (val, values) => hourlyRate.setValue(Labor.hourlyRate(val)));
 
-  const length = MeasurementInput.len();
-  const width = MeasurementInput.width();
-  const depth = MeasurementInput.depth();
-  const cost = MeasurementInput.cost();
-  const hours = Input.hours();
-  const count = Input.count();
-  const modifyDemension = Input.modifyDemension();
+  const length = Inputs('length');
+  const width = Inputs('width');
+  const depth = Inputs('depth');
+  const cost = Inputs('cost');
+  const hours = Inputs('hours');
+  const count = Inputs('count');
+  const modifyDemension = Inputs('modifyDemension');
   const selectInfo = [CostManager.formulaInput(objId, 'Select'),
                       RelationInput.selector];
-  const conditionalInfo = [Input.propertyId(), Select.propertyConditions(),
-        Input.propertyValue()];
-  const color = [Input.color()];
+  const conditionalInfo = [Inputs('propertyId'), Inputs('propertyConditions'),
+        Inputs('propertyValue')];
+  const color = [Inputs('color')];
 
   // Todo: ????
   const matFormula = CostManager.formulaInput(objId, 'Material');
@@ -337,7 +338,3 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
 
 new CostManager('cost-manager', 'cost');
 module.exports = CostManager
-
-
-
-

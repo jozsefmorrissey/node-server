@@ -391,7 +391,7 @@ class $t {
 			for (let index = 0; index < blocks.length; index += 1) {
 				const block = blocks[index];
 				const parced = ExprDef.parse(expression, block);
-				str = str.replace(`{{${block}}}`, `\` + (${parced}) + \``);
+				str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
 			}
 			return `\`${str}\``;
 		}
@@ -473,6 +473,8 @@ $t.dumpTemplates = function () {
 	return templateFunctions;
 }
 
+$t.clean = (val) => val === undefined ? '' : val;
+
 function createGlobalsInterface() {
   const GLOBALS = {};
   const isMotifiable = () => GLOBALS[name] === undefined ||
@@ -488,7 +490,3 @@ function createGlobalsInterface() {
 createGlobalsInterface();
 
 module.exports = $t;
-
-
-
-

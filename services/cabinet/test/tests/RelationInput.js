@@ -55,8 +55,3 @@ Test.add('RelationInput: Greater Than Or Equal',(ts) => {
   ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,undefined,8,9], 8), 6);
   ts.success();
 });
-
-module.exports = RelationInput
-
-
-

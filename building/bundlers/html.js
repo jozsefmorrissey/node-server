@@ -17,7 +17,7 @@ class HtmlBundler extends Bundler {
       try {
         shell.touch(fileDumpLoc);
         console.log('Writing file', fileDumpLoc)
-        fs.writeFileSync(fileDumpLoc, $t.dumpTemplates());
+        fs.writeFileSync(fileDumpLoc, $t.dumpTemplates(true));
       } catch (e) {
         console.log(e);
       }
