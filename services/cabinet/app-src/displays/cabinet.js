@@ -5,7 +5,7 @@ const Show = require('../show.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const OpenSectionDisplay = require('./open-section.js');
-const CabinetConfig = require('../cabinet-configs.js');
+const CabinetConfig = require('../config/cabinet-configs.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 const Measurement = require('../../../../public/js/utils/measurment.js');
@@ -13,7 +13,7 @@ const Request = require('../../../../public/js/utils/request.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
 const $t = require('../../../../public/js/utils/$t.js');
-const Inputs = require('./input/inputs.js');
+const Inputs = require('../input/inputs.js');
 
 
 

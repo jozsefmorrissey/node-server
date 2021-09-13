@@ -46,10 +46,9 @@ Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
 const classLookup = {};
 const identifierAttr = '_TYPE';
 const immutableAttr = '_IMMUTABLE';
+const temporaryAttr = '_TEMPORARY';
 
-Function.safeStdLibAddition(Object, 'getSet',   function () {
-  let attrs = arguments;
-  let obj = attrs[0];
+Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
   const cxtrName = obj.constructor.name;
   if (classLookup[cxtrName] === undefined) {
     classLookup[cxtrName] = obj.constructor;
@@ -59,15 +58,21 @@ Function.safeStdLibAddition(Object, 'getSet',   function () {
   if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
   let values = {};
   let startIndex = 1;
+  let temporary = false;
   let immutable = false;
-  if ((typeof attrs[1]) === 'object') {
-    values = JSON.clone(attrs[1]);
+  if ((typeof initialVals) === 'object') {
+    values = JSON.clone(initialVals);
     immutable = values[immutableAttr] === true;
+    temporary = values[temporaryAttr] === true;
     startIndex = 2;
     if (immutable) {
       attrs = Object.keys(values);
       startIndex = 0;
+    } else {
+      attrs = Object.keys(values).concat(attrs);
     }
+  } else {
+    attrs.push(initialVals);
   }
 
   for (let index = startIndex; index < attrs.length; index += 1) {
@@ -87,37 +92,38 @@ Function.safeStdLibAddition(Object, 'getSet',   function () {
       }
     }
   }
-
-  const origToJson = obj.toJson;
-  obj.toJson = () => {
-    const json = (typeof origToJson === 'function') ? origToJson() : {};
-    json[identifierAttr] = obj.constructor.name;
-    for (let index = startIndex; index < attrs.length; index += 1) {
-      const attr = attrs[index];
-      if (attr !== immutableAttr) {
-        const value = obj[attr]();
-        if ((typeof value) === 'object') {
-          if ((typeof value.toJson) === 'function') {
-            json[attr] = value.toJson();
-          } else if (Array.isArray(value)){
-            const arr = [];
-            value.forEach((val) => {
-              if ((typeof val.toJson) === 'function') {
-                arr.push(val.toJson());
-              } else {
-                arr.push(val);
-              }
-            });
-            json[attr] = arr;
+  if (!temporary) {
+    const origToJson = obj.toJson;
+    obj.toJson = () => {
+      const json = (typeof origToJson === 'function') ? origToJson() : {};
+      json[identifierAttr] = obj.constructor.name;
+      for (let index = startIndex; index < attrs.length; index += 1) {
+        const attr = attrs[index];
+        if (attr !== immutableAttr) {
+          const value = obj[attr]();
+          if ((typeof value) === 'object') {
+            if ((typeof value.toJson) === 'function') {
+              json[attr] = value.toJson();
+            } else if (Array.isArray(value)){
+              const arr = [];
+              value.forEach((val) => {
+                if ((typeof val.toJson) === 'function') {
+                  arr.push(val.toJson());
+                } else {
+                  arr.push(val);
+                }
+              });
+              json[attr] = arr;
+            } else {
+              json[attr] = JSON.clone(value);
+            }
           } else {
-            json[attr] = JSON.clone(value);
+            json[attr] = value;
           }
-        } else {
-          json[attr] = value;
         }
       }
+      return json;
     }
-    return json;
   }
   obj.fromJson = (json) => {
     for (let index = startIndex; index < attrs.length; index += 1) {
@@ -129,6 +135,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function () {
     return obj;
   }
 }, true);
+Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
 
 Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
   if (otherObj === undefined) return;

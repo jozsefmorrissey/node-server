@@ -10,7 +10,7 @@ const MeasurementInput = require('../../../../public/js/utils/input/styles/measu
 const ThreeDModel = require('../three-d/three-d-model.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
 const $t = require('../../../../public/js/utils/$t.js');
-const Inputs = require('../../input/inputs.js');
+const Inputs = require('../input/inputs.js');
 
 
 const OpenSectionDisplay = {};

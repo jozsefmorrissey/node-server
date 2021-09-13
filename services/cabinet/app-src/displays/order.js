@@ -11,6 +11,7 @@ const Input = require('../../../../public/js/utils/input/input.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const EPNTS = require('../../generated/EPNTS.js')
+const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
 const Inputs = require('../input/inputs.js');
 
 class OrderDisplay {
@@ -45,7 +46,7 @@ class OrderDisplay {
 
     const getBody = (order, $index) => {
       if (order instanceof Order) {
-        let propertyTypes = Object.keys(properties.list);
+        let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
         active = roomDisplays[order.id];
         return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
       } else {

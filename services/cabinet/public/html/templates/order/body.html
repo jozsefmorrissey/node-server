@@ -1,5 +1,5 @@
 <div>
-  <b>{{order.name}}</b>
+  <b>{{order.name()}}</b>
   <ul id='order-nav' class='center toggle-display-list'>
     <li class='toggle-display-item active'
         display-id='builder-display-{{$index}}'>Builder</li>
@@ -7,7 +7,7 @@
         display-id='information-display-{{$index}}'>Information</li>
   </ul>
   <div id='builder-display-{{$index}}'>
-    <b>{{order.name}}</b>
+    <b>{{order.name()}}</b>
     <button class='save-order-btn' index='{{$index}}'>Save</button>
     <div id='room-pills'>RoomPills!</div>
   </div>

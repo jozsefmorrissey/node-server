@@ -63,7 +63,7 @@ class DecisionInputTree extends DecisionTree {
 
     function getInput(name) {
       let answer;
-      forEachInput((input) => answer = input.name === name ? input : answer);
+      forEachInput((input) => answer = input.name() === name ? input : answer);
       return answer;
     }
 
@@ -75,7 +75,7 @@ class DecisionInputTree extends DecisionTree {
     const next = (node, index) => {
       const inputArray = node.payload.inputArray;
       const input = inputArray[index];
-      const name = input.name;
+      const name = input.name();
       const value = node.payload.getValue(index);
       return node.next(`${name}:${value}`) || node.next(name);
     }
@@ -107,7 +107,7 @@ class DecisionInputTree extends DecisionTree {
 
     function values() {
       const values = {};
-      forEachInput((input) => values[input.name] = input.value());
+      forEachInput((input) => values[input.name()] = input.value());
       return values;
     }
     this.values = values;
@@ -127,12 +127,12 @@ class DecisionInputTree extends DecisionTree {
         if (currentNode) {
           const currentInput = currentNode.payload.inputArray[index];
           currentInput.setValue();
-          (contengencies[currentInput.name] || []).forEach((inputName) => {
+          (contengencies[currentInput.name()] || []).forEach((inputName) => {
             const contengentInput = getInput(inputName);
             if (contengentInput)
               contengentInput.doubleCheck();
           });
-          runFunctions(onChange, currentInput.name, currentInput.value(), target);
+          runFunctions(onChange, currentInput.name(), currentInput.value(), target);
           const stepLen = Object.keys(currentNode.states).length;
           if (stepLen) {
             const inputCount = currentNode.payload.inputArray.length;
@@ -195,7 +195,3 @@ DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
 DecisionInputTree.template = new $t('input/decision/decisionTree');
 
 module.exports = DecisionInputTree;
-
-
-
-

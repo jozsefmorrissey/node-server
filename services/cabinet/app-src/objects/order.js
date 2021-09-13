@@ -8,8 +8,8 @@ class Order {
     const initialVals = {
       name: name || ++Order.count,
       id: id || String.random(32),
-      rooms: [],
     }
+    this.rooms = [];
     Object.getSet(this, 'name', 'id', 'rooms');
   }
 }

@@ -1,9 +1,5 @@
 
 
-
-const User = require('../../../services/cabinet/app-src/displays/user.js');
-
-
 Request = {
     onStateChange: function (success, failure, id) {
       return function () {

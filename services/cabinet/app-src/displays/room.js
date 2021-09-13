@@ -16,7 +16,7 @@ class RoomDisplay {
         RoomDisplay.headTemplate.render({room, $index});
 
     const getBody = (room, $index) => {
-      let propertyTypes = Object.keys(properties.list);
+      let propertyTypes = Object.keys(['alabaster','pickles']);
       return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
     }
 
@@ -35,7 +35,7 @@ class RoomDisplay {
     }
     this.cabinet = () => this.cabinetDisplay().active();
     const expListProps = {
-      list: order.rooms,
+      list: order.rooms(),
       parentSelector, getHeader, getBody, getObject,
       inputs: [{placeholder: 'name'}],
       inputValidation: (values) => values.name !== '' ? true : 'name must be defined',

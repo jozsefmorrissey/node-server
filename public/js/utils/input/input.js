@@ -28,11 +28,11 @@ class Input {
                             'class', 'list', 'value');
 
     const immutableProps = {
-      _immutable: true,
+      _IMMUTABLE: true,
       id: props.id || `input-${String.random(7)}`,
       targetAttr: props.targetAttr || 'value',
       errorMsg: props.errorMsg || 'Error',
-      errorMsgId: props.errorMsgId || `error-msg-${this.id()}`,
+      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
     }
     Object.getSet(this, immutableProps)
 

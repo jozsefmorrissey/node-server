@@ -3,7 +3,7 @@
 
 const Assembly = require('../assembly.js');
 const CoverStartPoints = require('../../../../globals/CONSTANTS.js').CoverStartPoints;
-const cabinetBuildConfig = require('../../../../public/json/cabinets.json.js');
+const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
 const Joint = require('../../joint/joint.js');
 const DivideSection = require('./section/space/sections/divide-section.js');
 
@@ -148,7 +148,3 @@ Cabinet.partCode = (assembly) => {
 
 Assembly.register(Cabinet);
 module.exports = Cabinet
-
-
-
-

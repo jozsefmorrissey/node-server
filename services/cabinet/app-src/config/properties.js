@@ -1,7 +1,7 @@
 
 
 const Property = require('./property');
-const CoverStartPoints = require('../globals/CONSTANTS.js').CoverStartPoints;
+const CoverStartPoints = require('../../globals/CONSTANTS.js').CoverStartPoints;
 
 const assemProps = {
   Cabinet: {

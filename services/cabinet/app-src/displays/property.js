@@ -1,7 +1,7 @@
 
 
 
-const Property = require('../properties.js');
+const Property = require('../config/properties.js');
 const Cost = require('../cost/cost.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');

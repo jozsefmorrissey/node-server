@@ -142,7 +142,7 @@ new Watcher(htmlBundler.change, htmlBundler.write)
 const ENPTSTemplate = `const Endpoints = require('../../../public/js/utils/endpoints.js');
 const json = require('../public/json/endpoints.json');
 module.exports = new Endpoints(json, '${global.ENV}').getFuncObj();`;
-fs.writeFile(`./generated/EPNTS.js`, ENPTSTemplate);
+fs.writeFile(`./generated/EPNTS.js`, ENPTSTemplate, () => {});
 
 
 const { JsBundler } = require('../../building/bundlers/js.js');

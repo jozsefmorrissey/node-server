@@ -1,24 +1,22 @@
 
 
 
-// const funcOvalue = require('../../utils.js').funcOvalue;
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Position = require('../../position.js');
-// const Cabinet = require('./assemblies/cabinet.js');
 
 class Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-    this.display = true;
-    this.important = ['partCode', 'partName', 'centerStr', 'demensionStr', 'rotationStr'];
-    this.part = true;
-    this.included = true;
-    this.parentAssembly = parent;
-    let propId = 'Full Overlay';
-    this.propertyId = (id) => {
-      if (id === undefined) return propId;
-      propId = id;
-    }
     let instance = this;
+    const temporaryInitialVals = {display: true};
+    const initialVals = {
+      part: true,
+      included: true,
+      uniqueId: String.random(32),
+      centerStr, demensionStr, rotationStr, partCode, partName,
+      parentAssembly: parent,
+    }
+    Object.getSet(this, initialVals, 'subAssemblies');
+    Object.getSet(this, temporaryInitialVals);
     funcOvalue.apply(this, ['centerStr', centerStr, 'demensionStr',  demensionStr, 'rotationStr', rotationStr]);
 
     function getValueSmeFormatter(path) {
@@ -61,8 +59,6 @@ class Assembly {
     let position = new Position(this, sme);
     this.position = () => position;
     this.updatePosition = () => position = new Position(this, sme);
-    this.partCode = partCode;
-    this.partName = partName;
     this.joints = [];
     this.values = {};
     this.fullDem = () => {
@@ -171,24 +167,9 @@ class Assembly {
     this.getParts = () => {
       return this.getSubAssemblies().filter((a) => a.part && a.included );
     }
-    this.uniqueId = String.random(32);
+
     if (Assembly.idCounters[this.objId] === undefined) {
       Assembly.idCounters[this.objId] = 0;
-    }
-    this.toJson = function (json) {
-      json = json || {};
-      json.type = this.constructor.name;
-      if (this.important) {
-        this.important.forEach((attr) =>
-            json[attr] = (typeof this[attr]) === 'function' ? this[attr]() : this[attr]);
-      }
-      json.values = JSON.parse(JSON.stringify(this.values));
-      json.subAssemblies = [];
-      if (!Assembly.class(json.type).dontSaveChildren) {
-        const subAssems = this.children();
-        subAssems.forEach((assem) => json.subAssemblies.push(assem.toJson()));
-      }
-      return json;
     }
 
     Assembly.add(this);

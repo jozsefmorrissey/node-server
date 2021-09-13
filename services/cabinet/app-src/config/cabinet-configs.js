@@ -1,14 +1,14 @@
 
 
 
-const CustomEvent = require('../../../public/js/utils/custom-error.js');
-const cabinetBuildConfig = require('../public/json/cabinets.json.js');
-const Select = require('../../../public/js/utils/input/styles/select.js');
-const Inputs = require('./input/inputs.js');
-const DecisionInputTree = require('../../../public/js/utils/input/decision/decision.js');
-const Cabinet = require('./objects/assembly/assemblies/cabinet.js');
-const Request = require('../../../public/js/utils/request.js');
-const EPNTS = require('../generated/hacky/EPNTS.js').EPNTS;
+const CustomEvent = require('../../../../public/js/utils/custom-error.js');
+const cabinetBuildConfig = require('../../public/json/cabinets.json');
+const Select = require('../../../../public/js/utils/input/styles/select.js');
+const Inputs = require('../input/inputs.js');
+const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+const Request = require('../../../../public/js/utils/request.js');
+const EPNTS = require('../../generated/EPNTS.js');
 
 class CabinetConfig {
   constructor() {

@@ -360,29 +360,6 @@ exports['-1702305177'] = (get, $t) =>
 		$t.clean(get("OpenSectionDisplay").html(get("opening"))) +
 		` </div>`
 
-exports['display-manager'] = (get, $t) => 
-		`<div class='display-manager' id='` +
-		$t.clean(get("id")) +
-		`'> ` +
-		$t.clean(new $t('-1519826343').render(get('scope'), 'item in list', get)) +
-		` </div> `
-
-exports['-1519826343'] = (get, $t) => 
-		`<div class='display-manager-item'> <input class='display-manager-input` +
-		$t.clean(get("$index") === 0 ? " active" : "") +
-		`' type='button' display-id='` +
-		$t.clean(get("item").id) +
-		`' value='` +
-		$t.clean(get("item").name) +
-		`'/> </div>`
-
-exports['divide/body'] = (get, $t) => 
-		`<h2>` +
-		$t.clean(get("list").activeIndex()) +
-		`</h2> val: ` +
-		$t.clean(get("list").value()('selected')) +
-		` `
-
 exports['cabinet/head'] = (get, $t) => 
 		`<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` +
 		$t.clean(get("$index")) +
@@ -411,6 +388,29 @@ exports['cabinet/head'] = (get, $t) =>
 		`' value='` +
 		$t.clean(get("cabinet").thickness()) +
 		`'> </div> </div> `
+
+exports['display-manager'] = (get, $t) => 
+		`<div class='display-manager' id='` +
+		$t.clean(get("id")) +
+		`'> ` +
+		$t.clean(new $t('-1519826343').render(get('scope'), 'item in list', get)) +
+		` </div> `
+
+exports['-1519826343'] = (get, $t) => 
+		`<div class='display-manager-item'> <input class='display-manager-input` +
+		$t.clean(get("$index") === 0 ? " active" : "") +
+		`' type='button' display-id='` +
+		$t.clean(get("item").id) +
+		`' value='` +
+		$t.clean(get("item").name) +
+		`'/> </div>`
+
+exports['divide/body'] = (get, $t) => 
+		`<h2>` +
+		$t.clean(get("list").activeIndex()) +
+		`</h2> val: ` +
+		$t.clean(get("list").value()('selected')) +
+		` `
 
 exports['divide/head'] = (get, $t) => 
 		`<div> <select value='` +
@@ -456,6 +456,29 @@ exports['divider-controls'] = (get, $t) =>
 		$t.clean(get("patternInputHtml")) +
 		` </div> </div> `
 
+exports['expandable/list'] = (get, $t) => 
+		` <div class="expandable-list ` +
+		$t.clean(get("type")) +
+		`" ex-list-id='` +
+		$t.clean(get("id")) +
+		`'> ` +
+		$t.clean(new $t('633282157').render(get('scope'), 'item in list', get)) +
+		` <div> <div id='input-tree-cnt'>` +
+		$t.clean(get("inputTree") ? get("inputTree").html() : '') +
+		`</div> <div ` +
+		$t.clean(!get("hasInputTree")() ? '' : 'hidden') +
+		`> ` +
+		$t.clean(new $t('-1756076485').render(get('scope'), 'input in inputs', get)) +
+		` <button ex-list-id='` +
+		$t.clean(get("id")) +
+		`' class='expandable-list-add-btn' ` +
+		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+		`> Add ` +
+		$t.clean(get("listElemLable")) +
+		` </button> </div> </div> <div class='error' id='` +
+		$t.clean(get("ERROR_CNT_ID")) +
+		`'></div> </div> `
+
 exports['expandable/pill'] = (get, $t) => 
 		` <div class="expandable-list ` +
 		$t.clean(get("type")) +
@@ -484,29 +507,6 @@ exports['expandable/pill'] = (get, $t) =>
 		`'></div> </div> <div class="expand-body ` +
 		$t.clean(get("type")) +
 		`"></div> </div> `
-
-exports['expandable/list'] = (get, $t) => 
-		` <div class="expandable-list ` +
-		$t.clean(get("type")) +
-		`" ex-list-id='` +
-		$t.clean(get("id")) +
-		`'> ` +
-		$t.clean(new $t('633282157').render(get('scope'), 'item in list', get)) +
-		` <div> <div id='input-tree-cnt'>` +
-		$t.clean(get("inputTree") ? get("inputTree").html() : '') +
-		`</div> <div ` +
-		$t.clean(!get("hasInputTree")() ? '' : 'hidden') +
-		`> ` +
-		$t.clean(new $t('-1756076485').render(get('scope'), 'input in inputs', get)) +
-		` <button ex-list-id='` +
-		$t.clean(get("id")) +
-		`' class='expandable-list-add-btn' ` +
-		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
-		`> Add ` +
-		$t.clean(get("listElemLable")) +
-		` </button> </div> </div> <div class='error' id='` +
-		$t.clean(get("ERROR_CNT_ID")) +
-		`'></div> </div> `
 
 exports['expandable/sidebar'] = (get, $t) => 
 		` <div class="expandable-list ` +
@@ -649,16 +649,6 @@ exports['input/measurement'] = (get, $t) =>
 		$t.clean(get("errorMsg")) +
 		`</div> </div> `
 
-exports['login/confirmation-message'] = (get, $t) => 
-		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
-
-exports['login/create-account'] = (get, $t) => 
-		`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
-		$t.clean(get("email")) +
-		`'> <input type='password' placeholder="password" name='password' value='` +
-		$t.clean(get("password")) +
-		`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
-
 exports['input/select'] = (get, $t) => 
 		`<div class='input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
@@ -679,6 +669,16 @@ exports['input/select'] = (get, $t) =>
 		`'>` +
 		$t.clean(get("errorMsg")) +
 		`</div> </div> `
+
+exports['login/confirmation-message'] = (get, $t) => 
+		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+
+exports['login/create-account'] = (get, $t) => 
+		`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
+		$t.clean(get("email")) +
+		`'> <input type='password' placeholder="password" name='password' value='` +
+		$t.clean(get("password")) +
+		`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
 
 exports['login/login'] = (get, $t) => 
 		`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -882,7 +882,7 @@ exports['opening'] = (get, $t) =>
 
 exports['order/body'] = (get, $t) => 
 		`<div> <b>` +
-		$t.clean(get("order").name) +
+		$t.clean(get("order").name()) +
 		`</b> <ul id='order-nav' class='center toggle-display-list'> <li class='toggle-display-item active' display-id='builder-display-` +
 		$t.clean(get("$index")) +
 		`'>Builder</li> <li class='toggle-display-item' display-id='information-display-` +
@@ -890,7 +890,7 @@ exports['order/body'] = (get, $t) =>
 		`'>Information</li> </ul> <div id='builder-display-` +
 		$t.clean(get("$index")) +
 		`'> <b>` +
-		$t.clean(get("order").name) +
+		$t.clean(get("order").name()) +
 		`</b> <button class='save-order-btn' index='` +
 		$t.clean(get("$index")) +
 		`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> <div id='information-display-` +

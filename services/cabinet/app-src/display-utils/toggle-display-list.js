@@ -4,7 +4,7 @@
 const du = require('../../../../public/js/utils/dom-utils.js');
 
 
-ToggleDisplayList = {};
+const ToggleDisplayList = {};
 ToggleDisplayList.class = 'toggle-display-list';
 ToggleDisplayList.funcs = {};
 
@@ -41,7 +41,4 @@ ToggleDisplayList.toggle = function (elem, event) {
 
 du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
 
-module.exports = du
-
-
-
+module.exports = ToggleDisplayList;
