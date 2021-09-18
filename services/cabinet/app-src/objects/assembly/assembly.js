@@ -3,6 +3,7 @@
 
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Position = require('../../position.js');
+const getDefaultSize = require('../../utils.js').getDefaultSize;
 
 class Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
@@ -14,10 +15,10 @@ class Assembly {
       uniqueId: String.random(32),
       centerStr, demensionStr, rotationStr, partCode, partName,
       parentAssembly: parent,
+      propertyId: undefined,
     }
     Object.getSet(this, initialVals, 'subAssemblies');
     Object.getSet(this, temporaryInitialVals);
-    funcOvalue.apply(this, ['centerStr', centerStr, 'demensionStr',  demensionStr, 'rotationStr', rotationStr]);
 
     function getValueSmeFormatter(path) {
       const split = path.split('.');
@@ -132,7 +133,6 @@ class Assembly {
       this.parentAssembly = pa;
       defaultPartCode();
     }
-    this.features = Feature.getList(formatConstructorId(this));
     this.addSubAssembly = (assembly) => {
       this.subAssemblies[assembly.partCode] = assembly;
       assembly.setParentAssembly(this);

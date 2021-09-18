@@ -408,8 +408,8 @@ class $t {
 						let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 						let scope = 'scope';
 						template = templateName !== tagContents ? templateName : template;
-						string = string.replace(match[0], `{{new $t('${template}').render(get('${scope}'), '${match[5]}', get)}}`);
-						eval(`new $t(\`${template}\`)`);
+						const t = eval(`new $t(\`${template}\`)`);
+            string = string.replace(match[0], `{{new $t('${t.id()}').render(get('${scope}'), '${match[5]}', get)}}`);
 					}
 					return string;
 				}
@@ -434,6 +434,7 @@ class $t {
     this.beforeRender = (func) => beforeRenderEvent.on(func);
 		this.type = type;
 		this.isolateBlocks = isolateBlocks;
+    this.id = () => id;
 	}
 }
 
@@ -460,14 +461,18 @@ $t.formatName = function (string) {
     function toCamel(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
     return string.replace(/([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g, toCamel);
 }
-$t.dumpTemplates = function () {
+$t.dumpTemplates = function (debug) {
 	let templateFunctions = '';
 	let tempNames = Object.keys($t.templates);
 	for (let index = 0; index < tempNames.length; index += 1) {
 		const tempName = tempNames[index];
 		if (tempName) {
-			const template = $t.templates[tempName];
-			templateFunctions += `\nexports['${tempName}'] = (get, $t) => ${template}\n`;
+			let template = $t.templates[tempName];
+      if (debug === true) {
+        const endTagReg = /( \+) /g;
+        template = template.replace(endTagReg, '$1\n\t\t');
+      }
+			templateFunctions += `\nexports['${tempName}'] = (get, $t) => \n\t\t${template}\n`;
 		}
 	}
 	return templateFunctions;

@@ -1,7 +1,7 @@
 
 
 
-// const getDefaultSize = require('./utils.js').getDefaultSize;
+const getDefaultSize = require('./utils.js').getDefaultSize;
 
 class Position {
   constructor(assembly, sme) {

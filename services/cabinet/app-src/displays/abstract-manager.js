@@ -4,6 +4,7 @@
 const du = require('../../../../public/js/utils/dom-utils.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 const Request = require('../../../../public/js/utils/request.js');
+const $t = require('../../../../public/js/utils/$t.js');
 
 
 class AbstractManager {
@@ -44,13 +45,9 @@ class AbstractManager {
       du.on.match('click', `#${manager.saveBtnId}`, save);
     }
 
-    afterLoad.push(() => Request.get(manager.loadPoint(), init));
+    this.load = () => Request.get(manager.loadPoint(), init);
   }
 }
 
 AbstractManager.inputTree = () => undefined;
 module.exports = AbstractManager
-
-
-
-

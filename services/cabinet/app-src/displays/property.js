@@ -1,7 +1,8 @@
 
 
 
-const Property = require('../config/properties.js');
+const Properties = require('../config/properties.js');
+const Property = require('../config/property.js');
 const Cost = require('../cost/cost.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
@@ -35,11 +36,11 @@ class PropertyDisplay {
     }
 
     this.update = () => {
-      const propKeys = Object.keys(assemProps);
+      const propKeys = Properties.list();
       const propertyObjs = {};
       for (let index = 0; index < propKeys.length; index += 1) {
         const key = propKeys[index];
-        const props = assemProps[key];
+        const props = Properties(key);
         const propObj = {global: props.global, instance: {}};
         propertyObjs[key] = propObj;
         // const assems = Cost.group().objectMap[key] || [];
@@ -61,7 +62,7 @@ class PropertyDisplay {
     function updateProperties(name, value) {
     }
     bind(containerSelector, updateProperties);
-    new RadioDisplay('property-container', 'radio-id');
+    // new RadioDisplay('property-container', 'radio-id');
   }
 }
 

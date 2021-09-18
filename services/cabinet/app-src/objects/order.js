@@ -10,7 +10,7 @@ class Order {
       id: id || String.random(32),
     }
     this.rooms = [];
-    Object.getSet(this, 'name', 'id', 'rooms');
+    Object.getSet(this, initialVals);
   }
 }
 

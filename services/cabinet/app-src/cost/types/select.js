@@ -38,9 +38,4 @@ class SelectCost extends Cost {
 
 SelectCost.instanceProps = ['modifyDemension', 'default', 'selectedId'];
 
-Cost.register(SelectCost);
 module.exports = SelectCost
-
-
-
-

@@ -35,9 +35,9 @@ class ExpandableList {
     this.id = () => props.id;
     props.list = props.list || [];
     props.inputs = props.inputs || [];
-    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${this.id}`;
-    props.inputTreeId = `expandable-input-tree-cnt-${this.id}`
-    props.type = props.type || 'list';
+    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${this.id()}`;
+    props.inputTreeId = `expandable-input-tree-cnt-${this.id()}`
+    this.type = () => props.type || 'list';
     props.findElement = props.findElement || ((selector, target) =>  du.find.closest(selector, target));
     this.findElement = props.findElement;
     props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
@@ -48,6 +48,7 @@ class ExpandableList {
     props.activeIndex = 0;
     ExpandableList.lists[props.id] = this;
 
+    this.errorCntId = () => props.ERROR_CNT_ID;
     function setErrorMsg(msg) {
         du.id(props.ERROR_CNT_ID).innerHTML = msg;
     }
@@ -93,7 +94,7 @@ class ExpandableList {
       props.list.splice(index, 1);
       this.refresh();
     }
-    this.html = () => ExpandableList[`${props.type}Template`].render(props);
+    this.html = () => ExpandableList[`${instance.type()}Template`].render(props);
     this.afterRender = (func) => afterRenderEvent.on(func);
     this.afterAdd = (func) => afterAddEvent.on(func);
     this.refresh = (type) => {

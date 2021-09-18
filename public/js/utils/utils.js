@@ -57,17 +57,14 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
   }
   if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
   let values = {};
-  let startIndex = 1;
   let temporary = false;
   let immutable = false;
   if ((typeof initialVals) === 'object') {
     values = JSON.clone(initialVals);
     immutable = values[immutableAttr] === true;
     temporary = values[temporaryAttr] === true;
-    startIndex = 2;
     if (immutable) {
       attrs = Object.keys(values);
-      startIndex = 0;
     } else {
       attrs = Object.keys(values).concat(attrs);
     }
@@ -75,7 +72,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     attrs.push(initialVals);
   }
 
-  for (let index = startIndex; index < attrs.length; index += 1) {
+  for (let index = 0; index < attrs.length; index += 1) {
     const attr = attrs[index];
     if (attr !== immutableAttr) {
       if (immutable) obj[attr] = () => values[attr];
@@ -97,7 +94,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     obj.toJson = () => {
       const json = (typeof origToJson === 'function') ? origToJson() : {};
       json[identifierAttr] = obj.constructor.name;
-      for (let index = startIndex; index < attrs.length; index += 1) {
+      for (let index = 0; index < attrs.length; index += 1) {
         const attr = attrs[index];
         if (attr !== immutableAttr) {
           const value = obj[attr]();
@@ -126,7 +123,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     }
   }
   obj.fromJson = (json) => {
-    for (let index = startIndex; index < attrs.length; index += 1) {
+    for (let index = 0; index < attrs.length; index += 1) {
       const attr = attrs[index];
       if (attr !== immutableAttr) {
         obj[attr](json[attr]);

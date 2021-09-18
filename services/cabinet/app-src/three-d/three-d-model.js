@@ -287,7 +287,7 @@ du.on.match('click', '#max-min-btn', (target) => {
 
 du.on.match('click', '.model-label', (target) => {
   if (event.target.tagName === 'INPUT') return;
-  const has = du.on.match(target, 'active');
+  const has = target.match('.active');
   deselectPrefix();
   !has ? addClass(target, 'active') : removeClass(target, 'active');
   let label = target.children[0]

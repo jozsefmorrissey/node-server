@@ -20,7 +20,7 @@ const Inputs = require('../input/inputs.js');
 class CabinetDisplay {
   constructor(room) {
     const propertySelectors = {};
-    const parentSelector = `[room-id="${room.id}"].cabinet-cnt`;
+    const parentSelector = `[room-id="${room.id()}"].cabinet-cnt`;
     let propId = 'Half Overlay';
     const instance = this;
     this.propId = (id) => {
@@ -92,8 +92,8 @@ class CabinetDisplay {
     }
 
     CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-    bind(`[room-id="${room.id}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
-    bind(`[room-id="${room.id}"].cabinet-id-input`, attrUpdate);
+    bind(`[room-id="${room.id()}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
+    bind(`[room-id="${room.id()}"].cabinet-id-input`, attrUpdate);
     du.on.match('click', '.save-cabinet-btn', save);
   }
 }

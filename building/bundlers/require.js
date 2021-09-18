@@ -249,7 +249,7 @@ class RequireJS {
         this.load = () => {
           if (loadPath.indexOf(path) !== -1) throw Error(`Circular Reference: \n\t\t${loadPath.join('\n\t\t')}`);
           loadPath.push(path);
-          console.log('loading: ', path);
+          // console.log('loading: ', path);
           func(requireFunc(absoluteDir, path), modulee.exports, modulee);
           loadPath.splice(loadPath.indexOf(path), 1);
           return modulee.exports;

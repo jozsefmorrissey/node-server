@@ -23,9 +23,4 @@ class Category extends Cost {
 
 Category.explanation = `A branching cost that will incorporate all child costs
                         in its total`
-Cost.register(Category);
 module.exports = Category
-
-
-
-

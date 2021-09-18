@@ -28,7 +28,7 @@ class OrderDisplay {
     }
 
     function initOrder(order, index) {
-      roomDisplays[order.id] = new RoomDisplay('#room-pills', order);
+      roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
       ToggleDisplayList.onShow(`information-display-${index}`, );
       expandList.afterRender(setInfo(order, index));
       return order;
@@ -47,7 +47,7 @@ class OrderDisplay {
     const getBody = (order, $index) => {
       if (order instanceof Order) {
         let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
-        active = roomDisplays[order.id];
+        active = roomDisplays[order.id()];
         return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
       } else {
         const start = new Date().getTime();

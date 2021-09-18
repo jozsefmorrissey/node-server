@@ -67,9 +67,4 @@ ConditionalCost.calc = (cost, assembly) => {
 ConditionalCost.explanation = `A cost that is applied if the a defined
                                 condition is met`;
 
-Cost.register(ConditionalCost);
 module.exports = ConditionalCost
-
-
-
-

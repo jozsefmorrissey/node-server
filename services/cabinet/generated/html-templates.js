@@ -90,7 +90,7 @@ exports['1927703609'] = (get, $t) =>
 		$t.clean(get("recurse")(get("key"), get("group"))) +
 		` </div>`
 
-exports['../.expandable/list'] = (get, $t) => 
+exports['expandable/list'] = (get, $t) => 
 		` <div class="expandable-list ` +
 		$t.clean(get("type")) +
 		`" ex-list-id='` +
@@ -113,25 +113,50 @@ exports['../.expandable/list'] = (get, $t) =>
 		$t.clean(get("ERROR_CNT_ID")) +
 		`'></div> </div> `
 
+exports['-2020667379'] = (get, $t) => 
+		`<div class="expandable-list-body" index='` +
+		$t.clean(get("$index")) +
+		`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
+		$t.clean(get("id")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'>X</button> <div class="expand-header ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("getHeader")(get("item"), get("$index"))) +
+		` </div> <div class="expand-body ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("getBody")(get("item"), get("$index"))) +
+		` </div> </div> </div>`
+
 exports['-1921787246'] = (get, $t) => 
 		`<option value="` +
 		$t.clean(get("option")) +
 		`" ></option>`
 
-exports['-1756076485'] = (get, $t) => 
+exports['-624140361'] = (get, $t) => 
 		`<span > <input list='auto-fill-list-` +
-		$t.clean(get("input").id) +
+		$t.clean(get("input").id()) +
 		`' id='` +
-		$t.clean(get("input").id) +
+		$t.clean(get("input").id()) +
 		`' placeholder='` +
 		$t.clean(get("input").placeholder) +
 		`' type='text'> <datalist id="auto-fill-list-` +
-		$t.clean(get("input").id) +
+		$t.clean(get("input").id()) +
 		`"> ` +
-		$t.clean(new $t('-1921787246').render(get('scope'), 'option in input.autofill', get)) +
+		$t.clean(new $t('-1921787246').render(get('scope'), 'option in input.autofill()', get)) +
 		` </datalist> </span>`
 
-exports['../.expandable/pill'] = (get, $t) => 
+exports['expandable/pill'] = (get, $t) => 
 		` <div class="expandable-list ` +
 		$t.clean(get("type")) +
 		`" ex-list-id='` +
@@ -177,7 +202,20 @@ exports['-520175802'] = (get, $t) =>
 		$t.clean(get("getHeader")(get("item"), get("$index"))) +
 		` </div> </div> </div>`
 
-exports['../.expandable/sidebar'] = (get, $t) => 
+exports['-1756076485'] = (get, $t) => 
+		`<span > <input list='auto-fill-list-` +
+		$t.clean(get("input").id) +
+		`' id='` +
+		$t.clean(get("input").id) +
+		`' placeholder='` +
+		$t.clean(get("input").placeholder) +
+		`' type='text'> <datalist id="auto-fill-list-` +
+		$t.clean(get("input").id) +
+		`"> ` +
+		$t.clean(new $t('-1921787246').render(get('scope'), 'option in input.autofill', get)) +
+		` </datalist> </span>`
+
+exports['expandable/sidebar'] = (get, $t) => 
 		` <div class="expandable-list ` +
 		$t.clean(get("type")) +
 		`" ex-list-id='` +
@@ -206,7 +244,7 @@ exports['../.expandable/sidebar'] = (get, $t) =>
 		$t.clean(get("type")) +
 		`"> Hello World! </div> </div> `
 
-exports['../.input/decision/decision'] = (get, $t) => 
+exports['input/decision/decision'] = (get, $t) => 
 		` <div> <span id='` +
 		$t.clean(get("id")) +
 		`' class='inline-flex'> ` +
@@ -233,7 +271,7 @@ exports['-1362189101'] = (get, $t) =>
 		$t.clean(get("childHtml")(get("$index"))) +
 		` </div>`
 
-exports['../.input/decision/decisionTree'] = (get, $t) => 
+exports['input/decision/decisionTree'] = (get, $t) => 
 		`<div class='` +
 		$t.clean(get("class")) +
 		`' tree-id='` +
@@ -250,41 +288,7 @@ exports['../.input/decision/decisionTree'] = (get, $t) =>
 		$t.clean(get("name")) +
 		` </button> </div> `
 
-exports['../.input/input'] = (get, $t) => 
-		`<div class='input-cnt'` +
-		$t.clean(get("hidden")() ? ' hidden' : '') +
-		`> <label>` +
-		$t.clean(get("label")) +
-		`</label> <input class='` +
-		$t.clean(get("class")) +
-		`' list='input-list-` +
-		$t.clean(get("id")) +
-		`' id='` +
-		$t.clean(get("id")) +
-		`' placeholder='` +
-		$t.clean(get("placeholder")) +
-		`' type='` +
-		$t.clean(get("type")) +
-		`' name='` +
-		$t.clean(get("name")) +
-		`' ` +
-		$t.clean(get("attrString")()) +
-		`> <datalist id="input-list-` +
-		$t.clean(get("id")) +
-		`"> ` +
-		$t.clean(new $t('-994603408').render(get('scope'), 'item in list', get)) +
-		` </datalist> <div class='error' id='` +
-		$t.clean(get("errorMsgId")) +
-		`'>` +
-		$t.clean(get("errorMsg")) +
-		`</div> </div> `
-
-exports['-994603408'] = (get, $t) => 
-		`<option value="` +
-		$t.clean(get("item")) +
-		`" ></option>`
-
-exports['../.input/measurement'] = (get, $t) => 
+exports['input/measurement'] = (get, $t) => 
 		`<div class='fit input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
 		`> <label>` +
@@ -307,25 +311,59 @@ exports['../.input/measurement'] = (get, $t) =>
 		$t.clean(get("errorMsg")) +
 		`</div> </div> `
 
-exports['../.input/select'] = (get, $t) => 
+exports['input/input'] = (get, $t) => 
 		`<div class='input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
 		`> <label>` +
-		$t.clean(get("label")) +
-		`</label> <select class='` +
-		$t.clean(get("class")) +
+		$t.clean(get("label")()) +
+		`</label> <input class='` +
+		$t.clean(get("class")()) +
+		`' list='input-list-` +
+		$t.clean(get("id")()) +
 		`' id='` +
-		$t.clean(get("id")) +
+		$t.clean(get("id")()) +
+		`' placeholder='` +
+		$t.clean(get("placeholder")()) +
+		`' type='` +
+		$t.clean(get("type")()) +
 		`' name='` +
-		$t.clean(get("name")) +
+		$t.clean(get("name")()) +
+		`' ` +
+		$t.clean(get("attrString")()) +
+		`> <datalist id="input-list-` +
+		$t.clean(get("id")()) +
+		`"> ` +
+		$t.clean(new $t('-994603408').render(get('scope'), 'item in list()', get)) +
+		` </datalist> <div class='error' id='` +
+		$t.clean(get("errorMsgId")()) +
+		`'>` +
+		$t.clean(get("errorMsg")()) +
+		`</div> </div> `
+
+exports['-994603408'] = (get, $t) => 
+		`<option value="` +
+		$t.clean(get("item")) +
+		`" ></option>`
+
+exports['input/select'] = (get, $t) => 
+		`<div class='input-cnt'` +
+		$t.clean(get("hidden")() ? ' hidden' : '') +
+		`> <label>` +
+		$t.clean(get("label")()) +
+		`</label> <select class='` +
+		$t.clean(get("class")()) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`' name='` +
+		$t.clean(get("name")()) +
 		`' value='` +
 		$t.clean(get("value")()) +
 		`'> ` +
-		$t.clean(new $t('-1238286346').render(get('scope'), 'key, value in list', get)) +
+		$t.clean(new $t('-1238286346').render(get('scope'), 'value in list()', get)) +
 		` </select> <div class='error' id='` +
-		$t.clean(get("errorMsgId")) +
+		$t.clean(get("errorMsgId")()) +
 		`'>` +
-		$t.clean(get("errorMsg")) +
+		$t.clean(get("errorMsg")()) +
 		`</div> </div> `
 
 exports['-1238286346'] = (get, $t) => 
@@ -366,25 +404,25 @@ exports['cabinet/head'] = (get, $t) =>
 		`.name' index='` +
 		$t.clean(get("$index")) +
 		`' room-id='` +
-		$t.clean(get("room").id) +
+		$t.clean(get("room").id()) +
 		`' value='` +
 		$t.clean(get("cabinet").name || get("$index")) +
 		`'> Size: <div class='cabinet-dem-cnt'> <label>W:</label> <input class='cabinet-input dem' prop-update='` +
 		$t.clean(get("$index")) +
 		`.width' room-id='` +
-		$t.clean(get("room").id) +
+		$t.clean(get("room").id()) +
 		`' value='` +
 		$t.clean(get("cabinet").width()) +
 		`'> <label>H:</label> <input class='cabinet-input dem' prop-update='` +
 		$t.clean(get("$index")) +
 		`.length' room-id='` +
-		$t.clean(get("room").id) +
+		$t.clean(get("room").id()) +
 		`' value='` +
 		$t.clean(get("cabinet").length()) +
 		`'> <label>D:</label> <input class='cabinet-input dem' prop-update='` +
 		$t.clean(get("$index")) +
 		`.thickness' room-id='` +
-		$t.clean(get("room").id) +
+		$t.clean(get("room").id()) +
 		`' value='` +
 		$t.clean(get("cabinet").thickness()) +
 		`'> </div> </div> `
@@ -455,220 +493,6 @@ exports['divider-controls'] = (get, $t) =>
 		`> ` +
 		$t.clean(get("patternInputHtml")) +
 		` </div> </div> `
-
-exports['expandable/list'] = (get, $t) => 
-		` <div class="expandable-list ` +
-		$t.clean(get("type")) +
-		`" ex-list-id='` +
-		$t.clean(get("id")) +
-		`'> ` +
-		$t.clean(new $t('633282157').render(get('scope'), 'item in list', get)) +
-		` <div> <div id='input-tree-cnt'>` +
-		$t.clean(get("inputTree") ? get("inputTree").html() : '') +
-		`</div> <div ` +
-		$t.clean(!get("hasInputTree")() ? '' : 'hidden') +
-		`> ` +
-		$t.clean(new $t('-1756076485').render(get('scope'), 'input in inputs', get)) +
-		` <button ex-list-id='` +
-		$t.clean(get("id")) +
-		`' class='expandable-list-add-btn' ` +
-		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
-		`> Add ` +
-		$t.clean(get("listElemLable")) +
-		` </button> </div> </div> <div class='error' id='` +
-		$t.clean(get("ERROR_CNT_ID")) +
-		`'></div> </div> `
-
-exports['expandable/pill'] = (get, $t) => 
-		` <div class="expandable-list ` +
-		$t.clean(get("type")) +
-		`" ex-list-id='` +
-		$t.clean(get("id")) +
-		`'> <div class="expand-list-cnt ` +
-		$t.clean(get("type")) +
-		`" ex-list-id='` +
-		$t.clean(get("id")) +
-		`'> ` +
-		$t.clean(new $t('-520175802').render(get('scope'), 'item in list', get)) +
-		` </div> <div> <div id='input-tree-cnt'>` +
-		$t.clean(get("inputTree") ? get("inputTree").html() : '') +
-		`</div> <div ` +
-		$t.clean(!get("hasInputTree")() ? '' : 'hidden') +
-		`> ` +
-		$t.clean(new $t('-1756076485').render(get('scope'), 'input in inputs', get)) +
-		` <button ex-list-id='` +
-		$t.clean(get("id")) +
-		`' class='expandable-list-add-btn' ` +
-		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
-		`> Add ` +
-		$t.clean(get("listElemLable")) +
-		` </button> </div> <br> <div class='error' id='` +
-		$t.clean(get("ERROR_CNT_ID")) +
-		`'></div> </div> <div class="expand-body ` +
-		$t.clean(get("type")) +
-		`"></div> </div> `
-
-exports['expandable/sidebar'] = (get, $t) => 
-		` <div class="expandable-list ` +
-		$t.clean(get("type")) +
-		`" ex-list-id='` +
-		$t.clean(get("id")) +
-		`'> <div class="expand-list-cnt ` +
-		$t.clean(get("type")) +
-		`" ex-list-id='` +
-		$t.clean(get("id")) +
-		`'> ` +
-		$t.clean(new $t('202297006').render(get('scope'), 'item in list', get)) +
-		` <div id='input-tree-cnt'>` +
-		$t.clean(get("inputTree") ? get("inputTree").html() : '') +
-		`</div> <div ` +
-		$t.clean(!get("hasInputTree")() ? '' : 'hidden') +
-		`> ` +
-		$t.clean(new $t('632351395').render(get('scope'), 'input in inputs', get)) +
-		` <button ex-list-id='` +
-		$t.clean(get("id")) +
-		`' class='expandable-list-add-btn' ` +
-		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
-		`> Add ` +
-		$t.clean(get("listElemLable")) +
-		` </button> <div class='error' id='` +
-		$t.clean(get("ERROR_CNT_ID")) +
-		`'></div> </div> </div> <div> </div> <div class="expand-body ` +
-		$t.clean(get("type")) +
-		`"> Hello World! </div> </div> `
-
-exports['features'] = (get, $t) => 
-		`<div class='tab'> ` +
-		$t.clean(new $t('-666497277').render(get('scope'), 'feature in features', get)) +
-		` </div> `
-
-exports['-666497277'] = (get, $t) => 
-		`<div > <label>` +
-		$t.clean(get("feature").name) +
-		`</label> <input type='checkbox' name='` +
-		$t.clean(get("id") +
-		'-checkbox') +
-		`' ` +
-		$t.clean(get("feature").isCheckbox() ? '': 'hidden') +
-		`> <input type='text' name='` +
-		$t.clean(get("id") +
-		'-input') +
-		`' ` +
-		$t.clean(get("feature").showInput() ? '' : 'hidden') +
-		`> <input class='feature-radio' type='radio' name='` +
-		$t.clean(get("id")) +
-		`' value='` +
-		$t.clean(get("feature").id) +
-		`' ` +
-		$t.clean(!get("feature").isRadio() ? "hidden disabled" : "") +
-		`> <div ` +
-		$t.clean(!get("feature").isRadio() ? '' : 'hidden') +
-		`> <input type='text' placeholder="Unique Notes" ` +
-		$t.clean(!get("feature").isRadio() ? "hidden disabled" : "") +
-		`> ` +
-		$t.clean(new get("$t")('features').render({features: get("get")('feature.features'), id: get("get")('id') +
-		'.' +
-		get("get")('feature.id')})) +
-		` </div> </div>`
-
-exports['input/decision/decision'] = (get, $t) => 
-		` <div> <span id='` +
-		$t.clean(get("id")) +
-		`' class='inline-flex'> ` +
-		$t.clean(new $t('-2022747631').render(get('scope'), 'input in inputArray', get)) +
-		` </span> ` +
-		$t.clean(new $t('-1362189101').render(get('scope'), 'input in inputArray', get)) +
-		` </div> `
-
-exports['input/decision/decisionTree'] = (get, $t) => 
-		`<div class='` +
-		$t.clean(get("class")) +
-		`' tree-id='` +
-		$t.clean(get("treeId")) +
-		`'> ` +
-		$t.clean(get("payload").html()) +
-		` <button class='` +
-		$t.clean(get("buttonClass")) +
-		`' tree-id='` +
-		$t.clean(get("treeId")) +
-		`' ` +
-		$t.clean(get("formFilled")() ? '' : 'disabled') +
-		`> ` +
-		$t.clean(get("name")) +
-		` </button> </div> `
-
-exports['input/input'] = (get, $t) => 
-		`<div class='input-cnt'` +
-		$t.clean(get("hidden")() ? ' hidden()' : '') +
-		`> <label>` +
-		$t.clean(get("label")()) +
-		`</label> <input class='` +
-		$t.clean(get("class")()) +
-		`' list='input-list-` +
-		$t.clean(get("id")) +
-		`' id='` +
-		$t.clean(get("id")) +
-		`' placeholder='` +
-		$t.clean(get("placeholder")()) +
-		`' type='` +
-		$t.clean(get("type")()) +
-		`' name='` +
-		$t.clean(get("name")()) +
-		`' ` +
-		$t.clean(get("attrString")()) +
-		`> <datalist id="input-list-` +
-		$t.clean(get("id")()) +
-		`"> ` +
-		$t.clean(new $t('-994603408').render(get('scope'), 'item in list()', get)) +
-		` </datalist> <div class='error' id='` +
-		$t.clean(get("errorMsgId")()) +
-		`'>` +
-		$t.clean(get("errorMsg")()) +
-		`</div> </div> `
-
-exports['input/measurement'] = (get, $t) => 
-		`<div class='fit input-cnt'` +
-		$t.clean(get("hidden")() ? ' hidden' : '') +
-		`> <label>` +
-		$t.clean(get("label")) +
-		`</label> <input class='measurement-input ` +
-		$t.clean(get("class")) +
-		`' id='` +
-		$t.clean(get("id")) +
-		`' value='` +
-		$t.clean(get("value")() ? get("value")() : "") +
-		`' placeholder='` +
-		$t.clean(get("placeholder")) +
-		`' type='` +
-		$t.clean(get("type")) +
-		`' name='` +
-		$t.clean(get("name")) +
-		`'> <div class='error' id='` +
-		$t.clean(get("errorMsgId")) +
-		`'>` +
-		$t.clean(get("errorMsg")) +
-		`</div> </div> `
-
-exports['input/select'] = (get, $t) => 
-		`<div class='input-cnt'` +
-		$t.clean(get("hidden")() ? ' hidden' : '') +
-		`> <label>` +
-		$t.clean(get("label")) +
-		`</label> <select class='` +
-		$t.clean(get("class")) +
-		`' id='` +
-		$t.clean(get("id")) +
-		`' name='` +
-		$t.clean(get("name")) +
-		`' value='` +
-		$t.clean(get("value")()) +
-		`'> ` +
-		$t.clean(new $t('-1238286346').render(get('scope'), 'key, value in list', get)) +
-		` </select> <div class='error' id='` +
-		$t.clean(get("errorMsgId")) +
-		`'>` +
-		$t.clean(get("errorMsg")) +
-		`</div> </div> `
 
 exports['login/confirmation-message'] = (get, $t) => 
 		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
@@ -963,7 +787,7 @@ exports['room/body'] = (get, $t) =>
 		`<div> <select> ` +
 		$t.clean(new $t('-1674837651').render(get('scope'), 'type in propertyTypes', get)) +
 		` </select> <div class='cabinet-cnt' room-id='` +
-		$t.clean(get("room").id) +
+		$t.clean(get("room").id()) +
 		`'></div> </div> `
 
 exports['-1674837651'] = (get, $t) => 
@@ -973,7 +797,7 @@ exports['-1674837651'] = (get, $t) =>
 
 exports['room/head'] = (get, $t) => 
 		`<b>` +
-		$t.clean(get("room").name) +
+		$t.clean(get("room").name()) +
 		`</b> `
 
 exports['sections/divider'] = (get, $t) => 

@@ -761,9 +761,7 @@ $t.dumpTemplates = function (debug) {
 		const tempName = tempNames[index];
 		if (tempName) {
 			let template = $t.templates[tempName];
-      console.log('her')
       if (debug === true) {
-        console.log('der');
         const endTagReg = /( \+) /g;
         template = template.replace(endTagReg, '$1\n\t\t');
       }

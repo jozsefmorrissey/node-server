@@ -20,7 +20,12 @@ const MeasurementInput = require('../../../../../public/js/utils/input/styles/me
 const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation.js');
 const Material = require('../../cost/types/material.js');
 const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-const Inputs = require('../input/inputs.js');
+const Inputs = require('../../input/inputs.js');
+const $t = require('../../../../../public/js/utils/$t.js');
+const EPNTS = require('../../../generated/EPNTS.js');
+const properties = require('../../config/properties.js');
+const Displays = require('../../services/display-svc.js');
+const propertyDisplay = Displays.get('propertyDisplay');
 
 
 
@@ -62,7 +67,7 @@ class CostManager extends AbstractManager {
           listElemLable: 'Cost'
         };
         const cost = new Category({id, referenceable: true, children: expListProps.list});
-        const staticProps = assemProperties(id);
+        const staticProps = properties(id);
         const expandList = new ExpandableList(expListProps);
         list.push({partId: id, expandList, staticProps,
           CostManager: CostManager, parentId, cost});
@@ -72,7 +77,7 @@ class CostManager extends AbstractManager {
     }
 
     this.Cost = Cost;
-    this.globalProps = () => assemProperties(name)
+    this.globalProps = () => properties(name)
 
     const getHeader = (costGroup) => CostManager.costHeadTemplate(costGroup.instance);
     const getBody = (costGroup) => CostManager.costBodyTemplate(costGroup.instance);
@@ -80,6 +85,8 @@ class CostManager extends AbstractManager {
       const obj = {partId: values.partId, costs: []};
       return obj;
     }
+
+    this.load();
   }
 }
 
@@ -102,7 +109,7 @@ CostManager.setInstanceProps = (scope) => {
   if (expandLists.length === 2) {
     const partId = expandLists[1].parentElement.children[1].children[0]
                       .getAttribute('part-id');
-    scope.instanceProps = assemProperties(partId).instance;
+    scope.instanceProps = properties(partId).instance;
   }
 }
 
@@ -164,51 +171,6 @@ CostManager.getObject = (values) => {
     return Cost.new({type: referenceCost.constructor.name, referenceCost, formula: values.formula});
   }
 }
-
-afterLoad.push(() => {
-  // Todo do a valid test for input... probably need to make a sample cabinet
-  const sectionScope = {l: 0, w:0, d:0, fpt: 0, fpb: 0, fpr: 0, fpl: 0, ppt: 0, ppb: 0, ppl: 0, ppr: 0};
-  const defaultScope = {l: 0, w:0, d:0};
-  const sectionEval = new StringMathEvaluator(sectionScope);
-  const defaultEval = new StringMathEvaluator(defaultScope);
-  const sectionObjs = ['Door', 'DrawerFront', 'DrawerBox', 'Opening'];
-
-  const validate = (objId, type) => (formula) => {
-    if (type === 'Labor' || sectionObjs.indexOf(objId) === -1)
-      return !Number.isNaN(defaultEval.eval(formula));
-    return !Number.isNaN(sectionEval.eval(formula));
-  }
-
-  const sectionInput = () => new Input({
-    name: 'formula',
-    placeholder: 'Formula',
-    validation: validate('Door'),
-    class: 'center',
-    errorMsg: `Invalid Formula: allowed variables...
-    <br>l - length
-    <br>w - width
-    <br>d - depth/thickness
-    <br>fp[tblr] - Frame postion [top, bottom, left, right]
-    <br>pp[tblr] - Panel Postion [top, bottom, left, right]`
-  });
-  const defaultInput = () => new Input({
-    name: 'formula',
-    placeholder: 'Formula',
-    validation: validate(),
-    class: 'center',
-    errorMsg: `Invalid Formula: allowed variables...
-    <br>l - length
-    <br>w - width
-    <br>d - depth/thickness`
-  });
-
-  CostManager.formulaInput = (objId, type) => {
-    if (type === 'Labor' ||
-          sectionObjs.indexOf(objId) === -1)
-      return defaultInput();
-    return sectionInput();
-  };
-});
 
 CostManager.costInputTree = (costTypes, objId, onUpdate) => {
 
@@ -336,5 +298,48 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
   return decisionInput;
 }
 
-new CostManager('cost-manager', 'cost');
+
+// Todo do a valid test for input... probably need to make a sample cabinet
+const sectionScope = {l: 0, w:0, d:0, fpt: 0, fpb: 0, fpr: 0, fpl: 0, ppt: 0, ppb: 0, ppl: 0, ppr: 0};
+const defaultScope = {l: 0, w:0, d:0};
+const sectionEval = new StringMathEvaluator(sectionScope);
+const defaultEval = new StringMathEvaluator(defaultScope);
+const sectionObjs = ['Door', 'DrawerFront', 'DrawerBox', 'Opening'];
+
+const validate = (objId, type) => (formula) => {
+  if (type === 'Labor' || sectionObjs.indexOf(objId) === -1)
+    return !Number.isNaN(defaultEval.eval(formula));
+  return !Number.isNaN(sectionEval.eval(formula));
+}
+
+const sectionInput = () => new Input({
+  name: 'formula',
+  placeholder: 'Formula',
+  validation: validate('Door'),
+  class: 'center',
+  errorMsg: `Invalid Formula: allowed variables...
+  <br>l - length
+  <br>w - width
+  <br>d - depth/thickness
+  <br>fp[tblr] - Frame postion [top, bottom, left, right]
+  <br>pp[tblr] - Panel Postion [top, bottom, left, right]`
+});
+const defaultInput = () => new Input({
+  name: 'formula',
+  placeholder: 'Formula',
+  validation: validate(),
+  class: 'center',
+  errorMsg: `Invalid Formula: allowed variables...
+  <br>l - length
+  <br>w - width
+  <br>d - depth/thickness`
+});
+
+CostManager.formulaInput = (objId, type) => {
+  if (type === 'Labor' ||
+        sectionObjs.indexOf(objId) === -1)
+    return defaultInput();
+  return sectionInput();
+};
+
 module.exports = CostManager

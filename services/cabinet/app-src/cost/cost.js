@@ -82,12 +82,13 @@ Cost.getterSetter = (obj, attr, validation) => (val) => {
 
 Cost.group = (() => {
   const groups = {};
+  const defaultCostObj = () => ({unique: {}, objectMap: {}, defined: {'/dev/nul': 'Custom'}});
   return (props, cost) => {
     const isSetter = cost instanceof Cost;
     const name = isSetter ? props.group : props;
     if (isSetter) {
       if (groups[name] === undefined)
-      groups[name] = {unique: {}, objectMap: {}, defined: {'/dev/nul': 'Custom'}};
+      groups[name] = defaultCostObj();
       const group = groups[name];
 
       const unique = group.unique;
@@ -114,7 +115,7 @@ Cost.group = (() => {
       }
     }
 
-    return groups[name]
+    return groups[name] || defaultCostObj();
   }
 })();
 

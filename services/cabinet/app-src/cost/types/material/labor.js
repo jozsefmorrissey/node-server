@@ -37,9 +37,4 @@ Labor.hourlyRates = {};
 Labor.types = [];
 Labor.explanation = `Cost to be calculated hourly`;
 
-Cost.register(Labor);
 module.exports = Labor
-
-
-
-

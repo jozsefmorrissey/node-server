@@ -91,9 +91,4 @@ Material.configure = (method, cost, length, width, depth) => {
 
 Material.explanation = `Cost to be calculated by number of units or demensions`;
 
-Cost.register(Material);
 module.exports = Material
-
-
-
-

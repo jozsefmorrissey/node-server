@@ -6,11 +6,16 @@ const Cabinet = require('./assembly/assemblies/cabinet.js');
 
 class Room {
   constructor(name, id) {
-    this.name = name || `Room ${Room.count++}`;
-    this.id = id || String.random(32);
+
+    const initialVals = {
+      name: name || `Room ${Room.count++}`,
+      id: id || String.random(32),
+    }
+    Object.getSet(this, initialVals);
+
     this.cabinets = [];
     this.toJson = () => {
-      const json = {name: this.name, id: this.id, cabinets: []};
+      const json = { cabinets: []};
       this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
       return json;
     };
@@ -23,7 +28,3 @@ Room.fromJson = (roomJson) => {
   return room;
 }
 module.exports = Room
-
-
-
-

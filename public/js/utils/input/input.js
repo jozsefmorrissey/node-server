@@ -67,7 +67,7 @@ class Input {
      html();
 
     function valuePriority (func) {
-      return (elem, event) => func(elem[props.targetAttr], elem, event);
+      return (elem, event) => func(elem[this.targetAttr()], elem, event);
     }
     this.attrString = () => Input.attrString(this.targetAttr(), this.value());
 
@@ -79,13 +79,13 @@ class Input {
     this.setValue = (val) => {
       const elem = getElem(this.id());
       if (val === undefined){
-        if (elem) val = elem[props.targetAttr]
+        if (elem) val = elem[this.targetAttr()]
         if (val === undefined) val = props.default;
       }
       if(this.validation(val)) {
         valid = true;
         value = val;
-        if (elem) elem[props.targetAttr] = val;
+        if (elem) elem[this.targetAttr()] = val;
         return true;
       }
       valid = false;
@@ -121,13 +121,13 @@ class Input {
     };
 
     const validate = (target) => {
-      target = target || getElem(instance.id);
+      target = target || getElem(instance.id());
       if (target) {
-        if (this.setValue(target[props.targetAttr])) {
-          getElem(this.errorMsgId).innerHTML = '';
+        if (this.setValue(target[this.targetAttr()])) {
+          getElem(this.errorMsgId()).innerHTML = '';
           valid = true;
         } else {
-          getElem(this.errorMsgId).innerHTML = props.errorMsg;
+          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
           valid = false;
         }
       }

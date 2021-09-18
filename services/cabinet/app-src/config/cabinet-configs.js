@@ -43,7 +43,7 @@ class CabinetConfig {
       const propertyInput = new Select({
         name: 'propertyId',
         class: 'center',
-        list: Object.keys(properties.list)
+        list: ['pajango', 'skititors']
       });
       const inputs = [Inputs('name'), typeInput, propertyInput];
       const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);

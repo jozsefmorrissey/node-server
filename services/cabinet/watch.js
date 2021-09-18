@@ -23,7 +23,6 @@ function argParser() {
     if (arg.match(valueRegex)) {
       const varName = arg.split('=', 1)[0];
       const valueStr = arg.substr(varName.length + 1);
-      console.log('arg:', arg, valueStr)
       global[varName] = getValue(valueStr.trim());
     }
   }
@@ -128,7 +127,7 @@ class Watcher {
 const { HtmlBundler } = require('../../building/bundlers/html.js');
 const htmlDumpLoc = './generated/html-templates.js';
 
-const cleanName = (name) => name.replace(/\.\/public\/html\/templates\/(.*).html/, '$1');
+const cleanName = (name) => name.replace(/(..\/..|\.)\/public\/html\/templates\/(.*).html/, '$2');
 const htmlBundler = new HtmlBundler(htmlDumpLoc, cleanName);
 
 new Watcher(htmlBundler.change, htmlBundler.write)

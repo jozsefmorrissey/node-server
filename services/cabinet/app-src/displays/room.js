@@ -27,7 +27,7 @@ class RoomDisplay {
     this.active = () => expandList.active();
     this.cabinetDisplay = () => {
       const room = this.active();
-      const id = room.id;
+      const id = room.id();
       if (cabinetDisplays[id] === undefined) {
         cabinetDisplays[id] = new CabinetDisplay(room);
       }
@@ -35,7 +35,7 @@ class RoomDisplay {
     }
     this.cabinet = () => this.cabinetDisplay().active();
     const expListProps = {
-      list: order.rooms(),
+      list: order.rooms,
       parentSelector, getHeader, getBody, getObject,
       inputs: [{placeholder: 'name'}],
       inputValidation: (values) => values.name !== '' ? true : 'name must be defined',

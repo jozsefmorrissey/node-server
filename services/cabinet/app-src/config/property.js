@@ -2,6 +2,10 @@ class Property {
   // clone constructor(id, value) {
   constructor(id, name, props) {
     let value;
+    if ((typeof props) !== 'object') {
+      value = props;
+      props = {};
+    }
     const existingProp = Property.list[id];
     let clone = false;
     if (existingProp) {
@@ -9,7 +13,7 @@ class Property {
       props = existingProp.properties();
       value = name;
       clone = true;
-    } else {
+    } else if (value === undefined){
       props = props || {};
       value = props.value;
     }
