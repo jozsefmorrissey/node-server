@@ -12,7 +12,8 @@ class SelectCost extends Cost {
 
     const selected = 0;
     this.selected = (index) => {
-      if (index !== undefined) this.selected(index);
+      if (index !== undefined)
+        this.selected(index);
       return this.children[this.selected()];
     }
 

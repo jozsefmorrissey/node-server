@@ -244,6 +244,23 @@ exports['expandable/sidebar'] = (get, $t) =>
 		$t.clean(get("type")) +
 		`"> Hello World! </div> </div> `
 
+exports['input/decision/decisionTree'] = (get, $t) => 
+		`<div class='` +
+		$t.clean(get("class")) +
+		`' tree-id='` +
+		$t.clean(get("treeId")) +
+		`'> ` +
+		$t.clean(get("payload").html()) +
+		` <button class='` +
+		$t.clean(get("buttonClass")) +
+		`' tree-id='` +
+		$t.clean(get("treeId")) +
+		`' ` +
+		$t.clean(get("formFilled")() ? '' : 'disabled') +
+		`> ` +
+		$t.clean(get("name")) +
+		` </button> </div> `
+
 exports['input/decision/decision'] = (get, $t) => 
 		` <div> <span id='` +
 		$t.clean(get("id")) +
@@ -270,46 +287,6 @@ exports['-1362189101'] = (get, $t) =>
 		`'> ` +
 		$t.clean(get("childHtml")(get("$index"))) +
 		` </div>`
-
-exports['input/decision/decisionTree'] = (get, $t) => 
-		`<div class='` +
-		$t.clean(get("class")) +
-		`' tree-id='` +
-		$t.clean(get("treeId")) +
-		`'> ` +
-		$t.clean(get("payload").html()) +
-		` <button class='` +
-		$t.clean(get("buttonClass")) +
-		`' tree-id='` +
-		$t.clean(get("treeId")) +
-		`' ` +
-		$t.clean(get("formFilled")() ? '' : 'disabled') +
-		`> ` +
-		$t.clean(get("name")) +
-		` </button> </div> `
-
-exports['input/measurement'] = (get, $t) => 
-		`<div class='fit input-cnt'` +
-		$t.clean(get("hidden")() ? ' hidden' : '') +
-		`> <label>` +
-		$t.clean(get("label")) +
-		`</label> <input class='measurement-input ` +
-		$t.clean(get("class")) +
-		`' id='` +
-		$t.clean(get("id")) +
-		`' value='` +
-		$t.clean(get("value")() ? get("value")() : "") +
-		`' placeholder='` +
-		$t.clean(get("placeholder")) +
-		`' type='` +
-		$t.clean(get("type")) +
-		`' name='` +
-		$t.clean(get("name")) +
-		`'> <div class='error' id='` +
-		$t.clean(get("errorMsgId")) +
-		`'>` +
-		$t.clean(get("errorMsg")) +
-		`</div> </div> `
 
 exports['input/input'] = (get, $t) => 
 		`<div class='input-cnt'` +
@@ -344,6 +321,29 @@ exports['-994603408'] = (get, $t) =>
 		`<option value="` +
 		$t.clean(get("item")) +
 		`" ></option>`
+
+exports['input/measurement'] = (get, $t) => 
+		`<div class='fit input-cnt'` +
+		$t.clean(get("hidden")() ? ' hidden' : '') +
+		`> <label>` +
+		$t.clean(get("label")) +
+		`</label> <input class='measurement-input ` +
+		$t.clean(get("class")) +
+		`' id='` +
+		$t.clean(get("id")) +
+		`' value='` +
+		$t.clean(get("value")() ? get("value")() : "") +
+		`' placeholder='` +
+		$t.clean(get("placeholder")) +
+		`' type='` +
+		$t.clean(get("type")) +
+		`' name='` +
+		$t.clean(get("name")) +
+		`'> <div class='error' id='` +
+		$t.clean(get("errorMsgId")) +
+		`'>` +
+		$t.clean(get("errorMsg")) +
+		`</div> </div> `
 
 exports['input/select'] = (get, $t) => 
 		`<div class='input-cnt'` +
@@ -517,17 +517,6 @@ exports['login/reset-password'] = (get, $t) =>
 		`'> <input type='password' placeholder="password" name='password' value='` +
 		$t.clean(get("password")) +
 		`'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
-
-exports['managers/abstract-manager'] = (get, $t) => 
-		`<div> <div class="center"> <h2 id='` +
-		$t.clean(get("headerId")) +
-		`'> ` +
-		$t.clean(get("header")) +
-		` <button class='manager-save-btn' id='` +
-		$t.clean(get("saveBtnId")) +
-		`'>Save</button> </h2> </div> <div id="` +
-		$t.clean(get("bodyId")) +
-		`"></div> </div> `
 
 exports['managers/cost/body'] = (get, $t) => 
 		`<div class='` +
@@ -841,3 +830,14 @@ exports['sections/open'] = (get, $t) =>
 		`</h2> <div class='section-feature-ctn'> ` +
 		$t.clean(get("featureDisplay")) +
 		` </div> `
+
+exports['managers/abstract-manager'] = (get, $t) => 
+		`<div> <div class="center"> <h2 id='` +
+		$t.clean(get("headerId")) +
+		`'> ` +
+		$t.clean(get("header")) +
+		` <button class='manager-save-btn' id='` +
+		$t.clean(get("saveBtnId")) +
+		`'>Save</button> </h2> </div> <div id="` +
+		$t.clean(get("bodyId")) +
+		`"></div> </div> `

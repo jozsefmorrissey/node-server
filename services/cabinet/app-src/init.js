@@ -1,6 +1,7 @@
 
 
 // Object Classes
+require('./objects/assembly/init-assem');
 const Order = require('./objects/order.js');
 const Assembly = require('./objects/assembly/assembly.js');
 
