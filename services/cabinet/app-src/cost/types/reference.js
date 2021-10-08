@@ -14,16 +14,6 @@ class ReferenceCost extends Cost {
 
     this.id = referenceCost.id;
     this.calc = referenceCost.calc;
-
-    const reqProps = referenceCost.constructor.staticProps || [];
-    reqProps.forEach((prop) => this[prop] = referenceCost.prop);
-
-    const instProps = referenceCost.constructor.instanceProps || [];
-    reqProps.forEach((prop) => this[prop] = Cost.getterSetter(props, prop));
   }
 }
 module.exports = ReferenceCost
-
-
-
-

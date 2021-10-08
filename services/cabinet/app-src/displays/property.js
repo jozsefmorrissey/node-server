@@ -17,19 +17,25 @@ class PropertyDisplay {
           properties.length === 0 && Object.keys(groups).length === 0;
 
     function getScope(key, group) {
+      key = key || '';
       let radioId = group.radioId || PropertyDisplay.counter++;
       const properties = [];
-      const groups = [];
-      const scope = {key, properties, groups, recurse, radioId,
-                      noChildren: noChildren(properties, groups)};
+      const groups = {};
+      const label = key.replace(PropertyDisplay.branchReg, '$1');
+      const scope = {key, label, properties, groups, recurse, radioId,
+                      noChildren: noChildren(properties, groups),
+                      branch: key.match(PropertyDisplay.branchReg)};
       const keys = Object.keys(group.values);
       radioId = PropertyDisplay.counter++;
       for( let index = 0; index < keys.length; index += 1) {
-        const value = group.values[keys[index]];
+        const key = keys[index];
+        const value = group.values[key];
         if (value instanceof Property) {
           scope.properties.push(value);
+        } else if (!key.match(PropertyDisplay.attrReg)){
+          scope.groups[key] = {key, values: value, radioId};
         } else {
-          scope.groups[keys[index]] = {key: keys[index], values: value, radioId};
+          scope[key] = value;
         }
       }
       return scope;
@@ -41,13 +47,8 @@ class PropertyDisplay {
       for (let index = 0; index < propKeys.length; index += 1) {
         const key = propKeys[index];
         const props = Properties(key);
-        const propObj = {global: props.global, instance: {}};
+        const propObj = props;
         propertyObjs[key] = propObj;
-        // const assems = Cost.group().objectMap[key] || [];
-        // for (let aIndex = 0; aIndex < assems.length; aIndex += 1) {
-        //   const aProps = JSON.clone(props.instance);
-        //   propObj.instance[assems[aIndex].id()] = aProps;
-        // }
       }
       const values = {values: propertyObjs};
       const contianer = document.querySelector(containerSelector);
@@ -61,12 +62,24 @@ class PropertyDisplay {
 
     function updateProperties(name, value) {
     }
-    bind(containerSelector, updateProperties);
-    // new RadioDisplay('property-container', 'radio-id');
+    bind('property-cnt', updateProperties);
+    new RadioDisplay('property-container', 'radio-id');
   }
 }
 
+// bind('property-branch-selector', '');
+
+du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
+  const childTargets = target.parentElement.children[1].children;
+  const childElem = childTargets[target.value];
+  // TODO: set config property: childElem.innerText;
+  du.hide(childTargets);
+  du.show(childElem);
+  console.log('hello');
+});
+
+PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
+PropertyDisplay.branchReg = /^OR_(.{1,})/;
 PropertyDisplay.counter = 0;
 PropertyDisplay.template = new $t('properties/properties');
-PropertyDisplay.propTemplate = new $t('properties/property');
 module.exports = PropertyDisplay

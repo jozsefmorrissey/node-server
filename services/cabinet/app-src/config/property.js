@@ -1,35 +1,38 @@
-class Property {
-  // clone constructor(id, value) {
-  constructor(id, name, props) {
+
+const Lookup = require('../../../../public/js/utils/object/lookup.js');
+
+class Property extends Lookup {
+  // clone constructor(code, value) {
+  constructor(code, name, props) {
+    super();
     let value;
     if ((typeof props) !== 'object') {
       value = props;
       props = {};
     }
-    const existingProp = Property.list[id];
+    const existingProp = Property.list[code];
     let clone = false;
     if (existingProp) {
-      this.name = existingProp.name();
+      value = name !== undefined ? name : existingProp.value();
+      name = existingProp.name();
       props = existingProp.properties();
-      value = name;
       clone = true;
     } else if (value === undefined){
       props = props || {};
       value = props.value;
     }
-    this.id = () => id;
+    this.code = () => code;
     this.name = () => name;
-    this.values = () => JSON.parse(JSON.stringify(props.values));
     this.description = () => props.description;
     this.value = (val) => {
       if (val !== undefined) value = val;
       return value;
     }
-    this.properties = () => props;
+    this.properties = () => JSON.parse(JSON.stringify(props));
     this.clone = (val) => {
-      return new Property(id, name, val, props);
+      return new Property(code, val);
     }
-    if(!clone) Property.list[id] = this;
+    if(!clone) Property.list[code] = this;
   }
 }
 

@@ -11,10 +11,8 @@ const Cost = require('../../cost.js');
 class Labor extends Material {
   constructor (props) {
     super(props);
-    props = this.props();
     const type = props.laborType;
-    this.type = () => type;
-    this.hourlyRate = () => Labor.hourlyRates[type];
+    props.hourlyRate = Labor.hourlyRates[type]
     const parentCalc = this.calc;
     this.cost = () => this.hourlyRate() * props.hours;
     if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
@@ -25,8 +23,6 @@ class Labor extends Material {
 }
 
 
-Labor.instanceProps = Material.instanceProps.concat(['type', 'hourlyRate']);
-Labor.staticProps = Material.staticProps.concat(['type', 'hourlyRate']);
 Labor.defaultRate = 40;
 Labor.hourlyRate = (type, rate) => {
   rate = Cost.evaluator.eval(new String(rate));

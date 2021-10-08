@@ -28,8 +28,6 @@ const Assembly = require('../objects/assembly/assembly.js');
 class Cost {
   //constructor(id, Cost, formula)
   constructor(props) {
-    this.props = () => JSON.parse(JSON.stringify(props));
-    props = this.props();
     let deleted = false;
     const instance = this;
     const uniqueId = String.random();
@@ -37,37 +35,18 @@ class Cost {
     this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
     this.delete = () => deleted = true;
     this.deleted = () => deleted;
-    this.group = Cost.getterSetter(props, 'group');
+    Object.getSet(this, props, 'group', 'objectId', 'id', 'children')
     this.uniqueId = () => uniqueId;
-    this.objectId = Cost.getterSetter(props, 'objectId');
-    this.id = Cost.getterSetter(props, 'id');
-    this.children = props.children || [];
     // TODO: None does not make sence here.
     this.childIds = () =>
         ['None'].concat(cost.children.map((obj) => obj.id()));
 
-    Cost.group(props, this);
+    Cost.group(this, this);
 
     this.addChild = (cost) => {
       if (cost instanceof Cost) {
         this.children.push(cost);
       }
-    }
-
-    this.toJson = () => {
-      const json = {
-        type: Cost.constructorId(this.constructor.name),
-        id: this.id(),
-        objectId: this.objectId(),
-        lastUpdated: lastUpdated,
-        children
-      };
-      const children = [];
-      this.children.forEach((child) => children.push(child.toJson()));
-      let allProps = this.constructor.staticProps || [];
-      allProps = allProps.concat(this.constructor.instanceProps);
-      reqProps.forEach((prop) => json[prop] = this[prop]());
-      return json;
     }
   }
 }
@@ -131,37 +110,6 @@ Cost.constructorId = (name) => name.replace(/Cost$/, '');
 Cost.register = (clazz) => {
   Cost.types[Cost.constructorId(clazz.prototype.constructor.name)] = clazz;
   Cost.typeList = Object.keys(Cost.types).sort();
-}
-
-Cost.new = function(propsOreference) {
-  let constructer;
-  if (propsOreference instanceof Cost)
-    constructer = Cost.types[Cost.constructorId(propsOreference.constructor.name)];
-  else constructer = Cost.types[Cost.constructorId(propsOreference.type)]
-  return new constructer(propsOreference)
-}
-
-Cost.fromJson = (objOrArray) => {
-  function instanceFromJson(obj) {
-    const cost = Cost.new(obj);
-    obj.children.forEach((childJson) => cost.addChild(Cost.fromJson(childJson)));
-    return cost;
-  }
-  if (!Array.isArray(objOrArray)) return instanceFromJson(objOrArray);
-
-  const list = [];
-  objOrArray.forEach((obj) => list.push(instanceFromJson(obj)));
-  return list;
-}
-
-Cost.toJson = (array) => {
-  if (!Array.isArray(array)) throw new Error('Input argument must be of type Array');
-  const list = [];
-  array.forEach((cost) => {
-    if (!(cost instanceof Cost)) throw new Error('All array object must be of type Cost');
-    list.push(cost.toJson())
-  });
-  return list;
 }
 
 Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))

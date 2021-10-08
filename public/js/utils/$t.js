@@ -32,7 +32,7 @@ class $t {
 		const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
 		const ternaryProps = {opening: /\?/};
 		const keyWordProps = {opening: /(new|null|undefined|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-		const ignoreProps = {opening: /new \$t\('.*?'\).render\(get\('scope'\), '(.*?)', get\)/};
+		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
 		const commaProps = {opening: /,/};
 		const colonProps = {opening: /:/};
 		const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
@@ -172,6 +172,7 @@ class $t {
 			for (let index = 0; index < get('scope').length; index += 1) {
 				if (elemName) {
 					const obj = {};
+          obj.$index = index;
 					obj[elemName] = get(index);
 					resp += new $t(template).render(obj, undefined, get);
 				} else {
@@ -181,10 +182,9 @@ class $t {
 			return `${resp}`;
 		}
 
-		function arrayExp(itExp, get) {
-			const match = itExp.match($t.arrayItExpReg);
-			const varName = match[1];
-			const array = match[3] ? get(match[2])() : get(match[2]);
+		function arrayExp(varName, get) {
+			varName = varName.trim();
+			const array = get('scope');
 			let built = '';
 			for (let index = 0; index < array.length; index += 1) {
 				const obj = {};
@@ -195,11 +195,11 @@ class $t {
 			return built;
 		}
 
-		function itOverObject(itExp, get) {
-			const match = itExp.match($t.objItExpReg);
+		function itOverObject(varNames, get) {
+			const match = varNames.match($t.objectNameReg);
 			const keyName = match[1];
 			const valueName = match[2];
-			const obj = get(match[3]);
+			const obj = get('scope');
 			const keys = Object.keys(obj);
 			let built = '';
 			for (let index = 0; index < keys.length; index += 1) {
@@ -213,8 +213,8 @@ class $t {
       return built;
 		}
 
-		function rangeExp(itExp, get) {
-			const match = itExp.match($t.rangeItExpReg);
+		function rangeExp(rangeItExpr, get) {
+			const match = rangeItExpr.match($t.rangeItExpReg);
 			const elemName = match[1];
 			let startIndex = (typeof match[2]) === 'number' ||
 						match[2].match(/^[0-9]*$/) ?
@@ -272,26 +272,26 @@ class $t {
 			}
 		}
 
-		function type(scope, itExp) {
-			if ((typeof itExp) === 'string' && itExp.match($t.rangeAttemptExpReg)) {
-				if (itExp.match($t.rangeItExpReg)) {
+		function type(scope, expression) {
+			if ((typeof expression) === 'string' && expression.match($t.rangeAttemptExpReg)) {
+				if (expression.match($t.rangeItExpReg)) {
 					return 'rangeExp'
 				}
 				return 'rangeExpFormatError';
 			} else if (Array.isArray(scope)) {
-				if (itExp === undefined) {
+				if (expression === undefined) {
 					return 'defaultArray';
-				} else if (itExp.match($t.nameScopeExpReg)) {
+				} else if (expression.match($t.nameScopeExpReg)) {
 					return 'nameArrayExp';
-				} else {
-					return 'invalidArray';
 				}
-			} else if ((typeof scope) === 'object') {
-				if (itExp === undefined) {
+			}
+
+			if ((typeof scope) === 'object') {
+				if (expression === undefined) {
 					return 'defaultObject';
-				} else if (itExp.match($t.objItExpReg)){
+				} else if (expression.match($t.objectNameReg)){
 					return 'itOverObject';
-				} else if (itExp.match($t.arrayItExpReg)){
+				} else if (expression.match($t.arrayNameReg)){
 					return 'arrayExp';
 				} else {
 					return 'invalidObject';
@@ -397,19 +397,30 @@ class $t {
 		}
 
 
-				const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')([^>^\4]*?)\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+				const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
 				function formatRepeat(string) {
 					// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
 					// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
 					let match;
 					while (match = string.match(repeatReg)) {
-						let tagContents = match[2] + match[6];
-						let template = `<${match[1]}${tagContents}${match[1]}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+						let tagContents = match[2] + match[8];
+            let tagName = match[1];
+            let varNames = match[6];
+            let realScope = match[7];
+						let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
 						let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 						let scope = 'scope';
 						template = templateName !== tagContents ? templateName : template;
 						const t = eval(`new $t(\`${template}\`)`);
-            string = string.replace(match[0], `{{new $t('${t.id()}').render(get('${scope}'), '${match[5]}', get)}}`);
+            let resolvedScope = "get('scope')";;
+            try {
+              console.log('tagName', tagName);
+              console.log('varNames', varNames);
+              console.log('realScope', realScope);
+              console.log('tagContents', tagContents);
+              resolvedScope = ExprDef.parse(expression, realScope);
+            } catch (e) {}
+            string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
 					}
 					return string;
 				}
@@ -447,8 +458,8 @@ $t.loadFunctions = (functions) => {
 
 }
 $t.isTemplate = (id) => $t.functions[id] !== undefined;
-$t.arrayItExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*in\s*([a-zA-Z][a-z0-9A-Z\.]*)(\(\)|)\s*$/;
-$t.objItExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*in\s*([a-zA-Z][a-z\.0-9A-Z]*)\s*$/;
+$t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+$t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.rangeAttemptExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*(.*\.\..*)\s*$/;
 $t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*([a-z0-9A-Z]*)\.\.([a-z0-9A-Z]*)\s*$/;
 $t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;

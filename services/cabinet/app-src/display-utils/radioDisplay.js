@@ -14,7 +14,7 @@ class RadioDisplay {
 
     function path () {
       let path = '';
-      const info = du.find.downInfo(`.${radioClass}.open`, `.${radioClass}.close`, document.body);
+      const info = du.find.downInfo(`.${radioClass}.open`, document.body, null, `.${radioClass}.close`);
       info.matches.forEach((obj) => {
         const header = obj.node.children[0];
         if (header && header.getBoundingClientRect().y < 8) {
@@ -28,11 +28,11 @@ class RadioDisplay {
       infoBar.update(path());
     });
 
-    du.on.match('click', `.${radioClass}`, (target, event) => {
+    du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
+      const target = targetHeader.parentElement;
       const attrVal = target.getAttribute(groupAttr);
-      const hidden = target.children[1].hidden;
-      const targetHeader = target.children[0];
       const targetBody = target.children[1];
+      const hidden = targetBody.hidden;
       targetBody.hidden = !hidden;
       if (hidden) {
         du.class.add(targetHeader, 'active');
@@ -56,7 +56,3 @@ class RadioDisplay {
   }
 }
 module.exports = RadioDisplay
-
-
-
-

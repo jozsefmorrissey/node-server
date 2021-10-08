@@ -7,17 +7,12 @@ const Cost = require('../../cost.js');
 class ConditionalCost extends Category {
   constructor (props) {
     super(props);
-    props = this.props();
-    this.propertyId = Cost.getterSetter(props, 'propertyId');
-    this.propertyValue = Cost.getterSetter(props, 'propertyValue');
-    this.propertyCondition = Cost.getterSetter(props, 'propertyCondition',
-                              ConditionalCost.isCondition);
+    Object.getSet(this, props, 'propertyId', 'propertyValue', 'propertyCondition');
     this.categoryCalc = this.calc;
     this.calc = (assembly) => ConditionalCost.calc(this, assembly);
   }
 }
 
-ConditionalCost.staticProps = ['propertyId', 'propertyValue', 'propertyCondition'];
 ConditionalCost.toKey = (value) => new String(value).replace(/ /g, '_').toUpperCase();
 
 ConditionalCost.conditions = {};

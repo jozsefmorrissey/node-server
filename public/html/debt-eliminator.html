@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <script type="text/javascript">
+
+      function binarySearch(ar, compare) {
+        closest = undefined;
+        var m = 0;
+        var n = ar.length - 1;
+        while (m <= n) {
+          var k = (n + m) >> 1;
+          compare(ar[k]);
+          if (closest.diff > 0) {
+              m = k + 1;
+          } else if(closest.diff < 0) {
+              n = k - 1;
+          } else {
+              return closest.payment;
+          }
+        }
+        return closest.payment;
+      }
+
+      let closest;
+      const compareFunc = (date) => (payment) => {
+        const clone = loan.clone();
+        clone.payment = payment;
+        const payoff = clone.payoff();
+        const diff = payoff.date - date;
+        if (closest === undefined || Math.abs(payoff.date - date) < Math.abs(closest.payoff.date - date)) {
+          closest = {payoff, payment};
+        }
+        closest.diff = diff;
+        return closest;
+      }
+
+      const searchArray = (step, start) => Array.from({length: 11}, (_, i) => start + ((i) * step || 100));
+
+      const resolvePaymentAmount = (payoffDate) => {
+        const compare = (val1, val2) => Math.abs(val - val1) < Math.abs(val - val2);
+        let found;
+        let steps = [10000, 2500, 1000, 250, 100, 25, 10, 1];
+        let array = searchArray(steps[0], 0);
+        let payment;
+        for (let index = 1; index < steps.length; index += 1) {
+          payment = binarySearch(array, compareFunc(payoffDate));
+          const step = steps[index];
+          array = searchArray(step, payment - (step * 5));
+        }
+        console.log(payment);
+        return payment;
+      }
+      class Loan {
+        constructor() {
+          this.rate = 2.75;
+          this.compoundType = Loan.compoundTypes.CONTINUOUSLY;
+          this.principle = 129500;
+          this.years = 30;
+          this.months = 24;
+          this.payment = 1700;
+          this.down = 10000;
+          const duration = () => this.months / 12 + this.years;
+          const interval = () => Loan.interval(this.compoundType);
+          const compound = () => (this.principle*(Math.pow(1+(this.rate/(interval()*100)), (interval()*duration())))) - this.principle;
+          // const savemorecalc = (d,adj) => (principle+d)*(adj);
+          // const savings = (down) => (principle+down)*(Math.pow(1+(rate/m), (m*duration)));
+          // const savingsAdj = (down, adj) => ((principle+down)*(1-adj))*(Math.pow(1+(rate/m), (m*duration)));
+          const continuously = () => ((this.principle)*Math.pow(Math.E,((this.rate/100)*(1/12)))) - this.principle;
+          // const continuously = () => this.principle*this.rate*(Math.pow(1+this.rate/12, 1) / (Math.pow(1 + this.rate/12, 1) - 1));
+          const interest = () => {
+            if (interval() === -1) return continuously();
+            return compound();
+          }
+          this.clone = () => {
+            const c = new Loan();
+            c.rate = this.rate;
+            c.compoundType = this.compoundType;
+            c.principle = this.principle;
+            c.years = this.years;
+            c.months = this.months;
+            c.payment = this.payment;
+            c.down = this.down;
+            return c;
+          }
+          this.nextMonth = () => {
+            const next = this.clone();
+            next.principle += interest() - this.payment;
+            return next;
+          }
+          this.payoff = () => {
+            let monthCount = 1;
+            let loan = this.clone();
+            loan.principle -= this.down;
+            loan = loan.nextMonth();
+            while (loan.principle > 0 && loan.principle < Number.MAX_SAFE_INTEGER) {
+              monthCount++;
+              loan = loan.nextMonth();
+            }
+            const amountPaid = Loan.twoDecimalPlaces(this.payment * monthCount + this.down);
+            const years = Math.floor(monthCount / 12);
+            const months = monthCount % 12;
+            const interest = Loan.twoDecimalPlaces(amountPaid - this.principle);
+            const date = new Date();
+            date.setFullYear(date.getFullYear() + years);
+            date.setMonth(date.getMonth() + months);
+            return {amountPaid, years, months, interest, date};
+          }
+          // const contSaving = (down, adj) => (principle+down)*(1-adj)*Math.pow(e,(rate*duration));
+        }
+      }
+      Loan.compoundTypes = {
+        CONTINUOUSLY: 'Countinuously',
+        YEARLY: 'Yearly',
+        MONTHLY: 'Monthly',
+        WEEKLY: 'Weekly',
+        DAILY: 'Daily'
+      }
+      Loan.interval = (compoundType) => {
+        switch (compoundType) {
+          case Loan.compoundTypes.YEARLY: return 1;
+          case Loan.compoundTypes.MONTHLY: return 12;
+          case Loan.compoundTypes.WEEKLY: return 52;
+          case Loan.compoundTypes.DAILY: return 365;
+          default: return -1;
+        }
+      }
+
+      Loan.twoDecimalPlaces = (val) => Math.round(val * 100) / 100;
+      function getElemsByName() {
+        const elems = {};
+        for(let index = 0; index < arguments.length; index += 1) {
+          const name = arguments[index];
+          elems[name] = document.querySelector(`[name="${name}"]`)
+        }
+        return elems;
+      }
+
+      const getLoanElems = () => getElemsByName('principle', 'rate', 'payment', 'down', 'compoundType', 'payoffDate', 'summary');
+
+      const loan = new Loan();
+
+      const updateValues = () => {
+        const elems = getLoanElems();
+        loan.principle = Number.parseInt(elems.principle.value);
+        loan.rate = Number.parseInt(elems.rate.value);
+        loan.payment = Number.parseInt(elems.payment.value);
+        loan.down = Number.parseInt(elems.down.value);
+        loan.compoundType = Number.parseInt(elems.compoundType.value);
+        updatePayoff();
+      }
+
+      const figurePayment = (event) => {
+        const elems = getLoanElems();
+        loan.payment = resolvePaymentAmount(new Date(elems.payoffDate.value));
+        elems.payment.value = loan.payment;
+        updatePayoff();
+      }
+
+      const updatePayoff = () => {
+        const elems = getLoanElems();
+        const payoff = loan.payoff();
+        elems.payoffDate.value = payoff.date.toISOString().split('T')[0];
+        elems.summary.innerHTML = `Interest: ${payoff.interest} Total: ${payoff.amountPaid}<br>Paid over ${payoff.years} Years and ${payoff.months} months`;
+      };
+
+      const init = () => {
+        const elems = getLoanElems();
+
+        elems.principle.value = loan.principle;
+        elems.rate.value = loan.rate;
+        elems.payment.value = loan.payment;
+        elems.down.value = loan.down;
+        elems.compoundType.value = loan.compoundType;
+        updatePayoff();
+        const valueElems = document.querySelectorAll('.loan-values>div>input');
+        valueElems.forEach((elem) => elem.addEventListener('keyup', updateValues))
+        elems.payoffDate.addEventListener('change', figurePayment);
+      }
+
+      window.onload = init;
+    </script>
+  </head>
+  <body>
+    <div class='loan-values'>
+      <div>
+        <label>Principle: </label>
+        <input type='number' name='principle'>
+      </div>
+      <div>
+        <label>Rate: </label>
+        <input type='number' name='rate'>
+      </div>
+      <div>
+        <label>Payment: </label>
+        <input type='number' name='payment'>
+      </div>
+      <div>
+        <label>Down: </label>
+        <input type='number' name='down'>
+      </div>
+      <div>
+        <label>Compounds: </label>
+        <select name='compoundType'>
+          <option>Countinuously</option>
+          <option>Yearly</option>
+          <option>Monthly</option>
+          <option>Weekly</option>
+          <option>Daily</option>
+        </select>
+      </div>
+    </div>
+    <br>
+    <div>
+      <label>Payoff Date: </label>
+      <input type='date' name='payoffDate'>
+      <br>
+      <p name='summary'></p>
+    </div>
+  </body>
+</html>

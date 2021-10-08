@@ -34,6 +34,23 @@ du.find.up = function (selector, node) {
   }
 }
 
+function visibility(hide, targets) {
+  targets = Array.isArray(targets) ? targets : [targets];
+  for (let index = 0; index < targets.length; index += 1) {
+    const target = targets[index];
+    if ((typeof target) === 'string') {
+      targets = targets.concat(Array.from(document.querySelectorAll(target)));
+    } else if (target instanceof HTMLElement) {
+      target.hidden = hide;
+    } else if (Array.isArray(target) || target instanceof NodeList || target instanceof HTMLCollection) {
+      targets = targets.concat(Array.from(target));
+    }
+  }
+}
+
+du.hide = (...targets) => visibility(true, targets);
+du.show = (...targets) => visibility(false, targets);
+
 du.id = function (id) {return document.getElementById(id);}
 
 du.appendError = (target, message) => {
@@ -162,7 +179,7 @@ du.class.add = function(target, clazz) {
 
 du.class.swap = function(target, newClass, oldClass) {
   du.class.remove(target, oldClass);
-  addClass(target, newClass)
+  du.class.add(target, newClass)
 }
 
 function classReg(clazz) {
@@ -178,8 +195,8 @@ du.class.has = function(target, clazz) {
 }
 
 du.class.toggle = function(target, clazz) {
-  if (hasClass(target, clazz)) du.class.remove(target, clazz);
-  else addClass(target, clazz);
+  if (du.class.has(target, clazz)) du.class.remove(target, clazz);
+  else du.class.add(target, clazz);
 }
 
 du.on.match = function(event, selector, func, target) {

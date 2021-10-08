@@ -7,8 +7,7 @@ class SelectCost extends Cost {
   constructor (props) {
     super(props);
     props = this.props();
-    this.modifyDemension = Cost.getterSetter(props, 'modifyDemension');
-    this.default = Cost.getterSetter(props, 'default');
+    Object.getSet(this, props, 'modifyDemension', 'default');
 
     const selected = 0;
     this.selected = (index) => {
@@ -37,6 +36,5 @@ class SelectCost extends Cost {
   }
 }
 
-SelectCost.instanceProps = ['modifyDemension', 'default', 'selectedId'];
 
 module.exports = SelectCost

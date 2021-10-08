@@ -10,14 +10,8 @@ class Material extends Cost {
     props = this.props();
     props.cost = props.cost / (props.count || 1);
     const instance = this;
-    this.company = Cost.getterSetter(props, 'company');
-    this.formula = Cost.getterSetter(props, 'formula');
-    this.partNumber = Cost.getterSetter(props, 'partNumber');
-    this.method = Cost.getterSetter(props, 'method');
-    this.length = Cost.getterSetter(props, 'length');
-    this.width = Cost.getterSetter(props, 'width');
-    this.depth = Cost.getterSetter(props, 'depth');
-    this.cost = Cost.getterSetter(props, 'cost');
+    Object.getSet(props, 'company', 'formula', 'partNumber',
+                'method', 'length', 'width', 'depth', 'cost');
 
 
     this.unitCost = (attr) => {
@@ -40,10 +34,6 @@ class Material extends Cost {
     }
   }
 }
-
-Material.instanceProps = ['formula'];
-Material.staticProps = ['method', 'cost', 'length', 'width',
-                          'depth', 'company', 'partNumber'];
 
 Material.methods = {
   LINEAR_FEET: 'Linear Feet',

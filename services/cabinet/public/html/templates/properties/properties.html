@@ -2,16 +2,28 @@
   <div class='{{key ? "property-container close" : ""}}' radio-id='{{radioId}}'
         {{noChildren() ? 'hidden' : ''}}>
     <div class='{{key ? "expand-header" : ""}}'>
-      {{key}}
+      {{label}}
     </div>
     <div{{key ? ' hidden' : ''}}>
-      <div:t repeat='property in properties'>
-        <label>{{property.name()}}</label>
-        <input type="text" name="{{key}}" value="{{property.value()}}">
-      </div:t>
-      <div:t repeat='key, group in groups'>
-        {{recurse(key, group)}}
-      </div:t>
+      <div{{branch ? ' hidden' : ''}}>
+        <div:t class='property-cnt' repeat='property in properties'>
+          <label>{{property.name()}}</label>
+          <input type="text" prop-update='{{property.id()}}:{{property.code()}}' name="{{key}}" value="{{property.value()}}">
+        </div:t>
+        <div:t repeat='key, group in groups'>
+          {{recurse(key, group)}}
+        </div:t>
+      </div>
+      <div{{!branch ? ' hidden' : ''}}>
+        <select name="property-branch-selector" prop-update='{{0}}:_SELECTED' value="{{_SELECTED}}">
+          <option:t  repeat='key, group in groups'{{key === _SELECTED ? ' selected' : ''}} value='{{$index}}'>{{key}}</option:t>
+        </select>
+        <div>
+          <div:t repeat='key, group in groups'{{key === _SELECTED ? '' : ' hidden'}}>
+            {{recurse(undefined, group)}}
+          </div:t>
+        </div>
+      </div>
     </div>
   </div>
 </div>

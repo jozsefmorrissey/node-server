@@ -50,8 +50,7 @@ class CostManager extends AbstractManager {
     this.costTypeHtml = CostManager.costTypeHtml;
     this.fromJson = (json) => {
       CostManager.partList = CostManager.partList ||
-          ['Opening'].concat(Object.keys(Assembly.classes)
-              .filter((id) => !id.match(/^.*Section$/)));
+          properties.list();
       CostManager.partList.sort();
       CostManager.partList.forEach((id) => {
         const parentId = `cost-group-${String.random()}`;
