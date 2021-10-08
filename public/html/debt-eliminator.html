@@ -56,10 +56,10 @@
         constructor() {
           this.rate = 2.75;
           this.compoundType = Loan.compoundTypes.CONTINUOUSLY;
-          this.principle = 129500;
+          this.principle = 126300;
           this.years = 30;
           this.months = 24;
-          this.payment = 1700;
+          this.payment = 1600;
           this.down = 10000;
           const duration = () => this.months / 12 + this.years;
           const interval = () => Loan.interval(this.compoundType);
@@ -143,11 +143,11 @@
 
       const updateValues = () => {
         const elems = getLoanElems();
-        loan.principle = Number.parseInt(elems.principle.value);
-        loan.rate = Number.parseInt(elems.rate.value);
-        loan.payment = Number.parseInt(elems.payment.value);
-        loan.down = Number.parseInt(elems.down.value);
-        loan.compoundType = Number.parseInt(elems.compoundType.value);
+        loan.principle = Number.parseFloat(elems.principle.value);
+        loan.rate = Number.parseFloat(elems.rate.value);
+        loan.payment = Number.parseFloat(elems.payment.value);
+        loan.down = Number.parseFloat(elems.down.value);
+        loan.compoundType = Number.parseFloat(elems.compoundType.value);
         updatePayoff();
       }
 
