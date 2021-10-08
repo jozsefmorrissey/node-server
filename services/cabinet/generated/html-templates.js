@@ -165,35 +165,6 @@ exports['-624140361'] = (get, $t) =>
 		$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 		` </datalist> </span>`
 
-exports['expandable/sidebar'] = (get, $t) => 
-		` <div class="expandable-list ` +
-		$t.clean(get("type")) +
-		`" ex-list-id='` +
-		$t.clean(get("id")) +
-		`'> <div class="expand-list-cnt ` +
-		$t.clean(get("type")) +
-		`" ex-list-id='` +
-		$t.clean(get("id")) +
-		`'> ` +
-		$t.clean( new $t('202297006').render(get("list"), 'item', get)) +
-		` <div id='input-tree-cnt'>` +
-		$t.clean(get("inputTree") ? get("inputTree").html() : '') +
-		`</div> <div ` +
-		$t.clean(!get("hasInputTree")() ? '' : 'hidden') +
-		`> ` +
-		$t.clean( new $t('632351395').render(get("inputs"), 'input', get)) +
-		` <button ex-list-id='` +
-		$t.clean(get("id")) +
-		`' class='expandable-list-add-btn' ` +
-		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
-		`> Add ` +
-		$t.clean(get("listElemLable")) +
-		` </button> <div class='error' id='` +
-		$t.clean(get("ERROR_CNT_ID")) +
-		`'></div> </div> </div> <div> </div> <div class="expand-body ` +
-		$t.clean(get("type")) +
-		`"> Hello World! </div> </div> `
-
 exports['expandable/pill'] = (get, $t) => 
 		` <div class="expandable-list ` +
 		$t.clean(get("type")) +
@@ -252,6 +223,35 @@ exports['-1756076485'] = (get, $t) =>
 		`"> ` +
 		$t.clean( new $t('-1921787246').render(get("input").autofill, 'option', get)) +
 		` </datalist> </span>`
+
+exports['expandable/sidebar'] = (get, $t) => 
+		` <div class="expandable-list ` +
+		$t.clean(get("type")) +
+		`" ex-list-id='` +
+		$t.clean(get("id")) +
+		`'> <div class="expand-list-cnt ` +
+		$t.clean(get("type")) +
+		`" ex-list-id='` +
+		$t.clean(get("id")) +
+		`'> ` +
+		$t.clean( new $t('202297006').render(get("list"), 'item', get)) +
+		` <div id='input-tree-cnt'>` +
+		$t.clean(get("inputTree") ? get("inputTree").html() : '') +
+		`</div> <div ` +
+		$t.clean(!get("hasInputTree")() ? '' : 'hidden') +
+		`> ` +
+		$t.clean( new $t('632351395').render(get("inputs"), 'input', get)) +
+		` <button ex-list-id='` +
+		$t.clean(get("id")) +
+		`' class='expandable-list-add-btn' ` +
+		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+		`> Add ` +
+		$t.clean(get("listElemLable")) +
+		` </button> <div class='error' id='` +
+		$t.clean(get("ERROR_CNT_ID")) +
+		`'></div> </div> </div> <div> </div> <div class="expand-body ` +
+		$t.clean(get("type")) +
+		`"> Hello World! </div> </div> `
 
 exports['input/decision/decision'] = (get, $t) => 
 		` <div> <span id='` +
@@ -503,15 +503,15 @@ exports['divider-controls'] = (get, $t) =>
 		$t.clean(get("patternInputHtml")) +
 		` </div> </div> `
 
+exports['login/confirmation-message'] = (get, $t) => 
+		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+
 exports['login/create-account'] = (get, $t) => 
 		`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
 		$t.clean(get("email")) +
 		`'> <input type='password' placeholder="password" name='password' value='` +
 		$t.clean(get("password")) +
 		`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
-
-exports['login/confirmation-message'] = (get, $t) => 
-		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
 
 exports['login/login'] = (get, $t) => 
 		`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
