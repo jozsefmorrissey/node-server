@@ -1,0 +1,4 @@
+<div:t class='property-cnt' repeat='property in properties'>
+  <label>{{property.name()}}</label>
+  <input type="text" prop-update='{{property.id}}' name="{{key}}" value="{{property.standard()}}">
+</div:t>

@@ -6,14 +6,13 @@ const Cost = require('../cost.js');
 class SelectCost extends Cost {
   constructor (props) {
     super(props);
-    props = this.props();
-    Object.getSet(this, props, 'modifyDemension', 'default');
+    Object.getSet(this, {modifyDemension: props.modifyDemension,default: props.default});
 
     const selected = 0;
     this.selected = (index) => {
       if (index !== undefined)
-        this.selected(index);
-      return this.children[this.selected()];
+        selected = index;
+      return this.children[selected];
     }
 
     this.selectedId = () => {

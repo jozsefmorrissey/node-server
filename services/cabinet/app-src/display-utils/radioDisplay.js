@@ -5,7 +5,7 @@ const InformationBar = require('./information-bar.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 
 class RadioDisplay {
-  constructor(radioClass, groupAttr) {
+  constructor(radioClass, groupAttr, alternateToggleClass) {
     const selector = (attrVal) => {
       return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
     }
@@ -22,6 +22,15 @@ class RadioDisplay {
         }
       });
       return path;
+    }
+
+    function triggerAlternateToggles(target) {
+      if (alternateToggleClass) {
+        const alterToggles = document.querySelectorAll(alternateToggleClass);
+        alterToggles.forEach((elem) => elem.hidden = false);
+        const closest = du.closest(alternateToggleClass, target);
+        if (closest) closest.hidden = true;
+      }
     }
 
     du.on.match('scroll', `*`, (target, event) => {

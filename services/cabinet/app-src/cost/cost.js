@@ -35,11 +35,12 @@ class Cost {
     this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
     this.delete = () => deleted = true;
     this.deleted = () => deleted;
-    Object.getSet(this, props, 'group', 'objectId', 'id', 'children')
+    Object.getSet(this, props, 'group', 'objectId', 'id', 'children');
+    this.children = [];
     this.uniqueId = () => uniqueId;
     // TODO: None does not make sence here.
     this.childIds = () =>
-        ['None'].concat(cost.children.map((obj) => obj.id()));
+        ['None'].concat(this.children.map((obj) => obj.id()));
 
     Cost.group(this, this);
 
@@ -102,6 +103,11 @@ Cost.types = [];
 Cost.get = (id) => {
   return Cost.uniqueId(uniqueId);
 };
+
+Cost.new = (props) => {
+  const type = props.type;
+  return new Cost.types[props.type](props);
+}
 
 Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
 Cost.remove = (uniqueId) => Cost.get(uniqueId).remove();

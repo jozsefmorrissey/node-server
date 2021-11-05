@@ -1,12 +1,13 @@
 
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
+const Measurement = require('../../../../public/js/utils/measurment.js');
 
 class Property extends Lookup {
   // clone constructor(code, value) {
   constructor(code, name, props) {
     super();
     let value;
-    if ((typeof props) !== 'object') {
+    if ((typeof props) !== 'object' ||  props === null) {
       value = props;
       props = {};
     }
@@ -28,6 +29,8 @@ class Property extends Lookup {
       if (val !== undefined) value = val;
       return value;
     }
+    this.standard = () =>
+      new Measurement(value).fraction('1/32');
     this.properties = () => JSON.parse(JSON.stringify(props));
     this.clone = (val) => {
       return new Property(code, val);

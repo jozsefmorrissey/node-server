@@ -83,6 +83,7 @@ class Measurement {
     this.fraction = (accuracy) => {
       if (nan) return NaN;
       const obj = calculateValue(accuracy);
+      if (obj.integer === 0 && obj.numerator === 0) return '0';
       const integer = obj.integer !== 0 ? obj.integer : '';
       return `${integer}${reduce(obj.numerator, obj.denominator)}`;
     }
@@ -127,7 +128,3 @@ Measurement.validation = function (range) {
 }
 
 module.exports = Measurement;
-
-
-
-

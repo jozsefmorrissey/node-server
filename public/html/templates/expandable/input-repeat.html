@@ -1,0 +1,14 @@
+<div>
+  <span:t repeat='input in inputs()'>
+    <input list='auto-fill-list-{{input.id()  + willFailCheckClassnameConstruction()}} expand-list-{{type()}}-input' id='{{input.id()}}'
+        placeholder='{{input.placeholder}}' type='text'>
+    <datalist id="auto-fill-list-{{input.id()}}">
+      <option:t value="{{option}}" repeat='option in input.autofill()'></option:t>
+    </datalist>
+  </span:t>
+  <button ex-list-id='{{id()}}' class='expandable-list-add-btn'
+        {{hideAddBtn ? 'hidden' : ''}}>
+    Add {{listElemLable}}
+  </button>
+  <div class='error' id='{{ERROR_CNT_ID}}'></div>
+</div>

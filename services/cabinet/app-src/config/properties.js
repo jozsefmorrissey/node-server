@@ -2,11 +2,11 @@
 
 const Property = require('./property');
 
-const h = new Property('h', 'height', 0);
-const w = new Property('w', 'width', 0);
-const d = new Property('d', 'depth', 0);
-const t = new Property('t', 'thickness', 0);
-const l = new Property('l', 'length', 0);
+const h = new Property('h', 'height', null);
+const w = new Property('w', 'width', null);
+const d = new Property('d', 'depth', null);
+const t = new Property('t', 'thickness', null);
+const l = new Property('l', 'length', null);
 
 
 
@@ -57,12 +57,12 @@ const assemProps = {
     h.clone(), w.clone(), t.clone()
   ],
   Frame: [
-    h.clone(), w.clone(1.5), t.clone(3/4)
+    h.clone(), w.clone(), t.clone()
   ],
   Handle: [
     l.clone(), w.clone(),
-    new Property('c2c', 'Center To Center', 1/2),
-    new Property('proj', 'Projection', 3/16),
+    new Property('c2c', 'Center To Center', null),
+    new Property('proj', 'Projection', null),
   ],
   Hinge: {
   }
@@ -70,7 +70,7 @@ const assemProps = {
 
 function assemProperties(clazz) {
   clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-  return assemProps[clazz] || {};
+  return assemProps[clazz] || [];
 }
 
 assemProperties.list = () => Object.keys(assemProps);

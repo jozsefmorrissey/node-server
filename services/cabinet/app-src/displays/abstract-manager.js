@@ -20,8 +20,10 @@ class AbstractManager {
     const bodyTemplate = new $t(`managers/${name}/body`);
     const headTemplate = new $t(`managers/${name}/header`);
 
-    const getHeader = (instance) => headTemplate.render({instance, manager});
-    const getBody = (instance) => bodyTemplate.render({instance, manager});
+    const getHeader = (instance) =>
+      headTemplate.render({instance, manager});
+    const getBody = (instance) =>
+      bodyTemplate.render({instance, manager});
 
     const getObject = (typeof manager.getObject) === 'function' ?
                         (values) => manager.getObject(values) : undefined;

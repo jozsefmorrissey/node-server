@@ -4,7 +4,7 @@
 const AbstractManager = require('../abstract-manager.js');
 const Assembly = require('../../objects/assembly/assembly.js');
 const Cost = require('../../cost/cost.js');
-const Category = require('../../cost/types/category.js');
+const SelectCost = require('../../cost/types/select.js');
 const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
 const Select = require('../../../../../public/js/utils/input/styles/select.js');
 const du = require('../../../../../public/js/utils/dom-utils.js');
@@ -23,9 +23,9 @@ const DecisionInputTree = require('../../../../../public/js/utils/input/decision
 const Inputs = require('../../input/inputs.js');
 const $t = require('../../../../../public/js/utils/$t.js');
 const EPNTS = require('../../../generated/EPNTS.js');
-const properties = require('../../config/properties.js');
 const Displays = require('../../services/display-svc.js');
 const propertyDisplay = Displays.get('propertyDisplay');
+const Properties = require('../../config/properties.js');
 
 
 
@@ -50,7 +50,7 @@ class CostManager extends AbstractManager {
     this.costTypeHtml = CostManager.costTypeHtml;
     this.fromJson = (json) => {
       CostManager.partList = CostManager.partList ||
-          properties.list();
+          Properties.list();
       CostManager.partList.sort();
       CostManager.partList.forEach((id) => {
         const parentId = `cost-group-${String.random()}`;
@@ -63,10 +63,10 @@ class CostManager extends AbstractManager {
           getHeader: CostManager.costHeader,
           getBody: CostManager.costBody,
           getObject: CostManager.getCostObject(id),
-          listElemLable: 'Cost'
+          listElemLable: `Cost to ${id}`
         };
-        const cost = new Category({id, referenceable: true, children: expListProps.list});
-        const staticProps = properties(id);
+        const cost = new SelectCost({id, referenceable: true, children: expListProps.list});
+        const staticProps = Properties(id);
         const expandList = new ExpandableList(expListProps);
         list.push({partId: id, expandList, staticProps,
           CostManager: CostManager, parentId, cost});
@@ -76,7 +76,7 @@ class CostManager extends AbstractManager {
     }
 
     this.Cost = Cost;
-    this.globalProps = () => properties(name)
+    this.globalProps = () => Properties(name)
 
     const getHeader = (costGroup) => CostManager.costHeadTemplate(costGroup.instance);
     const getBody = (costGroup) => CostManager.costBodyTemplate(costGroup.instance);
@@ -108,7 +108,7 @@ CostManager.setInstanceProps = (scope) => {
   if (expandLists.length === 2) {
     const partId = expandLists[1].parentElement.children[1].children[0]
                       .getAttribute('part-id');
-    scope.instanceProps = properties(partId).instance;
+    scope.instanceProps = Properties(partId).instance;
   }
 }
 
@@ -124,7 +124,7 @@ CostManager.childScope = (cost) => {
       getHeader: CostManager.costHeader,
       getBody: CostManager.costBody,
       getObject: CostManager.getCostObject(cost.id()),
-      listElemLable: 'Cost'
+      listElemLable: `Cost to ${cost.id()}`
     };
     const expandList = new ExpandableList(expListProps);
 
@@ -160,7 +160,7 @@ CostManager.costTypeHtml = (cost, scope) => {
 
 CostManager.isInstance = (target) => du.find.upAll('.expandable-list', el).length === 2;
 CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(cost);
-CostManager.costBody = (cost) => CostManager.costBodyTemplate.render(CostManager.childScope(cost));
+CostManager.costBody = (cost) => cost instanceof Cost && CostManager.costBodyTemplate.render(CostManager.childScope(cost));
 CostManager.getObject = (values) => {
   if (values.costType === '/dev/nul') {
     return Cost.new(values);

@@ -31,21 +31,22 @@ class ExpandableList {
     const afterAddEvent = new CustomEvent('afterAdd');
     const afterRefreshEvent = new CustomEvent('afterRefresh');
     const instance = this;
-    props.id = ExpandableList.lists.length;
-    this.id = () => props.id;
-    props.list = props.list || [];
-    props.inputs = props.inputs || [];
-    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${this.id()}`;
-    props.inputTreeId = `expandable-input-tree-cnt-${this.id()}`
-    this.type = () => props.type || 'list';
+    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
+    props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
+    props.type = props.type || 'list';
     props.findElement = props.findElement || ((selector, target) =>  du.find.closest(selector, target));
-    this.findElement = props.findElement;
     props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
     props.getObject = props.getObject || (() => {});
+    props.inputs = props.inputs || [];
+    props.list = props.list || [];
+    this.getHeader = props.getHeader; delete props.getHeader;
+    this.getBody = props.getBody; delete props.getBody;
+    props.id = ExpandableList.lists.length;
+    props.activeIndex = 0;
+    Object.getSet(this, props, 'listElemLable');
     let pendingRefresh = false;
     let lastRefresh = new Date().getTime();
     const storage = {};
-    props.activeIndex = 0;
     ExpandableList.lists[props.id] = this;
 
     this.errorCntId = () => props.ERROR_CNT_ID;
@@ -70,7 +71,7 @@ class ExpandableList {
         this.activeIndex(props.list.length - 1);
         this.refresh();
         afterAddEvent.trigger();
-        if (this.hasInputTree) props.inputTree.formFilled();
+        if (this.hasInputTree()) props.inputTree.formFilled();
       } else {
         const errors = props.inputValidation(inputValues);
         let errorStr;
@@ -84,7 +85,7 @@ class ExpandableList {
       }
     };
     this.hasInputTree = () =>
-      props.inputTree && props.inputTree.constructor.name === 'DecisionNode';
+      this.inputTree() && this.inputTree().constructor.name === 'DecisionNode';
     if (this.hasInputTree())
       props.inputTree.onComplete(this.add);
     props.hasInputTree = this.hasInputTree;
@@ -94,11 +95,11 @@ class ExpandableList {
       props.list.splice(index, 1);
       this.refresh();
     }
-    this.html = () => ExpandableList[`${instance.type()}Template`].render(props);
+    this.html = () => ExpandableList[`${instance.type()}Template`].render(this);
     this.afterRender = (func) => afterRenderEvent.on(func);
     this.afterAdd = (func) => afterAddEvent.on(func);
     this.refresh = (type) => {
-      props.type = (typeof type) === 'string' ? type : props.type;
+      this.type((typeof type) === 'string' ? type : props.type);
       if (!pendingRefresh) {
         pendingRefresh = true;
         setTimeout(() => {
@@ -122,6 +123,7 @@ class ExpandableList {
       if (value === undefined) return storage[index][key];
       storage[index][key] = value;
     }
+    this.inputHtml = () => this.hasInputTree() ? this.inputTree().html() : ExpandableList.inputRepeatTemplate.render(this);
     this.set = (index, value) => props.list[index] = value;
     this.get = (index) => props.list[index];
     this.renderBody = (target) => {
@@ -136,7 +138,7 @@ class ExpandableList {
         headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
         bodys.forEach((body) => body.style.display = 'none');
         rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-        const body = list.findElement('.expand-body', target);
+        const body = du.find.closest('.expand-body', target);
         body.style.display = 'block';
         const index = target.getAttribute('index');
         this.activeIndex(index);
@@ -149,12 +151,13 @@ class ExpandableList {
     };
     afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
 
-    this.htmlBody = (index) => props.getBody(props.list[index], index);
+    this.htmlBody = (index) => this.getBody(this.list()[index], index);
     this.getList = () => props.list;
     this.refresh();
   }
 }
 ExpandableList.lists = [];
+ExpandableList.inputRepeatTemplate = new $t('expandable/input-repeat');
 ExpandableList.listTemplate = new $t('expandable/list');
 ExpandableList.pillTemplate = new $t('expandable/pill');
 ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
@@ -202,7 +205,7 @@ du.on.match('click', '.expand-header', (target, event) => {
   if (list) {
     if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
       target.className = target.className.replace(/(^| )active( |$)/g, '');
-      list.findElement('.expand-body', target).style.display = 'none';
+      du.find.closest('.expand-body', target).style.display = 'none';
       list.activeIndex(null);
       target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
     } else if (!isActive) {
@@ -210,4 +213,15 @@ du.on.match('click', '.expand-header', (target, event) => {
     }
   }
 });
+
+du.on.match('click', '.input-open-cnt', (target) => {
+  const inputCnts = document.querySelectorAll('.expand-input-cnt');
+  const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
+  const closest = du.find.closest('.expand-input-cnt', target);
+  inputCnts.forEach((elem) => elem.hidden = true);
+  inputOpenCnts.forEach((elem) => elem.hidden = false);
+  target.hidden = true;
+  if (closest) closest.hidden = false;
+});
+
 module.exports = ExpandableList
