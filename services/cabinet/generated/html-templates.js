@@ -41,6 +41,11 @@ exports['550500469'] = (get, $t) =>
 		$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 		` </datalist> </span>`
 
+exports['760296172'] = (get, $t) => 
+		`<li >` +
+		$t.clean(get("name")) +
+		`</li>`
+
 exports['990870856'] = (get, $t) => 
 		`<div class='inline' > <h3>` +
 		$t.clean(get("assem").objId) +
@@ -480,10 +485,16 @@ exports['managers/cost/body'] = (get, $t) =>
 
 exports['managers/cost/cost-head'] = (get, $t) => 
 		`<b> ` +
-		$t.clean(get("id")()) +
+		$t.clean(get("cost").id()) +
 		` - ` +
-		$t.clean(get("constructor").constructorId(get("constructor").name)) +
-		` </b> `
+		$t.clean(get("cost").constructor.constructorId(get("constructor").name)) +
+		` </b> <ul` +
+		$t.clean(1 === get("cost").level() ? '' : ' hidden') +
+		` level='` +
+		$t.clean(get("cost").level()) +
+		`'> ` +
+		$t.clean( new $t('-1298799242').render(get("cost").unsatisfiedBranches(), 'name', get)) +
+		` </ul> `
 
 exports['managers/cost/header'] = (get, $t) => 
 		`<b part-id='` +
@@ -500,21 +511,27 @@ exports['managers/cost/cost-body'] = (get, $t) =>
 		` </div> `
 
 exports['managers/cost/types/category'] = (get, $t) => 
-		`<div> <b>Catagory</b> <div id='` +
+		`<div cost-id='` +
+		$t.clean(get("cost").uniqueId()) +
+		`'> <b>Catagory</b> <div id='` +
 		$t.clean(get("parentId")) +
 		`'>` +
 		$t.clean(get("expandList").html()) +
 		`</div> </div> `
 
 exports['managers/cost/types/conditional'] = (get, $t) => 
-		`<div> <b>Conditional</b> <div id='` +
+		`<div cost-id='` +
+		$t.clean(get("cost").uniqueId()) +
+		`'> <b>Conditional</b> <div id='` +
 		$t.clean(get("parentId")) +
 		`'>` +
 		$t.clean(get("expandList").html()) +
 		`</div> </div> `
 
 exports['managers/cost/types/labor'] = (get, $t) => 
-		`<div> <b>Labor</b> <span` +
+		`<div cost-id='` +
+		$t.clean(get("cost").uniqueId()) +
+		`'> <b>Labor</b> <span` +
 		$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
 		`> <input value='` +
 		$t.clean(get("cost").length()) +
@@ -535,7 +552,9 @@ exports['managers/cost/types/labor'] = (get, $t) =>
 		`</label> </div> </div> `
 
 exports['managers/cost/types/material'] = (get, $t) => 
-		`<div> <b>Material</b> <span` +
+		`<div cost-id='` +
+		$t.clean(get("cost").uniqueId()) +
+		`'> <b>Material</b> <span` +
 		$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
 		`> <input value='` +
 		$t.clean(get("cost").length()) +
@@ -556,11 +575,11 @@ exports['managers/cost/types/material'] = (get, $t) =>
 		`</label> </div> </div> `
 
 exports['managers/cost/types/select'] = (get, $t) => 
-		`<div> <b>Select</b> <div> ` +
+		`<div cost-id='` +
+		$t.clean(get("cost").uniqueId()) +
+		`'> <b>Select</b> <div> ` +
 		$t.clean(get("CostManager").selectInput(get("cost")).html()) +
-		` </div> <div id='` +
-		$t.clean(get("parentId")) +
-		`'>` +
+		` </div> <div>` +
 		$t.clean(get("expandList").html()) +
 		`</div> </div> `
 
@@ -799,3 +818,12 @@ exports['sections/open'] = (get, $t) =>
 		`</h2> <div class='section-feature-ctn'> ` +
 		$t.clean(get("featureDisplay")) +
 		` </div> `
+
+exports['-1298799242'] = (get, $t) => 
+		`<li unique-id='` +
+		$t.clean(get("cost").uniqueId) +
+		`' name='` +
+		$t.clean(get("name")) +
+		`'> ` +
+		$t.clean(get("name")) +
+		` </li>`

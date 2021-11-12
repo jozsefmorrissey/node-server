@@ -62,12 +62,20 @@ class ExpandableList {
       return values;
     }
 
+    function getCnt() {
+      return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
+    }
+
+    function getInputCnt() {
+      const cnt = du.find.down('.expand-input-cnt', getCnt());
+      return cnt;
+    }
+
     this.add = () => {
       const inputValues = values();
       if ((typeof props.inputValidation) !== 'function' ||
               props.inputValidation(inputValues) === true) {
-        props.list.push(props.getObject(inputValues));
-
+        props.list.push(props.getObject(inputValues, getInputCnt()));
         this.activeIndex(props.list.length - 1);
         this.refresh();
         afterAddEvent.trigger();

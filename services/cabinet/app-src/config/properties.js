@@ -64,13 +64,18 @@ const assemProps = {
     new Property('c2c', 'Center To Center', null),
     new Property('proj', 'Projection', null),
   ],
-  Hinge: {
-  }
+  Hinge: [
+    new Property('tab', 'Spacing from bore to edge of door'),
+    new Property('ol', 'Door Overlay')
+  ]
 }
 
-function assemProperties(clazz) {
+function assemProperties(clazz, filter) {
   clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-  return assemProps[clazz] || [];
+  props = assemProps[clazz] || [];
+  if ((typeof filter) != 'function') return props;
+  props = props.filter(filter);
+  return props;
 }
 
 assemProperties.list = () => Object.keys(assemProps);

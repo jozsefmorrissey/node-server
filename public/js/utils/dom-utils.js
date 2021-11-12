@@ -13,8 +13,10 @@ function validSelector (selector) {
 const VS = validSelector;
 
 
-const du = {create: {}, find: {}, class: {}, cookie: {}, param: {}, style: {},
+const du = {create: {}, class: {}, cookie: {}, param: {}, style: {},
       scroll: {}, input: {}, on: {}};
+du.find = (selector) => document.querySelector(selector);
+du.find.all = (selector) => document.querySelectorAll(selector);
 
 du.create.element = function (tagname, attributes) {
   const elem = document.createElement(tagname);
@@ -322,4 +324,6 @@ du.cookie.remove = function (name) {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
 }
 
-module.exports = du;
+try {
+  module.exports = du;
+} catch (e) {}

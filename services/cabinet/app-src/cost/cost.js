@@ -32,12 +32,38 @@ class Cost {
     const instance = this;
     const uniqueId = String.random();
     const lastUpdated = props.lastUpdated || new Date().getTime();
+    props.requiredBranches = props.requiredBranches || [];
     this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
     this.delete = () => deleted = true;
     this.deleted = () => deleted;
-    Object.getSet(this, props, 'group', 'objectId', 'id', 'children');
+    Object.getSet(this, props, 'group', 'objectId', 'id', 'children', 'parent');
     this.children = [];
+    this.level = () => {
+      let level = -1;
+      let curr = this;
+      while(curr instanceof Cost) {
+        level++;
+        curr = curr.parent();
+      }
+      return level;
+    }
+
+    const satisfyReg = (idOreg) => idOreg instanceof RegExp ? idOreg :
+      new RegExp(`(^\\s*${idOreg}\\s*$|\\((\\s*|[^(^)]*,\\s*)${idOreg}(\\s*,[^(^)]*\\s*|\\s*)\\)\\s*$)`);
+    // TODO: possibly make more efficient... tough to maintain consistancy
+    this.satisfies = (idOreg) => {
+      const reg = satisfyReg(idOreg);
+      if (this.id().match(reg)) return true;
+      for(let index = 0; index < this.children.length; index += 1) {
+        if (this.children[index].satisfies(reg)) return true;
+      }
+      return false;
+    }
+    this.unsatisfiedBranches = () =>
+      this.requiredBranches().filter((id) => !this.satisfies(id));
+
     this.uniqueId = () => uniqueId;
+    Cost.uniqueIdMap[uniqueId] = this;
     // TODO: None does not make sence here.
     this.childIds = () =>
         ['None'].concat(this.children.map((obj) => obj.id()));
@@ -52,6 +78,7 @@ class Cost {
   }
 }
 
+Cost.uniqueIdMap = {};
 
 Cost.getterSetter = (obj, attr, validation) => (val) => {
   if (val && validation && validation(val)) obj[attr] = val;
@@ -100,8 +127,8 @@ Cost.group = (() => {
 })();
 
 Cost.types = [];
-Cost.get = (id) => {
-  return Cost.uniqueId(uniqueId);
+Cost.get = (uniqueId) => {
+  return Cost.uniqueIdMap[uniqueId];
 };
 
 Cost.new = (props) => {

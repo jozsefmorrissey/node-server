@@ -1,10 +1,4 @@
 
-
-
-
-
-const Measurement = require('./measurment');
-
 function regexToObject (str, reg) {
   const match = str.match(reg);
   if (match === null) return null;
@@ -246,18 +240,13 @@ class StringMathEvaluator {
 
       if (Number.isFinite(value)) {
         cache[expr] = {time: new Date().getTime(), value};
-        return StringMathEvaluator.round(value);
+        return value;
       }
       return NaN;
     }
   }
 }
 
-StringMathEvaluator.round = (value, percision) => {
-  if (percision)
-    return new Measurement(value).decimal(percision);
-  return Math.round(value * 10000000) / 10000000;
-}
 StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
 
 StringMathEvaluator.mixedNumberReg = /([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
@@ -335,8 +324,6 @@ StringMathEvaluator.toFraction = function (decimal, accuracy) {
             (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
 }
 
-module.exports = StringMathEvaluator;
-
-
-
-
+try {
+  module.exports = StringMathEvaluator;
+} catch (e) {/* TODO: Consider Removing */}

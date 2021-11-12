@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src='/js/utils/dom-utils.js'></script>
+    <script type="text/javascript" src='/js/utils/measurment.js'></script>
+    <script type="text/javascript" src='/js/utils/string-math-evaluator.js'></script>
+    <title>equations</title>
+    <script type="text/javascript">
+      let index = 1;
+      const eval = new StringMathEvaluator(Math);
+      function addEq() {
+        const newElem = du.create.element('div', {index: index});
+        newElem.innerHTML = `<b>${index++}.)</b>
+                              <input class='name' type='text' placeholder="Name">
+                              <input class='equation' type='text' placeholder="Equation">
+                              <span class='input-cnt'></span>
+                              <span class='answer-cnt'></span>
+                              <br/>`;
+        du.find('#eq-cnt').append(newElem);
+      }
+
+      function onlyUnique(value, index, self) {
+        return self.indexOf(value) === index;
+      }
+
+      const saved = {};
+      const c = 'eq-input-elem';
+      function updateVariables(target) {
+        let matches = target.value.match(/[a-z_A-Z][a-z_A-Z0-9]*/g);
+        const inputCnt = du.find.closest('.input-cnt', target);
+        if (matches) {
+          matches = matches.filter(onlyUnique);
+          let repeatHtml = '';
+          for (let index = 0; index < matches.length; index += 1) {
+            const name = matches[index];
+            const value = saved[name] || 0;
+            repeatHtml += du.create.element('input', {class: c, value, name}).outerHTML;
+          }
+          inputCnt.innerHTML = repeatHtml;
+        } else {
+          inputCnt.innerHTML = '';
+        }
+        evaluate(target);
+      }
+
+      function evaluate(target) {
+        const equation = du.find.closest('.equation', target).value;
+        const inputs = du.find.closest(`.input-cnt`, target).children;
+        const scope = {};
+        for (let index = 0; index < inputs.length; index += 1) {
+          const input = inputs[index];
+          scope[input.name] = eval.eval(input.value);
+        }
+        const nearest32 = new Measurement(eval.eval(equation, scope)).fraction('1/32');
+        du.find.closest('.answer-cnt', target).innerHTML = nearest32;
+      }
+
+      function variableChange(target) {
+        saved[target.getAttribute('name')] = target.value;
+        evaluate(target);
+      }
+      du.on.match('click', '#add-eq-btn', addEq);
+      du.on.match('keyup', '.equation', updateVariables);
+      du.on.match('keyup', `.${c}`, evaluate);
+    </script>
+  </head>
+  <body>
+    <div id='eq-cnt'></div>
+    <button id='add-eq-btn'>Add Equation</button>
+  </body>
+</html>

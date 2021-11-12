@@ -4972,8 +4972,10 @@ const frag = document.createDocumentFragment();
 	const VS = validSelector;
 	
 	
-	const du = {create: {}, find: {}, class: {}, cookie: {}, param: {}, style: {},
+	const du = {create: {}, class: {}, cookie: {}, param: {}, style: {},
 	      scroll: {}, input: {}, on: {}};
+	du.find = (selector) => document.querySelector(selector);
+	du.find.all = (selector) => document.querySelectorAll(selector);
 	
 	du.create.element = function (tagname, attributes) {
 	  const elem = document.createElement(tagname);
@@ -5281,7 +5283,9 @@ const frag = document.createDocumentFragment();
 	  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
 	}
 	
-	module.exports = du;
+	try {
+	  module.exports = du;
+	} catch (e) {}
 	
 });
 
@@ -5289,13 +5293,7 @@ const frag = document.createDocumentFragment();
 RequireJS.addFunction('../../public/js/utils/string-math-evaluator.js',
 function (require, exports, module) {
 	
-
-	
-	
-	
-	const Measurement = require('./measurment');
-	
-	function regexToObject (str, reg) {
+function regexToObject (str, reg) {
 	  const match = str.match(reg);
 	  if (match === null) return null;
 	  const returnVal = {};
@@ -5536,18 +5534,13 @@ function (require, exports, module) {
 	
 	      if (Number.isFinite(value)) {
 	        cache[expr] = {time: new Date().getTime(), value};
-	        return StringMathEvaluator.round(value);
+	        return value;
 	      }
 	      return NaN;
 	    }
 	  }
 	}
 	
-	StringMathEvaluator.round = (value, percision) => {
-	  if (percision)
-	    return new Measurement(value).decimal(percision);
-	  return Math.round(value * 10000000) / 10000000;
-	}
 	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
 	
 	StringMathEvaluator.mixedNumberReg = /([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
@@ -5625,11 +5618,9 @@ function (require, exports, module) {
 	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
 	}
 	
-	module.exports = StringMathEvaluator;
-	
-	
-	
-	
+	try {
+	  module.exports = StringMathEvaluator;
+	} catch (e) {/* TODO: Consider Removing */}
 	
 });
 
@@ -6571,8 +6562,6 @@ RequireJS.addFunction('../../public/js/utils/measurment.js',
 function (require, exports, module) {
 	
 
-	
-	
 	function regexToObject (str, reg) {
 	  const match = str.match(reg);
 	  if (match === null) return null;
@@ -6698,7 +6687,15 @@ function (require, exports, module) {
 	  }
 	}
 	
-	module.exports = Measurement;
+	Measurement.round = (value, percision) => {
+	  if (percision)
+	  return new Measurement(value).decimal(percision);
+	  return Math.round(value * 10000000) / 10000000;
+	}
+	
+	try {
+	  module.exports = Measurement;
+	} catch (e) {/* TODO: Consider Removing */}
 	
 });
 
@@ -6986,12 +6983,20 @@ function (require, exports, module) {
 	      return values;
 	    }
 	
+	    function getCnt() {
+	      return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
+	    }
+	
+	    function getInputCnt() {
+	      const cnt = du.find.down('.expand-input-cnt', getCnt());
+	      return cnt;
+	    }
+	
 	    this.add = () => {
 	      const inputValues = values();
 	      if ((typeof props.inputValidation) !== 'function' ||
 	              props.inputValidation(inputValues) === true) {
-	        props.list.push(props.getObject(inputValues));
-	
+	        props.list.push(props.getObject(inputValues, getInputCnt()));
 	        this.activeIndex(props.list.length - 1);
 	        this.refresh();
 	        afterAddEvent.trigger();
@@ -7909,6 +7914,11 @@ exports['306898022'] = (get, $t) =>
 			$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 			` </datalist> </span>`
 	
+	exports['760296172'] = (get, $t) => 
+			`<li >` +
+			$t.clean(get("name")) +
+			`</li>`
+	
 	exports['990870856'] = (get, $t) => 
 			`<div class='inline' > <h3>` +
 			$t.clean(get("assem").objId) +
@@ -8348,10 +8358,16 @@ exports['306898022'] = (get, $t) =>
 	
 	exports['managers/cost/cost-head'] = (get, $t) => 
 			`<b> ` +
-			$t.clean(get("id")()) +
+			$t.clean(get("cost").id()) +
 			` - ` +
-			$t.clean(get("constructor").constructorId(get("constructor").name)) +
-			` </b> `
+			$t.clean(get("cost").constructor.constructorId(get("constructor").name)) +
+			` </b> <ul` +
+			$t.clean(1 === get("cost").level() ? '' : ' hidden') +
+			` level='` +
+			$t.clean(get("cost").level()) +
+			`'> ` +
+			$t.clean( new $t('-1298799242').render(get("cost").unsatisfiedBranches(), 'name', get)) +
+			` </ul> `
 	
 	exports['managers/cost/header'] = (get, $t) => 
 			`<b part-id='` +
@@ -8368,21 +8384,27 @@ exports['306898022'] = (get, $t) =>
 			` </div> `
 	
 	exports['managers/cost/types/category'] = (get, $t) => 
-			`<div> <b>Catagory</b> <div id='` +
+			`<div cost-id='` +
+			$t.clean(get("cost").uniqueId()) +
+			`'> <b>Catagory</b> <div id='` +
 			$t.clean(get("parentId")) +
 			`'>` +
 			$t.clean(get("expandList").html()) +
 			`</div> </div> `
 	
 	exports['managers/cost/types/conditional'] = (get, $t) => 
-			`<div> <b>Conditional</b> <div id='` +
+			`<div cost-id='` +
+			$t.clean(get("cost").uniqueId()) +
+			`'> <b>Conditional</b> <div id='` +
 			$t.clean(get("parentId")) +
 			`'>` +
 			$t.clean(get("expandList").html()) +
 			`</div> </div> `
 	
 	exports['managers/cost/types/labor'] = (get, $t) => 
-			`<div> <b>Labor</b> <span` +
+			`<div cost-id='` +
+			$t.clean(get("cost").uniqueId()) +
+			`'> <b>Labor</b> <span` +
 			$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
 			`> <input value='` +
 			$t.clean(get("cost").length()) +
@@ -8403,7 +8425,9 @@ exports['306898022'] = (get, $t) =>
 			`</label> </div> </div> `
 	
 	exports['managers/cost/types/material'] = (get, $t) => 
-			`<div> <b>Material</b> <span` +
+			`<div cost-id='` +
+			$t.clean(get("cost").uniqueId()) +
+			`'> <b>Material</b> <span` +
 			$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
 			`> <input value='` +
 			$t.clean(get("cost").length()) +
@@ -8424,11 +8448,11 @@ exports['306898022'] = (get, $t) =>
 			`</label> </div> </div> `
 	
 	exports['managers/cost/types/select'] = (get, $t) => 
-			`<div> <b>Select</b> <div> ` +
+			`<div cost-id='` +
+			$t.clean(get("cost").uniqueId()) +
+			`'> <b>Select</b> <div> ` +
 			$t.clean(get("CostManager").selectInput(get("cost")).html()) +
-			` </div> <div id='` +
-			$t.clean(get("parentId")) +
-			`'>` +
+			` </div> <div>` +
 			$t.clean(get("expandList").html()) +
 			`</div> </div> `
 	
@@ -8667,6 +8691,15 @@ exports['306898022'] = (get, $t) =>
 			`</h2> <div class='section-feature-ctn'> ` +
 			$t.clean(get("featureDisplay")) +
 			` </div> `
+	
+	exports['-1298799242'] = (get, $t) => 
+			`<li unique-id='` +
+			$t.clean(get("cost").uniqueId) +
+			`' name='` +
+			$t.clean(get("name")) +
+			`'> ` +
+			$t.clean(get("name")) +
+			` </li>`
 	
 });
 
@@ -9532,13 +9565,18 @@ function (require, exports, module) {
 	    new Property('c2c', 'Center To Center', null),
 	    new Property('proj', 'Projection', null),
 	  ],
-	  Hinge: {
-	  }
+	  Hinge: [
+	    new Property('tab', 'Spacing from bore to edge of door'),
+	    new Property('ol', 'Door Overlay')
+	  ]
 	}
 	
-	function assemProperties(clazz) {
+	function assemProperties(clazz, filter) {
 	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	  return assemProps[clazz] || [];
+	  props = assemProps[clazz] || [];
+	  if ((typeof filter) != 'function') return props;
+	  props = props.filter(filter);
+	  return props;
 	}
 	
 	assemProperties.list = () => Object.keys(assemProps);
@@ -9659,12 +9697,38 @@ function (require, exports, module) {
 	    const instance = this;
 	    const uniqueId = String.random();
 	    const lastUpdated = props.lastUpdated || new Date().getTime();
+	    props.requiredBranches = props.requiredBranches || [];
 	    this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
 	    this.delete = () => deleted = true;
 	    this.deleted = () => deleted;
-	    Object.getSet(this, props, 'group', 'objectId', 'id', 'children');
+	    Object.getSet(this, props, 'group', 'objectId', 'id', 'children', 'parent');
 	    this.children = [];
+	    this.level = () => {
+	      let level = -1;
+	      let curr = this;
+	      while(curr instanceof Cost) {
+	        level++;
+	        curr = curr.parent();
+	      }
+	      return level;
+	    }
+	
+	    const satisfyReg = (idOreg) => idOreg instanceof RegExp ? idOreg :
+	      new RegExp(`(^\\s*${idOreg}\\s*$|\\((\\s*|[^(^)]*,\\s*)${idOreg}(\\s*,[^(^)]*\\s*|\\s*)\\)\\s*$)`);
+	    // TODO: possibly make more efficient... tough to maintain consistancy
+	    this.satisfies = (idOreg) => {
+	      const reg = satisfyReg(idOreg);
+	      if (this.id().match(reg)) return true;
+	      for(let index = 0; index < this.children.length; index += 1) {
+	        if (this.children[index].satisfies(reg)) return true;
+	      }
+	      return false;
+	    }
+	    this.unsatisfiedBranches = () =>
+	      this.requiredBranches().filter((id) => !this.satisfies(id));
+	
 	    this.uniqueId = () => uniqueId;
+	    Cost.uniqueIdMap[uniqueId] = this;
 	    // TODO: None does not make sence here.
 	    this.childIds = () =>
 	        ['None'].concat(this.children.map((obj) => obj.id()));
@@ -9679,6 +9743,7 @@ function (require, exports, module) {
 	  }
 	}
 	
+	Cost.uniqueIdMap = {};
 	
 	Cost.getterSetter = (obj, attr, validation) => (val) => {
 	  if (val && validation && validation(val)) obj[attr] = val;
@@ -9727,8 +9792,8 @@ function (require, exports, module) {
 	})();
 	
 	Cost.types = [];
-	Cost.get = (id) => {
-	  return Cost.uniqueId(uniqueId);
+	Cost.get = (uniqueId) => {
+	  return Cost.uniqueIdMap[uniqueId];
 	};
 	
 	Cost.new = (props) => {
@@ -12101,10 +12166,9 @@ function (require, exports, module) {
 	          getObject: CostManager.getCostObject(id),
 	          listElemLable: `Cost to ${id}`
 	        };
-	        const cost = new SelectCost({id, referenceable: true, children: expListProps.list});
-	        const staticProps = Properties(id);
+	        const cost = new SelectCost({id, children: expListProps.list});
 	        const expandList = new ExpandableList(expListProps);
-	        list.push({partId: id, expandList, staticProps,
+	        list.push({partId: id, expandList,
 	          CostManager: CostManager, parentId, cost});
 	      });
 	      propertyDisplay.update();
@@ -12172,8 +12236,8 @@ function (require, exports, module) {
 	  return scope;
 	}
 	
-	CostManager.getCostObject = (id) => (values) => {
-	  const obj = CostManager.getObject(values);
+	CostManager.getCostObject = (id) => (values, target) => {
+	  const obj = CostManager.getObject(values, target);
 	  if (values.referenceable) costTypes.push(values.id);
 	  return obj;
 	};
@@ -12195,10 +12259,16 @@ function (require, exports, module) {
 	
 	
 	CostManager.isInstance = (target) => du.find.upAll('.expandable-list', el).length === 2;
-	CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(cost);
+	CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(CostManager.childScope(cost));
 	CostManager.costBody = (cost) => cost instanceof Cost && CostManager.costBodyTemplate.render(CostManager.childScope(cost));
-	CostManager.getObject = (values) => {
+	CostManager.getObject = (values, target) => {
+	  const parent = du.find.up('[cost-id]', target);
 	  if (values.costType === '/dev/nul') {
+	    values.parent = Cost.get(parent.getAttribute('cost-id'));
+	    if (values.parent.level() === 0) {
+	      values.requiredBranches = Properties(values.objectId, (prop) => prop.value() === null);
+	      values.requiredBranches = values.requiredBranches.map((prop) => prop.name());
+	    }
 	    return Cost.new(values);
 	  } else {
 	    const referenceCost = Cost.get(values.costType);

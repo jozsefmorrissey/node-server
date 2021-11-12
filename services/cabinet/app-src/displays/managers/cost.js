@@ -65,10 +65,9 @@ class CostManager extends AbstractManager {
           getObject: CostManager.getCostObject(id),
           listElemLable: `Cost to ${id}`
         };
-        const cost = new SelectCost({id, referenceable: true, children: expListProps.list});
-        const staticProps = Properties(id);
+        const cost = new SelectCost({id, children: expListProps.list});
         const expandList = new ExpandableList(expListProps);
-        list.push({partId: id, expandList, staticProps,
+        list.push({partId: id, expandList,
           CostManager: CostManager, parentId, cost});
       });
       propertyDisplay.update();
@@ -136,8 +135,8 @@ CostManager.childScope = (cost) => {
   return scope;
 }
 
-CostManager.getCostObject = (id) => (values) => {
-  const obj = CostManager.getObject(values);
+CostManager.getCostObject = (id) => (values, target) => {
+  const obj = CostManager.getObject(values, target);
   if (values.referenceable) costTypes.push(values.id);
   return obj;
 };
@@ -159,10 +158,16 @@ CostManager.costTypeHtml = (cost, scope) => {
 
 
 CostManager.isInstance = (target) => du.find.upAll('.expandable-list', el).length === 2;
-CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(cost);
+CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(CostManager.childScope(cost));
 CostManager.costBody = (cost) => cost instanceof Cost && CostManager.costBodyTemplate.render(CostManager.childScope(cost));
-CostManager.getObject = (values) => {
+CostManager.getObject = (values, target) => {
+  const parent = du.find.up('[cost-id]', target);
   if (values.costType === '/dev/nul') {
+    values.parent = Cost.get(parent.getAttribute('cost-id'));
+    if (values.parent.level() === 0) {
+      values.requiredBranches = Properties(values.objectId, (prop) => prop.value() === null);
+      values.requiredBranches = values.requiredBranches.map((prop) => prop.name());
+    }
     return Cost.new(values);
   } else {
     const referenceCost = Cost.get(values.costType);

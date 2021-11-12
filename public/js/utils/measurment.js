@@ -1,7 +1,5 @@
 
 
-
-
 function regexToObject (str, reg) {
   const match = str.match(reg);
   if (match === null) return null;
@@ -127,4 +125,12 @@ Measurement.validation = function (range) {
   }
 }
 
-module.exports = Measurement;
+Measurement.round = (value, percision) => {
+  if (percision)
+  return new Measurement(value).decimal(percision);
+  return Math.round(value * 10000000) / 10000000;
+}
+
+try {
+  module.exports = Measurement;
+} catch (e) {/* TODO: Consider Removing */}
