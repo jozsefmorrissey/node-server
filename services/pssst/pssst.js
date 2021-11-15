@@ -194,8 +194,8 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
   });
 
   function saveLocation(group, name) {
-    return shell.exec(`realpath ~/.opsc/pst/js/${group}/${name}.json`,
-                {silent: true}).stdout.trim();
+    return shell.exec('realpath ~'{silent: true}).stdout.trim() +
+        `/.opsc/pst/js/${group}/${name}.json`;
   }
 
   function valueValidated(group, key, value) {
