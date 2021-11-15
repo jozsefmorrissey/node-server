@@ -3,20 +3,33 @@
   <head>
     <meta charset="utf-8">
     <script type="text/javascript" src='/js/utils/dom-utils.js'></script>
+    <script type="text/javascript" src='/js/utils/utils.js'></script>
     <script type="text/javascript" src='/js/utils/measurment.js'></script>
+    <script type="text/javascript" src='/js/utils/request.js'></script>
     <script type="text/javascript" src='/js/utils/string-math-evaluator.js'></script>
+    <script type="text/javascript" src='/pssst/js/pssst-client.js'></script>
+    <style>
+      #error-cnt {
+        color: red;
+      }
+    </style>
     <title>equations</title>
     <script type="text/javascript">
       let index = 1;
       const eval = new StringMathEvaluator(Math);
-      function addEq() {
+      function addEq(name, equation) {
+        name = name || '';
+        equation = equation || '';
+        saved[index] = saved[index] || {};
         const newElem = du.create.element('div', {index: index});
         newElem.innerHTML = `<b>${index++}.)</b>
-                              <input class='name' type='text' placeholder="Name">
-                              <input class='equation' type='text' placeholder="Equation">
+                              <input class='name' type='text' placeholder="Name" value='${name}'>
+                              <input class='equation' type='text' placeholder="Equation" value='${equation}'>
                               <span class='input-cnt'></span>
+                              <b>=</b>
                               <span class='answer-cnt'></span>
                               <br/>`;
+        updateVariables(newElem.querySelector('.equation'));
         du.find('#eq-cnt').append(newElem);
       }
 
@@ -24,18 +37,24 @@
         return self.indexOf(value) === index;
       }
 
-      const saved = {};
+      let saved = {};
       const c = 'eq-input-elem';
       function updateVariables(target) {
         let matches = target.value.match(/[a-z_A-Z][a-z_A-Z0-9]*/g);
+        const varIndex = du.find.up('[index]', target).getAttribute('index');
         const inputCnt = du.find.closest('.input-cnt', target);
         if (matches) {
           matches = matches.filter(onlyUnique);
           let repeatHtml = '';
           for (let index = 0; index < matches.length; index += 1) {
             const name = matches[index];
-            const value = saved[name] || 0;
-            repeatHtml += du.create.element('input', {class: c, value, name}).outerHTML;
+            const value = saved[varIndex][name] || 0;
+            const div = du.create.element('span');
+            const b = du.create.element('b');
+            b.innerText = name;
+            div.append(b)
+            div.append(du.create.element('input', {class: c, value, name}));
+            repeatHtml += div.outerHTML;
           }
           inputCnt.innerHTML = repeatHtml;
         } else {
@@ -46,7 +65,8 @@
 
       function evaluate(target) {
         const equation = du.find.closest('.equation', target).value;
-        const inputs = du.find.closest(`.input-cnt`, target).children;
+        const inputCnt = du.find.closest(`.input-cnt`, target);
+        const inputs = du.find.downAll('input', inputCnt);
         const scope = {};
         for (let index = 0; index < inputs.length; index += 1) {
           const input = inputs[index];
@@ -57,16 +77,87 @@
       }
 
       function variableChange(target) {
-        saved[target.getAttribute('name')] = target.value;
+        const index = du.find.up('[index]', target).getAttribute('index');
+        saved[index][target.getAttribute('name')] = target.value;
+        du.cookie.set('values', saved);
         evaluate(target);
       }
-      du.on.match('click', '#add-eq-btn', addEq);
+
+      function loadValues() {
+        const values = du.cookie.get('values');
+        if (values) {
+          try {
+            saved = JSON.parse(values);
+          } catch (e) {
+            console.error('Error Loading Values\n', e);
+          }
+        }
+      }
+
+      function save() {
+        const key = du.param.get('name');
+        const value = du.param.get('token');
+        const list = document.querySelectorAll('div[index]');
+        const json = [];
+        for (let index = 0; index < list.length; index += 1) {
+          const name = list[index].querySelector('.name').value;
+          const equation = list[index].querySelector('.equation').value;
+          json.push({name, equation});
+        }
+        Request.post('/pssst/save/json', {group: 'custom-calc', key, value, json}, console.log, console.log);
+      }
+
+      function load() {
+        function populate(body) {
+          body.forEach((item) => addEq(item.name, item.equation));
+        }
+        const name = du.param.get('name');
+        Request.get(`/pssst/load/json/custom-calc/${name}`, populate, console.error);
+      }
+
+      function onLoad() {
+        const name = du.param.get('name');
+        du.find('#name-cnt').innerText = name;
+      }
+
+      function canEdit() {
+        const can = () => {
+          du.find('#save-eqs-btn').hidden = false;
+        }
+        const cannot  = (e) => {
+          console.log(e);
+          const match = e.statusText.match(/(locked.*$)/);
+          let errorMsg;
+          if (match) {
+            errorMsg = 'Your account has been ' + match[1];
+          } else {
+            errorMsg = "Invalid token: must fix if you want to edit file";
+          }
+          du.find('#error-cnt').innerText = errorMsg;
+        }
+        const token = du.param.get('token');
+        if (token) {
+          const name = du.param.get('name');
+          Pssst.validateValue(can, cannot, 'custom-calc', name, token);
+        }
+      }
+
+      canEdit();
+      loadValues();
+      load();
+      window.onload = onLoad;
+
+      du.on.match('click', '#add-eq-btn', () => addEq());
       du.on.match('keyup', '.equation', updateVariables);
-      du.on.match('keyup', `.${c}`, evaluate);
+      du.on.match('keyup', `.${c}`, variableChange);
+      du.on.match('click', '#save-eqs-btn', save);
     </script>
   </head>
   <body>
+    <h2 id='name-cnt'></h2>
+    <b id='error-cnt'></b>
     <div id='eq-cnt'></div>
     <button id='add-eq-btn'>Add Equation</button>
+    <button id='save-eqs-btn' hidden>Save</button>
   </body>
 </html>

@@ -1,0 +1,805 @@
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A&amp;M Inspection Report</title>
+<style>body {
+	margin-left: 7px;
+	margin-top: 7px;
+}
+
+img {
+	max-width: 95vw;
+	max-height: 95vh;
+	object-fit: scale-down; /* FF */
+}
+
+.legend img {
+	max-width: unset;
+}
+table	{ border-collapse: collapse;  font-family:inherit; font-size:inherit; }
+td 	{ text-align:left; vertical-align:top; }
+
+.pictureRow {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+figure {
+	display: table;
+	max-width: 95vw;
+	margin: 1rem 1rem 0 0;
+	page-break-inside: avoid;
+	align-self: flex-start;
+}
+figcaption {
+	display: table-caption;
+	caption-side: bottom;
+}
+.pictureContainer button {
+	margin-left: .25rem;
+	margin-right: .25rem;
+}
+span.photoNum {
+	font-weight: 700;
+	margin-right: .5rem;
+}
+.companyInfo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: wrap;
+	margin-bottom: 1rem;
+}
+.companyInfoCell {
+	display: block;
+	page-break-inside: avoid;
+}
+
+.breakBefore {
+	page-break-before: always;
+}
+
+.breakAfter {
+	page-break-after: always;
+}
+
+.noBreak {
+	page-break-inside: avoid;
+}
+
+.sectionTitle {
+	margin-top: 1rem;
+	padding-top: .25rem;
+	padding-bottom: .25rem;
+	margin-bottom: .25rem;
+	border-top: 5px solid black;
+}
+
+.rptDsc {
+	margin-top:.15rem;
+	clear: both;
+}
+.mxLineDsc {
+	margin-bottom: .5rem;
+}
+.rptConc {
+	margin-top:.5rem;
+	padding-top:.25rem;
+	border-top: 1px solid black;
+}
+
+br.clr { clear:both; }
+
+hr.rptmaj	{ display: block; color:black; background-color:black; border:none; height:5px; margin-top:15px; clear:both; }
+hr.rptmin	{ display: block; color:black; background-color:black; border:none; height:1px; }
+
+table th.noBorder { border-style: none; }
+table th.noWrap { white-space: nowrap; }
+
+table td.noBorder { border-style:none; }
+table td.noWrap { white-space: nowrap; }
+table td.wrap { white-space: normal; }
+table td.right { text-align: right; }
+table td.ctr { text-align: center; }
+table td.mid { vertical-align:middle; }
+table td.btm { vertical-align: bottom; }
+table td.shrink { width:1px; }
+table td.tight { white-space:nowrap; padding:1px 10px 1px 2px; border-style:none; vertical-align: middle; }
+
+table.form { margin:0; border:none; max-width:800px; }
+table.form td { padding:3px; }
+
+table.legend { margin:5px; border:1px solid black; }
+table.legend td { border:1px solid black; padding:3px; vertical-align:middle; }
+
+div.row { float:left; width:100%; white-space:nowrap; }
+div.cell { vertical-align:top; display:inline-block; margin-right:20px; white-space:normal; }
+
+.b { font-weight: bold; }
+.noWrap { white-space: nowrap; }
+.forceWrap { word-break: break-all; }
+.ctr { text-align: center; }
+.right { text-align: right; }
+.debug { border:2px solid red; }
+
+h1 { margin-bottom:8px; line-height:120%; }
+h2 { margin-bottom:5px; line-height:120%; }
+h3 { margin-bottom:2px; line-height:120%; }
+
+.rpt { }
+.rpt a { color:blue; font-weight:normal; overflow-wrap: break-word; }
+.rpt a:link { color:blue; font-weight:normal; }
+.rpt a:visited { color:blue; font-weight:normal; }
+.rpt a:hover { color:blue; font-weight:normal; }
+
+a.toc { font-weight:bold !important; margin-top: .25rem; }
+
+.fontFamily1 { font-family:Arial, Helvetica, sans-serif; }
+.fontFamily2 { font-family: Verdana, Geneva, sans-serif; }
+.fontFamily3 { font-family:"Trebuchet MS", Helvetica, sans-serif; }
+.fontFamily4 { font-family:Georgia, serif; }
+.fontFamily5 { font-family:"Times New Roman", Times, serif; }
+.fontFamily6 { font-family:"Comic Sans MS", cursive, sans-serif; }
+.fontSize1 { font-size: .8125rem; }
+.fontSize2 { font-size: .874rem;  line-height:120%; }
+.fontSize3 { font-size: .9375rem;  line-height:120%; }
+.fontSize4 { font-size: 1rem;  line-height:120%; }
+.fontSize5 { font-size: 1.0625rem;  line-height:120%; }
+.fontSize6 { font-size: 1.125rem;  line-height:120%; }
+
+.bigger1 { font-size: 120%; font-weight: bold; line-height:120%; }
+.bigger2 { font-size: 160%; font-weight: bold; line-height:120%; }
+
+@media print {
+    .noPrint, .noPrint * { display:none !important; }
+	.pictureRow {
+		flex-wrap: nowrap ! important;
+	}
+	div.col2 {
+		max-width: 50vw ! important;
+	}
+	div.col2 img.photo {
+		max-width: 100%;
+	}
+}
+
+@media screen {
+    .noScreen, .noScreen * { display:none !important; }
+}
+</style><script>
+function toPDF(){if(location.host==''){return ''}var a=location.href.split('/');var b=a.pop();var c='report';if(a.length==6){c=a.pop()}else{c=b.split('.')[0]}var d=a.pop();var e=a.pop();var f='toPDF.asp?c='+e+'&r='+d;var g='';if(c==='report'){g=''}else if(c==='summary'){g='&s=1'}else if(c==='invoice'){g='&i=1'}else if(c==='receipt'){g='&t=1'}else if(c==='morePictures'){g='&p=1'}f=f+g;a.push(f);return a.join('/')}
+</script>
+</head>
+<body>
+<div class="rpt fontFamily1 fontSize1"> <!--Begin report div-->
+<div class="noPrint" style="float:right;position:absolute;top:5px;right:5px;"><a title="View as PDF" href="javascript:void(0);" onclick="window.location.href=toPDF();"><img src="https://www.reporthost.com/_image/ViewAsPdf.png" alt="View as PDF" style="max-width:15vw" title="View as PDF" class="noPrint"></a></div><br style="clear:both;">
+<div class="noPrint" style="float:left;"><a href="summary.asp" class="bigger2"><b>View summary</b></a></div><br class="clr">
+<section class="rptTitleTags" style="text-align:center; margin-bottom:15px;">
+<h1 translate="no" class="notranslate">A&amp;M Inspection</h1><b><div><span class="noWrap b"><a href="mailto:aandminspection@gmail.com">aandminspection@gmail.com</a></span></div><div><span class="noWrap b">(217) 970-0167</span></div><div>Inspector: <span class="noWrap b">Mark Chandler</span></div></b>
+<div><img id="photo_178621628" src="https://www.reporthost.com/aandminspection/conroy20211008/33E6A5CA-9F9D-4DEF-93BE-70BE7E9AB1C5.jpg" alt=""> <img id="photo_178621629" src="https://www.reporthost.com/aandminspection/conroy20211008/3029EE17-D229-4EDE-9BDE-D76012203072.jpg" alt=""> </div>
+<h1>Property Inspection Report</h1><table class="rptTitle" style="border-collapse:collapse; padding:1px; margin:0 auto;">
+	<tbody><tr>
+     <td class="right mid"><b>Client(s):&nbsp;</b></td>
+     <td class="mid bigger2">James Conroy</td>
+	</tr>
+	<tr>
+     <td class="right"><b>Property address:&nbsp;</b></td>
+     <td class="bigger2">809 S 15th St<br>Mattoon IL 61938-5603</td>
+	</tr>
+	<tr>
+     <td class="right mid"><b>Inspection date:&nbsp;</b></td>
+     <td class="mid bigger2">Thursday, October 7, 2021</td>
+	</tr>
+</tbody></table>
+<p>This report published on Friday, October 8, 2021 1:34:35 PM CDT</p>
+</section><!-- eo-rptTitleTags -->
+
+<section class="rptHdr">I would personally like to Thank You James for choosing A&amp;M for your Inspection.</section>
+<hr class="rptmaj">
+<section class="noBreak">
+<div class="bigger1">How to Read this Report</div>This report is organized by the property's functional areas.&nbsp; Within each functional area, descriptive information is listed first and is shown in bold type.&nbsp; Items of concern follow descriptive information.
+ Concerns are shown and sorted according to these types:<table class="legend">
+<tbody><tr><td><img src="https://www.reporthost.com/_icons/ic0001.gif" alt="Concern type" class="mid"></td><td><b>Safety</b></td><td>Poses a safety hazard</td></tr>
+<tr><td><img src="https://www.reporthost.com/_icons/ic0002.gif" alt="Concern type" class="mid"></td><td><b>Major Defect</b></td><td>Correction likely involves a significant expense</td></tr>
+<tr><td><img src="https://www.reporthost.com/_icons/ic0003.gif" alt="Concern type" class="mid"></td><td><b>Repair/Replace</b></td><td>Recommend repairing or replacing</td></tr>
+<tr><td><img src="https://www.reporthost.com/_icons/ic0004.gif" alt="Concern type" class="mid"></td><td><b>Repair/Maintain</b></td><td>Recommend repair and/or maintenance</td></tr>
+<tr><td><img src="https://www.reporthost.com/_icons/ic0005.gif" alt="Concern type" class="mid"></td><td><b>Minor Defect</b></td><td>Correction likely involves only a minor expense</td></tr>
+<tr><td><img src="https://www.reporthost.com/_icons/ic0006.gif" alt="Concern type" class="mid"></td><td><b>Maintain</b></td><td>Recommend ongoing maintenance</td></tr>
+<tr><td><img src="https://www.reporthost.com/_icons/ic0007.gif" alt="Concern type" class="mid"></td><td><b>Evaluate</b></td><td>Recommend evaluation by a specialist</td></tr>
+<tr><td><img src="https://www.reporthost.com/_icons/ic0008.gif" alt="Concern type" class="mid"></td><td><b>Monitor</b></td><td>Recommend monitoring in the future</td></tr>
+<tr><td><img src="https://www.reporthost.com/_icons/ic0010.gif" alt="Concern type" class="mid"></td><td><b>Comment</b></td><td>For your information</td></tr></tbody></table>
+<p><span class="noPrint"><a href="/glossary.asp" target="new">Click here</a> for a glossary of building construction terms.</span><span class="noScreen">Contact your inspector If there are terms that you do not understand, or visit the glossary of construction terms at <b>https://www.reporthost.com/glossary.asp</b></span></p></section><section class="noPrint" style="display:flex; justify-content:flex-start; flex-wrap: wrap;">
+<section id="TOC" class="noPrint" style="margin: 0 1rem 1rem 0;"> <!--Begin TOC div-->
+<h2>Table of Contents</h2>
+<a href="#GeneralInformation" class="toc">General Information</a><br>
+<a href="#Grounds" class="toc">Grounds</a><br>
+<a href="#ExteriorandFoundation" class="toc">Exterior and Foundation</a><br>
+<a href="#Basement" class="toc">Basement</a><br>
+<a href="#Roof" class="toc">Roof</a><br>
+<a href="#AtticandRoofStructure" class="toc">Attic and Roof Structure</a><br>
+<a href="#Garage" class="toc">Garage</a><br>
+<a href="#Electric" class="toc">Electric</a><br>
+<a href="#Plumbing/FuelSystems" class="toc">Plumbing / Fuel Systems</a><br>
+<a href="#WaterHeater" class="toc">Water Heater</a><br>
+<a href="#Heating,VentilationandAirCondition(HVAC)" class="toc">Heating, Ventilation and Air Condition (HVAC)</a><br>
+<a href="#Kitchen" class="toc">Kitchen</a><br>
+<a href="#Bathrooms,LaundryandSinks" class="toc">Bathrooms, Laundry and Sinks</a><br>
+<a href="#Interior,DoorsandWindows" class="toc">Interior, Doors and Windows</a><br>
+<a href="#WoodDestroyingOrganismFindings" class="toc">Wood Destroying Organism Findings</a><br>
+<br><a href="summary.asp" class="toc">View summary</a><br>
+</section> <!--End TOC -->
+
+</section>
+<br class="clr">
+<section class="section" id="GeneralInformation">
+<div class="sectionTitle"><span class="bigger2"><u>General Information</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc"><b>Report number: </b>1083</div>
+<div class="rptDsc"><b>Time started: </b>9:45 a.m.</div>
+<div class="rptDsc"><b>Time finished: </b>2 p.m.</div>
+<div class="rptDsc"><b>Present during inspection: </b>Property owner</div>
+<div class="rptDsc"><b>Client present for discussion at end of inspection: </b>Yes</div>
+<div class="rptDsc"><b>Weather conditions during inspection: </b>light drizzle</div>
+<div class="rptDsc"><b>Temperature during inspection: </b>Warm, 74 degrees</div>
+<div class="rptDsc"><b>Type of building: </b>Single family, Detached garage</div>
+<div class="rptDsc"><b>Number of residential units inspected: </b>1</div>
+<div class="rptDsc"><b>Age of main building: </b>built in 1932</div>
+<div class="rptDsc"><b>Source for main building age: </b>Municipal records or property listing, Inspector's estimate</div>
+<div class="rptDsc"><b>Front of building faces: </b>East</div>
+<div class="rptDsc"><b>Main entrance faces: </b>East</div>
+<div class="rptDsc"><b>Occupied: </b>Yes</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>1) </b><img src="https://www.reporthost.com/_icons/ic0010.gif" style="margin:0 1px;" alt="">Many areas and items at this property were obscured by furniture. This often includes but is not limited to walls, floors, windows, inside and under cabinets, under sinks, on counter tops, in closets, behind window coverings, under rugs or carpets, and under or behind furniture. Areas around the exterior, under the structure, in the garage and in the attic may also be obscured by stored items. The inspector in general does not move personal belongings, furnishings, carpets or appliances. When furnishings, stored items or debris are present, all areas or items that are obscured, concealed or not readily accessible are excluded from the inspection. The client should be aware that when furnishings, stored items or debris are eventually moved, damage or problems that were not noted during the inspection may be found.
+</div>
+</section><!-- eo-General Information-->
+<section class="section" id="Grounds">
+<div class="sectionTitle"><span class="bigger2"><u>Grounds</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>Unless specifically included in the inspection, the following items and any related equipment, controls, electric systems and/or plumbing systems are excluded from this inspection: detached buildings or structures; fences and gates; retaining walls; underground drainage systems, catch basins or concealed sump pumps; swimming pools and related safety equipment, spas, hot tubs or saunas; whether deck, balcony and/or stair membranes are watertight; trees, landscaping, properties of soil, soil stability, erosion and erosion control; ponds, water features, irrigation or yard sprinkler systems; sport courts, playground, recreation or leisure equipment; areas below the exterior structures with less than 3 feet of vertical clearance; invisible fencing; sea walls, docks and boathouses; retractable awnings. Any comments made regarding these items are as a courtesy only.</div>
+<div class="rptDsc"><b>Site profile: </b>Level</div>
+<div class="rptDsc"><b>Condition of driveway: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Driveway material: </b>Asphalt</div>
+<div class="rptDsc"><b>Condition of deck, patio and/or porch covers: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Deck, patio, porch cover material and type: </b>Covered (Refer to Roof section), front porch covered, back patio had a small dormer roof over the door</div>
+<div class="rptDsc"><b>Condition of decks, porches and/or balconies: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Deck, porch and/or balcony material: </b>Wood</div>
+<div class="rptDsc"><b>Condition of stairs, handrails and guardrails: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Exterior stair material: </b>Wood</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>2) </b><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">Cracks, holes, and/or deterioration were found in the driveway. Recommend that qualified contractor repair as necessary. but no trip hazards.
+<br><br><b>Seller Comments</b> Fix with driveway sealer
+<div class="pictureRow"><figure class="col2" id="pc_178692625" data-concern="308108932" data-rip="178692625"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/087E219C-B333-41C6-B14C-3C7DD85430DC.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 2-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692626" data-concern="308108932" data-rip="178692626"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/56007F06-426C-4EFF-9707-1DA82CF18302.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 2-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:2,picture count: 2,concern Id: 308108932) -->
+<div class="pictureRow"><figure class="col2" id="pc_178692627" data-concern="308108932" data-rip="178692627"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/4BCF7CC3-68B5-47D9-AD73-FF8F5D1C9361.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 2-3</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692628" data-concern="308108932" data-rip="178692628"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/7CD1B275-DC8C-4D79-98CB-FD1AA83EFD26.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 2-4</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:2,picture count: 4,concern Id: 308108932) -->
+</div>
+</section><!-- eo-Grounds-->
+<section class="section" id="ExteriorandFoundation">
+<div class="sectionTitle"><span class="bigger2"><u>Exterior and Foundation</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The inspector performs a visual inspection of accessible components or systems at the exterior. Items excluded from this inspection include below-grade foundation walls and footings; foundations, exterior surfaces or components obscured by vegetation, stored items or debris; wall structures obscured by coverings such as siding or trim. Some items such as siding, trim, soffits, vents and windows are often high off the ground, and may be viewed using binoculars from the ground or from a ladder. This may limit a full evaluation. Regarding foundations, some amount of cracking is normal in concrete slabs and foundation walls due to shrinkage and drying. Note that the inspector does not determine the adequacy of seismic reinforcement.</div>
+<div class="rptDsc"><b>Wall inspection method: </b>Viewed from ground, with binoculars, from windows</div>
+<div class="rptDsc"><b>Condition of wall exterior covering: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Apparent wall structure: </b>Wood frame</div>
+<div class="rptDsc"><b>Wall covering: </b>Vinyl</div>
+<div class="rptDsc"><b>Condition of foundation and footings: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Apparent foundation type: </b>Unfinished basement</div>
+<div class="rptDsc"><b>Foundation/stem wall material: </b>Brick</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>3) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">One piece of fascia is missing on the back gable
+<br><br><b>Seller Comments</b> Fix add facia
+<div class="pictureRow"><figure class="col2" id="pc_178692623" data-concern="308109233" data-rip="178692623"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/FDC7E7D5-C57D-40E6-817B-9C9FDBD946BF.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 3-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308109233) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>4) </b><img src="https://www.reporthost.com/_icons/ic0006.gif" style="margin:0 1px;" alt="">Caulk was deteriorated in some areas. For example, around windows. Recommend that a qualified person renew or install caulk as necessary. Where gaps are wider than 1/4 inch, an appropriate material other than caulk should be used. For more information, visit:<br><a href="https://www.reporthost.com/?CAULK" target="_blank" class="forceWrap">https://www.reporthost.com/?CAULK</a>
+<br><br><b>Seller Comments</b> Fix repair caulking
+<div class="pictureRow"><figure class="col2" id="pc_178692636" data-concern="308109229" data-rip="178692636"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/91BDF1DC-6D08-46FF-B9FC-272164DDE9D0.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 4-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692637" data-concern="308109229" data-rip="178692637"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/6D7E9A79-BCE8-46C0-AC4A-D0159B8BFC82.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 4-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:4,picture count: 2,concern Id: 308109229) -->
+<div class="pictureRow"><figure class="col2" id="pc_178692638" data-concern="308109229" data-rip="178692638"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/70B5A6CC-5B24-4E53-B725-4D8CFCA1C002.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 4-3</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 3,concernId: 308109229) -->
+</div>
+</section><!-- eo-Exterior and Foundation-->
+<section class="section" id="Basement">
+<div class="sectionTitle"><span class="bigger2"><u>Basement</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>Structural components such as joists and beams, and other components such as piping, wiring and/or ducting that are obscured by under-floor insulation are also excluded from this inspection. Note that the inspector does not determine if support posts, columns, beams, joists, studs, trusses, etc. are of adequate size, spanning or spacing. <br><br>The inspector does not guarantee or warrant that water will not accumulate in the basement in the future. Access to the basement during all seasons and during prolonged periods of all types of weather conditions (e.g. heavy rain, melting snow) would be needed to do so. The inspector does not determine the adequacy of basement floor or stairwell drains, or determine if such drains are clear or clogged.<br><br>Note that all basement areas should be checked periodically for water intrusion, plumbing leaks and pest activity.</div>
+<div class="rptDsc"><b>Condition of exterior entry doors: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Exterior door material: </b>Wood, Metal</div>
+<div class="rptDsc"><b>Condition of floor substructure above: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Pier or support post material: </b>Bearing wall, Concrete block</div>
+<div class="rptDsc"><b>Beam material: </b>Solid wood</div>
+<div class="rptDsc"><b>Floor structure above: </b>Solid wood joists</div>
+<div class="rptDsc"><b>Condition of insulation underneath floor above: </b>Not applicable, none installed</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>5) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">Guardrails at one or more locations with drop-offs higher than 30 inches had gaps that were too large. This poses a safety hazard for children (e.g. falling, getting stuck in railing). Guardrails should not have gaps or voids that allow passage of a sphere equal to or greater than 4 inches in diameter, or 6 inches in diameter at triangular spaces between stair edges and guardrails. At a minimum, the client should be aware of this hazard. Recommend that a qualified contractor repair or replace guardrails per standard building practices.
+<br><br><b>Seller Comments</b> Left up to buyer. We are willing to install a simple safer railing out of two by fours.
+<div class="pictureRow"><figure class="col2" id="pc_178692655" data-concern="308119455" data-rip="178692655"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/8B8591DD-A981-4345-81BE-1D43286034A6.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 5-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308119455) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>6) </b><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">Grates were missing from one or more basement floor drains. Recommend installing grates where missing to prevent clogging.
+<br><br><b>Seller Comments</b> Fix add grate
+<div class="pictureRow"><figure class="col2" id="pc_178692662" data-concern="308119452" data-rip="178692662"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/237D2B7D-AA14-48E7-9A86-D54EA9F1CFE6.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 6-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308119452) -->
+</div>
+</section><!-- eo-Basement-->
+<section class="section" id="Roof">
+<div class="sectionTitle"><span class="bigger2"><u>Roof</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The following items or areas are not included in this inspection: areas that could not be traversed or viewed clearly due to lack of access; solar roofing components. Any comments made regarding these items are made as a courtesy only. Note that the inspector does not provide an estimate of remaining life on the roof surface material, nor guarantee that leaks have not occurred in the roof surface, skylights or roof penetrations in the past. Regarding roof leaks, only active leaks, visible evidence of possible sources of leaks, and evidence of past leaks observed during the inspection are reported on as part of this inspection. The inspector does not guarantee or warrant that leaks will not occur in the future. Complete access to all roof and attic spaces during all seasons and during prolonged periods of all types of weather conditions (e.g. high wind and rain, melting snow) would be needed to do so. Occupants should monitor the condition of roofing materials in the future. For older roofs, recommend that a professional inspect the roof surface, flashings, appurtenances, etc. annually and maintain/repair as might be required. If needed, the roofer should enter attic space(s). Regarding the roof drainage system, unless the inspection was conducted during and after prolonged periods of heavy rain, the inspector was unable to determine if gutters, downspouts and extensions perform adequately or are leak-free.</div>
+<div class="rptDsc"><b>Roof inspection method: </b>Partially traversed, Viewed from ground with binoculars, Viewed from windows</div>
+<div class="rptDsc"><b>Condition of roof surface material: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Roof surface material: </b>Asphalt or fiberglass composition shingles, architectural shingles</div>
+<div class="rptDsc"><b>Roof type: </b>Gable</div>
+<div class="rptDsc"><b>Apparent number of layers of roof surface material: </b>One</div>
+<div class="rptDsc"><b>Condition of exposed flashings: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of gutters, downspouts and extensions: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>7) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">Extensions such as splash blocks or drain pipes for one or more downspouts were missing, substandard and/or damaged. Water can accumulate around the building foundation or inside crawl spaces or basements as a result. Recommend that a qualified person install, replace or repair extensions as necessary so rainwater drains away from the structure.
+<br><br><b>Seller Comments</b> fix gutters
+<div class="pictureRow"><figure class="col2" id="pc_178692620" data-concern="308123397" data-rip="178692620"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/761CE370-9815-47D7-8B5D-26409D024E69.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 7-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692639" data-concern="308123397" data-rip="178692639"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/D73BF198-E1FF-4776-AF7A-D338D0D35A73.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 7-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:7,picture count: 2,concern Id: 308123397) -->
+<div class="pictureRow"><figure class="col2" id="pc_178692640" data-concern="308123397" data-rip="178692640"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/0034BC58-CBCB-477C-AA01-0192D8E45A34.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 7-3</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692649" data-concern="308123397" data-rip="178692649"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/A6A1826E-89F1-4E72-9C50-4AE3E5C7211E.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 7-4</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:7,picture count: 4,concern Id: 308123397) -->
+</div>
+</section><!-- eo-Roof-->
+<section class="section" id="AtticandRoofStructure">
+<div class="sectionTitle"><span class="bigger2"><u>Attic and Roof Structure</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The following items or areas are not included in this inspection: areas that could not be traversed or viewed clearly due to lack of access; areas and components obscured by insulation. Any comments made regarding these items are made as a courtesy only. The inspector does not determine the adequacy of the attic ventilation system. Complete access to all roof and attic spaces during all seasons and during prolonged periods of all types of weather conditions (e.g. high/low temperatures, high/low humidity, high wind and rain, melting snow) would be needed to do so. The inspector is not a licensed engineer and does not determine the adequacy of roof structure components such as trusses, rafters or ceiling beams, or their spacing or sizing.</div>
+<div class="rptDsc"><b>Attic inspection method: </b>Traversed</div>
+<div class="rptDsc"><b>Condition of roof structure: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Roof structure type: </b>Rafters</div>
+<div class="rptDsc"><b>Ceiling structure: </b>Ceiling joists</div>
+<div class="rptDsc"><b>Condition of insulation in attic (ceiling, skylight chase, etc.): </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Ceiling insulation material: </b>Mineral wool loose fill</div>
+<div class="rptDsc"><b>Approximate attic insulation R value (may vary in areas): </b>R-30, R-38</div>
+<div class="rptDsc"><b>Vermiculite insulation present: </b>None visible</div>
+<div class="rptDsc"><b>Condition of roof ventilation: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Roof ventilation type: </b>Ridge vent(s), Gable end vents</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>8) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0008.gif" style="margin:0 1px;" alt="">At some point in time this home had a fire and some rafters are burnt and the roof structure was damaged. This roof seemed to be structure sound with the repairs made. it does appear that a lot of the structure was rebuilt with new wood, and burnt wood was scissored with new wood,  Recommend that you monitor it over time and if needed that a qualified contractor repair as necessary.
+<br><br><b>Seller Comments</b> Repaired correctly nothing to remedy
+<div class="pictureRow"><figure class="col2" id="pc_178725225" data-concern="308129832" data-rip="178725225"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/9B13F10E-B3D5-4B60-AF0A-D44FDEAFA75A.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 8-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178725228" data-concern="308129832" data-rip="178725228"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/FE21B855-C45A-4799-A173-42DA6F131150.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 8-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:8,picture count: 2,concern Id: 308129832) -->
+<div class="pictureRow"><figure class="col2" id="pc_178725232" data-concern="308129832" data-rip="178725232"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/8C85D0DF-139A-41B7-9834-F64BF54E8FED.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 8-3</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178725236" data-concern="308129832" data-rip="178725236"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/DFAF1BE5-B9B4-4FBC-95DC-56EF7D914CD4.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 8-4</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:8,picture count: 4,concern Id: 308129832) -->
+</div>
+</section><!-- eo-Attic and Roof Structure-->
+<section class="section" id="Garage">
+<div class="sectionTitle"><span class="bigger2"><u>Garage</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The inspector cannot reasonably determine the integrity of all elements of limited fire resistance at residential construction or verify firewall ratings at multi unit construction. Requirements for ventilation in garages vary between municipalities.</div>
+<div class="rptDsc"><b>Type: </b>Detached, Garage</div>
+<div class="rptDsc"><b>Condition of garage vehicle door(s): </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Type of garage vehicle door: </b>Tilt-up</div>
+<div class="rptDsc"><b>Number of vehicle doors: </b>1</div>
+<div class="rptDsc"><b>Condition of garage floor: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of garage interior: </b>Required repair or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Garage ventilation: </b>None</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>9) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">The back window was boarded up, but the board was not secure and allows an easy entry area
+<br><br><b>Seller Comments</b> Fix nail board down
+<div class="pictureRow"><figure class="col2" id="pc_178692658" data-concern="308132655" data-rip="178692658"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/83E75BB1-57C0-43D6-AAF6-A5B08582EF04.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 9-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308132655) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>10) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">gutters and downspouts are missing on the garage
+<br><br><b>Seller Comments</b> No remedy offered
+<div class="pictureRow"><figure class="col2" id="pc_178692631" data-concern="308132651" data-rip="178692631"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/51699CC0-EDD0-4574-B10F-06622B89398B.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 10-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692632" data-concern="308132651" data-rip="178692632"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/8EBCB84B-E52C-47C4-8F76-ABB8C4195E31.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 10-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:10,picture count: 2,concern Id: 308132651) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>11) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">The ridge cap on the garage roof needs replaced now.
+<br><br><b>Seller Comments</b> Fix replace shingles $s70
+<div class="pictureRow"><figure class="col2" id="pc_178692650" data-concern="308132653" data-rip="178692650"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/B614781E-E52A-4EC1-9287-84CA2D51D60B.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 11-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692651" data-concern="308132653" data-rip="178692651"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/ABD29E92-ABF1-4AEB-8C30-86F230932629.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 11-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:11,picture count: 2,concern Id: 308132653) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>12) </b><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0007.gif" style="margin:0 1px;" alt="">The garage vehicle door was difficult to open or close. Vehicle doors should open and close smoothly and easily. A qualified person should evaluate and repair as necessary. This may require lubrication or repair to hardware such as rollers or brackets.
+<br><br><b>Seller Comments</b> No remedy offered
+<div class="pictureRow"><figure class="col2" id="pc_178692660" data-concern="308132647" data-rip="178692660"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/3E44DA12-28D6-4220-8342-683C3D212DDA.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 12-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692661" data-concern="308132647" data-rip="178692661"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/26709B3A-92D6-41DC-9527-1924485C826B.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 12-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:12,picture count: 2,concern Id: 308132647) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>13) </b><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">The wood siding is in need of repair, and painting
+<br><br><b>Seller Comments</b> No remedy offered
+<div class="pictureRow"><figure class="col2" id="pc_178692629" data-concern="308132652" data-rip="178692629"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/39903948-3DD6-4F0C-BDA9-CB7B93C994B9.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 13-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692630" data-concern="308132652" data-rip="178692630"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/DEB981B5-62EE-42B1-9BB8-6BE2FABD7FDF.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 13-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:13,picture count: 2,concern Id: 308132652) -->
+<div class="pictureRow"><figure class="col2" id="pc_178692633" data-concern="308132652" data-rip="178692633"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/F36CB54A-276E-4E73-9066-DD02F6529E79.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 13-3</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692634" data-concern="308132652" data-rip="178692634"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/7272790C-872D-4580-88D8-A7C63C093C9B.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 13-4</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:13,picture count: 4,concern Id: 308132652) -->
+<div class="pictureRow"><figure class="col2" id="pc_178692635" data-concern="308132652" data-rip="178692635"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/33F74EAE-5474-45E5-B666-2B06E2AF3F4C.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 13-5</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 5,concernId: 308132652) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>14) </b>&nbsp;The garage does have a slight lean to it, this is a structure concern and a contractor should evaluate and if repairs are needed
+<br><br><b>Seller Comments</b> No remedy offered
+</div>
+</section><!-- eo-Garage-->
+<section class="section" id="Electric">
+<div class="sectionTitle"><span class="bigger2"><u>Electric</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The following items are not included in this inspection: generator systems, transfer switches, surge suppressors, inaccessible or concealed wiring; underground utilities and systems; low-voltage lighting or lighting on timers or sensors. Any comments made regarding these items are as a courtesy only. Note that the inspector does not determine the adequacy of grounding or bonding, if this system has an adequate capacity for the client's specific or anticipated needs, or if this system has any reserve capacity for additions or expansion. The inspector does not operate circuit breakers as part of the inspection, and does not install or change light bulbs. The inspector does not evaluate every wall switch or receptacle, but instead tests a representative number of them per various standards of practice. When furnishings, stored items or child-protective caps are present some receptacles are usually inaccessible and are not tested; these are excluded from this inspection. Receptacles that are not of standard 110 volt configuration, including 240-volt dryer receptacles, are not tested and are excluded. The functionality of, power source for and placement of smoke and carbon monoxide alarms is not determined as part of this inspection. Upon taking occupancy, proper operating and placement of smoke and carbon monoxide alarms should be verified and batteries should be changed. These devices have a limited lifespan and should be replaced every 10 years. The inspector attempts to locate and evaluate all main and sub-panels. However, panels are often concealed. If panels are found after the inspection, a qualified electrician should evaluate and repair if necessary. The inspector attempts to determine the overall electrical service size, but such estimates are not guaranteed because the overall capacity may be diminished by lesser-rated components in the system. Any repairs recommended should be made by a licensed electrician.</div>
+<div class="rptDsc"><b>Electric service condition: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Primary service type: </b>Overhead</div>
+<div class="rptDsc"><b>Number of service conductors: </b>2</div>
+<div class="rptDsc"><b>Service voltage (volts): </b>120-240</div>
+<div class="rptDsc"><b>Estimated service amperage: </b>100</div>
+<div class="rptDsc"><b>Primary service overload protection type: </b>Circuit breakers</div>
+<div class="rptDsc"><b>Service entrance conductor material: </b>Stranded copper</div>
+<div class="rptDsc"><b>Main disconnect rating (amps): </b>100</div>
+<div class="rptDsc"><b>System ground: </b>Ground rod(s) in soil</div>
+<div class="rptDsc"><b>Condition of main service panel: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Location of main service panel #A: </b>Basement</div>
+<div class="rptDsc"><b>Location of main disconnect: </b>Breaker at top of main service panel, top left row of breakers</div>
+<div class="rptDsc"><b>Condition of branch circuit wiring: </b>Serviceable</div>
+<div class="rptDsc"><b>Branch circuit wiring type: </b>non-metallic sheathed, copper</div>
+<div class="rptDsc"><b>Solid strand aluminum branch circuit wiring present: </b>None visible</div>
+<div class="rptDsc"><b>Ground fault circuit interrupter (GFCI) protection present: </b>No</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>15) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0007.gif" style="margin:0 1px;" alt="">One or more ground fault circuit interrupter (GFCI) devices protecting receptacles at the exterior wouldn't trip when tested and/or wouldn't trip with a test instrument. This is a potential shock hazard. Recommend that a qualified electrician evaluate and repair as necessary.
+</div>
+<br><br><b>Seller Comments</b> Fix replace outlet
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>16) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0007.gif" style="margin:0 1px;" alt="">One or more electric receptacles at the basement had no visible ground fault circuit interrupter (GFCI) protection, or the inspector was unable to determine if GFCI protection was present. If not GFCI-protected, receptacles in wet areas pose a shock hazard. Recommend that a qualified electrician evaluate and install GFCI protection if necessary and per standard building practices. General guidelines for GFCI-protected receptacles include the following locations:<ul><li>Outdoors (since 1973) </li><li>Bathrooms (since 1975) </li><li>Garages  (since 1978) </li><li>Kitchens (since 1987) </li><li>Crawl spaces and unfinished basements (since 1990) </li><li>Wet bar sinks (since 1993) </li><li>Laundry and utility sinks (since 2005) </li></ul>For more information, visit:<br><a href="https://www.reporthost.com/?GFCI" target="_blank" class="forceWrap">https://www.reporthost.com/?GFCI</a>
+</div>
+<br><br><b>Seller Comments</b> Fix replace outlet
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>17) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">One receptacle on the outside back of the house was broken or damaged, the cover was missing and the GFCI outlet was not grounded so it was not working as should. This is a potential shock or fire hazard. Recommend that a qualified electrician replace such receptacles as necessary.
+<br><br><b>Seller Comments</b> Fix replace outlet
+<div class="pictureRow"><figure class="col2" id="pc_178692621" data-concern="308134785" data-rip="178692621"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/593838A3-6B0A-4386-8FC8-6FC4B7C611FC.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 17-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692622" data-concern="308134785" data-rip="178692622"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/C6412B54-9EEA-4DA5-AF45-5C01F884EEF7.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 17-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:17,picture count: 2,concern Id: 308134785) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>18) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">Smoke alarms were missing from one or more bedrooms and/or on one or more levels. Smoke alarms should be installed as necessary so a functioning alarm exists in each hallway leading to bedrooms, in each bedroom and on each level. For more information, visit:<br><a href="https://www.reporthost.com/?SMKALRM" target="_blank" class="forceWrap">https://www.reporthost.com/?SMKALRM</a>
+<br><br><b>Seller Comments</b> Fix Put smoke alarms in bedrooms/hallway
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>19) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">A junction box in the basement over the laundry ceiling area is missing knock outs, these boxes are meant to be completely sealed to help prevent fires
+<br><br><b>Seller Comments</b> Fix buy new junction box
+<div class="pictureRow"><figure class="col2" id="pc_178725243" data-concern="308134790" data-rip="178725243"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/E41EEC80-27A1-467E-97F3-0FB8B59FD3D3.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 19-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308134790) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>20) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">The front main panel is missing a screw, theses screws should only be blunt tipped, and this box is meant to be sealed tp help prevent fires
+<br><br><b>Seller Comments</b> Fix add screw
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>21) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">Carbon monoxide alarms were missing from one or more sleeping areas and/or on one or more levels. This is a potential safety hazard. Some states and/or municipalities require CO alarms to be installed in the vicinity of each sleeping area, on each level and in accordance with the manufacturer's recommendations. Recommend installing additional carbon monoxide alarms per these standards. For more information, visit:<br><a href="https://www.reporthost.com/?COALRM" target="_blank" class="forceWrap">https://www.reporthost.com/?COALRM</a>
+<br><br><b>Seller Comments</b> Fix add carbon monoxide alarms to bedrooms
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>22) </b><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0007.gif" style="margin:0 1px;" alt="">The legend for circuit breakers or fuses in panel(s) #A was missing, incomplete, illegible or confusing. This is a potential shock or fire hazard in the event of an emergency when power needs to be turned off. Recommend correcting the legend so it's accurate, complete and legible. Evaluation by a qualified electrician may be necessary.
+<br><br><b>Seller Comments</b> Fix correct labeling
+<div class="pictureRow"><figure class="col2" id="pc_178725194" data-concern="308134780" data-rip="178725194"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/50DF596D-884E-4CCD-8C3A-23274A1D255F.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 22-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308134780) -->
+</div>
+</section><!-- eo-Electric-->
+<section class="section" id="Plumbing/FuelSystems">
+<div class="sectionTitle"><span class="bigger2"><u>Plumbing / Fuel Systems</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The following items are not included in this inspection: private/shared wells and related equipment; private sewage disposal systems; hot tubs or spas; main, side and lateral sewer lines; gray water systems; pressure boosting systems; trap primers; incinerating or composting toilets; fire suppression systems; water softeners, conditioners or filtering systems; plumbing components concealed within the foundation or building structure, or in inaccessible areas such as below tubs; underground utilities and systems; overflow drains for tubs and sinks; backflow prevention devices. Any comments made regarding these items are as a courtesy only. Note that the inspector does not operate water supply or shut-off valves due to the possibility of valves leaking or breaking when operated. The inspector does not test for lead in the water supply, the water pipes or solder, does not determine if plumbing and fuel lines are adequately sized, and does not determine the existence or condition of underground or above-ground fuel tanks.</div>
+<div class="rptDsc"><b>Condition of service and main line: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Water service: </b>Public</div>
+<div class="rptDsc"><b>Water pressure (psi): </b>48 psi</div>
+<div class="rptDsc"><b>Location of main water shut-off: </b>Basement</div>
+<div class="rptDsc"><b>Condition of supply lines: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Supply pipe material: </b>Copper</div>
+<div class="rptDsc"><b>Condition of drain pipes: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Drain pipe material: </b>Plastic</div>
+<div class="rptDsc"><b>Condition of waste lines: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Waste pipe material: </b>Plastic</div>
+<div class="rptDsc"><b>Vent pipe condition: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Vent pipe material: </b>Plastic</div>
+<div class="rptDsc"><b>Sump pump installed: </b>None visible</div>
+<div class="rptDsc"><b>Sewage ejector pump installed: </b>None visible</div>
+<div class="rptDsc"><b>Condition of fuel system: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Location of main fuel shut-off valve: </b>At gas meter</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>23) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">No sediment trap was installed in the gas supply line at the furnace, water heater and/or clothes dryer. Sediment traps prevent damage to gas-fired appliances by trapping oil, scale, water condensation and/or debris. Recommend that a qualified contractor install a sediment trap per standard building practices.
+<br><br><b>Seller Comments</b> No remedy offered.
+<div class="pictureRow"><figure class="col2" id="pc_178725200" data-concern="308135338" data-rip="178725200"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/833940E0-BC30-4569-BA4A-25E7658EAEDF.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 23-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308135338) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>24) </b><img src="https://www.reporthost.com/_icons/ic0007.gif" style="margin:0 1px;" alt="">A water softener system was installed on the premises. These are specialty systems and are excluded from this inspection. Comments in this report related to this system are made as a courtesy only and are not meant to be a substitute for a full evaluation by a qualified specialist. Water softeners typically work by removing unwanted minerals (e.g. calcium, magnesium) from the water supply. They prevent build-up of scale inside water supply pipes, improve lathering while washing, and prevent spots on dishes. Recommend consulting with the property owner about this system to determine its condition, required maintenance, age, expected remaining life, etc. For more information, visit:<br><a href="https://www.reporthost.com/?WTRSFT" target="_blank" class="forceWrap">https://www.reporthost.com/?WTRSFT</a><br><a href="https://www.reporthost.com/?HRDWTR" target="_blank" class="forceWrap">https://www.reporthost.com/?HRDWTR</a><br>
+<br><br><b>Seller Comments</b> System is less than 2 years old and contains three different bypasses alowing you to bypass the filter, softener, or both. incase you have any issues.
+<div class="pictureRow"><figure class="col2" id="pc_178725195" data-concern="308135321" data-rip="178725195"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/CFAA2237-D21C-4B50-9F07-F870FD44A44A.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 24-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308135321) -->
+</div>
+</section><!-- eo-Plumbing / Fuel Systems-->
+<section class="section" id="WaterHeater">
+<div class="sectionTitle"><span class="bigger2"><u>Water Heater</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>Evaluation of and determining the adequacy or completeness of the following items are not included in this inspection: water recirculation pumps; solar water heating systems; Energy Smart or energy saver controls; catch pan drains. Any comments made regarding these items are as a courtesy only. <z id="heater-note" style="background-color:yellow">Note that the inspector does not provide an estimate of remaining life on water heaters</z>, does not determine if water heaters are appropriately sized, or perform any evaluations that require a pilot light to be lit or a shut-off valve to be operated.</div>
+<div class="rptDsc"><b>Condition of water heater: </b>Near, at or beyond service life</div>
+<div class="rptDsc"><b>Type: </b>Tank</div>
+<div class="rptDsc"><b>Energy source: </b>Natural gas</div>
+<div class="rptDsc"><b>Estimated age: </b>built in 1993 - 28 years old</div>
+<div class="rptDsc"><b>Capacity (in gallons): </b>40</div>
+<div class="rptDsc"><b>Temperature-pressure relief valve installed: </b>Yes</div>
+<div class="rptDsc"><b>Location of water heater: </b>Utility room, Basement</div>
+<div class="rptDsc"><b>Condition of burners: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Condition of venting system: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>25) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0005.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0010.gif" style="margin:0 1px;" alt="">The estimated useful life for most water heaters is 8-12 years. This water heater appeared to be beyond this age and/or its useful lifespan and may need replacing at any time. Recommend budgeting for a replacement in the near future, or considering replacement now before any leaks occur. The client should be aware that significant flooding can occur if the water heater fails. If not replaced now, consider having a qualified person install a catch pan and drain or a water alarm to help prevent damage if water does leak.<br><br>A 1993, gas fired, 40 gallon tank Richmond water heater with a model #7K4OS and a serial #RCN 0593107232 was installed and working at the time of my inspection, but needing repaired or replaced
+<div class="pictureRow"><figure class="col2" id="pc_178725197" data-concern="308137943" data-rip="178725197"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/46C5946D-EB35-4501-99CA-0D7E8996D32B.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 25-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308137943) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>26) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0007.gif" style="margin:0 1px;" alt="">Scorch marks were visible on the water heater casing above or around the combustion chamber opening. This may be a sign of a loose or missing inner flame sheild, improper venting, an improperly positioned burner, or other problems. Recommend that a qualified contractor evaluate and repair if necessary.
+<div class="pictureRow"><figure class="col2" id="pc_178725201" data-concern="308137946" data-rip="178725201"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/C11A8D17-BBE0-41C1-9F25-D8855D94091B.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 26-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308137946) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>27) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">The draft hood for the water heater flue was loose. This is a potential safety hazard due to the risk of exhaust gases entering living spaces. A qualified person should permanently secure the draft hood with appropriate fasteners per standard building practices.
+<div class="pictureRow"><figure class="col2" id="pc_178725199" data-concern="308137948" data-rip="178725199"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/C7B42BCE-7047-4571-83C9-D211540D7202.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 27-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308137948) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>28) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">No water shut-off valve was visible for the water heater. A shut-off valve allows the water supply to be turned off when the water heater needs repair or replacement, while allowing the remainder of the plumbing system to be operable (e.g. toilets, sinks). Recommend that a qualified plumber install a local shut-off valve per standard building practices.
+</div>
+</section><!-- eo-Water Heater-->
+<section class="section" id="Heating,VentilationandAirCondition(HVAC)">
+<div class="sectionTitle"><span class="bigger2"><u>Heating, Ventilation and Air Condition (HVAC)</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The following items are not included in this inspection: humidifiers, dehumidifiers, electronic air filters; solar, coal or wood-fired heat systems; thermostat or temperature control accuracy and timed functions; heating components concealed within the building structure or in inaccessible areas; underground utilities and systems; safety devices and controls (due to automatic operation). Any comments made regarding these items are as a courtesy only. Note that the inspector does not provide an estimate of remaining life on heating or cooling system components, does not determine if heating or cooling systems are appropriately sized, does not test coolant pressure, or perform any evaluations that require a pilot light to be lit, a shut-off valve to be operated, a circuit breaker to be turned "on" or a serviceman's or oil emergency switch to be operated. It is beyond the scope of this inspection to determine if furnace heat exchangers are intact and free of leaks. Condensation pans and drain lines may clog or leak at any time and should be monitored while in operation in the future. Where buildings contain furnishings or stored items, the inspector may not be able to verify that a heat source is present in all "liveable" rooms (e.g. bedrooms, kitchens and living/dining rooms).</div>
+<div class="rptDsc"><b>General heating system type(s): </b>Forced air, Furnace</div>
+<div class="rptDsc"><b>General heating distribution type(s): </b>Ducts and registers</div>
+<div class="rptDsc"><b>Condition of forced air heating/(cooling) system: </b>Near, at or beyond service life</div>
+<div class="rptDsc"><b>Forced air heating system fuel type: </b>Natural gas</div>
+<div class="rptDsc"><b>Estimated age of forced air furnace: </b>built in 1998 - 23 years old</div>
+<div class="rptDsc"><b>Location of forced air furnace: </b>Utility room, Basement</div>
+<div class="rptDsc"><b>Forced air system capacity in BTUs or kilowatts: </b>80,000 BTUs in - 74,000 BTUs out</div>
+<div class="rptDsc"><b>Condition of furnace filters: </b>Appeared serviceable, filter size is 16x20x1</div>
+<div class="rptDsc"><b>Location for forced air filter(s): </b>At end of air handler</div>
+<div class="rptDsc"><b>Condition of forced air ducts and registers: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of burners: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Type of combustion air supply: </b>Intake duct, Vent(s) to exterior</div>
+<div class="rptDsc"><b>Condition of venting system: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of cooling system and/or heat pump: </b>Near, at or beyond service life</div>
+<div class="rptDsc"><b>Cooling system and/or heat pump fuel type: </b>Electric</div>
+<div class="rptDsc"><b>Location of heat pump or air conditioning unit: </b>Building exterior, north</div>
+<div class="rptDsc"><b>Type: </b>Split system</div>
+<div class="rptDsc"><b>Condition of controls: </b>Appeared serviceable</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>29) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0007.gif" style="margin:0 1px;" alt="">The last service date of the gas or oil-fired forced air furnace appeared to be more than 1 year ago, or the inspector was unable to determine the last service date. Ask the property owner when it was last serviced. If unable to determine the last service date, or if this system was serviced more than 1 year ago, recommend that a qualified HVAC contractor inspect, clean, and service this system, and make repairs if necessary. For safety reasons, and because this system is fueled by gas or oil, this servicing should be performed annually in the future. Any needed repairs noted in this report should be brought to the attention of the HVAC contractor when it's serviced. For more information visit:<br><a href="https://www.reporthost.com/?ANFURINSP" target="_blank" class="forceWrap">https://www.reporthost.com/?ANFURINSP</a>
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>30) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0007.gif" style="margin:0 1px;" alt="">Because of the age and/or condition of the forced air furnace, recommend that a qualified HVAC contractor inspect the heat exchanger and perform a carbon monoxide test when it's serviced. Note that these tests are beyond the scope of a standard home inspection.
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>31) </b><img src="https://www.reporthost.com/_icons/ic0002.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0010.gif" style="margin:0 1px;" alt="">The estimated useful life for most forced air furnaces is 15-20 years. This furnace appeared to be beyond this age and/or its useful lifespan and may need replacing or significant repairs at any time. Recommend budgeting for a replacement in the near future.<br><br>A 1998, gas fired, forced air Carrier furnace with a model #58MCA080 - 12 and a serial #3498A00257 was installed and working at the time of my inspection
+<div class="pictureRow"><figure class="col2" id="pc_178725198" data-concern="308139919" data-rip="178725198"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/82C9ABC4-CBBE-4B5D-AB3F-0DF6F8910914.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 31-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308139919) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>32) </b><img src="https://www.reporthost.com/_icons/ic0002.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0010.gif" style="margin:0 1px;" alt="">The estimated useful life for most heat pumps and air conditioning condensing units is 10-15 years. This unit appeared to be beyond this age and/or its useful lifespan and may need replacing or significant repairs at any time. Recommend budgeting for a replacement in the near future.<br><br>A 1995, electric, Lennox central air conditioner with a model #12ACBB24 - 2P and a serial #5895K38078 was installed and working at the time of my inspection
+<div class="pictureRow"><figure class="col2" id="pc_178692641" data-concern="308139933" data-rip="178692641"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/F4B6C54E-4DC5-4CEA-9032-2691C2A036D3.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 32-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308139933) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>33) </b><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">Insulation on the heat pump or air conditioning condensing unit's refrigerant lines was deteriorated or missing in some areas. This may result in reduced efficiency and increased energy costs. Recommend that a qualified person replace or install insulation as necessary.
+<div class="pictureRow"><figure class="col2" id="pc_178692645" data-concern="308139934" data-rip="178692645"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/1CE22262-2FF5-498F-8096-F66C574FA034.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 33-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692646" data-concern="308139934" data-rip="178692646"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/A6E2C196-6369-46A3-8223-5A9D41EFC2EA.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 33-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:33,picture count: 2,concern Id: 308139934) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>34) </b><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">The whole house fan didn't have an insulated cover, or the insulation was substandard. Whole house fans are usually shut down during cooler months when they're not needed. Normally an insulated cover is installed over the fan in the attic to prevent warm interior air from entering the attic. Recommend that a qualified person install an insulated cover per standard building practices. For more information, visit:<br><a href="https://www.reporthost.com/?FANINS" target="_blank" class="forceWrap">https://www.reporthost.com/?FANINS</a>
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>35) </b><img src="https://www.reporthost.com/_icons/ic0006.gif" style="margin:0 1px;" alt="">Recommend that home buyers replace or clean HVAC filters upon taking occupancy depending on the type of filters installed. Regardless of the type, recommend checking filters monthly in the future and replacing or cleaning them as necessary. How frequently they need replacing or cleaning depends on the type and quality of the filter, how the system is configured (e.g. always on vs. "Auto"), and on environmental factors (e.g. pets, smoking, frequency of house cleaning, number of occupants, the season).
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>36) </b><img src="https://www.reporthost.com/_icons/ic0006.gif" style="margin:0 1px;" alt="">The cooling fins at the air handler evaporator coils were dirty. Recommend that a qualified person clean fins as necessary.
+<div class="pictureRow"><figure class="col2" id="pc_178692642" data-concern="308139935" data-rip="178692642"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/C70681FC-2726-43C2-B6C9-5F59B3493F14.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 36-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692643" data-concern="308139935" data-rip="178692643"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/5B088CD3-FF97-4D24-A8EA-E3968F066202.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 36-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:36,picture count: 2,concern Id: 308139935) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>37) </b><img src="https://www.reporthost.com/_icons/ic0010.gif" style="margin:0 1px;" alt="">A whole house fan was installed. These fans provide cooling for interior spaces by blowing hot interior air up into the attic and out through attic vents, and by drawing cooler air in from the outside through open windows. They are intented to operate only when the outside temperature is cooler than inside. Multiple windows should be opened to equal or exceed 3 times the area of the fan opening. If air conditioning is installed it should not be operated while the whole house fan is operated. These fans do not dehumidify. They may be noisy during operation.<br><br>In some cases, additional attic venting is required for whole house fans to allow blown air to exit the attic. Attic vents should be kept clear at all times. Inadequate attic venting may result in attic air blowing through ceiling penetrations such as lights, or down through wall framing. It's beyond the scope of a home inspection to determine if attic venting is adequate. If concernced, review the fan's documentation and/or consult with a qualified contractor.<br><br>Be aware of safety issues related to whole house fans. Injury can occur if people come in contact with fan blades or belts. Louvers should always be open and the area above the fan should be unobstructed during operation, otherwise the fan may overheat and pose a fire hazard. Items should never be stored on top of the fan. Negative interior air pressure can cause gas-fired appliances such as water heaters and clothes dryers to backdraft, or cause flame rollout or pilot lights to blow out. Carbon monoxide and/or fire hazards may result. Children should never be allowed to operate whole house fans.<br><br>Whole house fans should be shut down during cooler months when not needed. This includes installing an insulated cover over the fan and turning power off to the the fan.<br><br>The client should be aware that some routine maintenance is required for whole house fans such as lubrication, and tightening or replacing belts cleaning. Consult with a heating and cooling specialist on this. Note also that motors and other components have a limited lifespan.<br><br>For more information visit:<br><a href="https://www.reporthost.com/?WHFAN" target="_blank" class="forceWrap">https://www.reporthost.com/?WHFAN</a>
+</div>
+</section><!-- eo-Heating, Ventilation and Air Condition (HVAC)-->
+<section class="section" id="Kitchen">
+<div class="sectionTitle"><span class="bigger2"><u>Kitchen</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The following items are not included in this inspection: household appliances such as stoves, ovens, cook tops, ranges, warming ovens, griddles, broilers, dishwashers, trash compactors, refrigerators, freezers, ice makers, hot water dispensers and water filters; appliance timers, clocks, cook functions, self and/or continuous cleaning operations, thermostat or temperature control accuracy, and lights. Any comments made regarding these items are as a courtesy only. Note that the inspector does not provide an estimate of the remaining life of appliances, and does not determine the adequacy of operation of appliances. The inspector does not note appliance manufacturers, models or serial numbers and does not determine if appliances are subject to recalls. Areas and components behind and obscured by appliances are inaccessible and excluded from this inspection.</div>
+<div class="rptDsc"><b>Condition of counters: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of cabinets: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of sinks and related plumbing: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of under-sink food disposal: </b>N/A (none installed)</div>
+<div class="rptDsc"><b>Condition of dishwasher: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of ranges, cooktops and/or ovens: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Range, cooktop, oven type: </b>Natural gas, Electronic ignition</div>
+<div class="rptDsc"><b>Type of ventilation: </b>Hood or built into microwave over range or cooktop</div>
+<div class="rptDsc"><b>Condition of refrigerator: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of built-in microwave oven: </b>Appeared serviceable</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>38) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0007.gif" style="margin:0 1px;" alt="">The exhaust fan over the range recirculated the exhaust air back into the kitchen. This may be due to no duct being installed, baffles not being installed, or problems with duct work. This can be a nuisance for odor and grease accumulation. Where a gas-fired range or cook top is installed, carbon monoxide and excessive levels of moisture can accumulate in living spaces. Recommend that a qualified contractor evaluate and repair as necessary so exhaust air is ducted outdoors.
+<div class="pictureRow"><figure class="col2" id="pc_178692656" data-concern="308140278" data-rip="178692656"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/1BC5DE57-1D1B-41B2-8BF6-58D31CE5151C.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 38-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308140278) -->
+</div>
+</section><!-- eo-Kitchen-->
+<section class="section" id="Bathrooms,LaundryandSinks">
+<div class="sectionTitle"><span class="bigger2"><u>Bathrooms, Laundry and Sinks</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The following items are not included in this inspection: overflow drains for tubs and sinks; heated towel racks, saunas, steam generators, clothes washers, clothes dryers.  Any comments made regarding these items are as a courtesy only. Note that the inspector does not determine the adequacy of washing machine drain lines, washing machine catch pan drain lines, or clothes dryer exhaust ducts. The inspector does not operate water supply or shut-off valves for sinks, toilets, bidets, clothes washers, etc. due to the possibility of valves leaking or breaking when operated. The inspector does not determine if shower pans or tub and shower enclosures are water tight, or determine the completeness or operability of any gas piping to laundry appliances.</div>
+<div class="rptDsc"><b>Location #A: </b>3/4 bath, first floor</div>
+<div class="rptDsc"><b>Location #B: </b>3/4 bath, second floor</div>
+<div class="rptDsc"><b>Location #C: </b>Laundry room/area, basement</div>
+<div class="rptDsc"><b>Condition of counters: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of cabinets: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of flooring: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of sinks and related plumbing: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of toilets: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Condition of bathtubs and related plumbing: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Condition of shower(s) and related plumbing: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of ventilation systems: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Bathroom and laundry ventilation type: </b>Spot exhaust fans</div>
+<div class="rptDsc"><b>Gas supply for laundry equipment present: </b>Yes</div>
+<div class="rptDsc"><b>240 volt receptacle for laundry equipment present: </b>Yes</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>39) </b><img src="https://www.reporthost.com/_icons/ic0001.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">cloths dryer vent needs cleaned
+<div class="pictureRow"><figure class="col2" id="pc_178692624" data-concern="308142292" data-rip="178692624"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/7E5C83CB-5A18-40AF-A5C3-1A05B92DED4D.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 39-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308142292) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>40) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">One or more bathtub faucet handles at location(s) #B were very corroded. Recommend that a qualified person repair or replace handles as necessary.
+<div class="pictureRow"><figure class="col2" id="pc_178725207" data-concern="308142284" data-rip="178725207"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/48554848-6CF1-46F2-84D9-1CAC0EB84757.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 40-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308142284) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>41) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">The exhaust fan at location(s) #A and B was weak or slow. Moisture may accumulate and result in mold, bacteria or fungal growth. Recommend that a qualified person clean, repair or replace fans as necessary.
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>42) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">The second floor bath vents openly into the attic space, this creates a high level of moister in the attic space and a environment for mold and mildew to grow
+<div class="pictureRow"><figure class="col2" id="pc_178725217" data-concern="308142291" data-rip="178725217"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/85E2C09A-EF4B-457E-AB5B-CCDB1AB50714.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 42-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308142291) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>43) </b><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">Caulk around the base of the toilet at location(s) # was missing, substandard and/or deteriorated. Modern standards require caulk to be installed around the entire toilet base where it meets the floor for sanitary reasons. Without it, soiled water can soak into flooring and sub-floor materials if the toilet overflows. Condensation from the toilet can also soak into the flooring. Recommend that a qualified person caulk around toilet bases per standard building practices.
+<div class="pictureRow"><figure class="col2" id="pc_178725206" data-concern="308142281" data-rip="178725206"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/5AE28C9B-867D-42BD-9DF8-A84C5169E8DD.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 43-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308142281) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>44) </b><img src="https://www.reporthost.com/_icons/ic0010.gif" style="margin:0 1px;" alt="">The sink at location(s) #C was worn, blemished or deteriorated.
+<div class="pictureRow"><figure class="col2" id="pc_178692663" data-concern="308142279" data-rip="178692663"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/CD7D5DF9-2FED-4FED-A214-031DD355C19D.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 44-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308142279) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>45) </b><img src="https://www.reporthost.com/_icons/ic0010.gif" style="margin:0 1px;" alt="">The bathtub at location(s) #B was worn, blemished or deteriorated.
+</div>
+</section><!-- eo-Bathrooms, Laundry and Sinks-->
+<section class="section" id="Interior,DoorsandWindows">
+<div class="sectionTitle"><span class="bigger2"><u>Interior, Doors and Windows</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>The following items are not included in this inspection: security, intercom and sound systems; communications wiring; central vacuum systems; elevators and stair lifts; cosmetic deficiencies such as nail-pops, scuff marks, dents, dings, blemishes or issues due to normal wear and tear in wall, floor and ceiling surfaces and coverings, or in equipment; deficiencies relating to interior decorating; low voltage and gas lighting systems. Any comments made regarding these items are as a courtesy only. Note that the inspector does not evaluate any areas or items which require moving stored items, furnishings, debris, equipment, floor coverings, insulation or similar materials. The inspector does not test for asbestos, lead, radon, mold, hazardous waste, urea formaldehyde urethane, or any other toxic substance. Some items such as window, drawer, cabinet door or closet door operability are tested on a sampled basis. The client should be aware that paint may obscure wall and ceiling defects, floor coverings may obscure floor defects, and furnishings may obscure wall, floor and floor covering defects. If furnishings were present during the inspection, recommend a full evaluation of walls, floors and ceilings that were previously obscured when possible. Carpeting and flooring, when installed over concrete slabs, may conceal moisture. If dampness wicks through a slab and is hidden by floor coverings that moisture can result in unhygienic conditions, odors or problems that will only be discovered when/if the flooring is removed. Determining the cause and/or source of odors is not within the scope of this inspection.</div>
+<div class="rptDsc"><b>Condition of exterior entry doors: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Exterior door material: </b>Wood, Metal</div>
+<div class="rptDsc"><b>Condition of interior doors: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of windows and skylights: </b>Required repair, replacement and/or evaluation (see comments below)</div>
+<div class="rptDsc"><b>Type(s) of windows: </b>Vinyl, Wood, Multi-pane, Single-pane, Single-hung, Double-hung</div>
+<div class="rptDsc"><b>Condition of walls and ceilings: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Condition of flooring: </b>Appeared serviceable</div>
+<div class="rptDsc"><b>Flooring type or covering: </b>Carpet, Vinyl, linoleum or marmoleum, Wood or wood products, Tile</div>
+<div class="rptDsc"><b>Condition of stairs, handrails and guardrails: </b>Appeared serviceable</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>46) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt=""><img src="https://www.reporthost.com/_icons/ic0010.gif" style="margin:0 1px;" alt="">One or more hinged exterior doors had no deadbolt lock installed and relied solely on the entry lockset for security. Recommend installing locksets on exterior doors where missing for added security.
+<div class="pictureRow"><figure class="col2" id="pc_178692652" data-concern="308146961" data-rip="178692652"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/59814F96-114B-4BCA-8D02-48163B5AA521.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 46-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178692653" data-concern="308146961" data-rip="178692653"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/8C9BCC7D-8C4C-46E9-8030-BB4AB33A9117.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 46-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:46,picture count: 2,concern Id: 308146961) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>47) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">One or more windows that were designed to open and close were stuck shut. Recommend that a qualified person repair windows as necessary so they open and close easily.<br><br>The two windows at the top of the stair case is sealed shut
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>48) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">Glass in one or more windows was cracked, broken and/or missing. Recommend that a qualified contractor replace glass where necessary.<br><br>The wooden windows on the second floor and in the dinning room needs glazing repaired, and painted.
+<div class="pictureRow"><figure class="col2" id="pc_178692648" data-concern="308146967" data-rip="178692648"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/ECA91380-B9C7-4EA8-A7EA-9EE828029C24.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 48-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178725203" data-concern="308146967" data-rip="178725203"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/96E01AD4-74B4-476B-BE33-E44D6702E98A.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 48-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:48,picture count: 2,concern Id: 308146967) -->
+<div class="pictureRow"><figure class="col2" id="pc_178725208" data-concern="308146967" data-rip="178725208"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/136B8F5B-6562-45C6-AB83-D21A4E8E789B.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 48-3</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178725210" data-concern="308146967" data-rip="178725210"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/1937251A-8B13-4143-9020-912E3E4A116B.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 48-4</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:48,picture count: 4,concern Id: 308146967) -->
+<div class="pictureRow"><figure class="col2" id="pc_178725240" data-concern="308146967" data-rip="178725240"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/0F536C96-7CBA-4FC2-8274-FB3A0DFD1A26.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 48-5</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 5,concernId: 308146967) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>49) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">One or more window screens were damaged or deteriorated. These window(s) may not provide ventilation during months when insects are active. Recommend replacing window screens as necessary.
+<div class="pictureRow"><figure class="col2" id="pc_178692647" data-concern="308146968" data-rip="178692647"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/63FE9D25-FAE1-487D-A870-F222ECDA51C0.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 49-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308146968) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>50) </b><img src="https://www.reporthost.com/_icons/ic0003.gif" style="margin:0 1px;" alt="">The window in the room/office at the top of the stairs had a broken pane of glass in the left sided window
+<div class="pictureRow"><figure class="col2" id="pc_178725205" data-concern="308146973" data-rip="178725205"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/FB35DDCB-85F2-4503-89F0-6C19294F4F2A.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 50-1</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 1,concernId: 308146973) -->
+</div>
+<div class="rptConc"> <!-- Begin report concern div -->
+<b>51) </b><img src="https://www.reporthost.com/_icons/ic0004.gif" style="margin:0 1px;" alt="">Lock mechanisms on one or more windows were missing. This can pose a security risk. Recommend that a qualified person repair as necessary.<br><br>All the wooden second floor and dinning room windows are missing or incomplete
+<div class="pictureRow"><figure class="col2" id="pc_178725202" data-concern="308146966" data-rip="178725202"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/F22F52B1-2C03-4361-A191-429E563260B8.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 51-1</span>&nbsp; </figcaption>
+</figure><figure class="col2" id="pc_178725204" data-concern="308146966" data-rip="178725204"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/57BAC8D3-02F3-4C32-BE76-D115E0D62734.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 51-2</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (concern:51,picture count: 2,concern Id: 308146966) -->
+<div class="pictureRow"><figure class="col2" id="pc_178725214" data-concern="308146966" data-rip="178725214"><img class="photo" src="https://www.reporthost.com/aandminspection/conroy20211008/B3E82394-F2ED-4962-BEC0-BBD288E6621E.jpg" alt="Photo"><br>
+<figcaption data-source="caption"><span class="photoNum">Photo 51-3</span>&nbsp; </figcaption>
+</figure></div><!-- End of picture row (picture counter: 3,concernId: 308146966) -->
+</div>
+</section><!-- eo-Interior, Doors and Windows-->
+<section class="section" id="WoodDestroyingOrganismFindings">
+<div class="sectionTitle"><span class="bigger2"><u>Wood Destroying Organism Findings</u></span><div style="float:right;"> <!--Begin right section controls div--><a href="#TOC" class="noPrint toc">Table of contents</a></div> <!--End right section controls div--></div>
+<div class="rptDsc mxLineDsc"><b>Limitations: </b>This report only includes findings from accessible and visible areas on the day of the inspection. In addition to the inaccessible areas documented in this report, examples of other inaccessible areas include: sub areas less than 18 inches in height; attic areas less than 5 feet in height, areas blocked by ducts, pipes or insulation; areas where locks or permanently attached covers prevent access; areas where insulation would be damaged if traversed; areas obscured by vegetation. All inaccessible areas are subject to infestation or damage from wood-destroying organisms. The inspector does not move furnishings, stored items, debris, floor or wall coverings, insulation, or other materials as part of the inspection, nor perform destructive testing. Wood-destroying organisms may infest, re-infest or become active at any time. No warranty is provided as part of this inspection.</div>
+<div class="rptDsc"><b>Visible evidence of active wood-destroying insects: </b>No</div>
+<div class="rptDsc"><b>Visible evidence of active wood decay fungi: </b>No</div>
+<div class="rptDsc"><b>Visible evidence of past wood-destroying insects: </b>No</div>
+<div class="rptDsc"><b>Visible evidence of past wood decay fungi: </b>No</div>
+<div class="rptDsc"><b>Visible evidence of damage by wood-destroying insects: </b>No</div>
+<div class="rptDsc"><b>Visible evidence of damage by wood decay fungi: </b>No</div>
+<div class="rptDsc"><b>Visible evidence of conditions conducive to wood-destroying organisms: </b>No</div>
+</section><!-- eo-Wood Destroying Organism Findings-->
+<hr class="rptmaj">
+This report is the exclusive property of this inspection company and the client(s) listed in the report title. Use of this report by any unauthorized persons is prohibited.
+</div> <!--End report div-->
+
+
+</body></html>

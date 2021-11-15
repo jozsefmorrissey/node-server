@@ -1,5 +1,6 @@
-var shell = require('shelljs')
-var cookieParser = require('cookie-parser')
+var shell = require('shelljs');
+var fs = require('fs');
+var cookieParser = require('cookie-parser');
 const DebugGuiClient = require('../debug-gui/public/js/debug-gui-client.js').DebugGuiClient;
 
 var failedAttempts = {};
@@ -10,11 +11,11 @@ function validate() {
       throw 'Ah Ah Ah you shouldn\'t have non-alphanumberic characters';
 }
 
-function clean (str) {
-  if (str === undefined) {
-    return "";
+function clean (value) {
+  if ((typeof value) !== 'string') {
+    return value;
   }
-  return str.replace('\'', '\\\'').trim();
+  return value.replace('\'', '\\\'').trim();
 }
 
 function cleanObj(obj) {
@@ -22,29 +23,48 @@ function cleanObj(obj) {
   const cleanObj = {};
   for (let index = 0; index < keys.length; index += 1) {
     const key = keys[index];
+    console.log('key:', key)
     cleanObj[key] = clean(obj[key]);
   }
   return cleanObj;
 }
 
-const LOCKED_OUT = 'You have exceeded the number of attempts. Sorry your account is locked';
-function lockout(group, errorCode) {
-  if (failedAttempts[group] <= 0){
-      throw new Error(LOCKED_OUT);
+function tokenPinErrorStr(token, pstPin) {
+  return `token=>${token}|pstPin=>${pstPin}`;
+}
+
+const LOCKED_OUT = (d) => `You have exceeded the number of attempts. Sorry your account is locked for ${Math.ceil((d.getTime() - new Date().getTime()) / (1000*60))} minutes`;
+function lockout(group, errorCode, errorStr) {
+  let count = failedAttempts[group] ? failedAttempts[group].count : undefined;
+  if (count !== undefined && count <= 0){
+      if (failedAttempts[group].lockoutExpirationDate < new Date()) {
+        failedAttempts[group] = undefined;
+        count = undefined;
+      } else {
+        throw new Error(LOCKED_OUT(failedAttempts[group].lockoutExpirationDate));
+      }
   }
   if (errorCode !== undefined) {
     if (errorCode !== 0) {
-      if (failedAttempts[group] === undefined) {
-        failedAttempts[group] = 5;
+      if (count === undefined) {
+        failedAttempts[group] = {count: 6, attempts: []};
       }
-      failedAttempts[group] -= 1;
-      if (failedAttempts[group] > 0) {
-        throw new Error(`Your not supposed to be here... You have ${failedAttempts[group]} tries left`);
+      const failures = failedAttempts[group];
+      if (errorStr === undefined || failures.attempts.indexOf(errorStr) === -1) {
+        failures.count -= 1;
+        count = failures.count;
+        const lockoutExpirationDate = new Date();
+        lockoutExpirationDate.setMinutes(lockoutExpirationDate.getMinutes() + 5);
+        failures.lockoutExpirationDate = lockoutExpirationDate;
+        failures.attempts.push(errorStr);
+      }
+      if (count > 0) {
+        throw new Error(`Your not supposed to be here... You have ${count} tries left`);
       } else {
-        throw new Error(LOCKED_OUT);
+        throw new Error(LOCKED_OUT(failedAttempts[group].lockoutExpirationDate));
       }
     }
-    failedAttempts[group] = undefined;
+    count = undefined;
   }
 }
 
@@ -72,7 +92,7 @@ function exicuteCmd(cmd, req) {
     }
 
     const returnValue = shell.exec(validateCmd, {silent: false});
-    lockout(clBody.group, returnValue.code)
+    lockout(clBody.group, returnValue.code, tokenPinErrorStr(clBody.token, clBody.pstPin))
     return returnValue;
   }
 }
@@ -142,6 +162,20 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
   parts.push(word);
   return mixUp(parts);
 }
+  app.post(prefix + '/validate/value', function(req, res, next) {
+    const clBody = cleanObj(req.body);
+    const cmd = `pst validateValue -group '${clBody.group}' -key '${clBody.key}' -value '${clBody.value}'`;
+    console.log(cmd)
+    const validated = shell.exec(cmd, {silent: false});
+    try {
+      lockout(clBody.group, validated.code, `${clBody.key}=>${clBody.value}`);
+      res.send('success');
+    } catch (e) {
+      res.statusMessage = e + "";
+      res.status(416);
+      res.send(e.msg);
+    }
+  });
 
   app.post(prefix + '/validate', function(req, res, next){
     debugValues(req, '/validate', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
@@ -150,7 +184,7 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
     console.log(cmd)
     const validated = shell.exec(cmd, {silent: false});
     try {
-      lockout(clBody.group, validated.code);
+      lockout(clBody.group, validated.code, tokenPinErrorStr(clBody.token, clBody.pstPin));
       res.send(validated);
     } catch (e) {
       res.statusMessage = e + "";
@@ -158,6 +192,65 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
       res.send(e.msg);
     }
   });
+
+  function saveLocation(group, name) {
+    return shell.exec(`realpath ~/.opsc/pst/js/${group}/${name}.json`,
+                {silent: true}).stdout.trim();
+  }
+
+  function valueValidated(group, key, value) {
+    if (key === 'token' || key === 'pstPin') return new Error('Cannot validate token or pstPin');
+    const cmd = `pst validateValue -group '${group}' -key '${key}' -value '${value}'`;
+    const output = shell.exec(cmd).replace('\n', '');
+    console.log(cmd);
+    const validated = shell.exec(cmd, {silent: false});
+    console.log('code', validated.code)
+    if (validated.code === 0) {
+      return true;
+    } else {
+      return new Error('Value did not match');
+    }
+  }
+
+  app.get(prefix + '/load/json/:group/:key', function (req, res) {
+    const key = req.params.key;
+    const group = req.params.group;
+    res.send(JSON.parse(fs.readFileSync(saveLocation(group, key))));
+  });
+
+  app.get(prefix + '/json/save/auth/:group/:key/:value', function (req, res){
+    const clBody = cleanObj(req.params);
+    const e = valueValidated(clBody.group, clBody.key, clBody.value);
+    if (e === true) {
+      console.log('truedat');
+      res.send('success');
+    } else {
+      console.log('falsedat');
+      res.statusMessage = e + "";
+      res.status(416);
+      res.send(e.msg);
+    }
+  });
+
+  app.post(prefix + '/save/json', function (req, res) {
+    const clBody = cleanObj(req.body);
+    const e = valueValidated(clBody.group, clBody.key, clBody.value);
+    if (e === true) {
+      const contents = JSON.stringify(clBody.json);
+      const fileLocation = saveLocation(clBody.group, clBody.key);
+
+      const dir = fileLocation.replace(/^(.*\/).*$/, '$1');
+      shell.mkdir('-p', dir);
+      shell.touch(fileLocation);
+      fs.writeFileSync(fileLocation, contents);
+      res.send('success');
+    } else {
+      res.statusMessage = e + "";
+      res.status(416);
+      res.send(e.msg);
+    }
+  });
+
 
   app.post(prefix + '/update', function(req, res){
     const clBody = cleanObj(req.body);

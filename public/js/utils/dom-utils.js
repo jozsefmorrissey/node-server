@@ -108,12 +108,13 @@ du.find.downInfo = function (selector, node, distance, leafSelector) {
       found = childRes.distance < found.distance ? childRes : found;
     }
   }
-  found.matches = matches;
+  found.matches = matches
+  found.list = matches.map((match) => match.node);
   return found;
 }
 
 du.find.down = function(selector, node) {return du.find.downInfo(selector, node).node};
-du.find.downAll = function(selector, node) {return du.find.downInfo(selector, node).matches};
+du.find.downAll = function(selector, node) {return du.find.downInfo(selector, node).list};
 
 du.find.closest = function(selector, node) {
   const visited = [];
@@ -222,6 +223,12 @@ du.on.match = function(event, selector, func, target) {
   // }
 }
 
+du.cookie.set = function(name, value) {
+  if (value instanceof Object) {
+    value = JSON.stringify(value);
+  }
+  document.cookie = `${name}=${value}`;
+}
 
 du.cookie.get = function(name, seperator) {
   const cookie = document.cookie.parseSeperator(';')[name];
@@ -237,14 +244,16 @@ du.cookie.get = function(name, seperator) {
   return obj;
 }
 
-
+let params;
 du.param.get = function(name) {
-  if (getParam.params === undefined) {
+  if (params === undefined) {
     const url = window.location.href;
     const paramStr = url.substr(url.indexOf('?') + 1);
-    getParam.params = paramStr.parseSeperator('&');
+    params = paramStr.parseSeperator('&');
   }
-  return decodeURI(getParam.params[name]);
+  const value = params[name];
+  if (value === undefined) return undefined;
+  return decodeURI(value);
 }
 
 du.style.temporary = function(elem, time, style) {

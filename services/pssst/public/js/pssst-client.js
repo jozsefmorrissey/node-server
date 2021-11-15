@@ -3,14 +3,28 @@ var Pssst;
 function PssstInit() {
   var getUrl = window.location.origin + '/pssst/get';
   var updateUrl = window.location.origin + '/pssst/update';
+  var validateValueUrl = window.location.origin + '/pssst/validate/value';
   var adminUpdateUrl = window.location.origin + '/pssst/admin/update';
   var removeUrl = window.location.origin + '/pssst/remove';
 
-  function retrieve() {
-    var group = document.getElementById('group').value;
-    var id = document.getElementById('id').value;
+  function retrieve(group, id) {
+    var group = group || document.getElementById('group').value;
+    var id = id || document.getElementById('id').value;
     var token = document.getElementById('token').value;
     get(getUrl, group, id, token);
+  }
+
+  function validateValue(success, fail, group, key, value) {
+    var group = group || document.getElementById('group').value;
+    var key = key || document.getElementById('id').value;
+    var value = value || document.getElementById('value').value;
+    httpPostAsync(validateValueUrl, {group, key, value}, success, fail);
+  }
+
+  function validate(group, id) {
+    var group = group || document.getElementById('group').value;
+    var id = id || document.getElementById('id').value;
+    get(getUrl, group, id);
   }
 
   function bulkUpdate() {
@@ -392,7 +406,7 @@ function PssstInit() {
 
   Pssst = {retrieve, url, keys, getIndex, update, refresh, addPin, getPinPrompt,
     remove, add, bulkUpdate, copyCmd, build, validatePin, resetToken, resetPin,
-    validateThisPin, copy};
+    validateThisPin, copy, validateValue};
   return Pssst;
 }
 

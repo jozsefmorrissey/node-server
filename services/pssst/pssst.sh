@@ -405,6 +405,19 @@ getWithToken() {
 	Logger trace "EXIT"
 }
 
+validateValue() {
+  Logger trace "$(sepArguments "Argurments: " ", " "$@")"
+  value=$(getValue $1 $2)
+  echo "$1 $2 $3"
+  if [ "$value" == "$3" ]
+  then
+    echo 'true'
+  else
+    echo 'false'
+    exit  -1
+  fi
+}
+
 validateToken() {
   Logger trace "$(sepArguments "Argurments: " ", " "$@")"
   token=$(getValue $1 token)
@@ -694,6 +707,9 @@ insecureFunctions() {
     ;;
     help)
       _help
+    ;;
+    validateValue)
+      validateValue "$group" "$key" "$value"
     ;;
     validateToken)
       validateToken "$group" "$key" "$value"

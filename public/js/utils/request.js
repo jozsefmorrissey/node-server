@@ -86,4 +86,6 @@ try {
   Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
 }
 
-module.exports = Request;
+try {
+  module.exports = Request;
+} catch (e) {}

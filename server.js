@@ -236,6 +236,22 @@ app.post('/copy', function(req, res) {
   res.send('success');
 });
 
+function saveLocation(name) {
+  return `./json/${name}.json`;
+}
+
+app.get('/load/json/:name', function (req, res) {
+    const name = req.params.name;
+    res.send(JSON.parse(fs.readFileSync(saveLocation(name))));
+});
+
+app.post('/save/json', function (req, res) {
+  const name = req.body.name;
+  const contents = JSON.stringify(req.body.json);
+  fs.writeFileSync(saveLocation(name), contents);
+  res.send('success');
+});
+
 var ip = '192.168.254.10';
 var services = shell.ls('./services/');
 var exclude = ['uss', 'uus'];
