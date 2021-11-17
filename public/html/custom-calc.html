@@ -63,16 +63,36 @@
         evaluate(target);
       }
 
+      function evalConnected(index) {
+        const eqns = du.find.all('.equation');
+        const refReg = new RegExp(`\\$\\(${index}\\)`);
+        for (let i = 0; i < eqns.length; i += 1) {
+          let eqnStr = eqns[i].value;
+          const vars = du.find.downAll('.eq-input-elem', eqns[i]);
+          for (let j = 0; j < vars; vars += 1) {
+            eqnStr += vars.value;
+          }
+          if (eqnStr.match(refReg)) {
+            evaluate(eqns[i]);
+          }
+        }
+      }
+
+      let answers = [];
+      const $ = (index) => answers[index] || 0;
       function evaluate(target) {
+        const index = du.find.up('[index]', target).getAttribute('index');
         const equation = du.find.closest('.equation', target).value;
         const inputCnt = du.find.closest(`.input-cnt`, target);
         const inputs = du.find.downAll('input', inputCnt);
-        const scope = {};
+        const scope = {$};
         for (let index = 0; index < inputs.length; index += 1) {
           const input = inputs[index];
-          scope[input.name] = eval.eval(input.value);
+          scope[input.name] = eval.eval(input.value, scope);
         }
         const nearest32 = new Measurement(eval.eval(equation, scope)).fraction('1/32');
+        answers[index] = eval.eval(nearest32);
+        evalConnected(index);
         du.find.closest('.answer-cnt', target).innerHTML = nearest32;
       }
 
@@ -150,6 +170,8 @@
       du.on.match('click', '#add-eq-btn', () => addEq());
       du.on.match('keyup', '.equation', updateVariables);
       du.on.match('keyup', `.${c}`, variableChange);
+      du.on.match('click', '.equation', evaluate);
+      du.on.match('click', `.${c}`, evaluate);
       du.on.match('click', '#save-eqs-btn', save);
     </script>
   </head>

@@ -108,7 +108,7 @@ class StringMathEvaluator {
 
     const isolateFunction = resolveArguments('(',
       (expr, path, scope, args, endIndex) =>
-          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex - 1, ''));
+          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
 
     function isolateParenthesis(expr, index, values, operands, scope) {
       const char = expr[index];
@@ -182,8 +182,8 @@ class StringMathEvaluator {
     function addUnexpressedMultiplicationSigns(expr) {
       expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
       expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
-      expr = expr.replace(/\)([^\s^+^-^*^\/])/g, ')*$1');
-      return expr.replace(/([^\s^+^-^*^\/])\(/g, '$1*(');
+      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^-^*^\/])/g, ')*$1');
+      return expr.replace(/([^a-z^A-Z^\s^$^(^+^-^*^\/])\(/g, '$1*(');
     }
 
     const isolateNumber = isolateValueReg(StringMathEvaluator.numReg, Number.parseFloat);
@@ -255,7 +255,7 @@ StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
 StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
 StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
 StringMathEvaluator.numReg = /^(-|)[0-9\.]{1,}/;
-StringMathEvaluator.varReg = /^((\.|)([a-zA-Z][a-zA-Z0-9\.]*))/;
+StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
 StringMathEvaluator.multi = (n1, n2) => n1 * n2;
 StringMathEvaluator.div = (n1, n2) => n1 / n2;
 StringMathEvaluator.add = (n1, n2) => n1 + n2;
