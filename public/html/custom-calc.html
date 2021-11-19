@@ -12,6 +12,9 @@
       #error-cnt {
         color: red;
       }
+      .percision-input {
+        max-width: 30pt;
+      }
     </style>
     <title>equations</title>
     <script type="text/javascript">
@@ -79,6 +82,7 @@
       }
 
       let answers = [];
+      let percision = 32;
       const $ = (index) => answers[index] || 0;
       function evaluate(target) {
         const index = du.find.up('[index]', target).getAttribute('index');
@@ -90,10 +94,13 @@
           const input = inputs[index];
           scope[input.name] = eval.eval(input.value, scope);
         }
-        const nearest32 = new Measurement(eval.eval(equation, scope)).fraction('1/32');
-        answers[index] = eval.eval(nearest32);
+        let value = eval.eval(equation, scope);
+        if (percision !== undefined) {
+          value = new Measurement(value).fraction(`1/${percision}`);
+        }
+        answers[index] = eval.eval(value);
         evalConnected(index);
-        du.find.closest('.answer-cnt', target).innerHTML = nearest32;
+        du.find.closest('.answer-cnt', target).innerHTML = value;
       }
 
       function variableChange(target) {
@@ -162,6 +169,27 @@
         }
       }
 
+      function evaluateAll() {
+        du.find.all('.equation').forEach(evaluate);
+      }
+
+      function setPercision (target) {
+        percision = du.find.down('input', target).value;
+        evaluateAll();
+      }
+
+      function updatePercision (target) {
+        const percisionInputCnt = du.find.closest('.percision-input-cnt', target.parentElement);
+        if (target.value === 'fraction') {
+          percisionInputCnt.hidden = false;
+          setPercision(percisionInputCnt);
+        } else if (target.value === 'decimal') {
+          percisionInputCnt.hidden = true;
+          percision = undefined;
+          evaluateAll();
+        }
+      }
+
       canEdit();
       loadValues();
       load();
@@ -173,11 +201,24 @@
       du.on.match('click', '.equation', evaluate);
       du.on.match('click', `.${c}`, evaluate);
       du.on.match('click', '#save-eqs-btn', save);
+      du.on.match('change', 'input[name="percision-selector"]', updatePercision);
+      du.on.match('keyup', '.percision-input', setPercision);
+      du.on.match('change', '.percision-input', setPercision);
     </script>
   </head>
   <body>
     <h2 id='name-cnt'></h2>
     <b id='error-cnt'></b>
+    <div>
+      <label>Decimal</label>
+      <input type='radio' name='percision-selector' value='decimal'>
+      <label>Fraction</label>
+      <input type='radio' name='percision-selector' checked value='fraction'>
+      <span class='percision-input-cnt'>
+        <label>1/</label>
+        <input type='number' class='percision-input' max='1000' min='1' name='percision' value='32'>
+      </span>
+    </div>
     <div id='eq-cnt'></div>
     <button id='add-eq-btn'>Add Equation</button>
     <button id='save-eqs-btn' hidden>Save</button>
