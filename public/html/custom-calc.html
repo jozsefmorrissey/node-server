@@ -83,6 +83,7 @@
 
       let answers = [];
       let percision = 32;
+
       const $ = (index) => answers[index] || 0;
       function evaluate(target) {
         const index = du.find.up('[index]', target).getAttribute('index');
@@ -145,6 +146,9 @@
       function onLoad() {
         const name = du.param.get('name');
         du.find('#name-cnt').innerText = name;
+        const p = du.cookie.get('percision');
+        percision = p === 'null' ? undefined : p;
+        updatePercisionDisplay();
       }
 
       function canEdit() {
@@ -175,18 +179,31 @@
 
       function setPercision (target) {
         percision = du.find.down('input', target).value;
+        du.cookie.set('percision', percision);
         evaluateAll();
       }
 
       function updatePercision (target) {
         const percisionInputCnt = du.find.closest('.percision-input-cnt', target.parentElement);
         if (target.value === 'fraction') {
-          percisionInputCnt.hidden = false;
           setPercision(percisionInputCnt);
         } else if (target.value === 'decimal') {
-          percisionInputCnt.hidden = true;
           percision = undefined;
+          du.cookie.set('percision', null);
           evaluateAll();
+        }
+        updatePercisionDisplay();
+      }
+
+      function updatePercisionDisplay () {
+        const percisionInputCnt = du.find('.percision-input-cnt');
+        if (percision === undefined) {
+          percisionInputCnt.hidden = true;
+          du.find('input[name="percision-selector"][value="decimal"]').checked = true;
+        } else {
+          percisionInputCnt.hidden = false;
+          du.find('input[name="percision-selector"][value="fraction"]').checked = true;
+          du.find.down('input', percisionInputCnt).value = percision;
         }
       }
 
