@@ -223,11 +223,13 @@ du.on.match = function(event, selector, func, target) {
   // }
 }
 
-du.cookie.set = function(name, value) {
+du.cookie.set = function(name, value, lifeMilliSecs) {
   if (value instanceof Object) {
     value = JSON.stringify(value);
   }
-  document.cookie = `${name}=${value}`;
+  const expireDate = new Date();
+  expireDate.setTime(expireDate.getTime() + (lifeMilliSecs || (8035200000))); //93 days by default
+  document.cookie = `${name}=${value}; expires=${expireDate.toUTCString()}`;
 }
 
 du.cookie.get = function(name, seperator) {
