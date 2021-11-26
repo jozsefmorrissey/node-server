@@ -14,7 +14,7 @@ const VS = validSelector;
 
 
 const du = {create: {}, class: {}, cookie: {}, param: {}, style: {},
-      scroll: {}, input: {}, on: {}};
+      scroll: {}, input: {}, on: {}, move: {}};
 du.find = (selector) => document.querySelector(selector);
 du.find.all = (selector) => document.querySelectorAll(selector);
 
@@ -23,6 +23,64 @@ du.create.element = function (tagname, attributes) {
   const keys = Object.keys(attributes || {});
   keys.forEach((key) => elem.setAttribute(key, attributes[key]));
   return elem;
+}
+
+function keepInBounds (value, minimum) {
+  return (value < minimum ? minimum : value) + 'px';
+}
+
+du.move.relitive = function (elem, target, direction, props) {
+  props = props || {};
+  const clientHeight = document.documentElement.clientHeight;
+  const clientWidth = document.documentElement.clientWidth;
+  const rect = target.getBoundingClientRect();
+
+  const style = {};
+  const padding = props.padding || 5;
+  style.cursor = props.cursor || 'unset';
+  style.padding = `${padding}px`;
+  style.position = props.position || 'absolute';
+  style.backgroundColor = props.backgroundColor || 'transparent';
+
+  const scrollY =  props.isFixed ? 0 : window.scrollY;
+  const scrollX =  props.isFixed ? 0 : window.scrollX;
+  const isTop = direction.indexOf('top') !== -1;
+  const isBottom = direction.indexOf('bottom') !== -1;
+  const isRight = direction.indexOf('right') !== -1;
+  const isLeft = direction.indexOf('left') !== -1;
+  if (isTop) {
+    style.top = keepInBounds(rect.top - elem.clientWidth - padding + scrollY, padding);
+  } else { style.top = 'unset'; }
+
+  if (isBottom) {
+    style.bottom = (clientHeight - rect.bottom - elem.clientHeight) - padding - scrollY + 'px';
+  } else { style.bottom = 'unset'; }
+
+  if (!isTop && !isBottom) {
+    style.bottom = (clientHeight - rect.bottom + rect.height/2 - elem.clientHeight / 2) - padding - scrollY + 'px';
+  }
+
+  if (isRight) {
+    style.right = clientWidth - rect.right - elem.clientWidth - padding - scrollX + 'px';
+  } else { style.right = 'unset'; }
+
+  if (isLeft) {
+    style.left = keepInBounds(rect.left - padding - elem.clientWidth + scrollX, padding);
+  } else { style.left = 'unset'; }
+
+  if (!isLeft && ! isRight) {
+    style.right = clientWidth - rect.right + rect.width/2 - elem.clientWidth/2 - padding - scrollX + 'px';
+  }
+
+  du.style(elem, style);
+}
+
+du.move.below = function (elem, target) {
+  du.move.relitive(elem, target, 'bottom');
+}
+
+du.move.above = function (elem, target) {
+  du.move.relitive(elem, target, 'bottom');
 }
 
 du.find.up = function (selector, node) {
@@ -258,7 +316,7 @@ du.param.get = function(name) {
   return decodeURI(value);
 }
 
-du.style.temporary = function(elem, time, style) {
+du.style = function(elem, style, time) {
   const save = {};
   const keys = Object.keys(style);
   keys.forEach((key) => {
@@ -266,11 +324,13 @@ du.style.temporary = function(elem, time, style) {
     elem.style[key] = style[key];
   });
 
-  setTimeout(() => {
-    keys.forEach((key) => {
-      elem.style[key] = save[key];
-    });
-  }, time);
+  if (time) {
+    setTimeout(() => {
+      keys.forEach((key) => {
+        elem.style[key] = save[key];
+      });
+    }, time);
+  }
 }
 
 function center(elem) {

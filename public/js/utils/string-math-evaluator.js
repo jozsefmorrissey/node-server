@@ -67,7 +67,12 @@ class StringMathEvaluator {
           }
 
           for (let index = 0; index < args.length; index += 1) {
-            args[index] = instance.eval(args[index], scope);
+            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
+            if (stringMatch) {
+              args[index] = stringMatch[1];
+            } else {
+              args[index] =  instance.eval(args[index], scope);
+            }
           }
           const state = func(expr, path, scope, args, endIndex);
           if (state) {
@@ -256,6 +261,7 @@ StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
 StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
 StringMathEvaluator.numReg = /^(-|)[0-9\.]{1,}/;
 StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
+StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
 StringMathEvaluator.multi = (n1, n2) => n1 * n2;
 StringMathEvaluator.div = (n1, n2) => n1 / n2;
 StringMathEvaluator.add = (n1, n2) => n1 + n2;

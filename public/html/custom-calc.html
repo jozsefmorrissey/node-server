@@ -15,8 +15,24 @@
       .percision-input {
         max-width: 30pt;
       }
+      .full-width {
+        width: 95vw;
+        margin: 0 2vw;
+      }
       .eq-input-elem {
         max-width: 45pt;
+      }
+      .calc-button {
+        width: 25pt;
+        height: 25pt;
+      }
+      .calc-button.wide {
+        width: 35pt;
+      }
+      .calc-button.locked {
+        background-color: #958b8b;
+        font-weight: bolder;
+        color: white;
       }
     </style>
     <title>equations</title>
@@ -30,7 +46,8 @@
         const newElem = du.create.element('div', {index: index});
         newElem.innerHTML = `<b>${index++}.)</b>
                               <input class='name' type='text' placeholder="Name" value='${name}'>
-                              <input class='equation' type='text' placeholder="Equation" value='${equation}'>
+                              <br>
+                              <input class='equation full-width' disabled type='text' placeholder="Equation" value='${equation}'>
                               <span class='input-cnt'></span>
                               <b>=</b>
                               <span class='answer-cnt'></span>
@@ -45,6 +62,31 @@
 
       let saved = {};
       const c = 'eq-input-elem';
+
+      function updateReferenceList() {
+        const select = du.find('#reference-select');
+        const indexes = Object.keys(saved);
+        let html = '';
+        html += `<option>Ref</option>`;
+        for (let i = 0; i < indexes.length; i += 1) {
+          const index = indexes[i];
+          html += `<optgroup label="${index}">`
+          html += `<option>=</option>`;
+          const vars = Object.keys(saved[index]);
+          for (let j = 0; j < vars.length; j += 1) {
+            html += `<option>${vars[j]}</option>`;
+          }
+          html += '</optgroup>';
+        }
+        select.innerHTML = html;
+      }
+
+      function toggleDisabled(target) {
+        target.disabled = !target.disabled;
+        if (!target.disabled) hideCalcInput();
+        else (setCalcInput(target));
+      }
+
       function updateVariables(target) {
         let matches = target.value.match(/[a-z_A-Z][a-z_A-Z0-9]*/g);
         const varIndex = du.find.up('[index]', target).getAttribute('index');
@@ -55,11 +97,12 @@
           for (let index = 0; index < matches.length; index += 1) {
             const name = matches[index];
             const value = saved[varIndex][name] || 0;
+            saved[varIndex][name] = value;
             const div = du.create.element('span');
             const b = du.create.element('b');
             b.innerText = name;
             div.append(b);
-            div.append(du.create.element('input', {class: c, value, name}));
+            div.append(du.create.element('input', {class: c, value, name, disabled: true}));
             repeatHtml += '&nbsp;' + div.outerHTML;
           }
           inputCnt.innerHTML = repeatHtml;
@@ -67,6 +110,7 @@
           inputCnt.innerHTML = '';
         }
         evaluate(target);
+        updateReferenceList();
       }
 
       function evalConnected(index) {
@@ -87,7 +131,10 @@
       let answers = [];
       let percision = 32;
 
-      const $ = (index) => answers[index] || 0;
+      const $ = (index, varName) => {
+        if (varName === undefined) return answers[index] || 0;
+        return Number.parseFloat(saved[index][varName] || 0);
+      };
       function evaluate(target) {
         const index = du.find.up('[index]', target).getAttribute('index');
         const equation = du.find.closest('.equation', target).value;
@@ -210,6 +257,107 @@
         }
       }
 
+      function hideCalcInput(target) {
+        const calculator = du.find('#calc-input');
+        calculator.hidden = true;
+      }
+
+      let calcInput;
+      let calcState = 'numeric';
+      let capState = 'lower';
+      function setCalcInput(target, e) {
+        if (e) e.stopPropagation();
+        if (!target.disabled) return;
+        const calculator = du.find('#calc-input');
+        calculator.hidden = false;
+        const numeric = du.find('.calc-input-table.numeric');
+        const lower = du.find('.calc-input-table.lowercase');
+        const upper = du.find('.calc-input-table.uppercase');
+        calcInput = target;
+        if (calcState === 'numeric') {
+          lower.hidden = true;
+          upper.hidden = true;
+          numeric.hidden = false;
+        } else {
+          if (capState === 'lower') {
+            lower.hidden = false;
+            upper.hidden = true;
+            numeric.hidden = true;
+
+          } else {
+            lower.hidden = true;
+            upper.hidden = false;
+            numeric.hidden = true;
+          }
+        }
+        updateCapsIndicator();
+        du.move.relitive(calculator, target, 'bottom');
+      }
+
+      function updateCapsIndicator() {
+        const button = du.find('.calc-button.uppercase[type="caps"]');
+        if (capState === 'lock') {
+          du.class.add(button, 'locked');
+        } else {
+          du.class.remove(button, 'locked');
+        }
+      }
+
+      function updateCalcInput(target, e) {
+        e.stopPropagation();
+        const type = target.getAttribute('type');
+        switch (type) {
+          case 'caps':
+            if (capState === 'lower') capState = 'upper';
+            else if (capState === 'upper') capState = 'lock';
+            else if (capState === 'lock') capState = 'lower';
+            setCalcInput(calcInput);
+            break;
+          case 'back':
+            calcState = 'numeric';
+            setCalcInput(calcInput);
+            break;
+          case 'alpha':
+            calcState = 'alpha';
+            setCalcInput(calcInput);
+            break;
+          case 'clear':
+            calcInput.value = '';
+            evaluate(calcInput);
+            break;
+          case 'space':
+            calcInput.value += ' ';
+            break;
+          case 'delete':
+            calcInput.value = calcInput.value.substr(0, calcInput.value.length - 1);
+            evaluate(calcInput);
+            break;
+          case 'reference':
+            console.log('referencing!')
+            break;
+         default:
+            if (capState === 'upper') {
+              capState = 'lower';
+              setCalcInput(calcInput);
+            }
+            calcInput.value += target.innerText.trim();
+            evaluate(calcInput);
+        }
+      }
+
+      function applyReference(target) {
+        const value = target.value;
+        if (value === '') return;
+        const selected = target.selectedOptions[0];
+        const index = du.find.closest('optgroup', selected).label;
+        if (value === 'Ref') {
+          calcInput.value += `$(${index})`;
+        } else {
+          calcInput.value += `$(${index}, \'${value}\')`;
+        }
+        target.value = 'Ref';
+      }
+
       canEdit();
       loadValues();
       load();
@@ -224,6 +372,11 @@
       du.on.match('change', 'input[name="percision-selector"]', updatePercision);
       du.on.match('keyup', '.percision-input', setPercision);
       du.on.match('change', '.percision-input', setPercision);
+      du.on.match('click', '.eq-input-elem,.equation', setCalcInput);
+      du.on.match('dblclick', '.eq-input-elem,.equation', toggleDisabled);
+      du.on.match('click', '.calc-button', updateCalcInput);
+      du.on.match('change', '#reference-select', applyReference);
+      window.addEventListener('click', hideCalcInput);
     </script>
   </head>
   <body>
@@ -242,5 +395,115 @@
     <div id='eq-cnt'></div>
     <button id='add-eq-btn'>Add Equation</button>
     <button id='save-eqs-btn' hidden>Save</button>
+    <div id='calc-input' hidden>
+      <table class='calc-input-table numeric'>
+        <tr>
+          <td><button class='calc-button'>7</button></td>
+          <td><button class='calc-button'>8</button></td>
+          <td><button class='calc-button'>9</button></td>
+          <td><button class='calc-button'>*</button></td>
+          <td><button type='delete' class='calc-button wide'>Del</button></td>
+        </tr>
+        <tr>
+          <td><button class='calc-button'>4</button></td>
+          <td><button class='calc-button'>5</button></td>
+          <td><button class='calc-button'>6</button></td>
+          <td><button class='calc-button'>/</button></td>
+          <td><select id='reference-select' type='reference' class='calc-button wide'></select></td>
+        </tr>
+        <tr>
+          <td><button class='calc-button'>1</button></td>
+          <td><button class='calc-button'>2</button></td>
+          <td><button class='calc-button'>3</button></td>
+          <td><button class='calc-button'>+</button></td>
+          <td><button type='alpha' class='calc-button wide'>a-z</button></td>
+        </tr>
+        <tr>
+          <td><button type='space' class='calc-button'>_</button></td>
+          <td><button class='calc-button'>0</button></td>
+          <td><button class='calc-button'>.</button></td>
+          <td><button class='calc-button'>-</button></td>
+          <td><button type='clear' class='calc-button wide'>Clear</button></td>
+        </tr>
+      </table>
+
+      <table class='calc-input-table lowercase' hidden>
+        <tr>
+          <td><button type='back' class='calc-button'>&larr;</button></td>
+          <td><button class='calc-button'>a</button></td>
+          <td><button class='calc-button'>b</button></td>
+          <td><button class='calc-button'>c</button></td>
+          <td><button class='calc-button'>d</button></td>
+          <td><button class='calc-button'>e</button></td>
+          <td><button class='calc-button'>f</button></td>
+        </tr>
+        <tr>
+          <td><button type='caps' class='calc-button'>&#8679;</button></td>
+          <td><button class='calc-button'>g</button></td>
+          <td><button class='calc-button'>h</button></td>
+          <td><button class='calc-button'>i</button></td>
+          <td><button class='calc-button'>j</button></td>
+          <td><button class='calc-button'>k</button></td>
+          <td><button class='calc-button'>l</button></td>
+        </tr>
+        <tr>
+          <td><button class='calc-button'>m</button></td>
+          <td><button class='calc-button'>n</button></td>
+          <td><button class='calc-button'>o</button></td>
+          <td><button class='calc-button'>p</button></td>
+          <td><button class='calc-button'>q</button></td>
+          <td><button class='calc-button'>r</button></td>
+          <td><button class='calc-button'>s</button></td>
+        </tr>
+        <tr>
+          <td><button class='calc-button'>t</button></td>
+          <td><button class='calc-button'>u</button></td>
+          <td><button class='calc-button'>v</button></td>
+          <td><button class='calc-button'>w</button></td>
+          <td><button class='calc-button'>x</button></td>
+          <td><button class='calc-button'>y</button></td>
+          <td><button class='calc-button'>z</button></td>
+        </tr>
+      </table>
+
+      <table class='calc-input-table uppercase' hidden>
+        <tr>
+          <td><button type='back' class='calc-button'>&larr;</button></td>
+          <td><button class='calc-button'>A</button></td>
+          <td><button class='calc-button'>B</button></td>
+          <td><button class='calc-button'>C</button></td>
+          <td><button class='calc-button'>D</button></td>
+          <td><button class='calc-button'>E</button></td>
+          <td><button class='calc-button'>F</button></td>
+        </tr>
+        <tr>
+          <td><button type='caps' class='calc-button uppercase'>&#8679;</button></td>
+          <td><button class='calc-button'>G</button></td>
+          <td><button class='calc-button'>H</button></td>
+          <td><button class='calc-button'>I</button></td>
+          <td><button class='calc-button'>J</button></td>
+          <td><button class='calc-button'>K</button></td>
+          <td><button class='calc-button'>L</button></td>
+        </tr>
+        <tr>
+          <td><button class='calc-button'>M</button></td>
+          <td><button class='calc-button'>N</button></td>
+          <td><button class='calc-button'>O</button></td>
+          <td><button class='calc-button'>P</button></td>
+          <td><button class='calc-button'>Q</button></td>
+          <td><button class='calc-button'>R</button></td>
+          <td><button class='calc-button'>S</button></td>
+        </tr>
+        <tr>
+          <td><button class='calc-button'>T</button></td>
+          <td><button class='calc-button'>U</button></td>
+          <td><button class='calc-button'>V</button></td>
+          <td><button class='calc-button'>W</button></td>
+          <td><button class='calc-button'>X</button></td>
+          <td><button class='calc-button'>Y</button></td>
+          <td><button class='calc-button'>Z</button></td>
+        </tr>
+      </div>
+    </table>
   </body>
 </html>
