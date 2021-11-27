@@ -187,8 +187,8 @@ class StringMathEvaluator {
     function addUnexpressedMultiplicationSigns(expr) {
       expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
       expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
-      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^-^*^\/])/g, ')*$1');
-      return expr.replace(/([^a-z^A-Z^\s^$^(^+^-^*^\/])\(/g, '$1*(');
+      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
+      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
     }
 
     const isolateNumber = isolateValueReg(StringMathEvaluator.numReg, Number.parseFloat);
