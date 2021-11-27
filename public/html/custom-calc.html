@@ -9,6 +9,12 @@
     <script type="text/javascript" src='/js/utils/string-math-evaluator.js'></script>
     <script type="text/javascript" src='/pssst/js/pssst-client.js'></script>
     <style>
+    @media only screen
+      and (max-device-width: 600px) {
+        input,label,b {
+          font-size: 20pt;
+        }
+      }
       #error-cnt {
         color: red;
       }
@@ -53,7 +59,7 @@
                               <input class='equation full-width disable-zoom' disabled type='text' placeholder="Equation" value='${equation}'>
                               <span class='input-cnt'></span>
                               <b>=</b>
-                              <span class='answer-cnt'></span>
+                              <b class='answer-cnt'></b>
                               <br/>`;
         updateVariables(newElem.querySelector('.equation'));
         du.find('#eq-cnt').append(newElem);
