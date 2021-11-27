@@ -34,6 +34,9 @@
         font-weight: bolder;
         color: white;
       }
+      .disable-zoom {
+        touch-action: manipulation;
+      }
     </style>
     <title>equations</title>
     <script type="text/javascript">
@@ -47,7 +50,7 @@
         newElem.innerHTML = `<b>${index++}.)</b>
                               <input class='name' type='text' placeholder="Name" value='${name}'>
                               <br>
-                              <input class='equation full-width' disabled type='text' placeholder="Equation" value='${equation}'>
+                              <input class='equation full-width disable-zoom' disabled type='text' placeholder="Equation" value='${equation}'>
                               <span class='input-cnt'></span>
                               <b>=</b>
                               <span class='answer-cnt'></span>
@@ -61,7 +64,7 @@
       }
 
       let saved = {};
-      const c = 'eq-input-elem';
+      const c = 'eq-input-elem disable-zoom';
 
       function updateReferenceList() {
         const select = du.find('#reference-select');
@@ -403,6 +406,7 @@
           <td><button class='calc-button'>9</button></td>
           <td><button class='calc-button'>*</button></td>
           <td><button type='delete' class='calc-button wide'>Del</button></td>
+          <td><button class='calc-button'>(</button></td>
         </tr>
         <tr>
           <td><button class='calc-button'>4</button></td>
@@ -410,6 +414,7 @@
           <td><button class='calc-button'>6</button></td>
           <td><button class='calc-button'>/</button></td>
           <td><select id='reference-select' type='reference' class='calc-button wide'></select></td>
+          <td><button class='calc-button'>)</button></td>
         </tr>
         <tr>
           <td><button class='calc-button'>1</button></td>
