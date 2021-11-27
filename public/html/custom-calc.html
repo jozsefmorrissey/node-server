@@ -28,6 +28,9 @@
       .eq-input-elem {
         max-width: 45pt;
       }
+      #calc-input {
+        position: absolute;
+      }
       .calc-button {
         font-size: 20pt;
         width: 35pt;
@@ -93,8 +96,12 @@
 
       function toggleDisabled(target) {
         target.disabled = !target.disabled;
-        if (!target.disabled) hideCalcInput();
-        else (setCalcInput(target));
+        if (!target.disabled) {
+          hideCalcInput();
+          target.focus();
+        } else (
+          setCalcInput(target)
+        );
       }
 
       function updateVariables(target) {
