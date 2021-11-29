@@ -62,7 +62,8 @@ class Measurement {
       if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
         throw new Error('Please enter a fraction with a denominator between (0, 1000]')
       }
-      let remainder = decimal;
+      let sign = decimal > 0 ? 1 : -1;
+      let remainder = Math.abs(decimal);
       let currRemainder = remainder;
       let value = 0;
       let numerator = 0;
@@ -73,7 +74,7 @@ class Measurement {
       const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
       const diff2 = (numerator / denominator) - decimal;
       numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-      const integer = Math.floor(numerator / denominator);
+      const integer = sign * Math.floor(numerator / denominator);
       numerator = numerator % denominator;
       return {integer, numerator, denominator};
     }
