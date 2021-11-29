@@ -108,7 +108,7 @@
       }
 
       function updateVariables(target) {
-        const clean = target.value.replace(/\$\(.*?\)/, '');
+        const clean = target.value.replace(/\$\(.*?\)/g, '');
         let matches = clean.match(/[a-z_A-Z][a-z_A-Z0-9]*/g);
         const varIndex = du.find.up('[index]', target).getAttribute('index');
         const inputCnt = du.find.closest('.input-cnt', target);
