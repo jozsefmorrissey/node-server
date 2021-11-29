@@ -108,7 +108,8 @@
       }
 
       function updateVariables(target) {
-        let matches = target.value.match(/[a-z_A-Z][a-z_A-Z0-9]*/g);
+        const clean = target.value.replace(/\$\(.*?\)/, '');
+        let matches = clean.match(/[a-z_A-Z][a-z_A-Z0-9]*/g);
         const varIndex = du.find.up('[index]', target).getAttribute('index');
         const inputCnt = du.find.closest('.input-cnt', target);
         if (matches) {
@@ -176,7 +177,7 @@
 
       const $ = (index, varName) => {
         if (varName === undefined) return answers[index] || 0;
-        return Number.parseFloat(saved[index][varName] || 0);
+        return eval.eval(saved[index][varName], {$});
       };
       function evaluate(target) {
         const index = du.find.up('[index]', target).getAttribute('index');
