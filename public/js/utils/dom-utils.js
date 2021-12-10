@@ -25,8 +25,17 @@ du.create.element = function (tagname, attributes) {
   return elem;
 }
 
-function keepInBounds (value, minimum) {
-  return (value < minimum ? minimum : value) + 'px';
+function keepInBounds (elem, minimum) {
+  function checkDir(dir) {
+    const rect = elem.getBoundingClientRect();
+    if (rect[dir] < minimum) {
+      elem.style[dir] = minimum + 'px';
+    }
+  }
+  checkDir('left');
+  checkDir('right');
+  checkDir('top');
+  checkDir('bottom');
 }
 
 du.move.relitive = function (elem, target, direction, props) {
@@ -49,7 +58,7 @@ du.move.relitive = function (elem, target, direction, props) {
   const isRight = direction.indexOf('right') !== -1;
   const isLeft = direction.indexOf('left') !== -1;
   if (isTop) {
-    style.top = keepInBounds(rect.top - elem.clientWidth - padding + scrollY, padding);
+    style.top = rect.top - elem.clientWidth - padding + scrollY;
   } else { style.top = 'unset'; }
 
   if (isBottom) {
@@ -65,7 +74,7 @@ du.move.relitive = function (elem, target, direction, props) {
   } else { style.right = 'unset'; }
 
   if (isLeft) {
-    style.left = keepInBounds(rect.left - padding - elem.clientWidth + scrollX, padding);
+    style.left = rect.left - padding - elem.clientWidth + scrollX;
   } else { style.left = 'unset'; }
 
   if (!isLeft && ! isRight) {
@@ -73,6 +82,7 @@ du.move.relitive = function (elem, target, direction, props) {
   }
 
   du.style(elem, style);
+  keepInBounds(elem, padding);
 }
 
 du.move.below = function (elem, target) {

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <script type="text/javascript">
+      // Variable definition
+      // Function definition
+      // Object
+      // array
+      // Function call
+      // Loop
+      // Conditional
+      // constructor
+
+      class Breakdown {
+        constructor(msg){
+          msg = msg.trim();
+          msg = msg.replace(/\s{2,}/, ' ');
+          // Variable Definitions
+          var letters = {}; // Key, Value Object (Values are an array of letters)
+          var currWordIndex = 0;
+          var currLetterIndex = 0;
+
+          function next() { // Function Definitions
+            if (letters[currWordIndex] === undefined) {
+              return; // Return undefined
+            }
+            if (letters[currWordIndex][currLetterIndex] === undefined) {
+              currWordIndex++;
+              currLetterIndex = 0;
+              return ' '; // Return Statement
+            }
+            if (letters[currWordIndex][currLetterIndex] !== undefined) {
+              currLetterIndex++;
+              return letters[currWordIndex][currLetterIndex - 1]; //Return Statement
+            }
+          }
+
+          function reset() {
+            currWordIndex = 0;
+            currLetterIndex = 0;
+          }
+
+          function print() {
+            var msg = '';
+            var letter;
+            while (letter = this.next()) {
+              msg += letter;
+            }
+            console.log(msg);
+            this.reset();
+          }
+
+          function init() {
+            var spaceCount = 0;
+            var lastSpace = 0;
+            for (let index = 0; index < msg.length; index += 1) {
+              var letter = msg[index];
+              if (letter !== ' ') {
+                var wordIndex = Math.floor(spaceCount / 2);
+                var letterIndex = index - lastSpace;
+                if (letters[wordIndex] === undefined) {
+                  letters[wordIndex] = [];
+                }
+                letters[wordIndex][letterIndex] = letter;
+              } else if (letter === ' ') {
+                lastSpace = index + 1;
+                spaceCount += 1;
+                spaceCount = spaceCount + 1;
+              } else {
+                throw new Error('This will never happen')
+              }
+            }
+          }
+
+          init();
+          this.print = print;
+          this.next = next;
+          this.reset = reset;
+        }
+      }
+
+      new Breakdown('Hello World!').print();
+    </script>
+  </head>
+  <body>
+
+  </body>
+</html>
