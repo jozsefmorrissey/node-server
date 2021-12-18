@@ -92,7 +92,7 @@
 
       let homeSaved;
       let saved = {};
-      links = ['dave', 'matt'];
+      links = [];
       const c = 'eq-input-elem disable-zoom';
 
       function buildLink(name) {
@@ -273,7 +273,6 @@
       let isHome;
       function load(name) {
         function populate(body) {
-          if (Array.isArray(body)) body = {equations: body, links: []};
           if (name) {
             du.find('#save-btn-cnt').hidden = true;
           } else {
