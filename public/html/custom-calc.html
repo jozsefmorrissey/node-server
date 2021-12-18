@@ -297,15 +297,17 @@
           console.log(stateObject());
           Request.get(`/pssst/load/json/custom-calc/${name}`, populate, console.error);
           isHome = false;
+          du.find('#name-cnt').innerText = name;
         } else {
           isHome = true;
           populate({equations: homeSaved});
+          du.find('#name-cnt').innerText = du.param.get('name');
         }
       }
 
       function onLoad() {
         const name = du.param.get('name');
-        du.find('#name-cnt').innerText = name;
+        du.find('#name-cnt').innerText = du.param.get('name');
         const p = du.cookie.get('percision');
         percision = p === 'null' ? undefined : p;
         updatePercisionDisplay();
