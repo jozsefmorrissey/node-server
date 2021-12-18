@@ -273,6 +273,7 @@
       let isHome;
       function load(name) {
         function populate(body) {
+          if (Array.isArray(body)) body = {equations: body, links: []};
           if (name) {
             du.find('#save-btn-cnt').hidden = true;
           } else {
