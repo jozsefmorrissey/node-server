@@ -47,6 +47,23 @@
       .disable-zoom {
         touch-action: manipulation;
       }
+      #link-menu {
+        display: flex;
+        list-style-type: none;
+      }
+      #link-menu > li {
+        padding: 5pt;
+        font-size: x-large;
+      }
+      .remove-link-cnt {
+        display: flex;
+      }
+      .remove-link-btn {
+        margin: auto;
+        padding: 0 2pt;
+        border-radius: 5pt;
+        display: none;
+      }
     </style>
     <title>equations</title>
     <script type="text/javascript">
@@ -73,8 +90,26 @@
         return self.indexOf(value) === index;
       }
 
+      let homeSaved;
       let saved = {};
+      links = ['dave', 'matt'];
       const c = 'eq-input-elem disable-zoom';
+
+      function buildLink(name) {
+        return `<li><a href='#' onclick='load("${name}")'>${name}</a><br><div class='remove-link-cnt'><button class='remove-link-btn'>X</button></div></li>`
+      }
+
+      function buildLinks() {
+        let linkHtml = `<li><a href='#' onclick='load()'>Home</a></li>`;
+        links.forEach((name) => linkHtml += buildLink(name));
+        linkHtml += '<li><input type="text" id="add-link-input"><button id="add-link-btn">+</button></li>'
+        du.find('#link-menu').innerHTML = linkHtml;
+      }
+
+      function addLink(target) {
+        links.push(du.find.closest('input', target).value);
+        buildLinks();
+      }
 
       function updateReferenceList() {
         const select = du.find('#reference-select');
@@ -216,25 +251,56 @@
         }
       }
 
-      function save() {
-        const key = du.param.get('name');
-        const value = du.param.get('token');
+      function stateObject () {
         const list = document.querySelectorAll('div[index]');
-        const json = [];
+        const json = {equations: [], links};
         for (let index = 0; index < list.length; index += 1) {
           const name = list[index].querySelector('.name').value;
           const equation = list[index].querySelector('.equation').value;
-          json.push({name, equation});
+          json.equations.push({name, equation});
         }
+        return json;
+      }
+
+      function save() {
+        const key = du.param.get('name');
+        const value = du.param.get('token');
+        const json = stateObject();
         Request.post('/pssst/save/json', {group: 'custom-calc', key, value, json}, console.log, console.log);
       }
 
-      function load() {
+      let initialLoad = true;
+      let isHome;
+      function load(name) {
         function populate(body) {
-          body.forEach((item) => addEq(item.name, item.equation));
+          if (name) {
+            du.find('#save-btn-cnt').hidden = true;
+          } else {
+            du.find('#save-btn-cnt').hidden = false;
+          }
+          du.find('#eq-cnt').innerHTML = '';
+          index = 1;
+          if (Array.isArray(body.equations)) {
+            body.equations.forEach((item) => addEq(item.name, item.equation));
+            if (initialLoad) {
+              initialLoad = false;
+              links = body.links;
+              buildLinks();
+            }
+          }
         }
-        const name = du.param.get('name');
-        Request.get(`/pssst/load/json/custom-calc/${name}`, populate, console.error);
+        if (initialLoad && name === undefined) {
+          Request.get(`/pssst/load/json/custom-calc/${du.param.get('name')}`, populate, console.error);
+          isHome = true;
+        } else if (name) {
+          if (isHome) homeSaved = stateObject().equations;
+          console.log(stateObject());
+          Request.get(`/pssst/load/json/custom-calc/${name}`, populate, console.error);
+          isHome = false;
+        } else {
+          isHome = true;
+          populate({equations: homeSaved});
+        }
       }
 
       function onLoad() {
@@ -421,10 +487,15 @@
       du.on.match('dblclick', '.eq-input-elem,.equation', toggleDisabled);
       du.on.match('click', '.calc-button', updateCalcInput);
       du.on.match('change', '#reference-select', applyReference);
+      du.on.match('click', '#add-link-btn', addLink);
+      du.on.match('enter', '#add-link-input', addLink);
       window.addEventListener('click', hideCalcInput);
     </script>
   </head>
   <body>
+    <div>
+      <ul id='link-menu'></ul>
+    </div>
     <h2 id='name-cnt'></h2>
     <b id='error-cnt'></b>
     <div>
@@ -439,7 +510,9 @@
     </div>
     <div id='eq-cnt'></div>
     <button id='add-eq-btn'>Add Equation</button>
-    <button id='save-eqs-btn' hidden>Save</button>
+    <span id='save-btn-cnt'>
+      <button id='save-eqs-btn' hidden>Save</button>
+    </span>
     <div id='calc-input' class='disable-zoom' hidden>
       <table class='calc-input-table numeric'>
         <tr>

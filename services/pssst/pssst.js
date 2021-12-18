@@ -215,7 +215,11 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
   app.get(prefix + '/load/json/:group/:key', function (req, res) {
     const key = req.params.key;
     const group = req.params.group;
-    res.send(JSON.parse(fs.readFileSync(saveLocation(group, key))));
+    try {
+      res.send(JSON.parse(fs.readFileSync(saveLocation(group, key))));
+    } catch (e) {
+      res.send(undefined);
+    }
   });
 
   app.get(prefix + '/json/save/auth/:group/:key/:value', function (req, res){

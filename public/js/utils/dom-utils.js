@@ -230,6 +230,8 @@ function getTargetId(target) {
         '#document' : target === window ? '#window' : undefined;
 }
 
+
+
 function runMatch(event) {
   const  matchRunTargetId = getTargetId(event.currentTarget);
   const selectStrs = Object.keys(selectors[matchRunTargetId][event.type]);
@@ -270,24 +272,45 @@ du.class.toggle = function(target, clazz) {
   else du.class.add(target, clazz);
 }
 
+function onEnter(func) {
+  function filter(target, event) {
+    if (even) {
+
+    }
+  }
+}
+
+function filterCustomEvent(event, func) {
+  let filterFunc = func;
+  let filterEvent = event;
+  switch (event) {
+    case 'enter':
+      filterFunc = (target, event) => event.code === 'Enter' && func(target, event);
+      filterEvent = 'keydown';
+      break;
+  }
+  return {func: filterFunc, event: filterEvent};
+}
+
 du.on.match = function(event, selector, func, target) {
+  const filter = filterCustomEvent(event, func);
   target = target || document;
   selector = VS(selector);
   const  matchRunTargetId = getTargetId(target);
   if (selectors[matchRunTargetId] === undefined) {
     selectors[matchRunTargetId] = {};
   }
-  if (selectors[matchRunTargetId][event] === undefined) {
-    selectors[matchRunTargetId][event] = {};
-    target.addEventListener(event, runMatch);
+  if (selectors[matchRunTargetId][filter.event] === undefined) {
+    selectors[matchRunTargetId][filter.event] = {};
+    target.addEventListener(filter.event, runMatch);
   }
-  if ( selectors[matchRunTargetId][event][selector] === undefined) {
-    selectors[matchRunTargetId][event][selector] = [];
+  if ( selectors[matchRunTargetId][filter.event][selector] === undefined) {
+    selectors[matchRunTargetId][filter.event][selector] = [];
   }
 
-  const selectorArray = selectors[matchRunTargetId][event][selector];
+  const selectorArray = selectors[matchRunTargetId][filter.event][selector];
   // if (selectorArray.indexOf(func) !== -1) {
-    selectorArray.push(func);
+    selectorArray.push(filter.func);
   // }
 }
 
@@ -317,7 +340,7 @@ du.cookie.get = function(name, seperator) {
 let params;
 du.param.get = function(name) {
   if (params === undefined) {
-    const url = window.location.href;
+    const url = window.location.href.replace(/(.*?)#.*/, '$1');
     const paramStr = url.substr(url.indexOf('?') + 1);
     params = paramStr.parseSeperator('&');
   }
