@@ -30,6 +30,7 @@
       }
       #calc-input {
         position: absolute;
+        z-index: 12;
       }
       .calc-button {
         font-size: 20pt;
@@ -64,6 +65,25 @@
         border-radius: 5pt;
         display: none;
       }
+      .remove-cnt {
+        position: relative;
+        background-color: white;
+        margin: 2pt;
+        z-index: 10;
+      }
+
+      .pop-up-haze {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        text-align: center;
+        background: rgba(0,0,0,0.6);
+        padding: 5vh 1vw;
+        z-index: 9;
+        /* display: none; */
+      }
     </style>
     <title>equations</title>
     <script type="text/javascript">
@@ -73,7 +93,7 @@
         name = name || '';
         equation = equation || '';
         saved[index] = saved[index] || {};
-        const newElem = du.create.element('div', {index: index});
+        const newElem = du.create.element('div', {index: index, class: 'remove-cnt eqn'});
         newElem.innerHTML = `<b>${index++}.)</b>
                               <input class='name' type='text' placeholder="Name" value='${name}'>
                               <br>
@@ -96,7 +116,26 @@
       const c = 'eq-input-elem disable-zoom';
 
       function buildLink(name) {
-        return `<li><a href='#' onclick='load("${name}")'>${name}</a><br><div class='remove-link-cnt'><button class='remove-link-btn'>X</button></div></li>`
+        return `<li class='remove-cnt link'><a href='#' onclick='load("${name}")'>${name}</a><br><div class='remove-link-cnt'><button class='remove-link-btn'>X</button></div></li>`
+      }
+
+      let removing = false;
+      function removeToggle() {
+        const haze = du.find('.pop-up-haze');
+        haze.hidden = !haze.hidden;
+        removing = !haze.hidden;
+      }
+
+      function remove(elem) {
+        if (removing) {
+          if (elem.matches('.link')) {
+            const name = du.find.closest('a', elem).innerText;
+            links.splice(links.indexOf(name), 1);
+            buildLinks();
+          } else if (elem.matches('.eqn')){
+            elem.remove();
+          }
+        }
       }
 
       function buildLinks() {
@@ -274,9 +313,9 @@
       function load(name) {
         function populate(body) {
           if (name) {
-            du.find('#save-btn-cnt').hidden = true;
+            du.find.all('.modify-data').forEach((elem) => elem.hidden = true);
           } else {
-            du.find('#save-btn-cnt').hidden = false;
+            du.find.all('.modify-data').forEach((elem) => elem.hidden = false);
           }
           du.find('#eq-cnt').innerHTML = '';
           index = 1;
@@ -324,7 +363,7 @@
           if (match) {
             errorMsg = 'Your account has been ' + match[1];
           } else {
-            errorMsg = "Invalid token: must fix if you want to edit file";
+            errorMsg = "Invalid token: must fix if you want to save changes";
           }
           du.find('#error-cnt').innerText = errorMsg;
         }
@@ -491,6 +530,9 @@
       du.on.match('change', '#reference-select', applyReference);
       du.on.match('click', '#add-link-btn', addLink);
       du.on.match('enter', '#add-link-input', addLink);
+      du.on.match('click', '.pop-up-haze', removeToggle);
+      du.on.match('click', '#remove-btn', removeToggle);
+      du.on.match('click', '.remove-cnt', remove);
       window.addEventListener('click', hideCalcInput);
     </script>
   </head>
@@ -509,12 +551,14 @@
         <label>1/</label>
         <input type='number' class='percision-input' max='1000' min='1' name='percision' value='32'>
       </span>
+      <button class='modify-data' id='remove-btn'>Remove</button>
     </div>
     <div id='eq-cnt'></div>
-    <button id='add-eq-btn'>Add Equation</button>
-    <span id='save-btn-cnt'>
+    <span class='modify-data'>
+      <button id='add-eq-btn'>Add Equation</button>
       <button id='save-eqs-btn' hidden>Save</button>
     </span>
+    <div class='pop-up-haze' hidden></div>
     <div id='calc-input' class='disable-zoom' hidden>
       <table class='calc-input-table numeric'>
         <tr>
