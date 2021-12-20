@@ -166,8 +166,8 @@
         select.innerHTML = html;
       }
 
-      let varDisabled = du.cookie.get('eqn-input').match(/var=true/) ? true : false;
-      let eqnDisabled = du.cookie.get('eqn-input').match(/eqn=true/) ? true : false;
+      let varDisabled = (du.cookie.get('eqn-input') || '').match(/var=true/) ? true : false;
+      let eqnDisabled = (du.cookie.get('eqn-input') || '').match(/eqn=true/) ? true : false;
       function toggleDisabled(target) {
         const selector = '.' + target.className.replace(/ /g, '.');
         const elems = du.find.all(selector);
