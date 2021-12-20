@@ -167,14 +167,18 @@
       }
 
       function toggleDisabled(target) {
-        target.disabled = !target.disabled;
-        if (!target.disabled) {
-          hideCalcInput();
-          target.focus();
-          target.select();
-        } else {
-          setCalcInput(target);
-        };
+        const selector = '.' + target.className.replace(/ /g, '.');
+        const elems = du.find.all(selector);
+        elems.forEach((elem) => {
+          elem.disabled = !elem.disabled;
+          if (!elem.disabled) {
+            hideCalcInput();
+            elem.focus();
+            elem.select();
+          } else {
+            setCalcInput(elem);
+          };
+        });
       }
 
       function getVars(index) {
