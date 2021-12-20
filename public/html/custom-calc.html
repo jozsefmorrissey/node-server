@@ -15,7 +15,7 @@
           font-size: 20pt;
         }
       }
-      #error-cnt {
+      .error-cnt {
         color: red;
       }
       .percision-input {
@@ -98,6 +98,7 @@
                               <input class='name' type='text' placeholder="Name" value='${name}'>
                               <br>
                               <input class='equation full-width disable-zoom' ${eqnDisabled ? 'disabled ' : ''}type='text' placeholder="Equation" value='${equation}'>
+                              <div class='error-cnt'></div>
                               <span class='input-cnt'></span>
                               <b>=</b>
                               <b class='answer-cnt'></b>
@@ -223,6 +224,7 @@
       }
 
       function shouldEvaluate(eqn, otherEqn, index) {
+        if (eqn === otherEqn) return false
         const refReg = (varName)  => new RegExp(`\\$\\(${index}(|,\\s*("|')${varName}("|'))\\)`);
         const vars = getVars(index);
         for (let j = 0; j < vars.length; j += 1) {
@@ -274,13 +276,21 @@
           const input = inputs[index];
           scope[input.name] = eval.eval(input.value, scope);
         }
-        let value = eval.eval(equation, scope);
-        if (percision !== undefined) {
-          value = new Measurement(value).fraction(`1/${percision}`);
-        }
-        answers[index] = eval.eval(value);
-        evalConnected(index);
-        du.find.closest('.answer-cnt', target).innerHTML = value + '<br/>';
+        const errorCnt = du.find.closest('.error-cnt', target);
+        try {
+          let value = eval.eval(equation, scope);
+          if (!Number.isNaN(value)) {
+            if (percision !== undefined) {
+              value = new Measurement(value).fraction(`1/${percision}`);
+            }
+            answers[index] = eval.eval(value);
+            evalConnected(index);
+            du.find.closest('.answer-cnt', target).innerHTML = value + '<br/>';
+            errorCnt.innerText = "";
+            return;
+          }
+        } catch (e) {}
+        errorCnt.innerText = "Equation cannot be evaluated.";
       }
 
       function variableChange(target) {
@@ -512,7 +522,7 @@
         if (value === '') return;
         const selected = target.selectedOptions[0];
         const index = selected.getAttribute('index');
-        if (value === '=') {
+        if (value === index) {
           calcInput.value += `$(${index})`;
         } else {
           calcInput.value += `$(${index}, \'${value}\')`;
@@ -552,7 +562,7 @@
       <ul id='link-menu'></ul>
     </div>
     <h2 id='name-cnt'></h2>
-    <b id='error-cnt'></b>
+    <b id='error-cnt' class='error-cnt'></b>
     <div>
       <label>Decimal</label>
       <input type='radio' name='percision-selector' value='decimal'>
