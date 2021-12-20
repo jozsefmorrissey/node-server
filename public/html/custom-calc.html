@@ -97,7 +97,7 @@
         newElem.innerHTML = `<b>${index++}.)</b>
                               <input class='name' type='text' placeholder="Name" value='${name}'>
                               <br>
-                              <input class='equation full-width disable-zoom' disabled type='text' placeholder="Equation" value='${equation}'>
+                              <input class='equation full-width disable-zoom' ${eqnDisabled ? 'disabled ' : ''}type='text' placeholder="Equation" value='${equation}'>
                               <span class='input-cnt'></span>
                               <b>=</b>
                               <b class='answer-cnt'></b>
@@ -166,6 +166,8 @@
         select.innerHTML = html;
       }
 
+      let varDisabled = du.cookie.get('eqn-input').match(/var=true/) ? true : false;
+      let eqnDisabled = du.cookie.get('eqn-input').match(/eqn=true/) ? true : false;
       function toggleDisabled(target) {
         const selector = '.' + target.className.replace(/ /g, '.');
         const elems = du.find.all(selector);
@@ -179,6 +181,9 @@
             setCalcInput(elem);
           };
         });
+        if (target.matches('.equation')) eqnDisabled = target.disabled;
+        if (target.matches('.eq-input-elem')) varDisabled = target.disabled;
+        du.cookie.set('eqn-input', `eqn=${eqnDisabled}:var=${varDisabled}`);
       }
 
       function getVars(index) {
@@ -202,7 +207,9 @@
             const b = du.create.element('b');
             b.innerText = name;
             div.append(b);
-            div.append(du.create.element('input', {class: c, value, name, disabled: true}));
+            const input = du.create.element('input', {class: c, value, name});
+            input.disabled = varDisabled === true ? true : undefined;
+            div.append(input);
             repeatHtml += '&nbsp;' + div.outerHTML;
           }
           saved[varIndex] = newSaved;
