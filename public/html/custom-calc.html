@@ -515,6 +515,7 @@
             calcInput.value += target.innerText.trim();
             evaluate(calcInput);
         }
+        if (calcInput.matches('.eq-input-elem')) variableChange(calcInput);
       }
 
       function applyReference(target) {
@@ -539,6 +540,7 @@
       du.on.match('click', '#add-eq-btn', () => addEq());
       du.on.match('keyup', '.equation', updateVariables);
       du.on.match('keyup', `.eq-input-elem`, variableChange);
+      du.on.match('change', `.eq-input-elem`, variableChange);
       du.on.match('click', '.equation', evaluate);
       du.on.match('click', `.eq-input-elem`, evaluate);
       du.on.match('click', '#save-eqs-btn', save);
