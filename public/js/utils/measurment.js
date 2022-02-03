@@ -12,7 +12,7 @@ function regexToObject (str, reg) {
 }
 
 class Measurement {
-  constructor(value) {
+  constructor(value, isMetric) {
     if ((typeof value) === 'string') {
       value += ' '; // Hacky fix for regularExpression
     }
@@ -62,8 +62,9 @@ class Measurement {
       if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
         throw new Error('Please enter a fraction with a denominator between (0, 1000]')
       }
-      let sign = decimal > 0 ? 1 : -1;
-      let remainder = Math.abs(decimal);
+      let standardDecimal = decimal / 2.54;
+      let sign = standardDecimal > 0 ? 1 : -1;
+      let remainder = Math.abs(standardDecimal);
       let currRemainder = remainder;
       let value = 0;
       let numerator = 0;
@@ -71,8 +72,8 @@ class Measurement {
         numerator += fracObj.numerator;
         currRemainder -= fracObj.decimal;
       }
-      const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
-      const diff2 = (numerator / denominator) - decimal;
+      const diff1 = standardDecimal - ((numerator - fracObj.numerator) / denominator);
+      const diff2 = (numerator / denominator) - standardDecimal;
       numerator -= diff1 < diff2 ? fracObj.numerator : 0;
       const integer = sign * Math.floor(numerator / denominator);
       numerator = numerator % denominator;
@@ -86,18 +87,26 @@ class Measurement {
       const integer = obj.integer !== 0 ? obj.integer : '';
       return `${integer}${reduce(obj.numerator, obj.denominator)}`;
     }
+    this.standard = this.fraction;
 
     this.decimal = (accuracy) => {
-      if (nan) return NaN;
-      const obj = calculateValue(accuracy);
-      return obj.integer + (obj.numerator / obj.denominator);
+      accuracy = accuracy % 10 ? accuracy : 10;
+      return Math.round(decimal * accuracy) / accuracy;
     }
+    const convertToMetric = (standardDecimal) => value = standardDecimal * 2.54;
 
     if ((typeof value) === 'number') {
+      if (!isMetric) {
+          convertToMetric(value);
+      }
       decimal = value;
     } else if ((typeof value) === 'string') {
       try {
-        decimal = parseFraction(value).decimal;
+        if (!isMetric) {
+          const standardDecimal = parseFraction(value).decimal;
+          convertToMetric(standardDecimal);
+        }
+        decimal = value;
       } catch (e) {
         nan = true;
       }

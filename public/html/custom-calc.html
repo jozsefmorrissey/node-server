@@ -188,7 +188,7 @@
       }
 
       function getVars(index) {
-        return Object.keys(saved[index]);
+        return Object.keys(saved[index] || []);
       }
 
       function updateVariables(target) {
@@ -223,12 +223,13 @@
         updateReferenceList();
       }
 
-      function shouldEvaluate(eqn, otherEqn, index) {
+      function shouldEvaluate(eqn, index, otherEqn, otherIndex) {
         if (eqn === otherEqn) return false
+        if (eqn.match(new RegExp(`\\$\\(${index}\\)`))) return true;
         const refReg = (varName)  => new RegExp(`\\$\\(${index}(|,\\s*("|')${varName}("|'))\\)`);
         const vars = getVars(index);
         for (let j = 0; j < vars.length; j += 1) {
-          const eqnStr = buildEquationStr(otherEqn, index);
+          const eqnStr = buildEquationStr(otherEqn, otherIndex);
           if (eqnStr.match(refReg(vars[j]))) {
             return true;
           }
@@ -250,8 +251,8 @@
         const eqn = eqns[index - 1];
         if (eqn) {
           const eval = [];
-          eqns.forEach((otherEqn) => {
-            if (shouldEvaluate(eqn, otherEqn, index)) {
+          eqns.forEach((otherEqn, otherIndex) => {
+            if (shouldEvaluate(eqn.value, index, otherEqn.value, otherIndex + 1)) {
               eval.push(otherEqn);
             }
           });
@@ -289,7 +290,9 @@
             errorCnt.innerText = "";
             return;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error(e);
+        }
         errorCnt.innerText = "Equation cannot be evaluated.";
       }
 
