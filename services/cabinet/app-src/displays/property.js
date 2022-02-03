@@ -82,6 +82,9 @@ class PropertyDisplay {
     };
 
     const recurse = (key, group) => {
+      if (group.values._IS_RADIO) {
+        return PropertyDisplay.radioTemplate.render(group);
+      }
       return PropertyDisplay.template.render(getScope(key, group));
     }
 
@@ -103,6 +106,27 @@ du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
   console.log('hello');
 });
 
+function setPropertyElemValue(elem, idAttr, value) {
+  const id = elem.getAttribute(idAttr);
+  const property = Property.get(id);
+  property.value(value);
+}
+
+function updateRadio(elem) {
+  const name = elem.getAttribute('name');
+  const elems = du.find.all(`input[type="radio"][name='${name}']`);
+  elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
+  setPropertyElemValue(elem, 'prop-radio-update', true);
+}
+
+function updateValue(elem) {
+  setPropertyElemValue(elem, 'prop-value-update', elem.value);
+}
+
+du.on.match('keyup', '[prop-value-update]', updateValue);
+du.on.match('change', '[prop-radio-update]', updateRadio);
+
+
 PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
 PropertyDisplay.branchReg = /^OR_(.{1,})/;
 PropertyDisplay.camelReg = /([a-z])([A-Z])/g;
@@ -110,6 +134,7 @@ PropertyDisplay.counter = 0;
 PropertyDisplay.template = new $t('properties/properties');
 PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
 PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
+PropertyDisplay.radioTemplate = new $t('properties/radio');
 PropertyDisplay.uniqueMap = {};
 
 PropertyDisplay.configInputTree = () =>

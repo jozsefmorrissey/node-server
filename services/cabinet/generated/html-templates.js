@@ -16,6 +16,15 @@ exports['306898022'] = (get, $t) =>
 		$t.clean(get("getHeader")(get("item"), get("$index"))) +
 		` </div> </div> </div>`
 
+exports['322356531'] = (get, $t) => 
+		`<div class='property-cnt' > <label>` +
+		$t.clean(get("property").name()) +
+		`</label> <input type="text" prop-value-update='` +
+		$t.clean(get("property").id()) +
+		`' value="` +
+		$t.clean(get("property").standard()) +
+		`"> </div>`
+
 exports['443122713'] = (get, $t) => 
 		`<option value='` +
 		$t.clean(get("section").prototype.constructor.name) +
@@ -40,11 +49,6 @@ exports['550500469'] = (get, $t) =>
 		`"> ` +
 		$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 		` </datalist> </span>`
-
-exports['760296172'] = (get, $t) => 
-		`<li >` +
-		$t.clean(get("name")) +
-		`</li>`
 
 exports['990870856'] = (get, $t) => 
 		`<div class='inline' > <h3>` +
@@ -345,13 +349,6 @@ exports['-1702305177'] = (get, $t) =>
 		$t.clean(get("OpenSectionDisplay").html(get("opening"))) +
 		` </div>`
 
-exports['divide/body'] = (get, $t) => 
-		`<h2>` +
-		$t.clean(get("list").activeIndex()) +
-		`</h2> val: ` +
-		$t.clean(get("list").value()('selected')) +
-		` `
-
 exports['cabinet/head'] = (get, $t) => 
 		`<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` +
 		$t.clean(get("$index")) +
@@ -381,17 +378,6 @@ exports['cabinet/head'] = (get, $t) =>
 		$t.clean(get("cabinet").thickness()) +
 		`'> </div> </div> `
 
-exports['divide/head'] = (get, $t) => 
-		`<div> <select value='` +
-		$t.clean(get("opening").name) +
-		`' class='open-divider-select` +
-		$t.clean(get("sections").length === 0 ? ' hidden' : '') +
-		`'> ` +
-		$t.clean( new $t('443122713').render(get("sections"), 'section', get)) +
-		` </select> <div class='open-divider-select` +
-		$t.clean(get("sections").length === 0 ? '' : ' hidden') +
-		`'> D </div> </div> `
-
 exports['display-manager'] = (get, $t) => 
 		`<div class='display-manager' id='` +
 		$t.clean(get("id")) +
@@ -407,6 +393,24 @@ exports['-1519826343'] = (get, $t) =>
 		`' value='` +
 		$t.clean(get("item").name) +
 		`'/> </div>`
+
+exports['divide/body'] = (get, $t) => 
+		`<h2>` +
+		$t.clean(get("list").activeIndex()) +
+		`</h2> val: ` +
+		$t.clean(get("list").value()('selected')) +
+		` `
+
+exports['divide/head'] = (get, $t) => 
+		`<div> <select value='` +
+		$t.clean(get("opening").name) +
+		`' class='open-divider-select` +
+		$t.clean(get("sections").length === 0 ? ' hidden' : '') +
+		`'> ` +
+		$t.clean( new $t('443122713').render(get("sections"), 'section', get)) +
+		` </select> <div class='open-divider-select` +
+		$t.clean(get("sections").length === 0 ? '' : ' hidden') +
+		`'> D </div> </div> `
 
 exports['divider-controls'] = (get, $t) => 
 		`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
@@ -483,6 +487,11 @@ exports['managers/cost/body'] = (get, $t) =>
 		$t.clean(get("instance").CostManager.costTypeHtml(get("instance").cost, get("instance"))) +
 		` </div> `
 
+exports['managers/cost/cost-body'] = (get, $t) => 
+		`<div> ` +
+		$t.clean(get("CostManager").costTypeHtml(get("cost"), get("scope"))) +
+		` </div> `
+
 exports['managers/cost/cost-head'] = (get, $t) => 
 		`<b> ` +
 		$t.clean(get("cost").id()) +
@@ -496,6 +505,15 @@ exports['managers/cost/cost-head'] = (get, $t) =>
 		$t.clean( new $t('-1298799242').render(get("cost").unsatisfiedBranches(), 'name', get)) +
 		` </ul> `
 
+exports['-1298799242'] = (get, $t) => 
+		`<li unique-id='` +
+		$t.clean(get("cost").uniqueId) +
+		`' name='` +
+		$t.clean(get("name")) +
+		`'> ` +
+		$t.clean(get("name")) +
+		` </li>`
+
 exports['managers/cost/header'] = (get, $t) => 
 		`<b part-id='` +
 		$t.clean(get("instance").partId) +
@@ -504,11 +522,6 @@ exports['managers/cost/header'] = (get, $t) =>
 		`</b> <ul> ` +
 		$t.clean( new $t('1842139693').render(get("instance").staticProps, 'prop', get)) +
 		` </ul> `
-
-exports['managers/cost/cost-body'] = (get, $t) => 
-		`<div> ` +
-		$t.clean(get("CostManager").costTypeHtml(get("cost"), get("scope"))) +
-		` </div> `
 
 exports['managers/cost/types/category'] = (get, $t) => 
 		`<div cost-id='` +
@@ -583,6 +596,9 @@ exports['managers/cost/types/select'] = (get, $t) =>
 		$t.clean(get("expandList").html()) +
 		`</div> </div> `
 
+exports['managers/property/body'] = (get, $t) => 
+		`<div> No Need </div> `
+
 exports['managers/property/header'] = (get, $t) => 
 		`<div> <b>` +
 		$t.clean(get("instance").name) +
@@ -591,9 +607,6 @@ exports['managers/property/header'] = (get, $t) =>
 		`) - ` +
 		$t.clean(get("instance").value) +
 		`</b> </div> `
-
-exports['managers/property/body'] = (get, $t) => 
-		`<div> No Need </div> `
 
 exports['managers/template/body'] = (get, $t) => 
 		`<div> <span> <input value='` +
@@ -618,6 +631,32 @@ exports['managers/template/header'] = (get, $t) =>
 		` (` +
 		$t.clean(get("instance").method()) +
 		`)</b> </div> `
+
+exports['opening'] = (get, $t) => 
+		`<div class='opening-cnt' opening-id='` +
+		$t.clean(get("opening").uniqueId) +
+		`'> <div class='divider-controls'> </div> </div> <div id='` +
+		$t.clean(get("openDispId")) +
+		`'> </div> `
+
+exports['order/body'] = (get, $t) => 
+		`<div> <b>` +
+		$t.clean(get("order").name()) +
+		`</b> <ul id='order-nav' class='center toggle-display-list'> <li class='toggle-display-item active' display-id='builder-display-` +
+		$t.clean(get("$index")) +
+		`'>Builder</li> <li class='toggle-display-item' display-id='information-display-` +
+		$t.clean(get("$index")) +
+		`'>Information</li> </ul> <div id='builder-display-` +
+		$t.clean(get("$index")) +
+		`'> <b>` +
+		$t.clean(get("order").name()) +
+		`</b> <button class='save-order-btn' index='` +
+		$t.clean(get("$index")) +
+		`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> <div id='information-display-` +
+		$t.clean(get("$index")) +
+		`' hidden> <utility-filter id='uf-info-` +
+		$t.clean(get("$index")) +
+		`' edit='true'> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> </div> </div> `
 
 exports['model-controller'] = (get, $t) => 
 		`<div> <div class='model-selector'> <div ` +
@@ -660,32 +699,6 @@ exports['-1397238508'] = (get, $t) =>
 exports['-424251200'] = (get, $t) => 
 		`model-controller`
 
-exports['opening'] = (get, $t) => 
-		`<div class='opening-cnt' opening-id='` +
-		$t.clean(get("opening").uniqueId) +
-		`'> <div class='divider-controls'> </div> </div> <div id='` +
-		$t.clean(get("openDispId")) +
-		`'> </div> `
-
-exports['order/body'] = (get, $t) => 
-		`<div> <b>` +
-		$t.clean(get("order").name()) +
-		`</b> <ul id='order-nav' class='center toggle-display-list'> <li class='toggle-display-item active' display-id='builder-display-` +
-		$t.clean(get("$index")) +
-		`'>Builder</li> <li class='toggle-display-item' display-id='information-display-` +
-		$t.clean(get("$index")) +
-		`'>Information</li> </ul> <div id='builder-display-` +
-		$t.clean(get("$index")) +
-		`'> <b>` +
-		$t.clean(get("order").name()) +
-		`</b> <button class='save-order-btn' index='` +
-		$t.clean(get("$index")) +
-		`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> <div id='information-display-` +
-		$t.clean(get("$index")) +
-		`' hidden> <utility-filter id='uf-info-` +
-		$t.clean(get("$index")) +
-		`' edit='true'> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> </div> </div> `
-
 exports['order/builder/body'] = (get, $t) => 
 		`<div> <b>` +
 		$t.clean(get("order").name) +
@@ -693,14 +706,14 @@ exports['order/builder/body'] = (get, $t) =>
 		$t.clean(get("$index")) +
 		`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> `
 
-exports['order/head'] = (get, $t) => 
-		`<h3 class='margin-zero'> ` +
-		$t.clean(get("order").name()) +
-		` </h3> `
-
 exports['order/builder/head'] = (get, $t) => 
 		`<h3 class='margin-zero'> ` +
 		$t.clean(get("order").name) +
+		` </h3> `
+
+exports['order/head'] = (get, $t) => 
+		`<h3 class='margin-zero'> ` +
+		$t.clean(get("order").name()) +
 		` </h3> `
 
 exports['order/information/body'] = (get, $t) => 
@@ -711,19 +724,8 @@ exports['order/information/head'] = (get, $t) =>
 
 exports['properties/config-body'] = (get, $t) => 
 		`` +
-		$t.clean( new $t('-492695871').render(get("properties"), 'property', get)) +
+		$t.clean( new $t('322356531').render(get("properties"), 'property', get)) +
 		` `
-
-exports['-492695871'] = (get, $t) => 
-		`<div class='property-cnt' > <label>` +
-		$t.clean(get("property").name()) +
-		`</label> <input type="text" prop-update='` +
-		$t.clean(get("property").id) +
-		`' name="` +
-		$t.clean(get("key")) +
-		`" value="` +
-		$t.clean(get("property").standard()) +
-		`"> </div>`
 
 exports['properties/config-head'] = (get, $t) => 
 		`<h3>` +
@@ -759,6 +761,31 @@ exports['properties/property'] = (get, $t) =>
 		`" value="` +
 		$t.clean(get("property").value()) +
 		`"> `
+
+exports['properties/radio'] = (get, $t) => 
+		`<div class='center'> <label>` +
+		$t.clean(get("key")) +
+		`:&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
+		$t.clean( new $t('-1973743329').render(get("values"), 'property', get)) +
+		` </div> `
+
+exports['-1973743329'] = (get, $t) => 
+		`<span > <label>` +
+		$t.clean(get("property").name()) +
+		`</label> <input type='radio' name='` +
+		$t.clean(get("key")) +
+		`' prop-radio-update='` +
+		$t.clean(get("property").id()) +
+		`' ` +
+		$t.clean(get("property").value() === 'true' ? 'checked' : '') +
+		`> </span>`
+
+exports['properties/unit'] = (get, $t) => 
+		`<div> <label>Standard</label> <input type='radio' name='unit' ` +
+		$t.clean(get("unit").value() === 'Imperial (US)' ? 'checked' : '') +
+		` value='Imperial (US)'> <label>Metric</label> <input type='radio' name='unit' ` +
+		$t.clean(get("unit").value() === 'Metric' ? 'checked' : '') +
+		` value='Metric'> </div> `
 
 exports['room/body'] = (get, $t) => 
 		`<div> <select> ` +
@@ -818,12 +845,3 @@ exports['sections/open'] = (get, $t) =>
 		`</h2> <div class='section-feature-ctn'> ` +
 		$t.clean(get("featureDisplay")) +
 		` </div> `
-
-exports['-1298799242'] = (get, $t) => 
-		`<li unique-id='` +
-		$t.clean(get("cost").uniqueId) +
-		`' name='` +
-		$t.clean(get("name")) +
-		`'> ` +
-		$t.clean(get("name")) +
-		` </li>`

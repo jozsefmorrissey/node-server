@@ -131,14 +131,14 @@ function endpoints(app, prefix) {
     res.send(getUser(req).loadData('templates') || []);
   });
 
-  //  ---------------------------- Properties -----------------------------//
+  //  ---------------------------- Configuration -----------------------------//
 
-  app.post(prefix + EPNTS.properties.save(), function (req, res) {
+  app.post(prefix + EPNTS.configuration.save(), function (req, res) {
     getUser(req).saveData(`properties`, req.body);
     res.send('success');
   });
 
-  app.get(prefix + EPNTS.properties.get(), function (req, res) {
+  app.get(prefix + EPNTS.configuration.get(), function (req, res) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Type', 'application/json');
     res.send(getUser(req).loadData('properties') || []);

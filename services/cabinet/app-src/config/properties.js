@@ -11,15 +11,17 @@ const l = new Property('l', 'length', null);
 
 
 const assemProps = {
+  UNIT: [
+    new Property('IUS', 'Imperial (US)'),
+    new Property('M', 'Metric')
+  ],
   Overlay: [
     new Property('ov', 'Overlay', 1/2)
   ],
-  FullOverlay: [
+  Reveal: [
     new Property('r', 'Reveal', 1/8),
     new Property('rvt', 'Reveal Top', 1/2),
-    new Property('rvb', 'Reveal Bottom', 0),
-    new Property('rvl', 'Reveal Left', 1/16),
-    new Property('rvr', 'Reveal Right', 1/16)
+    new Property('rvb', 'Reveal Bottom', 0)
   ],
   Inset: [
     new Property('is', 'Spacing', 3/32)
@@ -41,9 +43,9 @@ const assemProps = {
   ],
   Guides: [
     l.clone(),
-    new Property('tos', 'Top Offset', 1/2),
-    new Property('sos', 'Side Offest', 3/16),
-    new Property('bos', 'Bottom Offset', 1/2)
+    new Property('dbtos', 'Drawer Box Top Offset', 1/2),
+    new Property('dbsos', 'Drawer Box Side Offest', 3/16),
+    new Property('dbbos', 'Drawer Box Bottom Offset', 1/2)
   ],
   Door: [
     h.clone(), w.clone(), t.clone()
@@ -65,10 +67,13 @@ const assemProps = {
     new Property('proj', 'Projection', null),
   ],
   Hinge: [
-    new Property('tab', 'Spacing from bore to edge of door'),
-    new Property('ol', 'Door Overlay')
+    new Property('maxtab', 'Max Spacing from bore to edge of door', null),
+    new Property('maxol', 'Max Door Overlay', null),
+    new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
+    new Property('minol', 'Minimum Door Overlay', null)
   ]
 }
+assemProps.UNIT._IS_RADIO = true;
 
 function assemProperties(clazz, filter) {
   clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;

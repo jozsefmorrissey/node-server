@@ -3,19 +3,6 @@ const shell = require('shelljs');
 const { Mutex, Semaphore } = require('async-mutex');
 require('../../arguement-parcer')
 
-const host = process.argv[2];
-
-// function HachyImport(url, dest) {
-//   const curlCmd = `curl -X GET --insecure '${url}'`;
-//   const code = shell.exec(curlCmd, {silent: true}).stdout;
-//   if (code !== '') {
-//     fs.writeFile(`./generated/hacky/${dest}`, code, () =>
-//         console.warn(`HackyImport: \n\t./generated/hacky/${dest}\n\t${url}`));
-//   }
-// }
-//
-// HachyImport(`${host}/endpoints`, 'EPNTS.js');
-
 const valueRegex = /[A-Z.a-z]{1,}=.*$/;
 function argParser() {
   for (let index = 2; index < process.argv.length; index += 1) {

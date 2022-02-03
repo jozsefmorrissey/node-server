@@ -22,6 +22,10 @@
     "save": "/costs/save",
     "get": "/costs/get"
   },
+  "configuration": {
+    "save": "/configuration/save",
+    "get": "/configuration/get"
+  },
   "patterns": {
     "save": "/patterns/save",
     "get": "/patterns/get"
