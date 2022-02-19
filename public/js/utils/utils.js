@@ -48,6 +48,41 @@ const identifierAttr = '_TYPE';
 const immutableAttr = '_IMMUTABLE';
 const temporaryAttr = '_TEMPORARY';
 
+Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
+  function interpretValue(value) {
+    const classname = value[identifierAttr];
+    if (value instanceof Object) {
+      const attrs = Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
+      if (Array.isArray(value)) {
+        const realArray = [];
+        for (let index = 0; index < value.length; index += 1) {
+          realArray[index] = fromJson(value[index]);
+        }
+        return realArray;
+      } else if (classname && classLookup[classname]) {
+        const classObj = new (classLookup[classname])();
+        for (let index = 0; index < attrs.length; index += 1) {
+          const attr = attrs[index];
+          if ((typeof classObj[attr]) === 'function')
+            classObj[attr](interpretValue(value[attr]));
+        };
+        return classObj;
+      } else {
+        const realObj = {}
+        for (let index = 0; index < attrs.length; index += 1) {
+          const attr = attrs[index];
+          realObj[attr] = interpretValue(value[attr]);
+        };
+        return realObj
+      }
+    }
+    return value;
+  }
+
+  if (!(rootJson instanceof Object)) return rootJson;
+  return interpretValue(rootJson);
+});
+
 Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
   const cxtrName = obj.constructor.name;
   if (classLookup[cxtrName] === undefined) {
@@ -131,6 +166,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     };
     return obj;
   }
+  // obj.clone = () => obj.fromJson(obj.toJson);
 }, true);
 Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
 
@@ -163,7 +199,7 @@ Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
   for(let index = 0; index < keys.length; index += 1) {
     const key = keys[index];
     const member = obj[key];
-    if ((typeof memeber) === 'object') {
+    if ((typeof member) === 'object') {
       if ((typeof member.clone) === 'function') {
         clone[key] = member.clone();
       } else {

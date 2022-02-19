@@ -1,6 +1,7 @@
 
 
 const Property = require('./property');
+const Measurement = require('../../../../public/js/utils/measurment.js');
 
 const h = new Property('h', 'height', null);
 const w = new Property('w', 'width', null);
@@ -9,12 +10,15 @@ const t = new Property('t', 'thickness', null);
 const l = new Property('l', 'length', null);
 
 
+let unitCount = 0;
+const UNIT = [];
+Measurement.units().forEach((unit) =>
+      UNIT.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
+UNIT._IS_RADIO = true;
+UNIT._VALUE = Measurement.unit();
 
 const assemProps = {
-  UNIT: [
-    new Property('IUS', 'Imperial (US)'),
-    new Property('M', 'Metric')
-  ],
+  UNIT,
   Overlay: [
     new Property('ov', 'Overlay', 1/2)
   ],
@@ -73,7 +77,6 @@ const assemProps = {
     new Property('minol', 'Minimum Door Overlay', null)
   ]
 }
-assemProps.UNIT._IS_RADIO = true;
 
 function assemProperties(clazz, filter) {
   clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
@@ -83,6 +86,60 @@ function assemProperties(clazz, filter) {
   return props;
 }
 
+const config = {};
+const changes = {};
+const copyMap = {};
+assemProperties.changes = {
+  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
+  save: (id) => {
+    const list = changes[id];
+    if (!list) throw new Error(`Unkown change id '${id}'`);
+    const group = list._GROUP;
+    if (config[group] === undefined) config[group] = [];
+    if(copyMap[id] === undefined) {
+      config[group].push(JSON.clone(changes[id]));
+      copyMap[list._ID] = config[group][config[group].length - 1];
+    } else {
+      const tempList = changes[id];
+      for (let index = 0; index < tempList.length; index += 1) {
+        const tempProp = tempList[index];
+        const configProp = copyMap[id][index];
+        configProp.fromJson(tempProp.toJson());
+      }
+    }
+    console.log('config', config);
+    console.log('changes', changes);
+  },
+  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.delete(list._GROUP)),
+  delete: (id) => delete changes[id],
+  changed: (id) => {
+    const list = changes[id];
+    if (list === undefined) return false;
+    for (let index = 0; index < list.length; index += 1) {
+      const prop = list[index];
+      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
 assemProperties.list = () => Object.keys(assemProps);
+assemProperties.get = (group) => {
+  if (assemProps[group]) {
+    const list = [];
+    const ogList = assemProps[group];
+    for (let index = 0; index < ogList.length; index += 1) {
+      list[index] = ogList[index].clone();
+    }
+    list._ID = String.random();
+    list._GROUP = group;
+    changes[list._ID] = list;
+    return list;
+  }
+  throw new Error(`Requesting invalid Property Group '${group}'`);
+}
+
 
 module.exports = assemProperties;

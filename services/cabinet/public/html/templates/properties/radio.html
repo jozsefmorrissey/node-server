@@ -3,6 +3,6 @@
   <span:t repeat='property in values'>
     <label>{{property.name()}}</label>
     <input type='radio' name='{{key}}' prop-radio-update='{{property.id()}}'
-          {{property.value() === 'true' ? 'checked' : ''}}>
+          {{property.value() === true ? 'checked' : ''}}>
   </span:t>
 </div>

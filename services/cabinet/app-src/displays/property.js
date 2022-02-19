@@ -11,6 +11,10 @@ const $t = require('../../../../public/js/utils/$t.js');
 const Inputs = require('../input/inputs.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+const Measurement = require('../../../../public/js/utils/measurment.js');
+
+// TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
+const changed = (id) => Properties.changes.changed(id);
 
 class PropertyDisplay {
   constructor(containerSelector) {
@@ -47,9 +51,13 @@ class PropertyDisplay {
       }
       if (properties.length > 0) {
         const getObject = (values) => {
-          const props = [];
-          properties.forEach((prop) => props.push(prop.clone()));
-          return {properties: props, name: values.name, uniqueId};
+          let props = [];
+          if (key === undefined) {
+            properties.forEach((prop) => props.push(prop.clone()));
+          } else {
+            props = Properties.get(key);
+          }
+          return {properties: props, name: values.name, uniqueId, changed};
         }
         const expListProps = {
           list: [],
@@ -108,8 +116,21 @@ du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
 
 function setPropertyElemValue(elem, idAttr, value) {
   const id = elem.getAttribute(idAttr);
+  const group = elem.getAttribute('name');
   const property = Property.get(id);
   property.value(value);
+  if (group === 'UNIT' && value) {
+    Measurement.unit(property.name());
+  }
+}
+
+function updateMeasurements () {
+  measureElems = du.find.all('[measurement-id]:not([measurement-id=""])');
+  measureElems.forEach((elem) => {
+    const id = elem.getAttribute('measurement-id');
+    const measurement = Measurement.get(id);
+    elem.value = measurement.display();
+  });
 }
 
 function updateRadio(elem) {
@@ -117,15 +138,23 @@ function updateRadio(elem) {
   const elems = du.find.all(`input[type="radio"][name='${name}']`);
   elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
   setPropertyElemValue(elem, 'prop-radio-update', true);
+  if (name === 'UNIT') updateMeasurements();
 }
 
 function updateValue(elem) {
   setPropertyElemValue(elem, 'prop-value-update', elem.value);
 }
 
+function saveChange(elem) {
+  const id = elem.getAttribute('properties-id');
+  Properties.changes.save(id);
+}
+
+
 du.on.match('keyup', '[prop-value-update]', updateValue);
 du.on.match('change', '[prop-radio-update]', updateRadio);
-
+du.on.match('click', '#property-manager-save-all', Properties.changes.saveAll);
+du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
 
 PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
 PropertyDisplay.branchReg = /^OR_(.{1,})/;
@@ -136,6 +165,7 @@ PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
 PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
 PropertyDisplay.radioTemplate = new $t('properties/radio');
 PropertyDisplay.uniqueMap = {};
+PropertyDisplay.configMap = {};
 
 PropertyDisplay.configInputTree = () =>
   new DecisionInputTree('Config', [Inputs('name')], console.log);

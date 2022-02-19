@@ -16,15 +16,6 @@ exports['306898022'] = (get, $t) =>
 		$t.clean(get("getHeader")(get("item"), get("$index"))) +
 		` </div> </div> </div>`
 
-exports['322356531'] = (get, $t) => 
-		`<div class='property-cnt' > <label>` +
-		$t.clean(get("property").name()) +
-		`</label> <input type="text" prop-value-update='` +
-		$t.clean(get("property").id()) +
-		`' value="` +
-		$t.clean(get("property").standard()) +
-		`"> </div>`
-
 exports['443122713'] = (get, $t) => 
 		`<option value='` +
 		$t.clean(get("section").prototype.constructor.name) +
@@ -70,6 +61,30 @@ exports['1309109837'] = (get, $t) =>
 		$t.clean( new $t('-1397238508').render(get("partList"), 'part', get)) +
 		` </div>`
 
+exports['1410278299'] = (get, $t) => 
+		`<span > <label>` +
+		$t.clean(get("property").name()) +
+		`</label> <input type='radio' name='` +
+		$t.clean(get("key")) +
+		`' prop-radio-update='` +
+		$t.clean(get("property").id()) +
+		`' ` +
+		$t.clean(get("property").value() === true ? 'checked' : '') +
+		`> </span>`
+
+exports['1615493058'] = (get, $t) => 
+		`<div class='property-cnt' > <label>` +
+		$t.clean(get("property").name()) +
+		`</label> <input type="text" prop-value-update='` +
+		$t.clean(get("property").id()) +
+		`' value="` +
+		$t.clean(get("property").display()) +
+		`" measurement-id='` +
+		$t.clean(get("property").measurementId()) +
+		`'> <button class='save-change' property-id='` +
+		$t.clean(get("property").id()) +
+		`'>Save</button> </div>`
+
 exports['1842139693'] = (get, $t) => 
 		`<li >` +
 		$t.clean(get("prop").name()) +
@@ -109,7 +124,7 @@ exports['expandable/input-repeat'] = (get, $t) =>
 		`' class='expandable-list-add-btn' ` +
 		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
 		`> Add ` +
-		$t.clean(get("listElemLable")) +
+		$t.clean(get("listElemLable")()) +
 		` </button> <div class='error' id='` +
 		$t.clean(get("ERROR_CNT_ID")) +
 		`'></div> </div> `
@@ -128,9 +143,9 @@ exports['expandable/list'] = (get, $t) =>
 		$t.clean( new $t('-493474868').render(get("list")(), 'item', get)) +
 		` <div class='expand-input-cnt' hidden>` +
 		$t.clean(get("inputHtml")()) +
-		`</div> <div class='input-open-cnt'><br>Add ` +
+		`</div> <div class='input-open-cnt'><button>Add ` +
 		$t.clean(get("listElemLable")()) +
-		`<br><br></div> </div> `
+		`</button></div> </div> `
 
 exports['-493474868'] = (get, $t) => 
 		`<div class="expandable-list-body" index='` +
@@ -222,23 +237,6 @@ exports['-1362189101'] = (get, $t) =>
 		$t.clean(get("childHtml")(get("$index"))) +
 		` </div>`
 
-exports['input/decision/decisionTree'] = (get, $t) => 
-		`<div class='` +
-		$t.clean(get("class")) +
-		`' tree-id='` +
-		$t.clean(get("treeId")) +
-		`'> ` +
-		$t.clean(get("payload").html()) +
-		` <button class='` +
-		$t.clean(get("buttonClass")) +
-		`' tree-id='` +
-		$t.clean(get("treeId")) +
-		`' ` +
-		$t.clean(get("formFilled")() ? '' : 'disabled') +
-		`> ` +
-		$t.clean(get("name")) +
-		` </button> </div> `
-
 exports['input/input'] = (get, $t) => 
 		`<div class='input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
@@ -272,6 +270,23 @@ exports['-994603408'] = (get, $t) =>
 		`<option value="` +
 		$t.clean(get("item")) +
 		`" ></option>`
+
+exports['input/decision/decisionTree'] = (get, $t) => 
+		`<div class='` +
+		$t.clean(get("class")) +
+		`' tree-id='` +
+		$t.clean(get("treeId")) +
+		`'> ` +
+		$t.clean(get("payload").html()) +
+		` <button class='` +
+		$t.clean(get("buttonClass")) +
+		`' tree-id='` +
+		$t.clean(get("treeId")) +
+		`' ` +
+		$t.clean(get("formFilled")() ? '' : 'disabled') +
+		`> ` +
+		$t.clean(get("name")) +
+		` </button> </div> `
 
 exports['input/measurement'] = (get, $t) => 
 		`<div class='fit input-cnt'` +
@@ -326,29 +341,6 @@ exports['-1238286346'] = (get, $t) =>
 		$t.clean(get("value")) +
 		` </option>`
 
-exports['cabinet/body'] = (get, $t) => 
-		`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
-		$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
-		` </select> </div> <div class='property-id-container center inline-flex'>` +
-		$t.clean(get("selectHtml")) +
-		`</div> <div class='right'> <select class="show-right-select"> ` +
-		$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
-		` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
-		$t.clean(get("$index")) +
-		`'>Save</button> </div> ` +
-		$t.clean( new $t('-1702305177').render(get("cabinet").openings, 'opening', get)) +
-		` </div> `
-
-exports['-970877277'] = (get, $t) => 
-		`<option >` +
-		$t.clean(get("showType").name) +
-		`</option>`
-
-exports['-1702305177'] = (get, $t) => 
-		`<div class='divison-section-cnt'> ` +
-		$t.clean(get("OpenSectionDisplay").html(get("opening"))) +
-		` </div>`
-
 exports['cabinet/head'] = (get, $t) => 
 		`<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` +
 		$t.clean(get("$index")) +
@@ -377,6 +369,29 @@ exports['cabinet/head'] = (get, $t) =>
 		`' value='` +
 		$t.clean(get("cabinet").thickness()) +
 		`'> </div> </div> `
+
+exports['cabinet/body'] = (get, $t) => 
+		`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
+		$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
+		` </select> </div> <div class='property-id-container center inline-flex'>` +
+		$t.clean(get("selectHtml")) +
+		`</div> <div class='right'> <select class="show-right-select"> ` +
+		$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
+		` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
+		$t.clean(get("$index")) +
+		`'>Save</button> </div> ` +
+		$t.clean( new $t('-1702305177').render(get("cabinet").openings, 'opening', get)) +
+		` </div> `
+
+exports['-970877277'] = (get, $t) => 
+		`<option >` +
+		$t.clean(get("showType").name) +
+		`</option>`
+
+exports['-1702305177'] = (get, $t) => 
+		`<div class='divison-section-cnt'> ` +
+		$t.clean(get("OpenSectionDisplay").html(get("opening"))) +
+		` </div>`
 
 exports['display-manager'] = (get, $t) => 
 		`<div class='display-manager' id='` +
@@ -448,19 +463,19 @@ exports['divider-controls'] = (get, $t) =>
 exports['login/confirmation-message'] = (get, $t) => 
 		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
 
-exports['login/create-account'] = (get, $t) => 
-		`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
-		$t.clean(get("email")) +
-		`'> <input type='password' placeholder="password" name='password' value='` +
-		$t.clean(get("password")) +
-		`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
-
 exports['login/login'] = (get, $t) => 
 		`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
 		$t.clean(get("email")) +
 		`'> <input type='password' placeholder="password" name='password' value='` +
 		$t.clean(get("password")) +
 		`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+
+exports['login/create-account'] = (get, $t) => 
+		`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
+		$t.clean(get("email")) +
+		`'> <input type='password' placeholder="password" name='password' value='` +
+		$t.clean(get("password")) +
+		`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
 
 exports['login/reset-password'] = (get, $t) => 
 		`<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -632,32 +647,6 @@ exports['managers/template/header'] = (get, $t) =>
 		$t.clean(get("instance").method()) +
 		`)</b> </div> `
 
-exports['opening'] = (get, $t) => 
-		`<div class='opening-cnt' opening-id='` +
-		$t.clean(get("opening").uniqueId) +
-		`'> <div class='divider-controls'> </div> </div> <div id='` +
-		$t.clean(get("openDispId")) +
-		`'> </div> `
-
-exports['order/body'] = (get, $t) => 
-		`<div> <b>` +
-		$t.clean(get("order").name()) +
-		`</b> <ul id='order-nav' class='center toggle-display-list'> <li class='toggle-display-item active' display-id='builder-display-` +
-		$t.clean(get("$index")) +
-		`'>Builder</li> <li class='toggle-display-item' display-id='information-display-` +
-		$t.clean(get("$index")) +
-		`'>Information</li> </ul> <div id='builder-display-` +
-		$t.clean(get("$index")) +
-		`'> <b>` +
-		$t.clean(get("order").name()) +
-		`</b> <button class='save-order-btn' index='` +
-		$t.clean(get("$index")) +
-		`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> <div id='information-display-` +
-		$t.clean(get("$index")) +
-		`' hidden> <utility-filter id='uf-info-` +
-		$t.clean(get("$index")) +
-		`' edit='true'> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> </div> </div> `
-
 exports['model-controller'] = (get, $t) => 
 		`<div> <div class='model-selector'> <div ` +
 		$t.clean(get("group").level > 0 ? 'hidden' : '') +
@@ -699,6 +688,32 @@ exports['-1397238508'] = (get, $t) =>
 exports['-424251200'] = (get, $t) => 
 		`model-controller`
 
+exports['opening'] = (get, $t) => 
+		`<div class='opening-cnt' opening-id='` +
+		$t.clean(get("opening").uniqueId) +
+		`'> <div class='divider-controls'> </div> </div> <div id='` +
+		$t.clean(get("openDispId")) +
+		`'> </div> `
+
+exports['order/body'] = (get, $t) => 
+		`<div> <b>` +
+		$t.clean(get("order").name()) +
+		`</b> <ul id='order-nav' class='center toggle-display-list'> <li class='toggle-display-item active' display-id='builder-display-` +
+		$t.clean(get("$index")) +
+		`'>Builder</li> <li class='toggle-display-item' display-id='information-display-` +
+		$t.clean(get("$index")) +
+		`'>Information</li> </ul> <div id='builder-display-` +
+		$t.clean(get("$index")) +
+		`'> <b>` +
+		$t.clean(get("order").name()) +
+		`</b> <button class='save-order-btn' index='` +
+		$t.clean(get("$index")) +
+		`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> <div id='information-display-` +
+		$t.clean(get("$index")) +
+		`' hidden> <utility-filter id='uf-info-` +
+		$t.clean(get("$index")) +
+		`' edit='true'> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> </div> </div> `
+
 exports['order/builder/body'] = (get, $t) => 
 		`<div> <b>` +
 		$t.clean(get("order").name) +
@@ -723,9 +738,24 @@ exports['order/information/head'] = (get, $t) =>
 		`<b>Information</b> `
 
 exports['properties/config-body'] = (get, $t) => 
-		`` +
-		$t.clean( new $t('322356531').render(get("properties"), 'property', get)) +
-		` `
+		`<div> ` +
+		$t.clean( new $t('-179269626').render(get("properties"), 'property', get)) +
+		` <button class='save-change' properties-id='` +
+		$t.clean(get("properties")._ID) +
+		`' ` +
+		$t.clean(get("changed")(get("properties")._ID) ? '' : '') +
+		`> Save </button> </div> `
+
+exports['-179269626'] = (get, $t) => 
+		`<div class='property-cnt' > <label>` +
+		$t.clean(get("property").name()) +
+		`</label> <input type="text" prop-value-update='` +
+		$t.clean(get("property").id()) +
+		`' value="` +
+		$t.clean(get("property").display()) +
+		`" measurement-id='` +
+		$t.clean(get("property").measurementId()) +
+		`'> </div>`
 
 exports['properties/config-head'] = (get, $t) => 
 		`<h3>` +
@@ -759,29 +789,20 @@ exports['properties/property'] = (get, $t) =>
 		`</label> <input type="text" name="` +
 		$t.clean(get("key")) +
 		`" value="` +
-		$t.clean(get("property").value()) +
-		`"> `
+		$t.clean(get("property").display()) +
+		`" decimal='` +
+		$t.clean(get("this").value()) +
+		`'> `
 
 exports['properties/radio'] = (get, $t) => 
 		`<div class='center'> <label>` +
 		$t.clean(get("key")) +
 		`:&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
-		$t.clean( new $t('-1973743329').render(get("values"), 'property', get)) +
+		$t.clean( new $t('1410278299').render(get("values"), 'property', get)) +
 		` </div> `
 
-exports['-1973743329'] = (get, $t) => 
-		`<span > <label>` +
-		$t.clean(get("property").name()) +
-		`</label> <input type='radio' name='` +
-		$t.clean(get("key")) +
-		`' prop-radio-update='` +
-		$t.clean(get("property").id()) +
-		`' ` +
-		$t.clean(get("property").value() === 'true' ? 'checked' : '') +
-		`> </span>`
-
 exports['properties/unit'] = (get, $t) => 
-		`<div> <label>Standard</label> <input type='radio' name='unit' ` +
+		`<div> HI <label>Standard</label> <input type='radio' name='unit' ` +
 		$t.clean(get("unit").value() === 'Imperial (US)' ? 'checked' : '') +
 		` value='Imperial (US)'> <label>Metric</label> <input type='radio' name='unit' ` +
 		$t.clean(get("unit").value() === 'Metric' ? 'checked' : '') +

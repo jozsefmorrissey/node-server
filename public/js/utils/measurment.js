@@ -1,4 +1,5 @@
 
+const Lookup = require('./object/lookup');
 
 function regexToObject (str, reg) {
   const match = str.match(reg);
@@ -11,14 +12,25 @@ function regexToObject (str, reg) {
   return returnVal;
 }
 
-class Measurement {
-  constructor(value, isMetric) {
+let percision = '1/32';
+let units = [
+              'Imperial (US)',
+              'Metric'
+]
+let unit = units[0];
+
+
+class Measurement extends Lookup {
+  constructor(value, metric) {
+    super();
     if ((typeof value) === 'string') {
       value += ' '; // Hacky fix for regularExpression
     }
 
+    const isMetric = () => unit === units[1] || metric;
+
     let decimal = 0;
-    let nan = false;
+    let nan = value === null || value === undefined;
     this.isNaN = () => nan;
 
     const parseFraction = (str) => {
@@ -56,7 +68,7 @@ class Measurement {
     }
 
     function calculateValue(accuracy) {
-      accuracy = accuracy || '1/1000'
+      accuracy = accuracy || '1/32'
       const fracObj = parseFraction(accuracy);
       const denominator = fracObj.denominator;
       if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
@@ -87,22 +99,34 @@ class Measurement {
       const integer = obj.integer !== 0 ? obj.integer : '';
       return `${integer}${reduce(obj.numerator, obj.denominator)}`;
     }
-    this.standard = this.fraction;
+    this.standardUS = this.fraction;
+
+    this.display = (accuracy) => {
+      switch (unit) {
+        case units[0]: return this.standardUS(accuracy);
+        case units[1]: return this.decimal(accuracy);
+        default:
+            return this.standardUS(accuracy);
+      }
+    }
+
+    this.value = (accuracy) => this.decimal(accuracy);
 
     this.decimal = (accuracy) => {
+      if (nan) return NaN;
       accuracy = accuracy % 10 ? accuracy : 10;
       return Math.round(decimal * accuracy) / accuracy;
     }
     const convertToMetric = (standardDecimal) => value = standardDecimal * 2.54;
 
     if ((typeof value) === 'number') {
-      if (!isMetric) {
+      if (!isMetric()) {
           convertToMetric(value);
       }
       decimal = value;
     } else if ((typeof value) === 'string') {
       try {
-        if (!isMetric) {
+        if (!isMetric()) {
           const standardDecimal = parseFraction(value).decimal;
           convertToMetric(standardDecimal);
         }
@@ -116,6 +140,13 @@ class Measurement {
   }
 }
 
+Measurement.unit = (newUnit) => {
+  for (index = 0; index < units.length; index += 1) {
+    if (newUnit === units[index]) unit = newUnit;
+  }
+  return unit
+};
+Measurement.units = () => JSON.parse(JSON.stringify(units));
 Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
 Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
 Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
