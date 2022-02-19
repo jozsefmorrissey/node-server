@@ -4730,659 +4730,773 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/decisionTree.js',
+RequireJS.addFunction('../../public/js/utils/dom-utils.js',
 function (require, exports, module) {
 	
-
-	
-	
-	
-	// terminology
-	// name - String to define state;
-	// payload - data returned for a given state
-	// stateObject - object defining states {name: [payload]...}
-	// states - array of availible state names.
-	// node - {name, states, payload, then, addState, addStates};
-	// then(name) - a function to set a following state.
-	// next(name) - a function to get the next state.
-	// back() - a function to move back up the tree.
-	// top() - a function to get root;
-	//
-	// returns all functions return current node;
-	class DecisionTree {
-	  constructor(name, payload) {
-	    name = name || 'root';
-	    const stateConfigs = {};
-	    const tree = {};
-	    const nodeMap = {};
-	
-	    function addState(name, payload) {
-	      return stateConfigs[name] = payload;
-	    }
-	
-	    function addStates(sts) {
-	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
-	      const keys = Object.keys(sts);
-	      keys.forEach((key) => stateConfigs[key] = sts[key]);
-	    }
-	
-	    function getState(name, parent) {
-	      return new DecisionNode(name, stateConfigs[name], parent);
-	    }
-	
-	
-	    class DecisionNode {
-	      constructor(name, payload, parent) {
-	        const states = {};
-	        let jump;
-	        payload = payload || {};
-	        payload._nodeId = `decision-node-${String.random(7)}`;
-	        nodeMap[payload._nodeId] = this;
-	        this.getNode = (nodeId) => nodeMap[nodeId];
-	        this.name = name;
-	        this.states = states;
-	        this.payload = payload;
-	        this.jump = (name) => {
-	          if (name) jump = getState(name, parent);
-	          return jump;
-	        };
-	        this.then = (name, payload) => {
-	          payload = payload ? addState(name, payload) : stateConfigs[name];
-	          states[name] = (getState(name, this));
-	          const state = states[name];
-	          return state === undefined ? undefined : state.jump() || state;
-	        }
-	        this.addState = (name, payload) => addState(name, payload) && this;
-	        this.addStates = (sts) => addStates(sts) && this;
-	        this.next = (name) => {
-	          const state = states[name];
-	          return state === undefined ? undefined : state.jump() || state;
-	        }
-	
-	        this.routePayloads = () => {
-	          let currNode = this;
-	          const payloads = [];
-	          while(currNode !== null) {
-	            payloads.push(currNode.payload);
-	            currNode = currNode.back();
-	          }
-	          return payloads.reverse();
-	        }
-	        this.back = () => parent;
-	        this.top = () => rootNode;
-	      }
-	    }
-	
-	    const rootNode = new DecisionNode(name, payload, null);
-	    return rootNode;
+const frag = document.createDocumentFragment();
+	function validSelector (selector) {
+	  try {
+	    frag.querySelector(selector)
+	    return selector;
+	  } catch (e) {
+	    const errMsg = `Invalid Selector: '${selector}'` ;
+	    console.error(errMsg);
+	    return errMsg;
 	  }
-	}
-	
-	module.exports = DecisionTree;
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/custom-error.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class CustomEvent {
-	  constructor(name) {
-	    const watchers = [];
-	    this.name = name;
-	
-	    const runFuncs = (e) => watchers.forEach((func) => func(e));
-	
-	    this.on = function (func) {
-	      if ((typeof func) === 'function') {
-	        watchers.push(func);
-	      } else {
-	        return 'on' + name;
-	      }
-	    }
-	
-	    this.trigger = function (element) {
-	      element = element === undefined ? window : element;
-	      runFuncs(element);
-	      if(document.createEvent){
-	          element.dispatchEvent(this.event);
-	      } else {
-	          element.fireEvent("on" + this.event.eventType, this.event);
-	      }
-	    }
-	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-	    this.event;
-	    if(document.createEvent){
-	        this.event = document.createEvent("HTMLEvents");
-	        this.event.initEvent(name, true, true);
-	        this.event.eventName = name;
-	    } else {
-	        this.event = document.createEventObject();
-	        this.event.eventName = name;
-	        this.event.eventType = name;
-	    }
-	  }
-	}
-	
-	module.exports = CustomEvent;
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/measurment.js',
-function (require, exports, module) {
-	
-const Lookup = require('./object/lookup');
-	
-	function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	let percision = '1/32';
-	let units = [
-	              'Imperial (US)',
-	              'Metric'
-	]
-	let unit = units[0];
-	
-	
-	class Measurement extends Lookup {
-	  constructor(value, metric) {
-	    super();
-	    if ((typeof value) === 'string') {
-	      value += ' '; // Hacky fix for regularExpression
-	    }
-	
-	    const isMetric = () => unit === units[1] || metric;
-	
-	    let decimal = 0;
-	    let nan = value === null || value === undefined;
-	    this.isNaN = () => nan;
-	
-	    const parseFraction = (str) => {
-	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
-	      regObj.integer = Number.parseInt(regObj.integer) || 0;
-	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	      if(regObj.denominator === 0) {
-	        regObj.numerator = 0;
-	        regObj.denominator = 1;
-	      }
-	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	      return regObj;
-	    };
-	
-	    function reduce(numerator, denominator) {
-	      let reduced = true;
-	      while (reduced) {
-	        reduced = false;
-	        for (let index = 0; index < Measurement.primes.length; index += 1) {
-	          const prime = Measurement.primes[index];
-	          if (prime >= denominator) break;
-	          if (numerator % prime === 0 && denominator % prime === 0) {
-	            numerator = numerator / prime;
-	            denominator = denominator / prime;
-	            reduced = true;
-	            break;
-	          }
-	        }
-	      }
-	      if (numerator === 0) {
-	        return '';
-	      }
-	      return ` ${numerator}/${denominator}`;
-	    }
-	
-	    function calculateValue(accuracy) {
-	      accuracy = accuracy || '1/32'
-	      const fracObj = parseFraction(accuracy);
-	      const denominator = fracObj.denominator;
-	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	      }
-	      let standardDecimal = decimal / 2.54;
-	      let sign = standardDecimal > 0 ? 1 : -1;
-	      let remainder = Math.abs(standardDecimal);
-	      let currRemainder = remainder;
-	      let value = 0;
-	      let numerator = 0;
-	      while (currRemainder > 0) {
-	        numerator += fracObj.numerator;
-	        currRemainder -= fracObj.decimal;
-	      }
-	      const diff1 = standardDecimal - ((numerator - fracObj.numerator) / denominator);
-	      const diff2 = (numerator / denominator) - standardDecimal;
-	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	      const integer = sign * Math.floor(numerator / denominator);
-	      numerator = numerator % denominator;
-	      return {integer, numerator, denominator};
-	    }
-	
-	    this.fraction = (accuracy) => {
-	      if (nan) return NaN;
-	      const obj = calculateValue(accuracy);
-	      if (obj.integer === 0 && obj.numerator === 0) return '0';
-	      const integer = obj.integer !== 0 ? obj.integer : '';
-	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
-	    }
-	    this.standardUS = this.fraction;
-	
-	    this.display = (accuracy) => {
-	      switch (unit) {
-	        case units[0]: return this.standardUS(accuracy);
-	        case units[1]: return this.decimal(accuracy);
-	        default:
-	            return this.standardUS(accuracy);
-	      }
-	    }
-	
-	    this.value = (accuracy) => this.decimal(accuracy);
-	
-	    this.decimal = (accuracy) => {
-	      if (nan) return NaN;
-	      accuracy = accuracy % 10 ? accuracy : 10;
-	      return Math.round(decimal * accuracy) / accuracy;
-	    }
-	    const convertToMetric = (standardDecimal) => value = standardDecimal * 2.54;
-	
-	    if ((typeof value) === 'number') {
-	      if (!isMetric()) {
-	          convertToMetric(value);
-	      }
-	      decimal = value;
-	    } else if ((typeof value) === 'string') {
-	      try {
-	        if (!isMetric()) {
-	          const standardDecimal = parseFraction(value).decimal;
-	          convertToMetric(standardDecimal);
-	        }
-	        decimal = value;
-	      } catch (e) {
-	        nan = true;
-	      }
-	    } else {
-	      nan = true;
-	    }
-	  }
-	}
-	
-	Measurement.unit = (newUnit) => {
-	  for (index = 0; index < units.length; index += 1) {
-	    if (newUnit === units[index]) unit = newUnit;
-	  }
-	  return unit
 	};
-	Measurement.units = () => JSON.parse(JSON.stringify(units));
-	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
+	const VS = validSelector;
 	
-	Measurement.validation = function (range) {
-	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
-	  let min = obj.min.trim() !== '' ?
-	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
-	  let max = obj.max.trim() !== '' ?
-	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
-	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
-	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
-	  return function (value) {
-	    const decimal = new Measurement(value).decimal();
-	    if (decimal === NaN) return false;
-	    return minCheck(decimal) && maxCheck(decimal);
+	
+	const du = {create: {}, class: {}, cookie: {}, param: {}, style: {},
+	      scroll: {}, input: {}, on: {}, move: {}};
+	du.find = (selector) => document.querySelector(selector);
+	du.find.all = (selector) => document.querySelectorAll(selector);
+	
+	du.create.element = function (tagname, attributes) {
+	  const elem = document.createElement(tagname);
+	  const keys = Object.keys(attributes || {});
+	  keys.forEach((key) => elem.setAttribute(key, attributes[key]));
+	  return elem;
+	}
+	
+	function keepInBounds (elem, minimum) {
+	  function checkDir(dir) {
+	    const rect = elem.getBoundingClientRect();
+	    if (rect[dir] < minimum) {
+	      elem.style[dir] = minimum + 'px';
+	    }
+	  }
+	  checkDir('left');
+	  checkDir('right');
+	  checkDir('top');
+	  checkDir('bottom');
+	}
+	
+	du.move.relitive = function (elem, target, direction, props) {
+	  props = props || {};
+	  const clientHeight = document.documentElement.clientHeight;
+	  const clientWidth = document.documentElement.clientWidth;
+	  const rect = target.getBoundingClientRect();
+	
+	  const style = {};
+	  const padding = props.padding || 5;
+	  style.cursor = props.cursor || 'unset';
+	  style.padding = `${padding}px`;
+	  style.position = props.position || 'absolute';
+	  style.backgroundColor = props.backgroundColor || 'transparent';
+	
+	  const scrollY =  props.isFixed ? 0 : window.scrollY;
+	  const scrollX =  props.isFixed ? 0 : window.scrollX;
+	  const isTop = direction.indexOf('top') !== -1;
+	  const isBottom = direction.indexOf('bottom') !== -1;
+	  const isRight = direction.indexOf('right') !== -1;
+	  const isLeft = direction.indexOf('left') !== -1;
+	  if (isTop) {
+	    style.top = rect.top - elem.clientWidth - padding + scrollY;
+	  } else { style.top = 'unset'; }
+	
+	  if (isBottom) {
+	    style.bottom = (clientHeight - rect.bottom - elem.clientHeight) - padding - scrollY + 'px';
+	  } else { style.bottom = 'unset'; }
+	
+	  if (!isTop && !isBottom) {
+	    style.bottom = (clientHeight - rect.bottom + rect.height/2 - elem.clientHeight / 2) - padding - scrollY + 'px';
+	  }
+	
+	  if (isRight) {
+	    style.right = clientWidth - rect.right - elem.clientWidth - padding - scrollX + 'px';
+	  } else { style.right = 'unset'; }
+	
+	  if (isLeft) {
+	    style.left = rect.left - padding - elem.clientWidth + scrollX;
+	  } else { style.left = 'unset'; }
+	
+	  if (!isLeft && ! isRight) {
+	    style.right = clientWidth - rect.right + rect.width/2 - elem.clientWidth/2 - padding - scrollX + 'px';
+	  }
+	
+	  du.style(elem, style);
+	  keepInBounds(elem, padding);
+	}
+	
+	du.move.below = function (elem, target) {
+	  du.move.relitive(elem, target, 'bottom');
+	}
+	
+	du.move.above = function (elem, target) {
+	  du.move.relitive(elem, target, 'bottom');
+	}
+	
+	du.find.up = function (selector, node) {
+	  selector = VS(selector);
+	  if (node instanceof HTMLElement) {
+	    if (node.matches(selector)) {
+	      return node;
+	    } else {
+	      return du.find.up(selector, node.parentNode);
+	    }
 	  }
 	}
 	
-	Measurement.round = (value, percision) => {
-	  if (percision)
-	  return new Measurement(value).decimal(percision);
-	  return Math.round(value * 10000000) / 10000000;
+	function visibility(hide, targets) {
+	  targets = Array.isArray(targets) ? targets : [targets];
+	  for (let index = 0; index < targets.length; index += 1) {
+	    const target = targets[index];
+	    if ((typeof target) === 'string') {
+	      targets = targets.concat(Array.from(document.querySelectorAll(target)));
+	    } else if (target instanceof HTMLElement) {
+	      target.hidden = hide;
+	    } else if (Array.isArray(target) || target instanceof NodeList || target instanceof HTMLCollection) {
+	      targets = targets.concat(Array.from(target));
+	    }
+	  }
+	}
+	
+	du.hide = (...targets) => visibility(true, targets);
+	du.show = (...targets) => visibility(false, targets);
+	
+	du.id = function (id) {return document.getElementById(id);}
+	
+	du.appendError = (target, message) => {
+	  return function (e) {
+	    const parent = target.parentNode;
+	    const error = document.createElement('div');
+	    error.className = 'error';
+	    error.innerHTML = message;
+	    parent.insertBefore(error, target.nextElementSibling)
+	  }
+	}
+	
+	du.find.upAll = function(selector, node) {
+	  const elems = [];
+	  let elem = node;
+	  selector = VS(selector);
+	  while(elem = du.find.up(selector, elem)) {
+	    elems.push(elem);
+	    elem = elem.parentElement;
+	  }
+	  return elems;
+	}
+	
+	du.depth = function(node) {return upAll('*', node).length};
+	
+	du.find.downInfo = function (selector, node, distance, leafSelector) {
+	  const nodes = node instanceof HTMLCollection ? node : [node];
+	  distance = distance || 0;
+	  selector = VS(selector);
+	
+	  function recurse (node, distance) {
+	    if (node instanceof HTMLElement) {
+	      if (node.matches(selector)) {
+	        return { node, distance, matches: [{node, distance}]};
+	      }
+	    }
+	    return { distance: Number.MAX_SAFE_INTEGER, matches: [] };
+	  }
+	
+	  let matches = [];
+	  let found = { distance: Number.MAX_SAFE_INTEGER };
+	  for (let index = 0; index < nodes.length; index += 1) {
+	    const currNode = nodes[index];
+	    const maybe = recurse(currNode, ++distance);
+	    if (maybe.node) {
+	      matches = matches.concat(maybe.matches);
+	      found = maybe.distance < found.distance ? maybe : found;
+	
+	    }
+	    if (!leafSelector || !currNode.matches(leafSelector)) {
+	      const childRes = du.find.downInfo(selector, currNode.children, distance + 1, leafSelector);
+	      matches = matches.concat(childRes.matches);
+	      found = childRes.distance < found.distance ? childRes : found;
+	    }
+	  }
+	  found.matches = matches
+	  found.list = matches.map((match) => match.node);
+	  return found;
+	}
+	
+	du.find.down = function(selector, node) {return du.find.downInfo(selector, node).node};
+	du.find.downAll = function(selector, node) {return du.find.downInfo(selector, node).list};
+	
+	du.find.closest = function(selector, node) {
+	  const visited = [];
+	  selector = VS(selector);
+	  function recurse (currNode, distance) {
+	    let found = { distance: Number.MAX_SAFE_INTEGER };
+	    if (!currNode || (typeof currNode.matches) !== 'function') {
+	      return found;
+	    }
+	    visited.push(currNode);
+	    if (currNode.matches(selector)) {
+	      return { node: currNode, distance };
+	    } else {
+	      for (let index = 0; index < currNode.children.length; index += 1) {
+	        const child = currNode.children[index];
+	        if (visited.indexOf(child) === -1) {
+	          const maybe = recurse(child, distance + index + 1);
+	          found = maybe && maybe.distance < found.distance ? maybe : found;
+	        }
+	      }
+	      if (visited.indexOf(currNode.parentNode) === -1) {
+	        const maybe = recurse(currNode.parentNode, distance + 1);
+	        found = maybe && maybe.distance < found.distance ? maybe : found;
+	      }
+	      return found;
+	    }
+	  }
+	
+	  return recurse(node, 0).node;
+	}
+	
+	
+	const selectors = {};
+	let matchRunIdCount = 0;
+	function getTargetId(target) {
+	  if((typeof target.getAttribute) === 'function') {
+	    let targetId = target.getAttribute('ce-match-run-id');
+	    if (targetId === null || targetId === undefined) {
+	      targetId = matchRunIdCount + '';
+	      target.setAttribute('ce-match-run-id', matchRunIdCount++)
+	    }
+	    return targetId;
+	  }
+	  return target === document ?
+	        '#document' : target === window ? '#window' : undefined;
+	}
+	
+	
+	
+	function runMatch(event) {
+	  const  matchRunTargetId = getTargetId(event.currentTarget);
+	  const selectStrs = Object.keys(selectors[matchRunTargetId][event.type]);
+	  selectStrs.forEach((selectStr) => {
+	    const target = du.find.up(selectStr, event.target);
+	    const everything = selectStr === '*';
+	    if (everything || target) {
+	      selectors[matchRunTargetId][event.type][selectStr].forEach((func) => func(target, event));
+	    }
+	  })
+	}
+	
+	
+	du.class.add = function(target, clazz) {
+	  du.class.remove(target, clazz);
+	  target.className += ` ${clazz}`;
+	}
+	
+	du.class.swap = function(target, newClass, oldClass) {
+	  du.class.remove(target, oldClass);
+	  du.class.add(target, newClass)
+	}
+	
+	function classReg(clazz) {
+	  return new RegExp(`(^| )(${clazz}( |$)){1,}`, 'g');
+	}
+	
+	du.class.remove = function(target, clazz) {
+	  target.className = target.className.replace(classReg(clazz), ' ').trim();
+	}
+	
+	du.class.has = function(target, clazz) {
+	  return target.className.match(classReg(clazz));
+	}
+	
+	du.class.toggle = function(target, clazz) {
+	  if (du.class.has(target, clazz)) du.class.remove(target, clazz);
+	  else du.class.add(target, clazz);
+	}
+	
+	function onEnter(func) {
+	  function filter(target, event) {
+	    if (even) {
+	
+	    }
+	  }
+	}
+	
+	function filterCustomEvent(event, func) {
+	  let filterFunc = func;
+	  let filterEvent = event;
+	  switch (event) {
+	    case 'enter':
+	      filterFunc = (target, event) => event.code === 'Enter' && func(target, event);
+	      filterEvent = 'keydown';
+	      break;
+	  }
+	  return {func: filterFunc, event: filterEvent};
+	}
+	
+	du.on.match = function(event, selector, func, target) {
+	  const filter = filterCustomEvent(event, func);
+	  target = target || document;
+	  selector = VS(selector);
+	  const  matchRunTargetId = getTargetId(target);
+	  if (selectors[matchRunTargetId] === undefined) {
+	    selectors[matchRunTargetId] = {};
+	  }
+	  if (selectors[matchRunTargetId][filter.event] === undefined) {
+	    selectors[matchRunTargetId][filter.event] = {};
+	    target.addEventListener(filter.event, runMatch);
+	  }
+	  if ( selectors[matchRunTargetId][filter.event][selector] === undefined) {
+	    selectors[matchRunTargetId][filter.event][selector] = [];
+	  }
+	
+	  const selectorArray = selectors[matchRunTargetId][filter.event][selector];
+	  // if (selectorArray.indexOf(func) !== -1) {
+	    selectorArray.push(filter.func);
+	  // }
+	}
+	
+	du.cookie.set = function(name, value, lifeMilliSecs) {
+	  if (value instanceof Object) {
+	    value = JSON.stringify(value);
+	  }
+	  const expireDate = new Date();
+	  expireDate.setTime(expireDate.getTime() + (lifeMilliSecs || (8035200000))); //93 days by default
+	  document.cookie = `${name}=${value}; expires=${expireDate.toUTCString()}`;
+	}
+	
+	du.cookie.get = function(name, seperator) {
+	  const cookie = document.cookie.parseSeperator(';')[name];
+	  if (seperator === undefined) return cookie;
+	  const values = cookie === undefined ? [] : cookie.split(seperator);
+	  if (arguments.length < 3) return values;
+	  let obj = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const key = arguments[index];
+	    const value = values[index - 2];
+	    obj[key] = value;
+	  }
+	  return obj;
+	}
+	
+	let params;
+	du.param.get = function(name) {
+	  if (params === undefined) {
+	    const url = window.location.href.replace(/(.*?)#.*/, '$1');
+	    const paramStr = url.substr(url.indexOf('?') + 1);
+	    params = paramStr.parseSeperator('&');
+	  }
+	  const value = params[name];
+	  if (value === undefined) return undefined;
+	  return decodeURI(value);
+	}
+	
+	du.style = function(elem, style, time) {
+	  const save = {};
+	  const keys = Object.keys(style);
+	  keys.forEach((key) => {
+	    save[key] = elem.style[key];
+	    elem.style[key] = style[key];
+	  });
+	
+	  if (time) {
+	    setTimeout(() => {
+	      keys.forEach((key) => {
+	        elem.style[key] = save[key];
+	      });
+	    }, time);
+	  }
+	}
+	
+	function center(elem) {
+	  const rect = elem.getBoundingClientRect();
+	  const x = rect.x + (rect.height / 2);
+	  const y = rect.y + (rect.height / 2);
+	  return {x, y, top: rect.top};
+	}
+	
+	du.scroll.can = function (elem) {
+	    const horizontallyScrollable = elem.scrollWidth > elem.clientWidth;
+	    const verticallyScrollable = elem.scrollHeight > elem.clientHeight;
+	    return elem.scrollWidth > elem.clientWidth || elem.scrollHeight > elem.clientHeight;
+	};
+	
+	du.scroll.parents = function (elem) {
+	  let scrollable = [];
+	  if (elem instanceof HTMLElement) {
+	    if (du.scroll.can(elem)) {
+	      scrollable.push(elem);
+	    }
+	    return du.scroll.parents(elem.parentNode).concat(scrollable);
+	  }
+	  return scrollable;
+	}
+	
+	du.scroll.intoView = function(elem, divisor, delay, scrollElem) {
+	  let scrollPidCounter = 0;
+	  const lastPosition = {};
+	  let highlighted = false;
+	  function scroll(scrollElem) {
+	    return function() {
+	      const scrollCenter = center(scrollElem);
+	      const elemCenter = center(elem);
+	      const fullDist = Math.abs(scrollCenter.y - elemCenter.y);
+	      const scrollDist = fullDist > 5 ? fullDist/divisor : fullDist;
+	      const yDiff = scrollDist * (elemCenter.y < scrollCenter.y ? -1 : 1);
+	      scrollElem.scroll(0, scrollElem.scrollTop + yDiff);
+	      if (elemCenter.top !== lastPosition[scrollElem.scrollPid]
+	            && (scrollCenter.y < elemCenter.y - 2 || scrollCenter.y > elemCenter.y + 2)) {
+	        lastPosition[scrollElem.scrollPid] = elemCenter.top;
+	        setTimeout(scroll(scrollElem), delay);
+	      } else if(!highlighted) {
+	        highlighted = true;
+	        du.style.temporary(elem, 2000, {
+	          borderStyle: 'solid',
+	          borderColor: '#07ff07',
+	          borderWidth: '5px'
+	        });
+	      }
+	    }
+	  }
+	  const scrollParents = du.scroll.parents(elem);
+	  scrollParents.forEach((scrollParent) => {
+	    scrollParent.scrollPid = scrollPidCounter++;
+	    setTimeout(scroll(scrollParent), 100);
+	  });
+	}
+	
+	
+	du.cookie.remove = function (name) {
+	  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
 	}
 	
 	try {
-	  module.exports = Measurement;
-	} catch (e) {/* TODO: Consider Removing */}
+	  module.exports = du;
+	} catch (e) {}
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/expression-definition.js',
+RequireJS.addFunction('../../public/js/utils/endpoints.js',
+function (require, exports, module) {
+	
+class Endpoints {
+	  constructor(config, host) {
+	    const instance = this;
+	    let environment;
+	
+	    if ((typeof config) !== 'object') {
+	      host = config;
+	      config = Endpoints.defaultConfig;
+	    }
+	
+	    host = host || '';
+	    this.setHost = (newHost) => {
+	      if ((typeof newHost) === 'string') {
+	        if (config._envs[newHost]) environment = newHost;
+	        host = config._envs[newHost] || newHost;
+	      }
+	    };
+	    this.setHost(host);
+	    this.getHost = (env) => env === undefined ? host : config._envs[env];
+	    this.getEnv = () => environment;
+	
+	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
+	    this.getFuncObj = function () {return endPointFuncs;};
+	
+	
+	    function build(str) {
+	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
+	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
+	      return function () {
+	        let values = [];
+	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
+	          values = arguments;
+	        } else {
+	          const obj = arguments[0];
+	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
+	        }
+	        let endpoint = '';
+	        for (let index = 0; index < pieces.length; index += 1) {
+	          const arg = values[index];
+	          let value = '';
+	          if (index < pieces.length - 1) {
+	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
+	          }
+	          endpoint += pieces[index] + value;
+	        }
+	        return `${host}${endpoint}`;
+	      }
+	    }
+	
+	    function configRecurse(currConfig, currFunc) {
+	      const keys = Object.keys(currConfig);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = currConfig[key];
+	        if (key.indexOf('_') !== 0) {
+	          if (value instanceof Object) {
+	            currFunc[key] = {};
+	            configRecurse(value, currFunc[key]);
+	          } else {
+	            currFunc[key] = build(value);
+	          }
+	        } else {
+	          currFunc[key] = value;
+	        }
+	      }
+	    }
+	
+	    configRecurse(config, endPointFuncs);
+	  }
+	}
+	
+	module.exports = Endpoints;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/utils.js',
 function (require, exports, module) {
 	
 
 	
 	
-	let idCount = 0;
-	class ExprDef {
-	  constructor(name, options, notify, stages, alwaysPossible) {
-	    this.id = idCount++;
-	    let id = this.id;
-	    let string;
-	    let modified = '';
-	    let start;
-	    let end;
-	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
-	    stages = stages ? stages : {};
-	    let currStage = stages;
+	function safeStdLibAddition() {
+	  const addition = [];
+	  function verify() {
+	    additions.forEach((a) => {
+	      if ((a.static && a.lib[a.field] !== a.func) ||
+	      (!a.static && a.lib.prototype[a.field] !== a.func))
+	        throw new Error(`Functionality was overwritten -` +
+	                          `\n\tLibrary: ${a.lib}` +
+	                          `\n\tStatic: ${a.static}` +
+	                          `\n\tField: ${a.field}`)
+	    });
+	    delete additions;
+	  }
+	  function safeAdd (lib, field, func, static) {
+	    if (!static && lib.prototype[field] === undefined)
+	      lib.prototype[field] = func;
+	    else if (lib[field] === undefined)
+	      lib[field] = func;
+	    else
+	      console.error(`Attempting to overwrite functionality -` +
+	                        `\n\tLibrary: ${lib}` +
+	                        `\n\tStatic: ${static}` +
+	                        `\n\tField: ${field}`);
+	    addition.push({lib, field, func, static})
+	  }
+	  safeAdd(Function, 'safeStdLibAddition', safeAdd);
+	}
+	safeStdLibAddition();
 	
-	    function getRoutes(prefix, stage) {
-	      let routes = [];
-	      let keys = Object.keys(stage);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        if (key !== '_meta') {
-	          let newPrefix;
-	          if (prefix) {
-	            newPrefix = `${prefix}.${key}`;
-	          } else {
-	            newPrefix = key;
-	          }
-	          const deepRoutes = getRoutes(newPrefix, stage[key]);
-	          if (deepRoutes.length > 0) {
-	            routes = routes.concat(deepRoutes);
-	          }
-	          if (stage[key]._meta && stage[key]._meta.end) {
-	            routes.push(newPrefix + '.end');
-	          }
-	          if (stage[key]._meta && stage[key]._meta.repeat) {
-	            routes.push(newPrefix + '.repeat');
-	          }
+	
+	Function.safeStdLibAddition(String, 'random',  function (len) {
+	    len = len || 7;
+	    let str = '';
+	    while (str.length < len) str += Math.random().toString(36).substr(2);
+	    return str.substr(0, len);
+	}, true);
+	
+	Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
+	  return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
+	}, true);
+	
+	const classLookup = {};
+	const identifierAttr = '_TYPE';
+	const immutableAttr = '_IMMUTABLE';
+	const temporaryAttr = '_TEMPORARY';
+	
+	Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
+	  function interpretValue(value) {
+	    const classname = value[identifierAttr];
+	    if (value instanceof Object) {
+	      const attrs = Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
+	      if (Array.isArray(value)) {
+	        const realArray = [];
+	        for (let index = 0; index < value.length; index += 1) {
+	          realArray[index] = fromJson(value[index]);
 	        }
-	      }
-	      return routes;
-	    }
-	
-	    this.always = function () {
-	      for (let index = 0; index < arguments.length; index += 1) {
-	        alwaysPossible.push(arguments[index]);
-	      }
-	    };
-	    this.getAlways = function (exprDef) {return alwaysPossible;};
-	
-	    this.allRoutes = function () {
-	      return getRoutes(null, stages);
-	    }
-	
-	    function getNotice (exprDef) {
-	      let isInAlways = false;
-	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
-	      if (isInAlways) return;
-	      if (!exprDef.closed()) {
-	        if (currStage[exprDef.getName()] === undefined) {
-	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
-	        }
-	        currStage = currStage[exprDef.getName()];
-	      }
-	    }
-	    this.getNotice = getNotice;
-	
-	    function getName () {return name;};
-	    this.getName = getName;
-	    this.onClose = function (start, end) {
-	      return function (str, start, end) {
-	        if (notify) notify(this);
-	        options.onClose(str, start, end);
-	      }
-	    }
-	
-	    function setMeta(targetNodes, attr, value) {
-	      return function () {
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          targetNodes[lIndex]._meta[attr] = value;
-	        }
-	      }
-	    }
-	
-	    function then (targetNodes) {
-	      return function () {
-	        const createdNodes = [];
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          const targetNode = targetNodes[lIndex];
-	          for (let index = 0; index < arguments.length; index += 1) {
-	            const exprDef = arguments[index];
-	            if (!exprDef instanceof ExprDef) {
-	              throw new Error(`Argument is not an instanceof ExprDef`);
-	            }
-	            const nextExpr = exprDef.clone(getNotice);
-	            if (targetNode[nextExpr.getName()] === undefined) {
-	              targetNode[nextExpr.getName()] = {
-	                _meta: {
-	                  expr: nextExpr
-	                }
-	              };
-	            }
-	            createdNodes.push(targetNode[nextExpr.getName()]);
-	          }
-	        }
-	        return {
-	          then: then(createdNodes),
-	          repeat: setMeta(createdNodes, 'repeat', true),
-	          end: setMeta(createdNodes, 'end', true),
+	        return realArray;
+	      } else if (classname && classLookup[classname]) {
+	        const classObj = new (classLookup[classname])();
+	        for (let index = 0; index < attrs.length; index += 1) {
+	          const attr = attrs[index];
+	          if ((typeof classObj[attr]) === 'function')
+	            classObj[attr](interpretValue(value[attr]));
 	        };
-	      }
-	    }
-	
-	    this.if = function () {return then([stages]).apply(this, arguments);}
-	
-	    function isEscaped(str, index) {
-	      if (options.escape === undefined) {
-	        return false;
-	      }
-	      let count = -1;
-	      let firstIndex, secondIndex;
-	      do {
-	        count += 1;
-	        firstIndex = index - (options.escape.length * (count + 1));
-	        secondIndex = options.escape.length;
-	      } while (str.substr(firstIndex, secondIndex) === options.escape);
-	      return count % 2 == 0;
-	    }
-	
-	    function foundCall(onFind, sub) {
-	      if ((typeof notify) === 'function') {
-	        notify(this);
-	      }
-	      if ((typeof onFind) === 'function') {
-	        return onFind(sub);
+	        return classObj;
 	      } else {
-	        return sub;
+	        const realObj = {}
+	        for (let index = 0; index < attrs.length; index += 1) {
+	          const attr = attrs[index];
+	          realObj[attr] = interpretValue(value[attr]);
+	        };
+	        return realObj
 	      }
 	    }
+	    return value;
+	  }
 	
-	    this.find = function (str, index) {
-	      let startedThisCall = false;
-	      let needle = options.closing;
-	      let starting = false;
-	      if (start === undefined) {
-	        needle = options.opening;
-	        starting = true;
-	      }
-	      const sub = str.substr(index);
-	      let needleLength;
-	      if (needle instanceof RegExp) {
-	        const match = sub.match(needle);
-	        if (match && match.index === 0) {
-	          needleLength = match[0].length;
-	        }
-	      } else if ((typeof needle) === 'string') {
-	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
-	          needleLength = needle.length;
-	      } else if (needle === undefined || needle === null) {
-	        needleLength = 0;
-	      } else {
-	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
-	      }
-	      needleLength += options.tailOffset ? options.tailOffset : 0;
-	      let changes = '';
-	      if (start === undefined && starting && (needleLength || needle === null)) {
-	        string = str;
-	        start = index;
-	        startedThisCall = true;
-	        if (needle === null) {
-	          if ((typeof notify) === 'function') {
-	            notify(this);
-	          }          return {index, changes}
-	        } else {
-	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
-	        }
-	      }
-	      if ((!startedThisCall && needleLength) ||
-	            (startedThisCall && options.closing === undefined) ||
-	            (!startedThisCall && options.closing === null)) {
-	        if (str !== string) {
-	          throw new Error ('Trying to apply an expression to two different strings.');
-	        }
-	        end = index + needleLength;
-	        if (options.closing === null) {
-	          return {index, changes}
-	        }
-	        if (!startedThisCall) {
-	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
-	        }
-	        return { index: end, changes };
-	      }
+	  if (!(rootJson instanceof Object)) return rootJson;
+	  return interpretValue(rootJson);
+	});
 	
-	      return start !== undefined ? { index: start + needleLength, changes } :
-	                      { index: -1, changes };
+	Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
+	  const cxtrName = obj.constructor.name;
+	  if (classLookup[cxtrName] === undefined) {
+	    classLookup[cxtrName] = obj.constructor;
+	  } else if (classLookup[cxtrName] !== obj.constructor) {
+	    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
+	  }
+	  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
+	  let values = {};
+	  let temporary = false;
+	  let immutable = false;
+	  if ((typeof initialVals) === 'object') {
+	    values = JSON.clone(initialVals);
+	    immutable = values[immutableAttr] === true;
+	    temporary = values[temporaryAttr] === true;
+	    if (immutable) {
+	      attrs = Object.keys(values);
+	    } else {
+	      attrs = Object.keys(values).concat(attrs);
 	    }
+	  } else {
+	    attrs.push(initialVals);
+	  }
 	
-	    this.clone = function (notify) {
-	      return new ExprDef(name, options, notify, stages, alwaysPossible);
+	  for (let index = 0; index < attrs.length; index += 1) {
+	    const attr = attrs[index];
+	    if (attr !== immutableAttr) {
+	      if (immutable) obj[attr] = () => values[attr];
+	      else {
+	        obj[attr] = (value) => {
+	          if (value === undefined) {
+	            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
+	            if (values[attr] !== undefined || noDefaults)
+	            return values[attr];
+	            return obj.defaultGetterValue(attr);
+	          }
+	          values[attr] = value;
+	        }
+	      }
+	    }
+	  }
+	  if (!temporary) {
+	    const origToJson = obj.toJson;
+	    obj.toJson = () => {
+	      const json = (typeof origToJson === 'function') ? origToJson() : {};
+	      json[identifierAttr] = obj.constructor.name;
+	      for (let index = 0; index < attrs.length; index += 1) {
+	        const attr = attrs[index];
+	        if (attr !== immutableAttr) {
+	          const value = obj[attr]();
+	          if ((typeof value) === 'object') {
+	            if ((typeof value.toJson) === 'function') {
+	              json[attr] = value.toJson();
+	            } else if (Array.isArray(value)){
+	              const arr = [];
+	              value.forEach((val) => {
+	                if ((typeof val.toJson) === 'function') {
+	                  arr.push(val.toJson());
+	                } else {
+	                  arr.push(val);
+	                }
+	              });
+	              json[attr] = arr;
+	            } else {
+	              json[attr] = JSON.clone(value);
+	            }
+	          } else {
+	            json[attr] = value;
+	          }
+	        }
+	      }
+	      return json;
+	    }
+	  }
+	  obj.fromJson = (json) => {
+	    for (let index = 0; index < attrs.length; index += 1) {
+	      const attr = attrs[index];
+	      if (attr !== immutableAttr) {
+	        obj[attr](json[attr]);
+	      }
 	    };
-	    this.name = this.getName();
-	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
-	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
-	    this.location = function () {return {start, end, length: end - start}};
-	    this.closed = function () {return end !== undefined;}
-	    this.open = function () {return start !== undefined;}
-	    this.next =  function () {
-	      const expressions = [];
-	      if (currStage._meta && currStage._meta.repeat) {
-	        currStage = stages;
-	      }
-	      Object.values(currStage).map(
-	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
-	      )
-	      return alwaysPossible.concat(expressions);
-	    };
+	    return obj;
 	  }
-	}
+	  // obj.clone = () => obj.fromJson(obj.toJson);
+	}, true);
+	Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
 	
-	function parse(exprDef, str) {
-	  exprDef = exprDef.clone();
-	  let index = 0;
-	  let modified = '';
-	  const breakDown = [];
-	  const stack = [];
-	
-	  function topOfStack() {
-	    return stack[stack.length - 1];
+	Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
+	  if (otherObj === undefined) return;
+	  if ((typeof otherObj) !== 'object') {
+	    throw new Error('Requires one argument of type object or undefined for meaningless call');
 	  }
+	  const keys = Object.keys(otherObj);
+	  keys.forEach((key) => obj[key] = otherObj[key]);
+	}, true);
 	
-	  function closeCheck(exprDef) {
-	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
-	      let result = exprDef.find(str, index);
-	      if (result.index) {
-	        modified += result.changes;
-	        return result.index;
-	      }
-	    }
+	Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
+	  if (start!== undefined && end !== undefined && start > end) {
+	    const temp = start;
+	    start = end;
+	    end = temp;
 	  }
+	  start = start || 0;
+	  end = end || values.length;
+	  for (let index = start; index < end; index += 1)
+	    array[index] = values[index];
+	  return array;
+	}, true);
 	
-	  function checkArray(exprDef, array) {
-	    if (exprDef.endDefined()) {
-	      let nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
-	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
-	      const result = childExprDef.find(str, index);
-	      if (result.index !== -1) {
-	        modified += result.changes;
-	        if (childExprDef.closed()) {
-	          breakDown.push(childExprDef);
-	        } else {
-	          stack.push(childExprDef);
-	        }
-	        return result.index;
-	      }
-	    }
-	    if (exprDef.canEnd()) {
-	      nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
-	  }
-	
-	  function open(exprDef, index) {
-	    const always = exprDef.getAlways();
-	    while (!exprDef.open()) {
-	      let result = exprDef.find(str, index);
-	      modified += result.changes;
-	      if(result.index === -1) {
-	        let newIndex = checkArray(exprDef, always);
-	        index = newIndex;
+	Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
+	  const keys = Object.keys(obj);
+	  const clone = ((typeof obj.clone) === 'function') ? obj.clone() :
+	                  Array.isArray(obj) ? [] : {};
+	  for(let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    const member = obj[key];
+	    if ((typeof memeber) === 'object') {
+	      if ((typeof member.clone) === 'function') {
+	        clone[key] = member.clone();
 	      } else {
-	        if (exprDef.closed()) {
-	          breakDown.push(exprDef);
-	        } else {
-	          stack.push(exprDef);
-	        }
-	        index = result.index;
+	        clone[key] = JSON.clone(member);
 	      }
+	    } else {
+	      clone[key] = member;
 	    }
-	    return index;
+	  }
+	  return clone;
+	}, true);
+	
+	Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
+	  if (isRegex !== true) {
+	    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
+	  }
+	  var keyValues = this.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
+	  var json = {};
+	  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
+	    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
+	    if (split) {
+	      json[split[1]] = split[2];
+	    }
+	  }
+	  return json;
+	});
+	
+	Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
+	  const attrs = path.split('.');
+	  const lastIndex = attrs.length - 1;
+	  let currObj = obj;
+	  for (let index = 0; index < lastIndex; index += 1) {
+	    let attr = attrs[index];
+	    if (currObj[attr] === undefined) currObj[attr] = {};
+	    currObj = currObj[attr];
 	  }
 	
-	  let loopCount = 0;
-	  index = open(exprDef, index);
-	  progress = [-3, -2, -1];
-	  while (topOfStack() !== undefined) {
-	    const tos = topOfStack();
-	    if (progress[0] === index) {
-	      throw new Error(`ExprDef stopped making progress`);
-	    }
-	    let stackIds = '';
-	    let options = '';
-	    stack.map(function (value) {stackIds+=value.getName() + ','});
-	    tos.next().map(function (value) {options+=value.getName() + ','})
-	    index = checkArray(tos, tos.next());
-	    if (tos.closed()) {
-	      stack.pop();
-	    }
-	    loopCount++;
+	  const lastAttr = attrs[lastIndex];
+	  if ((typeof currObj[lastAttr]) === 'function') {
+	    return currObj[lastAttr](value);
+	  } else if (value !== undefined) {
+	    currObj[lastAttr] = value;
 	  }
-	  // if (index < str.length) {
-	  //   throw new Error("String not fully read");
-	  // }
-	  return modified;
-	}
-	
-	
-	ExprDef.parse = parse;
-	
-	module.exports = ExprDef;
-	
-	
-	
-	
+	  return currObj[lastAttr];
+	}, true);
 	
 });
 
@@ -5901,694 +6015,55 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/dom-utils.js',
-function (require, exports, module) {
-	
-const frag = document.createDocumentFragment();
-	function validSelector (selector) {
-	  try {
-	    frag.querySelector(selector)
-	    return selector;
-	  } catch (e) {
-	    const errMsg = `Invalid Selector: '${selector}'` ;
-	    console.error(errMsg);
-	    return errMsg;
-	  }
-	};
-	const VS = validSelector;
-	
-	
-	const du = {create: {}, class: {}, cookie: {}, param: {}, style: {},
-	      scroll: {}, input: {}, on: {}, move: {}};
-	du.find = (selector) => document.querySelector(selector);
-	du.find.all = (selector) => document.querySelectorAll(selector);
-	
-	du.create.element = function (tagname, attributes) {
-	  const elem = document.createElement(tagname);
-	  const keys = Object.keys(attributes || {});
-	  keys.forEach((key) => elem.setAttribute(key, attributes[key]));
-	  return elem;
-	}
-	
-	function keepInBounds (elem, minimum) {
-	  function checkDir(dir) {
-	    const rect = elem.getBoundingClientRect();
-	    if (rect[dir] < minimum) {
-	      elem.style[dir] = minimum + 'px';
-	    }
-	  }
-	  checkDir('left');
-	  checkDir('right');
-	  checkDir('top');
-	  checkDir('bottom');
-	}
-	
-	du.move.relitive = function (elem, target, direction, props) {
-	  props = props || {};
-	  const clientHeight = document.documentElement.clientHeight;
-	  const clientWidth = document.documentElement.clientWidth;
-	  const rect = target.getBoundingClientRect();
-	
-	  const style = {};
-	  const padding = props.padding || 5;
-	  style.cursor = props.cursor || 'unset';
-	  style.padding = `${padding}px`;
-	  style.position = props.position || 'absolute';
-	  style.backgroundColor = props.backgroundColor || 'transparent';
-	
-	  const scrollY =  props.isFixed ? 0 : window.scrollY;
-	  const scrollX =  props.isFixed ? 0 : window.scrollX;
-	  const isTop = direction.indexOf('top') !== -1;
-	  const isBottom = direction.indexOf('bottom') !== -1;
-	  const isRight = direction.indexOf('right') !== -1;
-	  const isLeft = direction.indexOf('left') !== -1;
-	  if (isTop) {
-	    style.top = rect.top - elem.clientWidth - padding + scrollY;
-	  } else { style.top = 'unset'; }
-	
-	  if (isBottom) {
-	    style.bottom = (clientHeight - rect.bottom - elem.clientHeight) - padding - scrollY + 'px';
-	  } else { style.bottom = 'unset'; }
-	
-	  if (!isTop && !isBottom) {
-	    style.bottom = (clientHeight - rect.bottom + rect.height/2 - elem.clientHeight / 2) - padding - scrollY + 'px';
-	  }
-	
-	  if (isRight) {
-	    style.right = clientWidth - rect.right - elem.clientWidth - padding - scrollX + 'px';
-	  } else { style.right = 'unset'; }
-	
-	  if (isLeft) {
-	    style.left = rect.left - padding - elem.clientWidth + scrollX;
-	  } else { style.left = 'unset'; }
-	
-	  if (!isLeft && ! isRight) {
-	    style.right = clientWidth - rect.right + rect.width/2 - elem.clientWidth/2 - padding - scrollX + 'px';
-	  }
-	
-	  du.style(elem, style);
-	  keepInBounds(elem, padding);
-	}
-	
-	du.move.below = function (elem, target) {
-	  du.move.relitive(elem, target, 'bottom');
-	}
-	
-	du.move.above = function (elem, target) {
-	  du.move.relitive(elem, target, 'bottom');
-	}
-	
-	du.find.up = function (selector, node) {
-	  selector = VS(selector);
-	  if (node instanceof HTMLElement) {
-	    if (node.matches(selector)) {
-	      return node;
-	    } else {
-	      return du.find.up(selector, node.parentNode);
-	    }
-	  }
-	}
-	
-	function visibility(hide, targets) {
-	  targets = Array.isArray(targets) ? targets : [targets];
-	  for (let index = 0; index < targets.length; index += 1) {
-	    const target = targets[index];
-	    if ((typeof target) === 'string') {
-	      targets = targets.concat(Array.from(document.querySelectorAll(target)));
-	    } else if (target instanceof HTMLElement) {
-	      target.hidden = hide;
-	    } else if (Array.isArray(target) || target instanceof NodeList || target instanceof HTMLCollection) {
-	      targets = targets.concat(Array.from(target));
-	    }
-	  }
-	}
-	
-	du.hide = (...targets) => visibility(true, targets);
-	du.show = (...targets) => visibility(false, targets);
-	
-	du.id = function (id) {return document.getElementById(id);}
-	
-	du.appendError = (target, message) => {
-	  return function (e) {
-	    const parent = target.parentNode;
-	    const error = document.createElement('div');
-	    error.className = 'error';
-	    error.innerHTML = message;
-	    parent.insertBefore(error, target.nextElementSibling)
-	  }
-	}
-	
-	du.find.upAll = function(selector, node) {
-	  const elems = [];
-	  let elem = node;
-	  selector = VS(selector);
-	  while(elem = du.find.up(selector, elem)) {
-	    elems.push(elem);
-	    elem = elem.parentElement;
-	  }
-	  return elems;
-	}
-	
-	du.depth = function(node) {return upAll('*', node).length};
-	
-	du.find.downInfo = function (selector, node, distance, leafSelector) {
-	  const nodes = node instanceof HTMLCollection ? node : [node];
-	  distance = distance || 0;
-	  selector = VS(selector);
-	
-	  function recurse (node, distance) {
-	    if (node instanceof HTMLElement) {
-	      if (node.matches(selector)) {
-	        return { node, distance, matches: [{node, distance}]};
-	      }
-	    }
-	    return { distance: Number.MAX_SAFE_INTEGER, matches: [] };
-	  }
-	
-	  let matches = [];
-	  let found = { distance: Number.MAX_SAFE_INTEGER };
-	  for (let index = 0; index < nodes.length; index += 1) {
-	    const currNode = nodes[index];
-	    const maybe = recurse(currNode, ++distance);
-	    if (maybe.node) {
-	      matches = matches.concat(maybe.matches);
-	      found = maybe.distance < found.distance ? maybe : found;
-	
-	    }
-	    if (!leafSelector || !currNode.matches(leafSelector)) {
-	      const childRes = du.find.downInfo(selector, currNode.children, distance + 1, leafSelector);
-	      matches = matches.concat(childRes.matches);
-	      found = childRes.distance < found.distance ? childRes : found;
-	    }
-	  }
-	  found.matches = matches
-	  found.list = matches.map((match) => match.node);
-	  return found;
-	}
-	
-	du.find.down = function(selector, node) {return du.find.downInfo(selector, node).node};
-	du.find.downAll = function(selector, node) {return du.find.downInfo(selector, node).list};
-	
-	du.find.closest = function(selector, node) {
-	  const visited = [];
-	  selector = VS(selector);
-	  function recurse (currNode, distance) {
-	    let found = { distance: Number.MAX_SAFE_INTEGER };
-	    if (!currNode || (typeof currNode.matches) !== 'function') {
-	      return found;
-	    }
-	    visited.push(currNode);
-	    if (currNode.matches(selector)) {
-	      return { node: currNode, distance };
-	    } else {
-	      for (let index = 0; index < currNode.children.length; index += 1) {
-	        const child = currNode.children[index];
-	        if (visited.indexOf(child) === -1) {
-	          const maybe = recurse(child, distance + index + 1);
-	          found = maybe && maybe.distance < found.distance ? maybe : found;
-	        }
-	      }
-	      if (visited.indexOf(currNode.parentNode) === -1) {
-	        const maybe = recurse(currNode.parentNode, distance + 1);
-	        found = maybe && maybe.distance < found.distance ? maybe : found;
-	      }
-	      return found;
-	    }
-	  }
-	
-	  return recurse(node, 0).node;
-	}
-	
-	
-	const selectors = {};
-	let matchRunIdCount = 0;
-	function getTargetId(target) {
-	  if((typeof target.getAttribute) === 'function') {
-	    let targetId = target.getAttribute('ce-match-run-id');
-	    if (targetId === null || targetId === undefined) {
-	      targetId = matchRunIdCount + '';
-	      target.setAttribute('ce-match-run-id', matchRunIdCount++)
-	    }
-	    return targetId;
-	  }
-	  return target === document ?
-	        '#document' : target === window ? '#window' : undefined;
-	}
-	
-	
-	
-	function runMatch(event) {
-	  const  matchRunTargetId = getTargetId(event.currentTarget);
-	  const selectStrs = Object.keys(selectors[matchRunTargetId][event.type]);
-	  selectStrs.forEach((selectStr) => {
-	    const target = du.find.up(selectStr, event.target);
-	    const everything = selectStr === '*';
-	    if (everything || target) {
-	      selectors[matchRunTargetId][event.type][selectStr].forEach((func) => func(target, event));
-	    }
-	  })
-	}
-	
-	
-	du.class.add = function(target, clazz) {
-	  du.class.remove(target, clazz);
-	  target.className += ` ${clazz}`;
-	}
-	
-	du.class.swap = function(target, newClass, oldClass) {
-	  du.class.remove(target, oldClass);
-	  du.class.add(target, newClass)
-	}
-	
-	function classReg(clazz) {
-	  return new RegExp(`(^| )(${clazz}( |$)){1,}`, 'g');
-	}
-	
-	du.class.remove = function(target, clazz) {
-	  target.className = target.className.replace(classReg(clazz), ' ').trim();
-	}
-	
-	du.class.has = function(target, clazz) {
-	  return target.className.match(classReg(clazz));
-	}
-	
-	du.class.toggle = function(target, clazz) {
-	  if (du.class.has(target, clazz)) du.class.remove(target, clazz);
-	  else du.class.add(target, clazz);
-	}
-	
-	function onEnter(func) {
-	  function filter(target, event) {
-	    if (even) {
-	
-	    }
-	  }
-	}
-	
-	function filterCustomEvent(event, func) {
-	  let filterFunc = func;
-	  let filterEvent = event;
-	  switch (event) {
-	    case 'enter':
-	      filterFunc = (target, event) => event.code === 'Enter' && func(target, event);
-	      filterEvent = 'keydown';
-	      break;
-	  }
-	  return {func: filterFunc, event: filterEvent};
-	}
-	
-	du.on.match = function(event, selector, func, target) {
-	  const filter = filterCustomEvent(event, func);
-	  target = target || document;
-	  selector = VS(selector);
-	  const  matchRunTargetId = getTargetId(target);
-	  if (selectors[matchRunTargetId] === undefined) {
-	    selectors[matchRunTargetId] = {};
-	  }
-	  if (selectors[matchRunTargetId][filter.event] === undefined) {
-	    selectors[matchRunTargetId][filter.event] = {};
-	    target.addEventListener(filter.event, runMatch);
-	  }
-	  if ( selectors[matchRunTargetId][filter.event][selector] === undefined) {
-	    selectors[matchRunTargetId][filter.event][selector] = [];
-	  }
-	
-	  const selectorArray = selectors[matchRunTargetId][filter.event][selector];
-	  // if (selectorArray.indexOf(func) !== -1) {
-	    selectorArray.push(filter.func);
-	  // }
-	}
-	
-	du.cookie.set = function(name, value, lifeMilliSecs) {
-	  if (value instanceof Object) {
-	    value = JSON.stringify(value);
-	  }
-	  const expireDate = new Date();
-	  expireDate.setTime(expireDate.getTime() + (lifeMilliSecs || (8035200000))); //93 days by default
-	  document.cookie = `${name}=${value}; expires=${expireDate.toUTCString()}`;
-	}
-	
-	du.cookie.get = function(name, seperator) {
-	  const cookie = document.cookie.parseSeperator(';')[name];
-	  if (seperator === undefined) return cookie;
-	  const values = cookie === undefined ? [] : cookie.split(seperator);
-	  if (arguments.length < 3) return values;
-	  let obj = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const key = arguments[index];
-	    const value = values[index - 2];
-	    obj[key] = value;
-	  }
-	  return obj;
-	}
-	
-	let params;
-	du.param.get = function(name) {
-	  if (params === undefined) {
-	    const url = window.location.href.replace(/(.*?)#.*/, '$1');
-	    const paramStr = url.substr(url.indexOf('?') + 1);
-	    params = paramStr.parseSeperator('&');
-	  }
-	  const value = params[name];
-	  if (value === undefined) return undefined;
-	  return decodeURI(value);
-	}
-	
-	du.style = function(elem, style, time) {
-	  const save = {};
-	  const keys = Object.keys(style);
-	  keys.forEach((key) => {
-	    save[key] = elem.style[key];
-	    elem.style[key] = style[key];
-	  });
-	
-	  if (time) {
-	    setTimeout(() => {
-	      keys.forEach((key) => {
-	        elem.style[key] = save[key];
-	      });
-	    }, time);
-	  }
-	}
-	
-	function center(elem) {
-	  const rect = elem.getBoundingClientRect();
-	  const x = rect.x + (rect.height / 2);
-	  const y = rect.y + (rect.height / 2);
-	  return {x, y, top: rect.top};
-	}
-	
-	du.scroll.can = function (elem) {
-	    const horizontallyScrollable = elem.scrollWidth > elem.clientWidth;
-	    const verticallyScrollable = elem.scrollHeight > elem.clientHeight;
-	    return elem.scrollWidth > elem.clientWidth || elem.scrollHeight > elem.clientHeight;
-	};
-	
-	du.scroll.parents = function (elem) {
-	  let scrollable = [];
-	  if (elem instanceof HTMLElement) {
-	    if (du.scroll.can(elem)) {
-	      scrollable.push(elem);
-	    }
-	    return du.scroll.parents(elem.parentNode).concat(scrollable);
-	  }
-	  return scrollable;
-	}
-	
-	du.scroll.intoView = function(elem, divisor, delay, scrollElem) {
-	  let scrollPidCounter = 0;
-	  const lastPosition = {};
-	  let highlighted = false;
-	  function scroll(scrollElem) {
-	    return function() {
-	      const scrollCenter = center(scrollElem);
-	      const elemCenter = center(elem);
-	      const fullDist = Math.abs(scrollCenter.y - elemCenter.y);
-	      const scrollDist = fullDist > 5 ? fullDist/divisor : fullDist;
-	      const yDiff = scrollDist * (elemCenter.y < scrollCenter.y ? -1 : 1);
-	      scrollElem.scroll(0, scrollElem.scrollTop + yDiff);
-	      if (elemCenter.top !== lastPosition[scrollElem.scrollPid]
-	            && (scrollCenter.y < elemCenter.y - 2 || scrollCenter.y > elemCenter.y + 2)) {
-	        lastPosition[scrollElem.scrollPid] = elemCenter.top;
-	        setTimeout(scroll(scrollElem), delay);
-	      } else if(!highlighted) {
-	        highlighted = true;
-	        du.style.temporary(elem, 2000, {
-	          borderStyle: 'solid',
-	          borderColor: '#07ff07',
-	          borderWidth: '5px'
-	        });
-	      }
-	    }
-	  }
-	  const scrollParents = du.scroll.parents(elem);
-	  scrollParents.forEach((scrollParent) => {
-	    scrollParent.scrollPid = scrollPidCounter++;
-	    setTimeout(scroll(scrollParent), 100);
-	  });
-	}
-	
-	
-	du.cookie.remove = function (name) {
-	  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
-	}
-	
-	try {
-	  module.exports = du;
-	} catch (e) {}
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/utils.js',
+RequireJS.addFunction('../../public/js/utils/custom-error.js',
 function (require, exports, module) {
 	
 
 	
 	
-	function safeStdLibAddition() {
-	  const addition = [];
-	  function verify() {
-	    additions.forEach((a) => {
-	      if ((a.static && a.lib[a.field] !== a.func) ||
-	      (!a.static && a.lib.prototype[a.field] !== a.func))
-	        throw new Error(`Functionality was overwritten -` +
-	                          `\n\tLibrary: ${a.lib}` +
-	                          `\n\tStatic: ${a.static}` +
-	                          `\n\tField: ${a.field}`)
-	    });
-	    delete additions;
+	class CustomEvent {
+	  constructor(name) {
+	    const watchers = [];
+	    this.name = name;
+	
+	    const runFuncs = (e) => watchers.forEach((func) => func(e));
+	
+	    this.on = function (func) {
+	      if ((typeof func) === 'function') {
+	        watchers.push(func);
+	      } else {
+	        return 'on' + name;
+	      }
+	    }
+	
+	    this.trigger = function (element) {
+	      element = element === undefined ? window : element;
+	      runFuncs(element);
+	      if(document.createEvent){
+	          element.dispatchEvent(this.event);
+	      } else {
+	          element.fireEvent("on" + this.event.eventType, this.event);
+	      }
+	    }
+	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+	    this.event;
+	    if(document.createEvent){
+	        this.event = document.createEvent("HTMLEvents");
+	        this.event.initEvent(name, true, true);
+	        this.event.eventName = name;
+	    } else {
+	        this.event = document.createEventObject();
+	        this.event.eventName = name;
+	        this.event.eventType = name;
+	    }
 	  }
-	  function safeAdd (lib, field, func, static) {
-	    if (!static && lib.prototype[field] === undefined)
-	      lib.prototype[field] = func;
-	    else if (lib[field] === undefined)
-	      lib[field] = func;
-	    else
-	      console.error(`Attempting to overwrite functionality -` +
-	                        `\n\tLibrary: ${lib}` +
-	                        `\n\tStatic: ${static}` +
-	                        `\n\tField: ${field}`);
-	    addition.push({lib, field, func, static})
-	  }
-	  safeAdd(Function, 'safeStdLibAddition', safeAdd);
 	}
-	safeStdLibAddition();
+	
+	module.exports = CustomEvent;
 	
 	
-	Function.safeStdLibAddition(String, 'random',  function (len) {
-	    len = len || 7;
-	    let str = '';
-	    while (str.length < len) str += Math.random().toString(36).substr(2);
-	    return str.substr(0, len);
-	}, true);
 	
-	Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
-	  return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
-	}, true);
 	
-	const classLookup = {};
-	const identifierAttr = '_TYPE';
-	const immutableAttr = '_IMMUTABLE';
-	const temporaryAttr = '_TEMPORARY';
-	
-	Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
-	  function interpretValue(value) {
-	    const classname = value[identifierAttr];
-	    if (value instanceof Object) {
-	      const attrs = Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
-	      if (Array.isArray(value)) {
-	        const realArray = [];
-	        for (let index = 0; index < value.length; index += 1) {
-	          realArray[index] = fromJson(value[index]);
-	        }
-	        return realArray;
-	      } else if (classname && classLookup[classname]) {
-	        const classObj = new (classLookup[classname])();
-	        for (let index = 0; index < attrs.length; index += 1) {
-	          const attr = attrs[index];
-	          if ((typeof classObj[attr]) === 'function')
-	            classObj[attr](interpretValue(value[attr]));
-	        };
-	        return classObj;
-	      } else {
-	        const realObj = {}
-	        for (let index = 0; index < attrs.length; index += 1) {
-	          const attr = attrs[index];
-	          realObj[attr] = interpretValue(value[attr]);
-	        };
-	        return realObj
-	      }
-	    }
-	    return value;
-	  }
-	
-	  if (!(rootJson instanceof Object)) return rootJson;
-	  return interpretValue(rootJson);
-	});
-	
-	Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
-	  const cxtrName = obj.constructor.name;
-	  if (classLookup[cxtrName] === undefined) {
-	    classLookup[cxtrName] = obj.constructor;
-	  } else if (classLookup[cxtrName] !== obj.constructor) {
-	    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
-	  }
-	  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
-	  let values = {};
-	  let temporary = false;
-	  let immutable = false;
-	  if ((typeof initialVals) === 'object') {
-	    values = JSON.clone(initialVals);
-	    immutable = values[immutableAttr] === true;
-	    temporary = values[temporaryAttr] === true;
-	    if (immutable) {
-	      attrs = Object.keys(values);
-	    } else {
-	      attrs = Object.keys(values).concat(attrs);
-	    }
-	  } else {
-	    attrs.push(initialVals);
-	  }
-	
-	  for (let index = 0; index < attrs.length; index += 1) {
-	    const attr = attrs[index];
-	    if (attr !== immutableAttr) {
-	      if (immutable) obj[attr] = () => values[attr];
-	      else {
-	        obj[attr] = (value) => {
-	          if (value === undefined) {
-	            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
-	            if (values[attr] !== undefined || noDefaults)
-	            return values[attr];
-	            return obj.defaultGetterValue(attr);
-	          }
-	          values[attr] = value;
-	        }
-	      }
-	    }
-	  }
-	  if (!temporary) {
-	    const origToJson = obj.toJson;
-	    obj.toJson = () => {
-	      const json = (typeof origToJson === 'function') ? origToJson() : {};
-	      json[identifierAttr] = obj.constructor.name;
-	      for (let index = 0; index < attrs.length; index += 1) {
-	        const attr = attrs[index];
-	        if (attr !== immutableAttr) {
-	          const value = obj[attr]();
-	          if ((typeof value) === 'object') {
-	            if ((typeof value.toJson) === 'function') {
-	              json[attr] = value.toJson();
-	            } else if (Array.isArray(value)){
-	              const arr = [];
-	              value.forEach((val) => {
-	                if ((typeof val.toJson) === 'function') {
-	                  arr.push(val.toJson());
-	                } else {
-	                  arr.push(val);
-	                }
-	              });
-	              json[attr] = arr;
-	            } else {
-	              json[attr] = JSON.clone(value);
-	            }
-	          } else {
-	            json[attr] = value;
-	          }
-	        }
-	      }
-	      return json;
-	    }
-	  }
-	  obj.fromJson = (json) => {
-	    for (let index = 0; index < attrs.length; index += 1) {
-	      const attr = attrs[index];
-	      if (attr !== immutableAttr) {
-	        obj[attr](json[attr]);
-	      }
-	    };
-	    return obj;
-	  }
-	  // obj.clone = () => obj.fromJson(obj.toJson);
-	}, true);
-	Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
-	
-	Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
-	  if (otherObj === undefined) return;
-	  if ((typeof otherObj) !== 'object') {
-	    throw new Error('Requires one argument of type object or undefined for meaningless call');
-	  }
-	  const keys = Object.keys(otherObj);
-	  keys.forEach((key) => obj[key] = otherObj[key]);
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
-	  if (start!== undefined && end !== undefined && start > end) {
-	    const temp = start;
-	    start = end;
-	    end = temp;
-	  }
-	  start = start || 0;
-	  end = end || values.length;
-	  for (let index = start; index < end; index += 1)
-	    array[index] = values[index];
-	  return array;
-	}, true);
-	
-	Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
-	  const keys = Object.keys(obj);
-	  const clone = ((typeof obj.clone) === 'function') ? obj.clone() :
-	                  Array.isArray(obj) ? [] : {};
-	  for(let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    const member = obj[key];
-	    if ((typeof member) === 'object') {
-	      if ((typeof member.clone) === 'function') {
-	        clone[key] = member.clone();
-	      } else {
-	        clone[key] = JSON.clone(member);
-	      }
-	    } else {
-	      clone[key] = member;
-	    }
-	  }
-	  return clone;
-	}, true);
-	
-	Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
-	  if (isRegex !== true) {
-	    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
-	  }
-	  var keyValues = this.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
-	  var json = {};
-	  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
-	    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
-	    if (split) {
-	      json[split[1]] = split[2];
-	    }
-	  }
-	  return json;
-	});
-	
-	Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
-	  const attrs = path.split('.');
-	  const lastIndex = attrs.length - 1;
-	  let currObj = obj;
-	  for (let index = 0; index < lastIndex; index += 1) {
-	    let attr = attrs[index];
-	    if (currObj[attr] === undefined) currObj[attr] = {};
-	    currObj = currObj[attr];
-	  }
-	
-	  const lastAttr = attrs[lastIndex];
-	  if ((typeof currObj[lastAttr]) === 'function') {
-	    return currObj[lastAttr](value);
-	  } else if (value !== undefined) {
-	    currObj[lastAttr] = value;
-	  }
-	  return currObj[lastAttr];
-	}, true);
 	
 });
 
@@ -6934,6 +6409,103 @@ function regexToObject (str, reg) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/decisionTree.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	// terminology
+	// name - String to define state;
+	// payload - data returned for a given state
+	// stateObject - object defining states {name: [payload]...}
+	// states - array of availible state names.
+	// node - {name, states, payload, then, addState, addStates};
+	// then(name) - a function to set a following state.
+	// next(name) - a function to get the next state.
+	// back() - a function to move back up the tree.
+	// top() - a function to get root;
+	//
+	// returns all functions return current node;
+	class DecisionTree {
+	  constructor(name, payload) {
+	    name = name || 'root';
+	    const stateConfigs = {};
+	    const tree = {};
+	    const nodeMap = {};
+	
+	    function addState(name, payload) {
+	      return stateConfigs[name] = payload;
+	    }
+	
+	    function addStates(sts) {
+	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
+	      const keys = Object.keys(sts);
+	      keys.forEach((key) => stateConfigs[key] = sts[key]);
+	    }
+	
+	    function getState(name, parent) {
+	      return new DecisionNode(name, stateConfigs[name], parent);
+	    }
+	
+	
+	    class DecisionNode {
+	      constructor(name, payload, parent) {
+	        const states = {};
+	        let jump;
+	        payload = payload || {};
+	        payload._nodeId = `decision-node-${String.random(7)}`;
+	        nodeMap[payload._nodeId] = this;
+	        this.getNode = (nodeId) => nodeMap[nodeId];
+	        this.name = name;
+	        this.states = states;
+	        this.payload = payload;
+	        this.jump = (name) => {
+	          if (name) jump = getState(name, parent);
+	          return jump;
+	        };
+	        this.then = (name, payload) => {
+	          payload = payload ? addState(name, payload) : stateConfigs[name];
+	          states[name] = (getState(name, this));
+	          const state = states[name];
+	          return state === undefined ? undefined : state.jump() || state;
+	        }
+	        this.addState = (name, payload) => addState(name, payload) && this;
+	        this.addStates = (sts) => addStates(sts) && this;
+	        this.next = (name) => {
+	          const state = states[name];
+	          return state === undefined ? undefined : state.jump() || state;
+	        }
+	
+	        this.routePayloads = () => {
+	          let currNode = this;
+	          const payloads = [];
+	          while(currNode !== null) {
+	            payloads.push(currNode.payload);
+	            currNode = currNode.back();
+	          }
+	          return payloads.reverse();
+	        }
+	        this.back = () => parent;
+	        this.top = () => rootNode;
+	      }
+	    }
+	
+	    const rootNode = new DecisionNode(name, payload, null);
+	    return rootNode;
+	  }
+	}
+	
+	module.exports = DecisionTree;
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/request.js',
 function (require, exports, module) {
 	
@@ -7031,244 +6603,682 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/endpoints.js',
+RequireJS.addFunction('../../public/js/utils/measurment.js',
 function (require, exports, module) {
 	
-class Endpoints {
-	  constructor(config, host) {
-	    const instance = this;
-	    let environment;
+const Lookup = require('./object/lookup');
 	
-	    if ((typeof config) !== 'object') {
-	      host = config;
-	      config = Endpoints.defaultConfig;
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	let percision = '1/32';
+	let units = [
+	              'Imperial (US)',
+	              'Metric'
+	]
+	let unit = units[0];
+	
+	
+	class Measurement extends Lookup {
+	  constructor(value, metric) {
+	    super();
+	    if ((typeof value) === 'string') {
+	      value += ' '; // Hacky fix for regularExpression
 	    }
 	
-	    host = host || '';
-	    this.setHost = (newHost) => {
-	      if ((typeof newHost) === 'string') {
-	        if (config._envs[newHost]) environment = newHost;
-	        host = config._envs[newHost] || newHost;
+	    const isMetric = () => unit === units[1] || metric;
+	
+	    let decimal = 0;
+	    let nan = value === null || value === undefined;
+	    this.isNaN = () => nan;
+	
+	    const parseFraction = (str) => {
+	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
+	      regObj.integer = Number.parseInt(regObj.integer) || 0;
+	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	      if(regObj.denominator === 0) {
+	        regObj.numerator = 0;
+	        regObj.denominator = 1;
 	      }
+	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	      return regObj;
 	    };
-	    this.setHost(host);
-	    this.getHost = (env) => env === undefined ? host : config._envs[env];
-	    this.getEnv = () => environment;
 	
-	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
-	    this.getFuncObj = function () {return endPointFuncs;};
-	
-	
-	    function build(str) {
-	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
-	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
-	      return function () {
-	        let values = [];
-	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
-	          values = arguments;
-	        } else {
-	          const obj = arguments[0];
-	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
-	        }
-	        let endpoint = '';
-	        for (let index = 0; index < pieces.length; index += 1) {
-	          const arg = values[index];
-	          let value = '';
-	          if (index < pieces.length - 1) {
-	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
+	    function reduce(numerator, denominator) {
+	      let reduced = true;
+	      while (reduced) {
+	        reduced = false;
+	        for (let index = 0; index < Measurement.primes.length; index += 1) {
+	          const prime = Measurement.primes[index];
+	          if (prime >= denominator) break;
+	          if (numerator % prime === 0 && denominator % prime === 0) {
+	            numerator = numerator / prime;
+	            denominator = denominator / prime;
+	            reduced = true;
+	            break;
 	          }
-	          endpoint += pieces[index] + value;
 	        }
-	        return `${host}${endpoint}`;
+	      }
+	      if (numerator === 0) {
+	        return '';
+	      }
+	      return ` ${numerator}/${denominator}`;
+	    }
+	
+	    function calculateValue(accuracy) {
+	      accuracy = accuracy || '1/32'
+	      const fracObj = parseFraction(accuracy);
+	      const denominator = fracObj.denominator;
+	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	      }
+	      let standardDecimal = decimal / 2.54;
+	      let sign = standardDecimal > 0 ? 1 : -1;
+	      let remainder = Math.abs(standardDecimal);
+	      let currRemainder = remainder;
+	      let value = 0;
+	      let numerator = 0;
+	      while (currRemainder > 0) {
+	        numerator += fracObj.numerator;
+	        currRemainder -= fracObj.decimal;
+	      }
+	      const diff1 = standardDecimal - ((numerator - fracObj.numerator) / denominator);
+	      const diff2 = (numerator / denominator) - standardDecimal;
+	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	      const integer = sign * Math.floor(numerator / denominator);
+	      numerator = numerator % denominator;
+	      return {integer, numerator, denominator};
+	    }
+	
+	    this.fraction = (accuracy) => {
+	      if (nan) return NaN;
+	      const obj = calculateValue(accuracy);
+	      if (obj.integer === 0 && obj.numerator === 0) return '0';
+	      const integer = obj.integer !== 0 ? obj.integer : '';
+	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
+	    }
+	    this.standardUS = this.fraction;
+	
+	    this.display = (accuracy) => {
+	      switch (unit) {
+	        case units[0]: return this.standardUS(accuracy);
+	        case units[1]: return this.decimal(accuracy);
+	        default:
+	            return this.standardUS(accuracy);
 	      }
 	    }
 	
-	    function configRecurse(currConfig, currFunc) {
-	      const keys = Object.keys(currConfig);
+	    this.value = (accuracy) => this.decimal(accuracy);
+	
+	    this.decimal = (accuracy) => {
+	      if (nan) return NaN;
+	      accuracy = accuracy % 10 ? accuracy : 10;
+	      return Math.round(decimal * accuracy) / accuracy;
+	    }
+	    const convertToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+	
+	    if ((typeof value) === 'number') {
+	      if (!isMetric()) {
+	          convertToMetric(value);
+	      }
+	      decimal = value;
+	    } else if ((typeof value) === 'string') {
+	      try {
+	        if (!isMetric()) {
+	          const standardDecimal = parseFraction(value).decimal;
+	          convertToMetric(standardDecimal);
+	        }
+	        decimal = value;
+	      } catch (e) {
+	        nan = true;
+	      }
+	    } else {
+	      nan = true;
+	    }
+	  }
+	}
+	
+	Measurement.unit = (newUnit) => {
+	  for (index = 0; index < units.length; index += 1) {
+	    if (newUnit === units[index]) unit = newUnit;
+	  }
+	  return unit
+	};
+	Measurement.units = () => JSON.parse(JSON.stringify(units));
+	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
+	
+	Measurement.validation = function (range) {
+	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
+	  let min = obj.min.trim() !== '' ?
+	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
+	  let max = obj.max.trim() !== '' ?
+	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
+	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
+	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
+	  return function (value) {
+	    const decimal = new Measurement(value).decimal();
+	    if (decimal === NaN) return false;
+	    return minCheck(decimal) && maxCheck(decimal);
+	  }
+	}
+	
+	Measurement.round = (value, percision) => {
+	  if (percision)
+	  return new Measurement(value).decimal(percision);
+	  return Math.round(value * 10000000) / 10000000;
+	}
+	
+	try {
+	  module.exports = Measurement;
+	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/expression-definition.js',
+function (require, exports, module) {
+	
+
+	
+	
+	let idCount = 0;
+	class ExprDef {
+	  constructor(name, options, notify, stages, alwaysPossible) {
+	    this.id = idCount++;
+	    let id = this.id;
+	    let string;
+	    let modified = '';
+	    let start;
+	    let end;
+	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
+	    stages = stages ? stages : {};
+	    let currStage = stages;
+	
+	    function getRoutes(prefix, stage) {
+	      let routes = [];
+	      let keys = Object.keys(stage);
 	      for (let index = 0; index < keys.length; index += 1) {
 	        const key = keys[index];
-	        const value = currConfig[key];
-	        if (key.indexOf('_') !== 0) {
-	          if (value instanceof Object) {
-	            currFunc[key] = {};
-	            configRecurse(value, currFunc[key]);
+	        if (key !== '_meta') {
+	          let newPrefix;
+	          if (prefix) {
+	            newPrefix = `${prefix}.${key}`;
 	          } else {
-	            currFunc[key] = build(value);
+	            newPrefix = key;
 	          }
-	        } else {
-	          currFunc[key] = value;
-	        }
-	      }
-	    }
-	
-	    configRecurse(config, endPointFuncs);
-	  }
-	}
-	
-	module.exports = Endpoints;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/bind.js',
-function (require, exports, module) {
-	
-const du = require('../dom-utils');
-	const Input = require('./input');
-	
-	const defaultDynamInput = (value, type) => new Input({type, value});
-	
-	module.exports = function(selector, objOrFunc, props) {
-	  let lastInputTime = {};
-	  props = props || {};
-	  const validations = props.validations || {};
-	  const inputs = props.inputs || {};
-	
-	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
-	  const getValue = (updatePath, elem) => {
-	    const input = inputs.pathValue(updatePath);
-	    return input ? input.value() : elem.value;
-	  }
-	  const getValidation = (updatePath) => {
-	    let validation = validations.pathValue(updatePath);
-	    const input = inputs.pathValue(updatePath);
-	    if (input) {
-	      validation = input.validation;
-	    }
-	    return validation;
-	  }
-	
-	  function update(elem) {
-	    const target = resolveTarget(elem);
-	    elem = du.find.down('input,select,textarea', elem);
-	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
-	    elem.id = elem.id || String.random(7);
-	    const thisInputTime = new Date().getTime();
-	    lastInputTime[elem.id] = thisInputTime;
-	    setTimeout(() => {
-	      if (thisInputTime === lastInputTime[elem.id]) {
-	        const validation = getValidation(updatePath);
-	        if (updatePath !== null) {
-	          const newValue = getValue(updatePath, elem);
-	          if ((typeof validation) === 'function' && !validation(newValue)) {
-	            console.error('badValue')
-	          } else if ((typeof objOrFunc) === 'function') {
-	            objOrFunc(updatePath, elem.value);
-	          } else {
-	            objOrFunc.pathValue(updatePath, elem.value);
+	          const deepRoutes = getRoutes(newPrefix, stage[key]);
+	          if (deepRoutes.length > 0) {
+	            routes = routes.concat(deepRoutes);
 	          }
-	
-	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
-	            target.innerHTML = newValue;
+	          if (stage[key]._meta && stage[key]._meta.end) {
+	            routes.push(newPrefix + '.end');
+	          }
+	          if (stage[key]._meta && stage[key]._meta.repeat) {
+	            routes.push(newPrefix + '.repeat');
 	          }
 	        }
 	      }
-	    }, 2000);
-	  }
-	  const makeDynamic = (target) => {
-	    target = resolveTarget(target);
-	    if (target.getAttribute('resolved') === null) {
-	      target.setAttribute('resolved', 'dynam-input');
-	      const value = target.innerText;
-	      const type = target.getAttribute('type');
-	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
-	      const input = inputs.pathValue(updatePath) || defaultDynamInput(value, type);
-	
-	      target.innerHTML = input.html();
-	      const inputElem = du.find.down(`#${input.id}`, target);
-	      du.class.add(inputElem, 'dynam-input');
-	      inputElem.setAttribute('prop-update', updatePath);
-	      inputElem.focus();
+	      return routes;
 	    }
-	  }
 	
-	  du.on.match('keyup', selector, update);
-	  du.on.match('change', selector, update);
-	  du.on.match('click', selector, makeDynamic);
-	}
-	
-	
-	const undoDynamic = (target) => {
-	  const parent = du.find.up('[resolved="dynam-input"]', target)
-	  parent.innerText = target.value;
-	  parent.removeAttribute('resolved');
-	}
-	
-	du.on.match('focusout', '.dynam-input', undoDynamic);
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/collections/collection.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class Collection {
-	  constructor(members) {
-	    const list = [];
-	    const instance = this;
-	
-	    function runForEach(func) {
-	      let bool = true;
-	      for (let index = 0; index < members.length; index += 1) {
-	        bool = func(members[index]) && bool;
-	      }
-	      return bool;
-	    }
-	    function refMember(name) {
-	      instance[name] = () => {
-	        const attrId = list[0][name]();
-	        return attrId;
+	    this.always = function () {
+	      for (let index = 0; index < arguments.length; index += 1) {
+	        alwaysPossible.push(arguments[index]);
 	      }
 	    };
-	    runForEach(refMember);
+	    this.getAlways = function (exprDef) {return alwaysPossible;};
 	
-	    this.options = () => list[0].options() || [];
-	    this.cost = () => {
-	      let totalCost = 0;
-	      list.forEach((el) => totalCost += el.cost());
-	      return totalCost;
+	    this.allRoutes = function () {
+	      return getRoutes(null, stages);
 	    }
-	    this.belongs = (el) =>
-	      list.length === 0 ||
-	        runForEach((member) => el[member]() === list[0][member]());
 	
-	    this.add = (elem) => {
-	      if (!this.belongs(elem)) throw new Error ('Cannot add element that does not belong.');
-	      list.push(elem);
-	      runForEach(refMember);
+	    function getNotice (exprDef) {
+	      let isInAlways = false;
+	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
+	      if (isInAlways) return;
+	      if (!exprDef.closed()) {
+	        if (currStage[exprDef.getName()] === undefined) {
+	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
+	        }
+	        currStage = currStage[exprDef.getName()];
+	      }
 	    }
-	    this.list = list;
-	    this.typeId = () => {
-	      let typeId = '';
-	      runForEach((member) => typeId += `:${list[0][member]()}`);
-	      return typeId;
+	    this.getNotice = getNotice;
+	
+	    function getName () {return name;};
+	    this.getName = getName;
+	    this.onClose = function (start, end) {
+	      return function (str, start, end) {
+	        if (notify) notify(this);
+	        options.onClose(str, start, end);
+	      }
+	    }
+	
+	    function setMeta(targetNodes, attr, value) {
+	      return function () {
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          targetNodes[lIndex]._meta[attr] = value;
+	        }
+	      }
+	    }
+	
+	    function then (targetNodes) {
+	      return function () {
+	        const createdNodes = [];
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          const targetNode = targetNodes[lIndex];
+	          for (let index = 0; index < arguments.length; index += 1) {
+	            const exprDef = arguments[index];
+	            if (!exprDef instanceof ExprDef) {
+	              throw new Error(`Argument is not an instanceof ExprDef`);
+	            }
+	            const nextExpr = exprDef.clone(getNotice);
+	            if (targetNode[nextExpr.getName()] === undefined) {
+	              targetNode[nextExpr.getName()] = {
+	                _meta: {
+	                  expr: nextExpr
+	                }
+	              };
+	            }
+	            createdNodes.push(targetNode[nextExpr.getName()]);
+	          }
+	        }
+	        return {
+	          then: then(createdNodes),
+	          repeat: setMeta(createdNodes, 'repeat', true),
+	          end: setMeta(createdNodes, 'end', true),
+	        };
+	      }
+	    }
+	
+	    this.if = function () {return then([stages]).apply(this, arguments);}
+	
+	    function isEscaped(str, index) {
+	      if (options.escape === undefined) {
+	        return false;
+	      }
+	      let count = -1;
+	      let firstIndex, secondIndex;
+	      do {
+	        count += 1;
+	        firstIndex = index - (options.escape.length * (count + 1));
+	        secondIndex = options.escape.length;
+	      } while (str.substr(firstIndex, secondIndex) === options.escape);
+	      return count % 2 == 0;
+	    }
+	
+	    function foundCall(onFind, sub) {
+	      if ((typeof notify) === 'function') {
+	        notify(this);
+	      }
+	      if ((typeof onFind) === 'function') {
+	        return onFind(sub);
+	      } else {
+	        return sub;
+	      }
+	    }
+	
+	    this.find = function (str, index) {
+	      let startedThisCall = false;
+	      let needle = options.closing;
+	      let starting = false;
+	      if (start === undefined) {
+	        needle = options.opening;
+	        starting = true;
+	      }
+	      const sub = str.substr(index);
+	      let needleLength;
+	      if (needle instanceof RegExp) {
+	        const match = sub.match(needle);
+	        if (match && match.index === 0) {
+	          needleLength = match[0].length;
+	        }
+	      } else if ((typeof needle) === 'string') {
+	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
+	          needleLength = needle.length;
+	      } else if (needle === undefined || needle === null) {
+	        needleLength = 0;
+	      } else {
+	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
+	      }
+	      needleLength += options.tailOffset ? options.tailOffset : 0;
+	      let changes = '';
+	      if (start === undefined && starting && (needleLength || needle === null)) {
+	        string = str;
+	        start = index;
+	        startedThisCall = true;
+	        if (needle === null) {
+	          if ((typeof notify) === 'function') {
+	            notify(this);
+	          }          return {index, changes}
+	        } else {
+	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
+	        }
+	      }
+	      if ((!startedThisCall && needleLength) ||
+	            (startedThisCall && options.closing === undefined) ||
+	            (!startedThisCall && options.closing === null)) {
+	        if (str !== string) {
+	          throw new Error ('Trying to apply an expression to two different strings.');
+	        }
+	        end = index + needleLength;
+	        if (options.closing === null) {
+	          return {index, changes}
+	        }
+	        if (!startedThisCall) {
+	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
+	        }
+	        return { index: end, changes };
+	      }
+	
+	      return start !== undefined ? { index: start + needleLength, changes } :
+	                      { index: -1, changes };
+	    }
+	
+	    this.clone = function (notify) {
+	      return new ExprDef(name, options, notify, stages, alwaysPossible);
+	    };
+	    this.name = this.getName();
+	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
+	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
+	    this.location = function () {return {start, end, length: end - start}};
+	    this.closed = function () {return end !== undefined;}
+	    this.open = function () {return start !== undefined;}
+	    this.next =  function () {
+	      const expressions = [];
+	      if (currStage._meta && currStage._meta.repeat) {
+	        currStage = stages;
+	      }
+	      Object.values(currStage).map(
+	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
+	      )
+	      return alwaysPossible.concat(expressions);
+	    };
+	  }
+	}
+	
+	function parse(exprDef, str) {
+	  exprDef = exprDef.clone();
+	  let index = 0;
+	  let modified = '';
+	  const breakDown = [];
+	  const stack = [];
+	
+	  function topOfStack() {
+	    return stack[stack.length - 1];
+	  }
+	
+	  function closeCheck(exprDef) {
+	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
+	      let result = exprDef.find(str, index);
+	      if (result.index) {
+	        modified += result.changes;
+	        return result.index;
+	      }
+	    }
+	  }
+	
+	  function checkArray(exprDef, array) {
+	    if (exprDef.endDefined()) {
+	      let nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
+	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
+	      const result = childExprDef.find(str, index);
+	      if (result.index !== -1) {
+	        modified += result.changes;
+	        if (childExprDef.closed()) {
+	          breakDown.push(childExprDef);
+	        } else {
+	          stack.push(childExprDef);
+	        }
+	        return result.index;
+	      }
+	    }
+	    if (exprDef.canEnd()) {
+	      nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
+	  }
+	
+	  function open(exprDef, index) {
+	    const always = exprDef.getAlways();
+	    while (!exprDef.open()) {
+	      let result = exprDef.find(str, index);
+	      modified += result.changes;
+	      if(result.index === -1) {
+	        let newIndex = checkArray(exprDef, always);
+	        index = newIndex;
+	      } else {
+	        if (exprDef.closed()) {
+	          breakDown.push(exprDef);
+	        } else {
+	          stack.push(exprDef);
+	        }
+	        index = result.index;
+	      }
+	    }
+	    return index;
+	  }
+	
+	  let loopCount = 0;
+	  index = open(exprDef, index);
+	  progress = [-3, -2, -1];
+	  while (topOfStack() !== undefined) {
+	    const tos = topOfStack();
+	    if (progress[0] === index) {
+	      throw new Error(`ExprDef stopped making progress`);
+	    }
+	    let stackIds = '';
+	    let options = '';
+	    stack.map(function (value) {stackIds+=value.getName() + ','});
+	    tos.next().map(function (value) {options+=value.getName() + ','})
+	    index = checkArray(tos, tos.next());
+	    if (tos.closed()) {
+	      stack.pop();
+	    }
+	    loopCount++;
+	  }
+	  // if (index < str.length) {
+	  //   throw new Error("String not fully read");
+	  // }
+	  return modified;
+	}
+	
+	
+	ExprDef.parse = parse;
+	
+	module.exports = ExprDef;
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/input.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const $t = require('../$t');
+	const du = require('../dom-utils');
+	/*
+	supported attributes: type, placeholder, name, class, value
+	label: creates a text label preceeding input.
+	clearOnClick: removes value when clicked.
+	list: creates a dropdown with list values.
+	default: the default value if input is invalid.
+	targetAttr: attribute which defines the inputs value.
+	format: attribute which defines a function used to format value.
+	validation: Accepts
+	                Array: value must be included
+	                Regex: value must match
+	                Function: value is arg1, must return true
+	errorMsg: Message that shows when validation fails.
+	
+	*/
+	class Input {
+	  constructor(props) {
+	    props.hidden = props.hide || false;
+	    props.list = props.list || [];
+	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
+	                            'class', 'list', 'value');
+	
+	    const immutableProps = {
+	      _IMMUTABLE: true,
+	      id: props.id || `input-${String.random(7)}`,
+	      targetAttr: props.targetAttr || 'value',
+	      errorMsg: props.errorMsg || 'Error',
+	      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
+	    }
+	    Object.getSet(this, immutableProps)
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      delete json.id;
+	      delete json.errorMsgId;
+	      Object.set(json, properties);
+	      return new this.constructor(json);
+	    }
+	
+	    const instance = this;
+	    const forAll = Input.forAll(this.id());
+	
+	    this.hide = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      hidden = cnt.hidden = true;
+	    });
+	    this.show = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      hidden = cnt.hidden = false;
+	    });
+	
+	    let valid;
+	    let value = props.value;
+	
+	    const idSelector = `#${this.id()}`;
+	
+	    const html = this.constructor.html(this);
+	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
+	    this.html = () =>
+	     html();
+	
+	    function valuePriority (func) {
+	      return (elem, event) => func(elem[this.targetAttr()], elem, event);
+	    }
+	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
+	
+	    function getElem(id) {return document.getElementById(id);}
+	    this.get = () => getElem(this.id());
+	
+	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
+	    this.valid = () => valid === undefined ? this.setValue() : valid;
+	    this.setValue = (val) => {
+	      const elem = getElem(this.id());
+	      if (val === undefined){
+	        if (elem) val = elem[this.targetAttr()]
+	        if (val === undefined) val = props.default;
+	      }
+	      if(this.validation(val)) {
+	        valid = true;
+	        value = val;
+	        if (elem) elem[this.targetAttr()] = val;
+	        return true;
+	      }
+	      valid = false;
+	      value = undefined;
+	      return false;
+	    }
+	    this.value = () => {
+	      const unformatted = (typeof value === 'function') ? value() : value || '';
+	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
+	    }
+	    this.doubleCheck = () => {
+	      valid = undefined;
+	      validate();
+	      return valid;
+	    }
+	    this.validation = function(val) {
+	      const elem = getElem(instance.id);
+	      val = val === undefined && elem ? elem.value : val;
+	      if (val === undefined) return false;
+	      if (valid !== undefined && val === value) return valid;
+	      let valValid = true;
+	      if (props.validation instanceof RegExp) {
+	        valValid = val.match(props.validation) !== null;
+	      }
+	      else if ((typeof props.validation) === 'function') {
+	        valValid = props.validation.apply(null, arguments);
+	      }
+	      else if (Array.isArray(props.validation)) {
+	        valValid = props.validation.indexOf(val) !== -1;
+	      }
+	
+	      return valValid;
+	    };
+	
+	    const validate = (target) => {
+	      target = target || getElem(instance.id());
+	      if (target) {
+	        if (this.setValue(target[this.targetAttr()])) {
+	          getElem(this.errorMsgId()).innerHTML = '';
+	          valid = true;
+	        } else {
+	          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
+	          valid = false;
+	        }
+	      }
+	    }
+	
+	    if (props.clearOnClick) {
+	      du.on.match(`mousedown`, `#${this.id()}`, () => {
+	        const elem = getElem(this.id());
+	        if (elem) elem.value = '';
+	      });
+	    }
+	    du.on.match(`change`, `#${this.id()}`, validate);
+	    du.on.match(`keyup`, `#${this.id()}`, validate);
+	  }
+	}
+	
+	Input.forAll = (id) => {
+	  const idStr = `#${id}`;
+	  return (func) => {
+	    const elems = document.querySelectorAll(idStr);
+	    for (let index = 0; index < elems.length; index += 1) {
+	      func(elems[index]);
 	    }
 	  }
 	}
 	
-	Collection.create = function (members, objs) {
-	  let collections = {};
-	  for (let index = 0; index < objs.length; index += 1) {
-	    let collection = new Collection(members);
-	    collection.add(objs[index]);
-	    const typeId = collection.typeId();
-	    if (collections[typeId] === undefined) {
-	      collections[typeId] = collection;
-	    } else {
-	      collections[typeId].add(objs[index]);
-	    }
+	Input.template = new $t('input/input');
+	Input.html = (instance) => () => Input.template.render(instance);
+	Input.flagAttrs = ['checked', 'selected'];
+	Input.attrString = (targetAttr, value) =>{
+	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
+	    return value === true ? targetAttr : '';
 	  }
-	  return Object.values(collections);
+	  return `${targetAttr}='${value}'`
 	}
 	
-	module.exports = Collection;
-	
-	
-	
-	
+	module.exports = Input;
 	
 });
 
@@ -7514,175 +7524,76 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/input.js',
+RequireJS.addFunction('../../public/js/utils/collections/collection.js',
 function (require, exports, module) {
 	
 
 	
 	
-	
-	const $t = require('../$t');
-	const du = require('../dom-utils');
-	/*
-	supported attributes: type, placeholder, name, class, value
-	label: creates a text label preceeding input.
-	clearOnClick: removes value when clicked.
-	list: creates a dropdown with list values.
-	default: the default value if input is invalid.
-	targetAttr: attribute which defines the inputs value.
-	format: attribute which defines a function used to format value.
-	validation: Accepts
-	                Array: value must be included
-	                Regex: value must match
-	                Function: value is arg1, must return true
-	errorMsg: Message that shows when validation fails.
-	
-	*/
-	class Input {
-	  constructor(props) {
-	    props.hidden = props.hide || false;
-	    props.list = props.list || [];
-	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
-	                            'class', 'list', 'value');
-	
-	    const immutableProps = {
-	      _IMMUTABLE: true,
-	      id: props.id || `input-${String.random(7)}`,
-	      targetAttr: props.targetAttr || 'value',
-	      errorMsg: props.errorMsg || 'Error',
-	      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
-	    }
-	    Object.getSet(this, immutableProps)
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      delete json.id;
-	      delete json.errorMsgId;
-	      Object.set(json, properties);
-	      return new this.constructor(json);
-	    }
-	
+	class Collection {
+	  constructor(members) {
+	    const list = [];
 	    const instance = this;
-	    const forAll = Input.forAll(this.id());
 	
-	    this.hide = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      hidden = cnt.hidden = true;
-	    });
-	    this.show = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      hidden = cnt.hidden = false;
-	    });
-	
-	    let valid;
-	    let value = props.value;
-	
-	    const idSelector = `#${this.id()}`;
-	
-	    const html = this.constructor.html(this);
-	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
-	    this.html = () =>
-	     html();
-	
-	    function valuePriority (func) {
-	      return (elem, event) => func(elem[this.targetAttr()], elem, event);
+	    function runForEach(func) {
+	      let bool = true;
+	      for (let index = 0; index < members.length; index += 1) {
+	        bool = func(members[index]) && bool;
+	      }
+	      return bool;
 	    }
-	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
-	
-	    function getElem(id) {return document.getElementById(id);}
-	    this.get = () => getElem(this.id());
-	
-	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
-	    this.valid = () => valid === undefined ? this.setValue() : valid;
-	    this.setValue = (val) => {
-	      const elem = getElem(this.id());
-	      if (val === undefined){
-	        if (elem) val = elem[this.targetAttr()]
-	        if (val === undefined) val = props.default;
+	    function refMember(name) {
+	      instance[name] = () => {
+	        const attrId = list[0][name]();
+	        return attrId;
 	      }
-	      if(this.validation(val)) {
-	        valid = true;
-	        value = val;
-	        if (elem) elem[this.targetAttr()] = val;
-	        return true;
-	      }
-	      valid = false;
-	      value = undefined;
-	      return false;
-	    }
-	    this.value = () => {
-	      const unformatted = (typeof value === 'function') ? value() : value || '';
-	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
-	    }
-	    this.doubleCheck = () => {
-	      valid = undefined;
-	      validate();
-	      return valid;
-	    }
-	    this.validation = function(val) {
-	      const elem = getElem(instance.id);
-	      val = val === undefined && elem ? elem.value : val;
-	      if (val === undefined) return false;
-	      if (valid !== undefined && val === value) return valid;
-	      let valValid = true;
-	      if (props.validation instanceof RegExp) {
-	        valValid = val.match(props.validation) !== null;
-	      }
-	      else if ((typeof props.validation) === 'function') {
-	        valValid = props.validation.apply(null, arguments);
-	      }
-	      else if (Array.isArray(props.validation)) {
-	        valValid = props.validation.indexOf(val) !== -1;
-	      }
-	
-	      return valValid;
 	    };
+	    runForEach(refMember);
 	
-	    const validate = (target) => {
-	      target = target || getElem(instance.id());
-	      if (target) {
-	        if (this.setValue(target[this.targetAttr()])) {
-	          getElem(this.errorMsgId()).innerHTML = '';
-	          valid = true;
-	        } else {
-	          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
-	          valid = false;
-	        }
-	      }
+	    this.options = () => list[0].options() || [];
+	    this.cost = () => {
+	      let totalCost = 0;
+	      list.forEach((el) => totalCost += el.cost());
+	      return totalCost;
 	    }
+	    this.belongs = (el) =>
+	      list.length === 0 ||
+	        runForEach((member) => el[member]() === list[0][member]());
 	
-	    if (props.clearOnClick) {
-	      du.on.match(`mousedown`, `#${this.id()}`, () => {
-	        const elem = getElem(this.id());
-	        if (elem) elem.value = '';
-	      });
+	    this.add = (elem) => {
+	      if (!this.belongs(elem)) throw new Error ('Cannot add element that does not belong.');
+	      list.push(elem);
+	      runForEach(refMember);
 	    }
-	    du.on.match(`change`, `#${this.id()}`, validate);
-	    du.on.match(`keyup`, `#${this.id()}`, validate);
-	  }
-	}
-	
-	Input.forAll = (id) => {
-	  const idStr = `#${id}`;
-	  return (func) => {
-	    const elems = document.querySelectorAll(idStr);
-	    for (let index = 0; index < elems.length; index += 1) {
-	      func(elems[index]);
+	    this.list = list;
+	    this.typeId = () => {
+	      let typeId = '';
+	      runForEach((member) => typeId += `:${list[0][member]()}`);
+	      return typeId;
 	    }
 	  }
 	}
 	
-	Input.template = new $t('input/input');
-	Input.html = (instance) => () => Input.template.render(instance);
-	Input.flagAttrs = ['checked', 'selected'];
-	Input.attrString = (targetAttr, value) =>{
-	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
-	    return value === true ? targetAttr : '';
+	Collection.create = function (members, objs) {
+	  let collections = {};
+	  for (let index = 0; index < objs.length; index += 1) {
+	    let collection = new Collection(members);
+	    collection.add(objs[index]);
+	    const typeId = collection.typeId();
+	    if (collections[typeId] === undefined) {
+	      collections[typeId] = collection;
+	    } else {
+	      collections[typeId].add(objs[index]);
+	    }
 	  }
-	  return `${targetAttr}='${value}'`
+	  return Object.values(collections);
 	}
 	
-	module.exports = Input;
+	module.exports = Collection;
+	
+	
+	
+	
 	
 });
 
@@ -7719,6 +7630,95 @@ function (require, exports, module) {
 	}
 	
 	module.exports = Lookup;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/bind.js',
+function (require, exports, module) {
+	
+const du = require('../dom-utils');
+	const Input = require('./input');
+	
+	const defaultDynamInput = (value, type) => new Input({type, value});
+	
+	module.exports = function(selector, objOrFunc, props) {
+	  let lastInputTime = {};
+	  props = props || {};
+	  const validations = props.validations || {};
+	  const inputs = props.inputs || {};
+	
+	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
+	  const getValue = (updatePath, elem) => {
+	    const input = inputs.pathValue(updatePath);
+	    return input ? input.value() : elem.value;
+	  }
+	  const getValidation = (updatePath) => {
+	    let validation = validations.pathValue(updatePath);
+	    const input = inputs.pathValue(updatePath);
+	    if (input) {
+	      validation = input.validation;
+	    }
+	    return validation;
+	  }
+	
+	  function update(elem) {
+	    const target = resolveTarget(elem);
+	    elem = du.find.down('input,select,textarea', elem);
+	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
+	    elem.id = elem.id || String.random(7);
+	    const thisInputTime = new Date().getTime();
+	    lastInputTime[elem.id] = thisInputTime;
+	    setTimeout(() => {
+	      if (thisInputTime === lastInputTime[elem.id]) {
+	        const validation = getValidation(updatePath);
+	        if (updatePath !== null) {
+	          const newValue = getValue(updatePath, elem);
+	          if ((typeof validation) === 'function' && !validation(newValue)) {
+	            console.error('badValue')
+	          } else if ((typeof objOrFunc) === 'function') {
+	            objOrFunc(updatePath, elem.value);
+	          } else {
+	            objOrFunc.pathValue(updatePath, elem.value);
+	          }
+	
+	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
+	            target.innerHTML = newValue;
+	          }
+	        }
+	      }
+	    }, 2000);
+	  }
+	  const makeDynamic = (target) => {
+	    target = resolveTarget(target);
+	    if (target.getAttribute('resolved') === null) {
+	      target.setAttribute('resolved', 'dynam-input');
+	      const value = target.innerText;
+	      const type = target.getAttribute('type');
+	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
+	      const input = inputs.pathValue(updatePath) || defaultDynamInput(value, type);
+	
+	      target.innerHTML = input.html();
+	      const inputElem = du.find.down(`#${input.id}`, target);
+	      du.class.add(inputElem, 'dynam-input');
+	      inputElem.setAttribute('prop-update', updatePath);
+	      inputElem.focus();
+	    }
+	  }
+	
+	  du.on.match('keyup', selector, update);
+	  du.on.match('change', selector, update);
+	  du.on.match('click', selector, makeDynamic);
+	}
+	
+	
+	const undoDynamic = (target) => {
+	  const parent = du.find.up('[resolved="dynam-input"]', target)
+	  parent.innerText = target.value;
+	  parent.removeAttribute('resolved');
+	}
+	
+	du.on.match('focusout', '.dynam-input', undoDynamic);
 	
 });
 
@@ -8138,19 +8138,6 @@ exports['306898022'] = (get, $t) =>
 			$t.clean(get("property").value() === true ? 'checked' : '') +
 			`> </span>`
 	
-	exports['1615493058'] = (get, $t) => 
-			`<div class='property-cnt' > <label>` +
-			$t.clean(get("property").name()) +
-			`</label> <input type="text" prop-value-update='` +
-			$t.clean(get("property").id()) +
-			`' value="` +
-			$t.clean(get("property").display()) +
-			`" measurement-id='` +
-			$t.clean(get("property").measurementId()) +
-			`'> <button class='save-change' property-id='` +
-			$t.clean(get("property").id()) +
-			`'>Save</button> </div>`
-	
 	exports['1842139693'] = (get, $t) => 
 			`<li >` +
 			$t.clean(get("prop").name()) +
@@ -8276,32 +8263,22 @@ exports['306898022'] = (get, $t) =>
 			$t.clean(get("type")()) +
 			`"> Hello World! </div> </div> `
 	
-	exports['input/decision/decision'] = (get, $t) => 
-			` <div> <span id='` +
-			$t.clean(get("id")) +
-			`' class='inline-flex'> ` +
-			$t.clean( new $t('-2022747631').render(get("inputArray"), 'input', get)) +
-			` </span> ` +
-			$t.clean( new $t('-1362189101').render(get("inputArray"), 'input', get)) +
-			` </div> `
-	
-	exports['-2022747631'] = (get, $t) => 
-			`<span class='pad ` +
+	exports['input/decision/decisionTree'] = (get, $t) => 
+			`<div class='` +
 			$t.clean(get("class")) +
-			`' node-id='` +
-			$t.clean(get("_nodeId")) +
-			`' index='` +
-			$t.clean(get("$index")) +
+			`' tree-id='` +
+			$t.clean(get("treeId")) +
 			`'> ` +
-			$t.clean(get("input").html()) +
-			` </span>`
-	
-	exports['-1362189101'] = (get, $t) => 
-			`<div id='` +
-			$t.clean(get("input").childCntId) +
-			`'> ` +
-			$t.clean(get("childHtml")(get("$index"))) +
-			` </div>`
+			$t.clean(get("payload").html()) +
+			` <button class='` +
+			$t.clean(get("buttonClass")) +
+			`' tree-id='` +
+			$t.clean(get("treeId")) +
+			`' ` +
+			$t.clean(get("formFilled")() ? '' : 'disabled') +
+			`> ` +
+			$t.clean(get("name")) +
+			` </button> </div> `
 	
 	exports['input/input'] = (get, $t) => 
 			`<div class='input-cnt'` +
@@ -8337,22 +8314,32 @@ exports['306898022'] = (get, $t) =>
 			$t.clean(get("item")) +
 			`" ></option>`
 	
-	exports['input/decision/decisionTree'] = (get, $t) => 
-			`<div class='` +
+	exports['input/decision/decision'] = (get, $t) => 
+			` <div> <span id='` +
+			$t.clean(get("id")) +
+			`' class='inline-flex'> ` +
+			$t.clean( new $t('-2022747631').render(get("inputArray"), 'input', get)) +
+			` </span> ` +
+			$t.clean( new $t('-1362189101').render(get("inputArray"), 'input', get)) +
+			` </div> `
+	
+	exports['-2022747631'] = (get, $t) => 
+			`<span class='pad ` +
 			$t.clean(get("class")) +
-			`' tree-id='` +
-			$t.clean(get("treeId")) +
+			`' node-id='` +
+			$t.clean(get("_nodeId")) +
+			`' index='` +
+			$t.clean(get("$index")) +
 			`'> ` +
-			$t.clean(get("payload").html()) +
-			` <button class='` +
-			$t.clean(get("buttonClass")) +
-			`' tree-id='` +
-			$t.clean(get("treeId")) +
-			`' ` +
-			$t.clean(get("formFilled")() ? '' : 'disabled') +
-			`> ` +
-			$t.clean(get("name")) +
-			` </button> </div> `
+			$t.clean(get("input").html()) +
+			` </span>`
+	
+	exports['-1362189101'] = (get, $t) => 
+			`<div id='` +
+			$t.clean(get("input").childCntId) +
+			`'> ` +
+			$t.clean(get("childHtml")(get("$index"))) +
+			` </div>`
 	
 	exports['input/measurement'] = (get, $t) => 
 			`<div class='fit input-cnt'` +
@@ -8407,35 +8394,6 @@ exports['306898022'] = (get, $t) =>
 			$t.clean(get("value")) +
 			` </option>`
 	
-	exports['cabinet/head'] = (get, $t) => 
-			`<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` +
-			$t.clean(get("$index")) +
-			`.name' index='` +
-			$t.clean(get("$index")) +
-			`' room-id='` +
-			$t.clean(get("room").id()) +
-			`' value='` +
-			$t.clean(get("cabinet").name || get("$index")) +
-			`'> Size: <div class='cabinet-dem-cnt'> <label>W:</label> <input class='cabinet-input dem' prop-update='` +
-			$t.clean(get("$index")) +
-			`.width' room-id='` +
-			$t.clean(get("room").id()) +
-			`' value='` +
-			$t.clean(get("cabinet").width()) +
-			`'> <label>H:</label> <input class='cabinet-input dem' prop-update='` +
-			$t.clean(get("$index")) +
-			`.length' room-id='` +
-			$t.clean(get("room").id()) +
-			`' value='` +
-			$t.clean(get("cabinet").length()) +
-			`'> <label>D:</label> <input class='cabinet-input dem' prop-update='` +
-			$t.clean(get("$index")) +
-			`.thickness' room-id='` +
-			$t.clean(get("room").id()) +
-			`' value='` +
-			$t.clean(get("cabinet").thickness()) +
-			`'> </div> </div> `
-	
 	exports['cabinet/body'] = (get, $t) => 
 			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
 			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
@@ -8475,23 +8433,34 @@ exports['306898022'] = (get, $t) =>
 			$t.clean(get("item").name) +
 			`'/> </div>`
 	
-	exports['divide/body'] = (get, $t) => 
-			`<h2>` +
-			$t.clean(get("list").activeIndex()) +
-			`</h2> val: ` +
-			$t.clean(get("list").value()('selected')) +
-			` `
-	
-	exports['divide/head'] = (get, $t) => 
-			`<div> <select value='` +
-			$t.clean(get("opening").name) +
-			`' class='open-divider-select` +
-			$t.clean(get("sections").length === 0 ? ' hidden' : '') +
-			`'> ` +
-			$t.clean( new $t('443122713').render(get("sections"), 'section', get)) +
-			` </select> <div class='open-divider-select` +
-			$t.clean(get("sections").length === 0 ? '' : ' hidden') +
-			`'> D </div> </div> `
+	exports['cabinet/head'] = (get, $t) => 
+			`<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` +
+			$t.clean(get("$index")) +
+			`.name' index='` +
+			$t.clean(get("$index")) +
+			`' room-id='` +
+			$t.clean(get("room").id()) +
+			`' value='` +
+			$t.clean(get("cabinet").name || get("$index")) +
+			`'> Size: <div class='cabinet-dem-cnt'> <label>W:</label> <input class='cabinet-input dem' prop-update='` +
+			$t.clean(get("$index")) +
+			`.width' room-id='` +
+			$t.clean(get("room").id()) +
+			`' value='` +
+			$t.clean(get("cabinet").width()) +
+			`'> <label>H:</label> <input class='cabinet-input dem' prop-update='` +
+			$t.clean(get("$index")) +
+			`.length' room-id='` +
+			$t.clean(get("room").id()) +
+			`' value='` +
+			$t.clean(get("cabinet").length()) +
+			`'> <label>D:</label> <input class='cabinet-input dem' prop-update='` +
+			$t.clean(get("$index")) +
+			`.thickness' room-id='` +
+			$t.clean(get("room").id()) +
+			`' value='` +
+			$t.clean(get("cabinet").thickness()) +
+			`'> </div> </div> `
 	
 	exports['divider-controls'] = (get, $t) => 
 			`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
@@ -8526,15 +8495,26 @@ exports['306898022'] = (get, $t) =>
 			$t.clean(get("patternInputHtml")) +
 			` </div> </div> `
 	
+	exports['divide/body'] = (get, $t) => 
+			`<h2>` +
+			$t.clean(get("list").activeIndex()) +
+			`</h2> val: ` +
+			$t.clean(get("list").value()('selected')) +
+			` `
+	
+	exports['divide/head'] = (get, $t) => 
+			`<div> <select value='` +
+			$t.clean(get("opening").name) +
+			`' class='open-divider-select` +
+			$t.clean(get("sections").length === 0 ? ' hidden' : '') +
+			`'> ` +
+			$t.clean( new $t('443122713').render(get("sections"), 'section', get)) +
+			` </select> <div class='open-divider-select` +
+			$t.clean(get("sections").length === 0 ? '' : ' hidden') +
+			`'> D </div> </div> `
+	
 	exports['login/confirmation-message'] = (get, $t) => 
 			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
-	
-	exports['login/login'] = (get, $t) => 
-			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
-			$t.clean(get("email")) +
-			`'> <input type='password' placeholder="password" name='password' value='` +
-			$t.clean(get("password")) +
-			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 	
 	exports['login/create-account'] = (get, $t) => 
 			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -8543,12 +8523,26 @@ exports['306898022'] = (get, $t) =>
 			$t.clean(get("password")) +
 			`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
 	
+	exports['login/login'] = (get, $t) => 
+			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	
 	exports['login/reset-password'] = (get, $t) => 
 			`<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` +
 			$t.clean(get("email")) +
 			`'> <input type='password' placeholder="password" name='password' value='` +
 			$t.clean(get("password")) +
 			`'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	
+	exports['managers/cost/body'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("instance").CostManager.cntClass) +
+			`' > ` +
+			$t.clean(get("instance").CostManager.costTypeHtml(get("instance").cost, get("instance"))) +
+			` </div> `
 	
 	exports['managers/abstract-manager'] = (get, $t) => 
 			`<div> <div class="center"> <h2 id='` +
@@ -8560,13 +8554,6 @@ exports['306898022'] = (get, $t) =>
 			`'>Save</button> </h2> </div> <div id="` +
 			$t.clean(get("bodyId")) +
 			`"></div> </div> `
-	
-	exports['managers/cost/body'] = (get, $t) => 
-			`<div class='` +
-			$t.clean(get("instance").CostManager.cntClass) +
-			`' > ` +
-			$t.clean(get("instance").CostManager.costTypeHtml(get("instance").cost, get("instance"))) +
-			` </div> `
 	
 	exports['managers/cost/cost-body'] = (get, $t) => 
 			`<div> ` +
@@ -8677,9 +8664,6 @@ exports['306898022'] = (get, $t) =>
 			$t.clean(get("expandList").html()) +
 			`</div> </div> `
 	
-	exports['managers/property/body'] = (get, $t) => 
-			`<div> No Need </div> `
-	
 	exports['managers/property/header'] = (get, $t) => 
 			`<div> <b>` +
 			$t.clean(get("instance").name) +
@@ -8688,6 +8672,9 @@ exports['306898022'] = (get, $t) =>
 			`) - ` +
 			$t.clean(get("instance").value) +
 			`</b> </div> `
+	
+	exports['managers/property/body'] = (get, $t) => 
+			`<div> No Need </div> `
 	
 	exports['managers/template/body'] = (get, $t) => 
 			`<div> <span> <input value='` +
@@ -8849,17 +8836,6 @@ exports['306898022'] = (get, $t) =>
 			$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
 			` </div> </div> </div> </div> `
 	
-	exports['properties/property'] = (get, $t) => 
-			`<label>` +
-			$t.clean(get("property").name()) +
-			`</label> <input type="text" name="` +
-			$t.clean(get("key")) +
-			`" value="` +
-			$t.clean(get("property").display()) +
-			`" decimal='` +
-			$t.clean(get("this").value()) +
-			`'> `
-	
 	exports['properties/radio'] = (get, $t) => 
 			`<div class='center'> <label>` +
 			$t.clean(get("key")) +
@@ -8868,7 +8844,7 @@ exports['306898022'] = (get, $t) =>
 			` </div> `
 	
 	exports['properties/unit'] = (get, $t) => 
-			`<div> HI <label>Standard</label> <input type='radio' name='unit' ` +
+			`<div> <label>Standard</label> <input type='radio' name='unit' ` +
 			$t.clean(get("unit").value() === 'Imperial (US)' ? 'checked' : '') +
 			` value='Imperial (US)'> <label>Metric</label> <input type='radio' name='unit' ` +
 			$t.clean(get("unit").value() === 'Metric' ? 'checked' : '') +
@@ -9729,6 +9705,157 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/config/properties.js',
+function (require, exports, module) {
+	
+
+	const Property = require('./property');
+	const Measurement = require('../../../../public/js/utils/measurment.js');
+	
+	const h = new Property('h', 'height', null);
+	const w = new Property('w', 'width', null);
+	const d = new Property('d', 'depth', null);
+	const t = new Property('t', 'thickness', null);
+	const l = new Property('l', 'length', null);
+	
+	
+	let unitCount = 0;
+	const UNIT = [];
+	Measurement.units().forEach((unit) =>
+	      UNIT.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
+	UNIT._IS_RADIO = true;
+	UNIT._VALUE = Measurement.unit();
+	
+	const assemProps = {
+	  UNIT,
+	  Overlay: [
+	    new Property('ov', 'Overlay', 1/2)
+	  ],
+	  Reveal: [
+	    new Property('r', 'Reveal', 1/8),
+	    new Property('rvt', 'Reveal Top', 1/2),
+	    new Property('rvb', 'Reveal Bottom', 0)
+	  ],
+	  Inset: [
+	    new Property('is', 'Spacing', 3/32)
+	  ],
+	  Cabinet: [
+	      h.clone(), w.clone(), d.clone(),
+	      new Property('sr', 'Scribe Right', 3/8),
+	      new Property('sl', 'Scribe Left', 3/8),
+	      new Property('rvibr', 'Reveal Inside Bottom Rail', 1/8),
+	      new Property('rvdd', 'Reveal Dual Door', 1/16),
+	      new Property('tkbw', 'Toe Kick Backer Width', 1/2),
+	      new Property('tkd', 'Toe Kick Depth', 4),
+	      new Property('tkh', 'Toe Kick Height', 4),
+	      new Property('pbt', 'Panel Back Thickness', 1/2),
+	      new Property('iph', 'Ideal Handle Height', 42)
+	  ],
+	  Panel: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  Guides: [
+	    l.clone(),
+	    new Property('dbtos', 'Drawer Box Top Offset', 1/2),
+	    new Property('dbsos', 'Drawer Box Side Offest', 3/16),
+	    new Property('dbbos', 'Drawer Box Bottom Offset', 1/2)
+	  ],
+	  Door: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  DrawerBox: [
+	    h.clone(), w.clone(), d.clone(),
+	    new Property('dbst', 'Side Thickness', 5/8),
+	    new Property('dbbt', 'Box Bottom Thickness', 1/4)
+	  ],
+	  DrawerFront: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  Frame: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  Handle: [
+	    l.clone(), w.clone(),
+	    new Property('c2c', 'Center To Center', null),
+	    new Property('proj', 'Projection', null),
+	  ],
+	  Hinge: [
+	    new Property('maxtab', 'Max Spacing from bore to edge of door', null),
+	    new Property('maxol', 'Max Door Overlay', null),
+	    new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
+	    new Property('minol', 'Minimum Door Overlay', null)
+	  ]
+	}
+	
+	function assemProperties(clazz, filter) {
+	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
+	  props = assemProps[clazz] || [];
+	  if ((typeof filter) != 'function') return props;
+	  props = props.filter(filter);
+	  return props;
+	}
+	
+	const config = {};
+	const changes = {};
+	const copyMap = {};
+	assemProperties.changes = {
+	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
+	  save: (id) => {
+	    const list = changes[id];
+	    if (!list) throw new Error(`Unkown change id '${id}'`);
+	    const group = list._GROUP;
+	    if (config[group] === undefined) config[group] = [];
+	    if(copyMap[id] === undefined) {
+	      config[group].push(JSON.clone(changes[id]));
+	      copyMap[list._ID] = config[group][config[group].length - 1];
+	    } else {
+	      const tempList = changes[id];
+	      for (let index = 0; index < tempList.length; index += 1) {
+	        const tempProp = tempList[index];
+	        const configProp = copyMap[id][index];
+	        configProp.fromJson(tempProp.toJson());
+	      }
+	    }
+	    console.log('config', config);
+	    console.log('changes', changes);
+	  },
+	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.delete(list._GROUP)),
+	  delete: (id) => delete changes[id],
+	  changed: (id) => {
+	    const list = changes[id];
+	    if (list === undefined) return false;
+	    for (let index = 0; index < list.length; index += 1) {
+	      const prop = list[index];
+	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
+	        return true;
+	      }
+	    }
+	    return false;
+	  }
+	}
+	
+	assemProperties.list = () => Object.keys(assemProps);
+	assemProperties.get = (group) => {
+	  if (assemProps[group]) {
+	    const list = [];
+	    const ogList = assemProps[group];
+	    for (let index = 0; index < ogList.length; index += 1) {
+	      list[index] = ogList[index].clone();
+	    }
+	    list._ID = String.random();
+	    list._GROUP = group;
+	    changes[list._ID] = list;
+	    return list;
+	  }
+	  throw new Error(`Requesting invalid Property Group '${group}'`);
+	}
+	
+	
+	module.exports = assemProperties;
+	
+});
+
+
 RequireJS.addFunction('./app-src/services/display-svc.js',
 function (require, exports, module) {
 	class Register {
@@ -9750,6 +9877,114 @@ function (require, exports, module) {
 	}
 	
 	module.exports = new Register();
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/property.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const Measurement = require('../../../../public/js/utils/measurment.js');
+	
+	
+	
+	class Property extends Lookup {
+	  // clone constructor(code, value) {
+	  constructor(code, name, props) {
+	    super();
+	    let value;
+	    const children = [];
+	
+	    const initVals = {
+	      code, name
+	    }
+	    Object.getSet(this, initVals, 'value', 'code', 'name', 'properties');
+	
+	    this.value = (val) => {
+	      if (val !== undefined && value !== val) {
+	        const measurment = new Measurement(val);
+	        const measurmentVal = measurment.value();
+	        value = Number.isNaN(measurmentVal) ? val : measurment;
+	      }
+	      return value instanceof Measurement ? value.value() : value;
+	    }
+	
+	    this.display = () => {
+	      return value instanceof Measurement ? value.display() : value;
+	    }
+	
+	    this.description = () => this.properties().description;
+	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
+	
+	    if ((typeof props) !== 'object' ||  props === null) {
+	      this.value(props);
+	      props = {};
+	    }
+	    this.properties(props || {});
+	
+	    const existingProp = Property.list[code];
+	    let clone = false;
+	    if (existingProp) {
+	      value = existingProp.value();
+	      if ((typeof value) === 'number')
+	        value = new Measurement(value, true);
+	      name = existingProp.name();
+	      this.properties(existingProp.properties());
+	      clone = true;
+	    } else if (value === undefined){
+	      this.value(this.properties().value);
+	    }
+	
+	    this.addChild = (property) => {
+	      if (property instanceof Property && property.code() === this.code()) {
+	            if (children.indexOf(property) === -1) children.push(property);
+	            else throw new Error('Property is already a child');
+	      }
+	      else throw new Error('Child is not an instance of Property or Code does not match');
+	    }
+	
+	    this.children = () => JSON.clone(children);
+	
+	    this.equals = (other) => false ||
+	        other instanceof Property &&
+	        this.value() === other.value() &&
+	        this.code() === other.code() &&
+	        this.name() === other.name() &&
+	        this.description() === other.description();
+	
+	    this.clone = (val) => {
+	      const cProps = this.properties();
+	      cProps.clone = true;
+	      cProps.value = val;
+	      return new Property(code, name, props);
+	    }
+	    if(!clone) Property.list[code] = this;
+	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
+	  }
+	}
+	Property.list = {};
+	
+	new Property();
+	const p = Object.fromJson({
+	    "_TYPE": "Property",
+	    "id": "b7r4yen",
+	    "code": "r",
+	    "name": "Reveal",
+	    "value": 0.125,
+	    "properties": {
+	        "_TYPE": "Property",
+	        "id": "22222",
+	        "code": "ree",
+	        "name": "req",
+	        "value":12,
+	        "properties": {toocheei: 'madamuelle'}
+	    }
+	});
+	console.log(p.id(), p.code(), p.name(), p.value(), p.properties())
+	
+	
+	module.exports = Property
 	
 });
 
@@ -9906,64 +10141,6 @@ function (require, exports, module) {
 	Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
 	
 	module.exports = Cost
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/room.js',
-function (require, exports, module) {
-	
-
-	
-	const Cabinet = require('./assembly/assemblies/cabinet.js');
-	
-	
-	class Room {
-	  constructor(name, id) {
-	
-	    const initialVals = {
-	      name: name || `Room ${Room.count++}`,
-	      id: id || String.random(32),
-	    }
-	    Object.getSet(this, initialVals);
-	
-	    this.cabinets = [];
-	    this.toJson = () => {
-	      const json = { cabinets: []};
-	      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
-	      return json;
-	    };
-	  }
-	};
-	Room.count = 0;
-	Room.fromJson = (roomJson) => {
-	  const room = new Room(roomJson.name, roomJson.id);
-	  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
-	  return room;
-	}
-	module.exports = Room
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/init-costs.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Cost = require('./cost.js');
-	const SelectCost = require('./types/select.js');
-	const Material = require('./types/material.js');
-	const Category = require('./types/category.js');
-	const Labor = require('./types/material/labor.js');
-	const ConditionalCost = require('./types/category/conditional.js');
-	
-	Cost.register(SelectCost);
-	Cost.register(Material);
-	Cost.register(Category);
-	Cost.register(Labor);
-	Cost.register(ConditionalCost);
 	
 });
 
@@ -10160,56 +10337,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	
-	const ToggleDisplayList = {};
-	ToggleDisplayList.class = 'toggle-display-list';
-	ToggleDisplayList.funcs = {};
-	
-	ToggleDisplayList.onShow = (displayId, func) => {
-	  if ((typeof func) === 'function') {
-	    if (ToggleDisplayList.funcs[displayId] === undefined) {
-	      ToggleDisplayList.funcs[displayId] = [];
-	    }
-	    ToggleDisplayList.funcs[displayId].push(func);
-	  }
-	}
-	
-	ToggleDisplayList.runFuncs = (displayId) => {
-	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
-	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
-	}
-	
-	ToggleDisplayList.toggle = function (elem, event) {
-	  const target = event.target;
-	  const children = elem.children;
-	  for (let index = 0; index < children.length; index += 1) {
-	    const child = children[index];
-	    if (target === child) {
-	      du.class.add(child, 'active');
-	      const displayId = child.getAttribute('display-id');
-	      du.id(displayId).hidden = false;
-	      ToggleDisplayList.runFuncs(displayId);
-	    } else {
-	      du.class.remove(child, 'active');
-	      du.id(child.getAttribute('display-id')).hidden = true;
-	    }
-	  }
-	}
-	
-	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
-	
-	module.exports = ToggleDisplayList;
-	
-});
-
-
 RequireJS.addFunction('./app-src/displays/abstract-manager.js',
 function (require, exports, module) {
 	
@@ -10267,6 +10394,56 @@ function (require, exports, module) {
 	
 	AbstractManager.inputTree = () => undefined;
 	module.exports = AbstractManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	
+	const ToggleDisplayList = {};
+	ToggleDisplayList.class = 'toggle-display-list';
+	ToggleDisplayList.funcs = {};
+	
+	ToggleDisplayList.onShow = (displayId, func) => {
+	  if ((typeof func) === 'function') {
+	    if (ToggleDisplayList.funcs[displayId] === undefined) {
+	      ToggleDisplayList.funcs[displayId] = [];
+	    }
+	    ToggleDisplayList.funcs[displayId].push(func);
+	  }
+	}
+	
+	ToggleDisplayList.runFuncs = (displayId) => {
+	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
+	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
+	}
+	
+	ToggleDisplayList.toggle = function (elem, event) {
+	  const target = event.target;
+	  const children = elem.children;
+	  for (let index = 0; index < children.length; index += 1) {
+	    const child = children[index];
+	    if (target === child) {
+	      du.class.add(child, 'active');
+	      const displayId = child.getAttribute('display-id');
+	      du.id(displayId).hidden = false;
+	      ToggleDisplayList.runFuncs(displayId);
+	    } else {
+	      du.class.remove(child, 'active');
+	      du.id(child.getAttribute('display-id')).hidden = true;
+	    }
+	  }
+	}
+	
+	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
+	
+	module.exports = ToggleDisplayList;
 	
 });
 
@@ -10379,6 +10556,42 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/room.js',
+function (require, exports, module) {
+	
+
+	
+	const Cabinet = require('./assembly/assemblies/cabinet.js');
+	
+	
+	class Room {
+	  constructor(name, id) {
+	
+	    const initialVals = {
+	      name: name || `Room ${Room.count++}`,
+	      id: id || String.random(32),
+	    }
+	    Object.getSet(this, initialVals);
+	
+	    this.cabinets = [];
+	    this.toJson = () => {
+	      const json = { cabinets: []};
+	      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
+	      return json;
+	    };
+	  }
+	};
+	Room.count = 0;
+	Room.fromJson = (roomJson) => {
+	  const room = new Room(roomJson.name, roomJson.id);
+	  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
+	  return room;
+	}
+	module.exports = Room
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/order.js',
 function (require, exports, module) {
 	
@@ -10433,157 +10646,6 @@ function (require, exports, module) {
 	
 	
 	
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/properties.js',
-function (require, exports, module) {
-	
-
-	const Property = require('./property');
-	const Measurement = require('../../../../public/js/utils/measurment.js');
-	
-	const h = new Property('h', 'height', null);
-	const w = new Property('w', 'width', null);
-	const d = new Property('d', 'depth', null);
-	const t = new Property('t', 'thickness', null);
-	const l = new Property('l', 'length', null);
-	
-	
-	let unitCount = 0;
-	const UNIT = [];
-	Measurement.units().forEach((unit) =>
-	      UNIT.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
-	UNIT._IS_RADIO = true;
-	UNIT._VALUE = Measurement.unit();
-	
-	const assemProps = {
-	  UNIT,
-	  Overlay: [
-	    new Property('ov', 'Overlay', 1/2)
-	  ],
-	  Reveal: [
-	    new Property('r', 'Reveal', 1/8),
-	    new Property('rvt', 'Reveal Top', 1/2),
-	    new Property('rvb', 'Reveal Bottom', 0)
-	  ],
-	  Inset: [
-	    new Property('is', 'Spacing', 3/32)
-	  ],
-	  Cabinet: [
-	      h.clone(), w.clone(), d.clone(),
-	      new Property('sr', 'Scribe Right', 3/8),
-	      new Property('sl', 'Scribe Left', 3/8),
-	      new Property('rvibr', 'Reveal Inside Bottom Rail', 1/8),
-	      new Property('rvdd', 'Reveal Dual Door', 1/16),
-	      new Property('tkbw', 'Toe Kick Backer Width', 1/2),
-	      new Property('tkd', 'Toe Kick Depth', 4),
-	      new Property('tkh', 'Toe Kick Height', 4),
-	      new Property('pbt', 'Panel Back Thickness', 1/2),
-	      new Property('iph', 'Ideal Handle Height', 42)
-	  ],
-	  Panel: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  Guides: [
-	    l.clone(),
-	    new Property('dbtos', 'Drawer Box Top Offset', 1/2),
-	    new Property('dbsos', 'Drawer Box Side Offest', 3/16),
-	    new Property('dbbos', 'Drawer Box Bottom Offset', 1/2)
-	  ],
-	  Door: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  DrawerBox: [
-	    h.clone(), w.clone(), d.clone(),
-	    new Property('dbst', 'Side Thickness', 5/8),
-	    new Property('dbbt', 'Box Bottom Thickness', 1/4)
-	  ],
-	  DrawerFront: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  Frame: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  Handle: [
-	    l.clone(), w.clone(),
-	    new Property('c2c', 'Center To Center', null),
-	    new Property('proj', 'Projection', null),
-	  ],
-	  Hinge: [
-	    new Property('maxtab', 'Max Spacing from bore to edge of door', null),
-	    new Property('maxol', 'Max Door Overlay', null),
-	    new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
-	    new Property('minol', 'Minimum Door Overlay', null)
-	  ]
-	}
-	
-	function assemProperties(clazz, filter) {
-	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	  props = assemProps[clazz] || [];
-	  if ((typeof filter) != 'function') return props;
-	  props = props.filter(filter);
-	  return props;
-	}
-	
-	const config = {};
-	const changes = {};
-	const copyMap = {};
-	assemProperties.changes = {
-	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
-	  save: (id) => {
-	    const list = changes[id];
-	    if (!list) throw new Error(`Unkown change id '${id}'`);
-	    const group = list._GROUP;
-	    if (config[group] === undefined) config[group] = [];
-	    if(copyMap[id] === undefined) {
-	      config[group].push(JSON.clone(changes[id]));
-	      copyMap[list._ID] = config[group][config[group].length - 1];
-	    } else {
-	      const tempList = changes[id];
-	      for (let index = 0; index < tempList.length; index += 1) {
-	        const tempProp = tempList[index];
-	        const configProp = copyMap[id][index];
-	        configProp.fromJson(tempProp.toJson());
-	      }
-	    }
-	    console.log('config', config);
-	    console.log('changes', changes);
-	  },
-	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.delete(list._GROUP)),
-	  delete: (id) => delete changes[id],
-	  changed: (id) => {
-	    const list = changes[id];
-	    if (list === undefined) return false;
-	    for (let index = 0; index < list.length; index += 1) {
-	      const prop = list[index];
-	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
-	        return true;
-	      }
-	    }
-	    return false;
-	  }
-	}
-	
-	assemProperties.list = () => Object.keys(assemProps);
-	assemProperties.get = (group) => {
-	  if (assemProps[group]) {
-	    const list = [];
-	    const ogList = assemProps[group];
-	    for (let index = 0; index < ogList.length; index += 1) {
-	      list[index] = ogList[index].clone();
-	    }
-	    list._ID = String.random();
-	    list._GROUP = group;
-	    changes[list._ID] = list;
-	    return list;
-	  }
-	  throw new Error(`Requesting invalid Property Group '${group}'`);
-	}
-	
-	
-	module.exports = assemProperties;
 	
 });
 
@@ -11072,119 +11134,82 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/config/cabinet-configs.js',
+RequireJS.addFunction('./app-src/displays/room.js',
 function (require, exports, module) {
 	
 
 	
-	const CustomEvent = require('../../../../public/js/utils/custom-error.js');
-	const cabinetBuildConfig = require('../../public/json/cabinets.json');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Inputs = require('../input/inputs.js');
+	const Room = require('../objects/room.js');
+	const CabinetDisplay = require('./cabinet.js');
 	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const EPNTS = require('../../generated/EPNTS.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const Inputs = require('../input/inputs.js');
 	
-	class CabinetConfig {
-	  constructor() {
-	    let cabinetList = {};
-	    let cabinetKeys = {};
-	    let configKeys;
-	    const updateEvent = new CustomEvent('update');
-	    function setLists(cabinets) {
-	      const allCabinetKeys = Object.keys(cabinets);
-	      allCabinetKeys.forEach((key) => {
-	        const type = cabinets[key].partName;
-	        if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
-	        if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
-	        cabinetKeys[type][key] = cabinets[key];
-	      });
+	class RoomDisplay {
+	  constructor(parentSelector, order) {
+	    const cabinetDisplays = {};
+	    const getHeader = (room, $index) =>
+	        RoomDisplay.headTemplate.render({room, $index});
 	
-	      cabinetList = cabinets;
-	      configKeys = Object.keys(cabinetBuildConfig);
-	      updateEvent.trigger();
+	    const getBody = (room, $index) => {
+	      let propertyTypes = Object.keys(['alabaster','pickles']);
+	      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
 	    }
 	
-	    this.valid = (type, id) => (!id ?
-	    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
-	
-	    this.onUpdate = (func) => updateEvent.on(func);
-	    this.inputTree = () => {
-	      const typeInput = new Select({
-	        name: 'type',
-	        class: 'center',
-	        list: JSON.parse(JSON.stringify(configKeys))
-	      });
-	      const propertyInput = new Select({
-	        name: 'propertyId',
-	        class: 'center',
-	        list: ['pajango', 'skititors']
-	      });
-	      const inputs = [Inputs('name'), typeInput, propertyInput];
-	      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
-	      const cabinetTypes = Object.keys(cabinetKeys);
-	      cabinetTypes.forEach((type) => {
-	        const cabinetInput = new Select({
-	          label: 'Layout (Optional)',
-	          name: 'id',
-	          class: 'center',
-	          list: [''].concat(Object.keys(cabinetKeys[type]))
-	        });
-	        inputTree.addState(type, cabinetInput);
-	        inputTree.then(`type:${type}`).jump(type);
-	      });
-	      return inputTree;
+	    const getObject = (values) => {
+	      const room = new Room(values.name);
+	      return room;
 	    }
-	    this.get = (name, type, propertyId, id) => {
-	      let cabinet;
-	      if (!id) cabinet = Cabinet.build(type);
-	      else cabinet = Cabinet.fromJson(cabinetList[id]);
-	      if (propertyId !== undefined) cabinet.propertyId(propertyId);
-	      cabinet.name = name;
-	      return cabinet;
+	    this.active = () => expandList.active();
+	    this.cabinetDisplay = () => {
+	      const room = this.active();
+	      const id = room.id();
+	      if (cabinetDisplays[id] === undefined) {
+	        cabinetDisplays[id] = new CabinetDisplay(room);
+	      }
+	      return cabinetDisplays[id];
+	    }
+	    this.cabinet = () => this.cabinetDisplay().active();
+	    const expListProps = {
+	      list: order.rooms,
+	      parentSelector, getHeader, getBody, getObject,
+	      inputs: [{placeholder: 'name'}],
+	      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
+	      listElemLable: 'Room', type: 'pill',
+	      inputTree: new DecisionInputTree('Room', Inputs('name'), console.log)
 	    };
-	
-	    Request.get(EPNTS.cabinet.list(), setLists, () => setLists([]));
+	    const expandList = new ExpandableList(expListProps);
+	    expandList.afterRender(() => this.cabinetDisplay().refresh());
+	    this.refresh = () => expandList.refresh();
 	  }
 	}
-	
-	CabinetConfig = new CabinetConfig();
-	module.exports = CabinetConfig
+	RoomDisplay.bodyTemplate = new $t('room/body');
+	RoomDisplay.headTemplate = new $t('room/head');
+	module.exports = RoomDisplay
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/section.js',
+RequireJS.addFunction('./app-src/cost/init-costs.js',
 function (require, exports, module) {
 	
 
-	Section.templates = {};
-	
-	Section.templates[this.constructorId] = new $t(templatePath);
 	
 	
-	class SectionDisplay {
-	  constructor (section) {
-	    Section.render = (scope) => {
-	      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
-	      const cId = scope.opening.constructorId;
-	      if (cId === 'DivideSection') {
-	        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
-	      }
-	      return Section.templates[cId].render(scope);
-	    }
-	  }
-	}
+	const Cost = require('./cost.js');
+	const SelectCost = require('./types/select.js');
+	const Material = require('./types/material.js');
+	const Category = require('./types/category.js');
+	const Labor = require('./types/material/labor.js');
+	const ConditionalCost = require('./types/category/conditional.js');
 	
-	
-	const du = require('../../../public/js/utils/dom-utils.js');
-	
-	afterLoad.push(() => du.on.match('change', '.feature-radio', (target) => {
-	  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
-	  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
-	  target.nextElementSibling.hidden = !target.checked;
-	}))
+	Cost.register(SelectCost);
+	Cost.register(Material);
+	Cost.register(Category);
+	Cost.register(Labor);
+	Cost.register(ConditionalCost);
 	
 });
 
@@ -11319,60 +11344,119 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 });
 
 
-RequireJS.addFunction('./app-src/displays/room.js',
+RequireJS.addFunction('./app-src/displays/section.js',
+function (require, exports, module) {
+	
+
+	Section.templates = {};
+	
+	Section.templates[this.constructorId] = new $t(templatePath);
+	
+	
+	class SectionDisplay {
+	  constructor (section) {
+	    Section.render = (scope) => {
+	      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
+	      const cId = scope.opening.constructorId;
+	      if (cId === 'DivideSection') {
+	        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
+	      }
+	      return Section.templates[cId].render(scope);
+	    }
+	  }
+	}
+	
+	
+	const du = require('../../../public/js/utils/dom-utils.js');
+	
+	afterLoad.push(() => du.on.match('change', '.feature-radio', (target) => {
+	  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+	  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+	  target.nextElementSibling.hidden = !target.checked;
+	}))
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/cabinet-configs.js',
 function (require, exports, module) {
 	
 
 	
-	const Room = require('../objects/room.js');
-	const CabinetDisplay = require('./cabinet.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const $t = require('../../../../public/js/utils/$t.js');
+	const CustomEvent = require('../../../../public/js/utils/custom-error.js');
+	const cabinetBuildConfig = require('../../public/json/cabinets.json');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
 	const Inputs = require('../input/inputs.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const EPNTS = require('../../generated/EPNTS.js');
 	
-	class RoomDisplay {
-	  constructor(parentSelector, order) {
-	    const cabinetDisplays = {};
-	    const getHeader = (room, $index) =>
-	        RoomDisplay.headTemplate.render({room, $index});
+	class CabinetConfig {
+	  constructor() {
+	    let cabinetList = {};
+	    let cabinetKeys = {};
+	    let configKeys;
+	    const updateEvent = new CustomEvent('update');
+	    function setLists(cabinets) {
+	      const allCabinetKeys = Object.keys(cabinets);
+	      allCabinetKeys.forEach((key) => {
+	        const type = cabinets[key].partName;
+	        if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
+	        if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
+	        cabinetKeys[type][key] = cabinets[key];
+	      });
 	
-	    const getBody = (room, $index) => {
-	      let propertyTypes = Object.keys(['alabaster','pickles']);
-	      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
+	      cabinetList = cabinets;
+	      configKeys = Object.keys(cabinetBuildConfig);
+	      updateEvent.trigger();
 	    }
 	
-	    const getObject = (values) => {
-	      const room = new Room(values.name);
-	      return room;
+	    this.valid = (type, id) => (!id ?
+	    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
+	
+	    this.onUpdate = (func) => updateEvent.on(func);
+	    this.inputTree = () => {
+	      const typeInput = new Select({
+	        name: 'type',
+	        class: 'center',
+	        list: JSON.parse(JSON.stringify(configKeys))
+	      });
+	      const propertyInput = new Select({
+	        name: 'propertyId',
+	        class: 'center',
+	        list: ['pajango', 'skititors']
+	      });
+	      const inputs = [Inputs('name'), typeInput, propertyInput];
+	      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
+	      const cabinetTypes = Object.keys(cabinetKeys);
+	      cabinetTypes.forEach((type) => {
+	        const cabinetInput = new Select({
+	          label: 'Layout (Optional)',
+	          name: 'id',
+	          class: 'center',
+	          list: [''].concat(Object.keys(cabinetKeys[type]))
+	        });
+	        inputTree.addState(type, cabinetInput);
+	        inputTree.then(`type:${type}`).jump(type);
+	      });
+	      return inputTree;
 	    }
-	    this.active = () => expandList.active();
-	    this.cabinetDisplay = () => {
-	      const room = this.active();
-	      const id = room.id();
-	      if (cabinetDisplays[id] === undefined) {
-	        cabinetDisplays[id] = new CabinetDisplay(room);
-	      }
-	      return cabinetDisplays[id];
-	    }
-	    this.cabinet = () => this.cabinetDisplay().active();
-	    const expListProps = {
-	      list: order.rooms,
-	      parentSelector, getHeader, getBody, getObject,
-	      inputs: [{placeholder: 'name'}],
-	      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
-	      listElemLable: 'Room', type: 'pill',
-	      inputTree: new DecisionInputTree('Room', Inputs('name'), console.log)
+	    this.get = (name, type, propertyId, id) => {
+	      let cabinet;
+	      if (!id) cabinet = Cabinet.build(type);
+	      else cabinet = Cabinet.fromJson(cabinetList[id]);
+	      if (propertyId !== undefined) cabinet.propertyId(propertyId);
+	      cabinet.name = name;
+	      return cabinet;
 	    };
-	    const expandList = new ExpandableList(expListProps);
-	    expandList.afterRender(() => this.cabinetDisplay().refresh());
-	    this.refresh = () => expandList.refresh();
+	
+	    Request.get(EPNTS.cabinet.list(), setLists, () => setLists([]));
 	  }
 	}
-	RoomDisplay.bodyTemplate = new $t('room/body');
-	RoomDisplay.headTemplate = new $t('room/head');
-	module.exports = RoomDisplay
+	
+	CabinetConfig = new CabinetConfig();
+	module.exports = CabinetConfig
 	
 });
 
@@ -11733,114 +11817,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/config/property.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const Measurement = require('../../../../public/js/utils/measurment.js');
-	
-	
-	
-	class Property extends Lookup {
-	  // clone constructor(code, value) {
-	  constructor(code, name, props) {
-	    super();
-	    let value;
-	    const children = [];
-	
-	    const initVals = {
-	      code, name
-	    }
-	    Object.getSet(this, initVals, 'value', 'code', 'name', 'properties');
-	
-	    this.value = (val) => {
-	      if (val !== undefined && value !== val) {
-	        const measurment = new Measurement(val);
-	        const measurmentVal = measurment.value();
-	        value = Number.isNaN(measurmentVal) ? val : measurment;
-	      }
-	      return value instanceof Measurement ? value.value() : value;
-	    }
-	
-	    this.display = () => {
-	      return value instanceof Measurement ? value.display() : value;
-	    }
-	
-	    this.description = () => this.properties().description;
-	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
-	
-	    if ((typeof props) !== 'object' ||  props === null) {
-	      this.value(props);
-	      props = {};
-	    }
-	    this.properties(props || {});
-	
-	    const existingProp = Property.list[code];
-	    let clone = false;
-	    if (existingProp) {
-	      value = existingProp.value();
-	      if ((typeof value) === 'number')
-	        value = new Measurement(value, true);
-	      name = existingProp.name();
-	      this.properties(existingProp.properties());
-	      clone = true;
-	    } else if (value === undefined){
-	      this.value(this.properties().value);
-	    }
-	
-	    this.addChild = (property) => {
-	      if (property instanceof Property && property.code() === this.code()) {
-	            if (children.indexOf(property) === -1) children.push(property);
-	            else throw new Error('Property is already a child');
-	      }
-	      else throw new Error('Child is not an instance of Property or Code does not match');
-	    }
-	
-	    this.children = () => JSON.clone(children);
-	
-	    this.equals = (other) => false ||
-	        other instanceof Property &&
-	        this.value() === other.value() &&
-	        this.code() === other.code() &&
-	        this.name() === other.name() &&
-	        this.description() === other.description();
-	
-	    this.clone = (val) => {
-	      const cProps = this.properties();
-	      cProps.clone = true;
-	      cProps.value = val;
-	      return new Property(code, name, props);
-	    }
-	    if(!clone) Property.list[code] = this;
-	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
-	  }
-	}
-	Property.list = {};
-	
-	new Property();
-	const p = Object.fromJson({
-	    "_TYPE": "Property",
-	    "id": "b7r4yen",
-	    "code": "r",
-	    "name": "Reveal",
-	    "value": 0.125,
-	    "properties": {
-	        "_TYPE": "Property",
-	        "id": "22222",
-	        "code": "ree",
-	        "name": "req",
-	        "value":12,
-	        "properties": {toocheei: 'madamuelle'}
-	    }
-	});
-	console.log(p.id(), p.code(), p.name(), p.value(), p.properties())
-	
-	
-	module.exports = Property
-	
-});
-
-
 RequireJS.addFunction('./app-src/input/inputs.js',
 function (require, exports, module) {
 	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
@@ -12158,27 +12134,47 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/reference.js',
+RequireJS.addFunction('./app-src/cost/types/select.js',
 function (require, exports, module) {
 	
 
 	
 	const Cost = require('../cost.js');
 	
+	class SelectCost extends Cost {
+	  constructor (props) {
+	    super(props);
+	    Object.getSet(this, {modifyDemension: props.modifyDemension,default: props.default});
 	
-	class ReferenceCost extends Cost {
-	  constructor(referenceCost) {
-	    super(referenceCost.props());
-	    const props = this.props();
-	    this.children = [];
-	    referenceCost.children.forEach((child) =>
-	        this.children.push(new ReferenceCost(child)));
+	    const selected = 0;
+	    this.selected = (index) => {
+	      if (index !== undefined)
+	        selected = index;
+	      return this.children[selected];
+	    }
 	
-	    this.id = referenceCost.id;
-	    this.calc = referenceCost.calc;
+	    this.selectedId = () => {
+	      const child = this.selected();
+	      return child === undefined ? '' : child.id();
+	    }
+	
+	    this.calc = (assemblyOrCount) => this.children[selected] ?
+	        this.children[selected].calc(assemblyOrCount) : -0.01;
+	
+	    this.unitCost = () => this.children[selected] ?
+	        this.children[selected].unitCost() : -0.01;
+	
+	    const selectedId = this.selectedId();
+	    if (selectedId) {
+	      this.children.forEach((child, index) => {
+	        if (child.id() === selectedId) selected = index;
+	      });
+	    }
 	  }
 	}
-	module.exports = ReferenceCost
+	
+	
+	module.exports = SelectCost
 	
 });
 
@@ -12294,69 +12290,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/managers/template.js',
-function (require, exports, module) {
-	
-
-	
-	const AbstractManager = require('../abstract-manager.js');
-	const Cost = require('../../cost/cost.js');
-	const Input = require('../../../../../public/js/utils/input/input.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select.js');
-	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Material = require('../../cost/types/material.js');
-	const Inputs = require('../../input/inputs.js');
-	
-	
-	class TemplateManager extends AbstractManager {
-	  constructor(id, name) {
-	    super(id, name);
-	    const getObject = (values) => mangager.getObject(values);
-	    this.loadPoint = () => EPNTS.templates.get();
-	    this.savePoint = () => EPNTS.templates.save();
-	    this.fromJson = Cost.fromJson;
-	  }
-	}
-	
-	new TemplateManager('template-manager', 'template');
-	
-	TemplateManager.inputTree = (callback) => {
-	  const idTypeMethod = [Inputs('id'), Inputs('costType'), Inputs('method')];
-	
-	  const length = Inputs('length');
-	  const width = Inputs('width');
-	  const depth = Inputs('depth');
-	  const cost = Inputs('cost');
-	  const lengthCost = [length, cost];
-	  const lengthWidthCost = [length, width, cost];
-	  const lengthWidthDepthCost = [length, width, depth, cost];
-	  const color = [Inputs('color')];
-	
-	  const decisionInput = new DecisionInputTree('cost',
-	    idTypeMethod, callback);
-	
-	  decisionInput.addStates({
-	    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
-	  });
-	
-	  decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
-	        .jump('lengthCost');
-	  decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
-	        .jump('lengthWidthCost');
-	  decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
-	        .jump('lengthWidthDepthCost');
-	  decisionInput.then(`method:${Material.methods.UNIT}`)
-	        .jump('cost');
-	  decisionInput.then('type:Material').jump('color');
-	
-	  return decisionInput;
-	}
-	module.exports = TemplateManager
-	
-});
-
-
 RequireJS.addFunction('./app-src/cost/types/material.js',
 function (require, exports, module) {
 	
@@ -12447,6 +12380,31 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/cost/types/reference.js',
+function (require, exports, module) {
+	
+
+	
+	const Cost = require('../cost.js');
+	
+	
+	class ReferenceCost extends Cost {
+	  constructor(referenceCost) {
+	    super(referenceCost.props());
+	    const props = this.props();
+	    this.children = [];
+	    referenceCost.children.forEach((child) =>
+	        this.children.push(new ReferenceCost(child)));
+	
+	    this.id = referenceCost.id;
+	    this.calc = referenceCost.calc;
+	  }
+	}
+	module.exports = ReferenceCost
+	
+});
+
+
 RequireJS.addFunction('./app-src/cost/types/category.js',
 function (require, exports, module) {
 	
@@ -12475,51 +12433,6 @@ function (require, exports, module) {
 	Category.explanation = `A branching cost that will incorporate all child costs
 	                        in its total`
 	module.exports = Category
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/select.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	
-	class SelectCost extends Cost {
-	  constructor (props) {
-	    super(props);
-	    Object.getSet(this, {modifyDemension: props.modifyDemension,default: props.default});
-	
-	    const selected = 0;
-	    this.selected = (index) => {
-	      if (index !== undefined)
-	        selected = index;
-	      return this.children[selected];
-	    }
-	
-	    this.selectedId = () => {
-	      const child = this.selected();
-	      return child === undefined ? '' : child.id();
-	    }
-	
-	    this.calc = (assemblyOrCount) => this.children[selected] ?
-	        this.children[selected].calc(assemblyOrCount) : -0.01;
-	
-	    this.unitCost = () => this.children[selected] ?
-	        this.children[selected].unitCost() : -0.01;
-	
-	    const selectedId = this.selectedId();
-	    if (selectedId) {
-	      this.children.forEach((child, index) => {
-	        if (child.id() === selectedId) selected = index;
-	      });
-	    }
-	  }
-	}
-	
-	
-	module.exports = SelectCost
 	
 });
 
@@ -12559,58 +12472,6 @@ function (require, exports, module) {
 	  }
 	}
 	module.exports = UFObj
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joint.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class Joint {
-	  constructor(joinStr) {
-	    const match = joinStr.match(Joint.regex);
-	    this.malePartCode = match[1];
-	    this.femalePartCode = match[2];
-	
-	    this.updatePosition = () => {};
-	
-	    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
-	    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
-	
-	    this.maleOffset = () => 0;
-	    this.femaleOffset = () => 0;
-	    this.setParentAssembly = (pa) => this.parentAssembly = pa;
-	
-	    this.getDemensions = () => {
-	      const malePos = getMale();
-	      const femalePos = getFemale();
-	      // I created a loop but it was harder to understand
-	      return undefined;
-	    }
-	
-	    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
-	    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
-	    Joint.list[this.malePartCode].push(this);
-	    Joint.list[this.femalePartCode].push(this);
-	  }
-	}
-	Joint.list = {};
-	Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
-	
-	Joint.classes = {};
-	Joint.register = (clazz) =>
-	  Joint.classes[clazz.prototype.constructor.name] = clazz;
-	Joint.new = function (id) {
-	  return new Joint.classes[id](...Array.from(arguments).slice(1));
-	}
-	module.exports = Joint
 	
 	
 	
@@ -12970,6 +12831,121 @@ function (require, exports, module) {
 	};
 	
 	module.exports = CostManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joint.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class Joint {
+	  constructor(joinStr) {
+	    const match = joinStr.match(Joint.regex);
+	    this.malePartCode = match[1];
+	    this.femalePartCode = match[2];
+	
+	    this.updatePosition = () => {};
+	
+	    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
+	    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
+	
+	    this.maleOffset = () => 0;
+	    this.femaleOffset = () => 0;
+	    this.setParentAssembly = (pa) => this.parentAssembly = pa;
+	
+	    this.getDemensions = () => {
+	      const malePos = getMale();
+	      const femalePos = getFemale();
+	      // I created a loop but it was harder to understand
+	      return undefined;
+	    }
+	
+	    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
+	    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
+	    Joint.list[this.malePartCode].push(this);
+	    Joint.list[this.femalePartCode].push(this);
+	  }
+	}
+	Joint.list = {};
+	Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
+	
+	Joint.classes = {};
+	Joint.register = (clazz) =>
+	  Joint.classes[clazz.prototype.constructor.name] = clazz;
+	Joint.new = function (id) {
+	  return new Joint.classes[id](...Array.from(arguments).slice(1));
+	}
+	module.exports = Joint
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/managers/template.js',
+function (require, exports, module) {
+	
+
+	
+	const AbstractManager = require('../abstract-manager.js');
+	const Cost = require('../../cost/cost.js');
+	const Input = require('../../../../../public/js/utils/input/input.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select.js');
+	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Material = require('../../cost/types/material.js');
+	const Inputs = require('../../input/inputs.js');
+	
+	
+	class TemplateManager extends AbstractManager {
+	  constructor(id, name) {
+	    super(id, name);
+	    const getObject = (values) => mangager.getObject(values);
+	    this.loadPoint = () => EPNTS.templates.get();
+	    this.savePoint = () => EPNTS.templates.save();
+	    this.fromJson = Cost.fromJson;
+	  }
+	}
+	
+	new TemplateManager('template-manager', 'template');
+	
+	TemplateManager.inputTree = (callback) => {
+	  const idTypeMethod = [Inputs('id'), Inputs('costType'), Inputs('method')];
+	
+	  const length = Inputs('length');
+	  const width = Inputs('width');
+	  const depth = Inputs('depth');
+	  const cost = Inputs('cost');
+	  const lengthCost = [length, cost];
+	  const lengthWidthCost = [length, width, cost];
+	  const lengthWidthDepthCost = [length, width, depth, cost];
+	  const color = [Inputs('color')];
+	
+	  const decisionInput = new DecisionInputTree('cost',
+	    idTypeMethod, callback);
+	
+	  decisionInput.addStates({
+	    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
+	  });
+	
+	  decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
+	        .jump('lengthCost');
+	  decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
+	        .jump('lengthWidthCost');
+	  decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
+	        .jump('lengthWidthDepthCost');
+	  decisionInput.then(`method:${Material.methods.UNIT}`)
+	        .jump('cost');
+	  decisionInput.then('type:Material').jump('color');
+	
+	  return decisionInput;
+	}
+	module.exports = TemplateManager
 	
 });
 
@@ -13421,6 +13397,77 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/cost/types/category/conditional.js',
+function (require, exports, module) {
+	
+
+	
+	const Category = require('../category.js');
+	const Cost = require('../../cost.js');
+	
+	class ConditionalCost extends Category {
+	  constructor (props) {
+	    super(props);
+	    Object.getSet(this, props, 'propertyId', 'propertyValue', 'propertyCondition');
+	    this.categoryCalc = this.calc;
+	    this.calc = (assembly) => ConditionalCost.calc(this, assembly);
+	  }
+	}
+	
+	ConditionalCost.toKey = (value) => new String(value).replace(/ /g, '_').toUpperCase();
+	
+	ConditionalCost.conditions = {};
+	ConditionalCost.conditions.EQUAL = 'Equals';
+	ConditionalCost.conditions.NOT_EQUAL = 'Not Equal';
+	ConditionalCost.conditions.LESS_THAN = 'Less Than';
+	ConditionalCost.conditions.GREATER_THAN = 'Greater Than';
+	ConditionalCost.conditions.LESS_THAN_OR_EQUAL = 'Less Than Or Equal';
+	ConditionalCost.conditions.GREATER_THAN_OR_EQUAL = 'Greater Than Or Equal';
+	
+	ConditionalCost.isCondition = (value) => ConditionalCost
+	                      .conditions(ConditionalCost.toKey(value)) !== undefined;
+	
+	ConditionalCost.calc = (cost, assembly) => {
+	  let validationFunc;
+	  switch (cost.propertyCondition()) {
+	    case ConditionalCost.conditions.EQUAL:
+	      validationFunc = (value) => cost.propertyValue() === value;
+	      break;
+	    case ConditionalCost.conditions.NOT_EQUAL:
+	      validationFunc = (value) => cost.propertyValue() !== value;
+	      break;
+	    case ConditionalCost.conditions.LESS_THAN:
+	      validationFunc = (value) => cost.propertyValue() > value;
+	      break;
+	    case ConditionalCost.conditions.GREATER_THAN:
+	      validationFunc = (value) => cost.propertyValue() < value;
+	      break;
+	    case ConditionalCost.conditions.LESS_THAN_EQUAL:
+	      validationFunc = (value) => cost.propertyValue() >= value;
+	      break;
+	    case ConditionalCost.conditions.GREATER_THAN_EQUAL:
+	      validationFunc = (value) => cost.propertyValue() <= value;
+	      break;
+	    default:
+	      throw new Error('Some how you managed to have an invalid Condition');
+	  }
+	
+	  const value = assembly.value(cost.propertyId);
+	  if (validationFunc(value)) {
+	    return cost.categoryCalc(assembly);
+	  }
+	  return 0;
+	}
+	
+	
+	ConditionalCost.explanation = `A cost that is applied if the a defined
+	                                condition is met`;
+	
+	module.exports = ConditionalCost
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/cabinet.js',
 function (require, exports, module) {
 	
@@ -13577,77 +13624,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/category/conditional.js',
-function (require, exports, module) {
-	
-
-	
-	const Category = require('../category.js');
-	const Cost = require('../../cost.js');
-	
-	class ConditionalCost extends Category {
-	  constructor (props) {
-	    super(props);
-	    Object.getSet(this, props, 'propertyId', 'propertyValue', 'propertyCondition');
-	    this.categoryCalc = this.calc;
-	    this.calc = (assembly) => ConditionalCost.calc(this, assembly);
-	  }
-	}
-	
-	ConditionalCost.toKey = (value) => new String(value).replace(/ /g, '_').toUpperCase();
-	
-	ConditionalCost.conditions = {};
-	ConditionalCost.conditions.EQUAL = 'Equals';
-	ConditionalCost.conditions.NOT_EQUAL = 'Not Equal';
-	ConditionalCost.conditions.LESS_THAN = 'Less Than';
-	ConditionalCost.conditions.GREATER_THAN = 'Greater Than';
-	ConditionalCost.conditions.LESS_THAN_OR_EQUAL = 'Less Than Or Equal';
-	ConditionalCost.conditions.GREATER_THAN_OR_EQUAL = 'Greater Than Or Equal';
-	
-	ConditionalCost.isCondition = (value) => ConditionalCost
-	                      .conditions(ConditionalCost.toKey(value)) !== undefined;
-	
-	ConditionalCost.calc = (cost, assembly) => {
-	  let validationFunc;
-	  switch (cost.propertyCondition()) {
-	    case ConditionalCost.conditions.EQUAL:
-	      validationFunc = (value) => cost.propertyValue() === value;
-	      break;
-	    case ConditionalCost.conditions.NOT_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() !== value;
-	      break;
-	    case ConditionalCost.conditions.LESS_THAN:
-	      validationFunc = (value) => cost.propertyValue() > value;
-	      break;
-	    case ConditionalCost.conditions.GREATER_THAN:
-	      validationFunc = (value) => cost.propertyValue() < value;
-	      break;
-	    case ConditionalCost.conditions.LESS_THAN_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() >= value;
-	      break;
-	    case ConditionalCost.conditions.GREATER_THAN_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() <= value;
-	      break;
-	    default:
-	      throw new Error('Some how you managed to have an invalid Condition');
-	  }
-	
-	  const value = assembly.value(cost.propertyId);
-	  if (validationFunc(value)) {
-	    return cost.categoryCalc(assembly);
-	  }
-	  return 0;
-	}
-	
-	
-	ConditionalCost.explanation = `A cost that is applied if the a defined
-	                                condition is met`;
-	
-	module.exports = ConditionalCost
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
 function (require, exports, module) {
 	
@@ -13714,58 +13690,6 @@ function (require, exports, module) {
 	
 	Assembly.register(Guides);
 	module.exports = Guides
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	const Handle = require('../hardware/pull.js');
-	
-	class DrawerFront extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	    this.setParentAssembly(parent);
-	    const instance = this;
-	    let pulls;
-	    if (demensionStr === undefined) return;
-	
-	    function pullCount(dems) {
-	      if (dems.x < 30) return 1;
-	      return 2;
-	    }
-	
-	    this.demensionStr = (attr) => {
-	      const dems = demensionStr();
-	      return dems;
-	    };
-	
-	    this.children = () => this.updateHandles();
-	
-	    this.updateHandles = (dems, count) => {
-	      count = count || pullCount(this.demensionStr());
-	      pulls = [];
-	      for (let index = 0; index < count; index += 1) {
-	        pulls.push(new Handle(`${partCode}-p-${index}`, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
-	      }
-	      return pulls;
-	    };
-	    this.updatePosition();
-	  }
-	}
-	
-	DrawerFront.abbriviation = 'df';
-	
-	Assembly.register(DrawerFront);
-	module.exports = DrawerFront
 	
 	
 	
@@ -13879,104 +13803,50 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
-	const pull = require('../../../../three-d/models/pull.js');
+	const Handle = require('../hardware/pull.js');
 	
-	/*
-	    a,b,c
-	    d,e,f
-	    g,h,i
-	*/
-	class Handle extends Assembly {
-	  constructor(partCode, partName, door, location, index, count) {
-	    super(partCode, 'Handle');
-	    this.setParentAssembly(door);
-	    index = index || 0;
-	    count = count || 1;
-	    this.setLocation = (l) => location = l;
+	class DrawerFront extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	    this.setParentAssembly(parent);
+	    const instance = this;
+	    let pulls;
+	    if (demensionStr === undefined) return;
 	
-	    function offset(center, distance) {
-	      const spacing = distance / count;
-	      return center - (distance / 2) + spacing / 2 + spacing * (index);
+	    function pullCount(dems) {
+	      if (dems.x < 30) return 1;
+	      return 2;
 	    }
-	
 	
 	    this.demensionStr = (attr) => {
-	      const dems = {x: 1, y: 3, z: 1.5};
-	      return attr ? dems[attr] : dems;
-	    }
-	
-	    const edgeOffset = 1;
-	    this.centerStr = (attr) => {
-	        let center = door.position().center();
-	        let doorDems = door.position().demension();
-	        let pullDems = this.demensionStr();
-	        center.z -= (doorDems.z + pullDems.z) / 2;
-	        switch (location) {
-	          case Handle.location.TOP_RIGHT:
-	            center.x = center.x + doorDems.x / 2 -  edgeOffset;
-	            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
-						break;
-	          case Handle.location.TOP_LEFT:
-	          center.x = center.x - doorDems.x / 2 -  edgeOffset;
-	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
-						break;
-	          case Handle.location.BOTTOM_RIGHT:
-	          center.x = center.x + doorDems.x / 2 -  edgeOffset;
-	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
-						break;
-	          case Handle.location.BOTTOM_LEFT:
-	          center.x = center.x + doorDems.x / 2 -  edgeOffset;
-	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
-						break;
-	          case Handle.location.TOP:
-	            center.x = offset(center.x, doorDems.x);
-	            center.y -= doorDems.y / 2;
-						break;
-	          case Handle.location.BOTTOM:
-	            center.x = offset(center.x, doorDems.x);
-	            center.y += doorDems.y / 2;
-						break;
-	          case Handle.location.RIGHT:
-	            center.y = offset(center.y, doorDems.y);
-	            center.x += doorDems.x / 2;
-						break;
-	          case Handle.location.LEFT:
-	            center.y = offset(center.y, doorDems.y);
-	            center.x -= doorDems.x / 2;
-						break;
-	          case Handle.location.CENTER:
-	            center.x = offset(center.x, doorDems.x);
-						break;
-	          default:
-	            throw new Error('Invalid pull location');
-	        }
-	        return attr ? center[attr] : center;
+	      const dems = demensionStr();
+	      return dems;
 	    };
 	
+	    this.children = () => this.updateHandles();
+	
+	    this.updateHandles = (dems, count) => {
+	      count = count || pullCount(this.demensionStr());
+	      pulls = [];
+	      for (let index = 0; index < count; index += 1) {
+	        pulls.push(new Handle(`${partCode}-p-${index}`, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
+	      }
+	      return pulls;
+	    };
 	    this.updatePosition();
 	  }
 	}
-	Handle.location = {};
-	Handle.location.TOP_RIGHT = {rotate: true};
-	Handle.location.TOP_LEFT = {rotate: true};
-	Handle.location.BOTTOM_RIGHT = {rotate: true};
-	Handle.location.BOTTOM_LEFT = {rotate: true};
-	Handle.location.TOP = {multiple: true};
-	Handle.location.BOTTOM = {multiple: true};
-	Handle.location.RIGHT = {multiple: true};
-	Handle.location.LEFT = {multiple: true};
-	Handle.location.CENTER = {multiple: true, rotate: true};
 	
-	Handle.abbriviation = 'pu';
+	DrawerFront.abbriviation = 'df';
 	
-	Assembly.register(Handle);
-	module.exports = Handle
+	Assembly.register(DrawerFront);
+	module.exports = DrawerFront
 	
 	
 	
@@ -14103,6 +13973,112 @@ function (require, exports, module) {
 	
 	Assembly.register(Section);
 	module.exports = Section
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	const pull = require('../../../../three-d/models/pull.js');
+	
+	/*
+	    a,b,c
+	    d,e,f
+	    g,h,i
+	*/
+	class Handle extends Assembly {
+	  constructor(partCode, partName, door, location, index, count) {
+	    super(partCode, 'Handle');
+	    this.setParentAssembly(door);
+	    index = index || 0;
+	    count = count || 1;
+	    this.setLocation = (l) => location = l;
+	
+	    function offset(center, distance) {
+	      const spacing = distance / count;
+	      return center - (distance / 2) + spacing / 2 + spacing * (index);
+	    }
+	
+	
+	    this.demensionStr = (attr) => {
+	      const dems = {x: 1, y: 3, z: 1.5};
+	      return attr ? dems[attr] : dems;
+	    }
+	
+	    const edgeOffset = 1;
+	    this.centerStr = (attr) => {
+	        let center = door.position().center();
+	        let doorDems = door.position().demension();
+	        let pullDems = this.demensionStr();
+	        center.z -= (doorDems.z + pullDems.z) / 2;
+	        switch (location) {
+	          case Handle.location.TOP_RIGHT:
+	            center.x = center.x + doorDems.x / 2 -  edgeOffset;
+	            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+						break;
+	          case Handle.location.TOP_LEFT:
+	          center.x = center.x - doorDems.x / 2 -  edgeOffset;
+	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+						break;
+	          case Handle.location.BOTTOM_RIGHT:
+	          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+						break;
+	          case Handle.location.BOTTOM_LEFT:
+	          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+						break;
+	          case Handle.location.TOP:
+	            center.x = offset(center.x, doorDems.x);
+	            center.y -= doorDems.y / 2;
+						break;
+	          case Handle.location.BOTTOM:
+	            center.x = offset(center.x, doorDems.x);
+	            center.y += doorDems.y / 2;
+						break;
+	          case Handle.location.RIGHT:
+	            center.y = offset(center.y, doorDems.y);
+	            center.x += doorDems.x / 2;
+						break;
+	          case Handle.location.LEFT:
+	            center.y = offset(center.y, doorDems.y);
+	            center.x -= doorDems.x / 2;
+						break;
+	          case Handle.location.CENTER:
+	            center.x = offset(center.x, doorDems.x);
+						break;
+	          default:
+	            throw new Error('Invalid pull location');
+	        }
+	        return attr ? center[attr] : center;
+	    };
+	
+	    this.updatePosition();
+	  }
+	}
+	Handle.location = {};
+	Handle.location.TOP_RIGHT = {rotate: true};
+	Handle.location.TOP_LEFT = {rotate: true};
+	Handle.location.BOTTOM_RIGHT = {rotate: true};
+	Handle.location.BOTTOM_LEFT = {rotate: true};
+	Handle.location.TOP = {multiple: true};
+	Handle.location.BOTTOM = {multiple: true};
+	Handle.location.RIGHT = {multiple: true};
+	Handle.location.LEFT = {multiple: true};
+	Handle.location.CENTER = {multiple: true, rotate: true};
+	
+	Handle.abbriviation = 'pu';
+	
+	Assembly.register(Handle);
+	module.exports = Handle
+	
+	
+	
+	
 	
 });
 
@@ -14253,6 +14229,118 @@ function (require, exports, module) {
 	
 	Assembly.register(SpaceSection);
 	module.exports = SpaceSection
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/sections/divider.js',
+function (require, exports, module) {
+	
+
+	
+	const PartitionSection = require('../partition.js');
+	const Divider = require('../../../divider.js');
+	const Position = require('../../../../../../position.js');
+	const Panel = require('../../../panel.js');
+	const Frame = require('../../../frame.js');
+	const Assembly = require('../../../../assembly.js');
+	
+	class DividerSection extends PartitionSection {
+	  constructor(partCode, sectionProperties, parent) {
+	    super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties, parent);
+	    if (sectionProperties === undefined) return;
+	    this.setParentAssembly(parent);
+	    const props = sectionProperties;
+	    const instance = this;
+	    this.position().center = (attr) => {
+	      const center = props().center;
+	      return attr ? center[attr] : center;
+	    };
+	    this.position().demension = (attr) =>
+	      Position.targeted(attr, () => this.value('frw'),
+	          () => props().dividerLength / 2, () => this.value('frt'));
+	    const panelCenterFunc = (attr) => {
+	      const props = sectionProperties();
+	      const dem = {
+	        x: props.center.x,
+	        y: props.center.y,
+	        z: props.depth / 2
+	      };
+	      return attr ? dem[attr] : dem;
+	    };
+	    const panelDemFunc = (attr) => {
+	      if (attr === 'z') return this.value('pwt34');
+	      const props = sectionProperties();
+	      const dem = {
+	        x: props.depth - frameDemFunc('z'),
+	        y: props.dividerLength,
+	        z: this.value('pwt34')
+	      };
+	      return attr ? dem[attr] : dem;
+	    };
+	    const panelRotFunc = () => {
+	      const isVertical = sectionProperties().vertical;
+	      if (isVertical) return 'xyz';
+	      else return 'xy';
+	    }
+	
+	    const frameCenterFunc = (attr) => {
+	      const props = sectionProperties();
+	      const dem = {
+	        x: props.center.x,
+	        y: props.center.y,
+	        z: props.center.z
+	      };
+	      return attr ? dem[attr] : dem;
+	    };
+	
+	    const frameDemFunc = (attr) => {
+	      const reqHeight = attr === 'y' || attr === undefined;
+	      const dem = {
+	        x: this.value('frw'),
+	        y: reqHeight ? sectionProperties().dividerLength : undefined,
+	        z: this.value('frt'),
+	      };
+	      return attr ? dem[attr] : dem;
+	    }
+	
+	    const frameRotFunc = () => props().rotationFunc();
+	
+	    const lastWidthCalc = {date: Number.MAX_SAFE_INTEGER};
+	    this.maxWidth = () => {
+	      const currentDate = new Date().getTime();
+	      if (lastWidthCalc.date < currentDate + 1000) {
+	        return lastWidthCalc.value;
+	      }
+	      if (!panel.included && !frame.included) return 0;
+	
+	      let value;
+	      const panelWidth = panel.position().demension('z');
+	      const frameWidth = frame.position().demension('x');
+	      if (value === undefined && !frame.included) return panelWidth;
+	      if (value === undefined && !panel.included) return frameWidth;
+	      if (value === undefined) value = panelWidth > frameWidth ? panelWidth : frameWidth;
+	      lastWidthCalc.date = currentDate;
+	      lastWidthCalc.value = value;
+	      return value;
+	    }
+	
+	    const index = props().index;
+	    const panel = new Panel(`dp-${index}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
+	    const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
+	    this.addSubAssembly(panel);
+	    this.addSubAssembly(frame);
+	  }
+	}
+	
+	DividerSection.abbriviation = 'dvrs';
+	
+	Assembly.register(DividerSection);
+	module.exports = DividerSection
+	
+	
+	
+	
 	
 });
 
@@ -14478,118 +14566,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/sections/divider.js',
-function (require, exports, module) {
-	
-
-	
-	const PartitionSection = require('../partition.js');
-	const Divider = require('../../../divider.js');
-	const Position = require('../../../../../../position.js');
-	const Panel = require('../../../panel.js');
-	const Frame = require('../../../frame.js');
-	const Assembly = require('../../../../assembly.js');
-	
-	class DividerSection extends PartitionSection {
-	  constructor(partCode, sectionProperties, parent) {
-	    super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties, parent);
-	    if (sectionProperties === undefined) return;
-	    this.setParentAssembly(parent);
-	    const props = sectionProperties;
-	    const instance = this;
-	    this.position().center = (attr) => {
-	      const center = props().center;
-	      return attr ? center[attr] : center;
-	    };
-	    this.position().demension = (attr) =>
-	      Position.targeted(attr, () => this.value('frw'),
-	          () => props().dividerLength / 2, () => this.value('frt'));
-	    const panelCenterFunc = (attr) => {
-	      const props = sectionProperties();
-	      const dem = {
-	        x: props.center.x,
-	        y: props.center.y,
-	        z: props.depth / 2
-	      };
-	      return attr ? dem[attr] : dem;
-	    };
-	    const panelDemFunc = (attr) => {
-	      if (attr === 'z') return this.value('pwt34');
-	      const props = sectionProperties();
-	      const dem = {
-	        x: props.depth - frameDemFunc('z'),
-	        y: props.dividerLength,
-	        z: this.value('pwt34')
-	      };
-	      return attr ? dem[attr] : dem;
-	    };
-	    const panelRotFunc = () => {
-	      const isVertical = sectionProperties().vertical;
-	      if (isVertical) return 'xyz';
-	      else return 'xy';
-	    }
-	
-	    const frameCenterFunc = (attr) => {
-	      const props = sectionProperties();
-	      const dem = {
-	        x: props.center.x,
-	        y: props.center.y,
-	        z: props.center.z
-	      };
-	      return attr ? dem[attr] : dem;
-	    };
-	
-	    const frameDemFunc = (attr) => {
-	      const reqHeight = attr === 'y' || attr === undefined;
-	      const dem = {
-	        x: this.value('frw'),
-	        y: reqHeight ? sectionProperties().dividerLength : undefined,
-	        z: this.value('frt'),
-	      };
-	      return attr ? dem[attr] : dem;
-	    }
-	
-	    const frameRotFunc = () => props().rotationFunc();
-	
-	    const lastWidthCalc = {date: Number.MAX_SAFE_INTEGER};
-	    this.maxWidth = () => {
-	      const currentDate = new Date().getTime();
-	      if (lastWidthCalc.date < currentDate + 1000) {
-	        return lastWidthCalc.value;
-	      }
-	      if (!panel.included && !frame.included) return 0;
-	
-	      let value;
-	      const panelWidth = panel.position().demension('z');
-	      const frameWidth = frame.position().demension('x');
-	      if (value === undefined && !frame.included) return panelWidth;
-	      if (value === undefined && !panel.included) return frameWidth;
-	      if (value === undefined) value = panelWidth > frameWidth ? panelWidth : frameWidth;
-	      lastWidthCalc.date = currentDate;
-	      lastWidthCalc.value = value;
-	      return value;
-	    }
-	
-	    const index = props().index;
-	    const panel = new Panel(`dp-${index}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
-	    const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
-	    this.addSubAssembly(panel);
-	    this.addSubAssembly(frame);
-	  }
-	}
-	
-	DividerSection.abbriviation = 'dvrs';
-	
-	Assembly.register(DividerSection);
-	module.exports = DividerSection
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/open-cover.js',
 function (require, exports, module) {
 	
@@ -14718,6 +14694,42 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
+function (require, exports, module) {
+	
+
+	
+	const OpeningCoverSection = require('../open-cover.js');
+	const Door = require('../../../../../door/door.js');
+	const Handle = require('../../../../../hardware/pull.js');
+	const Assembly = require('../../../../../../assembly.js');
+	
+	class DualDoorSection extends OpeningCoverSection {
+	  constructor(partCode, divideProps, parent) {
+	    super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
+	    if (divideProps === undefined) return;
+	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
+	    this.addSubAssembly(rightDoor);
+	    rightDoor.setHandleLocation(Handle.location.TOP_LEFT);
+	
+	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems);
+	    this.addSubAssembly(leftDoor);
+	    leftDoor.setHandleLocation(Handle.location.TOP_RIGHT);
+	  }
+	}
+	
+	DualDoorSection.abbriviation = 'dds';
+	
+	Assembly.register(DualDoorSection);
+	module.exports = DualDoorSection
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/door.js',
 function (require, exports, module) {
 	
@@ -14794,42 +14806,6 @@ function (require, exports, module) {
 	
 	Assembly.register(DrawerSection);
 	module.exports = DrawerSection
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
-function (require, exports, module) {
-	
-
-	
-	const OpeningCoverSection = require('../open-cover.js');
-	const Door = require('../../../../../door/door.js');
-	const Handle = require('../../../../../hardware/pull.js');
-	const Assembly = require('../../../../../../assembly.js');
-	
-	class DualDoorSection extends OpeningCoverSection {
-	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
-	    if (divideProps === undefined) return;
-	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
-	    this.addSubAssembly(rightDoor);
-	    rightDoor.setHandleLocation(Handle.location.TOP_LEFT);
-	
-	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems);
-	    this.addSubAssembly(leftDoor);
-	    leftDoor.setHandleLocation(Handle.location.TOP_RIGHT);
-	  }
-	}
-	
-	DualDoorSection.abbriviation = 'dds';
-	
-	Assembly.register(DualDoorSection);
-	module.exports = DualDoorSection
 	
 	
 	
