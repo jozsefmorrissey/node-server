@@ -53,7 +53,6 @@ const Material = require('./category.js').Material;
 
   unitCostValue = smeRound(50.12/10);
   costValue = smeRound(unitCostValue * 13);
-  console.log('costValue', costValue)
   props.unit = {
     id: 'parts',
     method: 'Unit',
@@ -82,5 +81,3 @@ const Material = require('./category.js').Material;
 
 exports.Frame = Frame
 exports.Material = Material
-
-

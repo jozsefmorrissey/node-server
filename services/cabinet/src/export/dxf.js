@@ -3253,7 +3253,6 @@ function incrementalAdd(intial, increment, percentGrowth) {
   return {
     increment: (count) => {
       count = !Number.isFinite(count) || count < 1 ? 1 : count;
-      console.log(count);
       for (let index = 0; index < count; index += 1) {
         total += cost
         cost += increment;

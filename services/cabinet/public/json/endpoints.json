@@ -18,6 +18,10 @@
     "add": "/:id",
     "list": "/all"
   },
+  "config": {
+    "get": "/config/get",
+    "save": "/config/save"
+  },
   "costs": {
     "save": "/costs/save",
     "get": "/costs/get"

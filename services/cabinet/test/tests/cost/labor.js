@@ -64,7 +64,6 @@ const FunctionArgumentTest = require('../../test.js').FunctionArgumentTest;
 
   unitCostValue = smeRound(20*.66);
   costValue = smeRound(unitCostValue * 13);
-  console.log('costValue', costValue)
   props.unit = {
     id: 'instalation',
     method: 'Unit',
@@ -104,6 +103,3 @@ exports.Panel = Panel
 exports.StringMathEvaluator = StringMathEvaluator
 exports.Labor = Labor
 exports.FunctionArgumentTest = FunctionArgumentTest
-
-
-

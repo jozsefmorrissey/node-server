@@ -7,6 +7,7 @@ const Cost = require('../cost/cost.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
 const RadioDisplay = require('../display-utils/radioDisplay.js');
+const EPNTS = require('../../generated/EPNTS');
 const $t = require('../../../../public/js/utils/$t.js');
 const Inputs = require('../input/inputs.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
@@ -15,6 +16,14 @@ const Measurement = require('../../../../public/js/utils/measurment.js');
 
 // TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
 const changed = (id) => Properties.changes.changed(id);
+
+function save() {
+  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
+}
+
+function get() {
+  Request.get(EPNTS.config.get(), console.log);
+}
 
 class PropertyDisplay {
   constructor(containerSelector) {
@@ -55,18 +64,21 @@ class PropertyDisplay {
           if (key === undefined) {
             properties.forEach((prop) => props.push(prop.clone()));
           } else {
-            props = Properties.get(key);
+            props = Properties.new(key);
           }
+          props[0].description(values.name);
           return {properties: props, name: values.name, uniqueId, changed};
         }
+
+        const inputTree = PropertyDisplay.configInputTree();
         const expListProps = {
-          list: [],
+          list: Properties.groupList(key),
           parentSelector: `#config-expand-list-${uniqueId}`,
           getHeader: (scope) => PropertyDisplay.configHeadTemplate.render(scope),
           getBody: (scope) => PropertyDisplay.configBodyTemplate.render(scope),
-          inputTree: PropertyDisplay.configInputTree(),
-          getObject,
-          listElemLable: 'Config'
+          inputValidation: inputTree.validate,
+          listElemLable: 'Config',
+          getObject, inputTree
         };
         setTimeout(() =>
           new ExpandableList(expListProps), 500);
@@ -111,7 +123,6 @@ du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
   // TODO: set config property: childElem.innerText;
   du.hide(childTargets);
   du.show(childElem);
-  console.log('hello');
 });
 
 function setPropertyElemValue(elem, idAttr, value) {
@@ -135,6 +146,7 @@ function updateMeasurements () {
 
 function updateRadio(elem) {
   const name = elem.getAttribute('name');
+  Properties.config()
   const elems = du.find.all(`input[type="radio"][name='${name}']`);
   elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
   setPropertyElemValue(elem, 'prop-radio-update', true);
@@ -143,11 +155,19 @@ function updateRadio(elem) {
 
 function updateValue(elem) {
   setPropertyElemValue(elem, 'prop-value-update', elem.value);
+  const saveBtn = du.find.closest('.save-change', elem);
+  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+  const saveAllBtn = du.find('#property-manager-save-all');
+  saveAllBtn.hidden = !Properties.changes.changesExist();
 }
 
 function saveChange(elem) {
   const id = elem.getAttribute('properties-id');
   Properties.changes.save(id);
+  elem.hidden = true;
+  const saveAllBtn = du.find('#property-manager-save-all');
+  saveAllBtn.hidden = !Properties.changes.changesExist();
+  save();
 }
 
 

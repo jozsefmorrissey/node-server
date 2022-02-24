@@ -118,6 +118,19 @@ function endpoints(app, prefix) {
     res.send(getUser(req).loadData('costs') || []);
   });
 
+  //  ---------------------------- Config -----------------------------//
+
+  app.post(prefix + EPNTS.config.save(), function (req, res) {
+    getUser(req).saveData(`config`, req.body);
+    res.send('success');
+  });
+
+  app.get(prefix + EPNTS.config.get(), function (req, res) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Type', 'application/json');
+    res.send(getUser(req).loadData('config') || []);
+  });
+
   //  ---------------------------- Template -----------------------------//
 
   app.post(prefix + EPNTS.templates.save(), function (req, res) {

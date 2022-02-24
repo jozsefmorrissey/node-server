@@ -60,7 +60,6 @@ class OrderDisplay {
 
     const expListProps = {
       list: orders,
-      inputs: [{placeholder: 'name'}],
       inputValidation: (values) => values.name ? true :
           'You must Define a name',
       parentSelector, getHeader, getBody, getObject,

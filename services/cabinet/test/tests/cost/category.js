@@ -53,7 +53,6 @@ const Material = require('../../../app-src/cost/types/material.js');
 //
 //   unitCostValue = smeRound(50.12/10);
 //   costValue = smeRound(unitCostValue * 13);
-//   console.log('costValue', costValue)
 //   props.unit = {
 //     id: 'parts',
 //     method: 'Unit',
@@ -85,6 +84,3 @@ exports.Panel = Panel
 exports.StringMathEvaluator = StringMathEvaluator
 exports.Category = Category
 exports.Material = Material
-
-
-

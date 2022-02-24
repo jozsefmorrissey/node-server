@@ -2,6 +2,8 @@
 
 const Property = require('./property');
 const Measurement = require('../../../../public/js/utils/measurment.js');
+const EPNTS = require('../../generated/EPNTS');
+const Request = require('../../../../public/js/utils/request.js');
 
 const h = new Property('h', 'height', null);
 const w = new Property('w', 'width', null);
@@ -86,7 +88,7 @@ function assemProperties(clazz, filter) {
   return props;
 }
 
-const config = {};
+let config = {};
 const changes = {};
 const copyMap = {};
 assemProperties.changes = {
@@ -104,13 +106,11 @@ assemProperties.changes = {
       for (let index = 0; index < tempList.length; index += 1) {
         const tempProp = tempList[index];
         const configProp = copyMap[id][index];
-        configProp.fromJson(tempProp.toJson());
+        configProp.value(tempProp.value(), true);
       }
     }
-    console.log('config', config);
-    console.log('changes', changes);
-  },
-  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.delete(list._GROUP)),
+   },
+  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
   delete: (id) => delete changes[id],
   changed: (id) => {
     const list = changes[id];
@@ -122,11 +122,35 @@ assemProperties.changes = {
       }
     }
     return false;
+  },
+  changesExist: () => {
+      const lists = Object.values(changes);
+      for (let index = 0; index < lists.length; index += 1) {
+        if (assemProperties.changes.changed(lists[index]._ID)) {
+          return true;
+        }
+      }
+      return false;
   }
 }
 
+assemProperties.config = () => {
+  const plainObj = {};
+  const keys = Object.keys(config);
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
+    const lists = config[key];
+    plainObj[key] = [];
+    for (let lIndex = 0; lIndex < lists.length; lIndex += 1) {
+      plainObj[key].push([]);
+      const list = lists[lIndex];
+      list.forEach((property) => plainObj[key][lIndex].push(property.toJson(['properties'], true)))
+    }
+  }
+  return plainObj;
+}
 assemProperties.list = () => Object.keys(assemProps);
-assemProperties.get = (group) => {
+assemProperties.new = (group) => {
   if (assemProps[group]) {
     const list = [];
     const ogList = assemProps[group];
@@ -141,5 +165,10 @@ assemProperties.get = (group) => {
   throw new Error(`Requesting invalid Property Group '${group}'`);
 }
 
+assemProperties.groupList = (group) => config[group];
+
+assemProperties.load = (body) => {
+  config = Object.fromJson(body);
+}
 
 module.exports = assemProperties;

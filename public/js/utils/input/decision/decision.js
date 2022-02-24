@@ -21,6 +21,7 @@ class DecisionInputTree extends DecisionTree {
         this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
         this.class = rootClass;
         this.getValue = (index) => this.inputArray[index].value();
+        this.validate = () => DecisionInputTree.validateInput(inputArrayOinstance, this.values);
 
         this.html = () => {
           return DecisionInput.template.render(this);
@@ -177,6 +178,7 @@ class DecisionInputTree extends DecisionTree {
   }
 }
 
+DecisionInputTree.DO_NOT_CLONE = true;
 DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
   if (Array.isArray(inputArrayOinstance)) {
     inputArrayOinstance.forEach((instance) => {

@@ -33,7 +33,6 @@ function topKnobParse(body) {
   const document = new JSDOM(body).window.document;
   const items = document.querySelectorAll('.item.product');
   const set = {};
-  console.log('itemsss:', items[0].getAttribute('src'));
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index];
     const text = item.textContent.replace(/[\s\n]{2,}/g, '\|');

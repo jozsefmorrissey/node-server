@@ -28,6 +28,8 @@ const Assembly = require('../objects/assembly/assembly.js');
 class Cost {
   //constructor(id, Cost, formula)
   constructor(props) {
+    props = props || {};
+    this.props = () => props;
     let deleted = false;
     const instance = this;
     const uniqueId = String.random();

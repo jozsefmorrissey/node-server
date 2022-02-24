@@ -39,6 +39,7 @@ class ExpandableList {
     props.getObject = props.getObject || (() => {});
     props.inputs = props.inputs || [];
     props.list = props.list || [];
+    props.list.DO_NOT_CLONE = true;
     this.getHeader = props.getHeader; delete props.getHeader;
     this.getBody = props.getBody; delete props.getBody;
     props.id = ExpandableList.lists.length;
@@ -165,6 +166,7 @@ class ExpandableList {
   }
 }
 ExpandableList.lists = [];
+ExpandableList.DO_NOT_CLONE = true;
 ExpandableList.inputRepeatTemplate = new $t('expandable/input-repeat');
 ExpandableList.listTemplate = new $t('expandable/list');
 ExpandableList.pillTemplate = new $t('expandable/pill');

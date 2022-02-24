@@ -50,13 +50,13 @@ const temporaryAttr = '_TEMPORARY';
 
 Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
   function interpretValue(value) {
-    const classname = value[identifierAttr];
     if (value instanceof Object) {
+      const classname = value[identifierAttr];
       const attrs = Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
       if (Array.isArray(value)) {
         const realArray = [];
         for (let index = 0; index < value.length; index += 1) {
-          realArray[index] = fromJson(value[index]);
+          realArray[index] = Object.fromJson(value[index]);
         }
         return realArray;
       } else if (classname && classLookup[classname]) {
@@ -81,7 +81,7 @@ Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
 
   if (!(rootJson instanceof Object)) return rootJson;
   return interpretValue(rootJson);
-});
+}, true);
 
 Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
   const cxtrName = obj.constructor.name;
@@ -126,14 +126,17 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
   }
   if (!temporary) {
     const origToJson = obj.toJson;
-    obj.toJson = () => {
+    obj.toJson = (members, exclusive) => {
+      const restrictions = Array.isArray(members) && members.length;
       const json = (typeof origToJson === 'function') ? origToJson() : {};
       json[identifierAttr] = obj.constructor.name;
       for (let index = 0; index < attrs.length; index += 1) {
         const attr = attrs[index];
-        if (attr !== immutableAttr) {
-          const value = obj[attr]();
-          if ((typeof value) === 'object') {
+        const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
+        const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
+        if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
+          const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
+          if ((typeof value) === 'object' && value !== null) {
             if ((typeof value.toJson) === 'function') {
               json[attr] = value.toJson();
             } else if (Array.isArray(value)){
@@ -166,7 +169,15 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     };
     return obj;
   }
-  // obj.clone = () => obj.fromJson(obj.toJson);
+  if (obj.constructor.DO_NOT_CLONE) {
+    obj.clone = () => obj;
+  } else {
+    obj.clone = () => {
+      const clone = new obj.constructor();
+      clone.fromJson(obj.toJson());
+      return clone;
+    }
+  }
 }, true);
 Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
 
@@ -192,20 +203,47 @@ Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end)
   return array;
 }, true);
 
+const checked = {};
+
+// Swiped from https://stackoverflow.com/a/43197340
+function isClass(obj) {
+  const isCtorClass = obj.constructor
+      && obj.constructor.toString().substring(0, 5) === 'class'
+  if(obj.prototype === undefined) {
+    return isCtorClass
+  }
+  const isPrototypeCtorClass = obj.prototype.constructor
+    && obj.prototype.constructor.toString
+    && obj.prototype.constructor.toString().substring(0, 5) === 'class'
+  return isCtorClass || isPrototypeCtorClass
+}
+
 Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
   const keys = Object.keys(obj);
+  if (!checked[obj.constructor.name]) {
+    console.log('constructor: ' + obj.constructor.name);
+    checked[obj.constructor.name] = true;
+  }
+
   const clone = ((typeof obj.clone) === 'function') ? obj.clone() :
                   Array.isArray(obj) ? [] : {};
   for(let index = 0; index < keys.length; index += 1) {
     const key = keys[index];
     const member = obj[key];
-    if ((typeof member) === 'object') {
-      if ((typeof member.clone) === 'function') {
-        clone[key] = member.clone();
+    if (member && (member.DO_NOT_CLONE || member.constructor.DO_NOT_CLONE)) {
+      clone[key] = member;
+    } else if ((typeof member) !== 'function') {
+      if ((typeof member) === 'object') {
+        if ((typeof member.clone) === 'function') {
+          clone[key] = member.clone();
+        } else {
+          clone[key] = JSON.clone(member);
+        }
       } else {
-        clone[key] = JSON.clone(member);
+        clone[key] = member;
       }
-    } else {
+    }
+    else if (isClass(member)) {
       clone[key] = member;
     }
   }

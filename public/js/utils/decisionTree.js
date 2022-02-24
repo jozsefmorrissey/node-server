@@ -78,6 +78,7 @@ class DecisionTree {
         this.top = () => rootNode;
       }
     }
+    DecisionNode.DO_NOT_CLONE = true;
 
     const rootNode = new DecisionNode(name, payload, null);
     return rootNode;
@@ -85,7 +86,3 @@ class DecisionTree {
 }
 
 module.exports = DecisionTree;
-
-
-
-

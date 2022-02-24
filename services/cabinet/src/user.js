@@ -107,7 +107,6 @@ class User {
       let user = get();
       if (user === false) return 'Not Registered';
       if (user.activated === false) return 'Not Activated';
-      console.log(email, secret);
       if (this.validate(true)) return 'Logged In';
       return 'Logged Out';
     }
@@ -115,7 +114,6 @@ class User {
     function getToken(s, e) {
       s = s || secret;
       const expire = e || User.experation();
-      console.log(s, secret)
       if (s === undefined && e === undefined && token)
         return token;
       if (s !== undefined)
@@ -135,9 +133,12 @@ class User {
       var hash = bcrypt.hashSync(secret, salt);
       for(let index = 0; index < user.tokens.length; index += 1) {
           const token = user.tokens[index];
-          if (bcrypt.compareSync(secret, token.secret) && notExpired(token))
-          return token;
+          if (bcrypt.compareSync(secret, token.secret) && notExpired(token)) {
+            console.log(true, secret);
+            return token;
+          }
       }
+      console.log(false, secret);
       return false;
     }
 
@@ -173,13 +174,11 @@ class User {
 
     this.saveData = (path, data) => {
       if (!this.validate(true)) throw new UnAuthorized();
-      // console.log(JSON.stringify(data))
       try {
         let dirPath = path.split(".");
         dirPath = dirPath.splice(0, dirPath.length - 1).join('.');
         const filePath = userDataFilePath(path);
         const directory = this.dataDirectory(dirPath);
-        console.log('dir:', dirPath, directory)
         shell.mkdir('-p', directory);
         shell.touch(filePath);
         fs.writeFileSync(filePath, JSON.stringify(data));
@@ -206,7 +205,6 @@ class User {
     }
 
     this.list = (dirPath) => {
-      console.log('dir:', this.dataDirectory(dirPath))
       let list = shell.ls(this.dataDirectory(dirPath)).stdout;
       if (!list) return [];
       list = list.trim().split('\n');
@@ -235,7 +233,6 @@ class User {
 
     this.login = function () {
       secret = User.String.random(32);
-      console.log(get());
       if (!this.validate(true))
         throw new Invalid('password', password);
       addToken(getToken());
@@ -254,6 +251,7 @@ class User {
 
     this.validate = function (soft) {
       const user = get();
+      console.log(JSON.stringify(user, null, 2));
       if (!user || user.activated === false) {
         if (soft) return false;
         throw new UnAuthorized();

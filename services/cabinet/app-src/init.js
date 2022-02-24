@@ -6,23 +6,18 @@ const Order = require('./objects/order.js');
 const Assembly = require('./objects/assembly/assembly.js');
 
 require('../../../public/js/utils/utils.js');
-const properties = require('./config/properties.js');
+const Properties = require('./config/properties.js');
 
 // Display classes
 const du = require('../../../public/js/utils/dom-utils.js');
 const $t = require('../../../public/js/utils/$t');
 const EPNTS = require('../generated/EPNTS.js');
 $t.loadFunctions(require('../generated/html-templates'))
-require('./displays/user.js');
-require('./cost/init-costs.js');
 const Displays = require('./services/display-svc.js');
 const OrderDisplay = require('./displays/order.js');
 const ThreeDModel = require('./three-d/three-d-model.js');
 const PropertyDisplay = require('./displays/property.js');
-const propertyDisplay = new PropertyDisplay('#property-manager');
-Displays.register('propertyDisplay', propertyDisplay);
 const DisplayManager = require('./display-utils/displayManager.js');
-const CostManager = require('./displays/managers/cost.js');
 const utils = require('./utils.js');
 
 if (EPNTS.getEnv() === 'local') require('../test/tests/to-from-json');
@@ -47,12 +42,23 @@ function getValue(code, obj) {
   return CONSTANTS[code].value;
 }
 
-console.log(properties('Cabinet'));
-let roomDisplay;
-let order;
 
-du.on.match('change', '.open-orientation-radio,.open-division-input', utils.updateDivisions);
-const costManager = new CostManager('cost-manager', 'cost');
-orderDisplay = new OrderDisplay('#app');
-setTimeout(ThreeDModel.init, 1000);
-const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
+
+require('./displays/user.js');
+function init(body){
+  Properties.load(body);
+  let roomDisplay;
+  let order;
+
+  const propertyDisplay = new PropertyDisplay('#property-manager');
+  Displays.register('propertyDisplay', propertyDisplay);
+  require('./cost/init-costs.js');
+  // du.on.match('change', '.open-orientation-radio,.open-division-input', utils.updateDivisions);
+  const CostManager = require('./displays/managers/cost.js');
+  const costManager = new CostManager('cost-manager', 'cost');
+  // orderDisplay = new OrderDisplay('#app');
+  // setTimeout(ThreeDModel.init, 1000);
+  const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
+}
+
+Request.get(EPNTS.config.get(), init, console.error);

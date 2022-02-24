@@ -12,13 +12,13 @@ class Property extends Lookup {
     const children = [];
 
     const initVals = {
-      code, name
+      code, name, description: props instanceof Object ? props.description : undefined
     }
-    Object.getSet(this, initVals, 'value', 'code', 'name', 'properties');
+    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
 
-    this.value = (val) => {
+    this.value = (val, metric) => {
       if (val !== undefined && value !== val) {
-        const measurment = new Measurement(val);
+        const measurment = new Measurement(val, metric);
         const measurmentVal = measurment.value();
         value = Number.isNaN(measurmentVal) ? val : measurment;
       }
@@ -29,7 +29,6 @@ class Property extends Lookup {
       return value instanceof Measurement ? value.display() : value;
     }
 
-    this.description = () => this.properties().description;
     this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
 
     if ((typeof props) !== 'object' ||  props === null) {
@@ -61,7 +60,7 @@ class Property extends Lookup {
 
     this.children = () => JSON.clone(children);
 
-    this.equals = (other) => false ||
+    this.equals = (other) =>
         other instanceof Property &&
         this.value() === other.value() &&
         this.code() === other.code() &&
@@ -72,7 +71,8 @@ class Property extends Lookup {
       const cProps = this.properties();
       cProps.clone = true;
       cProps.value = val;
-      return new Property(code, name, props);
+      cProps.description = this.description();
+      return new Property(code, name, cProps);
     }
     if(!clone) Property.list[code] = this;
     else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
@@ -81,22 +81,5 @@ class Property extends Lookup {
 Property.list = {};
 
 new Property();
-const p = Object.fromJson({
-    "_TYPE": "Property",
-    "id": "b7r4yen",
-    "code": "r",
-    "name": "Reveal",
-    "value": 0.125,
-    "properties": {
-        "_TYPE": "Property",
-        "id": "22222",
-        "code": "ree",
-        "name": "req",
-        "value":12,
-        "properties": {toocheei: 'madamuelle'}
-    }
-});
-console.log(p.id(), p.code(), p.name(), p.value(), p.properties())
-
 
 module.exports = Property
