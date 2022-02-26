@@ -13,14 +13,12 @@ const l = new Property('l', 'length', null);
 
 
 let unitCount = 0;
-const UNIT = [];
+const UNITS = [];
 Measurement.units().forEach((unit) =>
-      UNIT.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
-UNIT._IS_RADIO = true;
-UNIT._VALUE = Measurement.unit();
+      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
+UNITS._VALUE = Measurement.unit();
 
 const assemProps = {
-  UNIT,
   Overlay: [
     new Property('ov', 'Overlay', 1/2)
   ],
@@ -80,6 +78,7 @@ const assemProps = {
   ]
 }
 
+const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
 function assemProperties(clazz, filter) {
   clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
   props = assemProps[clazz] || [];
@@ -99,8 +98,8 @@ assemProperties.changes = {
     const group = list._GROUP;
     if (config[group] === undefined) config[group] = [];
     if(copyMap[id] === undefined) {
-      config[group].push(JSON.clone(changes[id]));
-      copyMap[list._ID] = config[group][config[group].length - 1];
+      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
+      copyMap[list._ID] = config[group][list._NAME];
     } else {
       const tempList = changes[id];
       for (let index = 0; index < tempList.length; index += 1) {
@@ -140,17 +139,21 @@ assemProperties.config = () => {
   for (let index = 0; index < keys.length; index += 1) {
     const key = keys[index];
     const lists = config[key];
-    plainObj[key] = [];
-    for (let lIndex = 0; lIndex < lists.length; lIndex += 1) {
-      plainObj[key].push([]);
-      const list = lists[lIndex];
-      list.forEach((property) => plainObj[key][lIndex].push(property.toJson(['properties'], true)))
+    const listKeys = Object.keys(lists);
+    plainObj[key] = {};
+    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
+      const listKey = listKeys[lIndex];
+      const list = lists[listKey];
+      const propObj = {name: listKey, properties: []};
+      plainObj[key][listKey] = propObj;
+      list.properties.forEach((property) =>
+          propObj.properties.push(property.toJson(excludeKeys, true)))
     }
   }
   return plainObj;
 }
 assemProperties.list = () => Object.keys(assemProps);
-assemProperties.new = (group) => {
+assemProperties.new = (group, name) => {
   if (assemProps[group]) {
     const list = [];
     const ogList = assemProps[group];
@@ -159,13 +162,35 @@ assemProperties.new = (group) => {
     }
     list._ID = String.random();
     list._GROUP = group;
+    list._NAME = name;
     changes[list._ID] = list;
     return list;
   }
   throw new Error(`Requesting invalid Property Group '${group}'`);
 }
 
-assemProperties.groupList = (group) => config[group];
+assemProperties.groupList = (group) => {
+  console.log(group, `(${typeof group})`);
+  const groupList = config[group];
+  const changeList = {};
+  if (groupList === undefined) return {};
+  const groupKeys = Object.keys(groupList);
+  for (let index = 0; index < groupKeys.length; index += 1) {
+    const groupKey = groupKeys[index];
+    const list = groupList[groupKey];
+    const properties = groupList[list.name].properties;
+    changeList[list.name] = {name: list.name, properties: []};
+    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
+      changeList[list.name].properties.push(properties[pIndex].clone());
+    }
+    const uniqueId = String.random();
+    changeList[list.name].properties._ID = uniqueId;
+    changes[uniqueId] = changeList[list.name].properties;
+    copyMap[uniqueId] = properties;
+  }
+  return changeList;
+}
+assemProperties.UNITS = UNITS;
 
 assemProperties.load = (body) => {
   config = Object.fromJson(body);

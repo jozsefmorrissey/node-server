@@ -8,7 +8,7 @@ class Property extends Lookup {
   // clone constructor(code, value) {
   constructor(code, name, props) {
     super();
-    let value;
+    let value = (typeof props) === 'object' && props !== null ? props.value : undefined;
     const children = [];
 
     const initVals = {
@@ -16,9 +16,9 @@ class Property extends Lookup {
     }
     Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
 
-    this.value = (val, metric) => {
+    this.value = (val, notMetric) => {
       if (val !== undefined && value !== val) {
-        const measurment = new Measurement(val, metric);
+        const measurment = new Measurement(val, notMetric);
         const measurmentVal = measurment.value();
         value = Number.isNaN(measurmentVal) ? val : measurment;
       }
@@ -39,16 +39,20 @@ class Property extends Lookup {
 
     const existingProp = Property.list[code];
     let clone = false;
-    if (existingProp) {
-      value = existingProp.value();
-      if ((typeof value) === 'number')
-        value = new Measurement(value, true);
-      name = existingProp.name();
-      this.properties(existingProp.properties());
-      clone = true;
-    } else if (value === undefined){
+    if (this.properties().value !== undefined) {
       this.value(this.properties().value);
     }
+
+    // if (existingProp) {
+    //   value = value || existingProp.value();
+    //   name = existingProp.name();
+    //   this.properties(existingProp.properties());
+    //   clone = true;
+    // }
+
+    if ((typeof value) === 'number')
+      value = new Measurement(value);
+
 
     this.addChild = (property) => {
       if (property instanceof Property && property.code() === this.code()) {
@@ -70,7 +74,7 @@ class Property extends Lookup {
     this.clone = (val) => {
       const cProps = this.properties();
       cProps.clone = true;
-      cProps.value = val;
+      cProps.value = val === undefined ? this.value() : val;
       cProps.description = this.description();
       return new Property(code, name, cProps);
     }
@@ -79,6 +83,7 @@ class Property extends Lookup {
   }
 }
 Property.list = {};
+Property.DO_NOT_CLONE = true;
 
 new Property();
 

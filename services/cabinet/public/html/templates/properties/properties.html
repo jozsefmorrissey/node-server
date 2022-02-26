@@ -1,16 +1,20 @@
 <div class='center'>
-  <div class='{{key ? "property-container close" : ""}}' radio-id='{{radioId}}'
-        {{noChildren() ? 'hidden' : ''}}>
-    <div class='{{key ? "expand-header" : ""}}'>
-      {{label}}
-    </div>
-    <div{{key ? ' hidden' : ''}}>
-      <div{{branch ? ' hidden' : ''}}>
-        <div id='config-expand-list-{{uniqueId}}'></div>
-        <div:t repeat='key, group in groups'>
-          {{recurse(key, group)}}
-        </div:t>
+  <div class='center'>
+    <label>UNIT :&nbsp;&nbsp;&nbsp;&nbsp;</label>
+    <span:t repeat='property in Properties.UNITS'>
+      <label>{{property.name()}}</label>
+      <input type='radio' name='UNIT' prop-radio-update='{{property.id()}}'
+            {{property.value() === true ? 'checked' : ''}}>
+    </span:t>
+  </div>
+  <div:t repeat='key, properties in values' {{hideAll(properties) ? 'hidden' : ''}}>
+    <div class="property-container close" radio-id='666'>
+      <div class='{{key ? "expand-header" : ""}}'>
+        {{key}}
+      </div>
+      <div id='config-expand-list-{{childIdMap[key]}}' hidden>
+        {{childIdMap[key]}}
       </div>
     </div>
-  </div>
+  </div:t>
 </div>

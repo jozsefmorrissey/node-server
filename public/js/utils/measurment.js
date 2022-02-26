@@ -21,13 +21,13 @@ let unit = units[0];
 
 
 class Measurement extends Lookup {
-  constructor(value, metric) {
+  constructor(value, notMetric) {
     super();
     if ((typeof value) === 'string') {
       value += ' '; // Hacky fix for regularExpression
     }
 
-    const isMetric = () => unit === units[1] || metric;
+    const isNotMetric = () => unit !== units[1] && notMetric === true;
 
     let decimal = 0;
     let nan = value === null || value === undefined;
@@ -104,7 +104,7 @@ class Measurement extends Lookup {
     this.display = (accuracy) => {
       switch (unit) {
         case units[0]: return this.standardUS(accuracy);
-        case units[1]: return this.decimal(accuracy);
+        case units[1]: return Math.round(this.decimal(accuracy)*10) / 10;
         default:
             return this.standardUS(accuracy);
       }
@@ -114,19 +114,19 @@ class Measurement extends Lookup {
 
     this.decimal = (accuracy) => {
       if (nan) return NaN;
-      accuracy = accuracy % 10 ? accuracy : 10;
+      accuracy = accuracy % 100 ? accuracy : 100;
       return Math.round(decimal * accuracy) / accuracy;
     }
     const convertToMetric = (standardDecimal) => value = standardDecimal * 2.54;
 
     if ((typeof value) === 'number') {
-      if (!isMetric()) {
+      if (isNotMetric()) {
           convertToMetric(value);
       }
       decimal = value;
     } else if ((typeof value) === 'string') {
       try {
-        if (!isMetric()) {
+        if (isNotMetric()) {
           const standardDecimal = parseFraction(value).decimal;
           convertToMetric(standardDecimal);
         }

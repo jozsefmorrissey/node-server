@@ -6,14 +6,16 @@ const du = require('../dom-utils.js');
 const $t = require('../$t.js');
 const Expandable = require('./expandable');
 
-class ExpandableList extends Expandable {
+class ExpandableObject extends Expandable {
   constructor(props) {
     super(props);
-    this.remove = (index) => {
-      props.list.splice(index, 1);
+	//TODO: Set aciveKey
+    this.remove = (key) => {
+      props.list[key] = undefined;
       this.refresh();
     }
+
+    this.getKey = () => this.values().name;
   }
 }
-
-module.exports = ExpandableList
+module.exports = ExpandableObject

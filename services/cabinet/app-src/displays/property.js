@@ -11,12 +11,18 @@ const EPNTS = require('../../generated/EPNTS');
 const $t = require('../../../../public/js/utils/$t.js');
 const Inputs = require('../input/inputs.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
 const Measurement = require('../../../../public/js/utils/measurment.js');
 
 // TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
 const changed = (id) => Properties.changes.changed(id);
-
+const shouldHide = (prop) => prop.value() === null;
+const hideAll = (properties) => {
+  for (let index = 0; index < properties.length; index += 1) {
+    if (properties[index].value() !== null) return false;
+  }
+  return true;
+}
 function save() {
   Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
 }
@@ -31,6 +37,34 @@ class PropertyDisplay {
 
     const noChildren = (properties, groups) => () =>
           properties.length === 0 && Object.keys(groups).length === 0;
+
+    function childScope (key) {
+      const uniqueId = String.random();
+      const getObject = (values) => {
+        let properties = Properties.new(key,  values.name);
+        return {name: values.name, uniqueId, changed, properties};
+      }
+
+      const inputTree = PropertyDisplay.configInputTree();
+      const expListProps = {
+        list: Properties.groupList(key),
+        parentSelector: `#config-expand-list-${uniqueId}`,
+        getHeader: (scope) =>
+                    PropertyDisplay.configHeadTemplate.render(scope),
+        getBody: (scope) =>
+                    PropertyDisplay.configBodyTemplate.render({
+                      name: scope.name,
+                      properties: scope.properties,
+                      changed
+                    }),
+        inputValidation: inputTree.validate,
+        listElemLable: 'Config',
+        getObject, inputTree
+      };
+      setTimeout(() =>
+        new ExpandableObject(expListProps), 500);
+      return uniqueId;
+    }
 
     function getScope(key, group) {
       key = key || '';
@@ -48,40 +82,7 @@ class PropertyDisplay {
       for( let index = 0; index < keys.length; index += 1) {
         const key = keys[index];
         const value = group.values[key];
-        if (value instanceof Property) {
-          if (value.value() !== null) {
-            scope.properties.push(value);
-          }
-        } else if (!key.match(PropertyDisplay.attrReg)){
-          scope.groups[key] = {key, values: value, radioId};
-        } else {
-          scope[key] = value;
-        }
-      }
-      if (properties.length > 0) {
-        const getObject = (values) => {
-          let props = [];
-          if (key === undefined) {
-            properties.forEach((prop) => props.push(prop.clone()));
-          } else {
-            props = Properties.new(key);
-          }
-          props[0].description(values.name);
-          return {properties: props, name: values.name, uniqueId, changed};
-        }
-
-        const inputTree = PropertyDisplay.configInputTree();
-        const expListProps = {
-          list: Properties.groupList(key),
-          parentSelector: `#config-expand-list-${uniqueId}`,
-          getHeader: (scope) => PropertyDisplay.configHeadTemplate.render(scope),
-          getBody: (scope) => PropertyDisplay.configBodyTemplate.render(scope),
-          inputValidation: inputTree.validate,
-          listElemLable: 'Config',
-          getObject, inputTree
-        };
-        setTimeout(() =>
-          new ExpandableList(expListProps), 500);
+        childScope(key, uniqueId);
       }
       return scope;
     }
@@ -89,24 +90,20 @@ class PropertyDisplay {
     this.update = () => {
       const propKeys = Properties.list();
       const propertyObjs = {};
+      const childIdMap = [];
       for (let index = 0; index < propKeys.length; index += 1) {
         const key = propKeys[index];
         const props = Properties(key);
         const propObj = props;
         propertyObjs[key] = propObj;
+        childIdMap[key] = childScope(key);
       }
-      const values = {values: propertyObjs};
+      const uniqueId = String.random();
+      const values = {values: propertyObjs, uniqueId, childIdMap, hideAll, Properties};
       const contianer = document.querySelector(containerSelector);
       contianer.innerHTML =
-          PropertyDisplay.template.render(getScope(undefined, values));
+          PropertyDisplay.template.render(values);
     };
-
-    const recurse = (key, group) => {
-      if (group.values._IS_RADIO) {
-        return PropertyDisplay.radioTemplate.render(group);
-      }
-      return PropertyDisplay.template.render(getScope(key, group));
-    }
 
     function updateProperties(name, value) {
     }
@@ -129,7 +126,7 @@ function setPropertyElemValue(elem, idAttr, value) {
   const id = elem.getAttribute(idAttr);
   const group = elem.getAttribute('name');
   const property = Property.get(id);
-  property.value(value);
+  property.value(value, true);
   if (group === 'UNIT' && value) {
     Measurement.unit(property.name());
   }

@@ -1,4 +1,17 @@
 
+exports['115117775'] = (get, $t) => 
+		`<div ` +
+		$t.clean(get("hideAll")(get("properties")) ? 'hidden' : '') +
+		`> <div class="property-container close" radio-id='666'> <div class='` +
+		$t.clean(get("key") ? "expand-header" : "") +
+		`'> ` +
+		$t.clean(get("key")) +
+		` </div> <div id='config-expand-list-` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		`' hidden> ` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		` </div> </div> </div>`
+
 exports['306898022'] = (get, $t) => 
 		`<div class="expandable-list()-body" index='` +
 		$t.clean(get("$index")) +
@@ -41,12 +54,55 @@ exports['550500469'] = (get, $t) =>
 		$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 		` </datalist> </span>`
 
+exports['577794234'] = (get, $t) => 
+		`<div > ` +
+		$t.clean(get("key")) +
+		` ` +
+		$t.clean( new $t('-1836314325').render(get("properties"), 'prop', get)) +
+		` </div>`
+
 exports['990870856'] = (get, $t) => 
 		`<div class='inline' > <h3>` +
 		$t.clean(get("assem").objId) +
 		`</h3> <div> ` +
 		$t.clean(get("getFeatureDisplay")(get("assem"))) +
 		` </div> </div>`
+
+exports['1021556533'] = (get, $t) => 
+		`<div > <div class="property-container close" radio-id='666'> <div class='` +
+		$t.clean(get("key") ? "expand-header" : "") +
+		`'> ` +
+		$t.clean(get("key")) +
+		` </div> <div id='config-expand-list-` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		`' hidden> ` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		` </div> </div> </div>`
+
+exports['1048603870'] = (get, $t) => 
+		`<div class="expandable-list-body" key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("key") || get("$index")) +
+		`'>X</button> <div class="expand-header ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("key") || get("$index")) +
+		`'> ` +
+		$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
+		` </div> <div class="expand-body ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("key") || get("$index")) +
+		`'> ` +
+		$t.clean(get("getBody")(get("item"), get("$index") || get("$key"))) +
+		` </div> </div> </div>`
 
 exports['1309109837'] = (get, $t) => 
 		`<div class='model-label` +
@@ -61,6 +117,13 @@ exports['1309109837'] = (get, $t) =>
 		$t.clean( new $t('-1397238508').render(get("partList"), 'part', get)) +
 		` </div>`
 
+exports['1350279248'] = (get, $t) => 
+		`<div > ` +
+		$t.clean(get("key")) +
+		` ` +
+		$t.clean( new $t('-635368654').render(get("properties"), 'prop', get)) +
+		` </div>`
+
 exports['1410278299'] = (get, $t) => 
 		`<span > <label>` +
 		$t.clean(get("property").name()) +
@@ -71,6 +134,68 @@ exports['1410278299'] = (get, $t) =>
 		`' ` +
 		$t.clean(get("property").value() === true ? 'checked' : '') +
 		`> </span>`
+
+exports['1451502842'] = (get, $t) => 
+		`<div > ` +
+		$t.clean(get("key")) +
+		` <div id='config-expand-list-` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		`'> ` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		` </div> </div>`
+
+exports['1647498232'] = (get, $t) => 
+		`<div class="expandable-list-body" key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'>X</button> </div> <div class="expand-header ` +
+		$t.clean(get("type")()) +
+		` ` +
+		$t.clean((get("$index") || get("$key")) === get("activeKey") ? ' active' : '') +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' index='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> ` +
+		$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
+		` </div> </div> </div>`
+
+exports['1705673964'] = (get, $t) => 
+		`<div class="expandable-list-body" key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'>X</button> <div class="expand-header ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> ` +
+		$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
+		` </div> <div class="expand-body ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> ` +
+		$t.clean(get("getBody")(get("item"), get("$index") || get("$key"))) +
+		` </div> </div> </div>`
+
+exports['1720019920'] = (get, $t) => 
+		`<div hidden> ` +
+		$t.clean(get("key")) +
+		` <div id='config-expand-list-` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		`'> ` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		` </div> </div>`
 
 exports['1842139693'] = (get, $t) => 
 		`<li >` +
@@ -83,6 +208,15 @@ exports['1927703609'] = (get, $t) =>
 		`<div > ` +
 		$t.clean(get("recurse")(get("key"), get("group"))) +
 		` </div>`
+
+exports['2007668928'] = (get, $t) => 
+		`<span > <label>` +
+		$t.clean(get("property").name()) +
+		`</label> <input type='radio' name='UNIT' prop-radio-update='` +
+		$t.clean(get("property").id()) +
+		`' ` +
+		$t.clean(get("property").value() === true ? 'checked' : '') +
+		`> </span>`
 
 exports['2118731535'] = (get, $t) => 
 		`<div class="expandable-list-body" index='` +
@@ -101,6 +235,31 @@ exports['2118731535'] = (get, $t) =>
 		$t.clean(get("$index")) +
 		`'> ` +
 		$t.clean(get("getHeader")(get("item"), get("$index"))) +
+		` </div> </div> </div>`
+
+exports['2143078202'] = (get, $t) => 
+		`<div class="expandable-list-body" key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("$index") || get("key")) +
+		`'>X</button> <div class="expand-header ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("$index") || get("key")) +
+		`'> ` +
+		$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
+		` </div> <div class="expand-body ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("$index") || get("key")) +
+		`'> ` +
+		$t.clean(get("getBody")(get("item"), get("$index") || get("$key"))) +
 		` </div> </div> </div>`
 
 exports['expandable/input-repeat'] = (get, $t) => 
@@ -127,7 +286,7 @@ exports['expandable/list'] = (get, $t) =>
 		`" ex-list-id='` +
 		$t.clean(get("id")()) +
 		`'> ` +
-		$t.clean( new $t('-493474868').render(get("list")(), 'item', get)) +
+		$t.clean( new $t('1048603870').render(get("list")(), 'key, item', get)) +
 		` <div class='expand-input-cnt' hidden>` +
 		$t.clean(get("inputHtml")()) +
 		`</div> <div class='input-open-cnt'><button>Add ` +
@@ -169,7 +328,7 @@ exports['expandable/pill'] = (get, $t) =>
 		`" ex-list-id='` +
 		$t.clean(get("id")()) +
 		`'> ` +
-		$t.clean( new $t('306898022').render(get("list")(), 'item', get)) +
+		$t.clean( new $t('-2134413287').render(get("list")(), 'item', get)) +
 		` </div> <div> <div class='expand-input-cnt' hidden>` +
 		$t.clean(get("inputHtml")()) +
 		`</div> <br> <div class='error' id='` +
@@ -232,7 +391,7 @@ exports['expandable/sidebar'] = (get, $t) =>
 		`" ex-list-id='` +
 		$t.clean(get("id")()) +
 		`'> ` +
-		$t.clean( new $t('2118731535').render(get("list")(), 'item', get)) +
+		$t.clean( new $t('1647498232').render(get("list")(), 'item', get)) +
 		` <div class='expand-input-cnt' hidden>` +
 		$t.clean(get("inputHtml")()) +
 		`</div> <div class='input-open-cnt'>Add ` +
@@ -745,25 +904,11 @@ exports['order/information/body'] = (get, $t) =>
 		`<utility-filter hidden> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> `
 
 exports['properties/properties'] = (get, $t) => 
-		`<div class='center'> <div class='` +
-		$t.clean(get("key") ? "property-container close" : "") +
-		`' radio-id='` +
-		$t.clean(get("radioId")) +
-		`' ` +
-		$t.clean(get("noChildren")() ? 'hidden' : '') +
-		`> <div class='` +
-		$t.clean(get("key") ? "expand-header" : "") +
-		`'> ` +
-		$t.clean(get("label")) +
-		` </div> <div` +
-		$t.clean(get("key") ? ' hidden' : '') +
-		`> <div` +
-		$t.clean(get("branch") ? ' hidden' : '') +
-		`> <div id='config-expand-list-` +
-		$t.clean(get("uniqueId")) +
-		`'></div> ` +
-		$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
-		` </div> </div> </div> </div> `
+		`<div class='center'> <div class='center'> <label>UNIT :&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
+		$t.clean( new $t('2007668928').render(get("Properties").UNITS, 'property', get)) +
+		` </div> ` +
+		$t.clean( new $t('115117775').render(get("values"), 'key, properties', get)) +
+		` </div> `
 
 exports['properties/unit'] = (get, $t) => 
 		`<div> <label>Standard</label> <input type='radio' name='unit' ` +
@@ -842,3 +987,106 @@ exports['sections/open'] = (get, $t) =>
 		`</h2> <div class='section-feature-ctn'> ` +
 		$t.clean(get("featureDisplay")) +
 		` </div> `
+
+exports['properties/config-body0'] = (get, $t) => 
+		`<div> ` +
+		$t.clean( new $t('-179269626').render(get("properties"), 'property', get)) +
+		` <button class='save-change' properties-id='` +
+		$t.clean(get("properties")._ID) +
+		`' ` +
+		$t.clean(get("changed")(get("properties")._ID) ? '' : 'hidden') +
+		`> Save </button> </div> `
+
+exports['properties/config-head0'] = (get, $t) => 
+		`` +
+		$t.clean(get("name")) +
+		` `
+
+exports['properties/properties0'] = (get, $t) => 
+		`<div class='center'> <div class='` +
+		$t.clean(get("key") ? "property-container close" : "") +
+		`' radio-id='` +
+		$t.clean(get("radioId")) +
+		`' ` +
+		$t.clean(get("noChildren")() ? 'hidden' : '') +
+		`> <div class='` +
+		$t.clean(get("key") ? "expand-header" : "") +
+		`'> ` +
+		$t.clean(get("label")) +
+		` </div> <div` +
+		$t.clean(get("key") ? ' hidden' : '') +
+		`> <div` +
+		$t.clean(get("branch") ? ' hidden' : '') +
+		`> <div id='config-expand-list-` +
+		$t.clean(get("uniqueId")) +
+		`'></div> ` +
+		$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
+		` </div> </div> </div> </div> `
+
+exports['-1883946202'] = (get, $t) => 
+		`<div class="expandable-list()-body" index='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list()-id='` +
+		$t.clean(get("id")()) +
+		`' index='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'>X</button> </div> <div class="expand-header ` +
+		$t.clean(get("type")()) +
+		`" ex-list()-id='` +
+		$t.clean(get("id")()) +
+		`' index='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> ` +
+		$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
+		` </div> </div> </div>`
+
+exports['-2134413287'] = (get, $t) => 
+		`<div class="expandable-list()-body" key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list()-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'>X</button> </div> <div class="expand-header ` +
+		$t.clean(get("type")()) +
+		`" ex-list()-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("$index") || get("$key")) +
+		`'> ` +
+		$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
+		` </div> </div> </div>`
+
+exports['-236457651'] = (get, $t) => 
+		`<div id='config-expand-list-` +
+		$t.clean(get("childId")) +
+		`'> ` +
+		$t.clean(get("child")) +
+		` </div>`
+
+exports['-1836314325'] = (get, $t) => 
+		`<div id='config-expand-list-` +
+		$t.clean(get("childIdMap")[get("prop").id()]) +
+		`'> ` +
+		$t.clean(get("hi")) +
+		` </div>`
+
+exports['-635368654'] = (get, $t) => 
+		`<div id='config-expand-list-` +
+		$t.clean(get("childId")) +
+		`'> ` +
+		$t.clean(get("childId")) +
+		` </div>`
+
+exports['-1202037086'] = (get, $t) => 
+		`<div ` +
+		$t.clean(get("shouldHideAll")(get("properties")) ? 'hidden' : '') +
+		`> <div class="property-container close" radio-id='666'> <div class='` +
+		$t.clean(get("key") ? "expand-header" : "") +
+		`'> ` +
+		$t.clean(get("key")) +
+		` </div> <div id='config-expand-list-` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		`' hidden> ` +
+		$t.clean(get("childIdMap")[get("key")]) +
+		` </div> </div> </div>`

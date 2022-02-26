@@ -1,0 +1,11 @@
+<div>
+  <div:t class='property-cnt' repeat='property in properties'>
+    <label>{{property.name()}}</label>
+    <input type="text" prop-value-update='{{property.id()}}' value="{{property.display()}}"
+    measurement-id='{{property.measurementId()}}'>
+  </div:t>
+  <button class='save-change' properties-id='{{properties._ID}}'
+          {{changed(properties._ID) ? '' : 'hidden'}}>
+    Save
+  </button>
+</div>

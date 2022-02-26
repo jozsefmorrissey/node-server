@@ -219,6 +219,7 @@ function isClass(obj) {
 }
 
 Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
+  if ((typeof obj) != 'object') return obj;
   const keys = Object.keys(obj);
   if (!checked[obj.constructor.name]) {
     console.log('constructor: ' + obj.constructor.name);

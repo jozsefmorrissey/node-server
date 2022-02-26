@@ -201,14 +201,17 @@ class $t {
 			const valueName = match[2];
 			const obj = get('scope');
 			const keys = Object.keys(obj);
+			const isArray = Array.isArray(obj);
 			let built = '';
 			for (let index = 0; index < keys.length; index += 1) {
 				const key = keys[index];
-				const childScope = {};
-				childScope[keyName] = key;
-				childScope[valueName] = obj[key];
-				childScope.$index = index;
-				built += new $t(template).render(childScope, undefined, get);
+				if (!isArray || key.match(/^[0-9]{1,}$/)) {
+					const childScope = {};
+					childScope[keyName] = key;
+					childScope[valueName] = obj[key];
+					childScope.$index = index;
+					built += new $t(template).render(childScope, undefined, get);
+				}
 			}
       return built;
 		}
