@@ -6,6 +6,7 @@
 // terminology
 // name - String to define state;
 // payload - data returned for a given state
+//             - @_REQUIRED_NODES - An array of names that subsequent nodes must have to complete tree.
 // stateObject - object defining states {name: [payload]...}
 // states - array of availible state names.
 // node - {name, states, payload, then, addState, addStates};
@@ -18,6 +19,8 @@
 class DecisionTree {
   constructor(name, payload) {
     name = name || 'root';
+    payload._REQUIRED_NODES = Array.isArray(payload._REQUIRED_NODES) ?
+            payload._REQUIRED_NODES : [];
     const stateConfigs = {};
     const tree = {};
     const nodeMap = {};
@@ -41,6 +44,7 @@ class DecisionTree {
       constructor(name, payload, parent) {
         const states = {};
         let jump;
+        let isComplete = false; // null : requires evaluation
         payload = payload || {};
         payload._nodeId = `decision-node-${String.random(7)}`;
         nodeMap[payload._nodeId] = this;
@@ -52,7 +56,12 @@ class DecisionTree {
           if (name) jump = getState(name, parent);
           return jump;
         };
+        this.structureChanged = () => {
+          isComplete = null;
+          if (parent) parent.structureChanged();
+        }
         this.then = (name, payload) => {
+          structureChanged();
           payload = payload ? addState(name, payload) : stateConfigs[name];
           states[name] = (getState(name, this));
           const state = states[name];
@@ -76,6 +85,34 @@ class DecisionTree {
         }
         this.back = () => parent;
         this.top = () => rootNode;
+      }
+      this.getRoot = () => {
+        const root = this;
+        while (root.back()) root = root.back();
+        return root;
+      }
+
+      this.requiredNodes = () => {
+        const root = this;
+        const prevRequirements = parent ? parent.requiredNodes() : [];
+        const reqNodes = payload._REQUIRED_NODES.concat(prevRequirements);
+        const targetIndex = reqNodes.indexOf(this.name);
+        if (targetIndex !== -1) {
+          reqNodes = reqNodes.splice(targetIndex, 1)
+        }
+        return reqNodes;
+      }
+
+      this.isComplete = () => {
+        if (isComplete !== null) return isComplete;
+        const childRequiredNodes = this.requiredNodes();
+        if (childRequiredNodes.length === 0) return true;
+        isComplete = true;
+        for (let index = 0; isComplete && index < this.states.length; index += 1) {
+          const state = states[index];
+          isComplete = state.isComplete(childRequiredNodes);
+        }
+        return isComplete;
       }
     }
     DecisionNode.DO_NOT_CLONE = true;
