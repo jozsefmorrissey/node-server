@@ -29,7 +29,7 @@ const Properties = require('../../config/properties.js');
 
 
 
-const costTypes = ['Custom'];
+const costTypes = Cost.typeList;//['Custom'];
 class CostManager extends AbstractManager {
   constructor(id, name) {
     super(id, name);
@@ -182,7 +182,7 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
     name: 'costType',
     value: '/dev/nul',
     class: 'center',
-    list: Cost.group().defined
+    list: costTypes
   });
   const reference = new Input({
     name: 'referenceable',

@@ -21,8 +21,25 @@ const hideAll = (properties) => {
   for (let index = 0; index < properties.length; index += 1) {
     if (properties[index].value() !== null) return false;
   }
-  return true;
+  return properties.length > 0;
 }
+
+function updateSaveAll() {
+  const saveAllBtn = du.find('#property-manager-save-all');
+  saveAllBtn.hidden = !Properties.changes.changesExist();
+  if (saveAllBtn.hidden) {
+    const saveBtns = du.find.all('.save-change');
+    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
+  }
+}
+
+function saveAll() {
+  Properties.changes.saveAll();
+  save();
+  updateSaveAll();
+}
+
+
 function save() {
   Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
 }
@@ -47,7 +64,7 @@ class PropertyDisplay {
 
       const inputTree = PropertyDisplay.configInputTree();
       const expListProps = {
-        list: Properties.groupList(key),
+        list: Properties.hasValue(key),
         parentSelector: `#config-expand-list-${uniqueId}`,
         getHeader: (scope) =>
                     PropertyDisplay.configHeadTemplate.render(scope),
@@ -61,8 +78,14 @@ class PropertyDisplay {
         listElemLable: 'Config',
         getObject, inputTree
       };
-      setTimeout(() =>
-        new ExpandableObject(expListProps), 500);
+      setTimeout(() => {
+        const expList = new ExpandableObject(expListProps);
+        expList.afterRemoval((element, detail) => {
+          console.log(detail);
+          console.log('placehoder');
+          Properties.changes.delete(detail.properties._ID);
+        });
+      }, 500);
       return uniqueId;
     }
 
@@ -150,27 +173,34 @@ function updateRadio(elem) {
   if (name === 'UNIT') updateMeasurements();
 }
 
+function updateValueDisplay(elem) {
+  const id = elem.getAttribute('measurement-id');
+  const measurement = Measurement.get(id);
+  elem.value = measurement.display();
+}
+
 function updateValue(elem) {
   setPropertyElemValue(elem, 'prop-value-update', elem.value);
   const saveBtn = du.find.closest('.save-change', elem);
   saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
-  const saveAllBtn = du.find('#property-manager-save-all');
-  saveAllBtn.hidden = !Properties.changes.changesExist();
+  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
+  elem.setAttribute('measurement-id', measurementId);
+  updateSaveAll();
 }
 
 function saveChange(elem) {
   const id = elem.getAttribute('properties-id');
   Properties.changes.save(id);
   elem.hidden = true;
-  const saveAllBtn = du.find('#property-manager-save-all');
-  saveAllBtn.hidden = !Properties.changes.changesExist();
+  updateSaveAll();
   save();
 }
 
 
 du.on.match('keyup', '[prop-value-update]', updateValue);
+du.on.match('focusout', '[measurement-id]', updateValueDisplay);
 du.on.match('change', '[prop-radio-update]', updateRadio);
-du.on.match('click', '#property-manager-save-all', Properties.changes.saveAll);
+du.on.match('click', '#property-manager-save-all', saveAll);
 du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
 
 PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;

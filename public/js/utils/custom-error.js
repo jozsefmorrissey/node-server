@@ -7,7 +7,7 @@ class CustomEvent {
     const watchers = [];
     this.name = name;
 
-    const runFuncs = (e) => watchers.forEach((func) => func(e));
+    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
 
     this.on = function (func) {
       if ((typeof func) === 'function') {
@@ -17,9 +17,10 @@ class CustomEvent {
       }
     }
 
-    this.trigger = function (element) {
+    this.trigger = function (element, detail) {
       element = element === undefined ? window : element;
-      runFuncs(element);
+      runFuncs(element, detail);
+      this.event.detail = detail;
       if(document.createEvent){
           element.dispatchEvent(this.event);
       } else {
@@ -41,7 +42,3 @@ class CustomEvent {
 }
 
 module.exports = CustomEvent;
-
-
-
-

@@ -40,7 +40,7 @@ class Property extends Lookup {
     const existingProp = Property.list[code];
     let clone = false;
     if (this.properties().value !== undefined) {
-      this.value(this.properties().value);
+      this.value(this.properties().value, this.properties().notMetric);
     }
 
     // if (existingProp) {
@@ -51,7 +51,7 @@ class Property extends Lookup {
     // }
 
     if ((typeof value) === 'number')
-      value = new Measurement(value);
+      value = new Measurement(value, this.properties().notMetric);
 
 
     this.addChild = (property) => {
@@ -76,7 +76,8 @@ class Property extends Lookup {
       cProps.clone = true;
       cProps.value = val === undefined ? this.value() : val;
       cProps.description = this.description();
-      return new Property(code, name, cProps);
+      delete cProps.notMetric;
+      return new Property(this.code(), this.name(), cProps);
     }
     if(!clone) Property.list[code] = this;
     else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);

@@ -4752,6 +4752,7 @@ function (require, exports, module) {
 	// terminology
 	// name - String to define state;
 	// payload - data returned for a given state
+	//             - @_REQUIRED_NODES - An array of names that subsequent nodes must have to complete tree.
 	// stateObject - object defining states {name: [payload]...}
 	// states - array of availible state names.
 	// node - {name, states, payload, then, addState, addStates};
@@ -4764,6 +4765,8 @@ function (require, exports, module) {
 	class DecisionTree {
 	  constructor(name, payload) {
 	    name = name || 'root';
+	    payload._REQUIRED_NODES = Array.isArray(payload._REQUIRED_NODES) ?
+	            payload._REQUIRED_NODES : [];
 	    const stateConfigs = {};
 	    const tree = {};
 	    const nodeMap = {};
@@ -4787,6 +4790,7 @@ function (require, exports, module) {
 	      constructor(name, payload, parent) {
 	        const states = {};
 	        let jump;
+	        let isComplete = false; // null : requires evaluation
 	        payload = payload || {};
 	        payload._nodeId = `decision-node-${String.random(7)}`;
 	        nodeMap[payload._nodeId] = this;
@@ -4798,7 +4802,12 @@ function (require, exports, module) {
 	          if (name) jump = getState(name, parent);
 	          return jump;
 	        };
+	        this.structureChanged = () => {
+	          isComplete = null;
+	          if (parent) parent.structureChanged();
+	        }
 	        this.then = (name, payload) => {
+	          this.structureChanged();
 	          payload = payload ? addState(name, payload) : stateConfigs[name];
 	          states[name] = (getState(name, this));
 	          const state = states[name];
@@ -4820,8 +4829,38 @@ function (require, exports, module) {
 	          }
 	          return payloads.reverse();
 	        }
+	
 	        this.back = () => parent;
 	        this.top = () => rootNode;
+	
+	        this.getRoot = () => {
+	          const root = this;
+	          while (root.back()) root = root.back();
+	          return root;
+	        }
+	
+	        this.requiredNodes = () => {
+	          const root = this;
+	          const prevRequirements = parent ? parent.requiredNodes() : [];
+	          const reqNodes = payload._REQUIRED_NODES.concat(prevRequirements);
+	          const targetIndex = reqNodes.indexOf(this.name);
+	          if (targetIndex !== -1) {
+	            reqNodes = reqNodes.splice(targetIndex, 1)
+	          }
+	          return reqNodes;
+	        }
+	
+	        this.isComplete = () => {
+	          if (isComplete !== null) return isComplete;
+	          const childRequiredNodes = this.requiredNodes();
+	          if (childRequiredNodes.length === 0) return true;
+	          isComplete = true;
+	          for (let index = 0; isComplete && index < this.states.length; index += 1) {
+	            const state = states[index];
+	            isComplete = state.isComplete(childRequiredNodes);
+	          }
+	          return isComplete;
+	        }
 	      }
 	    }
 	    DecisionNode.DO_NOT_CLONE = true;
@@ -5461,7 +5500,7 @@ function (require, exports, module) {
 	    const watchers = [];
 	    this.name = name;
 	
-	    const runFuncs = (e) => watchers.forEach((func) => func(e));
+	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
 	
 	    this.on = function (func) {
 	      if ((typeof func) === 'function') {
@@ -5471,9 +5510,10 @@ function (require, exports, module) {
 	      }
 	    }
 	
-	    this.trigger = function (element) {
+	    this.trigger = function (element, detail) {
 	      element = element === undefined ? window : element;
-	      runFuncs(element);
+	      runFuncs(element, detail);
+	      this.event.detail = detail;
 	      if(document.createEvent){
 	          element.dispatchEvent(this.event);
 	      } else {
@@ -5495,10 +5535,6 @@ function (require, exports, module) {
 	}
 	
 	module.exports = CustomEvent;
-	
-	
-	
-	
 	
 });
 
@@ -5831,6 +5867,7 @@ RequireJS.addFunction('../../public/js/utils/measurment.js',
 function (require, exports, module) {
 	
 const Lookup = require('./object/lookup');
+	const StringMathEvaluator = require('./string-math-evaluator');
 	
 	function regexToObject (str, reg) {
 	  const match = str.match(reg);
@@ -5845,10 +5882,10 @@ const Lookup = require('./object/lookup');
 	
 	let percision = '1/32';
 	let units = [
-	              'Imperial (US)',
-	              'Metric'
+	  'Metric',
+	  'Imperial (US)'
 	]
-	let unit = units[0];
+	let unit = units[1];
 	
 	
 	class Measurement extends Lookup {
@@ -5858,7 +5895,15 @@ const Lookup = require('./object/lookup');
 	      value += ' '; // Hacky fix for regularExpression
 	    }
 	
-	    const isNotMetric = () => unit !== units[1] && notMetric === true;
+	    const determineUnit = () => {
+	      if ((typeof notMetric === 'string')) {
+	        const index = units.indexOf(notMetric);
+	        if (index !== -1) return units[index];
+	      } else if ((typeof notMetric) === 'boolean') {
+	        if (notMetric === true) return unit;
+	      }
+	      return units[0];
+	    }
 	
 	    let decimal = 0;
 	    let nan = value === null || value === undefined;
@@ -5934,8 +5979,8 @@ const Lookup = require('./object/lookup');
 	
 	    this.display = (accuracy) => {
 	      switch (unit) {
-	        case units[0]: return this.standardUS(accuracy);
-	        case units[1]: return Math.round(this.decimal(accuracy)*10) / 10;
+	        case units[0]: return this.decimal(accuracy);
+	        case units[1]: return this.standardUS(accuracy);
 	        default:
 	            return this.standardUS(accuracy);
 	      }
@@ -5948,20 +5993,37 @@ const Lookup = require('./object/lookup');
 	      accuracy = accuracy % 100 ? accuracy : 100;
 	      return Math.round(decimal * accuracy) / accuracy;
 	    }
-	    const convertToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+	
+	    function getDecimalEquivalant(string) {
+	      string = string.trim();
+	      if (string.match(StringMathEvaluator.decimalReg)) {
+	        return Number.parseFloat(string);
+	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
+	        return parseFraction(string).decimal
+	      }
+	      nan = true;
+	      return NaN;
+	    }
+	
+	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+	
+	    function standardize(ambiguousDecimal) {
+	      switch (determineUnit()) {
+	        case units[0]:
+	          return ambiguousDecimal;
+	        case units[1]:
+	          return convertUsToMetric(ambiguousDecimal);
+	        default:
+	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
+	      }
+	    }
 	
 	    if ((typeof value) === 'number') {
-	      if (isNotMetric()) {
-	          convertToMetric(value);
-	      }
-	      decimal = value;
+	      decimal = standardize(value);
 	    } else if ((typeof value) === 'string') {
 	      try {
-	        if (isNotMetric()) {
-	          const standardDecimal = parseFraction(value).decimal;
-	          convertToMetric(standardDecimal);
-	        }
-	        decimal = value;
+	        const ambiguousDecimal = getDecimalEquivalant(value);
+	        decimal = standardize(ambiguousDecimal);
 	      } catch (e) {
 	        nan = true;
 	      }
@@ -6284,7 +6346,7 @@ function regexToObject (str, reg) {
 	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
 	    }
 	
-	    const isolateNumber = isolateValueReg(StringMathEvaluator.numReg, Number.parseFloat);
+	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
 	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
 	
 	    this.cache = (expr) => {
@@ -6348,11 +6410,12 @@ function regexToObject (str, reg) {
 	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
 	
 	StringMathEvaluator.mixedNumberReg = /([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
+	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
 	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
 	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
 	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
 	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
-	StringMathEvaluator.numReg = /^(-|)[0-9\.]{1,}/;
+	StringMathEvaluator.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
 	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
 	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
 	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
@@ -7174,8 +7237,9 @@ function (require, exports, module) {
 	class ExpandableList extends Expandable {
 	  constructor(props) {
 	    super(props);
+	    const superRemove = this.remove;
 	    this.remove = (index) => {
-	      props.list.splice(index, 1);
+	      superRemove(props.list.splice(index, 1));
 	      this.refresh();
 	    }
 	  }
@@ -7200,9 +7264,11 @@ function (require, exports, module) {
 	  constructor(props) {
 	    super(props);
 		//TODO: Set aciveKey
+	    const superRemove = this.remove;
 	    this.remove = (key) => {
-	      props.list[key] = undefined;
-	      this.refresh();
+	      const removed = props.list[key];
+	      delete props.list[key];
+	      superRemove(removed);
 	    }
 	
 	    this.getKey = () => this.values().name;
@@ -7420,6 +7486,7 @@ function (require, exports, module) {
 	    const afterRenderEvent = new CustomEvent('afterRender');
 	    const afterAddEvent = new CustomEvent('afterAdd');
 	    const afterRefreshEvent = new CustomEvent('afterRefresh');
+	    const afterRemovalEvent = new CustomEvent('afterRemoval');
 	    const instance = this;
 	    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
 	    props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
@@ -7494,14 +7561,15 @@ function (require, exports, module) {
 	    props.hasInputTree = this.hasInputTree;
 	
 	    this.isSelfClosing = () => props.selfCloseTab;
-	    this.remove = (key) => {
-	      props.list.splice(key, 1);
+	    this.remove = (removed) => {
+	      afterRemovalEvent.trigger(undefined, removed);
 	      this.refresh();
 	    }
 	    this.html = () =>
 	      Expandable[`${instance.type()}Template`].render(this);
 	    this.afterRender = (func) => afterRenderEvent.on(func);
 	    this.afterAdd = (func) => afterAddEvent.on(func);
+	    this.afterRemoval = (func) => afterRemovalEvent.on(func);
 	    this.refresh = (type) => {
 	      this.type((typeof type) === 'string' ? type : props.type);
 	      if (!pendingRefresh) {
@@ -7520,6 +7588,7 @@ function (require, exports, module) {
 	    };
 	    this.getKey = this.list().length;
 	    this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
+	    this.getKey = () => this.activeKey();
 	    this.active = () => props.list[this.activeKey()];
 	    // TODO: figure out why i wrote this and if its neccisary.
 	    this.value = (key) => (key2, value) => {
@@ -11078,8 +11147,25 @@ function (require, exports, module) {
 	  for (let index = 0; index < properties.length; index += 1) {
 	    if (properties[index].value() !== null) return false;
 	  }
-	  return true;
+	  return properties.length > 0;
 	}
+	
+	function updateSaveAll() {
+	  const saveAllBtn = du.find('#property-manager-save-all');
+	  saveAllBtn.hidden = !Properties.changes.changesExist();
+	  if (saveAllBtn.hidden) {
+	    const saveBtns = du.find.all('.save-change');
+	    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
+	  }
+	}
+	
+	function saveAll() {
+	  Properties.changes.saveAll();
+	  save();
+	  updateSaveAll();
+	}
+	
+	
 	function save() {
 	  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
 	}
@@ -11104,7 +11190,7 @@ function (require, exports, module) {
 	
 	      const inputTree = PropertyDisplay.configInputTree();
 	      const expListProps = {
-	        list: Properties.groupList(key),
+	        list: Properties.hasValue(key),
 	        parentSelector: `#config-expand-list-${uniqueId}`,
 	        getHeader: (scope) =>
 	                    PropertyDisplay.configHeadTemplate.render(scope),
@@ -11118,8 +11204,14 @@ function (require, exports, module) {
 	        listElemLable: 'Config',
 	        getObject, inputTree
 	      };
-	      setTimeout(() =>
-	        new ExpandableObject(expListProps), 500);
+	      setTimeout(() => {
+	        const expList = new ExpandableObject(expListProps);
+	        expList.afterRemoval((element, detail) => {
+	          console.log(detail);
+	          console.log('placehoder');
+	          Properties.changes.delete(detail.properties._ID);
+	        });
+	      }, 500);
 	      return uniqueId;
 	    }
 	
@@ -11207,27 +11299,34 @@ function (require, exports, module) {
 	  if (name === 'UNIT') updateMeasurements();
 	}
 	
+	function updateValueDisplay(elem) {
+	  const id = elem.getAttribute('measurement-id');
+	  const measurement = Measurement.get(id);
+	  elem.value = measurement.display();
+	}
+	
 	function updateValue(elem) {
 	  setPropertyElemValue(elem, 'prop-value-update', elem.value);
 	  const saveBtn = du.find.closest('.save-change', elem);
 	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
-	  const saveAllBtn = du.find('#property-manager-save-all');
-	  saveAllBtn.hidden = !Properties.changes.changesExist();
+	  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
+	  elem.setAttribute('measurement-id', measurementId);
+	  updateSaveAll();
 	}
 	
 	function saveChange(elem) {
 	  const id = elem.getAttribute('properties-id');
 	  Properties.changes.save(id);
 	  elem.hidden = true;
-	  const saveAllBtn = du.find('#property-manager-save-all');
-	  saveAllBtn.hidden = !Properties.changes.changesExist();
+	  updateSaveAll();
 	  save();
 	}
 	
 	
 	du.on.match('keyup', '[prop-value-update]', updateValue);
+	du.on.match('focusout', '[measurement-id]', updateValueDisplay);
 	du.on.match('change', '[prop-radio-update]', updateRadio);
-	du.on.match('click', '#property-manager-save-all', Properties.changes.saveAll);
+	du.on.match('click', '#property-manager-save-all', saveAll);
 	du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
 	
 	PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
@@ -11783,7 +11882,7 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	    const existingProp = Property.list[code];
 	    let clone = false;
 	    if (this.properties().value !== undefined) {
-	      this.value(this.properties().value);
+	      this.value(this.properties().value, this.properties().notMetric);
 	    }
 	
 	    // if (existingProp) {
@@ -11794,7 +11893,7 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	    // }
 	
 	    if ((typeof value) === 'number')
-	      value = new Measurement(value);
+	      value = new Measurement(value, this.properties().notMetric);
 	
 	
 	    this.addChild = (property) => {
@@ -11819,7 +11918,8 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	      cProps.clone = true;
 	      cProps.value = val === undefined ? this.value() : val;
 	      cProps.description = this.description();
-	      return new Property(code, name, cProps);
+	      delete cProps.notMetric;
+	      return new Property(this.code(), this.name(), cProps);
 	    }
 	    if(!clone) Property.list[code] = this;
 	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
@@ -11915,46 +12015,47 @@ function (require, exports, module) {
 	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
 	UNITS._VALUE = Measurement.unit();
 	
+	const IMPERIAL_US = Measurement.units()[1];
 	const assemProps = {
 	  Overlay: [
-	    new Property('ov', 'Overlay', 1/2)
+	    new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
 	  ],
 	  Reveal: [
-	    new Property('r', 'Reveal', 1/8),
-	    new Property('rvt', 'Reveal Top', 1/2),
-	    new Property('rvb', 'Reveal Bottom', 0)
+	    new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
+	    new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
 	  ],
 	  Inset: [
-	    new Property('is', 'Spacing', 3/32)
+	    new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
 	  ],
 	  Cabinet: [
 	      h.clone(), w.clone(), d.clone(),
-	      new Property('sr', 'Scribe Right', 3/8),
-	      new Property('sl', 'Scribe Left', 3/8),
-	      new Property('rvibr', 'Reveal Inside Bottom Rail', 1/8),
-	      new Property('rvdd', 'Reveal Dual Door', 1/16),
-	      new Property('tkbw', 'Toe Kick Backer Width', 1/2),
-	      new Property('tkd', 'Toe Kick Depth', 4),
-	      new Property('tkh', 'Toe Kick Height', 4),
-	      new Property('pbt', 'Panel Back Thickness', 1/2),
-	      new Property('iph', 'Ideal Handle Height', 42)
+	      new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
+	      new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
+	      new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
+	      new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
+	      new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
+	      new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
+	      new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
+	      new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
+	      new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
 	  ],
 	  Panel: [
 	    h.clone(), w.clone(), t.clone()
 	  ],
 	  Guides: [
 	    l.clone(),
-	    new Property('dbtos', 'Drawer Box Top Offset', 1/2),
-	    new Property('dbsos', 'Drawer Box Side Offest', 3/16),
-	    new Property('dbbos', 'Drawer Box Bottom Offset', 1/2)
+	    new Property('dbtos', 'Drawer Box Top Offset', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('dbsos', 'Drawer Box Side Offest', {value: 3/16, notMetric: IMPERIAL_US}),
+	    new Property('dbbos', 'Drawer Box Bottom Offset', {value: 1/2, notMetric: IMPERIAL_US})
 	  ],
 	  Door: [
 	    h.clone(), w.clone(), t.clone()
 	  ],
 	  DrawerBox: [
 	    h.clone(), w.clone(), d.clone(),
-	    new Property('dbst', 'Side Thickness', 5/8),
-	    new Property('dbbt', 'Box Bottom Thickness', 1/4)
+	    new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
+	    new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US})
 	  ],
 	  DrawerFront: [
 	    h.clone(), w.clone(), t.clone()
@@ -11996,23 +12097,30 @@ function (require, exports, module) {
 	    if (config[group] === undefined) config[group] = [];
 	    if(copyMap[id] === undefined) {
 	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
-	      copyMap[list._ID] = config[group][list._NAME];
+	      copyMap[list._ID] = config[group][list._NAME].properties;
 	    } else {
 	      const tempList = changes[id];
 	      for (let index = 0; index < tempList.length; index += 1) {
 	        const tempProp = tempList[index];
 	        const configProp = copyMap[id][index];
-	        configProp.value(tempProp.value(), true);
+	        configProp.value(tempProp.value());
 	      }
 	    }
 	   },
 	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
-	  delete: (id) => delete changes[id],
+	  delete: (id) => {
+	    delete config[changes[id][0].name()][changes[id]._NAME];
+	    delete changes[id];
+	    delete copyMap[id];
+	  },
 	  changed: (id) => {
 	    const list = changes[id];
 	    if (list === undefined) return false;
 	    for (let index = 0; index < list.length; index += 1) {
 	      const prop = list[index];
+	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
+	        console.log('booyacka!');
+	      }
 	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
 	        return true;
 	      }
@@ -12053,7 +12161,7 @@ function (require, exports, module) {
 	assemProperties.new = (group, name) => {
 	  if (assemProps[group]) {
 	    const list = [];
-	    const ogList = assemProps[group];
+	    const ogList = assemProps[group].filter(hasValueFilter);
 	    for (let index = 0; index < ogList.length; index += 1) {
 	      list[index] = ogList[index].clone();
 	    }
@@ -12066,7 +12174,9 @@ function (require, exports, module) {
 	  throw new Error(`Requesting invalid Property Group '${group}'`);
 	}
 	
-	assemProperties.groupList = (group) => {
+	const dummyFilter = () => true;
+	assemProperties.groupList = (group, filter) => {
+	  filter = filter || dummyFilter;
 	  console.log(group, `(${typeof group})`);
 	  const groupList = config[group];
 	  const changeList = {};
@@ -12076,17 +12186,34 @@ function (require, exports, module) {
 	    const groupKey = groupKeys[index];
 	    const list = groupList[groupKey];
 	    const properties = groupList[list.name].properties;
+	    const codes = properties.map((prop) => prop.code());
+	    const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1 && prop.value() !== null);
+	    newProps.forEach((prop) => properties.push(prop.clone()));
 	    changeList[list.name] = {name: list.name, properties: []};
 	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
-	      changeList[list.name].properties.push(properties[pIndex].clone());
+	      const prop = properties[pIndex];
+	      changeList[list.name].properties.push(prop.clone());
 	    }
 	    const uniqueId = String.random();
-	    changeList[list.name].properties._ID = uniqueId;
-	    changes[uniqueId] = changeList[list.name].properties;
+	    const set = changeList[list.name].properties;
+	    set._ID = uniqueId;
+	    set._NAME = list.name;
+	    changes[uniqueId] = set;
 	    copyMap[uniqueId] = properties;
 	  }
 	  return changeList;
 	}
+	
+	const hasValueFilter = (prop) => prop.value() !== null;
+	assemProperties.hasValue = (group) => {
+	  return assemProperties.groupList(group, hasValueFilter);
+	}
+	
+	const noValueFilter = (prop) => prop.value() === null;
+	assemProperties.noValue = (group) => {
+	  return assemProperties.groupList(group, noValueFilter);
+	}
+	
 	assemProperties.UNITS = UNITS;
 	
 	assemProperties.load = (body) => {
@@ -12936,7 +13063,7 @@ function (require, exports, module) {
 	
 	
 	
-	const costTypes = ['Custom'];
+	const costTypes = Cost.typeList;//['Custom'];
 	class CostManager extends AbstractManager {
 	  constructor(id, name) {
 	    super(id, name);
@@ -13089,7 +13216,7 @@ function (require, exports, module) {
 	    name: 'costType',
 	    value: '/dev/nul',
 	    class: 'center',
-	    list: Cost.group().defined
+	    list: costTypes
 	  });
 	  const reference = new Input({
 	    name: 'referenceable',

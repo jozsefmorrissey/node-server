@@ -10,9 +10,11 @@ class ExpandableObject extends Expandable {
   constructor(props) {
     super(props);
 	//TODO: Set aciveKey
+    const superRemove = this.remove;
     this.remove = (key) => {
-      props.list[key] = undefined;
-      this.refresh();
+      const removed = props.list[key];
+      delete props.list[key];
+      superRemove(removed);
     }
 
     this.getKey = () => this.values().name;

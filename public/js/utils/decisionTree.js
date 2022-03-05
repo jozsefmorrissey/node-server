@@ -61,7 +61,7 @@ class DecisionTree {
           if (parent) parent.structureChanged();
         }
         this.then = (name, payload) => {
-          structureChanged();
+          this.structureChanged();
           payload = payload ? addState(name, payload) : stateConfigs[name];
           states[name] = (getState(name, this));
           const state = states[name];
@@ -83,36 +83,38 @@ class DecisionTree {
           }
           return payloads.reverse();
         }
+
         this.back = () => parent;
         this.top = () => rootNode;
-      }
-      this.getRoot = () => {
-        const root = this;
-        while (root.back()) root = root.back();
-        return root;
-      }
 
-      this.requiredNodes = () => {
-        const root = this;
-        const prevRequirements = parent ? parent.requiredNodes() : [];
-        const reqNodes = payload._REQUIRED_NODES.concat(prevRequirements);
-        const targetIndex = reqNodes.indexOf(this.name);
-        if (targetIndex !== -1) {
-          reqNodes = reqNodes.splice(targetIndex, 1)
+        this.getRoot = () => {
+          const root = this;
+          while (root.back()) root = root.back();
+          return root;
         }
-        return reqNodes;
-      }
 
-      this.isComplete = () => {
-        if (isComplete !== null) return isComplete;
-        const childRequiredNodes = this.requiredNodes();
-        if (childRequiredNodes.length === 0) return true;
-        isComplete = true;
-        for (let index = 0; isComplete && index < this.states.length; index += 1) {
-          const state = states[index];
-          isComplete = state.isComplete(childRequiredNodes);
+        this.requiredNodes = () => {
+          const root = this;
+          const prevRequirements = parent ? parent.requiredNodes() : [];
+          const reqNodes = payload._REQUIRED_NODES.concat(prevRequirements);
+          const targetIndex = reqNodes.indexOf(this.name);
+          if (targetIndex !== -1) {
+            reqNodes = reqNodes.splice(targetIndex, 1)
+          }
+          return reqNodes;
         }
-        return isComplete;
+
+        this.isComplete = () => {
+          if (isComplete !== null) return isComplete;
+          const childRequiredNodes = this.requiredNodes();
+          if (childRequiredNodes.length === 0) return true;
+          isComplete = true;
+          for (let index = 0; isComplete && index < this.states.length; index += 1) {
+            const state = states[index];
+            isComplete = state.isComplete(childRequiredNodes);
+          }
+          return isComplete;
+        }
       }
     }
     DecisionNode.DO_NOT_CLONE = true;

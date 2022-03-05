@@ -30,6 +30,7 @@ class Expandable {
     const afterRenderEvent = new CustomEvent('afterRender');
     const afterAddEvent = new CustomEvent('afterAdd');
     const afterRefreshEvent = new CustomEvent('afterRefresh');
+    const afterRemovalEvent = new CustomEvent('afterRemoval');
     const instance = this;
     props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
     props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
@@ -104,14 +105,15 @@ class Expandable {
     props.hasInputTree = this.hasInputTree;
 
     this.isSelfClosing = () => props.selfCloseTab;
-    this.remove = (key) => {
-      props.list.splice(key, 1);
+    this.remove = (removed) => {
+      afterRemovalEvent.trigger(undefined, removed);
       this.refresh();
     }
     this.html = () =>
       Expandable[`${instance.type()}Template`].render(this);
     this.afterRender = (func) => afterRenderEvent.on(func);
     this.afterAdd = (func) => afterAddEvent.on(func);
+    this.afterRemoval = (func) => afterRemovalEvent.on(func);
     this.refresh = (type) => {
       this.type((typeof type) === 'string' ? type : props.type);
       if (!pendingRefresh) {
@@ -130,6 +132,7 @@ class Expandable {
     };
     this.getKey = this.list().length;
     this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
+    this.getKey = () => this.activeKey();
     this.active = () => props.list[this.activeKey()];
     // TODO: figure out why i wrote this and if its neccisary.
     this.value = (key) => (key2, value) => {

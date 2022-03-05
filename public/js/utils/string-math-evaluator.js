@@ -191,7 +191,7 @@ class StringMathEvaluator {
       return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
     }
 
-    const isolateNumber = isolateValueReg(StringMathEvaluator.numReg, Number.parseFloat);
+    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
     const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
 
     this.cache = (expr) => {
@@ -255,11 +255,12 @@ class StringMathEvaluator {
 StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
 
 StringMathEvaluator.mixedNumberReg = /([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
+StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
 StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
 StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
 StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
 StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
-StringMathEvaluator.numReg = /^(-|)[0-9\.]{1,}/;
+StringMathEvaluator.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
 StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
 StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
 StringMathEvaluator.multi = (n1, n2) => n1 * n2;

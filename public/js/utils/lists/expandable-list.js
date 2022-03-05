@@ -9,8 +9,9 @@ const Expandable = require('./expandable');
 class ExpandableList extends Expandable {
   constructor(props) {
     super(props);
+    const superRemove = this.remove;
     this.remove = (index) => {
-      props.list.splice(index, 1);
+      superRemove(props.list.splice(index, 1));
       this.refresh();
     }
   }

@@ -1,5 +1,6 @@
 
 const Lookup = require('./object/lookup');
+const StringMathEvaluator = require('./string-math-evaluator');
 
 function regexToObject (str, reg) {
   const match = str.match(reg);
@@ -14,10 +15,10 @@ function regexToObject (str, reg) {
 
 let percision = '1/32';
 let units = [
-              'Imperial (US)',
-              'Metric'
+  'Metric',
+  'Imperial (US)'
 ]
-let unit = units[0];
+let unit = units[1];
 
 
 class Measurement extends Lookup {
@@ -27,7 +28,15 @@ class Measurement extends Lookup {
       value += ' '; // Hacky fix for regularExpression
     }
 
-    const isNotMetric = () => unit !== units[1] && notMetric === true;
+    const determineUnit = () => {
+      if ((typeof notMetric === 'string')) {
+        const index = units.indexOf(notMetric);
+        if (index !== -1) return units[index];
+      } else if ((typeof notMetric) === 'boolean') {
+        if (notMetric === true) return unit;
+      }
+      return units[0];
+    }
 
     let decimal = 0;
     let nan = value === null || value === undefined;
@@ -103,8 +112,8 @@ class Measurement extends Lookup {
 
     this.display = (accuracy) => {
       switch (unit) {
-        case units[0]: return this.standardUS(accuracy);
-        case units[1]: return Math.round(this.decimal(accuracy)*10) / 10;
+        case units[0]: return this.decimal(accuracy);
+        case units[1]: return this.standardUS(accuracy);
         default:
             return this.standardUS(accuracy);
       }
@@ -117,20 +126,37 @@ class Measurement extends Lookup {
       accuracy = accuracy % 100 ? accuracy : 100;
       return Math.round(decimal * accuracy) / accuracy;
     }
-    const convertToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+
+    function getDecimalEquivalant(string) {
+      string = string.trim();
+      if (string.match(StringMathEvaluator.decimalReg)) {
+        return Number.parseFloat(string);
+      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
+        return parseFraction(string).decimal
+      }
+      nan = true;
+      return NaN;
+    }
+
+    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+
+    function standardize(ambiguousDecimal) {
+      switch (determineUnit()) {
+        case units[0]:
+          return ambiguousDecimal;
+        case units[1]:
+          return convertUsToMetric(ambiguousDecimal);
+        default:
+          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
+      }
+    }
 
     if ((typeof value) === 'number') {
-      if (isNotMetric()) {
-          convertToMetric(value);
-      }
-      decimal = value;
+      decimal = standardize(value);
     } else if ((typeof value) === 'string') {
       try {
-        if (isNotMetric()) {
-          const standardDecimal = parseFraction(value).decimal;
-          convertToMetric(standardDecimal);
-        }
-        decimal = value;
+        const ambiguousDecimal = getDecimalEquivalant(value);
+        decimal = standardize(ambiguousDecimal);
       } catch (e) {
         nan = true;
       }
