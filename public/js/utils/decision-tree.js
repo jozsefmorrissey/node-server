@@ -7,6 +7,8 @@
 // name - String to define state;
 // payload - data returned for a given state
 //             - @_REQUIRED_NODES - An array of names that subsequent nodes must have to complete tree.
+//             - @_UNIQUE_NAME_GROUP - An Identifier used to insure all nodes of multople trees have a unique name.
+//                          note: only applicable on root node. governs entire tree
 // stateObject - object defining states {name: [payload]...}
 // states - array of availible state names.
 // node - {name, states, payload, then, addState, addStates};
@@ -24,8 +26,12 @@ class DecisionTree {
     const stateConfigs = {};
     const tree = {};
     const nodeMap = {};
+    const uniqueGroup = payload._UNIQUE_NAME_GROUP;
 
     function addState(name, payload) {
+      if (uniqueGroup && this.declairedName(name)) {
+        throw new Error('Name already declared: This requires unique naming possibly relitive to other trees use DecisionTree.undeclairedName(name) to validate names')
+      }
       return stateConfigs[name] = payload;
     }
 
@@ -60,12 +66,18 @@ class DecisionTree {
           isComplete = null;
           if (parent) parent.structureChanged();
         }
-        this.then = (name, payload) => {
+        this.then = (name, payload, conditional) => {
           this.structureChanged();
           payload = payload ? addState(name, payload) : stateConfigs[name];
-          states[name] = (getState(name, this));
-          const state = states[name];
-          return state === undefined ? undefined : state.jump() || state;
+          const newState = getState(name, payload);
+          if ((typeof conditional) === 'string') {
+            const stateId = `${this.name}:${conditional}`;
+            states[stateId] = getState(stateId, this);
+            states[stateId].jump(newState);
+          } else {
+            states[name] = newState;
+          }
+          return newState === undefined ? undefined : newState.jump() || newState;
         }
         this.addState = (name, payload) => addState(name, payload) && this;
         this.addStates = (sts) => addStates(sts) && this;
@@ -86,10 +98,11 @@ class DecisionTree {
 
         this.back = () => parent;
         this.top = () => rootNode;
+        this.isRoot = () => !(parent instanceof DecisionNode)
 
         this.getRoot = () => {
           const root = this;
-          while (root.back()) root = root.back();
+          while (!root.isRoot()) root = root.back();
           return root;
         }
 
@@ -120,7 +133,34 @@ class DecisionTree {
     DecisionNode.DO_NOT_CLONE = true;
 
     const rootNode = new DecisionNode(name, payload, null);
+    if (uniqueGroup) {
+      DecisionTree.registerUniqueNameGroup(uniqueGroup, rootNode);
+      this.undeclairedName = (name) => DecisionTree.undeclairedName(uniqueGroup, rootNode);
+    }
     return rootNode;
+  }
+}
+
+{
+  const declarationMap = {};
+  DecisionTree.registerUniqueNameGroup = (uniqueGroup, decisionNode) => {
+    if (decisionNode.constructor.name !== 'DecisionNode' ||
+            !decisionNode.isRoot()) {
+      throw new Error('Can only register the root node of a DecisionTree');
+    }
+    if (declarationMap[uniqueGroup] === undefined) declarationMap[uniqueGroup] = [];
+    declarationMap[uniqueGroup].push(decisionNode);
+  }
+  DecisionTree.undeclairedName = (uniqueGroup, name) => {
+    const list = declarationMap[uniqueGroup] || [];
+    for (let index = 0; index < list.length; index += 1) {
+      const states = list[index];
+      for (let sIndex = 0; sIndex < states.length; sIndex += 1) {
+        const node = states[sIndex];
+        if (node.name === name) return false;
+      }
+    }
+    return true;
   }
 }
 

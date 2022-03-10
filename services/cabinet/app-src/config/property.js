@@ -8,7 +8,7 @@ class Property extends Lookup {
   // clone constructor(code, value) {
   constructor(code, name, props) {
     super();
-    let value = (typeof props) === 'object' && props !== null ? props.value : undefined;
+    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
     const children = [];
 
     const initVals = {

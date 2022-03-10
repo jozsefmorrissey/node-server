@@ -4,6 +4,7 @@
 const AbstractManager = require('../abstract-manager.js');
 const Assembly = require('../../objects/assembly/assembly.js');
 const Cost = require('../../cost/cost.js');
+const CostDecision = require('../../cost/cost-decision.js');
 const SelectCost = require('../../cost/types/select.js');
 const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
 const Select = require('../../../../../public/js/utils/input/styles/select.js');
@@ -28,8 +29,9 @@ const propertyDisplay = Displays.get('propertyDisplay');
 const Properties = require('../../config/properties.js');
 
 
+const notCostGroups = ['Overlay', 'Inset', 'Reveal'];
 
-const costTypes = Cost.typeList;//['Custom'];
+const costTypes = ['Custom'];
 class CostManager extends AbstractManager {
   constructor(id, name) {
     super(id, name);
@@ -50,25 +52,26 @@ class CostManager extends AbstractManager {
     this.costTypeHtml = CostManager.costTypeHtml;
     this.fromJson = (json) => {
       CostManager.partList = CostManager.partList ||
-          Properties.list();
+          Properties.list().filter((name) => notCostGroups.indexOf(name) === -1);
       CostManager.partList.sort();
       CostManager.partList.forEach((id) => {
         const parentId = `cost-group-${String.random()}`;
-        const expListProps = {
-          list: json[id] ? Cost.fromJson(json[id]) : [],
-          inputValidation: () => true,
-          parentId,
-          parentSelector: `#${parentId}`,
-          inputTree:   CostManager.costInputTree(costTypes, id),
-          getHeader: CostManager.costHeader,
-          getBody: CostManager.costBody,
-          getObject: CostManager.getCostObject(id),
-          listElemLable: `Cost to ${id}`
-        };
-        const cost = new SelectCost({id, children: expListProps.list});
-        const expandList = new ExpandableList(expListProps);
-        list.push({partId: id, expandList,
-          CostManager: CostManager, parentId, cost});
+        let costDecision = new CostDecision(id, json[id]);
+        // const expListProps = {
+        //   list: json[id] ? Cost.fromJson(json[id]) : [],
+        //   inputValidation: () => true,
+        //   parentId,
+        //   parentSelector: `#${parentId}`,
+        //   inputTree:   CostManager.costInputTree(costTypes, id),
+        //   getHeader: CostManager.costHeader,
+        //   getBody: CostManager.costBody,
+        //   getObject: CostManager.getCostObject(id),
+        //   listElemLable: `Cost to ${id}`
+        // };
+        // const cost = new SelectCost({id, children: expListProps.list});
+        // const expandList = new ExpandableList(expListProps);
+        list.push({partId: id, costDecision,
+          CostManager: CostManager, parentId});
       });
       propertyDisplay.update();
       return list;
@@ -143,16 +146,16 @@ CostManager.getCostObject = (id) => (values, target) => {
 
 CostManager.typeTemplates = {};
 CostManager.costTypeHtml = (cost, scope) => {
-  const constName = cost.constructor.name;
-  if (CostManager.typeTemplates[constName])
-    return CostManager.typeTemplates[constName].render(scope);
-  const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
-  if ($t.isTemplate(fileId)) {
-    template = new $t(fileId);
-    CostManager.typeTemplates[constName] = template;
-    return template.render(scope);
-  }
-  return 'nada';
+  // const constName = cost.constructor.name;
+  // if (CostManager.typeTemplates[constName])
+  //   return CostManager.typeTemplates[constName].render(scope);
+  // const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
+  // if ($t.isTemplate(fileId)) {
+  //   template = new $t(fileId);
+  //   CostManager.typeTemplates[constName] = template;
+  //   return template.render(scope);
+  // }
+  return scope.costDecision.tree().requiredNodes();
 }
 
 
@@ -180,7 +183,7 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
 
   const costTypeSelect = new Select({
     name: 'costType',
-    value: '/dev/nul',
+    value: 'Custom',
     class: 'center',
     list: costTypes
   });
@@ -258,7 +261,7 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
     conditionalInfo
   });
 
-  const idTypeNode = decisionInput.then('costType:/dev/nul')
+  const idTypeNode = decisionInput.then('costType:Custom')
         .jump('idType');
 
 

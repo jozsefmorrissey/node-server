@@ -52,16 +52,23 @@ const assemProps = {
     new Property('dbsos', 'Drawer Box Side Offest', {value: 3/16, notMetric: IMPERIAL_US}),
     new Property('dbbos', 'Drawer Box Bottom Offset', {value: 1/2, notMetric: IMPERIAL_US})
   ],
+  DoorAndFront:[
+    new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
+    new Property('dafip', 'Door and front inset panel', {value: null})
+  ],
   Door: [
     h.clone(), w.clone(), t.clone()
   ],
   DrawerBox: [
     h.clone(), w.clone(), d.clone(),
     new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
-    new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US})
+    new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
+    new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
+    new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
   ],
   DrawerFront: [
-    h.clone(), w.clone(), t.clone()
+    h.clone(), w.clone(), t.clone(),
+    new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
   ],
   Frame: [
     h.clone(), w.clone(), t.clone()
@@ -72,11 +79,12 @@ const assemProps = {
     new Property('proj', 'Projection', null),
   ],
   Hinge: [
-    new Property('maxtab', 'Max Spacing from bore to edge of door', null),
-    new Property('maxol', 'Max Door Overlay', null),
-    new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
-    new Property('minol', 'Minimum Door Overlay', null)
-  ]
+    new Property('maxtab', 'Max Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
+    new Property('mintab', 'Minimum Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
+    new Property('maxol', 'Max Door Overlay', {value: 1/2, notMetric: IMPERIAL_US}),
+    new Property('minol', 'Minimum Door Overlay', {value: .5, notMetric: IMPERIAL_US})
+  ],
+  Opening: []
 }
 
 const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
@@ -180,7 +188,6 @@ assemProperties.new = (group, name) => {
 const dummyFilter = () => true;
 assemProperties.groupList = (group, filter) => {
   filter = filter || dummyFilter;
-  console.log(group, `(${typeof group})`);
   const groupList = config[group];
   const changeList = {};
   if (groupList === undefined) return {};
@@ -190,8 +197,9 @@ assemProperties.groupList = (group, filter) => {
     const list = groupList[groupKey];
     const properties = groupList[list.name].properties;
     const codes = properties.map((prop) => prop.code());
-    const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1 && prop.value() !== null);
-    newProps.forEach((prop) => properties.push(prop.clone()));
+    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
+    //                   .filter(filter);
+    // newProps.forEach((prop) => properties.push(prop.clone()));
     changeList[list.name] = {name: list.name, properties: []};
     for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
       const prop = properties[pIndex];
@@ -214,7 +222,8 @@ assemProperties.hasValue = (group) => {
 
 const noValueFilter = (prop) => prop.value() === null;
 assemProperties.noValue = (group) => {
-  return assemProperties.groupList(group, noValueFilter);
+  const props = assemProps[group];
+  return props.filter(noValueFilter);
 }
 
 assemProperties.UNITS = UNITS;

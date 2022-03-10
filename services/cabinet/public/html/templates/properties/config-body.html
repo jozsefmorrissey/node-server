@@ -1,8 +1,13 @@
 <div>
   <div:t class='property-cnt' repeat='property in properties'>
     <label>{{property.name()}}</label>
-    <input type="text" prop-value-update='{{property.id()}}' value="{{property.display()}}"
-    measurement-id='{{property.measurementId()}}'>
+    <span {{property.measurementId() ? '' : 'hidden'}}>
+      <input type="text" prop-value-update='{{property.id()}}' value="{{property.display()}}"
+      measurement-id='{{property.measurementId()}}'>
+    </span>
+    <span {{(typeof (property.value())) === 'boolean' ? '' : 'hidden'}}>
+      <input type="checkbox" prop-boolean-update='{{property.id()}}' {{property.value() === true ? 'checked' : ''}}>
+    </span>
   </div:t>
   <button class='save-change' properties-id='{{properties._ID}}'
           {{changed(properties._ID) ? '' : 'hidden'}}>

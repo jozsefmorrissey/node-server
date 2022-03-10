@@ -4742,236 +4742,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/decisionTree.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	// terminology
-	// name - String to define state;
-	// payload - data returned for a given state
-	//             - @_REQUIRED_NODES - An array of names that subsequent nodes must have to complete tree.
-	// stateObject - object defining states {name: [payload]...}
-	// states - array of availible state names.
-	// node - {name, states, payload, then, addState, addStates};
-	// then(name) - a function to set a following state.
-	// next(name) - a function to get the next state.
-	// back() - a function to move back up the tree.
-	// top() - a function to get root;
-	//
-	// returns all functions return current node;
-	class DecisionTree {
-	  constructor(name, payload) {
-	    name = name || 'root';
-	    payload._REQUIRED_NODES = Array.isArray(payload._REQUIRED_NODES) ?
-	            payload._REQUIRED_NODES : [];
-	    const stateConfigs = {};
-	    const tree = {};
-	    const nodeMap = {};
-	
-	    function addState(name, payload) {
-	      return stateConfigs[name] = payload;
-	    }
-	
-	    function addStates(sts) {
-	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
-	      const keys = Object.keys(sts);
-	      keys.forEach((key) => stateConfigs[key] = sts[key]);
-	    }
-	
-	    function getState(name, parent) {
-	      return new DecisionNode(name, stateConfigs[name], parent);
-	    }
-	
-	
-	    class DecisionNode {
-	      constructor(name, payload, parent) {
-	        const states = {};
-	        let jump;
-	        let isComplete = false; // null : requires evaluation
-	        payload = payload || {};
-	        payload._nodeId = `decision-node-${String.random(7)}`;
-	        nodeMap[payload._nodeId] = this;
-	        this.getNode = (nodeId) => nodeMap[nodeId];
-	        this.name = name;
-	        this.states = states;
-	        this.payload = payload;
-	        this.jump = (name) => {
-	          if (name) jump = getState(name, parent);
-	          return jump;
-	        };
-	        this.structureChanged = () => {
-	          isComplete = null;
-	          if (parent) parent.structureChanged();
-	        }
-	        this.then = (name, payload) => {
-	          this.structureChanged();
-	          payload = payload ? addState(name, payload) : stateConfigs[name];
-	          states[name] = (getState(name, this));
-	          const state = states[name];
-	          return state === undefined ? undefined : state.jump() || state;
-	        }
-	        this.addState = (name, payload) => addState(name, payload) && this;
-	        this.addStates = (sts) => addStates(sts) && this;
-	        this.next = (name) => {
-	          const state = states[name];
-	          return state === undefined ? undefined : state.jump() || state;
-	        }
-	
-	        this.routePayloads = () => {
-	          let currNode = this;
-	          const payloads = [];
-	          while(currNode !== null) {
-	            payloads.push(currNode.payload);
-	            currNode = currNode.back();
-	          }
-	          return payloads.reverse();
-	        }
-	
-	        this.back = () => parent;
-	        this.top = () => rootNode;
-	
-	        this.getRoot = () => {
-	          const root = this;
-	          while (root.back()) root = root.back();
-	          return root;
-	        }
-	
-	        this.requiredNodes = () => {
-	          const root = this;
-	          const prevRequirements = parent ? parent.requiredNodes() : [];
-	          const reqNodes = payload._REQUIRED_NODES.concat(prevRequirements);
-	          const targetIndex = reqNodes.indexOf(this.name);
-	          if (targetIndex !== -1) {
-	            reqNodes = reqNodes.splice(targetIndex, 1)
-	          }
-	          return reqNodes;
-	        }
-	
-	        this.isComplete = () => {
-	          if (isComplete !== null) return isComplete;
-	          const childRequiredNodes = this.requiredNodes();
-	          if (childRequiredNodes.length === 0) return true;
-	          isComplete = true;
-	          for (let index = 0; isComplete && index < this.states.length; index += 1) {
-	            const state = states[index];
-	            isComplete = state.isComplete(childRequiredNodes);
-	          }
-	          return isComplete;
-	        }
-	      }
-	    }
-	    DecisionNode.DO_NOT_CLONE = true;
-	
-	    const rootNode = new DecisionNode(name, payload, null);
-	    return rootNode;
-	  }
-	}
-	
-	module.exports = DecisionTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/request.js',
-function (require, exports, module) {
-	
-
-	Request = {
-	    onStateChange: function (success, failure, id) {
-	      return function () {
-	        if (this.readyState == 4) {
-	          if (this.status == 200) {
-	            try {
-	              resp = JSON.parse(this.responseText);
-	            } catch (e){
-	              resp = this.responseText;
-	            }
-	            if (success) {
-	              success(resp, this);
-	            }
-	          } else if (failure) {
-	            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
-	            if (errorMsgMatch) {
-	              this.errorMsg = errorMsgMatch[1].trim();
-	            }
-	            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
-	            if (errorCodeMatch) {
-	              this.errorCode = errorCodeMatch[1];
-	
-	            }
-	            failure(this);
-	          }
-	          var resp = this.responseText;
-	        }
-	      }
-	    },
-	
-	    id: function (url, method) {
-	      return `request.${method}.${url.replace(/\./g, ',')}`;
-	    },
-	
-	    get: function (url, success, failure) {
-	      const xhr = new Request.xmlhr();
-	      xhr.open("GET", url, true);
-	      const id = Request.id(url, 'GET');
-	      xhr.setRequestHeader('Content-Type', 'application/json');
-	      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
-	      Request.setGlobalHeaders(xhr);
-	      if (success === undefined && failure === undefined) return xhr;
-	      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
-	      xhr.send();
-	      return xhr;
-	    },
-	
-	    hasBody: function (method) {
-	      return function (url, body, success, failure) {
-	        const xhr = new Request.xmlhr();
-	        xhr.open(method, url, true);
-	        const id = Request.id(url, method);
-	        xhr.setRequestHeader('Content-Type', 'application/json');
-	        Request.setGlobalHeaders(xhr);
-	        if (success === undefined && failure === undefined) return xhr;
-	        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
-	        xhr.send(JSON.stringify(body));
-	        return xhr;
-	      }
-	    },
-	
-	    post: function () {return Request.hasBody('POST')(...arguments)},
-	    delete: function () {return Request.hasBody('DELETE')(...arguments)},
-	    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
-	    head: function () {return Request.hasBody('HEAD')(...arguments)},
-	    put: function () {return Request.hasBody('PUT')(...arguments)},
-	    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
-	}
-	
-	Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
-	Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
-	const globalHeaders = {};
-	Request.globalHeader = (header, funcOval) => {
-	  globalHeaders[header] = funcOval;
-	}
-	Request.setGlobalHeaders = (xhr) => {
-	  const headers = Object.keys(globalHeaders);
-	  headers.forEach((header) =>
-	    xhr.setRequestHeader(header, Function.orVal(globalHeaders[header], xhr)));
-	}
-	try {
-	  Request.xmlhr = XMLHttpRequest;
-	} catch (e) {
-	  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
-	}
-	
-	try {
-	  module.exports = Request;
-	} catch (e) {}
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/$t.js',
 function (require, exports, module) {
 	
@@ -5007,7 +4777,7 @@ function (require, exports, module) {
 			const signProps = {opening: /([-+\!])/};
 			const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
 			const ternaryProps = {opening: /\?/};
-			const keyWordProps = {opening: /(new|null|undefined|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
+			const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
 			const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
 			const commaProps = {opening: /,/};
 			const colonProps = {opening: /:/};
@@ -5539,535 +5309,348 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/expression-definition.js',
+RequireJS.addFunction('../../public/js/utils/decision-tree.js',
 function (require, exports, module) {
 	
 
 	
 	
-	let idCount = 0;
-	class ExprDef {
-	  constructor(name, options, notify, stages, alwaysPossible) {
-	    this.id = idCount++;
-	    let id = this.id;
-	    let string;
-	    let modified = '';
-	    let start;
-	    let end;
-	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
-	    stages = stages ? stages : {};
-	    let currStage = stages;
 	
-	    function getRoutes(prefix, stage) {
-	      let routes = [];
-	      let keys = Object.keys(stage);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        if (key !== '_meta') {
-	          let newPrefix;
-	          if (prefix) {
-	            newPrefix = `${prefix}.${key}`;
-	          } else {
-	            newPrefix = key;
-	          }
-	          const deepRoutes = getRoutes(newPrefix, stage[key]);
-	          if (deepRoutes.length > 0) {
-	            routes = routes.concat(deepRoutes);
-	          }
-	          if (stage[key]._meta && stage[key]._meta.end) {
-	            routes.push(newPrefix + '.end');
-	          }
-	          if (stage[key]._meta && stage[key]._meta.repeat) {
-	            routes.push(newPrefix + '.repeat');
-	          }
-	        }
+	// terminology
+	// name - String to define state;
+	// payload - data returned for a given state
+	//             - @_REQUIRED_NODES - An array of names that subsequent nodes must have to complete tree.
+	//             - @_UNIQUE_NAME_GROUP - An Identifier used to insure all nodes of multople trees have a unique name.
+	//                          note: only applicable on root node. governs entire tree
+	// stateObject - object defining states {name: [payload]...}
+	// states - array of availible state names.
+	// node - {name, states, payload, then, addState, addStates};
+	// then(name) - a function to set a following state.
+	// next(name) - a function to get the next state.
+	// back() - a function to move back up the tree.
+	// top() - a function to get root;
+	//
+	// returns all functions return current node;
+	class DecisionTree {
+	  constructor(name, payload) {
+	    name = name || 'root';
+	    payload._REQUIRED_NODES = Array.isArray(payload._REQUIRED_NODES) ?
+	            payload._REQUIRED_NODES : [];
+	    const stateConfigs = {};
+	    const tree = {};
+	    const nodeMap = {};
+	    const uniqueGroup = payload._UNIQUE_NAME_GROUP;
+	
+	    function addState(name, payload) {
+	      if (uniqueGroup && this.declairedName(name)) {
+	        throw new Error('Name already declared: This requires unique naming possibly relitive to other trees use DecisionTree.undeclairedName(name) to validate names')
 	      }
-	      return routes;
+	      return stateConfigs[name] = payload;
 	    }
 	
-	    this.always = function () {
-	      for (let index = 0; index < arguments.length; index += 1) {
-	        alwaysPossible.push(arguments[index]);
-	      }
-	    };
-	    this.getAlways = function (exprDef) {return alwaysPossible;};
-	
-	    this.allRoutes = function () {
-	      return getRoutes(null, stages);
+	    function addStates(sts) {
+	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
+	      const keys = Object.keys(sts);
+	      keys.forEach((key) => stateConfigs[key] = sts[key]);
 	    }
 	
-	    function getNotice (exprDef) {
-	      let isInAlways = false;
-	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
-	      if (isInAlways) return;
-	      if (!exprDef.closed()) {
-	        if (currStage[exprDef.getName()] === undefined) {
-	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
-	        }
-	        currStage = currStage[exprDef.getName()];
-	      }
-	    }
-	    this.getNotice = getNotice;
-	
-	    function getName () {return name;};
-	    this.getName = getName;
-	    this.onClose = function (start, end) {
-	      return function (str, start, end) {
-	        if (notify) notify(this);
-	        options.onClose(str, start, end);
-	      }
+	    function getState(name, parent) {
+	      return new DecisionNode(name, stateConfigs[name], parent);
 	    }
 	
-	    function setMeta(targetNodes, attr, value) {
-	      return function () {
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          targetNodes[lIndex]._meta[attr] = value;
-	        }
-	      }
-	    }
 	
-	    function then (targetNodes) {
-	      return function () {
-	        const createdNodes = [];
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          const targetNode = targetNodes[lIndex];
-	          for (let index = 0; index < arguments.length; index += 1) {
-	            const exprDef = arguments[index];
-	            if (!exprDef instanceof ExprDef) {
-	              throw new Error(`Argument is not an instanceof ExprDef`);
-	            }
-	            const nextExpr = exprDef.clone(getNotice);
-	            if (targetNode[nextExpr.getName()] === undefined) {
-	              targetNode[nextExpr.getName()] = {
-	                _meta: {
-	                  expr: nextExpr
-	                }
-	              };
-	            }
-	            createdNodes.push(targetNode[nextExpr.getName()]);
-	          }
-	        }
-	        return {
-	          then: then(createdNodes),
-	          repeat: setMeta(createdNodes, 'repeat', true),
-	          end: setMeta(createdNodes, 'end', true),
+	    class DecisionNode {
+	      constructor(name, payload, parent) {
+	        const states = {};
+	        let jump;
+	        let isComplete = false; // null : requires evaluation
+	        payload = payload || {};
+	        payload._nodeId = `decision-node-${String.random(7)}`;
+	        nodeMap[payload._nodeId] = this;
+	        this.getNode = (nodeId) => nodeMap[nodeId];
+	        this.name = name;
+	        this.states = states;
+	        this.payload = payload;
+	        this.jump = (name) => {
+	          if (name) jump = getState(name, parent);
+	          return jump;
 	        };
+	        this.structureChanged = () => {
+	          isComplete = null;
+	          if (parent) parent.structureChanged();
+	        }
+	        this.then = (name, payload, conditional) => {
+	          this.structureChanged();
+	          payload = payload ? addState(name, payload) : stateConfigs[name];
+	          const newState = getState(name, payload);
+	          if ((typeof conditional) === 'string') {
+	            const stateId = `${this.name}:${conditional}`;
+	            states[stateId] = getState(stateId, this);
+	            states[stateId].jump(newState);
+	          } else {
+	            states[name] = newState;
+	          }
+	          return newState === undefined ? undefined : newState.jump() || newState;
+	        }
+	        this.addState = (name, payload) => addState(name, payload) && this;
+	        this.addStates = (sts) => addStates(sts) && this;
+	        this.next = (name) => {
+	          const state = states[name];
+	          return state === undefined ? undefined : state.jump() || state;
+	        }
+	
+	        this.routePayloads = () => {
+	          let currNode = this;
+	          const payloads = [];
+	          while(currNode !== null) {
+	            payloads.push(currNode.payload);
+	            currNode = currNode.back();
+	          }
+	          return payloads.reverse();
+	        }
+	
+	        this.back = () => parent;
+	        this.top = () => rootNode;
+	        this.isRoot = () => !(parent instanceof DecisionNode)
+	
+	        this.getRoot = () => {
+	          const root = this;
+	          while (!root.isRoot()) root = root.back();
+	          return root;
+	        }
+	
+	        this.requiredNodes = () => {
+	          const root = this;
+	          const prevRequirements = parent ? parent.requiredNodes() : [];
+	          const reqNodes = payload._REQUIRED_NODES.concat(prevRequirements);
+	          const targetIndex = reqNodes.indexOf(this.name);
+	          if (targetIndex !== -1) {
+	            reqNodes = reqNodes.splice(targetIndex, 1)
+	          }
+	          return reqNodes;
+	        }
+	
+	        this.isComplete = () => {
+	          if (isComplete !== null) return isComplete;
+	          const childRequiredNodes = this.requiredNodes();
+	          if (childRequiredNodes.length === 0) return true;
+	          isComplete = true;
+	          for (let index = 0; isComplete && index < this.states.length; index += 1) {
+	            const state = states[index];
+	            isComplete = state.isComplete(childRequiredNodes);
+	          }
+	          return isComplete;
+	        }
 	      }
 	    }
+	    DecisionNode.DO_NOT_CLONE = true;
 	
-	    this.if = function () {return then([stages]).apply(this, arguments);}
-	
-	    function isEscaped(str, index) {
-	      if (options.escape === undefined) {
-	        return false;
-	      }
-	      let count = -1;
-	      let firstIndex, secondIndex;
-	      do {
-	        count += 1;
-	        firstIndex = index - (options.escape.length * (count + 1));
-	        secondIndex = options.escape.length;
-	      } while (str.substr(firstIndex, secondIndex) === options.escape);
-	      return count % 2 == 0;
+	    const rootNode = new DecisionNode(name, payload, null);
+	    if (uniqueGroup) {
+	      DecisionTree.registerUniqueNameGroup(uniqueGroup, rootNode);
+	      this.undeclairedName = (name) => DecisionTree.undeclairedName(uniqueGroup, rootNode);
 	    }
-	
-	    function foundCall(onFind, sub) {
-	      if ((typeof notify) === 'function') {
-	        notify(this);
-	      }
-	      if ((typeof onFind) === 'function') {
-	        return onFind(sub);
-	      } else {
-	        return sub;
-	      }
-	    }
-	
-	    this.find = function (str, index) {
-	      let startedThisCall = false;
-	      let needle = options.closing;
-	      let starting = false;
-	      if (start === undefined) {
-	        needle = options.opening;
-	        starting = true;
-	      }
-	      const sub = str.substr(index);
-	      let needleLength;
-	      if (needle instanceof RegExp) {
-	        const match = sub.match(needle);
-	        if (match && match.index === 0) {
-	          needleLength = match[0].length;
-	        }
-	      } else if ((typeof needle) === 'string') {
-	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
-	          needleLength = needle.length;
-	      } else if (needle === undefined || needle === null) {
-	        needleLength = 0;
-	      } else {
-	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
-	      }
-	      needleLength += options.tailOffset ? options.tailOffset : 0;
-	      let changes = '';
-	      if (start === undefined && starting && (needleLength || needle === null)) {
-	        string = str;
-	        start = index;
-	        startedThisCall = true;
-	        if (needle === null) {
-	          if ((typeof notify) === 'function') {
-	            notify(this);
-	          }          return {index, changes}
-	        } else {
-	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
-	        }
-	      }
-	      if ((!startedThisCall && needleLength) ||
-	            (startedThisCall && options.closing === undefined) ||
-	            (!startedThisCall && options.closing === null)) {
-	        if (str !== string) {
-	          throw new Error ('Trying to apply an expression to two different strings.');
-	        }
-	        end = index + needleLength;
-	        if (options.closing === null) {
-	          return {index, changes}
-	        }
-	        if (!startedThisCall) {
-	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
-	        }
-	        return { index: end, changes };
-	      }
-	
-	      return start !== undefined ? { index: start + needleLength, changes } :
-	                      { index: -1, changes };
-	    }
-	
-	    this.clone = function (notify) {
-	      return new ExprDef(name, options, notify, stages, alwaysPossible);
-	    };
-	    this.name = this.getName();
-	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
-	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
-	    this.location = function () {return {start, end, length: end - start}};
-	    this.closed = function () {return end !== undefined;}
-	    this.open = function () {return start !== undefined;}
-	    this.next =  function () {
-	      const expressions = [];
-	      if (currStage._meta && currStage._meta.repeat) {
-	        currStage = stages;
-	      }
-	      Object.values(currStage).map(
-	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
-	      )
-	      return alwaysPossible.concat(expressions);
-	    };
+	    return rootNode;
 	  }
 	}
 	
-	function parse(exprDef, str) {
-	  exprDef = exprDef.clone();
-	  let index = 0;
-	  let modified = '';
-	  const breakDown = [];
-	  const stack = [];
-	
-	  function topOfStack() {
-	    return stack[stack.length - 1];
+	{
+	  const declarationMap = {};
+	  DecisionTree.registerUniqueNameGroup = (uniqueGroup, decisionNode) => {
+	    if (decisionNode.constructor.name !== 'DecisionNode' ||
+	            !decisionNode.isRoot()) {
+	      throw new Error('Can only register the root node of a DecisionTree');
+	    }
+	    if (declarationMap[uniqueGroup] === undefined) declarationMap[uniqueGroup] = [];
+	    declarationMap[uniqueGroup].push(decisionNode);
 	  }
-	
-	  function closeCheck(exprDef) {
-	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
-	      let result = exprDef.find(str, index);
-	      if (result.index) {
-	        modified += result.changes;
-	        return result.index;
+	  DecisionTree.undeclairedName = (uniqueGroup, name) => {
+	    const list = declarationMap[uniqueGroup] || [];
+	    for (let index = 0; index < list.length; index += 1) {
+	      const states = list[index];
+	      for (let sIndex = 0; sIndex < states.length; sIndex += 1) {
+	        const node = states[sIndex];
+	        if (node.name === name) return false;
 	      }
 	    }
+	    return true;
 	  }
-	
-	  function checkArray(exprDef, array) {
-	    if (exprDef.endDefined()) {
-	      let nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
-	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
-	      const result = childExprDef.find(str, index);
-	      if (result.index !== -1) {
-	        modified += result.changes;
-	        if (childExprDef.closed()) {
-	          breakDown.push(childExprDef);
-	        } else {
-	          stack.push(childExprDef);
-	        }
-	        return result.index;
-	      }
-	    }
-	    if (exprDef.canEnd()) {
-	      nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
-	  }
-	
-	  function open(exprDef, index) {
-	    const always = exprDef.getAlways();
-	    while (!exprDef.open()) {
-	      let result = exprDef.find(str, index);
-	      modified += result.changes;
-	      if(result.index === -1) {
-	        let newIndex = checkArray(exprDef, always);
-	        index = newIndex;
-	      } else {
-	        if (exprDef.closed()) {
-	          breakDown.push(exprDef);
-	        } else {
-	          stack.push(exprDef);
-	        }
-	        index = result.index;
-	      }
-	    }
-	    return index;
-	  }
-	
-	  let loopCount = 0;
-	  index = open(exprDef, index);
-	  progress = [-3, -2, -1];
-	  while (topOfStack() !== undefined) {
-	    const tos = topOfStack();
-	    if (progress[0] === index) {
-	      throw new Error(`ExprDef stopped making progress`);
-	    }
-	    let stackIds = '';
-	    let options = '';
-	    stack.map(function (value) {stackIds+=value.getName() + ','});
-	    tos.next().map(function (value) {options+=value.getName() + ','})
-	    index = checkArray(tos, tos.next());
-	    if (tos.closed()) {
-	      stack.pop();
-	    }
-	    loopCount++;
-	  }
-	  // if (index < str.length) {
-	  //   throw new Error("String not fully read");
-	  // }
-	  return modified;
 	}
 	
-	
-	ExprDef.parse = parse;
-	
-	module.exports = ExprDef;
-	
-	
-	
-	
+	module.exports = DecisionTree;
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/measurment.js',
+RequireJS.addFunction('../../public/js/utils/decisionTree.js',
 function (require, exports, module) {
 	
-const Lookup = require('./object/lookup');
-	const StringMathEvaluator = require('./string-math-evaluator');
-	
-	function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	let percision = '1/32';
-	let units = [
-	  'Metric',
-	  'Imperial (US)'
-	]
-	let unit = units[1];
+
 	
 	
-	class Measurement extends Lookup {
-	  constructor(value, notMetric) {
-	    super();
-	    if ((typeof value) === 'string') {
-	      value += ' '; // Hacky fix for regularExpression
+	
+	// terminology
+	// name - String to define state;
+	// payload - data returned for a given state
+	//             - @_REQUIRED_NODES - An array of names that subsequent nodes must have to complete tree.
+	//             - @_UNIQUE_NAME_GROUP - An Identifier used to insure all nodes of multople trees have a unique name.
+	//                          note: only applicable on root node. governs entire tree
+	// stateObject - object defining states {name: [payload]...}
+	// states - array of availible state names.
+	// node - {name, states, payload, then, addState, addStates};
+	// then(name) - a function to set a following state.
+	// next(name) - a function to get the next state.
+	// back() - a function to move back up the tree.
+	// top() - a function to get root;
+	//
+	// returns all functions return current node;
+	class DecisionTree {
+	  constructor(name, payload) {
+	    name = name || 'root';
+	    payload._REQUIRED_NODES = Array.isArray(payload._REQUIRED_NODES) ?
+	            payload._REQUIRED_NODES : [];
+	    const stateConfigs = {};
+	    const tree = {};
+	    const nodeMap = {};
+	    const uniqueGroup = payload._UNIQUE_NAME_GROUP;
+	
+	    function addState(name, payload) {
+	      if (uniqueGroup && this.declairedName(name)) {
+	        throw new Error('Name already declared: This requires unique naming possibly relitive to other trees use DecisionTree.undeclairedName(name) to validate names')
+	      }
+	      return stateConfigs[name] = payload;
 	    }
 	
-	    const determineUnit = () => {
-	      if ((typeof notMetric === 'string')) {
-	        const index = units.indexOf(notMetric);
-	        if (index !== -1) return units[index];
-	      } else if ((typeof notMetric) === 'boolean') {
-	        if (notMetric === true) return unit;
-	      }
-	      return units[0];
+	    function addStates(sts) {
+	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
+	      const keys = Object.keys(sts);
+	      keys.forEach((key) => stateConfigs[key] = sts[key]);
 	    }
 	
-	    let decimal = 0;
-	    let nan = value === null || value === undefined;
-	    this.isNaN = () => nan;
+	    function getState(name, parent) {
+	      return new DecisionNode(name, stateConfigs[name], parent);
+	    }
 	
-	    const parseFraction = (str) => {
-	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
-	      regObj.integer = Number.parseInt(regObj.integer) || 0;
-	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	      if(regObj.denominator === 0) {
-	        regObj.numerator = 0;
-	        regObj.denominator = 1;
-	      }
-	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	      return regObj;
-	    };
 	
-	    function reduce(numerator, denominator) {
-	      let reduced = true;
-	      while (reduced) {
-	        reduced = false;
-	        for (let index = 0; index < Measurement.primes.length; index += 1) {
-	          const prime = Measurement.primes[index];
-	          if (prime >= denominator) break;
-	          if (numerator % prime === 0 && denominator % prime === 0) {
-	            numerator = numerator / prime;
-	            denominator = denominator / prime;
-	            reduced = true;
-	            break;
+	    class DecisionNode {
+	      constructor(name, payload, parent) {
+	        const states = {};
+	        let jump;
+	        let isComplete = false; // null : requires evaluation
+	        payload = payload || {};
+	        payload._nodeId = `decision-node-${String.random(7)}`;
+	        nodeMap[payload._nodeId] = this;
+	        this.getNode = (nodeId) => nodeMap[nodeId];
+	        this.name = name;
+	        this.states = states;
+	        this.payload = payload;
+	        this.jump = (name) => {
+	          if (name) jump = getState(name, parent);
+	          return jump;
+	        };
+	        this.structureChanged = () => {
+	          isComplete = null;
+	          if (parent) parent.structureChanged();
+	        }
+	        this.then = (name, payload, conditional) => {
+	          this.structureChanged();
+	          payload = payload ? addState(name, payload) : stateConfigs[name];
+	          const newState = getState(name, payload);
+	          if ((typeof conditional) === 'string') {
+	            const stateId = `${this.name}:${conditional}`;
+	            states[stateId] = getState(stateId, this);
+	            states[stateId].jump(newState);
+	          } else {
+	            states[name] = newState;
 	          }
+	          return newStatenewState === undefined ? undefined : newState.jump() || newState;
+	        }
+	        this.addState = (name, payload) => addState(name, payload) && this;
+	        this.addStates = (sts) => addStates(sts) && this;
+	        this.next = (name) => {
+	          const state = states[name];
+	          return state === undefined ? undefined : state.jump() || state;
+	        }
+	
+	        this.routePayloads = () => {
+	          let currNode = this;
+	          const payloads = [];
+	          while(currNode !== null) {
+	            payloads.push(currNode.payload);
+	            currNode = currNode.back();
+	          }
+	          return payloads.reverse();
+	        }
+	
+	        this.back = () => parent;
+	        this.top = () => rootNode;
+	        this.isRoot = () => !(parent instanceof DecisionNode)
+	
+	        this.getRoot = () => {
+	          const root = this;
+	          while (!root.isRoot()) root = root.back();
+	          return root;
+	        }
+	
+	        this.requiredNodes = () => {
+	          const root = this;
+	          const prevRequirements = parent ? parent.requiredNodes() : [];
+	          const reqNodes = payload._REQUIRED_NODES.concat(prevRequirements);
+	          const targetIndex = reqNodes.indexOf(this.name);
+	          if (targetIndex !== -1) {
+	            reqNodes = reqNodes.splice(targetIndex, 1)
+	          }
+	          return reqNodes;
+	        }
+	
+	        this.isComplete = () => {
+	          if (isComplete !== null) return isComplete;
+	          const childRequiredNodes = this.requiredNodes();
+	          if (childRequiredNodes.length === 0) return true;
+	          isComplete = true;
+	          for (let index = 0; isComplete && index < this.states.length; index += 1) {
+	            const state = states[index];
+	            isComplete = state.isComplete(childRequiredNodes);
+	          }
+	          return isComplete;
 	        }
 	      }
-	      if (numerator === 0) {
-	        return '';
-	      }
-	      return ` ${numerator}/${denominator}`;
 	    }
+	    DecisionNode.DO_NOT_CLONE = true;
 	
-	    function calculateValue(accuracy) {
-	      accuracy = accuracy || '1/32'
-	      const fracObj = parseFraction(accuracy);
-	      const denominator = fracObj.denominator;
-	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	      }
-	      let standardDecimal = decimal / 2.54;
-	      let sign = standardDecimal > 0 ? 1 : -1;
-	      let remainder = Math.abs(standardDecimal);
-	      let currRemainder = remainder;
-	      let value = 0;
-	      let numerator = 0;
-	      while (currRemainder > 0) {
-	        numerator += fracObj.numerator;
-	        currRemainder -= fracObj.decimal;
-	      }
-	      const diff1 = standardDecimal - ((numerator - fracObj.numerator) / denominator);
-	      const diff2 = (numerator / denominator) - standardDecimal;
-	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	      const integer = sign * Math.floor(numerator / denominator);
-	      numerator = numerator % denominator;
-	      return {integer, numerator, denominator};
+	    const rootNode = new DecisionNode(name, payload, null);
+	    if (uniqueGroup) {
+	      DecisionTree.registerUniqueNameGroup(uniqueGroup, root);
+	      this.undeclairedName = (name) => DecisionTree.undeclairedName(uniqueGroup, name);
 	    }
-	
-	    this.fraction = (accuracy) => {
-	      if (nan) return NaN;
-	      const obj = calculateValue(accuracy);
-	      if (obj.integer === 0 && obj.numerator === 0) return '0';
-	      const integer = obj.integer !== 0 ? obj.integer : '';
-	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
-	    }
-	    this.standardUS = this.fraction;
-	
-	    this.display = (accuracy) => {
-	      switch (unit) {
-	        case units[0]: return this.decimal(accuracy);
-	        case units[1]: return this.standardUS(accuracy);
-	        default:
-	            return this.standardUS(accuracy);
-	      }
-	    }
-	
-	    this.value = (accuracy) => this.decimal(accuracy);
-	
-	    this.decimal = (accuracy) => {
-	      if (nan) return NaN;
-	      accuracy = accuracy % 100 ? accuracy : 100;
-	      return Math.round(decimal * accuracy) / accuracy;
-	    }
-	
-	    function getDecimalEquivalant(string) {
-	      string = string.trim();
-	      if (string.match(StringMathEvaluator.decimalReg)) {
-	        return Number.parseFloat(string);
-	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
-	        return parseFraction(string).decimal
-	      }
-	      nan = true;
-	      return NaN;
-	    }
-	
-	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
-	
-	    function standardize(ambiguousDecimal) {
-	      switch (determineUnit()) {
-	        case units[0]:
-	          return ambiguousDecimal;
-	        case units[1]:
-	          return convertUsToMetric(ambiguousDecimal);
-	        default:
-	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
-	      }
-	    }
-	
-	    if ((typeof value) === 'number') {
-	      decimal = standardize(value);
-	    } else if ((typeof value) === 'string') {
-	      try {
-	        const ambiguousDecimal = getDecimalEquivalant(value);
-	        decimal = standardize(ambiguousDecimal);
-	      } catch (e) {
-	        nan = true;
-	      }
-	    } else {
-	      nan = true;
-	    }
+	    return rootNode;
 	  }
 	}
 	
-	Measurement.unit = (newUnit) => {
-	  for (index = 0; index < units.length; index += 1) {
-	    if (newUnit === units[index]) unit = newUnit;
+	{
+	  const declarationMap = {};
+	  DecisionTree.registerUniqueNameGroup = (uniqueGroup, decisionNode) => {
+	    if (decisionNode.constructor.name !== 'DecisionNode' ||
+	            !decisionNode.isRoot()) {
+	      throw new Error('Can only register the root node of a DecisionTree');
+	    }
+	    if (declarationMap[uniqueGroup] === undefined) declarationMap[uniqueGroup] = [];
+	    declarationMap[uniqueGroup].push(decisionNode);
 	  }
-	  return unit
-	};
-	Measurement.units = () => JSON.parse(JSON.stringify(units));
-	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
-	
-	Measurement.validation = function (range) {
-	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
-	  let min = obj.min.trim() !== '' ?
-	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
-	  let max = obj.max.trim() !== '' ?
-	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
-	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
-	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
-	  return function (value) {
-	    const decimal = new Measurement(value).decimal();
-	    if (decimal === NaN) return false;
-	    return minCheck(decimal) && maxCheck(decimal);
+	  DecisionTree.undeclairedName = (uniqueGroup, name) => {
+	    const list = declarationMap[uniqueGroup] || [];
+	    for (let index = 0; index < list.length; index += 1) {
+	      const states = list[index];
+	      for (let sIndex = 0; sIndex < states.length; sIndex += 1) {
+	        const node = states[sIndex];
+	        if (node.name === name) return false;
+	      }
+	    }
+	    return true;
 	  }
 	}
 	
-	Measurement.round = (value, percision) => {
-	  if (percision)
-	  return new Measurement(value).decimal(percision);
-	  return Math.round(value * 10000000) / 10000000;
-	}
-	
-	try {
-	  module.exports = Measurement;
-	} catch (e) {/* TODO: Consider Removing */}
+	module.exports = DecisionTree;
 	
 });
 
@@ -6147,348 +5730,6 @@ class Endpoints {
 	}
 	
 	module.exports = Endpoints;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/string-math-evaluator.js',
-function (require, exports, module) {
-	
-function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	class StringMathEvaluator {
-	  constructor(globalScope, resolver) {
-	    globalScope = globalScope || {};
-	    const instance = this;
-	    let splitter = '.';
-	    let cache = {};
-	
-	    function resolve (path, currObj, globalCheck) {
-	      if (path === '') return currObj;
-	      const resolved = !globalCheck && resolver && resolver(path, currObj);
-	      if (resolved) return resolved;
-	      try {
-	        if ((typeof path) === 'string') path = path.split(splitter);
-	        for (let index = 0; index < path.length; index += 1) {
-	          currObj = currObj[path[index]];
-	        }
-	        if (currObj === undefined && !globalCheck) throw Error('try global');
-	        return currObj;
-	      }  catch (e) {
-	        return resolve(path, globalScope, true);
-	      }
-	    }
-	
-	    function multiplyOrDivide (values, operands) {
-	      const op = operands[operands.length - 1];
-	      if (op === StringMathEvaluator.multi || op === StringMathEvaluator.div) {
-	        const len = values.length;
-	        values[len - 2] = op(values[len - 2], values[len - 1])
-	        values.pop();
-	        operands.pop();
-	      }
-	    }
-	
-	    const resolveArguments = (initialChar, func) => {
-	      return function (expr, index, values, operands, scope, path) {
-	        if (expr[index] === initialChar) {
-	          const args = [];
-	          let endIndex = index += 1;
-	          const terminationChar = expr[index - 1] === '(' ? ')' : ']';
-	          let terminate = false;
-	          let openParenCount = 0;
-	          while(!terminate && endIndex < expr.length) {
-	            const currChar = expr[endIndex++];
-	            if (currChar === '(') openParenCount++;
-	            else if (openParenCount > 0 && currChar === ')') openParenCount--;
-	            else if (openParenCount === 0) {
-	              if (currChar === ',') {
-	                args.push(expr.substr(index, endIndex - index - 1));
-	                index = endIndex;
-	              } else if (openParenCount === 0 && currChar === terminationChar) {
-	                args.push(expr.substr(index, endIndex++ - index - 1));
-	                terminate = true;
-	              }
-	            }
-	          }
-	
-	          for (let index = 0; index < args.length; index += 1) {
-	            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
-	            if (stringMatch) {
-	              args[index] = stringMatch[1];
-	            } else {
-	              args[index] =  instance.eval(args[index], scope);
-	            }
-	          }
-	          const state = func(expr, path, scope, args, endIndex);
-	          if (state) {
-	            values.push(state.value);
-	            return state.endIndex;
-	          }
-	        }
-	      }
-	    };
-	
-	    function chainedExpressions(expr, value, endIndex, path) {
-	      if (expr.length === endIndex) return {value, endIndex};
-	      let values = [];
-	      let offsetIndex;
-	      let valueIndex = 0;
-	      let chained = false;
-	      do {
-	        const subStr = expr.substr(endIndex);
-	        const offsetIndex = isolateArray(subStr, 0, values, [], value, path) ||
-	                            isolateFunction(subStr, 0, values, [], value, path) ||
-	                            (subStr[0] === '.' &&
-	                              isolateVar(subStr, 1, values, [], value));
-	        if (Number.isInteger(offsetIndex)) {
-	          value = values[valueIndex];
-	          endIndex += offsetIndex - 1;
-	          chained = true;
-	        }
-	      } while (offsetIndex !== undefined);
-	      return {value, endIndex};
-	    }
-	
-	    const isolateArray = resolveArguments('[',
-	      (expr, path, scope, args, endIndex) => {
-	        endIndex = endIndex - 1;
-	        let value = resolve(path, scope)[args[args.length - 1]];
-	        return chainedExpressions(expr, value, endIndex, '');
-	      });
-	
-	    const isolateFunction = resolveArguments('(',
-	      (expr, path, scope, args, endIndex) =>
-	          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
-	
-	    function isolateParenthesis(expr, index, values, operands, scope) {
-	      const char = expr[index];
-	      if (char === ')') throw new Error('UnExpected closing parenthesis');
-	      if (char === '(') {
-	        let openParenCount = 1;
-	        let endIndex = index + 1;
-	        while(openParenCount > 0 && endIndex < expr.length) {
-	          const currChar = expr[endIndex++];
-	          if (currChar === '(') openParenCount++;
-	          if (currChar === ')') openParenCount--;
-	        }
-	        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
-	        const len = endIndex - index - 2;
-	        values.push(instance.eval(expr.substr(index + 1, len), scope));
-	        multiplyOrDivide(values, operands);
-	        return endIndex;
-	      }
-	    };
-	
-	    function isolateOperand (char, operands) {
-	      if (char === ')') throw new Error('UnExpected closing parenthesis');
-	      switch (char) {
-	        case '*':
-	        operands.push(StringMathEvaluator.multi);
-	        return true;
-	        break;
-	        case '/':
-	        operands.push(StringMathEvaluator.div);
-	        return true;
-	        break;
-	        case '+':
-	        operands.push(StringMathEvaluator.add);
-	        return true;
-	        break;
-	        case '-':
-	        operands.push(StringMathEvaluator.sub);
-	        return true;
-	        break;
-	      }
-	      return false;
-	    }
-	
-	    function isolateValueReg(reg, resolver) {
-	      return function (expr, index, values, operands, scope) {
-	        const match = expr.substr(index).match(reg);
-	        let args;
-	        if (match) {
-	          let endIndex = index + match[0].length;
-	          let value = resolver(match[0], scope);
-	          if (!Number.isFinite(value)) {
-	            const state = chainedExpressions(expr, scope, endIndex, match[0]);
-	            if (state !== undefined) {
-	              value = state.value;
-	              endIndex = state.endIndex;
-	            }
-	          }
-	          values.push(value);
-	          multiplyOrDivide(values, operands);
-	          return endIndex;
-	        }
-	      }
-	    }
-	
-	    function convertFeetInchNotation(expr) {
-	      expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
-	      expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
-	      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
-	      return expr = expr.replace(StringMathEvaluator.mixedNumberReg, '($1+$2)') || expr;;
-	    }
-	    function addUnexpressedMultiplicationSigns(expr) {
-	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
-	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
-	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
-	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
-	    }
-	
-	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
-	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
-	
-	    this.cache = (expr) => {
-	      const time = new Date().getTime();
-	      if (cache[expr] && cache[expr].time > time - 200) {
-	        cache[expr].time = time;
-	        return cache[expr].value;
-	      }
-	      return null
-	    }
-	
-	    this.eval = function (expr, scope, percision) {
-	      if (instance.cache(expr) !== null) return instance.cache(expr);
-	      if (Number.isFinite(expr))
-	        return expr;
-	      expr = new String(expr);
-	      expr = addUnexpressedMultiplicationSigns(expr);
-	      expr = convertFeetInchNotation(expr);
-	      scope = scope || globalScope;
-	      const allowVars = (typeof scope) === 'object';
-	      let operands = [];
-	      let values = [];
-	      let prevWasOpperand = true;
-	      for (let index = 0; index < expr.length; index += 1) {
-	        const char = expr[index];
-	        if (prevWasOpperand) {
-	          try {
-	            if (isolateOperand(char, operands)) throw new Error('Invalid operand location');
-	            let newIndex = isolateParenthesis(expr, index, values, operands, scope) ||
-	                isolateNumber(expr, index, values, operands, scope) ||
-	                (allowVars && isolateVar(expr, index, values, operands, scope));
-	            if (Number.isInteger(newIndex)) {
-	              index = newIndex - 1;
-	              prevWasOpperand = false;
-	            }
-	          } catch (e) {
-	            console.error(e);
-	            return NaN;
-	          }
-	        } else {
-	          prevWasOpperand = isolateOperand(char, operands);
-	        }
-	      }
-	      if (prevWasOpperand) return NaN;
-	
-	      let value = values[0];
-	      for (let index = 0; index < values.length - 1; index += 1) {
-	        value = operands[index](values[index], values[index + 1]);
-	        values[index + 1] = value;
-	      }
-	
-	      if (Number.isFinite(value)) {
-	        cache[expr] = {time: new Date().getTime(), value};
-	        return value;
-	      }
-	      return NaN;
-	    }
-	  }
-	}
-	
-	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	
-	StringMathEvaluator.mixedNumberReg = /([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
-	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
-	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
-	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
-	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
-	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
-	StringMathEvaluator.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
-	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
-	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
-	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
-	StringMathEvaluator.div = (n1, n2) => n1 / n2;
-	StringMathEvaluator.add = (n1, n2) => n1 + n2;
-	StringMathEvaluator.sub = (n1, n2) => n1 - n2;
-	
-	StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	
-	
-	StringMathEvaluator.reduce = function(numerator, denominator) {
-	  let reduced = true;
-	  while (reduced) {
-	    reduced = false;
-	    for (let index = 0; index < StringMathEvaluator.primes.length; index += 1) {
-	      const prime = StringMathEvaluator.primes[index];
-	      if (prime >= denominator) break;
-	      if (numerator % prime === 0 && denominator % prime === 0) {
-	        numerator = numerator / prime;
-	        denominator = denominator / prime;
-	        reduced = true;
-	        break;
-	      }
-	    }
-	  }
-	  if (numerator === 0) {
-	    return '';
-	  }
-	  return `${numerator}/${denominator}`;
-	}
-	
-	StringMathEvaluator.parseFraction = function (str) {
-	  const regObj = regexToObject(str, StringMathEvaluator.regex, null, 'integer', null, 'numerator', 'denominator');
-	  regObj.integer = Number.parseInt(regObj.integer) || 0;
-	  regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	  regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	  if(regObj.denominator === 0) {
-	    regObj.numerator = 0;
-	    regObj.denominator = 1;
-	  }
-	  regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	  return regObj;
-	}
-	
-	StringMathEvaluator.toFraction = function (decimal, accuracy) {
-	  if (decimal === NaN) return NaN;
-	  accuracy = accuracy || '1/1000'
-	  const fracObj = StringMathEvaluator.parseFraction(accuracy);
-	  const denominator = fracObj.denominator;
-	  if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	    throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	  }
-	  let remainder = decimal;
-	  let currRemainder = remainder;
-	  let value = 0;
-	  let numerator = 0;
-	  while (currRemainder > 0) {
-	    numerator += fracObj.numerator;
-	    currRemainder -= fracObj.decimal;
-	  }
-	  const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
-	  const diff2 = (numerator / denominator) - decimal;
-	  numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	  const integer = Math.floor(numerator / denominator);
-	  numerator = numerator % denominator;
-	  const fraction = StringMathEvaluator.reduce(numerator, denominator);
-	  return (integer && fraction ? `${integer} ${fraction}` :
-	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
-	}
-	
-	try {
-	  module.exports = StringMathEvaluator;
-	} catch (e) {/* TODO: Consider Removing */}
 	
 });
 
@@ -7224,28 +6465,974 @@ const frag = document.createDocumentFragment();
 });
 
 
-RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
+RequireJS.addFunction('../../public/js/utils/string-math-evaluator.js',
 function (require, exports, module) {
 	
-
+function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
 	
-	const CustomEvent = require('../custom-error.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	const Expandable = require('./expandable');
+	class StringMathEvaluator {
+	  constructor(globalScope, resolver) {
+	    globalScope = globalScope || {};
+	    const instance = this;
+	    let splitter = '.';
+	    let cache = {};
 	
-	class ExpandableList extends Expandable {
-	  constructor(props) {
-	    super(props);
-	    const superRemove = this.remove;
-	    this.remove = (index) => {
-	      superRemove(props.list.splice(index, 1));
-	      this.refresh();
+	    function resolve (path, currObj, globalCheck) {
+	      if (path === '') return currObj;
+	      const resolved = !globalCheck && resolver && resolver(path, currObj);
+	      if (resolved) return resolved;
+	      try {
+	        if ((typeof path) === 'string') path = path.split(splitter);
+	        for (let index = 0; index < path.length; index += 1) {
+	          currObj = currObj[path[index]];
+	        }
+	        if (currObj === undefined && !globalCheck) throw Error('try global');
+	        return currObj;
+	      }  catch (e) {
+	        return resolve(path, globalScope, true);
+	      }
+	    }
+	
+	    function multiplyOrDivide (values, operands) {
+	      const op = operands[operands.length - 1];
+	      if (op === StringMathEvaluator.multi || op === StringMathEvaluator.div) {
+	        const len = values.length;
+	        values[len - 2] = op(values[len - 2], values[len - 1])
+	        values.pop();
+	        operands.pop();
+	      }
+	    }
+	
+	    const resolveArguments = (initialChar, func) => {
+	      return function (expr, index, values, operands, scope, path) {
+	        if (expr[index] === initialChar) {
+	          const args = [];
+	          let endIndex = index += 1;
+	          const terminationChar = expr[index - 1] === '(' ? ')' : ']';
+	          let terminate = false;
+	          let openParenCount = 0;
+	          while(!terminate && endIndex < expr.length) {
+	            const currChar = expr[endIndex++];
+	            if (currChar === '(') openParenCount++;
+	            else if (openParenCount > 0 && currChar === ')') openParenCount--;
+	            else if (openParenCount === 0) {
+	              if (currChar === ',') {
+	                args.push(expr.substr(index, endIndex - index - 1));
+	                index = endIndex;
+	              } else if (openParenCount === 0 && currChar === terminationChar) {
+	                args.push(expr.substr(index, endIndex++ - index - 1));
+	                terminate = true;
+	              }
+	            }
+	          }
+	
+	          for (let index = 0; index < args.length; index += 1) {
+	            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
+	            if (stringMatch) {
+	              args[index] = stringMatch[1];
+	            } else {
+	              args[index] =  instance.eval(args[index], scope);
+	            }
+	          }
+	          const state = func(expr, path, scope, args, endIndex);
+	          if (state) {
+	            values.push(state.value);
+	            return state.endIndex;
+	          }
+	        }
+	      }
+	    };
+	
+	    function chainedExpressions(expr, value, endIndex, path) {
+	      if (expr.length === endIndex) return {value, endIndex};
+	      let values = [];
+	      let offsetIndex;
+	      let valueIndex = 0;
+	      let chained = false;
+	      do {
+	        const subStr = expr.substr(endIndex);
+	        const offsetIndex = isolateArray(subStr, 0, values, [], value, path) ||
+	                            isolateFunction(subStr, 0, values, [], value, path) ||
+	                            (subStr[0] === '.' &&
+	                              isolateVar(subStr, 1, values, [], value));
+	        if (Number.isInteger(offsetIndex)) {
+	          value = values[valueIndex];
+	          endIndex += offsetIndex - 1;
+	          chained = true;
+	        }
+	      } while (offsetIndex !== undefined);
+	      return {value, endIndex};
+	    }
+	
+	    const isolateArray = resolveArguments('[',
+	      (expr, path, scope, args, endIndex) => {
+	        endIndex = endIndex - 1;
+	        let value = resolve(path, scope)[args[args.length - 1]];
+	        return chainedExpressions(expr, value, endIndex, '');
+	      });
+	
+	    const isolateFunction = resolveArguments('(',
+	      (expr, path, scope, args, endIndex) =>
+	          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
+	
+	    function isolateParenthesis(expr, index, values, operands, scope) {
+	      const char = expr[index];
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      if (char === '(') {
+	        let openParenCount = 1;
+	        let endIndex = index + 1;
+	        while(openParenCount > 0 && endIndex < expr.length) {
+	          const currChar = expr[endIndex++];
+	          if (currChar === '(') openParenCount++;
+	          if (currChar === ')') openParenCount--;
+	        }
+	        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
+	        const len = endIndex - index - 2;
+	        values.push(instance.eval(expr.substr(index + 1, len), scope));
+	        multiplyOrDivide(values, operands);
+	        return endIndex;
+	      }
+	    };
+	
+	    function isolateOperand (char, operands) {
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      switch (char) {
+	        case '*':
+	        operands.push(StringMathEvaluator.multi);
+	        return true;
+	        break;
+	        case '/':
+	        operands.push(StringMathEvaluator.div);
+	        return true;
+	        break;
+	        case '+':
+	        operands.push(StringMathEvaluator.add);
+	        return true;
+	        break;
+	        case '-':
+	        operands.push(StringMathEvaluator.sub);
+	        return true;
+	        break;
+	      }
+	      return false;
+	    }
+	
+	    function isolateValueReg(reg, resolver) {
+	      return function (expr, index, values, operands, scope) {
+	        const match = expr.substr(index).match(reg);
+	        let args;
+	        if (match) {
+	          let endIndex = index + match[0].length;
+	          let value = resolver(match[0], scope);
+	          if (!Number.isFinite(value)) {
+	            const state = chainedExpressions(expr, scope, endIndex, match[0]);
+	            if (state !== undefined) {
+	              value = state.value;
+	              endIndex = state.endIndex;
+	            }
+	          }
+	          values.push(value);
+	          multiplyOrDivide(values, operands);
+	          return endIndex;
+	        }
+	      }
+	    }
+	
+	    function convertFeetInchNotation(expr) {
+	      expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
+	      expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
+	      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
+	      return expr = expr.replace(StringMathEvaluator.mixedNumberReg, '($1+$2)') || expr;;
+	    }
+	    function addUnexpressedMultiplicationSigns(expr) {
+	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
+	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
+	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
+	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
+	    }
+	
+	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
+	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
+	
+	    this.cache = (expr) => {
+	      const time = new Date().getTime();
+	      if (cache[expr] && cache[expr].time > time - 200) {
+	        cache[expr].time = time;
+	        return cache[expr].value;
+	      }
+	      return null
+	    }
+	
+	    this.eval = function (expr, scope, percision) {
+	      if (instance.cache(expr) !== null) return instance.cache(expr);
+	      if (Number.isFinite(expr))
+	        return expr;
+	      expr = new String(expr);
+	      expr = addUnexpressedMultiplicationSigns(expr);
+	      expr = convertFeetInchNotation(expr);
+	      scope = scope || globalScope;
+	      const allowVars = (typeof scope) === 'object';
+	      let operands = [];
+	      let values = [];
+	      let prevWasOpperand = true;
+	      for (let index = 0; index < expr.length; index += 1) {
+	        const char = expr[index];
+	        if (prevWasOpperand) {
+	          try {
+	            if (isolateOperand(char, operands)) throw new Error('Invalid operand location');
+	            let newIndex = isolateParenthesis(expr, index, values, operands, scope) ||
+	                isolateNumber(expr, index, values, operands, scope) ||
+	                (allowVars && isolateVar(expr, index, values, operands, scope));
+	            if (Number.isInteger(newIndex)) {
+	              index = newIndex - 1;
+	              prevWasOpperand = false;
+	            }
+	          } catch (e) {
+	            console.error(e);
+	            return NaN;
+	          }
+	        } else {
+	          prevWasOpperand = isolateOperand(char, operands);
+	        }
+	      }
+	      if (prevWasOpperand) return NaN;
+	
+	      let value = values[0];
+	      for (let index = 0; index < values.length - 1; index += 1) {
+	        value = operands[index](values[index], values[index + 1]);
+	        values[index + 1] = value;
+	      }
+	
+	      if (Number.isFinite(value)) {
+	        cache[expr] = {time: new Date().getTime(), value};
+	        return value;
+	      }
+	      return NaN;
 	    }
 	  }
 	}
 	
-	module.exports = ExpandableList
+	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	
+	StringMathEvaluator.mixedNumberReg = /([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
+	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
+	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
+	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
+	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
+	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
+	StringMathEvaluator.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
+	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
+	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
+	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
+	StringMathEvaluator.div = (n1, n2) => n1 / n2;
+	StringMathEvaluator.add = (n1, n2) => n1 + n2;
+	StringMathEvaluator.sub = (n1, n2) => n1 - n2;
+	
+	StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	
+	
+	StringMathEvaluator.reduce = function(numerator, denominator) {
+	  let reduced = true;
+	  while (reduced) {
+	    reduced = false;
+	    for (let index = 0; index < StringMathEvaluator.primes.length; index += 1) {
+	      const prime = StringMathEvaluator.primes[index];
+	      if (prime >= denominator) break;
+	      if (numerator % prime === 0 && denominator % prime === 0) {
+	        numerator = numerator / prime;
+	        denominator = denominator / prime;
+	        reduced = true;
+	        break;
+	      }
+	    }
+	  }
+	  if (numerator === 0) {
+	    return '';
+	  }
+	  return `${numerator}/${denominator}`;
+	}
+	
+	StringMathEvaluator.parseFraction = function (str) {
+	  const regObj = regexToObject(str, StringMathEvaluator.regex, null, 'integer', null, 'numerator', 'denominator');
+	  regObj.integer = Number.parseInt(regObj.integer) || 0;
+	  regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	  regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	  if(regObj.denominator === 0) {
+	    regObj.numerator = 0;
+	    regObj.denominator = 1;
+	  }
+	  regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	  return regObj;
+	}
+	
+	StringMathEvaluator.toFraction = function (decimal, accuracy) {
+	  if (decimal === NaN) return NaN;
+	  accuracy = accuracy || '1/1000'
+	  const fracObj = StringMathEvaluator.parseFraction(accuracy);
+	  const denominator = fracObj.denominator;
+	  if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	    throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	  }
+	  let remainder = decimal;
+	  let currRemainder = remainder;
+	  let value = 0;
+	  let numerator = 0;
+	  while (currRemainder > 0) {
+	    numerator += fracObj.numerator;
+	    currRemainder -= fracObj.decimal;
+	  }
+	  const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
+	  const diff2 = (numerator / denominator) - decimal;
+	  numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	  const integer = Math.floor(numerator / denominator);
+	  numerator = numerator % denominator;
+	  const fraction = StringMathEvaluator.reduce(numerator, denominator);
+	  return (integer && fraction ? `${integer} ${fraction}` :
+	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
+	}
+	
+	try {
+	  module.exports = StringMathEvaluator;
+	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/expression-definition.js',
+function (require, exports, module) {
+	
+
+	
+	
+	let idCount = 0;
+	class ExprDef {
+	  constructor(name, options, notify, stages, alwaysPossible) {
+	    this.id = idCount++;
+	    let id = this.id;
+	    let string;
+	    let modified = '';
+	    let start;
+	    let end;
+	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
+	    stages = stages ? stages : {};
+	    let currStage = stages;
+	
+	    function getRoutes(prefix, stage) {
+	      let routes = [];
+	      let keys = Object.keys(stage);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        if (key !== '_meta') {
+	          let newPrefix;
+	          if (prefix) {
+	            newPrefix = `${prefix}.${key}`;
+	          } else {
+	            newPrefix = key;
+	          }
+	          const deepRoutes = getRoutes(newPrefix, stage[key]);
+	          if (deepRoutes.length > 0) {
+	            routes = routes.concat(deepRoutes);
+	          }
+	          if (stage[key]._meta && stage[key]._meta.end) {
+	            routes.push(newPrefix + '.end');
+	          }
+	          if (stage[key]._meta && stage[key]._meta.repeat) {
+	            routes.push(newPrefix + '.repeat');
+	          }
+	        }
+	      }
+	      return routes;
+	    }
+	
+	    this.always = function () {
+	      for (let index = 0; index < arguments.length; index += 1) {
+	        alwaysPossible.push(arguments[index]);
+	      }
+	    };
+	    this.getAlways = function (exprDef) {return alwaysPossible;};
+	
+	    this.allRoutes = function () {
+	      return getRoutes(null, stages);
+	    }
+	
+	    function getNotice (exprDef) {
+	      let isInAlways = false;
+	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
+	      if (isInAlways) return;
+	      if (!exprDef.closed()) {
+	        if (currStage[exprDef.getName()] === undefined) {
+	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
+	        }
+	        currStage = currStage[exprDef.getName()];
+	      }
+	    }
+	    this.getNotice = getNotice;
+	
+	    function getName () {return name;};
+	    this.getName = getName;
+	    this.onClose = function (start, end) {
+	      return function (str, start, end) {
+	        if (notify) notify(this);
+	        options.onClose(str, start, end);
+	      }
+	    }
+	
+	    function setMeta(targetNodes, attr, value) {
+	      return function () {
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          targetNodes[lIndex]._meta[attr] = value;
+	        }
+	      }
+	    }
+	
+	    function then (targetNodes) {
+	      return function () {
+	        const createdNodes = [];
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          const targetNode = targetNodes[lIndex];
+	          for (let index = 0; index < arguments.length; index += 1) {
+	            const exprDef = arguments[index];
+	            if (!exprDef instanceof ExprDef) {
+	              throw new Error(`Argument is not an instanceof ExprDef`);
+	            }
+	            const nextExpr = exprDef.clone(getNotice);
+	            if (targetNode[nextExpr.getName()] === undefined) {
+	              targetNode[nextExpr.getName()] = {
+	                _meta: {
+	                  expr: nextExpr
+	                }
+	              };
+	            }
+	            createdNodes.push(targetNode[nextExpr.getName()]);
+	          }
+	        }
+	        return {
+	          then: then(createdNodes),
+	          repeat: setMeta(createdNodes, 'repeat', true),
+	          end: setMeta(createdNodes, 'end', true),
+	        };
+	      }
+	    }
+	
+	    this.if = function () {return then([stages]).apply(this, arguments);}
+	
+	    function isEscaped(str, index) {
+	      if (options.escape === undefined) {
+	        return false;
+	      }
+	      let count = -1;
+	      let firstIndex, secondIndex;
+	      do {
+	        count += 1;
+	        firstIndex = index - (options.escape.length * (count + 1));
+	        secondIndex = options.escape.length;
+	      } while (str.substr(firstIndex, secondIndex) === options.escape);
+	      return count % 2 == 0;
+	    }
+	
+	    function foundCall(onFind, sub) {
+	      if ((typeof notify) === 'function') {
+	        notify(this);
+	      }
+	      if ((typeof onFind) === 'function') {
+	        return onFind(sub);
+	      } else {
+	        return sub;
+	      }
+	    }
+	
+	    this.find = function (str, index) {
+	      let startedThisCall = false;
+	      let needle = options.closing;
+	      let starting = false;
+	      if (start === undefined) {
+	        needle = options.opening;
+	        starting = true;
+	      }
+	      const sub = str.substr(index);
+	      let needleLength;
+	      if (needle instanceof RegExp) {
+	        const match = sub.match(needle);
+	        if (match && match.index === 0) {
+	          needleLength = match[0].length;
+	        }
+	      } else if ((typeof needle) === 'string') {
+	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
+	          needleLength = needle.length;
+	      } else if (needle === undefined || needle === null) {
+	        needleLength = 0;
+	      } else {
+	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
+	      }
+	      needleLength += options.tailOffset ? options.tailOffset : 0;
+	      let changes = '';
+	      if (start === undefined && starting && (needleLength || needle === null)) {
+	        string = str;
+	        start = index;
+	        startedThisCall = true;
+	        if (needle === null) {
+	          if ((typeof notify) === 'function') {
+	            notify(this);
+	          }          return {index, changes}
+	        } else {
+	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
+	        }
+	      }
+	      if ((!startedThisCall && needleLength) ||
+	            (startedThisCall && options.closing === undefined) ||
+	            (!startedThisCall && options.closing === null)) {
+	        if (str !== string) {
+	          throw new Error ('Trying to apply an expression to two different strings.');
+	        }
+	        end = index + needleLength;
+	        if (options.closing === null) {
+	          return {index, changes}
+	        }
+	        if (!startedThisCall) {
+	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
+	        }
+	        return { index: end, changes };
+	      }
+	
+	      return start !== undefined ? { index: start + needleLength, changes } :
+	                      { index: -1, changes };
+	    }
+	
+	    this.clone = function (notify) {
+	      return new ExprDef(name, options, notify, stages, alwaysPossible);
+	    };
+	    this.name = this.getName();
+	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
+	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
+	    this.location = function () {return {start, end, length: end - start}};
+	    this.closed = function () {return end !== undefined;}
+	    this.open = function () {return start !== undefined;}
+	    this.next =  function () {
+	      const expressions = [];
+	      if (currStage._meta && currStage._meta.repeat) {
+	        currStage = stages;
+	      }
+	      Object.values(currStage).map(
+	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
+	      )
+	      return alwaysPossible.concat(expressions);
+	    };
+	  }
+	}
+	
+	function parse(exprDef, str) {
+	  exprDef = exprDef.clone();
+	  let index = 0;
+	  let modified = '';
+	  const breakDown = [];
+	  const stack = [];
+	
+	  function topOfStack() {
+	    return stack[stack.length - 1];
+	  }
+	
+	  function closeCheck(exprDef) {
+	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
+	      let result = exprDef.find(str, index);
+	      if (result.index) {
+	        modified += result.changes;
+	        return result.index;
+	      }
+	    }
+	  }
+	
+	  function checkArray(exprDef, array) {
+	    if (exprDef.endDefined()) {
+	      let nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
+	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
+	      const result = childExprDef.find(str, index);
+	      if (result.index !== -1) {
+	        modified += result.changes;
+	        if (childExprDef.closed()) {
+	          breakDown.push(childExprDef);
+	        } else {
+	          stack.push(childExprDef);
+	        }
+	        return result.index;
+	      }
+	    }
+	    if (exprDef.canEnd()) {
+	      nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
+	  }
+	
+	  function open(exprDef, index) {
+	    const always = exprDef.getAlways();
+	    while (!exprDef.open()) {
+	      let result = exprDef.find(str, index);
+	      modified += result.changes;
+	      if(result.index === -1) {
+	        let newIndex = checkArray(exprDef, always);
+	        index = newIndex;
+	      } else {
+	        if (exprDef.closed()) {
+	          breakDown.push(exprDef);
+	        } else {
+	          stack.push(exprDef);
+	        }
+	        index = result.index;
+	      }
+	    }
+	    return index;
+	  }
+	
+	  let loopCount = 0;
+	  index = open(exprDef, index);
+	  progress = [-3, -2, -1];
+	  while (topOfStack() !== undefined) {
+	    const tos = topOfStack();
+	    if (progress[0] === index) {
+	      throw new Error(`ExprDef stopped making progress`);
+	    }
+	    let stackIds = '';
+	    let options = '';
+	    stack.map(function (value) {stackIds+=value.getName() + ','});
+	    tos.next().map(function (value) {options+=value.getName() + ','})
+	    index = checkArray(tos, tos.next());
+	    if (tos.closed()) {
+	      stack.pop();
+	    }
+	    loopCount++;
+	  }
+	  // if (index < str.length) {
+	  //   throw new Error("String not fully read");
+	  // }
+	  return modified;
+	}
+	
+	
+	ExprDef.parse = parse;
+	
+	module.exports = ExprDef;
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/request.js',
+function (require, exports, module) {
+	
+
+	Request = {
+	    onStateChange: function (success, failure, id) {
+	      return function () {
+	        if (this.readyState == 4) {
+	          if (this.status == 200) {
+	            try {
+	              resp = JSON.parse(this.responseText);
+	            } catch (e){
+	              resp = this.responseText;
+	            }
+	            if (success) {
+	              success(resp, this);
+	            }
+	          } else if (failure) {
+	            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
+	            if (errorMsgMatch) {
+	              this.errorMsg = errorMsgMatch[1].trim();
+	            }
+	            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
+	            if (errorCodeMatch) {
+	              this.errorCode = errorCodeMatch[1];
+	
+	            }
+	            failure(this);
+	          }
+	          var resp = this.responseText;
+	        }
+	      }
+	    },
+	
+	    id: function (url, method) {
+	      return `request.${method}.${url.replace(/\./g, ',')}`;
+	    },
+	
+	    get: function (url, success, failure) {
+	      const xhr = new Request.xmlhr();
+	      xhr.open("GET", url, true);
+	      const id = Request.id(url, 'GET');
+	      xhr.setRequestHeader('Content-Type', 'application/json');
+	      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+	      Request.setGlobalHeaders(xhr);
+	      if (success === undefined && failure === undefined) return xhr;
+	      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	      xhr.send();
+	      return xhr;
+	    },
+	
+	    hasBody: function (method) {
+	      return function (url, body, success, failure) {
+	        const xhr = new Request.xmlhr();
+	        xhr.open(method, url, true);
+	        const id = Request.id(url, method);
+	        xhr.setRequestHeader('Content-Type', 'application/json');
+	        Request.setGlobalHeaders(xhr);
+	        if (success === undefined && failure === undefined) return xhr;
+	        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	        xhr.send(JSON.stringify(body));
+	        return xhr;
+	      }
+	    },
+	
+	    post: function () {return Request.hasBody('POST')(...arguments)},
+	    delete: function () {return Request.hasBody('DELETE')(...arguments)},
+	    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
+	    head: function () {return Request.hasBody('HEAD')(...arguments)},
+	    put: function () {return Request.hasBody('PUT')(...arguments)},
+	    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
+	}
+	
+	Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
+	Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
+	const globalHeaders = {};
+	Request.globalHeader = (header, funcOval) => {
+	  globalHeaders[header] = funcOval;
+	}
+	Request.setGlobalHeaders = (xhr) => {
+	  const headers = Object.keys(globalHeaders);
+	  headers.forEach((header) =>
+	    xhr.setRequestHeader(header, Function.orVal(globalHeaders[header], xhr)));
+	}
+	try {
+	  Request.xmlhr = XMLHttpRequest;
+	} catch (e) {
+	  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
+	}
+	
+	try {
+	  module.exports = Request;
+	} catch (e) {}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/measurment.js',
+function (require, exports, module) {
+	
+const Lookup = require('./object/lookup');
+	const StringMathEvaluator = require('./string-math-evaluator');
+	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	let percision = '1/32';
+	let units = [
+	  'Metric',
+	  'Imperial (US)'
+	]
+	let unit = units[1];
+	
+	
+	class Measurement extends Lookup {
+	  constructor(value, notMetric) {
+	    super();
+	    if ((typeof value) === 'string') {
+	      value += ' '; // Hacky fix for regularExpression
+	    }
+	
+	    const determineUnit = () => {
+	      if ((typeof notMetric === 'string')) {
+	        const index = units.indexOf(notMetric);
+	        if (index !== -1) return units[index];
+	      } else if ((typeof notMetric) === 'boolean') {
+	        if (notMetric === true) return unit;
+	      }
+	      return units[0];
+	    }
+	
+	    let decimal = 0;
+	    let nan = value === null || value === undefined;
+	    this.isNaN = () => nan;
+	
+	    const parseFraction = (str) => {
+	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
+	      regObj.integer = Number.parseInt(regObj.integer) || 0;
+	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	      if(regObj.denominator === 0) {
+	        regObj.numerator = 0;
+	        regObj.denominator = 1;
+	      }
+	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	      return regObj;
+	    };
+	
+	    function reduce(numerator, denominator) {
+	      let reduced = true;
+	      while (reduced) {
+	        reduced = false;
+	        for (let index = 0; index < Measurement.primes.length; index += 1) {
+	          const prime = Measurement.primes[index];
+	          if (prime >= denominator) break;
+	          if (numerator % prime === 0 && denominator % prime === 0) {
+	            numerator = numerator / prime;
+	            denominator = denominator / prime;
+	            reduced = true;
+	            break;
+	          }
+	        }
+	      }
+	      if (numerator === 0) {
+	        return '';
+	      }
+	      return ` ${numerator}/${denominator}`;
+	    }
+	
+	    function calculateValue(accuracy) {
+	      accuracy = accuracy || '1/32'
+	      const fracObj = parseFraction(accuracy);
+	      const denominator = fracObj.denominator;
+	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	      }
+	      let standardDecimal = decimal / 2.54;
+	      let sign = standardDecimal > 0 ? 1 : -1;
+	      let remainder = Math.abs(standardDecimal);
+	      let currRemainder = remainder;
+	      let value = 0;
+	      let numerator = 0;
+	      while (currRemainder > 0) {
+	        numerator += fracObj.numerator;
+	        currRemainder -= fracObj.decimal;
+	      }
+	      const diff1 = standardDecimal - ((numerator - fracObj.numerator) / denominator);
+	      const diff2 = (numerator / denominator) - standardDecimal;
+	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	      const integer = sign * Math.floor(numerator / denominator);
+	      numerator = numerator % denominator;
+	      return {integer, numerator, denominator};
+	    }
+	
+	    this.fraction = (accuracy) => {
+	      if (nan) return NaN;
+	      const obj = calculateValue(accuracy);
+	      if (obj.integer === 0 && obj.numerator === 0) return '0';
+	      const integer = obj.integer !== 0 ? obj.integer : '';
+	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
+	    }
+	    this.standardUS = this.fraction;
+	
+	    this.display = (accuracy) => {
+	      switch (unit) {
+	        case units[0]: return this.decimal(accuracy);
+	        case units[1]: return this.standardUS(accuracy);
+	        default:
+	            return this.standardUS(accuracy);
+	      }
+	    }
+	
+	    this.value = (accuracy) => this.decimal(accuracy);
+	
+	    this.decimal = (accuracy) => {
+	      if (nan) return NaN;
+	      accuracy = accuracy % 100 ? accuracy : 100;
+	      return Math.round(decimal * accuracy) / accuracy;
+	    }
+	
+	    function getDecimalEquivalant(string) {
+	      string = string.trim();
+	      if (string.match(StringMathEvaluator.decimalReg)) {
+	        return Number.parseFloat(string);
+	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
+	        return parseFraction(string).decimal
+	      }
+	      nan = true;
+	      return NaN;
+	    }
+	
+	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+	
+	    function standardize(ambiguousDecimal) {
+	      switch (determineUnit()) {
+	        case units[0]:
+	          return ambiguousDecimal;
+	        case units[1]:
+	          return convertUsToMetric(ambiguousDecimal);
+	        default:
+	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
+	      }
+	    }
+	
+	    if ((typeof value) === 'number') {
+	      decimal = standardize(value);
+	    } else if ((typeof value) === 'string') {
+	      try {
+	        const ambiguousDecimal = getDecimalEquivalant(value);
+	        decimal = standardize(ambiguousDecimal);
+	      } catch (e) {
+	        nan = true;
+	      }
+	    } else {
+	      nan = true;
+	    }
+	  }
+	}
+	
+	Measurement.unit = (newUnit) => {
+	  for (index = 0; index < units.length; index += 1) {
+	    if (newUnit === units[index]) unit = newUnit;
+	  }
+	  return unit
+	};
+	Measurement.units = () => JSON.parse(JSON.stringify(units));
+	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
+	
+	Measurement.validation = function (range) {
+	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
+	  let min = obj.min.trim() !== '' ?
+	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
+	  let max = obj.max.trim() !== '' ?
+	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
+	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
+	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
+	  return function (value) {
+	    const decimal = new Measurement(value).decimal();
+	    if (decimal === NaN) return false;
+	    return minCheck(decimal) && maxCheck(decimal);
+	  }
+	}
+	
+	Measurement.round = (value, percision) => {
+	  if (percision)
+	  return new Measurement(value).decimal(percision);
+	  return Math.round(value * 10000000) / 10000000;
+	}
+	
+	try {
+	  module.exports = Measurement;
+	} catch (e) {/* TODO: Consider Removing */}
 	
 });
 
@@ -7275,179 +7462,6 @@ function (require, exports, module) {
 	  }
 	}
 	module.exports = ExpandableObject
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/input.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const $t = require('../$t');
-	const du = require('../dom-utils');
-	/*
-	supported attributes: type, placeholder, name, class, value
-	label: creates a text label preceeding input.
-	clearOnClick: removes value when clicked.
-	list: creates a dropdown with list values.
-	default: the default value if input is invalid.
-	targetAttr: attribute which defines the inputs value.
-	format: attribute which defines a function used to format value.
-	validation: Accepts
-	                Array: value must be included
-	                Regex: value must match
-	                Function: value is arg1, must return true
-	errorMsg: Message that shows when validation fails.
-	
-	*/
-	class Input {
-	  constructor(props) {
-	    props.hidden = props.hide || false;
-	    props.list = props.list || [];
-	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
-	                            'class', 'list', 'value');
-	
-	    const immutableProps = {
-	      _IMMUTABLE: true,
-	      id: props.id || `input-${String.random(7)}`,
-	      targetAttr: props.targetAttr || 'value',
-	      errorMsg: props.errorMsg || 'Error',
-	      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
-	    }
-	    Object.getSet(this, immutableProps)
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      delete json.id;
-	      delete json.errorMsgId;
-	      Object.set(json, properties);
-	      return new this.constructor(json);
-	    }
-	
-	    const instance = this;
-	    const forAll = Input.forAll(this.id());
-	
-	    this.hide = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      hidden = cnt.hidden = true;
-	    });
-	    this.show = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      hidden = cnt.hidden = false;
-	    });
-	
-	    let valid;
-	    let value = props.value;
-	
-	    const idSelector = `#${this.id()}`;
-	
-	    const html = this.constructor.html(this);
-	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
-	    this.html = () =>
-	     html();
-	
-	    function valuePriority (func) {
-	      return (elem, event) => func(elem[this.targetAttr()], elem, event);
-	    }
-	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
-	
-	    function getElem(id) {return document.getElementById(id);}
-	    this.get = () => getElem(this.id());
-	
-	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
-	    this.valid = () => valid === undefined ? this.setValue() : valid;
-	    this.setValue = (val) => {
-	      const elem = getElem(this.id());
-	      if (val === undefined){
-	        if (elem) val = elem[this.targetAttr()]
-	        if (val === undefined) val = props.default;
-	      }
-	      if(this.validation(val)) {
-	        valid = true;
-	        value = val;
-	        if (elem) elem[this.targetAttr()] = val;
-	        return true;
-	      }
-	      valid = false;
-	      value = undefined;
-	      return false;
-	    }
-	    this.value = () => {
-	      const unformatted = (typeof value === 'function') ? value() : value || '';
-	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
-	    }
-	    this.doubleCheck = () => {
-	      valid = undefined;
-	      validate();
-	      return valid;
-	    }
-	    this.validation = function(val) {
-	      const elem = getElem(instance.id);
-	      val = val === undefined && elem ? elem.value : val;
-	      if (val === undefined) return false;
-	      if (valid !== undefined && val === value) return valid;
-	      let valValid = true;
-	      if (props.validation instanceof RegExp) {
-	        valValid = val.match(props.validation) !== null;
-	      }
-	      else if ((typeof props.validation) === 'function') {
-	        valValid = props.validation.apply(null, arguments);
-	      }
-	      else if (Array.isArray(props.validation)) {
-	        valValid = props.validation.indexOf(val) !== -1;
-	      }
-	
-	      return valValid;
-	    };
-	
-	    const validate = (target) => {
-	      target = target || getElem(instance.id());
-	      if (target) {
-	        if (this.setValue(target[this.targetAttr()])) {
-	          getElem(this.errorMsgId()).innerHTML = '';
-	          valid = true;
-	        } else {
-	          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
-	          valid = false;
-	        }
-	      }
-	    }
-	
-	    if (props.clearOnClick) {
-	      du.on.match(`mousedown`, `#${this.id()}`, () => {
-	        const elem = getElem(this.id());
-	        if (elem) elem.value = '';
-	      });
-	    }
-	    du.on.match(`change`, `#${this.id()}`, validate);
-	    du.on.match(`keyup`, `#${this.id()}`, validate);
-	  }
-	}
-	
-	Input.forAll = (id) => {
-	  const idStr = `#${id}`;
-	  return (func) => {
-	    const elems = document.querySelectorAll(idStr);
-	    for (let index = 0; index < elems.length; index += 1) {
-	      func(elems[index]);
-	    }
-	  }
-	}
-	
-	Input.template = new $t('input/input');
-	Input.html = (instance) => () => Input.template.render(instance);
-	Input.flagAttrs = ['checked', 'selected'];
-	Input.attrString = (targetAttr, value) =>{
-	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
-	    return value === true ? targetAttr : '';
-	  }
-	  return `${targetAttr}='${value}'`
-	}
-	
-	module.exports = Input;
 	
 });
 
@@ -7779,245 +7793,400 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/lists/expandable-list0.js',
+RequireJS.addFunction('../../public/js/utils/input/input.js',
 function (require, exports, module) {
 	
 
 	
-	const CustomEvent = require('../custom-error.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
 	
-	// properties
-	//  required: {
-	//  getHeader: function returns html header string,
-	//  getBody: function returns html body string,
-	//}
-	//  optional: {
-	//  list: list to use, creates on undefined
-	//  getObject: function returns new list object default is generic js object,
-	//  parentSelector: cssSelector only reqired for refresh function,
-	//  listElemLable: nameOfElementType changes add button label,
-	//  hideAddBtn: defaults to false,
-	//  startClosed: all tabs are closed on list open.
-	//  input: true - require user to enter text before adding new
-	//  inputOptions: array of autofill inputs
-	//  inputs: [{placeholder, autofill},...]
-	//  inputValidation: function to validate input fields
-	//  type: defaults to list,
-	//  selfCloseTab: defalts to true - allows clicking on header to close body,
-	//  findElement: used to find elemenents related to header - defaults to closest
-	//}
-	class ExpandableList {
+	
+	const $t = require('../$t');
+	const du = require('../dom-utils');
+	/*
+	supported attributes: type, placeholder, name, class, value
+	label: creates a text label preceeding input.
+	clearOnClick: removes value when clicked.
+	list: creates a dropdown with list values.
+	default: the default value if input is invalid.
+	targetAttr: attribute which defines the inputs value.
+	format: attribute which defines a function used to format value.
+	validation: Accepts
+	                Array: value must be included
+	                Regex: value must match
+	                Function: value is arg1, must return true
+	errorMsg: Message that shows when validation fails.
+	
+	*/
+	class Input {
 	  constructor(props) {
-	    const afterRenderEvent = new CustomEvent('afterRender');
-	    const afterAddEvent = new CustomEvent('afterAdd');
-	    const afterRefreshEvent = new CustomEvent('afterRefresh');
-	    const instance = this;
-	    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
-	    props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
-	    props.type = props.type || 'list';
-	    props.findElement = props.findElement || ((selector, target) =>  du.find.closest(selector, target));
-	    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
-	    props.getObject = props.getObject || (() => {});
-	    props.inputs = props.inputs || [];
+	    props.hidden = props.hide || false;
 	    props.list = props.list || [];
-	    props.list.DO_NOT_CLONE = true;
-	    this.getHeader = props.getHeader; delete props.getHeader;
-	    this.getBody = props.getBody; delete props.getBody;
-	    props.id = ExpandableList.lists.length;
-	    props.activeIndex = 0;
-	    Object.getSet(this, props, 'listElemLable');
-	    let pendingRefresh = false;
-	    let lastRefresh = new Date().getTime();
-	    const storage = {};
-	    ExpandableList.lists[props.id] = this;
+	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
+	                            'class', 'list', 'value');
 	
-	    this.errorCntId = () => props.ERROR_CNT_ID;
-	    function setErrorMsg(msg) {
-	        du.id(props.ERROR_CNT_ID).innerHTML = msg;
+	    const immutableProps = {
+	      _IMMUTABLE: true,
+	      id: props.id || `input-${String.random(7)}`,
+	      targetAttr: props.targetAttr || 'value',
+	      errorMsg: props.errorMsg || 'Error',
+	      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
+	    }
+	    Object.getSet(this, immutableProps)
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      delete json.id;
+	      delete json.errorMsgId;
+	      Object.set(json, properties);
+	      return new this.constructor(json);
 	    }
 	
-	    function values() {
-	      if (instance.hasInputTree()) return props.inputTree.values();
-	      const values = {};
-	      props.inputs.forEach((input) =>
-	        values[input.placeholder] = du.id(input.id).value);
-	      return values;
-	    }
+	    const instance = this;
+	    const forAll = Input.forAll(this.id());
 	
-	    function getCnt() {
-	      return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
-	    }
+	    this.hide = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      this.hidden(cnt.hidden = true);
+	    });
+	    this.show = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      this.hidden(cnt.hidden = false);
+	    });
 	
-	    function getInputCnt() {
-	      const cnt = du.find.down('.expand-input-cnt', getCnt());
-	      return cnt;
-	    }
+	    let valid;
+	    let value = props.value;
 	
-	    this.add = () => {
-	      const inputValues = values();
-	      if ((typeof props.inputValidation) !== 'function' ||
-	              props.inputValidation(inputValues) === true) {
-	        props.list.push(props.getObject(inputValues, getInputCnt()));
-	        this.activeIndex(props.list.length - 1);
-	        this.refresh();
-	        afterAddEvent.trigger();
-	        if (this.hasInputTree()) props.inputTree.formFilled();
-	      } else {
-	        const errors = props.inputValidation(inputValues);
-	        let errorStr;
-	        if ((typeof errors) === 'object') {
-	          const keys = Object.keys(errors);
-	          errorStr = Object.values(errors).join('<br>');
+	    const idSelector = `#${this.id()}`;
+	
+	    const html = this.constructor.html(this);
+	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
+	    this.html = () =>
+	     html();
+	
+	    function valuePriority (func) {
+	      return (elem, event) => func(elem[instance.targetAttr()], elem, event);
+	    }
+	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
+	
+	    function getElem(id) {return document.getElementById(id);}
+	    this.get = () => getElem(this.id());
+	
+	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
+	    this.valid = () => valid === undefined ? this.setValue() : valid;
+	    this.setValue = (val) => {
+	      const elem = getElem(this.id());
+	      if (val === undefined){
+	        if (elem) val = elem[this.targetAttr()]
+	        if (val === undefined) val = props.default;
+	      }
+	      if(this.validation(val)) {
+	        valid = true;
+	        value = val;
+	        if (elem) elem[this.targetAttr()] = val;
+	        return true;
+	      }
+	      valid = false;
+	      value = undefined;
+	      return false;
+	    }
+	    this.value = () => {
+	      const unformatted = (typeof value === 'function') ? value() : value || '';
+	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
+	    }
+	    this.doubleCheck = () => {
+	      valid = undefined;
+	      validate();
+	      return valid;
+	    }
+	    this.validation = function(val) {
+	      const elem = getElem(instance.id);
+	      val = val === undefined && elem ? elem.value : val;
+	      if (val === undefined) return false;
+	      if (valid !== undefined && val === value) return valid;
+	      let valValid = true;
+	      if (props.validation instanceof RegExp) {
+	        valValid = val.match(props.validation) !== null;
+	      }
+	      else if ((typeof props.validation) === 'function') {
+	        valValid = props.validation.apply(null, arguments);
+	      }
+	      else if (Array.isArray(props.validation)) {
+	        valValid = props.validation.indexOf(val) !== -1;
+	      }
+	
+	      return valValid;
+	    };
+	
+	    const validate = (target) => {
+	      target = target || getElem(instance.id());
+	      if (target) {
+	        if (this.setValue(target[this.targetAttr()])) {
+	          getElem(this.errorMsgId()).innerHTML = '';
+	          valid = true;
 	        } else {
-	          errorStr = `Error: ${errors}`;
+	          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
+	          valid = false;
 	        }
-	        setErrorMsg(errorStr);
 	      }
-	    };
-	    this.hasInputTree = () =>
-	      this.inputTree() && this.inputTree().constructor.name === 'DecisionNode';
-	    if (this.hasInputTree())
-	      props.inputTree.onComplete(this.add);
-	    props.hasInputTree = this.hasInputTree;
-	
-	    this.isSelfClosing = () => props.selfCloseTab;
-	    this.remove = (index) => {
-	      props.list.splice(index, 1);
-	      this.refresh();
 	    }
-	    this.html = () => ExpandableList[`${instance.type()}Template`].render(this);
-	    this.afterRender = (func) => afterRenderEvent.on(func);
-	    this.afterAdd = (func) => afterAddEvent.on(func);
-	    this.refresh = (type) => {
-	      this.type((typeof type) === 'string' ? type : props.type);
-	      if (!pendingRefresh) {
-	        pendingRefresh = true;
-	        setTimeout(() => {
-	          props.inputs.forEach((input) => input.id = input.id || String.random(7));
-	          const parent = document.querySelector(props.parentSelector);
-	          const html = this.html();
-	          if (parent && html !== undefined) {
-	            parent.innerHTML = html;
-	            afterRefreshEvent.trigger();
+	
+	    if (props.clearOnClick) {
+	      du.on.match(`mousedown`, `#${this.id()}`, () => {
+	        const elem = getElem(this.id());
+	        if (elem) elem.value = '';
+	      });
+	    }
+	    du.on.match(`change`, `#${this.id()}`, validate);
+	    du.on.match(`keyup`, `#${this.id()}`, validate);
+	  }
+	}
+	
+	Input.forAll = (id) => {
+	  const idStr = `#${id}`;
+	  return (func) => {
+	    const elems = document.querySelectorAll(idStr);
+	    for (let index = 0; index < elems.length; index += 1) {
+	      func(elems[index]);
+	    }
+	  }
+	}
+	
+	Input.template = new $t('input/input');
+	Input.html = (instance) => () => Input.template.render(instance);
+	Input.flagAttrs = ['checked', 'selected'];
+	Input.attrString = (targetAttr, value) =>{
+	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
+	    return value === true ? targetAttr : '';
+	  }
+	  return `${targetAttr}='${value}'`
+	}
+	
+	module.exports = Input;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/object/lookup.js',
+function (require, exports, module) {
+	
+
+	class Lookup {
+	  constructor(id) {
+	    id = id || String.random();
+	    Object.getSet(this, 'id');
+	    this.id = () => id;
+	    const cxtr = this.constructor;
+	    if(cxtr.selectList === Lookup.selectList) {
+	      cxtr.get = (id) => Lookup.get(cxtr.name, id);
+	      Lookup.byId[cxtr.name] = {};
+	      cxtr.selectList = () => Lookup.selectList(cxtr.name);
+	    }
+	    if (Lookup.register[cxtr.name] === undefined)
+	      Lookup.register[cxtr.name] = {};
+	    Lookup.register[cxtr.name][id] = this;
+	    Lookup.byId[cxtr.name][id] = this;
+	    this.toString = () => this.id();
+	  }
+	}
+	
+	Lookup.register = {};
+	Lookup.byId = {};
+	Lookup.get = (cxtrName, id) =>
+	    Lookup.byId[cxtrName][id];
+	Lookup.selectList = (className) => {
+	  return Object.keys(Lookup.register[className]);
+	}
+	
+	module.exports = Lookup;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/test.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	Error.stackInfo = (steps) => {
+	  steps = steps || 1;
+	  const err = new Error();
+	  const lines = err.stack.split('\n');
+	  const match = lines[steps].match(/at (([a-zA-Z\.]*?) |)(.*\.js):([0-9]{1,}):([0-9]{1,})/);;
+	  if (match) {
+	    return {
+	      filename: match[3].replace(/^\(/, ''),
+	      function: match[2],
+	      line: match[4],
+	      character: match[5]
+	    }
+	  }
+	}
+	
+	Error.reducedStack = (steps) => {
+	  steps = steps || 1;
+	  const err = new Error();
+	  let lines = err.stack.split('\n');
+	  lines = lines.splice(steps);
+	  return `Error\n${lines.join('\n')}`;
+	}
+	
+	class ArgumentAttributeTest {
+	  constructor(argIndex, value, name, errorCode, errorAttribute) {
+	    function fail (ts, func, actualErrorCode, args) {
+	      ts.fail('AttributeTest Failed: use null if test was supposed to succeed' +
+	      `\n\tFunction: '${func.name}'` +
+	      `\n\tArgument Index: '${argIndex}'` +
+	      `\n\tName: '${name}'` +
+	      `\n\tValue: '${value}'` +
+	      `\n\tErrorCode: '${actualErrorCode}' !== '${errorCode}'`);
+	    }
+	
+	    this.run = function (ts, func, args, thiz) {
+	      thiz = thiz || null;
+	      const testArgs = [];
+	      for (let index = 0; index < args.length; index += 1) {
+	        const obj = args[index];
+	        let arg;
+	        if (index === argIndex) {
+	          if (name) {
+	            arg = JSON.parse(JSON.stringify(obj));
+	            arg[name] = value;
+	          } else {
+	            arg = value;
 	          }
-	          pendingRefresh = false;
-	        }, 100);
+	        }
+	        testArgs.push(arg);
 	      }
-	    };
-	    this.activeIndex = (value) => value === undefined ? props.activeIndex : (props.activeIndex = value);
-	    this.active = () => props.list[this.activeIndex()];
-	    this.value = (index) => (key, value) => {
-	      if (props.activeIndex === undefined) props.activeIndex = 0;
-	      if (index === undefined) index = props.activeIndex;
-	      if (storage[index] === undefined) storage[index] = {};
-	      if (value === undefined) return storage[index][key];
-	      storage[index][key] = value;
-	    }
-	    this.inputHtml = () => this.hasInputTree() ? this.inputTree().html() : ExpandableList.inputRepeatTemplate.render(this);
-	    this.set = (index, value) => props.list[index] = value;
-	    this.get = (index) => props.list[index];
-	    this.renderBody = (target) => {
-	      const headerSelector = `.expand-header[ex-list-id='${props.id}'][index='${this.activeIndex()}']`;
-	      target = target || document.querySelector(headerSelector);
-	      if (target !== null) {
-	        const id = target.getAttribute('ex-list-id');
-	        const list = ExpandableList.lists[id];
-	        const headers = du.find.up('.expandable-list', target).querySelectorAll('.expand-header');
-	        const bodys = du.find.up('.expandable-list', target).querySelectorAll('.expand-body');
-	        const rmBtns = du.find.up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-	        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-	        bodys.forEach((body) => body.style.display = 'none');
-	        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-	        const body = du.find.closest('.expand-body', target);
-	        body.style.display = 'block';
-	        const index = target.getAttribute('index');
-	        this.activeIndex(index);
-	        body.innerHTML = this.htmlBody(index);
-	        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-	        target.className += ' active';
-	        afterRenderEvent.trigger();
-	        // du.scroll.intoView(target.parentElement, 3, 25, document.body);
+	      try {
+	        func.apply(thiz, testArgs)
+	        if (errorCode || errorCode !== null) fail(ts, func, null, arguments);
+	      } catch (e) {
+	        errorAttribute = errorAttribute || 'errorCode';
+	        const actualErrorCode = e[errorAttribute];
+	        if (errorCode !== undefined &&
+	              (errorCode === null || actualErrorCode !== errorCode))
+	          fail(ts, func, actualErrorCode, arguments);
 	      }
-	    };
-	    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
-	
-	    this.htmlBody = (index) => this.getBody(this.list()[index], index);
-	    this.getList = () => props.list;
-	    this.refresh();
-	  }
-	}
-	ExpandableList.lists = [];
-	ExpandableList.DO_NOT_CLONE = true;
-	ExpandableList.inputRepeatTemplate = new $t('expandable/input-repeat');
-	ExpandableList.listTemplate = new $t('expandable/list');
-	ExpandableList.pillTemplate = new $t('expandable/pill');
-	ExpandableList.sidebarTemplate = new $t('expandable/sidebar');
-	ExpandableList.getIdAndIndex = (target) => {
-	  const cnt = du.find.up('.expand-header,.expand-body', target);
-	  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-	  const index = Number.parseInt(cnt.getAttribute('index'));
-	  return {id, index};
-	}
-	ExpandableList.getValueFunc = (target) => {
-	  const idIndex = ExpandableList.getIdAndIndex(target);
-	  return ExpandableList.lists[idIndex.id].value(idIndex.index);
-	}
-	
-	ExpandableList.get = (target, value) => {
-	  const idIndex = ExpandableList.getIdAndIndex(target);
-	  return ExpandableList.lists[idIndex.id].get(idIndex.index);
-	}
-	
-	ExpandableList.set = (target, value) => {
-	  const idIndex = ExpandableList.getIdAndIndex(target);
-	  ExpandableList.lists[idIndex.id].set(idIndex.index, value);
-	}
-	
-	ExpandableList.value = (key, value, target) => {
-	  return ExpandableList.getValueFunc(target)(key, value);
-	}
-	du.on.match('click', '.expandable-list-add-btn', (target) => {
-	  const id = target.getAttribute('ex-list-id');
-	  ExpandableList.lists[id].add();
-	});
-	du.on.match('click', '.expandable-item-rm-btn', (target) => {
-	  const id = target.getAttribute('ex-list-id');
-	  const index = target.getAttribute('index');
-	  ExpandableList.lists[id].remove(index);
-	});
-	ExpandableList.closeAll = (header) => {
-	  const hello = 'world';
-	}
-	
-	du.on.match('click', '.expand-header', (target, event) => {
-	  const isActive = target.matches('.active');
-	  const id = target.getAttribute('ex-list-id');
-	  const list = ExpandableList.lists[id];
-	  if (list) {
-	    if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
-	      target.className = target.className.replace(/(^| )active( |$)/g, '');
-	      du.find.closest('.expand-body', target).style.display = 'none';
-	      list.activeIndex(null);
-	      target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-	    } else if (!isActive) {
-	      list.renderBody(target);
 	    }
 	  }
-	});
+	}
 	
-	du.on.match('click', '.input-open-cnt', (target) => {
-	  const inputCnts = document.querySelectorAll('.expand-input-cnt');
-	  const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
-	  const closest = du.find.closest('.expand-input-cnt', target);
-	  inputCnts.forEach((elem) => elem.hidden = true);
-	  inputOpenCnts.forEach((elem) => elem.hidden = false);
-	  target.hidden = true;
-	  if (closest) closest.hidden = false;
-	});
+	class FunctionArgumentTestError extends Error {
+	  constructor(argIndex, errorAttribute) {
+	    super();
+	    this.message = 'errorCode should be null if no error thrown and undefined if no errorCode';
+	    if (argIndex === undefined) {
+	      this.message += '\n\targIndex must be defined.';
+	    }
+	    if (errorAttribute === undefined) {
+	      this.message += '\n\terrorAttribute must be defined.';
+	    }
+	  }
+	}
 	
-	module.exports = ExpandableList
+	class FunctionArgumentTest {
+	  constructor(ts, func, args, thiz) {
+	    if (!(ts instanceof TestStatus))
+	      throw new Error('ts must be a valid instance of TestStatus');
+	    if ((typeof func) !== 'function')
+	      throw new Error("Function must be defined and of type 'function'");
+	    if (!Array.isArray(args) || args.length === 0)
+	      throw new Error("This is not a suitable test for a function without arguments");
+	    const funcArgTests = [];
+	    let argIndex, errorCode;
+	    let errorAttribute = 'errorCode';
+	    this.setIndex = (i) => {argIndex = i; return this;}
+	    this.setErrorCode = (ec) => {errorCode = ec; return this;}
+	    this.setErrorAttribute = (ea) => {errorAttribute = ea; return this};
+	    const hasErrorCode =  errorCode !== undefined;
+	    this.run = () => {
+	      funcArgTests.forEach((fat) => {
+	        fat.run(ts, func, args, thiz);
+	      });
+	      return this;
+	    }
+	    this.add = (name, value) =>  {
+	      if (errorAttribute === undefined || argIndex === undefined)
+	        throw new FunctionArgumentTestError(argIndex, errorAttribute);
+	      const at = new ArgumentAttributeTest(argIndex, value, name, errorCode, errorAttribute);
+	      funcArgTests.push(at);
+	      return this;
+	    }
+	  }
+	}
+	
+	// ts for short
+	class TestStatus {
+	  constructor(testName) {
+	    let assertT = 0;
+	    let assertC = 0;
+	    let success = false;
+	    let fail = false;
+	    function printError(msg, stackOffset) {
+	      stackOffset = stackOffset || 4;
+	      console.error(`%c ${msg}\n${Error.reducedStack(stackOffset)}`, 'color: red');
+	    }
+	    function assert(b) {
+	      assertT++;
+	      if (b) {
+	        assertC++;
+	        return true;
+	      }
+	      return false;
+	    }
+	    function successStr(msg) {
+	      console.log(`%c ${testName} - Successfull (${assertC}/${assertT})${
+	          msg ? `\n\t\t${msg}` : ''}`, 'color: green');
+	    }
+	    this.assertTrue = (b, msg) => !assert(b) &&
+	                            printError(`'${b}' should be true`);
+	    this.assertFalse = (b, msg) => !assert(!b) &&
+	                            printError(`'${b}' should be false`);
+	    this.assertEquals = (a, b, msg) => !assert(a === b) &&
+	                            printError(`'${a}' === '${b}' should be true`);
+	    this.assertNotEquals = (a, b, msg) => !assert(a !== b) &&
+	                            printError(`'${a}' !== '${b}' should be true`);
+	    this.assertTolerance = (n1, n2, tol, msg, stackOffset) => {
+	      !assert(Math.abs(n1-n2) < tol) &&
+	      printError(`${n1} and ${n2} are not within tolerance ${tol}`, stackOffset);
+	    }
+	    this.fail = (msg, stackOffset) => {
+	      fail = true;
+	      printError(msgj, stackOffset);
+	      throw new Error();
+	    };
+	    this.success = (msg, stackOffset) => (success = true) && successStr(msg, stackOffset);
+	  }
+	}
+	
+	const Test = {
+	  tests: {},
+	  add: (name, func) => {
+	    if ((typeof func) === 'function') {
+	      if (Test.tests[name] ===  undefined) Test.tests[name] = [];
+	      Test.tests[name].push(func);
+	    }
+	  },
+	  run: () => {
+	    const testNames = Object.keys(Test.tests);
+	    for (let index = 0; index < testNames.length; index += 1) {
+	      const testName = testNames[index];
+	      try {
+	        Test.tests[testName].forEach((testFunc) => testFunc(new TestStatus(testName)));
+	      } catch (e) {
+	        console.log(`%c ${e.stack}`, 'color: red')
+	      }
+	    }
+	  }
+	}
+	
+	exports.ArgumentAttributeTest = ArgumentAttributeTest;
+	exports.FunctionArgumentTestError = FunctionArgumentTestError;
+	exports.FunctionArgumentTest = FunctionArgumentTest;
+	exports.TestStatus = TestStatus;
+	exports.Test = Test;
 	
 });
 
@@ -8111,38 +8280,154 @@ const du = require('../dom-utils');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/object/lookup.js',
+RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
 function (require, exports, module) {
 	
 
-	class Lookup {
-	  constructor(id) {
-	    id = id || String.random();
-	    Object.getSet(this, 'id');
-	    this.id = () => id;
-	    const cxtr = this.constructor;
-	    if(cxtr.selectList === Lookup.selectList) {
-	      cxtr.get = (id) => Lookup.get(cxtr.name, id);
-	      Lookup.byId[cxtr.name] = {};
-	      cxtr.selectList = () => Lookup.selectList(cxtr.name);
+	
+	const CustomEvent = require('../custom-error.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	const Expandable = require('./expandable');
+	
+	class ExpandableList extends Expandable {
+	  constructor(props) {
+	    super(props);
+	    const superRemove = this.remove;
+	    this.remove = (index) => {
+	      superRemove(props.list.splice(index, 1));
+	      this.refresh();
 	    }
-	    if (Lookup.register[cxtr.name] === undefined)
-	      Lookup.register[cxtr.name] = {};
-	    Lookup.register[cxtr.name][id] = this;
-	    Lookup.byId[cxtr.name][id] = this;
-	    this.toString = () => this.id();
 	  }
 	}
 	
-	Lookup.register = {};
-	Lookup.byId = {};
-	Lookup.get = (cxtrName, id) =>
-	    Lookup.byId[cxtrName][id];
-	Lookup.selectList = (className) => {
-	  return Object.keys(Lookup.register[className]);
+	module.exports = ExpandableList
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Select extends Input {
+	  constructor(props) {
+	    super(props);
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.index && props.list[props.index] ?
+	      props.list[props.index] : props.list[0];
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
+	    }
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	
+	    this.selected = (value) => value === this.value();
+	  }
 	}
 	
-	module.exports = Lookup;
+	Select.template = new $t('input/select');
+	Select.html = (instance) => () => Select.template.render(instance);
+	
+	module.exports = Select;
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/decision-tree.js',
+function (require, exports, module) {
+	
+
+	// branch structure
+	//
+	// style
+	//   solid
+	//     isInset:false
+	//     material
+	//       mdf
+	//         cost
+	//         profile
+	//       soft maple
+	//         cost
+	//         profile
+	//       walnut
+	//         cost
+	//         profile
+	//       alder
+	//         cost
+	//         profile
+	//   panel
+	//     isInset:true
+	//     profile
+	//       shaker
+	//         mdfCore
+	//           soft maple
+	//         nonMdfCore
+	//           soft maple
+	//           walnut
+	//           alder
+	//
+	// isInset (type===Inset)
+	//   magnet
+	
+	const Test = require('../test.js').Test;
+	const DecisionTree = require('../../decision-tree');
+	const states = {};
+	
+	states[5] = {descriptor: 'style'}
+	states[6] = {descriptor: 'solid'}
+	states[7] = {descriptor: 'isInset=false'}
+	states[8] = {descriptor: 'material'}
+	states[9] = {descriptor: 'mdf'}
+	states[10] = {descriptor: 'cost'}
+	states[11] = {descriptor: 'profile'}
+	states[12] = {descriptor: 'soft maple'}
+	states[13] = {descriptor: 'cost'}
+	states[14] = {descriptor: 'profile'}
+	states[15] = {descriptor: 'walnut'}
+	states[16] = {descriptor: 'cost'}
+	states[17] = {descriptor: 'profile'}
+	states[18] = {descriptor: 'alder'}
+	states[19] = {descriptor: 'cost'}
+	states[20] = {descriptor: 'profile'}
+	states[21] = {descriptor: 'panel'}
+	states[22] = {descriptor: 'isInset=true'}
+	states[23] = {descriptor: 'profile'}
+	states[24] = {descriptor: 'shaker'}
+	states[25] = {descriptor: 'mdfCore'}
+	states[26] = {descriptor: 'soft maple'}
+	states[27] = {descriptor: 'nonMdfCore'}
+	states[28] = {descriptor: 'soft maple'}
+	states[29] = {descriptor: 'walnut'}
+	states[30] = {descriptor: 'alder'}
+	
+	states[32] = {descriptor: 'isInset (type===Inset)'}
+	states[33] = {descriptor: 'magnet'}
+	
+	const dNode = new DecisionTree('root', {_UNIQUE_NAME_GROUP: 'tester'});
+	const statess = dNode.addStates(states);
+	dNode.then('style')
+	dNode.then('isInset (type===Inset)');
+	
+	Test.add('DecisionTree',(ts) => {
+	  ts.assertEquals(6, 6);
+	  ts.success();
+	});
 	
 });
 
@@ -8382,49 +8667,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Select extends Input {
-	  constructor(props) {
-	    super(props);
-	    const isArray = Array.isArray(props.list);
-	    let value;
-	    if (isArray) {
-	      value = props.index && props.list[props.index] ?
-	      props.list[props.index] : props.list[0];
-	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
-	    } else {
-	      const key = Object.keys(props.list)[0];
-	      value = props.value || key;
-	    }
-	    props.value = undefined;
-	    this.setValue(value);
-	    this.isArray = () => isArray;
-	
-	    this.selected = (value) => value === this.value();
-	  }
-	}
-	
-	Select.template = new $t('input/select');
-	Select.html = (instance) => () => Select.template.render(instance);
-	
-	module.exports = Select;
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/styles/select/relation.js',
 function (require, exports, module) {
 	
@@ -8504,23 +8746,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("childIdMap")[get("key")]) +
 			` </div> </div> </div>`
 	
-	exports['306898022'] = (get, $t) => 
-			`<div class="expandable-list()-body" index='` +
-			$t.clean(get("$index")) +
-			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list()-id='` +
-			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'>X</button> </div> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			`" ex-list()-id='` +
-			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index"))) +
-			` </div> </div> </div>`
-	
 	exports['443122713'] = (get, $t) => 
 			`<option value='` +
 			$t.clean(get("section").prototype.constructor.name) +
@@ -8546,30 +8771,12 @@ exports['115117775'] = (get, $t) =>
 			$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 			` </datalist> </span>`
 	
-	exports['577794234'] = (get, $t) => 
-			`<div > ` +
-			$t.clean(get("key")) +
-			` ` +
-			$t.clean( new $t('-1836314325').render(get("properties"), 'prop', get)) +
-			` </div>`
-	
 	exports['990870856'] = (get, $t) => 
 			`<div class='inline' > <h3>` +
 			$t.clean(get("assem").objId) +
 			`</h3> <div> ` +
 			$t.clean(get("getFeatureDisplay")(get("assem"))) +
 			` </div> </div>`
-	
-	exports['1021556533'] = (get, $t) => 
-			`<div > <div class="property-container close" radio-id='666'> <div class='` +
-			$t.clean(get("key") ? "expand-header" : "") +
-			`'> ` +
-			$t.clean(get("key")) +
-			` </div> <div id='config-expand-list-` +
-			$t.clean(get("childIdMap")[get("key")]) +
-			`' hidden> ` +
-			$t.clean(get("childIdMap")[get("key")]) +
-			` </div> </div> </div>`
 	
 	exports['1048603870'] = (get, $t) => 
 			`<div class="expandable-list-body" key='` +
@@ -8609,13 +8816,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean( new $t('-1397238508').render(get("partList"), 'part', get)) +
 			` </div>`
 	
-	exports['1350279248'] = (get, $t) => 
-			`<div > ` +
-			$t.clean(get("key")) +
-			` ` +
-			$t.clean( new $t('-635368654').render(get("properties"), 'prop', get)) +
-			` </div>`
-	
 	exports['1410278299'] = (get, $t) => 
 			`<span > <label>` +
 			$t.clean(get("property").name()) +
@@ -8626,15 +8826,6 @@ exports['115117775'] = (get, $t) =>
 			`' ` +
 			$t.clean(get("property").value() === true ? 'checked' : '') +
 			`> </span>`
-	
-	exports['1451502842'] = (get, $t) => 
-			`<div > ` +
-			$t.clean(get("key")) +
-			` <div id='config-expand-list-` +
-			$t.clean(get("childIdMap")[get("key")]) +
-			`'> ` +
-			$t.clean(get("childIdMap")[get("key")]) +
-			` </div> </div>`
 	
 	exports['1647498232'] = (get, $t) => 
 			`<div class="expandable-list-body" key='` +
@@ -8654,40 +8845,6 @@ exports['115117775'] = (get, $t) =>
 			`'> ` +
 			$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
 			` </div> </div> </div>`
-	
-	exports['1705673964'] = (get, $t) => 
-			`<div class="expandable-list-body" key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'>X</button> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
-			` </div> <div class="expand-body ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> ` +
-			$t.clean(get("getBody")(get("item"), get("$index") || get("$key"))) +
-			` </div> </div> </div>`
-	
-	exports['1720019920'] = (get, $t) => 
-			`<div hidden> ` +
-			$t.clean(get("key")) +
-			` <div id='config-expand-list-` +
-			$t.clean(get("childIdMap")[get("key")]) +
-			`'> ` +
-			$t.clean(get("childIdMap")[get("key")]) +
-			` </div> </div>`
 	
 	exports['1842139693'] = (get, $t) => 
 			`<li >` +
@@ -8709,50 +8866,6 @@ exports['115117775'] = (get, $t) =>
 			`' ` +
 			$t.clean(get("property").value() === true ? 'checked' : '') +
 			`> </span>`
-	
-	exports['2118731535'] = (get, $t) => 
-			`<div class="expandable-list-body" index='` +
-			$t.clean(get("$index")) +
-			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'>X</button> </div> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			` ` +
-			$t.clean(get("$index") === get("activeIndex") ? ' active' : '') +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index"))) +
-			` </div> </div> </div>`
-	
-	exports['2143078202'] = (get, $t) => 
-			`<div class="expandable-list-body" key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("$index") || get("key")) +
-			`'>X</button> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("$index") || get("key")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
-			` </div> <div class="expand-body ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("$index") || get("key")) +
-			`'> ` +
-			$t.clean(get("getBody")(get("item"), get("$index") || get("$key"))) +
-			` </div> </div> </div>`
 	
 	exports['expandable/input-repeat'] = (get, $t) => 
 			`<div> ` +
@@ -8785,31 +8898,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("listElemLable")()) +
 			`</button></div> </div> `
 	
-	exports['-493474868'] = (get, $t) => 
-			`<div class="expandable-list-body" index='` +
-			$t.clean(get("$index")) +
-			`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'>X</button> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index"))) +
-			` </div> <div class="expand-body ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("getBody")(get("item"), get("$index"))) +
-			` </div> </div> </div>`
-	
 	exports['expandable/pill'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -8829,22 +8917,41 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("type")()) +
 			`"></div> </div> `
 	
-	exports['input/decision/decisionTree'] = (get, $t) => 
-			`<div class='` +
-			$t.clean(get("class")) +
-			`' tree-id='` +
-			$t.clean(get("treeId")) +
+	exports['-2134413287'] = (get, $t) => 
+			`<div class="expandable-list()-body" key='` +
+			$t.clean(get("$index") || get("$key")) +
+			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list()-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("$index") || get("$key")) +
+			`'>X</button> </div> <div class="expand-header ` +
+			$t.clean(get("type")()) +
+			`" ex-list()-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("$index") || get("$key")) +
 			`'> ` +
-			$t.clean(get("payload").html()) +
-			` <button class='` +
-			$t.clean(get("buttonClass")) +
-			`' tree-id='` +
-			$t.clean(get("treeId")) +
-			`' ` +
-			$t.clean(get("formFilled")() ? '' : 'disabled') +
-			`> ` +
-			$t.clean(get("name")) +
-			` </button> </div> `
+			$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
+			` </div> </div> </div>`
+	
+	exports['expandable/sidebar'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> <div class="expand-list-cnt ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1647498232').render(get("list")(), 'item', get)) +
+			` <div class='expand-input-cnt' hidden>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</div> </div> <div> </div> <div class="expand-body ` +
+			$t.clean(get("type")()) +
+			`"> Hello World! </div> </div> `
 	
 	exports['input/decision/decision'] = (get, $t) => 
 			` <div> <span id='` +
@@ -8873,54 +8980,22 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("childHtml")(get("$index"))) +
 			` </div>`
 	
-	exports['expandable/sidebar'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> <div class="expand-list-cnt ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
+	exports['input/decision/decisionTree'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("class")) +
+			`' tree-id='` +
+			$t.clean(get("treeId")) +
 			`'> ` +
-			$t.clean( new $t('1647498232').render(get("list")(), 'item', get)) +
-			` <div class='expand-input-cnt' hidden>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</div> </div> <div> </div> <div class="expand-body ` +
-			$t.clean(get("type")()) +
-			`"> Hello World! </div> </div> `
-	
-	exports['input/select'] = (get, $t) => 
-			`<div class='input-cnt'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			`> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <select class='` +
-			$t.clean(get("class")()) +
-			`' id='` +
-			$t.clean(get("id")()) +
-			`' name='` +
-			$t.clean(get("name")()) +
-			`' value='` +
-			$t.clean(get("value")()) +
-			`'> ` +
-			$t.clean( new $t('-1238286346').render(get("list")(), 'key, value', get)) +
-			` </select> <div class='error' id='` +
-			$t.clean(get("errorMsgId")()) +
-			`'>` +
-			$t.clean(get("errorMsg")()) +
-			`</div> </div> `
-	
-	exports['-1238286346'] = (get, $t) => 
-			`<option value='` +
-			$t.clean(get("isArray")() ? get("value") : get("key")) +
+			$t.clean(get("payload").html()) +
+			` <button class='` +
+			$t.clean(get("buttonClass")) +
+			`' tree-id='` +
+			$t.clean(get("treeId")) +
 			`' ` +
-			$t.clean(get("selected")(get("item")) ? 'selected' : '') +
+			$t.clean(get("formFilled")() ? '' : 'disabled') +
 			`> ` +
-			$t.clean(get("value")) +
-			` </option>`
+			$t.clean(get("name")) +
+			` </button> </div> `
 	
 	exports['input/input'] = (get, $t) => 
 			`<div class='input-cnt'` +
@@ -8956,29 +9031,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("item")) +
 			`" ></option>`
 	
-	exports['cabinet/body'] = (get, $t) => 
-			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
-			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
-			` </select> </div> <div class='property-id-container center inline-flex'>` +
-			$t.clean(get("selectHtml")) +
-			`</div> <div class='right'> <select class="show-right-select"> ` +
-			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
-			` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
-			$t.clean(get("$index")) +
-			`'>Save</button> </div> ` +
-			$t.clean( new $t('-1702305177').render(get("cabinet").openings, 'opening', get)) +
-			` </div> `
-	
-	exports['-970877277'] = (get, $t) => 
-			`<option >` +
-			$t.clean(get("showType").name) +
-			`</option>`
-	
-	exports['-1702305177'] = (get, $t) => 
-			`<div class='divison-section-cnt'> ` +
-			$t.clean(get("OpenSectionDisplay").html(get("opening"))) +
-			` </div>`
-	
 	exports['input/measurement'] = (get, $t) => 
 			`<div class='fit input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
@@ -9002,16 +9054,58 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("errorMsg")()) +
 			`</div> </div> `
 	
-	exports['divide/head'] = (get, $t) => 
-			`<div> <select value='` +
-			$t.clean(get("opening").name) +
-			`' class='open-divider-select` +
-			$t.clean(get("sections").length === 0 ? ' hidden' : '') +
+	exports['input/select'] = (get, $t) => 
+			`<div class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <select class='` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`' value='` +
+			$t.clean(get("value")()) +
 			`'> ` +
-			$t.clean( new $t('443122713').render(get("sections"), 'section', get)) +
-			` </select> <div class='open-divider-select` +
-			$t.clean(get("sections").length === 0 ? '' : ' hidden') +
-			`'> D </div> </div> `
+			$t.clean( new $t('-1238286346').render(get("list")(), 'key, value', get)) +
+			` </select> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`'>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
+	
+	exports['-1238286346'] = (get, $t) => 
+			`<option value='` +
+			$t.clean(get("isArray")() ? get("value") : get("key")) +
+			`' ` +
+			$t.clean(get("selected")(get("item")) ? 'selected' : '') +
+			`> ` +
+			$t.clean(get("value")) +
+			` </option>`
+	
+	exports['cabinet/body'] = (get, $t) => 
+			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
+			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
+			` </select> </div> <div class='property-id-container center inline-flex'>` +
+			$t.clean(get("selectHtml")) +
+			`</div> <div class='right'> <select class="show-right-select"> ` +
+			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
+			` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
+			$t.clean(get("$index")) +
+			`'>Save</button> </div> ` +
+			$t.clean( new $t('-1702305177').render(get("cabinet").openings, 'opening', get)) +
+			` </div> `
+	
+	exports['-970877277'] = (get, $t) => 
+			`<option >` +
+			$t.clean(get("showType").name) +
+			`</option>`
+	
+	exports['-1702305177'] = (get, $t) => 
+			`<div class='divison-section-cnt'> ` +
+			$t.clean(get("OpenSectionDisplay").html(get("opening"))) +
+			` </div>`
 	
 	exports['cabinet/head'] = (get, $t) => 
 			`<div class='cabinet-header'> <input class='cabinet-id-input' prop-update='` +
@@ -9065,29 +9159,16 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("list").value()('selected')) +
 			` `
 	
-	exports['login/confirmation-message'] = (get, $t) => 
-			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
-	
-	exports['login/create-account'] = (get, $t) => 
-			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
-			$t.clean(get("email")) +
-			`'> <input type='password' placeholder="password" name='password' value='` +
-			$t.clean(get("password")) +
-			`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
-	
-	exports['login/login'] = (get, $t) => 
-			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
-			$t.clean(get("email")) +
-			`'> <input type='password' placeholder="password" name='password' value='` +
-			$t.clean(get("password")) +
-			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
-	
-	exports['login/reset-password'] = (get, $t) => 
-			`<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` +
-			$t.clean(get("email")) +
-			`'> <input type='password' placeholder="password" name='password' value='` +
-			$t.clean(get("password")) +
-			`'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	exports['divide/head'] = (get, $t) => 
+			`<div> <select value='` +
+			$t.clean(get("opening").name) +
+			`' class='open-divider-select` +
+			$t.clean(get("sections").length === 0 ? ' hidden' : '') +
+			`'> ` +
+			$t.clean( new $t('443122713').render(get("sections"), 'section', get)) +
+			` </select> <div class='open-divider-select` +
+			$t.clean(get("sections").length === 0 ? '' : ' hidden') +
+			`'> D </div> </div> `
 	
 	exports['divider-controls'] = (get, $t) => 
 			`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
@@ -9122,6 +9203,30 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("patternInputHtml")) +
 			` </div> </div> `
 	
+	exports['login/confirmation-message'] = (get, $t) => 
+			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+	
+	exports['login/create-account'] = (get, $t) => 
+			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
+	
+	exports['login/login'] = (get, $t) => 
+			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	
+	exports['login/reset-password'] = (get, $t) => 
+			`<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	
 	exports['managers/abstract-manager'] = (get, $t) => 
 			`<div> <div class="center"> <h2 id='` +
 			$t.clean(get("headerId")) +
@@ -9132,6 +9237,13 @@ exports['115117775'] = (get, $t) =>
 			`'>Save</button> </h2> </div> <div id="` +
 			$t.clean(get("bodyId")) +
 			`"></div> </div> `
+	
+	exports['managers/cost/body'] = (get, $t) => 
+			`<div class="` +
+			$t.clean(get("manager").constructor.cntClass) +
+			`" here-i-am='true'> ` +
+			$t.clean(get("manager").costTypeHtml(get("instance").cost, get("instance"))) +
+			` </div> `
 	
 	exports['managers/cost/cost-body'] = (get, $t) => 
 			`<div> ` +
@@ -9160,13 +9272,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("name")) +
 			` </li>`
 	
-	exports['managers/cost/body'] = (get, $t) => 
-			`<div class="` +
-			$t.clean(get("manager").constructor.cntClass) +
-			`"> ` +
-			$t.clean(get("manager").costTypeHtml(get("instance").cost, get("instance"))) +
-			` </div> `
-	
 	exports['managers/cost/header'] = (get, $t) => 
 			`<b part-id='` +
 			$t.clean(get("instance").partId) +
@@ -9180,6 +9285,15 @@ exports['115117775'] = (get, $t) =>
 			`<div cost-id='` +
 			$t.clean(get("cost").uniqueId()) +
 			`'> <b>Catagory</b> <div id='` +
+			$t.clean(get("parentId")) +
+			`'>` +
+			$t.clean(get("expandList").html()) +
+			`</div> </div> `
+	
+	exports['managers/cost/types/conditional'] = (get, $t) => 
+			`<div cost-id='` +
+			$t.clean(get("cost").uniqueId()) +
+			`'> <b>Conditional</b> <div id='` +
 			$t.clean(get("parentId")) +
 			`'>` +
 			$t.clean(get("expandList").html()) +
@@ -9208,15 +9322,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("cost").unitCost('value')) +
 			`</label> </div> </div> `
 	
-	exports['managers/cost/types/conditional'] = (get, $t) => 
-			`<div cost-id='` +
-			$t.clean(get("cost").uniqueId()) +
-			`'> <b>Conditional</b> <div id='` +
-			$t.clean(get("parentId")) +
-			`'>` +
-			$t.clean(get("expandList").html()) +
-			`</div> </div> `
-	
 	exports['managers/cost/types/material'] = (get, $t) => 
 			`<div cost-id='` +
 			$t.clean(get("cost").uniqueId()) +
@@ -9240,27 +9345,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("cost").unitCost('value')) +
 			`</label> </div> </div> `
 	
-	exports['managers/property/header'] = (get, $t) => 
-			`<div> <b>` +
-			$t.clean(get("instance").name) +
-			` (` +
-			$t.clean(get("instance").constructor.code) +
-			`) - ` +
-			$t.clean(get("instance").value) +
-			`</b> </div> `
-	
-	exports['managers/property/body'] = (get, $t) => 
-			`<div> No Need </div> `
-	
-	exports['managers/template/header'] = (get, $t) => 
-			`<div> <b>` +
-			$t.clean(get("instance").id()) +
-			` - ` +
-			$t.clean(get("instance").constructor.name) +
-			` (` +
-			$t.clean(get("instance").method()) +
-			`)</b> </div> `
-	
 	exports['managers/cost/types/select'] = (get, $t) => 
 			`<div cost-id='` +
 			$t.clean(get("cost").uniqueId()) +
@@ -9269,6 +9353,18 @@ exports['115117775'] = (get, $t) =>
 			` </div> <div>` +
 			$t.clean(get("expandList").html()) +
 			`</div> </div> `
+	
+	exports['managers/property/body'] = (get, $t) => 
+			`<div> No Need </div> `
+	
+	exports['managers/property/header'] = (get, $t) => 
+			`<div> <b>` +
+			$t.clean(get("instance").name) +
+			` (` +
+			$t.clean(get("instance").constructor.code) +
+			`) - ` +
+			$t.clean(get("instance").value) +
+			`</b> </div> `
 	
 	exports['managers/template/body'] = (get, $t) => 
 			`<div> <span> <input value='` +
@@ -9285,12 +9381,14 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("instance").unitCost().value) +
 			` </div> `
 	
-	exports['opening'] = (get, $t) => 
-			`<div class='opening-cnt' opening-id='` +
-			$t.clean(get("opening").uniqueId) +
-			`'> <div class='divider-controls'> </div> </div> <div id='` +
-			$t.clean(get("openDispId")) +
-			`'> </div> `
+	exports['managers/template/header'] = (get, $t) => 
+			`<div> <b>` +
+			$t.clean(get("instance").id()) +
+			` - ` +
+			$t.clean(get("instance").constructor.name) +
+			` (` +
+			$t.clean(get("instance").method()) +
+			`)</b> </div> `
 	
 	exports['model-controller'] = (get, $t) => 
 			`<div> <div class='model-selector'> <div ` +
@@ -9333,6 +9431,13 @@ exports['115117775'] = (get, $t) =>
 	exports['-424251200'] = (get, $t) => 
 			`model-controller`
 	
+	exports['opening'] = (get, $t) => 
+			`<div class='opening-cnt' opening-id='` +
+			$t.clean(get("opening").uniqueId) +
+			`'> <div class='divider-controls'> </div> </div> <div id='` +
+			$t.clean(get("openDispId")) +
+			`'> </div> `
+	
 	exports['order/body'] = (get, $t) => 
 			`<div> <b>` +
 			$t.clean(get("order").name()) +
@@ -9352,11 +9457,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("$index")) +
 			`' edit='true'> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> </div> </div> `
 	
-	exports['order/builder/head'] = (get, $t) => 
-			`<h3 class='margin-zero'> ` +
-			$t.clean(get("order").name) +
-			` </h3> `
-	
 	exports['order/builder/body'] = (get, $t) => 
 			`<div> <b>` +
 			$t.clean(get("order").name) +
@@ -9364,7 +9464,51 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("$index")) +
 			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> `
 	
+	exports['order/builder/head'] = (get, $t) => 
+			`<h3 class='margin-zero'> ` +
+			$t.clean(get("order").name) +
+			` </h3> `
+	
+	exports['order/head'] = (get, $t) => 
+			`<h3 class='margin-zero'> ` +
+			$t.clean(get("order").name()) +
+			` </h3> `
+	
+	exports['order/information/body'] = (get, $t) => 
+			`<utility-filter hidden> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> `
+	
+	exports['order/information/head'] = (get, $t) => 
+			`<b>Information</b> `
+	
 	exports['properties/config-body'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('-302479018').render(get("properties"), 'property', get)) +
+			` <button class='save-change' properties-id='` +
+			$t.clean(get("properties")._ID) +
+			`' ` +
+			$t.clean(get("changed")(get("properties")._ID) ? '' : 'hidden') +
+			`> Save </button> </div> `
+	
+	exports['-302479018'] = (get, $t) => 
+			`<div class='property-cnt' > <label>` +
+			$t.clean(get("property").name()) +
+			`</label> <span ` +
+			$t.clean(get("property").measurementId() ? '' : 'hidden') +
+			`> <input type="text" prop-value-update='` +
+			$t.clean(get("property").id()) +
+			`' value="` +
+			$t.clean(get("property").display()) +
+			`" measurement-id='` +
+			$t.clean(get("property").measurementId()) +
+			`'> </span> <span ` +
+			$t.clean((typeof (get("property").value())) === 'boolean' ? '' : 'hidden') +
+			`> <input type="checkbox" prop-boolean-update='` +
+			$t.clean(get("property").id()) +
+			`' ` +
+			$t.clean(get("property").value() === true ? 'checked' : '') +
+			`> </span> </div>`
+	
+	exports['properties/config-body0'] = (get, $t) => 
 			`<div> ` +
 			$t.clean( new $t('-179269626').render(get("properties"), 'property', get)) +
 			` <button class='save-change' properties-id='` +
@@ -9384,16 +9528,15 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("property").measurementId()) +
 			`'> </div>`
 	
-	exports['order/information/head'] = (get, $t) => 
-			`<b>Information</b> `
+	exports['properties/config-head'] = (get, $t) => 
+			`` +
+			$t.clean(get("name")) +
+			` `
 	
-	exports['order/head'] = (get, $t) => 
-			`<h3 class='margin-zero'> ` +
-			$t.clean(get("order").name()) +
-			` </h3> `
-	
-	exports['order/information/body'] = (get, $t) => 
-			`<utility-filter hidden> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> `
+	exports['properties/config-head0'] = (get, $t) => 
+			`` +
+			$t.clean(get("name")) +
+			` `
 	
 	exports['properties/properties'] = (get, $t) => 
 			`<div class='center'> <div class='center'> <label>UNIT :&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
@@ -9402,17 +9545,26 @@ exports['115117775'] = (get, $t) =>
 			$t.clean( new $t('115117775').render(get("values"), 'key, properties', get)) +
 			` </div> `
 	
-	exports['properties/unit'] = (get, $t) => 
-			`<div> <label>Standard</label> <input type='radio' name='unit' ` +
-			$t.clean(get("unit").value() === 'Imperial (US)' ? 'checked' : '') +
-			` value='Imperial (US)'> <label>Metric</label> <input type='radio' name='unit' ` +
-			$t.clean(get("unit").value() === 'Metric' ? 'checked' : '') +
-			` value='Metric'> </div> `
-	
-	exports['properties/config-head'] = (get, $t) => 
-			`` +
-			$t.clean(get("name")) +
-			` `
+	exports['properties/properties0'] = (get, $t) => 
+			`<div class='center'> <div class='` +
+			$t.clean(get("key") ? "property-container close" : "") +
+			`' radio-id='` +
+			$t.clean(get("radioId")) +
+			`' ` +
+			$t.clean(get("noChildren")() ? 'hidden' : '') +
+			`> <div class='` +
+			$t.clean(get("key") ? "expand-header" : "") +
+			`'> ` +
+			$t.clean(get("label")) +
+			` </div> <div` +
+			$t.clean(get("key") ? ' hidden' : '') +
+			`> <div` +
+			$t.clean(get("branch") ? ' hidden' : '') +
+			`> <div id='config-expand-list-` +
+			$t.clean(get("uniqueId")) +
+			`'></div> ` +
+			$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
+			` </div> </div> </div> </div> `
 	
 	exports['properties/radio'] = (get, $t) => 
 			`<div class='center'> <label>` +
@@ -9421,17 +9573,12 @@ exports['115117775'] = (get, $t) =>
 			$t.clean( new $t('1410278299').render(get("values"), 'property', get)) +
 			` </div> `
 	
-	exports['room/head'] = (get, $t) => 
-			`<b>` +
-			$t.clean(get("room").name()) +
-			`</b> `
-	
-	exports['sections/door'] = (get, $t) => 
-			`<h2>DoorSection(` +
-			$t.clean(get("list").activeIndex()) +
-			`):</h2> <br><br> <div> ` +
-			$t.clean( new $t('990870856').render(get("assemblies"), 'assem', get)) +
-			` </div> `
+	exports['properties/unit'] = (get, $t) => 
+			`<div> <label>Standard</label> <input type='radio' name='unit' ` +
+			$t.clean(get("unit").value() === 'Imperial (US)' ? 'checked' : '') +
+			` value='Imperial (US)'> <label>Metric</label> <input type='radio' name='unit' ` +
+			$t.clean(get("unit").value() === 'Metric' ? 'checked' : '') +
+			` value='Metric'> </div> `
 	
 	exports['room/body'] = (get, $t) => 
 			`<div> <select> ` +
@@ -9445,11 +9592,23 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("type")) +
 			`</option>`
 	
+	exports['room/head'] = (get, $t) => 
+			`<b>` +
+			$t.clean(get("room").name()) +
+			`</b> `
+	
 	exports['sections/divider'] = (get, $t) => 
 			`<h2>Divider: ` +
 			$t.clean(get("list").activeIndex()) +
 			`</h2> <div class='section-feature-ctn'> ` +
 			$t.clean(get("featureDisplay")) +
+			` </div> `
+	
+	exports['sections/door'] = (get, $t) => 
+			`<h2>DoorSection(` +
+			$t.clean(get("list").activeIndex()) +
+			`):</h2> <br><br> <div> ` +
+			$t.clean( new $t('990870856').render(get("assemblies"), 'assem', get)) +
 			` </div> `
 	
 	exports['sections/drawer'] = (get, $t) => 
@@ -9479,109 +9638,6 @@ exports['115117775'] = (get, $t) =>
 			`</h2> <div class='section-feature-ctn'> ` +
 			$t.clean(get("featureDisplay")) +
 			` </div> `
-	
-	exports['properties/config-body0'] = (get, $t) => 
-			`<div> ` +
-			$t.clean( new $t('-179269626').render(get("properties"), 'property', get)) +
-			` <button class='save-change' properties-id='` +
-			$t.clean(get("properties")._ID) +
-			`' ` +
-			$t.clean(get("changed")(get("properties")._ID) ? '' : 'hidden') +
-			`> Save </button> </div> `
-	
-	exports['properties/config-head0'] = (get, $t) => 
-			`` +
-			$t.clean(get("name")) +
-			` `
-	
-	exports['properties/properties0'] = (get, $t) => 
-			`<div class='center'> <div class='` +
-			$t.clean(get("key") ? "property-container close" : "") +
-			`' radio-id='` +
-			$t.clean(get("radioId")) +
-			`' ` +
-			$t.clean(get("noChildren")() ? 'hidden' : '') +
-			`> <div class='` +
-			$t.clean(get("key") ? "expand-header" : "") +
-			`'> ` +
-			$t.clean(get("label")) +
-			` </div> <div` +
-			$t.clean(get("key") ? ' hidden' : '') +
-			`> <div` +
-			$t.clean(get("branch") ? ' hidden' : '') +
-			`> <div id='config-expand-list-` +
-			$t.clean(get("uniqueId")) +
-			`'></div> ` +
-			$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
-			` </div> </div> </div> </div> `
-	
-	exports['-1883946202'] = (get, $t) => 
-			`<div class="expandable-list()-body" index='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list()-id='` +
-			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'>X</button> </div> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			`" ex-list()-id='` +
-			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
-			` </div> </div> </div>`
-	
-	exports['-2134413287'] = (get, $t) => 
-			`<div class="expandable-list()-body" key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list()-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'>X</button> </div> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			`" ex-list()-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
-			` </div> </div> </div>`
-	
-	exports['-236457651'] = (get, $t) => 
-			`<div id='config-expand-list-` +
-			$t.clean(get("childId")) +
-			`'> ` +
-			$t.clean(get("child")) +
-			` </div>`
-	
-	exports['-1836314325'] = (get, $t) => 
-			`<div id='config-expand-list-` +
-			$t.clean(get("childIdMap")[get("prop").id()]) +
-			`'> ` +
-			$t.clean(get("hi")) +
-			` </div>`
-	
-	exports['-635368654'] = (get, $t) => 
-			`<div id='config-expand-list-` +
-			$t.clean(get("childId")) +
-			`'> ` +
-			$t.clean(get("childId")) +
-			` </div>`
-	
-	exports['-1202037086'] = (get, $t) => 
-			`<div ` +
-			$t.clean(get("shouldHideAll")(get("properties")) ? 'hidden' : '') +
-			`> <div class="property-container close" radio-id='666'> <div class='` +
-			$t.clean(get("key") ? "expand-header" : "") +
-			`'> ` +
-			$t.clean(get("key")) +
-			` </div> <div id='config-expand-list-` +
-			$t.clean(get("childIdMap")[get("key")]) +
-			`' hidden> ` +
-			$t.clean(get("childIdMap")[get("key")]) +
-			` </div> </div> </div>`
 	
 });
 
@@ -9831,6 +9887,29 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/utils.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const removeSuffixes = ['Part', 'Section'].join('|');
+	function formatConstructorId (obj) {
+	  return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
+	}
+	
+	function getDefaultSize(instance) {
+	  const constructorName = instance.constructor.name;
+	  if (constructorName === 'Cabinet') return {length: 24, width: 50, thickness: 21};
+	  return {length: 0, width: 0, thickness: 0};
+	}
+	
+	exports.formatConstructorId = formatConstructorId;
+	exports.getDefaultSize = getDefaultSize;
+	
+});
+
+
 RequireJS.addFunction('./app-src/show.js',
 function (require, exports, module) {
 	
@@ -10033,48 +10112,94 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/utils.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const removeSuffixes = ['Part', 'Section'].join('|');
-	function formatConstructorId (obj) {
-	  return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
-	}
-	
-	function getDefaultSize(instance) {
-	  const constructorName = instance.constructor.name;
-	  if (constructorName === 'Cabinet') return {length: 24, width: 50, thickness: 21};
-	  return {length: 0, width: 0, thickness: 0};
-	}
-	
-	exports.formatConstructorId = formatConstructorId;
-	exports.getDefaultSize = getDefaultSize;
-	
-});
-
-
-RequireJS.addFunction('./app-src/error.js',
+RequireJS.addFunction('./app-src/decisionTree.js',
 function (require, exports, module) {
 	
 
 	
 	
 	
-	class InvalidComputation {
-	  constructor(attributes) {
-	    this.errorCode = 400;
-	    this.message = 'Error within input parameters';
-	    const keys = Object.keys(attributes);
-	    for (let index = 0; index < keys.length; index += 1) {
-	      const key = keys[index];
-	      this.message += `\n\t${key}: '${value}'`;
+	// terminology
+	// name - String to define state;
+	// payload - data returned for a given state
+	// stateObject - object defining states {name: [payload]...}
+	// states - array of availible state names.
+	// node - {name, states, payload, then, addState, addStates};
+	// then(name) - a function to set a following state.
+	// next(name) - a function to get the next state.
+	// back() - a function to move back up the tree.
+	// top() - a function to get root;
+	//
+	// returns all functions return current node;
+	class DecisionTree {
+	  constructor(name, payload) {
+	    name = name || 'root';
+	    const stateConfigs = {};
+	    const tree = {};
+	    const nodeMap = {};
+	
+	    function addState(name, payload) {
+	      return stateConfigs[name] = payload;
 	    }
+	
+	    function addStates(sts) {
+	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
+	      const keys = Object.keys(sts);
+	      keys.forEach((key) => stateConfigs[key] = sts[key]);
+	    }
+	
+	    function getState(name, parent) {
+	      return new DecisionNode(name, stateConfigs[name], parent);
+	    }
+	
+	
+	    class DecisionNode {
+	      constructor(name, payload, parent) {
+	        const states = {};
+	        let jump;
+	        payload = payload || {};
+	        payload._nodeId = `decision-node-${String.random(7)}`;
+	        nodeMap[payload._nodeId] = this;
+	        this.getNode = (nodeId) => nodeMap[nodeId];
+	        this.name = name;
+	        this.states = states;
+	        this.payload = payload;
+	        this.jump = (name) => {
+	          if (name) jump = getState(name, parent);
+	          return jump;
+	        };
+	        this.then = (name, payload) => {
+	          payload = payload ? addState(name, payload) : stateConfigs[name];
+	          states[name] = (getState(name, this));
+	          const state = states[name];
+	          return state === undefined ? undefined : state.jump() || state;
+	        }
+	        this.addState = (name, payload) => addState(name, payload) && this;
+	        this.addStates = (sts) => addStates(sts) && this;
+	        this.next = (name) => {
+	          const state = states[name];
+	          return state === undefined ? undefined : state.jump() || state;
+	        }
+	
+	        this.routePayloads = () => {
+	          let currNode = this;
+	          const payloads = [];
+	          while(currNode !== null) {
+	            payloads.push(currNode.payload);
+	            currNode = currNode.back();
+	          }
+	          return payloads.reverse();
+	        }
+	        this.back = () => parent;
+	        this.top = () => rootNode;
+	      }
+	    }
+	
+	    const rootNode = new DecisionNode(name, payload, null);
+	    return rootNode;
 	  }
 	}
-	module.exports = InvalidComputation
+	module.exports = DecisionTree
 	
 	
 	
@@ -10219,6 +10344,33 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/error.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	class InvalidComputation {
+	  constructor(attributes) {
+	    this.errorCode = 400;
+	    this.message = 'Error within input parameters';
+	    const keys = Object.keys(attributes);
+	    for (let index = 0; index < keys.length; index += 1) {
+	      const key = keys[index];
+	      this.message += `\n\t${key}: '${value}'`;
+	    }
+	  }
+	}
+	module.exports = InvalidComputation
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('./app-src/init.js',
 function (require, exports, module) {
 	
@@ -10243,7 +10395,8 @@ function (require, exports, module) {
 	const DisplayManager = require('./display-utils/displayManager.js');
 	const utils = require('./utils.js');
 	
-	if (EPNTS.getEnv() === 'local') require('../test/tests/to-from-json');
+	// Run Tests
+	require('../test/run');
 	
 	function updateDivisions (target) {
 	  const name = target.getAttribute('name');
@@ -10289,98 +10442,243 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/decisionTree.js',
+RequireJS.addFunction('./app-src/config/properties.js',
 function (require, exports, module) {
 	
 
+	const Property = require('./property');
+	const Measurement = require('../../../../public/js/utils/measurment.js');
+	const EPNTS = require('../../generated/EPNTS');
+	const Request = require('../../../../public/js/utils/request.js');
+	
+	const h = new Property('h', 'height', null);
+	const w = new Property('w', 'width', null);
+	const d = new Property('d', 'depth', null);
+	const t = new Property('t', 'thickness', null);
+	const l = new Property('l', 'length', null);
 	
 	
+	let unitCount = 0;
+	const UNITS = [];
+	Measurement.units().forEach((unit) =>
+	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
+	UNITS._VALUE = Measurement.unit();
 	
-	// terminology
-	// name - String to define state;
-	// payload - data returned for a given state
-	// stateObject - object defining states {name: [payload]...}
-	// states - array of availible state names.
-	// node - {name, states, payload, then, addState, addStates};
-	// then(name) - a function to set a following state.
-	// next(name) - a function to get the next state.
-	// back() - a function to move back up the tree.
-	// top() - a function to get root;
-	//
-	// returns all functions return current node;
-	class DecisionTree {
-	  constructor(name, payload) {
-	    name = name || 'root';
-	    const stateConfigs = {};
-	    const tree = {};
-	    const nodeMap = {};
+	const IMPERIAL_US = Measurement.units()[1];
+	const assemProps = {
+	  Overlay: [
+	    new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
+	  ],
+	  Reveal: [
+	    new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
+	    new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
+	  ],
+	  Inset: [
+	    new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
+	  ],
+	  Cabinet: [
+	      h.clone(), w.clone(), d.clone(),
+	      new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
+	      new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
+	      new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
+	      new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
+	      new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
+	      new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
+	      new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
+	      new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
+	      new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
+	  ],
+	  Panel: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  Guides: [
+	    l.clone(),
+	    new Property('dbtos', 'Drawer Box Top Offset', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('dbsos', 'Drawer Box Side Offest', {value: 3/16, notMetric: IMPERIAL_US}),
+	    new Property('dbbos', 'Drawer Box Bottom Offset', {value: 1/2, notMetric: IMPERIAL_US})
+	  ],
+	  DoorAndFront:[
+	    new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
+	    new Property('dafip', 'Door and front inset panel', {value: null})
+	  ],
+	  Door: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  DrawerBox: [
+	    h.clone(), w.clone(), d.clone(),
+	    new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
+	    new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
+	    new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
+	  ],
+	  DrawerFront: [
+	    h.clone(), w.clone(), t.clone(),
+	    new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
+	  ],
+	  Frame: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  Handle: [
+	    l.clone(), w.clone(),
+	    new Property('c2c', 'Center To Center', null),
+	    new Property('proj', 'Projection', null),
+	  ],
+	  Hinge: [
+	    new Property('maxtab', 'Max Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
+	    new Property('mintab', 'Minimum Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
+	    new Property('maxol', 'Max Door Overlay', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('minol', 'Minimum Door Overlay', {value: .5, notMetric: IMPERIAL_US})
+	  ],
+	  Opening: []
+	}
 	
-	    function addState(name, payload) {
-	      return stateConfigs[name] = payload;
-	    }
+	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
+	function assemProperties(clazz, filter) {
+	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
+	  props = assemProps[clazz] || [];
+	  if ((typeof filter) != 'function') return props;
+	  props = props.filter(filter);
+	  return props;
+	}
 	
-	    function addStates(sts) {
-	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
-	      const keys = Object.keys(sts);
-	      keys.forEach((key) => stateConfigs[key] = sts[key]);
-	    }
-	
-	    function getState(name, parent) {
-	      return new DecisionNode(name, stateConfigs[name], parent);
-	    }
-	
-	
-	    class DecisionNode {
-	      constructor(name, payload, parent) {
-	        const states = {};
-	        let jump;
-	        payload = payload || {};
-	        payload._nodeId = `decision-node-${String.random(7)}`;
-	        nodeMap[payload._nodeId] = this;
-	        this.getNode = (nodeId) => nodeMap[nodeId];
-	        this.name = name;
-	        this.states = states;
-	        this.payload = payload;
-	        this.jump = (name) => {
-	          if (name) jump = getState(name, parent);
-	          return jump;
-	        };
-	        this.then = (name, payload) => {
-	          payload = payload ? addState(name, payload) : stateConfigs[name];
-	          states[name] = (getState(name, this));
-	          const state = states[name];
-	          return state === undefined ? undefined : state.jump() || state;
-	        }
-	        this.addState = (name, payload) => addState(name, payload) && this;
-	        this.addStates = (sts) => addStates(sts) && this;
-	        this.next = (name) => {
-	          const state = states[name];
-	          return state === undefined ? undefined : state.jump() || state;
-	        }
-	
-	        this.routePayloads = () => {
-	          let currNode = this;
-	          const payloads = [];
-	          while(currNode !== null) {
-	            payloads.push(currNode.payload);
-	            currNode = currNode.back();
-	          }
-	          return payloads.reverse();
-	        }
-	        this.back = () => parent;
-	        this.top = () => rootNode;
+	let config = {};
+	const changes = {};
+	const copyMap = {};
+	assemProperties.changes = {
+	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
+	  save: (id) => {
+	    const list = changes[id];
+	    if (!list) throw new Error(`Unkown change id '${id}'`);
+	    const group = list._GROUP;
+	    if (config[group] === undefined) config[group] = [];
+	    if(copyMap[id] === undefined) {
+	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
+	      copyMap[list._ID] = config[group][list._NAME].properties;
+	    } else {
+	      const tempList = changes[id];
+	      for (let index = 0; index < tempList.length; index += 1) {
+	        const tempProp = tempList[index];
+	        const configProp = copyMap[id][index];
+	        configProp.value(tempProp.value());
 	      }
 	    }
-	
-	    const rootNode = new DecisionNode(name, payload, null);
-	    return rootNode;
+	   },
+	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
+	  delete: (id) => {
+	    delete config[changes[id][0].name()][changes[id]._NAME];
+	    delete changes[id];
+	    delete copyMap[id];
+	  },
+	  changed: (id) => {
+	    const list = changes[id];
+	    if (list === undefined) return false;
+	    for (let index = 0; index < list.length; index += 1) {
+	      const prop = list[index];
+	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
+	        console.log('booyacka!');
+	      }
+	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
+	        return true;
+	      }
+	    }
+	    return false;
+	  },
+	  changesExist: () => {
+	      const lists = Object.values(changes);
+	      for (let index = 0; index < lists.length; index += 1) {
+	        if (assemProperties.changes.changed(lists[index]._ID)) {
+	          return true;
+	        }
+	      }
+	      return false;
 	  }
 	}
-	module.exports = DecisionTree
 	
+	assemProperties.config = () => {
+	  const plainObj = {};
+	  const keys = Object.keys(config);
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    const lists = config[key];
+	    const listKeys = Object.keys(lists);
+	    plainObj[key] = {};
+	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
+	      const listKey = listKeys[lIndex];
+	      const list = lists[listKey];
+	      const propObj = {name: listKey, properties: []};
+	      plainObj[key][listKey] = propObj;
+	      list.properties.forEach((property) =>
+	          propObj.properties.push(property.toJson(excludeKeys, true)))
+	    }
+	  }
+	  return plainObj;
+	}
+	assemProperties.list = () => Object.keys(assemProps);
+	assemProperties.new = (group, name) => {
+	  if (assemProps[group]) {
+	    const list = [];
+	    const ogList = assemProps[group].filter(hasValueFilter);
+	    for (let index = 0; index < ogList.length; index += 1) {
+	      list[index] = ogList[index].clone();
+	    }
+	    list._ID = String.random();
+	    list._GROUP = group;
+	    list._NAME = name;
+	    changes[list._ID] = list;
+	    return list;
+	  }
+	  throw new Error(`Requesting invalid Property Group '${group}'`);
+	}
 	
+	const dummyFilter = () => true;
+	assemProperties.groupList = (group, filter) => {
+	  filter = filter || dummyFilter;
+	  const groupList = config[group];
+	  const changeList = {};
+	  if (groupList === undefined) return {};
+	  const groupKeys = Object.keys(groupList);
+	  for (let index = 0; index < groupKeys.length; index += 1) {
+	    const groupKey = groupKeys[index];
+	    const list = groupList[groupKey];
+	    const properties = groupList[list.name].properties;
+	    const codes = properties.map((prop) => prop.code());
+	    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
+	    //                   .filter(filter);
+	    // newProps.forEach((prop) => properties.push(prop.clone()));
+	    changeList[list.name] = {name: list.name, properties: []};
+	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
+	      const prop = properties[pIndex];
+	      changeList[list.name].properties.push(prop.clone());
+	    }
+	    const uniqueId = String.random();
+	    const set = changeList[list.name].properties;
+	    set._ID = uniqueId;
+	    set._NAME = list.name;
+	    changes[uniqueId] = set;
+	    copyMap[uniqueId] = properties;
+	  }
+	  return changeList;
+	}
 	
+	const hasValueFilter = (prop) => prop.value() !== null;
+	assemProperties.hasValue = (group) => {
+	  return assemProperties.groupList(group, hasValueFilter);
+	}
 	
+	const noValueFilter = (prop) => prop.value() === null;
+	assemProperties.noValue = (group) => {
+	  const props = assemProps[group];
+	  return props.filter(noValueFilter);
+	}
+	
+	assemProperties.UNITS = UNITS;
+	
+	assemProperties.load = (body) => {
+	  config = Object.fromJson(body);
+	}
+	
+	module.exports = assemProperties;
 	
 });
 
@@ -10406,6 +10704,164 @@ function (require, exports, module) {
 	}
 	
 	module.exports = new Register();
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/property.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const Measurement = require('../../../../public/js/utils/measurment.js');
+	
+	
+	
+	class Property extends Lookup {
+	  // clone constructor(code, value) {
+	  constructor(code, name, props) {
+	    super();
+	    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
+	    const children = [];
+	
+	    const initVals = {
+	      code, name, description: props instanceof Object ? props.description : undefined
+	    }
+	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
+	
+	    this.value = (val, notMetric) => {
+	      if (val !== undefined && value !== val) {
+	        const measurment = new Measurement(val, notMetric);
+	        const measurmentVal = measurment.value();
+	        value = Number.isNaN(measurmentVal) ? val : measurment;
+	      }
+	      return value instanceof Measurement ? value.value() : value;
+	    }
+	
+	    this.display = () => {
+	      return value instanceof Measurement ? value.display() : value;
+	    }
+	
+	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
+	
+	    if ((typeof props) !== 'object' ||  props === null) {
+	      this.value(props);
+	      props = {};
+	    }
+	    this.properties(props || {});
+	
+	    const existingProp = Property.list[code];
+	    let clone = false;
+	    if (this.properties().value !== undefined) {
+	      this.value(this.properties().value, this.properties().notMetric);
+	    }
+	
+	    // if (existingProp) {
+	    //   value = value || existingProp.value();
+	    //   name = existingProp.name();
+	    //   this.properties(existingProp.properties());
+	    //   clone = true;
+	    // }
+	
+	    if ((typeof value) === 'number')
+	      value = new Measurement(value, this.properties().notMetric);
+	
+	
+	    this.addChild = (property) => {
+	      if (property instanceof Property && property.code() === this.code()) {
+	            if (children.indexOf(property) === -1) children.push(property);
+	            else throw new Error('Property is already a child');
+	      }
+	      else throw new Error('Child is not an instance of Property or Code does not match');
+	    }
+	
+	    this.children = () => JSON.clone(children);
+	
+	    this.equals = (other) =>
+	        other instanceof Property &&
+	        this.value() === other.value() &&
+	        this.code() === other.code() &&
+	        this.name() === other.name() &&
+	        this.description() === other.description();
+	
+	    this.clone = (val) => {
+	      const cProps = this.properties();
+	      cProps.clone = true;
+	      cProps.value = val === undefined ? this.value() : val;
+	      cProps.description = this.description();
+	      delete cProps.notMetric;
+	      return new Property(this.code(), this.name(), cProps);
+	    }
+	    if(!clone) Property.list[code] = this;
+	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
+	  }
+	}
+	Property.list = {};
+	Property.DO_NOT_CLONE = true;
+	
+	new Property();
+	
+	module.exports = Property
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/cost-decision.js',
+function (require, exports, module) {
+	
+const Properties = require('../config/properties.js');
+	const DecisionTree = require('../../../../public/js/utils/decisionTree.js');
+	
+	class CostDecision {
+	  constructor(id, saved) {
+	    function getPayload(type) {
+	      const payload = {_TYPE: type};
+	      if (tree === undefined)
+	        payload._REQUIRED_NODES = Properties.noValue(id).map((prop) => prop.name());
+	      return payload
+	    }
+	
+	    function getParentNode(name, parentNodeId, type, payload) {
+	      if (parentNodeId === undefined) {
+	        if (tree === undefined) {
+	          tree = new DecisionTree(name, payload);
+	        } else {
+	          throw new Error('Tree already initialized. should not call this function without a parentNodeId after initialization');
+	        }
+	      } else {
+	        return tree.getNode(parentNodeId);
+	      }
+	    }
+	
+	    this.addSelect = (name, parentNodeId) => {
+	      const payload = getPayload(CostDecision.types.SELECT);
+	      const parentNode = getParentNode(name, parentNodeId, CostDecision.types.SELECT, payload);
+	      if (parentNode === undefined) return;
+	      parentNode.addState(name, payload);
+	    }
+	
+	    this.tree = () => tree;
+	
+	    let tree;
+	    if (saved) {
+	      tree = CostDecision.fromJson(saved);
+	    } else {
+	      if (Properties.hasValue(id)) {
+	        this.addSelect();
+	      }
+	    }
+	  }
+	}
+	
+	CostDecision.types = {
+	  SELECT: 'Select',
+	  GROUP: 'Group',
+	  CONDITIONAL: 'Conditional',
+	  REFERENCE: 'Reference',
+	  LABOR: 'Labor',
+	  MATERIAL: 'Material'
+	}
+	
+	module.exports = CostDecision
 	
 });
 
@@ -10529,160 +10985,52 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/cost/cost.js',
+RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
 function (require, exports, module) {
 	
 
 	
-	const Company = require('../objects/company.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
-	const Assembly = require('../objects/assembly/assembly.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
 	
 	
-	// constructors
-	// Cost({id, Method: Cost.methods.LINEAR_FEET, cost, length})
-	// Cost({id, Method: Cost.methods.SQUARE_FEET, cost, length, width})
-	// Cost({id, Method: Cost.methods.CUBIC_FEET, cost, length, width, depth})
-	// Cost({id, Method: Cost.methods.UNIT, cost})
-	// Cost((id, Cost, formula));
-	// props. - (optional*)
-	// id - Cost identifier
-	// method - Method for calculating cost
-	// length - length of piece used to calculate unit cost
-	// width - width of piece used to calculate unit cost
-	// depth - depth of piece used to calculate unit cost
-	// cost - cost of piece used to calculate unit cost
-	// formula* - formula used to apply cost to part
-	// company* - Company to order from.
-	// partNumber* - Part number to order part from company
-	// Cost* - Reference Cost.
+	const ToggleDisplayList = {};
+	ToggleDisplayList.class = 'toggle-display-list';
+	ToggleDisplayList.funcs = {};
 	
-	class Cost {
-	  //constructor(id, Cost, formula)
-	  constructor(props) {
-	    props = props || {};
-	    this.props = () => props;
-	    let deleted = false;
-	    const instance = this;
-	    const uniqueId = String.random();
-	    const lastUpdated = props.lastUpdated || new Date().getTime();
-	    props.requiredBranches = props.requiredBranches || [];
-	    this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
-	    this.delete = () => deleted = true;
-	    this.deleted = () => deleted;
-	    Object.getSet(this, props, 'group', 'objectId', 'id', 'children', 'parent');
-	    this.children = [];
-	    this.level = () => {
-	      let level = -1;
-	      let curr = this;
-	      while(curr instanceof Cost) {
-	        level++;
-	        curr = curr.parent();
-	      }
-	      return level;
+	ToggleDisplayList.onShow = (displayId, func) => {
+	  if ((typeof func) === 'function') {
+	    if (ToggleDisplayList.funcs[displayId] === undefined) {
+	      ToggleDisplayList.funcs[displayId] = [];
 	    }
+	    ToggleDisplayList.funcs[displayId].push(func);
+	  }
+	}
 	
-	    const satisfyReg = (idOreg) => idOreg instanceof RegExp ? idOreg :
-	      new RegExp(`(^\\s*${idOreg}\\s*$|\\((\\s*|[^(^)]*,\\s*)${idOreg}(\\s*,[^(^)]*\\s*|\\s*)\\)\\s*$)`);
-	    // TODO: possibly make more efficient... tough to maintain consistancy
-	    this.satisfies = (idOreg) => {
-	      const reg = satisfyReg(idOreg);
-	      if (this.id().match(reg)) return true;
-	      for(let index = 0; index < this.children.length; index += 1) {
-	        if (this.children[index].satisfies(reg)) return true;
-	      }
-	      return false;
-	    }
-	    this.unsatisfiedBranches = () =>
-	      this.requiredBranches().filter((id) => !this.satisfies(id));
+	ToggleDisplayList.runFuncs = (displayId) => {
+	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
+	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
+	}
 	
-	    this.uniqueId = () => uniqueId;
-	    Cost.uniqueIdMap[uniqueId] = this;
-	    // TODO: None does not make sence here.
-	    this.childIds = () =>
-	        ['None'].concat(this.children.map((obj) => obj.id()));
-	
-	    Cost.group(this, this);
-	
-	    this.addChild = (cost) => {
-	      if (cost instanceof Cost) {
-	        this.children.push(cost);
-	      }
+	ToggleDisplayList.toggle = function (elem, event) {
+	  const target = event.target;
+	  const children = elem.children;
+	  for (let index = 0; index < children.length; index += 1) {
+	    const child = children[index];
+	    if (target === child) {
+	      du.class.add(child, 'active');
+	      const displayId = child.getAttribute('display-id');
+	      du.id(displayId).hidden = false;
+	      ToggleDisplayList.runFuncs(displayId);
+	    } else {
+	      du.class.remove(child, 'active');
+	      du.id(child.getAttribute('display-id')).hidden = true;
 	    }
 	  }
 	}
 	
-	Cost.uniqueIdMap = {};
+	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
 	
-	Cost.getterSetter = (obj, attr, validation) => (val) => {
-	  if (val && validation && validation(val)) obj[attr] = val;
-	  if (validation && !validation(obj[attr])) throw new Error(`Invalid Cost Value ${obj[attr]}`);
-	  return obj[attr];
-	}
-	
-	
-	Cost.group = (() => {
-	  const groups = {};
-	  const defaultCostObj = () => ({unique: {}, objectMap: {}, defined: {'/dev/nul': 'Custom'}});
-	  return (props, cost) => {
-	    const isSetter = cost instanceof Cost;
-	    const name = isSetter ? props.group : props;
-	    if (isSetter) {
-	      if (groups[name] === undefined)
-	      groups[name] = defaultCostObj();
-	      const group = groups[name];
-	
-	      const unique = group.unique;
-	      const defined = group.defined;
-	      const objectMap = group.objectMap;
-	      if (unique[cost.uniqueId()] !== undefined)
-	      throw new Error('Invalid Unique Id');
-	
-	      unique[cost.uniqueId()] = cost;
-	
-	      if (props.objectId !== undefined) {
-	        if (objectMap[props.objectId] === undefined)
-	          objectMap[props.objectId] = [];
-	        objectMap[props.objectId].push(cost.uniqueId());
-	      }
-	
-	      // TODO move to referenceCost constructor
-	      if (cost.constructor.name === 'ReferenceCost') {
-	        if (props.referenceable) {
-	          if (Object.values(defined).indexOf(cost.id()) !== -1)
-	          throw new Error(`referenceable cost must have a unique Id: '${cost.id()}'`);
-	          defined[cost.uniqueId()] = cost.id();
-	        }
-	      }
-	    }
-	
-	    return groups[name] || defaultCostObj();
-	  }
-	})();
-	
-	Cost.types = [];
-	Cost.get = (uniqueId) => {
-	  return Cost.uniqueIdMap[uniqueId];
-	};
-	
-	Cost.new = (props) => {
-	  const type = props.type;
-	  return new Cost.types[props.type](props);
-	}
-	
-	Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
-	Cost.remove = (uniqueId) => Cost.get(uniqueId).remove();
-	
-	Cost.constructorId = (name) => name.replace(/Cost$/, '');
-	Cost.register = (clazz) => {
-	  Cost.types[Cost.constructorId(clazz.prototype.constructor.name)] = clazz;
-	  Cost.typeList = Object.keys(Cost.types).sort();
-	}
-	
-	Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
-	
-	module.exports = Cost
+	module.exports = ToggleDisplayList;
 	
 });
 
@@ -10756,56 +11104,6 @@ function (require, exports, module) {
 	  }
 	}
 	module.exports = RadioDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	
-	const ToggleDisplayList = {};
-	ToggleDisplayList.class = 'toggle-display-list';
-	ToggleDisplayList.funcs = {};
-	
-	ToggleDisplayList.onShow = (displayId, func) => {
-	  if ((typeof func) === 'function') {
-	    if (ToggleDisplayList.funcs[displayId] === undefined) {
-	      ToggleDisplayList.funcs[displayId] = [];
-	    }
-	    ToggleDisplayList.funcs[displayId].push(func);
-	  }
-	}
-	
-	ToggleDisplayList.runFuncs = (displayId) => {
-	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
-	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
-	}
-	
-	ToggleDisplayList.toggle = function (elem, event) {
-	  const target = event.target;
-	  const children = elem.children;
-	  for (let index = 0; index < children.length; index += 1) {
-	    const child = children[index];
-	    if (target === child) {
-	      du.class.add(child, 'active');
-	      const displayId = child.getAttribute('display-id');
-	      du.id(displayId).hidden = false;
-	      ToggleDisplayList.runFuncs(displayId);
-	    } else {
-	      du.class.remove(child, 'active');
-	      du.id(child.getAttribute('display-id')).hidden = true;
-	    }
-	  }
-	}
-	
-	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
-	
-	module.exports = ToggleDisplayList;
 	
 });
 
@@ -11015,89 +11313,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/config/cabinet-configs.js',
-function (require, exports, module) {
-	
-
-	
-	const CustomEvent = require('../../../../public/js/utils/custom-error.js');
-	const cabinetBuildConfig = require('../../public/json/cabinets.json');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Inputs = require('../input/inputs.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const EPNTS = require('../../generated/EPNTS.js');
-	
-	class CabinetConfig {
-	  constructor() {
-	    let cabinetList = {};
-	    let cabinetKeys = {};
-	    let configKeys;
-	    const updateEvent = new CustomEvent('update');
-	    function setLists(cabinets) {
-	      const allCabinetKeys = Object.keys(cabinets);
-	      allCabinetKeys.forEach((key) => {
-	        const type = cabinets[key].partName;
-	        if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
-	        if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
-	        cabinetKeys[type][key] = cabinets[key];
-	      });
-	
-	      cabinetList = cabinets;
-	      configKeys = Object.keys(cabinetBuildConfig);
-	      updateEvent.trigger();
-	    }
-	
-	    this.valid = (type, id) => (!id ?
-	    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
-	
-	    this.onUpdate = (func) => updateEvent.on(func);
-	    this.inputTree = () => {
-	      const typeInput = new Select({
-	        name: 'type',
-	        class: 'center',
-	        list: JSON.parse(JSON.stringify(configKeys))
-	      });
-	      const propertyInput = new Select({
-	        name: 'propertyId',
-	        class: 'center',
-	        list: ['pajango', 'skititors']
-	      });
-	      const inputs = [Inputs('name'), typeInput, propertyInput];
-	      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
-	      const cabinetTypes = Object.keys(cabinetKeys);
-	      cabinetTypes.forEach((type) => {
-	        const cabinetInput = new Select({
-	          label: 'Layout (Optional)',
-	          name: 'id',
-	          class: 'center',
-	          list: [''].concat(Object.keys(cabinetKeys[type]))
-	        });
-	        inputTree.addState(type, cabinetInput);
-	        inputTree.then(`type:${type}`).jump(type);
-	      });
-	      return inputTree;
-	    }
-	    this.get = (name, type, propertyId, id) => {
-	      let cabinet;
-	      if (!id) cabinet = Cabinet.build(type);
-	      else cabinet = Cabinet.fromJson(cabinetList[id]);
-	      if (propertyId !== undefined) cabinet.propertyId(propertyId);
-	      cabinet.name = name;
-	      return cabinet;
-	    };
-	
-	    Request.get(EPNTS.cabinet.list(), setLists, () => setLists([]));
-	  }
-	}
-	
-	CabinetConfig = new CabinetConfig();
-	module.exports = CabinetConfig
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/order.js',
 function (require, exports, module) {
 	
@@ -11122,228 +11337,36 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/property.js',
+RequireJS.addFunction('./app-src/objects/company.js',
 function (require, exports, module) {
 	
 
 	
-	const Properties = require('../config/properties.js');
-	const Property = require('../config/property.js');
-	const Cost = require('../cost/cost.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const RadioDisplay = require('../display-utils/radioDisplay.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const Inputs = require('../input/inputs.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
-	const Measurement = require('../../../../public/js/utils/measurment.js');
+	const Door = require('./assembly/assemblies/door/door.js');
 	
-	// TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
-	const changed = (id) => Properties.changes.changed(id);
-	const shouldHide = (prop) => prop.value() === null;
-	const hideAll = (properties) => {
-	  for (let index = 0; index < properties.length; index += 1) {
-	    if (properties[index].value() !== null) return false;
-	  }
-	  return properties.length > 0;
-	}
-	
-	function updateSaveAll() {
-	  const saveAllBtn = du.find('#property-manager-save-all');
-	  saveAllBtn.hidden = !Properties.changes.changesExist();
-	  if (saveAllBtn.hidden) {
-	    const saveBtns = du.find.all('.save-change');
-	    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
+	class Company {
+	  constructor(properties) {
+	    if (!properties.name) throw new Error('Company name must be defined')
+	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
+	    this.name = () => properties.name;
+	    this.email = () => properties.email;
+	    this.address = () => properties.address;
+	    Company.list[this.name()] = this;
 	  }
 	}
 	
-	function saveAll() {
-	  Properties.changes.saveAll();
-	  save();
-	  updateSaveAll();
-	}
+	Company.list = {};
+	new Company({name: 'Central Door'});
+	new Company({name: 'Central Wood'});
+	new Company({name: 'ADC'});
+	new Company({name: 'Accessa'});
+	new Company({name: 'Top Knobs'});
+	new Company({name: 'Richelieu'});
+	module.exports = Company
 	
 	
-	function save() {
-	  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
-	}
-	
-	function get() {
-	  Request.get(EPNTS.config.get(), console.log);
-	}
-	
-	class PropertyDisplay {
-	  constructor(containerSelector) {
-	    let currProps;
-	
-	    const noChildren = (properties, groups) => () =>
-	          properties.length === 0 && Object.keys(groups).length === 0;
-	
-	    function childScope (key) {
-	      const uniqueId = String.random();
-	      const getObject = (values) => {
-	        let properties = Properties.new(key,  values.name);
-	        return {name: values.name, uniqueId, changed, properties};
-	      }
-	
-	      const inputTree = PropertyDisplay.configInputTree();
-	      const expListProps = {
-	        list: Properties.hasValue(key),
-	        parentSelector: `#config-expand-list-${uniqueId}`,
-	        getHeader: (scope) =>
-	                    PropertyDisplay.configHeadTemplate.render(scope),
-	        getBody: (scope) =>
-	                    PropertyDisplay.configBodyTemplate.render({
-	                      name: scope.name,
-	                      properties: scope.properties,
-	                      changed
-	                    }),
-	        inputValidation: inputTree.validate,
-	        listElemLable: 'Config',
-	        getObject, inputTree
-	      };
-	      setTimeout(() => {
-	        const expList = new ExpandableObject(expListProps);
-	        expList.afterRemoval((element, detail) => {
-	          console.log(detail);
-	          console.log('placehoder');
-	          Properties.changes.delete(detail.properties._ID);
-	        });
-	      }, 500);
-	      return uniqueId;
-	    }
-	
-	    function getScope(key, group) {
-	      key = key || '';
-	      const uniqueId = String.random();
-	      let radioId = group.radioId || PropertyDisplay.counter++;
-	      const properties = [];
-	      const groups = {};
-	      const label = key.replace(PropertyDisplay.camelReg, '$1 $2');
-	      const scope = {key, label, properties, groups, recurse, radioId, uniqueId,
-	                      noChildren: noChildren(properties, groups),
-	                      branch: key.match(PropertyDisplay.branchReg)};
-	      PropertyDisplay.uniqueMap[uniqueId] = scope;
-	      const keys = Object.keys(group.values);
-	      radioId = PropertyDisplay.counter++;
-	      for( let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        const value = group.values[key];
-	        childScope(key, uniqueId);
-	      }
-	      return scope;
-	    }
-	
-	    this.update = () => {
-	      const propKeys = Properties.list();
-	      const propertyObjs = {};
-	      const childIdMap = [];
-	      for (let index = 0; index < propKeys.length; index += 1) {
-	        const key = propKeys[index];
-	        const props = Properties(key);
-	        const propObj = props;
-	        propertyObjs[key] = propObj;
-	        childIdMap[key] = childScope(key);
-	      }
-	      const uniqueId = String.random();
-	      const values = {values: propertyObjs, uniqueId, childIdMap, hideAll, Properties};
-	      const contianer = document.querySelector(containerSelector);
-	      contianer.innerHTML =
-	          PropertyDisplay.template.render(values);
-	    };
-	
-	    function updateProperties(name, value) {
-	    }
-	    bind('property-cnt', updateProperties);
-	    new RadioDisplay('property-container', 'radio-id');
-	  }
-	}
-	
-	// bind('property-branch-selector', '');
-	
-	du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
-	  const childTargets = target.parentElement.children[1].children;
-	  const childElem = childTargets[target.value];
-	  // TODO: set config property: childElem.innerText;
-	  du.hide(childTargets);
-	  du.show(childElem);
-	});
-	
-	function setPropertyElemValue(elem, idAttr, value) {
-	  const id = elem.getAttribute(idAttr);
-	  const group = elem.getAttribute('name');
-	  const property = Property.get(id);
-	  property.value(value, true);
-	  if (group === 'UNIT' && value) {
-	    Measurement.unit(property.name());
-	  }
-	}
-	
-	function updateMeasurements () {
-	  measureElems = du.find.all('[measurement-id]:not([measurement-id=""])');
-	  measureElems.forEach((elem) => {
-	    const id = elem.getAttribute('measurement-id');
-	    const measurement = Measurement.get(id);
-	    elem.value = measurement.display();
-	  });
-	}
-	
-	function updateRadio(elem) {
-	  const name = elem.getAttribute('name');
-	  Properties.config()
-	  const elems = du.find.all(`input[type="radio"][name='${name}']`);
-	  elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
-	  setPropertyElemValue(elem, 'prop-radio-update', true);
-	  if (name === 'UNIT') updateMeasurements();
-	}
-	
-	function updateValueDisplay(elem) {
-	  const id = elem.getAttribute('measurement-id');
-	  const measurement = Measurement.get(id);
-	  elem.value = measurement.display();
-	}
-	
-	function updateValue(elem) {
-	  setPropertyElemValue(elem, 'prop-value-update', elem.value);
-	  const saveBtn = du.find.closest('.save-change', elem);
-	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
-	  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
-	  elem.setAttribute('measurement-id', measurementId);
-	  updateSaveAll();
-	}
-	
-	function saveChange(elem) {
-	  const id = elem.getAttribute('properties-id');
-	  Properties.changes.save(id);
-	  elem.hidden = true;
-	  updateSaveAll();
-	  save();
-	}
 	
 	
-	du.on.match('keyup', '[prop-value-update]', updateValue);
-	du.on.match('focusout', '[measurement-id]', updateValueDisplay);
-	du.on.match('change', '[prop-radio-update]', updateRadio);
-	du.on.match('click', '#property-manager-save-all', saveAll);
-	du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
-	
-	PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
-	PropertyDisplay.branchReg = /^OR_(.{1,})/;
-	PropertyDisplay.camelReg = /([a-z])([A-Z])/g;
-	PropertyDisplay.counter = 0;
-	PropertyDisplay.template = new $t('properties/properties');
-	PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
-	PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
-	PropertyDisplay.radioTemplate = new $t('properties/radio');
-	PropertyDisplay.uniqueMap = {};
-	PropertyDisplay.configMap = {};
-	
-	PropertyDisplay.configInputTree = () =>
-	  new DecisionInputTree('Config', [Inputs('name')], console.log);
-	
-	module.exports = PropertyDisplay
 	
 });
 
@@ -11543,6 +11566,365 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/displays/order.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const UFObj = require('./information/utility-filter.js');
+	const RoomDisplay = require('./room.js');
+	const Order = require('../objects/order.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const EPNTS = require('../../generated/EPNTS.js')
+	const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
+	const Inputs = require('../input/inputs.js');
+	
+	class OrderDisplay {
+	  constructor(parentSelector, orders) {
+	    const roomDisplays = {};
+	    let active;
+	    const getHeader = (order, $index) =>
+	        OrderDisplay.headTemplate.render({order, $index});
+	
+	    const setInfo = (order, index) => () => {
+	      const elem = du.id(`uf-info-${index}`);
+	      if (elem)
+	        UTF.buildDisplay(elem, new UFObj(order));
+	    }
+	
+	    function initOrder(order, index) {
+	      roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
+	      ToggleDisplayList.onShow(`information-display-${index}`, );
+	      expandList.afterRender(setInfo(order, index));
+	      return order;
+	    }
+	
+	    function loadOrder(index, start) {
+	      return function (orderData) {
+	        const order = Order.fromJson(orderData);
+	        initOrder(order, index);
+	        expandList.set(index, order);
+	        expandList.refresh();
+	        console.log('load Time:', new Date().getTime() - start);
+	      }
+	    }
+	
+	    const getBody = (order, $index) => {
+	      if (order instanceof Order) {
+	        let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
+	        active = roomDisplays[order.id()];
+	        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
+	      } else {
+	        const start = new Date().getTime();
+	        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
+	        return 'Loading...';
+	      }
+	    }
+	    const getObject = (values) => initOrder(new Order(values.name));
+	    this.active = () => active;
+	
+	    const expListProps = {
+	      list: orders,
+	      inputValidation: (values) => values.name ? true :
+	          'You must Define a name',
+	      parentSelector, getHeader, getBody, getObject,
+	      listElemLable: 'Order', type: 'sidebar',
+	      inputTree: new DecisionInputTree('Order', Inputs('name'), console.log)
+	    };
+	    const expandList = new ExpandableList(expListProps);
+	    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
+	
+	    const saveSuccess = () => console.log('success');
+	    const saveFail = () => console.log('failure');
+	    const save = (target) => {
+	      const index = target.getAttribute('index');
+	      const order = expandList.get(index);
+	      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
+	      console.log('saving');
+	    }
+	
+	    const attrUpdate = (attr) => (target) => {
+	      const index = target.getAttribute('index');
+	      const order = expandList.get(index);
+	      order[attr] = target.value;
+	    };
+	
+	    function addOrders(names) {
+	      names.forEach((name) => expListProps.list.push({ name }));
+	      expandList.refresh();
+	    }
+	    Request.get(EPNTS.order.list(), addOrders);
+	
+	    du.on.match('change', '.order-name-input', attrUpdate('name'));
+	    du.on.match('click', '.save-order-btn', save);
+	  }
+	}
+	OrderDisplay.bodyTemplate = new $t('order/body');
+	OrderDisplay.headTemplate = new $t('order/head');
+	OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
+	OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
+	OrderDisplay.infoBodyTemplate = new $t('order/information/body');
+	OrderDisplay.infoHeadTemplate = new $t('order/information/head');
+	module.exports = OrderDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/cost.js',
+function (require, exports, module) {
+	
+
+	
+	const Company = require('../objects/company.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
+	const Assembly = require('../objects/assembly/assembly.js');
+	
+	
+	// constructors
+	// Cost({id, Method: Cost.methods.LINEAR_FEET, cost, length})
+	// Cost({id, Method: Cost.methods.SQUARE_FEET, cost, length, width})
+	// Cost({id, Method: Cost.methods.CUBIC_FEET, cost, length, width, depth})
+	// Cost({id, Method: Cost.methods.UNIT, cost})
+	// Cost((id, Cost, formula));
+	// props. - (optional*)
+	// id - Cost identifier
+	// method - Method for calculating cost
+	// length - length of piece used to calculate unit cost
+	// width - width of piece used to calculate unit cost
+	// depth - depth of piece used to calculate unit cost
+	// cost - cost of piece used to calculate unit cost
+	// formula* - formula used to apply cost to part
+	// company* - Company to order from.
+	// partNumber* - Part number to order part from company
+	// Cost* - Reference Cost.
+	
+	class Cost {
+	  //constructor(id, Cost, formula)
+	  constructor(props) {
+	    props = props || {};
+	    this.props = () => props;
+	    let deleted = false;
+	    const instance = this;
+	    const uniqueId = String.random();
+	    const lastUpdated = props.lastUpdated || new Date().getTime();
+	    props.requiredBranches = props.requiredBranches || [];
+	    this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
+	    this.delete = () => deleted = true;
+	    this.deleted = () => deleted;
+	    Object.getSet(this, props, 'group', 'objectId', 'id', 'children', 'parent');
+	    this.children = [];
+	    this.level = () => {
+	      let level = -1;
+	      let curr = this;
+	      while(curr instanceof Cost) {
+	        level++;
+	        curr = curr.parent();
+	      }
+	      return level;
+	    }
+	
+	    const satisfyReg = (idOreg) => idOreg instanceof RegExp ? idOreg :
+	      new RegExp(`(^\\s*${idOreg}\\s*$|\\((\\s*|[^(^)]*,\\s*)${idOreg}(\\s*,[^(^)]*\\s*|\\s*)\\)\\s*$)`);
+	    // TODO: possibly make more efficient... tough to maintain consistancy
+	    this.satisfies = (idOreg) => {
+	      const reg = satisfyReg(idOreg);
+	      if (this.id().match(reg)) return true;
+	      for(let index = 0; index < this.children.length; index += 1) {
+	        if (this.children[index].satisfies(reg)) return true;
+	      }
+	      return false;
+	    }
+	    this.unsatisfiedBranches = () =>
+	      this.requiredBranches().filter((id) => !this.satisfies(id));
+	
+	    this.uniqueId = () => uniqueId;
+	    Cost.uniqueIdMap[uniqueId] = this;
+	    // TODO: None does not make sence here.
+	    this.childIds = () =>
+	        ['None'].concat(this.children.map((obj) => obj.id()));
+	
+	    Cost.group(this, this);
+	
+	    this.addChild = (cost) => {
+	      if (cost instanceof Cost) {
+	        this.children.push(cost);
+	      }
+	    }
+	  }
+	}
+	
+	Cost.uniqueIdMap = {};
+	
+	Cost.getterSetter = (obj, attr, validation) => (val) => {
+	  if (val && validation && validation(val)) obj[attr] = val;
+	  if (validation && !validation(obj[attr])) throw new Error(`Invalid Cost Value ${obj[attr]}`);
+	  return obj[attr];
+	}
+	
+	
+	Cost.group = (() => {
+	  const groups = {};
+	  const defaultCostObj = () => ({unique: {}, objectMap: {}, defined: {'/dev/nul': 'Custom'}});
+	  return (props, cost) => {
+	    const isSetter = cost instanceof Cost;
+	    const name = isSetter ? props.group : props;
+	    if (isSetter) {
+	      if (groups[name] === undefined)
+	      groups[name] = defaultCostObj();
+	      const group = groups[name];
+	
+	      const unique = group.unique;
+	      const defined = group.defined;
+	      const objectMap = group.objectMap;
+	      if (unique[cost.uniqueId()] !== undefined)
+	      throw new Error('Invalid Unique Id');
+	
+	      unique[cost.uniqueId()] = cost;
+	
+	      if (props.objectId !== undefined) {
+	        if (objectMap[props.objectId] === undefined)
+	          objectMap[props.objectId] = [];
+	        objectMap[props.objectId].push(cost.uniqueId());
+	      }
+	
+	      // TODO move to referenceCost constructor
+	      if (cost.constructor.name === 'ReferenceCost') {
+	        if (props.referenceable) {
+	          if (Object.values(defined).indexOf(cost.id()) !== -1)
+	          throw new Error(`referenceable cost must have a unique Id: '${cost.id()}'`);
+	          defined[cost.uniqueId()] = cost.id();
+	        }
+	      }
+	    }
+	
+	    return groups[name] || defaultCostObj();
+	  }
+	})();
+	
+	Cost.types = [];
+	Cost.get = (uniqueId) => {
+	  return Cost.uniqueIdMap[uniqueId];
+	};
+	
+	Cost.new = (props) => {
+	  const type = props.type;
+	  return new Cost.types[props.type](props);
+	}
+	
+	Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
+	Cost.remove = (uniqueId) => Cost.get(uniqueId).remove();
+	
+	Cost.constructorId = (name) => name.replace(/Cost$/, '');
+	Cost.register = (clazz) => {
+	  Cost.types[Cost.constructorId(clazz.prototype.constructor.name)] = clazz;
+	  Cost.typeList = Object.keys(Cost.types).sort();
+	}
+	
+	Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
+	
+	module.exports = Cost
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/room.js',
+function (require, exports, module) {
+	
+
+	
+	const Room = require('../objects/room.js');
+	const CabinetDisplay = require('./cabinet.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const Inputs = require('../input/inputs.js');
+	
+	class RoomDisplay {
+	  constructor(parentSelector, order) {
+	    const cabinetDisplays = {};
+	    const getHeader = (room, $index) =>
+	        RoomDisplay.headTemplate.render({room, $index});
+	
+	    const getBody = (room, $index) => {
+	      let propertyTypes = Object.keys(['alabaster','pickles']);
+	      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
+	    }
+	
+	    const getObject = (values) => {
+	      const room = new Room(values.name);
+	      return room;
+	    }
+	    this.active = () => expandList.active();
+	    this.cabinetDisplay = () => {
+	      const room = this.active();
+	      const id = room.id();
+	      if (cabinetDisplays[id] === undefined) {
+	        cabinetDisplays[id] = new CabinetDisplay(room);
+	      }
+	      return cabinetDisplays[id];
+	    }
+	    this.cabinet = () => this.cabinetDisplay().active();
+	    const expListProps = {
+	      list: order.rooms,
+	      parentSelector, getHeader, getBody, getObject,
+	      inputs: [{placeholder: 'name'}],
+	      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
+	      listElemLable: 'Room', type: 'pill',
+	      inputTree: new DecisionInputTree('Room', Inputs('name'), console.log)
+	    };
+	    const expandList = new ExpandableList(expListProps);
+	    expandList.afterRender(() => this.cabinetDisplay().refresh());
+	    this.refresh = () => expandList.refresh();
+	  }
+	}
+	RoomDisplay.bodyTemplate = new $t('room/body');
+	RoomDisplay.headTemplate = new $t('room/head');
+	module.exports = RoomDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/section.js',
+function (require, exports, module) {
+	
+
+	Section.templates = {};
+	
+	Section.templates[this.constructorId] = new $t(templatePath);
+	
+	
+	class SectionDisplay {
+	  constructor (section) {
+	    Section.render = (scope) => {
+	      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
+	      const cId = scope.opening.constructorId;
+	      if (cId === 'DivideSection') {
+	        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
+	      }
+	      return Section.templates[cId].render(scope);
+	    }
+	  }
+	}
+	
+	
+	const du = require('../../../public/js/utils/dom-utils.js');
+	
+	afterLoad.push(() => du.on.match('change', '.feature-radio', (target) => {
+	  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+	  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+	  target.nextElementSibling.hidden = !target.checked;
+	}))
+	
+});
+
+
 RequireJS.addFunction('./app-src/displays/user.js',
 function (require, exports, module) {
 	
@@ -11673,149 +12055,6 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 });
 
 
-RequireJS.addFunction('./app-src/displays/order.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const UFObj = require('./information/utility-filter.js');
-	const RoomDisplay = require('./room.js');
-	const Order = require('../objects/order.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const EPNTS = require('../../generated/EPNTS.js')
-	const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
-	const Inputs = require('../input/inputs.js');
-	
-	class OrderDisplay {
-	  constructor(parentSelector, orders) {
-	    const roomDisplays = {};
-	    let active;
-	    const getHeader = (order, $index) =>
-	        OrderDisplay.headTemplate.render({order, $index});
-	
-	    const setInfo = (order, index) => () => {
-	      const elem = du.id(`uf-info-${index}`);
-	      if (elem)
-	        UTF.buildDisplay(elem, new UFObj(order));
-	    }
-	
-	    function initOrder(order, index) {
-	      roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
-	      ToggleDisplayList.onShow(`information-display-${index}`, );
-	      expandList.afterRender(setInfo(order, index));
-	      return order;
-	    }
-	
-	    function loadOrder(index, start) {
-	      return function (orderData) {
-	        const order = Order.fromJson(orderData);
-	        initOrder(order, index);
-	        expandList.set(index, order);
-	        expandList.refresh();
-	        console.log('load Time:', new Date().getTime() - start);
-	      }
-	    }
-	
-	    const getBody = (order, $index) => {
-	      if (order instanceof Order) {
-	        let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
-	        active = roomDisplays[order.id()];
-	        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
-	      } else {
-	        const start = new Date().getTime();
-	        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
-	        return 'Loading...';
-	      }
-	    }
-	    const getObject = (values) => initOrder(new Order(values.name));
-	    this.active = () => active;
-	
-	    const expListProps = {
-	      list: orders,
-	      inputValidation: (values) => values.name ? true :
-	          'You must Define a name',
-	      parentSelector, getHeader, getBody, getObject,
-	      listElemLable: 'Order', type: 'sidebar',
-	      inputTree: new DecisionInputTree('Order', Inputs('name'), console.log)
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
-	
-	    const saveSuccess = () => console.log('success');
-	    const saveFail = () => console.log('failure');
-	    const save = (target) => {
-	      const index = target.getAttribute('index');
-	      const order = expandList.get(index);
-	      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
-	      console.log('saving');
-	    }
-	
-	    const attrUpdate = (attr) => (target) => {
-	      const index = target.getAttribute('index');
-	      const order = expandList.get(index);
-	      order[attr] = target.value;
-	    };
-	
-	    function addOrders(names) {
-	      names.forEach((name) => expListProps.list.push({ name }));
-	      expandList.refresh();
-	    }
-	    Request.get(EPNTS.order.list(), addOrders);
-	
-	    du.on.match('change', '.order-name-input', attrUpdate('name'));
-	    du.on.match('click', '.save-order-btn', save);
-	  }
-	}
-	OrderDisplay.bodyTemplate = new $t('order/body');
-	OrderDisplay.headTemplate = new $t('order/head');
-	OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
-	OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
-	OrderDisplay.infoBodyTemplate = new $t('order/information/body');
-	OrderDisplay.infoHeadTemplate = new $t('order/information/head');
-	module.exports = OrderDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/section.js',
-function (require, exports, module) {
-	
-
-	Section.templates = {};
-	
-	Section.templates[this.constructorId] = new $t(templatePath);
-	
-	
-	class SectionDisplay {
-	  constructor (section) {
-	    Section.render = (scope) => {
-	      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
-	      const cId = scope.opening.constructorId;
-	      if (cId === 'DivideSection') {
-	        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
-	      }
-	      return Section.templates[cId].render(scope);
-	    }
-	  }
-	}
-	
-	
-	const du = require('../../../public/js/utils/dom-utils.js');
-	
-	afterLoad.push(() => du.on.match('change', '.feature-radio', (target) => {
-	  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
-	  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
-	  target.nextElementSibling.hidden = !target.checked;
-	}))
-	
-});
-
-
 RequireJS.addFunction('./app-src/cost/init-costs.js',
 function (require, exports, module) {
 	
@@ -11838,423 +12077,316 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/config/property.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const Measurement = require('../../../../public/js/utils/measurment.js');
-	
-	
-	
-	class Property extends Lookup {
-	  // clone constructor(code, value) {
-	  constructor(code, name, props) {
-	    super();
-	    let value = (typeof props) === 'object' && props !== null ? props.value : undefined;
-	    const children = [];
-	
-	    const initVals = {
-	      code, name, description: props instanceof Object ? props.description : undefined
-	    }
-	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
-	
-	    this.value = (val, notMetric) => {
-	      if (val !== undefined && value !== val) {
-	        const measurment = new Measurement(val, notMetric);
-	        const measurmentVal = measurment.value();
-	        value = Number.isNaN(measurmentVal) ? val : measurment;
-	      }
-	      return value instanceof Measurement ? value.value() : value;
-	    }
-	
-	    this.display = () => {
-	      return value instanceof Measurement ? value.display() : value;
-	    }
-	
-	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
-	
-	    if ((typeof props) !== 'object' ||  props === null) {
-	      this.value(props);
-	      props = {};
-	    }
-	    this.properties(props || {});
-	
-	    const existingProp = Property.list[code];
-	    let clone = false;
-	    if (this.properties().value !== undefined) {
-	      this.value(this.properties().value, this.properties().notMetric);
-	    }
-	
-	    // if (existingProp) {
-	    //   value = value || existingProp.value();
-	    //   name = existingProp.name();
-	    //   this.properties(existingProp.properties());
-	    //   clone = true;
-	    // }
-	
-	    if ((typeof value) === 'number')
-	      value = new Measurement(value, this.properties().notMetric);
-	
-	
-	    this.addChild = (property) => {
-	      if (property instanceof Property && property.code() === this.code()) {
-	            if (children.indexOf(property) === -1) children.push(property);
-	            else throw new Error('Property is already a child');
-	      }
-	      else throw new Error('Child is not an instance of Property or Code does not match');
-	    }
-	
-	    this.children = () => JSON.clone(children);
-	
-	    this.equals = (other) =>
-	        other instanceof Property &&
-	        this.value() === other.value() &&
-	        this.code() === other.code() &&
-	        this.name() === other.name() &&
-	        this.description() === other.description();
-	
-	    this.clone = (val) => {
-	      const cProps = this.properties();
-	      cProps.clone = true;
-	      cProps.value = val === undefined ? this.value() : val;
-	      cProps.description = this.description();
-	      delete cProps.notMetric;
-	      return new Property(this.code(), this.name(), cProps);
-	    }
-	    if(!clone) Property.list[code] = this;
-	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
-	  }
-	}
-	Property.list = {};
-	Property.DO_NOT_CLONE = true;
-	
-	new Property();
-	
-	module.exports = Property
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/room.js',
+RequireJS.addFunction('./app-src/displays/property.js',
 function (require, exports, module) {
 	
 
 	
-	const Room = require('../objects/room.js');
-	const CabinetDisplay = require('./cabinet.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const Properties = require('../config/properties.js');
+	const Property = require('../config/property.js');
+	const Cost = require('../cost/cost.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const RadioDisplay = require('../display-utils/radioDisplay.js');
+	const EPNTS = require('../../generated/EPNTS');
 	const $t = require('../../../../public/js/utils/$t.js');
 	const Inputs = require('../input/inputs.js');
-	
-	class RoomDisplay {
-	  constructor(parentSelector, order) {
-	    const cabinetDisplays = {};
-	    const getHeader = (room, $index) =>
-	        RoomDisplay.headTemplate.render({room, $index});
-	
-	    const getBody = (room, $index) => {
-	      let propertyTypes = Object.keys(['alabaster','pickles']);
-	      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
-	    }
-	
-	    const getObject = (values) => {
-	      const room = new Room(values.name);
-	      return room;
-	    }
-	    this.active = () => expandList.active();
-	    this.cabinetDisplay = () => {
-	      const room = this.active();
-	      const id = room.id();
-	      if (cabinetDisplays[id] === undefined) {
-	        cabinetDisplays[id] = new CabinetDisplay(room);
-	      }
-	      return cabinetDisplays[id];
-	    }
-	    this.cabinet = () => this.cabinetDisplay().active();
-	    const expListProps = {
-	      list: order.rooms,
-	      parentSelector, getHeader, getBody, getObject,
-	      inputs: [{placeholder: 'name'}],
-	      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
-	      listElemLable: 'Room', type: 'pill',
-	      inputTree: new DecisionInputTree('Room', Inputs('name'), console.log)
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	    expandList.afterRender(() => this.cabinetDisplay().refresh());
-	    this.refresh = () => expandList.refresh();
-	  }
-	}
-	RoomDisplay.bodyTemplate = new $t('room/body');
-	RoomDisplay.headTemplate = new $t('room/head');
-	module.exports = RoomDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/properties.js',
-function (require, exports, module) {
-	
-
-	const Property = require('./property');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
 	const Measurement = require('../../../../public/js/utils/measurment.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const Request = require('../../../../public/js/utils/request.js');
 	
-	const h = new Property('h', 'height', null);
-	const w = new Property('w', 'width', null);
-	const d = new Property('d', 'depth', null);
-	const t = new Property('t', 'thickness', null);
-	const l = new Property('l', 'length', null);
-	
-	
-	let unitCount = 0;
-	const UNITS = [];
-	Measurement.units().forEach((unit) =>
-	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
-	UNITS._VALUE = Measurement.unit();
-	
-	const IMPERIAL_US = Measurement.units()[1];
-	const assemProps = {
-	  Overlay: [
-	    new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
-	  ],
-	  Reveal: [
-	    new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
-	    new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
-	    new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
-	  ],
-	  Inset: [
-	    new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
-	  ],
-	  Cabinet: [
-	      h.clone(), w.clone(), d.clone(),
-	      new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
-	      new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
-	      new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
-	      new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
-	      new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
-	      new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
-	      new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
-	      new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
-	      new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
-	  ],
-	  Panel: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  Guides: [
-	    l.clone(),
-	    new Property('dbtos', 'Drawer Box Top Offset', {value: 1/2, notMetric: IMPERIAL_US}),
-	    new Property('dbsos', 'Drawer Box Side Offest', {value: 3/16, notMetric: IMPERIAL_US}),
-	    new Property('dbbos', 'Drawer Box Bottom Offset', {value: 1/2, notMetric: IMPERIAL_US})
-	  ],
-	  Door: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  DrawerBox: [
-	    h.clone(), w.clone(), d.clone(),
-	    new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
-	    new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US})
-	  ],
-	  DrawerFront: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  Frame: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  Handle: [
-	    l.clone(), w.clone(),
-	    new Property('c2c', 'Center To Center', null),
-	    new Property('proj', 'Projection', null),
-	  ],
-	  Hinge: [
-	    new Property('maxtab', 'Max Spacing from bore to edge of door', null),
-	    new Property('maxol', 'Max Door Overlay', null),
-	    new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
-	    new Property('minol', 'Minimum Door Overlay', null)
-	  ]
+	// TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
+	const changed = (id) => Properties.changes.changed(id);
+	const shouldHide = (prop) => prop.value() === null;
+	const hideAll = (properties) => {
+	  for (let index = 0; index < properties.length; index += 1) {
+	    if (properties[index].value() !== null) return false;
+	  }
+	  return properties.length > 0;
 	}
 	
-	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
-	function assemProperties(clazz, filter) {
-	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	  props = assemProps[clazz] || [];
-	  if ((typeof filter) != 'function') return props;
-	  props = props.filter(filter);
-	  return props;
-	}
-	
-	let config = {};
-	const changes = {};
-	const copyMap = {};
-	assemProperties.changes = {
-	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
-	  save: (id) => {
-	    const list = changes[id];
-	    if (!list) throw new Error(`Unkown change id '${id}'`);
-	    const group = list._GROUP;
-	    if (config[group] === undefined) config[group] = [];
-	    if(copyMap[id] === undefined) {
-	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
-	      copyMap[list._ID] = config[group][list._NAME].properties;
-	    } else {
-	      const tempList = changes[id];
-	      for (let index = 0; index < tempList.length; index += 1) {
-	        const tempProp = tempList[index];
-	        const configProp = copyMap[id][index];
-	        configProp.value(tempProp.value());
-	      }
-	    }
-	   },
-	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
-	  delete: (id) => {
-	    delete config[changes[id][0].name()][changes[id]._NAME];
-	    delete changes[id];
-	    delete copyMap[id];
-	  },
-	  changed: (id) => {
-	    const list = changes[id];
-	    if (list === undefined) return false;
-	    for (let index = 0; index < list.length; index += 1) {
-	      const prop = list[index];
-	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
-	        console.log('booyacka!');
-	      }
-	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
-	        return true;
-	      }
-	    }
-	    return false;
-	  },
-	  changesExist: () => {
-	      const lists = Object.values(changes);
-	      for (let index = 0; index < lists.length; index += 1) {
-	        if (assemProperties.changes.changed(lists[index]._ID)) {
-	          return true;
-	        }
-	      }
-	      return false;
+	function updateSaveAll() {
+	  const saveAllBtn = du.find('#property-manager-save-all');
+	  saveAllBtn.hidden = !Properties.changes.changesExist();
+	  if (saveAllBtn.hidden) {
+	    const saveBtns = du.find.all('.save-change');
+	    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
 	  }
 	}
 	
-	assemProperties.config = () => {
-	  const plainObj = {};
-	  const keys = Object.keys(config);
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    const lists = config[key];
-	    const listKeys = Object.keys(lists);
-	    plainObj[key] = {};
-	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
-	      const listKey = listKeys[lIndex];
-	      const list = lists[listKey];
-	      const propObj = {name: listKey, properties: []};
-	      plainObj[key][listKey] = propObj;
-	      list.properties.forEach((property) =>
-	          propObj.properties.push(property.toJson(excludeKeys, true)))
+	function saveAll() {
+	  Properties.changes.saveAll();
+	  save();
+	  updateSaveAll();
+	}
+	
+	
+	function save() {
+	  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
+	}
+	
+	function get() {
+	  Request.get(EPNTS.config.get(), console.log);
+	}
+	
+	class PropertyDisplay {
+	  constructor(containerSelector) {
+	    let currProps;
+	
+	    const noChildren = (properties, groups) => () =>
+	          properties.length === 0 && Object.keys(groups).length === 0;
+	
+	    function childScope (key) {
+	      const uniqueId = String.random();
+	      const getObject = (values) => {
+	        let properties = Properties.new(key,  values.name);
+	        return {name: values.name, uniqueId, changed, properties};
+	      }
+	
+	      const inputTree = PropertyDisplay.configInputTree();
+	      const expListProps = {
+	        list: Properties.hasValue(key),
+	        parentSelector: `#config-expand-list-${uniqueId}`,
+	        getHeader: (scope) =>
+	                    PropertyDisplay.configHeadTemplate.render(scope),
+	        getBody: (scope) =>
+	                    PropertyDisplay.configBodyTemplate.render({
+	                      name: scope.name,
+	                      properties: scope.properties,
+	                      changed
+	                    }),
+	        inputValidation: inputTree.validate,
+	        listElemLable: 'Config',
+	        getObject, inputTree
+	      };
+	      setTimeout(() => {
+	        const expList = new ExpandableObject(expListProps);
+	        expList.afterRemoval((element, detail) => {
+	          console.log(detail);
+	          console.log('placehoder');
+	          Properties.changes.delete(detail.properties._ID);
+	        });
+	      }, 500);
+	      return uniqueId;
 	    }
-	  }
-	  return plainObj;
-	}
-	assemProperties.list = () => Object.keys(assemProps);
-	assemProperties.new = (group, name) => {
-	  if (assemProps[group]) {
-	    const list = [];
-	    const ogList = assemProps[group].filter(hasValueFilter);
-	    for (let index = 0; index < ogList.length; index += 1) {
-	      list[index] = ogList[index].clone();
+	
+	    function getScope(key, group) {
+	      key = key || '';
+	      const uniqueId = String.random();
+	      let radioId = group.radioId || PropertyDisplay.counter++;
+	      const properties = [];
+	      const groups = {};
+	      const label = key.replace(PropertyDisplay.camelReg, '$1 $2');
+	      const scope = {key, label, properties, groups, recurse, radioId, uniqueId,
+	                      noChildren: noChildren(properties, groups),
+	                      branch: key.match(PropertyDisplay.branchReg)};
+	      PropertyDisplay.uniqueMap[uniqueId] = scope;
+	      const keys = Object.keys(group.values);
+	      radioId = PropertyDisplay.counter++;
+	      for( let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = group.values[key];
+	        childScope(key, uniqueId);
+	      }
+	      return scope;
 	    }
-	    list._ID = String.random();
-	    list._GROUP = group;
-	    list._NAME = name;
-	    changes[list._ID] = list;
-	    return list;
-	  }
-	  throw new Error(`Requesting invalid Property Group '${group}'`);
-	}
 	
-	const dummyFilter = () => true;
-	assemProperties.groupList = (group, filter) => {
-	  filter = filter || dummyFilter;
-	  console.log(group, `(${typeof group})`);
-	  const groupList = config[group];
-	  const changeList = {};
-	  if (groupList === undefined) return {};
-	  const groupKeys = Object.keys(groupList);
-	  for (let index = 0; index < groupKeys.length; index += 1) {
-	    const groupKey = groupKeys[index];
-	    const list = groupList[groupKey];
-	    const properties = groupList[list.name].properties;
-	    const codes = properties.map((prop) => prop.code());
-	    const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1 && prop.value() !== null);
-	    newProps.forEach((prop) => properties.push(prop.clone()));
-	    changeList[list.name] = {name: list.name, properties: []};
-	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
-	      const prop = properties[pIndex];
-	      changeList[list.name].properties.push(prop.clone());
+	    this.update = () => {
+	      const propKeys = Properties.list();
+	      const propertyObjs = {};
+	      const childIdMap = [];
+	      for (let index = 0; index < propKeys.length; index += 1) {
+	        const key = propKeys[index];
+	        const props = Properties(key);
+	        const propObj = props;
+	        propertyObjs[key] = propObj;
+	        childIdMap[key] = childScope(key);
+	      }
+	      const uniqueId = String.random();
+	      const values = {values: propertyObjs, uniqueId, childIdMap, hideAll, Properties};
+	      const contianer = document.querySelector(containerSelector);
+	      contianer.innerHTML =
+	          PropertyDisplay.template.render(values);
+	    };
+	
+	    function updateProperties(name, value) {
 	    }
-	    const uniqueId = String.random();
-	    const set = changeList[list.name].properties;
-	    set._ID = uniqueId;
-	    set._NAME = list.name;
-	    changes[uniqueId] = set;
-	    copyMap[uniqueId] = properties;
+	    bind('property-cnt', updateProperties);
+	    new RadioDisplay('property-container', 'radio-id');
 	  }
-	  return changeList;
 	}
 	
-	const hasValueFilter = (prop) => prop.value() !== null;
-	assemProperties.hasValue = (group) => {
-	  return assemProperties.groupList(group, hasValueFilter);
+	// bind('property-branch-selector', '');
+	
+	du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
+	  const childTargets = target.parentElement.children[1].children;
+	  const childElem = childTargets[target.value];
+	  // TODO: set config property: childElem.innerText;
+	  du.hide(childTargets);
+	  du.show(childElem);
+	});
+	
+	function setPropertyElemValue(elem, idAttr, value) {
+	  const id = elem.getAttribute(idAttr);
+	  const group = elem.getAttribute('name');
+	  const property = Property.get(id);
+	  property.value(value, true);
 	}
 	
-	const noValueFilter = (prop) => prop.value() === null;
-	assemProperties.noValue = (group) => {
-	  return assemProperties.groupList(group, noValueFilter);
+	function updateMeasurements () {
+	  measureElems = du.find.all('[measurement-id]:not([measurement-id=""])');
+	  measureElems.forEach((elem) => {
+	    const id = elem.getAttribute('measurement-id');
+	    const measurement = Measurement.get(id);
+	    elem.value = measurement.display();
+	  });
 	}
 	
-	assemProperties.UNITS = UNITS;
-	
-	assemProperties.load = (body) => {
-	  config = Object.fromJson(body);
+	function updateRadio(elem) {
+	  const name = elem.getAttribute('name');
+	  Properties.config()
+	  const elems = du.find.all(`input[type="radio"][name='${name}']`);
+	  elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
+	  setPropertyElemValue(elem, 'prop-radio-update', true);
+	  if (name === 'UNIT') updateMeasurements();
 	}
 	
-	module.exports = assemProperties;
+	function updateValueDisplay(elem) {
+	  const id = elem.getAttribute('measurement-id');
+	  const measurement = Measurement.get(id);
+	  elem.value = measurement.display();
+	}
+	
+	function updateValue(elem) {
+	  setPropertyElemValue(elem, 'prop-value-update', elem.value);
+	  const saveBtn = du.find.closest('.save-change', elem);
+	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+	  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
+	  elem.setAttribute('measurement-id', measurementId);
+	  updateSaveAll();
+	}
+	
+	function updateBoolean(elem) {
+	  setPropertyElemValue(elem, 'prop-boolean-update', elem.checked);
+	  const saveBtn = du.find.closest('.save-change', elem);
+	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+	  updateSaveAll();
+	}
+	
+	function saveChange(elem) {
+	  const id = elem.getAttribute('properties-id');
+	  Properties.changes.save(id);
+	  elem.hidden = true;
+	  updateSaveAll();
+	  save();
+	}
+	
+	
+	du.on.match('keyup', '[prop-value-update]', updateValue);
+	du.on.match('change', '[prop-boolean-update]', updateBoolean);
+	du.on.match('focusout', '[measurement-id]', updateValueDisplay);
+	du.on.match('change', '[prop-radio-update]', updateRadio);
+	du.on.match('click', '#property-manager-save-all', saveAll);
+	du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
+	
+	PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
+	PropertyDisplay.branchReg = /^OR_(.{1,})/;
+	PropertyDisplay.camelReg = /([a-z])([A-Z])/g;
+	PropertyDisplay.counter = 0;
+	PropertyDisplay.template = new $t('properties/properties');
+	PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
+	PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
+	PropertyDisplay.radioTemplate = new $t('properties/radio');
+	PropertyDisplay.uniqueMap = {};
+	PropertyDisplay.configMap = {};
+	
+	PropertyDisplay.configInputTree = () =>
+	  new DecisionInputTree('Config', [Inputs('name')], console.log);
+	
+	module.exports = PropertyDisplay
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/company.js',
+RequireJS.addFunction('./app-src/config/cabinet-configs.js',
 function (require, exports, module) {
 	
 
 	
-	const Door = require('./assembly/assemblies/door/door.js');
+	const CustomEvent = require('../../../../public/js/utils/custom-error.js');
+	const cabinetBuildConfig = require('../../public/json/cabinets.json');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Inputs = require('../input/inputs.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const EPNTS = require('../../generated/EPNTS.js');
 	
-	class Company {
-	  constructor(properties) {
-	    if (!properties.name) throw new Error('Company name must be defined')
-	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
-	    this.name = () => properties.name;
-	    this.email = () => properties.email;
-	    this.address = () => properties.address;
-	    Company.list[this.name()] = this;
+	class CabinetConfig {
+	  constructor() {
+	    let cabinetList = {};
+	    let cabinetKeys = {};
+	    let configKeys;
+	    const updateEvent = new CustomEvent('update');
+	    function setLists(cabinets) {
+	      const allCabinetKeys = Object.keys(cabinets);
+	      allCabinetKeys.forEach((key) => {
+	        const type = cabinets[key].partName;
+	        if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
+	        if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
+	        cabinetKeys[type][key] = cabinets[key];
+	      });
+	
+	      cabinetList = cabinets;
+	      configKeys = Object.keys(cabinetBuildConfig);
+	      updateEvent.trigger();
+	    }
+	
+	    this.valid = (type, id) => (!id ?
+	    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
+	
+	    this.onUpdate = (func) => updateEvent.on(func);
+	    this.inputTree = () => {
+	      const typeInput = new Select({
+	        name: 'type',
+	        class: 'center',
+	        list: JSON.parse(JSON.stringify(configKeys))
+	      });
+	      const propertyInput = new Select({
+	        name: 'propertyId',
+	        class: 'center',
+	        list: ['pajango', 'skititors']
+	      });
+	      const inputs = [Inputs('name'), typeInput, propertyInput];
+	      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
+	      const cabinetTypes = Object.keys(cabinetKeys);
+	      cabinetTypes.forEach((type) => {
+	        const cabinetInput = new Select({
+	          label: 'Layout (Optional)',
+	          name: 'id',
+	          class: 'center',
+	          list: [''].concat(Object.keys(cabinetKeys[type]))
+	        });
+	        inputTree.addState(type, cabinetInput);
+	        inputTree.then(`type:${type}`).jump(type);
+	      });
+	      return inputTree;
+	    }
+	    this.get = (name, type, propertyId, id) => {
+	      let cabinet;
+	      if (!id) cabinet = Cabinet.build(type);
+	      else cabinet = Cabinet.fromJson(cabinetList[id]);
+	      if (propertyId !== undefined) cabinet.propertyId(propertyId);
+	      cabinet.name = name;
+	      return cabinet;
+	    };
+	
+	    Request.get(EPNTS.cabinet.list(), setLists, () => setLists([]));
 	  }
 	}
 	
-	Company.list = {};
-	new Company({name: 'Central Door'});
-	new Company({name: 'Central Wood'});
-	new Company({name: 'ADC'});
-	new Company({name: 'Accessa'});
-	new Company({name: 'Top Knobs'});
-	new Company({name: 'Richelieu'});
-	module.exports = Company
-	
-	
-	
-	
+	CabinetConfig = new CabinetConfig();
+	module.exports = CabinetConfig
 	
 });
 
@@ -12978,50 +13110,291 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joint.js',
+RequireJS.addFunction('./app-src/displays/managers/template.js',
 function (require, exports, module) {
 	
 
 	
+	const AbstractManager = require('../abstract-manager.js');
+	const Cost = require('../../cost/cost.js');
+	const Input = require('../../../../../public/js/utils/input/input.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select.js');
+	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Material = require('../../cost/types/material.js');
+	const Inputs = require('../../input/inputs.js');
 	
-	class Joint {
-	  constructor(joinStr) {
-	    const match = joinStr.match(Joint.regex);
-	    this.malePartCode = match[1];
-	    this.femalePartCode = match[2];
 	
-	    this.updatePosition = () => {};
-	
-	    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
-	    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
-	
-	    this.maleOffset = () => 0;
-	    this.femaleOffset = () => 0;
-	    this.setParentAssembly = (pa) => this.parentAssembly = pa;
-	
-	    this.getDemensions = () => {
-	      const malePos = getMale();
-	      const femalePos = getFemale();
-	      // I created a loop but it was harder to understand
-	      return undefined;
-	    }
-	
-	    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
-	    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
-	    Joint.list[this.malePartCode].push(this);
-	    Joint.list[this.femalePartCode].push(this);
+	class TemplateManager extends AbstractManager {
+	  constructor(id, name) {
+	    super(id, name);
+	    const getObject = (values) => mangager.getObject(values);
+	    this.loadPoint = () => EPNTS.templates.get();
+	    this.savePoint = () => EPNTS.templates.save();
+	    this.fromJson = Cost.fromJson;
 	  }
 	}
-	Joint.list = {};
-	Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
 	
-	Joint.classes = {};
-	Joint.register = (clazz) =>
-	  Joint.classes[clazz.prototype.constructor.name] = clazz;
-	Joint.new = function (id) {
-	  return new Joint.classes[id](...Array.from(arguments).slice(1));
+	new TemplateManager('template-manager', 'template');
+	
+	TemplateManager.inputTree = (callback) => {
+	  const idTypeMethod = [Inputs('id'), Inputs('costType'), Inputs('method')];
+	
+	  const length = Inputs('length');
+	  const width = Inputs('width');
+	  const depth = Inputs('depth');
+	  const cost = Inputs('cost');
+	  const lengthCost = [length, cost];
+	  const lengthWidthCost = [length, width, cost];
+	  const lengthWidthDepthCost = [length, width, depth, cost];
+	  const color = [Inputs('color')];
+	
+	  const decisionInput = new DecisionInputTree('cost',
+	    idTypeMethod, callback);
+	
+	  decisionInput.addStates({
+	    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
+	  });
+	
+	  decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
+	        .jump('lengthCost');
+	  decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
+	        .jump('lengthWidthCost');
+	  decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
+	        .jump('lengthWidthDepthCost');
+	  decisionInput.then(`method:${Material.methods.UNIT}`)
+	        .jump('cost');
+	  decisionInput.then('type:Material').jump('color');
+	
+	  return decisionInput;
 	}
-	module.exports = Joint
+	module.exports = TemplateManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/pull.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	
+	function pull(length, height) {
+	  var rspx = length - .75;
+	  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+	  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+	  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+	  return mainCyl.union(lCyl).union(rCyl);
+	}
+	module.exports = pull
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	
+	function drawerBox(length, width, depth) {
+	  const bottomHeight = 7/8;
+	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+	  box.setColor(1, 0, 0);
+	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+	  inside.setColor(0, 0, 1);
+	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+	  bInside.setColor(0, 0, 1);
+	
+	  return box.subtract(bInside).subtract(inside);
+	}
+	module.exports = drawerBox
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/material.js',
+function (require, exports, module) {
+	
+
+	
+	const Cost = require('../cost.js');
+	const Assembly = require('../../objects/assembly/assembly.js');
+	
+	class Material extends Cost {
+	  constructor (props) {
+	    super(props);
+	    props = this.props();
+	    props.cost = props.cost / (props.count || 1);
+	    const instance = this;
+	    Object.getSet(props, 'company', 'formula', 'partNumber',
+	                'method', 'length', 'width', 'depth', 'cost');
+	
+	
+	    this.unitCost = (attr) => {
+	      const unitCost = Material.configure(instance.method(), instance.cost(),
+	        instance.length(), instance.width(), instance.depth());
+	      const copy = JSON.parse(JSON.stringify(unitCost));
+	      if (attr) return copy[attr];
+	      return copy;
+	    }
+	
+	    this.calc = (assemblyOrCount) => {
+	      const unitCost = this.unitCost();
+	      const formula = this.formula() || unitCost.formula;
+	      if (assemblyOrCount instanceof Assembly)
+	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
+	      else if (Number.isFinite(assemblyOrCount))
+	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
+	      else
+	        throw new Error('calc argument must be a number or Assembly');
+	    }
+	  }
+	}
+	
+	Material.methods = {
+	  LINEAR_FEET: 'Linear Feet',
+	  SQUARE_FEET: 'Square Feet',
+	  CUBIC_FEET: 'Cubic Feet',
+	  UNIT: 'Unit'
+	};
+	
+	Material.methodList = Object.values(Material.methods);
+	
+	
+	Material.configure = (method, cost, length, width, depth) => {
+	  const unitCost = {};
+	  switch (method) {
+	    case Material.methods.LINEAR_FEET:
+	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
+	      unitCost.name = 'Linear Inch';
+	      unitCost.value = perLinearInch;
+	      unitCost.formula = 'l';
+	      return unitCost;
+	    case Material.methods.SQUARE_FEET:
+	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
+	      unitCost.name = 'Square Inch';
+	      unitCost.value = perSquareInch;
+	      unitCost.formula = 'l*w';
+	      return unitCost;
+	    case Material.methods.CUBIC_FEET:
+	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
+	      unitCost.name = 'Cubic Inch';
+	      unitCost.value = perCubicInch;
+	      unitCost.formula = 'l*w*d';
+	      return unitCost;
+	    case Material.methods.UNIT:
+	      unitCost.name = 'Unit';
+	      unitCost.value = cost;
+	      return unitCost;
+	    default:
+	      throw new Error('wtf');
+	      unitCost.name = 'Unknown';
+	      unitCost = -0.01;
+	      formula = -0.01;
+	      return unitCost;
+	  }
+	};
+	
+	Material.explanation = `Cost to be calculated by number of units or demensions`;
+	
+	module.exports = Material
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/reference.js',
+function (require, exports, module) {
+	
+
+	
+	const Cost = require('../cost.js');
+	
+	
+	class ReferenceCost extends Cost {
+	  constructor(referenceCost) {
+	    super(referenceCost.props());
+	    const props = this.props();
+	    this.children = [];
+	    referenceCost.children.forEach((child) =>
+	        this.children.push(new ReferenceCost(child)));
+	
+	    this.id = referenceCost.id;
+	    this.calc = referenceCost.calc;
+	  }
+	}
+	module.exports = ReferenceCost
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/category.js',
+function (require, exports, module) {
+	
+
+	
+	const Cost = require('../cost.js');
+	
+	
+	/**
+	  A branching cost that will incorporate
+	**/
+	class Category extends Cost {
+	  constructor (props) {
+	    super(props);
+	
+	    this.calc = (assemblyOrCount) => {
+	      const cost = 0;
+	      this.children.forEach((child) => child.calc(assemblyOrCount));
+	      return cost || -0.01;
+	    };
+	
+	    this.unitCost = () => undefined;
+	  }
+	}
+	
+	Category.explanation = `A branching cost that will incorporate all child costs
+	                        in its total`
+	module.exports = Category
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
+function (require, exports, module) {
+	
+
+	
+	const Measurement = require('../../../../../public/js/utils/measurment.js');
+	
+	class UFObj {
+	  constructor(order) {
+	    class Row {
+	      constructor(assembly, index) {
+	        this.cabnetId = index;//assembly.getAssembly('c').name;
+	        this.type = assembly.constructor.name;
+	        this.partName = assembly.partName.replace(/.*\.(.*)/, '$1');
+	        const dems = assembly.position().demension();
+	        const accuracy = undefined; //'1/32';
+	        dems.y = new Measurement(dems.y).fraction(accuracy);
+	        dems.x = new Measurement(dems.x).fraction(accuracy);
+	        dems.z = new Measurement(dems.z).fraction(accuracy);
+	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
+	        this.partCode = `${index}-${assembly.partCode}`;
+	        this.cost = '$0';
+	        this.notes = assembly.notes || '';
+	      }
+	    }
+	    const cabinets = [];
+	    const array = [];
+	    order.rooms.forEach((room) => room.cabinets.forEach((cabinet, index) => {
+	      array.push(new Row(cabinet, index));
+	      cabinet.getParts().forEach((part) => array.push(new Row(part, index)));
+	    }));
+	    return array;
+	  }
+	}
+	module.exports = UFObj
 	
 	
 	
@@ -13038,6 +13411,7 @@ function (require, exports, module) {
 	const AbstractManager = require('../abstract-manager.js');
 	const Assembly = require('../../objects/assembly/assembly.js');
 	const Cost = require('../../cost/cost.js');
+	const CostDecision = require('../../cost/cost-decision.js');
 	const SelectCost = require('../../cost/types/select.js');
 	const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
 	const Select = require('../../../../../public/js/utils/input/styles/select.js');
@@ -13062,8 +13436,9 @@ function (require, exports, module) {
 	const Properties = require('../../config/properties.js');
 	
 	
+	const notCostGroups = ['Overlay', 'Inset', 'Reveal'];
 	
-	const costTypes = Cost.typeList;//['Custom'];
+	const costTypes = ['Custom'];
 	class CostManager extends AbstractManager {
 	  constructor(id, name) {
 	    super(id, name);
@@ -13084,25 +13459,26 @@ function (require, exports, module) {
 	    this.costTypeHtml = CostManager.costTypeHtml;
 	    this.fromJson = (json) => {
 	      CostManager.partList = CostManager.partList ||
-	          Properties.list();
+	          Properties.list().filter((name) => notCostGroups.indexOf(name) === -1);
 	      CostManager.partList.sort();
 	      CostManager.partList.forEach((id) => {
 	        const parentId = `cost-group-${String.random()}`;
-	        const expListProps = {
-	          list: json[id] ? Cost.fromJson(json[id]) : [],
-	          inputValidation: () => true,
-	          parentId,
-	          parentSelector: `#${parentId}`,
-	          inputTree:   CostManager.costInputTree(costTypes, id),
-	          getHeader: CostManager.costHeader,
-	          getBody: CostManager.costBody,
-	          getObject: CostManager.getCostObject(id),
-	          listElemLable: `Cost to ${id}`
-	        };
-	        const cost = new SelectCost({id, children: expListProps.list});
-	        const expandList = new ExpandableList(expListProps);
-	        list.push({partId: id, expandList,
-	          CostManager: CostManager, parentId, cost});
+	        let costDecision = new CostDecision(id, json[id]);
+	        // const expListProps = {
+	        //   list: json[id] ? Cost.fromJson(json[id]) : [],
+	        //   inputValidation: () => true,
+	        //   parentId,
+	        //   parentSelector: `#${parentId}`,
+	        //   inputTree:   CostManager.costInputTree(costTypes, id),
+	        //   getHeader: CostManager.costHeader,
+	        //   getBody: CostManager.costBody,
+	        //   getObject: CostManager.getCostObject(id),
+	        //   listElemLable: `Cost to ${id}`
+	        // };
+	        // const cost = new SelectCost({id, children: expListProps.list});
+	        // const expandList = new ExpandableList(expListProps);
+	        list.push({partId: id, costDecision,
+	          CostManager: CostManager, parentId});
 	      });
 	      propertyDisplay.update();
 	      return list;
@@ -13177,16 +13553,16 @@ function (require, exports, module) {
 	
 	CostManager.typeTemplates = {};
 	CostManager.costTypeHtml = (cost, scope) => {
-	  const constName = cost.constructor.name;
-	  if (CostManager.typeTemplates[constName])
-	    return CostManager.typeTemplates[constName].render(scope);
-	  const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
-	  if ($t.isTemplate(fileId)) {
-	    template = new $t(fileId);
-	    CostManager.typeTemplates[constName] = template;
-	    return template.render(scope);
-	  }
-	  return 'nada';
+	  // const constName = cost.constructor.name;
+	  // if (CostManager.typeTemplates[constName])
+	  //   return CostManager.typeTemplates[constName].render(scope);
+	  // const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
+	  // if ($t.isTemplate(fileId)) {
+	  //   template = new $t(fileId);
+	  //   CostManager.typeTemplates[constName] = template;
+	  //   return template.render(scope);
+	  // }
+	  return scope.costDecision.tree().requiredNodes();
 	}
 	
 	
@@ -13214,7 +13590,7 @@ function (require, exports, module) {
 	
 	  const costTypeSelect = new Select({
 	    name: 'costType',
-	    value: '/dev/nul',
+	    value: 'Custom',
 	    class: 'center',
 	    list: costTypes
 	  });
@@ -13292,7 +13668,7 @@ function (require, exports, module) {
 	    conditionalInfo
 	  });
 	
-	  const idTypeNode = decisionInput.then('costType:/dev/nul')
+	  const idTypeNode = decisionInput.then('costType:Custom')
 	        .jump('idType');
 	
 	
@@ -13381,6 +13757,58 @@ function (require, exports, module) {
 	};
 	
 	module.exports = CostManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joint.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class Joint {
+	  constructor(joinStr) {
+	    const match = joinStr.match(Joint.regex);
+	    this.malePartCode = match[1];
+	    this.femalePartCode = match[2];
+	
+	    this.updatePosition = () => {};
+	
+	    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
+	    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
+	
+	    this.maleOffset = () => 0;
+	    this.femaleOffset = () => 0;
+	    this.setParentAssembly = (pa) => this.parentAssembly = pa;
+	
+	    this.getDemensions = () => {
+	      const malePos = getMale();
+	      const femalePos = getFemale();
+	      // I created a loop but it was harder to understand
+	      return undefined;
+	    }
+	
+	    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
+	    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
+	    Joint.list[this.malePartCode].push(this);
+	    Joint.list[this.femalePartCode].push(this);
+	  }
+	}
+	Joint.list = {};
+	Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
+	
+	Joint.classes = {};
+	Joint.register = (clazz) =>
+	  Joint.classes[clazz.prototype.constructor.name] = clazz;
+	Joint.new = function (id) {
+	  return new Joint.classes[id](...Array.from(arguments).slice(1));
+	}
+	module.exports = Joint
+	
+	
+	
+	
 	
 });
 
@@ -13718,73 +14146,160 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/category.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/frame.js',
 function (require, exports, module) {
 	
 
 	
-	const Cost = require('../cost.js');
+	const Assembly = require('../assembly.js');
+	
+	class Frame extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	  }
+	}
+	
+	Frame.abbriviation = 'fr';
+	
+	Assembly.register(Frame);
+	module.exports = Frame
 	
 	
-	/**
-	  A branching cost that will incorporate
-	**/
-	class Category extends Cost {
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/material/labor.js',
+function (require, exports, module) {
+	
+
+	
+	const Material = require('../material.js');
+	const Cost = require('../../cost.js');
+	
+	
+	// unitCost.value = (hourlyRate*hours)/length
+	// calc(assembly) = unitCost.value * formula
+	
+	class Labor extends Material {
 	  constructor (props) {
 	    super(props);
+	    const type = props.laborType;
+	    props.hourlyRate = Labor.hourlyRates[type]
+	    const parentCalc = this.calc;
+	    this.cost = () => this.hourlyRate() * props.hours;
+	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
+	    Labor.hourlyRate(type, props.hourlyRate);
 	
-	    this.calc = (assemblyOrCount) => {
-	      const cost = 0;
-	      this.children.forEach((child) => child.calc(assemblyOrCount));
-	      return cost || -0.01;
+	    const parentToJson = this.toJson;
+	  }
+	}
+	
+	
+	Labor.defaultRate = 40;
+	Labor.hourlyRate = (type, rate) => {
+	  rate = Cost.evaluator.eval(new String(rate));
+	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
+	  return Labor.hourlyRates[type] || Labor.defaultRate;
+	}
+	Labor.hourlyRates = {};
+	Labor.types = [];
+	Labor.explanation = `Cost to be calculated hourly`;
+	
+	module.exports = Labor
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Rabbet extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
+	    super(joinStr);
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
+	    }
+	
+	    if (axis === undefined) return;
+	
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
+	    };
+	  }
+	}
+	
+	Joint.register(Rabbet);
+	module.exports = Rabbet
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Dado extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
+	    super(joinStr);
+	
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
+	    }
+	
+	    if (axis === undefined) return;
+	
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
 	    };
 	
-	    this.unitCost = () => undefined;
 	  }
 	}
 	
-	Category.explanation = `A branching cost that will incorporate all child costs
-	                        in its total`
-	module.exports = Category
+	Joint.register(Dado);
+	module.exports = Dado
+	
+	
+	
+	
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
+RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
 function (require, exports, module) {
 	
 
 	
-	const Measurement = require('../../../../../public/js/utils/measurment.js');
+	const Joint = require('../joint.js');
 	
-	class UFObj {
-	  constructor(order) {
-	    class Row {
-	      constructor(assembly, index) {
-	        this.cabnetId = index;//assembly.getAssembly('c').name;
-	        this.type = assembly.constructor.name;
-	        this.partName = assembly.partName.replace(/.*\.(.*)/, '$1');
-	        const dems = assembly.position().demension();
-	        const accuracy = undefined; //'1/32';
-	        dems.y = new Measurement(dems.y).fraction(accuracy);
-	        dems.x = new Measurement(dems.x).fraction(accuracy);
-	        dems.z = new Measurement(dems.z).fraction(accuracy);
-	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
-	        this.partCode = `${index}-${assembly.partCode}`;
-	        this.cost = '$0';
-	        this.notes = assembly.notes || '';
-	      }
-	    }
-	    const cabinets = [];
-	    const array = [];
-	    order.rooms.forEach((room) => room.cabinets.forEach((cabinet, index) => {
-	      array.push(new Row(cabinet, index));
-	      cabinet.getParts().forEach((part) => array.push(new Row(part, index)));
-	    }));
-	    return array;
+	class Miter extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
 	  }
 	}
-	module.exports = UFObj
+	
+	Joint.register(Miter);
+	module.exports = Miter
 	
 	
 	
@@ -13793,220 +14308,147 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/three-d/models/pull.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function pull(length, height) {
-	  var rspx = length - .75;
-	  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
-	  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
-	  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
-	  return mainCyl.union(lCyl).union(rCyl);
-	}
-	module.exports = pull
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/reference.js',
+RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
 function (require, exports, module) {
 	
 
 	
-	const Cost = require('../cost.js');
+	const Joint = require('../joint.js');
 	
-	
-	class ReferenceCost extends Cost {
-	  constructor(referenceCost) {
-	    super(referenceCost.props());
-	    const props = this.props();
-	    this.children = [];
-	    referenceCost.children.forEach((child) =>
-	        this.children.push(new ReferenceCost(child)));
-	
-	    this.id = referenceCost.id;
-	    this.calc = referenceCost.calc;
+	class Butt extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
 	  }
 	}
-	module.exports = ReferenceCost
+	
+	Joint.register(Butt);
+	module.exports = Butt
+	
+	
+	
+	
 	
 });
 
 
-RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function drawerBox(length, width, depth) {
-	  const bottomHeight = 7/8;
-	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-	  box.setColor(1, 0, 0);
-	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-	  inside.setColor(0, 0, 1);
-	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-	  bInside.setColor(0, 0, 1);
-	
-	  return box.subtract(bInside).subtract(inside);
-	}
-	module.exports = drawerBox
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/material.js',
+RequireJS.addFunction('./app-src/cost/types/category/conditional.js',
 function (require, exports, module) {
 	
 
 	
-	const Cost = require('../cost.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
+	const Category = require('../category.js');
+	const Cost = require('../../cost.js');
 	
-	class Material extends Cost {
+	class ConditionalCost extends Category {
 	  constructor (props) {
 	    super(props);
-	    props = this.props();
-	    props.cost = props.cost / (props.count || 1);
-	    const instance = this;
-	    Object.getSet(props, 'company', 'formula', 'partNumber',
-	                'method', 'length', 'width', 'depth', 'cost');
-	
-	
-	    this.unitCost = (attr) => {
-	      const unitCost = Material.configure(instance.method(), instance.cost(),
-	        instance.length(), instance.width(), instance.depth());
-	      const copy = JSON.parse(JSON.stringify(unitCost));
-	      if (attr) return copy[attr];
-	      return copy;
-	    }
-	
-	    this.calc = (assemblyOrCount) => {
-	      const unitCost = this.unitCost();
-	      const formula = this.formula() || unitCost.formula;
-	      if (assemblyOrCount instanceof Assembly)
-	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
-	      else if (Number.isFinite(assemblyOrCount))
-	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
-	      else
-	        throw new Error('calc argument must be a number or Assembly');
-	    }
+	    Object.getSet(this, props, 'propertyId', 'propertyValue', 'propertyCondition');
+	    this.categoryCalc = this.calc;
+	    this.calc = (assembly) => ConditionalCost.calc(this, assembly);
 	  }
 	}
 	
-	Material.methods = {
-	  LINEAR_FEET: 'Linear Feet',
-	  SQUARE_FEET: 'Square Feet',
-	  CUBIC_FEET: 'Cubic Feet',
-	  UNIT: 'Unit'
-	};
+	ConditionalCost.toKey = (value) => new String(value).replace(/ /g, '_').toUpperCase();
 	
-	Material.methodList = Object.values(Material.methods);
+	ConditionalCost.conditions = {};
+	ConditionalCost.conditions.EQUAL = 'Equals';
+	ConditionalCost.conditions.NOT_EQUAL = 'Not Equal';
+	ConditionalCost.conditions.LESS_THAN = 'Less Than';
+	ConditionalCost.conditions.GREATER_THAN = 'Greater Than';
+	ConditionalCost.conditions.LESS_THAN_OR_EQUAL = 'Less Than Or Equal';
+	ConditionalCost.conditions.GREATER_THAN_OR_EQUAL = 'Greater Than Or Equal';
 	
+	ConditionalCost.isCondition = (value) => ConditionalCost
+	                      .conditions(ConditionalCost.toKey(value)) !== undefined;
 	
-	Material.configure = (method, cost, length, width, depth) => {
-	  const unitCost = {};
-	  switch (method) {
-	    case Material.methods.LINEAR_FEET:
-	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
-	      unitCost.name = 'Linear Inch';
-	      unitCost.value = perLinearInch;
-	      unitCost.formula = 'l';
-	      return unitCost;
-	    case Material.methods.SQUARE_FEET:
-	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
-	      unitCost.name = 'Square Inch';
-	      unitCost.value = perSquareInch;
-	      unitCost.formula = 'l*w';
-	      return unitCost;
-	    case Material.methods.CUBIC_FEET:
-	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
-	      unitCost.name = 'Cubic Inch';
-	      unitCost.value = perCubicInch;
-	      unitCost.formula = 'l*w*d';
-	      return unitCost;
-	    case Material.methods.UNIT:
-	      unitCost.name = 'Unit';
-	      unitCost.value = cost;
-	      return unitCost;
+	ConditionalCost.calc = (cost, assembly) => {
+	  let validationFunc;
+	  switch (cost.propertyCondition()) {
+	    case ConditionalCost.conditions.EQUAL:
+	      validationFunc = (value) => cost.propertyValue() === value;
+	      break;
+	    case ConditionalCost.conditions.NOT_EQUAL:
+	      validationFunc = (value) => cost.propertyValue() !== value;
+	      break;
+	    case ConditionalCost.conditions.LESS_THAN:
+	      validationFunc = (value) => cost.propertyValue() > value;
+	      break;
+	    case ConditionalCost.conditions.GREATER_THAN:
+	      validationFunc = (value) => cost.propertyValue() < value;
+	      break;
+	    case ConditionalCost.conditions.LESS_THAN_EQUAL:
+	      validationFunc = (value) => cost.propertyValue() >= value;
+	      break;
+	    case ConditionalCost.conditions.GREATER_THAN_EQUAL:
+	      validationFunc = (value) => cost.propertyValue() <= value;
+	      break;
 	    default:
-	      throw new Error('wtf');
-	      unitCost.name = 'Unknown';
-	      unitCost = -0.01;
-	      formula = -0.01;
-	      return unitCost;
+	      throw new Error('Some how you managed to have an invalid Condition');
 	  }
-	};
 	
-	Material.explanation = `Cost to be calculated by number of units or demensions`;
+	  const value = assembly.value(cost.propertyId);
+	  if (validationFunc(value)) {
+	    return cost.categoryCalc(assembly);
+	  }
+	  return 0;
+	}
 	
-	module.exports = Material
+	
+	ConditionalCost.explanation = `A cost that is applied if the a defined
+	                                condition is met`;
+	
+	module.exports = ConditionalCost
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/managers/template.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
 function (require, exports, module) {
 	
 
 	
-	const AbstractManager = require('../abstract-manager.js');
-	const Cost = require('../../cost/cost.js');
-	const Input = require('../../../../../public/js/utils/input/input.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select.js');
-	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Material = require('../../cost/types/material.js');
-	const Inputs = require('../../input/inputs.js');
+	const Assembly = require('../assembly.js');
 	
-	
-	class TemplateManager extends AbstractManager {
-	  constructor(id, name) {
-	    super(id, name);
-	    const getObject = (values) => mangager.getObject(values);
-	    this.loadPoint = () => EPNTS.templates.get();
-	    this.savePoint = () => EPNTS.templates.save();
-	    this.fromJson = Cost.fromJson;
+	class Panel extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
 	  }
 	}
 	
-	new TemplateManager('template-manager', 'template');
+	Panel.abbriviation = 'pn';
 	
-	TemplateManager.inputTree = (callback) => {
-	  const idTypeMethod = [Inputs('id'), Inputs('costType'), Inputs('method')];
+	Assembly.register(Panel);
+	module.exports = Panel
 	
-	  const length = Inputs('length');
-	  const width = Inputs('width');
-	  const depth = Inputs('depth');
-	  const cost = Inputs('cost');
-	  const lengthCost = [length, cost];
-	  const lengthWidthCost = [length, width, cost];
-	  const lengthWidthDepthCost = [length, width, depth, cost];
-	  const color = [Inputs('color')];
 	
-	  const decisionInput = new DecisionInputTree('cost',
-	    idTypeMethod, callback);
 	
-	  decisionInput.addStates({
-	    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
-	  });
 	
-	  decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
-	        .jump('lengthCost');
-	  decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
-	        .jump('lengthWidthCost');
-	  decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
-	        .jump('lengthWidthDepthCost');
-	  decisionInput.then(`method:${Material.methods.UNIT}`)
-	        .jump('cost');
-	  decisionInput.then('type:Material').jump('color');
 	
-	  return decisionInput;
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Divider extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	  }
 	}
-	module.exports = TemplateManager
+	Divider.count = 0;
+	
+	Divider.abbriviation = 'dv';
+	
+	Assembly.register(Divider);
+	module.exports = Divider
+	
+	
+	
+	
 	
 });
 
@@ -14167,329 +14609,104 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Divider extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
-	Divider.count = 0;
-	
-	Divider.abbriviation = 'dv';
-	
-	Assembly.register(Divider);
-	module.exports = Divider
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Butt extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
-	  }
-	}
-	
-	Joint.register(Butt);
-	module.exports = Butt
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/category/conditional.js',
-function (require, exports, module) {
-	
-
-	
-	const Category = require('../category.js');
-	const Cost = require('../../cost.js');
-	
-	class ConditionalCost extends Category {
-	  constructor (props) {
-	    super(props);
-	    Object.getSet(this, props, 'propertyId', 'propertyValue', 'propertyCondition');
-	    this.categoryCalc = this.calc;
-	    this.calc = (assembly) => ConditionalCost.calc(this, assembly);
-	  }
-	}
-	
-	ConditionalCost.toKey = (value) => new String(value).replace(/ /g, '_').toUpperCase();
-	
-	ConditionalCost.conditions = {};
-	ConditionalCost.conditions.EQUAL = 'Equals';
-	ConditionalCost.conditions.NOT_EQUAL = 'Not Equal';
-	ConditionalCost.conditions.LESS_THAN = 'Less Than';
-	ConditionalCost.conditions.GREATER_THAN = 'Greater Than';
-	ConditionalCost.conditions.LESS_THAN_OR_EQUAL = 'Less Than Or Equal';
-	ConditionalCost.conditions.GREATER_THAN_OR_EQUAL = 'Greater Than Or Equal';
-	
-	ConditionalCost.isCondition = (value) => ConditionalCost
-	                      .conditions(ConditionalCost.toKey(value)) !== undefined;
-	
-	ConditionalCost.calc = (cost, assembly) => {
-	  let validationFunc;
-	  switch (cost.propertyCondition()) {
-	    case ConditionalCost.conditions.EQUAL:
-	      validationFunc = (value) => cost.propertyValue() === value;
-	      break;
-	    case ConditionalCost.conditions.NOT_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() !== value;
-	      break;
-	    case ConditionalCost.conditions.LESS_THAN:
-	      validationFunc = (value) => cost.propertyValue() > value;
-	      break;
-	    case ConditionalCost.conditions.GREATER_THAN:
-	      validationFunc = (value) => cost.propertyValue() < value;
-	      break;
-	    case ConditionalCost.conditions.LESS_THAN_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() >= value;
-	      break;
-	    case ConditionalCost.conditions.GREATER_THAN_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() <= value;
-	      break;
-	    default:
-	      throw new Error('Some how you managed to have an invalid Condition');
-	  }
-	
-	  const value = assembly.value(cost.propertyId);
-	  if (validationFunc(value)) {
-	    return cost.categoryCalc(assembly);
-	  }
-	  return 0;
-	}
-	
-	
-	ConditionalCost.explanation = `A cost that is applied if the a defined
-	                                condition is met`;
-	
-	module.exports = ConditionalCost
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/material/labor.js',
-function (require, exports, module) {
-	
-
-	
-	const Material = require('../material.js');
-	const Cost = require('../../cost.js');
-	
-	
-	// unitCost.value = (hourlyRate*hours)/length
-	// calc(assembly) = unitCost.value * formula
-	
-	class Labor extends Material {
-	  constructor (props) {
-	    super(props);
-	    const type = props.laborType;
-	    props.hourlyRate = Labor.hourlyRates[type]
-	    const parentCalc = this.calc;
-	    this.cost = () => this.hourlyRate() * props.hours;
-	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
-	    Labor.hourlyRate(type, props.hourlyRate);
-	
-	    const parentToJson = this.toJson;
-	  }
-	}
-	
-	
-	Labor.defaultRate = 40;
-	Labor.hourlyRate = (type, rate) => {
-	  rate = Cost.evaluator.eval(new String(rate));
-	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
-	  return Labor.hourlyRates[type] || Labor.defaultRate;
-	}
-	Labor.hourlyRates = {};
-	Labor.types = [];
-	Labor.explanation = `Cost to be calculated hourly`;
-	
-	module.exports = Labor
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Dado extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
-	    }
-	
-	    if (axis === undefined) return;
-	
-	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
-	    };
-	
-	  }
-	}
-	
-	Joint.register(Dado);
-	module.exports = Dado
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Miter extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
-	  }
-	}
-	
-	Joint.register(Miter);
-	module.exports = Miter
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Rabbet extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
-	    }
-	
-	    if (axis === undefined) return;
-	
-	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
-	    };
-	  }
-	}
-	
-	Joint.register(Rabbet);
-	module.exports = Rabbet
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/frame.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Frame extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
-	
-	Frame.abbriviation = 'fr';
-	
-	Assembly.register(Frame);
-	module.exports = Frame
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Panel extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
-	
-	Panel.abbriviation = 'pn';
-	
-	Assembly.register(Panel);
-	module.exports = Panel
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
+	const pull = require('../../../../three-d/models/pull.js');
+	
+	/*
+	    a,b,c
+	    d,e,f
+	    g,h,i
+	*/
+	class Handle extends Assembly {
+	  constructor(partCode, partName, door, location, index, count) {
+	    super(partCode, 'Handle');
+	    this.setParentAssembly(door);
+	    index = index || 0;
+	    count = count || 1;
+	    this.setLocation = (l) => location = l;
+	
+	    function offset(center, distance) {
+	      const spacing = distance / count;
+	      return center - (distance / 2) + spacing / 2 + spacing * (index);
+	    }
 	
 	
-	class Screw extends Assembly {
-	  constructor() {
+	    this.demensionStr = (attr) => {
+	      const dems = {x: 1, y: 3, z: 1.5};
+	      return attr ? dems[attr] : dems;
+	    }
 	
+	    const edgeOffset = 1;
+	    this.centerStr = (attr) => {
+	        let center = door.position().center();
+	        let doorDems = door.position().demension();
+	        let pullDems = this.demensionStr();
+	        center.z -= (doorDems.z + pullDems.z) / 2;
+	        switch (location) {
+	          case Handle.location.TOP_RIGHT:
+	            center.x = center.x + doorDems.x / 2 -  edgeOffset;
+	            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+						break;
+	          case Handle.location.TOP_LEFT:
+	          center.x = center.x - doorDems.x / 2 -  edgeOffset;
+	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+						break;
+	          case Handle.location.BOTTOM_RIGHT:
+	          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+						break;
+	          case Handle.location.BOTTOM_LEFT:
+	          center.x = center.x + doorDems.x / 2 -  edgeOffset;
+	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
+						break;
+	          case Handle.location.TOP:
+	            center.x = offset(center.x, doorDems.x);
+	            center.y -= doorDems.y / 2;
+						break;
+	          case Handle.location.BOTTOM:
+	            center.x = offset(center.x, doorDems.x);
+	            center.y += doorDems.y / 2;
+						break;
+	          case Handle.location.RIGHT:
+	            center.y = offset(center.y, doorDems.y);
+	            center.x += doorDems.x / 2;
+						break;
+	          case Handle.location.LEFT:
+	            center.y = offset(center.y, doorDems.y);
+	            center.x -= doorDems.x / 2;
+						break;
+	          case Handle.location.CENTER:
+	            center.x = offset(center.x, doorDems.x);
+						break;
+	          default:
+	            throw new Error('Invalid pull location');
+	        }
+	        return attr ? center[attr] : center;
+	    };
+	
+	    this.updatePosition();
 	  }
 	}
+	Handle.location = {};
+	Handle.location.TOP_RIGHT = {rotate: true};
+	Handle.location.TOP_LEFT = {rotate: true};
+	Handle.location.BOTTOM_RIGHT = {rotate: true};
+	Handle.location.BOTTOM_LEFT = {rotate: true};
+	Handle.location.TOP = {multiple: true};
+	Handle.location.BOTTOM = {multiple: true};
+	Handle.location.RIGHT = {multiple: true};
+	Handle.location.LEFT = {multiple: true};
+	Handle.location.CENTER = {multiple: true, rotate: true};
 	
-	Assembly.register(Screw);
-	module.exports = Screw
+	Handle.abbriviation = 'pu';
+	
+	Assembly.register(Handle);
+	module.exports = Handle
 	
 	
 	
@@ -14514,6 +14731,62 @@ function (require, exports, module) {
 	
 	Assembly.register(DoorCatch);
 	module.exports = DoorCatch
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	const Handle = require('../hardware/pull.js');
+	const pull = require('../../../../three-d/models/pull.js');
+	
+	
+	class Door extends Assembly {
+	  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
+	    super(partCode, partName, coverCenter, coverDems, rotationStr);
+	    let location = Handle.location.TOP_RIGHT;
+	    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, location);
+	    this.setHandleLocation = (l) => location = l;
+	    this.addSubAssembly(pull);
+	  }
+	}
+	
+	Door.abbriviation = 'dr';
+	
+	Assembly.register(Door);
+	module.exports = Door
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Hinges extends Assembly {
+	  constructor() {
+	
+	  }
+	}
+	
+	Assembly.register(Hinges);
+	module.exports = Hinges
 	
 	
 	
@@ -14547,22 +14820,50 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
+	const Handle = require('../hardware/pull.js');
 	
+	class DrawerFront extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	    this.setParentAssembly(parent);
+	    const instance = this;
+	    let pulls;
+	    if (demensionStr === undefined) return;
 	
-	class Hinges extends Assembly {
-	  constructor() {
+	    function pullCount(dems) {
+	      if (dems.x < 30) return 1;
+	      return 2;
+	    }
 	
+	    this.demensionStr = (attr) => {
+	      const dems = demensionStr();
+	      return dems;
+	    };
+	
+	    this.children = () => this.updateHandles();
+	
+	    this.updateHandles = (dems, count) => {
+	      count = count || pullCount(this.demensionStr());
+	      pulls = [];
+	      for (let index = 0; index < count; index += 1) {
+	        pulls.push(new Handle(`${partCode}-p-${index}`, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
+	      }
+	      return pulls;
+	    };
+	    this.updatePosition();
 	  }
 	}
 	
-	Assembly.register(Hinges);
-	module.exports = Hinges
+	DrawerFront.abbriviation = 'df';
+	
+	Assembly.register(DrawerFront);
+	module.exports = DrawerFront
 	
 	
 	
@@ -14716,30 +15017,22 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
-	const Handle = require('../hardware/pull.js');
-	const pull = require('../../../../three-d/models/pull.js');
 	
 	
-	class Door extends Assembly {
-	  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
-	    super(partCode, partName, coverCenter, coverDems, rotationStr);
-	    let location = Handle.location.TOP_RIGHT;
-	    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, location);
-	    this.setHandleLocation = (l) => location = l;
-	    this.addSubAssembly(pull);
+	class Screw extends Assembly {
+	  constructor() {
+	
 	  }
 	}
 	
-	Door.abbriviation = 'dr';
-	
-	Assembly.register(Door);
-	module.exports = Door
+	Assembly.register(Screw);
+	module.exports = Screw
 	
 	
 	
@@ -14748,156 +15041,32 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/partition.js',
 function (require, exports, module) {
 	
 
 	
-	const Assembly = require('../../assembly.js');
-	const pull = require('../../../../three-d/models/pull.js');
+	const Section = require('../section.js');
+	const Assembly = require('../../../assembly.js');
 	
-	/*
-	    a,b,c
-	    d,e,f
-	    g,h,i
-	*/
-	class Handle extends Assembly {
-	  constructor(partCode, partName, door, location, index, count) {
-	    super(partCode, 'Handle');
-	    this.setParentAssembly(door);
-	    index = index || 0;
-	    count = count || 1;
-	    this.setLocation = (l) => location = l;
-	
-	    function offset(center, distance) {
-	      const spacing = distance / count;
-	      return center - (distance / 2) + spacing / 2 + spacing * (index);
-	    }
-	
-	
-	    this.demensionStr = (attr) => {
-	      const dems = {x: 1, y: 3, z: 1.5};
-	      return attr ? dems[attr] : dems;
-	    }
-	
-	    const edgeOffset = 1;
-	    this.centerStr = (attr) => {
-	        let center = door.position().center();
-	        let doorDems = door.position().demension();
-	        let pullDems = this.demensionStr();
-	        center.z -= (doorDems.z + pullDems.z) / 2;
-	        switch (location) {
-	          case Handle.location.TOP_RIGHT:
-	            center.x = center.x + doorDems.x / 2 -  edgeOffset;
-	            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
-						break;
-	          case Handle.location.TOP_LEFT:
-	          center.x = center.x - doorDems.x / 2 -  edgeOffset;
-	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
-						break;
-	          case Handle.location.BOTTOM_RIGHT:
-	          center.x = center.x + doorDems.x / 2 -  edgeOffset;
-	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
-						break;
-	          case Handle.location.BOTTOM_LEFT:
-	          center.x = center.x + doorDems.x / 2 -  edgeOffset;
-	          center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + edgeOffset);
-						break;
-	          case Handle.location.TOP:
-	            center.x = offset(center.x, doorDems.x);
-	            center.y -= doorDems.y / 2;
-						break;
-	          case Handle.location.BOTTOM:
-	            center.x = offset(center.x, doorDems.x);
-	            center.y += doorDems.y / 2;
-						break;
-	          case Handle.location.RIGHT:
-	            center.y = offset(center.y, doorDems.y);
-	            center.x += doorDems.x / 2;
-						break;
-	          case Handle.location.LEFT:
-	            center.y = offset(center.y, doorDems.y);
-	            center.x -= doorDems.x / 2;
-						break;
-	          case Handle.location.CENTER:
-	            center.x = offset(center.x, doorDems.x);
-						break;
-	          default:
-	            throw new Error('Invalid pull location');
-	        }
-	        return attr ? center[attr] : center;
-	    };
-	
-	    this.updatePosition();
-	  }
-	}
-	Handle.location = {};
-	Handle.location.TOP_RIGHT = {rotate: true};
-	Handle.location.TOP_LEFT = {rotate: true};
-	Handle.location.BOTTOM_RIGHT = {rotate: true};
-	Handle.location.BOTTOM_LEFT = {rotate: true};
-	Handle.location.TOP = {multiple: true};
-	Handle.location.BOTTOM = {multiple: true};
-	Handle.location.RIGHT = {multiple: true};
-	Handle.location.LEFT = {multiple: true};
-	Handle.location.CENTER = {multiple: true, rotate: true};
-	
-	Handle.abbriviation = 'pu';
-	
-	Assembly.register(Handle);
-	module.exports = Handle
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	const Handle = require('../hardware/pull.js');
-	
-	class DrawerFront extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	    this.setParentAssembly(parent);
-	    const instance = this;
-	    let pulls;
-	    if (demensionStr === undefined) return;
-	
-	    function pullCount(dems) {
-	      if (dems.x < 30) return 1;
-	      return 2;
-	    }
-	
-	    this.demensionStr = (attr) => {
-	      const dems = demensionStr();
-	      return dems;
-	    };
-	
-	    this.children = () => this.updateHandles();
-	
-	    this.updateHandles = (dems, count) => {
-	      count = count || pullCount(this.demensionStr());
-	      pulls = [];
-	      for (let index = 0; index < count; index += 1) {
-	        pulls.push(new Handle(`${partCode}-p-${index}`, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
-	      }
-	      return pulls;
-	    };
-	    this.updatePosition();
+	class PartitionSection extends Section {
+	  constructor(templatePath, partCode, partName, sectionProperties) {
+	    super(templatePath, true, partCode, partName, sectionProperties);
+	    this.important = ['partCode', 'partName', 'index'];
 	  }
 	}
 	
-	DrawerFront.abbriviation = 'df';
+	PartitionSection.isPartition = () => true;
 	
-	Assembly.register(DrawerFront);
-	module.exports = DrawerFront
+	PartitionSection.fromJson = (json, parent) => {
+	  const sectionProps = parent.dividerProps(json.index);
+	  const assembly = Assembly.new(json.type, json.partCode, sectionProps, parent);
+	  assembly.partCode = json.partCode;
+	  assembly.partName = json.partName;
+	  assembly.values = json.values;
+	  return assembly;
+	}
+	module.exports = PartitionSection
 	
 	
 	
@@ -14994,40 +15163,6 @@ function (require, exports, module) {
 	
 	Assembly.register(SpaceSection);
 	module.exports = SpaceSection
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/partition.js',
-function (require, exports, module) {
-	
-
-	
-	const Section = require('../section.js');
-	const Assembly = require('../../../assembly.js');
-	
-	class PartitionSection extends Section {
-	  constructor(templatePath, partCode, partName, sectionProperties) {
-	    super(templatePath, true, partCode, partName, sectionProperties);
-	    this.important = ['partCode', 'partName', 'index'];
-	  }
-	}
-	
-	PartitionSection.isPartition = () => true;
-	
-	PartitionSection.fromJson = (json, parent) => {
-	  const sectionProps = parent.dividerProps(json.index);
-	  const assembly = Assembly.new(json.type, json.partCode, sectionProps, parent);
-	  assembly.partCode = json.partCode;
-	  assembly.partName = json.partName;
-	  assembly.values = json.values;
-	  return assembly;
-	}
-	module.exports = PartitionSection
-	
-	
-	
-	
 	
 });
 
@@ -15493,34 +15628,55 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/false-front.js',
+function (require, exports, module) {
+	
+
+	
+	const OpeningCoverSection = require('../open-cover.js');
+	const Section = require('../../../../section.js');
+	const PULL_TYPE = require('../../../../../../../../../globals/CONSTANTS.js').PULL_TYPE;
+	const DrawerFront = require('../../../../../drawer/drawer-front.js');
+	const Assembly = require('../../../../../../assembly.js');
+	
+	class FalseFrontSection extends OpeningCoverSection {
+	  constructor(partCode, divideProps, parent) {
+	    super(sectionFilePath('false-front'), partCode, 'False.Front.Section', divideProps, PULL_TYPE.DRAWER);
+	    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems, '', this));
+	  }
+	}
+	
+	FalseFrontSection.abbriviation = 'ffs';
+	
+	Assembly.register(FalseFrontSection);
+	module.exports = FalseFrontSection
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/door.js',
 function (require, exports, module) {
 	
 
 	
 	const OpeningCoverSection = require('../open-cover.js');
 	const Door = require('../../../../../door/door.js');
-	const Handle = require('../../../../../hardware/pull.js');
 	const Assembly = require('../../../../../../assembly.js');
 	
-	class DualDoorSection extends OpeningCoverSection {
+	class DoorSection extends OpeningCoverSection {
 	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
-	    if (divideProps === undefined) return;
-	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
-	    this.addSubAssembly(rightDoor);
-	    rightDoor.setHandleLocation(Handle.location.TOP_LEFT);
-	
-	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems);
-	    this.addSubAssembly(leftDoor);
-	    leftDoor.setHandleLocation(Handle.location.TOP_RIGHT);
+	    super(sectionFilePath('door'), partCode, 'Door.Section', divideProps);
+	    this.addSubAssembly(new Door('d', 'Door', this.coverCenter, this.coverDems));
 	  }
 	}
 	
-	DualDoorSection.abbriviation = 'dds';
-	
-	Assembly.register(DualDoorSection);
-	module.exports = DualDoorSection
+	DoorSection.abbriviation = 'drs';
+	Assembly.register(DoorSection);
+	module.exports = DoorSection
 	
 	
 	
@@ -15586,55 +15742,34 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/false-front.js',
-function (require, exports, module) {
-	
-
-	
-	const OpeningCoverSection = require('../open-cover.js');
-	const Section = require('../../../../section.js');
-	const PULL_TYPE = require('../../../../../../../../../globals/CONSTANTS.js').PULL_TYPE;
-	const DrawerFront = require('../../../../../drawer/drawer-front.js');
-	const Assembly = require('../../../../../../assembly.js');
-	
-	class FalseFrontSection extends OpeningCoverSection {
-	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('false-front'), partCode, 'False.Front.Section', divideProps, PULL_TYPE.DRAWER);
-	    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems, '', this));
-	  }
-	}
-	
-	FalseFrontSection.abbriviation = 'ffs';
-	
-	Assembly.register(FalseFrontSection);
-	module.exports = FalseFrontSection
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/door.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
 function (require, exports, module) {
 	
 
 	
 	const OpeningCoverSection = require('../open-cover.js');
 	const Door = require('../../../../../door/door.js');
+	const Handle = require('../../../../../hardware/pull.js');
 	const Assembly = require('../../../../../../assembly.js');
 	
-	class DoorSection extends OpeningCoverSection {
+	class DualDoorSection extends OpeningCoverSection {
 	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('door'), partCode, 'Door.Section', divideProps);
-	    this.addSubAssembly(new Door('d', 'Door', this.coverCenter, this.coverDems));
+	    super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
+	    if (divideProps === undefined) return;
+	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
+	    this.addSubAssembly(rightDoor);
+	    rightDoor.setHandleLocation(Handle.location.TOP_LEFT);
+	
+	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems);
+	    this.addSubAssembly(leftDoor);
+	    leftDoor.setHandleLocation(Handle.location.TOP_RIGHT);
 	  }
 	}
 	
-	DoorSection.abbriviation = 'drs';
-	Assembly.register(DoorSection);
-	module.exports = DoorSection
+	DualDoorSection.abbriviation = 'dds';
+	
+	Assembly.register(DualDoorSection);
+	module.exports = DualDoorSection
 	
 	
 	
@@ -15643,191 +15778,20 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./test/test.js',
+RequireJS.addFunction('./test/run.js',
 function (require, exports, module) {
 	
 
 	
+	const EPNTS = require('../generated/EPNTS.js');
+	const Test = require('../../../public/js/utils/test/test').Test;
 	
-	
-	Error.stackInfo = (steps) => {
-	  steps = steps || 1;
-	  const err = new Error();
-	  const lines = err.stack.split('\n');
-	  const match = lines[steps].match(/at (([a-zA-Z\.]*?) |)(.*\.js):([0-9]{1,}):([0-9]{1,})/);;
-	  if (match) {
-	    return {
-	      filename: match[3].replace(/^\(/, ''),
-	      function: match[2],
-	      line: match[4],
-	      character: match[5]
-	    }
-	  }
+	if (EPNTS.getEnv() === 'local') {
+	  require('../test/tests/to-from-json');
+	  require('../../../public/js/utils/test/tests/decision-tree');
 	}
 	
-	Error.reducedStack = (steps) => {
-	  steps = steps || 1;
-	  const err = new Error();
-	  let lines = err.stack.split('\n');
-	  lines = lines.splice(steps);
-	  return `Error\n${lines.join('\n')}`;
-	}
-	
-	class ArgumentAttributeTest {
-	  constructor(argIndex, value, name, errorCode, errorAttribute) {
-	    function fail (ts, func, actualErrorCode, args) {
-	      ts.fail('AttributeTest Failed: use null if test was supposed to succeed' +
-	      `\n\tFunction: '${func.name}'` +
-	      `\n\tArgument Index: '${argIndex}'` +
-	      `\n\tName: '${name}'` +
-	      `\n\tValue: '${value}'` +
-	      `\n\tErrorCode: '${actualErrorCode}' !== '${errorCode}'`);
-	    }
-	
-	    this.run = function (ts, func, args, thiz) {
-	      thiz = thiz || null;
-	      const testArgs = [];
-	      for (let index = 0; index < args.length; index += 1) {
-	        const obj = args[index];
-	        let arg;
-	        if (index === argIndex) {
-	          if (name) {
-	            arg = JSON.parse(JSON.stringify(obj));
-	            arg[name] = value;
-	          } else {
-	            arg = value;
-	          }
-	        }
-	        testArgs.push(arg);
-	      }
-	      try {
-	        func.apply(thiz, testArgs)
-	        if (errorCode || errorCode !== null) fail(ts, func, null, arguments);
-	      } catch (e) {
-	        errorAttribute = errorAttribute || 'errorCode';
-	        const actualErrorCode = e[errorAttribute];
-	        if (errorCode !== undefined &&
-	              (errorCode === null || actualErrorCode !== errorCode))
-	          fail(ts, func, actualErrorCode, arguments);
-	      }
-	    }
-	  }
-	}
-	
-	class FunctionArgumentTestError extends Error {
-	  constructor(argIndex, errorAttribute) {
-	    super();
-	    this.message = 'errorCode should be null if no error thrown and undefined if no errorCode';
-	    if (argIndex === undefined) {
-	      this.message += '\n\targIndex must be defined.';
-	    }
-	    if (errorAttribute === undefined) {
-	      this.message += '\n\terrorAttribute must be defined.';
-	    }
-	  }
-	}
-	
-	class FunctionArgumentTest {
-	  constructor(ts, func, args, thiz) {
-	    if (!(ts instanceof TestStatus))
-	      throw new Error('ts must be a valid instance of TestStatus');
-	    if ((typeof func) !== 'function')
-	      throw new Error("Function must be defined and of type 'function'");
-	    if (!Array.isArray(args) || args.length === 0)
-	      throw new Error("This is not a suitable test for a function without arguments");
-	    const funcArgTests = [];
-	    let argIndex, errorCode;
-	    let errorAttribute = 'errorCode';
-	    this.setIndex = (i) => {argIndex = i; return this;}
-	    this.setErrorCode = (ec) => {errorCode = ec; return this;}
-	    this.setErrorAttribute = (ea) => {errorAttribute = ea; return this};
-	    const hasErrorCode =  errorCode !== undefined;
-	    this.run = () => {
-	      funcArgTests.forEach((fat) => {
-	        fat.run(ts, func, args, thiz);
-	      });
-	      return this;
-	    }
-	    this.add = (name, value) =>  {
-	      if (errorAttribute === undefined || argIndex === undefined)
-	        throw new FunctionArgumentTestError(argIndex, errorAttribute);
-	      const at = new ArgumentAttributeTest(argIndex, value, name, errorCode, errorAttribute);
-	      funcArgTests.push(at);
-	      return this;
-	    }
-	  }
-	}
-	
-	// ts for short
-	class TestStatus {
-	  constructor(testName) {
-	    let assertT = 0;
-	    let assertC = 0;
-	    let success = false;
-	    let fail = false;
-	    function printError(msg, stackOffset) {
-	      stackOffset = stackOffset || 4;
-	      console.error(`%c ${msg}\n${Error.reducedStack(stackOffset)}`, 'color: red');
-	    }
-	    function assert(b) {
-	      assertT++;
-	      if (b) {
-	        assertC++;
-	        return true;
-	      }
-	      return false;
-	    }
-	    function successStr(msg) {
-	      console.log(`%c ${testName} - Successfull (${assertC}/${assertT})${
-	          msg ? `\n\t\t${msg}` : ''}`, 'color: green');
-	    }
-	    this.assertTrue = (b, msg) => !assert(b) &&
-	                            printError(`'${b}' should be true`);
-	    this.assertFalse = (b, msg) => !assert(!b) &&
-	                            printError(`'${b}' should be false`);
-	    this.assertEquals = (a, b, msg) => !assert(a === b) &&
-	                            printError(`'${a}' === '${b}' should be true`);
-	    this.assertNotEquals = (a, b, msg) => !assert(a !== b) &&
-	                            printError(`'${a}' !== '${b}' should be true`);
-	    this.assertTolerance = (n1, n2, tol, msg, stackOffset) => {
-	      !assert(Math.abs(n1-n2) < tol) &&
-	      printError(`${n1} and ${n2} are not within tolerance ${tol}`, stackOffset);
-	    }
-	    this.fail = (msg, stackOffset) => {
-	      fail = true;
-	      printError(msgj, stackOffset);
-	      throw new Error();
-	    };
-	    this.success = (msg, stackOffset) => (success = true) && successStr(msg, stackOffset);
-	  }
-	}
-	
-	const Test = {
-	  tests: {},
-	  add: (name, func) => {
-	    if ((typeof func) === 'function') {
-	      if (Test.tests[name] ===  undefined) Test.tests[name] = [];
-	      Test.tests[name].push(func);
-	    }
-	  },
-	  run: () => {
-	    const testNames = Object.keys(Test.tests);
-	    for (let index = 0; index < testNames.length; index += 1) {
-	      const testName = testNames[index];
-	      try {
-	        Test.tests[testName].forEach((testFunc) => testFunc(new TestStatus(testName)));
-	      } catch (e) {
-	        console.log(`%c ${e.stack}`, 'color: red')
-	      }
-	    }
-	  }
-	}
-	
-	exports.ArgumentAttributeTest = ArgumentAttributeTest;
-	exports.FunctionArgumentTestError = FunctionArgumentTestError;
-	exports.FunctionArgumentTest = FunctionArgumentTest;
-	exports.TestStatus = TestStatus;
-	exports.Test = Test;
+	Test.run();
 	
 });
 
@@ -15898,7 +15862,7 @@ function (require, exports, module) {
 RequireJS.addFunction('./test/tests/to-from-json.js',
 function (require, exports, module) {
 	
-const Test = require('../test').Test;
+const Test = require('../../../../public/js/utils/test/test').Test;
 	const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
 	
 	
@@ -15906,119 +15870,6 @@ const Test = require('../test').Test;
 	  ts.assertEquals(6, 6);
 	  ts.success();
 	});
-	
-	Test.run();
-	
-});
-
-
-RequireJS.addFunction('./test/tests/cost/labor.js',
-function (require, exports, module) {
-	
-
-	
-	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
-	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Labor = require('../../../app-src/cost/types/material/labor.js');
-	const FunctionArgumentTest = require('../../test.js').FunctionArgumentTest;
-	
-	
-	{
-	  const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
-	  const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
-	  const props = {};
-	  const smeRound = StringMathEvaluator.round;
-	  const referenceable = true;
-	  const group = 'localTest30487';
-	
-	  let unitCostValue = smeRound((35*.017)/(8*12));
-	  let costValue = smeRound(unitCostValue * 196 * 12);
-	  let assembly = frame;
-	  props.linear = {
-	    id: 'Sand Frame',
-	    method: 'Linear Feet',
-	    laborType: 'Sand',
-	    objectId: 'Frame',
-	    hourlyRate: '35',
-	    length: '8\'',
-	    hours: '.017',
-	    formula: 'l',
-	    referenceable, unitCostValue, costValue, assembly, group
-	  };
-	
-	  unitCostValue = smeRound((35*.08)/(48*48));
-	  costValue = smeRound(unitCostValue * 24 * 10);
-	  assembly = panel;
-	  props.square = {
-	    id: 'Sand Panel',
-	    method: 'Square Feet',
-	    laborType: 'Sand',
-	    length: '48',
-	    objectId: 'Panel',
-	    width: '48',
-	    hours: '.08',
-	    formula: 'l*w',
-	    referenceable, unitCostValue, costValue, assembly, group
-	  };
-	
-	  unitCostValue = smeRound((35*.06)/(12*6*1));
-	  costValue = smeRound(unitCostValue * 24 * 10 * .75);
-	  props.cubic = {
-	    id: 'Sand Block',
-	    method: 'Cubic Feet',
-	    laborType: 'Sand',
-	    hourlyRate: '35',
-	    objectId: 'Panel',
-	    length: '12',
-	    width: '6',
-	    depth: '1',
-	    hours: '.06',
-	    formula: 'l*w*d',
-	    referenceable, unitCostValue, costValue, assembly, group
-	  };
-	
-	  unitCostValue = smeRound(20*.66);
-	  costValue = smeRound(unitCostValue * 13);
-	  props.unit = {
-	    id: 'instalation',
-	    method: 'Unit',
-	    laborType: 'Instalation',
-	    hourlyRate: '20',
-	    hours: '.66',
-	    referenceable, unitCostValue, costValue, group,
-	    assembly: 13
-	  };
-	
-	  Test.add('LaborCost: unitCost/calc',(ts) => {
-	    const costs = [];
-	    function testProps(props) {
-	      const labor = new Labor(props);
-	      costs.push(labor);
-	      ts.assertTolerance(labor.unitCost().value, props.unitCostValue, .00001);
-	      ts.assertTolerance(labor.calc(props.assembly), props.costValue, .00001);
-	    }
-	    Object.values(props).forEach(testProps);
-	    costs.forEach((cost) => cost.delete());
-	    ts.success();
-	  });
-	
-	  // Test.add('LaborCost: argument validation',(ts) => {
-	  //   const args = [props.linear];
-	  //   const func = function (args) {new (Labor.prototype.constructor)(...arguments);}
-	  //   new FunctionArgumentTest(ts, func, args)
-	  //       .setIndex(0)
-	  //       .add('id', undefined)
-	  //       .run();
-	  //   ts.success();
-	  // });
-	}
-	
-	exports.Frame = Frame
-	exports.Panel = Panel
-	exports.StringMathEvaluator = StringMathEvaluator
-	exports.Labor = Labor
-	exports.FunctionArgumentTest = FunctionArgumentTest
 	
 });
 
@@ -16200,6 +16051,117 @@ function (require, exports, module) {
 	
 	exports.Frame = Frame
 	exports.Material = Material
+	
+});
+
+
+RequireJS.addFunction('./test/tests/cost/labor.js',
+function (require, exports, module) {
+	
+
+	
+	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
+	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Labor = require('../../../app-src/cost/types/material/labor.js');
+	const FunctionArgumentTest = require('../../test.js').FunctionArgumentTest;
+	
+	
+	{
+	  const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
+	  const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
+	  const props = {};
+	  const smeRound = StringMathEvaluator.round;
+	  const referenceable = true;
+	  const group = 'localTest30487';
+	
+	  let unitCostValue = smeRound((35*.017)/(8*12));
+	  let costValue = smeRound(unitCostValue * 196 * 12);
+	  let assembly = frame;
+	  props.linear = {
+	    id: 'Sand Frame',
+	    method: 'Linear Feet',
+	    laborType: 'Sand',
+	    objectId: 'Frame',
+	    hourlyRate: '35',
+	    length: '8\'',
+	    hours: '.017',
+	    formula: 'l',
+	    referenceable, unitCostValue, costValue, assembly, group
+	  };
+	
+	  unitCostValue = smeRound((35*.08)/(48*48));
+	  costValue = smeRound(unitCostValue * 24 * 10);
+	  assembly = panel;
+	  props.square = {
+	    id: 'Sand Panel',
+	    method: 'Square Feet',
+	    laborType: 'Sand',
+	    length: '48',
+	    objectId: 'Panel',
+	    width: '48',
+	    hours: '.08',
+	    formula: 'l*w',
+	    referenceable, unitCostValue, costValue, assembly, group
+	  };
+	
+	  unitCostValue = smeRound((35*.06)/(12*6*1));
+	  costValue = smeRound(unitCostValue * 24 * 10 * .75);
+	  props.cubic = {
+	    id: 'Sand Block',
+	    method: 'Cubic Feet',
+	    laborType: 'Sand',
+	    hourlyRate: '35',
+	    objectId: 'Panel',
+	    length: '12',
+	    width: '6',
+	    depth: '1',
+	    hours: '.06',
+	    formula: 'l*w*d',
+	    referenceable, unitCostValue, costValue, assembly, group
+	  };
+	
+	  unitCostValue = smeRound(20*.66);
+	  costValue = smeRound(unitCostValue * 13);
+	  props.unit = {
+	    id: 'instalation',
+	    method: 'Unit',
+	    laborType: 'Instalation',
+	    hourlyRate: '20',
+	    hours: '.66',
+	    referenceable, unitCostValue, costValue, group,
+	    assembly: 13
+	  };
+	
+	  Test.add('LaborCost: unitCost/calc',(ts) => {
+	    const costs = [];
+	    function testProps(props) {
+	      const labor = new Labor(props);
+	      costs.push(labor);
+	      ts.assertTolerance(labor.unitCost().value, props.unitCostValue, .00001);
+	      ts.assertTolerance(labor.calc(props.assembly), props.costValue, .00001);
+	    }
+	    Object.values(props).forEach(testProps);
+	    costs.forEach((cost) => cost.delete());
+	    ts.success();
+	  });
+	
+	  // Test.add('LaborCost: argument validation',(ts) => {
+	  //   const args = [props.linear];
+	  //   const func = function (args) {new (Labor.prototype.constructor)(...arguments);}
+	  //   new FunctionArgumentTest(ts, func, args)
+	  //       .setIndex(0)
+	  //       .add('id', undefined)
+	  //       .run();
+	  //   ts.success();
+	  // });
+	}
+	
+	exports.Frame = Frame
+	exports.Panel = Panel
+	exports.StringMathEvaluator = StringMathEvaluator
+	exports.Labor = Labor
+	exports.FunctionArgumentTest = FunctionArgumentTest
 	
 });
 

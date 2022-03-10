@@ -150,9 +150,6 @@ function setPropertyElemValue(elem, idAttr, value) {
   const group = elem.getAttribute('name');
   const property = Property.get(id);
   property.value(value, true);
-  if (group === 'UNIT' && value) {
-    Measurement.unit(property.name());
-  }
 }
 
 function updateMeasurements () {
@@ -188,6 +185,13 @@ function updateValue(elem) {
   updateSaveAll();
 }
 
+function updateBoolean(elem) {
+  setPropertyElemValue(elem, 'prop-boolean-update', elem.checked);
+  const saveBtn = du.find.closest('.save-change', elem);
+  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+  updateSaveAll();
+}
+
 function saveChange(elem) {
   const id = elem.getAttribute('properties-id');
   Properties.changes.save(id);
@@ -198,6 +202,7 @@ function saveChange(elem) {
 
 
 du.on.match('keyup', '[prop-value-update]', updateValue);
+du.on.match('change', '[prop-boolean-update]', updateBoolean);
 du.on.match('focusout', '[measurement-id]', updateValueDisplay);
 du.on.match('change', '[prop-radio-update]', updateRadio);
 du.on.match('click', '#property-manager-save-all', saveAll);

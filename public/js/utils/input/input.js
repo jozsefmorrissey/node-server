@@ -49,11 +49,11 @@ class Input {
 
     this.hide = () => forAll((elem) => {
       const cnt = du.find.up('.input-cnt', elem);
-      hidden = cnt.hidden = true;
+      this.hidden(cnt.hidden = true);
     });
     this.show = () => forAll((elem) => {
       const cnt = du.find.up('.input-cnt', elem);
-      hidden = cnt.hidden = false;
+      this.hidden(cnt.hidden = false);
     });
 
     let valid;
@@ -67,7 +67,7 @@ class Input {
      html();
 
     function valuePriority (func) {
-      return (elem, event) => func(elem[this.targetAttr()], elem, event);
+      return (elem, event) => func(elem[instance.targetAttr()], elem, event);
     }
     this.attrString = () => Input.attrString(this.targetAttr(), this.value());
 

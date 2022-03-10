@@ -20,7 +20,8 @@ const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
 
-if (EPNTS.getEnv() === 'local') require('../test/tests/to-from-json');
+// Run Tests
+require('../test/run');
 
 function updateDivisions (target) {
   const name = target.getAttribute('name');

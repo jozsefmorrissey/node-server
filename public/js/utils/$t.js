@@ -31,7 +31,7 @@ class $t {
 		const signProps = {opening: /([-+\!])/};
 		const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
 		const ternaryProps = {opening: /\?/};
-		const keyWordProps = {opening: /(new|null|undefined|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
+		const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
 		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
 		const commaProps = {opening: /,/};
 		const colonProps = {opening: /:/};
