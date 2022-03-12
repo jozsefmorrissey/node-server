@@ -1,0 +1,26 @@
+
+
+breakfast
+  food
+    eggs
+      over easy
+      sunny side up
+      scramble
+      fried
+    bacon
+    toast
+      white
+      wheat
+      texas
+    cereal
+      milk
+      type
+        raisin brand
+        cheerios
+        life
+  dishes
+    plate
+    fork
+    having cereal
+      bowl
+      spoon
