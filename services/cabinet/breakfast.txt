@@ -2,12 +2,23 @@
 
 breakfast
   food
-    eggs
-      over easy
-      sunny side up
-      scramble
-      fried
     bacon
+    eggs
+      2
+        over easy
+        sunny side up
+        scramble
+        fried
+      3
+        over easy
+        sunny side up
+        scramble
+        fried
+      6
+        over easy
+        sunny side up
+        scramble
+        fried
     toast
       white
       wheat
@@ -19,8 +30,9 @@ breakfast
         cheerios
         life
   dishes
-    plate
-    fork
+    eating
+      plate
+      fork
     having cereal
       bowl
       spoon

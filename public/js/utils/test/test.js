@@ -18,12 +18,12 @@ Error.stackInfo = (steps) => {
   }
 }
 
-Error.reducedStack = (steps) => {
+Error.reducedStack = (msg, steps) => {
   steps = steps || 1;
   const err = new Error();
   let lines = err.stack.split('\n');
   lines = lines.splice(steps);
-  return `Error\n${lines.join('\n')}`;
+  return `Error: ${msg}\n${lines.join('\n')}`;
 }
 
 class ArgumentAttributeTest {
@@ -80,6 +80,8 @@ class FunctionArgumentTestError extends Error {
   }
 }
 
+const failureError = new Error('Test Failed');
+
 class FunctionArgumentTest {
   constructor(ts, func, args, thiz) {
     if (!(ts instanceof TestStatus))
@@ -118,9 +120,11 @@ class TestStatus {
     let assertC = 0;
     let success = false;
     let fail = false;
+    let failOnError = true;
+    let instance = this;
     function printError(msg, stackOffset) {
       stackOffset = stackOffset || 4;
-      console.error(`%c ${msg}\n${Error.reducedStack(stackOffset)}`, 'color: red');
+      console.error(`%c${Error.reducedStack(msg, stackOffset)}`, 'color: red');
     }
     function assert(b) {
       assertT++;
@@ -134,22 +138,24 @@ class TestStatus {
       console.log(`%c ${testName} - Successfull (${assertC}/${assertT})${
           msg ? `\n\t\t${msg}` : ''}`, 'color: green');
     }
+    const possiblyFail = (msg) => failOnError ? instance.fail(msg, 6) : printError(msg, 5);
+
     this.assertTrue = (b, msg) => !assert(b) &&
-                            printError(`'${b}' should be true`);
+                            possiblyFail(`${msg}\n\t\t'${b}' should be true`);
     this.assertFalse = (b, msg) => !assert(!b) &&
-                            printError(`'${b}' should be false`);
+                            possiblyFail(`${msg}\n\t\t'${b}' should be false`);
     this.assertEquals = (a, b, msg) => !assert(a === b) &&
-                            printError(`'${a}' === '${b}' should be true`);
+                            possiblyFail(`${msg}\n\t\t'${a}' === '${b}' should be true`);
     this.assertNotEquals = (a, b, msg) => !assert(a !== b) &&
-                            printError(`'${a}' !== '${b}' should be true`);
+                            possiblyFail(`${msg}\n\t\t'${a}' !== '${b}' should be true`);
     this.assertTolerance = (n1, n2, tol, msg, stackOffset) => {
       !assert(Math.abs(n1-n2) < tol) &&
-      printError(`${n1} and ${n2} are not within tolerance ${tol}`, stackOffset);
+      possiblyFail(`${msg}\n\t\t${n1} and ${n2} are not within tolerance ${tol}`, stackOffset);
     }
     this.fail = (msg, stackOffset) => {
       fail = true;
-      printError(msgj, stackOffset);
-      throw new Error();
+      printError(msg, stackOffset);
+      throw failureError;
     };
     this.success = (msg, stackOffset) => (success = true) && successStr(msg, stackOffset);
   }
@@ -170,7 +176,8 @@ const Test = {
       try {
         Test.tests[testName].forEach((testFunc) => testFunc(new TestStatus(testName)));
       } catch (e) {
-        console.log(`%c ${e.stack}`, 'color: red')
+        if (e !== failureError)
+          console.log(`%c ${e.stack}`, 'color: red')
       }
     }
   }
