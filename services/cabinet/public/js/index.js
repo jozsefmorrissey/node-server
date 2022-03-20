@@ -4792,6 +4792,215 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/measurment.js',
+function (require, exports, module) {
+	
+const Lookup = require('./object/lookup');
+	const StringMathEvaluator = require('./string-math-evaluator');
+	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	let percision = '1/32';
+	let units = [
+	  'Metric',
+	  'Imperial (US)'
+	]
+	let unit = units[1];
+	
+	
+	class Measurement extends Lookup {
+	  constructor(value, notMetric) {
+	    super();
+	    if ((typeof value) === 'string') {
+	      value += ' '; // Hacky fix for regularExpression
+	    }
+	
+	    const determineUnit = () => {
+	      if ((typeof notMetric === 'string')) {
+	        const index = units.indexOf(notMetric);
+	        if (index !== -1) return units[index];
+	      } else if ((typeof notMetric) === 'boolean') {
+	        if (notMetric === true) return unit;
+	      }
+	      return units[0];
+	    }
+	
+	    let decimal = 0;
+	    let nan = value === null || value === undefined;
+	    this.isNaN = () => nan;
+	
+	    const parseFraction = (str) => {
+	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
+	      regObj.integer = Number.parseInt(regObj.integer) || 0;
+	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	      if(regObj.denominator === 0) {
+	        regObj.numerator = 0;
+	        regObj.denominator = 1;
+	      }
+	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	      return regObj;
+	    };
+	
+	    function reduce(numerator, denominator) {
+	      let reduced = true;
+	      while (reduced) {
+	        reduced = false;
+	        for (let index = 0; index < Measurement.primes.length; index += 1) {
+	          const prime = Measurement.primes[index];
+	          if (prime >= denominator) break;
+	          if (numerator % prime === 0 && denominator % prime === 0) {
+	            numerator = numerator / prime;
+	            denominator = denominator / prime;
+	            reduced = true;
+	            break;
+	          }
+	        }
+	      }
+	      if (numerator === 0) {
+	        return '';
+	      }
+	      return ` ${numerator}/${denominator}`;
+	    }
+	
+	    function calculateValue(accuracy) {
+	      accuracy = accuracy || '1/32'
+	      const fracObj = parseFraction(accuracy);
+	      const denominator = fracObj.denominator;
+	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	      }
+	      let standardDecimal = decimal / 2.54;
+	      let sign = standardDecimal > 0 ? 1 : -1;
+	      let remainder = Math.abs(standardDecimal);
+	      let currRemainder = remainder;
+	      let value = 0;
+	      let numerator = 0;
+	      while (currRemainder > 0) {
+	        numerator += fracObj.numerator;
+	        currRemainder -= fracObj.decimal;
+	      }
+	      const diff1 = standardDecimal - ((numerator - fracObj.numerator) / denominator);
+	      const diff2 = (numerator / denominator) - standardDecimal;
+	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	      const integer = sign * Math.floor(numerator / denominator);
+	      numerator = numerator % denominator;
+	      return {integer, numerator, denominator};
+	    }
+	
+	    this.fraction = (accuracy) => {
+	      if (nan) return NaN;
+	      const obj = calculateValue(accuracy);
+	      if (obj.integer === 0 && obj.numerator === 0) return '0';
+	      const integer = obj.integer !== 0 ? obj.integer : '';
+	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
+	    }
+	    this.standardUS = this.fraction;
+	
+	    this.display = (accuracy) => {
+	      switch (unit) {
+	        case units[0]: return this.decimal(accuracy);
+	        case units[1]: return this.standardUS(accuracy);
+	        default:
+	            return this.standardUS(accuracy);
+	      }
+	    }
+	
+	    this.value = (accuracy) => this.decimal(accuracy);
+	
+	    this.decimal = (accuracy) => {
+	      if (nan) return NaN;
+	      accuracy = accuracy % 100 ? accuracy : 100;
+	      return Math.round(decimal * accuracy) / accuracy;
+	    }
+	
+	    function getDecimalEquivalant(string) {
+	      string = string.trim();
+	      if (string.match(StringMathEvaluator.decimalReg)) {
+	        return Number.parseFloat(string);
+	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
+	        return parseFraction(string).decimal
+	      }
+	      nan = true;
+	      return NaN;
+	    }
+	
+	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+	
+	    function standardize(ambiguousDecimal) {
+	      switch (determineUnit()) {
+	        case units[0]:
+	          return ambiguousDecimal;
+	        case units[1]:
+	          return convertUsToMetric(ambiguousDecimal);
+	        default:
+	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
+	      }
+	    }
+	
+	    if ((typeof value) === 'number') {
+	      decimal = standardize(value);
+	    } else if ((typeof value) === 'string') {
+	      try {
+	        const ambiguousDecimal = getDecimalEquivalant(value);
+	        decimal = standardize(ambiguousDecimal);
+	      } catch (e) {
+	        nan = true;
+	      }
+	    } else {
+	      nan = true;
+	    }
+	  }
+	}
+	
+	Measurement.unit = (newUnit) => {
+	  for (index = 0; index < units.length; index += 1) {
+	    if (newUnit === units[index]) unit = newUnit;
+	  }
+	  return unit
+	};
+	Measurement.units = () => JSON.parse(JSON.stringify(units));
+	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
+	
+	Measurement.validation = function (range) {
+	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
+	  let min = obj.min.trim() !== '' ?
+	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
+	  let max = obj.max.trim() !== '' ?
+	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
+	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
+	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
+	  return function (value) {
+	    const decimal = new Measurement(value).decimal();
+	    if (decimal === NaN) return false;
+	    return minCheck(decimal) && maxCheck(decimal);
+	  }
+	}
+	
+	Measurement.round = (value, percision) => {
+	  if (percision)
+	  return new Measurement(value).decimal(percision);
+	  return Math.round(value * 10000000) / 10000000;
+	}
+	
+	try {
+	  module.exports = Measurement;
+	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/decision-tree.js',
 function (require, exports, module) {
 	
@@ -5046,179 +5255,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/decisionTree.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	// terminology
-	// name - String to define state;
-	// payload - data returned for a given state
-	//             - @_REQUIRED_NODES - An array of names that subsequent nodes must have to complete tree.
-	//             - @_UNIQUE_NAME_GROUP - An Identifier used to insure all nodes of multople trees have a unique name.
-	//                          note: only applicable on root node. governs entire tree
-	// stateObject - object defining states {name: [payload]...}
-	// states - array of availible state names.
-	// node - {name, states, payload, then, addState, addStates};
-	// then(name) - a function to set a following state.
-	// next(name) - a function to get the next state.
-	// back() - a function to move back up the tree.
-	// top() - a function to get root;
-	//
-	// returns all functions return current node;
-	class DecisionTree {
-	  constructor(name, payload) {
-	    name = name || 'root';
-	    payload._REQUIRED_NODES = Array.isArray(payload._REQUIRED_NODES) ?
-	            payload._REQUIRED_NODES : [];
-	    const stateConfigs = {};
-	    const tree = {};
-	    const nodeMap = {};
-	    const uniqueGroup = payload._UNIQUE_NAME_GROUP;
-	
-	    function addState(name, payload) {
-	      if (uniqueGroup && this.declairedName(name)) {
-	        throw new Error('Name already declared: This requires unique naming possibly relitive to other trees use DecisionTree.undeclairedName(name) to validate names')
-	      }
-	      return stateConfigs[name] = payload;
-	    }
-	
-	    function addStates(sts) {
-	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
-	      const keys = Object.keys(sts);
-	      keys.forEach((key) => stateConfigs[key] = sts[key]);
-	    }
-	
-	    function getState(name, parent) {
-	      return new DecisionNode(name, stateConfigs[name], parent);
-	    }
-	
-	
-	    class DecisionNode {
-	      constructor(name, payload, parent) {
-	        const states = {};
-	        let jump;
-	        let isComplete = false; // null : requires evaluation
-	        payload = payload || {};
-	        payload._nodeId = `decision-node-${String.random(7)}`;
-	        nodeMap[payload._nodeId] = this;
-	        this.getNode = (nodeId) => nodeMap[nodeId];
-	        this.name = name;
-	        this.states = states;
-	        this.payload = payload;
-	        this.jump = (name) => {
-	          if (name) jump = getState(name, parent);
-	          return jump;
-	        };
-	        this.structureChanged = () => {
-	          isComplete = null;
-	          if (parent) parent.structureChanged();
-	        }
-	        this.then = (name, payload, conditional) => {
-	          this.structureChanged();
-	          payload = payload ? addState(name, payload) : stateConfigs[name];
-	          const newState = getState(name, payload);
-	          if ((typeof conditional) === 'string') {
-	            const stateId = `${this.name}:${conditional}`;
-	            states[stateId] = getState(stateId, this);
-	            states[stateId].jump(newState);
-	          } else {
-	            states[name] = newState;
-	          }
-	          return newStatenewState === undefined ? undefined : newState.jump() || newState;
-	        }
-	        this.addState = (name, payload) => addState(name, payload) && this;
-	        this.addStates = (sts) => addStates(sts) && this;
-	        this.next = (name) => {
-	          const state = states[name];
-	          return state === undefined ? undefined : state.jump() || state;
-	        }
-	
-	        this.routePayloads = () => {
-	          let currNode = this;
-	          const payloads = [];
-	          while(currNode !== null) {
-	            payloads.push(currNode.payload);
-	            currNode = currNode.back();
-	          }
-	          return payloads.reverse();
-	        }
-	
-	        this.back = () => parent;
-	        this.top = () => rootNode;
-	        this.isRoot = () => !(parent instanceof DecisionNode)
-	
-	        this.getRoot = () => {
-	          const root = this;
-	          while (!root.isRoot()) root = root.back();
-	          return root;
-	        }
-	
-	        this.requiredNodes = () => {
-	          const root = this;
-	          const prevRequirements = parent ? parent.requiredNodes() : [];
-	          const reqNodes = payload._REQUIRED_NODES.concat(prevRequirements);
-	          const targetIndex = reqNodes.indexOf(this.name);
-	          if (targetIndex !== -1) {
-	            reqNodes = reqNodes.splice(targetIndex, 1)
-	          }
-	          return reqNodes;
-	        }
-	
-	        this.isComplete = () => {
-	          if (isComplete !== null) return isComplete;
-	          const childRequiredNodes = this.requiredNodes();
-	          if (childRequiredNodes.length === 0) return true;
-	          isComplete = true;
-	          for (let index = 0; isComplete && index < this.states.length; index += 1) {
-	            const state = states[index];
-	            isComplete = state.isComplete(childRequiredNodes);
-	          }
-	          return isComplete;
-	        }
-	      }
-	    }
-	    DecisionNode.DO_NOT_CLONE = true;
-	
-	    const rootNode = new DecisionNode(name, payload, null);
-	    if (uniqueGroup) {
-	      DecisionTree.registerUniqueNameGroup(uniqueGroup, root);
-	      this.undeclairedName = (name) => DecisionTree.undeclairedName(uniqueGroup, name);
-	    }
-	    return rootNode;
-	  }
-	}
-	
-	{
-	  const declarationMap = {};
-	  DecisionTree.registerUniqueNameGroup = (uniqueGroup, decisionNode) => {
-	    if (decisionNode.constructor.name !== 'DecisionNode' ||
-	            !decisionNode.isRoot()) {
-	      throw new Error('Can only register the root node of a DecisionTree');
-	    }
-	    if (declarationMap[uniqueGroup] === undefined) declarationMap[uniqueGroup] = [];
-	    declarationMap[uniqueGroup].push(decisionNode);
-	  }
-	  DecisionTree.undeclairedName = (uniqueGroup, name) => {
-	    const list = declarationMap[uniqueGroup] || [];
-	    for (let index = 0; index < list.length; index += 1) {
-	      const states = list[index];
-	      for (let sIndex = 0; sIndex < states.length; sIndex += 1) {
-	        const node = states[sIndex];
-	        if (node.name === name) return false;
-	      }
-	    }
-	    return true;
-	  }
-	}
-	
-	module.exports = DecisionTree;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/endpoints.js',
 function (require, exports, module) {
 	
@@ -5298,294 +5334,99 @@ class Endpoints {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/utils.js',
+RequireJS.addFunction('../../public/js/utils/request.js',
 function (require, exports, module) {
 	
 
-	
-	
-	function safeStdLibAddition() {
-	  const addition = [];
-	  function verify() {
-	    additions.forEach((a) => {
-	      if ((a.static && a.lib[a.field] !== a.func) ||
-	      (!a.static && a.lib.prototype[a.field] !== a.func))
-	        throw new Error(`Functionality was overwritten -` +
-	                          `\n\tLibrary: ${a.lib}` +
-	                          `\n\tStatic: ${a.static}` +
-	                          `\n\tField: ${a.field}`)
-	    });
-	    delete additions;
-	  }
-	  function safeAdd (lib, field, func, static) {
-	    if (!static && lib.prototype[field] === undefined)
-	      lib.prototype[field] = func;
-	    else if (lib[field] === undefined)
-	      lib[field] = func;
-	    else
-	      console.error(`Attempting to overwrite functionality -` +
-	                        `\n\tLibrary: ${lib}` +
-	                        `\n\tStatic: ${static}` +
-	                        `\n\tField: ${field}`);
-	    addition.push({lib, field, func, static})
-	  }
-	  safeAdd(Function, 'safeStdLibAddition', safeAdd);
-	}
-	safeStdLibAddition();
-	
-	
-	Function.safeStdLibAddition(String, 'random',  function (len) {
-	    len = len || 7;
-	    let str = '';
-	    while (str.length < len) str += Math.random().toString(36).substr(2);
-	    return str.substr(0, len);
-	}, true);
-	
-	Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
-	  return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
-	}, true);
-	
-	const classLookup = {};
-	const identifierAttr = '_TYPE';
-	const immutableAttr = '_IMMUTABLE';
-	const temporaryAttr = '_TEMPORARY';
-	
-	Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
-	  function interpretValue(value) {
-	    if (value instanceof Object) {
-	      const classname = value[identifierAttr];
-	      const attrs = Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
-	      if (Array.isArray(value)) {
-	        const realArray = [];
-	        for (let index = 0; index < value.length; index += 1) {
-	          realArray[index] = Object.fromJson(value[index]);
-	        }
-	        return realArray;
-	      } else if (classname && classLookup[classname]) {
-	        const classObj = new (classLookup[classname])();
-	        for (let index = 0; index < attrs.length; index += 1) {
-	          const attr = attrs[index];
-	          if ((typeof classObj[attr]) === 'function')
-	            classObj[attr](interpretValue(value[attr]));
-	        };
-	        return classObj;
-	      } else {
-	        const realObj = {}
-	        for (let index = 0; index < attrs.length; index += 1) {
-	          const attr = attrs[index];
-	          realObj[attr] = interpretValue(value[attr]);
-	        };
-	        return realObj
-	      }
-	    }
-	    return value;
-	  }
-	
-	  if (!(rootJson instanceof Object)) return rootJson;
-	  return interpretValue(rootJson);
-	}, true);
-	
-	Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
-	  const cxtrName = obj.constructor.name;
-	  if (classLookup[cxtrName] === undefined) {
-	    classLookup[cxtrName] = obj.constructor;
-	  } else if (classLookup[cxtrName] !== obj.constructor) {
-	    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
-	  }
-	  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
-	  let values = {};
-	  let temporary = false;
-	  let immutable = false;
-	  if ((typeof initialVals) === 'object') {
-	    values = JSON.clone(initialVals);
-	    immutable = values[immutableAttr] === true;
-	    temporary = values[temporaryAttr] === true;
-	    if (immutable) {
-	      attrs = Object.keys(values);
-	    } else {
-	      attrs = Object.keys(values).concat(attrs);
-	    }
-	  } else {
-	    attrs.push(initialVals);
-	  }
-	
-	  for (let index = 0; index < attrs.length; index += 1) {
-	    const attr = attrs[index];
-	    if (attr !== immutableAttr) {
-	      if (immutable) obj[attr] = () => values[attr];
-	      else {
-	        obj[attr] = (value) => {
-	          if (value === undefined) {
-	            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
-	            if (values[attr] !== undefined || noDefaults)
-	            return values[attr];
-	            return obj.defaultGetterValue(attr);
-	          }
-	          values[attr] = value;
-	        }
-	      }
-	    }
-	  }
-	  if (!temporary) {
-	    const origToJson = obj.toJson;
-	    obj.toJson = (members, exclusive) => {
-	      const restrictions = Array.isArray(members) && members.length;
-	      const json = (typeof origToJson === 'function') ? origToJson() : {};
-	      json[identifierAttr] = obj.constructor.name;
-	      for (let index = 0; index < attrs.length; index += 1) {
-	        const attr = attrs[index];
-	        const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
-	        const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
-	        if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
-	          const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
-	          if ((typeof value) === 'object' && value !== null) {
-	            if ((typeof value.toJson) === 'function') {
-	              json[attr] = value.toJson();
-	            } else if (Array.isArray(value)){
-	              const arr = [];
-	              value.forEach((val) => {
-	                if ((typeof val.toJson) === 'function') {
-	                  arr.push(val.toJson());
-	                } else {
-	                  arr.push(val);
-	                }
-	              });
-	              json[attr] = arr;
-	            } else {
-	              json[attr] = JSON.clone(value);
+	Request = {
+	    onStateChange: function (success, failure, id) {
+	      return function () {
+	        if (this.readyState == 4) {
+	          if (this.status == 200) {
+	            try {
+	              resp = JSON.parse(this.responseText);
+	            } catch (e){
+	              resp = this.responseText;
 	            }
-	          } else {
-	            json[attr] = value;
+	            if (success) {
+	              success(resp, this);
+	            }
+	          } else if (failure) {
+	            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
+	            if (errorMsgMatch) {
+	              this.errorMsg = errorMsgMatch[1].trim();
+	            }
+	            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
+	            if (errorCodeMatch) {
+	              this.errorCode = errorCodeMatch[1];
+	
+	            }
+	            failure(this);
 	          }
+	          var resp = this.responseText;
 	        }
 	      }
-	      return json;
-	    }
-	  }
-	  obj.fromJson = (json) => {
-	    for (let index = 0; index < attrs.length; index += 1) {
-	      const attr = attrs[index];
-	      if (attr !== immutableAttr) {
-	        obj[attr](json[attr]);
+	    },
+	
+	    id: function (url, method) {
+	      return `request.${method}.${url.replace(/\./g, ',')}`;
+	    },
+	
+	    get: function (url, success, failure) {
+	      const xhr = new Request.xmlhr();
+	      xhr.open("GET", url, true);
+	      const id = Request.id(url, 'GET');
+	      xhr.setRequestHeader('Content-Type', 'application/json');
+	      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+	      Request.setGlobalHeaders(xhr);
+	      if (success === undefined && failure === undefined) return xhr;
+	      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	      xhr.send();
+	      return xhr;
+	    },
+	
+	    hasBody: function (method) {
+	      return function (url, body, success, failure) {
+	        const xhr = new Request.xmlhr();
+	        xhr.open(method, url, true);
+	        const id = Request.id(url, method);
+	        xhr.setRequestHeader('Content-Type', 'application/json');
+	        Request.setGlobalHeaders(xhr);
+	        if (success === undefined && failure === undefined) return xhr;
+	        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	        xhr.send(JSON.stringify(body));
+	        return xhr;
 	      }
-	    };
-	    return obj;
-	  }
-	  if (obj.constructor.DO_NOT_CLONE) {
-	    obj.clone = () => obj;
-	  } else {
-	    obj.clone = () => {
-	      const clone = new obj.constructor();
-	      clone.fromJson(obj.toJson());
-	      return clone;
-	    }
-	  }
-	}, true);
-	Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
+	    },
 	
-	Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
-	  if (otherObj === undefined) return;
-	  if ((typeof otherObj) !== 'object') {
-	    throw new Error('Requires one argument of type object or undefined for meaningless call');
-	  }
-	  const keys = Object.keys(otherObj);
-	  keys.forEach((key) => obj[key] = otherObj[key]);
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
-	  if (start!== undefined && end !== undefined && start > end) {
-	    const temp = start;
-	    start = end;
-	    end = temp;
-	  }
-	  start = start || 0;
-	  end = end || values.length;
-	  for (let index = start; index < end; index += 1)
-	    array[index] = values[index];
-	  return array;
-	}, true);
-	
-	const checked = {};
-	
-	// Swiped from https://stackoverflow.com/a/43197340
-	function isClass(obj) {
-	  const isCtorClass = obj.constructor
-	      && obj.constructor.toString().substring(0, 5) === 'class'
-	  if(obj.prototype === undefined) {
-	    return isCtorClass
-	  }
-	  const isPrototypeCtorClass = obj.prototype.constructor
-	    && obj.prototype.constructor.toString
-	    && obj.prototype.constructor.toString().substring(0, 5) === 'class'
-	  return isCtorClass || isPrototypeCtorClass
+	    post: function () {return Request.hasBody('POST')(...arguments)},
+	    delete: function () {return Request.hasBody('DELETE')(...arguments)},
+	    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
+	    head: function () {return Request.hasBody('HEAD')(...arguments)},
+	    put: function () {return Request.hasBody('PUT')(...arguments)},
+	    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
 	}
 	
-	Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
-	  if ((typeof obj) != 'object') return obj;
-	  const keys = Object.keys(obj);
-	  if (!checked[obj.constructor.name]) {
-	    console.log('constructor: ' + obj.constructor.name);
-	    checked[obj.constructor.name] = true;
-	  }
+	Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
+	Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
+	const globalHeaders = {};
+	Request.globalHeader = (header, funcOval) => {
+	  globalHeaders[header] = funcOval;
+	}
+	Request.setGlobalHeaders = (xhr) => {
+	  const headers = Object.keys(globalHeaders);
+	  headers.forEach((header) =>
+	    xhr.setRequestHeader(header, Function.orVal(globalHeaders[header], xhr)));
+	}
+	try {
+	  Request.xmlhr = XMLHttpRequest;
+	} catch (e) {
+	  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
+	}
 	
-	  const clone = ((typeof obj.clone) === 'function') ? obj.clone() :
-	                  Array.isArray(obj) ? [] : {};
-	  for(let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    const member = obj[key];
-	    if (member && (member.DO_NOT_CLONE || member.constructor.DO_NOT_CLONE)) {
-	      clone[key] = member;
-	    } else if ((typeof member) !== 'function') {
-	      if ((typeof member) === 'object') {
-	        if ((typeof member.clone) === 'function') {
-	          clone[key] = member.clone();
-	        } else {
-	          clone[key] = JSON.clone(member);
-	        }
-	      } else {
-	        clone[key] = member;
-	      }
-	    }
-	    else if (isClass(member)) {
-	      clone[key] = member;
-	    }
-	  }
-	  return clone;
-	}, true);
-	
-	Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
-	  if (isRegex !== true) {
-	    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
-	  }
-	  var keyValues = this.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
-	  var json = {};
-	  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
-	    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
-	    if (split) {
-	      json[split[1]] = split[2];
-	    }
-	  }
-	  return json;
-	});
-	
-	Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
-	  const attrs = path.split('.');
-	  const lastIndex = attrs.length - 1;
-	  let currObj = obj;
-	  for (let index = 0; index < lastIndex; index += 1) {
-	    let attr = attrs[index];
-	    if (currObj[attr] === undefined) currObj[attr] = {};
-	    currObj = currObj[attr];
-	  }
-	
-	  const lastAttr = attrs[lastIndex];
-	  if ((typeof currObj[lastAttr]) === 'function') {
-	    return currObj[lastAttr](value);
-	  } else if (value !== undefined) {
-	    currObj[lastAttr] = value;
-	  }
-	  return currObj[lastAttr];
-	}, true);
+	try {
+	  module.exports = Request;
+	} catch (e) {}
 	
 });
 
@@ -6029,326 +5870,471 @@ const frag = document.createDocumentFragment();
 });
 
 
-RequireJS.addFunction('../../public/js/utils/expression-definition.js',
+RequireJS.addFunction('../../public/js/utils/logic-tree.js',
 function (require, exports, module) {
 	
 
 	
+	const DecisionTree = require('./decision-tree');
 	
-	let idCount = 0;
-	class ExprDef {
-	  constructor(name, options, notify, stages, alwaysPossible) {
-	    this.id = idCount++;
-	    let id = this.id;
-	    let string;
-	    let modified = '';
-	    let start;
-	    let end;
-	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
-	    stages = stages ? stages : {};
-	    let currStage = stages;
+	const INTERNAL_FUNCTION_PASSWORD = String.random();
+	const DEFAULT_GROUP = 'LogicTree';
 	
-	    function getRoutes(prefix, stage) {
-	      let routes = [];
-	      let keys = Object.keys(stage);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        if (key !== '_meta') {
-	          let newPrefix;
-	          if (prefix) {
-	            newPrefix = `${prefix}.${key}`;
-	          } else {
-	            newPrefix = key;
-	          }
-	          const deepRoutes = getRoutes(newPrefix, stage[key]);
-	          if (deepRoutes.length > 0) {
-	            routes = routes.concat(deepRoutes);
-	          }
-	          if (stage[key]._meta && stage[key]._meta.end) {
-	            routes.push(newPrefix + '.end');
-	          }
-	          if (stage[key]._meta && stage[key]._meta.repeat) {
-	            routes.push(newPrefix + '.repeat');
-	          }
+	function getNode(nodeOwrapper) {
+	  if (nodeOwrapper.constructor.name === 'DecisionNode') return nodeOwrapper;
+	  return nodeOwrapper.node;
+	}
+	
+	class LogicType {
+	  constructor() {
+	    let optional = false;
+	    this.optional = (val) => {
+	      if (val === true || val === false) {
+	        optional = val;
+	      }
+	      return optional;
+	    }
+	  }
+	}
+	
+	class Select extends LogicType {
+	  constructor(wrapper) {
+	    super();
+	    let value, def;
+	    const instance = this;
+	    this.madeSelection = () => validate(value, true) || validate(def, true);
+	    function validate(val, silent) {
+	      if (instance.optional() && val === null) return true;
+	      const valid = (instance.optional() && val === null) ||
+	                    (val !== null && wrapper.node.validState(val));
+	      if (!silent && !valid) throw Select.error;
+	      return valid;
+	    }
+	    this.value = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        value = val;
+	        LogicTree.updateValues(wrapper, password);
+	      }
+	      return value === undefined ? (def === undefined ? null : def) : value;
+	    }
+	    this.options = () => {
+	      return wrapper.node.stateNames();
+	    }
+	    this.default = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        def = val;
+	        LogicTree.updateDefaults(wrapper, password);
+	      }
+	      return def;
+	    }
+	    this.selector = () => this.value();
+	   }
+	}
+	
+	Select.error = new Error('Invalid selection: use wrapper.options() to get valid list.')
+	
+	class Multiselect extends LogicType {
+	  constructor(wrapper) {
+	    super();
+	    let value, def;
+	    const instance = this;
+	    this.madeSelection = () => validate(value, true) || validate(def, true);
+	    function validate(val, silent) {
+	      if (val === null) return instance.optional();
+	      if (val === undefined) return false;
+	      const stateNames = Object.keys(val);
+	      if (instance.optional() && stateNames.length === 0) return true;
+	      let valid = stateNames.length > 0;
+	      stateNames.forEach((name) => valid = valid && wrapper.node.validState(name));
+	      if (!silent && !valid) throw Multiselect.error;
+	      return valid;
+	    }
+	    this.value = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        value = val;
+	        LogicTree.updateValues(wrapper, password);
+	      }
+	      const retVal = value === undefined ? def : value;
+	      return retVal === null ? null : JSON.clone(retVal);
+	    }
+	    this.options = () => {
+	      const options = {};
+	      const stateNames = wrapper.node.stateNames();
+	      stateNames.forEach((name) => options[name] = def[name] === undefined ? false : def[name]);
+	      return options;
+	    }
+	    this.default = (val, password) => {
+	      validate(val);
+	      def = val;
+	      LogicTree.updateDefaults(wrapper, password);
+	    }
+	    this.selector = () => {
+	      const obj = this.value();
+	      if (obj === null || obj === undefined) return null;
+	      const keys = Object.keys(obj);
+	      let selector = '';
+	      keys.forEach((key) => selector += obj[key] ? `|${key}` : '');
+	      selector = selector.length === 0 ? null : new RegExp(`^${selector.substring(1)}$`);
+	      return selector;
+	    }
+	  }
+	}
+	Multiselect.error = new Error('Invalid multiselection: use wrapper.options() to get valid list.')
+	
+	
+	class Conditional extends LogicType {
+	  constructor(wrapper) {
+	    super();
+	    let value, def;
+	    function validate(val, password) {
+	      if ((typeof val) !== 'function') throw Conditional.error;
+	    }
+	    this.value = (val) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        value = val;
+	        LogicTree.updateValues(wrapper, password);
+	      }
+	      return value || def;
+	    }
+	    this.options = () => undefined;
+	    this.default = (val, password) => {
+	      validate(val);
+	      def = val;
+	      LogicTree.updateDefaults(wrapper, password);
+	    }
+	    this.selector = () => this.value();
+	  }
+	}
+	Conditional.error = new Error('Invalid condition: must be a function that returns true or false based off of node input');
+	
+	class Branch extends LogicType {
+	  constructor(wrapper) {
+	    super();
+	    this.value = () => undefined;
+	    this.options = () => undefined;
+	    this.default = () => undefined;
+	    this.selector = () => /.*/;
+	  }
+	}
+	
+	class Leaf extends LogicType {
+	  constructor(wrapper) {
+	    super();
+	    this.value = () =>undefined;
+	    this.options = () => undefined;
+	    this.default = () => undefined;
+	    this.selector = () => undefined;
+	  }
+	}
+	
+	LogicType.types = {Select, Multiselect, Conditional, Branch, Leaf};
+	class LogicTree {
+	  constructor(uniqueGroup) {
+	    let root;
+	    let choices = {};
+	    uniqueGroup = uniqueGroup || DEFAULT_GROUP;
+	
+	    function isOptional(node) {
+	      return !(choices[node.name] === undefined || !choices[node.name].optional());
+	    }
+	
+	    function isSelector(node) {
+	      return node.payload._TYPE.match(/Select|Multiselect/);
+	    }
+	
+	    function mustSelect(node) {
+	      return !isOptional(node)  && node.payload._TYPE.match(/Select|Multiselect/);
+	    }
+	
+	    function structure() { return root.node.toString(null, '_TYPE') }
+	
+	    function setChoice(name, val) {
+	      choices[name].value(val);
+	    }
+	
+	    function setDefault(name, val) {
+	      choices[name].default(val);
+	    }
+	
+	    function addChildrenFunc(wrapper, options) {
+	      return (name) => {
+	        const targetWrapper = LogicTree.get(name, uniqueGroup);
+	        if (targetWrapper === undefined) throw new Error(`Invalid name: ${name}`);
+	        const states = Object.values(targetWrapper.node.states);
+	        states.forEach((state) => wrapNode(wrapper.node.then(state)));
+	        return wrapper;
+	      }
+	    }
+	
+	    function choicesToSelectors() {
+	      const keys = Object.keys(choices);
+	      const selectors = {};
+	      keys.forEach((key) => selectors[key] = choices[key].selector());
+	      return selectors;
+	    }
+	
+	    function reachableTree() {
+	      return root.node.subtree(choicesToSelectors());
+	    }
+	
+	    function leaves() {
+	      const wrappers = [];
+	      reachableTree().leaves().forEach((node) => wrappers.push(wrapNode(node)));
+	      return wrappers;
+	    }
+	
+	    function forPath(func, reverse) {
+	      const lvs = reachableTree().leaves();
+	      lvs.forEach((leave) => {
+	        const path = [];
+	        let curr = leave;
+	        while (curr !== undefined) {
+	          path.push(curr);
+	          curr = curr.back()
+	        }
+	      let data;
+	      if (reverse === true) {
+	        for (let index = 0; index < path.length; index += 1) {
+	          data = func(wrapNode(path[index]), data);
+	        }
+	      } else {
+	        for (let index = path.length - 1; index >= 0; index -= 1) {
+	          data = func(wrapNode(path[index]), data);
 	        }
 	      }
-	      return routes;
+	      });
 	    }
 	
-	    this.always = function () {
-	      for (let index = 0; index < arguments.length; index += 1) {
-	        alwaysPossible.push(arguments[index]);
-	      }
-	    };
-	    this.getAlways = function (exprDef) {return alwaysPossible;};
-	
-	    this.allRoutes = function () {
-	      return getRoutes(null, stages);
-	    }
-	
-	    function getNotice (exprDef) {
-	      let isInAlways = false;
-	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
-	      if (isInAlways) return;
-	      if (!exprDef.closed()) {
-	        if (currStage[exprDef.getName()] === undefined) {
-	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
+	    function reachable(name) {
+	      const rTree = reachableTree();
+	      let canReach;
+	      rTree.forEach((node) => {
+	        if (!canReach) {
+	          const wrapper = wrapNode(node);
+	          if (wrapper.name === name) canReach = wrapper;
 	        }
-	        currStage = currStage[exprDef.getName()];
-	      }
-	    }
-	    this.getNotice = getNotice;
-	
-	    function getName () {return name;};
-	    this.getName = getName;
-	    this.onClose = function (start, end) {
-	      return function (str, start, end) {
-	        if (notify) notify(this);
-	        options.onClose(str, start, end);
-	      }
+	      });
+	      return canReach;
 	    }
 	
-	    function setMeta(targetNodes, attr, value) {
-	      return function () {
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          targetNodes[lIndex]._meta[attr] = value;
+	    function isComplete() {
+	      const subtree = reachableTree();
+	      let complete = true;
+	      subtree.forEach((node) => {
+	        if (Object.keys(node.states).length === 0 && node.payload._TYPE !== 'Leaf' &&
+	              !selectionMade(node)) {
+	          complete = false;
 	        }
-	      }
+	      });
+	      return complete;
 	    }
 	
-	    function then (targetNodes) {
-	      return function () {
-	        const createdNodes = [];
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          const targetNode = targetNodes[lIndex];
-	          for (let index = 0; index < arguments.length; index += 1) {
-	            const exprDef = arguments[index];
-	            if (!exprDef instanceof ExprDef) {
-	              throw new Error(`Argument is not an instanceof ExprDef`);
-	            }
-	            const nextExpr = exprDef.clone(getNotice);
-	            if (targetNode[nextExpr.getName()] === undefined) {
-	              targetNode[nextExpr.getName()] = {
-	                _meta: {
-	                  expr: nextExpr
+	    function selectionMade(node, selectors) {
+	      selectors = selectors || choicesToSelectors();
+	      if (mustSelect(node)) {
+	        const wrapper = wrapNode(node);
+	        if (wrapper.typeObject === undefined) {
+	          throw new Error ('This should not happen. node wrapper was not made correctly.');
+	        }
+	        return wrapper.typeObject.madeSelection();
+	      }
+	      return true;
+	    }
+	
+	    function decisions(wrapper) {
+	      return () =>{
+	        const decisions = [];
+	        const addedNodeIds = [];
+	        const selectors = choicesToSelectors();
+	        wrapper.node.forEach((node) => {
+	          if (isSelector(node)) {
+	            let terminatedPath = false;
+	            let current = node;
+	            while (current = current.back())
+	            if (addedNodeIds.indexOf(current.nodeId) !== -1) terminatedPath = true;
+	            if (!terminatedPath) {
+	              if (node.conditionsSatisfy(selectors, node)) {
+	                if (selectionMade(node, selectors)) {
+	                  decisions.push(wrapNode(node));
+	                } else {
+	                  decisions.push(wrapNode(node));
+	                  addedNodeIds.push(node.nodeId);
 	                }
-	              };
+	              }
 	            }
-	            createdNodes.push(targetNode[nextExpr.getName()]);
 	          }
-	        }
-	        return {
-	          then: then(createdNodes),
-	          repeat: setMeta(createdNodes, 'repeat', true),
-	          end: setMeta(createdNodes, 'end', true),
-	        };
+	        });
+	        return decisions;
 	      }
 	    }
 	
-	    this.if = function () {return then([stages]).apply(this, arguments);}
-	
-	    function isEscaped(str, index) {
-	      if (options.escape === undefined) {
-	        return false;
-	      }
-	      let count = -1;
-	      let firstIndex, secondIndex;
-	      do {
-	        count += 1;
-	        firstIndex = index - (options.escape.length * (count + 1));
-	        secondIndex = options.escape.length;
-	      } while (str.substr(firstIndex, secondIndex) === options.escape);
-	      return count % 2 == 0;
+	    function addStaticMethods(wrapper) {
+	      wrapper.structure = structure;
+	      wrapper.setChoice = setChoice;
+	      wrapper.setDefault = setDefault;
+	      wrapper.isComplete = isComplete;
+	      wrapper.reachable = reachable;
+	      wrapper.decisions = decisions(wrapper);
+	      wrapper.forPath = forPath;
+	      wrapper.leaves = leaves;
+	      wrapper.toString = () =>
+	          wrapper.node.subtree(choicesToSelectors()).toString(null, '_TYPE');
 	    }
 	
-	    function foundCall(onFind, sub) {
-	      if ((typeof notify) === 'function') {
-	        notify(this);
+	    function addHelperMetrhods (wrapper) {
+	      const node = wrapper.node;
+	      const type = node.payload._TYPE;
+	      const name = node.name;
+	      if (choices[name] === undefined) {
+	        choices[name] = new (LogicType.types[type])(wrapper);
 	      }
-	      if ((typeof onFind) === 'function') {
-	        return onFind(sub);
-	      } else {
-	        return sub;
-	      }
+	      const typeObj = choices[name];
+	      wrapper.name = name;
+	      wrapper.typeObject = typeObj;
+	      wrapper.value = typeObj.value;
+	      wrapper.options = typeObj.options;
+	      wrapper.optional = typeObj.optional;
+	      wrapper.default = typeObj.default;
+	      wrapper.selector = typeObj.selector;
+	      wrapper.addChildren = addChildrenFunc(wrapper);
+	      wrapper.connectValues = (w) => LogicTree.connectValues(wrapper, w);
+	      wrapper.connectDefaults = (w) => LogicTree.connectDefaults(wrapper, w);
 	    }
 	
-	    this.find = function (str, index) {
-	      let startedThisCall = false;
-	      let needle = options.closing;
-	      let starting = false;
-	      if (start === undefined) {
-	        needle = options.opening;
-	        starting = true;
-	      }
-	      const sub = str.substr(index);
-	      let needleLength;
-	      if (needle instanceof RegExp) {
-	        const match = sub.match(needle);
-	        if (match && match.index === 0) {
-	          needleLength = match[0].length;
-	        }
-	      } else if ((typeof needle) === 'string') {
-	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
-	          needleLength = needle.length;
-	      } else if (needle === undefined || needle === null) {
-	        needleLength = 0;
-	      } else {
-	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
-	      }
-	      needleLength += options.tailOffset ? options.tailOffset : 0;
-	      let changes = '';
-	      if (start === undefined && starting && (needleLength || needle === null)) {
-	        string = str;
-	        start = index;
-	        startedThisCall = true;
-	        if (needle === null) {
-	          if ((typeof notify) === 'function') {
-	            notify(this);
-	          }          return {index, changes}
+	    function addTypeFunction(type, wrapper) {
+	      wrapper[type.toLowerCase()] = (name, payload) => {
+	        payload = payload || {};
+	        payload._TYPE = type;
+	        payload._UNIQUE_NAME_GROUP = uniqueGroup;
+	        let newWrapper;
+	        if (root === undefined) {
+	          root = wrapper;
+	          root.node = new DecisionTree(name, payload);
+	          newWrapper = root;
+	          LogicTree.register(payload._UNIQUE_NAME_GROUP, name, newWrapper);name
+	        } else if (LogicTree.get(name, uniqueGroup)) {
+	          newWrapper = wrapNode(wrapper.node.then(name));
 	        } else {
-	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
+	          wrapper.node.addState(name, payload);
+	          newWrapper = wrapNode(wrapper.node.then(name));
+	          LogicTree.register(uniqueGroup, name, newWrapper);
 	        }
+	        return newWrapper;
 	      }
-	      if ((!startedThisCall && needleLength) ||
-	            (startedThisCall && options.closing === undefined) ||
-	            (!startedThisCall && options.closing === null)) {
-	        if (str !== string) {
-	          throw new Error ('Trying to apply an expression to two different strings.');
-	        }
-	        end = index + needleLength;
-	        if (options.closing === null) {
-	          return {index, changes}
-	        }
-	        if (!startedThisCall) {
-	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
-	        }
-	        return { index: end, changes };
-	      }
-	
-	      return start !== undefined ? { index: start + needleLength, changes } :
-	                      { index: -1, changes };
 	    }
 	
-	    this.clone = function (notify) {
-	      return new ExprDef(name, options, notify, stages, alwaysPossible);
-	    };
-	    this.name = this.getName();
-	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
-	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
-	    this.location = function () {return {start, end, length: end - start}};
-	    this.closed = function () {return end !== undefined;}
-	    this.open = function () {return start !== undefined;}
-	    this.next =  function () {
-	      const expressions = [];
-	      if (currStage._meta && currStage._meta.repeat) {
-	        currStage = stages;
+	    function wrapNode(node) {
+	      let wrapper = LogicTree.wrapper(node);
+	      if (wrapper) return wrapper;
+	      wrapper = {node};
+	      if (node !== undefined) {
+	        const payload = () => node.payload();
+	        const back = () => node.back();
+	        const top = () => node.top();
+	      } else {
+	        wrapper.toString = () =>
+	          root !== undefined ? root.toString() : 'Empty Tree';
 	      }
-	      Object.values(currStage).map(
-	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
-	      )
-	      return alwaysPossible.concat(expressions);
-	    };
+	      if (node === undefined || node.payload._TYPE !== 'Leaf') {
+	        addTypeFunction('Select', wrapper);
+	        addTypeFunction('Multiselect', wrapper);
+	        addTypeFunction('Conditional', wrapper);
+	        addTypeFunction('Leaf', wrapper);
+	        addTypeFunction('Branch', wrapper);
+	      }
+	      addStaticMethods(wrapper);
+	      if (node && node.payload._TYPE !== undefined) {
+	        addHelperMetrhods(wrapper);
+	      }
+	      LogicTree.wrapper(wrapper, INTERNAL_FUNCTION_PASSWORD);
+	      return wrapper;
+	    }
+	
+	
+	    return wrapNode();
 	  }
 	}
 	
-	function parse(exprDef, str) {
-	  exprDef = exprDef.clone();
-	  let index = 0;
-	  let modified = '';
-	  const breakDown = [];
-	  const stack = [];
+	{
+	  const declaired = {};
+	  const connectedValues = {};
+	  const connectedDefaults = {};
+	  const idMap = {};
+	  const wrapperMap = {};
 	
-	  function topOfStack() {
-	    return stack[stack.length - 1];
-	  }
-	
-	  function closeCheck(exprDef) {
-	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
-	      let result = exprDef.find(str, index);
-	      if (result.index) {
-	        modified += result.changes;
-	        return result.index;
-	      }
-	    }
-	  }
-	
-	  function checkArray(exprDef, array) {
-	    if (exprDef.endDefined()) {
-	      let nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
-	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
-	      const result = childExprDef.find(str, index);
-	      if (result.index !== -1) {
-	        modified += result.changes;
-	        if (childExprDef.closed()) {
-	          breakDown.push(childExprDef);
-	        } else {
-	          stack.push(childExprDef);
-	        }
-	        return result.index;
-	      }
-	    }
-	    if (exprDef.canEnd()) {
-	      nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
-	  }
-	
-	  function open(exprDef, index) {
-	    const always = exprDef.getAlways();
-	    while (!exprDef.open()) {
-	      let result = exprDef.find(str, index);
-	      modified += result.changes;
-	      if(result.index === -1) {
-	        let newIndex = checkArray(exprDef, always);
-	        index = newIndex;
+	  function connectNodes(node1, node2, attr, map) {
+	    let id;
+	    node1 = getNode(node1);
+	    node2 = getNode(node2);
+	    idMap[node1.nodeId] = idMap[node1.nodeId] || {};
+	    idMap[node2.nodeId] = idMap[node2.nodeId] || {};
+	    if (idMap[node1.nodeId][attr] === undefined) {
+	      if (idMap[node2.nodeId][attr] === undefined) {
+	        id = String.random();
 	      } else {
-	        if (exprDef.closed()) {
-	          breakDown.push(exprDef);
-	        } else {
-	          stack.push(exprDef);
-	        }
-	        index = result.index;
+	        id = idMap[node2.nodeId][attr];
 	      }
+	    } else { id = idMap[node1.nodeId][attr]; }
+	    idMap[node1.nodeId][attr] = id;
+	    idMap[node2.nodeId][attr] = id;
+	    map[id] = map[id] || [];
+	    if (map[id].indexOf(node1) === -1) {
+	      map[id].push(node1)
 	    }
-	    return index;
+	    if (map[id].indexOf(node2) === -1) {
+	      map[id].push(node2)
+	    }
 	  }
 	
-	  let loopCount = 0;
-	  index = open(exprDef, index);
-	  progress = [-3, -2, -1];
-	  while (topOfStack() !== undefined) {
-	    const tos = topOfStack();
-	    if (progress[0] === index) {
-	      throw new Error(`ExprDef stopped making progress`);
-	    }
-	    let stackIds = '';
-	    let options = '';
-	    stack.map(function (value) {stackIds+=value.getName() + ','});
-	    tos.next().map(function (value) {options+=value.getName() + ','})
-	    index = checkArray(tos, tos.next());
-	    if (tos.closed()) {
-	      stack.pop();
-	    }
-	    loopCount++;
+	  function updateConnected(wrapper, password, attr, map) {
+	    if (idMap[wrapper.node.nodeId] === undefined ||
+	          password === INTERNAL_FUNCTION_PASSWORD) return;
+	    const id = idMap[wrapper.node.nodeId][attr];
+	    const connected = map[id] || [];
+	    const value = wrapper[attr]();
+	    connected.forEach((node) => {
+	      const wrapper2 = LogicTree.wrapper(node);
+	      wrapper2[attr](value, INTERNAL_FUNCTION_PASSWORD);
+	    });
 	  }
-	  // if (index < str.length) {
-	  //   throw new Error("String not fully read");
-	  // }
-	  return modified;
+	
+	  LogicTree.register = (group, name, wrapper) => {
+	    if (declaired[group] === undefined) declaired[group] = {};
+	    if (declaired[group][name] !== undefined) throw new Error('This should not happen: check addTypeFunction logic');
+	    declaired[group][name] = wrapper;
+	  }
+	  LogicTree.get = (name, group) =>  declaired[group || DEFAULT_GROUP][name];
+	  LogicTree.connectValues =
+	    (node1, node2) => connectNodes(node1, node2, 'value', connectedValues);
+	  LogicTree.connectDefaults =
+	    (node1, node2) => connectNodes(node1, node2, 'default', connectedDefaults);
+	  LogicTree.updateValues =
+	    (wrapper, password) => updateConnected(wrapper, password, 'value', connectedValues);
+	  LogicTree.updateDefaults =
+	    (wrapper, password) => updateConnected(wrapper, password, 'default', connectedDefaults);
+	
+	  LogicTree.wrapper = (nodeOwrapper, wrapperConstId) => {
+	    if (nodeOwrapper === undefined) return undefined;
+	    if (nodeOwrapper.constructor.name === 'DecisionNode') {
+	      return wrapperMap[nodeOwrapper.nodeId];
+	    } else if (INTERNAL_FUNCTION_PASSWORD !== wrapperConstId) {
+	      throw new Error('External uses of \'LogicTree.wrapper(node)\' can only be used as a getter. Setting values is functionality reserved only for internal logic.')
+	    }
+	    if (nodeOwrapper.node !== undefined) {
+	      if (wrapperMap[nodeOwrapper.node.nodeId] !== undefined) {
+	        throw new Error('All nodes should only be wrapped once to accuratly persist data');
+	      }
+	      wrapperMap[nodeOwrapper.node.nodeId] = nodeOwrapper;
+	    }
+	  }
+	  LogicTree.wrappedIds = () => Object.keys(wrapperMap);
 	}
 	
-	
-	ExprDef.parse = parse;
-	
-	module.exports = ExprDef;
-	
-	
-	
-	
+	module.exports = LogicTree;
 	
 });
 
@@ -6870,441 +6856,618 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/logic-tree.js',
+RequireJS.addFunction('../../public/js/utils/utils.js',
 function (require, exports, module) {
 	
 
 	
-	const DecisionTree = require('./decision-tree');
 	
-	const INTERNAL_FUNCTION_PASSWORD = String.random();
-	const DEFAULT_GROUP = 'LogicTree';
-	
-	function getNode(nodeOwrapper) {
-	  if (nodeOwrapper.constructor.name === 'DecisionNode') return nodeOwrapper;
-	  return nodeOwrapper.node;
-	}
-	
-	class LogicType {
-	  constructor() {
-	    let optional = false;
-	    this.optional = (val) => {
-	      if (val === true || val === false) {
-	        optional = val;
-	      }
-	      return optional;
-	    }
-	  }
-	}
-	
-	class Select extends LogicType {
-	  constructor(wrapper) {
-	    super();
-	    let value, def;
-	    const instance = this;
-	    this.madeSelection = () => validate(value, true) || validate(def, true);
-	    function validate(val, silent) {
-	      if (instance.optional() && val === null) return true;
-	      const valid = (instance.optional() && val === null) ||
-	                    (val !== null && wrapper.node.validState(val));
-	      if (!silent && !valid) throw Select.error;
-	      return valid;
-	    }
-	    this.value = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        value = val;
-	        LogicTree.updateValues(wrapper, password);
-	      }
-	      return value === undefined ? (def === undefined ? null : def) : value;
-	    }
-	    this.options = () => {
-	      return wrapper.node.stateNames();
-	    }
-	    this.default = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        def = val;
-	        LogicTree.updateDefaults(wrapper, password);
-	      }
-	      return def;
-	    }
-	    this.selector = () => this.value();
-	   }
-	}
-	
-	Select.error = new Error('Invalid selection: use wrapper.options() to get valid list.')
-	
-	class Multiselect extends LogicType {
-	  constructor(wrapper) {
-	    super();
-	    let value, def;
-	    const instance = this;
-	    this.madeSelection = () => validate(value, true) || validate(def, true);
-	    function validate(val, silent) {
-	      if (val === null) return instance.optional();
-	      if (val === undefined) return false;
-	      const stateNames = Object.keys(val);
-	      if (instance.optional() && stateNames.length === 0) return true;
-	      let valid = stateNames.length > 0;
-	      stateNames.forEach((name) => valid = valid && wrapper.node.validState(name));
-	      if (!silent && !valid) throw Multiselect.error;
-	      return valid;
-	    }
-	    this.value = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        value = val;
-	        LogicTree.updateValues(wrapper, password);
-	      }
-	      const retVal = value === undefined ? def : value;
-	      return retVal === null ? null : JSON.clone(retVal);
-	    }
-	    this.options = () => {
-	      const options = {};
-	      const stateNames = wrapper.node.stateNames();
-	      stateNames.forEach((name) => options[name] = def[name] === undefined ? false : def[name]);
-	      return options;
-	    }
-	    this.default = (val, password) => {
-	      validate(val);
-	      def = val;
-	      LogicTree.updateDefaults(wrapper, password);
-	    }
-	    this.selector = () => {
-	      const obj = this.value();
-	      if (obj === null || obj === undefined) return null;
-	      const keys = Object.keys(obj);
-	      let selector = '';
-	      keys.forEach((key) => selector += obj[key] ? `|${key}` : '');
-	      selector = selector.length === 0 ? null : new RegExp(`^${selector.substring(1)}$`);
-	      return selector;
-	    }
-	  }
-	}
-	Multiselect.error = new Error('Invalid multiselection: use wrapper.options() to get valid list.')
-	
-	
-	class Conditional extends LogicType {
-	  constructor(wrapper) {
-	    super();
-	    let value, def;
-	    function validate(val, password) {
-	      if ((typeof val) !== 'function') throw Conditional.error;
-	    }
-	    this.value = (val) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        value = val;
-	        LogicTree.updateValues(wrapper, password);
-	      }
-	      return value || def;
-	    }
-	    this.options = () => undefined;
-	    this.default = (val, password) => {
-	      validate(val);
-	      def = val;
-	      LogicTree.updateDefaults(wrapper, password);
-	    }
-	    this.selector = () => this.value();
-	  }
-	}
-	Conditional.error = new Error('Invalid condition: must be a function that returns true or false based off of node input');
-	
-	class Branch extends LogicType {
-	  constructor(wrapper) {
-	    super();
-	    this.value = () => undefined;
-	    this.options = () => undefined;
-	    this.default = () => undefined;
-	    this.selector = () => /.*/;
-	  }
-	}
-	
-	class Leaf extends LogicType {
-	  constructor(wrapper) {
-	    super();
-	    this.value = () =>undefined;
-	    this.options = () => undefined;
-	    this.default = () => undefined;
-	    this.selector = () => undefined;
-	  }
-	}
-	
-	LogicType.types = {Select, Multiselect, Conditional, Branch, Leaf};
-	class LogicTree {
-	  constructor(uniqueGroup) {
-	    let root;
-	    let choices = {};
-	    uniqueGroup = uniqueGroup || DEFAULT_GROUP;
-	
-	    function isOptional(node) {
-	      return !(choices[node.name] === undefined || !choices[node.name].optional());
-	    }
-	
-	    function isSelector(node) {
-	      return node.payload._TYPE.match(/Select|Multiselect/);
-	    }
-	
-	    function mustSelect(node) {
-	      return !isOptional(node)  && node.payload._TYPE.match(/Select|Multiselect/);
-	    }
-	
-	    function structure() { return root.node.toString(null, '_TYPE') }
-	
-	    function setChoice(name, val) {
-	      choices[name].value(val);
-	    }
-	
-	    function setDefault(name, val) {
-	      choices[name].default(val);
-	    }
-	
-	    function addChildrenFunc(wrapper, options) {
-	      return (name) => {
-	        const targetWrapper = LogicTree.get(name, uniqueGroup);
-	        if (targetWrapper === undefined) throw new Error(`Invalid name: ${name}`);
-	        const states = Object.values(targetWrapper.node.states);
-	        states.forEach((state) => wrapNode(wrapper.node.then(state)));
-	        return wrapper;
-	      }
-	    }
-	
-	    function choicesToSelectors() {
-	      const keys = Object.keys(choices);
-	      const selectors = {};
-	      keys.forEach((key) => selectors[key] = choices[key].selector());
-	      return selectors;
-	    }
-	
-	    function reachableTree() {
-	      return root.node.subtree(choicesToSelectors());
-	    }
-	
-	    function reachable(name) {
-	      const rTree = reachableTree();
-	      let canReach;
-	      rTree.forEach((node) => {
-	        if (!canReach) {
-	          const wrapper = wrapNode(node);
-	          if (wrapper.name === name) canReach = wrapper;
-	        }
-	      });
-	      return canReach;
-	    }
-	
-	    function isComplete() {
-	      const subtree = reachableTree();
-	      let complete = true;
-	      subtree.forEach((node) => {
-	        if (Object.keys(node.states).length === 0 && node.payload._TYPE !== 'Leaf' &&
-	              !selectionMade(node)) {
-	          complete = false;
-	        }
-	      });
-	      return complete;
-	    }
-	
-	    function selectionMade(node, selectors) {
-	      selectors = selectors || choicesToSelectors();
-	      if (mustSelect(node)) {
-	        const wrapper = wrapNode(node);
-	        if (wrapper.typeObject === undefined) {
-	          throw new Error ('This should not happen. node wrapper was not made correctly.');
-	        }
-	        return wrapper.typeObject.madeSelection();
-	      }
-	      return true;
-	    }
-	
-	    function decisions(wrapper) {
-	      return () =>{
-	        const decisions = [];
-	        const addedNodeIds = [];
-	        const selectors = choicesToSelectors();
-	        wrapper.node.forEach((node) => {
-	          if (isSelector(node)) {
-	            let terminatedPath = false;
-	            let current = node;
-	            while (current = current.back())
-	            if (addedNodeIds.indexOf(current.nodeId) !== -1) terminatedPath = true;
-	            if (!terminatedPath) {
-	              if (node.conditionsSatisfy(selectors, node)) {
-	                if (selectionMade(node, selectors)) {
-	                  decisions.push(wrapNode(node));
-	                } else {
-	                  decisions.push(wrapNode(node));
-	                  addedNodeIds.push(node.nodeId);
-	                }
-	              }
-	            }
-	          }
-	        });
-	        return decisions;
-	      }
-	    }
-	
-	    function addStaticMethods(wrapper) {
-	      wrapper.structure = structure;
-	      wrapper.setChoice = setChoice;
-	      wrapper.setDefault = setDefault;
-	      wrapper.isComplete = isComplete;
-	      wrapper.reachable = reachable;
-	      wrapper.decisions = decisions(wrapper);
-	      wrapper.toString = () =>
-	          wrapper.node.subtree(choicesToSelectors()).toString(null, '_TYPE');
-	    }
-	
-	    function addHelperMetrhods (wrapper) {
-	      const node = wrapper.node;
-	      const type = node.payload._TYPE;
-	      const name = node.name;
-	      if (choices[name] === undefined) {
-	        choices[name] = new (LogicType.types[type])(wrapper);
-	      }
-	      const typeObj = choices[name];
-	      wrapper.name = name;
-	      wrapper.typeObject = typeObj;
-	      wrapper.value = typeObj.value;
-	      wrapper.options = typeObj.options;
-	      wrapper.optional = typeObj.optional;
-	      wrapper.default = typeObj.default;
-	      wrapper.selector = typeObj.selector;
-	      wrapper.addChildren = addChildrenFunc(wrapper);
-	      wrapper.connectValues = (w) => LogicTree.connectValues(wrapper, w);
-	      wrapper.connectDefaults = (w) => LogicTree.connectDefaults(wrapper, w);
-	    }
-	
-	    function addTypeFunction(type, wrapper) {
-	      wrapper[type.toLowerCase()] = (name, payload) => {
-	        payload = payload || {};
-	        payload._TYPE = type;
-	        payload._UNIQUE_NAME_GROUP = uniqueGroup;
-	        let newWrapper;
-	        if (root === undefined) {
-	          root = wrapper;
-	          root.node = new DecisionTree(name, payload);
-	          newWrapper = root;
-	          LogicTree.register(payload._UNIQUE_NAME_GROUP, name, newWrapper);name
-	        } else if (LogicTree.get(name, uniqueGroup)) {
-	          newWrapper = wrapNode(wrapper.node.then(name));
-	        } else {
-	          wrapper.node.addState(name, payload);
-	          newWrapper = wrapNode(wrapper.node.then(name));
-	          LogicTree.register(uniqueGroup, name, newWrapper);
-	        }
-	        return newWrapper;
-	      }
-	    }
-	
-	    function wrapNode(node) {
-	      let wrapper = LogicTree.wrapper(node);
-	      if (wrapper) return wrapper;
-	      wrapper = {node};
-	      if (node !== undefined) {
-	        const payload = () => node.payload();
-	        const back = () => node.back();
-	        const top = () => node.top();
-	      } else {
-	        wrapper.toString = () =>
-	          root !== undefined ? root.toString() : 'Empty Tree';
-	      }
-	      if (node === undefined || node.payload._TYPE !== 'Leaf') {
-	        addTypeFunction('Select', wrapper);
-	        addTypeFunction('Multiselect', wrapper);
-	        addTypeFunction('Conditional', wrapper);
-	        addTypeFunction('Leaf', wrapper);
-	        addTypeFunction('Branch', wrapper);
-	      }
-	      addStaticMethods(wrapper);
-	      if (node && node.payload._TYPE !== undefined) {
-	        addHelperMetrhods(wrapper);
-	      }
-	      LogicTree.wrapper(wrapper, INTERNAL_FUNCTION_PASSWORD);
-	      return wrapper;
-	    }
-	
-	
-	    return wrapNode();
-	  }
-	}
-	
-	{
-	  const declaired = {};
-	  const connectedValues = {};
-	  const connectedDefaults = {};
-	  const idMap = {};
-	  const wrapperMap = {};
-	
-	  function connectNodes(node1, node2, attr, map) {
-	    let id;
-	    node1 = getNode(node1);
-	    node2 = getNode(node2);
-	    idMap[node1.nodeId] = idMap[node1.nodeId] || {};
-	    idMap[node2.nodeId] = idMap[node2.nodeId] || {};
-	    if (idMap[node1.nodeId][attr] === undefined) {
-	      if (idMap[node2.nodeId][attr] === undefined) {
-	        id = String.random();
-	      } else {
-	        id = idMap[node2.nodeId][attr];
-	      }
-	    } else { id = idMap[node1.nodeId][attr]; }
-	    idMap[node1.nodeId][attr] = id;
-	    idMap[node2.nodeId][attr] = id;
-	    map[id] = map[id] || [];
-	    if (map[id].indexOf(node1) === -1) {
-	      map[id].push(node1)
-	    }
-	    if (map[id].indexOf(node2) === -1) {
-	      map[id].push(node2)
-	    }
-	  }
-	
-	  function updateConnected(wrapper, password, attr, map) {
-	    if (idMap[wrapper.node.nodeId] === undefined ||
-	          password === INTERNAL_FUNCTION_PASSWORD) return;
-	    const id = idMap[wrapper.node.nodeId][attr];
-	    const connected = map[id] || [];
-	    const value = wrapper[attr]();
-	    connected.forEach((node) => {
-	      const wrapper2 = LogicTree.wrapper(node);
-	      wrapper2[attr](value, INTERNAL_FUNCTION_PASSWORD);
+	function safeStdLibAddition() {
+	  const addition = [];
+	  function verify() {
+	    additions.forEach((a) => {
+	      if ((a.static && a.lib[a.field] !== a.func) ||
+	      (!a.static && a.lib.prototype[a.field] !== a.func))
+	        throw new Error(`Functionality was overwritten -` +
+	                          `\n\tLibrary: ${a.lib}` +
+	                          `\n\tStatic: ${a.static}` +
+	                          `\n\tField: ${a.field}`)
 	    });
+	    delete additions;
 	  }
-	
-	  LogicTree.register = (group, name, wrapper) => {
-	    if (declaired[group] === undefined) declaired[group] = {};
-	    if (declaired[group][name] !== undefined) throw new Error('This should not happen: check addTypeFunction logic');
-	    declaired[group][name] = wrapper;
+	  function safeAdd (lib, field, func, static) {
+	    if (!static && lib.prototype[field] === undefined)
+	      lib.prototype[field] = func;
+	    else if (lib[field] === undefined)
+	      lib[field] = func;
+	    else
+	      console.error(`Attempting to overwrite functionality -` +
+	                        `\n\tLibrary: ${lib}` +
+	                        `\n\tStatic: ${static}` +
+	                        `\n\tField: ${field}`);
+	    addition.push({lib, field, func, static})
 	  }
-	  LogicTree.get = (name, group) =>  declaired[group || DEFAULT_GROUP][name];
-	  LogicTree.connectValues =
-	    (node1, node2) => connectNodes(node1, node2, 'value', connectedValues);
-	  LogicTree.connectDefaults =
-	    (node1, node2) => connectNodes(node1, node2, 'default', connectedDefaults);
-	  LogicTree.updateValues =
-	    (wrapper, password) => updateConnected(wrapper, password, 'value', connectedValues);
-	  LogicTree.updateDefaults =
-	    (wrapper, password) => updateConnected(wrapper, password, 'default', connectedDefaults);
+	  safeAdd(Function, 'safeStdLibAddition', safeAdd);
+	}
+	safeStdLibAddition();
 	
-	  LogicTree.wrapper = (nodeOwrapper, wrapperConstId) => {
-	    if (nodeOwrapper === undefined) return undefined;
-	    if (nodeOwrapper.constructor.name === 'DecisionNode') {
-	      return wrapperMap[nodeOwrapper.nodeId];
-	    } else if (INTERNAL_FUNCTION_PASSWORD !== wrapperConstId) {
-	      throw new Error('External uses of \'LogicTree.wrapper(node)\' can only be used as a getter. Setting values is functionality reserved only for internal logic.')
-	    }
-	    if (nodeOwrapper.node !== undefined) {
-	      if (wrapperMap[nodeOwrapper.node.nodeId] !== undefined) {
-	        throw new Error('All nodes should only be wrapped once to accuratly persist data');
+	
+	Function.safeStdLibAddition(String, 'random',  function (len) {
+	    len = len || 7;
+	    let str = '';
+	    while (str.length < len) str += Math.random().toString(36).substr(2);
+	    return str.substr(0, len);
+	}, true);
+	
+	Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
+	  return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
+	}, true);
+	
+	const classLookup = {};
+	const identifierAttr = '_TYPE';
+	const immutableAttr = '_IMMUTABLE';
+	const temporaryAttr = '_TEMPORARY';
+	
+	Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
+	  function interpretValue(value) {
+	    if (value instanceof Object) {
+	      const classname = value[identifierAttr];
+	      const attrs = Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
+	      if (Array.isArray(value)) {
+	        const realArray = [];
+	        for (let index = 0; index < value.length; index += 1) {
+	          realArray[index] = Object.fromJson(value[index]);
+	        }
+	        return realArray;
+	      } else if (classname && classLookup[classname]) {
+	        const classObj = new (classLookup[classname])();
+	        for (let index = 0; index < attrs.length; index += 1) {
+	          const attr = attrs[index];
+	          if ((typeof classObj[attr]) === 'function')
+	            classObj[attr](interpretValue(value[attr]));
+	        };
+	        return classObj;
+	      } else {
+	        const realObj = {}
+	        for (let index = 0; index < attrs.length; index += 1) {
+	          const attr = attrs[index];
+	          realObj[attr] = interpretValue(value[attr]);
+	        };
+	        return realObj
 	      }
-	      wrapperMap[nodeOwrapper.node.nodeId] = nodeOwrapper;
+	    }
+	    return value;
+	  }
+	
+	  if (!(rootJson instanceof Object)) return rootJson;
+	  return interpretValue(rootJson);
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
+	  const cxtrName = obj.constructor.name;
+	  if (classLookup[cxtrName] === undefined) {
+	    classLookup[cxtrName] = obj.constructor;
+	  } else if (classLookup[cxtrName] !== obj.constructor) {
+	    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
+	  }
+	  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
+	  let values = {};
+	  let temporary = false;
+	  let immutable = false;
+	  if ((typeof initialVals) === 'object') {
+	    values = JSON.clone(initialVals);
+	    immutable = values[immutableAttr] === true;
+	    temporary = values[temporaryAttr] === true;
+	    if (immutable) {
+	      attrs = Object.keys(values);
+	    } else {
+	      attrs = Object.keys(values).concat(attrs);
+	    }
+	  } else {
+	    attrs.push(initialVals);
+	  }
+	
+	  for (let index = 0; index < attrs.length; index += 1) {
+	    const attr = attrs[index];
+	    if (attr !== immutableAttr) {
+	      if (immutable) obj[attr] = () => values[attr];
+	      else {
+	        obj[attr] = (value) => {
+	          if (value === undefined) {
+	            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
+	            if (values[attr] !== undefined || noDefaults)
+	            return values[attr];
+	            return obj.defaultGetterValue(attr);
+	          }
+	          values[attr] = value;
+	        }
+	      }
 	    }
 	  }
-	  LogicTree.wrappedIds = () => Object.keys(wrapperMap);
+	  if (!temporary) {
+	    const origToJson = obj.toJson;
+	    obj.toJson = (members, exclusive) => {
+	      const restrictions = Array.isArray(members) && members.length;
+	      const json = (typeof origToJson === 'function') ? origToJson() : {};
+	      json[identifierAttr] = obj.constructor.name;
+	      for (let index = 0; index < attrs.length; index += 1) {
+	        const attr = attrs[index];
+	        const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
+	        const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
+	        if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
+	          const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
+	          if ((typeof value) === 'object' && value !== null) {
+	            if ((typeof value.toJson) === 'function') {
+	              json[attr] = value.toJson();
+	            } else if (Array.isArray(value)){
+	              const arr = [];
+	              value.forEach((val) => {
+	                if ((typeof val.toJson) === 'function') {
+	                  arr.push(val.toJson());
+	                } else {
+	                  arr.push(val);
+	                }
+	              });
+	              json[attr] = arr;
+	            } else {
+	              json[attr] = JSON.clone(value);
+	            }
+	          } else {
+	            json[attr] = value;
+	          }
+	        }
+	      }
+	      return json;
+	    }
+	  }
+	  obj.fromJson = (json) => {
+	    for (let index = 0; index < attrs.length; index += 1) {
+	      const attr = attrs[index];
+	      if (attr !== immutableAttr) {
+	        obj[attr](json[attr]);
+	      }
+	    };
+	    return obj;
+	  }
+	  if (obj.constructor.DO_NOT_CLONE) {
+	    obj.clone = () => obj;
+	  } else {
+	    obj.clone = () => {
+	      const clone = new obj.constructor();
+	      clone.fromJson(obj.toJson());
+	      return clone;
+	    }
+	  }
+	}, true);
+	Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
+	
+	Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
+	  if (otherObj === undefined) return;
+	  if ((typeof otherObj) !== 'object') {
+	    throw new Error('Requires one argument of type object or undefined for meaningless call');
+	  }
+	  const keys = Object.keys(otherObj);
+	  keys.forEach((key) => obj[key] = otherObj[key]);
+	}, true);
+	
+	Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
+	  if (start!== undefined && end !== undefined && start > end) {
+	    const temp = start;
+	    start = end;
+	    end = temp;
+	  }
+	  start = start || 0;
+	  end = end || values.length;
+	  for (let index = start; index < end; index += 1)
+	    array[index] = values[index];
+	  return array;
+	}, true);
+	
+	const checked = {};
+	
+	// Swiped from https://stackoverflow.com/a/43197340
+	function isClass(obj) {
+	  const isCtorClass = obj.constructor
+	      && obj.constructor.toString().substring(0, 5) === 'class'
+	  if(obj.prototype === undefined) {
+	    return isCtorClass
+	  }
+	  const isPrototypeCtorClass = obj.prototype.constructor
+	    && obj.prototype.constructor.toString
+	    && obj.prototype.constructor.toString().substring(0, 5) === 'class'
+	  return isCtorClass || isPrototypeCtorClass
 	}
 	
-	module.exports = LogicTree;
+	Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
+	  if ((typeof obj) != 'object') return obj;
+	  const keys = Object.keys(obj);
+	  if (!checked[obj.constructor.name]) {
+	    console.log('constructor: ' + obj.constructor.name);
+	    checked[obj.constructor.name] = true;
+	  }
+	
+	  const clone = ((typeof obj.clone) === 'function') ? obj.clone() :
+	                  Array.isArray(obj) ? [] : {};
+	  for(let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    const member = obj[key];
+	    if (member && (member.DO_NOT_CLONE || member.constructor.DO_NOT_CLONE)) {
+	      clone[key] = member;
+	    } else if ((typeof member) !== 'function') {
+	      if ((typeof member) === 'object') {
+	        if ((typeof member.clone) === 'function') {
+	          clone[key] = member.clone();
+	        } else {
+	          clone[key] = JSON.clone(member);
+	        }
+	      } else {
+	        clone[key] = member;
+	      }
+	    }
+	    else if (isClass(member)) {
+	      clone[key] = member;
+	    }
+	  }
+	  return clone;
+	}, true);
+	
+	Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
+	  if (isRegex !== true) {
+	    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
+	  }
+	  var keyValues = this.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
+	  var json = {};
+	  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
+	    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
+	    if (split) {
+	      json[split[1]] = split[2];
+	    }
+	  }
+	  return json;
+	});
+	
+	Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
+	  const attrs = path.split('.');
+	  const lastIndex = attrs.length - 1;
+	  let currObj = obj;
+	  for (let index = 0; index < lastIndex; index += 1) {
+	    let attr = attrs[index];
+	    if (currObj[attr] === undefined) currObj[attr] = {};
+	    currObj = currObj[attr];
+	  }
+	
+	  const lastAttr = attrs[lastIndex];
+	  if ((typeof currObj[lastAttr]) === 'function') {
+	    return currObj[lastAttr](value);
+	  } else if (value !== undefined) {
+	    currObj[lastAttr] = value;
+	  }
+	  return currObj[lastAttr];
+	}, true);
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/expression-definition.js',
+function (require, exports, module) {
+	
+
+	
+	
+	let idCount = 0;
+	class ExprDef {
+	  constructor(name, options, notify, stages, alwaysPossible) {
+	    this.id = idCount++;
+	    let id = this.id;
+	    let string;
+	    let modified = '';
+	    let start;
+	    let end;
+	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
+	    stages = stages ? stages : {};
+	    let currStage = stages;
+	
+	    function getRoutes(prefix, stage) {
+	      let routes = [];
+	      let keys = Object.keys(stage);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        if (key !== '_meta') {
+	          let newPrefix;
+	          if (prefix) {
+	            newPrefix = `${prefix}.${key}`;
+	          } else {
+	            newPrefix = key;
+	          }
+	          const deepRoutes = getRoutes(newPrefix, stage[key]);
+	          if (deepRoutes.length > 0) {
+	            routes = routes.concat(deepRoutes);
+	          }
+	          if (stage[key]._meta && stage[key]._meta.end) {
+	            routes.push(newPrefix + '.end');
+	          }
+	          if (stage[key]._meta && stage[key]._meta.repeat) {
+	            routes.push(newPrefix + '.repeat');
+	          }
+	        }
+	      }
+	      return routes;
+	    }
+	
+	    this.always = function () {
+	      for (let index = 0; index < arguments.length; index += 1) {
+	        alwaysPossible.push(arguments[index]);
+	      }
+	    };
+	    this.getAlways = function (exprDef) {return alwaysPossible;};
+	
+	    this.allRoutes = function () {
+	      return getRoutes(null, stages);
+	    }
+	
+	    function getNotice (exprDef) {
+	      let isInAlways = false;
+	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
+	      if (isInAlways) return;
+	      if (!exprDef.closed()) {
+	        if (currStage[exprDef.getName()] === undefined) {
+	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
+	        }
+	        currStage = currStage[exprDef.getName()];
+	      }
+	    }
+	    this.getNotice = getNotice;
+	
+	    function getName () {return name;};
+	    this.getName = getName;
+	    this.onClose = function (start, end) {
+	      return function (str, start, end) {
+	        if (notify) notify(this);
+	        options.onClose(str, start, end);
+	      }
+	    }
+	
+	    function setMeta(targetNodes, attr, value) {
+	      return function () {
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          targetNodes[lIndex]._meta[attr] = value;
+	        }
+	      }
+	    }
+	
+	    function then (targetNodes) {
+	      return function () {
+	        const createdNodes = [];
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          const targetNode = targetNodes[lIndex];
+	          for (let index = 0; index < arguments.length; index += 1) {
+	            const exprDef = arguments[index];
+	            if (!exprDef instanceof ExprDef) {
+	              throw new Error(`Argument is not an instanceof ExprDef`);
+	            }
+	            const nextExpr = exprDef.clone(getNotice);
+	            if (targetNode[nextExpr.getName()] === undefined) {
+	              targetNode[nextExpr.getName()] = {
+	                _meta: {
+	                  expr: nextExpr
+	                }
+	              };
+	            }
+	            createdNodes.push(targetNode[nextExpr.getName()]);
+	          }
+	        }
+	        return {
+	          then: then(createdNodes),
+	          repeat: setMeta(createdNodes, 'repeat', true),
+	          end: setMeta(createdNodes, 'end', true),
+	        };
+	      }
+	    }
+	
+	    this.if = function () {return then([stages]).apply(this, arguments);}
+	
+	    function isEscaped(str, index) {
+	      if (options.escape === undefined) {
+	        return false;
+	      }
+	      let count = -1;
+	      let firstIndex, secondIndex;
+	      do {
+	        count += 1;
+	        firstIndex = index - (options.escape.length * (count + 1));
+	        secondIndex = options.escape.length;
+	      } while (str.substr(firstIndex, secondIndex) === options.escape);
+	      return count % 2 == 0;
+	    }
+	
+	    function foundCall(onFind, sub) {
+	      if ((typeof notify) === 'function') {
+	        notify(this);
+	      }
+	      if ((typeof onFind) === 'function') {
+	        return onFind(sub);
+	      } else {
+	        return sub;
+	      }
+	    }
+	
+	    this.find = function (str, index) {
+	      let startedThisCall = false;
+	      let needle = options.closing;
+	      let starting = false;
+	      if (start === undefined) {
+	        needle = options.opening;
+	        starting = true;
+	      }
+	      const sub = str.substr(index);
+	      let needleLength;
+	      if (needle instanceof RegExp) {
+	        const match = sub.match(needle);
+	        if (match && match.index === 0) {
+	          needleLength = match[0].length;
+	        }
+	      } else if ((typeof needle) === 'string') {
+	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
+	          needleLength = needle.length;
+	      } else if (needle === undefined || needle === null) {
+	        needleLength = 0;
+	      } else {
+	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
+	      }
+	      needleLength += options.tailOffset ? options.tailOffset : 0;
+	      let changes = '';
+	      if (start === undefined && starting && (needleLength || needle === null)) {
+	        string = str;
+	        start = index;
+	        startedThisCall = true;
+	        if (needle === null) {
+	          if ((typeof notify) === 'function') {
+	            notify(this);
+	          }          return {index, changes}
+	        } else {
+	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
+	        }
+	      }
+	      if ((!startedThisCall && needleLength) ||
+	            (startedThisCall && options.closing === undefined) ||
+	            (!startedThisCall && options.closing === null)) {
+	        if (str !== string) {
+	          throw new Error ('Trying to apply an expression to two different strings.');
+	        }
+	        end = index + needleLength;
+	        if (options.closing === null) {
+	          return {index, changes}
+	        }
+	        if (!startedThisCall) {
+	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
+	        }
+	        return { index: end, changes };
+	      }
+	
+	      return start !== undefined ? { index: start + needleLength, changes } :
+	                      { index: -1, changes };
+	    }
+	
+	    this.clone = function (notify) {
+	      return new ExprDef(name, options, notify, stages, alwaysPossible);
+	    };
+	    this.name = this.getName();
+	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
+	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
+	    this.location = function () {return {start, end, length: end - start}};
+	    this.closed = function () {return end !== undefined;}
+	    this.open = function () {return start !== undefined;}
+	    this.next =  function () {
+	      const expressions = [];
+	      if (currStage._meta && currStage._meta.repeat) {
+	        currStage = stages;
+	      }
+	      Object.values(currStage).map(
+	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
+	      )
+	      return alwaysPossible.concat(expressions);
+	    };
+	  }
+	}
+	
+	function parse(exprDef, str) {
+	  exprDef = exprDef.clone();
+	  let index = 0;
+	  let modified = '';
+	  const breakDown = [];
+	  const stack = [];
+	
+	  function topOfStack() {
+	    return stack[stack.length - 1];
+	  }
+	
+	  function closeCheck(exprDef) {
+	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
+	      let result = exprDef.find(str, index);
+	      if (result.index) {
+	        modified += result.changes;
+	        return result.index;
+	      }
+	    }
+	  }
+	
+	  function checkArray(exprDef, array) {
+	    if (exprDef.endDefined()) {
+	      let nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
+	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
+	      const result = childExprDef.find(str, index);
+	      if (result.index !== -1) {
+	        modified += result.changes;
+	        if (childExprDef.closed()) {
+	          breakDown.push(childExprDef);
+	        } else {
+	          stack.push(childExprDef);
+	        }
+	        return result.index;
+	      }
+	    }
+	    if (exprDef.canEnd()) {
+	      nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
+	  }
+	
+	  function open(exprDef, index) {
+	    const always = exprDef.getAlways();
+	    while (!exprDef.open()) {
+	      let result = exprDef.find(str, index);
+	      modified += result.changes;
+	      if(result.index === -1) {
+	        let newIndex = checkArray(exprDef, always);
+	        index = newIndex;
+	      } else {
+	        if (exprDef.closed()) {
+	          breakDown.push(exprDef);
+	        } else {
+	          stack.push(exprDef);
+	        }
+	        index = result.index;
+	      }
+	    }
+	    return index;
+	  }
+	
+	  let loopCount = 0;
+	  index = open(exprDef, index);
+	  progress = [-3, -2, -1];
+	  while (topOfStack() !== undefined) {
+	    const tos = topOfStack();
+	    if (progress[0] === index) {
+	      throw new Error(`ExprDef stopped making progress`);
+	    }
+	    let stackIds = '';
+	    let options = '';
+	    stack.map(function (value) {stackIds+=value.getName() + ','});
+	    tos.next().map(function (value) {options+=value.getName() + ','})
+	    index = checkArray(tos, tos.next());
+	    if (tos.closed()) {
+	      stack.pop();
+	    }
+	    loopCount++;
+	  }
+	  // if (index < str.length) {
+	  //   throw new Error("String not fully read");
+	  // }
+	  return modified;
+	}
+	
+	
+	ExprDef.parse = parse;
+	
+	module.exports = ExprDef;
+	
+	
+	
+	
 	
 });
 
@@ -7651,308 +7814,67 @@ function regexToObject (str, reg) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/request.js',
+RequireJS.addFunction('../../public/js/utils/lists/expandable-object.js',
 function (require, exports, module) {
 	
 
-	Request = {
-	    onStateChange: function (success, failure, id) {
-	      return function () {
-	        if (this.readyState == 4) {
-	          if (this.status == 200) {
-	            try {
-	              resp = JSON.parse(this.responseText);
-	            } catch (e){
-	              resp = this.responseText;
-	            }
-	            if (success) {
-	              success(resp, this);
-	            }
-	          } else if (failure) {
-	            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
-	            if (errorMsgMatch) {
-	              this.errorMsg = errorMsgMatch[1].trim();
-	            }
-	            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
-	            if (errorCodeMatch) {
-	              this.errorCode = errorCodeMatch[1];
 	
-	            }
-	            failure(this);
-	          }
-	          var resp = this.responseText;
-	        }
-	      }
-	    },
+	const CustomEvent = require('../custom-error.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	const Expandable = require('./expandable');
 	
-	    id: function (url, method) {
-	      return `request.${method}.${url.replace(/\./g, ',')}`;
-	    },
+	class ExpandableObject extends Expandable {
+	  constructor(props) {
+	    super(props);
+		//TODO: Set aciveKey
+	    const superRemove = this.remove;
+	    this.remove = (key) => {
+	      const removed = props.list[key];
+	      delete props.list[key];
+	      superRemove(removed);
+	    }
 	
-	    get: function (url, success, failure) {
-	      const xhr = new Request.xmlhr();
-	      xhr.open("GET", url, true);
-	      const id = Request.id(url, 'GET');
-	      xhr.setRequestHeader('Content-Type', 'application/json');
-	      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
-	      Request.setGlobalHeaders(xhr);
-	      if (success === undefined && failure === undefined) return xhr;
-	      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
-	      xhr.send();
-	      return xhr;
-	    },
-	
-	    hasBody: function (method) {
-	      return function (url, body, success, failure) {
-	        const xhr = new Request.xmlhr();
-	        xhr.open(method, url, true);
-	        const id = Request.id(url, method);
-	        xhr.setRequestHeader('Content-Type', 'application/json');
-	        Request.setGlobalHeaders(xhr);
-	        if (success === undefined && failure === undefined) return xhr;
-	        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
-	        xhr.send(JSON.stringify(body));
-	        return xhr;
-	      }
-	    },
-	
-	    post: function () {return Request.hasBody('POST')(...arguments)},
-	    delete: function () {return Request.hasBody('DELETE')(...arguments)},
-	    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
-	    head: function () {return Request.hasBody('HEAD')(...arguments)},
-	    put: function () {return Request.hasBody('PUT')(...arguments)},
-	    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
+	    this.getKey = () => this.values().name;
+	  }
 	}
-	
-	Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
-	Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
-	const globalHeaders = {};
-	Request.globalHeader = (header, funcOval) => {
-	  globalHeaders[header] = funcOval;
-	}
-	Request.setGlobalHeaders = (xhr) => {
-	  const headers = Object.keys(globalHeaders);
-	  headers.forEach((header) =>
-	    xhr.setRequestHeader(header, Function.orVal(globalHeaders[header], xhr)));
-	}
-	try {
-	  Request.xmlhr = XMLHttpRequest;
-	} catch (e) {
-	  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
-	}
-	
-	try {
-	  module.exports = Request;
-	} catch (e) {}
+	module.exports = ExpandableObject
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/measurment.js',
+RequireJS.addFunction('../../public/js/utils/object/lookup.js',
 function (require, exports, module) {
 	
-const Lookup = require('./object/lookup');
-	const StringMathEvaluator = require('./string-math-evaluator');
-	
-	function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	let percision = '1/32';
-	let units = [
-	  'Metric',
-	  'Imperial (US)'
-	]
-	let unit = units[1];
-	
-	
-	class Measurement extends Lookup {
-	  constructor(value, notMetric) {
-	    super();
-	    if ((typeof value) === 'string') {
-	      value += ' '; // Hacky fix for regularExpression
+
+	class Lookup {
+	  constructor(id) {
+	    id = id || String.random();
+	    Object.getSet(this, 'id');
+	    this.id = () => id;
+	    const cxtr = this.constructor;
+	    if(cxtr.selectList === Lookup.selectList) {
+	      cxtr.get = (id) => Lookup.get(cxtr.name, id);
+	      Lookup.byId[cxtr.name] = {};
+	      cxtr.selectList = () => Lookup.selectList(cxtr.name);
 	    }
-	
-	    const determineUnit = () => {
-	      if ((typeof notMetric === 'string')) {
-	        const index = units.indexOf(notMetric);
-	        if (index !== -1) return units[index];
-	      } else if ((typeof notMetric) === 'boolean') {
-	        if (notMetric === true) return unit;
-	      }
-	      return units[0];
-	    }
-	
-	    let decimal = 0;
-	    let nan = value === null || value === undefined;
-	    this.isNaN = () => nan;
-	
-	    const parseFraction = (str) => {
-	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
-	      regObj.integer = Number.parseInt(regObj.integer) || 0;
-	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	      if(regObj.denominator === 0) {
-	        regObj.numerator = 0;
-	        regObj.denominator = 1;
-	      }
-	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	      return regObj;
-	    };
-	
-	    function reduce(numerator, denominator) {
-	      let reduced = true;
-	      while (reduced) {
-	        reduced = false;
-	        for (let index = 0; index < Measurement.primes.length; index += 1) {
-	          const prime = Measurement.primes[index];
-	          if (prime >= denominator) break;
-	          if (numerator % prime === 0 && denominator % prime === 0) {
-	            numerator = numerator / prime;
-	            denominator = denominator / prime;
-	            reduced = true;
-	            break;
-	          }
-	        }
-	      }
-	      if (numerator === 0) {
-	        return '';
-	      }
-	      return ` ${numerator}/${denominator}`;
-	    }
-	
-	    function calculateValue(accuracy) {
-	      accuracy = accuracy || '1/32'
-	      const fracObj = parseFraction(accuracy);
-	      const denominator = fracObj.denominator;
-	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	      }
-	      let standardDecimal = decimal / 2.54;
-	      let sign = standardDecimal > 0 ? 1 : -1;
-	      let remainder = Math.abs(standardDecimal);
-	      let currRemainder = remainder;
-	      let value = 0;
-	      let numerator = 0;
-	      while (currRemainder > 0) {
-	        numerator += fracObj.numerator;
-	        currRemainder -= fracObj.decimal;
-	      }
-	      const diff1 = standardDecimal - ((numerator - fracObj.numerator) / denominator);
-	      const diff2 = (numerator / denominator) - standardDecimal;
-	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	      const integer = sign * Math.floor(numerator / denominator);
-	      numerator = numerator % denominator;
-	      return {integer, numerator, denominator};
-	    }
-	
-	    this.fraction = (accuracy) => {
-	      if (nan) return NaN;
-	      const obj = calculateValue(accuracy);
-	      if (obj.integer === 0 && obj.numerator === 0) return '0';
-	      const integer = obj.integer !== 0 ? obj.integer : '';
-	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
-	    }
-	    this.standardUS = this.fraction;
-	
-	    this.display = (accuracy) => {
-	      switch (unit) {
-	        case units[0]: return this.decimal(accuracy);
-	        case units[1]: return this.standardUS(accuracy);
-	        default:
-	            return this.standardUS(accuracy);
-	      }
-	    }
-	
-	    this.value = (accuracy) => this.decimal(accuracy);
-	
-	    this.decimal = (accuracy) => {
-	      if (nan) return NaN;
-	      accuracy = accuracy % 100 ? accuracy : 100;
-	      return Math.round(decimal * accuracy) / accuracy;
-	    }
-	
-	    function getDecimalEquivalant(string) {
-	      string = string.trim();
-	      if (string.match(StringMathEvaluator.decimalReg)) {
-	        return Number.parseFloat(string);
-	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
-	        return parseFraction(string).decimal
-	      }
-	      nan = true;
-	      return NaN;
-	    }
-	
-	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
-	
-	    function standardize(ambiguousDecimal) {
-	      switch (determineUnit()) {
-	        case units[0]:
-	          return ambiguousDecimal;
-	        case units[1]:
-	          return convertUsToMetric(ambiguousDecimal);
-	        default:
-	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
-	      }
-	    }
-	
-	    if ((typeof value) === 'number') {
-	      decimal = standardize(value);
-	    } else if ((typeof value) === 'string') {
-	      try {
-	        const ambiguousDecimal = getDecimalEquivalant(value);
-	        decimal = standardize(ambiguousDecimal);
-	      } catch (e) {
-	        nan = true;
-	      }
-	    } else {
-	      nan = true;
-	    }
+	    if (Lookup.register[cxtr.name] === undefined)
+	      Lookup.register[cxtr.name] = {};
+	    Lookup.register[cxtr.name][id] = this;
+	    Lookup.byId[cxtr.name][id] = this;
+	    this.toString = () => this.id();
 	  }
 	}
 	
-	Measurement.unit = (newUnit) => {
-	  for (index = 0; index < units.length; index += 1) {
-	    if (newUnit === units[index]) unit = newUnit;
-	  }
-	  return unit
-	};
-	Measurement.units = () => JSON.parse(JSON.stringify(units));
-	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
-	
-	Measurement.validation = function (range) {
-	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
-	  let min = obj.min.trim() !== '' ?
-	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
-	  let max = obj.max.trim() !== '' ?
-	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
-	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
-	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
-	  return function (value) {
-	    const decimal = new Measurement(value).decimal();
-	    if (decimal === NaN) return false;
-	    return minCheck(decimal) && maxCheck(decimal);
-	  }
+	Lookup.register = {};
+	Lookup.byId = {};
+	Lookup.get = (cxtrName, id) =>
+	    Lookup.byId[cxtrName][id];
+	Lookup.selectList = (className) => {
+	  return Object.keys(Lookup.register[className]);
 	}
 	
-	Measurement.round = (value, percision) => {
-	  if (percision)
-	  return new Measurement(value).decimal(percision);
-	  return Math.round(value * 10000000) / 10000000;
-	}
-	
-	try {
-	  module.exports = Measurement;
-	} catch (e) {/* TODO: Consider Removing */}
+	module.exports = Lookup;
 	
 });
 
@@ -8210,93 +8132,264 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/lists/expandable-object.js',
+RequireJS.addFunction('../../public/js/utils/input/input.js',
 function (require, exports, module) {
 	
 
 	
-	const CustomEvent = require('../custom-error.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	const Expandable = require('./expandable');
 	
-	class ExpandableObject extends Expandable {
+	
+	const $t = require('../$t');
+	const du = require('../dom-utils');
+	/*
+	supported attributes: type, placeholder, name, class, value
+	label: creates a text label preceeding input.
+	clearOnClick: removes value when clicked.
+	list: creates a dropdown with list values.
+	default: the default value if input is invalid.
+	targetAttr: attribute which defines the inputs value.
+	format: attribute which defines a function used to format value.
+	validation: Accepts
+	                Array: value must be included
+	                Regex: value must match
+	                Function: value is arg1, must return true
+	errorMsg: Message that shows when validation fails.
+	
+	*/
+	class Input {
 	  constructor(props) {
-	    super(props);
-		//TODO: Set aciveKey
-	    const superRemove = this.remove;
-	    this.remove = (key) => {
-	      const removed = props.list[key];
-	      delete props.list[key];
-	      superRemove(removed);
+	    props.hidden = props.hide || false;
+	    props.list = props.list || [];
+	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
+	                            'class', 'list', 'value');
+	
+	    const immutableProps = {
+	      _IMMUTABLE: true,
+	      id: props.id || `input-${String.random(7)}`,
+	      targetAttr: props.targetAttr || 'value',
+	      errorMsg: props.errorMsg || 'Error',
+	      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
+	    }
+	    Object.getSet(this, immutableProps)
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      delete json.id;
+	      delete json.errorMsgId;
+	      Object.set(json, properties);
+	      return new this.constructor(json);
 	    }
 	
-	    this.getKey = () => this.values().name;
+	    const instance = this;
+	    const forAll = Input.forAll(this.id());
+	
+	    this.hide = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      this.hidden(cnt.hidden = true);
+	    });
+	    this.show = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      this.hidden(cnt.hidden = false);
+	    });
+	
+	    let valid;
+	    let value = props.value;
+	
+	    const idSelector = `#${this.id()}`;
+	
+	    const html = this.constructor.html(this);
+	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
+	    this.html = () =>
+	     html();
+	
+	    function valuePriority (func) {
+	      return (elem, event) => func(elem[instance.targetAttr()], elem, event);
+	    }
+	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
+	
+	    function getElem(id) {return document.getElementById(id);}
+	    this.get = () => getElem(this.id());
+	
+	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
+	    this.valid = () => valid === undefined ? this.setValue() : valid;
+	    this.setValue = (val) => {
+	      const elem = getElem(this.id());
+	      if (val === undefined){
+	        if (elem) val = elem[this.targetAttr()]
+	        if (val === undefined) val = props.default;
+	      }
+	      if(this.validation(val)) {
+	        valid = true;
+	        value = val;
+	        if (elem) elem[this.targetAttr()] = val;
+	        return true;
+	      }
+	      valid = false;
+	      value = undefined;
+	      return false;
+	    }
+	    this.value = () => {
+	      const unformatted = (typeof value === 'function') ? value() : value || '';
+	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
+	    }
+	    this.doubleCheck = () => {
+	      valid = undefined;
+	      validate();
+	      return valid;
+	    }
+	    this.validation = function(val) {
+	      const elem = getElem(instance.id);
+	      val = val === undefined && elem ? elem.value : val;
+	      if (val === undefined) return false;
+	      if (valid !== undefined && val === value) return valid;
+	      let valValid = true;
+	      if (props.validation instanceof RegExp) {
+	        valValid = val.match(props.validation) !== null;
+	      }
+	      else if ((typeof props.validation) === 'function') {
+	        valValid = props.validation.apply(null, arguments);
+	      }
+	      else if (Array.isArray(props.validation)) {
+	        valValid = props.validation.indexOf(val) !== -1;
+	      }
+	
+	      return valValid;
+	    };
+	
+	    const validate = (target) => {
+	      target = target || getElem(instance.id());
+	      if (target) {
+	        if (this.setValue(target[this.targetAttr()])) {
+	          getElem(this.errorMsgId()).innerHTML = '';
+	          valid = true;
+	        } else {
+	          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
+	          valid = false;
+	        }
+	      }
+	    }
+	
+	    if (props.clearOnClick) {
+	      du.on.match(`mousedown`, `#${this.id()}`, () => {
+	        const elem = getElem(this.id());
+	        if (elem) elem.value = '';
+	      });
+	    }
+	    du.on.match(`change`, `#${this.id()}`, validate);
+	    du.on.match(`keyup`, `#${this.id()}`, validate);
 	  }
 	}
-	module.exports = ExpandableObject
+	
+	Input.forAll = (id) => {
+	  const idStr = `#${id}`;
+	  return (func) => {
+	    const elems = document.querySelectorAll(idStr);
+	    for (let index = 0; index < elems.length; index += 1) {
+	      func(elems[index]);
+	    }
+	  }
+	}
+	
+	Input.template = new $t('input/input');
+	Input.html = (instance) => () => Input.template.render(instance);
+	Input.flagAttrs = ['checked', 'selected'];
+	Input.attrString = (targetAttr, value) =>{
+	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
+	    return value === true ? targetAttr : '';
+	  }
+	  return `${targetAttr}='${value}'`
+	}
+	
+	module.exports = Input;
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/object/lookup.js',
+RequireJS.addFunction('../../public/js/utils/input/bind.js',
 function (require, exports, module) {
 	
-
-	class Lookup {
-	  constructor(id) {
-	    id = id || String.random();
-	    Object.getSet(this, 'id');
-	    this.id = () => id;
-	    const cxtr = this.constructor;
-	    if(cxtr.selectList === Lookup.selectList) {
-	      cxtr.get = (id) => Lookup.get(cxtr.name, id);
-	      Lookup.byId[cxtr.name] = {};
-	      cxtr.selectList = () => Lookup.selectList(cxtr.name);
-	    }
-	    if (Lookup.register[cxtr.name] === undefined)
-	      Lookup.register[cxtr.name] = {};
-	    Lookup.register[cxtr.name][id] = this;
-	    Lookup.byId[cxtr.name][id] = this;
-	    this.toString = () => this.id();
+const du = require('../dom-utils');
+	const Input = require('./input');
+	
+	const defaultDynamInput = (value, type) => new Input({type, value});
+	
+	module.exports = function(selector, objOrFunc, props) {
+	  let lastInputTime = {};
+	  props = props || {};
+	  const validations = props.validations || {};
+	  const inputs = props.inputs || {};
+	
+	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
+	  const getValue = (updatePath, elem) => {
+	    const input = inputs.pathValue(updatePath);
+	    return input ? input.value() : elem.value;
 	  }
-	}
+	  const getValidation = (updatePath) => {
+	    let validation = validations.pathValue(updatePath);
+	    const input = inputs.pathValue(updatePath);
+	    if (input) {
+	      validation = input.validation;
+	    }
+	    return validation;
+	  }
 	
-	Lookup.register = {};
-	Lookup.byId = {};
-	Lookup.get = (cxtrName, id) =>
-	    Lookup.byId[cxtrName][id];
-	Lookup.selectList = (className) => {
-	  return Object.keys(Lookup.register[className]);
-	}
+	  function update(elem) {
+	    const target = resolveTarget(elem);
+	    elem = du.find.down('input,select,textarea', elem);
+	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
+	    elem.id = elem.id || String.random(7);
+	    const thisInputTime = new Date().getTime();
+	    lastInputTime[elem.id] = thisInputTime;
+	    setTimeout(() => {
+	      if (thisInputTime === lastInputTime[elem.id]) {
+	        const validation = getValidation(updatePath);
+	        if (updatePath !== null) {
+	          const newValue = getValue(updatePath, elem);
+	          if ((typeof validation) === 'function' && !validation(newValue)) {
+	            console.error('badValue')
+	          } else if ((typeof objOrFunc) === 'function') {
+	            objOrFunc(updatePath, elem.value);
+	          } else {
+	            objOrFunc.pathValue(updatePath, elem.value);
+	          }
 	
-	module.exports = Lookup;
+	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
+	            target.innerHTML = newValue;
+	          }
+	        }
+	      }
+	    }, 2000);
+	  }
+	  const makeDynamic = (target) => {
+	    target = resolveTarget(target);
+	    if (target.getAttribute('resolved') === null) {
+	      target.setAttribute('resolved', 'dynam-input');
+	      const value = target.innerText;
+	      const type = target.getAttribute('type');
+	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
+	      const input = inputs.pathValue(updatePath) || defaultDynamInput(value, type);
 	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
-function (require, exports, module) {
-	
-
-	
-	const CustomEvent = require('../custom-error.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	const Expandable = require('./expandable');
-	
-	class ExpandableList extends Expandable {
-	  constructor(props) {
-	    super(props);
-	    const superRemove = this.remove;
-	    this.remove = (index) => {
-	      superRemove(props.list.splice(index, 1));
-	      this.refresh();
+	      target.innerHTML = input.html();
+	      const inputElem = du.find.down(`#${input.id}`, target);
+	      du.class.add(inputElem, 'dynam-input');
+	      inputElem.setAttribute('prop-update', updatePath);
+	      inputElem.focus();
 	    }
 	  }
+	
+	  du.on.match('keyup', selector, update);
+	  du.on.match('change', selector, update);
+	  du.on.match('click', selector, makeDynamic);
 	}
 	
-	module.exports = ExpandableList
+	
+	const undoDynamic = (target) => {
+	  const parent = du.find.up('[resolved="dynam-input"]', target)
+	  parent.innerText = target.value;
+	  parent.removeAttribute('resolved');
+	}
+	
+	du.on.match('focusout', '.dynam-input', undoDynamic);
 	
 });
 
@@ -8497,95 +8590,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/bind.js',
-function (require, exports, module) {
-	
-const du = require('../dom-utils');
-	const Input = require('./input');
-	
-	const defaultDynamInput = (value, type) => new Input({type, value});
-	
-	module.exports = function(selector, objOrFunc, props) {
-	  let lastInputTime = {};
-	  props = props || {};
-	  const validations = props.validations || {};
-	  const inputs = props.inputs || {};
-	
-	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
-	  const getValue = (updatePath, elem) => {
-	    const input = inputs.pathValue(updatePath);
-	    return input ? input.value() : elem.value;
-	  }
-	  const getValidation = (updatePath) => {
-	    let validation = validations.pathValue(updatePath);
-	    const input = inputs.pathValue(updatePath);
-	    if (input) {
-	      validation = input.validation;
-	    }
-	    return validation;
-	  }
-	
-	  function update(elem) {
-	    const target = resolveTarget(elem);
-	    elem = du.find.down('input,select,textarea', elem);
-	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
-	    elem.id = elem.id || String.random(7);
-	    const thisInputTime = new Date().getTime();
-	    lastInputTime[elem.id] = thisInputTime;
-	    setTimeout(() => {
-	      if (thisInputTime === lastInputTime[elem.id]) {
-	        const validation = getValidation(updatePath);
-	        if (updatePath !== null) {
-	          const newValue = getValue(updatePath, elem);
-	          if ((typeof validation) === 'function' && !validation(newValue)) {
-	            console.error('badValue')
-	          } else if ((typeof objOrFunc) === 'function') {
-	            objOrFunc(updatePath, elem.value);
-	          } else {
-	            objOrFunc.pathValue(updatePath, elem.value);
-	          }
-	
-	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
-	            target.innerHTML = newValue;
-	          }
-	        }
-	      }
-	    }, 2000);
-	  }
-	  const makeDynamic = (target) => {
-	    target = resolveTarget(target);
-	    if (target.getAttribute('resolved') === null) {
-	      target.setAttribute('resolved', 'dynam-input');
-	      const value = target.innerText;
-	      const type = target.getAttribute('type');
-	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
-	      const input = inputs.pathValue(updatePath) || defaultDynamInput(value, type);
-	
-	      target.innerHTML = input.html();
-	      const inputElem = du.find.down(`#${input.id}`, target);
-	      du.class.add(inputElem, 'dynam-input');
-	      inputElem.setAttribute('prop-update', updatePath);
-	      inputElem.focus();
-	    }
-	  }
-	
-	  du.on.match('keyup', selector, update);
-	  du.on.match('change', selector, update);
-	  du.on.match('click', selector, makeDynamic);
-	}
-	
-	
-	const undoDynamic = (target) => {
-	  const parent = du.find.up('[resolved="dynam-input"]', target)
-	  parent.innerText = target.value;
-	  parent.removeAttribute('resolved');
-	}
-	
-	du.on.match('focusout', '.dynam-input', undoDynamic);
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/collections/collection.js',
 function (require, exports, module) {
 	
@@ -8660,175 +8664,370 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/input.js',
+RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
+function (require, exports, module) {
+	
+
+	
+	const CustomEvent = require('../custom-error.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	const Expandable = require('./expandable');
+	
+	class ExpandableList extends Expandable {
+	  constructor(props) {
+	    super(props);
+	    const superRemove = this.remove;
+	    this.remove = (index) => {
+	      superRemove(props.list.splice(index, 1));
+	      this.refresh();
+	    }
+	  }
+	}
+	
+	module.exports = ExpandableList
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/logic-tree.js',
+function (require, exports, module) {
+	
+
+	// breakfast) Branch
+	//   food) Multiselect
+	//     bacon) Leaf
+	//     eggs) Select
+	//       2) Select
+	//         over easy) Leaf
+	//         sunny side up) Leaf
+	//         scramble) Leaf
+	//         fried) Leaf
+	//       3) Select
+	//         over easy) Leaf
+	//         sunny side up) Leaf
+	//         scramble) Leaf
+	//         fried) Leaf
+	//       6) Select
+	//         over easy) Leaf
+	//         sunny side up) Leaf
+	//         scramble) Leaf
+	//         fried) Leaf
+	//     toast) Select
+	//       white) Leaf
+	//       wheat) Leaf
+	//       texas) Leaf
+	//     cereal) Branch
+	//       milk) Leaf
+	//       type) Select
+	//         raisin brand) Leaf
+	//         cheerios) Leaf
+	//         life) Leaf
+	//   dishes) Branch
+	//     plate) Leaf
+	//     fork) Leaf
+	//     having cereal) Conditional
+	//       bowl) Leaf
+	//       spoon) Leaf
+	
+	
+	const Test = require('../test.js').Test;
+	const LogicTree = require('../../logic-tree');
+	
+	function createTree(connectEggs, optional) {
+	  const tree = new LogicTree(String.random());
+	  const branch = tree.branch('breakfast');
+	  const food = branch.multiselect('food');
+	  food.optional(optional);
+	  food.leaf('bacon', {cost: 1});
+	  const eggs = food.select('eggs');
+	  const two = eggs.select(2, {multiplier: 2});
+	  eggs.optional(optional);
+	  two.optional(optional);
+	  two.leaf('over easy', {cost: 1.8});
+	  two.leaf('sunny side up', {cost: 2.6});
+	  two.leaf('scramble', {cost: 3.2});
+	  two.leaf('fried', {cost: 1.3});
+	  const three = eggs.select(3, {multiplier: 3}).addChildren('2');
+	  const six = eggs.select(6, {multiplier: 6}).addChildren('2');
+	  const toast = food.select('toast');
+	  three.optional(optional);
+	  six.optional(optional);
+	  toast.optional(optional);
+	  toast.leaf('white', {cost: 1.01});
+	  toast.leaf('wheat', {cost: 1.24});
+	  toast.leaf('texas', {cost: 1.17});
+	  const cereal = food.branch('cereal');
+	  cereal.leaf('milk', {cost: 8.99});
+	  const type = cereal.select('type');
+	  type.optional(optional);
+	  type.leaf('raisin brand', {cost: -0.55});
+	  type.leaf('cheerios', {cost: 1.58});
+	  type.leaf('life', {cost: 1.23});
+	
+	  const dishes = branch.branch('dishes');
+	  const needPlate = dishes.conditional('need plate', (tree) => tree.reachable('bacon') || tree.reachable('eggs'));
+	  needPlate.leaf('plate', {cost: .14});
+	  needPlate.leaf('fork', {cost: .07});
+	  const havingCereal = dishes.conditional('having cereal', (tree) => tree.reachable('cereal'));
+	  havingCereal.leaf('bowl', {cost: .18});
+	  havingCereal.leaf('spoon', {cost: .06});
+	
+	  if (connectEggs) {
+	    two.connectValues(three);
+	    two.connectDefaults(six);
+	  }
+	  return tree;
+	}
+	
+	
+	function access(index, returnValue, testFuncs, tree) {
+	  const func = testFuncs[index];
+	  if ((typeof func === 'function')) {
+	    func(tree, returnValue);
+	  }
+	}
+	
+	function accessProcess(ts, testFuncs, optional) {
+	  let tree;
+	
+	  access('init', tree = createTree(true, optional), testFuncs, tree);
+	  access('dontEat2', tree.setChoice('food', null), testFuncs, tree);
+	  if (optional)
+	    access('dontEat', tree.setChoice('food', {}), testFuncs, tree);
+	
+	  access('bacon', tree.setChoice('food', {bacon: true}), testFuncs, tree);
+	
+	  access('toast', tree.setChoice('food', {toast: true}), testFuncs, tree);
+	  access('chooseToast', tree.setChoice('toast', 'white'), testFuncs, tree);
+	
+	  access('chooseCereal', tree.setChoice('type', 'life'), testFuncs, tree);
+	  access('cereal', tree.setChoice('food', {cereal: true}), testFuncs, tree);
+	
+	  access('eggs', tree.setChoice('food', {eggs: true}), testFuncs, tree);
+	  access('2', tree.setChoice('eggs', '2'), testFuncs, tree);
+	  access('2value', tree.setChoice('2', 'scramble'), testFuncs, tree);
+	  if (optional)
+	    access('2NoValue', tree.setChoice('2', null), testFuncs, tree);
+	  access('2valueAgain', tree.setChoice('2', 'scramble'), testFuncs, tree);
+	  access('2default', tree.setDefault('2', 'fried'), testFuncs, tree);
+	  access('3', tree.setChoice('eggs', '3'), testFuncs, tree);
+	  access('6', tree.setChoice('eggs', '6'), testFuncs, tree);
+	
+	
+	  access('all', tree.setChoice('food', {eggs: true, bacon: true, toast: true, cereal: true}), testFuncs, tree);
+	  return tree;
+	}
+	
+	
+	Test.add('LogicTree structure', (ts) => {
+	  const tree = createTree();
+	  const properStructure = "breakfast) Branch\n  food) Multiselect\n    bacon) Leaf\n    eggs) Select\n      2) Select\n        over easy) Leaf\n        sunny side up) Leaf\n        scramble) Leaf\n        fried) Leaf\n      3) Select\n        over easy) Leaf\n        sunny side up) Leaf\n        scramble) Leaf\n        fried) Leaf\n      6) Select\n        over easy) Leaf\n        sunny side up) Leaf\n        scramble) Leaf\n        fried) Leaf\n    toast) Select\n      white) Leaf\n      wheat) Leaf\n      texas) Leaf\n    cereal) Branch\n      milk) Leaf\n      type) Select\n        raisin brand) Leaf\n        cheerios) Leaf\n        life) Leaf\n  dishes) Branch\n    need plate) Conditional\n      plate) Leaf\n      fork) Leaf\n    having cereal) Conditional\n      bowl) Leaf\n      spoon) Leaf\n";
+	  ts.assertEquals(tree.structure(), properStructure);
+	  ts.success();
+	});
+	
+	Test.add('LogicTree decisions', (ts) => {
+	  function validateDecisions (tree, ...names) {
+	    const decisions = tree.decisions();
+	    ts.assertEquals(decisions.length, names.length);
+	    const decisionNames = decisions.map((elem) => elem.name);
+	    for (let index = 0; index < names.length; index += 1) {
+	      ts.assertNotEquals(decisionNames.indexOf(names[index]) === -1);
+	    }
+	  }
+	
+	  const testFuncs = {
+	    init: (tree) => validateDecisions(tree, 'food'),
+	    dontEat: (tree) => validateDecisions(tree, 'food'),
+	
+	    bacon: (tree) => validateDecisions(tree, 'food'),
+	
+	    toast: (tree) => validateDecisions(tree, 'food', 'toast'),
+	    chooseToast: (tree) => validateDecisions(tree, 'food', 'toast'),
+	
+	    chooseCereal: (tree) => validateDecisions(tree, 'food', 'toast'),
+	    cereal: (tree) => validateDecisions(tree, 'food', 'having cereal'),
+	
+	    eggs: (tree) => validateDecisions(tree, 'food', 'eggs'),
+	    "2": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
+	    "2value": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
+	    "2NoValue": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
+	    "2valueAgain": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
+	    "2default": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
+	    "3": (tree) => validateDecisions(tree, 'food', 'eggs', '3'),
+	    "6": (tree) => validateDecisions(tree, 'food', 'eggs', '6'),
+	
+	    all: (tree) => validateDecisions(tree, 'food', 'eggs', '6', 'having cereal', 'toast')
+	  }
+	  accessProcess(ts, testFuncs);
+	  ts.success();
+	});
+	
+	function testIsComplete(ts) {
+	  return (tree, isComplete) => ts.assertTrue(isComplete === tree.isComplete());
+	}
+	
+	Test.add('LogicTree isComplete (optional)', (ts) => {
+	  const tic = testIsComplete(ts);
+	  const testFuncs = {
+	    init: (tree) => tic(tree, true),
+	    dontEat: (tree) =>  tic(tree, true),
+	    dontEat2: (tree) =>  tic(tree, true),
+	    bacon: (tree) =>  tic(tree, true),
+	    toast: (tree) =>  tic(tree, true),
+	    chooseToast: (tree) =>  tic(tree, true),
+	    chooseCereal: (tree) =>  tic(tree, true),
+	    cereal: (tree) =>  tic(tree, true),
+	    eggs: (tree) =>  tic(tree, true),
+	    "2": (tree) =>  tic(tree, true),
+	    "2value": (tree) =>  tic(tree, true),
+	    "2NoValue": (tree) =>  tic(tree, true),
+	    "2valueAgain": (tree) =>  tic(tree, true),
+	    "2default": (tree) =>  tic(tree, true),
+	    "3": (tree) =>  tic(tree, true),
+	    "6": (tree) =>  tic(tree, true),
+	    all: (tree) =>  tic(tree, true),
+	  }
+	  accessProcess(ts, testFuncs, true);
+	  ts.success();
+	});
+	
+	Test.add('LogicTree isComplete (!optional)', (ts) => {
+	  const tic = testIsComplete(ts);
+	  const testFuncs = {
+	    init: (tree) => tic(tree, false),
+	    dontEat: (tree) =>  tic(tree, false),
+	    dontEat2: (tree) =>  tic(tree, false),
+	    bacon: (tree) =>  tic(tree, true),
+	    toast: (tree) =>  tic(tree, false),
+	    chooseToast: (tree) =>  tic(tree, true),
+	    chooseCereal: (tree) =>  tic(tree, true),
+	    cereal: (tree) =>  tic(tree, true),
+	    eggs: (tree) =>  tic(tree, false),
+	    "2": (tree) =>  tic(tree, false),
+	    "2value": (tree) =>  tic(tree, true),
+	    "2NoValue": (tree) =>  tic(tree, false),
+	    "2valueAgain": (tree) =>  tic(tree, true),
+	    "2default": (tree) =>  tic(tree, true),
+	    "3": (tree) =>  tic(tree, true),
+	    "6": (tree) =>  tic(tree, true),
+	    all: (tree) =>  tic(tree, true),
+	  }
+	  accessProcess(ts, testFuncs, false);
+	  ts.success();
+	});
+	
+	Test.add('LogicTree forPath (forward)', (ts) => {
+	  const tree = accessProcess(ts, {});
+	  let paths = '=>';
+	  tree.forPath((wrapper, data) => {
+	    if (data === undefined) paths = paths.substring(0, paths.length - 2) + "\n";
+	    paths += `${wrapper.name}=>`;
+	    return true;
+	  });
+	  paths = paths.substring(0, paths.length - 2)
+	  console.log(`forward\n${paths}`);
+	  ts.success();
+	});
+	
+	Test.add('LogicTree forPath (reverse)', (ts) => {
+	  const tree = accessProcess(ts, {});
+	  let paths = '<=';
+	  tree.forPath((wrapper, data) => {
+	    if (data === undefined) paths = paths.substring(0, paths.length - 2) + "\n";
+	    paths += `${wrapper.name}<=`;
+	    return true;
+	  }, true);
+	  paths = paths.substring(0, paths.length - 2)
+	  console.log(`reverse\n${paths}`);
+	  ts.success();
+	});
+	
+	Test.add('LogicTree leaves', (ts) => {
+	  const tree = accessProcess(ts, {});
+	  console.log('leaves\n', tree.leaves());
+	  ts.success();
+	});
+	
+	// Test.add('LogicTree ', (ts) => {
+	//   function validateDecisions (tree, ...names) {
+	//     const decisions = tree.decisions();
+	//     ts.assertEquals(decisions.length, names.length);
+	//     const decisionNames = decisions.map((elem) => elem.name);
+	//     for (let index = 0; index < names.length; index += 1) {
+	//       ts.assertNotEquals(decisionNames.indexOf(names[index]) === -1);
+	//     }
+	//   }
+	//
+	//   const testFuncs = {
+	//     init: (tree) => ,
+	//     dontEat: (tree) => ,
+	//
+	//     bacon: (tree) => ,
+	//
+	//     toast: (tree) => ,
+	//     chooseToast: (tree) => ,
+	//
+	//     chooseCereal: (tree) => ,
+	//     cereal: (tree) => ,
+	//
+	//     eggs: (tree) => ,
+	//     "2": (tree) => ,
+	//     "2value": (tree) => ,
+	//     "2NoValue": (tree) => ,
+	//     "2valueAgain": (tree) => ,
+	//     "2default": (tree) => ,
+	//     "6": (tree) => ,
+	//
+	//     all: (tree) =>
+	//   }
+	//   accessProcess(ts, testFuncs);
+	//   ts.success();
+	// });
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
 function (require, exports, module) {
 	
 
 	
 	
 	
-	const $t = require('../$t');
-	const du = require('../dom-utils');
-	/*
-	supported attributes: type, placeholder, name, class, value
-	label: creates a text label preceeding input.
-	clearOnClick: removes value when clicked.
-	list: creates a dropdown with list values.
-	default: the default value if input is invalid.
-	targetAttr: attribute which defines the inputs value.
-	format: attribute which defines a function used to format value.
-	validation: Accepts
-	                Array: value must be included
-	                Regex: value must match
-	                Function: value is arg1, must return true
-	errorMsg: Message that shows when validation fails.
+	const Input = require('../input');
+	const $t = require('../../$t');
 	
-	*/
-	class Input {
+	class Select extends Input {
 	  constructor(props) {
-	    props.hidden = props.hide || false;
-	    props.list = props.list || [];
-	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
-	                            'class', 'list', 'value');
-	
-	    const immutableProps = {
-	      _IMMUTABLE: true,
-	      id: props.id || `input-${String.random(7)}`,
-	      targetAttr: props.targetAttr || 'value',
-	      errorMsg: props.errorMsg || 'Error',
-	      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
+	    super(props);
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.index && props.list[props.index] ?
+	      props.list[props.index] : props.list[0];
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
 	    }
-	    Object.getSet(this, immutableProps)
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
 	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      delete json.id;
-	      delete json.errorMsgId;
-	      Object.set(json, properties);
-	      return new this.constructor(json);
-	    }
-	
-	    const instance = this;
-	    const forAll = Input.forAll(this.id());
-	
-	    this.hide = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      this.hidden(cnt.hidden = true);
-	    });
-	    this.show = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      this.hidden(cnt.hidden = false);
-	    });
-	
-	    let valid;
-	    let value = props.value;
-	
-	    const idSelector = `#${this.id()}`;
-	
-	    const html = this.constructor.html(this);
-	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
-	    this.html = () =>
-	     html();
-	
-	    function valuePriority (func) {
-	      return (elem, event) => func(elem[instance.targetAttr()], elem, event);
-	    }
-	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
-	
-	    function getElem(id) {return document.getElementById(id);}
-	    this.get = () => getElem(this.id());
-	
-	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
-	    this.valid = () => valid === undefined ? this.setValue() : valid;
-	    this.setValue = (val) => {
-	      const elem = getElem(this.id());
-	      if (val === undefined){
-	        if (elem) val = elem[this.targetAttr()]
-	        if (val === undefined) val = props.default;
-	      }
-	      if(this.validation(val)) {
-	        valid = true;
-	        value = val;
-	        if (elem) elem[this.targetAttr()] = val;
-	        return true;
-	      }
-	      valid = false;
-	      value = undefined;
-	      return false;
-	    }
-	    this.value = () => {
-	      const unformatted = (typeof value === 'function') ? value() : value || '';
-	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
-	    }
-	    this.doubleCheck = () => {
-	      valid = undefined;
-	      validate();
-	      return valid;
-	    }
-	    this.validation = function(val) {
-	      const elem = getElem(instance.id);
-	      val = val === undefined && elem ? elem.value : val;
-	      if (val === undefined) return false;
-	      if (valid !== undefined && val === value) return valid;
-	      let valValid = true;
-	      if (props.validation instanceof RegExp) {
-	        valValid = val.match(props.validation) !== null;
-	      }
-	      else if ((typeof props.validation) === 'function') {
-	        valValid = props.validation.apply(null, arguments);
-	      }
-	      else if (Array.isArray(props.validation)) {
-	        valValid = props.validation.indexOf(val) !== -1;
-	      }
-	
-	      return valValid;
-	    };
-	
-	    const validate = (target) => {
-	      target = target || getElem(instance.id());
-	      if (target) {
-	        if (this.setValue(target[this.targetAttr()])) {
-	          getElem(this.errorMsgId()).innerHTML = '';
-	          valid = true;
-	        } else {
-	          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
-	          valid = false;
-	        }
-	      }
-	    }
-	
-	    if (props.clearOnClick) {
-	      du.on.match(`mousedown`, `#${this.id()}`, () => {
-	        const elem = getElem(this.id());
-	        if (elem) elem.value = '';
-	      });
-	    }
-	    du.on.match(`change`, `#${this.id()}`, validate);
-	    du.on.match(`keyup`, `#${this.id()}`, validate);
+	    this.selected = (value) => value === this.value();
 	  }
 	}
 	
-	Input.forAll = (id) => {
-	  const idStr = `#${id}`;
-	  return (func) => {
-	    const elems = document.querySelectorAll(idStr);
-	    for (let index = 0; index < elems.length; index += 1) {
-	      func(elems[index]);
-	    }
-	  }
-	}
+	Select.template = new $t('input/select');
+	Select.html = (instance) => () => Select.template.render(instance);
 	
-	Input.template = new $t('input/input');
-	Input.html = (instance) => () => Input.template.render(instance);
-	Input.flagAttrs = ['checked', 'selected'];
-	Input.attrString = (targetAttr, value) =>{
-	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
-	    return value === true ? targetAttr : '';
-	  }
-	  return `${targetAttr}='${value}'`
-	}
+	module.exports = Select;
 	
-	module.exports = Input;
+	
+	
+	
 	
 });
 
@@ -8863,153 +9062,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/decision-tree.js',
-function (require, exports, module) {
-	
-
-	// branch structure
-	//
-	// style
-	//   solid
-	//     isInset:false
-	//     material
-	//       mdf
-	//         cost
-	//         profile
-	//       soft maple
-	//         cost
-	//         profile
-	//       walnut
-	//         cost
-	//         profile
-	//       alder
-	//         cost
-	//         profile
-	//   panel
-	//     isInset:true
-	//     profile
-	//       shaker
-	//         mdfCore
-	//           soft maple
-	//         nonMdfCore
-	//           soft maple
-	//           walnut
-	//           alder
-	//
-	// isInset (type===Inset)
-	//   magnet
-	
-	const Test = require('../test.js').Test;
-	const DecisionTree = require('../../decision-tree');
-	const states = {};
-	
-	states[5] = {descriptor: 'style'}
-	states[6] = {descriptor: 'solid'}
-	states[7] = {descriptor: 'isInset=false'}
-	states[8] = {descriptor: 'material'}
-	states[9] = {descriptor: 'mdf'}
-	states[10] = {descriptor: 'cost'}
-	states[11] = {descriptor: 'profile'}
-	states[12] = {descriptor: 'soft maple'}
-	states[13] = {descriptor: 'cost'}
-	states[14] = {descriptor: 'profile'}
-	states[15] = {descriptor: 'walnut'}
-	states[16] = {descriptor: 'cost'}
-	states[17] = {descriptor: 'profile'}
-	states[18] = {descriptor: 'alder'}
-	states[19] = {descriptor: 'cost'}
-	states[20] = {descriptor: 'profile'}
-	states[21] = {descriptor: 'panel'}
-	states[22] = {descriptor: 'isInset=true'}
-	states[23] = {descriptor: 'profile'}
-	states[24] = {descriptor: 'shaker'}
-	states[25] = {descriptor: 'mdfCore'}
-	states[26] = {descriptor: 'soft maple'}
-	states[27] = {descriptor: 'nonMdfCore'}
-	states[28] = {descriptor: 'soft maple'}
-	states[29] = {descriptor: 'walnut'}
-	states[30] = {descriptor: 'alder'}
-	
-	states[32] = {descriptor: 'isInset (type===Inset)'}
-	states[33] = {descriptor: 'magnet'}
-	
-	const dNode = new DecisionTree('root', {_UNIQUE_NAME_GROUP: 'tester'});
-	const dNode2 = new DecisionTree('root2', {_UNIQUE_NAME_GROUP: 'tester'});
-	const dNode3 = new DecisionTree('root3', {_UNIQUE_NAME_GROUP: 'testerr'});
-	const statess = dNode.addStates(states);
-	const style = dNode.then(5);
-	const solid = style.then(6);
-	const material = solid.then([7,8])[1];
-	const materials = material.then([9,12,15,18]);
-	materials[0].then([10,11]);
-	materials[1].then([13,14]);
-	materials[2].then([16,17]);
-	materials[3].then([19,20]);
-	
-	
-	const panel = style.then(21);
-	panel.then(22);
-	const profile = panel.then(23);
-	const shaker = profile.then(24);
-	shaker.then(25).then(26);
-	const nonMdfCore = shaker.then(27);
-	nonMdfCore.then([28,29,30]);
-	
-	dNode.then(32).then(33);
-	const func = (node) => node.payload.descriptor !== 'cost';
-	const subtree = style.subtree({'21': '23', '27': /29|30/, '9': func});
-	
-	
-	Test.add('DecisionTree Subtree',(ts) => {
-	  const kept = ['5','6','7','8','9','11','12','13','14','15','16','17',
-	                '18','19','20','21','23','24','25','26','27','29','30'];
-	  const ignored = ['10','22', '28','32','33','root'];
-	  const errors = {
-	    '10': 'Function condition did not work',
-	    '28': 'Regular expression condition did not work',
-	    '22': 'String condition did not work.',
-	    '32': 'Subtree is including parents',
-	    '33': 'Subtree is including parents',
-	    'root': 'Subtree is including parents',
-	    'default': 'This should not happen I would check the modification history of this test file.'
-	  }
-	  let nodeCount = 0;
-	  subtree.forEach((node) => {
-	    const errorMsg = errors[node.name] || errors.default;
-	    ts.assertNotEquals(kept.indexOf(node.name), -1, errorMsg);
-	    nodeCount++;
-	  });
-	  ts.assertEquals(nodeCount, 23, 'Subtree does not include all the nodes it should');
-	  ts.success();
-	});
-	
-	Test.add('DecisionTree Leaves', (ts) => {
-	  const leaves = subtree.leaves();
-	  ts.assertEquals(leaves.length, 11, 'Not plucking all the leaves');
-	  ts.assertEquals(dNode.leaves().length, 15, 'Not plucking all the leaves');
-	  ts.success();
-	});
-	
-	Test.add('DecisionTree _UNIQUE_NAME_GROUP', (ts) => {
-	  try {
-	    dNode2.addState('5', {});
-	    ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
-	  } catch (e) {}
-	  try {
-	    dNode3.addState('5', {});
-	  } catch (e) {
-	    ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
-	  }
-	  try {
-	    const dNode4 = new DecisionTree('root', {_UNIQUE_NAME_GROUP: 'tester'});
-	    ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
-	  } catch (e) {}
-	  ts.success();
-	});
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
 function (require, exports, module) {
 	
@@ -9017,7 +9069,7 @@ function (require, exports, module) {
 	
 	
 	
-	const DecisionTree = require('../../decisionTree.js');
+	const DecisionTree = require('../../decision-tree.js');
 	const Input = require('../input.js');
 	const du = require('../../dom-utils');
 	const $t = require('../../$t');
@@ -9215,311 +9267,149 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/logic-tree.js',
+RequireJS.addFunction('../../public/js/utils/test/tests/decision-tree.js',
 function (require, exports, module) {
 	
 
-	// breakfast) Branch
-	//   food) Multiselect
-	//     bacon) Leaf
-	//     eggs) Select
-	//       2) Select
-	//         over easy) Leaf
-	//         sunny side up) Leaf
-	//         scramble) Leaf
-	//         fried) Leaf
-	//       3) Select
-	//         over easy) Leaf
-	//         sunny side up) Leaf
-	//         scramble) Leaf
-	//         fried) Leaf
-	//       6) Select
-	//         over easy) Leaf
-	//         sunny side up) Leaf
-	//         scramble) Leaf
-	//         fried) Leaf
-	//     toast) Select
-	//       white) Leaf
-	//       wheat) Leaf
-	//       texas) Leaf
-	//     cereal) Branch
-	//       milk) Leaf
-	//       type) Select
-	//         raisin brand) Leaf
-	//         cheerios) Leaf
-	//         life) Leaf
-	//   dishes) Branch
-	//     plate) Leaf
-	//     fork) Leaf
-	//     having cereal) Conditional
-	//       bowl) Leaf
-	//       spoon) Leaf
-	
+	// branch structure
+	//
+	// style
+	//   solid
+	//     isInset:false
+	//     material
+	//       mdf
+	//         cost
+	//         profile
+	//       soft maple
+	//         cost
+	//         profile
+	//       walnut
+	//         cost
+	//         profile
+	//       alder
+	//         cost
+	//         profile
+	//   panel
+	//     isInset:true
+	//     profile
+	//       shaker
+	//         mdfCore
+	//           soft maple
+	//         nonMdfCore
+	//           soft maple
+	//           walnut
+	//           alder
+	//
+	// isInset (type===Inset)
+	//   magnet
 	
 	const Test = require('../test.js').Test;
-	const LogicTree = require('../../logic-tree');
+	const DecisionTree = require('../../decision-tree');
+	const states = {};
 	
-	function createTree(connectEggs, optional) {
-	  const tree = new LogicTree(String.random());
-	  const branch = tree.branch('breakfast');
-	  const food = branch.multiselect('food');
-	  food.optional(optional);
-	  food.leaf('bacon', {cost: 1});
-	  const eggs = food.select('eggs');
-	  const two = eggs.select(2, {multiplier: 2});
-	  eggs.optional(optional);
-	  two.optional(optional);
-	  two.leaf('over easy', {cost: 1.8});
-	  two.leaf('sunny side up', {cost: 2.6});
-	  two.leaf('scramble', {cost: 3.2});
-	  two.leaf('fried', {cost: 1.3});
-	  const three = eggs.select(3, {multiplier: 3}).addChildren('2');
-	  const six = eggs.select(6, {multiplier: 6}).addChildren('2');
-	  const toast = food.select('toast');
-	  three.optional(optional);
-	  six.optional(optional);
-	  toast.optional(optional);
-	  toast.leaf('white', {cost: 1.01});
-	  toast.leaf('wheat', {cost: 1.24});
-	  toast.leaf('texas', {cost: 1.17});
-	  const cereal = food.branch('cereal');
-	  cereal.leaf('milk', {cost: 8.99});
-	  const type = cereal.select('type');
-	  type.optional(optional);
-	  type.leaf('raisin brand', {cost: -0.55});
-	  type.leaf('cheerios', {cost: 1.58});
-	  type.leaf('life', {cost: 1.23});
+	states[5] = {descriptor: 'style'}
+	states[6] = {descriptor: 'solid'}
+	states[7] = {descriptor: 'isInset=false'}
+	states[8] = {descriptor: 'material'}
+	states[9] = {descriptor: 'mdf'}
+	states[10] = {descriptor: 'cost'}
+	states[11] = {descriptor: 'profile'}
+	states[12] = {descriptor: 'soft maple'}
+	states[13] = {descriptor: 'cost'}
+	states[14] = {descriptor: 'profile'}
+	states[15] = {descriptor: 'walnut'}
+	states[16] = {descriptor: 'cost'}
+	states[17] = {descriptor: 'profile'}
+	states[18] = {descriptor: 'alder'}
+	states[19] = {descriptor: 'cost'}
+	states[20] = {descriptor: 'profile'}
+	states[21] = {descriptor: 'panel'}
+	states[22] = {descriptor: 'isInset=true'}
+	states[23] = {descriptor: 'profile'}
+	states[24] = {descriptor: 'shaker'}
+	states[25] = {descriptor: 'mdfCore'}
+	states[26] = {descriptor: 'soft maple'}
+	states[27] = {descriptor: 'nonMdfCore'}
+	states[28] = {descriptor: 'soft maple'}
+	states[29] = {descriptor: 'walnut'}
+	states[30] = {descriptor: 'alder'}
 	
-	  const dishes = branch.branch('dishes');
-	  const needPlate = dishes.conditional('need plate', (tree) => tree.reachable('bacon') || tree.reachable('eggs'));
-	  needPlate.leaf('plate', {cost: .14});
-	  needPlate.leaf('fork', {cost: .07});
-	  const havingCereal = dishes.conditional('having cereal', (tree) => tree.reachable('cereal'));
-	  havingCereal.leaf('bowl', {cost: .18});
-	  havingCereal.leaf('spoon', {cost: .06});
+	states[32] = {descriptor: 'isInset (type===Inset)'}
+	states[33] = {descriptor: 'magnet'}
 	
-	  if (connectEggs) {
-	    two.connectValues(three);
-	    two.connectDefaults(six);
+	const dNode = new DecisionTree('root', {_UNIQUE_NAME_GROUP: 'tester'});
+	const dNode2 = new DecisionTree('root2', {_UNIQUE_NAME_GROUP: 'tester'});
+	const dNode3 = new DecisionTree('root3', {_UNIQUE_NAME_GROUP: 'testerr'});
+	const statess = dNode.addStates(states);
+	const style = dNode.then(5);
+	const solid = style.then(6);
+	const material = solid.then([7,8])[1];
+	const materials = material.then([9,12,15,18]);
+	materials[0].then([10,11]);
+	materials[1].then([13,14]);
+	materials[2].then([16,17]);
+	materials[3].then([19,20]);
+	
+	
+	const panel = style.then(21);
+	panel.then(22);
+	const profile = panel.then(23);
+	const shaker = profile.then(24);
+	shaker.then(25).then(26);
+	const nonMdfCore = shaker.then(27);
+	nonMdfCore.then([28,29,30]);
+	
+	dNode.then(32).then(33);
+	const func = (node) => node.payload.descriptor !== 'cost';
+	const subtree = style.subtree({'21': '23', '27': /29|30/, '9': func});
+	
+	
+	Test.add('DecisionTree Subtree',(ts) => {
+	  const kept = ['5','6','7','8','9','11','12','13','14','15','16','17',
+	                '18','19','20','21','23','24','25','26','27','29','30'];
+	  const ignored = ['10','22', '28','32','33','root'];
+	  const errors = {
+	    '10': 'Function condition did not work',
+	    '28': 'Regular expression condition did not work',
+	    '22': 'String condition did not work.',
+	    '32': 'Subtree is including parents',
+	    '33': 'Subtree is including parents',
+	    'root': 'Subtree is including parents',
+	    'default': 'This should not happen I would check the modification history of this test file.'
 	  }
-	  return tree;
-	}
-	
-	
-	function access(index, returnValue, testFuncs, tree) {
-	  const func = testFuncs[index];
-	  if ((typeof func === 'function')) {
-	    func(tree, returnValue);
-	  }
-	}
-	
-	function accessProcess(ts, testFuncs, optional) {
-	  let tree;
-	
-	  access('init', tree = createTree(true, optional), testFuncs, tree);
-	  access('dontEat2', tree.setChoice('food', null), testFuncs, tree);
-	  if (optional)
-	    access('dontEat', tree.setChoice('food', {}), testFuncs, tree);
-	
-	  access('bacon', tree.setChoice('food', {bacon: true}), testFuncs, tree);
-	
-	  access('toast', tree.setChoice('food', {toast: true}), testFuncs, tree);
-	  access('chooseToast', tree.setChoice('toast', 'white'), testFuncs, tree);
-	
-	  access('chooseCereal', tree.setChoice('type', 'life'), testFuncs, tree);
-	  access('cereal', tree.setChoice('food', {cereal: true}), testFuncs, tree);
-	
-	  access('eggs', tree.setChoice('food', {eggs: true}), testFuncs, tree);
-	  access('2', tree.setChoice('eggs', '2'), testFuncs, tree);
-	  access('2value', tree.setChoice('2', 'scramble'), testFuncs, tree);
-	  if (optional)
-	    access('2NoValue', tree.setChoice('2', null), testFuncs, tree);
-	  access('2valueAgain', tree.setChoice('2', 'scramble'), testFuncs, tree);
-	  access('2default', tree.setDefault('2', 'fried'), testFuncs, tree);
-	  access('3', tree.setChoice('eggs', '3'), testFuncs, tree);
-	  access('6', tree.setChoice('eggs', '6'), testFuncs, tree);
-	
-	
-	  access('all', tree.setChoice('food', {eggs: true, bacon: true, toast: true, cereal: true}), testFuncs, tree);
-	}
-	
-	
-	Test.add('LogicTree structure', (ts) => {
-	  const tree = createTree();
-	  const properStructure = "breakfast) Branch\n  food) Multiselect\n    bacon) Leaf\n    eggs) Select\n      2) Select\n        over easy) Leaf\n        sunny side up) Leaf\n        scramble) Leaf\n        fried) Leaf\n      3) Select\n        over easy) Leaf\n        sunny side up) Leaf\n        scramble) Leaf\n        fried) Leaf\n      6) Select\n        over easy) Leaf\n        sunny side up) Leaf\n        scramble) Leaf\n        fried) Leaf\n    toast) Select\n      white) Leaf\n      wheat) Leaf\n      texas) Leaf\n    cereal) Branch\n      milk) Leaf\n      type) Select\n        raisin brand) Leaf\n        cheerios) Leaf\n        life) Leaf\n  dishes) Branch\n    need plate) Conditional\n      plate) Leaf\n      fork) Leaf\n    having cereal) Conditional\n      bowl) Leaf\n      spoon) Leaf\n";
-	  ts.assertEquals(tree.structure(), properStructure);
+	  let nodeCount = 0;
+	  subtree.forEach((node) => {
+	    const errorMsg = errors[node.name] || errors.default;
+	    ts.assertNotEquals(kept.indexOf(node.name), -1, errorMsg);
+	    nodeCount++;
+	  });
+	  ts.assertEquals(nodeCount, 23, 'Subtree does not include all the nodes it should');
 	  ts.success();
 	});
 	
-	Test.add('LogicTree decisions', (ts) => {
-	  function validateDecisions (tree, ...names) {
-	    const decisions = tree.decisions();
-	    ts.assertEquals(decisions.length, names.length);
-	    const decisionNames = decisions.map((elem) => elem.name);
-	    for (let index = 0; index < names.length; index += 1) {
-	      ts.assertNotEquals(decisionNames.indexOf(names[index]) === -1);
-	    }
-	  }
-	
-	  const testFuncs = {
-	    init: (tree) => validateDecisions(tree, 'food'),
-	    dontEat: (tree) => validateDecisions(tree, 'food'),
-	
-	    bacon: (tree) => validateDecisions(tree, 'food'),
-	
-	    toast: (tree) => validateDecisions(tree, 'food', 'toast'),
-	    chooseToast: (tree) => validateDecisions(tree, 'food', 'toast'),
-	
-	    chooseCereal: (tree) => validateDecisions(tree, 'food', 'toast'),
-	    cereal: (tree) => validateDecisions(tree, 'food', 'having cereal'),
-	
-	    eggs: (tree) => validateDecisions(tree, 'food', 'eggs'),
-	    "2": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	    "2value": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	    "2NoValue": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	    "2valueAgain": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	    "2default": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	    "3": (tree) => validateDecisions(tree, 'food', 'eggs', '3'),
-	    "6": (tree) => validateDecisions(tree, 'food', 'eggs', '6'),
-	
-	    all: (tree) => validateDecisions(tree, 'food', 'eggs', '6', 'having cereal', 'toast')
-	  }
-	  accessProcess(ts, testFuncs);
+	Test.add('DecisionTree Leaves', (ts) => {
+	  const leaves = subtree.leaves();
+	  ts.assertEquals(leaves.length, 11, 'Not plucking all the leaves');
+	  ts.assertEquals(dNode.leaves().length, 15, 'Not plucking all the leaves');
 	  ts.success();
 	});
 	
-	function testIsComplete(ts) {
-	  return (tree, isComplete) => ts.assertTrue(isComplete === tree.isComplete());
-	}
-	
-	Test.add('LogicTree isComplete (optional)', (ts) => {
-	  const tic = testIsComplete(ts);
-	  const testFuncs = {
-	    init: (tree) => tic(tree, true),
-	    dontEat: (tree) =>  tic(tree, true),
-	    dontEat2: (tree) =>  tic(tree, true),
-	    bacon: (tree) =>  tic(tree, true),
-	    toast: (tree) =>  tic(tree, true),
-	    chooseToast: (tree) =>  tic(tree, true),
-	    chooseCereal: (tree) =>  tic(tree, true),
-	    cereal: (tree) =>  tic(tree, true),
-	    eggs: (tree) =>  tic(tree, true),
-	    "2": (tree) =>  tic(tree, true),
-	    "2value": (tree) =>  tic(tree, true),
-	    "2NoValue": (tree) =>  tic(tree, true),
-	    "2valueAgain": (tree) =>  tic(tree, true),
-	    "2default": (tree) =>  tic(tree, true),
-	    "3": (tree) =>  tic(tree, true),
-	    "6": (tree) =>  tic(tree, true),
-	    all: (tree) =>  tic(tree, true),
+	Test.add('DecisionTree _UNIQUE_NAME_GROUP', (ts) => {
+	  try {
+	    dNode2.addState('5', {});
+	    ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
+	  } catch (e) {}
+	  try {
+	    dNode3.addState('5', {});
+	  } catch (e) {
+	    ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
 	  }
-	  accessProcess(ts, testFuncs, true);
+	  try {
+	    const dNode4 = new DecisionTree('root', {_UNIQUE_NAME_GROUP: 'tester'});
+	    ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
+	  } catch (e) {}
 	  ts.success();
 	});
-	
-	Test.add('LogicTree isComplete (!optional)', (ts) => {
-	  const tic = testIsComplete(ts);
-	  const testFuncs = {
-	    init: (tree) => tic(tree, false),
-	    dontEat: (tree) =>  tic(tree, false),
-	    dontEat2: (tree) =>  tic(tree, false),
-	    bacon: (tree) =>  tic(tree, true),
-	    toast: (tree) =>  tic(tree, false),
-	    chooseToast: (tree) =>  tic(tree, true),
-	    chooseCereal: (tree) =>  tic(tree, true),
-	    cereal: (tree) =>  tic(tree, true),
-	    eggs: (tree) =>  tic(tree, false),
-	    "2": (tree) =>  tic(tree, false),
-	    "2value": (tree) =>  tic(tree, true),
-	    "2NoValue": (tree) =>  tic(tree, false),
-	    "2valueAgain": (tree) =>  tic(tree, true),
-	    "2default": (tree) =>  tic(tree, true),
-	    "3": (tree) =>  tic(tree, true),
-	    "6": (tree) =>  tic(tree, true),
-	    all: (tree) =>  tic(tree, true),
-	  }
-	  accessProcess(ts, testFuncs, false);
-	  ts.success();
-	});
-	
-	// Test.add('LogicTree ', (ts) => {
-	//   function validateDecisions (tree, ...names) {
-	//     const decisions = tree.decisions();
-	//     ts.assertEquals(decisions.length, names.length);
-	//     const decisionNames = decisions.map((elem) => elem.name);
-	//     for (let index = 0; index < names.length; index += 1) {
-	//       ts.assertNotEquals(decisionNames.indexOf(names[index]) === -1);
-	//     }
-	//   }
-	//
-	//   const testFuncs = {
-	//     init: (tree) => ,
-	//     dontEat: (tree) => ,
-	//
-	//     bacon: (tree) => ,
-	//
-	//     toast: (tree) => ,
-	//     chooseToast: (tree) => ,
-	//
-	//     chooseCereal: (tree) => ,
-	//     cereal: (tree) => ,
-	//
-	//     eggs: (tree) => ,
-	//     "2": (tree) => ,
-	//     "2value": (tree) => ,
-	//     "2NoValue": (tree) => ,
-	//     "2valueAgain": (tree) => ,
-	//     "2default": (tree) => ,
-	//     "6": (tree) => ,
-	//
-	//     all: (tree) =>
-	//   }
-	//   accessProcess(ts, testFuncs);
-	//   ts.success();
-	// });
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Select extends Input {
-	  constructor(props) {
-	    super(props);
-	    const isArray = Array.isArray(props.list);
-	    let value;
-	    if (isArray) {
-	      value = props.index && props.list[props.index] ?
-	      props.list[props.index] : props.list[0];
-	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
-	    } else {
-	      const key = Object.keys(props.list)[0];
-	      value = props.value || key;
-	    }
-	    props.value = undefined;
-	    this.setValue(value);
-	    this.isArray = () => isArray;
-	
-	    this.selected = (value) => value === this.value();
-	  }
-	}
-	
-	Select.template = new $t('input/select');
-	Select.html = (instance) => () => Select.template.render(instance);
-	
-	module.exports = Select;
-	
-	
-	
-	
 	
 });
 
@@ -9724,24 +9614,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("property").value() === true ? 'checked' : '') +
 			`> </span>`
 	
-	exports['expandable/input-repeat'] = (get, $t) => 
-			`<div> ` +
-			$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
-			` <button ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' class='expandable-list-add-btn' ` +
-			$t.clean(get("hideAddBtn") ? 'hidden' : '') +
-			`> Add ` +
-			$t.clean(get("listElemLable")()) +
-			` here </button> <div class='error' id='` +
-			$t.clean(get("ERROR_CNT_ID")) +
-			`'></div> </div> `
-	
-	exports['-1921787246'] = (get, $t) => 
-			`<option value="` +
-			$t.clean(get("option")) +
-			`" ></option>`
-	
 	exports['expandable/list'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -9940,6 +9812,24 @@ exports['115117775'] = (get, $t) =>
 			`> ` +
 			$t.clean(get("value")) +
 			` </option>`
+	
+	exports['expandable/input-repeat'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
+			` <button ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' class='expandable-list-add-btn' ` +
+			$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+			`> Add ` +
+			$t.clean(get("listElemLable")()) +
+			` here </button> <div class='error' id='` +
+			$t.clean(get("ERROR_CNT_ID")) +
+			`'></div> </div> `
+	
+	exports['-1921787246'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("option")) +
+			`" ></option>`
 	
 	exports['cabinet/body'] = (get, $t) => 
 			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
@@ -10744,52 +10634,165 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/show.js',
+RequireJS.addFunction('./app-src/division-patterns.js',
 function (require, exports, module) {
 	
 
+	class Pattern {
+	  constructor(str) {
+	    this.str = str;
+	    let unique = {};
+	    for (let index = 0; index < str.length; index += 1) {
+	      unique[str[index]] = true;
+	    }
+	    unique = Object.keys(unique).join('');
+	    this.unique = unique;
+	    this.equal = this.unique.length === 1;
+	    class Element {
+	      constructor(id, index, count) {
+	        let value;
+	        this.id = id;
+	        this.count = count || 1;
+	        this.indexes = [index];
+	        this.value = (val) => {
+	          if (val !== undefined) {
+	            Pattern.mostResent[id] = val;
+	            value = val;
+	          }
+	          return value;
+	        }
+	      }
+	    }
 	
-	const Panel = require('./objects/assembly/assemblies/panel.js');
+	    if ((typeof str) !== 'string' || str.length === 0)
+	      throw new Error('Must define str (arg0) as string of length > 1');
 	
-	class Show {
-	  constructor(name) {
-	    this.name = name;
-	    Show.types[name] = this;
+	    const elements = {};
+	    const values = {};
+	    const updateOrder = [];
+	    for (let index = str.length - 1; index > -1; index -= 1) {
+	      const char = str[index];
+	      if (elements[char]) {
+	        elements[char].count++;
+	        elements[char].indexes.push(index);
+	      } else {
+	        elements[char] = new Element(char, index);
+	        if (Pattern.mostResent[char] !== undefined) {
+	          elements[char].value(Pattern.mostResent[char]);
+	          updateOrder.push(char);
+	        }
+	      }
+	    }
+	
+	    this.ids = Object.keys(elements);
+	    this.size = str.length;
+	    let lastElem;
+	    this.satisfied = () => updateOrder.length === unique.length - 1;
+	
+	    const calc = (dist) => {
+	      const values = {};
+	      updateOrder.forEach((id) => {
+	        const elem = elements[id];
+	        dist -= elem.count * elem.value();
+	        values[elem.id] = elem.value();
+	      });
+	      if (lastElem === undefined) {
+	        for (let index = 0; index < unique.length; index += 1) {
+	          const char = unique[index];
+	          if (!values[char]) {
+	            if (lastElem === undefined) lastElem = elements[char];
+	            else {lastElem = undefined; break;}
+	          }
+	        }
+	      }
+	      if (lastElem !== undefined) {
+	        lastElem.value(dist / lastElem.count);
+	        values[lastElem.id] = lastElem.value();
+	      }
+	      const list = [];
+	      const fill = [];
+	      if (lastElem)
+	        for (let index = 0; index < unique.length; index += 1)
+	          fill[index] = values[unique[index]];
+	      for (let index = 0; index < str.length; index += 1)
+	        list[index] = values[str[index]];
+	      const retObj = {values, list, fill, str};
+	      return retObj;
+	    }
+	
+	    this.value = (id, value) => {
+	      if ((typeof id) === 'number') id = unique[id];
+	      if ((typeof value) === 'number') {
+	        const index = updateOrder.indexOf(id);
+	        if (index !== -1) updateOrder.splice(index, 1);
+	        updateOrder.push(id);
+	        if (updateOrder.length === this.ids.length) {
+	          lastElem = elements[updateOrder[0]];
+	          updateOrder.splice(0, 1);
+	        }
+	        elements[id].value(value);
+	      } else {
+	        return elements[id].value();
+	      }
+	    }
+	
+	    this.toJson = () => {
+	      const json = this.calc();
+	      json.list = undefined;
+	      json.fill = undefined;
+	      return json;
+	    }
+	
+	    this.elements = elements;
+	    this.calc = calc;
 	  }
 	}
-	Show.types = {};
-	Show.listTypes = () => Object.values(Show.types);
-	new Show('None');
-	new Show('Flat');
-	new Show('Inset Panel');
-	module.exports = Show
 	
+	Pattern.fromJson = (json) => {
+	  const pattern = new Pattern(json.str);
+	  const keys = Object.keys(pattern.values);
+	  keys.foEach((key) => pattern.value(key, pattern.values[key]));
+	  return json;
+	};
+	Pattern.mostResent = {};
 	
-	
-	
+	const p1 = new Pattern('babcdaf');
+	p1.value('b', 2);
+	p1.value('a', 2);
+	p1.value('c', 3);
+	p1.value('d', 4);
+	p1.value('b', 2);
+	p1.value('f', 5);
+	p1.calc(20);
+	const p2 = new Pattern(' // ^^%');
+	module.exports = Pattern
 	
 });
 
 
-RequireJS.addFunction('./app-src/utils.js',
+RequireJS.addFunction('./app-src/error.js',
 function (require, exports, module) {
 	
 
 	
 	
-	const removeSuffixes = ['Part', 'Section'].join('|');
-	function formatConstructorId (obj) {
-	  return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
-	}
 	
-	function getDefaultSize(instance) {
-	  const constructorName = instance.constructor.name;
-	  if (constructorName === 'Cabinet') return {length: 24, width: 50, thickness: 21};
-	  return {length: 0, width: 0, thickness: 0};
+	class InvalidComputation {
+	  constructor(attributes) {
+	    this.errorCode = 400;
+	    this.message = 'Error within input parameters';
+	    const keys = Object.keys(attributes);
+	    for (let index = 0; index < keys.length; index += 1) {
+	      const key = keys[index];
+	      this.message += `\n\t${key}: '${value}'`;
+	    }
+	  }
 	}
+	module.exports = InvalidComputation
 	
-	exports.formatConstructorId = formatConstructorId;
-	exports.getDefaultSize = getDefaultSize;
+	
+	
+	
 	
 });
 
@@ -10861,102 +10864,6 @@ function (require, exports, module) {
 	}
 	
 	Request.get(EPNTS.config.get(), init, console.error);
-	
-});
-
-
-RequireJS.addFunction('./app-src/decisionTree.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	// terminology
-	// name - String to define state;
-	// payload - data returned for a given state
-	// stateObject - object defining states {name: [payload]...}
-	// states - array of availible state names.
-	// node - {name, states, payload, then, addState, addStates};
-	// then(name) - a function to set a following state.
-	// next(name) - a function to get the next state.
-	// back() - a function to move back up the tree.
-	// top() - a function to get root;
-	//
-	// returns all functions return current node;
-	class DecisionTree {
-	  constructor(name, payload) {
-	    name = name || 'root';
-	    const stateConfigs = {};
-	    const tree = {};
-	    const nodeMap = {};
-	
-	    function addState(name, payload) {
-	      return stateConfigs[name] = payload;
-	    }
-	
-	    function addStates(sts) {
-	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
-	      const keys = Object.keys(sts);
-	      keys.forEach((key) => stateConfigs[key] = sts[key]);
-	    }
-	
-	    function getState(name, parent) {
-	      return new DecisionNode(name, stateConfigs[name], parent);
-	    }
-	
-	
-	    class DecisionNode {
-	      constructor(name, payload, parent) {
-	        const states = {};
-	        let jump;
-	        payload = payload || {};
-	        payload._nodeId = `decision-node-${String.random(7)}`;
-	        nodeMap[payload._nodeId] = this;
-	        this.getNode = (nodeId) => nodeMap[nodeId];
-	        this.name = name;
-	        this.states = states;
-	        this.payload = payload;
-	        this.jump = (name) => {
-	          if (name) jump = getState(name, parent);
-	          return jump;
-	        };
-	        this.then = (name, payload) => {
-	          payload = payload ? addState(name, payload) : stateConfigs[name];
-	          states[name] = (getState(name, this));
-	          const state = states[name];
-	          return state === undefined ? undefined : state.jump() || state;
-	        }
-	        this.addState = (name, payload) => addState(name, payload) && this;
-	        this.addStates = (sts) => addStates(sts) && this;
-	        this.next = (name) => {
-	          const state = states[name];
-	          return state === undefined ? undefined : state.jump() || state;
-	        }
-	
-	        this.routePayloads = () => {
-	          let currNode = this;
-	          const payloads = [];
-	          while(currNode !== null) {
-	            payloads.push(currNode.payload);
-	            currNode = currNode.back();
-	          }
-	          return payloads.reverse();
-	        }
-	        this.back = () => parent;
-	        this.top = () => rootNode;
-	      }
-	    }
-	
-	    const rootNode = new DecisionNode(name, payload, null);
-	    return rootNode;
-	  }
-	}
-	module.exports = DecisionTree
-	
-	
-	
-	
 	
 });
 
@@ -11136,161 +11043,94 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/division-patterns.js',
-function (require, exports, module) {
-	
-
-	class Pattern {
-	  constructor(str) {
-	    this.str = str;
-	    let unique = {};
-	    for (let index = 0; index < str.length; index += 1) {
-	      unique[str[index]] = true;
-	    }
-	    unique = Object.keys(unique).join('');
-	    this.unique = unique;
-	    this.equal = this.unique.length === 1;
-	    class Element {
-	      constructor(id, index, count) {
-	        let value;
-	        this.id = id;
-	        this.count = count || 1;
-	        this.indexes = [index];
-	        this.value = (val) => {
-	          if (val !== undefined) {
-	            Pattern.mostResent[id] = val;
-	            value = val;
-	          }
-	          return value;
-	        }
-	      }
-	    }
-	
-	    if ((typeof str) !== 'string' || str.length === 0)
-	      throw new Error('Must define str (arg0) as string of length > 1');
-	
-	    const elements = {};
-	    const values = {};
-	    const updateOrder = [];
-	    for (let index = str.length - 1; index > -1; index -= 1) {
-	      const char = str[index];
-	      if (elements[char]) {
-	        elements[char].count++;
-	        elements[char].indexes.push(index);
-	      } else {
-	        elements[char] = new Element(char, index);
-	        if (Pattern.mostResent[char] !== undefined) {
-	          elements[char].value(Pattern.mostResent[char]);
-	          updateOrder.push(char);
-	        }
-	      }
-	    }
-	
-	    this.ids = Object.keys(elements);
-	    this.size = str.length;
-	    let lastElem;
-	    this.satisfied = () => updateOrder.length === unique.length - 1;
-	
-	    const calc = (dist) => {
-	      const values = {};
-	      updateOrder.forEach((id) => {
-	        const elem = elements[id];
-	        dist -= elem.count * elem.value();
-	        values[elem.id] = elem.value();
-	      });
-	      if (lastElem === undefined) {
-	        for (let index = 0; index < unique.length; index += 1) {
-	          const char = unique[index];
-	          if (!values[char]) {
-	            if (lastElem === undefined) lastElem = elements[char];
-	            else {lastElem = undefined; break;}
-	          }
-	        }
-	      }
-	      if (lastElem !== undefined) {
-	        lastElem.value(dist / lastElem.count);
-	        values[lastElem.id] = lastElem.value();
-	      }
-	      const list = [];
-	      const fill = [];
-	      if (lastElem)
-	        for (let index = 0; index < unique.length; index += 1)
-	          fill[index] = values[unique[index]];
-	      for (let index = 0; index < str.length; index += 1)
-	        list[index] = values[str[index]];
-	      const retObj = {values, list, fill, str};
-	      return retObj;
-	    }
-	
-	    this.value = (id, value) => {
-	      if ((typeof id) === 'number') id = unique[id];
-	      if ((typeof value) === 'number') {
-	        const index = updateOrder.indexOf(id);
-	        if (index !== -1) updateOrder.splice(index, 1);
-	        updateOrder.push(id);
-	        if (updateOrder.length === this.ids.length) {
-	          lastElem = elements[updateOrder[0]];
-	          updateOrder.splice(0, 1);
-	        }
-	        elements[id].value(value);
-	      } else {
-	        return elements[id].value();
-	      }
-	    }
-	
-	    this.toJson = () => {
-	      const json = this.calc();
-	      json.list = undefined;
-	      json.fill = undefined;
-	      return json;
-	    }
-	
-	    this.elements = elements;
-	    this.calc = calc;
-	  }
-	}
-	
-	Pattern.fromJson = (json) => {
-	  const pattern = new Pattern(json.str);
-	  const keys = Object.keys(pattern.values);
-	  keys.foEach((key) => pattern.value(key, pattern.values[key]));
-	  return json;
-	};
-	Pattern.mostResent = {};
-	
-	const p1 = new Pattern('babcdaf');
-	p1.value('b', 2);
-	p1.value('a', 2);
-	p1.value('c', 3);
-	p1.value('d', 4);
-	p1.value('b', 2);
-	p1.value('f', 5);
-	p1.calc(20);
-	const p2 = new Pattern(' // ^^%');
-	module.exports = Pattern
-	
-});
-
-
-RequireJS.addFunction('./app-src/error.js',
+RequireJS.addFunction('./app-src/decisionTree.js',
 function (require, exports, module) {
 	
 
 	
 	
 	
-	class InvalidComputation {
-	  constructor(attributes) {
-	    this.errorCode = 400;
-	    this.message = 'Error within input parameters';
-	    const keys = Object.keys(attributes);
-	    for (let index = 0; index < keys.length; index += 1) {
-	      const key = keys[index];
-	      this.message += `\n\t${key}: '${value}'`;
+	// terminology
+	// name - String to define state;
+	// payload - data returned for a given state
+	// stateObject - object defining states {name: [payload]...}
+	// states - array of availible state names.
+	// node - {name, states, payload, then, addState, addStates};
+	// then(name) - a function to set a following state.
+	// next(name) - a function to get the next state.
+	// back() - a function to move back up the tree.
+	// top() - a function to get root;
+	//
+	// returns all functions return current node;
+	class DecisionTree {
+	  constructor(name, payload) {
+	    name = name || 'root';
+	    const stateConfigs = {};
+	    const tree = {};
+	    const nodeMap = {};
+	
+	    function addState(name, payload) {
+	      return stateConfigs[name] = payload;
 	    }
+	
+	    function addStates(sts) {
+	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
+	      const keys = Object.keys(sts);
+	      keys.forEach((key) => stateConfigs[key] = sts[key]);
+	    }
+	
+	    function getState(name, parent) {
+	      return new DecisionNode(name, stateConfigs[name], parent);
+	    }
+	
+	
+	    class DecisionNode {
+	      constructor(name, payload, parent) {
+	        const states = {};
+	        let jump;
+	        payload = payload || {};
+	        payload._nodeId = `decision-node-${String.random(7)}`;
+	        nodeMap[payload._nodeId] = this;
+	        this.getNode = (nodeId) => nodeMap[nodeId];
+	        this.name = name;
+	        this.states = states;
+	        this.payload = payload;
+	        this.jump = (name) => {
+	          if (name) jump = getState(name, parent);
+	          return jump;
+	        };
+	        this.then = (name, payload) => {
+	          payload = payload ? addState(name, payload) : stateConfigs[name];
+	          states[name] = (getState(name, this));
+	          const state = states[name];
+	          return state === undefined ? undefined : state.jump() || state;
+	        }
+	        this.addState = (name, payload) => addState(name, payload) && this;
+	        this.addStates = (sts) => addStates(sts) && this;
+	        this.next = (name) => {
+	          const state = states[name];
+	          return state === undefined ? undefined : state.jump() || state;
+	        }
+	
+	        this.routePayloads = () => {
+	          let currNode = this;
+	          const payloads = [];
+	          while(currNode !== null) {
+	            payloads.push(currNode.payload);
+	            currNode = currNode.back();
+	          }
+	          return payloads.reverse();
+	        }
+	        this.back = () => parent;
+	        this.top = () => rootNode;
+	      }
+	    }
+	
+	    const rootNode = new DecisionNode(name, payload, null);
+	    return rootNode;
 	  }
 	}
-	module.exports = InvalidComputation
+	module.exports = DecisionTree
 	
 	
 	
@@ -11299,423 +11139,382 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/config/properties.js',
+RequireJS.addFunction('./app-src/utils.js',
 function (require, exports, module) {
 	
 
-	const Property = require('./property');
+	
+	
+	const removeSuffixes = ['Part', 'Section'].join('|');
+	function formatConstructorId (obj) {
+	  return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
+	}
+	
+	function getDefaultSize(instance) {
+	  const constructorName = instance.constructor.name;
+	  if (constructorName === 'Cabinet') return {length: 24, width: 50, thickness: 21};
+	  return {length: 0, width: 0, thickness: 0};
+	}
+	
+	exports.formatConstructorId = formatConstructorId;
+	exports.getDefaultSize = getDefaultSize;
+	
+});
+
+
+RequireJS.addFunction('./app-src/show.js',
+function (require, exports, module) {
+	
+
+	
+	const Panel = require('./objects/assembly/assemblies/panel.js');
+	
+	class Show {
+	  constructor(name) {
+	    this.name = name;
+	    Show.types[name] = this;
+	  }
+	}
+	Show.types = {};
+	Show.listTypes = () => Object.values(Show.types);
+	new Show('None');
+	new Show('Flat');
+	new Show('Inset Panel');
+	module.exports = Show
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/cabinet.js',
+function (require, exports, module) {
+	
+
+	
+	const Show = require('../show.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const ThreeDModel = require('../three-d/three-d-model.js');
+	const OpenSectionDisplay = require('./open-section.js');
+	const CabinetConfig = require('../config/cabinet-configs.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 	const Measurement = require('../../../../public/js/utils/measurment.js');
-	const EPNTS = require('../../generated/EPNTS');
 	const Request = require('../../../../public/js/utils/request.js');
-	
-	const h = new Property('h', 'height', null);
-	const w = new Property('w', 'width', null);
-	const d = new Property('d', 'depth', null);
-	const t = new Property('t', 'thickness', null);
-	const l = new Property('l', 'length', null);
-	
-	
-	let unitCount = 0;
-	const UNITS = [];
-	Measurement.units().forEach((unit) =>
-	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
-	UNITS._VALUE = Measurement.unit();
-	
-	const IMPERIAL_US = Measurement.units()[1];
-	const assemProps = {
-	  Overlay: [
-	    new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
-	  ],
-	  Reveal: [
-	    new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
-	    new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
-	    new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
-	  ],
-	  Inset: [
-	    new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
-	  ],
-	  Cabinet: [
-	      h.clone(), w.clone(), d.clone(),
-	      new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
-	      new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
-	      new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
-	      new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
-	      new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
-	      new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
-	      new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
-	      new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
-	      new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
-	  ],
-	  Panel: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  Guides: [
-	    l.clone(),
-	    new Property('dbtos', 'Drawer Box Top Offset', {value: 1/2, notMetric: IMPERIAL_US}),
-	    new Property('dbsos', 'Drawer Box Side Offest', {value: 3/16, notMetric: IMPERIAL_US}),
-	    new Property('dbbos', 'Drawer Box Bottom Offset', {value: 1/2, notMetric: IMPERIAL_US})
-	  ],
-	  DoorAndFront:[
-	    new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
-	    new Property('dafip', 'Door and front inset panel', {value: null})
-	  ],
-	  Door: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  DrawerBox: [
-	    h.clone(), w.clone(), d.clone(),
-	    new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
-	    new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
-	    new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
-	    new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
-	  ],
-	  DrawerFront: [
-	    h.clone(), w.clone(), t.clone(),
-	    new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
-	  ],
-	  Frame: [
-	    h.clone(), w.clone(), t.clone()
-	  ],
-	  Handle: [
-	    l.clone(), w.clone(),
-	    new Property('c2c', 'Center To Center', null),
-	    new Property('proj', 'Projection', null),
-	  ],
-	  Hinge: [
-	    new Property('maxtab', 'Max Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
-	    new Property('mintab', 'Minimum Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
-	    new Property('maxol', 'Max Door Overlay', {value: 1/2, notMetric: IMPERIAL_US}),
-	    new Property('minol', 'Minimum Door Overlay', {value: .5, notMetric: IMPERIAL_US})
-	  ],
-	  Opening: []
-	}
-	
-	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
-	function assemProperties(clazz, filter) {
-	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	  props = assemProps[clazz] || [];
-	  if ((typeof filter) != 'function') return props;
-	  props = props.filter(filter);
-	  return props;
-	}
-	
-	let config = {};
-	const changes = {};
-	const copyMap = {};
-	assemProperties.changes = {
-	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
-	  save: (id) => {
-	    const list = changes[id];
-	    if (!list) throw new Error(`Unkown change id '${id}'`);
-	    const group = list._GROUP;
-	    if (config[group] === undefined) config[group] = [];
-	    if(copyMap[id] === undefined) {
-	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
-	      copyMap[list._ID] = config[group][list._NAME].properties;
-	    } else {
-	      const tempList = changes[id];
-	      for (let index = 0; index < tempList.length; index += 1) {
-	        const tempProp = tempList[index];
-	        const configProp = copyMap[id][index];
-	        configProp.value(tempProp.value());
-	      }
-	    }
-	   },
-	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
-	  delete: (id) => {
-	    delete config[changes[id][0].name()][changes[id]._NAME];
-	    delete changes[id];
-	    delete copyMap[id];
-	  },
-	  changed: (id) => {
-	    const list = changes[id];
-	    if (list === undefined) return false;
-	    for (let index = 0; index < list.length; index += 1) {
-	      const prop = list[index];
-	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
-	        console.log('booyacka!');
-	      }
-	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
-	        return true;
-	      }
-	    }
-	    return false;
-	  },
-	  changesExist: () => {
-	      const lists = Object.values(changes);
-	      for (let index = 0; index < lists.length; index += 1) {
-	        if (assemProperties.changes.changed(lists[index]._ID)) {
-	          return true;
-	        }
-	      }
-	      return false;
-	  }
-	}
-	
-	assemProperties.config = () => {
-	  const plainObj = {};
-	  const keys = Object.keys(config);
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    const lists = config[key];
-	    const listKeys = Object.keys(lists);
-	    plainObj[key] = {};
-	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
-	      const listKey = listKeys[lIndex];
-	      const list = lists[listKey];
-	      const propObj = {name: listKey, properties: []};
-	      plainObj[key][listKey] = propObj;
-	      list.properties.forEach((property) =>
-	          propObj.properties.push(property.toJson(excludeKeys, true)))
-	    }
-	  }
-	  return plainObj;
-	}
-	assemProperties.list = () => Object.keys(assemProps);
-	assemProperties.new = (group, name) => {
-	  if (assemProps[group]) {
-	    const list = [];
-	    const ogList = assemProps[group].filter(hasValueFilter);
-	    for (let index = 0; index < ogList.length; index += 1) {
-	      list[index] = ogList[index].clone();
-	    }
-	    list._ID = String.random();
-	    list._GROUP = group;
-	    list._NAME = name;
-	    changes[list._ID] = list;
-	    return list;
-	  }
-	  throw new Error(`Requesting invalid Property Group '${group}'`);
-	}
-	
-	const dummyFilter = () => true;
-	assemProperties.groupList = (group, filter) => {
-	  filter = filter || dummyFilter;
-	  const groupList = config[group];
-	  const changeList = {};
-	  if (groupList === undefined) return {};
-	  const groupKeys = Object.keys(groupList);
-	  for (let index = 0; index < groupKeys.length; index += 1) {
-	    const groupKey = groupKeys[index];
-	    const list = groupList[groupKey];
-	    const properties = groupList[list.name].properties;
-	    const codes = properties.map((prop) => prop.code());
-	    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
-	    //                   .filter(filter);
-	    // newProps.forEach((prop) => properties.push(prop.clone()));
-	    changeList[list.name] = {name: list.name, properties: []};
-	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
-	      const prop = properties[pIndex];
-	      changeList[list.name].properties.push(prop.clone());
-	    }
-	    const uniqueId = String.random();
-	    const set = changeList[list.name].properties;
-	    set._ID = uniqueId;
-	    set._NAME = list.name;
-	    changes[uniqueId] = set;
-	    copyMap[uniqueId] = properties;
-	  }
-	  return changeList;
-	}
-	
-	const hasValueFilter = (prop) => prop.value() !== null;
-	assemProperties.hasValue = (group) => {
-	  return assemProperties.groupList(group, hasValueFilter);
-	}
-	
-	const noValueFilter = (prop) => prop.value() === null;
-	assemProperties.noValue = (group) => {
-	  const props = assemProps[group];
-	  return props.filter(noValueFilter);
-	}
-	
-	assemProperties.UNITS = UNITS;
-	
-	assemProperties.load = (body) => {
-	  config = Object.fromJson(body);
-	}
-	
-	module.exports = assemProperties;
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/cost-decision.js',
-function (require, exports, module) {
-	
-const Properties = require('../config/properties.js');
-	const DecisionTree = require('../../../../public/js/utils/decisionTree.js');
-	
-	class CostDecision {
-	  constructor(id, saved) {
-	    function getPayload(type) {
-	      const payload = {_TYPE: type};
-	      if (tree === undefined)
-	        payload._REQUIRED_NODES = Properties.noValue(id).map((prop) => prop.name());
-	      return payload
-	    }
-	
-	    function getParentNode(name, parentNodeId, type, payload) {
-	      if (parentNodeId === undefined) {
-	        if (tree === undefined) {
-	          tree = new DecisionTree(name, payload);
-	        } else {
-	          throw new Error('Tree already initialized. should not call this function without a parentNodeId after initialization');
-	        }
-	      } else {
-	        return tree.getNode(parentNodeId);
-	      }
-	    }
-	
-	    this.addSelect = (name, parentNodeId) => {
-	      const payload = getPayload(CostDecision.types.SELECT);
-	      const parentNode = getParentNode(name, parentNodeId, CostDecision.types.SELECT, payload);
-	      if (parentNode === undefined) return;
-	      parentNode.addState(name, payload);
-	    }
-	
-	    this.tree = () => tree;
-	
-	    let tree;
-	    if (saved) {
-	      tree = CostDecision.fromJson(saved);
-	    } else {
-	      if (Properties.hasValue(id)) {
-	        this.addSelect();
-	      }
-	    }
-	  }
-	}
-	
-	CostDecision.types = {
-	  SELECT: 'Select',
-	  GROUP: 'Group',
-	  CONDITIONAL: 'Conditional',
-	  REFERENCE: 'Reference',
-	  LABOR: 'Labor',
-	  MATERIAL: 'Material'
-	}
-	
-	module.exports = CostDecision
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/displayManager.js',
-function (require, exports, module) {
-	
-
-	
 	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const Inputs = require('../input/inputs.js');
+	
+	
+	
+	class CabinetDisplay {
+	  constructor(room) {
+	    const propertySelectors = {};
+	    const parentSelector = `[room-id="${room.id()}"].cabinet-cnt`;
+	    let propId = 'Half Overlay';
+	    const instance = this;
+	    this.propId = (id) => {
+	      if (id ===  undefined) return propId;
+	      propId = id;
+	    }
+	    const getHeader = (cabinet, $index) =>
+	        CabinetDisplay.headTemplate.render({room, cabinet, $index});
+	    const showTypes = Show.listTypes();
+	    const getBody = (cabinet, $index) => {
+	      if (propertySelectors[cabinet.uniqueId] === undefined)
+	        propertySelectors[cabinet.uniqueId] = Inputs('propertyIds', { value: cabinet.propertyId() });
+	      if (expandList.activeIndex() === $index)
+	        ThreeDModel.render(cabinet);
+	      const selectHtml = propertySelectors[cabinet.uniqueId].html();
+	      const scope = {room, $index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
+	      return CabinetDisplay.bodyTemplate.render(scope);
+	    }
+	
+	    function inputValidation(values) {
+	      const validName = values.name !== undefined;
+	      const validType = CabinetConfig.valid(values.type, values.id);
+	      if(validType) return true;
+	      return {type: 'You must select a defined type.'};
+	    }
+	    const getObject = (values) => {
+	      return CabinetConfig.get(values.name, values.type, values.propertyId, values.id);
+	    };
+	    this.active = () => expandList.active();
+	    const expListProps = {
+	      list: room.cabinets,
+	      inputTree:   CabinetConfig.inputTree(),
+	      parentSelector, getHeader, getBody, getObject, inputValidation,
+	      listElemLable: 'Cabinet'
+	    };
+	    const expandList = new ExpandableList(expListProps);
+	    this.refresh = () => expandList.refresh();
+	
+	    const cabinetKey = (path) => {
+	      const split = path.split('.');
+	      const index = split[0];
+	      const key = split[1];
+	      const cabinet = expListProps.list[index];
+	      return {cabinet, key};
+	    }
+	
+	    const valueUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
+	      ThreeDModel.render(cabKey.cabinet);
+	    }
+	
+	    const attrUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      cabKey.cabinet[cabKey.key] = value;
+	    }
+	
+	    const saveSuccess = () => console.log('success');
+	    const saveFail = () => console.log('failure');
+	    const save = (target) => {
+	      const index = target.getAttribute('index');
+	      const cabinet = expListProps.list[index];
+	      if (cabinet.name !== undefined) {
+	        Request.post(EPNTS.cabinet.add(cabinet.name), cabinet.toJson(), saveSuccess, saveFail);
+	        console.log('saving');
+	      } else {
+	        alert('Please enter a name if you want to save the cabinet.')
+	      }
+	    }
+	
+	    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
+	    bind(`[room-id="${room.id()}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
+	    bind(`[room-id="${room.id()}"].cabinet-id-input`, attrUpdate);
+	    du.on.match('click', '.save-cabinet-btn', save);
+	  }
+	}
+	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
+	CabinetDisplay.headTemplate = new $t('cabinet/head');
+	module.exports = CabinetDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/room.js',
+function (require, exports, module) {
+	
+
+	
+	const Room = require('../objects/room.js');
+	const CabinetDisplay = require('./cabinet.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const Inputs = require('../input/inputs.js');
+	
+	class RoomDisplay {
+	  constructor(parentSelector, order) {
+	    const cabinetDisplays = {};
+	    const getHeader = (room, $index) =>
+	        RoomDisplay.headTemplate.render({room, $index});
+	
+	    const getBody = (room, $index) => {
+	      let propertyTypes = Object.keys(['alabaster','pickles']);
+	      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
+	    }
+	
+	    const getObject = (values) => {
+	      const room = new Room(values.name);
+	      return room;
+	    }
+	    this.active = () => expandList.active();
+	    this.cabinetDisplay = () => {
+	      const room = this.active();
+	      const id = room.id();
+	      if (cabinetDisplays[id] === undefined) {
+	        cabinetDisplays[id] = new CabinetDisplay(room);
+	      }
+	      return cabinetDisplays[id];
+	    }
+	    this.cabinet = () => this.cabinetDisplay().active();
+	    const expListProps = {
+	      list: order.rooms,
+	      parentSelector, getHeader, getBody, getObject,
+	      inputs: [{placeholder: 'name'}],
+	      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
+	      listElemLable: 'Room', type: 'pill',
+	      inputTree: new DecisionInputTree('Room', Inputs('name'), console.log)
+	    };
+	    const expandList = new ExpandableList(expListProps);
+	    expandList.afterRender(() => this.cabinetDisplay().refresh());
+	    this.refresh = () => expandList.refresh();
+	  }
+	}
+	RoomDisplay.bodyTemplate = new $t('room/body');
+	RoomDisplay.headTemplate = new $t('room/head');
+	module.exports = RoomDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/section.js',
+function (require, exports, module) {
+	
+
+	Section.templates = {};
+	
+	Section.templates[this.constructorId] = new $t(templatePath);
+	
+	
+	class SectionDisplay {
+	  constructor (section) {
+	    Section.render = (scope) => {
+	      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
+	      const cId = scope.opening.constructorId;
+	      if (cId === 'DivideSection') {
+	        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
+	      }
+	      return Section.templates[cId].render(scope);
+	    }
+	  }
+	}
+	
+	
+	const du = require('../../../public/js/utils/dom-utils.js');
+	
+	afterLoad.push(() => du.on.match('change', '.feature-radio', (target) => {
+	  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+	  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+	  target.nextElementSibling.hidden = !target.checked;
+	}))
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/user.js',
+function (require, exports, module) {
+	
+const du = require('../../../../public/js/utils/dom-utils.js');
+	const APP_ID = require('../../globals/CONSTANTS.js').APP_ID;
+	const Request = require('../../../../public/js/utils/request.js');
+	const EPNTS = require('../../generated/EPNTS');
 	const $t = require('../../../../public/js/utils/$t.js');
 	
-	class DisplayManager {
-	  constructor(displayId, listId, switchId) {
-	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
-	    const id = String.random();
-	    const instance = this;
-	    this.list = (func) => {
-	      const list = [];
-	      const runFunc = (typeof func) === 'function';
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        let id = elem.id || String.random(7);
-	        elem.id = id;
-	        name = elem.getAttribute('name') || id;
-	        const item = {id, name};
-	        if (runFunc) func(elem);
-	        list.push(item);
-	      }
-	      return list;
-	    }
-	
-	    function updateActive(id) {
-	      const items = document.querySelectorAll('.display-manager-input');
-	      for (let index = 0; index < items.length; index += 1) {
-	        const elem = items[index];
-	        elem.getAttribute('display-id') === id ?
-	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
-	      }
-	    }
-	
-	    function open(id) {
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        if (elem.id === id) elem.hidden = false;
-	        else elem.hidden = true;
-	      }
-	      updateActive(id);
-	    }
-	
-	    this.open = open;
-	
-	    const children = du.id(displayId).children;
-	
-	    if (children.length > 0) {
-	      this.list();
-	      open(children[0].id);
-	      if (listId) {
-	        du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
-	      }
-	    }
-	
-	    if (switchId) {
-	      du.on.match('click', `#${switchId}`, (target, event) => {
-	        const listElem = du.id(listId);
-	        listElem.hidden = !listElem.hidden;
-	      });
-	      document.addEventListener('click', (event) => {
-	        const listElem = du.id(listId);
-	        const target = event.target;
-	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
-	        if (!withinList && target.id !== switchId &&listElem)
-	          listElem.hidden = true;
-	      });
-	    }
-	    DisplayManager.instances[id] = this;
-	  }
-	}
-	
-	DisplayManager.instances = {};
-	DisplayManager.template = new $t('display-manager');
-	
-	du.on.match('click', '.display-manager-input', (target, event) => {
-	  const displayManager = du.find.up('.display-manager', target);
-	  const displayManagerId = displayManager.id;
-	  const displayId = target.getAttribute('display-id');
-	  DisplayManager.instances[displayManagerId].open(displayId);
-	});
-	module.exports = DisplayManager
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/information-bar.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	class InformationBar {
+	class User {
 	  constructor() {
-	    const container = du.create.element('div');
-	    container.className = 'information-bar';
+	    const stateAttr = 'user-state';
+	    let state, cnt, email, password;
 	
-	    this.show = () => container.hidden = false;
-	    this.hide = () => container.hidden = true;
-	    this.update = (html) => container.innerHTML = html;
+	    function updateDisplay(s) {
+	      state = s ? User.states[s] : state;
+	      cnt = cnt || du.id('login-cnt');
+	      cnt.innerHTML = state.template.render({email, password});
+	    }
 	
-	    document.body.append(container);
+	    const hideLogin = () => du.id('login').hidden = true;
+	    const showLogin = () => du.id('login').hidden = false;
+	    function successfulRegistration(body) {
+	      updateDisplay('CONFIRMATION_MESSAGE');
+	    }
+	
+	    function register(target) {password
+	      const fail = du.appendError(target, 'Registration Failed: Email already registered');
+	      const body = {email, password};
+	      document.cookie = `${APP_ID}=${email}:invalid`;
+	      Request.post(EPNTS.user.register(), body, successfulRegistration, fail);
+	    }
+	
+	    function successfulLogin(body, res) {
+	      const newAuth = res.getResponseHeader('authorization');
+	      document.cookie = `${APP_ID}=${newAuth}`;
+	      hideLogin();
+	    }
+	
+	    const getEmail = () => du.cookie.get(APP_ID, ':', 'email').email;
+	    this.credential = User.credential;
+	
+	    function login(target) {
+	      const fail = du.appendError(target, 'Login Failed: Invalid Email and/or Password');
+	      const body = {email, password};
+	      Request.post(EPNTS.user.login(), body, successfulLogin, fail);
+	    }
+	
+	    function resendActivation(target) {
+	      const fail = du.appendError(target, 'Email Not Registered Or Already Active');
+	      const body = {email: getEmail()};
+	      Request.post(EPNTS.user.resendActivation(), body, successfulRegistration, fail);
+	    }
+	
+	    function logout() {
+	      du.cookie.remove(APP_ID);
+	      showLogin();
+	      updateDisplay('LOGIN')
+	    }
+	
+	    function resetPassword(target) {
+	      const fail = du.appendError(target, 'Server Error Must have occured... try again in a few minutes');
+	      const body = {email, newPassword: password};
+	      Request.post(EPNTS.user.resetPasswordRequest(), body, successfulRegistration, fail);
+	    }
+	
+	    du.on.match('click', `[${stateAttr}]`, (elem) => {
+	      const stateId = elem.getAttribute(stateAttr);
+	      if (User.states[stateId]) {
+	        updateDisplay(stateId);
+	      } else console.error(`Invalid State: '${stateId}'`);
+	    });
+	
+	    du.on.match('click', '#register', register);
+	    du.on.match('click', '#login-btn', login);
+	    du.on.match('click', '#resend-activation', resendActivation);
+	    du.on.match('click', '#reset-password', resetPassword);
+	    du.on.match('click', '#logout-btn', logout);
+	
+	    du.on.match('change', 'input[name="email"]', (elem) => email = elem.value);
+	    du.on.match('change', 'input[name="password"]', (elem) => password = elem.value);
+	
+	    function statusCheck(body) {
+	      switch (body) {
+	        case 'Not Registered':
+	          updateDisplay('LOGIN')
+	          break;
+	        case 'Not Activated':
+	          updateDisplay('CONFIRMATION_MESSAGE');
+	          break;
+	        case 'Logged In':
+	          hideLogin();
+	          break;
+	        case 'Logged Out':
+	          updateDisplay('LOGIN')
+	          break;
+	        default:
+	
+	      }
+	    }
+	
+	    Request.globalHeader('Authorization', this.credential);
+	    if (this.credential()) Request.get(EPNTS.user.status(), statusCheck);
+	    else updateDisplay('LOGIN');
 	  }
 	}
-	module.exports = InformationBar
+	
+	User.states = {};
+	User.states.LOGIN = {
+	  template: new $t('login/login')
+	};
+	User.states.CONFIRMATION_MESSAGE = {
+	  template: new $t('login/confirmation-message')
+	};
+	User.states.CREATE_ACCOUNT = {
+	  template: new $t('login/create-account')
+	};
+	User.states.RESET_PASSWORD = {
+	  template: new $t('login/reset-password')
+	};
+	
+	User.credential = () => du.cookie.get(APP_ID);
 	
 	
-	
-	
+	User = new User();
+	module.exports = User
 	
 });
 
@@ -11843,390 +11642,99 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/abstract-manager.js',
+RequireJS.addFunction('./app-src/config/property.js',
 function (require, exports, module) {
 	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	
-	
-	class AbstractManager {
-	  constructor(id, name) {
-	    let list;
-	    const manager = this;
-	    this.saveBtnId = `${name}-manager-save-btn`;
-	    this.headerId = `${name}-manager-header-cnt`;
-	    this.bodyId = `${name}-manager-body-cnt`;
-	    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
-	    const parentSelector = `#${this.bodyId}`;
-	    const template = new $t('managers/abstract-manager');
-	    const bodyTemplate = new $t(`managers/${name}/body`);
-	    const headTemplate = new $t(`managers/${name}/header`);
-	
-	    const getHeader = (instance) =>
-	      headTemplate.render({instance, manager});
-	    const getBody = (instance) =>
-	      bodyTemplate.render({instance, manager});
-	
-	    const getObject = (typeof manager.getObject) === 'function' ?
-	                        (values) => manager.getObject(values) : undefined;
-	
-	    function init(json) {
-	      du.id(id).innerHTML = template.render(manager);
-	      list = manager.fromJson(json) || [];
-	      const expListProps = {
-	        inputTree: manager.constructor.inputTree(),
-	        parentSelector, getHeader, getBody, getObject, list,
-	        hideAddBtn: true
-	      };
-	      const expandList = new ExpandableList(expListProps);
-	
-	      const saveSuccess = () => console.log('success save');
-	      const saveFail = () => console.log('failed save');
-	      const save = (target) => {
-	        const body = manager.toJson();
-	        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
-	      }
-	      du.on.match('click', `#${manager.saveBtnId}`, save);
-	    }
-	
-	    this.load = () => Request.get(manager.loadPoint(), init);
-	  }
-	}
-	
-	AbstractManager.inputTree = () => undefined;
-	module.exports = AbstractManager
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/cabinet.js',
-function (require, exports, module) {
-	
-
-	
-	const Show = require('../show.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const ThreeDModel = require('../three-d/three-d-model.js');
-	const OpenSectionDisplay = require('./open-section.js');
-	const CabinetConfig = require('../config/cabinet-configs.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	const Measurement = require('../../../../public/js/utils/measurment.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const Inputs = require('../input/inputs.js');
 	
 	
 	
-	class CabinetDisplay {
-	  constructor(room) {
-	    const propertySelectors = {};
-	    const parentSelector = `[room-id="${room.id()}"].cabinet-cnt`;
-	    let propId = 'Half Overlay';
-	    const instance = this;
-	    this.propId = (id) => {
-	      if (id ===  undefined) return propId;
-	      propId = id;
+	class Property extends Lookup {
+	  // clone constructor(code, value) {
+	  constructor(code, name, props) {
+	    super();
+	    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
+	    const children = [];
+	
+	    const initVals = {
+	      code, name, description: props instanceof Object ? props.description : undefined
 	    }
-	    const getHeader = (cabinet, $index) =>
-	        CabinetDisplay.headTemplate.render({room, cabinet, $index});
-	    const showTypes = Show.listTypes();
-	    const getBody = (cabinet, $index) => {
-	      if (propertySelectors[cabinet.uniqueId] === undefined)
-	        propertySelectors[cabinet.uniqueId] = Inputs('propertyIds', { value: cabinet.propertyId() });
-	      if (expandList.activeIndex() === $index)
-	        ThreeDModel.render(cabinet);
-	      const selectHtml = propertySelectors[cabinet.uniqueId].html();
-	      const scope = {room, $index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
-	      return CabinetDisplay.bodyTemplate.render(scope);
-	    }
+	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
 	
-	    function inputValidation(values) {
-	      const validName = values.name !== undefined;
-	      const validType = CabinetConfig.valid(values.type, values.id);
-	      if(validType) return true;
-	      return {type: 'You must select a defined type.'};
-	    }
-	    const getObject = (values) => {
-	      return CabinetConfig.get(values.name, values.type, values.propertyId, values.id);
-	    };
-	    this.active = () => expandList.active();
-	    const expListProps = {
-	      list: room.cabinets,
-	      inputTree:   CabinetConfig.inputTree(),
-	      parentSelector, getHeader, getBody, getObject, inputValidation,
-	      listElemLable: 'Cabinet'
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	    this.refresh = () => expandList.refresh();
-	
-	    const cabinetKey = (path) => {
-	      const split = path.split('.');
-	      const index = split[0];
-	      const key = split[1];
-	      const cabinet = expListProps.list[index];
-	      return {cabinet, key};
-	    }
-	
-	    const valueUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
-	      ThreeDModel.render(cabKey.cabinet);
-	    }
-	
-	    const attrUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      cabKey.cabinet[cabKey.key] = value;
-	    }
-	
-	    const saveSuccess = () => console.log('success');
-	    const saveFail = () => console.log('failure');
-	    const save = (target) => {
-	      const index = target.getAttribute('index');
-	      const cabinet = expListProps.list[index];
-	      if (cabinet.name !== undefined) {
-	        Request.post(EPNTS.cabinet.add(cabinet.name), cabinet.toJson(), saveSuccess, saveFail);
-	        console.log('saving');
-	      } else {
-	        alert('Please enter a name if you want to save the cabinet.')
+	    this.value = (val, notMetric) => {
+	      if (val !== undefined && value !== val) {
+	        const measurment = new Measurement(val, notMetric);
+	        const measurmentVal = measurment.value();
+	        value = Number.isNaN(measurmentVal) ? val : measurment;
 	      }
+	      return value instanceof Measurement ? value.value() : value;
 	    }
 	
-	    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-	    bind(`[room-id="${room.id()}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
-	    bind(`[room-id="${room.id()}"].cabinet-id-input`, attrUpdate);
-	    du.on.match('click', '.save-cabinet-btn', save);
+	    this.display = () => {
+	      return value instanceof Measurement ? value.display() : value;
+	    }
+	
+	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
+	
+	    if ((typeof props) !== 'object' ||  props === null) {
+	      this.value(props);
+	      props = {};
+	    }
+	    this.properties(props || {});
+	
+	    const existingProp = Property.list[code];
+	    let clone = false;
+	    if (this.properties().value !== undefined) {
+	      this.value(this.properties().value, this.properties().notMetric);
+	    }
+	
+	    // if (existingProp) {
+	    //   value = value || existingProp.value();
+	    //   name = existingProp.name();
+	    //   this.properties(existingProp.properties());
+	    //   clone = true;
+	    // }
+	
+	    if ((typeof value) === 'number')
+	      value = new Measurement(value, this.properties().notMetric);
+	
+	
+	    this.addChild = (property) => {
+	      if (property instanceof Property && property.code() === this.code()) {
+	            if (children.indexOf(property) === -1) children.push(property);
+	            else throw new Error('Property is already a child');
+	      }
+	      else throw new Error('Child is not an instance of Property or Code does not match');
+	    }
+	
+	    this.children = () => JSON.clone(children);
+	
+	    this.equals = (other) =>
+	        other instanceof Property &&
+	        this.value() === other.value() &&
+	        this.code() === other.code() &&
+	        this.name() === other.name() &&
+	        this.description() === other.description();
+	
+	    this.clone = (val) => {
+	      const cProps = this.properties();
+	      cProps.clone = true;
+	      cProps.value = val === undefined ? this.value() : val;
+	      cProps.description = this.description();
+	      delete cProps.notMetric;
+	      return new Property(this.code(), this.name(), cProps);
+	    }
+	    if(!clone) Property.list[code] = this;
+	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
 	  }
 	}
-	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
-	CabinetDisplay.headTemplate = new $t('cabinet/head');
-	module.exports = CabinetDisplay
+	Property.list = {};
+	Property.DO_NOT_CLONE = true;
 	
-});
-
-
-RequireJS.addFunction('./app-src/services/display-svc.js',
-function (require, exports, module) {
-	class Register {
-	  constructor() {
-	    const registered = {};
-	    this.register = function (nameOobj, obj) {
-	      if ((typeof nameOobj) !== 'object') {
-	        registered[nameOobj] = obj;
-	      } else {
-	        const keys = Object.keys(nameOobj);
-	        for (let index = 0; index < keys.length; index += 1) {
-	          const key = keys[index];
-	          registered[key] = nameOobj[key];
-	        }
-	      }
-	    }
-	    this.get = (name) => registered[name];
-	  }
-	}
+	new Property();
 	
-	module.exports = new Register();
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/cost.js',
-function (require, exports, module) {
-	
-
-	
-	const Company = require('../objects/company.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
-	const Assembly = require('../objects/assembly/assembly.js');
-	
-	
-	// constructors
-	// Cost({id, Method: Cost.methods.LINEAR_FEET, cost, length})
-	// Cost({id, Method: Cost.methods.SQUARE_FEET, cost, length, width})
-	// Cost({id, Method: Cost.methods.CUBIC_FEET, cost, length, width, depth})
-	// Cost({id, Method: Cost.methods.UNIT, cost})
-	// Cost((id, Cost, formula));
-	// props. - (optional*)
-	// id - Cost identifier
-	// method - Method for calculating cost
-	// length - length of piece used to calculate unit cost
-	// width - width of piece used to calculate unit cost
-	// depth - depth of piece used to calculate unit cost
-	// cost - cost of piece used to calculate unit cost
-	// formula* - formula used to apply cost to part
-	// company* - Company to order from.
-	// partNumber* - Part number to order part from company
-	// Cost* - Reference Cost.
-	
-	class Cost {
-	  //constructor(id, Cost, formula)
-	  constructor(props) {
-	    props = props || {};
-	    this.props = () => props;
-	    let deleted = false;
-	    const instance = this;
-	    const uniqueId = String.random();
-	    const lastUpdated = props.lastUpdated || new Date().getTime();
-	    props.requiredBranches = props.requiredBranches || [];
-	    this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
-	    this.delete = () => deleted = true;
-	    this.deleted = () => deleted;
-	    Object.getSet(this, props, 'group', 'objectId', 'id', 'children', 'parent');
-	    this.children = [];
-	    this.level = () => {
-	      let level = -1;
-	      let curr = this;
-	      while(curr instanceof Cost) {
-	        level++;
-	        curr = curr.parent();
-	      }
-	      return level;
-	    }
-	
-	    const satisfyReg = (idOreg) => idOreg instanceof RegExp ? idOreg :
-	      new RegExp(`(^\\s*${idOreg}\\s*$|\\((\\s*|[^(^)]*,\\s*)${idOreg}(\\s*,[^(^)]*\\s*|\\s*)\\)\\s*$)`);
-	    // TODO: possibly make more efficient... tough to maintain consistancy
-	    this.satisfies = (idOreg) => {
-	      const reg = satisfyReg(idOreg);
-	      if (this.id().match(reg)) return true;
-	      for(let index = 0; index < this.children.length; index += 1) {
-	        if (this.children[index].satisfies(reg)) return true;
-	      }
-	      return false;
-	    }
-	    this.unsatisfiedBranches = () =>
-	      this.requiredBranches().filter((id) => !this.satisfies(id));
-	
-	    this.uniqueId = () => uniqueId;
-	    Cost.uniqueIdMap[uniqueId] = this;
-	    // TODO: None does not make sence here.
-	    this.childIds = () =>
-	        ['None'].concat(this.children.map((obj) => obj.id()));
-	
-	    Cost.group(this, this);
-	
-	    this.addChild = (cost) => {
-	      if (cost instanceof Cost) {
-	        this.children.push(cost);
-	      }
-	    }
-	  }
-	}
-	
-	Cost.uniqueIdMap = {};
-	
-	Cost.getterSetter = (obj, attr, validation) => (val) => {
-	  if (val && validation && validation(val)) obj[attr] = val;
-	  if (validation && !validation(obj[attr])) throw new Error(`Invalid Cost Value ${obj[attr]}`);
-	  return obj[attr];
-	}
-	
-	
-	Cost.group = (() => {
-	  const groups = {};
-	  const defaultCostObj = () => ({unique: {}, objectMap: {}, defined: {'/dev/nul': 'Custom'}});
-	  return (props, cost) => {
-	    const isSetter = cost instanceof Cost;
-	    const name = isSetter ? props.group : props;
-	    if (isSetter) {
-	      if (groups[name] === undefined)
-	      groups[name] = defaultCostObj();
-	      const group = groups[name];
-	
-	      const unique = group.unique;
-	      const defined = group.defined;
-	      const objectMap = group.objectMap;
-	      if (unique[cost.uniqueId()] !== undefined)
-	      throw new Error('Invalid Unique Id');
-	
-	      unique[cost.uniqueId()] = cost;
-	
-	      if (props.objectId !== undefined) {
-	        if (objectMap[props.objectId] === undefined)
-	          objectMap[props.objectId] = [];
-	        objectMap[props.objectId].push(cost.uniqueId());
-	      }
-	
-	      // TODO move to referenceCost constructor
-	      if (cost.constructor.name === 'ReferenceCost') {
-	        if (props.referenceable) {
-	          if (Object.values(defined).indexOf(cost.id()) !== -1)
-	          throw new Error(`referenceable cost must have a unique Id: '${cost.id()}'`);
-	          defined[cost.uniqueId()] = cost.id();
-	        }
-	      }
-	    }
-	
-	    return groups[name] || defaultCostObj();
-	  }
-	})();
-	
-	Cost.types = [];
-	Cost.get = (uniqueId) => {
-	  return Cost.uniqueIdMap[uniqueId];
-	};
-	
-	Cost.new = (props) => {
-	  const type = props.type;
-	  return new Cost.types[props.type](props);
-	}
-	
-	Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
-	Cost.remove = (uniqueId) => Cost.get(uniqueId).remove();
-	
-	Cost.constructorId = (name) => name.replace(/Cost$/, '');
-	Cost.register = (clazz) => {
-	  Cost.types[Cost.constructorId(clazz.prototype.constructor.name)] = clazz;
-	  Cost.typeList = Object.keys(Cost.types).sort();
-	}
-	
-	Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
-	
-	module.exports = Cost
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/room.js',
-function (require, exports, module) {
-	
-
-	
-	const Cabinet = require('./assembly/assemblies/cabinet.js');
-	
-	
-	class Room {
-	  constructor(name, id) {
-	
-	    const initialVals = {
-	      name: name || `Room ${Room.count++}`,
-	      id: id || String.random(32),
-	    }
-	    Object.getSet(this, initialVals);
-	
-	    this.cabinets = [];
-	    this.toJson = () => {
-	      const json = { cabinets: []};
-	      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
-	      return json;
-	    };
-	  }
-	};
-	Room.count = 0;
-	Room.fromJson = (roomJson) => {
-	  const room = new Room(roomJson.name, roomJson.id);
-	  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
-	  return room;
-	}
-	module.exports = Room
+	module.exports = Property
 	
 });
 
@@ -12426,589 +11934,538 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/order.js',
+RequireJS.addFunction('./app-src/input/validation.js',
 function (require, exports, module) {
 	
 
 	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const UFObj = require('./information/utility-filter.js');
-	const RoomDisplay = require('./room.js');
-	const Order = require('../objects/order.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const EPNTS = require('../../generated/EPNTS.js')
-	const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
-	const Inputs = require('../input/inputs.js');
+	const InvalidComputation = require('./error.js');
 	
-	class OrderDisplay {
-	  constructor(parentSelector, orders) {
-	    const roomDisplays = {};
-	    let active;
-	    const getHeader = (order, $index) =>
-	        OrderDisplay.headTemplate.render({order, $index});
-	
-	    const setInfo = (order, index) => () => {
-	      const elem = du.id(`uf-info-${index}`);
-	      if (elem)
-	        UTF.buildDisplay(elem, new UFObj(order));
-	    }
-	
-	    function initOrder(order, index) {
-	      roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
-	      ToggleDisplayList.onShow(`information-display-${index}`, );
-	      expandList.afterRender(setInfo(order, index));
-	      return order;
-	    }
-	
-	    function loadOrder(index, start) {
-	      return function (orderData) {
-	        const order = Order.fromJson(orderData);
-	        initOrder(order, index);
-	        expandList.set(index, order);
-	        expandList.refresh();
-	        console.log('load Time:', new Date().getTime() - start);
+	class ObjectValidator {
+	  constructor() {
+	    const validators =  {};
+	    this.add = (name, validator) => {
+	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
+	        throw new Error('Invalid Validator');
 	      }
+	      validator[name] = validator;
 	    }
+	    this.validate = (obj) => {
+	      if (typeof obj !== 'object') throw new InvalidComputation()
+	      const keys = Object.keys(validators);
+	    }
+	  }
+	}
 	
-	    const getBody = (order, $index) => {
-	      if (order instanceof Order) {
-	        let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
-	        active = roomDisplays[order.id()];
-	        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
+	
+	class Validator {
+	  constructor(validator, props, info) {
+	    let type, validate;
+	    const complement = props.explanation;
+	
+	    let defaultExpl;
+	    if (validator instanceof Regex) {
+	      type = 'Regex';
+	      if (props.complement) {
+	        defaultExpl = 'Value must fit regex expression';
+	        validate = (value) => validator.match('value');
 	      } else {
-	        const start = new Date().getTime();
-	        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
-	        return 'Loading...';
+	        defaultExpl = 'Value must not fit regex expression';
+	        validate = (value) => !validator.match('value');
+	      }
+	    } else if (Array.isArray(validator)) {
+	      if (props.complement) {
+	        defaultExpl = 'Value must exist within array';
+	        validate = (value) => validator.indexOf(value) !== -1;
+	      } else {
+	        defaultExpl = 'Value must not exist within array';
+	        validate = (value) => validator.indexOf(value) === -1;
 	      }
 	    }
-	    const getObject = (values) => initOrder(new Order(values.name));
-	    this.active = () => active;
 	
-	    const expListProps = {
-	      list: orders,
-	      inputValidation: (values) => values.name ? true :
-	          'You must Define a name',
-	      parentSelector, getHeader, getBody, getObject,
-	      listElemLable: 'Order', type: 'sidebar',
-	      inputTree: new DecisionInputTree('Order', Inputs('name'), console.log)
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
+	    props.explanation = props.explanation || defaultExpl;
 	
-	    const saveSuccess = () => console.log('success');
-	    const saveFail = () => console.log('failure');
-	    const save = (target) => {
-	      const index = target.getAttribute('index');
-	      const order = expandList.get(index);
-	      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
-	      console.log('saving');
+	    val = val === undefined && elem ? elem.value : val;
+	    if (val === undefined) return false;
+	    if (valid !== undefined && val === value) return valid;
+	    let valValid = true;
+	    if (props.validation instanceof RegExp) {
+	      valValid = val.match(props.validation) !== null;
+	    }
+	    else if ((typeof props.validation) === 'function') {
+	      valValid = props.validation.apply(null, arguments);
+	    }
+	    else if (Array.isArray(props.validation)) {
+	      valValid = props.validation.indexOf(val) !== -1;
 	    }
 	
-	    const attrUpdate = (attr) => (target) => {
-	      const index = target.getAttribute('index');
-	      const order = expandList.get(index);
-	      order[attr] = target.value;
-	    };
-	
-	    function addOrders(names) {
-	      names.forEach((name) => expListProps.list.push({ name }));
-	      expandList.refresh();
-	    }
-	    Request.get(EPNTS.order.list(), addOrders);
-	
-	    du.on.match('change', '.order-name-input', attrUpdate('name'));
-	    du.on.match('click', '.save-order-btn', save);
+	    return valValid;
 	  }
 	}
-	OrderDisplay.bodyTemplate = new $t('order/body');
-	OrderDisplay.headTemplate = new $t('order/head');
-	OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
-	OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
-	OrderDisplay.infoBodyTemplate = new $t('order/information/body');
-	OrderDisplay.infoHeadTemplate = new $t('order/information/head');
-	module.exports = OrderDisplay
+	exports.ObjectValidator = ObjectValidator
+	exports.Validator = Validator
+	
+	
+	
+	
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/property.js',
+RequireJS.addFunction('./app-src/input/inputs.js',
 function (require, exports, module) {
-	
-
-	
-	const Properties = require('../config/properties.js');
-	const Property = require('../config/property.js');
+	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
 	const Cost = require('../cost/cost.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const RadioDisplay = require('../display-utils/radioDisplay.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const Inputs = require('../input/inputs.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
-	const Measurement = require('../../../../public/js/utils/measurment.js');
-	
-	// TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
-	const changed = (id) => Properties.changes.changed(id);
-	const shouldHide = (prop) => prop.value() === null;
-	const hideAll = (properties) => {
-	  for (let index = 0; index < properties.length; index += 1) {
-	    if (properties[index].value() !== null) return false;
-	  }
-	  return properties.length > 0;
-	}
-	
-	function updateSaveAll() {
-	  const saveAllBtn = du.find('#property-manager-save-all');
-	  saveAllBtn.hidden = !Properties.changes.changesExist();
-	  if (saveAllBtn.hidden) {
-	    const saveBtns = du.find.all('.save-change');
-	    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
-	  }
-	}
-	
-	function saveAll() {
-	  Properties.changes.saveAll();
-	  save();
-	  updateSaveAll();
-	}
-	
-	
-	function save() {
-	  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
-	}
-	
-	function get() {
-	  Request.get(EPNTS.config.get(), console.log);
-	}
-	
-	class PropertyDisplay {
-	  constructor(containerSelector) {
-	    let currProps;
-	
-	    const noChildren = (properties, groups) => () =>
-	          properties.length === 0 && Object.keys(groups).length === 0;
-	
-	    function childScope (key) {
-	      const uniqueId = String.random();
-	      const getObject = (values) => {
-	        let properties = Properties.new(key,  values.name);
-	        return {name: values.name, uniqueId, changed, properties};
-	      }
-	
-	      const inputTree = PropertyDisplay.configInputTree();
-	      const expListProps = {
-	        list: Properties.hasValue(key),
-	        parentSelector: `#config-expand-list-${uniqueId}`,
-	        getHeader: (scope) =>
-	                    PropertyDisplay.configHeadTemplate.render(scope),
-	        getBody: (scope) =>
-	                    PropertyDisplay.configBodyTemplate.render({
-	                      name: scope.name,
-	                      properties: scope.properties,
-	                      changed
-	                    }),
-	        inputValidation: inputTree.validate,
-	        listElemLable: 'Config',
-	        getObject, inputTree
-	      };
-	      setTimeout(() => {
-	        const expList = new ExpandableObject(expListProps);
-	        expList.afterRemoval((element, detail) => {
-	          console.log(detail);
-	          console.log('placehoder');
-	          Properties.changes.delete(detail.properties._ID);
-	        });
-	      }, 500);
-	      return uniqueId;
-	    }
-	
-	    function getScope(key, group) {
-	      key = key || '';
-	      const uniqueId = String.random();
-	      let radioId = group.radioId || PropertyDisplay.counter++;
-	      const properties = [];
-	      const groups = {};
-	      const label = key.replace(PropertyDisplay.camelReg, '$1 $2');
-	      const scope = {key, label, properties, groups, recurse, radioId, uniqueId,
-	                      noChildren: noChildren(properties, groups),
-	                      branch: key.match(PropertyDisplay.branchReg)};
-	      PropertyDisplay.uniqueMap[uniqueId] = scope;
-	      const keys = Object.keys(group.values);
-	      radioId = PropertyDisplay.counter++;
-	      for( let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        const value = group.values[key];
-	        childScope(key, uniqueId);
-	      }
-	      return scope;
-	    }
-	
-	    this.update = () => {
-	      const propKeys = Properties.list();
-	      const propertyObjs = {};
-	      const childIdMap = [];
-	      for (let index = 0; index < propKeys.length; index += 1) {
-	        const key = propKeys[index];
-	        const props = Properties(key);
-	        const propObj = props;
-	        propertyObjs[key] = propObj;
-	        childIdMap[key] = childScope(key);
-	      }
-	      const uniqueId = String.random();
-	      const values = {values: propertyObjs, uniqueId, childIdMap, hideAll, Properties};
-	      const contianer = document.querySelector(containerSelector);
-	      contianer.innerHTML =
-	          PropertyDisplay.template.render(values);
-	    };
-	
-	    function updateProperties(name, value) {
-	    }
-	    bind('property-cnt', updateProperties);
-	    new RadioDisplay('property-container', 'radio-id');
-	  }
-	}
-	
-	// bind('property-branch-selector', '');
-	
-	du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
-	  const childTargets = target.parentElement.children[1].children;
-	  const childElem = childTargets[target.value];
-	  // TODO: set config property: childElem.innerText;
-	  du.hide(childTargets);
-	  du.show(childElem);
-	});
-	
-	function setPropertyElemValue(elem, idAttr, value) {
-	  const id = elem.getAttribute(idAttr);
-	  const group = elem.getAttribute('name');
-	  const property = Property.get(id);
-	  property.value(value, true);
-	}
-	
-	function updateMeasurements () {
-	  measureElems = du.find.all('[measurement-id]:not([measurement-id=""])');
-	  measureElems.forEach((elem) => {
-	    const id = elem.getAttribute('measurement-id');
-	    const measurement = Measurement.get(id);
-	    elem.value = measurement.display();
-	  });
-	}
-	
-	function updateRadio(elem) {
-	  const name = elem.getAttribute('name');
-	  Properties.config()
-	  const elems = du.find.all(`input[type="radio"][name='${name}']`);
-	  elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
-	  setPropertyElemValue(elem, 'prop-radio-update', true);
-	  if (name === 'UNIT') updateMeasurements();
-	}
-	
-	function updateValueDisplay(elem) {
-	  const id = elem.getAttribute('measurement-id');
-	  const measurement = Measurement.get(id);
-	  elem.value = measurement.display();
-	}
-	
-	function updateValue(elem) {
-	  setPropertyElemValue(elem, 'prop-value-update', elem.value);
-	  const saveBtn = du.find.closest('.save-change', elem);
-	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
-	  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
-	  elem.setAttribute('measurement-id', measurementId);
-	  updateSaveAll();
-	}
-	
-	function updateBoolean(elem) {
-	  setPropertyElemValue(elem, 'prop-boolean-update', elem.checked);
-	  const saveBtn = du.find.closest('.save-change', elem);
-	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
-	  updateSaveAll();
-	}
-	
-	function saveChange(elem) {
-	  const id = elem.getAttribute('properties-id');
-	  Properties.changes.save(id);
-	  elem.hidden = true;
-	  updateSaveAll();
-	  save();
-	}
-	
-	
-	du.on.match('keyup', '[prop-value-update]', updateValue);
-	du.on.match('change', '[prop-boolean-update]', updateBoolean);
-	du.on.match('focusout', '[measurement-id]', updateValueDisplay);
-	du.on.match('change', '[prop-radio-update]', updateRadio);
-	du.on.match('click', '#property-manager-save-all', saveAll);
-	du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
-	
-	PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
-	PropertyDisplay.branchReg = /^OR_(.{1,})/;
-	PropertyDisplay.camelReg = /([a-z])([A-Z])/g;
-	PropertyDisplay.counter = 0;
-	PropertyDisplay.template = new $t('properties/properties');
-	PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
-	PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
-	PropertyDisplay.radioTemplate = new $t('properties/radio');
-	PropertyDisplay.uniqueMap = {};
-	PropertyDisplay.configMap = {};
-	
-	PropertyDisplay.configInputTree = () =>
-	  new DecisionInputTree('Config', [Inputs('name')], console.log);
-	
-	module.exports = PropertyDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/cabinet-configs.js',
-function (require, exports, module) {
-	
-
-	
-	const CustomEvent = require('../../../../public/js/utils/custom-error.js');
-	const cabinetBuildConfig = require('../../public/json/cabinets.json');
 	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Inputs = require('../input/inputs.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const EPNTS = require('../../generated/EPNTS.js');
+	const Material = require('../cost/types/material.js');
+	const ConditionalCost = require('../cost/types/category/conditional.js');
+	const Company = require('../objects/company.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const Labor = require('../cost/types/material/labor.js');
 	
-	class CabinetConfig {
-	  constructor() {
-	    let cabinetList = {};
-	    let cabinetKeys = {};
-	    let configKeys;
-	    const updateEvent = new CustomEvent('update');
-	    function setLists(cabinets) {
-	      const allCabinetKeys = Object.keys(cabinets);
-	      allCabinetKeys.forEach((key) => {
-	        const type = cabinets[key].partName;
-	        if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
-	        if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
-	        cabinetKeys[type][key] = cabinets[key];
-	      });
 	
-	      cabinetList = cabinets;
-	      configKeys = Object.keys(cabinetBuildConfig);
-	      updateEvent.trigger();
-	    }
-	
-	    this.valid = (type, id) => (!id ?
-	    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
-	
-	    this.onUpdate = (func) => updateEvent.on(func);
-	    this.inputTree = () => {
-	      const typeInput = new Select({
-	        name: 'type',
-	        class: 'center',
-	        list: JSON.parse(JSON.stringify(configKeys))
-	      });
-	      const propertyInput = new Select({
-	        name: 'propertyId',
-	        class: 'center',
-	        list: ['pajango', 'skititors']
-	      });
-	      const inputs = [Inputs('name'), typeInput, propertyInput];
-	      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
-	      const cabinetTypes = Object.keys(cabinetKeys);
-	      cabinetTypes.forEach((type) => {
-	        const cabinetInput = new Select({
-	          label: 'Layout (Optional)',
-	          name: 'id',
-	          class: 'center',
-	          list: [''].concat(Object.keys(cabinetKeys[type]))
-	        });
-	        inputTree.addState(type, cabinetInput);
-	        inputTree.then(`type:${type}`).jump(type);
-	      });
-	      return inputTree;
-	    }
-	    this.get = (name, type, propertyId, id) => {
-	      let cabinet;
-	      if (!id) cabinet = Cabinet.build(type);
-	      else cabinet = Cabinet.fromJson(cabinetList[id]);
-	      if (propertyId !== undefined) cabinet.propertyId(propertyId);
-	      cabinet.name = name;
-	      return cabinet;
-	    };
-	
-	    Request.get(EPNTS.cabinet.list(), setLists, () => setLists([]));
+	const defined = {};
+	function add (name, input) {
+	  if (defined[name]) {
+	    throw new Error(`Input by the name of '${name}' is already defined`)
 	  }
+	  defined[name] = input;
 	}
 	
-	CabinetConfig = new CabinetConfig();
-	module.exports = CabinetConfig
+	module.exports = (name, properties) => defined[name].clone(properties);
+	
+	
+	add('length', new MeasurementInput({
+	  type: 'text',
+	  placeholder: 'Length',
+	  name: 'length',
+	  class: 'center'
+	}));
+	
+	add('width', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Width',
+	  name: 'width',
+	  class: 'center'
+	}));
+	
+	add('depth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Depth',
+	  name: 'depth',
+	  class: 'center'
+	}));
+	
+	add('cost', new MeasurementInput({
+	  type: 'number',
+	  label: '$',
+	  placeholder: 'Cost',
+	  name: 'cost'
+	}));
+	
+	add('pattern', new MeasurementInput({
+	  type: 'text',
+	  class: 'pattern-input',
+	}));
+	
+	
+	add('offsetLen', new MeasurementInput({
+	  type: 'text',
+	  label: 'Offset',
+	  placeholder: 'Length',
+	  name: 'offsetLength',
+	  class: 'center',
+	}));
+	
+	add('offsetWidth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Width',
+	  name: 'offsetWidth',
+	  class: 'center',
+	}));
+	
+	add('offsetDepth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Depth',
+	  name: 'offsetDepth',
+	  class: 'center',
+	}));
+	
+	
+	add('costType', new Select({
+	  placeholder: 'Type',
+	  name: 'type',
+	  class: 'center',
+	  list: Cost.typeList
+	}));
+	
+	add('method', new Select({
+	  name: 'method',
+	  class: 'center',
+	  list: Material.methodList,
+	}));
+	
+	add('propertyConditions', new Select({
+	  name: 'propertyCondition',
+	  class: 'center',
+	  list: Object.values(ConditionalCost.conditions)
+	}));
+	
+	add('propertyIds', new Select({
+	  name: 'propertyIds',
+	  class: 'center',
+	  list: Object.keys(['1/2', 'Full', 'Inset'])
+	}));
+	
+	add('company', new Select({
+	  name: 'company',
+	  label: 'Company',
+	  class: 'center',
+	  list: [''].concat(Object.keys(Company.list)),
+	  value: ''
+	}));
+	
+	add('childCost', new Select({
+	    name: 'child',
+	    label: 'Default',
+	    class: 'center',
+	}));
+	
+	
+	add('id', new Input({
+	  type: 'text',
+	  placeholder: 'Id',
+	  name: 'id',
+	  class: 'center',
+	  validation: /^\s*[^\s]{1,}\s*$/,
+	  errorMsg: 'You must enter an Id'
+	}));
+	
+	add('propertyId', new Input({
+	  type: 'text',
+	  placeholder: 'Property Id',
+	  name: 'propertyId',
+	  class: 'center',
+	  validation: /^[a-zA-Z\.]{1}$/,
+	  errorMsg: 'Alpha Numeric Value seperated by \'.\'.<br>I.E. Cabinet=>1/2 Overlay = Cabinet.12Overlay'
+	}));
+	
+	add('propertyValue', new Input({
+	  type: 'text',
+	  placeholder: 'Property Value',
+	  name: 'propertyValue',
+	  class: 'center'
+	}));
+	
+	add('costId', new Input({
+	  type: 'text',
+	  placeholder: 'Id',
+	  name: 'id',
+	  class: 'center',
+	  validation: (id, values) =>
+	      id !== '' && (!values.referenceable || Object.values(Cost.defined).indexOf(id) === -1),
+	  errorMsg: 'You must an Id: value must be unique if Referencable.'
+	}));
+	
+	add('name', new Input({
+	  type: 'text',
+	  placeholder: 'Name',
+	  name: 'name',
+	  class: 'center',
+	  validation: /^\s*[^\s].*$/,
+	  errorMsg: 'You must enter a Name'
+	}));
+	
+	add('color', new Input({
+	  type: 'color',
+	  validation: /.*/,
+	  placeholder: 'color',
+	  name: 'color',
+	  class: 'center'
+	}));
+	
+	add('optional', new Input({
+	  label: 'Optional',
+	  name: 'optional',
+	  type: 'checkbox',
+	  default: false,
+	  validation: [true, false],
+	  targetAttr: 'checked'
+	}));
+	
+	add('modifyDemension', new Input({
+	  label: 'Modify Demension',
+	  name: 'modifyDemension',
+	  type: 'checkbox',
+	  default: false,
+	  validation: [true, false],
+	  targetAttr: 'checked'
+	}));
+	
+	add('partNumber', new Input({
+	  label: 'Part Number',
+	  name: 'partNumber',
+	  type: 'text'
+	}));
+	
+	add('count', new Input({
+	  label: 'Count',
+	  name: 'count',
+	  type: 'number',
+	  value: 1
+	}));
+	
+	add('quantity', new Input({
+	  label: 'Quantity',
+	  name: 'quantity',
+	  type: 'number',
+	  value: 0
+	}));
+	
+	add('hourlyRate', new Input({
+	  label: 'Hourly Rate',
+	  name: 'hourlyRate',
+	  type: 'number',
+	}));
+	
+	add('hours', new Input({
+	  label: 'Hours',
+	  name: 'hours',
+	  type: 'number',
+	  value: 0
+	}));
+	
+	add('laborType', new Input({
+	  name: 'laborType',
+	  placeholder: 'Labor Type',
+	  label: 'Type',
+	  class: 'center',
+	  clearOnClick: true,
+	  list: Labor.types
+	}));
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/section.js',
+RequireJS.addFunction('./app-src/cost/cost-decision.js',
 function (require, exports, module) {
 	
-
-	Section.templates = {};
+const Properties = require('../config/properties.js');
+	const DecisionTree = require('../../../../public/js/utils/decisionTree.js');
 	
-	Section.templates[this.constructorId] = new $t(templatePath);
+	class CostDecision {
+	  constructor(id, saved) {
+	    function getPayload(type) {
+	      const payload = {_TYPE: type};
+	      if (tree === undefined)
+	        payload._REQUIRED_NODES = Properties.noValue(id).map((prop) => prop.name());
+	      return payload
+	    }
 	
-	
-	class SectionDisplay {
-	  constructor (section) {
-	    Section.render = (scope) => {
-	      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
-	      const cId = scope.opening.constructorId;
-	      if (cId === 'DivideSection') {
-	        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
+	    function getParentNode(name, parentNodeId, type, payload) {
+	      if (parentNodeId === undefined) {
+	        if (tree === undefined) {
+	          tree = new DecisionTree(name, payload);
+	        } else {
+	          throw new Error('Tree already initialized. should not call this function without a parentNodeId after initialization');
+	        }
+	      } else {
+	        return tree.getNode(parentNodeId);
 	      }
-	      return Section.templates[cId].render(scope);
+	    }
+	
+	    this.addSelect = (name, parentNodeId) => {
+	      const payload = getPayload(CostDecision.types.SELECT);
+	      const parentNode = getParentNode(name, parentNodeId, CostDecision.types.SELECT, payload);
+	      if (parentNode === undefined) return;
+	      parentNode.addState(name, payload);
+	    }
+	
+	    this.tree = () => tree;
+	
+	    let tree;
+	    if (saved) {
+	      tree = CostDecision.fromJson(saved);
+	    } else {
+	      if (Properties.hasValue(id)) {
+	        this.addSelect();
+	      }
 	    }
 	  }
 	}
 	
+	CostDecision.types = {
+	  SELECT: 'Select',
+	  GROUP: 'Group',
+	  CONDITIONAL: 'Conditional',
+	  REFERENCE: 'Reference',
+	  LABOR: 'Labor',
+	  MATERIAL: 'Material'
+	}
 	
-	const du = require('../../../public/js/utils/dom-utils.js');
-	
-	afterLoad.push(() => du.on.match('change', '.feature-radio', (target) => {
-	  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
-	  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
-	  target.nextElementSibling.hidden = !target.checked;
-	}))
+	module.exports = CostDecision
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/user.js',
+RequireJS.addFunction('./app-src/cost/cost.js',
 function (require, exports, module) {
 	
-const du = require('../../../../public/js/utils/dom-utils.js');
-	const APP_ID = require('../../globals/CONSTANTS.js').APP_ID;
-	const Request = require('../../../../public/js/utils/request.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const $t = require('../../../../public/js/utils/$t.js');
+
 	
-	class User {
-	  constructor() {
-	    const stateAttr = 'user-state';
-	    let state, cnt, email, password;
+	const Company = require('../objects/company.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
+	const Assembly = require('../objects/assembly/assembly.js');
 	
-	    function updateDisplay(s) {
-	      state = s ? User.states[s] : state;
-	      cnt = cnt || du.id('login-cnt');
-	      cnt.innerHTML = state.template.render({email, password});
+	
+	// constructors
+	// Cost({id, Method: Cost.methods.LINEAR_FEET, cost, length})
+	// Cost({id, Method: Cost.methods.SQUARE_FEET, cost, length, width})
+	// Cost({id, Method: Cost.methods.CUBIC_FEET, cost, length, width, depth})
+	// Cost({id, Method: Cost.methods.UNIT, cost})
+	// Cost((id, Cost, formula));
+	// props. - (optional*)
+	// id - Cost identifier
+	// method - Method for calculating cost
+	// length - length of piece used to calculate unit cost
+	// width - width of piece used to calculate unit cost
+	// depth - depth of piece used to calculate unit cost
+	// cost - cost of piece used to calculate unit cost
+	// formula* - formula used to apply cost to part
+	// company* - Company to order from.
+	// partNumber* - Part number to order part from company
+	// Cost* - Reference Cost.
+	
+	class Cost {
+	  //constructor(id, Cost, formula)
+	  constructor(props) {
+	    props = props || {};
+	    this.props = () => props;
+	    let deleted = false;
+	    const instance = this;
+	    const uniqueId = String.random();
+	    const lastUpdated = props.lastUpdated || new Date().getTime();
+	    props.requiredBranches = props.requiredBranches || [];
+	    this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
+	    this.delete = () => deleted = true;
+	    this.deleted = () => deleted;
+	    Object.getSet(this, props, 'group', 'objectId', 'id', 'children', 'parent');
+	    this.children = [];
+	    this.level = () => {
+	      let level = -1;
+	      let curr = this;
+	      while(curr instanceof Cost) {
+	        level++;
+	        curr = curr.parent();
+	      }
+	      return level;
 	    }
 	
-	    const hideLogin = () => du.id('login').hidden = true;
-	    const showLogin = () => du.id('login').hidden = false;
-	    function successfulRegistration(body) {
-	      updateDisplay('CONFIRMATION_MESSAGE');
+	    const satisfyReg = (idOreg) => idOreg instanceof RegExp ? idOreg :
+	      new RegExp(`(^\\s*${idOreg}\\s*$|\\((\\s*|[^(^)]*,\\s*)${idOreg}(\\s*,[^(^)]*\\s*|\\s*)\\)\\s*$)`);
+	    // TODO: possibly make more efficient... tough to maintain consistancy
+	    this.satisfies = (idOreg) => {
+	      const reg = satisfyReg(idOreg);
+	      if (this.id().match(reg)) return true;
+	      for(let index = 0; index < this.children.length; index += 1) {
+	        if (this.children[index].satisfies(reg)) return true;
+	      }
+	      return false;
 	    }
+	    this.unsatisfiedBranches = () =>
+	      this.requiredBranches().filter((id) => !this.satisfies(id));
 	
-	    function register(target) {password
-	      const fail = du.appendError(target, 'Registration Failed: Email already registered');
-	      const body = {email, password};
-	      document.cookie = `${APP_ID}=${email}:invalid`;
-	      Request.post(EPNTS.user.register(), body, successfulRegistration, fail);
-	    }
+	    this.uniqueId = () => uniqueId;
+	    Cost.uniqueIdMap[uniqueId] = this;
+	    // TODO: None does not make sence here.
+	    this.childIds = () =>
+	        ['None'].concat(this.children.map((obj) => obj.id()));
 	
-	    function successfulLogin(body, res) {
-	      const newAuth = res.getResponseHeader('authorization');
-	      document.cookie = `${APP_ID}=${newAuth}`;
-	      hideLogin();
-	    }
+	    Cost.group(this, this);
 	
-	    const getEmail = () => du.cookie.get(APP_ID, ':', 'email').email;
-	    this.credential = User.credential;
-	
-	    function login(target) {
-	      const fail = du.appendError(target, 'Login Failed: Invalid Email and/or Password');
-	      const body = {email, password};
-	      Request.post(EPNTS.user.login(), body, successfulLogin, fail);
-	    }
-	
-	    function resendActivation(target) {
-	      const fail = du.appendError(target, 'Email Not Registered Or Already Active');
-	      const body = {email: getEmail()};
-	      Request.post(EPNTS.user.resendActivation(), body, successfulRegistration, fail);
-	    }
-	
-	    function logout() {
-	      du.cookie.remove(APP_ID);
-	      showLogin();
-	      updateDisplay('LOGIN')
-	    }
-	
-	    function resetPassword(target) {
-	      const fail = du.appendError(target, 'Server Error Must have occured... try again in a few minutes');
-	      const body = {email, newPassword: password};
-	      Request.post(EPNTS.user.resetPasswordRequest(), body, successfulRegistration, fail);
-	    }
-	
-	    du.on.match('click', `[${stateAttr}]`, (elem) => {
-	      const stateId = elem.getAttribute(stateAttr);
-	      if (User.states[stateId]) {
-	        updateDisplay(stateId);
-	      } else console.error(`Invalid State: '${stateId}'`);
-	    });
-	
-	    du.on.match('click', '#register', register);
-	    du.on.match('click', '#login-btn', login);
-	    du.on.match('click', '#resend-activation', resendActivation);
-	    du.on.match('click', '#reset-password', resetPassword);
-	    du.on.match('click', '#logout-btn', logout);
-	
-	    du.on.match('change', 'input[name="email"]', (elem) => email = elem.value);
-	    du.on.match('change', 'input[name="password"]', (elem) => password = elem.value);
-	
-	    function statusCheck(body) {
-	      switch (body) {
-	        case 'Not Registered':
-	          updateDisplay('LOGIN')
-	          break;
-	        case 'Not Activated':
-	          updateDisplay('CONFIRMATION_MESSAGE');
-	          break;
-	        case 'Logged In':
-	          hideLogin();
-	          break;
-	        case 'Logged Out':
-	          updateDisplay('LOGIN')
-	          break;
-	        default:
-	
+	    this.addChild = (cost) => {
+	      if (cost instanceof Cost) {
+	        this.children.push(cost);
 	      }
 	    }
-	
-	    Request.globalHeader('Authorization', this.credential);
-	    if (this.credential()) Request.get(EPNTS.user.status(), statusCheck);
-	    else updateDisplay('LOGIN');
 	  }
 	}
 	
-	User.states = {};
-	User.states.LOGIN = {
-	  template: new $t('login/login')
-	};
-	User.states.CONFIRMATION_MESSAGE = {
-	  template: new $t('login/confirmation-message')
-	};
-	User.states.CREATE_ACCOUNT = {
-	  template: new $t('login/create-account')
-	};
-	User.states.RESET_PASSWORD = {
-	  template: new $t('login/reset-password')
-	};
+	Cost.uniqueIdMap = {};
 	
-	User.credential = () => du.cookie.get(APP_ID);
+	Cost.getterSetter = (obj, attr, validation) => (val) => {
+	  if (val && validation && validation(val)) obj[attr] = val;
+	  if (validation && !validation(obj[attr])) throw new Error(`Invalid Cost Value ${obj[attr]}`);
+	  return obj[attr];
+	}
 	
 	
-	User = new User();
-	module.exports = User
+	Cost.group = (() => {
+	  const groups = {};
+	  const defaultCostObj = () => ({unique: {}, objectMap: {}, defined: {'/dev/nul': 'Custom'}});
+	  return (props, cost) => {
+	    const isSetter = cost instanceof Cost;
+	    const name = isSetter ? props.group : props;
+	    if (isSetter) {
+	      if (groups[name] === undefined)
+	      groups[name] = defaultCostObj();
+	      const group = groups[name];
+	
+	      const unique = group.unique;
+	      const defined = group.defined;
+	      const objectMap = group.objectMap;
+	      if (unique[cost.uniqueId()] !== undefined)
+	      throw new Error('Invalid Unique Id');
+	
+	      unique[cost.uniqueId()] = cost;
+	
+	      if (props.objectId !== undefined) {
+	        if (objectMap[props.objectId] === undefined)
+	          objectMap[props.objectId] = [];
+	        objectMap[props.objectId].push(cost.uniqueId());
+	      }
+	
+	      // TODO move to referenceCost constructor
+	      if (cost.constructor.name === 'ReferenceCost') {
+	        if (props.referenceable) {
+	          if (Object.values(defined).indexOf(cost.id()) !== -1)
+	          throw new Error(`referenceable cost must have a unique Id: '${cost.id()}'`);
+	          defined[cost.uniqueId()] = cost.id();
+	        }
+	      }
+	    }
+	
+	    return groups[name] || defaultCostObj();
+	  }
+	})();
+	
+	Cost.types = [];
+	Cost.get = (uniqueId) => {
+	  return Cost.uniqueIdMap[uniqueId];
+	};
+	
+	Cost.new = (props) => {
+	  const type = props.type;
+	  return new Cost.types[props.type](props);
+	}
+	
+	Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
+	Cost.remove = (uniqueId) => Cost.get(uniqueId).remove();
+	
+	Cost.constructorId = (name) => name.replace(/Cost$/, '');
+	Cost.register = (clazz) => {
+	  Cost.types[Cost.constructorId(clazz.prototype.constructor.name)] = clazz;
+	  Cost.typeList = Object.keys(Cost.types).sort();
+	}
+	
+	Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
+	
+	module.exports = Cost
 	
 });
 
@@ -13391,377 +12848,846 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/room.js',
+RequireJS.addFunction('./app-src/config/properties.js',
+function (require, exports, module) {
+	
+
+	const Property = require('./property');
+	const Measurement = require('../../../../public/js/utils/measurment.js');
+	const EPNTS = require('../../generated/EPNTS');
+	const Request = require('../../../../public/js/utils/request.js');
+	
+	const h = new Property('h', 'height', null);
+	const w = new Property('w', 'width', null);
+	const d = new Property('d', 'depth', null);
+	const t = new Property('t', 'thickness', null);
+	const l = new Property('l', 'length', null);
+	
+	
+	let unitCount = 0;
+	const UNITS = [];
+	Measurement.units().forEach((unit) =>
+	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
+	UNITS._VALUE = Measurement.unit();
+	
+	const IMPERIAL_US = Measurement.units()[1];
+	const assemProps = {
+	  Overlay: [
+	    new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
+	  ],
+	  Reveal: [
+	    new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
+	    new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
+	  ],
+	  Inset: [
+	    new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
+	  ],
+	  Cabinet: [
+	      h.clone(), w.clone(), d.clone(),
+	      new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
+	      new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
+	      new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
+	      new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
+	      new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
+	      new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
+	      new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
+	      new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
+	      new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
+	  ],
+	  Panel: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  Guides: [
+	    l.clone(),
+	    new Property('dbtos', 'Drawer Box Top Offset', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('dbsos', 'Drawer Box Side Offest', {value: 3/16, notMetric: IMPERIAL_US}),
+	    new Property('dbbos', 'Drawer Box Bottom Offset', {value: 1/2, notMetric: IMPERIAL_US})
+	  ],
+	  DoorAndFront:[
+	    new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
+	    new Property('dafip', 'Door and front inset panel', {value: null})
+	  ],
+	  Door: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  DrawerBox: [
+	    h.clone(), w.clone(), d.clone(),
+	    new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
+	    new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
+	    new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
+	  ],
+	  DrawerFront: [
+	    h.clone(), w.clone(), t.clone(),
+	    new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
+	  ],
+	  Frame: [
+	    h.clone(), w.clone(), t.clone()
+	  ],
+	  Handle: [
+	    l.clone(), w.clone(),
+	    new Property('c2c', 'Center To Center', null),
+	    new Property('proj', 'Projection', null),
+	  ],
+	  Hinge: [
+	    new Property('maxtab', 'Max Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
+	    new Property('mintab', 'Minimum Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
+	    new Property('maxol', 'Max Door Overlay', {value: 1/2, notMetric: IMPERIAL_US}),
+	    new Property('minol', 'Minimum Door Overlay', {value: .5, notMetric: IMPERIAL_US})
+	  ],
+	  Opening: []
+	}
+	
+	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
+	function assemProperties(clazz, filter) {
+	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
+	  props = assemProps[clazz] || [];
+	  if ((typeof filter) != 'function') return props;
+	  props = props.filter(filter);
+	  return props;
+	}
+	
+	let config = {};
+	const changes = {};
+	const copyMap = {};
+	assemProperties.changes = {
+	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
+	  save: (id) => {
+	    const list = changes[id];
+	    if (!list) throw new Error(`Unkown change id '${id}'`);
+	    const group = list._GROUP;
+	    if (config[group] === undefined) config[group] = [];
+	    if(copyMap[id] === undefined) {
+	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
+	      copyMap[list._ID] = config[group][list._NAME].properties;
+	    } else {
+	      const tempList = changes[id];
+	      for (let index = 0; index < tempList.length; index += 1) {
+	        const tempProp = tempList[index];
+	        const configProp = copyMap[id][index];
+	        configProp.value(tempProp.value());
+	      }
+	    }
+	   },
+	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
+	  delete: (id) => {
+	    delete config[changes[id][0].name()][changes[id]._NAME];
+	    delete changes[id];
+	    delete copyMap[id];
+	  },
+	  changed: (id) => {
+	    const list = changes[id];
+	    if (list === undefined) return false;
+	    for (let index = 0; index < list.length; index += 1) {
+	      const prop = list[index];
+	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
+	        console.log('booyacka!');
+	      }
+	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
+	        return true;
+	      }
+	    }
+	    return false;
+	  },
+	  changesExist: () => {
+	      const lists = Object.values(changes);
+	      for (let index = 0; index < lists.length; index += 1) {
+	        if (assemProperties.changes.changed(lists[index]._ID)) {
+	          return true;
+	        }
+	      }
+	      return false;
+	  }
+	}
+	
+	assemProperties.config = () => {
+	  const plainObj = {};
+	  const keys = Object.keys(config);
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    const lists = config[key];
+	    const listKeys = Object.keys(lists);
+	    plainObj[key] = {};
+	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
+	      const listKey = listKeys[lIndex];
+	      const list = lists[listKey];
+	      const propObj = {name: listKey, properties: []};
+	      plainObj[key][listKey] = propObj;
+	      list.properties.forEach((property) =>
+	          propObj.properties.push(property.toJson(excludeKeys, true)))
+	    }
+	  }
+	  return plainObj;
+	}
+	assemProperties.list = () => Object.keys(assemProps);
+	assemProperties.new = (group, name) => {
+	  if (assemProps[group]) {
+	    const list = [];
+	    const ogList = assemProps[group].filter(hasValueFilter);
+	    for (let index = 0; index < ogList.length; index += 1) {
+	      list[index] = ogList[index].clone();
+	    }
+	    list._ID = String.random();
+	    list._GROUP = group;
+	    list._NAME = name;
+	    changes[list._ID] = list;
+	    return list;
+	  }
+	  throw new Error(`Requesting invalid Property Group '${group}'`);
+	}
+	
+	const dummyFilter = () => true;
+	assemProperties.groupList = (group, filter) => {
+	  filter = filter || dummyFilter;
+	  const groupList = config[group];
+	  const changeList = {};
+	  if (groupList === undefined) return {};
+	  const groupKeys = Object.keys(groupList);
+	  for (let index = 0; index < groupKeys.length; index += 1) {
+	    const groupKey = groupKeys[index];
+	    const list = groupList[groupKey];
+	    const properties = groupList[list.name].properties;
+	    const codes = properties.map((prop) => prop.code());
+	    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
+	    //                   .filter(filter);
+	    // newProps.forEach((prop) => properties.push(prop.clone()));
+	    changeList[list.name] = {name: list.name, properties: []};
+	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
+	      const prop = properties[pIndex];
+	      changeList[list.name].properties.push(prop.clone());
+	    }
+	    const uniqueId = String.random();
+	    const set = changeList[list.name].properties;
+	    set._ID = uniqueId;
+	    set._NAME = list.name;
+	    changes[uniqueId] = set;
+	    copyMap[uniqueId] = properties;
+	  }
+	  return changeList;
+	}
+	
+	const hasValueFilter = (prop) => prop.value() !== null;
+	assemProperties.hasValue = (group) => {
+	  return assemProperties.groupList(group, hasValueFilter);
+	}
+	
+	const noValueFilter = (prop) => prop.value() === null;
+	assemProperties.noValue = (group) => {
+	  const props = assemProps[group];
+	  return props.filter(noValueFilter);
+	}
+	
+	assemProperties.UNITS = UNITS;
+	
+	assemProperties.load = (body) => {
+	  config = Object.fromJson(body);
+	}
+	
+	module.exports = assemProperties;
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/cabinet-configs.js',
 function (require, exports, module) {
 	
 
 	
-	const Room = require('../objects/room.js');
-	const CabinetDisplay = require('./cabinet.js');
+	const CustomEvent = require('../../../../public/js/utils/custom-error.js');
+	const cabinetBuildConfig = require('../../public/json/cabinets.json');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Inputs = require('../input/inputs.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const EPNTS = require('../../generated/EPNTS.js');
+	
+	class CabinetConfig {
+	  constructor() {
+	    let cabinetList = {};
+	    let cabinetKeys = {};
+	    let configKeys;
+	    const updateEvent = new CustomEvent('update');
+	    function setLists(cabinets) {
+	      const allCabinetKeys = Object.keys(cabinets);
+	      allCabinetKeys.forEach((key) => {
+	        const type = cabinets[key].partName;
+	        if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
+	        if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
+	        cabinetKeys[type][key] = cabinets[key];
+	      });
+	
+	      cabinetList = cabinets;
+	      configKeys = Object.keys(cabinetBuildConfig);
+	      updateEvent.trigger();
+	    }
+	
+	    this.valid = (type, id) => (!id ?
+	    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
+	
+	    this.onUpdate = (func) => updateEvent.on(func);
+	    this.inputTree = () => {
+	      const typeInput = new Select({
+	        name: 'type',
+	        class: 'center',
+	        list: JSON.parse(JSON.stringify(configKeys))
+	      });
+	      const propertyInput = new Select({
+	        name: 'propertyId',
+	        class: 'center',
+	        list: ['pajango', 'skititors']
+	      });
+	      const inputs = [Inputs('name'), typeInput, propertyInput];
+	      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
+	      const cabinetTypes = Object.keys(cabinetKeys);
+	      cabinetTypes.forEach((type) => {
+	        const cabinetInput = new Select({
+	          label: 'Layout (Optional)',
+	          name: 'id',
+	          class: 'center',
+	          list: [''].concat(Object.keys(cabinetKeys[type]))
+	        });
+	        inputTree.addState(type, cabinetInput);
+	        inputTree.then(`type:${type}`).jump(type);
+	      });
+	      return inputTree;
+	    }
+	    this.get = (name, type, propertyId, id) => {
+	      let cabinet;
+	      if (!id) cabinet = Cabinet.build(type);
+	      else cabinet = Cabinet.fromJson(cabinetList[id]);
+	      if (propertyId !== undefined) cabinet.propertyId(propertyId);
+	      cabinet.name = name;
+	      return cabinet;
+	    };
+	
+	    Request.get(EPNTS.cabinet.list(), setLists, () => setLists([]));
+	  }
+	}
+	
+	CabinetConfig = new CabinetConfig();
+	module.exports = CabinetConfig
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/information-bar.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	class InformationBar {
+	  constructor() {
+	    const container = du.create.element('div');
+	    container.className = 'information-bar';
+	
+	    this.show = () => container.hidden = false;
+	    this.hide = () => container.hidden = true;
+	    this.update = (html) => container.innerHTML = html;
+	
+	    document.body.append(container);
+	  }
+	}
+	module.exports = InformationBar
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/displayManager.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	
+	class DisplayManager {
+	  constructor(displayId, listId, switchId) {
+	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
+	    const id = String.random();
+	    const instance = this;
+	    this.list = (func) => {
+	      const list = [];
+	      const runFunc = (typeof func) === 'function';
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        let id = elem.id || String.random(7);
+	        elem.id = id;
+	        name = elem.getAttribute('name') || id;
+	        const item = {id, name};
+	        if (runFunc) func(elem);
+	        list.push(item);
+	      }
+	      return list;
+	    }
+	
+	    function updateActive(id) {
+	      const items = document.querySelectorAll('.display-manager-input');
+	      for (let index = 0; index < items.length; index += 1) {
+	        const elem = items[index];
+	        elem.getAttribute('display-id') === id ?
+	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
+	      }
+	    }
+	
+	    function open(id) {
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        if (elem.id === id) elem.hidden = false;
+	        else elem.hidden = true;
+	      }
+	      updateActive(id);
+	    }
+	
+	    this.open = open;
+	
+	    const children = du.id(displayId).children;
+	
+	    if (children.length > 0) {
+	      this.list();
+	      open(children[0].id);
+	      if (listId) {
+	        du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
+	      }
+	    }
+	
+	    if (switchId) {
+	      du.on.match('click', `#${switchId}`, (target, event) => {
+	        const listElem = du.id(listId);
+	        listElem.hidden = !listElem.hidden;
+	      });
+	      document.addEventListener('click', (event) => {
+	        const listElem = du.id(listId);
+	        const target = event.target;
+	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
+	        if (!withinList && target.id !== switchId &&listElem)
+	          listElem.hidden = true;
+	      });
+	    }
+	    DisplayManager.instances[id] = this;
+	  }
+	}
+	
+	DisplayManager.instances = {};
+	DisplayManager.template = new $t('display-manager');
+	
+	du.on.match('click', '.display-manager-input', (target, event) => {
+	  const displayManager = du.find.up('.display-manager', target);
+	  const displayManagerId = displayManager.id;
+	  const displayId = target.getAttribute('display-id');
+	  DisplayManager.instances[displayManagerId].open(displayId);
+	});
+	module.exports = DisplayManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/order.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const UFObj = require('./information/utility-filter.js');
+	const RoomDisplay = require('./room.js');
+	const Order = require('../objects/order.js');
+	const Request = require('../../../../public/js/utils/request.js');
 	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 	const Input = require('../../../../public/js/utils/input/input.js');
 	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 	const $t = require('../../../../public/js/utils/$t.js');
+	const EPNTS = require('../../generated/EPNTS.js')
+	const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
 	const Inputs = require('../input/inputs.js');
 	
-	class RoomDisplay {
-	  constructor(parentSelector, order) {
-	    const cabinetDisplays = {};
-	    const getHeader = (room, $index) =>
-	        RoomDisplay.headTemplate.render({room, $index});
+	class OrderDisplay {
+	  constructor(parentSelector, orders) {
+	    const roomDisplays = {};
+	    let active;
+	    const getHeader = (order, $index) =>
+	        OrderDisplay.headTemplate.render({order, $index});
 	
-	    const getBody = (room, $index) => {
-	      let propertyTypes = Object.keys(['alabaster','pickles']);
-	      return RoomDisplay.bodyTemplate.render({$index, room, propertyTypes});
+	    const setInfo = (order, index) => () => {
+	      const elem = du.id(`uf-info-${index}`);
+	      if (elem)
+	        UTF.buildDisplay(elem, new UFObj(order));
 	    }
 	
-	    const getObject = (values) => {
-	      const room = new Room(values.name);
-	      return room;
+	    function initOrder(order, index) {
+	      roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
+	      ToggleDisplayList.onShow(`information-display-${index}`, );
+	      expandList.afterRender(setInfo(order, index));
+	      return order;
 	    }
-	    this.active = () => expandList.active();
-	    this.cabinetDisplay = () => {
-	      const room = this.active();
-	      const id = room.id();
-	      if (cabinetDisplays[id] === undefined) {
-	        cabinetDisplays[id] = new CabinetDisplay(room);
+	
+	    function loadOrder(index, start) {
+	      return function (orderData) {
+	        const order = Order.fromJson(orderData);
+	        initOrder(order, index);
+	        expandList.set(index, order);
+	        expandList.refresh();
+	        console.log('load Time:', new Date().getTime() - start);
 	      }
-	      return cabinetDisplays[id];
 	    }
-	    this.cabinet = () => this.cabinetDisplay().active();
+	
+	    const getBody = (order, $index) => {
+	      if (order instanceof Order) {
+	        let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
+	        active = roomDisplays[order.id()];
+	        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
+	      } else {
+	        const start = new Date().getTime();
+	        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
+	        return 'Loading...';
+	      }
+	    }
+	    const getObject = (values) => initOrder(new Order(values.name));
+	    this.active = () => active;
+	
 	    const expListProps = {
-	      list: order.rooms,
+	      list: orders,
+	      inputValidation: (values) => values.name ? true :
+	          'You must Define a name',
 	      parentSelector, getHeader, getBody, getObject,
-	      inputs: [{placeholder: 'name'}],
-	      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
-	      listElemLable: 'Room', type: 'pill',
-	      inputTree: new DecisionInputTree('Room', Inputs('name'), console.log)
+	      listElemLable: 'Order', type: 'sidebar',
+	      inputTree: new DecisionInputTree('Order', Inputs('name'), console.log)
 	    };
 	    const expandList = new ExpandableList(expListProps);
-	    expandList.afterRender(() => this.cabinetDisplay().refresh());
-	    this.refresh = () => expandList.refresh();
+	    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
+	
+	    const saveSuccess = () => console.log('success');
+	    const saveFail = () => console.log('failure');
+	    const save = (target) => {
+	      const index = target.getAttribute('index');
+	      const order = expandList.get(index);
+	      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
+	      console.log('saving');
+	    }
+	
+	    const attrUpdate = (attr) => (target) => {
+	      const index = target.getAttribute('index');
+	      const order = expandList.get(index);
+	      order[attr] = target.value;
+	    };
+	
+	    function addOrders(names) {
+	      names.forEach((name) => expListProps.list.push({ name }));
+	      expandList.refresh();
+	    }
+	    Request.get(EPNTS.order.list(), addOrders);
+	
+	    du.on.match('change', '.order-name-input', attrUpdate('name'));
+	    du.on.match('click', '.save-order-btn', save);
 	  }
 	}
-	RoomDisplay.bodyTemplate = new $t('room/body');
-	RoomDisplay.headTemplate = new $t('room/head');
-	module.exports = RoomDisplay
+	OrderDisplay.bodyTemplate = new $t('order/body');
+	OrderDisplay.headTemplate = new $t('order/head');
+	OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
+	OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
+	OrderDisplay.infoBodyTemplate = new $t('order/information/body');
+	OrderDisplay.infoHeadTemplate = new $t('order/information/head');
+	module.exports = OrderDisplay
 	
 });
 
 
-RequireJS.addFunction('./app-src/input/inputs.js',
+RequireJS.addFunction('./app-src/displays/property.js',
 function (require, exports, module) {
-	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
+	
+
+	
+	const Properties = require('../config/properties.js');
+	const Property = require('../config/property.js');
 	const Cost = require('../cost/cost.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Material = require('../cost/types/material.js');
-	const ConditionalCost = require('../cost/types/category/conditional.js');
-	const Company = require('../objects/company.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const Labor = require('../cost/types/material/labor.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const RadioDisplay = require('../display-utils/radioDisplay.js');
+	const EPNTS = require('../../generated/EPNTS');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const Inputs = require('../input/inputs.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
+	const Measurement = require('../../../../public/js/utils/measurment.js');
 	
-	
-	const defined = {};
-	function add (name, input) {
-	  if (defined[name]) {
-	    throw new Error(`Input by the name of '${name}' is already defined`)
+	// TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
+	const changed = (id) => Properties.changes.changed(id);
+	const shouldHide = (prop) => prop.value() === null;
+	const hideAll = (properties) => {
+	  for (let index = 0; index < properties.length; index += 1) {
+	    if (properties[index].value() !== null) return false;
 	  }
-	  defined[name] = input;
+	  return properties.length > 0;
 	}
 	
-	module.exports = (name, properties) => defined[name].clone(properties);
+	function updateSaveAll() {
+	  const saveAllBtn = du.find('#property-manager-save-all');
+	  saveAllBtn.hidden = !Properties.changes.changesExist();
+	  if (saveAllBtn.hidden) {
+	    const saveBtns = du.find.all('.save-change');
+	    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
+	  }
+	}
+	
+	function saveAll() {
+	  Properties.changes.saveAll();
+	  save();
+	  updateSaveAll();
+	}
 	
 	
-	add('length', new MeasurementInput({
-	  type: 'text',
-	  placeholder: 'Length',
-	  name: 'length',
-	  class: 'center'
-	}));
+	function save() {
+	  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
+	}
 	
-	add('width', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Width',
-	  name: 'width',
-	  class: 'center'
-	}));
+	function get() {
+	  Request.get(EPNTS.config.get(), console.log);
+	}
 	
-	add('depth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Depth',
-	  name: 'depth',
-	  class: 'center'
-	}));
+	class PropertyDisplay {
+	  constructor(containerSelector) {
+	    let currProps;
 	
-	add('cost', new MeasurementInput({
-	  type: 'number',
-	  label: '$',
-	  placeholder: 'Cost',
-	  name: 'cost'
-	}));
+	    const noChildren = (properties, groups) => () =>
+	          properties.length === 0 && Object.keys(groups).length === 0;
 	
-	add('pattern', new MeasurementInput({
-	  type: 'text',
-	  class: 'pattern-input',
-	}));
+	    function childScope (key) {
+	      const uniqueId = String.random();
+	      const getObject = (values) => {
+	        let properties = Properties.new(key,  values.name);
+	        return {name: values.name, uniqueId, changed, properties};
+	      }
+	
+	      const inputTree = PropertyDisplay.configInputTree();
+	      const expListProps = {
+	        list: Properties.hasValue(key),
+	        parentSelector: `#config-expand-list-${uniqueId}`,
+	        getHeader: (scope) =>
+	                    PropertyDisplay.configHeadTemplate.render(scope),
+	        getBody: (scope) =>
+	                    PropertyDisplay.configBodyTemplate.render({
+	                      name: scope.name,
+	                      properties: scope.properties,
+	                      changed
+	                    }),
+	        inputValidation: inputTree.validate,
+	        listElemLable: 'Config',
+	        getObject, inputTree
+	      };
+	      setTimeout(() => {
+	        const expList = new ExpandableObject(expListProps);
+	        expList.afterRemoval((element, detail) => {
+	          console.log(detail);
+	          console.log('placehoder');
+	          Properties.changes.delete(detail.properties._ID);
+	        });
+	      }, 500);
+	      return uniqueId;
+	    }
+	
+	    function getScope(key, group) {
+	      key = key || '';
+	      const uniqueId = String.random();
+	      let radioId = group.radioId || PropertyDisplay.counter++;
+	      const properties = [];
+	      const groups = {};
+	      const label = key.replace(PropertyDisplay.camelReg, '$1 $2');
+	      const scope = {key, label, properties, groups, recurse, radioId, uniqueId,
+	                      noChildren: noChildren(properties, groups),
+	                      branch: key.match(PropertyDisplay.branchReg)};
+	      PropertyDisplay.uniqueMap[uniqueId] = scope;
+	      const keys = Object.keys(group.values);
+	      radioId = PropertyDisplay.counter++;
+	      for( let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = group.values[key];
+	        childScope(key, uniqueId);
+	      }
+	      return scope;
+	    }
+	
+	    this.update = () => {
+	      const propKeys = Properties.list();
+	      const propertyObjs = {};
+	      const childIdMap = [];
+	      for (let index = 0; index < propKeys.length; index += 1) {
+	        const key = propKeys[index];
+	        const props = Properties(key);
+	        const propObj = props;
+	        propertyObjs[key] = propObj;
+	        childIdMap[key] = childScope(key);
+	      }
+	      const uniqueId = String.random();
+	      const values = {values: propertyObjs, uniqueId, childIdMap, hideAll, Properties};
+	      const contianer = document.querySelector(containerSelector);
+	      contianer.innerHTML =
+	          PropertyDisplay.template.render(values);
+	    };
+	
+	    function updateProperties(name, value) {
+	    }
+	    bind('property-cnt', updateProperties);
+	    new RadioDisplay('property-container', 'radio-id');
+	  }
+	}
+	
+	// bind('property-branch-selector', '');
+	
+	du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
+	  const childTargets = target.parentElement.children[1].children;
+	  const childElem = childTargets[target.value];
+	  // TODO: set config property: childElem.innerText;
+	  du.hide(childTargets);
+	  du.show(childElem);
+	});
+	
+	function setPropertyElemValue(elem, idAttr, value) {
+	  const id = elem.getAttribute(idAttr);
+	  const group = elem.getAttribute('name');
+	  const property = Property.get(id);
+	  property.value(value, true);
+	}
+	
+	function updateMeasurements () {
+	  measureElems = du.find.all('[measurement-id]:not([measurement-id=""])');
+	  measureElems.forEach((elem) => {
+	    const id = elem.getAttribute('measurement-id');
+	    const measurement = Measurement.get(id);
+	    elem.value = measurement.display();
+	  });
+	}
+	
+	function updateRadio(elem) {
+	  const name = elem.getAttribute('name');
+	  Properties.config()
+	  const elems = du.find.all(`input[type="radio"][name='${name}']`);
+	  elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
+	  setPropertyElemValue(elem, 'prop-radio-update', true);
+	  if (name === 'UNIT') updateMeasurements();
+	}
+	
+	function updateValueDisplay(elem) {
+	  const id = elem.getAttribute('measurement-id');
+	  const measurement = Measurement.get(id);
+	  elem.value = measurement.display();
+	}
+	
+	function updateValue(elem) {
+	  setPropertyElemValue(elem, 'prop-value-update', elem.value);
+	  const saveBtn = du.find.closest('.save-change', elem);
+	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+	  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
+	  elem.setAttribute('measurement-id', measurementId);
+	  updateSaveAll();
+	}
+	
+	function updateBoolean(elem) {
+	  setPropertyElemValue(elem, 'prop-boolean-update', elem.checked);
+	  const saveBtn = du.find.closest('.save-change', elem);
+	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+	  updateSaveAll();
+	}
+	
+	function saveChange(elem) {
+	  const id = elem.getAttribute('properties-id');
+	  Properties.changes.save(id);
+	  elem.hidden = true;
+	  updateSaveAll();
+	  save();
+	}
 	
 	
-	add('offsetLen', new MeasurementInput({
-	  type: 'text',
-	  label: 'Offset',
-	  placeholder: 'Length',
-	  name: 'offsetLength',
-	  class: 'center',
-	}));
+	du.on.match('keyup', '[prop-value-update]', updateValue);
+	du.on.match('change', '[prop-boolean-update]', updateBoolean);
+	du.on.match('focusout', '[measurement-id]', updateValueDisplay);
+	du.on.match('change', '[prop-radio-update]', updateRadio);
+	du.on.match('click', '#property-manager-save-all', saveAll);
+	du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
 	
-	add('offsetWidth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Width',
-	  name: 'offsetWidth',
-	  class: 'center',
-	}));
+	PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
+	PropertyDisplay.branchReg = /^OR_(.{1,})/;
+	PropertyDisplay.camelReg = /([a-z])([A-Z])/g;
+	PropertyDisplay.counter = 0;
+	PropertyDisplay.template = new $t('properties/properties');
+	PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
+	PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
+	PropertyDisplay.radioTemplate = new $t('properties/radio');
+	PropertyDisplay.uniqueMap = {};
+	PropertyDisplay.configMap = {};
 	
-	add('offsetDepth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Depth',
-	  name: 'offsetDepth',
-	  class: 'center',
-	}));
+	PropertyDisplay.configInputTree = () =>
+	  new DecisionInputTree('Config', [Inputs('name')], console.log);
 	
-	
-	add('costType', new Select({
-	  placeholder: 'Type',
-	  name: 'type',
-	  class: 'center',
-	  list: Cost.typeList
-	}));
-	
-	add('method', new Select({
-	  name: 'method',
-	  class: 'center',
-	  list: Material.methodList,
-	}));
-	
-	add('propertyConditions', new Select({
-	  name: 'propertyCondition',
-	  class: 'center',
-	  list: Object.values(ConditionalCost.conditions)
-	}));
-	
-	add('propertyIds', new Select({
-	  name: 'propertyIds',
-	  class: 'center',
-	  list: Object.keys(['1/2', 'Full', 'Inset'])
-	}));
-	
-	add('company', new Select({
-	  name: 'company',
-	  label: 'Company',
-	  class: 'center',
-	  list: [''].concat(Object.keys(Company.list)),
-	  value: ''
-	}));
-	
-	add('childCost', new Select({
-	    name: 'child',
-	    label: 'Default',
-	    class: 'center',
-	}));
-	
-	
-	add('id', new Input({
-	  type: 'text',
-	  placeholder: 'Id',
-	  name: 'id',
-	  class: 'center',
-	  validation: /^\s*[^\s]{1,}\s*$/,
-	  errorMsg: 'You must enter an Id'
-	}));
-	
-	add('propertyId', new Input({
-	  type: 'text',
-	  placeholder: 'Property Id',
-	  name: 'propertyId',
-	  class: 'center',
-	  validation: /^[a-zA-Z\.]{1}$/,
-	  errorMsg: 'Alpha Numeric Value seperated by \'.\'.<br>I.E. Cabinet=>1/2 Overlay = Cabinet.12Overlay'
-	}));
-	
-	add('propertyValue', new Input({
-	  type: 'text',
-	  placeholder: 'Property Value',
-	  name: 'propertyValue',
-	  class: 'center'
-	}));
-	
-	add('costId', new Input({
-	  type: 'text',
-	  placeholder: 'Id',
-	  name: 'id',
-	  class: 'center',
-	  validation: (id, values) =>
-	      id !== '' && (!values.referenceable || Object.values(Cost.defined).indexOf(id) === -1),
-	  errorMsg: 'You must an Id: value must be unique if Referencable.'
-	}));
-	
-	add('name', new Input({
-	  type: 'text',
-	  placeholder: 'Name',
-	  name: 'name',
-	  class: 'center',
-	  validation: /^\s*[^\s].*$/,
-	  errorMsg: 'You must enter a Name'
-	}));
-	
-	add('color', new Input({
-	  type: 'color',
-	  validation: /.*/,
-	  placeholder: 'color',
-	  name: 'color',
-	  class: 'center'
-	}));
-	
-	add('optional', new Input({
-	  label: 'Optional',
-	  name: 'optional',
-	  type: 'checkbox',
-	  default: false,
-	  validation: [true, false],
-	  targetAttr: 'checked'
-	}));
-	
-	add('modifyDemension', new Input({
-	  label: 'Modify Demension',
-	  name: 'modifyDemension',
-	  type: 'checkbox',
-	  default: false,
-	  validation: [true, false],
-	  targetAttr: 'checked'
-	}));
-	
-	add('partNumber', new Input({
-	  label: 'Part Number',
-	  name: 'partNumber',
-	  type: 'text'
-	}));
-	
-	add('count', new Input({
-	  label: 'Count',
-	  name: 'count',
-	  type: 'number',
-	  value: 1
-	}));
-	
-	add('quantity', new Input({
-	  label: 'Quantity',
-	  name: 'quantity',
-	  type: 'number',
-	  value: 0
-	}));
-	
-	add('hourlyRate', new Input({
-	  label: 'Hourly Rate',
-	  name: 'hourlyRate',
-	  type: 'number',
-	}));
-	
-	add('hours', new Input({
-	  label: 'Hours',
-	  name: 'hours',
-	  type: 'number',
-	  value: 0
-	}));
-	
-	add('laborType', new Input({
-	  name: 'laborType',
-	  placeholder: 'Labor Type',
-	  label: 'Type',
-	  class: 'center',
-	  clearOnClick: true,
-	  list: Labor.types
-	}));
+	module.exports = PropertyDisplay
 	
 });
 
 
-RequireJS.addFunction('./app-src/input/validation.js',
+RequireJS.addFunction('./app-src/services/display-svc.js',
+function (require, exports, module) {
+	class Register {
+	  constructor() {
+	    const registered = {};
+	    this.register = function (nameOobj, obj) {
+	      if ((typeof nameOobj) !== 'object') {
+	        registered[nameOobj] = obj;
+	      } else {
+	        const keys = Object.keys(nameOobj);
+	        for (let index = 0; index < keys.length; index += 1) {
+	          const key = keys[index];
+	          registered[key] = nameOobj[key];
+	        }
+	      }
+	    }
+	    this.get = (name) => registered[name];
+	  }
+	}
+	
+	module.exports = new Register();
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/room.js',
 function (require, exports, module) {
 	
 
 	
-	const InvalidComputation = require('./error.js');
+	const Cabinet = require('./assembly/assemblies/cabinet.js');
 	
-	class ObjectValidator {
-	  constructor() {
-	    const validators =  {};
-	    this.add = (name, validator) => {
-	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
-	        throw new Error('Invalid Validator');
-	      }
-	      validator[name] = validator;
+	
+	class Room {
+	  constructor(name, id) {
+	
+	    const initialVals = {
+	      name: name || `Room ${Room.count++}`,
+	      id: id || String.random(32),
 	    }
-	    this.validate = (obj) => {
-	      if (typeof obj !== 'object') throw new InvalidComputation()
-	      const keys = Object.keys(validators);
-	    }
+	    Object.getSet(this, initialVals);
+	
+	    this.cabinets = [];
+	    this.toJson = () => {
+	      const json = { cabinets: []};
+	      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
+	      return json;
+	    };
 	  }
+	};
+	Room.count = 0;
+	Room.fromJson = (roomJson) => {
+	  const room = new Room(roomJson.name, roomJson.id);
+	  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
+	  return room;
 	}
-	
-	
-	class Validator {
-	  constructor(validator, props, info) {
-	    let type, validate;
-	    const complement = props.explanation;
-	
-	    let defaultExpl;
-	    if (validator instanceof Regex) {
-	      type = 'Regex';
-	      if (props.complement) {
-	        defaultExpl = 'Value must fit regex expression';
-	        validate = (value) => validator.match('value');
-	      } else {
-	        defaultExpl = 'Value must not fit regex expression';
-	        validate = (value) => !validator.match('value');
-	      }
-	    } else if (Array.isArray(validator)) {
-	      if (props.complement) {
-	        defaultExpl = 'Value must exist within array';
-	        validate = (value) => validator.indexOf(value) !== -1;
-	      } else {
-	        defaultExpl = 'Value must not exist within array';
-	        validate = (value) => validator.indexOf(value) === -1;
-	      }
-	    }
-	
-	    props.explanation = props.explanation || defaultExpl;
-	
-	    val = val === undefined && elem ? elem.value : val;
-	    if (val === undefined) return false;
-	    if (valid !== undefined && val === value) return valid;
-	    let valValid = true;
-	    if (props.validation instanceof RegExp) {
-	      valValid = val.match(props.validation) !== null;
-	    }
-	    else if ((typeof props.validation) === 'function') {
-	      valValid = props.validation.apply(null, arguments);
-	    }
-	    else if (Array.isArray(props.validation)) {
-	      valValid = props.validation.indexOf(val) !== -1;
-	    }
-	
-	    return valValid;
-	  }
-	}
-	exports.ObjectValidator = ObjectValidator
-	exports.Validator = Validator
-	
-	
-	
-	
+	module.exports = Room
 	
 });
 
@@ -13824,306 +13750,63 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/config/property.js',
+RequireJS.addFunction('./app-src/displays/abstract-manager.js',
 function (require, exports, module) {
 	
-const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const Measurement = require('../../../../public/js/utils/measurment.js');
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const $t = require('../../../../public/js/utils/$t.js');
 	
 	
+	class AbstractManager {
+	  constructor(id, name) {
+	    let list;
+	    const manager = this;
+	    this.saveBtnId = `${name}-manager-save-btn`;
+	    this.headerId = `${name}-manager-header-cnt`;
+	    this.bodyId = `${name}-manager-body-cnt`;
+	    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
+	    const parentSelector = `#${this.bodyId}`;
+	    const template = new $t('managers/abstract-manager');
+	    const bodyTemplate = new $t(`managers/${name}/body`);
+	    const headTemplate = new $t(`managers/${name}/header`);
 	
-	class Property extends Lookup {
-	  // clone constructor(code, value) {
-	  constructor(code, name, props) {
-	    super();
-	    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
-	    const children = [];
+	    const getHeader = (instance) =>
+	      headTemplate.render({instance, manager});
+	    const getBody = (instance) =>
+	      bodyTemplate.render({instance, manager});
 	
-	    const initVals = {
-	      code, name, description: props instanceof Object ? props.description : undefined
-	    }
-	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
+	    const getObject = (typeof manager.getObject) === 'function' ?
+	                        (values) => manager.getObject(values) : undefined;
 	
-	    this.value = (val, notMetric) => {
-	      if (val !== undefined && value !== val) {
-	        const measurment = new Measurement(val, notMetric);
-	        const measurmentVal = measurment.value();
-	        value = Number.isNaN(measurmentVal) ? val : measurment;
+	    function init(json) {
+	      du.id(id).innerHTML = template.render(manager);
+	      list = manager.fromJson(json) || [];
+	      const expListProps = {
+	        inputTree: manager.constructor.inputTree(),
+	        parentSelector, getHeader, getBody, getObject, list,
+	        hideAddBtn: true
+	      };
+	      const expandList = new ExpandableList(expListProps);
+	
+	      const saveSuccess = () => console.log('success save');
+	      const saveFail = () => console.log('failed save');
+	      const save = (target) => {
+	        const body = manager.toJson();
+	        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
 	      }
-	      return value instanceof Measurement ? value.value() : value;
+	      du.on.match('click', `#${manager.saveBtnId}`, save);
 	    }
 	
-	    this.display = () => {
-	      return value instanceof Measurement ? value.display() : value;
-	    }
-	
-	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
-	
-	    if ((typeof props) !== 'object' ||  props === null) {
-	      this.value(props);
-	      props = {};
-	    }
-	    this.properties(props || {});
-	
-	    const existingProp = Property.list[code];
-	    let clone = false;
-	    if (this.properties().value !== undefined) {
-	      this.value(this.properties().value, this.properties().notMetric);
-	    }
-	
-	    // if (existingProp) {
-	    //   value = value || existingProp.value();
-	    //   name = existingProp.name();
-	    //   this.properties(existingProp.properties());
-	    //   clone = true;
-	    // }
-	
-	    if ((typeof value) === 'number')
-	      value = new Measurement(value, this.properties().notMetric);
-	
-	
-	    this.addChild = (property) => {
-	      if (property instanceof Property && property.code() === this.code()) {
-	            if (children.indexOf(property) === -1) children.push(property);
-	            else throw new Error('Property is already a child');
-	      }
-	      else throw new Error('Child is not an instance of Property or Code does not match');
-	    }
-	
-	    this.children = () => JSON.clone(children);
-	
-	    this.equals = (other) =>
-	        other instanceof Property &&
-	        this.value() === other.value() &&
-	        this.code() === other.code() &&
-	        this.name() === other.name() &&
-	        this.description() === other.description();
-	
-	    this.clone = (val) => {
-	      const cProps = this.properties();
-	      cProps.clone = true;
-	      cProps.value = val === undefined ? this.value() : val;
-	      cProps.description = this.description();
-	      delete cProps.notMetric;
-	      return new Property(this.code(), this.name(), cProps);
-	    }
-	    if(!clone) Property.list[code] = this;
-	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
-	  }
-	}
-	Property.list = {};
-	Property.DO_NOT_CLONE = true;
-	
-	new Property();
-	
-	module.exports = Property
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/select.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	
-	class SelectCost extends Cost {
-	  constructor (props) {
-	    super(props);
-	    props = this.props();
-	    Object.getSet(this, {modifyDemension: props.modifyDemension,default: props.default});
-	
-	    const selected = 0;
-	    this.selected = (index) => {
-	      if (index !== undefined)
-	        selected = index;
-	      return this.children[selected];
-	    }
-	
-	    this.selectedId = () => {
-	      const child = this.selected();
-	      return child === undefined ? '' : child.id();
-	    }
-	
-	    this.calc = (assemblyOrCount) => this.children[selected] ?
-	        this.children[selected].calc(assemblyOrCount) : -0.01;
-	
-	    this.unitCost = () => this.children[selected] ?
-	        this.children[selected].unitCost() : -0.01;
-	
-	    const selectedId = this.selectedId();
-	    if (selectedId) {
-	      this.children.forEach((child, index) => {
-	        if (child.id() === selectedId) selected = index;
-	      });
-	    }
+	    this.load = () => Request.get(manager.loadPoint(), init);
 	  }
 	}
 	
-	
-	module.exports = SelectCost
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/init-assem.js',
-function (require, exports, module) {
-	
-const Assembly = require('./assembly.js');
-	
-	const Cabinet = require('./assemblies/cabinet.js');
-	Assembly.register(Cabinet);
-	
-	const Divider = require('./assemblies/divider.js');
-	Assembly.register(Divider);
-	
-	const DoorCatch = require('./assemblies/door/door-catch.js');
-	Assembly.register(DoorCatch);
-	
-	const Door = require('./assemblies/door/door.js');
-	Assembly.register(Door);
-	
-	const Hinges = require('./assemblies/door/hinges.js');
-	Assembly.register(Hinges);
-	
-	const DrawerBox = require('./assemblies/drawer/drawer-box.js');
-	Assembly.register(DrawerBox);
-	
-	const DrawerFront = require('./assemblies/drawer/drawer-front.js');
-	Assembly.register(DrawerFront);
-	
-	const Guides = require('./assemblies/drawer/guides.js');
-	Assembly.register(Guides);
-	
-	const Frame = require('./assemblies/frame.js');
-	Assembly.register(Frame);
-	
-	const Handle = require('./assemblies/hardware/pull.js');
-	Assembly.register(Handle);
-	
-	const Screw = require('./assemblies/hardware/screw.js');
-	Assembly.register(Screw);
-	
-	const Panel = require('./assemblies/panel.js');
-	Assembly.register(Panel);
-	
-	const DividerSection = require('./assemblies/section/partition/sections/divider.js');
-	Assembly.register(DividerSection);
-	
-	const Section = require('./assemblies/section/section.js');
-	Assembly.register(Section);
-	
-	const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
-	Assembly.register(DivideSection);
-	
-	const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
-	Assembly.register(OpeningCoverSection);
-	
-	const DoorSection = require('./assemblies/section/space/sections/open-cover/sections/door.js');
-	Assembly.register(DoorSection);
-	
-	const DrawerSection = require('./assemblies/section/space/sections/open-cover/sections/drawer.js');
-	Assembly.register(DrawerSection);
-	
-	const DualDoorSection = require('./assemblies/section/space/sections/open-cover/sections/duel-door.js');
-	Assembly.register(DualDoorSection);
-	
-	const FalseFrontSection = require('./assemblies/section/space/sections/open-cover/sections/false-front.js');
-	Assembly.register(FalseFrontSection);
-	
-	const SpaceSection = require('./assemblies/section/space/space.js');
-	Assembly.register(SpaceSection);
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/material.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
-	
-	class Material extends Cost {
-	  constructor (props) {
-	    super(props);
-	    props = this.props();
-	    props.cost = props.cost / (props.count || 1);
-	    const instance = this;
-	    Object.getSet(props, 'company', 'formula', 'partNumber',
-	                'method', 'length', 'width', 'depth', 'cost');
-	
-	
-	    this.unitCost = (attr) => {
-	      const unitCost = Material.configure(instance.method(), instance.cost(),
-	        instance.length(), instance.width(), instance.depth());
-	      const copy = JSON.parse(JSON.stringify(unitCost));
-	      if (attr) return copy[attr];
-	      return copy;
-	    }
-	
-	    this.calc = (assemblyOrCount) => {
-	      const unitCost = this.unitCost();
-	      const formula = this.formula() || unitCost.formula;
-	      if (assemblyOrCount instanceof Assembly)
-	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
-	      else if (Number.isFinite(assemblyOrCount))
-	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
-	      else
-	        throw new Error('calc argument must be a number or Assembly');
-	    }
-	  }
-	}
-	
-	Material.methods = {
-	  LINEAR_FEET: 'Linear Feet',
-	  SQUARE_FEET: 'Square Feet',
-	  CUBIC_FEET: 'Cubic Feet',
-	  UNIT: 'Unit'
-	};
-	
-	Material.methodList = Object.values(Material.methods);
-	
-	
-	Material.configure = (method, cost, length, width, depth) => {
-	  const unitCost = {};
-	  switch (method) {
-	    case Material.methods.LINEAR_FEET:
-	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
-	      unitCost.name = 'Linear Inch';
-	      unitCost.value = perLinearInch;
-	      unitCost.formula = 'l';
-	      return unitCost;
-	    case Material.methods.SQUARE_FEET:
-	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
-	      unitCost.name = 'Square Inch';
-	      unitCost.value = perSquareInch;
-	      unitCost.formula = 'l*w';
-	      return unitCost;
-	    case Material.methods.CUBIC_FEET:
-	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
-	      unitCost.name = 'Cubic Inch';
-	      unitCost.value = perCubicInch;
-	      unitCost.formula = 'l*w*d';
-	      return unitCost;
-	    case Material.methods.UNIT:
-	      unitCost.name = 'Unit';
-	      unitCost.value = cost;
-	      return unitCost;
-	    default:
-	      throw new Error('wtf');
-	      unitCost.name = 'Unknown';
-	      unitCost = -0.01;
-	      formula = -0.01;
-	      return unitCost;
-	  }
-	};
-	
-	Material.explanation = `Cost to be calculated by number of units or demensions`;
-	
-	module.exports = Material
+	AbstractManager.inputTree = () => undefined;
+	module.exports = AbstractManager
 	
 });
 
@@ -14149,78 +13832,6 @@ function (require, exports, module) {
 	  }
 	}
 	module.exports = ReferenceCost
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/models/pull.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function pull(length, height) {
-	  var rspx = length - .75;
-	  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
-	  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
-	  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
-	  return mainCyl.union(lCyl).union(rCyl);
-	}
-	module.exports = pull
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function drawerBox(length, width, depth) {
-	  const bottomHeight = 7/8;
-	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-	  box.setColor(1, 0, 0);
-	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-	  inside.setColor(0, 0, 1);
-	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-	  bInside.setColor(0, 0, 1);
-	
-	  return box.subtract(bInside).subtract(inside);
-	}
-	module.exports = drawerBox
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/category.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	
-	
-	/**
-	  A branching cost that will incorporate
-	**/
-	class Category extends Cost {
-	  constructor (props) {
-	    super(props);
-	
-	    this.calc = (assemblyOrCount) => {
-	      const cost = 0;
-	      this.children.forEach((child) => child.calc(assemblyOrCount));
-	      return cost || -0.01;
-	    };
-	
-	    this.unitCost = () => undefined;
-	  }
-	}
-	
-	Category.explanation = `A branching cost that will incorporate all child costs
-	                        in its total`
-	module.exports = Category
 	
 });
 
@@ -14626,69 +14237,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/managers/template.js',
-function (require, exports, module) {
-	
-
-	
-	const AbstractManager = require('../abstract-manager.js');
-	const Cost = require('../../cost/cost.js');
-	const Input = require('../../../../../public/js/utils/input/input.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select.js');
-	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Material = require('../../cost/types/material.js');
-	const Inputs = require('../../input/inputs.js');
-	
-	
-	class TemplateManager extends AbstractManager {
-	  constructor(id, name) {
-	    super(id, name);
-	    const getObject = (values) => mangager.getObject(values);
-	    this.loadPoint = () => EPNTS.templates.get();
-	    this.savePoint = () => EPNTS.templates.save();
-	    this.fromJson = Cost.fromJson;
-	  }
-	}
-	
-	new TemplateManager('template-manager', 'template');
-	
-	TemplateManager.inputTree = (callback) => {
-	  const idTypeMethod = [Inputs('id'), Inputs('costType'), Inputs('method')];
-	
-	  const length = Inputs('length');
-	  const width = Inputs('width');
-	  const depth = Inputs('depth');
-	  const cost = Inputs('cost');
-	  const lengthCost = [length, cost];
-	  const lengthWidthCost = [length, width, cost];
-	  const lengthWidthDepthCost = [length, width, depth, cost];
-	  const color = [Inputs('color')];
-	
-	  const decisionInput = new DecisionInputTree('cost',
-	    idTypeMethod, callback);
-	
-	  decisionInput.addStates({
-	    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
-	  });
-	
-	  decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
-	        .jump('lengthCost');
-	  decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
-	        .jump('lengthWidthCost');
-	  decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
-	        .jump('lengthWidthDepthCost');
-	  decisionInput.then(`method:${Material.methods.UNIT}`)
-	        .jump('cost');
-	  decisionInput.then('type:Material').jump('color');
-	
-	  return decisionInput;
-	}
-	module.exports = TemplateManager
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/joint/joint.js',
 function (require, exports, module) {
 	
@@ -14737,6 +14285,109 @@ function (require, exports, module) {
 	
 	
 	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/init-assem.js',
+function (require, exports, module) {
+	
+const Assembly = require('./assembly.js');
+	
+	const Cabinet = require('./assemblies/cabinet.js');
+	Assembly.register(Cabinet);
+	
+	const Divider = require('./assemblies/divider.js');
+	Assembly.register(Divider);
+	
+	const DoorCatch = require('./assemblies/door/door-catch.js');
+	Assembly.register(DoorCatch);
+	
+	const Door = require('./assemblies/door/door.js');
+	Assembly.register(Door);
+	
+	const Hinges = require('./assemblies/door/hinges.js');
+	Assembly.register(Hinges);
+	
+	const DrawerBox = require('./assemblies/drawer/drawer-box.js');
+	Assembly.register(DrawerBox);
+	
+	const DrawerFront = require('./assemblies/drawer/drawer-front.js');
+	Assembly.register(DrawerFront);
+	
+	const Guides = require('./assemblies/drawer/guides.js');
+	Assembly.register(Guides);
+	
+	const Frame = require('./assemblies/frame.js');
+	Assembly.register(Frame);
+	
+	const Handle = require('./assemblies/hardware/pull.js');
+	Assembly.register(Handle);
+	
+	const Screw = require('./assemblies/hardware/screw.js');
+	Assembly.register(Screw);
+	
+	const Panel = require('./assemblies/panel.js');
+	Assembly.register(Panel);
+	
+	const DividerSection = require('./assemblies/section/partition/sections/divider.js');
+	Assembly.register(DividerSection);
+	
+	const Section = require('./assemblies/section/section.js');
+	Assembly.register(Section);
+	
+	const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
+	Assembly.register(DivideSection);
+	
+	const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
+	Assembly.register(OpeningCoverSection);
+	
+	const DoorSection = require('./assemblies/section/space/sections/open-cover/sections/door.js');
+	Assembly.register(DoorSection);
+	
+	const DrawerSection = require('./assemblies/section/space/sections/open-cover/sections/drawer.js');
+	Assembly.register(DrawerSection);
+	
+	const DualDoorSection = require('./assemblies/section/space/sections/open-cover/sections/duel-door.js');
+	Assembly.register(DualDoorSection);
+	
+	const FalseFrontSection = require('./assemblies/section/space/sections/open-cover/sections/false-front.js');
+	Assembly.register(FalseFrontSection);
+	
+	const SpaceSection = require('./assemblies/section/space/space.js');
+	Assembly.register(SpaceSection);
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/category.js',
+function (require, exports, module) {
+	
+
+	
+	const Cost = require('../cost.js');
+	
+	
+	/**
+	  A branching cost that will incorporate
+	**/
+	class Category extends Cost {
+	  constructor (props) {
+	    super(props);
+	
+	    this.calc = (assemblyOrCount) => {
+	      const cost = 0;
+	      this.children.forEach((child) => child.calc(assemblyOrCount));
+	      return cost || -0.01;
+	    };
+	
+	    this.unitCost = () => undefined;
+	  }
+	}
+	
+	Category.explanation = `A branching cost that will incorporate all child costs
+	                        in its total`
+	module.exports = Category
 	
 });
 
@@ -15003,96 +14654,308 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
+RequireJS.addFunction('./app-src/cost/types/select.js',
 function (require, exports, module) {
 	
 
 	
-	const Joint = require('../joint.js');
+	const Cost = require('../cost.js');
 	
-	class Butt extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
+	class SelectCost extends Cost {
+	  constructor (props) {
+	    super(props);
+	    props = this.props();
+	    Object.getSet(this, {modifyDemension: props.modifyDemension,default: props.default});
+	
+	    const selected = 0;
+	    this.selected = (index) => {
+	      if (index !== undefined)
+	        selected = index;
+	      return this.children[selected];
+	    }
+	
+	    this.selectedId = () => {
+	      const child = this.selected();
+	      return child === undefined ? '' : child.id();
+	    }
+	
+	    this.calc = (assemblyOrCount) => this.children[selected] ?
+	        this.children[selected].calc(assemblyOrCount) : -0.01;
+	
+	    this.unitCost = () => this.children[selected] ?
+	        this.children[selected].unitCost() : -0.01;
+	
+	    const selectedId = this.selectedId();
+	    if (selectedId) {
+	      this.children.forEach((child, index) => {
+	        if (child.id() === selectedId) selected = index;
+	      });
+	    }
 	  }
 	}
 	
-	Joint.register(Butt);
-	module.exports = Butt
 	
-	
-	
-	
+	module.exports = SelectCost
 	
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/category/conditional.js',
+RequireJS.addFunction('./app-src/cost/types/material.js',
 function (require, exports, module) {
 	
 
 	
-	const Category = require('../category.js');
-	const Cost = require('../../cost.js');
+	const Cost = require('../cost.js');
+	const Assembly = require('../../objects/assembly/assembly.js');
 	
-	class ConditionalCost extends Category {
+	class Material extends Cost {
 	  constructor (props) {
 	    super(props);
-	    Object.getSet(this, props, 'propertyId', 'propertyValue', 'propertyCondition');
-	    this.categoryCalc = this.calc;
-	    this.calc = (assembly) => ConditionalCost.calc(this, assembly);
+	    props = this.props();
+	    props.cost = props.cost / (props.count || 1);
+	    const instance = this;
+	    Object.getSet(props, 'company', 'formula', 'partNumber',
+	                'method', 'length', 'width', 'depth', 'cost');
+	
+	
+	    this.unitCost = (attr) => {
+	      const unitCost = Material.configure(instance.method(), instance.cost(),
+	        instance.length(), instance.width(), instance.depth());
+	      const copy = JSON.parse(JSON.stringify(unitCost));
+	      if (attr) return copy[attr];
+	      return copy;
+	    }
+	
+	    this.calc = (assemblyOrCount) => {
+	      const unitCost = this.unitCost();
+	      const formula = this.formula() || unitCost.formula;
+	      if (assemblyOrCount instanceof Assembly)
+	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
+	      else if (Number.isFinite(assemblyOrCount))
+	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
+	      else
+	        throw new Error('calc argument must be a number or Assembly');
+	    }
 	  }
 	}
 	
-	ConditionalCost.toKey = (value) => new String(value).replace(/ /g, '_').toUpperCase();
+	Material.methods = {
+	  LINEAR_FEET: 'Linear Feet',
+	  SQUARE_FEET: 'Square Feet',
+	  CUBIC_FEET: 'Cubic Feet',
+	  UNIT: 'Unit'
+	};
 	
-	ConditionalCost.conditions = {};
-	ConditionalCost.conditions.EQUAL = 'Equals';
-	ConditionalCost.conditions.NOT_EQUAL = 'Not Equal';
-	ConditionalCost.conditions.LESS_THAN = 'Less Than';
-	ConditionalCost.conditions.GREATER_THAN = 'Greater Than';
-	ConditionalCost.conditions.LESS_THAN_OR_EQUAL = 'Less Than Or Equal';
-	ConditionalCost.conditions.GREATER_THAN_OR_EQUAL = 'Greater Than Or Equal';
+	Material.methodList = Object.values(Material.methods);
 	
-	ConditionalCost.isCondition = (value) => ConditionalCost
-	                      .conditions(ConditionalCost.toKey(value)) !== undefined;
 	
-	ConditionalCost.calc = (cost, assembly) => {
-	  let validationFunc;
-	  switch (cost.propertyCondition()) {
-	    case ConditionalCost.conditions.EQUAL:
-	      validationFunc = (value) => cost.propertyValue() === value;
-	      break;
-	    case ConditionalCost.conditions.NOT_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() !== value;
-	      break;
-	    case ConditionalCost.conditions.LESS_THAN:
-	      validationFunc = (value) => cost.propertyValue() > value;
-	      break;
-	    case ConditionalCost.conditions.GREATER_THAN:
-	      validationFunc = (value) => cost.propertyValue() < value;
-	      break;
-	    case ConditionalCost.conditions.LESS_THAN_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() >= value;
-	      break;
-	    case ConditionalCost.conditions.GREATER_THAN_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() <= value;
-	      break;
+	Material.configure = (method, cost, length, width, depth) => {
+	  const unitCost = {};
+	  switch (method) {
+	    case Material.methods.LINEAR_FEET:
+	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
+	      unitCost.name = 'Linear Inch';
+	      unitCost.value = perLinearInch;
+	      unitCost.formula = 'l';
+	      return unitCost;
+	    case Material.methods.SQUARE_FEET:
+	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
+	      unitCost.name = 'Square Inch';
+	      unitCost.value = perSquareInch;
+	      unitCost.formula = 'l*w';
+	      return unitCost;
+	    case Material.methods.CUBIC_FEET:
+	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
+	      unitCost.name = 'Cubic Inch';
+	      unitCost.value = perCubicInch;
+	      unitCost.formula = 'l*w*d';
+	      return unitCost;
+	    case Material.methods.UNIT:
+	      unitCost.name = 'Unit';
+	      unitCost.value = cost;
+	      return unitCost;
 	    default:
-	      throw new Error('Some how you managed to have an invalid Condition');
+	      throw new Error('wtf');
+	      unitCost.name = 'Unknown';
+	      unitCost = -0.01;
+	      formula = -0.01;
+	      return unitCost;
 	  }
+	};
 	
-	  const value = assembly.value(cost.propertyId);
-	  if (validationFunc(value)) {
-	    return cost.categoryCalc(assembly);
+	Material.explanation = `Cost to be calculated by number of units or demensions`;
+	
+	module.exports = Material
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	
+	function drawerBox(length, width, depth) {
+	  const bottomHeight = 7/8;
+	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+	  box.setColor(1, 0, 0);
+	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+	  inside.setColor(0, 0, 1);
+	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+	  bInside.setColor(0, 0, 1);
+	
+	  return box.subtract(bInside).subtract(inside);
+	}
+	module.exports = drawerBox
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/pull.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	
+	function pull(length, height) {
+	  var rspx = length - .75;
+	  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+	  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+	  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+	  return mainCyl.union(lCyl).union(rCyl);
+	}
+	module.exports = pull
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/managers/template.js',
+function (require, exports, module) {
+	
+
+	
+	const AbstractManager = require('../abstract-manager.js');
+	const Cost = require('../../cost/cost.js');
+	const Input = require('../../../../../public/js/utils/input/input.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select.js');
+	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Material = require('../../cost/types/material.js');
+	const Inputs = require('../../input/inputs.js');
+	
+	
+	class TemplateManager extends AbstractManager {
+	  constructor(id, name) {
+	    super(id, name);
+	    const getObject = (values) => mangager.getObject(values);
+	    this.loadPoint = () => EPNTS.templates.get();
+	    this.savePoint = () => EPNTS.templates.save();
+	    this.fromJson = Cost.fromJson;
 	  }
-	  return 0;
+	}
+	
+	new TemplateManager('template-manager', 'template');
+	
+	TemplateManager.inputTree = (callback) => {
+	  const idTypeMethod = [Inputs('id'), Inputs('costType'), Inputs('method')];
+	
+	  const length = Inputs('length');
+	  const width = Inputs('width');
+	  const depth = Inputs('depth');
+	  const cost = Inputs('cost');
+	  const lengthCost = [length, cost];
+	  const lengthWidthCost = [length, width, cost];
+	  const lengthWidthDepthCost = [length, width, depth, cost];
+	  const color = [Inputs('color')];
+	
+	  const decisionInput = new DecisionInputTree('cost',
+	    idTypeMethod, callback);
+	
+	  decisionInput.addStates({
+	    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
+	  });
+	
+	  decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
+	        .jump('lengthCost');
+	  decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
+	        .jump('lengthWidthCost');
+	  decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
+	        .jump('lengthWidthDepthCost');
+	  decisionInput.then(`method:${Material.methods.UNIT}`)
+	        .jump('cost');
+	  decisionInput.then('type:Material').jump('color');
+	
+	  return decisionInput;
+	}
+	module.exports = TemplateManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/material/labor.js',
+function (require, exports, module) {
+	
+
+	
+	const Material = require('../material.js');
+	const Cost = require('../../cost.js');
+	
+	
+	// unitCost.value = (hourlyRate*hours)/length
+	// calc(assembly) = unitCost.value * formula
+	
+	class Labor extends Material {
+	  constructor (props) {
+	    super(props);
+	    const type = props.laborType;
+	    props.hourlyRate = Labor.hourlyRates[type]
+	    const parentCalc = this.calc;
+	    this.cost = () => this.hourlyRate() * props.hours;
+	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
+	    Labor.hourlyRate(type, props.hourlyRate);
+	
+	    const parentToJson = this.toJson;
+	  }
 	}
 	
 	
-	ConditionalCost.explanation = `A cost that is applied if the a defined
-	                                condition is met`;
+	Labor.defaultRate = 40;
+	Labor.hourlyRate = (type, rate) => {
+	  rate = Cost.evaluator.eval(new String(rate));
+	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
+	  return Labor.hourlyRates[type] || Labor.defaultRate;
+	}
+	Labor.hourlyRates = {};
+	Labor.types = [];
+	Labor.explanation = `Cost to be calculated hourly`;
 	
-	module.exports = ConditionalCost
+	module.exports = Labor
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Panel extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	  }
+	}
+	
+	Panel.abbriviation = 'pn';
+	
+	Assembly.register(Panel);
+	module.exports = Panel
+	
+	
+	
+	
 	
 });
 
@@ -15253,41 +15116,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Rabbet extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
-	    }
-	
-	    if (axis === undefined) return;
-	
-	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
-	    };
-	  }
-	}
-	
-	Joint.register(Rabbet);
-	module.exports = Rabbet
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
 function (require, exports, module) {
 	
@@ -15325,25 +15153,108 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
+RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
 function (require, exports, module) {
 	
 
 	
 	const Joint = require('../joint.js');
 	
-	class Miter extends Joint {
-	  constructor(joinStr) {
+	class Rabbet extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
 	    super(joinStr);
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
+	    }
+	
+	    if (axis === undefined) return;
+	
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
+	    };
 	  }
 	}
 	
-	Joint.register(Miter);
-	module.exports = Miter
+	Joint.register(Rabbet);
+	module.exports = Rabbet
 	
 	
 	
 	
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/category/conditional.js',
+function (require, exports, module) {
+	
+
+	
+	const Category = require('../category.js');
+	const Cost = require('../../cost.js');
+	
+	class ConditionalCost extends Category {
+	  constructor (props) {
+	    super(props);
+	    Object.getSet(this, props, 'propertyId', 'propertyValue', 'propertyCondition');
+	    this.categoryCalc = this.calc;
+	    this.calc = (assembly) => ConditionalCost.calc(this, assembly);
+	  }
+	}
+	
+	ConditionalCost.toKey = (value) => new String(value).replace(/ /g, '_').toUpperCase();
+	
+	ConditionalCost.conditions = {};
+	ConditionalCost.conditions.EQUAL = 'Equals';
+	ConditionalCost.conditions.NOT_EQUAL = 'Not Equal';
+	ConditionalCost.conditions.LESS_THAN = 'Less Than';
+	ConditionalCost.conditions.GREATER_THAN = 'Greater Than';
+	ConditionalCost.conditions.LESS_THAN_OR_EQUAL = 'Less Than Or Equal';
+	ConditionalCost.conditions.GREATER_THAN_OR_EQUAL = 'Greater Than Or Equal';
+	
+	ConditionalCost.isCondition = (value) => ConditionalCost
+	                      .conditions(ConditionalCost.toKey(value)) !== undefined;
+	
+	ConditionalCost.calc = (cost, assembly) => {
+	  let validationFunc;
+	  switch (cost.propertyCondition()) {
+	    case ConditionalCost.conditions.EQUAL:
+	      validationFunc = (value) => cost.propertyValue() === value;
+	      break;
+	    case ConditionalCost.conditions.NOT_EQUAL:
+	      validationFunc = (value) => cost.propertyValue() !== value;
+	      break;
+	    case ConditionalCost.conditions.LESS_THAN:
+	      validationFunc = (value) => cost.propertyValue() > value;
+	      break;
+	    case ConditionalCost.conditions.GREATER_THAN:
+	      validationFunc = (value) => cost.propertyValue() < value;
+	      break;
+	    case ConditionalCost.conditions.LESS_THAN_EQUAL:
+	      validationFunc = (value) => cost.propertyValue() >= value;
+	      break;
+	    case ConditionalCost.conditions.GREATER_THAN_EQUAL:
+	      validationFunc = (value) => cost.propertyValue() <= value;
+	      break;
+	    default:
+	      throw new Error('Some how you managed to have an invalid Condition');
+	  }
+	
+	  const value = assembly.value(cost.propertyId);
+	  if (validationFunc(value)) {
+	    return cost.categoryCalc(assembly);
+	  }
+	  return 0;
+	}
+	
+	
+	ConditionalCost.explanation = `A cost that is applied if the a defined
+	                                condition is met`;
+	
+	module.exports = ConditionalCost
 	
 });
 
@@ -15373,65 +15284,21 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/material/labor.js',
+RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
 function (require, exports, module) {
 	
 
 	
-	const Material = require('../material.js');
-	const Cost = require('../../cost.js');
+	const Joint = require('../joint.js');
 	
-	
-	// unitCost.value = (hourlyRate*hours)/length
-	// calc(assembly) = unitCost.value * formula
-	
-	class Labor extends Material {
-	  constructor (props) {
-	    super(props);
-	    const type = props.laborType;
-	    props.hourlyRate = Labor.hourlyRates[type]
-	    const parentCalc = this.calc;
-	    this.cost = () => this.hourlyRate() * props.hours;
-	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
-	    Labor.hourlyRate(type, props.hourlyRate);
-	
-	    const parentToJson = this.toJson;
+	class Miter extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
 	  }
 	}
 	
-	
-	Labor.defaultRate = 40;
-	Labor.hourlyRate = (type, rate) => {
-	  rate = Cost.evaluator.eval(new String(rate));
-	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
-	  return Labor.hourlyRates[type] || Labor.defaultRate;
-	}
-	Labor.hourlyRates = {};
-	Labor.types = [];
-	Labor.explanation = `Cost to be calculated hourly`;
-	
-	module.exports = Labor
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Panel extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
-	
-	Panel.abbriviation = 'pn';
-	
-	Assembly.register(Panel);
-	module.exports = Panel
+	Joint.register(Miter);
+	module.exports = Miter
 	
 	
 	
@@ -15458,6 +15325,101 @@ function (require, exports, module) {
 	
 	Assembly.register(Divider);
 	module.exports = Divider
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Butt extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
+	  }
+	}
+	
+	Joint.register(Butt);
+	module.exports = Butt
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class DoorCatch extends Assembly {
+	  constructor() {
+	
+	  }
+	}
+	
+	Assembly.register(DoorCatch);
+	module.exports = DoorCatch
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Hinges extends Assembly {
+	  constructor() {
+	
+	  }
+	}
+	
+	Assembly.register(Hinges);
+	module.exports = Hinges
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Screw extends Assembly {
+	  constructor() {
+	
+	  }
+	}
+	
+	Assembly.register(Screw);
+	module.exports = Screw
 	
 	
 	
@@ -15572,38 +15534,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	const Handle = require('../hardware/pull.js');
-	const pull = require('../../../../three-d/models/pull.js');
-	
-	
-	class Door extends Assembly {
-	  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
-	    super(partCode, partName, coverCenter, coverDems, rotationStr);
-	    let location = Handle.location.TOP_RIGHT;
-	    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, location);
-	    this.setHandleLocation = (l) => location = l;
-	    this.addSubAssembly(pull);
-	  }
-	}
-	
-	Door.abbriviation = 'dr';
-	
-	Assembly.register(Door);
-	module.exports = Door
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-box.js',
 function (require, exports, module) {
 	
@@ -15681,93 +15611,30 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/guides.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
+	const Handle = require('../hardware/pull.js');
+	const pull = require('../../../../three-d/models/pull.js');
 	
 	
-	class Guides extends Assembly {
-	  constructor() {
+	class Door extends Assembly {
+	  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
+	    super(partCode, partName, coverCenter, coverDems, rotationStr);
+	    let location = Handle.location.TOP_RIGHT;
+	    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, location);
+	    this.setHandleLocation = (l) => location = l;
+	    this.addSubAssembly(pull);
 	  }
 	}
 	
-	Assembly.register(Guides);
-	module.exports = Guides
+	Door.abbriviation = 'dr';
 	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class DoorCatch extends Assembly {
-	  constructor() {
-	
-	  }
-	}
-	
-	Assembly.register(DoorCatch);
-	module.exports = DoorCatch
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class Hinges extends Assembly {
-	  constructor() {
-	
-	  }
-	}
-	
-	Assembly.register(Hinges);
-	module.exports = Hinges
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class Screw extends Assembly {
-	  constructor() {
-	
-	  }
-	}
-	
-	Assembly.register(Screw);
-	module.exports = Screw
+	Assembly.register(Door);
+	module.exports = Door
 	
 	
 	
@@ -15898,6 +15765,29 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/guides.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Guides extends Assembly {
+	  constructor() {
+	  }
+	}
+	
+	Assembly.register(Guides);
+	module.exports = Guides
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/space.js',
 function (require, exports, module) {
 	
@@ -16016,118 +15906,6 @@ function (require, exports, module) {
 	  return assembly;
 	}
 	module.exports = PartitionSection
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/sections/divider.js',
-function (require, exports, module) {
-	
-
-	
-	const PartitionSection = require('../partition.js');
-	const Divider = require('../../../divider.js');
-	const Position = require('../../../../../../position.js');
-	const Panel = require('../../../panel.js');
-	const Frame = require('../../../frame.js');
-	const Assembly = require('../../../../assembly.js');
-	
-	class DividerSection extends PartitionSection {
-	  constructor(partCode, sectionProperties, parent) {
-	    super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties, parent);
-	    if (sectionProperties === undefined) return;
-	    this.setParentAssembly(parent);
-	    const props = sectionProperties;
-	    const instance = this;
-	    this.position().center = (attr) => {
-	      const center = props().center;
-	      return attr ? center[attr] : center;
-	    };
-	    this.position().demension = (attr) =>
-	      Position.targeted(attr, () => this.value('frw'),
-	          () => props().dividerLength / 2, () => this.value('frt'));
-	    const panelCenterFunc = (attr) => {
-	      const props = sectionProperties();
-	      const dem = {
-	        x: props.center.x,
-	        y: props.center.y,
-	        z: props.depth / 2
-	      };
-	      return attr ? dem[attr] : dem;
-	    };
-	    const panelDemFunc = (attr) => {
-	      if (attr === 'z') return this.value('pwt34');
-	      const props = sectionProperties();
-	      const dem = {
-	        x: props.depth - frameDemFunc('z'),
-	        y: props.dividerLength,
-	        z: this.value('pwt34')
-	      };
-	      return attr ? dem[attr] : dem;
-	    };
-	    const panelRotFunc = () => {
-	      const isVertical = sectionProperties().vertical;
-	      if (isVertical) return 'xyz';
-	      else return 'xy';
-	    }
-	
-	    const frameCenterFunc = (attr) => {
-	      const props = sectionProperties();
-	      const dem = {
-	        x: props.center.x,
-	        y: props.center.y,
-	        z: props.center.z
-	      };
-	      return attr ? dem[attr] : dem;
-	    };
-	
-	    const frameDemFunc = (attr) => {
-	      const reqHeight = attr === 'y' || attr === undefined;
-	      const dem = {
-	        x: this.value('frw'),
-	        y: reqHeight ? sectionProperties().dividerLength : undefined,
-	        z: this.value('frt'),
-	      };
-	      return attr ? dem[attr] : dem;
-	    }
-	
-	    const frameRotFunc = () => props().rotationFunc();
-	
-	    const lastWidthCalc = {date: Number.MAX_SAFE_INTEGER};
-	    this.maxWidth = () => {
-	      const currentDate = new Date().getTime();
-	      if (lastWidthCalc.date < currentDate + 1000) {
-	        return lastWidthCalc.value;
-	      }
-	      if (!panel.included && !frame.included) return 0;
-	
-	      let value;
-	      const panelWidth = panel.position().demension('z');
-	      const frameWidth = frame.position().demension('x');
-	      if (value === undefined && !frame.included) return panelWidth;
-	      if (value === undefined && !panel.included) return frameWidth;
-	      if (value === undefined) value = panelWidth > frameWidth ? panelWidth : frameWidth;
-	      lastWidthCalc.date = currentDate;
-	      lastWidthCalc.value = value;
-	      return value;
-	    }
-	
-	    const index = props().index;
-	    const panel = new Panel(`dp-${index}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
-	    const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
-	    this.addSubAssembly(panel);
-	    this.addSubAssembly(frame);
-	  }
-	}
-	
-	DividerSection.abbriviation = 'dvrs';
-	
-	Assembly.register(DividerSection);
-	module.exports = DividerSection
 	
 	
 	
@@ -16357,6 +16135,118 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/sections/divider.js',
+function (require, exports, module) {
+	
+
+	
+	const PartitionSection = require('../partition.js');
+	const Divider = require('../../../divider.js');
+	const Position = require('../../../../../../position.js');
+	const Panel = require('../../../panel.js');
+	const Frame = require('../../../frame.js');
+	const Assembly = require('../../../../assembly.js');
+	
+	class DividerSection extends PartitionSection {
+	  constructor(partCode, sectionProperties, parent) {
+	    super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties, parent);
+	    if (sectionProperties === undefined) return;
+	    this.setParentAssembly(parent);
+	    const props = sectionProperties;
+	    const instance = this;
+	    this.position().center = (attr) => {
+	      const center = props().center;
+	      return attr ? center[attr] : center;
+	    };
+	    this.position().demension = (attr) =>
+	      Position.targeted(attr, () => this.value('frw'),
+	          () => props().dividerLength / 2, () => this.value('frt'));
+	    const panelCenterFunc = (attr) => {
+	      const props = sectionProperties();
+	      const dem = {
+	        x: props.center.x,
+	        y: props.center.y,
+	        z: props.depth / 2
+	      };
+	      return attr ? dem[attr] : dem;
+	    };
+	    const panelDemFunc = (attr) => {
+	      if (attr === 'z') return this.value('pwt34');
+	      const props = sectionProperties();
+	      const dem = {
+	        x: props.depth - frameDemFunc('z'),
+	        y: props.dividerLength,
+	        z: this.value('pwt34')
+	      };
+	      return attr ? dem[attr] : dem;
+	    };
+	    const panelRotFunc = () => {
+	      const isVertical = sectionProperties().vertical;
+	      if (isVertical) return 'xyz';
+	      else return 'xy';
+	    }
+	
+	    const frameCenterFunc = (attr) => {
+	      const props = sectionProperties();
+	      const dem = {
+	        x: props.center.x,
+	        y: props.center.y,
+	        z: props.center.z
+	      };
+	      return attr ? dem[attr] : dem;
+	    };
+	
+	    const frameDemFunc = (attr) => {
+	      const reqHeight = attr === 'y' || attr === undefined;
+	      const dem = {
+	        x: this.value('frw'),
+	        y: reqHeight ? sectionProperties().dividerLength : undefined,
+	        z: this.value('frt'),
+	      };
+	      return attr ? dem[attr] : dem;
+	    }
+	
+	    const frameRotFunc = () => props().rotationFunc();
+	
+	    const lastWidthCalc = {date: Number.MAX_SAFE_INTEGER};
+	    this.maxWidth = () => {
+	      const currentDate = new Date().getTime();
+	      if (lastWidthCalc.date < currentDate + 1000) {
+	        return lastWidthCalc.value;
+	      }
+	      if (!panel.included && !frame.included) return 0;
+	
+	      let value;
+	      const panelWidth = panel.position().demension('z');
+	      const frameWidth = frame.position().demension('x');
+	      if (value === undefined && !frame.included) return panelWidth;
+	      if (value === undefined && !panel.included) return frameWidth;
+	      if (value === undefined) value = panelWidth > frameWidth ? panelWidth : frameWidth;
+	      lastWidthCalc.date = currentDate;
+	      lastWidthCalc.value = value;
+	      return value;
+	    }
+	
+	    const index = props().index;
+	    const panel = new Panel(`dp-${index}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
+	    const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
+	    this.addSubAssembly(panel);
+	    this.addSubAssembly(frame);
+	  }
+	}
+	
+	DividerSection.abbriviation = 'dvrs';
+	
+	Assembly.register(DividerSection);
+	module.exports = DividerSection
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/open-cover.js',
 function (require, exports, module) {
 	
@@ -16485,25 +16375,34 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/door.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
 function (require, exports, module) {
 	
 
 	
 	const OpeningCoverSection = require('../open-cover.js');
 	const Door = require('../../../../../door/door.js');
+	const Handle = require('../../../../../hardware/pull.js');
 	const Assembly = require('../../../../../../assembly.js');
 	
-	class DoorSection extends OpeningCoverSection {
+	class DualDoorSection extends OpeningCoverSection {
 	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('door'), partCode, 'Door.Section', divideProps);
-	    this.addSubAssembly(new Door('d', 'Door', this.coverCenter, this.coverDems));
+	    super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
+	    if (divideProps === undefined) return;
+	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
+	    this.addSubAssembly(rightDoor);
+	    rightDoor.setHandleLocation(Handle.location.TOP_LEFT);
+	
+	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems);
+	    this.addSubAssembly(leftDoor);
+	    leftDoor.setHandleLocation(Handle.location.TOP_RIGHT);
 	  }
 	}
 	
-	DoorSection.abbriviation = 'drs';
-	Assembly.register(DoorSection);
-	module.exports = DoorSection
+	DualDoorSection.abbriviation = 'dds';
+	
+	Assembly.register(DualDoorSection);
+	module.exports = DualDoorSection
 	
 	
 	
@@ -16542,34 +16441,25 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/door.js',
 function (require, exports, module) {
 	
 
 	
 	const OpeningCoverSection = require('../open-cover.js');
 	const Door = require('../../../../../door/door.js');
-	const Handle = require('../../../../../hardware/pull.js');
 	const Assembly = require('../../../../../../assembly.js');
 	
-	class DualDoorSection extends OpeningCoverSection {
+	class DoorSection extends OpeningCoverSection {
 	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
-	    if (divideProps === undefined) return;
-	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
-	    this.addSubAssembly(rightDoor);
-	    rightDoor.setHandleLocation(Handle.location.TOP_LEFT);
-	
-	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems);
-	    this.addSubAssembly(leftDoor);
-	    leftDoor.setHandleLocation(Handle.location.TOP_RIGHT);
+	    super(sectionFilePath('door'), partCode, 'Door.Section', divideProps);
+	    this.addSubAssembly(new Door('d', 'Door', this.coverCenter, this.coverDems));
 	  }
 	}
 	
-	DualDoorSection.abbriviation = 'dds';
-	
-	Assembly.register(DualDoorSection);
-	module.exports = DualDoorSection
+	DoorSection.abbriviation = 'drs';
+	Assembly.register(DoorSection);
+	module.exports = DoorSection
 	
 	
 	
@@ -16654,6 +16544,21 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./test/tests/to-from-json.js',
+function (require, exports, module) {
+	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
+	
+	
+	Test.add('To JSON',(ts) => {
+	  ts.assertEquals(6, 6);
+	  ts.success();
+	});
+	
+});
+
+
 RequireJS.addFunction('./test/tests/RelationInput.js',
 function (require, exports, module) {
 	
@@ -16717,17 +16622,91 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./test/tests/to-from-json.js',
+RequireJS.addFunction('./test/tests/cost/material.js',
 function (require, exports, module) {
 	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
+
+	const Frame = require('./labor.js').Frame;
+	const Material = require('./category.js').Material;
 	
 	
-	Test.add('To JSON',(ts) => {
-	  ts.assertEquals(6, 6);
-	  ts.success();
-	});
+	{
+	  const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
+	  const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
+	  const props = {};
+	  const smeRound = StringMathEvaluator.round;
+	  const referenceable = true;
+	  const group = 'localTest30487';
+	
+	  let unitCostValue = smeRound(15.37/(8*12));
+	  let costValue = smeRound(unitCostValue * 2 * 196 * 12);
+	  let assembly = frame;
+	  props.linear = {
+	    id: 'frame',
+	    method: 'Linear Feet',
+	    objectId: 'Frame',
+	    length: '8\'',
+	    cost: '15.37',
+	    formula: '2*l',
+	    referenceable, unitCostValue, costValue, assembly, group
+	  };
+	
+	  unitCostValue = smeRound((75.13)/(96*48));
+	  costValue = smeRound(unitCostValue * 24 * 10);
+	  assembly = panel;
+	  props.square = {
+	    id: 'panel0',
+	    method: 'Square Feet',
+	    objectId: 'Panel',
+	    length: '96',
+	    width: '48',
+	    cost: 75.13,
+	    referenceable, unitCostValue, costValue, assembly, group
+	  };
+	
+	  unitCostValue = smeRound(29.86/(12*6*1));
+	  costValue = smeRound(unitCostValue * 24 * 10 * .75);
+	  props.cubic = {
+	    id: 'metal',
+	    method: 'Cubic Feet',
+	    objectId: 'Panel',
+	    length: '12',
+	    width: '6',
+	    depth: '1',
+	    cost: 29.86,
+	    referenceable, unitCostValue, costValue, assembly, group
+	  };
+	
+	  unitCostValue = smeRound(50.12/10);
+	  costValue = smeRound(unitCostValue * 13);
+	  props.unit = {
+	    id: 'parts',
+	    method: 'Unit',
+	    laborType: 'Instalation',
+	    hourlyRate: '20',
+	    hours: '.66',
+	    cost: '50.12',
+	    count: '10',
+	    referenceable, unitCostValue, costValue, group,
+	    assembly: 13
+	  };
+	
+	  Test.add('MaterialCost: unitCost/calc',(ts) => {
+	    const costs = [];
+	    function testProps(props) {
+	      const labor = new Material(props);
+	      costs.push(labor);
+	      ts.assertTolerance(labor.unitCost().value, props.unitCostValue, .0001);
+	      ts.assertTolerance(labor.calc(props.assembly), props.costValue, .0001);
+	    }
+	    Object.values(props).forEach(testProps);
+	    costs.forEach((cost) => cost.delete());
+	    ts.success();
+	  });
+	}
+	
+	exports.Frame = Frame
+	exports.Material = Material
 	
 });
 
@@ -16931,95 +16910,6 @@ function (require, exports, module) {
 	exports.StringMathEvaluator = StringMathEvaluator
 	exports.Labor = Labor
 	exports.FunctionArgumentTest = FunctionArgumentTest
-	
-});
-
-
-RequireJS.addFunction('./test/tests/cost/material.js',
-function (require, exports, module) {
-	
-
-	const Frame = require('./labor.js').Frame;
-	const Material = require('./category.js').Material;
-	
-	
-	{
-	  const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
-	  const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
-	  const props = {};
-	  const smeRound = StringMathEvaluator.round;
-	  const referenceable = true;
-	  const group = 'localTest30487';
-	
-	  let unitCostValue = smeRound(15.37/(8*12));
-	  let costValue = smeRound(unitCostValue * 2 * 196 * 12);
-	  let assembly = frame;
-	  props.linear = {
-	    id: 'frame',
-	    method: 'Linear Feet',
-	    objectId: 'Frame',
-	    length: '8\'',
-	    cost: '15.37',
-	    formula: '2*l',
-	    referenceable, unitCostValue, costValue, assembly, group
-	  };
-	
-	  unitCostValue = smeRound((75.13)/(96*48));
-	  costValue = smeRound(unitCostValue * 24 * 10);
-	  assembly = panel;
-	  props.square = {
-	    id: 'panel0',
-	    method: 'Square Feet',
-	    objectId: 'Panel',
-	    length: '96',
-	    width: '48',
-	    cost: 75.13,
-	    referenceable, unitCostValue, costValue, assembly, group
-	  };
-	
-	  unitCostValue = smeRound(29.86/(12*6*1));
-	  costValue = smeRound(unitCostValue * 24 * 10 * .75);
-	  props.cubic = {
-	    id: 'metal',
-	    method: 'Cubic Feet',
-	    objectId: 'Panel',
-	    length: '12',
-	    width: '6',
-	    depth: '1',
-	    cost: 29.86,
-	    referenceable, unitCostValue, costValue, assembly, group
-	  };
-	
-	  unitCostValue = smeRound(50.12/10);
-	  costValue = smeRound(unitCostValue * 13);
-	  props.unit = {
-	    id: 'parts',
-	    method: 'Unit',
-	    laborType: 'Instalation',
-	    hourlyRate: '20',
-	    hours: '.66',
-	    cost: '50.12',
-	    count: '10',
-	    referenceable, unitCostValue, costValue, group,
-	    assembly: 13
-	  };
-	
-	  Test.add('MaterialCost: unitCost/calc',(ts) => {
-	    const costs = [];
-	    function testProps(props) {
-	      const labor = new Material(props);
-	      costs.push(labor);
-	      ts.assertTolerance(labor.unitCost().value, props.unitCostValue, .0001);
-	      ts.assertTolerance(labor.calc(props.assembly), props.costValue, .0001);
-	    }
-	    Object.values(props).forEach(testProps);
-	    costs.forEach((cost) => cost.delete());
-	    ts.success();
-	  });
-	}
-	
-	exports.Frame = Frame
-	exports.Material = Material
 	
 });
 

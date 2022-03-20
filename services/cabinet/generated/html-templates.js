@@ -133,24 +133,6 @@ exports['2007668928'] = (get, $t) =>
 		$t.clean(get("property").value() === true ? 'checked' : '') +
 		`> </span>`
 
-exports['expandable/input-repeat'] = (get, $t) => 
-		`<div> ` +
-		$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
-		` <button ex-list-id='` +
-		$t.clean(get("id")()) +
-		`' class='expandable-list-add-btn' ` +
-		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
-		`> Add ` +
-		$t.clean(get("listElemLable")()) +
-		` here </button> <div class='error' id='` +
-		$t.clean(get("ERROR_CNT_ID")) +
-		`'></div> </div> `
-
-exports['-1921787246'] = (get, $t) => 
-		`<option value="` +
-		$t.clean(get("option")) +
-		`" ></option>`
-
 exports['expandable/list'] = (get, $t) => 
 		` <div class="expandable-list ` +
 		$t.clean(get("type")()) +
@@ -349,6 +331,24 @@ exports['-1238286346'] = (get, $t) =>
 		`> ` +
 		$t.clean(get("value")) +
 		` </option>`
+
+exports['expandable/input-repeat'] = (get, $t) => 
+		`<div> ` +
+		$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
+		` <button ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' class='expandable-list-add-btn' ` +
+		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+		`> Add ` +
+		$t.clean(get("listElemLable")()) +
+		` here </button> <div class='error' id='` +
+		$t.clean(get("ERROR_CNT_ID")) +
+		`'></div> </div> `
+
+exports['-1921787246'] = (get, $t) => 
+		`<option value="` +
+		$t.clean(get("option")) +
+		`" ></option>`
 
 exports['cabinet/body'] = (get, $t) => 
 		`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
