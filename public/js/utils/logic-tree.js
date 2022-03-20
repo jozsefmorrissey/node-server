@@ -207,6 +207,34 @@ class LogicTree {
       return root.node.subtree(choicesToSelectors());
     }
 
+    function leaves() {
+      const wrappers = [];
+      reachableTree().leaves().forEach((node) => wrappers.push(wrapNode(node)));
+      return wrappers;
+    }
+
+    function forPath(func, reverse) {
+      const lvs = reachableTree().leaves();
+      lvs.forEach((leave) => {
+        const path = [];
+        let curr = leave;
+        while (curr !== undefined) {
+          path.push(curr);
+          curr = curr.back()
+        }
+      let data;
+      if (reverse === true) {
+        for (let index = 0; index < path.length; index += 1) {
+          data = func(wrapNode(path[index]), data);
+        }
+      } else {
+        for (let index = path.length - 1; index >= 0; index -= 1) {
+          data = func(wrapNode(path[index]), data);
+        }
+      }
+      });
+    }
+
     function reachable(name) {
       const rTree = reachableTree();
       let canReach;
@@ -277,6 +305,8 @@ class LogicTree {
       wrapper.isComplete = isComplete;
       wrapper.reachable = reachable;
       wrapper.decisions = decisions(wrapper);
+      wrapper.forPath = forPath;
+      wrapper.leaves = leaves;
       wrapper.toString = () =>
           wrapper.node.subtree(choicesToSelectors()).toString(null, '_TYPE');
     }

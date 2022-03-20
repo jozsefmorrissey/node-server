@@ -3,7 +3,7 @@
 
 
 
-const DecisionTree = require('../../decisionTree.js');
+const DecisionTree = require('../../decision-tree.js');
 const Input = require('../input.js');
 const du = require('../../dom-utils');
 const $t = require('../../$t');

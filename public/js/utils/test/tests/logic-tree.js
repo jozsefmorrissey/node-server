@@ -122,6 +122,7 @@ function accessProcess(ts, testFuncs, optional) {
 
 
   access('all', tree.setChoice('food', {eggs: true, bacon: true, toast: true, cereal: true}), testFuncs, tree);
+  return tree;
 }
 
 
@@ -220,6 +221,38 @@ Test.add('LogicTree isComplete (!optional)', (ts) => {
     all: (tree) =>  tic(tree, true),
   }
   accessProcess(ts, testFuncs, false);
+  ts.success();
+});
+
+Test.add('LogicTree forPath (forward)', (ts) => {
+  const tree = accessProcess(ts, {});
+  let paths = '=>';
+  tree.forPath((wrapper, data) => {
+    if (data === undefined) paths = paths.substring(0, paths.length - 2) + "\n";
+    paths += `${wrapper.name}=>`;
+    return true;
+  });
+  paths = paths.substring(0, paths.length - 2)
+  console.log(`forward\n${paths}`);
+  ts.success();
+});
+
+Test.add('LogicTree forPath (reverse)', (ts) => {
+  const tree = accessProcess(ts, {});
+  let paths = '<=';
+  tree.forPath((wrapper, data) => {
+    if (data === undefined) paths = paths.substring(0, paths.length - 2) + "\n";
+    paths += `${wrapper.name}<=`;
+    return true;
+  }, true);
+  paths = paths.substring(0, paths.length - 2)
+  console.log(`reverse\n${paths}`);
+  ts.success();
+});
+
+Test.add('LogicTree leaves', (ts) => {
+  const tree = accessProcess(ts, {});
+  console.log('leaves\n', tree.leaves());
   ts.success();
 });
 
