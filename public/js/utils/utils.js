@@ -31,6 +31,35 @@ function safeStdLibAddition() {
 }
 safeStdLibAddition();
 
+function processValue(value) {
+  let retVal;
+  if ((typeof value) === 'object' && value !== null) {
+    if ((typeof value.toJson) === 'function') {
+      retVal = value.toJson();
+    } else if (Array.isArray(value)){
+      const arr = [];
+      value.forEach((val) => {
+        if ((typeof val.toJson) === 'function') {
+          arr.push(val.toJson());
+        } else {
+          arr.push(val);
+        }
+      });
+      retVal = arr;
+    } else {
+      const keys = Object.keys(value);
+      const obj = {};
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        obj[key] = processValue(value[key]);
+      }
+      retVal = obj;
+    }
+  } else {
+    retVal = value;
+  }
+  return retVal;
+}
 
 Function.safeStdLibAddition(String, 'random',  function (len) {
     len = len || 7;
@@ -48,6 +77,11 @@ const identifierAttr = '_TYPE';
 const immutableAttr = '_IMMUTABLE';
 const temporaryAttr = '_TEMPORARY';
 
+Function.safeStdLibAddition(Array, 'toJson', function (arr) {
+    const json = [];
+    arr.forEach((elem) => json.push(processValue(elem)));
+    return json;
+}, true);
 Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
   function interpretValue(value) {
     if (value instanceof Object) {
@@ -60,7 +94,7 @@ Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
         }
         return realArray;
       } else if (classname && classLookup[classname]) {
-        const classObj = new (classLookup[classname])();
+        const classObj = new (classLookup[classname])(value);
         for (let index = 0; index < attrs.length; index += 1) {
           const attr = attrs[index];
           if ((typeof classObj[attr]) === 'function')
@@ -90,6 +124,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
   } else if (classLookup[cxtrName] !== obj.constructor) {
     console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
   }
+  if (initialVals === undefined) return;
   if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
   let values = {};
   let temporary = false;
@@ -104,7 +139,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
       attrs = Object.keys(values).concat(attrs);
     }
   } else {
-    attrs.push(initialVals);
+    attrs = [initialVals].concat(attrs);
   }
 
   for (let index = 0; index < attrs.length; index += 1) {
@@ -136,25 +171,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
         const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
         if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
           const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
-          if ((typeof value) === 'object' && value !== null) {
-            if ((typeof value.toJson) === 'function') {
-              json[attr] = value.toJson();
-            } else if (Array.isArray(value)){
-              const arr = [];
-              value.forEach((val) => {
-                if ((typeof val.toJson) === 'function') {
-                  arr.push(val.toJson());
-                } else {
-                  arr.push(val);
-                }
-              });
-              json[attr] = arr;
-            } else {
-              json[attr] = JSON.clone(value);
-            }
-          } else {
-            json[attr] = value;
-          }
+          json[attr] = processValue(value);
         }
       }
       return json;
@@ -164,7 +181,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     for (let index = 0; index < attrs.length; index += 1) {
       const attr = attrs[index];
       if (attr !== immutableAttr) {
-        obj[attr](json[attr]);
+        obj[attr](Object.fromJson(json[attr]));
       }
     };
     return obj;

@@ -13,11 +13,12 @@ class DecisionInputTree extends DecisionTree {
     const rootClass = `decision-input-${String.random()}`;
     class DecisionInput {
       constructor(name, inputArrayOinstance, decisionTreeId) {
+        const root = this;
         this.name = name;
         this.decisionTreeId = decisionTreeId;
         this.id = `decision-input-node-${String.random()}`;
         this.childCntId = `decision-child-ctn-${String.random()}`
-        this.values = () => root.values()
+        this.values = () => {};//root.values()
         this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
         this.class = rootClass;
         this.getValue = (index) => this.inputArray[index].value();
@@ -30,7 +31,7 @@ class DecisionInputTree extends DecisionTree {
         this.childHtml = (index) => {
           const node = getNode(this._nodeId);
           const nextNode = next(node, index);
-          return nextNode !== undefined ? nextNode.payload.html() : '';
+          return nextNode !== undefined ? nextNode.payload().html() : '';
         }
       }
     }
@@ -40,7 +41,6 @@ class DecisionInputTree extends DecisionTree {
     if ((typeof name) !== 'string') throw Error('name(arg2) must be defined as a string');
 
 
-    const root = this;
     const onCompletion = [];
     const onChange = [];
     this.treeId = String.random();
@@ -74,10 +74,10 @@ class DecisionInputTree extends DecisionTree {
     }
 
     const next = (node, index) => {
-      const inputArray = node.payload.inputArray;
+      const inputArray = node.payload().inputArray;
       const input = inputArray[index];
       const name = input.name();
-      const value = node.payload.getValue(index);
+      const value = node.payload().getValue(index);
       return node.next(`${name}:${value}`) || node.next(name);
     }
 
@@ -85,7 +85,7 @@ class DecisionInputTree extends DecisionTree {
       let nodes = [root];
       while (nodes.length !== 0) {
         const node = nodes[0];
-        const inputs = node.payload.inputArray;
+        const inputs = node.payload().inputArray;
         for (let index = 0; index < inputs.length; index += 1) {
           const input = inputs[index];
           func(inputs[index]);
@@ -126,7 +126,7 @@ class DecisionInputTree extends DecisionTree {
         const index = parentDecisionCnt.getAttribute('index');
         const currentNode = this.getNode(nodeId);
         if (currentNode) {
-          const currentInput = currentNode.payload.inputArray[index];
+          const currentInput = currentNode.payload().inputArray[index];
           currentInput.setValue();
           (contengencies[currentInput.name()] || []).forEach((inputName) => {
             const contengentInput = getInput(inputName);
@@ -136,12 +136,12 @@ class DecisionInputTree extends DecisionTree {
           runFunctions(onChange, currentInput.name(), currentInput.value(), target);
           const stepLen = Object.keys(currentNode.states).length;
           if (stepLen) {
-            const inputCount = currentNode.payload.inputArray.length;
+            const inputCount = currentNode.payload().inputArray.length;
             const nextState = next(currentNode, index);
-            const childCntId = currentNode.payload.inputArray[index].childCntId;
+            const childCntId = currentNode.payload().inputArray[index].childCntId;
             const childCnt = du.id(childCntId);
             if (nextState) {
-              childCnt.innerHTML = DecisionInput.template.render(nextState.payload);
+              childCnt.innerHTML = DecisionInput.template.render(nextState.payload());
             } else {
               childCnt.innerHTML = '';
             }

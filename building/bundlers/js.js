@@ -113,13 +113,14 @@ class JsBundler extends Bundler {
     }
 
     const writersLock = new Semaphore(1);
+    let maxFileCount = 0;
     let fileCount = 0;
     function write() {
       let bundle = encaps ? requireJs.header() : '';
 
       function writeBundle () {
         bundle += encaps ? requireJs.footer() : '';
-        console.log(`Writing ./${id}.js`);
+        console.log(`Writing ${maxFileCount} files into ./${id}.js`);
         fs.writeFile(`./${file}.js`, bundle, () => {});;
       }
 
@@ -130,7 +131,10 @@ class JsBundler extends Bundler {
                 // TODO: this does not make sense to me.... the lock should prevent async speed up...??
                 bundle += await formatScript(item.filename, item.contents);
                 fileCount--;
-                if (fileCount === 0) writeBundle();
+                // TODO: Not sure if this is a proper fix, only became a problem
+                //      when source code contained 111 files and ~17,400 lines
+                //      of code.
+                if (fileCount === 0) setTimeout(writeBundle, 100);
                 release();
               });
               addAfterFiles(item.filename);
@@ -139,6 +143,7 @@ class JsBundler extends Bundler {
         if (item && item.contents) {
           writersLock.acquire().then(function([value, release]) {
             fileCount++;
+            maxFileCount = maxFileCount < fileCount ? fileCount : maxFileCount;
             release();
             addIt(item, i);
           });

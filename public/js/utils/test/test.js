@@ -130,8 +130,10 @@ class TestStatus {
       assertT++;
       if (b) {
         assertC++;
+        TestStatus.successAssertions++;
         return true;
       }
+      TestStatus.failAssertions++;
       return false;
     }
     function successStr(msg) {
@@ -161,6 +163,11 @@ class TestStatus {
   }
 }
 
+TestStatus.successCount = 0;
+TestStatus.failCount = 0;
+TestStatus.successAssertions = 0;
+TestStatus.failAssertions = 0;
+
 const Test = {
   tests: {},
   add: (name, func) => {
@@ -175,11 +182,16 @@ const Test = {
       const testName = testNames[index];
       try {
         Test.tests[testName].forEach((testFunc) => testFunc(new TestStatus(testName)));
+        TestStatus.successCount++;
       } catch (e) {
+        TestStatus.failCount++;
         if (e !== failureError)
           console.log(`%c ${e.stack}`, 'color: red')
       }
     }
+    const failed = (TestStatus.failCount + TestStatus.failAssertions) > 0;
+    console.log(`\n%c Successfull Tests:${TestStatus.successCount} Successful Assertions: ${TestStatus.successAssertions}`, 'color: green');
+    console.log(`%c Failed Tests:${TestStatus.failCount} Failed Assertions: ${TestStatus.failAssertions}`, !failed ? 'color:green' : 'color: red');
   }
 }
 
