@@ -10,7 +10,7 @@ const Assembly = require('../../../../assembly.js');
 
 class DividerSection extends PartitionSection {
   constructor(partCode, sectionProperties, parent) {
-    super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties, parent);
+    super(DividerSection.filePath('divider'), partCode, 'Divider', sectionProperties, parent);
     if (sectionProperties === undefined) return;
     this.setParentAssembly(parent);
     const props = sectionProperties;
@@ -100,7 +100,3 @@ DividerSection.abbriviation = 'dvrs';
 
 Assembly.register(DividerSection);
 module.exports = DividerSection
-
-
-
-

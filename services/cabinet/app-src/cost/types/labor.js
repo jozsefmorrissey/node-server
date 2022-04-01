@@ -1,8 +1,8 @@
 
 
 
-const Material = require('../material.js');
-const Cost = require('../../cost.js');
+const Material = require('./material.js');
+const Cost = require('../cost.js');
 
 
 // unitCost.value = (hourlyRate*hours)/length

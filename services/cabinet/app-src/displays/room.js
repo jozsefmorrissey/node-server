@@ -5,7 +5,7 @@ const Room = require('../objects/room.js');
 const CabinetDisplay = require('./cabinet.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const Input = require('../../../../public/js/utils/input/input.js');
-const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const Inputs = require('../input/inputs.js');
 
@@ -37,15 +37,19 @@ class RoomDisplay {
     const expListProps = {
       list: order.rooms,
       parentSelector, getHeader, getBody, getObject,
-      inputs: [{placeholder: 'name'}],
       inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
       listElemLable: 'Room', type: 'pill',
-      inputTree: new DecisionInputTree('Room', Inputs('name'), console.log)
+      inputTree: RoomDisplay.configInputTree()
     };
-    const expandList = new ExpandableList(expListProps);
+    const expandList = new ExpandableObject(expListProps);
     expandList.afterRender(() => this.cabinetDisplay().refresh());
     this.refresh = () => expandList.refresh();
   }
+}
+RoomDisplay.configInputTree = () => {
+  const dit = new DecisionInputTree(console.log);
+  dit.leaf('Room', [Inputs('name')]);
+  return dit;
 }
 RoomDisplay.bodyTemplate = new $t('room/body');
 RoomDisplay.headTemplate = new $t('room/head');

@@ -128,30 +128,30 @@ const selWalnutBottoms = BottomMaterial.select(walnut12, walnut14a, walnut14b);
 const rusWalnutBottoms = BottomMaterial.select(walnut12, walnut14b);
 const bassBottoms = BottomMaterial.select(maple14, maple12, birtch14, birtch12);
 
-const decisionInput = new DecisionInputTree('Add Box',
-  [style, finishing, type, notch, braning, scoop, width, height, depth, quantity, notes]);
-
-decisionInput.addStates({softMapleBottoms, redOakBottoms, selWalnutBottoms,
-          bassBottoms, rusWalnutBottoms,
-          radius});
-
-const finishValues = Object.values(PerBoxCost.selectList());
-decisionInput.then(`finishing:${finishValues[2]}`)
-        .jump('radius');
-decisionInput.then(`finishing:${finishValues[3]}`)
-        .jump('radius');
-
-const typeNames = Object.values(typeList);
-decisionInput.then(`sides:${typeNames[0]}`)
-        .jump('softMapleBottoms');
-decisionInput.then(`sides:${typeNames[1]}`)
-        .jump('redOakBottoms');
-decisionInput.then(`sides:${typeNames[2]}`)
-        .jump('selWalnutBottoms');
-decisionInput.then(`sides:${typeNames[3]}`)
-        .jump('rusWalnutBottoms');
-decisionInput.then(`sides:${typeNames[4]}`)
-        .jump('bassBottoms');
+// const decisionInput = new DecisionInputTree('Add Box',
+//   [style, finishing, type, notch, braning, scoop, width, height, depth, quantity, notes]);
+//
+// decisionInput.addStates({softMapleBottoms, redOakBottoms, selWalnutBottoms,
+//           bassBottoms, rusWalnutBottoms,
+//           radius});
+//
+// const finishValues = Object.values(PerBoxCost.selectList());
+// decisionInput.then(`finishing:${finishValues[2]}`)
+//         .jump('radius');
+// decisionInput.then(`finishing:${finishValues[3]}`)
+//         .jump('radius');
+//
+// const typeNames = Object.values(typeList);
+// decisionInput.then(`sides:${typeNames[0]}`)
+//         .jump('softMapleBottoms');
+// decisionInput.then(`sides:${typeNames[1]}`)
+//         .jump('redOakBottoms');
+// decisionInput.then(`sides:${typeNames[2]}`)
+//         .jump('selWalnutBottoms');
+// decisionInput.then(`sides:${typeNames[3]}`)
+//         .jump('rusWalnutBottoms');
+// decisionInput.then(`sides:${typeNames[4]}`)
+//         .jump('bassBottoms');
 
 function sendEmail() {
     var email = 'jozsef.morrissey@gmail.com';

@@ -8,7 +8,7 @@ const Order = require('../objects/order.js');
 const Request = require('../../../../public/js/utils/request.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const Input = require('../../../../public/js/utils/input/input.js');
-const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const EPNTS = require('../../generated/EPNTS.js')
 const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
@@ -64,9 +64,9 @@ class OrderDisplay {
           'You must Define a name',
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Order', type: 'sidebar',
-      inputTree: new DecisionInputTree('Order', Inputs('name'), console.log)
+      inputTree: OrderDisplay.configInputTree()
     };
-    const expandList = new ExpandableList(expListProps);
+    const expandList = new ExpandableObject(expListProps);
     expandList.afterRender(() => {if (active !== undefined) active.refresh()});
 
     const saveSuccess = () => console.log('success');
@@ -100,4 +100,10 @@ OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
 OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
 OrderDisplay.infoBodyTemplate = new $t('order/information/body');
 OrderDisplay.infoHeadTemplate = new $t('order/information/head');
+
+OrderDisplay.configInputTree = () => {
+  const dit = new DecisionInputTree();
+  dit.leaf('Config', [Inputs('name')]);
+  return dit;
+}
 module.exports = OrderDisplay

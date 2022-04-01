@@ -5,8 +5,6 @@ const Assembly = require('../../assembly.js');
 const CoverStartPoints = require('../../../../../globals/CONSTANTS.js').CoverStartPoints;
 
 
-const sectionFilePath = (filename) => `sections/${filename}`;
-
 class Section extends Assembly {
   constructor(isPartition, partCode, partName, sectionProperties) {
     super(partCode, partName);
@@ -105,6 +103,8 @@ Section.getSections = (isPartition) => {
   });
   return sections;
 }
+Section.filePath = (filename) => `sections/${filename}`;
+
 Section.keys = () => Assembly.classIds(Section.sectionInstance);
 Section.new = function (constructorId) {
   const section = Assembly.new.apply(null, arguments);

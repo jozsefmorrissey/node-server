@@ -12,7 +12,7 @@ let dvs;
 let dsCount = 0;
 class DivideSection extends SpaceSection {
   constructor(sectionProperties, parent) {
-    super(sectionFilePath('open'), `dvds-${parent.uniqueId}-${sectionProperties().index}`, 'divideSection', sectionProperties);
+    super(DivideSection.filePath('open'), `dvds-${parent.uniqueId}-${sectionProperties().index}`, 'divideSection', sectionProperties);
     this.important = ['partCode', 'partName', 'borderIds', 'index'];
     const instance = this;
     this.setParentAssembly(parent);
@@ -209,7 +209,3 @@ DivideSection.abbriviation = 'ds';
 
 Assembly.register(DivideSection);
 module.exports = DivideSection
-
-
-
-

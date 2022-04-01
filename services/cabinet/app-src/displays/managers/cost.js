@@ -5,7 +5,6 @@ const AbstractManager = require('../abstract-manager.js');
 const Assembly = require('../../objects/assembly/assembly.js');
 const Cost = require('../../cost/cost.js');
 const CostDecision = require('../../cost/cost-decision.js');
-const SelectCost = require('../../cost/types/select.js');
 const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
 const Select = require('../../../../../public/js/utils/input/styles/select.js');
 const du = require('../../../../../public/js/utils/dom-utils.js');
@@ -13,7 +12,7 @@ const StringMathEvaluator = require('../../../../../public/js/utils/string-math-
 const Door = require('../../objects/assembly/assemblies/door/door.js');
 const DrawerFront = require('../../objects/assembly/assemblies/drawer/drawer-front.js');
 const DrawerBox = require('../../objects/assembly/assemblies/drawer/drawer-box.js');
-const Labor = require('../../cost/types/material/labor.js');
+const Labor = require('../../cost/types/labor.js');
 const Input = require('../../../../../public/js/utils/input/input.js');
 const Frame = require('../../objects/assembly/assemblies/frame.js');
 const Panel = require('../../objects/assembly/assemblies/panel.js');
@@ -47,34 +46,12 @@ class CostManager extends AbstractManager {
       return json;
     };
 
+
     this.loadPoint = () => EPNTS.costs.get();
     this.savePoint = () => EPNTS.costs.save();
     this.costTypeHtml = CostManager.costTypeHtml;
     this.fromJson = (json) => {
-      CostManager.partList = CostManager.partList ||
-          Properties.list().filter((name) => notCostGroups.indexOf(name) === -1);
-      CostManager.partList.sort();
-      CostManager.partList.forEach((id) => {
-        const parentId = `cost-group-${String.random()}`;
-        let costDecision = new CostDecision(id, json[id]);
-        // const expListProps = {
-        //   list: json[id] ? Cost.fromJson(json[id]) : [],
-        //   inputValidation: () => true,
-        //   parentId,
-        //   parentSelector: `#${parentId}`,
-        //   inputTree:   CostManager.costInputTree(costTypes, id),
-        //   getHeader: CostManager.costHeader,
-        //   getBody: CostManager.costBody,
-        //   getObject: CostManager.getCostObject(id),
-        //   listElemLable: `Cost to ${id}`
-        // };
-        // const cost = new SelectCost({id, children: expListProps.list});
-        // const expandList = new ExpandableList(expListProps);
-        list.push({partId: id, costDecision,
-          CostManager: CostManager, parentId});
-      });
-      propertyDisplay.update();
-      return list;
+      return {};
     }
 
     this.Cost = Cost;
@@ -146,15 +123,15 @@ CostManager.getCostObject = (id) => (values, target) => {
 
 CostManager.typeTemplates = {};
 CostManager.costTypeHtml = (cost, scope) => {
-  // const constName = cost.constructor.name;
-  // if (CostManager.typeTemplates[constName])
-  //   return CostManager.typeTemplates[constName].render(scope);
-  // const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
-  // if ($t.isTemplate(fileId)) {
-  //   template = new $t(fileId);
-  //   CostManager.typeTemplates[constName] = template;
-  //   return template.render(scope);
-  // }
+  const constName = cost.constructor.name;
+  if (CostManager.typeTemplates[constName])
+    return CostManager.typeTemplates[constName].render(scope);
+  const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
+  if ($t.isTemplate(fileId)) {
+    template = new $t(fileId);
+    CostManager.typeTemplates[constName] = template;
+    return template.render(scope);
+  }
   return scope.costDecision.tree().requiredNodes();
 }
 
@@ -179,130 +156,63 @@ CostManager.getObject = (values, target) => {
   }
 }
 
+class Conditional {
+  constructor(targrt, value) {
+    this.condition = () => decisionInput.value(target) === value;
+  }
+}
+
 CostManager.costInputTree = (costTypes, objId, onUpdate) => {
 
-  const costTypeSelect = new Select({
-    name: 'costType',
-    value: 'Custom',
-    class: 'center',
-    list: costTypes
-  });
-  const reference = new Input({
-    name: 'referenceable',
-    label: 'Referenceable',
-    type: 'checkbox',
-    default: false,
-    validation: [true, false],
-    targetAttr: 'checked',
-    value: objId === undefined ? false : true,
-  });
   const objectId = new Input({
     name: 'objectId',
     hide: true,
     value: objId
   });
 
-  costTypeSelect.on('change',
-    (val) => {
-      if (val !== '/dev/nul') {
-        reference.setValue(false);
-        reference.hide();
-      } else {
-        reference.show();
-      }
-    });
+  const costTypeSelect = new Select({
+    name: 'costType',
+    list: ['Material', 'Labor']
+  })
 
-  const id = Inputs('costId');
-  const laborType = Inputs('laborType');
-  const hourlyRate = Inputs('hourlyRate');
+  // const decisionInput = new DecisionInputTree();
+  // decisionInput.branch('cost', [costTypeSelect]);
 
-  const idType = [objectId, id, Inputs('costType')];
-  const materialInput = [Inputs('method'), Inputs('company'), Inputs('partNumber')];
-  const laborInput = [Inputs('method'), laborType, hourlyRate];
-  laborType.on('keyup',
-    (val, values) => hourlyRate.setValue(Labor.hourlyRate(val)));
+  // const id = Inputs('costId');
+  // const laborType = Inputs('laborType');
+  // const hourlyRate = Inputs('hourlyRate');
+  //
+  // const idType = [objectId, id, Inputs('costType')];
+  // const materialInput = [Inputs('method'), Inputs('company'), Inputs('partNumber')];
+  // const laborInput = [Inputs('method'), laborType, hourlyRate];
+  // laborType.on('keyup',
+  //   (val, values) => hourlyRate.setValue(Labor.hourlyRate(val)));
+  //
+  // const length = Inputs('length');
+  // const width = Inputs('width');
+  // const depth = Inputs('depth');
+  // const cost = Inputs('cost');
+  // const hours = Inputs('hours');
+  // const count = Inputs('count');
+  // const modifyDemension = Inputs('modifyDemension');
+  // const color = [Inputs('color')];
+  //
+  // // Todo: ????
+  // const matFormula = CostManager.formulaInput(objId, 'Material');
+  // const costCount = [count, cost, matFormula];
+  // const lengthCost = [length, cost, matFormula];
+  // const lengthWidthCost = [length, width, cost, matFormula];
+  // const lengthWidthDepthCost = [length, width, depth, cost, matFormula];
+  //
+  // const laborFormula = CostManager.formulaInput(objId, 'Labor');
+  // const hourlyCount = [count, hours, laborFormula];
+  // const lengthHourly = [length, hours, laborFormula];
+  // const lengthWidthHourly = [length, width, hours, laborFormula];
+  // const lengthWidthDepthHourly = [length, width, depth, hours, laborFormula];
 
-  const length = Inputs('length');
-  const width = Inputs('width');
-  const depth = Inputs('depth');
-  const cost = Inputs('cost');
-  const hours = Inputs('hours');
-  const count = Inputs('count');
-  const modifyDemension = Inputs('modifyDemension');
-  const selectInfo = [CostManager.formulaInput(objId, 'Select'),
-                      RelationInput.selector];
-  const conditionalInfo = [Inputs('propertyId'), Inputs('propertyConditions'),
-        Inputs('propertyValue')];
-  const color = [Inputs('color')];
-
-  // Todo: ????
-  const matFormula = CostManager.formulaInput(objId, 'Material');
-  const costCount = [count, cost, matFormula];
-  const lengthCost = [length, cost, matFormula];
-  const lengthWidthCost = [length, width, cost, matFormula];
-  const lengthWidthDepthCost = [length, width, depth, cost, matFormula];
-
-  const laborFormula = CostManager.formulaInput(objId, 'Labor');
-  const hourlyCount = [count, hours, laborFormula];
-  const lengthHourly = [length, hours, laborFormula];
-  const lengthWidthHourly = [length, width, hours, laborFormula];
-  const lengthWidthDepthHourly = [length, width, depth, hours, laborFormula];
-
-  const decisionInput = new DecisionInputTree('cost',
-    [costTypeSelect, reference]);
-
-  decisionInput.contengency('id', 'referenceable');
-  decisionInput.onChange(onUpdate);
-
-  decisionInput.addStates({
-    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color,idType,
-    laborInput, costCount, materialInput, selectInfo, hourlyCount,
-    lengthHourly, lengthWidthHourly, lengthWidthDepthHourly, modifyDemension,
-    conditionalInfo
-  });
-
-  const idTypeNode = decisionInput.then('costType:Custom')
-        .jump('idType');
-
-
-  const conditionalNode = idTypeNode.then('type:Conditional')
-        .jump('conditionalInfo');
-  const materialNode = idTypeNode.then('type:Material')
-        .jump('materialInput');
-  const selectNode = idTypeNode.then('type:Select')
-        .jump('selectInfo');
-  const laborNode = idTypeNode.then('type:Labor')
-        .jump('laborInput');
-
-  idTypeNode.then('id:length').jump('modifyDemension');
-  idTypeNode.then('id:width').jump('modifyDemension');
-  idTypeNode.then('id:depth').jump('modifyDemension');
-
-
-  materialNode.then(`method:${Material.methods.LINEAR_FEET}`)
-        .jump('lengthCost');
-  materialNode.then(`method:${Material.methods.SQUARE_FEET}`)
-        .jump('lengthWidthCost');
-  materialNode.then(`method:${Material.methods.CUBIC_FEET}`)
-        .jump('lengthWidthDepthCost');
-  materialNode.then(`method:${Material.methods.UNIT}`)
-        .jump('costCount');
-
-  materialNode.then('type:Material').jump('color');
-
-
-  laborNode.then(`method:${Material.methods.LINEAR_FEET}`)
-        .jump('lengthHourly');
-  laborNode.then(`method:${Material.methods.SQUARE_FEET}`)
-        .jump('lengthWidthHourly');
-  laborNode.then(`method:${Material.methods.CUBIC_FEET}`)
-        .jump('lengthWidthDepthHourly');
-  laborNode.then(`method:${Material.methods.UNIT}`)
-        .jump('hourlyCount');
-
-  laborNode.then('type:Material').jump('color');
-
-  return decisionInput;
+  const dit = new DecisionInputTree(console.log);
+  dit.leaf('Config', [Inputs('name')]);
+  return dit;
 }
 
 

@@ -50,6 +50,7 @@ class Expandable {
     let lastRefresh = new Date().getTime();
     const storage = {};
     Expandable.lists[props.id] = this;
+    this.inputTree = () => props.inputTree;
 
     this.errorCntId = () => props.ERROR_CNT_ID;
     function setErrorMsg(msg) {
@@ -57,7 +58,6 @@ class Expandable {
     }
 
     function values() {
-      if (instance.hasInputTree()) return props.inputTree.values();
       const values = {};
       props.inputs.forEach((input) =>
         values[input.placeholder] = du.id(input.id).value);
@@ -76,16 +76,15 @@ class Expandable {
     this.values = values;
     this.getInputCnt = getInputCnt;
 
-    this.add = () => {
-      const key = this.getKey();
-      const inputValues = values();
+    this.add = (vals) => {
+      const key = this.getKey(vals);
+      const inputValues = vals || values();
       if ((typeof props.inputValidation) !== 'function' ||
               props.inputValidation(inputValues) === true) {
         props.list[key] = props.getObject(inputValues, getInputCnt());
         this.activeKey(key);
         this.refresh();
         afterAddEvent.trigger();
-        if (this.hasInputTree()) props.inputTree.formFilled();
       } else {
         const errors = props.inputValidation(inputValues);
         let errorStr;
@@ -99,9 +98,9 @@ class Expandable {
       }
     };
     this.hasInputTree = () =>
-      this.inputTree() && this.inputTree().constructor.name === 'DecisionNode';
+      this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
     if (this.hasInputTree())
-      props.inputTree.onComplete(() => this.add());
+      props.inputTree.onComplete(this.add);
     props.hasInputTree = this.hasInputTree;
 
     this.isSelfClosing = () => props.selfCloseTab;
@@ -142,7 +141,8 @@ class Expandable {
       if (value === undefined) return storage[key][key2];
       storage[key][key2] = value;
     }
-    this.inputHtml = () => this.hasInputTree() ? this.inputTree().html() : Expandable.inputRepeatTemplate.render(this);
+    this.inputHtml = () => this.hasInputTree() ?
+          this.inputTree().html() : Expandable.inputRepeatTemplate.render(this);
     this.set = (key, value) => props.list[key] = value;
     this.get = (key) => props.list[key];
     this.renderBody = (target) => {

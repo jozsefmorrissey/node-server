@@ -1,7 +1,8 @@
 
 
-
 const DecisionTree = require('./decision-tree');
+const DataSync = require('./data-sync');
+const Lookup = require('./object/lookup');
 
 const INTERNAL_FUNCTION_PASSWORD = String.random();
 const DEFAULT_GROUP = 'LogicTree';
@@ -11,9 +12,12 @@ function getNode(nodeOwrapper) {
   return nodeOwrapper.node;
 }
 
-class LogicWrapper {constructor(node) {
-  this.node = node;
-}}
+class LogicWrapper extends Lookup {
+  constructor(node) {
+    super(node ? node.nodeId() : undefined, 'nodeId');
+    this.node = node;
+  }
+}
 
 class LogicType {
   constructor(wrapperOrJson) {
@@ -54,7 +58,7 @@ class SelectLogic extends LogicType {
       if (val !== undefined) {
         validate(val);
         value = val;
-        LogicTree.updateValues(wrapper, password);
+        wrapper.valueUpdate(value, wrapper);
       }
       return value === undefined ? (def === undefined ? null : def) : value;
     }
@@ -66,7 +70,7 @@ class SelectLogic extends LogicType {
       if (val !== undefined) {
         validate(val);
         def = val;
-        LogicTree.updateDefaults(wrapper, password);
+        wrapper.defaultUpdate(value, wrapper);
       }
       return def;
     }
@@ -97,7 +101,7 @@ class MultiselectLogic extends LogicType {
       if (val !== undefined) {
         validate(val);
         value = val;
-        LogicTree.updateValues(wrapper, password);
+        wrapper.valueUpdate(value);
       }
       let retVal = value === undefined ? def : value;
       return retVal === null ? null : JSON.clone(retVal);
@@ -113,7 +117,7 @@ class MultiselectLogic extends LogicType {
       if (val !== undefined) {
         validate(val);
         def = val;
-        LogicTree.updateDefaults(wrapper, password);
+        wrapper.defaultUpdate(value);
       }
       return def;
     }
@@ -145,7 +149,7 @@ class ConditionalLogic extends LogicType {
       if (val !== undefined) {
         validate(val);
         value = val;
-        LogicTree.updateValues(wrapper, password);
+        wrapper.valueUpdate(value);
       }
       return value || def;
     }
@@ -154,7 +158,7 @@ class ConditionalLogic extends LogicType {
       if (val !== undefined) {
         validate(val);
         def = val;
-        LogicTree.updateDefaults(wrapper, password);
+        wrapper.defaultUpdate(value);
       }
       return def;
     }
@@ -185,22 +189,19 @@ class LeafLogic extends LogicType {
 
 LogicType.types = {SelectLogic, MultiselectLogic, ConditionalLogic, BranchLogic, LeafLogic};
 class LogicTree {
-  constructor(uniqueGroup) {
-    // TODO: should eliminate uniqueGroup. trees should be completly disconnected.
-    let json;
-    if(uniqueGroup && uniqueGroup._TYPE === this.constructor.name) {
-      json = uniqueGroup;
-      uniqueGroup = json.uniqueGroup;
-    }
+  constructor(formatPayload) {
     Object.getSet(this);
     const tree = this;
     let root;
     let choices = {};
-    uniqueGroup = uniqueGroup || DEFAULT_GROUP;
+    const wrapperMap = {};
 
-    function changeType(node, newType, payload) {
-
+    function getTypeObjByNodeId(nodeId) {
+      return get(nodeId).typeObject;
     }
+    let dataSync = new DataSync('nodeId', getTypeObjByNodeId);
+    dataSync.addConnection('value');
+    dataSync.addConnection('default');
 
     function isOptional(node) {
       return !(choices[node.name] === undefined || !choices[node.name].optional());
@@ -224,9 +225,15 @@ class LogicTree {
       choices[name].default(val);
     }
 
+    function getByName(name) {
+      if (root.node === undefined) return undefined;
+      const node = root.node.getByName(name);
+      return node === undefined ? undefined : wrapNode(node);
+    }
+
     function addChildrenFunc(wrapper, options) {
       return (name) => {
-        const targetWrapper = LogicTree.get(name, uniqueGroup);
+        const targetWrapper = getByName(name);
         if (targetWrapper === undefined) throw new Error(`Invalid name: ${name}`);
         const states = targetWrapper.node.states();
         states.forEach((state) => wrapNode(wrapper.node.then(state)));
@@ -241,8 +248,8 @@ class LogicTree {
       return selectors;
     }
 
-    function reachableTree() {
-      return root.node.subtree(choicesToSelectors());
+    function reachableTree(node) {
+      return (node || root.node).subtree(choicesToSelectors());
     }
 
     function leaves() {
@@ -287,8 +294,14 @@ class LogicTree {
       return data;
     }
 
+    function forEach(func, node) {
+      reachableTree(node).forEach((n) => {
+        func(wrapNode(n));
+      });
+    }
+
     function reachable(name) {
-      const wrapper = LogicTree.get(name, uniqueGroup);
+      const wrapper = getByName(name);
       return wrapper.node.conditionsSatisfy(choicesToSelectors(), wrapper.node);
     }
 
@@ -353,7 +366,7 @@ class LogicTree {
     function toJson(wrapper) {
       return function () {
         wrapper = wrapper || root;
-        const json = {choices: {}, _TYPE: tree.constructor.name, uniqueGroup};
+        const json = {choices: {}, _TYPE: tree.constructor.name};
         const keys = Object.keys(choices);
         const ids = wrapper.node.map((node) => node.nodeId());
         keys.forEach((key) => {
@@ -365,7 +378,7 @@ class LogicTree {
           }
         });
         json.tree = wrapper.node.toJson();
-        json.connectionList = LogicTree.connectionList(wrapper);
+        json.connectionList = dataSync.toJson(wrapper.node.nodes());
         return json;
       }
     }
@@ -382,9 +395,9 @@ class LogicTree {
       wrapper.reachable = reachable;
       wrapper.decisions = decisions(wrapper);
       wrapper.forPath = forPath;
+      wrapper.forEach = forEach;
       wrapper.pathsToString = pathsToString;
       wrapper.leaves = leaves;
-      wrapper.destroyTree = () => LogicTree.destroy(wrapper);
       wrapper.toString = () =>
           wrapper.node.subtree(choicesToSelectors()).toString(null, 'LOGIC_TYPE');
     }
@@ -406,42 +419,64 @@ class LogicTree {
       wrapper.default = typeObj.default;
       wrapper.selector = typeObj.selector;
       wrapper.addChildren = addChildrenFunc(wrapper);
-      wrapper.connectValues = (w) => LogicTree.connectValues(wrapper, w);
-      wrapper.connectDefaults = (w) => LogicTree.connectDefaults(wrapper, w);
+      wrapper.valueSync = (w) => dataSync.valueSync(typeObj, w.typeObject);
+      wrapper.defaultSync = (w) => dataSync.defaultSync(typeObj, w.typeObject);
+      wrapper.valueUpdate = (value) => dataSync.valueUpdate(value, typeObj);
+      wrapper.defaultUpdate = (value) => dataSync.defaultUpdate(value, typeObj);
     }
 
     function attachTree(wrapper) {
       return (tree) => {
         const json = tree.toJson();
-        json.tree.payload._UNIQUE_NAME_GROUP = String.random();
         return incorrperateJsonNodes(json, wrapper.node);
       }
     }
 
     function addTypeFunction(type, wrapper) {
       wrapper[type.toLowerCase()] = (name, payload) => {
-        payload = payload || {};
+        payload = typeof formatPayload === 'function' ?
+                          formatPayload(name, payload || {}, wrapper) : payload || {};
         payload.LOGIC_TYPE = type;
-        payload._UNIQUE_NAME_GROUP = uniqueGroup;
         let newWrapper;
         if (root === undefined) {
           root = wrapper;
           root.node = new DecisionTree(name, payload);
           newWrapper = root;
-          LogicTree.register(payload._UNIQUE_NAME_GROUP, name, newWrapper);name
-        } else if (LogicTree.get(name, uniqueGroup)) {
+        } else if (getByName(name)) {
           newWrapper = wrapNode(wrapper.node.then(name));
         } else {
           wrapper.node.addState(name, payload);
           newWrapper = wrapNode(wrapper.node.then(name));
-          LogicTree.register(uniqueGroup, name, newWrapper);
         }
         return newWrapper;
       }
     }
 
-    const get = LogicTree.wrapper(uniqueGroup)
-    const set = LogicTree.wrapper(uniqueGroup, INTERNAL_FUNCTION_PASSWORD)
+    function getNode(nodeOrwrapperOrId) {
+      switch (nodeOrwrapperOrId.constructor.name) {
+        case 'DecisionNode':
+          return nodeOrwrapperOrId;
+        case 'LogicWrapper':
+          return nodeOrwrapperOrId.node;
+        default:
+          const node = DecisionTree.DecisionNode.get(nodeOrwrapperOrId);
+          if (node) return node;
+          return nodeOrwrapperOrId;
+      }
+    }
+
+    function get(nodeOidOwrapper) {
+      if (nodeOidOwrapper === undefined) return undefined;
+      const node = getNode(nodeOidOwrapper);
+      if (node instanceof DecisionTree.DecisionNode) {
+        return wrapperMap[node.nodeId()];
+      } else {
+        return wrapperMap[node];
+      }
+    }
+
+    const set = (wrapper) =>
+        wrapperMap[wrapper.node.nodeId()] = wrapper;
     this.get = get;
 
     function wrapNode(node) {
@@ -462,14 +497,15 @@ class LogicTree {
       addStaticMethods(wrapper);
       if (node && node.payload().LOGIC_TYPE !== undefined) {
         addHelperMetrhods(wrapper);
+        set(wrapper);
       }
-      set(wrapper);
       return wrapper;
     }
 
     function updateChoices(jsonChoices) {
       const keys = Object.keys(jsonChoices);
-      keys.forEach((key) => choices[key].fromJson(jsonChoices[key]));
+      keys.forEach((key) =>
+          choices[key].fromJson(jsonChoices[key]));
     }
 
     function incorrperateJsonNodes(json, node) {
@@ -485,174 +521,17 @@ class LogicTree {
       }
       newNode.forEach((n) =>
           wrapNode(n));
+      dataSync.fromJson(json.connectionList);
       updateChoices(json.choices);
-      LogicTree.addJsonConnections(json.connectionList);
       return node;
     }
 
     let rootWrapper = wrapNode();
-    if (json) incorrperateJsonNodes(json);
+    if (formatPayload && formatPayload._TYPE === this.constructor.name) incorrperateJsonNodes(formatPayload);
     return rootWrapper;
   }
 }
 
-{
-  const declaired = {};
-  const connectedValues = {};
-  const connectedDefaults = {};
-  const idMap = {};
-  const wrapperMap = {};
-  const maps = {value: connectedValues, default: connectedDefaults};
-
-  function getId(nodeOrwrapperOrId) {
-    if (nodeOrwrapperOrId instanceof DecisionTree.DecisionNode) {
-        return nodeOrwrapperOrId.nodeId();
-    } else {
-      return nodeOrwrapperOrId;
-    }
-  }
-
-  function forEachConnectionList(wrapper, func) {
-    wrapper.node.forEach((node) => {
-      Object.keys(maps).forEach((mapKey) => {
-        const map = maps[mapKey];
-        const mapKeys = Object.keys(map);
-        mapKeys.forEach((key) => {
-            func(node, map, key, mapKey);
-        });
-      });
-    });
-  }
-
-  function connectionList(wrapper) {
-    const connections = {};
-    const alreadyMapped = {};
-    forEachConnectionList(wrapper, (node, map, key, mapKey) => {
-      if(!alreadyMapped[mapKey]) {
-        const nodeIndex = map[key].indexOf(node);
-        const idIndex = map[key].indexOf(node.nodeId());
-        let index = nodeIndex !== -1 ? nodeIndex : idIndex;
-        if (index !== -1) {
-          if(connections[mapKey] === undefined) connections[mapKey] = [];
-          connections[mapKey].push(map[key].map((node) => node.nodeId()));
-          alreadyMapped[mapKey] = true;
-        }
-      }
-    });
-    return connections;
-  }
-
-  function getNodeOrId(nodeOrwrapperOrId) {
-    switch (nodeOrwrapperOrId.constructor.name) {
-      case 'DecisionNode':
-        return nodeOrwrapperOrId;
-      case 'LogicWrapper':
-        return nodeOrwrapperOrId.node;
-      default:
-        const node = DecisionTree.DecisionNode.get(nodeOrwrapperOrId);
-        if (node) return node;
-        return nodeOrwrapperOrId;
-    }
-  }
-
-  function connectNodes(node1, node2, attr, map) {
-    let id;
-    node1 = getNodeOrId(node1);
-    node2 = getNodeOrId(node2);
-    const node1Id = getId(node1);
-    const node2Id = getId(node2);
-    idMap[node1Id] = idMap[node1Id] || {};
-    idMap[node2Id] = idMap[node2Id] || {};
-    if (idMap[node1Id][attr] === undefined) {
-      if (idMap[node2Id][attr] === undefined) {
-        id = String.random();
-      } else {
-        id = idMap[node2Id][attr];
-      }
-    } else { id = idMap[node1Id][attr]; }
-    idMap[node1Id][attr] = id;
-    idMap[node2Id][attr] = id;
-    map[id] = map[id] || [];
-    if (map[id].indexOf(node1) === -1) {
-      map[id].push(node1)
-    }
-    if (map[id].indexOf(node2) === -1) {
-      map[id].push(node2)
-    }
-  }
-
-  function addJsonConnections(connections) {
-    const mapKeys = Object.keys(maps);
-    mapKeys.forEach((key) => {
-      const mapConns = connections[key] || [];
-      mapConns.forEach((group) => {
-        for (let index = 1; index < group.length; index += 1) {
-          const nodeId1 = group[index - 1];
-          const nodeId2 = group[index];
-          connectNodes(nodeId1, nodeId2, key, maps[key]);
-        }
-      });
-    });
-  }
-
-  function updateConnected(wrapper, password, attr, map) {
-    if (idMap[wrapper.node.nodeId()] === undefined ||
-          password === INTERNAL_FUNCTION_PASSWORD) return;
-    const id = idMap[wrapper.node.nodeId()][attr];
-    const connected = map[id] || [];
-    const value = wrapper[attr]();
-    connected.forEach((nodeOrId) => {
-      const node = getNodeOrId(nodeOrId)
-      if (node instanceof DecisionTree.DecisionNode) {
-        const wrapper2 = LogicTree.wrapper(node.uniqueGroup)(node);
-        wrapper2[attr](value, INTERNAL_FUNCTION_PASSWORD);
-      }
-    });
-  }
-  LogicTree.destroy = (wrapper) => {
-    const uniqueGroup = wrapper.node.uniqueGroup;
-    wrapper.node.forEach((node) => wrapperMap[uniqueGroup][node.nodeId()] = undefined);
-    forEachConnectionList(wrapper, (node, map, key) => {
-      let index = map[key].indexOf(node);
-      if (index !== -1) map[key].splice(index, 1);
-    });
-  }
-  LogicTree.register = (group, name, wrapper) => {
-    if (declaired[group] === undefined) declaired[group] = {};
-    if (declaired[group][name] !== undefined) throw new Error('This should not happen: check addTypeFunction logic');
-    declaired[group][name] = wrapper;
-  }
-  LogicTree.get = (name, group) =>  declaired[group || DEFAULT_GROUP][name];
-  LogicTree.connectValues =
-    (node1, node2) => connectNodes(node1, node2, 'value', connectedValues);
-  LogicTree.connectDefaults =
-    (node1, node2) => connectNodes(node1, node2, 'default', connectedDefaults);
-  LogicTree.updateValues =
-    (wrapper, password) => updateConnected(wrapper, password, 'value', connectedValues);
-  LogicTree.updateDefaults =
-    (wrapper, password) => updateConnected(wrapper, password, 'default', connectedDefaults);
-
-  LogicTree.wrapper = (uniqueGroup, wrapperConstId) => (nodeOidOwrapper) => {
-    if (wrapperMap[uniqueGroup] === undefined) wrapperMap[uniqueGroup] = [];
-    if (wrapperConstId === undefined) {
-      if (nodeOidOwrapper === undefined) return undefined;
-      const node = getNodeOrId(nodeOidOwrapper);
-      if (node instanceof DecisionTree.DecisionNode) {
-        return wrapperMap[uniqueGroup][node.nodeId()];
-      }
-    } else if (INTERNAL_FUNCTION_PASSWORD !== wrapperConstId) {
-      throw new Error('External uses of \'LogicTree.wrapper(node)\' can only be used as a getter. Setting values is functionality reserved only for internal logic.')
-    } else {
-      if (nodeOidOwrapper.node !== undefined) {
-        if (wrapperMap[uniqueGroup][nodeOidOwrapper.node.nodeId()] !== undefined) {
-          throw new Error('All nodes should only be wrapped once to accuratly persist data');
-        }
-        wrapperMap[uniqueGroup][nodeOidOwrapper.node.nodeId()] = nodeOidOwrapper;
-      }
-    }
-  }
-  LogicTree.connectionList = connectionList;
-  LogicTree.addJsonConnections = addJsonConnections;
-}
+LogicTree.LogicWrapper = LogicWrapper;
 
 module.exports = LogicTree;

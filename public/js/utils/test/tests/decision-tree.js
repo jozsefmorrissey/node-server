@@ -122,20 +122,3 @@ Test.add('DecisionTree Leaves', (ts) => {
   ts.assertEquals(dNode.leaves().length, 15, 'Not plucking all the leaves');
   ts.success();
 });
-//
-// Test.add('DecisionTree _UNIQUE_NAME_GROUP', (ts) => {
-//   try {
-//     dNode2.addState('5', {});
-//     ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
-//   } catch (e) {}
-//   try {
-//     dNode3.addState('5', {});
-//   } catch (e) {
-//     ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
-//   }
-//   try {
-//     const dNode4 = new DecisionTree('root', {_UNIQUE_NAME_GROUP: 'tester'});
-//     ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
-//   } catch (e) {}
-//   ts.success();
-// });

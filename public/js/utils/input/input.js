@@ -38,6 +38,7 @@ class Input {
 
     this.clone = (properties) => {
       const json = this.toJson();
+      json.validation = props.validation;
       delete json.id;
       delete json.errorMsgId;
       Object.set(json, properties);
@@ -75,7 +76,7 @@ class Input {
     this.get = () => getElem(this.id());
 
     this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
-    this.valid = () => valid === undefined ? this.setValue() : valid;
+    this.valid = () => this.setValue();
     this.setValue = (val) => {
       const elem = getElem(this.id());
       if (val === undefined){

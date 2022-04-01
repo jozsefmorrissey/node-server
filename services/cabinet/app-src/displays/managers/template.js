@@ -35,23 +35,23 @@ TemplateManager.inputTree = (callback) => {
   const lengthWidthDepthCost = [length, width, depth, cost];
   const color = [Inputs('color')];
 
-  const decisionInput = new DecisionInputTree('cost',
-    idTypeMethod, callback);
-
-  decisionInput.addStates({
-    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
-  });
-
-  decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
-        .jump('lengthCost');
-  decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
-        .jump('lengthWidthCost');
-  decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
-        .jump('lengthWidthDepthCost');
-  decisionInput.then(`method:${Material.methods.UNIT}`)
-        .jump('cost');
-  decisionInput.then('type:Material').jump('color');
-
-  return decisionInput;
+  // const decisionInput = new DecisionInputTree('cost',
+  //   idTypeMethod, callback);
+  //
+  // decisionInput.addStates({
+  //   lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
+  // });
+  //
+  // decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
+  //       .jump('lengthCost');
+  // decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
+  //       .jump('lengthWidthCost');
+  // decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
+  //       .jump('lengthWidthDepthCost');
+  // decisionInput.then(`method:${Material.methods.UNIT}`)
+  //       .jump('cost');
+  // decisionInput.then('type:Material').jump('color');
+  //
+  // return decisionInput;
 }
 module.exports = TemplateManager

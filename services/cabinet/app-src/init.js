@@ -6,6 +6,7 @@ const Order = require('./objects/order.js');
 const Assembly = require('./objects/assembly/assembly.js');
 
 require('../../../public/js/utils/utils.js');
+require('./displays/user.js');
 const Properties = require('./config/properties.js');
 
 // Display classes
@@ -45,7 +46,6 @@ function getValue(code, obj) {
 
 
 
-require('./displays/user.js');
 function init(body){
   Properties.load(body);
   let roomDisplay;
@@ -57,7 +57,7 @@ function init(body){
   // du.on.match('change', '.open-orientation-radio,.open-division-input', utils.updateDivisions);
   const CostManager = require('./displays/managers/cost.js');
   const costManager = new CostManager('cost-manager', 'cost');
-  // orderDisplay = new OrderDisplay('#app');
+  orderDisplay = new OrderDisplay('#app');
   // setTimeout(ThreeDModel.init, 1000);
   const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
 }

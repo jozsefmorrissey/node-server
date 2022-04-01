@@ -132,6 +132,7 @@ class PropertyDisplay {
     }
     bind('property-cnt', updateProperties);
     new RadioDisplay('property-container', 'radio-id');
+    this.update();
   }
 }
 
@@ -167,7 +168,10 @@ function updateRadio(elem) {
   const elems = du.find.all(`input[type="radio"][name='${name}']`);
   elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
   setPropertyElemValue(elem, 'prop-radio-update', true);
-  if (name === 'UNIT') updateMeasurements();
+  if (name === 'UNIT') {
+    Measurement.unit(elem.value);
+    updateMeasurements();
+  }
 }
 
 function updateValueDisplay(elem) {
@@ -219,7 +223,10 @@ PropertyDisplay.radioTemplate = new $t('properties/radio');
 PropertyDisplay.uniqueMap = {};
 PropertyDisplay.configMap = {};
 
-PropertyDisplay.configInputTree = () =>
-  new DecisionInputTree('Config', [Inputs('name')], console.log);
+PropertyDisplay.configInputTree = () => {
+  const dit = new DecisionInputTree(console.log);
+  dit.leaf('Config', [Inputs('name')]);
+  return dit;
+}
 
 module.exports = PropertyDisplay

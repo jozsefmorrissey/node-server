@@ -33,6 +33,16 @@ class CabinetConfig {
     this.valid = (type, id) => (!id ?
     cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
 
+    class ValueDependency {
+      constructor(name, value, payload) {
+        this.condition = (wrapper) => {
+          console.log('true');
+          return true;
+        }
+        Object.keys(payload).forEach((key) => this[key] = payload[key]);
+      }
+    }
+
     this.onUpdate = (func) => updateEvent.on(func);
     this.inputTree = () => {
       const typeInput = new Select({
@@ -45,8 +55,9 @@ class CabinetConfig {
         class: 'center',
         list: ['pajango', 'skititors']
       });
-      const inputs = [Inputs('name'), typeInput, propertyInput];
-      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
+      const inputs = [Inputs('name'), typeInput];
+      const inputTree = new DecisionInputTree();
+      const cabinet = inputTree.branch('Cabinet', inputs);
       const cabinetTypes = Object.keys(cabinetKeys);
       cabinetTypes.forEach((type) => {
         const cabinetInput = new Select({
@@ -55,11 +66,10 @@ class CabinetConfig {
           class: 'center',
           list: [''].concat(Object.keys(cabinetKeys[type]))
         });
-        inputTree.addState(type, cabinetInput);
-        inputTree.then(`type:${type}`).jump(type);
+        cabinet.conditional(type, new ValueDependency('type', type, type));
       });
       return inputTree;
-    }
+    };
     this.get = (name, type, propertyId, id) => {
       let cabinet;
       if (!id) cabinet = Cabinet.build(type);

@@ -107,15 +107,14 @@ function createTree(connectEggs, optional, shouldCopy, testFuncs) {
   runTestFunc('all');
 
   if (connectEggs) {
-    two.connectValues(three);
-    two.connectDefaults(six);
+    two.valueSync(three);
+    two.defaultSync(six);
   }
   return shouldCopy ? copy(tree) : tree;
 }
 
 function copy(origTree) {
     const treeJson = origTree.toJson();
-    origTree.destroyTree();
     return Object.fromJson(treeJson);
 }
 
@@ -580,6 +579,14 @@ Test.add('LogicTree attachTree', (ts) => {
 });
 Test.add('LogicTree attachTree (copy)', (ts) => {
   attachTreeTest(ts, true);
+});
+
+Test.add('LogicTree change', (ts) => {
+  let tree = createTree();
+  const food = tree.getByPath('food');
+  const needPlate = tree.getByPath('dishes', 'need plate');
+  food.node.change('needPlate');
+  ts.success();
 });
 
 

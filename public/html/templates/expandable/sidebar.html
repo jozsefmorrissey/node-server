@@ -1,14 +1,14 @@
 
 <div class="expandable-list {{type()}}" ex-list-id='{{id()}}'>
   <div class="expand-list-cnt {{type()}}" ex-list-id='{{id()}}'>
-    <div:t repeat='item in list()' class="expandable-list-body"  key='{{$index || $key}}'>
+    <div:t repeat='key, item in list()' class="expandable-list-body"  key='{{key}}'>
       <div class="expand-item">
         <div class='expand-rm-btn-cnt'>
-          <button class='expandable-item-rm-btn' ex-list-id='{{id()}}' key='{{$index || $key}}'>X</button>
+          <button class='expandable-item-rm-btn' ex-list-id='{{id()}}' key='{{key}}'>X</button>
         </div>
-        <div class="expand-header {{type()}} {{($index || $key) === activeKey ? ' active' : ''}}"
-                ex-list-id='{{id()}}' index='{{$index || $key}}'>
-          {{getHeader(item, $index || $key)}}
+        <div class="expand-header {{type()}} {{getKey() === key ? ' active' : ''}}"
+                ex-list-id='{{id()}}' key='{{key}}'>
+          {{getHeader(item, key)}}
         </div>
       </div>
     </div:t>

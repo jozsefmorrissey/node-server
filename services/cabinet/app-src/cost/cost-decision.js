@@ -1,6 +1,6 @@
 
 const Properties = require('../config/properties.js');
-const DecisionTree = require('../../../../public/js/utils/decisionTree.js');
+const DecisionTree = require('../../../../public/js/utils/decision-tree.js');
 
 class CostDecision {
   constructor(id, saved) {
@@ -14,20 +14,13 @@ class CostDecision {
     function getParentNode(name, parentNodeId, type, payload) {
       if (parentNodeId === undefined) {
         if (tree === undefined) {
-          tree = new DecisionTree(name, payload);
+          tree = new DecisionTree(name || 'root', payload);
         } else {
           throw new Error('Tree already initialized. should not call this function without a parentNodeId after initialization');
         }
       } else {
         return tree.getNode(parentNodeId);
       }
-    }
-
-    this.addSelect = (name, parentNodeId) => {
-      const payload = getPayload(CostDecision.types.SELECT);
-      const parentNode = getParentNode(name, parentNodeId, CostDecision.types.SELECT, payload);
-      if (parentNode === undefined) return;
-      parentNode.addState(name, payload);
     }
 
     this.tree = () => tree;
@@ -37,7 +30,7 @@ class CostDecision {
       tree = CostDecision.fromJson(saved);
     } else {
       if (Properties.hasValue(id)) {
-        this.addSelect();
+        console.log('todo')// this.addSelect();
       }
     }
   }

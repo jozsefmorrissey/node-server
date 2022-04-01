@@ -2,10 +2,9 @@ const MeasurementInput = require('../../../../public/js/utils/input/styles/measu
 const Cost = require('../cost/cost.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const Material = require('../cost/types/material.js');
-const ConditionalCost = require('../cost/types/category/conditional.js');
 const Company = require('../objects/company.js');
 const Input = require('../../../../public/js/utils/input/input.js');
-const Labor = require('../cost/types/material/labor.js');
+const Labor = require('../cost/types/labor.js');
 
 
 const defined = {};
@@ -91,12 +90,6 @@ add('method', new Select({
   name: 'method',
   class: 'center',
   list: Material.methodList,
-}));
-
-add('propertyConditions', new Select({
-  name: 'propertyCondition',
-  class: 'center',
-  list: Object.values(ConditionalCost.conditions)
 }));
 
 add('propertyIds', new Select({

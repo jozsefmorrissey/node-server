@@ -4742,52 +4742,141 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/custom-error.js',
+RequireJS.addFunction('../../public/js/utils/data-sync.js',
 function (require, exports, module) {
 	
 
+	class DataSync {
+	  constructor(idAttr, getById) {
+	    let connections = {};
+	    let lastValue = {};
+	    let idMap = {};
+	
+	    const getId = (objOid) => !(objOid instanceof Object) ? objOid :
+	      ((typeof objOid[idAttr] === 'function' ? objOid[idAttr]() : objOid[idAttr]));
+	
+	    const getArray = (elems) => !elems ? [] : (elems.length === 1 ? elems[0] : elems);
 	
 	
-	class CustomEvent {
-	  constructor(name) {
-	    const watchers = [];
-	    this.name = name;
-	
-	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
-	
-	    this.on = function (func) {
-	      if ((typeof func) === 'function') {
-	        watchers.push(func);
-	      } else {
-	        return 'on' + name;
+	    function makeSyncronous(key,...objOids) {
+	      objOids = getArray(objOids);
+	      for (let index = 1; index < objOids.length; index += 1) {
+	        let id;
+	        const obj1Id = getId(objOids[index - 1]);
+	        const obj2Id = getId(objOids[index]);
+	        idMap[obj1Id] = idMap[obj1Id] || {};
+	        idMap[obj2Id] = idMap[obj2Id] || {};
+	        if (idMap[obj1Id][key] === undefined) {
+	          if (idMap[obj2Id][key] === undefined) {
+	            id = String.random();
+	          } else {
+	            id = idMap[obj2Id][key];
+	          }
+	        } else { id = idMap[obj1Id][key]; }
+	        idMap[obj1Id][key] = id;
+	        idMap[obj2Id][key] = id;
+	        connections[id] = connections[id] || [];
+	        if (connections[id].indexOf(obj1Id) === -1) {
+	          connections[id].push(obj1Id)
+	        }
+	        if (connections[id].indexOf(obj2Id) === -1) {
+	          connections[id].push(obj2Id)
+	        }
 	      }
 	    }
 	
-	    this.trigger = function (element, detail) {
-	      element = element === undefined ? window : element;
-	      runFuncs(element, detail);
-	      this.event.detail = detail;
-	      if(document.createEvent){
-	          element.dispatchEvent(this.event);
-	      } else {
-	          element.fireEvent("on" + this.event.eventType, this.event);
+	    function unSync(key,...objOids) {
+	      objOids = getArray(objOids);
+	      for (let index = 1; index < objOids.length; index += 1) {
+	        const id = getId(objOids[index]);
+	        const connId = idMap[id][key];
+	        const conns = connections[connId];
+	        let tIndex;
+	        while ((tIndex = conns.indexOf(id)) !== -1) conns.split(tIndex, 1);
+	        delete idMap[id][key];
 	      }
 	    }
-	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-	    this.event;
-	    if(document.createEvent){
-	        this.event = document.createEvent("HTMLEvents");
-	        this.event.initEvent(name, true, true);
-	        this.event.eventName = name;
-	    } else {
-	        this.event = document.createEventObject();
-	        this.event.eventName = name;
-	        this.event.eventType = name;
+	
+	    function update(key, value, objOid) {
+	      const id = getId(objOid);
+	      if (!idMap[id] || !idMap[id][key]) return;
+	      const connId = idMap[id] && idMap[id][key];
+	      if (connId === undefined) return;
+	      if (lastValue[connId] !== value) {
+	        lastValue[connId] = value;
+	        const objIds = connections[connId];
+	        for (let index = 0; objIds && index < objIds.length; index ++) {
+	          const obj = getById(objIds[index]);
+	          if (obj !== undefined) obj[key](value);
+	        }
+	      }
 	    }
+	
+	    function shouldRun(hasRan, validIds, id) {
+	      return !hasRan && (validIds === null || validIds.indexOf(id) !== -1);
+	    }
+	
+	    function forEach(func, ...objOids) {
+	      objOids = getArray(objOids);
+	      let alreadyRan = {};
+	      let validIds = objOids === undefined ? null :
+	                      objOids.map((objOid) => getId(objOid));
+	      let ids = Object.keys(idMap);
+	      for (let index = 0; index < ids.length; index += 1) {
+	        const id = ids[index];
+	        const idKeys = Object.keys(idMap[id]);
+	        for (let iIndex = 0; iIndex < idKeys.length; iIndex += 1) {
+	          const idKey = idKeys[iIndex];
+	          const connectionId = idMap[id][idKey];
+	          if (shouldRun(alreadyRan[connectionId], validIds, id)) {
+	            const connIds = connections[connectionId];
+	            const applicableConnections = [];
+	            for (let cIndex = 0; cIndex < connIds.length; cIndex += 1) {
+	              if (shouldRun(alreadyRan[connectionId], validIds, id)) {
+	                applicableConnections.push(connIds[cIndex]);
+	              }
+	            }
+	            if (applicableConnections.length === 0) throw new Error('This should never happen');
+	            func(idKey, applicableConnections);
+	            alreadyRan[connectionId] = true;
+	          }
+	        }
+	      }
+	    }
+	
+	    function fromJson(connections) {
+	      const keys = Object.keys(connections);
+	      keys.forEach((key) => {
+	        this.addConnection(key);
+	        const groups = connections[key];
+	        groups.forEach((group) => {
+	          this[`${key}Sync`](group);
+	        });
+	      });
+	    }
+	
+	
+	    function toJson(...objOids) {
+	      objOids = getArray(objOids);
+	      const connects = {};
+	      forEach((key, connections) => {
+	        if (connects[key] === undefined) connects[key] = [];
+	        connects[key].push(connections);
+	      }, ...objOids);
+	      return connects;
+	    }
+	
+	    this.addConnection = (key) => {
+	      this[`${key}Sync`] = (...objOids) => makeSyncronous(key, ...objOids);
+	      this[`${key}UnSync`] = (...objOids) => makeSyncronous(key, ...objOids);
+	      this[`${key}Update`] = (value, objOid) => update(key,value, objOid);
+	    }
+	    this.toJson = toJson;
+	    this.fromJson = fromJson;
 	  }
 	}
 	
-	module.exports = CustomEvent;
+	module.exports = DataSync;
 	
 });
 
@@ -5324,6 +5413,85 @@ function (require, exports, module) {
 	try {
 	  module.exports = Request;
 	} catch (e) {}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/endpoints.js',
+function (require, exports, module) {
+	
+class Endpoints {
+	  constructor(config, host) {
+	    const instance = this;
+	    let environment;
+	
+	    if ((typeof config) !== 'object') {
+	      host = config;
+	      config = Endpoints.defaultConfig;
+	    }
+	
+	    host = host || '';
+	    this.setHost = (newHost) => {
+	      if ((typeof newHost) === 'string') {
+	        if (config._envs[newHost]) environment = newHost;
+	        host = config._envs[newHost] || newHost;
+	      }
+	    };
+	    this.setHost(host);
+	    this.getHost = (env) => env === undefined ? host : config._envs[env];
+	    this.getEnv = () => environment;
+	
+	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
+	    this.getFuncObj = function () {return endPointFuncs;};
+	
+	
+	    function build(str) {
+	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
+	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
+	      return function () {
+	        let values = [];
+	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
+	          values = arguments;
+	        } else {
+	          const obj = arguments[0];
+	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
+	        }
+	        let endpoint = '';
+	        for (let index = 0; index < pieces.length; index += 1) {
+	          const arg = values[index];
+	          let value = '';
+	          if (index < pieces.length - 1) {
+	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
+	          }
+	          endpoint += pieces[index] + value;
+	        }
+	        return `${host}${endpoint}`;
+	      }
+	    }
+	
+	    function configRecurse(currConfig, currFunc) {
+	      const keys = Object.keys(currConfig);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = currConfig[key];
+	        if (key.indexOf('_') !== 0) {
+	          if (value instanceof Object) {
+	            currFunc[key] = {};
+	            configRecurse(value, currFunc[key]);
+	          } else {
+	            currFunc[key] = build(value);
+	          }
+	        } else {
+	          currFunc[key] = value;
+	        }
+	      }
+	    }
+	
+	    configRecurse(config, endPointFuncs);
+	  }
+	}
+	
+	module.exports = Endpoints;
 	
 });
 
@@ -6820,359 +6988,52 @@ function regexToObject (str, reg) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/decision-tree.js',
+RequireJS.addFunction('../../public/js/utils/custom-error.js',
 function (require, exports, module) {
 	
 
-	const Lookup = require('./object/lookup')
-	const REMOVAL_PASSWORD = String.random();
 	
-	// terminology
-	// name - String to define state;
-	// payload - data returned for a given state
-	//             - @_UNIQUE_NAME_GROUP - An Identifier used to insure all nodes of multople trees have a unique name.
-	//                          note: only applicable on root node. governs entire tree
-	// stateObject - object defining states {name: [payload]...}
-	// states - array of availible state names.
-	// node - {name, states, payload, then, addState, addStates};
-	// then(name) - a function to set a following state.
-	// next(name) - a function to get the next state.
-	// back() - a function to move back up the tree.
-	// top() - a function to get root;
-	// subtree(conditions, parent) - returns a subtree.
-	//    @conditions - object identifying conditions for each name or _DEFAULT for undefined
-	//    @parent - can be used to atach a copy to another branch or tree
-	// returns all functions return current node;
-	class DecisionNode extends Lookup{
-	  constructor(tree, name, instancePayload, parent) {
-	    super(instancePayload && instancePayload._NODE_ID ?
-	              instancePayload._NODE_ID : String.random(7), 'nodeId');
-	    Object.getSet(this, 'name');
-	    const stateMap = {};
-	    let jump;
-	    let isComplete = false; // null : requires evaluation
-	    instancePayload = instancePayload || {};
-	    const instance = this;
-	    instancePayload._nodeId = `decision-node-${this.nodeId()}`;
-	    tree.nodeMap[instancePayload._nodeId] = this;
-	    this.isTree = (t) => t === tree;
-	    this.tree = () => tree;
-	    this.getNode = (nodeId) => tree.nodeMap[nodeId];
-	    this.name = name.toString();
-	    this.states = () => Object.values(stateMap);
-	    this.instancePayload = () => JSON.clone(instancePayload);
-	    this.set = (key, value) => instancePayload[key] = value;
-	    this.fromJson = undefined;
-	    this.instanceCount = (n) => tree.instanceCount(n || this.name);
-	    this.lastInstance = () => tree.instanceCount(this.name) === 1;
-	    this.stateDefined = tree.stateDefined;
-	    this.payload = () => {
-	      const copy = JSON.clone(tree.stateConfigs[name]) || {};
-	      Object.keys(instancePayload).forEach((key) => {
-	        copy[key] = instancePayload[key];
-	      });
-	      return copy;
-	    };
-	    this.jump = (name) => {
-	      if (name) jump = tree.getState(name, parent);
-	      return jump;
-	    };
-	    this.getNodeByPath = tree.getNodeByPath;
-	    this.isLeaf = () => Object.keys(stateMap).length === 0;
-	    this.stateNames = () => Object.keys(stateMap);
-	    this.structureChanged = () => {
-	      isComplete = null;
-	      if (parent) parent.structureChanged();
-	    }
-	    this.remove = (node, password) => {
-	      if (node === undefined) {
-	        tree.remove(this, REMOVAL_PASSWORD);
-	        tree = undefined;
-	      } else if (REMOVAL_PASSWORD !== password) {
-	        throw new Error('Attempting to remove node without going through the proper process find the node object you want to remove and call node.remove()');
+	
+	class CustomEvent {
+	  constructor(name) {
+	    const watchers = [];
+	    this.name = name;
+	
+	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
+	
+	    this.on = function (func) {
+	      if ((typeof func) === 'function') {
+	        watchers.push(func);
 	      } else {
-	        let removed = false;
-	        Object.keys(stateMap).forEach((name) => {
-	          const realNode = stateMap[name];
-	          if (realNode === node) {
-	            delete stateMap[name];
-	            removed = true;
-	          }
-	        });
+	        return 'on' + name;
 	      }
 	    }
 	
-	    this.validState = (name) => name !== undefined && instance.stateNames().indexOf(name.toString()) !== -1;
-	
-	    function attachTree(t) {
-	      return t.subtree(null, instance, tree);
-	    }
-	
-	    this.then = (name, instancePayload, conditional) => {
-	      if (name instanceof DecisionNode) return attachTree(name);
-	      if (Array.isArray(name)) {
-	        const returnNodes = [];
-	        for (let index = 0; index < name.length; index += 1) {
-	          returnNodes.push(this.then(name[index]));
-	        }
-	        return returnNodes;
-	      }
-	      this.structureChanged();
-	      const newState = tree.getState(name, this, instancePayload);
-	      if ((typeof conditional) === 'string') {
-	        const stateId = `${this.name}:${conditional}`;
-	        stateMap[stateId] = tree.getState(stateId, this, instancePayload);
-	        stateMap[stateId].jump(newState);
+	    this.trigger = function (element, detail) {
+	      element = element === undefined ? window : element;
+	      runFuncs(element, detail);
+	      this.event.detail = detail;
+	      if(document.createEvent){
+	          element.dispatchEvent(this.event);
 	      } else {
-	        stateMap[name] = newState;
-	      }
-	      return newState === undefined ? undefined : newState.jump() || newState;
-	    }
-	    this.addState = (name, payload) => tree.addState(name, payload) && this;
-	    this.addStates = (sts) => tree.addStates(sts) && this;
-	    this.next = (name) => {
-	      const state = stateMap[name];
-	      return state === undefined ? undefined : state.jump() || state;
-	    }
-	
-	    this.nameTaken = tree.nameTaken;
-	
-	    this.back = () => parent;
-	    this.top = () => rootNode;
-	    this.isRoot = () => !(parent instanceof DecisionNode)
-	
-	    this.getRoot = () => {
-	      const root = this;
-	      while (!root.isRoot()) root = root.back();
-	      return root;
-	    }
-	
-	    this.copy = (t) => new DecisionNode(t || tree, this.name, instancePayload);
-	
-	    // Breath First Search
-	    this.forEach = (func) => {
-	      const stateKeys = Object.keys(stateMap);
-	      func(this);
-	      for(let index = 0; index < stateKeys.length; index += 1) {
-	        const state = stateMap[stateKeys[index]];
-	        state.forEach(func);
+	          element.fireEvent("on" + this.event.eventType, this.event);
 	      }
 	    }
-	
-	    this.map = (func) => {
-	      const ids = [];
-	      this.forEach((node) => ids.push(func(node)));
-	      return ids;
+	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+	    this.event;
+	    if(document.createEvent){
+	        this.event = document.createEvent("HTMLEvents");
+	        this.event.initEvent(name, true, true);
+	        this.event.eventName = name;
+	    } else {
+	        this.event = document.createEventObject();
+	        this.event.eventName = name;
+	        this.event.eventType = name;
 	    }
-	
-	    this.leaves = () => {
-	      const leaves = [];
-	      this.forEach((node) => {
-	        if (node.isLeaf()) leaves.push(node);
-	      });
-	      return leaves;
-	    }
-	
-	    this.conditionsSatisfy = tree.conditionsSatisfy;
-	
-	    this.subtree = (conditions, parent, t) => {
-	      if (parent && !parent.conditionsSatisfy(conditions, this)) return undefined
-	      conditions = conditions instanceof Object ? conditions : {};
-	      const stateKeys = Object.keys(stateMap);
-	      let copy;
-	      if (parent === undefined) copy = this.copy(t);
-	      else {
-	        const target = t === undefined ? parent : t;
-	        const nameTaken = target.nameTaken(this.name);
-	        try {
-	          if (!nameTaken) target.addState(this.name, JSON.clone(tree.stateConfigs[this.name]) || {});
-	        } catch (e) {
-	          target.nameTaken(this.name);
-	          throw e;
-	        }
-	        copy = parent.then(this.name, JSON.clone(instancePayload));
-	      }
-	
-	      for(let index = 0; index < stateKeys.length; index += 1) {
-	        const state = stateMap[stateKeys[index]];
-	        state.subtree(conditions, copy, t);
-	      }
-	      return copy;
-	    }
-	
-	    this.nodeOnlyToJson = () => {
-	      const json = {nodeId: this.nodeId(), name, states: []};
-	      this.states().forEach((state) =>
-	          json.states.push(state.nodeOnlyToJson()));
-	      return json;
-	    }
-	    this.toJson = () => {
-	      const json = tree.toJson();
-	      json.name = this.name;
-	      json.payload = instancePayload;
-	      json.nodes = this.nodeOnlyToJson();
-	      return json;
-	    }
-	
-	    this.declairedName = tree.declairedName;
-	    this.toString = (tabs, attr) => {
-	      tabs = tabs || 0;
-	      const tab = new Array(tabs).fill('  ').join('');
-	      let str = `${tab}${this.name}`;
-	      str += attr ? `) ${this.payload()[attr]}\n` : '\n';
-	      const stateKeys = Object.keys(stateMap);
-	      for(let index = 0; index < stateKeys.length; index += 1) {
-	        str += stateMap[stateKeys[index]].toString(tabs + 1, attr);
-	      }
-	      return str;
-	    }
-	    this.attachTree = attachTree;
-	    this.uniqueGroup = tree.uniqueGroup;
-	    this.treeToJson = tree.toJson;
-	    this.conditionsSatisfy = tree.conditionsSatisfy;
-	  }
-	}
-	DecisionNode.DO_NOT_CLONE = true;
-	DecisionNode.stateMap = {};
-	
-	
-	class DecisionTree {
-	  constructor(name, payload) {
-	    let json;
-	    if (name._TYPE === 'DecisionTree') {
-	      json = name;
-	      payload = json.payload;
-	      name = json.name;
-	    }
-	    const names = {};
-	    name = name || String.random();
-	    payload = payload || {};
-	    const stateConfigs = {};
-	    const nodeMap = {};
-	    Object.getSet(this, {name, stateConfigs, payload});
-	    const uniqueGroup = payload._UNIQUE_NAME_GROUP || String.random();
-	    const tree = this;
-	
-	    this.nameTaken = (n) => Object.keys(tree.stateConfigs).indexOf(n) !== -1;
-	
-	    function addState(name, payload) {
-	      if (tree.declairedName(name)) {
-	        throw new Error('Name already declared: This requires unique naming possibly relitive to other trees use DecisionTree.undeclairedName(name) to validate names')
-	      }
-	      tree.declareName(name);
-	      return stateConfigs[name] = payload;
-	    }
-	
-	    function stateDefined(name) {
-	      const exists = false;
-	      rootNode.forEach((node) =>
-	        exists = exists || node.name === name);
-	      return exists;
-	    }
-	
-	    function instanceCount(name) {
-	      let count = 0;
-	      rootNode.forEach((node) =>
-	        count += node.name === name ? 1 : 0);
-	      return count;
-	    }
-	
-	    function remove(node, password) {
-	      if (!node.isTree(tree)) throw new Error('Node has already been removed');
-	      let removeList = [node];
-	      let index = 0;
-	      let currNode;
-	      while (currNode = removeList[index]) {
-	          currNode.back().remove(currNode, password);
-	          removeList = removeList.concat(currNode.states());
-	          index += 1;
-	      }
-	      names[node.name] = undefined;
-	    }
-	
-	    function addStates(sts) {
-	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
-	      const keys = Object.keys(sts);
-	      keys.forEach((key) => addState(key, sts[key]));
-	    }
-	
-	    function getState(name, parent, instancePayload) {
-	      return new DecisionNode(tree, name, instancePayload, parent);
-	    }
-	
-	    const toJson = this.toJson;
-	    this.toJson = () => {
-	      const json = toJson();
-	      return json;
-	    }
-	
-	    function conditionsSatisfy(conditions, state) {
-	      if ((typeof state.back) !== 'function') {
-	        console.log('here')
-	      }
-	      const parent = state.back();
-	      if (parent === null) return true;
-	      conditions = conditions || {};
-	      const cond = conditions[parent.name] === undefined ?
-	                    conditions._DEFAULT : conditions[parent.name];
-	      const noRestrictions = cond === undefined;
-	      const regex = cond instanceof RegExp ? cond : null;
-	      const target = (typeof cond) === 'string' ? cond : null;
-	      const func = (typeof cond) === 'function' ? cond : null;
-	      if (noRestrictions || (regex && state.name.match(regex)) ||
-	              (target !== null && state.name === target) ||
-	              (func && func(state))) {
-	        return conditionsSatisfy(conditions, parent);
-	      }
-	      return false;
-	    }
-	
-	    function getNodeByPath(...path) {
-	      let currNode = rootNode;
-	      path.forEach((name) => currNode = currNode.next(name));
-	      return currNode;
-	    }
-	
-	    this.remove = remove;
-	    this.getNodeByPath = getNodeByPath;
-	    this.uniqueGroup = uniqueGroup;
-	    this.conditionsSatisfy = conditionsSatisfy;
-	    this.getState = getState;
-	    this.addState = addState;
-	    this.addStates = addStates;
-	    this.nodeMap = nodeMap;
-	    this.instanceCount = instanceCount;
-	    this.stateConfigs = stateConfigs;
-	
-	    const rootNode = new DecisionNode(tree, name, payload, null);
-	    tree.declareName = (name) => names[name] = true;
-	    tree.declairedName = (name) => !!names[name];
-	
-	    if (json !== undefined) {
-	      addStates(Object.fromJson(json.stateConfigs));
-	      let index = 0;
-	      let jsons = [json.nodes];
-	      let currJson;
-	      let nodeMap = {};
-	      nodeMap[jsons[index].name] = rootNode;
-	      while (currJson = jsons[index]) {
-	        currJson.states.forEach((state) => {
-	          jsons.push(state);
-	          state.instancePayload = state.instancePayload || {};
-	          state.instancePayload._NODE_ID = state.nodeId;
-	          nodeMap[state.name] = nodeMap[currJson.name].then(state.name, state.instancePayload);
-	        });
-	        index++;
-	      }
-	    }
-	
-	    // addState(name, payload);
-	    return rootNode;
 	  }
 	}
 	
-	DecisionTree.DecisionNode = DecisionNode;
-	module.exports = DecisionTree;
+	module.exports = CustomEvent;
 	
 });
 
@@ -7181,8 +7042,9 @@ RequireJS.addFunction('../../public/js/utils/logic-tree.js',
 function (require, exports, module) {
 	
 
-	
 	const DecisionTree = require('./decision-tree');
+	const DataSync = require('./data-sync');
+	const Lookup = require('./object/lookup');
 	
 	const INTERNAL_FUNCTION_PASSWORD = String.random();
 	const DEFAULT_GROUP = 'LogicTree';
@@ -7192,9 +7054,12 @@ function (require, exports, module) {
 	  return nodeOwrapper.node;
 	}
 	
-	class LogicWrapper {constructor(node) {
-	  this.node = node;
-	}}
+	class LogicWrapper extends Lookup {
+	  constructor(node) {
+	    super(node ? node.nodeId() : undefined, 'nodeId');
+	    this.node = node;
+	  }
+	}
 	
 	class LogicType {
 	  constructor(wrapperOrJson) {
@@ -7235,7 +7100,7 @@ function (require, exports, module) {
 	      if (val !== undefined) {
 	        validate(val);
 	        value = val;
-	        LogicTree.updateValues(wrapper, password);
+	        wrapper.valueUpdate(value, wrapper);
 	      }
 	      return value === undefined ? (def === undefined ? null : def) : value;
 	    }
@@ -7247,7 +7112,7 @@ function (require, exports, module) {
 	      if (val !== undefined) {
 	        validate(val);
 	        def = val;
-	        LogicTree.updateDefaults(wrapper, password);
+	        wrapper.defaultUpdate(value, wrapper);
 	      }
 	      return def;
 	    }
@@ -7278,7 +7143,7 @@ function (require, exports, module) {
 	      if (val !== undefined) {
 	        validate(val);
 	        value = val;
-	        LogicTree.updateValues(wrapper, password);
+	        wrapper.valueUpdate(value);
 	      }
 	      let retVal = value === undefined ? def : value;
 	      return retVal === null ? null : JSON.clone(retVal);
@@ -7294,7 +7159,7 @@ function (require, exports, module) {
 	      if (val !== undefined) {
 	        validate(val);
 	        def = val;
-	        LogicTree.updateDefaults(wrapper, password);
+	        wrapper.defaultUpdate(value);
 	      }
 	      return def;
 	    }
@@ -7326,7 +7191,7 @@ function (require, exports, module) {
 	      if (val !== undefined) {
 	        validate(val);
 	        value = val;
-	        LogicTree.updateValues(wrapper, password);
+	        wrapper.valueUpdate(value);
 	      }
 	      return value || def;
 	    }
@@ -7335,7 +7200,7 @@ function (require, exports, module) {
 	      if (val !== undefined) {
 	        validate(val);
 	        def = val;
-	        LogicTree.updateDefaults(wrapper, password);
+	        wrapper.defaultUpdate(value);
 	      }
 	      return def;
 	    }
@@ -7366,22 +7231,19 @@ function (require, exports, module) {
 	
 	LogicType.types = {SelectLogic, MultiselectLogic, ConditionalLogic, BranchLogic, LeafLogic};
 	class LogicTree {
-	  constructor(uniqueGroup) {
-	    // TODO: should eliminate uniqueGroup. trees should be completly disconnected.
-	    let json;
-	    if(uniqueGroup && uniqueGroup._TYPE === this.constructor.name) {
-	      json = uniqueGroup;
-	      uniqueGroup = json.uniqueGroup;
-	    }
+	  constructor(formatPayload) {
 	    Object.getSet(this);
 	    const tree = this;
 	    let root;
 	    let choices = {};
-	    uniqueGroup = uniqueGroup || DEFAULT_GROUP;
+	    const wrapperMap = {};
 	
-	    function changeType(node, newType, payload) {
-	
+	    function getTypeObjByNodeId(nodeId) {
+	      return get(nodeId).typeObject;
 	    }
+	    let dataSync = new DataSync('nodeId', getTypeObjByNodeId);
+	    dataSync.addConnection('value');
+	    dataSync.addConnection('default');
 	
 	    function isOptional(node) {
 	      return !(choices[node.name] === undefined || !choices[node.name].optional());
@@ -7405,9 +7267,15 @@ function (require, exports, module) {
 	      choices[name].default(val);
 	    }
 	
+	    function getByName(name) {
+	      if (root.node === undefined) return undefined;
+	      const node = root.node.getByName(name);
+	      return node === undefined ? undefined : wrapNode(node);
+	    }
+	
 	    function addChildrenFunc(wrapper, options) {
 	      return (name) => {
-	        const targetWrapper = LogicTree.get(name, uniqueGroup);
+	        const targetWrapper = getByName(name);
 	        if (targetWrapper === undefined) throw new Error(`Invalid name: ${name}`);
 	        const states = targetWrapper.node.states();
 	        states.forEach((state) => wrapNode(wrapper.node.then(state)));
@@ -7422,8 +7290,8 @@ function (require, exports, module) {
 	      return selectors;
 	    }
 	
-	    function reachableTree() {
-	      return root.node.subtree(choicesToSelectors());
+	    function reachableTree(node) {
+	      return (node || root.node).subtree(choicesToSelectors());
 	    }
 	
 	    function leaves() {
@@ -7468,8 +7336,14 @@ function (require, exports, module) {
 	      return data;
 	    }
 	
+	    function forEach(func, node) {
+	      reachableTree(node).forEach((n) => {
+	        func(wrapNode(n));
+	      });
+	    }
+	
 	    function reachable(name) {
-	      const wrapper = LogicTree.get(name, uniqueGroup);
+	      const wrapper = getByName(name);
 	      return wrapper.node.conditionsSatisfy(choicesToSelectors(), wrapper.node);
 	    }
 	
@@ -7534,7 +7408,7 @@ function (require, exports, module) {
 	    function toJson(wrapper) {
 	      return function () {
 	        wrapper = wrapper || root;
-	        const json = {choices: {}, _TYPE: tree.constructor.name, uniqueGroup};
+	        const json = {choices: {}, _TYPE: tree.constructor.name};
 	        const keys = Object.keys(choices);
 	        const ids = wrapper.node.map((node) => node.nodeId());
 	        keys.forEach((key) => {
@@ -7546,7 +7420,7 @@ function (require, exports, module) {
 	          }
 	        });
 	        json.tree = wrapper.node.toJson();
-	        json.connectionList = LogicTree.connectionList(wrapper);
+	        json.connectionList = dataSync.toJson(wrapper.node.nodes());
 	        return json;
 	      }
 	    }
@@ -7563,9 +7437,9 @@ function (require, exports, module) {
 	      wrapper.reachable = reachable;
 	      wrapper.decisions = decisions(wrapper);
 	      wrapper.forPath = forPath;
+	      wrapper.forEach = forEach;
 	      wrapper.pathsToString = pathsToString;
 	      wrapper.leaves = leaves;
-	      wrapper.destroyTree = () => LogicTree.destroy(wrapper);
 	      wrapper.toString = () =>
 	          wrapper.node.subtree(choicesToSelectors()).toString(null, 'LOGIC_TYPE');
 	    }
@@ -7587,42 +7461,64 @@ function (require, exports, module) {
 	      wrapper.default = typeObj.default;
 	      wrapper.selector = typeObj.selector;
 	      wrapper.addChildren = addChildrenFunc(wrapper);
-	      wrapper.connectValues = (w) => LogicTree.connectValues(wrapper, w);
-	      wrapper.connectDefaults = (w) => LogicTree.connectDefaults(wrapper, w);
+	      wrapper.valueSync = (w) => dataSync.valueSync(typeObj, w.typeObject);
+	      wrapper.defaultSync = (w) => dataSync.defaultSync(typeObj, w.typeObject);
+	      wrapper.valueUpdate = (value) => dataSync.valueUpdate(value, typeObj);
+	      wrapper.defaultUpdate = (value) => dataSync.defaultUpdate(value, typeObj);
 	    }
 	
 	    function attachTree(wrapper) {
 	      return (tree) => {
 	        const json = tree.toJson();
-	        json.tree.payload._UNIQUE_NAME_GROUP = String.random();
 	        return incorrperateJsonNodes(json, wrapper.node);
 	      }
 	    }
 	
 	    function addTypeFunction(type, wrapper) {
 	      wrapper[type.toLowerCase()] = (name, payload) => {
-	        payload = payload || {};
+	        payload = typeof formatPayload === 'function' ?
+	                          formatPayload(name, payload || {}, wrapper) : payload || {};
 	        payload.LOGIC_TYPE = type;
-	        payload._UNIQUE_NAME_GROUP = uniqueGroup;
 	        let newWrapper;
 	        if (root === undefined) {
 	          root = wrapper;
 	          root.node = new DecisionTree(name, payload);
 	          newWrapper = root;
-	          LogicTree.register(payload._UNIQUE_NAME_GROUP, name, newWrapper);name
-	        } else if (LogicTree.get(name, uniqueGroup)) {
+	        } else if (getByName(name)) {
 	          newWrapper = wrapNode(wrapper.node.then(name));
 	        } else {
 	          wrapper.node.addState(name, payload);
 	          newWrapper = wrapNode(wrapper.node.then(name));
-	          LogicTree.register(uniqueGroup, name, newWrapper);
 	        }
 	        return newWrapper;
 	      }
 	    }
 	
-	    const get = LogicTree.wrapper(uniqueGroup)
-	    const set = LogicTree.wrapper(uniqueGroup, INTERNAL_FUNCTION_PASSWORD)
+	    function getNode(nodeOrwrapperOrId) {
+	      switch (nodeOrwrapperOrId.constructor.name) {
+	        case 'DecisionNode':
+	          return nodeOrwrapperOrId;
+	        case 'LogicWrapper':
+	          return nodeOrwrapperOrId.node;
+	        default:
+	          const node = DecisionTree.DecisionNode.get(nodeOrwrapperOrId);
+	          if (node) return node;
+	          return nodeOrwrapperOrId;
+	      }
+	    }
+	
+	    function get(nodeOidOwrapper) {
+	      if (nodeOidOwrapper === undefined) return undefined;
+	      const node = getNode(nodeOidOwrapper);
+	      if (node instanceof DecisionTree.DecisionNode) {
+	        return wrapperMap[node.nodeId()];
+	      } else {
+	        return wrapperMap[node];
+	      }
+	    }
+	
+	    const set = (wrapper) =>
+	        wrapperMap[wrapper.node.nodeId()] = wrapper;
 	    this.get = get;
 	
 	    function wrapNode(node) {
@@ -7643,14 +7539,15 @@ function (require, exports, module) {
 	      addStaticMethods(wrapper);
 	      if (node && node.payload().LOGIC_TYPE !== undefined) {
 	        addHelperMetrhods(wrapper);
+	        set(wrapper);
 	      }
-	      set(wrapper);
 	      return wrapper;
 	    }
 	
 	    function updateChoices(jsonChoices) {
 	      const keys = Object.keys(jsonChoices);
-	      keys.forEach((key) => choices[key].fromJson(jsonChoices[key]));
+	      keys.forEach((key) =>
+	          choices[key].fromJson(jsonChoices[key]));
 	    }
 	
 	    function incorrperateJsonNodes(json, node) {
@@ -7666,175 +7563,18 @@ function (require, exports, module) {
 	      }
 	      newNode.forEach((n) =>
 	          wrapNode(n));
+	      dataSync.fromJson(json.connectionList);
 	      updateChoices(json.choices);
-	      LogicTree.addJsonConnections(json.connectionList);
 	      return node;
 	    }
 	
 	    let rootWrapper = wrapNode();
-	    if (json) incorrperateJsonNodes(json);
+	    if (formatPayload && formatPayload._TYPE === this.constructor.name) incorrperateJsonNodes(formatPayload);
 	    return rootWrapper;
 	  }
 	}
 	
-	{
-	  const declaired = {};
-	  const connectedValues = {};
-	  const connectedDefaults = {};
-	  const idMap = {};
-	  const wrapperMap = {};
-	  const maps = {value: connectedValues, default: connectedDefaults};
-	
-	  function getId(nodeOrwrapperOrId) {
-	    if (nodeOrwrapperOrId instanceof DecisionTree.DecisionNode) {
-	        return nodeOrwrapperOrId.nodeId();
-	    } else {
-	      return nodeOrwrapperOrId;
-	    }
-	  }
-	
-	  function forEachConnectionList(wrapper, func) {
-	    wrapper.node.forEach((node) => {
-	      Object.keys(maps).forEach((mapKey) => {
-	        const map = maps[mapKey];
-	        const mapKeys = Object.keys(map);
-	        mapKeys.forEach((key) => {
-	            func(node, map, key, mapKey);
-	        });
-	      });
-	    });
-	  }
-	
-	  function connectionList(wrapper) {
-	    const connections = {};
-	    const alreadyMapped = {};
-	    forEachConnectionList(wrapper, (node, map, key, mapKey) => {
-	      if(!alreadyMapped[mapKey]) {
-	        const nodeIndex = map[key].indexOf(node);
-	        const idIndex = map[key].indexOf(node.nodeId());
-	        let index = nodeIndex !== -1 ? nodeIndex : idIndex;
-	        if (index !== -1) {
-	          if(connections[mapKey] === undefined) connections[mapKey] = [];
-	          connections[mapKey].push(map[key].map((node) => node.nodeId()));
-	          alreadyMapped[mapKey] = true;
-	        }
-	      }
-	    });
-	    return connections;
-	  }
-	
-	  function getNodeOrId(nodeOrwrapperOrId) {
-	    switch (nodeOrwrapperOrId.constructor.name) {
-	      case 'DecisionNode':
-	        return nodeOrwrapperOrId;
-	      case 'LogicWrapper':
-	        return nodeOrwrapperOrId.node;
-	      default:
-	        const node = DecisionTree.DecisionNode.get(nodeOrwrapperOrId);
-	        if (node) return node;
-	        return nodeOrwrapperOrId;
-	    }
-	  }
-	
-	  function connectNodes(node1, node2, attr, map) {
-	    let id;
-	    node1 = getNodeOrId(node1);
-	    node2 = getNodeOrId(node2);
-	    const node1Id = getId(node1);
-	    const node2Id = getId(node2);
-	    idMap[node1Id] = idMap[node1Id] || {};
-	    idMap[node2Id] = idMap[node2Id] || {};
-	    if (idMap[node1Id][attr] === undefined) {
-	      if (idMap[node2Id][attr] === undefined) {
-	        id = String.random();
-	      } else {
-	        id = idMap[node2Id][attr];
-	      }
-	    } else { id = idMap[node1Id][attr]; }
-	    idMap[node1Id][attr] = id;
-	    idMap[node2Id][attr] = id;
-	    map[id] = map[id] || [];
-	    if (map[id].indexOf(node1) === -1) {
-	      map[id].push(node1)
-	    }
-	    if (map[id].indexOf(node2) === -1) {
-	      map[id].push(node2)
-	    }
-	  }
-	
-	  function addJsonConnections(connections) {
-	    const mapKeys = Object.keys(maps);
-	    mapKeys.forEach((key) => {
-	      const mapConns = connections[key] || [];
-	      mapConns.forEach((group) => {
-	        for (let index = 1; index < group.length; index += 1) {
-	          const nodeId1 = group[index - 1];
-	          const nodeId2 = group[index];
-	          connectNodes(nodeId1, nodeId2, key, maps[key]);
-	        }
-	      });
-	    });
-	  }
-	
-	  function updateConnected(wrapper, password, attr, map) {
-	    if (idMap[wrapper.node.nodeId()] === undefined ||
-	          password === INTERNAL_FUNCTION_PASSWORD) return;
-	    const id = idMap[wrapper.node.nodeId()][attr];
-	    const connected = map[id] || [];
-	    const value = wrapper[attr]();
-	    connected.forEach((nodeOrId) => {
-	      const node = getNodeOrId(nodeOrId)
-	      if (node instanceof DecisionTree.DecisionNode) {
-	        const wrapper2 = LogicTree.wrapper(node.uniqueGroup)(node);
-	        wrapper2[attr](value, INTERNAL_FUNCTION_PASSWORD);
-	      }
-	    });
-	  }
-	  LogicTree.destroy = (wrapper) => {
-	    const uniqueGroup = wrapper.node.uniqueGroup;
-	    wrapper.node.forEach((node) => wrapperMap[uniqueGroup][node.nodeId()] = undefined);
-	    forEachConnectionList(wrapper, (node, map, key) => {
-	      let index = map[key].indexOf(node);
-	      if (index !== -1) map[key].splice(index, 1);
-	    });
-	  }
-	  LogicTree.register = (group, name, wrapper) => {
-	    if (declaired[group] === undefined) declaired[group] = {};
-	    if (declaired[group][name] !== undefined) throw new Error('This should not happen: check addTypeFunction logic');
-	    declaired[group][name] = wrapper;
-	  }
-	  LogicTree.get = (name, group) =>  declaired[group || DEFAULT_GROUP][name];
-	  LogicTree.connectValues =
-	    (node1, node2) => connectNodes(node1, node2, 'value', connectedValues);
-	  LogicTree.connectDefaults =
-	    (node1, node2) => connectNodes(node1, node2, 'default', connectedDefaults);
-	  LogicTree.updateValues =
-	    (wrapper, password) => updateConnected(wrapper, password, 'value', connectedValues);
-	  LogicTree.updateDefaults =
-	    (wrapper, password) => updateConnected(wrapper, password, 'default', connectedDefaults);
-	
-	  LogicTree.wrapper = (uniqueGroup, wrapperConstId) => (nodeOidOwrapper) => {
-	    if (wrapperMap[uniqueGroup] === undefined) wrapperMap[uniqueGroup] = [];
-	    if (wrapperConstId === undefined) {
-	      if (nodeOidOwrapper === undefined) return undefined;
-	      const node = getNodeOrId(nodeOidOwrapper);
-	      if (node instanceof DecisionTree.DecisionNode) {
-	        return wrapperMap[uniqueGroup][node.nodeId()];
-	      }
-	    } else if (INTERNAL_FUNCTION_PASSWORD !== wrapperConstId) {
-	      throw new Error('External uses of \'LogicTree.wrapper(node)\' can only be used as a getter. Setting values is functionality reserved only for internal logic.')
-	    } else {
-	      if (nodeOidOwrapper.node !== undefined) {
-	        if (wrapperMap[uniqueGroup][nodeOidOwrapper.node.nodeId()] !== undefined) {
-	          throw new Error('All nodes should only be wrapped once to accuratly persist data');
-	        }
-	        wrapperMap[uniqueGroup][nodeOidOwrapper.node.nodeId()] = nodeOidOwrapper;
-	      }
-	    }
-	  }
-	  LogicTree.connectionList = connectionList;
-	  LogicTree.addJsonConnections = addJsonConnections;
-	}
+	LogicTree.LogicWrapper = LogicWrapper;
 	
 	module.exports = LogicTree;
 	
@@ -8050,81 +7790,406 @@ const Lookup = require('./object/lookup');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/endpoints.js',
+RequireJS.addFunction('../../public/js/utils/decision-tree.js',
 function (require, exports, module) {
 	
-class Endpoints {
-	  constructor(config, host) {
+
+	const Lookup = require('./object/lookup')
+	const REMOVAL_PASSWORD = String.random();
+	
+	// terminology
+	// name - String to define state;
+	// payload - data returned for a given state
+	//             - @_UNIQUE_NAME_GROUP - An Identifier used to insure all nodes of multople trees have a unique name.
+	//                          note: only applicable on root node. governs entire tree
+	// stateObject - object defining states {name: [payload]...}
+	// states - array of availible state names.
+	// node - {name, states, payload, then, addState, addStates};
+	// then(name) - a function to set a following state.
+	// next(name) - a function to get the next state.
+	// back() - a function to move back up the tree.
+	// top() - a function to get root;
+	// subtree(conditions, parent) - returns a subtree.
+	//    @conditions - object identifying conditions for each name or _DEFAULT for undefined
+	//    @parent - can be used to atach a copy to another branch or tree
+	// returns all functions return current node;
+	class DecisionNode extends Lookup{
+	  constructor(tree, name, instancePayload, parent) {
+	    super(instancePayload && instancePayload._NODE_ID ?
+	              instancePayload._NODE_ID : String.random(7), 'nodeId');
+	    Object.getSet(this, 'name');
+	    const stateMap = {};
+	    let jump;
+	    let isComplete = false; // null : requires evaluation
+	    instancePayload = instancePayload || {};
+	    const formatId = (nodeId) =>
+	      nodeId.replace(/^decision-node-(.*)$/, '$1') || nodeId;
 	    const instance = this;
-	    let environment;
-	
-	    if ((typeof config) !== 'object') {
-	      host = config;
-	      config = Endpoints.defaultConfig;
-	    }
-	
-	    host = host || '';
-	    this.setHost = (newHost) => {
-	      if ((typeof newHost) === 'string') {
-	        if (config._envs[newHost]) environment = newHost;
-	        host = config._envs[newHost] || newHost;
-	      }
+	    instancePayload._nodeId = this.nodeId();
+	    tree.nodeMap[this.nodeId()]
+	    // tree.nodeMap[instancePayload._nodeId] = this;
+	    this.isTree = (t) => t === tree;
+	    this.setValue = (key, value) => instancePayload[key] = value;
+	    this.getByName = (n) => tree.stateTemplates[n];
+	    this.tree = () => tree;
+	    this.getNode = (nodeOid) => nodeOid instanceof DecisionNode ? nodeOid : tree.idMap[formatId(nodeOid)];
+	    this.name = name.toString();
+	    this.states = () => Object.values(stateMap);
+	    this.instancePayload = () => JSON.clone(instancePayload);
+	    this.set = (key, value) => instancePayload[key] = value;
+	    this.fromJson = undefined;
+	    this.instanceCount = (n) => tree.instanceCount(n || this.name);
+	    this.lastInstance = () => tree.instanceCount(this.name) === 1;
+	    this.stateDefined = tree.stateDefined;
+	    this.payload = () => {
+	      const copy = JSON.clone(tree.stateConfigs[name]) || {};
+	      Object.keys(instancePayload).forEach((key) => {
+	        copy[key] = instancePayload[key];
+	      });
+	      return copy;
 	    };
-	    this.setHost(host);
-	    this.getHost = (env) => env === undefined ? host : config._envs[env];
-	    this.getEnv = () => environment;
-	
-	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
-	    this.getFuncObj = function () {return endPointFuncs;};
-	
-	
-	    function build(str) {
-	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
-	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
-	      return function () {
-	        let values = [];
-	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
-	          values = arguments;
-	        } else {
-	          const obj = arguments[0];
-	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
-	        }
-	        let endpoint = '';
-	        for (let index = 0; index < pieces.length; index += 1) {
-	          const arg = values[index];
-	          let value = '';
-	          if (index < pieces.length - 1) {
-	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
+	    this.jump = (name) => {
+	      if (name) jump = tree.getState(name, parent);
+	      return jump;
+	    };
+	    this.getNodeByPath = tree.getNodeByPath;
+	    this.isLeaf = () => Object.keys(stateMap).length === 0;
+	    this.stateNames = () => Object.keys(stateMap);
+	    this.structureChanged = () => {
+	      isComplete = null;
+	      if (parent) parent.structureChanged();
+	    }
+	    this.remove = (node, password) => {
+	      if (node === undefined) {
+	        tree.remove(this, REMOVAL_PASSWORD);
+	        tree = undefined;
+	      } else if (REMOVAL_PASSWORD !== password) {
+	        throw new Error('Attempting to remove node without going through the proper process find the node object you want to remove and call node.remove()');
+	      } else {
+	        let removed = false;
+	        Object.keys(stateMap).forEach((name) => {
+	          const realNode = stateMap[name];
+	          if (realNode === node) {
+	            delete stateMap[name];
+	            removed = true;
 	          }
-	          endpoint += pieces[index] + value;
-	        }
-	        return `${host}${endpoint}`;
+	        });
 	      }
 	    }
 	
-	    function configRecurse(currConfig, currFunc) {
-	      const keys = Object.keys(currConfig);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        const value = currConfig[key];
-	        if (key.indexOf('_') !== 0) {
-	          if (value instanceof Object) {
-	            currFunc[key] = {};
-	            configRecurse(value, currFunc[key]);
-	          } else {
-	            currFunc[key] = build(value);
-	          }
-	        } else {
-	          currFunc[key] = value;
+	    this.validState = (name) => name !== undefined && instance.stateNames().indexOf(name.toString()) !== -1;
+	
+	    function attachTree(t) {
+	      return t.subtree(null, instance, tree);
+	    }
+	
+	    this.then = (name, instancePayload, conditional) => {
+	      if (name instanceof DecisionNode) return attachTree(name);
+	      if (Array.isArray(name)) {
+	        const returnNodes = [];
+	        for (let index = 0; index < name.length; index += 1) {
+	          returnNodes.push(this.then(name[index]));
 	        }
+	        return returnNodes;
+	      }
+	      this.structureChanged();
+	      const newState = tree.getState(name, this, instancePayload);
+	      if ((typeof conditional) === 'string') {
+	        const stateId = `${this.name}:${conditional}`;
+	        stateMap[stateId] = tree.getState(stateId, this, instancePayload);
+	        stateMap[stateId].jump(newState);
+	      } else {
+	        stateMap[name] = newState;
+	      }
+	      if (tree.stateTemplates[name] === undefined)
+	        tree.stateTemplates[name] = newState;
+	      return newState === undefined ? undefined : newState.jump() || newState;
+	    }
+	    this.addState = (name, payload) => tree.addState(name, payload) && this;
+	    this.addStates = (sts) => tree.addStates(sts) && this;
+	    this.next = (name) => {
+	      const state = stateMap[name];
+	      return state === undefined ? undefined : state.jump() || state;
+	    }
+	
+	    this.nameTaken = tree.nameTaken;
+	
+	    this.back = () => parent;
+	    this.top = () => tree.rootNode;
+	    this.isRoot = () => !(parent instanceof DecisionNode)
+	
+	    this.getRoot = () => {
+	      const root = this;
+	      while (!root.isRoot()) root = root.back();
+	      return root;
+	    }
+	
+	    this.copy = (t) => new DecisionNode(t || tree, this.name, instancePayload);
+	
+	    // Breath First Search
+	    this.forEach = (func) => {
+	      const stateKeys = Object.keys(stateMap);
+	      func(this);
+	      for(let index = 0; index < stateKeys.length; index += 1) {
+	        const state = stateMap[stateKeys[index]];
+	        state.forEach(func);
 	      }
 	    }
 	
-	    configRecurse(config, endPointFuncs);
+	    this.map = (func) => {
+	      const ids = [];
+	      this.forEach((node) => ids.push(func(node)));
+	      return ids;
+	    }
+	
+	    this.nodes = () => {
+	      return this.map((node) => node);
+	    }
+	
+	    this.leaves = () => {
+	      const leaves = [];
+	      this.forEach((node) => {
+	        if (node.isLeaf()) leaves.push(node);
+	      });
+	      return leaves;
+	    }
+	
+	    this.addChildren = (nodeId) => {
+	      const orig = this.getNode(nodeId);
+	      const states = orig.states();
+	      states.forEach((state) => this.then(state));
+	      return this;
+	    }
+	
+	    this.stealChildren = (nodeOid) => {
+	      return this.getNode(nodeOid).addChildren(this);
+	    }
+	
+	    this.conditionsSatisfy = tree.conditionsSatisfy;
+	
+	    this.change = (name) => {
+	      const newNode = this.back().then(name);
+	      const root = this.top();
+	      console.log(root.toJson());
+	      newNode.stealChildren(this);
+	      console.log(root.toJson());
+	      this.remove();
+	      console.log(root.toJson());
+	    }
+	
+	    this.subtree = (conditions, parent, t) => {
+	      if (parent && !parent.conditionsSatisfy(conditions, this)) return undefined
+	      conditions = conditions instanceof Object ? conditions : {};
+	      const stateKeys = Object.keys(stateMap);
+	      let copy;
+	      if (parent === undefined) copy = this.copy(t);
+	      else {
+	        const target = t === undefined ? parent : t;
+	        const nameTaken = target.nameTaken(this.name);
+	        try {
+	          if (!nameTaken) target.addState(this.name, JSON.clone(tree.stateConfigs[this.name]) || {});
+	        } catch (e) {
+	          target.nameTaken(this.name);
+	          throw e;
+	        }
+	        copy = parent.then(this.name, JSON.clone(instancePayload));
+	      }
+	
+	      for(let index = 0; index < stateKeys.length; index += 1) {
+	        const state = stateMap[stateKeys[index]];
+	        state.subtree(conditions, copy, t);
+	      }
+	      return copy;
+	    }
+	
+	    this.nodeOnlyToJson = (noStates) => {
+	      const json = {nodeId: this.nodeId(), name, states: [],
+	                    payload: Object.fromJson(instancePayload)};
+	      if (noStates !== true) {
+	        this.states().forEach((state) =>
+	          json.states.push(state.nodeOnlyToJson()));
+	      }
+	      return json;
+	    }
+	    this.toJson = (noStates) => {
+	      const json = tree.toJson(this, noStates);
+	      json.name = this.name;
+	      json.payload = Object.fromJson(instancePayload);
+	      json.nodes = this.nodeOnlyToJson(noStates);
+	      return json;
+	    }
+	
+	    this.declairedName = tree.declairedName;
+	    this.toString = (tabs, attr) => {
+	      tabs = tabs || 0;
+	      const tab = new Array(tabs).fill('  ').join('');
+	      let str = `${tab}${this.name}`;
+	      str += attr ? `) ${this.payload()[attr]}\n` : '\n';
+	      const stateKeys = Object.keys(stateMap);
+	      for(let index = 0; index < stateKeys.length; index += 1) {
+	        str += stateMap[stateKeys[index]].toString(tabs + 1, attr);
+	      }
+	      return str;
+	    }
+	    this.attachTree = attachTree;
+	    this.treeToJson = tree.toJson;
+	    this.conditionsSatisfy = tree.conditionsSatisfy;
+	  }
+	}
+	DecisionNode.DO_NOT_CLONE = true;
+	DecisionNode.stateMap = {};
+	
+	
+	class DecisionTree {
+	  constructor(name, payload) {
+	    let json;
+	    if (name._TYPE === 'DecisionTree') {
+	      json = name;
+	      payload = json.payload;
+	      name = json.name;
+	    }
+	    const names = {};
+	    name = name || String.random();
+	    payload = payload || {};
+	    const stateConfigs = {};
+	    const idMap = {};
+	    this.idMap = idMap;
+	    const nodeMap = {};
+	    Object.getSet(this, {name, stateConfigs, payload});
+	    const tree = this;
+	    tree.stateTemplates = {};
+	
+	    this.nameTaken = (n) => Object.keys(tree.stateConfigs).indexOf(n) !== -1;
+	
+	    function addState(name, payload) {
+	      if (tree.declairedName(name)) {
+	        throw new Error('Name already declared: This requires unique naming possibly relitive to other trees use DecisionTree.undeclairedName(name) to validate names')
+	      }
+	      tree.declareName(name);
+	      return stateConfigs[name] = payload;
+	    }
+	
+	    function stateDefined(name) {
+	      const exists = false;
+	      tree.rootNode.forEach((node) =>
+	        exists = exists || node.name === name);
+	      return exists;
+	    }
+	
+	    function instanceCount(name) {
+	      let count = 0;
+	      tree.rootNode.forEach((node) =>
+	        count += node.name === name ? 1 : 0);
+	      return count;
+	    }
+	
+	    function remove(node, password) {
+	      if (!node.isTree(tree)) throw new Error('Node has already been removed');
+	      let removeList = [node];
+	      let index = 0;
+	      let currNode;
+	      while (currNode = removeList[index]) {
+	          currNode.back().remove(currNode, password);
+	          removeList = removeList.concat(currNode.states());
+	          index += 1;
+	      }
+	      names[node.name] = undefined;
+	    }
+	
+	    function addStates(sts) {
+	      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
+	      const keys = Object.keys(sts);
+	      keys.forEach((key) => addState(key, sts[key]));
+	    }
+	
+	    function getState(name, parent, instancePayload) {
+	      const node = new DecisionNode(tree, name, instancePayload, parent);
+	      idMap[node.nodeId()] = node;
+	      return node;
+	    }
+	
+	    const toJson = this.toJson;
+	    this.toJson = (node, noStates) => {
+	      node = node || this.rootNode;
+	      const json = {stateConfigs: {}, _TYPE: this.constructor.name};
+	      if (noStates) {
+	        json.stateConfigs[name] = stateConfigs[node.name];
+	      } else {
+	        const names = Array.isArray(node) ? node : node.map((n) => n.name);
+	        names.forEach((name) => {
+	          const s = stateConfigs[name];
+	          json.stateConfigs[name] = s && s.toJson ? s.toJson() : s;
+	        });
+	      }
+	
+	      return json;
+	    }
+	
+	    function conditionsSatisfy(conditions, state) {
+	      if ((typeof state.back) !== 'function') {
+	        console.log('here')
+	      }
+	      const parent = state.back();
+	      if (parent === null) return true;
+	      conditions = conditions || {};
+	      const cond = conditions[parent.name] === undefined ?
+	                    conditions._DEFAULT : conditions[parent.name];
+	      const noRestrictions = cond === undefined;
+	      const regex = cond instanceof RegExp ? cond : null;
+	      const target = (typeof cond) === 'string' ? cond : null;
+	      const func = (typeof cond) === 'function' ? cond : null;
+	      if (noRestrictions || (regex && state.name.match(regex)) ||
+	              (target !== null && state.name === target) ||
+	              (func && func(state))) {
+	        return conditionsSatisfy(conditions, parent);
+	      }
+	      return false;
+	    }
+	
+	    function getNodeByPath(...path) {
+	      let currNode = tree.rootNode;
+	      path.forEach((name) => currNode = currNode.next(name));
+	      return currNode;
+	    }
+	
+	    this.remove = remove;
+	    this.getNodeByPath = getNodeByPath;
+	    this.conditionsSatisfy = conditionsSatisfy;
+	    this.getState = getState;
+	    this.addState = addState;
+	    this.addStates = addStates;
+	    this.nodeMap = nodeMap;
+	    this.instanceCount = instanceCount;
+	    this.stateConfigs = stateConfigs;
+	
+	    this.rootNode = new DecisionNode(tree, name, payload, null);
+	    idMap[this.rootNode.nodeId()] = this.rootNode;
+	    tree.declareName = (name) => names[name] = true;
+	    tree.declairedName = (name) => !!names[name];
+	
+	    if (json !== undefined) {
+	      addStates(Object.fromJson(json.stateConfigs));
+	      let index = 0;
+	      let jsons = [json.nodes];
+	      let currJson;
+	      nodeMap[jsons[index].name] = this.rootNode;
+	      while (currJson = jsons[index]) {
+	        currJson.states.forEach((state) => {
+	          jsons.push(state);
+	          state.instancePayload = state.instancePayload || {};
+	          state.instancePayload._NODE_ID = state.nodeId;
+	          nodeMap[state.name] = nodeMap[currJson.name].then(state.name, state.instancePayload);
+	        });
+	        index++;
+	      }
+	    }
+	
+	    return this.rootNode;
 	  }
 	}
 	
-	module.exports = Endpoints;
+	DecisionTree.DecisionNode = DecisionNode;
+	module.exports = DecisionTree;
 	
 });
 
@@ -8244,76 +8309,36 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/collections/collection.js',
+RequireJS.addFunction('../../public/js/utils/lists/expandable-object.js',
 function (require, exports, module) {
 	
 
 	
+	const CustomEvent = require('../custom-error.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	const Expandable = require('./expandable');
 	
-	class Collection {
-	  constructor(members) {
-	    const list = [];
-	    const instance = this;
+	class ExpandableObject extends Expandable {
+	  constructor(props) {
+	    props.list = props.list || {};
+	    super(props);
+		//TODO: Set aciveKey
 	
-	    function runForEach(func) {
-	      let bool = true;
-	      for (let index = 0; index < members.length; index += 1) {
-	        bool = func(members[index]) && bool;
-	      }
-	      return bool;
+	    const superRemove = this.remove;
+	    this.remove = (key) => {
+	      const removed = props.list[key];
+	      delete props.list[key];
+	      superRemove(removed);
 	    }
-	    function refMember(name) {
-	      instance[name] = () => {
-	        const attrId = list[0][name]();
-	        return attrId;
-	      }
-	    };
-	    runForEach(refMember);
 	
-	    this.options = () => list[0].options() || [];
-	    this.cost = () => {
-	      let totalCost = 0;
-	      list.forEach((el) => totalCost += el.cost());
-	      return totalCost;
-	    }
-	    this.belongs = (el) =>
-	      list.length === 0 ||
-	        runForEach((member) => el[member]() === list[0][member]());
-	
-	    this.add = (elem) => {
-	      if (!this.belongs(elem)) throw new Error ('Cannot add element that does not belong.');
-	      list.push(elem);
-	      runForEach(refMember);
-	    }
-	    this.list = list;
-	    this.typeId = () => {
-	      let typeId = '';
-	      runForEach((member) => typeId += `:${list[0][member]()}`);
-	      return typeId;
+	    this.getKey = (values) => {
+	      if (values) this.activeKey(values.name);
+	      return this.activeKey() || undefined;
 	    }
 	  }
 	}
-	
-	Collection.create = function (members, objs) {
-	  let collections = {};
-	  for (let index = 0; index < objs.length; index += 1) {
-	    let collection = new Collection(members);
-	    collection.add(objs[index]);
-	    const typeId = collection.typeId();
-	    if (collections[typeId] === undefined) {
-	      collections[typeId] = collection;
-	    } else {
-	      collections[typeId].add(objs[index]);
-	    }
-	  }
-	  return Object.values(collections);
-	}
-	
-	module.exports = Collection;
-	
-	
-	
-	
+	module.exports = ExpandableObject
 	
 });
 
@@ -8372,6 +8397,7 @@ function (require, exports, module) {
 	    let lastRefresh = new Date().getTime();
 	    const storage = {};
 	    Expandable.lists[props.id] = this;
+	    this.inputTree = () => props.inputTree;
 	
 	    this.errorCntId = () => props.ERROR_CNT_ID;
 	    function setErrorMsg(msg) {
@@ -8379,7 +8405,6 @@ function (require, exports, module) {
 	    }
 	
 	    function values() {
-	      if (instance.hasInputTree()) return props.inputTree.values();
 	      const values = {};
 	      props.inputs.forEach((input) =>
 	        values[input.placeholder] = du.id(input.id).value);
@@ -8398,16 +8423,15 @@ function (require, exports, module) {
 	    this.values = values;
 	    this.getInputCnt = getInputCnt;
 	
-	    this.add = () => {
-	      const key = this.getKey();
-	      const inputValues = values();
+	    this.add = (vals) => {
+	      const key = this.getKey(vals);
+	      const inputValues = vals || values();
 	      if ((typeof props.inputValidation) !== 'function' ||
 	              props.inputValidation(inputValues) === true) {
 	        props.list[key] = props.getObject(inputValues, getInputCnt());
 	        this.activeKey(key);
 	        this.refresh();
 	        afterAddEvent.trigger();
-	        if (this.hasInputTree()) props.inputTree.formFilled();
 	      } else {
 	        const errors = props.inputValidation(inputValues);
 	        let errorStr;
@@ -8421,9 +8445,9 @@ function (require, exports, module) {
 	      }
 	    };
 	    this.hasInputTree = () =>
-	      this.inputTree() && this.inputTree().constructor.name === 'DecisionNode';
+	      this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
 	    if (this.hasInputTree())
-	      props.inputTree.onComplete(() => this.add());
+	      props.inputTree.onComplete(this.add);
 	    props.hasInputTree = this.hasInputTree;
 	
 	    this.isSelfClosing = () => props.selfCloseTab;
@@ -8464,7 +8488,8 @@ function (require, exports, module) {
 	      if (value === undefined) return storage[key][key2];
 	      storage[key][key2] = value;
 	    }
-	    this.inputHtml = () => this.hasInputTree() ? this.inputTree().html() : Expandable.inputRepeatTemplate.render(this);
+	    this.inputHtml = () => this.hasInputTree() ?
+	          this.inputTree().html() : Expandable.inputRepeatTemplate.render(this);
 	    this.set = (key, value) => props.list[key] = value;
 	    this.get = (key) => props.list[key];
 	    this.renderBody = (target) => {
@@ -8571,31 +8596,287 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/lists/expandable-object.js',
+RequireJS.addFunction('../../public/js/utils/input/input.js',
 function (require, exports, module) {
 	
 
 	
-	const CustomEvent = require('../custom-error.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	const Expandable = require('./expandable');
 	
-	class ExpandableObject extends Expandable {
+	
+	const $t = require('../$t');
+	const du = require('../dom-utils');
+	/*
+	supported attributes: type, placeholder, name, class, value
+	label: creates a text label preceeding input.
+	clearOnClick: removes value when clicked.
+	list: creates a dropdown with list values.
+	default: the default value if input is invalid.
+	targetAttr: attribute which defines the inputs value.
+	format: attribute which defines a function used to format value.
+	validation: Accepts
+	                Array: value must be included
+	                Regex: value must match
+	                Function: value is arg1, must return true
+	errorMsg: Message that shows when validation fails.
+	
+	*/
+	class Input {
 	  constructor(props) {
-	    super(props);
-		//TODO: Set aciveKey
-	    const superRemove = this.remove;
-	    this.remove = (key) => {
-	      const removed = props.list[key];
-	      delete props.list[key];
-	      superRemove(removed);
+	    props.hidden = props.hide || false;
+	    props.list = props.list || [];
+	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
+	                            'class', 'list', 'value');
+	
+	    const immutableProps = {
+	      _IMMUTABLE: true,
+	      id: props.id || `input-${String.random(7)}`,
+	      targetAttr: props.targetAttr || 'value',
+	      errorMsg: props.errorMsg || 'Error',
+	      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
+	    }
+	    Object.getSet(this, immutableProps)
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = props.validation;
+	      delete json.id;
+	      delete json.errorMsgId;
+	      Object.set(json, properties);
+	      return new this.constructor(json);
 	    }
 	
-	    this.getKey = () => this.values().name;
+	    const instance = this;
+	    const forAll = Input.forAll(this.id());
+	
+	    this.hide = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      this.hidden(cnt.hidden = true);
+	    });
+	    this.show = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      this.hidden(cnt.hidden = false);
+	    });
+	
+	    let valid;
+	    let value = props.value;
+	
+	    const idSelector = `#${this.id()}`;
+	
+	    const html = this.constructor.html(this);
+	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
+	    this.html = () =>
+	     html();
+	
+	    function valuePriority (func) {
+	      return (elem, event) => func(elem[instance.targetAttr()], elem, event);
+	    }
+	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
+	
+	    function getElem(id) {return document.getElementById(id);}
+	    this.get = () => getElem(this.id());
+	
+	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
+	    this.valid = () => this.setValue();
+	    this.setValue = (val) => {
+	      const elem = getElem(this.id());
+	      if (val === undefined){
+	        if (elem) val = elem[this.targetAttr()]
+	        if (val === undefined) val = props.default;
+	      }
+	      if(this.validation(val)) {
+	        valid = true;
+	        value = val;
+	        if (elem) elem[this.targetAttr()] = val;
+	        return true;
+	      }
+	      valid = false;
+	      value = undefined;
+	      return false;
+	    }
+	    this.value = () => {
+	      const unformatted = (typeof value === 'function') ? value() : value || '';
+	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
+	    }
+	    this.doubleCheck = () => {
+	      valid = undefined;
+	      validate();
+	      return valid;
+	    }
+	    this.validation = function(val) {
+	      const elem = getElem(instance.id);
+	      val = val === undefined && elem ? elem.value : val;
+	      if (val === undefined) return false;
+	      if (valid !== undefined && val === value) return valid;
+	      let valValid = true;
+	      if (props.validation instanceof RegExp) {
+	        valValid = val.match(props.validation) !== null;
+	      }
+	      else if ((typeof props.validation) === 'function') {
+	        valValid = props.validation.apply(null, arguments);
+	      }
+	      else if (Array.isArray(props.validation)) {
+	        valValid = props.validation.indexOf(val) !== -1;
+	      }
+	
+	      return valValid;
+	    };
+	
+	    const validate = (target) => {
+	      target = target || getElem(instance.id());
+	      if (target) {
+	        if (this.setValue(target[this.targetAttr()])) {
+	          getElem(this.errorMsgId()).innerHTML = '';
+	          valid = true;
+	        } else {
+	          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
+	          valid = false;
+	        }
+	      }
+	    }
+	
+	    if (props.clearOnClick) {
+	      du.on.match(`mousedown`, `#${this.id()}`, () => {
+	        const elem = getElem(this.id());
+	        if (elem) elem.value = '';
+	      });
+	    }
+	    du.on.match(`change`, `#${this.id()}`, validate);
+	    du.on.match(`keyup`, `#${this.id()}`, validate);
 	  }
 	}
-	module.exports = ExpandableObject
+	
+	Input.forAll = (id) => {
+	  const idStr = `#${id}`;
+	  return (func) => {
+	    const elems = document.querySelectorAll(idStr);
+	    for (let index = 0; index < elems.length; index += 1) {
+	      func(elems[index]);
+	    }
+	  }
+	}
+	
+	Input.template = new $t('input/input');
+	Input.html = (instance) => () => Input.template.render(instance);
+	Input.flagAttrs = ['checked', 'selected'];
+	Input.attrString = (targetAttr, value) =>{
+	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
+	    return value === true ? targetAttr : '';
+	  }
+	  return `${targetAttr}='${value}'`
+	}
+	
+	module.exports = Input;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/collections/collection.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class Collection {
+	  constructor(members) {
+	    const list = [];
+	    const instance = this;
+	
+	    function runForEach(func) {
+	      let bool = true;
+	      for (let index = 0; index < members.length; index += 1) {
+	        bool = func(members[index]) && bool;
+	      }
+	      return bool;
+	    }
+	    function refMember(name) {
+	      instance[name] = () => {
+	        const attrId = list[0][name]();
+	        return attrId;
+	      }
+	    };
+	    runForEach(refMember);
+	
+	    this.options = () => list[0].options() || [];
+	    this.cost = () => {
+	      let totalCost = 0;
+	      list.forEach((el) => totalCost += el.cost());
+	      return totalCost;
+	    }
+	    this.belongs = (el) =>
+	      list.length === 0 ||
+	        runForEach((member) => el[member]() === list[0][member]());
+	
+	    this.add = (elem) => {
+	      if (!this.belongs(elem)) throw new Error ('Cannot add element that does not belong.');
+	      list.push(elem);
+	      runForEach(refMember);
+	    }
+	    this.list = list;
+	    this.typeId = () => {
+	      let typeId = '';
+	      runForEach((member) => typeId += `:${list[0][member]()}`);
+	      return typeId;
+	    }
+	  }
+	}
+	
+	Collection.create = function (members, objs) {
+	  let collections = {};
+	  for (let index = 0; index < objs.length; index += 1) {
+	    let collection = new Collection(members);
+	    collection.add(objs[index]);
+	    const typeId = collection.typeId();
+	    if (collections[typeId] === undefined) {
+	      collections[typeId] = collection;
+	    } else {
+	      collections[typeId].add(objs[index]);
+	    }
+	  }
+	  return Object.values(collections);
+	}
+	
+	module.exports = Collection;
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/object/lookup.js',
+function (require, exports, module) {
+	
+
+	class Lookup {
+	  constructor(id, attr) {
+	    attr = attr || 'id';
+	    id = id || String.random();
+	    Object.getSet(this, attr);
+	    this[attr] = () => id;
+	    const cxtr = this.constructor;
+	    if(cxtr.selectList === Lookup.selectList) {
+	      cxtr.get = (id) => Lookup.get(cxtr.name, id);
+	      Lookup.byId[cxtr.name] = {};
+	      cxtr.selectList = () => Lookup.selectList(cxtr.name);
+	    }
+	    if (Lookup.register[cxtr.name] === undefined)
+	      Lookup.register[cxtr.name] = {};
+	    Lookup.register[cxtr.name][id] = this;
+	    Lookup.byId[cxtr.name][id] = this;
+	    this.toString = () => this[attr]();
+	  }
+	}
+	
+	Lookup.register = {};
+	Lookup.byId = {};
+	Lookup.get = (cxtrName, id) =>
+	    Lookup.byId[cxtrName][id];
+	Lookup.selectList = (className) => {
+	  return Object.keys(Lookup.register[className]);
+	}
+	
+	module.exports = Lookup;
 	
 });
 
@@ -8808,216 +9089,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/object/lookup.js',
-function (require, exports, module) {
-	
-
-	class Lookup {
-	  constructor(id, attr) {
-	    attr = attr || 'id';
-	    id = id || String.random();
-	    Object.getSet(this, attr);
-	    this[attr] = () => id;
-	    const cxtr = this.constructor;
-	    if(cxtr.selectList === Lookup.selectList) {
-	      cxtr.get = (id) => Lookup.get(cxtr.name, id);
-	      Lookup.byId[cxtr.name] = {};
-	      cxtr.selectList = () => Lookup.selectList(cxtr.name);
-	    }
-	    if (Lookup.register[cxtr.name] === undefined)
-	      Lookup.register[cxtr.name] = {};
-	    Lookup.register[cxtr.name][id] = this;
-	    Lookup.byId[cxtr.name][id] = this;
-	    this.toString = () => this[attr]();
-	  }
-	}
-	
-	Lookup.register = {};
-	Lookup.byId = {};
-	Lookup.get = (cxtrName, id) =>
-	    Lookup.byId[cxtrName][id];
-	Lookup.selectList = (className) => {
-	  return Object.keys(Lookup.register[className]);
-	}
-	
-	module.exports = Lookup;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/input.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const $t = require('../$t');
-	const du = require('../dom-utils');
-	/*
-	supported attributes: type, placeholder, name, class, value
-	label: creates a text label preceeding input.
-	clearOnClick: removes value when clicked.
-	list: creates a dropdown with list values.
-	default: the default value if input is invalid.
-	targetAttr: attribute which defines the inputs value.
-	format: attribute which defines a function used to format value.
-	validation: Accepts
-	                Array: value must be included
-	                Regex: value must match
-	                Function: value is arg1, must return true
-	errorMsg: Message that shows when validation fails.
-	
-	*/
-	class Input {
-	  constructor(props) {
-	    props.hidden = props.hide || false;
-	    props.list = props.list || [];
-	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
-	                            'class', 'list', 'value');
-	
-	    const immutableProps = {
-	      _IMMUTABLE: true,
-	      id: props.id || `input-${String.random(7)}`,
-	      targetAttr: props.targetAttr || 'value',
-	      errorMsg: props.errorMsg || 'Error',
-	      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
-	    }
-	    Object.getSet(this, immutableProps)
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      delete json.id;
-	      delete json.errorMsgId;
-	      Object.set(json, properties);
-	      return new this.constructor(json);
-	    }
-	
-	    const instance = this;
-	    const forAll = Input.forAll(this.id());
-	
-	    this.hide = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      this.hidden(cnt.hidden = true);
-	    });
-	    this.show = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      this.hidden(cnt.hidden = false);
-	    });
-	
-	    let valid;
-	    let value = props.value;
-	
-	    const idSelector = `#${this.id()}`;
-	
-	    const html = this.constructor.html(this);
-	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
-	    this.html = () =>
-	     html();
-	
-	    function valuePriority (func) {
-	      return (elem, event) => func(elem[instance.targetAttr()], elem, event);
-	    }
-	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
-	
-	    function getElem(id) {return document.getElementById(id);}
-	    this.get = () => getElem(this.id());
-	
-	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
-	    this.valid = () => valid === undefined ? this.setValue() : valid;
-	    this.setValue = (val) => {
-	      const elem = getElem(this.id());
-	      if (val === undefined){
-	        if (elem) val = elem[this.targetAttr()]
-	        if (val === undefined) val = props.default;
-	      }
-	      if(this.validation(val)) {
-	        valid = true;
-	        value = val;
-	        if (elem) elem[this.targetAttr()] = val;
-	        return true;
-	      }
-	      valid = false;
-	      value = undefined;
-	      return false;
-	    }
-	    this.value = () => {
-	      const unformatted = (typeof value === 'function') ? value() : value || '';
-	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
-	    }
-	    this.doubleCheck = () => {
-	      valid = undefined;
-	      validate();
-	      return valid;
-	    }
-	    this.validation = function(val) {
-	      const elem = getElem(instance.id);
-	      val = val === undefined && elem ? elem.value : val;
-	      if (val === undefined) return false;
-	      if (valid !== undefined && val === value) return valid;
-	      let valValid = true;
-	      if (props.validation instanceof RegExp) {
-	        valValid = val.match(props.validation) !== null;
-	      }
-	      else if ((typeof props.validation) === 'function') {
-	        valValid = props.validation.apply(null, arguments);
-	      }
-	      else if (Array.isArray(props.validation)) {
-	        valValid = props.validation.indexOf(val) !== -1;
-	      }
-	
-	      return valValid;
-	    };
-	
-	    const validate = (target) => {
-	      target = target || getElem(instance.id());
-	      if (target) {
-	        if (this.setValue(target[this.targetAttr()])) {
-	          getElem(this.errorMsgId()).innerHTML = '';
-	          valid = true;
-	        } else {
-	          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
-	          valid = false;
-	        }
-	      }
-	    }
-	
-	    if (props.clearOnClick) {
-	      du.on.match(`mousedown`, `#${this.id()}`, () => {
-	        const elem = getElem(this.id());
-	        if (elem) elem.value = '';
-	      });
-	    }
-	    du.on.match(`change`, `#${this.id()}`, validate);
-	    du.on.match(`keyup`, `#${this.id()}`, validate);
-	  }
-	}
-	
-	Input.forAll = (id) => {
-	  const idStr = `#${id}`;
-	  return (func) => {
-	    const elems = document.querySelectorAll(idStr);
-	    for (let index = 0; index < elems.length; index += 1) {
-	      func(elems[index]);
-	    }
-	  }
-	}
-	
-	Input.template = new $t('input/input');
-	Input.html = (instance) => () => Input.template.render(instance);
-	Input.flagAttrs = ['checked', 'selected'];
-	Input.attrString = (targetAttr, value) =>{
-	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
-	    return value === true ? targetAttr : '';
-	  }
-	  return `${targetAttr}='${value}'`
-	}
-	
-	module.exports = Input;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
 function (require, exports, module) {
 	
@@ -9187,23 +9258,6 @@ function (require, exports, module) {
 	  ts.assertEquals(dNode.leaves().length, 15, 'Not plucking all the leaves');
 	  ts.success();
 	});
-	//
-	// Test.add('DecisionTree _UNIQUE_NAME_GROUP', (ts) => {
-	//   try {
-	//     dNode2.addState('5', {});
-	//     ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
-	//   } catch (e) {}
-	//   try {
-	//     dNode3.addState('5', {});
-	//   } catch (e) {
-	//     ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
-	//   }
-	//   try {
-	//     const dNode4 = new DecisionTree('root', {_UNIQUE_NAME_GROUP: 'tester'});
-	//     ts.fail('_UNIQUE_NAME_GROUP should have caused an error to be thrown');
-	//   } catch (e) {}
-	//   ts.success();
-	// });
 	
 });
 
@@ -9319,15 +9373,14 @@ function (require, exports, module) {
 	  runTestFunc('all');
 	
 	  if (connectEggs) {
-	    two.connectValues(three);
-	    two.connectDefaults(six);
+	    two.valueSync(three);
+	    two.defaultSync(six);
 	  }
 	  return shouldCopy ? copy(tree) : tree;
 	}
 	
 	function copy(origTree) {
 	    const treeJson = origTree.toJson();
-	    origTree.destroyTree();
 	    return Object.fromJson(treeJson);
 	}
 	
@@ -9794,6 +9847,14 @@ function (require, exports, module) {
 	  attachTreeTest(ts, true);
 	});
 	
+	Test.add('LogicTree change', (ts) => {
+	  let tree = createTree();
+	  const food = tree.getByPath('food');
+	  const needPlate = tree.getByPath('dishes', 'need plate');
+	  food.node.change('needPlate');
+	  ts.success();
+	});
+	
 	
 	// Test.add('LogicTree ', (ts) => {
 	//   function validateDecisions (tree, ...names) {
@@ -9872,197 +9933,150 @@ function (require, exports, module) {
 	
 	
 	const DecisionTree = require('../../decision-tree.js');
+	const LogicTree = require('../../logic-tree.js');
+	const LogicWrapper = LogicTree.LogicWrapper
 	const Input = require('../input.js');
 	const du = require('../../dom-utils');
 	const $t = require('../../$t');
 	
-	class DecisionInputTree extends DecisionTree {
-	  constructor(name, inputArrayOinstance, onComplete) {
-	    const rootClass = `decision-input-${String.random()}`;
-	    class DecisionInput {
-	      constructor(name, inputArrayOinstance, decisionTreeId) {
-	        const root = this;
-	        this.name = name;
-	        this.decisionTreeId = decisionTreeId;
-	        this.id = `decision-input-node-${String.random()}`;
-	        this.childCntId = `decision-child-ctn-${String.random()}`
-	        this.values = () => {};//root.values()
-	        this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
-	        this.class = rootClass;
-	        this.getValue = (index) => this.inputArray[index].value();
-	        this.validate = () => DecisionInputTree.validateInput(inputArrayOinstance, this.values);
+	const ROOT_CLASS = 'decision-input-tree';
 	
-	        this.html = () => {
-	          return DecisionInput.template.render(this);
-	        }
-	
-	        this.childHtml = (index) => {
-	          const node = getNode(this._nodeId);
-	          const nextNode = next(node, index);
-	          return nextNode !== undefined ? nextNode.payload().html() : '';
-	        }
-	      }
-	    }
-	    DecisionInput.template = new $t('input/decision/decision');
-	
-	    super(name, new DecisionInput(name, inputArrayOinstance, `decision-tree-${String.random()}`));
-	    if ((typeof name) !== 'string') throw Error('name(arg2) must be defined as a string');
-	
-	
-	    const onCompletion = [];
-	    const onChange = [];
-	    this.treeId = String.random();
-	    this.buttonClass = `tree-submit`;
-	    const buttonSelector = `.${this.buttonClass}[tree-id='${this.treeId}']`;
-	    this.class = `decision-input-tree`;
-	    const getNode = this.getNode;
-	    const parentAddState = this.addState;
-	    const parentAddStates = this.addStates;
-	
-	    this.addState = (name, payload) => parentAddState(name, new DecisionInput(name, payload)) && this;
-	    this.addStates = (sts) => {
-	      const states = {};
-	      const keys = Object.keys(sts);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        states[key] = new DecisionInput(key, sts[key]);
-	      }
-	      return parentAddStates(states)
+	class DecisionInput {
+	  constructor(name, inputArrayOinstance, tree) {
+	    Object.getSet(this, 'name', 'id', 'childCntId', 'inputArray', 'class');
+	    if (inputArrayOinstance !== undefined){
+	      this.name = name;
+	      this.id = `decision-input-node-${String.random()}`;
+	      this.childCntId = `decision-child-ctn-${String.random()}`
+	      this.values = () => tree.values();
+	      this.onComplete = tree.onComplete
+	      this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
+	      this.class =  ROOT_CLASS;
+	      this.getValue = (index) => this.inputArray[index].value();
+	      this.validate = () => DecisionInputTree.validateInput(inputArrayOinstance, this.values);
 	    }
 	
-	    function getInput(name) {
-	      let answer;
-	      forEachInput((input) => answer = input.name() === name ? input : answer);
-	      return answer;
+	    this.addValues = (values) => {
+	      this.inputArray.forEach((input) => values[input.name()] = input.value())
 	    }
 	
-	    this.set = (name, value) => {
-	      const input = getInput(name);
-	      input.setValue(value);
+	    this.isValid = () => {
+	      let valid = true;
+	      this.inputArray.forEach((input) =>
+	            valid = valid && input.valid());
+	      return valid;
 	    }
 	
-	    const next = (node, index) => {
-	      const inputArray = node.payload().inputArray;
-	      const input = inputArray[index];
-	      const name = input.name();
-	      const value = node.payload().getValue(index);
-	      return node.next(`${name}:${value}`) || node.next(name);
+	    this.html = () => {
+	      return DecisionInput.template.render(this);
 	    }
-	
-	    function forEachInput(func) {
-	      let nodes = [root];
-	      while (nodes.length !== 0) {
-	        const node = nodes[0];
-	        const inputs = node.payload().inputArray;
-	        for (let index = 0; index < inputs.length; index += 1) {
-	          const input = inputs[index];
-	          func(inputs[index]);
-	          const nextNode = next(node, index);
-	          if (nextNode) nodes.push(nextNode);
-	        }
-	        nodes.splice(0, 1);
-	      }
-	    }
-	
-	    function formFilled() {
-	      let filled = true;
-	      forEachInput((input) => filled = filled && input.doubleCheck());
-	      const addBtn = document.querySelector(buttonSelector);
-	      if (addBtn) addBtn.disabled = !filled;
-	      return filled;
-	    }
-	
-	    this.formFilled = formFilled;
-	
-	    function values() {
-	      const values = {};
-	      forEachInput((input) => values[input.name()] = input.value());
-	      return values;
-	    }
-	    this.values = values;
-	
-	    const contengencies = {};
-	    this.contengency = (subject, master) => {
-	      if (contengencies[master] === undefined) contengencies[master] = [];
-	      contengencies[master].push(subject);
-	    }
-	
-	    this.update = (target) => {
-	      const parentDecisionCnt = du.find.up(`.${rootClass}`, target);
-	      if (parentDecisionCnt) {
-	        const nodeId = parentDecisionCnt.getAttribute('node-id');
-	        const index = parentDecisionCnt.getAttribute('index');
-	        const currentNode = this.getNode(nodeId);
-	        if (currentNode) {
-	          const currentInput = currentNode.payload().inputArray[index];
-	          currentInput.setValue();
-	          (contengencies[currentInput.name()] || []).forEach((inputName) => {
-	            const contengentInput = getInput(inputName);
-	            if (contengentInput)
-	              contengentInput.doubleCheck();
-	          });
-	          runFunctions(onChange, currentInput.name(), currentInput.value(), target);
-	          const stepLen = Object.keys(currentNode.states).length;
-	          if (stepLen) {
-	            const inputCount = currentNode.payload().inputArray.length;
-	            const nextState = next(currentNode, index);
-	            const childCntId = currentNode.payload().inputArray[index].childCntId;
-	            const childCnt = du.id(childCntId);
-	            if (nextState) {
-	              childCnt.innerHTML = DecisionInput.template.render(nextState.payload());
-	            } else {
-	              childCnt.innerHTML = '';
-	            }
-	          }
-	        }
-	      }
-	
-	      formFilled();
-	    }
-	
-	    this.html = () =>
-	      DecisionInputTree.template.render(this);
-	    function on(func, funcArray) {
-	      if ((typeof func) === 'function') funcArray.push(func);
-	    };
-	    this.onChange = (func) => on(func, onChange);
-	    this.onComplete = (func) => on(func, onCompletion);
-	
-	    this.onComplete(onComplete);
-	
-	    function runFunctions(funcArray, ...args) {
-	      for(let index = 0; index < funcArray.length; index += 1) {
-	        funcArray[index].apply(null, args);
-	      }
-	    }
-	
-	    const inputSelector = `.${rootClass} > div > input,select`;
-	    du.on.match('change', inputSelector, this.update);
-	    du.on.match('keyup', inputSelector, this.update);
-	    du.on.match('click', buttonSelector, () => {
-	      const vals = values();
-	      runFunctions(onCompletion, values);
-	    });
+	    this.treeHtml = (wrapper) => tree.html(wrapper);
 	  }
 	}
+	
+	function superArgument(onComplete) {
+	  const formatPayload = (name, payload, treeId) => new DecisionInput(name, payload, treeId);
+	  if (onComplete && onComplete._TYPE === 'DecisionInputTree') {
+	    onComplete.formatPayload = formatPayload;
+	    return onComplete;
+	  }
+	  return formatPayload;
+	}
+	
+	class DecisionInputTree extends LogicTree {
+	  constructor(onComplete) {
+	    super(superArgument(onComplete));
+	    const onCompletion = [];
+	    this.html = (wrapper) => {
+	      wrapper = wrapper || this.root();
+	      let inputHtml = '';
+	      wrapper.forEach((wrapper) => {
+	        inputHtml += wrapper.payload().html();
+	      });
+	      const scope = {wrapper, inputHtml, DecisionInputTree};
+	      if (wrapper === this.root()) {
+	        return DecisionInputTree.template.render(scope);
+	      }
+	      return inputHtml;
+	    };
+	
+	    this.values = () => {
+	      return this.structure();
+	    }
+	
+	    this.onComplete = (func) => {
+	      if (typeof func !== 'function') throw new Error('Argument must be a function');
+	      onCompletion.push(func);
+	    }
+	
+	    this.values = () => {
+	      const values = {};
+	      this.root().forEach((wrapper) => {
+	        wrapper.payload().addValues(values);
+	      });
+	      return values;
+	    }
+	
+	    this.completed = () => {
+	      const values = this.values();
+	      onCompletion.forEach((func) => func(values))
+	    }
+	
+	    return this;
+	  }
+	}
+	
+	DecisionInputTree.class = 'decision-input-tree';
+	DecisionInputTree.buttonClass = 'decision-input-tree-submit';
+	
+	DecisionInputTree.validate = (wrapper) => {
+	  let valid = true;
+	  wrapper.forEach((wrapper) => {
+	    valid = valid && wrapper.payload().isValid();
+	  });
+	  return valid;
+	}
+	
+	function isComplete(wrapper) {
+	  return wrapper.isComplete() && DecisionInputTree.validate(wrapper)
+	}
+	
+	DecisionInputTree.update = (soft) =>
+	  (elem) => {
+	    const wrapper = LogicWrapper.get(elem.getAttribute('node-id'));
+	    console.log(isComplete(wrapper));
+	    if(!soft) {
+	      wrapper.payload().html();
+	    } else {
+	      const button = du.find.closest('button', elem);
+	      button.disabled = !isComplete(wrapper);
+	    }
+	  };
+	
+	DecisionInputTree.submit = (elem) => {
+	  const wrapper = LogicWrapper.get(elem.getAttribute('root-id'));
+	  wrapper.completed();
+	}
+	
+	du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
+	du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
+	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
+	
 	
 	DecisionInputTree.DO_NOT_CLONE = true;
 	DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
 	  if (Array.isArray(inputArrayOinstance)) {
 	    inputArrayOinstance.forEach((instance) => {
-	      if (!(instance instanceof Input)) throw new Error('arg3 must be an array exclusivly of/or instance of Input');
-	      const parentValidate = instance.validation;
-	      instance.validation = (value) => parentValidate(value, valuesFunc());
 	      instance.childCntId = `decision-child-ctn-${String.random()}`
 	    });
 	    return inputArrayOinstance;
 	  }
-	  if (!(inputArrayOinstance instanceof Input)) throw new Error('arg3 must be an array exclusivly of/or instance of Input');
 	  inputArrayOinstance.childCntId = `decision-child-ctn-${String.random()}`
 	  return [inputArrayOinstance];
 	}
 	
 	DecisionInputTree.template = new $t('input/decision/decisionTree');
+	DecisionInput.template = new $t('input/decision/decision');
 	
 	module.exports = DecisionInputTree;
 	
@@ -10173,37 +10187,29 @@ exports['115117775'] = (get, $t) =>
 			$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 			` </datalist> </span>`
 	
+	exports['909029184'] = (get, $t) => 
+			`<div class="expandable-list-body" key='` +
+			$t.clean(get("key")) +
+			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'>X</button> </div> <div class="expand-header ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'> ` +
+			$t.clean(get("getHeader")(get("item"), get("key"))) +
+			` </div> </div> </div>`
+	
 	exports['990870856'] = (get, $t) => 
 			`<div class='inline' > <h3>` +
 			$t.clean(get("assem").objId) +
 			`</h3> <div> ` +
 			$t.clean(get("getFeatureDisplay")(get("assem"))) +
 			` </div> </div>`
-	
-	exports['1048603870'] = (get, $t) => 
-			`<div class="expandable-list-body" key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key") || get("$index")) +
-			`'>X</button> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key") || get("$index")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
-			` </div> <div class="expand-body ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key") || get("$index")) +
-			`'> ` +
-			$t.clean(get("getBody")(get("item"), get("$index") || get("$key"))) +
-			` </div> </div> </div>`
 	
 	exports['1309109837'] = (get, $t) => 
 			`<div class='model-label` +
@@ -10229,23 +10235,29 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("property").value() === true ? 'checked' : '') +
 			`> </span>`
 	
-	exports['1647498232'] = (get, $t) => 
+	exports['1632987212'] = (get, $t) => 
 			`<div class="expandable-list-body" key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
+			$t.clean(get("getKey")()) +
+			`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
 			$t.clean(get("id")()) +
 			`' key='` +
-			$t.clean(get("$index") || get("$key")) +
-			`'>X</button> </div> <div class="expand-header ` +
+			$t.clean(get("getKey")()) +
+			`'>X</button> <div class="expand-header ` +
 			$t.clean(get("type")()) +
-			` ` +
-			$t.clean((get("$index") || get("$key")) === get("activeKey") ? ' active' : '') +
 			`" ex-list-id='` +
 			$t.clean(get("id")()) +
-			`' index='` +
-			$t.clean(get("$index") || get("$key")) +
+			`' key='` +
+			$t.clean(get("getKey")()) +
 			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
+			$t.clean(get("getHeader")(get("item"), get("getKey")())) +
+			` </div> <div class="expand-body ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("getKey")()) +
+			`'> ` +
+			$t.clean(get("getBody")(get("item"), get("getKey")())) +
 			` </div> </div> </div>`
 	
 	exports['1842139693'] = (get, $t) => 
@@ -10259,15 +10271,6 @@ exports['115117775'] = (get, $t) =>
 			`<div > ` +
 			$t.clean(get("recurse")(get("key"), get("group"))) +
 			` </div>`
-	
-	exports['2007668928'] = (get, $t) => 
-			`<span > <label>` +
-			$t.clean(get("property").name()) +
-			`</label> <input type='radio' name='UNIT' prop-radio-update='` +
-			$t.clean(get("property").id()) +
-			`' ` +
-			$t.clean(get("property").value() === true ? 'checked' : '') +
-			`> </span>`
 	
 	exports['expandable/input-repeat'] = (get, $t) => 
 			`<div> ` +
@@ -10293,7 +10296,7 @@ exports['115117775'] = (get, $t) =>
 			`" ex-list-id='` +
 			$t.clean(get("id")()) +
 			`'> ` +
-			$t.clean( new $t('1048603870').render(get("list")(), 'key, item', get)) +
+			$t.clean( new $t('1632987212').render(get("list")(), 'key, item', get)) +
 			` <div class='expand-input-cnt' hidden>` +
 			$t.clean(get("inputHtml")()) +
 			`</div> <div class='input-open-cnt'><button>Add ` +
@@ -10310,30 +10313,32 @@ exports['115117775'] = (get, $t) =>
 			`" ex-list-id='` +
 			$t.clean(get("id")()) +
 			`'> ` +
-			$t.clean( new $t('-2134413287').render(get("list")(), 'item', get)) +
-			` </div> <div> <div class='expand-input-cnt' hidden>` +
+			$t.clean( new $t('909029184').render(get("list")(), 'key, item', get)) +
+			` <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> </div> <div> <div class='expand-input-cnt' hidden>` +
 			$t.clean(get("inputHtml")()) +
 			`</div> <br> <div class='error' id='` +
-			$t.clean(get("ERROR_CNT_ID")) +
+			$t.clean(get("ERROR_CNT_ID")()) +
 			`'></div> </div> <div class="expand-body ` +
 			$t.clean(get("type")()) +
 			`"></div> </div> `
 	
-	exports['-2134413287'] = (get, $t) => 
+	exports['-322445795'] = (get, $t) => 
 			`<div class="expandable-list()-body" key='` +
-			$t.clean(get("$index") || get("$key")) +
+			$t.clean(get("key")) +
 			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list()-id='` +
 			$t.clean(get("id")()) +
 			`' key='` +
-			$t.clean(get("$index") || get("$key")) +
+			$t.clean(get("key")) +
 			`'>X</button> </div> <div class="expand-header ` +
 			$t.clean(get("type")()) +
 			`" ex-list()-id='` +
 			$t.clean(get("id")()) +
 			`' key='` +
-			$t.clean(get("$index") || get("$key")) +
+			$t.clean(get("key")) +
 			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("$index") || get("$key"))) +
+			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
 	exports['expandable/sidebar'] = (get, $t) => 
@@ -10346,7 +10351,7 @@ exports['115117775'] = (get, $t) =>
 			`" ex-list-id='` +
 			$t.clean(get("id")()) +
 			`'> ` +
-			$t.clean( new $t('1647498232').render(get("list")(), 'item', get)) +
+			$t.clean( new $t('-785829607').render(get("list")(), 'key, item', get)) +
 			` <div class='expand-input-cnt' hidden>` +
 			$t.clean(get("inputHtml")()) +
 			`</div> <div class='input-open-cnt'>Add ` +
@@ -10355,14 +10360,31 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("type")()) +
 			`"> Hello World! </div> </div> `
 	
+	exports['-785829607'] = (get, $t) => 
+			`<div class="expandable-list-body" key='` +
+			$t.clean(get("key")) +
+			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'>X</button> </div> <div class="expand-header ` +
+			$t.clean(get("type")()) +
+			` ` +
+			$t.clean(get("getKey")() ) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'> ` +
+			$t.clean(get("getHeader")(get("item"), get("key"))) +
+			` </div> </div> </div>`
+	
 	exports['input/decision/decision'] = (get, $t) => 
 			` <div> <span id='` +
 			$t.clean(get("id")) +
 			`' class='inline-flex'> ` +
 			$t.clean( new $t('-2022747631').render(get("inputArray"), 'input', get)) +
-			` </span> ` +
-			$t.clean( new $t('-1362189101').render(get("inputArray"), 'input', get)) +
-			` </div> `
+			` </span> </div> `
 	
 	exports['-2022747631'] = (get, $t) => 
 			`<span class='pad ` +
@@ -10375,29 +10397,54 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("input").html()) +
 			` </span>`
 	
-	exports['-1362189101'] = (get, $t) => 
-			`<div id='` +
-			$t.clean(get("input").childCntId) +
-			`'> ` +
-			$t.clean(get("childHtml")(get("$index"))) +
-			` </div>`
-	
 	exports['input/decision/decisionTree'] = (get, $t) => 
 			`<div class='` +
-			$t.clean(get("class")) +
-			`' tree-id='` +
-			$t.clean(get("treeId")) +
+			$t.clean(get("DecisionInputTree").class) +
+			`' root-id='` +
+			$t.clean(get("wrapper").nodeId()) +
 			`'> ` +
-			$t.clean(get("payload")().html()) +
+			$t.clean(get("inputHtml")) +
 			` <button class='` +
-			$t.clean(get("buttonClass")) +
-			`' tree-id='` +
-			$t.clean(get("treeId")) +
-			`' ` +
-			$t.clean(get("formFilled")() ? '' : 'disabled') +
-			`> ` +
-			$t.clean(get("name")) +
+			$t.clean(get("DecisionInputTree").buttonClass) +
+			`' root-id='` +
+			$t.clean(get("wrapper").nodeId()) +
+			`''> ` +
+			$t.clean(get("wrapper").node.name) +
 			` </button> </div> `
+	
+	exports['input/input'] = (get, $t) => 
+			`<div class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <input class='` +
+			$t.clean(get("class")()) +
+			`' list='input-list-` +
+			$t.clean(get("id")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`' ` +
+			$t.clean(get("attrString")()) +
+			`> <datalist id="input-list-` +
+			$t.clean(get("id")()) +
+			`"> ` +
+			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+			` </datalist> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`'>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
+	
+	exports['-994603408'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("item")) +
+			`" ></option>`
 	
 	exports['input/measurement'] = (get, $t) => 
 			`<div class='fit input-cnt'` +
@@ -10452,40 +10499,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("value")) +
 			` </option>`
 	
-	exports['input/input'] = (get, $t) => 
-			`<div class='input-cnt'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			`> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <input class='` +
-			$t.clean(get("class")()) +
-			`' list='input-list-` +
-			$t.clean(get("id")()) +
-			`' id='` +
-			$t.clean(get("id")()) +
-			`' placeholder='` +
-			$t.clean(get("placeholder")()) +
-			`' type='` +
-			$t.clean(get("type")()) +
-			`' name='` +
-			$t.clean(get("name")()) +
-			`' ` +
-			$t.clean(get("attrString")()) +
-			`> <datalist id="input-list-` +
-			$t.clean(get("id")()) +
-			`"> ` +
-			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-			` </datalist> <div class='error' id='` +
-			$t.clean(get("errorMsgId")()) +
-			`'>` +
-			$t.clean(get("errorMsg")()) +
-			`</div> </div> `
-	
-	exports['-994603408'] = (get, $t) => 
-			`<option value="` +
-			$t.clean(get("item")) +
-			`" ></option>`
-	
 	exports['cabinet/body'] = (get, $t) => 
 			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
 			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
@@ -10538,6 +10551,13 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("cabinet").thickness()) +
 			`'> </div> </div> `
 	
+	exports['divide/body'] = (get, $t) => 
+			`<h2>` +
+			$t.clean(get("list").activeIndex()) +
+			`</h2> val: ` +
+			$t.clean(get("list").value()('selected')) +
+			` `
+	
 	exports['display-manager'] = (get, $t) => 
 			`<div class='display-manager' id='` +
 			$t.clean(get("id")) +
@@ -10553,13 +10573,6 @@ exports['115117775'] = (get, $t) =>
 			`' value='` +
 			$t.clean(get("item").name) +
 			`'/> </div>`
-	
-	exports['divide/body'] = (get, $t) => 
-			`<h2>` +
-			$t.clean(get("list").activeIndex()) +
-			`</h2> val: ` +
-			$t.clean(get("list").value()('selected')) +
-			` `
 	
 	exports['divide/head'] = (get, $t) => 
 			`<div> <select value='` +
@@ -10629,13 +10642,6 @@ exports['115117775'] = (get, $t) =>
 			$t.clean(get("password")) +
 			`'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 	
-	exports['managers/cost/body'] = (get, $t) => 
-			`<div class="` +
-			$t.clean(get("manager").constructor.cntClass) +
-			`" here-i-am='true'> ` +
-			$t.clean(get("manager").costTypeHtml(get("instance").cost, get("instance"))) +
-			` </div> `
-	
 	exports['managers/abstract-manager'] = (get, $t) => 
 			`<div> <div class="center"> <h2 id='` +
 			$t.clean(get("headerId")) +
@@ -10646,6 +10652,36 @@ exports['115117775'] = (get, $t) =>
 			`'>Save</button> </h2> </div> <div id="` +
 			$t.clean(get("bodyId")) +
 			`"></div> </div> `
+	
+	exports['managers/cost/cost-body'] = (get, $t) => 
+			`<div> ` +
+			$t.clean(get("CostManager").costTypeHtml(get("cost"), get("scope"))) +
+			` </div> `
+	
+	exports['managers/cost/body'] = (get, $t) => 
+			`<div class="` +
+			$t.clean(get("manager").constructor.cntClass) +
+			`" here-i-am='true'> ` +
+			$t.clean(get("manager").costTypeHtml(get("instance").cost, get("instance"))) +
+			` </div> `
+	
+	exports['managers/cost/header'] = (get, $t) => 
+			`<b part-id='` +
+			$t.clean(get("instance").partId) +
+			`'>` +
+			$t.clean(get("instance").partId) +
+			`</b> <ul> ` +
+			$t.clean( new $t('1842139693').render(get("instance").staticProps, 'prop', get)) +
+			` </ul> `
+	
+	exports['managers/cost/types/category'] = (get, $t) => 
+			`<div cost-id='` +
+			$t.clean(get("cost").uniqueId()) +
+			`'> <b>Catagory</b> <div id='` +
+			$t.clean(get("parentId")) +
+			`'>` +
+			$t.clean(get("expandList").html()) +
+			`</div> </div> `
 	
 	exports['managers/cost/cost-head'] = (get, $t) => 
 			`<b> ` +
@@ -10668,29 +10704,6 @@ exports['115117775'] = (get, $t) =>
 			`'> ` +
 			$t.clean(get("name")) +
 			` </li>`
-	
-	exports['managers/cost/header'] = (get, $t) => 
-			`<b part-id='` +
-			$t.clean(get("instance").partId) +
-			`'>` +
-			$t.clean(get("instance").partId) +
-			`</b> <ul> ` +
-			$t.clean( new $t('1842139693').render(get("instance").staticProps, 'prop', get)) +
-			` </ul> `
-	
-	exports['managers/cost/cost-body'] = (get, $t) => 
-			`<div> ` +
-			$t.clean(get("CostManager").costTypeHtml(get("cost"), get("scope"))) +
-			` </div> `
-	
-	exports['managers/cost/types/category'] = (get, $t) => 
-			`<div cost-id='` +
-			$t.clean(get("cost").uniqueId()) +
-			`'> <b>Catagory</b> <div id='` +
-			$t.clean(get("parentId")) +
-			`'>` +
-			$t.clean(get("expandList").html()) +
-			`</div> </div> `
 	
 	exports['managers/cost/types/conditional'] = (get, $t) => 
 			`<div cost-id='` +
@@ -10942,10 +10955,21 @@ exports['115117775'] = (get, $t) =>
 	
 	exports['properties/properties'] = (get, $t) => 
 			`<div class='center'> <div class='center'> <label>UNIT :&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
-			$t.clean( new $t('2007668928').render(get("Properties").UNITS, 'property', get)) +
+			$t.clean( new $t('-766481261').render(get("Properties").UNITS, 'property', get)) +
 			` </div> ` +
 			$t.clean( new $t('115117775').render(get("values"), 'key, properties', get)) +
 			` </div> `
+	
+	exports['-766481261'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("property").name()) +
+			`</label> <input type='radio' name='UNIT' prop-radio-update='` +
+			$t.clean(get("property").id()) +
+			`' value="` +
+			$t.clean(get("property").name()) +
+			`" ` +
+			$t.clean(get("property").value() === true ? 'checked' : '') +
+			`> </span>`
 	
 	exports['properties/properties0'] = (get, $t) => 
 			`<div class='center'> <div class='` +
@@ -11491,29 +11515,73 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/error.js',
+RequireJS.addFunction('./app-src/init.js',
 function (require, exports, module) {
 	
 
+	// Object Classes
+	require('./objects/assembly/init-assem');
+	const Order = require('./objects/order.js');
+	const Assembly = require('./objects/assembly/assembly.js');
 	
+	require('../../../public/js/utils/utils.js');
+	require('./displays/user.js');
+	const Properties = require('./config/properties.js');
 	
+	// Display classes
+	const du = require('../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../public/js/utils/$t');
+	const EPNTS = require('../generated/EPNTS.js');
+	$t.loadFunctions(require('../generated/html-templates'))
+	const Displays = require('./services/display-svc.js');
+	const OrderDisplay = require('./displays/order.js');
+	const ThreeDModel = require('./three-d/three-d-model.js');
+	const PropertyDisplay = require('./displays/property.js');
+	const DisplayManager = require('./display-utils/displayManager.js');
+	const utils = require('./utils.js');
 	
-	class InvalidComputation {
-	  constructor(attributes) {
-	    this.errorCode = 400;
-	    this.message = 'Error within input parameters';
-	    const keys = Object.keys(attributes);
-	    for (let index = 0; index < keys.length; index += 1) {
-	      const key = keys[index];
-	      this.message += `\n\t${key}: '${value}'`;
-	    }
+	// Run Tests
+	require('../test/run');
+	
+	function updateDivisions (target) {
+	  const name = target.getAttribute('name');
+	  const index = Number.parseInt(target.getAttribute('index'));
+	  const value = Number.parseFloat(target.value);
+	  const inputs = target.parentElement.parentElement.querySelectorAll('.division-pattern-input');
+	  const uniqueId = du.find.up('.opening-cnt', target).getAttribute('opening-id');
+	  const opening = Assembly.get(uniqueId);
+	  const values = opening.dividerLayout().fill;
+	  for (let index = 0; values && index < inputs.length; index += 1){
+	    const value = values[index];
+	    if(value) inputs[index].value = value;
 	  }
+	  updateModel(opening);
 	}
-	module.exports = InvalidComputation
+	
+	function getValue(code, obj) {
+	  if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
+	  return CONSTANTS[code].value;
+	}
 	
 	
 	
+	function init(body){
+	  Properties.load(body);
+	  let roomDisplay;
+	  let order;
 	
+	  const propertyDisplay = new PropertyDisplay('#property-manager');
+	  Displays.register('propertyDisplay', propertyDisplay);
+	  require('./cost/init-costs.js');
+	  // du.on.match('change', '.open-orientation-radio,.open-division-input', utils.updateDivisions);
+	  const CostManager = require('./displays/managers/cost.js');
+	  const costManager = new CostManager('cost-manager', 'cost');
+	  orderDisplay = new OrderDisplay('#app');
+	  // setTimeout(ThreeDModel.init, 1000);
+	  const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
+	}
+	
+	Request.get(EPNTS.config.get(), init, console.error);
 	
 });
 
@@ -11654,73 +11722,29 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/init.js',
+RequireJS.addFunction('./app-src/error.js',
 function (require, exports, module) {
 	
 
-	// Object Classes
-	require('./objects/assembly/init-assem');
-	const Order = require('./objects/order.js');
-	const Assembly = require('./objects/assembly/assembly.js');
 	
-	require('../../../public/js/utils/utils.js');
-	const Properties = require('./config/properties.js');
 	
-	// Display classes
-	const du = require('../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../public/js/utils/$t');
-	const EPNTS = require('../generated/EPNTS.js');
-	$t.loadFunctions(require('../generated/html-templates'))
-	const Displays = require('./services/display-svc.js');
-	const OrderDisplay = require('./displays/order.js');
-	const ThreeDModel = require('./three-d/three-d-model.js');
-	const PropertyDisplay = require('./displays/property.js');
-	const DisplayManager = require('./display-utils/displayManager.js');
-	const utils = require('./utils.js');
 	
-	// Run Tests
-	require('../test/run');
-	
-	function updateDivisions (target) {
-	  const name = target.getAttribute('name');
-	  const index = Number.parseInt(target.getAttribute('index'));
-	  const value = Number.parseFloat(target.value);
-	  const inputs = target.parentElement.parentElement.querySelectorAll('.division-pattern-input');
-	  const uniqueId = du.find.up('.opening-cnt', target).getAttribute('opening-id');
-	  const opening = Assembly.get(uniqueId);
-	  const values = opening.dividerLayout().fill;
-	  for (let index = 0; values && index < inputs.length; index += 1){
-	    const value = values[index];
-	    if(value) inputs[index].value = value;
+	class InvalidComputation {
+	  constructor(attributes) {
+	    this.errorCode = 400;
+	    this.message = 'Error within input parameters';
+	    const keys = Object.keys(attributes);
+	    for (let index = 0; index < keys.length; index += 1) {
+	      const key = keys[index];
+	      this.message += `\n\t${key}: '${value}'`;
+	    }
 	  }
-	  updateModel(opening);
 	}
-	
-	function getValue(code, obj) {
-	  if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
-	  return CONSTANTS[code].value;
-	}
+	module.exports = InvalidComputation
 	
 	
 	
-	require('./displays/user.js');
-	function init(body){
-	  Properties.load(body);
-	  let roomDisplay;
-	  let order;
 	
-	  const propertyDisplay = new PropertyDisplay('#property-manager');
-	  Displays.register('propertyDisplay', propertyDisplay);
-	  require('./cost/init-costs.js');
-	  // du.on.match('change', '.open-orientation-radio,.open-division-input', utils.updateDivisions);
-	  const CostManager = require('./displays/managers/cost.js');
-	  const costManager = new CostManager('cost-manager', 'cost');
-	  // orderDisplay = new OrderDisplay('#app');
-	  // setTimeout(ThreeDModel.init, 1000);
-	  const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
-	}
-	
-	Request.get(EPNTS.config.get(), init, console.error);
 	
 });
 
@@ -11748,111 +11772,18 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/order.js',
+RequireJS.addFunction('./app-src/cost/init-costs.js',
 function (require, exports, module) {
 	
 
 	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const UFObj = require('./information/utility-filter.js');
-	const RoomDisplay = require('./room.js');
-	const Order = require('../objects/order.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const EPNTS = require('../../generated/EPNTS.js')
-	const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
-	const Inputs = require('../input/inputs.js');
 	
-	class OrderDisplay {
-	  constructor(parentSelector, orders) {
-	    const roomDisplays = {};
-	    let active;
-	    const getHeader = (order, $index) =>
-	        OrderDisplay.headTemplate.render({order, $index});
+	const Cost = require('./cost.js');
+	const Material = require('./types/material.js');
+	const Labor = require('./types/labor.js');
 	
-	    const setInfo = (order, index) => () => {
-	      const elem = du.id(`uf-info-${index}`);
-	      if (elem)
-	        UTF.buildDisplay(elem, new UFObj(order));
-	    }
-	
-	    function initOrder(order, index) {
-	      roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
-	      ToggleDisplayList.onShow(`information-display-${index}`, );
-	      expandList.afterRender(setInfo(order, index));
-	      return order;
-	    }
-	
-	    function loadOrder(index, start) {
-	      return function (orderData) {
-	        const order = Order.fromJson(orderData);
-	        initOrder(order, index);
-	        expandList.set(index, order);
-	        expandList.refresh();
-	        console.log('load Time:', new Date().getTime() - start);
-	      }
-	    }
-	
-	    const getBody = (order, $index) => {
-	      if (order instanceof Order) {
-	        let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
-	        active = roomDisplays[order.id()];
-	        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
-	      } else {
-	        const start = new Date().getTime();
-	        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
-	        return 'Loading...';
-	      }
-	    }
-	    const getObject = (values) => initOrder(new Order(values.name));
-	    this.active = () => active;
-	
-	    const expListProps = {
-	      list: orders,
-	      inputValidation: (values) => values.name ? true :
-	          'You must Define a name',
-	      parentSelector, getHeader, getBody, getObject,
-	      listElemLable: 'Order', type: 'sidebar',
-	      inputTree: new DecisionInputTree('Order', Inputs('name'), console.log)
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
-	
-	    const saveSuccess = () => console.log('success');
-	    const saveFail = () => console.log('failure');
-	    const save = (target) => {
-	      const index = target.getAttribute('index');
-	      const order = expandList.get(index);
-	      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
-	      console.log('saving');
-	    }
-	
-	    const attrUpdate = (attr) => (target) => {
-	      const index = target.getAttribute('index');
-	      const order = expandList.get(index);
-	      order[attr] = target.value;
-	    };
-	
-	    function addOrders(names) {
-	      names.forEach((name) => expListProps.list.push({ name }));
-	      expandList.refresh();
-	    }
-	    Request.get(EPNTS.order.list(), addOrders);
-	
-	    du.on.match('change', '.order-name-input', attrUpdate('name'));
-	    du.on.match('click', '.save-order-btn', save);
-	  }
-	}
-	OrderDisplay.bodyTemplate = new $t('order/body');
-	OrderDisplay.headTemplate = new $t('order/head');
-	OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
-	OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
-	OrderDisplay.infoBodyTemplate = new $t('order/information/body');
-	OrderDisplay.infoHeadTemplate = new $t('order/information/head');
-	module.exports = OrderDisplay
+	Cost.register(Material);
+	Cost.register(Labor);
 	
 });
 
@@ -12213,6 +12144,356 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/display-utils/displayManager.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	
+	class DisplayManager {
+	  constructor(displayId, listId, switchId) {
+	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
+	    const id = String.random();
+	    const instance = this;
+	    this.list = (func) => {
+	      const list = [];
+	      const runFunc = (typeof func) === 'function';
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        let id = elem.id || String.random(7);
+	        elem.id = id;
+	        name = elem.getAttribute('name') || id;
+	        const item = {id, name};
+	        if (runFunc) func(elem);
+	        list.push(item);
+	      }
+	      return list;
+	    }
+	
+	    function updateActive(id) {
+	      const items = document.querySelectorAll('.display-manager-input');
+	      for (let index = 0; index < items.length; index += 1) {
+	        const elem = items[index];
+	        elem.getAttribute('display-id') === id ?
+	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
+	      }
+	    }
+	
+	    function open(id) {
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        if (elem.id === id) elem.hidden = false;
+	        else elem.hidden = true;
+	      }
+	      updateActive(id);
+	    }
+	
+	    this.open = open;
+	
+	    const children = du.id(displayId).children;
+	
+	    if (children.length > 0) {
+	      this.list();
+	      open(children[0].id);
+	      if (listId) {
+	        du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
+	      }
+	    }
+	
+	    if (switchId) {
+	      du.on.match('click', `#${switchId}`, (target, event) => {
+	        const listElem = du.id(listId);
+	        listElem.hidden = !listElem.hidden;
+	      });
+	      document.addEventListener('click', (event) => {
+	        const listElem = du.id(listId);
+	        const target = event.target;
+	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
+	        if (!withinList && target.id !== switchId &&listElem)
+	          listElem.hidden = true;
+	      });
+	    }
+	    DisplayManager.instances[id] = this;
+	  }
+	}
+	
+	DisplayManager.instances = {};
+	DisplayManager.template = new $t('display-manager');
+	
+	du.on.match('click', '.display-manager-input', (target, event) => {
+	  const displayManager = du.find.up('.display-manager', target);
+	  const displayManagerId = displayManager.id;
+	  const displayId = target.getAttribute('display-id');
+	  DisplayManager.instances[displayManagerId].open(displayId);
+	});
+	module.exports = DisplayManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/information-bar.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	class InformationBar {
+	  constructor() {
+	    const container = du.create.element('div');
+	    container.className = 'information-bar';
+	
+	    this.show = () => container.hidden = false;
+	    this.hide = () => container.hidden = true;
+	    this.update = (html) => container.innerHTML = html;
+	
+	    document.body.append(container);
+	  }
+	}
+	module.exports = InformationBar
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/radioDisplay.js',
+function (require, exports, module) {
+	
+
+	
+	const InformationBar = require('./information-bar.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	class RadioDisplay {
+	  constructor(radioClass, groupAttr, alternateToggleClass) {
+	    const selector = (attrVal) => {
+	      return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
+	    }
+	
+	    const infoBar = new InformationBar();
+	
+	    function path () {
+	      let path = '';
+	      const info = du.find.downInfo(`.${radioClass}.open`, document.body, null, `.${radioClass}.close`);
+	      info.matches.forEach((obj) => {
+	        const header = obj.node.children[0];
+	        if (header && header.getBoundingClientRect().y < 8) {
+	          path += `${header.innerText}=>`
+	        }
+	      });
+	      return path;
+	    }
+	
+	    function triggerAlternateToggles(target) {
+	      if (alternateToggleClass) {
+	        const alterToggles = document.querySelectorAll(alternateToggleClass);
+	        alterToggles.forEach((elem) => elem.hidden = false);
+	        const closest = du.closest(alternateToggleClass, target);
+	        if (closest) closest.hidden = true;
+	      }
+	    }
+	
+	    du.on.match('scroll', `*`, (target, event) => {
+	      infoBar.update(path());
+	    });
+	
+	    du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
+	      const target = targetHeader.parentElement;
+	      const attrVal = target.getAttribute(groupAttr);
+	      const targetBody = target.children[1];
+	      const hidden = targetBody.hidden;
+	      targetBody.hidden = !hidden;
+	      if (hidden) {
+	        du.class.add(targetHeader, 'active');
+	        du.class.swap(target, 'open', 'close');
+	        const siblings = document.querySelectorAll(selector(attrVal));
+	        for (let index = 0; index < siblings.length; index += 1) {
+	          if (siblings[index] !== target) {
+	            const sibHeader = siblings[index].children[0];
+	            const sibBody = siblings[index].children[1];
+	            du.class.swap(siblings[index], 'close', 'open');
+	            sibBody.hidden = true;
+	            du.class.remove(sibHeader, 'active');
+	          }
+	        }
+	      } else {
+	        du.class.swap(target, 'close', 'open');
+	        du.class.remove(targetHeader, 'active');
+	      }
+	      infoBar.update(path());
+	    });
+	  }
+	}
+	module.exports = RadioDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	
+	const ToggleDisplayList = {};
+	ToggleDisplayList.class = 'toggle-display-list';
+	ToggleDisplayList.funcs = {};
+	
+	ToggleDisplayList.onShow = (displayId, func) => {
+	  if ((typeof func) === 'function') {
+	    if (ToggleDisplayList.funcs[displayId] === undefined) {
+	      ToggleDisplayList.funcs[displayId] = [];
+	    }
+	    ToggleDisplayList.funcs[displayId].push(func);
+	  }
+	}
+	
+	ToggleDisplayList.runFuncs = (displayId) => {
+	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
+	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
+	}
+	
+	ToggleDisplayList.toggle = function (elem, event) {
+	  const target = event.target;
+	  const children = elem.children;
+	  for (let index = 0; index < children.length; index += 1) {
+	    const child = children[index];
+	    if (target === child) {
+	      du.class.add(child, 'active');
+	      const displayId = child.getAttribute('display-id');
+	      du.id(displayId).hidden = false;
+	      ToggleDisplayList.runFuncs(displayId);
+	    } else {
+	      du.class.remove(child, 'active');
+	      du.id(child.getAttribute('display-id')).hidden = true;
+	    }
+	  }
+	}
+	
+	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
+	
+	module.exports = ToggleDisplayList;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/cabinet.js',
+function (require, exports, module) {
+	
+
+	
+	const Show = require('../show.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const ThreeDModel = require('../three-d/three-d-model.js');
+	const OpenSectionDisplay = require('./open-section.js');
+	const CabinetConfig = require('../config/cabinet-configs.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const Measurement = require('../../../../public/js/utils/measurment.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const Inputs = require('../input/inputs.js');
+	
+	
+	
+	class CabinetDisplay {
+	  constructor(room) {
+	    const propertySelectors = {};
+	    const parentSelector = `[room-id="${room.id()}"].cabinet-cnt`;
+	    let propId = 'Half Overlay';
+	    const instance = this;
+	    this.propId = (id) => {
+	      if (id ===  undefined) return propId;
+	      propId = id;
+	    }
+	    const getHeader = (cabinet, $index) =>
+	        CabinetDisplay.headTemplate.render({room, cabinet, $index});
+	    const showTypes = Show.listTypes();
+	    const getBody = (cabinet, $index) => {
+	      if (propertySelectors[cabinet.uniqueId] === undefined)
+	        propertySelectors[cabinet.uniqueId] = Inputs('propertyIds', { value: cabinet.propertyId() });
+	      if (expandList.activeIndex() === $index)
+	        ThreeDModel.render(cabinet);
+	      const selectHtml = propertySelectors[cabinet.uniqueId].html();
+	      const scope = {room, $index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
+	      return CabinetDisplay.bodyTemplate.render(scope);
+	    }
+	
+	    function inputValidation(values) {
+	      const validName = values.name !== undefined;
+	      const validType = CabinetConfig.valid(values.type, values.id);
+	      if(validType) return true;
+	      return {type: 'You must select a defined type.'};
+	    }
+	    const getObject = (values) => {
+	      return CabinetConfig.get(values.name, values.type, values.propertyId, values.id);
+	    };
+	    this.active = () => expandList.active();
+	    const expListProps = {
+	      list: room.cabinets,
+	      inputTree:   CabinetConfig.inputTree(),
+	      parentSelector, getHeader, getBody, getObject, inputValidation,
+	      listElemLable: 'Cabinet'
+	    };
+	    const expandList = new ExpandableList(expListProps);
+	    this.refresh = () => expandList.refresh();
+	
+	    const cabinetKey = (path) => {
+	      const split = path.split('.');
+	      const index = split[0];
+	      const key = split[1];
+	      const cabinet = expListProps.list[index];
+	      return {cabinet, key};
+	    }
+	
+	    const valueUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
+	      ThreeDModel.render(cabKey.cabinet);
+	    }
+	
+	    const attrUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      cabKey.cabinet[cabKey.key] = value;
+	    }
+	
+	    const saveSuccess = () => console.log('success');
+	    const saveFail = () => console.log('failure');
+	    const save = (target) => {
+	      const index = target.getAttribute('index');
+	      const cabinet = expListProps.list[index];
+	      if (cabinet.name !== undefined) {
+	        Request.post(EPNTS.cabinet.add(cabinet.name), cabinet.toJson(), saveSuccess, saveFail);
+	        console.log('saving');
+	      } else {
+	        alert('Please enter a name if you want to save the cabinet.')
+	      }
+	    }
+	
+	    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
+	    bind(`[room-id="${room.id()}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
+	    bind(`[room-id="${room.id()}"].cabinet-id-input`, attrUpdate);
+	    du.on.match('click', '.save-cabinet-btn', save);
+	  }
+	}
+	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
+	CabinetDisplay.headTemplate = new $t('cabinet/head');
+	module.exports = CabinetDisplay
+	
+});
+
+
 RequireJS.addFunction('./app-src/config/cabinet-configs.js',
 function (require, exports, module) {
 	
@@ -12250,6 +12531,16 @@ function (require, exports, module) {
 	    this.valid = (type, id) => (!id ?
 	    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
 	
+	    class ValueDependency {
+	      constructor(name, value, payload) {
+	        this.condition = (wrapper) => {
+	          console.log('true');
+	          return true;
+	        }
+	        Object.keys(payload).forEach((key) => this[key] = payload[key]);
+	      }
+	    }
+	
 	    this.onUpdate = (func) => updateEvent.on(func);
 	    this.inputTree = () => {
 	      const typeInput = new Select({
@@ -12262,8 +12553,9 @@ function (require, exports, module) {
 	        class: 'center',
 	        list: ['pajango', 'skititors']
 	      });
-	      const inputs = [Inputs('name'), typeInput, propertyInput];
-	      const inputTree = new DecisionInputTree('Cabinet', inputs, console.log);
+	      const inputs = [Inputs('name'), typeInput];
+	      const inputTree = new DecisionInputTree();
+	      const cabinet = inputTree.branch('Cabinet', inputs);
 	      const cabinetTypes = Object.keys(cabinetKeys);
 	      cabinetTypes.forEach((type) => {
 	        const cabinetInput = new Select({
@@ -12272,11 +12564,10 @@ function (require, exports, module) {
 	          class: 'center',
 	          list: [''].concat(Object.keys(cabinetKeys[type]))
 	        });
-	        inputTree.addState(type, cabinetInput);
-	        inputTree.then(`type:${type}`).jump(type);
+	        cabinet.conditional(type, new ValueDependency('type', type, type));
 	      });
 	      return inputTree;
-	    }
+	    };
 	    this.get = (name, type, propertyId, id) => {
 	      let cabinet;
 	      if (!id) cabinet = Cabinet.build(type);
@@ -12292,6 +12583,67 @@ function (require, exports, module) {
 	
 	CabinetConfig = new CabinetConfig();
 	module.exports = CabinetConfig
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/abstract-manager.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	
+	
+	class AbstractManager {
+	  constructor(id, name) {
+	    let list;
+	    const manager = this;
+	    this.saveBtnId = `${name}-manager-save-btn`;
+	    this.headerId = `${name}-manager-header-cnt`;
+	    this.bodyId = `${name}-manager-body-cnt`;
+	    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
+	    const parentSelector = `#${this.bodyId}`;
+	    const template = new $t('managers/abstract-manager');
+	    const bodyTemplate = new $t(`managers/${name}/body`);
+	    const headTemplate = new $t(`managers/${name}/header`);
+	
+	    const getHeader = (instance) =>
+	      headTemplate.render({instance, manager});
+	    const getBody = (instance) =>
+	      bodyTemplate.render({instance, manager});
+	
+	    const getObject = (typeof manager.getObject) === 'function' ?
+	                        (values) => manager.getObject(values) : undefined;
+	
+	    function init(json) {
+	      du.id(id).innerHTML = template.render(manager);
+	      list = manager.fromJson(json) || [];
+	      const expListProps = {
+	        inputTree: manager.constructor.inputTree(),
+	        parentSelector, getHeader, getBody, getObject, list,
+	        hideAddBtn: true
+	      };
+	      const expandList = new ExpandableList(expListProps);
+	
+	      const saveSuccess = () => console.log('success save');
+	      const saveFail = () => console.log('failed save');
+	      const save = (target) => {
+	        const body = manager.toJson();
+	        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
+	      }
+	      du.on.match('click', `#${manager.saveBtnId}`, save);
+	    }
+	
+	    this.load = () => Request.get(manager.loadPoint(), init);
+	  }
+	}
+	
+	AbstractManager.inputTree = () => undefined;
+	module.exports = AbstractManager
 	
 });
 
@@ -12562,518 +12914,12 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/room.js',
-function (require, exports, module) {
-	
-
-	
-	const Cabinet = require('./assembly/assemblies/cabinet.js');
-	
-	
-	class Room {
-	  constructor(name, id) {
-	
-	    const initialVals = {
-	      name: name || `Room ${Room.count++}`,
-	      id: id || String.random(32),
-	    }
-	    Object.getSet(this, initialVals);
-	
-	    this.cabinets = [];
-	    this.toJson = () => {
-	      const json = { cabinets: []};
-	      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
-	      return json;
-	    };
-	  }
-	};
-	Room.count = 0;
-	Room.fromJson = (roomJson) => {
-	  const room = new Room(roomJson.name, roomJson.id);
-	  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
-	  return room;
-	}
-	module.exports = Room
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/displayManager.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	
-	class DisplayManager {
-	  constructor(displayId, listId, switchId) {
-	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
-	    const id = String.random();
-	    const instance = this;
-	    this.list = (func) => {
-	      const list = [];
-	      const runFunc = (typeof func) === 'function';
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        let id = elem.id || String.random(7);
-	        elem.id = id;
-	        name = elem.getAttribute('name') || id;
-	        const item = {id, name};
-	        if (runFunc) func(elem);
-	        list.push(item);
-	      }
-	      return list;
-	    }
-	
-	    function updateActive(id) {
-	      const items = document.querySelectorAll('.display-manager-input');
-	      for (let index = 0; index < items.length; index += 1) {
-	        const elem = items[index];
-	        elem.getAttribute('display-id') === id ?
-	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
-	      }
-	    }
-	
-	    function open(id) {
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        if (elem.id === id) elem.hidden = false;
-	        else elem.hidden = true;
-	      }
-	      updateActive(id);
-	    }
-	
-	    this.open = open;
-	
-	    const children = du.id(displayId).children;
-	
-	    if (children.length > 0) {
-	      this.list();
-	      open(children[0].id);
-	      if (listId) {
-	        du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
-	      }
-	    }
-	
-	    if (switchId) {
-	      du.on.match('click', `#${switchId}`, (target, event) => {
-	        const listElem = du.id(listId);
-	        listElem.hidden = !listElem.hidden;
-	      });
-	      document.addEventListener('click', (event) => {
-	        const listElem = du.id(listId);
-	        const target = event.target;
-	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
-	        if (!withinList && target.id !== switchId &&listElem)
-	          listElem.hidden = true;
-	      });
-	    }
-	    DisplayManager.instances[id] = this;
-	  }
-	}
-	
-	DisplayManager.instances = {};
-	DisplayManager.template = new $t('display-manager');
-	
-	du.on.match('click', '.display-manager-input', (target, event) => {
-	  const displayManager = du.find.up('.display-manager', target);
-	  const displayManagerId = displayManager.id;
-	  const displayId = target.getAttribute('display-id');
-	  DisplayManager.instances[displayManagerId].open(displayId);
-	});
-	module.exports = DisplayManager
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/information-bar.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	class InformationBar {
-	  constructor() {
-	    const container = du.create.element('div');
-	    container.className = 'information-bar';
-	
-	    this.show = () => container.hidden = false;
-	    this.hide = () => container.hidden = true;
-	    this.update = (html) => container.innerHTML = html;
-	
-	    document.body.append(container);
-	  }
-	}
-	module.exports = InformationBar
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/radioDisplay.js',
-function (require, exports, module) {
-	
-
-	
-	const InformationBar = require('./information-bar.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	class RadioDisplay {
-	  constructor(radioClass, groupAttr, alternateToggleClass) {
-	    const selector = (attrVal) => {
-	      return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
-	    }
-	
-	    const infoBar = new InformationBar();
-	
-	    function path () {
-	      let path = '';
-	      const info = du.find.downInfo(`.${radioClass}.open`, document.body, null, `.${radioClass}.close`);
-	      info.matches.forEach((obj) => {
-	        const header = obj.node.children[0];
-	        if (header && header.getBoundingClientRect().y < 8) {
-	          path += `${header.innerText}=>`
-	        }
-	      });
-	      return path;
-	    }
-	
-	    function triggerAlternateToggles(target) {
-	      if (alternateToggleClass) {
-	        const alterToggles = document.querySelectorAll(alternateToggleClass);
-	        alterToggles.forEach((elem) => elem.hidden = false);
-	        const closest = du.closest(alternateToggleClass, target);
-	        if (closest) closest.hidden = true;
-	      }
-	    }
-	
-	    du.on.match('scroll', `*`, (target, event) => {
-	      infoBar.update(path());
-	    });
-	
-	    du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
-	      const target = targetHeader.parentElement;
-	      const attrVal = target.getAttribute(groupAttr);
-	      const targetBody = target.children[1];
-	      const hidden = targetBody.hidden;
-	      targetBody.hidden = !hidden;
-	      if (hidden) {
-	        du.class.add(targetHeader, 'active');
-	        du.class.swap(target, 'open', 'close');
-	        const siblings = document.querySelectorAll(selector(attrVal));
-	        for (let index = 0; index < siblings.length; index += 1) {
-	          if (siblings[index] !== target) {
-	            const sibHeader = siblings[index].children[0];
-	            const sibBody = siblings[index].children[1];
-	            du.class.swap(siblings[index], 'close', 'open');
-	            sibBody.hidden = true;
-	            du.class.remove(sibHeader, 'active');
-	          }
-	        }
-	      } else {
-	        du.class.swap(target, 'close', 'open');
-	        du.class.remove(targetHeader, 'active');
-	      }
-	      infoBar.update(path());
-	    });
-	  }
-	}
-	module.exports = RadioDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	
-	const ToggleDisplayList = {};
-	ToggleDisplayList.class = 'toggle-display-list';
-	ToggleDisplayList.funcs = {};
-	
-	ToggleDisplayList.onShow = (displayId, func) => {
-	  if ((typeof func) === 'function') {
-	    if (ToggleDisplayList.funcs[displayId] === undefined) {
-	      ToggleDisplayList.funcs[displayId] = [];
-	    }
-	    ToggleDisplayList.funcs[displayId].push(func);
-	  }
-	}
-	
-	ToggleDisplayList.runFuncs = (displayId) => {
-	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
-	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
-	}
-	
-	ToggleDisplayList.toggle = function (elem, event) {
-	  const target = event.target;
-	  const children = elem.children;
-	  for (let index = 0; index < children.length; index += 1) {
-	    const child = children[index];
-	    if (target === child) {
-	      du.class.add(child, 'active');
-	      const displayId = child.getAttribute('display-id');
-	      du.id(displayId).hidden = false;
-	      ToggleDisplayList.runFuncs(displayId);
-	    } else {
-	      du.class.remove(child, 'active');
-	      du.id(child.getAttribute('display-id')).hidden = true;
-	    }
-	  }
-	}
-	
-	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
-	
-	module.exports = ToggleDisplayList;
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/abstract-manager.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	
-	
-	class AbstractManager {
-	  constructor(id, name) {
-	    let list;
-	    const manager = this;
-	    this.saveBtnId = `${name}-manager-save-btn`;
-	    this.headerId = `${name}-manager-header-cnt`;
-	    this.bodyId = `${name}-manager-body-cnt`;
-	    this.header = `${name.substr(0,1).toUpperCase()}${name.substr(1)} Manager`;
-	    const parentSelector = `#${this.bodyId}`;
-	    const template = new $t('managers/abstract-manager');
-	    const bodyTemplate = new $t(`managers/${name}/body`);
-	    const headTemplate = new $t(`managers/${name}/header`);
-	
-	    const getHeader = (instance) =>
-	      headTemplate.render({instance, manager});
-	    const getBody = (instance) =>
-	      bodyTemplate.render({instance, manager});
-	
-	    const getObject = (typeof manager.getObject) === 'function' ?
-	                        (values) => manager.getObject(values) : undefined;
-	
-	    function init(json) {
-	      du.id(id).innerHTML = template.render(manager);
-	      list = manager.fromJson(json) || [];
-	      const expListProps = {
-	        inputTree: manager.constructor.inputTree(),
-	        parentSelector, getHeader, getBody, getObject, list,
-	        hideAddBtn: true
-	      };
-	      const expandList = new ExpandableList(expListProps);
-	
-	      const saveSuccess = () => console.log('success save');
-	      const saveFail = () => console.log('failed save');
-	      const save = (target) => {
-	        const body = manager.toJson();
-	        Request.post(manager.savePoint(), body, saveSuccess, saveFail);
-	      }
-	      du.on.match('click', `#${manager.saveBtnId}`, save);
-	    }
-	
-	    this.load = () => Request.get(manager.loadPoint(), init);
-	  }
-	}
-	
-	AbstractManager.inputTree = () => undefined;
-	module.exports = AbstractManager
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/cabinet.js',
-function (require, exports, module) {
-	
-
-	
-	const Show = require('../show.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const ThreeDModel = require('../three-d/three-d-model.js');
-	const OpenSectionDisplay = require('./open-section.js');
-	const CabinetConfig = require('../config/cabinet-configs.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const Measurement = require('../../../../public/js/utils/measurment.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const Inputs = require('../input/inputs.js');
-	
-	
-	
-	class CabinetDisplay {
-	  constructor(room) {
-	    const propertySelectors = {};
-	    const parentSelector = `[room-id="${room.id()}"].cabinet-cnt`;
-	    let propId = 'Half Overlay';
-	    const instance = this;
-	    this.propId = (id) => {
-	      if (id ===  undefined) return propId;
-	      propId = id;
-	    }
-	    const getHeader = (cabinet, $index) =>
-	        CabinetDisplay.headTemplate.render({room, cabinet, $index});
-	    const showTypes = Show.listTypes();
-	    const getBody = (cabinet, $index) => {
-	      if (propertySelectors[cabinet.uniqueId] === undefined)
-	        propertySelectors[cabinet.uniqueId] = Inputs('propertyIds', { value: cabinet.propertyId() });
-	      if (expandList.activeIndex() === $index)
-	        ThreeDModel.render(cabinet);
-	      const selectHtml = propertySelectors[cabinet.uniqueId].html();
-	      const scope = {room, $index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
-	      return CabinetDisplay.bodyTemplate.render(scope);
-	    }
-	
-	    function inputValidation(values) {
-	      const validName = values.name !== undefined;
-	      const validType = CabinetConfig.valid(values.type, values.id);
-	      if(validType) return true;
-	      return {type: 'You must select a defined type.'};
-	    }
-	    const getObject = (values) => {
-	      return CabinetConfig.get(values.name, values.type, values.propertyId, values.id);
-	    };
-	    this.active = () => expandList.active();
-	    const expListProps = {
-	      list: room.cabinets,
-	      inputTree:   CabinetConfig.inputTree(),
-	      parentSelector, getHeader, getBody, getObject, inputValidation,
-	      listElemLable: 'Cabinet'
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	    this.refresh = () => expandList.refresh();
-	
-	    const cabinetKey = (path) => {
-	      const split = path.split('.');
-	      const index = split[0];
-	      const key = split[1];
-	      const cabinet = expListProps.list[index];
-	      return {cabinet, key};
-	    }
-	
-	    const valueUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
-	      ThreeDModel.render(cabKey.cabinet);
-	    }
-	
-	    const attrUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      cabKey.cabinet[cabKey.key] = value;
-	    }
-	
-	    const saveSuccess = () => console.log('success');
-	    const saveFail = () => console.log('failure');
-	    const save = (target) => {
-	      const index = target.getAttribute('index');
-	      const cabinet = expListProps.list[index];
-	      if (cabinet.name !== undefined) {
-	        Request.post(EPNTS.cabinet.add(cabinet.name), cabinet.toJson(), saveSuccess, saveFail);
-	        console.log('saving');
-	      } else {
-	        alert('Please enter a name if you want to save the cabinet.')
-	      }
-	    }
-	
-	    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-	    bind(`[room-id="${room.id()}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
-	    bind(`[room-id="${room.id()}"].cabinet-id-input`, attrUpdate);
-	    du.on.match('click', '.save-cabinet-btn', save);
-	  }
-	}
-	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
-	CabinetDisplay.headTemplate = new $t('cabinet/head');
-	module.exports = CabinetDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/order.js',
-function (require, exports, module) {
-	
-
-	
-	const Room = require('./room.js');
-	
-	class Order {
-	  constructor(name, id) {
-	    const initialVals = {
-	      name: name || ++Order.count,
-	      id: id || String.random(32),
-	    }
-	    this.rooms = [];
-	    Object.getSet(this, initialVals);
-	  }
-	}
-	
-	Order.count = 0;
-	module.exports = Order
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/company.js',
-function (require, exports, module) {
-	
-
-	
-	const Door = require('./assembly/assemblies/door/door.js');
-	
-	class Company {
-	  constructor(properties) {
-	    if (!properties.name) throw new Error('Company name must be defined')
-	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
-	    this.name = () => properties.name;
-	    this.email = () => properties.email;
-	    this.address = () => properties.address;
-	    Company.list[this.name()] = this;
-	  }
-	}
-	
-	Company.list = {};
-	new Company({name: 'Central Door'});
-	new Company({name: 'Central Wood'});
-	new Company({name: 'ADC'});
-	new Company({name: 'Accessa'});
-	new Company({name: 'Top Knobs'});
-	new Company({name: 'Richelieu'});
-	module.exports = Company
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('./app-src/displays/open-section.js',
 function (require, exports, module) {
 	
 
 	
 	const Section = require('../objects/assembly/assemblies/section/section.js');
-	const FeatureDisplay = require('./feature.js');
 	const du = require('../../../../public/js/utils/dom-utils.js');
 	const bind = require('../../../../public/js/utils/input/bind.js');
 	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
@@ -13262,84 +13108,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/input/validation.js',
-function (require, exports, module) {
-	
-
-	
-	const InvalidComputation = require('./error.js');
-	
-	class ObjectValidator {
-	  constructor() {
-	    const validators =  {};
-	    this.add = (name, validator) => {
-	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
-	        throw new Error('Invalid Validator');
-	      }
-	      validator[name] = validator;
-	    }
-	    this.validate = (obj) => {
-	      if (typeof obj !== 'object') throw new InvalidComputation()
-	      const keys = Object.keys(validators);
-	    }
-	  }
-	}
-	
-	
-	class Validator {
-	  constructor(validator, props, info) {
-	    let type, validate;
-	    const complement = props.explanation;
-	
-	    let defaultExpl;
-	    if (validator instanceof Regex) {
-	      type = 'Regex';
-	      if (props.complement) {
-	        defaultExpl = 'Value must fit regex expression';
-	        validate = (value) => validator.match('value');
-	      } else {
-	        defaultExpl = 'Value must not fit regex expression';
-	        validate = (value) => !validator.match('value');
-	      }
-	    } else if (Array.isArray(validator)) {
-	      if (props.complement) {
-	        defaultExpl = 'Value must exist within array';
-	        validate = (value) => validator.indexOf(value) !== -1;
-	      } else {
-	        defaultExpl = 'Value must not exist within array';
-	        validate = (value) => validator.indexOf(value) === -1;
-	      }
-	    }
-	
-	    props.explanation = props.explanation || defaultExpl;
-	
-	    val = val === undefined && elem ? elem.value : val;
-	    if (val === undefined) return false;
-	    if (valid !== undefined && val === value) return valid;
-	    let valValid = true;
-	    if (props.validation instanceof RegExp) {
-	      valValid = val.match(props.validation) !== null;
-	    }
-	    else if ((typeof props.validation) === 'function') {
-	      valValid = props.validation.apply(null, arguments);
-	    }
-	    else if (Array.isArray(props.validation)) {
-	      valValid = props.validation.indexOf(val) !== -1;
-	    }
-	
-	    return valValid;
-	  }
-	}
-	exports.ObjectValidator = ObjectValidator
-	exports.Validator = Validator
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('./app-src/config/property.js',
 function (require, exports, module) {
 	
@@ -13437,233 +13205,117 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 });
 
 
-RequireJS.addFunction('./app-src/displays/property.js',
+RequireJS.addFunction('./app-src/displays/order.js',
 function (require, exports, module) {
 	
 
 	
-	const Properties = require('../config/properties.js');
-	const Property = require('../config/property.js');
-	const Cost = require('../cost/cost.js');
 	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const RadioDisplay = require('../display-utils/radioDisplay.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const Inputs = require('../input/inputs.js');
+	const UFObj = require('./information/utility-filter.js');
+	const RoomDisplay = require('./room.js');
+	const Order = require('../objects/order.js');
+	const Request = require('../../../../public/js/utils/request.js');
 	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
 	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
-	const Measurement = require('../../../../public/js/utils/measurment.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const EPNTS = require('../../generated/EPNTS.js')
+	const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
+	const Inputs = require('../input/inputs.js');
 	
-	// TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
-	const changed = (id) => Properties.changes.changed(id);
-	const shouldHide = (prop) => prop.value() === null;
-	const hideAll = (properties) => {
-	  for (let index = 0; index < properties.length; index += 1) {
-	    if (properties[index].value() !== null) return false;
-	  }
-	  return properties.length > 0;
-	}
+	class OrderDisplay {
+	  constructor(parentSelector, orders) {
+	    const roomDisplays = {};
+	    let active;
+	    const getHeader = (order, $index) =>
+	        OrderDisplay.headTemplate.render({order, $index});
 	
-	function updateSaveAll() {
-	  const saveAllBtn = du.find('#property-manager-save-all');
-	  saveAllBtn.hidden = !Properties.changes.changesExist();
-	  if (saveAllBtn.hidden) {
-	    const saveBtns = du.find.all('.save-change');
-	    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
-	  }
-	}
-	
-	function saveAll() {
-	  Properties.changes.saveAll();
-	  save();
-	  updateSaveAll();
-	}
-	
-	
-	function save() {
-	  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
-	}
-	
-	function get() {
-	  Request.get(EPNTS.config.get(), console.log);
-	}
-	
-	class PropertyDisplay {
-	  constructor(containerSelector) {
-	    let currProps;
-	
-	    const noChildren = (properties, groups) => () =>
-	          properties.length === 0 && Object.keys(groups).length === 0;
-	
-	    function childScope (key) {
-	      const uniqueId = String.random();
-	      const getObject = (values) => {
-	        let properties = Properties.new(key,  values.name);
-	        return {name: values.name, uniqueId, changed, properties};
-	      }
-	
-	      const inputTree = PropertyDisplay.configInputTree();
-	      const expListProps = {
-	        list: Properties.hasValue(key),
-	        parentSelector: `#config-expand-list-${uniqueId}`,
-	        getHeader: (scope) =>
-	                    PropertyDisplay.configHeadTemplate.render(scope),
-	        getBody: (scope) =>
-	                    PropertyDisplay.configBodyTemplate.render({
-	                      name: scope.name,
-	                      properties: scope.properties,
-	                      changed
-	                    }),
-	        inputValidation: inputTree.validate,
-	        listElemLable: 'Config',
-	        getObject, inputTree
-	      };
-	      setTimeout(() => {
-	        const expList = new ExpandableObject(expListProps);
-	        expList.afterRemoval((element, detail) => {
-	          console.log(detail);
-	          console.log('placehoder');
-	          Properties.changes.delete(detail.properties._ID);
-	        });
-	      }, 500);
-	      return uniqueId;
+	    const setInfo = (order, index) => () => {
+	      const elem = du.id(`uf-info-${index}`);
+	      if (elem)
+	        UTF.buildDisplay(elem, new UFObj(order));
 	    }
 	
-	    function getScope(key, group) {
-	      key = key || '';
-	      const uniqueId = String.random();
-	      let radioId = group.radioId || PropertyDisplay.counter++;
-	      const properties = [];
-	      const groups = {};
-	      const label = key.replace(PropertyDisplay.camelReg, '$1 $2');
-	      const scope = {key, label, properties, groups, recurse, radioId, uniqueId,
-	                      noChildren: noChildren(properties, groups),
-	                      branch: key.match(PropertyDisplay.branchReg)};
-	      PropertyDisplay.uniqueMap[uniqueId] = scope;
-	      const keys = Object.keys(group.values);
-	      radioId = PropertyDisplay.counter++;
-	      for( let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        const value = group.values[key];
-	        childScope(key, uniqueId);
-	      }
-	      return scope;
+	    function initOrder(order, index) {
+	      roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
+	      ToggleDisplayList.onShow(`information-display-${index}`, );
+	      expandList.afterRender(setInfo(order, index));
+	      return order;
 	    }
 	
-	    this.update = () => {
-	      const propKeys = Properties.list();
-	      const propertyObjs = {};
-	      const childIdMap = [];
-	      for (let index = 0; index < propKeys.length; index += 1) {
-	        const key = propKeys[index];
-	        const props = Properties(key);
-	        const propObj = props;
-	        propertyObjs[key] = propObj;
-	        childIdMap[key] = childScope(key);
+	    function loadOrder(index, start) {
+	      return function (orderData) {
+	        const order = Order.fromJson(orderData);
+	        initOrder(order, index);
+	        expandList.set(index, order);
+	        expandList.refresh();
+	        console.log('load Time:', new Date().getTime() - start);
 	      }
-	      const uniqueId = String.random();
-	      const values = {values: propertyObjs, uniqueId, childIdMap, hideAll, Properties};
-	      const contianer = document.querySelector(containerSelector);
-	      contianer.innerHTML =
-	          PropertyDisplay.template.render(values);
+	    }
+	
+	    const getBody = (order, $index) => {
+	      if (order instanceof Order) {
+	        let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
+	        active = roomDisplays[order.id()];
+	        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
+	      } else {
+	        const start = new Date().getTime();
+	        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
+	        return 'Loading...';
+	      }
+	    }
+	    const getObject = (values) => initOrder(new Order(values.name));
+	    this.active = () => active;
+	
+	    const expListProps = {
+	      list: orders,
+	      inputValidation: (values) => values.name ? true :
+	          'You must Define a name',
+	      parentSelector, getHeader, getBody, getObject,
+	      listElemLable: 'Order', type: 'sidebar',
+	      inputTree: OrderDisplay.configInputTree()
+	    };
+	    const expandList = new ExpandableObject(expListProps);
+	    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
+	
+	    const saveSuccess = () => console.log('success');
+	    const saveFail = () => console.log('failure');
+	    const save = (target) => {
+	      const index = target.getAttribute('index');
+	      const order = expandList.get(index);
+	      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
+	      console.log('saving');
+	    }
+	
+	    const attrUpdate = (attr) => (target) => {
+	      const index = target.getAttribute('index');
+	      const order = expandList.get(index);
+	      order[attr] = target.value;
 	    };
 	
-	    function updateProperties(name, value) {
+	    function addOrders(names) {
+	      names.forEach((name) => expListProps.list.push({ name }));
+	      expandList.refresh();
 	    }
-	    bind('property-cnt', updateProperties);
-	    new RadioDisplay('property-container', 'radio-id');
+	    Request.get(EPNTS.order.list(), addOrders);
+	
+	    du.on.match('change', '.order-name-input', attrUpdate('name'));
+	    du.on.match('click', '.save-order-btn', save);
 	  }
 	}
+	OrderDisplay.bodyTemplate = new $t('order/body');
+	OrderDisplay.headTemplate = new $t('order/head');
+	OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
+	OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
+	OrderDisplay.infoBodyTemplate = new $t('order/information/body');
+	OrderDisplay.infoHeadTemplate = new $t('order/information/head');
 	
-	// bind('property-branch-selector', '');
-	
-	du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
-	  const childTargets = target.parentElement.children[1].children;
-	  const childElem = childTargets[target.value];
-	  // TODO: set config property: childElem.innerText;
-	  du.hide(childTargets);
-	  du.show(childElem);
-	});
-	
-	function setPropertyElemValue(elem, idAttr, value) {
-	  const id = elem.getAttribute(idAttr);
-	  const group = elem.getAttribute('name');
-	  const property = Property.get(id);
-	  property.value(value, true);
+	OrderDisplay.configInputTree = () => {
+	  const dit = new DecisionInputTree();
+	  dit.leaf('Config', [Inputs('name')]);
+	  return dit;
 	}
-	
-	function updateMeasurements () {
-	  measureElems = du.find.all('[measurement-id]:not([measurement-id=""])');
-	  measureElems.forEach((elem) => {
-	    const id = elem.getAttribute('measurement-id');
-	    const measurement = Measurement.get(id);
-	    elem.value = measurement.display();
-	  });
-	}
-	
-	function updateRadio(elem) {
-	  const name = elem.getAttribute('name');
-	  Properties.config()
-	  const elems = du.find.all(`input[type="radio"][name='${name}']`);
-	  elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
-	  setPropertyElemValue(elem, 'prop-radio-update', true);
-	  if (name === 'UNIT') updateMeasurements();
-	}
-	
-	function updateValueDisplay(elem) {
-	  const id = elem.getAttribute('measurement-id');
-	  const measurement = Measurement.get(id);
-	  elem.value = measurement.display();
-	}
-	
-	function updateValue(elem) {
-	  setPropertyElemValue(elem, 'prop-value-update', elem.value);
-	  const saveBtn = du.find.closest('.save-change', elem);
-	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
-	  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
-	  elem.setAttribute('measurement-id', measurementId);
-	  updateSaveAll();
-	}
-	
-	function updateBoolean(elem) {
-	  setPropertyElemValue(elem, 'prop-boolean-update', elem.checked);
-	  const saveBtn = du.find.closest('.save-change', elem);
-	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
-	  updateSaveAll();
-	}
-	
-	function saveChange(elem) {
-	  const id = elem.getAttribute('properties-id');
-	  Properties.changes.save(id);
-	  elem.hidden = true;
-	  updateSaveAll();
-	  save();
-	}
-	
-	
-	du.on.match('keyup', '[prop-value-update]', updateValue);
-	du.on.match('change', '[prop-boolean-update]', updateBoolean);
-	du.on.match('focusout', '[measurement-id]', updateValueDisplay);
-	du.on.match('change', '[prop-radio-update]', updateRadio);
-	du.on.match('click', '#property-manager-save-all', saveAll);
-	du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
-	
-	PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
-	PropertyDisplay.branchReg = /^OR_(.{1,})/;
-	PropertyDisplay.camelReg = /([a-z])([A-Z])/g;
-	PropertyDisplay.counter = 0;
-	PropertyDisplay.template = new $t('properties/properties');
-	PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
-	PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
-	PropertyDisplay.radioTemplate = new $t('properties/radio');
-	PropertyDisplay.uniqueMap = {};
-	PropertyDisplay.configMap = {};
-	
-	PropertyDisplay.configInputTree = () =>
-	  new DecisionInputTree('Config', [Inputs('name')], console.log);
-	
-	module.exports = PropertyDisplay
+	module.exports = OrderDisplay
 	
 });
 
@@ -13677,7 +13329,7 @@ function (require, exports, module) {
 	const CabinetDisplay = require('./cabinet.js');
 	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 	const Input = require('../../../../public/js/utils/input/input.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
 	const $t = require('../../../../public/js/utils/$t.js');
 	const Inputs = require('../input/inputs.js');
 	
@@ -13709,15 +13361,19 @@ function (require, exports, module) {
 	    const expListProps = {
 	      list: order.rooms,
 	      parentSelector, getHeader, getBody, getObject,
-	      inputs: [{placeholder: 'name'}],
 	      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
 	      listElemLable: 'Room', type: 'pill',
-	      inputTree: new DecisionInputTree('Room', Inputs('name'), console.log)
+	      inputTree: RoomDisplay.configInputTree()
 	    };
-	    const expandList = new ExpandableList(expListProps);
+	    const expandList = new ExpandableObject(expListProps);
 	    expandList.afterRender(() => this.cabinetDisplay().refresh());
 	    this.refresh = () => expandList.refresh();
 	  }
+	}
+	RoomDisplay.configInputTree = () => {
+	  const dit = new DecisionInputTree(console.log);
+	  dit.leaf('Room', [Inputs('name')]);
+	  return dit;
 	}
 	RoomDisplay.bodyTemplate = new $t('room/body');
 	RoomDisplay.headTemplate = new $t('room/head');
@@ -13894,7 +13550,7 @@ RequireJS.addFunction('./app-src/cost/cost-decision.js',
 function (require, exports, module) {
 	
 const Properties = require('../config/properties.js');
-	const DecisionTree = require('../../../../public/js/utils/decisionTree.js');
+	const DecisionTree = require('../../../../public/js/utils/decision-tree.js');
 	
 	class CostDecision {
 	  constructor(id, saved) {
@@ -13908,20 +13564,13 @@ const Properties = require('../config/properties.js');
 	    function getParentNode(name, parentNodeId, type, payload) {
 	      if (parentNodeId === undefined) {
 	        if (tree === undefined) {
-	          tree = new DecisionTree(name, payload);
+	          tree = new DecisionTree(name || 'root', payload);
 	        } else {
 	          throw new Error('Tree already initialized. should not call this function without a parentNodeId after initialization');
 	        }
 	      } else {
 	        return tree.getNode(parentNodeId);
 	      }
-	    }
-	
-	    this.addSelect = (name, parentNodeId) => {
-	      const payload = getPayload(CostDecision.types.SELECT);
-	      const parentNode = getParentNode(name, parentNodeId, CostDecision.types.SELECT, payload);
-	      if (parentNode === undefined) return;
-	      parentNode.addState(name, payload);
 	    }
 	
 	    this.tree = () => tree;
@@ -13931,7 +13580,7 @@ const Properties = require('../config/properties.js');
 	      tree = CostDecision.fromJson(saved);
 	    } else {
 	      if (Properties.hasValue(id)) {
-	        this.addSelect();
+	        console.log('todo')// this.addSelect();
 	      }
 	    }
 	  }
@@ -13958,16 +13607,17 @@ function (require, exports, module) {
 	
 	const Company = require('../objects/company.js');
 	const Input = require('../../../../public/js/utils/input/input.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
 	const Assembly = require('../objects/assembly/assembly.js');
 	
 	
 	// constructors
-	// Cost({id, Method: Cost.methods.LINEAR_FEET, cost, length})
-	// Cost({id, Method: Cost.methods.SQUARE_FEET, cost, length, width})
-	// Cost({id, Method: Cost.methods.CUBIC_FEET, cost, length, width, depth})
-	// Cost({id, Method: Cost.methods.UNIT, cost})
-	// Cost((id, Cost, formula));
+	// Cost({name, Method: Cost.methods.LINEAR_FEET, cost, length})
+	// Cost({name, Method: Cost.methods.SQUARE_FEET, cost, length, width})
+	// Cost({name, Method: Cost.methods.CUBIC_FEET, cost, length, width, depth})
+	// Cost({name, Method: Cost.methods.UNIT, cost})
+	// Cost((name, Cost, formula));
 	// props. - (optional*)
 	// id - Cost identifier
 	// method - Method for calculating cost
@@ -13980,9 +13630,10 @@ function (require, exports, module) {
 	// partNumber* - Part number to order part from company
 	// Cost* - Reference Cost.
 	
-	class Cost {
+	class Cost extends Lookup {
 	  //constructor(id, Cost, formula)
 	  constructor(props) {
+	    super(props.name);
 	    props = props || {};
 	    this.props = () => props;
 	    let deleted = false;
@@ -13991,10 +13642,7 @@ function (require, exports, module) {
 	    const lastUpdated = props.lastUpdated || new Date().getTime();
 	    props.requiredBranches = props.requiredBranches || [];
 	    this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
-	    this.delete = () => deleted = true;
-	    this.deleted = () => deleted;
-	    Object.getSet(this, props, 'group', 'objectId', 'id', 'children', 'parent');
-	    this.children = [];
+	    Object.getSet(this, props, 'group', 'objectId', 'id', 'parent');
 	    this.level = () => {
 	      let level = -1;
 	      let curr = this;
@@ -14004,94 +13652,10 @@ function (require, exports, module) {
 	      }
 	      return level;
 	    }
-	
-	    const satisfyReg = (idOreg) => idOreg instanceof RegExp ? idOreg :
-	      new RegExp(`(^\\s*${idOreg}\\s*$|\\((\\s*|[^(^)]*,\\s*)${idOreg}(\\s*,[^(^)]*\\s*|\\s*)\\)\\s*$)`);
-	    // TODO: possibly make more efficient... tough to maintain consistancy
-	    this.satisfies = (idOreg) => {
-	      const reg = satisfyReg(idOreg);
-	      if (this.id().match(reg)) return true;
-	      for(let index = 0; index < this.children.length; index += 1) {
-	        if (this.children[index].satisfies(reg)) return true;
-	      }
-	      return false;
-	    }
-	    this.unsatisfiedBranches = () =>
-	      this.requiredBranches().filter((id) => !this.satisfies(id));
-	
-	    this.uniqueId = () => uniqueId;
-	    Cost.uniqueIdMap[uniqueId] = this;
-	    // TODO: None does not make sence here.
-	    this.childIds = () =>
-	        ['None'].concat(this.children.map((obj) => obj.id()));
-	
-	    Cost.group(this, this);
-	
-	    this.addChild = (cost) => {
-	      if (cost instanceof Cost) {
-	        this.children.push(cost);
-	      }
-	    }
 	  }
 	}
 	
-	Cost.uniqueIdMap = {};
-	
-	Cost.getterSetter = (obj, attr, validation) => (val) => {
-	  if (val && validation && validation(val)) obj[attr] = val;
-	  if (validation && !validation(obj[attr])) throw new Error(`Invalid Cost Value ${obj[attr]}`);
-	  return obj[attr];
-	}
-	
-	
-	Cost.group = (() => {
-	  const groups = {};
-	  const defaultCostObj = () => ({unique: {}, objectMap: {}, defined: {'/dev/nul': 'Custom'}});
-	  return (props, cost) => {
-	    const isSetter = cost instanceof Cost;
-	    const name = isSetter ? props.group : props;
-	    if (isSetter) {
-	      if (groups[name] === undefined)
-	      groups[name] = defaultCostObj();
-	      const group = groups[name];
-	
-	      const unique = group.unique;
-	      const defined = group.defined;
-	      const objectMap = group.objectMap;
-	      if (unique[cost.uniqueId()] !== undefined)
-	      throw new Error('Invalid Unique Id');
-	
-	      unique[cost.uniqueId()] = cost;
-	
-	      if (props.objectId !== undefined) {
-	        if (objectMap[props.objectId] === undefined)
-	          objectMap[props.objectId] = [];
-	        objectMap[props.objectId].push(cost.uniqueId());
-	      }
-	
-	      // TODO move to referenceCost constructor
-	      if (cost.constructor.name === 'ReferenceCost') {
-	        if (props.referenceable) {
-	          if (Object.values(defined).indexOf(cost.id()) !== -1)
-	          throw new Error(`referenceable cost must have a unique Id: '${cost.id()}'`);
-	          defined[cost.uniqueId()] = cost.id();
-	        }
-	      }
-	    }
-	
-	    return groups[name] || defaultCostObj();
-	  }
-	})();
-	
-	Cost.types = [];
-	Cost.get = (uniqueId) => {
-	  return Cost.uniqueIdMap[uniqueId];
-	};
-	
-	Cost.new = (props) => {
-	  const type = props.type;
-	  return new Cost.types[props.type](props);
-	}
+	Cost.types = {};
 	
 	Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
 	Cost.remove = (uniqueId) => Cost.get(uniqueId).remove();
@@ -14109,24 +13673,240 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/cost/init-costs.js',
+RequireJS.addFunction('./app-src/displays/property.js',
 function (require, exports, module) {
 	
 
 	
+	const Properties = require('../config/properties.js');
+	const Property = require('../config/property.js');
+	const Cost = require('../cost/cost.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const RadioDisplay = require('../display-utils/radioDisplay.js');
+	const EPNTS = require('../../generated/EPNTS');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const Inputs = require('../input/inputs.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
+	const Measurement = require('../../../../public/js/utils/measurment.js');
 	
-	const Cost = require('./cost.js');
-	const SelectCost = require('./types/select.js');
-	const Material = require('./types/material.js');
-	const Category = require('./types/category.js');
-	const Labor = require('./types/material/labor.js');
-	const ConditionalCost = require('./types/category/conditional.js');
+	// TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
+	const changed = (id) => Properties.changes.changed(id);
+	const shouldHide = (prop) => prop.value() === null;
+	const hideAll = (properties) => {
+	  for (let index = 0; index < properties.length; index += 1) {
+	    if (properties[index].value() !== null) return false;
+	  }
+	  return properties.length > 0;
+	}
 	
-	Cost.register(SelectCost);
-	Cost.register(Material);
-	Cost.register(Category);
-	Cost.register(Labor);
-	Cost.register(ConditionalCost);
+	function updateSaveAll() {
+	  const saveAllBtn = du.find('#property-manager-save-all');
+	  saveAllBtn.hidden = !Properties.changes.changesExist();
+	  if (saveAllBtn.hidden) {
+	    const saveBtns = du.find.all('.save-change');
+	    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
+	  }
+	}
+	
+	function saveAll() {
+	  Properties.changes.saveAll();
+	  save();
+	  updateSaveAll();
+	}
+	
+	
+	function save() {
+	  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
+	}
+	
+	function get() {
+	  Request.get(EPNTS.config.get(), console.log);
+	}
+	
+	class PropertyDisplay {
+	  constructor(containerSelector) {
+	    let currProps;
+	
+	    const noChildren = (properties, groups) => () =>
+	          properties.length === 0 && Object.keys(groups).length === 0;
+	
+	    function childScope (key) {
+	      const uniqueId = String.random();
+	      const getObject = (values) => {
+	        let properties = Properties.new(key,  values.name);
+	        return {name: values.name, uniqueId, changed, properties};
+	      }
+	
+	      const inputTree = PropertyDisplay.configInputTree();
+	      const expListProps = {
+	        list: Properties.hasValue(key),
+	        parentSelector: `#config-expand-list-${uniqueId}`,
+	        getHeader: (scope) =>
+	                    PropertyDisplay.configHeadTemplate.render(scope),
+	        getBody: (scope) =>
+	                    PropertyDisplay.configBodyTemplate.render({
+	                      name: scope.name,
+	                      properties: scope.properties,
+	                      changed
+	                    }),
+	        inputValidation: inputTree.validate,
+	        listElemLable: 'Config',
+	        getObject, inputTree
+	      };
+	      setTimeout(() => {
+	        const expList = new ExpandableObject(expListProps);
+	        expList.afterRemoval((element, detail) => {
+	          console.log(detail);
+	          console.log('placehoder');
+	          Properties.changes.delete(detail.properties._ID);
+	        });
+	      }, 500);
+	      return uniqueId;
+	    }
+	
+	    function getScope(key, group) {
+	      key = key || '';
+	      const uniqueId = String.random();
+	      let radioId = group.radioId || PropertyDisplay.counter++;
+	      const properties = [];
+	      const groups = {};
+	      const label = key.replace(PropertyDisplay.camelReg, '$1 $2');
+	      const scope = {key, label, properties, groups, recurse, radioId, uniqueId,
+	                      noChildren: noChildren(properties, groups),
+	                      branch: key.match(PropertyDisplay.branchReg)};
+	      PropertyDisplay.uniqueMap[uniqueId] = scope;
+	      const keys = Object.keys(group.values);
+	      radioId = PropertyDisplay.counter++;
+	      for( let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = group.values[key];
+	        childScope(key, uniqueId);
+	      }
+	      return scope;
+	    }
+	
+	    this.update = () => {
+	      const propKeys = Properties.list();
+	      const propertyObjs = {};
+	      const childIdMap = [];
+	      for (let index = 0; index < propKeys.length; index += 1) {
+	        const key = propKeys[index];
+	        const props = Properties(key);
+	        const propObj = props;
+	        propertyObjs[key] = propObj;
+	        childIdMap[key] = childScope(key);
+	      }
+	      const uniqueId = String.random();
+	      const values = {values: propertyObjs, uniqueId, childIdMap, hideAll, Properties};
+	      const contianer = document.querySelector(containerSelector);
+	      contianer.innerHTML =
+	          PropertyDisplay.template.render(values);
+	    };
+	
+	    function updateProperties(name, value) {
+	    }
+	    bind('property-cnt', updateProperties);
+	    new RadioDisplay('property-container', 'radio-id');
+	    this.update();
+	  }
+	}
+	
+	// bind('property-branch-selector', '');
+	
+	du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
+	  const childTargets = target.parentElement.children[1].children;
+	  const childElem = childTargets[target.value];
+	  // TODO: set config property: childElem.innerText;
+	  du.hide(childTargets);
+	  du.show(childElem);
+	});
+	
+	function setPropertyElemValue(elem, idAttr, value) {
+	  const id = elem.getAttribute(idAttr);
+	  const group = elem.getAttribute('name');
+	  const property = Property.get(id);
+	  property.value(value, true);
+	}
+	
+	function updateMeasurements () {
+	  measureElems = du.find.all('[measurement-id]:not([measurement-id=""])');
+	  measureElems.forEach((elem) => {
+	    const id = elem.getAttribute('measurement-id');
+	    const measurement = Measurement.get(id);
+	    elem.value = measurement.display();
+	  });
+	}
+	
+	function updateRadio(elem) {
+	  const name = elem.getAttribute('name');
+	  Properties.config()
+	  const elems = du.find.all(`input[type="radio"][name='${name}']`);
+	  elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
+	  setPropertyElemValue(elem, 'prop-radio-update', true);
+	  if (name === 'UNIT') {
+	    Measurement.unit(elem.value);
+	    updateMeasurements();
+	  }
+	}
+	
+	function updateValueDisplay(elem) {
+	  const id = elem.getAttribute('measurement-id');
+	  const measurement = Measurement.get(id);
+	  elem.value = measurement.display();
+	}
+	
+	function updateValue(elem) {
+	  setPropertyElemValue(elem, 'prop-value-update', elem.value);
+	  const saveBtn = du.find.closest('.save-change', elem);
+	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+	  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
+	  elem.setAttribute('measurement-id', measurementId);
+	  updateSaveAll();
+	}
+	
+	function updateBoolean(elem) {
+	  setPropertyElemValue(elem, 'prop-boolean-update', elem.checked);
+	  const saveBtn = du.find.closest('.save-change', elem);
+	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+	  updateSaveAll();
+	}
+	
+	function saveChange(elem) {
+	  const id = elem.getAttribute('properties-id');
+	  Properties.changes.save(id);
+	  elem.hidden = true;
+	  updateSaveAll();
+	  save();
+	}
+	
+	
+	du.on.match('keyup', '[prop-value-update]', updateValue);
+	du.on.match('change', '[prop-boolean-update]', updateBoolean);
+	du.on.match('focusout', '[measurement-id]', updateValueDisplay);
+	du.on.match('change', '[prop-radio-update]', updateRadio);
+	du.on.match('click', '#property-manager-save-all', saveAll);
+	du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
+	
+	PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
+	PropertyDisplay.branchReg = /^OR_(.{1,})/;
+	PropertyDisplay.camelReg = /([a-z])([A-Z])/g;
+	PropertyDisplay.counter = 0;
+	PropertyDisplay.template = new $t('properties/properties');
+	PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
+	PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
+	PropertyDisplay.radioTemplate = new $t('properties/radio');
+	PropertyDisplay.uniqueMap = {};
+	PropertyDisplay.configMap = {};
+	
+	PropertyDisplay.configInputTree = () => {
+	  const dit = new DecisionInputTree(console.log);
+	  dit.leaf('Config', [Inputs('name')]);
+	  return dit;
+	}
+	
+	module.exports = PropertyDisplay
 	
 });
 
@@ -14137,10 +13917,9 @@ function (require, exports, module) {
 	const Cost = require('../cost/cost.js');
 	const Select = require('../../../../public/js/utils/input/styles/select.js');
 	const Material = require('../cost/types/material.js');
-	const ConditionalCost = require('../cost/types/category/conditional.js');
 	const Company = require('../objects/company.js');
 	const Input = require('../../../../public/js/utils/input/input.js');
-	const Labor = require('../cost/types/material/labor.js');
+	const Labor = require('../cost/types/labor.js');
 	
 	
 	const defined = {};
@@ -14226,12 +14005,6 @@ function (require, exports, module) {
 	  name: 'method',
 	  class: 'center',
 	  list: Material.methodList,
-	}));
-	
-	add('propertyConditions', new Select({
-	  name: 'propertyCondition',
-	  class: 'center',
-	  list: Object.values(ConditionalCost.conditions)
 	}));
 	
 	add('propertyIds', new Select({
@@ -14370,27 +14143,720 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/reference.js',
+RequireJS.addFunction('./app-src/input/validation.js',
+function (require, exports, module) {
+	
+
+	
+	const InvalidComputation = require('./error.js');
+	
+	class ObjectValidator {
+	  constructor() {
+	    const validators =  {};
+	    this.add = (name, validator) => {
+	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
+	        throw new Error('Invalid Validator');
+	      }
+	      validator[name] = validator;
+	    }
+	    this.validate = (obj) => {
+	      if (typeof obj !== 'object') throw new InvalidComputation()
+	      const keys = Object.keys(validators);
+	    }
+	  }
+	}
+	
+	
+	class Validator {
+	  constructor(validator, props, info) {
+	    let type, validate;
+	    const complement = props.explanation;
+	
+	    let defaultExpl;
+	    if (validator instanceof Regex) {
+	      type = 'Regex';
+	      if (props.complement) {
+	        defaultExpl = 'Value must fit regex expression';
+	        validate = (value) => validator.match('value');
+	      } else {
+	        defaultExpl = 'Value must not fit regex expression';
+	        validate = (value) => !validator.match('value');
+	      }
+	    } else if (Array.isArray(validator)) {
+	      if (props.complement) {
+	        defaultExpl = 'Value must exist within array';
+	        validate = (value) => validator.indexOf(value) !== -1;
+	      } else {
+	        defaultExpl = 'Value must not exist within array';
+	        validate = (value) => validator.indexOf(value) === -1;
+	      }
+	    }
+	
+	    props.explanation = props.explanation || defaultExpl;
+	
+	    val = val === undefined && elem ? elem.value : val;
+	    if (val === undefined) return false;
+	    if (valid !== undefined && val === value) return valid;
+	    let valValid = true;
+	    if (props.validation instanceof RegExp) {
+	      valValid = val.match(props.validation) !== null;
+	    }
+	    else if ((typeof props.validation) === 'function') {
+	      valValid = props.validation.apply(null, arguments);
+	    }
+	    else if (Array.isArray(props.validation)) {
+	      valValid = props.validation.indexOf(val) !== -1;
+	    }
+	
+	    return valValid;
+	  }
+	}
+	exports.ObjectValidator = ObjectValidator
+	exports.Validator = Validator
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/room.js',
+function (require, exports, module) {
+	
+
+	
+	const Cabinet = require('./assembly/assemblies/cabinet.js');
+	
+	
+	class Room {
+	  constructor(name, id) {
+	
+	    const initialVals = {
+	      name: name || `Room ${Room.count++}`,
+	      id: id || String.random(32),
+	    }
+	    Object.getSet(this, initialVals);
+	
+	    this.cabinets = [];
+	    this.toJson = () => {
+	      const json = { cabinets: []};
+	      this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
+	      return json;
+	    };
+	  }
+	};
+	Room.count = 0;
+	Room.fromJson = (roomJson) => {
+	  const room = new Room(roomJson.name, roomJson.id);
+	  roomJson.cabinets.forEach((cabJson) => room.cabinets.push(Cabinet.fromJson(cabJson)));
+	  return room;
+	}
+	module.exports = Room
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/order.js',
+function (require, exports, module) {
+	
+
+	
+	const Room = require('./room.js');
+	
+	class Order {
+	  constructor(name, id) {
+	    const initialVals = {
+	      name: name || ++Order.count,
+	      id: id || String.random(32),
+	    }
+	    this.rooms = {};
+	    Object.getSet(this, initialVals);
+	  }
+	}
+	
+	Order.count = 0;
+	module.exports = Order
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/company.js',
+function (require, exports, module) {
+	
+
+	
+	const Door = require('./assembly/assemblies/door/door.js');
+	
+	class Company {
+	  constructor(properties) {
+	    if (!properties.name) throw new Error('Company name must be defined')
+	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
+	    this.name = () => properties.name;
+	    this.email = () => properties.email;
+	    this.address = () => properties.address;
+	    Company.list[this.name()] = this;
+	  }
+	}
+	
+	Company.list = {};
+	new Company({name: 'Central Door'});
+	new Company({name: 'Central Wood'});
+	new Company({name: 'ADC'});
+	new Company({name: 'Accessa'});
+	new Company({name: 'Top Knobs'});
+	new Company({name: 'Richelieu'});
+	module.exports = Company
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/managers/template.js',
+function (require, exports, module) {
+	
+
+	
+	const AbstractManager = require('../abstract-manager.js');
+	const Cost = require('../../cost/cost.js');
+	const Input = require('../../../../../public/js/utils/input/input.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select.js');
+	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Material = require('../../cost/types/material.js');
+	const Inputs = require('../../input/inputs.js');
+	
+	
+	class TemplateManager extends AbstractManager {
+	  constructor(id, name) {
+	    super(id, name);
+	    const getObject = (values) => mangager.getObject(values);
+	    this.loadPoint = () => EPNTS.templates.get();
+	    this.savePoint = () => EPNTS.templates.save();
+	    this.fromJson = Cost.fromJson;
+	  }
+	}
+	
+	new TemplateManager('template-manager', 'template');
+	
+	TemplateManager.inputTree = (callback) => {
+	  const idTypeMethod = [Inputs('id'), Inputs('costType'), Inputs('method')];
+	
+	  const length = Inputs('length');
+	  const width = Inputs('width');
+	  const depth = Inputs('depth');
+	  const cost = Inputs('cost');
+	  const lengthCost = [length, cost];
+	  const lengthWidthCost = [length, width, cost];
+	  const lengthWidthDepthCost = [length, width, depth, cost];
+	  const color = [Inputs('color')];
+	
+	  // const decisionInput = new DecisionInputTree('cost',
+	  //   idTypeMethod, callback);
+	  //
+	  // decisionInput.addStates({
+	  //   lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
+	  // });
+	  //
+	  // decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
+	  //       .jump('lengthCost');
+	  // decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
+	  //       .jump('lengthWidthCost');
+	  // decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
+	  //       .jump('lengthWidthDepthCost');
+	  // decisionInput.then(`method:${Material.methods.UNIT}`)
+	  //       .jump('cost');
+	  // decisionInput.then('type:Material').jump('color');
+	  //
+	  // return decisionInput;
+	}
+	module.exports = TemplateManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/material.js',
 function (require, exports, module) {
 	
 
 	
 	const Cost = require('../cost.js');
+	const Assembly = require('../../objects/assembly/assembly.js');
+	
+	class Material extends Cost {
+	  constructor (props) {
+	    super(props);
+	    props = this.props();
+	    props.cost = props.cost / (props.count || 1);
+	    const instance = this;
+	    Object.getSet(props, 'company', 'formula', 'partNumber',
+	                'method', 'length', 'width', 'depth', 'cost');
 	
 	
-	class ReferenceCost extends Cost {
-	  constructor(referenceCost) {
-	    super(referenceCost.props());
-	    const props = this.props();
-	    this.children = [];
-	    referenceCost.children.forEach((child) =>
-	        this.children.push(new ReferenceCost(child)));
+	    this.unitCost = (attr) => {
+	      const unitCost = Material.configure(instance.method(), instance.cost(),
+	        instance.length(), instance.width(), instance.depth());
+	      const copy = JSON.parse(JSON.stringify(unitCost));
+	      if (attr) return copy[attr];
+	      return copy;
+	    }
 	
-	    this.id = referenceCost.id;
-	    this.calc = referenceCost.calc;
+	    this.calc = (assemblyOrCount) => {
+	      const unitCost = this.unitCost();
+	      const formula = this.formula() || unitCost.formula;
+	      if (assemblyOrCount instanceof Assembly)
+	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
+	      else if (Number.isFinite(assemblyOrCount))
+	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
+	      else
+	        throw new Error('calc argument must be a number or Assembly');
+	    }
 	  }
 	}
-	module.exports = ReferenceCost
+	
+	Material.methods = {
+	  LINEAR_FEET: 'Linear Feet',
+	  SQUARE_FEET: 'Square Feet',
+	  CUBIC_FEET: 'Cubic Feet',
+	  UNIT: 'Unit'
+	};
+	
+	Material.methodList = Object.values(Material.methods);
+	
+	
+	Material.configure = (method, cost, length, width, depth) => {
+	  const unitCost = {};
+	  switch (method) {
+	    case Material.methods.LINEAR_FEET:
+	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
+	      unitCost.name = 'Linear Inch';
+	      unitCost.value = perLinearInch;
+	      unitCost.formula = 'l';
+	      return unitCost;
+	    case Material.methods.SQUARE_FEET:
+	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
+	      unitCost.name = 'Square Inch';
+	      unitCost.value = perSquareInch;
+	      unitCost.formula = 'l*w';
+	      return unitCost;
+	    case Material.methods.CUBIC_FEET:
+	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
+	      unitCost.name = 'Cubic Inch';
+	      unitCost.value = perCubicInch;
+	      unitCost.formula = 'l*w*d';
+	      return unitCost;
+	    case Material.methods.UNIT:
+	      unitCost.name = 'Unit';
+	      unitCost.value = cost;
+	      return unitCost;
+	    default:
+	      throw new Error('wtf');
+	      unitCost.name = 'Unknown';
+	      unitCost = -0.01;
+	      formula = -0.01;
+	      return unitCost;
+	  }
+	};
+	
+	Material.explanation = `Cost to be calculated by number of units or demensions`;
+	
+	module.exports = Material
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/labor.js',
+function (require, exports, module) {
+	
+
+	
+	const Material = require('./material.js');
+	const Cost = require('../cost.js');
+	
+	
+	// unitCost.value = (hourlyRate*hours)/length
+	// calc(assembly) = unitCost.value * formula
+	
+	class Labor extends Material {
+	  constructor (props) {
+	    super(props);
+	    const type = props.laborType;
+	    props.hourlyRate = Labor.hourlyRates[type]
+	    const parentCalc = this.calc;
+	    this.cost = () => this.hourlyRate() * props.hours;
+	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
+	    Labor.hourlyRate(type, props.hourlyRate);
+	
+	    const parentToJson = this.toJson;
+	  }
+	}
+	
+	
+	Labor.defaultRate = 40;
+	Labor.hourlyRate = (type, rate) => {
+	  rate = Cost.evaluator.eval(new String(rate));
+	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
+	  return Labor.hourlyRates[type] || Labor.defaultRate;
+	}
+	Labor.hourlyRates = {};
+	Labor.types = [];
+	Labor.explanation = `Cost to be calculated hourly`;
+	
+	module.exports = Labor
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/pull.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	
+	function pull(length, height) {
+	  var rspx = length - .75;
+	  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+	  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+	  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+	  return mainCyl.union(lCyl).union(rCyl);
+	}
+	module.exports = pull
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	
+	function drawerBox(length, width, depth) {
+	  const bottomHeight = 7/8;
+	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+	  box.setColor(1, 0, 0);
+	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+	  inside.setColor(0, 0, 1);
+	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+	  bInside.setColor(0, 0, 1);
+	
+	  return box.subtract(bInside).subtract(inside);
+	}
+	module.exports = drawerBox
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
+function (require, exports, module) {
+	
+
+	
+	const Measurement = require('../../../../../public/js/utils/measurment.js');
+	
+	class UFObj {
+	  constructor(order) {
+	    class Row {
+	      constructor(assembly, index) {
+	        this.cabnetId = index;//assembly.getAssembly('c').name;
+	        this.type = assembly.constructor.name;
+	        this.partName = assembly.partName.replace(/.*\.(.*)/, '$1');
+	        const dems = assembly.position().demension();
+	        const accuracy = undefined; //'1/32';
+	        dems.y = new Measurement(dems.y).fraction(accuracy);
+	        dems.x = new Measurement(dems.x).fraction(accuracy);
+	        dems.z = new Measurement(dems.z).fraction(accuracy);
+	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
+	        this.partCode = `${index}-${assembly.partCode}`;
+	        this.cost = '$0';
+	        this.notes = assembly.notes || '';
+	      }
+	    }
+	    const cabinets = [];
+	    const array = [];
+	    order.rooms.forEach((room) => room.cabinets.forEach((cabinet, index) => {
+	      array.push(new Row(cabinet, index));
+	      cabinet.getParts().forEach((part) => array.push(new Row(part, index)));
+	    }));
+	    return array;
+	  }
+	}
+	module.exports = UFObj
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/managers/cost.js',
+function (require, exports, module) {
+	
+
+	
+	const AbstractManager = require('../abstract-manager.js');
+	const Assembly = require('../../objects/assembly/assembly.js');
+	const Cost = require('../../cost/cost.js');
+	const CostDecision = require('../../cost/cost-decision.js');
+	const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select.js');
+	const du = require('../../../../../public/js/utils/dom-utils.js');
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Door = require('../../objects/assembly/assemblies/door/door.js');
+	const DrawerFront = require('../../objects/assembly/assemblies/drawer/drawer-front.js');
+	const DrawerBox = require('../../objects/assembly/assemblies/drawer/drawer-box.js');
+	const Labor = require('../../cost/types/labor.js');
+	const Input = require('../../../../../public/js/utils/input/input.js');
+	const Frame = require('../../objects/assembly/assemblies/frame.js');
+	const Panel = require('../../objects/assembly/assemblies/panel.js');
+	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
+	const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation.js');
+	const Material = require('../../cost/types/material.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Inputs = require('../../input/inputs.js');
+	const $t = require('../../../../../public/js/utils/$t.js');
+	const EPNTS = require('../../../generated/EPNTS.js');
+	const Displays = require('../../services/display-svc.js');
+	const propertyDisplay = Displays.get('propertyDisplay');
+	const Properties = require('../../config/properties.js');
+	
+	
+	const notCostGroups = ['Overlay', 'Inset', 'Reveal'];
+	
+	const costTypes = ['Custom'];
+	class CostManager extends AbstractManager {
+	  constructor(id, name) {
+	    super(id, name);
+	    const list = [];
+	
+	    this.toJson = () => {
+	      const json = {};
+	      list.forEach((listObj) => {
+	        json[listObj.partId] = [];
+	          listObj.expandList.getList().forEach((cost) =>
+	              json[listObj.partId].push(cost.toJson()));
+	      });
+	      return json;
+	    };
+	
+	
+	    this.loadPoint = () => EPNTS.costs.get();
+	    this.savePoint = () => EPNTS.costs.save();
+	    this.costTypeHtml = CostManager.costTypeHtml;
+	    this.fromJson = (json) => {
+	      return {};
+	    }
+	
+	    this.Cost = Cost;
+	    this.globalProps = () => Properties(name)
+	
+	    const getHeader = (costGroup) => CostManager.costHeadTemplate(costGroup.instance);
+	    const getBody = (costGroup) => CostManager.costBodyTemplate(costGroup.instance);
+	    const getObject = (values) => {
+	      const obj = {partId: values.partId, costs: []};
+	      return obj;
+	    }
+	
+	    this.load();
+	  }
+	}
+	
+	CostManager.headTemplate = new $t('managers/cost/head');
+	CostManager.bodyTemplate = new $t('managers/cost/body');
+	CostManager.costHeadTemplate = new $t('managers/cost/cost-head');
+	CostManager.costBodyTemplate = new $t('managers/cost/cost-body');
+	CostManager.cntClass = 'cost-manager-reference-cnt';
+	CostManager.selectInput = (cost) => Inputs('childCost', { value: cost.selectedId, list: cost.childIds() });
+	
+	CostManager.setInstanceProps = (scope) => {
+	  const parent = du.id(scope.parentId);
+	  if (scope.instanceProps !== undefined) return scope;
+	  if (parent === null) return undefined;
+	
+	
+	
+	  const expandLists = du.find.upAll('.expand-body', parent);
+	  let instanceProps = {};
+	  if (expandLists.length === 2) {
+	    const partId = expandLists[1].parentElement.children[1].children[0]
+	                      .getAttribute('part-id');
+	    scope.instanceProps = Properties(partId).instance;
+	  }
+	}
+	
+	CostManager.childScopes = {};
+	CostManager.childScope = (cost) => {
+	  if (CostManager.childScopes[cost.uniqueId()] === undefined) {
+	    const parentId = `cost-child-group-${String.random()}`;
+	    const expListProps = {
+	      list: cost.children,
+	      inputValidation: () => true,
+	      parentSelector: `#${parentId}`,
+	      inputTree:   CostManager.costInputTree(costTypes, undefined),
+	      getHeader: CostManager.costHeader,
+	      getBody: CostManager.costBody,
+	      getObject: CostManager.getCostObject(cost.id()),
+	      listElemLable: `Cost to ${cost.id()}`
+	    };
+	    const expandList = new ExpandableList(expListProps);
+	
+	    CostManager.childScopes[cost.uniqueId()] = {expandList, cost, parentId,
+	          CostManager};
+	  }
+	  const scope = CostManager.childScopes[cost.uniqueId()];
+	  CostManager.setInstanceProps(scope);
+	  return scope;
+	}
+	
+	CostManager.getCostObject = (id) => (values, target) => {
+	  const obj = CostManager.getObject(values, target);
+	  if (values.referenceable) costTypes.push(values.id);
+	  return obj;
+	};
+	
+	CostManager.typeTemplates = {};
+	CostManager.costTypeHtml = (cost, scope) => {
+	  const constName = cost.constructor.name;
+	  if (CostManager.typeTemplates[constName])
+	    return CostManager.typeTemplates[constName].render(scope);
+	  const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
+	  if ($t.isTemplate(fileId)) {
+	    template = new $t(fileId);
+	    CostManager.typeTemplates[constName] = template;
+	    return template.render(scope);
+	  }
+	  return scope.costDecision.tree().requiredNodes();
+	}
+	
+	
+	
+	CostManager.isInstance = (target) => du.find.upAll('.expandable-list', el).length === 2;
+	CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(CostManager.childScope(cost));
+	CostManager.costBody = (cost) => cost instanceof Cost && CostManager.costBodyTemplate.render(CostManager.childScope(cost));
+	CostManager.getObject = (values, target) => {
+	  const parent = du.find.up('[cost-id]', target);
+	  if (values.costType === '/dev/nul') {
+	    values.parent = Cost.get(parent.getAttribute('cost-id'));
+	    if (values.parent.level() === 0) {
+	      values.requiredBranches = Properties(values.objectId, (prop) => prop.value() === null);
+	      values.requiredBranches = values.requiredBranches.map((prop) => prop.name());
+	    }
+	    return Cost.new(values);
+	  } else {
+	    const referenceCost = Cost.get(values.costType);
+	    if (referenceCost === undefined) throw new Error('Invalid Cost reference name');
+	    return Cost.new({type: referenceCost.constructor.name, referenceCost, formula: values.formula});
+	  }
+	}
+	
+	class Conditional {
+	  constructor(targrt, value) {
+	    this.condition = () => decisionInput.value(target) === value;
+	  }
+	}
+	
+	CostManager.costInputTree = (costTypes, objId, onUpdate) => {
+	
+	  const objectId = new Input({
+	    name: 'objectId',
+	    hide: true,
+	    value: objId
+	  });
+	
+	  const costTypeSelect = new Select({
+	    name: 'costType',
+	    list: ['Material', 'Labor']
+	  })
+	
+	  // const decisionInput = new DecisionInputTree();
+	  // decisionInput.branch('cost', [costTypeSelect]);
+	
+	  // const id = Inputs('costId');
+	  // const laborType = Inputs('laborType');
+	  // const hourlyRate = Inputs('hourlyRate');
+	  //
+	  // const idType = [objectId, id, Inputs('costType')];
+	  // const materialInput = [Inputs('method'), Inputs('company'), Inputs('partNumber')];
+	  // const laborInput = [Inputs('method'), laborType, hourlyRate];
+	  // laborType.on('keyup',
+	  //   (val, values) => hourlyRate.setValue(Labor.hourlyRate(val)));
+	  //
+	  // const length = Inputs('length');
+	  // const width = Inputs('width');
+	  // const depth = Inputs('depth');
+	  // const cost = Inputs('cost');
+	  // const hours = Inputs('hours');
+	  // const count = Inputs('count');
+	  // const modifyDemension = Inputs('modifyDemension');
+	  // const color = [Inputs('color')];
+	  //
+	  // // Todo: ????
+	  // const matFormula = CostManager.formulaInput(objId, 'Material');
+	  // const costCount = [count, cost, matFormula];
+	  // const lengthCost = [length, cost, matFormula];
+	  // const lengthWidthCost = [length, width, cost, matFormula];
+	  // const lengthWidthDepthCost = [length, width, depth, cost, matFormula];
+	  //
+	  // const laborFormula = CostManager.formulaInput(objId, 'Labor');
+	  // const hourlyCount = [count, hours, laborFormula];
+	  // const lengthHourly = [length, hours, laborFormula];
+	  // const lengthWidthHourly = [length, width, hours, laborFormula];
+	  // const lengthWidthDepthHourly = [length, width, depth, hours, laborFormula];
+	
+	  const dit = new DecisionInputTree(console.log);
+	  dit.leaf('Config', [Inputs('name')]);
+	  return dit;
+	}
+	
+	
+	// Todo do a valid test for input... probably need to make a sample cabinet
+	const sectionScope = {l: 0, w:0, d:0, fpt: 0, fpb: 0, fpr: 0, fpl: 0, ppt: 0, ppb: 0, ppl: 0, ppr: 0};
+	const defaultScope = {l: 0, w:0, d:0};
+	const sectionEval = new StringMathEvaluator(sectionScope);
+	const defaultEval = new StringMathEvaluator(defaultScope);
+	const sectionObjs = ['Door', 'DrawerFront', 'DrawerBox', 'Opening'];
+	
+	const validate = (objId, type) => (formula) => {
+	  if (type === 'Labor' || sectionObjs.indexOf(objId) === -1)
+	    return !Number.isNaN(defaultEval.eval(formula));
+	  return !Number.isNaN(sectionEval.eval(formula));
+	}
+	
+	const sectionInput = () => new Input({
+	  name: 'formula',
+	  placeholder: 'Formula',
+	  validation: validate('Door'),
+	  class: 'center',
+	  errorMsg: `Invalid Formula: allowed variables...
+	  <br>l - length
+	  <br>w - width
+	  <br>d - depth/thickness
+	  <br>fp[tblr] - Frame postion [top, bottom, left, right]
+	  <br>pp[tblr] - Panel Postion [top, bottom, left, right]`
+	});
+	const defaultInput = () => new Input({
+	  name: 'formula',
+	  placeholder: 'Formula',
+	  validation: validate(),
+	  class: 'center',
+	  errorMsg: `Invalid Formula: allowed variables...
+	  <br>l - length
+	  <br>w - width
+	  <br>d - depth/thickness`
+	});
+	
+	CostManager.formulaInput = (objId, type) => {
+	  if (type === 'Labor' ||
+	        sectionObjs.indexOf(objId) === -1)
+	    return defaultInput();
+	  return sectionInput();
+	};
+	
+	module.exports = CostManager
 	
 });
 
@@ -14657,730 +15123,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/category.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	
-	
-	/**
-	  A branching cost that will incorporate
-	**/
-	class Category extends Cost {
-	  constructor (props) {
-	    super(props);
-	
-	    this.calc = (assemblyOrCount) => {
-	      const cost = 0;
-	      this.children.forEach((child) => child.calc(assemblyOrCount));
-	      return cost || -0.01;
-	    };
-	
-	    this.unitCost = () => undefined;
-	  }
-	}
-	
-	Category.explanation = `A branching cost that will incorporate all child costs
-	                        in its total`
-	module.exports = Category
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/models/pull.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function pull(length, height) {
-	  var rspx = length - .75;
-	  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
-	  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
-	  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
-	  return mainCyl.union(lCyl).union(rCyl);
-	}
-	module.exports = pull
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function drawerBox(length, width, depth) {
-	  const bottomHeight = 7/8;
-	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-	  box.setColor(1, 0, 0);
-	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-	  inside.setColor(0, 0, 1);
-	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-	  bInside.setColor(0, 0, 1);
-	
-	  return box.subtract(bInside).subtract(inside);
-	}
-	module.exports = drawerBox
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/material.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
-	
-	class Material extends Cost {
-	  constructor (props) {
-	    super(props);
-	    props = this.props();
-	    props.cost = props.cost / (props.count || 1);
-	    const instance = this;
-	    Object.getSet(props, 'company', 'formula', 'partNumber',
-	                'method', 'length', 'width', 'depth', 'cost');
-	
-	
-	    this.unitCost = (attr) => {
-	      const unitCost = Material.configure(instance.method(), instance.cost(),
-	        instance.length(), instance.width(), instance.depth());
-	      const copy = JSON.parse(JSON.stringify(unitCost));
-	      if (attr) return copy[attr];
-	      return copy;
-	    }
-	
-	    this.calc = (assemblyOrCount) => {
-	      const unitCost = this.unitCost();
-	      const formula = this.formula() || unitCost.formula;
-	      if (assemblyOrCount instanceof Assembly)
-	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
-	      else if (Number.isFinite(assemblyOrCount))
-	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
-	      else
-	        throw new Error('calc argument must be a number or Assembly');
-	    }
-	  }
-	}
-	
-	Material.methods = {
-	  LINEAR_FEET: 'Linear Feet',
-	  SQUARE_FEET: 'Square Feet',
-	  CUBIC_FEET: 'Cubic Feet',
-	  UNIT: 'Unit'
-	};
-	
-	Material.methodList = Object.values(Material.methods);
-	
-	
-	Material.configure = (method, cost, length, width, depth) => {
-	  const unitCost = {};
-	  switch (method) {
-	    case Material.methods.LINEAR_FEET:
-	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
-	      unitCost.name = 'Linear Inch';
-	      unitCost.value = perLinearInch;
-	      unitCost.formula = 'l';
-	      return unitCost;
-	    case Material.methods.SQUARE_FEET:
-	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
-	      unitCost.name = 'Square Inch';
-	      unitCost.value = perSquareInch;
-	      unitCost.formula = 'l*w';
-	      return unitCost;
-	    case Material.methods.CUBIC_FEET:
-	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
-	      unitCost.name = 'Cubic Inch';
-	      unitCost.value = perCubicInch;
-	      unitCost.formula = 'l*w*d';
-	      return unitCost;
-	    case Material.methods.UNIT:
-	      unitCost.name = 'Unit';
-	      unitCost.value = cost;
-	      return unitCost;
-	    default:
-	      throw new Error('wtf');
-	      unitCost.name = 'Unknown';
-	      unitCost = -0.01;
-	      formula = -0.01;
-	      return unitCost;
-	  }
-	};
-	
-	Material.explanation = `Cost to be calculated by number of units or demensions`;
-	
-	module.exports = Material
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/managers/template.js',
-function (require, exports, module) {
-	
-
-	
-	const AbstractManager = require('../abstract-manager.js');
-	const Cost = require('../../cost/cost.js');
-	const Input = require('../../../../../public/js/utils/input/input.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select.js');
-	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Material = require('../../cost/types/material.js');
-	const Inputs = require('../../input/inputs.js');
-	
-	
-	class TemplateManager extends AbstractManager {
-	  constructor(id, name) {
-	    super(id, name);
-	    const getObject = (values) => mangager.getObject(values);
-	    this.loadPoint = () => EPNTS.templates.get();
-	    this.savePoint = () => EPNTS.templates.save();
-	    this.fromJson = Cost.fromJson;
-	  }
-	}
-	
-	new TemplateManager('template-manager', 'template');
-	
-	TemplateManager.inputTree = (callback) => {
-	  const idTypeMethod = [Inputs('id'), Inputs('costType'), Inputs('method')];
-	
-	  const length = Inputs('length');
-	  const width = Inputs('width');
-	  const depth = Inputs('depth');
-	  const cost = Inputs('cost');
-	  const lengthCost = [length, cost];
-	  const lengthWidthCost = [length, width, cost];
-	  const lengthWidthDepthCost = [length, width, depth, cost];
-	  const color = [Inputs('color')];
-	
-	  const decisionInput = new DecisionInputTree('cost',
-	    idTypeMethod, callback);
-	
-	  decisionInput.addStates({
-	    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color
-	  });
-	
-	  decisionInput.then(`method:${Material.methods.LINEAR_FEET}`)
-	        .jump('lengthCost');
-	  decisionInput.then(`method:${Material.methods.SQUARE_FEET}`)
-	        .jump('lengthWidthCost');
-	  decisionInput.then(`method:${Material.methods.CUBIC_FEET}`)
-	        .jump('lengthWidthDepthCost');
-	  decisionInput.then(`method:${Material.methods.UNIT}`)
-	        .jump('cost');
-	  decisionInput.then('type:Material').jump('color');
-	
-	  return decisionInput;
-	}
-	module.exports = TemplateManager
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/select.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	
-	class SelectCost extends Cost {
-	  constructor (props) {
-	    super(props);
-	    props = this.props();
-	    Object.getSet(this, {modifyDemension: props.modifyDemension,default: props.default});
-	
-	    const selected = 0;
-	    this.selected = (index) => {
-	      if (index !== undefined)
-	        selected = index;
-	      return this.children[selected];
-	    }
-	
-	    this.selectedId = () => {
-	      const child = this.selected();
-	      return child === undefined ? '' : child.id();
-	    }
-	
-	    this.calc = (assemblyOrCount) => this.children[selected] ?
-	        this.children[selected].calc(assemblyOrCount) : -0.01;
-	
-	    this.unitCost = () => this.children[selected] ?
-	        this.children[selected].unitCost() : -0.01;
-	
-	    const selectedId = this.selectedId();
-	    if (selectedId) {
-	      this.children.forEach((child, index) => {
-	        if (child.id() === selectedId) selected = index;
-	      });
-	    }
-	  }
-	}
-	
-	
-	module.exports = SelectCost
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
-function (require, exports, module) {
-	
-
-	
-	const Measurement = require('../../../../../public/js/utils/measurment.js');
-	
-	class UFObj {
-	  constructor(order) {
-	    class Row {
-	      constructor(assembly, index) {
-	        this.cabnetId = index;//assembly.getAssembly('c').name;
-	        this.type = assembly.constructor.name;
-	        this.partName = assembly.partName.replace(/.*\.(.*)/, '$1');
-	        const dems = assembly.position().demension();
-	        const accuracy = undefined; //'1/32';
-	        dems.y = new Measurement(dems.y).fraction(accuracy);
-	        dems.x = new Measurement(dems.x).fraction(accuracy);
-	        dems.z = new Measurement(dems.z).fraction(accuracy);
-	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
-	        this.partCode = `${index}-${assembly.partCode}`;
-	        this.cost = '$0';
-	        this.notes = assembly.notes || '';
-	      }
-	    }
-	    const cabinets = [];
-	    const array = [];
-	    order.rooms.forEach((room) => room.cabinets.forEach((cabinet, index) => {
-	      array.push(new Row(cabinet, index));
-	      cabinet.getParts().forEach((part) => array.push(new Row(part, index)));
-	    }));
-	    return array;
-	  }
-	}
-	module.exports = UFObj
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joint.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class Joint {
-	  constructor(joinStr) {
-	    const match = joinStr.match(Joint.regex);
-	    this.malePartCode = match[1];
-	    this.femalePartCode = match[2];
-	
-	    this.updatePosition = () => {};
-	
-	    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
-	    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
-	
-	    this.maleOffset = () => 0;
-	    this.femaleOffset = () => 0;
-	    this.setParentAssembly = (pa) => this.parentAssembly = pa;
-	
-	    this.getDemensions = () => {
-	      const malePos = getMale();
-	      const femalePos = getFemale();
-	      // I created a loop but it was harder to understand
-	      return undefined;
-	    }
-	
-	    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
-	    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
-	    Joint.list[this.malePartCode].push(this);
-	    Joint.list[this.femalePartCode].push(this);
-	  }
-	}
-	Joint.list = {};
-	Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
-	
-	Joint.classes = {};
-	Joint.register = (clazz) =>
-	  Joint.classes[clazz.prototype.constructor.name] = clazz;
-	Joint.new = function (id) {
-	  return new Joint.classes[id](...Array.from(arguments).slice(1));
-	}
-	module.exports = Joint
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/managers/cost.js',
-function (require, exports, module) {
-	
-
-	
-	const AbstractManager = require('../abstract-manager.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
-	const Cost = require('../../cost/cost.js');
-	const CostDecision = require('../../cost/cost-decision.js');
-	const SelectCost = require('../../cost/types/select.js');
-	const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select.js');
-	const du = require('../../../../../public/js/utils/dom-utils.js');
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Door = require('../../objects/assembly/assemblies/door/door.js');
-	const DrawerFront = require('../../objects/assembly/assemblies/drawer/drawer-front.js');
-	const DrawerBox = require('../../objects/assembly/assemblies/drawer/drawer-box.js');
-	const Labor = require('../../cost/types/material/labor.js');
-	const Input = require('../../../../../public/js/utils/input/input.js');
-	const Frame = require('../../objects/assembly/assemblies/frame.js');
-	const Panel = require('../../objects/assembly/assemblies/panel.js');
-	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
-	const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation.js');
-	const Material = require('../../cost/types/material.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Inputs = require('../../input/inputs.js');
-	const $t = require('../../../../../public/js/utils/$t.js');
-	const EPNTS = require('../../../generated/EPNTS.js');
-	const Displays = require('../../services/display-svc.js');
-	const propertyDisplay = Displays.get('propertyDisplay');
-	const Properties = require('../../config/properties.js');
-	
-	
-	const notCostGroups = ['Overlay', 'Inset', 'Reveal'];
-	
-	const costTypes = ['Custom'];
-	class CostManager extends AbstractManager {
-	  constructor(id, name) {
-	    super(id, name);
-	    const list = [];
-	
-	    this.toJson = () => {
-	      const json = {};
-	      list.forEach((listObj) => {
-	        json[listObj.partId] = [];
-	          listObj.expandList.getList().forEach((cost) =>
-	              json[listObj.partId].push(cost.toJson()));
-	      });
-	      return json;
-	    };
-	
-	    this.loadPoint = () => EPNTS.costs.get();
-	    this.savePoint = () => EPNTS.costs.save();
-	    this.costTypeHtml = CostManager.costTypeHtml;
-	    this.fromJson = (json) => {
-	      CostManager.partList = CostManager.partList ||
-	          Properties.list().filter((name) => notCostGroups.indexOf(name) === -1);
-	      CostManager.partList.sort();
-	      CostManager.partList.forEach((id) => {
-	        const parentId = `cost-group-${String.random()}`;
-	        let costDecision = new CostDecision(id, json[id]);
-	        // const expListProps = {
-	        //   list: json[id] ? Cost.fromJson(json[id]) : [],
-	        //   inputValidation: () => true,
-	        //   parentId,
-	        //   parentSelector: `#${parentId}`,
-	        //   inputTree:   CostManager.costInputTree(costTypes, id),
-	        //   getHeader: CostManager.costHeader,
-	        //   getBody: CostManager.costBody,
-	        //   getObject: CostManager.getCostObject(id),
-	        //   listElemLable: `Cost to ${id}`
-	        // };
-	        // const cost = new SelectCost({id, children: expListProps.list});
-	        // const expandList = new ExpandableList(expListProps);
-	        list.push({partId: id, costDecision,
-	          CostManager: CostManager, parentId});
-	      });
-	      propertyDisplay.update();
-	      return list;
-	    }
-	
-	    this.Cost = Cost;
-	    this.globalProps = () => Properties(name)
-	
-	    const getHeader = (costGroup) => CostManager.costHeadTemplate(costGroup.instance);
-	    const getBody = (costGroup) => CostManager.costBodyTemplate(costGroup.instance);
-	    const getObject = (values) => {
-	      const obj = {partId: values.partId, costs: []};
-	      return obj;
-	    }
-	
-	    this.load();
-	  }
-	}
-	
-	CostManager.headTemplate = new $t('managers/cost/head');
-	CostManager.bodyTemplate = new $t('managers/cost/body');
-	CostManager.costHeadTemplate = new $t('managers/cost/cost-head');
-	CostManager.costBodyTemplate = new $t('managers/cost/cost-body');
-	CostManager.cntClass = 'cost-manager-reference-cnt';
-	CostManager.selectInput = (cost) => Inputs('childCost', { value: cost.selectedId, list: cost.childIds() });
-	
-	CostManager.setInstanceProps = (scope) => {
-	  const parent = du.id(scope.parentId);
-	  if (scope.instanceProps !== undefined) return scope;
-	  if (parent === null) return undefined;
-	
-	
-	
-	  const expandLists = du.find.upAll('.expand-body', parent);
-	  let instanceProps = {};
-	  if (expandLists.length === 2) {
-	    const partId = expandLists[1].parentElement.children[1].children[0]
-	                      .getAttribute('part-id');
-	    scope.instanceProps = Properties(partId).instance;
-	  }
-	}
-	
-	CostManager.childScopes = {};
-	CostManager.childScope = (cost) => {
-	  if (CostManager.childScopes[cost.uniqueId()] === undefined) {
-	    const parentId = `cost-child-group-${String.random()}`;
-	    const expListProps = {
-	      list: cost.children,
-	      inputValidation: () => true,
-	      parentSelector: `#${parentId}`,
-	      inputTree:   CostManager.costInputTree(costTypes, undefined),
-	      getHeader: CostManager.costHeader,
-	      getBody: CostManager.costBody,
-	      getObject: CostManager.getCostObject(cost.id()),
-	      listElemLable: `Cost to ${cost.id()}`
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	
-	    CostManager.childScopes[cost.uniqueId()] = {expandList, cost, parentId,
-	          CostManager};
-	  }
-	  const scope = CostManager.childScopes[cost.uniqueId()];
-	  CostManager.setInstanceProps(scope);
-	  return scope;
-	}
-	
-	CostManager.getCostObject = (id) => (values, target) => {
-	  const obj = CostManager.getObject(values, target);
-	  if (values.referenceable) costTypes.push(values.id);
-	  return obj;
-	};
-	
-	CostManager.typeTemplates = {};
-	CostManager.costTypeHtml = (cost, scope) => {
-	  // const constName = cost.constructor.name;
-	  // if (CostManager.typeTemplates[constName])
-	  //   return CostManager.typeTemplates[constName].render(scope);
-	  // const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
-	  // if ($t.isTemplate(fileId)) {
-	  //   template = new $t(fileId);
-	  //   CostManager.typeTemplates[constName] = template;
-	  //   return template.render(scope);
-	  // }
-	  return scope.costDecision.tree().requiredNodes();
-	}
-	
-	
-	
-	CostManager.isInstance = (target) => du.find.upAll('.expandable-list', el).length === 2;
-	CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(CostManager.childScope(cost));
-	CostManager.costBody = (cost) => cost instanceof Cost && CostManager.costBodyTemplate.render(CostManager.childScope(cost));
-	CostManager.getObject = (values, target) => {
-	  const parent = du.find.up('[cost-id]', target);
-	  if (values.costType === '/dev/nul') {
-	    values.parent = Cost.get(parent.getAttribute('cost-id'));
-	    if (values.parent.level() === 0) {
-	      values.requiredBranches = Properties(values.objectId, (prop) => prop.value() === null);
-	      values.requiredBranches = values.requiredBranches.map((prop) => prop.name());
-	    }
-	    return Cost.new(values);
-	  } else {
-	    const referenceCost = Cost.get(values.costType);
-	    if (referenceCost === undefined) throw new Error('Invalid Cost reference name');
-	    return Cost.new({type: referenceCost.constructor.name, referenceCost, formula: values.formula});
-	  }
-	}
-	
-	CostManager.costInputTree = (costTypes, objId, onUpdate) => {
-	
-	  const costTypeSelect = new Select({
-	    name: 'costType',
-	    value: 'Custom',
-	    class: 'center',
-	    list: costTypes
-	  });
-	  const reference = new Input({
-	    name: 'referenceable',
-	    label: 'Referenceable',
-	    type: 'checkbox',
-	    default: false,
-	    validation: [true, false],
-	    targetAttr: 'checked',
-	    value: objId === undefined ? false : true,
-	  });
-	  const objectId = new Input({
-	    name: 'objectId',
-	    hide: true,
-	    value: objId
-	  });
-	
-	  costTypeSelect.on('change',
-	    (val) => {
-	      if (val !== '/dev/nul') {
-	        reference.setValue(false);
-	        reference.hide();
-	      } else {
-	        reference.show();
-	      }
-	    });
-	
-	  const id = Inputs('costId');
-	  const laborType = Inputs('laborType');
-	  const hourlyRate = Inputs('hourlyRate');
-	
-	  const idType = [objectId, id, Inputs('costType')];
-	  const materialInput = [Inputs('method'), Inputs('company'), Inputs('partNumber')];
-	  const laborInput = [Inputs('method'), laborType, hourlyRate];
-	  laborType.on('keyup',
-	    (val, values) => hourlyRate.setValue(Labor.hourlyRate(val)));
-	
-	  const length = Inputs('length');
-	  const width = Inputs('width');
-	  const depth = Inputs('depth');
-	  const cost = Inputs('cost');
-	  const hours = Inputs('hours');
-	  const count = Inputs('count');
-	  const modifyDemension = Inputs('modifyDemension');
-	  const selectInfo = [CostManager.formulaInput(objId, 'Select'),
-	                      RelationInput.selector];
-	  const conditionalInfo = [Inputs('propertyId'), Inputs('propertyConditions'),
-	        Inputs('propertyValue')];
-	  const color = [Inputs('color')];
-	
-	  // Todo: ????
-	  const matFormula = CostManager.formulaInput(objId, 'Material');
-	  const costCount = [count, cost, matFormula];
-	  const lengthCost = [length, cost, matFormula];
-	  const lengthWidthCost = [length, width, cost, matFormula];
-	  const lengthWidthDepthCost = [length, width, depth, cost, matFormula];
-	
-	  const laborFormula = CostManager.formulaInput(objId, 'Labor');
-	  const hourlyCount = [count, hours, laborFormula];
-	  const lengthHourly = [length, hours, laborFormula];
-	  const lengthWidthHourly = [length, width, hours, laborFormula];
-	  const lengthWidthDepthHourly = [length, width, depth, hours, laborFormula];
-	
-	  const decisionInput = new DecisionInputTree('cost',
-	    [costTypeSelect, reference]);
-	
-	  decisionInput.contengency('id', 'referenceable');
-	  decisionInput.onChange(onUpdate);
-	
-	  decisionInput.addStates({
-	    lengthCost, lengthWidthCost, lengthWidthDepthCost, cost, color,idType,
-	    laborInput, costCount, materialInput, selectInfo, hourlyCount,
-	    lengthHourly, lengthWidthHourly, lengthWidthDepthHourly, modifyDemension,
-	    conditionalInfo
-	  });
-	
-	  const idTypeNode = decisionInput.then('costType:Custom')
-	        .jump('idType');
-	
-	
-	  const conditionalNode = idTypeNode.then('type:Conditional')
-	        .jump('conditionalInfo');
-	  const materialNode = idTypeNode.then('type:Material')
-	        .jump('materialInput');
-	  const selectNode = idTypeNode.then('type:Select')
-	        .jump('selectInfo');
-	  const laborNode = idTypeNode.then('type:Labor')
-	        .jump('laborInput');
-	
-	  idTypeNode.then('id:length').jump('modifyDemension');
-	  idTypeNode.then('id:width').jump('modifyDemension');
-	  idTypeNode.then('id:depth').jump('modifyDemension');
-	
-	
-	  materialNode.then(`method:${Material.methods.LINEAR_FEET}`)
-	        .jump('lengthCost');
-	  materialNode.then(`method:${Material.methods.SQUARE_FEET}`)
-	        .jump('lengthWidthCost');
-	  materialNode.then(`method:${Material.methods.CUBIC_FEET}`)
-	        .jump('lengthWidthDepthCost');
-	  materialNode.then(`method:${Material.methods.UNIT}`)
-	        .jump('costCount');
-	
-	  materialNode.then('type:Material').jump('color');
-	
-	
-	  laborNode.then(`method:${Material.methods.LINEAR_FEET}`)
-	        .jump('lengthHourly');
-	  laborNode.then(`method:${Material.methods.SQUARE_FEET}`)
-	        .jump('lengthWidthHourly');
-	  laborNode.then(`method:${Material.methods.CUBIC_FEET}`)
-	        .jump('lengthWidthDepthHourly');
-	  laborNode.then(`method:${Material.methods.UNIT}`)
-	        .jump('hourlyCount');
-	
-	  laborNode.then('type:Material').jump('color');
-	
-	  return decisionInput;
-	}
-	
-	
-	// Todo do a valid test for input... probably need to make a sample cabinet
-	const sectionScope = {l: 0, w:0, d:0, fpt: 0, fpb: 0, fpr: 0, fpl: 0, ppt: 0, ppb: 0, ppl: 0, ppr: 0};
-	const defaultScope = {l: 0, w:0, d:0};
-	const sectionEval = new StringMathEvaluator(sectionScope);
-	const defaultEval = new StringMathEvaluator(defaultScope);
-	const sectionObjs = ['Door', 'DrawerFront', 'DrawerBox', 'Opening'];
-	
-	const validate = (objId, type) => (formula) => {
-	  if (type === 'Labor' || sectionObjs.indexOf(objId) === -1)
-	    return !Number.isNaN(defaultEval.eval(formula));
-	  return !Number.isNaN(sectionEval.eval(formula));
-	}
-	
-	const sectionInput = () => new Input({
-	  name: 'formula',
-	  placeholder: 'Formula',
-	  validation: validate('Door'),
-	  class: 'center',
-	  errorMsg: `Invalid Formula: allowed variables...
-	  <br>l - length
-	  <br>w - width
-	  <br>d - depth/thickness
-	  <br>fp[tblr] - Frame postion [top, bottom, left, right]
-	  <br>pp[tblr] - Panel Postion [top, bottom, left, right]`
-	});
-	const defaultInput = () => new Input({
-	  name: 'formula',
-	  placeholder: 'Formula',
-	  validation: validate(),
-	  class: 'center',
-	  errorMsg: `Invalid Formula: allowed variables...
-	  <br>l - length
-	  <br>w - width
-	  <br>d - depth/thickness`
-	});
-	
-	CostManager.formulaInput = (objId, type) => {
-	  if (type === 'Labor' ||
-	        sectionObjs.indexOf(objId) === -1)
-	    return defaultInput();
-	  return sectionInput();
-	};
-	
-	module.exports = CostManager
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/init-assem.js',
 function (require, exports, module) {
 	
@@ -15452,309 +15194,54 @@ const Assembly = require('./assembly.js');
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
+RequireJS.addFunction('./app-src/objects/joint/joint.js',
 function (require, exports, module) {
 	
 
 	
-	const Assembly = require('../assembly.js');
 	
-	class Panel extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
+	class Joint {
+	  constructor(joinStr) {
+	    const match = joinStr.match(Joint.regex);
+	    this.malePartCode = match[1];
+	    this.femalePartCode = match[2];
 	
-	Panel.abbriviation = 'pn';
+	    this.updatePosition = () => {};
 	
-	Assembly.register(Panel);
-	module.exports = Panel
+	    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
+	    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
 	
+	    this.maleOffset = () => 0;
+	    this.femaleOffset = () => 0;
+	    this.setParentAssembly = (pa) => this.parentAssembly = pa;
 	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/category/conditional.js',
-function (require, exports, module) {
-	
-
-	
-	const Category = require('../category.js');
-	const Cost = require('../../cost.js');
-	
-	class ConditionalCost extends Category {
-	  constructor (props) {
-	    super(props);
-	    Object.getSet(this, props, 'propertyId', 'propertyValue', 'propertyCondition');
-	    this.categoryCalc = this.calc;
-	    this.calc = (assembly) => ConditionalCost.calc(this, assembly);
-	  }
-	}
-	
-	ConditionalCost.toKey = (value) => new String(value).replace(/ /g, '_').toUpperCase();
-	
-	ConditionalCost.conditions = {};
-	ConditionalCost.conditions.EQUAL = 'Equals';
-	ConditionalCost.conditions.NOT_EQUAL = 'Not Equal';
-	ConditionalCost.conditions.LESS_THAN = 'Less Than';
-	ConditionalCost.conditions.GREATER_THAN = 'Greater Than';
-	ConditionalCost.conditions.LESS_THAN_OR_EQUAL = 'Less Than Or Equal';
-	ConditionalCost.conditions.GREATER_THAN_OR_EQUAL = 'Greater Than Or Equal';
-	
-	ConditionalCost.isCondition = (value) => ConditionalCost
-	                      .conditions(ConditionalCost.toKey(value)) !== undefined;
-	
-	ConditionalCost.calc = (cost, assembly) => {
-	  let validationFunc;
-	  switch (cost.propertyCondition()) {
-	    case ConditionalCost.conditions.EQUAL:
-	      validationFunc = (value) => cost.propertyValue() === value;
-	      break;
-	    case ConditionalCost.conditions.NOT_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() !== value;
-	      break;
-	    case ConditionalCost.conditions.LESS_THAN:
-	      validationFunc = (value) => cost.propertyValue() > value;
-	      break;
-	    case ConditionalCost.conditions.GREATER_THAN:
-	      validationFunc = (value) => cost.propertyValue() < value;
-	      break;
-	    case ConditionalCost.conditions.LESS_THAN_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() >= value;
-	      break;
-	    case ConditionalCost.conditions.GREATER_THAN_EQUAL:
-	      validationFunc = (value) => cost.propertyValue() <= value;
-	      break;
-	    default:
-	      throw new Error('Some how you managed to have an invalid Condition');
-	  }
-	
-	  const value = assembly.value(cost.propertyId);
-	  if (validationFunc(value)) {
-	    return cost.categoryCalc(assembly);
-	  }
-	  return 0;
-	}
-	
-	
-	ConditionalCost.explanation = `A cost that is applied if the a defined
-	                                condition is met`;
-	
-	module.exports = ConditionalCost
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Rabbet extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
+	    this.getDemensions = () => {
+	      const malePos = getMale();
+	      const femalePos = getFemale();
+	      // I created a loop but it was harder to understand
+	      return undefined;
 	    }
 	
-	    if (axis === undefined) return;
-	
-	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
-	    };
+	    if (Joint.list[this.malePartCode] === undefined) Joint.list[this.malePartCode] = [];
+	    if (Joint.list[this.femalePartCode] === undefined) Joint.list[this.femalePartCode] = [];
+	    Joint.list[this.malePartCode].push(this);
+	    Joint.list[this.femalePartCode].push(this);
 	  }
 	}
+	Joint.list = {};
+	Joint.regex = /([a-z0-1\.]{1,})->([a-z0-1\.]{1,})/;
 	
-	Joint.register(Rabbet);
-	module.exports = Rabbet
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Miter extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
-	  }
+	Joint.classes = {};
+	Joint.register = (clazz) =>
+	  Joint.classes[clazz.prototype.constructor.name] = clazz;
+	Joint.new = function (id) {
+	  return new Joint.classes[id](...Array.from(arguments).slice(1));
 	}
-	
-	Joint.register(Miter);
-	module.exports = Miter
+	module.exports = Joint
 	
 	
 	
 	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Dado extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
-	    }
-	
-	    if (axis === undefined) return;
-	
-	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
-	    };
-	
-	  }
-	}
-	
-	Joint.register(Dado);
-	module.exports = Dado
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Butt extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
-	  }
-	}
-	
-	Joint.register(Butt);
-	module.exports = Butt
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/frame.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Frame extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
-	
-	Frame.abbriviation = 'fr';
-	
-	Assembly.register(Frame);
-	module.exports = Frame
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Divider extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
-	Divider.count = 0;
-	
-	Divider.abbriviation = 'dv';
-	
-	Assembly.register(Divider);
-	module.exports = Divider
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/material/labor.js',
-function (require, exports, module) {
-	
-
-	
-	const Material = require('../material.js');
-	const Cost = require('../../cost.js');
-	
-	
-	// unitCost.value = (hourlyRate*hours)/length
-	// calc(assembly) = unitCost.value * formula
-	
-	class Labor extends Material {
-	  constructor (props) {
-	    super(props);
-	    const type = props.laborType;
-	    props.hourlyRate = Labor.hourlyRates[type]
-	    const parentCalc = this.calc;
-	    this.cost = () => this.hourlyRate() * props.hours;
-	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
-	    Labor.hourlyRate(type, props.hourlyRate);
-	
-	    const parentToJson = this.toJson;
-	  }
-	}
-	
-	
-	Labor.defaultRate = 40;
-	Labor.hourlyRate = (type, rate) => {
-	  rate = Cost.evaluator.eval(new String(rate));
-	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
-	  return Labor.hourlyRates[type] || Labor.defaultRate;
-	}
-	Labor.hourlyRates = {};
-	Labor.types = [];
-	Labor.explanation = `Cost to be calculated hourly`;
-	
-	module.exports = Labor
 	
 });
 
@@ -15915,21 +15402,192 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/guides.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
 function (require, exports, module) {
 	
 
 	
-	const Assembly = require('../../assembly.js');
+	const Assembly = require('../assembly.js');
+	
+	class Divider extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	  }
+	}
+	Divider.count = 0;
+	
+	Divider.abbriviation = 'dv';
+	
+	Assembly.register(Divider);
+	module.exports = Divider
 	
 	
-	class Guides extends Assembly {
-	  constructor() {
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Rabbet extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
+	    super(joinStr);
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
+	    }
+	
+	    if (axis === undefined) return;
+	
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
+	    };
 	  }
 	}
 	
-	Assembly.register(Guides);
-	module.exports = Guides
+	Joint.register(Rabbet);
+	module.exports = Rabbet
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Panel extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	  }
+	}
+	
+	Panel.abbriviation = 'pn';
+	
+	Assembly.register(Panel);
+	module.exports = Panel
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/frame.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Frame extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	  }
+	}
+	
+	Frame.abbriviation = 'fr';
+	
+	Assembly.register(Frame);
+	module.exports = Frame
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Butt extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
+	  }
+	}
+	
+	Joint.register(Butt);
+	module.exports = Butt
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Dado extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
+	    super(joinStr);
+	
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
+	    }
+	
+	    if (axis === undefined) return;
+	
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
+	    };
+	
+	  }
+	}
+	
+	Joint.register(Dado);
+	module.exports = Dado
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Miter extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
+	  }
+	}
+	
+	Joint.register(Miter);
+	module.exports = Miter
 	
 	
 	
@@ -15990,229 +15648,6 @@ function (require, exports, module) {
 	
 	
 	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class Hinges extends Assembly {
-	  constructor() {
-	
-	  }
-	}
-	
-	Assembly.register(Hinges);
-	module.exports = Hinges
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-box.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	class DrawerBox extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
-	
-	DrawerBox.abbriviation = 'db';
-	
-	Assembly.register(DrawerBox);
-	module.exports = DrawerBox
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	const Handle = require('../hardware/pull.js');
-	
-	class DrawerFront extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	    this.setParentAssembly(parent);
-	    const instance = this;
-	    let pulls;
-	    if (demensionStr === undefined) return;
-	
-	    function pullCount(dems) {
-	      if (dems.x < 30) return 1;
-	      return 2;
-	    }
-	
-	    this.demensionStr = (attr) => {
-	      const dems = demensionStr();
-	      return dems;
-	    };
-	
-	    this.children = () => this.updateHandles();
-	
-	    this.updateHandles = (dems, count) => {
-	      count = count || pullCount(this.demensionStr());
-	      pulls = [];
-	      for (let index = 0; index < count; index += 1) {
-	        pulls.push(new Handle(`${partCode}-p-${index}`, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
-	      }
-	      return pulls;
-	    };
-	    this.updatePosition();
-	  }
-	}
-	
-	DrawerFront.abbriviation = 'df';
-	
-	Assembly.register(DrawerFront);
-	module.exports = DrawerFront
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/section.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	const CoverStartPoints = require('../../../../../globals/CONSTANTS.js').CoverStartPoints;
-	
-	
-	const sectionFilePath = (filename) => `sections/${filename}`;
-	
-	class Section extends Assembly {
-	  constructor(isPartition, partCode, partName, sectionProperties) {
-	    super(partCode, partName);
-	    this.index = () => sectionProperties().index;
-	    this.center = (attr) => {
-	      const props = sectionProperties();
-	      const topPos = props.borders.top.position();
-	      const botPos = props.borders.bottom.position();
-	      const leftPos = props.borders.left.position();
-	      const rightPos = props.borders.right.position();
-	      const center = {};
-	      center.x = (!attr || attr === 'x') &&
-	            leftPos.center('x') - ((leftPos.center('x') - rightPos.center('x')) / 2);
-	      center.y = (!attr || attr === 'y') &&
-	            botPos.center('y') + ((topPos.center('y') - botPos.center('y')) / 2);
-	      center.z = (!attr || attr === 'z') &&
-	            topPos.center('z');
-	      return attr ? center[attr] : center;
-	    }
-	
-	    const calculateRevealOffset = (border, direction) => {
-	      const borderPos = border.position();
-	      let reveal = border.value('r');
-	      const insideRailStart = CoverStartPoints.INSIDE_RAIL === border.value('csp');
-	      const positive = insideRailStart ? direction.indexOf('-') !== -1 :
-	                          direction.indexOf('-') === -1;
-	      const axis = direction.replace(/\+|-/, '');
-	      const magnitude = positive ? 1 : -1;
-	      const divisor = insideRailStart ? 1 : 2;
-	      const borderOrigin = !insideRailStart ? borderPos.center(axis) :
-	        (positive ? borderPos.centerAdjust(`${axis}`, '-x') :
-	                    borderPos.centerAdjust(`${axis}`, '+x'));
-	      return  borderOrigin + ((reveal * magnitude) / divisor);
-	    }
-	
-	
-	    this.outerSize = () => {
-	      const props = sectionProperties();
-	      const pos = props.position;
-	
-	      const top = props.borders.top;
-	      const bot = props.borders.bottom;
-	      const left = props.borders.left;
-	      const right = props.borders.right;
-	
-	      const limits = {};
-	      limits.x = pos.right || calculateRevealOffset(right, '-x');
-	      limits['-x'] = pos.left || calculateRevealOffset(left, '+x');
-	      limits.y = pos.top || calculateRevealOffset(top, '-y');
-	      limits['-y'] = pos.bottom || calculateRevealOffset(bot, '+y');
-	      limits['-z'] = top.position().limits('-z');
-	      limits.z = props.depth - limits['-z'];
-	
-	      const center = {};
-	      center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
-	      center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
-	      center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
-	
-	      const dems = {};
-	      dems.x = limits.x - limits['-x'];
-	      dems.y = limits.y - limits['-y'];
-	      dems.z = props.depth;
-	
-	      return {limits, center, dems};
-	    }
-	
-	    this.innerSize = () => {
-	      const props = sectionProperties();
-	      const topPos = props.borders.top.position();
-	      const botPos = props.borders.bottom.position();
-	      const leftPos = props.borders.left.position();
-	      const rightPos = props.borders.right.position();
-	      const x = rightPos.center('x') + rightPos.limits('-x') - (leftPos.center('x') + leftPos.limits('+x'));
-	      const y = topPos.center('y') + topPos.limits('-x') - ((botPos.center('y') + botPos.limits('+x')));
-	      const z = topPos.center('z');
-	      return {x,y,z};
-	    }
-	
-	    this.isPartition = () => isPartition;
-	    this.constructorId = this.constructor.name;
-	    this.part = false;
-	    this.display = false;
-	    this.name = this.constructorId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
-	  }
-	}
-	Section.isPartition = () => false;
-	Section.abstractClasses = ['PartitionSection', 'OpeningCoverSection', 'SpaceSection']
-	Section.sectionInstance = (clazz) => clazz.prototype instanceof Section &&
-	  Section.abstractClasses.indexOf(clazz.name) === -1;
-	Section.sections = () => Assembly.classList(Section.sectionInstance);
-	Section.getSections = (isPartition) => {
-	  const sections = [];
-	  Section.sections().forEach((section) => {
-	    const part = section.isPartition();
-	    if(isPartition === undefined || part === isPartition) sections.push(section);
-	  });
-	  return sections;
-	}
-	Section.keys = () => Assembly.classIds(Section.sectionInstance);
-	Section.new = function (constructorId) {
-	  const section = Assembly.new.apply(null, arguments);
-	  if (section instanceof Section) return section;
-	  throw new Error(`Invalid section Id: '${constructorId}'`);
-	}
-	
-	Assembly.register(Section);
-	module.exports = Section
 	
 });
 
@@ -16323,6 +15758,30 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Hinges extends Assembly {
+	  constructor() {
+	
+	  }
+	}
+	
+	Assembly.register(Hinges);
+	module.exports = Hinges
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
 function (require, exports, module) {
 	
@@ -16347,36 +15806,224 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/partition.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-box.js',
 function (require, exports, module) {
 	
 
 	
-	const Section = require('../section.js');
-	const Assembly = require('../../../assembly.js');
+	const Assembly = require('../../assembly.js');
 	
-	class PartitionSection extends Section {
-	  constructor(templatePath, partCode, partName, sectionProperties) {
-	    super(templatePath, true, partCode, partName, sectionProperties);
-	    this.important = ['partCode', 'partName', 'index'];
+	class DrawerBox extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
 	  }
 	}
 	
-	PartitionSection.isPartition = () => true;
+	DrawerBox.abbriviation = 'db';
 	
-	PartitionSection.fromJson = (json, parent) => {
-	  const sectionProps = parent.dividerProps(json.index);
-	  const assembly = Assembly.new(json.type, json.partCode, sectionProps, parent);
-	  assembly.partCode = json.partCode;
-	  assembly.partName = json.partName;
-	  assembly.values = json.values;
-	  return assembly;
+	Assembly.register(DrawerBox);
+	module.exports = DrawerBox
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	const Handle = require('../hardware/pull.js');
+	
+	class DrawerFront extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	    this.setParentAssembly(parent);
+	    const instance = this;
+	    let pulls;
+	    if (demensionStr === undefined) return;
+	
+	    function pullCount(dems) {
+	      if (dems.x < 30) return 1;
+	      return 2;
+	    }
+	
+	    this.demensionStr = (attr) => {
+	      const dems = demensionStr();
+	      return dems;
+	    };
+	
+	    this.children = () => this.updateHandles();
+	
+	    this.updateHandles = (dems, count) => {
+	      count = count || pullCount(this.demensionStr());
+	      pulls = [];
+	      for (let index = 0; index < count; index += 1) {
+	        pulls.push(new Handle(`${partCode}-p-${index}`, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
+	      }
+	      return pulls;
+	    };
+	    this.updatePosition();
+	  }
 	}
-	module.exports = PartitionSection
+	
+	DrawerFront.abbriviation = 'df';
+	
+	Assembly.register(DrawerFront);
+	module.exports = DrawerFront
 	
 	
 	
 	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/guides.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Guides extends Assembly {
+	  constructor() {
+	  }
+	}
+	
+	Assembly.register(Guides);
+	module.exports = Guides
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/section.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	const CoverStartPoints = require('../../../../../globals/CONSTANTS.js').CoverStartPoints;
+	
+	
+	class Section extends Assembly {
+	  constructor(isPartition, partCode, partName, sectionProperties) {
+	    super(partCode, partName);
+	    this.index = () => sectionProperties().index;
+	    this.center = (attr) => {
+	      const props = sectionProperties();
+	      const topPos = props.borders.top.position();
+	      const botPos = props.borders.bottom.position();
+	      const leftPos = props.borders.left.position();
+	      const rightPos = props.borders.right.position();
+	      const center = {};
+	      center.x = (!attr || attr === 'x') &&
+	            leftPos.center('x') - ((leftPos.center('x') - rightPos.center('x')) / 2);
+	      center.y = (!attr || attr === 'y') &&
+	            botPos.center('y') + ((topPos.center('y') - botPos.center('y')) / 2);
+	      center.z = (!attr || attr === 'z') &&
+	            topPos.center('z');
+	      return attr ? center[attr] : center;
+	    }
+	
+	    const calculateRevealOffset = (border, direction) => {
+	      const borderPos = border.position();
+	      let reveal = border.value('r');
+	      const insideRailStart = CoverStartPoints.INSIDE_RAIL === border.value('csp');
+	      const positive = insideRailStart ? direction.indexOf('-') !== -1 :
+	                          direction.indexOf('-') === -1;
+	      const axis = direction.replace(/\+|-/, '');
+	      const magnitude = positive ? 1 : -1;
+	      const divisor = insideRailStart ? 1 : 2;
+	      const borderOrigin = !insideRailStart ? borderPos.center(axis) :
+	        (positive ? borderPos.centerAdjust(`${axis}`, '-x') :
+	                    borderPos.centerAdjust(`${axis}`, '+x'));
+	      return  borderOrigin + ((reveal * magnitude) / divisor);
+	    }
+	
+	
+	    this.outerSize = () => {
+	      const props = sectionProperties();
+	      const pos = props.position;
+	
+	      const top = props.borders.top;
+	      const bot = props.borders.bottom;
+	      const left = props.borders.left;
+	      const right = props.borders.right;
+	
+	      const limits = {};
+	      limits.x = pos.right || calculateRevealOffset(right, '-x');
+	      limits['-x'] = pos.left || calculateRevealOffset(left, '+x');
+	      limits.y = pos.top || calculateRevealOffset(top, '-y');
+	      limits['-y'] = pos.bottom || calculateRevealOffset(bot, '+y');
+	      limits['-z'] = top.position().limits('-z');
+	      limits.z = props.depth - limits['-z'];
+	
+	      const center = {};
+	      center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
+	      center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
+	      center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
+	
+	      const dems = {};
+	      dems.x = limits.x - limits['-x'];
+	      dems.y = limits.y - limits['-y'];
+	      dems.z = props.depth;
+	
+	      return {limits, center, dems};
+	    }
+	
+	    this.innerSize = () => {
+	      const props = sectionProperties();
+	      const topPos = props.borders.top.position();
+	      const botPos = props.borders.bottom.position();
+	      const leftPos = props.borders.left.position();
+	      const rightPos = props.borders.right.position();
+	      const x = rightPos.center('x') + rightPos.limits('-x') - (leftPos.center('x') + leftPos.limits('+x'));
+	      const y = topPos.center('y') + topPos.limits('-x') - ((botPos.center('y') + botPos.limits('+x')));
+	      const z = topPos.center('z');
+	      return {x,y,z};
+	    }
+	
+	    this.isPartition = () => isPartition;
+	    this.constructorId = this.constructor.name;
+	    this.part = false;
+	    this.display = false;
+	    this.name = this.constructorId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
+	  }
+	}
+	Section.isPartition = () => false;
+	Section.abstractClasses = ['PartitionSection', 'OpeningCoverSection', 'SpaceSection']
+	Section.sectionInstance = (clazz) => clazz.prototype instanceof Section &&
+	  Section.abstractClasses.indexOf(clazz.name) === -1;
+	Section.sections = () => Assembly.classList(Section.sectionInstance);
+	Section.getSections = (isPartition) => {
+	  const sections = [];
+	  Section.sections().forEach((section) => {
+	    const part = section.isPartition();
+	    if(isPartition === undefined || part === isPartition) sections.push(section);
+	  });
+	  return sections;
+	}
+	Section.filePath = (filename) => `sections/${filename}`;
+	
+	Section.keys = () => Assembly.classIds(Section.sectionInstance);
+	Section.new = function (constructorId) {
+	  const section = Assembly.new.apply(null, arguments);
+	  if (section instanceof Section) return section;
+	  throw new Error(`Invalid section Id: '${constructorId}'`);
+	}
+	
+	Assembly.register(Section);
+	module.exports = Section
 	
 });
 
@@ -16473,6 +16120,40 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/partition.js',
+function (require, exports, module) {
+	
+
+	
+	const Section = require('../section.js');
+	const Assembly = require('../../../assembly.js');
+	
+	class PartitionSection extends Section {
+	  constructor(templatePath, partCode, partName, sectionProperties) {
+	    super(templatePath, true, partCode, partName, sectionProperties);
+	    this.important = ['partCode', 'partName', 'index'];
+	  }
+	}
+	
+	PartitionSection.isPartition = () => true;
+	
+	PartitionSection.fromJson = (json, parent) => {
+	  const sectionProps = parent.dividerProps(json.index);
+	  const assembly = Assembly.new(json.type, json.partCode, sectionProps, parent);
+	  assembly.partCode = json.partCode;
+	  assembly.partName = json.partName;
+	  assembly.values = json.values;
+	  return assembly;
+	}
+	module.exports = PartitionSection
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/sections/divider.js',
 function (require, exports, module) {
 	
@@ -16487,7 +16168,7 @@ function (require, exports, module) {
 	
 	class DividerSection extends PartitionSection {
 	  constructor(partCode, sectionProperties, parent) {
-	    super(sectionFilePath('divider'), partCode, 'Divider', sectionProperties, parent);
+	    super(DividerSection.filePath('divider'), partCode, 'Divider', sectionProperties, parent);
 	    if (sectionProperties === undefined) return;
 	    this.setParentAssembly(parent);
 	    const props = sectionProperties;
@@ -16578,10 +16259,6 @@ function (require, exports, module) {
 	Assembly.register(DividerSection);
 	module.exports = DividerSection
 	
-	
-	
-	
-	
 });
 
 
@@ -16601,7 +16278,7 @@ function (require, exports, module) {
 	let dsCount = 0;
 	class DivideSection extends SpaceSection {
 	  constructor(sectionProperties, parent) {
-	    super(sectionFilePath('open'), `dvds-${parent.uniqueId}-${sectionProperties().index}`, 'divideSection', sectionProperties);
+	    super(DivideSection.filePath('open'), `dvds-${parent.uniqueId}-${sectionProperties().index}`, 'divideSection', sectionProperties);
 	    this.important = ['partCode', 'partName', 'borderIds', 'index'];
 	    const instance = this;
 	    this.setParentAssembly(parent);
@@ -16799,10 +16476,6 @@ function (require, exports, module) {
 	Assembly.register(DivideSection);
 	module.exports = DivideSection
 	
-	
-	
-	
-	
 });
 
 
@@ -16934,42 +16607,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
-function (require, exports, module) {
-	
-
-	
-	const OpeningCoverSection = require('../open-cover.js');
-	const Door = require('../../../../../door/door.js');
-	const Handle = require('../../../../../hardware/pull.js');
-	const Assembly = require('../../../../../../assembly.js');
-	
-	class DualDoorSection extends OpeningCoverSection {
-	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
-	    if (divideProps === undefined) return;
-	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
-	    this.addSubAssembly(rightDoor);
-	    rightDoor.setHandleLocation(Handle.location.TOP_LEFT);
-	
-	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems);
-	    this.addSubAssembly(leftDoor);
-	    leftDoor.setHandleLocation(Handle.location.TOP_RIGHT);
-	  }
-	}
-	
-	DualDoorSection.abbriviation = 'dds';
-	
-	Assembly.register(DualDoorSection);
-	module.exports = DualDoorSection
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/door.js',
 function (require, exports, module) {
 	
@@ -16981,7 +16618,7 @@ function (require, exports, module) {
 	
 	class DoorSection extends OpeningCoverSection {
 	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('door'), partCode, 'Door.Section', divideProps);
+	    super(DoorSection.filePath('door'), partCode, 'Door.Section', divideProps);
 	    this.addSubAssembly(new Door('d', 'Door', this.coverCenter, this.coverDems));
 	  }
 	}
@@ -16989,10 +16626,6 @@ function (require, exports, module) {
 	DoorSection.abbriviation = 'drs';
 	Assembly.register(DoorSection);
 	module.exports = DoorSection
-	
-	
-	
-	
 	
 });
 
@@ -17011,7 +16644,7 @@ function (require, exports, module) {
 	
 	class DrawerSection extends OpeningCoverSection {
 	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('drawer'), partCode, 'Drawer.Section', divideProps, PULL_TYPE.DRAWER);
+	    super(DrawerSection.filePath('drawer'), partCode, 'Drawer.Section', divideProps, PULL_TYPE.DRAWER);
 	    if (divideProps === undefined) return;
 	    const instance = this;
 	
@@ -17047,10 +16680,6 @@ function (require, exports, module) {
 	Assembly.register(DrawerSection);
 	module.exports = DrawerSection
 	
-	
-	
-	
-	
 });
 
 
@@ -17067,7 +16696,7 @@ function (require, exports, module) {
 	
 	class FalseFrontSection extends OpeningCoverSection {
 	  constructor(partCode, divideProps, parent) {
-	    super(sectionFilePath('false-front'), partCode, 'False.Front.Section', divideProps, PULL_TYPE.DRAWER);
+	    super(FalseFrontSection.filePath('false-front'), partCode, 'False.Front.Section', divideProps, PULL_TYPE.DRAWER);
 	    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems, '', this));
 	  }
 	}
@@ -17077,9 +16706,37 @@ function (require, exports, module) {
 	Assembly.register(FalseFrontSection);
 	module.exports = FalseFrontSection
 	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
+function (require, exports, module) {
 	
+
 	
+	const OpeningCoverSection = require('../open-cover.js');
+	const Door = require('../../../../../door/door.js');
+	const Handle = require('../../../../../hardware/pull.js');
+	const Assembly = require('../../../../../../assembly.js');
 	
+	class DualDoorSection extends OpeningCoverSection {
+	  constructor(partCode, divideProps, parent) {
+	    super(DualDoorSection.filePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
+	    if (divideProps === undefined) return;
+	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
+	    this.addSubAssembly(rightDoor);
+	    rightDoor.setHandleLocation(Handle.location.TOP_LEFT);
+	
+	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems);
+	    this.addSubAssembly(leftDoor);
+	    leftDoor.setHandleLocation(Handle.location.TOP_RIGHT);
+	  }
+	}
+	
+	DualDoorSection.abbriviation = 'dds';
+	
+	Assembly.register(DualDoorSection);
+	module.exports = DualDoorSection
 	
 });
 

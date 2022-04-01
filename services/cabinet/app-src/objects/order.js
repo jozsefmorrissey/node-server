@@ -9,7 +9,7 @@ class Order {
       name: name || ++Order.count,
       id: id || String.random(32),
     }
-    this.rooms = [];
+    this.rooms = {};
     Object.getSet(this, initialVals);
   }
 }

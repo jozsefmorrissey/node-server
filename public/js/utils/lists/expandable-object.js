@@ -8,8 +8,10 @@ const Expandable = require('./expandable');
 
 class ExpandableObject extends Expandable {
   constructor(props) {
+    props.list = props.list || {};
     super(props);
 	//TODO: Set aciveKey
+
     const superRemove = this.remove;
     this.remove = (key) => {
       const removed = props.list[key];
@@ -17,7 +19,10 @@ class ExpandableObject extends Expandable {
       superRemove(removed);
     }
 
-    this.getKey = () => this.values().name;
+    this.getKey = (values) => {
+      if (values) this.activeKey(values.name);
+      return this.activeKey() || undefined;
+    }
   }
 }
 module.exports = ExpandableObject
