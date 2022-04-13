@@ -504,14 +504,17 @@ class $t {
 			const valueName = match[2];
 			const obj = get('scope');
 			const keys = Object.keys(obj);
+			const isArray = Array.isArray(obj);
 			let built = '';
 			for (let index = 0; index < keys.length; index += 1) {
 				const key = keys[index];
-				const childScope = {};
-				childScope[keyName] = key;
-				childScope[valueName] = obj[key];
-				childScope.$index = index;
-				built += new $t(template).render(childScope, undefined, get);
+				if (!isArray || key.match(/^[0-9]{1,}$/)) {
+					const childScope = {};
+					childScope[keyName] = key;
+					childScope[valueName] = obj[key];
+					childScope.$index = index;
+					built += new $t(template).render(childScope, undefined, get);
+				}
 			}
       return built;
 		}
@@ -576,25 +579,27 @@ class $t {
 		}
 
 		function type(scope, expression) {
-			if ((typeof itExp) === 'string' && itExp.match($t.rangeAttemptExpReg)) {
-				if (itExp.match($t.rangeItExpReg)) {
+			if ((typeof expression) === 'string' && expression.match($t.rangeAttemptExpReg)) {
+				if (expression.match($t.rangeItExpReg)) {
 					return 'rangeExp'
 				}
 				return 'rangeExpFormatError';
 			} else if (Array.isArray(scope)) {
-				if (itExp === undefined) {
+				if (expression === undefined) {
 					return 'defaultArray';
-				} else if (itExp.match($t.nameScopeExpReg)) {
+				} else if (expression.match($t.nameScopeExpReg)) {
 					return 'nameArrayExp';
 				} else {
 					return 'invalidArray';
 				}
-			} else if ((typeof scope) === 'object') {
-				if (itExp === undefined) {
+			}
+
+			if ((typeof scope) === 'object') {
+				if (expression === undefined) {
 					return 'defaultObject';
-				} else if (itExp.match($t.objectNameReg)){
+				} else if (expression.match($t.objectNameReg)){
 					return 'itOverObject';
-				} else if (itExp.match($t.arrayNameReg)){
+				} else if (expression.match($t.arrayNameReg)){
 					return 'arrayExp';
 				} else {
 					return 'invalidObject';
@@ -704,18 +709,23 @@ class $t {
             let realScope = match[7];
 						let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
 						let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+            const templateNameDefined = templateName.match(/^[a-z\-]*$/);
 						let scope = 'scope';
-						template = templateName !== tagContents ? templateName : template;
-						const t = eval(`new $t(\`${template}\`)`);
+						let t;
+            if (!templateNameDefined)
+            t = eval(`new $t(\`${template}\`)`);
             let resolvedScope = "get('scope')";;
             try {
               console.log('tagName', tagName);
+              console.log('templateName', templateName);
+              console.log('template', template);
               console.log('varNames', varNames);
               console.log('realScope', realScope);
               console.log('tagContents', tagContents);
               resolvedScope = ExprDef.parse(expression, realScope);
             } catch (e) {}
-            string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
+            const templateId = templateNameDefined ? templateName : t.id();
+            string = string.replace(match[0], `{{ new $t('${templateId}').render(${resolvedScope}, '${varNames}', get)}}`);
 					}
 					return string;
 				}

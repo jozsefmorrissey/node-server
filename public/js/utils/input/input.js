@@ -5,6 +5,7 @@
 
 const $t = require('../$t');
 const du = require('../dom-utils');
+const Lookup = require('../object/lookup')
 /*
 supported attributes: type, placeholder, name, class, value
 label: creates a text label preceeding input.
@@ -20,8 +21,9 @@ validation: Accepts
 errorMsg: Message that shows when validation fails.
 
 */
-class Input {
+class Input extends Lookup {
   constructor(props) {
+    super(props.id);
     props.hidden = props.hide || false;
     props.list = props.list || [];
     Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
@@ -77,16 +79,20 @@ class Input {
 
     this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
     this.valid = () => this.setValue();
+    function getValue() {
+      const elem = getElem(instance.id());
+      let val = value;
+      if (elem) val = elem[instance.targetAttr()];
+      if (val === undefined) val = props.default;
+      return val;
+    }
     this.setValue = (val) => {
-      const elem = getElem(this.id());
-      if (val === undefined){
-        if (elem) val = elem[this.targetAttr()]
-        if (val === undefined) val = props.default;
-      }
+      if (val === undefined) val = getValue();
       if(this.validation(val)) {
         valid = true;
         value = val;
-        if (elem) elem[this.targetAttr()] = val;
+        const elem = getElem(instance.id());
+        if (elem) elem[instance.targetAttr()] = val;
         return true;
       }
       valid = false;
@@ -94,7 +100,7 @@ class Input {
       return false;
     }
     this.value = () => {
-      const unformatted = (typeof value === 'function') ? value() : value || '';
+      const unformatted = (typeof value === 'function') ? value() : getValue() || '';
       return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
     }
     this.doubleCheck = () => {
@@ -164,5 +170,7 @@ Input.attrString = (targetAttr, value) =>{
   }
   return `${targetAttr}='${value}'`
 }
+
+Input.DO_NOT_CLONE = true;
 
 module.exports = Input;

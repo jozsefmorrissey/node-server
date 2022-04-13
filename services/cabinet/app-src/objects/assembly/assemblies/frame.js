@@ -11,9 +11,5 @@ class Frame extends Assembly {
 
 Frame.abbriviation = 'fr';
 
-Assembly.register(Frame);
+
 module.exports = Frame
-
-
-
-

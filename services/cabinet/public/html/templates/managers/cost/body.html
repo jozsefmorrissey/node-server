@@ -1,3 +1,16 @@
-<div class="{{manager.constructor.cntClass}}" here-i-am='true'>
-  {{manager.costTypeHtml(instance.cost, instance)}}
+<div hidden>
+  <div>
+    <span>
+      {{CostManager.nodeInputHtml()}}
+      <button>Add Cost</button>
+      <button>Add Node</button>
+    </span>
+    <span>
+      Cost Display
+    </span>
+  </div>
+  <div:t repeat='child in node.children()'>
+    {{CostManager.headHtml(child)}}
+    {{CostManager.bodyHtml(child)}}
+  </div:t>
 </div>

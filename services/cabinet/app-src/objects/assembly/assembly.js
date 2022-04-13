@@ -5,20 +5,25 @@ const StringMathEvaluator = require('../../../../../public/js/utils/string-math-
 const Position = require('../../position.js');
 const getDefaultSize = require('../../utils.js').getDefaultSize;
 
+const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
+
 class Assembly {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
     let instance = this;
-    const temporaryInitialVals = {display: true};
+    const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
     const initialVals = {
       part: true,
       included: true,
       uniqueId: String.random(32),
       centerStr, demensionStr, rotationStr, partCode, partName,
-      parentAssembly: parent,
       propertyId: undefined,
     }
-    Object.getSet(this, initialVals, 'subAssemblies');
+    Object.getSet(this, initialVals, 'values', 'subAssemblies');
     Object.getSet(this, temporaryInitialVals);
+
+    if ((typeof centerStr) === 'function') this.centerStr = centerStr;
+    if ((typeof demensionStr) === 'function') this.demensionStr = demensionStr;
+    if ((typeof rotationStr) === 'function') this.rotationStr = rotationStr;
 
     function getValueSmeFormatter(path) {
       const split = path.split('.');
@@ -44,7 +49,7 @@ class Assembly {
     let getting =  false;
     this.getAssembly = (partCode, callingAssem) => {
       if (callingAssem === this) return undefined;
-      if (this.partCode === partCode) return this;
+      if (this.partCode() === partCode) return this;
       if (this.subAssemblies[partCode]) return this.subAssemblies[partCode];
       if (callingAssem !== undefined) {
         const children = Object.values(this.subAssemblies);
@@ -53,8 +58,8 @@ class Assembly {
           if (assem !== undefined) return assem;
         }
       }
-      if (this.parentAssembly !== undefined && this.parentAssembly !== callingAssem)
-        return this.parentAssembly.getAssembly(partCode, this);
+      if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
+        return this.parentAssembly().getAssembly(partCode, this);
       return undefined;
     }
     let position = new Position(this, sme);
@@ -62,7 +67,10 @@ class Assembly {
     this.updatePosition = () => position = new Position(this, sme);
     this.joints = [];
     this.values = {};
-    this.fullDem = () => {
+    this.rootAssembly = () => {
+      let currAssem = this;
+      while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
+      return currAssem;
     }
     this.getJoints = (pc, joints) => {
       pc = pc || partCode;
@@ -74,8 +82,8 @@ class Assembly {
           joints.female.push(joint);
         }
       });
-      if (this.parentAssembly !== undefined)
-        this.parentAssembly.getJoints(pc, joints);
+      if (this.parentAssembly() !== undefined)
+        this.parentAssembly().getJoints(pc, joints);
       return joints;
     }
     function initObj(value) {
@@ -96,20 +104,20 @@ class Assembly {
           const instVal = this.values[code];
           if (instVal !== undefined && instVal !== null) {
             if ((typeof instVal) === 'number' || (typeof instVal) === 'string') {
-              return sme.eval(instVal);
+              return sme.eval(instVal, this);
             } else {
               return instVal;
             }
           }
-          if (this.parentAssembly) return this.parentAssembly.value(code);
+          if (this.parentAssembly()) return this.parentAssembly().value(code);
           else {
             try {
-              if (code.match(/trv|brv|lrv|rrv|fs/)) {
-                const nothing = true;
-              }
-              return properties(propId)[code].value;
+              const value = this.propertyConfig(this.constructor.name, code);
+              if (value === undefined) throw new Error();
+              return value;
             } catch (e) {
               console.error(`Failed to resolve code: ${code}`);
+              throw e;
               return NaN;
             }
           }
@@ -122,19 +130,19 @@ class Assembly {
     this.subAssemblies = {};
     this.setSubAssemblies = (assemblies) => {
       this.subAssemblies = {};
-      assemblies.forEach((assem) => this.subAssemblies[assem.partCode] = assem);
+      assemblies.forEach((assem) => this.subAssemblies[assem.partCode()] = assem);
     };
 
     // TODO: wierd dependency on inherited class.... fix!!!
     const defaultPartCode = () =>
-      instance.partCode = instance.partCode || Cabinet.partCode(this);
+      instance.partCode(instance.partCode() || Assembly.partCode(this));
 
     this.setParentAssembly = (pa) => {
-      this.parentAssembly = pa;
+      this.parentAssembly(pa);
       defaultPartCode();
     }
     this.addSubAssembly = (assembly) => {
-      this.subAssemblies[assembly.partCode] = assembly;
+      this.subAssemblies[assembly.partCode()] = assembly;
       assembly.setParentAssembly(this);
     }
 
@@ -193,7 +201,7 @@ Assembly.get = (uniqueId) => {
 Assembly.add = (assembly) => {
   const name = assembly.constructor.name;
   if (Assembly.list[name] === undefined) Assembly.list[name] = {};
-  Assembly.list[name][assembly.uniqueId] = assembly;
+  Assembly.list[name][assembly.uniqueId()] = assembly;
 }
 Assembly.all = () => {
   const list = [];
@@ -218,39 +226,39 @@ Assembly.fromJson = (assemblyJson) => {
   const rotationStr = assemblyJson.rotationStr;
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
-  const assembly = Assembly.new(assemblyJson.type, partCode, partName, centerStr, demensionStr, rotationStr);
+  const clazz = Object.class.get(assemblyJson._TYPE);
+  const assembly = new (clazz)(partCode, partName, centerStr, demensionStr, rotationStr);
+  assembly.uniqueId(assemblyJson.uniqueId);
   assembly.values = assemblyJson.values;
-  assemblyJson.subAssemblies.forEach((json) =>
-    assembly.addSubAssembly(Assembly.class(json.type)
+  assembly.setParentAssembly(assemblyJson.parent)
+  Object.values(assemblyJson.subAssemblies).forEach((json) =>
+    assembly.addSubAssembly(Assembly.class(json._TYPE)
                               .fromJson(json, assembly)));
   if (assemblyJson.length) assembly.length(assemblyJson.length);
   if (assemblyJson.width) assembly.width(assemblyJson.width);
   if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
   return assembly;
 }
-Assembly.classes = {};
-Assembly.register = (clazz) =>
-  Assembly.classes[clazz.prototype.constructor.name] = clazz;
-Assembly.new = function (id) {
-  return new Assembly.classes[id](...Array.from(arguments).slice(1));
-}
-Assembly.class = function (id) {
-  return Assembly.classes[id];
-}
 
-Assembly.classObj = (filterFunc) => {
-  if ((typeof filterFunc) !== 'function') return Assembly.classes;
-  const classIds = Object.keys(Assembly.classes);
-  const classes = Assembly.classes;
-  const obj = [];
-  for (let index = 0; index < classIds.length; index += 1) {
-    const id = classIds[index];
-    if (filterFunc(classes[id])) obj[id]= classes[id];
-  }
-  return obj;
-}
+Assembly.classes = Object.class.object;
+Assembly.new = function (id) {
+  return new (Object.class.get(id))(...Array.from(arguments).slice(1));
+};
+Assembly.class = Object.class.get;
+Assembly.classObj = Object.class.filter;
+
 Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
 Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
 Assembly.lists = {};
 Assembly.idCounters = {};
+
+Assembly.partCode = (assembly) => {
+  const cabinet = assembly.getAssembly('c');
+  if (cabinet) {
+    const name = assembly.constructor.name;
+    cabinet.partIndex = cabinet.partIndex || 0;
+    return `${assembly.constructor.abbriviation}-${cabinet.partIndex++}`;
+  }
+}
+
 module.exports = Assembly

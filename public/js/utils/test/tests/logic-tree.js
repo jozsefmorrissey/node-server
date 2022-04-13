@@ -167,6 +167,9 @@ function LogicTest(tree, ts) {
 
 function decisionsTest(ts, copy) {
   function validateDecisions (tree, ...names) {
+    if (tree.decisions().length !== names.length) {
+      console.log('badd!')
+    }
     const decisions = tree.decisions();
     ts.assertEquals(decisions.length, names.length);
     const decisionNames = decisions.map((elem) => elem.name);

@@ -2,6 +2,7 @@
 
 const CSG = require('../../public/js/3d-modeling/csg');
 
+const Assembly = require('../objects/assembly/assembly');
 const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
 const pull = require('./models/pull.js');
@@ -91,12 +92,12 @@ class ThreeDModel {
       if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
       switch (inclusiveTarget.type) {
         case 'prefix':
-          return part.partName.match(inclusiveTarget.prefixReg) !== null;
+          return part.partName().match(inclusiveTarget.prefixReg) !== null;
           break;
         case 'part-name':
-          return part.partName === inclusiveTarget.value;
+          return part.partName() === inclusiveTarget.value;
         case 'part-code':
-          return part.partCode === inclusiveTarget.value;
+          return part.partCode() === inclusiveTarget.value;
         default:
           throw new Error('unknown inclusiveTarget type');
       }
@@ -140,16 +141,16 @@ class ThreeDModel {
     function hidden(part, level) {
       const im = inclusiveMatch(part);
       if (im !== null) return !im;
-      if (instance.hidePartCode(part.partCode)) return true;
-      if (instance.hidePartName(part.partName)) return true;
-      if (hiddenPrefixReg && part.partName.match(hiddenPrefixReg)) return true;
+      if (instance.hidePartCode(part.partCode())) return true;
+      if (instance.hidePartName(part.partName())) return true;
+      if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
       return false;
     }
 
     function coloring(part) {
-      if (part.partName && part.partName.match(/.*Frame.*/)) return getColor('blue');
-      else if (part.partName && part.partName.match(/.*Drawer.Box.*/)) return getColor('green');
-      else if (part.partName && part.partName.match(/.*Handle.*/)) return getColor('silver');
+      if (part.partName() && part.partName().match(/.*Frame.*/)) return getColor('blue');
+      else if (part.partName() && part.partName().match(/.*Drawer.Box.*/)) return getColor('green');
+      else if (part.partName() && part.partName().match(/.*Handle.*/)) return getColor('silver');
       return getColor('red');
     }
 
@@ -220,10 +221,10 @@ ThreeDModel.init = () => {
 
 ThreeDModel.models = {};
 ThreeDModel.get = (assembly) => {
-  if (ThreeDModel.models[assembly.uniqueId] === undefined) {
-    ThreeDModel.models[assembly.uniqueId] = new ThreeDModel(assembly);
+  if (ThreeDModel.models[assembly.uniqueId()] === undefined) {
+    ThreeDModel.models[assembly.uniqueId()] = new ThreeDModel(assembly);
   }
-  return ThreeDModel.models[assembly.uniqueId];
+  return ThreeDModel.models[assembly.uniqueId()];
 }
 ThreeDModel.render = (part) => {
   const renderId = String.random();
@@ -243,21 +244,21 @@ function groupParts(cabinet) {
   const parts = cabinet.getParts();
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
-    const namePieces = part.partName.split('.');
+    const namePieces = part.partName().split('.');
     let currObj = grouping.group;
     let level = 0;
     let prefix = '';
     for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
       const piece = namePieces[nIndex];
       prefix += piece;
-      if (currObj.groups[piece] === undefined) currObj.groups[piece] = {groups: {}, parts: []};
+      if (currObj.groups[piece] === undefined) currObj.groups[piece] = {groups: {}, parts: {}};
       currObj = currObj.groups[piece];
-      currObj.groups = ++level;
+      currObj.level = ++level;
       currObj.prefix = prefix;
       prefix += '.'
     }
-    if (currObj.parts[part.partName] === undefined) currObj.parts[part.partName] = [];
-    currObj.parts[part.partName].push(part);
+    if (currObj.parts[part.partName()] === undefined) currObj.parts[part.partName()] = [];
+    currObj.parts[part.partName()].push(part);
   }
   return grouping;
 }
@@ -287,9 +288,9 @@ du.on.match('click', '#max-min-btn', (target) => {
 
 du.on.match('click', '.model-label', (target) => {
   if (event.target.tagName === 'INPUT') return;
-  const has = target.match('.active');
+  const has = target.matches('.active');
   deselectPrefix();
-  !has ? addClass(target, 'active') : removeClass(target, 'active');
+  !has ? du.class.add(target, 'active') : du.class.remove(target, 'active');
   let label = target.children[0]
   let type = label.getAttribute('type');
   let value = type !== 'prefix' ? label.innerText :
@@ -302,7 +303,7 @@ du.on.match('click', '.model-label', (target) => {
 
 function deselectPrefix() {
   document.querySelectorAll('.model-label')
-    .forEach((elem) => removeClass(elem, 'active'));
+    .forEach((elem) => du.class.remove(elem, 'active'));
   const cabinet = orderDisplay.active().cabinet();
   const tdm = ThreeDModel.get(cabinet);
   tdm.inclusiveTarget(undefined, undefined);
@@ -343,8 +344,11 @@ du.on.match('change', '.part-code-checkbox', (target) => {
 })
 
 
+let lastRendered;
 function updateModel(part) {
-  const cabinet = part.getAssembly('c');
-  ThreeDModel.render(cabinet);
+  if (part) lastRendered = part.getAssembly('c');
+  ThreeDModel.render(lastRendered);
 }
+
+ThreeDModel.update = updateModel;
 module.exports = ThreeDModel

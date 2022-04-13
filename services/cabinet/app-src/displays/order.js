@@ -36,7 +36,7 @@ class OrderDisplay {
 
     function loadOrder(index, start) {
       return function (orderData) {
-        const order = Order.fromJson(orderData);
+        const order = new Order().fromJson(orderData);
         initOrder(order, index);
         expandList.set(index, order);
         expandList.refresh();
@@ -45,13 +45,13 @@ class OrderDisplay {
     }
 
     const getBody = (order, $index) => {
-      if (order instanceof Order) {
+      if (order.loaded) {
         let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
         active = roomDisplays[order.id()];
         return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
       } else {
         const start = new Date().getTime();
-        Request.get(EPNTS.order.get(order.name), loadOrder($index, start), console.error);
+        Request.get(EPNTS.order.get(order.name()), loadOrder($index, start), console.error);
         return 'Loading...';
       }
     }
@@ -74,7 +74,7 @@ class OrderDisplay {
     const save = (target) => {
       const index = target.getAttribute('index');
       const order = expandList.get(index);
-      Request.post(EPNTS.order.add(order.name), order.toJson(), saveSuccess, saveFail);
+      Request.post(EPNTS.order.add(order.name()), order.toJson(), saveSuccess, saveFail);
       console.log('saving');
     }
 
@@ -85,7 +85,7 @@ class OrderDisplay {
     };
 
     function addOrders(names) {
-      names.forEach((name) => expListProps.list.push({ name }));
+      names.forEach((name) => expListProps.list[name] = new Order(name, null));
       expandList.refresh();
     }
     Request.get(EPNTS.order.list(), addOrders);

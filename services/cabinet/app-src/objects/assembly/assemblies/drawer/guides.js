@@ -6,12 +6,11 @@ const Assembly = require('../../assembly.js');
 
 class Guides extends Assembly {
   constructor() {
+    super();
   }
 }
 
-Assembly.register(Guides);
+Guides.abbriviation = 'gu';
+
+
 module.exports = Guides
-
-
-
-

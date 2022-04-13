@@ -12,14 +12,44 @@ const $t = require('../../$t');
 
 const ROOT_CLASS = 'decision-input-tree';
 
+class ValueCondition {
+  constructor(name, accepted, payload) {
+    Object.getSet(this, {name, accepted});
+    this.payload = payload;
+    this.condition = (wrapper) => {
+        let value;
+        wrapper.root().node.forEach((node) => {
+          node.payload().inputArray.forEach((input) => {
+            if (input.name() === name) value = input.value();
+          });
+        });
+        if (Array.isArray(accepted)) {
+          for (let index = 0; index < accepted.length; index +=1) {
+            if (value === accepted[index]) return true;
+          }
+          return false;
+        }
+        return value === accepted;
+    }
+  }
+}
+
 class DecisionInput {
-  constructor(name, inputArrayOinstance, tree) {
-    Object.getSet(this, 'name', 'id', 'childCntId', 'inputArray', 'class');
+  constructor(name, inputArrayOinstance, tree, isRoot) {
+    Object.getSet(this, 'name', 'id', 'childCntId', 'inputArray', 'class', 'condition');
+    this.clone = () =>
+        this;
+
+    if (inputArrayOinstance instanceof ValueCondition) {
+      this.condition = inputArrayOinstance.condition;
+      this.isConditional = true;
+      inputArrayOinstance = inputArrayOinstance.payload;
+    }
     if (inputArrayOinstance !== undefined){
       this.name = name;
       this.id = `decision-input-node-${String.random()}`;
       this.childCntId = `decision-child-ctn-${String.random()}`
-      this.values = () => tree.values();
+      this.values = tree.values;
       this.onComplete = tree.onComplete
       this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
       this.class =  ROOT_CLASS;
@@ -27,75 +57,121 @@ class DecisionInput {
       this.validate = () => DecisionInputTree.validateInput(inputArrayOinstance, this.values);
     }
 
+    const getWrapper = (wrapperOid) => wrapperOid instanceof LogicWrapper ?
+        wrapperOid : (LogicWrapper.get(wrapperId) || this.root());
+
+    this.branch = (wrapperId, inputs) =>
+            get(wrapperId).branch(String.random(), new DecisionInput(name));
+    this.conditional = (wrapperId, inputs, name, selector) =>
+            get(wrapperId).conditional(String.random(), new DecisionInput(name, relation, formula));
+
+    this.update = tree.update;
     this.addValues = (values) => {
       this.inputArray.forEach((input) => values[input.name()] = input.value())
     }
 
+    this.reachable = () => {
+      const nodeId = this._nodeId;
+      const wrapper = LogicWrapper.get(nodeId);
+      return wrapper.reachable();
+    }
     this.isValid = () => {
       let valid = true;
       this.inputArray.forEach((input) =>
             valid = valid && input.valid());
       return valid;
     }
+    this.isRoot = () => isRoot;
 
-    this.html = () => {
+    this.html = (parentCalling) => {
+      if (this.isRoot() && parentCalling !== true) return tree.html();
       return DecisionInput.template.render(this);
     }
     this.treeHtml = (wrapper) => tree.html(wrapper);
   }
 }
+DecisionInput.template = new $t('input/decision/decision');
 
-function superArgument(onComplete) {
-  const formatPayload = (name, payload, treeId) => new DecisionInput(name, payload, treeId);
-  if (onComplete && onComplete._TYPE === 'DecisionInputTree') {
-    onComplete.formatPayload = formatPayload;
-    return onComplete;
-  }
-  return formatPayload;
-}
+
+// properties
+// optional :
+// noSubmission: /[0-9]{1,}/ delay that determins how often a submission will be processed
+// buttonText: determins the text displayed on submit button;
 
 class DecisionInputTree extends LogicTree {
-  constructor(onComplete) {
+  constructor(onComplete, props) {
+    const decisionInputs = [];
+    props = props || {};
+    const tree = {};
+
+    tree.buttonText = () => {
+      return props.buttonText || `Create ${root.node.name}`;
+    }
+    function superArgument(onComplete) {
+      const formatPayload = (name, payload) => {
+        decisionInputs.push(new DecisionInput(name, payload, tree, decisionInputs.length === 0));
+        return decisionInputs[decisionInputs.length - 1];
+      }
+      if (onComplete && onComplete._TYPE === 'DecisionInputTree') {
+        onComplete.formatPayload = formatPayload;
+        return onComplete;
+      }
+      return formatPayload;
+    }
+
     super(superArgument(onComplete));
+    const root = this;
+
     const onCompletion = [];
-    this.html = (wrapper) => {
-      wrapper = wrapper || this.root();
+    tree.html = (wrapper) => {
+      wrapper = wrapper || root;
       let inputHtml = '';
-      wrapper.forEach((wrapper) => {
-        inputHtml += wrapper.payload().html();
+      wrapper.forAll((wrapper) => {
+        inputHtml += wrapper.payload().html(true);
       });
-      const scope = {wrapper, inputHtml, DecisionInputTree};
-      if (wrapper === this.root()) {
+      const scope = {wrapper, inputHtml, DecisionInputTree, tree};
+      if (wrapper === root) {
         return DecisionInputTree.template.render(scope);
       }
       return inputHtml;
     };
 
-    this.values = () => {
-      return this.structure();
-    }
 
     this.onComplete = (func) => {
-      if (typeof func !== 'function') throw new Error('Argument must be a function');
-      onCompletion.push(func);
+      if ((typeof func) === 'function') onCompletion.push(func);
     }
 
     this.values = () => {
       const values = {};
-      this.root().forEach((wrapper) => {
+      root.forEach((wrapper) => {
         wrapper.payload().addValues(values);
       });
       return values;
     }
+    tree.values = root.values;
+    tree.hideButton = props.noSubmission;
 
+    let submissionPending = false;
     this.completed = () => {
-      const values = this.values();
-      onCompletion.forEach((func) => func(values))
+      if (!root.isComplete()) return false;
+      const delay = props.noSubmission || 0;
+      if (!submissionPending) {
+        submissionPending = true;
+        setTimeout(() => {
+          const values = tree.values();
+          onCompletion.forEach((func) => func(values))
+          submissionPending = false;
+        }, delay);
+      }
+      return true;
     }
+    this.onComplete(onComplete);
 
     return this;
   }
 }
+
+DecisionInputTree.ValueCondition = ValueCondition;
 
 DecisionInputTree.class = 'decision-input-tree';
 DecisionInputTree.buttonClass = 'decision-input-tree-submit';
@@ -114,10 +190,19 @@ function isComplete(wrapper) {
 
 DecisionInputTree.update = (soft) =>
   (elem) => {
-    const wrapper = LogicWrapper.get(elem.getAttribute('node-id'));
+    const cnt = du.find.closest('[node-id]', elem);
+    const parent = cnt.parentElement;
+    const nodeId = cnt.getAttribute('node-id');
+    const wrapper = LogicWrapper.get(nodeId);
     console.log(isComplete(wrapper));
     if(!soft) {
-      wrapper.payload().html();
+      du.find.downAll('.decision-input-cnt', parent).forEach((e) => e.hidden = true)
+      wrapper.forEach((n) => {
+        let selector = `[node-id='${n.nodeId()}']`;
+        elem = du.find.down(selector, parent);
+        elem.hidden = false;
+      });
+      wrapper.root().completed()
     } else {
       const button = du.find.closest('button', elem);
       button.disabled = !isComplete(wrapper);
@@ -147,6 +232,5 @@ DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
 }
 
 DecisionInputTree.template = new $t('input/decision/decisionTree');
-DecisionInput.template = new $t('input/decision/decision');
 
 module.exports = DecisionInputTree;

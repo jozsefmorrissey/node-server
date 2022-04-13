@@ -21,8 +21,8 @@ const REMOVAL_PASSWORD = String.random();
 // returns all functions return current node;
 class DecisionNode extends Lookup{
   constructor(tree, name, instancePayload, parent) {
-    super(instancePayload && instancePayload._NODE_ID ?
-              instancePayload._NODE_ID : String.random(7), 'nodeId');
+    super(instancePayload && instancePayload._nodeId ?
+              instancePayload._nodeId : String.random(7), 'nodeId');
     Object.getSet(this, 'name');
     const stateMap = {};
     let jump;
@@ -41,7 +41,7 @@ class DecisionNode extends Lookup{
     this.getNode = (nodeOid) => nodeOid instanceof DecisionNode ? nodeOid : tree.idMap[formatId(nodeOid)];
     this.name = name.toString();
     this.states = () => Object.values(stateMap);
-    this.instancePayload = () => JSON.clone(instancePayload);
+    this.instancePayload = () => instancePayload;
     this.set = (key, value) => instancePayload[key] = value;
     this.fromJson = undefined;
     this.instanceCount = (n) => tree.instanceCount(n || this.name);
@@ -142,6 +142,19 @@ class DecisionNode extends Lookup{
       }
     }
 
+    this.forEachChild = (func) => {
+      const stateKeys = Object.keys(stateMap);
+      for(let index = 0; index < stateKeys.length; index += 1) {
+        const state = stateMap[stateKeys[index]];
+        func(state);
+      }
+    }
+    this.children = () => {
+      const children = [];
+      this.forEachChild((child) => children.push(child));
+      return children;
+    }
+
     this.map = (func) => {
       const ids = [];
       this.forEach((node) => ids.push(func(node)));
@@ -171,20 +184,17 @@ class DecisionNode extends Lookup{
       return this.getNode(nodeOid).addChildren(this);
     }
 
-    this.conditionsSatisfy = tree.conditionsSatisfy;
+    this.conditionsSatisfied = tree.conditionsSatisfied;
 
     this.change = (name) => {
       const newNode = this.back().then(name);
       const root = this.top();
-      console.log(root.toJson());
       newNode.stealChildren(this);
-      console.log(root.toJson());
       this.remove();
-      console.log(root.toJson());
     }
 
     this.subtree = (conditions, parent, t) => {
-      if (parent && !parent.conditionsSatisfy(conditions, this)) return undefined
+      if (parent && !parent.conditionsSatisfied(conditions, this)) return undefined
       conditions = conditions instanceof Object ? conditions : {};
       const stateKeys = Object.keys(stateMap);
       let copy;
@@ -193,12 +203,12 @@ class DecisionNode extends Lookup{
         const target = t === undefined ? parent : t;
         const nameTaken = target.nameTaken(this.name);
         try {
-          if (!nameTaken) target.addState(this.name, JSON.clone(tree.stateConfigs[this.name]) || {});
+          if (!nameTaken) target.addState(this.name, tree.stateConfigs[this.name] || {});
         } catch (e) {
           target.nameTaken(this.name);
           throw e;
         }
-        copy = parent.then(this.name, JSON.clone(instancePayload));
+        copy = parent.then(this.name, instancePayload);
       }
 
       for(let index = 0; index < stateKeys.length; index += 1) {
@@ -239,7 +249,7 @@ class DecisionNode extends Lookup{
     }
     this.attachTree = attachTree;
     this.treeToJson = tree.toJson;
-    this.conditionsSatisfy = tree.conditionsSatisfy;
+    this.conditionsSatisfied = tree.conditionsSatisfied;
   }
 }
 DecisionNode.DO_NOT_CLONE = true;
@@ -331,7 +341,20 @@ class DecisionTree {
       return json;
     }
 
-    function conditionsSatisfy(conditions, state) {
+    function conditionsSatisfied(conditions, state) {
+      const parent = state.back()
+      if (parent === null) return true;
+      conditions = conditions || {};
+      const cond = conditions[state.name] === undefined ?
+                    conditions._DEFAULT : conditions[state.name];
+      const func = (typeof cond) === 'function' ? cond : null;
+      if (func && !func(state)) {
+        return false;
+      }
+      return parentConditionsSatisfied(conditions, state);
+    }
+
+    function parentConditionsSatisfied(conditions, state) {
       if ((typeof state.back) !== 'function') {
         console.log('here')
       }
@@ -347,7 +370,7 @@ class DecisionTree {
       if (noRestrictions || (regex && state.name.match(regex)) ||
               (target !== null && state.name === target) ||
               (func && func(state))) {
-        return conditionsSatisfy(conditions, parent);
+        return parentConditionsSatisfied(conditions, parent);
       }
       return false;
     }
@@ -360,7 +383,7 @@ class DecisionTree {
 
     this.remove = remove;
     this.getNodeByPath = getNodeByPath;
-    this.conditionsSatisfy = conditionsSatisfy;
+    this.conditionsSatisfied = conditionsSatisfied;
     this.getState = getState;
     this.addState = addState;
     this.addStates = addStates;
@@ -370,6 +393,7 @@ class DecisionTree {
 
     this.rootNode = new DecisionNode(tree, name, payload, null);
     idMap[this.rootNode.nodeId()] = this.rootNode;
+    payload._nodeId = this.rootNode.nodeId();
     tree.declareName = (name) => names[name] = true;
     tree.declairedName = (name) => !!names[name];
 
@@ -383,7 +407,7 @@ class DecisionTree {
         currJson.states.forEach((state) => {
           jsons.push(state);
           state.instancePayload = state.instancePayload || {};
-          state.instancePayload._NODE_ID = state.nodeId;
+          state.instancePayload._nodeId = state.nodeId;
           nodeMap[state.name] = nodeMap[currJson.name].then(state.name, state.instancePayload);
         });
         index++;

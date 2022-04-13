@@ -76,7 +76,7 @@ class Handle extends Assembly {
         return attr ? center[attr] : center;
     };
 
-    this.updatePosition();
+    if (door !== undefined)this.updatePosition();
   }
 }
 Handle.location = {};
@@ -90,11 +90,7 @@ Handle.location.RIGHT = {multiple: true};
 Handle.location.LEFT = {multiple: true};
 Handle.location.CENTER = {multiple: true, rotate: true};
 
-Handle.abbriviation = 'pu';
+Handle.abbriviation = 'hn';
 
-Assembly.register(Handle);
+
 module.exports = Handle
-
-
-
-

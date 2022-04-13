@@ -9,8 +9,8 @@ const Assembly = require('../../../../../assembly.js');
 
 
 class OpeningCoverSection extends SpaceSection {
-  constructor(filePath, partCode, partName, divideProps, pullType) {
-    super(filePath, partCode, partName, divideProps);
+  constructor(partCode, partName, divideProps, parent, pullType) {
+    super(partCode, partName, divideProps, parent);
     const instance = this;
 
     pullType = pullType || PULL_TYPE.DOOR;
@@ -32,15 +32,16 @@ class OpeningCoverSection extends SpaceSection {
     }
 
     this.coverDems = function(attr) {
-      const dems = instance.outerSize().dems;
+      const inset = instance.rootAssembly().propertyConfig.isInset();
+      const dems = inset ? instance.innerSize() : instance.outerSize().dems;
       dems.z = 3/4;
       return attr ? dems[attr] : dems;
     }
 
     this.coverCenter = function (attr) {
       const center = instance.outerSize().center;
-      const inset = CoverStartPoints.INSIDE_RAIL === instance.value('csp');
-      center.z = inset ? 3/8 : -3/4;
+      const inset = instance.rootAssembly().propertyConfig.isInset();
+      center.z = inset ? 3/32 : -3/4;
       return attr ? center[attr] : center;
     }
 
@@ -109,14 +110,17 @@ class OpeningCoverSection extends SpaceSection {
       return center;
     }
 
+    const parentToJson = this.toJson;
+    this.toJson = () => {
+      const json = parentToJson();
+      delete json.subAssemblies;
+      return json;
+    }
+
   }
 }
 
 OpeningCoverSection.dontSaveChildren = true;
 
-Assembly.register(OpeningCoverSection);
+
 module.exports = OpeningCoverSection
-
-
-
-

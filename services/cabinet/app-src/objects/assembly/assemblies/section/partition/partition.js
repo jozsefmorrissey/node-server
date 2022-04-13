@@ -5,24 +5,29 @@ const Section = require('../section.js');
 const Assembly = require('../../../assembly.js');
 
 class PartitionSection extends Section {
-  constructor(templatePath, partCode, partName, sectionProperties) {
-    super(templatePath, true, partCode, partName, sectionProperties);
-    this.important = ['partCode', 'partName', 'index'];
+  constructor(partCode, partName, sectionProperties) {
+    super(true, partCode, partName, sectionProperties);
+    Object.getSet(this, 'index');
+    this.setIndex();
+
+    const parentToJson = this.toJson;
+    this.toJson = () => {
+      const json = parentToJson();
+      delete json.subAssemblies;
+      return json;
+    }
   }
 }
 
 PartitionSection.isPartition = () => true;
 
-PartitionSection.fromJson = (json, parent) => {
-  const sectionProps = parent.dividerProps(json.index);
-  const assembly = Assembly.new(json.type, json.partCode, sectionProps, parent);
-  assembly.partCode = json.partCode;
-  assembly.partName = json.partName;
+PartitionSection.fromJson = (json) => {
+  const sectionProps = json.parent.dividerProps(json.index);
+  const assembly = Assembly.new(json._TYPE, json.partCode, sectionProps, json.parent);
+  assembly.partCode(json.partCode);
+  assembly.partName(json.partName);
+  assembly.uniqueId(json.uniqueId);
   assembly.values = json.values;
   return assembly;
 }
 module.exports = PartitionSection
-
-
-
-

@@ -8,7 +8,7 @@ const Assembly = require('../../../../../../assembly.js');
 
 class DualDoorSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
-    super(DualDoorSection.filePath('dual-door'), partCode, 'Duel.Door.Section', divideProps);
+    super(partCode, 'Duel.Door.Section', divideProps, parent);
     if (divideProps === undefined) return;
     const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
     this.addSubAssembly(rightDoor);
@@ -22,5 +22,5 @@ class DualDoorSection extends OpeningCoverSection {
 
 DualDoorSection.abbriviation = 'dds';
 
-Assembly.register(DualDoorSection);
+
 module.exports = DualDoorSection

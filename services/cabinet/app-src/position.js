@@ -12,7 +12,7 @@ class Position {
           y: sme.eval(obj.y),
           z: sme.eval(obj.z)}
       } else {
-        return sme.eval(obj[attr]);
+        return sme.eval(obj[attr], assembly);
       }
     }
 

@@ -1,4 +1,5 @@
 
+const Measurement = require('../../../public/js/utils/measurement.js')
 
 class Pattern {
   constructor(str) {
@@ -19,7 +20,7 @@ class Pattern {
         this.value = (val) => {
           if (val !== undefined) {
             Pattern.mostResent[id] = val;
-            value = val;
+            value = new Measurement(val);
           }
           return value;
         }
@@ -55,8 +56,8 @@ class Pattern {
       const values = {};
       updateOrder.forEach((id) => {
         const elem = elements[id];
-        dist -= elem.count * elem.value();
-        values[elem.id] = elem.value();
+        dist -= elem.count * elem.value().decimal();
+        values[elem.id] = elem.value().value();
       });
       if (lastElem === undefined) {
         for (let index = 0; index < unique.length; index += 1) {
@@ -68,14 +69,14 @@ class Pattern {
         }
       }
       if (lastElem !== undefined) {
-        lastElem.value(dist / lastElem.count);
-        values[lastElem.id] = lastElem.value();
+        lastElem.value(new Measurement(dist / lastElem.count).value());
+        values[lastElem.id] = lastElem.value().value();
       }
       const list = [];
       const fill = [];
       if (lastElem)
         for (let index = 0; index < unique.length; index += 1)
-          fill[index] = values[unique[index]];
+          fill[index] = elements[unique[index]].value().display();
       for (let index = 0; index < str.length; index += 1)
         list[index] = values[str[index]];
       const retObj = {values, list, fill, str};
@@ -84,7 +85,7 @@ class Pattern {
 
     this.value = (id, value) => {
       if ((typeof id) === 'number') id = unique[id];
-      if ((typeof value) === 'number') {
+      if (value !== undefined) {
         const index = updateOrder.indexOf(id);
         if (index !== -1) updateOrder.splice(index, 1);
         updateOrder.push(id);
@@ -94,14 +95,21 @@ class Pattern {
         }
         elements[id].value(value);
       } else {
-        return elements[id].value();
+        return elements[id].value().decimal();
       }
     }
 
+    this.display = (id) => elements[id].value().display();
+
     this.toJson = () => {
       const json = this.calc();
-      json.list = undefined;
-      json.fill = undefined;
+      delete json.list;
+      delete json.fill;
+      Object.keys(json.values).forEach((key) => {
+        if (Number.isNaN(json.values[key])) {
+          delete json.values[key];
+        }
+      })
       return json;
     }
 
@@ -114,7 +122,7 @@ Pattern.fromJson = (json) => {
   const pattern = new Pattern(json.str);
   const keys = Object.keys(pattern.values);
   keys.foEach((key) => pattern.value(key, pattern.values[key]));
-  return json;
+  return pattern;
 };
 Pattern.mostResent = {};
 

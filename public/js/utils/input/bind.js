@@ -12,12 +12,12 @@ module.exports = function(selector, objOrFunc, props) {
 
   const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
   const getValue = (updatePath, elem) => {
-    const input = inputs.pathValue(updatePath);
+    const input = Object.pathValue(inputs, updatePath);
     return input ? input.value() : elem.value;
   }
   const getValidation = (updatePath) => {
-    let validation = validations.pathValue(updatePath);
-    const input = inputs.pathValue(updatePath);
+    let validation = Object.pathValue(validations, updatePath);
+    const input = Object.pathValue(inputs, updatePath);
     if (input) {
       validation = input.validation;
     }
@@ -41,7 +41,7 @@ module.exports = function(selector, objOrFunc, props) {
           } else if ((typeof objOrFunc) === 'function') {
             objOrFunc(updatePath, elem.value);
           } else {
-            objOrFunc.pathValue(updatePath, elem.value);
+            Object.pathValue(objOrFunc, updatePath, elem.value);
           }
 
           if (target.tagname !== 'INPUT' && target.children.length === 0) {
@@ -58,10 +58,11 @@ module.exports = function(selector, objOrFunc, props) {
       const value = target.innerText;
       const type = target.getAttribute('type');
       const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
-      const input = inputs.pathValue(updatePath) || defaultDynamInput(value, type);
+      const input = Object.pathValue(inputs, updatePath) || defaultDynamInput(value, type);
 
       target.innerHTML = input.html();
-      const inputElem = du.find.down(`#${input.id}`, target);
+      const id = (typeof input.id === 'function') ? input.id() : input.id;
+      const inputElem = du.find.down(`#${id}`, target);
       du.class.add(inputElem, 'dynam-input');
       inputElem.setAttribute('prop-update', updatePath);
       inputElem.focus();

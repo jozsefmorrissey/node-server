@@ -1,16 +1,10 @@
 
 
 const Property = require('./property');
-const Measurement = require('../../../../public/js/utils/measurment.js');
+const Defs = require('./property/definitions');
+const Measurement = require('../../../../public/js/utils/measurement.js');
 const EPNTS = require('../../generated/EPNTS');
 const Request = require('../../../../public/js/utils/request.js');
-
-const h = new Property('h', 'height', null);
-const w = new Property('w', 'width', null);
-const d = new Property('d', 'depth', null);
-const t = new Property('t', 'thickness', null);
-const l = new Property('l', 'length', null);
-
 
 let unitCount = 0;
 const UNITS = [];
@@ -18,74 +12,28 @@ Measurement.units().forEach((unit) =>
       UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
 UNITS._VALUE = Measurement.unit();
 
-const IMPERIAL_US = Measurement.units()[1];
-const assemProps = {
-  Overlay: [
-    new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
-  ],
-  Reveal: [
-    new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
-    new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
-    new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
-  ],
-  Inset: [
-    new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
-  ],
-  Cabinet: [
-      h.clone(), w.clone(), d.clone(),
-      new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
-      new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
-      new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
-      new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
-      new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
-      new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
-      new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
-      new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
-      new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
-  ],
-  Panel: [
-    h.clone(), w.clone(), t.clone()
-  ],
-  Guides: [
-    l.clone(),
-    new Property('dbtos', 'Drawer Box Top Offset', {value: 1/2, notMetric: IMPERIAL_US}),
-    new Property('dbsos', 'Drawer Box Side Offest', {value: 3/16, notMetric: IMPERIAL_US}),
-    new Property('dbbos', 'Drawer Box Bottom Offset', {value: 1/2, notMetric: IMPERIAL_US})
-  ],
-  DoorAndFront:[
-    new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
-    new Property('dafip', 'Door and front inset panel', {value: null})
-  ],
-  Door: [
-    h.clone(), w.clone(), t.clone()
-  ],
-  DrawerBox: [
-    h.clone(), w.clone(), d.clone(),
-    new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
-    new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
-    new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
-    new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
-  ],
-  DrawerFront: [
-    h.clone(), w.clone(), t.clone(),
-    new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
-  ],
-  Frame: [
-    h.clone(), w.clone(), t.clone()
-  ],
-  Handle: [
-    l.clone(), w.clone(),
-    new Property('c2c', 'Center To Center', null),
-    new Property('proj', 'Projection', null),
-  ],
-  Hinge: [
-    new Property('maxtab', 'Max Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
-    new Property('mintab', 'Minimum Spacing from bore to edge of door', {value: 1/4, notMetric: IMPERIAL_US}),
-    new Property('maxol', 'Max Door Overlay', {value: 1/2, notMetric: IMPERIAL_US}),
-    new Property('minol', 'Minimum Door Overlay', {value: .5, notMetric: IMPERIAL_US})
-  ],
-  Opening: []
-}
+const assemProps = {}
+const add = (key, properties) => properties.forEach((prop) => {
+  if (assemProps[key] === undefined) assemProps[key] = {};
+  assemProps[key][prop.code()] = prop;
+});
+
+add('Overlay', [Defs.ov]);
+add('Reveal', [Defs.r,Defs.rvt,Defs.rvb]);
+add('Inset', [Defs.is]);
+add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
+                Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
+                Defs.frw,Defs.frt]);
+add('Panel', [Defs.h,Defs.w,Defs.t]);
+add('Guides', [Defs.l,Defs.dbtos,Defs.dbsos,Defs.dbbos]);
+add('DoorAndFront', [Defs.daffrw,Defs.dafip])
+add('Door', [Defs.h,Defs.w,Defs.t]);
+add('DrawerBox', [Defs.h,Defs.w,Defs.d,Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn]);
+add('DrawerFront', [Defs.h,Defs.w,Defs.t,Defs.mfdfd]);
+add('Frame', [Defs.h,Defs.w,Defs.t]);
+add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
+add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
+add('Opening', []);
 
 const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
 function assemProperties(clazz, filter) {
@@ -95,6 +43,7 @@ function assemProperties(clazz, filter) {
   props = props.filter(filter);
   return props;
 }
+
 
 let config = {};
 const changes = {};
@@ -172,9 +121,11 @@ assemProperties.list = () => Object.keys(assemProps);
 assemProperties.new = (group, name) => {
   if (assemProps[group]) {
     const list = [];
-    const ogList = assemProps[group].filter(hasValueFilter);
+    const ogList = Object.values(assemProps[group]);
     for (let index = 0; index < ogList.length; index += 1) {
-      list[index] = ogList[index].clone();
+      if (hasValueFilter(ogList[index])) {
+        list[index] = ogList[index].clone();
+      }
     }
     list._ID = String.random();
     list._GROUP = group;
@@ -183,6 +134,25 @@ assemProperties.new = (group, name) => {
     return list;
   }
   throw new Error(`Requesting invalid Property Group '${group}'`);
+}
+
+assemProperties.instance = () => {
+  const keys = Object.keys(assemProps);
+  const clone = {};
+  keys.forEach((key) => {
+    const props = Object.values(assemProps[key]);
+    if (clone[key] === undefined) clone[key] = {};
+    props[keys] = {};
+    props.forEach((prop) => clone[key][prop.code()] = prop.clone());
+  });
+  return clone;
+};
+
+assemProperties.getSet = (group, setName) => {
+  const clone = {};
+  let propertyObj = config[group][setName];
+  propertyObj.properties.forEach((prop) => clone[prop.code()] = prop.clone());
+  return clone;
 }
 
 const dummyFilter = () => true;
@@ -217,13 +187,30 @@ assemProperties.groupList = (group, filter) => {
 
 const hasValueFilter = (prop) => prop.value() !== null;
 assemProperties.hasValue = (group) => {
+  if (props === undefined) return [];
   return assemProperties.groupList(group, hasValueFilter);
 }
 
+const list = (key) => {
+  console.log(key);
+  props[key] ? Object.values(props[key]) : [];
+}
 const noValueFilter = (prop) => prop.value() === null;
 assemProperties.noValue = (group) => {
-  const props = assemProps[group];
+  const props = list(group);
+  if (props === undefined) return [];
   return props.filter(noValueFilter);
+}
+
+assemProperties.all = () => {
+  const props = {};
+  const keys = Object.keys(assemProps);
+  keys.forEach((key) => {
+    const l = [];
+    list(key).forEach((prop) => l.push(prop));
+    props[key] = l;
+  });
+  return props;
 }
 
 assemProperties.UNITS = UNITS;

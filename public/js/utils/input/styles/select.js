@@ -22,6 +22,8 @@ class Select extends Input {
     props.value = undefined;
     this.setValue(value);
     this.isArray = () => isArray;
+    const parentHidden = this.hidden;
+    this.hidden = () => props.list.length < 2 || parentHidden();
 
     this.selected = (value) => value === this.value();
   }
@@ -31,7 +33,3 @@ Select.template = new $t('input/select');
 Select.html = (instance) => () => Select.template.render(instance);
 
 module.exports = Select;
-
-
-
-

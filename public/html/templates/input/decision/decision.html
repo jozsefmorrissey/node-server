@@ -1,9 +1,8 @@
 
-<div>
+<span class='decision-input-cnt' node-id='{{_nodeId}}' {{reachable() ? '' : 'hidden'}}>
   <span id='{{id}}' class='inline-flex'>
-    <span:t repeat='input in inputArray' class='pad {{class}}'
-          node-id='{{_nodeId}}' index='{{$index}}'>
+    <span:t repeat='input in inputArray' class='pad {{class}}' index='{{$index}}'>
       {{input.html()}}
     </span:t>
   </span>
-</div>
+</span>

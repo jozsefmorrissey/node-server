@@ -2,13 +2,14 @@
 
 
 const Assembly = require('../../assembly.js');
-const CoverStartPoints = require('../../../../../globals/CONSTANTS.js').CoverStartPoints;
 
 
 class Section extends Assembly {
-  constructor(isPartition, partCode, partName, sectionProperties) {
+  constructor(isPartition, partCode, partName, sectionProperties, parent) {
     super(partCode, partName);
-    this.index = () => sectionProperties().index;
+    this.setParentAssembly(parent);
+    this.setIndex = () => this.index = () => sectionProperties().index;
+    this.setIndex();
     this.center = (attr) => {
       const props = sectionProperties();
       const topPos = props.borders.top.position();
@@ -28,7 +29,7 @@ class Section extends Assembly {
     const calculateRevealOffset = (border, direction) => {
       const borderPos = border.position();
       let reveal = border.value('r');
-      const insideRailStart = CoverStartPoints.INSIDE_RAIL === border.value('csp');
+      const insideRailStart = !this.rootAssembly().propertyConfig.isRevealOverlay();
       const positive = insideRailStart ? direction.indexOf('-') !== -1 :
                           direction.indexOf('-') === -1;
       const axis = direction.replace(/\+|-/, '');
@@ -84,6 +85,7 @@ class Section extends Assembly {
     }
 
     this.isPartition = () => isPartition;
+    this.sectionProperties = sectionProperties;
     this.constructorId = this.constructor.name;
     this.part = false;
     this.display = false;
@@ -112,5 +114,5 @@ Section.new = function (constructorId) {
   throw new Error(`Invalid section Id: '${constructorId}'`);
 }
 
-Assembly.register(Section);
+
 module.exports = Section

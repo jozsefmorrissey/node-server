@@ -152,6 +152,7 @@ add('name', new Input({
   type: 'text',
   placeholder: 'Name',
   name: 'name',
+  value: 'peach',
   class: 'center',
   validation: /^\s*[^\s].*$/,
   errorMsg: 'You must enter a Name'
@@ -223,4 +224,11 @@ add('laborType', new Input({
   class: 'center',
   clearOnClick: true,
   list: Labor.types
+}));
+
+add('formula', new Input({
+  name: 'formula',
+  placeholder: 'Formula',
+  label: 'Formula',
+  class: 'center'
 }));

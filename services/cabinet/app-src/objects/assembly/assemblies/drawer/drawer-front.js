@@ -32,15 +32,11 @@ class DrawerFront extends Assembly {
       }
       return pulls;
     };
-    this.updatePosition();
+    if (demensionStr !== undefined)this.updatePosition();
   }
 }
 
 DrawerFront.abbriviation = 'df';
 
-Assembly.register(DrawerFront);
+
 module.exports = DrawerFront
-
-
-
-

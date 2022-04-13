@@ -5,15 +5,20 @@ const Section = require('../section.js');
 const Assembly = require('../../../assembly.js');
 
 class SpaceSection extends Section {
-  constructor(templatePath, partCode, partName, sectionProperties) {
-    super(templatePath, false, partCode, partName, sectionProperties);
+  constructor(partCode, partName, sectionProperties, parent) {
+    super(false, partCode, partName, sectionProperties, parent);
     if ((typeof sectionProperties) !== 'function')
-    this.important = ['partCode', 'partName', 'index'];
+      Object.getSet(this, 'index');
+    else
+      Object.getSet(this, 'borderIds', 'index');
+    this.setIndex();
+    // this.important = ['partCode', 'partName', 'index'];
     this.borderIds = () => sectionProperties().borderIds;
     const instance = this;
 
     const parentValue = this.value;
     this.value = (attr, value) => {
+      if ((typeof sectionProperties) !== 'function') return;
       const props = sectionProperties();
       const top = props.borders.top;
       const bottom = props.borders.bottom;
@@ -69,18 +74,22 @@ class SpaceSection extends Section {
 }
 
 SpaceSection.fromJson = (json, parent) => {
-  const sectionProps = parent.borders(json.borderIds || json.index);
-  const assembly = json.type !== 'DivideSection' ?
-          Assembly.new(json.type, json.partCode, sectionProps, parent) :
-          Assembly.new(json.type, sectionProps, parent);
-  assembly.partCode = json.partCode;
-  assembly.partName = json.partName;
+  const sectionProps = json.parent.borders(json.borderIds || json.index);
+  const assembly = json._TYPE !== 'DivideSection' ?
+          Assembly.new(json._TYPE, json.partCode, sectionProps, parent) :
+          Assembly.new(json._TYPE, sectionProps, parent);
+  assembly.partCode(json.partCode);
+  assembly.partName(json.partName);
+  assembly.uniqueId(json.uniqueId);
   assembly.values = json.values;
-  json.subAssemblies.forEach((json) =>
-    assembly.addSubAssembly(Assembly.class(json.type)
-                              .fromJson(json, assembly)));
+  // Object.values(json.subAssemblies).forEach((json) => {
+  //   console.log(json._TYPE);
+  //   json.sectionProps = sectionProps();
+  //   assembly.addSubAssembly(Assembly.class(json._TYPE)
+  //                             .fromJson(json, assembly));
+  //                           });
   return assembly;
 }
 
-Assembly.register(SpaceSection);
+
 module.exports = SpaceSection

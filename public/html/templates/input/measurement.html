@@ -1,6 +1,6 @@
 <div class='fit input-cnt'{{hidden() ? ' hidden' : ''}}>
   <label>{{label()}}</label>
-  <input class='measurement-input {{class()}}' id='{{id}}' value='{{value() ? value() : ""}}'
+  <input class='measurement-input {{class()}}' id='{{id()}}' value='{{value() ? value() : ""}}'
       placeholder='{{placeholder()}}' type='{{type()}}' name='{{name()}}'>
   <div class='error' id='{{errorMsgId()}}'>{{errorMsg()}}</div>
 </div>

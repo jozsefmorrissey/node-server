@@ -4,15 +4,12 @@
 const Assembly = require('../../assembly.js');
 
 
-class Hinges extends Assembly {
+class Hinge extends Assembly {
   constructor() {
-
+    super();
   }
 }
 
-Assembly.register(Hinges);
-module.exports = Hinges
+Hinge.abbriviation = 'hg';
 
-
-
-
+module.exports = Hinge

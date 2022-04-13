@@ -3,19 +3,23 @@
 
 const SpaceSection = require('../space.js');
 const Pattern = require('../../../../../../division-patterns.js');
-const CoverStartPoints = require('../../../../../../../globals/CONSTANTS.js').CoverStartPoints;
 const DividerSection = require('../../partition/sections/divider.js');
 const Section = require('../../section.js');
 const Assembly = require('../../../../assembly.js');
+
+function sectionId(parent, sectionProperties) {
+
+}
 
 let dvs;
 let dsCount = 0;
 class DivideSection extends SpaceSection {
   constructor(sectionProperties, parent) {
-    super(DivideSection.filePath('open'), `dvds-${parent.uniqueId}-${sectionProperties().index}`, 'divideSection', sectionProperties);
-    this.important = ['partCode', 'partName', 'borderIds', 'index'];
+    const pId = parent && parent.uniqueId ? parent.uniqueId() : null;
+    const sIndex = (typeof sectionProperties) === 'function' ? sectionProperties().index : null;
+    super(`dvds-${pId}-${sIndex}`, 'divideSection', sectionProperties, parent);
+    // this.important = ['partCode', 'partName', 'borderIds', 'index'];
     const instance = this;
-    this.setParentAssembly(parent);
     dvs = dvs || this;
     let pattern;
     let sectionCount = 1;
@@ -33,13 +37,14 @@ class DivideSection extends SpaceSection {
       }
       return pattern;
     }
-    this.dividerCount = () => Math.ceil((this.sections.length - 1) / 2);
+    this.dividerCount = () => this.init() && Math.ceil((this.sections.length - 1) / 2);
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
     this.sectionProperties = () => JSON.stringify(sectionProperties);
     this.init = () => {
       if (this.sections.length === 0) {
         this.sections.push(new DivideSection(this.borders(0), this));
       }
+      return true;
     }
 
     this.children = () => this.sections;
@@ -120,7 +125,7 @@ class DivideSection extends SpaceSection {
     this.sectionCount = () => this.dividerCount() + 1;
     this.dividerLayout = () => {
       let distance;
-      if (CoverStartPoints.INSIDE_RAIL === this.value('csp')) {
+      if (!this.rootAssembly().propertyConfig.isRevealOverlay()) {
         distance = this.vertical() ? this.innerSize().x : this.innerSize().y;
         this.sections.forEach((section) =>
           distance -= section instanceof DividerSection ? section.maxWidth() : 0);
@@ -141,7 +146,7 @@ class DivideSection extends SpaceSection {
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
-            this.sections.push(new DividerSection(`dv-${this.uniqueId}-${index}`, this.dividerProps(index), instance));
+            this.sections.push(new DividerSection(`dv-${this.uniqueId()}-${index}`, this.dividerProps(index), instance));
             const divideIndex = dividerCount + index + 1;
             this.sections.push(new DivideSection(this.borders(divideIndex), instance));
           }
@@ -156,12 +161,11 @@ class DivideSection extends SpaceSection {
         if (constructorIdOobject === 'DivideSection') {
           section = new DivideSection(this.borders(index), instance);
         } else {
-          section = Section.new(constructorIdOobject, 'dr', this.borders(index));
+          section = Section.new(constructorIdOobject, 'dr', this.borders(index), this);
         }
       } else {
         section = constructorIdOobject;
       }
-      section.setParentAssembly(instance);
       this.sections[index] = section;
     }
     this.size = () => {
@@ -174,28 +178,34 @@ class DivideSection extends SpaceSection {
     this.toJson = () => {
       const json = assemToJson.apply(this);
       json.pattern = this.pattern().toJson();
+      json.subAssemblies = this.sections.map((section) => section.toJson());
       return json;
     }
   }
 }
 
-DivideSection.fromJson = (json, parent) => {
-  const sectionProps = parent.borders(json.borderIds || json.index);
-  const assembly = new DivideSection(sectionProps, parent);
+DivideSection.fromJson = (json) => {
+  const sectionProps = json.parent.borders(json.borderIds || json.index);
+  const assembly = new DivideSection(sectionProps, json.parent);
+  assembly.partCode(json.partCode);
+  assembly.uniqueId(json.uniqueId)
+  assembly.index(json.index);
   const subAssems = json.subAssemblies;
   assembly.values = json.values;
   for (let index = 0; index < subAssems.length / 2; index += 1) {
     const partIndex = index * 2 + 1;
     if (partIndex < subAssems.length) {
       const partJson = subAssems[partIndex];
-      const partition = Assembly.class(partJson.type).fromJson(partJson, assembly);
+      partJson.parent = assembly;
+      const partition = Assembly.class(partJson._TYPE).fromJson(partJson, assembly);
       assembly.setSection(partition, partIndex);
     }
 
     const spaceIndex = index * 2;
     const spaceJson = subAssems[spaceIndex];
     spaceJson.index = spaceIndex;
-    const space = Assembly.class(spaceJson.type).fromJson(spaceJson, assembly);
+    spaceJson.parent = assembly;
+    const space = Assembly.class(spaceJson._TYPE).fromJson(spaceJson, assembly);
     assembly.setSection(space, spaceIndex);
   }
   assembly.pattern(json.pattern.str);
@@ -207,5 +217,5 @@ DivideSection.fromJson = (json, parent) => {
 
 DivideSection.abbriviation = 'ds';
 
-Assembly.register(DivideSection);
+
 module.exports = DivideSection

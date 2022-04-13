@@ -129,9 +129,8 @@ class Expandable {
         }, 100);
       }
     };
-    this.getKey = this.list().length;
     this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
-    this.getKey = () => this.activeKey();
+    this.getKey = () => this.list().length;
     this.active = () => props.list[this.activeKey()];
     // TODO: figure out why i wrote this and if its neccisary.
     this.value = (key) => (key2, value) => {
@@ -142,7 +141,7 @@ class Expandable {
       storage[key][key2] = value;
     }
     this.inputHtml = () => this.hasInputTree() ?
-          this.inputTree().html() : Expandable.inputRepeatTemplate.render(this);
+          this.inputTree().payload().html() : Expandable.inputRepeatTemplate.render(this);
     this.set = (key, value) => props.list[key] = value;
     this.get = (key) => props.list[key];
     this.renderBody = (target) => {
@@ -157,7 +156,7 @@ class Expandable {
         headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
         bodys.forEach((body) => body.style.display = 'none');
         rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-        const body = du.find.closest('.expand-body', target);
+        const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
         body.style.display = 'block';
         const key = target.getAttribute('key');
         this.activeKey(key);

@@ -1,8 +1,0 @@
-<b>
-  {{cost.id()}} - {{cost.constructor.constructorId(constructor.name)}}
-</b>
-<ul{{1 === cost.level() ? '' : ' hidden'}} level='{{cost.level()}}'>
-  <li:t repeat='name in cost.unsatisfiedBranches()' unique-id='{{cost.uniqueId}}' name='{{name}}'>
-    {{name}}
-  </li:t>
-</ul>

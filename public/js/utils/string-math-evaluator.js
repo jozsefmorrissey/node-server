@@ -29,7 +29,7 @@ class StringMathEvaluator {
         if (currObj === undefined && !globalCheck) throw Error('try global');
         return currObj;
       }  catch (e) {
-        return resolve(path, globalScope, true);
+        if (!globalCheck) return resolve(path, globalScope, true);
       }
     }
 
@@ -219,7 +219,8 @@ class StringMathEvaluator {
         const char = expr[index];
         if (prevWasOpperand) {
           try {
-            if (isolateOperand(char, operands)) throw new Error('Invalid operand location');
+            if (isolateOperand(char, operands))
+                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
             let newIndex = isolateParenthesis(expr, index, values, operands, scope) ||
                 isolateNumber(expr, index, values, operands, scope) ||
                 (allowVars && isolateVar(expr, index, values, operands, scope));
@@ -260,7 +261,7 @@ StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
 StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
 StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
 StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
-StringMathEvaluator.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
+StringMathEvaluator.decimalReg = /^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(.|)|(\.)[0-9]{1,})/;
 StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
 StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
 StringMathEvaluator.multi = (n1, n2) => n1 * n2;

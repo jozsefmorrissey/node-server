@@ -5,17 +5,18 @@
 class Joint {
   constructor(joinStr) {
     const match = joinStr.match(Joint.regex);
+    Object.getSet(this, 'parentAssembly');
     this.malePartCode = match[1];
     this.femalePartCode = match[2];
 
     this.updatePosition = () => {};
 
-    this.getFemale = () => this.parentAssembly.getAssembly(this.femalePartCode);
-    this.getMale = () => this.parentAssembly.getAssembly(this.malePartCode);
+    this.getFemale = () => this.parentAssembly().getAssembly(this.femalePartCode);
+    this.getMale = () => this.parentAssembly().getAssembly(this.malePartCode);
 
     this.maleOffset = () => 0;
     this.femaleOffset = () => 0;
-    this.setParentAssembly = (pa) => this.parentAssembly = pa;
+    this.setParentAssembly = (pa) => this.parentAssembly(pa);
 
     this.getDemensions = () => {
       const malePos = getMale();
@@ -40,7 +41,3 @@ Joint.new = function (id) {
   return new Joint.classes[id](...Array.from(arguments).slice(1));
 }
 module.exports = Joint
-
-
-
-

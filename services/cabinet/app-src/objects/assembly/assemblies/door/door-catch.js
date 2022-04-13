@@ -6,13 +6,8 @@ const Assembly = require('../../assembly.js');
 
 class DoorCatch extends Assembly {
   constructor() {
-
+    super();
   }
 }
 
-Assembly.register(DoorCatch);
 module.exports = DoorCatch
-
-
-
-

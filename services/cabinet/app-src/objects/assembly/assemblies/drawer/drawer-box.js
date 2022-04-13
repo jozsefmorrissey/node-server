@@ -11,9 +11,5 @@ class DrawerBox extends Assembly {
 
 DrawerBox.abbriviation = 'db';
 
-Assembly.register(DrawerBox);
+
 module.exports = DrawerBox
-
-
-
-

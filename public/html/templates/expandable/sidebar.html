@@ -6,7 +6,7 @@
         <div class='expand-rm-btn-cnt'>
           <button class='expandable-item-rm-btn' ex-list-id='{{id()}}' key='{{key}}'>X</button>
         </div>
-        <div class="expand-header {{type()}} {{getKey() === key ? ' active' : ''}}"
+        <div class="expand-header {{type()}} {{activeKey() === key ? ' active' : ''}}"
                 ex-list-id='{{id()}}' key='{{key}}'>
           {{getHeader(item, key)}}
         </div>

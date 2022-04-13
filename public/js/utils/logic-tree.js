@@ -24,8 +24,7 @@ class LogicType {
     Object.getSet(this, 'nodeId', 'optional', 'value', 'default');
     this.wrapper = wrapperOrJson instanceof LogicWrapper ?
                       wrapperOrJson :
-                      wrapper.get(wrapperOrJson.nodeId);
-    this.wrapper.typeObject = this;
+                      LogicWrapper.get(wrapperOrJson.nodeId);
     this.nodeId(this.wrapper.node.nodeId());
     let optional = false;
     this.optional = (val) => {
@@ -143,7 +142,8 @@ class ConditionalLogic extends LogicType {
     validate(wrapper.node.payload());
     def = wrapper.node.payload();
     function validate(val, password) {
-      if ((typeof val.condition) !== 'function') throw ConditionalLogic.error;
+      if ((typeof val.condition) !== 'function')
+        throw ConditionalLogic.error;
     }
     this.value = (val) => {
       if (val !== undefined) {
@@ -197,7 +197,7 @@ class LogicTree {
     const wrapperMap = {};
 
     function getTypeObjByNodeId(nodeId) {
-      return get(nodeId).typeObject;
+      return choices[get(nodeId).name];
     }
     let dataSync = new DataSync('nodeId', getTypeObjByNodeId);
     dataSync.addConnection('value');
@@ -294,15 +294,22 @@ class LogicTree {
       return data;
     }
 
+    function forAll(func, node) {
+      (node || root.node).forEach((n) => {
+        func(wrapNode(n));
+      });
+    }
+
     function forEach(func, node) {
       reachableTree(node).forEach((n) => {
         func(wrapNode(n));
       });
     }
 
-    function reachable(name) {
-      const wrapper = getByName(name);
-      return wrapper.node.conditionsSatisfy(choicesToSelectors(), wrapper.node);
+    function reachable(nameOwrapper) {
+      const wrapper = nameOwrapper instanceof LogicWrapper ?
+                        nameOwrapper : getByName(nameOwrapper);
+      return wrapper.node.conditionsSatisfied(choicesToSelectors(), wrapper.node);
     }
 
     function isComplete() {
@@ -321,10 +328,10 @@ class LogicTree {
       selectors = selectors || choicesToSelectors();
       if (mustSelect(node)) {
         const wrapper = wrapNode(node);
-        if (wrapper.typeObject === undefined) {
+        if (getTypeObj(wrapper) === undefined) {
           throw new Error ('This should not happen. node wrapper was not made correctly.');
         }
-        return wrapper.typeObject.madeSelection();
+        return getTypeObj(wrapper).madeSelection();
       }
       return true;
     }
@@ -348,7 +355,7 @@ class LogicTree {
                 terminatedPath = true;
             }
             if (!terminatedPath) {
-              if (node.conditionsSatisfy(selectors, node)) {
+              if (node.conditionsSatisfied(selectors, node)) {
                 if (selectionMade(node, selectors)) {
                   decisions.push(wrapNode(node));
                 } else {
@@ -366,40 +373,55 @@ class LogicTree {
     function toJson(wrapper) {
       return function () {
         wrapper = wrapper || root;
-        const json = {choices: {}, _TYPE: tree.constructor.name};
+        const json = {_choices: {}, _TYPE: tree.constructor.name};
         const keys = Object.keys(choices);
         const ids = wrapper.node.map((node) => node.nodeId());
         keys.forEach((key) => {
           if (ids.indexOf(choices[key].nodeId()) !== -1) {
-            json.choices[key] = choices[key].toJson();
+            json._choices[key] = choices[key].toJson();
             const valEqDefault = choices[key].default() === choices[key].value();
             const selectionNotMade = !choices[key].selectionMade();
-            if(selectionNotMade || valEqDefault) json.choices[key].value = undefined;
+            if(selectionNotMade || valEqDefault) json._choices[key].value = undefined;
           }
         });
-        json.tree = wrapper.node.toJson();
-        json.connectionList = dataSync.toJson(wrapper.node.nodes());
+        json._tree = wrapper.node.toJson();
+        json._connectionList = dataSync.toJson(wrapper.node.nodes());
         return json;
+      }
+    }
+
+    function children(wrapper) {
+      return () => {
+        const children = [];
+        wrapper.node.forEachChild((child) => children.push(wrapNode(child)));
+        return children;
       }
     }
 
     function addStaticMethods(wrapper) {
       wrapper.structure = structure;
+      wrapper.choicesToSelectors = choicesToSelectors;
       wrapper.setChoice = setChoice;
+      wrapper.children = children(wrapper);
       wrapper.getByPath = getByPath;
       wrapper.setDefault = setDefault;
       wrapper.attachTree = attachTree(wrapper);
       wrapper.toJson = toJson(wrapper);
       wrapper.root = () => root;
       wrapper.isComplete = isComplete;
-      wrapper.reachable = reachable;
+      wrapper.reachable = (wrap) => reachable(wrap || wrapper);
       wrapper.decisions = decisions(wrapper);
       wrapper.forPath = forPath;
       wrapper.forEach = forEach;
+      wrapper.forAll = forAll;
       wrapper.pathsToString = pathsToString;
       wrapper.leaves = leaves;
       wrapper.toString = () =>
           wrapper.node.subtree(choicesToSelectors()).toString(null, 'LOGIC_TYPE');
+    }
+
+    function getTypeObj(wrapper) {
+      return choices[wrapper.name];
     }
 
     function addHelperMetrhods (wrapper) {
@@ -411,7 +433,7 @@ class LogicTree {
       }
       const typeObj = choices[name];
       wrapper.name = name;
-      wrapper.typeObject = typeObj;
+      wrapper.getTypeObj = () => getTypeObj(wrapper);
       wrapper.value = typeObj.value;
       wrapper.payload = () => node.payload();
       wrapper.options = typeObj.options;
@@ -419,8 +441,8 @@ class LogicTree {
       wrapper.default = typeObj.default;
       wrapper.selector = typeObj.selector;
       wrapper.addChildren = addChildrenFunc(wrapper);
-      wrapper.valueSync = (w) => dataSync.valueSync(typeObj, w.typeObject);
-      wrapper.defaultSync = (w) => dataSync.defaultSync(typeObj, w.typeObject);
+      wrapper.valueSync = (w) => dataSync.valueSync(typeObj, w.getTypeObj());
+      wrapper.defaultSync = (w) => dataSync.defaultSync(typeObj, w.getTypeObj());
       wrapper.valueUpdate = (value) => dataSync.valueUpdate(value, typeObj);
       wrapper.defaultUpdate = (value) => dataSync.defaultUpdate(value, typeObj);
     }
@@ -441,6 +463,7 @@ class LogicTree {
         if (root === undefined) {
           root = wrapper;
           root.node = new DecisionTree(name, payload);
+          root.payload = root.node.payload;
           newWrapper = root;
         } else if (getByName(name)) {
           newWrapper = wrapNode(wrapper.node.then(name));
@@ -509,7 +532,7 @@ class LogicTree {
     }
 
     function incorrperateJsonNodes(json, node) {
-      const decisionTree = new DecisionTree(json.tree);
+      const decisionTree = new DecisionTree(json._tree);
 
       let newNode;
       if (node !== undefined) {
@@ -521,8 +544,8 @@ class LogicTree {
       }
       newNode.forEach((n) =>
           wrapNode(n));
-      dataSync.fromJson(json.connectionList);
-      updateChoices(json.choices);
+      dataSync.fromJson(json._connectionList);
+      updateChoices(json._choices);
       return node;
     }
 

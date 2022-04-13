@@ -73,9 +73,29 @@ Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
 }, true);
 
 const classLookup = {};
+const attrMap = {};
 const identifierAttr = '_TYPE';
 const immutableAttr = '_IMMUTABLE';
 const temporaryAttr = '_TEMPORARY';
+const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
+
+const clazz = {};
+clazz.object = () => JSON.clone(classLookup);
+clazz.get = (name) => classLookup[name];
+clazz.filter = (filterFunc) => {
+  const classes = clazz.object();
+  if ((typeof filterFunc) !== 'function') return classes;
+  const classIds = Object.keys(classes);
+  const obj = {};
+  for (let index = 0; index < classIds.length; index += 1) {
+    const id = classIds[index];
+    if (filterFunc(classes[id])) obj[id] = classes[id];
+  }
+  return obj;
+}
+
+
+Function.safeStdLibAddition(Object, 'class', clazz, true);
 
 Function.safeStdLibAddition(Array, 'toJson', function (arr) {
     const json = [];
@@ -86,7 +106,8 @@ Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
   function interpretValue(value) {
     if (value instanceof Object) {
       const classname = value[identifierAttr];
-      const attrs = Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
+      const attrs = attrMap[classname] ? Object.keys(attrMap[classname]) :
+                    Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
       if (Array.isArray(value)) {
         const realArray = [];
         for (let index = 0; index < value.length; index += 1) {
@@ -94,14 +115,23 @@ Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
         }
         return realArray;
       } else if (classname && classLookup[classname]) {
-        const classObj = new (classLookup[classname])(value);
-        for (let index = 0; index < attrs.length; index += 1) {
-          const attr = attrs[index];
-          if ((typeof classObj[attr]) === 'function')
+        if (classLookup[classname].fromJson) {
+          return classLookup[classname].fromJson(value);
+        } else {
+          const classObj = new (classLookup[classname])(value);
+          for (let index = 0; index < attrs.length; index += 1) {
+            const attr = attrs[index];
+            if ((typeof classObj[attr]) === 'function')
             classObj[attr](interpretValue(value[attr]));
-        };
-        return classObj;
+            else
+            classObj[attr] = interpretValue(value[attr]);
+          };
+          return classObj;
+        }
       } else {
+        if (classname) {
+          console.warn(`fromJson for class ${classname} not registered`)
+        }
         const realObj = {}
         for (let index = 0; index < attrs.length; index += 1) {
           const attr = attrs[index];
@@ -129,10 +159,12 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
   let values = {};
   let temporary = false;
   let immutable = false;
+  let doNotOverwrite = false;
   if ((typeof initialVals) === 'object') {
-    values = JSON.clone(initialVals);
+    values = initialVals;
     immutable = values[immutableAttr] === true;
     temporary = values[temporaryAttr] === true;
+    doNotOverwrite = values[doNotOverwriteAttr] === true;
     if (immutable) {
       attrs = Object.keys(values);
     } else {
@@ -141,8 +173,13 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
   } else {
     attrs = [initialVals].concat(attrs);
   }
+  if (attrMap[cxtrName] === undefined) attrMap[cxtrName] = [];
+  attrs.forEach((attr) => {
+    if (!attr.match(/^_[A-Z]*[A-Z_]*$/))
+      attrMap[cxtrName][attr] = true;
+  });
 
-  for (let index = 0; index < attrs.length; index += 1) {
+  for (let index = 0; !doNotOverwrite && index < attrs.length; index += 1) {
     const attr = attrs[index];
     if (attr !== immutableAttr) {
       if (immutable) obj[attr] = () => values[attr];
@@ -181,7 +218,10 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     for (let index = 0; index < attrs.length; index += 1) {
       const attr = attrs[index];
       if (attr !== immutableAttr) {
-        obj[attr](Object.fromJson(json[attr]));
+        if ((typeof obj[attr]) === 'function')
+          obj[attr](Object.fromJson(json[attr]));
+        else
+          obj[attr] = Object.fromJson(json[attr]);
       }
     };
     return obj;
@@ -190,7 +230,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     obj.clone = () => obj;
   } else {
     obj.clone = () => {
-      const clone = new obj.constructor();
+      const clone = new obj.constructor(obj.toJson());
       clone.fromJson(obj.toJson());
       return clone;
     }

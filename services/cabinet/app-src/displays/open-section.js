@@ -8,31 +8,74 @@ const ExpandableList = require('../../../../public/js/utils/lists/expandable-lis
 const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
+const Measurement = require('../../../../public/js/utils/measurement.js');
 const $t = require('../../../../public/js/utils/$t.js');
+const FeatureDisplay = require('./feature');
 const Inputs = require('../input/inputs.js');
 
+
+class SectionDisplay {
+  constructor (section) {
+    this.render = (scope) => {
+      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
+      const cId = scope.opening.constructorId;
+      if (cId === 'DivideSection') {
+        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
+      }
+      return SectionDisplay.template(section).render(scope);
+    }
+  }
+}
+
+const templates = {};
+const fileLocations = {};
+SectionDisplay.template = (section) => {
+  const cName = section.constructor.name;
+  if (fileLocations[cName] === undefined) {
+    const filename = cName.replace(/Section$/, '')
+                            .replace(/([a-z])([A-Z])/g, '$1-$2')
+                            .toLowerCase();
+    fileLocations[cName] = `sections/${filename}`;
+  }
+  const templatePath = fileLocations[cName];
+  if (templates[templatePath] === undefined) templates[templatePath] = new $t(templatePath);
+  return templates[templatePath];
+}
+
+du.on.match('change', '.feature-radio', (target) => {
+  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+  target.nextElementSibling.hidden = !target.checked;
+});
+
+displays = {};
+SectionDisplay.render = (scope) => {
+  const uId = scope.opening.uniqueId();
+  if (displays[uId] === undefined) displays[uId] = new SectionDisplay(scope.opening);
+  return displays[uId].render(scope);
+}
 
 const OpenSectionDisplay = {};
 
 OpenSectionDisplay.html = (opening) => {
   const openDispId = OpenSectionDisplay.getId(opening);
   opening.init();
-  OpenSectionDisplay.sections[opening.uniqueId] = opening;
+  OpenSectionDisplay.sections[opening.uniqueId()] = opening;
   setTimeout(() => OpenSectionDisplay.refresh(opening), 100);
   const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
   return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml});
 }
 
-OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.uniqueId}`;
+OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.uniqueId()}`;
 OpenSectionDisplay.template = new $t('opening');
 OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
 OpenSectionDisplay.listHeadTemplate = new $t('divide/head');
 OpenSectionDisplay.sections = {};
 OpenSectionDisplay.lists = {};
-OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId}`;
+OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId()}`;
 
 OpenSectionDisplay.getList = (root) => {
-  let openId = root.uniqueId;
+  let openId = root.uniqueId();
   if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
   const sections = Section.sections();
   const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
@@ -50,7 +93,7 @@ OpenSectionDisplay.getList = (root) => {
     const list = OpenSectionDisplay.getList(root);
     const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
     const assemblies = opening.getSubAssemblies();
-    return Section.render({assemblies, getFeatureDisplay, opening, list, sections});
+    return SectionDisplay.render({assemblies, getFeatureDisplay, opening, list, sections});
   }
   const findElement = (selector, target) => du.find.down(selector, du.find.up('.expandable-list', target));
   const expListProps = {
@@ -63,7 +106,7 @@ OpenSectionDisplay.getList = (root) => {
 }
 OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
 OpenSectionDisplay.updateDividers = (opening) => {
-  const selector = `[opening-id="${opening.uniqueId}"].opening-cnt > .divider-controls`;
+  const selector = `[opening-id="${opening.uniqueId()}"].opening-cnt > .divider-controls`;
   const dividerControlsCnt = document.querySelector(selector);
   const selectPatternId = OpenSectionDisplay.getSelectId(opening);
   bind(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/);
@@ -74,10 +117,10 @@ OpenSectionDisplay.updateDividers = (opening) => {
 
 OpenSectionDisplay.changeIds = {};
 OpenSectionDisplay.refresh = (opening) => {
-  let changeId = (OpenSectionDisplay.changeIds[opening.uniqueId] || 0) + 1;
-  OpenSectionDisplay.changeIds[opening.uniqueId] = changeId;
+  let changeId = (OpenSectionDisplay.changeIds[opening.uniqueId()] || 0) + 1;
+  OpenSectionDisplay.changeIds[opening.uniqueId()] = changeId;
   setTimeout(()=> {
-    if (changeId === OpenSectionDisplay.changeIds[opening.uniqueId]) {
+    if (changeId === OpenSectionDisplay.changeIds[opening.uniqueId()]) {
       const id = OpenSectionDisplay.getId(opening);
       const target = du.id(id);
       const listCnt = du.find.up('.expandable-list', target);
@@ -86,14 +129,14 @@ OpenSectionDisplay.refresh = (opening) => {
       const type = opening.isVertical() === true ? 'pill' : 'sidebar';
       OpenSectionDisplay.updateDividers(opening);
       OpenSectionDisplay.getList(opening).refresh(type);
-      const dividerSelector = `[opening-id='${opening.uniqueId}'].division-count-input`;
+      const dividerSelector = `[opening-id='${opening.uniqueId()}'].division-count-input`;
       // listCnt.querySelector(dividerSelector).focus();
     }
   }, 500);
 }
 
 OpenSectionDisplay.patternContainerSelector = (opening) =>
-  `.open-pattern-input-cnt[opening-id='${opening.uniqueId}']`;
+  `.open-pattern-input-cnt[opening-id='${opening.uniqueId()}']`;
 
 OpenSectionDisplay.lastInputValues = {};
 OpenSectionDisplay.patterInputHtml = (opening) => {
@@ -108,10 +151,10 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
       label: id,
       placeholder: id,
       name: id,
-      value: pattern.value(id)
+      value: fill[index]
     });
     measInput.on('keyup', (value, target) => {
-      opening.pattern().value(target.name, OpenSectionDisplay.evaluator.eval(target.value));
+      opening.pattern().value(target.name, Measurement.decimal(target.value));
       fill = opening.dividerLayout().fill;
       const patternCnt = document.querySelector(patCntSelector);
       const inputs = patternCnt.querySelectorAll('input');
@@ -137,14 +180,14 @@ OpenSectionDisplay.getOpening = (target) => {
 OpenSectionDisplay.evaluator = new StringMathEvaluator();
 OpenSectionDisplay.patternInputChange = (target) => {
   const opening = OpenSectionDisplay.getOpening(up('.open-pattern-input-cnt', target));
-  opening.pattern().value(target.name, OpenSectionDisplay.evaluator(target.value));
+  opening.pattern().value(target.name, Measurement.decimal(target.value));
   if (opening.pattern().satisfied()) {
     OpenSectionDisplay.refresh(opening);
   }
 };
 
 OpenSectionDisplay.patternInputSelector = (opening) =>
-  `[name='pattern'][opening-id='${opening.uniqueId}']`;
+  `[name='pattern'][opening-id='${opening.uniqueId()}']`;
 
 OpenSectionDisplay.onPatternChange = (target) => {
   const opening = OpenSectionDisplay.getOpening(target);
@@ -175,10 +218,10 @@ OpenSectionDisplay.onOrientation = (target) => {
 OpenSectionDisplay.onSectionChange = (target) => {
   ExpandableList.value('selected', target.value, target);
   const section = ExpandableList.get(target);
-  const index = ExpandableList.getIdAndIndex(target).index;
-  section.parentAssembly.setSection(target.value, index);
-  OpenSectionDisplay.refresh(section.parentAssembly);
-  updateModel(section);
+  const index = ExpandableList.getIdAndKey(target).key;
+  section.parentAssembly().setSection(target.value, index);
+  OpenSectionDisplay.refresh(section.parentAssembly());
+  ThreeDModel.update(section);
 }
 
 du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);

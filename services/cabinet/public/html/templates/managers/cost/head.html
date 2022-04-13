@@ -1,0 +1,10 @@
+<div class='expand-header' node-id='{{node.nodeId()}}'>
+  <b>
+    {{node.payload().name()}} - {{node.payload().type()}}
+  </b>
+  <ul>
+    <li:t repeat='property in node.payload().requiredProperties' name='{{property.name()}}'>
+      {{property.name()}}
+    </li:t>
+  </ul>
+</div>

@@ -9,12 +9,12 @@ const Assembly = require('../../../../../../assembly.js');
 
 class FalseFrontSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
-    super(FalseFrontSection.filePath('false-front'), partCode, 'False.Front.Section', divideProps, PULL_TYPE.DRAWER);
+    super(partCode, 'False.Front.Section', divideProps, parent, PULL_TYPE.DRAWER);
     this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems, '', this));
   }
 }
 
 FalseFrontSection.abbriviation = 'ffs';
 
-Assembly.register(FalseFrontSection);
+
 module.exports = FalseFrontSection

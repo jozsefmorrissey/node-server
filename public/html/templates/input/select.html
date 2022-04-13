@@ -2,7 +2,7 @@
   <label>{{label()}}</label>
   <select class='{{class()}}' id='{{id()}}' name='{{name()}}' value='{{value()}}'>
     <option:t repeat='key, value in list()' value='{{isArray() ? value : key}}'
-        {{selected(item) ? 'selected' : ''}}>
+        {{selected(isArray() ? value : key) ? 'selected' : ''}}>
       {{value}}
     </option:t>
   </select>

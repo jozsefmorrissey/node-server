@@ -11,9 +11,5 @@ class Panel extends Assembly {
 
 Panel.abbriviation = 'pn';
 
-Assembly.register(Panel);
+
 module.exports = Panel
-
-
-
-

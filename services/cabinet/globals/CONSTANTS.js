@@ -11,14 +11,5 @@ const PULL_TYPE = {
   DOOR: 'Door'
 };
 
-const CoverStartPoints = {
-  INSIDE_RAIL: 'InsideRail',
-  OUTSIDE_RAIL: 'OutsideRail'
-}
 exports.APP_ID = APP_ID
 exports.PULL_TYPE = PULL_TYPE
-exports.CoverStartPoints = CoverStartPoints
-
-
-
-

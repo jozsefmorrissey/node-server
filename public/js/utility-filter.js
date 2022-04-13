@@ -425,7 +425,6 @@ function UtilityFilter() {
         column = columns[index];
         for (let uIndex = 0; uIndex < columnsObj[column].length; uIndex += 1) {
           let multiSelectId = getSelectId(UTF.dataMap[id].id, column);
-          console.log(multiSelectId);
           let multiSelect = document.multiselect(`#${multiSelectId}`);
           let radioBtn = document.getElementById(buildId('radio', id, column, 'SELECT'));
           multiSelect._item.nextElementSibling

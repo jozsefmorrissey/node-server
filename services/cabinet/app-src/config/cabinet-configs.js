@@ -19,7 +19,7 @@ class CabinetConfig {
     function setLists(cabinets) {
       const allCabinetKeys = Object.keys(cabinets);
       allCabinetKeys.forEach((key) => {
-        const type = cabinets[key].partName;
+        const type = cabinets[key].partName();
         if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
         if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
         cabinetKeys[type][key] = cabinets[key];
@@ -70,16 +70,16 @@ class CabinetConfig {
       });
       return inputTree;
     };
-    this.get = (name, type, propertyId, id) => {
+    this.get = (group, name, type, propertyId, id) => {
       let cabinet;
-      if (!id) cabinet = Cabinet.build(type);
+      if (!id) cabinet = Cabinet.build(type, group);
       else cabinet = Cabinet.fromJson(cabinetList[id]);
       if (propertyId !== undefined) cabinet.propertyId(propertyId);
-      cabinet.name = name;
+      cabinet.name(name);
       return cabinet;
     };
 
-    Request.get(EPNTS.cabinet.list(), setLists, () => setLists([]));
+    Request.get(EPNTS.cabinet.list(), setLists, setLists);
   }
 }
 

@@ -1,0 +1,8 @@
+<div>
+  <div:t repeat='group, properties in groups'>
+    <b>{{group}} ({{abbriviation(group)}})</b>
+    <div:t class='tab' repeat='property in properties'>
+      {{property.name()}} ({{property.code()}})
+    </div:t>
+  </div:t>
+</div>

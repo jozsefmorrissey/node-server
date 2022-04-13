@@ -2,7 +2,6 @@
 
 
 const Assembly = require('../assembly.js');
-const CoverStartPoints = require('../../../../globals/CONSTANTS.js').CoverStartPoints;
 const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
 const Joint = require('../../joint/joint.js');
 const DivideSection = require('./section/space/sections/divide-section.js');
@@ -19,8 +18,9 @@ const framelessFrameWidth = 3/4;
 class Cabinet extends Assembly {
   constructor(partCode, partName, propsId) {
     super(partCode, partName);
+    Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
+    Object.getSet(this, 'propertyId', 'name');
     this.propertyId(propsId);
-    this.important = ['partCode', 'name', 'partName', 'length', 'width', 'thickness', 'propertyId'];
     const instance = this;
     let frameWidth = framedFrameWidth;
     let toeKickHeight = 4;
@@ -55,7 +55,7 @@ class Cabinet extends Assembly {
 
         const position = {};
         const start = {};
-        if (CoverStartPoints.INSIDE_RAIL === borders.top.value('csp')) {
+        if (this.propertyConfig.isRevealOverlay() || this.propertyConfig.isInset()) {
           position.right = borders.right.position().centerAdjust('x', '-x');
           position.left = borders.left.position().centerAdjust('x', '+x');
           position.top = borders.top.position().centerAdjust('y', '-x');
@@ -77,8 +77,10 @@ class Cabinet extends Assembly {
   }
 }
 
-Cabinet.build = (type) => {
+Cabinet.build = (type, group) => {
   const cabinet = new Cabinet('c', type);
+  cabinet.propertyConfig = group && group.propertyConfig ?
+                            group.propertyConfig : new PropertyConfig();
   const config = cabinetBuildConfig[type];
 
   const valueIds = Object.keys(config.values);
@@ -92,7 +94,7 @@ Cabinet.build = (type) => {
     const centerStr = subAssemConfig.center.join(',');
     const rotationStr = subAssemConfig.rotation;
     const subAssem = Assembly.new(type, subAssemConfig.code, name, centerStr, demStr, rotationStr);
-    subAssem.partCode = subAssemConfig.code;
+    subAssem.partCode(subAssemConfig.code);
     cabinet.addSubAssembly(subAssem);
   });
 
@@ -119,32 +121,36 @@ Cabinet.fromJson = (assemblyJson) => {
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const assembly = new Cabinet(partCode, partName);
+  assembly.propertyConfig = assemblyJson.propertyConfig;
+  assembly.uniqueId(assemblyJson.uniqueId);
   assembly.values = assemblyJson.values;
-  assemblyJson.subAssemblies.forEach((json) => {
-    const clazz = Assembly.class(json.type);
+  Object.values(assemblyJson.subAssemblies).forEach((json) => {
+    const clazz = Assembly.class(json._TYPE);
+    json.parent = assembly;
     if (clazz !== DivideSection) {
-      assembly.addSubAssembly(clazz.fromJson(json, assembly));
+      assembly.addSubAssembly(Object.fromJson(json));
     } else {
       const divideSection = clazz.fromJson(json, assembly);
       assembly.openings.push(divideSection);
       assembly.addSubAssembly(divideSection);
     }
   });
+  assembly.name(assemblyJson.name);
   assembly.length(assemblyJson.length);
   assembly.width(assemblyJson.width);
   assembly.thickness(assemblyJson.thickness);
   return assembly;
 }
+Cabinet.abbriviation = 'c';
 
-Cabinet.partCode = (assembly) => {
-  const cabinet = assembly.getAssembly('c');
-  if (cabinet) {
-    const name = assembly.constructor.name;
-    cabinet.partIndex = cabinet.partIndex || 0;
-    return `${assembly.constructor.abbriviation}-${cabinet.partIndex++}`;
-  }
-}
+// Cabinet.partCode = (assembly) => {
+//   const cabinet = assembly.getAssembly('c');
+//   if (cabinet) {
+//     const name = assembly.constructor.name;
+//     cabinet.partIndex = cabinet.partIndex || 0;
+//     return `${assembly.constructor.abbriviation}-${cabinet.partIndex++}`;
+//   }
+// }
 
 
-Assembly.register(Cabinet);
 module.exports = Cabinet

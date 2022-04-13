@@ -6,13 +6,13 @@ const Property = require('../config/property.js');
 const Cost = require('../cost/cost.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
-const RadioDisplay = require('../display-utils/radioDisplay.js');
+const RadioDisplay = require('../display-utils/radio-display.js');
 const EPNTS = require('../../generated/EPNTS');
 const $t = require('../../../../public/js/utils/$t.js');
 const Inputs = require('../input/inputs.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
-const Measurement = require('../../../../public/js/utils/measurment.js');
+const Measurement = require('../../../../public/js/utils/measurement.js');
 
 // TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
 const changed = (id) => Properties.changes.changed(id);

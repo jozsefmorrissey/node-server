@@ -1,262 +1,79 @@
 
 
 
-const AbstractManager = require('../abstract-manager.js');
+const CostTree = require('../../cost/cost-tree.js');
 const Assembly = require('../../objects/assembly/assembly.js');
-const Cost = require('../../cost/cost.js');
-const CostDecision = require('../../cost/cost-decision.js');
-const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
-const Select = require('../../../../../public/js/utils/input/styles/select.js');
 const du = require('../../../../../public/js/utils/dom-utils.js');
-const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-const Door = require('../../objects/assembly/assemblies/door/door.js');
-const DrawerFront = require('../../objects/assembly/assemblies/drawer/drawer-front.js');
-const DrawerBox = require('../../objects/assembly/assemblies/drawer/drawer-box.js');
-const Labor = require('../../cost/types/labor.js');
-const Input = require('../../../../../public/js/utils/input/input.js');
-const Frame = require('../../objects/assembly/assemblies/frame.js');
-const Panel = require('../../objects/assembly/assemblies/panel.js');
-const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
-const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation.js');
-const Material = require('../../cost/types/material.js');
-const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-const Inputs = require('../../input/inputs.js');
 const $t = require('../../../../../public/js/utils/$t.js');
-const EPNTS = require('../../../generated/EPNTS.js');
-const Displays = require('../../services/display-svc.js');
-const propertyDisplay = Displays.get('propertyDisplay');
-const Properties = require('../../config/properties.js');
+const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+const Select = require('../../../../../public/js/utils/input/styles/select');
+const Input = require('../../../../../public/js/utils/input/input');
+const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation');
+const Inputs = require('../../input/inputs.js');
+const RadioDisplay = require('../../display-utils/radio-display.js');
 
-
-const notCostGroups = ['Overlay', 'Inset', 'Reveal'];
-
-const costTypes = ['Custom'];
-class CostManager extends AbstractManager {
+class CostManager {
   constructor(id, name) {
-    super(id, name);
-    const list = [];
-
-    this.toJson = () => {
-      const json = {};
-      list.forEach((listObj) => {
-        json[listObj.partId] = [];
-          listObj.expandList.getList().forEach((cost) =>
-              json[listObj.partId].push(cost.toJson()));
-      });
-      return json;
-    };
-
-
-    this.loadPoint = () => EPNTS.costs.get();
-    this.savePoint = () => EPNTS.costs.save();
-    this.costTypeHtml = CostManager.costTypeHtml;
-    this.fromJson = (json) => {
-      return {};
+    const costTree = new CostTree();
+    this.root = () => costTree.root();
+    this.update = () => {
+      const html = CostManager.mainTemplate.render(this);
+      du.find(`#${id}`).innerHTML = html;
     }
-
-    this.Cost = Cost;
-    this.globalProps = () => Properties(name)
-
-    const getHeader = (costGroup) => CostManager.costHeadTemplate(costGroup.instance);
-    const getBody = (costGroup) => CostManager.costBodyTemplate(costGroup.instance);
-    const getObject = (values) => {
-      const obj = {partId: values.partId, costs: []};
-      return obj;
-    }
-
-    this.load();
+    this.nodeInputHtml = () => CostManager.nodeInput().payload().html();
+    this.headHtml = (node) =>
+        CostManager.headTemplate.render({node, CostManager: this});
+    this.bodyHtml = (node) =>
+        CostManager.bodyTemplate.render({node, CostManager: this});
+    this.loadPoint = () => console.log('load');
+    this.savePoint = () => console.log('save');
+    this.fromJson = () => {};
+    this.update();
   }
 }
 
+CostManager.mainTemplate = new $t('managers/cost/main');
 CostManager.headTemplate = new $t('managers/cost/head');
 CostManager.bodyTemplate = new $t('managers/cost/body');
-CostManager.costHeadTemplate = new $t('managers/cost/cost-head');
-CostManager.costBodyTemplate = new $t('managers/cost/cost-body');
-CostManager.cntClass = 'cost-manager-reference-cnt';
-CostManager.selectInput = (cost) => Inputs('childCost', { value: cost.selectedId, list: cost.childIds() });
-
-CostManager.setInstanceProps = (scope) => {
-  const parent = du.id(scope.parentId);
-  if (scope.instanceProps !== undefined) return scope;
-  if (parent === null) return undefined;
-
-
-
-  const expandLists = du.find.upAll('.expand-body', parent);
-  let instanceProps = {};
-  if (expandLists.length === 2) {
-    const partId = expandLists[1].parentElement.children[1].children[0]
-                      .getAttribute('part-id');
-    scope.instanceProps = Properties(partId).instance;
-  }
-}
-
-CostManager.childScopes = {};
-CostManager.childScope = (cost) => {
-  if (CostManager.childScopes[cost.uniqueId()] === undefined) {
-    const parentId = `cost-child-group-${String.random()}`;
-    const expListProps = {
-      list: cost.children,
-      inputValidation: () => true,
-      parentSelector: `#${parentId}`,
-      inputTree:   CostManager.costInputTree(costTypes, undefined),
-      getHeader: CostManager.costHeader,
-      getBody: CostManager.costBody,
-      getObject: CostManager.getCostObject(cost.id()),
-      listElemLable: `Cost to ${cost.id()}`
-    };
-    const expandList = new ExpandableList(expListProps);
-
-    CostManager.childScopes[cost.uniqueId()] = {expandList, cost, parentId,
-          CostManager};
-  }
-  const scope = CostManager.childScopes[cost.uniqueId()];
-  CostManager.setInstanceProps(scope);
-  return scope;
-}
-
-CostManager.getCostObject = (id) => (values, target) => {
-  const obj = CostManager.getObject(values, target);
-  if (values.referenceable) costTypes.push(values.id);
-  return obj;
-};
-
-CostManager.typeTemplates = {};
-CostManager.costTypeHtml = (cost, scope) => {
-  const constName = cost.constructor.name;
-  if (CostManager.typeTemplates[constName])
-    return CostManager.typeTemplates[constName].render(scope);
-  const fileId = `managers/cost/types/${Cost.constructorId(constName).toLowerCase()}`;
-  if ($t.isTemplate(fileId)) {
-    template = new $t(fileId);
-    CostManager.typeTemplates[constName] = template;
-    return template.render(scope);
-  }
-  return scope.costDecision.tree().requiredNodes();
-}
-
-
-
-CostManager.isInstance = (target) => du.find.upAll('.expandable-list', el).length === 2;
-CostManager.costHeader = (cost) => CostManager.costHeadTemplate.render(CostManager.childScope(cost));
-CostManager.costBody = (cost) => cost instanceof Cost && CostManager.costBodyTemplate.render(CostManager.childScope(cost));
-CostManager.getObject = (values, target) => {
-  const parent = du.find.up('[cost-id]', target);
-  if (values.costType === '/dev/nul') {
-    values.parent = Cost.get(parent.getAttribute('cost-id'));
-    if (values.parent.level() === 0) {
-      values.requiredBranches = Properties(values.objectId, (prop) => prop.value() === null);
-      values.requiredBranches = values.requiredBranches.map((prop) => prop.name());
-    }
-    return Cost.new(values);
-  } else {
-    const referenceCost = Cost.get(values.costType);
-    if (referenceCost === undefined) throw new Error('Invalid Cost reference name');
-    return Cost.new({type: referenceCost.constructor.name, referenceCost, formula: values.formula});
-  }
-}
-
-class Conditional {
-  constructor(targrt, value) {
-    this.condition = () => decisionInput.value(target) === value;
-  }
-}
-
+CostManager.propertySelectTemplate = new $t('managers/cost/property-select');
 CostManager.costInputTree = (costTypes, objId, onUpdate) => {
-
-  const objectId = new Input({
-    name: 'objectId',
-    hide: true,
-    value: objId
+  const logicTree = new LogicTree();
+  return logicTree;
+}
+CostManager.nodeInput = () => {
+  const dit = new DecisionInputTree();
+  const typeSelect = new Select({
+    name: 'type',
+    list: CostTree.types,
+    value: CostTree.types[0]
+  });
+  const selectorType = new Select({
+    name: 'selectorType',
+    list: ['Manual', 'Auto'],
+    value: 'Manual'
+  });
+  const propertySelector = new Select({
+    name: 'propertySelector',
+    list: CostTree.propertyList,
   });
 
-  const costTypeSelect = new Select({
-    name: 'costType',
-    list: ['Material', 'Labor']
-  })
-
-  // const decisionInput = new DecisionInputTree();
-  // decisionInput.branch('cost', [costTypeSelect]);
-
-  // const id = Inputs('costId');
-  // const laborType = Inputs('laborType');
-  // const hourlyRate = Inputs('hourlyRate');
-  //
-  // const idType = [objectId, id, Inputs('costType')];
-  // const materialInput = [Inputs('method'), Inputs('company'), Inputs('partNumber')];
-  // const laborInput = [Inputs('method'), laborType, hourlyRate];
-  // laborType.on('keyup',
-  //   (val, values) => hourlyRate.setValue(Labor.hourlyRate(val)));
-  //
-  // const length = Inputs('length');
-  // const width = Inputs('width');
-  // const depth = Inputs('depth');
-  // const cost = Inputs('cost');
-  // const hours = Inputs('hours');
-  // const count = Inputs('count');
-  // const modifyDemension = Inputs('modifyDemension');
-  // const color = [Inputs('color')];
-  //
-  // // Todo: ????
-  // const matFormula = CostManager.formulaInput(objId, 'Material');
-  // const costCount = [count, cost, matFormula];
-  // const lengthCost = [length, cost, matFormula];
-  // const lengthWidthCost = [length, width, cost, matFormula];
-  // const lengthWidthDepthCost = [length, width, depth, cost, matFormula];
-  //
-  // const laborFormula = CostManager.formulaInput(objId, 'Labor');
-  // const hourlyCount = [count, hours, laborFormula];
-  // const lengthHourly = [length, hours, laborFormula];
-  // const lengthWidthHourly = [length, width, hours, laborFormula];
-  // const lengthWidthDepthHourly = [length, width, depth, hours, laborFormula];
-
-  const dit = new DecisionInputTree(console.log);
-  dit.leaf('Config', [Inputs('name')]);
+  const accVals = ['select', 'multiselect', 'conditional'];
+  const condtionalPayload = new DecisionInputTree.ValueCondition('type', accVals, [selectorType]);
+  const type = dit.branch('Node', [Inputs('name'), typeSelect]);
+  const selectType = type.conditional('selectorType', condtionalPayload);
+  const payload = [Inputs('formula'), propertySelector, RelationInput.selector];
+  const condtionalPayload2 = new DecisionInputTree.ValueCondition('selectorType', 'Auto', payload);
+  selectType.conditional('formula', condtionalPayload2);
   return dit;
 }
+new RadioDisplay('cost-tree', 'radio-id');
 
+new CostManager('cost-manager', 'cost');
 
-// Todo do a valid test for input... probably need to make a sample cabinet
-const sectionScope = {l: 0, w:0, d:0, fpt: 0, fpb: 0, fpr: 0, fpl: 0, ppt: 0, ppb: 0, ppl: 0, ppr: 0};
-const defaultScope = {l: 0, w:0, d:0};
-const sectionEval = new StringMathEvaluator(sectionScope);
-const defaultEval = new StringMathEvaluator(defaultScope);
-const sectionObjs = ['Door', 'DrawerFront', 'DrawerBox', 'Opening'];
-
-const validate = (objId, type) => (formula) => {
-  if (type === 'Labor' || sectionObjs.indexOf(objId) === -1)
-    return !Number.isNaN(defaultEval.eval(formula));
-  return !Number.isNaN(sectionEval.eval(formula));
+function abbriviation(group) {
+  return Assembly.classes[group] ? Assembly.classes[group].abbriviation : 'nope';
 }
-
-const sectionInput = () => new Input({
-  name: 'formula',
-  placeholder: 'Formula',
-  validation: validate('Door'),
-  class: 'center',
-  errorMsg: `Invalid Formula: allowed variables...
-  <br>l - length
-  <br>w - width
-  <br>d - depth/thickness
-  <br>fp[tblr] - Frame postion [top, bottom, left, right]
-  <br>pp[tblr] - Panel Postion [top, bottom, left, right]`
-});
-const defaultInput = () => new Input({
-  name: 'formula',
-  placeholder: 'Formula',
-  validation: validate(),
-  class: 'center',
-  errorMsg: `Invalid Formula: allowed variables...
-  <br>l - length
-  <br>w - width
-  <br>d - depth/thickness`
-});
-
-CostManager.formulaInput = (objId, type) => {
-  if (type === 'Labor' ||
-        sectionObjs.indexOf(objId) === -1)
-    return defaultInput();
-  return sectionInput();
-};
-
+const scope = {groups: CostTree.propertyList, abbriviation};
+du.id('property-select-cnt').innerHTML =
+      CostManager.propertySelectTemplate.render(scope);
 module.exports = CostManager

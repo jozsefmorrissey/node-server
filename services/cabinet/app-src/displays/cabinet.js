@@ -8,7 +8,7 @@ const OpenSectionDisplay = require('./open-section.js');
 const CabinetConfig = require('../config/cabinet-configs.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-const Measurement = require('../../../../public/js/utils/measurment.js');
+const Measurement = require('../../../../public/js/utils/measurement.js');
 const Request = require('../../../../public/js/utils/request.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
@@ -18,25 +18,28 @@ const Inputs = require('../input/inputs.js');
 
 
 class CabinetDisplay {
-  constructor(room) {
+  constructor(parentSelector, group) {
     const propertySelectors = {};
-    const parentSelector = `[room-id="${room.id()}"].cabinet-cnt`;
     let propId = 'Half Overlay';
+    let displayId = String.random();
     const instance = this;
     this.propId = (id) => {
       if (id ===  undefined) return propId;
       propId = id;
     }
+    function displayValue(val) {
+      return new Measurement(val).display();
+    }
     const getHeader = (cabinet, $index) =>
-        CabinetDisplay.headTemplate.render({room, cabinet, $index});
+        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue});
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
-      if (propertySelectors[cabinet.uniqueId] === undefined)
-        propertySelectors[cabinet.uniqueId] = Inputs('propertyIds', { value: cabinet.propertyId() });
-      if (expandList.activeIndex() === $index)
+      if (propertySelectors[cabinet.uniqueId()] === undefined)
+        propertySelectors[cabinet.uniqueId()] = Inputs('propertyIds', { value: cabinet.propertyId() });
+      if (expandList.activeKey() === $index)
         ThreeDModel.render(cabinet);
-      const selectHtml = propertySelectors[cabinet.uniqueId].html();
-      const scope = {room, $index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
+      const selectHtml = propertySelectors[cabinet.uniqueId()].html();
+      const scope = {$index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
       return CabinetDisplay.bodyTemplate.render(scope);
     }
 
@@ -47,11 +50,11 @@ class CabinetDisplay {
       return {type: 'You must select a defined type.'};
     }
     const getObject = (values) => {
-      return CabinetConfig.get(values.name, values.type, values.propertyId, values.id);
+      return CabinetConfig.get(group, values.name, values.type, values.propertyId, values.id);
     };
     this.active = () => expandList.active();
     const expListProps = {
-      list: room.cabinets,
+      list: group.cabinets,
       inputTree:   CabinetConfig.inputTree(),
       parentSelector, getHeader, getBody, getObject, inputValidation,
       listElemLable: 'Cabinet'
@@ -69,13 +72,14 @@ class CabinetDisplay {
 
     const valueUpdate = (path, value) => {
       const cabKey = cabinetKey(path);
-      cabKey.cabinet.value(cabKey.key, new Measurement(value).decimal());
+      const decimal = new Measurement(value, true).decimal();
+      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : val);
       ThreeDModel.render(cabKey.cabinet);
     }
 
     const attrUpdate = (path, value) => {
       const cabKey = cabinetKey(path);
-      cabKey.cabinet[cabKey.key] = value;
+      cabKey.cabinet[cabKey.key](value);
     }
 
     const saveSuccess = () => console.log('success');
@@ -92,8 +96,9 @@ class CabinetDisplay {
     }
 
     CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-    bind(`[room-id="${room.id()}"].cabinet-input`, valueUpdate, Measurement.validation('(0,)'));
-    bind(`[room-id="${room.id()}"].cabinet-id-input`, attrUpdate);
+    bind(`[display-id="${displayId}"].cabinet-input`, valueUpdate,
+                  {validation: Measurement.validation('(0,)')});
+    bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
     du.on.match('click', '.save-cabinet-btn', save);
   }
 }

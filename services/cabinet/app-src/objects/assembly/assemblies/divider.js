@@ -12,9 +12,4 @@ Divider.count = 0;
 
 Divider.abbriviation = 'dv';
 
-Assembly.register(Divider);
 module.exports = Divider
-
-
-
-

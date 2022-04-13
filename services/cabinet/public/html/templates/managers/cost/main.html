@@ -1,0 +1,12 @@
+<div>
+  <div class="center">
+    <h2 id='cost-manager-header'>
+      Cost Tree Manager
+    </h2>
+  </div>
+  <div:t class='expandable-list cost-tree' repeat='child in root().children()' radio-id='poo'>
+    {{headHtml(child)}}
+    {{bodyHtml(child)}}
+  </div:t>
+  <button id='cost-manager-save-btn'>Save</button>
+</div>

@@ -10,7 +10,7 @@ const Assembly = require('../../../../../../assembly.js');
 
 class DrawerSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
-    super(DrawerSection.filePath('drawer'), partCode, 'Drawer.Section', divideProps, PULL_TYPE.DRAWER);
+    super(partCode, 'Drawer.Section', divideProps, parent, PULL_TYPE.DRAWER);
     if (divideProps === undefined) return;
     const instance = this;
 
@@ -43,5 +43,5 @@ class DrawerSection extends OpeningCoverSection {
 
 DrawerSection.abbriviation = 'dws';
 
-Assembly.register(DrawerSection);
+
 module.exports = DrawerSection

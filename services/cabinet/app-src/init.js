@@ -1,12 +1,13 @@
 
 
+
+require('../../../public/js/utils/utils.js');
+require('./displays/user.js');
+
 // Object Classes
 require('./objects/assembly/init-assem');
 const Order = require('./objects/order.js');
 const Assembly = require('./objects/assembly/assembly.js');
-
-require('../../../public/js/utils/utils.js');
-require('./displays/user.js');
 const Properties = require('./config/properties.js');
 
 // Display classes
@@ -54,11 +55,11 @@ function init(body){
   const propertyDisplay = new PropertyDisplay('#property-manager');
   Displays.register('propertyDisplay', propertyDisplay);
   require('./cost/init-costs.js');
-  // du.on.match('change', '.open-orientation-radio,.open-division-input', utils.updateDivisions);
+  du.on.match('change', '.open-orientation-radio,.open-division-input', utils.updateDivisions);
   const CostManager = require('./displays/managers/cost.js');
   const costManager = new CostManager('cost-manager', 'cost');
   orderDisplay = new OrderDisplay('#app');
-  // setTimeout(ThreeDModel.init, 1000);
+  setTimeout(ThreeDModel.init, 1000);
   const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
 }
 
