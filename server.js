@@ -25,7 +25,7 @@ function getValue(str) {
   }
   return str;
 }
-var0iX9EibohboicieGhoo7yoo8xaV
+
 const valueRegex = /[A-Z.a-z]{1,}=.*$/;
 function argParser() {
   for (let index = 2; index < process.argv.length; index += 1) {
