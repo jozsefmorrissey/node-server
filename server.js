@@ -25,7 +25,7 @@ function getValue(str) {
   }
   return str;
 }
-
+var0iX9EibohboicieGhoo7yoo8xaV
 const valueRegex = /[A-Z.a-z]{1,}=.*$/;
 function argParser() {
   for (let index = 2; index < process.argv.length; index += 1) {
@@ -77,7 +77,7 @@ if (shell.exec('[ -d ~/.cert ] && echo true', {silent: true}).stdout.trim() !== 
 var https_options = {
   key: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim()),
   cert: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim()),
-  ca: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim())
+  ca: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.ca").stdout.trim())
 };
 
 app.use(function (req, res, next) {
