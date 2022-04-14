@@ -77,7 +77,7 @@ if (shell.exec('[ -d ~/.cert ] && echo true', {silent: true}).stdout.trim() !== 
 var https_options = {
   key: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim()),
   cert: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim()),
-  ca: []
+  ca: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim())
 };
 
 app.use(function (req, res, next) {
