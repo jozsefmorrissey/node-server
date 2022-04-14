@@ -14,6 +14,14 @@ function endpoints(app, prefix) {
     fs.writeFile(fileName, JSON.stringify(req.body, null, 2), console.log);
     res.send(`success: ${fileName}`);
   });
+  app.get(prefix + '/webhook/', function (req, res, next) {
+    const dateStr = new Date().toLocaleString().replace(/\//g, '-');
+    const fileName = `${SERVICE_DIR}/hooks/${dateStr}.json`;
+    console.log(fileName);
+    shell.touch(fileName);
+    fs.writeFile(fileName, JSON.stringify(req.body, null, 2), console.log);
+    res.send(`success: ${fileName}`);
+  });
 }
 
 
