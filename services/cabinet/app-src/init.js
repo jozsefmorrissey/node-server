@@ -3,6 +3,7 @@
 
 require('../../../public/js/utils/utils.js');
 const $t = require('../../../public/js/utils/$t');
+$t.loadFunctions(require('../generated/html-templates'))
 require('./displays/user.js');
 
 // Object Classes
@@ -14,7 +15,6 @@ const Properties = require('./config/properties.js');
 // Display classes
 const du = require('../../../public/js/utils/dom-utils.js');
 const EPNTS = require('../generated/EPNTS.js');
-$t.loadFunctions(require('../generated/html-templates'))
 const Displays = require('./services/display-svc.js');
 const OrderDisplay = require('./displays/order.js');
 const ThreeDModel = require('./three-d/three-d-model.js');
