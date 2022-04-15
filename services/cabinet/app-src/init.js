@@ -2,6 +2,7 @@
 
 
 require('../../../public/js/utils/utils.js');
+const $t = require('../../../public/js/utils/$t');
 require('./displays/user.js');
 
 // Object Classes
@@ -12,7 +13,6 @@ const Properties = require('./config/properties.js');
 
 // Display classes
 const du = require('../../../public/js/utils/dom-utils.js');
-const $t = require('../../../public/js/utils/$t');
 const EPNTS = require('../generated/EPNTS.js');
 $t.loadFunctions(require('../generated/html-templates'))
 const Displays = require('./services/display-svc.js');
