@@ -3,7 +3,7 @@
 Request = {
     onStateChange: function (success, failure, id) {
       return function () {
-        if (this.readyState == 4) {
+        if (this.readyState === 4) {
           if (this.status == 200) {
             try {
               resp = JSON.parse(this.responseText);
@@ -38,7 +38,7 @@ Request = {
       const xhr = new Request.xmlhr();
       xhr.open("GET", url, true);
       const id = Request.id(url, 'GET');
-      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Content-Type', 'text/pdf');
       xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
       Request.setGlobalHeaders(xhr);
       if (success === undefined && failure === undefined) return xhr;
@@ -77,8 +77,10 @@ Request.globalHeader = (header, funcOval) => {
 }
 Request.setGlobalHeaders = (xhr) => {
   const headers = Object.keys(globalHeaders);
-  headers.forEach((header) =>
-    xhr.setRequestHeader(header, Function.orVal(globalHeaders[header], xhr)));
+  headers.forEach((header) => {
+    const value = (typeof globalHeaders[header]) === 'function' ? globalHeaders[header]() : globalHeaders[header];
+    xhr.setRequestHeader(header, value, xhr);
+  });
 }
 try {
   Request.xmlhr = XMLHttpRequest;

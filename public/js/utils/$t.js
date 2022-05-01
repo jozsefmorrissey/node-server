@@ -8,8 +8,10 @@ const ExprDef = require('./expression-definition');
 
 class $t {
 	constructor(template, id, selector) {
-    const afterRenderEvent = new CustomEvent('afterRender');
-    const beforeRenderEvent = new CustomEvent('beforeRender');
+		if (selector) {
+			const afterRenderEvent = new CustomEvent('afterRender');
+			const beforeRenderEvent = new CustomEvent('beforeRender');
+		}
 
 		function varReg(prefix, suffix) {
 		  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
@@ -216,15 +218,12 @@ class $t {
       return built;
 		}
 
-		function rangeExp(rangeItExpr, get) {
+		function rangeExp(elemName, rangeItExpr, get) {
 			const match = rangeItExpr.match($t.rangeItExpReg);
-			const elemName = match[1];
-			let startIndex = (typeof match[2]) === 'number' ||
-						match[2].match(/^[0-9]*$/) ?
-						match[2] : get(`${match[2]}`);
-			let endIndex = (typeof match[3]) === 'number' ||
-						match[3].match(/^[0-9]*$/) ?
-						match[3] : get(`${match[3]}`);
+			let startIndex = match[1].match(/^[0-9]{1,}$/) ?
+						match[1] : get(match[1]);
+			let endIndex = match[2].match(/^[0-9]*$/) ?
+						match[2] : get(match[2]);
 			if (((typeof startIndex) !== 'string' &&
 							(typeof	startIndex) !== 'number') ||
 								(typeof endIndex) !== 'string' &&
@@ -276,8 +275,8 @@ class $t {
 		}
 
 		function type(scope, expression) {
-			if ((typeof expression) === 'string' && expression.match($t.rangeAttemptExpReg)) {
-				if (expression.match($t.rangeItExpReg)) {
+			if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
+				if (scope.match($t.rangeItExpReg)) {
 					return 'rangeExp'
 				}
 				return 'rangeExpFormatError';
@@ -304,16 +303,17 @@ class $t {
 			}
 		}
 
+		// TODO: itExp is not longer an iteration expression. fix!!!!
 		function render(scope, itExp, parentScope) {
       if (scope === undefined) return '';
 			let rendered = '';
 			const get = getter(scope, parentScope);
 			switch (type(scope, itExp)) {
 				case 'rangeExp':
-					rendered = rangeExp(itExp, get);
+					rendered = rangeExp(itExp, scope, get);
 					break;
 				case 'rangeExpFormatError':
-					throw new Error(`Invalid range itteration expression "${itExp}"`);
+					throw new Error(`Invalid range itteration expression "${scope}"`);
 				case 'defaultArray':
 					rendered = defaultArray(itExp, get);
 					break;
@@ -417,11 +417,15 @@ class $t {
 						const t = eval(`new $t(\`${template}\`)`);
             let resolvedScope = "get('scope')";;
             try {
-              console.log('tagName', tagName);
-              console.log('varNames', varNames);
-              console.log('realScope', realScope);
-              console.log('tagContents', tagContents);
-              resolvedScope = ExprDef.parse(expression, realScope);
+              // console.log('tagName', tagName);
+              // console.log('varNames', varNames);
+              // console.log('realScope', realScope);
+              // console.log('tagContents', tagContents);
+							if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+                resolvedScope = `'${realScope}'`;
+              } else {
+                resolvedScope = ExprDef.parse(expression, realScope);
+              }
             } catch (e) {}
             string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
 					}
@@ -463,8 +467,8 @@ $t.loadFunctions = (functions) => {
 $t.isTemplate = (id) => $t.functions[id] !== undefined;
 $t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-$t.rangeAttemptExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*(.*\.\..*)\s*$/;
-$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*([a-z0-9A-Z]*)\.\.([a-z0-9A-Z]*)\s*$/;
+$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
+$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*\.\.\s*([a-z0-9A-Z]*)\s*$/;
 $t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.quoteStr = function (str) {
 		str = str.replace(/\\`/g, '\\\\\\`')
@@ -496,14 +500,14 @@ $t.clean = (val) => val === undefined ? '' : val;
 
 function createGlobalsInterface() {
   const GLOBALS = {};
-  const isMotifiable = () => GLOBALS[name] === undefined ||
+  const isMotifiable = (name) => GLOBALS[name] === undefined ||
         GLOBALS[name].imutable !== 'true';
   $t.global = function (name, value, imutable) {
     if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
-    if (isMotifiable()) GLOBALS[name] = {value, imutable};
+    if (isMotifiable(name)) GLOBALS[name] = {value, imutable};
   }
   $t.rmGlobal = function(name) {
-    if (isMotifiable()) delete GLOBALS[name];
+    if (isMotifiable(name)) delete GLOBALS[name];
   }
 }
 createGlobalsInterface();

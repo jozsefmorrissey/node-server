@@ -12,9 +12,24 @@ function validSelector (selector) {
 };
 const VS = validSelector;
 
+function parseSeperator(string, seperator, isRegex) {
+  if (isRegex !== true) {
+    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
+  }
+  var keyValues = string.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
+  var json = {};
+  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
+    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
+    if (split) {
+      json[split[1]] = split[2];
+    }
+  }
+  return json;
+}
+
 
 const du = {create: {}, class: {}, cookie: {}, param: {}, style: {},
-      scroll: {}, input: {}, on: {}, move: {}};
+      scroll: {}, input: {}, on: {}, move: {}, url: {}};
 du.find = (selector) => document.querySelector(selector);
 du.find.all = (selector) => document.querySelectorAll(selector);
 
@@ -285,7 +300,7 @@ function filterCustomEvent(event, func) {
   let filterEvent = event;
   switch (event) {
     case 'enter':
-      filterFunc = (target, event) => event.code === 'Enter' && func(target, event);
+      filterFunc = (target, event) => event.key === 'Enter' && func(target, event);
       filterEvent = 'keydown';
       break;
   }
@@ -324,7 +339,7 @@ du.cookie.set = function(name, value, lifeMilliSecs) {
 }
 
 du.cookie.get = function(name, seperator) {
-  const cookie = document.cookie.parseSeperator(';')[name];
+  const cookie = parseSeperator(document.cookie, ';')[name];
   if (seperator === undefined) return cookie;
   const values = cookie === undefined ? [] : cookie.split(seperator);
   if (arguments.length < 3) return values;
@@ -337,16 +352,58 @@ du.cookie.get = function(name, seperator) {
   return obj;
 }
 
-let params;
-du.param.get = function(name) {
-  if (params === undefined) {
-    const url = window.location.href.replace(/(.*?)#.*/, '$1');
-    const paramStr = url.substr(url.indexOf('?') + 1);
-    params = paramStr.parseSeperator('&');
+du.url.breakdown = function () {
+  const breakdown = {};
+  const hashMatch = window.location.href.match(/(.*?)#(.*)/, '$1');
+  let noHash;
+  if (hashMatch) {
+    noHash = hashMatch[1];
+    breakdown.hashtag = hashMatch[2]
+  } else {
+    noHash = window.location.href;
   }
+  const domainMatch = noHash.match(/(.*?):\/\/([^\/]*?)(:([0-9]{1,5})|)(\/[^?^#]*)/)
+  breakdown.protocol = domainMatch[1];
+  breakdown.domain = domainMatch[2];
+  breakdown.port = domainMatch[4] || undefined;
+  breakdown.path = domainMatch[5];
+
+  const urlMatch = noHash.match(/.*?:\/\/([^.]{1,})\.([^\/]*?)\.([^.^\/]{1,})(\/.*)/);
+  if (urlMatch) {
+    breakdown.subdomain = urlMatch[1];
+    breakdown.secondLevelDomain = urlMatch[2];
+    breakdown.topLevelDomaian = urlMatch[3]
+  }
+  breakdown.paramStr = noHash.substr(noHash.indexOf('?') + 1);
+
+  breakdown.params = parseSeperator(breakdown.paramStr, '&');
+  return breakdown;
+}
+
+du.url.build = function (b) {
+  const paramArray = [];
+  Object.keys(b.params).forEach((key) => paramArray.push(`${key}=${b.params[key]}`));
+  const paramStr = paramArray.length > 0 ? `?${paramArray.join('&')}` : '';
+  const portStr = b.port ? `:${b.port}` : '';
+  const hashStr = b.hashtag ? `#${b.hashtag}` : '';
+  return `${b.protocol}://${b.domain}${portStr}${b.path}${paramStr}${hashStr}`;
+}
+
+du.url.change = function (url) {
+  window.history.pushState(null,"", url);
+}
+
+du.param.get = function(name) {
+  let params = du.url.breakdown().params;
   const value = params[name];
   if (value === undefined) return undefined;
   return decodeURI(value);
+}
+
+du.param.remove = function (name) {
+  const breakdown = du.url.breakdown();
+  delete breakdown.params[name];
+  du.url.change(du.url.build(breakdown));
 }
 
 du.style = function(elem, style, time) {

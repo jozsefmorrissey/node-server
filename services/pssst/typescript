@@ -1,0 +1,165 @@
+Script started on 2022-04-27 12:27:52-0500
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ ssh roott@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cscriptc md 
+Script saves a redirect reference to a script in the following form.
+	[prefix] [script] "$@"
+Into either /user/bin or /bin.	(*=Required)
+	-cmd* : command to run script
+	-script* : script location
+
+	-global : save to /bin
+	-prefix : Default "bash"
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptcmmd [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Csh root@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Ccriptcmd [K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Csh root@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ xdg-open .[K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ ssh root@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Ccriptcmd [K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cscriptcmmd [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Csh root@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ xdg-open .[K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csystemcttl poweroff [C[C[C[2Psuspend[C[C[Cpoweroff [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cxdg-openn .[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ ssh root@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Ccriptcmd [K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cscriptcmmd [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csudo newwcmd -cmd scriptcmd -script ./BashScripts/installRef.sh[C
+[sudo] password for jozsef: * **  ****************                
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^C
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo newwcmd -cmd scriptcmd -script ./BashScripts/installRef.sh
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptc md 
+Script saves a redirect reference to a script in the following form.
+	[prefix] [script] "$@"
+Into either /user/bin or /bin.	(*=Required)
+	-cmd* : command to run script
+	-script* : script location
+
+	-global : save to /bin
+	-prefix : Default "bash"
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ newcmd  -[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cscriptcmmd [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cudo newcmd -cmd scriptcmd -script ./BashScripts/installRef.sh[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Ccriptcmd [K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Csh root@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ xdg-open .[K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csystemcttl poweroff [C[C[C[2Psuspend[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [1Patom .
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csystemcttl suspend[C[C[Cpoweroff [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cxdg-openn .[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ ssh root@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Ccriptcmd [K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cudo newcmd -cmd scriptcmd -script ./BashScripts/installRef.sh[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Ccriptcmd [K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ newcmd  [K-cmd scriptcmd =[K-script 'echo e[Khello'
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^C]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptc md 
+Script saves a redirect reference to a script in the following form.
+	[prefix] [script] "$@"
+Into either /user/bin or /bin.	(*=Required)
+	-cmd* : command to run script
+	-script* : script location
+
+	-global : save to /bin
+	-prefix : Default "bash"
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptcmmd [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ newcmd -cmd scriptcmd -script 'echo hello'
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^Z
+[1]+  Stopped                 newcmd -cmd scriptcmd -script 'echo hello'
+/home/jozsef/projects/node-server/services/pssst/BashScripts/installRef.sh: line 38: /usr/bin/scriptcmd: Permission denied
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ chmod: changing permissions of '/usr/bin/scriptcmd': Operation not permitted
+
+newcmd --cmd scriptcmd -script 'echo hello'[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ newcmd --cmd scriptcmd -script 'echo hello'[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ snewcmd [1@-[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cunewcmd[1@ [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [C[Cdnewcm[1@d[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [C[C[Conewc[1@m[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [C[C[C[C new[1@c[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [C[C[C[C[C
+
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^Z
+[2]+  Stopped                 sudo newcmd -cmd scriptcmd -script 'echo hello'
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+scriptc md [K[K[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[K[K[K[K[K[K
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo newwcmd -cmd scriptcmd -script 'echo hello'[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ newcmd -[C[C[C[C[5P[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo new[C[C[C[C[5@-cmd [C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cscriptc md
+bash: /home/jozsef/projects/node-server/services/pssst/echo: No such file or directory
+/usr/bin/scriptcmd: line 2: /home/jozsef/projects/node-server/services/pssst/hello: No such file or directory
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptcmmd[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cudo newcmd -cmd scriptcmd -script 'echo hello'[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C
+readlink: missing operand
+Try 'readlink --help' for more information.
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^Z
+[3]+  Stopped                 sudo newcmd -cmd scriptcmd -script 'echo hello'
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+sudo newwcmd -cmd scriptcmd -script 'echo hello'[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Ccriptcmd[K
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptc md
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ ssh roott@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ xdg-open .[K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csystemcttl poweroff [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cxdg-openn .[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ ssh root@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cssh roott@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ xdg-open .[K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csystemcttl poweroff [C[C[C[2Psuspend[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [1Patom .
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csystemcttl suspend[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [1Patom .
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cterminall [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [1Patom .
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csystemcttl suspend[C[C[Cpoweroff [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cxdg-openn .[K[K[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[K[K[K[K[K[Ksudo newwcmd -cmd scriptcmd -script 'echo hello'
+readlink: missing operand
+Try 'readlink --help' for more information.
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^C
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo newwcmd -cmd scriptcmd -script 'echo hello'
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^Z
+[1]+  Stopped                 sudo newcmd -cmd scriptcmd -script 'echo hello'
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+e[Kscriptc [A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[K[K[K[K[K[K
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ 
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptc md
+/bin/echo: /bin/echo: cannot execute binary file
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptcmmd[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cudo newcmd -cmd scriptcmd -script 'echo hello' -0[Ko
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^C
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo newwcmd -cmd scriptcmd -script 'echo hello' -o
+true
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^C
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo newwcmd -cmd scriptcmd -script 'echo hello' -o[K[K[K
+
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^C
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo newwcmd -cmd scriptcmd -script 'echo hello'
+
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^C
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo newwcmd -cmd scriptcmd -script 'echo hello' -o
+true
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^C
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo newwcmd -cmd scriptcmd -script 'echo hello' -o
+true
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ sudo newwcmd -cmd scriptcmd -script 'echo hello' -o[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [K
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cscriptc md 
+hello
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptcmmd [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cudo newcmd -cmd scriptcmd -script 'echo hello' -o[K -o[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Ccriptcmd[K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cudo newcmd -cmd scriptcmd -script 'echo hello'[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Csh root[24P@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ xdg-open .[K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csystemcttl poweroff [C[C[C[2Psuspend[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [1Patom .
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cterminall [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [1Patom .
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csystemcttl suspend[C[C[Cpoweroff [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [3Pmeld
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Cxdg-openn .[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ ssh root@134.209.123.38[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cudo newcmd -cmd scriptcmd -script 'echo hello'[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Ccriptcmd[K[A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cudo newcmd -cmd scriptcmd -script 'echo hello' -o[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[Kfile ./b[KBashScripts/p[KinstallRef.sh 
+Command "scriptcmd" already taken what would you like to do?
+	Exit - ctrl+c
+	Save Anyway - ctrl+z
+	Try new name: ^C
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptc md 
+hello
+]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ scriptcmmd [A]0;jozsef@jozsef-HP-Z620-Workstation: ~/projects/node-server/services/pssst[01;32mjozsef@jozsef-HP-Z620-Workstation[00m:[01;34m~/projects/node-server/services/pssst[00m$ [Cudo new[51@cmd -cmd scriptcmd -file ./BashScripts/installRef.sh[C
+Command "scriptcmd" 

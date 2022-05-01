@@ -1,0 +1,11 @@
+{
+  "_envs": {
+    "local": "http://localhost:3000/weather-fax",
+    "dev": "https://dev.jozsefmorrissey.com/weather-fax",
+    "prod": "https://node.jozsefmorrissey.com/weather-fax"
+  },
+  "admin" : {
+    "home": "/admin/home",
+    "vacaHome": "vaca"
+  }
+}

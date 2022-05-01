@@ -338,10 +338,7 @@ update () {
   # ifDebugging "debuggui keyValue 'updated $2' 'from $(getValue "$1" "$2") to $newVal' -group '$dgGroup' -id '${flags[dg-id]}'"
   _rm "$@"
   appendToFile "$1" "$2=$newVal"
-  if [ "$2" == "token" ] || [ "$2" == "pst-pin" ]
-  then
-    echo $newVal
-  fi
+  echo $newVal
 	Logger trace "EXIT"
 }
 
@@ -592,15 +589,23 @@ client-config() {
 	Logger trace "EXIT"
 }
 
+file-params() {
+  host=$(getValue "$group" 'host')
+  token=$(getValue "$group" 'token')
+  pstPin=$(getValue "$group" 'pst-pin')
+  group=$(getValue "$group" 'group')
+}
+
 client() {
+  file-params
   xdg-open "$host/pssst/client?host=$host&token=$token&group=$group";
 	Logger trace "EXIT"
 }
 
 remote() {
+  file-params
   url="$host/pssst/get/json"
   data="{\"group\": \"$group\",\"token\": \"$token\",\"pstPin\": \"$pstPin\"}"
-  echo -e "$url\n$data"
   json=$(curl -X POST -H "Content-Type: application/json" -d "$data" --insecure $url)
 	Logger trace "EXIT"
   key=${flags['key']}

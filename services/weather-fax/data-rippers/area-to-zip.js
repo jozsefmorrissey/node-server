@@ -16,7 +16,7 @@ const zips = {
   "214": 75218,
   "215": 19054,
   "216": 44142,
-  "217": 61839,
+  "217": 61911,
   "218": 56354,
   "219": 46394,
   "220": 43066,
@@ -281,7 +281,6 @@ function getZips() {
         }
         const zipObj = estimateZip();
         zips[areaCode] = zipObj.closest;
-        console.log(`${areaCode}) ${zipObj.min} < ${zipObj.closest} < ${zipObj.max} `);
     };
     xhr.send();
   }
@@ -313,7 +312,6 @@ function getZips() {
     return {closest, max, min, approximate};
   }
   Object.keys(zips).forEach((areaCode, index) => {
-    console.log(index*1000);
     setTimeout(() => setZipBody(areaCode), index * 1000)
   });
 }

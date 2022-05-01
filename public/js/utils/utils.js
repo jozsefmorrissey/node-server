@@ -36,11 +36,15 @@ function processValue(value) {
   if ((typeof value) === 'object' && value !== null) {
     if ((typeof value.toJson) === 'function') {
       retVal = value.toJson();
+    } else if ((typeof value.toJSON) === 'function') {
+      retVal = value.toJSON();
     } else if (Array.isArray(value)){
       const arr = [];
       value.forEach((val) => {
         if ((typeof val.toJson) === 'function') {
           arr.push(val.toJson());
+        } else if ((typeof val.toJSON) === 'function') {
+          arr.push(val.toJSON());
         } else {
           arr.push(val);
         }

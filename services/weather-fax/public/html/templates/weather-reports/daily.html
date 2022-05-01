@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Daily Weather Report</title>
+    <style>
+      h3 {margin: 0;font-size:12pt}
+      div {font-size: 8pt;}
+      b {font-size: 8pt;}
+      .icon-cnt {position: absolute; right: 0; top: 0;}
+      .day-cnt {position: relative;}
+    </style>
+  </head>
+  <body>
+    <div>
+      <h1>Daily Weather Report</h1>
+      <div:t repeat='day in weatherData' class='day-cnt'>
+        <h3>{{utils.getDateStr(day.dt)}}</h3>
+        <b>Sun rise:</b>  {{utils.getTimeStr(day.sunrise)}} - <b>set:</b> {{utils.getTimeStr(day.sunset)}}
+        <br>
+        <b>Moon rise:</b> {{utils.getTimeStr(day.moonrise)}} - <b>set:</b> {{utils.getTimeStr(day.moonset)}} (<b>Phase</b> {{day.moon_phase}})
+        <br>
+        <table>
+          <tbody>
+            <tr>
+              <td><b>Temperature</b></td>
+              <td>&nbsp;&nbsp;&nbsp;</td>
+              <td></td>
+              <td><b>Morning</b></td>
+              <td><b>Day</b></td>
+              <td><b>Evening</b></td>
+              <td><b>Night</b></td>
+            <tr>
+              <td><b>Low</b> {{Math.round(day.temp.min)}} &#x2109;</td>
+              <td>&nbsp;&nbsp;&nbsp;</td>
+              <td><b>Real</b></td>
+              <td>{{Math.round(day.temp.morn)}} &#x2109;</td>
+              <td>{{Math.round(day.temp.day)}} &#x2109;</td>
+              <td>{{Math.round(day.temp.eve)}} &#x2109;</td>
+              <td>{{Math.round(day.temp.night)}} &#x2109;</td>
+            </tr>
+            <tr>
+              <td><b>High</b> {{Math.round(day.temp.max)}} &#x2109;</td>
+              <td>&nbsp;&nbsp;&nbsp;</td>
+              <td><b>Wind Chill</b></td>
+              <td>{{Math.round(day.feels_like.morn)}} &#x2109;</td>
+              <td>{{Math.round(day.feels_like.day)}} &#x2109;</td>
+              <td>{{Math.round(day.feels_like.eve)}} &#x2109;</td>
+              <td>{{Math.round(day.feels_like.night)}} &#x2109;</td>
+            </tr>
+          </tbody>
+        </table>
+        <span class='icon-cnt'>
+          <span:t repeat='type in day.weather'>
+            <img src="{{utils.iconUrl(type.icon)}}" alt="Rain">
+            <br>
+            {{type.description}}
+          </span:t>
+        </span>
+        <table>
+          <tbody>
+            <tr>
+              <td>{{Math.round((day.rain || 0))}}% chance of rain</td>
+              <td>{{day.pressure}} Air Pressure</td>
+              <td><b>Wind</b></td>
+              <td>speed: {{Math.round(day.wind_speed)}} mph</td>
+              <td>gust: {{Math.round(day.wind_gust)}} mph</td>
+            </tr>
+            <tr>
+              <td>{{Math.round(day.clouds)}}% cloud coverage</td>
+              <td>{{day.uvi}} UV Index(inconsistant)</td>
+              <td></td>
+              <td>direction: {{utils.getDirection(day.wind_deg)}} ({{day.wind_deg}}&deg;)</td>
+            </tr>
+            <tr>
+              <td>{{Math.round(day.humidity )}}% humidity</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div:t>
+    </div>
+  </body>
+</html>

@@ -716,13 +716,17 @@ class $t {
             t = eval(`new $t(\`${template}\`)`);
             let resolvedScope = "get('scope')";;
             try {
-              console.log('tagName', tagName);
-              console.log('templateName', templateName);
-              console.log('template', template);
-              console.log('varNames', varNames);
-              console.log('realScope', realScope);
-              console.log('tagContents', tagContents);
-              resolvedScope = ExprDef.parse(expression, realScope);
+              // console.log('tagName', tagName);
+              // console.log('templateName', templateName);
+              // console.log('template', template);
+              // console.log('varNames', varNames);
+              // console.log('realScope', realScope);
+              // console.log('tagContents', tagContents);
+              if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+                resolvedScope = `'${realScope}'`;
+              } else {
+                resolvedScope = ExprDef.parse(expression, realScope);
+              }
             } catch (e) {}
             const templateId = templateNameDefined ? templateName : t.id();
             string = string.replace(match[0], `{{ new $t('${templateId}').render(${resolvedScope}, '${varNames}', get)}}`);

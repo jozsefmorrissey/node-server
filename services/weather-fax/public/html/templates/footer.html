@@ -1,0 +1,20 @@
+<div>
+  <style media="screen">
+    ul {list-style: none;}
+    {{isPdf ? '.small {zoom: .5;}' : ''}}
+  </style>
+  <div>
+    <table class='small'>
+      <tbody>
+        <tr>
+          <td colspan="3"><b>Fax Numbers</b></td>
+        </tr>
+        <tr:t repeat='number in numbers'>
+          <td>{{number.faxNumber()}}</td>
+          <td>{{number.service()}}</td>
+          <td>{{number.description()}}</td>
+        </tr:t>
+      </tbody>
+    </table>
+  </div>
+</div>

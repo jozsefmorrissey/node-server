@@ -1,0 +1,45 @@
+<div>
+  <style>
+    h3 {margin: 0;font-size:10pt}
+    div {font-size: 8pt;}
+    b {font-size: 8pt;}
+    .icon-cnt {position: absolute; right: 0; top: 0;}
+    .hour-cnt {position: relative;}
+  </style>
+  <div>
+    <h1>{{utils.getDateStr(weatherData[0].dt)}} Daily Weather Report</h1>
+    <div:t repeat='hour in weatherData' class='hour-cnt'>
+      <h3>{{utils.getTimeStr(hour.dt)}}</h3>
+      <table>
+        <tbody>
+          <tr>
+            <td><b>Temp</b> {{Math.round(hour.temp)}} &#x2109;</td>
+            <td><b>Chill</b> {{Math.round(hour.feels_like)}} &#x2109;</td>
+            <td><b>Humidity</b> {{Math.round(hour.humidity)}}</td>
+            <td><b>Pressure</b> {{Math.round(hour.pressure)}}</td>
+            <td><b>Rain</b> {{Math.round(hour.pop)}}%</td>
+          </tr>
+          <tr>
+            <td><b>Dew Point</b> {{Math.round(hour.dew_point)}}</td>
+            <td><b>Visibility</b> {{Math.round(hour.visibility)}}</td>
+            <td><b>UV Index</b> {{Math.round(hour.uvi)}}</td>
+            <td><b>Clouds</b> {{Math.round(hour.clouds)}}</td>
+          </tr>
+          <tr>
+            <td><b>Wind</b></td>
+            <td>Speed: {{Math.round(hour.wind_speed)}} mph</td>
+            <td>Gust: {{Math.round(hour.wind_gust)}} mph</td>
+            <td>Direction: {{utils.getDirection(hour.wind_deg)}} ({{hour.wind_deg}}&deg;)</td>
+          </tr>
+        </tbody>
+      </table>
+      <span class='icon-cnt'>
+        <span:t repeat='type in hour.weather'>
+          <img src="{{utils.iconUrl(type.icon)}}" alt="Rain">
+          <br>
+          {{type.description}}
+        </span:t>
+      </span>
+    </div:t>
+  </div>
+</div>

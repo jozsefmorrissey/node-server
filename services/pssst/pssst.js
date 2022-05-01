@@ -125,6 +125,7 @@ function endpoints(app, prefix) {
   res.send(get(clBody.group, clBody.token, clBody.pstPin, clBody.id, req));
 });
 
+// TODO: Verify is working.
 function getJson(req, res) {
   debugValues(req, '/get/json', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
   const clBody = cleanObj(req.body);
@@ -373,6 +374,7 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
     const cmd = `pst requires-pin '${group}'`;
     const needsPin = 'yes' == shell.exec(cmd, {silent: true}).trim();
     const pinflag = `<pst-pin id="pst-pin-flag" value="${needsPin}"></pst-pin>`;
+    const title = `<title>${group}</title>`;
     const script = `\n\t<script type='text/javascript' src='${host}/pssst/js/pssst-client.js'></script>
                     \n\t<script type='text/javascript' src='${host}/debug-gui/js/debug-gui-client.js'></script>`;
     const bootstrap = `<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
@@ -381,7 +383,7 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
       <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">`;
     const css = `<link rel="stylesheet" href="${host}/pssst/css/pssst-client.css">`;
     const debugGui = `<debug-gui-data url='${host}/debug-gui/' dg-id='test'></debug-gui-data>`;
-    return `<html><head>${bootstrap}${script}${css}</head><body>${pinflag}<pssst>${json}</pssst></body></html>`;
+    return `<html><head>${bootstrap}${script}${css}${title}</head><body>${pinflag}<pssst>${json}</pssst></body></html>`;
   }
 }
 
