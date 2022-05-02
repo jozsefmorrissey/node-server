@@ -121,6 +121,7 @@ function dateFromReport(report) {
 }
 
 function pullDates(day, hour) {
+  console.log('pulling dates:', day, hour)
   hour = hour.length === 2 ? hour : `0${hour}`;
   const fileLoc = fileLocation(day, hour);
   let list = [];
