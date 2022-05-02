@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <title>Daily Weather Report</title>
     <style>
-      h3 {margin: 0;font-size:12pt}
+      html {zoom: 0.70; margin: 3em}
+      h4 {margin: 0;}
       div {font-size: 8pt;}
       b {font-size: 8pt;}
       .icon-cnt {position: absolute; right: 0; top: 0;}
@@ -13,9 +14,16 @@
   </head>
   <body>
     <div>
-      <h1>Daily Weather Report</h1>
+      <h3>Daily Weather Report</h3>
       <div:t repeat='day in weatherData' class='day-cnt'>
-        <h3>{{utils.getDateStr(day.dt)}}</h3>
+        <h4>{{utils.getDateStr(day.dt)}}</h4>
+        <div class='icon-cnt'>
+          <div:t repeat='type in day.weather'>
+            <img src="{{utils.iconUrl(type.icon)}}" alt="Rain">
+            <br>
+            {{type.description}}
+          </div:t>
+        </div>
         <b>Sun rise:</b>  {{utils.getTimeStr(day.sunrise)}} - <b>set:</b> {{utils.getTimeStr(day.sunset)}}
         <br>
         <b>Moon rise:</b> {{utils.getTimeStr(day.moonrise)}} - <b>set:</b> {{utils.getTimeStr(day.moonset)}} (<b>Phase</b> {{day.moon_phase}})
@@ -50,13 +58,6 @@
             </tr>
           </tbody>
         </table>
-        <span class='icon-cnt'>
-          <span:t repeat='type in day.weather'>
-            <img src="{{utils.iconUrl(type.icon)}}" alt="Rain">
-            <br>
-            {{type.description}}
-          </span:t>
-        </span>
         <table>
           <tbody>
             <tr>
@@ -78,6 +79,7 @@
             </tr>
           </tbody>
         </table>
+        {{$index !== weatherData.length - 1 ? '<br>' : ''}}
       </div:t>
     </div>
   </body>

@@ -1,13 +1,17 @@
 <div>
   <style>
-    h3 {margin: 0;font-size:10pt}
+    html {zoom: 0.70; margin: 3em}
+    h2 {margin: 0;}
+    h3 {margin: 0;}
     div {font-size: 8pt;}
     b {font-size: 8pt;}
+    td {font-size: 8pt;}
     .icon-cnt {position: absolute; right: 0; top: 0;}
     .hour-cnt {position: relative;}
   </style>
+  <title>Hourly Weather Report</title>
   <div>
-    <h1>{{utils.getDateStr(weatherData[0].dt)}} Daily Weather Report</h1>
+    <h2>{{utils.getDateStr(weatherData[0].dt)}} Hourly Weather Report</h2>
     <div:t repeat='hour in weatherData' class='hour-cnt'>
       <h3>{{utils.getTimeStr(hour.dt)}}</h3>
       <table>

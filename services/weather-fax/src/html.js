@@ -47,6 +47,9 @@ class HTML {
     this.getHourlyReportUrl = (user, success, failure) => {
       Weather.hourly(user.zipCode(), build('hourlyReport', success), failure);
     }
+    this.get15HourReportUrl = (user, success, failure) => {
+      Weather.hours15(user.zipCode(), build('hours15Report', success), failure);
+    }
     this.getDailyReportUrl = (user, success, failure) => {
       Weather.daily(user.zipCode(), build('dailyReport', success), failure);
     }
@@ -61,6 +64,7 @@ class HTML {
 }
 
 HTML.hourlyReportTemplate = new $t('weather-reports/hourly');
+HTML.hours15ReportTemplate = new $t('weather-reports/hourly');
 HTML.dailyReportTemplate = new $t('weather-reports/daily');
 HTML.orderFormTemplate = new $t('order-form');
 HTML.schedualedReportsStatusTemplate = new $t('schedualed');

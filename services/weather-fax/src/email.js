@@ -2,7 +2,7 @@ const shell = require('shelljs');
 const mailgun = require("mailgun-js");
 const apiKey = shell.exec('pst value mailgun apiKey').stdout.trim();
 const domain = shell.exec('pst value mailgun domain').stdout.trim();
-const emailServiceActive = global.ENV === 'prod';
+const emailServiceActive = global.ENV === 'local';
 const mg = emailServiceActive ? mailgun({ apiKey, domain }) : undefined;
 const ENPTS = require('./EPNTS');
 
@@ -45,4 +45,18 @@ function sendHtml(email, html, success, failure) {
   }, success, failure);
 }
 
-module.exports = {sendHtml};
+function sendPdf(subject, name, url, email, success, failure) {
+  console.log('trying to send', subject);
+  send({
+    from: 'Weather-Fax <weather-fax@jozsefmorrissey.com>',
+    to: email,
+    html: 'Weather-Fax Report',
+    subject,
+    attachments:{
+      url, name,
+      "content-type": 'application/pdf'
+    }
+  }, success, failure);
+}
+
+module.exports = {sendHtml, sendPdf};

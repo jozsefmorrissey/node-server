@@ -331,14 +331,14 @@ class $t {
 		  }
 		}
 
-		const signProps = {opening: /([-+\!])/};
-		const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
+		const relationalProps = {opening: /((!==|===|!=|==|\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
+    const signProps = {opening: /([-+\!])/};
 		const ternaryProps = {opening: /\?/};
 		const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
 		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
 		const commaProps = {opening: /,/};
 		const colonProps = {opening: /:/};
-		const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
+		const multiplierProps = {opening: /([-+*\/](=|))/};
 		const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
 		const spaceProps = {opening: /\s{1}/};
 		const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};
@@ -400,11 +400,11 @@ class $t {
 
 		expression.always(space, ignore, keyWord);
 		expression.if(string, number, group, array, variable, funcRef, memberRef)
-		      .then(multiplier, sign, relational, group)
+		      .then(multiplier, relational, sign, group)
 		      .repeat();
 		expression.if(string, group, array, variable, funcRef, memberRef)
 					.then(attr)
-		      .then(multiplier, sign, relational, expression, funcRef, memberRef)
+		      .then(multiplier, relational, sign, expression, funcRef, memberRef)
 					.repeat();
 		expression.if(string, group, array, variable, funcRef, memberRef)
 					.then(attr)
@@ -415,9 +415,13 @@ class $t {
 		memberRef.if(expression).then(comma).repeat();
 		memberRef.if(expression).end();
 
+    expression.if(relational)
+		      .then(expression)
+		      .then(multiplier, relational, sign, group)
+		      .repeat();
 		expression.if(sign)
 		      .then(expression)
-		      .then(multiplier, sign, relational, group)
+		      .then(multiplier, relational, sign, group)
 		      .repeat();
 		expression.if(string, number, group, array, variable)
 		      .then(ternary)

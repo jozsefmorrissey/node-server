@@ -47,6 +47,8 @@ function calculateTotal() {
   totalElem.value = `$${cost}`;
 }
 
+const readableToCamelReplace = (match) => match[1].toUpperCase();
+
 function buildUser() {
   const timeZoneElem = du.find('input[name="timeZone"]');
   const radioElem = du.find('input[name="plan"]:checked');
@@ -74,8 +76,8 @@ function buildUser() {
       if (time) {
         const dayElems = du.find.downAll('[sending="true"]', du.find.closest('.days', timeInput));
         const dayIndexes = dayElems.map((elem) => elem.getAttribute('day-index'));
-
-        const type = du.find.down('[sending="true"]', du.find.closest('.types', timeInput)).innerText;
+        const typeText = du.find.down('[sending="true"]', du.find.closest('.types', timeInput)).innerText;
+        const type = typeText.replace(/\s{1,}([a-zA-Z0-9])/g, readableToCamelReplace);;
         user.schedualedReports.new.push({type, dayIndexes, time});
       }
     }

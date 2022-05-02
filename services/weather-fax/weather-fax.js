@@ -30,6 +30,9 @@ function generateDocument(faxNumber, type, format, res, next) {
       case 'daily':
       formatter.getDailyReportUrl(user, (retVal) => res.redirect(retVal), next);
       break;
+      case 'hours15':
+      formatter.get15HourReportUrl(user, (retVal) => res.redirect(retVal), next);
+      break;
       case 'orderForm':
       formatter.getOrderForm(user, (retVal) => res.redirect(retVal), next);
       break;
