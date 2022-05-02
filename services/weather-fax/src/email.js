@@ -2,7 +2,7 @@ const shell = require('shelljs');
 const mailgun = require("mailgun-js");
 const apiKey = shell.exec('pst value mailgun apiKey').stdout.trim();
 const domain = shell.exec('pst value mailgun domain').stdout.trim();
-const emailServiceActive = global.ENV === 'local';
+const emailServiceActive = global.ENV === 'prod';
 const mg = emailServiceActive ? mailgun({ apiKey, domain }) : undefined;
 const ENPTS = require('./EPNTS');
 
