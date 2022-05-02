@@ -108,7 +108,7 @@ function buildReportDirs() {
     });
   }
   files.forEach((file) => {
-    fs.readFile(file, process);
+    if (file) fs.readFile(file, process);
   });
 }
 
