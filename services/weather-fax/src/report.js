@@ -125,8 +125,9 @@ function pullDates(day, hour) {
   hour = hour.length === 2 ? hour : `0${hour}`;
   const fileLoc = fileLocation(day, hour);
   let list = [];
+  console.log('fileLocation', fileLoc)
   if (fs.existsSync(fileLoc)) {
-    console.log('fileLocation', fileLoc)
+    console.log('found')
     list = JSON.parse(fs.readFileSync(fileLoc));
   }
   list.forEach((report) => {
