@@ -72,21 +72,21 @@ function sendUnauthorized(res) {
 function endpoints(app, prefix) {
   const adminTemplate = new $t('admin');
   app.get(prefix + '/admin/home/', function(req, res ,next) {
-    if (isAdmin())
+    if (isAdmin(req))
       res.send(adminTemplate.render(req.query));
     else
       sendUnauthorized(res);
   });
 
   app.get(prefix + '/admin/manage/:faxNumber', function (req, res, next) {
-    if (isAdmin())
+    if (isAdmin(req))
       generateDocument(req.params.faxNumber, 'orderForm', 'html', res, next);
     else
       sendUnauthorized(res);
   });
 
   app.get(prefix + '/admin/update/report/schedule', function (req, res, next) {
-    if (isAdmin()){
+    if (isAdmin(req)){
       reports.buildReportDirs();
       res.send('success');
     }
@@ -95,7 +95,7 @@ function endpoints(app, prefix) {
   });
 
   app.post(prefix + '/admin/save', function (req, res, next) {
-    if (isAdmin()) {
+    if (isAdmin(req)) {
       User.update(req.body);
       res.send('Successfully Updated');
     } else
