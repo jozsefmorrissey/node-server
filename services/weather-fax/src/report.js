@@ -84,7 +84,7 @@ function getDateRelitiveToTimeZone(day, hours, minutes, timeZone) {
   localDate.setMinutes(minutes);
   localDate.setSeconds(0);
   const diff = timeZoneDiff(timeZone);
-  return new Date(localDate.getTime() - diff);
+  return new Date(localDate.getTime() + diff);
 }
 
 const timeReg = /([0-9][0-9]):([0-9][0-9])/;
