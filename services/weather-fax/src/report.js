@@ -55,6 +55,7 @@ const fs = require('fs');
 const { Mutex, Semaphore } = require('async-mutex');
 const mutex = new Mutex();
 const sender = require('./sender');
+const utils = require('./utils');
 
 
 const REPORT_DIR = `${global.DATA_DIRECTORY}/reports`;
@@ -69,11 +70,28 @@ function readable(reports) {
   return `[\n${list.substr(0, list.length - 2)}\n]\n`;
 }
 
+function timeZoneDiff(timeZone) {
+  const now = new Date();
+  var invdate = new Date(now.toLocaleString('en-US', {timeZone}));
+  var diff = now.getTime() - invdate.getTime();
+  return diff;
+}
+
+function getDateRelitiveToTimeZone(day, hours, minutes, timeZone) {
+  const localDate = new Date();
+  localDate.setDate(day - localDate.getDay());
+  localDate.setHours(hours);
+  localDate.setMinutes(minutes);
+  localDate.setSeconds(0);
+  const diff = timeZoneDiff(timeZone);
+  return new Date(localDate.getTime() - diff);
+}
 
 const timeReg = /([0-9][0-9]):([0-9][0-9])/;
 function buildReportDirs() {
   const reports = {};
   const files = shell.find(`${User.directory}/*.json`).stdout.trim().split('\n');
+  shell.rm('-r', `${REPORT_DIR}`);
   const semaphore = new Semaphore(files.length);
 
   function process(err, data) {
@@ -97,9 +115,16 @@ function buildReportDirs() {
         const match = report.time.match(timeReg);
         const hour = match[1];
         const minute = match[2];
-        if (reports[day] === undefined) reports[day] = {};
-        if (reports[day][hour] === undefined) reports[day][hour] = [];
-        reports[day][hour].push({userId: userInfo.userId, time: report.time, type: report.type.toLowerCase(), id: report.id});
+
+        const relDate = getDateRelitiveToTimeZone(day, hour, minute, userInfo.timeZone);
+        const rDay = relDate.getDay();
+        const rHour = relDate.getHours();
+        const rTime = utils.dateTime(relDate);
+
+        if (reports[rDay] === undefined) reports[rDay] = {};
+        if (reports[rDay][rHour] === undefined) reports[rDay][rHour] = [];
+
+        reports[rDay][rHour].push({userId: userInfo.userId, time: rTime, type: report.type.toLowerCase(), id: report.id});
       });
     });
     semaphore.acquire().then(([value, release]) => {

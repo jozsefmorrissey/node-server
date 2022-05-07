@@ -144,7 +144,7 @@ class User {
         const saveLocation = instance.userDataLocation();
         const saveDirectory = saveLocation.replace(/(.*\/).*/, '$1');
         shell.mkdir('-p', saveDirectory);
-        fs.writeFileSync(saveLocation, JSON.stringify(instance.toJson()));
+        fs.writeFileSync(saveLocation, JSON.stringify(instance.toJson(), null, 2));
         return true;
       } catch(e) {
         console.error('saveError', e)

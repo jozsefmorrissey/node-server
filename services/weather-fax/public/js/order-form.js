@@ -1,4 +1,6 @@
 
+const timeReg = /([0-9][0-9]):([0-9][0-9])/;
+
 function strikeToggle(elem) {
   let dec = elem.style.textDecoration;
   elem.setAttribute('sending', dec === null);
@@ -50,7 +52,7 @@ function calculateTotal() {
 const readableToCamelReplace = (match) => match[1].toUpperCase();
 
 function buildUser() {
-  const timeZoneElem = du.find('input[name="timeZone"]');
+  const timeZoneElem = du.find('select[name="timeZone"]');
   const radioElem = du.find('input[name="plan"]:checked');
 
   const zipCodeElem = du.find('input[name="zipCode"]');
@@ -72,13 +74,13 @@ function buildUser() {
     user.schedualedReports.remove = Array.from(removedReportElems).map((elem) => elem.id);
     for (let index = 0; index < timeInputElems.length; index += 1) {
       const timeInput = timeInputElems[index];
-      const time = timeInput.value;
-      if (time) {
+      const timeMatch = timeInput.value.match(timeReg);
+      if (timeMatch) {
         const dayElems = du.find.downAll('[sending="true"]', du.find.closest('.days', timeInput));
         const dayIndexes = dayElems.map((elem) => elem.getAttribute('day-index'));
         const typeText = du.find.down('[sending="true"]', du.find.closest('.types', timeInput)).innerText;
         const type = typeText.replace(/\s{1,}([a-zA-Z0-9])/g, readableToCamelReplace);;
-        user.schedualedReports.new.push({type, dayIndexes, time});
+        user.schedualedReports.new.push({type, dayIndexes, time: timeMatch[0]});
       }
     }
     return user;

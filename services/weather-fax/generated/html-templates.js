@@ -2,6 +2,15 @@
 exports['41683291'] = (get, $t) => 
 		`<tr > <td><input type='time'></td> <td class='toggle-cnt days'> <span class='pointer' sending='true' day-index='0'>S</span> <span class='pointer' sending='true' day-index='1'>M</span> <span class='pointer' sending='true' day-index='2'>T</span> <span class='pointer' sending='true' day-index='3'>W</span> <span class='pointer' sending='true' day-index='4'>T</span> <span class='pointer' sending='true' day-index='5'>F</span> <span class='pointer' sending='true' day-index='6'>S</span> </td> <td class='toggle-cnt types'> <span class='pointer' style="text-decoration: line-through;">Hourly</span> <span class='pointer' style="text-decoration: line-through;">Daily</span> <span class='pointer' sending='true'>15 Hour and Daily</span> </td> </tr>`
 
+exports['229660393'] = (get, $t) => 
+		`<option value='` +
+		$t.clean(get("value")) +
+		`' ` +
+		$t.clean(get("user").timeZone() === get("value") ? 'selected' : '') +
+		`> ` +
+		$t.clean(get("display")) +
+		` </option>`
+
 exports['636775893'] = (get, $t) => 
 		`<tr > <td>` +
 		$t.clean(get("number").faxNumber()) +
@@ -28,6 +37,13 @@ exports['789133096'] = (get, $t) =>
 		` <b>Days:</b> ` +
 		$t.clean(get("dayIndexesToString")(get("report").dayIndexes())) +
 		` </div>`
+
+exports['1440112564'] = (get, $t) => 
+		`<option value='` +
+		$t.clean(get("value")) +
+		`'> ` +
+		$t.clean(get("display")) +
+		` </option>`
 
 exports['1629632834'] = (get, $t) => 
 		`<div class='day-cnt'> <h4>` +
@@ -131,8 +147,10 @@ exports['order-form'] = (get, $t) =>
 		` </b></caption> <tr> <td><b>Zip Code</b></td> <td><b>Time Zone</b></td> </tr> </thead> <tbody> <tr> <td>` +
 		$t.clean(get("user").zipCode()) +
 		`</td> <td>` +
-		$t.clean(get("user").timeZone()) +
-		`</td> </tr> <tr> <td><input type='number' maxlength="5" name="zipCode"/></td> <td><input name="timeZone"/></td> <td>Correct if neccisary</td> </tr> </tbody> </table> <br> <table border="2" cellspacing="0" cellpadding="0"> <caption><b>Plans: ` +
+		$t.clean(get("utils").displayTimeZone(get("user").timeZone())) +
+		`</td> </tr> <tr> <td><input type='number' maxlength="5" name="zipCode"/></td> <td> <select name="timeZone"> ` +
+		$t.clean( new $t('229660393').render(get("utils").timeZoneMap(), 'display, value', get)) +
+		` </select> </td> <td>Correct if neccisary</td> </tr> </tbody> </table> <br> <table border="2" cellspacing="0" cellpadding="0"> <caption><b>Plans: ` +
 		$t.clean(get("user").plan().name()) +
 		`</b></caption> <thead> <tr> <td><b>Select</b></td> <td><b>Price per Year</b></td> <td><b>Name</b></td> <td><b>Description</b></td> </tr> </thead> <tbody> ` +
 		$t.clean( new $t('-1683812331').render(get("plans"), 'key, plan', get)) +

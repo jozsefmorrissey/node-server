@@ -8,8 +8,6 @@ const LOCAL_DIR = './services/weather-fax';
 const PUBLIC_DIR = `${LOCAL_DIR}/public`;
 
 
-
-
 const utils = {timeZoneList : []};
 
 utils.javascriptTimeZone = (normalTZ) => {
@@ -56,6 +54,22 @@ utils.getTimeZone = (zipCode, javascript) => {
     }
 }
 
+utils.timeZoneMap = (invert) => {
+  const map = {};
+  for (let index = 0; index < zones.length; index += 1) {
+    const split = zones[index].split(':');
+    if (invert === true) {
+      map[split[1]] = split[0];
+    } else {
+      map[split[0]] = split[1];
+    }
+  }
+  console.log('tzMap', map);
+  return map;
+}
+
+utils.displayTimeZone = (javascriptTz) => utils.timeZoneMap(true)[javascriptTz];
+
 utils.areaCodeToZip = (areaCode) => areaToZipJson[areaCode];
 utils.zipToCoords = (zip) => zipToCoordsJson[zip];
 
@@ -64,7 +78,8 @@ const zipCodeReg = /^[0-9]{5}$/;
 const areaCodeReg = /^[0-9]{3}$/;
 const faxNumberReg = /\+1([0-9]{3})[0-9]{7}/;
 
-utils.validTimeZone = (tz) => utils.timeZoneList.indexOf(tz) !== -1;
+// TODO: actually validate
+utils.validTimeZone = (tz) => Object.keys(utils.timeZoneMap(true)).indexOf(tz) !== -1;
 utils.validZipCode = (zc) => zc.toString().trim().match(zipCodeReg) !== null;
 
 utils.areaOzipOnumberToZip = (areaOzipOnumber) => {
@@ -98,5 +113,13 @@ utils.getServiceFilePath = (urlOpath) =>
 
 utils.randFileLocation = (subDirectory, extension) =>
   `${PUBLIC_DIR}/${subDirectory}/${String.random()}.${extension}`;
+
+utils.dateTime = (date) => {
+  let hours = date.getHours() + '';
+  let minutes = date.getMinutes() + '';
+  hours = hours.length === 1 ? `0${hours}` : hours;
+  minutes = minutes.length === 1 ? `0${minutes}` : minutes;
+  return `${hours}:${minutes}`;
+}
 
 module.exports = utils;

@@ -50,11 +50,18 @@
     <tbody>
       <tr>
         <td>{{user.zipCode()}}</td>
-        <td>{{user.timeZone()}}</td>
+        <td>{{utils.displayTimeZone(user.timeZone())}}</td>
       </tr>
       <tr>
         <td><input type='number' maxlength="5" name="zipCode"/></td>
-        <td><input name="timeZone"/></td>
+        <td>
+          <select name="timeZone">
+            <option:t repeat='display, value in utils.timeZoneMap()' value='{{value}}'
+                {{user.timeZone() === value ? 'selected' : ''}}>
+              {{display}}
+            </option:t>
+          </select>
+        </td>
         <td>Correct if neccisary</td>
       </tr>
     </tbody>
