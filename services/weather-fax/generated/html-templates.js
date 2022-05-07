@@ -321,3 +321,9 @@ exports['-66755273'] = (get, $t) =>
 		`&deg;)</td> </tr> </tbody> </table> <span class='icon-cnt'> ` +
 		$t.clean( new $t('698669312').render(get("hour").weather, 'type', get)) +
 		` </span> </div>`
+
+exports['./public/html/templates/weather-reports/.gitignore'] = (get, $t) => 
+		`/* `
+
+exports['./public/html/templates/orderForm/.gitignore'] = (get, $t) => 
+		`/* `
