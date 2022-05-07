@@ -228,7 +228,7 @@ function runReports() {
     console.log(currReps, '\nwakeIn:', wakeIn);
     setTimeout(run, wakeIn);
   }
-  run();
+  setTimeout(run, 20000);
   console.log('running');
 }
 
