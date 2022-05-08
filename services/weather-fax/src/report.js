@@ -88,6 +88,20 @@ function getDateRelitiveToTimeZone(day, hours, minutes, timeZone) {
 }
 
 const timeReg = /([0-9][0-9]):([0-9][0-9])/;
+function dateFromTime(time) {
+  const date = new Date();
+  const match = time.match(timeReg);
+  date.setHours(match[1]);
+  date.setMinutes(match[2]);
+  return date;
+}
+
+function compareSchedualedReports(r1, r2) {
+  const r1Date = dateFromTime(r1.time);
+  const r2Date = dateFromTime(r2.time);
+  return r1Date.getTime() - r2Date.getTime();
+}
+
 function buildReportDirs() {
   const reports = {};
   const files = shell.find(`${User.directory}/*.json`).stdout.trim().split('\n');
@@ -102,7 +116,7 @@ function buildReportDirs() {
             const data = readable(reports[day][hour]);
             const fileLoc = fileLocation(day, hour);
             shell.mkdir('-p', fileLoc.replace(/(.*)\/.*\.json/, '$1'));
-            fs.writeFileSync(fileLoc, data);
+            fs.writeFileSync(fileLoc, data.sort(compareSchedualedReports));
           });
         });
         release();
