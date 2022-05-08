@@ -96,7 +96,7 @@ class Sender {
     }
 
     function weatherReport(user, type, success) {
-      console.log('building weather report');
+      console.log('building weather report', JSON.stringify(user));
       function onComplete(responses) {
         console.log('weather report built', responses);
         success(combine(user, responses.order, responses.hours15, responses.hourly, responses.daily));
