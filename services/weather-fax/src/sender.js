@@ -25,10 +25,11 @@ function awaitAll(callback, ...keys) {
   const responses = {};
   if (keys.length === 0) callback();
   return (key) => {
+    console.log('awaiting', key)
     return (data) => {
       responses[key] = data;
       let finished = true;
-      console.log('awaiting', key, keys)
+      console.log('awaited', key, keys)
       keys.forEach((k) => finished = finished && responses[k] !== undefined);
       if (finished) {
         console.log('awaited!!!')
