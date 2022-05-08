@@ -173,7 +173,7 @@ function get2hours() {
   return list;
 }
 
-const threshhold = 60000
+const threshhold = 900000;
 function wakeIn(report) {
   const sleepTime = report.date.getTime() - new Date().getTime();
   return sleepTime < threshhold ? sleepTime : threshhold;
