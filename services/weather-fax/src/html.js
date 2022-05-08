@@ -31,7 +31,7 @@ class HTML {
         `/html/${templateName}/${dateHourKey}.html`;
 
     function build(templateName, success, failure) {
-      purgeDirectories.purge();
+      // purgeDirectories.purge();
       if (failure === undefined) failure = success;
       const htmlTemplate = HTML[`${templateName}Template`];
       if (instance.urlsMap[templateName] === undefined) instance.urlsMap[templateName] = {};
