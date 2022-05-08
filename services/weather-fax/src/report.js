@@ -118,7 +118,8 @@ function buildReportDirs() {
 
         const relDate = getDateRelitiveToTimeZone(day, hour, minute, userInfo.timeZone);
         const rDay = relDate.getDay();
-        const rHour = relDate.getHours();
+        let rHour = relDate.getHours() + '';
+        rHour = rHour.length === 1 ? `0${rHour}` : rHour;
         const rTime = utils.dateTime(relDate);
 
         if (reports[rDay] === undefined) reports[rDay] = {};
@@ -228,7 +229,7 @@ function runReports() {
     console.log(currReps, '\nwakeIn:', wakeIn);
     setTimeout(run, wakeIn);
   }
-  setTimeout(run, 20000);
+  setTimeout(run, 5000);
   console.log('running');
 }
 
