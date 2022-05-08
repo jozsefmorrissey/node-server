@@ -113,10 +113,10 @@ function buildReportDirs() {
       mutex.acquire().then((release) => {
         Object.keys(reports).forEach((day) => {
           Object.keys(reports[day]).forEach((hour) => {
-            const data = readable(reports[day][hour]);
+            const data = readable(reports[day][hour].sort(compareSchedualedReports));
             const fileLoc = fileLocation(day, hour);
             shell.mkdir('-p', fileLoc.replace(/(.*)\/.*\.json/, '$1'));
-            fs.writeFileSync(fileLoc, data.sort(compareSchedualedReports));
+            fs.writeFileSync(fileLoc, data);
           });
         });
         release();
