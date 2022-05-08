@@ -16,7 +16,7 @@ function send(user, data) {
     console.log('sending fax');
     // faxSvc.send(user.faxNumber(), data.url);
   } else {
-    emailSvc.sendPdf('Weather-Fax', 'Report', data.url, user.email(), console.log, console.error);
+    emailSvc.sendPdf('Weather-Fax', 'Report', data.file, user.email(), console.log, console.error);
     // emailSvc.sendHtml(user.email(), data.html, console.log, console.error);
   }
 }

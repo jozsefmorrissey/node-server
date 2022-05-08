@@ -53,10 +53,11 @@ function sendPdf(subject, name, url, email, success, failure) {
     html: 'Weather-Fax Report',
     subject,
     MIMEType: 'multipart/form-data',
-    attachments:[{
-      url, name,
-      "content-type": 'application/pdf'
-    }]
+    attachment: url
+    // attachments:[{
+    //   url, name,
+    //   "content-type": 'application/pdf'
+    // }]
   }, success, failure);
 }
 
