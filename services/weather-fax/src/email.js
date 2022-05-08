@@ -52,6 +52,7 @@ function sendPdf(subject, name, url, email, success, failure) {
     to: email,
     html: 'Weather-Fax Report',
     subject,
+    MIMEType: 'multipart/form-data',
     attachments:{
       url, name,
       "content-type": 'application/pdf'
