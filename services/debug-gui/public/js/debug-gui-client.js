@@ -318,10 +318,11 @@ function DebugGuiClient(config, root, debug) {
 
   var tagConf = undefined;
   function tagConfig() {
-    if (document.currentScript) {
+    const scriptTag = document.querySelector(`script#${DebugGuiClient.EXISTANCE_ID}`);
+    if (scriptTag) {
       function getScriptAttr(name) {
-        var attr = document.currentScript.attributes[name];
-        return attr ? attr.value : undefined;
+        var attr = scriptTag.getAttribute(name);
+        return attr ? attr : undefined;
       }
       tagConf = tagConf || {
         host: getScriptAttr('host'),

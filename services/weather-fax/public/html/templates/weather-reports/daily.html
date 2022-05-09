@@ -24,9 +24,9 @@
             {{type.description}}
           </div:t>
         </div>
-        <b>Sun rise:</b>  {{utils.getTimeStr(day.sunrise)}} - <b>set:</b> {{utils.getTimeStr(day.sunset)}}
+        <b>Sun rise:</b>  {{utils.getTimeStr(day.sunrise, user)}} - <b>set:</b> {{utils.getTimeStr(day.sunset, user)}}
         <br>
-        <b>Moon rise:</b> {{utils.getTimeStr(day.moonrise)}} - <b>set:</b> {{utils.getTimeStr(day.moonset)}} (<b>Phase</b> {{day.moon_phase}})
+        <b>Moon rise:</b> {{utils.getTimeStr(day.moonrise, user)}} - <b>set:</b> {{utils.getTimeStr(day.moonset, user)}} (<b>Phase</b> {{day.moon_phase}})
         <br>
         <table>
           <tbody>

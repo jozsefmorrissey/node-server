@@ -5,6 +5,7 @@
         host='http://localhost:3000/debug-gui'
         debug='true';
         log-window='23'></script>
+    <script type='text/javascript' src="/debug-gui/js/debug-gui.js"></script>
     <script>
       function dgTest() {
         var dg = DebugGuiClient.browser();
@@ -65,6 +66,5 @@
   </head>
   <body>
     <input type='button' onclick="randomAdd()" value='Generate'>
-    <debug-gui-data dg-id='test'></debug-gui-data>
   </body>
 </html>

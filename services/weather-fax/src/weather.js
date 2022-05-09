@@ -15,10 +15,11 @@ class Weather {
       const quarter = Math.floor(date.getMinutes() / 10) + 1;
       const dateHourKey = `${zip}-${date.getDate()}-${date.getHours()}-${quarter}`;
       function filter(weatherData) {
+        console.log('wddd', weatherData);
         if (weatherData) {
-          weatherData.hourly = weatherData.hourly.splice(0, 24);
-          weatherData.hours15 = weatherData.hourly.splice(0, 15);
-          weatherData.daily = weatherData.daily.splice(0, weatherData.daily.length - 1);
+          weatherData.hourly = weatherData.hourly.slice(0, 24);
+          weatherData.hours15 = weatherData.hourly.slice(0, 15);
+          weatherData.daily = weatherData.daily.slice(0, weatherData.daily.length - 1);
           data[dateHourKey] = weatherData;
         }
         if (data[dateHourKey]) {

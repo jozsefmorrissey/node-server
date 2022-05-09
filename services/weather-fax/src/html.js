@@ -30,12 +30,13 @@ class HTML {
     this.getPath = (templateName, dateHourKey) =>
         `/html/${templateName}/${dateHourKey}.html`;
 
-    function build(templateName, success, failure) {
+    function build(templateName, user, success, failure) {
       // purgeDirectories.purge();
       if (failure === undefined) failure = success;
       const htmlTemplate = HTML[`${templateName}Template`];
       if (instance.urlsMap[templateName] === undefined) instance.urlsMap[templateName] = {};
       return (data) => {
+        data.user = user;
         const path = instance.getPath(templateName, data.dateHourKey);
         if (instance.urlsMap[path]) return success(instance.urlsMap[path]);
         data.isPdf = instance instanceof PDF;
@@ -45,20 +46,20 @@ class HTML {
     }
 
     this.getHourlyReportUrl = (user, success, failure) => {
-      Weather.hourly(user.zipCode(), build('hourlyReport', success), failure);
+      Weather.hourly(user.zipCode(), build('hourlyReport', user, success), failure);
     }
     this.get15HourReportUrl = (user, success, failure) => {
-      Weather.hours15(user.zipCode(), build('hours15Report', success), failure);
+      Weather.hours15(user.zipCode(), build('hours15Report', user, success), failure);
     }
     this.getDailyReportUrl = (user, success, failure) => {
-      Weather.daily(user.zipCode(), build('dailyReport', success), failure);
+      Weather.daily(user.zipCode(), build('dailyReport', user, success), failure);
     }
     this.getOrderForm = (user, success, failure) => {
       const scope = {user, plans, dateHourKey: `order-form-${String.random()}`};
-      build('orderForm', success, failure)(scope);
+      build('orderForm', user, success, failure)(scope);
     }
     this.getReportStatus = (user, succes, failure) => {
-      build('schedualed', success, failure)(user);
+      build('schedualed', user, success, failure)(user);
     }
   }
 }

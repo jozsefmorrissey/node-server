@@ -13,7 +13,7 @@
   <div>
     <h2>{{utils.getDateStr(weatherData[0].dt)}} Hourly Weather Report</h2>
     <div:t repeat='hour in weatherData' class='hour-cnt'>
-      <h3>{{utils.getTimeStr(hour.dt)}}</h3>
+      <h3>{{utils.getTimeStr(hour.dt, user)}}</h3>
       <table>
         <tbody>
           <tr>

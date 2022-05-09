@@ -26,8 +26,14 @@ utils.getDateStr = (value) => {
   return new Date(value * 1000).toString().replace(/(^.*? .*? .*?) .*$/, '$1');
 }
 
-utils.getTimeStr = (value) => {
-  return new Date(value * 1000).toTimeString().substr(0,5);
+const timeDateSpacing = new Array(5).fill('&nbsp;').join('')
+utils.getTimeStr = (value, user) => {
+  const timeZone = user.timeZone();
+  console.log('tzzzz', timeZone, value);
+  const date = new Date(value * 1000);
+  const dateStr = date.toLocaleString('en-US', { timeZone });
+  const split = dateStr.split(', ');
+  return `${split[1]}${timeDateSpacing}(${split[0].replace(/(.*)\/.*/, '$1')})`;
 }
 
 utils.iconUrl = (iconCode) => {

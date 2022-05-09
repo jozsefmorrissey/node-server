@@ -110,7 +110,7 @@ exports['1836366674'] = (get, $t) =>
 		` </div>`
 
 exports['admin'] = (get, $t) => 
-		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <script src="/js/utils/dom-utils.js"></script> <script src="/js/utils/request.js"></script> <script src='/weather-fax/js/admin.js'></script> <script src="/weather-fax/js/order-form.js"></script> <meta charset="utf-8"> <title></title> </head> <body> <div class='left'> <label>User:</label> <input hidden type="text" name="admin-password" value="` +
+		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <script type='text/javascript' src="/debug-gui/js/debug-gui-client.js" host='http://localhost:3000/debug-gui' debug='true'; log-window='23'></script> <script src="/js/utils/dom-utils.js"></script> <script src="/js/utils/request.js"></script> <script src='/weather-fax/js/admin.js'></script> <script src="/weather-fax/js/order-form.js"></script> <meta charset="utf-8"> <title></title> </head> <body> <debug-gui-data url='https://node.jozsefmorrissey.com/debug-gui/' dg-id='test'></debug-gui-data> <div class='left'> <label>User:</label> <input hidden type="text" name="admin-password" value="` +
 		$t.clean(get("adminPassword")) +
 		`"> <input type="text" name="user-id" value=""> <br> <a id='update-reports' href='#'>Update Schedualed Report Table</a> <div id='user-info'></div> </div> </body> </html> `
 
@@ -191,7 +191,7 @@ exports['weather-reports/hourly'] = (get, $t) =>
 		`<div> <style> html {zoom: 0.70; margin: 3em} h2 {margin: 0;} h3 {margin: 0;} div {font-size: 8pt;} b {font-size: 8pt;} td {font-size: 8pt;} .icon-cnt {position: absolute; right: 0; top: 0;} .hour-cnt {position: relative;} </style> <title>Hourly Weather Report</title> <div> <h2>` +
 		$t.clean(get("utils").getDateStr(get("weatherData")[0].dt)) +
 		` Hourly Weather Report</h2> ` +
-		$t.clean( new $t('-754346315').render(get("weatherData"), 'hour', get)) +
+		$t.clean( new $t('-1660664076').render(get("weatherData"), 'hour', get)) +
 		` </div> </div> `
 
 exports['-754346315'] = (get, $t) => 
@@ -229,7 +229,7 @@ exports['-754346315'] = (get, $t) =>
 
 exports['weather-reports/daily'] = (get, $t) => 
 		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <title>Daily Weather Report</title> <style> html {zoom: 0.70; margin: 3em} h4 {margin: 0;} div {font-size: 8pt;} b {font-size: 8pt;} .icon-cnt {position: absolute; right: 0; top: 0;} .day-cnt {position: relative;} </style> </head> <body> <div> <h3>Daily Weather Report</h3> ` +
-		$t.clean( new $t('1629632834').render(get("weatherData"), 'day', get)) +
+		$t.clean( new $t('-1092262748').render(get("weatherData"), 'day', get)) +
 		` </div> </body> </html> `
 
 exports['-431538336'] = (get, $t) => 
@@ -327,3 +327,93 @@ exports['./public/html/templates/weather-reports/.gitignore'] = (get, $t) =>
 
 exports['./public/html/templates/orderForm/.gitignore'] = (get, $t) => 
 		`/* `
+
+exports['-1092262748'] = (get, $t) => 
+		`<div class='day-cnt'> <h4>` +
+		$t.clean(get("utils").getDateStr(get("day").dt)) +
+		`</h4> <div class='icon-cnt'> ` +
+		$t.clean( new $t('1836366674').render(get("day").weather, 'type', get)) +
+		` </div> <b>Sun rise:</b> ` +
+		$t.clean(get("utils").getTimeStr(get("day").sunrise, get("user"))) +
+		` - <b>set:</b> ` +
+		$t.clean(get("utils").getTimeStr(get("day").sunset, get("user"))) +
+		` <br> <b>Moon rise:</b> ` +
+		$t.clean(get("utils").getTimeStr(get("day").moonrise, get("user"))) +
+		` - <b>set:</b> ` +
+		$t.clean(get("utils").getTimeStr(get("day").moonset, get("user"))) +
+		` (<b>Phase</b> ` +
+		$t.clean(get("day").moon_phase) +
+		`) <br> <table> <tbody> <tr> <td><b>Temperature</b></td> <td>&nbsp;&nbsp;&nbsp;</td> <td></td> <td><b>Morning</b></td> <td><b>Day</b></td> <td><b>Evening</b></td> <td><b>Night</b></td> <tr> <td><b>Low</b> ` +
+		$t.clean(get("Math").round(get("day").temp.min)) +
+		` &#x2109;</td> <td>&nbsp;&nbsp;&nbsp;</td> <td><b>Real</b></td> <td>` +
+		$t.clean(get("Math").round(get("day").temp.morn)) +
+		` &#x2109;</td> <td>` +
+		$t.clean(get("Math").round(get("day").temp.day)) +
+		` &#x2109;</td> <td>` +
+		$t.clean(get("Math").round(get("day").temp.eve)) +
+		` &#x2109;</td> <td>` +
+		$t.clean(get("Math").round(get("day").temp.night)) +
+		` &#x2109;</td> </tr> <tr> <td><b>High</b> ` +
+		$t.clean(get("Math").round(get("day").temp.max)) +
+		` &#x2109;</td> <td>&nbsp;&nbsp;&nbsp;</td> <td><b>Wind Chill</b></td> <td>` +
+		$t.clean(get("Math").round(get("day").feels_like.morn)) +
+		` &#x2109;</td> <td>` +
+		$t.clean(get("Math").round(get("day").feels_like.day)) +
+		` &#x2109;</td> <td>` +
+		$t.clean(get("Math").round(get("day").feels_like.eve)) +
+		` &#x2109;</td> <td>` +
+		$t.clean(get("Math").round(get("day").feels_like.night)) +
+		` &#x2109;</td> </tr> </tbody> </table> <table> <tbody> <tr> <td>` +
+		$t.clean(get("Math").round((get("day").rain || 0))) +
+		`% chance of rain</td> <td>` +
+		$t.clean(get("day").pressure) +
+		` Air Pressure</td> <td><b>Wind</b></td> <td>speed: ` +
+		$t.clean(get("Math").round(get("day").wind_speed)) +
+		` mph</td> <td>gust: ` +
+		$t.clean(get("Math").round(get("day").wind_gust)) +
+		` mph</td> </tr> <tr> <td>` +
+		$t.clean(get("Math").round(get("day").clouds)) +
+		`% cloud coverage</td> <td>` +
+		$t.clean(get("day").uvi) +
+		` UV Index(inconsistant)</td> <td></td> <td>direction: ` +
+		$t.clean(get("utils").getDirection(get("day").wind_deg)) +
+		` (` +
+		$t.clean(get("day").wind_deg) +
+		`&deg;)</td> </tr> <tr> <td>` +
+		$t.clean(get("Math").round(get("day").humidity )) +
+		`% humidity</td> <td></td> </tr> </tbody> </table> ` +
+		$t.clean(get("$index") !== get("weatherData").length - 1 ? '<br>' : '') +
+		` </div>`
+
+exports['-1660664076'] = (get, $t) => 
+		`<div class='hour-cnt'> <h3>` +
+		$t.clean(get("utils").getTimeStr(get("hour").dt, get("user"))) +
+		`</h3> <table> <tbody> <tr> <td><b>Temp</b> ` +
+		$t.clean(get("Math").round(get("hour").temp)) +
+		` &#x2109;</td> <td><b>Chill</b> ` +
+		$t.clean(get("Math").round(get("hour").feels_like)) +
+		` &#x2109;</td> <td><b>Humidity</b> ` +
+		$t.clean(get("Math").round(get("hour").humidity)) +
+		`</td> <td><b>Pressure</b> ` +
+		$t.clean(get("Math").round(get("hour").pressure)) +
+		`</td> <td><b>Rain</b> ` +
+		$t.clean(get("Math").round(get("hour").pop)) +
+		`%</td> </tr> <tr> <td><b>Dew Point</b> ` +
+		$t.clean(get("Math").round(get("hour").dew_point)) +
+		`</td> <td><b>Visibility</b> ` +
+		$t.clean(get("Math").round(get("hour").visibility)) +
+		`</td> <td><b>UV Index</b> ` +
+		$t.clean(get("Math").round(get("hour").uvi)) +
+		`</td> <td><b>Clouds</b> ` +
+		$t.clean(get("Math").round(get("hour").clouds)) +
+		`</td> </tr> <tr> <td><b>Wind</b></td> <td>Speed: ` +
+		$t.clean(get("Math").round(get("hour").wind_speed)) +
+		` mph</td> <td>Gust: ` +
+		$t.clean(get("Math").round(get("hour").wind_gust)) +
+		` mph</td> <td>Direction: ` +
+		$t.clean(get("utils").getDirection(get("hour").wind_deg)) +
+		` (` +
+		$t.clean(get("hour").wind_deg) +
+		`&deg;)</td> </tr> </tbody> </table> <span class='icon-cnt'> ` +
+		$t.clean( new $t('698669312').render(get("hour").weather, 'type', get)) +
+		` </span> </div>`
