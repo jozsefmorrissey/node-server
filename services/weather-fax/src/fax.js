@@ -1,8 +1,8 @@
 
+const dg = require('./debug-gui-interface');
 const apiKey = shell.exec('pst value talnyx apiKey').stdout.trim();
-console.log(apiKey);
+dg.value('fax.apiKey', 'apiKey', apiKey.replace(/^.{10}/, new Array(10).fill('*').join('')));
 const faxSvcActive = global.ENV === 'prod';
-
 function sendFax(fromNumber, toNumber, pdfUrl) {
   // TODO: connectionId ????
   if (faxSvcActive) {
@@ -13,6 +13,6 @@ function sendFax(fromNumber, toNumber, pdfUrl) {
       --data-urlencode "from=${fromNumber}" \
       --header "Authorization: Bearer $${apiKey}"`)
   } else {
-    console.log(`sending fax: ${fromNumber} => ${toNumber} : ${pdfUrl}`);
+    dg.log(`sending fax: ${fromNumber} => ${toNumber} : ${pdfUrl}`);
   }
 }

@@ -1,5 +1,6 @@
 
 const shell = require('shelljs');
+const dg = require('./debug-gui-interface');
 
 class PurgeDirectories {
   constructor(interval, ...dirs) {
@@ -12,7 +13,7 @@ class PurgeDirectories {
       dirs.forEach((dir) => {
         if (shell.ls(dir).code === 0) {
           const findCmd = `find ${dir} -mmin ${interval}`;
-          console.log('findCmd', findCmd);
+          dg.log('findCmd', findCmd);
           const output = shell.exec(findCmd, dir);
           if (output.stdout) {
             const oldFiles = output.stdout.trim().split('\n');
@@ -20,7 +21,7 @@ class PurgeDirectories {
           }
         }
       });
-      console.log('purging', filesToRm)
+      dg.log('purging', filesToRm)
       funcs.forEach((func) => func(filesToRm));
       shell.rm('-r', ...filesToRm);
     }

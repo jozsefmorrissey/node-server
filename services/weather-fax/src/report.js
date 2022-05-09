@@ -56,7 +56,7 @@ const { Mutex, Semaphore } = require('async-mutex');
 const mutex = new Mutex();
 const sender = require('./sender');
 const utils = require('./utils');
-
+const dg = require('./debug-gui-interface');
 
 const REPORT_DIR = `${global.DATA_DIRECTORY}/reports`;
 
@@ -161,14 +161,16 @@ function dateFromReport(report) {
 }
 
 function pullDates(day, hour) {
-  console.log('pulling dates:', day, hour)
+  const pullId = `report.pullDates (${day}/${hour})`;
   hour = ('' + hour).length === 2 ? hour : `0${hour}`;
   const fileLoc = fileLocation(day, hour);
   let list = [];
-  console.log('fileLocation', fileLoc)
+  dg.value(pullId, 'fileLocation', fileLoc)
   if (fs.existsSync(fileLoc)) {
-    console.log('found')
+    dg.value(pullId, 'fileFound', true);
     list = JSON.parse(fs.readFileSync(fileLoc));
+  } else {
+    dg.value(pullId, 'fileFound', false);
   }
   list.forEach((report) => {
     report.date = dateFromReport(report);
@@ -195,7 +197,8 @@ function wakeIn(report) {
 
 let lastReportSentId = String.random();
 function currReports() {
-  console.log('lastReportSentId', lastReportSentId);
+  const dgGroup = `report.currReport`;
+  dg.value(dgGroup, 'lastReportSentId', lastReportSentId);
   const nextMinute = new Date();
   nextMinute.setHours(nextMinute.getHours());
   nextMinute.setMinutes(nextMinute.getMinutes() + 1);
@@ -212,41 +215,43 @@ function currReports() {
   const idMap = twoHours.map((r) => r.id);
   let lastRepIndex = idMap.indexOf(lastReportSentId);
   let startIndex = lastRepIndex === -1 ? 0 : lastRepIndex + 1;
-  console.log(startIndex, ') th', JSON.stringify(twoHours));
+  dg.object(`${dgGroup}.twoHours`, twoHours);
   const slice = twoHours.slice(startIndex);
-  console.log('slice', JSON.stringify(slice));
+  dg.object(`${dgGroup}.hasNotBeenSent`, slice);
   const nextMinuteArray = slice.filter(nextMinuteFilter);
-  console.log('nma', JSON.stringify(nextMinuteArray));
+  dg.object(`${dgGroup}.nextMinute`, nextMinuteArray);
   const firstUnsent = slice[nextMinuteArray.length];
-  console.log('firstUnsent', firstUnsent);
+  dg.value(dgGroup, 'firstUnsent', firstUnsent);
   return {nextMinuteArray, wakeIn: wakeIn(firstUnsent)};
 }
 
 
-
+let lastRun = new Date();
 function runReports() {
   buildReportDirs();
   function run() {
+    const dgGroup = 'runReports';
     const currReps = currReports();
     const scheduleList = currReps.nextMinuteArray;
-    console.log('schdlist', scheduleList);
+    dg.object(`${dgGroup}.scheduleList`, scheduleList);
     const wakeIn = currReps.wakeIn;
     scheduleList.forEach((report) => {
       try {
-        console.log('run report', report);
+        dg.object(`${dgGroup}.runningReport`, report);
         sender.weatherReport(new User(report.userId), report.type);
         lastReportSentId = report.id;
       } catch (e) {
-        console.log(e);
+        dg.exception(dgGroup, e);
       }
     });
-    console.log(currReps, '\nwakeIn:', wakeIn);
+    dg.object(`${dgGroup}.runningReport`, currReps);
+    lastRun = new Date();
     setTimeout(run, wakeIn);
   }
   setTimeout(run, 5000);
-  console.log('running');
 }
 
 runReports.buildReportDirs = buildReportDirs;
+runReports.isRunning = () => new Date().getTime() - lastRun < threshhold * 2;
 
 module.exports = runReports;

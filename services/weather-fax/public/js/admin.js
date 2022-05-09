@@ -1,4 +1,5 @@
 
+dg = DebugGuiClient.browser('Weather-Fax.admin.webpage')
 const IS_ADMIN=true;
 
 const password = du.param.get('adminPassword');
@@ -25,25 +26,33 @@ function load() {
 
 function save() {
   function success() {
-    console.log('saved Successfully');
+    dg.log('saved Successfully');
   }
   function fail() {
-    console.log('save failed');
+    dg.log('save failed');
   }
-  console.log('admin save');
+  dg.log('admin save');
   const user = buildUser();
-  console.log(user);
+  dg.log(user);
   Request.post(`/weather-fax/admin/save`, user, success, fail);
 }
 
 function updateReports() {
   function success() {
-    console.log('Report Schedule Updated Successfully');
+    dg.log('Report Schedule Updated Successfully');
   }
   Request.get(`/weather-fax/admin/update/report/schedule`, success);
 }
 
+function toggleDebug() {
+  function success(isDebugging) {
+    dg.setDebug(isDebugging);
+    dg.log('Debug has been toggled!');
+  }
+  Request.get(`/weather-fax/admin/debug/toggle`, success);
+}
 
-du.on.match('click', '#update-reports', updateReports)
+du.on.match('click', '#update-reports', updateReports);
+du.on.match('click', '#toggle-debug', toggleDebug);
 du.on.match('enter', 'input[name="user-id"]', load);
 du.on.match('click', 'button', save);

@@ -110,9 +110,9 @@ exports['1836366674'] = (get, $t) =>
 		` </div>`
 
 exports['admin'] = (get, $t) => 
-		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <script type='text/javascript' src="/debug-gui/js/debug-gui-client.js" host='http://localhost:3000/debug-gui' debug='true'; log-window='23'></script> <script src="/js/utils/dom-utils.js"></script> <script src="/js/utils/request.js"></script> <script src='/weather-fax/js/admin.js'></script> <script src="/weather-fax/js/order-form.js"></script> <meta charset="utf-8"> <title></title> </head> <body> <debug-gui-data url='https://node.jozsefmorrissey.com/debug-gui/' dg-id='test'></debug-gui-data> <div class='left'> <label>User:</label> <input hidden type="text" name="admin-password" value="` +
+		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <script type='text/javascript' src="/js/short-cut-container.js"></script> <script type='text/javascript' src="/debug-gui/js/debug-gui-client.js" host='http://localhost:3000/debug-gui' log-window='23'></script> <script type='text/javascript' src="/debug-gui/js/debug-gui.js"></script> <script src="/js/utils/dom-utils.js"></script> <script src="/js/utils/request.js"></script> <script src='/weather-fax/js/admin.js'></script> <script src="/weather-fax/js/order-form.js"></script> <meta charset="utf-8"> <title></title> </head> <body> <div class='left'> <label>User:</label> <input hidden type="text" name="admin-password" value="` +
 		$t.clean(get("adminPassword")) +
-		`"> <input type="text" name="user-id" value=""> <br> <a id='update-reports' href='#'>Update Schedualed Report Table</a> <div id='user-info'></div> </div> </body> </html> `
+		`"> <input type="text" name="user-id" value=""> <br> <a id='update-reports' href='#'>Update Schedualed Report Table</a> <a id='toggle-debug' href='#'>Toggle Debugging</a> <div id='user-info'></div> </div> </body> </html> `
 
 exports['footer'] = (get, $t) => 
 		`<div> <style media="screen"> ul {list-style: none;} ` +

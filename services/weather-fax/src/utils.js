@@ -29,7 +29,6 @@ utils.getDateStr = (value) => {
 const timeDateSpacing = new Array(5).fill('&nbsp;').join('')
 utils.getTimeStr = (value, user) => {
   const timeZone = user.timeZone();
-  console.log('tzzzz', timeZone, value);
   const date = new Date(value * 1000);
   const dateStr = date.toLocaleString('en-US', { timeZone });
   const split = dateStr.split(', ');
@@ -70,7 +69,6 @@ utils.timeZoneMap = (invert) => {
       map[split[0]] = split[1];
     }
   }
-  console.log('tzMap', map);
   return map;
 }
 

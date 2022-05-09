@@ -152,6 +152,27 @@ function endpoints(app, prefix, ip) {
       res.send('success');
   });
 
+  app.post(prefix + "/values/:id/:group", function (req, res) {
+    const id = req.params.id;
+    const time = new Date().getTime();
+    const recurseAdd = (parentGroup, obj) => {
+      const keys = Object.keys(obj);
+      keys.forEach((key) => {
+          const val = obj[key];
+          if ((typeof val) === 'object') {
+            recurseAdd(`${parentGroup}.${key}`, val);
+          } else {
+            getMap(id, parentGroup).values[key] = { value: val, time };
+          }
+      });
+    }
+
+    const group = req.params.group;
+    recurseAdd(group, req.body);
+
+    res.send('success');
+  });
+
   app.post(prefix + "/value/:id/:group", function (req, res) {
       const id = req.params.id;
       const group = req.params.group;

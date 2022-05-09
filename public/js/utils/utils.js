@@ -72,6 +72,22 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     return str.substr(0, len);
 }, true);
 
+const LEFT = 1;
+const RIGHT = 0;
+Function.safeStdLibAddition(String, 'obscure',  function (count) {
+    const direction = count < 0 ? LEFT : RIGHT;
+    const test = (index) => direction === LEFT ? index > this.length + count - 1 : index < count;
+    let str = '';
+    for (let index = 0; index < this.length; index += 1) {
+      if (test(index)) {
+        str += '*';
+      } else {
+        str += this[index];
+      }
+    }
+    return str;
+});
+
 Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
   return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
 }, true);

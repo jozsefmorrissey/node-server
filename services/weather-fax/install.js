@@ -9,6 +9,6 @@ if (global.ENV === 'local') {
 } else {
   adminUrl = require('./src/EPNTS').admin.home() + '?adminPassword=$(pst remote weather-fax -key admin-password)';
 }
-console.log(adminUrl, adminPassword)
+
 const cmd = `sudo scriptcmd -cmd weater-fax-admin-${global.ENV} -script 'xdg-open ${adminUrl}' -o`;
 shell.exec(cmd);

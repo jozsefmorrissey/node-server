@@ -6,33 +6,49 @@ const utils = require('./utils');
 const HTML = require('./html');
 const PDF = HTML.PDF;
 
+const dg = require('./debug-gui-interface');
+
 // TODO: reference single email reg throughtout project
 const emailReg = /^\s*([^@]{1,})@([^@^.]{1,})(\.([^@^.]{1,}))*\s*$/;
 
 const faxnumReg = /^(\+1|)((\(|)[0-9]{3}(\)|)[0-9]{3}(-|)[0-9]{4})$/;
+
+function success(type, user) {
+  return () => {
+    dg.log('Successfully sent ${type} to user: ${user.userId}');
+  }
+}
+
+function failure(type, user) {
+  return (e) => {
+    dg.log('Failed to send ${type} to user: ${user.userId}');
+    dg.exception(`sender.${type}`, e);
+  }
+}
+
 function send(user, data) {
 
   if (user.isFax()) {
-    console.log('sending fax');
+    dg.log('sending fax');
     // faxSvc.send(user.faxNumber(), data.url);
   } else {
-    emailSvc.sendPdf('Weather-Fax', 'Report', data.file, user.email(), console.log, console.error);
-    // emailSvc.sendHtml(user.email(), data.html, console.log, console.error);
+    emailSvc.sendPdf('Weather-Fax', 'Report', data.file, user.email(), success('pdf', user), failure('pdf', user));
   }
 }
 
 function awaitAll(callback, ...keys) {
   const responses = {};
   if (keys.length === 0) callback();
+  dg.object('awaitAll.keys', keys);
   return (key) => {
-    console.log('awaiting', key)
+    dg.value('awaitAll', 'awaiting', key);
     return (data) => {
       responses[key] = data;
       let finished = true;
-      console.log('awaited', key, keys)
+      dg.value('awaitAll', 'awaited', key);
       keys.forEach((k) => finished = finished && responses[k] !== undefined);
       if (finished) {
-        console.log('awaited!!!')
+        dg.value('awaitAll', 'allReturned', true);
         callback(responses);
       }
     }
@@ -40,37 +56,35 @@ function awaitAll(callback, ...keys) {
 }
 
 function combinePdfs(...pdfUrls) {
-  console.log('combining pdfs');
   const pdfLocation = utils.randFileLocation('combined/pdf', 'pdf');
+  pdfUrls._DESTINATION = pdfLocation;
+  dg.object('pdf.urls', pdfUrls);
   let pdfLocations = pdfUrls.map((pdfUrl) => utils.getProjectFilePath(pdfUrl));
   pdfLocations = pdfLocations.filter((loc) => loc !== false);
   const combineCmd = `pdftk '${pdfLocations.join("' '")}' cat output ${pdfLocation}`;
-  console.log(combineCmd);
-  console.log('combine pdf url', utils.getUrlPath(pdfLocation));
   shell.mkdir('-p', pdfLocation.replace(/(.*)\/.*/, '$1'))
   shell.exec(combineCmd);
   return {url: utils.getUrlPath(pdfLocation), file: pdfLocation};
 }
 
 function combineHtml(...htmlUrls) {
-  console.log('combining htmls', htmlUrls);
   let html = '';
+  const htmlLocation = utils.randFileLocation('combined/html', 'html');
+  htmlUrls._DESTINATION = htmlLocation;
+  dg.object('html.urls', htmlUrls);
   for (let index = 0; index < htmlUrls.length; index += 1) {
     const filePath = utils.getProjectFilePath(htmlUrls[index]);
-    console.log(htmlUrls[index], '=>', filePath);
     if (filePath) {
       html += shell.cat(filePath).stdout;
       if (index < htmlUrls.length - 1) html += '<br><br></br>';
     }
   }
-  const htmlLocation = utils.randFileLocation('combined/html', 'html');
   shell.mkdir('-p', htmlLocation.replace(/(.*)\/.*/, '$1'))
   fs.writeFileSync(htmlLocation, html);
   return {url: utils.getUrlPath(htmlLocation), file: htmlLocation, html};
 }
 
 function combine(user, ...urls) {
-  console.log('combine urls', urls);
   if (true || user.isFax()) {
     return combinePdfs.apply(null, urls);
   } else {
@@ -97,9 +111,9 @@ class Sender {
     }
 
     function weatherReport(user, type, success) {
-      console.log('building weather report', JSON.stringify(user.toJson()));
+      dg.log('building weather report');
       function onComplete(responses) {
-        console.log('weather report built', responses);
+        dg.log('weather report built');
         success(combine(user, responses.order, responses.hours15, responses.hourly, responses.daily));
       }
       let types = ['hours15', 'daily'];

@@ -1,11 +1,13 @@
+const DebugGuiClient = require('../services/debug-gui/public/js/debug-gui-client');
+// const { CallbackTree } = require('./callbackTree');
 
-const DebugGuiClient = require('../../debug-gui/public/js/debug-gui-client');
-const { CallbackTree } = require('./callbackTree');
-
+const pathReg = /^\/(.*?)(\/[^?]*)(\?.*|)$/;
 class Context {
   constructor(req, res, next) {
     const instance = this;
-    const id = Math.floor(Math.random() * 1000000);
+    Context.count++;
+    Context.count = Context.count % 100;
+    const id = Context.count;
     function cbTreeDgLogger(info) {
       instance.dg.value(`CallbackTrees.${info.rootId} - ${info.instId}.${info.id}`,
             info.key, info.value);
@@ -18,20 +20,24 @@ class Context {
     }
 
     this.getId = () => id;
-    this.dg = DebugGuiClient.express(req, 'ce-server');
+    const match = req.url.match(pathReg);
+    const callId = match ? `${match[1]}.requests.${match[2]} ${req.method} (${id})` : req.url;
+    this.dg = DebugGuiClient.express(req, callId);
+    this.dg.object('parameters', req.query || {});
+    this.dg.object('body', req.body || {});
     this.cbtLogger = this.dg.isDebugging() ? cbTreeDgLogger : undefined;
     if (global.ENV !== 'prod') this.dg.insecure();
-    if (req) req.ceContextId = id;
-    if (res) res.ceContextId = id;
-    if (next) next.ceContextId = id;
+    if (req) req.contextId = id;
+    if (res) res.contextId = id;
+    if (next) next.contextId = id;
     this.created = new Date().getTime();
     Context.open[id] = this;
   }
 }
 
+Context.count = 0;
 Context.open = {};
-Context.default = new Context()
-Context.fromReq = (req) => Context.open[req.ceContextId] || Context.default;
+Context.fromReq = (req) => Context.open[req.contextId];
 Context.fromRes = Context.fromReq;
 Context.fromFunc = (func) => {
   if ((typeof func) === 'function') {
@@ -39,6 +45,6 @@ Context.fromFunc = (func) => {
   }
   return Context.default;
 };
-Context.fromCbTree = (cbTree) => Context.open[cbTree.getContext()] || Context.default;
+// Context.fromCbTree = (cbTree) => Context.open[cbTree.getContext()] || Context.default;
 
-exports.Context = Context;
+module.exports = Context;

@@ -15,6 +15,8 @@ const HTML = require('./src/html');
 const PDF = HTML.PDF;
 const EPNTS = require('./src/EPNTS');
 const reports = require('./src/report');
+const Context = require('../../src/context');
+const dg = require('./src/debug-gui-interface');
 
 reports();
 
@@ -40,7 +42,7 @@ function generateDocument(faxNumber, type, format, res, next) {
       next(new Error(`Undefined pdf type '${type}'`));
     }
   } catch (e) {
-    console.log(e);
+    dg.exception('generateDocument', e);
     res.status(400).send(`Invaild fax number or email '${faxNumber}'`)
   }
 }
@@ -66,12 +68,13 @@ async function saveFile(type, from, url) {
 }
 
 function sendUnauthorized(res) {
-  res.status(404).send("Unauthorized")
+  res.status(404).send("Unauthorized");
 }
 
 function endpoints(app, prefix) {
   const adminTemplate = new $t('admin');
   app.get(prefix + '/admin/home/', function(req, res ,next) {
+    Context.fromReq(req).dg.value('called', 'url', '/admin/home');
     if (isAdmin(req))
       res.send(adminTemplate.render(req.query));
     else
@@ -83,6 +86,14 @@ function endpoints(app, prefix) {
       generateDocument(req.params.faxNumber, 'orderForm', 'html', res, next);
     else
       sendUnauthorized(res);
+  });
+
+  app.get(prefix + '/admin/debug/toggle', function (req, res, next) {
+    if (isAdmin(req)) {
+      res.send(dg.toggleDebug());
+    } else {
+      sendUnauthorized(res);
+    }
   });
 
   app.get(prefix + '/admin/update/report/schedule', function (req, res, next) {

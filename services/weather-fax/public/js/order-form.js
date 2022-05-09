@@ -87,6 +87,7 @@ function buildUser() {
   }
 }
 
+// Todo: Maybe make functioning form...
 function submit() {
   console.log(buildUser())
 }

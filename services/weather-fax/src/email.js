@@ -5,6 +5,8 @@ const domain = shell.exec('pst value mailgun domain').stdout.trim();
 const emailServiceActive = global.ENV === 'prod';
 const mg = emailServiceActive ? mailgun({ apiKey, domain }) : undefined;
 const ENPTS = require('./EPNTS');
+const dg = require('./debug-gui-interface');
+
 
 class EmailFailedToSend extends Error {
   constructor(error) {
@@ -14,11 +16,7 @@ class EmailFailedToSend extends Error {
   }
 }
 
-function print(message) {
-  if (global.ENV === 'local') {
-    console.log.apply(null, arguments);
-  }
-}
+const dgGroup = `email`;
 function send (data, success, failure) {
   function respond (error, body) {
     if (error) {
@@ -28,7 +26,7 @@ function send (data, success, failure) {
     }
   }
   if (emailServiceActive) {
-    console.log('sending: ', data);
+    dg.object('email.sending.payload', data);
     mg.messages().send(data, respond);
   } else {
     respond();
@@ -37,7 +35,7 @@ function send (data, success, failure) {
 
 function sendHtml(email, html, success, failure) {
   const subject = html.replace(/.*<title>(.*?)<\/title>.*/, '$1');
-  console.log('trying to send', subject);
+  dg.object('email.sending', {subject, type: 'html'});
   send({
     from: 'Weather-Fax <weather-fax@jozsefmorrissey.com>',
     to: email,
@@ -46,7 +44,7 @@ function sendHtml(email, html, success, failure) {
 }
 
 function sendPdf(subject, name, url, email, success, failure) {
-  console.log('trying to send', subject);
+  dg.object('email.sending', {subject, type: 'pdf'});
   send({
     from: 'Weather-Fax <weather-fax@jozsefmorrissey.com>',
     to: email,
@@ -54,10 +52,6 @@ function sendPdf(subject, name, url, email, success, failure) {
     subject,
     MIMEType: 'multipart/form-data',
     attachment: url
-    // attachments:[{
-    //   url, name,
-    //   "content-type": 'application/pdf'
-    // }]
   }, success, failure);
 }
 

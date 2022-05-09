@@ -4,6 +4,7 @@ const fs = require('fs');
 const utils = require('./utils.js');
 const emailReg = /^\s*([^@]{1,})@([^@^.]{1,})(\.([^@^.]{1,}))*\s*$$/;
 const Plan = require('./plan');
+const dg = require('./debug-gui-interface');
 
 class SchedualedReport {
   constructor(time, dayIndexes, type) {
@@ -60,7 +61,7 @@ class User {
     }
 
     this.removeReport = (id) =>  {
-      console.log('removeId', id);
+      dg.log(`removed userId: '${id}'`);
       for (let index = 0; index < user.schedualedReports.length; index += 1) {
         if (id === user.schedualedReports[index].id()) {
           return user.schedualedReports.splice(index,1);
@@ -91,15 +92,15 @@ class User {
       const dfp = instance.userDataLocation();
       try {
         user = JSON.parse(fs.readFileSync(dfp));
+        dg.object('user.get', user);
         user.schedualedReports = Object.fromJson(user.schedualedReports);
-        console.log('sr fr json', JSON.stringify(user.schedualedReports, null, 2))
         instance.timeZone(user.timeZone);
         instance.zipCode(user.zipCode);
         instance.startDate(new Date(user.startDate));
         instance.paidUntil(new Date(user.paidUntil));
         instance.plan(Object.fromJson(user.plan));
       } catch (e) {
-        console.log('USER ERROR', dfp, e);
+        dg.exception('user.get', e);
         user = {schedualedReports: []};
         instance.zipCode(utils.areaOzipOnumberToZip(faxNumber));
         instance.timeZone(utils.getTimeZone(instance.zipCode()));
@@ -158,20 +159,16 @@ class User {
 User.directory = `${global.DATA_DIRECTORY}/user/`;
 
 User.update = (obj) => {
-  console.log('obj', obj ? JSON.stringify(obj) : obj);
   const user = new User(obj.accountId);
   if (utils.validZipCode(obj.zipCode)) user.zipCode(obj.zipCode);
   if (utils.validTimeZone(obj.timeZone)) user.timeZone(obj.timeZone);
-  console.log("plan", obj.planName.toLowerCase(), JSON.stringify(Plan.plans[obj.planName.toLowerCase()].toJson()));
   user.plan(Plan.plans[obj.planName.toLowerCase()]);
-  console.log('new len', obj.schedualedReports.new.length);
   obj.schedualedReports.new.forEach((sr) =>
       user.addReport(sr.time, sr.dayIndexes, sr.type));
   obj.schedualedReports.remove.forEach((srId) =>
       user.removeReport(srId));
-  console.log(user.schedualedReports());
+  dg.object('user.update', user.toJson());
   user.save();
-  console.log(JSON.stringify(user.toJson()));
 }
 
 module.exports = User;

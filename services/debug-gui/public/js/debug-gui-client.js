@@ -65,14 +65,16 @@ function DebugGuiClient(config, root, debug) {
   }
 
   function exception(group, exception, soft) {
-    const exObj = {id: id, msg: exception.toString(), stacktrace: exception.stack}
-    var xhr = new DebugGuiClient.xmlhr();
-    xhr.open("POST", getUrl(host, 'exception', id, prefixRoot(group)), true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
     if (soft !== true) {
       console.error(group + ' - threw the following exception\n\t' + exception);
     }
-    xhr.send(JSON.stringify(exObj));
+    if (debug) {
+      const exObj = {id: id, msg: exception.toString(), stacktrace: exception.stack}
+      var xhr = new DebugGuiClient.xmlhr();
+      xhr.open("POST", getUrl(host, 'exception', id, prefixRoot(group)), true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      send(xhr, JSON.stringify(exObj));
+    }
   }
 
   function data(onSuccess) {
@@ -98,18 +100,43 @@ function DebugGuiClient(config, root, debug) {
       var xhr = new DebugGuiClient.xmlhr();
       xhr.open("POST", getUrl(host, "link", id, prefixRoot(group)), true);
       xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.send(JSON.stringify({label, url}));
+      send(xhr, JSON.stringify({label, url}));
     }
     return instance;
   }
 
+  function object(group, value) {
+    if (debug) {
+      var xhr = new DebugGuiClient.xmlhr();
+      xhr.open("POST", getUrl(host, "values", id, prefixRoot(group)), true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      send(xhr, JSON.stringify(value));
+
+    }
+    return instance;
+  }
+
+  const failed = [];
+  function runFailed() {
+    failed.forEach((obj) => obj.xhr.send(obj.body));
+  }
+  function queue(xhr, body) {
+    failed.push({xhr, body});
+  }
+
+  function send(xhr, body) {
+    xhr.send(body, undefined, () => queue(xhr, body));
+  }
+
   function value(group, key, value) {
     if (debug) {
+      runFailed();
       var xhr = new DebugGuiClient.xmlhr();
       xhr.open("POST", getUrl(host, "value", id, prefixRoot(group)), true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       if ((typeof value) === 'object') value = JSON.stringify(value, null, 2);
-      xhr.send(JSON.stringify({key, value}));
+      const body = JSON.stringify({key, value});
+      send(xhr, body);
     }
     return instance;
   }
@@ -119,16 +146,18 @@ function DebugGuiClient(config, root, debug) {
       var log = '';
       for (let i = 0; i < arguments.length; i++) {
         if ((typeof arguments[i]) === 'object') {
-          log += JSON.stringify(arguments[i], null, 6);
+          log += JSON.stringify(arguments[i], null, 6) + "\n";
         } else {
-          log += arguments[i];
+          log += arguments[i] + "\n";
         }
       }
+      log = log.substr(0, log.length - 1);
       var xhr = new DebugGuiClient.xmlhr();
       var url = getUrl(host, "log", id);
       xhr.open("POST", url, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.send(JSON.stringify({log}));
+      send(xhr, JSON.stringify({log}));
+
     }
     return instance;
   }
@@ -137,6 +166,17 @@ function DebugGuiClient(config, root, debug) {
     logs(log);
   }
 
+  function setDebug(value) {
+    debug = value;
+    createCookie();
+    return debug;
+  }
+
+  function toggleDebug() {
+    debug = !debug;
+    createCookie();
+    return debug;
+  }
 
   function isDebugging() {
     return debug;
@@ -175,17 +215,15 @@ function DebugGuiClient(config, root, debug) {
     if (!instance.getId() || !instance.getHost()) return;
     if (DebugGuiClient.inBrowser) {
       var cookie;
-      if (instance.isDebugging()) {
-        cookie = 'DebugGui=' + instance.toString() + ";";
-      } else {
-        cookie = 'DebugGui=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      }
+      cookie = 'DebugGui=' + instance.toString() + ";";
+
       document.cookie = cookie;
       return cookie;
     }
   }
 
   this.link = link;
+  this.object = object;
   this.value = value;
   this.exception = exception;
   this.getHost = getHost;
@@ -193,6 +231,8 @@ function DebugGuiClient(config, root, debug) {
   this.log = log;
   this.updateConfig = updateConfig;
   this.softUpdate = softUpdate;
+  this.toggleDebug = toggleDebug;
+  this.setDebug = setDebug;
   this.isDebugging = isDebugging;
   this.secure = secure;
   this.insecure = insecure;
@@ -307,7 +347,7 @@ function DebugGuiClient(config, root, debug) {
   }
 
   function express(req, root) {
-    if (req === undefined) return new DebugGuiClient({}, root);
+    if (req === undefined) return new DebugGuiClient(global, root);
     if (req.debugGui) return req.debugGui;
     var config = getHeaderOrCookie(req.headers);
     var debugGui = new DebugGuiClient(config, root);
@@ -382,7 +422,7 @@ try {
 }
 
 if (!DebugGuiClient.inBrowser) {
-  exports.DebugGuiClient = DebugGuiClient;
+  module.exports = DebugGuiClient;
 } else {
   DebugGuiClient.UI_EXISTANCE_ID = 'debug-gui-ui-exists-globally-unique-id';
   if (document.currentScript &&

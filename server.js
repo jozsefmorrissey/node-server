@@ -5,6 +5,8 @@ var bodyParser = require('body-parser');
 var fileUpload = require('express-fileupload');
 const cookieParser = require("cookie-parser");
 
+const Context = require('./src/context');
+
 require('./public/js/utils/parse-arguments');
 try{
 
@@ -15,6 +17,7 @@ app.use(cookieParser());
 
 var http = require('http');
 var https = require('https');
+const serverId = Math.floor(Math.random() * 1000000000);
 
 function getIp() {
   var ipconfig = shell.exec('ipconfig', {silent: true}).stdout;
@@ -59,6 +62,12 @@ app.use(express.static('./public'));
 app.use(fileUpload({
   limits: { fileSize: 50 * 1024 * 1024 },
 }));
+
+app.all('/*',function(req,res,next){
+  res.header('ce-server-id', serverId);
+  new Context(req);
+  next();
+});
 
 app.get("/git", function (req, res) {
   res.redirect('https://github.com/jozsefmorrissey/node-server');
