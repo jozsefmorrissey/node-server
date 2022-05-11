@@ -53,7 +53,7 @@ function generateDocument(faxNumber, type, format, res, next) {
 // Securing admin with new password on startup
 const adminPassword = shell.exec('pst update weather-fax admin-password').stdout.trim();
 const isAdmin = (req) => global.ENV === 'local' ||
-                          req.query.adminPassword === adminPassword ;
+                          req.query.adminPassword === adminPassword ||
                           req.header('Authorization') === adminPassword ;
 
 function dateStr() {
