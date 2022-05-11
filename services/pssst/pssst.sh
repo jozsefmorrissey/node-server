@@ -609,12 +609,12 @@ remote() {
   json=$(curl -X POST -H "Content-Type: application/json" -d "$data" --insecure $url)
 	Logger trace "EXIT"
   key=${flags['key']}
-  # if [ ! -z "$key" ]
-  # then
-  #   echo "$json" | grep -zoP "\"$key\":\s*\"\K[^\s,]*(?=\s*\")";
-  # else
+  if [ ! -z "$key" ]
+  then
+    echo "$json" | grep -zoP "\"$key\":\s*\"\K[^\s,]*(?=\s*\")";
+  else
     echo "$json"
-  # fi
+  fi
 }
 
 valueNonAdmin() {
