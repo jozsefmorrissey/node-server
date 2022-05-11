@@ -64,6 +64,10 @@ function fileLocation(day, hour) {
   return `${REPORT_DIR}/${day}/${hour}.json`;
 }
 
+function configLocation() {
+  return `${global.DATA_DIRECTORY}/config.json`;
+}
+
 function readable(reports) {
   let list = '';
   reports.forEach((rep) => list += `\t{"id": "${rep.id}", "userId": "${rep.userId}", "time": "${rep.time}", "type": "${rep.type}"},\n`)
@@ -152,9 +156,11 @@ function buildReportDirs() {
   });
 }
 
-function dateFromReport(report) {
+function dateFromReport(report, dayInc) {
   const match = report.time.match(timeReg);
   const repDate = new Date();
+  dayInc = dayInc > 0 ? dayInc : 0;
+  repDate.setDate(repDate.getDate() + dayInc);
   repDate.setHours(match[1]);
   repDate.setMinutes(match[2]);
   return repDate;
@@ -172,8 +178,10 @@ function pullDates(day, hour) {
   } else {
     dg.value(pullId, 'fileFound', false);
   }
+  const dayInc = (day - new Date().getDay())
+  console.log('dayInc', dayInc);
   list.forEach((report) => {
-    report.date = dateFromReport(report);
+    report.date = dateFromReport(report, dayInc);
   });
   return list;
 }
@@ -195,17 +203,23 @@ function wakeIn(report) {
   return sleepTime < threshhold ? sleepTime : threshhold;
 }
 
-let lastReportSentId = String.random();
+let lastReportSentId;
+try {
+  let config = require(configLocation());
+  lastReportSentId  = config.lastReportSentId ? config.lastReportSentId : String.random();
+} catch (e) {
+  lastReportSentId  = 'a';
+}
 function currReports() {
   const dgGroup = `report.currReport`;
   dg.value(dgGroup, 'lastReportSentId', lastReportSentId);
   const nextMinute = new Date();
-  nextMinute.setHours(nextMinute.getHours());
   nextMinute.setMinutes(nextMinute.getMinutes() + 1);
   nextMinute.setSeconds(0);
 
   function nextMinuteFilter(report) {
-    return new Date(report.date) < nextMinute;
+    const repDate = new Date(report.date);
+    return repDate < nextMinute;
   }
 
   reps = [{"id":"t8dsbdx","userId":"2172548654","time":"08:03","type":"Both","date":"2022-04-30T13:03:20.420Z"},{"id":"ze4tlyb","userId":"2172548654","time":"08:04","type":"Both","date":"2022-04-30T13:04:20.420Z"},{"id":"ks65y05","userId":"2172548654","time":"08:09","type":"Both","date":"2022-04-30T13:09:20.420Z"},{"id":"kv0tzom","userId":"2172548654","time":"09:03","type":"Both","date":"2022-04-30T14:03:20.420Z"},{"id":"noxcmkn","userId":"2172941286","time":"09:59","type":"Hourly","date":"2022-04-30T14:59:20.420Z"},{"id":"1puqgki","userId":"2172941286","time":"09:58","type":"Both","date":"2022-04-30T14:58:20.420Z"},{"date":"2022-04-30T14:59:20.419Z"}]
@@ -214,6 +228,7 @@ function currReports() {
   const twoHours = get2hours();
   const idMap = twoHours.map((r) => r.id);
   let lastRepIndex = idMap.indexOf(lastReportSentId);
+  if (lastRepIndex === -1) lastReportSentId = 'a';
   let startIndex = lastRepIndex === -1 ? 0 : lastRepIndex + 1;
   dg.object(`${dgGroup}.twoHours`, twoHours);
   const slice = twoHours.slice(startIndex);
@@ -229,6 +244,7 @@ function currReports() {
 let lastRun = new Date();
 function runReports() {
   buildReportDirs();
+
   function run() {
     const dgGroup = 'runReports';
     const currReps = currReports();
@@ -246,9 +262,23 @@ function runReports() {
     });
     dg.object(`${dgGroup}.runningReport`, currReps);
     lastRun = new Date();
+    if (wakeIn > 2000) {
+      shell.mkdir('-p', REPORT_DIR);
+      fs.writeFile(configLocation(), JSON.stringify({lastReportSentId}));
+    }
     setTimeout(run, wakeIn);
   }
-  setTimeout(run, 5000);
+
+  function loop() {
+    try {
+      run()
+    } catch (e) {
+      dg.exception('runReports.loopException', e);
+      setTimeout(loop, 5000);
+    }
+  }
+
+  setTimeout(loop, 5000);
 }
 
 runReports.buildReportDirs = buildReportDirs;

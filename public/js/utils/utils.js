@@ -88,6 +88,24 @@ Function.safeStdLibAddition(String, 'obscure',  function (count) {
     return str;
 });
 
+const singleCharReg = /([a-zA-Z]{1,})[^a-z^A-Z]{1,}([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z]{1,})/;
+const specialCharReg = /([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g;
+function singleCharReplace(whoCares, one, two, three) {
+  const oneLastChar = one[one.length - 1];
+  const twoLower = oneLastChar !== oneLastChar.toLowerCase();
+  const twoStr = twoLower ? two.toLowerCase() : two.toUpperCase();
+  const threeStr = twoLower ? `${three[0].toUpperCase()}${three.substr(1)}` :
+                                `${three[0].toLowerCase()}${three.substr(1)}`;
+  return `${one}${twoStr}${threeStr}`;
+}
+function camelReplace(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
+function toCamel() {
+  let string = `${this.substr(0,1).toLowerCase()}${this.substr(1)}`;
+  while (string.match(singleCharReg)) string = string.replace(singleCharReg, singleCharReplace);
+  return string.replace(specialCharReg, camelReplace);
+}
+Function.safeStdLibAddition(String, 'toCamel',  toCamel);
+
 Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
   return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
 }, true);

@@ -8,10 +8,10 @@ class PurgeDirectories {
     interval = `+${interval}`;
 
     const fileInfoReg = /^[-rwx]{10} [0-9]{1,} [^\s].*? [^\s].*? [0-9]{1,} (.*?[0-9]{2}:[0-9]{2}) (.*)$/;
-    function purge() {
+    function purge(dirRegExp) {
       let filesToRm = [];
       dirs.forEach((dir) => {
-        if (shell.ls(dir).code === 0) {
+        if (dir.match(dirRegExp) && shell.ls(dir).code === 0) {
           const findCmd = `find ${dir} -mmin ${interval}`;
           dg.log('findCmd', findCmd);
           const output = shell.exec(findCmd, dir);
@@ -23,7 +23,12 @@ class PurgeDirectories {
       });
       dg.log('purging', filesToRm)
       funcs.forEach((func) => func(filesToRm));
-      shell.rm('-r', ...filesToRm);
+      if (filesToRm.length > 0) {
+        shell.rm('-r', ...filesToRm);
+        return filesToRm;
+      }
+
+      return [];
     }
 
     this.purge = purge;

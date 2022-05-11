@@ -114,9 +114,9 @@ class Sender {
       dg.log('building weather report');
       function onComplete(responses) {
         dg.log('weather report built');
-        success(combine(user, responses.order, responses.hours15, responses.hourly, responses.daily));
+        success(combine(user, responses.order, responses.hours12, responses.hourly, responses.daily));
       }
-      let types = ['hours15', 'daily'];
+      let types = ['hours12', 'daily'];
       if (type === 'hourly') types = ['hourly'];
       if (type === 'daily') types = ['daily']
 
@@ -125,8 +125,8 @@ class Sender {
       const formatter = getFormatter(user);
       if (types.indexOf('hourly') !== -1 === 'hourly')
         formatter.getHourlyReportUrl(user, awAll('hourly'), console.err);
-      if (types.indexOf('hours15') !== -1)
-        formatter.get15HourReportUrl(user, awAll('hours15'), console.err);
+      if (types.indexOf('hours12') !== -1)
+        formatter.get12HourReportUrl(user, awAll('hours12'), console.err);
       if (types.indexOf('daily') !== -1)
         formatter.getDailyReportUrl(user, awAll('daily'), console.err);
     }

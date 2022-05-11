@@ -9,7 +9,7 @@ const dg = require('./debug-gui-interface');
 class SchedualedReport {
   constructor(time, dayIndexes, type) {
     const isJson = (typeof time) === 'object' && time._TYPE === 'SchedualedReport';
-    Object.getSet(this, 'time', 'dayIndexes', 'type', 'id');
+    Object.getSet(this, 'time', 'dayIndexes', 'type', 'id', 'contractEndDate');
     let id = String.random();
     if (isJson) {
       id = time.id;
@@ -30,7 +30,8 @@ class User {
   constructor(faxNumberOemail) {
     Object.getSet(this, 'faxNumber', 'status', 'zipCode', 'timeZone', 'startDate',
                       'paidUntil', 'requestCount', 'requestMonth', 'overdueDate',
-                      'schedualedReports', 'schedualedReportsActive', 'userId', 'plan');
+                      'schedualedReports', 'schedualedReportsActive', 'userId',
+                      'plan', 'balance', 'contractEndDate');
     let user, email, faxNumber, userId;
     let instance = this;
 
@@ -46,12 +47,16 @@ class User {
       faxNumber = `+1(${m[1]})${m[2]}-${m[3]}`;
     }
     this.userId = () => userId;
+    this.adjustBalance = (balance) =>
+      this.balance(this.balance() + balance);
 
     this.isFax = () => faxNumber !== undefined;
     this.faxNumber = () => faxNumber;
     this.email = () => email;
     this.schedualedReportsActive = () => user.schedualedReportsActive;
     this.schedualedReports = () => JSON.clone(user.schedualedReports || []);
+    this.schedualedReportStatus = () =>
+        user.schedualedReportsActive ? 'Acitve' : 'Inactive';
 
     this.addReport = (time, dayIndexes, type) => {
         if (this.plan().reportCount() <= user.schedualedReports.length) {
@@ -69,7 +74,7 @@ class User {
       }
     }
 
-    this.toggledSchedualedReports = () => {
+    this.toggleSchedualedReports = () => {
       user.schedualedReportsActive = !user.schedualedReportsActive;
     }
     this.requestMonth = () => user.requestMonth;
@@ -96,17 +101,20 @@ class User {
         user.schedualedReports = Object.fromJson(user.schedualedReports);
         instance.timeZone(user.timeZone);
         instance.zipCode(user.zipCode);
+        instance.balance(user.balance);
         instance.startDate(new Date(user.startDate));
         instance.paidUntil(new Date(user.paidUntil));
         instance.plan(Object.fromJson(user.plan));
       } catch (e) {
         dg.exception('user.get', e);
         user = {schedualedReports: []};
+        instance.balance(0);
         instance.zipCode(utils.areaOzipOnumberToZip(faxNumber));
-        instance.timeZone(utils.getTimeZone(instance.zipCode()));
+        instance.timeZone(utils.getTimeZone(instance.zipCode(), true));
         instance.plan(Plan.plans.casual);
         user.schedualedReportsActive = true;
         instance.startDate(new Date());
+        dg.object('user.new', instance.toJson());
       }
 
       return user;
@@ -114,8 +122,8 @@ class User {
 
     this.CONTACTED = () => user.status = 'CONTACTED';
     this.CONFIGURED = () => user.status = 'CONFIGURED';
-    this.PAID = (paidUntilDate) => {
-      instance.paidUntil(paidUntilDate);
+    this.PAID = () => {
+      instance.paidUntil(this.contractEndDate());
       user.status = 'PAID';
     }
     this.paidUp = () => {
@@ -156,13 +164,35 @@ class User {
   }
 }
 
+User.addBalance = (user, plan, years) => {
+  if (plan === undefined) return;
+  dg.object('user.addBalance', {user: user.toJson(), plan: plan.toJson(), years});
+  if (!plan || (user.plan() && user.plan().level() >= plan.level())) return;
+  console.log('level????', user.plan().level(), '=>', plan.level());
+
+  if (years < 1) years = 1;
+  if (years > 5) years = 5;
+  const pricePerYear = plan.price();
+  const multipleYearDiscount = (1 - ((years - 1) * 0.0625));
+  const emailDiscount = user.isFax() ? 1 : .8;
+  const totalDiscount = multipleYearDiscount * emailDiscount;
+  const cost = Math.round(100 * (pricePerYear * years * totalDiscount)) / 100;
+  dg.value('user.addBalance', 'cost' , cost);
+  user.adjustBalance(-1 * cost);
+  user.plan(plan);
+  const endDate = new Date();
+  endDate.setYear(endDate.getYear() + years);
+  dg.value('user.addBalance', 'contractEndDate' , endDate);
+  user.contractEndDate(endDate);
+}
+
 User.directory = `${global.DATA_DIRECTORY}/user/`;
 
 User.update = (obj) => {
   const user = new User(obj.accountId);
   if (utils.validZipCode(obj.zipCode)) user.zipCode(obj.zipCode);
   if (utils.validTimeZone(obj.timeZone)) user.timeZone(obj.timeZone);
-  user.plan(Plan.plans[obj.planName.toLowerCase()]);
+  User.addBalance(user, Plan.getPlan(obj.planName), obj.years);
   obj.schedualedReports.new.forEach((sr) =>
       user.addReport(sr.time, sr.dayIndexes, sr.type));
   obj.schedualedReports.remove.forEach((srId) =>

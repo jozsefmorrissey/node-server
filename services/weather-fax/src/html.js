@@ -30,8 +30,12 @@ class HTML {
     this.getPath = (templateName, dateHourKey) =>
         `/html/${templateName}/${dateHourKey}.html`;
 
+    const tempDirRegs = {};
     function build(templateName, user, success, failure) {
-      // purgeDirectories.purge();
+      if (tempDirRegs[templateName] === undefined)
+        tempDirRegs[templateName] = new RegExp(`.*/${templateName}/.*`);
+      purgeDirectories.purge(tempDirRegs[templateName]).forEach(
+              (file) => instance.urlsMap[utils.getPublicPath(file)] = undefined);
       if (failure === undefined) failure = success;
       const htmlTemplate = HTML[`${templateName}Template`];
       if (instance.urlsMap[templateName] === undefined) instance.urlsMap[templateName] = {};
@@ -48,8 +52,8 @@ class HTML {
     this.getHourlyReportUrl = (user, success, failure) => {
       Weather.hourly(user.zipCode(), build('hourlyReport', user, success), failure);
     }
-    this.get15HourReportUrl = (user, success, failure) => {
-      Weather.hours15(user.zipCode(), build('hours15Report', user, success), failure);
+    this.get12HourReportUrl = (user, success, failure) => {
+      Weather.hours12(user.zipCode(), build('hours12Report', user, success), failure);
     }
     this.getDailyReportUrl = (user, success, failure) => {
       Weather.daily(user.zipCode(), build('dailyReport', user, success), failure);
@@ -58,17 +62,18 @@ class HTML {
       const scope = {user, plans, dateHourKey: `order-form-${String.random()}`};
       build('orderForm', user, success, failure)(scope);
     }
-    this.getReportStatus = (user, succes, failure) => {
-      build('schedualed', user, success, failure)(user);
+    this.getReportStatus = (user, success, failure) => {
+      user.dateHourKey = `${user.schedualedReportsActive()}`;
+      build('reportStatus', user, success, failure)(user);
     }
   }
 }
 
 HTML.hourlyReportTemplate = new $t('weather-reports/hourly');
-HTML.hours15ReportTemplate = new $t('weather-reports/hourly');
+HTML.hours12ReportTemplate = new $t('weather-reports/hourly');
 HTML.dailyReportTemplate = new $t('weather-reports/daily');
 HTML.orderFormTemplate = new $t('order-form');
-HTML.schedualedReportsStatusTemplate = new $t('schedualed');
+HTML.reportStatusTemplate = new $t('reportStatus');
 
 const options = { format: 'Letter' };
 

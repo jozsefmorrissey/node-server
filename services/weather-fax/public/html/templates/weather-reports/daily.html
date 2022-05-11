@@ -4,19 +4,26 @@
     <meta charset="utf-8">
     <title>Daily Weather Report</title>
     <style>
-      html {zoom: 0.70; margin: 3em}
+      html {zoom: 0.9; margin: 1em}
       h4 {margin: 0;}
       div {font-size: 8pt;}
+      .margin-right {margin-right: 16px;}
       b {font-size: 8pt;}
+      .left {float: left;}
+      .right {float: right;}
       .icon-cnt {position: absolute; right: 0; top: 0;}
-      .day-cnt {position: relative;}
+      .day-cnt {position: relative; margin-bottom: 8px;}
+      .full-width {width: 100%}
     </style>
   </head>
   <body>
     <div>
-      <h3>Daily Weather Report</h3>
+      <div><b>Daily Weather Report</b></div>
       <div:t repeat='day in weatherData' class='day-cnt'>
-        <h4>{{utils.getDateStr(day.dt)}}</h4>
+        <div><b>{{utils.getDateStr(day.dt)}}</b>
+          &nbsp;&nbsp;&nbsp;
+          {{Math.round((day.rain || 0))}}% chance of rain
+        </div>
         <div class='icon-cnt'>
           <div:t repeat='type in day.weather'>
             <img src="{{utils.iconUrl(type.icon)}}" alt="Rain">
@@ -24,20 +31,20 @@
             {{type.description}}
           </div:t>
         </div>
-        <b>Sun rise:</b>  {{utils.getTimeStr(day.sunrise, user)}} - <b>set:</b> {{utils.getTimeStr(day.sunset, user)}}
-        <br>
-        <b>Moon rise:</b> {{utils.getTimeStr(day.moonrise, user)}} - <b>set:</b> {{utils.getTimeStr(day.moonset, user)}} (<b>Phase</b> {{day.moon_phase}})
-        <br>
         <table>
           <tbody>
             <tr>
               <td><b>Temperature</b></td>
-              <td>&nbsp;&nbsp;&nbsp;</td>
+              <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
               <td></td>
               <td><b>Morning</b></td>
               <td><b>Day</b></td>
               <td><b>Evening</b></td>
               <td><b>Night</b></td>
+              <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+              <td colspan="2">
+                <b>Wind {{utils.getDirection(day.wind_deg)}} ({{day.wind_deg}}&deg;)</b>
+              </td>
             <tr>
               <td><b>Low</b> {{Math.round(day.temp.min)}} &#x2109;</td>
               <td>&nbsp;&nbsp;&nbsp;</td>
@@ -46,6 +53,9 @@
               <td>{{Math.round(day.temp.day)}} &#x2109;</td>
               <td>{{Math.round(day.temp.eve)}} &#x2109;</td>
               <td>{{Math.round(day.temp.night)}} &#x2109;</td>
+              <td></td>
+              <td><b>Speed</b></td>
+              <td>{{Math.round(day.wind_speed)}} mph</td>
             </tr>
             <tr>
               <td><b>High</b> {{Math.round(day.temp.max)}} &#x2109;</td>
@@ -55,31 +65,41 @@
               <td>{{Math.round(day.feels_like.day)}} &#x2109;</td>
               <td>{{Math.round(day.feels_like.eve)}} &#x2109;</td>
               <td>{{Math.round(day.feels_like.night)}} &#x2109;</td>
+              <td></td>
+              <td><b>Gust</b></td>
+              <td>{{Math.round(day.wind_gust)}} mph</td>
             </tr>
           </tbody>
         </table>
-        <table>
+        <table class='full-width'>
           <tbody>
             <tr>
-              <td>{{Math.round((day.rain || 0))}}% chance of rain</td>
-              <td>{{day.pressure}} Air Pressure</td>
-              <td><b>Wind</b></td>
-              <td>speed: {{Math.round(day.wind_speed)}} mph</td>
-              <td>gust: {{Math.round(day.wind_gust)}} mph</td>
-            </tr>
-            <tr>
-              <td>{{Math.round(day.clouds)}}% cloud coverage</td>
-              <td>{{day.uvi}} UV Index(inconsistant)</td>
-              <td></td>
-              <td>direction: {{utils.getDirection(day.wind_deg)}} ({{day.wind_deg}}&deg;)</td>
-            </tr>
-            <tr>
-              <td>{{Math.round(day.humidity )}}% humidity</td>
-              <td></td>
+              <td>
+                <div>{{Math.round(day.humidity )}}% humidity</div>
+              </td>
+              <td>
+                <div>{{day.pressure}} Air Pressure</div>
+              </td>
+              <td>
+                <div>{{Math.round(day.clouds)}}% cloud coverage</div>
+              </td>
+              <td>
+                <div>{{day.uvi}} UV Index(inconsistant)</div>
+              </td>
             </tr>
           </tbody>
         </table>
-        {{$index !== weatherData.length - 1 ? '<br>' : ''}}
+        <div>
+          <span class='left'>
+            <b>Sun rise:</b>  {{utils.getTimeStr(day.sunrise, user, true)}} -
+            <b>set:</b> {{utils.getTimeStr(day.sunset, user, true)}}
+          </span>
+          <span class='right'>
+            <b>Moon rise:</b> {{utils.getTimeStr(day.moonrise, user, true)}} -
+            <b>set:</b> {{utils.getTimeStr(day.moonset, user, true)}}
+            (<b>Phase</b> {{day.moon_phase}})
+          </span>
+        </div>
       </div:t>
     </div>
   </body>

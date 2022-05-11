@@ -18,9 +18,13 @@
       <label>User:</label>
       <input hidden type="text" name="admin-password" value="{{adminPassword}}">
       <input type="text" name="user-id" value="">
-      <br>
-      <a id='update-reports' href='#'>Update Schedualed Report Table</a>
-      <a id='toggle-debug' href='#'>Toggle Debugging</a>
+      <button id='update-reports'>Update Schedualed Report Table</button>
+      <button id='toggle-debug'>Toggle Debugging</button>
+      <div id='payment-cnt' class='left' hidden>
+        <br>
+        <input type='number', name='payment-value'>
+        <button id='payment'>Payment Recieved</button>
+      </div>
       <div id='user-info'></div>
     </div>
   </body>

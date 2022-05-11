@@ -32,14 +32,17 @@ function generateDocument(faxNumber, type, format, res, next) {
       case 'daily':
       formatter.getDailyReportUrl(user, (retVal) => res.redirect(retVal), next);
       break;
-      case 'hours15':
-      formatter.get15HourReportUrl(user, (retVal) => res.redirect(retVal), next);
+      case 'hours12':
+      formatter.get12HourReportUrl(user, (retVal) => res.redirect(retVal), next);
+      break;
+      case 'reportStatus':
+      formatter.getReportStatus(user, (retVal) => res.redirect(retVal), next);
       break;
       case 'orderForm':
       formatter.getOrderForm(user, (retVal) => res.redirect(retVal), next);
       break;
       default:
-      next(new Error(`Undefined pdf type '${type}'`));
+      next(new Error(`Undefined pdf type: '${type}'`));
     }
   } catch (e) {
     dg.exception('generateDocument', e);
@@ -49,7 +52,7 @@ function generateDocument(faxNumber, type, format, res, next) {
 
 // Securing admin with new password on startup
 const adminPassword = shell.exec('pst update weather-fax admin-password').stdout.trim();
-const isAdmin = (req) => global.ENV === 'local' || req.query.adminPassword !== adminPassword;
+const isAdmin = (req) => global.ENV === 'local' || req.query.adminPassword === adminPassword;
 
 function dateStr() {
   return new Date().toLocaleString().replace(/\//g, '-');
@@ -91,6 +94,28 @@ function endpoints(app, prefix) {
   app.get(prefix + '/admin/debug/toggle', function (req, res, next) {
     if (isAdmin(req)) {
       res.send(dg.toggleDebug());
+    } else {
+      sendUnauthorized(res);
+    }
+  });
+
+  app.get(prefix + '/admin/payment/:userId/:amount', function (req, res, next) {
+    if (isAdmin(req)) {
+      const user = new User(req.params.userId);
+      const balance = user.adjustBalance(Number.parseInt(req.params.amount));
+      user.save();
+      res.send(balance);
+    } else {
+      sendUnauthorized(res);
+    }
+  });
+
+  app.get(prefix + '/admin/reportStatus/toggle/:userId', function (req, res, next) {
+    if (isAdmin(req)) {
+      const user = new User(req.params.userId);
+      user.toggleSchedualedReports();
+      user.save();
+      res.send(`Schedualed Reports are ${user.schedualedReportStatus()}`);
     } else {
       sendUnauthorized(res);
     }

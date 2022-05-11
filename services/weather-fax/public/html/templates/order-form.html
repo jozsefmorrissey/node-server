@@ -117,8 +117,8 @@
     <thead>
       <tr>
         <td><b>Time</b></td>
-        <td><b>Days of the Week</b></td>
-        <td><b>Type</b></td>
+        <td><b>Days of the Week</b> (Circle Multiple)</td>
+        <td><b>Type</b> (Circle One)</td>
       </tr>
     </thead>
     <tbody>
@@ -134,9 +134,13 @@
           <span class='pointer' sending='true' day-index='6'>S</span>
         </td>
         <td class='toggle-cnt types'>
-          <span class='pointer' style="text-decoration: line-through;">Hourly</span>
-          <span class='pointer' style="text-decoration: line-through;">Daily</span>
-          <span class='pointer' sending='true'>15 Hour and Daily</span>
+          <span class='pointer'
+                {{!isPdf ? 'style="text-decoration: line-through;"' : ''}}
+            >Hourly</span>
+          <span class='pointer'
+                {{!isPdf ? 'style="text-decoration: line-through;"' : ''}}>
+            Daily</span>
+          <span class='pointer' sending='true'>12 Hour and Daily</span>
         </td>
       </tr:t>
   </table>
@@ -145,7 +149,7 @@
   <div class='left'>
     {{isPdf ?
       `<b>Fax Copy to our service number at:</b><div class='left tab'>(217)572-9339</div>`
-      : "<div class='center half'><button type='submit'>Submit</button></div>"}}
+      : "<div class='center half'><button id='order-form-submit' type='submit'>Submit</button></div>"}}
     <b>Mail payment and copy or original to:</b>
     <div class='left tab'>
       Jozsef Morrissey

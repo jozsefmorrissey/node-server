@@ -20,7 +20,7 @@ class Weather {
         dg.object(`weather.${areaOzipOnumber}`, weatherData);
         if (weatherData) {
           weatherData.hourly = weatherData.hourly.slice(0, 24);
-          weatherData.hours15 = weatherData.hourly.slice(0, 15);
+          weatherData.hours12 = weatherData.hourly.slice(0, 12);
           weatherData.daily = weatherData.daily.slice(0, weatherData.daily.length - 1);
           data[dateHourKey] = weatherData;
         }
@@ -43,7 +43,7 @@ class Weather {
     }
 
     this.hourly = (areaOzipOnumber, success, failure) => get('hourly', areaOzipOnumber, success, failure);
-    this.hours15 = (areaOzipOnumber, success, failure) => get('hours15', areaOzipOnumber, success, failure);
+    this.hours12 = (areaOzipOnumber, success, failure) => get('hours12', areaOzipOnumber, success, failure);
     this.daily = (areaOzipOnumber, success, failure) => get('daily', areaOzipOnumber, success, failure);
   }
 }

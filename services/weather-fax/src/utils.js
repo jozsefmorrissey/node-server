@@ -27,11 +27,14 @@ utils.getDateStr = (value) => {
 }
 
 const timeDateSpacing = new Array(5).fill('&nbsp;').join('')
-utils.getTimeStr = (value, user) => {
+utils.getTimeStr = (value, user, timeOnly) => {
   const timeZone = user.timeZone();
   const date = new Date(value * 1000);
   const dateStr = date.toLocaleString('en-US', { timeZone });
   const split = dateStr.split(', ');
+  if (timeOnly) {
+    return `${split[1]}`;
+  }
   return `${split[1]}${timeDateSpacing}(${split[0].replace(/(.*)\/.*/, '$1')})`;
 }
 
