@@ -1,7 +1,7 @@
 var shell = require('shelljs');
 var fs = require('fs');
 var cookieParser = require('cookie-parser');
-const DebugGuiClient = require('../debug-gui/public/js/debug-gui-client.js').DebugGuiClient;
+const DebugGuiClient = require('../debug-gui/public/js/debug-gui-client.js');
 
 var failedAttempts = {};
 
