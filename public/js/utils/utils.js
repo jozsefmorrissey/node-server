@@ -106,7 +106,6 @@ function toCamel() {
 }
 Function.safeStdLibAddition(String, 'toCamel',  toCamel);
 
-const specialCharReg = /([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z])/g;
 const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
 const caseChangeReg = /([a-z])([A-Z])/g;
 function pascalReplace(whoCares, one, two) {return `${one.toUpperCase()}_${two.toUpperCase()}`;}
