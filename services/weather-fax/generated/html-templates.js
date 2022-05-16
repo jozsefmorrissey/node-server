@@ -1313,7 +1313,7 @@ exports['-754346315'] = (get, $t) =>
 
 exports['weather-reports/daily'] = (get, $t) => 
 		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <title>Daily Weather Report</title> <style> html {zoom: 0.9; margin: 1em} h4 {margin: 0;} div {font-size: 8pt;} .margin-right {margin-right: 16px;} b {font-size: 8pt;} .left {float: left;} .right {float: right;} .icon-cnt {position: absolute; right: 0; top: 0;} .day-cnt {position: relative; margin-bottom: 8px;} .full-width {width: 100%} </style> </head> <body> <div> <div><b>Daily Weather Report</b></div> ` +
-		$t.clean( new $t('644840433').render(get("weatherData"), 'day', get)) +
+		$t.clean( new $t('-1814681123').render(get("weatherData"), 'day', get)) +
 		` </div> </body> </html> `
 
 exports['-431538336'] = (get, $t) => 
@@ -2454,3 +2454,6 @@ exports['-643004969'] = (get, $t) =>
 
 exports['-839792104'] = (get, $t) => 
 		`<tr > <td><input type='time'></td> <td class='toggle-cnt days'> <span class='pointer' sending='true' day-index='0'>S</span> <span class='pointer' sending='true' day-index='1'>M</span> <span class='pointer' sending='true' day-index='2'>T</span> <span class='pointer' sending='true' day-index='3'>W</span> <span class='pointer' sending='true' day-index='4'>T</span> <span class='pointer' sending='true' day-index='5'>F</span> <span class='pointer' sending='true' day-index='6'>S</span> </td> <td class='toggle-cnt types'> <span class='pointer' style="text-decoration: line-through;">Hourly</span> <span class='pointer' style="text-decoration: line-through;">Daily</span> <span class='pointer' sending='true'>12 Hour and Daily</span> </td> </tr>`
+
+exports['./public/html/templates/user-capped'] = (get, $t) => 
+		`User has reached its request limit for this month `

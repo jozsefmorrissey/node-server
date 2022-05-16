@@ -87,6 +87,7 @@ class User {
       }
       user.requestCount++;
     }
+    this.canRequest = () => this.plan().reportCount() < this.requestCount();
 
     this.userDataLocation = () => {
       return `${User.directory}${userId}.json`;
@@ -112,6 +113,7 @@ class User {
         instance.zipCode(utils.areaOzipOnumberToZip(faxNumber));
         instance.timeZone(utils.getTimeZone(instance.zipCode(), true));
         instance.plan(Plan.plans.casual);
+        user.notInDB = true;
         user.schedualedReportsActive = true;
         instance.startDate(new Date());
         dg.object('user.new', instance.toJson());

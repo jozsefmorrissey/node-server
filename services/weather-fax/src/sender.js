@@ -124,24 +124,38 @@ class Sender {
 
       const formatter = getFormatter(user);
       if (types.indexOf('hourly') !== -1 === 'hourly')
-        formatter.getHourlyReportUrl(user, awAll('hourly'), console.err);
+        formatter.getHourlyReportUrl(user, awAll('hourly'));
       if (types.indexOf('hours12') !== -1)
-        formatter.get12HourReportUrl(user, awAll('hours12'), console.err);
+        formatter.get12HourReportUrl(user, awAll('hours12'));
       if (types.indexOf('daily') !== -1)
-        formatter.getDailyReportUrl(user, awAll('daily'), console.err);
+        formatter.getDailyReportUrl(user, awAll('daily'));
     }
 
-    function information(user, type, success) {
+    function awaitFunctions(user, success, funcIds...) {
+      dg.log('Awaiting functions', funcIds.length);
+      if (funcIds.length === 0) return;
+      function onComplete(responses) {
+        dg.log('Functions Complete');
+        success(combine(user, responses.order, responses.hours12, responses.hourly, responses.daily));
+      }
+
+      const awAll = awaitAll(onComplete, ...types);
+
       const formatter = getFormatter(user);
-      formatter.getOrderForm(user, success);
+      for (let index = 0; index < funcIds.length; index += 1) {
+        formatter[funcIds[index]](user, awAll(index));
+      }
     }
 
-    function toggledSchedualed(user, success) {
-      const formatter = getFormatter(user);
-      formatter.getOrderForm(user, success);
-    }
-
-    this.weatherReport = (user, type) => weatherReport(user, type, (data) => send(user, data));
+    const userSend = (user) => (data) => send(user, data);
+    this.weatherReport = (user, type) => weatherReport(user, type, userSend(user));
+    this.status = (user) => awaitFunctions(user, userSend(user), 'getReportStatus');
+    this.initialResponse = (user) =>
+      awaitFunctions(user, userSend(user), 'getOrderForm', 'get12HourReportUrl', 'getDailyReportUrl');
+    this.weatherRequest = (user) =>
+      awaitFunctions(user, userSend(user), 'get12HourReportUrl', 'getDailyReportUrl');
+    this.requestsCapped = (user) =>
+      awaitFunctions(user, userSend(user), 'requestCapped');
   }
 }
 

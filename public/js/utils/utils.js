@@ -89,7 +89,7 @@ Function.safeStdLibAddition(String, 'obscure',  function (count) {
 });
 
 const singleCharReg = /([a-zA-Z]{1,})[^a-z^A-Z]{1,}([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z]{1,})/;
-const specialCharReg = /([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g;
+const specialCharReg = /([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z])/g;
 function singleCharReplace(whoCares, one, two, three) {
   const oneLastChar = one[one.length - 1];
   const twoLower = oneLastChar !== oneLastChar.toLowerCase();
@@ -105,6 +105,18 @@ function toCamel() {
   return string.replace(specialCharReg, camelReplace);
 }
 Function.safeStdLibAddition(String, 'toCamel',  toCamel);
+
+const specialCharReg = /([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z])/g;
+const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
+const caseChangeReg = /([a-z])([A-Z])/g;
+function pascalReplace(whoCares, one, two) {return `${one.toUpperCase()}_${two.toUpperCase()}`;}
+function toPascal() {
+  let string = this;
+  return string.replace(multipleUpperReg, pascalReplace)
+                .replace(caseChangeReg, pascalReplace)
+                .replace(specialCharReg, pascalReplace).toUpperCase();
+}
+Function.safeStdLibAddition(String, 'toCamel',  toPascal);
 
 Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
   return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;

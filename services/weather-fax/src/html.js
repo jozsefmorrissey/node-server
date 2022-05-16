@@ -66,6 +66,8 @@ class HTML {
       user.dateHourKey = `${user.schedualedReportsActive()}`;
       build('reportStatus', user, success, failure)(user);
     }
+    this.requestCapped = (user, success, failure) =>
+      build('reportStatus', user, success, failure)(user);
   }
 }
 
@@ -74,6 +76,7 @@ HTML.hours12ReportTemplate = new $t('weather-reports/hourly');
 HTML.dailyReportTemplate = new $t('weather-reports/daily');
 HTML.orderFormTemplate = new $t('order-form');
 HTML.reportStatusTemplate = new $t('reportStatus');
+HTML.userCappedTemplate = new $t('user-capped');
 
 const options = { format: 'Letter' };
 

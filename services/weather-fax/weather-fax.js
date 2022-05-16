@@ -17,6 +17,7 @@ const EPNTS = require('./src/EPNTS');
 const reports = require('./src/report');
 const Context = require('../../src/context');
 const dg = require('./src/debug-gui-interface');
+const faxRespLog = require('./src/fax-response-logic');
 
 reports();
 
@@ -153,6 +154,7 @@ function endpoints(app, prefix) {
       fs.writeFile(`${SERVICE_DIR}faxes/test.pdf`, templates.test());
     } catch (e) {console.error(e)};
     fs.writeFile(filename, JSON.stringify(req.body, null, 2), console.log);
+    faxRespLog.recieved(req.body.data);
     res.send(`success: ${filename}`);
   });
 
