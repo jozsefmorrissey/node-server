@@ -28,4 +28,6 @@ Lookup.selectList = (className) => {
   return Object.keys(Lookup.register[className]);
 }
 
-module.exports = Lookup;
+try {
+  module.exports = Lookup;
+} catch (e) {/* TODO: Consider Removing */}
