@@ -7,6 +7,7 @@ dg.value('fax.apiKey', 'apiKey', apiKey.replace(/^.{10}/, new Array(10).fill('*'
 const faxSvcActive = global.ENV === 'prod';
 function sendFax(fromNumber, toNumber, pdfUrl) {
   // TODO: connectionId ????
+  console.log(`sending fax: ${fromNumber} => ${toNumber} : ${pdfUrl}`);
   if (faxSvcActive) {
     shell.exec(`curl -X POST https://api.telnyx.com/v2/faxes \
       --data-urlencode "media_url=${pdfUrl}" \

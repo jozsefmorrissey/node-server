@@ -52,6 +52,7 @@ class User {
 
     this.isFax = () => faxNumber !== undefined;
     this.faxNumber = () => faxNumber;
+    this.faxNumbersOnly = () => faxNumber.replace(/[^0-9^+]/g, '');
     this.email = () => email;
     this.schedualedReportsActive = () => user.schedualedReportsActive;
     this.schedualedReports = () => JSON.clone(user.schedualedReports || []);
