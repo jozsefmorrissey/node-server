@@ -13,7 +13,7 @@ function sendFax(fromNumber, toNumber, pdfUrl) {
       --data-urlencode "connection_id=1878532170411149172" \
       --data-urlencode "to=${toNumber}" \
       --data-urlencode "from=${fromNumber}" \
-      --header "Authorization: Bearer $${apiKey}"`)
+      --header "Authorization: Bearer ${apiKey}"`)
   } else {
     dg.log(`sending fax: ${fromNumber} => ${toNumber} : ${pdfUrl}`);
   }
