@@ -4,7 +4,7 @@ const areaToZipJson = require('../public/json/area-to-zip.json');
 const zipToCoordsJson = require('../public/json/zip-to-lon-lat.json');
 const zones = Object.keys(zoneToZip);
 const EPNTS = require('./EPNTS');
-const LOCAL_DIR = './services/weather-fax';
+const LOCAL_DIR = 'services/weather-fax';
 const PUBLIC_DIR = `${LOCAL_DIR}/public`;
 
 
@@ -111,12 +111,16 @@ utils.getPublicPath = (urlOpath) => {
 }
 
 const gpp = utils.getPublicPath;
+
+console.log('sroot', global.SERVER_ROOT)
 utils.getUrlPath = (urlOpath) =>
     (typeof urlOpath) === 'string' && `${EPNTS.getHost()}${gpp(urlOpath)}`;
 utils.getProjectFilePath = (urlOpath) =>
-    (typeof urlOpath) === 'string' && `${PUBLIC_DIR}${gpp(urlOpath)}`;
+    (typeof urlOpath) === 'string' && `./${PUBLIC_DIR}${gpp(urlOpath)}`;
 utils.getServiceFilePath = (urlOpath) =>
     (typeof urlOpath) === 'string' && `./public${gpp(urlOpath)}`;
+utils.getAbsoluteFilePath = (urlOpath) =>
+    (typeof urlOpath) === 'string' && `${global.SERVER_ROOT}/${PUBLIC_DIR}${gpp(urlOpath)}`;
 
 utils.randFileLocation = (subDirectory, extension) =>
   `${PUBLIC_DIR}/${subDirectory}/${String.random()}.${extension}`;
@@ -129,4 +133,6 @@ utils.dateTime = (date) => {
   return `${hours}:${minutes}`;
 }
 
+utils.imHere = true;
+console.log('utils', JSON.stringify(utils, null, 2));
 module.exports = utils;

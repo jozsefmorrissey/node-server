@@ -6,7 +6,7 @@ const EPNTS = require('./EPNTS');
 const $t = require('../../../public/js/utils/$t.js');
 const Weather = require('./weather.js');
 const plans = require('./plan.js').plans;
-const utils = require('./utils.js');
+const utils = require('./utils');
 
 const directories = require('./temporary-directories');
 const purgeDirectories = new (require('./purge-directories'))(1, ...directories);
@@ -23,6 +23,7 @@ class HTML {
       const dir = filename.replace(/(^.*\/).*$/, '$1');
       shell.mkdir('-p', dir);
       fs.writeFileSync(filename, html);
+      console.log('written')
       instance.urlsMap[path] = utils.getUrlPath(path);
       success(instance.urlsMap[path]);
     }
@@ -32,6 +33,7 @@ class HTML {
 
     const tempDirRegs = {};
     function build(templateName, user, success, failure) {
+      console.log('building...');
       if (tempDirRegs[templateName] === undefined)
         tempDirRegs[templateName] = new RegExp(`.*/${templateName}/.*`);
       purgeDirectories.purge(tempDirRegs[templateName]).forEach(
@@ -45,6 +47,7 @@ class HTML {
         if (instance.urlsMap[path]) return success(instance.urlsMap[path]);
         data.isPdf = instance instanceof PDF;
         var html = htmlTemplate.render(data);
+        console.log('built');
         instance.format(html, path, success, failure);
       }
     }
@@ -63,11 +66,13 @@ class HTML {
       build('orderForm', user, success, failure)(scope);
     }
     this.getReportStatus = (user, success, failure) => {
-      user.dateHourKey = `${user.schedualedReportsActive()}`;
+      user.dateHourKey = `${user.userId()}`;
       build('reportStatus', user, success, failure)(user);
     }
-    this.requestCapped = (user, success, failure) =>
-      build('reportStatus', user, success, failure)(user);
+    this.requestCapped = (user, success, failure) => {
+      user.dateHourKey = `${user.userId()}`;
+      build('userCapped', user, success, failure)(user);
+    }
   }
 }
 
@@ -88,7 +93,11 @@ class PDF extends HTML {
         `/pdf/${templateName}/${dateHourKey}.pdf`;
 
     this.format = (html, path, success, failure) => {
-      pdf.create(html, options).toFile(utils.getProjectFilePath(path), function(err, res) {
+      console.log('pdf create:', path)
+      console.log('dir', __dirname);
+      console.log('utils', JSON.stringify(utils, null, 2));
+      console.log(`'${utils.getAbsoluteFilePath(path)}'`);
+      pdf.create(html, options).toFile(utils.getAbsoluteFilePath(path), function(err, res) {
         if (err) return failure(err);
         instance.urlsMap[path] = utils.getUrlPath(path);
         success(instance.urlsMap[path]);
@@ -100,4 +109,6 @@ class PDF extends HTML {
 
 const inst = new HTML();
 inst.PDF = new PDF();
+inst.getFormatter = (format) =>
+  format === 'pdf' ? inst.PDF : inst;
 module.exports = inst;

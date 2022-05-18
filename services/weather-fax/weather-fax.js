@@ -11,13 +11,13 @@ require('./src/global-$t-funcs');
 const Request = require('../../public/js/utils/request.js');
 const User = require('./src/user');
 const SERVICE_DIR = './services/weather-fax/';
-const HTML = require('./src/html');
-const PDF = HTML.PDF;
 const EPNTS = require('./src/EPNTS');
+const utils = require('./src/utils');
+const HTML = require('./src/html');
 const reports = require('./src/report');
 const Context = require('../../src/context');
 const dg = require('./src/debug-gui-interface');
-const faxRespLog = require('./src/fax-response-logic');
+const faxRespLog = require('./fax-response-logic');
 
 reports();
 
@@ -25,7 +25,7 @@ function generateDocument(faxNumber, type, format, res, next) {
   try {
     const user = new User(faxNumber);
     res.setHeader('Content-Type', 'application/json');
-    const formatter = format === 'pdf' ? PDF : HTML;
+    const formatter = HTML.getFormatter(format);
     switch (type) {
       case 'hourly':
       formatter.getHourlyReportUrl(user, (retVal) => res.redirect(retVal), next);
@@ -142,20 +142,8 @@ function endpoints(app, prefix) {
   });
 
   app.post(prefix + '/webhook/', function (req, res, next) {
-    const filename = `${SERVICE_DIR}hooks/${dateStr()}.json`;
-    shell.touch(filename);
-    try {
-      const eventType = req.body.data.event_type;
-      if (eventType === 'fax.sending.started') {
-        const mediaUrl = req.body.data.payload.original_media_url;
-        const from = req.body.data.payload.from;
-        saveFile('incoming', from, mediaUrl);
-      }
-      fs.writeFile(`${SERVICE_DIR}faxes/test.pdf`, templates.test());
-    } catch (e) {console.error(e)};
-    fs.writeFile(filename, JSON.stringify(req.body, null, 2), console.log);
     faxRespLog.recieved(req.body.data);
-    res.send(`success: ${filename}`);
+    res.send(`processing`);
   });
 
   app.get(prefix + '/:type/:areaOzipOnumber', function (req, res, next) {

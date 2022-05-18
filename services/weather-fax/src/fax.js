@@ -16,3 +16,5 @@ function sendFax(fromNumber, toNumber, pdfUrl) {
     dg.log(`sending fax: ${fromNumber} => ${toNumber} : ${pdfUrl}`);
   }
 }
+
+module.exports = sendFax;

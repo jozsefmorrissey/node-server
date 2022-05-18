@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const utils = require('./utils');
 const HTML = require('./html');
-const PDF = HTML.PDF;
+const numbers = require('../numbers');
 
 const dg = require('./debug-gui-interface');
 
@@ -15,13 +15,13 @@ const faxnumReg = /^(\+1|)((\(|)[0-9]{3}(\)|)[0-9]{3}(-|)[0-9]{4})$/;
 
 function success(type, user) {
   return () => {
-    dg.log('Successfully sent ${type} to user: ${user.userId}');
+    console.log('Successfully sent ${type} to user: ${user.userId}');
   }
 }
 
 function failure(type, user) {
   return (e) => {
-    dg.log('Failed to send ${type} to user: ${user.userId}');
+    console.log('Failed to send ${type} to user: ${user.userId}');
     dg.exception(`sender.${type}`, e);
   }
 }
@@ -29,8 +29,8 @@ function failure(type, user) {
 function send(user, data) {
 
   if (user.isFax()) {
-    dg.log('sending fax');
-    // faxSvc.send(user.faxNumber(), data.url);
+    console.log('sending fax', data.url);
+    faxSvc.send(numbers.WEATHER_REQUEST, user.faxNumber(), data.url);
   } else {
     emailSvc.sendPdf('Weather-Fax', 'Report', data.file, user.email(), success('pdf', user), failure('pdf', user));
   }
@@ -96,24 +96,22 @@ class Sender {
   constructor() {
     const runOn = {};
 
-    const getFormatter = (user) => true ? PDF : HTML;
-
     function initialResponse(user, success) {
       function onComplete(responses) {
         success(combine(user, responses.order, responses.hourly, responses.daily));
       }
       const awAll = awaitAll(onComplete, 'hourly', 'daily', 'order');
 
-      const formatter = getFormatter(user);
+      const formatter = HTML.getFormatter('pdf');
       formatter.getHourlyReportUrl(user, awAll('hourly'));
       formatter.getDailyReportUrl(user, awAll('daily'));
       formatter.getOrderForm(user, awAll('order'));
     }
 
     function weatherReport(user, type, success) {
-      dg.log('building weather report');
+      console.log('building weather report');
       function onComplete(responses) {
-        dg.log('weather report built');
+        console.log('weather report built');
         success(combine(user, responses.order, responses.hours12, responses.hourly, responses.daily));
       }
       let types = ['hours12', 'daily'];
@@ -122,7 +120,7 @@ class Sender {
 
       const awAll = awaitAll(onComplete, ...types);
 
-      const formatter = getFormatter(user);
+      const formatter = HTML.getFormatter('pdf');
       if (types.indexOf('hourly') !== -1 === 'hourly')
         formatter.getHourlyReportUrl(user, awAll('hourly'));
       if (types.indexOf('hours12') !== -1)
@@ -131,25 +129,29 @@ class Sender {
         formatter.getDailyReportUrl(user, awAll('daily'));
     }
 
-    function awaitFunctions(user, success, funcIds...) {
-      dg.log('Awaiting functions', funcIds.length);
+    function awaitFunctions(user, success, ...funcIds) {
+      console.log('Awaiting functions', funcIds.length);
       if (funcIds.length === 0) return;
       function onComplete(responses) {
-        dg.log('Functions Complete');
-        success(combine(user, responses.order, responses.hours12, responses.hourly, responses.daily));
+        console.log('Functions Complete');
+
+        success(combine(user, ...Object.values(responses)));
       }
 
-      const awAll = awaitAll(onComplete, ...types);
+      const awAll = awaitAll(onComplete, ...funcIds);
 
-      const formatter = getFormatter(user);
+      const formatter = HTML.getFormatter('pdf');
       for (let index = 0; index < funcIds.length; index += 1) {
-        formatter[funcIds[index]](user, awAll(index));
+        const funcId = funcIds[index];
+        formatter[funcId](user, awAll(funcId));
       }
     }
 
     const userSend = (user) => (data) => send(user, data);
     this.weatherReport = (user, type) => weatherReport(user, type, userSend(user));
     this.status = (user) => awaitFunctions(user, userSend(user), 'getReportStatus');
+    this.orderForm = (user) =>
+      awaitFunctions(user, userSend(user), 'getOrderForm');
     this.initialResponse = (user) =>
       awaitFunctions(user, userSend(user), 'getOrderForm', 'get12HourReportUrl', 'getDailyReportUrl');
     this.weatherRequest = (user) =>

@@ -8,6 +8,7 @@
     {{isPdf ? 'html {zoom: 0.55; margin: 3em}' : '';}}
     {{!isPdf ? 'table {width: 50vw;}' : '';}}
     {{isPdf ? 'input {display: none;}' : '';}}
+    {{isPdf ? 'select {display: none;}' : '';}}
     .two-thirds {width: 66vw;}
     .half {width: 50vw;}
     .years-input {min-width: 5em;}
@@ -113,7 +114,7 @@
     </div:t>
   </div>
   <table border="2" cellspacing="0" cellpadding="0">
-    <caption><b>Schedualed Reports</b></caption>
+    <caption><b>Schedualed Reports</b> ({{user.schedualedReportsActive()}})</caption>
     <thead>
       <tr>
         <td><b>Time</b></td>

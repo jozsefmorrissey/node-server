@@ -1214,6 +1214,8 @@ exports['order-form'] = (get, $t) =>
 		$t.clean(!get("isPdf") ? 'table {width: 50vw;}' : '') +
 		` ` +
 		$t.clean(get("isPdf") ? 'input {display: none;}' : '') +
+		` ` +
+		$t.clean(get("isPdf") ? 'select {display: none;}' : '') +
 		` .two-thirds {width: 66vw;} .half {width: 50vw;} .years-input {min-width: 5em;} .tab {margin-left: 15pt;} .left {text-align: left;} h2 {margin-bottom: 0} td {padding: 0 8pt;} .toggle-cnt > * { padding: 0 5pt; border-radius: 8pt; } .toggle-cnt > *:hover { background-color: #80808040; } .pointer { cursor: pointer; } </style> <input hidden name='account-id' value='` +
 		$t.clean(get("user").faxNumber() || get("user").email()) +
 		`'> <input hidden name='orig-zip-code' value='` +
@@ -1242,7 +1244,9 @@ exports['order-form'] = (get, $t) =>
 		$t.clean(get("user").schedualedReports().length === 0 ? 'hidden' : '') +
 		`> <b>Existing Reports: Cross out to have them removed</b> ` +
 		$t.clean( new $t('789133096').render(get("user").schedualedReports(), 'report', get)) +
-		` </div> <table border="2" cellspacing="0" cellpadding="0"> <caption><b>Schedualed Reports</b></caption> <thead> <tr> <td><b>Time</b></td> <td><b>Days of the Week</b> (Circle Multiple)</td> <td><b>Type</b> (Circle One)</td> </tr> </thead> <tbody> ` +
+		` </div> <table border="2" cellspacing="0" cellpadding="0"> <caption><b>Schedualed Reports</b> (` +
+		$t.clean(get("user").schedualedReportsActive()) +
+		`)</caption> <thead> <tr> <td><b>Time</b></td> <td><b>Days of the Week</b> (Circle Multiple)</td> <td><b>Type</b> (Circle One)</td> </tr> </thead> <tbody> ` +
 		$t.clean( new $t('756433586').render('0..10', 'i', get)) +
 		` </table> <br> <div class='left'> ` +
 		$t.clean(get("isPdf") ? `<b>Fax Copy to our service number at:</b><div class='left tab'>(217)572-9339</div>` : "<div class='center half'><button id='order-form-submit' type='submit'>Submit</button></div>") +
@@ -2456,4 +2460,10 @@ exports['-839792104'] = (get, $t) =>
 		`<tr > <td><input type='time'></td> <td class='toggle-cnt days'> <span class='pointer' sending='true' day-index='0'>S</span> <span class='pointer' sending='true' day-index='1'>M</span> <span class='pointer' sending='true' day-index='2'>T</span> <span class='pointer' sending='true' day-index='3'>W</span> <span class='pointer' sending='true' day-index='4'>T</span> <span class='pointer' sending='true' day-index='5'>F</span> <span class='pointer' sending='true' day-index='6'>S</span> </td> <td class='toggle-cnt types'> <span class='pointer' style="text-decoration: line-through;">Hourly</span> <span class='pointer' style="text-decoration: line-through;">Daily</span> <span class='pointer' sending='true'>12 Hour and Daily</span> </td> </tr>`
 
 exports['./public/html/templates/user-capped'] = (get, $t) => 
-		`User has reached its request limit for this month `
+		`<h2>Sorry for the inconvenience you have exceeded your request limit for this month</h2> `
+
+exports['request-capped'] = (get, $t) => 
+		`<h2>Sorry for the inconvenience you have exceeded your request limit for this month</h2> `
+
+exports['user-capped'] = (get, $t) => 
+		`<h2>Sorry for the inconvenience you have exceeded your request limit for this month</h2> `

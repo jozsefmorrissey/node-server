@@ -1,8 +1,10 @@
 
-const NUMBERS = require('./numbers');
-const Sender = require('./sender');
-const HTML = require('./src/html');
-const PDF = HTML.PDF;
+const shell = require('shelljs');
+const fs = require('fs');
+
+const NUMBERS = require('./src/numbers');
+const Sender = require('./src/sender');
+const User = require('./src/user');
 
 EVENTS = {};
 EVENTS.FAX_DELIVERED = 'fax.delivered';
@@ -14,14 +16,14 @@ EXCEPTIONS = {}
 const HOOK_DIR = './services/weather-fax/hooks';
 const MEDIA_DIR = './services/weather-fax/public/faxes/';
 
+const dateStr = () => new Date().toISOString();
 const hookFileName = (event_type) => `${HOOK_DIR}/${event_type}/${dateStr()}.json`;
-const mediaFileName = (number, event_type) => `${HOOK_DIR}/${event_type}/${number} ${dateStr()}.json`;
 
 async function saveFile(type, from, url) {
     const dir = `${SERVICE_DIR}faxes/${type}/`;
     const filename = `${dir}${from}-${dateStr()}.pdf`;
     shell.mkdir('-p', dir);
-    shell.touch(filename);
+    shell.mkdir('-p', pdfLocation.replace(/(.*)\/.*/, '$1'))
     const pdfBuffer = await request.get({
       uri: url,
       encoding: null,
@@ -30,31 +32,25 @@ async function saveFile(type, from, url) {
 }
 
 function logUnprocessed(data) {
-  const filename = getFilename(data.event_type);
-  shell.touch(filename);
-  try {
-    const eventType = req.body.data.event_type;
-    if (eventType === 'fax.sending.started') {
-      const mediaUrl = req.body.data.payload.original_media_url;
-      const from = req.body.data.payload.from;
-      saveFile('incoming', from, mediaUrl);
-    }
-    fs.writeFile(`${SERVICE_DIR}faxes/test.pdf`, templates.test());
-  } catch (e) {console.error(e)};
-  fs.writeFile(filename, JSON.stringify(req.body, null, 2), console.log);
-  res.send(`success: ${filename}`);
+  const filename = hookFileName(data.event_type);
+  shell.mkdir('-p', filename.replace(/(.*)\/.*/, '$1'))
+  fs.writeFile(filename, JSON.stringify(data, null, 2), console.log);
 }
 
 class FaxResponseLogic {
   constructor() {
 
     function weatherRequestRecieved(user) {
+      console.log('request Recieved', user.faxNumber(), user.notInDB);
       if (user.notInDB) {
+        console.log('initialResponse');
         Sender.initialResponse(user);
         user.save();
       } else if (user.canRequest()) {
+        console.log('canRequest');
         Sender.weatherRequest(user);
       } else {
+        console.log('requestsCapped');
         Sender.requestsCapped(user);
       }
     }
@@ -69,7 +65,7 @@ class FaxResponseLogic {
     function toggleSchedualedReportsRequestRecieved(user) {
       if (user.notInDB) return;// TODO: Always Send Something???...!!!
       user.toggleSchedualedReports();
-      userl.save();
+      user.save();
       Sender.status(user);
     }
 
@@ -77,19 +73,24 @@ class FaxResponseLogic {
       const eventType = data.event_type;
       const user = new User(data.payload.from);
       const mediaUrl = data.payload.media_url;
-      const to = data.payload.to.replace(/[^0-9]/g, '');
-      switch (to) {
-        case NUMBERS.WEATHER_REQUEST:
-          weatherRequestRecieved(user);
-          break;
-        case NUMBERS.ACCOUNT_SERVICE:
-          accountServiceRequestRecieved(user, mediaUrl);
-          break;
-        case NUMBERS.TOGGLE_SCHEDUALED_REPORTS:
-          toggleSchedualedReportsRequestRecieved(user);
-          break;
-        default:
-          logUnprocessed(data);
+      const to = data.payload.to;
+      console.log("TO?", to)
+      if (eventType === EVENTS.FAX_RECIEVED) {
+        switch (to) {
+          case NUMBERS.WEATHER_REQUEST.faxNumber():
+            weatherRequestRecieved(user);
+            break;
+          case NUMBERS.ACCOUNT_SERVICE.faxNumber():
+            accountServiceRequestRecieved(user, mediaUrl);
+            break;
+          case NUMBERS.TOGGLE_SCHEDUALED_REPORTS.faxNumber():
+            toggleSchedualedReportsRequestRecieved(user);
+            break;
+          default:
+            logUnprocessed(data);
+        }
+      } else {
+        logUnprocessed(data);
       }
     }
   }

@@ -7,6 +7,9 @@ const cookieParser = require("cookie-parser");
 
 const Context = require('./src/context');
 
+const path = require('path');
+global.SERVER_ROOT = path.resolve(__dirname);
+
 require('./public/js/utils/parse-arguments');
 try{
 

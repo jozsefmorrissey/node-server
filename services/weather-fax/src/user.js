@@ -78,7 +78,7 @@ class User {
       user.schedualedReportsActive = !user.schedualedReportsActive;
     }
     this.requestMonth = () => user.requestMonth;
-    this.requestCount = () => user.requestCount;
+    this.requestCount = () => user.requestCount || 0;
     this.request = () => {
       const month = new Date().getMonth();
       if (month !== this.requestMonth()) {
@@ -87,7 +87,10 @@ class User {
       }
       user.requestCount++;
     }
-    this.canRequest = () => this.plan().reportCount() < this.requestCount();
+    this.canRequest = () => {
+      console.log(`${this.plan().reportCount()} < ${this.requestCount()}`)
+      return this.plan().reportCount() < this.requestCount();
+    }
 
     this.userDataLocation = () => {
       return `${User.directory}${userId}.json`;
@@ -113,7 +116,7 @@ class User {
         instance.zipCode(utils.areaOzipOnumberToZip(faxNumber));
         instance.timeZone(utils.getTimeZone(instance.zipCode(), true));
         instance.plan(Plan.plans.casual);
-        user.notInDB = true;
+        instance.notInDB = true;
         user.schedualedReportsActive = true;
         instance.startDate(new Date());
         dg.object('user.new', instance.toJson());

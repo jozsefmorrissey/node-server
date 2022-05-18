@@ -115,7 +115,7 @@ function toPascal() {
                 .replace(caseChangeReg, pascalReplace)
                 .replace(specialCharReg, pascalReplace).toUpperCase();
 }
-Function.safeStdLibAddition(String, 'toCamel',  toPascal);
+Function.safeStdLibAddition(String, 'toPascal',  toPascal);
 
 Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
   return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
