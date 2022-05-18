@@ -31,7 +31,7 @@ function send(user, data) {
 
   if (user.isFax()) {
     console.log('sending fax', data.url);
-    faxSvc(numbers.WEATHER_REQUEST, user.faxNumbersOnly(), data.url);
+    faxSvc(numbers.WEATHER_REQUEST.faxNumber(), user.faxNumbersOnly(), data.url);
   } else {
     emailSvc.sendPdf('Weather-Fax', 'Report', data.file, user.email(), success('pdf', user), failure('pdf', user));
   }
