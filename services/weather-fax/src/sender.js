@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const utils = require('./utils');
 const HTML = require('./html');
-const numbers = require('../numbers');
+const numbers = require('./numbers');
 
 const dg = require('./debug-gui-interface');
 
