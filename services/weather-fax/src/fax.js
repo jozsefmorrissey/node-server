@@ -1,4 +1,6 @@
 
+const shell = require('shelljs');
+
 const dg = require('./debug-gui-interface');
 const apiKey = shell.exec('pst value talnyx apiKey').stdout.trim();
 dg.value('fax.apiKey', 'apiKey', apiKey.replace(/^.{10}/, new Array(10).fill('*').join('')));

@@ -4,6 +4,7 @@ const fs = require('fs');
 
 const utils = require('./utils');
 const HTML = require('./html');
+const faxSvc = require('./fax');
 const numbers = require('./numbers');
 
 const dg = require('./debug-gui-interface');
