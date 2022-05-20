@@ -1,9 +1,9 @@
 
 class Plan {
-  constructor(level, name, description, price, reportCount, requestCount) {
-    Object.getSet(this, 'level', 'name', 'description', 'price', 'reportCount');
+  constructor(level, name, description, price, reportLimit, requestLimit) {
+    Object.getSet(this, 'level', 'name', 'description', 'price', 'reportLimit', 'requestLimit');
     if ((typeof level === 'object') && level._type === this.constructor.name) {
-      reportCount = level.reportCount;
+      reportLimit = level.reportLimit;
       price = level.price;
       description = level.description;
       name = level.name;
@@ -13,13 +13,13 @@ class Plan {
     this.level = () => level;
     this.description = () => description;
     this.price = () => price;
-    this.reportCount = () => reportCount;
-    this.requestCount = () => requestCount;
+    this.reportLimit = () => reportLimit;
+    this.requestLimit = () => requestLimit;
   }
 }
 
 Plan.fromJson = (json) =>
-  new Plan(json.level, json.name, json.description, json.price, json.reportCount);
+  new Plan(json.level, json.name, json.description, json.price, json.reportLimit, json.requestLimit);
 
 Plan.plans = {}
 Plan.plans.casual = new Plan(1, 'Casual', 'Our services are free if you do not utilize more than 5 times in a given month', 0, 0, 5);

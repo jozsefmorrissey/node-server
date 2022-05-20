@@ -1278,7 +1278,9 @@ exports['schedualed'] = (get, $t) =>
 exports['weather-reports/hourly'] = (get, $t) => 
 		`<div> <style> html {zoom: 0.95; margin: 1em} h2 {margin: 0;} h5 {margin: 0;} div {font-size: 8pt;} b {font-size: 8pt;} td {font-size: 8pt;} .icon-cnt {position: absolute; right: 0; top: 0;} .hour-cnt {position: relative; margin-bottom: 8px;} .full-width {width: 75%} </style> <title>Hourly Weather Report</title> <div> <div><b>` +
 		$t.clean(get("utils").getDateStr(get("weatherData")[0].dt)) +
-		` Hourly Weather Report</b></div> ` +
+		` Hourly Weather Report</b> (` +
+		$t.clean(get("user").zipCode()) +
+		`)</div> ` +
 		$t.clean( new $t('-643004969').render(get("weatherData"), 'hour', get)) +
 		` </div> </div> `
 
@@ -1316,7 +1318,9 @@ exports['-754346315'] = (get, $t) =>
 		` </span> </div>`
 
 exports['weather-reports/daily'] = (get, $t) => 
-		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <title>Daily Weather Report</title> <style> html {zoom: 0.9; margin: 1em} h4 {margin: 0;} div {font-size: 8pt;} .margin-right {margin-right: 16px;} b {font-size: 8pt;} .left {float: left;} .right {float: right;} .icon-cnt {position: absolute; right: 0; top: 0;} .day-cnt {position: relative; margin-bottom: 8px;} .full-width {width: 100%} </style> </head> <body> <div> <div><b>Daily Weather Report</b></div> ` +
+		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <title>Daily Weather Report</title> <style> html {zoom: 0.9; margin: 1em} h4 {margin: 0;} div {font-size: 8pt;} .margin-right {margin-right: 16px;} b {font-size: 8pt;} .left {float: left;} .right {float: right;} .icon-cnt {position: absolute; right: 0; top: 0;} .day-cnt {position: relative; margin-bottom: 8px;} .full-width {width: 100%} </style> </head> <body> <div> <div><b>Daily Weather Report</b> (` +
+		$t.clean(get("user").zipCode()) +
+		`)</div> ` +
 		$t.clean( new $t('-1814681123').render(get("weatherData"), 'day', get)) +
 		` </div> </body> </html> `
 

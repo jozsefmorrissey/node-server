@@ -60,7 +60,7 @@ class User {
         user.schedualedReportsActive ? 'Acitve' : 'Inactive';
 
     this.addReport = (time, dayIndexes, type) => {
-        if (this.plan().reportCount() <= user.schedualedReports.length) {
+        if (this.plan().reportLimit() <= user.schedualedReports.length) {
           throw new Error(`Cannot add any more reports to User: ${userId}`);
         }
         user.schedualedReports.push(new SchedualedReport(time, dayIndexes, type));
@@ -78,8 +78,9 @@ class User {
     this.toggleSchedualedReports = () => {
       user.schedualedReportsActive = !user.schedualedReportsActive;
     }
-    this.requestMonth = () => user.requestMonth;
+    this.requestMonth = () => user.requestMonth || new Date().getMonth();
     this.requestCount = () => user.requestCount || 0;
+    this.reportCount = () => user.reportCount() || 0;
     this.request = () => {
       const month = new Date().getMonth();
       if (month !== this.requestMonth()) {
@@ -87,10 +88,11 @@ class User {
         user.requestCount = 0;
       }
       user.requestCount++;
+      this.save();
     }
     this.canRequest = () => {
-      console.log(`${this.plan().reportCount()} < ${this.requestCount()}`)
-      return this.plan().reportCount() < this.requestCount();
+      console.log(`${this.plan().requestLimit()} > ${this.requestCount()}`)
+      return this.plan().requestLimit() > this.requestCount();
     }
 
     this.userDataLocation = () => {

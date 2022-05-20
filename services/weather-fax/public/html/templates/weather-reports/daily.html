@@ -18,7 +18,7 @@
   </head>
   <body>
     <div>
-      <div><b>Daily Weather Report</b></div>
+      <div><b>Daily Weather Report</b> ({{user.zipCode()}})</div>
       <div:t repeat='day in weatherData' class='day-cnt'>
         <div><b>{{utils.getDateStr(day.dt)}}</b>
           &nbsp;&nbsp;&nbsp;

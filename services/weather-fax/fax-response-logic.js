@@ -49,6 +49,7 @@ class FaxResponseLogic {
       } else if (user.canRequest()) {
         console.log('canRequest');
         Sender.weatherRequest(user);
+        user.request();
       } else {
         console.log('requestsCapped');
         Sender.requestsCapped(user);

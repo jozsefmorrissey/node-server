@@ -12,7 +12,7 @@
   </style>
   <title>Hourly Weather Report</title>
   <div>
-    <div><b>{{utils.getDateStr(weatherData[0].dt)}} Hourly Weather Report</b></div>
+    <div><b>{{utils.getDateStr(weatherData[0].dt)}} Hourly Weather Report</b> ({{user.zipCode()}})</div>
     <div:t repeat='hour in weatherData' class='hour-cnt'>
       <table class='full-width'>
         <tbody>
