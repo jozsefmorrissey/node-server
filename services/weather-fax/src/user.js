@@ -155,7 +155,7 @@ class User {
   }
 }
 
-User.directory = `${global.DATA_DIRECTORY}/user/`;
+User.directory = `${global.WEATHER_FAX_DATA_DIR}/user/`;
 
 User.update = (obj) => {
   console.log('obj', obj ? JSON.stringify(obj) : obj);

@@ -57,7 +57,7 @@ const mutex = new Mutex();
 const sender = require('./sender');
 
 
-const REPORT_DIR = `${global.DATA_DIRECTORY}/reports`;
+const REPORT_DIR = `${global.WEATHER_FAX_DATA_DIR}/reports`;
 
 function fileLocation(day, hour) {
   return `${REPORT_DIR}/${day}/${hour}.json`;

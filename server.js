@@ -5,6 +5,8 @@ var bodyParser = require('body-parser');
 var fileUpload = require('express-fileupload');
 const cookieParser = require("cookie-parser");
 
+global.DATA_DIRECTORY = `${shell.exec('realpath ~').stdout.trim()}/.opsc`;
+
 require('./public/js/utils/parse-arguments');
 try{
 
@@ -40,11 +42,12 @@ if (shell.exec('[ -d ~/.cert ] && echo true', {silent: true}).stdout.trim() !== 
   shell.exec('mkdir ~/.cert/ && cp ./cert/* ~/.cert/');
 }
 
-var https_options = {
-  key: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim()),
-  cert: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim()),
-  ca: fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.ca").stdout.trim())
-};
+var https_options = {};
+if (global.ENV !== 'local') {
+  https_options.key = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim()),
+  https_options.cert = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim()),
+  https_options.ca = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.ca").stdout.trim())
+}
 
 app.use(function (req, res, next) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -220,7 +223,7 @@ app.post('/save/json', function (req, res) {
 
 var ip = '192.168.254.10';
 var services = shell.ls('./services/');
-var exclude = ['uss', 'uus', 'content-explained'];
+var exclude = ['weather-fax', 'uss', 'uus', 'content-explained', 'premier', 'cabinet', 'info-directory'];
 try {
   for (let i = 0; i < services.length; i += 1) {
     var id = services[i];

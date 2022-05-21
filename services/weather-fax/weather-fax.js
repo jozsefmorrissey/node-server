@@ -1,6 +1,5 @@
 const shell = require('shelljs');
-global.DATA_DIRECTORY = `${shell.exec('realpath ~').stdout.trim()}/.opsc/weather-fax`;
-
+global.WEATHER_FAX_DATA_DIR = `${global.DATA_DIRECTORY}/weather-fax`
 require('./../../public/js/utils/utils.js');
 const fs = require('fs');
 const request = require("request-promise-native");
