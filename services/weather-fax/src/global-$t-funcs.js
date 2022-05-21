@@ -1,6 +1,6 @@
 const $t = require('../../../public/js/utils/$t.js');
 const utils = require('./utils');
-const numbers = require('./numbers');
+const numbers = Object.values(require('./numbers'));
 
 
 const footerTemplate = new $t('footer');

@@ -8,6 +8,7 @@
     {{isPdf ? 'html {zoom: 0.55; margin: 3em}' : '';}}
     {{!isPdf ? 'table {width: 50vw;}' : '';}}
     {{isPdf ? 'input {display: none;}' : '';}}
+    {{isPdf ? 'select {display: none;}' : '';}}
     .two-thirds {width: 66vw;}
     .half {width: 50vw;}
     .years-input {min-width: 5em;}
@@ -50,11 +51,18 @@
     <tbody>
       <tr>
         <td>{{user.zipCode()}}</td>
-        <td>{{user.timeZone()}}</td>
+        <td>{{utils.displayTimeZone(user.timeZone())}}</td>
       </tr>
       <tr>
         <td><input type='number' maxlength="5" name="zipCode"/></td>
-        <td><input name="timeZone"/></td>
+        <td>
+          <select name="timeZone">
+            <option:t repeat='display, value in utils.timeZoneMap()' value='{{value}}'
+                {{user.timeZone() === value ? 'selected' : ''}}>
+              {{display}}
+            </option:t>
+          </select>
+        </td>
         <td>Correct if neccisary</td>
       </tr>
     </tbody>
@@ -106,12 +114,12 @@
     </div:t>
   </div>
   <table border="2" cellspacing="0" cellpadding="0">
-    <caption><b>Schedualed Reports</b></caption>
+    <caption><b>Schedualed Reports</b> ({{user.schedualedReportsActive()}})</caption>
     <thead>
       <tr>
         <td><b>Time</b></td>
-        <td><b>Days of the Week</b></td>
-        <td><b>Type</b></td>
+        <td><b>Days of the Week</b> (Circle Multiple)</td>
+        <td><b>Type</b> (Circle One)</td>
       </tr>
     </thead>
     <tbody>
@@ -127,9 +135,13 @@
           <span class='pointer' sending='true' day-index='6'>S</span>
         </td>
         <td class='toggle-cnt types'>
-          <span class='pointer' style="text-decoration: line-through;">Hourly</span>
-          <span class='pointer' style="text-decoration: line-through;">Daily</span>
-          <span class='pointer' sending='true'>15 Hour and Daily</span>
+          <span class='pointer'
+                {{!isPdf ? 'style="text-decoration: line-through;"' : ''}}
+            >Hourly</span>
+          <span class='pointer'
+                {{!isPdf ? 'style="text-decoration: line-through;"' : ''}}>
+            Daily</span>
+          <span class='pointer' sending='true'>12 Hour and Daily</span>
         </td>
       </tr:t>
   </table>
@@ -138,7 +150,7 @@
   <div class='left'>
     {{isPdf ?
       `<b>Fax Copy to our service number at:</b><div class='left tab'>(217)572-9339</div>`
-      : "<div class='center half'><button type='submit'>Submit</button></div>"}}
+      : "<div class='center half'><button id='order-form-submit' type='submit'>Submit</button></div>"}}
     <b>Mail payment and copy or original to:</b>
     <div class='left tab'>
       Jozsef Morrissey

@@ -1,5 +1,5 @@
 
-const { DebugGuiClient } = require('../../debug-gui/public/js/debug-gui-client');
+const DebugGuiClient = require('../../debug-gui/public/js/debug-gui-client');
 const { CallbackTree } = require('./callbackTree');
 
 class Context {

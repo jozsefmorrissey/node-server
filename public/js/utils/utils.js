@@ -72,6 +72,51 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     return str.substr(0, len);
 }, true);
 
+const LEFT = 1;
+const RIGHT = 0;
+Function.safeStdLibAddition(String, 'obscure',  function (count) {
+    const direction = count < 0 ? LEFT : RIGHT;
+    const test = (index) => direction === LEFT ? index > this.length + count - 1 : index < count;
+    let str = '';
+    for (let index = 0; index < this.length; index += 1) {
+      if (test(index)) {
+        str += '*';
+      } else {
+        str += this[index];
+      }
+    }
+    return str;
+});
+
+const singleCharReg = /([a-zA-Z]{1,})[^a-z^A-Z]{1,}([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z]{1,})/;
+const specialCharReg = /([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z])/g;
+function singleCharReplace(whoCares, one, two, three) {
+  const oneLastChar = one[one.length - 1];
+  const twoLower = oneLastChar !== oneLastChar.toLowerCase();
+  const twoStr = twoLower ? two.toLowerCase() : two.toUpperCase();
+  const threeStr = twoLower ? `${three[0].toUpperCase()}${three.substr(1)}` :
+                                `${three[0].toLowerCase()}${three.substr(1)}`;
+  return `${one}${twoStr}${threeStr}`;
+}
+function camelReplace(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
+function toCamel() {
+  let string = `${this.substr(0,1).toLowerCase()}${this.substr(1)}`;
+  while (string.match(singleCharReg)) string = string.replace(singleCharReg, singleCharReplace);
+  return string.replace(specialCharReg, camelReplace);
+}
+Function.safeStdLibAddition(String, 'toCamel',  toCamel);
+
+const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
+const caseChangeReg = /([a-z])([A-Z])/g;
+function pascalReplace(whoCares, one, two) {return `${one.toUpperCase()}_${two.toUpperCase()}`;}
+function toPascal() {
+  let string = this;
+  return string.replace(multipleUpperReg, pascalReplace)
+                .replace(caseChangeReg, pascalReplace)
+                .replace(specialCharReg, pascalReplace).toUpperCase();
+}
+Function.safeStdLibAddition(String, 'toPascal',  toPascal);
+
 Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
   return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
 }, true);

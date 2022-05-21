@@ -4,10 +4,8 @@ const areaToZipJson = require('../public/json/area-to-zip.json');
 const zipToCoordsJson = require('../public/json/zip-to-lon-lat.json');
 const zones = Object.keys(zoneToZip);
 const EPNTS = require('./EPNTS');
-const LOCAL_DIR = './services/weather-fax';
+const LOCAL_DIR = 'services/weather-fax';
 const PUBLIC_DIR = `${LOCAL_DIR}/public`;
-
-
 
 
 const utils = {timeZoneList : []};
@@ -28,8 +26,16 @@ utils.getDateStr = (value) => {
   return new Date(value * 1000).toString().replace(/(^.*? .*? .*?) .*$/, '$1');
 }
 
-utils.getTimeStr = (value) => {
-  return new Date(value * 1000).toTimeString().substr(0,5);
+const timeDateSpacing = new Array(5).fill('&nbsp;').join('')
+utils.getTimeStr = (value, user, timeOnly) => {
+  const timeZone = user.timeZone();
+  const date = new Date(value * 1000);
+  const dateStr = date.toLocaleString('en-US', { timeZone });
+  const split = dateStr.split(', ');
+  if (timeOnly) {
+    return `${split[1]}`;
+  }
+  return `${split[1]}${timeDateSpacing}(${split[0].replace(/(.*)\/.*/, '$1')})`;
 }
 
 utils.iconUrl = (iconCode) => {
@@ -56,6 +62,21 @@ utils.getTimeZone = (zipCode, javascript) => {
     }
 }
 
+utils.timeZoneMap = (invert) => {
+  const map = {};
+  for (let index = 0; index < zones.length; index += 1) {
+    const split = zones[index].split(':');
+    if (invert === true) {
+      map[split[1]] = split[0];
+    } else {
+      map[split[0]] = split[1];
+    }
+  }
+  return map;
+}
+
+utils.displayTimeZone = (javascriptTz) => utils.timeZoneMap(true)[javascriptTz];
+
 utils.areaCodeToZip = (areaCode) => areaToZipJson[areaCode];
 utils.zipToCoords = (zip) => zipToCoordsJson[zip];
 
@@ -64,7 +85,8 @@ const zipCodeReg = /^[0-9]{5}$/;
 const areaCodeReg = /^[0-9]{3}$/;
 const faxNumberReg = /\+1([0-9]{3})[0-9]{7}/;
 
-utils.validTimeZone = (tz) => utils.timeZoneList.indexOf(tz) !== -1;
+// TODO: actually validate
+utils.validTimeZone = (tz) => Object.keys(utils.timeZoneMap(true)).indexOf(tz) !== -1;
 utils.validZipCode = (zc) => zc.toString().trim().match(zipCodeReg) !== null;
 
 utils.areaOzipOnumberToZip = (areaOzipOnumber) => {
@@ -89,14 +111,28 @@ utils.getPublicPath = (urlOpath) => {
 }
 
 const gpp = utils.getPublicPath;
+
+console.log('sroot', global.SERVER_ROOT)
 utils.getUrlPath = (urlOpath) =>
     (typeof urlOpath) === 'string' && `${EPNTS.getHost()}${gpp(urlOpath)}`;
 utils.getProjectFilePath = (urlOpath) =>
-    (typeof urlOpath) === 'string' && `${PUBLIC_DIR}${gpp(urlOpath)}`;
+    (typeof urlOpath) === 'string' && `./${PUBLIC_DIR}${gpp(urlOpath)}`;
 utils.getServiceFilePath = (urlOpath) =>
     (typeof urlOpath) === 'string' && `./public${gpp(urlOpath)}`;
+utils.getAbsoluteFilePath = (urlOpath) =>
+    (typeof urlOpath) === 'string' && `${global.SERVER_ROOT}/${PUBLIC_DIR}${gpp(urlOpath)}`;
 
 utils.randFileLocation = (subDirectory, extension) =>
   `${PUBLIC_DIR}/${subDirectory}/${String.random()}.${extension}`;
 
+utils.dateTime = (date) => {
+  let hours = date.getHours() + '';
+  let minutes = date.getMinutes() + '';
+  hours = hours.length === 1 ? `0${hours}` : hours;
+  minutes = minutes.length === 1 ? `0${minutes}` : minutes;
+  return `${hours}:${minutes}`;
+}
+
+utils.imHere = true;
+console.log('utils', JSON.stringify(utils, null, 2));
 module.exports = utils;

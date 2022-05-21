@@ -1,39 +1,57 @@
 <div>
   <style>
-    html {zoom: 0.70; margin: 3em}
+    html {zoom: 0.95; margin: 1em}
     h2 {margin: 0;}
-    h3 {margin: 0;}
+    h5 {margin: 0;}
     div {font-size: 8pt;}
     b {font-size: 8pt;}
     td {font-size: 8pt;}
     .icon-cnt {position: absolute; right: 0; top: 0;}
-    .hour-cnt {position: relative;}
+    .hour-cnt {position: relative; margin-bottom: 8px;}
+    .full-width {width: 75%}
   </style>
   <title>Hourly Weather Report</title>
   <div>
-    <h2>{{utils.getDateStr(weatherData[0].dt)}} Hourly Weather Report</h2>
+    <div><b>{{utils.getDateStr(weatherData[0].dt)}} Hourly Weather Report</b> ({{user.zipCode()}})</div>
     <div:t repeat='hour in weatherData' class='hour-cnt'>
-      <h3>{{utils.getTimeStr(hour.dt)}}</h3>
-      <table>
+      <table class='full-width'>
         <tbody>
           <tr>
-            <td><b>Temp</b> {{Math.round(hour.temp)}} &#x2109;</td>
-            <td><b>Chill</b> {{Math.round(hour.feels_like)}} &#x2109;</td>
-            <td><b>Humidity</b> {{Math.round(hour.humidity)}}</td>
-            <td><b>Pressure</b> {{Math.round(hour.pressure)}}</td>
-            <td><b>Rain</b> {{Math.round(hour.pop)}}%</td>
+            <td>
+              <b>{{utils.getTimeStr(hour.dt, user, true)}}</b>
+            </td>
+            <td>
+              <b>Rain</b> {{Math.round(hour.pop)}}%
+            </td>
+            <td>
+              <b>Temp</b> {{Math.round(hour.temp)}} &#x2109;
+            </td>
+            <td>
+              <b>Chill</b> {{Math.round(hour.feels_like)}} &#x2109;
+            </td>
           </tr>
+        </tbody>
+      </table>
+      <table class='full-width'>
+        <tbody>
           <tr>
             <td><b>Dew Point</b> {{Math.round(hour.dew_point)}}</td>
+            <td><b>Humidity</b> {{Math.round(hour.humidity)}}</td>
             <td><b>Visibility</b> {{Math.round(hour.visibility)}}</td>
             <td><b>UV Index</b> {{Math.round(hour.uvi)}}</td>
             <td><b>Clouds</b> {{Math.round(hour.clouds)}}</td>
           </tr>
+        </tbody>
+      </table>
+      <table>
+        <tbody>
           <tr>
-            <td><b>Wind</b></td>
-            <td>Speed: {{Math.round(hour.wind_speed)}} mph</td>
-            <td>Gust: {{Math.round(hour.wind_gust)}} mph</td>
-            <td>Direction: {{utils.getDirection(hour.wind_deg)}} ({{hour.wind_deg}}&deg;)</td>
+            <td><b>Pressure</b> {{Math.round(hour.pressure)}}</td>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <td><b>Wind {{utils.getDirection(hour.wind_deg)}} ({{hour.wind_deg}}&deg;)</b></td>
+            <td><b>Speed:</b> {{Math.round(hour.wind_speed)}} mph</td>
+            <td><b>Gust:</b> {{Math.round(hour.wind_gust)}} mph</td>
           </tr>
         </tbody>
       </table>

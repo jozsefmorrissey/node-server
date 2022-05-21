@@ -1,6 +1,8 @@
 
-const Lookup = require('./object/lookup');
-const StringMathEvaluator = require('./string-math-evaluator');
+// if (Lookup === undefined) {
+//   var Lookup = require('./object/lookup');
+//   var StringMathEvaluator = require('./string-math-evaluator');
+// }
 
 function regexToObject (str, reg) {
   const match = str.match(reg);
@@ -13,7 +15,6 @@ function regexToObject (str, reg) {
   return returnVal;
 }
 
-let percision = '1/32';
 let units = [
   'Metric',
   'Imperial (US)'

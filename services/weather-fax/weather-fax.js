@@ -10,10 +10,13 @@ require('./src/global-$t-funcs');
 const Request = require('../../public/js/utils/request.js');
 const User = require('./src/user');
 const SERVICE_DIR = './services/weather-fax/';
-const HTML = require('./src/html');
-const PDF = HTML.PDF;
 const EPNTS = require('./src/EPNTS');
+const utils = require('./src/utils');
+const HTML = require('./src/html');
 const reports = require('./src/report');
+const Context = require('../../src/context');
+const dg = require('./src/debug-gui-interface');
+const faxRespLog = require('./fax-response-logic');
 
 reports();
 
@@ -21,7 +24,7 @@ function generateDocument(faxNumber, type, format, res, next) {
   try {
     const user = new User(faxNumber);
     res.setHeader('Content-Type', 'application/json');
-    const formatter = format === 'pdf' ? PDF : HTML;
+    const formatter = HTML.getFormatter(format);
     switch (type) {
       case 'hourly':
       formatter.getHourlyReportUrl(user, (retVal) => res.redirect(retVal), next);
@@ -29,24 +32,29 @@ function generateDocument(faxNumber, type, format, res, next) {
       case 'daily':
       formatter.getDailyReportUrl(user, (retVal) => res.redirect(retVal), next);
       break;
-      case 'hours15':
-      formatter.get15HourReportUrl(user, (retVal) => res.redirect(retVal), next);
+      case 'hours12':
+      formatter.get12HourReportUrl(user, (retVal) => res.redirect(retVal), next);
+      break;
+      case 'reportStatus':
+      formatter.getReportStatus(user, (retVal) => res.redirect(retVal), next);
       break;
       case 'orderForm':
       formatter.getOrderForm(user, (retVal) => res.redirect(retVal), next);
       break;
       default:
-      next(new Error(`Undefined pdf type '${type}'`));
+      next(new Error(`Undefined pdf type: '${type}'`));
     }
   } catch (e) {
-    console.log(e);
+    dg.exception('generateDocument', e);
     res.status(400).send(`Invaild fax number or email '${faxNumber}'`)
   }
 }
 
 // Securing admin with new password on startup
 const adminPassword = shell.exec('pst update weather-fax admin-password').stdout.trim();
-const isAdmin = (req) => global.ENV === 'local' || req.query.adminPassword !== adminPassword;
+const isAdmin = (req) => global.ENV === 'local' ||
+                          req.query.adminPassword === adminPassword ||
+                          req.header('Authorization') === adminPassword ;
 
 function dateStr() {
   return new Date().toLocaleString().replace(/\//g, '-');
@@ -65,12 +73,13 @@ async function saveFile(type, from, url) {
 }
 
 function sendUnauthorized(res) {
-  res.status(404).send("Unauthorized")
+  res.status(404).send("Unauthorized");
 }
 
 function endpoints(app, prefix) {
   const adminTemplate = new $t('admin');
   app.get(prefix + '/admin/home/', function(req, res ,next) {
+    Context.fromReq(req).dg.value('called', 'url', '/admin/home');
     if (isAdmin(req))
       res.send(adminTemplate.render(req.query));
     else
@@ -82,6 +91,36 @@ function endpoints(app, prefix) {
       generateDocument(req.params.faxNumber, 'orderForm', 'html', res, next);
     else
       sendUnauthorized(res);
+  });
+
+  app.get(prefix + '/admin/debug/toggle', function (req, res, next) {
+    if (isAdmin(req)) {
+      res.send(dg.toggleDebug());
+    } else {
+      sendUnauthorized(res);
+    }
+  });
+
+  app.get(prefix + '/admin/payment/:userId/:amount', function (req, res, next) {
+    if (isAdmin(req)) {
+      const user = new User(req.params.userId);
+      const balance = user.adjustBalance(Number.parseInt(req.params.amount));
+      user.save();
+      res.send(balance);
+    } else {
+      sendUnauthorized(res);
+    }
+  });
+
+  app.get(prefix + '/admin/reportStatus/toggle/:userId', function (req, res, next) {
+    if (isAdmin(req)) {
+      const user = new User(req.params.userId);
+      user.toggleSchedualedReports();
+      user.save();
+      res.send(`Schedualed Reports are ${user.schedualedReportStatus()}`);
+    } else {
+      sendUnauthorized(res);
+    }
   });
 
   app.get(prefix + '/admin/update/report/schedule', function (req, res, next) {
@@ -102,19 +141,8 @@ function endpoints(app, prefix) {
   });
 
   app.post(prefix + '/webhook/', function (req, res, next) {
-    const filename = `${SERVICE_DIR}hooks/${dateStr()}.json`;
-    shell.touch(filename);
-    try {
-      const eventType = req.body.data.event_type;
-      if (eventType === 'fax.sending.started') {
-        const mediaUrl = req.body.data.payload.original_media_url;
-        const from = req.body.data.payload.from;
-        saveFile('incoming', from, mediaUrl);
-      }
-      fs.writeFile(`${SERVICE_DIR}faxes/test.pdf`, templates.test());
-    } catch (e) {console.error(e)};
-    fs.writeFile(filename, JSON.stringify(req.body, null, 2), console.log);
-    res.send(`success: ${filename}`);
+    faxRespLog.recieved(req.body.data);
+    res.send(`processing`);
   });
 
   app.get(prefix + '/:type/:areaOzipOnumber', function (req, res, next) {

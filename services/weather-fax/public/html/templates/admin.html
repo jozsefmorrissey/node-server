@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
   <head>
+    <script type='text/javascript' src="/js/short-cut-container.js"></script>
+    <script type='text/javascript' src="/debug-gui/js/debug-gui-client.js"
+        host='http://localhost:3000/debug-gui'
+        log-window='23'></script>
+    <script type='text/javascript' src="/debug-gui/js/debug-gui.js"></script>
     <script src="/js/utils/dom-utils.js"></script>
     <script src="/js/utils/request.js"></script>
     <script src='/weather-fax/js/admin.js'></script>
@@ -13,8 +18,13 @@
       <label>User:</label>
       <input hidden type="text" name="admin-password" value="{{adminPassword}}">
       <input type="text" name="user-id" value="">
-      <br>
-      <a id='update-reports' href='#'>Update Schedualed Report Table</a>
+      <button id='update-reports'>Update Schedualed Report Table</button>
+      <button id='toggle-debug'>Toggle Debugging</button>
+      <div id='payment-cnt' class='left' hidden>
+        <br>
+        <input type='number', name='payment-value'>
+        <button id='payment'>Payment Recieved</button>
+      </div>
       <div id='user-info'></div>
     </div>
   </body>

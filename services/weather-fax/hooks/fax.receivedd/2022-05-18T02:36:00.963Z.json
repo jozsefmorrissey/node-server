@@ -1,0 +1,16 @@
+{
+  "event_type": "fax.receivedd",
+  "id": "abf76f16-5c20-4945-a573-ee36c971787b",
+  "occurred_at": "2022-04-15T06:33:12.200025Z",
+  "payload": {
+    "connection_id": "1879533426046928705",
+    "direction": "outbound",
+    "fax_id": "e3c759e8-1a62-45fa-8c95-454a32035d5f",
+    "from": "+12175729339",
+    "original_media_url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    "status": "sending",
+    "to": "+12028732223",
+    "user_id": "b154eae2-0dea-4092-8074-8310599b2a42"
+  },
+  "record_type": "event"
+}
