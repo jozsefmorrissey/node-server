@@ -5,7 +5,10 @@ var bodyParser = require('body-parser');
 var fileUpload = require('express-fileupload');
 const cookieParser = require("cookie-parser");
 
-global.DATA_DIRECTORY = `${shell.exec('realpath ~').stdout.trim()}/.opsc`;
+const Context = require('./src/context');
+
+const path = require('path');
+global.SERVER_ROOT = path.resolve(__dirname);
 
 require('./public/js/utils/parse-arguments');
 try{
@@ -230,7 +233,7 @@ app.post('/save/json', function (req, res) {
 
 var ip = '192.168.254.10';
 var services = shell.ls('./services/');
-var exclude = ['weather-fax', 'uss', 'uus', 'content-explained', 'premier', 'cabinet', 'info-directory'];
+var exclude = ['uss', 'uus', 'content-explained', 'premier', 'cabinet', 'info-directory'];
 try {
   for (let i = 0; i < services.length; i += 1) {
     var id = services[i];

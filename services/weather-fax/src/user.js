@@ -172,9 +172,8 @@ class User {
   }
 }
 
-<<<<<<< HEAD
 User.directory = `${global.WEATHER_FAX_DATA_DIR}/user/`;
-=======
+
 User.addBalance = (user, plan, years) => {
   if (plan === undefined) return;
   dg.object('user.addBalance', {user: user.toJson(), plan: plan.toJson(), years});
@@ -196,9 +195,6 @@ User.addBalance = (user, plan, years) => {
   dg.value('user.addBalance', 'contractEndDate' , endDate);
   user.contractEndDate(endDate);
 }
-
-User.directory = `${global.DATA_DIRECTORY}/user/`;
->>>>>>> 1389bc8280eeb2778c77c55d2310d9263d9de2eb
 
 User.update = (obj) => {
   const user = new User(obj.accountId);
