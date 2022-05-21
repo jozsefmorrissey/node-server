@@ -9,6 +9,7 @@ const Context = require('./src/context');
 
 const path = require('path');
 global.SERVER_ROOT = path.resolve(__dirname);
+global.DATA_DIRECTORY = `${shell.exec('realpath ~').stdout.trim()}/.opsc`;
 
 require('./public/js/utils/parse-arguments');
 try{
