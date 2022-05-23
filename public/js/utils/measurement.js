@@ -77,16 +77,15 @@ class Measurement extends Lookup {
       return ` ${numerator}/${denominator}`;
     }
 
-    function calculateValue(accuracy) {
+    function fractionEquivalent(decimalValue, accuracy) {
       accuracy = accuracy || '1/32'
       const fracObj = parseFraction(accuracy);
       const denominator = fracObj.denominator;
       if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
         throw new Error('Please enter a fraction with a denominator between (0, 1000]')
       }
-      let standardDecimal = decimal / 2.54;
-      let sign = standardDecimal > 0 ? 1 : -1;
-      let remainder = Math.abs(standardDecimal);
+      let sign = decimalValue > 0 ? 1 : -1;
+      let remainder = Math.abs(decimalValue);
       let currRemainder = remainder;
       let value = 0;
       let numerator = 0;
@@ -94,22 +93,23 @@ class Measurement extends Lookup {
         numerator += fracObj.numerator;
         currRemainder -= fracObj.decimal;
       }
-      const diff1 = standardDecimal - ((numerator - fracObj.numerator) / denominator);
-      const diff2 = (numerator / denominator) - standardDecimal;
+      const diff1 = decimalValue - ((numerator - fracObj.numerator) / denominator);
+      const diff2 = (numerator / denominator) - decimalValue;
       numerator -= diff1 < diff2 ? fracObj.numerator : 0;
       const integer = sign * Math.floor(numerator / denominator);
       numerator = numerator % denominator;
       return {integer, numerator, denominator};
     }
 
-    this.fraction = (accuracy) => {
+    this.fraction = (accuracy, standardDecimal) => {
+      standardDecimal = standardDecimal || decimal;
       if (nan) return NaN;
-      const obj = calculateValue(accuracy);
+      const obj = fractionEquivalent(standardDecimal, accuracy);
       if (obj.integer === 0 && obj.numerator === 0) return '0';
       const integer = obj.integer !== 0 ? obj.integer : '';
       return `${integer}${reduce(obj.numerator, obj.denominator)}`;
     }
-    this.standardUS = this.fraction;
+    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
 
     this.display = (accuracy) => {
       switch (unit) {
@@ -139,6 +139,7 @@ class Measurement extends Lookup {
       return NaN;
     }
 
+    const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
     const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
 
     function standardize(ambiguousDecimal) {

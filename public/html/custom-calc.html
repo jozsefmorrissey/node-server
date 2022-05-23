@@ -239,7 +239,7 @@
       }
 
       function buildEquationStr(eqn, index) {
-        let eqnStr = eqn.value;
+        let eqnStr = eqn;
         const vars = getVars(index);
         for (let i = 0; i < vars.length; i += 1) {
           eqnStr += saved[index][vars[i]];
