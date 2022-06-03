@@ -1,0 +1,68 @@
+<div>
+  <style>
+    html {zoom: 0.95; margin: 1em}
+    h2 {margin: 0;}
+    h5 {margin: 0;}
+    .center {text-align: center;}
+    div {font-size: 8pt;}
+    b {font-size: 8pt;}
+    td {font-size: 8pt;}
+    .icon-cnt {position: absolute; right: 0; top: 0;}
+    .hour-cnt {position: relative; margin-bottom: 8px;}
+    .full-width {width: 75%}
+  </style>
+  <title>Hourly Weather Report</title>
+  <div>
+    <div class='center'><b>
+      {{utils.getDateStr(weatherData.hourly[0].time_epoch)}}
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      Hourly Weather Report
+    </b> ({{user.zipCode()}})</div>
+    <div:t repeat='hour in weatherData.hourly' class='hour-cnt'>
+      <table class='full-width'>
+        <tbody>
+          <tr>
+            <td>
+              <b>{{utils.getTimeStr(hour.time_epoch, user, true)}}</b>
+            </td>
+            <td>
+              <b>Rain</b> {{Math.round(hour.chance_of_rain)}}%
+            </td>
+            <td>
+              <b>Temp</b> {{Math.round(hour.temp_f)}} &#x2109;
+            </td>
+            <td>
+              <b>Chill</b> {{Math.round(hour.feelslike_f)}} &#x2109;
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <table class='full-width'>
+        <tbody>
+          <tr>
+            <td><b>Dew Point</b> {{hour.dewpoint_f}}</td>
+            <td><b>Humidity</b> {{hour.humidity}}</td>
+            <td><b>Visibility</b> {{hour.vis_miles}}</td>
+            <td><b>UV Index</b> {{hour.uv}}</td>
+            <td><b>Clouds</b> {{hour.cloud}}</td>
+          </tr>
+        </tbody>
+      </table>
+      <table>
+        <tbody>
+          <tr>
+            <td><b>Pressure</b> {{Math.round(hour.pressure_mb)}}</td>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <td><b>Wind {{hour.wind_dir}} ({{hour.wind_degree}}&deg;)</b></td>
+            <td><b>Speed:</b> {{Math.round(hour.wind_mph)}} mph</td>
+            <td><b>Gust:</b> {{Math.round(hour.gust_mph)}} mph</td>
+          </tr>
+        </tbody>
+      </table>
+      <span class='icon-cnt'>
+          <img src="http:{{hour.condition.icon}}" alt="hour.condition.text">
+      </span>
+    </div:t>
+  </div>
+</div>

@@ -8,7 +8,7 @@ const API_KEY = shell.exec('pst value OpenWeather apiKey').stdout.trim();
 
 dg.value('weather', 'API_KEY', API_KEY.obscure(22));
 
-class Weather {
+class OpenWeather {
   constructor() {
     const data = {};
     function get(type, areaOzipOnumber, success, failure) {
@@ -48,4 +48,4 @@ class Weather {
   }
 }
 
-module.exports = new Weather();
+module.exports = new OpenWeather();

@@ -3,7 +3,7 @@ global.WEATHER_FAX_DATA_DIR = `${global.DATA_DIRECTORY}/weather-fax`
 require('./../../public/js/utils/utils.js');
 const fs = require('fs');
 const request = require("request-promise-native");
-const Weather = require('./src/weather');
+const OpenWeather = require('./src/open-weather');
 const $t = require('../../public/js/utils/$t.js');
 $t.loadFunctions(require('./generated/html-templates'))
 require('./src/global-$t-funcs');
@@ -45,7 +45,7 @@ function generateDocument(faxNumber, type, format, res, next) {
       next(new Error(`Undefined pdf type: '${type}'`));
     }
   } catch (e) {
-    dg.exception('generateDocument', e);
+    console.log('generateDocument', e);
     res.status(400).send(`Invaild fax number or email '${faxNumber}'`)
   }
 }
@@ -149,7 +149,7 @@ function endpoints(app, prefix) {
     const areaOzipOnumber = req.params.areaOzipOnumber;
     const type = req.params.type;
     res.setHeader('Content-Type', 'application/json');
-    Weather[type](areaOzipOnumber, (results) => res.send(JSON.stringify(results)), (error) => next(JSON.stringify(error)));
+    OpenWeather[type](areaOzipOnumber, (results) => res.send(JSON.stringify(results)), (error) => next(JSON.stringify(error)));
   });
 
   app.get(prefix + '/:format/:type/:faxNumber', function (req, res, next) {

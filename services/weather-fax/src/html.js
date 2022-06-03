@@ -4,7 +4,8 @@ const shell = require('shelljs');
 const pdf = require('html-pdf');
 const EPNTS = require('./EPNTS');
 const $t = require('../../../public/js/utils/$t.js');
-const Weather = require('./weather.js');
+const OpenWeather = require('./open-weather.js');
+const WeatherApi = require('./weather-api.js');
 const plans = require('./plan.js').plans;
 const utils = require('./utils');
 
@@ -39,7 +40,7 @@ class HTML {
       purgeDirectories.purge(tempDirRegs[templateName]).forEach(
               (file) => instance.urlsMap[utils.getPublicPath(file)] = undefined);
       if (failure === undefined) failure = success;
-      const htmlTemplate = HTML[`${templateName}Template`];
+      const htmlTemplate = HTML.getTemplate(templateName, user);
       if (instance.urlsMap[templateName] === undefined) instance.urlsMap[templateName] = {};
       return (data) => {
         data.user = user;
@@ -53,13 +54,13 @@ class HTML {
     }
 
     this.getHourlyReportUrl = (user, success, failure) => {
-      Weather.hourly(user.zipCode(), build('hourlyReport', user, success), failure);
+      WeatherApi.get(user.zipCode(), build('hourlyReport', user, success), failure);
     }
     this.get12HourReportUrl = (user, success, failure) => {
-      Weather.hours12(user.zipCode(), build('hours12Report', user, success), failure);
+      WeatherApi.get(user.zipCode(), build('hours12Report', user, success), failure);
     }
     this.getDailyReportUrl = (user, success, failure) => {
-      Weather.daily(user.zipCode(), build('dailyReport', user, success), failure);
+      WeatherApi.get(user.zipCode(), build('dailyReport', user, success), failure);
     }
     this.getOrderForm = (user, success, failure) => {
       const scope = {user, plans, dateHourKey: `order-form-${String.random()}`};
@@ -76,12 +77,34 @@ class HTML {
   }
 }
 
-HTML.hourlyReportTemplate = new $t('weather-reports/hourly');
-HTML.hours12ReportTemplate = new $t('weather-reports/hourly');
-HTML.dailyReportTemplate = new $t('weather-reports/daily');
-HTML.orderFormTemplate = new $t('order-form');
-HTML.reportStatusTemplate = new $t('reportStatus');
-HTML.userCappedTemplate = new $t('user-capped');
+{
+  const templates = {openWeather: {}, weatherApi: {}};
+  const openWeather = templates.openWeather;
+  const weatherApi = templates.weatherApi;
+
+  templates.orderForm = new $t('order-form');
+  templates.reportStatus = new $t('reportStatus');
+  templates.userCapped = new $t('user-capped');
+
+  openWeather.hourlyReport = new $t('weather-reports/open-weather/hourly');
+  openWeather.hours12Report = new $t('weather-reports/open-weather/hourly');
+  openWeather.dailyReport = new $t('weather-reports/open-weather/daily');
+
+  weatherApi.hourlyReport = new $t('weather-reports/weather-api/hourly');
+  weatherApi.hours12Report = new $t('weather-reports/weather-api/hourly');
+  weatherApi.dailyReport = new $t('weather-reports/weather-api/daily');
+
+  HTML.getTemplate = (name, user) => {
+    let temps = templates;
+    if (name.indexOf('Report') !== -1) {
+      const service = user.service && user.service() ? user.service() : 'weatherApi';
+      console.log('SERVICE:', service)
+      temps = templates[service];
+    }
+    return temps[name];
+  }
+}
+
 
 const options = { format: 'Letter' };
 

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Daily Weather Report</title>
+    <style>
+      html {zoom: 0.9; margin: 1em}
+      h4 {margin: 0;}
+      div {font-size: 8pt;}
+      .margin-right {margin-right: 16px;}
+      b {font-size: 8pt;}
+      .center {text-align: center;}
+      .left {float: left;}
+      .right {float: right;}
+      .icon-cnt {position: absolute; right: 0; top: 0;}
+      .day-cnt {position: relative; margin-bottom: 8px;}
+      .full-width {width: 100%}
+    </style>
+  </head>
+  <body>
+    <div>
+      <div class='center'><b>Daily Weather Report</b> ({{user.zipCode()}})</div>
+      <br>
+      <div:t repeat='day in weatherData.daily' class='day-cnt'>
+        <div><b>{{utils.getDateStr(day.date_epoch)}}</b></div>
+        <span class='icon-cnt'>
+            <img src="http:{{day.day.condition.icon}}" alt="day.day.condition.text">
+        </span>
+        <table>
+          <tbody>
+            <tr>
+              <td><b>Low</b> {{Math.round(day.day.mintemp_f)}} &#x2109;</td>
+              <td>&nbsp;&nbsp;&nbsp;</td>
+              <td><b>High</b> {{Math.round(day.day.maxtemp_f)}} &#x2109;</td>
+            </tr>
+            <tr>
+              <td {{day.day.daily_chance_of_rain ? '' : 'hidden'}}>
+                <b>Rain</b> {{day.day.daily_chance_of_rain}}%
+                &nbsp;&nbsp;&nbsp;
+              </td>
+              <td {{day.day.daily_chance_of_snow ? '' : ''}}>
+                <b>Snow</b> {{day.day.daily_chance_of_snow}}%
+                &nbsp;&nbsp;&nbsp;
+              </td>
+              <td {{day.day.daily_chance_of_rain + day.day.daily_chance_of_snow ? '' : 'hidden'}}>
+                <b>Accumulation</b> {{day.day.totalprecip_in}} in
+              </td>
+            </tr>
+            <tr>
+            </tr>
+          </tbody>
+        </table>
+        <table class='full-width'>
+          <tbody>
+            <tr>
+              <span>
+                <b>Average Humidity</b> {{Math.round(day.day.avghumidity )}}%
+              </span>
+              <span>
+                &nbsp;&nbsp;&nbsp;
+                <b>UV Index</b> {{day.day.uv}}
+              </span>
+              <span>
+                &nbsp;&nbsp;&nbsp;
+                <b>Max Wind Speed:</b> {{day.day.maxwind_mph}}
+              </span>
+            </tr>
+          </tbody>
+        </table>
+        <div>
+          <span>
+            <b>Sun rise:</b>  {{day.astro.sunrise}}
+            &nbsp;&nbsp;&nbsp;
+            -
+            &nbsp;&nbsp;&nbsp;
+            <b>set:</b> {{day.astro.sunset}}
+          </span>
+          <br>
+          <span>
+            <b>Moon rise:</b> {{day.astro.moonrise}}
+            &nbsp;&nbsp;&nbsp;
+            -
+            &nbsp;&nbsp;&nbsp;
+            <b>set:</b> {{day.astro.moonset}}
+            &nbsp;&nbsp;&nbsp;
+            (<b>Phase</b> {{day.astro.moon_phase}})
+          </span>
+        </div>
+        <br>
+      </div:t>
+    </div>
+  </body>
+</html>

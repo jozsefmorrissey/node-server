@@ -232,6 +232,12 @@ app.post('/save/json', function (req, res) {
   res.send('success');
 });
 
+app.post('/print/body', function (req, res) {
+  console.log(req.body.json);
+  res.send('success');
+});
+
+
 var ip = '192.168.254.10';
 var services = shell.ls('./services/');
 var exclude = ['uss', 'uus', 'content-explained', 'premier', 'cabinet', 'info-directory'];
