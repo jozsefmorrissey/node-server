@@ -44,7 +44,7 @@ class WeatherApi {
         }
         if (data[dateHourKey]) {
           console.log(weatherData);
-          success({dateHourKey, weatherData});
+          success({dateHourKey, weatherData: data[dateHourKey]});
           return true;
         }
         return false;
