@@ -232,10 +232,17 @@ app.post('/save/json', function (req, res) {
   res.send('success');
 });
 
-app.post('/print/body', function (req, res) {
-  console.log(req.body.json);
-  res.send('success');
-});
+function printCall(method) {
+  return (req, res) => {
+    console.log(`Request Method: ${method}\n`, req.body.json);
+    res.send('success');
+  }
+}
+
+app.get('/print/body', printCall('GET'));
+app.post('/print/body', printCall('POST'));
+app.put('/print/body', printCall('PUT'));
+app.delete('/print/body', printCall('DELETE'));
 
 
 var ip = '192.168.254.10';
