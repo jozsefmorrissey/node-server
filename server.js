@@ -234,7 +234,9 @@ app.post('/save/json', function (req, res) {
 
 function printCall(method) {
   return (req, res) => {
-    console.log(`Request Method: ${method}\n`, req.body.json);
+    console.log(`Request Method: ${method}`);
+    console.log('Parameters:', req.query);
+    console.log('Body:', req.body.json);
     res.send('success');
   }
 }
