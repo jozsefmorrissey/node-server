@@ -236,7 +236,7 @@ function printCall(method) {
   return (req, res) => {
     console.log(`Request Method: ${method}`);
     console.log('Parameters:', req.query);
-    console.log('Body:', req.body.json);
+    console.log('Body:', req.body);
     res.send('success');
   }
 }
