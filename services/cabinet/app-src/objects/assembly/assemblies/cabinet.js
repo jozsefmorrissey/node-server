@@ -13,8 +13,6 @@ OVERLAY.INSET = 'Inset';
 
 const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
 
-const framedFrameWidth = 1.5;
-const framelessFrameWidth = 3/4;
 class Cabinet extends Assembly {
   constructor(partCode, partName, propsId) {
     super(partCode, partName);
@@ -22,7 +20,6 @@ class Cabinet extends Assembly {
     Object.getSet(this, 'propertyId', 'name');
     this.propertyId(propsId);
     const instance = this;
-    let frameWidth = framedFrameWidth;
     let toeKickHeight = 4;
     this.part = false;
     this.display = false;
@@ -35,11 +32,6 @@ class Cabinet extends Assembly {
     const framePieceCount = () => pieces.length;
     const addPanel = (panel) => panels.push(panel);
     const panelCount = () => panels.length;
-    const opening = () => {
-      const w = width - (frameWidth * 2);
-      const h = height - toeKickHeight - (frameWidth * 2);
-      return {width: w, height: h};
-    }
 
     this.borders = (borderIds) => {
       const borders = {};

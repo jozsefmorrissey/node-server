@@ -11,109 +11,158 @@ const cabinetBuildConfig = {
   "standard": {
     "type": "standard",
     "values": {
-      "brh": "tkb.w + pback.t + brr",
-      "innerWidth": "c.w - pwt34 * 2",
-      "innerWidthCenter": "innerWidth + pwt34"
+      "brh": "tkb.w + pback.t + brr - fb.w",
+      "stl": "frorl + pr.t",
+      "str": "frorr + pl.t",
+      "st":"str + stl"
     },
     "subAssemblies": {
       "Panel.ToeKickBacker": {
         "type": "Panel",
         "code": "tkb",
-        "center": ["c.w / 2", "w / 2", "tkd + (t / 2)"],
-        "demensions": ["tkh", "innerWidth", "tkbw"],
+        "center": ["pr.t + frorl + (l / 2)", "w / 2", "tkd + (t / 2)"],
+        "demensions": ["tkh", "c.w - st", "tkbw"],
+        "rotation": "z"
+      },
+      "Frame.Left": {
+        "type": "Frame",
+        "code": "fl",
+        "center": ["w / 2", "brh + (l / 2)", "t / 2"],
+        "demensions": ["frw", "c.l - brh", "frt"]
+      },
+      "Frame.Right": {
+        "type": "Frame",
+        "code": "fr",
+        "center": ["c.w - (w / 2)", " brh + (l / 2)", " t / 2"],
+        "demensions": ["frw", " c.l - brh", " frt"]
+      },
+      "Frame.Bottom": {
+        "type": "Frame",
+        "code": "fb",
+        "center": ["fr.w + (l / 2)", " brh + (w / 2)", " t / 2"],
+        "demensions": ["frw", " c.w - fr.w - fl.w", "frt"],
+        "rotation": "z"
+      },
+      "Frame.Top": {
+        "type": "Frame",
+        "code": "ft",
+        "center": ["fr.w + (l / 2)", " c.l - (w/2)", "t / 2"],
+        "demensions": ["frw", "fb.l", "frt"],
         "rotation": "z"
       },
       "Panel.Right": {
         "type": "Panel",
         "code": "pr",
-        "center": ["c.w - (t / 2)", "l / 2", "(w / 2)"],
-        "demensions": ["c.t", "c.l", "pwt34"],
+        "center": ["c.w - frorl - (t / 2)", "l / 2", "(w / 2) + fr.t"],
+        "demensions": ["c.t - fr.t", "c.l", "pwt34"],
         "rotation": "y"
       },
       "Panel.Left": {
         "type": "Panel",
         "code": "pl",
-        "center": ["(t / 2)", " l / 2", " (w/2)"],
-        "demensions": ["c.t", "c.l", "pwt34"],
+        "center": ["frorr + (t / 2)", " l / 2", " (w/2) + fl.t"],
+        "demensions": ["c.t - fr.t", "c.l", "pwt34"],
         "rotation": "y"
       },
       "Panel.Back": {
         "type": "Panel",
         "code": "pback",
-        "center": ["l / 2", " (w / 2) + tkb.w", " c.t - (t / 2)"],
-        "demensions": ["c.l - tkb.w", " c.w", " pwt34"],
+        "center": ["l / 2 + stl", " (w / 2) + tkb.w", " c.t - (t / 2)"],
+        "demensions": ["c.l - tkb.w", " c.w - st", " pwt34"],
         "rotation": "z"
       },
       "Panel.Bottom": {
         "type": "Panel",
         "code": "pb",
-        "center": ["c.w / 2", "tkh + (t/2)", "w / 2"],
-        "demensions": ["c.t - pback.t", "innerWidth", "pwt34"],
-        "rotation": "yx"
-      },
-      "Panel.Top": {
-        "type": "Panel",
-        "code": "pt",
-        "center": ["c.w / 2", "c.h - pwt34/2", "(w / 2)"],
-        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
-        "rotation": "yx"
-      },
-      "Panel.Top2": {
-        "type": "Panel",
-        "code": "pt2",
-        "center": ["c.w / 2", "c.h - pwt34/2", "c.t - pback.t - (w / 2)"],
-        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
+        "center": ["(l / 2) + stl", " brh + fb.w - (t / 2) - brr", "fb.t + (w / 2)"],
+        "demensions": ["c.t - fb.t - pback.t", "c.w - st", "pwt34"],
         "rotation": "yx"
       }
     },
     "joints": {
       "pback->pl":
         {
-          "type": "Butt",
+          "type": "Rabbet",
           "depth": 3/8,
           "DemensionToOffset": "y",
           "centerOffset": "-x"
         },
       "pback->pr": {
-        "type": "Butt",
+        "type": "Rabbet",
         "depth": 3/8,
         "DemensionToOffset":"y",
         "centerOffset": "+x"
       },
       "tkb->pl": {
-        "type": "Butt",
+        "type": "Dado",
         "depth": 3/8,
         "DemensionToOffset":"y",
         "centerOffset": "-x"
       },
+      "pl->lr": {
+        "type": "Dado",
+        "depth": 3/8,
+        "DemensionToOffset":"x",
+        "centerOffset": "-z"
+      },
       "tkb->pr": {
-        "type": "Butt",
+        "type": "Dado",
         "depth": 3/8,
         "DemensionToOffset":"y",
         "centerOffset": "+x"
       },
+      "pr->rr": {
+        "type": "Dado",
+        "depth": 3/8,
+        "DemensionToOffset":"x",
+        "centerOffset": "-z"
+      },
       "pb->pl": {
-        "type": "Butt",
+        "type": "Dado",
         "depth": 3/8,
         "DemensionToOffset":"y",
         "centerOffset": "-x"
       },
       "pb->pr": {
-        "type": "Butt",
+        "type": "Dado",
         "depth": 3/8,
         "DemensionToOffset":"y",
         "centerOffset": "+x"
       },
+      "pb->br": {
+        "type": "Dado",
+        "depth": 3/8
+      },
+      "pb->rr": {
+        "type": "Dado",
+        "depth": 3/8
+      },
+      "pb->lr": {
+        "type": "Dado",
+        "depth": 3/8
+      },
       "pback->pb'": {
         "type": "Butt"
       },
+      "ft->rr": {
+        "type": "Butt"
+      },
+      "ft->lr": {
+        "type": "Butt"
+      },
+      "fb->rr": {
+        "type": "Butt"
+      },
+      "fb->lr": {
+        "type": "Butt"
+      }
     },
     "bordersIdMap": [
       {
-        "top": "pt",
-        "bottom": "pb",
-        "left": "pl",
-        "right": "pr",
+        "top": "ft",
+        "bottom": "fb",
+        "left": "fl",
+        "right": "fr",
         "back": "pback"
       }
     ]

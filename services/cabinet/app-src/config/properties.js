@@ -35,6 +35,26 @@ add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
 add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
 add('Opening', []);
 
+function definitionsRequired(group) {
+  const required = [];
+  if (assemProps[group] === undefined) return [];
+  Object.values(assemProps[group]).forEach((prop) => {
+    if (prop.value() !== null) required.push(prop);
+  });
+  return required;
+}
+
+function propertiesToDefine() {
+  const propNames = [];
+  const keys = Object.keys(assemProps);
+  keys.forEach((key) => {
+    if (definitionsRequired(key).length !== 0) {
+      propNames.push(key);
+    }
+  });
+  return propNames;
+}
+
 const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
 function assemProperties(clazz, filter) {
   clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
@@ -121,10 +141,11 @@ assemProperties.list = () => Object.keys(assemProps);
 assemProperties.new = (group, name) => {
   if (assemProps[group]) {
     const list = [];
+    let addIndex = 0;
     const ogList = Object.values(assemProps[group]);
     for (let index = 0; index < ogList.length; index += 1) {
       if (hasValueFilter(ogList[index])) {
-        list[index] = ogList[index].clone();
+        list[addIndex++] = ogList[index].clone();
       }
     }
     list._ID = String.random();
@@ -191,10 +212,9 @@ assemProperties.hasValue = (group) => {
   return assemProperties.groupList(group, hasValueFilter);
 }
 
-const list = (key) => {
-  console.log(key);
-  props[key] ? Object.values(props[key]) : [];
-}
+const list = (key) =>
+    assemProps[key] ? Object.values(assemProps[key]) : [];
+
 const noValueFilter = (prop) => prop.value() === null;
 assemProperties.noValue = (group) => {
   const props = list(group);
@@ -219,4 +239,6 @@ assemProperties.load = (body) => {
   config = Object.fromJson(body);
 }
 
+assemProperties.definitionsRequired = definitionsRequired;
+assemProperties.propertiesToDefine = propertiesToDefine;
 module.exports = assemProperties;

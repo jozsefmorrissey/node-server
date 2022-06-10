@@ -56,15 +56,16 @@ class PropertyDisplay {
           properties.length === 0 && Object.keys(groups).length === 0;
 
     function childScope (key) {
+      const list = Properties.hasValue(key);
+      if (list.length === 0) return;
+
       const uniqueId = String.random();
       const getObject = (values) => {
         let properties = Properties.new(key,  values.name);
         return {name: values.name, uniqueId, changed, properties};
       }
-
       const inputTree = PropertyDisplay.configInputTree();
       const expListProps = {
-        list: Properties.hasValue(key),
         parentSelector: `#config-expand-list-${uniqueId}`,
         getHeader: (scope) =>
                     PropertyDisplay.configHeadTemplate.render(scope),
@@ -76,7 +77,7 @@ class PropertyDisplay {
                     }),
         inputValidation: inputTree.validate,
         listElemLable: 'Config',
-        getObject, inputTree
+        list, getObject, inputTree
       };
       setTimeout(() => {
         const expList = new ExpandableObject(expListProps);
@@ -111,7 +112,7 @@ class PropertyDisplay {
     }
 
     this.update = () => {
-      const propKeys = Properties.list();
+      const propKeys = Properties.propertiesToDefine();
       const propertyObjs = {};
       const childIdMap = [];
       for (let index = 0; index < propKeys.length; index += 1) {

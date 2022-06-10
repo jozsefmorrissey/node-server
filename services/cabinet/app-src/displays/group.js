@@ -7,6 +7,7 @@ const Properties = require('../config/properties.js');
 const CabinetDisplay = require('./cabinet.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
+const Input = require('../../../../public/js/utils/input/input.js');
 const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
@@ -43,10 +44,17 @@ GroupDisplay.DecisionInputTree = (onComplete, propertyConfigInst) => {
   const cabinetStyles = new Select({
     name: 'style',
     list: styles,
+    label: 'Style',
     value: propertyConfigInst.cabinetStyle()
   });
 
-  const style = dit.branch('style', [cabinetStyles]);
+  const hasFrame = new Input({
+    name: 'hasFrame',
+    type: 'checkbox',
+    label: 'Has Frame'
+  })
+
+  const style = dit.branch('style', [hasFrame, cabinetStyles]);
   styles.forEach((styleName) => {
     const properties = Properties.groupList(styleName);
     const selectObj = Object.keys(properties);

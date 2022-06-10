@@ -1,8 +1,9 @@
 
-// if (Lookup === undefined) {
-//   var Lookup = require('./object/lookup');
-//   var StringMathEvaluator = require('./string-math-evaluator');
-// }
+  try {
+    Lookup = require('./object/lookup');
+    StringMathEvaluator = require('./string-math-evaluator');
+  } catch(e) {}
+
 
 function regexToObject (str, reg) {
   const match = str.match(reg);
