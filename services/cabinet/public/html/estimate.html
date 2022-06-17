@@ -2,6 +2,12 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
+    <style>
+      .canC { width:650px;  height:650px;}
+      div {
+        font-size:x-small;
+      }
+    </style>
     <script type="text/javascript" src='/cabinet/js/index.js'></script>
     <link rel="stylesheet" href="/styles/expandable-list.css">
     <link rel="stylesheet" href="/cabinet/styles/estimate.css">
@@ -26,6 +32,7 @@
     </div>
     <div id='property-select-cnt'></div>
 
+    <canvas class="canC" id="canV" width=650 height=650></canvas>
     <div class='tree-d-model-cnt'>
       <div id="model-controller" hidden></div>
       <div id="three-d-model" class="viewer small">

@@ -144,8 +144,9 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
   const patCntSelector = OpenSectionDisplay.patternContainerSelector(opening);
 
   let inputHtml = '';
-  for (let index = 0; index < pattern.unique.length; index += 1) {
-    const id = pattern.unique[index];
+  const unique = pattern.unique();
+  for (let index = 0; index < unique.length; index += 1) {
+    const id = unique[index];
     let fill = opening.dividerLayout().fill;
     const measInput = Inputs('pattern', {
       label: id,
@@ -178,13 +179,6 @@ OpenSectionDisplay.getOpening = (target) => {
 }
 
 OpenSectionDisplay.evaluator = new StringMathEvaluator();
-OpenSectionDisplay.patternInputChange = (target) => {
-  const opening = OpenSectionDisplay.getOpening(up('.open-pattern-input-cnt', target));
-  opening.pattern().value(target.name, Measurement.decimal(target.value));
-  if (opening.pattern().satisfied()) {
-    OpenSectionDisplay.refresh(opening);
-  }
-};
 
 OpenSectionDisplay.patternInputSelector = (opening) =>
   `[name='pattern'][opening-id='${opening.uniqueId()}']`;
@@ -225,7 +219,6 @@ OpenSectionDisplay.onSectionChange = (target) => {
 }
 
 du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
-du.on.match('keyup', '.patternInput', OpenSectionDisplay.patternInputChange);
 du.on.match('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
 du.on.match('change', '.open-divider-select', OpenSectionDisplay.onSectionChange)
 module.exports = OpenSectionDisplay

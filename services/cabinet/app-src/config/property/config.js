@@ -12,7 +12,8 @@ class PropertyConfig {
 
     function isRevealOverlay() {return style === 'Reveal';}
     function isInset() {return style === 'Inset';}
-
+    function overlay() {return props['Overlay'].ov.value()}
+    function reveal() {return props['Reveal']};
 
     function cabinetStyles() {
       return ['Overlay', 'Inset', 'Reveal'];
@@ -47,18 +48,18 @@ class PropertyConfig {
     const outerCodeReg = /^(rrv|lrv|brv|trv)$/;
     const resolveOuterReveal = (code, props) => {
       if (!code.match(outerCodeReg)) return undefined;
-      if (isInset())
-        return new Measurement(-1 * props.Inset.is.value()).value();
-      else if (isRevealOverlay()) {
-        if (code === 'brv') {
-          return new Measurement(props.Reveal.rvb.value() - props.Cabinet.frw.value()).value();
-        }
-        if (code === 'trv') {
-          return new Measurement(-1 * props.Reveal.rvt.value()).value();
-        }
-        return new Measurement(props.Reveal.r.value()/2 - props.Cabinet.frw.value()).value();
+      switch (code) {
+        case 'rrv':
+          return 0.3175
+        case 'lrv':
+          return 0.3175
+        case 'brv':
+          return 0.3175
+        case 'trv':
+          return 0.3175
+        default:
+          return 0.3175
       }
-      return new Measurement(props.Cabinet.frw.value() - props.Overlay.ov.value()).value();
     }
 
 
@@ -78,8 +79,8 @@ class PropertyConfig {
       let value = resolvePanelThickness(code, props);
       if (value !== undefined) return value;
       value = resolveOuterReveal(code, props);
-      if (value !== undefined) return value;
-      value = resolveReveals(code, props);
+      // if (value !== undefined) return value;
+      // value = resolveReveals(code, props);
       return value;
     }
 
@@ -104,6 +105,8 @@ class PropertyConfig {
 
     getProperties.isRevealOverlay = isRevealOverlay;
     getProperties.isInset = isInset;
+    getProperties.overlay = overlay;
+    getProperties.reveal = reveal;
     getProperties.toJson = toJson;
     getProperties.cabinetStyles = cabinetStyles;
     getProperties.cabinetStyle = cabinetStyle;

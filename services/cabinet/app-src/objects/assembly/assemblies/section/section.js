@@ -28,16 +28,17 @@ class Section extends Assembly {
 
     const calculateRevealOffset = (border, direction) => {
       const borderPos = border.position();
-      let reveal = border.value('r');
-      const insideRailStart = !this.rootAssembly().propertyConfig.isRevealOverlay();
+      const propConfig = this.rootAssembly().propertyConfig;
+      let reveal = propConfig.reveal().r.value();
+      const insideRailStart = !propConfig.isRevealOverlay();
       const positive = insideRailStart ? direction.indexOf('-') !== -1 :
                           direction.indexOf('-') === -1;
       const axis = direction.replace(/\+|-/, '');
       const magnitude = positive ? 1 : -1;
       const divisor = insideRailStart ? 1 : 2;
       const borderOrigin = !insideRailStart ? borderPos.center(axis) :
-        (positive ? borderPos.centerAdjust(`${axis}`, '-x') :
-                    borderPos.centerAdjust(`${axis}`, '+x'));
+        (positive ? borderPos.centerAdjust(`${axis}`, '-z') :
+                    borderPos.centerAdjust(`${axis}`, '+z'));
       return  borderOrigin + ((reveal * magnitude) / divisor);
     }
 
@@ -78,8 +79,8 @@ class Section extends Assembly {
       const botPos = props.borders.bottom.position();
       const leftPos = props.borders.left.position();
       const rightPos = props.borders.right.position();
-      const x = rightPos.center('x') + rightPos.limits('-x') - (leftPos.center('x') + leftPos.limits('+x'));
-      const y = topPos.center('y') + topPos.limits('-x') - ((botPos.center('y') + botPos.limits('+x')));
+      const x = rightPos.centerAdjust('x', '-z') - leftPos.centerAdjust('x', '+z');
+      const y = topPos.centerAdjust('y', '-z') - botPos.centerAdjust('y', '+z');
       const z = topPos.center('z');
       return {x,y,z};
     }

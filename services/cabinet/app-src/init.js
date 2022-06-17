@@ -18,6 +18,7 @@ const EPNTS = require('../generated/EPNTS.js');
 const Displays = require('./services/display-svc.js');
 const OrderDisplay = require('./displays/order.js');
 const ThreeDModel = require('./three-d/three-d-model.js');
+const TwoDLayout = require('./two-d/layout.js');
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
@@ -60,6 +61,7 @@ function init(body){
   const costManager = new CostManager('cost-manager', 'cost');
   orderDisplay = new OrderDisplay('#app');
   setTimeout(ThreeDModel.init, 1000);
+  setTimeout(TwoDLayout.init, 1000);
   const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
 }
 

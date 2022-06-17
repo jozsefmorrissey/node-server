@@ -284,6 +284,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
       return clone;
     }
   }
+  return attrs;
 }, true);
 Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
 

@@ -65,6 +65,7 @@ function Viewer(csg, width, height, depth) {
   var gl = GL.create();
   this.gl = gl;
   this.mesh = csg.toMesh();
+  this.canvas = () => gl.canvas;
 
   // Set up the viewport
   gl.canvas.width = width;

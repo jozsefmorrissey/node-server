@@ -34,14 +34,17 @@ class OpeningCoverSection extends SpaceSection {
     this.coverDems = function(attr) {
       const inset = instance.rootAssembly().propertyConfig.isInset();
       const dems = inset ? instance.innerSize() : instance.outerSize().dems;
-      dems.z = 3/4;
+      // TODO: access User Defined variable
+      dems.z = (3/4) * 2.54;
       return attr ? dems[attr] : dems;
     }
 
     this.coverCenter = function (attr) {
       const center = instance.outerSize().center;
       const inset = instance.rootAssembly().propertyConfig.isInset();
-      center.z = inset ? 3/32 : -3/4;
+      // TODO access user defined values;
+      const reveal = inset ? 3/32 : 3/4;
+      center.z = (reveal * 2.54) / -2;
       return attr ? center[attr] : center;
     }
 
@@ -51,7 +54,8 @@ class OpeningCoverSection extends SpaceSection {
     }
 
 
-    const gap = 1/16;
+    // TODO: add duel door gap variable
+    const gap = 2.54/16 ;
     function duelDoorDems() {
       const dems = instance.coverDems();
       dems.x = (dems.x - gap) / 2;

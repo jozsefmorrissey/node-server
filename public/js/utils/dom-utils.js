@@ -287,24 +287,42 @@ du.class.toggle = function(target, clazz) {
   else du.class.add(target, clazz);
 }
 
-function onEnter(func) {
-  function filter(target, event) {
-    if (even) {
-
+function onKeycombo(event, func, args) {
+  const keysDown = {};
+  const keyup = (target, event) => {
+    keysDown[event.key] = false;
+  }
+  const keydown = (target, event) => {
+    let allPressed = true;
+    keysDown[event.key] = true;
+    for (let index = 0; allPressed && index < args.length; index += 1) {
+      allPressed = keysDown[args[index]];
+    }
+    if (allPressed) {
+      console.log('All Pressed!!!');
+      func(target, event);
     }
   }
+  du.on.match('keyup', '*', keyup);
+  return {event: 'keydown', func: keydown};
 }
 
+const argEventReg = /^(.*?)(|:(.*))$/;
 function filterCustomEvent(event, func) {
-  let filterFunc = func;
-  let filterEvent = event;
+  const split = event.split(':');
+  event = split[0];
+  const args = split[1] ? split[1].split(',') : [];
+  let customEvent = {func, event};
   switch (event) {
     case 'enter':
-      filterFunc = (target, event) => event.key === 'Enter' && func(target, event);
-      filterEvent = 'keydown';
+      customEvent.func = (target, event) => event.key === 'Enter' && func(target, event);
+      customEvent.event = 'keydown';
       break;
+    case 'keycombo':
+      customEvent = onKeycombo(event, func, args);
+    break;
   }
-  return {func: filterFunc, event: filterEvent};
+  return customEvent;
 }
 
 du.on.match = function(event, selector, func, target) {

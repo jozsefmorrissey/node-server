@@ -5,6 +5,7 @@ const Assembly = require('../assembly.js');
 const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
 const Joint = require('../../joint/joint.js');
 const DivideSection = require('./section/space/sections/divide-section.js');
+const Measurement = require('../../../../../../public/js/utils/measurement.js');
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -33,6 +34,21 @@ class Cabinet extends Assembly {
     const addPanel = (panel) => panels.push(panel);
     const panelCount = () => panels.length;
 
+    const resolveOuterReveal = (panel, location) => {
+      const propConfig = this.rootAssembly().propertyConfig;
+      if (propConfig.isInset()) {
+        return new Measurement(-1 * props.Inset.is.value()).value();
+      }
+      const definedValue = panel.railThickness() - panel.value(location);
+      let calculatedValue;
+      if (this.rootAssembly().propertyConfig.isRevealOverlay()) {
+        calculatedValue = panel.railThickness() - propConfig.reveal();
+      } else {
+        calculatedValue = propConfig.overlay();
+      }
+      return calculatedValue < definedValue ? calculatedValue : definedValue;
+    }
+
     this.borders = (borderIds) => {
       const borders = {};
       borders.right = instance.getAssembly(borderIds.right);
@@ -47,21 +63,26 @@ class Cabinet extends Assembly {
 
         const position = {};
         const start = {};
+        // TODO: hard coded orientation logic.... make dynamic???...
         if (this.propertyConfig.isRevealOverlay() || this.propertyConfig.isInset()) {
-          position.right = borders.right.position().centerAdjust('x', '-x');
-          position.left = borders.left.position().centerAdjust('x', '+x');
-          position.top = borders.top.position().centerAdjust('y', '-x');
-          position.bottom = borders.bottom.position().centerAdjust('y', '+x');
+          position.right = borders.right.position().centerAdjust('x', '-z');
+          position.left = borders.left.position().centerAdjust('x', '+z');
+          position.top = borders.top.position().centerAdjust('y', '-z');
+          position.bottom = borders.bottom.position().centerAdjust('y', '+z');
         } else {
-          position.right = borders.right.position().centerAdjust('x', '+x');
-          position.left = borders.left.position().centerAdjust('x', '-x');
-          position.top = borders.top.position().centerAdjust('y', '+x');
-          position.bottom = borders.bottom.position().centerAdjust('y', '-x');
+          position.right = borders.right.position().centerAdjust('x', '-z');
+          position.left = borders.left.position().centerAdjust('x', '+z');
+          position.top = borders.top.position().centerAdjust('y', '-z');
+          position.bottom = borders.bottom.position().centerAdjust('y', '+z');
         }
-        position.right -= this.value('rrv');
-        position.left += this.value('lrv')
-        position.top -= this.value('trv');
-        position.bottom += this.value('brv');
+
+        position.right += resolveOuterReveal(borders.right, 'rrv');
+        position.left -= resolveOuterReveal(borders.left, 'lrv')
+        position.top += resolveOuterReveal(borders.top, 'trv');
+        position.bottom -= resolveOuterReveal(borders.bottom, 'brv');
+
+        position.front = 0;
+        position.back = pb.position().center('z') + pb.position().limits('-z');
 
         return {borders, position, depth, borderIds};
       }

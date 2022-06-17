@@ -9,9 +9,8 @@ const pull = require('../../../../three-d/models/pull.js');
 class Door extends Assembly {
   constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
     super(partCode, partName, coverCenter, coverDems, rotationStr);
-    let location = Handle.location.TOP_RIGHT;
-    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, location);
-    this.setHandleLocation = (l) => location = l;
+    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, Handle.location.TOP_RIGHT);
+    this.pull = () => pull;
     this.addSubAssembly(pull);
   }
 }

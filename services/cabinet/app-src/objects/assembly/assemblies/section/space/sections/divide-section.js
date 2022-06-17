@@ -57,6 +57,8 @@ class DivideSection extends SpaceSection {
         // }
         const props = sectionProperties();
         const position = {
+          front: props.position.front,
+          back: props.position.back,
           top: props.position.top,
           bottom: props.position.bottom,
           left: props.position.left,
@@ -97,20 +99,22 @@ class DivideSection extends SpaceSection {
         //   console.log('center');
         // }
         const answer = this.dividerLayout().list;
-        let offset = 0;
+        let offset = this.dividerOffset(index * 2);
         for (let i = 0; i < index + 1; i += 1) offset += answer[i];
         let props = sectionProperties();
         const innerSize = this.innerSize();
         let center = this.center();
         let dividerLength;
         if (this.vertical()) {
-          let start = sectionProperties().borders.left.position().center('x');
-          start += sectionProperties().borders.left.position().limits('+x');
+          const borderWidth = props.borders.left.position().demension('z');
+          let start = props.borders.left.position().center('x');
+          start += borderWidth / 2;
           center.x = start + offset;
           dividerLength = innerSize.y;
         } else {
-          let start = sectionProperties().borders.top.position().center('y');
-          start += sectionProperties().borders.top.position().limits('+x');
+          const borderWidth = props.borders.top.position().demension('z');
+          let start = props.borders.top.position().center('y');
+          start += borderWidth / 2;
           center.y = start - offset;
           dividerLength = innerSize.x;
         }
@@ -122,13 +126,22 @@ class DivideSection extends SpaceSection {
       }
     }
 
+    this.dividerOffset = (limitIndex) => {
+      limitIndex = limitIndex > -1 && limitIndex < this.sections.length ? limitIndex : this.sections.length;
+      let offset = 0;
+      for (let index = 0; index < limitIndex; index += 1) {
+        const section = this.sections[index];
+        offset += section instanceof DividerSection ? section.maxWidth() : 0;
+      }
+      return offset;
+    }
+
     this.sectionCount = () => this.dividerCount() + 1;
     this.dividerLayout = () => {
       let distance;
       if (!this.rootAssembly().propertyConfig.isRevealOverlay()) {
         distance = this.vertical() ? this.innerSize().x : this.innerSize().y;
-        this.sections.forEach((section) =>
-          distance -= section instanceof DividerSection ? section.maxWidth() : 0);
+        distance -= this.dividerOffset();
       } else {
         distance = this.vertical() ? this.outerSize().dems.x : this.outerSize().dems.y;
       }

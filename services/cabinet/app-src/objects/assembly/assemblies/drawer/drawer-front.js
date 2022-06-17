@@ -13,7 +13,7 @@ class DrawerFront extends Assembly {
     if (demensionStr === undefined) return;
 
     function pullCount(dems) {
-      if (dems.x < 30) return 1;
+      if (dems.x < 55.88) return 1;
       return 2;
     }
 

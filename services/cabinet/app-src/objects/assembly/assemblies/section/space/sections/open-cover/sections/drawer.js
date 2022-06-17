@@ -23,14 +23,15 @@ class DrawerSection extends OpeningCoverSection {
       const props = divideProps();
       const dems = drawerDems();
       const center = instance.center();
-      center.z += (dems.z - props.borders.top.position().demension('z')) / 2 - 1/8;
+      center.z = props.position.front + (dems.z) / 2 - 1/8;
       return attr ? center[attr] : center;
     }
 
     function drawerDems(attr) {
       const props = divideProps();
       const dems = instance.innerSize()
-      dems.z = getDrawerDepth(props.depth);
+      // TODO add box depth tolerance variable
+      dems.z = getDrawerDepth(props.depth - 2.54);
       dems.x = dems.x - 1/2;
       dems.y = dems.y - 1/2;
       return attr ? dems[attr] : dems;

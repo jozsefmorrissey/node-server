@@ -12,8 +12,10 @@ class Lookup {
       Lookup.byId[cxtr.name] = {};
       cxtr.selectList = () => Lookup.selectList(cxtr.name);
     }
-    if (Lookup.register[cxtr.name] === undefined)
+    if (Lookup.register[cxtr.name] === undefined) {
       Lookup.register[cxtr.name] = {};
+      Lookup.byId[cxtr.name] = {};
+    }
     Lookup.register[cxtr.name][id] = this;
     Lookup.byId[cxtr.name][id] = this;
     this.toString = () => this[attr]();

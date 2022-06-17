@@ -10,13 +10,13 @@ class DualDoorSection extends OpeningCoverSection {
   constructor(partCode, divideProps, parent) {
     super(partCode, 'Duel.Door.Section', divideProps, parent);
     if (divideProps === undefined) return;
-    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(true), this.duelDoorDems);
+    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(), this.duelDoorDems);
     this.addSubAssembly(rightDoor);
-    rightDoor.setHandleLocation(Handle.location.TOP_LEFT);
+    rightDoor.pull().location(Handle.location.TOP_LEFT);
 
-    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(), this.duelDoorDems);
+    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(true), this.duelDoorDems);
     this.addSubAssembly(leftDoor);
-    leftDoor.setHandleLocation(Handle.location.TOP_RIGHT);
+    leftDoor.pull().location(Handle.location.TOP_RIGHT);
   }
 }
 

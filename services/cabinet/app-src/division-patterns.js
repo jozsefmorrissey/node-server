@@ -6,10 +6,15 @@ class Pattern {
     this.str = str;
     let unique = {};
     for (let index = 0; index < str.length; index += 1) {
-      unique[str[index]] = true;
+      const char = str[index];
+      if (unique[char] === undefined) {
+        unique[char] = {char, count: 1};
+      } else {
+        unique[char].count++;
+      }
     }
-    unique = Object.keys(unique).join('');
-    this.unique = unique;
+    const uniqueStr = Object.keys(unique).join('');
+    this.unique = () => uniqueStr;
     this.equal = this.unique.length === 1;
     class Element {
       constructor(id, index, count) {
@@ -50,7 +55,7 @@ class Pattern {
     this.ids = Object.keys(elements);
     this.size = str.length;
     let lastElem;
-    this.satisfied = () => updateOrder.length === unique.length - 1;
+    this.satisfied = () => updateOrder.length === uniqueStr.length - 1;
 
     const calc = (dist) => {
       const values = {};
@@ -59,9 +64,10 @@ class Pattern {
         dist -= elem.count * elem.value().decimal();
         values[elem.id] = elem.value().value();
       });
+      const uniqueVals = Object.values(unique);
       if (lastElem === undefined) {
-        for (let index = 0; index < unique.length; index += 1) {
-          const char = unique[index];
+        for (let index = 0; index < uniqueVals.length; index += 1) {
+          const char = uniqueVals[index].char;
           if (!values[char]) {
             if (lastElem === undefined) lastElem = elements[char];
             else {lastElem = undefined; break;}
@@ -74,9 +80,11 @@ class Pattern {
       }
       const list = [];
       const fill = [];
-      if (lastElem)
-        for (let index = 0; index < unique.length; index += 1)
-          fill[index] = elements[unique[index]].value().display();
+      if (lastElem){
+        for (let index = 0; index < uniqueVals.length; index += 1) {
+          fill[index] = elements[uniqueVals[index].char].value().display();
+        }
+      }
       for (let index = 0; index < str.length; index += 1)
         list[index] = values[str[index]];
       const retObj = {values, list, fill, str};
@@ -84,7 +92,6 @@ class Pattern {
     }
 
     this.value = (id, value) => {
-      if ((typeof id) === 'number') id = unique[id];
       if (value !== undefined) {
         const index = updateOrder.indexOf(id);
         if (index !== -1) updateOrder.splice(index, 1);
