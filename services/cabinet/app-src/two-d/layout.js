@@ -14,6 +14,9 @@ const windowLineWidth = 8;
 const tolerance = 1;
 let hovering;
 let clickHolding = false;
+let popupOpen = true;
+let lastDown = 0;
+const selectTimeBuffer = 500;
 const quickChangeFuncs = {};
 
 function registerQuickChangeFunc(type, func) {
@@ -21,34 +24,43 @@ function registerQuickChangeFunc(type, func) {
 }
 
 function onMousedown(event, stdEvent) {
+  lastDown = clickHolding ? 0 : new Date().getTime();
   if (stdEvent.button == 0) {
-    if (hovering !== undefined && !clickHolding) console.log('down');
     clickHolding = clickHolding || hovering !== undefined;
     return clickHolding;
   } else {
     if (hovering && quickChangeFuncs[hovering.constructor.name]) {
       quickChangeFuncs[hovering.constructor.name](hovering, event, stdEvent);
     }
-    console.log('rightClick: do stuff!!');
     return true;
   }
 }
 
 function addVertex(hovering, event, stdEvent) {
   const point = hovering.closestPointOnLine({x: event.imageX, y: event.imageY});
-  hovering.endVertex().nextVertex(point, Layout2D.Wall2D);
+  hovering.startVertex().nextVertex(point, Layout2D.Wall2D);
 }
 
 registerQuickChangeFunc('Wall2D', addVertex);
+registerQuickChangeFunc('Door2D', (door) => door.hingeRight(!door.hingeRight()));
 
 function hoverId () {
   return hovering ? hovering.id() : undefined;
 }
 
+const popupCnt = du.id('controls-2d');
+function openPopup(event, stdEvent) {
+  popupOpen = true;
+  const msg = `${hovering.constructor.name}: ${hovering.id()}`;
+  console.log(msg);
+  popupCnt.innerHTML = msg;
+}
+
 function onMouseup(event, stdEvent) {
   if (stdEvent.button == 0) {
-    console.log('leftClick');
-    console.log('up');
+    if (lastDown > new Date().getTime() - selectTimeBuffer) {
+      openPopup(event, stdEvent);
+    }
     const clickWasHolding = clickHolding;
     clickHolding = false;
     hovering = undefined;
@@ -85,7 +97,8 @@ function hover(event) {
 }
 
 function onMove(event) {
-  return drag(event) || hover(event);
+  const canDrag = !popupOpen && lastDown < new Date().getTime() - selectTimeBuffer;
+  return (canDrag && drag(event)) || hover(event);
 }
 
 function withinTolerance(point, map) {
@@ -97,7 +110,6 @@ function withinTolerance(point, map) {
   const y2 = map.end.y;
   const num = Math.abs((y2 - y1)*x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
   const denom = Math.sqrt(Math.pow(y2 - y1, 2) + Math.pow(x2 - x1, 2));
-  console.log(num/denom);
   return num / denom < map.tolerance;
 }
 
@@ -189,7 +201,7 @@ function drawMeasurmentValue(ctx, line) {
 
 const measurementLineWidth = 1;
 function drawMeasurment(ctx, measurement)  {
-  const lines = measurement.I();
+  const lines = measurement.I(2);
   try {
     drawLine(ctx, lines.startLine, 'blue', measurementLineWidth);
     drawLine(ctx, lines.endLine, 'blue', measurementLineWidth);
@@ -249,7 +261,7 @@ function draw(canvas) {
     if (previousEndpoint)
       drawVertex(ctx, wall.startVertex());
     previousEndpoint = lastEndPoint;
-  });
+  }, true);
   drawVertex(ctx, walls[0].startVertex());
 }
 

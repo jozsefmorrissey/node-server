@@ -62,7 +62,7 @@ class Vertex2D extends Lookup {
     this.y = () => this.point().y;
     function assignVertex(forward) {
       return (point, lineConst) => {
-        const vertexGetter = forward ? instance.nextVertex : instance.prevVertex;
+        const vertexGetter = forward ? instance.tex : instance.prevVertex;
         const lineGetter = forward ? instance.nextLine : instance.prevLine;
         if (point !== undefined) {
           const vertex = new Vertex2D(point);
@@ -158,11 +158,14 @@ class Vertex2D extends Lookup {
       if (point !== undefined) {
         const vertex = new Vertex2D(point);
         const origVertex = this.nextVertex();
+        const origLine = this.nextLine();
         if (origVertex instanceof Vertex2D) {
           lineConst = lineConst || Line2D;
           const line = new lineConst(vertex, origVertex);
           origVertex.prevLine(line);
           vertex.nextLine(line);
+          vertex.prevLine(origLine);
+          origLine.endVertex(vertex);
         } else {
           lineConst = lineConst || Line2D;
           const line = new lineConst(instance, vertex);
@@ -199,13 +202,14 @@ class LineMeasurment2D extends Lookup {
   constructor(line) {
     super();
     const offset = 100;
-    this.I = () => {
+    this.I = (layer) => {
+      layer = layer || 1;
       const startLine = line.perpendicular(line.startVertex());
       const endLine = line.perpendicular(line.endVertex());
       const startCircle = new Circle2D(offset, line.startVertex());
       const endCircle = new Circle2D(offset, line.endVertex());
-      const startTerminationCircle = new Circle2D(10 + offset, line.startVertex());
-      const endTerminationCircle = new Circle2D(10 + offset, line.endVertex());
+      const startTerminationCircle = new Circle2D(layer * 10 + offset, line.startVertex());
+      const endTerminationCircle = new Circle2D(layer * 10 + offset, line.endVertex());
       const startVerticies = startCircle.lineIntersects(startLine);
       const endVerticies = endCircle.lineIntersects(endLine);
       let inner, outer;
@@ -392,67 +396,64 @@ function getVertex(point, wall1, wall2) {
   return vertexMap[mapId];
 }
 
+class OnWall extends Lookup {
+  constructor(wall, fromPreviousWall, fromFloor, height, width) {
+    super();
+    Object.getSet(this, {width, height, fromFloor, fromPreviousWall});
+    this.wallEndpoints2D = () => {
+      const wallStartPoint = wall.startVertex();
+      const dist = this.fromPreviousWall();
+      const total = dist + width;
+      return {
+        start: new Vertex2D({
+          x: wallStartPoint.x() + dist * Math.cos(theta),
+          y: wallStartPoint.y() + dist * Math.sin(theta)
+        }),
+        end: new Vertex2D({
+          x: wallStartPoint.x + total * Math.cos(theta),
+          y: wallStartPoint.y + total * Math.sin(theta)
+        })
+      };
+    }
+    this.move = (event) => {
+      const point = wall.closestPointOnLine({x: event.imageX, y: event.imageY});
+      let distance = wall.startVertex().distance(point);
+      const max = wall.length() - this.width();
+      distance = distance < 0 ? 0 : distance;
+      distance = distance > max ? max : distance;
+      this.fromPreviousWall(distance);
+    };
+  }
+}
+
+class Door2D extends Lookup {
+  constructor() {
+    super(...arguments);
+    this.width(this.width() || 81.28);
+    this.height(this.height() || 198.12);
+    this.fromPreviousWall(this.fromPreviousWall() || 150);
+    Object.getSet(this, {
+      hingeRight: true,
+    });
+  }
+}
+
+class Window2D extends Lookup {
+  constructor(wall, fromPreviousWall, fromFloor, height, width) {
+    width = width || 81.28;
+    height = height || 91.44;
+    fromFloor = fromFloor || 101.6;
+    fromPreviousWall = fromPreviousWall || 20;
+    super(wall, fromPreviousWall, fromFloor, height, width);
+  }
+}
+
 class Wall2D extends Line2D {
   constructor(startVertex, endVertex, height) {
     super(startVertex, endVertex);
     const windows = [];
     const doors = [];
     const wall = this;
-
-    class Door2D extends Lookup {
-      constructor(fromPreviousWall, height, width, hingeRight) {
-        super();
-        Object.getSet(this, {
-          width: width || 81.28,
-          height: height || 198.12,
-          fromPreviousWall: fromPreviousWall || 150,
-          hingeRight: hingeRight || true,
-        });
-        this.move = (event) => {
-          const point = wall.closestPointOnLine({x: event.imageX, y: event.imageY});
-          let distance = wall.startVertex().distance(point);
-          const max = wall.length() - this.width();
-          distance = distance < 0 ? 0 : distance;
-          distance = distance > max ? max : distance;
-          this.fromPreviousWall(distance);
-        };
-      }
-    }
-
-    class Window2D extends Lookup {
-      constructor(fromPreviousWall, fromFloor, height, width) {
-        super();
-        width = width || 81.28;
-        height = height || 91.44;
-        fromFloor = fromFloor || 101.6;
-        fromPreviousWall = fromPreviousWall || 20;
-        Object.getSet(this, {width, height, fromFloor, fromPreviousWall});
-
-        this.endpoints2D = (wallStartPoint) => {
-          const dist = this.fromPreviousWall();
-          const total = dist + width;
-          return {
-            start: {
-              x: wallStartPoint.x + dist * Math.cos(theta),
-              y: wallStartPoint.y + dist * Math.sin(theta)
-            },
-            end: {
-              x: wallStartPoint.x + total * Math.cos(theta),
-              y: wallStartPoint.y + total * Math.sin(theta)
-            }
-          };
-        }
-        this.move = (event) => {
-          const point = wall.closestPointOnLine({x: event.imageX, y: event.imageY});
-          let distance = wall.startVertex().distance(point);
-          const max = wall.length() - this.width();
-          distance = distance < 0 ? 0 : distance;
-          distance = distance > max ? max : distance;
-          this.fromPreviousWall(distance);
-        };
-      }
-    }
-
 
     height = height || 243.84;
     Object.getSet(this, {height, windows, doors});
@@ -461,8 +462,15 @@ class Wall2D extends Line2D {
     this.addWindow = (window) => windows.push(window);
     this.doors = () => doors;
     this.addDoor = (door) => doors.push(door);
-    this.addDoor(new Door2D());
-    this.addWindow(new Window2D());
+    this.verticies = () => {
+      const verts = [startVertex, endVertex];
+      doors.concat(windows).forEach((onWall) => {
+
+      });
+    }
+
+    this.addDoor(new Door2D(this));
+    this.addWindow(new Window2D(this));
   }
 }
 
