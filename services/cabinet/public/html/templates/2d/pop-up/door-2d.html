@@ -1,0 +1,23 @@
+<div type-2d='{{target.constructor.name}}' id='{{target.id()}}'
+        x='{{lastImagePoint.x}}' y='{{lastImagePoint.y}}'>
+  <table>
+    <tr>
+      <td><label>Height</label></td>
+      <td><input class='value-2d' key='height' value='{{display(target.height())}}'></td>
+    </tr>
+    <tr>
+      <td><label>Width</label></td>
+      <td><input class='value-2d' key='width' value='{{display(target.width())}}'></td>
+    </tr>
+    <tr>
+      <td><label>Distance From Floor</label></td>
+      <td><input class='value-2d' key='fromFloor' value='{{display(target.fromFloor())}}'></td>
+    </tr>
+    <tr>
+      <td>
+        <button class='hinge-btn'>Hinge</button>
+      </td>
+      <td><button class='remove-btn-2d'>Remove</button></td>
+    </tr>
+  </table>
+</div>

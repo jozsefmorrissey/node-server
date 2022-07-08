@@ -169,7 +169,7 @@ function updateRadio(elem) {
   const elems = du.find.all(`input[type="radio"][name='${name}']`);
   elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
   setPropertyElemValue(elem, 'prop-radio-update', true);
-  if (name === 'UNIT') {
+  if (name.substr(0, 4) === 'UNIT') {
     Measurement.unit(elem.value);
     updateMeasurements();
   }

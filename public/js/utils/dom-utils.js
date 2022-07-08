@@ -7,7 +7,7 @@ function validSelector (selector) {
   } catch (e) {
     const errMsg = `Invalid Selector: '${selector}'` ;
     console.error(errMsg);
-    return errMsg;
+    return null;
   }
 };
 const VS = validSelector;
@@ -29,7 +29,7 @@ function parseSeperator(string, seperator, isRegex) {
 
 
 const du = {create: {}, class: {}, cookie: {}, param: {}, style: {},
-      scroll: {}, input: {}, on: {}, move: {}, url: {}};
+      scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}};
 du.find = (selector) => document.querySelector(selector);
 du.find.all = (selector) => document.querySelectorAll(selector);
 
@@ -146,6 +146,17 @@ du.appendError = (target, message) => {
     error.innerHTML = message;
     parent.insertBefore(error, target.nextElementSibling)
   }
+}
+
+const jsAttrReg = /<([a-zA-Z]{1,}[^>]{1,})(\s|'|")on[a-z]{1,}=/;
+du.innerHTML = (text, elem) => {
+  if (text === undefined) return undefined;
+  const clean = text.replace(/<script(| [^<]*?)>/, '').replace(jsAttrReg, '<$1');
+  if (clean !== text) {
+    throw new JsDetected(text, clean);
+  }
+  if (elem !== undefined) elem.innerHTML = clean;
+  return clean;
 }
 
 du.find.upAll = function(selector, node) {
@@ -296,7 +307,7 @@ function onKeycombo(event, func, args) {
     let allPressed = true;
     keysDown[event.key] = true;
     for (let index = 0; allPressed && index < args.length; index += 1) {
-      allPressed = keysDown[args[index]];
+      allPressed = allPressed && keysDown[args[index]];
     }
     if (allPressed) {
       console.log('All Pressed!!!');
@@ -329,6 +340,7 @@ du.on.match = function(event, selector, func, target) {
   const filter = filterCustomEvent(event, func);
   target = target || document;
   selector = VS(selector);
+  if (selector === null) return;
   const  matchRunTargetId = getTargetId(target);
   if (selectors[matchRunTargetId] === undefined) {
     selectors[matchRunTargetId] = {};
@@ -497,6 +509,29 @@ du.scroll.intoView = function(elem, divisor, delay, scrollElem) {
     setTimeout(scroll(scrollParent), 100);
   });
 }
+
+du.fade.out = (elem, disapearAt, func) => {
+  const origOpacity = elem.style.opacity;
+  let stopFade = false;
+  function reduceOpacity () {
+    if (stopFade) return;
+    elem.style.opacity -= .005;
+    if (elem.style.opacity <= 0) {
+      elem.style.opacity = origOpacity;
+      func(elem);
+    } else {
+      setTimeout(reduceOpacity, disapearAt * 2 / 600 * 1000);
+    }
+  }
+
+  elem.style.opacity = 1;
+  setTimeout(reduceOpacity, disapearAt / 3 * 1000);
+  return () => {
+    stopFade = true;
+    elem.style.opacity = origOpacity;
+  };
+}
+
 
 
 du.cookie.remove = function (name) {

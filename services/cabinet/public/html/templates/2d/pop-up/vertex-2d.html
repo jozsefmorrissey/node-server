@@ -1,0 +1,17 @@
+<div type-2d='{{target.constructor.name}}' id='{{target.id()}}'
+        x='{{lastImagePoint.x}}' y='{{lastImagePoint.y}}'>
+  <table>
+    <tr>
+      <td><label>X</label></td>
+      <td><input class='value-2d' key='x' value='{{display(target.x())}}'></td>
+    </tr>
+    <tr>
+      <td><label>Y</label></td>
+      <td><input class='value-2d' key='y' value='{{display(target.y())}}'></td>
+    </tr>
+    <tr>
+      <td colspan="2"><button class='remove-btn-2d'>Remove</button></td>
+    </tr>
+    <tr>
+  </table>
+</div>

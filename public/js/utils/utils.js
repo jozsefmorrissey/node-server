@@ -72,6 +72,19 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     return str.substr(0, len);
 }, true);
 
+function stringHash() {
+  let hashString = this;
+  let hash = 0;
+  for (let i = 0; i < hashString.length; i += 1) {
+    const character = hashString.charCodeAt(i);
+    hash = ((hash << 5) - hash) + character;
+    hash &= hash; // Convert to 32bit integer
+  }
+  return hash;
+}
+
+Function.safeStdLibAddition(String, 'hash',  stringHash, false);
+
 const LEFT = 1;
 const RIGHT = 0;
 Function.safeStdLibAddition(String, 'obscure',  function (count) {
@@ -89,7 +102,8 @@ Function.safeStdLibAddition(String, 'obscure',  function (count) {
 });
 
 const singleCharReg = /([a-zA-Z]{1,})[^a-z^A-Z]{1,}([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z]{1,})/;
-const specialCharReg = /([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z])/g;
+const specialCharReg = /([a-zA-Z])[^a-z^A-Z^0-9]{1,}([a-zA-Z])/g;
+const charNumberReg = /([a-zA-Z])([0-9])/
 function singleCharReplace(whoCares, one, two, three) {
   const oneLastChar = one[one.length - 1];
   const twoLower = oneLastChar !== oneLastChar.toLowerCase();
@@ -98,9 +112,9 @@ function singleCharReplace(whoCares, one, two, three) {
                                 `${three[0].toLowerCase()}${three.substr(1)}`;
   return `${one}${twoStr}${threeStr}`;
 }
-function camelReplace(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
+function camelReplace(whoCares, one, two) {return `${one}${two.toUpperCase ? two.toUpperCase() : two}`;}
 function toCamel() {
-  let string = `${this.substr(0,1).toLowerCase()}${this.substr(1)}`;
+  let string = `${this.substr(0,1).toLowerCase()}${this.substr(1)}`.replace(charNumberReg, camelReplace);
   while (string.match(singleCharReg)) string = string.replace(singleCharReg, singleCharReplace);
   return string.replace(specialCharReg, camelReplace);
 }
@@ -108,14 +122,20 @@ Function.safeStdLibAddition(String, 'toCamel',  toCamel);
 
 const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
 const caseChangeReg = /([a-z])([A-Z])/g;
-function pascalReplace(whoCares, one, two) {return `${one.toUpperCase()}_${two.toUpperCase()}`;}
+function pascalReplace(whoCares, one, two) {return `${one.toUpperCase()}_${two.toUpperCase ? two.toUpperCase() : two}`;}
 function toPascal() {
   let string = this;
   return string.replace(multipleUpperReg, pascalReplace)
                 .replace(caseChangeReg, pascalReplace)
+                .replace(charNumberReg, pascalReplace)
                 .replace(specialCharReg, pascalReplace).toUpperCase();
 }
 Function.safeStdLibAddition(String, 'toPascal',  toPascal);
+
+function toHypenated() {
+  return this.toPascal().toLowerCase().replace(/_/g, '-');
+}
+Function.safeStdLibAddition(String, 'toHypenated',  toHypenated);
 
 Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
   return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
@@ -256,6 +276,8 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
         const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
         const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
         if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
+          // if (obj.constructor.name === 'SnapLocation2D')
+          //   console.log('foundit!');
           const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
           json[attr] = processValue(value);
         }

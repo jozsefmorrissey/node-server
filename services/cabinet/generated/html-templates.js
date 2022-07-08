@@ -368,6 +368,114 @@ exports['input/select'] = (get, $t) =>
 		$t.clean(get("errorMsg")()) +
 		`</div> </div> `
 
+exports['2-d/pop-up/vertex-2d'] = (get, $t) => 
+		`<div 2d-type='` +
+		$t.clean(get("constructor").name) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`'> <table> <tr> <td><label>X</label></td> <td><input class='2d-value' key='x' value='` +
+		$t.clean(get("x")()) +
+		`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='2d-value' key='y' value='` +
+		$t.clean(get("y")()) +
+		`'></td> </tr> <tr> <td colspan="2"><button class='2d-remove-btn'>Remove</button></td> </tr> <tr> </table> `
+
+exports['2-d/pop-up/wall-2d'] = (get, $t) => 
+		`<div 2d-type='` +
+		$t.clean(get("constructor").name) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`'> <button class='2d-add-door-btn'>Add Door</button> <button class='2d-add-window-btn'>Add Window</button> <button class='2d-add-vertex-btn'>Add Vertex</button> <button class='2d-remove-btn'>Remove</button> </div> `
+
+exports['2-d/pop-up/window-2d'] = (get, $t) => 
+		`<div 2d-type='` +
+		$t.clean(get("constructor").name) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`'> <table> <tr> <td colspan="2"><button class='2d-remove-btn'>Remove</button></td> </tr> <tr> <td><label>Height</label></td> <td><input class='2d-value' key='height' value='` +
+		$t.clean(get("height")()) +
+		`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='2d-value' key='width' value='` +
+		$t.clean(get("width")()) +
+		`'></td> </tr> <tr> <td><label>Distance From Previous Wall</label></td> <td><input class='2d-value' key='fromPreviousWall' value='` +
+		$t.clean(get("fromPreviousWall")()) +
+		`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='2d-value' key='fromFloor' value='` +
+		$t.clean(get("fromFloor")()) +
+		`'></td> </tr> </table> </div> `
+
+exports['2d/pop-up/door-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
+		$t.clean(get("display")(get("target").height())) +
+		`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
+		$t.clean(get("display")(get("target").width())) +
+		`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
+		$t.clean(get("display")(get("target").fromFloor())) +
+		`'></td> </tr> <tr> <td> <button class='hinge-btn'>Hinge</button> </td> <td><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
+
+exports['2d/pop-up/line-measurment-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> ` +
+		$t.clean( new $t('-1881817601').render(get("UNITS"), 'property', get)) +
+		` <br> <input type='text' class='measurment-mod' value='` +
+		$t.clean(get("target").display()) +
+		`'> </div> `
+
+exports['2d/pop-up/vertex-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <table> <tr> <td><label>X</label></td> <td><input class='value-2d' key='x' value='` +
+		$t.clean(get("display")(get("target").x())) +
+		`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='value-2d' key='y' value='` +
+		$t.clean(get("display")(get("target").y())) +
+		`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> <tr> </table> </div> `
+
+exports['2d/pop-up/wall-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <button class='add-door-btn-2d'>Add Door</button> <button class='add-window-btn-2d'>Add Window</button> <button class='add-vertex-btn-2d'>Add Vertex</button> <button class='add-object-btn-2d'>Add Object</button> <button class='remove-btn-2d'>Remove</button> </div> `
+
+exports['2d/pop-up/window-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
+		$t.clean(get("display")(get("target").height())) +
+		`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
+		$t.clean(get("display")(get("target").width())) +
+		`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
+		$t.clean(get("display")(get("target").fromFloor())) +
+		`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
+
 exports['cabinet/body'] = (get, $t) => 
 		`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
 		$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
@@ -918,3 +1026,19 @@ exports['sections/open'] = (get, $t) =>
 		`</h2> <div class='section-feature-ctn'> ` +
 		$t.clean(get("featureDisplay")) +
 		` </div> `
+
+exports['units'] = (get, $t) => 
+		`<label>UNIT :&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
+		$t.clean( new $t('-766481261').render(get("UNITS"), 'property', get)) +
+		` `
+
+exports['-1881817601'] = (get, $t) => 
+		`<span > <label>` +
+		$t.clean(get("property").name()) +
+		`</label> <input type='radio' name='UNIT2' prop-radio-update='` +
+		$t.clean(get("property").id()) +
+		`' value="` +
+		$t.clean(get("property").name()) +
+		`" ` +
+		$t.clean(get("property").value() === true ? 'checked' : '') +
+		`> </span>`

@@ -1,7 +1,8 @@
 
 const $t = require('../$t');
 const CatchAll = require('./catch-all');
-
+const du = require('../dom-utils');
+const Resizer = require('./resizer');
 
 class DragDropResize {
   constructor (props) {
@@ -26,8 +27,8 @@ class DragDropResize {
     const instance = this;
     const closeFuncs = [];
 
-    let width = props.width || '40vw';
-    let height = props.height || '20vh';
+    let width = props.width || 'fit-content';
+    let height = props.height || 'fit-content';
     this.getDems = props.getDems || ( () => { return {width, height}; } );
     this.setDems = props.setDems || ( (w, h) => { width = w; height = h; } );
 
@@ -40,11 +41,9 @@ class DragDropResize {
     const defaultStyle = `
       background-color: white;
       position: ${position};
-      overflow: hidden;
-      min-height: ${props.minWidth === undefined ? '0vh' : props.minWidth};
-      min-width: ${props.minHeight === undefined ? '0vw' : props.minHeight};
-      display: none;
-      ${props.overflow ? 'overflow: ' + props.overflow + ';' : ''}
+      width: fit-content;
+      height: fit-content;
+      padding: 5pt;
       border: 1px solid;
       border-radius: 5pt;
       box-shadow: 3px 3px 6px black, 3px 3px 6px grey, 3px 3px 6px lightgrey;`;
@@ -54,12 +53,14 @@ class DragDropResize {
       Resizer.hide(popupCnt);
       closeFuncs.forEach((func) => func());
       middleSize();
+      backdrop.hide();
       histCnt.hidden = true;
     }
     this.hide = this.close;
 
     this.show = () => {
       if (instance.hidden()) {
+        backdrop.show();
         updateControls();
         const css = {display: 'block',
         height: Resizer.isLocked(popupCnt) ? undefined : instance.getDems().height,
@@ -69,7 +70,7 @@ class DragDropResize {
 
         setCss(css);
         if (!Resizer.isLocked(popupCnt)) Resizer.show(popupCnt);
-        updateHistZindex();
+        // updateHistZindex();
       }
       return instance;
     };
@@ -92,10 +93,22 @@ class DragDropResize {
 
     function getRelitiveRect(elem) {
       let rect;
-      if (elem === undefined) {
-        rect = {top: 0, bottom: 0, right: 0, left: 0, width: 100, height: 100};
-      } else {
+      if (elem instanceof HTMLElement) {
         rect = elem.getBoundingClientRect();
+      } else if (elem.x !== undefined && elem.y !== undefined) {
+        const x = (typeof elem.x === 'function') ? elem.x() : elem.x;
+        const y = (typeof elem.y === 'function') ? elem.y() : elem.y;
+        return {
+          top: y,
+          bottom: y,
+          right: x,
+          left: x,
+          width: 0,
+          height: 0
+        }
+      } else {
+        rect = {top: 0, bottom: 0, right: 0, left: 0, width: 100, height: 100};
+        console.warn('unknown DragDrops position element:', elem);
       }
 
       const absRect = {};
@@ -113,9 +126,10 @@ class DragDropResize {
 
     function positionOnElement(elem, container) {
       currElem = elem || currElem;
+      container = container || getPopupElems().cnt;
       instance.show();
       let rect = getRelitiveRect(currElem);
-      let popRect = getRelitiveRect(container || getPopupElems().cnt);
+      let popRect = getRelitiveRect(container);
       let padding = 8;
 
       let top = `${rect.top}px`;
@@ -131,6 +145,7 @@ class DragDropResize {
               setCss({left: left + 'px', top: top + 'px'}, container);
               return position;};
       position.inView = () =>{
+        // TODO: Fix or remove
         let popRect = getRelitiveRect(container || getPopupElems().cnt);
         const left = (popRect.left > 10 ? popRect.left : 10) + 'px';
         const right = (popRect.right > 10 ? popRect.right : 10) + 'px';
@@ -149,7 +164,7 @@ class DragDropResize {
       return position;
     }
 
-    this.elem = positionOnElement;
+    this.position = positionOnElement;
     this.select = () => {
       if (window.getSelection().toString().trim()) {
         selectElem = window.getSelection().getRangeAt(0);
@@ -171,7 +186,7 @@ class DragDropResize {
     }
 
     function showElem(id, show) {
-      document.getElementById(id).hidden = !show;
+      popupCnt.hidden = !show;
     }
 
     function updateControls() {
@@ -240,7 +255,7 @@ class DragDropResize {
         prevLocation = {top, bottom, left, right, maxWidth, maxHeight, width, height}
         setTimeout(() => Resizer.position(popupCnt), 0);
       }
-      styleUpdate(container || getPopupElems().cnt, rect);
+      du.style(container || getPopupElems().cnt, rect);
       return instance;
     }
     this.setCss = setCss;
@@ -248,7 +263,7 @@ class DragDropResize {
     this.onClose = (func) => closeFuncs.push(func);
 
     function updateContent(html) {
-      safeInnerHtml(html, getPopupElems().content);
+      du.innerHTML(html, getPopupElems().content);
       return instance;
     }
     this.updateContent = updateContent;
@@ -299,21 +314,29 @@ class DragDropResize {
       if (!Resizer.isLocked(popupCnt)) Resizer.show(popupCnt);
     }
 
+    function backdropClick() {
+      if (moving) stopMoving();
+      else instance.close();
+    }
+
     const tempElem = document.createElement('div');
+    tempElem.append(document.createElement('div'));
     const tempHtml = template.render({POPUP_CNT_ID, POPUP_CONTENT_ID,
         MINIMIZE_BTN_ID, MAXIMIZE_BTN_ID, MAX_MIN_CNT_ID, CLOSE_BTN_ID,
         HISTORY_BTN_ID, FORWARD_BTN_ID, BACK_BTN_ID, MOVE_BTN_ID,
         POPUP_HEADER_CNT_ID, POPUP_CONTENT_CNT_ID,
         props});
-    safeInnerHtml(tempHtml, tempElem);
-    tempElem.children[0].style = defaultStyle;
-    CE_CONTAINER.append(tempElem);
+    du.innerHTML(tempHtml, tempElem.children[0]);
+    // tempElem.children[0].style = defaultStyle;
+    DragDropResize.container.append(tempElem);
 
-    const popupContent = document.getElementById(POPUP_CONTENT_ID);
-    const popupCnt = document.getElementById(POPUP_CNT_ID);
+    const popupContent = tempElem.children[0];
+    const popupCnt = tempElem;
     const histCnt = document.createElement('DIV');
-    const tabHeader = document.getElementById(POPUP_HEADER_CNT_ID);
-    tabHeader.onclick = this.maximize;
+    const tabHeader = du.id(POPUP_HEADER_CNT_ID);
+    if (tabHeader) {
+      tabHeader.onclick = this.maximize;
+    }
     const histFilter = document.createElement('input');
     histFilter.placeholder = 'filter';
     const histDisplayCnt = document.createElement('DIV');
@@ -324,60 +347,60 @@ class DragDropResize {
     histCnt.style.position = position;
     histCnt.hidden = true;
     histCnt.className = 'place-history-cnt';
-    CE_CONTAINER.append(histCnt);
+    DragDropResize.container.append(histCnt);
     popupCnt.style = defaultStyle;
     popupCnt.addEventListener(Resizer.events.resize.name, onResizeEvent);
-    document.getElementById(MAXIMIZE_BTN_ID).onclick = instance.maximize;
-    document.getElementById(MINIMIZE_BTN_ID).onclick = instance.minimize;
-    document.getElementById(CLOSE_BTN_ID).onclick = instance.close;
-    document.getElementById(MOVE_BTN_ID).onclick = move;
-    if (props.back) {
-      document.getElementById(BACK_BTN_ID).onclick = () => {
-        props.back();
-        updateControls();
-        event.stopPropagation();
-        histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
-      }
-    }
-    if (props.forward) {
-      document.getElementById(FORWARD_BTN_ID).onclick = () => {
-        props.forward();
-        updateControls();
-        event.stopPropagation();
-        histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
-      }
-    }
-    if (props.historyDisplay) {
-      const historyBtn = document.getElementById(HISTORY_BTN_ID);
-      historyBtn.onclick = (event) => {
-        histCnt.hidden = false;
-        histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
-        positionOnElement(historyBtn, histCnt).center().bottom();
-        updateHistZindex();
-        event.stopPropagation();
-      }
-      histCnt.onclick = (event) => {
-        event.stopPropagation();
-      }
-      histDisplayCnt.onclick = (event) => {
-        event.stopPropagation();
-        if ((typeof props.historyClick) === 'function') {
-          props.historyClick(event);
-          updateControls();
-          histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
-          histFilter.focus();
-        }
-      }
-      histFilter.onkeyup = () => {
-        histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
-        histFilter.focus();
-      }
-    }
+    du.on.match('click', `${MAXIMIZE_BTN_ID}`, instance.maximize);
+    du.on.match('click', `${MINIMIZE_BTN_ID}`, instance.minimize);
+    du.on.match('click', `${CLOSE_BTN_ID}`, instance.close);
+    du.on.match('click', `${MOVE_BTN_ID}`, move);
+    // if (props.back) {
+    //   document.getElementById(BACK_BTN_ID).onclick = () => {
+    //     props.back();
+    //     updateControls();
+    //     event.stopPropagation();
+    //     histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
+    //   }
+    // }
+    // if (props.forward) {
+    //   document.getElementById(FORWARD_BTN_ID).onclick = () => {
+    //     props.forward();
+    //     updateControls();
+    //     event.stopPropagation();
+    //     histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
+    //   }
+    // }
+    // if (props.historyDisplay) {
+    //   const historyBtn = document.getElementById(HISTORY_BTN_ID);
+    //   historyBtn.onclick = (event) => {
+    //     histCnt.hidden = false;
+    //     histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
+    //     positionOnElement(historyBtn, histCnt).center().bottom();
+    //     updateHistZindex();
+    //     event.stopPropagation();
+    //   }
+    //   histCnt.onclick = (event) => {
+    //     event.stopPropagation();
+    //   }
+    //   histDisplayCnt.onclick = (event) => {
+    //     event.stopPropagation();
+    //     if ((typeof props.historyClick) === 'function') {
+    //       props.historyClick(event);
+    //       updateControls();
+    //       histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
+    //       histFilter.focus();
+    //     }
+    //   }
+    //   histFilter.onkeyup = () => {
+    //     histDisplayCnt.innerHTML = props.historyDisplay(histFilter.value);
+    //     histFilter.focus();
+    //   }
+    // }
 
     popupCnt.onclick = (e) => {
       histCnt.hidden = true;
-      if (e.target.tagName !== 'A')
-      e.stopPropagation()
+      // if (e.target.tagName !== 'A')
+      // e.stopPropagation()
     };
 
     // CssFile.apply('place');
@@ -413,17 +436,19 @@ class DragDropResize {
     }
     this.on = on;
 
-    const cancelFade = fadeOut(getPopupElems().cnt, 10, instance.close);
-    getPopupElems().cnt.addEventListener('mouseover', cancelFade);
+    // const cancelFade = du.fade.out(getPopupElems().cnt, 10, instance.close);
+    // getPopupElems().cnt.addEventListener('mouseover', cancelFade);
 
 
     this.container = () => getPopupElems().cnt;
     this.lockSize = () => Resizer.lock(popupCnt);
     this.unlockSize = () => Resizer.unlock(popupCnt);
 
-    Resizer.all(popupCnt, props.position);
+    if (props.resize !== false){
+      Resizer.all(popupCnt, props.position);
+    }
     const backdrop = new CatchAll(popupCnt);
-    backdrop.on('click', stopMoving);
+    backdrop.on('click', backdropClick);
     backdrop.on('mousemove', mouseMove);
 
     Resizer.position(popupCnt);
@@ -431,6 +456,8 @@ class DragDropResize {
 }
 
 DragDropResize.events = {};
+DragDropResize.container = du.create.element('div', {id: 'drag-drop-resize'});
+document.body.append(DragDropResize.container);
 DragDropResize.events.drag = new CustomEvent ('drag');
 DragDropResize.events.dragend = new CustomEvent ('dragend');
 DragDropResize.events.dragstart = new CustomEvent ('dragstart');

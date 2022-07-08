@@ -3,6 +3,7 @@
 function panZoom(canvas, draw) {
   let mrx, mry;
   const eventFuncs = [];
+  const instance = this;
 
   this.on = (eventName) => {
     if (eventFuncs[eventName] === undefined) eventFuncs[eventName] = [];
@@ -12,20 +13,33 @@ function panZoom(canvas, draw) {
       }
     }
   }
+  let sleeping = false;
+  let nextUpdateId = 0;
+  this.sleep = () => sleeping = true;
+  this.wake = () => {
+    if (sleeping) {
+      sleeping = false;
+      requestAnimationFrame(() => update(nextUpdateId));
+    }
+  };
+  this.once = () => {
+    requestAnimationFrame(() => update(nextUpdateId, once))
+  };
+
   this.onMove = this.on('move');
   this.onClick = this.on('click');
   this.onMousedown = this.on('mousedown');
   this.onMouseup = this.on('mouseup');
 
-  function eventObject(eventName) {
+  function eventObject(eventName, event) {
     let x  =  mouse.rx;
     let y = mouse.ry;
     const dt = displayTransform;
     x -= dt.x;
     y -= dt.y;
     // screenX and screen Y are the screen coordinates.
-    screenX = -1*dt.scale*(x * dt.matrix[0] + y * dt.matrix[2])+dt.cox;
-    screenY = -1*dt.scale*(x * dt.matrix[1] + y * dt.matrix[3])+dt.coy;
+    screenX = event.pageX;//dt.scale*(x * dt.matrix[0] + y * dt.matrix[2])+dt.cox;
+    screenY = event.pageY;//dt.scale*(x * dt.matrix[1] + y * dt.matrix[3])+dt.coy;
     return {
       eventName, screenX, screenY,
       imageX: mouse.rx,
@@ -39,7 +53,7 @@ function panZoom(canvas, draw) {
     const dt = displayTransform;
     let performingFunction = false;
     const funcs = eventFuncs[type];
-    const eventObj  = eventObject(type);
+    const eventObj  = eventObject(type, event);
     for (let index = 0; !performingFunction && index < funcs.length; index += 1) {
       performingFunction = funcs[index](eventObj, event);
     }
@@ -59,7 +73,9 @@ function panZoom(canvas, draw) {
       over : false,
       buttons : [1, 2, 4, 6, 5, 3], // masks for setting and clearing button raw bits;
   };
+  let lastMouseMovementId = 0;
   function mouseMove(event) {
+      const mouseMovementId = ++lastMouseMovementId;
       mouse.x = event.offsetX;
       mouse.y = event.offsetY;
       if (mouse.x === undefined) {
@@ -90,8 +106,10 @@ function panZoom(canvas, draw) {
       } else if (event.type === "DOMMouseScroll") { // FF you pedantic doffus
          mouse.w = -event.detail;
       }
-
-
+      instance.wake();
+      setTimeout(() => {
+        if (mouseMovementId === lastMouseMovementId) instance.sleep()
+      }, 500);
   }
 
   function setupMouse(e) {
@@ -118,7 +136,6 @@ function panZoom(canvas, draw) {
       const attr = attrs[index];
       str += `${attr}: ${round(displayTransform[attr])} `;
     }
-    console.log(displayTransform);
   }
   // terms.
   // Real space, real, r (prefix) refers to the transformed canvas space.
@@ -142,7 +159,7 @@ function panZoom(canvas, draw) {
       doy:0,
       dscale:1,
       drotate:0,
-      drag:0.1,  // drag for movements
+      drag:0.2,  // drag for movements
       accel:0.7, // acceleration
       matrix:[0,0,0,0,0,0], // main matrix
       invMatrix:[0,0,0,0,0,0], // invers matrix;
@@ -248,6 +265,8 @@ function panZoom(canvas, draw) {
               // get the real mouse position
               var screenX = (mouse.x - this.cox);
               var screenY = (mouse.y - this.coy);
+              this.screenX = screenX;
+              this.screenY = screenY;
               this.mouseX = this.cx + (screenX * this.invMatrix[0] + screenY * this.invMatrix[2]);
               this.mouseY = this.cy + (screenX * this.invMatrix[1] + screenY * this.invMatrix[3]);
               mouse.rx = this.mouseX;  // add the coordinates to the mouse. r is for real
@@ -268,7 +287,9 @@ function panZoom(canvas, draw) {
   ctx.textBaseline = "middle";
   // timer for stuff
   var timer =0;
-  function update(){
+  function update(updateId, once){
+    if (nextUpdateId !== updateId) return;
+      nextUpdateId++;
       timer += 1; // update timere
       // update the transform
       displayTransform.update();
@@ -280,11 +301,11 @@ function panZoom(canvas, draw) {
         displayTransform.setTransform();
         draw(canvas);
         ctx.fillStyle = "white";
-        if(Math.floor(timer/100)%2 === 0){
-            ctx.fillText("Left but to pan",mouse.rx,mouse.ry);
-        }else{
-            ctx.fillText("Wheel to zoom",mouse.rx,mouse.ry);
-        }
+        // if(Math.floor(timer/100)%2 === 0){
+        //     ctx.fillText("Left but to pan",mouse.rx,mouse.ry);
+        // }else{
+        //     ctx.fillText("Wheel to zoom",mouse.rx,mouse.ry);
+        // }
     }else{
         // waiting for image to load
         displayTransform.setTransform();
@@ -300,9 +321,13 @@ function panZoom(canvas, draw) {
          displayTransform.oy = 0;
      }
     // reaquest next frame
-    requestAnimationFrame(update);
+    if (!sleeping) {
+      if (once) sleeping = true;
+      setTimeout(() => requestAnimationFrame(() => update(nextUpdateId)), 10);
+    }
   }
-  update(); // start it happening
+  update(nextUpdateId); // start it happening
+
   return this;
 }
 

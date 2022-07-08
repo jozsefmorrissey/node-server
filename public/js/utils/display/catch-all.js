@@ -1,22 +1,34 @@
+const du = require('../dom-utils');
 
 class CatchAll {
   constructor(container) {
     const instance = this;
-    container = container || CE_CONTAINER;
+    container = container;
     let events = Array.from(arguments).splice(1);
     events = events.length > 0 ? events : CatchAll.allMouseEvents;
 
-    // const zIndex = 1000008;
     const backdrop = document.createElement('DIV');
     this.backdrop = backdrop;
 
-    this.hide = () => backdrop.hidden = true;
+    this.hide = () => {
+      backdrop.hidden = true;
+      backdrop.style.zIndex = 0;
+    };
     this.show = () => {
       backdrop.hidden = false
       instance.updateZindex();
     };
 
-    this.updateZindex = (zIndex) => backdrop.style.zIndex = zIndex || CatchAll.findHigestZindex() + 1;
+    this.updateZindex = () => setTimeout(() => {
+      if (container) {
+        if (container.style.zIndex === '') {
+          container.style.zIndex = 2;
+        }
+        backdrop.style.zIndex = Number.parseInt(container.style.zIndex) - 1;
+      } else {
+        backdrop.style.zIndex = CatchAll.findHigestZindex() + 1;
+      }
+    }, 200);
 
     this.on = (eventName, func) => backdrop.addEventListener(eventName, func);
 
@@ -30,7 +42,7 @@ class CatchAll {
     backdrop.style.left = 0;
     const stopPropagation = (e) => e.stopPropagation();
     events.forEach((eventName) => instance.on(eventName, stopPropagation));
-    container.append(backdrop);
+    CatchAll.container.append(backdrop);
 
     this.updateZindex();
     this.hide();
@@ -60,5 +72,8 @@ CatchAll.findHigestZindex = function () {
   }
   return highest;
 }
+
+CatchAll.container = du.create.element('div', {id: 'catch-all-cnt'});
+document.body.append(CatchAll.container);
 
 module.exports = CatchAll;
