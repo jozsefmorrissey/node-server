@@ -74,6 +74,6 @@ function abbriviation(group) {
   return Assembly.classes[group] ? Assembly.classes[group].abbriviation : 'nope';
 }
 const scope = {groups: CostTree.propertyList, abbriviation};
-du.id('property-select-cnt').innerHTML =
-      CostManager.propertySelectTemplate.render(scope);
+// du.id('property-select-cnt').innerHTML =
+//       CostManager.propertySelectTemplate.render(scope);
 module.exports = CostManager

@@ -5,9 +5,11 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 const PopUp = require('../../../../public/js/utils/display/pop-up');
 const Properties = require('../config/properties');
 const Measurement = require('../../../../public/js/utils/measurement.js');
+const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
 const StateHistory = require('../../../../public/js/utils/services/state-history');
 const TwoDLayout = {};
 
+const eval = new StringMathEvaluator({Math}).eval;
 const popUp = new PopUp({resize: false});
 
 let layout = new Layout2D();
@@ -38,14 +40,20 @@ function getPopUpAttrs(elem) {
   if (cnt === undefined) return {};
   const type = cnt.getAttribute('type-2d');
   const key = elem.getAttribute('key');
-  const measurment = new Measurement(elem.value, true);
-  const value = measurment.decimal();
-  const display = measurment.display();
+  const evalVal = eval(elem.value);
+  let value, display;
+  if (elem.getAttribute('convert') === 'false') {
+    value = evalVal;
+    display = evalVal;
+  } else {
+    const measurment = new Measurement(evalVal, true);
+    value = measurment.decimal();
+    display = measurment.display();
+  }
   const id = cnt.id;
   return {
     type,id,key,value,display,
-    obj: Layout2D[type].byId[type][id],
-    // obj: Layout2D[type].get(id), // TODO: not sure why this doesnt work
+    obj:  Layout2D.get(id),
     point: {
       x: cnt.getAttribute('x'),
       y: cnt.getAttribute('y')
@@ -57,6 +65,8 @@ du.on.match('enter', '.value-2d', (elem) => {
   const props = getPopUpAttrs(elem);
   props.obj[props.key](props.value);
   elem.value = props.display;
+  layoutHistory.forceState();
+  panZ.once();
 });
 
 du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
@@ -102,18 +112,29 @@ du.on.match('click', '.add-vertex-btn-2d', (elem) => {
 });
 
 du.on.match('enter', '.measurment-mod', (elem) => {
-  getPopUpAttrs(elem).obj.modify(elem.value);
+  const value = eval(elem.value);
+  getPopUpAttrs(elem).obj.modify(value);
+  panZ.once();
 });
+
+// TODO: define cache better.
+function clearCache() {
+  measurementIs = {};
+}
 
 function undo(target) {
   const state = layoutHistory.back();
   if (state) layout = Layout2D.fromJson(state);
+  clearCache();
+  panZ.once();
   console.log('undo State:', state);
 }
 
 function redo () {
   const state = layoutHistory.forward();
   if (state) layout = Layout2D.fromJson(state);
+  clearCache();
+  panZ.once();
   console.log(JSON.stringify(layout.toJson(), null, 2));
   console.log('redo State:', state);
 }
@@ -309,8 +330,8 @@ function updateDoorHoverMap(door, startpointRight, startpointLeft) {
   updateHoverMap(door, startpointRight, startpointLeft, 15);
 }
 
-function doorDrawingFunc(ctx, door, startpointLeft, startpointRight) {
-  return () => {
+function doorDrawingFunc(ctx, startpointLeft, startpointRight) {
+  return (door) => {
     ctx.beginPath();
     ctx.strokeStyle = hoverId() === door.id() ? 'green' : 'black';
     const hinge = door.hinge();
@@ -338,9 +359,9 @@ function doorDrawingFunc(ctx, door, startpointLeft, startpointRight) {
       }
 
       ctx.fillStyle = 'white';
-      updateHoverMap(door, startpointRight, startpointLeft, 10);
       ctx.fill();
     }
+    updateHoverMap(door, startpointRight, startpointLeft, 10);
     ctx.stroke();
   }
 }
@@ -356,9 +377,9 @@ function drawDoor(ctx, startpoint, door, wallTheta) {
     const startpointLeft = {x: startpoint.x + distLeft * Math.cos(theta), y: startpoint.y + distLeft * Math.sin(theta)};
     const distRight = door.fromPreviousWall();
     const startpointRight = {x: startpoint.x + distRight * Math.cos(theta), y: startpoint.y + distRight * Math.sin(theta)};
-    doorDrawMap[lookupKey] = doorDrawingFunc(ctx, door, startpointLeft, startpointRight, initialAngle);
+    doorDrawMap[lookupKey] = doorDrawingFunc(ctx, startpointLeft, startpointRight, initialAngle);
   }
-  doorDrawMap[lookupKey]();
+  doorDrawMap[lookupKey](door);
 }
 
 function drawLine(ctx, line, color, width) {
@@ -425,7 +446,7 @@ function drawMeasurmentValues() {
 }
 
 const measurementLineWidth = 3;
-const measurementIs = {};
+let measurementIs = {};
 function drawMeasurment(ctx, measurement, level, focalVertex)  {
   const lookupKey = `${measurement.line().toString()}-${level}`;
   if (measurementIs[lookupKey] === undefined) {
@@ -540,13 +561,13 @@ function drawSquare(ctx, snap) {
   ctx.beginPath();
   ctx.lineWidth = 2;
   ctx.strokeStyle = 'black';
-  ctx.fillStyle = hoverId() === square.id() ? 'green' : 'white';
+  ctx.fillStyle = hoverId() === snap.id() ? 'green' : 'white';
 
   const center = square.center();
   ctx.translate(center.x(), center.y());
   ctx.rotate(square.radians());
   ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
-  updateHoverMap(snap, center, center, square.shorterSideLength());
+  updateHoverMap(snap, center, center, 30);
   ctx.stroke();
   ctx.fill();
 
@@ -554,16 +575,16 @@ function drawSquare(ctx, snap) {
   ctx.lineWidth = 4;
   ctx.strokeStyle = 'black';
   ctx.fillStyle =  'black';
-  textStart = square.leftCenter();
+  textStart = snap.leftCenter();
   ctx.fillText('HEllo', 0, square.height()/4);
   ctx.stroke()
 
   ctx.restore();
 
   const potentalSnap = snap.potentalSnapLocation();
-  drawSnapLocation(ctx, square.snapLocations.inactive().filter((loc) => loc.pairedWith() !== null), 'black');
+  drawSnapLocation(ctx, snap.snapLocations.paired(), 'black');
   if (potentalSnap) drawSnapLocation(ctx, [potentalSnap], 'white');
-  Layout2D.SnapLocation2D.active(square.snapLocations.active());
+  Layout2D.SnapLocation2D.active(snap.snapLocations.notPaired());
 }
 
 function drawObject(ctx, object) {

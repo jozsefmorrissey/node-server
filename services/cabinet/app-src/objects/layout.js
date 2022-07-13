@@ -8,12 +8,17 @@ const pushVertex = (x, y, arr) => {
   arr.push(new Vertex2D({x, y}));
 }
 
-function radians(angle) {
-  roundAccuracy((angle*Math.PI/180)%(2*Math.PI));
+const vAccuracy = 1000
+function roundAccuracy(value) {
+  return Math.round(value * vAccuracy) / vAccuracy;
 }
 
-function degrees(rads) {
-  return rads * 180/Math.PI % 360;
+function toRadians(angle) {
+  return roundAccuracy((angle*Math.PI/180)%(2*Math.PI));
+}
+
+function toDegrees(rads) {
+  return roundAccuracy(rads * 180/Math.PI % 360);
 }
 
 class Circle2D extends Lookup {
@@ -142,16 +147,9 @@ Circle2D.intersectionOfTwo = (circle0, circle1) => {
 
 class Vertex2D extends Lookup {
   constructor(point, nextLine, prevLine) {
-    let setupJson;
-    if (point && point._TYPE) {
-      setupJson = point;
-      prevLine = setupJson.prevLine;
-      nextLine = setupJson.nextLine;
-      point = point.point;
-    }
     if (point instanceof Vertex2D) return point;
     point = point || {x:0,y:0};
-    super(setupJson);
+    super();
     if (nextLine) nextLine.startVertex(this);
     if (prevLine) prevLine.endVertex(this);
     Object.getSet(this, {point});
@@ -169,14 +167,20 @@ class Vertex2D extends Lookup {
       return true;
     };
     this.point = (newPoint) => {
-      if (newPoint && !Number.isNaN(Number.parseFloat(newPoint.x))) point.x = roundAccuracy(newPoint.x);
-      if (newPoint && !Number.isNaN(Number.parseFloat(newPoint.y))) point.y = roundAccuracy(newPoint.y);
+      if (newPoint) this.x(newPoint.x);
+      if (newPoint) this.y(newPoint.y);
       return point;
     }
 
     this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
-    this.x = () => this.point().x;
-    this.y = () => this.point().y;
+    this.x = (val) => {
+      if ((typeof val) === 'number') point.x = roundAccuracy(val);
+      return point.x;
+    }
+    this.y = (val) => {
+      if ((typeof val) === 'number') this.point().y = roundAccuracy(val);
+      return point.y;
+    }
     function assignVertex(forward) {
       return (point, lineConst) => {
         const vertexGetter = forward ? instance.tex : instance.prevVertex;
@@ -340,7 +344,18 @@ class Vertex2D extends Lookup {
       if (x !== undefined) copy.x += x;
       return new Vertex2D(copy);
     }
+
+    this.point(point);
   }
+}
+
+Vertex2D.fromJson = (json) => {
+  prevLine = json.prevLine && Lookup.get(json.prevLine);
+  nextLine = json.nextLine && Lookup.get(json.nextLine);
+  point = json.point;
+  const vertex = new Vertex2D(point, nextLine, prevLine);
+  vertex.id(json.id);
+  return vertex;
 }
 
 Vertex2D.center = (...verticies) => {
@@ -413,11 +428,6 @@ LineMeasurment2D.furtherLine = (inner, outer, point, closer) =>
       (closer ? outer : inner) :
       (closer ? inner : outer);
 
-const vAccuracy = 1000
-function roundAccuracy(value) {
-  return Math.round(value * vAccuracy) / vAccuracy;
-}
-
 const approximate = {
   eq: (val1, val2) => roundAccuracy(val1) === roundAccuracy(val2),
   neq: (val1, val2) => roundAccuracy(val1) !== roundAccuracy(val2),
@@ -429,7 +439,7 @@ const approximate = {
 
 class Line2D  extends Lookup {
   constructor(startVertex, endVertex) {
-    super(startVertex);
+    super();
     startVertex = new Vertex2D(startVertex);
     endVertex = new Vertex2D(endVertex);
     const instance = this;
@@ -611,7 +621,7 @@ class Line2D  extends Lookup {
                         this.startVertex().y() : this.endVertex().y();
     this.angle = (value) => {
       if (value) this.radians(value);
-      return degrees(this.radians());
+      return toDegrees(this.radians());
     }
     this.radians = () => {
       const deltaX = this.endVertex().x() - this.startVertex().x();
@@ -661,15 +671,15 @@ function getVertex(point, wall1, wall2) {
 
 const moveCount = 0;
 class SnapLocation2D extends Lookup {
-  constructor(object, location, vertex, targetVertex, color, pairedWith) {
+  constructor(parent, location, vertex, targetVertex, color, pairedWith) {
     super();
-    Object.getSet(this, {location, vertex, targetVertex, color}, "objectId", "pairedWithId");
+    Object.getSet(this, {location, vertex, targetVertex, color}, "parentId", "pairedWithId");
     const circle = new Circle2D(5, vertex);
     pairedWith = pairedWith || null;
     this.circle = () => circle;
-    this.eval = () => this.object()[location]();
-    this.object = () => object;
-    this.objectId = () => object.id();
+    this.eval = () => this.parent()[location]();
+    this.parent = () => parent;
+    this.parentId = () => parent.id();
     this.pairedWithId = () => pairedWith && pairedWith.id();
     this.pairedWith = () => pairedWith;
     this.disconnect = () => {
@@ -681,10 +691,6 @@ class SnapLocation2D extends Lookup {
     this.pairWith = (otherSnapLoc) => {
       const alreadyPaired = otherSnapLoc === pairedWith;
       if (!alreadyPaired) {
-        object.snapLocations().forEach((snapLoc) => {
-          if (snapLoc !== otherSnapLoc && object === snapLoc.object())
-          snapLoc.disconnect();
-        });
         pairedWith = otherSnapLoc;
         otherSnapLoc.pairWith(this);
       }
@@ -692,13 +698,13 @@ class SnapLocation2D extends Lookup {
 
     this.forEachObject = (func, objMap) => {
       objMap = objMap || {};
-      objMap[this.object().id()] = this.object();
-      const locs = this.object().snapLocations.inactive();
+      objMap[this.parent().id()] = this.parent();
+      const locs = this.parent().snapLocations.paired();
       for (let index = 0; index < locs.length; index += 1) {
         const loc = locs[index];
         const connSnap = loc.pairedWith();
         if (connSnap) {
-          const connObj = connSnap.object();
+          const connObj = connSnap.parent();
           if (connObj && objMap[connObj.id()] === undefined) {
             objMap[connObj.id()] = connObj;
             connSnap.forEachObject(undefined, objMap);
@@ -728,21 +734,36 @@ class SnapLocation2D extends Lookup {
       moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
       if (lastMove === moveId) return;
       vertexLocation = new Vertex2D(vertexLocation);
-      const object = this.object();
-      const thisNewCenterLoc = this.object()[location]({center: vertexLocation});
-      object.move({center: thisNewCenterLoc});
+      const parent = this.parent();
+      const thisNewCenterLoc = this.parent()[location]({center: vertexLocation});
+      parent.object().move({center: thisNewCenterLoc});
       lastMove = moveId;
-      const inactiveLocs = object.snapLocations.inactive();
-      for (let index = 0; index < inactiveLocs.length; index += 1) {
-        const loc = inactiveLocs[index];
+      const pairedLocs = parent.snapLocations.paired();
+      for (let index = 0; index < pairedLocs.length; index += 1) {
+        const loc = pairedLocs[index];
         const paired = loc.pairedWith();
-        if (paired !== null) {
-          const tarVertexLoc = this.object()[loc.location()]().vertex();
-          paired.move(tarVertexLoc, moveId);
-        }
+        const tarVertexLoc = this.parent()[loc.location()]().vertex();
+        paired.move(tarVertexLoc, moveId);
       }
     }
     this.notPaired = () => pairedWith === null;
+
+    this.instString = () => `${parent.id()}:${location}`;
+    this.toString = () => `${this.instString()}=>${pairedWith && pairedWith.instString()}`;
+    this.toJson = () => {
+      const pw = pairedWith;
+      if (pw === undefined) return;
+      const json = [{
+        location, objectId: parent.id()
+      }, {
+        location: pw.location(), objectId: pw.parent().id()
+      }];
+      const thisStr = this.toString();
+      const pairStr = pw.toString();
+      const uniqueId = thisStr < pairStr ? thisStr : pairStr;
+      json.UNIQUE_ID = uniqueId;
+      return json;
+    }
   }
 }
 
@@ -766,6 +787,74 @@ class Snap2D extends Lookup {
     let end = new Vertex2D();
 
     this.layoutId = () => layout.id();
+    this.radians = object.radians;
+    this.angle = object.angle;
+    this.x = object.x;
+    this.y = object.y;
+    this.height = object.height;
+    this.width = object.width;
+
+    const backLeft = new SnapLocation2D(this, "backLeft",  new Vertex2D(null),  'backRight', 'red');
+    const backRight = new SnapLocation2D(this, "backRight",  new Vertex2D(null),  'backLeft', 'purple');
+    const frontRight = new SnapLocation2D(this, "frontRight",  new Vertex2D(null),  'frontLeft', 'black');
+    const frontLeft = new SnapLocation2D(this, "frontLeft",  new Vertex2D(null),  'frontRight', 'green');
+
+    const backCenter = new SnapLocation2D(this, "backCenter",  new Vertex2D(null),  'backCenter', 'teal');
+    const leftCenter = new SnapLocation2D(this, "leftCenter",  new Vertex2D(null),  'rightCenter', 'pink');
+    const rightCenter = new SnapLocation2D(this, "rightCenter",  new Vertex2D(null),  'leftCenter', 'yellow');
+
+    const snapLocations = [backCenter,leftCenter,rightCenter,backLeft,backRight,frontLeft,frontRight];
+    function getSnapLocations(paired) {
+      if (paired === undefined) return snapLocations;
+      const locs = [];
+      for (let index = 0; index < snapLocations.length; index += 1) {
+        const loc = snapLocations[index];
+        if (paired) {
+          if (loc.pairedWith() !== null) locs.push(loc);
+        } else if (loc.pairedWith() === null) locs.push(loc);
+      }
+      return locs;
+    }
+
+    this.snapLocations = getSnapLocations;
+    this.snapLocations.notPaired = () => getSnapLocations(false);
+    this.snapLocations.paired = () => getSnapLocations(true);
+    this.snapLocations.rotate = backCenter.rotate;
+    function resetVertices() {
+      for (let index = 0; index < snapLocations.length; index += 1) {
+        const snapLoc = snapLocations[index];
+        instance[snapLoc.location()]();
+      }
+    }
+
+    function centerMethod(snapLoc, widthMultiplier, heightMultiplier, position) {
+      const vertex = snapLoc.vertex();
+      // if (position === undefined && vertex.point() !== null) return vertex;
+      const center = object.center();
+      const rads = object.radians();
+      const offsetX = object.width() * widthMultiplier * Math.cos(rads) -
+                        object.height() * heightMultiplier * Math.sin(rads);
+      const offsetY = object.height() * heightMultiplier * Math.cos(rads) +
+                        object.width() * widthMultiplier * Math.sin(rads);
+
+      if (position !== undefined) {
+        const posCenter = new Vertex2D(position.center);
+        return new Vertex2D({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+      }
+      const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
+      vertex.point(backLeftLocation);
+      return snapLoc;
+    }
+
+    this.frontCenter = (position) => centerMethod(frontCenter, 0, -.5, position);
+    this.backCenter = (position) => centerMethod(backCenter, 0, .5, position);
+    this.leftCenter = (position) => centerMethod(leftCenter, .5, 0, position);
+    this.rightCenter = (position) => centerMethod(rightCenter, -.5, 0, position);
+
+    this.backLeft = (position) => centerMethod(backLeft, .5, .5, position);
+    this.backRight = (position) => centerMethod(backRight, -.5, .5, position);
+    this.frontLeft = (position) =>  centerMethod(frontLeft, .5, -.5, position);
+    this.frontRight = (position) => centerMethod(frontRight, -.5, -.5, position);
 
     function calculateMaxAndMin(closestVertex, furthestVertex, wall, position, axis) {
       const maxAttr = `max${axis.toUpperCase()}`;
@@ -801,10 +890,10 @@ class Snap2D extends Lookup {
         const theta = wall.radians();
         let position = {center, theta};
 
-        const backCenter = object.backCenter({center, theta});
-        const backLeftCenter = object.backLeft({center: wall.startVertex(), theta});
+        const backCenter = instance.backCenter({center, theta});
+        const backLeftCenter = instance.backLeft({center: wall.startVertex(), theta});
         if (backCenter.distance(backLeftCenter) < object.maxDem() / 2) return object.move({center: backLeftCenter, theta});
-        const backRightCenter = object.backRight({center: wall.endVertex(), theta})
+        const backRightCenter = instance.backRight({center: wall.endVertex(), theta})
         if (backCenter.distance(backRightCenter) < object.maxDem() / 2) return object.move({center: backRightCenter,theta});
 
         return {center: backCenter, theta};
@@ -814,8 +903,8 @@ class Snap2D extends Lookup {
     function findObjectSnapLocation (center) {
       let snapObj;
       SnapLocation2D.active().forEach((snapLoc) => {
-        const targetSnapLoc = object[snapLoc.targetVertex()]();
-        if (snapLoc.isConnected(instance.object()) ||
+        const targetSnapLoc = instance[snapLoc.targetVertex()]();
+        if (snapLoc.isConnected(instance) ||
             snapLoc.pairedWith() !== null || targetSnapLoc.pairedWith() !== null) return;
         const vertDist = snapLoc.vertex().distance(center);
         const vertCloser = (snapObj === undefined && vertDist < tolerance) ||
@@ -824,16 +913,17 @@ class Snap2D extends Lookup {
       });
       if (snapObj) {
         const snapLoc = snapObj.snapLoc;
-        let theta = snapLoc.object().radians();
+        let theta = snapLoc.parent().radians();
         const center = snapLoc.vertex();
         const funcName = snapLoc.targetVertex();
         if (funcName === 'backCenter') theta = (theta + Math.PI) % (2 * Math.PI);
         lastPotentalPair = [snapLoc, snapObj.targetSnapLoc];
-        return {snapLoc, center: object[funcName]({center, theta}), theta};
+        return {snapLoc, center: instance[funcName]({center, theta}), theta};
       }
     }
 
     let lastPotentalPair;
+    this.setLastPotentialPair = (lpp) => lastPotentalPair = lpp;
     function checkPotentialPair() {
       if (!lastPotentalPair) return;
       const snap1 = lastPotentalPair[0];
@@ -851,24 +941,25 @@ class Snap2D extends Lookup {
     };
     this.move = (center) => {
       checkPotentialPair();
-      const inactiveSnapLocs = this.object().snapLocations.inactive();
-      if (inactiveSnapLocs.length > 0) {
+      const pairedSnapLocs = this.snapLocations.paired();
+      resetVertices();
+      if (pairedSnapLocs.length > 0) {
         const snapInfo = findObjectSnapLocation(center);
         if (snapInfo) {
-          const obj = snapInfo.snapLoc.object();
+          const obj = snapInfo.snapLoc.parent();
           if (snapInfo.theta !== undefined) {
             const theta = roundAccuracy(((snapInfo.theta + 2 * Math.PI) - this.object().radians()) % (2*Math.PI));
             snapInfo.theta = undefined;
-            this.object().snapLocations.rotate(theta);
+            this.snapLocations.rotate(theta);
           }
           const snapLoc = snapInfo.snapLoc;
           const targetVertex = snapLoc.targetVertex();
-          const targetSnapLoc = this.object()[targetVertex]();
+          const targetSnapLoc = this[targetVertex]();
           lastPotentalPair = [targetSnapLoc, snapLoc];
-          const vertexCenter = snapLoc.object()[snapLoc.location()]().vertex();
+          const vertexCenter = snapLoc.parent()[snapLoc.location()]().vertex();
           return targetSnapLoc.move(vertexCenter);
         }
-        const snapLoc = inactiveSnapLocs[0];
+        const snapLoc = pairedSnapLocs[0];
         return snapLoc.move(center);
       }
       const centerWithin = layout.within(center);
@@ -897,9 +988,10 @@ Snap2D.fromJson = (json) => {
 class OnWall extends Lookup {
   constructor(wall, fromPreviousWall, fromFloor, height, width) {
     super();
-    Object.getSet(this, {width, height, fromFloor, fromPreviousWall});
+    Object.getSet(this, {width, height, fromFloor, fromPreviousWall}, 'wallId');
     let start = new Vertex2D();
     let end = new Vertex2D();
+    this.wallId = () => wall.id();
     this.endpoints2D = () => {
       const wallStartPoint = wall.startVertex();
       const dist = this.fromPreviousWall();
@@ -941,6 +1033,13 @@ class OnWall extends Lookup {
   }
 }
 OnWall.sort = (ow1, ow2) => ow1.fromPreviousWall() - ow2.fromPreviousWall();
+OnWall.fromJson = (json) => {
+  const cxtr = Lookup.decode(json.id).constructor;
+  const wall = Lookup.get(json.wallId);
+  const instance = new cxtr(wall, json.fromPreviousWall, json.fromFloor, json.height, json.width);
+  instance.id(json.id);
+  return instance;
+}
 
 class Door2D extends OnWall {
   constructor() {
@@ -951,11 +1050,17 @@ class Door2D extends OnWall {
     this.fromFloor(this.fromFloor() || 0);
     let hinge = 0;
     Object.getSet(this, 'hinge');
-    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}`;
+    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}:${hinge}`;
     this.remove = () => this.wall().removeDoor(this);
     this.hinge = (val) => val === undefined ? hinge :
       hinge = ((typeof val) === 'number' ? val : hinge + 1) % 5;
   }
+}
+
+Door2D.fromJson = (json) => {
+  const inst = OnWall.fromJson(json);
+  inst.hinge(json.hinge);
+  return inst;
 }
 
 class Window2D extends OnWall {
@@ -971,10 +1076,10 @@ class Window2D extends OnWall {
 }
 
 class Wall2D extends Line2D {
-  constructor(startVertex, endVertex, height) {
+  constructor(startVertex, endVertex, height, windows, doors) {
     super(startVertex, endVertex);
-    const windows = [];
-    const doors = [];
+    windows = windows || [];
+    doors = doors || [];
     const wall = this;
 
     height = height || 243.84;
@@ -1009,66 +1114,28 @@ class Wall2D extends Line2D {
     this.removeWindow = (window) => windows.splice(windows.indexOf(window), 1);
   }
 }
+Wall2D.fromJson = (json) => {
+  const doors = Object.fromJson(json.doors);
+  const windows = Object.fromJson(json.windows);
+  const height = json.height;
+  const inst = new Wall2D(undefined, undefined, height, windows, doors);
+  inst.id(json.id);
+  return inst;
+}
 
 class Square2D extends Lookup {
   constructor(center, height, width, radians) {
     super();
     center = new Vertex2D(center);
-    width = width === undefined ? 60 : width;
-    height = height === undefined ? 30 : height;
+    width = width === undefined ? 121.92 : width;
+    height = height === undefined ? 60.96 : height;
     radians = radians === undefined ? 0 : radians;
     const instance = this;
-    Object.getSet(this, {center, height, width, radians},
-          "backLeft", "backRight", "frontRight", "frontLeft",
-          "backCenter", "leftCenter", "rightCenter");
+    Object.getSet(this, {center, height, width, radians});
     const startPoint = new Vertex2D(null);
 
-    const backLeft = new SnapLocation2D(this, "backLeft",  new Vertex2D(null),  'backRight', 'red');
-    const backRight = new SnapLocation2D(this, "backRight",  new Vertex2D(null),  'backLeft', 'purple');
-    const frontRight = new SnapLocation2D(this, "frontRight",  new Vertex2D(null),  'frontLeft', 'black');
-    const frontLeft = new SnapLocation2D(this, "frontLeft",  new Vertex2D(null),  'frontRight', 'green');
-
-    const backCenter = new SnapLocation2D(this, "backCenter",  new Vertex2D(null),  'backCenter', 'teal');
-    const leftCenter = new SnapLocation2D(this, "leftCenter",  new Vertex2D(null),  'rightCenter', 'pink');
-    const rightCenter = new SnapLocation2D(this, "rightCenter",  new Vertex2D(null),  'leftCenter', 'yellow');
-
-    const snapLocations = [backCenter,leftCenter,rightCenter,backLeft,backRight,frontLeft,frontRight];
-    function getSnapLocations(which) {
-      const isActive = which === 'Active';
-      const isInactive = which === 'Inactive';
-      const backNotPaired = backCenter.notPaired();
-      const leftNotPaired = leftCenter.notPaired() && frontLeft.notPaired() && backLeft.notPaired();
-      const rightNotPaired = rightCenter.notPaired() && frontRight.notPaired() && backRight.notPaired();
-      let active = [];
-      let inactive = [];
-
-      if (isActive && backNotPaired) active.push(backCenter);
-      else if (isInactive && !backNotPaired) inactive.push(backCenter);;
-      if (leftNotPaired && isActive)
-        active = active.concat([leftCenter, frontLeft, backLeft]);
-      else if (isInactive && !leftNotPaired)
-        inactive = inactive.concat([leftCenter, frontLeft, backLeft]);
-      if (isActive && rightNotPaired)
-        active = active.concat([rightCenter, frontRight, backRight]);
-      else if (isInactive && !rightNotPaired)
-        inactive = inactive.concat([rightCenter, frontRight, backRight]);
-
-      return isActive ? active : (isInactive ? inactive : active.concat(inactive));
-    }
-
-    this.snapLocations = getSnapLocations;
-    this.snapLocations.active = () => getSnapLocations('Active');
-    this.snapLocations.inactive = () => getSnapLocations('Inactive');
-    this.snapLocations.rotate = backCenter.rotate;
-    function resetVertices() {
-      for (let index = 0; index < snapLocations.length; index += 1) {
-        const snapLoc = snapLocations[index];
-        instance[snapLoc.location()]();
-      }
-    }
-
     this.radians = (newValue) => {
-      if (newValue && !Number.isNaN(Number.parseFloat(newValue))) radians = roundAccuracy(newValue);
+      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) radians = roundAccuracy(newValue);
       return radians;
     };
     this.startPoint = () => {
@@ -1076,41 +1143,14 @@ class Square2D extends Lookup {
       return startPoint;
     }
     this.angle = (value) => {
-      if (value) this.radians(value);
-      return degrees(this.radians());
+      if (value !== undefined) this.radians(toRadians(value));
+      return toDegrees(this.radians());
     }
 
+    this.x = (val) => this.center().x(val);
+    this.y = (val) => this.center().y(val);
     this.minDem = () => this.width() > this.height() ? this.width() : this.height();
     this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-
-    function centerMethod(snapLoc, widthMultiplier, heightMultiplier, position) {
-      const vertex = snapLoc.vertex();
-      // if (position === undefined && vertex.point() !== null) return vertex;
-      const center = instance.center();
-      const rads = instance.radians();
-      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
-                        instance.height() * heightMultiplier * Math.sin(rads);
-      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
-                        instance.width() * widthMultiplier * Math.sin(rads);
-
-      if (position !== undefined) {
-        const posCenter = new Vertex2D(position.center);
-        return new Vertex2D({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
-      }
-      const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
-      vertex.point(backLeftLocation);
-      return snapLoc;
-    }
-
-    this.frontCenter = (position) => centerMethod(frontCenter, 0, -.5, position);
-    this.backCenter = (position) => centerMethod(backCenter, 0, .5, position);
-    this.leftCenter = (position) => centerMethod(leftCenter, .5, 0, position);
-    this.rightCenter = (position) => centerMethod(rightCenter, -.5, 0, position);
-
-    this.backLeft = (position) => centerMethod(backLeft, .5, .5, position);
-    this.backRight = (position) => centerMethod(backRight, -.5, .5, position);
-    this.frontLeft = (position) =>  centerMethod(frontLeft, .5, -.5, position);
-    this.frontRight = (position) => centerMethod(frontRight, -.5, -.5, position);
 
     this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
     this.move = (position, theta) => {
@@ -1121,12 +1161,12 @@ class Square2D extends Lookup {
       if (position.minY !== undefined) center.y = position.minY + this.offsetY();
       this.radians(position.theta);
       this.center().point(center);
-      resetVertices();
+      // resetVertices();
       return true;
     };
     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-    resetVertices();
+    // resetVertices();
   }
 }
 
@@ -1176,6 +1216,17 @@ class Layout2D extends Lookup {
       json.verticies.sort(sortById);
       json.walls.sort(sortById);
       json.objects.sort(sortById);
+      const snapMap = {};
+      objects.forEach((obj) => {
+        const snapLocs = obj.topview().snapLocations.paired();
+        snapLocs.forEach((snapLoc) => {
+          const snapLocJson = snapLoc.toJson();
+          if (snapMap[snapLocJson.UNIQUE_ID] === undefined) {
+            snapMap[snapLocJson.UNIQUE_ID] = snapLocJson;
+          }
+        });
+      });
+      json.snapLocations = Object.values(snapMap);
       return json;
     }
 
@@ -1251,21 +1302,21 @@ class Layout2D extends Lookup {
 }
 
 Layout2D.fromJson = (json) => {
-  const wallMap = {};
-  Object.fromJson(json.walls).forEach((wall) => wallMap[wall.id()] = wall);
+  Object.fromJson(json.walls);
   const verticies = [];
   for (let index = 0; index < json.verticies.length; index += 1) {
     const jsonVert = json.verticies[index];
-    // TODO: modify objectIds to contain constructor id
-    if ((typeof jsonVert.prevLine) === 'string') {
-      jsonVert.prevLine = wallMap[jsonVert.prevLine];
-      jsonVert.nextLine = wallMap[jsonVert.nextLine];
-    }
-    const vertex = new Vertex2D(jsonVert);
+    const vertex = Vertex2D.fromJson(jsonVert);
     verticies.push(vertex);
   }
   const objects = Object.fromJson(json.objects);
   const layout = new Layout2D(verticies[0], verticies[verticies.length - 1], objects);
+  json.snapLocations.forEach((snapLocJson) => {
+    const snapLoc1 = Lookup.get(snapLocJson[0].objectId)[snapLocJson[0].location]();
+    const snapLoc2 = Lookup.get(snapLocJson[1].objectId)[snapLocJson[1].location]();
+    snapLoc2.pairWith(snapLoc1);
+  });
+
   layout.id(json.id);
   return layout;
 }

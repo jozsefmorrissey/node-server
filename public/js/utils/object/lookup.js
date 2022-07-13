@@ -26,7 +26,8 @@ class Lookup {
       if (modificationWindowOpen) {
         if (initialValue) {
           Lookup.byId[cxtr.name][id] = undefined;
-          id = initialValue;
+          const decoded = Lookup.decode(initialValue);
+          id = decoded ? decoded.id : initialValue;
           cxtrAndId = `${cxtrHash}:${id}`
           Lookup.byId[cxtr.name][id] = this;
           modificationWindowOpen = false;
@@ -46,7 +47,7 @@ class Lookup {
 
     function addSelectListFuncToConstructor() {
       if(cxtr.selectList === Lookup.selectList) {
-        cxtr.get = (id) => Lookup.newGet(id, cxtr);
+        cxtr.get = (id) => Lookup.get(id, cxtr);
         Lookup.byId[cxtr.name] = {};
         cxtr.selectList = () => Lookup.selectList(cxtr.name);
       }
@@ -62,18 +63,21 @@ class Lookup {
 }
 
 Lookup.ID_ATTRIBUTE = 'ID_ATTRIBUTE';
-Lookup.byId = {};
+Lookup.byId = {Lookup};
 Lookup.constructorMap = {};
-Lookup.get = (cxtrName, id) => {
+
+Lookup.get = (id, cxtr) => {
+  cxtr = cxtr || Lookup;
   const decoded = Lookup.decode(id);
-  id = decoded ? decoded.id : id;
-  return Lookup.byId[cxtrName][id];
-}
-Lookup.newGet = (id, constructor) => {
-  const decoded = Lookup.decode(id);
-  id = decoded ? decoded.id : id;
-  constructor = constructor || decoded.constructor;
-  return Lookup.byId[constructor.name][id];
+  let decodedId, decodedCxtr;
+  if (decoded) {
+    decodedId = decoded.id;
+    decodedCxtr = decoded.constructor;
+  }
+  id = decodedId || id;
+  cxtr = cxtr || decodedCxtr;
+  const instance = Lookup.byId[cxtr.name][id] || Lookup.byId[decodedCxtr.name][id];
+  return instance;
 }
 Lookup.selectList = (className) => {
   return Object.keys(Lookup.byId[className]);

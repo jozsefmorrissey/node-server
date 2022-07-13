@@ -28,6 +28,11 @@ class StateHistory {
       setTimeout(() => getNewState(thisReqTime), minTimeInterval);
     }
 
+    this.forceState = () => {
+      lastStateReqTime = 0;
+      getNewState(0);
+    }
+
     this.canGoBack = () => index > 1;
     this.canGoForward = () => index < states.length;
 
