@@ -3,15 +3,15 @@
   <input class='cabinet-id-input' prop-update='{{$index}}.name'
         index='{{$index}}' display-id='{{displayId}}' value='{{cabinet.name()}}'>
   Size:
-  <div class='cabinet-dem-cnt'>
+  <div class='cabinet-dem-cnt' cabinet-id='{{cabinet.uniqueId()}}'>
     <label>W:</label>
-    <input class='cabinet-input dem' prop-update='{{$index}}.width'
+    <input class='cabinet-input dem' prop-update='{{$index}}.width' name='width'
         display-id='{{displayId}}' value='{{displayValue(cabinet.width())}}'>
     <label>H:</label>
-    <input class='cabinet-input dem' prop-update='{{$index}}.length'
+    <input class='cabinet-input dem' prop-update='{{$index}}.length' name='length'
         display-id='{{displayId}}' value='{{displayValue(cabinet.length())}}'>
     <label>D:</label>
-    <input class='cabinet-input dem' prop-update='{{$index}}.thickness'
+    <input class='cabinet-input dem' prop-update='{{$index}}.thickness' name='thickness'
         display-id='{{displayId}}' value='{{displayValue(cabinet.thickness())}}'>
   </div>
 </div>

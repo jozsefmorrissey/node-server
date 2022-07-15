@@ -1,4 +1,13 @@
 
+exports['55165911'] = (get, $t) => 
+		`<span class='display-manager-item'> <input class='display-manager-input` +
+		$t.clean(get("$index") === 0 ? " active" : "") +
+		`' type='button' display-id='` +
+		$t.clean(get("item").id) +
+		`' value='` +
+		$t.clean(get("item").name) +
+		`'/> </span>`
+
 exports['101748844'] = (get, $t) => 
 		`<span class='pad ` +
 		$t.clean(get("class")) +
@@ -273,40 +282,6 @@ exports['input/decision/decision'] = (get, $t) =>
 		$t.clean( new $t('101748844').render(get("inputArray"), 'input', get)) +
 		` </span> </span> `
 
-exports['input/input'] = (get, $t) => 
-		`<div class='input-cnt'` +
-		$t.clean(get("hidden")() ? ' hidden' : '') +
-		`> <label>` +
-		$t.clean(get("label")()) +
-		`</label> <input class='` +
-		$t.clean(get("class")()) +
-		`' list='input-list-` +
-		$t.clean(get("id")()) +
-		`' id='` +
-		$t.clean(get("id")()) +
-		`' placeholder='` +
-		$t.clean(get("placeholder")()) +
-		`' type='` +
-		$t.clean(get("type")()) +
-		`' name='` +
-		$t.clean(get("name")()) +
-		`' ` +
-		$t.clean(get("attrString")()) +
-		`> <datalist id="input-list-` +
-		$t.clean(get("id")()) +
-		`"> ` +
-		$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-		` </datalist> <div class='error' id='` +
-		$t.clean(get("errorMsgId")()) +
-		`'>` +
-		$t.clean(get("errorMsg")()) +
-		`</div> </div> `
-
-exports['-994603408'] = (get, $t) => 
-		`<option value="` +
-		$t.clean(get("item")) +
-		`" ></option>`
-
 exports['input/decision/decisionTree'] = (get, $t) => 
 		`<div class='` +
 		$t.clean(get("DecisionInputTree").class) +
@@ -346,6 +321,40 @@ exports['input/measurement'] = (get, $t) =>
 		`'>` +
 		$t.clean(get("errorMsg")()) +
 		`</div> </div> `
+
+exports['input/input'] = (get, $t) => 
+		`<div class='input-cnt'` +
+		$t.clean(get("hidden")() ? ' hidden' : '') +
+		`> <label>` +
+		$t.clean(get("label")()) +
+		`</label> <input class='` +
+		$t.clean(get("class")()) +
+		`' list='input-list-` +
+		$t.clean(get("id")()) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`' placeholder='` +
+		$t.clean(get("placeholder")()) +
+		`' type='` +
+		$t.clean(get("type")()) +
+		`' name='` +
+		$t.clean(get("name")()) +
+		`' ` +
+		$t.clean(get("attrString")()) +
+		`> <datalist id="input-list-` +
+		$t.clean(get("id")()) +
+		`"> ` +
+		$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+		` </datalist> <div class='error' id='` +
+		$t.clean(get("errorMsgId")()) +
+		`'>` +
+		$t.clean(get("errorMsg")()) +
+		`</div> </div> `
+
+exports['-994603408'] = (get, $t) => 
+		`<option value="` +
+		$t.clean(get("item")) +
+		`" ></option>`
 
 exports['input/select'] = (get, $t) => 
 		`<div class='input-cnt'` +
@@ -411,27 +420,6 @@ exports['-1881817601'] = (get, $t) =>
 		$t.clean(get("property").value() === true ? 'checked' : '') +
 		`> </span>`
 
-exports['2d/pop-up/snap-2d'] = (get, $t) => 
-		`<div type-2d='` +
-		$t.clean(get("target").constructor.name) +
-		`' id='` +
-		$t.clean(get("target").id()) +
-		`' x='` +
-		$t.clean(get("lastImagePoint").x) +
-		`' y='` +
-		$t.clean(get("lastImagePoint").y) +
-		`'> <label>Depth</label> <input class='value-2d' type="text" key="height" value="` +
-		$t.clean(get("display")(get("target").object().height())) +
-		`"> <label>Width</label> <input class='value-2d' type="text" key="width" value="` +
-		$t.clean(get("display")(get("target").object().width())) +
-		`"> <label>Angle</label> <input class='value-2d' type="text" convert='false' key="angle" value="` +
-		$t.clean(get("target").object().angle()) +
-		`"> <label>X</label> <input class='value-2d' type="text" key="x" value="` +
-		$t.clean(get("display")(get("target").object().x())) +
-		`"> <label>Y</label> <input class='value-2d' type="text" key="y" value="` +
-		$t.clean(get("display")(get("target").object().y())) +
-		`"> </div> `
-
 exports['2d/pop-up/vertex-2d'] = (get, $t) => 
 		`<div type-2d='` +
 		$t.clean(get("target").constructor.name) +
@@ -447,6 +435,27 @@ exports['2d/pop-up/vertex-2d'] = (get, $t) =>
 		$t.clean(get("display")(get("target").y())) +
 		`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> <tr> </table> </div> `
 
+exports['2d/pop-up/snap-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <label>Depth</label> <input class='value-2d' type="text" key="height" value="` +
+		$t.clean(get("display")(get("target").object().height())) +
+		`"> <br> <label>Width</label> <input class='value-2d' type="text" key="width" value="` +
+		$t.clean(get("display")(get("target").object().width())) +
+		`"> <br> <label>Angle</label> <input class='value-2d' type="text" convert='false' key="angle" value="` +
+		$t.clean(get("target").object().angle()) +
+		`"> <br> <label>X</label> <input class='value-2d' type="text" key="x" value="` +
+		$t.clean(get("display")(get("target").object().x())) +
+		`"> <br> <label>Y</label> <input class='value-2d' type="text" key="y" value="` +
+		$t.clean(get("display")(get("target").object().y())) +
+		`"> </div> `
+
 exports['2d/pop-up/wall-2d'] = (get, $t) => 
 		`<div type-2d='` +
 		$t.clean(get("target").constructor.name) +
@@ -457,23 +466,6 @@ exports['2d/pop-up/wall-2d'] = (get, $t) =>
 		`' y='` +
 		$t.clean(get("lastImagePoint").y) +
 		`'> <button class='add-door-btn-2d'>Add Door</button> <button class='add-window-btn-2d'>Add Window</button> <button class='add-vertex-btn-2d'>Add Vertex</button> <button class='add-object-btn-2d'>Add Object</button> <button class='remove-btn-2d'>Remove</button> </div> `
-
-exports['2d/pop-up/window-2d'] = (get, $t) => 
-		`<div type-2d='` +
-		$t.clean(get("target").constructor.name) +
-		`' id='` +
-		$t.clean(get("target").id()) +
-		`' x='` +
-		$t.clean(get("lastImagePoint").x) +
-		`' y='` +
-		$t.clean(get("lastImagePoint").y) +
-		`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
-		$t.clean(get("display")(get("target").height())) +
-		`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
-		$t.clean(get("display")(get("target").width())) +
-		`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
-		$t.clean(get("display")(get("target").fromFloor())) +
-		`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
 
 exports['cabinet/body'] = (get, $t) => 
 		`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
@@ -509,21 +501,23 @@ exports['cabinet/head'] = (get, $t) =>
 		$t.clean(get("displayId")) +
 		`' value='` +
 		$t.clean(get("cabinet").name()) +
-		`'> Size: <div class='cabinet-dem-cnt'> <label>W:</label> <input class='cabinet-input dem' prop-update='` +
+		`'> Size: <div class='cabinet-dem-cnt' cabinet-id='` +
+		$t.clean(get("cabinet").uniqueId()) +
+		`'> <label>W:</label> <input class='cabinet-input dem' prop-update='` +
 		$t.clean(get("$index")) +
-		`.width' display-id='` +
+		`.width' name='width' display-id='` +
 		$t.clean(get("displayId")) +
 		`' value='` +
 		$t.clean(get("displayValue")(get("cabinet").width())) +
 		`'> <label>H:</label> <input class='cabinet-input dem' prop-update='` +
 		$t.clean(get("$index")) +
-		`.length' display-id='` +
+		`.length' name='length' display-id='` +
 		$t.clean(get("displayId")) +
 		`' value='` +
 		$t.clean(get("displayValue")(get("cabinet").length())) +
 		`'> <label>D:</label> <input class='cabinet-input dem' prop-update='` +
 		$t.clean(get("$index")) +
-		`.thickness' display-id='` +
+		`.thickness' name='thickness' display-id='` +
 		$t.clean(get("displayId")) +
 		`' value='` +
 		$t.clean(get("displayValue")(get("cabinet").thickness())) +
@@ -533,7 +527,7 @@ exports['display-manager'] = (get, $t) =>
 		`<div class='display-manager' id='` +
 		$t.clean(get("id")) +
 		`'> ` +
-		$t.clean( new $t('-1519826343').render(get("list"), 'item', get)) +
+		$t.clean( new $t('55165911').render(get("list"), 'item', get)) +
 		` </div> `
 
 exports['-1519826343'] = (get, $t) => 
@@ -544,6 +538,23 @@ exports['-1519826343'] = (get, $t) =>
 		`' value='` +
 		$t.clean(get("item").name) +
 		`'/> </div>`
+
+exports['2d/pop-up/window-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
+		$t.clean(get("display")(get("target").height())) +
+		`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
+		$t.clean(get("display")(get("target").width())) +
+		`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
+		$t.clean(get("display")(get("target").fromFloor())) +
+		`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
 
 exports['divide/body'] = (get, $t) => 
 		`<h2>` +
@@ -606,6 +617,9 @@ exports['group/body'] = (get, $t) =>
 		$t.clean(get("group").id()) +
 		`'></div> </div> `
 
+exports['login/confirmation-message'] = (get, $t) => 
+		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+
 exports['group/head'] = (get, $t) => 
 		`<div group-display-id='` +
 		$t.clean(get("groupDisplay").id()) +
@@ -618,9 +632,6 @@ exports['group/head'] = (get, $t) =>
 		`' value='` +
 		$t.clean(get("group").name()) +
 		`' prop-update='name'> </div> <div class='group-display-body' hidden></div> </div> <br> `
-
-exports['login/confirmation-message'] = (get, $t) => 
-		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
 
 exports['login/create-account'] = (get, $t) => 
 		`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -661,6 +672,17 @@ exports['managers/cost/body'] = (get, $t) =>
 		$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
 		` </div> `
 
+exports['managers/cost/head'] = (get, $t) => 
+		`<div class='expand-header' node-id='` +
+		$t.clean(get("node").nodeId()) +
+		`'> <b> ` +
+		$t.clean(get("node").payload().name()) +
+		` - ` +
+		$t.clean(get("node").payload().type()) +
+		` </b> <ul> ` +
+		$t.clean( new $t('1417643187').render(get("node").payload().requiredProperties, 'property', get)) +
+		` </ul> </div> `
+
 exports['managers/cost/main'] = (get, $t) => 
 		`<div> <div class="center"> <h2 id='cost-manager-header'> Cost Tree Manager </h2> </div> ` +
 		$t.clean( new $t('-496477131').render(get("root")().children(), 'child', get)) +
@@ -671,6 +693,20 @@ exports['-496477131'] = (get, $t) =>
 		$t.clean(get("headHtml")(get("child"))) +
 		` ` +
 		$t.clean(get("bodyHtml")(get("child"))) +
+		` </div>`
+
+exports['managers/cost/property-select'] = (get, $t) => 
+		`<div> ` +
+		$t.clean( new $t('-1569738859').render(get("groups"), 'group, properties', get)) +
+		` </div> `
+
+exports['-1569738859'] = (get, $t) => 
+		`<div > <b>` +
+		$t.clean(get("group")) +
+		` (` +
+		$t.clean(get("abbriviation")(get("group"))) +
+		`)</b> ` +
+		$t.clean( new $t('1036581066').render(get("properties"), 'property', get)) +
 		` </div>`
 
 exports['managers/cost/types/labor'] = (get, $t) => 
@@ -695,31 +731,6 @@ exports['managers/cost/types/labor'] = (get, $t) =>
 		` = ` +
 		$t.clean(get("cost").unitCost('value')) +
 		`</label> </div> </div> `
-
-exports['managers/cost/head'] = (get, $t) => 
-		`<div class='expand-header' node-id='` +
-		$t.clean(get("node").nodeId()) +
-		`'> <b> ` +
-		$t.clean(get("node").payload().name()) +
-		` - ` +
-		$t.clean(get("node").payload().type()) +
-		` </b> <ul> ` +
-		$t.clean( new $t('1417643187').render(get("node").payload().requiredProperties, 'property', get)) +
-		` </ul> </div> `
-
-exports['managers/cost/property-select'] = (get, $t) => 
-		`<div> ` +
-		$t.clean( new $t('-1569738859').render(get("groups"), 'group, properties', get)) +
-		` </div> `
-
-exports['-1569738859'] = (get, $t) => 
-		`<div > <b>` +
-		$t.clean(get("group")) +
-		` (` +
-		$t.clean(get("abbriviation")(get("group"))) +
-		`)</b> ` +
-		$t.clean( new $t('1036581066').render(get("properties"), 'property', get)) +
-		` </div>`
 
 exports['managers/cost/types/material'] = (get, $t) => 
 		`<div cost-id='` +

@@ -164,37 +164,29 @@ a {
   padding-left: 15pt;
 }
 
-#three-d-model {
+#model-cnt {
   background-position: -1px -1px;
   position: fixed;
   right: 0;
   bottom: 0;
   z-index: 10;
-}
-
-#three-d-model.small {
   background-color: #ffffff94;
-  width: 25vw;
-  height: 25vh;
-}
-
-#three-d-model.large {
-  width: 100vw;
+  width: 100vh;
   height: 100vh;
 }
 
-#add-cabinet-cnt.large {
-  width: 75vw;
-  height: 100vh;
+#display-menu > .display-manager {
+  width: fit-content;
+  display: inline-flex;
+  position: absolute;
 }
 
-canvas {
-  width: 100%;
-  height: 100%;
-}
-
-.three-d-model-cnt {
+.model-cnt {
   position: relative;
+}
+
+#app {
+  position: absolute;
 }
 
 #three-d-model > #max-min-btn {

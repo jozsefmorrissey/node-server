@@ -11,11 +11,13 @@ class Group extends Lookup {
     Object.getSet(this, initialVals);
     this.propertyConfig = new PropertyConfig();
     this.cabinets = [];
+    this.room = () => room;
     this.toJson = () => {
       const json = {cabinets: [], _TYPE: 'Group'};
       this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
       json.name = this.name();
       json.id = this.id();
+      json.roomId = this.room.id();
       json.propertyConfig = this.propertyConfig.toJson();
       return json;
     }
@@ -26,13 +28,14 @@ Group.count = 0;
 new Group();
 
 Group.fromJson = (json) => {
-    const group = new Group(json.room, json.name, json.id);
-    group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
-    json.cabinets.forEach((cabinetJson) => {
-      cabinetJson.propertyConfig = group.propertyConfig;
-      group.cabinets.push(Object.fromJson(cabinetJson))
-    });
-    return group;
+  const room = Lookup.get(json.roomId);
+  const group = new Group(room, json.name, json.id);
+  group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
+  json.cabinets.forEach((cabinetJson) => {
+    cabinetJson.propertyConfig = group.propertyConfig;
+    group.cabinets.push(Object.fromJson(cabinetJson))
+  });
+  return group;
 }
 
 module.exports = Group;

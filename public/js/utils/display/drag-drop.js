@@ -58,6 +58,12 @@ class DragDropResize {
     }
     this.hide = this.close;
 
+    this.updateZindex = () => {
+      const highestZ = CatchAll.findHigestZindex();
+      popupCnt.style.zIndex = highestZ + 2;
+      backdrop.backdrop.style.zIndex = highestZ - 1;
+    }
+
     this.show = () => {
       if (instance.hidden()) {
         backdrop.show();
@@ -70,8 +76,9 @@ class DragDropResize {
 
         setCss(css);
         if (!Resizer.isLocked(popupCnt)) Resizer.show(popupCnt);
-        // updateHistZindex();
       }
+      this.updateZindex();
+      // updateHistZindex();
       return instance;
     };
 

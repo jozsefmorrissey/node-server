@@ -11,6 +11,7 @@ const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const Inputs = require('../input/inputs.js');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
+const TwoDLayout = require('../two-d/layout');
 
 class RoomDisplay extends Lookup {
   constructor(parentSelector, order) {
@@ -20,6 +21,7 @@ class RoomDisplay extends Lookup {
         RoomDisplay.headTemplate.render({room, $index});
 
     const getBody = (room, $index) => {
+      TwoDLayout.set(room.layout());
       return RoomDisplay.bodyTemplate.render({$index, room, groupHtml});
     }
 

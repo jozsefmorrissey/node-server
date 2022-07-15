@@ -29,7 +29,7 @@ function parseSeperator(string, seperator, isRegex) {
 
 
 const du = {create: {}, class: {}, cookie: {}, param: {}, style: {},
-      scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}};
+      scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}, position: {}};
 du.find = (selector) => document.querySelector(selector);
 du.find.all = (selector) => document.querySelectorAll(selector);
 
@@ -51,6 +51,24 @@ function keepInBounds (elem, minimum) {
   checkDir('right');
   checkDir('top');
   checkDir('bottom');
+}
+
+du.move.inFront = function (elem, timeout) {
+  setTimeout(function () {
+    var exclude = du.find.downAll('*', elem);
+    exclude.push(elem);
+    var elems = document.querySelectorAll('*');
+    var highest = Number.MIN_SAFE_INTEGER;
+    for (var i = 0; i < elems.length; i++) {
+      const e = elems[i];
+      if (exclude.indexOf(e) === -1) {
+        var zindex = Number.parseInt(
+          document.defaultView.getComputedStyle(elems[i], null).getPropertyValue("z-index"), 10);
+        }
+        if (zindex > highest) highest = zindex;
+      }
+      if (highest < Number.MAX_SAFE_INTEGER) elem.style.zIndex = highest + 1;
+  },  timeout || 0);
 }
 
 du.move.relitive = function (elem, target, direction, props) {

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <style>
-      #two-d-model { width: 500px;  height:500px;}
+      /* #two-d-model { width: 500px;  height:500px;} */
       div {
         font-size:x-small;
       }
@@ -32,11 +32,14 @@
     </div>
     <div id='property-select-cnt'></div>
 
-    <canvas id="two-d-model" width=500 height=500></canvas>
-    <div class='tree-d-model-cnt'>
+
+    <div id='model-cnt'>
       <div id="model-controller" hidden></div>
-      <div id="three-d-model" class="viewer small">
-        <button id='max-min-btn'>+</button>
+      <div id='display-menu'></div>
+      <div id='model-display-cnt'>
+        <canvas id="two-d-model"></canvas>
+        <div id="three-d-model" class="viewer small">
+        </div>
       </div>
     </div>
     <div class="" id='controls-2d'></div>

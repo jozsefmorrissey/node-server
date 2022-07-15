@@ -4,6 +4,7 @@
 const Cabinet = require('./assembly/assemblies/cabinet.js');
 const Group = require('./group.js');
 const Lookup = require('../../../../public/js/utils/object/lookup');
+const Layout2D = require('../objects/layout');
 
 
 class Room extends Lookup {
@@ -11,6 +12,7 @@ class Room extends Lookup {
     super(id || String.random(32));
     const initialVals = {
       name: name || `Room ${Room.count++}`,
+      layout: new Layout2D()
     }
     Object.getSet(this, initialVals, 'groups');
     this.groups = [new Group(this)];

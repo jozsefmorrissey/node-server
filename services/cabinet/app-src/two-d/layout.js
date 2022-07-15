@@ -6,15 +6,19 @@ const PopUp = require('../../../../public/js/utils/display/pop-up');
 const Properties = require('../config/properties');
 const Measurement = require('../../../../public/js/utils/measurement.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
-const StateHistory = require('../../../../public/js/utils/services/state-history');
+// TODO: Rename
 const TwoDLayout = {};
 
 const eval = new StringMathEvaluator({Math}).eval;
 const popUp = new PopUp({resize: false});
 
-let layout = new Layout2D();
-const currLayoutJson = () => layout.toJson();
-const layoutHistory = new StateHistory(currLayoutJson);
+let layout;
+TwoDLayout.set = (l) => {
+  if (l instanceof Layout2D) {
+    layout = l;
+    panZ.once();
+  }
+}
 
 let hoverMap;
 
@@ -65,7 +69,7 @@ du.on.match('enter', '.value-2d', (elem) => {
   const props = getPopUpAttrs(elem);
   props.obj[props.key](props.value);
   elem.value = props.display;
-  layoutHistory.forceState();
+  layout.history().forceState();
   panZ.once();
 });
 
@@ -81,6 +85,12 @@ function remove() {
   popUp.close();
 }
 
+function placeInFront(target) {
+  du.move.inFront(target);
+}
+
+du.on.match('click', '#model-cnt', placeInFront);
+du.on.match('click', '#app', placeInFront);
 du.on.match('click', '.remove-btn-2d', remove, popUp.container());
 
 du.on.match('click', '.add-door-btn-2d', (elem) => {
@@ -102,7 +112,8 @@ du.on.match('click', '.add-window-btn-2d', (elem) => {
 
 du.on.match('click', '.add-object-btn-2d', (elem) => {
   const props = getPopUpAttrs(elem);
-  layout.addObject(props.point);
+  const obj = layout.addObject(props.point);
+  obj.topview().onChange(console.log);
 });
 
 du.on.match('click', '.add-vertex-btn-2d', (elem) => {
@@ -123,16 +134,16 @@ function clearCache() {
 }
 
 function undo(target) {
-  const state = layoutHistory.back();
-  if (state) layout = Layout2D.fromJson(state);
+  const state = layout.history().back();
+  if (state) layout = Layout2D.fromJson(state, layout.history());
   clearCache();
   panZ.once();
   console.log('undo State:', state);
 }
 
 function redo () {
-  const state = layoutHistory.forward();
-  if (state) layout = Layout2D.fromJson(state);
+  const state = layout.history().forward();
+  if (state) layout = Layout2D.fromJson(state, layout.history());
   clearCache();
   panZ.once();
   console.log(JSON.stringify(layout.toJson(), null, 2));
@@ -213,7 +224,7 @@ function onMouseup(event, stdEvent) {
   if (stdEvent.button == 0) {
     if (lastDown > new Date().getTime() - selectTimeBuffer) {
       if (hovering) {
-        openPopup(event, stdEvent);
+        setTimeout(() => openPopup(event, stdEvent), 5);
       } else {
         measurmentModify = !measurmentModify;
       }
@@ -265,7 +276,8 @@ function hover(event) {
 }
 
 function onMove(event) {
-  layoutHistory.newState();
+  if (layout === undefined) return;
+  layout.history().newState();
   const canDrag = !popupOpen && lastDown < new Date().getTime() - selectTimeBuffer * 1.5;
   return (canDrag && drag(event)) || hover(event);
 }
@@ -607,7 +619,7 @@ function drawObject(ctx, object) {
 }
 
 function draw(canvas) {
-  // if (!dragging && !popupOpen && initial < 0) return;
+  if (layout === undefined) return;
   Layout2D.SnapLocation2D.clear();
   resetHoverMap();
   const ctx = canvas.getContext('2d');
@@ -629,9 +641,19 @@ function draw(canvas) {
   layout.objects().forEach((obj) => drawObject(ctx, obj.topview()));
 }
 
+function updateCanvasSize(canvas) {
+  canvas.style.width = '95vh';
+  const dem = Math.floor(canvas.getBoundingClientRect().width);
+  canvas.width = dem;
+  canvas.height = dem;
+  canvas.style.width = `${dem}px`;
+  canvas.style.width = `${dem}px`;
+}
+
 let panZ;
 function init() {
   const canvas = document.getElementById('two-d-model');
+  updateCanvasSize(canvas);
   panZ = panZoom(canvas, draw);
   panZ.onMove(onMove);
   panZ.onMousedown(onMousedown);

@@ -12,7 +12,7 @@ class Lookup {
     id = id || String.random();
     const cxtr = this.constructor;
     const cxtrHash = cxtr.name.hash();
-    let cxtrAndId = `${cxtrHash}:${id}`
+    let cxtrAndId = `${cxtrHash}_${id}`
     if (singleton && cxtr.get(id)) return cxtr.get(id);
 
     let constructedAt = new Date().getTime();
@@ -28,7 +28,7 @@ class Lookup {
           Lookup.byId[cxtr.name][id] = undefined;
           const decoded = Lookup.decode(initialValue);
           id = decoded ? decoded.id : initialValue;
-          cxtrAndId = `${cxtrHash}:${id}`
+          cxtrAndId = `${cxtrHash}_${id}`
           Lookup.byId[cxtr.name][id] = this;
           modificationWindowOpen = false;
         } else if (constructedAt < new Date().getTime() - 200) {
@@ -84,7 +84,7 @@ Lookup.selectList = (className) => {
 }
 Lookup.decode = (id) => {
   if ((typeof id) !== 'string') return;
-  const split = id.split(':');
+  const split = id.split('_');
   if (split.length === 1) return;
   return {
     constructor: Lookup.constructorMap[split[0]],

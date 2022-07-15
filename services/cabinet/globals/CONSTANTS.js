@@ -11,5 +11,6 @@ const PULL_TYPE = {
   DOOR: 'Door'
 };
 
+exports.VIEWER = {height: 600, width: 600}
 exports.APP_ID = APP_ID
 exports.PULL_TYPE = PULL_TYPE

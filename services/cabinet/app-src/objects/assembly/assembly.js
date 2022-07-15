@@ -4,17 +4,18 @@
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Position = require('../../position.js');
 const getDefaultSize = require('../../utils.js').getDefaultSize;
+const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
 
-class Assembly {
+class Assembly extends Lookup {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
+    super(undefined, 'uniqueId');
     let instance = this;
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
     const initialVals = {
       part: true,
       included: true,
-      uniqueId: String.random(32),
       centerStr, demensionStr, rotationStr, partCode, partName,
       propertyId: undefined,
     }

@@ -212,10 +212,11 @@ class ThreeDModel {
   }
 }
 const cube = new CSG.cube({radius: [3,5,1]});
+const consts = require('../../globals/CONSTANTS');
 ThreeDModel.init = () => {
   const p = pull(5,2);
   // const db = drawerBox(10, 15, 22);
-  ThreeDModel.viewer = new Viewer(p, 300, 150, 50);
+  ThreeDModel.viewer = new Viewer(p, consts.VIEWER.height, consts.VIEWER.width, 50);
   addViewer(ThreeDModel.viewer, 'three-d-model');
 }
 
@@ -263,27 +264,27 @@ function groupParts(cabinet) {
   return grouping;
 }
 
-const modelContTemplate = new $t('model-controller')
-const stateReg = /( |^)(small|large)( |$)/;
-du.on.match('click', '#max-min-btn', (target) => {
-  const className = target.parentElement.className;
-  const controller = du.id('model-controller');
-  const state = className.match(stateReg);
-  const clean = className.replace(new RegExp(stateReg, 'g'), '').trim();
-  if (state[2] === 'small') {
-    target.parentElement.className = `${clean} large`;
-    const cabinet = orderDisplay.active().cabinet();
-    if (cabinet) {
-      const grouping = groupParts(cabinet);
-      grouping.tdm = ThreeDModel.get(cabinet);
-      controller.innerHTML = modelContTemplate.render(grouping);
-    }
-    controller.hidden = false;
-  } else {
-    target.parentElement.className = `${clean} small`;
-    controller.hidden = true;
-  }
-});
+// const modelContTemplate = new $t('model-controller')
+// const stateReg = /( |^)(small|large)( |$)/;
+// du.on.match('click', '#max-min-btn', (target) => {
+//   const className = target.parentElement.className;
+//   const controller = du.id('model-controller');
+//   const state = className.match(stateReg);
+//   const clean = className.replace(new RegExp(stateReg, 'g'), '').trim();
+//   if (state[2] === 'small') {
+//     target.parentElement.className = `${clean} large`;
+//     const cabinet = orderDisplay.active().cabinet();
+//     if (cabinet) {
+//       const grouping = groupParts(cabinet);
+//       grouping.tdm = ThreeDModel.get(cabinet);
+//       controller.innerHTML = modelContTemplate.render(grouping);
+//     }
+//     controller.hidden = false;
+//   } else {
+//     target.parentElement.className = `${clean} small`;
+//     controller.hidden = true;
+//   }
+// });
 
 
 du.on.match('click', '.model-label', (target) => {

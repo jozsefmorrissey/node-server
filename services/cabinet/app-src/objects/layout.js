@@ -1,7 +1,7 @@
 
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const Measurement = require('../../../../public/js/utils/measurement.js');
-const History = require('../services/history');
+const StateHistory = require('../../../../public/js/utils/services/state-history');
 
 const pushVertex = (x, y, arr) => {
   if (Number.isNaN(x) || Number.isNaN(y)) return;
@@ -780,8 +780,9 @@ SnapLocation2D.clear = () => activeLocations = [];
 
 class Snap2D extends Lookup {
   constructor(layout, object, tolerance) {
-    super(object.id());
+    super(object ? object.id() : undefined);
     Object.getSet(this, {object, tolerance}, 'layoutId');
+    if (layout === undefined) return;
     const instance = this;
     let start = new Vertex2D();
     let end = new Vertex2D();
@@ -793,6 +794,7 @@ class Snap2D extends Lookup {
     this.y = object.y;
     this.height = object.height;
     this.width = object.width;
+    this.onChange = object.onChange;
 
     const backLeft = new SnapLocation2D(this, "backLeft",  new Vertex2D(null),  'backRight', 'red');
     const backRight = new SnapLocation2D(this, "backRight",  new Vertex2D(null),  'backLeft', 'purple');
@@ -1134,8 +1136,38 @@ class Square2D extends Lookup {
     Object.getSet(this, {center, height, width, radians});
     const startPoint = new Vertex2D(null);
 
+    const getterHeight = this.height;
+    this.height = (v) => {
+      notify(getterHeight(), v);
+      return getterHeight(v);
+    }
+    const getterWidth = this.width;
+    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
+    
+    const changeFuncs = [];
+    this.onChange = (func) => {
+      if ((typeof func) === 'function') {
+        changeFuncs.push(func);
+      }
+    }
+
+    let lastNotificationId = 0;
+    function notify(currentValue, newValue) {
+      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
+      if (newValue !== currentValue) {
+        const id = ++lastNotificationId;
+        setTimeout(() => {
+          if (id === lastNotificationId)
+            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
+        }, 100);
+      }
+    }
+
     this.radians = (newValue) => {
-      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) radians = roundAccuracy(newValue);
+      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+        notify(radians, newValue);
+        radians = roundAccuracy(newValue);
+      }
       return radians;
     };
     this.startPoint = () => {
@@ -1147,8 +1179,8 @@ class Square2D extends Lookup {
       return toDegrees(this.radians());
     }
 
-    this.x = (val) => this.center().x(val);
-    this.y = (val) => this.center().y(val);
+    this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
+    this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
     this.minDem = () => this.width() > this.height() ? this.width() : this.height();
     this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
 
@@ -1160,13 +1192,13 @@ class Square2D extends Lookup {
       if (position.minX !== undefined) center.x = position.minX + this.offsetX();
       if (position.minY !== undefined) center.y = position.minY + this.offsetY();
       this.radians(position.theta);
+      this.x(center.x);
+      this.y(center.y);
       this.center().point(center);
-      // resetVertices();
       return true;
     };
     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-    // resetVertices();
   }
 }
 
@@ -1188,10 +1220,11 @@ class Object2d extends Lookup {
 
 const ww = 500;
 class Layout2D extends Lookup {
-  constructor(startVertex, endVertex, objects) {
+  constructor(startVertex, endVertex, objects, history) {
     super();
-    const initialized = startVertex !== undefined;
     objects = objects || [];
+    Object.getSet(this, {objects});
+    const initialized = startVertex !== undefined;
 
     function sortByAttr(attr) {
       function sort(obj1, obj2) {
@@ -1205,9 +1238,10 @@ class Layout2D extends Lookup {
 
     const sortById = sortByAttr('id');
     this.toJson = () => {
+      const objs = this.objects();
       const json = {verticies: [], walls: []};
       json.id = this.id();
-      json.objects = Array.toJson(objects);
+      json.objects = Array.toJson(objs);
       startVertex.forEach((vert) => {
         json.verticies.push(vert.toJson());
         const nextLine = vert.nextLine();
@@ -1217,7 +1251,7 @@ class Layout2D extends Lookup {
       json.walls.sort(sortById);
       json.objects.sort(sortById);
       const snapMap = {};
-      objects.forEach((obj) => {
+      objs.forEach((obj) => {
         const snapLocs = obj.topview().snapLocations.paired();
         snapLocs.forEach((snapLoc) => {
           const snapLocJson = snapLoc.toJson();
@@ -1227,6 +1261,7 @@ class Layout2D extends Lookup {
         });
       });
       json.snapLocations = Object.values(snapMap);
+      json._TYPE = this.constructor.name;
       return json;
     }
 
@@ -1242,8 +1277,12 @@ class Layout2D extends Lookup {
       });
     }
 
-    this.addObject = (center) => objects.push(new Object2d(center, this));
-    this.objects = () => objects;
+    this.addObject = () => {
+      const center = Vertex2D.center.apply(null, this.verticies())
+      const obj = new Object2d(center, this);
+      this.objects().push(obj);
+      return obj;
+    }
 
     this.remove = (id) => {
       id = id instanceof Lookup ? id.id() : id;
@@ -1297,11 +1336,13 @@ class Layout2D extends Lookup {
 
       return onLine || intersections.length % 2 === 1;
     }
-    // if (!initialized)Layout2D.fromJson(this.toJson());
+
+    history = history instanceof StateHistory ? history : new StateHistory(this.toJson);
+    this.history = () => history;
   }
 }
 
-Layout2D.fromJson = (json) => {
+Layout2D.fromJson = (json, history) => {
   Object.fromJson(json.walls);
   const verticies = [];
   for (let index = 0; index < json.verticies.length; index += 1) {
@@ -1309,8 +1350,9 @@ Layout2D.fromJson = (json) => {
     const vertex = Vertex2D.fromJson(jsonVert);
     verticies.push(vertex);
   }
-  const objects = Object.fromJson(json.objects);
-  const layout = new Layout2D(verticies[0], verticies[verticies.length - 1], objects);
+  const layout = new Layout2D(verticies[0], verticies[verticies.length - 1], undefined, history);
+  layout.id(json.id);
+  layout.objects(Object.fromJson(json.objects));
   json.snapLocations.forEach((snapLocJson) => {
     const snapLoc1 = Lookup.get(snapLocJson[0].objectId)[snapLocJson[0].location]();
     const snapLoc2 = Lookup.get(snapLocJson[1].objectId)[snapLocJson[1].location]();
@@ -1320,6 +1362,11 @@ Layout2D.fromJson = (json) => {
   layout.id(json.id);
   return layout;
 }
+
+new Layout2D();
+new Object2d();
+new Snap2D();
+new Square2D();
 
 Layout2D.Vertex2D = Vertex2D;
 Layout2D.Wall2D = Wall2D;

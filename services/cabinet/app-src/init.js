@@ -24,7 +24,9 @@ const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
 
 // Run Tests
-require('../test/run');
+if (EPNTS.getEnv() === 'local') {
+  require('../test/run');
+}
 
 function updateDivisions (target) {
   const name = target.getAttribute('name');
@@ -63,6 +65,8 @@ function init(body){
   setTimeout(ThreeDModel.init, 1000);
   setTimeout(TwoDLayout.init, 1000);
   const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
+  const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
+
 }
 
 Request.get(EPNTS.config.get(), init, console.error);

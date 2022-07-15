@@ -49,8 +49,31 @@ class CabinetDisplay {
       if(validType) return true;
       return {type: 'You must select a defined type.'};
     }
+
+    function updateCabValue(cabinet, attr) {
+      const inputCnt = du.find(`[cabinet-id='${cabinet.uniqueId()}']`);
+      const input = du.find.down(`[name='${attr}']`, inputCnt);
+      input.value = displayValue(cabinet[attr]());
+    }
+
+    function linkLayout(cabinet, obj2d) {
+      console.log('linking!')
+      const square = obj2d.topview().object();
+      if (square.width() !== cabinet.width()) {
+        cabinet.width(square.width());
+        updateCabValue(cabinet, 'width');
+      }
+      if (square.height() !== cabinet.thickness()) {
+        cabinet.thickness(square.height());
+        updateCabValue(cabinet, 'thickness');
+      }
+    }
+
     const getObject = (values) => {
-      return CabinetConfig.get(group, values.name, values.type, values.propertyId, values.id);
+      const cabinet = CabinetConfig.get(group, values.name, values.type, values.propertyId, values.id);
+      const obj2d = group.room().layout().addObject();
+      obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
+      return cabinet;
     };
     this.active = () => expandList.active();
     const expListProps = {
