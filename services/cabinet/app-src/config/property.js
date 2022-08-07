@@ -18,9 +18,9 @@ class Property extends Lookup {
 
     this.value = (val, notMetric) => {
       if (val !== undefined && value !== val) {
-        const measurment = new Measurement(val, notMetric);
-        const measurmentVal = measurment.value();
-        value = Number.isNaN(measurmentVal) ? val : measurment;
+        const measurement = new Measurement(val, notMetric);
+        const measurementVal = measurement.value();
+        value = Number.isNaN(measurementVal) ? val : measurement;
       }
       return value instanceof Measurement ? value.value() : value;
     }

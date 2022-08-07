@@ -67,3 +67,7 @@ new FalseFrontSection();
 
 const SpaceSection = require('./assemblies/section/space/space.js');
 new SpaceSection();
+
+Assembly.components = {
+  Door, DrawerBox, DrawerFront, Frame, Panel
+};

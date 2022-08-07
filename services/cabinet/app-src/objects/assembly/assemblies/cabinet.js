@@ -6,6 +6,7 @@ const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
 const Joint = require('../../joint/joint.js');
 const DivideSection = require('./section/space/sections/divide-section.js');
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
+const PropertyConfig = require('../../../config/property/config.js');
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -64,6 +65,7 @@ class Cabinet extends Assembly {
         const position = {};
         const start = {};
         // TODO: hard coded orientation logic.... make dynamic???...
+        const jointOffset = 0.9525;
         if (this.propertyConfig.isRevealOverlay() || this.propertyConfig.isInset()) {
           position.right = borders.right.position().centerAdjust('x', '-z');
           position.left = borders.left.position().centerAdjust('x', '+z');
@@ -76,10 +78,10 @@ class Cabinet extends Assembly {
           position.bottom = borders.bottom.position().centerAdjust('y', '+z');
         }
 
-        position.right += resolveOuterReveal(borders.right, 'rrv');
-        position.left -= resolveOuterReveal(borders.left, 'lrv')
-        position.top += resolveOuterReveal(borders.top, 'trv');
-        position.bottom -= resolveOuterReveal(borders.bottom, 'brv');
+        // position.right += resolveOuterReveal(borders.right, 'rrv');
+        // position.left -= resolveOuterReveal(borders.left, 'lrv')
+        // position.top += resolveOuterReveal(borders.top, 'trv');
+        // position.bottom -= resolveOuterReveal(borders.bottom, 'brv');
 
         position.front = 0;
         position.back = pb.position().center('z') + pb.position().limits('-z');
@@ -90,39 +92,35 @@ class Cabinet extends Assembly {
   }
 }
 
-Cabinet.build = (type, group) => {
+Cabinet.build = (type, group, config) => {
   const cabinet = new Cabinet('c', type);
   cabinet.propertyConfig = group && group.propertyConfig ?
                             group.propertyConfig : new PropertyConfig();
-  const config = cabinetBuildConfig[type];
+  if (group) group.propertyConfig = cabinet.propertyConfig;
+  config ||= cabinetBuildConfig[type];
+  config.values.forEach((value) => cabinet.value(value.key, value.eqn));
 
-  const valueIds = Object.keys(config.values);
-  valueIds.forEach((valueId) => cabinet.value(valueId, config.values[valueId]));
-
-  const subNames = Object.keys(config.subAssemblies);
-  subNames.forEach((name) => {
-    subAssemConfig = config.subAssemblies[name];
+  config.subassemblies.forEach((subAssemConfig) => {
     const type = subAssemConfig.type;
+    const name = subAssemConfig.name;
     const demStr = subAssemConfig.demensions.join(',');
     const centerStr = subAssemConfig.center.join(',');
-    const rotationStr = subAssemConfig.rotation;
+    const rotationStr = subAssemConfig.rotation.join(',');
     const subAssem = Assembly.new(type, subAssemConfig.code, name, centerStr, demStr, rotationStr);
     subAssem.partCode(subAssemConfig.code);
     cabinet.addSubAssembly(subAssem);
   });
 
-  const joinRelations = Object.keys(config.joints);
-  joinRelations.forEach((relation) => {
-    relationConfig = config.joints[relation];
+  config.joints.forEach((relationConfig) => {
     const type = relationConfig.type;
     const depth = relationConfig.depth;
-    const demensionToOffset = relationConfig.DemensionToOffset;
+    const demensionToOffset = relationConfig.demensionToOffset;
     const centerOffset = relationConfig.centerOffset;
-    const joint = Joint.new(type, relation, depth, demensionToOffset, centerOffset);
+    const joint = Joint.new(type, relationConfig);
     cabinet.addJoints(joint);
   });
 
-  config.bordersIdMap.forEach((idMap) => {
+  config.openings.forEach((idMap) => {
     const divideSection = new DivideSection(cabinet.borders(idMap), cabinet);
     cabinet.openings.push(divideSection);
     cabinet.addSubAssembly(divideSection);
@@ -137,7 +135,7 @@ Cabinet.fromJson = (assemblyJson) => {
   assembly.propertyConfig = assemblyJson.propertyConfig;
   assembly.uniqueId(assemblyJson.uniqueId);
   assembly.values = assemblyJson.values;
-  Object.values(assemblyJson.subAssemblies).forEach((json) => {
+  Object.values(assemblyJson.subassemblies).forEach((json) => {
     const clazz = Assembly.class(json._TYPE);
     json.parent = assembly;
     if (clazz !== DivideSection) {
@@ -152,6 +150,8 @@ Cabinet.fromJson = (assemblyJson) => {
   assembly.length(assemblyJson.length);
   assembly.width(assemblyJson.width);
   assembly.thickness(assemblyJson.thickness);
+  const joints = Object.fromJson(assemblyJson.joints);
+  assembly.addJoints.apply(assembly, joints);
   return assembly;
 }
 Cabinet.abbriviation = 'c';

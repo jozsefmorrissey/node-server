@@ -183,13 +183,14 @@ function Viewer(csg, width, height, depth) {
   };
 
   gl.ondraw();
+
   // gl.canvas.width = '100vw';
   // gl.canvas.height = '100vh';
 }
 
 var nextID = 0;
 function addViewer(viewer, id) {
-  du.id(id).appendChild(viewer.gl.canvas);
+  du.find(id).appendChild(viewer.gl.canvas);
 }
 
 

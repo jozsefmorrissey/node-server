@@ -4,20 +4,15 @@
 const Joint = require('../joint.js');
 
 class Dado extends Joint {
-  constructor(joinStr, defaultDepth, axis, centerOffset) {
-    super(joinStr);
-
-    this.maleOffset = (assembly) => {
-      return defaultDepth;
-    }
-
-    if (axis === undefined) return;
+  constructor(malePartCode, femalePartCode) {
+    super(malePartCode, femalePartCode);
 
     this.updatePosition = (position) => {
-      const direction = centerOffset[0] === '-' ? -1 : 1;
-      const centerAxis = centerOffset[1];
-      position.demension[axis] += defaultDepth;
-      position.center[centerAxis] += defaultDepth/2 * direction;
+      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
+      const centerAxis = this.centerAxis()[1].toLowerCase();
+      const offset = this.parentAssembly().eval(this.maleOffset());
+      position.demension[this.demensionAxis().toLowerCase()] += offset;
+      position.center[centerAxis] += offset/2 * direction;
     };
 
   }
@@ -25,7 +20,3 @@ class Dado extends Joint {
 
 Joint.register(Dado);
 module.exports = Dado
-
-
-
-

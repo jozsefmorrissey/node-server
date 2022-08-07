@@ -15,3 +15,10 @@
 
 ### watch.js
 Simple watch bundler that builds your html and js files on change.
+
+
+TODO's
+fix data save filename
+requireJS to properly formatJson files
+"Imperial (us)" does not add implicit multiplication stringMathEval
+hover help/error text

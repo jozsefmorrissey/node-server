@@ -13,14 +13,14 @@ const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
-const ThreeDModel = require('../three-d/three-d-model.js');
+const ThreeDMain = require('../displays/three-d-main.js');
 
 class GroupDisplay extends Lookup {
   constructor(group) {
     super();
     function onCabinetStyleChange(values) {
       group.propertyConfig.set(values.style, values.subStyle);
-      ThreeDModel.update();
+      ThreeDMain.update();
     }
     const dit = GroupDisplay.DecisionInputTree(onCabinetStyleChange, group.propertyConfig);
     function styleSelector() {

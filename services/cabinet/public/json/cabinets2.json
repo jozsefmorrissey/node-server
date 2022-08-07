@@ -1,0 +1,139 @@
+module.exports = {
+  "standard": {
+    "type": "standard",
+    "values": {
+      "brh": "tkb.w + pback.t + brr",
+      "innerWidth": "c.w - pwt34 * 2",
+      "innerWidthCenter": "innerWidth + pwt34"
+    },
+    "subassemblies": {
+      "Panel.ToeKickBacker": {
+        "type": "Panel",
+        "code": "tkb",
+        "center": ["c.w / 2", "w / 2", "tkd + (t / 2)"],
+        "demensions": ["tkh", "innerWidth", "tkbw"],
+        "rotation": "z"
+      },
+      "Panel.Right": {
+        "type": "Panel",
+        "code": "pr",
+        "center": ["c.w - (t / 2)", "l / 2", "(w / 2)"],
+        "demensions": ["c.t", "c.l", "pwt34"],
+        "rotation": "y"
+      },
+      "Panel.Left": {
+        "type": "Panel",
+        "code": "pl",
+        "center": ["(t / 2)", " l / 2", " (w/2)"],
+        "demensions": ["c.t", "c.l", "pwt34"],
+        "rotation": "y"
+      },
+      "Panel.Back": {
+        "type": "Panel",
+        "code": "pback",
+        "center": ["l / 2 + pl.t", " (w / 2) + tkb.w", " c.t - (t / 2)"],
+        "demensions": ["c.l - tkb.w", "innerWidth", "pwt34"],
+        "rotation": "z"
+      },
+      "Panel.Bottom": {
+        "type": "Panel",
+        "code": "pb",
+        "center": ["c.w / 2", "tkh + (t/2)", "w / 2"],
+        "demensions": ["c.t - pback.t", "innerWidth", "pwt34"],
+        "rotation": "yx"
+      },
+      "Panel.Top": {
+        "type": "Panel",
+        "code": "pt",
+        "center": ["c.w / 2", "c.h - pwt34/2", "(w / 2)"],
+        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
+        "rotation": "yx"
+      },
+      "Panel.Top2": {
+        "type": "Panel",
+        "code": "pt2",
+        "center": ["c.w / 2", "c.h - pwt34/2", "c.t - pback.t - (w / 2)"],
+        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
+        "rotation": "yx"
+      }
+    },
+    "joints": {
+      "pt->pl":
+        {
+          "type": "Dado",
+          "depth": 0.9525,
+          "demensionToOffset": "y",
+          "centerOffset": "-x"
+        },
+        "pt->pr": {
+          "type": "Dado",
+          "depth": 0.9525,
+          "demensionToOffset":"y",
+          "centerOffset": "+x"
+        },
+      "pt2->pl":
+        {
+          "type": "Dado",
+          "depth": 0.9525,
+          "demensionToOffset": "y",
+          "centerOffset": "-x"
+        },
+        "pt2->pr": {
+          "type": "Dado",
+          "depth": 0.9525,
+          "demensionToOffset":"y",
+          "centerOffset": "+x"
+        },
+      "pback->pl":
+        {
+          "type": "Dado",
+          "depth": 0.9525,
+          "demensionToOffset": "y",
+          "centerOffset": "-x"
+        },
+      "pback->pr": {
+        "type": "Dado",
+        "depth": 0.9525,
+        "demensionToOffset":"y",
+        "centerOffset": "+x"
+      },
+      "tkb->pl": {
+        "type": "Dado",
+        "depth": 0.9525,
+        "demensionToOffset":"y",
+        "centerOffset": "-x"
+      },
+      "tkb->pr": {
+        "type": "Dado",
+        "depth": 0.9525,
+        "demensionToOffset":"y",
+        "centerOffset": "+x"
+      },
+      "pb->pl": {
+        "type": "Dado",
+        "depth": 0.9525,
+        "demensionToOffset":"y",
+        "centerOffset": "-x"
+      },
+      "pb->pr": {
+        "type": "Dado",
+        "depth": 0.9525,
+        "demensionToOffset":"y",
+        "centerOffset": "+x"
+      }
+    },
+    "dividerJoint": {
+      "type": "Dado",
+      "depth": 0.9525,
+    },
+    "openings": [
+      {
+        "top": "pt",
+        "bottom": "pb",
+        "left": "pl",
+        "right": "pr",
+        "back": "pback"
+      }
+    ]
+  }
+}

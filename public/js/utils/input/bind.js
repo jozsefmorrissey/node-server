@@ -39,7 +39,7 @@ module.exports = function(selector, objOrFunc, props) {
           if ((typeof validation) === 'function' && !validation(newValue)) {
             console.error('badValue')
           } else if ((typeof objOrFunc) === 'function') {
-            objOrFunc(updatePath, elem.value);
+            objOrFunc(updatePath, elem.value, elem);
           } else {
             Object.pathValue(objOrFunc, updatePath, elem.value);
           }

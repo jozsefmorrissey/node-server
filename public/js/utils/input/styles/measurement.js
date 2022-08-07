@@ -8,14 +8,22 @@ const Measurement = require('../../measurement');
 
 class MeasurementInput extends Input {
   constructor(props) {
-    props.value = new Measurement(props.value, true);
+    let value = new Measurement(props.value, true);
+    props.value = () => value;
     super(props);
-    props.validation = (value) => !Number.isNaN(new Measurement(value).value());
+    props.validation = (val) =>
+        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
     props.errorMsg = 'Invalid Mathematical Expression';
-    const parentValue = this.value;
-    this.value = (val) => {
-      if (val !== undefined) return parentValue(new Measurement(val, true)).display();
-      return parentValue().display();
+    this.value = () => {
+      return value.display();
+    }
+    const parentSetVal = this.setValue;
+    this.setValue = (val) => {
+      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
+                        val : new Measurement(val, true)) : value;
+      const updated = newVal !== value;
+      value = newVal;
+      return updated;
     }
   }
 }

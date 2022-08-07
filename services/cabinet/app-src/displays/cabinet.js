@@ -3,7 +3,7 @@
 
 const Show = require('../show.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
-const ThreeDModel = require('../three-d/three-d-model.js');
+const ThreeDMain = require('../displays/three-d-main.js');
 const OpenSectionDisplay = require('./open-section.js');
 const CabinetConfig = require('../config/cabinet-configs.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
@@ -13,9 +13,14 @@ const Request = require('../../../../public/js/utils/request.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
 const $t = require('../../../../public/js/utils/$t.js');
+const { Object2d } = require('../objects/layout.js');//.Object2d;
 const Inputs = require('../input/inputs.js');
 
 
+function getHtmlElemCabinet (elem) {
+  const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
+  return Cabinet.get(cabinetId);
+}
 
 class CabinetDisplay {
   constructor(parentSelector, group) {
@@ -31,13 +36,13 @@ class CabinetDisplay {
       return new Measurement(val).display();
     }
     const getHeader = (cabinet, $index) =>
-        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue});
+        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
       if (propertySelectors[cabinet.uniqueId()] === undefined)
         propertySelectors[cabinet.uniqueId()] = Inputs('propertyIds', { value: cabinet.propertyId() });
       if (expandList.activeKey() === $index)
-        ThreeDModel.render(cabinet);
+        ThreeDMain.update(cabinet);
       const selectHtml = propertySelectors[cabinet.uniqueId()].html();
       const scope = {$index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
       return CabinetDisplay.bodyTemplate.render(scope);
@@ -49,6 +54,19 @@ class CabinetDisplay {
       if(validType) return true;
       return {type: 'You must select a defined type.'};
     }
+
+    function updateLayout(target) {
+      setTimeout(() => {
+        const attr = target.name === 'thickness' ? 'height' : 'width';
+        const cabinet = getHtmlElemCabinet(target);
+        const obj2d = Object2d.get(cabinet.uniqueId());
+        const value = cabinet[target.name]();
+        obj2d.topview()[attr](value);
+      });
+    }
+
+    du.on.match('change', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
+    du.on.match('blur', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
 
     function updateCabValue(cabinet, attr) {
       const inputCnt = du.find(`[cabinet-id='${cabinet.uniqueId()}']`);
@@ -71,7 +89,7 @@ class CabinetDisplay {
 
     const getObject = (values) => {
       const cabinet = CabinetConfig.get(group, values.name, values.type, values.propertyId, values.id);
-      const obj2d = group.room().layout().addObject();
+      const obj2d = group.room().layout().addObject(cabinet.uniqueId());
       obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
       return cabinet;
     };
@@ -97,7 +115,7 @@ class CabinetDisplay {
       const cabKey = cabinetKey(path);
       const decimal = new Measurement(value, true).decimal();
       cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : val);
-      ThreeDModel.render(cabKey.cabinet);
+      ThreeDMain.update(cabKey.cabinet);
     }
 
     const attrUpdate = (path, value) => {
@@ -119,7 +137,7 @@ class CabinetDisplay {
     }
 
     CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-    bind(`[display-id="${displayId}"].cabinet-input`, valueUpdate,
+    bind(`.cabinet-input`, valueUpdate,
                   {validation: Measurement.validation('(0,)')});
     bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
     du.on.match('click', '.save-cabinet-btn', save);

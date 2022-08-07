@@ -182,7 +182,7 @@ class StringMathEvaluator {
       expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
       expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
       expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
-      return expr = expr.replace(StringMathEvaluator.mixedNumberReg, '($1+$2)') || expr;;
+      return expr = expr.replace(StringMathEvaluator.multiMixedNumberReg, '($1+$2)') || expr;
     }
     function addUnexpressedMultiplicationSigns(expr) {
       expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
@@ -255,19 +255,51 @@ class StringMathEvaluator {
 
 StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
 
-StringMathEvaluator.mixedNumberReg = /([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
+const mixNumberRegStr = "([0-9]{1,})\\s{1,}(([0-9]{1,})\\/([0-9]{1,}))";
+StringMathEvaluator.mixedNumberReg = new RegExp(`^${mixNumberRegStr}$`);
+StringMathEvaluator.multiMixedNumberReg = new RegExp(mixNumberRegStr, 'g');///([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
 StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
 StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
 StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
 StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
 StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
-StringMathEvaluator.decimalReg = /^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(\.|)|(\.)[0-9]{1,})/;
+const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
+StringMathEvaluator.decimalReg = new RegExp(`^${decimalRegStr}`);///^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(\.|)|(\.)[0-9]{1,})/;
+StringMathEvaluator.multiDecimalReg = new RegExp(decimalRegStr, 'g');
 StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
 StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
 StringMathEvaluator.multi = (n1, n2) => n1 * n2;
 StringMathEvaluator.div = (n1, n2) => n1 / n2;
 StringMathEvaluator.add = (n1, n2) => n1 + n2;
 StringMathEvaluator.sub = (n1, n2) => n1 - n2;
+
+const npf = Number.parseFloat;
+StringMathEvaluator.convert = {eqn: {}};
+StringMathEvaluator.convert.metricToImperial = (value) => {
+  value = npf(value);
+  return value / 2.54;
+}
+
+StringMathEvaluator.resolveMixedNumber = (value) => {
+  const match = value.match(StringMathEvaluator.mixedNumberReg);
+  if (match) {
+    value = npf(match[1]) + (npf(match[3]) / npf(match[4]));
+  }
+  value = npf(value);
+  return value;
+}
+
+StringMathEvaluator.convert.imperialToMetric = (value) => {
+  value = npf(value);
+  return value * 2.54;
+}
+
+StringMathEvaluator.convert.eqn.metricToImperial = (str) =>
+  str.replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.metricToImperial);
+
+StringMathEvaluator.convert.eqn.imperialToMetric = (str) =>
+  str.replace(StringMathEvaluator.multiMixedNumberReg, StringMathEvaluator.resolveMixedNumber)
+  .replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.imperialToMetric);
 
 StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
 

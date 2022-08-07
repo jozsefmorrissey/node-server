@@ -1,12 +1,25 @@
-.error {
-  font-size: small;
-    font-weight: 700;
-    color: red;
+
+input, select {
+  height: 14pt;
+  margin: 1pt 2pt;
+}
+
+input[name='malePartCode'],
+input[name='femalePartCode'],
+input[name='partCode'],
+input[name='code'] {
+  width: 75pt;
 }
 
 canvas {
   border-style: groove;
   background-color: whitesmoke;
+}
+
+.three-view-cnt {
+  position: fixed;
+  top: 0;
+  right: 0;
 }
 
 .information-bar {
@@ -44,7 +57,7 @@ canvas {
   height: 6pt;
 }
 
-.display-manager-item > input {
+.display-manager-item > button {
   width: 100%;
   margin: 1pt;
   border-radius: 5pt;
@@ -53,11 +66,11 @@ canvas {
   border-width: 1pt;
 }
 
-.display-manager-item > input:hover {
+.display-manager-item > button:hover {
   border-width: 3pt;
 }
 
-.display-manager-item > input.active {
+.display-manager-item > button.active {
   background-color: blue;
   border-width: 1pt;
   color: white;
@@ -74,6 +87,13 @@ canvas {
 .save-order-btn {
   float: right;
   margin: 10pt;
+}
+
+.full-width {
+  width: 100%;
+}
+.full-height {
+  height: 100%;
 }
 
 .property-container {
@@ -107,6 +127,7 @@ canvas {
 
 #menu {
   position: fixed;
+  width: 120pt;
   right: 0;
   top: 45pt;
   border-color: ivory;
@@ -141,6 +162,10 @@ a {
   transform: translate(50%, -50%);
 }
 
+.model-label {
+  display: inline-flex;
+}
+
 .model-label.active {
   background-color: blue;
 }
@@ -154,10 +179,9 @@ a {
 }
 
 #model-controller {
-  position: absolute;
-  top: 0;
-  background-color: #ffffff94;
-  z-index: 20;
+  width: fit-content;
+  background-color: white;
+  padding: 20pt 5pt;
 }
 
 .indent {
@@ -169,7 +193,7 @@ a {
   position: fixed;
   right: 0;
   bottom: 0;
-  z-index: 10;
+  z-index: 20;
   background-color: #ffffff94;
   width: 100vh;
   height: 100vh;
@@ -181,12 +205,20 @@ a {
   position: absolute;
 }
 
-.model-cnt {
-  position: relative;
+#order-cnt {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  left: 0;
+  min-width: 600pt;
 }
 
 #app {
   position: absolute;
+}
+
+#three-d-model {
+  display: inline-flex;
 }
 
 #three-d-model > #max-min-btn {
@@ -195,6 +227,9 @@ a {
   right: 0;
 }
 
+#model-display-cnt {
+  float: right;
+}
 
 .hidden {
   display: none;
@@ -245,5 +280,16 @@ a {
 }
 
 .cost-tree {
+  margin: 2pt;
+}
+
+.error {
+  font-size: small;
+  font-weight: 700;
+  color: red;
+  background-color: pink;
+}
+
+.cabinet-template-input-cnt {
   margin: 2pt;
 }

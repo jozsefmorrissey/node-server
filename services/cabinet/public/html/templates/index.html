@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <style>
+      /* #two-d-model { width: 500px;  height:500px;} */
+      div {
+        font-size:x-small;
+      }
+    </style>
+    <script type="text/javascript" src='/cabinet/js/index.js'></script>
+    <link rel="stylesheet" href="/styles/expandable-list.css">
+    <link rel="stylesheet" href="/cabinet/styles/estimate.css">
+    <script src="/js/utility-filter.js" run-type='auto'></script>
+    <title>Estimate{{bolux}}gege</title>
+  </head>
+  <body>
+    <button id='menu-btn'>&#8801;</button>
+    <div id='menu' hidden></div>
+    <div id='login'><div id='login-cnt' class='center-all'></div></div>
+    <div id='display-ctn'>
+      <div id='app' name='Orders' {{id !== 'home' ? "link='/cabinet/home'" : ''}} hidden>
+        <div id='order-cnt'></div>
+        <div id='model-cnt'>
+          <div id='display-menu'></div>
+          <div id='model-display-cnt'>
+            <canvas id="two-d-model"></canvas>
+            <div id="three-d-model" class="viewer small">
+              <span id="model-controller"></span>
+              <span id="three-d-model-display"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div name='Property Manager' {{id !== 'home' ? "link='/cabinet/property'" : ''}}
+        id='property-manager-cnt' hidden>
+        <div class='center'>
+          <button id='property-manager-save-all'>Save All</button>
+        </div>
+        <div id='property-manager'></div>
+      </div>
+      <div id='cost-manager' "link='/cabinet/cost'" name='Cost Manager'
+          {{id !== 'cost' ? "link='/cabinet/cost'" : ''}} hidden></div>
+      <div id='template-manager' name='Template Manager'
+          {{id !== 'template' ? "link='/cabinet/template'" : ''}} hidden>Temp Man</div>
+      <div id='pattern-manager' name='Pattern Manager'
+          {{id !== 'home' ? "link='/cabinet/pattern'" : ''}} hidden>Pat Man</div>
+    </div>
+    <div id='property-select-cnt'></div>
+  </body>
+</html>

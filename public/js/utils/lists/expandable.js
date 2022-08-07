@@ -32,6 +32,8 @@ class Expandable {
     const afterRefreshEvent = new CustomEvent('afterRefresh');
     const afterRemovalEvent = new CustomEvent('afterRemoval');
     const instance = this;
+    const renderBodyOnOpen = props.renderBodyOnOpen === false ? false : true;
+    props.getObject = props.getObject || (() => ({}));
     props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
     props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
     props.type = props.type || 'list';
@@ -41,6 +43,7 @@ class Expandable {
     props.inputs = props.inputs || [];
     props.list = props.list || [];
     // props.list.DO_NOT_CLONE = true;
+    this.hasBody = () => (typeof this.getBody) === 'function';
     this.getHeader = props.getHeader; delete props.getHeader;
     this.getBody = props.getBody; delete props.getBody;
     props.id = Expandable.lists.length;
@@ -68,6 +71,10 @@ class Expandable {
       return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
     }
 
+    function getBodyCnt() {
+      return du.find.down('.expand-body', getCnt());
+    }
+
     function getInputCnt() {
       const cnt = du.find.down('.expand-input-cnt', getCnt());
       return cnt;
@@ -77,11 +84,12 @@ class Expandable {
     this.getInputCnt = getInputCnt;
 
     this.add = (vals) => {
-      const key = this.getKey(vals);
       const inputValues = vals || values();
       if ((typeof props.inputValidation) !== 'function' ||
               props.inputValidation(inputValues) === true) {
-        props.list[key] = props.getObject(inputValues, getInputCnt());
+        const obj = props.getObject(inputValues, getInputCnt());
+        const key = this.getKey(vals, obj);
+        props.list[key] = obj;
         this.activeKey(key);
         this.refresh();
         afterAddEvent.trigger();
@@ -157,19 +165,24 @@ class Expandable {
         bodys.forEach((body) => body.style.display = 'none');
         rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
         const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
-        body.style.display = 'block';
+        if (this.hasBody()) {
+          body.style.display = 'block';
+        }
         const key = target.getAttribute('key');
         this.activeKey(key);
-        body.innerHTML = this.htmlBody(key);
+        if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
         target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-        target.className += ' active';
+        target.className += ' active' + (this.hasBody() ? '' : ' no-body');
         afterRenderEvent.trigger();
         // du.scroll.intoView(target.parentElement, 3, 25, document.body);
       }
     };
     afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
 
-    this.htmlBody = (key) => this.getBody(this.list()[key], key);
+    this.htmlBody = (key) => {
+      getBodyCnt().setAttribute('key', key);
+      return this.hasBody() ? this.getBody(this.list()[key], key) : '';
+    }
     this.list = () => props.list;
     this.refresh();
   }
@@ -180,10 +193,13 @@ Expandable.inputRepeatTemplate = new $t('expandable/input-repeat');
 Expandable.listTemplate = new $t('expandable/list');
 Expandable.pillTemplate = new $t('expandable/pill');
 Expandable.sidebarTemplate = new $t('expandable/sidebar');
-Expandable.getIdAndKey = (target) => {
-  const cnt = du.find.up('.expand-header,.expand-body', target);
+Expandable.getIdAndKey = (target, level) => {
+  level ||= 0;
+  const elems = du.find.upAll('.expand-header,.expand-body', target);
+  if (elems.length < level + 1) return undefined;
+  const cnt = elems[level];
   const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-  const key = Number.parseInt(cnt.getAttribute('key'));
+  const key = cnt.getAttribute('key');
   return {id, key};
 }
 Expandable.getValueFunc = (target) => {
@@ -191,9 +207,15 @@ Expandable.getValueFunc = (target) => {
   return Expandable.lists[idKey.id].value(idKey.key);
 }
 
-Expandable.get = (target, value) => {
-  const idKey = Expandable.getIdAndKey(target);
+Expandable.get = (target, level) => {
+  const idKey = Expandable.getIdAndKey(target, level);
+  if (idKey === undefined) return undefined;
   return Expandable.lists[idKey.id].get(idKey.key);
+}
+
+Expandable.list = (target) => {
+  const idKey = Expandable.getIdAndKey(target);
+  return Expandable.lists[idKey.id];
 }
 
 Expandable.set = (target, value) => {
@@ -223,7 +245,7 @@ du.on.match('click', '.expand-header', (target, event) => {
   const list = Expandable.lists[id];
   if (list) {
     if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
-      target.className = target.className.replace(/(^| )active( |$)/g, '');
+      du.class.remove(target, 'active');
       du.find.closest('.expand-body', target).style.display = 'none';
       list.activeKey(null);
       target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
@@ -233,14 +255,25 @@ du.on.match('click', '.expand-header', (target, event) => {
   }
 });
 
+function getExpandObject(elem) {
+  const exListElem = du.find.up('[ex-list-id]', elem);
+  if (!exListElem) return undefined;
+  const listId = exListElem.getAttribute('ex-list-id');
+  return Expandable.lists[listId];
+}
+
 du.on.match('click', '.input-open-cnt', (target) => {
   const inputCnts = document.querySelectorAll('.expand-input-cnt');
-  const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
-  const closest = du.find.closest('.expand-input-cnt', target);
-  inputCnts.forEach((elem) => elem.hidden = true);
-  inputOpenCnts.forEach((elem) => elem.hidden = false);
-  target.hidden = true;
-  if (closest) closest.hidden = false;
+  const expandList = getExpandObject(target);
+  if (expandList && !expandList.hasInputTree()) expandList.add();
+  else {
+    const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
+    const closest = du.find.closest('.expand-input-cnt', target);
+    inputCnts.forEach((elem) => elem.hidden = true);
+    inputOpenCnts.forEach((elem) => elem.hidden = false);
+    target.hidden = true;
+    if (closest) closest.hidden = false;
+  }
 });
 
 module.exports = Expandable

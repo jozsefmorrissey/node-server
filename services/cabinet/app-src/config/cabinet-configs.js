@@ -9,6 +9,7 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const Request = require('../../../../public/js/utils/request.js');
 const EPNTS = require('../../generated/EPNTS.js');
+const CabinetTemplate = require('./cabinet-template');
 
 class CabinetConfig {
   constructor() {

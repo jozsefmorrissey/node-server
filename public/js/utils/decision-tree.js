@@ -22,7 +22,7 @@ const REMOVAL_PASSWORD = String.random();
 class DecisionNode extends Lookup{
   constructor(tree, name, instancePayload, parent) {
     super(instancePayload && instancePayload._nodeId ?
-              instancePayload._nodeId : String.random(7), 'nodeId');
+              instancePayload._nodeId : String.random(7));
     Object.getSet(this, 'name');
     const stateMap = {};
     let jump;
@@ -31,8 +31,9 @@ class DecisionNode extends Lookup{
     const formatId = (nodeId) =>
       nodeId.replace(/^decision-node-(.*)$/, '$1') || nodeId;
     const instance = this;
+    this.nodeId = () => DecisionNode.decode(this.id()).id;
     instancePayload._nodeId = this.nodeId();
-    tree.nodeMap[this.nodeId()]
+    tree.nodeMap[this.nodeId()];
     // tree.nodeMap[instancePayload._nodeId] = this;
     this.isTree = (t) => t === tree;
     this.setValue = (key, value) => instancePayload[key] = value;

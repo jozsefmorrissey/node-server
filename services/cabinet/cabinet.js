@@ -1,6 +1,9 @@
 
 const fs = require('fs');
 const shell = require('shelljs');
+const $t = require('../../public/js/utils/$t');
+$t.loadFunctions(require('./generated/html-templates'));
+
 const dxfDownloadLink = require('./src/export/dxf').downloadLink;
 const { User, UnAuthorized } = require('./src/user');
 const { emailSvc } = require('./src/email');
@@ -24,7 +27,25 @@ const setCredentials = (res, email, secret) => {
   res.header('authorization', `${email}:${secret}`);
 }
 
+const indexHtml = fs.readFileSync('./services/cabinet/public/html/estimate.html');
+
+const indexTemplate = new $t('index');
+function servePage(id) {
+  return (req, res) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.send(indexTemplate.render({id}));
+  }
+}
+
 function endpoints(app, prefix) {
+
+  // ------------------------------ html ----------------------------//
+
+  app.get(prefix + "/home", servePage('home'));
+  app.get(prefix + "/cost", servePage('cost'));
+  app.get(prefix + "/template", servePage('template'));
+  app.get(prefix + "/property", servePage('home'));
+  app.get(prefix + "/pattern", servePage('home'));
 
   //  ---------------------------- User -----------------------------//
   app.post(prefix + EPNTS.user.register(), function (req, res, next) {

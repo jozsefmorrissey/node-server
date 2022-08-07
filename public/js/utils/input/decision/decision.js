@@ -50,7 +50,8 @@ class DecisionInput {
       this.id = `decision-input-node-${String.random()}`;
       this.childCntId = `decision-child-ctn-${String.random()}`
       this.values = tree.values;
-      this.onComplete = tree.onComplete
+      this.onComplete = tree.onComplete;
+      this.onChange = tree.onChange;
       this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
       this.class =  ROOT_CLASS;
       this.getValue = (index) => this.inputArray[index].value();
@@ -123,6 +124,7 @@ class DecisionInputTree extends LogicTree {
     const root = this;
 
     const onCompletion = [];
+    const onChange = [];
     tree.html = (wrapper) => {
       wrapper = wrapper || root;
       let inputHtml = '';
@@ -139,6 +141,9 @@ class DecisionInputTree extends LogicTree {
 
     this.onComplete = (func) => {
       if ((typeof func) === 'function') onCompletion.push(func);
+    }
+    this.onChange = (func) => {
+      if ((typeof func) === 'function') onChange.push(func);
     }
 
     this.values = () => {
@@ -165,6 +170,20 @@ class DecisionInputTree extends LogicTree {
       }
       return true;
     }
+
+    this.changed = (elem) => {
+      const delay = props.noSubmission || 0;
+      if (!submissionPending) {
+        submissionPending = true;
+        setTimeout(() => {
+          const values = tree.values();
+          onChange.forEach((func) => func(values, this, elem))
+          submissionPending = false;
+        }, delay);
+      }
+      return true;
+    }
+
     this.onComplete(onComplete);
 
     return this;
@@ -200,8 +219,9 @@ DecisionInputTree.update = (soft) =>
       wrapper.forEach((n) => {
         let selector = `[node-id='${n.nodeId()}']`;
         elem = du.find.down(selector, parent);
-        elem.hidden = false;
+        if (elem) elem.hidden = false;
       });
+      wrapper.root().changed();
       wrapper.root().completed()
     } else {
       const button = du.find.closest('button', elem);

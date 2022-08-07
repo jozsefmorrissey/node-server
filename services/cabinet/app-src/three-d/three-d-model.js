@@ -41,44 +41,24 @@ function getColor(name) {
   return [0,0,0];
 }
 
-function Validation() {
-  types = {};
-  types.int = '^[0-9]{1,}$';
-  types.float = `^((\\.[0-9]{1,})|([0-9]{1,}\\.[0-9]{1,}))$|(${types.int})`;
-  types.fraction = '^[0-9]{1,}/[0-9]{1,}$';
-  types.size = `(${types.float})|(${types.fraction})`;
-
-
-  let obj = {};
-  Object.keys(types).forEach((type) => {
-    const regex = new RegExp(types[type]);
-    obj[type] = (min, max) => {
-      min = Number.isFinite(min) ? min : Number.MIN_SAFE_INTEGER;
-      max = Number.isFinite(max) ? max : Number.MAX_SAFE_INTEGER;
-      return (value) => {
-        if ((typeof value) === 'string') {
-          if (value.match(regex) === null) return false;
-          value = Number.parseFloat(value);
-        }
-        return value > min && value < max;
-      }
-    }
-
-  });
-  return obj;
-}
-Validation = Validation();
-
-
 class ThreeDModel {
-  constructor(assembly) {
+  constructor(assembly, viewer) {
     const hiddenPartCodes = {};
     const hiddenPartNames = {};
     const hiddenPrefixes = {};
     const instance = this;
     let hiddenPrefixReg;
     let inclusiveTarget = {};
+    let partMap;
 
+    this.assembly = (a) => {
+      if (a !== undefined) {
+        assembly = a;
+      }
+      return assembly;
+    }
+
+    this.partMap = () => partMap;
     this.isTarget = (type, value) => {
       return inclusiveTarget.type === type && inclusiveTarget.value === value;
     }
@@ -177,6 +157,22 @@ class ThreeDModel {
       return model;
     }
 
+    let lm;
+    this.lastModel = () => {
+      const map = {xy: [], xz: [], yz: []};
+      lm.polygons.forEach((p, index) => {
+        map.xy.push([]);
+        map.xz.push([]);
+        map.yz.push([]);
+        p.vertices.forEach((v) => {
+          map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+          map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+          map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+        });
+      });
+      return map;
+    }
+
 
     this.render = function () {
       const startTime = new Date().getTime();
@@ -192,38 +188,38 @@ class ThreeDModel {
         // else a.setColor(1, 0, 0);
         return a;
       }
-      const assemblies = assembly.getParts();
+      const assemblies = this.assembly().getParts();
       let a;
+      partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
+        partMap[assem.partCode()] = assem.path();
         if (!hidden(assem)) {
           const b = buildObject(assem);
+          const e=1.15;
+          const c = assem.position().center();
+          b.center({x: c.x * e, y: c.y * e, z: -c.z * e});
           if (a === undefined) a = b;
           else if (b && assem.length() && assem.width() && assem.thickness()) {
             a = a.union(b);
           }
+          lm = b;
         }
       }
-      console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
-      ThreeDModel.viewer.mesh = a.toMesh();
-      ThreeDModel.viewer.gl.ondraw();
-      console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
+      if (a) {
+        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
+        viewer.mesh = a.toMesh();
+        viewer.gl.ondraw();
+        console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
+      }
     }
   }
 }
-const cube = new CSG.cube({radius: [3,5,1]});
-const consts = require('../../globals/CONSTANTS');
-ThreeDModel.init = () => {
-  const p = pull(5,2);
-  // const db = drawerBox(10, 15, 22);
-  ThreeDModel.viewer = new Viewer(p, consts.VIEWER.height, consts.VIEWER.width, 50);
-  addViewer(ThreeDModel.viewer, 'three-d-model');
-}
 
 ThreeDModel.models = {};
-ThreeDModel.get = (assembly) => {
+ThreeDModel.get = (assembly, viewer) => {
   if (ThreeDModel.models[assembly.uniqueId()] === undefined) {
-    ThreeDModel.models[assembly.uniqueId()] = new ThreeDModel(assembly);
+    ThreeDModel.models[assembly.uniqueId()] = new ThreeDModel(assembly, viewer);
   }
   return ThreeDModel.models[assembly.uniqueId()];
 }
@@ -235,121 +231,4 @@ ThreeDModel.render = (part) => {
   }, 250);
 };
 
-
-function displayPart(part) {
-  return true;
-}
-
-function groupParts(cabinet) {
-  const grouping = {displayPart, group: {groups: {}, parts: {}, level: 0}};
-  const parts = cabinet.getParts();
-  for (let index = 0; index < parts.length; index += 1) {
-    const part = parts[index];
-    const namePieces = part.partName().split('.');
-    let currObj = grouping.group;
-    let level = 0;
-    let prefix = '';
-    for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
-      const piece = namePieces[nIndex];
-      prefix += piece;
-      if (currObj.groups[piece] === undefined) currObj.groups[piece] = {groups: {}, parts: {}};
-      currObj = currObj.groups[piece];
-      currObj.level = ++level;
-      currObj.prefix = prefix;
-      prefix += '.'
-    }
-    if (currObj.parts[part.partName()] === undefined) currObj.parts[part.partName()] = [];
-    currObj.parts[part.partName()].push(part);
-  }
-  return grouping;
-}
-
-// const modelContTemplate = new $t('model-controller')
-// const stateReg = /( |^)(small|large)( |$)/;
-// du.on.match('click', '#max-min-btn', (target) => {
-//   const className = target.parentElement.className;
-//   const controller = du.id('model-controller');
-//   const state = className.match(stateReg);
-//   const clean = className.replace(new RegExp(stateReg, 'g'), '').trim();
-//   if (state[2] === 'small') {
-//     target.parentElement.className = `${clean} large`;
-//     const cabinet = orderDisplay.active().cabinet();
-//     if (cabinet) {
-//       const grouping = groupParts(cabinet);
-//       grouping.tdm = ThreeDModel.get(cabinet);
-//       controller.innerHTML = modelContTemplate.render(grouping);
-//     }
-//     controller.hidden = false;
-//   } else {
-//     target.parentElement.className = `${clean} small`;
-//     controller.hidden = true;
-//   }
-// });
-
-
-du.on.match('click', '.model-label', (target) => {
-  if (event.target.tagName === 'INPUT') return;
-  const has = target.matches('.active');
-  deselectPrefix();
-  !has ? du.class.add(target, 'active') : du.class.remove(target, 'active');
-  let label = target.children[0]
-  let type = label.getAttribute('type');
-  let value = type !== 'prefix' ? label.innerText :
-        label.nextElementSibling.getAttribute('prefix');
-  const cabinet = orderDisplay.active().cabinet();
-  const tdm = ThreeDModel.get(cabinet);
-  tdm.inclusiveTarget(type, has ? undefined : value);
-  tdm.render();
-});
-
-function deselectPrefix() {
-  document.querySelectorAll('.model-label')
-    .forEach((elem) => du.class.remove(elem, 'active'));
-  const cabinet = orderDisplay.active().cabinet();
-  const tdm = ThreeDModel.get(cabinet);
-  tdm.inclusiveTarget(undefined, undefined);
-}
-
-du.on.match('click', '.prefix-switch', (target, event) => {
-  const eventTarg = event.target;
-  const active = du.find.upAll('.model-selector', target);
-  active.push(target.parentElement.parentElement);
-  const all = document.querySelectorAll('.prefix-body');
-  all.forEach((pb) => pb.hidden = true);
-  active.forEach((ms) => ms.children[0].children[1].hidden = false);
-});
-
-du.on.match('change', '.prefix-checkbox', (target) => {
-  const cabinet = orderDisplay.active().cabinet();
-  const attr = target.getAttribute('prefix');
-  deselectPrefix();
-  ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
-});
-
-du.on.match('change', '.part-name-checkbox', (target) => {
-  const cabinet = orderDisplay.active().cabinet();
-  const attr = target.getAttribute('part-name');
-  deselectPrefix();
-  const tdm = ThreeDModel.get(cabinet);
-  tdm.hidePartName(attr, !target.checked);
-  tdm.render();
-});
-
-du.on.match('change', '.part-code-checkbox', (target) => {
-  const cabinet = orderDisplay.active().cabinet();
-  const attr = target.getAttribute('part-code');
-  deselectPrefix();
-  const tdm = ThreeDModel.get(cabinet);
-  tdm.hidePartCode(attr, !target.checked);
-  tdm.render();
-})
-
-
-let lastRendered;
-function updateModel(part) {
-  if (part) lastRendered = part.getAssembly('c');
-  ThreeDModel.render(lastRendered);
-}
-
-ThreeDModel.update = updateModel;
 module.exports = ThreeDModel

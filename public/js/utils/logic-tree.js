@@ -14,8 +14,9 @@ function getNode(nodeOwrapper) {
 
 class LogicWrapper extends Lookup {
   constructor(node) {
-    super(node ? node.nodeId() : undefined, 'nodeId');
+    super(node ? node.nodeId() : undefined);
     this.node = node;
+    this.nodeId = () => LogicWrapper.decode(this.id()).id;
   }
 }
 

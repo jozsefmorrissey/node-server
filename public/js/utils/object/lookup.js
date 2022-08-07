@@ -11,7 +11,7 @@ class Lookup {
     }
     id = id || String.random();
     const cxtr = this.constructor;
-    const cxtrHash = cxtr.name.hash();
+    const cxtrHash = cxtr.name;
     let cxtrAndId = `${cxtrHash}_${id}`
     if (singleton && cxtr.get(id)) return cxtr.get(id);
 
@@ -41,7 +41,7 @@ class Lookup {
     function registerConstructor() {
       if (Lookup.byId[cxtr.name] === undefined) {
         Lookup.byId[cxtr.name] = {};
-        Lookup.constructorMap[cxtr.name.hash()] = cxtr;
+        Lookup.constructorMap[cxtr.name] = cxtr;
       }
     }
 
@@ -76,7 +76,7 @@ Lookup.get = (id, cxtr) => {
   }
   id = decodedId || id;
   cxtr = cxtr || decodedCxtr;
-  const instance = Lookup.byId[cxtr.name][id] || Lookup.byId[decodedCxtr.name][id];
+  const instance = Lookup.byId[cxtr.name][id] || (decodedCxtr && Lookup.byId[decodedCxtr.name][id]);
   return instance;
 }
 Lookup.selectList = (className) => {

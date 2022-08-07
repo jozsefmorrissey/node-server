@@ -7,10 +7,10 @@
         {{getHeader(item, key)}}
       </div>
       <div class="expand-body {{type()}}"  ex-list-id='{{id()}}' key='{{key}}'>
-        {{getBody(item, key)}}
+        {{getBody && getBody(item, key)}}
       </div>
     </div>
   </div:t>
-  <div class='expand-input-cnt' hidden>{{inputHtml()}}</div>
+  <div class='expand-input-cnt' hidden has-input-tree='{{hasInputTree()}}'>{{inputHtml()}}</div>
   <div class='input-open-cnt'><button>Add {{listElemLable()}}</button></div>
 </div>

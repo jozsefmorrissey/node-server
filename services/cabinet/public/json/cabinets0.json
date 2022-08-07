@@ -16,7 +16,7 @@ const cabinetBuildConfig = {
       "str": "frorr + pl.t",
       "st":"str + stl"
     },
-    "subAssemblies": {
+    "subassemblies": {
       "Panel.ToeKickBacker": {
         "type": "Panel",
         "code": "tkb",
@@ -84,49 +84,49 @@ const cabinetBuildConfig = {
         {
           "type": "Rabbet",
           "depth": 3/8,
-          "DemensionToOffset": "y",
+          "demensionToOffset": "y",
           "centerOffset": "-x"
         },
       "pback->pr": {
         "type": "Rabbet",
         "depth": 3/8,
-        "DemensionToOffset":"y",
+        "demensionToOffset":"y",
         "centerOffset": "+x"
       },
       "tkb->pl": {
         "type": "Dado",
         "depth": 3/8,
-        "DemensionToOffset":"y",
+        "demensionToOffset":"y",
         "centerOffset": "-x"
       },
       "pl->lr": {
         "type": "Dado",
         "depth": 3/8,
-        "DemensionToOffset":"x",
+        "demensionToOffset":"x",
         "centerOffset": "-z"
       },
       "tkb->pr": {
         "type": "Dado",
         "depth": 3/8,
-        "DemensionToOffset":"y",
+        "demensionToOffset":"y",
         "centerOffset": "+x"
       },
       "pr->rr": {
         "type": "Dado",
         "depth": 3/8,
-        "DemensionToOffset":"x",
+        "demensionToOffset":"x",
         "centerOffset": "-z"
       },
       "pb->pl": {
         "type": "Dado",
         "depth": 3/8,
-        "DemensionToOffset":"y",
+        "demensionToOffset":"y",
         "centerOffset": "-x"
       },
       "pb->pr": {
         "type": "Dado",
         "depth": 3/8,
-        "DemensionToOffset":"y",
+        "demensionToOffset":"y",
         "centerOffset": "+x"
       },
       "pb->br": {
@@ -157,7 +157,7 @@ const cabinetBuildConfig = {
         "type": "Butt"
       }
     },
-    "bordersIdMap": [
+    "openings": [
       {
         "top": "ft",
         "bottom": "fb",
@@ -176,7 +176,7 @@ const cabinetBuildConfig = {
       "str": "frorr + pl.t",
       "st":"str + stl"
     },
-    "subAssemblies": {
+    "subassemblies": {
       "Left": {
         "type": "Frame",
         "code": "fl",
@@ -221,7 +221,7 @@ const cabinetBuildConfig = {
     "type": "Butt"
     }
     },
-    "bordersIdMap": [
+    "openings": [
       {
         "top": "ft",
         "bottom": "fb",

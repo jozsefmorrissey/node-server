@@ -23,18 +23,19 @@ errorMsg: Message that shows when validation fails.
 */
 class Input extends Lookup {
   constructor(props) {
-    super(props.id);
+    const id = props.id || `input-${String.random(7)}`;
+    super(id);
     props.hidden = props.hide || false;
     props.list = props.list || [];
-    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'id', 'placeholder',
+    this.inline = props.inline;
+    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'placeholder',
                             'class', 'list', 'value');
 
     const immutableProps = {
       _IMMUTABLE: true,
-      id: props.id || `input-${String.random(7)}`,
       targetAttr: props.targetAttr || 'value',
       errorMsg: props.errorMsg || 'Error',
-      errorMsgId: props.errorMsgId || `error-msg-${props.id}`,
+      errorMsgId: props.errorMsgId || `error-msg-${this.id()}`,
     }
     Object.getSet(this, immutableProps)
 
@@ -86,13 +87,15 @@ class Input extends Lookup {
       if (val === undefined) val = props.default;
       return val;
     }
-    this.setValue = (val) => {
+    this.updateDisplay = () => {
+      const elem = getElem(instance.id());
+      if (elem) elem[instance.targetAttr()] = this.value();
+    };
+    this.setValue = (val, force) => {
       if (val === undefined) val = getValue();
-      if(this.validation(val)) {
+      if(force || this.validation(val)) {
         valid = true;
         value = val;
-        const elem = getElem(instance.id());
-        if (elem) elem[instance.targetAttr()] = val;
         return true;
       }
       valid = false;
@@ -105,7 +108,7 @@ class Input extends Lookup {
     }
     this.doubleCheck = () => {
       valid = undefined;
-      validate();
+      this.validate();
       return valid;
     }
     this.validation = function(val) {
@@ -127,14 +130,14 @@ class Input extends Lookup {
       return valValid;
     };
 
-    const validate = (target) => {
+    this.validate = (target) => {
       target = target || getElem(instance.id());
       if (target) {
         if (this.setValue(target[this.targetAttr()])) {
-          getElem(this.errorMsgId()).innerHTML = '';
+          getElem(this.errorMsgId()).hidden = true;
           valid = true;
         } else {
-          getElem(this.errorMsgId()).innerHTML = props.errorMsg;
+          getElem(this.errorMsgId()).hidden = false;
           valid = false;
         }
       }
@@ -146,10 +149,18 @@ class Input extends Lookup {
         if (elem) elem.value = '';
       });
     }
-    du.on.match(`change`, `#${this.id()}`, validate);
-    du.on.match(`keyup`, `#${this.id()}`, validate);
   }
 }
+
+function runValidate(elem) {
+  const input = Lookup.get(elem.id);
+  if (input) input.validate(elem);
+}
+
+du.on.match(`change`, `input`, runValidate);
+du.on.match(`keyup`, `input`, runValidate);
+du.on.match(`change`, `select`, runValidate);
+du.on.match(`keyup`, `select`, runValidate);
 
 Input.forAll = (id) => {
   const idStr = `#${id}`;

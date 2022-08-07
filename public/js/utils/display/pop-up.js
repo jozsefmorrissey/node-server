@@ -15,6 +15,7 @@ class PopUp {
     popupCnt.hide();
 
     this.position = () => popupCnt;
+    this.positionOnElement = popupCnt.position;
 
 
     this.softClose = () => {

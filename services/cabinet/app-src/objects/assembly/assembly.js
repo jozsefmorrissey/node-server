@@ -19,8 +19,9 @@ class Assembly extends Lookup {
       centerStr, demensionStr, rotationStr, partCode, partName,
       propertyId: undefined,
     }
-    Object.getSet(this, initialVals, 'values', 'subAssemblies');
+    Object.getSet(this, initialVals, 'values', 'subassemblies', 'joints');
     Object.getSet(this, temporaryInitialVals);
+    this.path = () => `${this.constructor.name}.${partName}`.toDot();
 
     if ((typeof centerStr) === 'function') this.centerStr = centerStr;
     if ((typeof demensionStr) === 'function') this.demensionStr = demensionStr;
@@ -45,15 +46,21 @@ class Assembly extends Lookup {
       return returnVal;
     }
     const sme = new StringMathEvaluator(null, getValueSmeFormatter);
+    this.eval = (eqn) => sme.eval(eqn, this);
 
+    this.getRoot = () => {
+      let currAssem = this;
+      while(currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
+      return currAssem;
+    }
 
     let getting =  false;
     this.getAssembly = (partCode, callingAssem) => {
       if (callingAssem === this) return undefined;
       if (this.partCode() === partCode) return this;
-      if (this.subAssemblies[partCode]) return this.subAssemblies[partCode];
+      if (this.subassemblies[partCode]) return this.subassemblies[partCode];
       if (callingAssem !== undefined) {
-        const children = Object.values(this.subAssemblies);
+        const children = Object.values(this.subassemblies);
         for (let index = 0; index < children.length; index += 1) {
           const assem = children[index].getAssembly(partCode, this);
           if (assem !== undefined) return assem;
@@ -73,18 +80,21 @@ class Assembly extends Lookup {
       while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
       return currAssem;
     }
-    this.getJoints = (pc, joints) => {
+    this.getJoints = (pc) => {
+      const root = this.getRoot();
+      if (root !== this) return root.getJoints(pc || partCode);
       pc = pc || partCode;
-      joints = joints || {male: [], female: []};
-      this.joints.forEach((joint) => {
-        if (joint.malePartCode === pc) {
+      const assemList = this.getSubassemblies();
+      let jointList = [].concat(this.joints);
+      assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
+      let joints = {male: [], female: []};
+      jointList.forEach((joint) => {
+        if (joint.malePartCode() === pc) {
           joints.male.push(joint);
-        } else if (joint.femalePartCode === pc) {
+        } else if (joint.femalePartCode() === pc) {
           joints.female.push(joint);
         }
       });
-      if (this.parentAssembly() !== undefined)
-        this.parentAssembly().getJoints(pc, joints);
       return joints;
     }
     function initObj(value) {
@@ -128,10 +138,10 @@ class Assembly extends Lookup {
     this.jointOffsets = () => {
     }
 
-    this.subAssemblies = {};
-    this.setSubAssemblies = (assemblies) => {
-      this.subAssemblies = {};
-      assemblies.forEach((assem) => this.subAssemblies[assem.partCode()] = assem);
+    this.subassemblies = {};
+    this.setSubassemblies = (assemblies) => {
+      this.subassemblies = {};
+      assemblies.forEach((assem) => this.subassemblies[assem.partCode()] = assem);
     };
 
     // TODO: wierd dependency on inherited class.... fix!!!
@@ -143,7 +153,7 @@ class Assembly extends Lookup {
       defaultPartCode();
     }
     this.addSubAssembly = (assembly) => {
-      this.subAssemblies[assembly.partCode()] = assembly;
+      this.subassemblies[assembly.partCode()] = assembly;
       assembly.setParentAssembly(this);
     }
 
@@ -153,28 +163,28 @@ class Assembly extends Lookup {
       for (let i = 0; i < arguments.length; i += 1) {
         const joint = arguments[i];
         this.joints.push(joint);
-        joint.setParentAssembly(this);
+        joint.parentAssemblyId(this.uniqueId());
       }
     }
 
-    this.addSubAssemblies = function () {
+    this.addSubassemblies = function () {
       for (let i = 0; i < arguments.length; i += 1) {
         this.addSubAssembly(arguments[i]);
       }
     }
 
-    this.children = () => Object.values(this.subAssemblies);
+    this.children = () => Object.values(this.subassemblies);
 
-    this.getSubAssemblies = () => {
+    this.getSubassemblies = () => {
       let assemblies = [];
       this.children().forEach((assem) => {
         assemblies.push(assem);
-        assemblies = assemblies.concat(assem.getSubAssemblies());
+        assemblies = assemblies.concat(assem.getSubassemblies());
       });
       return assemblies;
     }
     this.getParts = () => {
-      return this.getSubAssemblies().filter((a) => a.part && a.included );
+      return this.getSubassemblies().filter((a) => a.part && a.included );
     }
 
     if (Assembly.idCounters[this.objId] === undefined) {
@@ -232,7 +242,7 @@ Assembly.fromJson = (assemblyJson) => {
   assembly.uniqueId(assemblyJson.uniqueId);
   assembly.values = assemblyJson.values;
   assembly.setParentAssembly(assemblyJson.parent)
-  Object.values(assemblyJson.subAssemblies).forEach((json) =>
+  Object.values(assemblyJson.subassemblies).forEach((json) =>
     assembly.addSubAssembly(Assembly.class(json._TYPE)
                               .fromJson(json, assembly)));
   if (assemblyJson.length) assembly.length(assemblyJson.length);

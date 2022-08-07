@@ -13,11 +13,11 @@
       </div>
     </div:t>
     <div class='expand-input-cnt' hidden>{{inputHtml()}}</div>
-    <div class='input-open-cnt'>Add {{listElemLable()}}</div>
+    <div class='input-open-cnt'><button>Add {{listElemLable()}}</button></div>
   </div>
   <div>
   </div>
-  <div class="expand-body {{type()}}">
+  <div class="expand-body {{type()}}" ex-list-id='{{id()}}' key='{{key}}'>
     Hello World!
   </div>
 </div>

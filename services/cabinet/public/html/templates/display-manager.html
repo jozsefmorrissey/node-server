@@ -1,6 +1,6 @@
 <div class='display-manager' id='{{id}}'>
   <span:t repeat='item in list' class='display-manager-item'>
-    <input class='display-manager-input{{$index === 0 ? " active" : ""}}'
-          type='button' display-id='{{item.id}}' value='{{item.name}}'/>
+    <button class='display-manager-input{{$index === 0 ? " active" : ""}}'
+          type='button' display-id='{{item.id}}' link='{{link}}'>{{item.name}}</button>
   </span:t>
 </div>

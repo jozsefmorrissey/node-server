@@ -16,9 +16,16 @@ class Position {
       }
     }
 
-    let center, demension;
+    let center, demension, rotation;
     let demCoords = {};
     let centerCoords = {};
+
+    if ((typeof assembly.rotationStr()) !== 'object') {
+      const rotCoords = Position.parseCoordinates(assembly.rotationStr(), '0,0,0');
+      rotation = (attr) => getSme(attr, rotCoords);
+    } else {
+      rotation = assembly.rotationStr;
+    }
 
     if ((typeof assembly.centerStr()) !== 'object') {
       centerCoords = Position.parseCoordinates(assembly.centerStr(), '0,0,0');
@@ -44,6 +51,7 @@ class Position {
       return sme;
     }
 
+    this.rotation = (attr) => rotation(attr);
     this.center = (attr) => center(attr);
     this.demension = (attr) => demension(attr);
 
@@ -89,17 +97,6 @@ class Position {
         '-z': -d.z / 2,
       }
     }
-
-
-    this.rotation = () => {
-      const rotation = {x: 0, y: 0, z: 0};
-      const axisStrs = (assembly.rotationStr() || '').match(Position.rotateStrRegex);
-      for (let index = 0; axisStrs && index < axisStrs.length; index += 1) {
-        const match = axisStrs[index].match(Position.axisStrRegex);
-        rotation[match[2]] = match[4] ? Number.parseInt[match[4]] : 90;
-      }
-      return rotation;
-    };
 
     this.set = (obj, type, value) => {
       if (value !== undefined) obj[type] = value;

@@ -28,7 +28,7 @@ class Handle extends Assembly {
       return attr ? dems[attr] : dems;
     }
 
-    this.rotationStr = () => this.location() && this.location().rotate ? 'z' : '';
+    this.rotationStr = () => this.location() && this.location().rotate ? {x: 0, y:0, z: 90} : {x: 0, y:0, z: 0};
 
     const edgeOffset = 3.01625;
     const toCenter = 4;

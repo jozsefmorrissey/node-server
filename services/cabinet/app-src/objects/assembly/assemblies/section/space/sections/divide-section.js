@@ -47,6 +47,12 @@ class DivideSection extends SpaceSection {
       return true;
     }
 
+    // TODO: will break in future should be calling getJoints.. recursive iissue;
+    this.getJoints = () => {
+      let joints = [];
+      this.children().forEach((child) => joints = joints.concat(child.joints));
+      return joints;
+    }
     this.children = () => this.sections;
     this.partitions = () => this.sections.filter((e, index) => index % 2 === 1);
     this.spaces = () => this.sections.filter((e, index) => index % 2 === 0);
@@ -118,11 +124,12 @@ class DivideSection extends SpaceSection {
           center.y = start - offset;
           dividerLength = innerSize.x;
         }
-        const rotationFunc = () =>  this.vertical() ? '' : 'z';
+        const rotationFunc = () =>  this.vertical() ? {x: 0, y:0, z: 0} : {x: 0, y:0, z: 90};
 
         const depth = props.depth;
         const vertical = this.vertical();
-        return {center, dividerLength, rotationFunc, index, depth, vertical};
+        const borders = props.borders;
+        return {center, dividerLength, rotationFunc, index, depth, vertical, borders};
       }
     }
 
@@ -170,6 +177,7 @@ class DivideSection extends SpaceSection {
     }
     this.setSection = (constructorIdOobject, index) => {
       let section;
+      index = Number.parseInt(index);
       if ((typeof constructorIdOobject) === 'string') {
         if (constructorIdOobject === 'DivideSection') {
           section = new DivideSection(this.borders(index), instance);
@@ -191,7 +199,7 @@ class DivideSection extends SpaceSection {
     this.toJson = () => {
       const json = assemToJson.apply(this);
       json.pattern = this.pattern().toJson();
-      json.subAssemblies = this.sections.map((section) => section.toJson());
+      json.subassemblies = this.sections.map((section) => section.toJson());
       return json;
     }
   }
@@ -203,7 +211,7 @@ DivideSection.fromJson = (json) => {
   assembly.partCode(json.partCode);
   assembly.uniqueId(json.uniqueId)
   assembly.index(json.index);
-  const subAssems = json.subAssemblies;
+  const subAssems = json.subassemblies;
   assembly.values = json.values;
   for (let index = 0; index < subAssems.length / 2; index += 1) {
     const partIndex = index * 2 + 1;

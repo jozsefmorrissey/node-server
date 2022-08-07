@@ -122,20 +122,27 @@ Function.safeStdLibAddition(String, 'toCamel',  toCamel);
 
 const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
 const caseChangeReg = /([a-z])([A-Z])/g;
-function pascalReplace(whoCares, one, two) {return `${one.toUpperCase()}_${two.toUpperCase ? two.toUpperCase() : two}`;}
+function pascalReplace(whoCares, one, two) {return `${one.toLowerCase()}_${two.toUpperCase ? two.toUpperCase() : two}`;}
 function toPascal() {
   let string = this;
   return string.replace(multipleUpperReg, pascalReplace)
                 .replace(caseChangeReg, pascalReplace)
                 .replace(charNumberReg, pascalReplace)
-                .replace(specialCharReg, pascalReplace).toUpperCase();
+                .replace(specialCharReg, pascalReplace);
 }
 Function.safeStdLibAddition(String, 'toPascal',  toPascal);
 
-function toHypenated() {
+function toKebab() {
   return this.toPascal().toLowerCase().replace(/_/g, '-');
 }
-Function.safeStdLibAddition(String, 'toHypenated',  toHypenated);
+Function.safeStdLibAddition(String, 'toKebab',  toKebab);
+
+Function.safeStdLibAddition(String, 'toSnake',  function () {return this.toKebab().replace(/-/g, '_')});
+Function.safeStdLibAddition(String, 'toDot',  function () {return this.toKebab().replace(/-/g, '.')});
+Function.safeStdLibAddition(String, 'toScreamingDot',  function () {return this.toKebab().replace(/-/g, '.')});
+Function.safeStdLibAddition(String, 'toScreamingSnake',  function () {return this.toSnakeCase().toUpperCase()});
+Function.safeStdLibAddition(String, 'toScreamingKebab',  function () {return this.toKebab().toUpperCase()});
+Function.safeStdLibAddition(String, 'toSentance',  function () {return this.toPascal().replace(/_/g, ' ')});
 
 Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
   return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
@@ -351,7 +358,7 @@ Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
   if ((typeof obj) != 'object') return obj;
   const keys = Object.keys(obj);
   if (!checked[obj.constructor.name]) {
-    console.log('constructor: ' + obj.constructor.name);
+    // console.log('constructor: ' + obj.constructor.name);
     checked[obj.constructor.name] = true;
   }
 

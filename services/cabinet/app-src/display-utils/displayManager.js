@@ -5,7 +5,7 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
 
 class DisplayManager {
-  constructor(displayId, listId, switchId) {
+  constructor(displayId, listId, switchId, selected) {
     if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
     const id = String.random();
     const instance = this;
@@ -18,7 +18,7 @@ class DisplayManager {
         let id = elem.id || String.random(7);
         elem.id = id;
         name = elem.getAttribute('name') || id;
-        const item = {id, name};
+        const item = {id, name, link: elem.getAttribute('link')};
         if (runFunc) func(elem);
         list.push(item);
       }
@@ -38,7 +38,14 @@ class DisplayManager {
       const displayElems = du.id(displayId).children;
       for (let index = 0; index < displayElems.length; index += 1) {
         const elem = displayElems[index];
-        if (elem.id === id) elem.hidden = false;
+        if (elem.id === id) {
+          const link = elem.getAttribute('link');
+          if (link) {
+            window.location.href = link;
+            return;
+          }
+          elem.hidden = false;
+        }
         else elem.hidden = true;
       }
       updateActive(id);
@@ -47,14 +54,6 @@ class DisplayManager {
     this.open = open;
 
     const children = du.id(displayId).children;
-
-    if (children.length > 0) {
-      this.list();
-      open(children[0].id);
-      if (listId) {
-        du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
-      }
-    }
 
     if (switchId) {
       du.on.match('click', `#${switchId}`, (target, event) => {
@@ -69,7 +68,15 @@ class DisplayManager {
           listElem.hidden = true;
       });
     }
-    DisplayManager.instances[id] = this;
+    DisplayManager.instances[id] = this
+    if ((typeof selected) === 'string') setTimeout(() => open(selected), 100);
+    else if (children.length > 0) {
+      this.list();
+      open(children[0].id);
+    }
+    if (listId) {
+      du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
+    }
   }
 }
 

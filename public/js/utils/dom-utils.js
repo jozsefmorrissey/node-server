@@ -28,7 +28,7 @@ function parseSeperator(string, seperator, isRegex) {
 }
 
 
-const du = {create: {}, class: {}, cookie: {}, param: {}, style: {},
+const du = {create: {}, class: {}, cookie: {}, param: {}, style: {}, is: {},
       scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}, position: {}};
 du.find = (selector) => document.querySelector(selector);
 du.find.all = (selector) => document.querySelectorAll(selector);
@@ -53,6 +53,10 @@ function keepInBounds (elem, minimum) {
   checkDir('bottom');
 }
 
+du.zIndex = function (elem) {
+  return Number.parseInt(document.defaultView.getComputedStyle(elem, null)
+    .getPropertyValue("z-index"), 10);
+}
 du.move.inFront = function (elem, timeout) {
   setTimeout(function () {
     var exclude = du.find.downAll('*', elem);
@@ -62,12 +66,11 @@ du.move.inFront = function (elem, timeout) {
     for (var i = 0; i < elems.length; i++) {
       const e = elems[i];
       if (exclude.indexOf(e) === -1) {
-        var zindex = Number.parseInt(
-          document.defaultView.getComputedStyle(elems[i], null).getPropertyValue("z-index"), 10);
-        }
-        if (zindex > highest) highest = zindex;
+        var zindex = du.zIndex(e);
       }
-      if (highest < Number.MAX_SAFE_INTEGER) elem.style.zIndex = highest + 1;
+      if (zindex > highest) highest = zindex;
+    }
+    if (highest < Number.MAX_SAFE_INTEGER) elem.style.zIndex = highest + 1;
   },  timeout || 0);
 }
 
@@ -288,6 +291,10 @@ function runMatch(event) {
   })
 }
 
+du.is.hidden = function (target) {
+  const elem = du.find.up('[hidden]', target);
+  return elem !== undefined;
+}
 
 du.class.add = function(target, clazz) {
   du.class.remove(target, clazz);
@@ -359,6 +366,7 @@ du.on.match = function(event, selector, func, target) {
   target = target || document;
   selector = VS(selector);
   if (selector === null) return;
+  if ((typeof func) !== 'function') console.warn(`Attempting to create an event without calling function.\nevent: "${event}"\nselector: ${selector}`)
   const  matchRunTargetId = getTargetId(target);
   if (selectors[matchRunTargetId] === undefined) {
     selectors[matchRunTargetId] = {};

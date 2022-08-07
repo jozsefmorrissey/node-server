@@ -1,17 +1,34 @@
-<div>
-  <span>
-    <input value='{{instance.length()}}'>
+<div class='template-body' template-id={{template.id()}}>
+  <h4>{{template.type())}}</h4>
+  <span class='part-input-cnt'>
+    <input type="text" name="partSelector" list='part-list'>
+    <datalist id='part-list'></datalist>
   </span>
-  <span>
-    <label>X</label>
-    <input value='{{instance.width()}}'>
-  </span>
-  <span>
-    <label>X</label>
-    <input value='{{instance.depth()}}'>
-  </span>
-  <label>Cost</label>
-  <input value='{{instance.cost()}}'>
-  <br>
-  <label>Per {{instance.unitCost().name}} = {{instance.unitCost().value}}
+  <input class='cabinet-input dem' type="text" name="width" value="24">
+  X
+  <input class='cabinet-input dem' type="text" name="height" value="24">
+  X
+  <input class='cabinet-input dem' type="text" name="thickness" value="24">
+  <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
+    <div class='expand-header'>Values</div>
+    <div hidden class="{{containerClasses.values}}"></div>
+  </div>
+  <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
+    <div class='expand-header'>Subassemblies</div>
+    <div hidden class="{{containerClasses.subassemblies}}">2</div>
+  </div>
+  <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
+    <div class='expand-header'>Joints</div>
+    <div hidden class="{{containerClasses.joints}}">3</div>
+  </div>
+  <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
+    <div class='expand-header'>Divider Joint</div>
+    <div hidden class="{{containerClasses.dividerJoint}}">
+      {{dividerJointInput.html()}}
+    </div>
+  </div>
+  <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
+    <div class='expand-header'>Opening Border Part Codes</div>
+    <div hidden class="{{containerClasses.openings}}">5</div>
+  </div>
 </div>

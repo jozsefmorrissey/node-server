@@ -66,7 +66,7 @@ class DragDropResize {
 
     this.show = () => {
       if (instance.hidden()) {
-        backdrop.show();
+        if (!props.noBackdrop) backdrop.show();
         updateControls();
         const css = {display: 'block',
         height: Resizer.isLocked(popupCnt) ? undefined : instance.getDems().height,
@@ -443,8 +443,8 @@ class DragDropResize {
     }
     this.on = on;
 
-    // const cancelFade = du.fade.out(getPopupElems().cnt, 10, instance.close);
-    // getPopupElems().cnt.addEventListener('mouseover', cancelFade);
+    const cancelFade = du.fade.out(getPopupElems().cnt, 10, instance.close);
+    getPopupElems().cnt.addEventListener('mouseover', cancelFade);
 
 
     this.container = () => getPopupElems().cnt;

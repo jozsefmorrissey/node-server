@@ -1,0 +1,22 @@
+<div template-attr='subassembles'>
+  <label>Name</label>
+  <input class='template-input' attr='subassemblies' name="name" value="{{obj.name}}">
+  <br>
+  <div class='sub-demensions-cnt inline-flex'>
+    {{demensionXyzSelect.html()}}
+    <input class='template-input' attr='subassemblies' name='demensions' value='{{getEqn(demensionXyzSelect, obj.demensions)}}'>
+    <input disabled class='measurement-input' name='value'>
+  </div>
+  <br>
+  <div class='sub-center-cnt inline-flex'>
+    {{centerXyzSelect.html()}}
+    <input class='template-input' attr='subassemblies' name='center' value='{{getEqn(centerXyzSelect, obj.center)}}'>
+    <input disabled class='measurement-input' name='value'>
+  </div>
+  <br>
+  <div class='sub-center-cnt inline-flex'>
+    {{rotationXyzSelect.html()}}
+    <input class='template-input' attr='subassemblies' name='rotation' value='{{getEqn(rotationXyzSelect, obj.rotation)}}'>
+    <input disabled class='measurement-input' name='value'>
+  </div>
+</div>

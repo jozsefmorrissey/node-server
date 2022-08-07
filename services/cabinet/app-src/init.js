@@ -3,21 +3,24 @@
 
 require('../../../public/js/utils/utils.js');
 const $t = require('../../../public/js/utils/$t');
-$t.loadFunctions(require('../generated/html-templates'))
+$t.loadFunctions(require('../generated/html-templates'));
 require('./displays/user.js');
 
 // Object Classes
+// require('./bind.js');
 require('./objects/assembly/init-assem');
+require('./objects/joint/init');
 const Order = require('./objects/order.js');
 const Assembly = require('./objects/assembly/assembly.js');
 const Properties = require('./config/properties.js');
+const PopUp = require('../../../public/js/utils/display/pop-up.js');
 
 // Display classes
 const du = require('../../../public/js/utils/dom-utils.js');
 const EPNTS = require('../generated/EPNTS.js');
 const Displays = require('./services/display-svc.js');
 const OrderDisplay = require('./displays/order.js');
-const ThreeDModel = require('./three-d/three-d-model.js');
+const ThreeDMainModel = require('./displays/three-d-main.js');
 const TwoDLayout = require('./two-d/layout.js');
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
@@ -40,7 +43,7 @@ function updateDivisions (target) {
     const value = values[index];
     if(value) inputs[index].value = value;
   }
-  updateModel(opening);
+  ThreeDModel.update(opening);
 }
 
 function getValue(code, obj) {
@@ -49,7 +52,10 @@ function getValue(code, obj) {
 }
 
 
-
+const urlSuffix = du.url.breakdown().path.split('/')[2];
+const pageId = {template: 'template-manager', cost: 'cost-manager', home: 'app',
+                pattern: 'pattern-manager', property: 'property-manager-cnt'
+              }[urlSuffix] || 'app';
 function init(body){
   Properties.load(body);
   let roomDisplay;
@@ -58,15 +64,32 @@ function init(body){
   const propertyDisplay = new PropertyDisplay('#property-manager');
   Displays.register('propertyDisplay', propertyDisplay);
   require('./cost/init-costs.js');
-  du.on.match('change', '.open-orientation-radio,.open-division-input', utils.updateDivisions);
-  const CostManager = require('./displays/managers/cost.js');
-  const costManager = new CostManager('cost-manager', 'cost');
-  orderDisplay = new OrderDisplay('#app');
-  setTimeout(ThreeDModel.init, 1000);
-  setTimeout(TwoDLayout.init, 1000);
-  const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn');
+  const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId);
   const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
-
+  if (urlSuffix === 'cost') {
+    const CostManager = require('./displays/managers/cost.js');
+    const costManager = new CostManager('cost-manager', 'cost');
+  } else if (urlSuffix === 'template') {
+    const TemplateManager = require('./displays/managers/template.js');
+    const templateDisplayManager = new TemplateManager('template-manager');
+  } else {
+    du.on.match('change', '.open-orientation-radio,.open-division-input', updateDivisions);
+    orderDisplay = new OrderDisplay('#order-cnt');
+    setTimeout(TwoDLayout.init, 1000);
+    setTimeout(ThreeDMainModel.init, 1000);
+  }
 }
 
 Request.get(EPNTS.config.get(), init, console.error);
+
+const popUp = new PopUp({resize: false, noBackdrop: true});
+
+du.on.match('click', '*', (elem, event) => {
+  const errorMsg = elem.getAttribute('error-msg');
+  if (errorMsg) {
+    popUp.positionOnElement(elem).bottom();
+    popUp.updateContent(errorMsg);
+    popUp.show();
+    event.stopPropagation();
+  } else popUp.close();
+});

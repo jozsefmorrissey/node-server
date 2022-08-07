@@ -24,6 +24,7 @@
 
 .expandable-list.sidebar {
   display: inline-flex;
+  padding: 3pt;
 }
 
 .expand-rm-btn-cnt {
@@ -104,4 +105,14 @@
   background-color: black;
   color: white;
   font-weight: bolder;
+}
+
+.expand-header.active.no-body {
+  border-radius: 10pt;
+}
+
+.expand-header.error {
+  font-weight: 700;
+  color: red;
+  background-color: pink;
 }

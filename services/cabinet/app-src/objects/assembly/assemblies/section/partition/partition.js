@@ -13,7 +13,7 @@ class PartitionSection extends Section {
     const parentToJson = this.toJson;
     this.toJson = () => {
       const json = parentToJson();
-      delete json.subAssemblies;
+      delete json.subassemblies;
       return json;
     }
   }

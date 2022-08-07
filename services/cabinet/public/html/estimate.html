@@ -12,36 +12,37 @@
     <link rel="stylesheet" href="/styles/expandable-list.css">
     <link rel="stylesheet" href="/cabinet/styles/estimate.css">
     <script src="/js/utility-filter.js" run-type='auto'></script>
-    <title>Estimate</title>
+    <title>Estimate{{bolux}}</title>
   </head>
   <body>
     <button id='menu-btn'>&#8801;</button>
     <div id='menu' hidden></div>
     <div id='login'><div id='login-cnt' class='center-all'></div></div>
     <div id='display-ctn'>
-      <div id='app' name='Orders'></div>
-      <div name='Property Manager'>
+      <div id='app' name='Orders' {{id !== 'home' && "path='/cabinet/home'"}} >
+        <div id='order-cnt'></div>
+        <div id='model-cnt'>
+          <div id='display-menu'></div>
+          <div id='model-display-cnt'>
+            <canvas id="two-d-model"></canvas>
+            <div id="three-d-model" class="viewer small">
+              <span id="model-controller"></span>
+              <span id="three-d-model-display"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div name='Property Manager' path='/cabinet/property' >
         <div class='center'>
           <button id='property-manager-save-all'>Save All</button>
         </div>
         <div id='property-manager'></div>
       </div>
-      <div id='cost-manager' name='Cost Manager'></div>
-      <div id='template-manager' name='Template Manager'>Temp Man</div>
-      <div id='pattern-manager' name='Pattern Manager'>Pat Man</div>
+      <div id='cost-manager' path='/cabinet/cost' name='Cost Manager'></div>
+      <div id='template-manager' {{id === 'home' && path='/cabinet/template'}} name='Template Manager'>Temp Man</div>
+      <div id='pattern-manager' path='/cabinet/home' name='Pattern Manager'>Pat Man</div>
     </div>
     <div id='property-select-cnt'></div>
-
-
-    <div id='model-cnt'>
-      <div id="model-controller" hidden></div>
-      <div id='display-menu'></div>
-      <div id='model-display-cnt'>
-        <canvas id="two-d-model"></canvas>
-        <div id="three-d-model" class="viewer small">
-        </div>
-      </div>
-    </div>
-    <div class="" id='controls-2d'></div>
   </body>
 </html>

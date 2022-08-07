@@ -7,6 +7,7 @@ const Position = require('../../../../../../position.js');
 const Panel = require('../../../panel.js');
 const Frame = require('../../../frame.js');
 const Assembly = require('../../../../assembly.js');
+const Joint = require('../../../../../joint/joint');
 
 class DividerSection extends PartitionSection {
   constructor(partCode, sectionProperties, parent) {
@@ -15,6 +16,23 @@ class DividerSection extends PartitionSection {
     this.setParentAssembly(parent);
     const props = sectionProperties;
     const instance = this;
+    let panel;
+
+    function jointOffset(props) {
+      instance.getAssembly('c').joints
+      if (panel && panel.joints.length < 1) {
+        const pc = panel.partCode();
+        panel.joints = [
+          new Joint(pc, props.borders.top.partCode()),
+          new Joint(pc, props.borders.bottom.partCode()),
+          new Joint(pc, props.borders.left.partCode()),
+          new Joint(pc, props.borders.right.partCode())
+        ];
+        panel.joints.forEach((j) => j.parentAssemblyId(panel.uniqueId()));
+      }
+      return 0.9525;
+    }
+
     this.position().center = (attr) => {
       const center = props().center;
       return attr ? center[attr] : center;
@@ -36,15 +54,15 @@ class DividerSection extends PartitionSection {
       const props = sectionProperties();
       const dem = {
         x: props.depth,
-        y: props.dividerLength,
+        y: props.dividerLength + jointOffset(props) * 2,
         z: this.value('pwt34')
       };
       return attr ? dem[attr] : dem;
     };
     const panelRotFunc = () => {
       const isVertical = sectionProperties().vertical;
-      if (isVertical) return 'xyz';
-      else return 'xy';
+      if (isVertical) return {x: 90, y: 90, z: 90};
+      else return {x: 90, y: 90, z: 0};
     }
 
     // const frameCenterFunc = (attr) => {
@@ -89,7 +107,7 @@ class DividerSection extends PartitionSection {
     }
 
     const index = props().index;
-    const panel = new Panel(`dp-${index}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
+    panel = new Panel(`dp-${index}`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
     // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
     this.addSubAssembly(panel);
     // this.addSubAssembly(frame);

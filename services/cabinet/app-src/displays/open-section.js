@@ -6,7 +6,7 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
-const ThreeDModel = require('../three-d/three-d-model.js');
+const ThreeDMain = require('./three-d-main.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
 const Measurement = require('../../../../public/js/utils/measurement.js');
 const $t = require('../../../../public/js/utils/$t.js');
@@ -92,7 +92,7 @@ OpenSectionDisplay.getList = (root) => {
   const getBody = (opening) => {
     const list = OpenSectionDisplay.getList(root);
     const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
-    const assemblies = opening.getSubAssemblies();
+    const assemblies = opening.getSubassemblies();
     return SectionDisplay.render({assemblies, getFeatureDisplay, opening, list, sections});
   }
   const findElement = (selector, target) => du.find.down(selector, du.find.up('.expandable-list', target));
@@ -124,6 +124,7 @@ OpenSectionDisplay.refresh = (opening) => {
       const id = OpenSectionDisplay.getId(opening);
       const target = du.id(id);
       const listCnt = du.find.up('.expandable-list', target);
+      if (!listCnt) return;
       const listId = Number.parseInt(listCnt.getAttribute('ex-list-id'));
 
       const type = opening.isVertical() === true ? 'pill' : 'sidebar';
@@ -165,7 +166,7 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
       });
       if (opening.pattern().satisfied()) {
         const cabinet = opening.getAssembly('c');
-        ThreeDModel.render(cabinet);
+        ThreeDMain.update(cabinet);
       }
     });
     inputHtml += measInput.html();
@@ -194,7 +195,7 @@ OpenSectionDisplay.onPatternChange = (target) => {
     document.querySelector(cntSelector).innerHTML = html;
     OpenSectionDisplay.refresh(opening);
     const cabinet = opening.getAssembly('c');
-    ThreeDModel.render(cabinet);
+    ThreeDMain.update(cabinet);
   }
   if (inputCnt !== null) {
     inputCnt.hidden = opening.pattern().equal;
@@ -215,7 +216,7 @@ OpenSectionDisplay.onSectionChange = (target) => {
   const index = ExpandableList.getIdAndKey(target).key;
   section.parentAssembly().setSection(target.value, index);
   OpenSectionDisplay.refresh(section.parentAssembly());
-  ThreeDModel.update(section);
+  ThreeDMain.update(section);
 }
 
 du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);

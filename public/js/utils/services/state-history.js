@@ -16,7 +16,7 @@ class StateHistory {
           if (states.length > index) states = states.slice(0, index);
           states.push({hash: currHash, json: currState});
           index = states.length;
-          console.log('new history element!', index, currHash);
+          // console.log('new history element!', index, currHash);
           // console.log(JSON.stringify(currState, null, 2));
         }
       }

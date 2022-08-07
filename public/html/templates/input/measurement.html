@@ -2,5 +2,5 @@
   <label>{{label()}}</label>
   <input class='measurement-input {{class()}}' id='{{id()}}' value='{{value() ? value() : ""}}'
       placeholder='{{placeholder()}}' type='{{type()}}' name='{{name()}}'>
-  <div class='error' id='{{errorMsgId()}}'>{{errorMsg()}}</div>
+  <div class='error' id='{{errorMsgId()}}' hidden>{{errorMsg()}}</div>
 </div>

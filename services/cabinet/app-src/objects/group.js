@@ -17,7 +17,7 @@ class Group extends Lookup {
       this.cabinets.forEach((cabinet) => json.cabinets.push(cabinet.toJson()));
       json.name = this.name();
       json.id = this.id();
-      json.roomId = this.room.id();
+      json.roomId = this.room().id();
       json.propertyConfig = this.propertyConfig.toJson();
       return json;
     }

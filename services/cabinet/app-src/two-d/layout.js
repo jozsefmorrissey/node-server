@@ -6,9 +6,11 @@ const PopUp = require('../../../../public/js/utils/display/pop-up');
 const Properties = require('../config/properties');
 const Measurement = require('../../../../public/js/utils/measurement.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
+const Draw2D = require('./draw.js');
 // TODO: Rename
 const TwoDLayout = {};
 
+let draw;
 const eval = new StringMathEvaluator({Math}).eval;
 const popUp = new PopUp({resize: false});
 
@@ -23,7 +25,7 @@ TwoDLayout.set = (l) => {
 let hoverMap;
 
 const resetHoverMap = () => hoverMap = {
-    Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2D: {}, LineMeasurment2D: {},
+    Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2D: {}, LineMeasurement2D: {},
     Object2d: {}, Square2D: {}, Snap2D: {}, SnapLocation2D: {}
   };
 
@@ -34,7 +36,7 @@ let hovering;
 let dragging;
 let clickHolding = false;
 let popupOpen = false;
-let measurmentModify = false;
+let measurementModify = false;
 let lastDown = 0;
 const selectTimeBuffer = 200;
 const quickChangeFuncs = {};
@@ -44,15 +46,15 @@ function getPopUpAttrs(elem) {
   if (cnt === undefined) return {};
   const type = cnt.getAttribute('type-2d');
   const key = elem.getAttribute('key');
-  const evalVal = eval(elem.value);
+  const evalVal = elem.type === 'input' ? eval(elem.value) : elem.value;
   let value, display;
   if (elem.getAttribute('convert') === 'false') {
     value = evalVal;
     display = evalVal;
   } else {
-    const measurment = new Measurement(evalVal, true);
-    value = measurment.decimal();
-    display = measurment.display();
+    const measurement = new Measurement(evalVal, true);
+    value = measurement.decimal();
+    display = measurement.display();
   }
   const id = cnt.id;
   return {
@@ -75,7 +77,7 @@ du.on.match('enter', '.value-2d', (elem) => {
 
 du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
   const props = getPopUpAttrs(elem);
-  const input = du.find.closest('.measurment-mod', elem);
+  const input = du.find.closest('.measurement-mod', elem);
   if (input) setTimeout(() =>
       input.value = props.obj.display(), 0);
 });
@@ -85,12 +87,25 @@ function remove() {
   popUp.close();
 }
 
-function placeInFront(target) {
-  du.move.inFront(target);
+function setGreaterZindex(otherId) {
+  return (target) => {
+    const other = du.id(otherId);
+    if (!other) return;
+    const targetZ = du.zIndex(target);
+    const otherZ = du.zIndex(other);
+    if (Number.isNaN(targetZ) || Number.isNaN(otherZ)) return;
+    if (targetZ > otherZ) {
+      target.style.zIndex = targetZ;
+      other.style.zIndex = otherZ;
+    } else {
+      target.style.zIndex = otherZ;
+      other.style.zIndex = targetZ;
+    }
+  };
 }
 
-du.on.match('click', '#model-cnt', placeInFront);
-du.on.match('click', '#app', placeInFront);
+du.on.match('click', '#model-cnt', setGreaterZindex('order-cnt'));
+du.on.match('click', '#order-cnt', setGreaterZindex('model-cnt'));
 du.on.match('click', '.remove-btn-2d', remove, popUp.container());
 
 du.on.match('click', '.add-door-btn-2d', (elem) => {
@@ -122,7 +137,7 @@ du.on.match('click', '.add-vertex-btn-2d', (elem) => {
   attrs.obj.startVertex().nextVertex(point, Layout2D.Wall2D);
 });
 
-du.on.match('enter', '.measurment-mod', (elem) => {
+du.on.match('enter', '.measurement-mod', (elem) => {
   const value = eval(elem.value);
   getPopUpAttrs(elem).obj.modify(value);
   panZ.once();
@@ -188,7 +203,7 @@ function hoverId () {
 
 const templateMap = {};
 function getTemplate(item) {
-  const templateLocation = `2d/pop-up/${item.constructor.name.toHypenated()}`;
+  const templateLocation = `2d/pop-up/${item.constructor.name.toKebab()}`;
   if (templateMap[templateLocation] === undefined) {
     templateMap[templateLocation] = new $t(templateLocation);
   }
@@ -199,13 +214,11 @@ function display(value) {
   return new Measurement(value).display();
 }
 
-const popupCnt = du.id('controls-2d');
 function openPopup(event, stdEvent) {
   if (hovering) {
     if (hovering.constructor.name === 'Snap2D') hovering.pairWithLast();
     popupOpen = true;
     const msg = `${hovering.constructor.name}: ${hovering.id()}`;
-    popupCnt.innerHTML = msg;
     const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
     const html = getTemplate(hovering).render(scope);
     popUp.open(html, {x: event.screenX, y: event.screenY});
@@ -215,7 +228,7 @@ function openPopup(event, stdEvent) {
 popUp.onClose((elem, event) => {
   setTimeout(() => popupOpen = false, 200);
   const attrs = getPopUpAttrs(du.find.closest('[type-2d]',popUp.container()));
-  measurmentModify = attrs.type === 'LineMeasurment2D';
+  measurementModify = attrs.type === 'LineMeasurement2D';
   lastDown = new Date().getTime();
   clickHolding = false;
 });
@@ -226,7 +239,7 @@ function onMouseup(event, stdEvent) {
       if (hovering) {
         setTimeout(() => openPopup(event, stdEvent), 5);
       } else {
-        measurmentModify = !measurmentModify;
+        measurementModify = !measurementModify;
       }
     } else {
       const clickWasHolding = clickHolding;
@@ -259,8 +272,8 @@ function hover(event) {
     if (!clickHolding && !found) hovering = undefined;
   }
 
-  if (measurmentModify) {
-    check(Object.values(hoverMap.LineMeasurment2D));
+  if (measurementModify) {
+    check(Object.values(hoverMap.LineMeasurement2D));
     found || check(Object.values(hoverMap.SnapLocation2D));
     found || check(Object.values(hoverMap.Snap2D));
     found || check(Object.values(hoverMap.Object2d));
@@ -321,10 +334,11 @@ let getWindowColor = () => {
 }
 
 const windowDrawMap = {};
-function drawWindow(ctx, wallStartPoint, window, wallTheta) {
-  ctx.beginPath();
+function drawWindow(wallStartPoint, window, wallTheta) {
+  draw.beginPath();
   const points = window.endpoints2D(wallStartPoint);
   const lookupKey = window.toString();
+  const ctx = draw.ctx();
   if (windowDrawMap[lookupKey] === undefined) {
     windowDrawMap[lookupKey] = () => {
       ctx.moveTo(points.start.x(), points.start.y());
@@ -342,8 +356,9 @@ function updateDoorHoverMap(door, startpointRight, startpointLeft) {
   updateHoverMap(door, startpointRight, startpointLeft, 15);
 }
 
-function doorDrawingFunc(ctx, startpointLeft, startpointRight) {
+function doorDrawingFunc(startpointLeft, startpointRight) {
   return (door) => {
+    const ctx = draw.ctx();
     ctx.beginPath();
     ctx.strokeStyle = hoverId() === door.id() ? 'green' : 'black';
     const hinge = door.hinge();
@@ -379,7 +394,7 @@ function doorDrawingFunc(ctx, startpointLeft, startpointRight) {
 }
 
 const doorDrawMap = {};
-function drawDoor(ctx, startpoint, door, wallTheta) {
+function drawDoor(startpoint, door, wallTheta) {
   const lookupKey = door.toString();
   if (doorDrawMap[lookupKey] === undefined) {
     const initialAngle = wallTheta;
@@ -389,37 +404,26 @@ function drawDoor(ctx, startpoint, door, wallTheta) {
     const startpointLeft = {x: startpoint.x + distLeft * Math.cos(theta), y: startpoint.y + distLeft * Math.sin(theta)};
     const distRight = door.fromPreviousWall();
     const startpointRight = {x: startpoint.x + distRight * Math.cos(theta), y: startpoint.y + distRight * Math.sin(theta)};
-    doorDrawMap[lookupKey] = doorDrawingFunc(ctx, startpointLeft, startpointRight, initialAngle);
+    doorDrawMap[lookupKey] = doorDrawingFunc(startpointLeft, startpointRight, initialAngle);
   }
   doorDrawMap[lookupKey](door);
 }
 
-function drawLine(ctx, line, color, width) {
-  if (line === undefined) return;
-  color = color ||  'black';
-  width = width || 10;
-  ctx.beginPath();
-  ctx.strokeStyle = hoverId() === line.id() ? 'green' : color;
-  ctx.lineWidth = width;
-  ctx.moveTo(line.startVertex().x(), line.startVertex().y());
-  ctx.lineTo(line.endVertex().x(), line.endVertex().y());
-  ctx.stroke();
-}
-
 const blank = 40;
 const hblank = blank/2;
-function drawMeasurmentValue(ctx, line, midpoint, measurment) {
+function drawMeasurementValue(line, midpoint, measurement) {
   if (line === undefined) return;
+  const ctx = draw.ctx();
   midpoint = line.midpoint();
 
   ctx.save();
   ctx.lineWidth = 0;
-  const length = measurment.display();
+  const length = measurement.display();
   const textLength = length.length;
   ctx.translate(midpoint.x(), midpoint.y());
   ctx.rotate(line.radians());
   ctx.beginPath();
-  ctx.fillStyle = hoverId() === measurment.id() ? 'green' : "white";
+  ctx.fillStyle = hoverId() === measurement.id() ? 'green' : "white";
   ctx.strokeStyle = 'white';
   ctx.rect(textLength * -3, -8, textLength * 6, 16);
   ctx.fill();
@@ -434,32 +438,32 @@ function drawMeasurmentValue(ctx, line, midpoint, measurment) {
   ctx.restore();
 }
 
-const measurmentLineMap = {};
-const getMeasurmentLine = (vertex1, vertex2) => {
+const measurementLineMap = {};
+const getMeasurementLine = (vertex1, vertex2) => {
   const lookupKey = `${vertex1.id()} => ${vertex2.id()}`;
-  if (measurmentLineMap[lookupKey] === undefined) {
-    measurmentLineMap[lookupKey] = new Layout2D.Line2D(vertex1, vertex2);
+  if (measurementLineMap[lookupKey] === undefined) {
+    measurementLineMap[lookupKey] = new Layout2D.Line2D(vertex1, vertex2);
   }
-  return measurmentLineMap[lookupKey];
+  return measurementLineMap[lookupKey];
 }
 
-let measurmentValues = [];
-function measurementValueToDraw(ctx, line, midpoint, measurment) {
-  measurmentValues.push({ctx, line, midpoint, measurment});
+let measurementValues = [];
+function measurementValueToDraw(line, midpoint, measurement) {
+  measurementValues.push({line, midpoint, measurement});
 }
 
-function drawMeasurmentValues() {
-  let values = measurmentValues;
-  measurmentValues = [];
+function drawMeasurementValues() {
+  let values = measurementValues;
+  measurementValues = [];
   for (let index = 0; index < values.length; index += 1) {
     let m = values[index];
-    drawMeasurmentValue(m.ctx, m.line, m.midpoint, m.measurment);
+    drawMeasurementValue(m.line, m.midpoint, m.measurement);
   }
 }
 
 const measurementLineWidth = 3;
 let measurementIs = {};
-function drawMeasurment(ctx, measurement, level, focalVertex)  {
+function drawMeasurement(measurement, level, focalVertex)  {
   const lookupKey = `${measurement.line().toString()}-${level}`;
   if (measurementIs[lookupKey] === undefined) {
     measurementIs[lookupKey] = measurement.I(level);
@@ -468,45 +472,45 @@ function drawMeasurment(ctx, measurement, level, focalVertex)  {
   const center = focalVertex.center(2, 3);
   const measurementColor = hoverId() === measurement.id() ? 'green' : 'grey';
   try {
-    ctx.beginPath();
+    draw.beginPath();
     const isWithin = layout.within(lines.outer.midpoint());
     const line = isWithin ? lines.inner : lines.outer;//lines.furtherLine(center);
     const midpoint = Layout2D.Vertex2D.center(line.startLine.endVertex(), line.endLine.endVertex());
-    if (measurmentModify || popupOpen) {
-      drawLine(ctx, line.startLine, measurementColor, measurementLineWidth);
-      drawLine(ctx, line.endLine, measurementColor, measurementLineWidth);
-      drawLine(ctx, line, measurementColor, measurementLineWidth);
-      ctx.stroke();
+    if (measurementModify || popupOpen) {
+      draw.line(line.startLine, measurementColor, measurementLineWidth);
+      draw.line(line.endLine, measurementColor, measurementLineWidth);
+      draw.line(line, measurementColor, measurementLineWidth);
       updateHoverMap(measurement, midpoint, midpoint, 15);
     }
-    measurementValueToDraw(ctx, line, midpoint, measurement);
+    measurementValueToDraw(line, midpoint, measurement);
     return line;
   } catch (e) {
     console.error('Measurement render error:', e);
   }
 }
 
-function measureOnWall(ctx, list, level) {
+function measureOnWall(list, level) {
   for (let index = 0; index < list.length; index += 1) {
     let item = list[index];
     const wall = item.wall();
     const points = item.endpoints2D();
-    const line1 = getMeasurmentLine(wall.startVertex(), points.start);
-    const line2 = getMeasurmentLine(points.end, wall.endVertex());
+    const line1 = getMeasurementLine(wall.startVertex(), points.start);
+    const line2 = getMeasurementLine(points.end, wall.endVertex());
     line1.measurement().modificationFunction(item.fromPreviousWall);
     line2.measurement().modificationFunction(item.fromNextWall);
-    drawMeasurment(ctx, line1.measurement(), level, wall.startVertex())
-    drawMeasurment(ctx, line2.measurement(), level, wall.startVertex())
+    drawMeasurement(line1.measurement(), level, wall.startVertex())
+    drawMeasurement(line2.measurement(), level, wall.startVertex())
     level += 2;
   }
   return level;
 }
 
 function includeDetails() {
-  return !dragging && (measurmentModify || popupOpen)
+  return !dragging && (measurementModify || popupOpen)
 }
 
-function drawWall(ctx, wall) {
+function drawWall(wall) {
+  const ctx = draw.ctx();
   const startpoint = wall.startVertex().point();
   r =  wall.length();
   theta = wall.radians();
@@ -519,126 +523,89 @@ function drawWall(ctx, wall) {
   ctx.stroke();
 
   wall.doors().forEach((door) =>
-    drawDoor(ctx, startpoint, door, wall.radians()));
+    drawDoor(startpoint, door, wall.radians()));
   wall.windows().forEach((window) =>
-    drawWindow(ctx, startpoint, window, wall.radians()));
+    drawWindow(startpoint, window, wall.radians()));
 
   let level = 4;
   if (includeDetails()) {
     const verticies = wall.verticies();
     let measLines = {};
-    level = measureOnWall(ctx, wall.doors(), level);
-    level = measureOnWall(ctx, wall.windows(), level);
+    level = measureOnWall(wall.doors(), level);
+    level = measureOnWall(wall.windows(), level);
   }
-  drawMeasurment(ctx, wall.measurement(), level, wall.startVertex());
+  drawMeasurement(wall.measurement(), level, wall.startVertex());
 
   updateHoverMap(wall, startpoint, endpoint, 5);
 
   return endpoint;
 }
 
-function drawCircle(ctx, circle, lineColor, fillColor, lineWidth) {
-  const center = circle.center();
-  ctx.beginPath();
-  ctx.lineWidth = lineWidth || 2;
-  ctx.strokeStyle = lineColor || 'black';
-  ctx.fillStyle = fillColor || 'white';
-  ctx.arc(center.x(),center.y(), circle.radius(),0, 2*Math.PI);
-  ctx.stroke();
-  ctx.fill();
-}
-
-function drawVertex(ctx, vertex) {
+function drawVertex(vertex) {
   const fillColor = hoverId() === vertex.id() ? 'green' : 'white';
   const p = vertex.point();
   const radius = 10;
   const circle = new Layout2D.Circle2D(radius, p);
-  drawCircle(ctx, circle, 'black', fillColor);
+  draw.circle(circle, 'black', fillColor);
   updateHoverMap(vertex, p, p, 12);
 }
 
-function drawSnapLocation(ctx, locations, color) {
+function drawSnapLocation(locations, color) {
   for (let index = 0; index < locations.length; index += 1) {
     const loc = locations[index];
     const c = hoverId() === loc.id() ? 'green' : (color || loc.color());
-    drawCircle(ctx, loc.circle(), 'black', c);
+    draw.circle(loc.circle(), 'black', c);
     const vertex = loc.vertex();
     updateHoverMap(loc, vertex.point(), vertex.point(), 8);
   }
 }
 
-function drawSquare(ctx, snap) {
-  const square = snap.object();
-  ctx.save();
-  ctx.beginPath();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = hoverId() === snap.id() ? 'green' : 'white';
-
-  const center = square.center();
-  ctx.translate(center.x(), center.y());
-  ctx.rotate(square.radians());
-  ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
-  updateHoverMap(snap, center, center, 30);
-  ctx.stroke();
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle =  'black';
-  textStart = snap.leftCenter();
-  ctx.fillText('HEllo', 0, square.height()/4);
-  ctx.stroke()
-
-  ctx.restore();
-
-  const potentalSnap = snap.potentalSnapLocation();
-  drawSnapLocation(ctx, snap.snapLocations.paired(), 'black');
-  if (potentalSnap) drawSnapLocation(ctx, [potentalSnap], 'white');
-  Layout2D.SnapLocation2D.active(snap.snapLocations.notPaired());
-}
-
-function drawObject(ctx, object) {
+function drawObject(object) {
   switch (object.object().constructor.name) {
     case 'Square2D':
-      drawSquare(ctx, object);
+      const square = object.object();
+      const center = square.center();
+      updateHoverMap(object, center, center, 30);
+      draw.square(square, hoverId() === object.id() ? 'green' : 'white');
+      const potentalSnap = object.potentalSnapLocation();
+      drawSnapLocation(object.snapLocations.paired(), 'black');
+      if (potentalSnap) drawSnapLocation([potentalSnap], 'white');
+      Layout2D.SnapLocation2D.active(object.snapLocations.notPaired());
       break;
     case 'Line2D':
-      drawLine(ctx, object);
+      draw.line(object);
       break;
     case 'Circle2D':
-      drawCircle(ctx, object);
+      draw.circle(object);
       break;
     case 'Layout2D':
-      drawLayout(ctx, object); // NOT IMPLEMENTED YET!!!
+      drawLayout(object); // NOT IMPLEMENTED YET!!!
       break;
     default:
       throw new Error(`Cannot draw object with constructor: ${object.constructor.name}`);
   }
 }
 
-function draw(canvas) {
+function illustrate(canvas) {
   if (layout === undefined) return;
   Layout2D.SnapLocation2D.clear();
   resetHoverMap();
-  const ctx = canvas.getContext('2d');
   let lastEndPoint = {x: 20, y: 20};
 
-  ctx.beginPath();
+  draw.beginPath();
   const walls = layout.walls();
   let previousEndpoint;
   let wl = walls.length;
   walls.forEach((wall, index) => {
-    lastEndPoint = drawWall(ctx, wall, lastEndPoint);
+    lastEndPoint = drawWall(wall, lastEndPoint);
     const previousWall = walls[(index - 1) % wl];
     if (previousEndpoint)
-      drawVertex(ctx, wall.startVertex());
+      drawVertex(wall.startVertex());
     previousEndpoint = lastEndPoint;
   }, true);
-  drawVertex(ctx, walls[0].startVertex());
-  drawMeasurmentValues();
-  layout.objects().forEach((obj) => drawObject(ctx, obj.topview()));
+  drawVertex(walls[0].startVertex());
+  drawMeasurementValues();
+  layout.objects().forEach((obj) => drawObject(obj.topview()));
 }
 
 function updateCanvasSize(canvas) {
@@ -653,8 +620,9 @@ function updateCanvasSize(canvas) {
 let panZ;
 function init() {
   const canvas = document.getElementById('two-d-model');
-  updateCanvasSize(canvas);
-  panZ = panZoom(canvas, draw);
+  draw = new Draw2D(canvas);
+  updateCanvasSize(draw.canvas());
+  panZ = panZoom(canvas, illustrate);
   panZ.onMove(onMove);
   panZ.onMousedown(onMousedown);
   panZ.onMouseup(onMouseup);

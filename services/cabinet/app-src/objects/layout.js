@@ -371,7 +371,7 @@ Vertex2D.center = (...verticies) => {
 }
 
 
-class LineMeasurment2D extends Lookup {
+class LineMeasurement2D extends Lookup {
   constructor(line, modificationFunction) {
     super();
     modificationFunction = modificationFunction || line.length;
@@ -403,15 +403,15 @@ class LineMeasurment2D extends Lookup {
         outer = new Line2D(startVerticies[0], endVerticies[0]);
         outer.startLine = new Line2D(line.startVertex(), startTerminationVerticies[0]);
         outer.endLine = new Line2D(line.endVertex(), endTerminationVerticies[0]);
-        const furtherLine = (point) => LineMeasurment2D.furtherLine(inner, outer, point);
-        const closerLine = (point) => LineMeasurment2D.furtherLine(inner, outer, point, true);
+        const furtherLine = (point) => LineMeasurement2D.furtherLine(inner, outer, point);
+        const closerLine = (point) => LineMeasurement2D.furtherLine(inner, outer, point, true);
         return {inner, outer, furtherLine, closerLine};
       } else {
         return {};
       }
     }
 
-    this.copy = (modFunc) => new LineMeasurment2D(line, modFunc);
+    this.copy = (modFunc) => new LineMeasurement2D(line, modFunc);
     this.modificationFunction = (func) => {
       if ((typeof func) === 'function') modificationFunction = func;
       return modificationFunction;
@@ -423,7 +423,7 @@ class LineMeasurment2D extends Lookup {
   }
 }
 
-LineMeasurment2D.furtherLine = (inner, outer, point, closer) =>
+LineMeasurement2D.furtherLine = (inner, outer, point, closer) =>
     inner.midpoint().distance(point) > outer.midpoint().distance(point) ?
       (closer ? outer : inner) :
       (closer ? inner : outer);
@@ -506,7 +506,7 @@ class Line2D  extends Lookup {
       }
     }
 
-    const measurment = new LineMeasurment2D(this);
+    const measurement = new LineMeasurement2D(this);
     function getSlope(v1, v2) {
       const y1 = v1.y();
       const y2 = v2.y();
@@ -514,7 +514,7 @@ class Line2D  extends Lookup {
       const x2 = v2.x();
       return roundAccuracy(y2 - y1) / roundAccuracy(x2 - x1);
     }
-    this.measurement = () => measurment;
+    this.measurement = () => measurement;
 
     function getB(x, y, slope) {
         return y - slope * x;
@@ -1143,7 +1143,7 @@ class Square2D extends Lookup {
     }
     const getterWidth = this.width;
     this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
-    
+
     const changeFuncs = [];
     this.onChange = (func) => {
       if ((typeof func) === 'function') {
@@ -1197,8 +1197,37 @@ class Square2D extends Lookup {
       this.center().point(center);
       return true;
     };
+
+    function centerMethod(widthMultiplier, heightMultiplier, position) {
+      const center = instance.center();
+      const rads = instance.radians();
+      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
+                        instance.height() * heightMultiplier * Math.sin(rads);
+      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
+                        instance.width() * widthMultiplier * Math.sin(rads);
+
+      if (position !== undefined) {
+        const posCenter = new Vertex2D(position.center);
+        return new Vertex2D({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+      }
+      const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
+      return new Vertex2D(backLeftLocation);
+    }
+
+
+    this.frontCenter = (position) => centerMethod(0, -.5, position);
+    this.backCenter = (position) => centerMethod(0, .5, position);
+    this.leftCenter = (position) => centerMethod(.5, 0, position);
+    this.rightCenter = (position) => centerMethod(-.5, 0, position);
+
+    this.backLeft = (position) => centerMethod(.5, .5, position);
+    this.backRight = (position) => centerMethod(-.5, .5, position);
+    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
+    this.frontRight = (position) => centerMethod(-.5, -.5, position);
+
     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
+
   }
 }
 
@@ -1277,9 +1306,10 @@ class Layout2D extends Lookup {
       });
     }
 
-    this.addObject = () => {
+    this.addObject = (id) => {
       const center = Vertex2D.center.apply(null, this.verticies())
       const obj = new Object2d(center, this);
+      obj.id(id);
       this.objects().push(obj);
       return obj;
     }
@@ -1377,5 +1407,5 @@ Layout2D.Circle2D = Circle2D;
 Layout2D.Object2d = Object2d;
 Layout2D.Door2D = Door2D;
 Layout2D.SnapLocation2D = SnapLocation2D;
-Layout2D.LineMeasurment2D = LineMeasurment2D;
+Layout2D.LineMeasurement2D = LineMeasurement2D;
 module.exports = Layout2D;
