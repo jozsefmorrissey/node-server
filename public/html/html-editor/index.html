@@ -5,29 +5,59 @@
     <script type="text/javascript" src="trix.js"></script>
     <style media="screen">
       .html-editor-textarea {
+        width: 96%;
+        height: 180pt;
+      }
+      #html-editor-cnt {
+        position: fixed;
+        bottom: 0px;
         width: 100%;
-        height: 100pt;
+        z-index: 10;
+        max-height: 200pt;
+        background-color: white;
+        border-top: gray;
+        border-style: double;
+        border-width: 2pt 0 0 0;
+        margin: 0;
+        padding: 10pt;
+      }
+      #html-editory-bottom-spacer {
+        height: 250pt
+      }
+      trix-editor {
+        max-height: 140pt;
+        overflow: auto;
+      }
+      body {
+        margin: 0;
+      }
+      #display {
+        padding: 8pt;
       }
     </style>
     <style media="screen" id='user-style'></style>
   </head>
   <body>
     <div id='display'></div>
+    <div id='html-editory-bottom-spacer'></div>
 
-    <div id='radio-cnt'>
-      <label>Trix</label>
-      <input type="radio" name="display" value="trix" checked>
-      <label>Html</label>
-      <input type="radio" name="display" value="html">
-      <label>Css</label>
-      <input type="radio" name="display" value="css">
-    </div>
 
-    <div id='trix-cnt'>
-      <trix-editor></trix-editor>
+    <div id='html-editor-cnt'>
+      <div id='radio-cnt'>
+        <label>Trix</label>
+        <input type="radio" name="display" value="trix" checked>
+        <label>Html</label>
+        <input type="radio" name="display" value="html">
+        <label>Css</label>
+        <input type="radio" name="display" value="css">
+      </div>
+
+      <div id='trix-cnt' class='html-editor-textarea'>
+        <trix-editor></trix-editor>
+      </div>
+      <textarea class='html-editor-textarea' id='raw-html-input' hidden></textarea>
+      <textarea class='html-editor-textarea' id='css-input' hidden></textarea>
     </div>
-    <textarea class='html-editor-textarea' id='raw-html-input' hidden></textarea>
-    <textarea class='html-editor-textarea' id='css-input' hidden></textarea>
     <script type="text/javascript">
       var element = document.querySelector("trix-editor")
       element.editor  // is a Trix.Editor instance
@@ -47,13 +77,13 @@
       const elementReg = /^([^>^<]*?)(<([a-zA-Z-0-9]*)[^>]*>((?!(<\3[^>]*>|<\/\3>)).)*<\/\3>)/;
       const multiSpaceReg = / {2,}/g;
       function formatHtml(str) {
+        if ((typeof str) !== 'string') return '';
         let formattedStr = '';
         let index = 0;
         let nestCnt = 0;
         let currStr = str.replace(/\n/g, '');
         let match;
         while (match = currStr.match(tagReg)) {
-          console.log(match);
           const currTab = tab(nestCnt);
           const elemMatch = currStr.match(elementReg);
           const hasClosingTag = elemMatch !== null;
@@ -76,7 +106,9 @@
       }
 
       rawInput.addEventListener('keyup', (e) => {
-        if (state !== 'html') return;
+        if (state !== 'html' || rawInput.value === html) return;
+        radioCnt.children[0].hidden = true;
+        radioCnt.children[1].hidden = true;
         html = rawInput.value;
         display.innerHTML = html;
       });
@@ -104,12 +136,21 @@
           rawInput.hidden = false;
           cssInput.hidden = true;
           rawInput.value = formatHtml(html);
+          html = rawInput.value;
         } else {
           trixCnt.hidden = true;
           rawInput.hidden = true;
           cssInput.hidden = false;
         }
       });
+
+      window.onload = () => {
+        const toolbar = document.querySelector('trix-toolbar');
+        toolbar.addEventListener('click', () => {
+          html = element.value;
+          display.innerHTML = html;
+        });
+      }
     </script>
   </body>
 </html>
