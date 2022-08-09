@@ -6,7 +6,8 @@
     <style media="screen">
       .html-editor-textarea {
         width: 96%;
-        height: 180pt;
+        height: 160pt;
+        white-space: nowrap;
       }
       #html-editor-cnt {
         position: fixed;
@@ -55,7 +56,11 @@
       <div id='trix-cnt' class='html-editor-textarea'>
         <trix-editor></trix-editor>
       </div>
-      <textarea class='html-editor-textarea' id='raw-html-input' hidden></textarea>
+      <div id='raw-html-input-cnt' hidden>
+        <label>Max Line Length</label>
+        <input id='html-editor-max-length' type='number' value='81'>
+        <textarea class='html-editor-textarea' id='raw-html-input'></textarea>
+      </div>
       <textarea class='html-editor-textarea' id='css-input' hidden></textarea>
     </div>
     <script type="text/javascript">
@@ -65,6 +70,7 @@
       let state = 'trix';
       const display = document.getElementById('display');
       const checkbox = document.getElementById('raw-html');
+      const rawInputCnt = document.getElementById('raw-html-input-cnt');
       const rawInput = document.getElementById('raw-html-input');
       const trixCnt = document.getElementById('trix-cnt');
       const cssInput = document.getElementById('css-input');
@@ -152,20 +158,21 @@
         state = document.querySelector('input[type=\'radio\']:checked').value;
         if (state === 'trix') {
           trixCnt.hidden = false;
-          rawInput.hidden = true;
+          rawInputCnt.hidden = true;
           cssInput.hidden = true;
           const docLen = element.editor.getDocument().getLength();
           element.editor.setSelectedRange([0, docLen])
           element.editor.insertHTML(html);
         } else if (state === 'html') {
           trixCnt.hidden = true;
-          rawInput.hidden = false;
+          rawInputCnt.hidden = false;
           cssInput.hidden = true;
+          maxTextLength = Number.parseInt(document.getElementById('html-editor-max-length').value);
           rawInput.value = formatHtml(html);
           html = rawInput.value;
         } else {
           trixCnt.hidden = true;
-          rawInput.hidden = true;
+          rawInputCnt.hidden = true;
           cssInput.hidden = false;
         }
       });
