@@ -70,7 +70,33 @@
       const cssInput = document.getElementById('css-input');
       const userStyle = document.getElementById('user-style');
       const radioCnt = document.getElementById('radio-cnt');
+      let maxTextLength = 81;
       let css = '';
+
+      function tabText(tabStr, text) {
+        text = text.replace(/\n/g, `\n${tabStr}`);
+        const mtl = maxTextLength - tabStr.length;
+        let formatStr = '';
+        let currIndex = 0;
+        let startIndex = 0;
+        let endIndex = text.indexOf(' ');
+        let index;
+        while ((index = text.indexOf(' ', currIndex)) !== -1) {
+          if (index - startIndex < mtl) {
+            endIndex = index;
+            currIndex = index + 1;
+          } else {
+            formatStr += `\n${tabStr}${text.substring(startIndex, endIndex)}`;
+            startIndex = endIndex + 1;
+            endIndex = text.indexOf(' ', startIndex);
+            currIndex = startIndex;
+          }
+        }
+        if (text.length - startIndex < mtl) formatStr += `\n${tabStr}${text.substring(startIndex, text.length)}`;
+        else if (endIndex !== -1) formatStr += `\n${tabStr}${text.substring(startIndex, endIndex)}\n${tabStr}${text.substring(endIndex + 1, text.length)}`;
+        else formatStr += `\n${tabStr}${text.substring(startIndex, text.length)}`;
+        return formatStr.substring(1);
+      }
 
       const tagReg = /^(.*?)((<[a-zA-Z0-9]{1,}.*?>)|(<\/[a-zA-Z0-9]{1,}>))/;
       const tab = (count) => new Array(count).fill('  ').join('');
@@ -86,10 +112,10 @@
         while (match = currStr.match(tagReg)) {
           const currTab = tab(nestCnt);
           const elemMatch = currStr.match(elementReg);
-          const hasClosingTag = elemMatch !== null;
-          const prefix = match[1].trim() ? `\n${currTab}${match[1].trim().replace(multiSpaceReg, ' ')}` : '';
-          const tagStr = hasClosingTag ? elemMatch[2].trim().replace(multiSpaceReg, ' ') : undefined;
-          if (hasClosingTag && tagStr.length + currTab.length < 81) {
+          const hasClosingTag = currStr.indexOf(`${match[2][0]}/${match[2].substring(1)}`) !== -1;
+          const prefix = match[1].trim() ? `\n${tabText(currTab, match[1].trim().replace(multiSpaceReg, ' '))}` : '';
+          const tagStr = elemMatch ? elemMatch[2].trim().replace(multiSpaceReg, ' ') : undefined;
+          if (tagStr && tagStr.length + currTab.length < maxTextLength) {
             formattedStr += `${prefix}\n${currTab}${tagStr}`;
             currStr = currStr.substring(elemMatch[1].length + elemMatch[2].length);
           } else if (match[3]) {
