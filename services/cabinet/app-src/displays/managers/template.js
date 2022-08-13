@@ -18,6 +18,8 @@ const Joint = require('../../objects/joint/joint.js');
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
 const ThreeView = require('../three-view.js');
+const Layout2D = require('../../objects/layout.js');
+const Draw2D = require('../../two-d/draw.js');
 const cabinetBuildConfig = require('../../../public/json/cabinets.json');
 
 
@@ -138,6 +140,7 @@ const xyzEqnCheck = (template, cabinet) => (xyzInput) => {
   const valueInput = du.find.closest('[name="value"]', xyzInput);
   const index = Number.parseInt(du.find.closest('select', xyzInput).value);
   const subAssem = ExpandableList.get(xyzInput);
+  const part = cabinet.getAssembly(subAssem.code);
   const eqns = subAssem[xyzInput.name];
   const eqnMap = {x: eqns[0], y: eqns[1], z: eqns[2]};
   validateEquations(template, cabinet, valueInput, xyzInput, index, eqnMap);
@@ -164,7 +167,9 @@ function onPartSelect(elem) {
 
 du.on.match('change', '.template-body>span>input[name="partSelector"]', onPartSelect);
 
-
+const topView = du.id('three-view-top');
+const leftView = du.id('three-view-left');
+const frongView = du.id('three-view-front');
 function validateOpenTemplate (elem) {
   const templateBody = du.find('.template-body[template-id]');
   if (!templateBody || du.is.hidden(templateBody)) return;
@@ -192,10 +197,10 @@ function validateOpenTemplate (elem) {
 
   try {
     const templateCnt = du.find(`.template-body[template-id='${template.id()}'`);
-    const length = new Measurement(templateBody.children[2].value, true).decimal();
-    const width = new Measurement(templateBody.children[3].value, true).decimal();
+    const height = new Measurement(templateBody.children[3].value, true).decimal();
+    const width = new Measurement(templateBody.children[2].value, true).decimal();
     const thickness = new Measurement(templateBody.children[4].value, true).decimal();
-    const cabinet = template.getCabinet(length, width, thickness);
+    const cabinet = template.getCabinet(height, width, thickness);
 
     const depthInputs = du.find.downAll('[name=depth]', templateBody);
     depthInputs.forEach(valueEqnCheck(template, cabinet));
@@ -209,7 +214,6 @@ function validateOpenTemplate (elem) {
     subRotInputs.forEach(xyzEqnCheck(template, cabinet));
     threeView.update(cabinet);
     updatePartsDataList();
-    console.log(threeView.lastModel());
   } catch (e) {
     console.log(e);
   }

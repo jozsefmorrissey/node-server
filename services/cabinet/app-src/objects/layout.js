@@ -2,34 +2,266 @@
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const Measurement = require('../../../../public/js/utils/measurement.js');
 const StateHistory = require('../../../../public/js/utils/services/state-history');
+const approximate = require('../../../../public/js/utils/approximate.js');
 
 const pushVertex = (x, y, arr) => {
   if (Number.isNaN(x) || Number.isNaN(y)) return;
-  arr.push(new Vertex2D({x, y}));
-}
-
-const vAccuracy = 1000
-function roundAccuracy(value) {
-  return Math.round(value * vAccuracy) / vAccuracy;
+  arr.push(Vertex2D.instance({x, y}));
 }
 
 function toRadians(angle) {
-  return roundAccuracy((angle*Math.PI/180)%(2*Math.PI));
+  return approximate((angle*Math.PI/180)%(2*Math.PI));
 }
 
 function toDegrees(rads) {
-  return roundAccuracy(rads * 180/Math.PI % 360);
+  return approximate(rads * 180/Math.PI % 360);
 }
+
+class Vertex2D extends Lookup {
+  constructor(point, nextLine, prevLine) {
+    if (point instanceof Vertex2D) return point;
+    point = point || {x:0,y:0};
+    super();
+    if (nextLine) nextLine.startVertex(this);
+    if (prevLine) prevLine.endVertex(this);
+    Object.getSet(this, {point});
+    this.nextLine = (newLine) => {
+      if (newLine instanceof Line2D) nextLine = newLine;
+      return nextLine;
+    }
+    this.prevLine = (newLine) => {
+      if (newLine instanceof Line2D) prevLine = newLine;
+      return prevLine;
+    }
+    const instance = this;
+    this.move = (center) => {
+      this.point(center);
+      return true;
+    };
+    this.point = (newPoint) => {
+      if (newPoint) this.x(newPoint.x);
+      if (newPoint) this.y(newPoint.y);
+      return point;
+    }
+
+    this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
+    this.x = (val) => {
+      if ((typeof val) === 'number') point.x = approximate(val);
+      return this.point().x;
+    }
+    this.y = (val) => {
+      if ((typeof val) === 'number') this.point().y = approximate(val);
+      return this.point().y;
+    }
+    function assignVertex(forward) {
+      return (point, lineConst) => {
+        const vertexGetter = forward ? instance.tex : instance.prevVertex;
+        const lineGetter = forward ? instance.nextLine : instance.prevLine;
+        if (point !== undefined) {
+          const vertex = Vertex2D.instance(point);
+          const origVertex = vertexGetter();
+          if (origVertex instanceof Vertex2D) {
+            lineConst = lineConst || Line2D;
+            const line = forward ? new lineConst(vertex, origVertex) : new lineConst(origVertex, vertex);
+            origVertex.lineGetter(line);
+            vertex.lineGetter(line);
+          } else {
+            lineConst = lineConst || Line2D;
+            const line = forward ? new lineConst(vertex, instance) : new lineConst(instance, vertex);
+            lineGetter(line);
+            const otherLineGetter = !forward ? vertex.nextLine : vertex.prevLine;
+            otherLineGetter(line);
+          }
+        }
+        const line = lineGetter();
+        if (line === undefined) return undefined;
+        return instance.nextLine().endVertex();
+      };
+    }
+
+    const dummyFunc = () => true;
+    this.forEach = (func, backward) => {
+      let currVert = this;
+      let lastVert;
+      do {
+        lastVert = currVert;
+        func(currVert);
+        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
+      } while (currVert && currVert !== this);
+      return currVert || lastVert;
+    }
+
+    this.verticies = () => {
+      let list = [];
+      const endVertex = this.forEach((vertex) => vertex && list.push(vertex));
+      if (endVertex === this) return list;
+      let reverseList = [];
+      this.forEach((vertex) => reverseList.push(vertex), true);
+      return reverseList.reverse().concat(list);
+    }
+
+    this.lines = () => {
+      let list = [];
+      const endVertex = this.forEach((vertex) =>
+          vertex && vertex.nextLine() && list.push(vertex.nextLine()));
+      if (endVertex === this) return list;
+      let reverseList = [];
+      this.forEach((vertex) =>
+        vertex && vertex.prevLine() && reverseList.push(vertex.prevLine()), true);
+      return reverseList.reverse().concat(list);
+    }
+
+    this.isEnclosed = () => {
+      const start = this.forEach(dummyFunc, true);
+      const end = this.forEach(dummyFunc);
+      return start === end;
+    }
+
+    this.enclose = (lineConst) => {
+      if (!this.isEnclosed()) {
+        const start = this.forEach(dummyFunc, true);
+        const end = this.forEach(dummyFunc, false);
+        const newLine = new lineConst(end, start);
+        start.prevLine(newLine);
+        end.nextLine(newLine);
+      }
+    }
+    this.prevVertex = (point, lineConst) => {
+      if (point !== undefined) {
+        const vertex = Vertex2D.instance(point);
+        const origVertex = this.prevVertex();
+        if (origVertex instanceof Vertex2D) {
+          lineConst = lineConst || Line2D;
+          const line = new lineConst(origVertex, vertex);
+          origVertex.nextLine(line);
+          vertex.prevLine(line);
+        } else {
+          lineConst = lineConst || Line2D;
+          const line = new lineConst(vertex, instance);
+          instance.prevLine(line);
+          vertex.nextLine(line);
+        }
+      }
+      const line = instance.prevLine();
+      if (line === undefined) return undefined;
+      return line.startVertex();
+    };
+    this.nextVertex = (point, lineConst) => {
+      if (point !== undefined) {
+        const vertex = Vertex2D.instance(point);
+        const origVertex = this.nextVertex();
+        const origLine = this.nextLine();
+        if (origVertex instanceof Vertex2D) {
+          lineConst = lineConst || Line2D;
+          const line = new lineConst(vertex, origVertex);
+          origVertex.prevLine(line);
+          vertex.nextLine(line);
+          vertex.prevLine(origLine);
+          origLine.endVertex(vertex);
+        } else {
+          lineConst = lineConst || Line2D;
+          const line = new lineConst(instance, vertex);
+          instance.nextLine(line);
+          vertex.prevLine(line);
+        }
+      }
+      const line = instance.nextLine();
+      if (line === undefined) return undefined;
+      return line.endVertex();
+    };
+    this.center = (previousCount, nextCount) => {
+      previousCount = previousCount || 0;
+      nextCount = nextCount || 0;
+      if (previousCount + nextCount === 0) return Vertex2D.center(...this.verticies());
+      const verticies = {};
+      verticies[this.id()] = this;
+      let currVert = this.prevVertex();
+      for (let index = 0; currVert && !verticies[currVert.id()] && index < previousCount; index += 1) {
+        verticies[currVert.id()] = currVert;
+        currVert = this.prevVertex();
+      }
+      currVert = this.nextVertex();
+      for (let index = 0; currVert && !verticies[currVert.id()] && index < previousCount; index += 1) {
+        verticies[currVert.id()] = currVert;
+        currVert = this.nextVertex();
+      }
+      return Vertex2D.center(...Object.values(verticies));
+    }
+    this.distance = (vertex) => {
+      vertex = (vertex instanceof Vertex2D) ? vertex : Vertex2D.instance(vertex);
+      const xDiff = vertex.x() - this.x();
+      const yDiff = vertex.y() - this.y();
+      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+    }
+    this.remove = () => {
+      const prevLine = this.prevLine();
+      const nextLine = this.nextLine();
+      const nextVertex = this.nextVertex();
+      prevLine.endVertex(nextVertex);
+      nextVertex.prevLine(prevLine);
+    }
+    this.toString = () => `(${this.x()}, ${this.y()})`;
+    const parentToJson = this.toJson;
+    this.toJson = () => {
+      const json = parentToJson();
+      const nextLine = this.nextLine();
+      const prevLine = this.prevLine();
+      if (prevLine) json.prevLine = prevLine.id();
+      if (nextLine) json.nextLine = nextLine.id();
+      return json;
+    };
+    this.offset = (x, y) => {
+      const copy = this.toJson();
+      if (y !== undefined) copy.y += y;
+      if (x !== undefined) copy.x += x;
+      return Vertex2D.instance(copy);
+    }
+
+    this.point(point);
+  }
+}
+
+Vertex2D.instance = (point, group) => {
+  if (point instanceof Vertex2D) {
+    point.lookupGroup(group);
+    return point;
+  }
+  const inst = Lookup.instance(Vertex2D.name);
+  inst.lookupGroup(group);
+  inst.point(point);
+  return inst;
+}
+
+Vertex2D.fromJson = (json) => {
+  prevLine = json.prevLine && Lookup.get(json.prevLine);
+  nextLine = json.nextLine && Lookup.get(json.nextLine);
+  point = json.point;
+  const vertex = Vertex2D.instance(point, nextLine, prevLine);
+  vertex.id(json.id);
+  return vertex;
+}
+
+Vertex2D.center = (...verticies) => {
+  let x = 0;
+  let y = 0;
+  let count = 0;
+  verticies.forEach((vertex) => {
+      count++;
+      x += vertex.x();
+      y += vertex.y();
+  });
+  return Vertex2D.instance({x: x/count, y: y/count});
+}
+
+Vertex2D.reusable = true;
+new Vertex2D();
 
 class Circle2D extends Lookup {
   constructor(radius, center) {
     super();
-    center = new Vertex2D(center);
+    center = Vertex2D.instance(center);
+    Object.getSet(this, {radius, center});
     // ( x - h )^2 + ( y - k )^2 = r^2
-    this.radius = () => radius;
-    this.center = () => center;
-    this.center.x = () => center.x();
-    this.center.y = () => center.y();
     const instance = this;
     // Stole the root code from: https://stackoverflow.com/a/37225895
     function lineIntersects (line, bounded) {
@@ -145,230 +377,14 @@ Circle2D.intersectionOfTwo = (circle0, circle1) => {
     return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
 }
 
-class Vertex2D extends Lookup {
-  constructor(point, nextLine, prevLine) {
-    if (point instanceof Vertex2D) return point;
-    point = point || {x:0,y:0};
-    super();
-    if (nextLine) nextLine.startVertex(this);
-    if (prevLine) prevLine.endVertex(this);
-    Object.getSet(this, {point});
-    this.nextLine = (newLine) => {
-      if (newLine instanceof Line2D) nextLine = newLine;
-      return nextLine;
-    }
-    this.prevLine = (newLine) => {
-      if (newLine instanceof Line2D) prevLine = newLine;
-      return prevLine;
-    }
-    const instance = this;
-    this.move = (center) => {
-      this.point(center);
-      return true;
-    };
-    this.point = (newPoint) => {
-      if (newPoint) this.x(newPoint.x);
-      if (newPoint) this.y(newPoint.y);
-      return point;
-    }
-
-    this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
-    this.x = (val) => {
-      if ((typeof val) === 'number') point.x = roundAccuracy(val);
-      return point.x;
-    }
-    this.y = (val) => {
-      if ((typeof val) === 'number') this.point().y = roundAccuracy(val);
-      return point.y;
-    }
-    function assignVertex(forward) {
-      return (point, lineConst) => {
-        const vertexGetter = forward ? instance.tex : instance.prevVertex;
-        const lineGetter = forward ? instance.nextLine : instance.prevLine;
-        if (point !== undefined) {
-          const vertex = new Vertex2D(point);
-          const origVertex = vertexGetter();
-          if (origVertex instanceof Vertex2D) {
-            lineConst = lineConst || Line2D;
-            const line = forward ? new lineConst(vertex, origVertex) : new lineConst(origVertex, vertex);
-            origVertex.lineGetter(line);
-            vertex.lineGetter(line);
-          } else {
-            lineConst = lineConst || Line2D;
-            const line = forward ? new lineConst(vertex, instance) : new lineConst(instance, vertex);
-            lineGetter(line);
-            const otherLineGetter = !forward ? vertex.nextLine : vertex.prevLine;
-            otherLineGetter(line);
-          }
-        }
-        const line = lineGetter();
-        if (line === undefined) return undefined;
-        return instance.nextLine().endVertex();
-      };
-    }
-
-    const dummyFunc = () => true;
-    this.forEach = (func, backward) => {
-      let currVert = this;
-      let lastVert;
-      do {
-        lastVert = currVert;
-        func(currVert);
-        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
-      } while (currVert && currVert !== this);
-      return currVert || lastVert;
-    }
-
-    this.verticies = () => {
-      let list = [];
-      const endVertex = this.forEach((vertex) => vertex && list.push(vertex));
-      if (endVertex === this) return list;
-      let reverseList = [];
-      this.forEach((vertex) => reverseList.push(vertex), true);
-      return reverseList.reverse().concat(list);
-    }
-
-    this.lines = () => {
-      let list = [];
-      const endVertex = this.forEach((vertex) =>
-          vertex && vertex.nextLine() && list.push(vertex.nextLine()));
-      if (endVertex === this) return list;
-      let reverseList = [];
-      this.forEach((vertex) =>
-        vertex && vertex.prevLine() && reverseList.push(vertex.prevLine()), true);
-      return reverseList.reverse().concat(list);
-    }
-
-    this.isEnclosed = () => {
-      const start = this.forEach(dummyFunc, true);
-      const end = this.forEach(dummyFunc);
-      return start === end;
-    }
-
-    this.enclose = (lineConst) => {
-      if (!this.isEnclosed()) {
-        const start = this.forEach(dummyFunc, true);
-        const end = this.forEach(dummyFunc, false);
-        const newLine = new lineConst(end, start);
-        start.prevLine(newLine);
-        end.nextLine(newLine);
-      }
-    }
-    this.prevVertex = (point, lineConst) => {
-      if (point !== undefined) {
-        const vertex = new Vertex2D(point);
-        const origVertex = this.prevVertex();
-        if (origVertex instanceof Vertex2D) {
-          lineConst = lineConst || Line2D;
-          const line = new lineConst(origVertex, vertex);
-          origVertex.nextLine(line);
-          vertex.prevLine(line);
-        } else {
-          lineConst = lineConst || Line2D;
-          const line = new lineConst(vertex, instance);
-          instance.prevLine(line);
-          vertex.nextLine(line);
-        }
-      }
-      const line = instance.prevLine();
-      if (line === undefined) return undefined;
-      return line.startVertex();
-    };
-    this.nextVertex = (point, lineConst) => {
-      if (point !== undefined) {
-        const vertex = new Vertex2D(point);
-        const origVertex = this.nextVertex();
-        const origLine = this.nextLine();
-        if (origVertex instanceof Vertex2D) {
-          lineConst = lineConst || Line2D;
-          const line = new lineConst(vertex, origVertex);
-          origVertex.prevLine(line);
-          vertex.nextLine(line);
-          vertex.prevLine(origLine);
-          origLine.endVertex(vertex);
-        } else {
-          lineConst = lineConst || Line2D;
-          const line = new lineConst(instance, vertex);
-          instance.nextLine(line);
-          vertex.prevLine(line);
-        }
-      }
-      const line = instance.nextLine();
-      if (line === undefined) return undefined;
-      return line.endVertex();
-    };
-    this.center = (previousCount, nextCount) => {
-      previousCount = previousCount || 0;
-      nextCount = nextCount || 0;
-      if (previousCount + nextCount === 0) return Vertex2D.center(...this.verticies());
-      const verticies = {};
-      verticies[this.id()] = this;
-      let currVert = this.prevVertex();
-      for (let index = 0; currVert && !verticies[currVert.id()] && index < previousCount; index += 1) {
-        verticies[currVert.id()] = currVert;
-        currVert = this.prevVertex();
-      }
-      currVert = this.nextVertex();
-      for (let index = 0; currVert && !verticies[currVert.id()] && index < previousCount; index += 1) {
-        verticies[currVert.id()] = currVert;
-        currVert = this.nextVertex();
-      }
-      return Vertex2D.center(...Object.values(verticies));
-    }
-    this.distance = (vertex) => {
-      vertex = (vertex instanceof Vertex2D) ? vertex : new Vertex2D(vertex);
-      const xDiff = vertex.x() - this.x();
-      const yDiff = vertex.y() - this.y();
-      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
-    }
-    this.remove = () => {
-      const prevLine = this.prevLine();
-      const nextLine = this.nextLine();
-      const nextVertex = this.nextVertex();
-      prevLine.endVertex(nextVertex);
-      nextVertex.prevLine(prevLine);
-    }
-    this.toString = () => `(${this.x()}, ${this.y()})`;
-    const parentToJson = this.toJson;
-    this.toJson = () => {
-      const json = parentToJson();
-      const nextLine = this.nextLine();
-      const prevLine = this.prevLine();
-      if (prevLine) json.prevLine = prevLine.id();
-      if (nextLine) json.nextLine = nextLine.id();
-      return json;
-    };
-    this.offset = (x, y) => {
-      const copy = this.toJson();
-      if (y !== undefined) copy.y += y;
-      if (x !== undefined) copy.x += x;
-      return new Vertex2D(copy);
-    }
-
-    this.point(point);
-  }
+Circle2D.reusable = true;
+Circle2D.instance = (radius, center) => {
+  const inst = Lookup.instance(Circle2D.name);
+  inst.radius(radius);
+  inst.center(center);
+  return inst;
 }
-
-Vertex2D.fromJson = (json) => {
-  prevLine = json.prevLine && Lookup.get(json.prevLine);
-  nextLine = json.nextLine && Lookup.get(json.nextLine);
-  point = json.point;
-  const vertex = new Vertex2D(point, nextLine, prevLine);
-  vertex.id(json.id);
-  return vertex;
-}
-
-Vertex2D.center = (...verticies) => {
-  let x = 0;
-  let y = 0;
-  let count = 0;
-  verticies.forEach((vertex) => {
-      count++;
-      x += vertex.x();
-      y += vertex.y();
-  });
-  return new Vertex2D({x: x/count, y: y/count});
-}
+new Circle2D();
 
 
 class LineMeasurement2D extends Lookup {
@@ -428,28 +444,25 @@ LineMeasurement2D.furtherLine = (inner, outer, point, closer) =>
       (closer ? outer : inner) :
       (closer ? inner : outer);
 
-const approximate = {
-  eq: (val1, val2) => roundAccuracy(val1) === roundAccuracy(val2),
-  neq: (val1, val2) => roundAccuracy(val1) !== roundAccuracy(val2),
-  gt: (val1, val2) => roundAccuracy(val1) > roundAccuracy(val2),
-  lt: (val1, val2) => roundAccuracy(val1) < roundAccuracy(val2),
-  gteq: (val1, val2) => roundAccuracy(val1) >= roundAccuracy(val2),
-  lteq: (val1, val2) => roundAccuracy(val1) <= roundAccuracy(val2)
-}
-
 class Line2D  extends Lookup {
   constructor(startVertex, endVertex) {
     super();
-    startVertex = new Vertex2D(startVertex);
-    endVertex = new Vertex2D(endVertex);
+    startVertex = Vertex2D.instance(startVertex);
+    endVertex = Vertex2D.instance(endVertex);
     const instance = this;
 
     this.startVertex = (newVertex) => {
-      if (newVertex instanceof Vertex2D) startVertex = newVertex;
+      if (newVertex instanceof Vertex2D) {
+        startVertex = newVertex;
+        startVertex.nextLine(this);
+      }
       return startVertex;
     }
     this.endVertex = (newVertex) => {
-      if (newVertex instanceof Vertex2D) endVertex = newVertex;
+      if (newVertex instanceof Vertex2D) {
+        endVertex = newVertex;
+        endVertex.prevLine(this);
+      }
       return endVertex;
     }
 
@@ -466,7 +479,7 @@ class Line2D  extends Lookup {
     }
 
     this.withinSegmentBounds = (point) => {
-      point = new Vertex2D(point);
+      point = Vertex2D.instance(point);
       return approximate.lteq(this.minX(), point.x()) && approximate.lteq(this.minY(), point.y()) &&
             approximate.gteq(this.maxX(), point.x()) && approximate.gteq(this.maxY(), point.y());
     }
@@ -512,7 +525,7 @@ class Line2D  extends Lookup {
       const y2 = v2.y();
       const x1 = v1.x();
       const x2 = v2.x();
-      return roundAccuracy(y2 - y1) / roundAccuracy(x2 - x1);
+      return approximate(y2 - y1) / approximate(x2 - x1);
     }
     this.measurement = () => measurement;
 
@@ -530,7 +543,7 @@ class Line2D  extends Lookup {
     this.midpoint = () => {
       const x = (this.endVertex().x() + this.startVertex().x())/2;
       const y = (this.endVertex().y() + this.startVertex().y())/2;
-      return new Vertex2D({x,y});
+      return Vertex2D.instance({x,y});
     }
 
     this.yIntercept = () => getB(this.startVertex().x(), this.startVertex().y(), this.slope());
@@ -549,7 +562,7 @@ class Line2D  extends Lookup {
     this.minDem = () => this.y() < this.x() ? this.y() : this.x();
 
     this.closestPointOnLine = (vertex, segment) => {
-      vertex = (vertex instanceof Vertex2D) ? vertex : new Vertex2D(vertex);
+      vertex = (vertex instanceof Vertex2D) ? vertex : Vertex2D.instance(vertex);
       const perpLine = this.perpendicular(vertex);
       const perpSlope = perpLine.slope();
       const slope = this.slope();
@@ -564,7 +577,7 @@ class Line2D  extends Lookup {
         x = newX(slope, perpSlope, this.yIntercept(), perpLine.yIntercept());
         y = this.y(x);
       }
-      const closestPoint = new Vertex2D({x, y});
+      const closestPoint = Vertex2D.instance({x, y});
       if (!segment || this.withinSegmentBounds(closestPoint)) return closestPoint;
       return false;
     }
@@ -572,7 +585,7 @@ class Line2D  extends Lookup {
     this.inverseX = (y) => this.slope()*y + this.yIntercept();
     this.inverseY = (x) => (x-this.yIntercept())/this.slope();
     this.perpendicular = (vertex, distance) => {
-      vertex = new Vertex2D(vertex) || this.midpoint();
+      vertex = Vertex2D.instance(vertex) || this.midpoint();
       const posOffset = distance !== undefined ? distance/2 : 1000;
       const negOffset = -1 * posOffset;
       const slope = this.slope();
@@ -626,11 +639,11 @@ class Line2D  extends Lookup {
     this.radians = () => {
       const deltaX = this.endVertex().x() - this.startVertex().x();
       const deltaY = this.endVertex().y() - this.startVertex().y();
-      return roundAccuracy(Math.atan2(deltaY, deltaX));
+      return approximate(Math.atan2(deltaY, deltaX));
     }
 
     this.move = (center) => {
-      const mouseLocation = new Vertex2D(center);
+      const mouseLocation = Vertex2D.instance(center);
       const perpLine = this.perpendicular(mouseLocation);
       const interX = this.findIntersection(perpLine);
       const diffLine = new Line2D(interX, mouseLocation);
@@ -647,12 +660,71 @@ class Line2D  extends Lookup {
       this.endVertex().point().y = newEnd.y;
     };
     this.toString = () => `${this.startVertex().toString()} => ${this.endVertex().toString()}`;
+    this.toNegitiveString = () => `${this.endVertex().toString()} => ${this.startVertex().toString()}`;
   }
 }
-
+Line2D.reusable = true;
 Line2D.startAndTheta = (startvertex, theta) => {
   const end = {x: dist * Math.cos(theta), y: dist*Math.sin(theta)};
   return new Line(startVertex.point(), end);
+}
+Line2D.instance = (startV, endV, group) => {
+  const line = Lookup.instance(Line2D.name);
+  line.lookupGroup(group);
+  line.startVertex(Vertex2D.instance(startV)).lookupGroup(group);
+  line.endVertex(Vertex2D.instance(endV)).lookupGroup(group);
+  return line;
+}
+new Line2D();
+
+class Plane2D extends Lookup {
+  constructor(verticies) {
+    super();
+    this.getLines = () => {
+      const lines = [];
+      for (let index = 0; index < verticies.length; index += 1) {
+        lines.push(new Line2D(verticies[index], verticies[(index + 1) % verticies.length]));
+      }
+      return lines;
+    }
+  }
+}
+
+Plane2D.getPlanes = (planes) => {
+  const ps = [];
+  planes.forEach((p) => ps.push(new Plane2D(p)));
+  return ps;
+}
+
+class Plane3D extends Lookup {
+  constructor(...verticies) {
+    super();
+    if (verticies.length < 3) throw new Error('A Plane3D cannot be constructed without 3 verticies');
+
+  }
+}
+
+
+Plane2D.consolidatePolygons = (polygons) => {
+  const consolidated = {top: {}, left: {}, front: {}};
+  function group(g, poly) {
+
+    map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+    map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+    map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+  }
+  const map = {xy: [], xz: [], yz: []};
+  polygons.forEach((p, index) => {
+    map.xy.push([]);
+    map.xz.push([]);
+    map.yz.push([]);
+    p.vertices.forEach((v) => {
+      map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+      map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+      map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+    });
+  });
+  return map;
 }
 
 
@@ -733,7 +805,7 @@ class SnapLocation2D extends Lookup {
     this.move = (vertexLocation, moveId) => {
       moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
       if (lastMove === moveId) return;
-      vertexLocation = new Vertex2D(vertexLocation);
+      vertexLocation = Vertex2D.instance(vertexLocation);
       const parent = this.parent();
       const thisNewCenterLoc = this.parent()[location]({center: vertexLocation});
       parent.object().move({center: thisNewCenterLoc});
@@ -784,8 +856,8 @@ class Snap2D extends Lookup {
     Object.getSet(this, {object, tolerance}, 'layoutId');
     if (layout === undefined) return;
     const instance = this;
-    let start = new Vertex2D();
-    let end = new Vertex2D();
+    let start = Vertex2D.instance();
+    let end = Vertex2D.instance();
 
     this.layoutId = () => layout.id();
     this.radians = object.radians;
@@ -796,14 +868,14 @@ class Snap2D extends Lookup {
     this.width = object.width;
     this.onChange = object.onChange;
 
-    const backLeft = new SnapLocation2D(this, "backLeft",  new Vertex2D(null),  'backRight', 'red');
-    const backRight = new SnapLocation2D(this, "backRight",  new Vertex2D(null),  'backLeft', 'purple');
-    const frontRight = new SnapLocation2D(this, "frontRight",  new Vertex2D(null),  'frontLeft', 'black');
-    const frontLeft = new SnapLocation2D(this, "frontLeft",  new Vertex2D(null),  'frontRight', 'green');
+    const backLeft = new SnapLocation2D(this, "backLeft",  Vertex2D.instance(null),  'backRight', 'red');
+    const backRight = new SnapLocation2D(this, "backRight",  Vertex2D.instance(null),  'backLeft', 'purple');
+    const frontRight = new SnapLocation2D(this, "frontRight",  Vertex2D.instance(null),  'frontLeft', 'black');
+    const frontLeft = new SnapLocation2D(this, "frontLeft",  Vertex2D.instance(null),  'frontRight', 'green');
 
-    const backCenter = new SnapLocation2D(this, "backCenter",  new Vertex2D(null),  'backCenter', 'teal');
-    const leftCenter = new SnapLocation2D(this, "leftCenter",  new Vertex2D(null),  'rightCenter', 'pink');
-    const rightCenter = new SnapLocation2D(this, "rightCenter",  new Vertex2D(null),  'leftCenter', 'yellow');
+    const backCenter = new SnapLocation2D(this, "backCenter",  Vertex2D.instance(null),  'backCenter', 'teal');
+    const leftCenter = new SnapLocation2D(this, "leftCenter",  Vertex2D.instance(null),  'rightCenter', 'pink');
+    const rightCenter = new SnapLocation2D(this, "rightCenter",  Vertex2D.instance(null),  'leftCenter', 'yellow');
 
     const snapLocations = [backCenter,leftCenter,rightCenter,backLeft,backRight,frontLeft,frontRight];
     function getSnapLocations(paired) {
@@ -840,8 +912,8 @@ class Snap2D extends Lookup {
                         object.width() * widthMultiplier * Math.sin(rads);
 
       if (position !== undefined) {
-        const posCenter = new Vertex2D(position.center);
-        return new Vertex2D({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+        const posCenter = Vertex2D.instance(position.center);
+        return Vertex2D.instance({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
       }
       const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
       vertex.point(backLeftLocation);
@@ -950,7 +1022,7 @@ class Snap2D extends Lookup {
         if (snapInfo) {
           const obj = snapInfo.snapLoc.parent();
           if (snapInfo.theta !== undefined) {
-            const theta = roundAccuracy(((snapInfo.theta + 2 * Math.PI) - this.object().radians()) % (2*Math.PI));
+            const theta = approximate(((snapInfo.theta + 2 * Math.PI) - this.object().radians()) % (2*Math.PI));
             snapInfo.theta = undefined;
             this.snapLocations.rotate(theta);
           }
@@ -991,8 +1063,8 @@ class OnWall extends Lookup {
   constructor(wall, fromPreviousWall, fromFloor, height, width) {
     super();
     Object.getSet(this, {width, height, fromFloor, fromPreviousWall}, 'wallId');
-    let start = new Vertex2D();
-    let end = new Vertex2D();
+    let start = Vertex2D.instance();
+    let end = Vertex2D.instance();
     this.wallId = () => wall.id();
     this.endpoints2D = () => {
       const wallStartPoint = wall.startVertex();
@@ -1128,13 +1200,13 @@ Wall2D.fromJson = (json) => {
 class Square2D extends Lookup {
   constructor(center, height, width, radians) {
     super();
-    center = new Vertex2D(center);
+    center = Vertex2D.instance(center);
     width = width === undefined ? 121.92 : width;
     height = height === undefined ? 60.96 : height;
     radians = radians === undefined ? 0 : radians;
     const instance = this;
     Object.getSet(this, {center, height, width, radians});
-    const startPoint = new Vertex2D(null);
+    const startPoint = Vertex2D.instance(null);
 
     const getterHeight = this.height;
     this.height = (v) => {
@@ -1166,7 +1238,7 @@ class Square2D extends Lookup {
     this.radians = (newValue) => {
       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
         notify(radians, newValue);
-        radians = roundAccuracy(newValue);
+        radians = approximate(newValue);
       }
       return radians;
     };
@@ -1207,11 +1279,11 @@ class Square2D extends Lookup {
                         instance.width() * widthMultiplier * Math.sin(rads);
 
       if (position !== undefined) {
-        const posCenter = new Vertex2D(position.center);
-        return new Vertex2D({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+        const posCenter = Vertex2D.instance(position.center);
+        return Vertex2D.instance({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
       }
       const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
-      return new Vertex2D(backLeftLocation);
+      return Vertex2D.instance(backLeftLocation);
     }
 
 
@@ -1238,7 +1310,7 @@ function defSquare(center, layout) {
 class Object2d extends Lookup {
   constructor(center, layout, payload) {
     super();
-    center = new Vertex2D(center);
+    center = Vertex2D.instance(center);
     Object.getSet(this, {payload,
       topview: defSquare(center, layout), bottomView: defSquare(center, layout),
       leftview: defSquare(center, layout), rightview: defSquare(center, layout),
@@ -1298,7 +1370,7 @@ class Layout2D extends Lookup {
       points = Array.isArray(points) ? points : [points];
       points.forEach((point) => {
         if (startVertex === undefined) {
-          startVertex = new Vertex2D(point);
+          startVertex = Vertex2D.instance(point);
           endVertex = startVertex;
         } else {
           endVertex = endVertex.nextVertex(point, Wall2D);
@@ -1401,6 +1473,7 @@ new Square2D();
 Layout2D.Vertex2D = Vertex2D;
 Layout2D.Wall2D = Wall2D;
 Layout2D.Line2D = Line2D;
+Layout2D.Plane2D = Plane2D;
 Layout2D.Window2D = Window2D;
 Layout2D.Square2D = Square2D;
 Layout2D.Circle2D = Circle2D;

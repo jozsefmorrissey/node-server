@@ -12,6 +12,7 @@ class Lookup {
     id = id || String.random();
     const cxtr = this.constructor;
     const cxtrHash = cxtr.name;
+    let group;
     let cxtrAndId = `${cxtrHash}_${id}`
     if (singleton && cxtr.get(id)) return cxtr.get(id);
 
@@ -19,6 +20,24 @@ class Lookup {
     let modificationWindowOpen = true;
     attr = attr || 'id';
     Object.getSet(this, attr, Lookup.ID_ATTRIBUTE);
+    this.lookupGroup = (g) => {
+      if (group === undefined && g !== undefined) {
+        if (Lookup.groups[g] === undefined) Lookup.groups[g] = [];
+        group = g;
+        Lookup.groups[g].push(this);
+      }
+      return group;
+    }
+
+    this.release = () => {
+      if (cxtr.reusable === true) {
+        if (Lookup.freeAgents[cxtr.name] === undefined) Lookup.freeAgents[cxtr.name] = [];
+        Lookup.freeAgents[cxtr.name].push(this);
+        const index = Lookup.groups[group] ? Lookup.groups[group].indexOf(this) : -1;
+        if (index !== -1) Lookup.groups[group].splice(index, 1);
+      }
+      delete Lookup.byId[cxtr.name][this[attr]];
+    }
 
 
     this[Lookup.ID_ATTRIBUTE] = () => attr;
@@ -48,6 +67,7 @@ class Lookup {
     function addSelectListFuncToConstructor() {
       if(cxtr.selectList === Lookup.selectList) {
         cxtr.get = (id) => Lookup.get(id, cxtr);
+        if (cxtr.instance === undefined) cxtr.instance = () => Lookup.instance(cxtr.name);
         Lookup.byId[cxtr.name] = {};
         cxtr.selectList = () => Lookup.selectList(cxtr.name);
       }
@@ -65,6 +85,8 @@ class Lookup {
 Lookup.ID_ATTRIBUTE = 'ID_ATTRIBUTE';
 Lookup.byId = {Lookup};
 Lookup.constructorMap = {};
+Lookup.groups = {};
+Lookup.freeAgents = {};
 
 Lookup.get = (id, cxtr) => {
   cxtr = cxtr || Lookup;
@@ -82,6 +104,17 @@ Lookup.get = (id, cxtr) => {
 Lookup.selectList = (className) => {
   return Object.keys(Lookup.byId[className]);
 }
+Lookup.instance = (cxtrName) => {
+  const agents = Lookup.freeAgents[cxtrName];
+  if (!agents || agents.length === 0) {
+    return new (Lookup.constructorMap[cxtrName])();
+  }
+
+  const index = agents.length - 1;
+  const agent = agents[index];
+  agents.splice(index, 1);
+  return agent;
+}
 Lookup.decode = (id) => {
   if ((typeof id) !== 'string') return;
   const split = id.split('_');
@@ -90,6 +123,14 @@ Lookup.decode = (id) => {
     constructor: Lookup.constructorMap[split[0]],
     id:  split[1]
   };
+}
+Lookup.release = (group) => {
+  const groupList = Lookup.groups[group];
+  if (groupList === undefined) return;
+  Lookup.groups[group] = [];
+  for (let index = 0; index < groupList.length; index += 1) {
+    groupList[index].release();
+  }
 }
 
 try {

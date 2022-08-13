@@ -22,3 +22,4 @@ fix data save filename
 requireJS to properly formatJson files
 "Imperial (us)" does not add implicit multiplication stringMathEval
 hover help/error text
+Clean and seperate Object.(getSet|get|set);

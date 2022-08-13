@@ -1,4 +1,6 @@
 
+const approximate = require('approximate');
+
 function regexToObject (str, reg) {
   const match = str.match(reg);
   if (match === null) return null;
@@ -206,7 +208,7 @@ class StringMathEvaluator {
     this.eval = function (expr, scope, percision) {
       if (instance.cache(expr) !== null) return instance.cache(expr);
       if (Number.isFinite(expr))
-        return expr;
+        return approximate(expr);
       expr = new String(expr);
       expr = addUnexpressedMultiplicationSigns(expr);
       expr = convertFeetInchNotation(expr);
@@ -245,6 +247,7 @@ class StringMathEvaluator {
       }
 
       if (Number.isFinite(value)) {
+        value = approximate(value);
         cache[expr] = {time: new Date().getTime(), value};
         return value;
       }

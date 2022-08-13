@@ -328,6 +328,12 @@ function panZoom(canvas, draw) {
   }
   update(nextUpdateId); // start it happening
 
+  this.centerOn = function(x, y) {
+    displayTransform.scale = 1;
+    displayTransform.x = x - (canvas.width / 2);
+    displayTransform.y = y - (canvas.height / 2);
+  };
+
   return this;
 }
 

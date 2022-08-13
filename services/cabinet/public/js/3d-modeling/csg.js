@@ -360,20 +360,26 @@ CSG.cylinder = function(options) {
 //     new CSG.Vector({ x: 1, y: 2, z: 3 });
 
 CSG.Vector = function(x, y, z) {
+  function approximate(value, acc) {
+    acc ||= 1000000;
+    return Math.round(value * acc) / acc;
+  }
   if (arguments.length == 3) {
-    this.x = x;
-    this.y = y;
-    this.z = z;
+    this.x = approximate(x);
+    this.y = approximate(y);
+    this.z = approximate(z);
   } else if ('x' in x) {
-    this.x = x.x;
-    this.y = x.y;
-    this.z = x.z;
+    this.x = approximate(x.x);
+    this.y = approximate(x.y);
+    this.z = approximate(x.z);
   } else {
-    this.x = x[0];
-    this.y = x[1];
-    this.z = x[2];
+    this.x = approximate(x[0]);
+    this.y = approximate(x[1]);
+    this.z = approximate(x[2]);
   }
 };
+
+CSG.percision = 1000;
 
 CSG.Vector.prototype = {
   clone: function() {

@@ -4,12 +4,37 @@ class Draw2D {
   constructor(canvas) {
     const ctx = canvas.getContext('2d');
 
-    this.canvas = () => canvas;
-    this.ctx = () => ctx;
-    this.beginPath = () => ctx.beginPath();
-    this.moveTo = () => ctx.moveTo();
+    function draw(object, color, width) {
+      if (Array.isArray(object)) {
+        for (let index = 0; index < object.length; index += 1)
+          draw(object[index], color, width);
+        return;
+      }
+      switch (object.constructor.name) {
+        case 'Line2D':
+          draw.line(object, color, width);
+          break;
+        case 'Circle2D':
+          draw.circle(object, color, width);
+          break;
+        case 'Plane2D':
+          draw.plane(object, color, width);
+          break;
+        case 'Square2D':
+          draw.square(object, color, width);
+          break;
+        default:
+          console.error(`Cannot Draw '${object.constructor.name}'`);
+      }
+    }
 
-    this.line = (line, color, width) => {
+    draw.canvas = () => canvas;
+    draw.ctx = () => ctx;
+    draw.beginPath = () => ctx.beginPath();
+    draw.moveTo = () => ctx.moveTo();
+
+    draw.clear = () => ctx.clearRect(0,0,canvas.width,canvas.height);
+    draw.line = (line, color, width) => {
       if (line === undefined) return;
       color = color ||  'black';
       width = width || 10;
@@ -21,7 +46,14 @@ class Draw2D {
       ctx.stroke();
     }
 
-    this.square = (square, color) => {
+    draw.plane = (plane, color, width) => {
+      if (plane === undefined) return;
+      color = color ||  'black';
+      width = width || .1;
+      plane.getLines().forEach((line) => this.line(line, color, width));
+    }
+
+    draw.square = (square, color) => {
       ctx.save();
       ctx.beginPath();
       ctx.lineWidth = 2;
@@ -47,7 +79,7 @@ class Draw2D {
       ctx.restore();
     }
 
-    this.circle = (circle, lineColor, fillColor, lineWidth) => {
+    draw.circle = (circle, lineColor, fillColor, lineWidth) => {
       const center = circle.center();
       ctx.beginPath();
       ctx.lineWidth = lineWidth || 2;
@@ -57,6 +89,8 @@ class Draw2D {
       ctx.stroke();
       ctx.fill();
     }
+
+    return draw;
   }
 }
 

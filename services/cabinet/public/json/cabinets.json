@@ -19,7 +19,7 @@ module.exports = {
         "name": "Right",
         "type": "Panel",
         "code": "pr",
-        "center": ["c.w - (t / 2)", "l / 2", "(w / 2)"],
+        "center": ["c.w - (pr.t / 2)", "l / 2", "(w / 2)"],
         "demensions": ["c.t", "c.l", "pwt34"],
         "rotation": [0,90,0]
       },
