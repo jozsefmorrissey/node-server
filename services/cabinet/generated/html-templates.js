@@ -334,29 +334,6 @@ exports['-994603408'] = (get, $t) =>
 		$t.clean(get("item")) +
 		`" ></option>`
 
-exports['input/measurement'] = (get, $t) => 
-		`<div class='fit input-cnt'` +
-		$t.clean(get("hidden")() ? ' hidden' : '') +
-		`> <label>` +
-		$t.clean(get("label")()) +
-		`</label> <input class='measurement-input ` +
-		$t.clean(get("class")()) +
-		`' id='` +
-		$t.clean(get("id")()) +
-		`' value='` +
-		$t.clean(get("value")() ? get("value")() : "") +
-		`' placeholder='` +
-		$t.clean(get("placeholder")()) +
-		`' type='` +
-		$t.clean(get("type")()) +
-		`' name='` +
-		$t.clean(get("name")()) +
-		`'> <div class='error' id='` +
-		$t.clean(get("errorMsgId")()) +
-		`' hidden>` +
-		$t.clean(get("errorMsg")()) +
-		`</div> </div> `
-
 exports['input/select'] = (get, $t) => 
 		`<` +
 		$t.clean(get("inline") ? 'span' : 'div') +
@@ -381,6 +358,29 @@ exports['input/select'] = (get, $t) =>
 		`</div> </` +
 		$t.clean(get("inline") ? 'span' : 'div') +
 		`> `
+
+exports['input/measurement'] = (get, $t) => 
+		`<div class='fit input-cnt'` +
+		$t.clean(get("hidden")() ? ' hidden' : '') +
+		`> <label>` +
+		$t.clean(get("label")()) +
+		`</label> <input class='measurement-input ` +
+		$t.clean(get("class")()) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`' value='` +
+		$t.clean(get("value")() ? get("value")() : "") +
+		`' placeholder='` +
+		$t.clean(get("placeholder")()) +
+		`' type='` +
+		$t.clean(get("type")()) +
+		`' name='` +
+		$t.clean(get("name")()) +
+		`'> <div class='error' id='` +
+		$t.clean(get("errorMsgId")()) +
+		`' hidden>` +
+		$t.clean(get("errorMsg")()) +
+		`</div> </div> `
 
 exports['2d/pop-up/door-2d'] = (get, $t) => 
 		`<div type-2d='` +
@@ -425,21 +425,6 @@ exports['-1881817601'] = (get, $t) =>
 		$t.clean(get("property").value() === true ? 'checked' : '') +
 		`> </span>`
 
-exports['2d/pop-up/vertex-2d'] = (get, $t) => 
-		`<div type-2d='` +
-		$t.clean(get("target").constructor.name) +
-		`' id='` +
-		$t.clean(get("target").id()) +
-		`' x='` +
-		$t.clean(get("lastImagePoint").x) +
-		`' y='` +
-		$t.clean(get("lastImagePoint").y) +
-		`'> <table> <tr> <td><label>X</label></td> <td><input class='value-2d' key='x' value='` +
-		$t.clean(get("display")(get("target").x())) +
-		`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='value-2d' key='y' value='` +
-		$t.clean(get("display")(get("target").y())) +
-		`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> <tr> </table> </div> `
-
 exports['2d/pop-up/snap-2d'] = (get, $t) => 
 		`<div type-2d='` +
 		$t.clean(get("target").constructor.name) +
@@ -471,6 +456,21 @@ exports['2d/pop-up/wall-2d'] = (get, $t) =>
 		`' y='` +
 		$t.clean(get("lastImagePoint").y) +
 		`'> <button class='add-door-btn-2d'>Add Door</button> <button class='add-window-btn-2d'>Add Window</button> <button class='add-vertex-btn-2d'>Add Vertex</button> <button class='add-object-btn-2d'>Add Object</button> <button class='remove-btn-2d'>Remove</button> </div> `
+
+exports['2d/pop-up/vertex-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <table> <tr> <td><label>X</label></td> <td><input class='value-2d' key='x' value='` +
+		$t.clean(get("display")(get("target").x())) +
+		`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='value-2d' key='y' value='` +
+		$t.clean(get("display")(get("target").y())) +
+		`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> <tr> </table> </div> `
 
 exports['2d/pop-up/window-2d'] = (get, $t) => 
 		`<div type-2d='` +
@@ -581,6 +581,9 @@ exports['divide/head'] = (get, $t) =>
 		$t.clean(get("sections").length === 0 ? '' : ' hidden') +
 		`'> D </div> </div> `
 
+exports['feature'] = (get, $t) => 
+		`<h3>Feature Display</h3> `
+
 exports['divider-controls'] = (get, $t) => 
 		`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
 		$t.clean(get("opening").uniqueId()) +
@@ -614,16 +617,6 @@ exports['divider-controls'] = (get, $t) =>
 		$t.clean(get("patternInputHtml")) +
 		` </div> </div> `
 
-exports['group/body'] = (get, $t) => 
-		`<div> ` +
-		$t.clean(get("propertyHtml")()) +
-		` <div class='cabinet-cnt' group-id='` +
-		$t.clean(get("group").id()) +
-		`'></div> </div> `
-
-exports['feature'] = (get, $t) => 
-		`<h3>Feature Display</h3> `
-
 exports['group/head'] = (get, $t) => 
 		`<div group-display-id='` +
 		$t.clean(get("groupDisplay").id()) +
@@ -637,20 +630,8 @@ exports['group/head'] = (get, $t) =>
 		$t.clean(get("group").name()) +
 		`' prop-update='name'> </div> <div class='group-display-body' hidden></div> </div> <br> `
 
-exports['login/confirmation-message'] = (get, $t) => 
-		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
-
-exports['login/create-account'] = (get, $t) => 
-		`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
-		$t.clean(get("email")) +
-		`'> <input type='password' placeholder="password" name='password' value='` +
-		$t.clean(get("password")) +
-		`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
-
 exports['index'] = (get, $t) => 
-		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>Estimate` +
-		$t.clean(get("bolux")) +
-		`gege</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login'><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
+		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>Estimate</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login'><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
 		$t.clean(get("id") !== 'home' ? "link='/cabinet/home'" : '') +
 		` hidden> <div id='order-cnt'></div> <div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <canvas id="two-d-model"></canvas> <div id="three-d-model" class="viewer small"> <span id="model-controller"></span> <span id="three-d-model-display"></span> </div> </div> </div> </div> <div name='Property Manager' ` +
 		$t.clean(get("id") !== 'home' ? "link='/cabinet/property'" : '') +
@@ -661,6 +642,23 @@ exports['index'] = (get, $t) =>
 		` hidden>Temp Man</div> <div id='pattern-manager' name='Pattern Manager' ` +
 		$t.clean(get("id") !== 'home' ? "link='/cabinet/pattern'" : '') +
 		` hidden>Pat Man</div> </div> <div id='property-select-cnt'></div> </body> </html> `
+
+exports['group/body'] = (get, $t) => 
+		`<div> ` +
+		$t.clean(get("propertyHtml")()) +
+		` <div class='cabinet-cnt' group-id='` +
+		$t.clean(get("group").id()) +
+		`'></div> </div> `
+
+exports['login/confirmation-message'] = (get, $t) => 
+		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+
+exports['login/create-account'] = (get, $t) => 
+		`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
+		$t.clean(get("email")) +
+		`'> <input type='password' placeholder="password" name='password' value='` +
+		$t.clean(get("password")) +
+		`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
 
 exports['login/login'] = (get, $t) => 
 		`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -1127,4 +1125,8 @@ exports['sections/open'] = (get, $t) =>
 		` </div> `
 
 exports['three-view'] = (get, $t) => 
-		`<canvas id="three-view-top" width="300" height="300"></canvas> <canvas id="three-view-left" width="300" height="300"></canvas> <canvas id="three-view-front" width="300" height="300"></canvas> `
+		`<div class='three-view-cnt' id='` +
+		$t.clean(get("id")()) +
+		`'> <div class='three-view-three-d-cnt'></div> <div class='three-view-two-d-cnt'> <div id='three-view-canvases-cnt' class='inline-flex'> <div class='center-vert'><h3 id='three-view-part-code-` +
+		$t.clean(get("id")()) +
+		`'></h3></div> <span class='three-view-canvas-cnt'> <b>Top</b> <canvas id="three-view-top" width="300" height="300"></canvas> </span> <span class='three-view-canvas-cnt'> <b>Left</b> <canvas id="three-view-left" width="300" height="300"></canvas> </span> <span class='three-view-canvas-cnt'> <b>Front</b> <canvas id="three-view-front" width="300" height="300"></canvas> </span> </div> </div> </div> `

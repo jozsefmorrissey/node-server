@@ -7,6 +7,12 @@ const Properties = require('../config/properties');
 const Measurement = require('../../../../public/js/utils/measurement.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
 const Draw2D = require('./draw.js');
+const Vertex2d = require('../two-d/objects/vertex.js');
+const Line2d = require('../two-d/objects/line.js');
+const Circle2d = require('../two-d/objects/circle.js');
+const SnapLocation2d = require('../two-d/objects/snap-location.js');
+const LineMeasurement2d = require('../two-d/objects/line-measurement');
+
 // TODO: Rename
 const TwoDLayout = {};
 
@@ -25,8 +31,8 @@ TwoDLayout.set = (l) => {
 let hoverMap;
 
 const resetHoverMap = () => hoverMap = {
-    Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2D: {}, LineMeasurement2D: {},
-    Object2d: {}, Square2D: {}, Snap2D: {}, SnapLocation2D: {}
+    Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2d: {}, LineMeasurement2d: {},
+    Object2d: {}, Square2d: {}, Snap2d: {}, SnapLocation2d: {}
   };
 
 const windowLineWidth = 8;
@@ -83,7 +89,7 @@ du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
 });
 
 function remove() {
-  layout.remove(hovering.id());
+  layout.remove(hoveringId());
   popUp.close();
 }
 
@@ -192,13 +198,13 @@ function addVertex(hovering, event, stdEvent) {
 }
 
 registerQuickChangeFunc('Wall2D', addVertex);
-registerQuickChangeFunc('Vertex2D', remove);
+registerQuickChangeFunc('Vertex2d', remove);
 registerQuickChangeFunc('Window2D', remove);
-registerQuickChangeFunc('SnapLocation2D', (snapLoc) => snapLoc.disconnect());
+registerQuickChangeFunc('SnapLocation2d', (snapLoc) => snapLoc.disconnect());
 registerQuickChangeFunc('Door2D', (door) => door.hinge(true));
 
 function hoverId () {
-  return hovering ? hovering.id() : undefined;
+  return hovering ? hovering.toString() : undefined;
 }
 
 const templateMap = {};
@@ -216,9 +222,9 @@ function display(value) {
 
 function openPopup(event, stdEvent) {
   if (hovering) {
-    if (hovering.constructor.name === 'Snap2D') hovering.pairWithLast();
+    if (hovering.constructor.name === 'Snap2d') hovering.pairWithLast();
     popupOpen = true;
-    const msg = `${hovering.constructor.name}: ${hovering.id()}`;
+    const msg = `${hovering.constructor.name}: ${hoverId()}`;
     const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
     const html = getTemplate(hovering).render(scope);
     popUp.open(html, {x: event.screenX, y: event.screenY});
@@ -228,7 +234,7 @@ function openPopup(event, stdEvent) {
 popUp.onClose((elem, event) => {
   setTimeout(() => popupOpen = false, 200);
   const attrs = getPopUpAttrs(du.find.closest('[type-2d]',popUp.container()));
-  measurementModify = attrs.type === 'LineMeasurement2D';
+  measurementModify = attrs.type === 'LineMeasurement2d';
   lastDown = new Date().getTime();
   clickHolding = false;
 });
@@ -273,13 +279,13 @@ function hover(event) {
   }
 
   if (measurementModify) {
-    check(Object.values(hoverMap.LineMeasurement2D));
-    found || check(Object.values(hoverMap.SnapLocation2D));
-    found || check(Object.values(hoverMap.Snap2D));
+    check(Object.values(hoverMap.LineMeasurement2d));
+    found || check(Object.values(hoverMap.SnapLocation2d));
+    found || check(Object.values(hoverMap.Snap2d));
     found || check(Object.values(hoverMap.Object2d));
-    found || check(Object.values(hoverMap.Square2D));
+    found || check(Object.values(hoverMap.Square2d));
   } else {
-    check(Object.values(hoverMap.Vertex2D));
+    check(Object.values(hoverMap.Vertex2d));
     found || check(Object.values(hoverMap.Window2D));
     found || check(Object.values(hoverMap.Door2D));
     found || check(Object.values(hoverMap.Wall2D));
@@ -321,7 +327,7 @@ function withinTolerance(point, map) {
 }
 
 function updateHoverMap(item, start, end, tolerance) {
-  hoverMap[item.constructor.name][item.id()] = {start, end, tolerance, item};
+  hoverMap[item.constructor.name][item.toString()] = {start, end, tolerance, item};
 }
 
 let windowCount = 0;
@@ -343,7 +349,7 @@ function drawWindow(wallStartPoint, window, wallTheta) {
     windowDrawMap[lookupKey] = () => {
       ctx.moveTo(points.start.x(), points.start.y());
       ctx.lineWidth = 8;
-      ctx.strokeStyle = hoverId() === window.id() ? 'green' : 'blue';
+      ctx.strokeStyle = hoverId() === window.toString() ? 'green' : 'blue';
       ctx.lineTo(points.end.x(), points.end.y());
       updateHoverMap(window, points.start, points.end, 5);
       ctx.stroke();
@@ -360,13 +366,13 @@ function doorDrawingFunc(startpointLeft, startpointRight) {
   return (door) => {
     const ctx = draw.ctx();
     ctx.beginPath();
-    ctx.strokeStyle = hoverId() === door.id() ? 'green' : 'black';
+    ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'black';
     const hinge = door.hinge();
 
     if (hinge === 4) {
       ctx.moveTo(startpointLeft.x, startpointLeft.y);
       ctx.lineWidth = 8;
-      ctx.strokeStyle = hoverId() === door.id() ? 'green' : 'white';
+      ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'white';
       ctx.lineTo(startpointRight.x, startpointRight.y);
       updateDoorHoverMap(door, startpointRight, startpointLeft, 10);
       ctx.stroke();
@@ -423,7 +429,7 @@ function drawMeasurementValue(line, midpoint, measurement) {
   ctx.translate(midpoint.x(), midpoint.y());
   ctx.rotate(line.radians());
   ctx.beginPath();
-  ctx.fillStyle = hoverId() === measurement.id() ? 'green' : "white";
+  ctx.fillStyle = hoverId() === measurement.toString() ? 'green' : "white";
   ctx.strokeStyle = 'white';
   ctx.rect(textLength * -3, -8, textLength * 6, 16);
   ctx.fill();
@@ -442,7 +448,7 @@ const measurementLineMap = {};
 const getMeasurementLine = (vertex1, vertex2) => {
   const lookupKey = `${vertex1.id()} => ${vertex2.id()}`;
   if (measurementLineMap[lookupKey] === undefined) {
-    measurementLineMap[lookupKey] = new Layout2D.Line2D(vertex1, vertex2);
+    measurementLineMap[lookupKey] = new Line2d(vertex1, vertex2);
   }
   return measurementLineMap[lookupKey];
 }
@@ -464,18 +470,18 @@ function drawMeasurementValues() {
 const measurementLineWidth = 3;
 let measurementIs = {};
 function drawMeasurement(measurement, level, focalVertex)  {
-  const lookupKey = `${measurement.line().toString()}-${level}`;
-  if (measurementIs[lookupKey] === undefined) {
+  const lookupKey = `${measurement.toString()}-[${level}]`;
+  // if (measurementIs[lookupKey] === undefined) {
     measurementIs[lookupKey] = measurement.I(level);
-  }
+  // }
   const lines = measurementIs[lookupKey];
-  const center = focalVertex.center(2, 3);
-  const measurementColor = hoverId() === measurement.id() ? 'green' : 'grey';
+  const center = layout.verticies(focalVertex, 2, 3);
+  const measurementColor = hoverId() === measurement.toString() ? 'green' : 'grey';
   try {
     draw.beginPath();
     const isWithin = layout.within(lines.outer.midpoint());
     const line = isWithin ? lines.inner : lines.outer;//lines.furtherLine(center);
-    const midpoint = Layout2D.Vertex2D.center(line.startLine.endVertex(), line.endLine.endVertex());
+    const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
     if (measurementModify || popupOpen) {
       draw.line(line.startLine, measurementColor, measurementLineWidth);
       draw.line(line.endLine, measurementColor, measurementLineWidth);
@@ -517,7 +523,7 @@ function drawWall(wall) {
   ctx.beginPath();
   ctx.moveTo(startpoint.x, startpoint.y);
   ctx.lineWidth = 10;
-  ctx.strokeStyle = hoverId() === wall.id() ? 'green' : 'black';
+  ctx.strokeStyle = hoverId() === wall.toString() ? 'green' : 'black';
   const endpoint = wall.endVertex().point();
   ctx.lineTo(endpoint.x, endpoint.y);
   ctx.stroke();
@@ -534,7 +540,7 @@ function drawWall(wall) {
     level = measureOnWall(wall.doors(), level);
     level = measureOnWall(wall.windows(), level);
   }
-  drawMeasurement(wall.measurement(), level, wall.startVertex());
+  drawMeasurement(new LineMeasurement2d(wall), level, wall.startVertex());
 
   updateHoverMap(wall, startpoint, endpoint, 5);
 
@@ -542,10 +548,10 @@ function drawWall(wall) {
 }
 
 function drawVertex(vertex) {
-  const fillColor = hoverId() === vertex.id() ? 'green' : 'white';
+  const fillColor = hoverId() === vertex.toString() ? 'green' : 'white';
   const p = vertex.point();
   const radius = 10;
-  const circle = new Layout2D.Circle2D(radius, p);
+  const circle = new Circle2d(radius, p);
   draw.circle(circle, 'black', fillColor);
   updateHoverMap(vertex, p, p, 12);
 }
@@ -553,7 +559,7 @@ function drawVertex(vertex) {
 function drawSnapLocation(locations, color) {
   for (let index = 0; index < locations.length; index += 1) {
     const loc = locations[index];
-    const c = hoverId() === loc.id() ? 'green' : (color || loc.color());
+    const c = hoverId() === loc.toString() ? 'green' : (color || loc.color());
     draw.circle(loc.circle(), 'black', c);
     const vertex = loc.vertex();
     updateHoverMap(loc, vertex.point(), vertex.point(), 8);
@@ -562,23 +568,23 @@ function drawSnapLocation(locations, color) {
 
 function drawObject(object) {
   switch (object.object().constructor.name) {
-    case 'Square2D':
+    case 'Square2d':
       const square = object.object();
       const center = square.center();
       updateHoverMap(object, center, center, 30);
-      draw.square(square, hoverId() === object.id() ? 'green' : 'white');
+      draw.square(square, hoverId() === object.toString() ? 'green' : 'white');
       const potentalSnap = object.potentalSnapLocation();
       drawSnapLocation(object.snapLocations.paired(), 'black');
       if (potentalSnap) drawSnapLocation([potentalSnap], 'white');
-      Layout2D.SnapLocation2D.active(object.snapLocations.notPaired());
+      SnapLocation2d.active(object.snapLocations.notPaired());
       break;
-    case 'Line2D':
+    case 'Line2d':
       draw.line(object);
       break;
-    case 'Circle2D':
+    case 'Circle2d':
       draw.circle(object);
       break;
-    case 'Layout2D':
+    case 'Layout2d':
       drawLayout(object); // NOT IMPLEMENTED YET!!!
       break;
     default:
@@ -588,7 +594,7 @@ function drawObject(object) {
 
 function illustrate(canvas) {
   if (layout === undefined) return;
-  Layout2D.SnapLocation2D.clear();
+  SnapLocation2d.clear();
   resetHoverMap();
   let lastEndPoint = {x: 20, y: 20};
 

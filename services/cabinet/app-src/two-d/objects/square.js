@@ -1,16 +1,15 @@
 
-const Vertex2D = require('vertex');
+const Vertex2d = require('vertex');
 
-class Square2D extends Lookup {
+class Square2d {
   constructor(center, height, width, radians) {
-    super();
-    center = Vertex2D.instance(center);
+    center = new Vertex2d(center);
     width = width === undefined ? 121.92 : width;
     height = height === undefined ? 60.96 : height;
     radians = radians === undefined ? 0 : radians;
     const instance = this;
     Object.getSet(this, {center, height, width, radians});
-    const startPoint = Vertex2D.instance(null);
+    const startPoint = new Vertex2d(null);
 
     const getterHeight = this.height;
     this.height = (v) => {
@@ -62,7 +61,7 @@ class Square2D extends Lookup {
 
     this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
     this.move = (position, theta) => {
-      const center = position.center instanceof Vertex2D ? position.center.point() : position.center;
+      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
       if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
       if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
       if (position.minX !== undefined) center.x = position.minX + this.offsetX();
@@ -83,11 +82,11 @@ class Square2D extends Lookup {
                         instance.width() * widthMultiplier * Math.sin(rads);
 
       if (position !== undefined) {
-        const posCenter = Vertex2D.instance(position.center);
-        return Vertex2D.instance({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+        const posCenter = new Vertex2d(position.center);
+        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
       }
       const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
-      return Vertex2D.instance(backLeftLocation);
+      return new Vertex2d(backLeftLocation);
     }
 
 
@@ -104,7 +103,10 @@ class Square2D extends Lookup {
     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
 
+    this.toString = `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
   }
 }
 
-new Square2D();
+new Square2d();
+
+module.exports = Square2d;

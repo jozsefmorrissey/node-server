@@ -1,3 +1,20 @@
-<canvas id="three-view-top" width="300" height="300"></canvas>
-<canvas id="three-view-left" width="300" height="300"></canvas>
-<canvas id="three-view-front" width="300" height="300"></canvas>
+<div class='three-view-cnt' id='{{id()}}'>
+  <div class='three-view-three-d-cnt'></div>
+  <div class='three-view-two-d-cnt'>
+    <div id='three-view-canvases-cnt' class='inline-flex'>
+      <div class='center-vert'><h3 id='three-view-part-code-{{id()}}'></h3></div>
+      <span class='three-view-canvas-cnt'>
+        <b>Top</b>
+        <canvas id="three-view-top" width="300" height="300"></canvas>
+      </span>
+      <span class='three-view-canvas-cnt'>
+        <b>Left</b>
+        <canvas id="three-view-left" width="300" height="300"></canvas>
+      </span>
+      <span class='three-view-canvas-cnt'>
+        <b>Front</b>
+        <canvas id="three-view-front" width="300" height="300"></canvas>
+      </span>
+    </div>
+  </div>
+</div>

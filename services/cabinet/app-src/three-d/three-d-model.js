@@ -2,6 +2,7 @@
 
 const CSG = require('../../public/js/3d-modeling/csg');
 
+const Polygon3D = require('./objects/polygon');
 const Assembly = require('../objects/assembly/assembly');
 const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
@@ -164,32 +165,16 @@ class ThreeDModel {
     let lm;
     this.lastModel = () => {
       if (lm === undefined) return undefined;
-      const normMap = {};
-      const vertexMap = {};
+      const polys = [];
       const map = {xy: [], xz: [], zy: []};
       lm.polygons.forEach((p, index) => {
-        const normal = p.vertices[0].normal;
-        const normKey = `${normal.x},${normal.y},${normal.z}`;
-        normMap[normKey] ||= [];
-        normMap[normKey].push(p.vertices.map((v) => ({
-          x: approximate(v.pos.x),
-          y: approximate(v.pos.y),
-          z: approximate(v.pos.z)
-        })));
-        map.xy.push([]);
-        map.xz.push([]);
-        map.zy.push([]);
-        p.vertices.forEach((vertex) => {
-          const pos = vertex.pos;
-          const vertexKey =  `${pos.x},${pos.y},${pos.z}`;
-          vertexMap[vertexKey] ||= [];
-          vertexMap[vertexKey].push(vertexKey);
-          map.xy[index].push({x: pos.x, y: pos.y, level: pos.z});
-          map.xz[index].push({x: pos.x, y: pos.z, level: pos.y});
-          map.zy[index].push({x: -1 * pos.z, y: -1 * pos.y, level: pos.x});
-        });
+        const norm = p.plane.normal;
+        const verticies = p.vertices.map((v) => ({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
+        polys.push(new Polygon3D(norm, verticies));
       });
-      return map;
+      // Polygon3D.merge(polys);
+      const twoDpolys = Polygon3D.toTwoD(polys);
+      return twoDpolys;
     }
 
 

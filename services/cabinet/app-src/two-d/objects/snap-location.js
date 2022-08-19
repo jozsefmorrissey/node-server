@@ -1,12 +1,11 @@
 
-const Vertex2D = require('vertex');
-const Circle2D = require('circle');
+const Vertex2d = require('vertex');
+const Circle2d = require('circle');
 
-class SnapLocation2D extends Lookup {
+class SnapLocation2d {
   constructor(parent, location, vertex, targetVertex, color, pairedWith) {
-    super();
     Object.getSet(this, {location, vertex, targetVertex, color}, "parentId", "pairedWithId");
-    const circle = new Circle2D(5, vertex);
+    const circle = new Circle2d(5, vertex);
     pairedWith = pairedWith || null;
     this.circle = () => circle;
     this.eval = () => this.parent()[location]();
@@ -65,7 +64,7 @@ class SnapLocation2D extends Lookup {
     this.move = (vertexLocation, moveId) => {
       moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
       if (lastMove === moveId) return;
-      vertexLocation = Vertex2D.instance(vertexLocation);
+      vertexLocation = new Vertex2d(vertexLocation);
       const parent = this.parent();
       const thisNewCenterLoc = this.parent()[location]({center: vertexLocation});
       parent.object().move({center: thisNewCenterLoc});
@@ -99,13 +98,15 @@ class SnapLocation2D extends Lookup {
   }
 }
 
-SnapLocation2D.fromJson = (json) => {
+SnapLocation2d.fromJson = (json) => {
   console.log('jsoned it up!')
 }
 
 let activeLocations = [];
-SnapLocation2D.active = (locs) => {
+SnapLocation2d.active = (locs) => {
   if (Array.isArray(locs)) activeLocations = activeLocations.concat(locs);
   return activeLocations;
 }
-SnapLocation2D.clear = () => activeLocations = [];
+SnapLocation2d.clear = () => activeLocations = [];
+
+module.exports = SnapLocation2d;

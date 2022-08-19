@@ -1,13 +1,13 @@
 
 const approximate = require('../../../../../public/js/utils/approximate.js');
-const Line2D = require('line');
 
-class Vertex2D extends Lookup {
+class Vertex2d {
   constructor(point) {
-    if (point instanceof Vertex2D) return point;
+    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
+    if (point instanceof Vertex2d) return point;
     point = point || {x:0,y:0};
-    super();
     Object.getSet(this, {point});
+    this.layer = point.layer;
     const instance = this;
     this.move = (center) => {
       this.point(center);
@@ -42,7 +42,7 @@ class Vertex2D extends Lookup {
     }
 
     this.distance = (vertex) => {
-      vertex = (vertex instanceof Vertex2D) ? vertex : Vertex2D.instance(vertex);
+      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
       const xDiff = vertex.x() - this.x();
       const yDiff = vertex.y() - this.y();
       return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
@@ -55,41 +55,37 @@ class Vertex2D extends Lookup {
       const copy = this.toJson();
       if (y !== undefined) copy.y += y;
       if (x !== undefined) copy.x += x;
-      return Vertex2D.instance(copy);
+      return new Vertex2d(copy);
     }
 
     this.point(point);
   }
 }
 
-Vertex2D.instance = (point, group) => {
-  if (point instanceof Vertex2D) {
-    point.lookupGroup(group);
-    return point;
-  }
-  const inst = Lookup.instance(Vertex2D.name);
-  inst.lookupGroup(group);
-  inst.point(point);
-  return inst;
-}
-
-Vertex2D.fromJson = (json) => {
+Vertex2d.fromJson = (json) => {
   point = json.point;
   vertex.id(json.id);
-  return Vertex2D.instance(point);
+  return new Vertex2d(point);
 }
 
-Vertex2D.center = (...verticies) => {
+Vertex2d.center = (...verticies) => {
   let x = 0;
   let y = 0;
   let count = 0;
   verticies.forEach((vertex) => {
+    if (Number.isFinite(vertex.x() + vertex.y())) {
       count++;
       x += vertex.x();
       y += vertex.y();
+    }
   });
-  return Vertex2D.instance({x: x/count, y: y/count});
+  return new Vertex2d({x: x/count, y: y/count});
 }
 
-Vertex2D.reusable = true;
-new Vertex2D();
+Vertex2d.sort = (a, b) =>
+    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
+
+Vertex2d.reusable = true;
+new Vertex2d();
+
+module.exports = Vertex2d;

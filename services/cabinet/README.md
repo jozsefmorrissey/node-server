@@ -23,3 +23,5 @@ requireJS to properly formatJson files
 "Imperial (us)" does not add implicit multiplication stringMathEval
 hover help/error text
 Clean and seperate Object.(getSet|get|set);
+figure out three-view hidden lines
+orient parts correctly for tree-view

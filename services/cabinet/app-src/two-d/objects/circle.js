@@ -1,25 +1,23 @@
 
-const Line2D = require('line');
-const Vertex2D = require('vertex');
+const Vertex2d = require('./vertex');
 
-class Circle2D extends Lookup {
+class Circle2d {
   constructor(radius, center) {
-    super();
-    center = Vertex2D.instance(center);
+    center = new Vertex2d(center);
     Object.getSet(this, {radius, center});
     // ( x - h )^2 + ( y - k )^2 = r^2
     const instance = this;
     // Stole the root code from: https://stackoverflow.com/a/37225895
     function lineIntersects (line, bounded) {
-      line.p1 = line.startVertex();
-      line.p2 = line.endVertex();
+      const p1 = line.startVertex();
+      const p2 = line.endVertex();
         var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
         v1 = {};
         v2 = {};
-        v1.x = line.p2.x() - line.p1.x();
-        v1.y = line.p2.y() - line.p1.y();
-        v2.x = line.p1.x() - instance.center.x();
-        v2.y = line.p1.y() - instance.center.y();
+        v1.x = p2.x() - p1.x();
+        v1.y = p2.y() - p1.y();
+        v2.x = p1.x() - instance.center().x();
+        v2.y = p1.y() - instance.center().y();
         b = (v1.x * v2.x + v1.y * v2.y);
         c = 2 * (v1.x * v1.x + v1.y * v1.y);
         b *= -2;
@@ -33,32 +31,34 @@ class Circle2D extends Lookup {
         retP2 = {}
         ret = []; // return array
         if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
-            retP1.x = line.p1.x() + v1.x * u1;
-            retP1.y = line.p1.y() + v1.y * u1;
+            retP1.x = p1.x() + v1.x * u1;
+            retP1.y = p1.y() + v1.y * u1;
             ret[0] = retP1;
         }
         if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
-            retP2.x = line.p1.x() + v1.x * u2;
-            retP2.y = line.p1.y() + v1.y * u2;
+            retP2.x = p1.x() + v1.x * u2;
+            retP2.y = p1.y() + v1.y * u2;
             ret[ret.length] = retP2;
         }
         return ret;
     }
 
     function circleIntersects(circle) {
-      return Circle2D.intersectionOfTwo(instance, circle);
+      return Circle2d.intersectionOfTwo(instance, circle);
     }
 
+    this.toString = () => `(${this.radius()}${this.center()}----)`;
+
     this.intersections = (input) => {
-        if (input instanceof Circle2D) return circleIntersects(input);
-        if (input instanceof Line2D) return lineIntersects(input);
+        if (input instanceof Circle2d) return circleIntersects(input);
+        if (input.constructor.name === 'Line2d') return lineIntersects(input);
         throw new Error(`Cannot find intersections for ${input.constructor.name}`);
     }
   }
 }
 
 // Ripped off from: https://stackoverflow.com/a/12221389
-Circle2D.intersectionOfTwo = (circle0, circle1) => {
+Circle2d.intersectionOfTwo = (circle0, circle1) => {
     const x0 = circle0.center().x();
     const y0 = circle0.center().y();
     const r0 = circle0.radius();
@@ -123,11 +123,13 @@ Circle2D.intersectionOfTwo = (circle0, circle1) => {
     return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
 }
 
-Circle2D.reusable = true;
-Circle2D.instance = (radius, center) => {
-  const inst = Lookup.instance(Circle2D.name);
+Circle2d.reusable = true;
+Circle2d.instance = (radius, center) => {
+  const inst = Lookup.instance(Circle2d.name);
   inst.radius(radius);
   inst.center(center);
   return inst;
 }
-new Circle2D();
+new Circle2d();
+
+module.exports = Circle2d;

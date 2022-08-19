@@ -1,16 +1,16 @@
 
-const Vertex2D = require('vertex');
-const SnapLocation2D = require('snap-location');
+const Vertex2d = require('vertex');
+const SnapLocation2d = require('snap-location');
 
-class Snap2D extends Lookup {
+class Snap2d {
   constructor(layout, object, tolerance) {
-    super(object ? object.id() : undefined);
     Object.getSet(this, {object, tolerance}, 'layoutId');
     if (layout === undefined) return;
     const instance = this;
-    let start = Vertex2D.instance();
-    let end = Vertex2D.instance();
+    let start = new Vertex2d();
+    let end = new Vertex2d();
 
+    this.toString = () => `SNAP (${tolerance}):${object}`
     this.layoutId = () => layout.id();
     this.radians = object.radians;
     this.angle = object.angle;
@@ -20,14 +20,14 @@ class Snap2D extends Lookup {
     this.width = object.width;
     this.onChange = object.onChange;
 
-    const backLeft = new SnapLocation2D(this, "backLeft",  Vertex2D.instance(null),  'backRight', 'red');
-    const backRight = new SnapLocation2D(this, "backRight",  Vertex2D.instance(null),  'backLeft', 'purple');
-    const frontRight = new SnapLocation2D(this, "frontRight",  Vertex2D.instance(null),  'frontLeft', 'black');
-    const frontLeft = new SnapLocation2D(this, "frontLeft",  Vertex2D.instance(null),  'frontRight', 'green');
+    const backLeft = new SnapLocation2d(this, "backLeft",  new Vertex2d(null),  'backRight', 'red');
+    const backRight = new SnapLocation2d(this, "backRight",  new Vertex2d(null),  'backLeft', 'purple');
+    const frontRight = new SnapLocation2d(this, "frontRight",  new Vertex2d(null),  'frontLeft', 'black');
+    const frontLeft = new SnapLocation2d(this, "frontLeft",  new Vertex2d(null),  'frontRight', 'green');
 
-    const backCenter = new SnapLocation2D(this, "backCenter",  Vertex2D.instance(null),  'backCenter', 'teal');
-    const leftCenter = new SnapLocation2D(this, "leftCenter",  Vertex2D.instance(null),  'rightCenter', 'pink');
-    const rightCenter = new SnapLocation2D(this, "rightCenter",  Vertex2D.instance(null),  'leftCenter', 'yellow');
+    const backCenter = new SnapLocation2d(this, "backCenter",  new Vertex2d(null),  'backCenter', 'teal');
+    const leftCenter = new SnapLocation2d(this, "leftCenter",  new Vertex2d(null),  'rightCenter', 'pink');
+    const rightCenter = new SnapLocation2d(this, "rightCenter",  new Vertex2d(null),  'leftCenter', 'yellow');
 
     const snapLocations = [backCenter,leftCenter,rightCenter,backLeft,backRight,frontLeft,frontRight];
     function getSnapLocations(paired) {
@@ -64,8 +64,8 @@ class Snap2D extends Lookup {
                         object.width() * widthMultiplier * Math.sin(rads);
 
       if (position !== undefined) {
-        const posCenter = Vertex2D.instance(position.center);
-        return Vertex2D.instance({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+        const posCenter = new Vertex2d(position.center);
+        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
       }
       const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
       vertex.point(backLeftLocation);
@@ -128,7 +128,7 @@ class Snap2D extends Lookup {
 
     function findObjectSnapLocation (center) {
       let snapObj;
-      SnapLocation2D.active().forEach((snapLoc) => {
+      SnapLocation2d.active().forEach((snapLoc) => {
         const targetSnapLoc = instance[snapLoc.targetVertex()]();
         if (snapLoc.isConnected(instance) ||
             snapLoc.pairedWith() !== null || targetSnapLoc.pairedWith() !== null) return;
@@ -203,12 +203,14 @@ class Snap2D extends Lookup {
   }
 }
 
-Snap2D.fromJson = (json) => {
-  const layout = Layout2D.get(json.layoutId);
+Snap2d.fromJson = (json) => {
+  const layout = Layout2d.get(json.layoutId);
   const object = Object.fromJson(json.object);
-  const snapObj = new Snap2D(layout, object, json.tolerance);
+  const snapObj = new Snap2d(layout, object, json.tolerance);
   snapObj.id(json.id);
   return snapObj;
 }
 
-new Snap2D();
+new Snap2d();
+
+module.exports = Snap2d;

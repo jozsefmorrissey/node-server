@@ -23,7 +23,7 @@ function panZoom(canvas, draw) {
     }
   };
   this.once = () => {
-    requestAnimationFrame(() => update(nextUpdateId, once))
+    requestAnimationFrame(() => update(nextUpdateId, true))
   };
 
   this.onMove = this.on('move');
@@ -330,8 +330,8 @@ function panZoom(canvas, draw) {
 
   this.centerOn = function(x, y) {
     displayTransform.scale = 1;
-    displayTransform.x = x - (canvas.width / 2);
-    displayTransform.y = y - (canvas.height / 2);
+    displayTransform.x = x - (canvas.width / 2) - displayTransform.x - displayTransform.dx;
+    displayTransform.y = y - (canvas.height / 2) - displayTransform.y - displayTransform.dy;
   };
 
   return this;

@@ -148,6 +148,7 @@ const xyzEqnCheck = (template, cabinet) => (xyzInput) => {
 
 function updatePartsDataList() {
   const partMap = threeView.partMap();
+  if (!partMap) return;
   const partKeys = Object.keys(partMap);
   let html = '';
   for (let index = 0; index < partKeys.length; index += 1) {
@@ -163,6 +164,7 @@ function updatePartsDataList() {
 function onPartSelect(elem) {
   console.log(elem.value);
   threeView.isolatePart(elem.value);
+  elem.value = '';
 }
 
 du.on.match('change', '.template-body>span>input[name="partSelector"]', onPartSelect);
@@ -213,7 +215,7 @@ function validateOpenTemplate (elem) {
     const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
     subRotInputs.forEach(xyzEqnCheck(template, cabinet));
     threeView.update(cabinet);
-    updatePartsDataList();
+    setTimeout(updatePartsDataList, 500);
   } catch (e) {
     console.log(e);
   }
@@ -375,9 +377,12 @@ class TemplateManager extends Lookup {
 
     const getHeader = (template) =>
       TemplateManager.headTemplate.render({template, TemplateManager: this});
-    const getBody = (template) => currentTemplate = template &&
-      TemplateManager.bodyTemplate.render({template, TemplateManager: this,
+    const getBody = (template) => {
+      currentTemplate = template;
+      setTimeout(() => validateOpenTemplate(du.id(parentId)), 1000);
+      return TemplateManager.bodyTemplate.render({template, TemplateManager: this,
         containerClasses, dividerJointInput: dividerJointInput(template)});
+      }
 
     function initTemplate(template) {
       return () => {

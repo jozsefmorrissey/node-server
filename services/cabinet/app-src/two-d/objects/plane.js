@@ -1,24 +1,23 @@
 
-class Plane2D extends Lookup {
+class Plane2d {
   constructor(verticies) {
-    super();
     this.getLines = () => {
       const lines = [];
       for (let index = 0; index < verticies.length; index += 1) {
-        lines.push(new Line2D(verticies[index], verticies[(index + 1) % verticies.length]));
+        lines.push(new Line2d(verticies[index], verticies[(index + 1) % verticies.length]));
       }
       return lines;
     }
   }
 }
 
-Plane2D.getPlanes = (planes) => {
+Plane2d.getPlanes = (planes) => {
   const ps = [];
-  planes.forEach((p) => ps.push(new Plane2D(p)));
+  planes.forEach((p) => ps.push(new Plane2d(p)));
   return ps;
 }
 
-Plane2D.consolidatePolygons = (polygons) => {
+Plane2d.consolidatePolygons = (polygons) => {
   const consolidated = {top: {}, left: {}, front: {}};
   function group(g, poly) {
 
@@ -39,3 +38,6 @@ Plane2D.consolidatePolygons = (polygons) => {
   });
   return map;
 }
+
+new Plane2d();
+module.exports = Plane2d;

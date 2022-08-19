@@ -34,6 +34,10 @@ canvas {
   border-bottom-width: 1pt;
 }
 
+[hidden] > canvas {
+    display: none;
+}
+
 .margin-zero {
   margin: 0;
 }
@@ -292,4 +296,19 @@ a {
 
 .cabinet-template-input-cnt {
   margin: 2pt;
+}
+
+.three-view-canvas-cnt {
+  display: grid;
+  text-align: center;
+}
+
+.three-view-three-d-cnt {
+  float: right;
+}
+
+.center-vert {
+  text-align: center;
+  margin: auto;
+  padding: 0 10pt;
 }

@@ -5,12 +5,12 @@ function approximate(value, acc) {
   return Math.round(value * acc) / acc;
 }
 
-approximate.accuracy = 1000;
-approximate.eq = (val1, val2) => approximate(val1) === approximate(val2);
-approximate.neq = (val1, val2) => approximate(val1) !== approximate(val2);
-approximate.gt = (val1, val2) => approximate(val1) > approximate(val2);
-approximate.lt = (val1, val2) => approximate(val1) < approximate(val2);
-approximate.gteq = (val1, val2) => approximate(val1) >= approximate(val2);
-approximate.lteq = (val1, val2) => approximate(val1) <= approximate(val2);
+approximate.accuracy = 1000000000;
+approximate.eq = (val1, val2, acc) => approximate(val1, acc) === approximate(val2, acc);
+approximate.neq = (val1, val2, acc) => approximate(val1, acc) !== approximate(val2, acc);
+approximate.gt = (val1, val2, acc) => approximate(val1, acc) > approximate(val2, acc);
+approximate.lt = (val1, val2, acc) => approximate(val1, acc) < approximate(val2, acc);
+approximate.gteq = (val1, val2, acc) => approximate(val1, acc) >= approximate(val2, acc);
+approximate.lteq = (val1, val2, acc) => approximate(val1, acc) <= approximate(val2, acc);
 
 module.exports  = approximate;

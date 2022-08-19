@@ -72,6 +72,11 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     return str.substr(0, len);
 }, true);
 
+Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
+  while (val < 0) val += mod;
+  return val % mod;
+}, true);
+
 function stringHash() {
   let hashString = this;
   let hash = 0;
@@ -385,6 +390,11 @@ Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
     }
   }
   return clone;
+}, true);
+
+Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
+  if (!(obj instanceof Object)) return obj;
+  return JSON.parse(JSON.stringify(obj));
 }, true);
 
 Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
