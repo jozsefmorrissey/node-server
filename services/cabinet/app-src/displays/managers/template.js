@@ -24,6 +24,11 @@ const cabinetBuildConfig = require('../../../public/json/cabinets.json');
 
 
 const threeView = new ThreeView();
+du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
+  du.move.inFront(elem));
+du.on.match('click', `#${threeView.id()}>.three-view-two-d-cnt>.three-view-canvases-cnt`, (elem) =>
+  du.move.inFront(elem));
+
 const containerClasses = {
   values: `template-values`,
   subassemblies: `template-subassemblies`,
@@ -231,6 +236,7 @@ const depthValidation = (measurment) =>
         measurment.decimal() > 0;
 
 function getJointInputTree(func, joint, dividerJoint) {
+  joint.type ||= 'Butt';
   const selectType = new Select({
     name: 'type',
     list: Object.keys(Joint.types),
@@ -250,7 +256,7 @@ function getJointInputTree(func, joint, dividerJoint) {
   });
 
   const depthInput = new Input({
-    name: 'depth',
+    name: 'maleOffset',
     value: joint.maleOffset
   });
 
@@ -269,7 +275,7 @@ const jointOnChange = (vals, dit) => {
   const selectId = dit.payload().inputArray[0].id();
   const joint = ExpandableList.get(du.id(selectId));
   joint.type = vals.type;
-  lastDepth = vals.depth || lastDepth;
+  lastDepth = vals.maleOffset || lastDepth;
   joint.maleOffset = lastDepth || undefined;
   const depthInput = dit.children()[0].payload().inputArray[0];
   // depthInput.updateDisplay();
@@ -340,6 +346,25 @@ function getScope(type, obj) {
   return scopes[obj.id];
 }
 
+const getObjects = {
+    subassemblies: () => (      {
+      "type": "Panel",
+      "center": [0,0,0],
+      "demensions": [1,1,1],
+      "rotation": [0,0,0]
+    })
+}
+
+function updateTemplateDisplay() {
+  const managerElems = du.find.all('[template-manager]');
+  for (let index = 0; index < managerElems.length; index += 1) {
+    const templateManagerId = managerElems[index].getAttribute('template-manager');
+    const templateManager =TemplateManager.get(templateManagerId);
+    templateManager.update();
+  }
+}
+
+
 function addExpandable(template, type) {
   const containerClass = containerClasses[type];
   let parentSelector = `[template-id='${template.id()}']>.${containerClass}`;
@@ -352,11 +377,13 @@ function addExpandable(template, type) {
   const expListProps = {
     idAttribute: 'name',
     list: template[type](),
+    getObject: getObjects[type],
     renderBodyOnOpen: false,
     parentSelector, getHeader, getBody,
     listElemLable: type.toSentance(),
   };
   const expandList = new ExpandableList(expListProps);
+  expandList.afterRemoval(updateTemplateDisplay);
   return expandList;
 }
 
@@ -379,29 +406,44 @@ class TemplateManager extends Lookup {
       TemplateManager.headTemplate.render({template, TemplateManager: this});
     const getBody = (template) => {
       currentTemplate = template;
-      setTimeout(() => validateOpenTemplate(du.id(parentId)), 1000);
+      setTimeout(() => {
+        updateExpandables(template);
+      }, 100);
+      setTimeout(() => {
+        validateOpenTemplate(du.id(parentId));
+      }, 1000);
       return TemplateManager.bodyTemplate.render({template, TemplateManager: this,
         containerClasses, dividerJointInput: dividerJointInput(template)});
       }
 
+    const expandables = {};
     function initTemplate(template) {
+      const list = [];
+      expandables[template.id()] = list;
       return () => {
-        addExpandable(template, 'values');
-        addExpandable(template, 'subassemblies');
-        addExpandable(template, 'joints');
-        addExpandable(template, 'openings', true);
+        list.push(addExpandable(template, 'values'));
+        list.push(addExpandable(template, 'subassemblies'));
+        list.push(addExpandable(template, 'joints'));
+        list.push(addExpandable(template, 'openings', true));
       };
     }
 
+    function updateExpandables(template) {
+      template ||= currentTemplate;
+      if (template === undefined) return;
+      expandables[template.id()].forEach((e) => e.refresh());
+    }
+    this.updateExpandables = updateExpandables;
+
     const getObject = (values) => {
       const cabTemp = new CabinetTemplate(values.name);
-      setTimeout(initTemplate(cabTemp), 200);
+      initTemplate(cabTemp)();
       return cabTemp;
     }
 
     this.active = () => expandList.active();
     const expListProps = {
-      list: [new CabinetTemplate().fromJson(cabinetBuildConfig["standard"])],
+      list: [new CabinetTemplate().fromJson(cabinetBuildConfig["corner-wall"])],
       inputTree: TemplateManager.inputTree(),
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Template',
@@ -411,13 +453,13 @@ class TemplateManager extends Lookup {
     const expandList = new ExpandableList(expListProps);
 
     this.update = () => {
-      const html = TemplateManager.mainTemplate.render(this);
-      du.find(`#${id}`).innerHTML = html;
+      expandList.refresh();
     }
     this.loadPoint = () => console.log('load');
     this.savePoint = () => console.log('save');
     this.fromJson = () => {};
-    this.update();
+    const html = TemplateManager.mainTemplate.render(this);
+    du.find(`#${id}`).innerHTML = html;
   }
 }
 
@@ -461,11 +503,6 @@ function updateSubassembliesTemplate(elem, template) {
   } else if (elem.name !== 'name') {
     subAssem[elem.name] = elem.value;
   }
-
-  console.log(ExpandableList.get(elem,1).toJson().subassemblies);
-  console.log(ExpandableList.get(elem,1).toJson().subassemblies.center);
-  console.log(ExpandableList.get(elem,1).toJson().subassemblies.demensions);
-  console.log(ExpandableList.get(elem,1).toJson().subassemblies.rotation);
 }
 
 function switchEqn(elem) {
@@ -521,6 +558,32 @@ du.on.match('change', '.opening-part-code-input', updateOpeningsTemplate);
 du.on.match('change', '[name="xyz"]', switchEqn);
 du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
 du.on.match('change', '.template-input[name="malePartCode"],.template-input[name="femalePartCode"]', updateJointPartCode);
+du.on.match('click', '.copy-template', (elem) => {
+  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+  const template = CabinetTemplate.get(templateId);
+  du.copy(JSON.stringify(template.toJson(), null, 2));
+});
+
+du.on.match('click', '.paste-template', (elem) => {
+  navigator.clipboard.readText()
+  .then(text => {
+    try {
+      const obj = Object.fromJson(JSON.parse(text));
+      if (!(obj instanceof CabinetTemplate)) throw new Error(`Json is of type ${obj.constructor.name}`);
+      const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+      const template = CabinetTemplate.get(templateId);
+      template.fromJson(obj.toJson());
+      const templateManagerId = du.find.up('[template-manager]', elem).getAttribute('template-manager');
+      const templateManager =TemplateManager.get(templateManagerId);
+      templateManager.update();
+    } catch (e) {
+      alert('clipboard does not contain a valid CabinetTemplate');
+    }
+  })
+  .catch(err => {
+    console.error('Failed to read clipboard contents: ', err);
+  });
+});
 
 du.on.match('change', '.template-input', function (elem) {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');

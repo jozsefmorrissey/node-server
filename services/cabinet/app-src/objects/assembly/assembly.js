@@ -45,7 +45,7 @@ class Assembly extends Lookup {
       const returnVal = Assembly.resolveAttr(obj, attr);
       return returnVal;
     }
-    const sme = new StringMathEvaluator(null, getValueSmeFormatter);
+    const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
     this.eval = (eqn) => sme.eval(eqn, this);
 
     this.getRoot = () => {

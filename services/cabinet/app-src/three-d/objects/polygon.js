@@ -242,23 +242,31 @@ Polygon3D.merge = (polygons) => {
   }
 }
 
-const abs1 = (val) => Math.abs(val) === 1;
+const include = (axis1, axis2, axis3) => (Math.abs(axis1) > 0 && Math.abs(axis2) > 0) ||
+                  (Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
+// const include = (axis1, axis2, axis3) => Math.abs(axis3) !== 1;
 Polygon3D.toTwoD = (polygons) => {
   const map = {xy: [], xz: [], zy: []};
   for (let index = 0; index < polygons.length; index += 1) {
-    map.xy.push([]);
-    map.xz.push([]);
-    map.zy.push([]);
     const poly = polygons[index];
     const norm = poly.normal;
+    const includeXY = include(norm.x, norm.y, norm.z);
+    const includeXZ = include(norm.x, norm.z, norm.y);
+    const includeZY = include(norm.z, norm.y, norm.x);
+    const indexXY = map.xy.length;
+    const indexXZ = map.xz.length;
+    const indexZY = map.zy.length;
+    if (includeXY) map.xy[indexXY] = [];
+    if (includeXZ) map.xz[indexXZ] = [];
+    if (includeZY) map.zy[indexZY] = [];
     poly.verticies().forEach((vertex) => {
-      if (!abs1(norm.z)) map.xy[index].push({x: vertex.x, y: -1 * vertex.y, layer: vertex.z});
-      if (!abs1(norm.y)) map.xz[index].push({x: vertex.x, y: -1 * vertex.z, layer: vertex.y});
-      if (!abs1(norm.x)) map.zy[index].push({x: -1 * vertex.z, y: -1 * vertex.y, layer: vertex.x});
+      if (includeXY) map.xy[indexXY].push({x: vertex.x, y: -1 * vertex.y, layer: vertex.z});
+      if (includeXZ) map.xz[indexXZ].push({x: vertex.x, y: -1 * vertex.z, layer: vertex.y});
+      if (includeZY) map.zy[indexZY].push({x: -1 * vertex.z, y: -1 * vertex.y, layer: vertex.x});
     });
-    map.xy[index] = new Polygon2D(map.xy[index]);
-    map.xz[index] = new Polygon2D(map.xz[index]);
-    map.zy[index] = new Polygon2D(map.zy[index]);
+    if (includeXY) map.xy[indexXY] = new Polygon2D(map.xy[indexXY]);
+    if (includeXZ) map.xz[indexXZ] = new Polygon2D(map.xz[indexXZ]);
+    if (includeZY) map.zy[indexZY] = new Polygon2D(map.zy[indexZY]);
   }
   return map;
 }

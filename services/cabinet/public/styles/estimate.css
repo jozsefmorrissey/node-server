@@ -16,10 +16,17 @@ canvas {
   background-color: whitesmoke;
 }
 
-.three-view-cnt {
+#template-list-TemplateManager_template-manager {
+  position: absolute;
+}
+
+.three-view-canvases-cnt {
   position: fixed;
   bottom: 0;
   right: 0;
+  background-color: white;
+  border-radius: 5pt;
+  box-shadow: 3px 3px 6px black, 3px 3px 6px grey, 3px 3px 6px lightgrey;
 }
 
 .information-bar {
@@ -304,11 +311,21 @@ a {
 }
 
 .three-view-three-d-cnt {
+  position: fixed;
   float: right;
+  top: 0;
+  right: 0;
 }
 
 .center-vert {
   text-align: center;
   margin: auto;
   padding: 0 10pt;
+}
+
+#du-copy-textarea {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: -1;
 }

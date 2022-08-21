@@ -7,7 +7,7 @@ const Measurement = require('../../../../../public/js/utils/measurement.js');
 class LineMeasurement2d {
   constructor(line, modificationFunction) {
     modificationFunction = modificationFunction || line.length;
-    const offset = 10;
+    const offset = 1;
     this.line = () => line;
     this.I = (layer) => {
       layer = layer || 1;

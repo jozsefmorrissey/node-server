@@ -210,10 +210,17 @@ class Line2d {
       return approximate(Math.atan2(deltaY, deltaX));
     }
 
-    this.combine = (other) => {
+    this.clean = (other) => {
       if (!(other instanceof Line2d)) return;
       if (other.startVertex().equal(other.endVertex())) return this;
       if (this.startVertex().equal(this.endVertex())) return other;
+      if (this.toString() === other.toString() || this.toString() === other.toNegitiveString()) return this;
+    }
+
+    this.combine = (other) => {
+      if (!(other instanceof Line2d)) return;
+      const clean = this.clean(other);
+      if (clean) return clean;
       if (Math.abs(this.slope()) !== Math.abs(other.slope())) return;
       const otherNeg = other.negitive();
       const posEq = (this.y(other.x()) === other.y() && this.x(other.y()) === other.x());

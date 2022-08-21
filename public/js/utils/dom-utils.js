@@ -564,6 +564,20 @@ du.cookie.remove = function (name) {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
 }
 
+let copyTextArea;
+du.copy = (textOelem) => {
+  if (copyTextArea === undefined) {
+    copyTextArea = du.create.element('textarea', {id: 'du-copy-textarea'});
+    document.body.append(copyTextArea);
+  }
+
+  copyTextArea.value = textOelem;
+  copyTextArea.innerText = textOelem;
+
+  copyTextArea.select();
+  document.execCommand("copy");
+}
+
 try {
   module.exports = du;
 } catch (e) {}

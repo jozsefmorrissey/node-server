@@ -1,6 +1,13 @@
 <div class='template-body' template-id={{template.id()}}>
-  <h4>{{template.type())}}</h4>
+  <div class='inline-flex full-width'>
+    <h4>{{template.type())}}</h4>
+    <div class='full-width'>
+      <button class='copy-template right'>Copy</button>
+      <button class='paste-template right'>Paste</button>
+    </div>
+  </div>
   <span class='part-input-cnt'>
+    <br>
     <input type="text" name="partSelector" list='part-list'>
     <datalist id='part-list'></datalist>
   </span>

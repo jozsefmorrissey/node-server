@@ -183,6 +183,9 @@ class ThreeDModel {
       buildHiddenPrefixReg();
       function buildObject(assem) {
         let a = getModel(assem);
+        const c = assem.position().center();
+        const e=1;
+        a.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
         a.setColor(...debugColoring(assem));
         assem.getJoints().female.forEach((joint) => {
           const male = joint.getMale();
@@ -205,15 +208,20 @@ class ThreeDModel {
         }
         if (!hidden(assem)) {
           const b = buildObject(assem);
-          const e=1.1;
-          const c = assem.position().center();
-          b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+          // const c = assem.position().center();
+          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
           if (a === undefined) a = b;
           else if (b && assem.length() && assem.width() && assem.thickness()) {
             a = a.union(b);
           }
           if (assem.partCode() === targetPartCode) {
-            lm = b;
+            lm = b.clone();
+            const rotation = assem.position().rotation();
+            rotation.x *=-1;
+            rotation.y *=-1;
+            rotation.z *=-1;
+            lm.rotate(rotation);
+            lm.center({x:0,y:0,z:0})
           }
         }
       }

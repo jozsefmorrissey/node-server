@@ -183,6 +183,18 @@ Function.safeStdLibAddition(Array, 'toJson', function (arr) {
     arr.forEach((elem) => json.push(processValue(elem)));
     return json;
 }, true);
+
+Function.safeStdLibAddition(Array, 'copy', function (arr) {
+  this.length = 0;
+  // const keys = Object.keys(this);
+  // for (let index = 0; index < keys.length; index += 1) delete this[keys[index]];
+  const newKeys = Object.keys(arr);
+  for (let index = 0; index < newKeys.length; index += 1) {
+    const key = newKeys[index];
+    this[key] = arr[key];
+  }
+});
+
 Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
   function interpretValue(value) {
     if (value instanceof Object) {
@@ -301,8 +313,13 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     for (let index = 0; index < attrs.length; index += 1) {
       const attr = attrs[index];
       if (attr !== immutableAttr) {
-        if ((typeof obj[attr]) === 'function')
-          obj[attr](Object.fromJson(json[attr]));
+        if ((typeof obj[attr]) === 'function') {
+          if(Array.isArray(obj[attr]())){
+            obj[attr]().copy(Object.fromJson(json[attr]));
+          } else {
+            obj[attr](Object.fromJson(json[attr]));
+          }
+        }
         else
           obj[attr] = Object.fromJson(json[attr]);
       }

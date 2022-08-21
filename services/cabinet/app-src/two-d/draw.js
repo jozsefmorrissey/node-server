@@ -38,7 +38,12 @@ class Draw2d {
     draw.beginPath = () => ctx.beginPath();
     draw.moveTo = () => ctx.moveTo();
 
-    draw.clear = () => ctx.clearRect(0,0,canvas.width,canvas.height);
+    draw.clear = () => {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    }
     draw.line = (line, color, width, doNotMeasure) => {
       if (line === undefined) return;
       color = color ||  'black';
@@ -51,7 +56,7 @@ class Draw2d {
       ctx.moveTo(line.startVertex().x(), line.startVertex().y());
       ctx.lineTo(line.endVertex().x(), line.endVertex().y());
       ctx.stroke();
-      if (!doNotMeasure)draw.measurement(line, 6);
+      if (!doNotMeasure)draw.measurement(line, 1);
     }
 
     draw.plane = (plane, color, width) => {
@@ -105,7 +110,7 @@ class Draw2d {
       ctx.fill();
     }
 
-    const blank = 40;
+    const blank = 4;
     const hblank = blank/2;
     function drawMeasurementLabel(line, measurement) {
       if (measurement === undefined) return;
@@ -121,12 +126,13 @@ class Draw2d {
       ctx.beginPath();
       ctx.fillStyle = "white";
       ctx.strokeStyle = 'white';
-      ctx.rect(textLength * -3, -8, textLength * 6, 16);
+      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
       ctx.fill();
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.lineWidth = 4;
+      ctx.font = "1px Arial";
+      ctx.lineWidth = .2;
       ctx.strokeStyle = 'black';
       ctx.fillStyle =  'black';
       ctx.fillText(length, 0, 0);
@@ -136,8 +142,8 @@ class Draw2d {
 
     draw.measurement = (line, level) => {
       const center = line.startVertex();
-      const measurementColor = 'black';
-      const measurementLineWidth = '.2';
+      const measurementColor = 'grey';
+      const measurementLineWidth = '.1';
       const measurement = new LineMeasurement2d(line)
       const lines = measurement.I(level);
       try {

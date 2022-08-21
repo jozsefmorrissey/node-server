@@ -68,8 +68,9 @@ class ThreeView extends Lookup {
       threeDModel.assembly(cabinet, viewer);
       threeDModel.update(cabinet);
       front.clear();left.clear();top.clear();
-
-
+      setTimeout(() => {
+        drawTop();drawLeft();drawFront();
+      }, 1000);
     }
 
     this.isolatePart = (partCode) => {
