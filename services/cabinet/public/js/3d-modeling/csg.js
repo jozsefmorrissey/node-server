@@ -126,6 +126,71 @@ CSG.prototype = {
   //          +-------+
   //
   subtract: function(csg) {
+    function cleanPolygons(polys) {
+      const vertexMap = {};
+      const polyMap = {};
+      for (let index = 0; index < polys.length; index += 1) {
+        const wrongList = [];
+        const poly = polys[index];
+        const connected = {};
+        let added = false;
+        for (let vIndex = 0; vIndex < poly.vertices.length; vIndex += 1) {
+          const vertex = poly.vertices[vIndex];
+          const vKey = vertex.toString();
+          if (vertexMap[vKey]) {
+            const key = vertexMap[vKey].key;
+            let obj = vertexMap[vKey];
+            if (vKey === '(50.8,0,0)') {
+              console.log('badKey')
+            }
+            if (!added) {
+              obj.list.push(poly);
+              added = key;
+            }
+            if (added !== vertexMap[vKey].key){
+              wrongList.push(obj);
+            }
+            connected[key] = obj;
+          } else {
+            let obj = {vertex};
+            vertexMap[vKey] = obj;
+            wrongList.push(obj);
+          }
+        }
+        let obj = {};
+        const connKeys = Object.keys(connected);
+        if (connKeys.length === 0) {
+          obj.list = [poly];
+          obj.key = String.random();
+          polyMap[obj.key] = obj;
+        } else {
+          obj = connected[connKeys[0]];
+          for (let index = 1; index < connKeys.length; index += 1) {
+            const connKey = connKeys[index];
+            const otherObj = connected[connKey];
+            if (connKey !== obj.key) delete polyMap[otherObj.key];
+            else
+              console.log('wtf');
+            otherObj.key = obj.key;
+            otherObj.connected = true;
+            obj.list.concatInPlace(otherObj.list);
+            polyMap[obj.key] = obj;
+            otherObj.list = obj.list;
+          }
+        }
+        for (let wIndex = 0; wIndex < wrongList.length; wIndex += 1) {
+          const wrongObj = wrongList[wIndex];
+          wrongObj.list = obj.list;
+          wrongObj.key = obj.key;
+        }
+      }
+      const polylists = Object.values(polyMap);
+      if (polylists.length === 0) return [];
+      let biggest = polylists[0].list;
+      for (let index = 1; index < polylists.length; index += 1)
+        if (biggest.length < polylists[index].list.length) biggest = polylists[index].list;
+      return biggest;
+    }
     var a = new CSG.Node(this.clone().polygons);
     var b = new CSG.Node(csg.clone().polygons);
     a.invert();
@@ -444,11 +509,15 @@ CSG.Vector.prototype = {
 CSG.Vertex = function(pos, normal) {
   this.pos = new CSG.Vector(pos);
   this.normal = new CSG.Vector(normal);
+
 };
 
 CSG.Vertex.prototype = {
   clone: function() {
     return new CSG.Vertex(this.pos.clone(), this.normal.clone());
+  },
+  toString: function () {
+    return `(${this.pos.x},${this.pos.y},${this.pos.z})`
   },
 
   // Invert all orientation-specific data (e.g. vertex normal). Called when the

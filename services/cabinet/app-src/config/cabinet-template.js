@@ -147,12 +147,15 @@ class CabinetTemplate extends Lookup {
 }
 
 CabinetTemplate.map = {};
+CabinetTemplate.defaultList = () => {
+  const list = [];
+  const keys = Object.keys(cabinetsJson);
+  for (let index = 0; index < keys.length; index += 1) {
+    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
+  }
+  return list;
+}
 
 CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
-
-const ct = new CabinetTemplate().fromJson(cabinetsJson.standard);
-
-console.log(ct);
-console.log(ct.valid());
 
 module.exports = CabinetTemplate;

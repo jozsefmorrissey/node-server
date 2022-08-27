@@ -128,11 +128,11 @@ Cabinet.build = (type, group, config) => {
   return cabinet;
 }
 
-Cabinet.fromJson = (assemblyJson) => {
+Cabinet.fromJson = (assemblyJson, group) => {
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const assembly = new Cabinet(partCode, partName);
-  assembly.propertyConfig = assemblyJson.propertyConfig;
+  assembly.propertyConfig = group.propertyConfig;
   assembly.uniqueId(assemblyJson.uniqueId);
   assembly.values = assemblyJson.values;
   Object.values(assemblyJson.subassemblies).forEach((json) => {

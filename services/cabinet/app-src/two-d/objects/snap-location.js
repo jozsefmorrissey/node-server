@@ -29,7 +29,7 @@ class SnapLocation2d {
 
     this.forEachObject = (func, objMap) => {
       objMap = objMap || {};
-      objMap[this.parent().id()] = this.parent();
+      objMap[this.parent().toString()] = this.parent();
       const locs = this.parent().snapLocations.paired();
       for (let index = 0; index < locs.length; index += 1) {
         const loc = locs[index];

@@ -24,6 +24,7 @@ canvas {
   position: fixed;
   bottom: 0;
   right: 0;
+  z-index: 15;
   background-color: white;
   border-radius: 5pt;
   box-shadow: 3px 3px 6px black, 3px 3px 6px grey, 3px 3px 6px lightgrey;
@@ -174,7 +175,7 @@ a {
 }
 
 .model-label {
-  display: inline-flex;
+
 }
 
 .model-label.active {
@@ -203,11 +204,9 @@ a {
   background-position: -1px -1px;
   position: fixed;
   right: 0;
-  bottom: 0;
+  top: 0;
   z-index: 20;
   background-color: #ffffff94;
-  width: 100vh;
-  height: 100vh;
 }
 
 #display-menu > .display-manager {
@@ -221,7 +220,7 @@ a {
   z-index: 10;
   top: 0;
   left: 0;
-  min-width: 600pt;
+  min-width: 50vw;
 }
 
 #app {

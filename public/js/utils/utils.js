@@ -178,11 +178,28 @@ clazz.filter = (filterFunc) => {
 
 Function.safeStdLibAddition(Object, 'class', clazz, true);
 
+
+Function.safeStdLibAddition(Math, 'toDegrees', function (rads, accuracy) {
+  accuracy ||= 100;
+  return Math.round((rads * 180/Math.PI % 360) * accuracy) / accuracy;
+}, true);
+
 Function.safeStdLibAddition(Array, 'toJson', function (arr) {
     const json = [];
     arr.forEach((elem) => json.push(processValue(elem)));
     return json;
 }, true);
+
+Function.safeStdLibAddition(Array, 'concatInPlace', function (arr) {
+  if (arr === this) return;
+  for (let index = 0; index < arr.length; index += 1) {
+    if (this.indexOf(arr[index]) !== -1) {
+      console.error('duplicate');
+    } else {
+      this[this.length] = arr[index];
+    }
+  }
+});
 
 Function.safeStdLibAddition(Array, 'copy', function (arr) {
   this.length = 0;

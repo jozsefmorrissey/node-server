@@ -7,10 +7,12 @@ class Snap2d {
     Object.getSet(this, {object, tolerance}, 'layoutId');
     if (layout === undefined) return;
     const instance = this;
+    const id = String.random();
     let start = new Vertex2d();
     let end = new Vertex2d();
 
     this.toString = () => `SNAP (${tolerance}):${object}`
+    this.id = () => id;
     this.layoutId = () => layout.id();
     this.radians = object.radians;
     this.angle = object.angle;
@@ -194,7 +196,7 @@ class Snap2d {
       const wallSnapLocation = findWallSnapLocation(center);
       if (snapLocation) {
         return object.move(snapLocation);
-      } else if (!centerWithin || wallSnapLocation) {
+      } else if (!centerWithin && (wallSnapLocation instanceof Object)) {
         return object.move(wallSnapLocation);
       } else if (centerWithin) {
         return object.move({center});

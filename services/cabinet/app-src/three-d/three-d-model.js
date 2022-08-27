@@ -124,6 +124,7 @@ class ThreeDModel {
     this.depth = (label) => label.split('.').length - 1;
 
     function hidden(part, level) {
+      if (!part.included()) return true;
       const im = inclusiveMatch(part);
       if (im !== null) return !im;
       if (instance.hidePartCode(part.partCode())) return true;
@@ -168,7 +169,7 @@ class ThreeDModel {
       const polys = [];
       const map = {xy: [], xz: [], zy: []};
       lm.polygons.forEach((p, index) => {
-        const norm = p.plane.normal;
+        const norm = p.vertices[0].normal;
         const verticies = p.vertices.map((v) => ({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
         polys.push(new Polygon3D(norm, verticies));
       });
@@ -179,6 +180,7 @@ class ThreeDModel {
 
 
     this.render = function () {
+      ThreeDModel.lastActive = this;
       const startTime = new Date().getTime();
       buildHiddenPrefixReg();
       function buildObject(assem) {
@@ -218,10 +220,10 @@ class ThreeDModel {
             lm = b.clone();
             const rotation = assem.position().rotation();
             rotation.x *=-1;
-            rotation.y *=-1;
+            rotation.y = (360 - rotation.y)  % 360;
             rotation.z *=-1;
-            lm.rotate(rotation);
             lm.center({x:0,y:0,z:0})
+            lm.rotate(rotation);
           }
         }
       }
@@ -245,6 +247,7 @@ class ThreeDModel {
 
 ThreeDModel.models = {};
 ThreeDModel.get = (assembly, viewer) => {
+  if (assembly === undefined) return ThreeDModel.lastActive;
   if (ThreeDModel.models[assembly.uniqueId()] === undefined) {
     ThreeDModel.models[assembly.uniqueId()] = new ThreeDModel(assembly, viewer);
   }

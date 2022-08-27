@@ -202,7 +202,7 @@ class Line2d {
                         this.startVertex().y() : this.endVertex().y();
     this.angle = (value) => {
       if (value) this.radians(value);
-      return toDegrees(this.radians());
+      return Math.toDegrees(this.radians());
     }
     this.radians = () => {
       const deltaX = this.endVertex().x() - this.startVertex().x();

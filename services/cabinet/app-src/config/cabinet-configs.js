@@ -10,6 +10,7 @@ const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const Request = require('../../../../public/js/utils/request.js');
 const EPNTS = require('../../generated/EPNTS.js');
 const CabinetTemplate = require('./cabinet-template');
+const ValueCondition = require('../../../../public/js/utils/input/decision/decision.js').ValueCondition;
 
 class CabinetConfig {
   constructor() {
@@ -20,7 +21,7 @@ class CabinetConfig {
     function setLists(cabinets) {
       const allCabinetKeys = Object.keys(cabinets);
       allCabinetKeys.forEach((key) => {
-        const type = cabinets[key].partName();
+        const type = cabinets[key].partName;
         if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
         if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
         cabinetKeys[type][key] = cabinets[key];
@@ -33,16 +34,6 @@ class CabinetConfig {
 
     this.valid = (type, id) => (!id ?
     cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
-
-    class ValueDependency {
-      constructor(name, value, payload) {
-        this.condition = (wrapper) => {
-          console.log('true');
-          return true;
-        }
-        Object.keys(payload).forEach((key) => this[key] = payload[key]);
-      }
-    }
 
     this.onUpdate = (func) => updateEvent.on(func);
     this.inputTree = () => {
@@ -67,14 +58,14 @@ class CabinetConfig {
           class: 'center',
           list: [''].concat(Object.keys(cabinetKeys[type]))
         });
-        cabinet.conditional(type, new ValueDependency('type', type, type));
+        cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
       });
       return inputTree;
     };
     this.get = (group, name, type, propertyId, id) => {
       let cabinet;
       if (!id) cabinet = Cabinet.build(type, group);
-      else cabinet = Cabinet.fromJson(cabinetList[id]);
+      else cabinet = Cabinet.fromJson(cabinetList[id], group);
       if (propertyId !== undefined) cabinet.propertyId(propertyId);
       cabinet.name(name);
       return cabinet;

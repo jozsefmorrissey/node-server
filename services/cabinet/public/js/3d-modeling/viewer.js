@@ -52,8 +52,19 @@ function Viewer(csg, width, height, depth) {
   let x = 0;
   let y = 0;
 
+  let lastZoom;
+  let zoomCount = 0;
   const zoom = (out) => {
-    depth += (out === true ? 2 : -2);
+    let direction = (out === true ? 1 : -1);
+    let zoomOffset = 2;
+    let newTime = new Date().getTime();
+    if (lastZoom > newTime - 50) {
+      zoomCount++;
+      zoomOffset *= zoomCount;
+      zoomOffset = zoomOffset > 20 ? 20 : zoomOffset;
+    }
+    lastZoom = newTime;
+    depth += zoomOffset * direction;
   };
   this.zoom = zoom;
   const pan = (leftRight, upDown) => {
@@ -73,7 +84,7 @@ function Viewer(csg, width, height, depth) {
   gl.viewport(0, 0, width, height);
   gl.matrixMode(gl.PROJECTION);
   gl.loadIdentity();
-  gl.perspective(100, width / height, 0.1, 100);
+  gl.perspective(100, width / height, 0.1, 1000);
   gl.matrixMode(gl.MODELVIEW);
 
   // Set up WebGL state

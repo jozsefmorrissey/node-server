@@ -68,6 +68,9 @@ new FalseFrontSection();
 const SpaceSection = require('./assemblies/section/space/space.js');
 new SpaceSection();
 
+const Cutter = require('./assemblies/cutter.js');
+new Cutter();
+
 Assembly.components = {
-  Door, DrawerBox, DrawerFront, Frame, Panel
+  Door, DrawerBox, DrawerFront, Frame, Panel, Cutter,
 };

@@ -1,5 +1,6 @@
 
 const Vertex2d = require('vertex');
+const approximate = require('../../../../../public/js/utils/approximate.js');
 
 class Square2d {
   constructor(center, height, width, radians) {
@@ -51,7 +52,7 @@ class Square2d {
     }
     this.angle = (value) => {
       if (value !== undefined) this.radians(toRadians(value));
-      return toDegrees(this.radians());
+      return Math.toDegrees(this.radians());
     }
 
     this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
@@ -103,7 +104,7 @@ class Square2d {
     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
 
-    this.toString = `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
+    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
   }
 }
 

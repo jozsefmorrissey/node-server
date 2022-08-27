@@ -12,16 +12,17 @@ const Polygon2d = require('../two-d/objects/polygon.js');
 const PanZoom = require('../two-d/pan-zoom.js');
 
 class ThreeView extends Lookup {
-  constructor() {
+  constructor(viewer) {
     super();
     const instance = this;
+    const maxDem = window.innerHeight * .45;
     const cnt = du.create.element('div');
     const p = pull(5,2);
-    const viewer = new Viewer(p, 300, 300, 50);
     let front, left, top;
     let panzFront, panzLeft, panzTop;
     let threeDModel;
     document.body.append(cnt);
+    this.maxDem = () => maxDem;
     cnt.innerHTML = ThreeView.template.render(this);
 
     const color = 'black';
@@ -50,7 +51,10 @@ class ThreeView extends Lookup {
     }
 
     function init() {
-      addViewer(viewer, `#${instance.id()}>.three-view-three-d-cnt`);
+      if (viewer === undefined) {
+        viewer = new Viewer(p, maxDem, maxDem, 50);
+        addViewer(viewer, `#${instance.id()}>.three-view-three-d-cnt`);
+      }
       front = new Draw2D(du.id('three-view-front'));
       left = new Draw2D(du.id('three-view-left'));
       top = new Draw2D(du.id('three-view-top'));
@@ -73,7 +77,8 @@ class ThreeView extends Lookup {
       }, 1000);
     }
 
-    this.isolatePart = (partCode) => {
+    this.isolatePart = (partCode, cabinet) => {
+      threeDModel = ThreeDModel.get();
       threeDModel.setTargetPartCode(partCode);
       threeDModel.update();
       setTimeout(() => {

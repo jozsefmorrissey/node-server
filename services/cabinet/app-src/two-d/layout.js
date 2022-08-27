@@ -93,25 +93,6 @@ function remove() {
   popUp.close();
 }
 
-function setGreaterZindex(otherId) {
-  return (target) => {
-    const other = du.id(otherId);
-    if (!other) return;
-    const targetZ = du.zIndex(target);
-    const otherZ = du.zIndex(other);
-    if (Number.isNaN(targetZ) || Number.isNaN(otherZ)) return;
-    if (targetZ > otherZ) {
-      target.style.zIndex = targetZ;
-      other.style.zIndex = otherZ;
-    } else {
-      target.style.zIndex = otherZ;
-      other.style.zIndex = targetZ;
-    }
-  };
-}
-
-du.on.match('click', '#model-cnt', setGreaterZindex('order-cnt'));
-du.on.match('click', '#order-cnt', setGreaterZindex('model-cnt'));
 du.on.match('click', '.remove-btn-2d', remove, popUp.container());
 
 du.on.match('click', '.add-door-btn-2d', (elem) => {
@@ -615,7 +596,7 @@ function illustrate(canvas) {
 }
 
 function updateCanvasSize(canvas) {
-  canvas.style.width = '95vh';
+  canvas.style.width = '80vh';
   const dem = Math.floor(canvas.getBoundingClientRect().width);
   canvas.width = dem;
   canvas.height = dem;

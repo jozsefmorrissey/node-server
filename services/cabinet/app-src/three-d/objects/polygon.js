@@ -2,6 +2,25 @@
 const approximate = require('../../../../../public/js/utils/approximate.js');
 const Polygon2D = require('../../two-d/objects/polygon.js');
 
+function shuffle(array) {
+  return array;
+  let currentIndex = array.length,  randomIndex;
+
+  // While there remain elements to shuffle.
+  while (currentIndex != 0) {
+
+    // Pick a remaining element.
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+
+  return array;
+}
+
 class Vertex3D {
   constructor(x, y) {
     if (x instanceof Vertex3D) return x;
@@ -190,7 +209,7 @@ class Polygon3D {
       const inverseMap = [];
       const notShared = [];
       const lineMap = this.lineMap();
-      const otherLines = other.lines();
+      const otherLines = shuffle(other.lines());
       let merged;
       for (let index = 0; index < otherLines.length; index += 1) {
         const curr = otherLines[index];
@@ -226,6 +245,7 @@ class Polygon3D {
 }
 
 Polygon3D.merge = (polygons) => {
+  shuffle(polygons);
   let currIndex = 0;
   while (currIndex < polygons.length - 1) {
     const target = polygons[currIndex];
@@ -242,9 +262,7 @@ Polygon3D.merge = (polygons) => {
   }
 }
 
-const include = (axis1, axis2, axis3) => (Math.abs(axis1) > 0 && Math.abs(axis2) > 0) ||
-                  (Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
-// const include = (axis1, axis2, axis3) => Math.abs(axis3) !== 1;
+const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
 Polygon3D.toTwoD = (polygons) => {
   const map = {xy: [], xz: [], zy: []};
   for (let index = 0; index < polygons.length; index += 1) {

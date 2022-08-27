@@ -15,6 +15,7 @@ const bind = require('../../../../public/js/utils/input/bind.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const { Object2d } = require('../objects/layout.js');//.Object2d;
 const Inputs = require('../input/inputs.js');
+const EPNTS = require('../../generated/EPNTS');
 
 
 function getHtmlElemCabinet (elem) {
@@ -129,7 +130,7 @@ class CabinetDisplay {
       const index = target.getAttribute('index');
       const cabinet = expListProps.list[index];
       if (cabinet.name !== undefined) {
-        Request.post(EPNTS.cabinet.add(cabinet.name), cabinet.toJson(), saveSuccess, saveFail);
+        Request.post(EPNTS.cabinet.add(cabinet.name()), cabinet.toJson(), saveSuccess, saveFail);
         console.log('saving');
       } else {
         alert('Please enter a name if you want to save the cabinet.')

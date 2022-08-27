@@ -17,10 +17,6 @@ function toRadians(angle) {
   return approximate((angle*Math.PI/180)%(2*Math.PI));
 }
 
-function toDegrees(rads) {
-  return approximate(rads * 180/Math.PI % 360);
-}
-
 const vertexMap = {};
 function getVertex(point, wall1, wall2) {
   const mapId = `${wall1.id()}->${wall2.id()}`;
@@ -177,6 +173,8 @@ function defSquare(center, layout) {
 
 class Object2d {
   constructor(center, layout, payload) {
+    const id = String.random();
+    this.id = () => id;
     center = new Vertex2d(center);
     Object.getSet(this, {payload,
       topview: defSquare(center, layout), bottomView: defSquare(center, layout),

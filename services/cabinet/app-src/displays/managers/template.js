@@ -284,9 +284,10 @@ const jointOnChange = (vals, dit) => {
   console.log(vals);
 }
 
-function getTypeInput() {
+function getTypeInput(obj) {
   return new Select({
     name: 'type',
+    value: obj.type,
     class: 'template-input',
     list: Object.keys(Assembly.components),
     inline: true
@@ -314,7 +315,7 @@ function getJoint(obj) {
   return {obj, jointInput: getJointInputTree(jointOnChange, obj).payload()};
 }
 function getSubassembly(obj) {
-  return {typeInput:  getTypeInput(),
+  return {typeInput:  getTypeInput(obj),
           centerXyzSelect: getXyzSelect('Center'),
           demensionXyzSelect: getXyzSelect('Demension'),
           rotationXyzSelect: getXyzSelect('Rotation'),
@@ -431,6 +432,7 @@ class TemplateManager extends Lookup {
     function updateExpandables(template) {
       template ||= currentTemplate;
       if (template === undefined) return;
+      if (!expandables[template.id()]) initTemplate(template)();
       expandables[template.id()].forEach((e) => e.refresh());
     }
     this.updateExpandables = updateExpandables;
@@ -443,7 +445,7 @@ class TemplateManager extends Lookup {
 
     this.active = () => expandList.active();
     const expListProps = {
-      list: [new CabinetTemplate().fromJson(cabinetBuildConfig["corner-wall"])],
+      list: CabinetTemplate.defaultList(),
       inputTree: TemplateManager.inputTree(),
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Template',
@@ -561,7 +563,9 @@ du.on.match('change', '.template-input[name="malePartCode"],.template-input[name
 du.on.match('click', '.copy-template', (elem) => {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
   const template = CabinetTemplate.get(templateId);
-  du.copy(JSON.stringify(template.toJson(), null, 2));
+  let jsonStr = JSON.stringify(template.toJson(), null, 2);
+  jsonStr = jsonStr.replace(/.*"id":.*/g, '');
+  du.copy(jsonStr);
 });
 
 du.on.match('click', '.paste-template', (elem) => {

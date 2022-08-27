@@ -163,7 +163,8 @@ class ConditionalLogic extends LogicType {
       }
       return def;
     }
-    this.selector = () => () => this.value().condition(wrapper.root());
+    this.selector = () => () =>
+      this.value().condition(wrapper.root());
   }
 }
 ConditionalLogic.error = new Error('Invalid condition: must be a function that returns true or false based off of node input');

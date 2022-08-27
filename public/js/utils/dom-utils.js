@@ -311,6 +311,7 @@ function classReg(clazz) {
 }
 
 du.class.remove = function(target, clazz) {
+  if (!(target instanceof HTMLElement)) return;
   target.className = target.className.replace(classReg(clazz), ' ').trim();
 }
 

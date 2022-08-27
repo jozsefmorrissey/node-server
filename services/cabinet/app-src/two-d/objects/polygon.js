@@ -171,7 +171,7 @@ Polygon2d.lines = (...polys) => {
     lines = lines.concat(polys[index].lines());
   }
   // TODO: patchy fix.... there is somthing wrong with my algorythym
-  return Line2d.consolidate(...Line2d.consolidate(...lines));
+  return Line2d.consolidate(...lines);
 }
 
 new Polygon2d();
