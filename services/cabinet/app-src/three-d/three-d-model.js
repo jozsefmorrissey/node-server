@@ -38,14 +38,15 @@ const colors = {
   purple: [128, 0, 128]
 }
 
+const colorChoices = Object.keys(colors);
 function getColor(name) {
   if(colors[name]) return colors[name];
-  return [0,0,0];
+  return colors[colorChoices[Math.floor(Math.random() * colorChoices.length)]];
 }
 
 class ThreeDModel {
   constructor(assembly, viewer) {
-    const hiddenPartCodes = {};
+    const hiddenPartIds = {};
     const hiddenPartNames = {};
     const hiddenPrefixes = {};
     const instance = this;
@@ -53,8 +54,8 @@ class ThreeDModel {
     let inclusiveTarget = {};
     let partMap;
     let renderId;
-    let targetPartCode;
-    this.setTargetPartCode = (pc) => targetPartCode = pc;
+    let targetPartId;
+    this.setTargetPartId = (id) => targetPartId = id;
 
     this.assembly = (a) => {
       if (a !== undefined) {
@@ -81,8 +82,8 @@ class ThreeDModel {
           break;
         case 'part-name':
           return part.partName() === inclusiveTarget.value;
-        case 'part-code':
-          return part.partCode() === inclusiveTarget.value;
+        case 'part-id':
+          return part.uniqueId() === inclusiveTarget.value;
         default:
           throw new Error('unknown inclusiveTarget type');
       }
@@ -108,7 +109,7 @@ class ThreeDModel {
       hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
     }
 
-    this.hidePartCode = manageHidden(hiddenPartCodes);
+    this.hidePartId = manageHidden(hiddenPartIds);
     this.hidePartName = manageHidden(hiddenPartNames);
     this.hidePrefix = manageHidden(hiddenPrefixes);
 
@@ -118,7 +119,7 @@ class ThreeDModel {
         if (hidden[keys[index]])return true;
       return false;
     }
-    this.noneHidden = () => !hasHidden(hiddenPartCodes) &&
+    this.noneHidden = () => !hasHidden(hiddenPartIds) &&
         !hasHidden(hiddenPartNames) && !hasHidden(hiddenPrefixes);
 
     this.depth = (label) => label.split('.').length - 1;
@@ -127,7 +128,7 @@ class ThreeDModel {
       if (!part.included()) return true;
       const im = inclusiveMatch(part);
       if (im !== null) return !im;
-      if (instance.hidePartCode(part.partCode())) return true;
+      if (instance.hidePartId(part.uniqueId())) return true;
       if (instance.hidePartName(part.partName())) return true;
       if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
       return false;
@@ -171,7 +172,7 @@ class ThreeDModel {
       lm.polygons.forEach((p, index) => {
         const norm = p.vertices[0].normal;
         const verticies = p.vertices.map((v) => ({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
-        polys.push(new Polygon3D(norm, verticies));
+        polys.push(new Polygon3D(verticies));
       });
       // Polygon3D.merge(polys);
       const twoDpolys = Polygon3D.toTwoD(polys);
@@ -188,7 +189,7 @@ class ThreeDModel {
         const c = assem.position().center();
         const e=1;
         a.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
-        a.setColor(...debugColoring(assem));
+        a.setColor(...getColor());
         assem.getJoints().female.forEach((joint) => {
           const male = joint.getMale();
           const m = getModel(male, male.position().current());
@@ -202,12 +203,7 @@ class ThreeDModel {
       partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
-        partMap[assem.partCode()] = assem.path();
-        if (assem.partCode() === 'pr') {
-          console.log(assem.getAssembly('c').uniqueId());
-        } else {
-          console.log(assem.getAssembly('c').uniqueId());
-        }
+        partMap[assem.uniqueId()] = assem.path();
         if (!hidden(assem)) {
           const b = buildObject(assem);
           // const c = assem.position().center();
@@ -216,7 +212,7 @@ class ThreeDModel {
           else if (b && assem.length() && assem.width() && assem.thickness()) {
             a = a.union(b);
           }
-          if (assem.partCode() === targetPartCode) {
+          if (assem.uniqueId() === targetPartId) {
             lm = b.clone();
             const rotation = assem.position().rotation();
             rotation.x *=-1;
@@ -228,6 +224,7 @@ class ThreeDModel {
         }
       }
       if (a) {
+        // a.polygons.forEach((p) => p.shared = getColor());
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         viewer.mesh = a.toMesh();
         viewer.gl.ondraw();

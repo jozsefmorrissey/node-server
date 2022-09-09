@@ -38,7 +38,7 @@ class GroupDisplay extends Lookup {
 }
 
 GroupDisplay.DecisionInputTree = (onComplete, propertyConfigInst) => {
-  const dit = new DecisionInputTree(onComplete, {buttonText: 'Change', noSubmission: 2000});
+  const dit = new DecisionInputTree(onComplete, {buttonText: 'Change'});
   const propertyConfig = new PropertyConfig();
   const styles = propertyConfig.cabinetStyles();
   const cabinetStyles = new Select({

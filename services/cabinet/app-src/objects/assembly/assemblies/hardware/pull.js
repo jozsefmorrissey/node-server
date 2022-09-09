@@ -2,7 +2,6 @@
 
 
 const Assembly = require('../../assembly.js');
-const pull = require('../../../../three-d/models/pull.js');
 
 /*
     a,b,c

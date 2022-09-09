@@ -132,6 +132,9 @@ Cabinet.fromJson = (assemblyJson, group) => {
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const assembly = new Cabinet(partCode, partName);
+  assembly.name(assemblyJson.name);
+  assembly.length(assemblyJson.length);
+  assembly.width(assemblyJson.width);
   assembly.propertyConfig = group.propertyConfig;
   assembly.uniqueId(assemblyJson.uniqueId);
   assembly.values = assemblyJson.values;
@@ -146,9 +149,6 @@ Cabinet.fromJson = (assemblyJson, group) => {
       assembly.addSubAssembly(divideSection);
     }
   });
-  assembly.name(assemblyJson.name);
-  assembly.length(assemblyJson.length);
-  assembly.width(assemblyJson.width);
   assembly.thickness(assemblyJson.thickness);
   const joints = Object.fromJson(assemblyJson.joints);
   assembly.addJoints.apply(assembly, joints);

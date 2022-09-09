@@ -15,13 +15,16 @@
           <label type='part-name'>{{partName}}</label>
           <input type='checkbox' class='part-name-checkbox' part-name='{{partName}}'
               {{!tdm.hidePartName(partName) ? 'checked' : ''}}>
-          <div:t class='{{tdm.isTarget("part-code", part.partCode()) ? "active " : ""}}
+          <div:t part-id='{{part.uniqueId()}}'
+                  class='{{tdm.isTarget("part-id", part.uniqueId()) ? "active " : ""}}
                         model-label indent'
-              repeat='part in partList'
-              {{partList.length > 1 ? "" : "hidden"}}>
-            <label type='part-code'>{{part.partCode()}}</label>
-            <input type='checkbox' class='part-code-checkbox' part-code='{{part.partCode()}}'
-                {{!tdm.hidePartCode(part.partCode()) ? 'checked' : ''}}>
+                  repeat='part in partList'
+                  {{partList.length > 1 ? "" : "hidden"}}>
+            <label type='part-id' part-id='{{part.uniqueId()}}'>
+              {{part.partCode()}}-{{$index + 1}}
+            </label>
+            <input type='checkbox' class='part-id-checkbox' part-id='{{part.uniqueId()}}'
+                {{!tdm.hidePartId(part.uniqueId()) ? 'checked' : ''}}>
           </div:t>
         </div:t>
       </div>

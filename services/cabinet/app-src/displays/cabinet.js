@@ -50,9 +50,9 @@ class CabinetDisplay {
     }
 
     function inputValidation(values) {
-      const validName = values.name !== undefined;
-      const validType = CabinetConfig.valid(values.type, values.id);
-      if(validType) return true;
+      // const validName = values.name !== undefined;
+      // const validType = CabinetConfig.valid(values.type, values.id);
+      if(true) return true;
       return {type: 'You must select a defined type.'};
     }
 
@@ -89,7 +89,7 @@ class CabinetDisplay {
     }
 
     const getObject = (values) => {
-      const cabinet = CabinetConfig.get(group, values.name, values.type, values.propertyId, values.id);
+      const cabinet = CabinetConfig.get(group, values.type, values.propertyId, values.id);
       const obj2d = group.room().layout().addObject(cabinet.uniqueId());
       obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
       return cabinet;

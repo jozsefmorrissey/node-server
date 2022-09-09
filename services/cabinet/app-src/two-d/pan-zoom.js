@@ -13,7 +13,7 @@ function panZoom(canvas, draw) {
       }
     }
   }
-  let sleeping = false;
+  let sleeping = null;
   let nextUpdateId = 0;
   this.sleep = () => sleeping = true;
   this.wake = () => {
@@ -321,7 +321,7 @@ function panZoom(canvas, draw) {
          displayTransform.oy = 0;
      }
     // reaquest next frame
-    if (!sleeping) {
+    if (sleeping === false) {
       if (once) sleeping = true;
       setTimeout(() => requestAnimationFrame(() => update(nextUpdateId)), 10);
     }

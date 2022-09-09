@@ -13,7 +13,7 @@ const consisePoly = new Polygon2d([[0,0],[0,3],[1,3],[1,4],
                 [6,2],[6,0],[4,0],[4,-2],[1,0]])
 
 
-// const A = new Polygon3D(null, [[,],[,],[,],[,]])
+// const A = new Polygon3D([[,],[,],[,],[,]])
 Test.add('Line2d: consolidate',(ts) => {
   const lines = Polygon2d.lines(extraLinePoly);
   ts.assertTrue(lines.length === consisePoly.lines().length);

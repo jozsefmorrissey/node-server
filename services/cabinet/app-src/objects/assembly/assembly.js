@@ -144,6 +144,12 @@ class Assembly extends Lookup {
       assemblies.forEach((assem) => this.subassemblies[assem.partCode()] = assem);
     };
 
+    this.partsOf = (clazz) => {
+      const parts = this.getRoot().getParts();
+      if (clazz === undefined) return parts;
+      return parts.filter((p) => p instanceof clazz);
+    }
+
     // TODO: wierd dependency on inherited class.... fix!!!
     const defaultPartCode = () =>
       instance.partCode(instance.partCode() || Assembly.partCode(this));
@@ -268,7 +274,7 @@ Assembly.partCode = (assembly) => {
   if (cabinet) {
     const name = assembly.constructor.name;
     cabinet.partIndex = cabinet.partIndex || 0;
-    return `${assembly.constructor.abbriviation}-${cabinet.partIndex++}`;
+    return `${assembly.constructor.abbriviation}`;
   }
 }
 

@@ -6820,35 +6820,540 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/approximate.js',
+RequireJS.addFunction('../../public/js/utils/$t.js',
 function (require, exports, module) {
 	
 
-	function approximate(value, acc) {
-	  acc ||= approximate.accuracy || 1000;
-	  return Math.round(value * acc) / acc;
+	
+	
+	
+	const CustomEvent = require('./custom-error');
+	const ExprDef = require('./expression-definition');
+	
+	class $t {
+		constructor(template, id, selector) {
+			if (selector) {
+				const afterRenderEvent = new CustomEvent('afterRender');
+				const beforeRenderEvent = new CustomEvent('beforeRender');
+			}
+	
+			function varReg(prefix, suffix) {
+			  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
+			  prefix = prefix ? prefix : '';
+			  suffix = suffix ? suffix : '';
+			  return new RegExp(`${prefix}${vReg}${suffix}`)
+			};
+	
+			function replace(needleRegEx, replaceStr, exceptions) {
+			  return function (sub) {
+			    if (!exceptions || exceptions.indexOf(sub) === -1) {
+			      return sub.replace(needleRegEx, replaceStr)
+			    } else {
+			      return sub;
+			    }
+			  }
+			}
+	
+			const signProps = {opening: /([-+\!])/};
+			const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
+			const ternaryProps = {opening: /\?/};
+			const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
+			const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
+			const commaProps = {opening: /,/};
+			const colonProps = {opening: /:/};
+			const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
+			const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
+			const spaceProps = {opening: /\s{1}/};
+			const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};
+			const objectProps = {opening: '{', closing: '}'};
+			const objectLabelProps = {opening: varReg(null, '\\:')};
+			const groupProps = {opening: /\(/, closing: /\)/};
+			const expressionProps = {opening: null, closing: null};
+			const attrProps = {opening: varReg('(\\.', '){1,}')};
+	
+			// const funcProps = {
+			//   opening: varReg(null, '\\('),
+			//   onOpen: replace(varReg(null, '\\('), 'get("$1")('),
+			//   closing: /\)/
+			// };
+			const arrayProps = {
+			  opening: varReg(null, '\\['),
+			  onOpen: replace(varReg(null, '\\['), 'get("$1")['),
+			  closing: /\]/
+			};
+			const funcRefProps = {
+				opening: /\[|\(/,
+				closing: /\]|\)/
+			};
+			const memberRefProps = {
+				opening: varReg('\\.', ''),
+			};
+			const variableProps = {
+			  opening: varReg(),
+			  onOpen: replace(varReg(), 'get("$1")'),
+			};
+			const objectShorthandProps = {
+			  opening: varReg(),
+			  onOpen: replace(varReg(), '$1: get("$1")'),
+			};
+	
+	
+			const expression = new ExprDef('expression', expressionProps);
+			const ternary = new ExprDef('ternary', ternaryProps);
+			const relational = new ExprDef('relational', relationalProps);
+			const comma = new ExprDef('comma', commaProps);
+			const colon = new ExprDef('colon', colonProps);
+			const attr = new ExprDef('attr', attrProps);
+			// const func = new ExprDef('func', funcProps);
+			const funcRef = new ExprDef('funcRef', funcRefProps);
+			const memberRef = new ExprDef('memberRef', memberRefProps);
+			const string = new ExprDef('string', stringProps);
+			const space = new ExprDef('space', spaceProps);
+			const keyWord = new ExprDef('keyWord', keyWordProps);
+			const group = new ExprDef('group', groupProps);
+			const object = new ExprDef('object', objectProps);
+			const array = new ExprDef('array', arrayProps);
+			const number = new ExprDef('number', numberProps);
+			const multiplier = new ExprDef('multiplier', multiplierProps);
+			const sign = new ExprDef('sign', signProps);
+			const ignore = new ExprDef('ignore', ignoreProps);
+			const variable = new ExprDef('variable', variableProps);
+			const objectLabel = new ExprDef('objectLabel', objectLabelProps);
+			const objectShorthand = new ExprDef('objectShorthand', objectShorthandProps);
+	
+			expression.always(space, ignore, keyWord);
+			expression.if(string, number, group, array, variable, funcRef, memberRef)
+			      .then(multiplier, sign, relational, group)
+			      .repeat();
+			expression.if(string, group, array, variable, funcRef, memberRef)
+						.then(attr)
+			      .then(multiplier, sign, relational, expression, funcRef, memberRef)
+						.repeat();
+			expression.if(string, group, array, variable, funcRef, memberRef)
+						.then(attr)
+						.end();
+	
+			funcRef.if(expression).then(comma).repeat();
+			funcRef.if(expression).end();
+			memberRef.if(expression).then(comma).repeat();
+			memberRef.if(expression).end();
+	
+			expression.if(sign)
+			      .then(expression)
+			      .then(multiplier, sign, relational, group)
+			      .repeat();
+			expression.if(string, number, group, array, variable)
+			      .then(ternary)
+			      .then(expression)
+			      .then(colon)
+			      .then(expression)
+			      .end();
+			expression.if(ternary)
+			      .then(expression)
+			      .then(colon)
+			      .then(expression)
+			      .end();
+			expression.if(object, string, number, group, array, variable)
+			      .end();
+			expression.if(sign)
+			      .then(number)
+			      .end();
+	
+			object.always(space, ignore, keyWord);
+			object.if(objectLabel).then(expression).then(comma).repeat();
+			object.if(objectShorthand).then(comma).repeat();
+			object.if(objectLabel).then(expression).end();
+			object.if(objectShorthand).end();
+	
+			group.always(space, ignore, keyWord);
+			group.if(expression).then(comma).repeat();
+			group.if(expression).end();
+	
+			array.always(space, ignore, keyWord);
+			array.if(expression).then(comma).repeat();
+			array.if(expression).end();
+	
+			function getter(scope, parentScope) {
+				parentScope = parentScope || function () {return undefined};
+				function get(name) {
+					if (name === 'scope') return scope;
+					const split = new String(name).split('.');
+					let currObj = scope;
+					for (let index = 0; currObj != undefined && index < split.length; index += 1) {
+						currObj = currObj[split[index]];
+					}
+					if (currObj !== undefined) return currObj;
+					const parentScopeVal = parentScope(name);
+					if (parentScopeVal !== undefined) return parentScopeVal;
+	        else {
+	          const globalVal = $t.global(name);
+	          return globalVal === undefined ? '' : globalVal;
+	        }
+				}
+				return get;
+			}
+	
+			function defaultArray(elemName, get) {
+				let resp = '';
+				for (let index = 0; index < get('scope').length; index += 1) {
+					if (elemName) {
+						const obj = {};
+	          obj.$index = index;
+						obj[elemName] = get(index);
+						resp += new $t(template).render(obj, undefined, get);
+					} else {
+						resp += new $t(template).render(get(index), undefined, get);
+					}
+				}
+				return `${resp}`;
+			}
+	
+			function arrayExp(varName, get) {
+				varName = varName.trim();
+				const array = get('scope');
+				let built = '';
+				for (let index = 0; index < array.length; index += 1) {
+					const obj = {};
+					obj[varName] = array[index];
+					obj.$index = index;
+					built += new $t(template).render(obj, undefined, get);
+				}
+				return built;
+			}
+	
+			function itOverObject(varNames, get) {
+				const match = varNames.match($t.objectNameReg);
+				const keyName = match[1];
+				const valueName = match[2];
+				const obj = get('scope');
+				const keys = Object.keys(obj);
+				const isArray = Array.isArray(obj);
+				let built = '';
+				for (let index = 0; index < keys.length; index += 1) {
+					const key = keys[index];
+					if (!isArray || key.match(/^[0-9]{1,}$/)) {
+						const childScope = {};
+						childScope[keyName] = key;
+						childScope[valueName] = obj[key];
+						childScope.$index = index;
+						built += new $t(template).render(childScope, undefined, get);
+					}
+				}
+	      return built;
+			}
+	
+			function rangeExp(elemName, rangeItExpr, get) {
+				const match = rangeItExpr.match($t.rangeItExpReg);
+				let startIndex = match[1].match(/^[0-9]{1,}$/) ?
+							match[1] : get(match[1]);
+				let endIndex = match[2].match(/^[0-9]*$/) ?
+							match[2] : get(match[2]);
+				if (((typeof startIndex) !== 'string' &&
+								(typeof	startIndex) !== 'number') ||
+									(typeof endIndex) !== 'string' &&
+									(typeof endIndex) !== 'number') {
+										throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+	
+				try {
+					startIndex = Number.parseInt(startIndex);
+				} catch (e) {
+					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+				try {
+					endIndex = Number.parseInt(endIndex);
+				} catch (e) {
+					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+	
+				let index = startIndex;
+				let built = '';
+				while (true) {
+					let increment = 1;
+					if (startIndex > endIndex) {
+						if (index <= endIndex) {
+							break;
+						}
+						increment = -1;
+					} else if (index >= endIndex) {
+						break;
+					}
+					const obj = {$index: index};
+					obj[elemName] = index;
+					built += new $t(template).render(obj, undefined, get);
+					index += increment;
+				}
+				return built;
+			}
+	
+			function evaluate(get) {
+				if ($t.functions[id]) {
+					try {
+						return $t.functions[id](get, $t);
+					} catch (e) {
+					  console.error(e);
+					}
+				} else {
+					return eval($t.templates[id])
+				}
+			}
+	
+			function type(scope, expression) {
+				if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
+					if (scope.match($t.rangeItExpReg)) {
+						return 'rangeExp'
+					}
+					return 'rangeExpFormatError';
+				} else if (Array.isArray(scope)) {
+					if (expression === undefined) {
+						return 'defaultArray';
+					} else if (expression.match($t.nameScopeExpReg)) {
+						return 'nameArrayExp';
+					}
+				}
+	
+				if ((typeof scope) === 'object') {
+					if (expression === undefined) {
+						return 'defaultObject';
+					} else if (expression.match($t.objectNameReg)){
+						return 'itOverObject';
+					} else if (expression.match($t.arrayNameReg)){
+						return 'arrayExp';
+					} else {
+						return 'invalidObject';
+					}
+				} else {
+					return 'defaultObject';
+				}
+			}
+	
+			// TODO: itExp is not longer an iteration expression. fix!!!!
+			function render(scope, itExp, parentScope) {
+	      if (scope === undefined) return '';
+				let rendered = '';
+				const get = getter(scope, parentScope);
+				switch (type(scope, itExp)) {
+					case 'rangeExp':
+						rendered = rangeExp(itExp, scope, get);
+						break;
+					case 'rangeExpFormatError':
+						throw new Error(`Invalid range itteration expression "${scope}"`);
+					case 'defaultArray':
+						rendered = defaultArray(itExp, get);
+						break;
+					case 'nameArrayExp':
+						rendered = defaultArray(itExp, get);
+						break;
+					case 'arrayExp':
+						rendered = arrayExp(itExp, get);
+						break;
+					case 'invalidArray':
+						throw new Error(`Invalid iterative expression for an array "${itExp}"`);
+					case 'defaultObject':
+						rendered = evaluate(get);
+						break;
+					case 'itOverObject':
+						rendered = itOverObject(itExp, get);
+						break;
+					case 'invalidObject':
+						throw new Error(`Invalid iterative expression for an object "${itExp}"`);
+					default:
+						throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
+				}
+	
+	      if (selector) {
+	        const elem = document.querySelector(selector);
+	        if (elem !== null) {
+	          beforeRenderEvent.trigger();
+	          elem.innerHTML = rendered;
+	          afterRenderEvent.trigger();
+	        }
+	      }
+				return rendered;
+			}
+	
+	
+	//---------------------  Compile Functions ---------------//
+	
+			function stringHash(string) {
+				let hashString = string;
+				let hash = 0;
+				for (let i = 0; i < hashString.length; i += 1) {
+					const character = hashString.charCodeAt(i);
+					hash = ((hash << 5) - hash) + character;
+					hash &= hash; // Convert to 32bit integer
+				}
+				return hash;
+			}
+	
+			function isolateBlocks(template) {
+				let inBlock = false;
+				let openBracketCount = 0;
+				let block = '';
+				let blocks = [];
+				let str = template;
+				for (let index = 0; index < str.length; index += 1) {
+					if (inBlock) {
+						block += str[index];
+					}
+					if (!inBlock && index > 0 &&
+						str[index] == '{' && str[index - 1] == '{') {
+						inBlock = true;
+					} else if (inBlock && str[index] == '{') {
+						openBracketCount++;
+					} else if (openBracketCount > 0 && str[index] == '}') {
+						openBracketCount--;
+					} else if (str[index + 1] == '}' && str[index] == '}' ) {
+						inBlock = false;
+						blocks.push(`${block.substr(0, block.length - 1)}`);
+						block = '';
+					}
+				}
+				return blocks;
+			}
+	
+			function compile() {
+				const blocks = isolateBlocks(template);
+				let str = template;
+				for (let index = 0; index < blocks.length; index += 1) {
+					const block = blocks[index];
+					const parced = ExprDef.parse(expression, block);
+					str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
+				}
+				return `\`${str}\``;
+			}
+	
+	
+					const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+					function formatRepeat(string) {
+						// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
+						// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
+						let match;
+						while (match = string.match(repeatReg)) {
+							let tagContents = match[2] + match[8];
+	            let tagName = match[1];
+	            let varNames = match[6];
+	            let realScope = match[7];
+							let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+							let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+							let scope = 'scope';
+							template = templateName !== tagContents ? templateName : template;
+							const t = eval(`new $t(\`${template}\`)`);
+	            let resolvedScope = "get('scope')";;
+	            try {
+	              // console.log('tagName', tagName);
+	              // console.log('varNames', varNames);
+	              // console.log('realScope', realScope);
+	              // console.log('tagContents', tagContents);
+								if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+	                resolvedScope = `'${realScope}'`;
+	              } else {
+	                resolvedScope = ExprDef.parse(expression, realScope);
+	              }
+	            } catch (e) {}
+	            string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
+						}
+						return string;
+					}
+	
+			if (id) {
+				$t.templates[id] = undefined;
+				$t.functions[id] = undefined;
+			}
+	
+			template = template.replace(/\s{1,}/g, ' ');
+			id = $t.functions[template] ? template : id || stringHash(template);
+			if (!$t.functions[id]) {
+				if (!$t.templates[id]) {
+					template = template.replace(/\s{2,}|\n/g, ' ');
+					template = formatRepeat(template);
+					$t.templates[id] = compile();
+				}
+			}
+			this.compiled = function () { return $t.templates[id];}
+			this.render = render;
+	    this.afterRender = (func) => afterRenderEvent.on(func);
+	    this.beforeRender = (func) => beforeRenderEvent.on(func);
+			this.type = type;
+			this.isolateBlocks = isolateBlocks;
+	    this.id = () => id;
+		}
 	}
 	
-	approximate.accuracy = 1000000000;
-	approximate.eq = (val1, val2, acc) => approximate(val1, acc) === approximate(val2, acc);
-	approximate.neq = (val1, val2, acc) => approximate(val1, acc) !== approximate(val2, acc);
-	approximate.gt = (val1, val2, acc) => approximate(val1, acc) > approximate(val2, acc);
-	approximate.lt = (val1, val2, acc) => approximate(val1, acc) < approximate(val2, acc);
-	approximate.gteq = (val1, val2, acc) => approximate(val1, acc) >= approximate(val2, acc);
-	approximate.lteq = (val1, val2, acc) => approximate(val1, acc) <= approximate(val2, acc);
+	$t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
+	$t.functions = {};
+	$t.loadFunctions = (functions) => {
+		Object.keys(functions).forEach((name) => {
+			$t.functions[name] = functions[name];
+		});
 	
-	module.exports  = approximate;
+	}
+	$t.isTemplate = (id) => $t.functions[id] !== undefined;
+	$t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
+	$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*\.\.\s*([a-z0-9A-Z]*)\s*$/;
+	$t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.quoteStr = function (str) {
+			str = str.replace(/\\`/g, '\\\\\\`')
+			str = str.replace(/([^\\])`/g, '$1\\\`')
+			return `\`${str.replace(/``/g, '`\\`')}\``;
+		}
+	$t.formatName = function (string) {
+	    function toCamel(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
+	    return string.replace(/([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g, toCamel);
+	}
+	$t.dumpTemplates = function (debug) {
+		let templateFunctions = '';
+		let tempNames = Object.keys($t.templates);
+		for (let index = 0; index < tempNames.length; index += 1) {
+			const tempName = tempNames[index];
+			if (tempName) {
+				let template = $t.templates[tempName];
+	      if (debug === true) {
+	        const endTagReg = /( \+) /g;
+	        template = template.replace(endTagReg, '$1\n\t\t');
+	      }
+				templateFunctions += `\nexports['${tempName}'] = (get, $t) => \n\t\t${template}\n`;
+			}
+		}
+		return templateFunctions;
+	}
+	
+	$t.clean = (val) => val === undefined ? '' : val;
+	
+	function createGlobalsInterface() {
+	  const GLOBALS = {};
+	  const isMotifiable = (name) => GLOBALS[name] === undefined ||
+	        GLOBALS[name].imutable !== 'true';
+	  $t.global = function (name, value, imutable) {
+	    if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
+	    if (isMotifiable(name)) GLOBALS[name] = {value, imutable};
+	  }
+	  $t.rmGlobal = function(name) {
+	    if (isMotifiable(name)) delete GLOBALS[name];
+	  }
+	}
+	createGlobalsInterface();
+	
+	module.exports = $t;
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/custom-event.js',
+RequireJS.addFunction('../../public/js/utils/custom-error.js',
 function (require, exports, module) {
 	
-class CustomEvent {
+
+	
+	
+	class CustomEvent {
 	  constructor(name) {
 	    const watchers = [];
 	    this.name = name;
+	
+	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
+	
 	    this.on = function (func) {
 	      if ((typeof func) === 'function') {
 	        watchers.push(func);
@@ -6857,8 +7362,10 @@ class CustomEvent {
 	      }
 	    }
 	
-	    this.trigger = function (element) {
+	    this.trigger = function (element, detail) {
 	      element = element === undefined ? window : element;
+	      runFuncs(element, detail);
+	      this.event.detail = detail;
 	      if(document.createEvent){
 	          element.dispatchEvent(this.event);
 	      } else {
@@ -6880,363 +7387,6 @@ class CustomEvent {
 	}
 	
 	module.exports = CustomEvent;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/measurement.js',
-function (require, exports, module) {
-	
-  try {
-	    Lookup = require('./object/lookup');
-	    StringMathEvaluator = require('./string-math-evaluator');
-	  } catch(e) {}
-	
-	
-	function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	let units = [
-	  'Metric',
-	  'Imperial (US)'
-	]
-	let unit = units[1];
-	
-	
-	class Measurement extends Lookup {
-	  constructor(value, notMetric) {
-	    super();
-	    if ((typeof value) === 'string') {
-	      value += ' '; // Hacky fix for regularExpression
-	    }
-	
-	    const determineUnit = () => {
-	      if ((typeof notMetric === 'string')) {
-	        const index = units.indexOf(notMetric);
-	        if (index !== -1) return units[index];
-	      } else if ((typeof notMetric) === 'boolean') {
-	        if (notMetric === true) return unit;
-	      }
-	      return units[0];
-	    }
-	
-	    let decimal = 0;
-	    let nan = value === null || value === undefined;
-	    this.isNaN = () => nan;
-	
-	    const parseFraction = (str) => {
-	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
-	      regObj.integer = Number.parseInt(regObj.integer) || 0;
-	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	      if(regObj.denominator === 0) {
-	        regObj.numerator = 0;
-	        regObj.denominator = 1;
-	      }
-	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	      return regObj;
-	    };
-	
-	    function reduce(numerator, denominator) {
-	      let reduced = true;
-	      while (reduced) {
-	        reduced = false;
-	        for (let index = 0; index < Measurement.primes.length; index += 1) {
-	          const prime = Measurement.primes[index];
-	          if (prime >= denominator) break;
-	          if (numerator % prime === 0 && denominator % prime === 0) {
-	            numerator = numerator / prime;
-	            denominator = denominator / prime;
-	            reduced = true;
-	            break;
-	          }
-	        }
-	      }
-	      if (numerator === 0) {
-	        return '';
-	      }
-	      return ` ${numerator}/${denominator}`;
-	    }
-	
-	    function fractionEquivalent(decimalValue, accuracy) {
-	      accuracy = accuracy || '1/32'
-	      const fracObj = parseFraction(accuracy);
-	      const denominator = fracObj.denominator;
-	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	      }
-	      let sign = decimalValue > 0 ? 1 : -1;
-	      let remainder = Math.abs(decimalValue);
-	      let currRemainder = remainder;
-	      let value = 0;
-	      let numerator = 0;
-	      while (currRemainder > 0) {
-	        numerator += fracObj.numerator;
-	        currRemainder -= fracObj.decimal;
-	      }
-	      const diff1 = decimalValue - ((numerator - fracObj.numerator) / denominator);
-	      const diff2 = (numerator / denominator) - decimalValue;
-	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	      const integer = sign * Math.floor(numerator / denominator);
-	      numerator = numerator % denominator;
-	      return {integer, numerator, denominator};
-	    }
-	
-	    this.fraction = (accuracy, standardDecimal) => {
-	      standardDecimal = standardDecimal || decimal;
-	      if (nan) return NaN;
-	      const obj = fractionEquivalent(standardDecimal, accuracy);
-	      if (obj.integer === 0 && obj.numerator === 0) return '0';
-	      const integer = obj.integer !== 0 ? obj.integer : '';
-	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
-	    }
-	    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
-	
-	    this.display = (accuracy) => {
-	      switch (unit) {
-	        case units[0]: return new String(this.decimal(accuracy));
-	        case units[1]: return this.standardUS(accuracy);
-	        default:
-	            return this.standardUS(accuracy);
-	      }
-	    }
-	
-	    this.value = (accuracy) => this.decimal(accuracy);
-	
-	    this.decimal = (accuracy) => {
-	      if (nan) return NaN;
-	      accuracy = accuracy % 100 ? accuracy : 100;
-	      return Math.round(decimal * accuracy) / accuracy;
-	    }
-	
-	    function getDecimalEquivalant(string) {
-	      string = string.trim();
-	      if (string.match(Measurement.decimalReg)) {
-	        return Number.parseFloat(string);
-	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
-	        return parseFraction(string).decimal
-	      }
-	      nan = true;
-	      return NaN;
-	    }
-	
-	    const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
-	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
-	
-	    function standardize(ambiguousDecimal) {
-	      switch (determineUnit()) {
-	        case units[0]:
-	          return ambiguousDecimal;
-	        case units[1]:
-	          return convertUsToMetric(ambiguousDecimal);
-	        default:
-	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
-	      }
-	    }
-	
-	    if ((typeof value) === 'number') {
-	      decimal = standardize(value);
-	    } else if ((typeof value) === 'string') {
-	      try {
-	        const ambiguousDecimal = getDecimalEquivalant(value);
-	        decimal = standardize(ambiguousDecimal);
-	      } catch (e) {
-	        nan = true;
-	      }
-	    } else {
-	      nan = true;
-	    }
-	  }
-	}
-	
-	Measurement.unit = (newUnit) => {
-	  for (index = 0; index < units.length; index += 1) {
-	    if (newUnit === units[index]) unit = newUnit;
-	  }
-	  return unit
-	};
-	Measurement.units = () => JSON.parse(JSON.stringify(units));
-	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
-	Measurement.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
-	
-	
-	Measurement.validation = function (range) {
-	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
-	  let min = obj.min.trim() !== '' ?
-	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
-	  let max = obj.max.trim() !== '' ?
-	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
-	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
-	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
-	  return function (value) {
-	    const decimal = new Measurement(value).decimal();
-	    if (decimal === NaN) return false;
-	    return minCheck(decimal) && maxCheck(decimal);
-	  }
-	}
-	
-	Measurement.decimal = (value) => {
-	  return new Measurement(value, true).decimal();
-	}
-	
-	Measurement.round = (value, percision) => {
-	  if (percision)
-	  return new Measurement(value).decimal(percision);
-	  return Math.round(value * 10000000) / 10000000;
-	}
-	
-	try {
-	  module.exports = Measurement;
-	} catch (e) {/* TODO: Consider Removing */}
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/data-sync.js',
-function (require, exports, module) {
-	
-
-	class DataSync {
-	  constructor(idAttr, getById) {
-	    let connections = {};
-	    let lastValue = {};
-	    let idMap = {};
-	
-	    const getId = (objOid) => !(objOid instanceof Object) ? objOid :
-	      ((typeof objOid[idAttr] === 'function' ? objOid[idAttr]() : objOid[idAttr]));
-	
-	    const getArray = (elems) => !elems ? [] : (elems.length === 1 ? elems[0] : elems);
-	
-	
-	    function makeSyncronous(key,...objOids) {
-	      objOids = getArray(objOids);
-	      for (let index = 1; index < objOids.length; index += 1) {
-	        let id;
-	        const obj1Id = getId(objOids[index - 1]);
-	        const obj2Id = getId(objOids[index]);
-	        idMap[obj1Id] = idMap[obj1Id] || {};
-	        idMap[obj2Id] = idMap[obj2Id] || {};
-	        if (idMap[obj1Id][key] === undefined) {
-	          if (idMap[obj2Id][key] === undefined) {
-	            id = String.random();
-	          } else {
-	            id = idMap[obj2Id][key];
-	          }
-	        } else { id = idMap[obj1Id][key]; }
-	        idMap[obj1Id][key] = id;
-	        idMap[obj2Id][key] = id;
-	        connections[id] = connections[id] || [];
-	        if (connections[id].indexOf(obj1Id) === -1) {
-	          connections[id].push(obj1Id)
-	        }
-	        if (connections[id].indexOf(obj2Id) === -1) {
-	          connections[id].push(obj2Id)
-	        }
-	      }
-	    }
-	
-	    function unSync(key,...objOids) {
-	      objOids = getArray(objOids);
-	      for (let index = 1; index < objOids.length; index += 1) {
-	        const id = getId(objOids[index]);
-	        const connId = idMap[id][key];
-	        const conns = connections[connId];
-	        let tIndex;
-	        while ((tIndex = conns.indexOf(id)) !== -1) conns.split(tIndex, 1);
-	        delete idMap[id][key];
-	      }
-	    }
-	
-	    function update(key, value, objOid) {
-	      const id = getId(objOid);
-	      if (!idMap[id] || !idMap[id][key]) return;
-	      const connId = idMap[id] && idMap[id][key];
-	      if (connId === undefined) return;
-	      if (lastValue[connId] !== value) {
-	        lastValue[connId] = value;
-	        const objIds = connections[connId];
-	        for (let index = 0; objIds && index < objIds.length; index ++) {
-	          const obj = getById(objIds[index]);
-	          if (obj !== undefined) obj[key](value);
-	        }
-	      }
-	    }
-	
-	    function shouldRun(hasRan, validIds, id) {
-	      return !hasRan && (validIds === null || validIds.indexOf(id) !== -1);
-	    }
-	
-	    function forEach(func, ...objOids) {
-	      objOids = getArray(objOids);
-	      let alreadyRan = {};
-	      let validIds = objOids === undefined ? null :
-	                      objOids.map((objOid) => getId(objOid));
-	      let ids = Object.keys(idMap);
-	      for (let index = 0; index < ids.length; index += 1) {
-	        const id = ids[index];
-	        const idKeys = Object.keys(idMap[id]);
-	        for (let iIndex = 0; iIndex < idKeys.length; iIndex += 1) {
-	          const idKey = idKeys[iIndex];
-	          const connectionId = idMap[id][idKey];
-	          if (shouldRun(alreadyRan[connectionId], validIds, id)) {
-	            const connIds = connections[connectionId];
-	            const applicableConnections = [];
-	            for (let cIndex = 0; cIndex < connIds.length; cIndex += 1) {
-	              if (shouldRun(alreadyRan[connectionId], validIds, id)) {
-	                applicableConnections.push(connIds[cIndex]);
-	              }
-	            }
-	            if (applicableConnections.length === 0) throw new Error('This should never happen');
-	            func(idKey, applicableConnections);
-	            alreadyRan[connectionId] = true;
-	          }
-	        }
-	      }
-	    }
-	
-	    function fromJson(connections) {
-	      const keys = Object.keys(connections);
-	      keys.forEach((key) => {
-	        this.addConnection(key);
-	        const groups = connections[key];
-	        groups.forEach((group) => {
-	          this[`${key}Sync`](group);
-	        });
-	      });
-	    }
-	
-	
-	    function toJson(...objOids) {
-	      objOids = getArray(objOids);
-	      const connects = {};
-	      forEach((key, connections) => {
-	        if (connects[key] === undefined) connects[key] = [];
-	        connects[key].push(connections);
-	      }, ...objOids);
-	      return connects;
-	    }
-	
-	    this.addConnection = (key) => {
-	      this[`${key}Sync`] = (...objOids) => makeSyncronous(key, ...objOids);
-	      this[`${key}UnSync`] = (...objOids) => makeSyncronous(key, ...objOids);
-	      this[`${key}Update`] = (value, objOid) => update(key,value, objOid);
-	    }
-	    this.toJson = toJson;
-	    this.fromJson = fromJson;
-	  }
-	}
-	
-	module.exports = DataSync;
 	
 });
 
@@ -7615,6 +7765,187 @@ const approximate = require('approximate');
 	try {
 	  module.exports = StringMathEvaluator;
 	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/custom-event.js',
+function (require, exports, module) {
+	
+class CustomEvent {
+	  constructor(name) {
+	    const watchers = [];
+	    this.name = name;
+	    this.on = function (func) {
+	      if ((typeof func) === 'function') {
+	        watchers.push(func);
+	      } else {
+	        return 'on' + name;
+	      }
+	    }
+	
+	    this.trigger = function (element) {
+	      element = element === undefined ? window : element;
+	      if(document.createEvent){
+	          element.dispatchEvent(this.event);
+	      } else {
+	          element.fireEvent("on" + this.event.eventType, this.event);
+	      }
+	    }
+	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+	    this.event;
+	    if(document.createEvent){
+	        this.event = document.createEvent("HTMLEvents");
+	        this.event.initEvent(name, true, true);
+	        this.event.eventName = name;
+	    } else {
+	        this.event = document.createEventObject();
+	        this.event.eventName = name;
+	        this.event.eventType = name;
+	    }
+	  }
+	}
+	
+	module.exports = CustomEvent;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/data-sync.js',
+function (require, exports, module) {
+	
+
+	class DataSync {
+	  constructor(idAttr, getById) {
+	    let connections = {};
+	    let lastValue = {};
+	    let idMap = {};
+	
+	    const getId = (objOid) => !(objOid instanceof Object) ? objOid :
+	      ((typeof objOid[idAttr] === 'function' ? objOid[idAttr]() : objOid[idAttr]));
+	
+	    const getArray = (elems) => !elems ? [] : (elems.length === 1 ? elems[0] : elems);
+	
+	
+	    function makeSyncronous(key,...objOids) {
+	      objOids = getArray(objOids);
+	      for (let index = 1; index < objOids.length; index += 1) {
+	        let id;
+	        const obj1Id = getId(objOids[index - 1]);
+	        const obj2Id = getId(objOids[index]);
+	        idMap[obj1Id] = idMap[obj1Id] || {};
+	        idMap[obj2Id] = idMap[obj2Id] || {};
+	        if (idMap[obj1Id][key] === undefined) {
+	          if (idMap[obj2Id][key] === undefined) {
+	            id = String.random();
+	          } else {
+	            id = idMap[obj2Id][key];
+	          }
+	        } else { id = idMap[obj1Id][key]; }
+	        idMap[obj1Id][key] = id;
+	        idMap[obj2Id][key] = id;
+	        connections[id] = connections[id] || [];
+	        if (connections[id].indexOf(obj1Id) === -1) {
+	          connections[id].push(obj1Id)
+	        }
+	        if (connections[id].indexOf(obj2Id) === -1) {
+	          connections[id].push(obj2Id)
+	        }
+	      }
+	    }
+	
+	    function unSync(key,...objOids) {
+	      objOids = getArray(objOids);
+	      for (let index = 1; index < objOids.length; index += 1) {
+	        const id = getId(objOids[index]);
+	        const connId = idMap[id][key];
+	        const conns = connections[connId];
+	        let tIndex;
+	        while ((tIndex = conns.indexOf(id)) !== -1) conns.split(tIndex, 1);
+	        delete idMap[id][key];
+	      }
+	    }
+	
+	    function update(key, value, objOid) {
+	      const id = getId(objOid);
+	      if (!idMap[id] || !idMap[id][key]) return;
+	      const connId = idMap[id] && idMap[id][key];
+	      if (connId === undefined) return;
+	      if (lastValue[connId] !== value) {
+	        lastValue[connId] = value;
+	        const objIds = connections[connId];
+	        for (let index = 0; objIds && index < objIds.length; index ++) {
+	          const obj = getById(objIds[index]);
+	          if (obj !== undefined) obj[key](value);
+	        }
+	      }
+	    }
+	
+	    function shouldRun(hasRan, validIds, id) {
+	      return !hasRan && (validIds === null || validIds.indexOf(id) !== -1);
+	    }
+	
+	    function forEach(func, ...objOids) {
+	      objOids = getArray(objOids);
+	      let alreadyRan = {};
+	      let validIds = objOids === undefined ? null :
+	                      objOids.map((objOid) => getId(objOid));
+	      let ids = Object.keys(idMap);
+	      for (let index = 0; index < ids.length; index += 1) {
+	        const id = ids[index];
+	        const idKeys = Object.keys(idMap[id]);
+	        for (let iIndex = 0; iIndex < idKeys.length; iIndex += 1) {
+	          const idKey = idKeys[iIndex];
+	          const connectionId = idMap[id][idKey];
+	          if (shouldRun(alreadyRan[connectionId], validIds, id)) {
+	            const connIds = connections[connectionId];
+	            const applicableConnections = [];
+	            for (let cIndex = 0; cIndex < connIds.length; cIndex += 1) {
+	              if (shouldRun(alreadyRan[connectionId], validIds, id)) {
+	                applicableConnections.push(connIds[cIndex]);
+	              }
+	            }
+	            if (applicableConnections.length === 0) throw new Error('This should never happen');
+	            func(idKey, applicableConnections);
+	            alreadyRan[connectionId] = true;
+	          }
+	        }
+	      }
+	    }
+	
+	    function fromJson(connections) {
+	      const keys = Object.keys(connections);
+	      keys.forEach((key) => {
+	        this.addConnection(key);
+	        const groups = connections[key];
+	        groups.forEach((group) => {
+	          this[`${key}Sync`](group);
+	        });
+	      });
+	    }
+	
+	
+	    function toJson(...objOids) {
+	      objOids = getArray(objOids);
+	      const connects = {};
+	      forEach((key, connections) => {
+	        if (connects[key] === undefined) connects[key] = [];
+	        connects[key].push(connections);
+	      }, ...objOids);
+	      return connects;
+	    }
+	
+	    this.addConnection = (key) => {
+	      this[`${key}Sync`] = (...objOids) => makeSyncronous(key, ...objOids);
+	      this[`${key}UnSync`] = (...objOids) => makeSyncronous(key, ...objOids);
+	      this[`${key}Update`] = (value, objOid) => update(key,value, objOid);
+	    }
+	    this.toJson = toJson;
+	    this.fromJson = fromJson;
+	  }
+	}
+	
+	module.exports = DataSync;
 	
 });
 
@@ -8188,6 +8519,893 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/measurement.js',
+function (require, exports, module) {
+	
+  try {
+	    Lookup = require('./object/lookup');
+	    StringMathEvaluator = require('./string-math-evaluator');
+	  } catch(e) {}
+	
+	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	let units = [
+	  'Metric',
+	  'Imperial (US)'
+	]
+	let unit = units[1];
+	
+	
+	class Measurement extends Lookup {
+	  constructor(value, notMetric) {
+	    super();
+	    if ((typeof value) === 'string') {
+	      value += ' '; // Hacky fix for regularExpression
+	    }
+	
+	    const determineUnit = () => {
+	      if ((typeof notMetric === 'string')) {
+	        const index = units.indexOf(notMetric);
+	        if (index !== -1) return units[index];
+	      } else if ((typeof notMetric) === 'boolean') {
+	        if (notMetric === true) return unit;
+	      }
+	      return units[0];
+	    }
+	
+	    let decimal = 0;
+	    let nan = value === null || value === undefined;
+	    this.isNaN = () => nan;
+	
+	    const parseFraction = (str) => {
+	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
+	      regObj.integer = Number.parseInt(regObj.integer) || 0;
+	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	      if(regObj.denominator === 0) {
+	        regObj.numerator = 0;
+	        regObj.denominator = 1;
+	      }
+	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	      return regObj;
+	    };
+	
+	    function reduce(numerator, denominator) {
+	      let reduced = true;
+	      while (reduced) {
+	        reduced = false;
+	        for (let index = 0; index < Measurement.primes.length; index += 1) {
+	          const prime = Measurement.primes[index];
+	          if (prime >= denominator) break;
+	          if (numerator % prime === 0 && denominator % prime === 0) {
+	            numerator = numerator / prime;
+	            denominator = denominator / prime;
+	            reduced = true;
+	            break;
+	          }
+	        }
+	      }
+	      if (numerator === 0) {
+	        return '';
+	      }
+	      return ` ${numerator}/${denominator}`;
+	    }
+	
+	    function fractionEquivalent(decimalValue, accuracy) {
+	      accuracy = accuracy || '1/32'
+	      const fracObj = parseFraction(accuracy);
+	      const denominator = fracObj.denominator;
+	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	      }
+	      let sign = decimalValue > 0 ? 1 : -1;
+	      let remainder = Math.abs(decimalValue);
+	      let currRemainder = remainder;
+	      let value = 0;
+	      let numerator = 0;
+	      while (currRemainder > 0) {
+	        numerator += fracObj.numerator;
+	        currRemainder -= fracObj.decimal;
+	      }
+	      const diff1 = decimalValue - ((numerator - fracObj.numerator) / denominator);
+	      const diff2 = (numerator / denominator) - decimalValue;
+	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	      const integer = sign * Math.floor(numerator / denominator);
+	      numerator = numerator % denominator;
+	      return {integer, numerator, denominator};
+	    }
+	
+	    this.fraction = (accuracy, standardDecimal) => {
+	      standardDecimal = standardDecimal || decimal;
+	      if (nan) return NaN;
+	      const obj = fractionEquivalent(standardDecimal, accuracy);
+	      if (obj.integer === 0 && obj.numerator === 0) return '0';
+	      const integer = obj.integer !== 0 ? obj.integer : '';
+	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
+	    }
+	    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
+	
+	    this.display = (accuracy) => {
+	      switch (unit) {
+	        case units[0]: return new String(this.decimal(accuracy));
+	        case units[1]: return this.standardUS(accuracy);
+	        default:
+	            return this.standardUS(accuracy);
+	      }
+	    }
+	
+	    this.value = (accuracy) => this.decimal(accuracy);
+	
+	    this.decimal = (accuracy) => {
+	      if (nan) return NaN;
+	      accuracy = accuracy % 100 ? accuracy : 100;
+	      return Math.round(decimal * accuracy) / accuracy;
+	    }
+	
+	    function getDecimalEquivalant(string) {
+	      string = string.trim();
+	      if (string.match(Measurement.decimalReg)) {
+	        return Number.parseFloat(string);
+	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
+	        return parseFraction(string).decimal
+	      }
+	      nan = true;
+	      return NaN;
+	    }
+	
+	    const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
+	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+	
+	    function standardize(ambiguousDecimal) {
+	      switch (determineUnit()) {
+	        case units[0]:
+	          return ambiguousDecimal;
+	        case units[1]:
+	          return convertUsToMetric(ambiguousDecimal);
+	        default:
+	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
+	      }
+	    }
+	
+	    if ((typeof value) === 'number') {
+	      decimal = standardize(value);
+	    } else if ((typeof value) === 'string') {
+	      try {
+	        const ambiguousDecimal = getDecimalEquivalant(value);
+	        decimal = standardize(ambiguousDecimal);
+	      } catch (e) {
+	        nan = true;
+	      }
+	    } else {
+	      nan = true;
+	    }
+	  }
+	}
+	
+	Measurement.unit = (newUnit) => {
+	  for (index = 0; index < units.length; index += 1) {
+	    if (newUnit === units[index]) unit = newUnit;
+	  }
+	  return unit
+	};
+	Measurement.units = () => JSON.parse(JSON.stringify(units));
+	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
+	Measurement.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
+	
+	
+	Measurement.validation = function (range) {
+	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
+	  let min = obj.min.trim() !== '' ?
+	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
+	  let max = obj.max.trim() !== '' ?
+	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
+	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
+	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
+	  return function (value) {
+	    const decimal = new Measurement(value).decimal();
+	    if (decimal === NaN) return false;
+	    return minCheck(decimal) && maxCheck(decimal);
+	  }
+	}
+	
+	Measurement.decimal = (value) => {
+	  return new Measurement(value, true).decimal();
+	}
+	
+	Measurement.round = (value, percision) => {
+	  if (percision)
+	  return new Measurement(value).decimal(percision);
+	  return Math.round(value * 10000000) / 10000000;
+	}
+	
+	try {
+	  module.exports = Measurement;
+	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/logic-tree.js',
+function (require, exports, module) {
+	
+
+	const DecisionTree = require('./decision-tree');
+	const DataSync = require('./data-sync');
+	const Lookup = require('./object/lookup');
+	
+	const INTERNAL_FUNCTION_PASSWORD = String.random();
+	const DEFAULT_GROUP = 'LogicTree';
+	
+	function getNode(nodeOwrapper) {
+	  if (nodeOwrapper.constructor.name === 'DecisionNode') return nodeOwrapper;
+	  return nodeOwrapper.node;
+	}
+	
+	class LogicWrapper extends Lookup {
+	  constructor(node) {
+	    super(node ? node.nodeId() : undefined);
+	    this.node = node;
+	    this.nodeId = () => LogicWrapper.decode(this.id()).id;
+	  }
+	}
+	
+	class LogicType {
+	  constructor(wrapperOrJson) {
+	    Object.getSet(this, 'nodeId', 'optional', 'value', 'default');
+	    this.wrapper = wrapperOrJson instanceof LogicWrapper ?
+	                      wrapperOrJson :
+	                      LogicWrapper.get(wrapperOrJson.nodeId);
+	    this.nodeId(this.wrapper.node.nodeId());
+	    let optional = false;
+	    this.optional = (val) => {
+	      if (val === true || val === false) {
+	        optional = val;
+	      }
+	      return optional;
+	    }
+	    this.selectionMade = () => true;
+	  }
+	}
+	
+	class SelectLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    const json = wrapper;
+	    wrapper = this.wrapper;
+	    let value, def;
+	    const instance = this;
+	    this.madeSelection = () => validate(value, true) || validate(def, true);
+	    function validate(val, silent) {
+	      if (instance.optional() && val === null) return true;
+	      const valid = (instance.optional() && val === null) ||
+	                    (val !== null && wrapper.node.validState(val));
+	      if (!silent && !valid)
+	        throw SelectLogic.error;
+	      return valid;
+	    }
+	    this.value = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        value = val;
+	        wrapper.valueUpdate(value, wrapper);
+	      }
+	      return value === undefined ? (def === undefined ? null : def) : value;
+	    }
+	    this.selectionMade = () => value !== undefined;
+	    this.options = () => {
+	      return wrapper.node.stateNames();
+	    }
+	    this.default = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        def = val;
+	        wrapper.defaultUpdate(value, wrapper);
+	      }
+	      return def;
+	    }
+	    this.selector = () => this.value();
+	   }
+	}
+	
+	SelectLogic.error = new Error('Invalid selection: use wrapper.options() to get valid list.')
+	
+	class MultiselectLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    wrapper = this.wrapper;
+	    let value, def;
+	    const instance = this;
+	    this.madeSelection = () => validate(value, true) || validate(def, true);
+	    function validate(val, silent) {
+	      if (val === null) return instance.optional();
+	      if (val === undefined) return false;
+	      const stateNames = Object.keys(val);
+	      if (instance.optional() && stateNames.length === 0) return true;
+	      let valid = stateNames.length > 0;
+	      stateNames.forEach((name) => valid = valid && wrapper.node.validState(name));
+	      if (!silent && !valid) throw MultiselectLogic.error;
+	      return valid;
+	    }
+	    this.value = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        value = val;
+	        wrapper.valueUpdate(value);
+	      }
+	      let retVal = value === undefined ? def : value;
+	      return retVal === null ? null : JSON.clone(retVal);
+	    }
+	    this.selectionMade = () => value !== undefined;
+	    this.options = () => {
+	      const options = {};
+	      const stateNames = wrapper.node.stateNames();
+	      stateNames.forEach((name) => options[name] = def[name] === undefined ? false : def[name]);
+	      return options;
+	    }
+	    this.default = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        def = val;
+	        wrapper.defaultUpdate(value);
+	      }
+	      return def;
+	    }
+	    this.selector = () => {
+	      const obj = this.value();
+	      if (obj === null || obj === undefined) return null;
+	      const keys = Object.keys(obj);
+	      let selector = '';
+	      keys.forEach((key) => selector += obj[key] ? `|${key}` : '');
+	      selector = selector.length === 0 ? null : new RegExp(`^${selector.substring(1)}$`);
+	      return selector;
+	    }
+	  }
+	}
+	MultiselectLogic.error = new Error('Invalid multiselection: use wrapper.options() to get valid list.')
+	
+	
+	class ConditionalLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    wrapper = this.wrapper;
+	    let value, def;
+	    validate(wrapper.node.payload());
+	    def = wrapper.node.payload();
+	    function validate(val, password) {
+	      if ((typeof val.condition) !== 'function')
+	        throw ConditionalLogic.error;
+	    }
+	    this.value = (val) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        value = val;
+	        wrapper.valueUpdate(value);
+	      }
+	      return value || def;
+	    }
+	    this.options = () => undefined;
+	    this.default = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        def = val;
+	        wrapper.defaultUpdate(value);
+	      }
+	      return def;
+	    }
+	    this.selector = () => () =>
+	      this.value().condition(wrapper.root());
+	  }
+	}
+	ConditionalLogic.error = new Error('Invalid condition: must be a function that returns true or false based off of node input');
+	
+	class BranchLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    this.value = () => undefined;
+	    this.options = () => undefined;
+	    this.default = () => undefined;
+	    this.selector = () => /.*/;
+	  }
+	}
+	
+	class LeafLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    this.value = () =>undefined;
+	    this.options = () => undefined;
+	    this.default = () => undefined;
+	    this.selector = () => undefined;
+	  }
+	}
+	
+	LogicType.types = {SelectLogic, MultiselectLogic, ConditionalLogic, BranchLogic, LeafLogic};
+	class LogicTree {
+	  constructor(formatPayload) {
+	    Object.getSet(this);
+	    const tree = this;
+	    let root;
+	    let choices = {};
+	    const wrapperMap = {};
+	
+	    function getTypeObjByNodeId(nodeId) {
+	      return choices[get(nodeId).name];
+	    }
+	    let dataSync = new DataSync('nodeId', getTypeObjByNodeId);
+	    dataSync.addConnection('value');
+	    dataSync.addConnection('default');
+	
+	    function isOptional(node) {
+	      return !(choices[node.name] === undefined || !choices[node.name].optional());
+	    }
+	
+	    function isSelector(node) {
+	      return node.payload().LOGIC_TYPE.match(/Select|Multiselect/);
+	    }
+	
+	    function mustSelect(node) {
+	      return !isOptional(node)  && node.payload().LOGIC_TYPE.match(/Select|Multiselect/);
+	    }
+	
+	    function structure() { return root.node.toString(null, 'LOGIC_TYPE') }
+	
+	    function setChoice(name, val) {
+	      choices[name].value(val);
+	    }
+	
+	    function setDefault(name, val) {
+	      choices[name].default(val);
+	    }
+	
+	    function getByName(name) {
+	      if (root.node === undefined) return undefined;
+	      const node = root.node.getByName(name);
+	      return node === undefined ? undefined : wrapNode(node);
+	    }
+	
+	    function addChildrenFunc(wrapper, options) {
+	      return (name) => {
+	        const targetWrapper = getByName(name);
+	        if (targetWrapper === undefined) throw new Error(`Invalid name: ${name}`);
+	        const states = targetWrapper.node.states();
+	        states.forEach((state) => wrapNode(wrapper.node.then(state)));
+	        return wrapper;
+	      }
+	    }
+	
+	    function choicesToSelectors() {
+	      const keys = Object.keys(choices);
+	      const selectors = {};
+	      keys.forEach((key) => selectors[key] = choices[key].selector());
+	      return selectors;
+	    }
+	
+	    function reachableTree(node) {
+	      return (node || root.node).subtree(choicesToSelectors());
+	    }
+	
+	    function leaves() {
+	      const wrappers = [];
+	      reachableTree().leaves().forEach((node) => wrappers.push(wrapNode(node)));
+	      return wrappers;
+	    }
+	
+	    function pathsToString() {
+	      let paths = '=>';
+	      forPath((wrapper, data) => {
+	        if (data === undefined) paths = paths.substring(0, paths.length - 2) + "\n";
+	        paths += `${wrapper.name}=>`;
+	        return true;
+	      });
+	      paths = paths.substring(0, paths.length - 2)
+	      return paths;
+	    }
+	
+	    function forPath(func, reverse) {
+	      const lvs = reachableTree().leaves();
+	      let data = [];
+	      let dIndex = 0;
+	      lvs.forEach((leave) => {
+	        const path = [];
+	        let curr = leave;
+	        while (curr !== undefined) {
+	          path.push(curr);
+	          curr = curr.back()
+	        }
+	        if (reverse === true) {
+	          for (let index = 0; index < path.length; index += 1) {
+	            data[dIndex] = func(wrapNode(path[index]), data[dIndex]);
+	          }
+	        } else {
+	          for (let index = path.length - 1; index >= 0; index -= 1) {
+	            data[dIndex] = func(wrapNode(path[index]), data[dIndex]);
+	          }
+	        }
+	        dIndex++;
+	      });
+	      return data;
+	    }
+	
+	    function forAll(func, node) {
+	      (node || root.node).forEach((n) => {
+	        func(wrapNode(n));
+	      });
+	    }
+	
+	    function forEach(func, node) {
+	      reachableTree(node).forEach((n) => {
+	        func(wrapNode(n));
+	      });
+	    }
+	
+	    function reachable(nameOwrapper) {
+	      const wrapper = nameOwrapper instanceof LogicWrapper ?
+	                        nameOwrapper : getByName(nameOwrapper);
+	      return wrapper.node.conditionsSatisfied(choicesToSelectors(), wrapper.node);
+	    }
+	
+	    function isComplete() {
+	      const subtree = reachableTree();
+	      let complete = true;
+	      subtree.forEach((node) => {
+	        if (node.states().length === 0 && node.payload().LOGIC_TYPE !== 'Leaf' &&
+	              !selectionMade(node)) {
+	          complete = false;
+	        }
+	      });
+	      return complete;
+	    }
+	
+	    function selectionMade(node, selectors) {
+	      selectors = selectors || choicesToSelectors();
+	      if (mustSelect(node)) {
+	        const wrapper = wrapNode(node);
+	        if (getTypeObj(wrapper) === undefined) {
+	          throw new Error ('This should not happen. node wrapper was not made correctly.');
+	        }
+	        return getTypeObj(wrapper).madeSelection();
+	      }
+	      return true;
+	    }
+	
+	    function getByPath(...args) {
+	      return wrapNode(root.node.getNodeByPath(...args))
+	    }
+	    this.getByPath = getByPath;
+	
+	    function decisions(wrapper) {
+	      return () =>{
+	        const decisions = [];
+	        const addedNodeIds = [];
+	        const selectors = choicesToSelectors();
+	        wrapper.node.forEach((node) => {
+	          if (isSelector(node)) {
+	            let terminatedPath = false;
+	            let current = node;
+	            while (current = current.back()){
+	              if (addedNodeIds.indexOf(current.nodeId()) !== -1)
+	                terminatedPath = true;
+	            }
+	            if (!terminatedPath) {
+	              if (node.conditionsSatisfied(selectors, node)) {
+	                if (selectionMade(node, selectors)) {
+	                  decisions.push(wrapNode(node));
+	                } else {
+	                  decisions.push(wrapNode(node));
+	                  addedNodeIds.push(node.nodeId());
+	                }
+	              }
+	            }
+	          }
+	        });
+	        return decisions;
+	      }
+	    }
+	
+	    function toJson(wrapper) {
+	      return function () {
+	        wrapper = wrapper || root;
+	        const json = {_choices: {}, _TYPE: tree.constructor.name};
+	        const keys = Object.keys(choices);
+	        const ids = wrapper.node.map((node) => node.nodeId());
+	        keys.forEach((key) => {
+	          if (ids.indexOf(choices[key].nodeId()) !== -1) {
+	            json._choices[key] = choices[key].toJson();
+	            const valEqDefault = choices[key].default() === choices[key].value();
+	            const selectionNotMade = !choices[key].selectionMade();
+	            if(selectionNotMade || valEqDefault) json._choices[key].value = undefined;
+	          }
+	        });
+	        json._tree = wrapper.node.toJson();
+	        json._connectionList = dataSync.toJson(wrapper.node.nodes());
+	        return json;
+	      }
+	    }
+	
+	    function children(wrapper) {
+	      return () => {
+	        const children = [];
+	        wrapper.node.forEachChild((child) => children.push(wrapNode(child)));
+	        return children;
+	      }
+	    }
+	
+	    function addStaticMethods(wrapper) {
+	      wrapper.structure = structure;
+	      wrapper.choicesToSelectors = choicesToSelectors;
+	      wrapper.setChoice = setChoice;
+	      wrapper.children = children(wrapper);
+	      wrapper.getByPath = getByPath;
+	      wrapper.setDefault = setDefault;
+	      wrapper.attachTree = attachTree(wrapper);
+	      wrapper.toJson = toJson(wrapper);
+	      wrapper.root = () => root;
+	      wrapper.isComplete = isComplete;
+	      wrapper.reachable = (wrap) => reachable(wrap || wrapper);
+	      wrapper.decisions = decisions(wrapper);
+	      wrapper.forPath = forPath;
+	      wrapper.forEach = forEach;
+	      wrapper.forAll = forAll;
+	      wrapper.pathsToString = pathsToString;
+	      wrapper.leaves = leaves;
+	      wrapper.toString = () =>
+	          wrapper.node.subtree(choicesToSelectors()).toString(null, 'LOGIC_TYPE');
+	    }
+	
+	    function getTypeObj(wrapper) {
+	      return choices[wrapper.name];
+	    }
+	
+	    function addHelperMetrhods (wrapper) {
+	      const node = wrapper.node;
+	      const type = node.payload().LOGIC_TYPE;
+	      const name = node.name;
+	      if (choices[name] === undefined) {
+	        choices[name] = new (LogicType.types[`${type}Logic`])(wrapper);
+	      }
+	      const typeObj = choices[name];
+	      wrapper.name = name;
+	      wrapper.getTypeObj = () => getTypeObj(wrapper);
+	      wrapper.value = typeObj.value;
+	      wrapper.payload = () => node.payload();
+	      wrapper.options = typeObj.options;
+	      wrapper.optional = typeObj.optional;
+	      wrapper.default = typeObj.default;
+	      wrapper.selector = typeObj.selector;
+	      wrapper.addChildren = addChildrenFunc(wrapper);
+	      wrapper.valueSync = (w) => dataSync.valueSync(typeObj, w.getTypeObj());
+	      wrapper.defaultSync = (w) => dataSync.defaultSync(typeObj, w.getTypeObj());
+	      wrapper.valueUpdate = (value) => dataSync.valueUpdate(value, typeObj);
+	      wrapper.defaultUpdate = (value) => dataSync.defaultUpdate(value, typeObj);
+	    }
+	
+	    function attachTree(wrapper) {
+	      return (tree) => {
+	        const json = tree.toJson();
+	        return incorrperateJsonNodes(json, wrapper.node);
+	      }
+	    }
+	
+	    function addTypeFunction(type, wrapper) {
+	      wrapper[type.toLowerCase()] = (name, payload) => {
+	        payload = typeof formatPayload === 'function' ?
+	                          formatPayload(name, payload || {}, wrapper) : payload || {};
+	        payload.LOGIC_TYPE = type;
+	        let newWrapper;
+	        if (root === undefined) {
+	          root = wrapper;
+	          root.node = new DecisionTree(name, payload);
+	          root.payload = root.node.payload;
+	          newWrapper = root;
+	        } else if (getByName(name)) {
+	          newWrapper = wrapNode(wrapper.node.then(name));
+	        } else {
+	          wrapper.node.addState(name, payload);
+	          newWrapper = wrapNode(wrapper.node.then(name));
+	        }
+	        return newWrapper;
+	      }
+	    }
+	
+	    function getNode(nodeOrwrapperOrId) {
+	      switch (nodeOrwrapperOrId.constructor.name) {
+	        case 'DecisionNode':
+	          return nodeOrwrapperOrId;
+	        case 'LogicWrapper':
+	          return nodeOrwrapperOrId.node;
+	        default:
+	          const node = DecisionTree.DecisionNode.get(nodeOrwrapperOrId);
+	          if (node) return node;
+	          return nodeOrwrapperOrId;
+	      }
+	    }
+	
+	    function get(nodeOidOwrapper) {
+	      if (nodeOidOwrapper === undefined) return undefined;
+	      const node = getNode(nodeOidOwrapper);
+	      if (node instanceof DecisionTree.DecisionNode) {
+	        return wrapperMap[node.nodeId()];
+	      } else {
+	        return wrapperMap[node];
+	      }
+	    }
+	
+	    const set = (wrapper) =>
+	        wrapperMap[wrapper.node.nodeId()] = wrapper;
+	    this.get = get;
+	
+	    function wrapNode(node) {
+	      let wrapper = get(node);
+	      if (wrapper) return wrapper;
+	      wrapper = new LogicWrapper(node);
+	      if (node === undefined) {
+	        wrapper.toString = () =>
+	          root !== undefined ? root.toString() : 'Empty Tree';
+	      }
+	      if (node === undefined || node.payload().LOGIC_TYPE !== 'Leaf') {
+	        addTypeFunction('Select', wrapper);
+	        addTypeFunction('Multiselect', wrapper);
+	        addTypeFunction('Conditional', wrapper);
+	        addTypeFunction('Leaf', wrapper);
+	        addTypeFunction('Branch', wrapper);
+	      }
+	      addStaticMethods(wrapper);
+	      if (node && node.payload().LOGIC_TYPE !== undefined) {
+	        addHelperMetrhods(wrapper);
+	        set(wrapper);
+	      }
+	      return wrapper;
+	    }
+	
+	    function updateChoices(jsonChoices) {
+	      const keys = Object.keys(jsonChoices);
+	      keys.forEach((key) =>
+	          choices[key].fromJson(jsonChoices[key]));
+	    }
+	
+	    function incorrperateJsonNodes(json, node) {
+	      const decisionTree = new DecisionTree(json._tree);
+	
+	      let newNode;
+	      if (node !== undefined) {
+	        newNode = node.attachTree(decisionTree);
+	      } else {
+	        root = wrapNode(decisionTree);
+	        rootWrapper.node = root.node;
+	        newNode = root.node;
+	      }
+	      newNode.forEach((n) =>
+	          wrapNode(n));
+	      dataSync.fromJson(json._connectionList);
+	      updateChoices(json._choices);
+	      return node;
+	    }
+	
+	    let rootWrapper = wrapNode();
+	    if (formatPayload && formatPayload._TYPE === this.constructor.name) incorrperateJsonNodes(formatPayload);
+	    return rootWrapper;
+	  }
+	}
+	
+	LogicTree.LogicWrapper = LogicWrapper;
+	
+	module.exports = LogicTree;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/approximate.js',
+function (require, exports, module) {
+	
+
+	function approximate(value, acc) {
+	  acc ||= approximate.accuracy || 1000;
+	  return Math.round(value * acc) / acc;
+	}
+	
+	approximate.accuracy = 1000000000;
+	approximate.eq = (val1, val2, acc) => approximate(val1, acc) === approximate(val2, acc);
+	approximate.neq = (val1, val2, acc) => approximate(val1, acc) !== approximate(val2, acc);
+	approximate.gt = (val1, val2, acc) => approximate(val1, acc) > approximate(val2, acc);
+	approximate.lt = (val1, val2, acc) => approximate(val1, acc) < approximate(val2, acc);
+	approximate.gteq = (val1, val2, acc) => approximate(val1, acc) >= approximate(val2, acc);
+	approximate.lteq = (val1, val2, acc) => approximate(val1, acc) <= approximate(val2, acc);
+	
+	module.exports  = approximate;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/endpoints.js',
+function (require, exports, module) {
+	
+class Endpoints {
+	  constructor(config, host) {
+	    const instance = this;
+	    let environment;
+	
+	    if ((typeof config) !== 'object') {
+	      host = config;
+	      config = Endpoints.defaultConfig;
+	    }
+	
+	    host = host || '';
+	    this.setHost = (newHost) => {
+	      if ((typeof newHost) === 'string') {
+	        if (config._envs[newHost]) environment = newHost;
+	        host = config._envs[newHost] || newHost;
+	      }
+	    };
+	    this.setHost(host);
+	    this.getHost = (env) => env === undefined ? host : config._envs[env];
+	    this.getEnv = () => environment;
+	
+	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
+	    this.getFuncObj = function () {return endPointFuncs;};
+	
+	
+	    function build(str) {
+	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
+	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
+	      return function () {
+	        let values = [];
+	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
+	          values = arguments;
+	        } else {
+	          const obj = arguments[0];
+	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
+	        }
+	        let endpoint = '';
+	        for (let index = 0; index < pieces.length; index += 1) {
+	          const arg = values[index];
+	          let value = '';
+	          if (index < pieces.length - 1) {
+	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
+	          }
+	          endpoint += pieces[index] + value;
+	        }
+	        return `${host}${endpoint}`;
+	      }
+	    }
+	
+	    function configRecurse(currConfig, currFunc) {
+	      const keys = Object.keys(currConfig);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = currConfig[key];
+	        if (key.indexOf('_') !== 0) {
+	          if (value instanceof Object) {
+	            currFunc[key] = {};
+	            configRecurse(value, currFunc[key]);
+	          } else {
+	            currFunc[key] = build(value);
+	          }
+	        } else {
+	          currFunc[key] = value;
+	        }
+	      }
+	    }
+	
+	    configRecurse(config, endPointFuncs);
+	  }
+	}
+	
+	module.exports = Endpoints;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/expression-definition.js',
 function (require, exports, module) {
 	
@@ -8512,602 +9730,486 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/endpoints.js',
+RequireJS.addFunction('../../public/js/utils/utils.js',
 function (require, exports, module) {
 	
-class Endpoints {
-	  constructor(config, host) {
-	    const instance = this;
-	    let environment;
-	
-	    if ((typeof config) !== 'object') {
-	      host = config;
-	      config = Endpoints.defaultConfig;
-	    }
-	
-	    host = host || '';
-	    this.setHost = (newHost) => {
-	      if ((typeof newHost) === 'string') {
-	        if (config._envs[newHost]) environment = newHost;
-	        host = config._envs[newHost] || newHost;
-	      }
-	    };
-	    this.setHost(host);
-	    this.getHost = (env) => env === undefined ? host : config._envs[env];
-	    this.getEnv = () => environment;
-	
-	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
-	    this.getFuncObj = function () {return endPointFuncs;};
+
 	
 	
-	    function build(str) {
-	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
-	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
-	      return function () {
-	        let values = [];
-	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
-	          values = arguments;
+	function safeStdLibAddition() {
+	  const addition = [];
+	  function verify() {
+	    additions.forEach((a) => {
+	      if ((a.static && a.lib[a.field] !== a.func) ||
+	      (!a.static && a.lib.prototype[a.field] !== a.func))
+	        throw new Error(`Functionality was overwritten -` +
+	                          `\n\tLibrary: ${a.lib}` +
+	                          `\n\tStatic: ${a.static}` +
+	                          `\n\tField: ${a.field}`)
+	    });
+	    delete additions;
+	  }
+	  function safeAdd (lib, field, func, static) {
+	    if (!static && lib.prototype[field] === undefined)
+	      lib.prototype[field] = func;
+	    else if (lib[field] === undefined)
+	      lib[field] = func;
+	    else
+	      console.error(`Attempting to overwrite functionality -` +
+	                        `\n\tLibrary: ${lib}` +
+	                        `\n\tStatic: ${static}` +
+	                        `\n\tField: ${field}`);
+	    addition.push({lib, field, func, static})
+	  }
+	  safeAdd(Function, 'safeStdLibAddition', safeAdd);
+	}
+	safeStdLibAddition();
+	
+	function processValue(value) {
+	  let retVal;
+	  if ((typeof value) === 'object' && value !== null) {
+	    if ((typeof value.toJson) === 'function') {
+	      retVal = value.toJson();
+	    } else if ((typeof value.toJSON) === 'function') {
+	      retVal = value.toJSON();
+	    } else if (Array.isArray(value)){
+	      const arr = [];
+	      value.forEach((val) => {
+	        if ((typeof val.toJson) === 'function') {
+	          arr.push(val.toJson());
+	        } else if ((typeof val.toJSON) === 'function') {
+	          arr.push(val.toJSON());
 	        } else {
-	          const obj = arguments[0];
-	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
+	          arr.push(val);
 	        }
-	        let endpoint = '';
-	        for (let index = 0; index < pieces.length; index += 1) {
-	          const arg = values[index];
-	          let value = '';
-	          if (index < pieces.length - 1) {
-	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
-	          }
-	          endpoint += pieces[index] + value;
-	        }
-	        return `${host}${endpoint}`;
-	      }
-	    }
-	
-	    function configRecurse(currConfig, currFunc) {
-	      const keys = Object.keys(currConfig);
+	      });
+	      retVal = arr;
+	    } else {
+	      const keys = Object.keys(value);
+	      const obj = {};
 	      for (let index = 0; index < keys.length; index += 1) {
 	        const key = keys[index];
-	        const value = currConfig[key];
-	        if (key.indexOf('_') !== 0) {
-	          if (value instanceof Object) {
-	            currFunc[key] = {};
-	            configRecurse(value, currFunc[key]);
-	          } else {
-	            currFunc[key] = build(value);
-	          }
+	        obj[key] = processValue(value[key]);
+	      }
+	      retVal = obj;
+	    }
+	  } else {
+	    retVal = value;
+	  }
+	  return retVal;
+	}
+	
+	Function.safeStdLibAddition(String, 'random',  function (len) {
+	    len = len || 7;
+	    let str = '';
+	    while (str.length < len) str += Math.random().toString(36).substr(2);
+	    return str.substr(0, len);
+	}, true);
+	
+	Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
+	  while (val < 0) val += mod;
+	  return val % mod;
+	}, true);
+	
+	function stringHash() {
+	  let hashString = this;
+	  let hash = 0;
+	  for (let i = 0; i < hashString.length; i += 1) {
+	    const character = hashString.charCodeAt(i);
+	    hash = ((hash << 5) - hash) + character;
+	    hash &= hash; // Convert to 32bit integer
+	  }
+	  return hash;
+	}
+	
+	Function.safeStdLibAddition(String, 'hash',  stringHash, false);
+	
+	const LEFT = 1;
+	const RIGHT = 0;
+	Function.safeStdLibAddition(String, 'obscure',  function (count) {
+	    const direction = count < 0 ? LEFT : RIGHT;
+	    const test = (index) => direction === LEFT ? index > this.length + count - 1 : index < count;
+	    let str = '';
+	    for (let index = 0; index < this.length; index += 1) {
+	      if (test(index)) {
+	        str += '*';
+	      } else {
+	        str += this[index];
+	      }
+	    }
+	    return str;
+	});
+	
+	const singleCharReg = /([a-zA-Z]{1,})[^a-z^A-Z]{1,}([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z]{1,})/;
+	const specialCharReg = /([a-zA-Z])[^a-z^A-Z^0-9]{1,}([a-zA-Z])/g;
+	const charNumberReg = /([a-zA-Z])([0-9])/
+	function singleCharReplace(whoCares, one, two, three) {
+	  const oneLastChar = one[one.length - 1];
+	  const twoLower = oneLastChar !== oneLastChar.toLowerCase();
+	  const twoStr = twoLower ? two.toLowerCase() : two.toUpperCase();
+	  const threeStr = twoLower ? `${three[0].toUpperCase()}${three.substr(1)}` :
+	                                `${three[0].toLowerCase()}${three.substr(1)}`;
+	  return `${one}${twoStr}${threeStr}`;
+	}
+	function camelReplace(whoCares, one, two) {return `${one}${two.toUpperCase ? two.toUpperCase() : two}`;}
+	function toCamel() {
+	  let string = `${this.substr(0,1).toLowerCase()}${this.substr(1)}`.replace(charNumberReg, camelReplace);
+	  while (string.match(singleCharReg)) string = string.replace(singleCharReg, singleCharReplace);
+	  return string.replace(specialCharReg, camelReplace);
+	}
+	Function.safeStdLibAddition(String, 'toCamel',  toCamel);
+	
+	const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
+	const caseChangeReg = /([a-z])([A-Z])/g;
+	function pascalReplace(whoCares, one, two) {return `${one.toLowerCase()}_${two.toUpperCase ? two.toUpperCase() : two}`;}
+	function toPascal() {
+	  let string = this;
+	  return string.replace(multipleUpperReg, pascalReplace)
+	                .replace(caseChangeReg, pascalReplace)
+	                .replace(charNumberReg, pascalReplace)
+	                .replace(specialCharReg, pascalReplace);
+	}
+	Function.safeStdLibAddition(String, 'toPascal',  toPascal);
+	
+	function toKebab() {
+	  return this.toPascal().toLowerCase().replace(/_/g, '-');
+	}
+	Function.safeStdLibAddition(String, 'toKebab',  toKebab);
+	
+	Function.safeStdLibAddition(String, 'toSnake',  function () {return this.toKebab().replace(/-/g, '_')});
+	Function.safeStdLibAddition(String, 'toDot',  function () {return this.toKebab().replace(/-/g, '.')});
+	Function.safeStdLibAddition(String, 'toScreamingDot',  function () {return this.toKebab().replace(/-/g, '.')});
+	Function.safeStdLibAddition(String, 'toScreamingSnake',  function () {return this.toSnakeCase().toUpperCase()});
+	Function.safeStdLibAddition(String, 'toScreamingKebab',  function () {return this.toKebab().toUpperCase()});
+	Function.safeStdLibAddition(String, 'toSentance',  function () {return this.toPascal().replace(/_/g, ' ')});
+	
+	Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
+	  return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
+	}, true);
+	
+	const classLookup = {};
+	const attrMap = {};
+	const identifierAttr = '_TYPE';
+	const immutableAttr = '_IMMUTABLE';
+	const temporaryAttr = '_TEMPORARY';
+	const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
+	
+	const clazz = {};
+	clazz.object = () => JSON.clone(classLookup);
+	clazz.get = (name) => classLookup[name];
+	clazz.filter = (filterFunc) => {
+	  const classes = clazz.object();
+	  if ((typeof filterFunc) !== 'function') return classes;
+	  const classIds = Object.keys(classes);
+	  const obj = {};
+	  for (let index = 0; index < classIds.length; index += 1) {
+	    const id = classIds[index];
+	    if (filterFunc(classes[id])) obj[id] = classes[id];
+	  }
+	  return obj;
+	}
+	
+	
+	Function.safeStdLibAddition(Object, 'class', clazz, true);
+	
+	
+	Function.safeStdLibAddition(Math, 'toDegrees', function (rads, accuracy) {
+	  accuracy ||= 100;
+	  return Math.round((rads * 180/Math.PI % 360) * accuracy) / accuracy;
+	}, true);
+	
+	Function.safeStdLibAddition(Array, 'toJson', function (arr) {
+	    const json = [];
+	    arr.forEach((elem) => json.push(processValue(elem)));
+	    return json;
+	}, true);
+	
+	Function.safeStdLibAddition(Array, 'shuffle', function() {
+	  let currentIndex = this.length,  randomIndex;
+	  while (currentIndex != 0) {
+	    randomIndex = Math.floor(Math.random() * currentIndex);
+	    currentIndex--;
+	    [this[currentIndex], this[randomIndex]] = [
+	      this[randomIndex], this[currentIndex]];
+	  }
+	
+	  return this;
+	});
+	
+	Function.safeStdLibAddition(Array, 'concatInPlace', function (arr) {
+	  if (arr === this) return;
+	  for (let index = 0; index < arr.length; index += 1) {
+	    if (this.indexOf(arr[index]) !== -1) {
+	      console.error('duplicate');
+	    } else {
+	      this[this.length] = arr[index];
+	    }
+	  }
+	});
+	
+	Function.safeStdLibAddition(Array, 'copy', function (arr) {
+	  this.length = 0;
+	  // const keys = Object.keys(this);
+	  // for (let index = 0; index < keys.length; index += 1) delete this[keys[index]];
+	  const newKeys = Object.keys(arr);
+	  for (let index = 0; index < newKeys.length; index += 1) {
+	    const key = newKeys[index];
+	    this[key] = arr[key];
+	  }
+	});
+	
+	Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
+	  function interpretValue(value) {
+	    if (value instanceof Object) {
+	      const classname = value[identifierAttr];
+	      const attrs = attrMap[classname] ? Object.keys(attrMap[classname]) :
+	                    Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
+	      if (Array.isArray(value)) {
+	        const realArray = [];
+	        for (let index = 0; index < value.length; index += 1) {
+	          realArray[index] = Object.fromJson(value[index]);
+	        }
+	        return realArray;
+	      } else if (classname && classLookup[classname]) {
+	        if (classLookup[classname].fromJson) {
+	          return classLookup[classname].fromJson(value);
 	        } else {
-	          currFunc[key] = value;
+	          const classObj = new (classLookup[classname])(value);
+	          for (let index = 0; index < attrs.length; index += 1) {
+	            const attr = attrs[index];
+	            if ((typeof classObj[attr]) === 'function')
+	            classObj[attr](interpretValue(value[attr]));
+	            else
+	            classObj[attr] = interpretValue(value[attr]);
+	          };
+	          return classObj;
+	        }
+	      } else {
+	        if (classname) {
+	          console.warn(`fromJson for class ${classname} not registered`)
+	        }
+	        const realObj = {}
+	        for (let index = 0; index < attrs.length; index += 1) {
+	          const attr = attrs[index];
+	          realObj[attr] = interpretValue(value[attr]);
+	        };
+	        return realObj
+	      }
+	    }
+	    return value;
+	  }
+	
+	  if (!(rootJson instanceof Object)) return rootJson;
+	  return interpretValue(rootJson);
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
+	  const cxtrName = obj.constructor.name;
+	  if (classLookup[cxtrName] === undefined) {
+	    classLookup[cxtrName] = obj.constructor;
+	  } else if (classLookup[cxtrName] !== obj.constructor) {
+	    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
+	  }
+	  if (initialVals === undefined) return;
+	  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
+	  let values = {};
+	  let temporary = false;
+	  let immutable = false;
+	  let doNotOverwrite = false;
+	  if ((typeof initialVals) === 'object') {
+	    values = initialVals;
+	    immutable = values[immutableAttr] === true;
+	    temporary = values[temporaryAttr] === true;
+	    doNotOverwrite = values[doNotOverwriteAttr] === true;
+	    if (immutable) {
+	      attrs = Object.keys(values);
+	    } else {
+	      attrs = Object.keys(values).concat(attrs);
+	    }
+	  } else {
+	    attrs = [initialVals].concat(attrs);
+	  }
+	  if (attrMap[cxtrName] === undefined) attrMap[cxtrName] = [];
+	  attrs.forEach((attr) => {
+	    if (!attr.match(/^_[A-Z]*[A-Z_]*$/))
+	      attrMap[cxtrName][attr] = true;
+	  });
+	
+	  for (let index = 0; !doNotOverwrite && index < attrs.length; index += 1) {
+	    const attr = attrs[index];
+	    if (attr !== immutableAttr) {
+	      if (immutable) obj[attr] = () => values[attr];
+	      else {
+	        obj[attr] = (value) => {
+	          if (value === undefined) {
+	            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
+	            if (values[attr] !== undefined || noDefaults)
+	            return values[attr];
+	            return obj.defaultGetterValue(attr);
+	          }
+	          values[attr] = value;
 	        }
 	      }
 	    }
-	
-	    configRecurse(config, endPointFuncs);
 	  }
-	}
-	
-	module.exports = Endpoints;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/$t.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const CustomEvent = require('./custom-error');
-	const ExprDef = require('./expression-definition');
-	
-	class $t {
-		constructor(template, id, selector) {
-			if (selector) {
-				const afterRenderEvent = new CustomEvent('afterRender');
-				const beforeRenderEvent = new CustomEvent('beforeRender');
-			}
-	
-			function varReg(prefix, suffix) {
-			  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
-			  prefix = prefix ? prefix : '';
-			  suffix = suffix ? suffix : '';
-			  return new RegExp(`${prefix}${vReg}${suffix}`)
-			};
-	
-			function replace(needleRegEx, replaceStr, exceptions) {
-			  return function (sub) {
-			    if (!exceptions || exceptions.indexOf(sub) === -1) {
-			      return sub.replace(needleRegEx, replaceStr)
-			    } else {
-			      return sub;
-			    }
-			  }
-			}
-	
-			const signProps = {opening: /([-+\!])/};
-			const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
-			const ternaryProps = {opening: /\?/};
-			const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-			const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
-			const commaProps = {opening: /,/};
-			const colonProps = {opening: /:/};
-			const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
-			const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
-			const spaceProps = {opening: /\s{1}/};
-			const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};
-			const objectProps = {opening: '{', closing: '}'};
-			const objectLabelProps = {opening: varReg(null, '\\:')};
-			const groupProps = {opening: /\(/, closing: /\)/};
-			const expressionProps = {opening: null, closing: null};
-			const attrProps = {opening: varReg('(\\.', '){1,}')};
-	
-			// const funcProps = {
-			//   opening: varReg(null, '\\('),
-			//   onOpen: replace(varReg(null, '\\('), 'get("$1")('),
-			//   closing: /\)/
-			// };
-			const arrayProps = {
-			  opening: varReg(null, '\\['),
-			  onOpen: replace(varReg(null, '\\['), 'get("$1")['),
-			  closing: /\]/
-			};
-			const funcRefProps = {
-				opening: /\[|\(/,
-				closing: /\]|\)/
-			};
-			const memberRefProps = {
-				opening: varReg('\\.', ''),
-			};
-			const variableProps = {
-			  opening: varReg(),
-			  onOpen: replace(varReg(), 'get("$1")'),
-			};
-			const objectShorthandProps = {
-			  opening: varReg(),
-			  onOpen: replace(varReg(), '$1: get("$1")'),
-			};
-	
-	
-			const expression = new ExprDef('expression', expressionProps);
-			const ternary = new ExprDef('ternary', ternaryProps);
-			const relational = new ExprDef('relational', relationalProps);
-			const comma = new ExprDef('comma', commaProps);
-			const colon = new ExprDef('colon', colonProps);
-			const attr = new ExprDef('attr', attrProps);
-			// const func = new ExprDef('func', funcProps);
-			const funcRef = new ExprDef('funcRef', funcRefProps);
-			const memberRef = new ExprDef('memberRef', memberRefProps);
-			const string = new ExprDef('string', stringProps);
-			const space = new ExprDef('space', spaceProps);
-			const keyWord = new ExprDef('keyWord', keyWordProps);
-			const group = new ExprDef('group', groupProps);
-			const object = new ExprDef('object', objectProps);
-			const array = new ExprDef('array', arrayProps);
-			const number = new ExprDef('number', numberProps);
-			const multiplier = new ExprDef('multiplier', multiplierProps);
-			const sign = new ExprDef('sign', signProps);
-			const ignore = new ExprDef('ignore', ignoreProps);
-			const variable = new ExprDef('variable', variableProps);
-			const objectLabel = new ExprDef('objectLabel', objectLabelProps);
-			const objectShorthand = new ExprDef('objectShorthand', objectShorthandProps);
-	
-			expression.always(space, ignore, keyWord);
-			expression.if(string, number, group, array, variable, funcRef, memberRef)
-			      .then(multiplier, sign, relational, group)
-			      .repeat();
-			expression.if(string, group, array, variable, funcRef, memberRef)
-						.then(attr)
-			      .then(multiplier, sign, relational, expression, funcRef, memberRef)
-						.repeat();
-			expression.if(string, group, array, variable, funcRef, memberRef)
-						.then(attr)
-						.end();
-	
-			funcRef.if(expression).then(comma).repeat();
-			funcRef.if(expression).end();
-			memberRef.if(expression).then(comma).repeat();
-			memberRef.if(expression).end();
-	
-			expression.if(sign)
-			      .then(expression)
-			      .then(multiplier, sign, relational, group)
-			      .repeat();
-			expression.if(string, number, group, array, variable)
-			      .then(ternary)
-			      .then(expression)
-			      .then(colon)
-			      .then(expression)
-			      .end();
-			expression.if(ternary)
-			      .then(expression)
-			      .then(colon)
-			      .then(expression)
-			      .end();
-			expression.if(object, string, number, group, array, variable)
-			      .end();
-			expression.if(sign)
-			      .then(number)
-			      .end();
-	
-			object.always(space, ignore, keyWord);
-			object.if(objectLabel).then(expression).then(comma).repeat();
-			object.if(objectShorthand).then(comma).repeat();
-			object.if(objectLabel).then(expression).end();
-			object.if(objectShorthand).end();
-	
-			group.always(space, ignore, keyWord);
-			group.if(expression).then(comma).repeat();
-			group.if(expression).end();
-	
-			array.always(space, ignore, keyWord);
-			array.if(expression).then(comma).repeat();
-			array.if(expression).end();
-	
-			function getter(scope, parentScope) {
-				parentScope = parentScope || function () {return undefined};
-				function get(name) {
-					if (name === 'scope') return scope;
-					const split = new String(name).split('.');
-					let currObj = scope;
-					for (let index = 0; currObj != undefined && index < split.length; index += 1) {
-						currObj = currObj[split[index]];
-					}
-					if (currObj !== undefined) return currObj;
-					const parentScopeVal = parentScope(name);
-					if (parentScopeVal !== undefined) return parentScopeVal;
-	        else {
-	          const globalVal = $t.global(name);
-	          return globalVal === undefined ? '' : globalVal;
-	        }
-				}
-				return get;
-			}
-	
-			function defaultArray(elemName, get) {
-				let resp = '';
-				for (let index = 0; index < get('scope').length; index += 1) {
-					if (elemName) {
-						const obj = {};
-	          obj.$index = index;
-						obj[elemName] = get(index);
-						resp += new $t(template).render(obj, undefined, get);
-					} else {
-						resp += new $t(template).render(get(index), undefined, get);
-					}
-				}
-				return `${resp}`;
-			}
-	
-			function arrayExp(varName, get) {
-				varName = varName.trim();
-				const array = get('scope');
-				let built = '';
-				for (let index = 0; index < array.length; index += 1) {
-					const obj = {};
-					obj[varName] = array[index];
-					obj.$index = index;
-					built += new $t(template).render(obj, undefined, get);
-				}
-				return built;
-			}
-	
-			function itOverObject(varNames, get) {
-				const match = varNames.match($t.objectNameReg);
-				const keyName = match[1];
-				const valueName = match[2];
-				const obj = get('scope');
-				const keys = Object.keys(obj);
-				const isArray = Array.isArray(obj);
-				let built = '';
-				for (let index = 0; index < keys.length; index += 1) {
-					const key = keys[index];
-					if (!isArray || key.match(/^[0-9]{1,}$/)) {
-						const childScope = {};
-						childScope[keyName] = key;
-						childScope[valueName] = obj[key];
-						childScope.$index = index;
-						built += new $t(template).render(childScope, undefined, get);
-					}
-				}
-	      return built;
-			}
-	
-			function rangeExp(elemName, rangeItExpr, get) {
-				const match = rangeItExpr.match($t.rangeItExpReg);
-				let startIndex = match[1].match(/^[0-9]{1,}$/) ?
-							match[1] : get(match[1]);
-				let endIndex = match[2].match(/^[0-9]*$/) ?
-							match[2] : get(match[2]);
-				if (((typeof startIndex) !== 'string' &&
-								(typeof	startIndex) !== 'number') ||
-									(typeof endIndex) !== 'string' &&
-									(typeof endIndex) !== 'number') {
-										throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
-				}
-	
-				try {
-					startIndex = Number.parseInt(startIndex);
-				} catch (e) {
-					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
-				}
-				try {
-					endIndex = Number.parseInt(endIndex);
-				} catch (e) {
-					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
-				}
-	
-				let index = startIndex;
-				let built = '';
-				while (true) {
-					let increment = 1;
-					if (startIndex > endIndex) {
-						if (index <= endIndex) {
-							break;
-						}
-						increment = -1;
-					} else if (index >= endIndex) {
-						break;
-					}
-					const obj = {$index: index};
-					obj[elemName] = index;
-					built += new $t(template).render(obj, undefined, get);
-					index += increment;
-				}
-				return built;
-			}
-	
-			function evaluate(get) {
-				if ($t.functions[id]) {
-					try {
-						return $t.functions[id](get, $t);
-					} catch (e) {
-					  console.error(e);
-					}
-				} else {
-					return eval($t.templates[id])
-				}
-			}
-	
-			function type(scope, expression) {
-				if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
-					if (scope.match($t.rangeItExpReg)) {
-						return 'rangeExp'
-					}
-					return 'rangeExpFormatError';
-				} else if (Array.isArray(scope)) {
-					if (expression === undefined) {
-						return 'defaultArray';
-					} else if (expression.match($t.nameScopeExpReg)) {
-						return 'nameArrayExp';
-					}
-				}
-	
-				if ((typeof scope) === 'object') {
-					if (expression === undefined) {
-						return 'defaultObject';
-					} else if (expression.match($t.objectNameReg)){
-						return 'itOverObject';
-					} else if (expression.match($t.arrayNameReg)){
-						return 'arrayExp';
-					} else {
-						return 'invalidObject';
-					}
-				} else {
-					return 'defaultObject';
-				}
-			}
-	
-			// TODO: itExp is not longer an iteration expression. fix!!!!
-			function render(scope, itExp, parentScope) {
-	      if (scope === undefined) return '';
-				let rendered = '';
-				const get = getter(scope, parentScope);
-				switch (type(scope, itExp)) {
-					case 'rangeExp':
-						rendered = rangeExp(itExp, scope, get);
-						break;
-					case 'rangeExpFormatError':
-						throw new Error(`Invalid range itteration expression "${scope}"`);
-					case 'defaultArray':
-						rendered = defaultArray(itExp, get);
-						break;
-					case 'nameArrayExp':
-						rendered = defaultArray(itExp, get);
-						break;
-					case 'arrayExp':
-						rendered = arrayExp(itExp, get);
-						break;
-					case 'invalidArray':
-						throw new Error(`Invalid iterative expression for an array "${itExp}"`);
-					case 'defaultObject':
-						rendered = evaluate(get);
-						break;
-					case 'itOverObject':
-						rendered = itOverObject(itExp, get);
-						break;
-					case 'invalidObject':
-						throw new Error(`Invalid iterative expression for an object "${itExp}"`);
-					default:
-						throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
-				}
-	
-	      if (selector) {
-	        const elem = document.querySelector(selector);
-	        if (elem !== null) {
-	          beforeRenderEvent.trigger();
-	          elem.innerHTML = rendered;
-	          afterRenderEvent.trigger();
+	  if (!temporary) {
+	    const origToJson = obj.toJson;
+	    obj.toJson = (members, exclusive) => {
+	      const restrictions = Array.isArray(members) && members.length;
+	      const json = (typeof origToJson === 'function') ? origToJson() : {};
+	      json[identifierAttr] = obj.constructor.name;
+	      for (let index = 0; index < attrs.length; index += 1) {
+	        const attr = attrs[index];
+	        const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
+	        const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
+	        if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
+	          // if (obj.constructor.name === 'SnapLocation2D')
+	          //   console.log('foundit!');
+	          const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
+	          json[attr] = processValue(value);
 	        }
 	      }
-				return rendered;
-			}
-	
-	
-	//---------------------  Compile Functions ---------------//
-	
-			function stringHash(string) {
-				let hashString = string;
-				let hash = 0;
-				for (let i = 0; i < hashString.length; i += 1) {
-					const character = hashString.charCodeAt(i);
-					hash = ((hash << 5) - hash) + character;
-					hash &= hash; // Convert to 32bit integer
-				}
-				return hash;
-			}
-	
-			function isolateBlocks(template) {
-				let inBlock = false;
-				let openBracketCount = 0;
-				let block = '';
-				let blocks = [];
-				let str = template;
-				for (let index = 0; index < str.length; index += 1) {
-					if (inBlock) {
-						block += str[index];
-					}
-					if (!inBlock && index > 0 &&
-						str[index] == '{' && str[index - 1] == '{') {
-						inBlock = true;
-					} else if (inBlock && str[index] == '{') {
-						openBracketCount++;
-					} else if (openBracketCount > 0 && str[index] == '}') {
-						openBracketCount--;
-					} else if (str[index + 1] == '}' && str[index] == '}' ) {
-						inBlock = false;
-						blocks.push(`${block.substr(0, block.length - 1)}`);
-						block = '';
-					}
-				}
-				return blocks;
-			}
-	
-			function compile() {
-				const blocks = isolateBlocks(template);
-				let str = template;
-				for (let index = 0; index < blocks.length; index += 1) {
-					const block = blocks[index];
-					const parced = ExprDef.parse(expression, block);
-					str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
-				}
-				return `\`${str}\``;
-			}
-	
-	
-					const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
-					function formatRepeat(string) {
-						// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
-						// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
-						let match;
-						while (match = string.match(repeatReg)) {
-							let tagContents = match[2] + match[8];
-	            let tagName = match[1];
-	            let varNames = match[6];
-	            let realScope = match[7];
-							let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-							let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
-							let scope = 'scope';
-							template = templateName !== tagContents ? templateName : template;
-							const t = eval(`new $t(\`${template}\`)`);
-	            let resolvedScope = "get('scope')";;
-	            try {
-	              // console.log('tagName', tagName);
-	              // console.log('varNames', varNames);
-	              // console.log('realScope', realScope);
-	              // console.log('tagContents', tagContents);
-								if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
-	                resolvedScope = `'${realScope}'`;
-	              } else {
-	                resolvedScope = ExprDef.parse(expression, realScope);
-	              }
-	            } catch (e) {}
-	            string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
-						}
-						return string;
-					}
-	
-			if (id) {
-				$t.templates[id] = undefined;
-				$t.functions[id] = undefined;
-			}
-	
-			template = template.replace(/\s{1,}/g, ' ');
-			id = $t.functions[template] ? template : id || stringHash(template);
-			if (!$t.functions[id]) {
-				if (!$t.templates[id]) {
-					template = template.replace(/\s{2,}|\n/g, ' ');
-					template = formatRepeat(template);
-					$t.templates[id] = compile();
-				}
-			}
-			this.compiled = function () { return $t.templates[id];}
-			this.render = render;
-	    this.afterRender = (func) => afterRenderEvent.on(func);
-	    this.beforeRender = (func) => beforeRenderEvent.on(func);
-			this.type = type;
-			this.isolateBlocks = isolateBlocks;
-	    this.id = () => id;
-		}
-	}
-	
-	$t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
-	$t.functions = {};
-	$t.loadFunctions = (functions) => {
-		Object.keys(functions).forEach((name) => {
-			$t.functions[name] = functions[name];
-		});
-	
-	}
-	$t.isTemplate = (id) => $t.functions[id] !== undefined;
-	$t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-	$t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-	$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
-	$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*\.\.\s*([a-z0-9A-Z]*)\s*$/;
-	$t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-	$t.quoteStr = function (str) {
-			str = str.replace(/\\`/g, '\\\\\\`')
-			str = str.replace(/([^\\])`/g, '$1\\\`')
-			return `\`${str.replace(/``/g, '`\\`')}\``;
-		}
-	$t.formatName = function (string) {
-	    function toCamel(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
-	    return string.replace(/([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g, toCamel);
-	}
-	$t.dumpTemplates = function (debug) {
-		let templateFunctions = '';
-		let tempNames = Object.keys($t.templates);
-		for (let index = 0; index < tempNames.length; index += 1) {
-			const tempName = tempNames[index];
-			if (tempName) {
-				let template = $t.templates[tempName];
-	      if (debug === true) {
-	        const endTagReg = /( \+) /g;
-	        template = template.replace(endTagReg, '$1\n\t\t');
+	      return json;
+	    }
+	  }
+	  obj.fromJson = (json) => {
+	    for (let index = 0; index < attrs.length; index += 1) {
+	      const attr = attrs[index];
+	      if (attr !== immutableAttr) {
+	        if ((typeof obj[attr]) === 'function') {
+	          if(Array.isArray(obj[attr]())){
+	            obj[attr]().copy(Object.fromJson(json[attr]));
+	          } else {
+	            obj[attr](Object.fromJson(json[attr]));
+	          }
+	        }
+	        else
+	          obj[attr] = Object.fromJson(json[attr]);
 	      }
-				templateFunctions += `\nexports['${tempName}'] = (get, $t) => \n\t\t${template}\n`;
-			}
-		}
-		return templateFunctions;
+	    };
+	    return obj;
+	  }
+	  if (obj.constructor.DO_NOT_CLONE) {
+	    obj.clone = () => obj;
+	  } else {
+	    obj.clone = () => {
+	      const clone = new obj.constructor(obj.toJson());
+	      clone.fromJson(obj.toJson());
+	      return clone;
+	    }
+	  }
+	  return attrs;
+	}, true);
+	Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
+	
+	Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
+	  if (otherObj === undefined) return;
+	  if ((typeof otherObj) !== 'object') {
+	    throw new Error('Requires one argument of type object or undefined for meaningless call');
+	  }
+	  const keys = Object.keys(otherObj);
+	  keys.forEach((key) => obj[key] = otherObj[key]);
+	}, true);
+	
+	Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
+	  if (start!== undefined && end !== undefined && start > end) {
+	    const temp = start;
+	    start = end;
+	    end = temp;
+	  }
+	  start = start || 0;
+	  end = end || values.length;
+	  for (let index = start; index < end; index += 1)
+	    array[index] = values[index];
+	  return array;
+	}, true);
+	
+	const checked = {};
+	
+	// Swiped from https://stackoverflow.com/a/43197340
+	function isClass(obj) {
+	  const isCtorClass = obj.constructor
+	      && obj.constructor.toString().substring(0, 5) === 'class'
+	  if(obj.prototype === undefined) {
+	    return isCtorClass
+	  }
+	  const isPrototypeCtorClass = obj.prototype.constructor
+	    && obj.prototype.constructor.toString
+	    && obj.prototype.constructor.toString().substring(0, 5) === 'class'
+	  return isCtorClass || isPrototypeCtorClass
 	}
 	
-	$t.clean = (val) => val === undefined ? '' : val;
-	
-	function createGlobalsInterface() {
-	  const GLOBALS = {};
-	  const isMotifiable = (name) => GLOBALS[name] === undefined ||
-	        GLOBALS[name].imutable !== 'true';
-	  $t.global = function (name, value, imutable) {
-	    if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
-	    if (isMotifiable(name)) GLOBALS[name] = {value, imutable};
+	Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
+	  if ((typeof obj) != 'object') return obj;
+	  const keys = Object.keys(obj);
+	  if (!checked[obj.constructor.name]) {
+	    // console.log('constructor: ' + obj.constructor.name);
+	    checked[obj.constructor.name] = true;
 	  }
-	  $t.rmGlobal = function(name) {
-	    if (isMotifiable(name)) delete GLOBALS[name];
-	  }
-	}
-	createGlobalsInterface();
 	
-	module.exports = $t;
+	  const clone = ((typeof obj.clone) === 'function') ? obj.clone() :
+	                  Array.isArray(obj) ? [] : {};
+	  for(let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    const member = obj[key];
+	    if (member && (member.DO_NOT_CLONE || member.constructor.DO_NOT_CLONE)) {
+	      clone[key] = member;
+	    } else if ((typeof member) !== 'function') {
+	      if ((typeof member) === 'object') {
+	        if ((typeof member.clone) === 'function') {
+	          clone[key] = member.clone();
+	        } else {
+	          clone[key] = JSON.clone(member);
+	        }
+	      } else {
+	        clone[key] = member;
+	      }
+	    }
+	    else if (isClass(member)) {
+	      clone[key] = member;
+	    }
+	  }
+	  return clone;
+	}, true);
+	
+	Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
+	  if (!(obj instanceof Object)) return obj;
+	  return JSON.parse(JSON.stringify(obj));
+	}, true);
+	
+	Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
+	  if (isRegex !== true) {
+	    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
+	  }
+	  var keyValues = this.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
+	  var json = {};
+	  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
+	    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
+	    if (split) {
+	      json[split[1]] = split[2];
+	    }
+	  }
+	  return json;
+	});
+	
+	Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
+	  const attrs = path.split('.');
+	  const lastIndex = attrs.length - 1;
+	  let currObj = obj;
+	  for (let index = 0; index < lastIndex; index += 1) {
+	    let attr = attrs[index];
+	    if (currObj[attr] === undefined) currObj[attr] = {};
+	    currObj = currObj[attr];
+	  }
+	
+	  const lastAttr = attrs[lastIndex];
+	  if ((typeof currObj[lastAttr]) === 'function') {
+	    return currObj[lastAttr](value);
+	  } else if (value !== undefined) {
+	    currObj[lastAttr] = value;
+	  }
+	  return currObj[lastAttr];
+	}, true);
 	
 });
 
@@ -9702,1236 +10804,86 @@ const frag = document.createDocumentFragment();
 });
 
 
-RequireJS.addFunction('../../public/js/utils/logic-tree.js',
+RequireJS.addFunction('../../public/js/utils/display/pop-up.js',
 function (require, exports, module) {
+	const DragDropResize = require('./drag-drop');
 	
-
-	const DecisionTree = require('./decision-tree');
-	const DataSync = require('./data-sync');
-	const Lookup = require('./object/lookup');
-	
-	const INTERNAL_FUNCTION_PASSWORD = String.random();
-	const DEFAULT_GROUP = 'LogicTree';
-	
-	function getNode(nodeOwrapper) {
-	  if (nodeOwrapper.constructor.name === 'DecisionNode') return nodeOwrapper;
-	  return nodeOwrapper.node;
-	}
-	
-	class LogicWrapper extends Lookup {
-	  constructor(node) {
-	    super(node ? node.nodeId() : undefined);
-	    this.node = node;
-	    this.nodeId = () => LogicWrapper.decode(this.id()).id;
-	  }
-	}
-	
-	class LogicType {
-	  constructor(wrapperOrJson) {
-	    Object.getSet(this, 'nodeId', 'optional', 'value', 'default');
-	    this.wrapper = wrapperOrJson instanceof LogicWrapper ?
-	                      wrapperOrJson :
-	                      LogicWrapper.get(wrapperOrJson.nodeId);
-	    this.nodeId(this.wrapper.node.nodeId());
-	    let optional = false;
-	    this.optional = (val) => {
-	      if (val === true || val === false) {
-	        optional = val;
-	      }
-	      return optional;
-	    }
-	    this.selectionMade = () => true;
-	  }
-	}
-	
-	class SelectLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    const json = wrapper;
-	    wrapper = this.wrapper;
-	    let value, def;
+	class PopUp {
+	  constructor (props) {
+	    props = props || {}
 	    const instance = this;
-	    this.madeSelection = () => validate(value, true) || validate(def, true);
-	    function validate(val, silent) {
-	      if (instance.optional() && val === null) return true;
-	      const valid = (instance.optional() && val === null) ||
-	                    (val !== null && wrapper.node.validState(val));
-	      if (!silent && !valid)
-	        throw SelectLogic.error;
-	      return valid;
-	    }
-	    this.value = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        value = val;
-	        wrapper.valueUpdate(value, wrapper);
-	      }
-	      return value === undefined ? (def === undefined ? null : def) : value;
-	    }
-	    this.selectionMade = () => value !== undefined;
-	    this.options = () => {
-	      return wrapper.node.stateNames();
-	    }
-	    this.default = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        def = val;
-	        wrapper.defaultUpdate(value, wrapper);
-	      }
-	      return def;
-	    }
-	    this.selector = () => this.value();
-	   }
-	}
+	    const htmlFuncs = {};
+	    let forceOpen = false;
+	    let lockOpen = false;
+	    let currFuncs, currElem;
+	    let canClose = false;
 	
-	SelectLogic.error = new Error('Invalid selection: use wrapper.options() to get valid list.')
+	    const popupCnt = new DragDropResize(props);
 	
-	class MultiselectLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    wrapper = this.wrapper;
-	    let value, def;
-	    const instance = this;
-	    this.madeSelection = () => validate(value, true) || validate(def, true);
-	    function validate(val, silent) {
-	      if (val === null) return instance.optional();
-	      if (val === undefined) return false;
-	      const stateNames = Object.keys(val);
-	      if (instance.optional() && stateNames.length === 0) return true;
-	      let valid = stateNames.length > 0;
-	      stateNames.forEach((name) => valid = valid && wrapper.node.validState(name));
-	      if (!silent && !valid) throw MultiselectLogic.error;
-	      return valid;
-	    }
-	    this.value = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        value = val;
-	        wrapper.valueUpdate(value);
-	      }
-	      let retVal = value === undefined ? def : value;
-	      return retVal === null ? null : JSON.clone(retVal);
-	    }
-	    this.selectionMade = () => value !== undefined;
-	    this.options = () => {
-	      const options = {};
-	      const stateNames = wrapper.node.stateNames();
-	      stateNames.forEach((name) => options[name] = def[name] === undefined ? false : def[name]);
-	      return options;
-	    }
-	    this.default = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        def = val;
-	        wrapper.defaultUpdate(value);
-	      }
-	      return def;
-	    }
-	    this.selector = () => {
-	      const obj = this.value();
-	      if (obj === null || obj === undefined) return null;
-	      const keys = Object.keys(obj);
-	      let selector = '';
-	      keys.forEach((key) => selector += obj[key] ? `|${key}` : '');
-	      selector = selector.length === 0 ? null : new RegExp(`^${selector.substring(1)}$`);
-	      return selector;
-	    }
-	  }
-	}
-	MultiselectLogic.error = new Error('Invalid multiselection: use wrapper.options() to get valid list.')
+	    popupCnt.hide();
+	
+	    this.position = () => popupCnt;
+	    this.positionOnElement = popupCnt.position;
 	
 	
-	class ConditionalLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    wrapper = this.wrapper;
-	    let value, def;
-	    validate(wrapper.node.payload());
-	    def = wrapper.node.payload();
-	    function validate(val, password) {
-	      if ((typeof val.condition) !== 'function')
-	        throw ConditionalLogic.error;
-	    }
-	    this.value = (val) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        value = val;
-	        wrapper.valueUpdate(value);
-	      }
-	      return value || def;
-	    }
-	    this.options = () => undefined;
-	    this.default = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        def = val;
-	        wrapper.defaultUpdate(value);
-	      }
-	      return def;
-	    }
-	    this.selector = () => () =>
-	      this.value().condition(wrapper.root());
-	  }
-	}
-	ConditionalLogic.error = new Error('Invalid condition: must be a function that returns true or false based off of node input');
-	
-	class BranchLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    this.value = () => undefined;
-	    this.options = () => undefined;
-	    this.default = () => undefined;
-	    this.selector = () => /.*/;
-	  }
-	}
-	
-	class LeafLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    this.value = () =>undefined;
-	    this.options = () => undefined;
-	    this.default = () => undefined;
-	    this.selector = () => undefined;
-	  }
-	}
-	
-	LogicType.types = {SelectLogic, MultiselectLogic, ConditionalLogic, BranchLogic, LeafLogic};
-	class LogicTree {
-	  constructor(formatPayload) {
-	    Object.getSet(this);
-	    const tree = this;
-	    let root;
-	    let choices = {};
-	    const wrapperMap = {};
-	
-	    function getTypeObjByNodeId(nodeId) {
-	      return choices[get(nodeId).name];
-	    }
-	    let dataSync = new DataSync('nodeId', getTypeObjByNodeId);
-	    dataSync.addConnection('value');
-	    dataSync.addConnection('default');
-	
-	    function isOptional(node) {
-	      return !(choices[node.name] === undefined || !choices[node.name].optional());
-	    }
-	
-	    function isSelector(node) {
-	      return node.payload().LOGIC_TYPE.match(/Select|Multiselect/);
-	    }
-	
-	    function mustSelect(node) {
-	      return !isOptional(node)  && node.payload().LOGIC_TYPE.match(/Select|Multiselect/);
-	    }
-	
-	    function structure() { return root.node.toString(null, 'LOGIC_TYPE') }
-	
-	    function setChoice(name, val) {
-	      choices[name].value(val);
-	    }
-	
-	    function setDefault(name, val) {
-	      choices[name].default(val);
-	    }
-	
-	    function getByName(name) {
-	      if (root.node === undefined) return undefined;
-	      const node = root.node.getByName(name);
-	      return node === undefined ? undefined : wrapNode(node);
-	    }
-	
-	    function addChildrenFunc(wrapper, options) {
-	      return (name) => {
-	        const targetWrapper = getByName(name);
-	        if (targetWrapper === undefined) throw new Error(`Invalid name: ${name}`);
-	        const states = targetWrapper.node.states();
-	        states.forEach((state) => wrapNode(wrapper.node.then(state)));
-	        return wrapper;
+	    this.softClose = () => {
+	      if (!lockOpen) {
+	        instance.close();
 	      }
 	    }
 	
-	    function choicesToSelectors() {
-	      const keys = Object.keys(choices);
-	      const selectors = {};
-	      keys.forEach((key) => selectors[key] = choices[key].selector());
-	      return selectors;
-	    }
+	    this.close = popupCnt.close;
 	
-	    function reachableTree(node) {
-	      return (node || root.node).subtree(choicesToSelectors());
-	    }
-	
-	    function leaves() {
-	      const wrappers = [];
-	      reachableTree().leaves().forEach((node) => wrappers.push(wrapNode(node)));
-	      return wrappers;
-	    }
-	
-	    function pathsToString() {
-	      let paths = '=>';
-	      forPath((wrapper, data) => {
-	        if (data === undefined) paths = paths.substring(0, paths.length - 2) + "\n";
-	        paths += `${wrapper.name}=>`;
-	        return true;
-	      });
-	      paths = paths.substring(0, paths.length - 2)
-	      return paths;
-	    }
-	
-	    function forPath(func, reverse) {
-	      const lvs = reachableTree().leaves();
-	      let data = [];
-	      let dIndex = 0;
-	      lvs.forEach((leave) => {
-	        const path = [];
-	        let curr = leave;
-	        while (curr !== undefined) {
-	          path.push(curr);
-	          curr = curr.back()
-	        }
-	        if (reverse === true) {
-	          for (let index = 0; index < path.length; index += 1) {
-	            data[dIndex] = func(wrapNode(path[index]), data[dIndex]);
-	          }
-	        } else {
-	          for (let index = path.length - 1; index >= 0; index -= 1) {
-	            data[dIndex] = func(wrapNode(path[index]), data[dIndex]);
-	          }
-	        }
-	        dIndex++;
-	      });
-	      return data;
-	    }
-	
-	    function forAll(func, node) {
-	      (node || root.node).forEach((n) => {
-	        func(wrapNode(n));
-	      });
-	    }
-	
-	    function forEach(func, node) {
-	      reachableTree(node).forEach((n) => {
-	        func(wrapNode(n));
-	      });
-	    }
-	
-	    function reachable(nameOwrapper) {
-	      const wrapper = nameOwrapper instanceof LogicWrapper ?
-	                        nameOwrapper : getByName(nameOwrapper);
-	      return wrapper.node.conditionsSatisfied(choicesToSelectors(), wrapper.node);
-	    }
-	
-	    function isComplete() {
-	      const subtree = reachableTree();
-	      let complete = true;
-	      subtree.forEach((node) => {
-	        if (node.states().length === 0 && node.payload().LOGIC_TYPE !== 'Leaf' &&
-	              !selectionMade(node)) {
-	          complete = false;
-	        }
-	      });
-	      return complete;
-	    }
-	
-	    function selectionMade(node, selectors) {
-	      selectors = selectors || choicesToSelectors();
-	      if (mustSelect(node)) {
-	        const wrapper = wrapNode(node);
-	        if (getTypeObj(wrapper) === undefined) {
-	          throw new Error ('This should not happen. node wrapper was not made correctly.');
-	        }
-	        return getTypeObj(wrapper).madeSelection();
-	      }
-	      return true;
-	    }
-	
-	    function getByPath(...args) {
-	      return wrapNode(root.node.getNodeByPath(...args))
-	    }
-	    this.getByPath = getByPath;
-	
-	    function decisions(wrapper) {
-	      return () =>{
-	        const decisions = [];
-	        const addedNodeIds = [];
-	        const selectors = choicesToSelectors();
-	        wrapper.node.forEach((node) => {
-	          if (isSelector(node)) {
-	            let terminatedPath = false;
-	            let current = node;
-	            while (current = current.back()){
-	              if (addedNodeIds.indexOf(current.nodeId()) !== -1)
-	                terminatedPath = true;
-	            }
-	            if (!terminatedPath) {
-	              if (node.conditionsSatisfied(selectors, node)) {
-	                if (selectionMade(node, selectors)) {
-	                  decisions.push(wrapNode(node));
-	                } else {
-	                  decisions.push(wrapNode(node));
-	                  addedNodeIds.push(node.nodeId());
-	                }
-	              }
-	            }
-	          }
-	        });
-	        return decisions;
-	      }
-	    }
-	
-	    function toJson(wrapper) {
-	      return function () {
-	        wrapper = wrapper || root;
-	        const json = {_choices: {}, _TYPE: tree.constructor.name};
-	        const keys = Object.keys(choices);
-	        const ids = wrapper.node.map((node) => node.nodeId());
-	        keys.forEach((key) => {
-	          if (ids.indexOf(choices[key].nodeId()) !== -1) {
-	            json._choices[key] = choices[key].toJson();
-	            const valEqDefault = choices[key].default() === choices[key].value();
-	            const selectionNotMade = !choices[key].selectionMade();
-	            if(selectionNotMade || valEqDefault) json._choices[key].value = undefined;
-	          }
-	        });
-	        json._tree = wrapper.node.toJson();
-	        json._connectionList = dataSync.toJson(wrapper.node.nodes());
-	        return json;
-	      }
-	    }
-	
-	    function children(wrapper) {
-	      return () => {
-	        const children = [];
-	        wrapper.node.forEachChild((child) => children.push(wrapNode(child)));
-	        return children;
-	      }
-	    }
-	
-	    function addStaticMethods(wrapper) {
-	      wrapper.structure = structure;
-	      wrapper.choicesToSelectors = choicesToSelectors;
-	      wrapper.setChoice = setChoice;
-	      wrapper.children = children(wrapper);
-	      wrapper.getByPath = getByPath;
-	      wrapper.setDefault = setDefault;
-	      wrapper.attachTree = attachTree(wrapper);
-	      wrapper.toJson = toJson(wrapper);
-	      wrapper.root = () => root;
-	      wrapper.isComplete = isComplete;
-	      wrapper.reachable = (wrap) => reachable(wrap || wrapper);
-	      wrapper.decisions = decisions(wrapper);
-	      wrapper.forPath = forPath;
-	      wrapper.forEach = forEach;
-	      wrapper.forAll = forAll;
-	      wrapper.pathsToString = pathsToString;
-	      wrapper.leaves = leaves;
-	      wrapper.toString = () =>
-	          wrapper.node.subtree(choicesToSelectors()).toString(null, 'LOGIC_TYPE');
-	    }
-	
-	    function getTypeObj(wrapper) {
-	      return choices[wrapper.name];
-	    }
-	
-	    function addHelperMetrhods (wrapper) {
-	      const node = wrapper.node;
-	      const type = node.payload().LOGIC_TYPE;
-	      const name = node.name;
-	      if (choices[name] === undefined) {
-	        choices[name] = new (LogicType.types[`${type}Logic`])(wrapper);
-	      }
-	      const typeObj = choices[name];
-	      wrapper.name = name;
-	      wrapper.getTypeObj = () => getTypeObj(wrapper);
-	      wrapper.value = typeObj.value;
-	      wrapper.payload = () => node.payload();
-	      wrapper.options = typeObj.options;
-	      wrapper.optional = typeObj.optional;
-	      wrapper.default = typeObj.default;
-	      wrapper.selector = typeObj.selector;
-	      wrapper.addChildren = addChildrenFunc(wrapper);
-	      wrapper.valueSync = (w) => dataSync.valueSync(typeObj, w.getTypeObj());
-	      wrapper.defaultSync = (w) => dataSync.defaultSync(typeObj, w.getTypeObj());
-	      wrapper.valueUpdate = (value) => dataSync.valueUpdate(value, typeObj);
-	      wrapper.defaultUpdate = (value) => dataSync.defaultUpdate(value, typeObj);
-	    }
-	
-	    function attachTree(wrapper) {
-	      return (tree) => {
-	        const json = tree.toJson();
-	        return incorrperateJsonNodes(json, wrapper.node);
-	      }
-	    }
-	
-	    function addTypeFunction(type, wrapper) {
-	      wrapper[type.toLowerCase()] = (name, payload) => {
-	        payload = typeof formatPayload === 'function' ?
-	                          formatPayload(name, payload || {}, wrapper) : payload || {};
-	        payload.LOGIC_TYPE = type;
-	        let newWrapper;
-	        if (root === undefined) {
-	          root = wrapper;
-	          root.node = new DecisionTree(name, payload);
-	          root.payload = root.node.payload;
-	          newWrapper = root;
-	        } else if (getByName(name)) {
-	          newWrapper = wrapNode(wrapper.node.then(name));
-	        } else {
-	          wrapper.node.addState(name, payload);
-	          newWrapper = wrapNode(wrapper.node.then(name));
-	        }
-	        return newWrapper;
-	      }
-	    }
-	
-	    function getNode(nodeOrwrapperOrId) {
-	      switch (nodeOrwrapperOrId.constructor.name) {
-	        case 'DecisionNode':
-	          return nodeOrwrapperOrId;
-	        case 'LogicWrapper':
-	          return nodeOrwrapperOrId.node;
-	        default:
-	          const node = DecisionTree.DecisionNode.get(nodeOrwrapperOrId);
-	          if (node) return node;
-	          return nodeOrwrapperOrId;
-	      }
-	    }
-	
-	    function get(nodeOidOwrapper) {
-	      if (nodeOidOwrapper === undefined) return undefined;
-	      const node = getNode(nodeOidOwrapper);
-	      if (node instanceof DecisionTree.DecisionNode) {
-	        return wrapperMap[node.nodeId()];
-	      } else {
-	        return wrapperMap[node];
-	      }
-	    }
-	
-	    const set = (wrapper) =>
-	        wrapperMap[wrapper.node.nodeId()] = wrapper;
-	    this.get = get;
-	
-	    function wrapNode(node) {
-	      let wrapper = get(node);
-	      if (wrapper) return wrapper;
-	      wrapper = new LogicWrapper(node);
-	      if (node === undefined) {
-	        wrapper.toString = () =>
-	          root !== undefined ? root.toString() : 'Empty Tree';
-	      }
-	      if (node === undefined || node.payload().LOGIC_TYPE !== 'Leaf') {
-	        addTypeFunction('Select', wrapper);
-	        addTypeFunction('Multiselect', wrapper);
-	        addTypeFunction('Conditional', wrapper);
-	        addTypeFunction('Leaf', wrapper);
-	        addTypeFunction('Branch', wrapper);
-	      }
-	      addStaticMethods(wrapper);
-	      if (node && node.payload().LOGIC_TYPE !== undefined) {
-	        addHelperMetrhods(wrapper);
-	        set(wrapper);
-	      }
-	      return wrapper;
-	    }
-	
-	    function updateChoices(jsonChoices) {
-	      const keys = Object.keys(jsonChoices);
-	      keys.forEach((key) =>
-	          choices[key].fromJson(jsonChoices[key]));
-	    }
-	
-	    function incorrperateJsonNodes(json, node) {
-	      const decisionTree = new DecisionTree(json._tree);
-	
-	      let newNode;
-	      if (node !== undefined) {
-	        newNode = node.attachTree(decisionTree);
-	      } else {
-	        root = wrapNode(decisionTree);
-	        rootWrapper.node = root.node;
-	        newNode = root.node;
-	      }
-	      newNode.forEach((n) =>
-	          wrapNode(n));
-	      dataSync.fromJson(json._connectionList);
-	      updateChoices(json._choices);
-	      return node;
-	    }
-	
-	    let rootWrapper = wrapNode();
-	    if (formatPayload && formatPayload._TYPE === this.constructor.name) incorrperateJsonNodes(formatPayload);
-	    return rootWrapper;
-	  }
-	}
-	
-	LogicTree.LogicWrapper = LogicWrapper;
-	
-	module.exports = LogicTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/custom-error.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class CustomEvent {
-	  constructor(name) {
-	    const watchers = [];
-	    this.name = name;
-	
-	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
-	
-	    this.on = function (func) {
-	      if ((typeof func) === 'function') {
-	        watchers.push(func);
-	      } else {
-	        return 'on' + name;
-	      }
-	    }
-	
-	    this.trigger = function (element, detail) {
-	      element = element === undefined ? window : element;
-	      runFuncs(element, detail);
-	      this.event.detail = detail;
-	      if(document.createEvent){
-	          element.dispatchEvent(this.event);
-	      } else {
-	          element.fireEvent("on" + this.event.eventType, this.event);
-	      }
-	    }
-	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-	    this.event;
-	    if(document.createEvent){
-	        this.event = document.createEvent("HTMLEvents");
-	        this.event.initEvent(name, true, true);
-	        this.event.eventName = name;
-	    } else {
-	        this.event = document.createEventObject();
-	        this.event.eventName = name;
-	        this.event.eventType = name;
-	    }
-	  }
-	}
-	
-	module.exports = CustomEvent;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/utils.js',
-function (require, exports, module) {
-	
-
-	
-	
-	function safeStdLibAddition() {
-	  const addition = [];
-	  function verify() {
-	    additions.forEach((a) => {
-	      if ((a.static && a.lib[a.field] !== a.func) ||
-	      (!a.static && a.lib.prototype[a.field] !== a.func))
-	        throw new Error(`Functionality was overwritten -` +
-	                          `\n\tLibrary: ${a.lib}` +
-	                          `\n\tStatic: ${a.static}` +
-	                          `\n\tField: ${a.field}`)
-	    });
-	    delete additions;
-	  }
-	  function safeAdd (lib, field, func, static) {
-	    if (!static && lib.prototype[field] === undefined)
-	      lib.prototype[field] = func;
-	    else if (lib[field] === undefined)
-	      lib[field] = func;
-	    else
-	      console.error(`Attempting to overwrite functionality -` +
-	                        `\n\tLibrary: ${lib}` +
-	                        `\n\tStatic: ${static}` +
-	                        `\n\tField: ${field}`);
-	    addition.push({lib, field, func, static})
-	  }
-	  safeAdd(Function, 'safeStdLibAddition', safeAdd);
-	}
-	safeStdLibAddition();
-	
-	function processValue(value) {
-	  let retVal;
-	  if ((typeof value) === 'object' && value !== null) {
-	    if ((typeof value.toJson) === 'function') {
-	      retVal = value.toJson();
-	    } else if ((typeof value.toJSON) === 'function') {
-	      retVal = value.toJSON();
-	    } else if (Array.isArray(value)){
-	      const arr = [];
-	      value.forEach((val) => {
-	        if ((typeof val.toJson) === 'function') {
-	          arr.push(val.toJson());
-	        } else if ((typeof val.toJSON) === 'function') {
-	          arr.push(val.toJSON());
-	        } else {
-	          arr.push(val);
-	        }
-	      });
-	      retVal = arr;
-	    } else {
-	      const keys = Object.keys(value);
-	      const obj = {};
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        obj[key] = processValue(value[key]);
-	      }
-	      retVal = obj;
-	    }
-	  } else {
-	    retVal = value;
-	  }
-	  return retVal;
-	}
-	
-	Function.safeStdLibAddition(String, 'random',  function (len) {
-	    len = len || 7;
-	    let str = '';
-	    while (str.length < len) str += Math.random().toString(36).substr(2);
-	    return str.substr(0, len);
-	}, true);
-	
-	Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
-	  while (val < 0) val += mod;
-	  return val % mod;
-	}, true);
-	
-	function stringHash() {
-	  let hashString = this;
-	  let hash = 0;
-	  for (let i = 0; i < hashString.length; i += 1) {
-	    const character = hashString.charCodeAt(i);
-	    hash = ((hash << 5) - hash) + character;
-	    hash &= hash; // Convert to 32bit integer
-	  }
-	  return hash;
-	}
-	
-	Function.safeStdLibAddition(String, 'hash',  stringHash, false);
-	
-	const LEFT = 1;
-	const RIGHT = 0;
-	Function.safeStdLibAddition(String, 'obscure',  function (count) {
-	    const direction = count < 0 ? LEFT : RIGHT;
-	    const test = (index) => direction === LEFT ? index > this.length + count - 1 : index < count;
-	    let str = '';
-	    for (let index = 0; index < this.length; index += 1) {
-	      if (test(index)) {
-	        str += '*';
-	      } else {
-	        str += this[index];
-	      }
-	    }
-	    return str;
-	});
-	
-	const singleCharReg = /([a-zA-Z]{1,})[^a-z^A-Z]{1,}([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z]{1,})/;
-	const specialCharReg = /([a-zA-Z])[^a-z^A-Z^0-9]{1,}([a-zA-Z])/g;
-	const charNumberReg = /([a-zA-Z])([0-9])/
-	function singleCharReplace(whoCares, one, two, three) {
-	  const oneLastChar = one[one.length - 1];
-	  const twoLower = oneLastChar !== oneLastChar.toLowerCase();
-	  const twoStr = twoLower ? two.toLowerCase() : two.toUpperCase();
-	  const threeStr = twoLower ? `${three[0].toUpperCase()}${three.substr(1)}` :
-	                                `${three[0].toLowerCase()}${three.substr(1)}`;
-	  return `${one}${twoStr}${threeStr}`;
-	}
-	function camelReplace(whoCares, one, two) {return `${one}${two.toUpperCase ? two.toUpperCase() : two}`;}
-	function toCamel() {
-	  let string = `${this.substr(0,1).toLowerCase()}${this.substr(1)}`.replace(charNumberReg, camelReplace);
-	  while (string.match(singleCharReg)) string = string.replace(singleCharReg, singleCharReplace);
-	  return string.replace(specialCharReg, camelReplace);
-	}
-	Function.safeStdLibAddition(String, 'toCamel',  toCamel);
-	
-	const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
-	const caseChangeReg = /([a-z])([A-Z])/g;
-	function pascalReplace(whoCares, one, two) {return `${one.toLowerCase()}_${two.toUpperCase ? two.toUpperCase() : two}`;}
-	function toPascal() {
-	  let string = this;
-	  return string.replace(multipleUpperReg, pascalReplace)
-	                .replace(caseChangeReg, pascalReplace)
-	                .replace(charNumberReg, pascalReplace)
-	                .replace(specialCharReg, pascalReplace);
-	}
-	Function.safeStdLibAddition(String, 'toPascal',  toPascal);
-	
-	function toKebab() {
-	  return this.toPascal().toLowerCase().replace(/_/g, '-');
-	}
-	Function.safeStdLibAddition(String, 'toKebab',  toKebab);
-	
-	Function.safeStdLibAddition(String, 'toSnake',  function () {return this.toKebab().replace(/-/g, '_')});
-	Function.safeStdLibAddition(String, 'toDot',  function () {return this.toKebab().replace(/-/g, '.')});
-	Function.safeStdLibAddition(String, 'toScreamingDot',  function () {return this.toKebab().replace(/-/g, '.')});
-	Function.safeStdLibAddition(String, 'toScreamingSnake',  function () {return this.toSnakeCase().toUpperCase()});
-	Function.safeStdLibAddition(String, 'toScreamingKebab',  function () {return this.toKebab().toUpperCase()});
-	Function.safeStdLibAddition(String, 'toSentance',  function () {return this.toPascal().replace(/_/g, ' ')});
-	
-	Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
-	  return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
-	}, true);
-	
-	const classLookup = {};
-	const attrMap = {};
-	const identifierAttr = '_TYPE';
-	const immutableAttr = '_IMMUTABLE';
-	const temporaryAttr = '_TEMPORARY';
-	const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
-	
-	const clazz = {};
-	clazz.object = () => JSON.clone(classLookup);
-	clazz.get = (name) => classLookup[name];
-	clazz.filter = (filterFunc) => {
-	  const classes = clazz.object();
-	  if ((typeof filterFunc) !== 'function') return classes;
-	  const classIds = Object.keys(classes);
-	  const obj = {};
-	  for (let index = 0; index < classIds.length; index += 1) {
-	    const id = classIds[index];
-	    if (filterFunc(classes[id])) obj[id] = classes[id];
-	  }
-	  return obj;
-	}
-	
-	
-	Function.safeStdLibAddition(Object, 'class', clazz, true);
-	
-	
-	Function.safeStdLibAddition(Math, 'toDegrees', function (rads, accuracy) {
-	  accuracy ||= 100;
-	  return Math.round((rads * 180/Math.PI % 360) * accuracy) / accuracy;
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'toJson', function (arr) {
-	    const json = [];
-	    arr.forEach((elem) => json.push(processValue(elem)));
-	    return json;
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'concatInPlace', function (arr) {
-	  if (arr === this) return;
-	  for (let index = 0; index < arr.length; index += 1) {
-	    if (this.indexOf(arr[index]) !== -1) {
-	      console.error('duplicate');
-	    } else {
-	      this[this.length] = arr[index];
-	    }
-	  }
-	});
-	
-	Function.safeStdLibAddition(Array, 'copy', function (arr) {
-	  this.length = 0;
-	  // const keys = Object.keys(this);
-	  // for (let index = 0; index < keys.length; index += 1) delete this[keys[index]];
-	  const newKeys = Object.keys(arr);
-	  for (let index = 0; index < newKeys.length; index += 1) {
-	    const key = newKeys[index];
-	    this[key] = arr[key];
-	  }
-	});
-	
-	Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
-	  function interpretValue(value) {
-	    if (value instanceof Object) {
-	      const classname = value[identifierAttr];
-	      const attrs = attrMap[classname] ? Object.keys(attrMap[classname]) :
-	                    Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
-	      if (Array.isArray(value)) {
-	        const realArray = [];
-	        for (let index = 0; index < value.length; index += 1) {
-	          realArray[index] = Object.fromJson(value[index]);
-	        }
-	        return realArray;
-	      } else if (classname && classLookup[classname]) {
-	        if (classLookup[classname].fromJson) {
-	          return classLookup[classname].fromJson(value);
-	        } else {
-	          const classObj = new (classLookup[classname])(value);
-	          for (let index = 0; index < attrs.length; index += 1) {
-	            const attr = attrs[index];
-	            if ((typeof classObj[attr]) === 'function')
-	            classObj[attr](interpretValue(value[attr]));
-	            else
-	            classObj[attr] = interpretValue(value[attr]);
-	          };
-	          return classObj;
-	        }
-	      } else {
-	        if (classname) {
-	          console.warn(`fromJson for class ${classname} not registered`)
-	        }
-	        const realObj = {}
-	        for (let index = 0; index < attrs.length; index += 1) {
-	          const attr = attrs[index];
-	          realObj[attr] = interpretValue(value[attr]);
-	        };
-	        return realObj
-	      }
-	    }
-	    return value;
-	  }
-	
-	  if (!(rootJson instanceof Object)) return rootJson;
-	  return interpretValue(rootJson);
-	}, true);
-	
-	Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
-	  const cxtrName = obj.constructor.name;
-	  if (classLookup[cxtrName] === undefined) {
-	    classLookup[cxtrName] = obj.constructor;
-	  } else if (classLookup[cxtrName] !== obj.constructor) {
-	    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
-	  }
-	  if (initialVals === undefined) return;
-	  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
-	  let values = {};
-	  let temporary = false;
-	  let immutable = false;
-	  let doNotOverwrite = false;
-	  if ((typeof initialVals) === 'object') {
-	    values = initialVals;
-	    immutable = values[immutableAttr] === true;
-	    temporary = values[temporaryAttr] === true;
-	    doNotOverwrite = values[doNotOverwriteAttr] === true;
-	    if (immutable) {
-	      attrs = Object.keys(values);
-	    } else {
-	      attrs = Object.keys(values).concat(attrs);
-	    }
-	  } else {
-	    attrs = [initialVals].concat(attrs);
-	  }
-	  if (attrMap[cxtrName] === undefined) attrMap[cxtrName] = [];
-	  attrs.forEach((attr) => {
-	    if (!attr.match(/^_[A-Z]*[A-Z_]*$/))
-	      attrMap[cxtrName][attr] = true;
-	  });
-	
-	  for (let index = 0; !doNotOverwrite && index < attrs.length; index += 1) {
-	    const attr = attrs[index];
-	    if (attr !== immutableAttr) {
-	      if (immutable) obj[attr] = () => values[attr];
-	      else {
-	        obj[attr] = (value) => {
-	          if (value === undefined) {
-	            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
-	            if (values[attr] !== undefined || noDefaults)
-	            return values[attr];
-	            return obj.defaultGetterValue(attr);
-	          }
-	          values[attr] = value;
-	        }
-	      }
-	    }
-	  }
-	  if (!temporary) {
-	    const origToJson = obj.toJson;
-	    obj.toJson = (members, exclusive) => {
-	      const restrictions = Array.isArray(members) && members.length;
-	      const json = (typeof origToJson === 'function') ? origToJson() : {};
-	      json[identifierAttr] = obj.constructor.name;
-	      for (let index = 0; index < attrs.length; index += 1) {
-	        const attr = attrs[index];
-	        const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
-	        const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
-	        if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
-	          // if (obj.constructor.name === 'SnapLocation2D')
-	          //   console.log('foundit!');
-	          const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
-	          json[attr] = processValue(value);
-	        }
-	      }
-	      return json;
-	    }
-	  }
-	  obj.fromJson = (json) => {
-	    for (let index = 0; index < attrs.length; index += 1) {
-	      const attr = attrs[index];
-	      if (attr !== immutableAttr) {
-	        if ((typeof obj[attr]) === 'function') {
-	          if(Array.isArray(obj[attr]())){
-	            obj[attr]().copy(Object.fromJson(json[attr]));
-	          } else {
-	            obj[attr](Object.fromJson(json[attr]));
-	          }
-	        }
-	        else
-	          obj[attr] = Object.fromJson(json[attr]);
-	      }
+	    this.show = () => {
+	      popupCnt.show();
 	    };
-	    return obj;
-	  }
-	  if (obj.constructor.DO_NOT_CLONE) {
-	    obj.clone = () => obj;
-	  } else {
-	    obj.clone = () => {
-	      const clone = new obj.constructor(obj.toJson());
-	      clone.fromJson(obj.toJson());
-	      return clone;
-	    }
-	  }
-	  return attrs;
-	}, true);
-	Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
 	
-	Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
-	  if (otherObj === undefined) return;
-	  if ((typeof otherObj) !== 'object') {
-	    throw new Error('Requires one argument of type object or undefined for meaningless call');
-	  }
-	  const keys = Object.keys(otherObj);
-	  keys.forEach((key) => obj[key] = otherObj[key]);
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
-	  if (start!== undefined && end !== undefined && start > end) {
-	    const temp = start;
-	    start = end;
-	    end = temp;
-	  }
-	  start = start || 0;
-	  end = end || values.length;
-	  for (let index = start; index < end; index += 1)
-	    array[index] = values[index];
-	  return array;
-	}, true);
-	
-	const checked = {};
-	
-	// Swiped from https://stackoverflow.com/a/43197340
-	function isClass(obj) {
-	  const isCtorClass = obj.constructor
-	      && obj.constructor.toString().substring(0, 5) === 'class'
-	  if(obj.prototype === undefined) {
-	    return isCtorClass
-	  }
-	  const isPrototypeCtorClass = obj.prototype.constructor
-	    && obj.prototype.constructor.toString
-	    && obj.prototype.constructor.toString().substring(0, 5) === 'class'
-	  return isCtorClass || isPrototypeCtorClass
-	}
-	
-	Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
-	  if ((typeof obj) != 'object') return obj;
-	  const keys = Object.keys(obj);
-	  if (!checked[obj.constructor.name]) {
-	    // console.log('constructor: ' + obj.constructor.name);
-	    checked[obj.constructor.name] = true;
-	  }
-	
-	  const clone = ((typeof obj.clone) === 'function') ? obj.clone() :
-	                  Array.isArray(obj) ? [] : {};
-	  for(let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    const member = obj[key];
-	    if (member && (member.DO_NOT_CLONE || member.constructor.DO_NOT_CLONE)) {
-	      clone[key] = member;
-	    } else if ((typeof member) !== 'function') {
-	      if ((typeof member) === 'object') {
-	        if ((typeof member.clone) === 'function') {
-	          clone[key] = member.clone();
-	        } else {
-	          clone[key] = JSON.clone(member);
+	    function getFunctions(elem) {
+	      let foundFuncs;
+	      const queryStrs = Object.keys(htmlFuncs);
+	      queryStrs.forEach((queryStr) => {
+	        if (elem.matches(queryStr)) {
+	          if (foundFuncs) {
+	            throw new Error('Multiple functions being invoked on one hover event');
+	          } else {
+	            foundFuncs = htmlFuncs[queryStr];
+	          }
 	        }
-	      } else {
-	        clone[key] = member;
-	      }
-	    }
-	    else if (isClass(member)) {
-	      clone[key] = member;
-	    }
-	  }
-	  return clone;
-	}, true);
-	
-	Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
-	  if (!(obj instanceof Object)) return obj;
-	  return JSON.parse(JSON.stringify(obj));
-	}, true);
-	
-	Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
-	  if (isRegex !== true) {
-	    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
-	  }
-	  var keyValues = this.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
-	  var json = {};
-	  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
-	    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
-	    if (split) {
-	      json[split[1]] = split[2];
-	    }
-	  }
-	  return json;
-	});
-	
-	Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
-	  const attrs = path.split('.');
-	  const lastIndex = attrs.length - 1;
-	  let currObj = obj;
-	  for (let index = 0; index < lastIndex; index += 1) {
-	    let attr = attrs[index];
-	    if (currObj[attr] === undefined) currObj[attr] = {};
-	    currObj = currObj[attr];
-	  }
-	
-	  const lastAttr = attrs[lastIndex];
-	  if ((typeof currObj[lastAttr]) === 'function') {
-	    return currObj[lastAttr](value);
-	  } else if (value !== undefined) {
-	    currObj[lastAttr] = value;
-	  }
-	  return currObj[lastAttr];
-	}, true);
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/object/lookup.js',
-function (require, exports, module) {
-	
-class Lookup {
-	  constructor(id, attr, singleton) {
-	    if (id){
-	      const decoded = Lookup.decode(id);
-	      if (decoded) {
-	        id = decoded.id;
-	      } else if (id._TYPE !== undefined) {
-	        id = Lookup.decode(id[id[Lookup.ID_ATTRIBUTE]]).id;
-	      }
-	    }
-	    id = id || String.random();
-	    const cxtr = this.constructor;
-	    const cxtrHash = cxtr.name;
-	    let group;
-	    let cxtrAndId = `${cxtrHash}_${id}`
-	    if (singleton && cxtr.get(id)) return cxtr.get(id);
-	
-	    let constructedAt = new Date().getTime();
-	    let modificationWindowOpen = true;
-	    attr = attr || 'id';
-	    Object.getSet(this, attr, Lookup.ID_ATTRIBUTE);
-	    this.lookupGroup = (g) => {
-	      if (group === undefined && g !== undefined) {
-	        if (Lookup.groups[g] === undefined) Lookup.groups[g] = [];
-	        group = g;
-	        Lookup.groups[g].push(this);
-	      }
-	      return group;
+	      });
+	      return foundFuncs;
 	    }
 	
-	    this.release = () => {
-	      if (cxtr.reusable === true) {
-	        if (Lookup.freeAgents[cxtr.name] === undefined) Lookup.freeAgents[cxtr.name] = [];
-	        Lookup.freeAgents[cxtr.name].push(this);
-	        const index = Lookup.groups[group] ? Lookup.groups[group].indexOf(this) : -1;
-	        if (index !== -1) Lookup.groups[group].splice(index, 1);
-	      }
-	      delete Lookup.byId[cxtr.name][this[attr]];
+	    function on(queryStr, funcObj) {
+	      if (htmlFuncs[queryStr] !== undefined) throw new Error('Assigning multiple functions to the same selector');
+	      htmlFuncs[queryStr] = funcObj;
+	    }
+	    this.on = on;
+	
+	    this.onClose = popupCnt.onClose;
+	
+	    function updateContent(html) {
+	      popupCnt.updateContent(html);
+	      if (currFuncs && currFuncs.after) currFuncs.after();
+	      return instance;
+	    }
+	    this.updateContent = updateContent;
+	
+	    this.open = (html, positionOn) => {
+	      this.updateContent(html);
+	      popupCnt.position(positionOn);
+	      this.show();
 	    }
 	
+	    this.container = popupCnt.container;
+	    this.hasMoved = popupCnt.hasMoved;
+	    this.lockSize = popupCnt.lockSize;
+	    this.unlockSize = popupCnt.unlockSize;
 	
-	    this[Lookup.ID_ATTRIBUTE] = () => attr;
-	    this[attr] = (initialValue) => {
-	      if (modificationWindowOpen) {
-	        if (initialValue) {
-	          Lookup.byId[cxtr.name][id] = undefined;
-	          const decoded = Lookup.decode(initialValue);
-	          id = decoded ? decoded.id : initialValue;
-	          cxtrAndId = `${cxtrHash}_${id}`
-	          Lookup.byId[cxtr.name][id] = this;
-	          modificationWindowOpen = false;
-	        } else if (constructedAt < new Date().getTime() - 200) {
-	          modificationWindowOpen = false;
-	        }
-	      }
-	      return cxtrAndId;
-	    }
-	
-	    function registerConstructor() {
-	      if (Lookup.byId[cxtr.name] === undefined) {
-	        Lookup.byId[cxtr.name] = {};
-	        Lookup.constructorMap[cxtr.name] = cxtr;
-	      }
-	    }
-	
-	    function addSelectListFuncToConstructor() {
-	      if(cxtr.selectList === Lookup.selectList) {
-	        cxtr.get = (id) => Lookup.get(id, cxtr);
-	        if (cxtr.instance === undefined) cxtr.instance = () => Lookup.instance(cxtr.name);
-	        Lookup.byId[cxtr.name] = {};
-	        cxtr.selectList = () => Lookup.selectList(cxtr.name);
-	      }
-	    }
-	
-	    registerConstructor();
-	    addSelectListFuncToConstructor();
-	
-	
-	    Lookup.byId[cxtr.name][id] = this;
-	    this.toString = () => this[attr]();
+	    document.addEventListener('click', this.forceClose);
 	  }
 	}
 	
-	Lookup.ID_ATTRIBUTE = 'ID_ATTRIBUTE';
-	Lookup.byId = {Lookup};
-	Lookup.constructorMap = {};
-	Lookup.groups = {};
-	Lookup.freeAgents = {};
-	
-	Lookup.get = (id, cxtr) => {
-	  cxtr = cxtr || Lookup;
-	  const decoded = Lookup.decode(id);
-	  let decodedId, decodedCxtr;
-	  if (decoded) {
-	    decodedId = decoded.id;
-	    decodedCxtr = decoded.constructor;
-	  }
-	  id = decodedId || id;
-	  cxtr = cxtr || decodedCxtr;
-	  const instance = Lookup.byId[cxtr.name][id] || (decodedCxtr && Lookup.byId[decodedCxtr.name][id]);
-	  return instance;
-	}
-	Lookup.selectList = (className) => {
-	  return Object.keys(Lookup.byId[className]);
-	}
-	Lookup.instance = (cxtrName) => {
-	  const agents = Lookup.freeAgents[cxtrName];
-	  if (!agents || agents.length === 0) {
-	    return new (Lookup.constructorMap[cxtrName])();
-	  }
-	
-	  const index = agents.length - 1;
-	  const agent = agents[index];
-	  agents.splice(index, 1);
-	  return agent;
-	}
-	Lookup.decode = (id) => {
-	  if ((typeof id) !== 'string') return;
-	  const split = id.split('_');
-	  if (split.length === 1) return;
-	  return {
-	    constructor: Lookup.constructorMap[split[0]],
-	    id:  split[1]
-	  };
-	}
-	Lookup.release = (group) => {
-	  const groupList = Lookup.groups[group];
-	  if (groupList === undefined) return;
-	  Lookup.groups[group] = [];
-	  for (let index = 0; index < groupList.length; index += 1) {
-	    groupList[index].release();
-	  }
-	}
-	
-	try {
-	  module.exports = Lookup;
-	} catch (e) {/* TODO: Consider Removing */}
+	module.exports = PopUp;
 	
 });
 
@@ -11129,6 +11081,32 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
+function (require, exports, module) {
+	
+
+	
+	const CustomEvent = require('../custom-error.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	const Expandable = require('./expandable');
+	
+	class ExpandableList extends Expandable {
+	  constructor(props) {
+	    super(props);
+	    const superRemove = this.remove;
+	    this.remove = (index) => {
+	      superRemove(props.list.splice(index, 1));
+	      this.refresh();
+	    }
+	  }
+	}
+	
+	module.exports = ExpandableList
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/lists/expandable-object.js',
 function (require, exports, module) {
 	
@@ -11197,6 +11175,522 @@ function (require, exports, module) {
 	  }
 	}
 	module.exports = ExpandableObject
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/lists/expandable.js',
+function (require, exports, module) {
+	
+
+	
+	const CustomEvent = require('../custom-error.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	
+	// properties
+	//  required: {
+	//  getHeader: function returns html header string,
+	//  getBody: function returns html body string,
+	//}
+	//  optional: {
+	//  list: list to use, creates on undefined
+	//  getObject: function returns new list object default is generic js object,
+	//  parentSelector: cssSelector only reqired for refresh function,
+	//  listElemLable: nameOfElementType changes add button label,
+	//  hideAddBtn: defaults to false,
+	//  startClosed: all tabs are closed on list open.
+	//  input: true - require user to enter text before adding new
+	//  inputOptions: array of autofill inputs
+	//  inputs: [{placeholder, autofill},...]
+	//  inputValidation: function to validate input fields
+	//  type: defaults to list,
+	//  selfCloseTab: defalts to true - allows clicking on header to close body,
+	//  findElement: used to find elemenents related to header - defaults to closest
+	//}
+	class Expandable {
+	  constructor(props) {
+	    const afterRenderEvent = new CustomEvent('afterRender');
+	    const afterAddEvent = new CustomEvent('afterAdd');
+	    const afterRefreshEvent = new CustomEvent('afterRefresh');
+	    const afterRemovalEvent = new CustomEvent('afterRemoval');
+	    const instance = this;
+	    const renderBodyOnOpen = props.renderBodyOnOpen === false ? false : true;
+	    props.getObject = props.getObject || (() => ({}));
+	    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
+	    props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
+	    props.type = props.type || 'list';
+	    props.findElement = props.findElement || ((selector, target) =>  du.find.closest(selector, target));
+	    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
+	    props.getObject = props.getObject || (() => {});
+	    props.inputs = props.inputs || [];
+	    props.list = props.list || [];
+	    // props.list.DO_NOT_CLONE = true;
+	    this.hasBody = () => (typeof this.getBody) === 'function';
+	    this.getHeader = props.getHeader; delete props.getHeader;
+	    this.getBody = props.getBody; delete props.getBody;
+	    props.id = Expandable.lists.length;
+	    props.activeKey = 0; //TODO ???
+	    Object.getSet(this, props, 'listElemLable');
+	    let pendingRefresh = false;
+	    let lastRefresh = new Date().getTime();
+	    const storage = {};
+	    Expandable.lists[props.id] = this;
+	    this.inputTree = () => props.inputTree;
+	
+	    this.errorCntId = () => props.ERROR_CNT_ID;
+	    function setErrorMsg(msg) {
+	        du.id(props.ERROR_CNT_ID).innerHTML = msg;
+	    }
+	
+	    function values() {
+	      const values = {};
+	      props.inputs.forEach((input) =>
+	        values[input.placeholder] = du.id(input.id).value);
+	      return values;
+	    }
+	
+	    function getCnt() {
+	      return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
+	    }
+	
+	    function getBodyCnt() {
+	      return du.find.down('.expand-body', getCnt());
+	    }
+	
+	    function getInputCnt() {
+	      const cnt = du.find.down('.expand-input-cnt', getCnt());
+	      return cnt;
+	    }
+	    //changes....
+	    this.values = values;
+	    this.getInputCnt = getInputCnt;
+	
+	    this.add = (vals) => {
+	      const inputValues = vals || values();
+	      if ((typeof props.inputValidation) !== 'function' ||
+	              props.inputValidation(inputValues) === true) {
+	          const obj = props.getObject(inputValues, getInputCnt());
+	          const key = this.getKey(vals, obj);
+	          props.list[key] = obj;
+	          this.activeKey(key);
+	          this.refresh();
+	          afterAddEvent.trigger();
+	      } else {
+	        const errors = props.inputValidation(inputValues);
+	        let errorStr;
+	        if ((typeof errors) === 'object') {
+	          const keys = Object.keys(errors);
+	          errorStr = Object.values(errors).join('<br>');
+	        } else {
+	          errorStr = `Error: ${errors}`;
+	        }
+	        setErrorMsg(errorStr);
+	      }
+	    };
+	    this.hasInputTree = () =>
+	      this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
+	    if (this.hasInputTree())
+	      props.inputTree.onSubmit(this.add);
+	    props.hasInputTree = this.hasInputTree;
+	
+	    this.isSelfClosing = () => props.selfCloseTab;
+	    this.remove = (removed) => {
+	      afterRemovalEvent.trigger(undefined, removed);
+	      this.refresh();
+	    }
+	    this.html = () =>
+	      Expandable[`${instance.type()}Template`].render(this);
+	    this.afterRender = (func) => afterRenderEvent.on(func);
+	    this.afterAdd = (func) => afterAddEvent.on(func);
+	    this.afterRemoval = (func) => afterRemovalEvent.on(func);
+	    this.refresh = (type) => {
+	      this.type((typeof type) === 'string' ? type : props.type);
+	      if (!pendingRefresh) {
+	        pendingRefresh = true;
+	        setTimeout(() => {
+	          props.inputs.forEach((input) => input.id = input.id || String.random(7));
+	          const parent = document.querySelector(props.parentSelector);
+	          const html = this.html();
+	          if (parent && html !== undefined) {
+	            parent.innerHTML = html;
+	            afterRefreshEvent.trigger();
+	          }
+	          pendingRefresh = false;
+	        }, 100);
+	      }
+	    };
+	    this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
+	    this.getKey = () => this.list().length;
+	    this.active = () => props.list[this.activeKey()];
+	    // TODO: figure out why i wrote this and if its neccisary.
+	    this.value = (key) => (key2, value) => {
+	      if (props.activeKey === undefined) props.activeKey = 0;
+	      if (key === undefined) key = props.activeKey;
+	      if (storage[key] === undefined) storage[key] = {};
+	      if (value === undefined) return storage[key][key2];
+	      storage[key][key2] = value;
+	    }
+	    this.inputHtml = () => this.hasInputTree() ?
+	          this.inputTree().payload().html() : Expandable.inputRepeatTemplate.render(this);
+	    this.set = (key, value) => props.list[key] = value;
+	    this.get = (key) => props.list[key];
+	    this.renderBody = (target) => {
+	      const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
+	      target = target || document.querySelector(headerSelector);
+	      if (target !== null) {
+	        const id = target.getAttribute('ex-list-id');
+	        const list = Expandable.lists[id];
+	        const headers = du.find.up('.expandable-list', target).querySelectorAll('.expand-header');
+	        const bodys = du.find.up('.expandable-list', target).querySelectorAll('.expand-body');
+	        const rmBtns = du.find.up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
+	        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
+	        bodys.forEach((body) => body.style.display = 'none');
+	        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
+	        const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
+	        if (this.hasBody()) {
+	          body.style.display = 'block';
+	        }
+	        const key = target.getAttribute('key');
+	        this.activeKey(key);
+	        if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
+	        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+	        target.className += ' active' + (this.hasBody() ? '' : ' no-body');
+	        afterRenderEvent.trigger();
+	        // du.scroll.intoView(target.parentElement, 3, 25, document.body);
+	      }
+	    };
+	    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+	
+	    this.htmlBody = (key) => {
+	      getBodyCnt().setAttribute('key', key);
+	      return this.hasBody() ? this.getBody(this.list()[key], key) : '';
+	    }
+	    this.list = () => props.list;
+	    this.refresh();
+	  }
+	}
+	Expandable.lists = [];
+	Expandable.DO_NOT_CLONE = true;
+	Expandable.inputRepeatTemplate = new $t('expandable/input-repeat');
+	Expandable.listTemplate = new $t('expandable/list');
+	Expandable.pillTemplate = new $t('expandable/pill');
+	Expandable.sidebarTemplate = new $t('expandable/sidebar');
+	Expandable.getIdAndKey = (target, level) => {
+	  level ||= 0;
+	  const elems = du.find.upAll('.expand-header,.expand-body', target);
+	  if (elems.length < level + 1) return undefined;
+	  const cnt = elems[level];
+	  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
+	  const key = cnt.getAttribute('key');
+	  return {id, key};
+	}
+	Expandable.getValueFunc = (target) => {
+	  const idKey = Expandable.getIdAndKey(target);
+	  return Expandable.lists[idKey.id].value(idKey.key);
+	}
+	
+	Expandable.get = (target, level) => {
+	  const idKey = Expandable.getIdAndKey(target, level);
+	  if (idKey === undefined) return undefined;
+	  return Expandable.lists[idKey.id].get(idKey.key);
+	}
+	
+	Expandable.list = (target) => {
+	  const idKey = Expandable.getIdAndKey(target);
+	  return Expandable.lists[idKey.id];
+	}
+	
+	Expandable.set = (target, value) => {
+	  const idKey = Expandable.getIdAndKey(target);
+	  Expandable.lists[idKey.id].set(idKey.key, value);
+	}
+	
+	Expandable.value = (key, value, target) => {
+	  return Expandable.getValueFunc(target)(key, value);
+	}
+	du.on.match('click', '.expandable-list-add-btn', (target) => {
+	  const id = target.getAttribute('ex-list-id');
+	  Expandable.lists[id].add();
+	});
+	du.on.match('click', '.expandable-item-rm-btn', (target) => {
+	  const id = target.getAttribute('ex-list-id');
+	  const key = target.getAttribute('key');
+	  Expandable.lists[id].remove(key);
+	});
+	Expandable.closeAll = (header) => {
+	  const hello = 'world';
+	}
+	
+	du.on.match('click', '.expand-header', (target, event) => {
+	  const isActive = target.matches('.active');
+	  const id = target.getAttribute('ex-list-id');
+	  const list = Expandable.lists[id];
+	  if (list) {
+	    if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
+	      du.class.remove(target, 'active');
+	      du.find.closest('.expand-body', target).style.display = 'none';
+	      list.activeKey(null);
+	      target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
+	    } else if (!isActive) {
+	      list.renderBody(target);
+	    }
+	  }
+	});
+	
+	function getExpandObject(elem) {
+	  const exListElem = du.find.up('[ex-list-id]', elem);
+	  if (!exListElem) return undefined;
+	  const listId = exListElem.getAttribute('ex-list-id');
+	  return Expandable.lists[listId];
+	}
+	
+	du.on.match('click', '.input-open-cnt', (target) => {
+	  const inputCnts = document.querySelectorAll('.expand-input-cnt');
+	  const expandList = getExpandObject(target);
+	  if (expandList && !expandList.hasInputTree()) expandList.add();
+	  else {
+	    const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
+	    const closest = du.find.closest('.expand-input-cnt', target);
+	    inputCnts.forEach((elem) => elem.hidden = true);
+	    inputOpenCnts.forEach((elem) => elem.hidden = false);
+	    target.hidden = true;
+	    if (closest) closest.hidden = false;
+	  }
+	});
+	
+	module.exports = Expandable
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/display/resizer.js',
+function (require, exports, module) {
+	const CatchAll = require('./catch-all');
+	const du = require('../dom-utils');
+	const CustomEvent = require('../custom-event');
+	
+	class Resizer {
+	  constructor (elem, axisObj, cursor) {
+	    const instance = this;
+	    const minimumSize = 40;
+	    let resizeId = elem.getAttribute(Resizer.resizeAttr);
+	    let sizeLocked = false;
+	
+	    if (!resizeId) {
+	      resizeId = 'resize-' + Math.floor(Math.random() * 1000000);
+	      elem.setAttribute(Resizer.resizeAttr, resizeId);
+	    }
+	
+	    this.show = () => {this.container.hidden = false; this.position()};
+	    this.hide = () => this.container.hidden = true;
+	
+	    function updateZindex(zIndex) {
+	      if (instance.container.hidden === false) {
+	        instance.container.style.zIndex = zIndex;
+	        elem.style.zIndex = zIndex;
+	        Resizer.backdrop.updateZindex();
+	        instance.position();
+	      }
+	    }
+	    this.updateZindex = updateZindex;
+	    elem.addEventListener('click', () => Resizer.updateZindex(elem));
+	
+	
+	    if (resizeId) {
+	      if (!Resizer.collections[resizeId]) {
+	        Resizer.collections[resizeId] = [];
+	      }
+	      Resizer.collections[resizeId].push(this);
+	    }
+	    const padding = 8;
+	    let resize = false;
+	    let lastPosition;
+	    this.getPadding = () => padding;
+	
+	    const attrs = Object.values(axisObj);
+	    const top = attrs.indexOf('top') !== -1;
+	    const bottom = attrs.indexOf('bottom') !== -1;
+	    const left = attrs.indexOf('left') !== -1;
+	    const right = attrs.indexOf('right') !== -1;
+	
+	    this.container = document.createElement('DIV');
+	    this.container.style.cursor = cursor;
+	    this.container.style.padding = padding/2 + 'px';
+	    this.container.style.position = axisObj.position || 'absolute';
+	    this.container.style.backgroundColor = 'transparent';
+	    Resizer.container.append(this.container);
+	
+	    function getComputedSize(element, property) {
+	      return Number.parseInt(window.getComputedStyle(element).getPropertyValue(property));
+	    }
+	
+	    function resizeCnt (event) {
+	      if (resize) {
+	        Resizer.updateZindex(elem);
+	        let dy = resize.clientY - event.clientY;
+	        let dx = resize.clientX - event.clientX;
+	        let minHeight = getComputedSize(elem, 'min-height');
+	        let minWidth = getComputedSize(elem, 'min-width');
+	        if (axisObj.x) {
+	          if (left) dx *= -1;
+	          const newWidth = lastPosition.width - dx;
+	          if (newWidth > minWidth) {
+	            if (left) {
+	              elem.style.left = lastPosition.left + dx + 'px';
+	            }
+	            elem.style.width = newWidth + 'px'
+	          }
+	        }
+	        if (axisObj.y) {
+	          if (top) dy *= -1;
+	          const newHeight = lastPosition.height - dy;
+	          if (newHeight > minHeight) {
+	            if (top) {
+	              elem.style.top = lastPosition.top + window.scrollY + dy + 'px';
+	            }
+	            elem.style.height = newHeight + 'px'
+	          }
+	        }
+	      }
+	    }
+	
+	    this.container.onmousedown = (e) => {
+	      resize = e;
+	      Resizer.backdrop.show();
+	      lastPosition = elem.getBoundingClientRect();
+	      // e.stopPropagation();
+	      // e.preventDefault();
+	    }
+	
+	    function stopResizing() {
+	      if (resize) {
+	        resize = undefined;
+	        Resizer.position(elem);
+	        Resizer.backdrop.hide();
+	        Resizer.events.resize.trigger(elem);
+	      }
+	    }
+	
+	    function isFixed() {
+	      return axisObj.position && axisObj.position === 'fixed';
+	    }
+	
+	    // this.container.addEventListener('click',
+	    // (e) =>
+	    // e.stopPropagation()
+	    // );
+	    Resizer.backdrop.on('mouseup', stopResizing);
+	    this.container.onmouseup = stopResizing;
+	
+	    this.container.onmousemove = resizeCnt;
+	    Resizer.backdrop.on('mousemove', (event) =>
+	    resizeCnt(event));
+	    this.position = function () {
+	      const height = document.documentElement.clientHeight;
+	      const width = document.documentElement.clientWidth;
+	      const rect = elem.getBoundingClientRect();
+	      const cntStyle = instance.container.style;
+	      const scrollY =  isFixed() ? 0 : window.scrollY;
+	      const scrollX =  isFixed() ? 0 : window.scrollX;
+	      if (top) {
+	        cntStyle.top = rect.top - padding + scrollY + 'px';
+	      } else if (!bottom) {
+	        cntStyle.top = rect.top + scrollY + 'px';
+	      }
+	
+	      if (bottom) {
+	        cntStyle.bottom = (height - rect.bottom) - padding - scrollY + 'px';
+	      } else if (!top) {
+	        cntStyle.bottom = (height - rect.bottom) - scrollY + 'px';
+	      }
+	
+	      if (right) {
+	        cntStyle.right = (width - rect.right) - padding - scrollX + 'px';
+	      } else if (!left) {
+	        cntStyle.right = (width - rect.right) - scrollX + 'px';
+	      }
+	
+	      if (left) {
+	        cntStyle.left = rect.left - padding + scrollX + 'px';
+	      } else if (!right) {
+	        cntStyle.left = rect.left + scrollX + 'px';
+	      }
+	    }
+	  }
+	}
+	
+	Resizer.container = du.create.element('div', {id: 'resizer-cnt'});
+	document.body.append(Resizer.container);
+	
+	Resizer.lastZindexSearch = new Date().getTime();
+	Resizer.zIndex = (zindex) => {
+	  const time = new Date().getTime();
+	  if (time > Resizer.lastZindexSearch + 500) {
+	    Resizer.zed = CatchAll.findHigestZindex();
+	    lastZindexSearch = time;
+	  }
+	  return Resizer.zed;
+	}
+	Resizer.container.id = 'resize-id-id';
+	// Resizer.container.addEventListener('click', (e) => e.stopPropagation());
+	Resizer.events = {};
+	Resizer.events.resize = new CustomEvent ('resized')
+	
+	Resizer.backdrop = new CatchAll();
+	
+	Resizer.resizeAttr = 'resizer-id'
+	Resizer.collections = {};
+	Resizer.position = function (elem) {
+	  const resizeId = elem.getAttribute(Resizer.resizeAttr);
+	  const collection = Resizer.collections[resizeId];
+	  if (collection) {
+	    collection.forEach((item) => item.position());
+	  }
+	}
+	Resizer.onEach = function (elem, func) {
+	  const callArgs = Array.from(arguments).splice(2);
+	  const resizeId = elem.getAttribute(Resizer.resizeAttr);
+	  const collection = Resizer.collections[resizeId];
+	  if (collection) {
+	    collection.forEach((item) => item[func](...callArgs));
+	  }
+	}
+	Resizer.hide = (elem) => Resizer.onEach(elem, 'hide');
+	Resizer.show = (elem) => {
+	    if (!Resizer.isLocked(elem)) {
+	      Resizer.onEach(elem, 'show');
+	      Resizer.updateZindex(elem);
+	    }
+	};
+	Resizer.updateZindex = (elem, callback) => {
+	  const highestZIndex = Resizer.zIndex() - 3;
+	  if (!elem.style.zIndex ||
+	      (elem.style.zIndex.match(/[0-9]{1,}/) &&
+	        highestZIndex > Number.parseInt(elem.style.zIndex))) {
+	    Resizer.onEach(elem, 'updateZindex', highestZIndex + 4);
+	  }
+	}
+	
+	{
+	  const locked = {};
+	  Resizer.lock = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)] = true;
+	  Resizer.unlock = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)] = false;
+	  Resizer.isLocked  = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)];
+	}
+	
+	Resizer.all = (elem, position) => {
+	  new Resizer(elem, {y: 'top', position}, 'n-resize');
+	  new Resizer(elem, {y: 'bottom', position}, 's-resize');
+	  new Resizer(elem, {x: 'right', position}, 'e-resize');
+	  new Resizer(elem, {x: 'left', position}, 'w-resize', position);
+	  new Resizer(elem, {x: 'right', y: 'top', position}, 'ne-resize');
+	  new Resizer(elem, {x: 'left', y: 'top', position}, 'nw-resize');
+	  new Resizer(elem, {x: 'right', y: 'bottom', position}, 'se-resize');
+	  new Resizer(elem, {x: 'left', y: 'bottom', position}, 'sw-resize');
+	}
+	
+	module.exports = Resizer;
 	
 });
 
@@ -11287,6 +11781,150 @@ const du = require('../dom-utils');
 	}
 	
 	du.on.match('focusout', '.dynam-input', undoDynamic);
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/object/lookup.js',
+function (require, exports, module) {
+	
+class Lookup {
+	  constructor(id, attr, singleton) {
+	    if (id){
+	      const decoded = Lookup.decode(id);
+	      if (decoded) {
+	        id = decoded.id;
+	      } else if (id._TYPE !== undefined) {
+	        id = Lookup.decode(id[id[Lookup.ID_ATTRIBUTE]]).id;
+	      }
+	    }
+	    id = id || String.random();
+	    const cxtr = this.constructor;
+	    const cxtrHash = cxtr.name;
+	    let group;
+	    let cxtrAndId = `${cxtrHash}_${id}`
+	    if (singleton && cxtr.get(id)) return cxtr.get(id);
+	
+	    let constructedAt = new Date().getTime();
+	    let modificationWindowOpen = true;
+	    attr = attr || 'id';
+	    Object.getSet(this, attr, Lookup.ID_ATTRIBUTE);
+	    this.lookupGroup = (g) => {
+	      if (group === undefined && g !== undefined) {
+	        if (Lookup.groups[g] === undefined) Lookup.groups[g] = [];
+	        group = g;
+	        Lookup.groups[g].push(this);
+	      }
+	      return group;
+	    }
+	
+	    this.release = () => {
+	      if (cxtr.reusable === true) {
+	        if (Lookup.freeAgents[cxtr.name] === undefined) Lookup.freeAgents[cxtr.name] = [];
+	        Lookup.freeAgents[cxtr.name].push(this);
+	        const index = Lookup.groups[group] ? Lookup.groups[group].indexOf(this) : -1;
+	        if (index !== -1) Lookup.groups[group].splice(index, 1);
+	      }
+	      delete Lookup.byId[cxtr.name][this[attr]];
+	    }
+	
+	
+	    this[Lookup.ID_ATTRIBUTE] = () => attr;
+	    this[attr] = (initialValue) => {
+	      if (modificationWindowOpen) {
+	        if (initialValue) {
+	          Lookup.byId[cxtr.name][id] = undefined;
+	          const decoded = Lookup.decode(initialValue);
+	          id = decoded ? decoded.id : initialValue;
+	          cxtrAndId = `${cxtrHash}_${id}`
+	          Lookup.byId[cxtr.name][id] = this;
+	          modificationWindowOpen = false;
+	        } else if (constructedAt < new Date().getTime() - 200) {
+	          modificationWindowOpen = false;
+	        }
+	      }
+	      return cxtrAndId;
+	    }
+	
+	    function registerConstructor() {
+	      if (Lookup.byId[cxtr.name] === undefined) {
+	        Lookup.byId[cxtr.name] = {};
+	        Lookup.constructorMap[cxtr.name] = cxtr;
+	      }
+	    }
+	
+	    function addSelectListFuncToConstructor() {
+	      if(cxtr.selectList === Lookup.selectList) {
+	        cxtr.get = (id) => Lookup.get(id, cxtr);
+	        if (cxtr.instance === undefined) cxtr.instance = () => Lookup.instance(cxtr.name);
+	        Lookup.byId[cxtr.name] = {};
+	        cxtr.selectList = () => Lookup.selectList(cxtr.name);
+	      }
+	    }
+	
+	    registerConstructor();
+	    addSelectListFuncToConstructor();
+	
+	
+	    Lookup.byId[cxtr.name][id] = this;
+	    this.toString = () => this[attr]();
+	  }
+	}
+	
+	Lookup.ID_ATTRIBUTE = 'ID_ATTRIBUTE';
+	Lookup.byId = {Lookup};
+	Lookup.constructorMap = {};
+	Lookup.groups = {};
+	Lookup.freeAgents = {};
+	
+	Lookup.get = (id, cxtr) => {
+	  cxtr = cxtr || Lookup;
+	  const decoded = Lookup.decode(id);
+	  let decodedId, decodedCxtr;
+	  if (decoded) {
+	    decodedId = decoded.id;
+	    decodedCxtr = decoded.constructor;
+	  }
+	  id = decodedId || id;
+	  cxtr = cxtr || decodedCxtr;
+	  const instance = Lookup.byId[cxtr.name][id] || (decodedCxtr && Lookup.byId[decodedCxtr.name][id]);
+	  return instance;
+	}
+	Lookup.selectList = (className) => {
+	  return Object.keys(Lookup.byId[className]);
+	}
+	Lookup.instance = (cxtrName) => {
+	  const agents = Lookup.freeAgents[cxtrName];
+	  if (!agents || agents.length === 0) {
+	    return new (Lookup.constructorMap[cxtrName])();
+	  }
+	
+	  const index = agents.length - 1;
+	  const agent = agents[index];
+	  agents.splice(index, 1);
+	  return agent;
+	}
+	Lookup.decode = (id) => {
+	  if ((typeof id) !== 'string') return;
+	  const split = id.split('_');
+	  if (split.length === 1) return;
+	  return {
+	    constructor: Lookup.constructorMap[split[0]],
+	    id:  split[1]
+	  };
+	}
+	Lookup.release = (group) => {
+	  const groupList = Lookup.groups[group];
+	  if (groupList === undefined) return;
+	  Lookup.groups[group] = [];
+	  for (let index = 0; index < groupList.length; index += 1) {
+	    groupList[index].release();
+	  }
+	}
+	
+	try {
+	  module.exports = Lookup;
+	} catch (e) {/* TODO: Consider Removing */}
 	
 });
 
@@ -11776,466 +12414,6 @@ const $t = require('../$t');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/display/pop-up.js',
-function (require, exports, module) {
-	const DragDropResize = require('./drag-drop');
-	
-	class PopUp {
-	  constructor (props) {
-	    props = props || {}
-	    const instance = this;
-	    const htmlFuncs = {};
-	    let forceOpen = false;
-	    let lockOpen = false;
-	    let currFuncs, currElem;
-	    let canClose = false;
-	
-	    const popupCnt = new DragDropResize(props);
-	
-	    popupCnt.hide();
-	
-	    this.position = () => popupCnt;
-	    this.positionOnElement = popupCnt.position;
-	
-	
-	    this.softClose = () => {
-	      if (!lockOpen) {
-	        instance.close();
-	      }
-	    }
-	
-	    this.close = popupCnt.close;
-	
-	    this.show = () => {
-	      popupCnt.show();
-	    };
-	
-	    function getFunctions(elem) {
-	      let foundFuncs;
-	      const queryStrs = Object.keys(htmlFuncs);
-	      queryStrs.forEach((queryStr) => {
-	        if (elem.matches(queryStr)) {
-	          if (foundFuncs) {
-	            throw new Error('Multiple functions being invoked on one hover event');
-	          } else {
-	            foundFuncs = htmlFuncs[queryStr];
-	          }
-	        }
-	      });
-	      return foundFuncs;
-	    }
-	
-	    function on(queryStr, funcObj) {
-	      if (htmlFuncs[queryStr] !== undefined) throw new Error('Assigning multiple functions to the same selector');
-	      htmlFuncs[queryStr] = funcObj;
-	    }
-	    this.on = on;
-	
-	    this.onClose = popupCnt.onClose;
-	
-	    function updateContent(html) {
-	      popupCnt.updateContent(html);
-	      if (currFuncs && currFuncs.after) currFuncs.after();
-	      return instance;
-	    }
-	    this.updateContent = updateContent;
-	
-	    this.open = (html, positionOn) => {
-	      this.updateContent(html);
-	      popupCnt.position(positionOn);
-	      this.show();
-	    }
-	
-	    this.container = popupCnt.container;
-	    this.hasMoved = popupCnt.hasMoved;
-	    this.lockSize = popupCnt.lockSize;
-	    this.unlockSize = popupCnt.unlockSize;
-	
-	    document.addEventListener('click', this.forceClose);
-	  }
-	}
-	
-	module.exports = PopUp;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
-function (require, exports, module) {
-	
-
-	
-	const CustomEvent = require('../custom-error.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	const Expandable = require('./expandable');
-	
-	class ExpandableList extends Expandable {
-	  constructor(props) {
-	    super(props);
-	    const superRemove = this.remove;
-	    this.remove = (index) => {
-	      superRemove(props.list.splice(index, 1));
-	      this.refresh();
-	    }
-	  }
-	}
-	
-	module.exports = ExpandableList
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/lists/expandable.js',
-function (require, exports, module) {
-	
-
-	
-	const CustomEvent = require('../custom-error.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	
-	// properties
-	//  required: {
-	//  getHeader: function returns html header string,
-	//  getBody: function returns html body string,
-	//}
-	//  optional: {
-	//  list: list to use, creates on undefined
-	//  getObject: function returns new list object default is generic js object,
-	//  parentSelector: cssSelector only reqired for refresh function,
-	//  listElemLable: nameOfElementType changes add button label,
-	//  hideAddBtn: defaults to false,
-	//  startClosed: all tabs are closed on list open.
-	//  input: true - require user to enter text before adding new
-	//  inputOptions: array of autofill inputs
-	//  inputs: [{placeholder, autofill},...]
-	//  inputValidation: function to validate input fields
-	//  type: defaults to list,
-	//  selfCloseTab: defalts to true - allows clicking on header to close body,
-	//  findElement: used to find elemenents related to header - defaults to closest
-	//}
-	class Expandable {
-	  constructor(props) {
-	    const afterRenderEvent = new CustomEvent('afterRender');
-	    const afterAddEvent = new CustomEvent('afterAdd');
-	    const afterRefreshEvent = new CustomEvent('afterRefresh');
-	    const afterRemovalEvent = new CustomEvent('afterRemoval');
-	    const instance = this;
-	    const renderBodyOnOpen = props.renderBodyOnOpen === false ? false : true;
-	    props.getObject = props.getObject || (() => ({}));
-	    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
-	    props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
-	    props.type = props.type || 'list';
-	    props.findElement = props.findElement || ((selector, target) =>  du.find.closest(selector, target));
-	    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
-	    props.getObject = props.getObject || (() => {});
-	    props.inputs = props.inputs || [];
-	    props.list = props.list || [];
-	    // props.list.DO_NOT_CLONE = true;
-	    this.hasBody = () => (typeof this.getBody) === 'function';
-	    this.getHeader = props.getHeader; delete props.getHeader;
-	    this.getBody = props.getBody; delete props.getBody;
-	    props.id = Expandable.lists.length;
-	    props.activeKey = 0; //TODO ???
-	    Object.getSet(this, props, 'listElemLable');
-	    let pendingRefresh = false;
-	    let lastRefresh = new Date().getTime();
-	    const storage = {};
-	    Expandable.lists[props.id] = this;
-	    this.inputTree = () => props.inputTree;
-	
-	    this.errorCntId = () => props.ERROR_CNT_ID;
-	    function setErrorMsg(msg) {
-	        du.id(props.ERROR_CNT_ID).innerHTML = msg;
-	    }
-	
-	    function values() {
-	      const values = {};
-	      props.inputs.forEach((input) =>
-	        values[input.placeholder] = du.id(input.id).value);
-	      return values;
-	    }
-	
-	    function getCnt() {
-	      return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
-	    }
-	
-	    function getBodyCnt() {
-	      return du.find.down('.expand-body', getCnt());
-	    }
-	
-	    function getInputCnt() {
-	      const cnt = du.find.down('.expand-input-cnt', getCnt());
-	      return cnt;
-	    }
-	    //changes....
-	    this.values = values;
-	    this.getInputCnt = getInputCnt;
-	
-	    this.add = (vals) => {
-	      const inputValues = vals || values();
-	      if ((typeof props.inputValidation) !== 'function' ||
-	              props.inputValidation(inputValues) === true) {
-	        const obj = props.getObject(inputValues, getInputCnt());
-	        const key = this.getKey(vals, obj);
-	        props.list[key] = obj;
-	        this.activeKey(key);
-	        this.refresh();
-	        afterAddEvent.trigger();
-	      } else {
-	        const errors = props.inputValidation(inputValues);
-	        let errorStr;
-	        if ((typeof errors) === 'object') {
-	          const keys = Object.keys(errors);
-	          errorStr = Object.values(errors).join('<br>');
-	        } else {
-	          errorStr = `Error: ${errors}`;
-	        }
-	        setErrorMsg(errorStr);
-	      }
-	    };
-	    this.hasInputTree = () =>
-	      this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
-	    if (this.hasInputTree())
-	      props.inputTree.onComplete(this.add);
-	    props.hasInputTree = this.hasInputTree;
-	
-	    this.isSelfClosing = () => props.selfCloseTab;
-	    this.remove = (removed) => {
-	      afterRemovalEvent.trigger(undefined, removed);
-	      this.refresh();
-	    }
-	    this.html = () =>
-	      Expandable[`${instance.type()}Template`].render(this);
-	    this.afterRender = (func) => afterRenderEvent.on(func);
-	    this.afterAdd = (func) => afterAddEvent.on(func);
-	    this.afterRemoval = (func) => afterRemovalEvent.on(func);
-	    this.refresh = (type) => {
-	      this.type((typeof type) === 'string' ? type : props.type);
-	      if (!pendingRefresh) {
-	        pendingRefresh = true;
-	        setTimeout(() => {
-	          props.inputs.forEach((input) => input.id = input.id || String.random(7));
-	          const parent = document.querySelector(props.parentSelector);
-	          const html = this.html();
-	          if (parent && html !== undefined) {
-	            parent.innerHTML = html;
-	            afterRefreshEvent.trigger();
-	          }
-	          pendingRefresh = false;
-	        }, 100);
-	      }
-	    };
-	    this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
-	    this.getKey = () => this.list().length;
-	    this.active = () => props.list[this.activeKey()];
-	    // TODO: figure out why i wrote this and if its neccisary.
-	    this.value = (key) => (key2, value) => {
-	      if (props.activeKey === undefined) props.activeKey = 0;
-	      if (key === undefined) key = props.activeKey;
-	      if (storage[key] === undefined) storage[key] = {};
-	      if (value === undefined) return storage[key][key2];
-	      storage[key][key2] = value;
-	    }
-	    this.inputHtml = () => this.hasInputTree() ?
-	          this.inputTree().payload().html() : Expandable.inputRepeatTemplate.render(this);
-	    this.set = (key, value) => props.list[key] = value;
-	    this.get = (key) => props.list[key];
-	    this.renderBody = (target) => {
-	      const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
-	      target = target || document.querySelector(headerSelector);
-	      if (target !== null) {
-	        const id = target.getAttribute('ex-list-id');
-	        const list = Expandable.lists[id];
-	        const headers = du.find.up('.expandable-list', target).querySelectorAll('.expand-header');
-	        const bodys = du.find.up('.expandable-list', target).querySelectorAll('.expand-body');
-	        const rmBtns = du.find.up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-	        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-	        bodys.forEach((body) => body.style.display = 'none');
-	        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-	        const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
-	        if (this.hasBody()) {
-	          body.style.display = 'block';
-	        }
-	        const key = target.getAttribute('key');
-	        this.activeKey(key);
-	        if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
-	        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-	        target.className += ' active' + (this.hasBody() ? '' : ' no-body');
-	        afterRenderEvent.trigger();
-	        // du.scroll.intoView(target.parentElement, 3, 25, document.body);
-	      }
-	    };
-	    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
-	
-	    this.htmlBody = (key) => {
-	      getBodyCnt().setAttribute('key', key);
-	      return this.hasBody() ? this.getBody(this.list()[key], key) : '';
-	    }
-	    this.list = () => props.list;
-	    this.refresh();
-	  }
-	}
-	Expandable.lists = [];
-	Expandable.DO_NOT_CLONE = true;
-	Expandable.inputRepeatTemplate = new $t('expandable/input-repeat');
-	Expandable.listTemplate = new $t('expandable/list');
-	Expandable.pillTemplate = new $t('expandable/pill');
-	Expandable.sidebarTemplate = new $t('expandable/sidebar');
-	Expandable.getIdAndKey = (target, level) => {
-	  level ||= 0;
-	  const elems = du.find.upAll('.expand-header,.expand-body', target);
-	  if (elems.length < level + 1) return undefined;
-	  const cnt = elems[level];
-	  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-	  const key = cnt.getAttribute('key');
-	  return {id, key};
-	}
-	Expandable.getValueFunc = (target) => {
-	  const idKey = Expandable.getIdAndKey(target);
-	  return Expandable.lists[idKey.id].value(idKey.key);
-	}
-	
-	Expandable.get = (target, level) => {
-	  const idKey = Expandable.getIdAndKey(target, level);
-	  if (idKey === undefined) return undefined;
-	  return Expandable.lists[idKey.id].get(idKey.key);
-	}
-	
-	Expandable.list = (target) => {
-	  const idKey = Expandable.getIdAndKey(target);
-	  return Expandable.lists[idKey.id];
-	}
-	
-	Expandable.set = (target, value) => {
-	  const idKey = Expandable.getIdAndKey(target);
-	  Expandable.lists[idKey.id].set(idKey.key, value);
-	}
-	
-	Expandable.value = (key, value, target) => {
-	  return Expandable.getValueFunc(target)(key, value);
-	}
-	du.on.match('click', '.expandable-list-add-btn', (target) => {
-	  const id = target.getAttribute('ex-list-id');
-	  Expandable.lists[id].add();
-	});
-	du.on.match('click', '.expandable-item-rm-btn', (target) => {
-	  const id = target.getAttribute('ex-list-id');
-	  const key = target.getAttribute('key');
-	  Expandable.lists[id].remove(key);
-	});
-	Expandable.closeAll = (header) => {
-	  const hello = 'world';
-	}
-	
-	du.on.match('click', '.expand-header', (target, event) => {
-	  const isActive = target.matches('.active');
-	  const id = target.getAttribute('ex-list-id');
-	  const list = Expandable.lists[id];
-	  if (list) {
-	    if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
-	      du.class.remove(target, 'active');
-	      du.find.closest('.expand-body', target).style.display = 'none';
-	      list.activeKey(null);
-	      target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-	    } else if (!isActive) {
-	      list.renderBody(target);
-	    }
-	  }
-	});
-	
-	function getExpandObject(elem) {
-	  const exListElem = du.find.up('[ex-list-id]', elem);
-	  if (!exListElem) return undefined;
-	  const listId = exListElem.getAttribute('ex-list-id');
-	  return Expandable.lists[listId];
-	}
-	
-	du.on.match('click', '.input-open-cnt', (target) => {
-	  const inputCnts = document.querySelectorAll('.expand-input-cnt');
-	  const expandList = getExpandObject(target);
-	  if (expandList && !expandList.hasInputTree()) expandList.add();
-	  else {
-	    const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
-	    const closest = du.find.closest('.expand-input-cnt', target);
-	    inputCnts.forEach((elem) => elem.hidden = true);
-	    inputOpenCnts.forEach((elem) => elem.hidden = false);
-	    target.hidden = true;
-	    if (closest) closest.hidden = false;
-	  }
-	});
-	
-	module.exports = Expandable
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/services/state-history.js',
-function (require, exports, module) {
-	
-class StateHistory {
-	  constructor(getState, minTimeInterval) {
-	    let index = 0;
-	    let states = [];
-	    minTimeInterval = minTimeInterval || 400;
-	    let lastStateReqTime;
-	
-	    const indexHash = () => index > 0 && states[index - 1].hash;
-	
-	    function getNewState(reqTime) {
-	      if (reqTime === lastStateReqTime) {
-	        const currState = getState();
-	        const currHash = JSON.stringify(currState).hash();
-	        if (currHash !== indexHash()) {
-	          if (states.length > index) states = states.slice(0, index);
-	          states.push({hash: currHash, json: currState});
-	          index = states.length;
-	          // console.log('new history element!', index, currHash);
-	          // console.log(JSON.stringify(currState, null, 2));
-	        }
-	      }
-	    }
-	
-	    this.newState = () => {
-	      const thisReqTime = new Date().getTime();
-	      lastStateReqTime = thisReqTime;
-	      setTimeout(() => getNewState(thisReqTime), minTimeInterval);
-	    }
-	
-	    this.forceState = () => {
-	      lastStateReqTime = 0;
-	      getNewState(0);
-	    }
-	
-	    this.canGoBack = () => index > 1;
-	    this.canGoForward = () => index < states.length;
-	
-	    this.back = () => {
-	      if (this.canGoBack()) {
-	        const state = states[--index - 1];
-	        console.log('goingBack', index, indexHash());
-	        lastStateReqTime = 0;
-	        return state.json;
-	      }
-	    }
-	
-	    this.forward = () => {
-	      if (this.canGoForward()) {
-	        const state = states[index++];
-	        console.log('goingForward', index, indexHash());
-	        lastStateReqTime = 0;
-	        return state.json;
-	      }
-	    }
-	  }
-	}
-	
-	module.exports = StateHistory;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/display/catch-all.js',
 function (require, exports, module) {
 	const du = require('../dom-utils');
@@ -12317,6 +12495,71 @@ function (require, exports, module) {
 	document.body.append(CatchAll.container);
 	
 	module.exports = CatchAll;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/services/state-history.js',
+function (require, exports, module) {
+	
+class StateHistory {
+	  constructor(getState, minTimeInterval) {
+	    let index = 0;
+	    let states = [];
+	    minTimeInterval = minTimeInterval || 400;
+	    let lastStateReqTime;
+	
+	    const indexHash = () => index > 0 && states[index - 1].hash;
+	
+	    function getNewState(reqTime) {
+	      if (reqTime === lastStateReqTime) {
+	        const currState = getState();
+	        const currHash = JSON.stringify(currState).hash();
+	        if (currHash !== indexHash()) {
+	          if (states.length > index) states = states.slice(0, index);
+	          states.push({hash: currHash, json: currState});
+	          index = states.length;
+	          // console.log('new history element!', index, currHash);
+	          // console.log(JSON.stringify(currState, null, 2));
+	        }
+	      }
+	    }
+	
+	    this.newState = () => {
+	      const thisReqTime = new Date().getTime();
+	      lastStateReqTime = thisReqTime;
+	      setTimeout(() => getNewState(thisReqTime), minTimeInterval);
+	    }
+	
+	    this.forceState = () => {
+	      lastStateReqTime = 0;
+	      getNewState(0);
+	    }
+	
+	    this.canGoBack = () => index > 1;
+	    this.canGoForward = () => index < states.length;
+	
+	    this.back = () => {
+	      if (this.canGoBack()) {
+	        const state = states[--index - 1];
+	        console.log('goingBack', index, indexHash());
+	        lastStateReqTime = 0;
+	        return state.json;
+	      }
+	    }
+	
+	    this.forward = () => {
+	      if (this.canGoForward()) {
+	        const state = states[index++];
+	        console.log('goingForward', index, indexHash());
+	        lastStateReqTime = 0;
+	        return state.json;
+	      }
+	    }
+	  }
+	}
+	
+	module.exports = StateHistory;
 	
 });
 
@@ -12603,233 +12846,325 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/display/resizer.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
 function (require, exports, module) {
-	const CatchAll = require('./catch-all');
-	const du = require('../dom-utils');
-	const CustomEvent = require('../custom-event');
 	
-	class Resizer {
-	  constructor (elem, axisObj, cursor) {
-	    const instance = this;
-	    const minimumSize = 40;
-	    let resizeId = elem.getAttribute(Resizer.resizeAttr);
-	    let sizeLocked = false;
+
 	
-	    if (!resizeId) {
-	      resizeId = 'resize-' + Math.floor(Math.random() * 1000000);
-	      elem.setAttribute(Resizer.resizeAttr, resizeId);
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Select extends Input {
+	  constructor(props) {
+	    super(props);
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.index && props.list[props.index] ?
+	      props.list[props.index] : props.list[0];
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
 	    }
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    const parentHidden = this.hidden;
+	    this.hidden = () => props.list.length < 2 || parentHidden();
 	
-	    this.show = () => {this.container.hidden = false; this.position()};
-	    this.hide = () => this.container.hidden = true;
+	    this.selected = (value) => value === this.value();
+	  }
+	}
 	
-	    function updateZindex(zIndex) {
-	      if (instance.container.hidden === false) {
-	        instance.container.style.zIndex = zIndex;
-	        elem.style.zIndex = zIndex;
-	        Resizer.backdrop.updateZindex();
-	        instance.position();
-	      }
-	    }
-	    this.updateZindex = updateZindex;
-	    elem.addEventListener('click', () => Resizer.updateZindex(elem));
+	Select.template = new $t('input/select');
+	Select.html = (instance) => () => Select.template.render(instance);
+	
+	module.exports = Select;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
+function (require, exports, module) {
+	
+
 	
 	
-	    if (resizeId) {
-	      if (!Resizer.collections[resizeId]) {
-	        Resizer.collections[resizeId] = [];
-	      }
-	      Resizer.collections[resizeId].push(this);
-	    }
-	    const padding = 8;
-	    let resize = false;
-	    let lastPosition;
-	    this.getPadding = () => padding;
 	
-	    const attrs = Object.values(axisObj);
-	    const top = attrs.indexOf('top') !== -1;
-	    const bottom = attrs.indexOf('bottom') !== -1;
-	    const left = attrs.indexOf('left') !== -1;
-	    const right = attrs.indexOf('right') !== -1;
+	const DecisionTree = require('../../decision-tree.js');
+	const LogicTree = require('../../logic-tree.js');
+	const LogicWrapper = LogicTree.LogicWrapper
+	const Input = require('../input.js');
+	const du = require('../../dom-utils');
+	const $t = require('../../$t');
 	
-	    this.container = document.createElement('DIV');
-	    this.container.style.cursor = cursor;
-	    this.container.style.padding = padding/2 + 'px';
-	    this.container.style.position = axisObj.position || 'absolute';
-	    this.container.style.backgroundColor = 'transparent';
-	    Resizer.container.append(this.container);
+	const ROOT_CLASS = 'decision-input-tree';
 	
-	    function getComputedSize(element, property) {
-	      return Number.parseInt(window.getComputedStyle(element).getPropertyValue(property));
-	    }
-	
-	    function resizeCnt (event) {
-	      if (resize) {
-	        Resizer.updateZindex(elem);
-	        let dy = resize.clientY - event.clientY;
-	        let dx = resize.clientX - event.clientX;
-	        let minHeight = getComputedSize(elem, 'min-height');
-	        let minWidth = getComputedSize(elem, 'min-width');
-	        if (axisObj.x) {
-	          if (left) dx *= -1;
-	          const newWidth = lastPosition.width - dx;
-	          if (newWidth > minWidth) {
-	            if (left) {
-	              elem.style.left = lastPosition.left + dx + 'px';
-	            }
-	            elem.style.width = newWidth + 'px'
+	class ValueCondition {
+	  constructor(name, accepted, payload) {
+	    Object.getSet(this, {name, accepted});
+	    this.payload = payload;
+	    this.condition = (wrapper) => {
+	        let value;
+	        wrapper.root().node.forEach((node) => {
+	          node.payload().inputArray.forEach((input) => {
+	            if (input.name() === name) value = input.value();
+	          });
+	        });
+	        if (Array.isArray(accepted)) {
+	          for (let index = 0; index < accepted.length; index +=1) {
+	            if (value === accepted[index]) return true;
 	          }
+	          return false;
 	        }
-	        if (axisObj.y) {
-	          if (top) dy *= -1;
-	          const newHeight = lastPosition.height - dy;
-	          if (newHeight > minHeight) {
-	            if (top) {
-	              elem.style.top = lastPosition.top + window.scrollY + dy + 'px';
-	            }
-	            elem.style.height = newHeight + 'px'
-	          }
-	        }
-	      }
-	    }
-	
-	    this.container.onmousedown = (e) => {
-	      resize = e;
-	      Resizer.backdrop.show();
-	      lastPosition = elem.getBoundingClientRect();
-	      // e.stopPropagation();
-	      // e.preventDefault();
-	    }
-	
-	    function stopResizing() {
-	      if (resize) {
-	        resize = undefined;
-	        Resizer.position(elem);
-	        Resizer.backdrop.hide();
-	        Resizer.events.resize.trigger(elem);
-	      }
-	    }
-	
-	    function isFixed() {
-	      return axisObj.position && axisObj.position === 'fixed';
-	    }
-	
-	    // this.container.addEventListener('click',
-	    // (e) =>
-	    // e.stopPropagation()
-	    // );
-	    Resizer.backdrop.on('mouseup', stopResizing);
-	    this.container.onmouseup = stopResizing;
-	
-	    this.container.onmousemove = resizeCnt;
-	    Resizer.backdrop.on('mousemove', (event) =>
-	    resizeCnt(event));
-	    this.position = function () {
-	      const height = document.documentElement.clientHeight;
-	      const width = document.documentElement.clientWidth;
-	      const rect = elem.getBoundingClientRect();
-	      const cntStyle = instance.container.style;
-	      const scrollY =  isFixed() ? 0 : window.scrollY;
-	      const scrollX =  isFixed() ? 0 : window.scrollX;
-	      if (top) {
-	        cntStyle.top = rect.top - padding + scrollY + 'px';
-	      } else if (!bottom) {
-	        cntStyle.top = rect.top + scrollY + 'px';
-	      }
-	
-	      if (bottom) {
-	        cntStyle.bottom = (height - rect.bottom) - padding - scrollY + 'px';
-	      } else if (!top) {
-	        cntStyle.bottom = (height - rect.bottom) - scrollY + 'px';
-	      }
-	
-	      if (right) {
-	        cntStyle.right = (width - rect.right) - padding - scrollX + 'px';
-	      } else if (!left) {
-	        cntStyle.right = (width - rect.right) - scrollX + 'px';
-	      }
-	
-	      if (left) {
-	        cntStyle.left = rect.left - padding + scrollX + 'px';
-	      } else if (!right) {
-	        cntStyle.left = rect.left + scrollX + 'px';
-	      }
+	        return value === accepted;
 	    }
 	  }
 	}
 	
-	Resizer.container = du.create.element('div', {id: 'resizer-cnt'});
-	document.body.append(Resizer.container);
+	class DecisionInput {
+	  constructor(name, inputArrayOinstance, tree, isRoot) {
+	    Object.getSet(this, 'name', 'id', 'childCntId', 'inputArray', 'class', 'condition');
+	    this.clone = () =>
+	        this;
 	
-	Resizer.lastZindexSearch = new Date().getTime();
-	Resizer.zIndex = (zindex) => {
-	  const time = new Date().getTime();
-	  if (time > Resizer.lastZindexSearch + 500) {
-	    Resizer.zed = CatchAll.findHigestZindex();
-	    lastZindexSearch = time;
-	  }
-	  return Resizer.zed;
-	}
-	Resizer.container.id = 'resize-id-id';
-	// Resizer.container.addEventListener('click', (e) => e.stopPropagation());
-	Resizer.events = {};
-	Resizer.events.resize = new CustomEvent ('resized')
-	
-	Resizer.backdrop = new CatchAll();
-	
-	Resizer.resizeAttr = 'resizer-id'
-	Resizer.collections = {};
-	Resizer.position = function (elem) {
-	  const resizeId = elem.getAttribute(Resizer.resizeAttr);
-	  const collection = Resizer.collections[resizeId];
-	  if (collection) {
-	    collection.forEach((item) => item.position());
-	  }
-	}
-	Resizer.onEach = function (elem, func) {
-	  const callArgs = Array.from(arguments).splice(2);
-	  const resizeId = elem.getAttribute(Resizer.resizeAttr);
-	  const collection = Resizer.collections[resizeId];
-	  if (collection) {
-	    collection.forEach((item) => item[func](...callArgs));
-	  }
-	}
-	Resizer.hide = (elem) => Resizer.onEach(elem, 'hide');
-	Resizer.show = (elem) => {
-	    if (!Resizer.isLocked(elem)) {
-	      Resizer.onEach(elem, 'show');
-	      Resizer.updateZindex(elem);
+	    if (inputArrayOinstance instanceof ValueCondition) {
+	      this.condition = inputArrayOinstance.condition;
+	      this.isConditional = true;
+	      inputArrayOinstance = inputArrayOinstance.payload;
 	    }
-	};
-	Resizer.updateZindex = (elem, callback) => {
-	  const highestZIndex = Resizer.zIndex() - 3;
-	  if (!elem.style.zIndex ||
-	      (elem.style.zIndex.match(/[0-9]{1,}/) &&
-	        highestZIndex > Number.parseInt(elem.style.zIndex))) {
-	    Resizer.onEach(elem, 'updateZindex', highestZIndex + 4);
+	    if (inputArrayOinstance !== undefined){
+	      this.name = name;
+	      this.id = `decision-input-node-${String.random()}`;
+	      this.childCntId = `decision-child-ctn-${String.random()}`
+	      this.values = tree.values;
+	      this.onComplete = tree.onComplete;
+	      this.onChange = tree.onChange;
+	      this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
+	      this.class =  ROOT_CLASS;
+	      this.getValue = (index) => this.inputArray[index].value();
+	      this.validate = () => DecisionInputTree.validateInput(inputArrayOinstance, this.values);
+	    }
+	
+	    const getWrapper = (wrapperOid) => wrapperOid instanceof LogicWrapper ?
+	        wrapperOid : (LogicWrapper.get(wrapperId) || this.root());
+	
+	    this.branch = (wrapperId, inputs) =>
+	            get(wrapperId).branch(String.random(), new DecisionInput(name));
+	    this.conditional = (wrapperId, inputs, name, selector) =>
+	            get(wrapperId).conditional(String.random(), new DecisionInput(name, relation, formula));
+	
+	    this.update = tree.update;
+	    this.addValues = (values) => {
+	      this.inputArray.forEach((input) => values[input.name()] = input.value())
+	    }
+	
+	    this.reachable = () => {
+	      const nodeId = this._nodeId;
+	      const wrapper = LogicWrapper.get(nodeId);
+	      return wrapper.reachable();
+	    }
+	    this.isValid = () => {
+	      let valid = true;
+	      this.inputArray.forEach((input) =>
+	            valid = valid && input.valid());
+	      return valid;
+	    }
+	    this.isRoot = () => isRoot;
+	
+	    this.html = (parentCalling) => {
+	      if (this.isRoot() && parentCalling !== true) return tree.html();
+	      return DecisionInput.template.render(this);
+	    }
+	    this.treeHtml = (wrapper) => tree.html(wrapper);
+	  }
+	}
+	DecisionInput.template = new $t('input/decision/decision');
+	
+	
+	// properties
+	// optional :
+	// noSubmission: /[0-9]{1,}/ delay that determins how often a submission will be processed
+	// buttonText: determins the text displayed on submit button;
+	
+	class DecisionInputTree extends LogicTree {
+	  constructor(onComplete, props) {
+	    const decisionInputs = [];
+	    props = props || {};
+	    const tree = {};
+	
+	    tree.buttonText = () => {
+	      return props.buttonText || `Create ${root.node.name}`;
+	    }
+	    function superArgument(onComplete) {
+	      const formatPayload = (name, payload) => {
+	        decisionInputs.push(new DecisionInput(name, payload, tree, decisionInputs.length === 0));
+	        return decisionInputs[decisionInputs.length - 1];
+	      }
+	      if (onComplete && onComplete._TYPE === 'DecisionInputTree') {
+	        onComplete.formatPayload = formatPayload;
+	        return onComplete;
+	      }
+	      return formatPayload;
+	    }
+	
+	    super(superArgument(onComplete));
+	    const root = this;
+	
+	    const onCompletion = [];
+	    const onChange = [];
+	    const onSubmit = [];
+	    tree.html = (wrapper) => {
+	      wrapper = wrapper || root;
+	      let inputHtml = '';
+	      wrapper.forAll((wrapper) => {
+	        inputHtml += wrapper.payload().html(true);
+	      });
+	      const scope = {wrapper, inputHtml, DecisionInputTree, tree};
+	      if (wrapper === root) {
+	        return DecisionInputTree.template.render(scope);
+	      }
+	      return inputHtml;
+	    };
+	
+	
+	    this.onComplete = (func) => {
+	      if ((typeof func) === 'function') onCompletion.push(func);
+	    }
+	    this.onChange = (func) => {
+	      if ((typeof func) === 'function') onChange.push(func);
+	    }
+	    this.onSubmit = (func) => {
+	      if ((typeof func) === 'function') onSubmit.push(func);
+	    }
+	
+	    this.values = () => {
+	      const values = {};
+	      root.forEach((wrapper) => {
+	        wrapper.payload().addValues(values);
+	      });
+	      return values;
+	    }
+	    tree.values = root.values;
+	    tree.hideButton = props.noSubmission;
+	
+	    let completionPending = false;
+	    this.completed = () => {
+	      if (!root.isComplete()) return false;
+	      const delay = props.noSubmission || 0;
+	      if (!completionPending) {
+	        completionPending = true;
+	        setTimeout(() => {
+	          const values = tree.values();
+	          onCompletion.forEach((func) => func(values))
+	          completionPending = false;
+	        }, delay);
+	      }
+	      return true;
+	    }
+	
+	    let submissionPending = false;
+	    this.submit = () => {
+	      const delay = props.noSubmission || 0;
+	      if (!submissionPending) {
+	        submissionPending = true;
+	        setTimeout(() => {
+	          const values = tree.values();
+	          if (!root.isComplete()) return false;
+	          onSubmit.forEach((func) => func(values))
+	          submissionPending = false;
+	        }, delay);
+	      }
+	      return true;
+	    }
+	
+	    let changePending = false;
+	    this.changed = (elem) => {
+	      const delay = props.noSubmission || 0;
+	      if (!changePending) {
+	        changePending = true;
+	        setTimeout(() => {
+	          const values = tree.values();
+	          onChange.forEach((func) => func(values, this, elem))
+	          changePending = false;
+	        }, delay);
+	      }
+	      return true;
+	    }
+	
+	    this.onComplete(onComplete);
+	
+	    return this;
 	  }
 	}
 	
-	{
-	  const locked = {};
-	  Resizer.lock = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)] = true;
-	  Resizer.unlock = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)] = false;
-	  Resizer.isLocked  = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)];
+	DecisionInputTree.ValueCondition = ValueCondition;
+	
+	DecisionInputTree.class = 'decision-input-tree';
+	DecisionInputTree.buttonClass = 'decision-input-tree-submit';
+	
+	DecisionInputTree.validate = (wrapper) => {
+	  let valid = true;
+	  wrapper.forEach((wrapper) => {
+	    valid = valid && wrapper.payload().isValid();
+	  });
+	  return valid;
 	}
 	
-	Resizer.all = (elem, position) => {
-	  new Resizer(elem, {y: 'top', position}, 'n-resize');
-	  new Resizer(elem, {y: 'bottom', position}, 's-resize');
-	  new Resizer(elem, {x: 'right', position}, 'e-resize');
-	  new Resizer(elem, {x: 'left', position}, 'w-resize', position);
-	  new Resizer(elem, {x: 'right', y: 'top', position}, 'ne-resize');
-	  new Resizer(elem, {x: 'left', y: 'top', position}, 'nw-resize');
-	  new Resizer(elem, {x: 'right', y: 'bottom', position}, 'se-resize');
-	  new Resizer(elem, {x: 'left', y: 'bottom', position}, 'sw-resize');
+	function isComplete(wrapper) {
+	  return wrapper.isComplete() && DecisionInputTree.validate(wrapper)
 	}
 	
-	module.exports = Resizer;
+	DecisionInputTree.update = (soft) =>
+	  (elem) => {
+	    const cnt = du.find.closest('[node-id]', elem);
+	    const parent = cnt.parentElement;
+	    const nodeId = cnt.getAttribute('node-id');
+	    const wrapper = LogicWrapper.get(nodeId);
+	    console.log(isComplete(wrapper));
+	    if(!soft) {
+	      du.find.downAll('.decision-input-cnt', parent).forEach((e) => e.hidden = true)
+	      wrapper.forEach((n) => {
+	        let selector = `[node-id='${n.nodeId()}']`;
+	        elem = du.find.down(selector, parent);
+	        if (elem) elem.hidden = false;
+	      });
+	      wrapper.root().changed();
+	      wrapper.root().completed()
+	    } else {
+	      const button = du.find.closest('button', elem);
+	      button.disabled = !isComplete(wrapper);
+	    }
+	  };
+	
+	DecisionInputTree.submit = (elem) => {
+	  const wrapper = LogicWrapper.get(elem.getAttribute('root-id'));
+	  wrapper.submit();
+	}
+	
+	du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
+	du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
+	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
+	
+	
+	DecisionInputTree.DO_NOT_CLONE = true;
+	DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
+	  if (Array.isArray(inputArrayOinstance)) {
+	    inputArrayOinstance.forEach((instance) => {
+	      instance.childCntId = `decision-child-ctn-${String.random()}`
+	    });
+	    return inputArrayOinstance;
+	  }
+	  inputArrayOinstance.childCntId = `decision-child-ctn-${String.random()}`
+	  return [inputArrayOinstance];
+	}
+	
+	DecisionInputTree.template = new $t('input/decision/decisionTree');
+	
+	module.exports = DecisionInputTree;
 	
 });
 
@@ -13001,309 +13336,6 @@ function (require, exports, module) {
 	  ts.assertEquals(dNode.leaves().length, 15, 'Not plucking all the leaves');
 	  ts.success();
 	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const DecisionTree = require('../../decision-tree.js');
-	const LogicTree = require('../../logic-tree.js');
-	const LogicWrapper = LogicTree.LogicWrapper
-	const Input = require('../input.js');
-	const du = require('../../dom-utils');
-	const $t = require('../../$t');
-	
-	const ROOT_CLASS = 'decision-input-tree';
-	
-	class ValueCondition {
-	  constructor(name, accepted, payload) {
-	    Object.getSet(this, {name, accepted});
-	    this.payload = payload;
-	    this.condition = (wrapper) => {
-	        let value;
-	        wrapper.root().node.forEach((node) => {
-	          node.payload().inputArray.forEach((input) => {
-	            if (input.name() === name) value = input.value();
-	          });
-	        });
-	        if (Array.isArray(accepted)) {
-	          for (let index = 0; index < accepted.length; index +=1) {
-	            if (value === accepted[index]) return true;
-	          }
-	          return false;
-	        }
-	        return value === accepted;
-	    }
-	  }
-	}
-	
-	class DecisionInput {
-	  constructor(name, inputArrayOinstance, tree, isRoot) {
-	    Object.getSet(this, 'name', 'id', 'childCntId', 'inputArray', 'class', 'condition');
-	    this.clone = () =>
-	        this;
-	
-	    if (inputArrayOinstance instanceof ValueCondition) {
-	      this.condition = inputArrayOinstance.condition;
-	      this.isConditional = true;
-	      inputArrayOinstance = inputArrayOinstance.payload;
-	    }
-	    if (inputArrayOinstance !== undefined){
-	      this.name = name;
-	      this.id = `decision-input-node-${String.random()}`;
-	      this.childCntId = `decision-child-ctn-${String.random()}`
-	      this.values = tree.values;
-	      this.onComplete = tree.onComplete;
-	      this.onChange = tree.onChange;
-	      this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
-	      this.class =  ROOT_CLASS;
-	      this.getValue = (index) => this.inputArray[index].value();
-	      this.validate = () => DecisionInputTree.validateInput(inputArrayOinstance, this.values);
-	    }
-	
-	    const getWrapper = (wrapperOid) => wrapperOid instanceof LogicWrapper ?
-	        wrapperOid : (LogicWrapper.get(wrapperId) || this.root());
-	
-	    this.branch = (wrapperId, inputs) =>
-	            get(wrapperId).branch(String.random(), new DecisionInput(name));
-	    this.conditional = (wrapperId, inputs, name, selector) =>
-	            get(wrapperId).conditional(String.random(), new DecisionInput(name, relation, formula));
-	
-	    this.update = tree.update;
-	    this.addValues = (values) => {
-	      this.inputArray.forEach((input) => values[input.name()] = input.value())
-	    }
-	
-	    this.reachable = () => {
-	      const nodeId = this._nodeId;
-	      const wrapper = LogicWrapper.get(nodeId);
-	      return wrapper.reachable();
-	    }
-	    this.isValid = () => {
-	      let valid = true;
-	      this.inputArray.forEach((input) =>
-	            valid = valid && input.valid());
-	      return valid;
-	    }
-	    this.isRoot = () => isRoot;
-	
-	    this.html = (parentCalling) => {
-	      if (this.isRoot() && parentCalling !== true) return tree.html();
-	      return DecisionInput.template.render(this);
-	    }
-	    this.treeHtml = (wrapper) => tree.html(wrapper);
-	  }
-	}
-	DecisionInput.template = new $t('input/decision/decision');
-	
-	
-	// properties
-	// optional :
-	// noSubmission: /[0-9]{1,}/ delay that determins how often a submission will be processed
-	// buttonText: determins the text displayed on submit button;
-	
-	class DecisionInputTree extends LogicTree {
-	  constructor(onComplete, props) {
-	    const decisionInputs = [];
-	    props = props || {};
-	    const tree = {};
-	
-	    tree.buttonText = () => {
-	      return props.buttonText || `Create ${root.node.name}`;
-	    }
-	    function superArgument(onComplete) {
-	      const formatPayload = (name, payload) => {
-	        decisionInputs.push(new DecisionInput(name, payload, tree, decisionInputs.length === 0));
-	        return decisionInputs[decisionInputs.length - 1];
-	      }
-	      if (onComplete && onComplete._TYPE === 'DecisionInputTree') {
-	        onComplete.formatPayload = formatPayload;
-	        return onComplete;
-	      }
-	      return formatPayload;
-	    }
-	
-	    super(superArgument(onComplete));
-	    const root = this;
-	
-	    const onCompletion = [];
-	    const onChange = [];
-	    tree.html = (wrapper) => {
-	      wrapper = wrapper || root;
-	      let inputHtml = '';
-	      wrapper.forAll((wrapper) => {
-	        inputHtml += wrapper.payload().html(true);
-	      });
-	      const scope = {wrapper, inputHtml, DecisionInputTree, tree};
-	      if (wrapper === root) {
-	        return DecisionInputTree.template.render(scope);
-	      }
-	      return inputHtml;
-	    };
-	
-	
-	    this.onComplete = (func) => {
-	      if ((typeof func) === 'function') onCompletion.push(func);
-	    }
-	    this.onChange = (func) => {
-	      if ((typeof func) === 'function') onChange.push(func);
-	    }
-	
-	    this.values = () => {
-	      const values = {};
-	      root.forEach((wrapper) => {
-	        wrapper.payload().addValues(values);
-	      });
-	      return values;
-	    }
-	    tree.values = root.values;
-	    tree.hideButton = props.noSubmission;
-	
-	    let submissionPending = false;
-	    this.completed = () => {
-	      if (!root.isComplete()) return false;
-	      const delay = props.noSubmission || 0;
-	      if (!submissionPending) {
-	        submissionPending = true;
-	        setTimeout(() => {
-	          const values = tree.values();
-	          onCompletion.forEach((func) => func(values))
-	          submissionPending = false;
-	        }, delay);
-	      }
-	      return true;
-	    }
-	
-	    this.changed = (elem) => {
-	      const delay = props.noSubmission || 0;
-	      if (!submissionPending) {
-	        submissionPending = true;
-	        setTimeout(() => {
-	          const values = tree.values();
-	          onChange.forEach((func) => func(values, this, elem))
-	          submissionPending = false;
-	        }, delay);
-	      }
-	      return true;
-	    }
-	
-	    this.onComplete(onComplete);
-	
-	    return this;
-	  }
-	}
-	
-	DecisionInputTree.ValueCondition = ValueCondition;
-	
-	DecisionInputTree.class = 'decision-input-tree';
-	DecisionInputTree.buttonClass = 'decision-input-tree-submit';
-	
-	DecisionInputTree.validate = (wrapper) => {
-	  let valid = true;
-	  wrapper.forEach((wrapper) => {
-	    valid = valid && wrapper.payload().isValid();
-	  });
-	  return valid;
-	}
-	
-	function isComplete(wrapper) {
-	  return wrapper.isComplete() && DecisionInputTree.validate(wrapper)
-	}
-	
-	DecisionInputTree.update = (soft) =>
-	  (elem) => {
-	    const cnt = du.find.closest('[node-id]', elem);
-	    const parent = cnt.parentElement;
-	    const nodeId = cnt.getAttribute('node-id');
-	    const wrapper = LogicWrapper.get(nodeId);
-	    console.log(isComplete(wrapper));
-	    if(!soft) {
-	      du.find.downAll('.decision-input-cnt', parent).forEach((e) => e.hidden = true)
-	      wrapper.forEach((n) => {
-	        let selector = `[node-id='${n.nodeId()}']`;
-	        elem = du.find.down(selector, parent);
-	        if (elem) elem.hidden = false;
-	      });
-	      wrapper.root().changed();
-	      wrapper.root().completed()
-	    } else {
-	      const button = du.find.closest('button', elem);
-	      button.disabled = !isComplete(wrapper);
-	    }
-	  };
-	
-	DecisionInputTree.submit = (elem) => {
-	  const wrapper = LogicWrapper.get(elem.getAttribute('root-id'));
-	  wrapper.completed();
-	}
-	
-	du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
-	du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
-	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
-	
-	
-	DecisionInputTree.DO_NOT_CLONE = true;
-	DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
-	  if (Array.isArray(inputArrayOinstance)) {
-	    inputArrayOinstance.forEach((instance) => {
-	      instance.childCntId = `decision-child-ctn-${String.random()}`
-	    });
-	    return inputArrayOinstance;
-	  }
-	  inputArrayOinstance.childCntId = `decision-child-ctn-${String.random()}`
-	  return [inputArrayOinstance];
-	}
-	
-	DecisionInputTree.template = new $t('input/decision/decisionTree');
-	
-	module.exports = DecisionInputTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Select extends Input {
-	  constructor(props) {
-	    super(props);
-	    const isArray = Array.isArray(props.list);
-	    let value;
-	    if (isArray) {
-	      value = props.index && props.list[props.index] ?
-	      props.list[props.index] : props.list[0];
-	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
-	    } else {
-	      const key = Object.keys(props.list)[0];
-	      value = props.value || key;
-	    }
-	    props.value = undefined;
-	    this.setValue(value);
-	    this.isArray = () => isArray;
-	    const parentHidden = this.hidden;
-	    this.hidden = () => props.list.length < 2 || parentHidden();
-	
-	    this.selected = (value) => value === this.value();
-	  }
-	}
-	
-	Select.template = new $t('input/select');
-	Select.html = (instance) => () => Select.template.render(instance);
-	
-	module.exports = Select;
 	
 });
 
@@ -14057,10 +14089,54 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 			` </datalist> </span>`
 	
+	exports['554785822'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("tdm").isTarget("part-id", get("part").uniqueId()) ? "active " : "") +
+			` model-label indent' ` +
+			$t.clean(get("partList").length > 1 ? "" : "hidden") +
+			`> <label type='part-id' part-id='` +
+			$t.clean(get("part").uniqueId()) +
+			`'> ` +
+			$t.clean(get("part").partCode()) +
+			`-` +
+			$t.clean(get("$index") +
+			1) +
+			` </label> <input type='checkbox' class='part-id-checkbox' part-id='` +
+			$t.clean(get("part").uniqueId()) +
+			`' ` +
+			$t.clean(!get("tdm").hideId(get("part").uniqueId()) ? 'checked' : '') +
+			`> </div>`
+	
+	exports['584330325'] = (get, $t) => 
+			`<div class='model-label` +
+			$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
+			`' > <label type='part-name'>` +
+			$t.clean(get("partName")) +
+			`</label> <input type='checkbox' class='part-name-checkbox' part-name='` +
+			$t.clean(get("partName")) +
+			`' ` +
+			$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
+			`> ` +
+			$t.clean( new $t('-2091403791').render(get("partList"), 'part', get)) +
+			` </div>`
+	
 	exports['714657883'] = (get, $t) => 
 			`<div >` +
 			$t.clean(get("groupHtml")(get("group"))) +
 			`</div>`
+	
+	exports['735252018'] = (get, $t) => 
+			`<div class='model-label` +
+			$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
+			`' > <label type='part-name'>` +
+			$t.clean(get("partName")) +
+			`</label> <input type='checkbox' class='part-name-checkbox' part-name='` +
+			$t.clean(get("partName")) +
+			`' ` +
+			$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
+			`> ` +
+			$t.clean( new $t('554785822').render(get("partList"), 'part', get)) +
+			` </div>`
 	
 	exports['990870856'] = (get, $t) => 
 			`<div class='inline' > <h3>` +
@@ -14075,19 +14151,6 @@ exports['101748844'] = (get, $t) =>
 			` (` +
 			$t.clean(get("property").code()) +
 			`) </div>`
-	
-	exports['1136490671'] = (get, $t) => 
-			`<div class='model-label` +
-			$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
-			`' > <label type='part-name'>` +
-			$t.clean(get("partName")) +
-			`</label> <input type='checkbox' class='part-name-checkbox' part-name='` +
-			$t.clean(get("partName")) +
-			`' ` +
-			$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
-			`> ` +
-			$t.clean( new $t('1686400020').render(get("partList"), 'part', get)) +
-			` </div>`
 	
 	exports['1410278299'] = (get, $t) => 
 			`<span > <label>` +
@@ -14132,18 +14195,18 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("getBody") && get("getBody")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['1686400020'] = (get, $t) => 
-			`<div class='` +
-			$t.clean(get("tdm").isTarget("part-code", get("part").partCode()) ? "active " : "") +
-			` model-label indent' ` +
-			$t.clean(get("partList").length > 1 ? "" : "hidden") +
-			`> <label type='part-code'>` +
-			$t.clean(get("part").partCode()) +
-			`</label> <input type='checkbox' class='part-code-checkbox' part-code='` +
-			$t.clean(get("part").partCode()) +
+	exports['1753942820'] = (get, $t) => 
+			`<div class='model-label` +
+			$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
+			`' > <label type='part-name'>` +
+			$t.clean(get("partName")) +
+			`</label> <input type='checkbox' class='part-name-checkbox' part-name='` +
+			$t.clean(get("partName")) +
 			`' ` +
-			$t.clean(!get("tdm").hidePartCode(get("part").partCode()) ? 'checked' : '') +
-			`> </div>`
+			$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
+			`> ` +
+			$t.clean( new $t('-1523801133').render(get("partList"), 'part', get)) +
+			` </div>`
 	
 	exports['1835219150'] = (get, $t) => 
 			`<option value='` +
@@ -14199,6 +14262,44 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("listElemLable")()) +
 			`</button></div> </div> `
 	
+	exports['expandable/pill'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> <div class="expand-list-cnt ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('-2108278621').render(get("list")(), 'key, item', get)) +
+			` <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> </div> <div> <div class='expand-input-cnt' hidden>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <br> <div class='error' id='` +
+			$t.clean(get("ERROR_CNT_ID")()) +
+			`'></div> </div> <div class="expand-body ` +
+			$t.clean(get("type")()) +
+			`"></div> </div> `
+	
+	exports['-2108278621'] = (get, $t) => 
+			`<div key='` +
+			$t.clean(get("key")) +
+			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'>X</button> </div> <div class="expand-header ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'> ` +
+			$t.clean(get("getHeader")(get("item"), get("key"))) +
+			` </div> </div> </div>`
+	
 	exports['expandable/sidebar'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -14241,44 +14342,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['expandable/pill'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> <div class="expand-list-cnt ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('-2108278621').render(get("list")(), 'key, item', get)) +
-			` <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> </div> <div> <div class='expand-input-cnt' hidden>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <br> <div class='error' id='` +
-			$t.clean(get("ERROR_CNT_ID")()) +
-			`'></div> </div> <div class="expand-body ` +
-			$t.clean(get("type")()) +
-			`"></div> </div> `
-	
-	exports['-2108278621'] = (get, $t) => 
-			`<div key='` +
-			$t.clean(get("key")) +
-			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key")) +
-			`'>X</button> </div> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("key"))) +
-			` </div> </div> </div>`
-	
 	exports['input/decision/decision'] = (get, $t) => 
 			` <span class='decision-input-cnt' node-id='` +
 			$t.clean(get("_nodeId")) +
@@ -14306,6 +14369,29 @@ exports['101748844'] = (get, $t) =>
 			`> ` +
 			$t.clean(get("tree").buttonText()) +
 			` </button> </div> `
+	
+	exports['input/measurement'] = (get, $t) => 
+			`<div class='fit input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <input class='measurement-input ` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' value='` +
+			$t.clean(get("value")() ? get("value")() : "") +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`'> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
 	
 	exports['input/input'] = (get, $t) => 
 			`<` +
@@ -14345,46 +14431,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("item")) +
 			`" ></option>`
 	
-	exports['input/measurement'] = (get, $t) => 
-			`<div class='fit input-cnt'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			`> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <input class='measurement-input ` +
-			$t.clean(get("class")()) +
-			`' id='` +
-			$t.clean(get("id")()) +
-			`' value='` +
-			$t.clean(get("value")() ? get("value")() : "") +
-			`' placeholder='` +
-			$t.clean(get("placeholder")()) +
-			`' type='` +
-			$t.clean(get("type")()) +
-			`' name='` +
-			$t.clean(get("name")()) +
-			`'> <div class='error' id='` +
-			$t.clean(get("errorMsgId")()) +
-			`' hidden>` +
-			$t.clean(get("errorMsg")()) +
-			`</div> </div> `
-	
-	exports['2d/pop-up/door-2d'] = (get, $t) => 
-			`<div type-2d='` +
-			$t.clean(get("target").constructor.name) +
-			`' id='` +
-			$t.clean(get("target").id()) +
-			`' x='` +
-			$t.clean(get("lastImagePoint").x) +
-			`' y='` +
-			$t.clean(get("lastImagePoint").y) +
-			`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
-			$t.clean(get("display")(get("target").height())) +
-			`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
-			$t.clean(get("display")(get("target").width())) +
-			`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
-			$t.clean(get("display")(get("target").fromFloor())) +
-			`'></td> </tr> <tr> <td> <button class='hinge-btn'>Hinge</button> </td> <td><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
-	
 	exports['input/select'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline") ? 'span' : 'div') +
@@ -14409,6 +14455,23 @@ exports['101748844'] = (get, $t) =>
 			`</div> </` +
 			$t.clean(get("inline") ? 'span' : 'div') +
 			`> `
+	
+	exports['2d/pop-up/door-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
+			$t.clean(get("display")(get("target").height())) +
+			`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
+			$t.clean(get("display")(get("target").width())) +
+			`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
+			$t.clean(get("display")(get("target").fromFloor())) +
+			`'></td> </tr> <tr> <td> <button class='hinge-btn'>Hinge</button> </td> <td><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
 	
 	exports['2d/pop-up/line-measurement-2d'] = (get, $t) => 
 			`<div type-2d='` +
@@ -14435,6 +14498,21 @@ exports['101748844'] = (get, $t) =>
 			`" ` +
 			$t.clean(get("property").value() === true ? 'checked' : '') +
 			`> </span>`
+	
+	exports['2d/pop-up/vertex-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <table> <tr> <td><label>X</label></td> <td><input class='value-2d' key='x' value='` +
+			$t.clean(get("display")(get("target").x())) +
+			`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='value-2d' key='y' value='` +
+			$t.clean(get("display")(get("target").y())) +
+			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> <tr> </table> </div> `
 	
 	exports['2d/pop-up/snap-2d'] = (get, $t) => 
 			`<div type-2d='` +
@@ -14468,21 +14546,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("lastImagePoint").y) +
 			`'> <button class='add-door-btn-2d'>Add Door</button> <button class='add-window-btn-2d'>Add Window</button> <button class='add-vertex-btn-2d'>Add Vertex</button> <button class='add-object-btn-2d'>Add Object</button> <button class='remove-btn-2d'>Remove</button> </div> `
 	
-	exports['2d/pop-up/vertex-2d'] = (get, $t) => 
-			`<div type-2d='` +
-			$t.clean(get("target").constructor.name) +
-			`' id='` +
-			$t.clean(get("target").id()) +
-			`' x='` +
-			$t.clean(get("lastImagePoint").x) +
-			`' y='` +
-			$t.clean(get("lastImagePoint").y) +
-			`'> <table> <tr> <td><label>X</label></td> <td><input class='value-2d' key='x' value='` +
-			$t.clean(get("display")(get("target").x())) +
-			`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='value-2d' key='y' value='` +
-			$t.clean(get("display")(get("target").y())) +
-			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> <tr> </table> </div> `
-	
 	exports['2d/pop-up/window-2d'] = (get, $t) => 
 			`<div type-2d='` +
 			$t.clean(get("target").constructor.name) +
@@ -14499,29 +14562,6 @@ exports['101748844'] = (get, $t) =>
 			`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
 			$t.clean(get("display")(get("target").fromFloor())) +
 			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
-	
-	exports['cabinet/body'] = (get, $t) => 
-			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
-			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
-			` </select> </div> <div class='property-id-container center inline-flex'>` +
-			$t.clean(get("selectHtml")) +
-			`</div> <div class='right'> <select class="show-right-select"> ` +
-			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
-			` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
-			$t.clean(get("$index")) +
-			`'>Save</button> </div> ` +
-			$t.clean( new $t('-1702305177').render(get("cabinet").openings, 'opening', get)) +
-			` </div> `
-	
-	exports['-970877277'] = (get, $t) => 
-			`<option >` +
-			$t.clean(get("showType").name) +
-			`</option>`
-	
-	exports['-1702305177'] = (get, $t) => 
-			`<div class='divison-section-cnt'> ` +
-			$t.clean(get("OpenSectionDisplay").html(get("opening"))) +
-			` </div>`
 	
 	exports['cabinet/head'] = (get, $t) => 
 			`<div class='cabinet-header'> ` +
@@ -14555,6 +14595,29 @@ exports['101748844'] = (get, $t) =>
 			`' value='` +
 			$t.clean(get("displayValue")(get("cabinet").thickness())) +
 			`'> </div> </div> `
+	
+	exports['cabinet/body'] = (get, $t) => 
+			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
+			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
+			` </select> </div> <div class='property-id-container center inline-flex'>` +
+			$t.clean(get("selectHtml")) +
+			`</div> <div class='right'> <select class="show-right-select"> ` +
+			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
+			` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
+			$t.clean(get("$index")) +
+			`'>Save</button> </div> ` +
+			$t.clean( new $t('-1702305177').render(get("cabinet").openings, 'opening', get)) +
+			` </div> `
+	
+	exports['-970877277'] = (get, $t) => 
+			`<option >` +
+			$t.clean(get("showType").name) +
+			`</option>`
+	
+	exports['-1702305177'] = (get, $t) => 
+			`<div class='divison-section-cnt'> ` +
+			$t.clean(get("OpenSectionDisplay").html(get("opening"))) +
+			` </div>`
 	
 	exports['display-manager'] = (get, $t) => 
 			`<div class='display-manager' id='` +
@@ -14625,19 +14688,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("patternInputHtml")) +
 			` </div> </div> `
 	
-	exports['index'] = (get, $t) => 
-			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>Estimate</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login'><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
-			$t.clean(get("id") !== 'home' ? "link='/cabinet/home'" : '') +
-			` hidden> <div id='order-cnt'></div> <div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <canvas id="two-d-model"></canvas> <div id="three-d-model" class="viewer small"> <span id="model-controller"></span> <span id="three-d-model-display"></span> </div> </div> </div> </div> <div name='Property Manager' ` +
-			$t.clean(get("id") !== 'home' ? "link='/cabinet/property'" : '') +
-			` id='property-manager-cnt' hidden> <div class='center'> <button id='property-manager-save-all'>Save All</button> </div> <div id='property-manager'></div> </div> <div id='cost-manager' "link='/cabinet/cost'" name='Cost Manager' ` +
-			$t.clean(get("id") !== 'cost' ? "link='/cabinet/cost'" : '') +
-			` hidden></div> <div id='template-manager' name='Template Manager' ` +
-			$t.clean(get("id") !== 'template' ? "link='/cabinet/template'" : '') +
-			` hidden>Temp Man</div> <div id='pattern-manager' name='Pattern Manager' ` +
-			$t.clean(get("id") !== 'home' ? "link='/cabinet/pattern'" : '') +
-			` hidden>Pat Man</div> </div> <div id='property-select-cnt'></div> </body> </html> `
-	
 	exports['feature'] = (get, $t) => 
 			`<h3>Feature Display</h3> `
 	
@@ -14647,16 +14697,6 @@ exports['101748844'] = (get, $t) =>
 			` <div class='cabinet-cnt' group-id='` +
 			$t.clean(get("group").id()) +
 			`'></div> </div> `
-	
-	exports['login/confirmation-message'] = (get, $t) => 
-			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
-	
-	exports['login/create-account'] = (get, $t) => 
-			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
-			$t.clean(get("email")) +
-			`'> <input type='password' placeholder="password" name='password' value='` +
-			$t.clean(get("password")) +
-			`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
 	
 	exports['group/head'] = (get, $t) => 
 			`<div group-display-id='` +
@@ -14670,6 +14710,29 @@ exports['101748844'] = (get, $t) =>
 			`' value='` +
 			$t.clean(get("group").name()) +
 			`' prop-update='name'> </div> <div class='group-display-body' hidden></div> </div> <br> `
+	
+	exports['index'] = (get, $t) => 
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>Estimate</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login'><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
+			$t.clean(get("id") !== 'home' ? "link='/cabinet/home'" : '') +
+			` hidden> <div id='order-cnt'></div> <div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <canvas id="two-d-model"></canvas> <div id="three-d-model" class="viewer small"> <span id="model-controller"></span> <span id="three-d-model-display"></span> </div> </div> </div> </div> <div name='Property Manager' ` +
+			$t.clean(get("id") !== 'home' ? "link='/cabinet/property'" : '') +
+			` id='property-manager-cnt' hidden> <div class='center'> <button id='property-manager-save-all'>Save All</button> </div> <div id='property-manager'></div> </div> <div id='cost-manager' "link='/cabinet/cost'" name='Cost Manager' ` +
+			$t.clean(get("id") !== 'cost' ? "link='/cabinet/cost'" : '') +
+			` hidden></div> <div id='template-manager' name='Template Manager' ` +
+			$t.clean(get("id") !== 'template' ? "link='/cabinet/template'" : '') +
+			` hidden>Temp Man</div> <div id='pattern-manager' name='Pattern Manager' ` +
+			$t.clean(get("id") !== 'home' ? "link='/cabinet/pattern'" : '') +
+			` hidden>Pat Man</div> </div> <div id='property-select-cnt'></div> </body> </html> `
+	
+	exports['login/create-account'] = (get, $t) => 
+			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
+	
+	exports['login/confirmation-message'] = (get, $t) => 
+			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
 	
 	exports['login/login'] = (get, $t) => 
 			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -14696,6 +14759,13 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("bodyId")) +
 			`"></div> </div> `
 	
+	exports['managers/cost/body'] = (get, $t) => 
+			`<div hidden> <div> <span> ` +
+			$t.clean(get("CostManager").nodeInputHtml()) +
+			` <button>Add Cost</button> <button>Add Node</button> </span> <span> Cost Display </span> </div> ` +
+			$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
+			` </div> `
+	
 	exports['managers/cost/head'] = (get, $t) => 
 			`<div class='expand-header' node-id='` +
 			$t.clean(get("node").nodeId()) +
@@ -14707,13 +14777,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('1417643187').render(get("node").payload().requiredProperties, 'property', get)) +
 			` </ul> </div> `
 	
-	exports['managers/cost/body'] = (get, $t) => 
-			`<div hidden> <div> <span> ` +
-			$t.clean(get("CostManager").nodeInputHtml()) +
-			` <button>Add Cost</button> <button>Add Node</button> </span> <span> Cost Display </span> </div> ` +
-			$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
-			` </div> `
-	
 	exports['managers/cost/main'] = (get, $t) => 
 			`<div> <div class="center"> <h2 id='cost-manager-header'> Cost Tree Manager </h2> </div> ` +
 			$t.clean( new $t('-496477131').render(get("root")().children(), 'child', get)) +
@@ -14724,6 +14787,20 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("headHtml")(get("child"))) +
 			` ` +
 			$t.clean(get("bodyHtml")(get("child"))) +
+			` </div>`
+	
+	exports['managers/cost/property-select'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('-1569738859').render(get("groups"), 'group, properties', get)) +
+			` </div> `
+	
+	exports['-1569738859'] = (get, $t) => 
+			`<div > <b>` +
+			$t.clean(get("group")) +
+			` (` +
+			$t.clean(get("abbriviation")(get("group"))) +
+			`)</b> ` +
+			$t.clean( new $t('1036581066').render(get("properties"), 'property', get)) +
 			` </div>`
 	
 	exports['managers/cost/types/labor'] = (get, $t) => 
@@ -14772,6 +14849,18 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("cost").unitCost('value')) +
 			`</label> </div> </div> `
 	
+	exports['managers/property/body'] = (get, $t) => 
+			`<div> No Need </div> `
+	
+	exports['managers/property/header'] = (get, $t) => 
+			`<div> <b>` +
+			$t.clean(get("instance").name) +
+			` (` +
+			$t.clean(get("instance").constructor.code) +
+			`) - ` +
+			$t.clean(get("instance").value) +
+			`</b> </div> `
+	
 	exports['managers/template/body'] = (get, $t) => 
 			`<div class='template-body' template-id=` +
 			$t.clean(get("template").id()) +
@@ -14806,39 +14895,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("template").type()) +
 			`</b> </div> `
 	
-	exports['managers/cost/property-select'] = (get, $t) => 
-			`<div> ` +
-			$t.clean( new $t('-1569738859').render(get("groups"), 'group, properties', get)) +
-			` </div> `
-	
-	exports['-1569738859'] = (get, $t) => 
-			`<div > <b>` +
-			$t.clean(get("group")) +
-			` (` +
-			$t.clean(get("abbriviation")(get("group"))) +
-			`)</b> ` +
-			$t.clean( new $t('1036581066').render(get("properties"), 'property', get)) +
-			` </div>`
-	
-	exports['managers/property/body'] = (get, $t) => 
-			`<div> No Need </div> `
-	
-	exports['managers/template/main'] = (get, $t) => 
-			`<div template-manager=` +
-			$t.clean(get("id")()) +
-			`> Main template <div id='` +
-			$t.clean(get("parentId")()) +
-			`'></div> </div> `
-	
-	exports['managers/property/header'] = (get, $t) => 
-			`<div> <b>` +
-			$t.clean(get("instance").name) +
-			` (` +
-			$t.clean(get("instance").constructor.code) +
-			`) - ` +
-			$t.clean(get("instance").value) +
-			`</b> </div> `
-	
 	exports['managers/template/joints/body'] = (get, $t) => 
 			`` +
 			$t.clean(get("jointInput").html()) +
@@ -14850,6 +14906,13 @@ exports['101748844'] = (get, $t) =>
 			`' attr='joints' placeholder='Male Part Code' name='malePartCode'> => <input class='template-input' value='` +
 			$t.clean(get("obj").femalePartCode) +
 			`' attr='joints' placeholder='Female Part Code' name='femalePartCode'> </b> `
+	
+	exports['managers/template/main'] = (get, $t) => 
+			`<div template-manager=` +
+			$t.clean(get("id")()) +
+			`> Main template <div id='` +
+			$t.clean(get("parentId")()) +
+			`'></div> </div> `
 	
 	exports['managers/template/openings/head'] = (get, $t) => 
 			`<div class='inline-flex'> ` +
@@ -14911,7 +14974,7 @@ exports['101748844'] = (get, $t) =>
 			`' ` +
 			$t.clean(get("label") ? 'hidden' : '') +
 			`> ` +
-			$t.clean( new $t('1136490671').render(get("group").parts, 'partName, partList', get)) +
+			$t.clean( new $t('1753942820').render(get("group").parts, 'partName, partList', get)) +
 			` </div> </div> ` +
 			$t.clean( new $t('model-controller').render(get("group").groups, 'label, group', get)) +
 			` </div> </div> `
@@ -14951,14 +15014,14 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("$index")) +
 			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> `
 	
-	exports['order/head'] = (get, $t) => 
-			`<h3 class='margin-zero'> ` +
-			$t.clean(get("order").name()) +
-			` </h3> `
-	
 	exports['order/builder/head'] = (get, $t) => 
 			`<h3 class='margin-zero'> ` +
 			$t.clean(get("order").name) +
+			` </h3> `
+	
+	exports['order/head'] = (get, $t) => 
+			`<h3 class='margin-zero'> ` +
+			$t.clean(get("order").name()) +
 			` </h3> `
 	
 	exports['order/information/body'] = (get, $t) => 
@@ -15130,6 +15193,13 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("featureDisplay")) +
 			` </div> `
 	
+	exports['sections/open'] = (get, $t) => 
+			`<h2>Open: ` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> <div class='section-feature-ctn'> ` +
+			$t.clean(get("featureDisplay")) +
+			` </div> `
+	
 	exports['three-view'] = (get, $t) => 
 			`<div class='three-view-cnt' id='` +
 			$t.clean(get("id")()) +
@@ -15151,12 +15221,43 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("maxDem")()) +
 			`"></canvas> </span> </div> </div> </div> `
 	
-	exports['sections/open'] = (get, $t) => 
-			`<h2>Open: ` +
-			$t.clean(get("list").activeKey()) +
-			`</h2> <div class='section-feature-ctn'> ` +
-			$t.clean(get("featureDisplay")) +
-			` </div> `
+	exports['-2091403791'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("tdm").isTarget("part-id", get("part").uniqueId()) ? "active " : "") +
+			` model-label indent' ` +
+			$t.clean(get("partList").length > 1 ? "" : "hidden") +
+			`> <label type='part-id' part-id='` +
+			$t.clean(get("part").uniqueId()) +
+			`'> ` +
+			$t.clean(get("part").partCode()) +
+			`-` +
+			$t.clean(get("$index") +
+			1) +
+			` </label> <input type='checkbox' class='part-id-checkbox' part-id='` +
+			$t.clean(get("part").uniqueId()) +
+			`' ` +
+			$t.clean(!get("tdm").hidePartId(get("part").uniqueId()) ? 'checked' : '') +
+			`> </div>`
+	
+	exports['-1523801133'] = (get, $t) => 
+			`<div part-id='` +
+			$t.clean(get("part").uniqueId()) +
+			`' class='` +
+			$t.clean(get("tdm").isTarget("part-id", get("part").uniqueId()) ? "active " : "") +
+			` model-label indent' ` +
+			$t.clean(get("partList").length > 1 ? "" : "hidden") +
+			`> <label type='part-id' part-id='` +
+			$t.clean(get("part").uniqueId()) +
+			`'> ` +
+			$t.clean(get("part").partCode()) +
+			`-` +
+			$t.clean(get("$index") +
+			1) +
+			` </label> <input type='checkbox' class='part-id-checkbox' part-id='` +
+			$t.clean(get("part").uniqueId()) +
+			`' ` +
+			$t.clean(!get("tdm").hidePartId(get("part").uniqueId()) ? 'checked' : '') +
+			`> </div>`
 	
 });
 
@@ -17052,6 +17153,33 @@ const Measurement = require('../../../public/js/utils/measurement.js')
 });
 
 
+RequireJS.addFunction('./app-src/error.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	class InvalidComputation {
+	  constructor(attributes) {
+	    this.errorCode = 400;
+	    this.message = 'Error within input parameters';
+	    const keys = Object.keys(attributes);
+	    for (let index = 0; index < keys.length; index += 1) {
+	      const key = keys[index];
+	      this.message += `\n\t${key}: '${value}'`;
+	    }
+	  }
+	}
+	module.exports = InvalidComputation
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('./app-src/init.js',
 function (require, exports, module) {
 	
@@ -17149,33 +17277,6 @@ function (require, exports, module) {
 	    event.stopPropagation();
 	  } else popUp.close();
 	});
-	
-});
-
-
-RequireJS.addFunction('./app-src/error.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	class InvalidComputation {
-	  constructor(attributes) {
-	    this.errorCode = 400;
-	    this.message = 'Error within input parameters';
-	    const keys = Object.keys(attributes);
-	    for (let index = 0; index < keys.length; index += 1) {
-	      const key = keys[index];
-	      this.message += `\n\t${key}: '${value}'`;
-	    }
-	  }
-	}
-	module.exports = InvalidComputation
-	
-	
-	
-	
 	
 });
 
@@ -17425,522 +17526,75 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/config/properties.js',
+RequireJS.addFunction('./app-src/cost/cost-tree.js',
 function (require, exports, module) {
 	
-
-	const Property = require('./property');
-	const Defs = require('./property/definitions');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const Request = require('../../../../public/js/utils/request.js');
+const Properties = require('../config/properties.js');
+	const Assembly = require('../objects/assembly/assembly.js');
+	const LogicTree = require('../../../../public/js/utils/logic-tree.js');
+	const LogicWrapper = LogicTree.LogicWrapper;
 	
-	let unitCount = 0;
-	const UNITS = [];
-	Measurement.units().forEach((unit) =>
-	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
-	UNITS._VALUE = Measurement.unit();
-	
-	const assemProps = {}
-	const add = (key, properties) => properties.forEach((prop) => {
-	  if (assemProps[key] === undefined) assemProps[key] = {};
-	  assemProps[key][prop.code()] = prop;
-	});
-	
-	add('Overlay', [Defs.ov]);
-	add('Reveal', [Defs.r,Defs.rvt,Defs.rvb]);
-	add('Inset', [Defs.is]);
-	add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
-	                Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
-	                Defs.frw,Defs.frt]);
-	add('Panel', [Defs.h,Defs.w,Defs.t]);
-	add('Guides', [Defs.l,Defs.dbtos,Defs.dbsos,Defs.dbbos]);
-	add('DoorAndFront', [Defs.daffrw,Defs.dafip])
-	add('Door', [Defs.h,Defs.w,Defs.t]);
-	add('DrawerBox', [Defs.h,Defs.w,Defs.d,Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn]);
-	add('DrawerFront', [Defs.h,Defs.w,Defs.t,Defs.mfdfd]);
-	add('Frame', [Defs.h,Defs.w,Defs.t]);
-	add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
-	add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
-	add('Opening', []);
-	
-	function definitionsRequired(group) {
-	  const required = [];
-	  if (assemProps[group] === undefined) return [];
-	  Object.values(assemProps[group]).forEach((prop) => {
-	    if (prop.value() !== null) required.push(prop);
-	  });
-	  return required;
-	}
-	
-	function propertiesToDefine() {
-	  const propNames = [];
-	  const keys = Object.keys(assemProps);
-	  keys.forEach((key) => {
-	    if (definitionsRequired(key).length !== 0) {
-	      propNames.push(key);
-	    }
-	  });
-	  return propNames;
-	}
-	
-	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
-	function assemProperties(clazz, filter) {
-	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	  props = assemProps[clazz] || [];
-	  if ((typeof filter) != 'function') return props;
-	  props = props.filter(filter);
-	  return props;
-	}
-	
-	
-	let config = {};
-	const changes = {};
-	const copyMap = {};
-	assemProperties.changes = {
-	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
-	  save: (id) => {
-	    const list = changes[id];
-	    if (!list) throw new Error(`Unkown change id '${id}'`);
-	    const group = list._GROUP;
-	    if (config[group] === undefined) config[group] = [];
-	    if(copyMap[id] === undefined) {
-	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
-	      copyMap[list._ID] = config[group][list._NAME].properties;
-	    } else {
-	      const tempList = changes[id];
-	      for (let index = 0; index < tempList.length; index += 1) {
-	        const tempProp = tempList[index];
-	        const configProp = copyMap[id][index];
-	        configProp.value(tempProp.value());
-	      }
-	    }
-	   },
-	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
-	  delete: (id) => {
-	    delete config[changes[id][0].name()][changes[id]._NAME];
-	    delete changes[id];
-	    delete copyMap[id];
-	  },
-	  changed: (id) => {
-	    const list = changes[id];
-	    if (list === undefined) return false;
-	    for (let index = 0; index < list.length; index += 1) {
-	      const prop = list[index];
-	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
-	        console.log('booyacka!');
-	      }
-	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
-	        return true;
-	      }
-	    }
-	    return false;
-	  },
-	  changesExist: () => {
-	      const lists = Object.values(changes);
-	      for (let index = 0; index < lists.length; index += 1) {
-	        if (assemProperties.changes.changed(lists[index]._ID)) {
+	class CostDecision {
+	  constructor(type, name, relation, formula) {
+	    Object.getSet(this, {type, name, costs: [], relation, isChoice: false});
+	    this.requiredProperties = Properties.noValue(name);
+	    if (this.relation) {
+	      if (formula) {
+	        function makeDecision(wrapper) {
 	          return true;
 	        }
-	      }
-	      return false;
-	  }
-	}
-	
-	assemProperties.config = () => {
-	  const plainObj = {};
-	  const keys = Object.keys(config);
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    const lists = config[key];
-	    const listKeys = Object.keys(lists);
-	    plainObj[key] = {};
-	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
-	      const listKey = listKeys[lIndex];
-	      const list = lists[listKey];
-	      const propObj = {name: listKey, properties: []};
-	      plainObj[key][listKey] = propObj;
-	      list.properties.forEach((property) =>
-	          propObj.properties.push(property.toJson(excludeKeys, true)))
-	    }
-	  }
-	  return plainObj;
-	}
-	assemProperties.list = () => Object.keys(assemProps);
-	assemProperties.new = (group, name) => {
-	  if (assemProps[group]) {
-	    const list = [];
-	    let addIndex = 0;
-	    const ogList = Object.values(assemProps[group]);
-	    for (let index = 0; index < ogList.length; index += 1) {
-	      if (hasValueFilter(ogList[index])) {
-	        list[addIndex++] = ogList[index].clone();
-	      }
-	    }
-	    list._ID = String.random();
-	    list._GROUP = group;
-	    list._NAME = name;
-	    changes[list._ID] = list;
-	    return list;
-	  }
-	  throw new Error(`Requesting invalid Property Group '${group}'`);
-	}
-	
-	assemProperties.instance = () => {
-	  const keys = Object.keys(assemProps);
-	  const clone = {};
-	  keys.forEach((key) => {
-	    const props = Object.values(assemProps[key]);
-	    if (clone[key] === undefined) clone[key] = {};
-	    props[keys] = {};
-	    props.forEach((prop) => clone[key][prop.code()] = prop.clone());
-	  });
-	  return clone;
-	};
-	
-	assemProperties.getSet = (group, setName) => {
-	  const clone = {};
-	  let propertyObj = config[group][setName];
-	  propertyObj.properties.forEach((prop) => clone[prop.code()] = prop.clone());
-	  return clone;
-	}
-	
-	const dummyFilter = () => true;
-	assemProperties.groupList = (group, filter) => {
-	  filter = filter || dummyFilter;
-	  const groupList = config[group];
-	  const changeList = {};
-	  if (groupList === undefined) return {};
-	  const groupKeys = Object.keys(groupList);
-	  for (let index = 0; index < groupKeys.length; index += 1) {
-	    const groupKey = groupKeys[index];
-	    const list = groupList[groupKey];
-	    const properties = groupList[list.name].properties;
-	    const codes = properties.map((prop) => prop.code());
-	    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
-	    //                   .filter(filter);
-	    // newProps.forEach((prop) => properties.push(prop.clone()));
-	    changeList[list.name] = {name: list.name, properties: []};
-	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
-	      const prop = properties[pIndex];
-	      changeList[list.name].properties.push(prop.clone());
-	    }
-	    const uniqueId = String.random();
-	    const set = changeList[list.name].properties;
-	    set._ID = uniqueId;
-	    set._NAME = list.name;
-	    changes[uniqueId] = set;
-	    copyMap[uniqueId] = properties;
-	  }
-	  return changeList;
-	}
-	
-	const hasValueFilter = (prop) => prop.value() !== null;
-	assemProperties.hasValue = (group) => {
-	  if (props === undefined) return [];
-	  return assemProperties.groupList(group, hasValueFilter);
-	}
-	
-	const list = (key) =>
-	    assemProps[key] ? Object.values(assemProps[key]) : [];
-	
-	const noValueFilter = (prop) => prop.value() === null;
-	assemProperties.noValue = (group) => {
-	  const props = list(group);
-	  if (props === undefined) return [];
-	  return props.filter(noValueFilter);
-	}
-	
-	assemProperties.all = () => {
-	  const props = {};
-	  const keys = Object.keys(assemProps);
-	  keys.forEach((key) => {
-	    const l = [];
-	    list(key).forEach((prop) => l.push(prop));
-	    props[key] = l;
-	  });
-	  return props;
-	}
-	
-	assemProperties.UNITS = UNITS;
-	
-	assemProperties.load = (body) => {
-	  config = Object.fromJson(body);
-	}
-	
-	assemProperties.definitionsRequired = definitionsRequired;
-	assemProperties.propertiesToDefine = propertiesToDefine;
-	module.exports = assemProperties;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/three-d-model.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../public/js/3d-modeling/csg');
-	
-	const Polygon3D = require('./objects/polygon');
-	const Assembly = require('../objects/assembly/assembly');
-	const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
-	const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
-	const pull = require('./models/pull.js');
-	const drawerBox = require('./models/drawer-box.js');
-	const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
-	const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const approximate = require('../../../../public/js/utils/approximate.js');
-	
-	const colors = {
-	  indianred: [205, 92, 92],
-	  lightcoral: [240, 128, 128],
-	  salmon: [250, 128, 114],
-	  darksalmon: [233, 150, 122],
-	  lightsalmon: [255, 160, 122],
-	  white: [255, 255, 255],
-	  silver: [192, 192, 192],
-	  gray: [128, 128, 128],
-	  black: [0, 0, 0],
-	  red: [255, 0, 0],
-	  maroon: [128, 0, 0],
-	  yellow: [255, 255, 0],
-	  olive: [128, 128, 0],
-	  lime: [0, 255, 0],
-	  green: [0, 128, 0],
-	  aqua: [0, 255, 255],
-	  teal: [0, 128, 128],
-	  blue: [0, 0, 255],
-	  navy: [0, 0, 128],
-	  fuchsia: [255, 0, 255],
-	  purple: [128, 0, 128]
-	}
-	
-	function getColor(name) {
-	  if(colors[name]) return colors[name];
-	  return [0,0,0];
-	}
-	
-	class ThreeDModel {
-	  constructor(assembly, viewer) {
-	    const hiddenPartCodes = {};
-	    const hiddenPartNames = {};
-	    const hiddenPrefixes = {};
-	    const instance = this;
-	    let hiddenPrefixReg;
-	    let inclusiveTarget = {};
-	    let partMap;
-	    let renderId;
-	    let targetPartCode;
-	    this.setTargetPartCode = (pc) => targetPartCode = pc;
-	
-	    this.assembly = (a) => {
-	      if (a !== undefined) {
-	        assembly = a;
-	      }
-	      return assembly;
-	    }
-	
-	    this.partMap = () => partMap;
-	    this.isTarget = (type, value) => {
-	      return inclusiveTarget.type === type && inclusiveTarget.value === value;
-	    }
-	    this.inclusiveTarget = function(type, value) {
-	      let prefixReg;
-	      if (type === 'prefix') prefixReg = new RegExp(`^${value}`)
-	      inclusiveTarget = {type, value, prefixReg};
-	    }
-	
-	    function inclusiveMatch(part) {
-	      if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
-	      switch (inclusiveTarget.type) {
-	        case 'prefix':
-	          return part.partName().match(inclusiveTarget.prefixReg) !== null;
-	          break;
-	        case 'part-name':
-	          return part.partName() === inclusiveTarget.value;
-	        case 'part-code':
-	          return part.partCode() === inclusiveTarget.value;
-	        default:
-	          throw new Error('unknown inclusiveTarget type');
-	      }
-	    }
-	
-	    function manageHidden(object) {
-	      return function (attr, value) {
-	        if (value === undefined) return object[attr] === true;
-	       object[attr] = value === true;
-	       instance.render();
-	      }
-	    }
-	
-	    function buildHiddenPrefixReg() {
-	      const list = [];
-	      const keys = Object.keys(hiddenPrefixes);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        if (hiddenPrefixes[key] === true) {
-	          list.push(key);
-	        }
-	      }
-	      hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
-	    }
-	
-	    this.hidePartCode = manageHidden(hiddenPartCodes);
-	    this.hidePartName = manageHidden(hiddenPartNames);
-	    this.hidePrefix = manageHidden(hiddenPrefixes);
-	
-	    function hasHidden(hiddenObj) {
-	      const keys = Object.keys(hiddenObj);
-	      for(let i = 0; i < hiddenObj.length; i += 1)
-	        if (hidden[keys[index]])return true;
-	      return false;
-	    }
-	    this.noneHidden = () => !hasHidden(hiddenPartCodes) &&
-	        !hasHidden(hiddenPartNames) && !hasHidden(hiddenPrefixes);
-	
-	    this.depth = (label) => label.split('.').length - 1;
-	
-	    function hidden(part, level) {
-	      if (!part.included()) return true;
-	      const im = inclusiveMatch(part);
-	      if (im !== null) return !im;
-	      if (instance.hidePartCode(part.partCode())) return true;
-	      if (instance.hidePartName(part.partName())) return true;
-	      if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
-	      return false;
-	    }
-	
-	    function coloring(part) {
-	      if (part.partName() && part.partName().match(/.*Frame.*/)) return getColor('blue');
-	      else if (part.partName() && part.partName().match(/.*Drawer.Box.*/)) return getColor('green');
-	      else if (part.partName() && part.partName().match(/.*Handle.*/)) return getColor('silver');
-	      return getColor('red');
-	    }
-	
-	    const randInt = (start, range) => start + Math.floor(Math.random() * range);
-	    function debugColoring() {
-	      return [randInt(0, 255),randInt(0, 255),randInt(0, 255)];
-	    }
-	
-	    function getModel(assem) {
-	      const pos = assem.position().current();
-	      let model;
-	      if (assem instanceof DrawerBox) {
-	        model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
-	      } else if (assem instanceof Handle) {
-	        model = pull(pos.demension.y, pos.demension.z);
+	        this.relation = RelationInput.relationsObjs[relation](makeDecision);
+	        this.condition = (wrapper) => this.relation.eval(wrapper.children(), wrapper.payload.value());
 	      } else {
-	        const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
-	        model = CSG.cube({ radius });
-	      }
-	      model.rotate(pos.rotation);
-	      pos.center.z *= -1;
-	      model.center(pos.center);
-	      // serialize({}, model);
-	      return model;
-	    }
-	
-	    let lm;
-	    this.lastModel = () => {
-	      if (lm === undefined) return undefined;
-	      const polys = [];
-	      const map = {xy: [], xz: [], zy: []};
-	      lm.polygons.forEach((p, index) => {
-	        const norm = p.vertices[0].normal;
-	        const verticies = p.vertices.map((v) => ({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
-	        polys.push(new Polygon3D(norm, verticies));
-	      });
-	      // Polygon3D.merge(polys);
-	      const twoDpolys = Polygon3D.toTwoD(polys);
-	      return twoDpolys;
-	    }
-	
-	
-	    this.render = function () {
-	      ThreeDModel.lastActive = this;
-	      const startTime = new Date().getTime();
-	      buildHiddenPrefixReg();
-	      function buildObject(assem) {
-	        let a = getModel(assem);
-	        const c = assem.position().center();
-	        const e=1;
-	        a.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
-	        a.setColor(...debugColoring(assem));
-	        assem.getJoints().female.forEach((joint) => {
-	          const male = joint.getMale();
-	          const m = getModel(male, male.position().current());
-	          a = a.subtract(m);
-	        });
-	        // else a.setColor(1, 0, 0);
-	        return a;
-	      }
-	      const assemblies = this.assembly().getParts();
-	      let a;
-	      partMap = {};
-	      for (let index = 0; index < assemblies.length; index += 1) {
-	        const assem = assemblies[index];
-	        partMap[assem.partCode()] = assem.path();
-	        if (assem.partCode() === 'pr') {
-	          console.log(assem.getAssembly('c').uniqueId());
-	        } else {
-	          console.log(assem.getAssembly('c').uniqueId());
-	        }
-	        if (!hidden(assem)) {
-	          const b = buildObject(assem);
-	          // const c = assem.position().center();
-	          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
-	          if (a === undefined) a = b;
-	          else if (b && assem.length() && assem.width() && assem.thickness()) {
-	            a = a.union(b);
-	          }
-	          if (assem.partCode() === targetPartCode) {
-	            lm = b.clone();
-	            const rotation = assem.position().rotation();
-	            rotation.x *=-1;
-	            rotation.y = (360 - rotation.y)  % 360;
-	            rotation.z *=-1;
-	            lm.center({x:0,y:0,z:0})
-	            lm.rotate(rotation);
-	          }
-	        }
-	      }
-	      if (a) {
-	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
-	        viewer.mesh = a.toMesh();
-	        viewer.gl.ondraw();
-	        console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
+	        this.isChoice(true);
 	      }
 	    }
-	
-	    this.update = (part) => {
-	      const rId = renderId = String.random();
-	      ThreeDModel.renderId = renderId;
-	      setTimeout(() => {
-	        if(renderId === rId) instance.render();
-	      }, 250);
-	    };
 	  }
 	}
 	
-	ThreeDModel.models = {};
-	ThreeDModel.get = (assembly, viewer) => {
-	  if (assembly === undefined) return ThreeDModel.lastActive;
-	  if (ThreeDModel.models[assembly.uniqueId()] === undefined) {
-	    ThreeDModel.models[assembly.uniqueId()] = new ThreeDModel(assembly, viewer);
-	  }
-	  return ThreeDModel.models[assembly.uniqueId()];
-	}
-	ThreeDModel.render = (part) => {
-	  const renderId = String.random();
-	  ThreeDModel.renderId = renderId;
-	  setTimeout(() => {
-	    if(ThreeDModel.renderId === renderId) ThreeDModel.get(part).render();
-	  }, 250);
-	};
+	class CostTree {
+	  constructor(logicTree) {
+	    const idMap = {};
+	    logicTree = CostTree.suplement(logicTree);
+	    this.tree = () => logicTree;
+	    this.root = () => logicTree.root();
+	    const getWrapper = (wrapperId) => (LogicWrapper.get(wrapperId) || this.root());
 	
-	module.exports = ThreeDModel
+	    this.branch = (wrapperId, name) =>
+	            get(wrapperId).branch(String.random(), new CostDecision('Branch', name));
+	    this.leaf = (wrapperId, name) =>
+	            get(wrapperId).leaf(String.random(), new CostDecision('Leaf', name));
+	    this.select = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).select(String.random(), new CostDecision('Select', name, relation, formula));
+	    this.multiselect = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).multiselect(String.random(), new CostDecision('Multiselect', name, relation, formula));
+	    this.conditional = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).conditional(String.random(), new CostDecision('Conditional', name, relation, formula));
+	
+	  }
+	}
+	
+	
+	CostTree.propertyList = Properties.all();
+	CostTree.types = ['branch', 'select', 'conditional', 'multiselect', 'leaf'];
+	CostTree.suplement = (logicTree) => {
+	  if (!(logicTree instanceof LogicWrapper)) {
+	    logicTree = new LogicTree();
+	    logicTree.branch('root');
+	  }
+	  const root = logicTree.root();
+	  const assemClassIds = Properties.list();
+	  assemClassIds.forEach((classId) => {
+	    if (root.node.getNodeByPath(classId) === undefined)
+	      root.branch(classId, new CostDecision('Branch', classId));
+	  });
+	  return logicTree;
+	}
+	CostTree.choices = [];
+	
+	
+	CostTree.CostDecision = CostDecision;
+	module.exports = CostTree;
 	
 });
 
@@ -17957,448 +17611,6 @@ function (require, exports, module) {
 	
 	Cost.register(Material);
 	Cost.register(Labor);
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/draw.js',
-function (require, exports, module) {
-	
-const Circle2d = require('./objects/circle');
-	const LineMeasurement2d = require('./objects/line-measurement');
-	
-	class Draw2d {
-	  constructor(canvas) {
-	    const ctx = canvas.getContext('2d');
-	
-	    function draw(object, color, width) {
-	      if (Array.isArray(object)) {
-	        for (let index = 0; index < object.length; index += 1)
-	          draw(object[index], color, width);
-	        return;
-	      }
-	      switch (object.constructor.name) {
-	        case 'Line2d':
-	          draw.line(object, color, width);
-	          break;
-	        case 'Circle2d':
-	          draw.circle(object, color, width);
-	          break;
-	        case 'Plane2d':
-	          draw.plane(object, color, width);
-	          break;
-	        case 'Polygon2d':
-	          draw.polygon(object, color, width);
-	          break;
-	        case 'Square2d':
-	          draw.square(object, color, width);
-	          break;
-	        default:
-	          console.error(`Cannot Draw '${object.constructor.name}'`);
-	      }
-	    }
-	
-	    draw.canvas = () => canvas;
-	    draw.ctx = () => ctx;
-	    draw.beginPath = () => ctx.beginPath();
-	    draw.moveTo = () => ctx.moveTo();
-	
-	    draw.clear = () => {
-	      ctx.save();
-	      ctx.setTransform(1, 0, 0, 1, 0, 0);
-	      ctx.clearRect(0, 0, canvas.width, canvas.height);
-	      ctx.restore();
-	    }
-	    draw.line = (line, color, width, doNotMeasure) => {
-	      if (line === undefined) return;
-	      color = color ||  'black';
-	      width = width || 10;
-	      // draw.circle(new Circle2d(.2, line.startVertex(), null, null, .2));
-	      // draw.circle(new Circle2d(.2, line.endVertex(), null, null, .2));
-	      ctx.beginPath();
-	      ctx.strokeStyle = color;
-	      ctx.lineWidth = width;
-	      ctx.moveTo(line.startVertex().x(), line.startVertex().y());
-	      ctx.lineTo(line.endVertex().x(), line.endVertex().y());
-	      ctx.stroke();
-	      if (!doNotMeasure)draw.measurement(line, 1);
-	    }
-	
-	    draw.plane = (plane, color, width) => {
-	      if (plane === undefined) return;
-	      color = color ||  'black';
-	      width = width || .1;
-	      plane.getLines().forEach((line) => draw.line(line, color, width));
-	    }
-	
-	    draw.polygon = (poly, color, width) => {
-	      if (poly === undefined) return;
-	      color = color ||  'black';
-	      width = width || .1;
-	      poly.lines().forEach((line) => draw.line(line, color, width));
-	    }
-	
-	    draw.square = (square, color) => {
-	      ctx.save();
-	      ctx.beginPath();
-	      ctx.lineWidth = 2;
-	      ctx.strokeStyle = 'black';
-	      ctx.fillStyle = color;
-	
-	      const center = square.center();
-	      ctx.translate(center.x(), center.y());
-	      ctx.rotate(square.radians());
-	      ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
-	      ctx.stroke();
-	      ctx.fill();
-	
-	      ctx.beginPath();
-	      ctx.lineWidth = 4;
-	      ctx.strokeStyle = 'black';
-	      ctx.fillStyle =  'black';
-	      const lc = square.leftCenter();
-	      const fc = square.frontLeft();
-	      ctx.fillText('HEllo o my gooooooood nesss', 0, square.height() / 4, square.width());
-	      ctx.stroke()
-	
-	      ctx.restore();
-	    }
-	
-	    draw.circle = (circle, lineColor, fillColor, lineWidth) => {
-	      const center = circle.center();
-	      ctx.beginPath();
-	      ctx.lineWidth = lineWidth || 2;
-	      ctx.strokeStyle = lineColor || 'black';
-	      ctx.fillStyle = fillColor || 'white';
-	      ctx.arc(center.x(),center.y(), circle.radius(),0, 2*Math.PI);
-	      ctx.stroke();
-	      ctx.fill();
-	    }
-	
-	    const blank = 4;
-	    const hblank = blank/2;
-	    function drawMeasurementLabel(line, measurement) {
-	      if (measurement === undefined) return;
-	      const ctx = draw.ctx();
-	      const midpoint = line.midpoint();
-	
-	      ctx.save();
-	      ctx.lineWidth = 0;
-	      const length = measurement.display();
-	      const textLength = length.length;
-	      ctx.translate(midpoint.x(), midpoint.y());
-	      ctx.rotate(line.radians());
-	      ctx.beginPath();
-	      ctx.fillStyle = "white";
-	      ctx.strokeStyle = 'white';
-	      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
-	      ctx.fill();
-	      ctx.stroke();
-	
-	      ctx.beginPath();
-	      ctx.font = "1px Arial";
-	      ctx.lineWidth = .2;
-	      ctx.strokeStyle = 'black';
-	      ctx.fillStyle =  'black';
-	      ctx.fillText(length, 0, 0);
-	      ctx.stroke()
-	      ctx.restore();
-	    }
-	
-	    draw.measurement = (line, level) => {
-	      const center = line.startVertex();
-	      const measurementColor = 'grey';
-	      const measurementLineWidth = '.1';
-	      const measurement = new LineMeasurement2d(line)
-	      const lines = measurement.I(level);
-	      try {
-	        const winner = lines.outer;
-	        draw.beginPath();
-	        draw.line(winner.startLine, measurementColor, measurementLineWidth, true);
-	        draw.line(winner.endLine, measurementColor, measurementLineWidth, true);
-	        draw.line(winner, measurementColor, measurementLineWidth, true);
-	        drawMeasurementLabel(winner, measurement);
-	        return line;
-	      } catch (e) {
-	        console.error('Measurement render error:', e);
-	      }
-	    }
-	
-	    return draw;
-	  }
-	}
-	
-	module.exports = Draw2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/displayManager.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	
-	class DisplayManager {
-	  constructor(displayId, listId, switchId, selected) {
-	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
-	    const id = String.random();
-	    const instance = this;
-	    this.list = (func) => {
-	      const list = [];
-	      const runFunc = (typeof func) === 'function';
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        let id = elem.id || String.random(7);
-	        elem.id = id;
-	        name = elem.getAttribute('name') || id;
-	        const item = {id, name, link: elem.getAttribute('link')};
-	        if (runFunc) func(elem);
-	        list.push(item);
-	      }
-	      return list;
-	    }
-	
-	    function updateActive(id) {
-	      const items = document.querySelectorAll('.display-manager-input');
-	      for (let index = 0; index < items.length; index += 1) {
-	        const elem = items[index];
-	        elem.getAttribute('display-id') === id ?
-	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
-	      }
-	    }
-	
-	    function open(id) {
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        if (elem.id === id) {
-	          const link = elem.getAttribute('link');
-	          if (link) {
-	            window.location.href = link;
-	            return;
-	          }
-	          elem.hidden = false;
-	        }
-	        else elem.hidden = true;
-	      }
-	      updateActive(id);
-	    }
-	
-	    this.open = open;
-	
-	    const children = du.id(displayId).children;
-	
-	    if (switchId) {
-	      du.on.match('click', `#${switchId}`, (target, event) => {
-	        const listElem = du.id(listId);
-	        listElem.hidden = !listElem.hidden;
-	      });
-	      document.addEventListener('click', (event) => {
-	        const listElem = du.id(listId);
-	        const target = event.target;
-	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
-	        if (!withinList && target.id !== switchId &&listElem)
-	          listElem.hidden = true;
-	      });
-	    }
-	    DisplayManager.instances[id] = this
-	    if ((typeof selected) === 'string') setTimeout(() => open(selected), 100);
-	    else if (children.length > 0) {
-	      this.list();
-	      open(children[0].id);
-	    }
-	    if (listId) {
-	      du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
-	    }
-	  }
-	}
-	
-	DisplayManager.instances = {};
-	DisplayManager.template = new $t('display-manager');
-	
-	du.on.match('click', '.display-manager-input', (target, event) => {
-	  const displayManager = du.find.up('.display-manager', target);
-	  const displayManagerId = displayManager.id;
-	  const displayId = target.getAttribute('display-id');
-	  DisplayManager.instances[displayManagerId].open(displayId);
-	});
-	module.exports = DisplayManager
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/information-bar.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	class InformationBar {
-	  constructor() {
-	    const container = du.create.element('div');
-	    container.className = 'information-bar';
-	
-	    this.show = () => container.hidden = false;
-	    this.hide = () => container.hidden = true;
-	    this.update = (html) => container.innerHTML = html;
-	
-	    document.body.append(container);
-	  }
-	}
-	module.exports = InformationBar
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	
-	const ToggleDisplayList = {};
-	ToggleDisplayList.class = 'toggle-display-list';
-	ToggleDisplayList.funcs = {};
-	
-	ToggleDisplayList.onShow = (displayId, func) => {
-	  if ((typeof func) === 'function') {
-	    if (ToggleDisplayList.funcs[displayId] === undefined) {
-	      ToggleDisplayList.funcs[displayId] = [];
-	    }
-	    ToggleDisplayList.funcs[displayId].push(func);
-	  }
-	}
-	
-	ToggleDisplayList.runFuncs = (displayId) => {
-	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
-	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
-	}
-	
-	ToggleDisplayList.toggle = function (elem, event) {
-	  const target = event.target;
-	  const children = elem.children;
-	  for (let index = 0; index < children.length; index += 1) {
-	    const child = children[index];
-	    if (target === child) {
-	      du.class.add(child, 'active');
-	      const displayId = child.getAttribute('display-id');
-	      du.id(displayId).hidden = false;
-	      ToggleDisplayList.runFuncs(displayId);
-	    } else {
-	      du.class.remove(child, 'active');
-	      du.id(child.getAttribute('display-id')).hidden = true;
-	    }
-	  }
-	}
-	
-	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
-	
-	module.exports = ToggleDisplayList;
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/radio-display.js',
-function (require, exports, module) {
-	
-
-	
-	const InformationBar = require('./information-bar.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	class RadioDisplay {
-	  constructor(radioClass, groupAttr, alternateToggleClass) {
-	    const selector = (attrVal) => {
-	      return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
-	    }
-	
-	    const infoBar = new InformationBar();
-	
-	    function path () {
-	      let path = '';
-	      const info = du.find.downInfo(`.${radioClass}.open`, document.body, null, `.${radioClass}.close`);
-	      info.matches.forEach((obj) => {
-	        const header = obj.node.children[0];
-	        if (header && header.getBoundingClientRect().y < 8) {
-	          path += `${header.innerText}=>`
-	        }
-	      });
-	      return path;
-	    }
-	
-	    function triggerAlternateToggles(target) {
-	      if (alternateToggleClass) {
-	        const alterToggles = document.querySelectorAll(alternateToggleClass);
-	        alterToggles.forEach((elem) => elem.hidden = false);
-	        const closest = du.closest(alternateToggleClass, target);
-	        if (closest) closest.hidden = true;
-	      }
-	    }
-	
-	    du.on.match('scroll', `*`, (target, event) => {
-	      infoBar.update(path());
-	    });
-	
-	    du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
-	      const target = targetHeader.parentElement;
-	      const attrVal = target.getAttribute(groupAttr);
-	      const targetBody = target.children[1];
-	      const hidden = targetBody.hidden;
-	      targetBody.hidden = !hidden;
-	      if (hidden) {
-	        du.class.add(targetHeader, 'active');
-	        du.class.swap(target, 'open', 'close');
-	        const siblings = document.querySelectorAll(selector(attrVal));
-	        for (let index = 0; index < siblings.length; index += 1) {
-	          if (siblings[index] !== target) {
-	            const sibHeader = siblings[index].children[0];
-	            const sibBody = siblings[index].children[1];
-	            du.class.swap(siblings[index], 'close', 'open');
-	            sibBody.hidden = true;
-	            du.class.remove(sibHeader, 'active');
-	          }
-	        }
-	      } else {
-	        du.class.swap(target, 'close', 'open');
-	        du.class.remove(targetHeader, 'active');
-	      }
-	      infoBar.update(path());
-	    });
-	  }
-	}
-	module.exports = RadioDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/feature.js',
-function (require, exports, module) {
-	
-
-	const $t = require('../../../../public/js/utils/$t');
-	
-	class FeatureDisplay {
-	  constructor(assembly, parentSelector) {
-	    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
-	    this.refresh = () => {
-	      const container = document.querySelector(parentSelector);
-	      container.innerHTML = this.html;
-	    }
-	  }
-	}
-	FeatureDisplay.template = new $t('features');
-	module.exports = FeatureDisplay
 	
 });
 
@@ -18867,8 +18079,8 @@ function (require, exports, module) {
 	  const measurementColor = hoverId() === measurement.toString() ? 'green' : 'grey';
 	  try {
 	    draw.beginPath();
-	    const isWithin = layout.within(lines.outer.midpoint());
-	    const line = isWithin ? lines.inner : lines.outer;//lines.furtherLine(center);
+	    const isWithin = layout.within(lines.furtherLine().midpoint());
+	    const line = isWithin ? lines.closerLine() : lines.furtherLine();
 	    const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
 	    if (measurementModify || popupOpen) {
 	      draw.line(line.startLine, measurementColor, measurementLineWidth);
@@ -19025,6 +18237,1195 @@ function (require, exports, module) {
 	
 	TwoDLayout.init = init;
 	module.exports = TwoDLayout;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/draw.js',
+function (require, exports, module) {
+	
+const Circle2d = require('./objects/circle');
+	const Line2d = require('./objects/line');
+	const LineMeasurement2d = require('./objects/line-measurement');
+	
+	class Draw2d {
+	  constructor(canvas) {
+	    const ctx = canvas.getContext('2d');
+	
+	    function draw(object, color, width) {
+	      if (Array.isArray(object)) {
+	        for (let index = 0; index < object.length; index += 1)
+	          draw(object[index], color, width);
+	        return;
+	      }
+	      switch (object.constructor.name) {
+	        case 'Line2d':
+	          draw.line(object, color, width);
+	          break;
+	        case 'Circle2d':
+	          draw.circle(object, color, width);
+	          break;
+	        case 'Plane2d':
+	          draw.plane(object, color, width);
+	          break;
+	        case 'Polygon2d':
+	          draw.polygon(object, color, width);
+	          break;
+	        case 'Square2d':
+	          draw.square(object, color, width);
+	          break;
+	        case 'LineMeasurement2d':
+	          draw.measurement(object, color, width);
+	          break;
+	        default:
+	          console.error(`Cannot Draw '${object.constructor.name}'`);
+	      }
+	    }
+	
+	    draw.canvas = () => canvas;
+	    draw.ctx = () => ctx;
+	    draw.beginPath = () => ctx.beginPath();
+	    draw.moveTo = () => ctx.moveTo();
+	
+	    draw.clear = () => {
+	      ctx.save();
+	      ctx.setTransform(1, 0, 0, 1, 0, 0);
+	      ctx.clearRect(0, 0, canvas.width, canvas.height);
+	      ctx.restore();
+	    }
+	    draw.line = (line, color, width, doNotMeasure) => {
+	      if (line === undefined) return;
+	      color = color ||  'black';
+	      width = width || 10;
+	      const measurePoints = line.measureTo();
+	      ctx.beginPath();
+	      ctx.strokeStyle = color;
+	      ctx.lineWidth = width;
+	      ctx.moveTo(line.startVertex().x(), line.startVertex().y());
+	      ctx.lineTo(line.endVertex().x(), line.endVertex().y());
+	      ctx.stroke();
+	    }
+	
+	    draw.plane = (plane, color, width) => {
+	      if (plane === undefined) return;
+	      color = color ||  'black';
+	      width = width || .1;
+	      plane.getLines().forEach((line) => draw.line(line, color, width));
+	    }
+	
+	    draw.polygon = (poly, color, width) => {
+	      if (poly === undefined) return;
+	      color = color ||  'black';
+	      width = width || .1;
+	      poly.lines().forEach((line) => draw.line(line, color, width));
+	    }
+	
+	    draw.square = (square, color) => {
+	      ctx.save();
+	      ctx.beginPath();
+	      ctx.lineWidth = 2;
+	      ctx.strokeStyle = 'black';
+	      ctx.fillStyle = color;
+	
+	      const center = square.center();
+	      ctx.translate(center.x(), center.y());
+	      ctx.rotate(square.radians());
+	      ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
+	      ctx.stroke();
+	      ctx.fill();
+	
+	      ctx.beginPath();
+	      ctx.lineWidth = 4;
+	      ctx.strokeStyle = 'black';
+	      ctx.fillStyle =  'black';
+	      const lc = square.leftCenter();
+	      const fc = square.frontLeft();
+	      ctx.fillText('HEllo o my gooooooood nesss', 0, square.height() / 4, square.width());
+	      ctx.stroke()
+	
+	      ctx.restore();
+	    }
+	
+	    draw.circle = (circle, lineColor, fillColor, lineWidth) => {
+	      const center = circle.center();
+	      ctx.beginPath();
+	      ctx.lineWidth = lineWidth || 2;
+	      ctx.strokeStyle = lineColor || 'black';
+	      ctx.fillStyle = fillColor || 'white';
+	      ctx.arc(center.x(),center.y(), circle.radius(),0, 2*Math.PI);
+	      ctx.stroke();
+	      ctx.fill();
+	    }
+	
+	    const blank = 4;
+	    const hblank = blank/2;
+	    function drawMeasurementLabel(line, measurement) {
+	      if (measurement === undefined) return;
+	      const ctx = draw.ctx();
+	      const midpoint = line.midpoint();
+	
+	      ctx.save();
+	      ctx.lineWidth = 0;
+	      const length = measurement.display();
+	      const textLength = length.length;
+	      ctx.translate(midpoint.x(), midpoint.y());
+	      ctx.rotate(line.radians());
+	      ctx.beginPath();
+	      ctx.fillStyle = "white";
+	      ctx.strokeStyle = 'white';
+	      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
+	      ctx.fill();
+	      ctx.stroke();
+	
+	      ctx.beginPath();
+	      ctx.font = "1px Arial";
+	      ctx.lineWidth = .2;
+	      ctx.strokeStyle = 'black';
+	      ctx.fillStyle =  'black';
+	      ctx.fillText(length, 0, 0);
+	      ctx.stroke()
+	      ctx.restore();
+	    }
+	
+	    draw.measurement = (measurement, color) => {
+	      const measurementColor = color || 'grey';
+	      const measurementLineWidth = '.1';
+	      const lines = measurement.I();
+	      try {
+	        const winner = lines.furtherLine();
+	        draw.beginPath();
+	        draw.line(winner.startLine, measurementColor, measurementLineWidth, true);
+	        draw.line(winner.endLine, measurementColor, measurementLineWidth, true);
+	        draw.line(winner, measurementColor, measurementLineWidth, true);
+	        drawMeasurementLabel(winner, measurement);
+	      } catch (e) {
+	        console.error('Measurement render error:', e);
+	      }
+	    }
+	
+	    return draw;
+	  }
+	}
+	
+	module.exports = Draw2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/displayManager.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	
+	class DisplayManager {
+	  constructor(displayId, listId, switchId, selected) {
+	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
+	    const id = String.random();
+	    const instance = this;
+	    this.list = (func) => {
+	      const list = [];
+	      const runFunc = (typeof func) === 'function';
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        let id = elem.id || String.random(7);
+	        elem.id = id;
+	        name = elem.getAttribute('name') || id;
+	        const item = {id, name, link: elem.getAttribute('link')};
+	        if (runFunc) func(elem);
+	        list.push(item);
+	      }
+	      return list;
+	    }
+	
+	    function updateActive(id) {
+	      const items = document.querySelectorAll('.display-manager-input');
+	      for (let index = 0; index < items.length; index += 1) {
+	        const elem = items[index];
+	        elem.getAttribute('display-id') === id ?
+	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
+	      }
+	    }
+	
+	    function open(id) {
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        if (elem.id === id) {
+	          const link = elem.getAttribute('link');
+	          if (link) {
+	            window.location.href = link;
+	            return;
+	          }
+	          elem.hidden = false;
+	        }
+	        else elem.hidden = true;
+	      }
+	      updateActive(id);
+	    }
+	
+	    this.open = open;
+	
+	    const children = du.id(displayId).children;
+	
+	    if (switchId) {
+	      du.on.match('click', `#${switchId}`, (target, event) => {
+	        const listElem = du.id(listId);
+	        listElem.hidden = !listElem.hidden;
+	      });
+	      document.addEventListener('click', (event) => {
+	        const listElem = du.id(listId);
+	        const target = event.target;
+	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
+	        if (!withinList && target.id !== switchId &&listElem)
+	          listElem.hidden = true;
+	      });
+	    }
+	    DisplayManager.instances[id] = this
+	    if ((typeof selected) === 'string') setTimeout(() => open(selected), 100);
+	    else if (children.length > 0) {
+	      this.list();
+	      open(children[0].id);
+	    }
+	    if (listId) {
+	      du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
+	    }
+	  }
+	}
+	
+	DisplayManager.instances = {};
+	DisplayManager.template = new $t('display-manager');
+	
+	du.on.match('click', '.display-manager-input', (target, event) => {
+	  const displayManager = du.find.up('.display-manager', target);
+	  const displayManagerId = displayManager.id;
+	  const displayId = target.getAttribute('display-id');
+	  DisplayManager.instances[displayManagerId].open(displayId);
+	});
+	module.exports = DisplayManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	
+	const ToggleDisplayList = {};
+	ToggleDisplayList.class = 'toggle-display-list';
+	ToggleDisplayList.funcs = {};
+	
+	ToggleDisplayList.onShow = (displayId, func) => {
+	  if ((typeof func) === 'function') {
+	    if (ToggleDisplayList.funcs[displayId] === undefined) {
+	      ToggleDisplayList.funcs[displayId] = [];
+	    }
+	    ToggleDisplayList.funcs[displayId].push(func);
+	  }
+	}
+	
+	ToggleDisplayList.runFuncs = (displayId) => {
+	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
+	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
+	}
+	
+	ToggleDisplayList.toggle = function (elem, event) {
+	  const target = event.target;
+	  const children = elem.children;
+	  for (let index = 0; index < children.length; index += 1) {
+	    const child = children[index];
+	    if (target === child) {
+	      du.class.add(child, 'active');
+	      const displayId = child.getAttribute('display-id');
+	      du.id(displayId).hidden = false;
+	      ToggleDisplayList.runFuncs(displayId);
+	    } else {
+	      du.class.remove(child, 'active');
+	      du.id(child.getAttribute('display-id')).hidden = true;
+	    }
+	  }
+	}
+	
+	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
+	
+	module.exports = ToggleDisplayList;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/cabinet.js',
+function (require, exports, module) {
+	
+
+	
+	const Show = require('../show.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const ThreeDMain = require('../displays/three-d-main.js');
+	const OpenSectionDisplay = require('./open-section.js');
+	const CabinetConfig = require('../config/cabinet-configs.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const { Object2d } = require('../objects/layout.js');//.Object2d;
+	const Inputs = require('../input/inputs.js');
+	const EPNTS = require('../../generated/EPNTS');
+	
+	
+	function getHtmlElemCabinet (elem) {
+	  const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
+	  return Cabinet.get(cabinetId);
+	}
+	
+	class CabinetDisplay {
+	  constructor(parentSelector, group) {
+	    const propertySelectors = {};
+	    let propId = 'Half Overlay';
+	    let displayId = String.random();
+	    const instance = this;
+	    this.propId = (id) => {
+	      if (id ===  undefined) return propId;
+	      propId = id;
+	    }
+	    function displayValue(val) {
+	      return new Measurement(val).display();
+	    }
+	    const getHeader = (cabinet, $index) =>
+	        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
+	    const showTypes = Show.listTypes();
+	    const getBody = (cabinet, $index) => {
+	      if (propertySelectors[cabinet.uniqueId()] === undefined)
+	        propertySelectors[cabinet.uniqueId()] = Inputs('propertyIds', { value: cabinet.propertyId() });
+	      if (expandList.activeKey() === $index)
+	        ThreeDMain.update(cabinet);
+	      const selectHtml = propertySelectors[cabinet.uniqueId()].html();
+	      const scope = {$index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
+	      return CabinetDisplay.bodyTemplate.render(scope);
+	    }
+	
+	    function inputValidation(values) {
+	      // const validName = values.name !== undefined;
+	      // const validType = CabinetConfig.valid(values.type, values.id);
+	      if(true) return true;
+	      return {type: 'You must select a defined type.'};
+	    }
+	
+	    function updateLayout(target) {
+	      setTimeout(() => {
+	        const attr = target.name === 'thickness' ? 'height' : 'width';
+	        const cabinet = getHtmlElemCabinet(target);
+	        const obj2d = Object2d.get(cabinet.uniqueId());
+	        const value = cabinet[target.name]();
+	        obj2d.topview()[attr](value);
+	      });
+	    }
+	
+	    du.on.match('change', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
+	    du.on.match('blur', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
+	
+	    function updateCabValue(cabinet, attr) {
+	      const inputCnt = du.find(`[cabinet-id='${cabinet.uniqueId()}']`);
+	      const input = du.find.down(`[name='${attr}']`, inputCnt);
+	      input.value = displayValue(cabinet[attr]());
+	    }
+	
+	    function linkLayout(cabinet, obj2d) {
+	      console.log('linking!')
+	      const square = obj2d.topview().object();
+	      if (square.width() !== cabinet.width()) {
+	        cabinet.width(square.width());
+	        updateCabValue(cabinet, 'width');
+	      }
+	      if (square.height() !== cabinet.thickness()) {
+	        cabinet.thickness(square.height());
+	        updateCabValue(cabinet, 'thickness');
+	      }
+	    }
+	
+	    const getObject = (values) => {
+	      const cabinet = CabinetConfig.get(group, values.type, values.propertyId, values.id);
+	      const obj2d = group.room().layout().addObject(cabinet.uniqueId());
+	      obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
+	      return cabinet;
+	    };
+	    this.active = () => expandList.active();
+	    const expListProps = {
+	      list: group.cabinets,
+	      inputTree:   CabinetConfig.inputTree(),
+	      parentSelector, getHeader, getBody, getObject, inputValidation,
+	      listElemLable: 'Cabinet'
+	    };
+	    const expandList = new ExpandableList(expListProps);
+	    this.refresh = () => expandList.refresh();
+	
+	    const cabinetKey = (path) => {
+	      const split = path.split('.');
+	      const index = split[0];
+	      const key = split[1];
+	      const cabinet = expListProps.list[index];
+	      return {cabinet, key};
+	    }
+	
+	    const valueUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      const decimal = new Measurement(value, true).decimal();
+	      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : val);
+	      ThreeDMain.update(cabKey.cabinet);
+	    }
+	
+	    const attrUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      cabKey.cabinet[cabKey.key](value);
+	    }
+	
+	    const saveSuccess = () => console.log('success');
+	    const saveFail = () => console.log('failure');
+	    const save = (target) => {
+	      const index = target.getAttribute('index');
+	      const cabinet = expListProps.list[index];
+	      if (cabinet.name !== undefined) {
+	        Request.post(EPNTS.cabinet.add(cabinet.name()), cabinet.toJson(), saveSuccess, saveFail);
+	        console.log('saving');
+	      } else {
+	        alert('Please enter a name if you want to save the cabinet.')
+	      }
+	    }
+	
+	    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
+	    bind(`.cabinet-input`, valueUpdate,
+	                  {validation: Measurement.validation('(0,)')});
+	    bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
+	    du.on.match('click', '.save-cabinet-btn', save);
+	  }
+	}
+	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
+	CabinetDisplay.headTemplate = new $t('cabinet/head');
+	module.exports = CabinetDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/feature.js',
+function (require, exports, module) {
+	
+
+	const $t = require('../../../../public/js/utils/$t');
+	
+	class FeatureDisplay {
+	  constructor(assembly, parentSelector) {
+	    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
+	    this.refresh = () => {
+	      const container = document.querySelector(parentSelector);
+	      container.innerHTML = this.html;
+	    }
+	  }
+	}
+	FeatureDisplay.template = new $t('features');
+	module.exports = FeatureDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/group.js',
+function (require, exports, module) {
+	
+
+	
+	const Group = require('../objects/group.js');
+	const PropertyConfig = require('../config/property/config.js');
+	const Properties = require('../config/properties.js');
+	const CabinetDisplay = require('./cabinet.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const ThreeDMain = require('../displays/three-d-main.js');
+	
+	class GroupDisplay extends Lookup {
+	  constructor(group) {
+	    super();
+	    function onCabinetStyleChange(values) {
+	      group.propertyConfig.set(values.style, values.subStyle);
+	      ThreeDMain.update();
+	    }
+	    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleChange, group.propertyConfig);
+	    function styleSelector() {
+	      return dit.root().payload().html();
+	    }
+	    function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
+	    this.html = () => {
+	      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this});
+	    }
+	    this.bodyHtml = () =>  GroupDisplay.bodyTemplate.render({group, propertyHtml});
+	
+	    this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
+	    this.cabinet = () => this.cabinetDisplay().active();
+	  }
+	}
+	
+	GroupDisplay.DecisionInputTree = (onComplete, propertyConfigInst) => {
+	  const dit = new DecisionInputTree(onComplete, {buttonText: 'Change'});
+	  const propertyConfig = new PropertyConfig();
+	  const styles = propertyConfig.cabinetStyles();
+	  const cabinetStyles = new Select({
+	    name: 'style',
+	    list: styles,
+	    label: 'Style',
+	    value: propertyConfigInst.cabinetStyle()
+	  });
+	
+	  const hasFrame = new Input({
+	    name: 'hasFrame',
+	    type: 'checkbox',
+	    label: 'Has Frame'
+	  })
+	
+	  const style = dit.branch('style', [hasFrame, cabinetStyles]);
+	  styles.forEach((styleName) => {
+	    const properties = Properties.groupList(styleName);
+	    const selectObj = Object.keys(properties);
+	    const select = new Select({
+	      name: 'subStyle',
+	      list: selectObj,
+	      value: propertyConfigInst.cabinetStyleName()
+	    });
+	    const condtionalPayload = new DecisionInputTree.ValueCondition('style', [styleName], [select]);
+	    style.conditional(styleName, condtionalPayload);
+	  });
+	
+	  return dit;
+	}
+	
+	du.on.match('click', `.group-display-header`, (target) => {
+	  const allBodys = du.find.all('.group-display-body');
+	  for (let index = 0; index < allBodys.length; index += 1) {
+	    allBodys[index].hidden = true;
+	  }
+	  const allHeaders = du.find.all('.group-display-header');
+	  for (let index = 0; index < allHeaders.length; index += 1) {
+	    du.class.remove(allHeaders[index], 'active');
+	  }
+	  du.class.add(target, 'active');
+	  const body = du.find.closest('.group-display-body', target);
+	  const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
+	  const groupDisplay = GroupDisplay.get(groupDisplayId);
+	  body.innerHTML = groupDisplay.bodyHtml();
+	  groupDisplay.cabinetDisplay.refresh();
+	  body.hidden = false;
+	});
+	
+	GroupDisplay.valueUpdate = (target) => {
+	  const group = Group.get(target.getAttribute('group-id'));
+	  const value = target.value;
+	  group.name(value);
+	}
+	
+	du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
+	
+	GroupDisplay.headTemplate = new $t('group/head');
+	GroupDisplay.bodyTemplate = new $t('group/body');
+	GroupDisplay.propertyMenuTemplate = new $t('properties/property-menu');
+	module.exports = GroupDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/radio-display.js',
+function (require, exports, module) {
+	
+
+	
+	const InformationBar = require('./information-bar.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	class RadioDisplay {
+	  constructor(radioClass, groupAttr, alternateToggleClass) {
+	    const selector = (attrVal) => {
+	      return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
+	    }
+	
+	    const infoBar = new InformationBar();
+	
+	    function path () {
+	      let path = '';
+	      const info = du.find.downInfo(`.${radioClass}.open`, document.body, null, `.${radioClass}.close`);
+	      info.matches.forEach((obj) => {
+	        const header = obj.node.children[0];
+	        if (header && header.getBoundingClientRect().y < 8) {
+	          path += `${header.innerText}=>`
+	        }
+	      });
+	      return path;
+	    }
+	
+	    function triggerAlternateToggles(target) {
+	      if (alternateToggleClass) {
+	        const alterToggles = document.querySelectorAll(alternateToggleClass);
+	        alterToggles.forEach((elem) => elem.hidden = false);
+	        const closest = du.closest(alternateToggleClass, target);
+	        if (closest) closest.hidden = true;
+	      }
+	    }
+	
+	    du.on.match('scroll', `*`, (target, event) => {
+	      infoBar.update(path());
+	    });
+	
+	    du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
+	      const target = targetHeader.parentElement;
+	      const attrVal = target.getAttribute(groupAttr);
+	      const targetBody = target.children[1];
+	      const hidden = targetBody.hidden;
+	      targetBody.hidden = !hidden;
+	      if (hidden) {
+	        du.class.add(targetHeader, 'active');
+	        du.class.swap(target, 'open', 'close');
+	        const siblings = document.querySelectorAll(selector(attrVal));
+	        for (let index = 0; index < siblings.length; index += 1) {
+	          if (siblings[index] !== target) {
+	            const sibHeader = siblings[index].children[0];
+	            const sibBody = siblings[index].children[1];
+	            du.class.swap(siblings[index], 'close', 'open');
+	            sibBody.hidden = true;
+	            du.class.remove(sibHeader, 'active');
+	          }
+	        }
+	      } else {
+	        du.class.swap(target, 'close', 'open');
+	        du.class.remove(targetHeader, 'active');
+	      }
+	      infoBar.update(path());
+	    });
+	  }
+	}
+	module.exports = RadioDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/information-bar.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	class InformationBar {
+	  constructor() {
+	    const container = du.create.element('div');
+	    container.className = 'information-bar';
+	
+	    this.show = () => container.hidden = false;
+	    this.hide = () => container.hidden = true;
+	    this.update = (html) => container.innerHTML = html;
+	
+	    document.body.append(container);
+	  }
+	}
+	module.exports = InformationBar
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/three-d-model.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../public/js/3d-modeling/csg');
+	
+	const Polygon3D = require('./objects/polygon');
+	const Assembly = require('../objects/assembly/assembly');
+	const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
+	const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
+	const pull = require('./models/pull.js');
+	const drawerBox = require('./models/drawer-box.js');
+	const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
+	const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const approximate = require('../../../../public/js/utils/approximate.js');
+	
+	const colors = {
+	  indianred: [205, 92, 92],
+	  lightcoral: [240, 128, 128],
+	  salmon: [250, 128, 114],
+	  darksalmon: [233, 150, 122],
+	  lightsalmon: [255, 160, 122],
+	  white: [255, 255, 255],
+	  silver: [192, 192, 192],
+	  gray: [128, 128, 128],
+	  black: [0, 0, 0],
+	  red: [255, 0, 0],
+	  maroon: [128, 0, 0],
+	  yellow: [255, 255, 0],
+	  olive: [128, 128, 0],
+	  lime: [0, 255, 0],
+	  green: [0, 128, 0],
+	  aqua: [0, 255, 255],
+	  teal: [0, 128, 128],
+	  blue: [0, 0, 255],
+	  navy: [0, 0, 128],
+	  fuchsia: [255, 0, 255],
+	  purple: [128, 0, 128]
+	}
+	
+	const colorChoices = Object.keys(colors);
+	function getColor(name) {
+	  if(colors[name]) return colors[name];
+	  return colors[colorChoices[Math.floor(Math.random() * colorChoices.length)]];
+	}
+	
+	class ThreeDModel {
+	  constructor(assembly, viewer) {
+	    const hiddenPartIds = {};
+	    const hiddenPartNames = {};
+	    const hiddenPrefixes = {};
+	    const instance = this;
+	    let hiddenPrefixReg;
+	    let inclusiveTarget = {};
+	    let partMap;
+	    let renderId;
+	    let targetPartId;
+	    this.setTargetPartId = (id) => targetPartId = id;
+	
+	    this.assembly = (a) => {
+	      if (a !== undefined) {
+	        assembly = a;
+	      }
+	      return assembly;
+	    }
+	
+	    this.partMap = () => partMap;
+	    this.isTarget = (type, value) => {
+	      return inclusiveTarget.type === type && inclusiveTarget.value === value;
+	    }
+	    this.inclusiveTarget = function(type, value) {
+	      let prefixReg;
+	      if (type === 'prefix') prefixReg = new RegExp(`^${value}`)
+	      inclusiveTarget = {type, value, prefixReg};
+	    }
+	
+	    function inclusiveMatch(part) {
+	      if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
+	      switch (inclusiveTarget.type) {
+	        case 'prefix':
+	          return part.partName().match(inclusiveTarget.prefixReg) !== null;
+	          break;
+	        case 'part-name':
+	          return part.partName() === inclusiveTarget.value;
+	        case 'part-id':
+	          return part.uniqueId() === inclusiveTarget.value;
+	        default:
+	          throw new Error('unknown inclusiveTarget type');
+	      }
+	    }
+	
+	    function manageHidden(object) {
+	      return function (attr, value) {
+	        if (value === undefined) return object[attr] === true;
+	       object[attr] = value === true;
+	       instance.render();
+	      }
+	    }
+	
+	    function buildHiddenPrefixReg() {
+	      const list = [];
+	      const keys = Object.keys(hiddenPrefixes);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        if (hiddenPrefixes[key] === true) {
+	          list.push(key);
+	        }
+	      }
+	      hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
+	    }
+	
+	    this.hidePartId = manageHidden(hiddenPartIds);
+	    this.hidePartName = manageHidden(hiddenPartNames);
+	    this.hidePrefix = manageHidden(hiddenPrefixes);
+	
+	    function hasHidden(hiddenObj) {
+	      const keys = Object.keys(hiddenObj);
+	      for(let i = 0; i < hiddenObj.length; i += 1)
+	        if (hidden[keys[index]])return true;
+	      return false;
+	    }
+	    this.noneHidden = () => !hasHidden(hiddenPartIds) &&
+	        !hasHidden(hiddenPartNames) && !hasHidden(hiddenPrefixes);
+	
+	    this.depth = (label) => label.split('.').length - 1;
+	
+	    function hidden(part, level) {
+	      if (!part.included()) return true;
+	      const im = inclusiveMatch(part);
+	      if (im !== null) return !im;
+	      if (instance.hidePartId(part.uniqueId())) return true;
+	      if (instance.hidePartName(part.partName())) return true;
+	      if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
+	      return false;
+	    }
+	
+	    function coloring(part) {
+	      if (part.partName() && part.partName().match(/.*Frame.*/)) return getColor('blue');
+	      else if (part.partName() && part.partName().match(/.*Drawer.Box.*/)) return getColor('green');
+	      else if (part.partName() && part.partName().match(/.*Handle.*/)) return getColor('silver');
+	      return getColor('red');
+	    }
+	
+	    const randInt = (start, range) => start + Math.floor(Math.random() * range);
+	    function debugColoring() {
+	      return [randInt(0, 255),randInt(0, 255),randInt(0, 255)];
+	    }
+	
+	    function getModel(assem) {
+	      const pos = assem.position().current();
+	      let model;
+	      if (assem instanceof DrawerBox) {
+	        model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
+	      } else if (assem instanceof Handle) {
+	        model = pull(pos.demension.y, pos.demension.z);
+	      } else {
+	        const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
+	        model = CSG.cube({ radius });
+	      }
+	      model.rotate(pos.rotation);
+	      pos.center.z *= -1;
+	      model.center(pos.center);
+	      // serialize({}, model);
+	      return model;
+	    }
+	
+	    let lm;
+	    this.lastModel = () => {
+	      if (lm === undefined) return undefined;
+	      const polys = [];
+	      const map = {xy: [], xz: [], zy: []};
+	      lm.polygons.forEach((p, index) => {
+	        const norm = p.vertices[0].normal;
+	        const verticies = p.vertices.map((v) => ({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
+	        polys.push(new Polygon3D(verticies));
+	      });
+	      // Polygon3D.merge(polys);
+	      const twoDpolys = Polygon3D.toTwoD(polys);
+	      return twoDpolys;
+	    }
+	
+	
+	    this.render = function () {
+	      ThreeDModel.lastActive = this;
+	      const startTime = new Date().getTime();
+	      buildHiddenPrefixReg();
+	      function buildObject(assem) {
+	        let a = getModel(assem);
+	        const c = assem.position().center();
+	        const e=1;
+	        a.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+	        a.setColor(...getColor());
+	        assem.getJoints().female.forEach((joint) => {
+	          const male = joint.getMale();
+	          const m = getModel(male, male.position().current());
+	          a = a.subtract(m);
+	        });
+	        // else a.setColor(1, 0, 0);
+	        return a;
+	      }
+	      const assemblies = this.assembly().getParts();
+	      let a;
+	      partMap = {};
+	      for (let index = 0; index < assemblies.length; index += 1) {
+	        const assem = assemblies[index];
+	        partMap[assem.uniqueId()] = assem.path();
+	        if (!hidden(assem)) {
+	          const b = buildObject(assem);
+	          // const c = assem.position().center();
+	          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+	          if (a === undefined) a = b;
+	          else if (b && assem.length() && assem.width() && assem.thickness()) {
+	            a = a.union(b);
+	          }
+	          if (assem.uniqueId() === targetPartId) {
+	            lm = b.clone();
+	            const rotation = assem.position().rotation();
+	            rotation.x *=-1;
+	            rotation.y = (360 - rotation.y)  % 360;
+	            rotation.z *=-1;
+	            lm.center({x:0,y:0,z:0})
+	            lm.rotate(rotation);
+	          }
+	        }
+	      }
+	      if (a) {
+	        // a.polygons.forEach((p) => p.shared = getColor());
+	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
+	        viewer.mesh = a.toMesh();
+	        viewer.gl.ondraw();
+	        console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
+	      }
+	    }
+	
+	    this.update = (part) => {
+	      const rId = renderId = String.random();
+	      ThreeDModel.renderId = renderId;
+	      setTimeout(() => {
+	        if(renderId === rId) instance.render();
+	      }, 250);
+	    };
+	  }
+	}
+	
+	ThreeDModel.models = {};
+	ThreeDModel.get = (assembly, viewer) => {
+	  if (assembly === undefined) return ThreeDModel.lastActive;
+	  if (ThreeDModel.models[assembly.uniqueId()] === undefined) {
+	    ThreeDModel.models[assembly.uniqueId()] = new ThreeDModel(assembly, viewer);
+	  }
+	  return ThreeDModel.models[assembly.uniqueId()];
+	}
+	ThreeDModel.render = (part) => {
+	  const renderId = String.random();
+	  ThreeDModel.renderId = renderId;
+	  setTimeout(() => {
+	    if(ThreeDModel.renderId === renderId) ThreeDModel.get(part).render();
+	  }, 250);
+	};
+	
+	module.exports = ThreeDModel
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/cabinet-template.js',
+function (require, exports, module) {
+	
+const cabinetsJson = require('../../public/json/cabinets.json');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const PropertyConfig = require('./property/config');
+	
+	class CabinetTemplate extends Lookup {
+	  constructor(type) {
+	    super();
+	    const instance = this;
+	    const initialVals = (typeof type) === 'object' ? type : {
+	      type, values: [], subassemblies: [], joints: [], dividerJoint: {},
+	      openings: [
+	        {
+	          "top": "pt",
+	          "bottom": "pb",
+	          "left": "pl",
+	          "right": "pr",
+	          "back": "pback"
+	        }
+	      ]
+	    };
+	    Object.getSet(this, initialVals);
+	    CabinetTemplate.map[type] = this;
+	
+	    function getCabinet(length, width, thickness, pc) {
+	      const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
+	      cabinet.length(length);
+	      cabinet.width(width);
+	      cabinet.thickness(thickness);
+	
+	      cabinet.propertyConfig = pc instanceof PropertyConfig ? pc : new PropertyConfig();
+	      return cabinet;
+	    }
+	    this.getCabinet = getCabinet;
+	
+	    this.codeMap = () => {
+	      let codeMap = {};
+	      Object.values(this.subassemblies()).forEach((sa) => codeMap[sa.code] = sa);
+	      return codeMap;
+	    }
+	
+	    this.validPartCode = (code) => this.codeMap()[code] !== undefined;
+	    const vpc = this.validPartCode;
+	
+	    this.validOpenings = () => {
+	      const bms = this.openings();
+	      for (let index = 0; index < bms.length; index += 1) {
+	        const bm = bms[index];
+	        if (!(vpc(bm.top) && vpc(bm.bottom) && vpc(bm.right) &&
+	                vpc(bm.left) && vpc(bm.bottom))) {
+	          return false;
+	        }
+	      }
+	      return true;
+	    }
+	    this.validateDividerJoint = () => {
+	      const j = this.dividerJoint();
+	      return j.type === 'Butt' || (j.type === 'Dado' && j.maleOffset > 0);
+	    }
+	
+	    const offsetReg = /(-|\+|)[xyz]/;
+	    this.validOffset = (offset) => offset && offset.match(offsetReg) !== null;
+	    const vo = this.validOffset;
+	
+	    this.validateJoint = (joint, malePartCode, femalePartCode) => {
+	      let isValid = vpc(malePartCode) && vpc(femalePartCode);
+	      switch (joint.type) {
+	        case "Dado":
+	          return isValid && joint.maleOffset > 0 && vo(joint.demensionToOffset) &&
+	                  vo(joint.centerOffset);
+	        default:
+	          return true;
+	      }
+	    }
+	    this.validateJoints = () => {
+	      let joints = this.joints();
+	      for (let index = 0; index < joints.length; index += 1) {
+	        if (!this.validateJoint(joints[index])) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.evalEqn = (eqn, cab) => {
+	      cab ||= getCabinet();
+	      return cab.eval(eqn);
+	    }
+	
+	    this.validateEquation = (eqn, cab) => {
+	      return !Number.isNaN(this.evalEqn(eqn, cab));
+	    }
+	    const veq = this.validateEquation;
+	
+	    this.validateValues = (cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	      const values = Object.values(this.values());
+	      for (let index = 0; index < values.length; index += 1) {
+	        if (!veq(values[index].eqn, cab)) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.validateSubassembly = (subAssem, cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	
+	      const c = subAssem.center;
+	      const d = subAssem.demensions;
+	      const r = subAssem.rotation;
+	      return vpc(subAssem.code) &&
+	              r.length === 3 && veq(r[0], cab) && veq(r[1], cab) && veq(r[2], cab) &&
+	              veq(c[0], cab) && veq(c[1], cab) && veq(c[2], cab) &&
+	              veq(d[0], cab) && veq(d[1], cab) && veq(d[2], cab);
+	    }
+	
+	    this.validateSubassemblies = (cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }      const subAssems = Object.values(this.subassemblies());
+	      for (let index = 0; index < subAssems.length; index += 1) {
+	        if (!this.validateSubassembly(subAssems[index])) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.valid = () => {
+	      let cab;
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	      return this.validateValues(cab) && this.validOpenings() &&
+	              this.validateDividerJoint() && this.validateJoints() &&
+	              this.validateSubassemblies(cab);
+	    }
+	  }
+	}
+	
+	CabinetTemplate.map = {};
+	CabinetTemplate.defaultList = () => {
+	  const list = [];
+	  const keys = Object.keys(cabinetsJson);
+	  for (let index = 0; index < keys.length; index += 1) {
+	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
+	  }
+	  return list;
+	}
+	
+	CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
+	
+	module.exports = CabinetTemplate;
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/history.js',
+function (require, exports, module) {
+	
+class History {
+	  constructor() {
+	    let changes = [];
+	    let changesIndex = [];
+	
+	      this.addChange = (forward, back) => {
+	        changes = changes.slice(0, changesIndex);
+	        changes.push({forward, back});
+	        changesIndex++;
+	      }
+	
+	    this.getSet = (obj, initialVals, ...attrs) => {
+	      attrs = Object.getSet(obj, initialVals, ...attrs);
+	      const objFuncs = {};
+	      attrs.forEach((attr) => {
+	        objFuncs[attr] = obj[attr];
+	        obj[attr] = (value) => {
+	          if (value !== undefined) {
+	            const oldValue = objFuncs[attr]();
+	            const back = () => objFuncs[attr](oldValue);
+	            const forward = () => objFuncs[attr](value);
+	            this.addChange(obj, forward, back);
+	          }
+	          return objFuncs[attr](value);
+	        }
+	      });
+	    }
+	
+	    this.undo = () => {
+	      const change = changes[--changesIndex];
+	      change.back();
+	    }
+	
+	    this.redo = () => {
+	      const change = changes[++changesIndex];
+	      change.forward();
+	    }
+	
+	    this.canUndo =() => changesIndex > 0;
+	    this.canRedo = () => changeIndex < changes.length - 1;
+	  }
+	}
+	
+	module.exports = History;
 	
 });
 
@@ -19260,320 +19661,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/group.js',
-function (require, exports, module) {
-	
-
-	
-	const Group = require('../objects/group.js');
-	const PropertyConfig = require('../config/property/config.js');
-	const Properties = require('../config/properties.js');
-	const CabinetDisplay = require('./cabinet.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const ThreeDMain = require('../displays/three-d-main.js');
-	
-	class GroupDisplay extends Lookup {
-	  constructor(group) {
-	    super();
-	    function onCabinetStyleChange(values) {
-	      group.propertyConfig.set(values.style, values.subStyle);
-	      ThreeDMain.update();
-	    }
-	    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleChange, group.propertyConfig);
-	    function styleSelector() {
-	      return dit.root().payload().html();
-	    }
-	    function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
-	    this.html = () => {
-	      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this});
-	    }
-	    this.bodyHtml = () =>  GroupDisplay.bodyTemplate.render({group, propertyHtml});
-	
-	    this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
-	    this.cabinet = () => this.cabinetDisplay().active();
-	  }
-	}
-	
-	GroupDisplay.DecisionInputTree = (onComplete, propertyConfigInst) => {
-	  const dit = new DecisionInputTree(onComplete, {buttonText: 'Change', noSubmission: 2000});
-	  const propertyConfig = new PropertyConfig();
-	  const styles = propertyConfig.cabinetStyles();
-	  const cabinetStyles = new Select({
-	    name: 'style',
-	    list: styles,
-	    label: 'Style',
-	    value: propertyConfigInst.cabinetStyle()
-	  });
-	
-	  const hasFrame = new Input({
-	    name: 'hasFrame',
-	    type: 'checkbox',
-	    label: 'Has Frame'
-	  })
-	
-	  const style = dit.branch('style', [hasFrame, cabinetStyles]);
-	  styles.forEach((styleName) => {
-	    const properties = Properties.groupList(styleName);
-	    const selectObj = Object.keys(properties);
-	    const select = new Select({
-	      name: 'subStyle',
-	      list: selectObj,
-	      value: propertyConfigInst.cabinetStyleName()
-	    });
-	    const condtionalPayload = new DecisionInputTree.ValueCondition('style', [styleName], [select]);
-	    style.conditional(styleName, condtionalPayload);
-	  });
-	
-	  return dit;
-	}
-	
-	du.on.match('click', `.group-display-header`, (target) => {
-	  const allBodys = du.find.all('.group-display-body');
-	  for (let index = 0; index < allBodys.length; index += 1) {
-	    allBodys[index].hidden = true;
-	  }
-	  const allHeaders = du.find.all('.group-display-header');
-	  for (let index = 0; index < allHeaders.length; index += 1) {
-	    du.class.remove(allHeaders[index], 'active');
-	  }
-	  du.class.add(target, 'active');
-	  const body = du.find.closest('.group-display-body', target);
-	  const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
-	  const groupDisplay = GroupDisplay.get(groupDisplayId);
-	  body.innerHTML = groupDisplay.bodyHtml();
-	  groupDisplay.cabinetDisplay.refresh();
-	  body.hidden = false;
-	});
-	
-	GroupDisplay.valueUpdate = (target) => {
-	  const group = Group.get(target.getAttribute('group-id'));
-	  const value = target.value;
-	  group.name(value);
-	}
-	
-	du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
-	
-	GroupDisplay.headTemplate = new $t('group/head');
-	GroupDisplay.bodyTemplate = new $t('group/body');
-	GroupDisplay.propertyMenuTemplate = new $t('properties/property-menu');
-	module.exports = GroupDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/cabinet.js',
-function (require, exports, module) {
-	
-
-	
-	const Show = require('../show.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const ThreeDMain = require('../displays/three-d-main.js');
-	const OpenSectionDisplay = require('./open-section.js');
-	const CabinetConfig = require('../config/cabinet-configs.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const { Object2d } = require('../objects/layout.js');//.Object2d;
-	const Inputs = require('../input/inputs.js');
-	const EPNTS = require('../../generated/EPNTS');
-	
-	
-	function getHtmlElemCabinet (elem) {
-	  const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
-	  return Cabinet.get(cabinetId);
-	}
-	
-	class CabinetDisplay {
-	  constructor(parentSelector, group) {
-	    const propertySelectors = {};
-	    let propId = 'Half Overlay';
-	    let displayId = String.random();
-	    const instance = this;
-	    this.propId = (id) => {
-	      if (id ===  undefined) return propId;
-	      propId = id;
-	    }
-	    function displayValue(val) {
-	      return new Measurement(val).display();
-	    }
-	    const getHeader = (cabinet, $index) =>
-	        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
-	    const showTypes = Show.listTypes();
-	    const getBody = (cabinet, $index) => {
-	      if (propertySelectors[cabinet.uniqueId()] === undefined)
-	        propertySelectors[cabinet.uniqueId()] = Inputs('propertyIds', { value: cabinet.propertyId() });
-	      if (expandList.activeKey() === $index)
-	        ThreeDMain.update(cabinet);
-	      const selectHtml = propertySelectors[cabinet.uniqueId()].html();
-	      const scope = {$index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
-	      return CabinetDisplay.bodyTemplate.render(scope);
-	    }
-	
-	    function inputValidation(values) {
-	      const validName = values.name !== undefined;
-	      const validType = CabinetConfig.valid(values.type, values.id);
-	      if(validType) return true;
-	      return {type: 'You must select a defined type.'};
-	    }
-	
-	    function updateLayout(target) {
-	      setTimeout(() => {
-	        const attr = target.name === 'thickness' ? 'height' : 'width';
-	        const cabinet = getHtmlElemCabinet(target);
-	        const obj2d = Object2d.get(cabinet.uniqueId());
-	        const value = cabinet[target.name]();
-	        obj2d.topview()[attr](value);
-	      });
-	    }
-	
-	    du.on.match('change', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
-	    du.on.match('blur', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
-	
-	    function updateCabValue(cabinet, attr) {
-	      const inputCnt = du.find(`[cabinet-id='${cabinet.uniqueId()}']`);
-	      const input = du.find.down(`[name='${attr}']`, inputCnt);
-	      input.value = displayValue(cabinet[attr]());
-	    }
-	
-	    function linkLayout(cabinet, obj2d) {
-	      console.log('linking!')
-	      const square = obj2d.topview().object();
-	      if (square.width() !== cabinet.width()) {
-	        cabinet.width(square.width());
-	        updateCabValue(cabinet, 'width');
-	      }
-	      if (square.height() !== cabinet.thickness()) {
-	        cabinet.thickness(square.height());
-	        updateCabValue(cabinet, 'thickness');
-	      }
-	    }
-	
-	    const getObject = (values) => {
-	      const cabinet = CabinetConfig.get(group, values.name, values.type, values.propertyId, values.id);
-	      const obj2d = group.room().layout().addObject(cabinet.uniqueId());
-	      obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
-	      return cabinet;
-	    };
-	    this.active = () => expandList.active();
-	    const expListProps = {
-	      list: group.cabinets,
-	      inputTree:   CabinetConfig.inputTree(),
-	      parentSelector, getHeader, getBody, getObject, inputValidation,
-	      listElemLable: 'Cabinet'
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	    this.refresh = () => expandList.refresh();
-	
-	    const cabinetKey = (path) => {
-	      const split = path.split('.');
-	      const index = split[0];
-	      const key = split[1];
-	      const cabinet = expListProps.list[index];
-	      return {cabinet, key};
-	    }
-	
-	    const valueUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      const decimal = new Measurement(value, true).decimal();
-	      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : val);
-	      ThreeDMain.update(cabKey.cabinet);
-	    }
-	
-	    const attrUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      cabKey.cabinet[cabKey.key](value);
-	    }
-	
-	    const saveSuccess = () => console.log('success');
-	    const saveFail = () => console.log('failure');
-	    const save = (target) => {
-	      const index = target.getAttribute('index');
-	      const cabinet = expListProps.list[index];
-	      if (cabinet.name !== undefined) {
-	        Request.post(EPNTS.cabinet.add(cabinet.name()), cabinet.toJson(), saveSuccess, saveFail);
-	        console.log('saving');
-	      } else {
-	        alert('Please enter a name if you want to save the cabinet.')
-	      }
-	    }
-	
-	    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-	    bind(`.cabinet-input`, valueUpdate,
-	                  {validation: Measurement.validation('(0,)')});
-	    bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
-	    du.on.match('click', '.save-cabinet-btn', save);
-	  }
-	}
-	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
-	CabinetDisplay.headTemplate = new $t('cabinet/head');
-	module.exports = CabinetDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/history.js',
-function (require, exports, module) {
-	
-class History {
-	  constructor() {
-	    let changes = [];
-	    let changesIndex = [];
-	
-	      this.addChange = (forward, back) => {
-	        changes = changes.slice(0, changesIndex);
-	        changes.push({forward, back});
-	        changesIndex++;
-	      }
-	
-	    this.getSet = (obj, initialVals, ...attrs) => {
-	      attrs = Object.getSet(obj, initialVals, ...attrs);
-	      const objFuncs = {};
-	      attrs.forEach((attr) => {
-	        objFuncs[attr] = obj[attr];
-	        obj[attr] = (value) => {
-	          if (value !== undefined) {
-	            const oldValue = objFuncs[attr]();
-	            const back = () => objFuncs[attr](oldValue);
-	            const forward = () => objFuncs[attr](value);
-	            this.addChange(obj, forward, back);
-	          }
-	          return objFuncs[attr](value);
-	        }
-	      });
-	    }
-	
-	    this.undo = () => {
-	      const change = changes[--changesIndex];
-	      change.back();
-	    }
-	
-	    this.redo = () => {
-	      const change = changes[++changesIndex];
-	      change.forward();
-	    }
-	
-	    this.canUndo =() => changesIndex > 0;
-	    this.canRedo = () => changeIndex < changes.length - 1;
-	  }
-	}
-	
-	module.exports = History;
-	
-});
-
-
 RequireJS.addFunction('./app-src/displays/order.js',
 function (require, exports, module) {
 	
@@ -19685,120 +19772,6 @@ function (require, exports, module) {
 	  return dit;
 	}
 	module.exports = OrderDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/section.js',
-function (require, exports, module) {
-	
-
-});
-
-
-RequireJS.addFunction('./app-src/displays/three-view.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils');
-	const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
-	const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
-	const pull = require('../three-d/models/pull.js');
-	const ThreeDModel = require('../three-d/three-d-model.js');
-	const Layout2D = require('../objects/layout.js')
-	const Draw2D = require('../two-d/draw.js');
-	const Polygon2d = require('../two-d/objects/polygon.js');
-	const PanZoom = require('../two-d/pan-zoom.js');
-	
-	class ThreeView extends Lookup {
-	  constructor(viewer) {
-	    super();
-	    const instance = this;
-	    const maxDem = window.innerHeight * .45;
-	    const cnt = du.create.element('div');
-	    const p = pull(5,2);
-	    let front, left, top;
-	    let panzFront, panzLeft, panzTop;
-	    let threeDModel;
-	    document.body.append(cnt);
-	    this.maxDem = () => maxDem;
-	    cnt.innerHTML = ThreeView.template.render(this);
-	
-	    const color = 'black';
-	    const width = .2;
-	    const drawFront = () => {
-	      Layout2D.release('three-view-front');
-	      const lm = this.lastModel();
-	      if (lm === undefined) return;
-	      const xy = lm.xy;
-	      const twoDmap = Polygon2d.lines(...xy);
-	      front(twoDmap, color, width);
-	    }
-	    const drawLeft = () => {
-	      Layout2D.release('three-view-left');
-	      const lm = this.lastModel();
-	      if (lm === undefined) return;
-	      const twoDmap = Polygon2d.lines(...lm.zy);
-	      left(twoDmap, color, width);
-	    }
-	    const drawTop = () => {
-	      Layout2D.release('three-view-top');
-	      const lm = this.lastModel();
-	      if (lm === undefined) return;
-	      const twoDmap = Polygon2d.lines(...lm.xz);
-	      top(twoDmap, color, width);
-	    }
-	
-	    function init() {
-	      if (viewer === undefined) {
-	        viewer = new Viewer(p, maxDem, maxDem, 50);
-	        addViewer(viewer, `#${instance.id()}>.three-view-three-d-cnt`);
-	      }
-	      front = new Draw2D(du.id('three-view-front'));
-	      left = new Draw2D(du.id('three-view-left'));
-	      top = new Draw2D(du.id('three-view-top'));
-	
-	      panzFront = new PanZoom(front.canvas(), drawFront);
-	      panzLeft = new PanZoom(left.canvas(), drawLeft);
-	      panzTop = new PanZoom(top.canvas(), drawTop);
-	      panzFront.centerOn(0, 0);
-	      panzLeft.centerOn(0, 0);
-	      panzTop.centerOn(0, 0);
-	    }
-	
-	    this.update = (cabinet) => {
-	      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet, viewer);
-	      threeDModel.assembly(cabinet, viewer);
-	      threeDModel.update(cabinet);
-	      front.clear();left.clear();top.clear();
-	      setTimeout(() => {
-	        drawTop();drawLeft();drawFront();
-	      }, 1000);
-	    }
-	
-	    this.isolatePart = (partCode, cabinet) => {
-	      threeDModel = ThreeDModel.get();
-	      threeDModel.setTargetPartCode(partCode);
-	      threeDModel.update();
-	      setTimeout(() => {
-	        panzFront.once();
-	        panzLeft.once();
-	        panzTop.once();
-	      }, 500);
-	      du.id(`three-view-part-code-${this.id()}`).innerText = partCode;
-	    }
-	
-	    this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;
-	    this.partMap = () => threeDModel ? threeDModel.partMap() : {};
-	
-	    setTimeout(init, 1000);
-	  }
-	}
-	
-	ThreeView.template = new $t('three-view');
-	
-	module.exports = ThreeView;
 	
 });
 
@@ -20117,6 +20090,13 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/displays/section.js',
+function (require, exports, module) {
+	
+
+});
+
+
 RequireJS.addFunction('./app-src/displays/three-d-main.js',
 function (require, exports, module) {
 	
@@ -20195,10 +20175,16 @@ function (require, exports, module) {
 	        label.nextElementSibling.getAttribute('prefix');
 	  const cabinet = lastRendered;
 	  const tdm = ThreeDModel.get(cabinet, viewer);
-	  tdm.inclusiveTarget(type, has ? undefined : value);
-	  if (!has) {
-	    const partCode = du.find.closest('[type="part-code"]', target).innerText;
-	    threeView.isolatePart(partCode, cabinet);
+	  let partId = target.getAttribute('part-id');
+	  if (partId) {
+	    if (!has) {
+	      tdm.inclusiveTarget(type, partId);
+	      threeView.isolatePart(partId, cabinet);
+	    }
+	  } else {
+	    tdm.inclusiveTarget(type, has ? undefined : value);
+	    partId = du.find.closest('[part-id]', target).getAttribute('part-id');
+	    threeView.isolatePart(partId, cabinet);
 	  }
 	  tdm.render();
 	});
@@ -20260,25 +20246,26 @@ function (require, exports, module) {
 	  tdm.render();
 	});
 	
-	du.on.match('change', '.part-code-checkbox', (target) => {
+	du.on.match('change', '.part-id-checkbox', (target) => {
 	  const cabinet = lastRendered;
-	  const attr = target.getAttribute('part-code');
+	  const attr = target.getAttribute('part-id');
 	  deselectPrefix();
 	  const tdm = ThreeDModel.get(cabinet, viewer);
-	  tdm.hidePartCode(attr, !target.checked);
+	  tdm.hidePartId(attr, !target.checked);
 	  tdm.render();
 	})
 	
-	du.on.match('click', '#three-d-model', () => {
-	  const controller = du.id('model-controller');
-	  const cabinet = lastRendered;
-	  if (cabinet) {
-	    const grouping = groupParts(cabinet);
-	    grouping.tdm = ThreeDModel.get(cabinet, viewer);
+	let controllerModel;
+	function updateController() {
+	  if (controllerModel !== lastRendered) {
+	    controllerModel = lastRendered;
+	    const controller = du.id('model-controller');
+	    const grouping = groupParts(controllerModel);
+	    grouping.tdm = ThreeDModel.get(controllerModel, viewer);
 	    controller.innerHTML = modelContTemplate.render(grouping);
+	    controller.hidden = false;
 	  }
-	  controller.hidden = false;
-	});
+	}
 	
 	
 	let lastRendered;
@@ -20286,6 +20273,7 @@ function (require, exports, module) {
 	  if (part) lastRendered = part.getAssembly('c');
 	  const threeDModel = ThreeDModel.get(lastRendered, viewer);
 	  threeDModel.render(lastRendered);
+	  updateController();
 	}
 	
 	module.exports = {init, update}
@@ -20301,6 +20289,7 @@ function (require, exports, module) {
 	const CustomEvent = require('../../../../public/js/utils/custom-error.js');
 	const cabinetBuildConfig = require('../../public/json/cabinets.json');
 	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
 	const Inputs = require('../input/inputs.js');
 	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
@@ -20334,37 +20323,34 @@ function (require, exports, module) {
 	
 	    this.onUpdate = (func) => updateEvent.on(func);
 	    this.inputTree = () => {
+	      const types = JSON.parse(JSON.stringify(configKeys));
 	      const typeInput = new Select({
 	        name: 'type',
 	        class: 'center',
-	        list: JSON.parse(JSON.stringify(configKeys))
+	        list: types
 	      });
-	      const propertyInput = new Select({
-	        name: 'propertyId',
-	        class: 'center',
-	        list: ['pajango', 'skititors']
-	      });
-	      const inputs = [Inputs('name'), typeInput];
+	      const inputs = [typeInput];
 	      const inputTree = new DecisionInputTree();
 	      const cabinet = inputTree.branch('Cabinet', inputs);
 	      const cabinetTypes = Object.keys(cabinetKeys);
-	      cabinetTypes.forEach((type) => {
-	        const cabinetInput = new Select({
+	      types.forEach((type) => {
+	
+	        const cabinetInput = new Input({
 	          label: 'Layout (Optional)',
 	          name: 'id',
 	          class: 'center',
-	          list: [''].concat(Object.keys(cabinetKeys[type]))
+	          list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
 	        });
 	        cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
 	      });
 	      return inputTree;
 	    };
-	    this.get = (group, name, type, propertyId, id) => {
+	    this.get = (group, type, propertyId, id) => {
 	      let cabinet;
-	      if (!id) cabinet = Cabinet.build(type, group);
+	      if (!cabinetList || !cabinetList[id]) cabinet = Cabinet.build(type, group);
 	      else cabinet = Cabinet.fromJson(cabinetList[id], group);
 	      if (propertyId !== undefined) cabinet.propertyId(propertyId);
-	      cabinet.name(name);
+	      cabinet.name(id);
 	      return cabinet;
 	    };
 	
@@ -20374,270 +20360,6 @@ function (require, exports, module) {
 	
 	CabinetConfig = new CabinetConfig();
 	module.exports = CabinetConfig
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/property.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	
-	
-	
-	class Property extends Lookup {
-	  // clone constructor(code, value) {
-	  constructor(code, name, props) {
-	    super();
-	    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
-	    const children = [];
-	
-	    const initVals = {
-	      code, name, description: props instanceof Object ? props.description : undefined
-	    }
-	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
-	
-	    this.value = (val, notMetric) => {
-	      if (val !== undefined && value !== val) {
-	        const measurement = new Measurement(val, notMetric);
-	        const measurementVal = measurement.value();
-	        value = Number.isNaN(measurementVal) ? val : measurement;
-	      }
-	      return value instanceof Measurement ? value.value() : value;
-	    }
-	
-	    this.display = () => {
-	      return value instanceof Measurement ? value.display() : value;
-	    }
-	
-	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
-	
-	    if ((typeof props) !== 'object' ||  props === null) {
-	      this.value(props);
-	      props = {};
-	    }
-	    this.properties(props || {});
-	
-	    const existingProp = Property.list[code];
-	    let clone = false;
-	    if (this.properties().value !== undefined) {
-	      this.value(this.properties().value, this.properties().notMetric);
-	    }
-	
-	    // if (existingProp) {
-	    //   value = value || existingProp.value();
-	    //   name = existingProp.name();
-	    //   this.properties(existingProp.properties());
-	    //   clone = true;
-	    // }
-	
-	    if ((typeof value) === 'number')
-	      value = new Measurement(value, this.properties().notMetric);
-	
-	
-	    this.addChild = (property) => {
-	      if (property instanceof Property && property.code() === this.code()) {
-	            if (children.indexOf(property) === -1) children.push(property);
-	            else throw new Error('Property is already a child');
-	      }
-	      else throw new Error('Child is not an instance of Property or Code does not match');
-	    }
-	
-	    this.children = () => JSON.clone(children);
-	
-	    this.equals = (other) =>
-	        other instanceof Property &&
-	        this.value() === other.value() &&
-	        this.code() === other.code() &&
-	        this.name() === other.name() &&
-	        this.description() === other.description();
-	
-	    this.clone = (val) => {
-	      const cProps = this.properties();
-	      cProps.clone = true;
-	      cProps.value = val === undefined ? this.value() : val;
-	      cProps.description = this.description();
-	      delete cProps.notMetric;
-	      return new Property(this.code(), this.name(), cProps);
-	    }
-	    if(!clone) Property.list[code] = this;
-	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
-	  }
-	}
-	Property.list = {};
-	Property.DO_NOT_CLONE = true;
-	
-	new Property();
-	
-	module.exports = Property
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/cabinet-template.js',
-function (require, exports, module) {
-	
-const cabinetsJson = require('../../public/json/cabinets.json');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const PropertyConfig = require('./property/config');
-	
-	class CabinetTemplate extends Lookup {
-	  constructor(type) {
-	    super();
-	    const instance = this;
-	    const initialVals = (typeof type) === 'object' ? type : {
-	      type, values: [], subassemblies: [], joints: [], dividerJoint: {},
-	      openings: [
-	        {
-	          "top": "pt",
-	          "bottom": "pb",
-	          "left": "pl",
-	          "right": "pr",
-	          "back": "pback"
-	        }
-	      ]
-	    };
-	    Object.getSet(this, initialVals);
-	    CabinetTemplate.map[type] = this;
-	
-	    function getCabinet(length, width, thickness, pc) {
-	      const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
-	      cabinet.length(length);
-	      cabinet.width(width);
-	      cabinet.thickness(thickness);
-	
-	      cabinet.propertyConfig = pc instanceof PropertyConfig ? pc : new PropertyConfig();
-	      return cabinet;
-	    }
-	    this.getCabinet = getCabinet;
-	
-	    this.codeMap = () => {
-	      let codeMap = {};
-	      Object.values(this.subassemblies()).forEach((sa) => codeMap[sa.code] = sa);
-	      return codeMap;
-	    }
-	
-	    this.validPartCode = (code) => this.codeMap()[code] !== undefined;
-	    const vpc = this.validPartCode;
-	
-	    this.validOpenings = () => {
-	      const bms = this.openings();
-	      for (let index = 0; index < bms.length; index += 1) {
-	        const bm = bms[index];
-	        if (!(vpc(bm.top) && vpc(bm.bottom) && vpc(bm.right) &&
-	                vpc(bm.left) && vpc(bm.bottom))) {
-	          return false;
-	        }
-	      }
-	      return true;
-	    }
-	    this.validateDividerJoint = () => {
-	      const j = this.dividerJoint();
-	      return j.type === 'Butt' || (j.type === 'Dado' && j.maleOffset > 0);
-	    }
-	
-	    const offsetReg = /(-|\+|)[xyz]/;
-	    this.validOffset = (offset) => offset && offset.match(offsetReg) !== null;
-	    const vo = this.validOffset;
-	
-	    this.validateJoint = (joint, malePartCode, femalePartCode) => {
-	      let isValid = vpc(malePartCode) && vpc(femalePartCode);
-	      switch (joint.type) {
-	        case "Dado":
-	          return isValid && joint.maleOffset > 0 && vo(joint.demensionToOffset) &&
-	                  vo(joint.centerOffset);
-	        default:
-	          return true;
-	      }
-	    }
-	    this.validateJoints = () => {
-	      let joints = this.joints();
-	      for (let index = 0; index < joints.length; index += 1) {
-	        if (!this.validateJoint(joints[index])) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.evalEqn = (eqn, cab) => {
-	      cab ||= getCabinet();
-	      return cab.eval(eqn);
-	    }
-	
-	    this.validateEquation = (eqn, cab) => {
-	      return !Number.isNaN(this.evalEqn(eqn, cab));
-	    }
-	    const veq = this.validateEquation;
-	
-	    this.validateValues = (cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	      const values = Object.values(this.values());
-	      for (let index = 0; index < values.length; index += 1) {
-	        if (!veq(values[index].eqn, cab)) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.validateSubassembly = (subAssem, cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	
-	      const c = subAssem.center;
-	      const d = subAssem.demensions;
-	      const r = subAssem.rotation;
-	      return vpc(subAssem.code) &&
-	              r.length === 3 && veq(r[0], cab) && veq(r[1], cab) && veq(r[2], cab) &&
-	              veq(c[0], cab) && veq(c[1], cab) && veq(c[2], cab) &&
-	              veq(d[0], cab) && veq(d[1], cab) && veq(d[2], cab);
-	    }
-	
-	    this.validateSubassemblies = (cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }      const subAssems = Object.values(this.subassemblies());
-	      for (let index = 0; index < subAssems.length; index += 1) {
-	        if (!this.validateSubassembly(subAssems[index])) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.valid = () => {
-	      let cab;
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	      return this.validateValues(cab) && this.validOpenings() &&
-	              this.validateDividerJoint() && this.validateJoints() &&
-	              this.validateSubassemblies(cab);
-	    }
-	  }
-	}
-	
-	CabinetTemplate.map = {};
-	CabinetTemplate.defaultList = () => {
-	  const list = [];
-	  const keys = Object.keys(cabinetsJson);
-	  for (let index = 0; index < keys.length; index += 1) {
-	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
-	  }
-	  return list;
-	}
-	
-	CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
-	
-	module.exports = CabinetTemplate;
 	
 });
 
@@ -20772,6 +20494,817 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 });
 
 
+RequireJS.addFunction('./app-src/config/properties.js',
+function (require, exports, module) {
+	
+
+	const Property = require('./property');
+	const Defs = require('./property/definitions');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	const EPNTS = require('../../generated/EPNTS');
+	const Request = require('../../../../public/js/utils/request.js');
+	
+	let unitCount = 0;
+	const UNITS = [];
+	Measurement.units().forEach((unit) =>
+	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
+	UNITS._VALUE = Measurement.unit();
+	
+	const assemProps = {}
+	const add = (key, properties) => properties.forEach((prop) => {
+	  if (assemProps[key] === undefined) assemProps[key] = {};
+	  assemProps[key][prop.code()] = prop;
+	});
+	
+	add('Overlay', [Defs.ov]);
+	add('Reveal', [Defs.r,Defs.rvt,Defs.rvb]);
+	add('Inset', [Defs.is]);
+	add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
+	                Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
+	                Defs.frw,Defs.frt]);
+	add('Panel', [Defs.h,Defs.w,Defs.t]);
+	add('Guides', [Defs.l,Defs.dbtos,Defs.dbsos,Defs.dbbos]);
+	add('DoorAndFront', [Defs.daffrw,Defs.dafip])
+	add('Door', [Defs.h,Defs.w,Defs.t]);
+	add('DrawerBox', [Defs.h,Defs.w,Defs.d,Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn]);
+	add('DrawerFront', [Defs.h,Defs.w,Defs.t,Defs.mfdfd]);
+	add('Frame', [Defs.h,Defs.w,Defs.t]);
+	add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
+	add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
+	add('Opening', []);
+	
+	function definitionsRequired(group) {
+	  const required = [];
+	  if (assemProps[group] === undefined) return [];
+	  Object.values(assemProps[group]).forEach((prop) => {
+	    if (prop.value() !== null) required.push(prop);
+	  });
+	  return required;
+	}
+	
+	function propertiesToDefine() {
+	  const propNames = [];
+	  const keys = Object.keys(assemProps);
+	  keys.forEach((key) => {
+	    if (definitionsRequired(key).length !== 0) {
+	      propNames.push(key);
+	    }
+	  });
+	  return propNames;
+	}
+	
+	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
+	function assemProperties(clazz, filter) {
+	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
+	  props = assemProps[clazz] || [];
+	  if ((typeof filter) != 'function') return props;
+	  props = props.filter(filter);
+	  return props;
+	}
+	
+	
+	let config = {};
+	const changes = {};
+	const copyMap = {};
+	assemProperties.changes = {
+	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
+	  save: (id) => {
+	    const list = changes[id];
+	    if (!list) throw new Error(`Unkown change id '${id}'`);
+	    const group = list._GROUP;
+	    if (config[group] === undefined) config[group] = [];
+	    if(copyMap[id] === undefined) {
+	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
+	      copyMap[list._ID] = config[group][list._NAME].properties;
+	    } else {
+	      const tempList = changes[id];
+	      for (let index = 0; index < tempList.length; index += 1) {
+	        const tempProp = tempList[index];
+	        const configProp = copyMap[id][index];
+	        configProp.value(tempProp.value());
+	      }
+	    }
+	   },
+	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
+	  delete: (id) => {
+	    delete config[changes[id][0].name()][changes[id]._NAME];
+	    delete changes[id];
+	    delete copyMap[id];
+	  },
+	  changed: (id) => {
+	    const list = changes[id];
+	    if (list === undefined) return false;
+	    for (let index = 0; index < list.length; index += 1) {
+	      const prop = list[index];
+	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
+	        console.log('booyacka!');
+	      }
+	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
+	        return true;
+	      }
+	    }
+	    return false;
+	  },
+	  changesExist: () => {
+	      const lists = Object.values(changes);
+	      for (let index = 0; index < lists.length; index += 1) {
+	        if (assemProperties.changes.changed(lists[index]._ID)) {
+	          return true;
+	        }
+	      }
+	      return false;
+	  }
+	}
+	
+	assemProperties.config = () => {
+	  const plainObj = {};
+	  const keys = Object.keys(config);
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    const lists = config[key];
+	    const listKeys = Object.keys(lists);
+	    plainObj[key] = {};
+	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
+	      const listKey = listKeys[lIndex];
+	      const list = lists[listKey];
+	      const propObj = {name: listKey, properties: []};
+	      plainObj[key][listKey] = propObj;
+	      list.properties.forEach((property) =>
+	          propObj.properties.push(property.toJson(excludeKeys, true)))
+	    }
+	  }
+	  return plainObj;
+	}
+	assemProperties.list = () => Object.keys(assemProps);
+	assemProperties.new = (group, name) => {
+	  if (assemProps[group]) {
+	    const list = [];
+	    let addIndex = 0;
+	    const ogList = Object.values(assemProps[group]);
+	    for (let index = 0; index < ogList.length; index += 1) {
+	      if (hasValueFilter(ogList[index])) {
+	        list[addIndex++] = ogList[index].clone();
+	      }
+	    }
+	    list._ID = String.random();
+	    list._GROUP = group;
+	    list._NAME = name;
+	    changes[list._ID] = list;
+	    return list;
+	  }
+	  throw new Error(`Requesting invalid Property Group '${group}'`);
+	}
+	
+	assemProperties.instance = () => {
+	  const keys = Object.keys(assemProps);
+	  const clone = {};
+	  keys.forEach((key) => {
+	    const props = Object.values(assemProps[key]);
+	    if (clone[key] === undefined) clone[key] = {};
+	    props[keys] = {};
+	    props.forEach((prop) => clone[key][prop.code()] = prop.clone());
+	  });
+	  return clone;
+	};
+	
+	assemProperties.getSet = (group, setName) => {
+	  const clone = {};
+	  let propertyObj = config[group][setName];
+	  propertyObj.properties.forEach((prop) => clone[prop.code()] = prop.clone());
+	  return clone;
+	}
+	
+	const dummyFilter = () => true;
+	assemProperties.groupList = (group, filter) => {
+	  filter = filter || dummyFilter;
+	  const groupList = config[group];
+	  const changeList = {};
+	  if (groupList === undefined) return {};
+	  const groupKeys = Object.keys(groupList);
+	  for (let index = 0; index < groupKeys.length; index += 1) {
+	    const groupKey = groupKeys[index];
+	    const list = groupList[groupKey];
+	    const properties = groupList[list.name].properties;
+	    const codes = properties.map((prop) => prop.code());
+	    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
+	    //                   .filter(filter);
+	    // newProps.forEach((prop) => properties.push(prop.clone()));
+	    changeList[list.name] = {name: list.name, properties: []};
+	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
+	      const prop = properties[pIndex];
+	      changeList[list.name].properties.push(prop.clone());
+	    }
+	    const uniqueId = String.random();
+	    const set = changeList[list.name].properties;
+	    set._ID = uniqueId;
+	    set._NAME = list.name;
+	    changes[uniqueId] = set;
+	    copyMap[uniqueId] = properties;
+	  }
+	  return changeList;
+	}
+	
+	const hasValueFilter = (prop) => prop.value() !== null;
+	assemProperties.hasValue = (group) => {
+	  if (props === undefined) return [];
+	  return assemProperties.groupList(group, hasValueFilter);
+	}
+	
+	const list = (key) =>
+	    assemProps[key] ? Object.values(assemProps[key]) : [];
+	
+	const noValueFilter = (prop) => prop.value() === null;
+	assemProperties.noValue = (group) => {
+	  const props = list(group);
+	  if (props === undefined) return [];
+	  return props.filter(noValueFilter);
+	}
+	
+	assemProperties.all = () => {
+	  const props = {};
+	  const keys = Object.keys(assemProps);
+	  keys.forEach((key) => {
+	    const l = [];
+	    list(key).forEach((prop) => l.push(prop));
+	    props[key] = l;
+	  });
+	  return props;
+	}
+	
+	assemProperties.UNITS = UNITS;
+	
+	assemProperties.load = (body) => {
+	  config = Object.fromJson(body);
+	}
+	
+	assemProperties.definitionsRequired = definitionsRequired;
+	assemProperties.propertiesToDefine = propertiesToDefine;
+	module.exports = assemProperties;
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/property.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	
+	
+	
+	class Property extends Lookup {
+	  // clone constructor(code, value) {
+	  constructor(code, name, props) {
+	    super();
+	    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
+	    const children = [];
+	
+	    const initVals = {
+	      code, name, description: props instanceof Object ? props.description : undefined
+	    }
+	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
+	
+	    this.value = (val, notMetric) => {
+	      if (val !== undefined && value !== val) {
+	        const measurement = new Measurement(val, notMetric);
+	        const measurementVal = measurement.value();
+	        value = Number.isNaN(measurementVal) ? val : measurement;
+	      }
+	      return value instanceof Measurement ? value.value() : value;
+	    }
+	
+	    this.display = () => {
+	      return value instanceof Measurement ? value.display() : value;
+	    }
+	
+	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
+	
+	    if ((typeof props) !== 'object' ||  props === null) {
+	      this.value(props);
+	      props = {};
+	    }
+	    this.properties(props || {});
+	
+	    const existingProp = Property.list[code];
+	    let clone = false;
+	    if (this.properties().value !== undefined) {
+	      this.value(this.properties().value, this.properties().notMetric);
+	    }
+	
+	    // if (existingProp) {
+	    //   value = value || existingProp.value();
+	    //   name = existingProp.name();
+	    //   this.properties(existingProp.properties());
+	    //   clone = true;
+	    // }
+	
+	    if ((typeof value) === 'number')
+	      value = new Measurement(value, this.properties().notMetric);
+	
+	
+	    this.addChild = (property) => {
+	      if (property instanceof Property && property.code() === this.code()) {
+	            if (children.indexOf(property) === -1) children.push(property);
+	            else throw new Error('Property is already a child');
+	      }
+	      else throw new Error('Child is not an instance of Property or Code does not match');
+	    }
+	
+	    this.children = () => JSON.clone(children);
+	
+	    this.equals = (other) =>
+	        other instanceof Property &&
+	        this.value() === other.value() &&
+	        this.code() === other.code() &&
+	        this.name() === other.name() &&
+	        this.description() === other.description();
+	
+	    this.clone = (val) => {
+	      const cProps = this.properties();
+	      cProps.clone = true;
+	      cProps.value = val === undefined ? this.value() : val;
+	      cProps.description = this.description();
+	      delete cProps.notMetric;
+	      return new Property(this.code(), this.name(), cProps);
+	    }
+	    if(!clone) Property.list[code] = this;
+	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
+	  }
+	}
+	Property.list = {};
+	Property.DO_NOT_CLONE = true;
+	
+	new Property();
+	
+	module.exports = Property
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/three-view.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils');
+	const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
+	const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
+	const pull = require('../three-d/models/pull.js');
+	const ThreeDModel = require('../three-d/three-d-model.js');
+	const Layout2D = require('../objects/layout.js')
+	const Draw2D = require('../two-d/draw.js');
+	const Polygon2d = require('../two-d/objects/polygon.js');
+	const Line2d = require('../two-d/objects/line.js');
+	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
+	const PanZoom = require('../two-d/pan-zoom.js');
+	
+	class ThreeView extends Lookup {
+	  constructor(viewer) {
+	    super();
+	    const instance = this;
+	    const maxDem = window.innerHeight * .45;
+	    const cnt = du.create.element('div');
+	    const p = pull(5,2);
+	    let front, left, top;
+	    let panzFront, panzLeft, panzTop;
+	    let threeDModel;
+	    document.body.append(cnt);
+	    this.maxDem = () => maxDem;
+	    cnt.innerHTML = ThreeView.template.render(this);
+	
+	    const color = 'black';
+	    const width = .2;
+	    const drawFront = () => {
+	      Layout2D.release('three-view-front');
+	      const lm = this.lastModel();
+	      if (lm === undefined) return;
+	      const xy = lm.xy;
+	      const twoDmap = Polygon2d.lines(...xy);
+	      if (twoDmap.length < 100) {
+	        front(twoDmap, color, width);
+	        const measurements = LineMeasurement2d.measurements(twoDmap);
+	        front(measurements, 'grey');
+	      }
+	    }
+	    const drawLeft = () => {
+	      Layout2D.release('three-view-left');
+	      const lm = this.lastModel();
+	      if (lm === undefined) return;
+	      const twoDmap = Polygon2d.lines(...lm.zy);
+	      if (twoDmap.length < 100) {
+	        left(twoDmap, color, width);
+	        const measurements = LineMeasurement2d.measurements(twoDmap);
+	        left(measurements, 'grey');
+	      }
+	    }
+	    const drawTop = () => {
+	      Layout2D.release('three-view-top');
+	      const lm = this.lastModel();
+	      if (lm === undefined) return;
+	      const twoDmap = Polygon2d.lines(...lm.xz);
+	      if (twoDmap.length < 100) {
+	        top(twoDmap, color, width);
+	        const measurements = LineMeasurement2d.measurements(twoDmap);
+	        top(measurements, 'grey');
+	      }
+	    }
+	
+	    function init() {
+	      if (viewer === undefined) {
+	        viewer = new Viewer(p, maxDem, maxDem, 50);
+	        addViewer(viewer, `#${instance.id()}>.three-view-three-d-cnt`);
+	      }
+	      front = new Draw2D(du.id('three-view-front'));
+	      left = new Draw2D(du.id('three-view-left'));
+	      top = new Draw2D(du.id('three-view-top'));
+	
+	      panzFront = new PanZoom(front.canvas(), drawFront);
+	      panzLeft = new PanZoom(left.canvas(), drawLeft);
+	      panzTop = new PanZoom(top.canvas(), drawTop);
+	      panzFront.centerOn(0, 0);
+	      panzLeft.centerOn(0, 0);
+	      panzTop.centerOn(0, 0);
+	    }
+	
+	    this.update = (cabinet) => {
+	      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet, viewer);
+	      threeDModel.assembly(cabinet, viewer);
+	      threeDModel.update(cabinet);
+	      front.clear();left.clear();top.clear();
+	      setTimeout(() => {
+	        drawTop();drawLeft();drawFront();
+	      }, 1000);
+	    }
+	
+	    this.isolatePart = (partId, cabinet) => {
+	      threeDModel = ThreeDModel.get();
+	      threeDModel.setTargetPartId(partId);
+	      threeDModel.update();
+	      setTimeout(() => {
+	        panzFront.once();
+	        panzLeft.once();
+	        panzTop.once();
+	      }, 500);
+	      du.id(`three-view-part-code-${this.id()}`).innerText = partId;
+	    }
+	
+	    this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;
+	    this.partMap = () => threeDModel ? threeDModel.partMap() : {};
+	
+	    setTimeout(init, 1000);
+	  }
+	}
+	
+	ThreeView.template = new $t('three-view');
+	
+	module.exports = ThreeView;
+	
+});
+
+
+RequireJS.addFunction('./app-src/input/inputs.js',
+function (require, exports, module) {
+	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
+	const Cost = require('../cost/cost.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Material = require('../cost/types/material.js');
+	const Company = require('../objects/company.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const Labor = require('../cost/types/labor.js');
+	
+	
+	const defined = {};
+	function add (name, input) {
+	  if (defined[name]) {
+	    throw new Error(`Input by the name of '${name}' is already defined`)
+	  }
+	  defined[name] = input;
+	}
+	
+	module.exports = (name, properties) => defined[name].clone(properties);
+	
+	
+	add('length', new MeasurementInput({
+	  type: 'text',
+	  placeholder: 'Length',
+	  name: 'length',
+	  class: 'center'
+	}));
+	
+	add('width', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Width',
+	  name: 'width',
+	  class: 'center'
+	}));
+	
+	add('depth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Depth',
+	  name: 'depth',
+	  class: 'center'
+	}));
+	
+	add('cost', new MeasurementInput({
+	  type: 'number',
+	  label: '$',
+	  placeholder: 'Cost',
+	  name: 'cost'
+	}));
+	
+	add('pattern', new MeasurementInput({
+	  type: 'text',
+	  class: 'pattern-input',
+	}));
+	
+	
+	add('offsetLen', new MeasurementInput({
+	  type: 'text',
+	  label: 'Offset',
+	  placeholder: 'Length',
+	  name: 'offsetLength',
+	  class: 'center',
+	}));
+	
+	add('offsetWidth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Width',
+	  name: 'offsetWidth',
+	  class: 'center',
+	}));
+	
+	add('offsetDepth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Depth',
+	  name: 'offsetDepth',
+	  class: 'center',
+	}));
+	
+	
+	add('costType', new Select({
+	  placeholder: 'Type',
+	  name: 'type',
+	  class: 'center',
+	  list: Cost.typeList
+	}));
+	
+	add('method', new Select({
+	  name: 'method',
+	  class: 'center',
+	  list: Material.methodList,
+	}));
+	
+	add('propertyIds', new Select({
+	  name: 'propertyIds',
+	  class: 'center',
+	  list: Object.keys(['1/2', 'Full', 'Inset'])
+	}));
+	
+	add('company', new Select({
+	  name: 'company',
+	  label: 'Company',
+	  class: 'center',
+	  list: [''].concat(Object.keys(Company.list)),
+	  value: ''
+	}));
+	
+	add('childCost', new Select({
+	    name: 'child',
+	    label: 'Default',
+	    class: 'center',
+	}));
+	
+	
+	add('id', new Input({
+	  type: 'text',
+	  placeholder: 'Id',
+	  name: 'id',
+	  class: 'center',
+	  validation: /^\s*[^\s]{1,}\s*$/,
+	  errorMsg: 'You must enter an Id'
+	}));
+	
+	add('propertyId', new Input({
+	  type: 'text',
+	  placeholder: 'Property Id',
+	  name: 'propertyId',
+	  class: 'center',
+	  validation: /^[a-zA-Z\.]{1}$/,
+	  errorMsg: 'Alpha Numeric Value seperated by \'.\'.<br>I.E. Cabinet=>1/2 Overlay = Cabinet.12Overlay'
+	}));
+	
+	add('propertyValue', new Input({
+	  type: 'text',
+	  placeholder: 'Property Value',
+	  name: 'propertyValue',
+	  class: 'center'
+	}));
+	
+	add('costId', new Input({
+	  type: 'text',
+	  placeholder: 'Id',
+	  name: 'id',
+	  class: 'center',
+	  validation: (id, values) =>
+	      id !== '' && (!values.referenceable || Object.values(Cost.defined).indexOf(id) === -1),
+	  errorMsg: 'You must an Id: value must be unique if Referencable.'
+	}));
+	
+	add('name', new Input({
+	  type: 'text',
+	  placeholder: 'Name',
+	  name: 'name',
+	  value: 'peach',
+	  class: 'center',
+	  validation: /^\s*[^\s].*$/,
+	  errorMsg: 'You must enter a Name'
+	}));
+	
+	add('color', new Input({
+	  type: 'color',
+	  validation: /.*/,
+	  placeholder: 'color',
+	  name: 'color',
+	  class: 'center'
+	}));
+	
+	add('optional', new Input({
+	  label: 'Optional',
+	  name: 'optional',
+	  type: 'checkbox',
+	  default: false,
+	  validation: [true, false],
+	  targetAttr: 'checked'
+	}));
+	
+	add('modifyDemension', new Input({
+	  label: 'Modify Demension',
+	  name: 'modifyDemension',
+	  type: 'checkbox',
+	  default: false,
+	  validation: [true, false],
+	  targetAttr: 'checked'
+	}));
+	
+	add('partNumber', new Input({
+	  label: 'Part Number',
+	  name: 'partNumber',
+	  type: 'text'
+	}));
+	
+	add('count', new Input({
+	  label: 'Count',
+	  name: 'count',
+	  type: 'number',
+	  value: 1
+	}));
+	
+	add('quantity', new Input({
+	  label: 'Quantity',
+	  name: 'quantity',
+	  type: 'number',
+	  value: 0
+	}));
+	
+	add('hourlyRate', new Input({
+	  label: 'Hourly Rate',
+	  name: 'hourlyRate',
+	  type: 'number',
+	}));
+	
+	add('hours', new Input({
+	  label: 'Hours',
+	  name: 'hours',
+	  type: 'number',
+	  value: 0
+	}));
+	
+	add('laborType', new Input({
+	  name: 'laborType',
+	  placeholder: 'Labor Type',
+	  label: 'Type',
+	  class: 'center',
+	  clearOnClick: true,
+	  list: Labor.types
+	}));
+	
+	add('formula', new Input({
+	  name: 'formula',
+	  placeholder: 'Formula',
+	  label: 'Formula',
+	  class: 'center'
+	}));
+	
+});
+
+
+RequireJS.addFunction('./app-src/input/validation.js',
+function (require, exports, module) {
+	
+
+	
+	const InvalidComputation = require('./error.js');
+	
+	class ObjectValidator {
+	  constructor() {
+	    const validators =  {};
+	    this.add = (name, validator) => {
+	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
+	        throw new Error('Invalid Validator');
+	      }
+	      validator[name] = validator;
+	    }
+	    this.validate = (obj) => {
+	      if (typeof obj !== 'object') throw new InvalidComputation()
+	      const keys = Object.keys(validators);
+	    }
+	  }
+	}
+	
+	
+	class Validator {
+	  constructor(validator, props, info) {
+	    let type, validate;
+	    const complement = props.explanation;
+	
+	    let defaultExpl;
+	    if (validator instanceof Regex) {
+	      type = 'Regex';
+	      if (props.complement) {
+	        defaultExpl = 'Value must fit regex expression';
+	        validate = (value) => validator.match('value');
+	      } else {
+	        defaultExpl = 'Value must not fit regex expression';
+	        validate = (value) => !validator.match('value');
+	      }
+	    } else if (Array.isArray(validator)) {
+	      if (props.complement) {
+	        defaultExpl = 'Value must exist within array';
+	        validate = (value) => validator.indexOf(value) !== -1;
+	      } else {
+	        defaultExpl = 'Value must not exist within array';
+	        validate = (value) => validator.indexOf(value) === -1;
+	      }
+	    }
+	
+	    props.explanation = props.explanation || defaultExpl;
+	
+	    val = val === undefined && elem ? elem.value : val;
+	    if (val === undefined) return false;
+	    if (valid !== undefined && val === value) return valid;
+	    let valValid = true;
+	    if (props.validation instanceof RegExp) {
+	      valValid = val.match(props.validation) !== null;
+	    }
+	    else if ((typeof props.validation) === 'function') {
+	      valValid = props.validation.apply(null, arguments);
+	    }
+	    else if (Array.isArray(props.validation)) {
+	      valValid = props.validation.indexOf(val) !== -1;
+	    }
+	
+	    return valValid;
+	  }
+	}
+	exports.ObjectValidator = ObjectValidator
+	exports.Validator = Validator
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/display-svc.js',
+function (require, exports, module) {
+	class Register {
+	  constructor() {
+	    const registered = {};
+	    this.register = function (nameOobj, obj) {
+	      if ((typeof nameOobj) !== 'object') {
+	        registered[nameOobj] = obj;
+	      } else {
+	        const keys = Object.keys(nameOobj);
+	        for (let index = 0; index < keys.length; index += 1) {
+	          const key = keys[index];
+	          registered[key] = nameOobj[key];
+	        }
+	      }
+	    }
+	    this.get = (name) => registered[name];
+	  }
+	}
+	
+	module.exports = new Register();
+	
+});
+
+
 RequireJS.addFunction('./app-src/two-d/pan-zoom.js',
 function (require, exports, module) {
 	
@@ -20789,7 +21322,7 @@ function (require, exports, module) {
 	      }
 	    }
 	  }
-	  let sleeping = false;
+	  let sleeping = null;
 	  let nextUpdateId = 0;
 	  this.sleep = () => sleeping = true;
 	  this.wake = () => {
@@ -21097,7 +21630,7 @@ function (require, exports, module) {
 	         displayTransform.oy = 0;
 	     }
 	    // reaquest next frame
-	    if (!sleeping) {
+	    if (sleeping === false) {
 	      if (once) sleeping = true;
 	      setTimeout(() => requestAnimationFrame(() => update(nextUpdateId)), 10);
 	    }
@@ -21114,246 +21647,6 @@ function (require, exports, module) {
 	}
 	
 	module.exports = panZoom;
-	
-});
-
-
-RequireJS.addFunction('./app-src/input/inputs.js',
-function (require, exports, module) {
-	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
-	const Cost = require('../cost/cost.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Material = require('../cost/types/material.js');
-	const Company = require('../objects/company.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const Labor = require('../cost/types/labor.js');
-	
-	
-	const defined = {};
-	function add (name, input) {
-	  if (defined[name]) {
-	    throw new Error(`Input by the name of '${name}' is already defined`)
-	  }
-	  defined[name] = input;
-	}
-	
-	module.exports = (name, properties) => defined[name].clone(properties);
-	
-	
-	add('length', new MeasurementInput({
-	  type: 'text',
-	  placeholder: 'Length',
-	  name: 'length',
-	  class: 'center'
-	}));
-	
-	add('width', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Width',
-	  name: 'width',
-	  class: 'center'
-	}));
-	
-	add('depth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Depth',
-	  name: 'depth',
-	  class: 'center'
-	}));
-	
-	add('cost', new MeasurementInput({
-	  type: 'number',
-	  label: '$',
-	  placeholder: 'Cost',
-	  name: 'cost'
-	}));
-	
-	add('pattern', new MeasurementInput({
-	  type: 'text',
-	  class: 'pattern-input',
-	}));
-	
-	
-	add('offsetLen', new MeasurementInput({
-	  type: 'text',
-	  label: 'Offset',
-	  placeholder: 'Length',
-	  name: 'offsetLength',
-	  class: 'center',
-	}));
-	
-	add('offsetWidth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Width',
-	  name: 'offsetWidth',
-	  class: 'center',
-	}));
-	
-	add('offsetDepth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Depth',
-	  name: 'offsetDepth',
-	  class: 'center',
-	}));
-	
-	
-	add('costType', new Select({
-	  placeholder: 'Type',
-	  name: 'type',
-	  class: 'center',
-	  list: Cost.typeList
-	}));
-	
-	add('method', new Select({
-	  name: 'method',
-	  class: 'center',
-	  list: Material.methodList,
-	}));
-	
-	add('propertyIds', new Select({
-	  name: 'propertyIds',
-	  class: 'center',
-	  list: Object.keys(['1/2', 'Full', 'Inset'])
-	}));
-	
-	add('company', new Select({
-	  name: 'company',
-	  label: 'Company',
-	  class: 'center',
-	  list: [''].concat(Object.keys(Company.list)),
-	  value: ''
-	}));
-	
-	add('childCost', new Select({
-	    name: 'child',
-	    label: 'Default',
-	    class: 'center',
-	}));
-	
-	
-	add('id', new Input({
-	  type: 'text',
-	  placeholder: 'Id',
-	  name: 'id',
-	  class: 'center',
-	  validation: /^\s*[^\s]{1,}\s*$/,
-	  errorMsg: 'You must enter an Id'
-	}));
-	
-	add('propertyId', new Input({
-	  type: 'text',
-	  placeholder: 'Property Id',
-	  name: 'propertyId',
-	  class: 'center',
-	  validation: /^[a-zA-Z\.]{1}$/,
-	  errorMsg: 'Alpha Numeric Value seperated by \'.\'.<br>I.E. Cabinet=>1/2 Overlay = Cabinet.12Overlay'
-	}));
-	
-	add('propertyValue', new Input({
-	  type: 'text',
-	  placeholder: 'Property Value',
-	  name: 'propertyValue',
-	  class: 'center'
-	}));
-	
-	add('costId', new Input({
-	  type: 'text',
-	  placeholder: 'Id',
-	  name: 'id',
-	  class: 'center',
-	  validation: (id, values) =>
-	      id !== '' && (!values.referenceable || Object.values(Cost.defined).indexOf(id) === -1),
-	  errorMsg: 'You must an Id: value must be unique if Referencable.'
-	}));
-	
-	add('name', new Input({
-	  type: 'text',
-	  placeholder: 'Name',
-	  name: 'name',
-	  value: 'peach',
-	  class: 'center',
-	  validation: /^\s*[^\s].*$/,
-	  errorMsg: 'You must enter a Name'
-	}));
-	
-	add('color', new Input({
-	  type: 'color',
-	  validation: /.*/,
-	  placeholder: 'color',
-	  name: 'color',
-	  class: 'center'
-	}));
-	
-	add('optional', new Input({
-	  label: 'Optional',
-	  name: 'optional',
-	  type: 'checkbox',
-	  default: false,
-	  validation: [true, false],
-	  targetAttr: 'checked'
-	}));
-	
-	add('modifyDemension', new Input({
-	  label: 'Modify Demension',
-	  name: 'modifyDemension',
-	  type: 'checkbox',
-	  default: false,
-	  validation: [true, false],
-	  targetAttr: 'checked'
-	}));
-	
-	add('partNumber', new Input({
-	  label: 'Part Number',
-	  name: 'partNumber',
-	  type: 'text'
-	}));
-	
-	add('count', new Input({
-	  label: 'Count',
-	  name: 'count',
-	  type: 'number',
-	  value: 1
-	}));
-	
-	add('quantity', new Input({
-	  label: 'Quantity',
-	  name: 'quantity',
-	  type: 'number',
-	  value: 0
-	}));
-	
-	add('hourlyRate', new Input({
-	  label: 'Hourly Rate',
-	  name: 'hourlyRate',
-	  type: 'number',
-	}));
-	
-	add('hours', new Input({
-	  label: 'Hours',
-	  name: 'hours',
-	  type: 'number',
-	  value: 0
-	}));
-	
-	add('laborType', new Input({
-	  name: 'laborType',
-	  placeholder: 'Labor Type',
-	  label: 'Type',
-	  class: 'center',
-	  clearOnClick: true,
-	  list: Labor.types
-	}));
-	
-	add('formula', new Input({
-	  name: 'formula',
-	  placeholder: 'Formula',
-	  label: 'Formula',
-	  class: 'center'
-	}));
 	
 });
 
@@ -21389,109 +21682,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/input/validation.js',
-function (require, exports, module) {
-	
-
-	
-	const InvalidComputation = require('./error.js');
-	
-	class ObjectValidator {
-	  constructor() {
-	    const validators =  {};
-	    this.add = (name, validator) => {
-	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
-	        throw new Error('Invalid Validator');
-	      }
-	      validator[name] = validator;
-	    }
-	    this.validate = (obj) => {
-	      if (typeof obj !== 'object') throw new InvalidComputation()
-	      const keys = Object.keys(validators);
-	    }
-	  }
-	}
-	
-	
-	class Validator {
-	  constructor(validator, props, info) {
-	    let type, validate;
-	    const complement = props.explanation;
-	
-	    let defaultExpl;
-	    if (validator instanceof Regex) {
-	      type = 'Regex';
-	      if (props.complement) {
-	        defaultExpl = 'Value must fit regex expression';
-	        validate = (value) => validator.match('value');
-	      } else {
-	        defaultExpl = 'Value must not fit regex expression';
-	        validate = (value) => !validator.match('value');
-	      }
-	    } else if (Array.isArray(validator)) {
-	      if (props.complement) {
-	        defaultExpl = 'Value must exist within array';
-	        validate = (value) => validator.indexOf(value) !== -1;
-	      } else {
-	        defaultExpl = 'Value must not exist within array';
-	        validate = (value) => validator.indexOf(value) === -1;
-	      }
-	    }
-	
-	    props.explanation = props.explanation || defaultExpl;
-	
-	    val = val === undefined && elem ? elem.value : val;
-	    if (val === undefined) return false;
-	    if (valid !== undefined && val === value) return valid;
-	    let valValid = true;
-	    if (props.validation instanceof RegExp) {
-	      valValid = val.match(props.validation) !== null;
-	    }
-	    else if ((typeof props.validation) === 'function') {
-	      valValid = props.validation.apply(null, arguments);
-	    }
-	    else if (Array.isArray(props.validation)) {
-	      valValid = props.validation.indexOf(val) !== -1;
-	    }
-	
-	    return valValid;
-	  }
-	}
-	exports.ObjectValidator = ObjectValidator
-	exports.Validator = Validator
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/display-svc.js',
-function (require, exports, module) {
-	class Register {
-	  constructor() {
-	    const registered = {};
-	    this.register = function (nameOobj, obj) {
-	      if ((typeof nameOobj) !== 'object') {
-	        registered[nameOobj] = obj;
-	      } else {
-	        const keys = Object.keys(nameOobj);
-	        for (let index = 0; index < keys.length; index += 1) {
-	          const key = keys[index];
-	          registered[key] = nameOobj[key];
-	        }
-	      }
-	    }
-	    this.get = (name) => registered[name];
-	  }
-	}
-	
-	module.exports = new Register();
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/order.js',
 function (require, exports, module) {
 	
@@ -21514,79 +21704,6 @@ function (require, exports, module) {
 	
 	Order.count = 0;
 	module.exports = Order
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/cost-tree.js',
-function (require, exports, module) {
-	
-const Properties = require('../config/properties.js');
-	const Assembly = require('../objects/assembly/assembly.js');
-	const LogicTree = require('../../../../public/js/utils/logic-tree.js');
-	const LogicWrapper = LogicTree.LogicWrapper;
-	
-	class CostDecision {
-	  constructor(type, name, relation, formula) {
-	    Object.getSet(this, {type, name, costs: [], relation, isChoice: false});
-	    this.requiredProperties = Properties.noValue(name);
-	    if (this.relation) {
-	      if (formula) {
-	        function makeDecision(wrapper) {
-	          return true;
-	        }
-	        this.relation = RelationInput.relationsObjs[relation](makeDecision);
-	        this.condition = (wrapper) => this.relation.eval(wrapper.children(), wrapper.payload.value());
-	      } else {
-	        this.isChoice(true);
-	      }
-	    }
-	  }
-	}
-	
-	class CostTree {
-	  constructor(logicTree) {
-	    const idMap = {};
-	    logicTree = CostTree.suplement(logicTree);
-	    this.tree = () => logicTree;
-	    this.root = () => logicTree.root();
-	    const getWrapper = (wrapperId) => (LogicWrapper.get(wrapperId) || this.root());
-	
-	    this.branch = (wrapperId, name) =>
-	            get(wrapperId).branch(String.random(), new CostDecision('Branch', name));
-	    this.leaf = (wrapperId, name) =>
-	            get(wrapperId).leaf(String.random(), new CostDecision('Leaf', name));
-	    this.select = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).select(String.random(), new CostDecision('Select', name, relation, formula));
-	    this.multiselect = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).multiselect(String.random(), new CostDecision('Multiselect', name, relation, formula));
-	    this.conditional = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).conditional(String.random(), new CostDecision('Conditional', name, relation, formula));
-	
-	  }
-	}
-	
-	
-	CostTree.propertyList = Properties.all();
-	CostTree.types = ['branch', 'select', 'conditional', 'multiselect', 'leaf'];
-	CostTree.suplement = (logicTree) => {
-	  if (!(logicTree instanceof LogicWrapper)) {
-	    logicTree = new LogicTree();
-	    logicTree.branch('root');
-	  }
-	  const root = logicTree.root();
-	  const assemClassIds = Properties.list();
-	  assemClassIds.forEach((classId) => {
-	    if (root.node.getNodeByPath(classId) === undefined)
-	      root.branch(classId, new CostDecision('Branch', classId));
-	  });
-	  return logicTree;
-	}
-	CostTree.choices = [];
-	
-	
-	CostTree.CostDecision = CostDecision;
-	module.exports = CostTree;
 	
 });
 
@@ -22069,174 +22186,178 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/plane.js',
+RequireJS.addFunction('./app-src/objects/assembly/init-assem.js',
 function (require, exports, module) {
 	
-class Plane2d {
-	  constructor(verticies) {
-	    this.getLines = () => {
-	      const lines = [];
-	      for (let index = 0; index < verticies.length; index += 1) {
-	        lines.push(new Line2d(verticies[index], verticies[(index + 1) % verticies.length]));
-	      }
-	      return lines;
-	    }
-	  }
-	}
+const Assembly = require('./assembly.js');
+	new Assembly();
 	
-	Plane2d.getPlanes = (planes) => {
-	  const ps = [];
-	  planes.forEach((p) => ps.push(new Plane2d(p)));
-	  return ps;
-	}
+	const Cabinet = require('./assemblies/cabinet.js');
+	new Cabinet();
 	
-	Plane2d.consolidatePolygons = (polygons) => {
-	  const consolidated = {top: {}, left: {}, front: {}};
-	  function group(g, poly) {
+	const Divider = require('./assemblies/divider.js');
+	new Divider();
 	
-	    map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
-	    map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
-	    map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
-	  }
-	  const map = {xy: [], xz: [], yz: []};
-	  polygons.forEach((p, index) => {
-	    map.xy.push([]);
-	    map.xz.push([]);
-	    map.yz.push([]);
-	    p.vertices.forEach((v) => {
-	      map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
-	      map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
-	      map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
-	    });
-	  });
-	  return map;
-	}
+	const DoorCatch = require('./assemblies/door/door-catch.js');
+	new DoorCatch();
 	
-	new Plane2d();
-	module.exports = Plane2d;
+	const Door = require('./assemblies/door/door.js');
+	new Door();
+	
+	const Hinges = require('./assemblies/door/hinges.js');
+	new Hinges();
+	
+	const DrawerBox = require('./assemblies/drawer/drawer-box.js');
+	new DrawerBox();
+	
+	const DrawerFront = require('./assemblies/drawer/drawer-front.js');
+	new DrawerFront();
+	
+	const Guides = require('./assemblies/drawer/guides.js');
+	new Guides();
+	
+	const Frame = require('./assemblies/frame.js');
+	new Frame();
+	
+	const Handle = require('./assemblies/hardware/pull.js');
+	new Handle();
+	
+	const Screw = require('./assemblies/hardware/screw.js');
+	new Screw();
+	
+	const Panel = require('./assemblies/panel.js');
+	new Panel();
+	
+	const PartitionSection = require('./assemblies/section/partition/sections/divider.js');
+	new PartitionSection();
+	
+	const DividerSection = require('./assemblies/section/partition/partition');
+	new DividerSection();
+	
+	const Section = require('./assemblies/section/section.js');
+	new Section();
+	
+	const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
+	new DivideSection();
+	
+	const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
+	new OpeningCoverSection();
+	
+	const DoorSection = require('./assemblies/section/space/sections/open-cover/sections/door.js');
+	new DoorSection();
+	
+	const DrawerSection = require('./assemblies/section/space/sections/open-cover/sections/drawer.js');
+	new DrawerSection();
+	
+	const DualDoorSection = require('./assemblies/section/space/sections/open-cover/sections/duel-door.js');
+	new DualDoorSection();
+	
+	const FalseFrontSection = require('./assemblies/section/space/sections/open-cover/sections/false-front.js');
+	new FalseFrontSection();
+	
+	const SpaceSection = require('./assemblies/section/space/space.js');
+	new SpaceSection();
+	
+	const Cutter = require('./assemblies/cutter.js');
+	new Cutter();
+	
+	Assembly.components = {
+	  Door, DrawerBox, DrawerFront, Frame, Panel, Cutter,
+	};
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
+RequireJS.addFunction('./app-src/two-d/objects/line-measurement.js',
 function (require, exports, module) {
 	
-
-	
+const Circle2d = require('circle');
+	const Vertex2d = require('vertex');
+	const Line2d = require('line');
 	const Measurement = require('../../../../../public/js/utils/measurement.js');
 	
-	class UFObj {
-	  constructor(order) {
-	    class Row {
-	      constructor(groupName, assembly, index) {
-	        this.groupName = groupName;
-	        this.cabnetId = index;//assembly.getAssembly('c').name;
-	        this.type = assembly.constructor.name;
-	        this.partName = assembly.partName().replace(/.*\.(.*)/, '$1');
-	        const dems = assembly.position().demension();
-	        const accuracy = undefined; //'1/32';
-	        dems.y = new Measurement(dems.y).display(accuracy);
-	        dems.x = new Measurement(dems.x).display(accuracy);
-	        dems.z = new Measurement(dems.z).display(accuracy);
-	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
-	        this.partCode = `${index}-${assembly.partCode()}`;
-	        this.cost = '$0';
-	        this.notes = assembly.notes || '';
+	class LineMeasurement2d {
+	  constructor(line, center, layer, modificationFunction) {
+	    modificationFunction = modificationFunction || line.length;
+	    const offset = 3;
+	    this.line = () => line;
+	    this.I = (l) => {
+	      l = l || layer || 1;
+	      const termDist = (l + 1) * offset;
+	      const measureDist = l * offset;
+	      const startLine = line.perpendicular(line.startVertex(), termDist * 2);
+	      const endLine = line.perpendicular(line.endVertex(), termDist * 2);
+	      const startCircle = new Circle2d(measureDist, line.startVertex());
+	      const endCircle = new Circle2d(measureDist, line.endVertex());
+	      const startTerminationCircle = new Circle2d(termDist - 2.5, line.startVertex());
+	      const endTerminationCircle = new Circle2d(termDist - 2.5, line.endVertex());
+	      const startVerticies = startCircle.intersections(startLine);
+	      const endVerticies = endCircle.intersections(endLine);
+	      let l1, l2;
+	      if (startVerticies.length > 0 && endVerticies.length > 0) {
+	        const startTerminationVerticies = startTerminationCircle.intersections(startLine);
+	        const endTerminationVerticies = endTerminationCircle.intersections(endLine);
+	        let startTerminationLine, endTerminationLine, measurementLine;
+	
+	        l1 = new Line2d(startVerticies[1], endVerticies[1]);
+	        l1.startLine = new Line2d(line.startVertex(), startTerminationVerticies[1]);
+	        l1.endLine = new Line2d(line.endVertex(), endTerminationVerticies[1]);
+	
+	        l2 = new Line2d(startVerticies[0], endVerticies[0]);
+	        l2.startLine = new Line2d(line.startVertex(), startTerminationVerticies[0]);
+	        l2.endLine = new Line2d(line.endVertex(), endTerminationVerticies[0]);
+	        const furtherLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center);
+	        const closerLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center, true);
+	        return {furtherLine, closerLine};
+	      } else {
+	        return {};
 	      }
 	    }
-	    const cabinets = [];
-	    const array = [];
-	    Object.values(order.rooms).forEach((room, rIndex) => room.groups.forEach((group, gIndex) => {
-	      group.cabinets.forEach((cabinet, index) => {
-	        const cabinetId = `${rIndex+1}-${gIndex+1}-${index+1}`;
-	        array.push(new Row(group.name(), cabinet, cabinetId));
-	        cabinet.getParts().forEach((part) => array.push(new Row(group.name(), part, cabinetId)));
-	      });
-	    }));
-	    return array;
+	
+	    this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
+	    this.modificationFunction = (func) => {
+	      if ((typeof func) === 'function') modificationFunction = func;
+	      return modificationFunction;
+	    }
+	
+	    this.toString = () => `|--${this.line()}--|`;
+	    this.display = () => new Measurement(line.length()).display();
+	
+	    this.modify = (value) => modificationFunction(new Measurement(value, true).decimal());
 	  }
 	}
-	module.exports = UFObj
 	
-});
-
-
-RequireJS.addFunction('./app-src/config/property/definitions.js',
-function (require, exports, module) {
-	const Property = require('../property');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const IMPERIAL_US = Measurement.units()[1];
+	LineMeasurement2d.measurements = (lines) => {
+	  const verts = Line2d.vertices(lines);
+	  const center = Vertex2d.center(...verts);
+	  const measurements = [];
+	  for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
+	    const tarVerts = lines[tIndex].liesOn(verts);
+	    if (tarVerts.length > 2) {
+	      for (let index = 1; index < tarVerts.length; index += 1) {
+	        const sv = tarVerts[index - 1];
+	        const ev = tarVerts[index];
+	        const line = new Line2d(sv,ev);
+	        measurements.push(new LineMeasurement2d(line, center, 1));
+	      }
+	    }
+	    if (tarVerts.length > 1) {
+	      const sv = tarVerts[0];
+	      const ev = tarVerts[tarVerts.length - 1];
+	      const line = new Line2d(sv,ev);
+	      measurements.push(new LineMeasurement2d(line, center, 2));
+	    }
+	  }
+	  return measurements;
+	}
 	
-	const defs = {};
+	LineMeasurement2d.furtherLine = (l1, l2, point, closer) =>
+	    point === undefined ? (closer ? l1 : l2) :
+	    (l1.midpoint().distance(point) > l2.midpoint().distance(point) ?
+	      (closer ? l2 : l1) :
+	      (closer ? l1 : l2));
 	
-	defs.h = new Property('h', 'height', null);
-	defs.w = new Property('w', 'width', null);
-	defs.d = new Property('d', 'depth', null);
-	defs.t = new Property('t', 'thickness', null);
-	defs.l = new Property('l', 'length', null);
-	
-	//   Overlay
-	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
-	
-	//   Reveal
-	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
-	
-	//   Inset
-	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
-	
-	//   Cabinet
-	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
-	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
-	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
-	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
-	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
-	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
-	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US})
-	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US})
-	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US})
-	
-	//   Panel
-	
-	//   Guides
-	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', null),
-	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', null),
-	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', null)
-	
-	//   DoorAndFront
-	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
-	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null})
-	
-	//   Door
-	
-	//   DrawerBox
-	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
-	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
-	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
-	
-	//   DrawerFront
-	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
-	
-	//   Frame
-	
-	//   Handle
-	defs.c2c = new Property('c2c', 'Center To Center', null),
-	defs.proj = new Property('proj', 'Projection', null),
-	
-	//   Hinge
-	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null),
-	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
-	defs.maxol = new Property('maxol', 'Max Door Overlay', null),
-	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
-	
-	//   Opening
-	
-	module.exports = defs;
+	module.exports = LineMeasurement2d;
 	
 });
 
@@ -22379,120 +22500,218 @@ const Properties = require('../properties');
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/snap-location.js',
+RequireJS.addFunction('./app-src/two-d/objects/vertex.js',
 function (require, exports, module) {
 	
-const Vertex2d = require('vertex');
-	const Circle2d = require('circle');
+const approximate = require('../../../../../public/js/utils/approximate.js');
 	
-	class SnapLocation2d {
-	  constructor(parent, location, vertex, targetVertex, color, pairedWith) {
-	    Object.getSet(this, {location, vertex, targetVertex, color}, "parentId", "pairedWithId");
-	    const circle = new Circle2d(5, vertex);
-	    pairedWith = pairedWith || null;
-	    this.circle = () => circle;
-	    this.eval = () => this.parent()[location]();
-	    this.parent = () => parent;
-	    this.parentId = () => parent.id();
-	    this.pairedWithId = () => pairedWith && pairedWith.id();
-	    this.pairedWith = () => pairedWith;
-	    this.disconnect = () => {
-	      if (pairedWith === null) return;
-	      const wasPaired = pairedWith;
-	      pairedWith = null;
-	      wasPaired.disconnect();
-	    }
-	    this.pairWith = (otherSnapLoc) => {
-	      const alreadyPaired = otherSnapLoc === pairedWith;
-	      if (!alreadyPaired) {
-	        pairedWith = otherSnapLoc;
-	        otherSnapLoc.pairWith(this);
-	      }
-	    }
-	
-	    this.forEachObject = (func, objMap) => {
-	      objMap = objMap || {};
-	      objMap[this.parent().toString()] = this.parent();
-	      const locs = this.parent().snapLocations.paired();
-	      for (let index = 0; index < locs.length; index += 1) {
-	        const loc = locs[index];
-	        const connSnap = loc.pairedWith();
-	        if (connSnap) {
-	          const connObj = connSnap.parent();
-	          if (connObj && objMap[connObj.id()] === undefined) {
-	            objMap[connObj.id()] = connObj;
-	            connSnap.forEachObject(undefined, objMap);
-	          }
-	        }
-	      }
-	      if ((typeof func) === 'function') {
-	        const objs = Object.values(objMap);
-	        for (let index = 0; index < objs.length; index += 1) {
-	          func(objs[index]);
-	        }
-	      }
+	class Vertex2d {
+	  constructor(point) {
+	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
+	    if (point instanceof Vertex2d) return point;
+	    point = point || {x:0,y:0};
+	    Object.getSet(this, {point});
+	    this.layer = point.layer;
+	    const instance = this;
+	    this.move = (center) => {
+	      this.point(center);
+	      return true;
 	    };
-	
-	    this.isConnected = (obj) => {
-	      let connected = false;
-	      this.forEachObject((connObj) => connected = connected || obj.id() === connObj.id());
-	      return connected;
+	    this.point = (newPoint) => {
+	      if (newPoint) this.x(newPoint.x);
+	      if (newPoint) this.y(newPoint.y);
+	      return point;
 	    }
 	
-	    this.rotate = (theta) => {
-	      this.forEachObject((obj) => obj.radians((obj.radians() + theta) % (2*Math.PI)));
+	    this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
+	    this.x = (val) => {
+	      if ((typeof val) === 'number') point.x = approximate(val);
+	      return this.point().x;
+	    }
+	    this.y = (val) => {
+	      if ((typeof val) === 'number') this.point().y = approximate(val);
+	      return this.point().y;
 	    }
 	
-	    let lastMove = 0;
-	    this.move = (vertexLocation, moveId) => {
-	      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
-	      if (lastMove === moveId) return;
-	      vertexLocation = new Vertex2d(vertexLocation);
-	      const parent = this.parent();
-	      const thisNewCenterLoc = this.parent()[location]({center: vertexLocation});
-	      parent.object().move({center: thisNewCenterLoc});
-	      lastMove = moveId;
-	      const pairedLocs = parent.snapLocations.paired();
-	      for (let index = 0; index < pairedLocs.length; index += 1) {
-	        const loc = pairedLocs[index];
-	        const paired = loc.pairedWith();
-	        const tarVertexLoc = this.parent()[loc.location()]().vertex();
-	        paired.move(tarVertexLoc, moveId);
-	      }
+	    const dummyFunc = () => true;
+	    this.forEach = (func, backward) => {
+	      let currVert = this;
+	      let lastVert;
+	      do {
+	        lastVert = currVert;
+	        func(currVert);
+	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
+	      } while (currVert && currVert !== this);
+	      return currVert || lastVert;
 	    }
-	    this.notPaired = () => pairedWith === null;
 	
-	    this.instString = () => `${parent.id()}:${location}`;
-	    this.toString = () => `${this.instString()}=>${pairedWith && pairedWith.instString()}`;
-	    this.toJson = () => {
-	      const pw = pairedWith;
-	      if (pw === undefined) return;
-	      const json = [{
-	        location, objectId: parent.id()
-	      }, {
-	        location: pw.location(), objectId: pw.parent().id()
-	      }];
-	      const thisStr = this.toString();
-	      const pairStr = pw.toString();
-	      const uniqueId = thisStr < pairStr ? thisStr : pairStr;
-	      json.UNIQUE_ID = uniqueId;
-	      return json;
+	    this.distance = (vertex) => {
+	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
+	      const xDiff = vertex.x() - this.x();
+	      const yDiff = vertex.y() - this.y();
+	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
 	    }
+	
+	    this.toString = () => `(${this.x()}, ${this.y()})`;
+	    const parentToJson = this.toJson;
+	
+	    this.offset = (x, y) => {
+	      const copy = this.toJson();
+	      if (y !== undefined) copy.y += y;
+	      if (x !== undefined) copy.x += x;
+	      return new Vertex2d(copy);
+	    }
+	
+	    this.point(point);
 	  }
 	}
 	
-	SnapLocation2d.fromJson = (json) => {
-	  console.log('jsoned it up!')
+	Vertex2d.fromJson = (json) => {
+	  point = json.point;
+	  vertex.id(json.id);
+	  return new Vertex2d(point);
 	}
 	
-	let activeLocations = [];
-	SnapLocation2d.active = (locs) => {
-	  if (Array.isArray(locs)) activeLocations = activeLocations.concat(locs);
-	  return activeLocations;
+	Vertex2d.center = (...verticies) => {
+	  let x = 0;
+	  let y = 0;
+	  let count = 0;
+	  verticies.forEach((vertex) => {
+	    if (Number.isFinite(vertex.x() + vertex.y())) {
+	      count++;
+	      x += vertex.x();
+	      y += vertex.y();
+	    }
+	  });
+	  return new Vertex2d({x: x/count, y: y/count});
 	}
-	SnapLocation2d.clear = () => activeLocations = [];
 	
-	module.exports = SnapLocation2d;
+	Vertex2d.sort = (a, b) =>
+	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
+	
+	Vertex2d.reusable = true;
+	new Vertex2d();
+	
+	module.exports = Vertex2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/square.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('vertex');
+	const approximate = require('../../../../../public/js/utils/approximate.js');
+	
+	class Square2d {
+	  constructor(center, height, width, radians) {
+	    center = new Vertex2d(center);
+	    width = width === undefined ? 121.92 : width;
+	    height = height === undefined ? 60.96 : height;
+	    radians = radians === undefined ? 0 : radians;
+	    const instance = this;
+	    Object.getSet(this, {center, height, width, radians});
+	    const startPoint = new Vertex2d(null);
+	
+	    const getterHeight = this.height;
+	    this.height = (v) => {
+	      notify(getterHeight(), v);
+	      return getterHeight(v);
+	    }
+	    const getterWidth = this.width;
+	    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
+	
+	    const changeFuncs = [];
+	    this.onChange = (func) => {
+	      if ((typeof func) === 'function') {
+	        changeFuncs.push(func);
+	      }
+	    }
+	
+	    let lastNotificationId = 0;
+	    function notify(currentValue, newValue) {
+	      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
+	      if (newValue !== currentValue) {
+	        const id = ++lastNotificationId;
+	        setTimeout(() => {
+	          if (id === lastNotificationId)
+	            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
+	        }, 100);
+	      }
+	    }
+	
+	    this.radians = (newValue) => {
+	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        notify(radians, newValue);
+	        radians = approximate(newValue);
+	      }
+	      return radians;
+	    };
+	    this.startPoint = () => {
+	      startPoint.point({x: center.x() - width / 2, y: center.y() - height / 2});
+	      return startPoint;
+	    }
+	    this.angle = (value) => {
+	      if (value !== undefined) this.radians(toRadians(value));
+	      return Math.toDegrees(this.radians());
+	    }
+	
+	    this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
+	    this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
+	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+	
+	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	    this.move = (position, theta) => {
+	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	      this.radians(position.theta);
+	      this.x(center.x);
+	      this.y(center.y);
+	      this.center().point(center);
+	      return true;
+	    };
+	
+	    function centerMethod(widthMultiplier, heightMultiplier, position) {
+	      const center = instance.center();
+	      const rads = instance.radians();
+	      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
+	                        instance.height() * heightMultiplier * Math.sin(rads);
+	      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
+	                        instance.width() * widthMultiplier * Math.sin(rads);
+	
+	      if (position !== undefined) {
+	        const posCenter = new Vertex2d(position.center);
+	        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+	      }
+	      const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
+	      return new Vertex2d(backLeftLocation);
+	    }
+	
+	
+	    this.frontCenter = (position) => centerMethod(0, -.5, position);
+	    this.backCenter = (position) => centerMethod(0, .5, position);
+	    this.leftCenter = (position) => centerMethod(.5, 0, position);
+	    this.rightCenter = (position) => centerMethod(-.5, 0, position);
+	
+	    this.backLeft = (position) => centerMethod(.5, .5, position);
+	    this.backRight = (position) => centerMethod(-.5, .5, position);
+	    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
+	    this.frontRight = (position) => centerMethod(-.5, -.5, position);
+	
+	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
+	
+	    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
+	  }
+	}
+	
+	new Square2d();
+	
+	module.exports = Square2d;
 	
 });
 
@@ -22721,422 +22940,120 @@ const Vertex2d = require('vertex');
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/square.js',
+RequireJS.addFunction('./app-src/two-d/objects/snap-location.js',
 function (require, exports, module) {
 	
 const Vertex2d = require('vertex');
-	const approximate = require('../../../../../public/js/utils/approximate.js');
+	const Circle2d = require('circle');
 	
-	class Square2d {
-	  constructor(center, height, width, radians) {
-	    center = new Vertex2d(center);
-	    width = width === undefined ? 121.92 : width;
-	    height = height === undefined ? 60.96 : height;
-	    radians = radians === undefined ? 0 : radians;
-	    const instance = this;
-	    Object.getSet(this, {center, height, width, radians});
-	    const startPoint = new Vertex2d(null);
-	
-	    const getterHeight = this.height;
-	    this.height = (v) => {
-	      notify(getterHeight(), v);
-	      return getterHeight(v);
+	class SnapLocation2d {
+	  constructor(parent, location, vertex, targetVertex, color, pairedWith) {
+	    Object.getSet(this, {location, vertex, targetVertex, color}, "parentId", "pairedWithId");
+	    const circle = new Circle2d(5, vertex);
+	    pairedWith = pairedWith || null;
+	    this.circle = () => circle;
+	    this.eval = () => this.parent()[location]();
+	    this.parent = () => parent;
+	    this.parentId = () => parent.id();
+	    this.pairedWithId = () => pairedWith && pairedWith.id();
+	    this.pairedWith = () => pairedWith;
+	    this.disconnect = () => {
+	      if (pairedWith === null) return;
+	      const wasPaired = pairedWith;
+	      pairedWith = null;
+	      wasPaired.disconnect();
 	    }
-	    const getterWidth = this.width;
-	    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
+	    this.pairWith = (otherSnapLoc) => {
+	      const alreadyPaired = otherSnapLoc === pairedWith;
+	      if (!alreadyPaired) {
+	        pairedWith = otherSnapLoc;
+	        otherSnapLoc.pairWith(this);
+	      }
+	    }
 	
-	    const changeFuncs = [];
-	    this.onChange = (func) => {
+	    this.forEachObject = (func, objMap) => {
+	      objMap = objMap || {};
+	      objMap[this.parent().toString()] = this.parent();
+	      const locs = this.parent().snapLocations.paired();
+	      for (let index = 0; index < locs.length; index += 1) {
+	        const loc = locs[index];
+	        const connSnap = loc.pairedWith();
+	        if (connSnap) {
+	          const connObj = connSnap.parent();
+	          if (connObj && objMap[connObj.id()] === undefined) {
+	            objMap[connObj.id()] = connObj;
+	            connSnap.forEachObject(undefined, objMap);
+	          }
+	        }
+	      }
 	      if ((typeof func) === 'function') {
-	        changeFuncs.push(func);
+	        const objs = Object.values(objMap);
+	        for (let index = 0; index < objs.length; index += 1) {
+	          func(objs[index]);
+	        }
 	      }
-	    }
-	
-	    let lastNotificationId = 0;
-	    function notify(currentValue, newValue) {
-	      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
-	      if (newValue !== currentValue) {
-	        const id = ++lastNotificationId;
-	        setTimeout(() => {
-	          if (id === lastNotificationId)
-	            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
-	        }, 100);
-	      }
-	    }
-	
-	    this.radians = (newValue) => {
-	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	        notify(radians, newValue);
-	        radians = approximate(newValue);
-	      }
-	      return radians;
-	    };
-	    this.startPoint = () => {
-	      startPoint.point({x: center.x() - width / 2, y: center.y() - height / 2});
-	      return startPoint;
-	    }
-	    this.angle = (value) => {
-	      if (value !== undefined) this.radians(toRadians(value));
-	      return Math.toDegrees(this.radians());
-	    }
-	
-	    this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
-	    this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
-	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	
-	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	    this.move = (position, theta) => {
-	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	      this.radians(position.theta);
-	      this.x(center.x);
-	      this.y(center.y);
-	      this.center().point(center);
-	      return true;
 	    };
 	
-	    function centerMethod(widthMultiplier, heightMultiplier, position) {
-	      const center = instance.center();
-	      const rads = instance.radians();
-	      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
-	                        instance.height() * heightMultiplier * Math.sin(rads);
-	      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
-	                        instance.width() * widthMultiplier * Math.sin(rads);
-	
-	      if (position !== undefined) {
-	        const posCenter = new Vertex2d(position.center);
-	        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
-	      }
-	      const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
-	      return new Vertex2d(backLeftLocation);
+	    this.isConnected = (obj) => {
+	      let connected = false;
+	      this.forEachObject((connObj) => connected = connected || obj.id() === connObj.id());
+	      return connected;
 	    }
 	
+	    this.rotate = (theta) => {
+	      this.forEachObject((obj) => obj.radians((obj.radians() + theta) % (2*Math.PI)));
+	    }
 	
-	    this.frontCenter = (position) => centerMethod(0, -.5, position);
-	    this.backCenter = (position) => centerMethod(0, .5, position);
-	    this.leftCenter = (position) => centerMethod(.5, 0, position);
-	    this.rightCenter = (position) => centerMethod(-.5, 0, position);
+	    let lastMove = 0;
+	    this.move = (vertexLocation, moveId) => {
+	      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
+	      if (lastMove === moveId) return;
+	      vertexLocation = new Vertex2d(vertexLocation);
+	      const parent = this.parent();
+	      const thisNewCenterLoc = this.parent()[location]({center: vertexLocation});
+	      parent.object().move({center: thisNewCenterLoc});
+	      lastMove = moveId;
+	      const pairedLocs = parent.snapLocations.paired();
+	      for (let index = 0; index < pairedLocs.length; index += 1) {
+	        const loc = pairedLocs[index];
+	        const paired = loc.pairedWith();
+	        const tarVertexLoc = this.parent()[loc.location()]().vertex();
+	        paired.move(tarVertexLoc, moveId);
+	      }
+	    }
+	    this.notPaired = () => pairedWith === null;
 	
-	    this.backLeft = (position) => centerMethod(.5, .5, position);
-	    this.backRight = (position) => centerMethod(-.5, .5, position);
-	    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
-	    this.frontRight = (position) => centerMethod(-.5, -.5, position);
-	
-	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	
-	    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
+	    this.instString = () => `${parent.id()}:${location}`;
+	    this.toString = () => `${this.instString()}=>${pairedWith && pairedWith.instString()}`;
+	    this.toJson = () => {
+	      const pw = pairedWith;
+	      if (pw === undefined) return;
+	      const json = [{
+	        location, objectId: parent.id()
+	      }, {
+	        location: pw.location(), objectId: pw.parent().id()
+	      }];
+	      const thisStr = this.toString();
+	      const pairStr = pw.toString();
+	      const uniqueId = thisStr < pairStr ? thisStr : pairStr;
+	      json.UNIQUE_ID = uniqueId;
+	      return json;
+	    }
 	  }
 	}
 	
-	new Square2d();
-	
-	module.exports = Square2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/polygon.js',
-function (require, exports, module) {
-	
-const approximate = require('../../../../../public/js/utils/approximate.js');
-	const Polygon2D = require('../../two-d/objects/polygon.js');
-	
-	function shuffle(array) {
-	  return array;
-	  let currentIndex = array.length,  randomIndex;
-	
-	  // While there remain elements to shuffle.
-	  while (currentIndex != 0) {
-	
-	    // Pick a remaining element.
-	    randomIndex = Math.floor(Math.random() * currentIndex);
-	    currentIndex--;
-	
-	    // And swap it with the current element.
-	    [array[currentIndex], array[randomIndex]] = [
-	      array[randomIndex], array[currentIndex]];
-	  }
-	
-	  return array;
+	SnapLocation2d.fromJson = (json) => {
+	  console.log('jsoned it up!')
 	}
 	
-	class Vertex3D {
-	  constructor(x, y) {
-	    if (x instanceof Vertex3D) return x;
-	    if (arguments.length == 3) {
-	      this.x = approximate(x);
-	      this.y = approximate(y);
-	      this.z = approximate(z);
-	    } else if ('x' in x) {
-	      this.x = approximate(x.x);
-	      this.y = approximate(x.y);
-	      this.z = approximate(x.z);
-	    } else {
-	      this.x = approximate(x[0]);
-	      this.y = approximate(x[1]);
-	      this.z = approximate(x[2]);
-	    }
-	    this.equals = (other) => other && this.x === other.x && this.y === other.y;
-	    this.toString = () => `${this.x},${this.y},${this.z}`;
-	  }
+	let activeLocations = [];
+	SnapLocation2d.active = (locs) => {
+	  if (Array.isArray(locs)) activeLocations = activeLocations.concat(locs);
+	  return activeLocations;
 	}
+	SnapLocation2d.clear = () => activeLocations = [];
 	
-	class Line3D {
-	  constructor(startVertex, endVertex) {
-	    this.startVertex = startVertex;
-	    this.endVertex = endVertex;
-	
-	    this.negitive = () => new Line3D(endVertex, startVertex);
-	    this.equals = (other) => startVertex && endVertex && other &&
-	        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
-	
-	    this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
-	    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
-	  }
-	}
-	Line3D.verticies = (lines) => {
-	  const verts = [];
-	  for (let index = 0; index < lines.length; index += 1) {
-	    verts.push(lines[index].endVertex);
-	  }
-	  return verts;
-	}
-	
-	class Polygon3D {
-	  constructor(normal, initialVerticies) {
-	    const lines = [];
-	    let map;
-	    this.normal = new Vertex3D(normal);
-	
-	    this.verticies = () => {
-	      if (lines.length === 0) return [];
-	      const verticies = [];
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        verticies.push(line.startVertex);
-	      }
-	
-	      return verticies;
-	    }
-	
-	    this.lines = () => lines;
-	    this.startLine = () => lines[0];
-	    this.endLine = () => lines[lines.length - 1];
-	
-	    this.lineMap = (force) => {
-	      if (!force && map !== undefined) return map;
-	      if (lines.length === 0) return {};
-	      map = {};
-	      let lastEnd;
-	      if (!lines[0].startVertex.equals(lines[lines.length - 1].endVertex)) throw new Error('Broken Polygon');
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        if (lastEnd && !line.startVertex.equals(lastEnd)) throw new Error('Broken Polygon');
-	        lastEnd = line.endVertex;
-	        map[line.toString()] = line;
-	      }
-	      return map;
-	    }
-	
-	    this.equals = (other) => {
-	      if (!(other instanceof Polygon3D)) return false;
-	      const verts = this.verticies();
-	      const otherVerts = other.verticies();
-	      if (verts.length !== otherVerts.length) return false;
-	      let otherIndex = undefined;
-	      let direction;
-	      for (let index = 0; index < verts.length * 2; index += 1) {
-	        const vIndex = index % verts.length;
-	        if (otherIndex === undefined) {
-	          if (index > verts.length) {
-	            return false
-	          } if(verts[index].equals(otherVerts[0])) {
-	            otherIndex = otherVerts.length * 2;
-	          }
-	        } else if (otherIndex === otherVerts.length * 2) {
-	          if (verts[vIndex].equals(otherVerts[1])) direction = 1;
-	          else if(verts[vIndex].equals(otherVerts[otherVerts.length - 1])) direction = -1;
-	          else return false;
-	          otherIndex += direction * 2;
-	        } else if (!verts[vIndex].equals(otherVerts[otherIndex % otherVerts.length])) {
-	          return false;
-	        } else {
-	          otherIndex += direction;
-	        }
-	      }
-	      return true;
-	    }
-	
-	    function getLine(line) {
-	      const lineMap = this.lineMap();
-	      return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
-	    }
-	
-	    this.getLines = (startVertex, endVertex, reverse) => {
-	      const inc = reverse ? -1 : 1;
-	      const subSection = [];
-	      let completed = false;
-	      const doubleLen = lines.length * 2;
-	      for (let steps = 0; steps < doubleLen; steps += 1) {
-	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
-	        const curr = lines[index];
-	        if (subSection.length === 0) {
-	          if (startVertex.equals(!reverse ? curr.startVertex : curr.endVertex)) {
-	            subSection.push(!reverse ? curr : curr.negitive());
-	            if (endVertex.equals(reverse ? curr.startVertex : curr.endVertex)) {
-	              completed = true;
-	              break;
-	            }
-	          }
-	        } else {
-	          subSection.push(!reverse ? curr : curr.negitive());
-	          if (endVertex.equals(reverse ? curr.startVertex : curr.endVertex)) {
-	            completed = true;
-	            break;
-	          }
-	        }
-	      }
-	      if (completed) return subSection;
-	    }
-	
-	    this.addVerticies = (list) => {
-	      if (list === undefined) return;
-	      const verts = [];
-	      const endLine = this.endLine();
-	      for (let index = 0; index < list.length + 1; index += 1) {
-	        if (index < list.length) verts[index] = new Vertex3D(list[index]);
-	        if (index === 0 && endLine) endLine.endVertex = verts[0];
-	        else if (index > 0) {
-	          const startVertex = verts[index - 1];
-	          const endVertex = verts[index] || this.startLine().startVertex;
-	          const line = new Line3D(startVertex, endVertex);
-	          lines.push(line);
-	        }
-	      }
-	      if (verts.length > 0 && lines.length > 0) {
-	        if (endLine) endline.endVertex = verts[0];
-	      }
-	      this.removeLoops();
-	      this.lineMap(true);
-	    }
-	
-	    this.removeLoops = () => {
-	      const map = {}
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        const key = line.toString();
-	        const negKey = line.toNegitiveString();
-	        if (map[key]) {
-	          lines.splice(map[key].index, index - map[key].index + 1);
-	        } else if (map[negKey]) {
-	          lines.splice(map[negKey].index, index - map[negKey].index + 1);
-	        } else {
-	          map[key] = {line, index};
-	        }
-	      }
-	    }
-	
-	    this.path = () => {
-	      let path = '';
-	      this.verticies().forEach((v) => path += `${v.toString()} => `);
-	      return path.substring(0, path.length - 4);
-	    }
-	
-	    this.merge = (other) => {
-	      if (!this.normal.equals(other.normal)) return;
-	      const sharedMap = [];
-	      const inverseMap = [];
-	      const notShared = [];
-	      const lineMap = this.lineMap();
-	      const otherLines = shuffle(other.lines());
-	      let merged;
-	      for (let index = 0; index < otherLines.length; index += 1) {
-	        const curr = otherLines[index];
-	        if (lineMap[curr.toString()] !== undefined) {
-	          let thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
-	          let otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
-	          if (thisLines && otherLines) {
-	            if (thisLines[0].startVertex.equals(otherLines[0].startVertex)) {
-	              merged = new Polygon3D(normal, Line3D.verticies(thisLines.concat(otherLines.reverse())));
-	            } else {
-	              merged = new Polygon3D(normal, Line3D.verticies(thisLines.concat(otherLines)));
-	            }
-	          }
-	        }
-	        if (lineMap[curr.toNegitiveString()] !== undefined) {
-	          let thisLines = this.getLines(curr.endVertex, curr.startVertex, true);
-	          let otherLines = other.getLines(curr.startVertex, curr.endVertex, true);
-	          if (thisLines[0].startVertex.equals(otherLines[0].startVertex)) {
-	            merged = new Polygon3D(normal, Line3D.verticies(thisLines.concat(otherLines.reverse())));
-	          } else {
-	            merged = new Polygon3D(normal, Line3D.verticies(thisLines.concat(otherLines)));
-	          }
-	        }
-	      }
-	
-	      if (merged) {
-	        // merged.removeLoops();
-	        return merged;
-	      }
-	    }
-	    this.addVerticies(initialVerticies);
-	  }
-	}
-	
-	Polygon3D.merge = (polygons) => {
-	  shuffle(polygons);
-	  let currIndex = 0;
-	  while (currIndex < polygons.length - 1) {
-	    const target = polygons[currIndex];
-	    for (let index = currIndex + 1; index < polygons.length; index += 1) {
-	      const other = polygons[index];
-	      const merged = target.merge(other);
-	      if (merged) {
-	        polygons[currIndex--] = merged;
-	        polygons.splice(index, 1);
-	        break;
-	      }
-	    }
-	    currIndex++;
-	  }
-	}
-	
-	const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
-	Polygon3D.toTwoD = (polygons) => {
-	  const map = {xy: [], xz: [], zy: []};
-	  for (let index = 0; index < polygons.length; index += 1) {
-	    const poly = polygons[index];
-	    const norm = poly.normal;
-	    const includeXY = include(norm.x, norm.y, norm.z);
-	    const includeXZ = include(norm.x, norm.z, norm.y);
-	    const includeZY = include(norm.z, norm.y, norm.x);
-	    const indexXY = map.xy.length;
-	    const indexXZ = map.xz.length;
-	    const indexZY = map.zy.length;
-	    if (includeXY) map.xy[indexXY] = [];
-	    if (includeXZ) map.xz[indexXZ] = [];
-	    if (includeZY) map.zy[indexZY] = [];
-	    poly.verticies().forEach((vertex) => {
-	      if (includeXY) map.xy[indexXY].push({x: vertex.x, y: -1 * vertex.y, layer: vertex.z});
-	      if (includeXZ) map.xz[indexXZ].push({x: vertex.x, y: -1 * vertex.z, layer: vertex.y});
-	      if (includeZY) map.zy[indexZY].push({x: -1 * vertex.z, y: -1 * vertex.y, layer: vertex.x});
-	    });
-	    if (includeXY) map.xy[indexXY] = new Polygon2D(map.xy[indexXY]);
-	    if (includeXZ) map.xz[indexXZ] = new Polygon2D(map.xz[indexXZ]);
-	    if (includeZY) map.zy[indexZY] = new Polygon2D(map.zy[indexZY]);
-	  }
-	  return map;
-	}
-	
-	
-	Polygon3D.Vertex3D = Vertex3D;
-	Polygon3D.Line3D = Line3D;
-	module.exports = Polygon3D;
+	module.exports = SnapLocation2d;
 	
 });
 
@@ -23315,8 +23232,11 @@ function (require, exports, module) {
 	  for (let index = 0; index < polys.length; index += 1) {
 	    lines = lines.concat(polys[index].lines());
 	  }
-	  // TODO: patchy fix.... there is somthing wrong with my algorythym
-	  return Line2d.consolidate(...lines);
+	  const consolidated = Line2d.consolidate(...Line2d.consolidate(...lines));
+	  if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
+	    console.error('Line Consolidation malfunction');
+	  }
+	  return consolidated;
 	}
 	
 	new Polygon2d();
@@ -23325,424 +23245,51 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assembly.js',
+RequireJS.addFunction('./app-src/two-d/objects/plane.js',
 function (require, exports, module) {
 	
-
-	
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Position = require('../../position.js');
-	const getDefaultSize = require('../../utils.js').getDefaultSize;
-	const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-	
-	const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
-	
-	class Assembly extends Lookup {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-	    super(undefined, 'uniqueId');
-	    let instance = this;
-	    const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
-	    const initialVals = {
-	      part: true,
-	      included: true,
-	      centerStr, demensionStr, rotationStr, partCode, partName,
-	      propertyId: undefined,
-	    }
-	    Object.getSet(this, initialVals, 'values', 'subassemblies', 'joints');
-	    Object.getSet(this, temporaryInitialVals);
-	    this.path = () => `${this.constructor.name}.${partName}`.toDot();
-	
-	    if ((typeof centerStr) === 'function') this.centerStr = centerStr;
-	    if ((typeof demensionStr) === 'function') this.demensionStr = demensionStr;
-	    if ((typeof rotationStr) === 'function') this.rotationStr = rotationStr;
-	
-	    function getValueSmeFormatter(path) {
-	      const split = path.split('.');
-	      let attr = split[0];
-	      let objIdStr;
-	      if (split.length === 2) {
-	        objIdStr = split[0];
-	        attr = split[1];
+class Plane2d {
+	  constructor(verticies) {
+	    this.getLines = () => {
+	      const lines = [];
+	      for (let index = 0; index < verticies.length; index += 1) {
+	        lines.push(new Line2d(verticies[index], verticies[(index + 1) % verticies.length]));
 	      }
-	
-	      let obj;
-	      if (objIdStr === undefined) {
-	        obj = instance;
-	      } else {
-	        obj = instance.getAssembly(objIdStr);
-	      }
-	      const returnVal = Assembly.resolveAttr(obj, attr);
-	      return returnVal;
-	    }
-	    const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
-	    this.eval = (eqn) => sme.eval(eqn, this);
-	
-	    this.getRoot = () => {
-	      let currAssem = this;
-	      while(currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
-	      return currAssem;
-	    }
-	
-	    let getting =  false;
-	    this.getAssembly = (partCode, callingAssem) => {
-	      if (callingAssem === this) return undefined;
-	      if (this.partCode() === partCode) return this;
-	      if (this.subassemblies[partCode]) return this.subassemblies[partCode];
-	      if (callingAssem !== undefined) {
-	        const children = Object.values(this.subassemblies);
-	        for (let index = 0; index < children.length; index += 1) {
-	          const assem = children[index].getAssembly(partCode, this);
-	          if (assem !== undefined) return assem;
-	        }
-	      }
-	      if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
-	        return this.parentAssembly().getAssembly(partCode, this);
-	      return undefined;
-	    }
-	    let position = new Position(this, sme);
-	    this.position = () => position;
-	    this.updatePosition = () => position = new Position(this, sme);
-	    this.joints = [];
-	    this.values = {};
-	    this.rootAssembly = () => {
-	      let currAssem = this;
-	      while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
-	      return currAssem;
-	    }
-	    this.getJoints = (pc) => {
-	      const root = this.getRoot();
-	      if (root !== this) return root.getJoints(pc || partCode);
-	      pc = pc || partCode;
-	      const assemList = this.getSubassemblies();
-	      let jointList = [].concat(this.joints);
-	      assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
-	      let joints = {male: [], female: []};
-	      jointList.forEach((joint) => {
-	        if (joint.malePartCode() === pc) {
-	          joints.male.push(joint);
-	        } else if (joint.femalePartCode() === pc) {
-	          joints.female.push(joint);
-	        }
-	      });
-	      return joints;
-	    }
-	    function initObj(value) {
-	      const obj = {};
-	      for (let index = 1; index < arguments.length; index += 1) {
-	        obj[arguments[index]] = value;
-	      }
-	      return obj;
-	    }
-	    const funcAttrs = ['length', 'width', 'thickness'];
-	    this.value = (code, value) => {
-	      if (code.match(new RegExp(funcAttrs.join('|')))) {
-	        this[code](value);
-	      } else {
-	        if (value !== undefined) {
-	          this.values[code] = value;
-	        } else {
-	          const instVal = this.values[code];
-	          if (instVal !== undefined && instVal !== null) {
-	            if ((typeof instVal) === 'number' || (typeof instVal) === 'string') {
-	              return sme.eval(instVal, this);
-	            } else {
-	              return instVal;
-	            }
-	          }
-	          if (this.parentAssembly()) return this.parentAssembly().value(code);
-	          else {
-	            try {
-	              const value = this.propertyConfig(this.constructor.name, code);
-	              if (value === undefined) throw new Error();
-	              return value;
-	            } catch (e) {
-	              console.error(`Failed to resolve code: ${code}`);
-	              throw e;
-	              return NaN;
-	            }
-	          }
-	        }
-	      }
-	    }
-	    this.jointOffsets = () => {
-	    }
-	
-	    this.subassemblies = {};
-	    this.setSubassemblies = (assemblies) => {
-	      this.subassemblies = {};
-	      assemblies.forEach((assem) => this.subassemblies[assem.partCode()] = assem);
-	    };
-	
-	    // TODO: wierd dependency on inherited class.... fix!!!
-	    const defaultPartCode = () =>
-	      instance.partCode(instance.partCode() || Assembly.partCode(this));
-	
-	    this.setParentAssembly = (pa) => {
-	      this.parentAssembly(pa);
-	      defaultPartCode();
-	    }
-	    this.addSubAssembly = (assembly) => {
-	      this.subassemblies[assembly.partCode()] = assembly;
-	      assembly.setParentAssembly(this);
-	    }
-	
-	    this.objId = this.constructor.name;
-	
-	    this.addJoints = function () {
-	      for (let i = 0; i < arguments.length; i += 1) {
-	        const joint = arguments[i];
-	        this.joints.push(joint);
-	        joint.parentAssemblyId(this.uniqueId());
-	      }
-	    }
-	
-	    this.addSubassemblies = function () {
-	      for (let i = 0; i < arguments.length; i += 1) {
-	        this.addSubAssembly(arguments[i]);
-	      }
-	    }
-	
-	    this.children = () => Object.values(this.subassemblies);
-	
-	    this.getSubassemblies = () => {
-	      let assemblies = [];
-	      this.children().forEach((assem) => {
-	        assemblies.push(assem);
-	        assemblies = assemblies.concat(assem.getSubassemblies());
-	      });
-	      return assemblies;
-	    }
-	    this.getParts = () => {
-	      return this.getSubassemblies().filter((a) => a.part && a.included );
-	    }
-	
-	    if (Assembly.idCounters[this.objId] === undefined) {
-	      Assembly.idCounters[this.objId] = 0;
-	    }
-	
-	    Assembly.add(this);
-	
-	    this.width = (value) => position.setDemension('x', value);
-	    this.length = (value) => position.setDemension('y', value);
-	    this.thickness = (value) => position.setDemension('z', value);
-	    defaultPartCode();
-	  }
-	}
-	
-	Assembly.list = {};
-	Assembly.get = (uniqueId) => {
-	  const keys = Object.keys(Assembly.list);
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const assembly = Assembly.list[keys[index]][uniqueId];
-	    if (assembly !== undefined) return assembly;
-	  }
-	  return null;
-	}
-	Assembly.add = (assembly) => {
-	  const name = assembly.constructor.name;
-	  if (Assembly.list[name] === undefined) Assembly.list[name] = {};
-	  Assembly.list[name][assembly.uniqueId()] = assembly;
-	}
-	Assembly.all = () => {
-	  const list = [];
-	  const keys = Object.keys(Assembly.list);
-	  keys.forEach((key) => list.concat(Object.values(Assembly.list[key])));
-	  return list;
-	}
-	Assembly.resolveAttr = (assembly, attr) => {
-	  if (!(assembly instanceof Assembly)) return undefined;
-	  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
-	    return assembly.length();
-	  } else if (attr === 'w' || attr === 'width') {
-	    return assembly.width();
-	  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
-	    return assembly.thickness();
-	  }
-	  return assembly.value(attr);
-	}
-	Assembly.fromJson = (assemblyJson) => {
-	  const demensionStr = assemblyJson.demensionStr;
-	  const centerStr = assemblyJson.centerStr;
-	  const rotationStr = assemblyJson.rotationStr;
-	  const partCode = assemblyJson.partCode;
-	  const partName = assemblyJson.partName;
-	  const clazz = Object.class.get(assemblyJson._TYPE);
-	  const assembly = new (clazz)(partCode, partName, centerStr, demensionStr, rotationStr);
-	  assembly.uniqueId(assemblyJson.uniqueId);
-	  assembly.values = assemblyJson.values;
-	  assembly.setParentAssembly(assemblyJson.parent)
-	  Object.values(assemblyJson.subassemblies).forEach((json) =>
-	    assembly.addSubAssembly(Assembly.class(json._TYPE)
-	                              .fromJson(json, assembly)));
-	  if (assemblyJson.length) assembly.length(assemblyJson.length);
-	  if (assemblyJson.width) assembly.width(assemblyJson.width);
-	  if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
-	  return assembly;
-	}
-	
-	Assembly.classes = Object.class.object;
-	Assembly.new = function (id) {
-	  return new (Object.class.get(id))(...Array.from(arguments).slice(1));
-	};
-	Assembly.class = Object.class.get;
-	Assembly.classObj = Object.class.filter;
-	
-	Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
-	Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
-	Assembly.lists = {};
-	Assembly.idCounters = {};
-	
-	Assembly.partCode = (assembly) => {
-	  const cabinet = assembly.getAssembly('c');
-	  if (cabinet) {
-	    const name = assembly.constructor.name;
-	    cabinet.partIndex = cabinet.partIndex || 0;
-	    return `${assembly.constructor.abbriviation}-${cabinet.partIndex++}`;
-	  }
-	}
-	
-	module.exports = Assembly
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/circle.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('./vertex');
-	
-	class Circle2d {
-	  constructor(radius, center) {
-	    center = new Vertex2d(center);
-	    Object.getSet(this, {radius, center});
-	    // ( x - h )^2 + ( y - k )^2 = r^2
-	    const instance = this;
-	    // Stole the root code from: https://stackoverflow.com/a/37225895
-	    function lineIntersects (line, bounded) {
-	      const p1 = line.startVertex();
-	      const p2 = line.endVertex();
-	        var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
-	        v1 = {};
-	        v2 = {};
-	        v1.x = p2.x() - p1.x();
-	        v1.y = p2.y() - p1.y();
-	        v2.x = p1.x() - instance.center().x();
-	        v2.y = p1.y() - instance.center().y();
-	        b = (v1.x * v2.x + v1.y * v2.y);
-	        c = 2 * (v1.x * v1.x + v1.y * v1.y);
-	        b *= -2;
-	        d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - instance.radius() * instance.radius()));
-	        if(isNaN(d)){ // no intercept
-	            return [];
-	        }
-	        u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
-	        u2 = (b + d) / c;
-	        retP1 = {};   // return points
-	        retP2 = {}
-	        ret = []; // return array
-	        if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
-	            retP1.x = p1.x() + v1.x * u1;
-	            retP1.y = p1.y() + v1.y * u1;
-	            ret[0] = retP1;
-	        }
-	        if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
-	            retP2.x = p1.x() + v1.x * u2;
-	            retP2.y = p1.y() + v1.y * u2;
-	            ret[ret.length] = retP2;
-	        }
-	        return ret;
-	    }
-	
-	    function circleIntersects(circle) {
-	      return Circle2d.intersectionOfTwo(instance, circle);
-	    }
-	
-	    this.toString = () => `(${this.radius()}${this.center()}----)`;
-	
-	    this.intersections = (input) => {
-	        if (input instanceof Circle2d) return circleIntersects(input);
-	        if (input.constructor.name === 'Line2d') return lineIntersects(input);
-	        throw new Error(`Cannot find intersections for ${input.constructor.name}`);
+	      return lines;
 	    }
 	  }
 	}
 	
-	// Ripped off from: https://stackoverflow.com/a/12221389
-	Circle2d.intersectionOfTwo = (circle0, circle1) => {
-	    const x0 = circle0.center().x();
-	    const y0 = circle0.center().y();
-	    const r0 = circle0.radius();
-	
-	    const x1 = circle1.center().x();
-	    const y1 = circle1.center().y();
-	    const r1 = circle1.radius();
-	    var a, dx, dy, d, h, rx, ry;
-	    var x2, y2;
-	
-	    /* dx and dy are the vertical and horizontal distances between
-	     * the circle centers.
-	     */
-	    dx = x1 - x0;
-	    dy = y1 - y0;
-	
-	    /* Determine the straight-line distance between the centers. */
-	    d = Math.sqrt((dy*dy) + (dx*dx));
-	
-	    /* Check for solvability. */
-	    if (d > (r0 + r1)) {
-	        /* no solution. circles do not intersect. */
-	        return [];
-	    }
-	    if (d < Math.abs(r0 - r1)) {
-	        /* no solution. one circle is contained in the other */
-	        return [];
-	    }
-	
-	    /* 'point 2' is the point where the line through the circle
-	     * intersection points crosses the line between the circle
-	     * centers.
-	     */
-	
-	    /* Determine the distance from point 0 to point 2. */
-	    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
-	
-	    /* Determine the coordinates of point 2. */
-	    x2 = x0 + (dx * a/d);
-	    y2 = y0 + (dy * a/d);
-	
-	    /* Determine the distance from point 2 to either of the
-	     * intersection points.
-	     */
-	    h = Math.sqrt((r0*r0) - (a*a));
-	
-	    /* Now determine the offsets of the intersection points from
-	     * point 2.
-	     */
-	    rx = -dy * (h/d);
-	    ry = dx * (h/d);
-	
-	    /* Determine the absolute intersection points. */
-	    var xi = x2 + rx;
-	    var xi_prime = x2 - rx;
-	    var yi = y2 + ry;
-	    var yi_prime = y2 - ry;
-	
-	    const list = [];
-	    pushVertex(xi, yi, list);
-	    pushVertex(xi_prime, yi_prime, list);
-	    return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
+	Plane2d.getPlanes = (planes) => {
+	  const ps = [];
+	  planes.forEach((p) => ps.push(new Plane2d(p)));
+	  return ps;
 	}
 	
-	Circle2d.reusable = true;
-	Circle2d.instance = (radius, center) => {
-	  const inst = Lookup.instance(Circle2d.name);
-	  inst.radius(radius);
-	  inst.center(center);
-	  return inst;
-	}
-	new Circle2d();
+	Plane2d.consolidatePolygons = (polygons) => {
+	  const consolidated = {top: {}, left: {}, front: {}};
+	  function group(g, poly) {
 	
-	module.exports = Circle2d;
+	    map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+	    map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+	    map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+	  }
+	  const map = {xy: [], xz: [], yz: []};
+	  polygons.forEach((p, index) => {
+	    map.xy.push([]);
+	    map.xz.push([]);
+	    map.yz.push([]);
+	    p.vertices.forEach((v) => {
+	      map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+	      map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+	      map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+	    });
+	  });
+	  return map;
+	}
+	
+	new Plane2d();
+	module.exports = Plane2d;
 	
 });
 
@@ -23758,6 +23305,7 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	  constructor(startVertex, endVertex) {
 	    startVertex = new Vertex2d(startVertex);
 	    endVertex = new Vertex2d(endVertex);
+	    const measureTo = [];
 	    const instance = this;
 	
 	    this.startVertex = (newVertex) => {
@@ -23875,6 +23423,27 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	        else return Infinity;
 	      }
 	      return (y - this.yIntercept())/slope;
+	    }
+	
+	    this.liesOn = (vertices) => {
+	      const liesOn = [];
+	      for (let index = 0; index < vertices.length; index += 1) {
+	        const v = vertices[index];
+	        const y = this.y(v.x());
+	        if ((y === v.y() || Math.abs(y) === Infinity) && this.withinSegmentBounds(v)) {
+	          liesOn.push(v);
+	        }
+	      }
+	      liesOn.sort(Vertex2d.sort);
+	      return liesOn;
+	    }
+	
+	    this.measureTo = (verts) => {
+	      if (Array.isArray(verts)) {
+	        verts = this.liesOn(verts);
+	        measureTo.concatInPlace(verts);
+	      }
+	      return measureTo;
 	    }
 	
 	    this.maxDem = () => this.y() > this.x() ? this.y() : this.x();
@@ -24041,6 +23610,18 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	  return line;
 	}
 	
+	Line2d.vertices = (lines) => {
+	  const verts = {};
+	  for (let index = 0; index < lines.length; index += 1) {
+	    const line = lines[index];
+	    const sv = line.startVertex();
+	    const ev = line.endVertex();
+	    verts[sv.toString()] = sv;
+	    verts[ev.toString()] = ev;
+	  }
+	  return Object.values(verts);
+	}
+	
 	Line2d.consolidate = (...lines) => {
 	  const lineMap = {};
 	  for (let index = 0; index < lines.length; index += 1) {
@@ -24057,13 +23638,18 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	    const list = lineMap[keys[lIndex]];
 	    for (let tIndex = 0; tIndex < list.length; tIndex += 1) {
 	      let target = list[tIndex];
-	      for (let index = 1 + tIndex; index < list.length; index += 1) {
-	        const combined = target.combine(list[index]);
-	        if (combined) {
-	          list.splice(index, 1);
-	          list[tIndex] = combined;
-	          target = combined;
-	          index--;
+	      for (let index = 0; index < list.length; index += 1) {
+	        if (index !== tIndex) {
+	          const combined = target.combine(list[index]);
+	          if (combined) {
+	            const lowIndex = index < tIndex ? index : tIndex;
+	            const highIndex = index > tIndex ? index : tIndex;
+	            list.splice(highIndex, 1);
+	            list[lowIndex] = combined;
+	            target = combined;
+	            tIndex--;
+	            break;
+	          }
 	        }
 	      }
 	    }
@@ -24080,222 +23666,385 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/vertex.js',
+RequireJS.addFunction('./app-src/objects/assembly/assembly.js',
 function (require, exports, module) {
 	
-const approximate = require('../../../../../public/js/utils/approximate.js');
+
 	
-	class Vertex2d {
-	  constructor(point) {
-	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
-	    if (point instanceof Vertex2d) return point;
-	    point = point || {x:0,y:0};
-	    Object.getSet(this, {point});
-	    this.layer = point.layer;
-	    const instance = this;
-	    this.move = (center) => {
-	      this.point(center);
-	      return true;
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Position = require('../../position.js');
+	const getDefaultSize = require('../../utils.js').getDefaultSize;
+	const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+	
+	const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
+	
+	class Assembly extends Lookup {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
+	    super(undefined, 'uniqueId');
+	    let instance = this;
+	    const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
+	    const initialVals = {
+	      part: true,
+	      included: true,
+	      centerStr, demensionStr, rotationStr, partCode, partName,
+	      propertyId: undefined,
+	    }
+	    Object.getSet(this, initialVals, 'values', 'subassemblies', 'joints');
+	    Object.getSet(this, temporaryInitialVals);
+	    this.path = () => `${this.constructor.name}.${partName}`.toDot();
+	
+	    if ((typeof centerStr) === 'function') this.centerStr = centerStr;
+	    if ((typeof demensionStr) === 'function') this.demensionStr = demensionStr;
+	    if ((typeof rotationStr) === 'function') this.rotationStr = rotationStr;
+	
+	    function getValueSmeFormatter(path) {
+	      const split = path.split('.');
+	      let attr = split[0];
+	      let objIdStr;
+	      if (split.length === 2) {
+	        objIdStr = split[0];
+	        attr = split[1];
+	      }
+	
+	      let obj;
+	      if (objIdStr === undefined) {
+	        obj = instance;
+	      } else {
+	        obj = instance.getAssembly(objIdStr);
+	      }
+	      const returnVal = Assembly.resolveAttr(obj, attr);
+	      return returnVal;
+	    }
+	    const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
+	    this.eval = (eqn) => sme.eval(eqn, this);
+	
+	    this.getRoot = () => {
+	      let currAssem = this;
+	      while(currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
+	      return currAssem;
+	    }
+	
+	    let getting =  false;
+	    this.getAssembly = (partCode, callingAssem) => {
+	      if (callingAssem === this) return undefined;
+	      if (this.partCode() === partCode) return this;
+	      if (this.subassemblies[partCode]) return this.subassemblies[partCode];
+	      if (callingAssem !== undefined) {
+	        const children = Object.values(this.subassemblies);
+	        for (let index = 0; index < children.length; index += 1) {
+	          const assem = children[index].getAssembly(partCode, this);
+	          if (assem !== undefined) return assem;
+	        }
+	      }
+	      if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
+	        return this.parentAssembly().getAssembly(partCode, this);
+	      return undefined;
+	    }
+	    let position = new Position(this, sme);
+	    this.position = () => position;
+	    this.updatePosition = () => position = new Position(this, sme);
+	    this.joints = [];
+	    this.values = {};
+	    this.rootAssembly = () => {
+	      let currAssem = this;
+	      while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
+	      return currAssem;
+	    }
+	    this.getJoints = (pc) => {
+	      const root = this.getRoot();
+	      if (root !== this) return root.getJoints(pc || partCode);
+	      pc = pc || partCode;
+	      const assemList = this.getSubassemblies();
+	      let jointList = [].concat(this.joints);
+	      assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
+	      let joints = {male: [], female: []};
+	      jointList.forEach((joint) => {
+	        if (joint.malePartCode() === pc) {
+	          joints.male.push(joint);
+	        } else if (joint.femalePartCode() === pc) {
+	          joints.female.push(joint);
+	        }
+	      });
+	      return joints;
+	    }
+	    function initObj(value) {
+	      const obj = {};
+	      for (let index = 1; index < arguments.length; index += 1) {
+	        obj[arguments[index]] = value;
+	      }
+	      return obj;
+	    }
+	    const funcAttrs = ['length', 'width', 'thickness'];
+	    this.value = (code, value) => {
+	      if (code.match(new RegExp(funcAttrs.join('|')))) {
+	        this[code](value);
+	      } else {
+	        if (value !== undefined) {
+	          this.values[code] = value;
+	        } else {
+	          const instVal = this.values[code];
+	          if (instVal !== undefined && instVal !== null) {
+	            if ((typeof instVal) === 'number' || (typeof instVal) === 'string') {
+	              return sme.eval(instVal, this);
+	            } else {
+	              return instVal;
+	            }
+	          }
+	          if (this.parentAssembly()) return this.parentAssembly().value(code);
+	          else {
+	            try {
+	              const value = this.propertyConfig(this.constructor.name, code);
+	              if (value === undefined) throw new Error();
+	              return value;
+	            } catch (e) {
+	              console.error(`Failed to resolve code: ${code}`);
+	              throw e;
+	              return NaN;
+	            }
+	          }
+	        }
+	      }
+	    }
+	    this.jointOffsets = () => {
+	    }
+	
+	    this.subassemblies = {};
+	    this.setSubassemblies = (assemblies) => {
+	      this.subassemblies = {};
+	      assemblies.forEach((assem) => this.subassemblies[assem.partCode()] = assem);
 	    };
-	    this.point = (newPoint) => {
-	      if (newPoint) this.x(newPoint.x);
-	      if (newPoint) this.y(newPoint.y);
-	      return point;
+	
+	    this.partsOf = (clazz) => {
+	      const parts = this.getRoot().getParts();
+	      if (clazz === undefined) return parts;
+	      return parts.filter((p) => p instanceof clazz);
 	    }
 	
-	    this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
-	    this.x = (val) => {
-	      if ((typeof val) === 'number') point.x = approximate(val);
-	      return this.point().x;
-	    }
-	    this.y = (val) => {
-	      if ((typeof val) === 'number') this.point().y = approximate(val);
-	      return this.point().y;
-	    }
+	    // TODO: wierd dependency on inherited class.... fix!!!
+	    const defaultPartCode = () =>
+	      instance.partCode(instance.partCode() || Assembly.partCode(this));
 	
-	    const dummyFunc = () => true;
-	    this.forEach = (func, backward) => {
-	      let currVert = this;
-	      let lastVert;
-	      do {
-	        lastVert = currVert;
-	        func(currVert);
-	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
-	      } while (currVert && currVert !== this);
-	      return currVert || lastVert;
+	    this.setParentAssembly = (pa) => {
+	      this.parentAssembly(pa);
+	      defaultPartCode();
+	    }
+	    this.addSubAssembly = (assembly) => {
+	      this.subassemblies[assembly.partCode()] = assembly;
+	      assembly.setParentAssembly(this);
 	    }
 	
-	    this.distance = (vertex) => {
-	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
-	      const xDiff = vertex.x() - this.x();
-	      const yDiff = vertex.y() - this.y();
-	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+	    this.objId = this.constructor.name;
+	
+	    this.addJoints = function () {
+	      for (let i = 0; i < arguments.length; i += 1) {
+	        const joint = arguments[i];
+	        this.joints.push(joint);
+	        joint.parentAssemblyId(this.uniqueId());
+	      }
 	    }
 	
-	    this.toString = () => `(${this.x()}, ${this.y()})`;
-	    const parentToJson = this.toJson;
-	
-	    this.offset = (x, y) => {
-	      const copy = this.toJson();
-	      if (y !== undefined) copy.y += y;
-	      if (x !== undefined) copy.x += x;
-	      return new Vertex2d(copy);
+	    this.addSubassemblies = function () {
+	      for (let i = 0; i < arguments.length; i += 1) {
+	        this.addSubAssembly(arguments[i]);
+	      }
 	    }
 	
-	    this.point(point);
+	    this.children = () => Object.values(this.subassemblies);
+	
+	    this.getSubassemblies = () => {
+	      let assemblies = [];
+	      this.children().forEach((assem) => {
+	        assemblies.push(assem);
+	        assemblies = assemblies.concat(assem.getSubassemblies());
+	      });
+	      return assemblies;
+	    }
+	    this.getParts = () => {
+	      return this.getSubassemblies().filter((a) => a.part && a.included );
+	    }
+	
+	    if (Assembly.idCounters[this.objId] === undefined) {
+	      Assembly.idCounters[this.objId] = 0;
+	    }
+	
+	    Assembly.add(this);
+	
+	    this.width = (value) => position.setDemension('x', value);
+	    this.length = (value) => position.setDemension('y', value);
+	    this.thickness = (value) => position.setDemension('z', value);
+	    defaultPartCode();
 	  }
 	}
 	
-	Vertex2d.fromJson = (json) => {
-	  point = json.point;
-	  vertex.id(json.id);
-	  return new Vertex2d(point);
+	Assembly.list = {};
+	Assembly.get = (uniqueId) => {
+	  const keys = Object.keys(Assembly.list);
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const assembly = Assembly.list[keys[index]][uniqueId];
+	    if (assembly !== undefined) return assembly;
+	  }
+	  return null;
+	}
+	Assembly.add = (assembly) => {
+	  const name = assembly.constructor.name;
+	  if (Assembly.list[name] === undefined) Assembly.list[name] = {};
+	  Assembly.list[name][assembly.uniqueId()] = assembly;
+	}
+	Assembly.all = () => {
+	  const list = [];
+	  const keys = Object.keys(Assembly.list);
+	  keys.forEach((key) => list.concat(Object.values(Assembly.list[key])));
+	  return list;
+	}
+	Assembly.resolveAttr = (assembly, attr) => {
+	  if (!(assembly instanceof Assembly)) return undefined;
+	  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
+	    return assembly.length();
+	  } else if (attr === 'w' || attr === 'width') {
+	    return assembly.width();
+	  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
+	    return assembly.thickness();
+	  }
+	  return assembly.value(attr);
+	}
+	Assembly.fromJson = (assemblyJson) => {
+	  const demensionStr = assemblyJson.demensionStr;
+	  const centerStr = assemblyJson.centerStr;
+	  const rotationStr = assemblyJson.rotationStr;
+	  const partCode = assemblyJson.partCode;
+	  const partName = assemblyJson.partName;
+	  const clazz = Object.class.get(assemblyJson._TYPE);
+	  const assembly = new (clazz)(partCode, partName, centerStr, demensionStr, rotationStr);
+	  assembly.uniqueId(assemblyJson.uniqueId);
+	  assembly.values = assemblyJson.values;
+	  assembly.setParentAssembly(assemblyJson.parent)
+	  Object.values(assemblyJson.subassemblies).forEach((json) =>
+	    assembly.addSubAssembly(Assembly.class(json._TYPE)
+	                              .fromJson(json, assembly)));
+	  if (assemblyJson.length) assembly.length(assemblyJson.length);
+	  if (assemblyJson.width) assembly.width(assemblyJson.width);
+	  if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
+	  return assembly;
 	}
 	
-	Vertex2d.center = (...verticies) => {
-	  let x = 0;
-	  let y = 0;
-	  let count = 0;
-	  verticies.forEach((vertex) => {
-	    if (Number.isFinite(vertex.x() + vertex.y())) {
-	      count++;
-	      x += vertex.x();
-	      y += vertex.y();
-	    }
-	  });
-	  return new Vertex2d({x: x/count, y: y/count});
+	Assembly.classes = Object.class.object;
+	Assembly.new = function (id) {
+	  return new (Object.class.get(id))(...Array.from(arguments).slice(1));
+	};
+	Assembly.class = Object.class.get;
+	Assembly.classObj = Object.class.filter;
+	
+	Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
+	Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
+	Assembly.lists = {};
+	Assembly.idCounters = {};
+	
+	Assembly.partCode = (assembly) => {
+	  const cabinet = assembly.getAssembly('c');
+	  if (cabinet) {
+	    const name = assembly.constructor.name;
+	    cabinet.partIndex = cabinet.partIndex || 0;
+	    return `${assembly.constructor.abbriviation}`;
+	  }
 	}
 	
-	Vertex2d.sort = (a, b) =>
-	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
-	
-	Vertex2d.reusable = true;
-	new Vertex2d();
-	
-	module.exports = Vertex2d;
+	module.exports = Assembly
 	
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/labor.js',
+RequireJS.addFunction('./app-src/config/property/definitions.js',
 function (require, exports, module) {
+	const Property = require('../property');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const IMPERIAL_US = Measurement.units()[1];
 	
-
+	const defs = {};
 	
-	const Material = require('./material.js');
-	const Cost = require('../cost.js');
+	defs.h = new Property('h', 'height', null);
+	defs.w = new Property('w', 'width', null);
+	defs.d = new Property('d', 'depth', null);
+	defs.t = new Property('t', 'thickness', null);
+	defs.l = new Property('l', 'length', null);
 	
+	//   Overlay
+	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
 	
-	// unitCost.value = (hourlyRate*hours)/length
-	// calc(assembly) = unitCost.value * formula
+	//   Reveal
+	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
 	
-	class Labor extends Material {
-	  constructor (props) {
-	    super(props);
-	    const type = props.laborType;
-	    props.hourlyRate = Labor.hourlyRates[type]
-	    const parentCalc = this.calc;
-	    this.cost = () => this.hourlyRate() * props.hours;
-	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
-	    Labor.hourlyRate(type, props.hourlyRate);
+	//   Inset
+	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
 	
-	    const parentToJson = this.toJson;
-	  }
-	}
+	//   Cabinet
+	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
+	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
+	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
+	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
+	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
+	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
+	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US})
+	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US})
+	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US})
 	
+	//   Panel
 	
-	Labor.defaultRate = 40;
-	Labor.hourlyRate = (type, rate) => {
-	  rate = Cost.evaluator.eval(new String(rate));
-	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
-	  return Labor.hourlyRates[type] || Labor.defaultRate;
-	}
-	Labor.hourlyRates = {};
-	Labor.types = [];
-	Labor.explanation = `Cost to be calculated hourly`;
+	//   Guides
+	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', null),
+	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', null),
+	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', null)
 	
-	module.exports = Labor
+	//   DoorAndFront
+	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
+	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null})
+	
+	//   Door
+	
+	//   DrawerBox
+	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
+	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
+	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
+	
+	//   DrawerFront
+	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
+	
+	//   Frame
+	
+	//   Handle
+	defs.c2c = new Property('c2c', 'Center To Center', null),
+	defs.proj = new Property('proj', 'Projection', null),
+	
+	//   Hinge
+	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null),
+	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
+	defs.maxol = new Property('maxol', 'Max Door Overlay', null),
+	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
+	
+	//   Opening
+	
+	module.exports = defs;
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/init-assem.js',
+RequireJS.addFunction('./app-src/objects/joint/init.js',
 function (require, exports, module) {
 	
-const Assembly = require('./assembly.js');
-	new Assembly();
+const Joint = require('./joint');
 	
-	const Cabinet = require('./assemblies/cabinet.js');
-	new Cabinet();
+	const Butt = require('./joints/butt.js');
+	const Dado = require('./joints/dado.js');
+	const Miter = require('./joints/miter.js');
+	const Rabbet = require('./joints/rabbet.js');
 	
-	const Divider = require('./assemblies/divider.js');
-	new Divider();
-	
-	const DoorCatch = require('./assemblies/door/door-catch.js');
-	new DoorCatch();
-	
-	const Door = require('./assemblies/door/door.js');
-	new Door();
-	
-	const Hinges = require('./assemblies/door/hinges.js');
-	new Hinges();
-	
-	const DrawerBox = require('./assemblies/drawer/drawer-box.js');
-	new DrawerBox();
-	
-	const DrawerFront = require('./assemblies/drawer/drawer-front.js');
-	new DrawerFront();
-	
-	const Guides = require('./assemblies/drawer/guides.js');
-	new Guides();
-	
-	const Frame = require('./assemblies/frame.js');
-	new Frame();
-	
-	const Handle = require('./assemblies/hardware/pull.js');
-	new Handle();
-	
-	const Screw = require('./assemblies/hardware/screw.js');
-	new Screw();
-	
-	const Panel = require('./assemblies/panel.js');
-	new Panel();
-	
-	const PartitionSection = require('./assemblies/section/partition/sections/divider.js');
-	new PartitionSection();
-	
-	const DividerSection = require('./assemblies/section/partition/partition');
-	new DividerSection();
-	
-	const Section = require('./assemblies/section/section.js');
-	new Section();
-	
-	const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
-	new DivideSection();
-	
-	const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
-	new OpeningCoverSection();
-	
-	const DoorSection = require('./assemblies/section/space/sections/open-cover/sections/door.js');
-	new DoorSection();
-	
-	const DrawerSection = require('./assemblies/section/space/sections/open-cover/sections/drawer.js');
-	new DrawerSection();
-	
-	const DualDoorSection = require('./assemblies/section/space/sections/open-cover/sections/duel-door.js');
-	new DualDoorSection();
-	
-	const FalseFrontSection = require('./assemblies/section/space/sections/open-cover/sections/false-front.js');
-	new FalseFrontSection();
-	
-	const SpaceSection = require('./assemblies/section/space/space.js');
-	new SpaceSection();
-	
-	const Cutter = require('./assemblies/cutter.js');
-	new Cutter();
-	
-	Assembly.components = {
-	  Door, DrawerBox, DrawerFront, Frame, Panel, Cutter,
+	Joint.types = {
+	  Butt, Dado, Miter, Rabbet
 	};
 	
 });
@@ -24355,200 +24104,6 @@ const Lookup = require('../../../../../public/js/utils/object/lookup.js')
 	  return new Joint.classes[id]().fromJson(json);
 	}
 	module.exports = Joint
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/line-measurement.js',
-function (require, exports, module) {
-	
-const Circle2d = require('circle');
-	const Vertex2d = require('vertex');
-	const Line2d = require('line');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	
-	class LineMeasurement2d {
-	  constructor(line, modificationFunction) {
-	    modificationFunction = modificationFunction || line.length;
-	    const offset = 1;
-	    this.line = () => line;
-	    this.I = (layer) => {
-	      layer = layer || 1;
-	      const termDist = (layer + 1) * offset;
-	      const measureDist = layer * offset;
-	      const startLine = line.perpendicular(line.startVertex(), termDist * 2);
-	      const endLine = line.perpendicular(line.endVertex(), termDist * 2);
-	      const startCircle = new Circle2d(measureDist, line.startVertex());
-	      const endCircle = new Circle2d(measureDist, line.endVertex());
-	      const startTerminationCircle = new Circle2d(termDist, line.startVertex());
-	      const endTerminationCircle = new Circle2d(termDist, line.endVertex());
-	      const startVerticies = startCircle.intersections(startLine);
-	      const endVerticies = endCircle.intersections(endLine);
-	      let inner, outer;
-	      if (startVerticies.length > 0 && endVerticies.length > 0) {
-	        const startTerminationVerticies = startTerminationCircle.intersections(startLine);
-	        const endTerminationVerticies = endTerminationCircle.intersections(endLine);
-	        let startTerminationLine, endTerminationLine, measurementLine;
-	
-	        inner = new Line2d(startVerticies[1], endVerticies[1]);
-	        inner.startLine = new Line2d(line.startVertex(), startTerminationVerticies[1]);
-	        inner.endLine = new Line2d(line.endVertex(), endTerminationVerticies[1]);
-	
-	        outer = new Line2d(startVerticies[0], endVerticies[0]);
-	        outer.startLine = new Line2d(line.startVertex(), startTerminationVerticies[0]);
-	        outer.endLine = new Line2d(line.endVertex(), endTerminationVerticies[0]);
-	        const furtherLine = (point) => LineMeasurement2d.furtherLine(inner, outer, point);
-	        const closerLine = (point) => LineMeasurement2d.furtherLine(inner, outer, point, true);
-	        return {inner, outer, furtherLine, closerLine};
-	      } else {
-	        return {};
-	      }
-	    }
-	
-	    this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
-	    this.modificationFunction = (func) => {
-	      if ((typeof func) === 'function') modificationFunction = func;
-	      return modificationFunction;
-	    }
-	
-	    this.toString = () => `|--${this.line()}--|`;
-	    this.display = () => new Measurement(line.length()).display();
-	
-	    this.modify = (value) => modificationFunction(new Measurement(value, true).decimal());
-	  }
-	}
-	
-	LineMeasurement2d.furtherLine = (inner, outer, point, closer) =>
-	    inner.midpoint().distance(point) > outer.midpoint().distance(point) ?
-	      (closer ? outer : inner) :
-	      (closer ? inner : outer);
-	
-	module.exports = LineMeasurement2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/models/pull.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function pull(length, height) {
-	  var rspx = length - .75;
-	  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
-	  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
-	  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
-	  return mainCyl.union(lCyl).union(rCyl);
-	}
-	module.exports = pull
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/init.js',
-function (require, exports, module) {
-	
-const Joint = require('./joint');
-	
-	const Butt = require('./joints/butt.js');
-	const Dado = require('./joints/dado.js');
-	const Miter = require('./joints/miter.js');
-	const Rabbet = require('./joints/rabbet.js');
-	
-	Joint.types = {
-	  Butt, Dado, Miter, Rabbet
-	};
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/material.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
-	
-	class Material extends Cost {
-	  constructor (props) {
-	    super(props);
-	    props = this.props();
-	    props.cost = props.cost / (props.count || 1);
-	    const instance = this;
-	    Object.getSet(props, 'company', 'formula', 'partNumber',
-	                'method', 'length', 'width', 'depth', 'cost');
-	
-	
-	    this.unitCost = (attr) => {
-	      const unitCost = Material.configure(instance.method(), instance.cost(),
-	        instance.length(), instance.width(), instance.depth());
-	      const copy = JSON.parse(JSON.stringify(unitCost));
-	      if (attr) return copy[attr];
-	      return copy;
-	    }
-	
-	    this.calc = (assemblyOrCount) => {
-	      const unitCost = this.unitCost();
-	      const formula = this.formula() || unitCost.formula;
-	      if (assemblyOrCount instanceof Assembly)
-	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
-	      else if (Number.isFinite(assemblyOrCount))
-	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
-	      else
-	        throw new Error('calc argument must be a number or Assembly');
-	    }
-	  }
-	}
-	
-	Material.methods = {
-	  LINEAR_FEET: 'Linear Feet',
-	  SQUARE_FEET: 'Square Feet',
-	  CUBIC_FEET: 'Cubic Feet',
-	  UNIT: 'Unit'
-	};
-	
-	Material.methodList = Object.values(Material.methods);
-	
-	
-	Material.configure = (method, cost, length, width, depth) => {
-	  const unitCost = {};
-	  switch (method) {
-	    case Material.methods.LINEAR_FEET:
-	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
-	      unitCost.name = 'Linear Inch';
-	      unitCost.value = perLinearInch;
-	      unitCost.formula = 'l';
-	      return unitCost;
-	    case Material.methods.SQUARE_FEET:
-	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
-	      unitCost.name = 'Square Inch';
-	      unitCost.value = perSquareInch;
-	      unitCost.formula = 'l*w';
-	      return unitCost;
-	    case Material.methods.CUBIC_FEET:
-	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
-	      unitCost.name = 'Cubic Inch';
-	      unitCost.value = perCubicInch;
-	      unitCost.formula = 'l*w*d';
-	      return unitCost;
-	    case Material.methods.UNIT:
-	      unitCost.name = 'Unit';
-	      unitCost.value = cost;
-	      return unitCost;
-	    default:
-	      throw new Error('wtf');
-	      unitCost.name = 'Unknown';
-	      unitCost = -0.01;
-	      formula = -0.01;
-	      return unitCost;
-	  }
-	};
-	
-	Material.explanation = `Cost to be calculated by number of units or demensions`;
-	
-	module.exports = Material
 	
 });
 
@@ -25160,28 +24715,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function drawerBox(length, width, depth) {
-	  const bottomHeight = 7/8;
-	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-	  box.setColor(1, 0, 0);
-	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-	  inside.setColor(0, 0, 1);
-	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-	  bInside.setColor(0, 0, 1);
-	
-	  return box.subtract(bInside).subtract(inside);
-	}
-	module.exports = drawerBox
-	
-});
-
-
 RequireJS.addFunction('./app-src/displays/managers/cost.js',
 function (require, exports, module) {
 	
@@ -25263,6 +24796,861 @@ function (require, exports, module) {
 	// du.id('property-select-cnt').innerHTML =
 	//       CostManager.propertySelectTemplate.render(scope);
 	module.exports = CostManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	
+	function drawerBox(length, width, depth) {
+	  const bottomHeight = 7/8;
+	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+	  box.setColor(1, 0, 0);
+	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+	  inside.setColor(0, 0, 1);
+	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+	  bInside.setColor(0, 0, 1);
+	
+	  return box.subtract(bInside).subtract(inside);
+	}
+	module.exports = drawerBox
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/pull.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	
+	function pull(length, height) {
+	  var rspx = length - .75;
+	  var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+	  var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+	  var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+	  return mainCyl.union(lCyl).union(rCyl);
+	}
+	module.exports = pull
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/polygon.js',
+function (require, exports, module) {
+	
+const approximate = require('../../../../../public/js/utils/approximate.js');
+	const Polygon2D = require('../../two-d/objects/polygon.js');
+	
+	class Vertex3D {
+	  constructor(x, y) {
+	    if (x instanceof Vertex3D) return x;
+	    if (arguments.length == 3) {
+	      this.x = approximate(x);
+	      this.y = approximate(y);
+	      this.z = approximate(z);
+	    } else if ('x' in x) {
+	      this.x = approximate(x.x);
+	      this.y = approximate(x.y);
+	      this.z = approximate(x.z);
+	    } else {
+	      this.x = approximate(x[0]);
+	      this.y = approximate(x[1]);
+	      this.z = approximate(x[2]);
+	    }
+	    this.equals = (other) => other && this.x === other.x && this.y === other.y;
+	    this.toString = () => `${this.x},${this.y},${this.z}`;
+	  }
+	}
+	
+	class Vector3D {
+	  constructor(i, j, k) {
+	    this.i = () => i;
+	    this.j = () => j;
+	    this.k = () => k;
+	
+	    this.minus = (vector) =>
+	      new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k())
+	    this.add = (vector) =>
+	      new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k())
+	    this.dot = (vector) => {
+	      const i = approximate((this.j() * vector.k()) - (vector.j() * this.k()));
+	      const j = approximate((this.i() * vector.k()) - (vector.i() * this.k()));
+	      const k = approximate((this.i() * vector.j()) - (vector.i() * this.j()));
+	      return new Vector3D(i,j,k);
+	    }
+	    this.perpendicular = (vector) =>
+	      ((this.i() * vector.i()) + (this.j() * vector.j()) + (this.k() * vector.k())) === 0;
+	    this.parrelle = (vector) => {
+	      let coef = this.i() / vector.i() || this.j() / vector.j() || this.k() / vector.k();
+	      if (Math.abs(coef) === Infinity || coef === 0 || Number.isNaN(coef)) return null;
+	      return vector.i() * coef === this.i() && vector.j() * coef === this.j() && vector.k() * coef === this.k();
+	    }
+	    this.equals = this.parrelle;
+	    this.toString = () => `<${i},${j},${k}>`;
+	  }
+	}
+	
+	class Line3D {
+	  constructor(startVertex, endVertex) {
+	    this.startVertex = startVertex;
+	    this.endVertex = endVertex;
+	
+	
+	    let i = endVertex.x - startVertex.x;
+	    let j = endVertex.y - startVertex.y;
+	    let k = endVertex.z - startVertex.z;
+	    const vector = new Vector3D(i,j,k);
+	
+	    this.negitive = () => new Line3D(endVertex, startVertex);
+	    this.equals = (other) => startVertex && endVertex && other &&
+	        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
+	    this.vector = () => vector;
+	
+	    this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
+	    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
+	  }
+	}
+	Line3D.verticies = (lines) => {
+	  const verts = [];
+	  for (let index = 0; index < lines.length; index += 1) {
+	    verts.push(lines[index].endVertex);
+	  }
+	  return verts;
+	}
+	
+	class Polygon3D {
+	  constructor(initialVerticies) {
+	    const lines = [];
+	    let map;
+	    let normal;
+	    this.normal = () => normal;
+	
+	    function calcNormal(l1, l2) {
+	      return l1.vector().dot(l2.vector());
+	    }
+	
+	    this.perpendicular = (poly) => {
+	      if (normal === undefined || poly.normal() === undefined) return false;
+	      return normal.perpendicular(poly.normal());
+	    }
+	    this.inXY = () => this.perpendicular(xyPoly);
+	    this.inYZ = () => this.perpendicular(yzPoly);
+	    this.inXZ = () => this.perpendicular(xzPoly);
+	
+	    this.parrelle = (poly) => {
+	      if (normal === undefined || poly.normal() === undefined) return false;
+	      return normal.parrelle(poly.normal());
+	    }
+	
+	    this.verticies = () => {
+	      if (lines.length === 0) return [];
+	      const verticies = [];
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        verticies.push(line.startVertex);
+	      }
+	
+	      return verticies;
+	    }
+	
+	    this.lines = () => lines;
+	    this.startLine = () => lines[0];
+	    this.endLine = () => lines[lines.length - 1];
+	
+	    this.lineMap = (force) => {
+	      if (!force && map !== undefined) return map;
+	      if (lines.length === 0) return {};
+	      map = {};
+	      let lastEnd;
+	      if (!lines[0].startVertex.equals(lines[lines.length - 1].endVertex)) throw new Error('Broken Polygon');
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        if (lastEnd && !line.startVertex.equals(lastEnd)) throw new Error('Broken Polygon');
+	        lastEnd = line.endVertex;
+	        map[line.toString()] = line;
+	      }
+	      return map;
+	    }
+	
+	    this.equals = (other) => {
+	      if (!(other instanceof Polygon3D)) return false;
+	      const verts = this.verticies();
+	      const otherVerts = other.verticies();
+	      if (verts.length !== otherVerts.length) return false;
+	      let otherIndex = undefined;
+	      let direction;
+	      for (let index = 0; index < verts.length * 2; index += 1) {
+	        const vIndex = index % verts.length;
+	        if (otherIndex === undefined) {
+	          if (index > verts.length) {
+	            return false
+	          } if(verts[index].equals(otherVerts[0])) {
+	            otherIndex = otherVerts.length * 2;
+	          }
+	        } else if (otherIndex === otherVerts.length * 2) {
+	          if (verts[vIndex].equals(otherVerts[1])) direction = 1;
+	          else if(verts[vIndex].equals(otherVerts[otherVerts.length - 1])) direction = -1;
+	          else return false;
+	          otherIndex += direction * 2;
+	        } else if (!verts[vIndex].equals(otherVerts[otherIndex % otherVerts.length])) {
+	          return false;
+	        } else {
+	          otherIndex += direction;
+	        }
+	      }
+	      return true;
+	    }
+	
+	    function getLine(line) {
+	      const lineMap = this.lineMap();
+	      return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
+	    }
+	
+	    this.getLines = (startVertex, endVertex, reverse) => {
+	      const inc = reverse ? -1 : 1;
+	      const subSection = [];
+	      let completed = false;
+	      const doubleLen = lines.length * 2;
+	      for (let steps = 0; steps < doubleLen; steps += 1) {
+	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
+	        const curr = lines[index];
+	        if (subSection.length === 0) {
+	          if (startVertex.equals(!reverse ? curr.startVertex : curr.endVertex)) {
+	            subSection.push(!reverse ? curr : curr.negitive());
+	            if (endVertex.equals(reverse ? curr.startVertex : curr.endVertex)) {
+	              completed = true;
+	              break;
+	            }
+	          }
+	        } else {
+	          subSection.push(!reverse ? curr : curr.negitive());
+	          if (endVertex.equals(reverse ? curr.startVertex : curr.endVertex)) {
+	            completed = true;
+	            break;
+	          }
+	        }
+	      }
+	      if (completed) return subSection;
+	    }
+	
+	    this.addVerticies = (list) => {
+	      if (list === undefined) return;
+	      const verts = [];
+	      const endLine = this.endLine();
+	      for (let index = 0; index < list.length + 1; index += 1) {
+	        if (index < list.length) verts[index] = new Vertex3D(list[index]);
+	        if (index === 0 && endLine) endLine.endVertex = verts[0];
+	        else if (index > 0) {
+	          const startVertex = verts[index - 1];
+	          const endVertex = verts[index] || this.startLine().startVertex;
+	          const line = new Line3D(startVertex, endVertex);
+	          lines.push(line);
+	          const prevLine = lines[lines.length - 2];
+	          if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
+	          // else if (lines.length > 2) {
+	          //   const equal = normal.equals(calcNormal(line, prevLine));
+	          //   if (equal === false) {
+	          //     console.log('Trying to add vertex that does not lie in the existing plane');
+	          //   }
+	          // }
+	        }
+	      }
+	      if (verts.length > 0 && lines.length > 0) {
+	        if (endLine) endline.endVertex = verts[0];
+	      }
+	      this.removeLoops();
+	      this.lineMap(true);
+	    }
+	
+	    this.removeLoops = () => {
+	      const map = {}
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        const key = line.toString();
+	        const negKey = line.toNegitiveString();
+	        if (map[key]) {
+	          lines.splice(map[key].index, index - map[key].index + 1);
+	        } else if (map[negKey]) {
+	          lines.splice(map[negKey].index, index - map[negKey].index + 1);
+	        } else {
+	          map[key] = {line, index};
+	        }
+	      }
+	    }
+	
+	    this.path = () => {
+	      let path = '';
+	      this.verticies().forEach((v) => path += `${v.toString()} => `);
+	      return path.substring(0, path.length - 4);
+	    }
+	
+	    this.merge = (other) => {
+	      // if (!this.normal.equals(other.normal)) return;
+	      const sharedMap = [];
+	      const inverseMap = [];
+	      const notShared = [];
+	      const lineMap = this.lineMap();
+	      const otherLines = other.lines();
+	      let merged;
+	      for (let index = 0; index < otherLines.length; index += 1) {
+	        const curr = otherLines[index];
+	        if (lineMap[curr.toString()] !== undefined) {
+	          let thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
+	          let otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
+	          if (thisLines && otherLines) {
+	            if (thisLines[0].startVertex.equals(otherLines[0].startVertex)) {
+	              merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines.reverse())));
+	            } else {
+	              merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines)));
+	            }
+	          }
+	        }
+	        if (lineMap[curr.toNegitiveString()] !== undefined) {
+	          let thisLines = this.getLines(curr.endVertex, curr.startVertex, true);
+	          let otherLines = other.getLines(curr.startVertex, curr.endVertex, true);
+	          if (thisLines[0].startVertex.equals(otherLines[0].startVertex)) {
+	            merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines.reverse())));
+	          } else {
+	            merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines)));
+	          }
+	        }
+	      }
+	
+	      if (merged) {
+	        // merged.removeLoops();
+	        return merged;
+	      }
+	    }
+	    this.addVerticies(initialVerticies);
+	  }
+	}
+	
+	Polygon3D.merge = (polygons) => {
+	  let currIndex = 0;
+	  while (currIndex < polygons.length - 1) {
+	    const target = polygons[currIndex];
+	    for (let index = currIndex + 1; index < polygons.length; index += 1) {
+	      const other = polygons[index];
+	      const merged = target.merge(other);
+	      if (merged) {
+	        polygons[currIndex--] = merged;
+	        polygons.splice(index, 1);
+	        break;
+	      }
+	    }
+	    currIndex++;
+	  }
+	}
+	
+	const xyPoly = new Polygon3D([[1,1,0],[1,2,0],[2,1,0]]);
+	const yzPoly = new Polygon3D([[1,0,1],[1,0,2],[2,0,1]]);
+	const xzPoly = new Polygon3D([[0,1,1],[0,1,2],[0,2,1]]);
+	
+	// const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
+	// const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
+	const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
+	Polygon3D.toTwoD = (polygons) => {
+	  const map = {xy: [], xz: [], zy: []};
+	  for (let index = 0; index < polygons.length; index += 1) {
+	    const poly = polygons[index];
+	    const norm = poly.normal();
+	    const includeXY = poly.inXY();//include(norm, [0,0,1]);//include(norm[0], norm[1], norm[2]);
+	    const includeXZ = poly.inXZ();//include(norm, [0,1,0]);//include(norm[0], norm[2], norm[1]);
+	    const includeZY = poly.inYZ();//include(norm, [1,0,0]);//include(norm[2], norm[1], norm[0]);
+	    const indexXY = map.xy.length;
+	    const indexXZ = map.xz.length;
+	    const indexZY = map.zy.length;
+	    if (includeXY) map.xy[indexXY] = [];
+	    if (includeXZ) map.xz[indexXZ] = [];
+	    if (includeZY) map.zy[indexZY] = [];
+	    poly.verticies().forEach((vertex) => {
+	      if (includeXY) map.xy[indexXY].push({x: vertex.x, y: -1 * vertex.y, layer: vertex.z});
+	      if (includeXZ) map.xz[indexXZ].push({x: vertex.x, y: -1 * vertex.z, layer: vertex.y});
+	      if (includeZY) map.zy[indexZY].push({x: -1 * vertex.z, y: -1 * vertex.y, layer: vertex.x});
+	    });
+	    if (includeXY) map.xy[indexXY] = new Polygon2D(map.xy[indexXY]);
+	    if (includeXZ) map.xz[indexXZ] = new Polygon2D(map.xz[indexXZ]);
+	    if (includeZY) map.zy[indexZY] = new Polygon2D(map.zy[indexZY]);
+	  }
+	  return map;
+	}
+	
+	
+	Polygon3D.Vector3D = Vector3D;
+	Polygon3D.Vertex3D = Vertex3D;
+	Polygon3D.Line3D = Line3D;
+	module.exports = Polygon3D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
+function (require, exports, module) {
+	
+
+	
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	
+	class UFObj {
+	  constructor(order) {
+	    class Row {
+	      constructor(groupName, assembly, index) {
+	        this.groupName = groupName;
+	        this.cabnetId = index;//assembly.getAssembly('c').name;
+	        this.type = assembly.constructor.name;
+	        this.partName = assembly.partName().replace(/.*\.(.*)/, '$1');
+	        const dems = assembly.position().demension();
+	        const accuracy = undefined; //'1/32';
+	        dems.y = new Measurement(dems.y).display(accuracy);
+	        dems.x = new Measurement(dems.x).display(accuracy);
+	        dems.z = new Measurement(dems.z).display(accuracy);
+	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
+	        this.partCode = `${index}-${assembly.partCode()}`;
+	        this.cost = '$0';
+	        this.notes = assembly.notes || '';
+	      }
+	    }
+	    const cabinets = [];
+	    const array = [];
+	    Object.values(order.rooms).forEach((room, rIndex) => room.groups.forEach((group, gIndex) => {
+	      group.cabinets.forEach((cabinet, index) => {
+	        const cabinetId = `${rIndex+1}-${gIndex+1}-${index+1}`;
+	        array.push(new Row(group.name(), cabinet, cabinetId));
+	        cabinet.getParts().forEach((part) => array.push(new Row(group.name(), part, cabinetId)));
+	      });
+	    }));
+	    return array;
+	  }
+	}
+	module.exports = UFObj
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/material.js',
+function (require, exports, module) {
+	
+
+	
+	const Cost = require('../cost.js');
+	const Assembly = require('../../objects/assembly/assembly.js');
+	
+	class Material extends Cost {
+	  constructor (props) {
+	    super(props);
+	    props = this.props();
+	    props.cost = props.cost / (props.count || 1);
+	    const instance = this;
+	    Object.getSet(props, 'company', 'formula', 'partNumber',
+	                'method', 'length', 'width', 'depth', 'cost');
+	
+	
+	    this.unitCost = (attr) => {
+	      const unitCost = Material.configure(instance.method(), instance.cost(),
+	        instance.length(), instance.width(), instance.depth());
+	      const copy = JSON.parse(JSON.stringify(unitCost));
+	      if (attr) return copy[attr];
+	      return copy;
+	    }
+	
+	    this.calc = (assemblyOrCount) => {
+	      const unitCost = this.unitCost();
+	      const formula = this.formula() || unitCost.formula;
+	      if (assemblyOrCount instanceof Assembly)
+	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
+	      else if (Number.isFinite(assemblyOrCount))
+	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
+	      else
+	        throw new Error('calc argument must be a number or Assembly');
+	    }
+	  }
+	}
+	
+	Material.methods = {
+	  LINEAR_FEET: 'Linear Feet',
+	  SQUARE_FEET: 'Square Feet',
+	  CUBIC_FEET: 'Cubic Feet',
+	  UNIT: 'Unit'
+	};
+	
+	Material.methodList = Object.values(Material.methods);
+	
+	
+	Material.configure = (method, cost, length, width, depth) => {
+	  const unitCost = {};
+	  switch (method) {
+	    case Material.methods.LINEAR_FEET:
+	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
+	      unitCost.name = 'Linear Inch';
+	      unitCost.value = perLinearInch;
+	      unitCost.formula = 'l';
+	      return unitCost;
+	    case Material.methods.SQUARE_FEET:
+	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
+	      unitCost.name = 'Square Inch';
+	      unitCost.value = perSquareInch;
+	      unitCost.formula = 'l*w';
+	      return unitCost;
+	    case Material.methods.CUBIC_FEET:
+	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
+	      unitCost.name = 'Cubic Inch';
+	      unitCost.value = perCubicInch;
+	      unitCost.formula = 'l*w*d';
+	      return unitCost;
+	    case Material.methods.UNIT:
+	      unitCost.name = 'Unit';
+	      unitCost.value = cost;
+	      return unitCost;
+	    default:
+	      throw new Error('wtf');
+	      unitCost.name = 'Unknown';
+	      unitCost = -0.01;
+	      formula = -0.01;
+	      return unitCost;
+	  }
+	};
+	
+	Material.explanation = `Cost to be calculated by number of units or demensions`;
+	
+	module.exports = Material
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/labor.js',
+function (require, exports, module) {
+	
+
+	
+	const Material = require('./material.js');
+	const Cost = require('../cost.js');
+	
+	
+	// unitCost.value = (hourlyRate*hours)/length
+	// calc(assembly) = unitCost.value * formula
+	
+	class Labor extends Material {
+	  constructor (props) {
+	    super(props);
+	    const type = props.laborType;
+	    props.hourlyRate = Labor.hourlyRates[type]
+	    const parentCalc = this.calc;
+	    this.cost = () => this.hourlyRate() * props.hours;
+	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
+	    Labor.hourlyRate(type, props.hourlyRate);
+	
+	    const parentToJson = this.toJson;
+	  }
+	}
+	
+	
+	Labor.defaultRate = 40;
+	Labor.hourlyRate = (type, rate) => {
+	  rate = Cost.evaluator.eval(new String(rate));
+	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
+	  return Labor.hourlyRates[type] || Labor.defaultRate;
+	}
+	Labor.hourlyRates = {};
+	Labor.types = [];
+	Labor.explanation = `Cost to be calculated hourly`;
+	
+	module.exports = Labor
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/circle.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('./vertex');
+	
+	class Circle2d {
+	  constructor(radius, center) {
+	    center = new Vertex2d(center);
+	    Object.getSet(this, {radius, center});
+	    // ( x - h )^2 + ( y - k )^2 = r^2
+	    const instance = this;
+	    // Stole the root code from: https://stackoverflow.com/a/37225895
+	    function lineIntersects (line, bounded) {
+	      const p1 = line.startVertex();
+	      const p2 = line.endVertex();
+	        var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
+	        v1 = {};
+	        v2 = {};
+	        v1.x = p2.x() - p1.x();
+	        v1.y = p2.y() - p1.y();
+	        v2.x = p1.x() - instance.center().x();
+	        v2.y = p1.y() - instance.center().y();
+	        b = (v1.x * v2.x + v1.y * v2.y);
+	        c = 2 * (v1.x * v1.x + v1.y * v1.y);
+	        b *= -2;
+	        d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - instance.radius() * instance.radius()));
+	        if(isNaN(d)){ // no intercept
+	            return [];
+	        }
+	        u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
+	        u2 = (b + d) / c;
+	        retP1 = {};   // return points
+	        retP2 = {}
+	        ret = []; // return array
+	        if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
+	            retP1.x = p1.x() + v1.x * u1;
+	            retP1.y = p1.y() + v1.y * u1;
+	            ret[0] = retP1;
+	        }
+	        if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
+	            retP2.x = p1.x() + v1.x * u2;
+	            retP2.y = p1.y() + v1.y * u2;
+	            ret[ret.length] = retP2;
+	        }
+	        return ret;
+	    }
+	
+	    function circleIntersects(circle) {
+	      return Circle2d.intersectionOfTwo(instance, circle);
+	    }
+	
+	    this.toString = () => `(${this.radius()}${this.center()}----)`;
+	
+	    this.intersections = (input) => {
+	        if (input instanceof Circle2d) return circleIntersects(input);
+	        if (input.constructor.name === 'Line2d') return lineIntersects(input);
+	        throw new Error(`Cannot find intersections for ${input.constructor.name}`);
+	    }
+	  }
+	}
+	
+	// Ripped off from: https://stackoverflow.com/a/12221389
+	Circle2d.intersectionOfTwo = (circle0, circle1) => {
+	    const x0 = circle0.center().x();
+	    const y0 = circle0.center().y();
+	    const r0 = circle0.radius();
+	
+	    const x1 = circle1.center().x();
+	    const y1 = circle1.center().y();
+	    const r1 = circle1.radius();
+	    var a, dx, dy, d, h, rx, ry;
+	    var x2, y2;
+	
+	    /* dx and dy are the vertical and horizontal distances between
+	     * the circle centers.
+	     */
+	    dx = x1 - x0;
+	    dy = y1 - y0;
+	
+	    /* Determine the straight-line distance between the centers. */
+	    d = Math.sqrt((dy*dy) + (dx*dx));
+	
+	    /* Check for solvability. */
+	    if (d > (r0 + r1)) {
+	        /* no solution. circles do not intersect. */
+	        return [];
+	    }
+	    if (d < Math.abs(r0 - r1)) {
+	        /* no solution. one circle is contained in the other */
+	        return [];
+	    }
+	
+	    /* 'point 2' is the point where the line through the circle
+	     * intersection points crosses the line between the circle
+	     * centers.
+	     */
+	
+	    /* Determine the distance from point 0 to point 2. */
+	    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
+	
+	    /* Determine the coordinates of point 2. */
+	    x2 = x0 + (dx * a/d);
+	    y2 = y0 + (dy * a/d);
+	
+	    /* Determine the distance from point 2 to either of the
+	     * intersection points.
+	     */
+	    h = Math.sqrt((r0*r0) - (a*a));
+	
+	    /* Now determine the offsets of the intersection points from
+	     * point 2.
+	     */
+	    rx = -dy * (h/d);
+	    ry = dx * (h/d);
+	
+	    /* Determine the absolute intersection points. */
+	    var xi = x2 + rx;
+	    var xi_prime = x2 - rx;
+	    var yi = y2 + ry;
+	    var yi_prime = y2 - ry;
+	
+	    const list = [];
+	    pushVertex(xi, yi, list);
+	    pushVertex(xi_prime, yi_prime, list);
+	    return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
+	}
+	
+	Circle2d.reusable = true;
+	Circle2d.instance = (radius, center) => {
+	  const inst = Lookup.instance(Circle2d.name);
+	  inst.radius(radius);
+	  inst.center(center);
+	  return inst;
+	}
+	new Circle2d();
+	
+	module.exports = Circle2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/cutter.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Cutter extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	    this.included(false);
+	  }
+	}
+	Cutter.abbriviation = 'cut';
+	
+	module.exports = Cutter;
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/frame.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Frame extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	  }
+	}
+	
+	Frame.abbriviation = 'fr';
+	
+	
+	module.exports = Frame
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
+function (require, exports, module) {
+	
+const approximate = require('./../../../../../../public/js/utils/approximate.js');
+	
+	
+	const Joint = require('../joint.js');
+	
+	class Dado extends Joint {
+	  constructor(malePartCode, femalePartCode) {
+	    super(malePartCode, femalePartCode);
+	
+	    this.updatePosition = (position) => {
+	      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
+	      const centerAxis = this.centerAxis()[1].toLowerCase();
+	      const offset = this.parentAssembly().eval(this.maleOffset());
+	      const demAxis = this.demensionAxis().toLowerCase();
+	      position.demension[demAxis] = approximate(position.demension[demAxis] + offset);
+	      position.center[centerAxis] = approximate(position.center[centerAxis] + (offset/2 * direction));
+	    };
+	
+	  }
+	}
+	
+	Joint.register(Dado);
+	module.exports = Dado
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Miter extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
+	  }
+	}
+	
+	Joint.register(Miter);
+	module.exports = Miter
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Rabbet extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
+	    super(joinStr);
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
+	    }
+	
+	    if (axis === undefined) return;
+	
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
+	    };
+	  }
+	}
+	
+	Joint.register(Rabbet);
+	module.exports = Rabbet
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Divider extends Assembly {
+	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
+	    super(partCode, partName, centerStr, demensionStr, rotationStr);
+	  }
+	}
+	Divider.count = 0;
+	
+	Divider.abbriviation = 'dv';
+	
+	module.exports = Divider
 	
 });
 
@@ -25403,6 +25791,9 @@ function (require, exports, module) {
 	  const partCode = assemblyJson.partCode;
 	  const partName = assemblyJson.partName;
 	  const assembly = new Cabinet(partCode, partName);
+	  assembly.name(assemblyJson.name);
+	  assembly.length(assemblyJson.length);
+	  assembly.width(assemblyJson.width);
 	  assembly.propertyConfig = group.propertyConfig;
 	  assembly.uniqueId(assemblyJson.uniqueId);
 	  assembly.values = assemblyJson.values;
@@ -25417,9 +25808,6 @@ function (require, exports, module) {
 	      assembly.addSubAssembly(divideSection);
 	    }
 	  });
-	  assembly.name(assemblyJson.name);
-	  assembly.length(assemblyJson.length);
-	  assembly.width(assemblyJson.width);
 	  assembly.thickness(assemblyJson.thickness);
 	  const joints = Object.fromJson(assemblyJson.joints);
 	  assembly.addJoints.apply(assembly, joints);
@@ -25438,64 +25826,6 @@ function (require, exports, module) {
 	
 	
 	module.exports = Cabinet
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Miter extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
-	  }
-	}
-	
-	Joint.register(Miter);
-	module.exports = Miter
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Rabbet extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
-	    }
-	
-	    if (axis === undefined) return;
-	
-	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
-	    };
-	  }
-	}
-	
-	Joint.register(Rabbet);
-	module.exports = Rabbet
-	
-	
-	
-	
 	
 });
 
@@ -25524,98 +25854,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
-function (require, exports, module) {
-	
-const approximate = require('./../../../../../../public/js/utils/approximate.js');
-	
-	
-	const Joint = require('../joint.js');
-	
-	class Dado extends Joint {
-	  constructor(malePartCode, femalePartCode) {
-	    super(malePartCode, femalePartCode);
-	
-	    this.updatePosition = (position) => {
-	      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
-	      const centerAxis = this.centerAxis()[1].toLowerCase();
-	      const offset = this.parentAssembly().eval(this.maleOffset());
-	      const demAxis = this.demensionAxis().toLowerCase();
-	      position.demension[demAxis] = approximate(position.demension[demAxis] + offset);
-	      position.center[centerAxis] = approximate(position.center[centerAxis] + (offset/2 * direction));
-	    };
-	
-	  }
-	}
-	
-	Joint.register(Dado);
-	module.exports = Dado
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Divider extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
-	Divider.count = 0;
-	
-	Divider.abbriviation = 'dv';
-	
-	module.exports = Divider
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/frame.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Frame extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	  }
-	}
-	
-	Frame.abbriviation = 'fr';
-	
-	
-	module.exports = Frame
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/cutter.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Cutter extends Assembly {
-	  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-	    super(partCode, partName, centerStr, demensionStr, rotationStr);
-	    this.included(false);
-	  }
-	}
-	Cutter.abbriviation = 'cut';
-	
-	module.exports = Cutter;
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
 function (require, exports, module) {
 	
@@ -25635,74 +25873,6 @@ function (require, exports, module) {
 	
 	
 	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class Screw extends Assembly {
-	  constructor() {
-	    super();
-	  }
-	}
-	
-	
-	module.exports = Screw
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	const Handle = require('../hardware/pull.js');
-	const pull = require('../../../../three-d/models/pull.js');
-	
-	
-	class Door extends Assembly {
-	  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
-	    super(partCode, partName, coverCenter, coverDems, rotationStr);
-	    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, Handle.location.TOP_RIGHT);
-	    this.pull = () => pull;
-	    this.addSubAssembly(pull);
-	  }
-	}
-	
-	Door.abbriviation = 'dr';
-	
-	
-	module.exports = Door
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class Hinge extends Assembly {
-	  constructor() {
-	    super();
-	  }
-	}
-	
-	Hinge.abbriviation = 'hg';
-	
-	module.exports = Hinge
 	
 });
 
@@ -25739,7 +25909,7 @@ function (require, exports, module) {
 	      count = count || pullCount(this.demensionStr());
 	      pulls = [];
 	      for (let index = 0; index < count; index += 1) {
-	        pulls.push(new Handle(`${partCode}-p-${index}`, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
+	        pulls.push(new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
 	      }
 	      return pulls;
 	    };
@@ -25776,13 +25946,79 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Hinge extends Assembly {
+	  constructor() {
+	    super();
+	  }
+	}
+	
+	Hinge.abbriviation = 'hg';
+	
+	module.exports = Hinge
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	const Handle = require('../hardware/pull.js');
+	const pull = require('../../../../three-d/models/pull.js');
+	
+	
+	class Door extends Assembly {
+	  constructor(partCode, partName, coverCenter, coverDems, rotationStr) {
+	    super(partCode, partName, coverCenter, coverDems, rotationStr);
+	    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, Handle.location.TOP_RIGHT);
+	    this.pull = () => pull;
+	    this.addSubAssembly(pull);
+	  }
+	}
+	
+	Door.abbriviation = 'dr';
+	
+	
+	module.exports = Door
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class DoorCatch extends Assembly {
+	  constructor() {
+	    super();
+	  }
+	}
+	
+	module.exports = DoorCatch
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
-	const pull = require('../../../../three-d/models/pull.js');
 	
 	/*
 	    a,b,c
@@ -25887,7 +26123,7 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/guides.js',
 function (require, exports, module) {
 	
 
@@ -25895,13 +26131,36 @@ function (require, exports, module) {
 	const Assembly = require('../../assembly.js');
 	
 	
-	class DoorCatch extends Assembly {
+	class Guides extends Assembly {
 	  constructor() {
 	    super();
 	  }
 	}
 	
-	module.exports = DoorCatch
+	Guides.abbriviation = 'gu';
+	
+	
+	module.exports = Guides
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Screw extends Assembly {
+	  constructor() {
+	    super();
+	  }
+	}
+	
+	
+	module.exports = Screw
 	
 });
 
@@ -26027,28 +26286,6 @@ function (require, exports, module) {
 	
 	
 	module.exports = Section
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/guides.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class Guides extends Assembly {
-	  constructor() {
-	    super();
-	  }
-	}
-	
-	Guides.abbriviation = 'gu';
-	
-	
-	module.exports = Guides
 	
 });
 
@@ -26703,6 +26940,90 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
+function (require, exports, module) {
+	
+
+	
+	const OpeningCoverSection = require('../open-cover.js');
+	const Door = require('../../../../../door/door.js');
+	const Handle = require('../../../../../hardware/pull.js');
+	const Assembly = require('../../../../../../assembly.js');
+	
+	class DualDoorSection extends OpeningCoverSection {
+	  constructor(partCode, divideProps, parent) {
+	    super(partCode, 'Duel.Door.Section', divideProps, parent);
+	    if (divideProps === undefined) return;
+	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(), this.duelDoorDems);
+	    this.addSubAssembly(rightDoor);
+	    rightDoor.pull().location(Handle.location.TOP_LEFT);
+	
+	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(true), this.duelDoorDems);
+	    this.addSubAssembly(leftDoor);
+	    leftDoor.pull().location(Handle.location.TOP_RIGHT);
+	  }
+	}
+	
+	DualDoorSection.abbriviation = 'dds';
+	
+	
+	module.exports = DualDoorSection
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/door.js',
+function (require, exports, module) {
+	
+
+	
+	const OpeningCoverSection = require('../open-cover.js');
+	const Door = require('../../../../../door/door.js');
+	const Assembly = require('../../../../../../assembly.js');
+	
+	class DoorSection extends OpeningCoverSection {
+	  constructor(partCode, divideProps, parent) {
+	    super(partCode, 'Door.Section', divideProps, parent);
+	    const door = new Door('d', 'Door', this.coverCenter, this.coverDems);
+	    this.door = () => door;
+	    this.pull = () => door.pull();
+	    this.addSubAssembly(new Door('d', 'Door', this.coverCenter, this.coverDems));
+	  }
+	}
+	
+	DoorSection.abbriviation = 'drs';
+	
+	module.exports = DoorSection
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/false-front.js',
+function (require, exports, module) {
+	
+
+	
+	const OpeningCoverSection = require('../open-cover.js');
+	const Section = require('../../../../section.js');
+	const PULL_TYPE = require('../../../../../../../../../globals/CONSTANTS.js').PULL_TYPE;
+	const DrawerFront = require('../../../../../drawer/drawer-front.js');
+	const Assembly = require('../../../../../../assembly.js');
+	
+	class FalseFrontSection extends OpeningCoverSection {
+	  constructor(partCode, divideProps, parent) {
+	    super(partCode, 'False.Front.Section', divideProps, parent, PULL_TYPE.DRAWER);
+	    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems, '', this));
+	  }
+	}
+	
+	FalseFrontSection.abbriviation = 'ffs';
+	
+	
+	module.exports = FalseFrontSection
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/drawer.js',
 function (require, exports, module) {
 	
@@ -26757,90 +27078,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/duel-door.js',
-function (require, exports, module) {
-	
-
-	
-	const OpeningCoverSection = require('../open-cover.js');
-	const Door = require('../../../../../door/door.js');
-	const Handle = require('../../../../../hardware/pull.js');
-	const Assembly = require('../../../../../../assembly.js');
-	
-	class DualDoorSection extends OpeningCoverSection {
-	  constructor(partCode, divideProps, parent) {
-	    super(partCode, 'Duel.Door.Section', divideProps, parent);
-	    if (divideProps === undefined) return;
-	    const rightDoor = new Door('dr', 'DoorRight', this.duelDoorCenter(), this.duelDoorDems);
-	    this.addSubAssembly(rightDoor);
-	    rightDoor.pull().location(Handle.location.TOP_LEFT);
-	
-	    const leftDoor = new Door('dl', 'DoorLeft', this.duelDoorCenter(true), this.duelDoorDems);
-	    this.addSubAssembly(leftDoor);
-	    leftDoor.pull().location(Handle.location.TOP_RIGHT);
-	  }
-	}
-	
-	DualDoorSection.abbriviation = 'dds';
-	
-	
-	module.exports = DualDoorSection
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/false-front.js',
-function (require, exports, module) {
-	
-
-	
-	const OpeningCoverSection = require('../open-cover.js');
-	const Section = require('../../../../section.js');
-	const PULL_TYPE = require('../../../../../../../../../globals/CONSTANTS.js').PULL_TYPE;
-	const DrawerFront = require('../../../../../drawer/drawer-front.js');
-	const Assembly = require('../../../../../../assembly.js');
-	
-	class FalseFrontSection extends OpeningCoverSection {
-	  constructor(partCode, divideProps, parent) {
-	    super(partCode, 'False.Front.Section', divideProps, parent, PULL_TYPE.DRAWER);
-	    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', this.coverCenter, this.coverDems, '', this));
-	  }
-	}
-	
-	FalseFrontSection.abbriviation = 'ffs';
-	
-	
-	module.exports = FalseFrontSection
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/space/sections/open-cover/sections/door.js',
-function (require, exports, module) {
-	
-
-	
-	const OpeningCoverSection = require('../open-cover.js');
-	const Door = require('../../../../../door/door.js');
-	const Assembly = require('../../../../../../assembly.js');
-	
-	class DoorSection extends OpeningCoverSection {
-	  constructor(partCode, divideProps, parent) {
-	    super(partCode, 'Door.Section', divideProps, parent);
-	    const door = new Door('d', 'Door', this.coverCenter, this.coverDems);
-	    this.door = () => door;
-	    this.pull = () => door.pull();
-	    this.addSubAssembly(new Door('d', 'Door', this.coverCenter, this.coverDems));
-	  }
-	}
-	
-	DoorSection.abbriviation = 'drs';
-	
-	module.exports = DoorSection
-	
-});
-
-
 RequireJS.addFunction('./test/run.js',
 function (require, exports, module) {
 	
@@ -26879,7 +27116,7 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	                [6,2],[6,0],[4,0],[4,-2],[1,0]])
 	
 	
-	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
+	// const A = new Polygon3D([[,],[,],[,],[,]])
 	Test.add('Line2d: consolidate',(ts) => {
 	  const lines = Polygon2d.lines(extraLinePoly);
 	  ts.assertTrue(lines.length === consisePoly.lines().length);
@@ -26896,20 +27133,20 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 	
 	
-	const A = new Polygon3D([0,0,0], [[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
-	const B = new Polygon3D([0,0,0], [[0,1,0],[1,1,0],[1,3,0],[0,3,0]])
-	const C = new Polygon3D([0,0,0], [[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
-	const D = new Polygon3D([0,0,0], [[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
-	const E = new Polygon3D([0,0,0], [[3,8,0],[1,10,0],[0,8,0]]);
-	const F = new Polygon3D([0,0,0], [[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
-	const G = new Polygon3D([0,0,0], [[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
-	const H = new Polygon3D([0,0,0], [[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
-	const I = new Polygon3D([0,0,0], [[4,7,0],[4,8,0],[6,8,0],[6,7,0]]);
-	const J = new Polygon3D([0,0,0], [[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
+	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]])
+	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
+	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
+	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
+	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
+	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
+	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
+	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
+	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]]);
+	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
 	
-	const polyAB = new Polygon3D([0,0,0], [[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
-	const polyIF = new Polygon3D([0,0,0], [[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
-	const polyABCDEGHJ = new Polygon3D([0,0,0], [[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
+	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
+	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
+	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
 	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
 	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
 	
@@ -26920,6 +27157,7 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	  const IF = [F,I];
 	  Polygon3D.merge(IF);
 	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
+	  ABCDEFGHIJ.shuffle();
 	  Polygon3D.merge(ABCDEFGHIJ);
 	
 	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
@@ -26928,23 +27166,9 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	  ts.assertFalse(polyAB.equals(A));
 	  ts.assertTrue(IF[0].equals(polyIF));
 	  ts.assertTrue(polyIF.equals(IF[0]));
-	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]));
-	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]))
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./test/tests/to-from-json.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
-	
-	
-	Test.add('To JSON',(ts) => {
-	  ts.assertEquals(6, 6);
+	  ts.assertTrue(ABCDEFGHIJ.length === 2);
+	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
+	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
 	  ts.success();
 	});
 	
@@ -27010,6 +27234,113 @@ function (require, exports, module) {
 	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,undefined,8,9], 8), 6);
 	  ts.success();
 	});
+	
+});
+
+
+RequireJS.addFunction('./test/tests/to-from-json.js',
+function (require, exports, module) {
+	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
+	
+	
+	Test.add('To JSON',(ts) => {
+	  ts.assertEquals(6, 6);
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('./test/tests/cost/category.js',
+function (require, exports, module) {
+	
+
+	
+	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
+	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Category = require('../../../app-src/cost/types/category.js');
+	const Material = require('../../../app-src/cost/types/material.js');
+	
+	//
+	//
+	// {
+	//   const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
+	//   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
+	//   const frame.addSubAssembly(panel);
+	//   const props = {};
+	//   const smeRound = StringMathEvaluator.round;
+	//
+	//   let unitCostValue = smeRound(15.37/(8*12));
+	//   let costValue = smeRound(unitCostValue * 2 * 196 * 12);
+	//   let assembly = frame;
+	//   props.linear = {
+	//     id: 'frame',
+	//     method: 'Linear Feet',
+	//     length: '8\'',
+	//     cost: '15.37',
+	//     formula: '2*l',
+	//     unitCostValue, costValue, assembly
+	//   };
+	//
+	//   unitCostValue = smeRound((75.13)/(96*48));
+	//   costValue = smeRound(unitCostValue * 24 * 10);
+	//   props.square = {
+	//     id: 'panel0',
+	//     method: 'Square Feet',
+	//     length: '96',
+	//     width: '48',
+	//     cost: 75.13,
+	//     unitCostValue, costValue, assembly
+	//   };
+	//
+	//   unitCostValue = smeRound(29.86/(12*6*1));
+	//   costValue = smeRound(unitCostValue * 24 * 10 * .75);
+	//   props.cubic = {
+	//     id: 'metal',
+	//     method: 'Cubic Feet',
+	//     length: '12',
+	//     width: '6',
+	//     depth: '1',
+	//     cost: 29.86,
+	//     unitCostValue, costValue, assembly
+	//   };
+	//
+	//   unitCostValue = smeRound(50.12/10);
+	//   costValue = smeRound(unitCostValue * 13);
+	//   props.unit = {
+	//     id: 'parts',
+	//     method: 'Unit',
+	//     laborType: 'Instalation',
+	//     hourlyRate: '20',
+	//     hours: '.66',
+	//     cost: '50.12',
+	//     count: '10',
+	//     unitCostValue, costValue,
+	//     assembly: 13
+	//   };
+	//   const catCost = new Category({id: 'catTest'});
+	//
+	//   Test.add('CategoryCost: calc',(ts) => {
+	//     let totalCost = 0;
+	//     function testProps(props) {
+	//       const matCost = new Material(props);
+	//       catCost.addChild(matCost);
+	//       totalCost += matCost.calc(props.assembly);
+	//     }
+	//     Object.values(props).forEach(testProps);
+	//     ts.assertTolerance(totalCost, catCost.calc(), .0001);
+	//     ts.success();
+	//   });
+	// }
+	
+	exports.Frame = Frame
+	exports.Panel = Panel
+	exports.StringMathEvaluator = StringMathEvaluator
+	exports.Category = Category
+	exports.Material = Material
 	
 });
 
@@ -27209,98 +27540,6 @@ function (require, exports, module) {
 	}
 	
 	exports.Frame = Frame
-	exports.Material = Material
-	
-});
-
-
-RequireJS.addFunction('./test/tests/cost/category.js',
-function (require, exports, module) {
-	
-
-	
-	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
-	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Category = require('../../../app-src/cost/types/category.js');
-	const Material = require('../../../app-src/cost/types/material.js');
-	
-	//
-	//
-	// {
-	//   const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
-	//   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
-	//   const frame.addSubAssembly(panel);
-	//   const props = {};
-	//   const smeRound = StringMathEvaluator.round;
-	//
-	//   let unitCostValue = smeRound(15.37/(8*12));
-	//   let costValue = smeRound(unitCostValue * 2 * 196 * 12);
-	//   let assembly = frame;
-	//   props.linear = {
-	//     id: 'frame',
-	//     method: 'Linear Feet',
-	//     length: '8\'',
-	//     cost: '15.37',
-	//     formula: '2*l',
-	//     unitCostValue, costValue, assembly
-	//   };
-	//
-	//   unitCostValue = smeRound((75.13)/(96*48));
-	//   costValue = smeRound(unitCostValue * 24 * 10);
-	//   props.square = {
-	//     id: 'panel0',
-	//     method: 'Square Feet',
-	//     length: '96',
-	//     width: '48',
-	//     cost: 75.13,
-	//     unitCostValue, costValue, assembly
-	//   };
-	//
-	//   unitCostValue = smeRound(29.86/(12*6*1));
-	//   costValue = smeRound(unitCostValue * 24 * 10 * .75);
-	//   props.cubic = {
-	//     id: 'metal',
-	//     method: 'Cubic Feet',
-	//     length: '12',
-	//     width: '6',
-	//     depth: '1',
-	//     cost: 29.86,
-	//     unitCostValue, costValue, assembly
-	//   };
-	//
-	//   unitCostValue = smeRound(50.12/10);
-	//   costValue = smeRound(unitCostValue * 13);
-	//   props.unit = {
-	//     id: 'parts',
-	//     method: 'Unit',
-	//     laborType: 'Instalation',
-	//     hourlyRate: '20',
-	//     hours: '.66',
-	//     cost: '50.12',
-	//     count: '10',
-	//     unitCostValue, costValue,
-	//     assembly: 13
-	//   };
-	//   const catCost = new Category({id: 'catTest'});
-	//
-	//   Test.add('CategoryCost: calc',(ts) => {
-	//     let totalCost = 0;
-	//     function testProps(props) {
-	//       const matCost = new Material(props);
-	//       catCost.addChild(matCost);
-	//       totalCost += matCost.calc(props.assembly);
-	//     }
-	//     Object.values(props).forEach(testProps);
-	//     ts.assertTolerance(totalCost, catCost.calc(), .0001);
-	//     ts.success();
-	//   });
-	// }
-	
-	exports.Frame = Frame
-	exports.Panel = Panel
-	exports.StringMathEvaluator = StringMathEvaluator
-	exports.Category = Category
 	exports.Material = Material
 	
 });

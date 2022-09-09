@@ -74,10 +74,16 @@ du.on.match('click', '.model-label', (target) => {
         label.nextElementSibling.getAttribute('prefix');
   const cabinet = lastRendered;
   const tdm = ThreeDModel.get(cabinet, viewer);
-  tdm.inclusiveTarget(type, has ? undefined : value);
-  if (!has) {
-    const partCode = du.find.closest('[type="part-code"]', target).innerText;
-    threeView.isolatePart(partCode, cabinet);
+  let partId = target.getAttribute('part-id');
+  if (partId) {
+    if (!has) {
+      tdm.inclusiveTarget(type, partId);
+      threeView.isolatePart(partId, cabinet);
+    }
+  } else {
+    tdm.inclusiveTarget(type, has ? undefined : value);
+    partId = du.find.closest('[part-id]', target).getAttribute('part-id');
+    threeView.isolatePart(partId, cabinet);
   }
   tdm.render();
 });
@@ -139,25 +145,26 @@ du.on.match('change', '.part-name-checkbox', (target) => {
   tdm.render();
 });
 
-du.on.match('change', '.part-code-checkbox', (target) => {
+du.on.match('change', '.part-id-checkbox', (target) => {
   const cabinet = lastRendered;
-  const attr = target.getAttribute('part-code');
+  const attr = target.getAttribute('part-id');
   deselectPrefix();
   const tdm = ThreeDModel.get(cabinet, viewer);
-  tdm.hidePartCode(attr, !target.checked);
+  tdm.hidePartId(attr, !target.checked);
   tdm.render();
 })
 
-du.on.match('click', '#three-d-model', () => {
-  const controller = du.id('model-controller');
-  const cabinet = lastRendered;
-  if (cabinet) {
-    const grouping = groupParts(cabinet);
-    grouping.tdm = ThreeDModel.get(cabinet, viewer);
+let controllerModel;
+function updateController() {
+  if (controllerModel !== lastRendered) {
+    controllerModel = lastRendered;
+    const controller = du.id('model-controller');
+    const grouping = groupParts(controllerModel);
+    grouping.tdm = ThreeDModel.get(controllerModel, viewer);
     controller.innerHTML = modelContTemplate.render(grouping);
+    controller.hidden = false;
   }
-  controller.hidden = false;
-});
+}
 
 
 let lastRendered;
@@ -165,6 +172,7 @@ function update(part) {
   if (part) lastRendered = part.getAssembly('c');
   const threeDModel = ThreeDModel.get(lastRendered, viewer);
   threeDModel.render(lastRendered);
+  updateController();
 }
 
 module.exports = {init, update}

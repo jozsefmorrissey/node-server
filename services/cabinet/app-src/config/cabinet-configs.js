@@ -4,6 +4,7 @@
 const CustomEvent = require('../../../../public/js/utils/custom-error.js');
 const cabinetBuildConfig = require('../../public/json/cabinets.json');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
+const Input = require('../../../../public/js/utils/input/input.js');
 const Inputs = require('../input/inputs.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
@@ -37,37 +38,34 @@ class CabinetConfig {
 
     this.onUpdate = (func) => updateEvent.on(func);
     this.inputTree = () => {
+      const types = JSON.parse(JSON.stringify(configKeys));
       const typeInput = new Select({
         name: 'type',
         class: 'center',
-        list: JSON.parse(JSON.stringify(configKeys))
+        list: types
       });
-      const propertyInput = new Select({
-        name: 'propertyId',
-        class: 'center',
-        list: ['pajango', 'skititors']
-      });
-      const inputs = [Inputs('name'), typeInput];
+      const inputs = [typeInput];
       const inputTree = new DecisionInputTree();
       const cabinet = inputTree.branch('Cabinet', inputs);
       const cabinetTypes = Object.keys(cabinetKeys);
-      cabinetTypes.forEach((type) => {
-        const cabinetInput = new Select({
+      types.forEach((type) => {
+
+        const cabinetInput = new Input({
           label: 'Layout (Optional)',
           name: 'id',
           class: 'center',
-          list: [''].concat(Object.keys(cabinetKeys[type]))
+          list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
         });
         cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
       });
       return inputTree;
     };
-    this.get = (group, name, type, propertyId, id) => {
+    this.get = (group, type, propertyId, id) => {
       let cabinet;
-      if (!id) cabinet = Cabinet.build(type, group);
+      if (!cabinetList || !cabinetList[id]) cabinet = Cabinet.build(type, group);
       else cabinet = Cabinet.fromJson(cabinetList[id], group);
       if (propertyId !== undefined) cabinet.propertyId(propertyId);
-      cabinet.name(name);
+      cabinet.name(id);
       return cabinet;
     };
 

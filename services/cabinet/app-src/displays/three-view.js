@@ -9,6 +9,8 @@ const ThreeDModel = require('../three-d/three-d-model.js');
 const Layout2D = require('../objects/layout.js')
 const Draw2D = require('../two-d/draw.js');
 const Polygon2d = require('../two-d/objects/polygon.js');
+const Line2d = require('../two-d/objects/line.js');
+const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
 const PanZoom = require('../two-d/pan-zoom.js');
 
 class ThreeView extends Lookup {
@@ -33,21 +35,33 @@ class ThreeView extends Lookup {
       if (lm === undefined) return;
       const xy = lm.xy;
       const twoDmap = Polygon2d.lines(...xy);
-      front(twoDmap, color, width);
+      if (twoDmap.length < 100) {
+        front(twoDmap, color, width);
+        const measurements = LineMeasurement2d.measurements(twoDmap);
+        front(measurements, 'grey');
+      }
     }
     const drawLeft = () => {
       Layout2D.release('three-view-left');
       const lm = this.lastModel();
       if (lm === undefined) return;
       const twoDmap = Polygon2d.lines(...lm.zy);
-      left(twoDmap, color, width);
+      if (twoDmap.length < 100) {
+        left(twoDmap, color, width);
+        const measurements = LineMeasurement2d.measurements(twoDmap);
+        left(measurements, 'grey');
+      }
     }
     const drawTop = () => {
       Layout2D.release('three-view-top');
       const lm = this.lastModel();
       if (lm === undefined) return;
       const twoDmap = Polygon2d.lines(...lm.xz);
-      top(twoDmap, color, width);
+      if (twoDmap.length < 100) {
+        top(twoDmap, color, width);
+        const measurements = LineMeasurement2d.measurements(twoDmap);
+        top(measurements, 'grey');
+      }
     }
 
     function init() {
@@ -77,16 +91,16 @@ class ThreeView extends Lookup {
       }, 1000);
     }
 
-    this.isolatePart = (partCode, cabinet) => {
+    this.isolatePart = (partId, cabinet) => {
       threeDModel = ThreeDModel.get();
-      threeDModel.setTargetPartCode(partCode);
+      threeDModel.setTargetPartId(partId);
       threeDModel.update();
       setTimeout(() => {
         panzFront.once();
         panzLeft.once();
         panzTop.once();
       }, 500);
-      du.id(`three-view-part-code-${this.id()}`).innerText = partCode;
+      du.id(`three-view-part-code-${this.id()}`).innerText = partId;
     }
 
     this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;

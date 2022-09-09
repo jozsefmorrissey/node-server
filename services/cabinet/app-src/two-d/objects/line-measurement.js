@@ -5,38 +5,38 @@ const Line2d = require('line');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
 
 class LineMeasurement2d {
-  constructor(line, modificationFunction) {
+  constructor(line, center, layer, modificationFunction) {
     modificationFunction = modificationFunction || line.length;
-    const offset = 1;
+    const offset = 3;
     this.line = () => line;
-    this.I = (layer) => {
-      layer = layer || 1;
-      const termDist = (layer + 1) * offset;
-      const measureDist = layer * offset;
+    this.I = (l) => {
+      l = l || layer || 1;
+      const termDist = (l + 1) * offset;
+      const measureDist = l * offset;
       const startLine = line.perpendicular(line.startVertex(), termDist * 2);
       const endLine = line.perpendicular(line.endVertex(), termDist * 2);
       const startCircle = new Circle2d(measureDist, line.startVertex());
       const endCircle = new Circle2d(measureDist, line.endVertex());
-      const startTerminationCircle = new Circle2d(termDist, line.startVertex());
-      const endTerminationCircle = new Circle2d(termDist, line.endVertex());
+      const startTerminationCircle = new Circle2d(termDist - 2.5, line.startVertex());
+      const endTerminationCircle = new Circle2d(termDist - 2.5, line.endVertex());
       const startVerticies = startCircle.intersections(startLine);
       const endVerticies = endCircle.intersections(endLine);
-      let inner, outer;
+      let l1, l2;
       if (startVerticies.length > 0 && endVerticies.length > 0) {
         const startTerminationVerticies = startTerminationCircle.intersections(startLine);
         const endTerminationVerticies = endTerminationCircle.intersections(endLine);
         let startTerminationLine, endTerminationLine, measurementLine;
 
-        inner = new Line2d(startVerticies[1], endVerticies[1]);
-        inner.startLine = new Line2d(line.startVertex(), startTerminationVerticies[1]);
-        inner.endLine = new Line2d(line.endVertex(), endTerminationVerticies[1]);
+        l1 = new Line2d(startVerticies[1], endVerticies[1]);
+        l1.startLine = new Line2d(line.startVertex(), startTerminationVerticies[1]);
+        l1.endLine = new Line2d(line.endVertex(), endTerminationVerticies[1]);
 
-        outer = new Line2d(startVerticies[0], endVerticies[0]);
-        outer.startLine = new Line2d(line.startVertex(), startTerminationVerticies[0]);
-        outer.endLine = new Line2d(line.endVertex(), endTerminationVerticies[0]);
-        const furtherLine = (point) => LineMeasurement2d.furtherLine(inner, outer, point);
-        const closerLine = (point) => LineMeasurement2d.furtherLine(inner, outer, point, true);
-        return {inner, outer, furtherLine, closerLine};
+        l2 = new Line2d(startVerticies[0], endVerticies[0]);
+        l2.startLine = new Line2d(line.startVertex(), startTerminationVerticies[0]);
+        l2.endLine = new Line2d(line.endVertex(), endTerminationVerticies[0]);
+        const furtherLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center);
+        const closerLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center, true);
+        return {furtherLine, closerLine};
       } else {
         return {};
       }
@@ -55,9 +55,34 @@ class LineMeasurement2d {
   }
 }
 
-LineMeasurement2d.furtherLine = (inner, outer, point, closer) =>
-    inner.midpoint().distance(point) > outer.midpoint().distance(point) ?
-      (closer ? outer : inner) :
-      (closer ? inner : outer);
+LineMeasurement2d.measurements = (lines) => {
+  const verts = Line2d.vertices(lines);
+  const center = Vertex2d.center(...verts);
+  const measurements = [];
+  for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
+    const tarVerts = lines[tIndex].liesOn(verts);
+    if (tarVerts.length > 2) {
+      for (let index = 1; index < tarVerts.length; index += 1) {
+        const sv = tarVerts[index - 1];
+        const ev = tarVerts[index];
+        const line = new Line2d(sv,ev);
+        measurements.push(new LineMeasurement2d(line, center, 1));
+      }
+    }
+    if (tarVerts.length > 1) {
+      const sv = tarVerts[0];
+      const ev = tarVerts[tarVerts.length - 1];
+      const line = new Line2d(sv,ev);
+      measurements.push(new LineMeasurement2d(line, center, 2));
+    }
+  }
+  return measurements;
+}
+
+LineMeasurement2d.furtherLine = (l1, l2, point, closer) =>
+    point === undefined ? (closer ? l1 : l2) :
+    (l1.midpoint().distance(point) > l2.midpoint().distance(point) ?
+      (closer ? l2 : l1) :
+      (closer ? l1 : l2));
 
 module.exports = LineMeasurement2d;

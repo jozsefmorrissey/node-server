@@ -7,6 +7,7 @@ class Line2d {
   constructor(startVertex, endVertex) {
     startVertex = new Vertex2d(startVertex);
     endVertex = new Vertex2d(endVertex);
+    const measureTo = [];
     const instance = this;
 
     this.startVertex = (newVertex) => {
@@ -124,6 +125,27 @@ class Line2d {
         else return Infinity;
       }
       return (y - this.yIntercept())/slope;
+    }
+
+    this.liesOn = (vertices) => {
+      const liesOn = [];
+      for (let index = 0; index < vertices.length; index += 1) {
+        const v = vertices[index];
+        const y = this.y(v.x());
+        if ((y === v.y() || Math.abs(y) === Infinity) && this.withinSegmentBounds(v)) {
+          liesOn.push(v);
+        }
+      }
+      liesOn.sort(Vertex2d.sort);
+      return liesOn;
+    }
+
+    this.measureTo = (verts) => {
+      if (Array.isArray(verts)) {
+        verts = this.liesOn(verts);
+        measureTo.concatInPlace(verts);
+      }
+      return measureTo;
     }
 
     this.maxDem = () => this.y() > this.x() ? this.y() : this.x();
@@ -290,6 +312,18 @@ Line2d.trendLine = (...points) => {
   return line;
 }
 
+Line2d.vertices = (lines) => {
+  const verts = {};
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const sv = line.startVertex();
+    const ev = line.endVertex();
+    verts[sv.toString()] = sv;
+    verts[ev.toString()] = ev;
+  }
+  return Object.values(verts);
+}
+
 Line2d.consolidate = (...lines) => {
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
@@ -306,13 +340,18 @@ Line2d.consolidate = (...lines) => {
     const list = lineMap[keys[lIndex]];
     for (let tIndex = 0; tIndex < list.length; tIndex += 1) {
       let target = list[tIndex];
-      for (let index = 1 + tIndex; index < list.length; index += 1) {
-        const combined = target.combine(list[index]);
-        if (combined) {
-          list.splice(index, 1);
-          list[tIndex] = combined;
-          target = combined;
-          index--;
+      for (let index = 0; index < list.length; index += 1) {
+        if (index !== tIndex) {
+          const combined = target.combine(list[index]);
+          if (combined) {
+            const lowIndex = index < tIndex ? index : tIndex;
+            const highIndex = index > tIndex ? index : tIndex;
+            list.splice(highIndex, 1);
+            list[lowIndex] = combined;
+            target = combined;
+            tIndex--;
+            break;
+          }
         }
       }
     }

@@ -87,12 +87,12 @@ class Expandable {
       const inputValues = vals || values();
       if ((typeof props.inputValidation) !== 'function' ||
               props.inputValidation(inputValues) === true) {
-        const obj = props.getObject(inputValues, getInputCnt());
-        const key = this.getKey(vals, obj);
-        props.list[key] = obj;
-        this.activeKey(key);
-        this.refresh();
-        afterAddEvent.trigger();
+          const obj = props.getObject(inputValues, getInputCnt());
+          const key = this.getKey(vals, obj);
+          props.list[key] = obj;
+          this.activeKey(key);
+          this.refresh();
+          afterAddEvent.trigger();
       } else {
         const errors = props.inputValidation(inputValues);
         let errorStr;
@@ -108,7 +108,7 @@ class Expandable {
     this.hasInputTree = () =>
       this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
     if (this.hasInputTree())
-      props.inputTree.onComplete(this.add);
+      props.inputTree.onSubmit(this.add);
     props.hasInputTree = this.hasInputTree;
 
     this.isSelfClosing = () => props.selfCloseTab;

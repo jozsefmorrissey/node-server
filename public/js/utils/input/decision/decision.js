@@ -125,6 +125,7 @@ class DecisionInputTree extends LogicTree {
 
     const onCompletion = [];
     const onChange = [];
+    const onSubmit = [];
     tree.html = (wrapper) => {
       wrapper = wrapper || root;
       let inputHtml = '';
@@ -145,6 +146,9 @@ class DecisionInputTree extends LogicTree {
     this.onChange = (func) => {
       if ((typeof func) === 'function') onChange.push(func);
     }
+    this.onSubmit = (func) => {
+      if ((typeof func) === 'function') onSubmit.push(func);
+    }
 
     this.values = () => {
       const values = {};
@@ -156,29 +160,45 @@ class DecisionInputTree extends LogicTree {
     tree.values = root.values;
     tree.hideButton = props.noSubmission;
 
-    let submissionPending = false;
+    let completionPending = false;
     this.completed = () => {
       if (!root.isComplete()) return false;
+      const delay = props.noSubmission || 0;
+      if (!completionPending) {
+        completionPending = true;
+        setTimeout(() => {
+          const values = tree.values();
+          onCompletion.forEach((func) => func(values))
+          completionPending = false;
+        }, delay);
+      }
+      return true;
+    }
+
+    let submissionPending = false;
+    this.submit = () => {
       const delay = props.noSubmission || 0;
       if (!submissionPending) {
         submissionPending = true;
         setTimeout(() => {
           const values = tree.values();
-          onCompletion.forEach((func) => func(values))
+          if (!root.isComplete()) return false;
+          onSubmit.forEach((func) => func(values))
           submissionPending = false;
         }, delay);
       }
       return true;
     }
 
+    let changePending = false;
     this.changed = (elem) => {
       const delay = props.noSubmission || 0;
-      if (!submissionPending) {
-        submissionPending = true;
+      if (!changePending) {
+        changePending = true;
         setTimeout(() => {
           const values = tree.values();
           onChange.forEach((func) => func(values, this, elem))
-          submissionPending = false;
+          changePending = false;
         }, delay);
       }
       return true;
@@ -231,7 +251,7 @@ DecisionInputTree.update = (soft) =>
 
 DecisionInputTree.submit = (elem) => {
   const wrapper = LogicWrapper.get(elem.getAttribute('root-id'));
-  wrapper.completed();
+  wrapper.submit();
 }
 
 du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));

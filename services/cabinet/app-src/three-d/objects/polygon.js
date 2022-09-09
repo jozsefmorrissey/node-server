@@ -2,25 +2,6 @@
 const approximate = require('../../../../../public/js/utils/approximate.js');
 const Polygon2D = require('../../two-d/objects/polygon.js');
 
-function shuffle(array) {
-  return array;
-  let currentIndex = array.length,  randomIndex;
-
-  // While there remain elements to shuffle.
-  while (currentIndex != 0) {
-
-    // Pick a remaining element.
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-
-    // And swap it with the current element.
-    [array[currentIndex], array[randomIndex]] = [
-      array[randomIndex], array[currentIndex]];
-  }
-
-  return array;
-}
-
 class Vertex3D {
   constructor(x, y) {
     if (x instanceof Vertex3D) return x;
@@ -42,14 +23,49 @@ class Vertex3D {
   }
 }
 
+class Vector3D {
+  constructor(i, j, k) {
+    this.i = () => i;
+    this.j = () => j;
+    this.k = () => k;
+
+    this.minus = (vector) =>
+      new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k())
+    this.add = (vector) =>
+      new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k())
+    this.dot = (vector) => {
+      const i = approximate((this.j() * vector.k()) - (vector.j() * this.k()));
+      const j = approximate((this.i() * vector.k()) - (vector.i() * this.k()));
+      const k = approximate((this.i() * vector.j()) - (vector.i() * this.j()));
+      return new Vector3D(i,j,k);
+    }
+    this.perpendicular = (vector) =>
+      ((this.i() * vector.i()) + (this.j() * vector.j()) + (this.k() * vector.k())) === 0;
+    this.parrelle = (vector) => {
+      let coef = this.i() / vector.i() || this.j() / vector.j() || this.k() / vector.k();
+      if (Math.abs(coef) === Infinity || coef === 0 || Number.isNaN(coef)) return null;
+      return vector.i() * coef === this.i() && vector.j() * coef === this.j() && vector.k() * coef === this.k();
+    }
+    this.equals = this.parrelle;
+    this.toString = () => `<${i},${j},${k}>`;
+  }
+}
+
 class Line3D {
   constructor(startVertex, endVertex) {
     this.startVertex = startVertex;
     this.endVertex = endVertex;
 
+
+    let i = endVertex.x - startVertex.x;
+    let j = endVertex.y - startVertex.y;
+    let k = endVertex.z - startVertex.z;
+    const vector = new Vector3D(i,j,k);
+
     this.negitive = () => new Line3D(endVertex, startVertex);
     this.equals = (other) => startVertex && endVertex && other &&
         startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
+    this.vector = () => vector;
 
     this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
     this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
@@ -64,10 +80,28 @@ Line3D.verticies = (lines) => {
 }
 
 class Polygon3D {
-  constructor(normal, initialVerticies) {
+  constructor(initialVerticies) {
     const lines = [];
     let map;
-    this.normal = new Vertex3D(normal);
+    let normal;
+    this.normal = () => normal;
+
+    function calcNormal(l1, l2) {
+      return l1.vector().dot(l2.vector());
+    }
+
+    this.perpendicular = (poly) => {
+      if (normal === undefined || poly.normal() === undefined) return false;
+      return normal.perpendicular(poly.normal());
+    }
+    this.inXY = () => this.perpendicular(xyPoly);
+    this.inYZ = () => this.perpendicular(yzPoly);
+    this.inXZ = () => this.perpendicular(xzPoly);
+
+    this.parrelle = (poly) => {
+      if (normal === undefined || poly.normal() === undefined) return false;
+      return normal.parrelle(poly.normal());
+    }
 
     this.verticies = () => {
       if (lines.length === 0) return [];
@@ -172,6 +206,14 @@ class Polygon3D {
           const endVertex = verts[index] || this.startLine().startVertex;
           const line = new Line3D(startVertex, endVertex);
           lines.push(line);
+          const prevLine = lines[lines.length - 2];
+          if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
+          // else if (lines.length > 2) {
+          //   const equal = normal.equals(calcNormal(line, prevLine));
+          //   if (equal === false) {
+          //     console.log('Trying to add vertex that does not lie in the existing plane');
+          //   }
+          // }
         }
       }
       if (verts.length > 0 && lines.length > 0) {
@@ -204,12 +246,12 @@ class Polygon3D {
     }
 
     this.merge = (other) => {
-      if (!this.normal.equals(other.normal)) return;
+      // if (!this.normal.equals(other.normal)) return;
       const sharedMap = [];
       const inverseMap = [];
       const notShared = [];
       const lineMap = this.lineMap();
-      const otherLines = shuffle(other.lines());
+      const otherLines = other.lines();
       let merged;
       for (let index = 0; index < otherLines.length; index += 1) {
         const curr = otherLines[index];
@@ -218,9 +260,9 @@ class Polygon3D {
           let otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
           if (thisLines && otherLines) {
             if (thisLines[0].startVertex.equals(otherLines[0].startVertex)) {
-              merged = new Polygon3D(normal, Line3D.verticies(thisLines.concat(otherLines.reverse())));
+              merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines.reverse())));
             } else {
-              merged = new Polygon3D(normal, Line3D.verticies(thisLines.concat(otherLines)));
+              merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines)));
             }
           }
         }
@@ -228,9 +270,9 @@ class Polygon3D {
           let thisLines = this.getLines(curr.endVertex, curr.startVertex, true);
           let otherLines = other.getLines(curr.startVertex, curr.endVertex, true);
           if (thisLines[0].startVertex.equals(otherLines[0].startVertex)) {
-            merged = new Polygon3D(normal, Line3D.verticies(thisLines.concat(otherLines.reverse())));
+            merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines.reverse())));
           } else {
-            merged = new Polygon3D(normal, Line3D.verticies(thisLines.concat(otherLines)));
+            merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines)));
           }
         }
       }
@@ -245,7 +287,6 @@ class Polygon3D {
 }
 
 Polygon3D.merge = (polygons) => {
-  shuffle(polygons);
   let currIndex = 0;
   while (currIndex < polygons.length - 1) {
     const target = polygons[currIndex];
@@ -262,15 +303,21 @@ Polygon3D.merge = (polygons) => {
   }
 }
 
-const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
+const xyPoly = new Polygon3D([[1,1,0],[1,2,0],[2,1,0]]);
+const yzPoly = new Polygon3D([[1,0,1],[1,0,2],[2,0,1]]);
+const xzPoly = new Polygon3D([[0,1,1],[0,1,2],[0,2,1]]);
+
+// const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
+// const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
+const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
 Polygon3D.toTwoD = (polygons) => {
   const map = {xy: [], xz: [], zy: []};
   for (let index = 0; index < polygons.length; index += 1) {
     const poly = polygons[index];
-    const norm = poly.normal;
-    const includeXY = include(norm.x, norm.y, norm.z);
-    const includeXZ = include(norm.x, norm.z, norm.y);
-    const includeZY = include(norm.z, norm.y, norm.x);
+    const norm = poly.normal();
+    const includeXY = poly.inXY();//include(norm, [0,0,1]);//include(norm[0], norm[1], norm[2]);
+    const includeXZ = poly.inXZ();//include(norm, [0,1,0]);//include(norm[0], norm[2], norm[1]);
+    const includeZY = poly.inYZ();//include(norm, [1,0,0]);//include(norm[2], norm[1], norm[0]);
     const indexXY = map.xy.length;
     const indexXZ = map.xz.length;
     const indexZY = map.zy.length;
@@ -290,6 +337,7 @@ Polygon3D.toTwoD = (polygons) => {
 }
 
 
+Polygon3D.Vector3D = Vector3D;
 Polygon3D.Vertex3D = Vertex3D;
 Polygon3D.Line3D = Line3D;
 module.exports = Polygon3D;

@@ -460,8 +460,8 @@ function drawMeasurement(measurement, level, focalVertex)  {
   const measurementColor = hoverId() === measurement.toString() ? 'green' : 'grey';
   try {
     draw.beginPath();
-    const isWithin = layout.within(lines.outer.midpoint());
-    const line = isWithin ? lines.inner : lines.outer;//lines.furtherLine(center);
+    const isWithin = layout.within(lines.furtherLine().midpoint());
+    const line = isWithin ? lines.closerLine() : lines.furtherLine();
     const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
     if (measurementModify || popupOpen) {
       draw.line(line.startLine, measurementColor, measurementLineWidth);

@@ -190,6 +190,18 @@ Function.safeStdLibAddition(Array, 'toJson', function (arr) {
     return json;
 }, true);
 
+Function.safeStdLibAddition(Array, 'shuffle', function() {
+  let currentIndex = this.length,  randomIndex;
+  while (currentIndex != 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [this[currentIndex], this[randomIndex]] = [
+      this[randomIndex], this[currentIndex]];
+  }
+
+  return this;
+});
+
 Function.safeStdLibAddition(Array, 'concatInPlace', function (arr) {
   if (arr === this) return;
   for (let index = 0; index < arr.length; index += 1) {

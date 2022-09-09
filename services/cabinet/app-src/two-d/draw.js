@@ -1,5 +1,6 @@
 
 const Circle2d = require('./objects/circle');
+const Line2d = require('./objects/line');
 const LineMeasurement2d = require('./objects/line-measurement');
 
 class Draw2d {
@@ -28,6 +29,9 @@ class Draw2d {
         case 'Square2d':
           draw.square(object, color, width);
           break;
+        case 'LineMeasurement2d':
+          draw.measurement(object, color, width);
+          break;
         default:
           console.error(`Cannot Draw '${object.constructor.name}'`);
       }
@@ -48,15 +52,13 @@ class Draw2d {
       if (line === undefined) return;
       color = color ||  'black';
       width = width || 10;
-      // draw.circle(new Circle2d(.2, line.startVertex(), null, null, .2));
-      // draw.circle(new Circle2d(.2, line.endVertex(), null, null, .2));
+      const measurePoints = line.measureTo();
       ctx.beginPath();
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
       ctx.moveTo(line.startVertex().x(), line.startVertex().y());
       ctx.lineTo(line.endVertex().x(), line.endVertex().y());
       ctx.stroke();
-      if (!doNotMeasure)draw.measurement(line, 1);
     }
 
     draw.plane = (plane, color, width) => {
@@ -140,20 +142,17 @@ class Draw2d {
       ctx.restore();
     }
 
-    draw.measurement = (line, level) => {
-      const center = line.startVertex();
-      const measurementColor = 'grey';
+    draw.measurement = (measurement, color) => {
+      const measurementColor = color || 'grey';
       const measurementLineWidth = '.1';
-      const measurement = new LineMeasurement2d(line)
-      const lines = measurement.I(level);
+      const lines = measurement.I();
       try {
-        const winner = lines.outer;
+        const winner = lines.furtherLine();
         draw.beginPath();
         draw.line(winner.startLine, measurementColor, measurementLineWidth, true);
         draw.line(winner.endLine, measurementColor, measurementLineWidth, true);
         draw.line(winner, measurementColor, measurementLineWidth, true);
         drawMeasurementLabel(winner, measurement);
-        return line;
       } catch (e) {
         console.error('Measurement render error:', e);
       }
