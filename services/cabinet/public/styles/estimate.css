@@ -11,6 +11,22 @@ input[name='code'] {
   width: 75pt;
 }
 
+.drag-drop-popup-cnt {
+  opacity: .75;
+}
+
+.transparent {
+  opacity: .75;
+}
+
+.value-2d {
+  opacity: .75;
+}
+
+.remove-btn-2d {
+  opacity: .75;
+}
+
 canvas {
   border-style: groove;
   background-color: whitesmoke;
@@ -194,6 +210,8 @@ a {
   width: fit-content;
   background-color: white;
   padding: 20pt 5pt;
+  overflow: auto;
+  max-height: 80vh;
 }
 
 .indent {

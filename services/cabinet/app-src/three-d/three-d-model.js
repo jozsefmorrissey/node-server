@@ -2,6 +2,7 @@
 
 const CSG = require('../../public/js/3d-modeling/csg');
 
+const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
 const Polygon3D = require('./objects/polygon');
 const Assembly = require('../objects/assembly/assembly');
 const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
@@ -55,11 +56,13 @@ class ThreeDModel {
     let partMap;
     let renderId;
     let targetPartId;
+    let rootAssembly = assembly.getRoot();
     this.setTargetPartId = (id) => targetPartId = id;
 
     this.assembly = (a) => {
       if (a !== undefined) {
         assembly = a;
+        rootAssembly = a.getRoot();
       }
       return assembly;
     }
@@ -182,6 +185,10 @@ class ThreeDModel {
 
     this.render = function () {
       ThreeDModel.lastActive = this;
+      const cacheId = rootAssembly.uniqueId();
+      // FunctionCache.on(cacheId);
+      FunctionCache.on('sme');
+
       const startTime = new Date().getTime();
       buildHiddenPrefixReg();
       function buildObject(assem) {
@@ -205,6 +212,9 @@ class ThreeDModel {
         const assem = assemblies[index];
         partMap[assem.uniqueId()] = assem.path();
         if (!hidden(assem)) {
+          if (assem.constructor.name === 'DrawerFront') {
+            console.log('df mf');
+          }
           const b = buildObject(assem);
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
@@ -230,9 +240,11 @@ class ThreeDModel {
         viewer.gl.ondraw();
         console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
       }
+      // FunctionCache.off(cacheId);
+      FunctionCache.off('sme');
     }
 
-    this.update = (part) => {
+    this.update = () => {
       const rId = renderId = String.random();
       ThreeDModel.renderId = renderId;
       setTimeout(() => {
@@ -254,8 +266,13 @@ ThreeDModel.render = (part) => {
   const renderId = String.random();
   ThreeDModel.renderId = renderId;
   setTimeout(() => {
-    if(ThreeDModel.renderId === renderId) ThreeDModel.get(part).render();
-  }, 250);
+    if(ThreeDModel.renderId === renderId) {
+      const cacheId = part.getRoot().uniqueId();
+      FunctionCache.on(cacheId);
+      ThreeDModel.get(part).render();
+      FunctionCache.off(cacheId);
+    }
+  }, 2500);
 };
 
 module.exports = ThreeDModel

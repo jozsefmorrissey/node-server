@@ -22,15 +22,16 @@ class OrderDisplay {
         OrderDisplay.headTemplate.render({order, $index});
 
     const setInfo = (order, index) => () => {
-      const elem = du.id(`uf-info-${index}`);
+      console.log('oid:', order.id());
+      const elem = du.id(`uf-info-${order.id()}`);
       if (elem)
         UTF.buildDisplay(elem, new UFObj(order));
     }
 
     function initOrder(order, index) {
       roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
-      ToggleDisplayList.onShow(`information-display-${index}`, );
-      expandList.afterRender(setInfo(order, index));
+      ToggleDisplayList.onShow(`information-display-${order.id()}`, setInfo(order, index));
+      // expandList.afterRender(setInfo(order, index));
       return order;
     }
 

@@ -9,30 +9,30 @@ class DrawerFront extends Assembly {
     super(partCode, partName, centerStr, demensionStr, rotationStr);
     this.setParentAssembly(parent);
     const instance = this;
-    let pulls;
+    let pulls = [new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, 1)];
     if (demensionStr === undefined) return;
+    let handleCount = 1;
 
-    function pullCount(dems) {
-      if (dems.x < 55.88) return 1;
+    function pullCount() {
+      if (instance.demensionStr().x < 55.88) return 1;
       return 2;
     }
 
-    this.demensionStr = (attr) => {
-      const dems = demensionStr();
-      return dems;
-    };
-
     this.children = () => this.updateHandles();
 
-    this.updateHandles = (dems, count) => {
-      count = count || pullCount(this.demensionStr());
-      pulls = [];
+    this.updateHandles = (count) => {
+      count = count || pullCount();
+      pulls.splice(count);
       for (let index = 0; index < count; index += 1) {
-        pulls.push(new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
+        if (index === pulls.length) {
+          pulls.push(new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
+        } else {
+          pulls[index].count(count);
+        }
       }
       return pulls;
     };
-    if (demensionStr !== undefined)this.updatePosition();
+    // if (demensionStr !== undefined)this.updatePosition();
   }
 }
 

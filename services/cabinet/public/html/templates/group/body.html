@@ -1,4 +1,16 @@
-<div>
+<div class='group-cnt'>
+  <div class='group-header' cab-style='Inset'
+      {{group.propertyConfig.isInset() ? '' : 'hidden'}}>
+    <h2>Inset <b class='group-key'>{{group.propertyConfig('Inset').__KEY}}</b></h2>
+  </div>
+  <div class='group-header' cab-style='Overlay'
+      {{!group.propertyConfig.isInset() && !group.propertyConfig.isRevealOverlay() ? '' : 'hidden'}}>
+    <h2>Overlay <b class='group-key'>{{group.propertyConfig('Overlay').__KEY}}</b></h2>
+  </div>
+  <div class='group-header' cab-style='Reveal'
+      {{group.propertyConfig.isRevealOverlay() ? '' : 'hidden'}}>
+    <h2>Reveal <b class='group-key'>{{group.propertyConfig('Reveal').__KEY}}</b></h2>
+  </div>
   {{propertyHtml()}}
   <div class='cabinet-cnt' group-id='{{group.id()}}'></div>
 </div>

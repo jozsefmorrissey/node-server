@@ -57,8 +57,28 @@ class Pattern {
     let lastElem;
     this.satisfied = () => updateOrder.length === uniqueStr.length - 1;
 
+    const numbersOnlyReg = /^[0-9]{1,}$/;
     const calc = (dist) => {
       const values = {};
+      if (str.trim().match(numbersOnlyReg)) {
+        let count = 0;
+        for (let index = 0; index < str.length; index += 1) {
+          count += Number.parseInt(str.charAt(index));
+        }
+        const unitDist = dist / count;
+        let retObj = {list: [], fill: [], str, values: {}};
+        for (let index = 0; index < str.length; index += 1) {
+          const char = str.charAt(index);
+          const units = Number.parseInt(char);
+          const value = units * unitDist;
+          retObj.list[index] = value;
+          if (retObj.values[char] === undefined) {
+            retObj.values[char] = value;
+            retObj.fill[retObj.list.fill.length] = value;
+          }
+        }
+        return retObj;
+      }
       updateOrder.forEach((id) => {
         const elem = elements[id];
         dist -= elem.count * elem.value().decimal();

@@ -114,7 +114,7 @@ class Measurement extends Lookup {
 
     this.display = (accuracy) => {
       switch (unit) {
-        case units[0]: return new String(this.decimal(accuracy));
+        case units[0]: return new String(this.decimal(10));
         case units[1]: return this.standardUS(accuracy);
         default:
             return this.standardUS(accuracy);
@@ -125,7 +125,7 @@ class Measurement extends Lookup {
 
     this.decimal = (accuracy) => {
       if (nan) return NaN;
-      accuracy = accuracy % 100 ? accuracy : 100;
+      accuracy = accuracy % 10 ? accuracy : 10000;
       return Math.round(decimal * accuracy) / accuracy;
     }
 

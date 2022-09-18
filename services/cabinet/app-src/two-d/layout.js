@@ -11,6 +11,7 @@ const Vertex2d = require('../two-d/objects/vertex.js');
 const Line2d = require('../two-d/objects/line.js');
 const Circle2d = require('../two-d/objects/circle.js');
 const SnapLocation2d = require('../two-d/objects/snap-location.js');
+const Snap2d = require('../two-d/objects/snap.js');
 const LineMeasurement2d = require('../two-d/objects/line-measurement');
 
 // TODO: Rename
@@ -52,19 +53,19 @@ function getPopUpAttrs(elem) {
   if (cnt === undefined) return {};
   const type = cnt.getAttribute('type-2d');
   const key = elem.getAttribute('key');
-  const evalVal = elem.type === 'input' ? eval(elem.value) : elem.value;
+  const raw = elem.type === 'input' ? eval(elem.value) : elem.value;
   let value, display;
   if (elem.getAttribute('convert') === 'false') {
-    value = evalVal;
-    display = evalVal;
+    value = raw;
+    display = raw;
   } else {
-    const measurement = new Measurement(evalVal, true);
+    const measurement = new Measurement(raw, true);
     value = measurement.decimal();
     display = measurement.display();
   }
   const id = cnt.id;
   return {
-    type,id,key,value,display,
+    type,id,key,value,display,raw,
     obj:  Layout2D.get(id),
     point: {
       x: cnt.getAttribute('x'),
@@ -75,6 +76,35 @@ function getPopUpAttrs(elem) {
 
 du.on.match('enter', '.value-2d', (elem) => {
   const props = getPopUpAttrs(elem);
+  const member = elem.getAttribute('member');
+  switch (member) {
+    case 'object':
+      props.obj[props.key](props.raw);
+      const cab = props.obj.payload();
+      if (cab && cab.constructor.name === 'Cabinet') {
+        const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.uniqueId()}']`);
+        const idInput = du.find.closest('.cabinet-id-input', cabDemCnt);
+        idInput.value = props.raw;
+      }
+      panZ.once();
+      return;
+    case 'cabinet':
+      const cabinet = props.obj.payload();
+      const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.uniqueId()}']`);
+      const input = du.find.down(`input[name='${props.key}']`, cabCnt);
+      input.value = props.display;
+      cabinet[props.key](props.value);
+      square[props.key === 'thickness' ? 'height' : props.key](props.value);
+      panZ.once();
+      return;
+    case 'square':
+      props.obj = props.obj.topview().object();
+  }
+  if (props.obj.payload && props.obj.payload() === 'placeholder') {
+    if (props.key === 'thickness') props.key = 'height';
+    props.obj = props.obj.topview().object();
+  }
+
   props.obj[props.key](props.value);
   elem.value = props.display;
   layout.history().forceState();
@@ -89,8 +119,19 @@ du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
 });
 
 function remove() {
-  layout.remove(hoveringId());
+  if (hovering.parent) {
+    if (hovering.parent().payload().constructor.name === 'Cabinet') {
+      const cabinet = hovering.parent().payload();
+      const cabinetHeader = du.find(`.cabinet-header[cabinet-id='${cabinet.uniqueId()}']`);
+      const removeButton = du.find.closest('.expandable-item-rm-btn', cabinetHeader)
+      removeButton.click();
+    }
+    layout.remove(hovering.parent().id());
+  } else {
+    layout.remove(hovering.id());
+  }
   popUp.close();
+  TwoDLayout.panZoom.once();
 }
 
 du.on.match('click', '.remove-btn-2d', remove, popUp.container());
@@ -99,29 +140,34 @@ du.on.match('click', '.add-door-btn-2d', (elem) => {
   const attrs = getPopUpAttrs(elem);
   const distance = attrs.obj.startVertex().distance(attrs.point);
   attrs.obj.addDoor(distance);
+  panZ.once();
 });
 
 du.on.match('click', '.hinge-btn', (elem) => {
   const attrs = getPopUpAttrs(elem);
   attrs.obj.hinge(true);
+  panZ.once();
 });
 
 du.on.match('click', '.add-window-btn-2d', (elem) => {
   const attrs = getPopUpAttrs(elem);
   const distance = attrs.obj.startVertex().distance(attrs.point);
   attrs.obj.addWindow(distance);
+  panZ.once();
 });
 
 du.on.match('click', '.add-object-btn-2d', (elem) => {
   const props = getPopUpAttrs(elem);
-  const obj = layout.addObject(props.point);
+  const obj = layout.addObject(props.point, 'placeholder');
   obj.topview().onChange(console.log);
+  panZ.once();
 });
 
 du.on.match('click', '.add-vertex-btn-2d', (elem) => {
   const attrs = getPopUpAttrs(elem);
   const point = hovering.closestPointOnLine(attrs.point);
-  attrs.obj.startVertex().nextVertex(point, Layout2D.Wall2D);
+  layout.addVertex(point, hovering);
+  panZ.once();
 });
 
 du.on.match('enter', '.measurement-mod', (elem) => {
@@ -140,16 +186,15 @@ function undo(target) {
   if (state) layout = Layout2D.fromJson(state, layout.history());
   clearCache();
   panZ.once();
-  console.log('undo State:', state);
+  console.log('undo State:', state.id);
 }
 
 function redo () {
   const state = layout.history().forward();
+  console.log('redo State:', state.id);
   if (state) layout = Layout2D.fromJson(state, layout.history());
   clearCache();
   panZ.once();
-  console.log(JSON.stringify(layout.toJson(), null, 2));
-  console.log('redo State:', state);
 }
 
 du.on.match('keycombo:Control,z', '*', undo);
@@ -174,8 +219,8 @@ function onMousedown(event, stdEvent) {
 }
 
 function addVertex(hovering, event, stdEvent) {
-  const point = hovering.closestPointOnLine({x: event.imageX, y: event.imageY});
-  hovering.startVertex().nextVertex(point, Layout2D.Wall2D);
+  const point = {x: event.imageX, y: event.imageY};
+  layout.addVertex(point, hovering);
 }
 
 registerQuickChangeFunc('Wall2D', addVertex);
@@ -232,6 +277,7 @@ function onMouseup(event, stdEvent) {
       const clickWasHolding = clickHolding;
       clickHolding = false;
       hovering = undefined;
+      layout.history().newState();
       return clickWasHolding;
     }
   } else {
@@ -277,7 +323,6 @@ function hover(event) {
 
 function onMove(event) {
   if (layout === undefined) return;
-  layout.history().newState();
   const canDrag = !popupOpen && lastDown < new Date().getTime() - selectTimeBuffer * 1.5;
   return (canDrag && drag(event)) || hover(event);
 }
@@ -427,9 +472,10 @@ function drawMeasurementValue(line, midpoint, measurement) {
 
 const measurementLineMap = {};
 const getMeasurementLine = (vertex1, vertex2) => {
-  const lookupKey = `${vertex1.id()} => ${vertex2.id()}`;
+  const lookupKey = `${vertex1} => ${vertex2}`;
   if (measurementLineMap[lookupKey] === undefined) {
-    measurementLineMap[lookupKey] = new Line2d(vertex1, vertex2);
+    const line = new Line2d(vertex1, vertex2);
+    measurementLineMap[lookupKey] = new LineMeasurement2d(line)
   }
   return measurementLineMap[lookupKey];
 }
@@ -481,13 +527,13 @@ function measureOnWall(list, level) {
     let item = list[index];
     const wall = item.wall();
     const points = item.endpoints2D();
-    const line1 = getMeasurementLine(wall.startVertex(), points.start);
-    const line2 = getMeasurementLine(points.end, wall.endVertex());
-    line1.measurement().modificationFunction(item.fromPreviousWall);
-    line2.measurement().modificationFunction(item.fromNextWall);
-    drawMeasurement(line1.measurement(), level, wall.startVertex())
-    drawMeasurement(line2.measurement(), level, wall.startVertex())
-    level += 2;
+    const measureLine1 = getMeasurementLine(wall.startVertex(), points.start);
+    const measureLine2 = getMeasurementLine(points.end, wall.endVertex());
+    measureLine1.modificationFunction(item.fromPreviousWall);
+    measureLine2.modificationFunction(item.fromNextWall);
+    drawMeasurement(measureLine1, level, wall.startVertex())
+    drawMeasurement(measureLine2, level, wall.startVertex())
+    level += 4;
   }
   return level;
 }
@@ -514,14 +560,15 @@ function drawWall(wall) {
   wall.windows().forEach((window) =>
     drawWindow(startpoint, window, wall.radians()));
 
-  let level = 4;
+  let level = 8;
   if (includeDetails()) {
     const verticies = wall.verticies();
     let measLines = {};
     level = measureOnWall(wall.doors(), level);
     level = measureOnWall(wall.windows(), level);
   }
-  drawMeasurement(new LineMeasurement2d(wall), level, wall.startVertex());
+  const measurement = new LineMeasurement2d(wall, undefined, undefined, layout.reconsileLength(wall));
+  drawMeasurement(measurement, level, wall.startVertex());
 
   updateHoverMap(wall, startpoint, endpoint, 5);
 
@@ -553,7 +600,8 @@ function drawObject(object) {
       const square = object.object();
       const center = square.center();
       updateHoverMap(object, center, center, 30);
-      draw.square(square, hoverId() === object.toString() ? 'green' : 'white');
+      const color = hoverId() === object.toString() ? 'green' : 'white';
+      draw.square(square, color, object.parent().name());
       const potentalSnap = object.potentalSnapLocation();
       drawSnapLocation(object.snapLocations.paired(), 'black');
       if (potentalSnap) drawSnapLocation([potentalSnap], 'white');
@@ -614,6 +662,7 @@ function init() {
   panZ.onMousedown(onMousedown);
   panZ.onMouseup(onMouseup);
   // draw(canvas);
+  TwoDLayout.panZoom = panZ;
 }
 
 TwoDLayout.init = init;

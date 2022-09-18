@@ -44,8 +44,17 @@ class CabinetConfig {
         class: 'center',
         list: types
       });
-      const inputs = [typeInput];
+      const nameInput = new Input({
+        name: 'name',
+        label: 'Name (optional)',
+        class: 'center',
+      });
+      const inputs = [typeInput, nameInput];
       const inputTree = new DecisionInputTree();
+      inputTree.onSubmit((t) => {
+        inputTree.payload().inputArray[1].setValue('', true)
+        inputTree.children()[0].payload().inputArray[0].setValue('', true)
+      });
       const cabinet = inputTree.branch('Cabinet', inputs);
       const cabinetTypes = Object.keys(cabinetKeys);
       types.forEach((type) => {
@@ -54,6 +63,7 @@ class CabinetConfig {
           label: 'Layout (Optional)',
           name: 'id',
           class: 'center',
+          clearOnDblClick: true,
           list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
         });
         cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));

@@ -38,15 +38,7 @@ class DragDropResize {
       if (!Resizer.isLocked(popupCnt)) instance.setDems({width: rect.width + 'px', height: rect.height + 'px'});
     }
 
-    const defaultStyle = `
-      background-color: white;
-      position: ${position};
-      width: fit-content;
-      height: fit-content;
-      padding: 5pt;
-      border: 1px solid;
-      border-radius: 5pt;
-      box-shadow: 3px 3px 6px black, 3px 3px 6px grey, 3px 3px 6px lightgrey;`;
+    const defaultStyle = `position: ${position};`;
 
     this.close = () => {
       getPopupElems().cnt.style.display = 'none';
@@ -339,6 +331,7 @@ class DragDropResize {
 
     const popupContent = tempElem.children[0];
     const popupCnt = tempElem;
+    popupCnt.className = 'drag-drop-popup-cnt';
     const histCnt = document.createElement('DIV');
     const tabHeader = du.id(POPUP_HEADER_CNT_ID);
     if (tabHeader) {

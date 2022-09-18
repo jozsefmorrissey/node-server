@@ -16,7 +16,7 @@ class DrawerSection extends OpeningCoverSection {
 
     function getDrawerDepth(depth) {
       if (depth < 3) return 0;
-      return Math.ceil((depth - 1)/2) * 2;
+      return (Math.ceil((depth / 2.54 - 1)/2) * 2) * 2.54;
     }
 
     function drawerCenter(attr) {
@@ -32,8 +32,8 @@ class DrawerSection extends OpeningCoverSection {
       const dems = instance.innerSize()
       // TODO add box depth tolerance variable
       dems.z = getDrawerDepth(props.depth - 2.54);
-      dems.x = dems.x - 1/2;
-      dems.y = dems.y - 1/2;
+      dems.x = dems.x - 0.9525;
+      dems.y = dems.y - 2.54;
       return attr ? dems[attr] : dems;
     }
 

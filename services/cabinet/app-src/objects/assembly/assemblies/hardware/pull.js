@@ -10,69 +10,60 @@ const Assembly = require('../../assembly.js');
 */
 class Handle extends Assembly {
   constructor(partCode, partName, door, location, index, count) {
-    super(partCode, 'Handle');
-    Object.getSet(this, {location});
-    this.setParentAssembly(door);
-    index = index || 0;
-    count = count || 1;
-
-    function offset(center, distance) {
-      const spacing = distance / count;
-      return center - (distance / 2) + spacing / 2 + spacing * (index);
+    let instance;
+    function rotationStr() {
+      if (!instance || !instance.location) return {x:0,y:0,z:0};
+      return instance.location && instance.location() && instance.location().rotate ?
+          {x: 0, y:0, z: 90} : {x: 0, y:0, z: 0};
     }
-
-
-    this.demensionStr = (attr) => {
+    function demensionStr(attr) {
+      if (!instance || !instance.location) return {x:0,y:0,z:0};
       const dems = {x: 1, y: 9.6, z: 1.9};
       return attr ? dems[attr] : dems;
     }
-
-    this.rotationStr = () => this.location() && this.location().rotate ? {x: 0, y:0, z: 90} : {x: 0, y:0, z: 0};
-
-    const edgeOffset = 3.01625;
-    const toCenter = 4;
-    this.centerStr = (attr) => {
+    function centerStr(attr) {
+      if (!instance || !instance.location) return {x:0,y:0,z:0};
         let center = door.position().center();
         let doorDems = door.position().demension();
-        let pullDems = this.demensionStr();
+        let pullDems = instance.demensionStr();
         center.z -= (doorDems.z + pullDems.z) / 2;
 
-        switch (this.location()) {
+        switch (instance.location()) {
           case Handle.location.TOP_RIGHT:
             center.x = center.x + doorDems.x / 2 +  edgeOffset;
             center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-					  break;
+            break;
           case Handle.location.TOP_LEFT:
             center.x = center.x - doorDems.x / 2 -  edgeOffset;
             center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-  					break;
+            break;
           case Handle.location.BOTTOM_RIGHT:
             center.x = center.x + doorDems.x / 2 -  edgeOffset;
             center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-  					break;
+            break;
           case Handle.location.BOTTOM_LEFT:
             center.x = center.x + doorDems.x / 2 -  edgeOffset;
             center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-					  break;
+            break;
           case Handle.location.TOP:
             center.x = offset(center.x, doorDems.x);
             center.y -= doorDems.y / 2;
-					  break;
+            break;
           case Handle.location.BOTTOM:
             center.x = offset(center.x, doorDems.x);
             center.y += doorDems.y / 2;
-					  break;
+            break;
           case Handle.location.RIGHT:
             center.y = offset(center.y, doorDems.y);
             center.x += doorDems.x / 2;
-					  break;
+            break;
           case Handle.location.LEFT:
             center.y = offset(center.y, doorDems.y);
             center.x -= doorDems.x / 2;
-					  break;
+            break;
           case Handle.location.CENTER:
             center.x = offset(center.x, doorDems.x);
-					  break;
+            break;
           case undefined:
             center.x = 0;
             center.y = 0;
@@ -84,7 +75,28 @@ class Handle extends Assembly {
         return attr ? center[attr] : center;
     };
 
-    if (door !== undefined)this.updatePosition();
+    super(partCode, 'Handle', centerStr, demensionStr, rotationStr);
+    // super(partCode, 'Handle', '0,0,0', '0,0,0', '0,0,0');
+    Object.getSet(this, {location});
+    this.setParentAssembly(door);
+    instance = this;
+    index = index || 0;
+    count = count || 1;
+
+    this.count = (c) => {
+      if (c > 0) {
+        count = c;
+      }
+      return count;
+    }
+
+    function offset(center, distance) {
+      const spacing = distance / count;
+      return center - (distance / 2) + spacing / 2 + spacing * (index);
+    }
+
+    const edgeOffset = 3.01625;
+    const toCenter = 4;
   }
 }
 Handle.location = {};

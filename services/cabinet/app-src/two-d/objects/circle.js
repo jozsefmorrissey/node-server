@@ -118,8 +118,6 @@ Circle2d.intersectionOfTwo = (circle0, circle1) => {
     var yi_prime = y2 - ry;
 
     const list = [];
-    pushVertex(xi, yi, list);
-    pushVertex(xi_prime, yi_prime, list);
     return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
 }
 

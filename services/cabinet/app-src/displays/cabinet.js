@@ -4,6 +4,7 @@
 const Show = require('../show.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const ThreeDMain = require('../displays/three-d-main.js');
+const TwoDLayout = require('../two-d/layout');
 const OpenSectionDisplay = require('./open-section.js');
 const CabinetConfig = require('../config/cabinet-configs.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
@@ -25,7 +26,6 @@ function getHtmlElemCabinet (elem) {
 
 class CabinetDisplay {
   constructor(parentSelector, group) {
-    const propertySelectors = {};
     let propId = 'Half Overlay';
     let displayId = String.random();
     const instance = this;
@@ -40,12 +40,11 @@ class CabinetDisplay {
         CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
     const showTypes = Show.listTypes();
     const getBody = (cabinet, $index) => {
-      if (propertySelectors[cabinet.uniqueId()] === undefined)
-        propertySelectors[cabinet.uniqueId()] = Inputs('propertyIds', { value: cabinet.propertyId() });
-      if (expandList.activeKey() === $index)
+      if (expandList.activeKey() === $index) {
+        TwoDLayout.panZoom.once();
         ThreeDMain.update(cabinet);
-      const selectHtml = propertySelectors[cabinet.uniqueId()].html();
-      const scope = {$index, cabinet, showTypes, OpenSectionDisplay, selectHtml};
+      }
+      const scope = {$index, cabinet, showTypes, OpenSectionDisplay};
       return CabinetDisplay.bodyTemplate.render(scope);
     }
 
@@ -61,9 +60,11 @@ class CabinetDisplay {
         const attr = target.name === 'thickness' ? 'height' : 'width';
         const cabinet = getHtmlElemCabinet(target);
         const obj2d = Object2d.get(cabinet.uniqueId());
-        const value = cabinet[target.name]();
+        const value = new Measurement(target.value, true).decimal();
+        console.log('new cab val', value);
         obj2d.topview()[attr](value);
-      });
+        TwoDLayout.panZoom.once();
+      }, 1000);
     }
 
     du.on.match('change', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
@@ -73,6 +74,11 @@ class CabinetDisplay {
       const inputCnt = du.find(`[cabinet-id='${cabinet.uniqueId()}']`);
       const input = du.find.down(`[name='${attr}']`, inputCnt);
       input.value = displayValue(cabinet[attr]());
+    }
+
+    function removeFromLayout(elem, cabinet) {
+      group.room().layout().removeByPayload(cabinet);
+      TwoDLayout.panZoom.once();
     }
 
     function linkLayout(cabinet, obj2d) {
@@ -89,19 +95,22 @@ class CabinetDisplay {
     }
 
     const getObject = (values) => {
-      const cabinet = CabinetConfig.get(group, values.type, values.propertyId, values.id);
-      const obj2d = group.room().layout().addObject(cabinet.uniqueId());
+      const cabinet = CabinetConfig.get(group, values.type, values.propertyId, values.name || values.id);
+      const obj2d = group.room().layout().addObject(cabinet.uniqueId(), cabinet, cabinet.name);
       obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
       return cabinet;
     };
     this.active = () => expandList.active();
     const expListProps = {
       list: group.cabinets,
+      dontOpenOnAdd: true,
+      type: 'top-add-list',
       inputTree:   CabinetConfig.inputTree(),
       parentSelector, getHeader, getBody, getObject, inputValidation,
       listElemLable: 'Cabinet'
     };
     const expandList = new ExpandableList(expListProps);
+    expandList.afterRemoval(removeFromLayout);
     this.refresh = () => expandList.refresh();
 
     const cabinetKey = (path) => {
@@ -116,12 +125,14 @@ class CabinetDisplay {
       const cabKey = cabinetKey(path);
       const decimal = new Measurement(value, true).decimal();
       cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : val);
+      TwoDLayout.panZoom.once();
       ThreeDMain.update(cabKey.cabinet);
     }
 
     const attrUpdate = (path, value) => {
       const cabKey = cabinetKey(path);
       cabKey.cabinet[cabKey.key](value);
+      TwoDLayout.panZoom.once();
     }
 
     const saveSuccess = () => console.log('success');

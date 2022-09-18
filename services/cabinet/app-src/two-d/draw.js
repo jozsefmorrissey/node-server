@@ -75,7 +75,7 @@ class Draw2d {
       poly.lines().forEach((line) => draw.line(line, color, width));
     }
 
-    draw.square = (square, color) => {
+    draw.square = (square, color, text) => {
       ctx.save();
       ctx.beginPath();
       ctx.lineWidth = 2;
@@ -89,14 +89,16 @@ class Draw2d {
       ctx.stroke();
       ctx.fill();
 
-      ctx.beginPath();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = 'black';
-      ctx.fillStyle =  'black';
-      const lc = square.leftCenter();
-      const fc = square.frontLeft();
-      ctx.fillText('HEllo o my gooooooood nesss', 0, square.height() / 4, square.width());
-      ctx.stroke()
+      if (text) {
+        ctx.beginPath();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'black';
+        ctx.fillStyle =  'black';
+        const lc = square.leftCenter();
+        const fc = square.frontLeft();
+        ctx.fillText(text, 0, square.height() / 4, square.width());
+        ctx.stroke()
+      }
 
       ctx.restore();
     }

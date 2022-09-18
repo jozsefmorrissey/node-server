@@ -171,8 +171,10 @@ let lastRendered;
 function update(part) {
   if (part) lastRendered = part.getAssembly('c');
   const threeDModel = ThreeDModel.get(lastRendered, viewer);
-  threeDModel.render(lastRendered);
-  updateController();
+  if (threeDModel) {
+    threeDModel.update(lastRendered);
+    updateController();
+  }
 }
 
 module.exports = {init, update}

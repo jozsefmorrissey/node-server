@@ -112,15 +112,11 @@ class DivideSection extends SpaceSection {
         let center = this.center();
         let dividerLength;
         if (this.vertical()) {
-          const borderWidth = props.borders.left.position().demension('z');
-          let start = props.borders.left.position().center('x');
-          start += borderWidth / 2;
+          const start = props.borders.left.position().centerAdjust('x', '-z');
           center.x = start + offset;
           dividerLength = innerSize.y;
         } else {
-          const borderWidth = props.borders.top.position().demension('z');
-          let start = props.borders.top.position().center('y');
-          start += borderWidth / 2;
+          const start = props.borders.top.position().centerAdjust('y', '+z');
           center.y = start - offset;
           dividerLength = innerSize.x;
         }
@@ -135,10 +131,44 @@ class DivideSection extends SpaceSection {
 
     this.dividerOffset = (limitIndex) => {
       limitIndex = limitIndex > -1 && limitIndex < this.sections.length ? limitIndex : this.sections.length;
+      let cov = this.coverable();
+      let frOut = this.panelOuter();
+      let offset = this.isVertical() ? cov.limits['-x'] - frOut.limits['-x'] : frOut.limits.y - cov.limits.y;
+      for (let index = 0; index < limitIndex + 2; index += 1) {
+        const section = this.sections[index];
+        if (section instanceof DividerSection) {
+          const maxWidth = section.maxWidth();
+          let halfReveal;
+          if (this.rootAssembly().propertyConfig.isRevealOverlay()) {
+            halfReveal = this.rootAssembly().propertyConfig.reveal().r.value() / 2;
+          } else if (this.rootAssembly().propertyConfig.isInset()) {
+            const insetValue = this.rootAssembly().propertyConfig('Inset').is.value();
+            halfReveal = (section.maxWidth() + insetValue * 2) / 2;
+          } else {
+            halfReveal = (maxWidth - this.rootAssembly().propertyConfig.overlay() * 2)/2;
+          }
+          offset += index < limitIndex ? halfReveal*2 : halfReveal;
+        }
+      }
+      return offset;
+    }
+
+    this.dividerReveal = (limitIndex) => {
+      limitIndex = limitIndex > -1 && limitIndex < this.sections.length ? limitIndex : this.sections.length;
       let offset = 0;
       for (let index = 0; index < limitIndex; index += 1) {
         const section = this.sections[index];
-        offset += section instanceof DividerSection ? section.maxWidth() : 0;
+        if (section instanceof DividerSection) {
+          if (this.rootAssembly().propertyConfig.isRevealOverlay()) {
+            offset += this.rootAssembly().propertyConfig.reveal().r.value();
+          }  else if (this.rootAssembly().propertyConfig.isInset()) {
+            const insetValue = this.rootAssembly().propertyConfig('Inset').is.value();
+            offset += section.maxWidth() + insetValue * 2;
+          } else {
+            offset += section.maxWidth();
+            offset -= this.rootAssembly().propertyConfig.overlay() * 2;
+          }
+        }
       }
       return offset;
     }
@@ -146,12 +176,9 @@ class DivideSection extends SpaceSection {
     this.sectionCount = () => this.dividerCount() + 1;
     this.dividerLayout = () => {
       let distance;
-      if (!this.rootAssembly().propertyConfig.isRevealOverlay()) {
-        distance = this.vertical() ? this.innerSize().x : this.innerSize().y;
-        distance -= this.dividerOffset();
-      } else {
-        distance = this.vertical() ? this.outerSize().dems.x : this.outerSize().dems.y;
-      }
+      const coverable = this.coverable();
+      distance = this.vertical() ? coverable.dems.x : coverable.dems.y;
+      distance -= this.dividerReveal();
       return this.pattern().calc(distance);
     };
     this.divide = (dividerCount) => {

@@ -92,12 +92,6 @@ add('method', new Select({
   list: Material.methodList,
 }));
 
-add('propertyIds', new Select({
-  name: 'propertyIds',
-  class: 'center',
-  list: Object.keys(['1/2', 'Full', 'Inset'])
-}));
-
 add('company', new Select({
   name: 'company',
   label: 'Company',

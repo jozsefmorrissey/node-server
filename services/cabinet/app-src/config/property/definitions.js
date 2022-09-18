@@ -15,6 +15,8 @@ defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
 
 //   Reveal
 defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
+defs.rvr = new Property('rvr', 'Reveal Right', {value: 1/8, notMetric: IMPERIAL_US}),
+defs.rvl = new Property('rvl', 'Reveal Left', {value: 1/8, notMetric: IMPERIAL_US}),
 defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
 defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
 

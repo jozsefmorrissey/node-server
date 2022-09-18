@@ -11,7 +11,7 @@ class ExpandableList extends Expandable {
     super(props);
     const superRemove = this.remove;
     this.remove = (index) => {
-      superRemove(props.list.splice(index, 1));
+      superRemove(props.list.splice(index, 1)[0]);
       this.refresh();
     }
   }

@@ -9,6 +9,7 @@ class Line2d {
     endVertex = new Vertex2d(endVertex);
     const measureTo = [];
     const instance = this;
+    Object.getSet(this, {startVertex, endVertex});
 
     this.startVertex = (newVertex) => {
       if (newVertex instanceof Vertex2d) {
@@ -37,8 +38,8 @@ class Line2d {
 
     this.withinSegmentBounds = (point) => {
       point = new Vertex2d(point);
-      return approximate.lteq(this.minX(), point.x()) && approximate.lteq(this.minY(), point.y()) &&
-            approximate.gteq(this.maxX(), point.x()) && approximate.gteq(this.maxY(), point.y());
+      return approximate.lteq(this.minX(), point.x(), 100) && approximate.lteq(this.minY(), point.y(), 100) &&
+            approximate.gteq(this.maxX(), point.x(), 100) && approximate.gteq(this.maxY(), point.y(), 100);
     }
 
 
@@ -66,14 +67,15 @@ class Line2d {
 
     this.length = (value) => {
       value = Number.parseFloat(value);
-      if (Number.isNaN(value)) {
-        const a = this.endVertex().x() - this.startVertex().x();
-        const b = this.endVertex().y() - this.startVertex().y();
-        return Math.sqrt(a*a + b*b);
-      } else {
-        reconsileLength(value);
-        return value;
+      if (!Number.isNaN(value)) {
+        const sv = this.startVertex();
+        const x = value * Math.cos(this.radians()) + sv.x();
+        const y = value * Math.sin(this.radians()) + sv.y();
+        this.endVertex().point({x,y});
       }
+      const a = this.endVertex().x() - this.startVertex().x();
+      const b = this.endVertex().y() - this.startVertex().y();
+      return Math.sqrt(a*a + b*b);
     }
 
     function getSlope(v1, v2) {
@@ -81,7 +83,7 @@ class Line2d {
       const y2 = v2.y();
       const x1 = v1.x();
       const x2 = v2.x();
-      return approximate(y2 - y1) / approximate(x2 - x1);
+      return approximate((y2 - y1) / (x2 - x1));
     }
 
     function getB(x, y, slope) {
@@ -229,7 +231,7 @@ class Line2d {
     this.radians = () => {
       const deltaX = this.endVertex().x() - this.startVertex().x();
       const deltaY = this.endVertex().y() - this.startVertex().y();
-      return approximate(Math.atan2(deltaY, deltaX));
+      return approximate(Math.atan2(deltaY, deltaX), 100);
     }
 
     this.clean = (other) => {

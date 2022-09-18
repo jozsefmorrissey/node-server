@@ -2,6 +2,7 @@
 
 
 const getDefaultSize = require('./utils.js').getDefaultSize;
+const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
 
 class Position {
   constructor(assembly, sme) {
@@ -51,9 +52,18 @@ class Position {
       return sme;
     }
 
-    this.rotation = (attr) => rotation(attr);
-    this.center = (attr) => center(attr);
-    this.demension = (attr) => demension(attr);
+
+    const rootAssembly = assembly.getRoot();
+    if (rootAssembly.constructor.name === 'Cabinet') {
+      const cacheId = rootAssembly.uniqueId();
+      this.rotation = new FunctionCache((attr) => rotation(attr), null, cacheId, assembly);
+      this.center = new FunctionCache((attr) => center(attr), null, cacheId, assembly);
+      this.demension = new FunctionCache((attr) => demension(attr), null, cacheId, assembly);
+    } else {
+      this.rotation = (attr) => rotation(attr);
+      this.center = (attr) => center(attr);
+      this.demension = (attr) => demension(attr);
+    }
 
     this.current = () => {
       const position = {

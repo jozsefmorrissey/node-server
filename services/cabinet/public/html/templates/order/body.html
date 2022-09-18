@@ -2,17 +2,17 @@
   <b>{{order.name()}}</b>
   <ul id='order-nav' class='center toggle-display-list'>
     <li class='toggle-display-item active'
-        display-id='builder-display-{{$index}}'>Builder</li>
+        display-id='builder-display-{{order.id()}}'>Builder</li>
     <li class='toggle-display-item'
-        display-id='information-display-{{$index}}'>Information</li>
+        display-id='information-display-{{order.id()}}'>Information</li>
   </ul>
-  <div id='builder-display-{{$index}}'>
+  <div id='builder-display-{{order.id()}}'>
     <b>{{order.name()}}</b>
     <button class='save-order-btn' index='{{$index}}'>Save</button>
     <div id='room-pills'>RoomPills!</div>
   </div>
-  <div id='information-display-{{$index}}' hidden>
-    <utility-filter id='uf-info-{{$index}}' edit='true'>
+  <div id='information-display-{{order.id()}}' hidden>
+    <utility-filter id='uf-info-{{order.id()}}' edit='true'>
       [
         {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988},
         {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933},

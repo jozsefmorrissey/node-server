@@ -15,6 +15,7 @@ const $t = require('../$t.js');
 //  getObject: function returns new list object default is generic js object,
 //  parentSelector: cssSelector only reqired for refresh function,
 //  listElemLable: nameOfElementType changes add button label,
+//  dontOpenOnAdd: by default the active element will be switched to newly added elements.
 //  hideAddBtn: defaults to false,
 //  startClosed: all tabs are closed on list open.
 //  input: true - require user to enter text before adding new
@@ -90,7 +91,7 @@ class Expandable {
           const obj = props.getObject(inputValues, getInputCnt());
           const key = this.getKey(vals, obj);
           props.list[key] = obj;
-          this.activeKey(key);
+          if (!props.dontOpenOnAdd) this.activeKey(key);
           this.refresh();
           afterAddEvent.trigger();
       } else {
@@ -117,7 +118,7 @@ class Expandable {
       this.refresh();
     }
     this.html = () =>
-      Expandable[`${instance.type()}Template`].render(this);
+      Expandable[`${instance.type().toCamel()}Template`].render(this);
     this.afterRender = (func) => afterRenderEvent.on(func);
     this.afterAdd = (func) => afterAddEvent.on(func);
     this.afterRemoval = (func) => afterRemovalEvent.on(func);
@@ -193,6 +194,7 @@ Expandable.inputRepeatTemplate = new $t('expandable/input-repeat');
 Expandable.listTemplate = new $t('expandable/list');
 Expandable.pillTemplate = new $t('expandable/pill');
 Expandable.sidebarTemplate = new $t('expandable/sidebar');
+Expandable.topAddListTemplate = new $t('expandable/top-add-list');
 Expandable.getIdAndKey = (target, level) => {
   level ||= 0;
   const elems = du.find.upAll('.expand-header,.expand-body', target);

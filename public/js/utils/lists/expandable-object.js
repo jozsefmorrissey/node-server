@@ -57,7 +57,7 @@ class ExpandableObject extends Expandable {
         object._EXPAND_LAST_OBJECT_NAME = undefinedAttr(valOfunc(object, idAttr), mappedObject);
         if (idAttr !== undefined) mappedObject[object._EXPAND_LAST_OBJECT_NAME] = object;
       }
-      if (object) this.activeKey(object._EXPAND_KEY);
+      if (!props.dontOpenOnAdd && object) this.activeKey(object._EXPAND_KEY);
       if (idAttr) this.updateMapped(object);
       return this.activeKey() || undefined;
     }

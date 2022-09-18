@@ -43,7 +43,7 @@ class Lookup {
     this[Lookup.ID_ATTRIBUTE] = () => attr;
     this[attr] = (initialValue) => {
       if (modificationWindowOpen) {
-        if (initialValue) {
+        if ((typeof initialValue) === "string") {
           Lookup.byId[cxtr.name][id] = undefined;
           const decoded = Lookup.decode(initialValue);
           id = decoded ? decoded.id : initialValue;
@@ -80,6 +80,87 @@ class Lookup {
     Lookup.byId[cxtr.name][id] = this;
     this.toString = () => this[attr]();
   }
+}
+
+Lookup.convert = function (obj, attr) {
+  let id = obj.id && obj.id();
+  if (id){
+    const decoded = Lookup.decode(id);
+    if (decoded) {
+      id = decoded.id;
+    } else if (id._TYPE !== undefined) {
+      id = Lookup.decode(id[id[Lookup.ID_ATTRIBUTE]]).id;
+    }
+  }
+  id = id || String.random();
+  const cxtr = obj.constructor;
+  const cxtrHash = cxtr.name;
+  let group;
+  let cxtrAndId = `${cxtrHash}_${id}`
+
+  let constructedAt = new Date().getTime();
+  let modificationWindowOpen = true;
+  attr = attr || 'id';
+  Object.getSet(obj);
+  obj.lookupGroup = (g) => {
+    if (group === undefined && g !== undefined) {
+      if (Lookup.groups[g] === undefined) Lookup.groups[g] = [];
+      group = g;
+      Lookup.groups[g].push(obj);
+    }
+    return group;
+  }
+
+  obj.lookupRelease = () => {
+    if (cxtr.reusable === true) {
+      if (Lookup.freeAgents[cxtr.name] === undefined) Lookup.freeAgents[cxtr.name] = [];
+      Lookup.freeAgents[cxtr.name].push(obj);
+      const index = Lookup.groups[group] ? Lookup.groups[group].indexOf(obj) : -1;
+      if (index !== -1) Lookup.groups[group].splice(index, 1);
+    }
+    delete Lookup.byId[cxtr.name][obj[attr]];
+  }
+
+
+  obj[Lookup.ID_ATTRIBUTE] = () => attr;
+  obj[attr] = (initialValue) => {
+    if (modificationWindowOpen) {
+      if (initialValue) {
+        Lookup.byId[cxtr.name][id] = undefined;
+        const decoded = Lookup.decode(initialValue);
+        id = decoded ? decoded.id : initialValue;
+        cxtrAndId = `${cxtrHash}_${id}`
+        Lookup.byId[cxtr.name][id] = obj;
+        modificationWindowOpen = false;
+      } else if (constructedAt < new Date().getTime() - 200) {
+        modificationWindowOpen = false;
+      }
+    }
+    return cxtrAndId;
+  }
+
+  function registerConstructor() {
+    if (Lookup.byId[cxtr.name] === undefined) {
+      Lookup.byId[cxtr.name] = {};
+      Lookup.constructorMap[cxtr.name] = cxtr;
+    }
+  }
+
+  function addSelectListFuncToConstructor() {
+    if(cxtr.selectList === Lookup.selectList) {
+      cxtr.get = (id) => Lookup.get(id, cxtr);
+      if (cxtr.instance === undefined) cxtr.instance = () => Lookup.instance(cxtr.name);
+      Lookup.byId[cxtr.name] = {};
+      cxtr.selectList = () => Lookup.selectList(cxtr.name);
+    }
+  }
+
+  registerConstructor();
+  addSelectListFuncToConstructor();
+
+
+  Lookup.byId[cxtr.name][id] = obj;
+  if (obj.toString === undefined) obj.toString = () => obj[attr]();
 }
 
 Lookup.ID_ATTRIBUTE = 'ID_ATTRIBUTE';

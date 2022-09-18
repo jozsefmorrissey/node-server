@@ -175,13 +175,40 @@ clazz.filter = (filterFunc) => {
   return obj;
 }
 
+function objEq(obj1, obj2) {
+  if (!(obj1 instanceof Object)) return false;
+  if (!(obj2 instanceof Object)) return false;
+  const obj1Keys = Object.keys(obj1);
+  const obj2Keys = Object.keys(obj2);
+  if (obj1Keys.length !== obj2Keys.length) return false;
+  obj1Keys.sort();
+  obj2Keys.sort();
+  for (let index = 0; index < obj1Keys.length; index += 1) {
+    const obj1Key = obj1Keys[index];
+    const obj2Key = obj2Keys[index];
+    if (obj1Key !== obj2Key) return false;
+    const obj1Val = obj1[obj1Key];
+    const obj2Val = obj2[obj2Key];
+    if (obj1Val instanceof Object) {
+      if (!obj1Val.equals(obj2)) return false;
+    } else if (obj1[obj1Key] !== obj2[obj2Key]) return false;
+  }
+  return true;
+}
+
 
 Function.safeStdLibAddition(Object, 'class', clazz, true);
+Function.safeStdLibAddition(Object, 'equals', objEq, true);
 
 
 Function.safeStdLibAddition(Math, 'toDegrees', function (rads, accuracy) {
   accuracy ||= 100;
   return Math.round((rads * 180/Math.PI % 360) * accuracy) / accuracy;
+}, true);
+
+Function.safeStdLibAddition(Math, 'toRadians', function (angle, accuracy) {
+  accuracy ||= 10000;
+  return Math.round((angle*Math.PI/180)%(2*Math.PI) * accuracy)  / accuracy;
 }, true);
 
 Function.safeStdLibAddition(Array, 'toJson', function (arr) {

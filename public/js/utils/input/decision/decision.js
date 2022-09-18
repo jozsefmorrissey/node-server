@@ -12,6 +12,10 @@ const $t = require('../../$t');
 
 const ROOT_CLASS = 'decision-input-tree';
 
+function isComplete(wrapper) {
+  return wrapper.isComplete() && DecisionInputTree.validate(wrapper)
+}
+
 class ValueCondition {
   constructor(name, accepted, payload) {
     Object.getSet(this, {name, accepted});
@@ -37,9 +41,9 @@ class ValueCondition {
 class DecisionInput {
   constructor(name, inputArrayOinstance, tree, isRoot) {
     Object.getSet(this, 'name', 'id', 'childCntId', 'inputArray', 'class', 'condition');
-    this.clone = () =>
-        this;
+    this.clone = () => this;
 
+    this.tree = () => tree;
     if (inputArrayOinstance instanceof ValueCondition) {
       this.condition = inputArrayOinstance.condition;
       this.isConditional = true;
@@ -108,6 +112,18 @@ class DecisionInputTree extends LogicTree {
     tree.buttonText = () => {
       return props.buttonText || `Create ${root.node.name}`;
     }
+
+    let disabled;
+    tree.disableButton = (d, elem) => {
+      disabled = d === null || d === true || d === false ? d : disabled;
+      if (elem) {
+        const button = du.find.closest(`button`, elem);
+        if (button) {
+          button.disabled = disabled === null ? !isComplete(root) : disabled;
+        }
+      }
+    }
+
     function superArgument(onComplete) {
       const formatPayload = (name, payload) => {
         decisionInputs.push(new DecisionInput(name, payload, tree, decisionInputs.length === 0));
@@ -168,7 +184,7 @@ class DecisionInputTree extends LogicTree {
         completionPending = true;
         setTimeout(() => {
           const values = tree.values();
-          onCompletion.forEach((func) => func(values))
+          onCompletion.forEach((func) => func(values, this))
           completionPending = false;
         }, delay);
       }
@@ -183,7 +199,7 @@ class DecisionInputTree extends LogicTree {
         setTimeout(() => {
           const values = tree.values();
           if (!root.isComplete()) return false;
-          onSubmit.forEach((func) => func(values))
+          onSubmit.forEach((func) => func(values, this))
           submissionPending = false;
         }, delay);
       }
@@ -223,10 +239,6 @@ DecisionInputTree.validate = (wrapper) => {
   return valid;
 }
 
-function isComplete(wrapper) {
-  return wrapper.isComplete() && DecisionInputTree.validate(wrapper)
-}
-
 DecisionInputTree.update = (soft) =>
   (elem) => {
     const cnt = du.find.closest('[node-id]', elem);
@@ -243,10 +255,8 @@ DecisionInputTree.update = (soft) =>
       });
       wrapper.root().changed();
       wrapper.root().completed()
-    } else {
-      const button = du.find.closest('button', elem);
-      button.disabled = !isComplete(wrapper);
     }
+    wrapper.payload().tree().disableButton(undefined, elem);
   };
 
 DecisionInputTree.submit = (elem) => {

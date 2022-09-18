@@ -266,10 +266,10 @@ const selectors = {};
 let matchRunIdCount = 0;
 function getTargetId(target) {
   if((typeof target.getAttribute) === 'function') {
-    let targetId = target.getAttribute('ce-match-run-id');
+    let targetId = target.getAttribute('du-match-run-id');
     if (targetId === null || targetId === undefined) {
       targetId = matchRunIdCount + '';
-      target.setAttribute('ce-match-run-id', matchRunIdCount++)
+      target.setAttribute('du-match-run-id', matchRunIdCount++)
     }
     return targetId;
   }

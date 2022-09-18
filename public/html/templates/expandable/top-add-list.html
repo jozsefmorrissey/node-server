@@ -1,0 +1,16 @@
+
+<div class="expandable-list {{type()}}" ex-list-id='{{id()}}'>
+  <div class='expand-input-cnt' hidden has-input-tree='{{hasInputTree()}}'>{{inputHtml()}}</div>
+  <div class='input-open-cnt'><button>Add {{listElemLable()}}</button></div>
+  <div:t repeat='key, item in list()' class="expandable-list-body"  key='{{key}}'>
+    <div class="expand-item">
+      <button class='expandable-item-rm-btn' ex-list-id='{{id()}}' key='{{key}}'>X</button>
+      <div class="expand-header {{type()}}"  ex-list-id='{{id()}}' key='{{key}}'>
+        {{getHeader(item, key)}}
+      </div>
+      <div class="expand-body {{type()}}"  ex-list-id='{{id()}}' key='{{key}}'>
+        {{getBody && getBody(item, key)}}
+      </div>
+    </div>
+  </div:t>
+</div>

@@ -96,6 +96,8 @@ class Input extends Lookup {
       if(force || this.validation(val)) {
         valid = true;
         value = val;
+        const elem = getElem(instance.id());
+        if (elem) elem.value = value;
         return true;
       }
       valid = false;
@@ -143,7 +145,12 @@ class Input extends Lookup {
       }
     }
 
-    if (props.clearOnClick) {
+    if (props.clearOnDblClick) {
+      du.on.match(`dblclick`, `#${this.id()}`, () => {
+        const elem = getElem(this.id());
+        if (elem) elem.value = '';
+      });
+    } else if (props.clearOnClick) {
       du.on.match(`mousedown`, `#${this.id()}`, () => {
         const elem = getElem(this.id());
         if (elem) elem.value = '';

@@ -1,5 +1,6 @@
 
 const approximate = require('approximate');
+const FunctionCache = require('./services/function-cache.js');
 
 function regexToObject (str, reg) {
   const match = str.match(reg);
@@ -205,7 +206,7 @@ class StringMathEvaluator {
       return null
     }
 
-    this.eval = function (expr, scope, percision) {
+    function evaluate(expr, scope, percision) {
       if (instance.cache(expr) !== null) return instance.cache(expr);
       if (Number.isFinite(expr))
         return approximate(expr);
@@ -253,6 +254,8 @@ class StringMathEvaluator {
       }
       return NaN;
     }
+
+    this.eval = new FunctionCache(evaluate, this, 'sme');
   }
 }
 

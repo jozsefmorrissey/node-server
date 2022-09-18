@@ -7,8 +7,11 @@ class PropertyConfig {
   constructor(props) {
     Object.getSet(this);
     props = props || Properties.instance();
-    let style = props.style;
-    let styleName = props.styleName;
+    let style = props.style || PropertyConfig.lastStyle;
+    let styleName = props.styleName || PropertyConfig.lastStyleName ||
+                    Object.keys(Properties.groupList(style))[0];
+    if (styleName)
+      props[style] = Properties.getSet(style, styleName);
 
     function isRevealOverlay() {return style === 'Reveal';}
     function isInset() {return style === 'Inset';}
@@ -27,6 +30,7 @@ class PropertyConfig {
 
     function set(group, name) {
       const newSet = Properties.getSet(group, name);
+      newSet.__KEY = name;
       if (cabinetStyles().indexOf(group) !== -1) {
         style = group;
         styleName = name;
@@ -98,7 +102,10 @@ class PropertyConfig {
       keys.forEach((key) => {
         json[key] = [];
         const propKeys = Object.keys(props[key]);
-        propKeys.forEach((propKey) => json[key].push(props[key][propKey].toJson()))
+        propKeys.forEach((propKey) => {
+          if (props[key][propKey] && props[key][propKey].toJson === 'function')
+            json[key].push(props[key][propKey].toJson())
+        });
       });
       return json;
     }
@@ -116,6 +123,8 @@ class PropertyConfig {
     return getProperties;
   }
 }
+
+PropertyConfig.lastStyle = 'Overlay';
 
 PropertyConfig.fromJson = (json) => {
   const propConfig = {style: json.style, styleName: json.styleName};

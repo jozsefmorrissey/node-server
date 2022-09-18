@@ -5,7 +5,7 @@ function approximate(value, acc) {
   return Math.round(value * acc) / acc;
 }
 
-approximate.accuracy = 1000000000;
+approximate.accuracy = 10000000000;
 approximate.eq = (val1, val2, acc) => approximate(val1, acc) === approximate(val2, acc);
 approximate.neq = (val1, val2, acc) => approximate(val1, acc) !== approximate(val2, acc);
 approximate.gt = (val1, val2, acc) => approximate(val1, acc) > approximate(val2, acc);

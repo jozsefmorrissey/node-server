@@ -64,24 +64,25 @@ class Cabinet extends Assembly {
 
         const position = {};
         const start = {};
-        // TODO: hard coded orientation logic.... make dynamic???...
-        const jointOffset = 0.9525;
-        if (this.propertyConfig.isRevealOverlay() || this.propertyConfig.isInset()) {
-          position.right = borders.right.position().centerAdjust('x', '-z');
-          position.left = borders.left.position().centerAdjust('x', '+z');
-          position.top = borders.top.position().centerAdjust('y', '-z');
-          position.bottom = borders.bottom.position().centerAdjust('y', '+z');
+        if (this.propertyConfig.isRevealOverlay()) {
+          const revealProps = this.rootAssembly().propertyConfig.reveal();
+          position.right = borders.right.position().centerAdjust('x', '+z') - revealProps.rvr.value();
+          position.left = borders.left.position().centerAdjust('x', '-z') + revealProps.rvl.value();
+          position.top = borders.top.position().centerAdjust('y', '+z') - revealProps.rvt.value();
+          position.bottom = borders.bottom.position().centerAdjust('y', '-z') + revealProps.rvb.value();
+        } else if (this.propertyConfig.isInset()) {
+          const insetValue = this.rootAssembly().propertyConfig('Inset').is.value();
+          position.right = borders.right.position().centerAdjust('x', '-z') - insetValue;
+          position.left = borders.left.position().centerAdjust('x', '+z') + insetValue;
+          position.top = borders.top.position().centerAdjust('y', '-z') - insetValue;
+          position.bottom = borders.bottom.position().centerAdjust('y', '+z') + insetValue;
         } else {
-          position.right = borders.right.position().centerAdjust('x', '-z');
-          position.left = borders.left.position().centerAdjust('x', '+z');
-          position.top = borders.top.position().centerAdjust('y', '-z');
-          position.bottom = borders.bottom.position().centerAdjust('y', '+z');
+          const ov = this.propertyConfig('Overlay').ov.value();
+          position.right = borders.right.position().centerAdjust('x', '-z') + ov;;
+          position.left = borders.left.position().centerAdjust('x', '+z') - ov;
+          position.top = borders.top.position().centerAdjust('y', '-z') + ov;
+          position.bottom = borders.bottom.position().centerAdjust('y', '+z') - ov;
         }
-
-        // position.right += resolveOuterReveal(borders.right, 'rrv');
-        // position.left -= resolveOuterReveal(borders.left, 'lrv')
-        // position.top += resolveOuterReveal(borders.top, 'trv');
-        // position.bottom -= resolveOuterReveal(borders.bottom, 'brv');
 
         position.front = 0;
         position.back = pb.position().center('z') + pb.position().limits('-z');

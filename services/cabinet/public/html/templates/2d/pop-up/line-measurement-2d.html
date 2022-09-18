@@ -2,9 +2,10 @@
         x='{{lastImagePoint.x}}' y='{{lastImagePoint.y}}'>
   <span:t repeat='property in UNITS'>
     <label>{{property.name()}}</label>
-    <input type='radio' name='UNIT2' prop-radio-update='{{property.id()}}' value="{{property.name()}}"
+    <input class='transparent' type='radio' name='UNIT2'
+          prop-radio-update='{{property.id()}}' value="{{property.name()}}"
           {{property.value() === true ? 'checked' : ''}}>
   </span:t>
   <br>
-  <input type='text' class='measurement-mod' value='{{target.display()}}'>
+  <input type='text' class='measurement-mod transparent' value='{{target.display()}}'>
 </div>

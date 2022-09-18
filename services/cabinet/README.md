@@ -25,3 +25,5 @@ hover help/error text
 Clean and seperate Object.(getSet|get|set);
 figure out three-view hidden lines
 orient parts correctly for tree-view
+ensure if new property is added existing configs updated with default value
+eliminate timers!!!! (lazy programming)

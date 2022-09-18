@@ -51,7 +51,7 @@ class Square2d {
       return startPoint;
     }
     this.angle = (value) => {
-      if (value !== undefined) this.radians(toRadians(value));
+      if (value !== undefined) this.radians(Math.toRadians(value));
       return Math.toDegrees(this.radians());
     }
 

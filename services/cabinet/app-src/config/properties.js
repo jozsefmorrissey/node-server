@@ -19,7 +19,7 @@ const add = (key, properties) => properties.forEach((prop) => {
 });
 
 add('Overlay', [Defs.ov]);
-add('Reveal', [Defs.r,Defs.rvt,Defs.rvb]);
+add('Reveal', [Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl]);
 add('Inset', [Defs.is]);
 add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
                 Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
@@ -39,7 +39,7 @@ function definitionsRequired(group) {
   const required = [];
   if (assemProps[group] === undefined) return [];
   Object.values(assemProps[group]).forEach((prop) => {
-    if (prop.value() !== null) required.push(prop);
+    if (prop instanceof Property && prop.value() !== null) required.push(prop);
   });
   return required;
 }
@@ -173,6 +173,7 @@ assemProperties.getSet = (group, setName) => {
   const clone = {};
   let propertyObj = config[group][setName];
   propertyObj.properties.forEach((prop) => clone[prop.code()] = prop.clone());
+  clone.__KEY = setName;
   return clone;
 }
 

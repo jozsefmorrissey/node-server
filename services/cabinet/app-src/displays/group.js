@@ -8,21 +8,52 @@ const CabinetDisplay = require('./cabinet.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const Input = require('../../../../public/js/utils/input/input.js');
-const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
 const ThreeDMain = require('../displays/three-d-main.js');
 
+const currentStyleState = {};
+
+function disableButton(values, dit, elem) {
+  const nId = dit.node.constructor.decode(dit.root().id()).id;
+  const currState = currentStyleState[nId];
+  const rootId = dit.node.constructor.decode(dit.root().id()).id;
+  const button = du.find(`button[root-id='${rootId}']`);
+  if (button) button.hidden = Object.equals(currState, values);
+  const headers = du.find.downAll('.group-header', du.find.up('.group-cnt', button));
+  headers.forEach((header) => {
+    header.hidden = currState.style !== header.getAttribute("cab-style");
+    if (!header.hidden) du.find.down('.group-key', header).innerText = currState.subStyle;
+  });
+}
+
 class GroupDisplay extends Lookup {
   constructor(group) {
     super();
-    function onCabinetStyleChange(values) {
+    function setCurrentStyleState(values) {
+      values = values || dit.values();
+      const nId = dit.node.constructor.decode(dit.root().id()).id;
+      currentStyleState[nId] = values;
+      disableButton(values, dit);
+      return values;
+    }
+    function onCabinetStyleSubmit(values) {
+      setCurrentStyleState(values);
       group.propertyConfig.set(values.style, values.subStyle);
       ThreeDMain.update();
     }
-    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleChange, group.propertyConfig);
+
+    let initialized = false;
+    function initializeDitButton() {
+      if (initialized) disableButton(dit.values(), dit);
+      else {
+        disableButton(setCurrentStyleState(), dit);
+        initialized = true;
+      }
+    }
+    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleSubmit, group.propertyConfig);
     function styleSelector() {
       return dit.root().payload().html();
     }
@@ -30,15 +61,20 @@ class GroupDisplay extends Lookup {
     this.html = () => {
       return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this});
     }
-    this.bodyHtml = () =>  GroupDisplay.bodyTemplate.render({group, propertyHtml});
+    this.bodyHtml = () =>  {
+      setTimeout(initializeDitButton, 200);
+      return GroupDisplay.bodyTemplate.render({group, propertyHtml});
+    }
 
     this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
     this.cabinet = () => this.cabinetDisplay().active();
   }
 }
 
-GroupDisplay.DecisionInputTree = (onComplete, propertyConfigInst) => {
-  const dit = new DecisionInputTree(onComplete, {buttonText: 'Change'});
+GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
+  const dit = new DecisionInputTree(undefined, {buttonText: 'Change'});
+  dit.onChange(disableButton);
+  dit.onSubmit(onSubmit);
   const propertyConfig = new PropertyConfig();
   const styles = propertyConfig.cabinetStyles();
   const cabinetStyles = new Select({
@@ -48,11 +84,11 @@ GroupDisplay.DecisionInputTree = (onComplete, propertyConfigInst) => {
     value: propertyConfigInst.cabinetStyle()
   });
 
-  const hasFrame = new Input({
-    name: 'hasFrame',
-    type: 'checkbox',
-    label: 'Has Frame'
-  })
+  const hasFrame = new Select({
+      name: 'FrameStyle',
+      list: ['Frameless', 'Framed', 'Frame Only'],
+      value: 'Frameless'
+    });
 
   const style = dit.branch('style', [hasFrame, cabinetStyles]);
   styles.forEach((styleName) => {

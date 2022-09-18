@@ -3,17 +3,19 @@ const Vertex2d = require('vertex');
 const SnapLocation2d = require('snap-location');
 
 class Snap2d {
-  constructor(layout, object, tolerance) {
+  constructor(parent, object, tolerance) {
+    name = 'booyacka';
     Object.getSet(this, {object, tolerance}, 'layoutId');
-    if (layout === undefined) return;
+    if (parent === undefined) return;
     const instance = this;
     const id = String.random();
     let start = new Vertex2d();
     let end = new Vertex2d();
+    let layout = parent.layout();
 
     this.toString = () => `SNAP (${tolerance}):${object}`
     this.id = () => id;
-    this.layoutId = () => layout.id();
+    this.parent = () => parent;
     this.radians = object.radians;
     this.angle = object.angle;
     this.x = object.x;

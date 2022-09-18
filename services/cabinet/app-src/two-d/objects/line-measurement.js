@@ -2,11 +2,11 @@
 const Circle2d = require('circle');
 const Vertex2d = require('vertex');
 const Line2d = require('line');
+const Lookup = require('../../../../../public/js/utils/object/lookup');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
 
 class LineMeasurement2d {
   constructor(line, center, layer, modificationFunction) {
-    modificationFunction = modificationFunction || line.length;
     const offset = 3;
     this.line = () => line;
     this.I = (l) => {
@@ -44,7 +44,10 @@ class LineMeasurement2d {
 
     this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
     this.modificationFunction = (func) => {
-      if ((typeof func) === 'function') modificationFunction = func;
+      if ((typeof func) === 'function') {
+        if ((typeof this.id) !== 'function') Lookup.convert(this);
+        modificationFunction = func;
+      }
       return modificationFunction;
     }
 
@@ -52,6 +55,8 @@ class LineMeasurement2d {
     this.display = () => new Measurement(line.length()).display();
 
     this.modify = (value) => modificationFunction(new Measurement(value, true).decimal());
+
+    this.modificationFunction(modificationFunction);
   }
 }
 

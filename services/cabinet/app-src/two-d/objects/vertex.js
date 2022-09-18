@@ -5,6 +5,7 @@ class Vertex2d {
   constructor(point) {
     if (Array.isArray(point)) point = {x: point[0], y: point[1]};
     if (point instanceof Vertex2d) return point;
+    let modificationFunction;
     point = point || {x:0,y:0};
     Object.getSet(this, {point});
     this.layer = point.layer;
@@ -17,6 +18,14 @@ class Vertex2d {
       if (newPoint) this.x(newPoint.x);
       if (newPoint) this.y(newPoint.y);
       return point;
+    }
+
+    this.modificationFunction = (func) => {
+      if ((typeof func) === 'function') {
+        if ((typeof this.id) !== 'function') Lookup.convert(this);
+        modificationFunction = func;
+      }
+      return modificationFunction;
     }
 
     this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
@@ -63,9 +72,7 @@ class Vertex2d {
 }
 
 Vertex2d.fromJson = (json) => {
-  point = json.point;
-  vertex.id(json.id);
-  return new Vertex2d(point);
+  return new Vertex2d(json.point);
 }
 
 Vertex2d.center = (...verticies) => {
