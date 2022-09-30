@@ -94,8 +94,6 @@ class Draw2d {
         ctx.lineWidth = 4;
         ctx.strokeStyle = 'black';
         ctx.fillStyle =  'black';
-        const lc = square.leftCenter();
-        const fc = square.frontLeft();
         ctx.fillText(text, 0, square.height() / 4, square.width());
         ctx.stroke()
       }

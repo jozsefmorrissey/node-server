@@ -22,6 +22,7 @@ const Layout2D = require('../../objects/layout.js');
 const Draw2D = require('../../two-d/draw.js');
 const cabinetBuildConfig = require('../../../public/json/cabinets.json');
 
+let template;
 
 const threeView = new ThreeView();
 du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
@@ -109,7 +110,13 @@ function validateEquations(template, cabinet, valueInput, eqnInput, valueIndex, 
         errorString += `${key},`;
         errorCount++;
       } else {
-        valueInput.value = new Measurement(value).display();
+        const convertCheckBox = valueInput.nextElementSibling;
+        if (convertCheckBox && convertCheckBox.getAttribute('name') === 'convert' &&
+              convertCheckBox.checked) {
+          valueInput.value = new Measurement(value).display();
+        } else {
+          valueInput.value = value;
+        }
       }
     } else {
       if (!template.validateEquation(eqn, cabinet)) {
@@ -157,9 +164,10 @@ function updatePartsDataList() {
   const partKeys = Object.keys(partMap);
   let html = '';
   for (let index = 0; index < partKeys.length; index += 1) {
-    const key = partKeys[index];
-    const value = partMap[key];
-    html += `<option value='${key}'>${value}</option>`;
+    const id = partKeys[index];
+    const partCode = partMap[id].code;
+    const partName = partMap[id].name;
+    html += `<option value='${partCode}'></option>`;
   }
 
   const datalist = du.id('part-list');
@@ -168,7 +176,7 @@ function updatePartsDataList() {
 
 function onPartSelect(elem) {
   console.log(elem.value);
-  threeView.isolatePart(elem.value);
+  threeView.isolatePart(elem.value, template);
   elem.value = '';
 }
 
@@ -303,6 +311,15 @@ function getXyzSelect(label) {
   });
 }
 
+function getWhdSelect(label) {
+  return new Select({
+    label,
+    name: 'xyz',
+    list: {'0': 'W', '1': 'H', '2':'D'},
+    inline: true
+  });
+}
+
 function getOpeningLocationSelect() {
   return new Select({
     name: 'openingLocation',
@@ -317,7 +334,7 @@ function getJoint(obj) {
 function getSubassembly(obj) {
   return {typeInput:  getTypeInput(obj),
           centerXyzSelect: getXyzSelect('Center'),
-          demensionXyzSelect: getXyzSelect('Demension'),
+          demensionXyzSelect: getWhdSelect('Demension'),
           rotationXyzSelect: getXyzSelect('Rotation'),
           getEqn, obj
         };
@@ -564,7 +581,7 @@ du.on.match('click', '.copy-template', (elem) => {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
   const template = CabinetTemplate.get(templateId);
   let jsonStr = JSON.stringify(template.toJson(), null, 2);
-  jsonStr = jsonStr.replace(/.*"id":.*/g, '');
+  jsonStr = jsonStr.replace(/.*"id":.*($|,)/g, '');
   du.copy(jsonStr);
 });
 
@@ -591,7 +608,7 @@ du.on.match('click', '.paste-template', (elem) => {
 
 du.on.match('change', '.template-input', function (elem) {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-  const template = CabinetTemplate.get(templateId);
+  template = CabinetTemplate.get(templateId);
   updateTemplate(elem, template);
 });
 

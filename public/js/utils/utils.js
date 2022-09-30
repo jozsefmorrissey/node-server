@@ -217,6 +217,64 @@ Function.safeStdLibAddition(Array, 'toJson', function (arr) {
     return json;
 }, true);
 
+Function.safeStdLibAddition(Array, 'equalIndexOf', function (elem, startIndex, endIndex) {
+    startIndex =  startIndex > -1 ? startIndex : 0;
+    endIndex = endIndex < this.length ? endIndex : this.length;
+    for (let index = startIndex; index < endIndex; index += 1) {
+      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
+        return index;
+      } else if (elem === this[index]) {
+        return index;
+      }
+    }
+    return -1;
+});
+
+Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
+    for (let index = 0; index < arr.length; index += 1) {
+      this.remove(arr[index]);
+    }
+});
+
+Function.safeStdLibAddition(Array, 'remove', function (elem) {
+    for (let index = 0; index < this.length; index += 1) {
+      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
+        this.splice(index--, 1);
+      } else if (elem === this[index]) {
+        this.splice(index--, 1);
+      }
+    }
+});
+
+Function.safeStdLibAddition(Array, 'compare', function (original, neww, modify) {
+    const comparison = {both: [], removed: [], added: []};
+    const arr = original.concat(neww);
+    const visited = {new: {}, original: {}};
+    arr.forEach((elem) => {
+      const origIndex = original.equalIndexOf(elem);
+      const newIndex = neww.equalIndexOf(elem);
+      if (!visited.new[newIndex] && !visited.original[origIndex]) {
+        if (newIndex !== -1) visited.new[newIndex] = true;
+        if (origIndex !== -1) visited.original[origIndex] = true;
+        if (origIndex !== -1 && newIndex !== -1) comparison.both.push(elem);
+        else if (newIndex !== -1) comparison.added.push(elem);
+        else comparison.removed.push({elem, index: origIndex});
+      }
+    });
+
+    if (modify) {
+      if (comparison.removed.length > 0) {
+        let removed = 0;
+        comparison.removed.forEach((info) => original.splice(info.index - removed++, 1));
+        comparison.removed = comparison.removed.map((info) => info.elem);
+      }
+      if (comparison.added.length > 0) {
+        original.concatInPlace(neww);
+      }
+    }
+    return comparison.removed.length > 0 || comparison.added.length > 0 ? comparison : false;
+}, true);
+
 Function.safeStdLibAddition(Array, 'shuffle', function() {
   let currentIndex = this.length,  randomIndex;
   while (currentIndex != 0) {

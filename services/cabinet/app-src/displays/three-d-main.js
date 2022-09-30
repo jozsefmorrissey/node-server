@@ -74,16 +74,18 @@ du.on.match('click', '.model-label', (target) => {
         label.nextElementSibling.getAttribute('prefix');
   const cabinet = lastRendered;
   const tdm = ThreeDModel.get(cabinet, viewer);
+  let partCode = target.getAttribute('part-code');
   let partId = target.getAttribute('part-id');
   if (partId) {
     if (!has) {
       tdm.inclusiveTarget(type, partId);
-      threeView.isolatePart(partId, cabinet);
+      threeView.isolatePart(partCode, cabinet);
     }
   } else {
     tdm.inclusiveTarget(type, has ? undefined : value);
-    partId = du.find.closest('[part-id]', target).getAttribute('part-id');
-    threeView.isolatePart(partId, cabinet);
+    const elem = du.find.closest('[part-code]', target);
+    partCode = elem.getAttribute('part-code');
+    threeView.isolatePart(partCode, cabinet);
   }
   tdm.render();
 });

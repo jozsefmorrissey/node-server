@@ -139,13 +139,13 @@ class DivideSection extends SpaceSection {
         if (section instanceof DividerSection) {
           const maxWidth = section.maxWidth();
           let halfReveal;
-          if (this.rootAssembly().propertyConfig.isRevealOverlay()) {
-            halfReveal = this.rootAssembly().propertyConfig.reveal().r.value() / 2;
-          } else if (this.rootAssembly().propertyConfig.isInset()) {
-            const insetValue = this.rootAssembly().propertyConfig('Inset').is.value();
+          if (this.propertyConfig().isRevealOverlay()) {
+            halfReveal = this.propertyConfig().reveal().r.value() / 2;
+          } else if (this.propertyConfig().isInset()) {
+            const insetValue = this.propertyConfig('Inset').is.value();
             halfReveal = (section.maxWidth() + insetValue * 2) / 2;
           } else {
-            halfReveal = (maxWidth - this.rootAssembly().propertyConfig.overlay() * 2)/2;
+            halfReveal = (maxWidth - this.propertyConfig().overlay() * 2)/2;
           }
           offset += index < limitIndex ? halfReveal*2 : halfReveal;
         }
@@ -159,14 +159,14 @@ class DivideSection extends SpaceSection {
       for (let index = 0; index < limitIndex; index += 1) {
         const section = this.sections[index];
         if (section instanceof DividerSection) {
-          if (this.rootAssembly().propertyConfig.isRevealOverlay()) {
-            offset += this.rootAssembly().propertyConfig.reveal().r.value();
-          }  else if (this.rootAssembly().propertyConfig.isInset()) {
-            const insetValue = this.rootAssembly().propertyConfig('Inset').is.value();
+          if (this.propertyConfig().isRevealOverlay()) {
+            offset += this.propertyConfig().reveal().r.value();
+          }  else if (this.propertyConfig().isInset()) {
+            const insetValue = this.propertyConfig('Inset').is.value();
             offset += section.maxWidth() + insetValue * 2;
           } else {
             offset += section.maxWidth();
-            offset -= this.rootAssembly().propertyConfig.overlay() * 2;
+            offset -= this.propertyConfig().overlay() * 2;
           }
         }
       }

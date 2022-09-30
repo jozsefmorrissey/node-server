@@ -14,6 +14,7 @@ class Snap2d {
     let layout = parent.layout();
 
     this.toString = () => `SNAP (${tolerance}):${object}`
+    this.position = {};
     this.id = () => id;
     this.parent = () => parent;
     this.radians = object.radians;
@@ -24,16 +25,25 @@ class Snap2d {
     this.width = object.width;
     this.onChange = object.onChange;
 
-    const backLeft = new SnapLocation2d(this, "backLeft",  new Vertex2d(null),  'backRight', 'red');
-    const backRight = new SnapLocation2d(this, "backRight",  new Vertex2d(null),  'backLeft', 'purple');
-    const frontRight = new SnapLocation2d(this, "frontRight",  new Vertex2d(null),  'frontLeft', 'black');
-    const frontLeft = new SnapLocation2d(this, "frontLeft",  new Vertex2d(null),  'frontRight', 'green');
+    this.view = () => {
+      switch (this) {
+        case parent.topview(): return 'topview';
+        case parent.bottomview(): return 'bottomview';
+        case parent.leftview(): return 'leftview';
+        case parent.rightview(): return 'rightview';
+        case parent.frontview(): return 'frontview';
+        case parent.backview(): return 'backview';
+        default: return null;
+      }
+    }
 
-    const backCenter = new SnapLocation2d(this, "backCenter",  new Vertex2d(null),  'backCenter', 'teal');
-    const leftCenter = new SnapLocation2d(this, "leftCenter",  new Vertex2d(null),  'rightCenter', 'pink');
-    const rightCenter = new SnapLocation2d(this, "rightCenter",  new Vertex2d(null),  'leftCenter', 'yellow');
-
-    const snapLocations = [backCenter,leftCenter,rightCenter,backLeft,backRight,frontLeft,frontRight];
+    const snapLocations = [];
+    this.addLocation = (snapLoc) => {
+      if (snapLoc instanceof SnapLocation2d && this.position[snapLoc.location()] === undefined) {
+        snapLocations.push(snapLoc);
+        this.position[snapLoc.location()] = snapLoc.at;
+      }
+    }
     function getSnapLocations(paired) {
       if (paired === undefined) return snapLocations;
       const locs = [];
@@ -49,42 +59,13 @@ class Snap2d {
     this.snapLocations = getSnapLocations;
     this.snapLocations.notPaired = () => getSnapLocations(false);
     this.snapLocations.paired = () => getSnapLocations(true);
-    this.snapLocations.rotate = backCenter.rotate;
+    // this.snapLocations.rotate = backCenter.rotate;
     function resetVertices() {
       for (let index = 0; index < snapLocations.length; index += 1) {
         const snapLoc = snapLocations[index];
-        instance[snapLoc.location()]();
+        instance.position[snapLoc.location()]();
       }
     }
-
-    function centerMethod(snapLoc, widthMultiplier, heightMultiplier, position) {
-      const vertex = snapLoc.vertex();
-      // if (position === undefined && vertex.point() !== null) return vertex;
-      const center = object.center();
-      const rads = object.radians();
-      const offsetX = object.width() * widthMultiplier * Math.cos(rads) -
-                        object.height() * heightMultiplier * Math.sin(rads);
-      const offsetY = object.height() * heightMultiplier * Math.cos(rads) +
-                        object.width() * widthMultiplier * Math.sin(rads);
-
-      if (position !== undefined) {
-        const posCenter = new Vertex2d(position.center);
-        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
-      }
-      const backLeftLocation = {x: center.x() - offsetX , y: center.y() - offsetY};
-      vertex.point(backLeftLocation);
-      return snapLoc;
-    }
-
-    this.frontCenter = (position) => centerMethod(frontCenter, 0, -.5, position);
-    this.backCenter = (position) => centerMethod(backCenter, 0, .5, position);
-    this.leftCenter = (position) => centerMethod(leftCenter, .5, 0, position);
-    this.rightCenter = (position) => centerMethod(rightCenter, -.5, 0, position);
-
-    this.backLeft = (position) => centerMethod(backLeft, .5, .5, position);
-    this.backRight = (position) => centerMethod(backRight, -.5, .5, position);
-    this.frontLeft = (position) =>  centerMethod(frontLeft, .5, -.5, position);
-    this.frontRight = (position) => centerMethod(frontRight, -.5, -.5, position);
 
     function calculateMaxAndMin(closestVertex, furthestVertex, wall, position, axis) {
       const maxAttr = `max${axis.toUpperCase()}`;
@@ -120,20 +101,20 @@ class Snap2d {
         const theta = wall.radians();
         let position = {center, theta};
 
-        const backCenter = instance.backCenter({center, theta});
-        const backLeftCenter = instance.backLeft({center: wall.startVertex(), theta});
-        if (backCenter.distance(backLeftCenter) < object.maxDem() / 2) return object.move({center: backLeftCenter, theta});
-        const backRightCenter = instance.backRight({center: wall.endVertex(), theta})
-        if (backCenter.distance(backRightCenter) < object.maxDem() / 2) return object.move({center: backRightCenter,theta});
+        const backCenter = instance.position.backCenter({center, theta});
+        const backLeftCenter = instance.position.backLeft({center: wall.startVertex(), theta});
+        if (backCenter.distance(backLeftCenter) < object.maxDem() / 2) return instance.makeMove({center: backLeftCenter, theta});
+        const backRightCenter = instance.position.backRight({center: wall.endVertex(), theta})
+        if (backCenter.distance(backRightCenter) < object.maxDem() / 2) return instance.makeMove({center: backRightCenter,theta});
 
-        return {center: backCenter, theta};
+        return {center: backCenter, theta, wall};
       }
     }
 
     function findObjectSnapLocation (center) {
       let snapObj;
       SnapLocation2d.active().forEach((snapLoc) => {
-        const targetSnapLoc = instance[snapLoc.targetVertex()]();
+        const targetSnapLoc = instance.position[snapLoc.targetVertex()]();
         if (snapLoc.isConnected(instance) ||
             snapLoc.pairedWith() !== null || targetSnapLoc.pairedWith() !== null) return;
         const vertDist = snapLoc.vertex().distance(center);
@@ -148,7 +129,7 @@ class Snap2d {
         const funcName = snapLoc.targetVertex();
         if (funcName === 'backCenter') theta = (theta + Math.PI) % (2 * Math.PI);
         lastPotentalPair = [snapLoc, snapObj.targetSnapLoc];
-        return {snapLoc, center: instance[funcName]({center, theta}), theta};
+        return {snapLoc, center: instance.position[funcName]({center, theta}), theta};
       }
     }
 
@@ -156,6 +137,7 @@ class Snap2d {
     this.setLastPotentialPair = (lpp) => lastPotentalPair = lpp;
     function checkPotentialPair() {
       if (!lastPotentalPair) return;
+      if (!(lastPotentalPair[1] instanceof SnapLocation2d)) return true;
       const snap1 = lastPotentalPair[0];
       const snap2 = lastPotentalPair[1];
       snap1.eval();
@@ -169,6 +151,9 @@ class Snap2d {
       lastPotentalPair && lastPotentalPair[0].pairWith(lastPotentalPair[1])
       lastPotentalPair = null;
     };
+    this.makeMove = (position) => {
+      object.move(position);
+    }
     this.move = (center) => {
       checkPotentialPair();
       const pairedSnapLocs = this.snapLocations.paired();
@@ -186,7 +171,7 @@ class Snap2d {
           const targetVertex = snapLoc.targetVertex();
           const targetSnapLoc = this[targetVertex]();
           lastPotentalPair = [targetSnapLoc, snapLoc];
-          const vertexCenter = snapLoc.parent()[snapLoc.location()]().vertex();
+          const vertexCenter = snapLoc.parent().position[snapLoc.location()]().vertex();
           return targetSnapLoc.move(vertexCenter);
         }
         const snapLoc = pairedSnapLocs[0];
@@ -197,11 +182,13 @@ class Snap2d {
       const snapLocation = findObjectSnapLocation(center);
       const wallSnapLocation = findWallSnapLocation(center);
       if (snapLocation) {
-        return object.move(snapLocation);
+        return this.makeMove(snapLocation);
       } else if (!centerWithin && (wallSnapLocation instanceof Object)) {
-        return object.move(wallSnapLocation);
+        const move = this.makeMove(wallSnapLocation);
+        lastPotentalPair = [backCenter, wallSnapLocation.wall];
+        return move;
       } else if (centerWithin) {
-        return object.move({center});
+        return this.makeMove({center});
       }
     };
   }

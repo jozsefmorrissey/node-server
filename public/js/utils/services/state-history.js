@@ -1,7 +1,7 @@
 
 class StateHistory {
-  constructor(getState, minTimeInterval, states) {
-    states ||= [];
+  constructor(getState, setState, minTimeInterval) {
+    let states = [];
     let index = 0;
     minTimeInterval = minTimeInterval || 400;
     const instance = this;
@@ -9,6 +9,7 @@ class StateHistory {
 
 
     const indexHash = () => states[index].hash;
+    this.states = () => JSON.clone(states);
     this.toString = () => {
       let str = ''
       states.forEach((s, i) => i === index ?
@@ -29,18 +30,18 @@ class StateHistory {
         }
       }
     }
-    if (states.length === 0) getNewState();
+    getNewState();
 
     this.index = (i) => {
       if (i > -1 && i < states.length) index = i;
       return index;
     }
 
-    this.clone = (getState) => {
-      const sh = new StateHistory(getState, minTimeInterval, states);
-      sh.index(index);
-      return sh;
-    }
+    // this.clone = (getState) => {
+    //   const sh = new StateHistory(getState, minTimeInterval, this.states());
+    //   sh.index(index);
+    //   return sh;
+    // }
 
     this.newState = () => {
       const thisReqTime = new Date().getTime();
@@ -61,6 +62,7 @@ class StateHistory {
         const state = states[--index];
         lastStateReqTime = 0;
         console.log(this.toString());
+        setState(state.json);
         return state.json;
       }
     }
@@ -70,6 +72,7 @@ class StateHistory {
         const state = states[++index];
         lastStateReqTime = 0;
         console.log(this.toString());
+        setState(state.json);
         return state.json;
       }
     }

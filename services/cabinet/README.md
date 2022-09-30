@@ -27,3 +27,4 @@ figure out three-view hidden lines
 orient parts correctly for tree-view
 ensure if new property is added existing configs updated with default value
 eliminate timers!!!! (lazy programming)
+StringMathEvaluator: Math.atan(3/4)* (180/Math.PI) works but Math.atan(3/4)*(180/Math.PI) does not

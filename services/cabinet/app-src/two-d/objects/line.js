@@ -234,6 +234,14 @@ class Line2d {
       return approximate(Math.atan2(deltaY, deltaX), 100);
     }
 
+    this.equals = (other) => {
+      if (other === this) return true;
+      if (this.toString() === other.toString()) return true;
+      if (this.toString() === other.toNegitiveString()) return true;
+      return false;
+    }
+
+
     this.clean = (other) => {
       if (!(other instanceof Line2d)) return;
       if (other.startVertex().equal(other.endVertex())) return this;

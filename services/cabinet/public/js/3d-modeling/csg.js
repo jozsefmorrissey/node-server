@@ -548,7 +548,7 @@ CSG.Plane = function(normal, w) {
 
 // `CSG.Plane.EPSILON` is the tolerance used by `splitPolygon()` to decide if a
 // point is on the plane.
-CSG.Plane.EPSILON = 1e-5;
+CSG.Plane.EPSILON = 1e-3;
 
 CSG.Plane.fromPoints = function(a, b, c) {
   var n = b.minus(a).cross(c.minus(a)).unit();
@@ -591,12 +591,15 @@ CSG.Plane.prototype = {
     switch (polygonType) {
       case COPLANAR:
         (this.normal.dot(polygon.plane.normal) > 0 ? coplanarFront : coplanarBack).push(polygon);
+        // console.log('COPLANAR');
         break;
       case FRONT:
         front.push(polygon);
+        // console.log('FRONT');
         break;
       case BACK:
         back.push(polygon);
+        // console.log('BACK');
         break;
       case SPANNING:
         var f = [], b = [];
@@ -615,6 +618,7 @@ CSG.Plane.prototype = {
         }
         if (f.length >= 3) front.push(new CSG.Polygon(f, polygon.shared));
         if (b.length >= 3) back.push(new CSG.Polygon(b, polygon.shared));
+        // console.log('SPANNING');
         break;
     }
   }
@@ -730,6 +734,7 @@ CSG.Node.prototype = {
   // nodes there. Each set of polygons is partitioned using the first polygon
   // (no heuristic is used to pick a good split).
   build: function(polygons) {
+    // console.log('\n');
     if (!polygons.length) return;
     if (!this.plane) this.plane = polygons[0].plane.clone();
     var front = [], back = [];
@@ -761,7 +766,9 @@ function round(value, percision) {
 */
 function ArbitraryRotate(point, degreestheta, radius)
 {
-  theta = degreestheta * Math.PI/180;
+  // theta = degreestheta * Math.PI/180;
+  theta = Math.round(100000000000* (degreestheta * Math.PI/180)) / 100000000000;
+  // console.log('theta', theta);
   let p = point;
   let r = radius;
    let q = {x: 0.0, y: 0.0, z: 0.0};

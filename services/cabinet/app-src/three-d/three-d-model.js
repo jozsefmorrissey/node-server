@@ -55,9 +55,9 @@ class ThreeDModel {
     let inclusiveTarget = {};
     let partMap;
     let renderId;
-    let targetPartId;
+    let targetPartCode;
     let rootAssembly = assembly.getRoot();
-    this.setTargetPartId = (id) => targetPartId = id;
+    this.setTargetPartCode = (id) => targetPartCode = id;
 
     this.assembly = (a) => {
       if (a !== undefined) {
@@ -151,6 +151,9 @@ class ThreeDModel {
 
     function getModel(assem) {
       const pos = assem.position().current();
+      if (pos.rotation.x % 45 !== 0 || pos.rotation.y % 45 !== 0 || pos.rotation.z % 45 !== 0) {
+        console.log('position off')
+      }
       let model;
       if (assem instanceof DrawerBox) {
         model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
@@ -210,7 +213,7 @@ class ThreeDModel {
       partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
-        partMap[assem.uniqueId()] = assem.path();
+        partMap[assem.uniqueId()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
         if (!hidden(assem)) {
           if (assem.constructor.name === 'DrawerFront') {
             console.log('df mf');
@@ -222,7 +225,7 @@ class ThreeDModel {
           else if (b && assem.length() && assem.width() && assem.thickness()) {
             a = a.union(b);
           }
-          if (assem.uniqueId() === targetPartId) {
+          if (assem.partCode() === targetPartCode) {
             lm = b.clone();
             const rotation = assem.position().rotation();
             rotation.x *=-1;

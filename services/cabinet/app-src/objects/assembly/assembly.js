@@ -11,7 +11,8 @@ const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() :
 class Assembly extends Lookup {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
     super(undefined, 'uniqueId');
-    let instance = this;
+    const instance = this;
+    let group;
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
     const initialVals = {
       part: true,
@@ -31,9 +32,12 @@ class Assembly extends Lookup {
       const split = path.split('.');
       let attr = split[0];
       let objIdStr;
-      if (split.length === 2) {
+      if (split.length > 2) {
+        console.log('her');
+      }
+      if (split.length > 1) {
         objIdStr = split[0];
-        attr = split[1];
+        attr = split.slice(1).join('.');
       }
 
       let obj;
@@ -52,6 +56,20 @@ class Assembly extends Lookup {
       let currAssem = this;
       while(currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
       return currAssem;
+    }
+
+    this.group = (g) => {
+      if (g) group = g;
+      return group;
+    }
+    this.propertyConfig = (one, two) => {
+      const parent = this.parentAssembly();
+      if (parent instanceof Assembly) return parent.propertyConfig(one, two);
+      const group = this.group();
+      if (group) {
+        if (one) return group.propertyConfig(one, two);
+        return group.propertyConfig;
+      }
     }
 
     let getting =  false;
@@ -226,6 +244,8 @@ Assembly.all = () => {
   keys.forEach((key) => list.concat(Object.values(Assembly.list[key])));
   return list;
 }
+
+const positionReg = /^(c|r|center|rotation).(x|y|z)$/;
 Assembly.resolveAttr = (assembly, attr) => {
   if (!(assembly instanceof Assembly)) return undefined;
   if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
@@ -234,6 +254,14 @@ Assembly.resolveAttr = (assembly, attr) => {
     return assembly.width();
   } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
     return assembly.thickness();
+  }
+
+  const positionMatch = attr.match(positionReg);
+  if (positionMatch) {
+    const func = positionMatch[1];
+    const axis = positionMatch[2];
+    if (func === 'r' || func === 'rotation') return assembly.position().rotation(axis);
+    if (func === 'c' || func === 'center') return assembly.position().center(axis);
   }
   return assembly.value(attr);
 }

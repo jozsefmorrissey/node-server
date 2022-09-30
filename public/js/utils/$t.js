@@ -3,7 +3,7 @@
 
 
 
-const CustomEvent = require('./custom-error');
+const CustomEvent = require('./custom-event');
 const ExprDef = require('./expression-definition');
 
 class $t {

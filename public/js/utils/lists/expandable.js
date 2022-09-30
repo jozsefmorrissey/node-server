@@ -1,7 +1,7 @@
 
 
 
-const CustomEvent = require('../custom-error.js');
+const CustomEvent = require('../custom-event.js');
 const du = require('../dom-utils.js');
 const $t = require('../$t.js');
 

@@ -29,7 +29,7 @@ class Section extends Assembly {
 
     const calculateRevealOffset = (border, direction) => {
       const borderPos = border.position();
-      const propConfig = this.rootAssembly().propertyConfig;
+      const propConfig = this.propertyConfig();
       const positive = direction.indexOf('-') === -1;
       const axis = direction.replace(/\+|-/, '');
       const magnitude = positive ? 1 : -1;

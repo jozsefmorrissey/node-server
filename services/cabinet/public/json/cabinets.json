@@ -168,6 +168,570 @@ module.exports = {
       }
     ]
   },
+  "wall": {
+    "_TYPE": "CabinetTemplate",
+    "ID_ATTRIBUTE": "id",
+    "type": "wall",
+    "values": [
+      {
+        "key": "bottomInsetDepth",
+        "eqn": "0"
+      },
+      {
+        "key": "topInsetDepth",
+        "eqn": "0"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - pr.t/2",
+          "c.h / 2",
+          "pr.w / 2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Right",
+        "code": "pr"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "pl.t/2",
+          "c.h/2",
+          "pl.w/2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Left",
+        "code": "pl"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "pl.t + pb.w/2",
+          "pb.h/2 + pbtm.t",
+          "c.t - pb.t /2"
+        ],
+        "demensions": [
+          "c.w - pl.t - pr.t",
+          "c.h - pbtm.t -pt.t",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "Panel.back",
+        "code": "pb"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "pl.t + pt.w / 2",
+          "c.h - pt.t/2",
+          "pt.l/2 "
+        ],
+        "demensions": [
+          "c.w - pl.t - pr.t",
+          "c.t ",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panal.top",
+        "code": "pt"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "pbtm.w /2 + pl.t",
+          "pbtm.t/2",
+          "pbtm.h / 2"
+        ],
+        "demensions": [
+          "c.w - pl.t - pr.t",
+          "c.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panal.Bottom",
+        "code": "pbtm"
+      }
+    ],
+    "joints": [
+      {
+        "type": "Dado",
+        "malePartCode": "pb",
+        "femalePartCode": "pt",
+        "maleOffset": "pt.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+y"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pb",
+        "femalePartCode": "pr",
+        "maleOffset": "pr.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pb",
+        "femalePartCode": "pbtm",
+        "maleOffset": "pbtm.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "-y"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pb",
+        "femalePartCode": "pl",
+        "maleOffset": "pl.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-x"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": "33"
+    },
+    "openings": []
+  },
+  "corner-wall": {
+    "_TYPE": "CabinetTemplate",
+
+    "ID_ATTRIBUTE": "id",
+    "type": "corner-wall",
+    "values": [
+      {
+        "key": "cnrR",
+        "eqn": "4*2.54",
+        "id": "pz0usts"
+      },
+      {
+        "key": "fwl",
+        "eqn": "c.t - depthR",
+        "id": "v47f8o3"
+      },
+      {
+        "key": "fwr",
+        "eqn": "c.w - depthL",
+        "id": "ammy5c5"
+      },
+      {
+        "key": "bottomInsetDepth",
+        "eqn": "0",
+        "id": "h1i4yon"
+      },
+      {
+        "key": "topInsetDepth",
+        "eqn": "0",
+        "id": "r30qsyq"
+      },
+      {
+        "key": "depthL",
+        "eqn": "30.48",
+        "id": "r8els3r"
+      },
+      {
+        "key": "depthR",
+        "eqn": "30.48",
+        "id": "zoxsnu9"
+      },
+      {
+        "key": "cnrD",
+        "eqn": "Math.sqrt(pbw*pbw/2 - cnrR*cnrR)",
+        "id": "vju4ekg"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((cnrR+pb.t)*(cnrR+pb.t)*2)",
+        "id": "bg3l1cw"
+      },
+      {
+        "key": "backhyp",
+        "eqn": "Math.sqrt((pl.t*pl.t)*2)",
+        "id": "zmra3po"
+      },
+      {
+        "key": "frontLeftTheta",
+        "eqn": "Math.atan(fwl/fwr)",
+        "id": "woqnfe1"
+      },
+      {
+        "key": "frontHype",
+        "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)",
+        "id": "u1sgalg"
+      },
+      {
+
+        "key": "cutWidth",
+        "eqn": "frontHype * 2"
+      },
+      {
+
+        "key": "frontHypeCenterX",
+        "eqn": "fwl/2"
+      },
+      {
+
+        "key": "frontHypeCenterD",
+        "eqn": "fwr/2"
+      },
+      {
+
+        "key": "cutCenterX",
+        "eqn": "frontHypeCenterX - frontHype * Math.cos(frontLeftTheta)"
+      },
+      {
+
+        "key": "cutCenterD",
+        "eqn": "frontHypeCenterD - frontHype * Math.sin(frontLeftTheta)"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.t - cnrR/2",
+          "c.h/2",
+          "c.w - cnrR/2"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pwt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Panel.Back",
+        "code": "pb",
+        "id": "ly2p41u"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "(c.t - pr.w) + pr.w / 2",
+          "c.h / 2",
+          "pr.t / 2"
+        ],
+        "demensions": [
+          "depthR*1.1",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "Panel.Right",
+        "code": "pr",
+        "id": "67tkjp5"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "pl.t/2",
+          "c.h/2",
+          "(c.w - pl.w) + pl.w/2"
+        ],
+        "demensions": [
+          "depthL*1.1",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Left",
+        "code": "pl",
+        "id": "kfuwf6d"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "pbl.w / 2 + pl.t ",
+          "c.h/2",
+          "c.w - t / 2"
+        ],
+        "demensions": [
+          "c.t - cnrR",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "Panel.back.Left",
+        "code": "pbl",
+        "id": "qnpktr8"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.t - pbr.t/2",
+          "c.h/2",
+          "pbr.w/2 + pr.t"
+        ],
+        "demensions": [
+          "c.w - cnrR",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Back.Right",
+        "code": "pbr",
+        "id": "a1yypp5"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.t / 2",
+          "c.h - topInsetDepth - t / 2",
+          "c.w / 2"
+        ],
+        "demensions": [
+          "c.t - pbr.t - pl.t",
+          "c.w - pbl.t - pr.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panal.top",
+        "code": "pt",
+        "id": "0p8zyq0"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.t / 2",
+          "bottomInsetDepth + t / 2",
+          "c.w / 2"
+        ],
+        "demensions": [
+          "c.t - pbr.t - pl.t",
+          "c.w - pbl.t - pr.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panal.top",
+        "code": "pbtm",
+        "id": "uqb7ksc"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "cutCenterX",
+          "c.h/2",
+          "cutCenterD"
+        ],
+        "demensions": [
+          "frontHype * 2",
+          "frontHype*2",
+          "c.h"
+        ],
+        "rotation": [
+          "90",
+          "frontLeftTheta * (180 / Math.PI)",
+          0
+        ],
+        "name": "Cutter.Front",
+        "code": "cut",
+        "id": "t2nx210"
+      }
+    ],
+    "joints": [
+      {
+        "malePartCode": "pb",
+        "femalePartCode": "pbtm",
+        "type": "Butt",
+        "id": "jhdiitu"
+      },
+      {
+        "malePartCode": "pb",
+        "femalePartCode": "pbr",
+        "type": "Butt",
+        "id": "tfovv9r"
+      },
+      {
+        "malePartCode": "pb",
+        "femalePartCode": "pbl",
+        "type": "Butt",
+        "id": "i49ifbe"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbtm",
+        "femalePartCode": "pr",
+        "maleOffset": "pr.t / 2",
+        "demensionAxis": "y",
+        "centerAxis": "-z",
+        "id": "0zszlb9"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbtm",
+        "femalePartCode": "pl",
+        "maleOffset": "pl.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "vbwtc6l"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbtm",
+        "femalePartCode": "pbl",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+z",
+        "id": "x8qno2z"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbtm",
+        "femalePartCode": "pbr",
+        "maleOffset": "pbr.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "3zyqkyg"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pt",
+        "femalePartCode": "pr",
+        "maleOffset": "pr.t / 2",
+        "demensionAxis": "y",
+        "centerAxis": "-z",
+        "id": "ho44x8c"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pt",
+        "femalePartCode": "pl",
+        "maleOffset": "pl.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "f2yqowv"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pt",
+        "femalePartCode": "pbl",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+z",
+        "id": "xlic9x8"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pt",
+        "femalePartCode": "pbr",
+        "maleOffset": "pbr.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "dv1u67c"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbl",
+        "femalePartCode": "pl",
+        "maleOffset": "pl.t",
+        "demensionAxis": "x",
+        "centerAxis": "+y",
+        "id": "861ea5i"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbr",
+        "femalePartCode": "pr",
+        "maleOffset": "pr.t",
+        "demensionAxis": "x",
+        "centerAxis": "+y",
+        "id": "t0ywrvc"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "pb",
+        "femalePartCode": "pt",
+        "id": "e3z7qur"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "pt",
+        "id": "k0atwnf"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "pbtm",
+        "id": "4ke3jn9"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "pr",
+        "id": "lr1xqx8"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "pl",
+        "id": "bk2rjwz"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": "33"
+    },
+    "openings": []
+  },
   "corner-wall(L)": {
     "_TYPE": "CabinetTemplate",
     "ID_ATTRIBUTE": "id",
@@ -486,162 +1050,6 @@ module.exports = {
         "type": "Butt",
         "malePartCode": "cut",
         "femalePartCode": "pbtm"
-      }
-    ],
-    "dividerJoint": {
-      "type": "Dado",
-      "maleOffset": "33"
-    },
-    "openings": []
-  },
-  "wall": {
-    "_TYPE": "CabinetTemplate",
-    "ID_ATTRIBUTE": "id",
-    "type": "wall",
-    "values": [
-      {
-        "key": "bottomInsetDepth",
-        "eqn": "0"
-      },
-      {
-        "key": "topInsetDepth",
-        "eqn": "0"
-      }
-    ],
-    "subassemblies": [
-      {
-        "type": "Panel",
-        "center": [
-          "c.w - pr.t/2",
-          "c.h / 2",
-          "pr.w / 2"
-        ],
-        "demensions": [
-          "c.t",
-          "c.h",
-          "pwt34"
-        ],
-        "rotation": [
-          0,
-          "90",
-          0
-        ],
-        "name": "Panel.Right",
-        "code": "pr"
-      },
-      {
-        "type": "Panel",
-        "center": [
-          "pl.t/2",
-          "c.h/2",
-          "pl.w/2"
-        ],
-        "demensions": [
-          "c.t",
-          "c.h",
-          "pwt34"
-        ],
-        "rotation": [
-          0,
-          "90",
-          0
-        ],
-        "name": "Panel.Left",
-        "code": "pl"
-      },
-      {
-        "type": "Panel",
-        "center": [
-          "pl.t + pb.w/2",
-          "pb.h/2 + pbtm.t",
-          "c.t - pb.t /2"
-        ],
-        "demensions": [
-          "c.w - pl.t - pr.t",
-          "c.h - pbtm.t -pt.t",
-          "pwt34"
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "name": "Panel.back",
-        "code": "pb"
-      },
-      {
-        "type": "Panel",
-        "center": [
-          "pl.t + pt.w / 2",
-          "c.h - pt.t/2",
-          "pt.l/2 "
-        ],
-        "demensions": [
-          "c.w - pl.t - pr.t",
-          "c.t ",
-          "pwt34"
-        ],
-        "rotation": [
-          "90",
-          "0",
-          0
-        ],
-        "name": "Panal.top",
-        "code": "pt"
-      },
-      {
-        "type": "Panel",
-        "center": [
-          "pbtm.w /2 + pl.t",
-          "pbtm.t/2",
-          "pbtm.h / 2"
-        ],
-        "demensions": [
-          "c.w - pl.t - pr.t",
-          "c.t",
-          "pwt34"
-        ],
-        "rotation": [
-          "90",
-          "0",
-          0
-        ],
-        "name": "Panal.Bottom",
-        "code": "pbtm"
-      }
-    ],
-    "joints": [
-      {
-        "type": "Dado",
-        "malePartCode": "pb",
-        "femalePartCode": "pt",
-        "maleOffset": "pt.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "+y"
-      },
-      {
-        "type": "Dado",
-        "malePartCode": "pb",
-        "femalePartCode": "pr",
-        "maleOffset": "pr.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "+x"
-      },
-      {
-        "type": "Dado",
-        "malePartCode": "pb",
-        "femalePartCode": "pbtm",
-        "maleOffset": "pbtm.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "-y"
-      },
-      {
-        "type": "Dado",
-        "malePartCode": "pb",
-        "femalePartCode": "pl",
-        "maleOffset": "pl.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "-x"
       }
     ],
     "dividerJoint": {
@@ -1080,7 +1488,7 @@ module.exports = {
   },
   "openings": []
 },
-  "corner-base-blind": {
+  "corner-base-blind (R)": {
   "_TYPE": "CabinetTemplate",
 
   "ID_ATTRIBUTE": "id",
@@ -1680,5 +2088,5 @@ module.exports = {
 
       }
     ]
-  }
+  },
 }

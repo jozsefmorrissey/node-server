@@ -33,7 +33,7 @@ class OpeningCoverSection extends SpaceSection {
 
     this.coverDems = function(attr) {
       const dems = instance.coverable().dems;
-      // const inset = instance.rootAssembly().propertyConfig.isInset();
+      // const inset = instance.propertyConfig().isInset();
       // const dems = inset ? instance.innerSize() : instance.outerSize().dems;
       // TODO: access User Defined variable
       dems.z = (3/4) * 2.54;
@@ -42,7 +42,7 @@ class OpeningCoverSection extends SpaceSection {
 
     this.coverCenter = function (attr) {
       const center = instance.outerSize().center;
-      const inset = instance.rootAssembly().propertyConfig.isInset();
+      const inset = instance.propertyConfig().isInset();
       // TODO access user defined values;
       const reveal = inset ? 3/32 : 3/4;
       center.z = (reveal * 2.54) / -2;

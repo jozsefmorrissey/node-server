@@ -2,12 +2,11 @@
 const Vertex2d = require('vertex');
 const approximate = require('../../../../../public/js/utils/approximate.js');
 
-class Square2d {
+class Corner {
   constructor(center, height, width, radians) {
     width = width === undefined ? 121.92 : width;
     height = height === undefined ? 60.96 : height;
     radians = radians === undefined ? 0 : radians;
-    const uniqueId = String.random();
     const instance = this;
     Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
     if ((typeof center) === 'function') this.center = center;
@@ -56,6 +55,8 @@ class Square2d {
       return Math.toDegrees(this.radians());
     }
 
+    // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
+    // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
     this.x = (val) => {
       if (val !== undefined) this.center().x(val);
       return this.center().x();
@@ -79,10 +80,40 @@ class Square2d {
       return true;
     };
 
+    function centerMethod(widthMultiplier, heightMultiplier, position) {
+      const center = instance.center();
+      const rads = instance.radians();
+      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
+                        instance.height() * heightMultiplier * Math.sin(rads);
+      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
+                        instance.width() * widthMultiplier * Math.sin(rads);
+
+      if (position !== undefined) {
+        const posCenter = new Vertex2d(position.center);
+        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+      }
+      const backLeftLocation = {
+            x: instance.center().x() - offsetX ,
+            y: instance.center().y() - offsetY
+      };
+      return new Vertex2d(backLeftLocation);
+    }
+
+
+    this.frontCenter = (position) => centerMethod(0, -.5, position);
+    this.backCenter = (position) => centerMethod(0, .5, position);
+    this.leftCenter = (position) => centerMethod(.5, 0, position);
+    this.rightCenter = (position) => centerMethod(-.5, 0, position);
+
+    this.backLeft = (position) => centerMethod(.5, .5, position);
+    this.backRight = (position) => centerMethod(-.5, .5, position);
+    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
+    this.frontRight = (position) => centerMethod(-.5, -.5, position);
+
     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
 
-    this.toString = () => `Square2d(${uniqueId}): ${this.width()} X ${this.height()}] @ ${this.center()}`
+    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
   }
 }
 

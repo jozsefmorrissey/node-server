@@ -103,7 +103,7 @@ class PropertyConfig {
         json[key] = [];
         const propKeys = Object.keys(props[key]);
         propKeys.forEach((propKey) => {
-          if (props[key][propKey] && props[key][propKey].toJson === 'function')
+          if (props[key][propKey] && (typeof props[key][propKey].toJson) === 'function')
             json[key].push(props[key][propKey].toJson())
         });
       });

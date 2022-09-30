@@ -11,7 +11,6 @@ const Vertex2d = require('../two-d/objects/vertex.js');
 const Line2d = require('../two-d/objects/line.js');
 const Circle2d = require('../two-d/objects/circle.js');
 const SnapLocation2d = require('../two-d/objects/snap-location.js');
-const Snap2d = require('../two-d/objects/snap.js');
 const LineMeasurement2d = require('../two-d/objects/line-measurement');
 
 // TODO: Rename
@@ -33,7 +32,7 @@ let hoverMap;
 
 const resetHoverMap = () => hoverMap = {
     Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2d: {}, LineMeasurement2d: {},
-    Object2d: {}, Square2d: {}, Snap2d: {}, SnapLocation2d: {}
+    Object2d: {}, Square2d: {}, SnapSquare: {}, SnapLocation2d: {}
   };
 
 const windowLineWidth = 8;
@@ -91,9 +90,12 @@ du.on.match('enter', '.value-2d', (elem) => {
     case 'cabinet':
       const cabinet = props.obj.payload();
       const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.uniqueId()}']`);
-      const input = du.find.down(`input[name='${props.key}']`, cabCnt);
-      input.value = props.display;
+      if (cabCnt) {
+        const input = du.find.down(`input[name='${props.key}']`, cabCnt);
+        input.value = props.display;
+      }
       cabinet[props.key](props.value);
+      const square = props.obj.topview().object();
       square[props.key === 'thickness' ? 'height' : props.key](props.value);
       panZ.once();
       return;
@@ -105,9 +107,8 @@ du.on.match('enter', '.value-2d', (elem) => {
     props.obj = props.obj.topview().object();
   }
 
-  props.obj[props.key](props.value);
+  props.obj.topview()[props.key](props.value);
   elem.value = props.display;
-  layout.history().forceState();
   panZ.once();
 });
 
@@ -124,7 +125,8 @@ function remove() {
       const cabinet = hovering.parent().payload();
       const cabinetHeader = du.find(`.cabinet-header[cabinet-id='${cabinet.uniqueId()}']`);
       const removeButton = du.find.closest('.expandable-item-rm-btn', cabinetHeader)
-      removeButton.click();
+      if (removeButton) removeButton.click();
+      else console.warn('Remove button for cabinet should be present but is not present');
     }
     layout.remove(hovering.parent().id());
   } else {
@@ -182,23 +184,16 @@ function clearCache() {
 }
 
 function undo(target) {
-  const state = layout.history().back();
-  if (state) layout = Layout2D.fromJson(state, layout.history());
+  layout.history().back();
   clearCache();
   panZ.once();
-  console.log('undo State:', state.id);
 }
 
 function redo () {
-  const state = layout.history().forward();
-  console.log('redo State:', state.id);
-  if (state) layout = Layout2D.fromJson(state, layout.history());
+  layout.history().forward();
   clearCache();
   panZ.once();
 }
-
-du.on.match('keycombo:Control,z', '*', undo);
-du.on.match('keycombo:Control,Shift,Z', '*', redo);
 
 function registerQuickChangeFunc(type, func) {
   if ((typeof func) === 'function') quickChangeFuncs[type] = func;
@@ -248,7 +243,7 @@ function display(value) {
 
 function openPopup(event, stdEvent) {
   if (hovering) {
-    if (hovering.constructor.name === 'Snap2d') hovering.pairWithLast();
+    if (hovering.constructor.name === 'SnapSquare') hovering.pairWithLast();
     popupOpen = true;
     const msg = `${hovering.constructor.name}: ${hoverId()}`;
     const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
@@ -263,6 +258,7 @@ popUp.onClose((elem, event) => {
   measurementModify = attrs.type === 'LineMeasurement2d';
   lastDown = new Date().getTime();
   clickHolding = false;
+  if (layout) layout.history().newState();
 });
 
 function onMouseup(event, stdEvent) {
@@ -277,11 +273,12 @@ function onMouseup(event, stdEvent) {
       const clickWasHolding = clickHolding;
       clickHolding = false;
       hovering = undefined;
-      layout.history().newState();
+      if (layout) layout.history().newState();
       return clickWasHolding;
     }
   } else {
     console.log('rightClick: do stuff!!');
+    if (layout) layout.history().newState();
   }
 }
 
@@ -308,7 +305,7 @@ function hover(event) {
   if (measurementModify) {
     check(Object.values(hoverMap.LineMeasurement2d));
     found || check(Object.values(hoverMap.SnapLocation2d));
-    found || check(Object.values(hoverMap.Snap2d));
+    found || check(Object.values(hoverMap.SnapSquare));
     found || check(Object.values(hoverMap.Object2d));
     found || check(Object.values(hoverMap.Square2d));
   } else {
@@ -594,6 +591,7 @@ function drawSnapLocation(locations, color) {
   }
 }
 
+let showAllSnapLocations = true;
 function drawObject(object) {
   switch (object.object().constructor.name) {
     case 'Square2d':
@@ -603,6 +601,9 @@ function drawObject(object) {
       const color = hoverId() === object.toString() ? 'green' : 'white';
       draw.square(square, color, object.parent().name());
       const potentalSnap = object.potentalSnapLocation();
+      if (showAllSnapLocations)
+        drawSnapLocation(object.snapLocations());
+
       drawSnapLocation(object.snapLocations.paired(), 'black');
       if (potentalSnap) drawSnapLocation([potentalSnap], 'white');
       SnapLocation2d.active(object.snapLocations.notPaired());
@@ -617,7 +618,7 @@ function drawObject(object) {
       drawLayout(object); // NOT IMPLEMENTED YET!!!
       break;
     default:
-      throw new Error(`Cannot draw object with constructor: ${object.constructor.name}`);
+      throw new Error(`Cannot draw object with constructor: ${object.object().constructor.name}`);
   }
 }
 
@@ -663,6 +664,8 @@ function init() {
   panZ.onMouseup(onMouseup);
   // draw(canvas);
   TwoDLayout.panZoom = panZ;
+  du.on.match('keycombo:Control,z', '*', undo);
+  du.on.match('keycombo:Control,Shift,Z', '*', redo);
 }
 
 TwoDLayout.init = init;

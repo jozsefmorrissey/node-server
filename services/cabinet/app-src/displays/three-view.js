@@ -91,16 +91,16 @@ class ThreeView extends Lookup {
       }, 1000);
     }
 
-    this.isolatePart = (partId, cabinet) => {
+    this.isolatePart = (partCode, cabinet) => {
       threeDModel = ThreeDModel.get();
-      threeDModel.setTargetPartId(partId);
+      threeDModel.setTargetPartCode(partCode);
       threeDModel.update();
       setTimeout(() => {
         panzFront.once();
         panzLeft.once();
         panzTop.once();
       }, 500);
-      du.id(`three-view-part-code-${this.id()}`).innerText = partId;
+      du.id(`three-view-part-code-${this.id()}`).innerText = partCode;
     }
 
     this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;

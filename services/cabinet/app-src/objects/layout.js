@@ -8,6 +8,9 @@ const Line2d = require('../two-d/objects/line.js');
 const Square2d = require('../two-d/objects/square.js');
 const Circle2d = require('../two-d/objects/circle.js');
 const Snap2d = require('../two-d/objects/snap.js');
+const SnapSquare = require('../two-d/objects/snap/square.js');
+const Cabinet = require('../objects/assembly/assemblies/cabinet');
+const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 
 const pushVertex = (x, y, arr) => {
   if (Number.isNaN(x) || Number.isNaN(y)) return;
@@ -191,20 +194,57 @@ Wall2D.fromJson = (json, vertexMap) => {
   return inst;
 }
 
-function defSquare(center, parent) {
-  return new Snap2d(parent, new Square2d(center), 30);
+function defSquare(center, parent, square) {
+  return new SnapSquare(parent, 30);
 }
 
 class Object2d extends Lookup {
   constructor(center, layout, payload, name) {
-    super();
+    super(undefined, undefined, true);
     center = new Vertex2d(center);
+    let payloadId;
     this.layout = () => layout;
-    Object.getSet(this, {payload, name,
-      topview: defSquare(center, this), bottomView: defSquare(center, this),
-      leftview: defSquare(center, this), rightview: defSquare(center, this),
-      frontview: defSquare(center, this), backView: defSquare(center, this)
-    });
+    Object.getSet(this, {name, center}, 'payloadId');
+    this.payload = () => {
+      if (payload === undefined) payload = Lookup.get(this.payloadId());
+      return payload;
+    };
+
+    // Ids should only be equal if one object was built using the other as a replacement
+    this.equals = (obj) => this.id() === obj.id();
+
+    this.payloadId = (pId) => {
+      if ((typeof pId) === 'string') payloadId = pId;
+      if (!payload) return payloadId;
+      if (payload.ID_ATTRIBUTE) return payload[payload.ID_ATTRIBUTE()]();
+      return (typeof payload.id) === 'function' ? payload.id() : payload.id;
+    }
+
+    this.name = (val) => {
+      if (val) name = val;
+      if (this.payload() === undefined) return name;
+      if ((typeof this.payload().name) === 'function') return this.payload().name(val);
+      return this.payload.name;
+    }
+
+    function topMoved(position) {
+      console.log('topMoved', position);
+    }
+
+
+    const topview = new SnapSquare(this, 30);
+    const bottomview = new SnapSquare(this, 30);
+    const leftview = new SnapSquare(this, 30);
+    const rightview = new SnapSquare(this, 30);
+    const frontview = new SnapSquare(this, 30);
+    const backView = new SnapSquare(this, 30);
+
+    this.topview = () => topview;
+    this.bottomview = () => bottomview;
+    this.leftview = () => leftview;
+    this.rightview = () => rightview;
+    this.frontview = () => frontview;
+    this.backview = () => backview;
 
     if ((typeof name) === 'function') this.name = name;
     this.toString = () => `Object2d: ${center}`;
@@ -213,8 +253,16 @@ class Object2d extends Lookup {
 
 const ww = 500;
 class Layout2D extends Lookup {
-  constructor(walls, objects, history) {
+  constructor(walls, objects) {
     super();
+    let history;
+    const addEvent = new CustomEvent('add');
+    const removeEvent = new CustomEvent('remove');
+    const stateChangeEvent = new CustomEvent('stateChange');
+    this.onAdd = (func) => addEvent.on(func);
+    this.onRemove = (func) => removeEvent.on(func);
+    this.onStateChange = (func) => stateChangeEvent.on(func);
+
     walls = walls || [];
     objects = objects || [];
     Object.getSet(this, {objects, walls});
@@ -327,13 +375,17 @@ class Layout2D extends Lookup {
       const obj = new Object2d(center, this, payload, name);
       obj.id(id);
       this.objects().push(obj);
+      history.newState();
+      addEvent.trigger(undefined, payload);
       return obj;
     }
 
     this.removeObject = (obj) => {
       for (index = 0; index < objects.length; index += 1) {
         if (objects[index] === obj) {
-          return objects.splice(index, 1);
+          const obj = objects.splice(index, 1);
+          removeEvent.trigger(undefined, obj.payload());
+          return obj;
         }
       }
       return null;
@@ -342,7 +394,9 @@ class Layout2D extends Lookup {
     this.removeByPayload = (payload) => {
       for (index = 0; index < objects.length; index += 1) {
         if (objects[index].payload() === payload) {
-          return objects.splice(index, 1);
+          const obj = objects.splice(index, 1);
+          removeEvent.trigger(undefined, payload);
+          return obj;
         }
       }
       return null;
@@ -470,34 +524,93 @@ class Layout2D extends Lookup {
       return onLine || intersections.length % 2 === 1;
     }
 
-    this.setHistory = (h) => {
-      history = h.clone(this.toJson);
+    this.connected = () => {
+      for (let index = 0; index < walls.length; index += 1) {
+        const wall = walls[index];
+        const prevWall = this.prevWall(wall);
+        if (wall.startVertex() !== prevWall.endVertex()) return false;
+      }
+      return true;
     }
 
-    history = new StateHistory(this.toJson);
-    this.history = () => history;
+    this.payloads = () => {
+      const payloads = [];
+      this.objects().forEach((obj) => {
+        const center = obj.center();
+        const payload = obj.payload();
+        payloads.push({center, payload});
+      });
+      return payloads;
+    }
+
+    function filterCompare(list) {
+      list = list.map((o) => o.payload());
+      return list.filter((o) => o);
+    }
+
+    this.fromJson = (json) => {
+      const layout = Layout2D.fromJson(json);
+      const origWalls = this.walls();
+      const newWalls = layout.walls();
+      const wallCompare = Array.compare(origWalls, newWalls, true);
+
+      const origObjects = this.objects();
+      const newObjects = layout.objects();
+      const objCompare = Array.compare(origObjects, newObjects, true);
+
+      if (objCompare || wallCompare) {
+        const detail = {layout, objects: {added: [], removed: []}, walls: {added: [], removed: []}};
+        if (objCompare) {
+          detail.objects.added = filterCompare(objCompare.added);
+          detail.objects.removed = filterCompare(objCompare.removed);
+        }
+        if (wallCompare) {
+          detail.walls.added = filterCompare(wallCompare.added);
+          detail.walls.removed = filterCompare(wallCompare.removed);
+        }
+        stateChangeEvent.trigger(undefined, detail);
+      }
+    }
 
     if (!initialized) this.push({x:1, y:1}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
     this.walls = () => walls;
 
+    history = new StateHistory(this.toJson, this.fromJson);
+    this.history = () => history;
   }
 }
 
-Layout2D.fromJson = (json, history) => {
+// Needs to be internal!!!!
+Layout2D.fromJson = (json) => {
   const walls = [];
   const vertexMap = {};
   json.walls.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, vertexMap)));
 
-  const objects = Object.fromJson(json.objects);
-  const layout = new Layout2D(walls, objects);
+  const layout = new Layout2D(walls);
   layout.id(json.id);
+
+  const objects = [];
+  json.objects.forEach((o) => {
+    const center = Vertex2d.fromJson(o.center);
+    let obj = Object2d.get(o.id);
+    if (obj === undefined) {
+      obj = new Object2d(center, layout, undefined, o.name);
+      obj.payloadId(o.payloadId);
+      obj.id(o.id);
+    } else obj.fromJson(o);
+    objects.push(obj);
+  });
+  layout.objects(objects);
   json.snapLocations.forEach((snapLocJson) => {
-    const snapLoc1 = Lookup.get(snapLocJson[0].objectId)[snapLocJson[0].location]();
-    const snapLoc2 = Lookup.get(snapLocJson[1].objectId)[snapLocJson[1].location]();
+    const view = snapLocJson.view;
+    const obj1 = Lookup.get(snapLocJson[0].objectId);
+    const obj2 = Lookup.get(snapLocJson[1].objectId);
+    const snapLoc1 = obj1[view]().position[snapLocJson[0].location]();
+    const snapLoc2 = obj2[view]().position[snapLocJson[1].location]();
     snapLoc2.pairWith(snapLoc1);
   });
 
-  if (history) layout.setHistory(history);
+  console.log('isConnected:', layout.connected());
   return layout;
 }
 

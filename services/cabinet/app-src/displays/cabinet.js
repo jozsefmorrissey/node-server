@@ -94,15 +94,19 @@ class CabinetDisplay {
       }
     }
 
-    const getObject = (values) => {
-      const cabinet = CabinetConfig.get(group, values.type, values.propertyId, values.name || values.id);
+    function updateObjLayout(cabinet) {
       const obj2d = group.room().layout().addObject(cabinet.uniqueId(), cabinet, cabinet.name);
       obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
+    }
+
+    const getObject = (values) => {
+      const cabinet = CabinetConfig.get(group, values.type, values.propertyId, values.name || values.id);
+      setTimeout(() => updateObjLayout(cabinet));
       return cabinet;
     };
     this.active = () => expandList.active();
     const expListProps = {
-      list: group.cabinets,
+      list: group.objects,
       dontOpenOnAdd: true,
       type: 'top-add-list',
       inputTree:   CabinetConfig.inputTree(),

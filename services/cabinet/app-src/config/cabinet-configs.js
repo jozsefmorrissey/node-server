@@ -1,7 +1,7 @@
 
 
 
-const CustomEvent = require('../../../../public/js/utils/custom-error.js');
+const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const cabinetBuildConfig = require('../../public/json/cabinets.json');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const Input = require('../../../../public/js/utils/input/input.js');
@@ -74,7 +74,6 @@ class CabinetConfig {
       let cabinet;
       if (!cabinetList || !cabinetList[id]) cabinet = Cabinet.build(type, group);
       else cabinet = Cabinet.fromJson(cabinetList[id], group);
-      if (propertyId !== undefined) cabinet.propertyId(propertyId);
       cabinet.name(id);
       return cabinet;
     };

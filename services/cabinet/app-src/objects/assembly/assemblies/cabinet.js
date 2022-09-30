@@ -7,6 +7,7 @@ const Joint = require('../../joint/joint.js');
 const DivideSection = require('./section/space/sections/divide-section.js');
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
 const PropertyConfig = require('../../../config/property/config.js');
+const Group = require('../../group');
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -16,11 +17,10 @@ OVERLAY.INSET = 'Inset';
 const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
 
 class Cabinet extends Assembly {
-  constructor(partCode, partName, propsId) {
+  constructor(partCode, partName) {
     super(partCode, partName);
     Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
     Object.getSet(this, 'propertyId', 'name');
-    this.propertyId(propsId);
     const instance = this;
     let toeKickHeight = 4;
     this.part = false;
@@ -36,13 +36,13 @@ class Cabinet extends Assembly {
     const panelCount = () => panels.length;
 
     const resolveOuterReveal = (panel, location) => {
-      const propConfig = this.rootAssembly().propertyConfig;
+      const propConfig = this.propertyConfig();
       if (propConfig.isInset()) {
         return new Measurement(-1 * props.Inset.is.value()).value();
       }
       const definedValue = panel.railThickness() - panel.value(location);
       let calculatedValue;
-      if (this.rootAssembly().propertyConfig.isRevealOverlay()) {
+      if (propConfig.isRevealOverlay()) {
         calculatedValue = panel.railThickness() - propConfig.reveal();
       } else {
         calculatedValue = propConfig.overlay();
@@ -64,20 +64,21 @@ class Cabinet extends Assembly {
 
         const position = {};
         const start = {};
-        if (this.propertyConfig.isRevealOverlay()) {
-          const revealProps = this.rootAssembly().propertyConfig.reveal();
+        const propConfig = this.propertyConfig();
+        if (propConfig.isRevealOverlay()) {
+          const revealProps = propConfig.reveal();
           position.right = borders.right.position().centerAdjust('x', '+z') - revealProps.rvr.value();
           position.left = borders.left.position().centerAdjust('x', '-z') + revealProps.rvl.value();
           position.top = borders.top.position().centerAdjust('y', '+z') - revealProps.rvt.value();
           position.bottom = borders.bottom.position().centerAdjust('y', '-z') + revealProps.rvb.value();
-        } else if (this.propertyConfig.isInset()) {
-          const insetValue = this.rootAssembly().propertyConfig('Inset').is.value();
+        } else if (propConfig.isInset()) {
+          const insetValue = propConfig('Inset').is.value();
           position.right = borders.right.position().centerAdjust('x', '-z') - insetValue;
           position.left = borders.left.position().centerAdjust('x', '+z') + insetValue;
           position.top = borders.top.position().centerAdjust('y', '-z') - insetValue;
           position.bottom = borders.bottom.position().centerAdjust('y', '+z') + insetValue;
         } else {
-          const ov = this.propertyConfig('Overlay').ov.value();
+          const ov = propConfig('Overlay').ov.value();
           position.right = borders.right.position().centerAdjust('x', '-z') + ov;;
           position.left = borders.left.position().centerAdjust('x', '+z') - ov;
           position.top = borders.top.position().centerAdjust('y', '-z') + ov;
@@ -94,10 +95,9 @@ class Cabinet extends Assembly {
 }
 
 Cabinet.build = (type, group, config) => {
+  group ||= new Group();
   const cabinet = new Cabinet('c', type);
-  cabinet.propertyConfig = group && group.propertyConfig ?
-                            group.propertyConfig : new PropertyConfig();
-  if (group) group.propertyConfig = cabinet.propertyConfig;
+  cabinet.group(group);
   config ||= cabinetBuildConfig[type];
   config.values.forEach((value) => cabinet.value(value.key, value.eqn));
 
@@ -130,13 +130,14 @@ Cabinet.build = (type, group, config) => {
 }
 
 Cabinet.fromJson = (assemblyJson, group) => {
+  group ||= new Group();
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const assembly = new Cabinet(partCode, partName);
   assembly.name(assemblyJson.name);
   assembly.length(assemblyJson.length);
   assembly.width(assemblyJson.width);
-  assembly.propertyConfig = group.propertyConfig;
+  assembly.group(group);
   assembly.uniqueId(assemblyJson.uniqueId);
   assembly.values = assemblyJson.values;
   Object.values(assemblyJson.subassemblies).forEach((json) => {
