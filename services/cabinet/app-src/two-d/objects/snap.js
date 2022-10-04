@@ -1,6 +1,7 @@
 
 const Vertex2d = require('vertex');
 const SnapLocation2d = require('snap-location');
+const approximate = require('../../../../../public/js/utils/approximate.js');
 
 class Snap2d {
   constructor(parent, object, tolerance) {
@@ -13,17 +14,87 @@ class Snap2d {
     let end = new Vertex2d();
     let layout = parent.layout();
 
+    this.dl = () => 12;
+    this.dr = () => 24;
+    this.dol = () => 8;
+    this.dor = () => 16;
     this.toString = () => `SNAP (${tolerance}):${object}`
     this.position = {};
     this.id = () => id;
     this.parent = () => parent;
-    this.radians = object.radians;
-    this.angle = object.angle;
-    this.x = object.x;
-    this.y = object.y;
-    this.height = object.height;
-    this.width = object.width;
-    this.onChange = object.onChange;
+    this.x = (val) => {
+      if (val !== undefined) {
+        notify(this.parent().center().x(), val);
+        this.parent().center().x(val);
+      }
+      return this.parent().center().x();
+    }
+    this.y = (val) => {
+      if (val !== undefined) {
+        notify(this.parent().center().y(), val);
+        this.parent().center().y(val);
+      }
+      return this.parent().center().y();
+    }
+
+    this.angle = (value) => {
+      if (value !== undefined) {
+        notify(this.angle(), value);
+        this.radians(Math.toRadians(value));
+      }
+      return Math.toDegrees(this.radians());
+    }
+
+
+    const changeFuncs = [];
+    this.onChange = (func) => {
+      if ((typeof func) === 'function') {
+        changeFuncs.push(func);
+      }
+    }
+
+    let lastNotificationId = 0;
+    function notify(currentValue, newValue) {
+      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
+      if (newValue !== currentValue) {
+        const id = ++lastNotificationId;
+        setTimeout(() => {
+          if (id === lastNotificationId)
+            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
+        }, 100);
+      }
+    }
+
+    let radians = 0;
+    this.radians = (newValue) => {
+      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+        notify(radians, newValue);
+        radians = newValue;
+      }
+      return radians;
+    };
+
+    let height = 60.96;
+    let width = 121.92;
+    this.height = (h) => {
+      if ((typeof h) === 'number') {
+        const newVal = approximate(h);
+        notify(height, newVal);
+        height = newVal;
+      }
+      return height;
+    }
+    this.width = (w) => {
+      if ((typeof w) === 'number') {
+        const newVal = approximate(w);
+        notify(width, newVal);
+        width = newVal;
+      }
+      return width;
+    }
+
+    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
 
     this.view = () => {
       switch (this) {
@@ -44,21 +115,21 @@ class Snap2d {
         this.position[snapLoc.location()] = snapLoc.at;
       }
     }
-    function getSnapLocations(paired) {
-      if (paired === undefined) return snapLocations;
+    function getSnapLocations(func) {
       const locs = [];
       for (let index = 0; index < snapLocations.length; index += 1) {
         const loc = snapLocations[index];
-        if (paired) {
-          if (loc.pairedWith() !== null) locs.push(loc);
-        } else if (loc.pairedWith() === null) locs.push(loc);
+        if ((typeof func) === 'function') {
+          if (func(loc)) locs.push(loc);
+        } else locs.push(loc);
       }
       return locs;
     }
 
     this.snapLocations = getSnapLocations;
-    this.snapLocations.notPaired = () => getSnapLocations(false);
-    this.snapLocations.paired = () => getSnapLocations(true);
+    this.snapLocations.notPaired = () => getSnapLocations((loc) => loc.pairedWith() === null);
+    this.snapLocations.paired = () => getSnapLocations((loc) => loc.pairedWith() !== null);
+    this.snapLocations.wallPairable = () => getSnapLocations((loc) => loc.wallThetaOffset() !== undefined);
     // this.snapLocations.rotate = backCenter.rotate;
     function resetVertices() {
       for (let index = 0; index < snapLocations.length; index += 1) {
@@ -87,7 +158,7 @@ class Snap2d {
         const point = wall.closestPointOnLine(center, true);
         if (point) {
           const wallDist = point.distance(center);
-          const isCloser = (!centerWithin || wallDist < tolerance) &&
+          const isCloser = (!centerWithin || wallDist < tolerance*2) &&
                           (wallObj === undefined || wallObj.distance > wallDist);
           if (isCloser) {
             wallObj = {point, distance: wallDist, wall};
@@ -98,23 +169,33 @@ class Snap2d {
         const wall = wallObj.wall;
         const point = wallObj.point;
         center = point;
-        const theta = wall.radians();
+        let theta = wall.radians();
+
         let position = {center, theta};
 
-        const backCenter = instance.position.backCenter({center, theta});
-        const backLeftCenter = instance.position.backLeft({center: wall.startVertex(), theta});
-        if (backCenter.distance(backLeftCenter) < object.maxDem() / 2) return instance.makeMove({center: backLeftCenter, theta});
-        const backRightCenter = instance.position.backRight({center: wall.endVertex(), theta})
-        if (backCenter.distance(backRightCenter) < object.maxDem() / 2) return instance.makeMove({center: backRightCenter,theta});
+        const wallPairables = instance.snapLocations.wallPairable();
+        let pairWith;
+        if (centerWithin) pairWith = wallPairables[1];
+        else pairWith = wallPairables[0];
 
-        return {center: backCenter, theta, wall};
+        theta += Math.toRadians(pairWith.wallThetaOffset());
+        const objCenter = pairWith.at({center, theta});
+
+        // const backLeftCenter = instance.position.backLeft({center: wall.startVertex(), theta});
+        // if (backCenter.distance(backLeftCenter) < instance.maxDem() / 2) return instance.makeMove({center: backLeftCenter, theta});
+        // const backRightCenter = instance.position.backRight({center: wall.endVertex(), theta})
+        // if (backCenter.distance(backRightCenter) < instance.maxDem() / 2) return instance.makeMove({center: backRightCenter,theta});
+
+        return {center: objCenter, theta, wall, pairWith};
       }
     }
 
     function findObjectSnapLocation (center) {
       let snapObj;
       SnapLocation2d.active().forEach((snapLoc) => {
-        const targetSnapLoc = instance.position[snapLoc.targetVertex()]();
+        const tarVertId = snapLoc.targetVertex();
+        if ((typeof instance.position[tarVertId]) !== 'function') return;
+        const targetSnapLoc = instance.position[tarVertId]();
         if (snapLoc.isConnected(instance) ||
             snapLoc.pairedWith() !== null || targetSnapLoc.pairedWith() !== null) return;
         const vertDist = snapLoc.vertex().distance(center);
@@ -124,11 +205,12 @@ class Snap2d {
       });
       if (snapObj) {
         const snapLoc = snapObj.snapLoc;
+        const tarSnap = snapObj.targetSnapLoc;
         let theta = snapLoc.parent().radians();
         const center = snapLoc.vertex();
         const funcName = snapLoc.targetVertex();
-        if (funcName === 'backCenter') theta = (theta + Math.PI) % (2 * Math.PI);
-        lastPotentalPair = [snapLoc, snapObj.targetSnapLoc];
+        theta += Math.toRadians(tarSnap.thetaOffset());
+        lastPotentalPair = [snapLoc, tarSnap];
         return {snapLoc, center: instance.position[funcName]({center, theta}), theta};
       }
     }
@@ -148,11 +230,29 @@ class Snap2d {
 
     this.potentalSnapLocation = () => checkPotentialPair() && lastPotentalPair && lastPotentalPair[0];
     this.pairWithLast = () => {
-      lastPotentalPair && lastPotentalPair[0].pairWith(lastPotentalPair[1])
+      if (lastPotentalPair) {
+        if ((typeof lastPotentalPair[0].pairWith) === 'function') {
+          lastPotentalPair && lastPotentalPair[0].pairWith(lastPotentalPair[1])
+        } else {
+          console.log('nope');
+        }
+      }
       lastPotentalPair = null;
     };
-    this.makeMove = (position) => {
-      object.move(position);
+
+    let lastValidMove;
+    this.makeMove = (position, force) => {
+      const originalPos = {center: this.parent().center(), theta: this.radians()};
+      instance.parent().center().point(position.center);
+      if (position.theta !== undefined) instance.radians(position.theta);
+      if (!force) {
+        let validMove = true;
+        instance.snapLocations().forEach((l) => validMove &&= layout.within(l.at().vertex()));
+        if (!validMove) return this.makeMove(lastValidMove, true); // No move was made return undefined
+        else lastValidMove = position;
+        console.log('valid');
+      }
+      instance.update();
     }
     this.move = (center) => {
       checkPotentialPair();
@@ -163,7 +263,7 @@ class Snap2d {
         if (snapInfo) {
           const obj = snapInfo.snapLoc.parent();
           if (snapInfo.theta !== undefined) {
-            const theta = approximate(((snapInfo.theta + 2 * Math.PI) - this.object().radians()) % (2*Math.PI));
+            const theta = approximate(((snapInfo.theta + 2 * Math.PI) - this.radians()) % (2*Math.PI));
             snapInfo.theta = undefined;
             this.snapLocations.rotate(theta);
           }
@@ -183,16 +283,43 @@ class Snap2d {
       const wallSnapLocation = findWallSnapLocation(center);
       if (snapLocation) {
         return this.makeMove(snapLocation);
-      } else if (!centerWithin && (wallSnapLocation instanceof Object)) {
+      } else if (wallSnapLocation !== undefined) {
         const move = this.makeMove(wallSnapLocation);
-        lastPotentalPair = [backCenter, wallSnapLocation.wall];
+        const wallSnapLoc = this.snapLocations.wallPairable()[0];
+        lastPotentalPair = [wallSnapLoc.pairWith, wallSnapLocation.wall];
         return move;
       } else if (centerWithin) {
         return this.makeMove({center});
       }
-    };
+    }
+
+    const objData = (funcName) => {
+      const obj = this.object();
+      return obj && (typeof obj[funcName]) === 'function';
+    }
+    function updateObject() {
+      if (objData('radians')) object.radians(radians);
+      if (objData('height')) object.height(height);
+      if (objData('width')) object.width(width);
+      instance.snapLocations().forEach((snapLoc) => snapLoc.at());
+    }
+
+    this.update = updateObject;
+    this.onChange(updateObject);
   }
 }
+
+Snap2d.get = {};
+Snap2d.registar = (clazz) => {
+  const instance = new clazz();
+  if (instance instanceof Snap2d) {
+    const name = clazz.prototype.constructor.name.replace(/^Snap/, '').toCamel();
+    if (Snap2d.get[name] === undefined)
+      Snap2d.get[name] = (parent, tolerance) => new clazz(parent, tolerance);
+    else throw new Error(`Double registering Snap2d: ${name}`);
+  }
+}
+
 
 Snap2d.fromJson = (json) => {
   const layout = Layout2d.get(json.layoutId);

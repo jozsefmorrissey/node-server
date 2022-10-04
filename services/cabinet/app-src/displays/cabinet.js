@@ -83,13 +83,13 @@ class CabinetDisplay {
 
     function linkLayout(cabinet, obj2d) {
       console.log('linking!')
-      const square = obj2d.topview().object();
-      if (square.width() !== cabinet.width()) {
-        cabinet.width(square.width());
+      const topview = obj2d.topview();
+      if (topview.width() !== cabinet.width()) {
+        cabinet.width(topview.width());
         updateCabValue(cabinet, 'width');
       }
-      if (square.height() !== cabinet.thickness()) {
-        cabinet.thickness(square.height());
+      if (topview.height() !== cabinet.thickness()) {
+        cabinet.thickness(topview.height());
         updateCabValue(cabinet, 'thickness');
       }
     }

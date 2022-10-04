@@ -9,6 +9,7 @@ const Square2d = require('../two-d/objects/square.js');
 const Circle2d = require('../two-d/objects/circle.js');
 const Snap2d = require('../two-d/objects/snap.js');
 const SnapSquare = require('../two-d/objects/snap/square.js');
+// const SnapSquare = require('../two-d/objects/snap/corner-l.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 
@@ -194,10 +195,6 @@ Wall2D.fromJson = (json, vertexMap) => {
   return inst;
 }
 
-function defSquare(center, parent, square) {
-  return new SnapSquare(parent, 30);
-}
-
 class Object2d extends Lookup {
   constructor(center, layout, payload, name) {
     super(undefined, undefined, true);
@@ -232,19 +229,20 @@ class Object2d extends Lookup {
     }
 
 
-    const topview = new SnapSquare(this, 30);
-    const bottomview = new SnapSquare(this, 30);
-    const leftview = new SnapSquare(this, 30);
-    const rightview = new SnapSquare(this, 30);
-    const frontview = new SnapSquare(this, 30);
-    const backView = new SnapSquare(this, 30);
+    const topType = 'cornerL';
+    const topview = Snap2d.get[topType](this, 30);
+    // const bottomview = new SnapSquare(this, 30);
+    // const leftview = new SnapSquare(this, 30);
+    // const rightview = new SnapSquare(this, 30);
+    // const frontview = new SnapSquare(this, 30);
+    // const backView = new SnapSquare(this, 30);
 
     this.topview = () => topview;
-    this.bottomview = () => bottomview;
-    this.leftview = () => leftview;
-    this.rightview = () => rightview;
-    this.frontview = () => frontview;
-    this.backview = () => backview;
+    // this.bottomview = () => bottomview;
+    // this.leftview = () => leftview;
+    // this.rightview = () => rightview;
+    // this.frontview = () => frontview;
+    // this.backview = () => backview;
 
     if ((typeof name) === 'function') this.name = name;
     this.toString = () => `Object2d: ${center}`;
@@ -514,8 +512,9 @@ class Layout2D extends Lookup {
         const intersection = wall.findIntersection(escapeLine, true);
         allIntersections.push(intersection);
         if (intersection) {
-          const xEqual = approximate.eq(intersection.x, vertex.x, 100);
-          const yEqual = approximate.eq(intersection.y, vertex.y, 100);
+          // Todo make more accurate
+          const xEqual = approximate.eq(intersection.x, vertex.x, 1);
+          const yEqual = approximate.eq(intersection.y, vertex.y, 1);
           if (xEqual && yEqual) onLine = true;
           intersections.push(intersection);
         }

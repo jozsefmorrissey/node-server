@@ -9,6 +9,7 @@ const StringMathEvaluator = require('../../../../public/js/utils/string-math-eva
 const Draw2D = require('./draw.js');
 const Vertex2d = require('../two-d/objects/vertex.js');
 const Line2d = require('../two-d/objects/line.js');
+const Snap2d = require('../two-d/objects/snap.js');
 const Circle2d = require('../two-d/objects/circle.js');
 const SnapLocation2d = require('../two-d/objects/snap-location.js');
 const LineMeasurement2d = require('../two-d/objects/line-measurement');
@@ -32,7 +33,7 @@ let hoverMap;
 
 const resetHoverMap = () => hoverMap = {
     Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2d: {}, LineMeasurement2d: {},
-    Object2d: {}, Square2d: {}, SnapSquare: {}, SnapLocation2d: {}
+    Object2d: {}, Square2d: {}, Snap2d: {}, SnapLocation2d: {}
   };
 
 const windowLineWidth = 8;
@@ -95,12 +96,11 @@ du.on.match('enter', '.value-2d', (elem) => {
         input.value = props.display;
       }
       cabinet[props.key](props.value);
-      const square = props.obj.topview().object();
-      square[props.key === 'thickness' ? 'height' : props.key](props.value);
+      const poly = props.obj.topview();
+      poly[props.key === 'thickness' ? 'height' : props.key](props.value);
+      poly.update();
       panZ.once();
       return;
-    case 'square':
-      props.obj = props.obj.topview().object();
   }
   if (props.obj.payload && props.obj.payload() === 'placeholder') {
     if (props.key === 'thickness') props.key = 'height';
@@ -109,6 +109,7 @@ du.on.match('enter', '.value-2d', (elem) => {
 
   props.obj.topview()[props.key](props.value);
   elem.value = props.display;
+  props.obj.topview().update();
   panZ.once();
 });
 
@@ -230,7 +231,8 @@ function hoverId () {
 
 const templateMap = {};
 function getTemplate(item) {
-  const templateLocation = `2d/pop-up/${item.constructor.name.toKebab()}`;
+  const isSnap = item instanceof Snap2d;
+  const templateLocation = `2d/pop-up/${isSnap ? 'snap-2d' : item.constructor.name.toKebab()}`;
   if (templateMap[templateLocation] === undefined) {
     templateMap[templateLocation] = new $t(templateLocation);
   }
@@ -243,7 +245,7 @@ function display(value) {
 
 function openPopup(event, stdEvent) {
   if (hovering) {
-    if (hovering.constructor.name === 'SnapSquare') hovering.pairWithLast();
+    if (hovering instanceof Snap2d) hovering.pairWithLast();
     popupOpen = true;
     const msg = `${hovering.constructor.name}: ${hoverId()}`;
     const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
@@ -282,9 +284,11 @@ function onMouseup(event, stdEvent) {
   }
 }
 
+let pending = 0;
 function  drag(event)  {
-  dragging = !popupOpen && clickHolding && hovering &&
-                      hovering.move && hovering.move({x: event.imageX, y: event.imageY}, event);
+  const dragging = !popupOpen && clickHolding && hovering;
+  if (dragging)
+    hovering.move && hovering.move({x: event.imageX, y: event.imageY}, event);
   return dragging;
 }
 
@@ -305,7 +309,7 @@ function hover(event) {
   if (measurementModify) {
     check(Object.values(hoverMap.LineMeasurement2d));
     found || check(Object.values(hoverMap.SnapLocation2d));
-    found || check(Object.values(hoverMap.SnapSquare));
+    found || check(Object.values(hoverMap.Snap2d));
     found || check(Object.values(hoverMap.Object2d));
     found || check(Object.values(hoverMap.Square2d));
   } else {
@@ -350,7 +354,10 @@ function withinTolerance(point, map) {
 }
 
 function updateHoverMap(item, start, end, tolerance) {
-  hoverMap[item.constructor.name][item.toString()] = {start, end, tolerance, item};
+  let group;
+  if (item instanceof Snap2d) group = 'Snap2d';
+  else group = item.constructor.name;
+  hoverMap[group][item.toString()] = {start, end, tolerance, item};
 }
 
 let windowCount = 0;
@@ -593,19 +600,34 @@ function drawSnapLocation(locations, color) {
 
 let showAllSnapLocations = true;
 function drawObject(object) {
+  let center, coolor, potentalSnap;
   switch (object.object().constructor.name) {
     case 'Square2d':
       const square = object.object();
-      const center = square.center();
+      center = square.center();
       updateHoverMap(object, center, center, 30);
-      const color = hoverId() === object.toString() ? 'green' : 'white';
+      color = hoverId() === object.toString() ? 'green' : 'white';
       draw.square(square, color, object.parent().name());
-      const potentalSnap = object.potentalSnapLocation();
+      potentalSnap = object.potentalSnapLocation();
       if (showAllSnapLocations)
         drawSnapLocation(object.snapLocations());
 
       drawSnapLocation(object.snapLocations.paired(), 'black');
-      if (potentalSnap) drawSnapLocation([potentalSnap], 'white');
+      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
+      SnapLocation2d.active(object.snapLocations.notPaired());
+      break;
+    case 'Polygon2d':
+      const poly = object.object();
+      center = poly.center();
+      updateHoverMap(object, center, center, 30);
+      color = hoverId() === object.toString() ? 'green' : 'black';
+      draw(poly, color, object.parent().name());
+      potentalSnap = object.potentalSnapLocation();
+      if (showAllSnapLocations)
+        drawSnapLocation(object.snapLocations());
+
+      drawSnapLocation(object.snapLocations.paired(), 'black');
+      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
       SnapLocation2d.active(object.snapLocations.notPaired());
       break;
     case 'Line2d':

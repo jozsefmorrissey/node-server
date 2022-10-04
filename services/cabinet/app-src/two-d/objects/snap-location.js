@@ -4,7 +4,8 @@ const Circle2d = require('circle');
 
 class SnapLocation2d {
   constructor(parent, location, vertex, targetVertex, color, pairedWith) {
-    Object.getSet(this, {location, vertex, targetVertex, color}, "canPairWithWall", "parentId", "pairedWithId");
+    Object.getSet(this, {location, vertex, targetVertex, color}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
+    this.thetaOffset(0);
     let locationFunction;
     const circle = new Circle2d(5, vertex);
     pairedWith = pairedWith || null;
@@ -107,14 +108,13 @@ class SnapLocation2d {
 
     let lastMove = 0;
     this.move = (vertexLocation, moveId) => {
-      const nonSnap = this.getNonSnap();
-      console.log(nonSnap);
       moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
       if (lastMove === moveId) return;
       vertexLocation = new Vertex2d(vertexLocation);
       const parent = this.parent();
       const thisNewCenterLoc = this.parent().position[location]({center: vertexLocation});
-      parent.object().move({center: thisNewCenterLoc});
+      parent.parent().center().point(thisNewCenterLoc);
+      parent.update();
       lastMove = moveId;
       const pairedLocs = parent.snapLocations.paired();
       for (let index = 0; index < pairedLocs.length; index += 1) {
@@ -164,19 +164,19 @@ function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
     const xDiff = xDiffFunc();
     const yDiff = yDiffFunc();
     const vertex = snapLoc.vertex();
-    const object = snapLoc.parent().object();
-    const center = object.center();
+    const center = snapLoc.parent().parent().center();
     const direction = xDiff >= 0 ? 1 : -1;
     const hypeLen = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
     let rads = Math.atan(yDiff/xDiff);
-    rads += object.radians();
     if (position) {
+      rads += position.theta === undefined ? snapLoc.parent().radians() : position.theta;
       const newPoint = position.center;
       return new Vertex2d({
         x: newPoint.x() - direction * (hypeLen * Math.cos(rads)),
         y: newPoint.y() - direction * (hypeLen * Math.sin(rads))
       });
     } else {
+      rads += snapLoc.parent().radians();
       vertex.point({
         x: center.x() + direction * (hypeLen * Math.cos(rads)),
         y: center.y() + direction * (hypeLen * Math.sin(rads))
@@ -187,62 +187,16 @@ function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
 }
 SnapLocation2d.fromToPoint = fromToPoint;
 
-const wFunc = (snapLoc, multiplier) => () => snapLoc.parent().width() * multiplier;
-const hFunc = (snapLoc, multiplier) => () => snapLoc.parent().height() * multiplier;
+const f = (snapLoc, attr, attrM, props) => () => {
+  let val = snapLoc.parent()[attr]() * attrM;
+  let keys = Object.keys(props || {});
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
+    val += snapLoc.parent()[key]() * props[key];
+  }
+  return val;
+};
 
-SnapLocation2d.backCenter = (parent, canPairWithWall) => {
-  const snapLoc = new SnapLocation2d(parent, "backCenter",  new Vertex2d(null),  'backCenter', 'teal');
-  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), hFunc(snapLoc, -.5)));
-  snapLoc.canPairWithWall(canPairWithWall);
-  return snapLoc;
-}
-SnapLocation2d.frontCenter = (parent, canPairWithWall) => {
-  const snapLoc = new SnapLocation2d(parent, "frontCenter",  new Vertex2d(null),  'frontCenter', 'blue');
-  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), () => hFunc(snapLoc, .5)));
-  snapLoc.canPairWithWall(canPairWithWall);
-  return snapLoc;
-}
-SnapLocation2d.leftCenter = (parent, canPairWithWall) => {
-  const snapLoc = new SnapLocation2d(parent, "leftCenter",  new Vertex2d(null),  'rightCenter', 'pink');
-  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, 0)));
-  snapLoc.canPairWithWall(canPairWithWall);
-  return snapLoc;
-}
-SnapLocation2d.rightCenter = (parent, canPairWithWall) => {
-  const snapLoc = new SnapLocation2d(parent, "rightCenter",  new Vertex2d(null),  'leftCenter', 'yellow');
-  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, 0)));
-  snapLoc.canPairWithWall(canPairWithWall);
-  return snapLoc;
-}
-
-SnapLocation2d.backLeft = (parent, canPairWithWall) => {
-  const snapLoc = new SnapLocation2d(parent, "backLeft",  new Vertex2d(null),  'backRight', 'red');
-  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, -.5)));
-  snapLoc.canPairWithWall(canPairWithWall);
-  return snapLoc;
-}
-SnapLocation2d.backRight = (parent, canPairWithWall) => {
-  const snapLoc = new SnapLocation2d(parent, "backRight",  new Vertex2d(null),  'backLeft', 'purple');
-  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, -.5)));
-  snapLoc.canPairWithWall(canPairWithWall);
-  return snapLoc;
-}
-
-SnapLocation2d.frontRight = (parent, canPairWithWall) => {
-  const snapLoc = new SnapLocation2d(parent, "frontRight",  new Vertex2d(null),  'frontLeft', 'black');
-  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, .5)));
-  snapLoc.canPairWithWall(canPairWithWall);
-  return snapLoc;
-}
-SnapLocation2d.frontLeft = (parent, canPairWithWall) => {
-  const snapLoc = new SnapLocation2d(parent, "frontLeft",  new Vertex2d(null),  'frontRight', 'green');
-  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, .5)));
-  snapLoc.canPairWithWall(canPairWithWall);
-  return snapLoc;
-}
-
-
-
-
+SnapLocation2d.locationFunction = f;
 
 module.exports = SnapLocation2d;

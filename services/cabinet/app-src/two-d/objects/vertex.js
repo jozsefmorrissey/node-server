@@ -15,6 +15,7 @@ class Vertex2d {
       return true;
     };
     this.point = (newPoint) => {
+      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
       if (newPoint) this.x(newPoint.x);
       if (newPoint) this.y(newPoint.y);
       return point;

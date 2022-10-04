@@ -207,7 +207,7 @@ Function.safeStdLibAddition(Math, 'toDegrees', function (rads, accuracy) {
 }, true);
 
 Function.safeStdLibAddition(Math, 'toRadians', function (angle, accuracy) {
-  accuracy ||= 10000;
+  accuracy ||= 10000000;
   return Math.round((angle*Math.PI/180)%(2*Math.PI) * accuracy)  / accuracy;
 }, true);
 

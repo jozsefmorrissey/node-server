@@ -5,19 +5,19 @@
   <input class='value-2d' member='object' type="text" key="name" value="{{target.parent().name()}}">
   <br><br>
   <label>Width</label>
-  <input class='value-2d' member='cabinet' type="text" key="width" value="{{display(target.object().width())}}">
+  <input class='value-2d' member='cabinet' type="text" key="width" value="{{display(target.width())}}">
   <br>
   <label>Depth</label>
-  <input class='value-2d' member='cabinet' type="text" key="thickness" value="{{display(target.object().height())}}">
+  <input class='value-2d' member='cabinet' type="text" key="thickness" value="{{display(target.height())}}">
   <br>
   <label>Angle</label>
-  <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="{{target.object().angle()}}">
+  <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="{{target.angle()}}">
   <br>
   <label>X</label>
-  <input class='value-2d' member='snap' type="text" key="x" value="{{display(target.object().x())}}">
+  <input class='value-2d' member='snap' type="text" key="x" value="{{display(target.x())}}">
   <br>
   <label>Y</label>
-  <input class='value-2d' member='snap' type="text" key="y" value="{{display(target.object().y())}}">
+  <input class='value-2d' member='snap' type="text" key="y" value="{{display(target.y())}}">
   <br>
   <button class='remove-btn-2d transparent'>Remove</button>
 </div>

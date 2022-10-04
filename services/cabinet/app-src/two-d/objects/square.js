@@ -13,36 +13,9 @@ class Square2d {
     if ((typeof center) === 'function') this.center = center;
     const startPoint = new Vertex2d(null);
 
-    const getterHeight = this.height;
-    this.height = (v) => {
-      notify(getterHeight(), v);
-      return getterHeight(v);
-    }
-    const getterWidth = this.width;
-    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
-
-    const changeFuncs = [];
-    this.onChange = (func) => {
-      if ((typeof func) === 'function') {
-        changeFuncs.push(func);
-      }
-    }
-
-    let lastNotificationId = 0;
-    function notify(currentValue, newValue) {
-      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
-      if (newValue !== currentValue) {
-        const id = ++lastNotificationId;
-        setTimeout(() => {
-          if (id === lastNotificationId)
-            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
-        }, 100);
-      }
-    }
 
     this.radians = (newValue) => {
       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-        notify(radians, newValue);
         radians = approximate(newValue);
       }
       return radians;

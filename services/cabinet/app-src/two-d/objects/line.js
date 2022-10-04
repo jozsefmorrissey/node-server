@@ -224,14 +224,13 @@ class Line2d {
                         this.startVertex().x() : this.endVertex().x();
     this.maxY = () => this.startVertex().y() > this.endVertex().y() ?
                         this.startVertex().y() : this.endVertex().y();
-    this.angle = (value) => {
-      if (value) this.radians(value);
+    this.angle = () => {
       return Math.toDegrees(this.radians());
     }
     this.radians = () => {
       const deltaX = this.endVertex().x() - this.startVertex().x();
       const deltaY = this.endVertex().y() - this.startVertex().y();
-      return approximate(Math.atan2(deltaY, deltaX), 100);
+      return Math.atan2(deltaY, deltaX);
     }
 
     this.equals = (other) => {
