@@ -14,6 +14,7 @@ const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const approximate = require('../../../../public/js/utils/approximate.js');
+const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 
 const colors = {
   indianred: [205, 92, 92],
@@ -47,6 +48,7 @@ function getColor(name) {
 
 class ThreeDModel {
   constructor(assembly, viewer) {
+    const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
     const hiddenPartIds = {};
     const hiddenPartNames = {};
     const hiddenPrefixes = {};
@@ -185,6 +187,7 @@ class ThreeDModel {
       return twoDpolys;
     }
 
+    this.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
 
     this.render = function () {
       ThreeDModel.lastActive = this;
@@ -222,7 +225,7 @@ class ThreeDModel {
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
           if (a === undefined) a = b;
-          else if (b && assem.length() && assem.width() && assem.thickness()) {
+          else if (b && b.polygons.length !== 0) {
             a = a.union(b);
           }
           if (assem.partCode() === targetPartCode) {
@@ -233,6 +236,8 @@ class ThreeDModel {
             rotation.z *=-1;
             lm.center({x:0,y:0,z:0})
             lm.rotate(rotation);
+            const lastModel = this.lastModel();
+            lastModelUpdateEvent.trigger(undefined, lastModel);
           }
         }
       }

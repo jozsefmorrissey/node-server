@@ -12,5 +12,7 @@ approximate.gt = (val1, val2, acc) => approximate(val1, acc) > approximate(val2,
 approximate.lt = (val1, val2, acc) => approximate(val1, acc) < approximate(val2, acc);
 approximate.gteq = (val1, val2, acc) => approximate(val1, acc) >= approximate(val2, acc);
 approximate.lteq = (val1, val2, acc) => approximate(val1, acc) <= approximate(val2, acc);
+approximate.eqAbs = (val1, val2, acc) => approximate(Math.abs(val1), acc) === approximate(Math.abs(val2), acc);
+approximate.neqAbs = (val1, val2, acc) => approximate(Math.abs(val1), acc) !== approximate(Math.abs(val2), acc);
 
 module.exports  = approximate;

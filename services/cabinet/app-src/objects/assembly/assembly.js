@@ -28,12 +28,23 @@ class Assembly extends Lookup {
     if ((typeof demensionStr) === 'function') this.demensionStr = demensionStr;
     if ((typeof rotationStr) === 'function') this.rotationStr = rotationStr;
 
+    const parentIncluded = this.included;
+
+    this.included = (value) => {
+        value = parentIncluded(value);
+        if ((typeof value) === 'string') return  group.propertyConfig(value);
+        switch (value) {
+          case true: return true;
+          case false: return false;
+          default: return true;
+        }
+    }
+
     function getValueSmeFormatter(path) {
       const split = path.split('.');
       let attr = split[0];
       let objIdStr;
       if (split.length > 2) {
-        console.log('her');
       }
       if (split.length > 1) {
         objIdStr = split[0];
@@ -208,7 +219,12 @@ class Assembly extends Lookup {
       return assemblies;
     }
     this.getParts = () => {
-      return this.getSubassemblies().filter((a) => a.part && a.included );
+      return this.getSubassemblies().filter((a) => {
+        if ((typeof a.part) !== 'function') {
+          console.log('party')
+        }
+        return a.part() && a.included()
+      });
     }
 
     if (Assembly.idCounters[this.objId] === undefined) {
@@ -245,7 +261,7 @@ Assembly.all = () => {
   return list;
 }
 
-const positionReg = /^(c|r|center|rotation).(x|y|z)$/;
+const positionReg = /^(c|r|d|center|rotation|demension).(x|y|z)$/;
 Assembly.resolveAttr = (assembly, attr) => {
   if (!(assembly instanceof Assembly)) return undefined;
   if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
@@ -262,6 +278,7 @@ Assembly.resolveAttr = (assembly, attr) => {
     const axis = positionMatch[2];
     if (func === 'r' || func === 'rotation') return assembly.position().rotation(axis);
     if (func === 'c' || func === 'center') return assembly.position().center(axis);
+    if (func === 'd' || func === 'demension') return assembly.position().demension(axis);
   }
   return assembly.value(attr);
 }

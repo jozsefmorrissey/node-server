@@ -1,4 +1,11 @@
+Math.PI12 = Math.PI/2;
+Math.PI32 = 3*Math.PI/2;
+Math.PI2 = 2*Math.PI;
 
+Math.PI14 = Math.PI/4;
+Math.PI34 = 3*Math.PI/4;
+Math.PI54 = 5*Math.PI/4;
+Math.PI74 = 7*Math.PI/4;
 
 
 

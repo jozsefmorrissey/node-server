@@ -8,6 +8,8 @@ const DivideSection = require('./section/space/sections/divide-section.js');
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
 const PropertyConfig = require('../../../config/property/config.js');
 const Group = require('../../group');
+const Line2d = require('../../../two-d/objects/line');
+const Vertex2d = require('../../../two-d/objects/vertex');
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -42,7 +44,7 @@ class Cabinet extends Assembly {
       }
       const definedValue = panel.railThickness() - panel.value(location);
       let calculatedValue;
-      if (propConfig.isRevealOverlay()) {
+      if (propConfig.isReveal()) {
         calculatedValue = panel.railThickness() - propConfig.reveal();
       } else {
         calculatedValue = propConfig.overlay();
@@ -52,6 +54,8 @@ class Cabinet extends Assembly {
 
     this.borders = (borderIds) => {
       const borders = {};
+      const center = borderIds.center;
+      const rotation = borderIds.rotation;
       borders.right = instance.getAssembly(borderIds.right);
       borders.left = instance.getAssembly(borderIds.left);
       borders.top = instance.getAssembly(borderIds.top);
@@ -65,7 +69,7 @@ class Cabinet extends Assembly {
         const position = {};
         const start = {};
         const propConfig = this.propertyConfig();
-        if (propConfig.isRevealOverlay()) {
+        if (propConfig.isReveal()) {
           const revealProps = propConfig.reveal();
           position.right = borders.right.position().centerAdjust('x', '+z') - revealProps.rvr.value();
           position.left = borders.left.position().centerAdjust('x', '-z') + revealProps.rvl.value();
@@ -88,7 +92,7 @@ class Cabinet extends Assembly {
         position.front = 0;
         position.back = pb.position().center('z') + pb.position().limits('-z');
 
-        return {borders, position, depth, borderIds};
+        return {borders, position, depth, borderIds, center, rotation};
       }
     }
   }
@@ -158,14 +162,84 @@ Cabinet.fromJson = (assemblyJson, group) => {
 }
 Cabinet.abbriviation = 'c';
 
-// Cabinet.partCode = (assembly) => {
-//   const cabinet = assembly.getAssembly('c');
-//   if (cabinet) {
-//     const name = assembly.constructor.name;
-//     cabinet.partIndex = cabinet.partIndex || 0;
-//     return `${assembly.constructor.abbriviation}-${cabinet.partIndex++}`;
-//   }
-// }
+function getIntersectPoint(line, centerLine, right, dist, gap, noneAdjacent) {
+  if (noneAdjacent) {
+    if (right)
+      return centerLine.endVertex();
+    return centerLine.startVertex();
+  }
+  const parr = line.parrelle(dist);
+  if (line.isParrelle(centerLine)) {
+    if (right)
+      return parr.trimmed(gap/2).startVertex();
+    return parr.trimmed(gap/-2).endVertex();
+  }
+  return centerLine.findIntersection(parr);
+}
 
+// document location /cabinet/html/docs/door-intersect-diagram.html
+function doorIntersect(llp, lcp, rcp, rrp, ld, cd, rd, gap, padOffset) {
+  padOffset ||= 0;
+  const LL = new Line2d(llp, lcp);
+  const CL = new Line2d(lcp, rcp);
+  const RL = new Line2d(rcp, rrp);
+
+  const CLFP = CL.parrelle(cd + padOffset);
+
+  const cxlp = getIntersectPoint(LL, CLFP, false, ld + padOffset, gap, !llp);
+  const cxrp = getIntersectPoint(RL, CLFP, true, rd + padOffset, gap, !rrp);
+
+  const centerFrontTrimmed = new Line2d(cxlp, cxrp).trimmed(gap, true);
+  const centerBackTrimmed = centerFrontTrimmed.parrelle(-1 * cd);
+  const tsp = centerFrontTrimmed.startVertex();
+  const tep = centerFrontTrimmed.endVertex();
+  const clrs = CL.closestPointOnLine(tsp);
+  const crrs = CL.closestPointOnLine(tep);
+
+  const centerRightSide = new Line2d(crrs, tep);
+  const centerLeftSide = new Line2d(clrs, tsp);
+
+  const info = {center: {left: {}, right: {}}, left: {}, right: {}};
+
+
+  info.center.center = Vertex2d.center(tsp, tep, centerBackTrimmed.startVertex(), centerBackTrimmed.endVertex());
+  info.center.length = centerFrontTrimmed.length();
+  info.center.left.reveal = clrs.distance(lcp) * (CL.isOn(clrs) ? 1 : -1);
+  info.center.right.reveal = crrs.distance(rcp) * (CL.isOn(crrs) ? 1 : -1);
+
+  if (rrp){
+    const rrsp = RL.closestPointOnLine(cxrp);
+    const rightSide = new Line2d(rrsp, cxrp);
+    const rightGapTheta = CL.thetaBetween(RL);
+    const rightGapLine = Line2d.startAndTheta(rcp, CL.negitive().radians() + rightGapTheta / 2);
+    info.right.reveal = rrsp.distance(rcp) * (RL.isOn(rrsp) ? 1 : -1);
+    if (rightGapTheta > Math.PI) {
+      info.right.theta = rightGapLine.thetaBetween(rightSide);
+      info.center.right.theta = centerRightSide.thetaBetween(rightGapLine);
+    } else if (info.center.right.reveal < 0) {
+      //For meeting walls or other flat surfaces
+      info.center.right.theta = centerRightSide.thetaBetween(RL);
+    }
+  }
+
+  if (llp) {
+    const lrsp = LL.closestPointOnLine(cxlp);
+    info.left.reveal = lrsp.distance(lcp) * (LL.isOn(lrsp) ? 1 : -1);
+    const leftGapTheta = LL.thetaBetween(CL);
+    if (leftGapTheta > Math.PI) {
+      const leftSide = new Line2d(lrsp, cxlp);
+      const leftGapLine = Line2d.startAndTheta(rcp, CL.radians() - leftGapTheta / 2);
+      info.left.theta = leftSide.thetaBetween(leftGapLine);
+      info.center.left.theta = leftGapLine.thetaBetween(centerLeftSide);
+    } else if (info.center.left.reveal < 0) {
+      //For meeting walls or other flat surfaces
+      info.center.left.theta = LL.thetaBetween(centerRightSide);
+    }
+  }
+
+  return info;
+}
+
+Cabinet.doorIntersect = doorIntersect;
 
 module.exports = Cabinet

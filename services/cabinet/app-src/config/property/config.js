@@ -13,8 +13,9 @@ class PropertyConfig {
     if (styleName)
       props[style] = Properties.getSet(style, styleName);
 
-    function isRevealOverlay() {return style === 'Reveal';}
+    function isReveal() {return style === 'Reveal';}
     function isInset() {return style === 'Inset';}
+    function isOverlay() {return !isReveal() && !isInset();}
     function overlay() {return props['Overlay'].ov.value()}
     function reveal() {return props['Reveal']};
 
@@ -66,13 +67,20 @@ class PropertyConfig {
       }
     }
 
+    const resolveStyleStatus = (code) => {
+      switch (code) {
+        case 'isReveal': return isReveal();
+        case 'isInset': return isInset();
+        case 'isOverlay': return isOverlay();
+      }
+    }
 
     const resolveReveals = (code, props) => {
       switch (code) {
         case 'frorl': return new Measurement(1/8, IMPERIAL_US).value();
         case 'frorr': return new Measurement(1/8, IMPERIAL_US).value();
         case 'r': if (isInset()) return 0;
-          if (isRevealOverlay()) return new Measurement(props.Reveal.r.value()).value();
+          if (isReveal()) return new Measurement(props.Reveal.r.value()).value();
           return new Measurement(props.Cabinet.frw.value() - 2 * props.Overlay.ov.value()).value();
         default: return resolveCostProps(code, props);
       }
@@ -83,6 +91,9 @@ class PropertyConfig {
       let value = resolvePanelThickness(code, props);
       if (value !== undefined) return value;
       value = resolveOuterReveal(code, props);
+      if (value !== undefined) return value;
+      console.log(code);
+      value = resolveStyleStatus(code);
       // if (value !== undefined) return value;
       // value = resolveReveals(code, props);
       return value;
@@ -110,7 +121,7 @@ class PropertyConfig {
       return json;
     }
 
-    getProperties.isRevealOverlay = isRevealOverlay;
+    getProperties.isReveal = isReveal;
     getProperties.isInset = isInset;
     getProperties.overlay = overlay;
     getProperties.reveal = reveal;

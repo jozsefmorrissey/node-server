@@ -60,9 +60,11 @@ class DividerSection extends PartitionSection {
       return attr ? dem[attr] : dem;
     };
     const panelRotFunc = () => {
-      const isVertical = sectionProperties().vertical;
-      if (isVertical) return {x: 90, y: 90, z: 90};
-      else return {x: 90, y: 90, z: 0};
+      const props = sectionProperties();
+      const rotation = props.rotation || {x: 90, y: 90, z: 0};
+      const isVertical = props.vertical;
+      if (isVertical) rotation.z = 90;
+      return rotation;
     }
 
     // const frameCenterFunc = (attr) => {

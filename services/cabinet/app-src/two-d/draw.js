@@ -8,6 +8,7 @@ class Draw2d {
     const ctx = canvas.getContext('2d');
 
     function draw(object, color, width) {
+      if (object === undefined) return;
       if (Array.isArray(object)) {
         for (let index = 0; index < object.length; index += 1)
           draw(object[index], color, width);
@@ -73,6 +74,20 @@ class Draw2d {
       color = color ||  'black';
       width = width || .1;
       poly.lines().forEach((line) => draw.line(line, color, width));
+      if ((typeof poly.getTextInfo) === 'function') {
+        ctx.save();
+        const info = poly.getTextInfo();
+        ctx.translate(info.center.x(), info.center.y());
+        ctx.rotate(info.radians);
+        ctx.beginPath();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'black';
+        ctx.fillStyle =  'black';
+        const text = info.limit === undefined ? info.text : info.text.substring(0, info.limit);
+        ctx.fillText(text, info.x, info.y, info.maxWidth);
+        ctx.stroke()
+        ctx.restore();
+      }
     }
 
     draw.square = (square, color, text) => {

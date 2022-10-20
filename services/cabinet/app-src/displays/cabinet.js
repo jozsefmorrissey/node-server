@@ -82,7 +82,6 @@ class CabinetDisplay {
     }
 
     function linkLayout(cabinet, obj2d) {
-      console.log('linking!')
       const topview = obj2d.topview();
       if (topview.width() !== cabinet.width()) {
         cabinet.width(topview.width());

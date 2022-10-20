@@ -70,6 +70,7 @@ class DivideSection extends SpaceSection {
           left: props.position.left,
           right: props.position.right
         };
+        const rotation = props.rotation;
 
         let top = props.borders.top;
         let bottom = props.borders.bottom;
@@ -96,7 +97,7 @@ class DivideSection extends SpaceSection {
         const depth = props.depth;
         if (!top || !bottom || !right || !left)
           throw new Error('Border not defined');
-        return {borders: {top, bottom, right, left}, position, depth, index};
+        return {borders: {top, bottom, right, left}, position, depth, index, rotation};
       }
     }
     this.dividerProps = (index) => {
@@ -139,7 +140,7 @@ class DivideSection extends SpaceSection {
         if (section instanceof DividerSection) {
           const maxWidth = section.maxWidth();
           let halfReveal;
-          if (this.propertyConfig().isRevealOverlay()) {
+          if (this.propertyConfig().isReveal()) {
             halfReveal = this.propertyConfig().reveal().r.value() / 2;
           } else if (this.propertyConfig().isInset()) {
             const insetValue = this.propertyConfig('Inset').is.value();
@@ -159,7 +160,7 @@ class DivideSection extends SpaceSection {
       for (let index = 0; index < limitIndex; index += 1) {
         const section = this.sections[index];
         if (section instanceof DividerSection) {
-          if (this.propertyConfig().isRevealOverlay()) {
+          if (this.propertyConfig().isReveal()) {
             offset += this.propertyConfig().reveal().r.value();
           }  else if (this.propertyConfig().isInset()) {
             const insetValue = this.propertyConfig('Inset').is.value();

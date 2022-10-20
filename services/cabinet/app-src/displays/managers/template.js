@@ -20,10 +20,12 @@ const Measurement = require('../../../../../public/js/utils/measurement.js');
 const ThreeView = require('../three-view.js');
 const Layout2D = require('../../objects/layout.js');
 const Draw2D = require('../../two-d/draw.js');
+const Snap2d = require('../../two-d/objects/snap');
 const cabinetBuildConfig = require('../../../public/json/cabinets.json');
 
 let template;
 
+const toDisplay = (value) =>  new Measurement(value).display();
 const threeView = new ThreeView();
 du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
   du.move.inFront(elem));
@@ -215,6 +217,9 @@ function validateOpenTemplate (elem) {
     const height = new Measurement(templateBody.children[3].value, true).decimal();
     const width = new Measurement(templateBody.children[2].value, true).decimal();
     const thickness = new Measurement(templateBody.children[4].value, true).decimal();
+    template.height(height);
+    template.width(width);
+    template.thickness(thickness);
     const cabinet = template.getCabinet(height, width, thickness);
 
     const depthInputs = du.find.downAll('[name=depth]', templateBody);
@@ -366,10 +371,11 @@ function getScope(type, obj) {
 
 const getObjects = {
     subassemblies: () => (      {
-      "type": "Panel",
-      "center": [0,0,0],
-      "demensions": [1,1,1],
-      "rotation": [0,0,0]
+      type: "Panel",
+      center: [0,0,0],
+      demensions: [1,1,1],
+      rotation: [0,0,0],
+      include: 'All'
     })
 }
 
@@ -386,7 +392,6 @@ function updateTemplateDisplay() {
 function addExpandable(template, type) {
   const containerClass = containerClasses[type];
   let parentSelector = `[template-id='${template.id()}']>.${containerClass}`;
-  console.log(parentSelector);
   TemplateManager.headTemplate[type] ||= new $t(`managers/template/${type.toKebab()}/head`);
   TemplateManager.bodyTemplate[type] = TemplateManager.bodyTemplate[type] === undefined ?
                     new $t(`managers/template/${type.toKebab()}/body`) : TemplateManager.bodyTemplate[type];
@@ -415,6 +420,7 @@ class TemplateManager extends Lookup {
     const dividerJointChange = (template) => (vals) => {
       template.dividerJoint(vals);
     }
+    const templateShapeInput = (template) => TemplateManager.templateShapeInput(template.shape());
     const dividerJointInput = (template) =>
       getJointInputTree(dividerJointChange(template), template.dividerJoint(), true).payload();
 
@@ -431,7 +437,8 @@ class TemplateManager extends Lookup {
         validateOpenTemplate(du.id(parentId));
       }, 1000);
       return TemplateManager.bodyTemplate.render({template, TemplateManager: this,
-        containerClasses, dividerJointInput: dividerJointInput(template)});
+        containerClasses, dividerJointInput: dividerJointInput(template), toDisplay,
+        templateShapeInput: templateShapeInput(template)});
       }
 
     const expandables = {};
@@ -489,6 +496,15 @@ TemplateManager.inputTree = () => {
   dit.leaf('Template Name', [Inputs('name')]);
   return dit;
 }
+
+TemplateManager.templateShapeInput = (value) => {
+  return new Select({
+      name: 'templateShape',
+      list: Object.keys(Snap2d.get),
+      class: 'template-shape-input',
+      value: value
+    });
+};
 
 TemplateManager.mainTemplate = new $t('managers/template/main');
 TemplateManager.headTemplate = new $t('managers/template/head');
@@ -548,6 +564,12 @@ function updateOpeningsTemplate(elem, template) {
   console.log(ExpandableList.get(elem,1).toJson());
 }
 
+function updateViewShape(elem) {
+  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+  const template = CabinetTemplate.get(templateId);
+  template.shape(elem.value);
+}
+
 function updateJointPartCode(elem) {
   const attr = elem.name;
   const listElem = ExpandableList.get(elem);
@@ -573,7 +595,15 @@ function updateTemplate(elem, template) {
   }
 }
 
+function updateInclude(elem) {
+  const subAssem = ExpandableList.get(elem);;
+  subAssem.include = elem.value;
+  console.log(subAssem);
+}
+
+du.on.match('change', '.template-include', updateInclude);
 du.on.match('change', '.opening-part-code-input', updateOpeningsTemplate);
+du.on.match('change', '.template-shape-input', updateViewShape);
 du.on.match('change', '[name="xyz"]', switchEqn);
 du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
 du.on.match('change', '.template-input[name="malePartCode"],.template-input[name="femalePartCode"]', updateJointPartCode);

@@ -1,6 +1,8 @@
 
 const approximate = require('../../../../../public/js/utils/approximate.js');
 
+const acc = 1000000;
+
 class Vertex2d {
   constructor(point) {
     if (Array.isArray(point)) point = {x: point[0], y: point[1]};
@@ -29,13 +31,13 @@ class Vertex2d {
       return modificationFunction;
     }
 
-    this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
+    this.equal = (other) => approximate.eq(other.x(), this.x(), acc) && approximate.eq(other.y(), this.y(), acc);
     this.x = (val) => {
-      if ((typeof val) === 'number') point.x = approximate(val);
+      if ((typeof val) === 'number') point.x = approximate(val, acc);
       return this.point().x;
     }
     this.y = (val) => {
-      if ((typeof val) === 'number') this.point().y = approximate(val);
+      if ((typeof val) === 'number') this.point().y = approximate(val, acc);
       return this.point().y;
     }
 
@@ -62,10 +64,24 @@ class Vertex2d {
     const parentToJson = this.toJson;
 
     this.offset = (x, y) => {
-      const copy = this.toJson();
+      if (x instanceof Vertex2d) {
+        y = x.y();
+        x = x.x();
+      }
+      const copy = this.toJson().point;
       if (y !== undefined) copy.y += y;
       if (x !== undefined) copy.x += x;
       return new Vertex2d(copy);
+    }
+
+    this.copy = () => new Vertex2d([this.x(), this.y()]);
+
+    this.differance = (x, y) => {
+      if (x instanceof Vertex2d) {
+        y = x.y();
+        x = x.x();
+      }
+      return new Vertex2d({x: this.x() - x, y: this.y() - y});
     }
 
     this.point(point);

@@ -3,15 +3,32 @@ const Vertex2d = require('vertex');
 const Circle2d = require('circle');
 
 class SnapLocation2d {
-  constructor(parent, location, vertex, targetVertex, color, pairedWith) {
-    Object.getSet(this, {location, vertex, targetVertex, color}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
-    this.thetaOffset(0);
+  constructor(parent, location, vertex, targetVertex, pairedWith) {
+    Object.getSet(this, {location, vertex, targetVertex}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
     let locationFunction;
     const circle = new Circle2d(5, vertex);
     pairedWith = pairedWith || null;
 
+    const thetaOffset = {_DEFAULT: 0};
+    this.thetaOffset = (cxtrNameOinstance, location, value) => {
+      const cxtrName = cxtrNameOinstance instanceof SnapLocation2d ?
+              cxtrNameOinstance.parent().constructor.name :
+              cxtrNameOinstance ? cxtrNameOinstance : parent.constructor.name;
+      if (cxtrNameOinstance instanceof SnapLocation2d && location === undefined)
+        location = cxtrNameOinstance.location();
+      if (cxtrName !== undefined && Number.isFinite(value)) {
+        if (thetaOffset._DEFAULT === undefined) thetaOffset._DEFAULT = value;
+        if (thetaOffset[cxtrName] === undefined) thetaOffset[cxtrName] = {};
+        if (thetaOffset[cxtrName]._DEFAULT === undefined) thetaOffset[cxtrName]._DEFAULT = value;
+        if (location) thetaOffset[cxtrName][location] = value;
+      }
+      return thetaOffset[cxtrName] === undefined ? thetaOffset._DEFAULT :
+          (thetaOffset[cxtrName][location] === undefined ? thetaOffset[cxtrName]._DEFAULT :
+          thetaOffset[cxtrName][location]);
+    }
+
     // If position is defined and a Vertex2d:
-    //        returns the position of parents center iff this location was at positiion
+    //        returns the position of parents center iff this location was at position
     // else
     //        returns current postion based off of the parents current center
 
@@ -164,6 +181,11 @@ function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
     const xDiff = xDiffFunc();
     const yDiff = yDiffFunc();
     const vertex = snapLoc.vertex();
+    if (xDiff === 0 && yDiff === 0) {
+      if (position) return snapLoc.parent().parent().center().clone();
+      vertex.point(snapLoc.parent().parent().center().clone());
+      return snapLoc;
+    }
     const center = snapLoc.parent().parent().center();
     const direction = xDiff >= 0 ? 1 : -1;
     const hypeLen = Math.sqrt(xDiff * xDiff + yDiff * yDiff);

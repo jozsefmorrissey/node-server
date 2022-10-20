@@ -29,19 +29,23 @@ class ThreeView extends Lookup {
 
     const color = 'black';
     const width = .2;
-    const drawFront = () => {
+    const cache = {front: {}, left: {}, top: {}};
+
+    const drawFront = (refresh) => {
       Layout2D.release('three-view-front');
-      const lm = this.lastModel();
-      if (lm === undefined) return;
-      const xy = lm.xy;
-      const twoDmap = Polygon2d.lines(...xy);
-      if (twoDmap.length < 100) {
-        front(twoDmap, color, width);
-        const measurements = LineMeasurement2d.measurements(twoDmap);
-        front(measurements, 'grey');
-      }
+        const lm = this.lastModel();
+        if (lm === undefined) return;
+        const xy = lm.xy;
+        const twoDmap = Polygon2d.lines(...xy);
+        if (twoDmap.length < 100) {
+          const measurements = LineMeasurement2d.measurements(twoDmap);
+          cache.front.twoDmap = twoDmap;
+          cache.front.measurements = measurements;
+        }
+      front(cache.front.twoDmap, color, width);
+      front(cache.front.measurements, 'grey');
     }
-    const drawLeft = () => {
+    const drawLeft = (refresh) => {
       Layout2D.release('three-view-left');
       const lm = this.lastModel();
       if (lm === undefined) return;
@@ -52,7 +56,7 @@ class ThreeView extends Lookup {
         left(measurements, 'grey');
       }
     }
-    const drawTop = () => {
+    const drawTop = (refresh) => {
       Layout2D.release('three-view-top');
       const lm = this.lastModel();
       if (lm === undefined) return;
@@ -87,7 +91,7 @@ class ThreeView extends Lookup {
       threeDModel.update(cabinet);
       front.clear();left.clear();top.clear();
       setTimeout(() => {
-        drawTop();drawLeft();drawFront();
+        drawTop(true);drawLeft(true);drawFront(true);
       }, 1000);
     }
 

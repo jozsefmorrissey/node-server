@@ -10,6 +10,10 @@ class CabinetTemplate extends Lookup {
     const instance = this;
     const initialVals = (typeof type) === 'object' ? type : {
       type, values: [], subassemblies: [], joints: [], dividerJoint: {},
+      shape: 'square',
+      width: 18 * 2.54,
+      height: 34 * 2.54,
+      thickness: 24 * 2.54,
       openings: [
         {
           "top": "pt",

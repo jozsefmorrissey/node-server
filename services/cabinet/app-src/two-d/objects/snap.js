@@ -14,10 +14,10 @@ class Snap2d {
     let end = new Vertex2d();
     let layout = parent.layout();
 
-    this.dl = () => 12;
-    this.dr = () => 24;
-    this.dol = () => 8;
-    this.dor = () => 16;
+    this.dl = () => 24 * 2.54;
+    this.dr = () => 24 * 2.54;
+    this.dol = () => 12;
+    this.dor = () => 12;
     this.toString = () => `SNAP (${tolerance}):${object}`
     this.position = {};
     this.id = () => id;
@@ -142,7 +142,7 @@ class Snap2d {
       const maxAttr = `max${axis.toUpperCase()}`;
       const minAttr = `min${axis.toUpperCase()}`;
       if (closestVertex[axis]() === furthestVertex[axis]()) {
-        const perpLine = wall.perpendicular(undefined, 10);
+        const perpLine = wall.perpendicular(10, null, true);
         const externalVertex = !layout.within(perpLine.startVertex()) ?
                 perpLine.endVertex() : perpLine.startVertex();
         if (externalVertex[axis]() < closestVertex[axis]()) position[maxAttr] = closestVertex[axis]();
@@ -181,11 +181,6 @@ class Snap2d {
         theta += Math.toRadians(pairWith.wallThetaOffset());
         const objCenter = pairWith.at({center, theta});
 
-        // const backLeftCenter = instance.position.backLeft({center: wall.startVertex(), theta});
-        // if (backCenter.distance(backLeftCenter) < instance.maxDem() / 2) return instance.makeMove({center: backLeftCenter, theta});
-        // const backRightCenter = instance.position.backRight({center: wall.endVertex(), theta})
-        // if (backCenter.distance(backRightCenter) < instance.maxDem() / 2) return instance.makeMove({center: backRightCenter,theta});
-
         return {center: objCenter, theta, wall, pairWith};
       }
     }
@@ -209,7 +204,7 @@ class Snap2d {
         let theta = snapLoc.parent().radians();
         const center = snapLoc.vertex();
         const funcName = snapLoc.targetVertex();
-        theta += Math.toRadians(tarSnap.thetaOffset());
+        theta += Math.toRadians(tarSnap.thetaOffset(snapLoc));
         lastPotentalPair = [snapLoc, tarSnap];
         return {snapLoc, center: instance.position[funcName]({center, theta}), theta};
       }
@@ -250,7 +245,6 @@ class Snap2d {
         instance.snapLocations().forEach((l) => validMove &&= layout.within(l.at().vertex()));
         if (!validMove) return this.makeMove(lastValidMove, true); // No move was made return undefined
         else lastValidMove = position;
-        console.log('valid');
       }
       instance.update();
     }

@@ -9,6 +9,7 @@ const Square2d = require('../two-d/objects/square.js');
 const Circle2d = require('../two-d/objects/circle.js');
 const Snap2d = require('../two-d/objects/snap.js');
 const SnapSquare = require('../two-d/objects/snap/square.js');
+const cabinetBuildConfig = require('../../public/json/cabinets.json');
 // const SnapSquare = require('../two-d/objects/snap/corner-l.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
@@ -229,8 +230,9 @@ class Object2d extends Lookup {
     }
 
 
-    const topType = 'cornerL';
-    const topview = Snap2d.get[topType](this, 30);
+    const p = this.payload();
+    const topType = p ? cabinetBuildConfig[p.partName()].shape : 'square';
+    const topview = Snap2d.get[topType || 'square'](this, 30);
     // const bottomview = new SnapSquare(this, 30);
     // const leftview = new SnapSquare(this, 30);
     // const rightview = new SnapSquare(this, 30);
@@ -497,11 +499,11 @@ class Layout2D extends Lookup {
     }
 
     this.within = (vertex, print) => {
-      vertex = vertex instanceof Vertex2d ? vertex.point() : vertex;
+      vertex = new Vertex2d(vertex);
       const endpoint = {x: 0, y: 0};
-      this.verticies().forEach(vertex => {
-        endpoint.x -= vertex.x();
-        endpoint.y -= vertex.y();
+      this.verticies().forEach(v => {
+        endpoint.x -= v.x();
+        endpoint.y -= v.y();
       });
       const escapeLine = new Line2d(vertex, endpoint);
       const intersections = [];
@@ -513,8 +515,8 @@ class Layout2D extends Lookup {
         allIntersections.push(intersection);
         if (intersection) {
           // Todo make more accurate
-          const xEqual = approximate.eq(intersection.x, vertex.x, 1);
-          const yEqual = approximate.eq(intersection.y, vertex.y, 1);
+          const xEqual = approximate.eq(intersection.x(), vertex.x(), 1);
+          const yEqual = approximate.eq(intersection.y(), vertex.y(), 1);
           if (xEqual && yEqual) onLine = true;
           intersections.push(intersection);
         }
@@ -611,6 +613,17 @@ Layout2D.fromJson = (json) => {
 
   console.log('isConnected:', layout.connected());
   return layout;
+}
+
+function locateGap(line, point, theta, distance, gap, gaptheta) {
+  const bysector = Line2d.startAndTheta(point, theta);
+  const perpLine = line.perpendicular(distance, point, true);
+  const parrelleLine = perpLine.perpendicular(distance, perpLine.endVertex(), true);
+  const midPoint = bysector.findIntersection(parrelleLine);
+  const halfLine1 = Line2d.startAndTheta(midPoint, gaptheta, gap/2);
+  const halfLine2 = Line2d.startAndTheta(midPoint, gaptheta, gap/-2);
+  const gapLine = halfLine1.combine(halfLine2);
+  return gapLine;
 }
 
 new Layout2D();

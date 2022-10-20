@@ -44,7 +44,7 @@ function updateDivisions (target) {
     const value = values[index];
     if(value) inputs[index].value = value;
   }
-  ThreeDModel.update(opening);
+  ThreeDMainModel.update(opening);
 }
 
 function getValue(code, obj) {

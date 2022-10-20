@@ -1,4 +1,18 @@
 <div template-attr='subassembles'>
+  <div>
+    <label>All</label>
+    <input class='template-include' type='radio' name='is-{{obj.id}}' value='All'
+          {{obj.include === 'All' ? 'checked' : ''}}>
+    <label>Overlay</label>
+    <input class='template-include' type='radio' name='is-{{obj.id}}' value='Overlay'
+          {{obj.include === 'Overlay' ? 'checked' : ''}}>
+    <label>Reveal</label>
+    <input class='template-include' type='radio' name='is-{{obj.id}}' value='Reveal'
+          {{obj.include === 'Reveal' ? 'checked' : ''}}>
+    <label>Inset</label>
+    <input class='template-include' type='radio' name='is-{{obj.id}}' value='Inset'
+          {{obj.include === 'Inset' ? 'checked' : ''}}>
+  </div>
   <label>Name</label>
   <input class='template-input' attr='subassemblies' name="name" value="{{obj.name}}">
   <br>

@@ -8,6 +8,7 @@ const approximate = require('../../../../../../../public/js/utils/approximate.js
 class Section extends Assembly {
   constructor(isPartition, partCode, partName, sectionProperties, parent) {
     super(partCode, partName);
+    const instance = this;
     this.setParentAssembly(parent);
     this.setIndex = () => this.index = () => sectionProperties().index;
     this.setIndex();
@@ -38,7 +39,7 @@ class Section extends Assembly {
       if (propConfig.isInset()) {
         const insetValue = propConfig('Inset').is.value();
         borderOrigin += magnitude * insetValue;
-      } else if (propConfig.isRevealOverlay()) {
+      } else if (propConfig.isReveal()) {
         let reveal = propConfig.reveal().r.value();
         borderOrigin -= magnitude * (border.maxWidth() - reveal) / 2;
       } else {
@@ -80,6 +81,24 @@ class Section extends Assembly {
       return {limits, center, dems};
     }
 
+    this.rotation = function (attr) {
+      if (sectionProperties) {
+        const props = sectionProperties();
+        if (props.rotation) {
+          if (attr) {
+            return instance.eval(props.rotation[attr]);
+          }
+          const rotation = {
+            x: instance.eval(props.rotation.x),
+            y: instance.eval(props.rotation.y),
+            z: instance.eval(props.rotation.z)
+          };
+          return rotation;
+        }
+      }
+      return {y:0,x:0,z:0};
+    }
+
     this.innerSize = () => {
       const props = sectionProperties();
       const topPos = props.borders.top.position();
@@ -95,7 +114,7 @@ class Section extends Assembly {
     this.isPartition = () => isPartition;
     this.sectionProperties = sectionProperties;
     this.constructorId = this.constructor.name;
-    this.part = false;
+    this.part(false);
     this.display = false;
     this.name = this.constructorId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
 

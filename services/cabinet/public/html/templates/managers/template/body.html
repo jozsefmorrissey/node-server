@@ -11,11 +11,11 @@
     <input type="text" name="partSelector" list='part-list'>
     <datalist id='part-list'></datalist>
   </span>
-  <input class='cabinet-input dem' type="text" name="width" value="27">
+  <input class='cabinet-input dem' type="text" name="width" value="{{toDisplay(template.width())}}">
   X
-  <input class='cabinet-input dem' type="text" name="height" value="24">
+  <input class='cabinet-input dem' type="text" name="height" value="{{toDisplay(template.height())}}">
   X
-  <input class='cabinet-input dem' type="text" name="thickness" value="20">
+  <input class='cabinet-input dem' type="text" name="thickness" value="{{toDisplay(template.thickness())}}">
   <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
     <div class='expand-header'>Values</div>
     <div hidden class="{{containerClasses.values}}"></div>
@@ -37,5 +37,9 @@
   <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
     <div class='expand-header'>Opening Border Part Codes</div>
     <div hidden class="{{containerClasses.openings}}">5</div>
+  </div>
+  <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
+    <div class='expand-header'>View Shape</div>
+    <div hidden>{{templateShapeInput.html()}}</div>
   </div>
 </div>

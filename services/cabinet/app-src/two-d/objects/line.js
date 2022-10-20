@@ -75,7 +75,7 @@ class Line2d {
       }
       const a = this.endVertex().x() - this.startVertex().x();
       const b = this.endVertex().y() - this.startVertex().y();
-      return Math.sqrt(a*a + b*b);
+      return approximate(Math.sqrt(a*a + b*b), 1000000);
     }
 
     function getSlope(v1, v2) {
@@ -108,6 +108,45 @@ class Line2d {
       return new Vertex2d({x,y});
     }
 
+    this.closestEnds = (other) => {
+      const tsv = this.startVertex();
+      const osv = other.startVertex();
+      const tev = this.endVertex();
+      const oev = other.endVertex();
+
+      const ss = tsv.distance(osv);
+      const se = tsv.distance(oev);
+      const ee = tev.distance(oev);
+      const es = tev.distance(osv);
+
+      if (ss <= se && ss <= ee && ss <= es) return [tsv, osv];
+      if (se <= ee && se <= es) return [tsv, oev];
+      if (ee <= es) return [tev, oev];
+      else return [tev, osv]
+    }
+
+    // Always returns left side of intersection path
+    this.thetaBetween = (other) => {
+      if (!(other instanceof Line2d)) throw new Error('Cannot calculate thetaBetween if arg1 is not an instanceof Line2d');
+      let theta;
+      let theta1 = this.radians();
+      let closestEnds = this.closestEnds(other);
+      if (closestEnds.indexOf(this.startVertex()) !== -1) {
+        theta1 += Math.PI;
+      }
+      let theta2 = other.radians();
+      if (closestEnds.indexOf(other.startVertex()) !== -1) {
+        theta2 += Math.PI;
+      }
+
+      if (theta1 > theta2) {
+        theta = theta2 - theta1 + Math.PI * 2;
+      } else {
+        theta = theta2 - theta1;
+      }
+      return theta % (2 * Math.PI)
+    }
+
     this.yIntercept = () => getB(this.startVertex().x(), this.startVertex().y(), this.slope());
     this.slope = () => getSlope(this.startVertex(), this.endVertex());
     this.y = (x) => {
@@ -129,6 +168,7 @@ class Line2d {
       return (y - this.yIntercept())/slope;
     }
 
+    //TODO: fix!!!!
     this.liesOn = (vertices) => {
       const liesOn = [];
       for (let index = 0; index < vertices.length; index += 1) {
@@ -140,6 +180,11 @@ class Line2d {
       }
       liesOn.sort(Vertex2d.sort);
       return liesOn;
+    }
+
+    this.isOn = (vertex) => {
+      const y = this.y(vertex.x());
+      return (y === vertex.y() || Math.abs(y) === Infinity) && this.withinSegmentBounds(vertex);
     }
 
     this.measureTo = (verts) => {
@@ -155,7 +200,7 @@ class Line2d {
 
     this.closestPointOnLine = (vertex, segment) => {
       vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
-      const perpLine = this.perpendicular(vertex);
+      const perpLine = this.perpendicular(undefined, vertex, true);
       const perpSlope = perpLine.slope();
       const slope = this.slope();
       let x, y;
@@ -176,26 +221,45 @@ class Line2d {
 
     this.inverseX = (y) => this.slope()*y + this.yIntercept();
     this.inverseY = (x) => (x-this.yIntercept())/this.slope();
-    this.perpendicular = (vertex, distance) => {
-      vertex = new Vertex2d(vertex) || this.midpoint();
-      const posOffset = distance !== undefined ? distance/2 : 1000;
-      const negOffset = -1 * posOffset;
-      const slope = this.slope();
-      if (slope === 0) {
-        return new Line2d({x: vertex.x(), y: vertex.y() + posOffset}, {x: vertex.x(), y: vertex.y() + negOffset});
+    this.perpendicular = (distance, vertex, center) => {
+      distance ||= this.length();
+      const rotated = this.copy().rotate(Math.PI12);
+      const mp = vertex || rotated.midpoint();
+      if (center) {
+        distance = Math.abs(distance);
+        const left = Line2d.startAndTheta(mp, rotated.negitive().radians(), distance/2);
+        const right = Line2d.startAndTheta(mp, rotated.radians(), distance/2);
+        return right.combine(left);
       }
-      if (Math.abs(slope) === Infinity || Number.isNaN(slope)) {
-        return new Line2d({x: posOffset + vertex.x(), y: vertex.y()}, {x: negOffset + vertex.x(), y: vertex.y()});
-      }
-
-      const slopeInverse = -1/slope;
-      const b = getB(vertex.x(), vertex.y(), slopeInverse);
-      const startVertex = {x: getX(posOffset, slopeInverse, b), y: posOffset};
-      const endVertex = {x: getX(negOffset, slopeInverse, b), y: negOffset};
-      const line = new Line2d(startVertex, endVertex);
-      return line;
+      return Line2d.startAndTheta(mp, rotated.radians(), distance);
     }
+
+    this.rotate = (radians, pivot) => {
+      pivot ||= this.midpoint();
+
+      const sv = this.startVertex();
+      const spl = new Line2d(pivot, sv);
+      const sRadOffset = radians + spl.radians();
+      const sfl = Line2d.startAndTheta(pivot, sRadOffset, spl.length());
+      sv.point(sfl.endVertex());
+
+      const ev = this.endVertex();
+      const epl = new Line2d(pivot, ev);
+      const eRadOffset = radians + epl.radians();
+      const efl = Line2d.startAndTheta(pivot, eRadOffset, epl.length());
+      ev.point(efl.endVertex());
+      return this;
+    }
+
     this.findIntersection = (line, segment) => {
+      if (this.slope() === 0 && line.slope() === 0) {
+        if (this.yIntercept() === line.yIntercept()) return Infinity;
+        return false;
+      }
+      if (this.slope() === 0) return line.findIntersection(this, segment);
+      if (approximate.eq(line.radians(), this.radians(), 10000)) {
+        return Vertex2d.center(line.startVertex(), this.startVertex(), line.endVertex(), this.endVertex());
+      }
       const slope = this.slope();
       const lineSlope = line.slope();
       let x, y;
@@ -203,16 +267,16 @@ class Line2d {
         x = this.startVertex().x();
         y = line.y(x);
       } else if (!Number.isFinite(lineSlope)) {
-        y = line.startVertex().y();
-        x = line.x(y);
+        x = line.startVertex().x();
+        y = this.y(x);
       } else {
         x = newX(slope, lineSlope, this.yIntercept(), line.yIntercept());
         y = this.y(x);
       }
       const intersection = {x,y};
-      if (segment !== true) return intersection;
+      if (segment !== true) return new Vertex2d(intersection);
       if (this.withinSegmentBounds(intersection) && line.withinSegmentBounds(intersection)) {
-        return intersection;
+        return new Vertex2d(intersection);
       }
       return false;
     }
@@ -233,6 +297,30 @@ class Line2d {
       return Math.atan2(deltaY, deltaX);
     }
 
+    // Positive returns right side.
+    this.parrelle = (distance, midpoint, length) => {
+      if (distance === 0) return this.copy();
+      if ((typeof distance) !== 'number') throw new Error('distance (arg1) must be of type number && a non-zero value');
+      length ||= this.length();
+      midpoint ||= this.midpoint();
+      const perpLine = this.perpendicular(distance * 2, midpoint, true);
+      let targetPoint = perpLine.startVertex();
+      if (distance < 0) targetPoint = perpLine.endVertex();
+      const radians = this.radians();
+      const halfLine1 = Line2d.startAndTheta(targetPoint, radians, length/2);
+      const halfLine2 = Line2d.startAndTheta(targetPoint, radians, length/-2);
+      const parrelle = halfLine1.combine(halfLine2);
+      return Math.abs(parrelle.radians() - this.radians()) < Math.PI12 ? parrelle : parrelle.negitive();
+    }
+
+    this.isParrelle = (other) => {
+      const posRads = Math.mod(this.radians(), 2*Math.PI);
+      const negRads = Math.mod(this.radians() + Math.PI, 2*Math.PI);
+      const otherRads = Math.mod(other.radians(), 2*Math.PI);
+      return approximate.eq(posRads, otherRads, 10000) ||
+              approximate.eq(negRads, otherRads, 10000);
+    }
+
     this.equals = (other) => {
       if (other === this) return true;
       if (this.toString() === other.toString()) return true;
@@ -248,14 +336,18 @@ class Line2d {
       if (this.toString() === other.toString() || this.toString() === other.toNegitiveString()) return this;
     }
 
+    this.copy = () => new Line2d(this.startVertex().copy(), this.endVertex().copy());
+
     this.combine = (other) => {
       if (!(other instanceof Line2d)) return;
       const clean = this.clean(other);
       if (clean) return clean;
-      if (Math.abs(this.slope()) !== Math.abs(other.slope())) return;
+      if (approximate.neqAbs(this.slope(), other.slope(), 1000)) return;
       const otherNeg = other.negitive();
-      const posEq = (this.y(other.x()) === other.y() && this.x(other.y()) === other.x());
-      const negEq = (this.y(otherNeg.x()) === otherNeg.y() && this.x(otherNeg.y()) === otherNeg.x());
+      const posEq = approximate.eq(this.y(other.x()), other.y(), 1000) &&
+                    approximate.eq(this.x(other.y()), other.x(), 1000);
+      const negEq = approximate.eq(this.y(otherNeg.x()), otherNeg.y(), 1000) &&
+                    approximate.eq(this.x(otherNeg.y()), otherNeg.x(), 1000);
       if (!posEq && !negEq) return;
       const v1 = this.startVertex();
       const v2 = this.endVertex();
@@ -264,12 +356,46 @@ class Line2d {
       if (!this.withinSegmentBounds(ov1) && !this.withinSegmentBounds(ov2)) return;
       const vs = [v1, v2, ov1, ov2].sort(Vertex2d.sort);
       const combined = new Line2d(vs[0], vs[vs.length - 1]);
-      return combined;
+      return approximate.eq(this.radians(), combined.radians(), 1000) ? combined : combined.negitive();
+    }
+
+    this.trimmed = (distance, both) => {
+      if ((typeof distance) !== 'number' || distance === 0) throw new Error('distance (arg1) must be of type number && a non-zero value');
+      const trimBack = distance < 0;
+      distance = Math.abs(distance);
+      const halfLen = this.length() / 2;
+      const halfNewLen = halfLen - distance;
+      const midPoint = this.midpoint();
+      const frontRads = this.radians();
+      const backRads = frontRads + Math.PI;
+      let xOffsetFront, yOffsetFront, xOffsetBack, yOffsetBack;
+      if (both) {
+        xOffsetFront = halfNewLen * Math.cos(frontRads);
+        yOffsetFront = halfNewLen * Math.sin(frontRads);
+        xOffsetBack = halfNewLen * Math.cos(backRads);
+        yOffsetBack = halfNewLen * Math.sin(backRads);
+      } else if (trimBack) {
+        xOffsetFront = halfLen * Math.cos(frontRads);
+        yOffsetFront = halfLen * Math.sin(frontRads);
+        xOffsetBack = halfNewLen * Math.cos(backRads);
+        yOffsetBack = halfNewLen * Math.sin(backRads);
+      } else {
+        xOffsetFront = halfNewLen * Math.cos(frontRads);
+        yOffsetFront = halfNewLen * Math.sin(frontRads);
+        xOffsetBack = halfLen * Math.cos(backRads);
+        yOffsetBack = halfLen * Math.sin(backRads);
+      }
+      const sv = this.startVertex();
+      const ev = this.endVertex();
+      const startVertex = {x: midPoint.x() - xOffsetBack, y: midPoint.y() - yOffsetBack};
+      const endVertex = {x: midPoint.x() - xOffsetFront, y: midPoint.y() - yOffsetFront};
+      const line = new Line2d(startVertex, endVertex);
+      return approximate.eq(line.radians(), this.radians()) ? line : line.negitive();
     }
 
     this.move = (center) => {
       const mouseLocation = new Vertex2d(center);
-      const perpLine = this.perpendicular(mouseLocation);
+      const perpLine = this.perpendicular(undefined, mouseLocation);
       const interX = this.findIntersection(perpLine);
       const diffLine = new Line2d(interX, mouseLocation);
       const rads = diffLine.radians();
@@ -291,9 +417,14 @@ class Line2d {
   }
 }
 Line2d.reusable = true;
-Line2d.startAndTheta = (startvertex, theta) => {
-  const end = {x: dist * Math.cos(theta), y: dist*Math.sin(theta)};
-  return new Line(startVertex.point(), end);
+Line2d.startAndTheta = (startVertex, theta, dist) => {
+  dist ||= 100;
+  startVertex = new Vertex2d(startVertex);
+  const end = {
+    x: startVertex.x() + dist * Math.cos(theta),
+    y: startVertex.y() +dist*Math.sin(theta)
+  };
+  return new Line2d(startVertex.point(), end);
 }
 Line2d.instance = (startV, endV, group) => {
   const line = Lookup.instance(Line2d.name);

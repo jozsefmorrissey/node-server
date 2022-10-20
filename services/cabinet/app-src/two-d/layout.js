@@ -588,10 +588,23 @@ function drawVertex(vertex) {
   updateHoverMap(vertex, p, p, 12);
 }
 
+function snapLocColor(snapLoc) {
+  switch (snapLoc.location()) {
+    case "backRight": return 'red';
+    case "frontRight": return 'yellow';
+    case "frontLeft": return 'green';
+    case "backLeft": return 'blue';
+    case "backCenter": return 'purple';
+    case "diagonalRight": return 'lime';
+    case "diagonalLeft": return 'azure';
+    default: return "grey"
+  }
+}
+
 function drawSnapLocation(locations, color) {
   for (let index = 0; index < locations.length; index += 1) {
     const loc = locations[index];
-    const c = hoverId() === loc.toString() ? 'green' : (color || loc.color());
+    const c = hoverId() === loc.toString() ? 'green' : (color || snapLocColor(loc));
     draw.circle(loc.circle(), 'black', c);
     const vertex = loc.vertex();
     updateHoverMap(loc, vertex.point(), vertex.point(), 8);

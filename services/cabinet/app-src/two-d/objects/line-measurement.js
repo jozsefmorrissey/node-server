@@ -13,8 +13,8 @@ class LineMeasurement2d {
       l = l || layer || 1;
       const termDist = (l + 1) * offset;
       const measureDist = l * offset;
-      const startLine = line.perpendicular(line.startVertex(), termDist * 2);
-      const endLine = line.perpendicular(line.endVertex(), termDist * 2);
+      const startLine = line.perpendicular(termDist * 2, line.startVertex(), true);
+      const endLine = line.perpendicular(termDist * 2, line.endVertex(), true);
       const startCircle = new Circle2d(measureDist, line.startVertex());
       const endCircle = new Circle2d(measureDist, line.endVertex());
       const startTerminationCircle = new Circle2d(termDist - 2.5, line.startVertex());
