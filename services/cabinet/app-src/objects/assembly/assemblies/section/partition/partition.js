@@ -26,7 +26,7 @@ PartitionSection.fromJson = (json) => {
   const assembly = Assembly.new(json._TYPE, json.partCode, sectionProps, json.parent);
   assembly.partCode(json.partCode);
   assembly.partName(json.partName);
-  assembly.uniqueId(json.uniqueId);
+  assembly.id(json.id);
   assembly.values = json.values;
   return assembly;
 }

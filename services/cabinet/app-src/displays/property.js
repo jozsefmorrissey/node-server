@@ -59,14 +59,14 @@ class PropertyDisplay {
       const list = Properties.hasValue(key);
       if (list.length === 0) return;
 
-      const uniqueId = String.random();
+      const id = String.random();
       const getObject = (values) => {
         let properties = Properties.new(key,  values.name);
-        return {name: values.name, uniqueId, changed, properties};
+        return {name: values.name, id, changed, properties};
       }
       const inputTree = PropertyDisplay.configInputTree();
       const expListProps = {
-        parentSelector: `#config-expand-list-${uniqueId}`,
+        parentSelector: `#config-expand-list-${id}`,
         getHeader: (scope) =>
                     PropertyDisplay.configHeadTemplate.render(scope),
         getBody: (scope) =>
@@ -87,26 +87,26 @@ class PropertyDisplay {
           Properties.changes.delete(detail.properties._ID);
         });
       }, 500);
-      return uniqueId;
+      return id;
     }
 
     function getScope(key, group) {
       key = key || '';
-      const uniqueId = String.random();
+      const id = String.random();
       let radioId = group.radioId || PropertyDisplay.counter++;
       const properties = [];
       const groups = {};
       const label = key.replace(PropertyDisplay.camelReg, '$1 $2');
-      const scope = {key, label, properties, groups, recurse, radioId, uniqueId,
+      const scope = {key, label, properties, groups, recurse, radioId, id,
                       noChildren: noChildren(properties, groups),
                       branch: key.match(PropertyDisplay.branchReg)};
-      PropertyDisplay.uniqueMap[uniqueId] = scope;
+      PropertyDisplay.uniqueMap[id] = scope;
       const keys = Object.keys(group.values);
       radioId = PropertyDisplay.counter++;
       for( let index = 0; index < keys.length; index += 1) {
         const key = keys[index];
         const value = group.values[key];
-        childScope(key, uniqueId);
+        childScope(key, id);
       }
       return scope;
     }
@@ -122,8 +122,8 @@ class PropertyDisplay {
         propertyObjs[key] = propObj;
         childIdMap[key] = childScope(key);
       }
-      const uniqueId = String.random();
-      const values = {values: propertyObjs, uniqueId, childIdMap, hideAll, Properties};
+      const id = String.random();
+      const values = {values: propertyObjs, id, childIdMap, hideAll, Properties};
       const contianer = document.querySelector(containerSelector);
       contianer.innerHTML =
           PropertyDisplay.template.render(values);

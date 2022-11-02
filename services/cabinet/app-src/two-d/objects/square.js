@@ -6,7 +6,7 @@ class Square2d {
     width = width === undefined ? 121.92 : width;
     height = height === undefined ? 60.96 : height;
     radians = radians === undefined ? 0 : radians;
-    const uniqueId = String.random();
+    const id = String.random();
     const instance = this;
     Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
     if ((typeof center) === 'function') this.center = center;
@@ -54,7 +54,7 @@ class Square2d {
     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
 
-    this.toString = () => `Square2d(${uniqueId}): ${this.width()} X ${this.height()}] @ ${this.center()}`
+    this.toString = () => `Square2d(${id}): ${this.width()} X ${this.height()}] @ ${this.center()}`
   }
 }
 

@@ -1,9 +1,9 @@
-<div class='cabinet-header' cabinet-id='{{cabinet.uniqueId()}}'>
+<div class='cabinet-header' cabinet-id='{{cabinet.id()}}'>
   {{$index}})
   <input class='cabinet-id-input' prop-update='{{$index}}.name'
         index='{{$index}}' display-id='{{displayId}}' value='{{cabinet.name()}}'>
   Size:
-  <div class='cabinet-dem-cnt' cabinet-id='{{cabinet.uniqueId()}}'>
+  <div class='cabinet-dem-cnt' cabinet-id='{{cabinet.id()}}'>
     <label>W:</label>
     <input class='cabinet-input dem' prop-update='{{$index}}.width' name='width'
         display-id='{{displayId}}' value='{{displayValue(cabinet.width())}}'>

@@ -6,7 +6,7 @@
     </div>
     <div{{key ? ' hidden' : ''}}>
       <div{{branch ? ' hidden' : ''}}>
-        <div id='config-expand-list-{{uniqueId}}'></div>
+        <div id='config-expand-list-{{id}}'></div>
         <div:t repeat='key, group in groups'>
           {{recurse(key, group)}}
         </div:t>

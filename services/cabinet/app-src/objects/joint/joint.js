@@ -14,7 +14,7 @@ class Joint {
     this.parentAssembly = () => {
       if (!parentAssembly && this.parentAssemblyId()) {
         parentAssembly = Lookup.get(this.parentAssemblyId());
-        this.parentAssemblyId = () => parentAssembly.uniqueId();
+        this.parentAssemblyId = () => parentAssembly.id();
       }
       return parentAssembly;
     }

@@ -178,7 +178,7 @@ class SectionProperties {
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
-            this.sections.push(new DividerSection(`dv-${this.uniqueId()}-${index}`, this.dividerProps(index), instance));
+            this.sections.push(new DividerSection(`dv-${this.id()}-${index}`, this.dividerProps(index), instance));
             const divideIndex = dividerCount + index + 1;
             this.sections.push(new DivideSection(this.borders(divideIndex), instance));
           }
@@ -298,7 +298,7 @@ const list = [];
 const byId = {};
 const tolerance = .04
 SectionProperties.updateLinks = (sectionProp) => {
-  const id = sectionProp.uniqueId();
+  const id = sectionProp.id();
   if (byId[id] === undefined) {
     byId[id] = sectionProp;
     list.push(sectionProp);

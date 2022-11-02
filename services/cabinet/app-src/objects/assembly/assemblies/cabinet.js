@@ -197,7 +197,7 @@ Cabinet.fromJson = (assemblyJson, group) => {
   assembly.length(assemblyJson.length);
   assembly.width(assemblyJson.width);
   assembly.group(group);
-  assembly.uniqueId(assemblyJson.uniqueId);
+  assembly.id(assemblyJson.id);
   assembly.values = assemblyJson.values;
   Object.values(assemblyJson.subassemblies).forEach((json) => {
     const clazz = Assembly.class(json._TYPE);

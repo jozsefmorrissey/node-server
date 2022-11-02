@@ -10,7 +10,7 @@ const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() :
 
 class Assembly extends Lookup {
   constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-    super(undefined, 'uniqueId');
+    super(undefined, 'id');
     const instance = this;
     let group;
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
@@ -199,7 +199,7 @@ class Assembly extends Lookup {
       for (let i = 0; i < arguments.length; i += 1) {
         const joint = arguments[i];
         this.joints.push(joint);
-        joint.parentAssemblyId(this.uniqueId());
+        joint.parentAssemblyId(this.id());
       }
     }
 
@@ -242,10 +242,10 @@ class Assembly extends Lookup {
 }
 
 Assembly.list = {};
-Assembly.get = (uniqueId) => {
+Assembly.get = (id) => {
   const keys = Object.keys(Assembly.list);
   for (let index = 0; index < keys.length; index += 1) {
-    const assembly = Assembly.list[keys[index]][uniqueId];
+    const assembly = Assembly.list[keys[index]][id];
     if (assembly !== undefined) return assembly;
   }
   return null;
@@ -253,7 +253,7 @@ Assembly.get = (uniqueId) => {
 Assembly.add = (assembly) => {
   const name = assembly.constructor.name;
   if (Assembly.list[name] === undefined) Assembly.list[name] = {};
-  Assembly.list[name][assembly.uniqueId()] = assembly;
+  Assembly.list[name][assembly.id()] = assembly;
 }
 Assembly.all = () => {
   const list = [];
@@ -291,7 +291,7 @@ Assembly.fromJson = (assemblyJson) => {
   const partName = assemblyJson.partName;
   const clazz = Object.class.get(assemblyJson._TYPE);
   const assembly = new (clazz)(partCode, partName, centerStr, demensionStr, rotationStr);
-  assembly.uniqueId(assemblyJson.uniqueId);
+  assembly.id(assemblyJson.id);
   assembly.values = assemblyJson.values;
   assembly.setParentAssembly(assemblyJson.parent)
   Object.values(assemblyJson.subassemblies).forEach((json) =>

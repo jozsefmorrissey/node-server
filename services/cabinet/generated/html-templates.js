@@ -179,6 +179,32 @@ exports['2055573719'] = (get, $t) =>
 		$t.clean(get("CostManager").bodyHtml(get("child"))) +
 		` </div>`
 
+exports['2081934436'] = (get, $t) => 
+		`<div part-id='` +
+		$t.clean(get("part").id()) +
+		`' part-code='` +
+		$t.clean(get("part").partCode()) +
+		`' class='` +
+		$t.clean(get("tdm").isTarget("part-id", get("part").id()) ? "active " : "") +
+		` model-label indent' ` +
+		$t.clean(get("partList").length > 1 ? "" : "hidden") +
+		`> <label type='part-id' part-id='` +
+		$t.clean(get("part").id()) +
+		`' part-code='` +
+		$t.clean(get("part").partCode()) +
+		`'> ` +
+		$t.clean(get("part").partCode()) +
+		`-` +
+		$t.clean(get("$index") +
+		1) +
+		` </label> <input type='checkbox' class='part-id-checkbox' part-id='` +
+		$t.clean(get("part").id()) +
+		`' part-code='` +
+		$t.clean(get("part").partCode()) +
+		`' ` +
+		$t.clean(!get("tdm").hidePartId(get("part").id()) ? 'checked' : '') +
+		`> </div>`
+
 exports['expandable/input-repeat'] = (get, $t) => 
 		`<div> ` +
 		$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
@@ -544,7 +570,7 @@ exports['-1702305177'] = (get, $t) =>
 
 exports['cabinet/head'] = (get, $t) => 
 		`<div class='cabinet-header' cabinet-id='` +
-		$t.clean(get("cabinet").uniqueId()) +
+		$t.clean(get("cabinet").id()) +
 		`'> ` +
 		$t.clean(get("$index")) +
 		`) <input class='cabinet-id-input' prop-update='` +
@@ -556,7 +582,7 @@ exports['cabinet/head'] = (get, $t) =>
 		`' value='` +
 		$t.clean(get("cabinet").name()) +
 		`'> Size: <div class='cabinet-dem-cnt' cabinet-id='` +
-		$t.clean(get("cabinet").uniqueId()) +
+		$t.clean(get("cabinet").id()) +
 		`'> <label>W:</label> <input class='cabinet-input dem' prop-update='` +
 		$t.clean(get("$index")) +
 		`.width' name='width' display-id='` +
@@ -615,31 +641,31 @@ exports['divide/head'] = (get, $t) =>
 
 exports['divider-controls'] = (get, $t) => 
 		`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`' value='` +
 		$t.clean(get("opening").pattern().str) +
 		`'> <span class="open-orientation-radio-cnt"> <label for='open-orientation-horiz-` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`'>Horizontal:</label> <input type='radio' name='orientation-` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`' value='horizontal' open-id='` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`' id='open-orientation-horiz-` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`' class='open-orientation-radio' ` +
 		$t.clean(get("opening").value('vertical') ? '' : 'checked') +
 		`> <label for='open-orientation-vert-` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`'>Vertical:</label> <input type='radio' name='orientation-` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`' value='vertical' open-id='` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`' id='open-orientation-vert-` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`' class='open-orientation-radio' ` +
 		$t.clean(get("opening").value('vertical') ? 'checked' : '') +
 		`> </span> <div class='open-pattern-input-cnt' opening-id='` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`' ` +
 		$t.clean(get("opening").pattern().equal ? 'hidden' : '') +
 		`> ` +
@@ -775,7 +801,7 @@ exports['-1569738859'] = (get, $t) =>
 
 exports['managers/cost/types/labor'] = (get, $t) => 
 		`<div cost-id='` +
-		$t.clean(get("cost").uniqueId()) +
+		$t.clean(get("cost").id()) +
 		`'> <b>Labor</b> <span` +
 		$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
 		`> <input value='` +
@@ -798,7 +824,7 @@ exports['managers/cost/types/labor'] = (get, $t) =>
 
 exports['managers/cost/types/material'] = (get, $t) => 
 		`<div cost-id='` +
-		$t.clean(get("cost").uniqueId()) +
+		$t.clean(get("cost").id()) +
 		`'> <b>Material</b> <span` +
 		$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
 		`> <input value='` +
@@ -1025,14 +1051,14 @@ exports['model-controller'] = (get, $t) =>
 		`' ` +
 		$t.clean(get("label") ? 'hidden' : '') +
 		`> ` +
-		$t.clean( new $t('1160200676').render(get("group").parts, 'partName, partList', get)) +
+		$t.clean( new $t('-13082682').render(get("group").parts, 'partName, partList', get)) +
 		` </div> </div> ` +
 		$t.clean( new $t('model-controller').render(get("group").groups, 'label, group', get)) +
 		` </div> </div> `
 
 exports['opening'] = (get, $t) => 
 		`<div class='opening-cnt' opening-id='` +
-		$t.clean(get("opening").uniqueId()) +
+		$t.clean(get("opening").id()) +
 		`'> <div class='divider-controls'> </div> </div> <div id='` +
 		$t.clean(get("openDispId")) +
 		`'> </div> `
@@ -1173,7 +1199,7 @@ exports['properties/properties0'] = (get, $t) =>
 		`> <div` +
 		$t.clean(get("branch") ? ' hidden' : '') +
 		`> <div id='config-expand-list-` +
-		$t.clean(get("uniqueId")) +
+		$t.clean(get("id")) +
 		`'></div> ` +
 		$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
 		` </div> </div> </div> </div> `
@@ -1271,3 +1297,16 @@ exports['three-view'] = (get, $t) =>
 		`" height="` +
 		$t.clean(get("maxDem")()) +
 		`"></canvas> </span> </div> </div> </div> `
+
+exports['-13082682'] = (get, $t) => 
+		`<div class='model-label` +
+		$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
+		`' > <label type='part-name'>` +
+		$t.clean(get("partName")) +
+		`</label> <input type='checkbox' class='part-name-checkbox' part-name='` +
+		$t.clean(get("partName")) +
+		`' ` +
+		$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
+		`> ` +
+		$t.clean( new $t('2081934436').render(get("partList"), 'part', get)) +
+		` </div>`

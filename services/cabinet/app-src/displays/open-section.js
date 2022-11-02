@@ -50,7 +50,7 @@ du.on.match('change', '.feature-radio', (target) => {
 
 displays = {};
 SectionDisplay.render = (scope) => {
-  const uId = scope.opening.uniqueId();
+  const uId = scope.opening.id();
   if (displays[uId] === undefined) displays[uId] = new SectionDisplay(scope.opening);
   return displays[uId].render(scope);
 }
@@ -60,22 +60,22 @@ const OpenSectionDisplay = {};
 OpenSectionDisplay.html = (opening) => {
   const openDispId = OpenSectionDisplay.getId(opening);
   opening.init();
-  OpenSectionDisplay.sections[opening.uniqueId()] = opening;
+  OpenSectionDisplay.sections[opening.id()] = opening;
   setTimeout(() => OpenSectionDisplay.refresh(opening), 100);
   const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
   return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml});
 }
 
-OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.uniqueId()}`;
+OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.id()}`;
 OpenSectionDisplay.template = new $t('opening');
 OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
 OpenSectionDisplay.listHeadTemplate = new $t('divide/head');
 OpenSectionDisplay.sections = {};
 OpenSectionDisplay.lists = {};
-OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.uniqueId()}`;
+OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.id()}`;
 
 OpenSectionDisplay.getList = (root) => {
-  let openId = root.uniqueId();
+  let openId = root.id();
   if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
   const sections = Section.sections();
   const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
@@ -106,7 +106,7 @@ OpenSectionDisplay.getList = (root) => {
 }
 OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
 OpenSectionDisplay.updateDividers = (opening) => {
-  const selector = `[opening-id="${opening.uniqueId()}"].opening-cnt > .divider-controls`;
+  const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls`;
   const dividerControlsCnt = document.querySelector(selector);
   const selectPatternId = OpenSectionDisplay.getSelectId(opening);
   bind(`#${selectPatternId}`, (g, p) => opening.pattern(p), /.*/);
@@ -117,10 +117,10 @@ OpenSectionDisplay.updateDividers = (opening) => {
 
 OpenSectionDisplay.changeIds = {};
 OpenSectionDisplay.refresh = (opening) => {
-  let changeId = (OpenSectionDisplay.changeIds[opening.uniqueId()] || 0) + 1;
-  OpenSectionDisplay.changeIds[opening.uniqueId()] = changeId;
+  let changeId = (OpenSectionDisplay.changeIds[opening.id()] || 0) + 1;
+  OpenSectionDisplay.changeIds[opening.id()] = changeId;
   setTimeout(()=> {
-    if (changeId === OpenSectionDisplay.changeIds[opening.uniqueId()]) {
+    if (changeId === OpenSectionDisplay.changeIds[opening.id()]) {
       const id = OpenSectionDisplay.getId(opening);
       const target = du.id(id);
       const listCnt = du.find.up('.expandable-list', target);
@@ -130,14 +130,14 @@ OpenSectionDisplay.refresh = (opening) => {
       const type = opening.isVertical() === true ? 'pill' : 'sidebar';
       OpenSectionDisplay.updateDividers(opening);
       OpenSectionDisplay.getList(opening).refresh(type);
-      const dividerSelector = `[opening-id='${opening.uniqueId()}'].division-count-input`;
+      const dividerSelector = `[opening-id='${opening.id()}'].division-count-input`;
       // listCnt.querySelector(dividerSelector).focus();
     }
   }, 500);
 }
 
 OpenSectionDisplay.patternContainerSelector = (opening) =>
-  `.open-pattern-input-cnt[opening-id='${opening.uniqueId()}']`;
+  `.open-pattern-input-cnt[opening-id='${opening.id()}']`;
 
 OpenSectionDisplay.lastInputValues = {};
 OpenSectionDisplay.patterInputHtml = (opening) => {
@@ -182,7 +182,7 @@ OpenSectionDisplay.getOpening = (target) => {
 OpenSectionDisplay.evaluator = new StringMathEvaluator();
 
 OpenSectionDisplay.patternInputSelector = (opening) =>
-  `[name='pattern'][opening-id='${opening.uniqueId()}']`;
+  `[name='pattern'][opening-id='${opening.id()}']`;
 
 OpenSectionDisplay.onPatternChange = (target) => {
   const opening = OpenSectionDisplay.getOpening(target);

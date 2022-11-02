@@ -34,7 +34,6 @@ class Cost extends Lookup {
     this.props = () => props;
     let deleted = false;
     const instance = this;
-    const uniqueId = String.random();
     const lastUpdated = props.lastUpdated || new Date().getTime();
     props.requiredBranches = props.requiredBranches || [];
     this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
@@ -54,7 +53,7 @@ class Cost extends Lookup {
 Cost.types = {};
 
 Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
-Cost.remove = (uniqueId) => Cost.get(uniqueId).remove();
+Cost.remove = (id) => Cost.get(id).remove();
 
 Cost.constructorId = (name) => name.replace(/Cost$/, '');
 Cost.register = (clazz) => {

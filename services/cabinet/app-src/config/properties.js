@@ -197,12 +197,12 @@ assemProperties.groupList = (group, filter) => {
       const prop = properties[pIndex];
       changeList[list.name].properties.push(prop.clone());
     }
-    const uniqueId = String.random();
+    const id = String.random();
     const set = changeList[list.name].properties;
-    set._ID = uniqueId;
+    set._ID = id;
     set._NAME = list.name;
-    changes[uniqueId] = set;
-    copyMap[uniqueId] = properties;
+    changes[id] = set;
+    copyMap[id] = properties;
   }
   return changeList;
 }

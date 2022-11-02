@@ -88,7 +88,7 @@ class ThreeDModel {
         case 'part-name':
           return part.partName() === inclusiveTarget.value;
         case 'part-id':
-          return part.uniqueId() === inclusiveTarget.value;
+          return part.id() === inclusiveTarget.value;
         default:
           throw new Error('unknown inclusiveTarget type');
       }
@@ -133,7 +133,7 @@ class ThreeDModel {
       if (!part.included()) return true;
       const im = inclusiveMatch(part);
       if (im !== null) return !im;
-      if (instance.hidePartId(part.uniqueId())) return true;
+      if (instance.hidePartId(part.id())) return true;
       if (instance.hidePartName(part.partName())) return true;
       if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
       return false;
@@ -200,7 +200,7 @@ class ThreeDModel {
 
     this.render = function () {
       ThreeDModel.lastActive = this;
-      const cacheId = rootAssembly.uniqueId();
+      const cacheId = rootAssembly.id();
       // FunctionCache.on(cacheId);
       FunctionCache.on('sme');
 
@@ -225,7 +225,7 @@ class ThreeDModel {
       partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
-        partMap[assem.uniqueId()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
+        partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
         if (!hidden(assem)) {
           if (assem.constructor.name === 'DrawerFront') {
             console.log('df mf');
@@ -277,17 +277,17 @@ class ThreeDModel {
 ThreeDModel.models = {};
 ThreeDModel.get = (assembly, viewer) => {
   if (assembly === undefined) return ThreeDModel.lastActive;
-  if (ThreeDModel.models[assembly.uniqueId()] === undefined) {
-    ThreeDModel.models[assembly.uniqueId()] = new ThreeDModel(assembly, viewer);
+  if (ThreeDModel.models[assembly.id()] === undefined) {
+    ThreeDModel.models[assembly.id()] = new ThreeDModel(assembly, viewer);
   }
-  return ThreeDModel.models[assembly.uniqueId()];
+  return ThreeDModel.models[assembly.id()];
 }
 ThreeDModel.render = (part) => {
   const renderId = String.random();
   ThreeDModel.renderId = renderId;
   setTimeout(() => {
     if(ThreeDModel.renderId === renderId) {
-      const cacheId = part.getRoot().uniqueId();
+      const cacheId = part.getRoot().id();
       FunctionCache.on(cacheId);
       ThreeDModel.get(part).render();
       FunctionCache.off(cacheId);

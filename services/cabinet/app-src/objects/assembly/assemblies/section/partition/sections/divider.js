@@ -28,7 +28,7 @@ class DividerSection extends PartitionSection {
           new Joint(pc, props.borders.left.partCode()),
           new Joint(pc, props.borders.right.partCode())
         ];
-        panel.joints.forEach((j) => j.parentAssemblyId(panel.uniqueId()));
+        panel.joints.forEach((j) => j.parentAssemblyId(panel.id()));
       }
       return 0.9525;
     }

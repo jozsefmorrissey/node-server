@@ -37,8 +37,8 @@ function updateDivisions (target) {
   const index = Number.parseInt(target.getAttribute('index'));
   const value = Number.parseFloat(target.value);
   const inputs = target.parentElement.parentElement.querySelectorAll('.division-pattern-input');
-  const uniqueId = du.find.up('.opening-cnt', target).getAttribute('opening-id');
-  const opening = Assembly.get(uniqueId);
+  const id = du.find.up('.opening-cnt', target).getAttribute('opening-id');
+  const opening = Assembly.get(id);
   const values = opening.dividerLayout().fill;
   for (let index = 0; values && index < inputs.length; index += 1){
     const value = values[index];

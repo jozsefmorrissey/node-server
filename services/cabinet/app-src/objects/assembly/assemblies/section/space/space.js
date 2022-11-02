@@ -81,7 +81,7 @@ SpaceSection.fromJson = (json, parent) => {
           Assembly.new(json._TYPE, sectionProps, parent);
   assembly.partCode(json.partCode);
   assembly.partName(json.partName);
-  assembly.uniqueId(json.uniqueId);
+  assembly.id(json.id);
   assembly.values = json.values;
   // Object.values(json.subassemblies).forEach((json) => {
   //   console.log(json._TYPE);

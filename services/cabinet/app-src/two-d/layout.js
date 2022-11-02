@@ -82,7 +82,7 @@ du.on.match('enter', '.value-2d', (elem) => {
       props.obj[props.key](props.raw);
       const cab = props.obj.payload();
       if (cab && cab.constructor.name === 'Cabinet') {
-        const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.uniqueId()}']`);
+        const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.id()}']`);
         const idInput = du.find.closest('.cabinet-id-input', cabDemCnt);
         idInput.value = props.raw;
       }
@@ -90,7 +90,7 @@ du.on.match('enter', '.value-2d', (elem) => {
       return;
     case 'cabinet':
       const cabinet = props.obj.payload();
-      const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.uniqueId()}']`);
+      const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.id()}']`);
       if (cabCnt) {
         const input = du.find.down(`input[name='${props.key}']`, cabCnt);
         input.value = props.display;
@@ -124,7 +124,7 @@ function remove() {
   if (hovering.parent) {
     if (hovering.parent().payload().constructor.name === 'Cabinet') {
       const cabinet = hovering.parent().payload();
-      const cabinetHeader = du.find(`.cabinet-header[cabinet-id='${cabinet.uniqueId()}']`);
+      const cabinetHeader = du.find(`.cabinet-header[cabinet-id='${cabinet.id()}']`);
       const removeButton = du.find.closest('.expandable-item-rm-btn', cabinetHeader)
       if (removeButton) removeButton.click();
       else console.warn('Remove button for cabinet should be present but is not present');

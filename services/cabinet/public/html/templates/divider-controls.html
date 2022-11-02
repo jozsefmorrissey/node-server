@@ -1,22 +1,22 @@
 <div>
   <label>Dividers:</label>
   <input class='division-pattern-input' type='text' name='pattern'
-      opening-id='{{opening.uniqueId()}}' value='{{opening.pattern().str}}'>
+      opening-id='{{opening.id()}}' value='{{opening.pattern().str}}'>
 
   <span class="open-orientation-radio-cnt">
 
-    <label for='open-orientation-horiz-{{opening.uniqueId()}}'>Horizontal:</label>
-    <input type='radio' name='orientation-{{opening.uniqueId()}}' value='horizontal'
-        open-id='{{opening.uniqueId()}}' id='open-orientation-horiz-{{opening.uniqueId()}}'
+    <label for='open-orientation-horiz-{{opening.id()}}'>Horizontal:</label>
+    <input type='radio' name='orientation-{{opening.id()}}' value='horizontal'
+        open-id='{{opening.id()}}' id='open-orientation-horiz-{{opening.id()}}'
         class='open-orientation-radio' {{opening.value('vertical') ? '' : 'checked'}}>
 
-    <label for='open-orientation-vert-{{opening.uniqueId()}}'>Vertical:</label>
-    <input type='radio' name='orientation-{{opening.uniqueId()}}' value='vertical'
-        open-id='{{opening.uniqueId()}}' id='open-orientation-vert-{{opening.uniqueId()}}'
+    <label for='open-orientation-vert-{{opening.id()}}'>Vertical:</label>
+    <input type='radio' name='orientation-{{opening.id()}}' value='vertical'
+        open-id='{{opening.id()}}' id='open-orientation-vert-{{opening.id()}}'
         class='open-orientation-radio' {{opening.value('vertical') ? 'checked' : ''}}>
 
   </span>
-  <div class='open-pattern-input-cnt' opening-id='{{opening.uniqueId()}}'
+  <div class='open-pattern-input-cnt' opening-id='{{opening.id()}}'
       {{opening.pattern().equal ? 'hidden' : ''}}>
     {{patternInputHtml}}
   </div>

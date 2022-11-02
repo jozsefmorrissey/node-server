@@ -15,7 +15,7 @@ let dvs;
 let dsCount = 0;
 class DivideSection extends SpaceSection {
   constructor(sectionProperties, parent) {
-    const pId = parent && parent.uniqueId ? parent.uniqueId() : null;
+    const pId = parent && parent.id ? parent.id() : null;
     const sIndex = (typeof sectionProperties) === 'function' ? sectionProperties().index : null;
     super(`dvds-${pId}-${sIndex}`, 'divideSection', sectionProperties, parent);
     // this.important = ['partCode', 'partName', 'borderIds', 'index'];
@@ -194,7 +194,7 @@ class DivideSection extends SpaceSection {
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
-            this.sections.push(new DividerSection(`dv-${this.uniqueId()}-${index}`, this.dividerProps(index), instance));
+            this.sections.push(new DividerSection(`dv-${this.id()}-${index}`, this.dividerProps(index), instance));
             const divideIndex = dividerCount + index + 1;
             this.sections.push(new DivideSection(this.borders(divideIndex), instance));
           }
@@ -237,7 +237,7 @@ DivideSection.fromJson = (json) => {
   const sectionProps = json.parent.borders(json.borderIds || json.index);
   const assembly = new DivideSection(sectionProps, json.parent);
   assembly.partCode(json.partCode);
-  assembly.uniqueId(json.uniqueId)
+  assembly.id(json.id)
   assembly.index(json.index);
   const subAssems = json.subassemblies;
   assembly.values = json.values;

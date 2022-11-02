@@ -59,7 +59,7 @@ class CabinetDisplay {
       setTimeout(() => {
         const attr = target.name === 'thickness' ? 'height' : 'width';
         const cabinet = getHtmlElemCabinet(target);
-        const obj2d = Object2d.get(cabinet.uniqueId());
+        const obj2d = Object2d.get(cabinet.id());
         const value = new Measurement(target.value, true).decimal();
         console.log('new cab val', value);
         obj2d.topview()[attr](value);
@@ -71,7 +71,7 @@ class CabinetDisplay {
     du.on.match('blur', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
 
     function updateCabValue(cabinet, attr) {
-      const inputCnt = du.find(`[cabinet-id='${cabinet.uniqueId()}']`);
+      const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
       const input = du.find.down(`[name='${attr}']`, inputCnt);
       input.value = displayValue(cabinet[attr]());
     }
@@ -94,7 +94,7 @@ class CabinetDisplay {
     }
 
     function updateObjLayout(cabinet) {
-      const obj2d = group.room().layout().addObject(cabinet.uniqueId(), cabinet, cabinet.name);
+      const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
       obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
     }
 

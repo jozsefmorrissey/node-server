@@ -55,7 +55,7 @@ class Position {
 
     const rootAssembly = assembly.getRoot();
     if (rootAssembly.constructor.name === 'Cabinet') {
-      const cacheId = rootAssembly.uniqueId();
+      const cacheId = rootAssembly.id();
       this.rotation = new FunctionCache((attr) => rotation(attr), null, cacheId, assembly);
       this.center = new FunctionCache((attr) => center(attr), null, cacheId, assembly);
       this.demension = new FunctionCache((attr) => demension(attr), null, cacheId, assembly);
