@@ -13,13 +13,52 @@ const Line2d = require('../two-d/objects/line.js');
 const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
 const PanZoom = require('../two-d/pan-zoom.js');
 
+const CSG = require('../../public/js/3d-modeling/csg');
+
+
+function csgVert(pos, normal) {
+  return new CSG.Vertex(pos, normal);
+}
+
+function normalize (verts, normal, reverse) {
+  const returnValue = [];
+  for (let index = 0; index < verts.length; index++)
+    returnValue[index] = new CSG.Vertex(verts[index], normal);
+  return reverse ? returnValue.reverse() : returnValue;
+}
+
+function door(face1, face2) {
+  const front = new CSG.Polygon(normalize(face1, [+1, 0, 0]));
+  front.plane.normal = new CSG.Vector([0,0+1, 0,0]);
+  const back = new CSG.Polygon(normalize(face2, [-1, 0, 0], true));
+  back.plane.normal = new CSG.Vector([0,0,1,0,0]);
+  const top = new CSG.Polygon(normalize([face1[0], face1[1], face2[1], face2[0]], [0,1,0], true));
+  top.plane.normal = new CSG.Vector([0, 1, 0]);
+  const left = new CSG.Polygon(normalize([face2[3], face2[0], face1[0], face1[3]], [-1,0,0]));
+  left.plane.normal = new CSG.Vector([-1, 0, 0]);
+  const right = new CSG.Polygon(normalize([face1[1], face1[2], face2[2], face2[1]], [1,0,0], true));
+  right.plane.normal = new CSG.Vector([1, 0, 0]);
+  const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]], [0,-1,0]));
+  bottom.plane.normal = new CSG.Vector([0, -1, 0]);
+
+  const poly = CSG.fromPolygons([front, back, top, left, right, bottom]);
+  return poly;
+}
+
 class ThreeView extends Lookup {
   constructor(viewer) {
     super();
     const instance = this;
     const maxDem = window.innerHeight * .45;
     const cnt = du.create.element('div');
-    const p = pull(5,2);
+    // const p = pull(5,2);
+    const p = door([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}],
+          [{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}]);
+    // const p = door([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}],
+    //       [{x:0, y: 4, z: 4}, {x:4, y: 4, z: 4}, {x:4, y: 0, z: 4}, {x:0, y: 0, z: 4}]);
+    // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
+    // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
+    p.setColor([0, 255, 0])
     let front, left, top;
     let panzFront, panzLeft, panzTop;
     let threeDModel;
@@ -107,6 +146,7 @@ class ThreeView extends Lookup {
       du.id(`three-view-part-code-${this.id()}`).innerText = partCode;
     }
 
+    this.threeDModel = () => threeDModel;
     this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;
     this.partMap = () => threeDModel ? threeDModel.partMap() : {};
 

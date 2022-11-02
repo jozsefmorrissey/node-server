@@ -20,55 +20,56 @@ class SpaceSection extends Section {
     this.value = (attr, value) => {
       if ((typeof sectionProperties) !== 'function') return;
       const props = sectionProperties();
-      const top = props.borders.top;
-      const bottom = props.borders.bottom;
-      const right = props.borders.right;
-      const left = props.borders.left;
-      let panel;
-      switch (attr) {
-        case 'opt':
+      if (props.borders) {
+        const top = props.borders.top;
+        const bottom = props.borders.bottom;
+        const right = props.borders.right;
+        const left = props.borders.left;
+        let panel;
+        switch (attr) {
+          case 'opt':
           if (props.position.top) return props.position.top;
           return top.position().center('y');
-        case 'opb':
+          case 'opb':
           if (props.position.bottom) return props.position.bottom;
           return bottom.position().center('y');
-        case 'opr':
+          case 'opr':
           if (props.position.right) return props.position.right;
           return right.position().center('x');
-        case 'opl':
+          case 'opl':
           if (props.position.left) return props.position.left;
           return left.position().center('x');
-        case 'fpt':
+          case 'fpt':
           return top.position().center('y') - top.width() / 2;
-        case 'fpb':
+          case 'fpb':
           return bottom.position().center('y') + bottom.width() / 2;
-        case 'fpr':
+          case 'fpr':
           return right.position().center('x') - right.width() / 2;
-        case 'fpl':
+          case 'fpl':
           return left.position().center('x') + left.width() / 2;
-        case 'ppt':
+          case 'ppt':
           panel = top.getAssembly(top.partCode.replace(/f/, 'p'));
           return panel === undefined ?
-            top.position().centerAdjust('y', '-x') :
-            panel.position().centerAdjust('y', '-z');
-        case 'ppb':
+          top.position().centerAdjust('y', '-x') :
+          panel.position().centerAdjust('y', '-z');
+          case 'ppb':
           panel = bottom.getAssembly(bottom.partCode.replace(/f/, 'p'));
           return panel === undefined ?
-            bottom.position().centerAdjust('y', '+x') :
-            panel.position().centerAdjust('y', '+z');
-        case 'ppr':
+          bottom.position().centerAdjust('y', '+x') :
+          panel.position().centerAdjust('y', '+z');
+          case 'ppr':
           panel = right.getAssembly(right.partCode.replace(/f/, 'p'));
           return panel === undefined ?
-            right.position().centerAdjust('x', '-x') :
-            panel.position().centerAdjust('x', '-z');
-        case 'ppl':
+          right.position().centerAdjust('x', '-x') :
+          panel.position().centerAdjust('x', '-z');
+          case 'ppl':
           panel = left.getAssembly(left.partCode.replace(/f/, 'p'));
           return panel === undefined ?
-            left.position().centerAdjust('x', '+x') :
-            panel.position().centerAdjust('x', '+z');
-        default:
-          return parentValue(attr, value);
+          left.position().centerAdjust('x', '+x') :
+          panel.position().centerAdjust('x', '+z');
+        }
       }
+      return parentValue(attr, value);
     }
   }
 }

@@ -3,11 +3,19 @@
 
 
 class CustomEvent {
-  constructor(name) {
+  constructor(name, delay) {
+    if (delay === undefined) delay = 20;
     const watchers = [];
     this.name = name;
 
-    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
+    let lastTrigger;
+    const runFuncs = (e, detail, time) => {
+      if (lastTrigger === time || lastTrigger > new Date().getTime() - delay) {
+        setTimeout(runFuncs, delay);
+      } else {
+        watchers.forEach((func) => func(e, detail));
+      }
+    }
 
     this.on = function (func) {
       if ((typeof func) === 'function') {
@@ -18,8 +26,9 @@ class CustomEvent {
     }
 
     this.trigger = function (element, detail) {
-      element = element === undefined ? window : element;
-      runFuncs(element, detail);
+      element = element ? element : window;
+      const time = new Date().getTime();
+      runFuncs(element, detail, time);
       this.event.detail = detail;
       if(document.createEvent){
           element.dispatchEvent(this.event);

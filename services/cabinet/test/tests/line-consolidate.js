@@ -2,7 +2,9 @@
 const Test = require('../../../../public/js/utils/test/test').Test;
 const Polygon2d = require('../../app-src/two-d/objects/polygon.js');
 const Line2d = require('../../app-src/two-d/objects/line.js');
+const Line3D = require('../../app-src/three-d/objects/line.js');
 const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
+const approximate = require('../../../../public/js/utils/approximate.js');
 
 const extraLinePoly = new Polygon2d([[0,0],[0,1],[0,2],[0,3],
                 [1,3],[1,4],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],
@@ -196,28 +198,36 @@ Test.add('Line2d: thetaBetween', (ts) => {
   let line2 = new Line2d({x:0,y:10}, {x:10, y:20});
   let line3 = new Line2d({x:10,y:20}, {x:10, y:30})
 
-  ts.assertEquals(Math.toDegrees(line.thetaBetween(line2)), 135);
-  ts.assertEquals(Math.toDegrees(line2.thetaBetween(line3)), 225);
-  ts.assertEquals(Math.toDegrees(line2.thetaBetween(line)), 225);
-  ts.assertEquals(Math.toDegrees(line3.thetaBetween(line2)), 135);
+  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 135);
+  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line3))), 225);
+  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 225);
+  ts.assertEquals(approximate(Math.toDegrees(line3.thetaBetween(line2))), 135);
 
   let origin = {x:3, y:22};
   line = Line2d.startAndTheta(origin, Math.toRadians(16), 10);
   line2 = Line2d.startAndTheta(origin, Math.toRadians(251), 10);
-  ts.assertEquals(Math.toDegrees(line.thetaBetween(line2)), 235);
-  ts.assertEquals(Math.toDegrees(line2.thetaBetween(line)), 125);
+  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
 
   line2 = line2.negitive();
-  ts.assertEquals(Math.toDegrees(line.thetaBetween(line2)), 235);
-  ts.assertEquals(Math.toDegrees(line2.thetaBetween(line)), 125);
+  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
 
   line = line.negitive();
-  ts.assertEquals(Math.toDegrees(line.thetaBetween(line2)), 235);
-  ts.assertEquals(Math.toDegrees(line2.thetaBetween(line)), 125);
+  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
 
   line2 = line2.negitive();
-  ts.assertEquals(Math.toDegrees(line.thetaBetween(line2)), 235);
-  ts.assertEquals(Math.toDegrees(line2.thetaBetween(line)), 125);
+  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
 
+  ts.success();
+});
+
+Test.add('Line3D: intersects', (ts) => {
+  const line1 = new Line3D({x: 10, y: 10, z: 10}, {x: 5, y: 5, z: 5});
+  const line2 = new Line3D({x: 10, y: 10, z: -10}, {x: 5, y: 5, z: -5});
+  let intersection = line1.intersects(line2);
+  ts.assertTrue(intersection.equals({x: 0, y:0, z:0}));
   ts.success();
 });

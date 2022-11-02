@@ -2,7 +2,6 @@
 
 
 const Assembly = require('../../assembly.js');
-const approximate = require('../../../../../../../public/js/utils/approximate.js');
 
 
 class Section extends Assembly {
@@ -55,23 +54,32 @@ class Section extends Assembly {
       const props = sectionProperties();
       const pos = props.position;
 
-      const top = props.borders.top;
-      const bot = props.borders.bottom;
-      const left = props.borders.left;
-      const right = props.borders.right;
+      let top, bot, right, left;
+      if (props.borders) {
+        top = props.borders.top;
+        bot = props.borders.bottom;
+        left = props.borders.left;
+        right = props.borders.right;
+      }
 
       const limits = {};
-      limits.x = approximate(pos.right || calculateRevealOffset(right, '-x'));
-      limits['-x'] = approximate(pos.left || calculateRevealOffset(left, '+x'));
-      limits.y = approximate(pos.top || calculateRevealOffset(top, '-y'));
-      limits['-y'] = approximate(pos.bottom || calculateRevealOffset(bot, '+y'));
-      limits['-z'] = approximate(top.position().limits('-z'));
-      limits.z = approximate(props.depth - limits['-z']);
+      limits.x = pos.right || calculateRevealOffset(right, '-x');
+      limits['-x'] = pos.left || calculateRevealOffset(left, '+x');
+      limits.y = pos.top || calculateRevealOffset(top, '-y');
+      limits['-y'] = pos.bottom || calculateRevealOffset(bot, '+y');
+      //TODO: hard coded fix
+      limits['-z'] = 0;
+      limits.z = props.depth - limits['-z'];
 
-      const center = {};
-      center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
-      center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
-      center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
+      let center;
+      if ((typeof props.center) === 'function') {
+        center = props.center(3/-4);
+      } else {
+        center = {};
+        center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
+        center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
+        center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
+      }
 
       const dems = {};
       dems.x = limits.x - limits['-x'];
@@ -99,15 +107,24 @@ class Section extends Assembly {
       return {y:0,x:0,z:0};
     }
 
+    function calculateInnerPosition(defined1, defined2, border1, border2, axis, offsetAxis) {
+      if (defined1 === undefined) defined1 = border1.position().centerAdjust(axis, `-${offsetAxis}`);
+      if (defined2 === undefined) defined2 = border2.position().centerAdjust(axis, `+${offsetAxis}`);
+      return defined2 - defined1;
+    }
+
     this.innerSize = () => {
       const props = sectionProperties();
-      const topPos = props.borders.top.position();
-      const botPos = props.borders.bottom.position();
-      const leftPos = props.borders.left.position();
-      const rightPos = props.borders.right.position();
-      const x = rightPos.centerAdjust('x', '-z') - leftPos.centerAdjust('x', '+z');
-      const y = topPos.centerAdjust('y', '-z') - botPos.centerAdjust('y', '+z');
-      const z = topPos.center('z');
+      const pos = props.position;
+      const bds = props.borders || {};
+
+      const topPos = pos.top || props.borders.top.position();
+      const botPos = pos.bottom || props.borders.bottom.position();
+      const leftPos = pos.left || props.borders.left.position();
+      const rightPos = pos.right || props.borders.right.position();
+      const x = calculateInnerPosition(pos.right, pos.left, bds.right, bds.left, 'x', 'z');
+      const y = calculateInnerPosition(pos.top, pos.bottom, bds.top, bds.bottom, 'y', 'z');
+      const z = 0;
       return {x,y,z};
     }
 
@@ -126,17 +143,21 @@ class Section extends Assembly {
         const props = sectionProperties();
         const pos = props.position;
 
-        const top = props.borders.top;
-        const bot = props.borders.bottom;
-        const left = props.borders.left;
-        const right = props.borders.right;
+        let top, bot, right, left;
+        if (props.borders) {
+          top = props.borders.top;
+          bot = props.borders.bottom;
+          left = props.borders.left;
+          right = props.borders.right;
+        }
 
         const limits = {};
         limits.x = pos.right || calculateRevealOffset(right, '-x');
         limits['-x'] = pos.left || calculateRevealOffset(left, '+x');
         limits.y = pos.top || calculateRevealOffset(top, '-y');
         limits['-y'] = pos.bottom || calculateRevealOffset(bot, '+y');
-        limits['-z'] = top.position().limits('-z');
+        //TODO: hard coded fix
+        limits['-z'] = 0;
         limits.z = props.depth - limits['-z'];
 
         const center = {};
@@ -154,125 +175,125 @@ class Section extends Assembly {
       return coverCache.value;
     }
 
-    this.frameInner = () => {
-      const props = sectionProperties();
-      const pos = props.position;
-
-      const topPos = props.borders.top.position();
-      const botPos = props.borders.bottom.position();
-      const leftPos = props.borders.left.position();
-      const rightPos = props.borders.right.position();
-
-      const limits = {};
-      limits.x = leftPos.centerAdjust('x', '+x');
-      limits['-x'] = rightPos.centerAdjust('x', '-x');
-      limits.y = topPos.centerAdjust('y', '-y');
-      limits['-y'] = botPos.centerAdjust('y', '+y');
-      limits.z = top.position().limits('+z');
-      limits['-z'] = top.position().limits('-z');
-
-      const center = {};
-      center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
-      center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
-      center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
-
-      const dems = {};
-      dems.x = limits.x - limits['-x'];
-      dems.y = limits.y - limits['-y'];
-      dems.z = props.depth;
-
-      return {limits, center, dems};
-    }
-
-    this.frameOuter = () => {
-      const props = sectionProperties();
-      const pos = props.position;
-
-      const topPos = props.borders.top.position();
-      const botPos = props.borders.bottom.position();
-      const leftPos = props.borders.left.position();
-      const rightPos = props.borders.right.position();
-
-      const limits = {};
-      limits.x = leftPos.centerAdjust('x', '-x');
-      limits['-x'] = rightPos.centerAdjust('x', '+x');
-      limits.y = topPos.centerAdjust('y', '+y');
-      limits['-y'] = botPos.centerAdjust('y', '-y');
-      limits.z = NaN;
-      limits['-z'] = NaN;
-
-      const center = {};
-      center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
-      center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
-      center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
-
-      const dems = {};
-      dems.x = limits.x - limits['-x'];
-      dems.y = limits.y - limits['-y'];
-      dems.z = props.depth;
-
-      return {limits, center, dems};
-    }
-
-    this.panelOuter = () => {
-      const props = sectionProperties();
-      const pos = props.position;
-
-      const topPos = props.borders.top.position();
-      const botPos = props.borders.bottom.position();
-      const leftPos = props.borders.left.position();
-      const rightPos = props.borders.right.position();
-
-      const limits = {};
-      limits.x = rightPos.centerAdjust('x', '+z');
-      limits['-x'] = leftPos.centerAdjust('x', '-z');
-      limits.y = topPos.centerAdjust('y', '+z');
-      limits['-y'] = botPos.centerAdjust('y', '-z');
-      limits.z = NaN;
-      limits['-z'] = NaN;
-
-      const center = {};
-      center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
-      center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
-      center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
-
-      const dems = {};
-      dems.x = limits.x - limits['-x'];
-      dems.y = limits.y - limits['-y'];
-      dems.z = props.depth;
-
-      return {limits, center, dems};
-    }
-
-    this.panelInner = () => {
-      const props = sectionProperties();
-      const pos = props.position;
-
-      const topPos = props.borders.top.position();
-      const botPos = props.borders.bottom.position();
-      const leftPos = props.borders.left.position();
-      const rightPos = props.borders.right.position();
-
-      const limits = {};
-      limits.x = leftPos.centerAdjust('x', '+x');
-      limits['-x'] = rightPos.centerAdjust('x', '-x');
-      limits.y = topPos.centerAdjust('y', '-y');
-      limits['-y'] = botPos.centerAdjust('y', '+y');
-      limits.z = top.position().limits('+z');
-      limits['-z'] = top.position().limits('-z');
-
-      const center = {};
-      center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
-      center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
-      center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
-
-      const dems = {};
-      dems.x = limits.x - limits['-x'];
-      dems.y = limits.y - limits['-y'];
-      dems.z = props.depth;
-
-      return {limits, center, dems};
-    }
+    // this.frameInner = () => {
+    //   const props = sectionProperties();
+    //   const pos = props.position;
+    //
+    //   const topPos = props.borders.top.position();
+    //   const botPos = props.borders.bottom.position();
+    //   const leftPos = props.borders.left.position();
+    //   const rightPos = props.borders.right.position();
+    //
+    //   const limits = {};
+    //   limits.x = leftPos.centerAdjust('x', '+x');
+    //   limits['-x'] = rightPos.centerAdjust('x', '-x');
+    //   limits.y = topPos.centerAdjust('y', '-y');
+    //   limits['-y'] = botPos.centerAdjust('y', '+y');
+    //   limits.z = top.position().limits('+z');
+    //   limits['-z'] = top.position().limits('-z');
+    //
+    //   const center = {};
+    //   center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
+    //   center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
+    //   center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
+    //
+    //   const dems = {};
+    //   dems.x = limits.x - limits['-x'];
+    //   dems.y = limits.y - limits['-y'];
+    //   dems.z = props.depth;
+    //
+    //   return {limits, center, dems};
+    // }
+    //
+    // this.frameOuter = () => {
+    //   const props = sectionProperties();
+    //   const pos = props.position;
+    //
+    //   const topPos = props.borders.top.position();
+    //   const botPos = props.borders.bottom.position();
+    //   const leftPos = props.borders.left.position();
+    //   const rightPos = props.borders.right.position();
+    //
+    //   const limits = {};
+    //   limits.x = leftPos.centerAdjust('x', '-x');
+    //   limits['-x'] = rightPos.centerAdjust('x', '+x');
+    //   limits.y = topPos.centerAdjust('y', '+y');
+    //   limits['-y'] = botPos.centerAdjust('y', '-y');
+    //   limits.z = NaN;
+    //   limits['-z'] = NaN;
+    //
+    //   const center = {};
+    //   center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
+    //   center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
+    //   center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
+    //
+    //   const dems = {};
+    //   dems.x = limits.x - limits['-x'];
+    //   dems.y = limits.y - limits['-y'];
+    //   dems.z = props.depth;
+    //
+    //   return {limits, center, dems};
+    // }
+    //
+    // this.panelOuter = () => {
+    //   const props = sectionProperties();
+    //   const pos = props.position;
+    //
+    //   const topPos = props.borders.top.position();
+    //   const botPos = props.borders.bottom.position();
+    //   const leftPos = props.borders.left.position();
+    //   const rightPos = props.borders.right.position();
+    //
+    //   const limits = {};
+    //   limits.x = rightPos.centerAdjust('x', '+z');
+    //   limits['-x'] = leftPos.centerAdjust('x', '-z');
+    //   limits.y = topPos.centerAdjust('y', '+z');
+    //   limits['-y'] = botPos.centerAdjust('y', '-z');
+    //   limits.z = NaN;
+    //   limits['-z'] = NaN;
+    //
+    //   const center = {};
+    //   center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
+    //   center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
+    //   center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
+    //
+    //   const dems = {};
+    //   dems.x = limits.x - limits['-x'];
+    //   dems.y = limits.y - limits['-y'];
+    //   dems.z = props.depth;
+    //
+    //   return {limits, center, dems};
+    // }
+    //
+    // this.panelInner = () => {
+    //   const props = sectionProperties();
+    //   const pos = props.position;
+    //
+    //   const topPos = props.borders.top.position();
+    //   const botPos = props.borders.bottom.position();
+    //   const leftPos = props.borders.left.position();
+    //   const rightPos = props.borders.right.position();
+    //
+    //   const limits = {};
+    //   limits.x = leftPos.centerAdjust('x', '+x');
+    //   limits['-x'] = rightPos.centerAdjust('x', '-x');
+    //   limits.y = topPos.centerAdjust('y', '-y');
+    //   limits['-y'] = botPos.centerAdjust('y', '+y');
+    //   limits.z = top.position().limits('+z');
+    //   limits['-z'] = top.position().limits('-z');
+    //
+    //   const center = {};
+    //   center.x = limits['-x'] + ((limits.x - limits['-x']) / 2);
+    //   center.y = limits['-y'] + ((limits.y - limits['-y']) / 2);
+    //   center.z = limits['-z'] + ((limits.z - limits['-z']) / 2);
+    //
+    //   const dems = {};
+    //   dems.x = limits.x - limits['-x'];
+    //   dems.y = limits.y - limits['-y'];
+    //   dems.z = props.depth;
+    //
+    //   return {limits, center, dems};
+    // }
   }
 }
 Section.isPartition = () => false;

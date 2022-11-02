@@ -13,7 +13,6 @@ const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
-const approximate = require('../../../../public/js/utils/approximate.js');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 
 const colors = {
@@ -54,6 +53,7 @@ class ThreeDModel {
     const hiddenPrefixes = {};
     const instance = this;
     let hiddenPrefixReg;
+    let extraObjects = [];
     let inclusiveTarget = {};
     let partMap;
     let renderId;
@@ -151,6 +151,15 @@ class ThreeDModel {
       return [randInt(0, 255),randInt(0, 255),randInt(0, 255)];
     }
 
+    this.addVertex = (center, radius, color) => {
+      radius ||= .5;
+      const vertex = CSG.sphere({center, radius});
+      vertex.setColor(getColor(color));
+      extraObjects.push(vertex);
+    }
+
+    this.removeAllExtraObjects = () => extraObjects = [];
+
     function getModel(assem) {
       const pos = assem.position().current();
       if (pos.rotation.x % 45 !== 0 || pos.rotation.y % 45 !== 0 || pos.rotation.z % 45 !== 0) {
@@ -201,7 +210,7 @@ class ThreeDModel {
         let a = getModel(assem);
         const c = assem.position().center();
         const e=1;
-        a.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+        a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
         a.setColor(...getColor());
         assem.getJoints().female.forEach((joint) => {
           const male = joint.getMale();
@@ -240,6 +249,9 @@ class ThreeDModel {
             lastModelUpdateEvent.trigger(undefined, lastModel);
           }
         }
+      }
+      for (let index = 0; index < extraObjects.length; index++) {
+        a = a.union(extraObjects[index]);
       }
       if (a) {
         // a.polygons.forEach((p) => p.shared = getColor());

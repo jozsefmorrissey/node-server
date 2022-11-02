@@ -97,7 +97,7 @@ module.exports = {
     },
     {
       "key": "topInnerLimit",
-      "eqn": "c.h - topInsetDepth - bottomInsetDepth - pt.t - pbtm.t"
+      "eqn": "c.h - topInsetDepth - pt.t"
     },
     {
       "key": "topOuterLimit",
@@ -113,15 +113,31 @@ module.exports = {
     },
     {
       "key": "leftInnerLimit",
-      "eqn": "pl.t * Math.sin(Math.PI/2 - frontLeftTheta)/Math.sin(Math.PI/2)"
+      "eqn": "pl.t"
     },
     {
       "key": "leftOuterLimit",
       "eqn": "0"
     },
     {
+      "key": "leftCutTheta",
+      "eqn": "Math.PI - frontLeftTheta - Math.PI12"
+    },
+    {
+      "key": "leftCutT",
+      "eqn": "pl.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)"
+    },
+    {
+      "key": "rightCutTheta",
+      "eqn": "frontLeftTheta"
+    },
+    {
+      "key": "rightCutX",
+      "eqn": "pr.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)"
+    },
+    {
       "key": "rightInnerLimit",
-      "eqn": "pl.t * Math.sin(Math.PI/2)/Math.sin(Math.PI/2 - frontLeftTheta)"
+      "eqn": "fwl"
     },
     {
       "key": "rightOuterLimit",
@@ -133,7 +149,7 @@ module.exports = {
     },
     {
       "key": "frontDepthMax",
-      "eqn": "fwr"
+      "eqn": "-1 * fwr"
     }
   ],
   "subassemblies": [
@@ -187,7 +203,7 @@ module.exports = {
         "pr.t / 2"
       ],
       "demensions": [
-        "rw*1.1",
+        "c.w",
         "c.h",
         "pwt34"
       ],
@@ -208,7 +224,7 @@ module.exports = {
         "(c.w - pl.w) + pl.w/2"
       ],
       "demensions": [
-        "lw*1.1",
+        "c.t",
         "c.h",
         "pwt34"
       ],
@@ -555,66 +571,60 @@ module.exports = {
   "thickness": 91.44,
   "openings": [
     {
-      "top": "pt",
-      "bottom": "pbtm",
-      "left": "pl",
-      "right": "pr",
-      "back": "pb",
-      "center": {
-        "x": "frontHypeCenterX",
-        "y": "h/2",
-        "z": "frontHypeCenterD"
+      "_Type": "location",
+      "zRotation": "-90 + Math.toDegrees(frontLeftTheta)",
+      "inner": {
+        "top": {
+          "left": {
+            "x": "leftInnerLimit",
+            "y": "topInnerLimit",
+            "z": "frontDepthMax + leftCutT"
+          },
+          "right": {
+            "x": "rightInnerLimit - rightCutX",
+            "y": "topInnerLimit",
+            "z": "frontDepthMin - pr.t"
+          }
+        },
+        "bottom": {
+          "right":{
+            "x": "rightInnerLimit - rightCutX",
+            "y": "bottomInnerLimit",
+            "z": "frontDepthMin - pr.t"
+          },
+          "left": {
+            "x": "leftInnerLimit",
+            "y": "bottomInnerLimit",
+            "z": "frontDepthMax + leftCutT"
+          }
+        }
       },
-      "rotation": {
-        "x": 0,
-        "y": "90 + Math.toDegrees(frontLeftTheta)",
-        "z": 0
-      },
-      "inner": [
-        {
-          "x": "leftInnerLimit",
-          "y": "topInnerLimit",
-          "z": "frontDepthMax"
+      "outer": {
+        "top" : {
+          "left": {
+            "x": "leftOuterLimit",
+            "y": "topOuterLimit",
+            "z": "frontDepthMax"
+          },
+          "right": {
+            "x": "rightOuterLimit",
+            "y": "topOuterLimit",
+            "z": "frontDepthMin"
+          },
         },
-        {
-          "x": "rightInnerLimit",
-          "y": "topInnerLimit",
-          "z": "frontDepthMin"
-        },
-        {
-          "x": "rightInnerLimit",
-          "y": "bottomInnerLimit",
-          "z": "frontDepthMin"
-        },
-        {
-          "x": "leftInnerLimit",
-          "y": "bottomInnerLimit",
-          "z": "frontDepthMax"
-        },
-      ],
-      "outer": [
-        {
-          "x": "leftOuterLimit",
-          "y": "topOuterLimit",
-          "z": "frontDepthMax"
-        },
-        {
-          "x": "rightOuterLimit",
-          "y": "topOuterLimit",
-          "z": "frontDepthMin"
-        },
-        {
-          "x": "rightOuterLimit",
-          "y": "bottomOuterLimit",
-          "z": "frontDepthMin"
-        },
-        {
-          "x": "leftOuterLimit",
-          "y": "bottomOuterLimit",
-          "z": "frontDepthMax"
-        },
-      ],
-      "id": "kc2n9od"
+        "bottom": {
+          "right":{
+            "x": "rightOuterLimit",
+            "y": "bottomOuterLimit",
+            "z": "frontDepthMin"
+          },
+          "left": {
+            "x": "leftOuterLimit",
+            "y": "bottomOuterLimit",
+            "z": "frontDepthMax"
+          }
+        }
+      }
     }
   ]
 },

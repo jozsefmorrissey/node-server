@@ -1,7 +1,6 @@
 
 const Vertex2d = require('vertex');
 const SnapLocation2d = require('snap-location');
-const approximate = require('../../../../../public/js/utils/approximate.js');
 
 class Snap2d {
   constructor(parent, object, tolerance) {
@@ -78,7 +77,7 @@ class Snap2d {
     let width = 121.92;
     this.height = (h) => {
       if ((typeof h) === 'number') {
-        const newVal = approximate(h);
+        const newVal = h;
         notify(height, newVal);
         height = newVal;
       }
@@ -86,7 +85,7 @@ class Snap2d {
     }
     this.width = (w) => {
       if ((typeof w) === 'number') {
-        const newVal = approximate(w);
+        const newVal = w;
         notify(width, newVal);
         width = newVal;
       }
@@ -257,7 +256,7 @@ class Snap2d {
         if (snapInfo) {
           const obj = snapInfo.snapLoc.parent();
           if (snapInfo.theta !== undefined) {
-            const theta = approximate(((snapInfo.theta + 2 * Math.PI) - this.radians()) % (2*Math.PI));
+            const theta = ((snapInfo.theta + 2 * Math.PI) - this.radians()) % (2*Math.PI);
             snapInfo.theta = undefined;
             this.snapLocations.rotate(theta);
           }

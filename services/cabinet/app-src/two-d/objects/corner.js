@@ -1,6 +1,5 @@
 
 const Vertex2d = require('vertex');
-const approximate = require('../../../../../public/js/utils/approximate.js');
 
 class Corner {
   constructor(center, height, width, radians) {
@@ -42,7 +41,7 @@ class Corner {
     this.radians = (newValue) => {
       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
         notify(radians, newValue);
-        radians = approximate(newValue);
+        radians = newValue;
       }
       return radians;
     };

@@ -1,0 +1,47 @@
+<div>
+  <div class='border-part-code-cnt' {{obj._Type !== 'location' ? '' : 'hidden'}}>
+    <h4>Opening Border Part Codes</h4>
+    {{select.html()}}
+    <input class='opening-part-code-input' attr='openings' name='partCode' value="{{obj[select.value()]}}">
+  </div>
+  <div class='border-location-cnt' {{obj._Type === 'location' ? '' : 'hidden'}}>
+    <h4>Opening Border Locations</h4>
+    <label>Z Rotation</label>
+    <input type="text" name="zRotation" value="{{obj.zRotation}}">
+    <br><br>
+    <label>Inner</label>
+    <input type="radio" name="innerOouter-{{obj.id}}" value="true"
+        {{state.innerOouter === true ? 'checked' : ''}}>
+    <label>Outer</label>
+    <input type="radio" name="innerOouter-{{obj.id}}" value="false"
+        {{state.innerOouter === false ? 'checked' : ''}}>
+    <br><br>
+    <label>Top</label>
+    <input type="radio" name="topObottom-{{obj.id}}" value="true"
+        {{state.topObottom === true ? 'checked' : ''}}>
+    <label>Bottom</label>
+    <input type="radio" name="topObottom-{{obj.id}}" value="false"
+        {{state.topObottom === false ? 'checked' : ''}}>
+    <br><br>
+    <label>Left</label>
+    <input type="radio" name="leftOright-{{obj.id}}" value="true"
+        {{state.leftOright === true ? 'checked' : ''}}>
+    <label>Right</label>
+    <input type="radio" name="leftOright-{{obj.id}}" value="false"
+        {{state.leftOright === false ? 'checked' : ''}}>
+    <br><br>
+    <label>X</label>
+    <input type="radio" name="xOyOz-{{obj.id}}" value="x"
+        {{state.xOyOz === 'x' ? 'checked' : ''}}>
+    <label>Y</label>
+    <input type="radio" name="xOyOz-{{obj.id}}" value="y"
+        {{state.xOyOz === 'y' ? 'checked' : ''}}>
+    <label>Z</label>
+    <input type="radio" name="xOyOz-{{obj.id}}" value="z"
+        {{state.xOyOz === 'z' ? 'checked' : ''}}>
+    <br><br>
+    <input type='text' name='opening-coordinate-value' value=''>
+    <div class='opening-location-value-cnt'></div>
+    <div class='opening-location-description-cnt'></div>
+  </div>
+</div>

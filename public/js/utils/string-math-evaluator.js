@@ -1,5 +1,4 @@
 
-const approximate = require('approximate');
 const FunctionCache = require('./services/function-cache.js');
 
 function regexToObject (str, reg) {
@@ -18,7 +17,6 @@ class StringMathEvaluator {
     globalScope = globalScope || {};
     const instance = this;
     let splitter = '.';
-    let cache = {};
 
     function resolve (path, currObj, globalCheck) {
       if (path === '') return currObj;
@@ -197,19 +195,9 @@ class StringMathEvaluator {
     const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
     const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
 
-    this.cache = (expr) => {
-      const time = new Date().getTime();
-      if (cache[expr] && cache[expr].time > time - 200) {
-        cache[expr].time = time;
-        return cache[expr].value;
-      }
-      return null
-    }
-
     function evaluate(expr, scope, percision) {
-      if (instance.cache(expr) !== null) return instance.cache(expr);
       if (Number.isFinite(expr))
-        return approximate(expr);
+        return expr;
       expr = new String(expr);
       expr = addUnexpressedMultiplicationSigns(expr);
       expr = convertFeetInchNotation(expr);
@@ -222,10 +210,10 @@ class StringMathEvaluator {
         const char = expr[index];
         if (prevWasOpperand) {
           try {
-            if (isolateOperand(char, operands))
+            let newIndex = isolateNumber(expr, index, values, operands, scope);
+            if (!newIndex && isolateOperand(char, operands))
                 throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
-            let newIndex = isolateParenthesis(expr, index, values, operands, scope) ||
-                isolateNumber(expr, index, values, operands, scope) ||
+            newIndex ||= isolateParenthesis(expr, index, values, operands, scope) ||
                 (allowVars && isolateVar(expr, index, values, operands, scope));
             if (Number.isInteger(newIndex)) {
               index = newIndex - 1;
@@ -248,14 +236,21 @@ class StringMathEvaluator {
       }
 
       if (Number.isFinite(value)) {
-        value = approximate(value);
-        cache[expr] = {time: new Date().getTime(), value};
+        value = value;
         return value;
       }
       return NaN;
     }
 
     this.eval = new FunctionCache(evaluate, this, 'sme');
+
+    this.evalObject = new FunctionCache((obj, scope) => {
+      const returnObj = Object.forEachConditional(obj, (value, key, object) => {
+        value = evaluate(value, scope);
+        if (!Number.isNaN(value)) object[key] = value;
+      }, (value) => (typeof value) === 'string');
+      return returnObj;
+    }, this, 'sme');
   }
 }
 

@@ -1,5 +1,6 @@
 
 const approximate = require('../../../../../public/js/utils/approximate.js');
+const approximate100 = approximate.new(100);
 const Vertex2d = require('./vertex');
 const Circle2d = require('./circle');
 
@@ -24,6 +25,9 @@ class Line2d {
       return endVertex;
     }
 
+    this.rise = () => endVertex.y() - startVertex.y();
+    this.run = () =>  endVertex.x() - startVertex.x();
+
     function changeLength(value) {
       const circle = new Circle2d(value, instance.startVertex());
       const points = circle.intersections(instance);
@@ -36,10 +40,21 @@ class Line2d {
       }
     }
 
+    this.withinDirectionalBounds = (point, limit) => {
+      point = new Vertex2d(point);
+      const withinLimit = limit === undefined || (limit > point.y() && limit > point.x());
+      const rise = this.rise();
+      const run = this.run();
+      if (withinLimit && this.withinSegmentBounds(point)) return true;
+      const offsetPoint = {x: point.x() + run, y: point.y() + rise};
+      if (this.startVertex().distance(point) > this.startVertex().distance(offsetPoint)) return false;
+      return withinLimit;
+    }
+
     this.withinSegmentBounds = (point) => {
       point = new Vertex2d(point);
-      return approximate.lteq(this.minX(), point.x(), 100) && approximate.lteq(this.minY(), point.y(), 100) &&
-            approximate.gteq(this.maxX(), point.x(), 100) && approximate.gteq(this.maxY(), point.y(), 100);
+      return approximate100.lteq(this.minX(), point.x()) && approximate100.lteq(this.minY(), point.y()) &&
+            approximate100.gteq(this.maxX(), point.x()) && approximate100.gteq(this.maxY(), point.y());
     }
 
 
@@ -75,7 +90,7 @@ class Line2d {
       }
       const a = this.endVertex().x() - this.startVertex().x();
       const b = this.endVertex().y() - this.startVertex().y();
-      return approximate(Math.sqrt(a*a + b*b), 1000000);
+      return Math.sqrt(a*a + b*b);
     }
 
     function getSlope(v1, v2) {
@@ -83,13 +98,17 @@ class Line2d {
       const y2 = v2.y();
       const x1 = v1.x();
       const x2 = v2.x();
-      return approximate((y2 - y1) / (x2 - x1));
+      const slope = (y2 - y1) / (x2 - x1);
+      if (slope > 10000) return Infinity;
+      if (slope < -10000) return -Infinity;
+      if (slope > -0.00001 && slope < -0.00001) return 0;
+      return slope;
     }
 
     function getB(x, y, slope) {
       if (slope === 0) return y;
       else if (Math.abs(slope) === Infinity) {
-        if (this.startVertex().x() === 0) return 0;
+        if (instance.startVertex().x() === 0) return 0;
         else return Infinity;
       }
       else return y - slope * x;
@@ -251,13 +270,24 @@ class Line2d {
       return this;
     }
 
-    this.findIntersection = (line, segment) => {
+    this.vertical = () => Math.abs(this.slope()) === Infinity;
+
+    this.findIntersection = (line) => {
       if (this.slope() === 0 && line.slope() === 0) {
         if (this.yIntercept() === line.yIntercept()) return Infinity;
         return false;
       }
-      if (this.slope() === 0) return line.findIntersection(this, segment);
-      if (approximate.eq(line.radians(), this.radians(), 10000)) {
+      if (this.slope() === 0) return line.findIntersection(this);
+
+      if (this.vertical() && line.vertical()) {
+        if (this.startVertex().x() === line.startVertex().x()) return Infinity;
+        return false;
+      }
+      if (this.slope() === 0) return line.findIntersection(this);
+
+
+      if (approximate.eq(line.radians(), this.radians()) &&
+              approximate.eq(line.yIntercept(), this.yIntercept())) {
         return Vertex2d.center(line.startVertex(), this.startVertex(), line.endVertex(), this.endVertex());
       }
       const slope = this.slope();
@@ -273,13 +303,29 @@ class Line2d {
         x = newX(slope, lineSlope, this.yIntercept(), line.yIntercept());
         y = this.y(x);
       }
-      const intersection = {x,y};
-      if (segment !== true) return new Vertex2d(intersection);
+      if (Number.NaNfinity(x,y)) return false;
+
+      return new Vertex2d({x,y});
+    }
+
+    this.findDirectionalIntersection = (line, limit) => {
+      const intersection = this.findIntersection(line);
+      if (intersection && this.withinDirectionalBounds(intersection, limit)) return intersection;
+      return false;
+    }
+
+    this.findSegmentIntersection = (line, both) => {
+      const intersection = this.findIntersection(line);
+      if (!intersection) return false;
+      if (!both && this.withinSegmentBounds(intersection)) {
+        return intersection;
+      }
       if (this.withinSegmentBounds(intersection) && line.withinSegmentBounds(intersection)) {
-        return new Vertex2d(intersection);
+        return intersection;
       }
       return false;
     }
+
     this.minX = () => this.startVertex().x() < this.endVertex().x() ?
                         this.startVertex().x() : this.endVertex().x();
     this.minY = () => this.startVertex().y() < this.endVertex().y() ?
@@ -317,15 +363,15 @@ class Line2d {
       const posRads = Math.mod(this.radians(), 2*Math.PI);
       const negRads = Math.mod(this.radians() + Math.PI, 2*Math.PI);
       const otherRads = Math.mod(other.radians(), 2*Math.PI);
-      return approximate.eq(posRads, otherRads, 10000) ||
-              approximate.eq(negRads, otherRads, 10000);
+      return approximate.eq(posRads, otherRads) ||
+              approximate.eq(negRads, otherRads);
     }
 
     this.equals = (other) => {
       if (other === this) return true;
-      if (this.toString() === other.toString()) return true;
-      if (this.toString() === other.toNegitiveString()) return true;
-      return false;
+      const forwardEq = this.startVertex().equal(other.startVertex()) && this.endVertex().equal(other.endVertex());
+      const backwardEq = this.startVertex().equal(other.endVertex()) && this.endVertex().equal(other.startVertex());
+      return forwardEq || backwardEq;
     }
 
 
@@ -342,21 +388,22 @@ class Line2d {
       if (!(other instanceof Line2d)) return;
       const clean = this.clean(other);
       if (clean) return clean;
-      if (approximate.neqAbs(this.slope(), other.slope(), 1000)) return;
+      if (approximate.neqAbs(this.slope(), other.slope())) return;
       const otherNeg = other.negitive();
-      const posEq = approximate.eq(this.y(other.x()), other.y(), 1000) &&
-                    approximate.eq(this.x(other.y()), other.x(), 1000);
-      const negEq = approximate.eq(this.y(otherNeg.x()), otherNeg.y(), 1000) &&
-                    approximate.eq(this.x(otherNeg.y()), otherNeg.x(), 1000);
+      const posEq = approximate.eq(this.y(other.x()), other.y()) &&
+                    approximate.eq(this.x(other.y()), other.x());
+      const negEq = approximate.eq(this.y(otherNeg.x()), otherNeg.y()) &&
+                    approximate.eq(this.x(otherNeg.y()), otherNeg.x());
       if (!posEq && !negEq) return;
       const v1 = this.startVertex();
       const v2 = this.endVertex();
       const ov1 = other.startVertex();
       const ov2 = other.endVertex();
       if (!this.withinSegmentBounds(ov1) && !this.withinSegmentBounds(ov2)) return;
+      // Fix sort method
       const vs = [v1, v2, ov1, ov2].sort(Vertex2d.sort);
       const combined = new Line2d(vs[0], vs[vs.length - 1]);
-      return approximate.eq(this.radians(), combined.radians(), 1000) ? combined : combined.negitive();
+      return approximate.eq(this.radians(), combined.radians()) ? combined : combined.negitive();
     }
 
     this.trimmed = (distance, both) => {

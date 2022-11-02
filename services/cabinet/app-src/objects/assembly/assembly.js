@@ -62,6 +62,7 @@ class Assembly extends Lookup {
     }
     const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
     this.eval = (eqn) => sme.eval(eqn, this);
+    this.evalObject = (obj) => sme.evalObject(obj, this);
 
     this.getRoot = () => {
       let currAssem = this;

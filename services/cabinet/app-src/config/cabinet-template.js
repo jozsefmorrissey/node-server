@@ -12,17 +12,10 @@ class CabinetTemplate extends Lookup {
       type, values: [], subassemblies: [], joints: [], dividerJoint: {},
       shape: 'square',
       width: 18 * 2.54,
+
       height: 34 * 2.54,
       thickness: 24 * 2.54,
-      openings: [
-        {
-          "top": "pt",
-          "bottom": "pb",
-          "left": "pl",
-          "right": "pr",
-          "back": "pback"
-        }
-      ]
+      openings: [CabinetTemplate.defaultPartCodeOpening()]
     };
     Object.getSet(this, initialVals);
     CabinetTemplate.map[type] = this;
@@ -33,7 +26,7 @@ class CabinetTemplate extends Lookup {
       cabinet.width(width);
       cabinet.thickness(thickness);
 
-      cabinet.propertyConfig = pc instanceof PropertyConfig ? pc : new PropertyConfig();
+      cabinet.propertyConfig(pc instanceof PropertyConfig ? pc : new PropertyConfig());
       return cabinet;
     }
     this.getCabinet = getCabinet;
@@ -88,6 +81,11 @@ class CabinetTemplate extends Lookup {
     this.evalEqn = (eqn, cab) => {
       cab ||= getCabinet();
       return cab.eval(eqn);
+    }
+
+    this.evalObject = (eqn, cab) => {
+      cab ||= getCabinet();
+      return cab.evalObject(eqn);
     }
 
     this.validateEquation = (eqn, cab) => {
@@ -161,5 +159,27 @@ CabinetTemplate.defaultList = () => {
 }
 
 CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
+CabinetTemplate.defaultPartCodeOpening = () => ({
+    _Type: "part-code",
+    top: "pt",
+    bottom: "pb",
+    left: "pl",
+    right: "pr",
+    back: "pback"
+  }
+);
+
+CabinetTemplate.defaultLocationOpening = () => ({
+  _Type: "location",
+  zRotation: 0,
+  inner: {
+    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
+    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
+  },
+  outer: {
+    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
+    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
+  }
+});
 
 module.exports = CabinetTemplate;

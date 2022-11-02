@@ -19,7 +19,9 @@ const cube = new CSG.cube({radius: [3,5,1]});
 const consts = require('../../globals/CONSTANTS');
 let viewer, threeView;
 function init() {
-  const p = pull(5,2);
+  // const p = pull(5,2);
+  const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
+  p.setColor('black')
   // const db = drawerBox(10, 15, 22);
   const canvas2d = du.id('two-d-model');
   viewer = new Viewer(p, canvas2d.height, canvas2d.width, 50);

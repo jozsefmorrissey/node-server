@@ -1,7 +1,4 @@
 
-const approximate = require('./../../../../../../public/js/utils/approximate.js');
-
-
 const Joint = require('../joint.js');
 
 class Dado extends Joint {
@@ -13,8 +10,8 @@ class Dado extends Joint {
       const centerAxis = this.centerAxis()[1].toLowerCase();
       const offset = this.parentAssembly().eval(this.maleOffset());
       const demAxis = this.demensionAxis().toLowerCase();
-      position.demension[demAxis] = approximate(position.demension[demAxis] + offset);
-      position.center[centerAxis] = approximate(position.center[centerAxis] + (offset/2 * direction));
+      position.demension[demAxis] = position.demension[demAxis] + offset;
+      position.center[centerAxis] = position.center[centerAxis] + (offset/2 * direction);
     };
 
   }

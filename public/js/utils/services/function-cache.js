@@ -51,6 +51,8 @@ FunctionCache.off = (group) => {
   cacheState[group] = false;
   cacheFuncs[group].forEach((func) => func.clearCache());
 }
-FunctionCache.isOn = (group) => cacheState[group];
-
+let disabled = false;
+FunctionCache.isOn = (group) => !disabled && cacheState[group];
+FunctionCache.disable = () => disabled = true;
+FunctionCache.enable = () => disabled = false;
 module.exports = FunctionCache;

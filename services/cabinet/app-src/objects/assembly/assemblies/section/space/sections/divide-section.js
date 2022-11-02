@@ -72,10 +72,10 @@ class DivideSection extends SpaceSection {
         };
         const rotation = props.rotation;
 
-        let top = props.borders.top;
-        let bottom = props.borders.bottom;
-        let left = props.borders.left;
-        let right = props.borders.right;
+        let top = props.borders ? props.borders.top : props.position.top;
+        let bottom = props.borders ? props.borders.bottom : props.position.bottom;
+        let left = props.borders ? props.borders.left : props.position.left;
+        let right = props.borders ? props.borders.right : props.position.right;
         if (this.vertical()) {
           if (index !== 0) {
             left = this.sections[index - 1];
@@ -113,11 +113,11 @@ class DivideSection extends SpaceSection {
         let center = this.center();
         let dividerLength;
         if (this.vertical()) {
-          const start = props.borders.left.position().centerAdjust('x', '-z');
+          const start = props.borders ? props.borders.left.position().centerAdjust('x', '-z') : props.position.left;
           center.x = start + offset;
           dividerLength = innerSize.y;
         } else {
-          const start = props.borders.top.position().centerAdjust('y', '+z');
+          const start = props.borders ? props.borders.top.position().centerAdjust('y', '+z') : props.position.top;
           center.y = start - offset;
           dividerLength = innerSize.x;
         }
@@ -133,7 +133,7 @@ class DivideSection extends SpaceSection {
     this.dividerOffset = (limitIndex) => {
       limitIndex = limitIndex > -1 && limitIndex < this.sections.length ? limitIndex : this.sections.length;
       let cov = this.coverable();
-      let frOut = this.panelOuter();
+      let frOut = this.outerSize();
       let offset = this.isVertical() ? cov.limits['-x'] - frOut.limits['-x'] : frOut.limits.y - cov.limits.y;
       for (let index = 0; index < limitIndex + 2; index += 1) {
         const section = this.sections[index];

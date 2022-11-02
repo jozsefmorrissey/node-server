@@ -1,7 +1,6 @@
 
-const approximate = require('../../../../../public/js/utils/approximate.js');
+const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
 
-const acc = 1000000;
 
 class Vertex2d {
   constructor(point) {
@@ -31,13 +30,13 @@ class Vertex2d {
       return modificationFunction;
     }
 
-    this.equal = (other) => approximate.eq(other.x(), this.x(), acc) && approximate.eq(other.y(), this.y(), acc);
+    this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
     this.x = (val) => {
-      if ((typeof val) === 'number') point.x = approximate(val, acc);
+      if ((typeof val) === 'number') point.x = val;
       return this.point().x;
     }
     this.y = (val) => {
-      if ((typeof val) === 'number') this.point().y = approximate(val, acc);
+      if ((typeof val) === 'number') this.point().y = val;
       return this.point().y;
     }
 

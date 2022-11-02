@@ -55,7 +55,7 @@ class ReferenceableFuctions {
     this.clone = () => new ReferenceableFuctions(id);
   }
 }
-console.log(new ReferenceableFuctions(1).toJson())
+
 function createTree(connectEggs, optional, shouldCopy, testFuncs) {
   const tree = new LogicTree(String.random());
 

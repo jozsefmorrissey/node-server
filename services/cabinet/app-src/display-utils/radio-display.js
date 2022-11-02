@@ -1,11 +1,13 @@
 
 
-
+const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const InformationBar = require('./information-bar.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 
 class RadioDisplay {
   constructor(radioClass, groupAttr, alternateToggleClass) {
+    const afterSwitchEvent = new CustomEvent('afterSwitch');
+    const beforeSwitchEvent = new CustomEvent('beforeSwitch');
     const selector = (attrVal) => {
       return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
     }
@@ -32,17 +34,22 @@ class RadioDisplay {
         if (closest) closest.hidden = true;
       }
     }
+    this.beforeSwitch = (func) => beforeSwitchEvent.on(func);
+    this.afterSwitch = (func) => afterSwitchEvent.on(func);
+
 
     du.on.match('scroll', `*`, (target, event) => {
       infoBar.update(path());
     });
 
+    let previousHeader;
     du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
       const target = targetHeader.parentElement;
       const attrVal = target.getAttribute(groupAttr);
       const targetBody = target.children[1];
       const hidden = targetBody.hidden;
       targetBody.hidden = !hidden;
+      beforeSwitchEvent.trigger(null, {previousHeader, targetHeader});
       if (hidden) {
         du.class.add(targetHeader, 'active');
         du.class.swap(target, 'open', 'close');
@@ -56,9 +63,13 @@ class RadioDisplay {
             du.class.remove(sibHeader, 'active');
           }
         }
+        afterSwitchEvent.trigger(null, {previousHeader, targetHeader});
+        previousHeader = targetHeader;
       } else {
         du.class.swap(target, 'close', 'open');
         du.class.remove(targetHeader, 'active');
+        afterSwitchEvent.trigger(null, {previousHeader, targetHeader});
+        previousHeader = null;
       }
       infoBar.update(path());
     });

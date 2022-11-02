@@ -84,6 +84,14 @@ Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
   return val % mod;
 }, true);
 
+Function.safeStdLibAddition(Number, 'NaNfinity',  function (...vals) {
+  for (let index = 0; index < vals.length; index++) {
+    let val = vals[index];
+    if(Number.isNaN(val) || !Number.isFinite(val)) return true;
+  }
+  return false;
+}, true);
+
 function stringHash() {
   let hashString = this;
   let hash = 0;
@@ -203,19 +211,51 @@ function objEq(obj1, obj2) {
   return true;
 }
 
+Function.safeStdLibAddition(Object, 'merge', (target, object, soft) => {
+  if (!(target instanceof Object)) return;
+  if (!(object instanceof Object)) return;
+  const objKeys = Object.keys(object);
+  for (let index = 0; index < objKeys.length; index++) {
+    const key = objKeys[index];
+    if (!soft || target[key] === undefined) {
+      target[key] = object[key];
+    }
+  }
+}, true);
+
 
 Function.safeStdLibAddition(Object, 'class', clazz, true);
 Function.safeStdLibAddition(Object, 'equals', objEq, true);
 
 
-Function.safeStdLibAddition(Math, 'toDegrees', function (rads, accuracy) {
-  accuracy ||= 100;
-  return Math.round((rads * 180/Math.PI % 360) * accuracy) / accuracy;
+Function.safeStdLibAddition(Math, 'toDegrees', function (rads) {
+  return rads * 180/Math.PI % 360;
+}, true);
+
+Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {
+  if (!modifyObject) obj = JSON.clone(obj);
+  conditionFunc = (typeof conditionFunc) === 'function' ? conditionFunc : () => true;
+  const keys = Object.keys(obj);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const value = obj[key];
+    if (conditionFunc(value)) func(value, key, obj);
+    if (value instanceof Object) Object.forEachConditional(value, func, conditionFunc, true);
+  }
+  return obj;
 }, true);
 
 Function.safeStdLibAddition(Math, 'toRadians', function (angle, accuracy) {
-  accuracy ||= 10000000;
-  return Math.round((angle*Math.PI/180)%(2*Math.PI) * accuracy)  / accuracy;
+  return (angle*Math.PI/180)%(2*Math.PI);
+}, true);
+
+Function.safeStdLibAddition(Math, 'midpoint', function (s, e) {
+  if (e < s) {
+    let t = s;
+    s = e;
+    e = t;
+  }
+  return s + (e - s)/2;
 }, true);
 
 Function.safeStdLibAddition(Array, 'toJson', function (arr) {
@@ -235,6 +275,24 @@ Function.safeStdLibAddition(Array, 'equalIndexOf', function (elem, startIndex, e
       }
     }
     return -1;
+});
+
+Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endIndex) {
+    startIndex =  startIndex > -1 ? startIndex : 0;
+    endIndex = endIndex < this.length ? endIndex : this.length;
+    if (endIndex < other.length) return false;
+    let equal = true;
+    for (let index = startIndex; equal && index < endIndex; index += 1) {
+      const elem = this[index];
+      if (elem && (typeof elem.equals) === 'function') {
+        if (!elem.equals(this[index])) {
+          return index;
+        }
+      } else if (elem !== other[index]) {
+        equal = false;
+      }
+    }
+    return equal;
 });
 
 Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
@@ -568,3 +626,27 @@ Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
   }
   return currObj[lastAttr];
 }, true);
+
+
+/////////////////////////////////// Matrix Equations //////////////////////////
+
+Function.safeStdLibAddition(Array, 'translate', function (vector, doNotModify, quiet) {
+  let point = this;
+  let single = false;
+  if (doNotModify === true) point = Array.from(point);
+  const vecLen = vector.length;
+  if (point.length !== vecLen && !quiet) console.warn('vector.length !== point.length but we\' do it anyway (arg3(quiet) = true to silence)');
+  for (let i = 0; i < vecLen; i += 1) {
+    if (point[i] === undefined) point[i] = 0;
+    point[i] += vector[i];
+  }
+  return point;
+});
+
+Function.safeStdLibAddition(Array, 'inverse', function (doNotModify) {
+  const arr = doNotModify === true ? Array.from(this) : this;
+  for (let index = 0; index < arr.length; index += 1) {
+    arr[index] *= -1;
+  }
+  return arr;
+});

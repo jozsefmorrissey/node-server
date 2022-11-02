@@ -264,7 +264,8 @@ CSG.prototype = {
 
   rotate: function (rotations) {
     this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-      let newPos = ArbitraryRotate(vertex.pos, rotations.x, {x: 1, y:0, z:0});
+      let newPos = vertex.pos;
+      newPos = ArbitraryRotate(newPos, rotations.x, {x: 1, y:0, z:0});
       newPos = ArbitraryRotate(newPos, rotations.y, {x: 0, y:1, z:0});
       newPos = ArbitraryRotate(newPos, rotations.z, {x: 0, y:0, z:1});
       return new CSG.Vertex(newPos, vertex.normal);
@@ -425,22 +426,18 @@ CSG.cylinder = function(options) {
 //     new CSG.Vector({ x: 1, y: 2, z: 3 });
 
 CSG.Vector = function(x, y, z) {
-  function approximate(value, acc) {
-    acc ||= 1000000;
-    return Math.round(value * acc) / acc;
-  }
   if (arguments.length == 3) {
-    this.x = approximate(x);
-    this.y = approximate(y);
-    this.z = approximate(z);
+    this.x = x;
+    this.y = y;
+    this.z = z;
   } else if ('x' in x) {
-    this.x = approximate(x.x);
-    this.y = approximate(x.y);
-    this.z = approximate(x.z);
+    this.x = x.x;
+    this.y = x.y;
+    this.z = x.z;
   } else {
-    this.x = approximate(x[0]);
-    this.y = approximate(x[1]);
-    this.z = approximate(x[2]);
+    this.x = x[0];
+    this.y = x[1];
+    this.z = x[2];
   }
 };
 
@@ -755,11 +752,6 @@ CSG.Node.prototype = {
   }
 };
 
-function round(value, percision) {
-  const multiplier = Math.pow(10, percision);
-  return Math.round(value * multiplier, 5) / multiplier;
-}
-
 /*
    Rotate a point p by angle theta around an arbitrary axis r
    Return the rotated point.
@@ -770,7 +762,7 @@ function round(value, percision) {
 function ArbitraryRotate(point, degreestheta, radius)
 {
   // theta = degreestheta * Math.PI/180;
-  theta = Math.round(100000000000* (degreestheta * Math.PI/180)) / 100000000000;
+  theta = degreestheta * Math.PI/180;
   // console.log('theta', theta);
   let p = point;
   let r = radius;
@@ -788,19 +780,90 @@ function ArbitraryRotate(point, degreestheta, radius)
    q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
    q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
    q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
-   q.x = round(q.x, 10);
 
    q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
    q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
    q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
-   q.y = round(q.y, 10);
 
    q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
    q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
    q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
-   q.z = round(q.z, 10);
 
    return(q);
 }
 
+function rotate (point, rotation) {
+  let newPos = point;
+  newPos = ArbitraryRotate(newPos, rotation.x, {x: 1, y:0, z:0});
+  newPos = ArbitraryRotate(newPos, rotation.y, {x: 0, y:1, z:0});
+  newPos = ArbitraryRotate(newPos, rotation.z, {x: 0, y:0, z:1});
+  return newPos;
+}
+
+function reverseRotate (point, rotation) {
+  rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
+  let newPos = point;
+  newPos = ArbitraryRotate(newPos, rotation.z, {x: 0, y:0, z:1});
+  newPos = ArbitraryRotate(newPos, rotation.y, {x: 0, y:1, z:0});
+  newPos = ArbitraryRotate(newPos, rotation.x, {x: 1, y:0, z:0});
+  return newPos;
+}
+
+function transRotate (point, offset, rotation) {
+  let newPos = rotate (offset, rotation);
+  newPos.x += point.x;
+  newPos.y += point.y;
+  newPos.z += point.z;
+  return newPos;
+}
+
+function transRotateAll (points, offset, rotation) {
+  for (let index = 0; index < points.length; index++) {
+    points[index] = transRotate(points[index], offset, rotation);
+  }
+}
+
+function rotateAll (points, rotation) {
+  const ret = [];
+  for (let index = 0; index < points.length; index++) {
+    ret[index] = rotate(points[index], rotation);
+  }
+  return ret;
+}
+
+function reverseRotateAll (points, rotation) {
+  const ret = [];
+  for (let index = 0; index < points.length; index++) {
+    ret[index] = reverseRotate(points[index], rotation);
+  }
+  return ret;
+}
+
+function rotatePointAroundCenter(rotation, point, center, reverse) {
+  point.x -=  center.x;
+  point.y -= center.y;
+  point.z -= center.z;
+  const rotated = reverse ? reverseRotate(point, rotation) : rotate(point, rotation);
+  point.x =  center.x + rotated.x;
+  point.y = center.y + rotated.y;
+  point.z = center.z + rotated.z;
+  return point;
+}
+
+function rotatePointsAroundCenter(rotation, points, center, reverse) {
+  for (let index = 0; index < points.length; index++) {
+    rotatePointAroundCenter(rotation, points[index], center, reverse);
+  }
+  return points;
+}
+
+CSG.ArbitraryRotate = ArbitraryRotate;
+CSG.rotatePointsAroundCenter = rotatePointsAroundCenter;
+CSG.rotatePointAroundCenter = rotatePointAroundCenter;
+CSG.transRotate = transRotate;
+CSG.rotateAll = rotateAll;
+CSG.transRotateAll = transRotateAll;
+CSG.reverseRotateAll = reverseRotateAll;
+CSG.rotate = rotate;
+CSG.reverseRotate = reverseRotate;
 module.exports = CSG;

@@ -9,6 +9,8 @@ if (EPNTS.getEnv() === 'local') {
   require('../../../public/js/utils/test/tests/decision-tree');
   require('../../../public/js/utils/test/tests/logic-tree');
   require('./tests/polygon-merge');
+  require('./tests/array-math');
+  require('./tests/plane');
   require('./tests/line-consolidate');
 }
 

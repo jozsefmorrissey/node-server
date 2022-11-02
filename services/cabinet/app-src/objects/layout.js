@@ -2,7 +2,7 @@
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const Measurement = require('../../../../public/js/utils/measurement.js');
 const StateHistory = require('../../../../public/js/utils/services/state-history');
-const approximate = require('../../../../public/js/utils/approximate.js');
+const approximate = require('../../../../public/js/utils/approximate.js').new(1);
 const Vertex2d = require('../two-d/objects/vertex.js');
 const Line2d = require('../two-d/objects/line.js');
 const Square2d = require('../two-d/objects/square.js');
@@ -498,7 +498,7 @@ class Layout2D extends Lookup {
       return verticies;
     }
 
-    this.within = (vertex, print) => {
+    this.within = (vertex) => {
       vertex = new Vertex2d(vertex);
       const endpoint = {x: 0, y: 0};
       this.verticies().forEach(v => {
@@ -511,12 +511,12 @@ class Layout2D extends Lookup {
       const allIntersections = [];
       this.walls().forEach((wall) => {
 
-        const intersection = wall.findIntersection(escapeLine, true);
+        const intersection = wall.findSegmentIntersection(escapeLine);
         allIntersections.push(intersection);
         if (intersection) {
           // Todo make more accurate
-          const xEqual = approximate.eq(intersection.x(), vertex.x(), 1);
-          const yEqual = approximate.eq(intersection.y(), vertex.y(), 1);
+          const xEqual = approximate.eq(intersection.x(), vertex.x());
+          const yEqual = approximate.eq(intersection.y(), vertex.y());
           if (xEqual && yEqual) onLine = true;
           intersections.push(intersection);
         }

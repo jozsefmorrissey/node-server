@@ -10,6 +10,8 @@ const PropertyConfig = require('../../../config/property/config.js');
 const Group = require('../../group');
 const Line2d = require('../../../two-d/objects/line');
 const Vertex2d = require('../../../two-d/objects/vertex');
+const Vertex3D = require('../../../three-d/objects/vertex');
+const CSG = require('../../../../public/js/3d-modeling/csg.js');
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -52,10 +54,9 @@ class Cabinet extends Assembly {
       return calculatedValue < definedValue ? calculatedValue : definedValue;
     }
 
-    this.borders = (borderIds) => {
+    function bordersByIds(borderIds) {
       const borders = {};
       const center = borderIds.center;
-      const rotation = borderIds.rotation;
       borders.right = instance.getAssembly(borderIds.right);
       borders.left = instance.getAssembly(borderIds.left);
       borders.top = instance.getAssembly(borderIds.top);
@@ -67,8 +68,7 @@ class Cabinet extends Assembly {
         const depth = pb.position().center('z') + pb.position().limits('-z');
 
         const position = {};
-        const start = {};
-        const propConfig = this.propertyConfig();
+        const propConfig = instance.propertyConfig();
         if (propConfig.isReveal()) {
           const revealProps = propConfig.reveal();
           position.right = borders.right.position().centerAdjust('x', '+z') - revealProps.rvr.value();
@@ -92,8 +92,63 @@ class Cabinet extends Assembly {
         position.front = 0;
         position.back = pb.position().center('z') + pb.position().limits('-z');
 
-        return {borders, position, depth, borderIds, center, rotation};
+        return {borders, position, depth, borderIds, center};
       }
+    }
+
+    function bordersByEndPoints (borderObj) {
+      const bo = borderObj;
+
+      return () => {
+        const rotation = {x: 0, z: 0, y: instance.eval(borderObj.zRotation)};
+        let evaluated;
+
+        let points;
+        const propConfig = instance.propertyConfig();
+        if (propConfig.isReveal()) {
+          points = instance.evalObject(bo.outer);
+        } else {
+          points = instance.evalObject(bo.inner);
+        }
+
+        const pointArr = [points.top.left, points.top.right, points.bottom.right, points.bottom.left];
+        let center = Vertex3D.center.apply(null, pointArr);
+        // CSG.rotatePointsAroundCenter(rotation, pointArr, center, true);
+
+        const width = new Vertex3D(points.top.left).distance(new Vertex3D(points.top.right));
+        const length = new Vertex3D(points.bottom.left).distance(new Vertex3D(points.top.left));
+
+        //TODO: calculate real value;
+        const depth = 20 * 2.54;
+
+        const position = {};
+        if (propConfig.isReveal()) {
+          const revealProps = propConfig.reveal();
+          position.right = center.x + width/2 - revealProps.rvr.value();
+          position.left = center.x - width/2 + revealProps.rvl.value();
+          position.top = center.y + length/2 - revealProps.rvt.value();
+          position.bottom = center.y - length/2 + revealProps.rvb.value();
+        } else if (propConfig.isInset()) {
+          const insetValue = propConfig('Inset').is.value();
+          position.right = center.x + width/2 - insetValue;
+          position.left = center.x - width/2 + insetValue;
+          position.top = center.y + length/2 - insetValue;
+          position.bottom = center.y - length/2 + insetValue;
+        } else {
+          const ov = propConfig('Overlay').ov.value();
+          position.right = center.x + width/2 + ov;;
+          position.left = center.x - width/2 - ov;
+          position.top = center.y + length/2 + ov;
+          position.bottom = center.y - length/2 - ov;
+        }
+
+        return {position, depth, center, rotation};
+      }
+    }
+
+    this.borders = (borderObj) => {
+      if (borderObj.inner) return bordersByEndPoints(borderObj);
+      return bordersByIds(borderObj);
     }
   }
 }

@@ -113,6 +113,10 @@ class FunctionArgumentTest {
   }
 }
 
+function round(value, accuracy) {
+  if (accuracy === undefined) return value;
+  return Math.round(value * accuracy) / accuracy;
+}
 // ts for short
 class TestStatus {
   constructor(testName) {
@@ -146,9 +150,9 @@ class TestStatus {
                             possiblyFail(`${msg}\n\t\t'${b}' should be true`);
     this.assertFalse = (b, msg) => !assert(!b) &&
                             possiblyFail(`${msg}\n\t\t'${b}' should be false`);
-    this.assertEquals = (a, b, msg) => !assert(a === b) &&
+    this.assertEquals = (a, b, msg, acc) => !assert(round(a, acc) === round(b, acc)) &&
                             possiblyFail(`${msg}\n\t\t'${a}' === '${b}' should be true`);
-    this.assertNotEquals = (a, b, msg) => !assert(a !== b) &&
+    this.assertNotEquals = (a, b, msg, acc) => !assert(round(a, acc) !== round(b, acc)) &&
                             possiblyFail(`${msg}\n\t\t'${a}' !== '${b}' should be true`);
     this.assertTolerance = (n1, n2, tol, msg, stackOffset) => {
       !assert(Math.abs(n1-n2) < tol) &&

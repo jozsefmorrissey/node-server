@@ -1,83 +1,11 @@
 
-const approximate = require('../../../../../public/js/utils/approximate.js');
 const Polygon2D = require('../../two-d/objects/polygon.js');
+const Line2D = require('../../two-d/objects/line.js');
+const Line3D = require('./line');
+const Vertex3D = require('./vertex');
+const Vector3D = require('./vector');
 
-class Vertex3D {
-  constructor(x, y) {
-    if (x instanceof Vertex3D) return x;
-    if (arguments.length == 3) {
-      this.x = approximate(x);
-      this.y = approximate(y);
-      this.z = approximate(z);
-    } else if ('x' in x) {
-      this.x = approximate(x.x);
-      this.y = approximate(x.y);
-      this.z = approximate(x.z);
-    } else {
-      this.x = approximate(x[0]);
-      this.y = approximate(x[1]);
-      this.z = approximate(x[2]);
-    }
-    this.equals = (other) => other && this.x === other.x && this.y === other.y;
-    this.toString = () => `${this.x},${this.y},${this.z}`;
-  }
-}
-
-class Vector3D {
-  constructor(i, j, k) {
-    this.i = () => i;
-    this.j = () => j;
-    this.k = () => k;
-
-    this.minus = (vector) =>
-      new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k())
-    this.add = (vector) =>
-      new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k())
-    this.dot = (vector) => {
-      const i = approximate((this.j() * vector.k()) - (vector.j() * this.k()));
-      const j = approximate((this.i() * vector.k()) - (vector.i() * this.k()));
-      const k = approximate((this.i() * vector.j()) - (vector.i() * this.j()));
-      return new Vector3D(i,j,k);
-    }
-    this.perpendicular = (vector) =>
-      ((this.i() * vector.i()) + (this.j() * vector.j()) + (this.k() * vector.k())) === 0;
-    this.parrelle = (vector) => {
-      let coef = this.i() / vector.i() || this.j() / vector.j() || this.k() / vector.k();
-      if (Math.abs(coef) === Infinity || coef === 0 || Number.isNaN(coef)) return null;
-      return vector.i() * coef === this.i() && vector.j() * coef === this.j() && vector.k() * coef === this.k();
-    }
-    this.equals = this.parrelle;
-    this.toString = () => `<${i},${j},${k}>`;
-  }
-}
-
-class Line3D {
-  constructor(startVertex, endVertex) {
-    this.startVertex = startVertex;
-    this.endVertex = endVertex;
-
-
-    let i = endVertex.x - startVertex.x;
-    let j = endVertex.y - startVertex.y;
-    let k = endVertex.z - startVertex.z;
-    const vector = new Vector3D(i,j,k);
-
-    this.negitive = () => new Line3D(endVertex, startVertex);
-    this.equals = (other) => startVertex && endVertex && other &&
-        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
-    this.vector = () => vector;
-
-    this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
-    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
-  }
-}
-Line3D.verticies = (lines) => {
-  const verts = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    verts.push(lines[index].endVertex);
-  }
-  return verts;
-}
+const CSG = require('../../../public/js/3d-modeling/csg.js');
 
 class Polygon3D {
   constructor(initialVerticies) {
@@ -336,8 +264,4 @@ Polygon3D.toTwoD = (polygons) => {
   return map;
 }
 
-
-Polygon3D.Vector3D = Vector3D;
-Polygon3D.Vertex3D = Vertex3D;
-Polygon3D.Line3D = Line3D;
 module.exports = Polygon3D;

@@ -1,6 +1,5 @@
 
 const Vertex2d = require('vertex');
-const approximate = require('../../../../../public/js/utils/approximate.js');
 
 class Square2d {
   constructor(center, height, width, radians) {
@@ -16,7 +15,7 @@ class Square2d {
 
     this.radians = (newValue) => {
       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-        radians = approximate(newValue);
+        radians = newValue;
       }
       return radians;
     };
