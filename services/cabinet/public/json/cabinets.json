@@ -149,7 +149,7 @@ module.exports = {
     },
     {
       "key": "frontDepthMax",
-      "eqn": "-1 * fwr"
+      "eqn": "fwr"
     }
   ],
   "subassemblies": [
@@ -572,58 +572,46 @@ module.exports = {
   "openings": [
     {
       "_Type": "location",
-      "zRotation": "-90 + Math.toDegrees(frontLeftTheta)",
-      "inner": {
-        "top": {
-          "left": {
+      "rotation": {"x": 0, "z":0, "y":"-90 + Math.toDegrees(frontLeftTheta)"},
+      "coordinates" : {
+        "inner": [
+          {
             "x": "leftInnerLimit",
             "y": "topInnerLimit",
-            "z": "frontDepthMax + leftCutT"
-          },
-          "right": {
+            "z": "frontDepthMax - leftCutT"
+          }, {
             "x": "rightInnerLimit - rightCutX",
             "y": "topInnerLimit",
-            "z": "frontDepthMin - pr.t"
-          }
-        },
-        "bottom": {
-          "right":{
+            "z": "frontDepthMin + pr.t"
+          }, {
             "x": "rightInnerLimit - rightCutX",
             "y": "bottomInnerLimit",
-            "z": "frontDepthMin - pr.t"
-          },
-          "left": {
+            "z": "frontDepthMin + pr.t"
+          }, {
             "x": "leftInnerLimit",
             "y": "bottomInnerLimit",
-            "z": "frontDepthMax + leftCutT"
+            "z": "frontDepthMax - leftCutT"
           }
-        }
-      },
-      "outer": {
-        "top" : {
-          "left": {
+        ],
+        "outer": [
+          {
             "x": "leftOuterLimit",
             "y": "topOuterLimit",
             "z": "frontDepthMax"
-          },
-          "right": {
+          }, {
             "x": "rightOuterLimit",
             "y": "topOuterLimit",
             "z": "frontDepthMin"
-          },
-        },
-        "bottom": {
-          "right":{
+          }, {
             "x": "rightOuterLimit",
             "y": "bottomOuterLimit",
             "z": "frontDepthMin"
-          },
-          "left": {
+          }, {
             "x": "leftOuterLimit",
             "y": "bottomOuterLimit",
             "z": "frontDepthMax"
           }
-        }
+        ]
       }
     }
   ]

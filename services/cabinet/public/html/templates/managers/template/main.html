@@ -1,4 +1,41 @@
 <div template-manager={{id()}}>
-  Main template
+  <div class='section-properties'>
+    <br>
+    <label>Inset</label>
+    <input class='style-selector' type="radio" name="style" value="Inset"
+        {{sectionState.style === 'Inset' ? 'checked' : ''}}>
+    <label>overlay</label>
+    <input class='style-selector' type="radio" name="style" value="Overlay"
+        {{sectionState.style === 'Overlay' ? 'checked' : ''}}>
+    <label>Reveal</label>
+    <input class='style-selector' type="radio" name="style" value="Reveal"
+        {{sectionState.style === 'Reveal' ? 'checked' : ''}}>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <label>Door</label>
+    <input type="radio" name='sectionType' value="DoorSection">
+    <label>Drawer</label>
+    <input type="radio" name='sectionType' value="DrawerSection">
+    <label>Duel Door</label>
+    <input type="radio" name='sectionType' value="DualDoorSection">
+    <label>False Front</label>
+    <input type="radio" name='sectionType' value="FalseFrontSection">
+    <label>Open</label>
+    <input type="radio" name='sectionType' value="">
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <label>Divider Count</label>
+    <input id='template-divider-count-input' type="number" name="count" min='0' max='3' value=0>
+    <label>Vertical</label>
+    <input type="checkbox" name="vertical">
+    <label>Test</label>
+    <input type="checkbox" name="testDividers">
+  </div>
   <div id='{{parentId()}}'></div>
 </div>

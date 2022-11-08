@@ -5,16 +5,16 @@ const Assembly = require('../../assembly.js');
 const Handle = require('../hardware/pull.js');
 
 class DrawerFront extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
+    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
     this.setParentAssembly(parent);
     const instance = this;
     let pulls = [new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, 1)];
-    if (demensionStr === undefined) return;
+    if (demensionConfig === undefined) return;
     let handleCount = 1;
 
     function pullCount() {
-      if (instance.demensionStr().x < 55.88) return 1;
+      if (instance.demensionConfig().x < 55.88) return 1;
       return 2;
     }
 
@@ -32,7 +32,7 @@ class DrawerFront extends Assembly {
       }
       return pulls;
     };
-    // if (demensionStr !== undefined)this.updatePosition();
+    // if (demensionConfig !== undefined)this.updatePosition();
   }
 }
 

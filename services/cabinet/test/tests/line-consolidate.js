@@ -224,10 +224,10 @@ Test.add('Line2d: thetaBetween', (ts) => {
   ts.success();
 });
 
-Test.add('Line3D: intersects', (ts) => {
-  const line1 = new Line3D({x: 10, y: 10, z: 10}, {x: 5, y: 5, z: 5});
-  const line2 = new Line3D({x: 10, y: 10, z: -10}, {x: 5, y: 5, z: -5});
-  let intersection = line1.intersects(line2);
-  ts.assertTrue(intersection.equals({x: 0, y:0, z:0}));
-  ts.success();
-});
+// Test.add('Line3D: intersects', (ts) => {
+//   const line1 = new Line3D({x: 10, y: 10, z: 10}, {x: 5, y: 5, z: 5});
+//   const line2 = new Line3D({x: 10, y: 10, z: -10}, {x: 5, y: 5, z: -5});
+//   let intersection = line1.intersects(line2);
+//   ts.assertTrue(intersection.equals({x: 0, y:0, z:0}));
+//   ts.success();
+// });

@@ -30,14 +30,15 @@ class PropertyConfig {
     }
 
     function set(group, name) {
-      const newSet = Properties.getSet(group, name);
-      newSet.__KEY = name;
       if (cabinetStyles().indexOf(group) !== -1) {
         style = group;
         styleName = name;
+      } else {
+        const newSet = Properties.getSet(group, name);
+        newSet.__KEY = name;
+        if (newSet === undefined) throw new Error(`Attempting to switch '${group}' to unknown property set '${name}'`);
+        props[group] = newSet;
       }
-      if (newSet === undefined) throw new Error(`Attempting to switch '${group}' to unknown property set '${name}'`);
-      props[group] = newSet;
     }
 
     const panelThicknessRegMetric = /^pwt([0-9]{1,})([0-9][0-9])$/;

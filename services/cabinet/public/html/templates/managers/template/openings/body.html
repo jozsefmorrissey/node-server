@@ -16,19 +16,15 @@
     <input type="radio" name="innerOouter-{{obj.id}}" value="false"
         {{state.innerOouter === false ? 'checked' : ''}}>
     <br><br>
-    <label>Top</label>
-    <input type="radio" name="topObottom-{{obj.id}}" value="true"
-        {{state.topObottom === true ? 'checked' : ''}}>
-    <label>Bottom</label>
-    <input type="radio" name="topObottom-{{obj.id}}" value="false"
-        {{state.topObottom === false ? 'checked' : ''}}>
-    <br><br>
-    <label>Left</label>
-    <input type="radio" name="leftOright-{{obj.id}}" value="true"
-        {{state.leftOright === true ? 'checked' : ''}}>
-    <label>Right</label>
-    <input type="radio" name="leftOright-{{obj.id}}" value="false"
-        {{state.leftOright === false ? 'checked' : ''}}>
+
+    <label>Vertex:</label>
+    <br>
+    <span:t repeat='i in 0..4'>
+      <label>{{i}}</label>
+      <input type="radio" name="index-{{obj.id}}" value="{{i}}"
+          {{state.index === i ? 'checked' : ''}}>
+    </span:t>
+
     <br><br>
     <label>X</label>
     <input type="radio" name="xOyOz-{{obj.id}}" value="x"

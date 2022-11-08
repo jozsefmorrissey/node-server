@@ -8,18 +8,6 @@ const CSG = require('../../public/js/3d-modeling/csg');
 
 const Notification = require('../../../../public/js/utils/collections/notification.js');
 
-const notifyArr = new Notification();
-notifyArr.onAfterChange(console.log);
-notifyArr.onBeforeChange(console.error);
-notifyArr[4] = 'poop';
-notifyArr.pickls = 5;
-notifyArr[4] = 'y diapers';
-notifyArr[0] = [];
-notifyArr[0][69] = 'sooo fine'
-notifyArr[0][6] = {}
-notifyArr[0][6].punk = [1,2,3,4,66]
-notifyArr[0][6].punk.skittles = 'taste the rainbow'
-notifyArr[0][6].punk.skittles = 'uck!'
 
 
 

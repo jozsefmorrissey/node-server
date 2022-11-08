@@ -1,7 +1,7 @@
 
 
 
-const Section = require('../objects/assembly/assemblies/section/section.js');
+const SectionProperties = require('../objects/assembly/assemblies/section/section-properties.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');

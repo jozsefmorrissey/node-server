@@ -26,6 +26,10 @@ class Line3D {
       return new Plane(startVertex.copy(), two, three, endVertex.copy());
     }
 
+    this.on = (vertex, tolerance) => {
+      tolerance ||= .01;
+    }
+
     this.equation = () => {
       const returnValue = {};
       for (let i = 0; i < 3; i++) {

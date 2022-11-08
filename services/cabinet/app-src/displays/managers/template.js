@@ -22,19 +22,94 @@ const ThreeView = require('../three-view.js');
 const Layout2D = require('../../objects/layout.js');
 const Draw2D = require('../../two-d/draw.js');
 const Snap2d = require('../../two-d/objects/snap');
+const PropertyConfig = require('../../config/property/config.js');
 const cabinetBuildConfig = require('../../../public/json/cabinets.json');
+const Pattern = require('../../division-patterns.js');
+const Handle = require('../../objects/assembly/assemblies/hardware/pull.js');
 
 let template;
 let modifyingOpening = false;
+const sectionState = {
+  style: 'Overlay',
+  vertical: false,
+  count: 0,
+};
+
+du.on.match('keydown', '#template-divider-count-input', (elem,ev) => ev.preventDefault());
+du.on.match('change', '.section-properties>input', (elem) => {
+  const attr = elem.name;
+  const value = elem.type === 'checkbox' ? elem.checked : elem.value;
+  sectionState[attr] = value;
+});
+
+function applyDividers(cabinet) {
+  for (let index = 0; index < cabinet.openings.length; index++) {
+    const divideCount = Number.parseInt(sectionState.count);
+    const opening = cabinet.openings[index];
+    opening.divide(divideCount);
+    opening.vertical(sectionState.vertical);
+    const sectionType = sectionState.sectionType;
+    if (sectionType) {
+      for (let si = 0; si < opening.sections.length; si++) {
+        opening.sections[si].setSection(sectionType);
+      }
+    }
+    const coords = opening.update();
+  }
+}
+
+function applyTestConfiguration(cabinet) {
+  cabinet.width(60*2.54);
+
+  const opening = cabinet.openings[0];
+  opening.divide(2);
+  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
+  const left = opening.sections[0];
+  const center = opening.sections[1];
+  const right = opening.sections[2];
+  const a = 6*2.54
+
+  left.divide(2);
+  left.vertical(false);
+  left.sections[0].setSection("DrawerSection");
+  left.sections[1].setSection("DrawerSection");
+  left.sections[2].setSection("DrawerSection");
+  left.pattern('abb').value('a', a);
+
+  center.divide(1);
+  center.vertical(false);
+  center.sections[0].setSection('DualDoorSection');
+  center.pattern('ab').value('a', a);
+  const centerTop = center.sections[1];
+
+  centerTop.divide(2);
+  centerTop.sections[0].setSection("DoorSection");
+  centerTop.sections[1].setSection("FalseFrontSection");
+  centerTop.sections[2].setSection("DoorSection");
+  centerTop.pattern('ztz').value('t', 15*2.54);
+  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+
+  right.divide(2);
+  right.vertical(false);
+  right.sections[0].setSection("DrawerSection");
+  right.sections[1].setSection("DrawerSection");
+  right.sections[2].setSection("DrawerSection");
+  right.pattern('abb').value('a', a);
+}
 
 FunctionCache.disable();
 function getCabinet(elem) {
   const templateBody = du.find.closest(`.template-body[template-id]`, elem);
   const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
-  const height = new Measurement(templateBody.children[3].value, true).decimal();
-  const width = new Measurement(templateBody.children[2].value, true).decimal();
-  const thickness = new Measurement(templateBody.children[4].value, true).decimal();
+  const height = new Measurement(templateBody.children[4].value, true).decimal();
+  const width = new Measurement(templateBody.children[3].value, true).decimal();
+  const thickness = new Measurement(templateBody.children[5].value, true).decimal();
   const cabinet = template.getCabinet(height, width, thickness);
+  cabinet.propertyConfig().set(sectionState.style);
+
+  if (sectionState.testDividers) applyTestConfiguration(cabinet);
+  else applyDividers(cabinet);
+
   console.log(`Cabinet Demesions: ${cabinet.width()} !== ${cabinet.eval('c.w')} x ${cabinet.length()} x ${cabinet.thickness()}`)
   return cabinet;
 }
@@ -70,13 +145,15 @@ function setHeaderErrors(elem) {
 }
 
 function updateCss(elem, isValid, errorMsg) {
-  if (isValid) {
-    du.class.remove(elem, 'error');
-    elem.setAttribute('error-msg', '');
-  } else {
-    du.class.add(elem, 'error');
-    elem.setAttribute('error-msg', errorMsg);
-    setHeaderErrors(elem);
+  if (elem) {
+    if (isValid) {
+      du.class.remove(elem, 'error');
+      elem.setAttribute('error-msg', '');
+    } else {
+      du.class.add(elem, 'error');
+      elem.setAttribute('error-msg', errorMsg);
+      setHeaderErrors(elem);
+    }
   }
 }
 
@@ -198,15 +275,14 @@ function onPartSelect(elem) {
 }
 
 function updateOpenLocationDisplay (opening, elem) {
-  const state = opening.locationState;
+  const state = opening.state;
 
   const io = state.innerOouter ? 'inner' : 'outer';
-  const tb = state.topObottom ? 'top' : 'bottom';
-  const lr = state.leftOright ? 'left' : 'right';
-  const description = `Current formula describes the ${io} boundry ${tb} ${lr} corner, the ${state.xOyOz} coordinate.`;
+  const i = state.index;
+  const description = `Current formula describes the ${io} boundry ${state.xOyOz} coordinate of vertex ${state.index}.`;
   du.find.closest('.opening-location-description-cnt', elem).innerText = description;
 
-  const targetPoint = opening[io][tb][lr];
+  const targetPoint = opening.coordinates[io][i];
 
   if (elem.name !== 'opening-coordinate-value')
     du.find.closest('[name="opening-coordinate-value"]', elem).value = targetPoint[state.xOyOz];
@@ -225,7 +301,7 @@ function updateOpenLocationDisplay (opening, elem) {
 const changeEvent = new Event("change");
 function onOpeningLocationChange(elem) {
   const opening = ExpandableList.get(elem);
-  const state = opening.locationState;
+  const state = opening.state;
   let value = elem.value;
   if (value === 'true') value = true;
   else if (value === 'false') value = false;
@@ -249,7 +325,7 @@ function onOpeningTypeChange(elem) {
   }
 }
 
-du.on.match('change', '.border-location-cnt>input', onOpeningLocationChange);
+du.on.match('change', '.border-location-cnt>input,.border-location-cnt>span>input', onOpeningLocationChange);
 du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
 du.on.match('change', '.template-body>span>input[name="partSelector"]', onPartSelect);
 
@@ -257,27 +333,28 @@ function updateOpeningPoints(template, cabinet) {
   const threeDModel = threeView.threeDModel();
   if (threeDModel) {
     threeDModel.removeAllExtraObjects();
-    const openings = template.openings();
+    const openings = cabinet.openings;
     for (let index = 0; index < openings.length; index++) {
       const opening = openings[index];
-      if (opening._Type === 'location') {
-        const size = modifyingOpening ? 1 : .25;
-        const state = opening.locationState;
-        const vertexColor = (io, tb, lr) => io !== state.innerOouter ? 'black' :
-        (modifyingOpening && tb === state.topObottom && lr === state.leftOright ? 'lime' : 'white');
+      const size = modifyingOpening ? 1 : .25;
+      if (opening.state === undefined) opening.state = getLocationOpeningState();
+      const state = opening.state;
+      const i = state.index;
+      const vertexColor = (io, i) => io !== state.innerOouter ? 'black' :
+            (modifyingOpening && i === state.index ? 'lime' : 'white');
 
-        const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
+      const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
 
-        threeDModel.addVertex(cabinet.evalObject(opening.inner.top.left), vertexSize(true), vertexColor(true, true, true));
-        threeDModel.addVertex(cabinet.evalObject(opening.inner.top.right), vertexSize(true), vertexColor(true, true, false));
-        threeDModel.addVertex(cabinet.evalObject(opening.inner.bottom.left), vertexSize(true), vertexColor(true, false, true));
-        threeDModel.addVertex(cabinet.evalObject(opening.inner.bottom.right), vertexSize(true), vertexColor(true, false, false));
+      const coords = opening.update();
+      threeDModel.addVertex(coords.inner[0], vertexSize(true), vertexColor(true, 0));
+      threeDModel.addVertex(coords.inner[1], vertexSize(true), vertexColor(true, 1));
+      threeDModel.addVertex(coords.inner[2], vertexSize(true), vertexColor(true, 2));
+      threeDModel.addVertex(coords.inner[3], vertexSize(true), vertexColor(true, 3));
 
-        threeDModel.addVertex(cabinet.evalObject(opening.outer.top.left), vertexSize(false), vertexColor(false, true, true));
-        threeDModel.addVertex(cabinet.evalObject(opening.outer.top.right), vertexSize(false), vertexColor(false, true, false));
-        threeDModel.addVertex(cabinet.evalObject(opening.outer.bottom.left), vertexSize(false), vertexColor(false, false, true));
-        threeDModel.addVertex(cabinet.evalObject(opening.outer.bottom.right), vertexSize(false), vertexColor(false, false, false));
-      }
+      threeDModel.addVertex(coords.outer[0], vertexSize(false), vertexColor(false, 0));
+      threeDModel.addVertex(coords.outer[1], vertexSize(false), vertexColor(false, 1));
+      threeDModel.addVertex(coords.outer[2], vertexSize(false), vertexColor(false, 2));
+      threeDModel.addVertex(coords.outer[3], vertexSize(false), vertexColor(false, 3));
     }
   }
 }
@@ -324,10 +401,8 @@ function validateOpenTemplate (elem) {
     const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
     subRotInputs.forEach(xyzEqnCheck(template, cabinet));
     updateOpeningPoints(template, cabinet);
-    // cabinet.openings[0].divide(0);
-    cabinet.openings[0].setSection('DoorSection', 0)
-    // threeView.update(cabinet);
-    // setTimeout(updatePartsDataList, 500);
+    threeView.update(cabinet);
+    setTimeout(updatePartsDataList, 500);
   } catch (e) {
     console.log(e);
   }
@@ -441,14 +516,13 @@ function getSubassembly(obj) {
 
 const getLocationOpeningState = () => ({
     innerOouter: true,
-    topObottom: true,
-    leftOright: true,
+    index: 0,
     xOyOz: 'x'
   });
 
 function getOpening(obj) {
-  obj.locationState ||= getLocationOpeningState();
-  return {obj, select: getOpeningLocationSelect(), state: obj.locationState};
+  obj.state ||= getLocationOpeningState();
+  return {obj, select: getOpeningLocationSelect(), state: obj.state};
 }
 
 const scopes = {};
@@ -543,6 +617,7 @@ class TemplateManager extends Lookup {
         templateShapeInput: templateShapeInput(template)});
       }
 
+    this.sectionState = sectionState;
     const expandables = {};
     function initTemplate(template) {
       const list = [];
@@ -592,6 +667,17 @@ class TemplateManager extends Lookup {
 }
 
 const radioDisplay = new RadioDisplay('cabinet-template-input-cnt', 'template-id');
+radioDisplay.afterSwitch(function (header){
+  const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
+  const opening = ExpandableList.get(coordinateInput);
+  if (opening._Type === 'location') {
+    const state = opening.state;
+    const io = state.innerOouter ? 'inner' : 'outer';
+    coordinateInput.value = opening.coordinates[io][state.index][state.xOyOz];
+  }
+
+  console.log(opening);
+});
 
 TemplateManager.inputTree = () => {
   const dit = new DecisionInputTree();

@@ -49,7 +49,7 @@ class RadioDisplay {
       const targetBody = target.children[1];
       const hidden = targetBody.hidden;
       targetBody.hidden = !hidden;
-      beforeSwitchEvent.trigger(null, {previousHeader, targetHeader});
+      beforeSwitchEvent.trigger(previousHeader, {previousHeader, targetHeader});
       if (hidden) {
         du.class.add(targetHeader, 'active');
         du.class.swap(target, 'open', 'close');
@@ -63,12 +63,12 @@ class RadioDisplay {
             du.class.remove(sibHeader, 'active');
           }
         }
-        afterSwitchEvent.trigger(null, {previousHeader, targetHeader});
+        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
         previousHeader = targetHeader;
       } else {
         du.class.swap(target, 'close', 'open');
         du.class.remove(targetHeader, 'active');
-        afterSwitchEvent.trigger(null, {previousHeader, targetHeader});
+        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
         previousHeader = null;
       }
       infoBar.update(path());

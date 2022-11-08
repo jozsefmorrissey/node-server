@@ -152,6 +152,8 @@ CabinetTemplate.map = {};
 CabinetTemplate.defaultList = () => {
   const list = [];
   const keys = Object.keys(cabinetsJson);
+  // comment out to get corner-wall to be the first.
+  keys.sort();
   for (let index = 0; index < keys.length; index += 1) {
     list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
   }

@@ -21,6 +21,17 @@ exports['115117775'] = (get, $t) =>
 		$t.clean(get("childIdMap")[get("key")]) +
 		` </div> </div> </div>`
 
+exports['354267796'] = (get, $t) => 
+		`<span > <label>` +
+		$t.clean(1) +
+		`</label> <input type="radio" name="leftOright-` +
+		$t.clean(get("obj").id) +
+		`" value="` +
+		$t.clean(get("i")) +
+		`" ` +
+		$t.clean(get("state").index === get("i") ? 'checked' : '') +
+		`> </span>`
+
 exports['443122713'] = (get, $t) => 
 		`<option value='` +
 		$t.clean(get("section").prototype.constructor.name) +
@@ -46,36 +57,26 @@ exports['550500469'] = (get, $t) =>
 		$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 		` </datalist> </span>`
 
+exports['609725186'] = (get, $t) => 
+		`<span > <label>` +
+		$t.clean(get("i")) +
+		`</label> <input type="radio" name="index-` +
+		$t.clean(get("obj").id) +
+		`" value="` +
+		$t.clean(get("i")) +
+		`" ` +
+		$t.clean(get("state").index === get("i") ? 'checked' : '') +
+		`> </span>`
+
+exports['691376700'] = (get, $t) => 
+		`<span >` +
+		$t.clean(get("i")) +
+		`</span>`
+
 exports['714657883'] = (get, $t) => 
 		`<div >` +
 		$t.clean(get("groupHtml")(get("group"))) +
 		`</div>`
-
-exports['770968599'] = (get, $t) => 
-		`<div part-id='` +
-		$t.clean(get("part").uniqueId()) +
-		`' part-code='` +
-		$t.clean(get("part").partCode()) +
-		`' class='` +
-		$t.clean(get("tdm").isTarget("part-id", get("part").uniqueId()) ? "active " : "") +
-		` model-label indent' ` +
-		$t.clean(get("partList").length > 1 ? "" : "hidden") +
-		`> <label type='part-id' part-id='` +
-		$t.clean(get("part").uniqueId()) +
-		`' part-code='` +
-		$t.clean(get("part").partCode()) +
-		`'> ` +
-		$t.clean(get("part").partCode()) +
-		`-` +
-		$t.clean(get("$index") +
-		1) +
-		` </label> <input type='checkbox' class='part-id-checkbox' part-id='` +
-		$t.clean(get("part").uniqueId()) +
-		`' part-code='` +
-		$t.clean(get("part").partCode()) +
-		`' ` +
-		$t.clean(!get("tdm").hidePartId(get("part").uniqueId()) ? 'checked' : '') +
-		`> </div>`
 
 exports['987967094'] = (get, $t) => 
 		`<span > <label>` +
@@ -101,19 +102,6 @@ exports['1036581066'] = (get, $t) =>
 		` (` +
 		$t.clean(get("property").code()) +
 		`) </div>`
-
-exports['1160200676'] = (get, $t) => 
-		`<div class='model-label` +
-		$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
-		`' > <label type='part-name'>` +
-		$t.clean(get("partName")) +
-		`</label> <input type='checkbox' class='part-name-checkbox' part-name='` +
-		$t.clean(get("partName")) +
-		`' ` +
-		$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
-		`> ` +
-		$t.clean( new $t('770968599').render(get("partList"), 'part', get)) +
-		` </div>`
 
 exports['1410278299'] = (get, $t) => 
 		`<span > <label>` +
@@ -361,6 +349,29 @@ exports['input/decision/decisionTree'] = (get, $t) =>
 		$t.clean(get("tree").buttonText()) +
 		` </button> </div> `
 
+exports['input/measurement'] = (get, $t) => 
+		`<div class='fit input-cnt'` +
+		$t.clean(get("hidden")() ? ' hidden' : '') +
+		`> <label>` +
+		$t.clean(get("label")()) +
+		`</label> <input class='measurement-input ` +
+		$t.clean(get("class")()) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`' value='` +
+		$t.clean(get("value")() ? get("value")() : "") +
+		`' placeholder='` +
+		$t.clean(get("placeholder")()) +
+		`' type='` +
+		$t.clean(get("type")()) +
+		`' name='` +
+		$t.clean(get("name")()) +
+		`'> <div class='error' id='` +
+		$t.clean(get("errorMsgId")()) +
+		`' hidden>` +
+		$t.clean(get("errorMsg")()) +
+		`</div> </div> `
+
 exports['input/input'] = (get, $t) => 
 		`<` +
 		$t.clean(get("inline") ? 'span' : 'div') +
@@ -398,29 +409,6 @@ exports['-994603408'] = (get, $t) =>
 		`<option value="` +
 		$t.clean(get("item")) +
 		`" ></option>`
-
-exports['input/measurement'] = (get, $t) => 
-		`<div class='fit input-cnt'` +
-		$t.clean(get("hidden")() ? ' hidden' : '') +
-		`> <label>` +
-		$t.clean(get("label")()) +
-		`</label> <input class='measurement-input ` +
-		$t.clean(get("class")()) +
-		`' id='` +
-		$t.clean(get("id")()) +
-		`' value='` +
-		$t.clean(get("value")() ? get("value")() : "") +
-		`' placeholder='` +
-		$t.clean(get("placeholder")()) +
-		`' type='` +
-		$t.clean(get("type")()) +
-		`' name='` +
-		$t.clean(get("name")()) +
-		`'> <div class='error' id='` +
-		$t.clean(get("errorMsgId")()) +
-		`' hidden>` +
-		$t.clean(get("errorMsg")()) +
-		`</div> </div> `
 
 exports['input/select'] = (get, $t) => 
 		`<` +
@@ -502,17 +490,6 @@ exports['2d/pop-up/snap-2d'] = (get, $t) =>
 		$t.clean(get("display")(get("target").y())) +
 		`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
 
-exports['2d/pop-up/wall-2d'] = (get, $t) => 
-		`<div type-2d='` +
-		$t.clean(get("target").constructor.name) +
-		`' id='` +
-		$t.clean(get("target").id()) +
-		`' x='` +
-		$t.clean(get("lastImagePoint").x) +
-		`' y='` +
-		$t.clean(get("lastImagePoint").y) +
-		`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
-
 exports['2d/pop-up/vertex-2d'] = (get, $t) => 
 		`<div type-2d='` +
 		$t.clean(get("target").constructor.name) +
@@ -527,6 +504,17 @@ exports['2d/pop-up/vertex-2d'] = (get, $t) =>
 		`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='value-2d' key='y' value='` +
 		$t.clean(get("display")(get("target").y())) +
 		`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d transparent'>Remove</button></td> </tr> <tr> </table> </div> `
+
+exports['2d/pop-up/wall-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
 
 exports['2d/pop-up/window-2d'] = (get, $t) => 
 		`<div type-2d='` +
@@ -862,7 +850,7 @@ exports['managers/template/body'] = (get, $t) =>
 		$t.clean(get("template").id()) +
 		`> <div class='inline-flex full-width'> <h4>` +
 		$t.clean(get("template").type()) +
-		`</h4> <div class='full-width'> <button class='copy-template right'>Copy</button> <button class='paste-template right'>Paste</button> </div> </div> <span class='part-input-cnt'> <br> <input type="text" name="partSelector" list='part-list'> <datalist id='part-list'></datalist> </span> <input class='cabinet-input dem' type="text" name="width" value="` +
+		`</h4> <div class='full-width'> <button class='copy-template right'>Copy</button> <button class='paste-template right'>Paste</button> </div> </div> <div></div> <span class='part-input-cnt'> <br> <input type="text" name="partSelector" list='part-list'> <datalist id='part-list'></datalist> </span> <input class='cabinet-input dem' type="text" name="width" value="` +
 		$t.clean(get("toDisplay")(get("template").width())) +
 		`"> X <input class='cabinet-input dem' type="text" name="height" value="` +
 		$t.clean(get("toDisplay")(get("template").height())) +
@@ -916,7 +904,13 @@ exports['managers/template/joints/head'] = (get, $t) =>
 exports['managers/template/main'] = (get, $t) => 
 		`<div template-manager=` +
 		$t.clean(get("id")()) +
-		`> Main template <div id='` +
+		`> <div class='section-properties'> <br> <label>Inset</label> <input class='style-selector' type="radio" name="style" value="Inset" ` +
+		$t.clean(get("sectionState").style === 'Inset' ? 'checked' : '') +
+		`> <label>overlay</label> <input class='style-selector' type="radio" name="style" value="Overlay" ` +
+		$t.clean(get("sectionState").style === 'Overlay' ? 'checked' : '') +
+		`> <label>Reveal</label> <input class='style-selector' type="radio" name="style" value="Reveal" ` +
+		$t.clean(get("sectionState").style === 'Reveal' ? 'checked' : '') +
+		`> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <label>Door</label> <input type="radio" name='sectionType' value="DoorSection"> <label>Drawer</label> <input type="radio" name='sectionType' value="DrawerSection"> <label>Duel Door</label> <input type="radio" name='sectionType' value="DualDoorSection"> <label>False Front</label> <input type="radio" name='sectionType' value="FalseFrontSection"> <label>Open</label> <input type="radio" name='sectionType' value=""> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <label>Divider Count</label> <input id='template-divider-count-input' type="number" name="count" min='0' max='3' value=0> <label>Vertical</label> <input type="checkbox" name="vertical"> <label>Test</label> <input type="checkbox" name="testDividers"> </div> <div id='` +
 		$t.clean(get("parentId")()) +
 		`'></div> </div> `
 
@@ -939,23 +933,9 @@ exports['managers/template/openings/body'] = (get, $t) =>
 		$t.clean(get("obj").id) +
 		`" value="false" ` +
 		$t.clean(get("state").innerOouter === false ? 'checked' : '') +
-		`> <br><br> <label>Top</label> <input type="radio" name="topObottom-` +
-		$t.clean(get("obj").id) +
-		`" value="true" ` +
-		$t.clean(get("state").topObottom === true ? 'checked' : '') +
-		`> <label>Bottom</label> <input type="radio" name="topObottom-` +
-		$t.clean(get("obj").id) +
-		`" value="false" ` +
-		$t.clean(get("state").topObottom === false ? 'checked' : '') +
-		`> <br><br> <label>Left</label> <input type="radio" name="leftOright-` +
-		$t.clean(get("obj").id) +
-		`" value="true" ` +
-		$t.clean(get("state").leftOright === true ? 'checked' : '') +
-		`> <label>Right</label> <input type="radio" name="leftOright-` +
-		$t.clean(get("obj").id) +
-		`" value="false" ` +
-		$t.clean(get("state").leftOright === false ? 'checked' : '') +
-		`> <br><br> <label>X</label> <input type="radio" name="xOyOz-` +
+		`> <br><br> <label>Vertex:</label> <br> ` +
+		$t.clean( new $t('609725186').render('0..4', 'i', get)) +
+		` <br><br> <label>X</label> <input type="radio" name="xOyOz-` +
 		$t.clean(get("obj").id) +
 		`" value="x" ` +
 		$t.clean(get("state").xOyOz === 'x' ? 'checked' : '') +
@@ -1055,6 +1035,19 @@ exports['model-controller'] = (get, $t) =>
 		` </div> </div> ` +
 		$t.clean( new $t('model-controller').render(get("group").groups, 'label, group', get)) +
 		` </div> </div> `
+
+exports['-13082682'] = (get, $t) => 
+		`<div class='model-label` +
+		$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
+		`' > <label type='part-name'>` +
+		$t.clean(get("partName")) +
+		`</label> <input type='checkbox' class='part-name-checkbox' part-name='` +
+		$t.clean(get("partName")) +
+		`' ` +
+		$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
+		`> ` +
+		$t.clean( new $t('2081934436').render(get("partList"), 'part', get)) +
+		` </div>`
 
 exports['opening'] = (get, $t) => 
 		`<div class='opening-cnt' opening-id='` +
@@ -1298,15 +1291,16 @@ exports['three-view'] = (get, $t) =>
 		$t.clean(get("maxDem")()) +
 		`"></canvas> </span> </div> </div> </div> `
 
-exports['-13082682'] = (get, $t) => 
-		`<div class='model-label` +
-		$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
-		`' > <label type='part-name'>` +
-		$t.clean(get("partName")) +
-		`</label> <input type='checkbox' class='part-name-checkbox' part-name='` +
-		$t.clean(get("partName")) +
-		`' ` +
-		$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
-		`> ` +
-		$t.clean( new $t('2081934436').render(get("partList"), 'part', get)) +
-		` </div>`
+exports['-1916480964'] = (get, $t) => 
+		`<span >i</span>`
+
+exports['-1222606500'] = (get, $t) => 
+		`<span > <label>` +
+		$t.clean(get("i")) +
+		`</label> <input type="radio" name="leftOright-` +
+		$t.clean(get("obj").id) +
+		`" value="` +
+		$t.clean(get("i")) +
+		`" ` +
+		$t.clean(get("state").index === get("i") ? 'checked' : '') +
+		`> </span>`

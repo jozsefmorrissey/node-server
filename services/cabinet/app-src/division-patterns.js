@@ -38,7 +38,7 @@ class Pattern {
     const elements = {};
     const values = {};
     const updateOrder = [];
-    for (let index = str.length - 1; index > -1; index -= 1) {
+    for (let index = 0; index < str.length; index += 1) {
       const char = str[index];
       if (elements[char]) {
         elements[char].count++;
@@ -60,6 +60,19 @@ class Pattern {
     const numbersOnlyReg = /^[0-9]{1,}$/;
     const calc = (dist) => {
       const values = {};
+
+      const uniqueVals = Object.values(unique);
+      if (uniqueVals.length === 1) {
+        const count = uniqueVals[0].count;
+        const value = dist / count;
+        const str = uniqueVals.char;
+        //Cant remember exactly what values is used for... bad naming
+        const values = new Array(count).fill(value);
+        const list = new Array(count).fill(value);
+        const fill = [value];
+        return {values, list, fill, str};
+      }
+
       if (str.trim().match(numbersOnlyReg)) {
         let count = 0;
         for (let index = 0; index < str.length; index += 1) {
@@ -84,7 +97,6 @@ class Pattern {
         dist -= elem.count * elem.value().decimal();
         values[elem.id] = elem.value().value();
       });
-      const uniqueVals = Object.values(unique);
       if (lastElem === undefined) {
         for (let index = 0; index < uniqueVals.length; index += 1) {
           const char = uniqueVals[index].char;

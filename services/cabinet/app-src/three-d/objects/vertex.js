@@ -8,7 +8,11 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 class Vertex3D {
   constructor(x, y, z) {
     if (x instanceof Vertex3D) return x;
-    if (arguments.length == 3) {
+    if (x === undefined) {
+      this.x = 0;
+      this.y = 0;
+      this.z = 0;
+    } else if (arguments.length == 3) {
       this.x = x;
       this.y = y;
       this.z = z;
@@ -29,6 +33,12 @@ class Vertex3D {
       vertex.y += vector.j();
       vertex.z += vector.z();
       return vertex;
+    }
+
+    this.positionAt = (vertex) => {
+      this.x = vertex.x;
+      this.y = vertex.y;
+      this.z = vertex.z;
     }
 
     this.usless = () => Number.NaNfinity(x, y, z);
@@ -119,6 +129,7 @@ Vertex3D.direction = (vertList1, vertList2, tolerance, axisOnly) => {
 }
 
 Vertex3D.center = (...verticies) => {
+  if (Array.isArray(verticies[0])) verticies = verticies[0];
   let x = 0;
   let y = 0;
   let z = 0;
@@ -134,6 +145,14 @@ Vertex3D.center = (...verticies) => {
     }
   });
   return new Vertex3D({x: x/count, y: y/count, z: z/count});
+}
+
+Vertex3D.sortByCenter = (center) => {
+  return (v1, v2) => {
+    const d1 = v1.distance(v2);
+    const d2 = v2.distance(v1);
+    d1 === d2 ? 0 : (d1 < d2 ? -1 : 1);
+  }
 }
 
 module.exports = Vertex3D;

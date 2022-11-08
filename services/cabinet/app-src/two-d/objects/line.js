@@ -1,6 +1,6 @@
 
 const approximate = require('../../../../../public/js/utils/approximate.js');
-const approximate100 = approximate.new(100);
+const approximate100 = approximate.new(100000000000000);
 const Vertex2d = require('./vertex');
 const Circle2d = require('./circle');
 
@@ -101,7 +101,7 @@ class Line2d {
       const slope = (y2 - y1) / (x2 - x1);
       if (slope > 10000) return Infinity;
       if (slope < -10000) return -Infinity;
-      if (slope > -0.00001 && slope < -0.00001) return 0;
+      if (slope > -0.00001 && slope < 0.00001) return 0;
       return slope;
     }
 
@@ -181,8 +181,7 @@ class Line2d {
       const slope = this.slope();
       if (Math.abs(slope) === Infinity) return this.startVertex().x();
       if (slope === 0) {
-        if (this.yIntercept() === 0) return 0;
-        else return Infinity;
+        return Infinity;
       }
       return (y - this.yIntercept())/slope;
     }
@@ -248,6 +247,9 @@ class Line2d {
         distance = Math.abs(distance);
         const left = Line2d.startAndTheta(mp, rotated.negitive().radians(), distance/2);
         const right = Line2d.startAndTheta(mp, rotated.radians(), distance/2);
+        if (right.combine(left) === undefined) {
+          console.log('here');
+        }
         return right.combine(left);
       }
       return Line2d.startAndTheta(mp, rotated.radians(), distance);
@@ -401,8 +403,8 @@ class Line2d {
       const ov2 = other.endVertex();
       if (!this.withinSegmentBounds(ov1) && !this.withinSegmentBounds(ov2)) return;
       // Fix sort method
-      const vs = [v1, v2, ov1, ov2].sort(Vertex2d.sort);
-      const combined = new Line2d(vs[0], vs[vs.length - 1]);
+      const vs = [v1, v2, ov1, ov2].sort(Vertex2d.sortByCenter(Vertex2d.center([v1, v2, ov1, ov2])));
+      const combined = new Line2d(vs[0], vs[1]);
       return approximate.eq(this.radians(), combined.radians()) ? combined : combined.negitive();
     }
 
@@ -461,6 +463,7 @@ class Line2d {
     this.negitive = () => new Line2d(this.endVertex(), this.startVertex());
     this.toString = () => `${this.startVertex().toString()} => ${this.endVertex().toString()}`;
     this.toNegitiveString = () => `${this.endVertex().toString()} => ${this.startVertex().toString()}`;
+    this.approxToString = () => `${this.startVertex().approxToString()} => ${this.endVertex().approxToString()}`;
   }
 }
 Line2d.reusable = true;
@@ -515,7 +518,7 @@ Line2d.consolidate = (...lines) => {
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
-    const slope = Math.abs(line.slope());
+    const slope = approximate.abs(line.slope());
     if (!Number.isNaN(slope)) {
       if (lineMap[slope] === undefined) lineMap[slope] = [];
       lineMap[slope].push(line);

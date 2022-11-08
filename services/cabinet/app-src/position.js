@@ -21,28 +21,28 @@ class Position {
     let demCoords = {};
     let centerCoords = {};
 
-    if ((typeof assembly.rotationStr()) !== 'object') {
-      const rotCoords = Position.parseCoordinates(assembly.rotationStr(), '0,0,0');
+    if ((typeof assembly.rotationConfig) !== 'function') {
+      const rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0,0,0');
       rotation = (attr) => getSme(attr, rotCoords);
     } else {
-      rotation = assembly.rotationStr;
+      rotation = assembly.rotationConfig;
     }
 
-    if ((typeof assembly.centerStr()) !== 'object') {
-      centerCoords = Position.parseCoordinates(assembly.centerStr(), '0,0,0');
+    if ((typeof assembly.centerConfig) !== 'function') {
+      centerCoords = Position.parseCoordinates(assembly.centerConfig, '0,0,0');
       center = (attr) => getSme(attr, centerCoords);
     } else {
-      center = assembly.centerStr;
+      center = assembly.centerConfig;
     }
 
-    if ((typeof assembly.demensionStr()) !== 'object') {
+    if ((typeof assembly.demensionConfig) !== 'function') {
       const defSizes = getDefaultSize(assembly);
-      demCoords = Position.parseCoordinates(assembly.demensionStr(),
+      demCoords = Position.parseCoordinates(assembly.demensionConfig,
       `${defSizes.width},${defSizes.length},${defSizes.thickness}`,
       '0,0,0');
       demension = (attr) => getSme(attr, demCoords);
     } else new Promise(function(resolve, reject) {
-      demension = assembly.demensionStr
+      demension = assembly.demensionConfig
     });
 
 

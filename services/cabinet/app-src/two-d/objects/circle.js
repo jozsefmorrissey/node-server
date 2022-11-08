@@ -50,9 +50,11 @@ class Circle2d {
     this.toString = () => `(${this.radius()}${this.center()}----)`;
 
     this.intersections = (input) => {
-        if (input instanceof Circle2d) return circleIntersects(input);
-        if (input.constructor.name === 'Line2d') return lineIntersects(input);
-        throw new Error(`Cannot find intersections for ${input.constructor.name}`);
+      if (input === undefined)
+        console.log('here');
+      if (input instanceof Circle2d) return circleIntersects(input);
+      if (input.constructor.name === 'Line2d') return lineIntersects(input);
+      throw new Error(`Cannot find intersections for ${input.constructor.name}`);
     }
   }
 }

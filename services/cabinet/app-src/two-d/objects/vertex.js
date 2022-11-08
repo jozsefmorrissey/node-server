@@ -1,5 +1,6 @@
 
 const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
+const approximate10 = require('../../../../../public/js/utils/approximate.js').new(10);
 
 
 class Vertex2d {
@@ -60,6 +61,7 @@ class Vertex2d {
     }
 
     this.toString = () => `(${this.x()}, ${this.y()})`;
+    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
     const parentToJson = this.toJson;
 
     this.offset = (x, y) => {
@@ -92,6 +94,7 @@ Vertex2d.fromJson = (json) => {
 }
 
 Vertex2d.center = (...verticies) => {
+  if (Array.isArray(verticies[0])) verticies = verticies[0];
   let x = 0;
   let y = 0;
   let count = 0;
@@ -107,6 +110,15 @@ Vertex2d.center = (...verticies) => {
 
 Vertex2d.sort = (a, b) =>
     a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
+
+Vertex2d.sortByCenter = (center) => {
+  return (v1, v2) => {
+    const d1 = v1.distance(center);
+    const d2 = v2.distance(center);
+    return d2 - d1;
+  }
+}
+
 
 Vertex2d.reusable = true;
 new Vertex2d();

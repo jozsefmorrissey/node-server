@@ -4,29 +4,35 @@
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Position = require('../../position.js');
 const getDefaultSize = require('../../utils.js').getDefaultSize;
-const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
 
-class Assembly extends Lookup {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr, parent) {
-    super(undefined, 'id');
+class Assembly extends KeyValue {
+  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
+    super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
+
     const instance = this;
     let group;
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
     const initialVals = {
       part: true,
       included: true,
-      centerStr, demensionStr, rotationStr, partCode, partName,
+      centerConfig, demensionConfig, rotationConfig, partCode, partName,
       propertyId: undefined,
     }
+    const subAssems = this.subassemblies;
     Object.getSet(this, initialVals, 'values', 'subassemblies', 'joints');
+    this.subassemblies = subAssems;
     Object.getSet(this, temporaryInitialVals);
     this.path = () => `${this.constructor.name}.${partName}`.toDot();
 
-    if ((typeof centerStr) === 'function') this.centerStr = centerStr;
-    if ((typeof demensionStr) === 'function') this.demensionStr = demensionStr;
-    if ((typeof rotationStr) === 'function') this.rotationStr = rotationStr;
+    if ((typeof centerConfig) === 'function') this.centerConfig = centerConfig;
+    else this.centerConfig = centerConfig
+    if ((typeof demensionConfig) === 'function') this.demensionConfig = demensionConfig;
+    else this.demensionConfig = demensionConfig
+    if ((typeof rotationConfig) === 'function') this.rotationConfig = rotationConfig;
+    else this.rotationConfig = rotationConfig
 
     const parentIncluded = this.included;
 
@@ -61,14 +67,15 @@ class Assembly extends Lookup {
       return returnVal;
     }
     const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
+
+    // KeyValue setup
+    const funcReg = /length|width|thickness/;
+    this.value.addCustomFunction((key, value) => key.match(funcReg) ? this[code](value) : undefined)
+    this.value.evaluators.string = (value) => sme.eval(value, this);
+    this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
+
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
-
-    this.getRoot = () => {
-      let currAssem = this;
-      while(currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
-      return currAssem;
-    }
 
     this.group = (g) => {
       if (g) group = g;
@@ -84,7 +91,6 @@ class Assembly extends Lookup {
       }
     }
 
-    let getting =  false;
     this.getAssembly = (partCode, callingAssem) => {
       if (callingAssem === this) return undefined;
       if (this.partCode() === partCode) return this;
@@ -134,41 +140,8 @@ class Assembly extends Lookup {
       }
       return obj;
     }
-    const funcAttrs = ['length', 'width', 'thickness'];
-    this.value = (code, value) => {
-      if (code.match(new RegExp(funcAttrs.join('|')))) {
-        this[code](value);
-      } else {
-        if (value !== undefined) {
-          this.values[code] = value;
-        } else {
-          const instVal = this.values[code];
-          if (instVal !== undefined && instVal !== null) {
-            if ((typeof instVal) === 'number' || (typeof instVal) === 'string') {
-              return sme.eval(instVal, this);
-            } else {
-              return instVal;
-            }
-          }
-          if (this.parentAssembly()) return this.parentAssembly().value(code);
-          else {
-            try {
-              const value = this.propertyConfig(this.constructor.name, code);
-              if (value === undefined) throw new Error();
-              return value;
-            } catch (e) {
-              console.error(`Failed to resolve code: ${code}`);
-              throw e;
-              return NaN;
-            }
-          }
-        }
-      }
-    }
-    this.jointOffsets = () => {
-    }
 
-    this.subassemblies = {};
+
     this.setSubassemblies = (assemblies) => {
       this.subassemblies = {};
       assemblies.forEach((assem) => this.subassemblies[assem.partCode()] = assem);
@@ -190,7 +163,7 @@ class Assembly extends Lookup {
     }
     this.addSubAssembly = (assembly) => {
       this.subassemblies[assembly.partCode()] = assembly;
-      assembly.setParentAssembly(this);
+      // assembly.setParentAssembly(this);
     }
 
     this.objId = this.constructor.name;
@@ -284,13 +257,13 @@ Assembly.resolveAttr = (assembly, attr) => {
   return assembly.value(attr);
 }
 Assembly.fromJson = (assemblyJson) => {
-  const demensionStr = assemblyJson.demensionStr;
-  const centerStr = assemblyJson.centerStr;
-  const rotationStr = assemblyJson.rotationStr;
+  const demensionConfig = assemblyJson.demensionConfig;
+  const centerConfig = assemblyJson.centerConfig;
+  const rotationConfig = assemblyJson.rotationConfig;
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const clazz = Object.class.get(assemblyJson._TYPE);
-  const assembly = new (clazz)(partCode, partName, centerStr, demensionStr, rotationStr);
+  const assembly = new (clazz)(partCode, partName, centerConfig, demensionConfig, rotationConfig);
   assembly.id(assemblyJson.id);
   assembly.values = assemblyJson.values;
   assembly.setParentAssembly(assemblyJson.parent)

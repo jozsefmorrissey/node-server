@@ -28,6 +28,7 @@ class Approximate {
     approximate.lteq = approximateFunc((one, two) => one <= two);
     approximate.eqAbs = approximateFunc((one, two) => Math.abs(one) === Math.abs(two));
     approximate.neqAbs = approximateFunc((one, two) => Math.abs(one) !== Math.abs(two));
+    approximate.abs = (value) => Math.abs(approximate(value));
     return approximate;
   }
 }

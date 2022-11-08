@@ -11,55 +11,57 @@ const Assembly = require('../../assembly.js');
 class Handle extends Assembly {
   constructor(partCode, partName, door, location, index, count) {
     let instance;
-    function rotationStr() {
+    function rotationConfig() {
       if (!instance || !instance.location) return {x:0,y:0,z:0};
       return instance.location && instance.location() && instance.location().rotate ?
           {x: 0, y:0, z: 90} : {x: 0, y:0, z: 0};
     }
-    function demensionStr(attr) {
+    function demensionConfig(attr) {
       if (!instance || !instance.location) return {x:0,y:0,z:0};
       const dems = {x: 1, y: 9.6, z: 1.9};
       return attr ? dems[attr] : dems;
     }
-    function centerStr(attr) {
+    function centerConfig(attr) {
       if (!instance || !instance.location) return {x:0,y:0,z:0};
         let center = door.position().center();
         let doorDems = door.position().demension();
-        let pullDems = instance.demensionStr();
+        let pullDems = instance.demensionConfig();
         center.z -= (doorDems.z + pullDems.z) / 2;
+        const edgeOffset = (19 * 2.54) / 16;
+        const toCenter = 3 * 2.54;
 
         switch (instance.location()) {
           case Handle.location.TOP_RIGHT:
-            center.x = center.x + doorDems.x / 2 +  edgeOffset;
+            center.x = center.x + doorDems.x / 2 -  edgeOffset;
             center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
             break;
           case Handle.location.TOP_LEFT:
-            center.x = center.x - doorDems.x / 2 -  edgeOffset;
+            center.x = center.x - doorDems.x / 2 +  edgeOffset;
             center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
             break;
           case Handle.location.BOTTOM_RIGHT:
             center.x = center.x + doorDems.x / 2 -  edgeOffset;
-            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
+            center.y = center.y - doorDems.y / 2 + (pullDems.y / 2 + toCenter);
             break;
           case Handle.location.BOTTOM_LEFT:
-            center.x = center.x + doorDems.x / 2 -  edgeOffset;
-            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
+            center.x = center.x - doorDems.x / 2 +  edgeOffset;
+            center.y = center.y - doorDems.y / 2 + (pullDems.y / 2 + toCenter);
             break;
           case Handle.location.TOP:
             center.x = offset(center.x, doorDems.x);
-            center.y -= doorDems.y / 2;
+            center.y += doorDems.y / 2 - edgeOffset;
             break;
           case Handle.location.BOTTOM:
             center.x = offset(center.x, doorDems.x);
-            center.y += doorDems.y / 2;
+            center.y -= doorDems.y / 2 - edgeOffset;
             break;
           case Handle.location.RIGHT:
-            center.y = offset(center.y, doorDems.y);
-            center.x += doorDems.x / 2;
+            center.y = center.y;
+            center.x += doorDems.x / 2 - edgeOffset;
             break;
           case Handle.location.LEFT:
-            center.y = offset(center.y, doorDems.y);
-            center.x -= doorDems.x / 2;
+            center.y = center.y;
+            center.x -= doorDems.x / 2 - edgeOffset;
             break;
           case Handle.location.CENTER:
             center.x = offset(center.x, doorDems.x);
@@ -75,7 +77,7 @@ class Handle extends Assembly {
         return attr ? center[attr] : center;
     };
 
-    super(partCode, 'Handle', centerStr, demensionStr, rotationStr);
+    super(partCode, 'Handle', centerConfig, demensionConfig, rotationConfig);
     // super(partCode, 'Handle', '0,0,0', '0,0,0', '0,0,0');
     Object.getSet(this, {location});
     this.setParentAssembly(door);
@@ -94,9 +96,6 @@ class Handle extends Assembly {
       const spacing = distance / count;
       return center - (distance / 2) + spacing / 2 + spacing * (index);
     }
-
-    const edgeOffset = 3.01625;
-    const toCenter = 4;
   }
 }
 Handle.location = {};
@@ -106,8 +105,8 @@ Handle.location.BOTTOM_RIGHT = {rotate: true};
 Handle.location.BOTTOM_LEFT = {rotate: true};
 Handle.location.TOP = {multiple: true};
 Handle.location.BOTTOM = {multiple: true};
-Handle.location.RIGHT = {multiple: true};
-Handle.location.LEFT = {multiple: true};
+Handle.location.RIGHT = {multiple: true, rotate: true};
+Handle.location.LEFT = {multiple: true, rotate: true};
 Handle.location.CENTER = {multiple: true};
 
 Handle.abbriviation = 'hn';

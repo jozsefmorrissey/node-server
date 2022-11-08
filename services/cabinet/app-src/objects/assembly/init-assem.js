@@ -38,35 +38,35 @@ new Screw();
 const Panel = require('./assemblies/panel.js');
 new Panel();
 
-const PartitionSection = require('./assemblies/section/partition/sections/divider.js');
-new PartitionSection();
+// const PartitionSection = require('./assemblies/section/partition/sections/divider.js');
+// new PartitionSection();
+//
+// const DividerSection = require('./assemblies/section/partition/partition');
+// new DividerSection();
+//
+// const Section = require('./assemblies/section/section.js');
+// new Section();
+//
+// const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
+// new DivideSection();
+//
+// const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
+// new OpeningCoverSection();
 
-const DividerSection = require('./assemblies/section/partition/partition');
-new DividerSection();
-
-const Section = require('./assemblies/section/section.js');
-new Section();
-
-const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
-new DivideSection();
-
-const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
-new OpeningCoverSection();
-
-const DoorSection = require('./assemblies/section/space/sections/open-cover/sections/door.js');
+const DoorSection = require('./assemblies/section/sections/door.js');
 new DoorSection();
 
-const DrawerSection = require('./assemblies/section/space/sections/open-cover/sections/drawer.js');
+const DrawerSection = require('./assemblies/section/sections/drawer.js');
 new DrawerSection();
 
-const DualDoorSection = require('./assemblies/section/space/sections/open-cover/sections/duel-door.js');
+const DualDoorSection = require('./assemblies/section/sections/duel-door.js');
 new DualDoorSection();
 
-const FalseFrontSection = require('./assemblies/section/space/sections/open-cover/sections/false-front.js');
+const FalseFrontSection = require('./assemblies/section/sections/false-front.js');
 new FalseFrontSection();
 
-const SpaceSection = require('./assemblies/section/space/space.js');
-new SpaceSection();
+// const SpaceSection = require('./assemblies/section/space/space.js');
+// new SpaceSection();
 
 const Cutter = require('./assemblies/cutter.js');
 new Cutter();

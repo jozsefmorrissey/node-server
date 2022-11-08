@@ -12,16 +12,29 @@ class Polygon3D {
     const lines = [];
     let map;
     let normal;
-    this.normal = () => normal;
 
-    function calcNormal(l1, l2) {
-      return l1.vector().dot(l2.vector());
+    function calcNormal() {
+      let normals = [];
+      for (let index = 1; index < lines.length; index++) {
+        normals[index-1] = lines[index-1].vector().crossProduct(lines[index].vector()).unit();
+      }
+
+      for (let index = 1; index < normals.length; index++) {
+        if (!normals[index -1] || !normals[index - 1].equals(normals[index])) {
+          console.log('ne')
+        }
+      }
+
+      return normals[0];
     }
+    this.normal = calcNormal;
 
     this.perpendicular = (poly) => {
-      if (normal === undefined || poly.normal() === undefined) return false;
-      return normal.perpendicular(poly.normal());
+      return this.normal().perpendicular(poly.normal());
     }
+    const xyNormal = new Vector3D(0,0,1);
+    const yzNormal = new Vector3D(1,0,0);
+    const xzNormal = new Vector3D(0,1,0);
     this.inXY = () => this.perpendicular(xyPoly);
     this.inYZ = () => this.perpendicular(yzPoly);
     this.inXZ = () => this.perpendicular(xzPoly);
@@ -135,7 +148,7 @@ class Polygon3D {
           const line = new Line3D(startVertex, endVertex);
           lines.push(line);
           const prevLine = lines[lines.length - 2];
-          if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
+          // if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
           // else if (lines.length > 2) {
           //   const equal = normal.equals(calcNormal(line, prevLine));
           //   if (equal === false) {
@@ -231,9 +244,9 @@ Polygon3D.merge = (polygons) => {
   }
 }
 
-const xyPoly = new Polygon3D([[1,1,0],[1,2,0],[2,1,0]]);
-const yzPoly = new Polygon3D([[1,0,1],[1,0,2],[2,0,1]]);
-const xzPoly = new Polygon3D([[0,1,1],[0,1,2],[0,2,1]]);
+const xyPoly = new Polygon3D([[1,10,0],[11,2,0],[22,1,0]]);
+const yzPoly = new Polygon3D([[6,0,1],[10,0,27],[2,0,11]]);
+const xzPoly = new Polygon3D([[0,11,13],[0,12,23],[0,22,3]]);
 
 // const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
 // const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
@@ -243,9 +256,12 @@ Polygon3D.toTwoD = (polygons) => {
   for (let index = 0; index < polygons.length; index += 1) {
     const poly = polygons[index];
     const norm = poly.normal();
-    const includeXY = poly.inXY();//include(norm, [0,0,1]);//include(norm[0], norm[1], norm[2]);
-    const includeXZ = poly.inXZ();//include(norm, [0,1,0]);//include(norm[0], norm[2], norm[1]);
-    const includeZY = poly.inYZ();//include(norm, [1,0,0]);//include(norm[2], norm[1], norm[0]);
+    const inXY = poly.inXY();//include(norm, [0,0,1]);//include(norm[0], norm[1], norm[2]);
+    const inXZ = poly.inXZ();//include(norm, [0,1,0]);//include(norm[0], norm[2], norm[1]);
+    const inZY = poly.inYZ();//include(norm, [1,0,0]);//include(norm[2], norm[1], norm[0]);
+    const includeXY = inXY;//!inXZ && !inZY;
+    const includeXZ = inXZ;//!inXY && !inZY;
+    const includeZY = inZY;//!inXY && !inXZ;
     const indexXY = map.xy.length;
     const indexXZ = map.xz.length;
     const indexZY = map.zy.length;

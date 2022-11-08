@@ -4,8 +4,8 @@
 const Assembly = require('../assembly.js');
 
 class Cutter extends Assembly {
-  constructor(partCode, partName, centerStr, demensionStr, rotationStr) {
-    super(partCode, partName, centerStr, demensionStr, rotationStr);
+  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
+    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
     this.included(false);
   }
 }

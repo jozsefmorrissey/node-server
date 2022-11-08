@@ -4,7 +4,8 @@
 const Assembly = require('../assembly.js');
 const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
 const Joint = require('../../joint/joint.js');
-const DivideSection = require('./section/space/sections/divide-section.js');
+const CabinetOpeningCorrdinates = require('../../../services/cabinet-opening-coordinates.js');
+const SectionProperties = require('./section/section-properties.js');
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
 const PropertyConfig = require('../../../config/property/config.js');
 const Group = require('../../group');
@@ -164,9 +165,9 @@ Cabinet.build = (type, group, config) => {
     const type = subAssemConfig.type;
     const name = subAssemConfig.name;
     const demStr = subAssemConfig.demensions.join(',');
-    const centerStr = subAssemConfig.center.join(',');
-    const rotationStr = subAssemConfig.rotation.join(',');
-    const subAssem = Assembly.new(type, subAssemConfig.code, name, centerStr, demStr, rotationStr);
+    const centerConfig = subAssemConfig.center.join(',');
+    const rotationConfig = subAssemConfig.rotation.join(',');
+    const subAssem = Assembly.new(type, subAssemConfig.code, name, centerConfig, demStr, rotationConfig);
     subAssem.partCode(subAssemConfig.code);
     cabinet.addSubAssembly(subAssem);
   });
@@ -180,11 +181,14 @@ Cabinet.build = (type, group, config) => {
     cabinet.addJoints(joint);
   });
 
-  config.openings.forEach((idMap) => {
-    const divideSection = new DivideSection(cabinet.borders(idMap), cabinet);
-    cabinet.openings.push(divideSection);
-    cabinet.addSubAssembly(divideSection);
+  config.openings.forEach((config) => {
+    const sectionProperties = new SectionProperties(config);
+    const cabOpenCoords = new CabinetOpeningCorrdinates(cabinet, config, sectionProperties);
+    cabinet.openings.push(cabOpenCoords);
+    cabinet.addSubAssembly(sectionProperties);
+    cabOpenCoords.update();
   });
+  const c = cabinet.subassemblies['sp'].coordinates();
   return cabinet;
 }
 
@@ -202,12 +206,12 @@ Cabinet.fromJson = (assemblyJson, group) => {
   Object.values(assemblyJson.subassemblies).forEach((json) => {
     const clazz = Assembly.class(json._TYPE);
     json.parent = assembly;
-    if (clazz !== DivideSection) {
+    if (clazz !== SectionProperties) {
       assembly.addSubAssembly(Object.fromJson(json));
     } else {
-      const divideSection = clazz.fromJson(json, assembly);
-      assembly.openings.push(divideSection);
-      assembly.addSubAssembly(divideSection);
+      const sectionProperties = clazz.fromJson(json, assembly);
+      assembly.openings.push(sectionProperties);
+      assembly.addSubAssembly(sectionProperties);
     }
   });
   assembly.thickness(assemblyJson.thickness);

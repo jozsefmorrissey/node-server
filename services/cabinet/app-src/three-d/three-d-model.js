@@ -153,6 +153,7 @@ class ThreeDModel {
 
     this.addVertex = (center, radius, color) => {
       radius ||= .5;
+      center.z *= -1;
       const vertex = CSG.sphere({center, radius});
       vertex.setColor(getColor(color));
       extraObjects.push(vertex);
@@ -227,9 +228,6 @@ class ThreeDModel {
         const assem = assemblies[index];
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
         if (!hidden(assem)) {
-          if (assem.constructor.name === 'DrawerFront') {
-            console.log('df mf');
-          }
           const b = buildObject(assem);
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
