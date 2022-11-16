@@ -1,0 +1,26 @@
+<table>
+  <tr>
+    <td{{target(4) ? ' class="bold"' : ''}}>{{display(coords.outer[0])}}</td>
+    <td></td>
+    <td></td>
+    <td{{target(5) ? ' class="bold"' : ''}}>{{display(coords.outer[1])}}</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td{{target(0) ? ' class="bold"' : ''}}>{{display(coords.inner[0])}}</td>
+    <td{{target(1) ? ' class="bold"' : ''}}>{{display(coords.inner[1])}}</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td{{target(3) ? ' class="bold"' : ''}}>{{display(coords.inner[3])}}</td>
+    <td{{target(2) ? ' class="bold"' : ''}}>{{display(coords.inner[2])}}</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td{{target(7) ? ' class="bold"' : ''}}>{{display(coords.outer[3])}}</td>
+    <td></td>
+    <td></td>
+    <td{{target(6) ? ' class="bold"' : ''}}>{{display(coords.outer[2])}}</td>
+  </tr>
+</table>

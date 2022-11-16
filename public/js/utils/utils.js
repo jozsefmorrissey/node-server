@@ -223,6 +223,19 @@ Function.safeStdLibAddition(Object, 'merge', (target, object, soft) => {
   }
 }, true);
 
+Function.safeStdLibAddition(Object, 'forAllRecursive', (object, func) => {
+  if (!(object instanceof Object)) return;
+  if ((typeof func) !== 'function') return;
+  const target = Array.isArray(object) ? [] :{};
+  const objKeys = Object.keys(object);
+  for (let index = 0; index < objKeys.length; index++) {
+    const key = objKeys[index];
+    if (object[key] instanceof Object) {
+      target[key] = Object.forAllRecursive(object[key], func);
+    } else target[key] = func(object[key], key, object);
+  }
+  return target;
+}, true);
 
 Function.safeStdLibAddition(Object, 'class', clazz, true);
 Function.safeStdLibAddition(Object, 'equals', objEq, true);
@@ -257,6 +270,28 @@ Function.safeStdLibAddition(Math, 'midpoint', function (s, e) {
   }
   return s + (e - s)/2;
 }, true);
+
+// Ripped off of: https://stackoverflow.com/a/2450976
+Function.safeStdLibAddition(Array, 'shuffle', function () {
+  let currentIndex = this.length,  randomIndex;
+  while (currentIndex != 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [this[currentIndex], this[randomIndex]] = [
+      this[randomIndex], this[currentIndex]];
+  }
+});
+
+Function.safeStdLibAddition(Array, 'reorder', function () {
+  let count = 2;
+  let currentIndex = this.length,  randomIndex;
+  while (currentIndex != 0) {
+    randomIndex = (currentIndex * count++) % currentIndex;
+    currentIndex--;
+    [this[currentIndex], this[randomIndex]] = [
+      this[randomIndex], this[currentIndex]];
+  }
+});
 
 Function.safeStdLibAddition(Array, 'toJson', function (arr) {
     const json = [];

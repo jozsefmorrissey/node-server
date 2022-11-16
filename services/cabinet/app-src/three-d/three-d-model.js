@@ -102,6 +102,15 @@ class ThreeDModel {
       }
     }
 
+    // Quick and dirty
+    function centerModel(model) {
+      const offset = model.distCenter();
+      offset.z += 100;
+      offset.y -= 50;
+      offset.x -= 50;
+      model.translate(offset);
+    }
+
     function buildHiddenPrefixReg() {
       const list = [];
       const keys = Object.keys(hiddenPrefixes);
@@ -153,7 +162,6 @@ class ThreeDModel {
 
     this.addVertex = (center, radius, color) => {
       radius ||= .5;
-      center.z *= -1;
       const vertex = CSG.sphere({center, radius});
       vertex.setColor(getColor(color));
       extraObjects.push(vertex);
@@ -162,22 +170,27 @@ class ThreeDModel {
     this.removeAllExtraObjects = () => extraObjects = [];
 
     function getModel(assem) {
-      const pos = assem.position().current();
-      if (pos.rotation.x % 45 !== 0 || pos.rotation.y % 45 !== 0 || pos.rotation.z % 45 !== 0) {
-        console.log('position off')
+      if (assem.constructor.name === 'Door') {
+        console.log('here');
       }
-      let model;
-      if (assem instanceof DrawerBox) {
-        model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
-      } else if (assem instanceof Handle) {
-        model = pull(pos.demension.y, pos.demension.z);
-      } else {
-        const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
-        model = CSG.cube({ radius });
+      let model = assem.toModel && assem.toModel();
+      if (model === undefined) {
+        const pos = assem.position().current();
+        if (pos.rotation.x % 45 !== 0 || pos.rotation.y % 45 !== 0 || pos.rotation.z % 45 !== 0) {
+          console.log('position off')
+        }
+        if (assem instanceof DrawerBox) {
+          model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
+        } else if (assem instanceof Handle) {
+          model = pull(pos.demension.y, pos.demension.z);
+        } else {
+          const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
+          model = CSG.cube({ radius });
+        }
+        model.rotate(pos.rotation);
+        // pos.center.z *= -1;
+        model.center(pos.center);
       }
-      model.rotate(pos.rotation);
-      pos.center.z *= -1;
-      model.center(pos.center);
       // serialize({}, model);
       return model;
     }
@@ -209,9 +222,9 @@ class ThreeDModel {
       buildHiddenPrefixReg();
       function buildObject(assem) {
         let a = getModel(assem);
-        const c = assem.position().center();
+        // const c = assem.position().center();
         const e=1;
-        a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
+        // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
         a.setColor(...getColor());
         assem.getJoints().female.forEach((joint) => {
           const male = joint.getMale();
@@ -254,6 +267,7 @@ class ThreeDModel {
       if (a) {
         // a.polygons.forEach((p) => p.shared = getColor());
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
+        centerModel(a);
         viewer.mesh = a.toMesh();
         viewer.gl.ondraw();
         console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);

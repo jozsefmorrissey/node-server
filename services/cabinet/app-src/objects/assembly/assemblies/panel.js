@@ -14,5 +14,12 @@ class Panel extends Assembly {
 
 Panel.abbriviation = 'pn';
 
+class PanelModel extends Panel {
+  constructor(partCode, partName, toModel) {
+    super(partCode, partName);
+    this.toModel = toModel;
+  }
+}
 
+Panel.Model = PanelModel;
 module.exports = Panel

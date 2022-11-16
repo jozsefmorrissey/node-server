@@ -137,6 +137,7 @@ function panZoom(canvas, draw) {
       str += `${attr}: ${round(displayTransform[attr])} `;
     }
   }
+  this.displayTransform = displayTransform;
   // terms.
   // Real space, real, r (prefix) refers to the transformed canvas space.
   // c (prefix), chase is the value that chases a requiered value

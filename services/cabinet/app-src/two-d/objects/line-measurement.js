@@ -4,6 +4,7 @@ const Vertex2d = require('vertex');
 const Line2d = require('line');
 const Lookup = require('../../../../../public/js/utils/object/lookup');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
+const approximate = require('../../../../../public/js/utils/approximate.js');
 
 class LineMeasurement2d {
   constructor(line, center, layer, modificationFunction) {
@@ -60,10 +61,19 @@ class LineMeasurement2d {
   }
 }
 
+function measurementLevel(line) {
+  if ((typeof line.length) !== 'function')
+    console.log(line);
+
+  return Math.log(line.length()*line.length())*2;
+}
+
 LineMeasurement2d.measurements = (lines) => {
+  lines.reorder();
   const verts = Line2d.vertices(lines);
   const center = Vertex2d.center(...verts);
   const measurements = [];
+  const lengthMap = {};
   for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
     const tarVerts = lines[tIndex].liesOn(verts);
     if (tarVerts.length > 2) {
@@ -71,16 +81,50 @@ LineMeasurement2d.measurements = (lines) => {
         const sv = tarVerts[index - 1];
         const ev = tarVerts[index];
         const line = new Line2d(sv,ev);
-        measurements.push(new LineMeasurement2d(line, center, 1));
+        const length = approximate(line.length());
+        if (lengthMap[length] === undefined) lengthMap[length] = [];
+        lengthMap[length].push(line);
+        // measurements.push(new LineMeasurement2d(line, center, 1));
       }
     }
     if (tarVerts.length > 1) {
       const sv = tarVerts[0];
       const ev = tarVerts[tarVerts.length - 1];
       const line = new Line2d(sv,ev);
-      measurements.push(new LineMeasurement2d(line, center, 2));
+      const length = approximate(line.length());
+      if (lengthMap[length] === undefined) lengthMap[length] = [];
+      lengthMap[length].push(line);
+      // measurements.push(new LineMeasurement2d(line, center, 2));
     }
   }
+
+  const lengths = Object.keys(lengthMap);
+  for (index = 0; index < lengths.length; index += 1) {
+    const slopeMap = {};
+    let lines = lengthMap[lengths[index]];
+    for(let li = 1; li < lines.length; li++) {
+      const line = lines[li];
+      const center2center = new Line2d(lines[li-1].midpoint(), line.midpoint());
+      const slopeMag = approximate.abs(center2center.slope());
+      if (!slopeMap[slopeMag] && approximate(line.length()) !== 0) {
+        for (let si = 0; si < li; si++) {
+          const c2c = new Line2d(lines[si].midpoint(), line.midpoint());
+          const slopeMag = approximate.abs(center2center.slope());
+          slopeMap[slopeMag] = true;
+        }
+      } else {
+        lines.splice(li, 1);
+        li--;
+      }
+    }
+    if (lines.length > 1) lines.splice(0,1);
+    measurements.concatInPlace(lines);
+  }
+
+  for (let index = 0; index < measurements.length; index++)
+    if (approximate.abs(measurements[index].length()) !== 0)
+      measurements[index] = new LineMeasurement2d(measurements[index], center, measurementLevel(measurements[index]));
+
   return measurements;
 }
 

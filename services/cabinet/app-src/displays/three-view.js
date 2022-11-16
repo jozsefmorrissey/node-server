@@ -9,12 +9,13 @@ const ThreeDModel = require('../three-d/three-d-model.js');
 const Layout2D = require('../objects/layout.js')
 const Draw2D = require('../two-d/draw.js');
 const Polygon2d = require('../two-d/objects/polygon.js');
+const Polygon3D = require('../three-d/objects/polygon.js');
+const BiPolygon = require('../three-d/objects/bi-polygon.js');
 const Line2d = require('../two-d/objects/line.js');
 const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
 const PanZoom = require('../two-d/pan-zoom.js');
 
 const CSG = require('../../public/js/3d-modeling/csg');
-
 
 function csgVert(pos, normal) {
   return new CSG.Vertex(pos, normal);
@@ -52,8 +53,8 @@ class ThreeView extends Lookup {
     const maxDem = window.innerHeight * .45;
     const cnt = du.create.element('div');
     // const p = pull(5,2);
-    const p = door([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}],
-          [{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}]);
+    const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
+          new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel();
     // const p = door([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}],
     //       [{x:0, y: 4, z: 4}, {x:4, y: 4, z: 4}, {x:4, y: 0, z: 4}, {x:0, y: 0, z: 4}]);
     // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
@@ -107,6 +108,12 @@ class ThreeView extends Lookup {
       }
     }
 
+    function onPartSelect(elem) {
+      console.log(elem.value);
+      instance.isolatePart(elem.value);
+      elem.value = '';
+    }
+
     function init() {
       if (viewer === undefined) {
         viewer = new Viewer(p, maxDem, maxDem, 50);
@@ -122,6 +129,8 @@ class ThreeView extends Lookup {
       panzFront.centerOn(0, 0);
       panzLeft.centerOn(0, 0);
       panzTop.centerOn(0, 0);
+
+      du.on.match('change', '[name="partSelector"]', onPartSelect);
     }
 
     this.update = (cabinet) => {
@@ -134,7 +143,7 @@ class ThreeView extends Lookup {
       }, 1000);
     }
 
-    this.isolatePart = (partCode, cabinet) => {
+    this.isolatePart = (partCode) => {
       threeDModel = ThreeDModel.get();
       threeDModel.setTargetPartCode(partCode);
       threeDModel.update();

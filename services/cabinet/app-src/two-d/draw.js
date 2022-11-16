@@ -116,6 +116,16 @@ class Draw2d {
       ctx.restore();
     }
 
+    draw.text = (text, center, width, color, maxWidth) => {
+      ctx.beginPath();
+      ctx.lineWidth = width || 4;
+      ctx.strokeStyle = color || 'black';
+      ctx.fillStyle =  color || 'black';
+      ctx.font = width + "px Arial";
+      ctx.fillText(text, center.x, center.y, maxWidth);
+      ctx.stroke()
+    }
+
     draw.circle = (circle, lineColor, fillColor, lineWidth) => {
       const center = circle.center();
       ctx.beginPath();
@@ -148,7 +158,7 @@ class Draw2d {
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.font = "1px Arial";
+      ctx.font = (Math.abs((Math.log(Math.floor(line.length() * 10)))) || .1) + "px Arial";
       ctx.lineWidth = .2;
       ctx.strokeStyle = 'black';
       ctx.fillStyle =  'black';
@@ -157,7 +167,7 @@ class Draw2d {
       ctx.restore();
     }
 
-    draw.measurement = (measurement, color) => {
+    draw.measurement = (measurement, color, textWidth) => {
       const measurementColor = color || 'grey';
       const measurementLineWidth = '.1';
       const lines = measurement.I();

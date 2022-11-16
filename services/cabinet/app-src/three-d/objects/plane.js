@@ -163,9 +163,10 @@ class Plane extends Array {
 
     this.normal = () => {
       const points = this.findPoints();
-      const vector1 = points[1].minus(points[0]);
-      const vector2 = points[2].minus(points[0]);
-      return vector1.crossProduct(vector2);
+      const vector1 = points[0].minus(points[1]);
+      const vector2 = points[2].minus(points[1]);
+      const normVect = vector1.crossProduct(vector2);
+      return normVect.scale(1 / normVect.magnitude());
     }
 
     this.center = () => Vertex3D.center.apply(null, this);
@@ -278,6 +279,22 @@ Plane.bisector = (p1, p2) => {
   const obtuse = (eq1.a*eq2.a + eq1.b*eq2.b + eq1.c*eq2.c) < 0
   if (obtuse) return {obtuse: plane1, accute: plane2};
   return {obtuse: plane2, accute: plane1};
+}
+
+// TODO: not used but could be helpful. - fix
+Plane.fromPointNormal = (point, normal) => {
+  const a = normal.i();
+  const b = normal.j();
+  const c = normal.k();
+  const x0 = point.x;
+  const y0 = point.y;
+  const z0 = point.z;
+  const getZ = (x,y) => (a*(x-x0)+b*(y-y0)-c*z0)/-c;
+  // there is a chance that these three points will be colinear.... not likely and I have more important stuff to do.
+  const point1 = {x: 13, y: 677, z: getZ(13,677)};
+  const point2 = {x: 127, y: 43, z: getZ(127,43)};
+  const point3 = {x: 107, y: 563, z: getZ(107,563)};
+  return new Plane(point1, point2, point3);
 }
 
 module.exports = Plane;

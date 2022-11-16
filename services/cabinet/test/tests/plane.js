@@ -164,3 +164,11 @@ Test.add('Plane: bisector',(ts) => {
 
   ts.success();
 });
+
+
+Test.add('Plane: bisector',(ts) => {
+  const xyPlane = Plane.fromPointNormal({x: 12, y: 41, z: 0}, new Vector3D(1, 1, 1));
+  const yzPlane = Plane.fromPointNormal({x: 0, y: 41, z: 1}, new Vector3D(0, 3, -1));
+  const xzPlane = Plane.fromPointNormal({x: 12, y: 0, z: 50}, new Vector3D(5, 0, 13));
+  ts.success();
+});

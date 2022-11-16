@@ -16,10 +16,14 @@ class Vector3D {
       if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
       return new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k());
     }
+    this.scale = (coef) => {
+      return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
+    }
     this.divide = (vector) => {
       if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
       return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
     }
+    this.toArray = () => [this.i(), this.j(), this.k()];
     this.dot = (vector) =>
       this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
     this.perpendicular = (vector) =>
@@ -40,22 +44,12 @@ class Vector3D {
       const mag = Math.sqrt(i*i+j*j+k*k);
       return new Vector3D(i/mag,j/-mag,k/mag);
     }
+    this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
 
     this.unit = () => {
-      const attrs = ['i', 'j', 'k'];
-      let maxIndex = 0;
-      for (let index = 1; index < 3; index++)
-        if (Math.abs(this[attrs[maxIndex]]()) < Math.abs(this[attrs[index]]())) maxIndex = index;
-      const unit = [];
-      const maxAttr = attrs[maxIndex];
-      unit[maxIndex] = attrs[maxIndex] > 0 ? 1 : -1;
-      const magnitudeOfMaxValue = this[maxAttr]() * (unit[maxAttr] < 0 ? -1 : 1);
-      for (let index = 1; index < 4; index++) {
-        const targetIndex = (index + maxIndex) % 3;
-        const attr = attrs[targetIndex];
-        unit[targetIndex] = this[attr]() / magnitudeOfMaxValue;
-      }
-      return new Vector3D(...unit);
+      const i = this.i();const j = this.j();const k = this.k();
+      const magnitude = Math.sqrt(i*i+j*j+k*k);
+      return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
     }
     this.equals = this.parrelle;
     this.toString = () => `<${i},  ${j},  ${k}>`;

@@ -188,7 +188,6 @@ Cabinet.build = (type, group, config) => {
     cabinet.addSubAssembly(sectionProperties);
     cabOpenCoords.update();
   });
-  const c = cabinet.subassemblies['sp'].coordinates();
   return cabinet;
 }
 

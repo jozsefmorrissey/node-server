@@ -2,6 +2,7 @@
 const Matrix = require('./matrix');
 const Vector3D = require('./vector');
 const approximate = require('../../../../../public/js/utils/approximate.js');
+const approx10 = approximate.new(10);
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 
 
@@ -31,7 +32,7 @@ class Vertex3D {
       if (doNotModify === true) vertex = this.copy();
       vertex.x += vector.i();
       vertex.y += vector.j();
-      vertex.z += vector.z();
+      vertex.z += vector.k();
       return vertex;
     }
 
@@ -84,9 +85,10 @@ class Vertex3D {
     }
 
     this.copy = () => new Vertex3D(this.x, this.y, this.z);
+    this.clone = this.copy;
     this.equals = (other) => other && approximate.eq(this.x, other.x) &&
           approximate.eq(this.y, other.y);
-    this.toString = () => `${this.x},${this.y},${this.z}`;
+    this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
   }
 }
 

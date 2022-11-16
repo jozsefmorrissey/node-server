@@ -1,7 +1,14 @@
 
+/* #layout-sketch-cnt {
+  transform: scale(1, -1);
+} */
 input, select {
   height: 14pt;
   margin: 1pt 2pt;
+}
+
+.bold {
+  font-weight: bold;
 }
 
 input[name='malePartCode'],

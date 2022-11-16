@@ -85,6 +85,7 @@ function Viewer(csg, width, height, depth) {
   gl.matrixMode(gl.PROJECTION);
   gl.loadIdentity();
   gl.perspective(100, width / height, 0.1, 1000);
+  gl.rotate(180, 0, 1, 0);
   gl.matrixMode(gl.MODELVIEW);
 
   // Set up WebGL state
@@ -132,7 +133,7 @@ function Viewer(csg, width, height, depth) {
   function rotateEvent(e) {
     angleY += e.deltaX * 2;
     angleX += e.deltaY * 2;
-    angleX = Math.max(-90, Math.min(90, angleX));
+    // angleX = Math.max(-90, Math.min(90, angleX));
   }
 
   gl.onmousemove = function(e) {
@@ -178,9 +179,9 @@ function Viewer(csg, width, height, depth) {
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.loadIdentity();
-    gl.translate(x, y, -depth);
-    gl.rotate(angleX, 1, 0, 0);
-    gl.rotate(angleY, 0, 1, 0);
+    gl.translate(-x, y, -depth);
+    gl.rotate(angleX, -1, 0, 0);
+    gl.rotate(angleY, 0, -1, 0);
 
     if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
     that.lightingShader.draw(that.mesh, gl.TRIANGLES);

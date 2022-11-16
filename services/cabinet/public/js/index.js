@@ -2770,6 +2770,10 @@ function (require, exports, module) {
 	  },
 	
 	  rotate: function (rotations) {
+	    if (Array.isArray(rotations)) {
+	      for (let i = 0; i < rotations.length; i++) this.rotate(rotations[i])
+	      return;
+	    }
 	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
 	      let newPos = vertex.pos;
 	      newPos = ArbitraryRotate(newPos, rotations.x, {x: 1, y:0, z:0});
@@ -6720,6 +6724,7 @@ function (require, exports, module) {
 	  gl.matrixMode(gl.PROJECTION);
 	  gl.loadIdentity();
 	  gl.perspective(100, width / height, 0.1, 1000);
+	  gl.rotate(180, 0, 1, 0);
 	  gl.matrixMode(gl.MODELVIEW);
 	
 	  // Set up WebGL state
@@ -6767,7 +6772,7 @@ function (require, exports, module) {
 	  function rotateEvent(e) {
 	    angleY += e.deltaX * 2;
 	    angleX += e.deltaY * 2;
-	    angleX = Math.max(-90, Math.min(90, angleX));
+	    // angleX = Math.max(-90, Math.min(90, angleX));
 	  }
 	
 	  gl.onmousemove = function(e) {
@@ -6813,9 +6818,9 @@ function (require, exports, module) {
 	
 	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	    gl.loadIdentity();
-	    gl.translate(x, y, -depth);
-	    gl.rotate(angleX, 1, 0, 0);
-	    gl.rotate(angleY, 0, 1, 0);
+	    gl.translate(-x, y, -depth);
+	    gl.rotate(angleX, -1, 0, 0);
+	    gl.rotate(angleY, 0, -1, 0);
 	
 	    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
 	    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
@@ -6889,6 +6894,432 @@ function (require, exports, module) {
 	exports.preventDefaultForScrollKeys = preventDefaultForScrollKeys
 	exports.disableScroll = disableScroll
 	exports.enableScroll = enableScroll
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/custom-event.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class CustomEvent {
+	  constructor(name) {
+	    const watchers = [];
+	    this.name = name;
+	
+	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
+	
+	    this.on = function (func) {
+	      if ((typeof func) === 'function') {
+	        watchers.push(func);
+	      } else {
+	        return 'on' + name;
+	      }
+	    }
+	
+	    this.trigger = function (element, detail) {
+	      element = element ? element : window;
+	      runFuncs(element, detail);
+	      this.event.detail = detail;
+	      if(document.createEvent){
+	          element.dispatchEvent(this.event);
+	      } else {
+	          element.fireEvent("on" + this.event.eventType, this.event);
+	      }
+	    }
+	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+	    this.event;
+	    if(document.createEvent){
+	        this.event = document.createEvent("HTMLEvents");
+	        this.event.initEvent(name, true, true);
+	        this.event.eventName = name;
+	    } else {
+	        this.event = document.createEventObject();
+	        this.event.eventName = name;
+	        this.event.eventType = name;
+	    }
+	  }
+	}
+	
+	module.exports = CustomEvent;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/string-math-evaluator.js',
+function (require, exports, module) {
+	
+const FunctionCache = require('./services/function-cache.js');
+	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	class StringMathEvaluator {
+	  constructor(globalScope, resolver) {
+	    globalScope = globalScope || {};
+	    const instance = this;
+	    let splitter = '.';
+	
+	    function resolve (path, currObj, globalCheck) {
+	      if (path === '') return currObj;
+	      const resolved = !globalCheck && resolver && resolver(path, currObj);
+	      if (Number.isFinite(resolved)) return resolved;
+	      try {
+	        if ((typeof path) === 'string') path = path.split(splitter);
+	        for (let index = 0; index < path.length; index += 1) {
+	          currObj = currObj[path[index]];
+	        }
+	        if (currObj === undefined && !globalCheck) throw Error('try global');
+	        return currObj;
+	      }  catch (e) {
+	        if (!globalCheck) return resolve(path, globalScope, true);
+	      }
+	    }
+	
+	    function multiplyOrDivide (values, operands) {
+	      const op = operands[operands.length - 1];
+	      if (op === StringMathEvaluator.multi || op === StringMathEvaluator.div) {
+	        const len = values.length;
+	        values[len - 2] = op(values[len - 2], values[len - 1])
+	        values.pop();
+	        operands.pop();
+	      }
+	    }
+	
+	    const resolveArguments = (initialChar, func) => {
+	      return function (expr, index, values, operands, scope, path) {
+	        if (expr[index] === initialChar) {
+	          const args = [];
+	          let endIndex = index += 1;
+	          const terminationChar = expr[index - 1] === '(' ? ')' : ']';
+	          let terminate = false;
+	          let openParenCount = 0;
+	          while(!terminate && endIndex < expr.length) {
+	            const currChar = expr[endIndex++];
+	            if (currChar === '(') openParenCount++;
+	            else if (openParenCount > 0 && currChar === ')') openParenCount--;
+	            else if (openParenCount === 0) {
+	              if (currChar === ',') {
+	                args.push(expr.substr(index, endIndex - index - 1));
+	                index = endIndex;
+	              } else if (openParenCount === 0 && currChar === terminationChar) {
+	                args.push(expr.substr(index, endIndex++ - index - 1));
+	                terminate = true;
+	              }
+	            }
+	          }
+	
+	          for (let index = 0; index < args.length; index += 1) {
+	            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
+	            if (stringMatch) {
+	              args[index] = stringMatch[1];
+	            } else {
+	              args[index] =  instance.eval(args[index], scope);
+	            }
+	          }
+	          const state = func(expr, path, scope, args, endIndex);
+	          if (state) {
+	            values.push(state.value);
+	            return state.endIndex;
+	          }
+	        }
+	      }
+	    };
+	
+	    function chainedExpressions(expr, value, endIndex, path) {
+	      if (expr.length === endIndex) return {value, endIndex};
+	      let values = [];
+	      let offsetIndex;
+	      let valueIndex = 0;
+	      let chained = false;
+	      do {
+	        const subStr = expr.substr(endIndex);
+	        const offsetIndex = isolateArray(subStr, 0, values, [], value, path) ||
+	                            isolateFunction(subStr, 0, values, [], value, path) ||
+	                            (subStr[0] === '.' &&
+	                              isolateVar(subStr, 1, values, [], value));
+	        if (Number.isInteger(offsetIndex)) {
+	          value = values[valueIndex];
+	          endIndex += offsetIndex - 1;
+	          chained = true;
+	        }
+	      } while (offsetIndex !== undefined);
+	      return {value, endIndex};
+	    }
+	
+	    const isolateArray = resolveArguments('[',
+	      (expr, path, scope, args, endIndex) => {
+	        endIndex = endIndex - 1;
+	        let value = resolve(path, scope)[args[args.length - 1]];
+	        return chainedExpressions(expr, value, endIndex, '');
+	      });
+	
+	    const isolateFunction = resolveArguments('(',
+	      (expr, path, scope, args, endIndex) =>
+	          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
+	
+	    function isolateParenthesis(expr, index, values, operands, scope) {
+	      const char = expr[index];
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      if (char === '(') {
+	        let openParenCount = 1;
+	        let endIndex = index + 1;
+	        while(openParenCount > 0 && endIndex < expr.length) {
+	          const currChar = expr[endIndex++];
+	          if (currChar === '(') openParenCount++;
+	          if (currChar === ')') openParenCount--;
+	        }
+	        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
+	        const len = endIndex - index - 2;
+	        values.push(instance.eval(expr.substr(index + 1, len), scope));
+	        multiplyOrDivide(values, operands);
+	        return endIndex;
+	      }
+	    };
+	
+	    function isolateOperand (char, operands) {
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      switch (char) {
+	        case '*':
+	        operands.push(StringMathEvaluator.multi);
+	        return true;
+	        break;
+	        case '/':
+	        operands.push(StringMathEvaluator.div);
+	        return true;
+	        break;
+	        case '+':
+	        operands.push(StringMathEvaluator.add);
+	        return true;
+	        break;
+	        case '-':
+	        operands.push(StringMathEvaluator.sub);
+	        return true;
+	        break;
+	      }
+	      return false;
+	    }
+	
+	    function isolateValueReg(reg, resolver) {
+	      return function (expr, index, values, operands, scope) {
+	        const match = expr.substr(index).match(reg);
+	        let args;
+	        if (match) {
+	          let endIndex = index + match[0].length;
+	          let value = resolver(match[0], scope);
+	          if (!Number.isFinite(value)) {
+	            const state = chainedExpressions(expr, scope, endIndex, match[0]);
+	            if (state !== undefined) {
+	              value = state.value;
+	              endIndex = state.endIndex;
+	            }
+	          }
+	          values.push(value);
+	          multiplyOrDivide(values, operands);
+	          return endIndex;
+	        }
+	      }
+	    }
+	
+	    function convertFeetInchNotation(expr) {
+	      expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
+	      expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
+	      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
+	      return expr = expr.replace(StringMathEvaluator.multiMixedNumberReg, '($1+$2)') || expr;
+	    }
+	    function addUnexpressedMultiplicationSigns(expr) {
+	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
+	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
+	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
+	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
+	    }
+	
+	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
+	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
+	
+	    function evaluate(expr, scope, percision) {
+	      if (Number.isFinite(expr))
+	        return expr;
+	      expr = new String(expr);
+	      expr = addUnexpressedMultiplicationSigns(expr);
+	      expr = convertFeetInchNotation(expr);
+	      scope = scope || globalScope;
+	      const allowVars = (typeof scope) === 'object';
+	      let operands = [];
+	      let values = [];
+	      let prevWasOpperand = true;
+	      for (let index = 0; index < expr.length; index += 1) {
+	        const char = expr[index];
+	        if (prevWasOpperand) {
+	          try {
+	            let newIndex = isolateNumber(expr, index, values, operands, scope);
+	            if (!newIndex && isolateOperand(char, operands))
+	                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
+	            newIndex ||= isolateParenthesis(expr, index, values, operands, scope) ||
+	                (allowVars && isolateVar(expr, index, values, operands, scope));
+	            if (Number.isInteger(newIndex)) {
+	              index = newIndex - 1;
+	              prevWasOpperand = false;
+	            }
+	          } catch (e) {
+	            console.error(e);
+	            return NaN;
+	          }
+	        } else {
+	          prevWasOpperand = isolateOperand(char, operands);
+	        }
+	      }
+	      if (prevWasOpperand) return NaN;
+	
+	      let value = values[0];
+	      for (let index = 0; index < values.length - 1; index += 1) {
+	        value = operands[index](values[index], values[index + 1]);
+	        values[index + 1] = value;
+	      }
+	
+	      if (Number.isFinite(value)) {
+	        value = value;
+	        return value;
+	      }
+	      return NaN;
+	    }
+	
+	    this.eval = new FunctionCache(evaluate, this, 'sme');
+	
+	    this.evalObject = new FunctionCache((obj, scope) => {
+	      const returnObj = Object.forEachConditional(obj, (value, key, object) => {
+	        value = evaluate(value, scope);
+	        if (!Number.isNaN(value)) object[key] = value;
+	      }, (value) => (typeof value) === 'string');
+	      return returnObj;
+	    }, this, 'sme');
+	  }
+	}
+	
+	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	
+	const mixNumberRegStr = "([0-9]{1,})\\s{1,}(([0-9]{1,})\\/([0-9]{1,}))";
+	StringMathEvaluator.mixedNumberReg = new RegExp(`^${mixNumberRegStr}$`);
+	StringMathEvaluator.multiMixedNumberReg = new RegExp(mixNumberRegStr, 'g');///([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
+	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
+	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
+	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
+	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
+	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
+	const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
+	StringMathEvaluator.decimalReg = new RegExp(`^${decimalRegStr}`);///^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(\.|)|(\.)[0-9]{1,})/;
+	StringMathEvaluator.multiDecimalReg = new RegExp(decimalRegStr, 'g');
+	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
+	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
+	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
+	StringMathEvaluator.div = (n1, n2) => n1 / n2;
+	StringMathEvaluator.add = (n1, n2) => n1 + n2;
+	StringMathEvaluator.sub = (n1, n2) => n1 - n2;
+	
+	const npf = Number.parseFloat;
+	StringMathEvaluator.convert = {eqn: {}};
+	StringMathEvaluator.convert.metricToImperial = (value) => {
+	  value = npf(value);
+	  return value / 2.54;
+	}
+	
+	StringMathEvaluator.resolveMixedNumber = (value) => {
+	  const match = value.match(StringMathEvaluator.mixedNumberReg);
+	  if (match) {
+	    value = npf(match[1]) + (npf(match[3]) / npf(match[4]));
+	  }
+	  value = npf(value);
+	  return value;
+	}
+	
+	StringMathEvaluator.convert.imperialToMetric = (value) => {
+	  value = npf(value);
+	  return value * 2.54;
+	}
+	
+	StringMathEvaluator.convert.eqn.metricToImperial = (str) =>
+	  str.replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.metricToImperial);
+	
+	StringMathEvaluator.convert.eqn.imperialToMetric = (str) =>
+	  str.replace(StringMathEvaluator.multiMixedNumberReg, StringMathEvaluator.resolveMixedNumber)
+	  .replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.imperialToMetric);
+	
+	StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	
+	
+	StringMathEvaluator.reduce = function(numerator, denominator) {
+	  let reduced = true;
+	  while (reduced) {
+	    reduced = false;
+	    for (let index = 0; index < StringMathEvaluator.primes.length; index += 1) {
+	      const prime = StringMathEvaluator.primes[index];
+	      if (prime >= denominator) break;
+	      if (numerator % prime === 0 && denominator % prime === 0) {
+	        numerator = numerator / prime;
+	        denominator = denominator / prime;
+	        reduced = true;
+	        break;
+	      }
+	    }
+	  }
+	  if (numerator === 0) {
+	    return '';
+	  }
+	  return `${numerator}/${denominator}`;
+	}
+	
+	StringMathEvaluator.parseFraction = function (str) {
+	  const regObj = regexToObject(str, StringMathEvaluator.regex, null, 'integer', null, 'numerator', 'denominator');
+	  regObj.integer = Number.parseInt(regObj.integer) || 0;
+	  regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	  regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	  if(regObj.denominator === 0) {
+	    regObj.numerator = 0;
+	    regObj.denominator = 1;
+	  }
+	  regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	  return regObj;
+	}
+	
+	StringMathEvaluator.toFraction = function (decimal, accuracy) {
+	  if (decimal === NaN) return NaN;
+	  accuracy = accuracy || '1/1000'
+	  const fracObj = StringMathEvaluator.parseFraction(accuracy);
+	  const denominator = fracObj.denominator;
+	  if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	    throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	  }
+	  let remainder = decimal;
+	  let currRemainder = remainder;
+	  let value = 0;
+	  let numerator = 0;
+	  while (currRemainder > 0) {
+	    numerator += fracObj.numerator;
+	    currRemainder -= fracObj.decimal;
+	  }
+	  const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
+	  const diff2 = (numerator / denominator) - decimal;
+	  numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	  const integer = Math.floor(numerator / denominator);
+	  numerator = numerator % denominator;
+	  const fraction = StringMathEvaluator.reduce(numerator, denominator);
+	  return (integer && fraction ? `${integer} ${fraction}` :
+	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
+	}
+	
+	try {
+	  module.exports = StringMathEvaluator;
+	} catch (e) {/* TODO: Consider Removing */}
 	
 });
 
@@ -7414,155 +7845,1383 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/approximate.js',
+RequireJS.addFunction('../../public/js/utils/endpoints.js',
 function (require, exports, module) {
 	
-
+class Endpoints {
+	  constructor(config, host) {
+	    const instance = this;
+	    let environment;
 	
-	let defaultAccuracy;
-	
-	class Approximate {
-	  constructor(accuracy) {
-	    if ((typeof accuracy) !== 'number' || accuracy === defaultAccuracy) return Approximate.default;
-	
-	    function approximate(value) {
-	      return Math.round(value * accuracy) / accuracy;
+	    if ((typeof config) !== 'object') {
+	      host = config;
+	      config = Endpoints.defaultConfig;
 	    }
 	
-	    function approximateFunc(test) {
+	    host = host || '';
+	    this.setHost = (newHost) => {
+	      if ((typeof newHost) === 'string') {
+	        if (config._envs[newHost]) environment = newHost;
+	        host = config._envs[newHost] || newHost;
+	      }
+	    };
+	    this.setHost(host);
+	    this.getHost = (env) => env === undefined ? host : config._envs[env];
+	    this.getEnv = () => environment;
+	
+	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
+	    this.getFuncObj = function () {return endPointFuncs;};
+	
+	
+	    function build(str) {
+	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
+	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
 	      return function () {
-	        if (arguments.length === 2) return test(approximate(arguments[0]), approximate(arguments[1]));
-	        for (let index = 1; index < arguments.length; index++) {
-	          if (!test(approximate(arguments[index - 1]), approximate(arguments[index]))) return false;
+	        let values = [];
+	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
+	          values = arguments;
+	        } else {
+	          const obj = arguments[0];
+	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
 	        }
+	        let endpoint = '';
+	        for (let index = 0; index < pieces.length; index += 1) {
+	          const arg = values[index];
+	          let value = '';
+	          if (index < pieces.length - 1) {
+	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
+	          }
+	          endpoint += pieces[index] + value;
+	        }
+	        return `${host}${endpoint}`;
+	      }
+	    }
+	
+	    function configRecurse(currConfig, currFunc) {
+	      const keys = Object.keys(currConfig);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = currConfig[key];
+	        if (key.indexOf('_') !== 0) {
+	          if (value instanceof Object) {
+	            currFunc[key] = {};
+	            configRecurse(value, currFunc[key]);
+	          } else {
+	            currFunc[key] = build(value);
+	          }
+	        } else {
+	          currFunc[key] = value;
+	        }
+	      }
+	    }
+	
+	    configRecurse(config, endPointFuncs);
+	  }
+	}
+	
+	module.exports = Endpoints;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/utils.js',
+function (require, exports, module) {
+	Math.PI12 = Math.PI/2;
+	Math.PI32 = 3*Math.PI/2;
+	Math.PI2 = 2*Math.PI;
+	
+	Math.PI14 = Math.PI/4;
+	Math.PI34 = 3*Math.PI/4;
+	Math.PI54 = 5*Math.PI/4;
+	Math.PI74 = 7*Math.PI/4;
+	
+	
+	
+	function safeStdLibAddition() {
+	  const addition = [];
+	  function verify() {
+	    additions.forEach((a) => {
+	      if ((a.static && a.lib[a.field] !== a.func) ||
+	      (!a.static && a.lib.prototype[a.field] !== a.func))
+	        throw new Error(`Functionality was overwritten -` +
+	                          `\n\tLibrary: ${a.lib}` +
+	                          `\n\tStatic: ${a.static}` +
+	                          `\n\tField: ${a.field}`)
+	    });
+	    delete additions;
+	  }
+	  function safeAdd (lib, field, func, static) {
+	    if (!static && lib.prototype[field] === undefined)
+	      lib.prototype[field] = func;
+	    else if (lib[field] === undefined)
+	      lib[field] = func;
+	    else
+	      console.error(`Attempting to overwrite functionality -` +
+	                        `\n\tLibrary: ${lib}` +
+	                        `\n\tStatic: ${static}` +
+	                        `\n\tField: ${field}`);
+	    addition.push({lib, field, func, static})
+	  }
+	  safeAdd(Function, 'safeStdLibAddition', safeAdd);
+	}
+	safeStdLibAddition();
+	
+	function processValue(value) {
+	  let retVal;
+	  if ((typeof value) === 'object' && value !== null) {
+	    if ((typeof value.toJson) === 'function') {
+	      retVal = value.toJson();
+	    } else if ((typeof value.toJSON) === 'function') {
+	      retVal = value.toJSON();
+	    } else if (Array.isArray(value)){
+	      const arr = [];
+	      value.forEach((val) => {
+	        if ((typeof val.toJson) === 'function') {
+	          arr.push(val.toJson());
+	        } else if ((typeof val.toJSON) === 'function') {
+	          arr.push(val.toJSON());
+	        } else {
+	          arr.push(val);
+	        }
+	      });
+	      retVal = arr;
+	    } else {
+	      const keys = Object.keys(value);
+	      const obj = {};
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        obj[key] = processValue(value[key]);
+	      }
+	      retVal = obj;
+	    }
+	  } else {
+	    retVal = value;
+	  }
+	  return retVal;
+	}
+	
+	Function.safeStdLibAddition(String, 'random',  function (len) {
+	    len = len || 7;
+	    let str = '';
+	    while (str.length < len) str += Math.random().toString(36).substr(2);
+	    return str.substr(0, len);
+	}, true);
+	
+	Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
+	  while (val < 0) val += mod;
+	  return val % mod;
+	}, true);
+	
+	Function.safeStdLibAddition(Number, 'NaNfinity',  function (...vals) {
+	  for (let index = 0; index < vals.length; index++) {
+	    let val = vals[index];
+	    if(Number.isNaN(val) || !Number.isFinite(val)) return true;
+	  }
+	  return false;
+	}, true);
+	
+	function stringHash() {
+	  let hashString = this;
+	  let hash = 0;
+	  for (let i = 0; i < hashString.length; i += 1) {
+	    const character = hashString.charCodeAt(i);
+	    hash = ((hash << 5) - hash) + character;
+	    hash &= hash; // Convert to 32bit integer
+	  }
+	  return hash;
+	}
+	
+	Function.safeStdLibAddition(String, 'hash',  stringHash, false);
+	
+	const LEFT = 1;
+	const RIGHT = 0;
+	Function.safeStdLibAddition(String, 'obscure',  function (count) {
+	    const direction = count < 0 ? LEFT : RIGHT;
+	    const test = (index) => direction === LEFT ? index > this.length + count - 1 : index < count;
+	    let str = '';
+	    for (let index = 0; index < this.length; index += 1) {
+	      if (test(index)) {
+	        str += '*';
+	      } else {
+	        str += this[index];
+	      }
+	    }
+	    return str;
+	});
+	
+	const singleCharReg = /([a-zA-Z]{1,})[^a-z^A-Z]{1,}([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z]{1,})/;
+	const specialCharReg = /([a-zA-Z])[^a-z^A-Z^0-9]{1,}([a-zA-Z])/g;
+	const charNumberReg = /([a-zA-Z])([0-9])/
+	function singleCharReplace(whoCares, one, two, three) {
+	  const oneLastChar = one[one.length - 1];
+	  const twoLower = oneLastChar !== oneLastChar.toLowerCase();
+	  const twoStr = twoLower ? two.toLowerCase() : two.toUpperCase();
+	  const threeStr = twoLower ? `${three[0].toUpperCase()}${three.substr(1)}` :
+	                                `${three[0].toLowerCase()}${three.substr(1)}`;
+	  return `${one}${twoStr}${threeStr}`;
+	}
+	function camelReplace(whoCares, one, two) {return `${one}${two.toUpperCase ? two.toUpperCase() : two}`;}
+	function toCamel() {
+	  let string = `${this.substr(0,1).toLowerCase()}${this.substr(1)}`.replace(charNumberReg, camelReplace);
+	  while (string.match(singleCharReg)) string = string.replace(singleCharReg, singleCharReplace);
+	  return string.replace(specialCharReg, camelReplace);
+	}
+	Function.safeStdLibAddition(String, 'toCamel',  toCamel);
+	
+	const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
+	const caseChangeReg = /([a-z])([A-Z])/g;
+	function pascalReplace(whoCares, one, two) {return `${one.toLowerCase()}_${two.toUpperCase ? two.toUpperCase() : two}`;}
+	function toPascal() {
+	  let string = this;
+	  return string.replace(multipleUpperReg, pascalReplace)
+	                .replace(caseChangeReg, pascalReplace)
+	                .replace(charNumberReg, pascalReplace)
+	                .replace(specialCharReg, pascalReplace);
+	}
+	Function.safeStdLibAddition(String, 'toPascal',  toPascal);
+	
+	function toKebab() {
+	  return this.toPascal().toLowerCase().replace(/_/g, '-');
+	}
+	Function.safeStdLibAddition(String, 'toKebab',  toKebab);
+	
+	Function.safeStdLibAddition(String, 'toSnake',  function () {return this.toKebab().replace(/-/g, '_')});
+	Function.safeStdLibAddition(String, 'toDot',  function () {return this.toKebab().replace(/-/g, '.')});
+	Function.safeStdLibAddition(String, 'toScreamingDot',  function () {return this.toKebab().replace(/-/g, '.')});
+	Function.safeStdLibAddition(String, 'toScreamingSnake',  function () {return this.toSnakeCase().toUpperCase()});
+	Function.safeStdLibAddition(String, 'toScreamingKebab',  function () {return this.toKebab().toUpperCase()});
+	Function.safeStdLibAddition(String, 'toSentance',  function () {return this.toPascal().replace(/_/g, ' ')});
+	
+	Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
+	  return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
+	}, true);
+	
+	const classLookup = {};
+	const attrMap = {};
+	const identifierAttr = '_TYPE';
+	const immutableAttr = '_IMMUTABLE';
+	const temporaryAttr = '_TEMPORARY';
+	const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
+	
+	const clazz = {};
+	clazz.object = () => JSON.clone(classLookup);
+	clazz.get = (name) => classLookup[name];
+	clazz.filter = (filterFunc) => {
+	  const classes = clazz.object();
+	  if ((typeof filterFunc) !== 'function') return classes;
+	  const classIds = Object.keys(classes);
+	  const obj = {};
+	  for (let index = 0; index < classIds.length; index += 1) {
+	    const id = classIds[index];
+	    if (filterFunc(classes[id])) obj[id] = classes[id];
+	  }
+	  return obj;
+	}
+	
+	function objEq(obj1, obj2) {
+	  if (!(obj1 instanceof Object)) return false;
+	  if (!(obj2 instanceof Object)) return false;
+	  const obj1Keys = Object.keys(obj1);
+	  const obj2Keys = Object.keys(obj2);
+	  if (obj1Keys.length !== obj2Keys.length) return false;
+	  obj1Keys.sort();
+	  obj2Keys.sort();
+	  for (let index = 0; index < obj1Keys.length; index += 1) {
+	    const obj1Key = obj1Keys[index];
+	    const obj2Key = obj2Keys[index];
+	    if (obj1Key !== obj2Key) return false;
+	    const obj1Val = obj1[obj1Key];
+	    const obj2Val = obj2[obj2Key];
+	    if (obj1Val instanceof Object) {
+	      if (!obj1Val.equals(obj2)) return false;
+	    } else if (obj1[obj1Key] !== obj2[obj2Key]) return false;
+	  }
+	  return true;
+	}
+	
+	Function.safeStdLibAddition(Object, 'merge', (target, object, soft) => {
+	  if (!(target instanceof Object)) return;
+	  if (!(object instanceof Object)) return;
+	  const objKeys = Object.keys(object);
+	  for (let index = 0; index < objKeys.length; index++) {
+	    const key = objKeys[index];
+	    if (!soft || target[key] === undefined) {
+	      target[key] = object[key];
+	    }
+	  }
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'forAllRecursive', (object, func) => {
+	  if (!(object instanceof Object)) return;
+	  if ((typeof func) !== 'function') return;
+	  const target = Array.isArray(object) ? [] :{};
+	  const objKeys = Object.keys(object);
+	  for (let index = 0; index < objKeys.length; index++) {
+	    const key = objKeys[index];
+	    if (object[key] instanceof Object) {
+	      target[key] = Object.forAllRecursive(object[key], func);
+	    } else target[key] = func(object[key], key, object);
+	  }
+	  return target;
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'class', clazz, true);
+	Function.safeStdLibAddition(Object, 'equals', objEq, true);
+	
+	
+	Function.safeStdLibAddition(Math, 'toDegrees', function (rads) {
+	  return rads * 180/Math.PI % 360;
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {
+	  if (!modifyObject) obj = JSON.clone(obj);
+	  conditionFunc = (typeof conditionFunc) === 'function' ? conditionFunc : () => true;
+	  const keys = Object.keys(obj);
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = obj[key];
+	    if (conditionFunc(value)) func(value, key, obj);
+	    if (value instanceof Object) Object.forEachConditional(value, func, conditionFunc, true);
+	  }
+	  return obj;
+	}, true);
+	
+	Function.safeStdLibAddition(Math, 'toRadians', function (angle, accuracy) {
+	  return (angle*Math.PI/180)%(2*Math.PI);
+	}, true);
+	
+	Function.safeStdLibAddition(Math, 'midpoint', function (s, e) {
+	  if (e < s) {
+	    let t = s;
+	    s = e;
+	    e = t;
+	  }
+	  return s + (e - s)/2;
+	}, true);
+	
+	// Ripped off of: https://stackoverflow.com/a/2450976
+	Function.safeStdLibAddition(Array, 'shuffle', function () {
+	  let currentIndex = this.length,  randomIndex;
+	  while (currentIndex != 0) {
+	    randomIndex = Math.floor(Math.random() * currentIndex);
+	    currentIndex--;
+	    [this[currentIndex], this[randomIndex]] = [
+	      this[randomIndex], this[currentIndex]];
+	  }
+	});
+	
+	Function.safeStdLibAddition(Array, 'reorder', function () {
+	  let count = 2;
+	  let currentIndex = this.length,  randomIndex;
+	  while (currentIndex != 0) {
+	    randomIndex = (currentIndex * count++) % currentIndex;
+	    currentIndex--;
+	    [this[currentIndex], this[randomIndex]] = [
+	      this[randomIndex], this[currentIndex]];
+	  }
+	});
+	
+	Function.safeStdLibAddition(Array, 'toJson', function (arr) {
+	    const json = [];
+	    arr.forEach((elem) => json.push(processValue(elem)));
+	    return json;
+	}, true);
+	
+	Function.safeStdLibAddition(Array, 'equalIndexOf', function (elem, startIndex, endIndex) {
+	    startIndex =  startIndex > -1 ? startIndex : 0;
+	    endIndex = endIndex < this.length ? endIndex : this.length;
+	    for (let index = startIndex; index < endIndex; index += 1) {
+	      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
+	        return index;
+	      } else if (elem === this[index]) {
+	        return index;
+	      }
+	    }
+	    return -1;
+	});
+	
+	Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endIndex) {
+	    startIndex =  startIndex > -1 ? startIndex : 0;
+	    endIndex = endIndex < this.length ? endIndex : this.length;
+	    if (endIndex < other.length) return false;
+	    let equal = true;
+	    for (let index = startIndex; equal && index < endIndex; index += 1) {
+	      const elem = this[index];
+	      if (elem && (typeof elem.equals) === 'function') {
+	        if (!elem.equals(this[index])) {
+	          return index;
+	        }
+	      } else if (elem !== other[index]) {
+	        equal = false;
+	      }
+	    }
+	    return equal;
+	});
+	
+	Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
+	    for (let index = 0; index < arr.length; index += 1) {
+	      this.remove(arr[index]);
+	    }
+	});
+	
+	Function.safeStdLibAddition(Array, 'remove', function (elem) {
+	    for (let index = 0; index < this.length; index += 1) {
+	      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
+	        this.splice(index--, 1);
+	      } else if (elem === this[index]) {
+	        this.splice(index--, 1);
+	      }
+	    }
+	});
+	
+	Function.safeStdLibAddition(Array, 'compare', function (original, neww, modify) {
+	    const comparison = {both: [], removed: [], added: []};
+	    const arr = original.concat(neww);
+	    const visited = {new: {}, original: {}};
+	    arr.forEach((elem) => {
+	      const origIndex = original.equalIndexOf(elem);
+	      const newIndex = neww.equalIndexOf(elem);
+	      if (!visited.new[newIndex] && !visited.original[origIndex]) {
+	        if (newIndex !== -1) visited.new[newIndex] = true;
+	        if (origIndex !== -1) visited.original[origIndex] = true;
+	        if (origIndex !== -1 && newIndex !== -1) comparison.both.push(elem);
+	        else if (newIndex !== -1) comparison.added.push(elem);
+	        else comparison.removed.push({elem, index: origIndex});
+	      }
+	    });
+	
+	    if (modify) {
+	      if (comparison.removed.length > 0) {
+	        let removed = 0;
+	        comparison.removed.forEach((info) => original.splice(info.index - removed++, 1));
+	        comparison.removed = comparison.removed.map((info) => info.elem);
+	      }
+	      if (comparison.added.length > 0) {
+	        original.concatInPlace(neww);
+	      }
+	    }
+	    return comparison.removed.length > 0 || comparison.added.length > 0 ? comparison : false;
+	}, true);
+	
+	Function.safeStdLibAddition(Array, 'shuffle', function() {
+	  let currentIndex = this.length,  randomIndex;
+	  while (currentIndex != 0) {
+	    randomIndex = Math.floor(Math.random() * currentIndex);
+	    currentIndex--;
+	    [this[currentIndex], this[randomIndex]] = [
+	      this[randomIndex], this[currentIndex]];
+	  }
+	
+	  return this;
+	});
+	
+	Function.safeStdLibAddition(Array, 'concatInPlace', function (arr) {
+	  if (arr === this) return;
+	  for (let index = 0; index < arr.length; index += 1) {
+	    if (this.indexOf(arr[index]) !== -1) {
+	      console.error('duplicate');
+	    } else {
+	      this[this.length] = arr[index];
+	    }
+	  }
+	});
+	
+	Function.safeStdLibAddition(Array, 'copy', function (arr) {
+	  this.length = 0;
+	  // const keys = Object.keys(this);
+	  // for (let index = 0; index < keys.length; index += 1) delete this[keys[index]];
+	  const newKeys = Object.keys(arr);
+	  for (let index = 0; index < newKeys.length; index += 1) {
+	    const key = newKeys[index];
+	    this[key] = arr[key];
+	  }
+	});
+	
+	Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
+	  function interpretValue(value) {
+	    if (value instanceof Object) {
+	      const classname = value[identifierAttr];
+	      const attrs = attrMap[classname] ? Object.keys(attrMap[classname]) :
+	                    Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
+	      if (Array.isArray(value)) {
+	        const realArray = [];
+	        for (let index = 0; index < value.length; index += 1) {
+	          realArray[index] = Object.fromJson(value[index]);
+	        }
+	        return realArray;
+	      } else if (classname && classLookup[classname]) {
+	        if (classLookup[classname].fromJson) {
+	          return classLookup[classname].fromJson(value);
+	        } else {
+	          const classObj = new (classLookup[classname])(value);
+	          for (let index = 0; index < attrs.length; index += 1) {
+	            const attr = attrs[index];
+	            if ((typeof classObj[attr]) === 'function')
+	            classObj[attr](interpretValue(value[attr]));
+	            else
+	            classObj[attr] = interpretValue(value[attr]);
+	          };
+	          return classObj;
+	        }
+	      } else {
+	        if (classname) {
+	          console.warn(`fromJson for class ${classname} not registered`)
+	        }
+	        const realObj = {}
+	        for (let index = 0; index < attrs.length; index += 1) {
+	          const attr = attrs[index];
+	          realObj[attr] = interpretValue(value[attr]);
+	        };
+	        return realObj
+	      }
+	    }
+	    return value;
+	  }
+	
+	  if (!(rootJson instanceof Object)) return rootJson;
+	  return interpretValue(rootJson);
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
+	  const cxtrName = obj.constructor.name;
+	  if (classLookup[cxtrName] === undefined) {
+	    classLookup[cxtrName] = obj.constructor;
+	  } else if (classLookup[cxtrName] !== obj.constructor) {
+	    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
+	  }
+	  if (initialVals === undefined) return;
+	  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
+	  let values = {};
+	  let temporary = false;
+	  let immutable = false;
+	  let doNotOverwrite = false;
+	  if ((typeof initialVals) === 'object') {
+	    values = initialVals;
+	    immutable = values[immutableAttr] === true;
+	    temporary = values[temporaryAttr] === true;
+	    doNotOverwrite = values[doNotOverwriteAttr] === true;
+	    if (immutable) {
+	      attrs = Object.keys(values);
+	    } else {
+	      attrs = Object.keys(values).concat(attrs);
+	    }
+	  } else {
+	    attrs = [initialVals].concat(attrs);
+	  }
+	  if (attrMap[cxtrName] === undefined) attrMap[cxtrName] = [];
+	  attrs.forEach((attr) => {
+	    if (!attr.match(/^_[A-Z]*[A-Z_]*$/))
+	      attrMap[cxtrName][attr] = true;
+	  });
+	
+	  for (let index = 0; !doNotOverwrite && index < attrs.length; index += 1) {
+	    const attr = attrs[index];
+	    if (attr !== immutableAttr) {
+	      if (immutable) obj[attr] = () => values[attr];
+	      else {
+	        obj[attr] = (value) => {
+	          if (value === undefined) {
+	            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
+	            if (values[attr] !== undefined || noDefaults)
+	            return values[attr];
+	            return obj.defaultGetterValue(attr);
+	          }
+	          values[attr] = value;
+	        }
+	      }
+	    }
+	  }
+	  if (!temporary) {
+	    const origToJson = obj.toJson;
+	    obj.toJson = (members, exclusive) => {
+	      const restrictions = Array.isArray(members) && members.length;
+	      const json = (typeof origToJson === 'function') ? origToJson() : {};
+	      json[identifierAttr] = obj.constructor.name;
+	      for (let index = 0; index < attrs.length; index += 1) {
+	        const attr = attrs[index];
+	        const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
+	        const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
+	        if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
+	          // if (obj.constructor.name === 'SnapLocation2D')
+	          //   console.log('foundit!');
+	          const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
+	          json[attr] = processValue(value);
+	        }
+	      }
+	      return json;
+	    }
+	  }
+	  obj.fromJson = (json) => {
+	    for (let index = 0; index < attrs.length; index += 1) {
+	      const attr = attrs[index];
+	      if (attr !== immutableAttr) {
+	        if ((typeof obj[attr]) === 'function') {
+	          if(Array.isArray(obj[attr]())){
+	            obj[attr]().copy(Object.fromJson(json[attr]));
+	          } else {
+	            obj[attr](Object.fromJson(json[attr]));
+	          }
+	        }
+	        else
+	          obj[attr] = Object.fromJson(json[attr]);
+	      }
+	    };
+	    return obj;
+	  }
+	  if (obj.constructor.DO_NOT_CLONE) {
+	    obj.clone = () => obj;
+	  } else {
+	    obj.clone = () => {
+	      const clone = new obj.constructor(obj.toJson());
+	      clone.fromJson(obj.toJson());
+	      return clone;
+	    }
+	  }
+	  return attrs;
+	}, true);
+	Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
+	
+	Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
+	  if (otherObj === undefined) return;
+	  if ((typeof otherObj) !== 'object') {
+	    throw new Error('Requires one argument of type object or undefined for meaningless call');
+	  }
+	  const keys = Object.keys(otherObj);
+	  keys.forEach((key) => obj[key] = otherObj[key]);
+	}, true);
+	
+	Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
+	  if (start!== undefined && end !== undefined && start > end) {
+	    const temp = start;
+	    start = end;
+	    end = temp;
+	  }
+	  start = start || 0;
+	  end = end || values.length;
+	  for (let index = start; index < end; index += 1)
+	    array[index] = values[index];
+	  return array;
+	}, true);
+	
+	const checked = {};
+	
+	// Swiped from https://stackoverflow.com/a/43197340
+	function isClass(obj) {
+	  const isCtorClass = obj.constructor
+	      && obj.constructor.toString().substring(0, 5) === 'class'
+	  if(obj.prototype === undefined) {
+	    return isCtorClass
+	  }
+	  const isPrototypeCtorClass = obj.prototype.constructor
+	    && obj.prototype.constructor.toString
+	    && obj.prototype.constructor.toString().substring(0, 5) === 'class'
+	  return isCtorClass || isPrototypeCtorClass
+	}
+	
+	Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
+	  if ((typeof obj) != 'object') return obj;
+	  const keys = Object.keys(obj);
+	  if (!checked[obj.constructor.name]) {
+	    // console.log('constructor: ' + obj.constructor.name);
+	    checked[obj.constructor.name] = true;
+	  }
+	
+	  const clone = ((typeof obj.clone) === 'function') ? obj.clone() :
+	                  Array.isArray(obj) ? [] : {};
+	  for(let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    const member = obj[key];
+	    if (member && (member.DO_NOT_CLONE || member.constructor.DO_NOT_CLONE)) {
+	      clone[key] = member;
+	    } else if ((typeof member) !== 'function') {
+	      if ((typeof member) === 'object') {
+	        if ((typeof member.clone) === 'function') {
+	          clone[key] = member.clone();
+	        } else {
+	          clone[key] = JSON.clone(member);
+	        }
+	      } else {
+	        clone[key] = member;
+	      }
+	    }
+	    else if (isClass(member)) {
+	      clone[key] = member;
+	    }
+	  }
+	  return clone;
+	}, true);
+	
+	Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
+	  if (!(obj instanceof Object)) return obj;
+	  return JSON.parse(JSON.stringify(obj));
+	}, true);
+	
+	Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
+	  if (isRegex !== true) {
+	    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
+	  }
+	  var keyValues = this.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
+	  var json = {};
+	  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
+	    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
+	    if (split) {
+	      json[split[1]] = split[2];
+	    }
+	  }
+	  return json;
+	});
+	
+	Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
+	  const attrs = path.split('.');
+	  const lastIndex = attrs.length - 1;
+	  let currObj = obj;
+	  for (let index = 0; index < lastIndex; index += 1) {
+	    let attr = attrs[index];
+	    if (currObj[attr] === undefined) currObj[attr] = {};
+	    currObj = currObj[attr];
+	  }
+	
+	  const lastAttr = attrs[lastIndex];
+	  if ((typeof currObj[lastAttr]) === 'function') {
+	    return currObj[lastAttr](value);
+	  } else if (value !== undefined) {
+	    currObj[lastAttr] = value;
+	  }
+	  return currObj[lastAttr];
+	}, true);
+	
+	
+	/////////////////////////////////// Matrix Equations //////////////////////////
+	
+	Function.safeStdLibAddition(Array, 'translate', function (vector, doNotModify, quiet) {
+	  let point = this;
+	  let single = false;
+	  if (doNotModify === true) point = Array.from(point);
+	  const vecLen = vector.length;
+	  if (point.length !== vecLen && !quiet) console.warn('vector.length !== point.length but we\' do it anyway (arg3(quiet) = true to silence)');
+	  for (let i = 0; i < vecLen; i += 1) {
+	    if (point[i] === undefined) point[i] = 0;
+	    point[i] += vector[i];
+	  }
+	  return point;
+	});
+	
+	Function.safeStdLibAddition(Array, 'inverse', function (doNotModify) {
+	  const arr = doNotModify === true ? Array.from(this) : this;
+	  for (let index = 0; index < arr.length; index += 1) {
+	    arr[index] *= -1;
+	  }
+	  return arr;
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/parse-arguments.js',
+function (require, exports, module) {
+	const trueReg = /^true$/;
+	const falseReg = /^false$/;
+	const numberReg = /^[0-9]{1,}$/;
+	const arrayReg = /^(.*[,].*(,|)){1,}$/;
+	
+	function getValue(str) {
+	  if (str === '') return undefined;
+	  if (str.match(trueReg)) return true;
+	  if (str.match(falseReg)) return false;
+	  if (str.match(numberReg)) return Number.parseInt(str);
+	  if (str.match(arrayReg)) {
+	    const arr = [];
+	    const elems = str.split(',');
+	    for (let index = 0; index < elems.length; index += 1) {
+	      arr.push(getValue(elems[index]));
+	    }
+	    return arr;
+	  }
+	  return str;
+	}
+	
+	const valueRegex = /[A-Z.a-z]{1,}=.*$/;
+	function argParser() {
+	  for (let index = 2; index < process.argv.length; index += 1) {
+	    const arg = process.argv[index];
+	    if (arg.match(valueRegex)) {
+	      const varName = arg.split('=', 1)[0];
+	      const valueStr = arg.substr(varName.length + 1);
+	      global[varName] = getValue(valueStr.trim());
+	    }
+	  }
+	}
+	
+	global.__basedir = __dirname;
+	argParser();
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/logic-tree.js',
+function (require, exports, module) {
+	
+
+	const DecisionTree = require('./decision-tree');
+	const DataSync = require('./data-sync');
+	const Lookup = require('./object/lookup');
+	
+	const INTERNAL_FUNCTION_PASSWORD = String.random();
+	const DEFAULT_GROUP = 'LogicTree';
+	
+	function getNode(nodeOwrapper) {
+	  if (nodeOwrapper.constructor.name === 'DecisionNode') return nodeOwrapper;
+	  return nodeOwrapper.node;
+	}
+	
+	class LogicWrapper extends Lookup {
+	  constructor(node) {
+	    super(node ? node.nodeId() : undefined);
+	    this.node = node;
+	    this.nodeId = () => LogicWrapper.decode(this.id()).id;
+	  }
+	}
+	
+	class LogicType {
+	  constructor(wrapperOrJson) {
+	    Object.getSet(this, 'nodeId', 'optional', 'value', 'default');
+	    this.wrapper = wrapperOrJson instanceof LogicWrapper ?
+	                      wrapperOrJson :
+	                      LogicWrapper.get(wrapperOrJson.nodeId);
+	    this.nodeId(this.wrapper.node.nodeId());
+	    let optional = false;
+	    this.optional = (val) => {
+	      if (val === true || val === false) {
+	        optional = val;
+	      }
+	      return optional;
+	    }
+	    this.selectionMade = () => true;
+	  }
+	}
+	
+	class SelectLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    const json = wrapper;
+	    wrapper = this.wrapper;
+	    let value, def;
+	    const instance = this;
+	    this.madeSelection = () => validate(value, true) || validate(def, true);
+	    function validate(val, silent) {
+	      if (instance.optional() && val === null) return true;
+	      const valid = (instance.optional() && val === null) ||
+	                    (val !== null && wrapper.node.validState(val));
+	      if (!silent && !valid)
+	        throw SelectLogic.error;
+	      return valid;
+	    }
+	    this.value = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        value = val;
+	        wrapper.valueUpdate(value, wrapper);
+	      }
+	      return value === undefined ? (def === undefined ? null : def) : value;
+	    }
+	    this.selectionMade = () => value !== undefined;
+	    this.options = () => {
+	      return wrapper.node.stateNames();
+	    }
+	    this.default = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        def = val;
+	        wrapper.defaultUpdate(value, wrapper);
+	      }
+	      return def;
+	    }
+	    this.selector = () => this.value();
+	   }
+	}
+	
+	SelectLogic.error = new Error('Invalid selection: use wrapper.options() to get valid list.')
+	
+	class MultiselectLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    wrapper = this.wrapper;
+	    let value, def;
+	    const instance = this;
+	    this.madeSelection = () => validate(value, true) || validate(def, true);
+	    function validate(val, silent) {
+	      if (val === null) return instance.optional();
+	      if (val === undefined) return false;
+	      const stateNames = Object.keys(val);
+	      if (instance.optional() && stateNames.length === 0) return true;
+	      let valid = stateNames.length > 0;
+	      stateNames.forEach((name) => valid = valid && wrapper.node.validState(name));
+	      if (!silent && !valid) throw MultiselectLogic.error;
+	      return valid;
+	    }
+	    this.value = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        value = val;
+	        wrapper.valueUpdate(value);
+	      }
+	      let retVal = value === undefined ? def : value;
+	      return retVal === null ? null : JSON.clone(retVal);
+	    }
+	    this.selectionMade = () => value !== undefined;
+	    this.options = () => {
+	      const options = {};
+	      const stateNames = wrapper.node.stateNames();
+	      stateNames.forEach((name) => options[name] = def[name] === undefined ? false : def[name]);
+	      return options;
+	    }
+	    this.default = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        def = val;
+	        wrapper.defaultUpdate(value);
+	      }
+	      return def;
+	    }
+	    this.selector = () => {
+	      const obj = this.value();
+	      if (obj === null || obj === undefined) return null;
+	      const keys = Object.keys(obj);
+	      let selector = '';
+	      keys.forEach((key) => selector += obj[key] ? `|${key}` : '');
+	      selector = selector.length === 0 ? null : new RegExp(`^${selector.substring(1)}$`);
+	      return selector;
+	    }
+	  }
+	}
+	MultiselectLogic.error = new Error('Invalid multiselection: use wrapper.options() to get valid list.')
+	
+	
+	class ConditionalLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    wrapper = this.wrapper;
+	    let value, def;
+	    validate(wrapper.node.payload());
+	    def = wrapper.node.payload();
+	    function validate(val, password) {
+	      if ((typeof val.condition) !== 'function')
+	        throw ConditionalLogic.error;
+	    }
+	    this.value = (val) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        value = val;
+	        wrapper.valueUpdate(value);
+	      }
+	      return value || def;
+	    }
+	    this.options = () => undefined;
+	    this.default = (val, password) => {
+	      if (val !== undefined) {
+	        validate(val);
+	        def = val;
+	        wrapper.defaultUpdate(value);
+	      }
+	      return def;
+	    }
+	    this.selector = () => () =>
+	      this.value().condition(wrapper.root());
+	  }
+	}
+	ConditionalLogic.error = new Error('Invalid condition: must be a function that returns true or false based off of node input');
+	
+	class BranchLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    this.value = () => undefined;
+	    this.options = () => undefined;
+	    this.default = () => undefined;
+	    this.selector = () => /.*/;
+	  }
+	}
+	
+	class LeafLogic extends LogicType {
+	  constructor(wrapper) {
+	    super(wrapper);
+	    this.value = () =>undefined;
+	    this.options = () => undefined;
+	    this.default = () => undefined;
+	    this.selector = () => undefined;
+	  }
+	}
+	
+	LogicType.types = {SelectLogic, MultiselectLogic, ConditionalLogic, BranchLogic, LeafLogic};
+	class LogicTree {
+	  constructor(formatPayload) {
+	    Object.getSet(this);
+	    const tree = this;
+	    let root;
+	    let choices = {};
+	    const wrapperMap = {};
+	
+	    function getTypeObjByNodeId(nodeId) {
+	      return choices[get(nodeId).name];
+	    }
+	    let dataSync = new DataSync('nodeId', getTypeObjByNodeId);
+	    dataSync.addConnection('value');
+	    dataSync.addConnection('default');
+	
+	    function isOptional(node) {
+	      return !(choices[node.name] === undefined || !choices[node.name].optional());
+	    }
+	
+	    function isSelector(node) {
+	      return node.payload().LOGIC_TYPE.match(/Select|Multiselect/);
+	    }
+	
+	    function mustSelect(node) {
+	      return !isOptional(node)  && node.payload().LOGIC_TYPE.match(/Select|Multiselect/);
+	    }
+	
+	    function structure() { return root.node.toString(null, 'LOGIC_TYPE') }
+	
+	    function setChoice(name, val) {
+	      choices[name].value(val);
+	    }
+	
+	    function setDefault(name, val) {
+	      choices[name].default(val);
+	    }
+	
+	    function getByName(name) {
+	      if (root.node === undefined) return undefined;
+	      const node = root.node.getByName(name);
+	      return node === undefined ? undefined : wrapNode(node);
+	    }
+	
+	    function addChildrenFunc(wrapper, options) {
+	      return (name) => {
+	        const targetWrapper = getByName(name);
+	        if (targetWrapper === undefined) throw new Error(`Invalid name: ${name}`);
+	        const states = targetWrapper.node.states();
+	        states.forEach((state) => wrapNode(wrapper.node.then(state)));
+	        return wrapper;
+	      }
+	    }
+	
+	    function choicesToSelectors() {
+	      const keys = Object.keys(choices);
+	      const selectors = {};
+	      keys.forEach((key) => selectors[key] = choices[key].selector());
+	      return selectors;
+	    }
+	
+	    function reachableTree(node) {
+	      return (node || root.node).subtree(choicesToSelectors());
+	    }
+	
+	    function leaves() {
+	      const wrappers = [];
+	      reachableTree().leaves().forEach((node) => wrappers.push(wrapNode(node)));
+	      return wrappers;
+	    }
+	
+	    function pathsToString() {
+	      let paths = '=>';
+	      forPath((wrapper, data) => {
+	        if (data === undefined) paths = paths.substring(0, paths.length - 2) + "\n";
+	        paths += `${wrapper.name}=>`;
 	        return true;
+	      });
+	      paths = paths.substring(0, paths.length - 2)
+	      return paths;
+	    }
+	
+	    function forPath(func, reverse) {
+	      const lvs = reachableTree().leaves();
+	      let data = [];
+	      let dIndex = 0;
+	      lvs.forEach((leave) => {
+	        const path = [];
+	        let curr = leave;
+	        while (curr !== undefined) {
+	          path.push(curr);
+	          curr = curr.back()
+	        }
+	        if (reverse === true) {
+	          for (let index = 0; index < path.length; index += 1) {
+	            data[dIndex] = func(wrapNode(path[index]), data[dIndex]);
+	          }
+	        } else {
+	          for (let index = path.length - 1; index >= 0; index -= 1) {
+	            data[dIndex] = func(wrapNode(path[index]), data[dIndex]);
+	          }
+	        }
+	        dIndex++;
+	      });
+	      return data;
+	    }
+	
+	    function forAll(func, node) {
+	      (node || root.node).forEach((n) => {
+	        func(wrapNode(n));
+	      });
+	    }
+	
+	    function forEach(func, node) {
+	      reachableTree(node).forEach((n) => {
+	        func(wrapNode(n));
+	      });
+	    }
+	
+	    function reachable(nameOwrapper) {
+	      const wrapper = nameOwrapper instanceof LogicWrapper ?
+	                        nameOwrapper : getByName(nameOwrapper);
+	      return wrapper.node.conditionsSatisfied(choicesToSelectors(), wrapper.node);
+	    }
+	
+	    function isComplete() {
+	      const subtree = reachableTree();
+	      let complete = true;
+	      subtree.forEach((node) => {
+	        if (node.states().length === 0 && node.payload().LOGIC_TYPE !== 'Leaf' &&
+	              !selectionMade(node)) {
+	          complete = false;
+	        }
+	      });
+	      return complete;
+	    }
+	
+	    function selectionMade(node, selectors) {
+	      selectors = selectors || choicesToSelectors();
+	      if (mustSelect(node)) {
+	        const wrapper = wrapNode(node);
+	        if (getTypeObj(wrapper) === undefined) {
+	          throw new Error ('This should not happen. node wrapper was not made correctly.');
+	        }
+	        return getTypeObj(wrapper).madeSelection();
+	      }
+	      return true;
+	    }
+	
+	    function getByPath(...args) {
+	      return wrapNode(root.node.getNodeByPath(...args))
+	    }
+	    this.getByPath = getByPath;
+	
+	    function decisions(wrapper) {
+	      return () =>{
+	        const decisions = [];
+	        const addedNodeIds = [];
+	        const selectors = choicesToSelectors();
+	        wrapper.node.forEach((node) => {
+	          if (isSelector(node)) {
+	            let terminatedPath = false;
+	            let current = node;
+	            while (current = current.back()){
+	              if (addedNodeIds.indexOf(current.nodeId()) !== -1)
+	                terminatedPath = true;
+	            }
+	            if (!terminatedPath) {
+	              if (node.conditionsSatisfied(selectors, node)) {
+	                if (selectionMade(node, selectors)) {
+	                  decisions.push(wrapNode(node));
+	                } else {
+	                  decisions.push(wrapNode(node));
+	                  addedNodeIds.push(node.nodeId());
+	                }
+	              }
+	            }
+	          }
+	        });
+	        return decisions;
 	      }
 	    }
-	    approximate.eq = approximateFunc((one, two) => one === two);
-	    approximate.neq = approximateFunc((one, two) => one !== two);
-	    approximate.gt = approximateFunc((one, two) => one > two);
-	    approximate.lt = approximateFunc((one, two) => one < two);
-	    approximate.gteq = approximateFunc((one, two) => one >= two);
-	    approximate.lteq = approximateFunc((one, two) => one <= two);
-	    approximate.eqAbs = approximateFunc((one, two) => Math.abs(one) === Math.abs(two));
-	    approximate.neqAbs = approximateFunc((one, two) => Math.abs(one) !== Math.abs(two));
-	    approximate.abs = (value) => Math.abs(approximate(value));
-	    return approximate;
+	
+	    function toJson(wrapper) {
+	      return function () {
+	        wrapper = wrapper || root;
+	        const json = {_choices: {}, _TYPE: tree.constructor.name};
+	        const keys = Object.keys(choices);
+	        const ids = wrapper.node.map((node) => node.nodeId());
+	        keys.forEach((key) => {
+	          if (ids.indexOf(choices[key].nodeId()) !== -1) {
+	            json._choices[key] = choices[key].toJson();
+	            const valEqDefault = choices[key].default() === choices[key].value();
+	            const selectionNotMade = !choices[key].selectionMade();
+	            if(selectionNotMade || valEqDefault) json._choices[key].value = undefined;
+	          }
+	        });
+	        json._tree = wrapper.node.toJson();
+	        json._connectionList = dataSync.toJson(wrapper.node.nodes());
+	        return json;
+	      }
+	    }
+	
+	    function children(wrapper) {
+	      return () => {
+	        const children = [];
+	        wrapper.node.forEachChild((child) => children.push(wrapNode(child)));
+	        return children;
+	      }
+	    }
+	
+	    function addStaticMethods(wrapper) {
+	      wrapper.structure = structure;
+	      wrapper.choicesToSelectors = choicesToSelectors;
+	      wrapper.setChoice = setChoice;
+	      wrapper.children = children(wrapper);
+	      wrapper.getByPath = getByPath;
+	      wrapper.setDefault = setDefault;
+	      wrapper.attachTree = attachTree(wrapper);
+	      wrapper.toJson = toJson(wrapper);
+	      wrapper.root = () => root;
+	      wrapper.isComplete = isComplete;
+	      wrapper.reachable = (wrap) => reachable(wrap || wrapper);
+	      wrapper.decisions = decisions(wrapper);
+	      wrapper.forPath = forPath;
+	      wrapper.forEach = forEach;
+	      wrapper.forAll = forAll;
+	      wrapper.pathsToString = pathsToString;
+	      wrapper.leaves = leaves;
+	      wrapper.toString = () =>
+	          wrapper.node.subtree(choicesToSelectors()).toString(null, 'LOGIC_TYPE');
+	    }
+	
+	    function getTypeObj(wrapper) {
+	      return choices[wrapper.name];
+	    }
+	
+	    function addHelperMetrhods (wrapper) {
+	      const node = wrapper.node;
+	      const type = node.payload().LOGIC_TYPE;
+	      const name = node.name;
+	      if (choices[name] === undefined) {
+	        choices[name] = new (LogicType.types[`${type}Logic`])(wrapper);
+	      }
+	      const typeObj = choices[name];
+	      wrapper.name = name;
+	      wrapper.getTypeObj = () => getTypeObj(wrapper);
+	      wrapper.value = typeObj.value;
+	      wrapper.payload = () => node.payload();
+	      wrapper.options = typeObj.options;
+	      wrapper.optional = typeObj.optional;
+	      wrapper.default = typeObj.default;
+	      wrapper.selector = typeObj.selector;
+	      wrapper.addChildren = addChildrenFunc(wrapper);
+	      wrapper.valueSync = (w) => dataSync.valueSync(typeObj, w.getTypeObj());
+	      wrapper.defaultSync = (w) => dataSync.defaultSync(typeObj, w.getTypeObj());
+	      wrapper.valueUpdate = (value) => dataSync.valueUpdate(value, typeObj);
+	      wrapper.defaultUpdate = (value) => dataSync.defaultUpdate(value, typeObj);
+	    }
+	
+	    function attachTree(wrapper) {
+	      return (tree) => {
+	        const json = tree.toJson();
+	        return incorrperateJsonNodes(json, wrapper.node);
+	      }
+	    }
+	
+	    function addTypeFunction(type, wrapper) {
+	      wrapper[type.toLowerCase()] = (name, payload) => {
+	        payload = typeof formatPayload === 'function' ?
+	                          formatPayload(name, payload || {}, wrapper) : payload || {};
+	        payload.LOGIC_TYPE = type;
+	        let newWrapper;
+	        if (root === undefined) {
+	          root = wrapper;
+	          root.node = new DecisionTree(name, payload);
+	          root.payload = root.node.payload;
+	          newWrapper = root;
+	        } else if (getByName(name)) {
+	          newWrapper = wrapNode(wrapper.node.then(name));
+	        } else {
+	          wrapper.node.addState(name, payload);
+	          newWrapper = wrapNode(wrapper.node.then(name));
+	        }
+	        return newWrapper;
+	      }
+	    }
+	
+	    function getNode(nodeOrwrapperOrId) {
+	      switch (nodeOrwrapperOrId.constructor.name) {
+	        case 'DecisionNode':
+	          return nodeOrwrapperOrId;
+	        case 'LogicWrapper':
+	          return nodeOrwrapperOrId.node;
+	        default:
+	          const node = DecisionTree.DecisionNode.get(nodeOrwrapperOrId);
+	          if (node) return node;
+	          return nodeOrwrapperOrId;
+	      }
+	    }
+	
+	    function get(nodeOidOwrapper) {
+	      if (nodeOidOwrapper === undefined) return undefined;
+	      const node = getNode(nodeOidOwrapper);
+	      if (node instanceof DecisionTree.DecisionNode) {
+	        return wrapperMap[node.nodeId()];
+	      } else {
+	        return wrapperMap[node];
+	      }
+	    }
+	
+	    const set = (wrapper) =>
+	        wrapperMap[wrapper.node.nodeId()] = wrapper;
+	    this.get = get;
+	
+	    function wrapNode(node) {
+	      let wrapper = get(node);
+	      if (wrapper) return wrapper;
+	      wrapper = new LogicWrapper(node);
+	      if (node === undefined) {
+	        wrapper.toString = () =>
+	          root !== undefined ? root.toString() : 'Empty Tree';
+	      }
+	      if (node === undefined || node.payload().LOGIC_TYPE !== 'Leaf') {
+	        addTypeFunction('Select', wrapper);
+	        addTypeFunction('Multiselect', wrapper);
+	        addTypeFunction('Conditional', wrapper);
+	        addTypeFunction('Leaf', wrapper);
+	        addTypeFunction('Branch', wrapper);
+	      }
+	      addStaticMethods(wrapper);
+	      if (node && node.payload().LOGIC_TYPE !== undefined) {
+	        addHelperMetrhods(wrapper);
+	        set(wrapper);
+	      }
+	      return wrapper;
+	    }
+	
+	    function updateChoices(jsonChoices) {
+	      const keys = Object.keys(jsonChoices);
+	      keys.forEach((key) =>
+	          choices[key].fromJson(jsonChoices[key]));
+	    }
+	
+	    function incorrperateJsonNodes(json, node) {
+	      const decisionTree = new DecisionTree(json._tree);
+	
+	      let newNode;
+	      if (node !== undefined) {
+	        newNode = node.attachTree(decisionTree);
+	      } else {
+	        root = wrapNode(decisionTree);
+	        rootWrapper.node = root.node;
+	        newNode = root.node;
+	      }
+	      newNode.forEach((n) =>
+	          wrapNode(n));
+	      dataSync.fromJson(json._connectionList);
+	      updateChoices(json._choices);
+	      return node;
+	    }
+	
+	    let rootWrapper = wrapNode();
+	    if (formatPayload && formatPayload._TYPE === this.constructor.name) incorrperateJsonNodes(formatPayload);
+	    return rootWrapper;
 	  }
 	}
 	
+	LogicTree.LogicWrapper = LogicWrapper;
 	
-	Approximate.setDefault = (accuracy) => {
-	  if ((typeof accuracy) !== 'number') throw new Error('Must enter a number for accuracy: hint must be a power of 10');
-	  Approximate.default = new Approximate(accuracy);
-	  defaultAccuracy = accuracy;
-	  Approximate.default.new = (acc) => new Approximate(acc);
-	  Approximate.default.setDefault = Approximate.default;
-	}
-	
-	Approximate.setDefault(1000);
-	
-	module.exports  = Approximate.default;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/custom-event0.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class CustomEvent {
-	  constructor(name) {
-	    const watchers = [];
-	    this.name = name;
-	
-	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
-	
-	    this.on = function (func) {
-	      if ((typeof func) === 'function') {
-	        watchers.push(func);
-	      } else {
-	        return 'on' + name;
-	      }
-	    }
-	
-	    this.trigger = function (element, detail) {
-	      element = element ? element : window;
-	      runFuncs(element, detail);
-	      this.event.detail = detail;
-	      if(document.createEvent){
-	          element.dispatchEvent(this.event);
-	      } else {
-	          element.fireEvent("on" + this.event.eventType, this.event);
-	      }
-	    }
-	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-	    this.event;
-	    if(document.createEvent){
-	        this.event = document.createEvent("HTMLEvents");
-	        this.event.initEvent(name, true, true);
-	        this.event.eventName = name;
-	    } else {
-	        this.event = document.createEventObject();
-	        this.event.eventName = name;
-	        this.event.eventType = name;
-	    }
-	  }
-	}
-	
-	module.exports = CustomEvent;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/custom-event.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class CustomEvent {
-	  constructor(name) {
-	    const watchers = [];
-	    this.name = name;
-	
-	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
-	
-	    this.on = function (func) {
-	      if ((typeof func) === 'function') {
-	        watchers.push(func);
-	      } else {
-	        return 'on' + name;
-	      }
-	    }
-	
-	    this.trigger = function (element, detail) {
-	      element = element ? element : window;
-	      runFuncs(element, detail);
-	      this.event.detail = detail;
-	      if(document.createEvent){
-	          element.dispatchEvent(this.event);
-	      } else {
-	          element.fireEvent("on" + this.event.eventType, this.event);
-	      }
-	    }
-	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-	    this.event;
-	    if(document.createEvent){
-	        this.event = document.createEvent("HTMLEvents");
-	        this.event.initEvent(name, true, true);
-	        this.event.eventName = name;
-	    } else {
-	        this.event = document.createEventObject();
-	        this.event.eventName = name;
-	        this.event.eventType = name;
-	    }
-	  }
-	}
-	
-	module.exports = CustomEvent;
+	module.exports = LogicTree;
 	
 });
 
@@ -7632,6 +9291,421 @@ function (require, exports, module) {
 	}
 	
 	module.exports = CustomEvent;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/measurement.js',
+function (require, exports, module) {
+	
+  try {
+	    Lookup = require('./object/lookup');
+	    StringMathEvaluator = require('./string-math-evaluator');
+	  } catch(e) {}
+	
+	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	let units = [
+	  'Metric',
+	  'Imperial (US)'
+	]
+	let unit = units[1];
+	
+	
+	class Measurement extends Lookup {
+	  constructor(value, notMetric) {
+	    super();
+	    if ((typeof value) === 'string') {
+	      value += ' '; // Hacky fix for regularExpression
+	    }
+	
+	    const determineUnit = () => {
+	      if ((typeof notMetric === 'string')) {
+	        const index = units.indexOf(notMetric);
+	        if (index !== -1) return units[index];
+	      } else if ((typeof notMetric) === 'boolean') {
+	        if (notMetric === true) return unit;
+	      }
+	      return units[0];
+	    }
+	
+	    let decimal = 0;
+	    let nan = value === null || value === undefined;
+	    this.isNaN = () => nan;
+	
+	    const parseFraction = (str) => {
+	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
+	      regObj.integer = Number.parseInt(regObj.integer) || 0;
+	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	      if(regObj.denominator === 0) {
+	        regObj.numerator = 0;
+	        regObj.denominator = 1;
+	      }
+	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	      return regObj;
+	    };
+	
+	    function reduce(numerator, denominator) {
+	      let reduced = true;
+	      while (reduced) {
+	        reduced = false;
+	        for (let index = 0; index < Measurement.primes.length; index += 1) {
+	          const prime = Measurement.primes[index];
+	          if (prime >= denominator) break;
+	          if (numerator % prime === 0 && denominator % prime === 0) {
+	            numerator = numerator / prime;
+	            denominator = denominator / prime;
+	            reduced = true;
+	            break;
+	          }
+	        }
+	      }
+	      if (numerator === 0) {
+	        return '';
+	      }
+	      return ` ${numerator}/${denominator}`;
+	    }
+	
+	    function fractionEquivalent(decimalValue, accuracy) {
+	      accuracy = accuracy || '1/32'
+	      const fracObj = parseFraction(accuracy);
+	      const denominator = fracObj.denominator;
+	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	      }
+	      let sign = decimalValue > 0 ? 1 : -1;
+	      let remainder = Math.abs(decimalValue);
+	      let currRemainder = remainder;
+	      let value = 0;
+	      let numerator = 0;
+	      while (currRemainder > 0) {
+	        numerator += fracObj.numerator;
+	        currRemainder -= fracObj.decimal;
+	      }
+	      const diff1 = decimalValue - ((numerator - fracObj.numerator) / denominator);
+	      const diff2 = (numerator / denominator) - decimalValue;
+	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	      const integer = sign * Math.floor(numerator / denominator);
+	      numerator = numerator % denominator;
+	      return {integer, numerator, denominator};
+	    }
+	
+	    this.fraction = (accuracy, standardDecimal) => {
+	      standardDecimal = standardDecimal || decimal;
+	      if (nan) return NaN;
+	      const obj = fractionEquivalent(standardDecimal, accuracy);
+	      if (obj.integer === 0 && obj.numerator === 0) return '0';
+	      const integer = obj.integer !== 0 ? obj.integer : '';
+	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
+	    }
+	    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
+	
+	    this.display = (accuracy) => {
+	      switch (unit) {
+	        case units[0]: return new String(this.decimal(10));
+	        case units[1]: return this.standardUS(accuracy);
+	        default:
+	            return this.standardUS(accuracy);
+	      }
+	    }
+	
+	    this.value = (accuracy) => this.decimal(accuracy);
+	
+	    this.decimal = (accuracy) => {
+	      if (nan) return NaN;
+	      accuracy = accuracy % 10 ? accuracy : 10000;
+	      return Math.round(decimal * accuracy) / accuracy;
+	    }
+	
+	    function getDecimalEquivalant(string) {
+	      string = string.trim();
+	      if (string.match(Measurement.decimalReg)) {
+	        return Number.parseFloat(string);
+	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
+	        return parseFraction(string).decimal
+	      }
+	      nan = true;
+	      return NaN;
+	    }
+	
+	    const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
+	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+	
+	    function standardize(ambiguousDecimal) {
+	      switch (determineUnit()) {
+	        case units[0]:
+	          return ambiguousDecimal;
+	        case units[1]:
+	          return convertUsToMetric(ambiguousDecimal);
+	        default:
+	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
+	      }
+	    }
+	
+	    if ((typeof value) === 'number') {
+	      decimal = standardize(value);
+	    } else if ((typeof value) === 'string') {
+	      try {
+	        const ambiguousDecimal = getDecimalEquivalant(value);
+	        decimal = standardize(ambiguousDecimal);
+	      } catch (e) {
+	        nan = true;
+	      }
+	    } else {
+	      nan = true;
+	    }
+	  }
+	}
+	
+	Measurement.unit = (newUnit) => {
+	  for (index = 0; index < units.length; index += 1) {
+	    if (newUnit === units[index]) unit = newUnit;
+	  }
+	  return unit
+	};
+	Measurement.units = () => JSON.parse(JSON.stringify(units));
+	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
+	Measurement.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
+	
+	
+	Measurement.validation = function (range) {
+	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
+	  let min = obj.min.trim() !== '' ?
+	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
+	  let max = obj.max.trim() !== '' ?
+	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
+	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
+	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
+	  return function (value) {
+	    const decimal = new Measurement(value).decimal();
+	    if (decimal === NaN) return false;
+	    return minCheck(decimal) && maxCheck(decimal);
+	  }
+	}
+	
+	Measurement.decimal = (value) => {
+	  return new Measurement(value, true).decimal();
+	}
+	
+	Measurement.round = (value, percision) => {
+	  if (percision)
+	  return new Measurement(value).decimal(percision);
+	  return Math.round(value * 10000000) / 10000000;
+	}
+	
+	try {
+	  module.exports = Measurement;
+	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/data-sync.js',
+function (require, exports, module) {
+	
+
+	class DataSync {
+	  constructor(idAttr, getById) {
+	    let connections = {};
+	    let lastValue = {};
+	    let idMap = {};
+	
+	    const getId = (objOid) => !(objOid instanceof Object) ? objOid :
+	      ((typeof objOid[idAttr] === 'function' ? objOid[idAttr]() : objOid[idAttr]));
+	
+	    const getArray = (elems) => !elems ? [] : (elems.length === 1 ? elems[0] : elems);
+	
+	
+	    function makeSyncronous(key,...objOids) {
+	      objOids = getArray(objOids);
+	      for (let index = 1; index < objOids.length; index += 1) {
+	        let id;
+	        const obj1Id = getId(objOids[index - 1]);
+	        const obj2Id = getId(objOids[index]);
+	        idMap[obj1Id] = idMap[obj1Id] || {};
+	        idMap[obj2Id] = idMap[obj2Id] || {};
+	        if (idMap[obj1Id][key] === undefined) {
+	          if (idMap[obj2Id][key] === undefined) {
+	            id = String.random();
+	          } else {
+	            id = idMap[obj2Id][key];
+	          }
+	        } else { id = idMap[obj1Id][key]; }
+	        idMap[obj1Id][key] = id;
+	        idMap[obj2Id][key] = id;
+	        connections[id] = connections[id] || [];
+	        if (connections[id].indexOf(obj1Id) === -1) {
+	          connections[id].push(obj1Id)
+	        }
+	        if (connections[id].indexOf(obj2Id) === -1) {
+	          connections[id].push(obj2Id)
+	        }
+	      }
+	    }
+	
+	    function unSync(key,...objOids) {
+	      objOids = getArray(objOids);
+	      for (let index = 1; index < objOids.length; index += 1) {
+	        const id = getId(objOids[index]);
+	        const connId = idMap[id][key];
+	        const conns = connections[connId];
+	        let tIndex;
+	        while ((tIndex = conns.indexOf(id)) !== -1) conns.split(tIndex, 1);
+	        delete idMap[id][key];
+	      }
+	    }
+	
+	    function update(key, value, objOid) {
+	      const id = getId(objOid);
+	      if (!idMap[id] || !idMap[id][key]) return;
+	      const connId = idMap[id] && idMap[id][key];
+	      if (connId === undefined) return;
+	      if (lastValue[connId] !== value) {
+	        lastValue[connId] = value;
+	        const objIds = connections[connId];
+	        for (let index = 0; objIds && index < objIds.length; index ++) {
+	          const obj = getById(objIds[index]);
+	          if (obj !== undefined) obj[key](value);
+	        }
+	      }
+	    }
+	
+	    function shouldRun(hasRan, validIds, id) {
+	      return !hasRan && (validIds === null || validIds.indexOf(id) !== -1);
+	    }
+	
+	    function forEach(func, ...objOids) {
+	      objOids = getArray(objOids);
+	      let alreadyRan = {};
+	      let validIds = objOids === undefined ? null :
+	                      objOids.map((objOid) => getId(objOid));
+	      let ids = Object.keys(idMap);
+	      for (let index = 0; index < ids.length; index += 1) {
+	        const id = ids[index];
+	        const idKeys = Object.keys(idMap[id]);
+	        for (let iIndex = 0; iIndex < idKeys.length; iIndex += 1) {
+	          const idKey = idKeys[iIndex];
+	          const connectionId = idMap[id][idKey];
+	          if (shouldRun(alreadyRan[connectionId], validIds, id)) {
+	            const connIds = connections[connectionId];
+	            const applicableConnections = [];
+	            for (let cIndex = 0; cIndex < connIds.length; cIndex += 1) {
+	              if (shouldRun(alreadyRan[connectionId], validIds, id)) {
+	                applicableConnections.push(connIds[cIndex]);
+	              }
+	            }
+	            if (applicableConnections.length === 0) throw new Error('This should never happen');
+	            func(idKey, applicableConnections);
+	            alreadyRan[connectionId] = true;
+	          }
+	        }
+	      }
+	    }
+	
+	    function fromJson(connections) {
+	      const keys = Object.keys(connections);
+	      keys.forEach((key) => {
+	        this.addConnection(key);
+	        const groups = connections[key];
+	        groups.forEach((group) => {
+	          this[`${key}Sync`](group);
+	        });
+	      });
+	    }
+	
+	
+	    function toJson(...objOids) {
+	      objOids = getArray(objOids);
+	      const connects = {};
+	      forEach((key, connections) => {
+	        if (connects[key] === undefined) connects[key] = [];
+	        connects[key].push(connections);
+	      }, ...objOids);
+	      return connects;
+	    }
+	
+	    this.addConnection = (key) => {
+	      this[`${key}Sync`] = (...objOids) => makeSyncronous(key, ...objOids);
+	      this[`${key}UnSync`] = (...objOids) => makeSyncronous(key, ...objOids);
+	      this[`${key}Update`] = (value, objOid) => update(key,value, objOid);
+	    }
+	    this.toJson = toJson;
+	    this.fromJson = fromJson;
+	  }
+	}
+	
+	module.exports = DataSync;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/approximate.js',
+function (require, exports, module) {
+	
+
+	
+	let defaultAccuracy;
+	
+	class Approximate {
+	  constructor(accuracy) {
+	    if ((typeof accuracy) !== 'number' || accuracy === defaultAccuracy) return Approximate.default;
+	
+	    function approximate(value) {
+	      return Math.round(value * accuracy) / accuracy;
+	    }
+	
+	    function approximateFunc(test) {
+	      return function () {
+	        if (arguments.length === 2) return test(approximate(arguments[0]), approximate(arguments[1]));
+	        for (let index = 1; index < arguments.length; index++) {
+	          if (!test(approximate(arguments[index - 1]), approximate(arguments[index]))) return false;
+	        }
+	        return true;
+	      }
+	    }
+	    approximate.eq = approximateFunc((one, two) => one === two);
+	    approximate.neq = approximateFunc((one, two) => one !== two);
+	    approximate.gt = approximateFunc((one, two) => one > two);
+	    approximate.lt = approximateFunc((one, two) => one < two);
+	    approximate.gteq = approximateFunc((one, two) => one >= two);
+	    approximate.lteq = approximateFunc((one, two) => one <= two);
+	    approximate.eqAbs = approximateFunc((one, two) => Math.abs(one) === Math.abs(two));
+	    approximate.neqAbs = approximateFunc((one, two) => Math.abs(one) !== Math.abs(two));
+	    approximate.abs = (value) => Math.abs(approximate(value));
+	    approximate.object = (obj) => {
+	      const approx = {};
+	      return Object.forAllRecursive(obj,
+	            (value) => (typeof value) === 'number' ? approximate(value) : value);
+	    }
+	    return approximate;
+	  }
+	}
+	
+	
+	Approximate.setDefault = (accuracy) => {
+	  if ((typeof accuracy) !== 'number') throw new Error('Must enter a number for accuracy: hint must be a power of 10');
+	  Approximate.default = new Approximate(accuracy);
+	  defaultAccuracy = accuracy;
+	  Approximate.default.new = (acc) => new Approximate(acc);
+	  Approximate.default.setDefault = Approximate.default;
+	}
+	
+	Approximate.setDefault(1000);
+	
+	module.exports  = Approximate.default;
 	
 });
 
@@ -8061,1319 +10135,6 @@ function (require, exports, module) {
 	
 	DecisionTree.DecisionNode = DecisionNode;
 	module.exports = DecisionTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/utils.js',
-function (require, exports, module) {
-	Math.PI12 = Math.PI/2;
-	Math.PI32 = 3*Math.PI/2;
-	Math.PI2 = 2*Math.PI;
-	
-	Math.PI14 = Math.PI/4;
-	Math.PI34 = 3*Math.PI/4;
-	Math.PI54 = 5*Math.PI/4;
-	Math.PI74 = 7*Math.PI/4;
-	
-	
-	
-	function safeStdLibAddition() {
-	  const addition = [];
-	  function verify() {
-	    additions.forEach((a) => {
-	      if ((a.static && a.lib[a.field] !== a.func) ||
-	      (!a.static && a.lib.prototype[a.field] !== a.func))
-	        throw new Error(`Functionality was overwritten -` +
-	                          `\n\tLibrary: ${a.lib}` +
-	                          `\n\tStatic: ${a.static}` +
-	                          `\n\tField: ${a.field}`)
-	    });
-	    delete additions;
-	  }
-	  function safeAdd (lib, field, func, static) {
-	    if (!static && lib.prototype[field] === undefined)
-	      lib.prototype[field] = func;
-	    else if (lib[field] === undefined)
-	      lib[field] = func;
-	    else
-	      console.error(`Attempting to overwrite functionality -` +
-	                        `\n\tLibrary: ${lib}` +
-	                        `\n\tStatic: ${static}` +
-	                        `\n\tField: ${field}`);
-	    addition.push({lib, field, func, static})
-	  }
-	  safeAdd(Function, 'safeStdLibAddition', safeAdd);
-	}
-	safeStdLibAddition();
-	
-	function processValue(value) {
-	  let retVal;
-	  if ((typeof value) === 'object' && value !== null) {
-	    if ((typeof value.toJson) === 'function') {
-	      retVal = value.toJson();
-	    } else if ((typeof value.toJSON) === 'function') {
-	      retVal = value.toJSON();
-	    } else if (Array.isArray(value)){
-	      const arr = [];
-	      value.forEach((val) => {
-	        if ((typeof val.toJson) === 'function') {
-	          arr.push(val.toJson());
-	        } else if ((typeof val.toJSON) === 'function') {
-	          arr.push(val.toJSON());
-	        } else {
-	          arr.push(val);
-	        }
-	      });
-	      retVal = arr;
-	    } else {
-	      const keys = Object.keys(value);
-	      const obj = {};
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        obj[key] = processValue(value[key]);
-	      }
-	      retVal = obj;
-	    }
-	  } else {
-	    retVal = value;
-	  }
-	  return retVal;
-	}
-	
-	Function.safeStdLibAddition(String, 'random',  function (len) {
-	    len = len || 7;
-	    let str = '';
-	    while (str.length < len) str += Math.random().toString(36).substr(2);
-	    return str.substr(0, len);
-	}, true);
-	
-	Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
-	  while (val < 0) val += mod;
-	  return val % mod;
-	}, true);
-	
-	Function.safeStdLibAddition(Number, 'NaNfinity',  function (...vals) {
-	  for (let index = 0; index < vals.length; index++) {
-	    let val = vals[index];
-	    if(Number.isNaN(val) || !Number.isFinite(val)) return true;
-	  }
-	  return false;
-	}, true);
-	
-	function stringHash() {
-	  let hashString = this;
-	  let hash = 0;
-	  for (let i = 0; i < hashString.length; i += 1) {
-	    const character = hashString.charCodeAt(i);
-	    hash = ((hash << 5) - hash) + character;
-	    hash &= hash; // Convert to 32bit integer
-	  }
-	  return hash;
-	}
-	
-	Function.safeStdLibAddition(String, 'hash',  stringHash, false);
-	
-	const LEFT = 1;
-	const RIGHT = 0;
-	Function.safeStdLibAddition(String, 'obscure',  function (count) {
-	    const direction = count < 0 ? LEFT : RIGHT;
-	    const test = (index) => direction === LEFT ? index > this.length + count - 1 : index < count;
-	    let str = '';
-	    for (let index = 0; index < this.length; index += 1) {
-	      if (test(index)) {
-	        str += '*';
-	      } else {
-	        str += this[index];
-	      }
-	    }
-	    return str;
-	});
-	
-	const singleCharReg = /([a-zA-Z]{1,})[^a-z^A-Z]{1,}([a-zA-Z])[^a-z^A-Z]{1,}([a-zA-Z]{1,})/;
-	const specialCharReg = /([a-zA-Z])[^a-z^A-Z^0-9]{1,}([a-zA-Z])/g;
-	const charNumberReg = /([a-zA-Z])([0-9])/
-	function singleCharReplace(whoCares, one, two, three) {
-	  const oneLastChar = one[one.length - 1];
-	  const twoLower = oneLastChar !== oneLastChar.toLowerCase();
-	  const twoStr = twoLower ? two.toLowerCase() : two.toUpperCase();
-	  const threeStr = twoLower ? `${three[0].toUpperCase()}${three.substr(1)}` :
-	                                `${three[0].toLowerCase()}${three.substr(1)}`;
-	  return `${one}${twoStr}${threeStr}`;
-	}
-	function camelReplace(whoCares, one, two) {return `${one}${two.toUpperCase ? two.toUpperCase() : two}`;}
-	function toCamel() {
-	  let string = `${this.substr(0,1).toLowerCase()}${this.substr(1)}`.replace(charNumberReg, camelReplace);
-	  while (string.match(singleCharReg)) string = string.replace(singleCharReg, singleCharReplace);
-	  return string.replace(specialCharReg, camelReplace);
-	}
-	Function.safeStdLibAddition(String, 'toCamel',  toCamel);
-	
-	const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
-	const caseChangeReg = /([a-z])([A-Z])/g;
-	function pascalReplace(whoCares, one, two) {return `${one.toLowerCase()}_${two.toUpperCase ? two.toUpperCase() : two}`;}
-	function toPascal() {
-	  let string = this;
-	  return string.replace(multipleUpperReg, pascalReplace)
-	                .replace(caseChangeReg, pascalReplace)
-	                .replace(charNumberReg, pascalReplace)
-	                .replace(specialCharReg, pascalReplace);
-	}
-	Function.safeStdLibAddition(String, 'toPascal',  toPascal);
-	
-	function toKebab() {
-	  return this.toPascal().toLowerCase().replace(/_/g, '-');
-	}
-	Function.safeStdLibAddition(String, 'toKebab',  toKebab);
-	
-	Function.safeStdLibAddition(String, 'toSnake',  function () {return this.toKebab().replace(/-/g, '_')});
-	Function.safeStdLibAddition(String, 'toDot',  function () {return this.toKebab().replace(/-/g, '.')});
-	Function.safeStdLibAddition(String, 'toScreamingDot',  function () {return this.toKebab().replace(/-/g, '.')});
-	Function.safeStdLibAddition(String, 'toScreamingSnake',  function () {return this.toSnakeCase().toUpperCase()});
-	Function.safeStdLibAddition(String, 'toScreamingKebab',  function () {return this.toKebab().toUpperCase()});
-	Function.safeStdLibAddition(String, 'toSentance',  function () {return this.toPascal().replace(/_/g, ' ')});
-	
-	Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
-	  return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
-	}, true);
-	
-	const classLookup = {};
-	const attrMap = {};
-	const identifierAttr = '_TYPE';
-	const immutableAttr = '_IMMUTABLE';
-	const temporaryAttr = '_TEMPORARY';
-	const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
-	
-	const clazz = {};
-	clazz.object = () => JSON.clone(classLookup);
-	clazz.get = (name) => classLookup[name];
-	clazz.filter = (filterFunc) => {
-	  const classes = clazz.object();
-	  if ((typeof filterFunc) !== 'function') return classes;
-	  const classIds = Object.keys(classes);
-	  const obj = {};
-	  for (let index = 0; index < classIds.length; index += 1) {
-	    const id = classIds[index];
-	    if (filterFunc(classes[id])) obj[id] = classes[id];
-	  }
-	  return obj;
-	}
-	
-	function objEq(obj1, obj2) {
-	  if (!(obj1 instanceof Object)) return false;
-	  if (!(obj2 instanceof Object)) return false;
-	  const obj1Keys = Object.keys(obj1);
-	  const obj2Keys = Object.keys(obj2);
-	  if (obj1Keys.length !== obj2Keys.length) return false;
-	  obj1Keys.sort();
-	  obj2Keys.sort();
-	  for (let index = 0; index < obj1Keys.length; index += 1) {
-	    const obj1Key = obj1Keys[index];
-	    const obj2Key = obj2Keys[index];
-	    if (obj1Key !== obj2Key) return false;
-	    const obj1Val = obj1[obj1Key];
-	    const obj2Val = obj2[obj2Key];
-	    if (obj1Val instanceof Object) {
-	      if (!obj1Val.equals(obj2)) return false;
-	    } else if (obj1[obj1Key] !== obj2[obj2Key]) return false;
-	  }
-	  return true;
-	}
-	
-	Function.safeStdLibAddition(Object, 'merge', (target, object, soft) => {
-	  if (!(target instanceof Object)) return;
-	  if (!(object instanceof Object)) return;
-	  const objKeys = Object.keys(object);
-	  for (let index = 0; index < objKeys.length; index++) {
-	    const key = objKeys[index];
-	    if (!soft || target[key] === undefined) {
-	      target[key] = object[key];
-	    }
-	  }
-	}, true);
-	
-	
-	Function.safeStdLibAddition(Object, 'class', clazz, true);
-	Function.safeStdLibAddition(Object, 'equals', objEq, true);
-	
-	
-	Function.safeStdLibAddition(Math, 'toDegrees', function (rads) {
-	  return rads * 180/Math.PI % 360;
-	}, true);
-	
-	Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {
-	  if (!modifyObject) obj = JSON.clone(obj);
-	  conditionFunc = (typeof conditionFunc) === 'function' ? conditionFunc : () => true;
-	  const keys = Object.keys(obj);
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const value = obj[key];
-	    if (conditionFunc(value)) func(value, key, obj);
-	    if (value instanceof Object) Object.forEachConditional(value, func, conditionFunc, true);
-	  }
-	  return obj;
-	}, true);
-	
-	Function.safeStdLibAddition(Math, 'toRadians', function (angle, accuracy) {
-	  return (angle*Math.PI/180)%(2*Math.PI);
-	}, true);
-	
-	Function.safeStdLibAddition(Math, 'midpoint', function (s, e) {
-	  if (e < s) {
-	    let t = s;
-	    s = e;
-	    e = t;
-	  }
-	  return s + (e - s)/2;
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'toJson', function (arr) {
-	    const json = [];
-	    arr.forEach((elem) => json.push(processValue(elem)));
-	    return json;
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'equalIndexOf', function (elem, startIndex, endIndex) {
-	    startIndex =  startIndex > -1 ? startIndex : 0;
-	    endIndex = endIndex < this.length ? endIndex : this.length;
-	    for (let index = startIndex; index < endIndex; index += 1) {
-	      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
-	        return index;
-	      } else if (elem === this[index]) {
-	        return index;
-	      }
-	    }
-	    return -1;
-	});
-	
-	Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endIndex) {
-	    startIndex =  startIndex > -1 ? startIndex : 0;
-	    endIndex = endIndex < this.length ? endIndex : this.length;
-	    if (endIndex < other.length) return false;
-	    let equal = true;
-	    for (let index = startIndex; equal && index < endIndex; index += 1) {
-	      const elem = this[index];
-	      if (elem && (typeof elem.equals) === 'function') {
-	        if (!elem.equals(this[index])) {
-	          return index;
-	        }
-	      } else if (elem !== other[index]) {
-	        equal = false;
-	      }
-	    }
-	    return equal;
-	});
-	
-	Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
-	    for (let index = 0; index < arr.length; index += 1) {
-	      this.remove(arr[index]);
-	    }
-	});
-	
-	Function.safeStdLibAddition(Array, 'remove', function (elem) {
-	    for (let index = 0; index < this.length; index += 1) {
-	      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
-	        this.splice(index--, 1);
-	      } else if (elem === this[index]) {
-	        this.splice(index--, 1);
-	      }
-	    }
-	});
-	
-	Function.safeStdLibAddition(Array, 'compare', function (original, neww, modify) {
-	    const comparison = {both: [], removed: [], added: []};
-	    const arr = original.concat(neww);
-	    const visited = {new: {}, original: {}};
-	    arr.forEach((elem) => {
-	      const origIndex = original.equalIndexOf(elem);
-	      const newIndex = neww.equalIndexOf(elem);
-	      if (!visited.new[newIndex] && !visited.original[origIndex]) {
-	        if (newIndex !== -1) visited.new[newIndex] = true;
-	        if (origIndex !== -1) visited.original[origIndex] = true;
-	        if (origIndex !== -1 && newIndex !== -1) comparison.both.push(elem);
-	        else if (newIndex !== -1) comparison.added.push(elem);
-	        else comparison.removed.push({elem, index: origIndex});
-	      }
-	    });
-	
-	    if (modify) {
-	      if (comparison.removed.length > 0) {
-	        let removed = 0;
-	        comparison.removed.forEach((info) => original.splice(info.index - removed++, 1));
-	        comparison.removed = comparison.removed.map((info) => info.elem);
-	      }
-	      if (comparison.added.length > 0) {
-	        original.concatInPlace(neww);
-	      }
-	    }
-	    return comparison.removed.length > 0 || comparison.added.length > 0 ? comparison : false;
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'shuffle', function() {
-	  let currentIndex = this.length,  randomIndex;
-	  while (currentIndex != 0) {
-	    randomIndex = Math.floor(Math.random() * currentIndex);
-	    currentIndex--;
-	    [this[currentIndex], this[randomIndex]] = [
-	      this[randomIndex], this[currentIndex]];
-	  }
-	
-	  return this;
-	});
-	
-	Function.safeStdLibAddition(Array, 'concatInPlace', function (arr) {
-	  if (arr === this) return;
-	  for (let index = 0; index < arr.length; index += 1) {
-	    if (this.indexOf(arr[index]) !== -1) {
-	      console.error('duplicate');
-	    } else {
-	      this[this.length] = arr[index];
-	    }
-	  }
-	});
-	
-	Function.safeStdLibAddition(Array, 'copy', function (arr) {
-	  this.length = 0;
-	  // const keys = Object.keys(this);
-	  // for (let index = 0; index < keys.length; index += 1) delete this[keys[index]];
-	  const newKeys = Object.keys(arr);
-	  for (let index = 0; index < newKeys.length; index += 1) {
-	    const key = newKeys[index];
-	    this[key] = arr[key];
-	  }
-	});
-	
-	Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
-	  function interpretValue(value) {
-	    if (value instanceof Object) {
-	      const classname = value[identifierAttr];
-	      const attrs = attrMap[classname] ? Object.keys(attrMap[classname]) :
-	                    Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
-	      if (Array.isArray(value)) {
-	        const realArray = [];
-	        for (let index = 0; index < value.length; index += 1) {
-	          realArray[index] = Object.fromJson(value[index]);
-	        }
-	        return realArray;
-	      } else if (classname && classLookup[classname]) {
-	        if (classLookup[classname].fromJson) {
-	          return classLookup[classname].fromJson(value);
-	        } else {
-	          const classObj = new (classLookup[classname])(value);
-	          for (let index = 0; index < attrs.length; index += 1) {
-	            const attr = attrs[index];
-	            if ((typeof classObj[attr]) === 'function')
-	            classObj[attr](interpretValue(value[attr]));
-	            else
-	            classObj[attr] = interpretValue(value[attr]);
-	          };
-	          return classObj;
-	        }
-	      } else {
-	        if (classname) {
-	          console.warn(`fromJson for class ${classname} not registered`)
-	        }
-	        const realObj = {}
-	        for (let index = 0; index < attrs.length; index += 1) {
-	          const attr = attrs[index];
-	          realObj[attr] = interpretValue(value[attr]);
-	        };
-	        return realObj
-	      }
-	    }
-	    return value;
-	  }
-	
-	  if (!(rootJson instanceof Object)) return rootJson;
-	  return interpretValue(rootJson);
-	}, true);
-	
-	Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
-	  const cxtrName = obj.constructor.name;
-	  if (classLookup[cxtrName] === undefined) {
-	    classLookup[cxtrName] = obj.constructor;
-	  } else if (classLookup[cxtrName] !== obj.constructor) {
-	    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
-	  }
-	  if (initialVals === undefined) return;
-	  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
-	  let values = {};
-	  let temporary = false;
-	  let immutable = false;
-	  let doNotOverwrite = false;
-	  if ((typeof initialVals) === 'object') {
-	    values = initialVals;
-	    immutable = values[immutableAttr] === true;
-	    temporary = values[temporaryAttr] === true;
-	    doNotOverwrite = values[doNotOverwriteAttr] === true;
-	    if (immutable) {
-	      attrs = Object.keys(values);
-	    } else {
-	      attrs = Object.keys(values).concat(attrs);
-	    }
-	  } else {
-	    attrs = [initialVals].concat(attrs);
-	  }
-	  if (attrMap[cxtrName] === undefined) attrMap[cxtrName] = [];
-	  attrs.forEach((attr) => {
-	    if (!attr.match(/^_[A-Z]*[A-Z_]*$/))
-	      attrMap[cxtrName][attr] = true;
-	  });
-	
-	  for (let index = 0; !doNotOverwrite && index < attrs.length; index += 1) {
-	    const attr = attrs[index];
-	    if (attr !== immutableAttr) {
-	      if (immutable) obj[attr] = () => values[attr];
-	      else {
-	        obj[attr] = (value) => {
-	          if (value === undefined) {
-	            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
-	            if (values[attr] !== undefined || noDefaults)
-	            return values[attr];
-	            return obj.defaultGetterValue(attr);
-	          }
-	          values[attr] = value;
-	        }
-	      }
-	    }
-	  }
-	  if (!temporary) {
-	    const origToJson = obj.toJson;
-	    obj.toJson = (members, exclusive) => {
-	      const restrictions = Array.isArray(members) && members.length;
-	      const json = (typeof origToJson === 'function') ? origToJson() : {};
-	      json[identifierAttr] = obj.constructor.name;
-	      for (let index = 0; index < attrs.length; index += 1) {
-	        const attr = attrs[index];
-	        const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
-	        const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
-	        if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
-	          // if (obj.constructor.name === 'SnapLocation2D')
-	          //   console.log('foundit!');
-	          const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
-	          json[attr] = processValue(value);
-	        }
-	      }
-	      return json;
-	    }
-	  }
-	  obj.fromJson = (json) => {
-	    for (let index = 0; index < attrs.length; index += 1) {
-	      const attr = attrs[index];
-	      if (attr !== immutableAttr) {
-	        if ((typeof obj[attr]) === 'function') {
-	          if(Array.isArray(obj[attr]())){
-	            obj[attr]().copy(Object.fromJson(json[attr]));
-	          } else {
-	            obj[attr](Object.fromJson(json[attr]));
-	          }
-	        }
-	        else
-	          obj[attr] = Object.fromJson(json[attr]);
-	      }
-	    };
-	    return obj;
-	  }
-	  if (obj.constructor.DO_NOT_CLONE) {
-	    obj.clone = () => obj;
-	  } else {
-	    obj.clone = () => {
-	      const clone = new obj.constructor(obj.toJson());
-	      clone.fromJson(obj.toJson());
-	      return clone;
-	    }
-	  }
-	  return attrs;
-	}, true);
-	Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
-	
-	Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
-	  if (otherObj === undefined) return;
-	  if ((typeof otherObj) !== 'object') {
-	    throw new Error('Requires one argument of type object or undefined for meaningless call');
-	  }
-	  const keys = Object.keys(otherObj);
-	  keys.forEach((key) => obj[key] = otherObj[key]);
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
-	  if (start!== undefined && end !== undefined && start > end) {
-	    const temp = start;
-	    start = end;
-	    end = temp;
-	  }
-	  start = start || 0;
-	  end = end || values.length;
-	  for (let index = start; index < end; index += 1)
-	    array[index] = values[index];
-	  return array;
-	}, true);
-	
-	const checked = {};
-	
-	// Swiped from https://stackoverflow.com/a/43197340
-	function isClass(obj) {
-	  const isCtorClass = obj.constructor
-	      && obj.constructor.toString().substring(0, 5) === 'class'
-	  if(obj.prototype === undefined) {
-	    return isCtorClass
-	  }
-	  const isPrototypeCtorClass = obj.prototype.constructor
-	    && obj.prototype.constructor.toString
-	    && obj.prototype.constructor.toString().substring(0, 5) === 'class'
-	  return isCtorClass || isPrototypeCtorClass
-	}
-	
-	Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
-	  if ((typeof obj) != 'object') return obj;
-	  const keys = Object.keys(obj);
-	  if (!checked[obj.constructor.name]) {
-	    // console.log('constructor: ' + obj.constructor.name);
-	    checked[obj.constructor.name] = true;
-	  }
-	
-	  const clone = ((typeof obj.clone) === 'function') ? obj.clone() :
-	                  Array.isArray(obj) ? [] : {};
-	  for(let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    const member = obj[key];
-	    if (member && (member.DO_NOT_CLONE || member.constructor.DO_NOT_CLONE)) {
-	      clone[key] = member;
-	    } else if ((typeof member) !== 'function') {
-	      if ((typeof member) === 'object') {
-	        if ((typeof member.clone) === 'function') {
-	          clone[key] = member.clone();
-	        } else {
-	          clone[key] = JSON.clone(member);
-	        }
-	      } else {
-	        clone[key] = member;
-	      }
-	    }
-	    else if (isClass(member)) {
-	      clone[key] = member;
-	    }
-	  }
-	  return clone;
-	}, true);
-	
-	Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
-	  if (!(obj instanceof Object)) return obj;
-	  return JSON.parse(JSON.stringify(obj));
-	}, true);
-	
-	Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
-	  if (isRegex !== true) {
-	    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
-	  }
-	  var keyValues = this.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
-	  var json = {};
-	  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
-	    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
-	    if (split) {
-	      json[split[1]] = split[2];
-	    }
-	  }
-	  return json;
-	});
-	
-	Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
-	  const attrs = path.split('.');
-	  const lastIndex = attrs.length - 1;
-	  let currObj = obj;
-	  for (let index = 0; index < lastIndex; index += 1) {
-	    let attr = attrs[index];
-	    if (currObj[attr] === undefined) currObj[attr] = {};
-	    currObj = currObj[attr];
-	  }
-	
-	  const lastAttr = attrs[lastIndex];
-	  if ((typeof currObj[lastAttr]) === 'function') {
-	    return currObj[lastAttr](value);
-	  } else if (value !== undefined) {
-	    currObj[lastAttr] = value;
-	  }
-	  return currObj[lastAttr];
-	}, true);
-	
-	
-	/////////////////////////////////// Matrix Equations //////////////////////////
-	
-	Function.safeStdLibAddition(Array, 'translate', function (vector, doNotModify, quiet) {
-	  let point = this;
-	  let single = false;
-	  if (doNotModify === true) point = Array.from(point);
-	  const vecLen = vector.length;
-	  if (point.length !== vecLen && !quiet) console.warn('vector.length !== point.length but we\' do it anyway (arg3(quiet) = true to silence)');
-	  for (let i = 0; i < vecLen; i += 1) {
-	    if (point[i] === undefined) point[i] = 0;
-	    point[i] += vector[i];
-	  }
-	  return point;
-	});
-	
-	Function.safeStdLibAddition(Array, 'inverse', function (doNotModify) {
-	  const arr = doNotModify === true ? Array.from(this) : this;
-	  for (let index = 0; index < arr.length; index += 1) {
-	    arr[index] *= -1;
-	  }
-	  return arr;
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/string-math-evaluator.js',
-function (require, exports, module) {
-	
-const FunctionCache = require('./services/function-cache.js');
-	
-	function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	class StringMathEvaluator {
-	  constructor(globalScope, resolver) {
-	    globalScope = globalScope || {};
-	    const instance = this;
-	    let splitter = '.';
-	
-	    function resolve (path, currObj, globalCheck) {
-	      if (path === '') return currObj;
-	      const resolved = !globalCheck && resolver && resolver(path, currObj);
-	      if (Number.isFinite(resolved)) return resolved;
-	      try {
-	        if ((typeof path) === 'string') path = path.split(splitter);
-	        for (let index = 0; index < path.length; index += 1) {
-	          currObj = currObj[path[index]];
-	        }
-	        if (currObj === undefined && !globalCheck) throw Error('try global');
-	        return currObj;
-	      }  catch (e) {
-	        if (!globalCheck) return resolve(path, globalScope, true);
-	      }
-	    }
-	
-	    function multiplyOrDivide (values, operands) {
-	      const op = operands[operands.length - 1];
-	      if (op === StringMathEvaluator.multi || op === StringMathEvaluator.div) {
-	        const len = values.length;
-	        values[len - 2] = op(values[len - 2], values[len - 1])
-	        values.pop();
-	        operands.pop();
-	      }
-	    }
-	
-	    const resolveArguments = (initialChar, func) => {
-	      return function (expr, index, values, operands, scope, path) {
-	        if (expr[index] === initialChar) {
-	          const args = [];
-	          let endIndex = index += 1;
-	          const terminationChar = expr[index - 1] === '(' ? ')' : ']';
-	          let terminate = false;
-	          let openParenCount = 0;
-	          while(!terminate && endIndex < expr.length) {
-	            const currChar = expr[endIndex++];
-	            if (currChar === '(') openParenCount++;
-	            else if (openParenCount > 0 && currChar === ')') openParenCount--;
-	            else if (openParenCount === 0) {
-	              if (currChar === ',') {
-	                args.push(expr.substr(index, endIndex - index - 1));
-	                index = endIndex;
-	              } else if (openParenCount === 0 && currChar === terminationChar) {
-	                args.push(expr.substr(index, endIndex++ - index - 1));
-	                terminate = true;
-	              }
-	            }
-	          }
-	
-	          for (let index = 0; index < args.length; index += 1) {
-	            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
-	            if (stringMatch) {
-	              args[index] = stringMatch[1];
-	            } else {
-	              args[index] =  instance.eval(args[index], scope);
-	            }
-	          }
-	          const state = func(expr, path, scope, args, endIndex);
-	          if (state) {
-	            values.push(state.value);
-	            return state.endIndex;
-	          }
-	        }
-	      }
-	    };
-	
-	    function chainedExpressions(expr, value, endIndex, path) {
-	      if (expr.length === endIndex) return {value, endIndex};
-	      let values = [];
-	      let offsetIndex;
-	      let valueIndex = 0;
-	      let chained = false;
-	      do {
-	        const subStr = expr.substr(endIndex);
-	        const offsetIndex = isolateArray(subStr, 0, values, [], value, path) ||
-	                            isolateFunction(subStr, 0, values, [], value, path) ||
-	                            (subStr[0] === '.' &&
-	                              isolateVar(subStr, 1, values, [], value));
-	        if (Number.isInteger(offsetIndex)) {
-	          value = values[valueIndex];
-	          endIndex += offsetIndex - 1;
-	          chained = true;
-	        }
-	      } while (offsetIndex !== undefined);
-	      return {value, endIndex};
-	    }
-	
-	    const isolateArray = resolveArguments('[',
-	      (expr, path, scope, args, endIndex) => {
-	        endIndex = endIndex - 1;
-	        let value = resolve(path, scope)[args[args.length - 1]];
-	        return chainedExpressions(expr, value, endIndex, '');
-	      });
-	
-	    const isolateFunction = resolveArguments('(',
-	      (expr, path, scope, args, endIndex) =>
-	          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
-	
-	    function isolateParenthesis(expr, index, values, operands, scope) {
-	      const char = expr[index];
-	      if (char === ')') throw new Error('UnExpected closing parenthesis');
-	      if (char === '(') {
-	        let openParenCount = 1;
-	        let endIndex = index + 1;
-	        while(openParenCount > 0 && endIndex < expr.length) {
-	          const currChar = expr[endIndex++];
-	          if (currChar === '(') openParenCount++;
-	          if (currChar === ')') openParenCount--;
-	        }
-	        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
-	        const len = endIndex - index - 2;
-	        values.push(instance.eval(expr.substr(index + 1, len), scope));
-	        multiplyOrDivide(values, operands);
-	        return endIndex;
-	      }
-	    };
-	
-	    function isolateOperand (char, operands) {
-	      if (char === ')') throw new Error('UnExpected closing parenthesis');
-	      switch (char) {
-	        case '*':
-	        operands.push(StringMathEvaluator.multi);
-	        return true;
-	        break;
-	        case '/':
-	        operands.push(StringMathEvaluator.div);
-	        return true;
-	        break;
-	        case '+':
-	        operands.push(StringMathEvaluator.add);
-	        return true;
-	        break;
-	        case '-':
-	        operands.push(StringMathEvaluator.sub);
-	        return true;
-	        break;
-	      }
-	      return false;
-	    }
-	
-	    function isolateValueReg(reg, resolver) {
-	      return function (expr, index, values, operands, scope) {
-	        const match = expr.substr(index).match(reg);
-	        let args;
-	        if (match) {
-	          let endIndex = index + match[0].length;
-	          let value = resolver(match[0], scope);
-	          if (!Number.isFinite(value)) {
-	            const state = chainedExpressions(expr, scope, endIndex, match[0]);
-	            if (state !== undefined) {
-	              value = state.value;
-	              endIndex = state.endIndex;
-	            }
-	          }
-	          values.push(value);
-	          multiplyOrDivide(values, operands);
-	          return endIndex;
-	        }
-	      }
-	    }
-	
-	    function convertFeetInchNotation(expr) {
-	      expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
-	      expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
-	      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
-	      return expr = expr.replace(StringMathEvaluator.multiMixedNumberReg, '($1+$2)') || expr;
-	    }
-	    function addUnexpressedMultiplicationSigns(expr) {
-	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
-	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
-	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
-	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
-	    }
-	
-	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
-	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
-	
-	    function evaluate(expr, scope, percision) {
-	      if (Number.isFinite(expr))
-	        return expr;
-	      expr = new String(expr);
-	      expr = addUnexpressedMultiplicationSigns(expr);
-	      expr = convertFeetInchNotation(expr);
-	      scope = scope || globalScope;
-	      const allowVars = (typeof scope) === 'object';
-	      let operands = [];
-	      let values = [];
-	      let prevWasOpperand = true;
-	      for (let index = 0; index < expr.length; index += 1) {
-	        const char = expr[index];
-	        if (prevWasOpperand) {
-	          try {
-	            let newIndex = isolateNumber(expr, index, values, operands, scope);
-	            if (!newIndex && isolateOperand(char, operands))
-	                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
-	            newIndex ||= isolateParenthesis(expr, index, values, operands, scope) ||
-	                (allowVars && isolateVar(expr, index, values, operands, scope));
-	            if (Number.isInteger(newIndex)) {
-	              index = newIndex - 1;
-	              prevWasOpperand = false;
-	            }
-	          } catch (e) {
-	            console.error(e);
-	            return NaN;
-	          }
-	        } else {
-	          prevWasOpperand = isolateOperand(char, operands);
-	        }
-	      }
-	      if (prevWasOpperand) return NaN;
-	
-	      let value = values[0];
-	      for (let index = 0; index < values.length - 1; index += 1) {
-	        value = operands[index](values[index], values[index + 1]);
-	        values[index + 1] = value;
-	      }
-	
-	      if (Number.isFinite(value)) {
-	        value = value;
-	        return value;
-	      }
-	      return NaN;
-	    }
-	
-	    this.eval = new FunctionCache(evaluate, this, 'sme');
-	
-	    this.evalObject = new FunctionCache((obj, scope) => {
-	      const returnObj = Object.forEachConditional(obj, (value, key, object) => {
-	        value = evaluate(value, scope);
-	        if (!Number.isNaN(value)) object[key] = value;
-	      }, (value) => (typeof value) === 'string');
-	      return returnObj;
-	    }, this, 'sme');
-	  }
-	}
-	
-	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	
-	const mixNumberRegStr = "([0-9]{1,})\\s{1,}(([0-9]{1,})\\/([0-9]{1,}))";
-	StringMathEvaluator.mixedNumberReg = new RegExp(`^${mixNumberRegStr}$`);
-	StringMathEvaluator.multiMixedNumberReg = new RegExp(mixNumberRegStr, 'g');///([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
-	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
-	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
-	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
-	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
-	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
-	const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
-	StringMathEvaluator.decimalReg = new RegExp(`^${decimalRegStr}`);///^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(\.|)|(\.)[0-9]{1,})/;
-	StringMathEvaluator.multiDecimalReg = new RegExp(decimalRegStr, 'g');
-	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
-	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
-	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
-	StringMathEvaluator.div = (n1, n2) => n1 / n2;
-	StringMathEvaluator.add = (n1, n2) => n1 + n2;
-	StringMathEvaluator.sub = (n1, n2) => n1 - n2;
-	
-	const npf = Number.parseFloat;
-	StringMathEvaluator.convert = {eqn: {}};
-	StringMathEvaluator.convert.metricToImperial = (value) => {
-	  value = npf(value);
-	  return value / 2.54;
-	}
-	
-	StringMathEvaluator.resolveMixedNumber = (value) => {
-	  const match = value.match(StringMathEvaluator.mixedNumberReg);
-	  if (match) {
-	    value = npf(match[1]) + (npf(match[3]) / npf(match[4]));
-	  }
-	  value = npf(value);
-	  return value;
-	}
-	
-	StringMathEvaluator.convert.imperialToMetric = (value) => {
-	  value = npf(value);
-	  return value * 2.54;
-	}
-	
-	StringMathEvaluator.convert.eqn.metricToImperial = (str) =>
-	  str.replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.metricToImperial);
-	
-	StringMathEvaluator.convert.eqn.imperialToMetric = (str) =>
-	  str.replace(StringMathEvaluator.multiMixedNumberReg, StringMathEvaluator.resolveMixedNumber)
-	  .replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.imperialToMetric);
-	
-	StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	
-	
-	StringMathEvaluator.reduce = function(numerator, denominator) {
-	  let reduced = true;
-	  while (reduced) {
-	    reduced = false;
-	    for (let index = 0; index < StringMathEvaluator.primes.length; index += 1) {
-	      const prime = StringMathEvaluator.primes[index];
-	      if (prime >= denominator) break;
-	      if (numerator % prime === 0 && denominator % prime === 0) {
-	        numerator = numerator / prime;
-	        denominator = denominator / prime;
-	        reduced = true;
-	        break;
-	      }
-	    }
-	  }
-	  if (numerator === 0) {
-	    return '';
-	  }
-	  return `${numerator}/${denominator}`;
-	}
-	
-	StringMathEvaluator.parseFraction = function (str) {
-	  const regObj = regexToObject(str, StringMathEvaluator.regex, null, 'integer', null, 'numerator', 'denominator');
-	  regObj.integer = Number.parseInt(regObj.integer) || 0;
-	  regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	  regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	  if(regObj.denominator === 0) {
-	    regObj.numerator = 0;
-	    regObj.denominator = 1;
-	  }
-	  regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	  return regObj;
-	}
-	
-	StringMathEvaluator.toFraction = function (decimal, accuracy) {
-	  if (decimal === NaN) return NaN;
-	  accuracy = accuracy || '1/1000'
-	  const fracObj = StringMathEvaluator.parseFraction(accuracy);
-	  const denominator = fracObj.denominator;
-	  if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	    throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	  }
-	  let remainder = decimal;
-	  let currRemainder = remainder;
-	  let value = 0;
-	  let numerator = 0;
-	  while (currRemainder > 0) {
-	    numerator += fracObj.numerator;
-	    currRemainder -= fracObj.decimal;
-	  }
-	  const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
-	  const diff2 = (numerator / denominator) - decimal;
-	  numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	  const integer = Math.floor(numerator / denominator);
-	  numerator = numerator % denominator;
-	  const fraction = StringMathEvaluator.reduce(numerator, denominator);
-	  return (integer && fraction ? `${integer} ${fraction}` :
-	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
-	}
-	
-	try {
-	  module.exports = StringMathEvaluator;
-	} catch (e) {/* TODO: Consider Removing */}
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/data-sync.js',
-function (require, exports, module) {
-	
-
-	class DataSync {
-	  constructor(idAttr, getById) {
-	    let connections = {};
-	    let lastValue = {};
-	    let idMap = {};
-	
-	    const getId = (objOid) => !(objOid instanceof Object) ? objOid :
-	      ((typeof objOid[idAttr] === 'function' ? objOid[idAttr]() : objOid[idAttr]));
-	
-	    const getArray = (elems) => !elems ? [] : (elems.length === 1 ? elems[0] : elems);
-	
-	
-	    function makeSyncronous(key,...objOids) {
-	      objOids = getArray(objOids);
-	      for (let index = 1; index < objOids.length; index += 1) {
-	        let id;
-	        const obj1Id = getId(objOids[index - 1]);
-	        const obj2Id = getId(objOids[index]);
-	        idMap[obj1Id] = idMap[obj1Id] || {};
-	        idMap[obj2Id] = idMap[obj2Id] || {};
-	        if (idMap[obj1Id][key] === undefined) {
-	          if (idMap[obj2Id][key] === undefined) {
-	            id = String.random();
-	          } else {
-	            id = idMap[obj2Id][key];
-	          }
-	        } else { id = idMap[obj1Id][key]; }
-	        idMap[obj1Id][key] = id;
-	        idMap[obj2Id][key] = id;
-	        connections[id] = connections[id] || [];
-	        if (connections[id].indexOf(obj1Id) === -1) {
-	          connections[id].push(obj1Id)
-	        }
-	        if (connections[id].indexOf(obj2Id) === -1) {
-	          connections[id].push(obj2Id)
-	        }
-	      }
-	    }
-	
-	    function unSync(key,...objOids) {
-	      objOids = getArray(objOids);
-	      for (let index = 1; index < objOids.length; index += 1) {
-	        const id = getId(objOids[index]);
-	        const connId = idMap[id][key];
-	        const conns = connections[connId];
-	        let tIndex;
-	        while ((tIndex = conns.indexOf(id)) !== -1) conns.split(tIndex, 1);
-	        delete idMap[id][key];
-	      }
-	    }
-	
-	    function update(key, value, objOid) {
-	      const id = getId(objOid);
-	      if (!idMap[id] || !idMap[id][key]) return;
-	      const connId = idMap[id] && idMap[id][key];
-	      if (connId === undefined) return;
-	      if (lastValue[connId] !== value) {
-	        lastValue[connId] = value;
-	        const objIds = connections[connId];
-	        for (let index = 0; objIds && index < objIds.length; index ++) {
-	          const obj = getById(objIds[index]);
-	          if (obj !== undefined) obj[key](value);
-	        }
-	      }
-	    }
-	
-	    function shouldRun(hasRan, validIds, id) {
-	      return !hasRan && (validIds === null || validIds.indexOf(id) !== -1);
-	    }
-	
-	    function forEach(func, ...objOids) {
-	      objOids = getArray(objOids);
-	      let alreadyRan = {};
-	      let validIds = objOids === undefined ? null :
-	                      objOids.map((objOid) => getId(objOid));
-	      let ids = Object.keys(idMap);
-	      for (let index = 0; index < ids.length; index += 1) {
-	        const id = ids[index];
-	        const idKeys = Object.keys(idMap[id]);
-	        for (let iIndex = 0; iIndex < idKeys.length; iIndex += 1) {
-	          const idKey = idKeys[iIndex];
-	          const connectionId = idMap[id][idKey];
-	          if (shouldRun(alreadyRan[connectionId], validIds, id)) {
-	            const connIds = connections[connectionId];
-	            const applicableConnections = [];
-	            for (let cIndex = 0; cIndex < connIds.length; cIndex += 1) {
-	              if (shouldRun(alreadyRan[connectionId], validIds, id)) {
-	                applicableConnections.push(connIds[cIndex]);
-	              }
-	            }
-	            if (applicableConnections.length === 0) throw new Error('This should never happen');
-	            func(idKey, applicableConnections);
-	            alreadyRan[connectionId] = true;
-	          }
-	        }
-	      }
-	    }
-	
-	    function fromJson(connections) {
-	      const keys = Object.keys(connections);
-	      keys.forEach((key) => {
-	        this.addConnection(key);
-	        const groups = connections[key];
-	        groups.forEach((group) => {
-	          this[`${key}Sync`](group);
-	        });
-	      });
-	    }
-	
-	
-	    function toJson(...objOids) {
-	      objOids = getArray(objOids);
-	      const connects = {};
-	      forEach((key, connections) => {
-	        if (connects[key] === undefined) connects[key] = [];
-	        connects[key].push(connections);
-	      }, ...objOids);
-	      return connects;
-	    }
-	
-	    this.addConnection = (key) => {
-	      this[`${key}Sync`] = (...objOids) => makeSyncronous(key, ...objOids);
-	      this[`${key}UnSync`] = (...objOids) => makeSyncronous(key, ...objOids);
-	      this[`${key}Update`] = (value, objOid) => update(key,value, objOid);
-	    }
-	    this.toJson = toJson;
-	    this.fromJson = fromJson;
-	  }
-	}
-	
-	module.exports = DataSync;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/request.js',
-function (require, exports, module) {
-	
-
-	Request = {
-	    onStateChange: function (success, failure, id) {
-	      return function () {
-	        if (this.readyState === 4) {
-	          if (this.status == 200) {
-	            try {
-	              resp = JSON.parse(this.responseText);
-	            } catch (e){
-	              resp = this.responseText;
-	            }
-	            if (success) {
-	              success(resp, this);
-	            }
-	          } else if (failure) {
-	            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
-	            if (errorMsgMatch) {
-	              this.errorMsg = errorMsgMatch[1].trim();
-	            }
-	            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
-	            if (errorCodeMatch) {
-	              this.errorCode = errorCodeMatch[1];
-	
-	            }
-	            failure(this);
-	          }
-	          var resp = this.responseText;
-	        }
-	      }
-	    },
-	
-	    id: function (url, method) {
-	      return `request.${method}.${url.replace(/\./g, ',')}`;
-	    },
-	
-	    get: function (url, success, failure) {
-	      const xhr = new Request.xmlhr();
-	      xhr.open("GET", url, true);
-	      const id = Request.id(url, 'GET');
-	      xhr.setRequestHeader('Content-Type', 'text/pdf');
-	      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
-	      Request.setGlobalHeaders(xhr);
-	      if (success === undefined && failure === undefined) return xhr;
-	      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
-	      xhr.send();
-	      return xhr;
-	    },
-	
-	    hasBody: function (method) {
-	      return function (url, body, success, failure) {
-	        const xhr = new Request.xmlhr();
-	        xhr.open(method, url, true);
-	        const id = Request.id(url, method);
-	        xhr.setRequestHeader('Content-Type', 'application/json');
-	        Request.setGlobalHeaders(xhr);
-	        if (success === undefined && failure === undefined) return xhr;
-	        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
-	        xhr.send(JSON.stringify(body));
-	        return xhr;
-	      }
-	    },
-	
-	    post: function () {return Request.hasBody('POST')(...arguments)},
-	    delete: function () {return Request.hasBody('DELETE')(...arguments)},
-	    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
-	    head: function () {return Request.hasBody('HEAD')(...arguments)},
-	    put: function () {return Request.hasBody('PUT')(...arguments)},
-	    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
-	}
-	
-	Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
-	Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
-	const globalHeaders = {};
-	Request.globalHeader = (header, funcOval) => {
-	  globalHeaders[header] = funcOval;
-	}
-	Request.setGlobalHeaders = (xhr) => {
-	  const headers = Object.keys(globalHeaders);
-	  headers.forEach((header) => {
-	    const value = (typeof globalHeaders[header]) === 'function' ? globalHeaders[header]() : globalHeaders[header];
-	    xhr.setRequestHeader(header, value, xhr);
-	  });
-	}
-	try {
-	  Request.xmlhr = XMLHttpRequest;
-	} catch (e) {
-	  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
-	}
-	
-	try {
-	  module.exports = Request;
-	} catch (e) {}
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/parse-arguments.js',
-function (require, exports, module) {
-	const trueReg = /^true$/;
-	const falseReg = /^false$/;
-	const numberReg = /^[0-9]{1,}$/;
-	const arrayReg = /^(.*[,].*(,|)){1,}$/;
-	
-	function getValue(str) {
-	  if (str === '') return undefined;
-	  if (str.match(trueReg)) return true;
-	  if (str.match(falseReg)) return false;
-	  if (str.match(numberReg)) return Number.parseInt(str);
-	  if (str.match(arrayReg)) {
-	    const arr = [];
-	    const elems = str.split(',');
-	    for (let index = 0; index < elems.length; index += 1) {
-	      arr.push(getValue(elems[index]));
-	    }
-	    return arr;
-	  }
-	  return str;
-	}
-	
-	const valueRegex = /[A-Z.a-z]{1,}=.*$/;
-	function argParser() {
-	  for (let index = 2; index < process.argv.length; index += 1) {
-	    const arg = process.argv[index];
-	    if (arg.match(valueRegex)) {
-	      const varName = arg.split('=', 1)[0];
-	      const valueStr = arg.substr(varName.length + 1);
-	      global[varName] = getValue(valueStr.trim());
-	    }
-	  }
-	}
-	
-	global.__basedir = __dirname;
-	argParser();
 	
 });
 
@@ -10292,1079 +11053,425 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/measurement.js',
+RequireJS.addFunction('../../public/js/utils/request.js',
 function (require, exports, module) {
 	
-  try {
-	    Lookup = require('./object/lookup');
-	    StringMathEvaluator = require('./string-math-evaluator');
-	  } catch(e) {}
+
+	Request = {
+	    onStateChange: function (success, failure, id) {
+	      return function () {
+	        if (this.readyState === 4) {
+	          if (this.status == 200) {
+	            try {
+	              resp = JSON.parse(this.responseText);
+	            } catch (e){
+	              resp = this.responseText;
+	            }
+	            if (success) {
+	              success(resp, this);
+	            }
+	          } else if (failure) {
+	            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
+	            if (errorMsgMatch) {
+	              this.errorMsg = errorMsgMatch[1].trim();
+	            }
+	            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
+	            if (errorCodeMatch) {
+	              this.errorCode = errorCodeMatch[1];
 	
-	
-	function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	let units = [
-	  'Metric',
-	  'Imperial (US)'
-	]
-	let unit = units[1];
-	
-	
-	class Measurement extends Lookup {
-	  constructor(value, notMetric) {
-	    super();
-	    if ((typeof value) === 'string') {
-	      value += ' '; // Hacky fix for regularExpression
-	    }
-	
-	    const determineUnit = () => {
-	      if ((typeof notMetric === 'string')) {
-	        const index = units.indexOf(notMetric);
-	        if (index !== -1) return units[index];
-	      } else if ((typeof notMetric) === 'boolean') {
-	        if (notMetric === true) return unit;
-	      }
-	      return units[0];
-	    }
-	
-	    let decimal = 0;
-	    let nan = value === null || value === undefined;
-	    this.isNaN = () => nan;
-	
-	    const parseFraction = (str) => {
-	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
-	      regObj.integer = Number.parseInt(regObj.integer) || 0;
-	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	      if(regObj.denominator === 0) {
-	        regObj.numerator = 0;
-	        regObj.denominator = 1;
-	      }
-	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	      return regObj;
-	    };
-	
-	    function reduce(numerator, denominator) {
-	      let reduced = true;
-	      while (reduced) {
-	        reduced = false;
-	        for (let index = 0; index < Measurement.primes.length; index += 1) {
-	          const prime = Measurement.primes[index];
-	          if (prime >= denominator) break;
-	          if (numerator % prime === 0 && denominator % prime === 0) {
-	            numerator = numerator / prime;
-	            denominator = denominator / prime;
-	            reduced = true;
-	            break;
+	            }
+	            failure(this);
 	          }
+	          var resp = this.responseText;
 	        }
 	      }
-	      if (numerator === 0) {
-	        return '';
+	    },
+	
+	    id: function (url, method) {
+	      return `request.${method}.${url.replace(/\./g, ',')}`;
+	    },
+	
+	    get: function (url, success, failure) {
+	      const xhr = new Request.xmlhr();
+	      xhr.open("GET", url, true);
+	      const id = Request.id(url, 'GET');
+	      xhr.setRequestHeader('Content-Type', 'text/pdf');
+	      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+	      Request.setGlobalHeaders(xhr);
+	      if (success === undefined && failure === undefined) return xhr;
+	      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	      xhr.send();
+	      return xhr;
+	    },
+	
+	    hasBody: function (method) {
+	      return function (url, body, success, failure) {
+	        const xhr = new Request.xmlhr();
+	        xhr.open(method, url, true);
+	        const id = Request.id(url, method);
+	        xhr.setRequestHeader('Content-Type', 'application/json');
+	        Request.setGlobalHeaders(xhr);
+	        if (success === undefined && failure === undefined) return xhr;
+	        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	        xhr.send(JSON.stringify(body));
+	        return xhr;
 	      }
-	      return ` ${numerator}/${denominator}`;
-	    }
+	    },
 	
-	    function fractionEquivalent(decimalValue, accuracy) {
-	      accuracy = accuracy || '1/32'
-	      const fracObj = parseFraction(accuracy);
-	      const denominator = fracObj.denominator;
-	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	      }
-	      let sign = decimalValue > 0 ? 1 : -1;
-	      let remainder = Math.abs(decimalValue);
-	      let currRemainder = remainder;
-	      let value = 0;
-	      let numerator = 0;
-	      while (currRemainder > 0) {
-	        numerator += fracObj.numerator;
-	        currRemainder -= fracObj.decimal;
-	      }
-	      const diff1 = decimalValue - ((numerator - fracObj.numerator) / denominator);
-	      const diff2 = (numerator / denominator) - decimalValue;
-	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	      const integer = sign * Math.floor(numerator / denominator);
-	      numerator = numerator % denominator;
-	      return {integer, numerator, denominator};
-	    }
-	
-	    this.fraction = (accuracy, standardDecimal) => {
-	      standardDecimal = standardDecimal || decimal;
-	      if (nan) return NaN;
-	      const obj = fractionEquivalent(standardDecimal, accuracy);
-	      if (obj.integer === 0 && obj.numerator === 0) return '0';
-	      const integer = obj.integer !== 0 ? obj.integer : '';
-	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
-	    }
-	    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
-	
-	    this.display = (accuracy) => {
-	      switch (unit) {
-	        case units[0]: return new String(this.decimal(10));
-	        case units[1]: return this.standardUS(accuracy);
-	        default:
-	            return this.standardUS(accuracy);
-	      }
-	    }
-	
-	    this.value = (accuracy) => this.decimal(accuracy);
-	
-	    this.decimal = (accuracy) => {
-	      if (nan) return NaN;
-	      accuracy = accuracy % 10 ? accuracy : 10000;
-	      return Math.round(decimal * accuracy) / accuracy;
-	    }
-	
-	    function getDecimalEquivalant(string) {
-	      string = string.trim();
-	      if (string.match(Measurement.decimalReg)) {
-	        return Number.parseFloat(string);
-	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
-	        return parseFraction(string).decimal
-	      }
-	      nan = true;
-	      return NaN;
-	    }
-	
-	    const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
-	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
-	
-	    function standardize(ambiguousDecimal) {
-	      switch (determineUnit()) {
-	        case units[0]:
-	          return ambiguousDecimal;
-	        case units[1]:
-	          return convertUsToMetric(ambiguousDecimal);
-	        default:
-	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
-	      }
-	    }
-	
-	    if ((typeof value) === 'number') {
-	      decimal = standardize(value);
-	    } else if ((typeof value) === 'string') {
-	      try {
-	        const ambiguousDecimal = getDecimalEquivalant(value);
-	        decimal = standardize(ambiguousDecimal);
-	      } catch (e) {
-	        nan = true;
-	      }
-	    } else {
-	      nan = true;
-	    }
-	  }
+	    post: function () {return Request.hasBody('POST')(...arguments)},
+	    delete: function () {return Request.hasBody('DELETE')(...arguments)},
+	    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
+	    head: function () {return Request.hasBody('HEAD')(...arguments)},
+	    put: function () {return Request.hasBody('PUT')(...arguments)},
+	    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
 	}
 	
-	Measurement.unit = (newUnit) => {
-	  for (index = 0; index < units.length; index += 1) {
-	    if (newUnit === units[index]) unit = newUnit;
-	  }
-	  return unit
-	};
-	Measurement.units = () => JSON.parse(JSON.stringify(units));
-	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
-	Measurement.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
-	
-	
-	Measurement.validation = function (range) {
-	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
-	  let min = obj.min.trim() !== '' ?
-	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
-	  let max = obj.max.trim() !== '' ?
-	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
-	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
-	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
-	  return function (value) {
-	    const decimal = new Measurement(value).decimal();
-	    if (decimal === NaN) return false;
-	    return minCheck(decimal) && maxCheck(decimal);
-	  }
+	Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
+	Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
+	const globalHeaders = {};
+	Request.globalHeader = (header, funcOval) => {
+	  globalHeaders[header] = funcOval;
 	}
-	
-	Measurement.decimal = (value) => {
-	  return new Measurement(value, true).decimal();
+	Request.setGlobalHeaders = (xhr) => {
+	  const headers = Object.keys(globalHeaders);
+	  headers.forEach((header) => {
+	    const value = (typeof globalHeaders[header]) === 'function' ? globalHeaders[header]() : globalHeaders[header];
+	    xhr.setRequestHeader(header, value, xhr);
+	  });
 	}
-	
-	Measurement.round = (value, percision) => {
-	  if (percision)
-	  return new Measurement(value).decimal(percision);
-	  return Math.round(value * 10000000) / 10000000;
+	try {
+	  Request.xmlhr = XMLHttpRequest;
+	} catch (e) {
+	  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
 	}
 	
 	try {
-	  module.exports = Measurement;
-	} catch (e) {/* TODO: Consider Removing */}
+	  module.exports = Request;
+	} catch (e) {}
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/endpoints.js',
+RequireJS.addFunction('../../public/js/utils/services/function-cache.js',
 function (require, exports, module) {
 	
-class Endpoints {
-	  constructor(config, host) {
-	    const instance = this;
-	    let environment;
+const cacheState = {};
+	const cacheFuncs = {};
 	
-	    if ((typeof config) !== 'object') {
-	      host = config;
-	      config = Endpoints.defaultConfig;
+	class FunctionCache {
+	  constructor(func, context, group, assem) {
+	    if ((typeof func) !== 'function') return func;
+	    group ||= 'global';
+	    let cache = {};
+	
+	    function cacheFunc() {
+	      if (FunctionCache.isOn(group)) {
+	        // if (assem.constructor.name === 'DrawerFront') {
+	        //   console.log('df mfer');
+	        // }
+	        let c = cache;
+	        for (let index = 0; index < arguments.length; index += 1) {
+	          if (c[arguments[index]] === undefined) c[arguments[index]] = {};
+	          c = c[arguments[index]];
+	        }
+	        if (c[arguments[index]] === undefined) c[arguments[index]] = {};
+	
+	        if (c.__FunctionCache === undefined) {
+	          FunctionCache.notCahed++
+	          c.__FunctionCache = func.apply(context, arguments);
+	        } else FunctionCache.cached++;
+	        return c.__FunctionCache;
+	      }
+	      FunctionCache.notCahed++
+	      return func.apply(context, arguments);
+	    }
+	    cacheFunc.clearCache = () => cache = {};
+	    if (cacheFuncs[group] === undefined) cacheFuncs[group] = [];
+	    cacheFuncs[group].push(cacheFunc);
+	    return cacheFunc;
+	  }
+	}
+	
+	FunctionCache.cached = 0;
+	FunctionCache.notCahed = 0;
+	FunctionCache.on = (group) => {
+	  FunctionCache.cached = 0;
+	  FunctionCache.notCahed = 0;
+	  cacheState[group] = true;
+	}
+	FunctionCache.off = (group) => {
+	  const cached = FunctionCache.cached;
+	  const total = FunctionCache.notCahed + cached;
+	  const percent = (cached / total) * 100;
+	  console.log(`FunctionCache report: ${cached}/${total} %${percent}`);
+	  cacheState[group] = false;
+	  cacheFuncs[group].forEach((func) => func.clearCache());
+	}
+	let disabled = false;
+	FunctionCache.isOn = (group) => !disabled && cacheState[group];
+	FunctionCache.disable = () => disabled = true;
+	FunctionCache.enable = () => disabled = false;
+	module.exports = FunctionCache;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/services/state-history.js',
+function (require, exports, module) {
+	
+class StateHistory {
+	  constructor(getState, setState, minTimeInterval) {
+	    let states = [];
+	    let index = 0;
+	    minTimeInterval = minTimeInterval || 400;
+	    const instance = this;
+	    let lastStateReqTime;
+	
+	
+	    const indexHash = () => states[index].hash;
+	    this.states = () => JSON.clone(states);
+	    this.toString = () => {
+	      let str = ''
+	      states.forEach((s, i) => i === index ?
+	                        str += `(${s.hash}),` :
+	                        str += `${s.hash},`);
+	      return str.substr(0, str.length - 1);
 	    }
 	
-	    host = host || '';
-	    this.setHost = (newHost) => {
-	      if ((typeof newHost) === 'string') {
-	        if (config._envs[newHost]) environment = newHost;
-	        host = config._envs[newHost] || newHost;
+	    function getNewState(reqTime) {
+	      if (reqTime === lastStateReqTime) {
+	        const currState = getState();
+	        const currHash = JSON.stringify(currState).hash();
+	        if (states.length === 0 || currHash !== indexHash()) {
+	          if (states && states.length - 1 > index) states = states.slice(0, index + 1);
+	          states.push({hash: currHash, json: currState});
+	          index = states.length - 1;
+	          console.log(instance.toString());
+	        }
+	      }
+	    }
+	    getNewState();
+	
+	    this.index = (i) => {
+	      if (i > -1 && i < states.length) index = i;
+	      return index;
+	    }
+	
+	    // this.clone = (getState) => {
+	    //   const sh = new StateHistory(getState, minTimeInterval, this.states());
+	    //   sh.index(index);
+	    //   return sh;
+	    // }
+	
+	    this.newState = () => {
+	      const thisReqTime = new Date().getTime();
+	      lastStateReqTime = thisReqTime;
+	      setTimeout(() => getNewState(thisReqTime), minTimeInterval);
+	    }
+	
+	    this.forceState = () => {
+	      lastStateReqTime = 0;
+	      getNewState(0);
+	    }
+	
+	    this.canGoBack = () => index > 0;
+	    this.canGoForward = () => index < states.length - 1;
+	
+	    this.back = () => {
+	      if (this.canGoBack()) {
+	        const state = states[--index];
+	        lastStateReqTime = 0;
+	        console.log(this.toString());
+	        setState(state.json);
+	        return state.json;
+	      }
+	    }
+	
+	    this.forward = () => {
+	      if (this.canGoForward()) {
+	        const state = states[++index];
+	        lastStateReqTime = 0;
+	        console.log(this.toString());
+	        setState(state.json);
+	        return state.json;
+	      }
+	    }
+	  }
+	}
+	
+	module.exports = StateHistory;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
+function (require, exports, module) {
+	
+
+	
+	const CustomEvent = require('../custom-event.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	const Expandable = require('./expandable');
+	
+	class ExpandableList extends Expandable {
+	  constructor(props) {
+	    super(props);
+	    const superRemove = this.remove;
+	    this.remove = (index) => {
+	      superRemove(props.list.splice(index, 1)[0]);
+	      this.refresh();
+	    }
+	  }
+	}
+	
+	module.exports = ExpandableList
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/collections/collection.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class Collection {
+	  constructor(members) {
+	    const list = [];
+	    const instance = this;
+	
+	    function runForEach(func) {
+	      let bool = true;
+	      for (let index = 0; index < members.length; index += 1) {
+	        bool = func(members[index]) && bool;
+	      }
+	      return bool;
+	    }
+	    function refMember(name) {
+	      instance[name] = () => {
+	        const attrId = list[0][name]();
+	        return attrId;
 	      }
 	    };
-	    this.setHost(host);
-	    this.getHost = (env) => env === undefined ? host : config._envs[env];
-	    this.getEnv = () => environment;
+	    runForEach(refMember);
 	
-	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
-	    this.getFuncObj = function () {return endPointFuncs;};
-	
-	
-	    function build(str) {
-	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
-	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
-	      return function () {
-	        let values = [];
-	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
-	          values = arguments;
-	        } else {
-	          const obj = arguments[0];
-	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
-	        }
-	        let endpoint = '';
-	        for (let index = 0; index < pieces.length; index += 1) {
-	          const arg = values[index];
-	          let value = '';
-	          if (index < pieces.length - 1) {
-	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
-	          }
-	          endpoint += pieces[index] + value;
-	        }
-	        return `${host}${endpoint}`;
-	      }
+	    this.options = () => list[0].options() || [];
+	    this.cost = () => {
+	      let totalCost = 0;
+	      list.forEach((el) => totalCost += el.cost());
+	      return totalCost;
 	    }
+	    this.belongs = (el) =>
+	      list.length === 0 ||
+	        runForEach((member) => el[member]() === list[0][member]());
 	
-	    function configRecurse(currConfig, currFunc) {
-	      const keys = Object.keys(currConfig);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        const value = currConfig[key];
-	        if (key.indexOf('_') !== 0) {
-	          if (value instanceof Object) {
-	            currFunc[key] = {};
-	            configRecurse(value, currFunc[key]);
-	          } else {
-	            currFunc[key] = build(value);
-	          }
-	        } else {
-	          currFunc[key] = value;
-	        }
-	      }
+	    this.add = (elem) => {
+	      if (!this.belongs(elem)) throw new Error ('Cannot add element that does not belong.');
+	      list.push(elem);
+	      runForEach(refMember);
 	    }
-	
-	    configRecurse(config, endPointFuncs);
+	    this.list = list;
+	    this.typeId = () => {
+	      let typeId = '';
+	      runForEach((member) => typeId += `:${list[0][member]()}`);
+	      return typeId;
+	    }
 	  }
 	}
 	
-	module.exports = Endpoints;
+	Collection.create = function (members, objs) {
+	  let collections = {};
+	  for (let index = 0; index < objs.length; index += 1) {
+	    let collection = new Collection(members);
+	    collection.add(objs[index]);
+	    const typeId = collection.typeId();
+	    if (collections[typeId] === undefined) {
+	      collections[typeId] = collection;
+	    } else {
+	      collections[typeId].add(objs[index]);
+	    }
+	  }
+	  return Object.values(collections);
+	}
+	
+	module.exports = Collection;
+	
+	
+	
+	
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/logic-tree.js',
-function (require, exports, module) {
-	
-
-	const DecisionTree = require('./decision-tree');
-	const DataSync = require('./data-sync');
-	const Lookup = require('./object/lookup');
-	
-	const INTERNAL_FUNCTION_PASSWORD = String.random();
-	const DEFAULT_GROUP = 'LogicTree';
-	
-	function getNode(nodeOwrapper) {
-	  if (nodeOwrapper.constructor.name === 'DecisionNode') return nodeOwrapper;
-	  return nodeOwrapper.node;
-	}
-	
-	class LogicWrapper extends Lookup {
-	  constructor(node) {
-	    super(node ? node.nodeId() : undefined);
-	    this.node = node;
-	    this.nodeId = () => LogicWrapper.decode(this.id()).id;
-	  }
-	}
-	
-	class LogicType {
-	  constructor(wrapperOrJson) {
-	    Object.getSet(this, 'nodeId', 'optional', 'value', 'default');
-	    this.wrapper = wrapperOrJson instanceof LogicWrapper ?
-	                      wrapperOrJson :
-	                      LogicWrapper.get(wrapperOrJson.nodeId);
-	    this.nodeId(this.wrapper.node.nodeId());
-	    let optional = false;
-	    this.optional = (val) => {
-	      if (val === true || val === false) {
-	        optional = val;
-	      }
-	      return optional;
-	    }
-	    this.selectionMade = () => true;
-	  }
-	}
-	
-	class SelectLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    const json = wrapper;
-	    wrapper = this.wrapper;
-	    let value, def;
-	    const instance = this;
-	    this.madeSelection = () => validate(value, true) || validate(def, true);
-	    function validate(val, silent) {
-	      if (instance.optional() && val === null) return true;
-	      const valid = (instance.optional() && val === null) ||
-	                    (val !== null && wrapper.node.validState(val));
-	      if (!silent && !valid)
-	        throw SelectLogic.error;
-	      return valid;
-	    }
-	    this.value = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        value = val;
-	        wrapper.valueUpdate(value, wrapper);
-	      }
-	      return value === undefined ? (def === undefined ? null : def) : value;
-	    }
-	    this.selectionMade = () => value !== undefined;
-	    this.options = () => {
-	      return wrapper.node.stateNames();
-	    }
-	    this.default = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        def = val;
-	        wrapper.defaultUpdate(value, wrapper);
-	      }
-	      return def;
-	    }
-	    this.selector = () => this.value();
-	   }
-	}
-	
-	SelectLogic.error = new Error('Invalid selection: use wrapper.options() to get valid list.')
-	
-	class MultiselectLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    wrapper = this.wrapper;
-	    let value, def;
-	    const instance = this;
-	    this.madeSelection = () => validate(value, true) || validate(def, true);
-	    function validate(val, silent) {
-	      if (val === null) return instance.optional();
-	      if (val === undefined) return false;
-	      const stateNames = Object.keys(val);
-	      if (instance.optional() && stateNames.length === 0) return true;
-	      let valid = stateNames.length > 0;
-	      stateNames.forEach((name) => valid = valid && wrapper.node.validState(name));
-	      if (!silent && !valid) throw MultiselectLogic.error;
-	      return valid;
-	    }
-	    this.value = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        value = val;
-	        wrapper.valueUpdate(value);
-	      }
-	      let retVal = value === undefined ? def : value;
-	      return retVal === null ? null : JSON.clone(retVal);
-	    }
-	    this.selectionMade = () => value !== undefined;
-	    this.options = () => {
-	      const options = {};
-	      const stateNames = wrapper.node.stateNames();
-	      stateNames.forEach((name) => options[name] = def[name] === undefined ? false : def[name]);
-	      return options;
-	    }
-	    this.default = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        def = val;
-	        wrapper.defaultUpdate(value);
-	      }
-	      return def;
-	    }
-	    this.selector = () => {
-	      const obj = this.value();
-	      if (obj === null || obj === undefined) return null;
-	      const keys = Object.keys(obj);
-	      let selector = '';
-	      keys.forEach((key) => selector += obj[key] ? `|${key}` : '');
-	      selector = selector.length === 0 ? null : new RegExp(`^${selector.substring(1)}$`);
-	      return selector;
-	    }
-	  }
-	}
-	MultiselectLogic.error = new Error('Invalid multiselection: use wrapper.options() to get valid list.')
-	
-	
-	class ConditionalLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    wrapper = this.wrapper;
-	    let value, def;
-	    validate(wrapper.node.payload());
-	    def = wrapper.node.payload();
-	    function validate(val, password) {
-	      if ((typeof val.condition) !== 'function')
-	        throw ConditionalLogic.error;
-	    }
-	    this.value = (val) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        value = val;
-	        wrapper.valueUpdate(value);
-	      }
-	      return value || def;
-	    }
-	    this.options = () => undefined;
-	    this.default = (val, password) => {
-	      if (val !== undefined) {
-	        validate(val);
-	        def = val;
-	        wrapper.defaultUpdate(value);
-	      }
-	      return def;
-	    }
-	    this.selector = () => () =>
-	      this.value().condition(wrapper.root());
-	  }
-	}
-	ConditionalLogic.error = new Error('Invalid condition: must be a function that returns true or false based off of node input');
-	
-	class BranchLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    this.value = () => undefined;
-	    this.options = () => undefined;
-	    this.default = () => undefined;
-	    this.selector = () => /.*/;
-	  }
-	}
-	
-	class LeafLogic extends LogicType {
-	  constructor(wrapper) {
-	    super(wrapper);
-	    this.value = () =>undefined;
-	    this.options = () => undefined;
-	    this.default = () => undefined;
-	    this.selector = () => undefined;
-	  }
-	}
-	
-	LogicType.types = {SelectLogic, MultiselectLogic, ConditionalLogic, BranchLogic, LeafLogic};
-	class LogicTree {
-	  constructor(formatPayload) {
-	    Object.getSet(this);
-	    const tree = this;
-	    let root;
-	    let choices = {};
-	    const wrapperMap = {};
-	
-	    function getTypeObjByNodeId(nodeId) {
-	      return choices[get(nodeId).name];
-	    }
-	    let dataSync = new DataSync('nodeId', getTypeObjByNodeId);
-	    dataSync.addConnection('value');
-	    dataSync.addConnection('default');
-	
-	    function isOptional(node) {
-	      return !(choices[node.name] === undefined || !choices[node.name].optional());
-	    }
-	
-	    function isSelector(node) {
-	      return node.payload().LOGIC_TYPE.match(/Select|Multiselect/);
-	    }
-	
-	    function mustSelect(node) {
-	      return !isOptional(node)  && node.payload().LOGIC_TYPE.match(/Select|Multiselect/);
-	    }
-	
-	    function structure() { return root.node.toString(null, 'LOGIC_TYPE') }
-	
-	    function setChoice(name, val) {
-	      choices[name].value(val);
-	    }
-	
-	    function setDefault(name, val) {
-	      choices[name].default(val);
-	    }
-	
-	    function getByName(name) {
-	      if (root.node === undefined) return undefined;
-	      const node = root.node.getByName(name);
-	      return node === undefined ? undefined : wrapNode(node);
-	    }
-	
-	    function addChildrenFunc(wrapper, options) {
-	      return (name) => {
-	        const targetWrapper = getByName(name);
-	        if (targetWrapper === undefined) throw new Error(`Invalid name: ${name}`);
-	        const states = targetWrapper.node.states();
-	        states.forEach((state) => wrapNode(wrapper.node.then(state)));
-	        return wrapper;
-	      }
-	    }
-	
-	    function choicesToSelectors() {
-	      const keys = Object.keys(choices);
-	      const selectors = {};
-	      keys.forEach((key) => selectors[key] = choices[key].selector());
-	      return selectors;
-	    }
-	
-	    function reachableTree(node) {
-	      return (node || root.node).subtree(choicesToSelectors());
-	    }
-	
-	    function leaves() {
-	      const wrappers = [];
-	      reachableTree().leaves().forEach((node) => wrappers.push(wrapNode(node)));
-	      return wrappers;
-	    }
-	
-	    function pathsToString() {
-	      let paths = '=>';
-	      forPath((wrapper, data) => {
-	        if (data === undefined) paths = paths.substring(0, paths.length - 2) + "\n";
-	        paths += `${wrapper.name}=>`;
-	        return true;
-	      });
-	      paths = paths.substring(0, paths.length - 2)
-	      return paths;
-	    }
-	
-	    function forPath(func, reverse) {
-	      const lvs = reachableTree().leaves();
-	      let data = [];
-	      let dIndex = 0;
-	      lvs.forEach((leave) => {
-	        const path = [];
-	        let curr = leave;
-	        while (curr !== undefined) {
-	          path.push(curr);
-	          curr = curr.back()
-	        }
-	        if (reverse === true) {
-	          for (let index = 0; index < path.length; index += 1) {
-	            data[dIndex] = func(wrapNode(path[index]), data[dIndex]);
-	          }
-	        } else {
-	          for (let index = path.length - 1; index >= 0; index -= 1) {
-	            data[dIndex] = func(wrapNode(path[index]), data[dIndex]);
-	          }
-	        }
-	        dIndex++;
-	      });
-	      return data;
-	    }
-	
-	    function forAll(func, node) {
-	      (node || root.node).forEach((n) => {
-	        func(wrapNode(n));
-	      });
-	    }
-	
-	    function forEach(func, node) {
-	      reachableTree(node).forEach((n) => {
-	        func(wrapNode(n));
-	      });
-	    }
-	
-	    function reachable(nameOwrapper) {
-	      const wrapper = nameOwrapper instanceof LogicWrapper ?
-	                        nameOwrapper : getByName(nameOwrapper);
-	      return wrapper.node.conditionsSatisfied(choicesToSelectors(), wrapper.node);
-	    }
-	
-	    function isComplete() {
-	      const subtree = reachableTree();
-	      let complete = true;
-	      subtree.forEach((node) => {
-	        if (node.states().length === 0 && node.payload().LOGIC_TYPE !== 'Leaf' &&
-	              !selectionMade(node)) {
-	          complete = false;
-	        }
-	      });
-	      return complete;
-	    }
-	
-	    function selectionMade(node, selectors) {
-	      selectors = selectors || choicesToSelectors();
-	      if (mustSelect(node)) {
-	        const wrapper = wrapNode(node);
-	        if (getTypeObj(wrapper) === undefined) {
-	          throw new Error ('This should not happen. node wrapper was not made correctly.');
-	        }
-	        return getTypeObj(wrapper).madeSelection();
-	      }
-	      return true;
-	    }
-	
-	    function getByPath(...args) {
-	      return wrapNode(root.node.getNodeByPath(...args))
-	    }
-	    this.getByPath = getByPath;
-	
-	    function decisions(wrapper) {
-	      return () =>{
-	        const decisions = [];
-	        const addedNodeIds = [];
-	        const selectors = choicesToSelectors();
-	        wrapper.node.forEach((node) => {
-	          if (isSelector(node)) {
-	            let terminatedPath = false;
-	            let current = node;
-	            while (current = current.back()){
-	              if (addedNodeIds.indexOf(current.nodeId()) !== -1)
-	                terminatedPath = true;
-	            }
-	            if (!terminatedPath) {
-	              if (node.conditionsSatisfied(selectors, node)) {
-	                if (selectionMade(node, selectors)) {
-	                  decisions.push(wrapNode(node));
-	                } else {
-	                  decisions.push(wrapNode(node));
-	                  addedNodeIds.push(node.nodeId());
-	                }
-	              }
-	            }
-	          }
-	        });
-	        return decisions;
-	      }
-	    }
-	
-	    function toJson(wrapper) {
-	      return function () {
-	        wrapper = wrapper || root;
-	        const json = {_choices: {}, _TYPE: tree.constructor.name};
-	        const keys = Object.keys(choices);
-	        const ids = wrapper.node.map((node) => node.nodeId());
-	        keys.forEach((key) => {
-	          if (ids.indexOf(choices[key].nodeId()) !== -1) {
-	            json._choices[key] = choices[key].toJson();
-	            const valEqDefault = choices[key].default() === choices[key].value();
-	            const selectionNotMade = !choices[key].selectionMade();
-	            if(selectionNotMade || valEqDefault) json._choices[key].value = undefined;
-	          }
-	        });
-	        json._tree = wrapper.node.toJson();
-	        json._connectionList = dataSync.toJson(wrapper.node.nodes());
-	        return json;
-	      }
-	    }
-	
-	    function children(wrapper) {
-	      return () => {
-	        const children = [];
-	        wrapper.node.forEachChild((child) => children.push(wrapNode(child)));
-	        return children;
-	      }
-	    }
-	
-	    function addStaticMethods(wrapper) {
-	      wrapper.structure = structure;
-	      wrapper.choicesToSelectors = choicesToSelectors;
-	      wrapper.setChoice = setChoice;
-	      wrapper.children = children(wrapper);
-	      wrapper.getByPath = getByPath;
-	      wrapper.setDefault = setDefault;
-	      wrapper.attachTree = attachTree(wrapper);
-	      wrapper.toJson = toJson(wrapper);
-	      wrapper.root = () => root;
-	      wrapper.isComplete = isComplete;
-	      wrapper.reachable = (wrap) => reachable(wrap || wrapper);
-	      wrapper.decisions = decisions(wrapper);
-	      wrapper.forPath = forPath;
-	      wrapper.forEach = forEach;
-	      wrapper.forAll = forAll;
-	      wrapper.pathsToString = pathsToString;
-	      wrapper.leaves = leaves;
-	      wrapper.toString = () =>
-	          wrapper.node.subtree(choicesToSelectors()).toString(null, 'LOGIC_TYPE');
-	    }
-	
-	    function getTypeObj(wrapper) {
-	      return choices[wrapper.name];
-	    }
-	
-	    function addHelperMetrhods (wrapper) {
-	      const node = wrapper.node;
-	      const type = node.payload().LOGIC_TYPE;
-	      const name = node.name;
-	      if (choices[name] === undefined) {
-	        choices[name] = new (LogicType.types[`${type}Logic`])(wrapper);
-	      }
-	      const typeObj = choices[name];
-	      wrapper.name = name;
-	      wrapper.getTypeObj = () => getTypeObj(wrapper);
-	      wrapper.value = typeObj.value;
-	      wrapper.payload = () => node.payload();
-	      wrapper.options = typeObj.options;
-	      wrapper.optional = typeObj.optional;
-	      wrapper.default = typeObj.default;
-	      wrapper.selector = typeObj.selector;
-	      wrapper.addChildren = addChildrenFunc(wrapper);
-	      wrapper.valueSync = (w) => dataSync.valueSync(typeObj, w.getTypeObj());
-	      wrapper.defaultSync = (w) => dataSync.defaultSync(typeObj, w.getTypeObj());
-	      wrapper.valueUpdate = (value) => dataSync.valueUpdate(value, typeObj);
-	      wrapper.defaultUpdate = (value) => dataSync.defaultUpdate(value, typeObj);
-	    }
-	
-	    function attachTree(wrapper) {
-	      return (tree) => {
-	        const json = tree.toJson();
-	        return incorrperateJsonNodes(json, wrapper.node);
-	      }
-	    }
-	
-	    function addTypeFunction(type, wrapper) {
-	      wrapper[type.toLowerCase()] = (name, payload) => {
-	        payload = typeof formatPayload === 'function' ?
-	                          formatPayload(name, payload || {}, wrapper) : payload || {};
-	        payload.LOGIC_TYPE = type;
-	        let newWrapper;
-	        if (root === undefined) {
-	          root = wrapper;
-	          root.node = new DecisionTree(name, payload);
-	          root.payload = root.node.payload;
-	          newWrapper = root;
-	        } else if (getByName(name)) {
-	          newWrapper = wrapNode(wrapper.node.then(name));
-	        } else {
-	          wrapper.node.addState(name, payload);
-	          newWrapper = wrapNode(wrapper.node.then(name));
-	        }
-	        return newWrapper;
-	      }
-	    }
-	
-	    function getNode(nodeOrwrapperOrId) {
-	      switch (nodeOrwrapperOrId.constructor.name) {
-	        case 'DecisionNode':
-	          return nodeOrwrapperOrId;
-	        case 'LogicWrapper':
-	          return nodeOrwrapperOrId.node;
-	        default:
-	          const node = DecisionTree.DecisionNode.get(nodeOrwrapperOrId);
-	          if (node) return node;
-	          return nodeOrwrapperOrId;
-	      }
-	    }
-	
-	    function get(nodeOidOwrapper) {
-	      if (nodeOidOwrapper === undefined) return undefined;
-	      const node = getNode(nodeOidOwrapper);
-	      if (node instanceof DecisionTree.DecisionNode) {
-	        return wrapperMap[node.nodeId()];
-	      } else {
-	        return wrapperMap[node];
-	      }
-	    }
-	
-	    const set = (wrapper) =>
-	        wrapperMap[wrapper.node.nodeId()] = wrapper;
-	    this.get = get;
-	
-	    function wrapNode(node) {
-	      let wrapper = get(node);
-	      if (wrapper) return wrapper;
-	      wrapper = new LogicWrapper(node);
-	      if (node === undefined) {
-	        wrapper.toString = () =>
-	          root !== undefined ? root.toString() : 'Empty Tree';
-	      }
-	      if (node === undefined || node.payload().LOGIC_TYPE !== 'Leaf') {
-	        addTypeFunction('Select', wrapper);
-	        addTypeFunction('Multiselect', wrapper);
-	        addTypeFunction('Conditional', wrapper);
-	        addTypeFunction('Leaf', wrapper);
-	        addTypeFunction('Branch', wrapper);
-	      }
-	      addStaticMethods(wrapper);
-	      if (node && node.payload().LOGIC_TYPE !== undefined) {
-	        addHelperMetrhods(wrapper);
-	        set(wrapper);
-	      }
-	      return wrapper;
-	    }
-	
-	    function updateChoices(jsonChoices) {
-	      const keys = Object.keys(jsonChoices);
-	      keys.forEach((key) =>
-	          choices[key].fromJson(jsonChoices[key]));
-	    }
-	
-	    function incorrperateJsonNodes(json, node) {
-	      const decisionTree = new DecisionTree(json._tree);
-	
-	      let newNode;
-	      if (node !== undefined) {
-	        newNode = node.attachTree(decisionTree);
-	      } else {
-	        root = wrapNode(decisionTree);
-	        rootWrapper.node = root.node;
-	        newNode = root.node;
-	      }
-	      newNode.forEach((n) =>
-	          wrapNode(n));
-	      dataSync.fromJson(json._connectionList);
-	      updateChoices(json._choices);
-	      return node;
-	    }
-	
-	    let rootWrapper = wrapNode();
-	    if (formatPayload && formatPayload._TYPE === this.constructor.name) incorrperateJsonNodes(formatPayload);
-	    return rootWrapper;
-	  }
-	}
-	
-	LogicTree.LogicWrapper = LogicWrapper;
-	
-	module.exports = LogicTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/test.js',
+RequireJS.addFunction('../../public/js/utils/lists/expandable-object.js',
 function (require, exports, module) {
 	
 
 	
+	const CustomEvent = require('../custom-event.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	const Expandable = require('./expandable');
 	
 	
-	Error.stackInfo = (steps) => {
-	  steps = steps || 1;
-	  const err = new Error();
-	  const lines = err.stack.split('\n');
-	  const match = lines[steps].match(/at (([a-zA-Z\.]*?) |)(.*\.js):([0-9]{1,}):([0-9]{1,})/);;
-	  if (match) {
-	    return {
-	      filename: match[3].replace(/^\(/, ''),
-	      function: match[2],
-	      line: match[4],
-	      character: match[5]
+	class ExpandableObject extends Expandable {
+	  constructor(props) {
+	    props.list = props.list || {};
+	    let idAttr, mappedObject;
+	    if (props.idAttribute) {
+	      idAttr = props.idAttribute;
+	      mappedObject = props.mappedObject || {}
 	    }
-	  }
-	}
+	    super(props);
+		//TODO: Set aciveKey
 	
-	Error.reducedStack = (msg, steps) => {
-	  steps = steps || 1;
-	  const err = new Error();
-	  let lines = err.stack.split('\n');
-	  lines = lines.splice(steps);
-	  return `Error: ${msg}\n${lines.join('\n')}`;
-	}
-	
-	class ArgumentAttributeTest {
-	  constructor(argIndex, value, name, errorCode, errorAttribute) {
-	    function fail (ts, func, actualErrorCode, args) {
-	      ts.fail('AttributeTest Failed: use null if test was supposed to succeed' +
-	      `\n\tFunction: '${func.name}'` +
-	      `\n\tArgument Index: '${argIndex}'` +
-	      `\n\tName: '${name}'` +
-	      `\n\tValue: '${value}'` +
-	      `\n\tErrorCode: '${actualErrorCode}' !== '${errorCode}'`);
+	    const superRemove = this.remove;
+	    this.remove = (key) => {
+	      const removed = props.list[key];
+	      delete props.list[key];
+	      superRemove(removed);
 	    }
 	
-	    this.run = function (ts, func, args, thiz) {
-	      thiz = thiz || null;
-	      const testArgs = [];
-	      for (let index = 0; index < args.length; index += 1) {
-	        const obj = args[index];
-	        let arg;
-	        if (index === argIndex) {
-	          if (name) {
-	            arg = JSON.parse(JSON.stringify(obj));
-	            arg[name] = value;
-	          } else {
-	            arg = value;
-	          }
+	    function undefinedAttr(attr, object) {
+	      if (object === undefined) return attr;
+	      let currAttr = attr;
+	      let count = 1;
+	      while(object[currAttr] !== undefined) {
+	        if (object[currAttr] === object) return currAttr;
+	        currAttr = `${attr}-${count++}`;
+	      }
+	      return currAttr;
+	    }
+	
+	    const valOfunc = (obj, attr) => (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
+	    this.updateMapped = (obj) => {
+	      if (idAttr === undefined) return;
+	      obj = obj || props.list[this.activeKey()];
+	      if (obj) {
+	        const name = undefinedAttr(valOfunc(obj, idAttr), mappedObject);
+	        if (name !== obj._EXPAND_LAST_OBJECT_NAME) {
+	          mappedObject[name] = mappedObject[obj._EXPAND_LAST_OBJECT_NAME];
+	          delete mappedObject[obj._EXPAND_LAST_OBJECT_NAME];
+	          obj._EXPAND_LAST_OBJECT_NAME = name;
 	        }
-	        testArgs.push(arg);
-	      }
-	      try {
-	        func.apply(thiz, testArgs)
-	        if (errorCode || errorCode !== null) fail(ts, func, null, arguments);
-	      } catch (e) {
-	        errorAttribute = errorAttribute || 'errorCode';
-	        const actualErrorCode = e[errorAttribute];
-	        if (errorCode !== undefined &&
-	              (errorCode === null || actualErrorCode !== errorCode))
-	          fail(ts, func, actualErrorCode, arguments);
 	      }
 	    }
-	  }
-	}
+	    this.getMappedObject = () => mappedObject;
 	
-	class FunctionArgumentTestError extends Error {
-	  constructor(argIndex, errorAttribute) {
-	    super();
-	    this.message = 'errorCode should be null if no error thrown and undefined if no errorCode';
-	    if (argIndex === undefined) {
-	      this.message += '\n\targIndex must be defined.';
-	    }
-	    if (errorAttribute === undefined) {
-	      this.message += '\n\terrorAttribute must be defined.';
-	    }
-	  }
-	}
-	
-	const failureError = new Error('Test Failed');
-	
-	class FunctionArgumentTest {
-	  constructor(ts, func, args, thiz) {
-	    if (!(ts instanceof TestStatus))
-	      throw new Error('ts must be a valid instance of TestStatus');
-	    if ((typeof func) !== 'function')
-	      throw new Error("Function must be defined and of type 'function'");
-	    if (!Array.isArray(args) || args.length === 0)
-	      throw new Error("This is not a suitable test for a function without arguments");
-	    const funcArgTests = [];
-	    let argIndex, errorCode;
-	    let errorAttribute = 'errorCode';
-	    this.setIndex = (i) => {argIndex = i; return this;}
-	    this.setErrorCode = (ec) => {errorCode = ec; return this;}
-	    this.setErrorAttribute = (ea) => {errorAttribute = ea; return this};
-	    const hasErrorCode =  errorCode !== undefined;
-	    this.run = () => {
-	      funcArgTests.forEach((fat) => {
-	        fat.run(ts, func, args, thiz);
-	      });
-	      return this;
-	    }
-	    this.add = (name, value) =>  {
-	      if (errorAttribute === undefined || argIndex === undefined)
-	        throw new FunctionArgumentTestError(argIndex, errorAttribute);
-	      const at = new ArgumentAttributeTest(argIndex, value, name, errorCode, errorAttribute);
-	      funcArgTests.push(at);
-	      return this;
-	    }
-	  }
-	}
-	
-	function round(value, accuracy) {
-	  if (accuracy === undefined) return value;
-	  return Math.round(value * accuracy) / accuracy;
-	}
-	// ts for short
-	class TestStatus {
-	  constructor(testName) {
-	    let assertT = 0;
-	    let assertC = 0;
-	    let success = false;
-	    let fail = false;
-	    let failOnError = true;
-	    let instance = this;
-	    function printError(msg, stackOffset) {
-	      stackOffset = stackOffset || 4;
-	      console.error(`%c${Error.reducedStack(msg, stackOffset)}`, 'color: red');
-	    }
-	    function assert(b) {
-	      assertT++;
-	      if (b) {
-	        assertC++;
-	        TestStatus.successAssertions++;
-	        return true;
+	    this.getKey = (values, object) => {
+	      if (object && object._EXPAND_KEY === undefined) {
+	        object._EXPAND_KEY = String.random();
+	        object._EXPAND_LAST_OBJECT_NAME = undefinedAttr(valOfunc(object, idAttr), mappedObject);
+	        if (idAttr !== undefined) mappedObject[object._EXPAND_LAST_OBJECT_NAME] = object;
 	      }
-	      TestStatus.failAssertions++;
-	      return false;
+	      if (!props.dontOpenOnAdd && object) this.activeKey(object._EXPAND_KEY);
+	      if (idAttr) this.updateMapped(object);
+	      return this.activeKey() || undefined;
 	    }
-	    function successStr(msg) {
-	      console.log(`%c ${testName} - Successfull (${assertC}/${assertT})${
-	          msg ? `\n\t\t${msg}` : ''}`, 'color: green');
-	    }
-	    const possiblyFail = (msg) => failOnError ? instance.fail(msg, 6) : printError(msg, 5);
-	
-	    this.assertTrue = (b, msg) => !assert(b) &&
-	                            possiblyFail(`${msg}\n\t\t'${b}' should be true`);
-	    this.assertFalse = (b, msg) => !assert(!b) &&
-	                            possiblyFail(`${msg}\n\t\t'${b}' should be false`);
-	    this.assertEquals = (a, b, msg, acc) => !assert(round(a, acc) === round(b, acc)) &&
-	                            possiblyFail(`${msg}\n\t\t'${a}' === '${b}' should be true`);
-	    this.assertNotEquals = (a, b, msg, acc) => !assert(round(a, acc) !== round(b, acc)) &&
-	                            possiblyFail(`${msg}\n\t\t'${a}' !== '${b}' should be true`);
-	    this.assertTolerance = (n1, n2, tol, msg, stackOffset) => {
-	      !assert(Math.abs(n1-n2) < tol) &&
-	      possiblyFail(`${msg}\n\t\t${n1} and ${n2} are not within tolerance ${tol}`, stackOffset);
-	    }
-	    this.fail = (msg, stackOffset) => {
-	      fail = true;
-	      printError(msg, stackOffset);
-	      throw failureError;
-	    };
-	    this.success = (msg, stackOffset) => (success = true) && successStr(msg, stackOffset);
 	  }
 	}
-	
-	TestStatus.successCount = 0;
-	TestStatus.failCount = 0;
-	TestStatus.successAssertions = 0;
-	TestStatus.failAssertions = 0;
-	
-	const Test = {
-	  tests: {},
-	  add: (name, func) => {
-	    if ((typeof func) === 'function') {
-	      if (Test.tests[name] ===  undefined) Test.tests[name] = [];
-	      Test.tests[name].push(func);
-	    }
-	  },
-	  run: () => {
-	    const testNames = Object.keys(Test.tests);
-	    for (let index = 0; index < testNames.length; index += 1) {
-	      const testName = testNames[index];
-	      try {
-	        Test.tests[testName].forEach((testFunc) => testFunc(new TestStatus(testName)));
-	        TestStatus.successCount++;
-	      } catch (e) {
-	        TestStatus.failCount++;
-	        if (e !== failureError)
-	          console.log(`%c ${e.stack}`, 'color: red')
-	      }
-	    }
-	    const failed = (TestStatus.failCount + TestStatus.failAssertions) > 0;
-	    console.log(`\n%c Successfull Tests:${TestStatus.successCount} Successful Assertions: ${TestStatus.successAssertions}`, 'color: green');
-	    console.log(`%c Failed Tests:${TestStatus.failCount} Failed Assertions: ${TestStatus.failAssertions}`, !failed ? 'color:green' : 'color: red');
-	  }
-	}
-	
-	exports.ArgumentAttributeTest = ArgumentAttributeTest;
-	exports.FunctionArgumentTestError = FunctionArgumentTestError;
-	exports.FunctionArgumentTest = FunctionArgumentTest;
-	exports.TestStatus = TestStatus;
-	exports.Test = Test;
+	module.exports = ExpandableObject
 	
 });
 
@@ -11569,746 +11676,87 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/collections/notification.js',
+RequireJS.addFunction('../../public/js/utils/display/catch-all.js',
 function (require, exports, module) {
+	const du = require('../dom-utils');
 	
-const CustomEvent = require('../custom-event');
-	
-	function searchAndConvert(obj, parentPath, beforeEvent, afterEvent) {
-	  const proxy = new Proxy(obj, {set: notify(parentPath, beforeEvent, afterEvent)});
-	  const keys = Object.keys(obj);
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const path = parentPath ? `${parentPath}.${key}` : key;
-	    if (obj[key] instanceof Object)
-	      obj[key] = new Notifiction(true, obj[key], path, beforeEvent, afterEvent);
-	  }
-	  return proxy;
-	}
-	
-	function notify(parentPath, beforeEvent, afterEvent) {
-	  return (target, key, value) => {
-	    const change = target[key] !== value;
-	    const path = parentPath ? `${parentPath}.${key}` : key;
-	    if (change) {
-	      if (target.isRecusive() && value instanceof Object) value = new Notifiction(true, value, path, beforeEvent, afterEvent);
-	    }
-	    const detail = {target, path, old: target[key], new: value};
-	    if (change) beforeEvent.trigger(null, detail);
-	    target[key] = value;
-	    if (change) afterEvent.trigger(null, detail);
-	    return true;
-	  }
-	}
-	
-	class Notifiction {
-	  constructor(recursive, object, path, beforeChangeEvent, afterChangeEvent) {
-	    path ||= '';
-	    afterChangeEvent ||= new CustomEvent('afterChange');
-	    beforeChangeEvent ||= new CustomEvent('beforeChange');
-	    let proxy;
-	    if (recursive) {
-	      proxy = searchAndConvert(object || this, path, beforeChangeEvent, afterChangeEvent);
-	    } else {
-	      proxy = new Proxy(object || this, {set: notify(path, beforeChangeEvent, afterChangeEvent)})
-	    }
-	
-	    Object.defineProperty(proxy, "isRecusive", {
-	        writable: false,
-	        enumerable: false,
-	        configurable: false,
-	        value: () => recursive === true
-	    });
-	    Object.defineProperty(proxy, "onAfterChange", {
-	        writable: false,
-	        enumerable: false,
-	        configurable: false,
-	        value: afterChangeEvent.on
-	    });
-	    Object.defineProperty(proxy, "onBeforeChange", {
-	        writable: false,
-	        enumerable: false,
-	        configurable: false,
-	        value: beforeChangeEvent.on
-	    });
-	
-	    return proxy;
-	  }
-	}
-	
-	class NotifictionArray extends Notifiction {
-	  constructor(recursive, array, path, beforeChangeEvent, afterChangeEvent) {
-	    super(recursive, array || [], path, beforeChangeEvent, afterChangeEvent);
-	  }
-	}
-	
-	const notifyArr = new Notifiction();
-	notifyArr.onAfterChange(console.log);
-	notifyArr.onBeforeChange(console.error);
-	notifyArr[4] = 'poop';
-	notifyArr.pickls = 5;
-	notifyArr[4] = 'y diapers';
-	notifyArr[0] = [];
-	notifyArr[0][69] = 'sooo fine'
-	notifyArr[0][6] = {}
-	notifyArr[0][6].punk = [1,2,3,4,66]
-	notifyArr[0][6].punk.skittles = 'taste the rainbow'
-	notifyArr[0][6].punk.skittles = 'uck!'
-	
-	Notifiction.Array = NotifictionArray;
-	module.exports = Notifiction;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/lists/expandable-object.js',
-function (require, exports, module) {
-	
-
-	
-	const CustomEvent = require('../custom-event.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	const Expandable = require('./expandable');
-	
-	
-	class ExpandableObject extends Expandable {
-	  constructor(props) {
-	    props.list = props.list || {};
-	    let idAttr, mappedObject;
-	    if (props.idAttribute) {
-	      idAttr = props.idAttribute;
-	      mappedObject = props.mappedObject || {}
-	    }
-	    super(props);
-		//TODO: Set aciveKey
-	
-	    const superRemove = this.remove;
-	    this.remove = (key) => {
-	      const removed = props.list[key];
-	      delete props.list[key];
-	      superRemove(removed);
-	    }
-	
-	    function undefinedAttr(attr, object) {
-	      if (object === undefined) return attr;
-	      let currAttr = attr;
-	      let count = 1;
-	      while(object[currAttr] !== undefined) {
-	        if (object[currAttr] === object) return currAttr;
-	        currAttr = `${attr}-${count++}`;
-	      }
-	      return currAttr;
-	    }
-	
-	    const valOfunc = (obj, attr) => (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
-	    this.updateMapped = (obj) => {
-	      if (idAttr === undefined) return;
-	      obj = obj || props.list[this.activeKey()];
-	      if (obj) {
-	        const name = undefinedAttr(valOfunc(obj, idAttr), mappedObject);
-	        if (name !== obj._EXPAND_LAST_OBJECT_NAME) {
-	          mappedObject[name] = mappedObject[obj._EXPAND_LAST_OBJECT_NAME];
-	          delete mappedObject[obj._EXPAND_LAST_OBJECT_NAME];
-	          obj._EXPAND_LAST_OBJECT_NAME = name;
-	        }
-	      }
-	    }
-	    this.getMappedObject = () => mappedObject;
-	
-	    this.getKey = (values, object) => {
-	      if (object && object._EXPAND_KEY === undefined) {
-	        object._EXPAND_KEY = String.random();
-	        object._EXPAND_LAST_OBJECT_NAME = undefinedAttr(valOfunc(object, idAttr), mappedObject);
-	        if (idAttr !== undefined) mappedObject[object._EXPAND_LAST_OBJECT_NAME] = object;
-	      }
-	      if (!props.dontOpenOnAdd && object) this.activeKey(object._EXPAND_KEY);
-	      if (idAttr) this.updateMapped(object);
-	      return this.activeKey() || undefined;
-	    }
-	  }
-	}
-	module.exports = ExpandableObject
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/lists/expandable.js',
-function (require, exports, module) {
-	
-
-	
-	const CustomEvent = require('../custom-event.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	
-	// properties
-	//  required: {
-	//  getHeader: function returns html header string,
-	//  getBody: function returns html body string,
-	//}
-	//  optional: {
-	//  list: list to use, creates on undefined
-	//  getObject: function returns new list object default is generic js object,
-	//  parentSelector: cssSelector only reqired for refresh function,
-	//  listElemLable: nameOfElementType changes add button label,
-	//  dontOpenOnAdd: by default the active element will be switched to newly added elements.
-	//  hideAddBtn: defaults to false,
-	//  startClosed: all tabs are closed on list open.
-	//  input: true - require user to enter text before adding new
-	//  inputOptions: array of autofill inputs
-	//  inputs: [{placeholder, autofill},...]
-	//  inputValidation: function to validate input fields
-	//  type: defaults to list,
-	//  selfCloseTab: defalts to true - allows clicking on header to close body,
-	//  findElement: used to find elemenents related to header - defaults to closest
-	//}
-	class Expandable {
-	  constructor(props) {
-	    const afterRenderEvent = new CustomEvent('afterRender');
-	    const afterAddEvent = new CustomEvent('afterAdd');
-	    const afterRefreshEvent = new CustomEvent('afterRefresh');
-	    const afterRemovalEvent = new CustomEvent('afterRemoval');
+	class CatchAll {
+	  constructor(container) {
 	    const instance = this;
-	    const renderBodyOnOpen = props.renderBodyOnOpen === false ? false : true;
-	    props.getObject = props.getObject || (() => ({}));
-	    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
-	    props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
-	    props.type = props.type || 'list';
-	    props.findElement = props.findElement || ((selector, target) =>  du.find.closest(selector, target));
-	    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
-	    props.getObject = props.getObject || (() => {});
-	    props.inputs = props.inputs || [];
-	    props.list = props.list || [];
-	    // props.list.DO_NOT_CLONE = true;
-	    this.hasBody = () => (typeof this.getBody) === 'function';
-	    this.getHeader = props.getHeader; delete props.getHeader;
-	    this.getBody = props.getBody; delete props.getBody;
-	    props.id = Expandable.lists.length;
-	    props.activeKey = 0; //TODO ???
-	    Object.getSet(this, props, 'listElemLable');
-	    let pendingRefresh = false;
-	    let lastRefresh = new Date().getTime();
-	    const storage = {};
-	    Expandable.lists[props.id] = this;
-	    this.inputTree = () => props.inputTree;
+	    container = container;
+	    let events = Array.from(arguments).splice(1);
+	    events = events.length > 0 ? events : CatchAll.allMouseEvents;
 	
-	    this.errorCntId = () => props.ERROR_CNT_ID;
-	    function setErrorMsg(msg) {
-	        du.id(props.ERROR_CNT_ID).innerHTML = msg;
-	    }
+	    const backdrop = document.createElement('DIV');
+	    this.backdrop = backdrop;
 	
-	    function values() {
-	      const values = {};
-	      props.inputs.forEach((input) =>
-	        values[input.placeholder] = du.id(input.id).value);
-	      return values;
-	    }
+	    this.hide = () => {
+	      backdrop.hidden = true;
+	      backdrop.style.zIndex = 0;
+	    };
+	    this.show = () => {
+	      backdrop.hidden = false
+	      instance.updateZindex();
+	    };
 	
-	    function getCnt() {
-	      return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
-	    }
-	
-	    function getBodyCnt() {
-	      return du.find.down('.expand-body', getCnt());
-	    }
-	
-	    function getInputCnt() {
-	      const cnt = du.find.down('.expand-input-cnt', getCnt());
-	      return cnt;
-	    }
-	    //changes....
-	    this.values = values;
-	    this.getInputCnt = getInputCnt;
-	
-	    this.add = (vals) => {
-	      const inputValues = vals || values();
-	      if ((typeof props.inputValidation) !== 'function' ||
-	              props.inputValidation(inputValues) === true) {
-	          const obj = props.getObject(inputValues, getInputCnt());
-	          const key = this.getKey(vals, obj);
-	          props.list[key] = obj;
-	          if (!props.dontOpenOnAdd) this.activeKey(key);
-	          this.refresh();
-	          afterAddEvent.trigger();
+	    this.updateZindex = () => setTimeout(() => {
+	      if (container) {
+	        if (container.style.zIndex === '') {
+	          container.style.zIndex = 2;
+	        }
+	        backdrop.style.zIndex = Number.parseInt(container.style.zIndex) - 1;
 	      } else {
-	        const errors = props.inputValidation(inputValues);
-	        let errorStr;
-	        if ((typeof errors) === 'object') {
-	          const keys = Object.keys(errors);
-	          errorStr = Object.values(errors).join('<br>');
-	        } else {
-	          errorStr = `Error: ${errors}`;
-	        }
-	        setErrorMsg(errorStr);
+	        backdrop.style.zIndex = CatchAll.findHigestZindex() + 1;
 	      }
-	    };
-	    this.hasInputTree = () =>
-	      this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
-	    if (this.hasInputTree())
-	      props.inputTree.onSubmit(this.add);
-	    props.hasInputTree = this.hasInputTree;
+	    }, 200);
 	
-	    this.isSelfClosing = () => props.selfCloseTab;
-	    this.remove = (removed) => {
-	      afterRemovalEvent.trigger(undefined, removed);
-	      this.refresh();
-	    }
-	    this.html = () =>
-	      Expandable[`${instance.type().toCamel()}Template`].render(this);
-	    this.afterRender = (func) => afterRenderEvent.on(func);
-	    this.afterAdd = (func) => afterAddEvent.on(func);
-	    this.afterRemoval = (func) => afterRemovalEvent.on(func);
-	    this.refresh = (type) => {
-	      this.type((typeof type) === 'string' ? type : props.type);
-	      if (!pendingRefresh) {
-	        pendingRefresh = true;
-	        setTimeout(() => {
-	          props.inputs.forEach((input) => input.id = input.id || String.random(7));
-	          const parent = document.querySelector(props.parentSelector);
-	          const html = this.html();
-	          if (parent && html !== undefined) {
-	            parent.innerHTML = html;
-	            afterRefreshEvent.trigger();
-	          }
-	          pendingRefresh = false;
-	        }, 100);
-	      }
-	    };
-	    this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
-	    this.getKey = () => this.list().length;
-	    this.active = () => props.list[this.activeKey()];
-	    // TODO: figure out why i wrote this and if its neccisary.
-	    this.value = (key) => (key2, value) => {
-	      if (props.activeKey === undefined) props.activeKey = 0;
-	      if (key === undefined) key = props.activeKey;
-	      if (storage[key] === undefined) storage[key] = {};
-	      if (value === undefined) return storage[key][key2];
-	      storage[key][key2] = value;
-	    }
-	    this.inputHtml = () => this.hasInputTree() ?
-	          this.inputTree().payload().html() : Expandable.inputRepeatTemplate.render(this);
-	    this.set = (key, value) => props.list[key] = value;
-	    this.get = (key) => props.list[key];
-	    this.renderBody = (target) => {
-	      const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
-	      target = target || document.querySelector(headerSelector);
-	      if (target !== null) {
-	        const id = target.getAttribute('ex-list-id');
-	        const list = Expandable.lists[id];
-	        const headers = du.find.up('.expandable-list', target).querySelectorAll('.expand-header');
-	        const bodys = du.find.up('.expandable-list', target).querySelectorAll('.expand-body');
-	        const rmBtns = du.find.up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-	        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-	        bodys.forEach((body) => body.style.display = 'none');
-	        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-	        const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
-	        if (this.hasBody()) {
-	          body.style.display = 'block';
-	        }
-	        const key = target.getAttribute('key');
-	        this.activeKey(key);
-	        if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
-	        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-	        target.className += ' active' + (this.hasBody() ? '' : ' no-body');
-	        afterRenderEvent.trigger();
-	        // du.scroll.intoView(target.parentElement, 3, 25, document.body);
-	      }
-	    };
-	    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+	    this.on = (eventName, func) => backdrop.addEventListener(eventName, func);
 	
-	    this.htmlBody = (key) => {
-	      getBodyCnt().setAttribute('key', key);
-	      return this.hasBody() ? this.getBody(this.list()[key], key) : '';
-	    }
-	    this.list = () => props.list;
-	    this.refresh();
-	  }
-	}
-	Expandable.lists = [];
-	Expandable.DO_NOT_CLONE = true;
-	Expandable.inputRepeatTemplate = new $t('expandable/input-repeat');
-	Expandable.listTemplate = new $t('expandable/list');
-	Expandable.pillTemplate = new $t('expandable/pill');
-	Expandable.sidebarTemplate = new $t('expandable/sidebar');
-	Expandable.topAddListTemplate = new $t('expandable/top-add-list');
-	Expandable.getIdAndKey = (target, level) => {
-	  level ||= 0;
-	  const elems = du.find.upAll('.expand-header,.expand-body', target);
-	  if (elems.length < level + 1) return undefined;
-	  const cnt = elems[level];
-	  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-	  const key = cnt.getAttribute('key');
-	  return {id, key};
-	}
-	Expandable.getValueFunc = (target) => {
-	  const idKey = Expandable.getIdAndKey(target);
-	  return Expandable.lists[idKey.id].value(idKey.key);
-	}
+	    backdrop.style.position = 'fixed';
+	    backdrop.style.backgroundColor = 'transparent';
 	
-	Expandable.get = (target, level) => {
-	  const idKey = Expandable.getIdAndKey(target, level);
-	  if (idKey === undefined) return undefined;
-	  return Expandable.lists[idKey.id].get(idKey.key);
-	}
+	    // backdrop.style.cursor = 'none';
+	    backdrop.style.top = 0;
+	    backdrop.style.bottom = 0;
+	    backdrop.style.right = 0;
+	    backdrop.style.left = 0;
+	    const stopPropagation = (e) => e.stopPropagation();
+	    events.forEach((eventName) => instance.on(eventName, stopPropagation));
+	    CatchAll.container.append(backdrop);
 	
-	Expandable.list = (target) => {
-	  const idKey = Expandable.getIdAndKey(target);
-	  return Expandable.lists[idKey.id];
-	}
-	
-	Expandable.set = (target, value) => {
-	  const idKey = Expandable.getIdAndKey(target);
-	  Expandable.lists[idKey.id].set(idKey.key, value);
-	}
-	
-	Expandable.value = (key, value, target) => {
-	  return Expandable.getValueFunc(target)(key, value);
-	}
-	du.on.match('click', '.expandable-list-add-btn', (target) => {
-	  const id = target.getAttribute('ex-list-id');
-	  Expandable.lists[id].add();
-	});
-	du.on.match('click', '.expandable-item-rm-btn', (target) => {
-	  const id = target.getAttribute('ex-list-id');
-	  const key = target.getAttribute('key');
-	  Expandable.lists[id].remove(key);
-	});
-	Expandable.closeAll = (header) => {
-	  const hello = 'world';
-	}
-	
-	du.on.match('click', '.expand-header', (target, event) => {
-	  const isActive = target.matches('.active');
-	  const id = target.getAttribute('ex-list-id');
-	  const list = Expandable.lists[id];
-	  if (list) {
-	    if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
-	      du.class.remove(target, 'active');
-	      du.find.closest('.expand-body', target).style.display = 'none';
-	      list.activeKey(null);
-	      target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-	    } else if (!isActive) {
-	      list.renderBody(target);
-	    }
-	  }
-	});
-	
-	function getExpandObject(elem) {
-	  const exListElem = du.find.up('[ex-list-id]', elem);
-	  if (!exListElem) return undefined;
-	  const listId = exListElem.getAttribute('ex-list-id');
-	  return Expandable.lists[listId];
-	}
-	
-	du.on.match('click', '.input-open-cnt', (target) => {
-	  const inputCnts = document.querySelectorAll('.expand-input-cnt');
-	  const expandList = getExpandObject(target);
-	  if (expandList && !expandList.hasInputTree()) expandList.add();
-	  else {
-	    const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
-	    const closest = du.find.closest('.expand-input-cnt', target);
-	    inputCnts.forEach((elem) => elem.hidden = true);
-	    inputOpenCnts.forEach((elem) => elem.hidden = false);
-	    target.hidden = true;
-	    if (closest) closest.hidden = false;
-	  }
-	});
-	
-	module.exports = Expandable
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
-function (require, exports, module) {
-	
-
-	
-	const CustomEvent = require('../custom-event.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	const Expandable = require('./expandable');
-	
-	class ExpandableList extends Expandable {
-	  constructor(props) {
-	    super(props);
-	    const superRemove = this.remove;
-	    this.remove = (index) => {
-	      superRemove(props.list.splice(index, 1)[0]);
-	      this.refresh();
-	    }
+	    this.updateZindex();
+	    this.hide();
 	  }
 	}
 	
-	module.exports = ExpandableList
 	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/collections/collection.js',
-function (require, exports, module) {
+	CatchAll.allMouseEvents = ['auxclick', 'click', 'contextmenu', 'dblclick',
+	                        'mousedown', 'mouseenter', 'mouseleave', 'mousemove',
+	                        'mouseover', 'mouseout', 'mouseup', 'pointerlockchange',
+	                        'pointerlockerror', 'select', 'wheel'];
 	
-
-	
-	
-	class Collection {
-	  constructor(members) {
-	    const list = [];
-	    const instance = this;
-	
-	    function runForEach(func) {
-	      let bool = true;
-	      for (let index = 0; index < members.length; index += 1) {
-	        bool = func(members[index]) && bool;
-	      }
-	      return bool;
-	    }
-	    function refMember(name) {
-	      instance[name] = () => {
-	        const attrId = list[0][name]();
-	        return attrId;
-	      }
-	    };
-	    runForEach(refMember);
-	
-	    this.options = () => list[0].options() || [];
-	    this.cost = () => {
-	      let totalCost = 0;
-	      list.forEach((el) => totalCost += el.cost());
-	      return totalCost;
-	    }
-	    this.belongs = (el) =>
-	      list.length === 0 ||
-	        runForEach((member) => el[member]() === list[0][member]());
-	
-	    this.add = (elem) => {
-	      if (!this.belongs(elem)) throw new Error ('Cannot add element that does not belong.');
-	      list.push(elem);
-	      runForEach(refMember);
-	    }
-	    this.list = list;
-	    this.typeId = () => {
-	      let typeId = '';
-	      runForEach((member) => typeId += `:${list[0][member]()}`);
-	      return typeId;
+	// Ripped off of: https://stackoverflow.com/a/1120068
+	CatchAll.findHigestZindex = function () {
+	  var elems = document.querySelectorAll('*');
+	  var highest = Number.MIN_SAFE_INTEGER || -(Math.pow(2, 53) - 1);
+	  for (var i = 0; i < elems.length; i++)
+	  {
+	    var zindex = Number.parseInt(
+	      document.defaultView.getComputedStyle(elems[i], null).getPropertyValue("z-index"),
+	      10
+	    );
+	    if (zindex > highest && zindex !== 2147483647)
+	    {
+	      highest = zindex;
 	    }
 	  }
+	  return highest;
 	}
 	
-	Collection.create = function (members, objs) {
-	  let collections = {};
-	  for (let index = 0; index < objs.length; index += 1) {
-	    let collection = new Collection(members);
-	    collection.add(objs[index]);
-	    const typeId = collection.typeId();
-	    if (collections[typeId] === undefined) {
-	      collections[typeId] = collection;
-	    } else {
-	      collections[typeId].add(objs[index]);
-	    }
-	  }
-	  return Object.values(collections);
-	}
+	CatchAll.container = du.create.element('div', {id: 'catch-all-cnt'});
+	document.body.append(CatchAll.container);
 	
-	module.exports = Collection;
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/bind.js',
-function (require, exports, module) {
-	
-const du = require('../dom-utils');
-	const Input = require('./input');
-	
-	const defaultDynamInput = (value, type) => new Input({type, value});
-	
-	module.exports = function(selector, objOrFunc, props) {
-	  let lastInputTime = {};
-	  props = props || {};
-	  const validations = props.validations || {};
-	  const inputs = props.inputs || {};
-	
-	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
-	  const getValue = (updatePath, elem) => {
-	    const input = Object.pathValue(inputs, updatePath);
-	    return input ? input.value() : elem.value;
-	  }
-	  const getValidation = (updatePath) => {
-	    let validation = Object.pathValue(validations, updatePath);
-	    const input = Object.pathValue(inputs, updatePath);
-	    if (input) {
-	      validation = input.validation;
-	    }
-	    return validation;
-	  }
-	
-	  function update(elem) {
-	    const target = resolveTarget(elem);
-	    elem = du.find.down('input,select,textarea', elem);
-	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
-	    elem.id = elem.id || String.random(7);
-	    const thisInputTime = new Date().getTime();
-	    lastInputTime[elem.id] = thisInputTime;
-	    setTimeout(() => {
-	      if (thisInputTime === lastInputTime[elem.id]) {
-	        const validation = getValidation(updatePath);
-	        if (updatePath !== null) {
-	          const newValue = getValue(updatePath, elem);
-	          if ((typeof validation) === 'function' && !validation(newValue)) {
-	            console.error('badValue')
-	          } else if ((typeof objOrFunc) === 'function') {
-	            objOrFunc(updatePath, elem.value, elem);
-	          } else {
-	            Object.pathValue(objOrFunc, updatePath, elem.value);
-	          }
-	
-	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
-	            target.innerHTML = newValue;
-	          }
-	        }
-	      }
-	    }, 2000);
-	  }
-	  const makeDynamic = (target) => {
-	    target = resolveTarget(target);
-	    if (target.getAttribute('resolved') === null) {
-	      target.setAttribute('resolved', 'dynam-input');
-	      const value = target.innerText;
-	      const type = target.getAttribute('type');
-	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
-	      const input = Object.pathValue(inputs, updatePath) || defaultDynamInput(value, type);
-	
-	      target.innerHTML = input.html();
-	      const id = (typeof input.id === 'function') ? input.id() : input.id;
-	      const inputElem = du.find.down(`#${id}`, target);
-	      du.class.add(inputElem, 'dynam-input');
-	      inputElem.setAttribute('prop-update', updatePath);
-	      inputElem.focus();
-	    }
-	  }
-	
-	  du.on.match('keyup', selector, update);
-	  du.on.match('change', selector, update);
-	  du.on.match('click', selector, makeDynamic);
-	}
-	
-	
-	const undoDynamic = (target) => {
-	  const parent = du.find.up('[resolved="dynam-input"]', target)
-	  parent.innerText = target.value;
-	  parent.removeAttribute('resolved');
-	}
-	
-	du.on.match('focusout', '.dynam-input', undoDynamic);
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/object/key-value.js',
-function (require, exports, module) {
-	
-const Lookup = require('./lookup');
-	const Notifiction = require('../collections/notification.js');
-	const NotifictionArray = Notifiction.Array;
-	const CustomEvent = require('../custom-event.js');
-	
-	function updateParent(keyValue) {
-	  return (target, detail) => {
-	    if (detail.new instanceof KeyValue) {
-	      const parentAttr = detail.new.value.parentAttribute();
-	      if (parentAttr) detail.new[parentAttr](keyValue);
-	    }
-	  }
-	}
-	
-	/**
-	  properties:
-	    @childrenAttribute - Attribute that defines children an object or an array;
-	    @object - true iff you want an object for your children
-	    @parentAttribute - Attribute that defines parent setting getting function;
-	    @keyMapFunction - function will be called to convert keys before processing.
-	    @id - Lookup id
-	    @idAttr - attribute for Lookup id.
-	    @evaluators - an object whos attributes are types and values are functions to resolve said type
-	**/
-	class KeyValue extends Lookup {
-	  constructor(properties) {
-	    super(properties.id, properties.idAttr);
-	    const childAttr = properties.childrenAttribute;
-	    const parentAttr = properties.parentAttribute;
-	    const customFuncs = [];
-	
-	
-	    if (childAttr) {
-	      if (properties.object) this[childAttr] = new Notifiction(false);
-	      else this[childAttr] = new NotifictionArray(false);
-	      this[childAttr].onAfterChange(updateParent(this));
-	      this.getRoot = () => {
-	        let curr = this;
-	        while(curr.parentAssembly() !== undefined) curr = curr.parentAssembly();
-	        return curr;
-	      }
-	    }
-	
-	    function runCustomFunctions(code, value) {
-	      for (let index = 0; index < customFuncs; index++) {
-	        const customVal = customFuncs[index](code, value);
-	        if(customVal) return customVal;
-	      }
-	    }
-	
-	    this.value = (key, value) => {
-	      try {
-	        const formatted = (typeof this.value.keyFormatter) === 'function' ? this.value.keyFormatter(key) : undefined;
-	        if (formatted !== undefined) key = formatted;
-	        const customVal = runCustomFunctions(key, value)
-	        if(customVal !== undefined) return customVal;
-	
-	        if (value !== undefined) {
-	          this.value.values[key] = value;
-	        } else {
-	          const instVal = this.value.values[key];
-	          if (instVal !== undefined && instVal !== null) {
-	            const evaluator = this.value.evaluators[(typeof instVal)];
-	            if (evaluator) return evaluator(instVal);
-	            return instVal;
-	          }
-	          const parent = this[parentAttr]();
-	          if (parent) return parent.value(key);
-	          else {
-	            const defaultFunction = this.value.defaultFunction;
-	            if (defaultFunction) {
-	              value = (typeof this.value.defaultFunction) === 'function' ? this.value.defaultFunction(key) : undefined;
-	              if (value === undefined) throw new Error();
-	              return value;
-	            }
-	          }
-	        }
-	      } catch (e) {
-	        console.error(`Failed to resolve key: '${key}'`);
-	        throw e;
-	        return NaN;
-	      }
-	    }
-	
-	
-	    this.value.values = {};
-	    this.value.evaluators = properties.evaluators || {};
-	    this.value.defaultFunction = properties.defaultFunction;
-	    this.value.keyFormatter = properties.keyFormatter;
-	    this.value.parentAttribute = () => parentAttr;
-	    this.value.childrenAttribute = () => childAttr;
-	    this.value.addCustomFunction = (func) => (typeof func) === 'function' && customFuncs.push(func);
-	  }
-	}
-	
-	module.exports = KeyValue;
+	module.exports = CatchAll;
 	
 });
 
@@ -12534,6 +11982,503 @@ class Lookup {
 	try {
 	  module.exports = Lookup;
 	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/collections/notification.js',
+function (require, exports, module) {
+	
+const CustomEvent = require('../custom-event');
+	
+	function searchAndConvert(obj, parentPath, beforeEvent, afterEvent) {
+	  const proxy = new Proxy(obj, {set: notify(parentPath, beforeEvent, afterEvent)});
+	  const keys = Object.keys(obj);
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const path = parentPath ? `${parentPath}.${key}` : key;
+	    if (obj[key] instanceof Object)
+	      obj[key] = new Notifiction(true, obj[key], path, beforeEvent, afterEvent);
+	  }
+	  return proxy;
+	}
+	
+	function notify(parentPath, beforeEvent, afterEvent) {
+	  return (target, key, value) => {
+	    const change = target[key] !== value;
+	    const path = parentPath ? `${parentPath}.${key}` : key;
+	    if (change) {
+	      if (target.isRecusive() && value instanceof Object) value = new Notifiction(true, value, path, beforeEvent, afterEvent);
+	    }
+	    const detail = {target, path, old: target[key], new: value};
+	    if (change) beforeEvent.trigger(null, detail);
+	    target[key] = value;
+	    if (change) afterEvent.trigger(null, detail);
+	    return true;
+	  }
+	}
+	
+	class Notifiction {
+	  constructor(recursive, object, path, beforeChangeEvent, afterChangeEvent) {
+	    path ||= '';
+	    afterChangeEvent ||= new CustomEvent('afterChange');
+	    beforeChangeEvent ||= new CustomEvent('beforeChange');
+	    let proxy;
+	    if (recursive) {
+	      proxy = searchAndConvert(object || this, path, beforeChangeEvent, afterChangeEvent);
+	    } else {
+	      proxy = new Proxy(object || this, {set: notify(path, beforeChangeEvent, afterChangeEvent)})
+	    }
+	
+	    Object.defineProperty(proxy, "isRecusive", {
+	        writable: false,
+	        enumerable: false,
+	        configurable: false,
+	        value: () => recursive === true
+	    });
+	    Object.defineProperty(proxy, "onAfterChange", {
+	        writable: false,
+	        enumerable: false,
+	        configurable: false,
+	        value: afterChangeEvent.on
+	    });
+	    Object.defineProperty(proxy, "onBeforeChange", {
+	        writable: false,
+	        enumerable: false,
+	        configurable: false,
+	        value: beforeChangeEvent.on
+	    });
+	
+	    return proxy;
+	  }
+	}
+	
+	class NotifictionArray extends Notifiction {
+	  constructor(recursive, array, path, beforeChangeEvent, afterChangeEvent) {
+	    super(recursive, array || [], path, beforeChangeEvent, afterChangeEvent);
+	  }
+	}
+	
+	const notifyArr = new Notifiction();
+	notifyArr.onAfterChange(console.log);
+	notifyArr.onBeforeChange(console.error);
+	notifyArr[4] = 'poop';
+	notifyArr.pickls = 5;
+	notifyArr[4] = 'y diapers';
+	notifyArr[0] = [];
+	notifyArr[0][69] = 'sooo fine'
+	notifyArr[0][6] = {}
+	notifyArr[0][6].punk = [1,2,3,4,66]
+	notifyArr[0][6].punk.skittles = 'taste the rainbow'
+	notifyArr[0][6].punk.skittles = 'uck!'
+	
+	Notifiction.Array = NotifictionArray;
+	module.exports = Notifiction;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/object/key-value.js',
+function (require, exports, module) {
+	
+const Lookup = require('./lookup');
+	const Notifiction = require('../collections/notification.js');
+	const NotifictionArray = Notifiction.Array;
+	const CustomEvent = require('../custom-event.js');
+	
+	function updateParent(keyValue) {
+	  return (target, detail) => {
+	    if (detail.new instanceof KeyValue) {
+	      const parentAttr = detail.new.value.parentAttribute();
+	      if (parentAttr) detail.new[parentAttr](keyValue);
+	    }
+	  }
+	}
+	
+	/**
+	  properties:
+	    @childrenAttribute - Attribute that defines children an object or an array;
+	    @object - true iff you want an object for your children
+	    @parentAttribute - Attribute that defines parent setting getting function;
+	    @keyMapFunction - function will be called to convert keys before processing.
+	    @id - Lookup id
+	    @idAttr - attribute for Lookup id.
+	    @evaluators - an object whos attributes are types and values are functions to resolve said type
+	**/
+	class KeyValue extends Lookup {
+	  constructor(properties) {
+	    super(properties.id, properties.idAttr);
+	    const childAttr = properties.childrenAttribute;
+	    const parentAttr = properties.parentAttribute;
+	    const customFuncs = [];
+	
+	
+	    if (childAttr) {
+	      if (properties.object) this[childAttr] = new Notifiction(false);
+	      else this[childAttr] = new NotifictionArray(false);
+	      this[childAttr].onAfterChange(updateParent(this));
+	      this.getRoot = () => {
+	        let curr = this;
+	        while(curr.parentAssembly() !== undefined) curr = curr.parentAssembly();
+	        return curr;
+	      }
+	    }
+	
+	    function runCustomFunctions(code, value) {
+	      for (let index = 0; index < customFuncs; index++) {
+	        const customVal = customFuncs[index](code, value);
+	        if(customVal) return customVal;
+	      }
+	    }
+	
+	    this.value = (key, value) => {
+	      try {
+	        const formatted = (typeof this.value.keyFormatter) === 'function' ? this.value.keyFormatter(key) : undefined;
+	        if (formatted !== undefined) key = formatted;
+	        const customVal = runCustomFunctions(key, value)
+	        if(customVal !== undefined) return customVal;
+	
+	        if (value !== undefined) {
+	          this.value.values[key] = value;
+	        } else {
+	          const instVal = this.value.values[key];
+	          if (instVal !== undefined && instVal !== null) {
+	            const evaluator = this.value.evaluators[(typeof instVal)];
+	            if (evaluator) return evaluator(instVal);
+	            return instVal;
+	          }
+	          const parent = this[parentAttr]();
+	          if (parent) return parent.value(key);
+	          else {
+	            const defaultFunction = this.value.defaultFunction;
+	            if (defaultFunction) {
+	              value = (typeof this.value.defaultFunction) === 'function' ? this.value.defaultFunction(key) : undefined;
+	              if (value === undefined) throw new Error();
+	              return value;
+	            }
+	          }
+	        }
+	      } catch (e) {
+	        console.error(`Failed to resolve key: '${key}'`);
+	        throw e;
+	        return NaN;
+	      }
+	    }
+	
+	
+	    this.value.values = {};
+	    this.value.evaluators = properties.evaluators || {};
+	    this.value.defaultFunction = properties.defaultFunction;
+	    this.value.keyFormatter = properties.keyFormatter;
+	    this.value.parentAttribute = () => parentAttr;
+	    this.value.childrenAttribute = () => childAttr;
+	    this.value.addCustomFunction = (func) => (typeof func) === 'function' && customFuncs.push(func);
+	  }
+	}
+	
+	module.exports = KeyValue;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/bind.js',
+function (require, exports, module) {
+	
+const du = require('../dom-utils');
+	const Input = require('./input');
+	
+	const defaultDynamInput = (value, type) => new Input({type, value});
+	
+	module.exports = function(selector, objOrFunc, props) {
+	  let lastInputTime = {};
+	  props = props || {};
+	  const validations = props.validations || {};
+	  const inputs = props.inputs || {};
+	
+	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
+	  const getValue = (updatePath, elem) => {
+	    const input = Object.pathValue(inputs, updatePath);
+	    return input ? input.value() : elem.value;
+	  }
+	  const getValidation = (updatePath) => {
+	    let validation = Object.pathValue(validations, updatePath);
+	    const input = Object.pathValue(inputs, updatePath);
+	    if (input) {
+	      validation = input.validation;
+	    }
+	    return validation;
+	  }
+	
+	  function update(elem) {
+	    const target = resolveTarget(elem);
+	    elem = du.find.down('input,select,textarea', elem);
+	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
+	    elem.id = elem.id || String.random(7);
+	    const thisInputTime = new Date().getTime();
+	    lastInputTime[elem.id] = thisInputTime;
+	    setTimeout(() => {
+	      if (thisInputTime === lastInputTime[elem.id]) {
+	        const validation = getValidation(updatePath);
+	        if (updatePath !== null) {
+	          const newValue = getValue(updatePath, elem);
+	          if ((typeof validation) === 'function' && !validation(newValue)) {
+	            console.error('badValue')
+	          } else if ((typeof objOrFunc) === 'function') {
+	            objOrFunc(updatePath, elem.value, elem);
+	          } else {
+	            Object.pathValue(objOrFunc, updatePath, elem.value);
+	          }
+	
+	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
+	            target.innerHTML = newValue;
+	          }
+	        }
+	      }
+	    }, 2000);
+	  }
+	  const makeDynamic = (target) => {
+	    target = resolveTarget(target);
+	    if (target.getAttribute('resolved') === null) {
+	      target.setAttribute('resolved', 'dynam-input');
+	      const value = target.innerText;
+	      const type = target.getAttribute('type');
+	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
+	      const input = Object.pathValue(inputs, updatePath) || defaultDynamInput(value, type);
+	
+	      target.innerHTML = input.html();
+	      const id = (typeof input.id === 'function') ? input.id() : input.id;
+	      const inputElem = du.find.down(`#${id}`, target);
+	      du.class.add(inputElem, 'dynam-input');
+	      inputElem.setAttribute('prop-update', updatePath);
+	      inputElem.focus();
+	    }
+	  }
+	
+	  du.on.match('keyup', selector, update);
+	  du.on.match('change', selector, update);
+	  du.on.match('click', selector, makeDynamic);
+	}
+	
+	
+	const undoDynamic = (target) => {
+	  const parent = du.find.up('[resolved="dynam-input"]', target)
+	  parent.innerText = target.value;
+	  parent.removeAttribute('resolved');
+	}
+	
+	du.on.match('focusout', '.dynam-input', undoDynamic);
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/test.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	Error.stackInfo = (steps) => {
+	  steps = steps || 1;
+	  const err = new Error();
+	  const lines = err.stack.split('\n');
+	  const match = lines[steps].match(/at (([a-zA-Z\.]*?) |)(.*\.js):([0-9]{1,}):([0-9]{1,})/);;
+	  if (match) {
+	    return {
+	      filename: match[3].replace(/^\(/, ''),
+	      function: match[2],
+	      line: match[4],
+	      character: match[5]
+	    }
+	  }
+	}
+	
+	Error.reducedStack = (msg, steps) => {
+	  steps = steps || 1;
+	  const err = new Error();
+	  let lines = err.stack.split('\n');
+	  lines = lines.splice(steps);
+	  return `Error: ${msg}\n${lines.join('\n')}`;
+	}
+	
+	class ArgumentAttributeTest {
+	  constructor(argIndex, value, name, errorCode, errorAttribute) {
+	    function fail (ts, func, actualErrorCode, args) {
+	      ts.fail('AttributeTest Failed: use null if test was supposed to succeed' +
+	      `\n\tFunction: '${func.name}'` +
+	      `\n\tArgument Index: '${argIndex}'` +
+	      `\n\tName: '${name}'` +
+	      `\n\tValue: '${value}'` +
+	      `\n\tErrorCode: '${actualErrorCode}' !== '${errorCode}'`);
+	    }
+	
+	    this.run = function (ts, func, args, thiz) {
+	      thiz = thiz || null;
+	      const testArgs = [];
+	      for (let index = 0; index < args.length; index += 1) {
+	        const obj = args[index];
+	        let arg;
+	        if (index === argIndex) {
+	          if (name) {
+	            arg = JSON.parse(JSON.stringify(obj));
+	            arg[name] = value;
+	          } else {
+	            arg = value;
+	          }
+	        }
+	        testArgs.push(arg);
+	      }
+	      try {
+	        func.apply(thiz, testArgs)
+	        if (errorCode || errorCode !== null) fail(ts, func, null, arguments);
+	      } catch (e) {
+	        errorAttribute = errorAttribute || 'errorCode';
+	        const actualErrorCode = e[errorAttribute];
+	        if (errorCode !== undefined &&
+	              (errorCode === null || actualErrorCode !== errorCode))
+	          fail(ts, func, actualErrorCode, arguments);
+	      }
+	    }
+	  }
+	}
+	
+	class FunctionArgumentTestError extends Error {
+	  constructor(argIndex, errorAttribute) {
+	    super();
+	    this.message = 'errorCode should be null if no error thrown and undefined if no errorCode';
+	    if (argIndex === undefined) {
+	      this.message += '\n\targIndex must be defined.';
+	    }
+	    if (errorAttribute === undefined) {
+	      this.message += '\n\terrorAttribute must be defined.';
+	    }
+	  }
+	}
+	
+	const failureError = new Error('Test Failed');
+	
+	class FunctionArgumentTest {
+	  constructor(ts, func, args, thiz) {
+	    if (!(ts instanceof TestStatus))
+	      throw new Error('ts must be a valid instance of TestStatus');
+	    if ((typeof func) !== 'function')
+	      throw new Error("Function must be defined and of type 'function'");
+	    if (!Array.isArray(args) || args.length === 0)
+	      throw new Error("This is not a suitable test for a function without arguments");
+	    const funcArgTests = [];
+	    let argIndex, errorCode;
+	    let errorAttribute = 'errorCode';
+	    this.setIndex = (i) => {argIndex = i; return this;}
+	    this.setErrorCode = (ec) => {errorCode = ec; return this;}
+	    this.setErrorAttribute = (ea) => {errorAttribute = ea; return this};
+	    const hasErrorCode =  errorCode !== undefined;
+	    this.run = () => {
+	      funcArgTests.forEach((fat) => {
+	        fat.run(ts, func, args, thiz);
+	      });
+	      return this;
+	    }
+	    this.add = (name, value) =>  {
+	      if (errorAttribute === undefined || argIndex === undefined)
+	        throw new FunctionArgumentTestError(argIndex, errorAttribute);
+	      const at = new ArgumentAttributeTest(argIndex, value, name, errorCode, errorAttribute);
+	      funcArgTests.push(at);
+	      return this;
+	    }
+	  }
+	}
+	
+	function round(value, accuracy) {
+	  if (accuracy === undefined) return value;
+	  return Math.round(value * accuracy) / accuracy;
+	}
+	// ts for short
+	class TestStatus {
+	  constructor(testName) {
+	    let assertT = 0;
+	    let assertC = 0;
+	    let success = false;
+	    let fail = false;
+	    let failOnError = true;
+	    let instance = this;
+	    function printError(msg, stackOffset) {
+	      stackOffset = stackOffset || 4;
+	      console.error(`%c${Error.reducedStack(msg, stackOffset)}`, 'color: red');
+	    }
+	    function assert(b) {
+	      assertT++;
+	      if (b) {
+	        assertC++;
+	        TestStatus.successAssertions++;
+	        return true;
+	      }
+	      TestStatus.failAssertions++;
+	      return false;
+	    }
+	    function successStr(msg) {
+	      console.log(`%c ${testName} - Successfull (${assertC}/${assertT})${
+	          msg ? `\n\t\t${msg}` : ''}`, 'color: green');
+	    }
+	    const possiblyFail = (msg) => failOnError ? instance.fail(msg, 6) : printError(msg, 5);
+	
+	    this.assertTrue = (b, msg) => !assert(b) &&
+	                            possiblyFail(`${msg}\n\t\t'${b}' should be true`);
+	    this.assertFalse = (b, msg) => !assert(!b) &&
+	                            possiblyFail(`${msg}\n\t\t'${b}' should be false`);
+	    this.assertEquals = (a, b, msg, acc) => !assert(round(a, acc) === round(b, acc)) &&
+	                            possiblyFail(`${msg}\n\t\t'${a}' === '${b}' should be true`);
+	    this.assertNotEquals = (a, b, msg, acc) => !assert(round(a, acc) !== round(b, acc)) &&
+	                            possiblyFail(`${msg}\n\t\t'${a}' !== '${b}' should be true`);
+	    this.assertTolerance = (n1, n2, tol, msg, stackOffset) => {
+	      !assert(Math.abs(n1-n2) < tol) &&
+	      possiblyFail(`${msg}\n\t\t${n1} and ${n2} are not within tolerance ${tol}`, stackOffset);
+	    }
+	    this.fail = (msg, stackOffset) => {
+	      fail = true;
+	      printError(msg, stackOffset);
+	      throw failureError;
+	    };
+	    this.success = (msg, stackOffset) => (success = true) && successStr(msg, stackOffset);
+	  }
+	}
+	
+	TestStatus.successCount = 0;
+	TestStatus.failCount = 0;
+	TestStatus.successAssertions = 0;
+	TestStatus.failAssertions = 0;
+	
+	const Test = {
+	  tests: {},
+	  add: (name, func) => {
+	    if ((typeof func) === 'function') {
+	      if (Test.tests[name] ===  undefined) Test.tests[name] = [];
+	      Test.tests[name].push(func);
+	    }
+	  },
+	  run: () => {
+	    const testNames = Object.keys(Test.tests);
+	    for (let index = 0; index < testNames.length; index += 1) {
+	      const testName = testNames[index];
+	      try {
+	        Test.tests[testName].forEach((testFunc) => testFunc(new TestStatus(testName)));
+	        TestStatus.successCount++;
+	      } catch (e) {
+	        TestStatus.failCount++;
+	        if (e !== failureError)
+	          console.log(`%c ${e.stack}`, 'color: red')
+	      }
+	    }
+	    const failed = (TestStatus.failCount + TestStatus.failAssertions) > 0;
+	    console.log(`\n%c Successfull Tests:${TestStatus.successCount} Successful Assertions: ${TestStatus.successAssertions}`, 'color: green');
+	    console.log(`%c Failed Tests:${TestStatus.failCount} Failed Assertions: ${TestStatus.failAssertions}`, !failed ? 'color:green' : 'color: red');
+	  }
+	}
+	
+	exports.ArgumentAttributeTest = ArgumentAttributeTest;
+	exports.FunctionArgumentTestError = FunctionArgumentTestError;
+	exports.FunctionArgumentTest = FunctionArgumentTest;
+	exports.TestStatus = TestStatus;
+	exports.Test = Test;
 	
 });
 
@@ -12765,242 +12710,6 @@ function (require, exports, module) {
 	}
 	
 	module.exports = Resizer;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/display/pop-up.js',
-function (require, exports, module) {
-	const DragDropResize = require('./drag-drop');
-	
-	class PopUp {
-	  constructor (props) {
-	    props = props || {}
-	    const instance = this;
-	    const htmlFuncs = {};
-	    let forceOpen = false;
-	    let lockOpen = false;
-	    let currFuncs, currElem;
-	    let canClose = false;
-	
-	    const popupCnt = new DragDropResize(props);
-	
-	    popupCnt.hide();
-	
-	    this.position = () => popupCnt;
-	    this.positionOnElement = popupCnt.position;
-	
-	
-	    this.softClose = () => {
-	      if (!lockOpen) {
-	        instance.close();
-	      }
-	    }
-	
-	    this.close = popupCnt.close;
-	
-	    this.show = () => {
-	      popupCnt.show();
-	    };
-	
-	    function getFunctions(elem) {
-	      let foundFuncs;
-	      const queryStrs = Object.keys(htmlFuncs);
-	      queryStrs.forEach((queryStr) => {
-	        if (elem.matches(queryStr)) {
-	          if (foundFuncs) {
-	            throw new Error('Multiple functions being invoked on one hover event');
-	          } else {
-	            foundFuncs = htmlFuncs[queryStr];
-	          }
-	        }
-	      });
-	      return foundFuncs;
-	    }
-	
-	    function on(queryStr, funcObj) {
-	      if (htmlFuncs[queryStr] !== undefined) throw new Error('Assigning multiple functions to the same selector');
-	      htmlFuncs[queryStr] = funcObj;
-	    }
-	    this.on = on;
-	
-	    this.onClose = popupCnt.onClose;
-	
-	    function updateContent(html) {
-	      popupCnt.updateContent(html);
-	      if (currFuncs && currFuncs.after) currFuncs.after();
-	      return instance;
-	    }
-	    this.updateContent = updateContent;
-	
-	    this.open = (html, positionOn) => {
-	      this.updateContent(html);
-	      popupCnt.position(positionOn);
-	      this.show();
-	    }
-	
-	    this.container = popupCnt.container;
-	    this.hasMoved = popupCnt.hasMoved;
-	    this.lockSize = popupCnt.lockSize;
-	    this.unlockSize = popupCnt.unlockSize;
-	
-	    document.addEventListener('click', this.forceClose);
-	  }
-	}
-	
-	module.exports = PopUp;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/services/function-cache.js',
-function (require, exports, module) {
-	
-const cacheState = {};
-	const cacheFuncs = {};
-	
-	class FunctionCache {
-	  constructor(func, context, group, assem) {
-	    if ((typeof func) !== 'function') return func;
-	    group ||= 'global';
-	    let cache = {};
-	
-	    function cacheFunc() {
-	      if (FunctionCache.isOn(group)) {
-	        // if (assem.constructor.name === 'DrawerFront') {
-	        //   console.log('df mfer');
-	        // }
-	        let c = cache;
-	        for (let index = 0; index < arguments.length; index += 1) {
-	          if (c[arguments[index]] === undefined) c[arguments[index]] = {};
-	          c = c[arguments[index]];
-	        }
-	        if (c[arguments[index]] === undefined) c[arguments[index]] = {};
-	
-	        if (c.__FunctionCache === undefined) {
-	          FunctionCache.notCahed++
-	          c.__FunctionCache = func.apply(context, arguments);
-	        } else FunctionCache.cached++;
-	        return c.__FunctionCache;
-	      }
-	      FunctionCache.notCahed++
-	      return func.apply(context, arguments);
-	    }
-	    cacheFunc.clearCache = () => cache = {};
-	    if (cacheFuncs[group] === undefined) cacheFuncs[group] = [];
-	    cacheFuncs[group].push(cacheFunc);
-	    return cacheFunc;
-	  }
-	}
-	
-	FunctionCache.cached = 0;
-	FunctionCache.notCahed = 0;
-	FunctionCache.on = (group) => {
-	  FunctionCache.cached = 0;
-	  FunctionCache.notCahed = 0;
-	  cacheState[group] = true;
-	}
-	FunctionCache.off = (group) => {
-	  const cached = FunctionCache.cached;
-	  const total = FunctionCache.notCahed + cached;
-	  const percent = (cached / total) * 100;
-	  console.log(`FunctionCache report: ${cached}/${total} %${percent}`);
-	  cacheState[group] = false;
-	  cacheFuncs[group].forEach((func) => func.clearCache());
-	}
-	let disabled = false;
-	FunctionCache.isOn = (group) => !disabled && cacheState[group];
-	FunctionCache.disable = () => disabled = true;
-	FunctionCache.enable = () => disabled = false;
-	module.exports = FunctionCache;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/services/state-history.js',
-function (require, exports, module) {
-	
-class StateHistory {
-	  constructor(getState, setState, minTimeInterval) {
-	    let states = [];
-	    let index = 0;
-	    minTimeInterval = minTimeInterval || 400;
-	    const instance = this;
-	    let lastStateReqTime;
-	
-	
-	    const indexHash = () => states[index].hash;
-	    this.states = () => JSON.clone(states);
-	    this.toString = () => {
-	      let str = ''
-	      states.forEach((s, i) => i === index ?
-	                        str += `(${s.hash}),` :
-	                        str += `${s.hash},`);
-	      return str.substr(0, str.length - 1);
-	    }
-	
-	    function getNewState(reqTime) {
-	      if (reqTime === lastStateReqTime) {
-	        const currState = getState();
-	        const currHash = JSON.stringify(currState).hash();
-	        if (states.length === 0 || currHash !== indexHash()) {
-	          if (states && states.length - 1 > index) states = states.slice(0, index + 1);
-	          states.push({hash: currHash, json: currState});
-	          index = states.length - 1;
-	          console.log(instance.toString());
-	        }
-	      }
-	    }
-	    getNewState();
-	
-	    this.index = (i) => {
-	      if (i > -1 && i < states.length) index = i;
-	      return index;
-	    }
-	
-	    // this.clone = (getState) => {
-	    //   const sh = new StateHistory(getState, minTimeInterval, this.states());
-	    //   sh.index(index);
-	    //   return sh;
-	    // }
-	
-	    this.newState = () => {
-	      const thisReqTime = new Date().getTime();
-	      lastStateReqTime = thisReqTime;
-	      setTimeout(() => getNewState(thisReqTime), minTimeInterval);
-	    }
-	
-	    this.forceState = () => {
-	      lastStateReqTime = 0;
-	      getNewState(0);
-	    }
-	
-	    this.canGoBack = () => index > 0;
-	    this.canGoForward = () => index < states.length - 1;
-	
-	    this.back = () => {
-	      if (this.canGoBack()) {
-	        const state = states[--index];
-	        lastStateReqTime = 0;
-	        console.log(this.toString());
-	        setState(state.json);
-	        return state.json;
-	      }
-	    }
-	
-	    this.forward = () => {
-	      if (this.canGoForward()) {
-	        const state = states[++index];
-	        lastStateReqTime = 0;
-	        console.log(this.toString());
-	        setState(state.json);
-	        return state.json;
-	      }
-	    }
-	  }
-	}
-	
-	module.exports = StateHistory;
 	
 });
 
@@ -13483,87 +13192,747 @@ const $t = require('../$t');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/display/catch-all.js',
+RequireJS.addFunction('../../public/js/utils/display/pop-up.js',
 function (require, exports, module) {
-	const du = require('../dom-utils');
+	const DragDropResize = require('./drag-drop');
 	
-	class CatchAll {
-	  constructor(container) {
+	class PopUp {
+	  constructor (props) {
+	    props = props || {}
 	    const instance = this;
-	    container = container;
-	    let events = Array.from(arguments).splice(1);
-	    events = events.length > 0 ? events : CatchAll.allMouseEvents;
+	    const htmlFuncs = {};
+	    let forceOpen = false;
+	    let lockOpen = false;
+	    let currFuncs, currElem;
+	    let canClose = false;
 	
-	    const backdrop = document.createElement('DIV');
-	    this.backdrop = backdrop;
+	    const popupCnt = new DragDropResize(props);
 	
-	    this.hide = () => {
-	      backdrop.hidden = true;
-	      backdrop.style.zIndex = 0;
-	    };
-	    this.show = () => {
-	      backdrop.hidden = false
-	      instance.updateZindex();
-	    };
+	    popupCnt.hide();
 	
-	    this.updateZindex = () => setTimeout(() => {
-	      if (container) {
-	        if (container.style.zIndex === '') {
-	          container.style.zIndex = 2;
-	        }
-	        backdrop.style.zIndex = Number.parseInt(container.style.zIndex) - 1;
-	      } else {
-	        backdrop.style.zIndex = CatchAll.findHigestZindex() + 1;
+	    this.position = () => popupCnt;
+	    this.positionOnElement = popupCnt.position;
+	
+	
+	    this.softClose = () => {
+	      if (!lockOpen) {
+	        instance.close();
 	      }
-	    }, 200);
+	    }
 	
-	    this.on = (eventName, func) => backdrop.addEventListener(eventName, func);
+	    this.close = popupCnt.close;
 	
-	    backdrop.style.position = 'fixed';
-	    backdrop.style.backgroundColor = 'transparent';
+	    this.show = () => {
+	      popupCnt.show();
+	    };
 	
-	    // backdrop.style.cursor = 'none';
-	    backdrop.style.top = 0;
-	    backdrop.style.bottom = 0;
-	    backdrop.style.right = 0;
-	    backdrop.style.left = 0;
-	    const stopPropagation = (e) => e.stopPropagation();
-	    events.forEach((eventName) => instance.on(eventName, stopPropagation));
-	    CatchAll.container.append(backdrop);
+	    function getFunctions(elem) {
+	      let foundFuncs;
+	      const queryStrs = Object.keys(htmlFuncs);
+	      queryStrs.forEach((queryStr) => {
+	        if (elem.matches(queryStr)) {
+	          if (foundFuncs) {
+	            throw new Error('Multiple functions being invoked on one hover event');
+	          } else {
+	            foundFuncs = htmlFuncs[queryStr];
+	          }
+	        }
+	      });
+	      return foundFuncs;
+	    }
 	
-	    this.updateZindex();
-	    this.hide();
+	    function on(queryStr, funcObj) {
+	      if (htmlFuncs[queryStr] !== undefined) throw new Error('Assigning multiple functions to the same selector');
+	      htmlFuncs[queryStr] = funcObj;
+	    }
+	    this.on = on;
+	
+	    this.onClose = popupCnt.onClose;
+	
+	    function updateContent(html) {
+	      popupCnt.updateContent(html);
+	      if (currFuncs && currFuncs.after) currFuncs.after();
+	      return instance;
+	    }
+	    this.updateContent = updateContent;
+	
+	    this.open = (html, positionOn) => {
+	      this.updateContent(html);
+	      popupCnt.position(positionOn);
+	      this.show();
+	    }
+	
+	    this.container = popupCnt.container;
+	    this.hasMoved = popupCnt.hasMoved;
+	    this.lockSize = popupCnt.lockSize;
+	    this.unlockSize = popupCnt.unlockSize;
+	
+	    document.addEventListener('click', this.forceClose);
 	  }
 	}
 	
+	module.exports = PopUp;
 	
-	CatchAll.allMouseEvents = ['auxclick', 'click', 'contextmenu', 'dblclick',
-	                        'mousedown', 'mouseenter', 'mouseleave', 'mousemove',
-	                        'mouseover', 'mouseout', 'mouseup', 'pointerlockchange',
-	                        'pointerlockerror', 'select', 'wheel'];
+});
+
+
+RequireJS.addFunction('../../public/js/utils/lists/expandable.js',
+function (require, exports, module) {
 	
-	// Ripped off of: https://stackoverflow.com/a/1120068
-	CatchAll.findHigestZindex = function () {
-	  var elems = document.querySelectorAll('*');
-	  var highest = Number.MIN_SAFE_INTEGER || -(Math.pow(2, 53) - 1);
-	  for (var i = 0; i < elems.length; i++)
-	  {
-	    var zindex = Number.parseInt(
-	      document.defaultView.getComputedStyle(elems[i], null).getPropertyValue("z-index"),
-	      10
-	    );
-	    if (zindex > highest && zindex !== 2147483647)
-	    {
-	      highest = zindex;
+
+	
+	const CustomEvent = require('../custom-event.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	
+	// properties
+	//  required: {
+	//  getHeader: function returns html header string,
+	//  getBody: function returns html body string,
+	//}
+	//  optional: {
+	//  list: list to use, creates on undefined
+	//  getObject: function returns new list object default is generic js object,
+	//  parentSelector: cssSelector only reqired for refresh function,
+	//  listElemLable: nameOfElementType changes add button label,
+	//  dontOpenOnAdd: by default the active element will be switched to newly added elements.
+	//  hideAddBtn: defaults to false,
+	//  startClosed: all tabs are closed on list open.
+	//  input: true - require user to enter text before adding new
+	//  inputOptions: array of autofill inputs
+	//  inputs: [{placeholder, autofill},...]
+	//  inputValidation: function to validate input fields
+	//  type: defaults to list,
+	//  selfCloseTab: defalts to true - allows clicking on header to close body,
+	//  findElement: used to find elemenents related to header - defaults to closest
+	//}
+	class Expandable {
+	  constructor(props) {
+	    const afterRenderEvent = new CustomEvent('afterRender');
+	    const afterAddEvent = new CustomEvent('afterAdd');
+	    const afterRefreshEvent = new CustomEvent('afterRefresh');
+	    const afterRemovalEvent = new CustomEvent('afterRemoval');
+	    const instance = this;
+	    const renderBodyOnOpen = props.renderBodyOnOpen === false ? false : true;
+	    props.getObject = props.getObject || (() => ({}));
+	    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
+	    props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
+	    props.type = props.type || 'list';
+	    props.findElement = props.findElement || ((selector, target) =>  du.find.closest(selector, target));
+	    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
+	    props.getObject = props.getObject || (() => {});
+	    props.inputs = props.inputs || [];
+	    props.list = props.list || [];
+	    // props.list.DO_NOT_CLONE = true;
+	    this.hasBody = () => (typeof this.getBody) === 'function';
+	    this.getHeader = props.getHeader; delete props.getHeader;
+	    this.getBody = props.getBody; delete props.getBody;
+	    props.id = Expandable.lists.length;
+	    props.activeKey = 0; //TODO ???
+	    Object.getSet(this, props, 'listElemLable');
+	    let pendingRefresh = false;
+	    let lastRefresh = new Date().getTime();
+	    const storage = {};
+	    Expandable.lists[props.id] = this;
+	    this.inputTree = () => props.inputTree;
+	
+	    this.errorCntId = () => props.ERROR_CNT_ID;
+	    function setErrorMsg(msg) {
+	        du.id(props.ERROR_CNT_ID).innerHTML = msg;
+	    }
+	
+	    function values() {
+	      const values = {};
+	      props.inputs.forEach((input) =>
+	        values[input.placeholder] = du.id(input.id).value);
+	      return values;
+	    }
+	
+	    function getCnt() {
+	      return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
+	    }
+	
+	    function getBodyCnt() {
+	      return du.find.down('.expand-body', getCnt());
+	    }
+	
+	    function getInputCnt() {
+	      const cnt = du.find.down('.expand-input-cnt', getCnt());
+	      return cnt;
+	    }
+	    //changes....
+	    this.values = values;
+	    this.getInputCnt = getInputCnt;
+	
+	    this.add = (vals) => {
+	      const inputValues = vals || values();
+	      if ((typeof props.inputValidation) !== 'function' ||
+	              props.inputValidation(inputValues) === true) {
+	          const obj = props.getObject(inputValues, getInputCnt());
+	          const key = this.getKey(vals, obj);
+	          props.list[key] = obj;
+	          if (!props.dontOpenOnAdd) this.activeKey(key);
+	          this.refresh();
+	          afterAddEvent.trigger();
+	      } else {
+	        const errors = props.inputValidation(inputValues);
+	        let errorStr;
+	        if ((typeof errors) === 'object') {
+	          const keys = Object.keys(errors);
+	          errorStr = Object.values(errors).join('<br>');
+	        } else {
+	          errorStr = `Error: ${errors}`;
+	        }
+	        setErrorMsg(errorStr);
+	      }
+	    };
+	    this.hasInputTree = () =>
+	      this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
+	    if (this.hasInputTree())
+	      props.inputTree.onSubmit(this.add);
+	    props.hasInputTree = this.hasInputTree;
+	
+	    this.isSelfClosing = () => props.selfCloseTab;
+	    this.remove = (removed) => {
+	      afterRemovalEvent.trigger(undefined, removed);
+	      this.refresh();
+	    }
+	    this.html = () =>
+	      Expandable[`${instance.type().toCamel()}Template`].render(this);
+	    this.afterRender = (func) => afterRenderEvent.on(func);
+	    this.afterAdd = (func) => afterAddEvent.on(func);
+	    this.afterRemoval = (func) => afterRemovalEvent.on(func);
+	    this.refresh = (type) => {
+	      this.type((typeof type) === 'string' ? type : props.type);
+	      if (!pendingRefresh) {
+	        pendingRefresh = true;
+	        setTimeout(() => {
+	          props.inputs.forEach((input) => input.id = input.id || String.random(7));
+	          const parent = document.querySelector(props.parentSelector);
+	          const html = this.html();
+	          if (parent && html !== undefined) {
+	            parent.innerHTML = html;
+	            afterRefreshEvent.trigger();
+	          }
+	          pendingRefresh = false;
+	        }, 100);
+	      }
+	    };
+	    this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
+	    this.getKey = () => this.list().length;
+	    this.active = () => props.list[this.activeKey()];
+	    // TODO: figure out why i wrote this and if its neccisary.
+	    this.value = (key) => (key2, value) => {
+	      if (props.activeKey === undefined) props.activeKey = 0;
+	      if (key === undefined) key = props.activeKey;
+	      if (storage[key] === undefined) storage[key] = {};
+	      if (value === undefined) return storage[key][key2];
+	      storage[key][key2] = value;
+	    }
+	    this.inputHtml = () => this.hasInputTree() ?
+	          this.inputTree().payload().html() : Expandable.inputRepeatTemplate.render(this);
+	    this.set = (key, value) => props.list[key] = value;
+	    this.get = (key) => props.list[key];
+	    this.renderBody = (target) => {
+	      const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
+	      target = target || document.querySelector(headerSelector);
+	      if (target !== null) {
+	        const id = target.getAttribute('ex-list-id');
+	        const list = Expandable.lists[id];
+	        const headers = du.find.up('.expandable-list', target).querySelectorAll('.expand-header');
+	        const bodys = du.find.up('.expandable-list', target).querySelectorAll('.expand-body');
+	        const rmBtns = du.find.up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
+	        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
+	        bodys.forEach((body) => body.style.display = 'none');
+	        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
+	        const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
+	        if (this.hasBody()) {
+	          body.style.display = 'block';
+	        }
+	        const key = target.getAttribute('key');
+	        this.activeKey(key);
+	        if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
+	        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+	        target.className += ' active' + (this.hasBody() ? '' : ' no-body');
+	        afterRenderEvent.trigger();
+	        // du.scroll.intoView(target.parentElement, 3, 25, document.body);
+	      }
+	    };
+	    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+	
+	    this.htmlBody = (key) => {
+	      getBodyCnt().setAttribute('key', key);
+	      return this.hasBody() ? this.getBody(this.list()[key], key) : '';
+	    }
+	    this.list = () => props.list;
+	    this.refresh();
+	  }
+	}
+	Expandable.lists = [];
+	Expandable.DO_NOT_CLONE = true;
+	Expandable.inputRepeatTemplate = new $t('expandable/input-repeat');
+	Expandable.listTemplate = new $t('expandable/list');
+	Expandable.pillTemplate = new $t('expandable/pill');
+	Expandable.sidebarTemplate = new $t('expandable/sidebar');
+	Expandable.topAddListTemplate = new $t('expandable/top-add-list');
+	Expandable.getIdAndKey = (target, level) => {
+	  level ||= 0;
+	  const elems = du.find.upAll('.expand-header,.expand-body', target);
+	  if (elems.length < level + 1) return undefined;
+	  const cnt = elems[level];
+	  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
+	  const key = cnt.getAttribute('key');
+	  return {id, key};
+	}
+	Expandable.getValueFunc = (target) => {
+	  const idKey = Expandable.getIdAndKey(target);
+	  return Expandable.lists[idKey.id].value(idKey.key);
+	}
+	
+	Expandable.get = (target, level) => {
+	  const idKey = Expandable.getIdAndKey(target, level);
+	  if (idKey === undefined) return undefined;
+	  return Expandable.lists[idKey.id].get(idKey.key);
+	}
+	
+	Expandable.list = (target) => {
+	  const idKey = Expandable.getIdAndKey(target);
+	  return Expandable.lists[idKey.id];
+	}
+	
+	Expandable.set = (target, value) => {
+	  const idKey = Expandable.getIdAndKey(target);
+	  Expandable.lists[idKey.id].set(idKey.key, value);
+	}
+	
+	Expandable.value = (key, value, target) => {
+	  return Expandable.getValueFunc(target)(key, value);
+	}
+	du.on.match('click', '.expandable-list-add-btn', (target) => {
+	  const id = target.getAttribute('ex-list-id');
+	  Expandable.lists[id].add();
+	});
+	du.on.match('click', '.expandable-item-rm-btn', (target) => {
+	  const id = target.getAttribute('ex-list-id');
+	  const key = target.getAttribute('key');
+	  Expandable.lists[id].remove(key);
+	});
+	Expandable.closeAll = (header) => {
+	  const hello = 'world';
+	}
+	
+	du.on.match('click', '.expand-header', (target, event) => {
+	  const isActive = target.matches('.active');
+	  const id = target.getAttribute('ex-list-id');
+	  const list = Expandable.lists[id];
+	  if (list) {
+	    if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
+	      du.class.remove(target, 'active');
+	      du.find.closest('.expand-body', target).style.display = 'none';
+	      list.activeKey(null);
+	      target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
+	    } else if (!isActive) {
+	      list.renderBody(target);
 	    }
 	  }
-	  return highest;
+	});
+	
+	function getExpandObject(elem) {
+	  const exListElem = du.find.up('[ex-list-id]', elem);
+	  if (!exListElem) return undefined;
+	  const listId = exListElem.getAttribute('ex-list-id');
+	  return Expandable.lists[listId];
 	}
 	
-	CatchAll.container = du.create.element('div', {id: 'catch-all-cnt'});
-	document.body.append(CatchAll.container);
+	du.on.match('click', '.input-open-cnt', (target) => {
+	  const inputCnts = document.querySelectorAll('.expand-input-cnt');
+	  const expandList = getExpandObject(target);
+	  if (expandList && !expandList.hasInputTree()) expandList.add();
+	  else {
+	    const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
+	    const closest = du.find.closest('.expand-input-cnt', target);
+	    inputCnts.forEach((elem) => elem.hidden = true);
+	    inputOpenCnts.forEach((elem) => elem.hidden = false);
+	    target.hidden = true;
+	    if (closest) closest.hidden = false;
+	  }
+	});
 	
-	module.exports = CatchAll;
+	module.exports = Expandable
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const DecisionTree = require('../../decision-tree.js');
+	const LogicTree = require('../../logic-tree.js');
+	const LogicWrapper = LogicTree.LogicWrapper
+	const Input = require('../input.js');
+	const du = require('../../dom-utils');
+	const $t = require('../../$t');
+	
+	const ROOT_CLASS = 'decision-input-tree';
+	
+	function isComplete(wrapper) {
+	  return wrapper.isComplete() && DecisionInputTree.validate(wrapper)
+	}
+	
+	class ValueCondition {
+	  constructor(name, accepted, payload) {
+	    Object.getSet(this, {name, accepted});
+	    this.payload = payload;
+	    this.condition = (wrapper) => {
+	        let value;
+	        wrapper.root().node.forEach((node) => {
+	          node.payload().inputArray.forEach((input) => {
+	            if (input.name() === name) value = input.value();
+	          });
+	        });
+	        if (Array.isArray(accepted)) {
+	          for (let index = 0; index < accepted.length; index +=1) {
+	            if (value === accepted[index]) return true;
+	          }
+	          return false;
+	        }
+	        return value === accepted;
+	    }
+	  }
+	}
+	
+	class DecisionInput {
+	  constructor(name, inputArrayOinstance, tree, isRoot) {
+	    Object.getSet(this, 'name', 'id', 'childCntId', 'inputArray', 'class', 'condition');
+	    this.clone = () => this;
+	
+	    this.tree = () => tree;
+	    if (inputArrayOinstance instanceof ValueCondition) {
+	      this.condition = inputArrayOinstance.condition;
+	      this.isConditional = true;
+	      inputArrayOinstance = inputArrayOinstance.payload;
+	    }
+	    if (inputArrayOinstance !== undefined){
+	      this.name = name;
+	      this.id = `decision-input-node-${String.random()}`;
+	      this.childCntId = `decision-child-ctn-${String.random()}`
+	      this.values = tree.values;
+	      this.onComplete = tree.onComplete;
+	      this.onChange = tree.onChange;
+	      this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
+	      this.class =  ROOT_CLASS;
+	      this.getValue = (index) => this.inputArray[index].value();
+	      this.validate = () => DecisionInputTree.validateInput(inputArrayOinstance, this.values);
+	    }
+	
+	    const getWrapper = (wrapperOid) => wrapperOid instanceof LogicWrapper ?
+	        wrapperOid : (LogicWrapper.get(wrapperId) || this.root());
+	
+	    this.branch = (wrapperId, inputs) =>
+	            get(wrapperId).branch(String.random(), new DecisionInput(name));
+	    this.conditional = (wrapperId, inputs, name, selector) =>
+	            get(wrapperId).conditional(String.random(), new DecisionInput(name, relation, formula));
+	
+	    this.update = tree.update;
+	    this.addValues = (values) => {
+	      this.inputArray.forEach((input) => values[input.name()] = input.value())
+	    }
+	
+	    this.reachable = () => {
+	      const nodeId = this._nodeId;
+	      const wrapper = LogicWrapper.get(nodeId);
+	      return wrapper.reachable();
+	    }
+	    this.isValid = () => {
+	      let valid = true;
+	      this.inputArray.forEach((input) =>
+	            valid = valid && input.valid());
+	      return valid;
+	    }
+	    this.isRoot = () => isRoot;
+	
+	    this.html = (parentCalling) => {
+	      if (this.isRoot() && parentCalling !== true) return tree.html();
+	      return DecisionInput.template.render(this);
+	    }
+	    this.treeHtml = (wrapper) => tree.html(wrapper);
+	  }
+	}
+	DecisionInput.template = new $t('input/decision/decision');
+	
+	
+	// properties
+	// optional :
+	// noSubmission: /[0-9]{1,}/ delay that determins how often a submission will be processed
+	// buttonText: determins the text displayed on submit button;
+	
+	class DecisionInputTree extends LogicTree {
+	  constructor(onComplete, props) {
+	    const decisionInputs = [];
+	    props = props || {};
+	    const tree = {};
+	
+	    tree.buttonText = () => {
+	      return props.buttonText || `Create ${root.node.name}`;
+	    }
+	
+	    let disabled;
+	    tree.disableButton = (d, elem) => {
+	      disabled = d === null || d === true || d === false ? d : disabled;
+	      if (elem) {
+	        const button = du.find.closest(`button`, elem);
+	        if (button) {
+	          button.disabled = disabled === null ? !isComplete(root) : disabled;
+	        }
+	      }
+	    }
+	
+	    function superArgument(onComplete) {
+	      const formatPayload = (name, payload) => {
+	        decisionInputs.push(new DecisionInput(name, payload, tree, decisionInputs.length === 0));
+	        return decisionInputs[decisionInputs.length - 1];
+	      }
+	      if (onComplete && onComplete._TYPE === 'DecisionInputTree') {
+	        onComplete.formatPayload = formatPayload;
+	        return onComplete;
+	      }
+	      return formatPayload;
+	    }
+	
+	    super(superArgument(onComplete));
+	    const root = this;
+	
+	    const onCompletion = [];
+	    const onChange = [];
+	    const onSubmit = [];
+	    tree.html = (wrapper) => {
+	      wrapper = wrapper || root;
+	      let inputHtml = '';
+	      wrapper.forAll((wrapper) => {
+	        inputHtml += wrapper.payload().html(true);
+	      });
+	      const scope = {wrapper, inputHtml, DecisionInputTree, tree};
+	      if (wrapper === root) {
+	        return DecisionInputTree.template.render(scope);
+	      }
+	      return inputHtml;
+	    };
+	
+	
+	    this.onComplete = (func) => {
+	      if ((typeof func) === 'function') onCompletion.push(func);
+	    }
+	    this.onChange = (func) => {
+	      if ((typeof func) === 'function') onChange.push(func);
+	    }
+	    this.onSubmit = (func) => {
+	      if ((typeof func) === 'function') onSubmit.push(func);
+	    }
+	
+	    this.values = () => {
+	      const values = {};
+	      root.forEach((wrapper) => {
+	        wrapper.payload().addValues(values);
+	      });
+	      return values;
+	    }
+	    tree.values = root.values;
+	    tree.hideButton = props.noSubmission;
+	
+	    let completionPending = false;
+	    this.completed = () => {
+	      if (!root.isComplete()) return false;
+	      const delay = props.noSubmission || 0;
+	      if (!completionPending) {
+	        completionPending = true;
+	        setTimeout(() => {
+	          const values = tree.values();
+	          onCompletion.forEach((func) => func(values, this))
+	          completionPending = false;
+	        }, delay);
+	      }
+	      return true;
+	    }
+	
+	    let submissionPending = false;
+	    this.submit = () => {
+	      const delay = props.noSubmission || 0;
+	      if (!submissionPending) {
+	        submissionPending = true;
+	        setTimeout(() => {
+	          const values = tree.values();
+	          if (!root.isComplete()) return false;
+	          onSubmit.forEach((func) => func(values, this))
+	          submissionPending = false;
+	        }, delay);
+	      }
+	      return true;
+	    }
+	
+	    let changePending = false;
+	    this.changed = (elem) => {
+	      const delay = props.noSubmission || 0;
+	      if (!changePending) {
+	        changePending = true;
+	        setTimeout(() => {
+	          const values = tree.values();
+	          onChange.forEach((func) => func(values, this, elem))
+	          changePending = false;
+	        }, delay);
+	      }
+	      return true;
+	    }
+	
+	    this.onComplete(onComplete);
+	
+	    return this;
+	  }
+	}
+	
+	DecisionInputTree.ValueCondition = ValueCondition;
+	
+	DecisionInputTree.class = 'decision-input-tree';
+	DecisionInputTree.buttonClass = 'decision-input-tree-submit';
+	
+	DecisionInputTree.validate = (wrapper) => {
+	  let valid = true;
+	  wrapper.forEach((wrapper) => {
+	    valid = valid && wrapper.payload().isValid();
+	  });
+	  return valid;
+	}
+	
+	DecisionInputTree.update = (soft) =>
+	  (elem) => {
+	    const cnt = du.find.closest('[node-id]', elem);
+	    const parent = cnt.parentElement;
+	    const nodeId = cnt.getAttribute('node-id');
+	    const wrapper = LogicWrapper.get(nodeId);
+	    console.log(isComplete(wrapper));
+	    if(!soft) {
+	      du.find.downAll('.decision-input-cnt', parent).forEach((e) => e.hidden = true)
+	      wrapper.forEach((n) => {
+	        let selector = `[node-id='${n.nodeId()}']`;
+	        elem = du.find.down(selector, parent);
+	        if (elem) elem.hidden = false;
+	      });
+	      wrapper.root().changed();
+	      wrapper.root().completed()
+	    }
+	    wrapper.payload().tree().disableButton(undefined, elem);
+	  };
+	
+	DecisionInputTree.submit = (elem) => {
+	  const wrapper = LogicWrapper.get(elem.getAttribute('root-id'));
+	  wrapper.submit();
+	}
+	
+	du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
+	du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
+	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
+	
+	
+	DecisionInputTree.DO_NOT_CLONE = true;
+	DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
+	  if (Array.isArray(inputArrayOinstance)) {
+	    inputArrayOinstance.forEach((instance) => {
+	      instance.childCntId = `decision-child-ctn-${String.random()}`
+	    });
+	    return inputArrayOinstance;
+	  }
+	  inputArrayOinstance.childCntId = `decision-child-ctn-${String.random()}`
+	  return [inputArrayOinstance];
+	}
+	
+	DecisionInputTree.template = new $t('input/decision/decisionTree');
+	
+	module.exports = DecisionInputTree;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const Measurement = require('../../measurement');
+	
+	class MeasurementInput extends Input {
+	  constructor(props) {
+	    let value = new Measurement(props.value, true);
+	    props.value = () => value;
+	    super(props);
+	    props.validation = (val) =>
+	        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
+	    }
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
+	    }
+	  }
+	}
+	
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	
+	
+	module.exports = MeasurementInput;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Select extends Input {
+	  constructor(props) {
+	    super(props);
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.index && props.list[props.index] ?
+	      props.list[props.index] : props.list[0];
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
+	    }
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    const parentHidden = this.hidden;
+	    this.hidden = () => props.list.length < 2 || parentHidden();
+	
+	    this.selected = (value) => value === this.value();
+	  }
+	}
+	
+	Select.template = new $t('input/select');
+	Select.html = (instance) => () => Select.template.render(instance);
+	
+	module.exports = Select;
 	
 });
 
@@ -13694,88 +14063,6 @@ function (require, exports, module) {
 	  ts.assertEquals(dNode.leaves().length, 15, 'Not plucking all the leaves');
 	  ts.success();
 	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const Measurement = require('../../measurement');
-	
-	class MeasurementInput extends Input {
-	  constructor(props) {
-	    let value = new Measurement(props.value, true);
-	    props.value = () => value;
-	    super(props);
-	    props.validation = (val) =>
-	        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
-	    }
-	    const parentSetVal = this.setValue;
-	    this.setValue = (val) => {
-	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
-	    }
-	  }
-	}
-	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
-	
-	
-	module.exports = MeasurementInput;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Select extends Input {
-	  constructor(props) {
-	    super(props);
-	    const isArray = Array.isArray(props.list);
-	    let value;
-	    if (isArray) {
-	      value = props.index && props.list[props.index] ?
-	      props.list[props.index] : props.list[0];
-	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
-	    } else {
-	      const key = Object.keys(props.list)[0];
-	      value = props.value || key;
-	    }
-	    props.value = undefined;
-	    this.setValue(value);
-	    this.isArray = () => isArray;
-	    const parentHidden = this.hidden;
-	    this.hidden = () => props.list.length < 2 || parentHidden();
-	
-	    this.selected = (value) => value === this.value();
-	  }
-	}
-	
-	Select.template = new $t('input/select');
-	Select.html = (instance) => () => Select.template.render(instance);
-	
-	module.exports = Select;
 	
 });
 
@@ -14416,298 +14703,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const DecisionTree = require('../../decision-tree.js');
-	const LogicTree = require('../../logic-tree.js');
-	const LogicWrapper = LogicTree.LogicWrapper
-	const Input = require('../input.js');
-	const du = require('../../dom-utils');
-	const $t = require('../../$t');
-	
-	const ROOT_CLASS = 'decision-input-tree';
-	
-	function isComplete(wrapper) {
-	  return wrapper.isComplete() && DecisionInputTree.validate(wrapper)
-	}
-	
-	class ValueCondition {
-	  constructor(name, accepted, payload) {
-	    Object.getSet(this, {name, accepted});
-	    this.payload = payload;
-	    this.condition = (wrapper) => {
-	        let value;
-	        wrapper.root().node.forEach((node) => {
-	          node.payload().inputArray.forEach((input) => {
-	            if (input.name() === name) value = input.value();
-	          });
-	        });
-	        if (Array.isArray(accepted)) {
-	          for (let index = 0; index < accepted.length; index +=1) {
-	            if (value === accepted[index]) return true;
-	          }
-	          return false;
-	        }
-	        return value === accepted;
-	    }
-	  }
-	}
-	
-	class DecisionInput {
-	  constructor(name, inputArrayOinstance, tree, isRoot) {
-	    Object.getSet(this, 'name', 'id', 'childCntId', 'inputArray', 'class', 'condition');
-	    this.clone = () => this;
-	
-	    this.tree = () => tree;
-	    if (inputArrayOinstance instanceof ValueCondition) {
-	      this.condition = inputArrayOinstance.condition;
-	      this.isConditional = true;
-	      inputArrayOinstance = inputArrayOinstance.payload;
-	    }
-	    if (inputArrayOinstance !== undefined){
-	      this.name = name;
-	      this.id = `decision-input-node-${String.random()}`;
-	      this.childCntId = `decision-child-ctn-${String.random()}`
-	      this.values = tree.values;
-	      this.onComplete = tree.onComplete;
-	      this.onChange = tree.onChange;
-	      this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
-	      this.class =  ROOT_CLASS;
-	      this.getValue = (index) => this.inputArray[index].value();
-	      this.validate = () => DecisionInputTree.validateInput(inputArrayOinstance, this.values);
-	    }
-	
-	    const getWrapper = (wrapperOid) => wrapperOid instanceof LogicWrapper ?
-	        wrapperOid : (LogicWrapper.get(wrapperId) || this.root());
-	
-	    this.branch = (wrapperId, inputs) =>
-	            get(wrapperId).branch(String.random(), new DecisionInput(name));
-	    this.conditional = (wrapperId, inputs, name, selector) =>
-	            get(wrapperId).conditional(String.random(), new DecisionInput(name, relation, formula));
-	
-	    this.update = tree.update;
-	    this.addValues = (values) => {
-	      this.inputArray.forEach((input) => values[input.name()] = input.value())
-	    }
-	
-	    this.reachable = () => {
-	      const nodeId = this._nodeId;
-	      const wrapper = LogicWrapper.get(nodeId);
-	      return wrapper.reachable();
-	    }
-	    this.isValid = () => {
-	      let valid = true;
-	      this.inputArray.forEach((input) =>
-	            valid = valid && input.valid());
-	      return valid;
-	    }
-	    this.isRoot = () => isRoot;
-	
-	    this.html = (parentCalling) => {
-	      if (this.isRoot() && parentCalling !== true) return tree.html();
-	      return DecisionInput.template.render(this);
-	    }
-	    this.treeHtml = (wrapper) => tree.html(wrapper);
-	  }
-	}
-	DecisionInput.template = new $t('input/decision/decision');
-	
-	
-	// properties
-	// optional :
-	// noSubmission: /[0-9]{1,}/ delay that determins how often a submission will be processed
-	// buttonText: determins the text displayed on submit button;
-	
-	class DecisionInputTree extends LogicTree {
-	  constructor(onComplete, props) {
-	    const decisionInputs = [];
-	    props = props || {};
-	    const tree = {};
-	
-	    tree.buttonText = () => {
-	      return props.buttonText || `Create ${root.node.name}`;
-	    }
-	
-	    let disabled;
-	    tree.disableButton = (d, elem) => {
-	      disabled = d === null || d === true || d === false ? d : disabled;
-	      if (elem) {
-	        const button = du.find.closest(`button`, elem);
-	        if (button) {
-	          button.disabled = disabled === null ? !isComplete(root) : disabled;
-	        }
-	      }
-	    }
-	
-	    function superArgument(onComplete) {
-	      const formatPayload = (name, payload) => {
-	        decisionInputs.push(new DecisionInput(name, payload, tree, decisionInputs.length === 0));
-	        return decisionInputs[decisionInputs.length - 1];
-	      }
-	      if (onComplete && onComplete._TYPE === 'DecisionInputTree') {
-	        onComplete.formatPayload = formatPayload;
-	        return onComplete;
-	      }
-	      return formatPayload;
-	    }
-	
-	    super(superArgument(onComplete));
-	    const root = this;
-	
-	    const onCompletion = [];
-	    const onChange = [];
-	    const onSubmit = [];
-	    tree.html = (wrapper) => {
-	      wrapper = wrapper || root;
-	      let inputHtml = '';
-	      wrapper.forAll((wrapper) => {
-	        inputHtml += wrapper.payload().html(true);
-	      });
-	      const scope = {wrapper, inputHtml, DecisionInputTree, tree};
-	      if (wrapper === root) {
-	        return DecisionInputTree.template.render(scope);
-	      }
-	      return inputHtml;
-	    };
-	
-	
-	    this.onComplete = (func) => {
-	      if ((typeof func) === 'function') onCompletion.push(func);
-	    }
-	    this.onChange = (func) => {
-	      if ((typeof func) === 'function') onChange.push(func);
-	    }
-	    this.onSubmit = (func) => {
-	      if ((typeof func) === 'function') onSubmit.push(func);
-	    }
-	
-	    this.values = () => {
-	      const values = {};
-	      root.forEach((wrapper) => {
-	        wrapper.payload().addValues(values);
-	      });
-	      return values;
-	    }
-	    tree.values = root.values;
-	    tree.hideButton = props.noSubmission;
-	
-	    let completionPending = false;
-	    this.completed = () => {
-	      if (!root.isComplete()) return false;
-	      const delay = props.noSubmission || 0;
-	      if (!completionPending) {
-	        completionPending = true;
-	        setTimeout(() => {
-	          const values = tree.values();
-	          onCompletion.forEach((func) => func(values, this))
-	          completionPending = false;
-	        }, delay);
-	      }
-	      return true;
-	    }
-	
-	    let submissionPending = false;
-	    this.submit = () => {
-	      const delay = props.noSubmission || 0;
-	      if (!submissionPending) {
-	        submissionPending = true;
-	        setTimeout(() => {
-	          const values = tree.values();
-	          if (!root.isComplete()) return false;
-	          onSubmit.forEach((func) => func(values, this))
-	          submissionPending = false;
-	        }, delay);
-	      }
-	      return true;
-	    }
-	
-	    let changePending = false;
-	    this.changed = (elem) => {
-	      const delay = props.noSubmission || 0;
-	      if (!changePending) {
-	        changePending = true;
-	        setTimeout(() => {
-	          const values = tree.values();
-	          onChange.forEach((func) => func(values, this, elem))
-	          changePending = false;
-	        }, delay);
-	      }
-	      return true;
-	    }
-	
-	    this.onComplete(onComplete);
-	
-	    return this;
-	  }
-	}
-	
-	DecisionInputTree.ValueCondition = ValueCondition;
-	
-	DecisionInputTree.class = 'decision-input-tree';
-	DecisionInputTree.buttonClass = 'decision-input-tree-submit';
-	
-	DecisionInputTree.validate = (wrapper) => {
-	  let valid = true;
-	  wrapper.forEach((wrapper) => {
-	    valid = valid && wrapper.payload().isValid();
-	  });
-	  return valid;
-	}
-	
-	DecisionInputTree.update = (soft) =>
-	  (elem) => {
-	    const cnt = du.find.closest('[node-id]', elem);
-	    const parent = cnt.parentElement;
-	    const nodeId = cnt.getAttribute('node-id');
-	    const wrapper = LogicWrapper.get(nodeId);
-	    console.log(isComplete(wrapper));
-	    if(!soft) {
-	      du.find.downAll('.decision-input-cnt', parent).forEach((e) => e.hidden = true)
-	      wrapper.forEach((n) => {
-	        let selector = `[node-id='${n.nodeId()}']`;
-	        elem = du.find.down(selector, parent);
-	        if (elem) elem.hidden = false;
-	      });
-	      wrapper.root().changed();
-	      wrapper.root().completed()
-	    }
-	    wrapper.payload().tree().disableButton(undefined, elem);
-	  };
-	
-	DecisionInputTree.submit = (elem) => {
-	  const wrapper = LogicWrapper.get(elem.getAttribute('root-id'));
-	  wrapper.submit();
-	}
-	
-	du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
-	du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
-	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
-	
-	
-	DecisionInputTree.DO_NOT_CLONE = true;
-	DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
-	  if (Array.isArray(inputArrayOinstance)) {
-	    inputArrayOinstance.forEach((instance) => {
-	      instance.childCntId = `decision-child-ctn-${String.random()}`
-	    });
-	    return inputArrayOinstance;
-	  }
-	  inputArrayOinstance.childCntId = `decision-child-ctn-${String.random()}`
-	  return [inputArrayOinstance];
-	}
-	
-	DecisionInputTree.template = new $t('input/decision/decisionTree');
-	
-	module.exports = DecisionInputTree;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/styles/select/relation.js',
 function (require, exports, module) {
 	
@@ -14796,17 +14791,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("childIdMap")[get("key")]) +
 			` </div> </div> </div>`
 	
-	exports['354267796'] = (get, $t) => 
-			`<span > <label>` +
-			$t.clean(1) +
-			`</label> <input type="radio" name="leftOright-` +
-			$t.clean(get("obj").id) +
-			`" value="` +
-			$t.clean(get("i")) +
-			`" ` +
-			$t.clean(get("state").index === get("i") ? 'checked' : '') +
-			`> </span>`
-	
 	exports['443122713'] = (get, $t) => 
 			`<option value='` +
 			$t.clean(get("section").prototype.constructor.name) +
@@ -14842,11 +14826,6 @@ exports['101748844'] = (get, $t) =>
 			`" ` +
 			$t.clean(get("state").index === get("i") ? 'checked' : '') +
 			`> </span>`
-	
-	exports['691376700'] = (get, $t) => 
-			`<span >` +
-			$t.clean(get("i")) +
-			`</span>`
 	
 	exports['714657883'] = (get, $t) => 
 			`<div >` +
@@ -14986,59 +14965,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("option")) +
 			`" ></option>`
 	
-	exports['expandable/list'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
-			` <div class='expand-input-cnt' hidden has-input-tree='` +
-			$t.clean(get("hasInputTree")()) +
-			`'>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> </div> `
-	
-	exports['expandable/pill'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> <div class="expand-list-cnt ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('-2108278621').render(get("list")(), 'key, item', get)) +
-			` <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> </div> <div> <div class='expand-input-cnt' hidden>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <br> <div class='error' id='` +
-			$t.clean(get("ERROR_CNT_ID")()) +
-			`'></div> </div> <div class="expand-body ` +
-			$t.clean(get("type")()) +
-			`"></div> </div> `
-	
-	exports['-2108278621'] = (get, $t) => 
-			`<div key='` +
-			$t.clean(get("key")) +
-			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key")) +
-			`'>X</button> </div> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("key"))) +
-			` </div> </div> </div>`
-	
 	exports['expandable/sidebar'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -15081,6 +15007,21 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
+	exports['expandable/list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
+			` <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> </div> `
+	
 	exports['expandable/top-add-list'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -15096,6 +15037,44 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 			` </div> `
 	
+	exports['expandable/pill'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> <div class="expand-list-cnt ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('-2108278621').render(get("list")(), 'key, item', get)) +
+			` <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> </div> <div> <div class='expand-input-cnt' hidden>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <br> <div class='error' id='` +
+			$t.clean(get("ERROR_CNT_ID")()) +
+			`'></div> </div> <div class="expand-body ` +
+			$t.clean(get("type")()) +
+			`"></div> </div> `
+	
+	exports['-2108278621'] = (get, $t) => 
+			`<div key='` +
+			$t.clean(get("key")) +
+			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'>X</button> </div> <div class="expand-header ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'> ` +
+			$t.clean(get("getHeader")(get("item"), get("key"))) +
+			` </div> </div> </div>`
+	
 	exports['input/decision/decision'] = (get, $t) => 
 			` <span class='decision-input-cnt' node-id='` +
 			$t.clean(get("_nodeId")) +
@@ -15106,46 +15085,6 @@ exports['101748844'] = (get, $t) =>
 			`' class='inline-flex'> ` +
 			$t.clean( new $t('101748844').render(get("inputArray"), 'input', get)) +
 			` </span> </span> `
-	
-	exports['input/decision/decisionTree'] = (get, $t) => 
-			`<div class='` +
-			$t.clean(get("DecisionInputTree").class) +
-			`' root-id='` +
-			$t.clean(get("wrapper").nodeId()) +
-			`'> ` +
-			$t.clean(get("inputHtml")) +
-			` <button class='` +
-			$t.clean(get("DecisionInputTree").buttonClass) +
-			`' root-id='` +
-			$t.clean(get("wrapper").nodeId()) +
-			`'' ` +
-			$t.clean(get("tree").hideButton ? 'hidden' : '') +
-			`> ` +
-			$t.clean(get("tree").buttonText()) +
-			` </button> </div> `
-	
-	exports['input/measurement'] = (get, $t) => 
-			`<div class='fit input-cnt'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			`> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <input class='measurement-input ` +
-			$t.clean(get("class")()) +
-			`' id='` +
-			$t.clean(get("id")()) +
-			`' value='` +
-			$t.clean(get("value")() ? get("value")() : "") +
-			`' placeholder='` +
-			$t.clean(get("placeholder")()) +
-			`' type='` +
-			$t.clean(get("type")()) +
-			`' name='` +
-			$t.clean(get("name")()) +
-			`'> <div class='error' id='` +
-			$t.clean(get("errorMsgId")()) +
-			`' hidden>` +
-			$t.clean(get("errorMsg")()) +
-			`</div> </div> `
 	
 	exports['input/input'] = (get, $t) => 
 			`<` +
@@ -15185,6 +15124,23 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("item")) +
 			`" ></option>`
 	
+	exports['input/decision/decisionTree'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("DecisionInputTree").class) +
+			`' root-id='` +
+			$t.clean(get("wrapper").nodeId()) +
+			`'> ` +
+			$t.clean(get("inputHtml")) +
+			` <button class='` +
+			$t.clean(get("DecisionInputTree").buttonClass) +
+			`' root-id='` +
+			$t.clean(get("wrapper").nodeId()) +
+			`'' ` +
+			$t.clean(get("tree").hideButton ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("tree").buttonText()) +
+			` </button> </div> `
+	
 	exports['input/select'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline") ? 'span' : 'div') +
@@ -15209,6 +15165,29 @@ exports['101748844'] = (get, $t) =>
 			`</div> </` +
 			$t.clean(get("inline") ? 'span' : 'div') +
 			`> `
+	
+	exports['input/measurement'] = (get, $t) => 
+			`<div class='fit input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <input class='measurement-input ` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' value='` +
+			$t.clean(get("value")() ? get("value")() : "") +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`'> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
 	
 	exports['2d/pop-up/door-2d'] = (get, $t) => 
 			`<div type-2d='` +
@@ -15265,6 +15244,17 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("display")(get("target").y())) +
 			`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
 	
+	exports['2d/pop-up/wall-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+	
 	exports['2d/pop-up/vertex-2d'] = (get, $t) => 
 			`<div type-2d='` +
 			$t.clean(get("target").constructor.name) +
@@ -15279,17 +15269,6 @@ exports['101748844'] = (get, $t) =>
 			`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='value-2d' key='y' value='` +
 			$t.clean(get("display")(get("target").y())) +
 			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d transparent'>Remove</button></td> </tr> <tr> </table> </div> `
-	
-	exports['2d/pop-up/wall-2d'] = (get, $t) => 
-			`<div type-2d='` +
-			$t.clean(get("target").constructor.name) +
-			`' id='` +
-			$t.clean(get("target").id()) +
-			`' x='` +
-			$t.clean(get("lastImagePoint").x) +
-			`' y='` +
-			$t.clean(get("lastImagePoint").y) +
-			`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
 	
 	exports['2d/pop-up/window-2d'] = (get, $t) => 
 			`<div type-2d='` +
@@ -15384,13 +15363,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("item").name) +
 			`</button> </span>`
 	
-	exports['divide/body'] = (get, $t) => 
-			`<h2>` +
-			$t.clean(get("list").activeKey()) +
-			`</h2> val: ` +
-			$t.clean(get("list").value()('selected')) +
-			` `
-	
 	exports['divide/head'] = (get, $t) => 
 			`<div> <select value='` +
 			$t.clean(get("opening").name) +
@@ -15435,8 +15407,12 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("patternInputHtml")) +
 			` </div> </div> `
 	
-	exports['feature'] = (get, $t) => 
-			`<h3>Feature Display</h3> `
+	exports['divide/body'] = (get, $t) => 
+			`<h2>` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> val: ` +
+			$t.clean(get("list").value()('selected')) +
+			` `
 	
 	exports['group/body'] = (get, $t) => 
 			`<div class='group-cnt'> <div class='group-header' cab-style='Inset' ` +
@@ -15456,6 +15432,9 @@ exports['101748844'] = (get, $t) =>
 			` <div class='cabinet-cnt' group-id='` +
 			$t.clean(get("group").id()) +
 			`'></div> </div> `
+	
+	exports['feature'] = (get, $t) => 
+			`<h3>Feature Display</h3> `
 	
 	exports['group/head'] = (get, $t) => 
 			`<div group-display-id='` +
@@ -15518,13 +15497,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("bodyId")) +
 			`"></div> </div> `
 	
-	exports['managers/cost/body'] = (get, $t) => 
-			`<div hidden> <div> <span> ` +
-			$t.clean(get("CostManager").nodeInputHtml()) +
-			` <button>Add Cost</button> <button>Add Node</button> </span> <span> Cost Display </span> </div> ` +
-			$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
-			` </div> `
-	
 	exports['managers/cost/head'] = (get, $t) => 
 			`<div class='expand-header' node-id='` +
 			$t.clean(get("node").nodeId()) +
@@ -15536,17 +15508,12 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('1417643187').render(get("node").payload().requiredProperties, 'property', get)) +
 			` </ul> </div> `
 	
-	exports['managers/cost/main'] = (get, $t) => 
-			`<div> <div class="center"> <h2 id='cost-manager-header'> Cost Tree Manager </h2> </div> ` +
-			$t.clean( new $t('-496477131').render(get("root")().children(), 'child', get)) +
-			` <button id='cost-manager-save-btn'>Save</button> </div> `
-	
-	exports['-496477131'] = (get, $t) => 
-			`<div class='expandable-list cost-tree' radio-id='poo'> ` +
-			$t.clean(get("headHtml")(get("child"))) +
-			` ` +
-			$t.clean(get("bodyHtml")(get("child"))) +
-			` </div>`
+	exports['managers/cost/body'] = (get, $t) => 
+			`<div hidden> <div> <span> ` +
+			$t.clean(get("CostManager").nodeInputHtml()) +
+			` <button>Add Cost</button> <button>Add Node</button> </span> <span> Cost Display </span> </div> ` +
+			$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
+			` </div> `
 	
 	exports['managers/cost/property-select'] = (get, $t) => 
 			`<div> ` +
@@ -15560,6 +15527,18 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("abbriviation")(get("group"))) +
 			`)</b> ` +
 			$t.clean( new $t('1036581066').render(get("properties"), 'property', get)) +
+			` </div>`
+	
+	exports['managers/cost/main'] = (get, $t) => 
+			`<div> <div class="center"> <h2 id='cost-manager-header'> Cost Tree Manager </h2> </div> ` +
+			$t.clean( new $t('-496477131').render(get("root")().children(), 'child', get)) +
+			` <button id='cost-manager-save-btn'>Save</button> </div> `
+	
+	exports['-496477131'] = (get, $t) => 
+			`<div class='expandable-list cost-tree' radio-id='poo'> ` +
+			$t.clean(get("headHtml")(get("child"))) +
+			` ` +
+			$t.clean(get("bodyHtml")(get("child"))) +
 			` </div>`
 	
 	exports['managers/cost/types/labor'] = (get, $t) => 
@@ -15625,7 +15604,7 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("template").id()) +
 			`> <div class='inline-flex full-width'> <h4>` +
 			$t.clean(get("template").type()) +
-			`</h4> <div class='full-width'> <button class='copy-template right'>Copy</button> <button class='paste-template right'>Paste</button> </div> </div> <div></div> <span class='part-input-cnt'> <br> <input type="text" name="partSelector" list='part-list'> <datalist id='part-list'></datalist> </span> <input class='cabinet-input dem' type="text" name="width" value="` +
+			`</h4> <div class='full-width'> <button class='copy-template right'>Copy</button> <button class='paste-template right'>Paste</button> </div> </div> <div></div> <div></div> <input class='cabinet-input dem' type="text" name="width" value="` +
 			$t.clean(get("toDisplay")(get("template").width())) +
 			`"> X <input class='cabinet-input dem' type="text" name="height" value="` +
 			$t.clean(get("toDisplay")(get("template").height())) +
@@ -15687,29 +15666,29 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("sectionState").style === 'Reveal' ? 'checked' : '') +
 			`> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <label>Door</label> <input type="radio" name='sectionType' value="DoorSection"> <label>Drawer</label> <input type="radio" name='sectionType' value="DrawerSection"> <label>Duel Door</label> <input type="radio" name='sectionType' value="DualDoorSection"> <label>False Front</label> <input type="radio" name='sectionType' value="FalseFrontSection"> <label>Open</label> <input type="radio" name='sectionType' value=""> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <label>Divider Count</label> <input id='template-divider-count-input' type="number" name="count" min='0' max='3' value=0> <label>Vertical</label> <input type="checkbox" name="vertical"> <label>Test</label> <input type="checkbox" name="testDividers"> </div> <div id='` +
 			$t.clean(get("parentId")()) +
-			`'></div> </div> `
+			`'></div> <div class='center center-vert' id='layout-sketch-cnt'></div> </div> `
 	
 	exports['managers/template/openings/body'] = (get, $t) => 
-			`<div> <div class='border-part-code-cnt' ` +
-			$t.clean(get("obj")._Type !== 'location' ? '' : 'hidden') +
-			`> <h4>Opening Border Part Codes</h4> ` +
+			`<div> <h4>Opening Border Part Codes</h4> <div class='tab border-part-code-cnt'> ` +
 			$t.clean(get("select").html()) +
 			` <input class='opening-part-code-input' attr='openings' name='partCode' value="` +
 			$t.clean(get("obj")[get("select").value()]) +
-			`"> </div> <div class='border-location-cnt' ` +
+			`"> <b>Flip Normal</b> <input type="checkbox" name="flipNormal" ` +
+			$t.clean(get("obj").flipNormal ? 'checked' : '') +
+			`> </div> <h4>Opening Border Locations</h4> <div class='tab'> Custom Vertex Formula: <input class='opening-type-selector' type="checkbox" name="custom-formula" ` +
+			$t.clean(get("obj")._Type === 'location' ? 'checked' : '') +
+			`> <div class='border-location-cnt' ` +
 			$t.clean(get("obj")._Type === 'location' ? '' : 'hidden') +
-			`> <h4>Opening Border Locations</h4> <label>Z Rotation</label> <input type="text" name="zRotation" value="` +
-			$t.clean(get("obj").zRotation) +
-			`"> <br><br> <label>Inner</label> <input type="radio" name="innerOouter-` +
+			`> <label>Inner</label> <input type="radio" name="innerOouter-` +
 			$t.clean(get("obj").id) +
 			`" value="true" ` +
-			$t.clean(get("state").innerOouter === true ? 'checked' : '') +
+			$t.clean(get("state").innerOouter === 'true' ? 'checked' : '') +
 			`> <label>Outer</label> <input type="radio" name="innerOouter-` +
 			$t.clean(get("obj").id) +
 			`" value="false" ` +
-			$t.clean(get("state").innerOouter === false ? 'checked' : '') +
+			$t.clean(get("state").innerOouter === 'false' ? 'checked' : '') +
 			`> <br><br> <label>Vertex:</label> <br> ` +
-			$t.clean( new $t('609725186').render('0..4', 'i', get)) +
+			$t.clean( new $t('-182533851').render('0..4', 'i', get)) +
 			` <br><br> <label>X</label> <input type="radio" name="xOyOz-` +
 			$t.clean(get("obj").id) +
 			`" value="x" ` +
@@ -15722,20 +15701,7 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("obj").id) +
 			`" value="z" ` +
 			$t.clean(get("state").xOyOz === 'z' ? 'checked' : '') +
-			`> <br><br> <input type='text' name='opening-coordinate-value' value=''> <div class='opening-location-value-cnt'></div> <div class='opening-location-description-cnt'></div> </div> </div> `
-	
-	exports['managers/template/openings/head'] = (get, $t) => 
-			`<div class='inline-flex' opening-id='` +
-			$t.clean(get("obj").id) +
-			`'> Openings <label>Part Codes</label> <input class='opening-type-selector' type="radio" name="borderType-` +
-			$t.clean(get("obj").id) +
-			`" value="part-code" ` +
-			$t.clean(get("obj")._Type !== 'location' ? 'checked' : '') +
-			`> <label>Locations</label> <input class='opening-type-selector' type="radio" name="borderType-` +
-			$t.clean(get("obj").id) +
-			`" value="location" ` +
-			$t.clean(get("obj")._Type === 'location' ? 'checked' : '') +
-			`> </div> `
+			`> <br><br> <input type='text' name='opening-coordinate-value' value=''> </div> <div class='opening-location-value-cnt'></div> <div class='opening-location-description-cnt'></div> </div> </div> `
 	
 	exports['managers/template/subassemblies/body'] = (get, $t) => 
 			`<div template-attr='subassembles'> <div> <label>All</label> <input class='template-include' type='radio' name='is-` +
@@ -15770,6 +15736,11 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("getEqn")(get("rotationXyzSelect"), get("obj").rotation)) +
 			`'> <input disabled class='measurement-input' name='value'> </div> </div> `
 	
+	exports['managers/template/openings/head'] = (get, $t) => 
+			`<div class='inline-flex' opening-id='` +
+			$t.clean(get("obj").id) +
+			`'> Openings </div> `
+	
 	exports['managers/template/subassemblies/head'] = (get, $t) => 
 			`<label>Part Code</label> <input class='template-input' attr='subassemblies' name='code' value="` +
 			$t.clean(get("obj").code) +
@@ -15785,6 +15756,13 @@ exports['101748844'] = (get, $t) =>
 			`' placeholder="Value" disabled> <input type="checkbox" name="convert" checked> <br> <input class='template-input full-width' attr='values' type='text' name='eqn' value='` +
 			$t.clean(get("obj").eqn) +
 			`' placeholder="Equation"> </div> `
+	
+	exports['opening'] = (get, $t) => 
+			`<div class='opening-cnt' opening-id='` +
+			$t.clean(get("opening").id()) +
+			`'> <div class='divider-controls'> </div> </div> <div id='` +
+			$t.clean(get("openDispId")) +
+			`'> </div> `
 	
 	exports['model-controller'] = (get, $t) => 
 			`<div> <div class='model-selector'> <div ` +
@@ -15824,13 +15802,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('2081934436').render(get("partList"), 'part', get)) +
 			` </div>`
 	
-	exports['opening'] = (get, $t) => 
-			`<div class='opening-cnt' opening-id='` +
-			$t.clean(get("opening").id()) +
-			`'> <div class='divider-controls'> </div> </div> <div id='` +
-			$t.clean(get("openDispId")) +
-			`'> </div> `
-	
 	exports['order/body'] = (get, $t) => 
 			`<div order-id='` +
 			$t.clean(get("order").id()) +
@@ -15859,14 +15830,14 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("$index")) +
 			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> `
 	
-	exports['order/builder/head'] = (get, $t) => 
-			`<h3 class='margin-zero'> ` +
-			$t.clean(get("order").name) +
-			` </h3> `
-	
 	exports['order/head'] = (get, $t) => 
 			`<h3 class='margin-zero'> ` +
 			$t.clean(get("order").name()) +
+			` </h3> `
+	
+	exports['order/builder/head'] = (get, $t) => 
+			`<h3 class='margin-zero'> ` +
+			$t.clean(get("order").name) +
 			` </h3> `
 	
 	exports['order/information/body'] = (get, $t) => 
@@ -15874,6 +15845,26 @@ exports['101748844'] = (get, $t) =>
 	
 	exports['order/information/head'] = (get, $t) => 
 			`<b>Information</b> `
+	
+	exports['properties/config-body0'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('-179269626').render(get("properties"), 'property', get)) +
+			` <button class='save-change' properties-id='` +
+			$t.clean(get("properties")._ID) +
+			`' ` +
+			$t.clean(get("changed")(get("properties")._ID) ? '' : 'hidden') +
+			`> Save </button> </div> `
+	
+	exports['-179269626'] = (get, $t) => 
+			`<div class='property-cnt' > <label>` +
+			$t.clean(get("property").name()) +
+			`</label> <input type="text" prop-value-update='` +
+			$t.clean(get("property").id()) +
+			`' value="` +
+			$t.clean(get("property").display()) +
+			`" measurement-id='` +
+			$t.clean(get("property").measurementId()) +
+			`'> </div>`
 	
 	exports['properties/config-body'] = (get, $t) => 
 			`<div> ` +
@@ -15902,26 +15893,6 @@ exports['101748844'] = (get, $t) =>
 			`' ` +
 			$t.clean(get("property").value() === true ? 'checked' : '') +
 			`> </span> </div>`
-	
-	exports['properties/config-body0'] = (get, $t) => 
-			`<div> ` +
-			$t.clean( new $t('-179269626').render(get("properties"), 'property', get)) +
-			` <button class='save-change' properties-id='` +
-			$t.clean(get("properties")._ID) +
-			`' ` +
-			$t.clean(get("changed")(get("properties")._ID) ? '' : 'hidden') +
-			`> Save </button> </div> `
-	
-	exports['-179269626'] = (get, $t) => 
-			`<div class='property-cnt' > <label>` +
-			$t.clean(get("property").name()) +
-			`</label> <input type="text" prop-value-update='` +
-			$t.clean(get("property").id()) +
-			`' value="` +
-			$t.clean(get("property").display()) +
-			`" measurement-id='` +
-			$t.clean(get("property").measurementId()) +
-			`'> </div>`
 	
 	exports['properties/config-head'] = (get, $t) => 
 			`` +
@@ -15972,17 +15943,17 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
 			` </div> </div> </div> </div> `
 	
-	exports['properties/property-menu'] = (get, $t) => 
-			` <div class='cabinet-style-selector-cnt'>` +
-			$t.clean(get("styleSelector")()) +
-			`</div> Property MeNu `
-	
 	exports['properties/radio'] = (get, $t) => 
 			`<div class='center'> <label>` +
 			$t.clean(get("key")) +
 			`:&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
 			$t.clean( new $t('1410278299').render(get("values"), 'property', get)) +
 			` </div> `
+	
+	exports['properties/property-menu'] = (get, $t) => 
+			` <div class='cabinet-style-selector-cnt'>` +
+			$t.clean(get("styleSelector")()) +
+			`</div> Property MeNu `
 	
 	exports['properties/unit'] = (get, $t) => 
 			`<div> <label>Standard</label> <input type='radio' name='unit' ` +
@@ -15998,17 +15969,17 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("room").id()) +
 			`'>Add Group</button> </div> </div> `
 	
-	exports['room/head'] = (get, $t) => 
-			`<b>` +
-			$t.clean(get("room").name()) +
-			`</b> `
-	
 	exports['sections/divider'] = (get, $t) => 
 			`<h2>Divider: ` +
 			$t.clean(get("list").activeKey()) +
 			`</h2> <div class='section-feature-ctn'> ` +
 			$t.clean(get("featureDisplay")) +
 			` </div> `
+	
+	exports['room/head'] = (get, $t) => 
+			`<b>` +
+			$t.clean(get("room").name()) +
+			`</b> `
 	
 	exports['sections/door'] = (get, $t) => 
 			`<h2>DoorSection(` +
@@ -16050,7 +16021,7 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("id")()) +
 			`'> <div class='three-view-three-d-cnt'></div> <div class='three-view-two-d-cnt'> <div class='three-view-canvases-cnt inline-flex' id='` +
 			$t.clean(get("id")()) +
-			`-cnt'> <div class='center-vert'>Part Code: <b id='three-view-part-code-` +
+			`-cnt'> <div class='part-input-cnt center-vert'> <input type="text" name="partSelector" list='part-list'> <datalist id='part-list'></datalist> </div> <div class='center-vert'>Part Code: <b id='three-view-part-code-` +
 			$t.clean(get("id")()) +
 			`'></b></div> <span class='three-view-canvas-cnt'> <b>Top</b> <canvas id="three-view-top" width="` +
 			$t.clean(get("maxDem")()) +
@@ -16066,19 +16037,54 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("maxDem")()) +
 			`"></canvas> </span> </div> </div> </div> `
 	
-	exports['-1916480964'] = (get, $t) => 
-			`<span >i</span>`
-	
-	exports['-1222606500'] = (get, $t) => 
-			`<span > <label>` +
+	exports['-182533851'] = (get, $t) => 
+			`<span class='border-location-cnt'> <label>` +
 			$t.clean(get("i")) +
-			`</label> <input type="radio" name="leftOright-` +
+			`</label> <input type="radio" name="index-` +
 			$t.clean(get("obj").id) +
 			`" value="` +
 			$t.clean(get("i")) +
 			`" ` +
 			$t.clean(get("state").index === get("i") ? 'checked' : '') +
 			`> </span>`
+	
+	exports['managers/template/openings/opening-points'] = (get, $t) => 
+			`<<table> <tr> <td>display(coords.outer[0])</td> <td></td> <td></td> <td>display(coords.outer[0])</td> </tr> </table> `
+	
+	exports['managers/template/openings/points'] = (get, $t) => 
+			`<table> <tr> <td` +
+			$t.clean(get("target")(4) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[0])) +
+			`</td> <td></td> <td></td> <td` +
+			$t.clean(get("target")(5) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[1])) +
+			`</td> </tr> <tr> <td></td> <td` +
+			$t.clean(get("target")(0) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[0])) +
+			`</td> <td` +
+			$t.clean(get("target")(1) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[1])) +
+			`</td> <td></td> </tr> <tr> <td></td> <td` +
+			$t.clean(get("target")(3) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[3])) +
+			`</td> <td` +
+			$t.clean(get("target")(2) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[2])) +
+			`</td> <td></td> </tr> <tr> <td` +
+			$t.clean(get("target")(7) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[3])) +
+			`</td> <td></td> <td></td> <td` +
+			$t.clean(get("target")(6) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[2])) +
+			`</td> </tr> </table> `
 	
 });
 
@@ -16099,12 +16105,12 @@ function (require, exports, module) {
 	    },
 	    {
 	      "key": "fwl",
-	      "eqn": "c.t - rw",
+	      "eqn": "c.w - rw",
 	      "id": "v47f8o3"
 	    },
 	    {
 	      "key": "fwr",
-	      "eqn": "c.w - lw",
+	      "eqn": "c.t - lw",
 	      "id": "ammy5c5"
 	    },
 	    {
@@ -16144,7 +16150,7 @@ function (require, exports, module) {
 	    },
 	    {
 	      "key": "frontLeftTheta",
-	      "eqn": "Math.atan(fwl/fwr)",
+	      "eqn": "Math.atan(fwr/fwl)",
 	      "id": "woqnfe1"
 	    },
 	    {
@@ -16169,12 +16175,12 @@ function (require, exports, module) {
 	    },
 	    {
 	      "key": "cutCenterX",
-	      "eqn": "frontHypeCenterX - frontHype * Math.cos(frontLeftTheta)",
+	      "eqn": "frontHypeCenterX - frontHype * Math.sin(frontLeftTheta)",
 	      "id": "otayvu9"
 	    },
 	    {
 	      "key": "cutCenterD",
-	      "eqn": "frontHypeCenterD - frontHype * Math.sin(frontLeftTheta)",
+	      "eqn": "frontHypeCenterD - frontHype * Math.cos(frontLeftTheta)",
 	      "id": "ekillpb"
 	    },
 	    {
@@ -16184,68 +16190,82 @@ function (require, exports, module) {
 	    },
 	    {
 	      "key": "topInnerLimit",
-	      "eqn": "c.h - topInsetDepth - pt.t"
+	      "eqn": "c.h - topInsetDepth - pt.t",
+	      "id": "zj8uuj1"
 	    },
 	    {
 	      "key": "topOuterLimit",
-	      "eqn": "c.h"
+	      "eqn": "c.h",
+	      "id": "3liro7c"
 	    },
 	    {
 	      "key": "bottomInnerLimit",
-	      "eqn": "bottomInsetDepth + pbtm.t"
+	      "eqn": "bottomInsetDepth + pbtm.t",
+	      "id": "ddjl8d0"
 	    },
 	    {
 	      "key": "bottomOuterLimit",
-	      "eqn": 0
+	      "eqn": 0,
+	      "id": "0y39vqw"
 	    },
 	    {
 	      "key": "leftInnerLimit",
-	      "eqn": "pl.t"
+	      "eqn": "pl.t",
+	      "id": "oto8hml"
 	    },
 	    {
 	      "key": "leftOuterLimit",
-	      "eqn": "0"
+	      "eqn": "0",
+	      "id": "s0ynin6"
 	    },
 	    {
 	      "key": "leftCutTheta",
-	      "eqn": "Math.PI - frontLeftTheta - Math.PI12"
+	      "eqn": "Math.PI - frontLeftTheta - Math.PI12",
+	      "id": "d91x5l5"
 	    },
 	    {
 	      "key": "leftCutT",
-	      "eqn": "pl.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)"
+	      "eqn": "pl.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
+	      "id": "c1zmc1s"
 	    },
 	    {
 	      "key": "rightCutTheta",
-	      "eqn": "frontLeftTheta"
+	      "eqn": "frontLeftTheta",
+	      "id": "moxhnw5"
 	    },
 	    {
 	      "key": "rightCutX",
-	      "eqn": "pr.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)"
+	      "eqn": "pr.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
+	      "id": "476p6b2"
 	    },
 	    {
 	      "key": "rightInnerLimit",
-	      "eqn": "fwl"
+	      "eqn": "fwl",
+	      "id": "dnmesi3"
 	    },
 	    {
 	      "key": "rightOuterLimit",
-	      "eqn": "fwl"
+	      "eqn": "fwl",
+	      "id": "9syndoq"
 	    },
 	    {
 	      "key": "frontDepthMin",
-	      "eqn": 0
+	      "eqn": 0,
+	      "id": "2pfov96"
 	    },
 	    {
 	      "key": "frontDepthMax",
-	      "eqn": "fwr"
+	      "eqn": "fwr",
+	      "id": "eflejko"
 	    }
 	  ],
 	  "subassemblies": [
 	    {
 	      "type": "Panel",
 	      "center": [
-	        "c.t - bo/2",
+	        "c.w - bo/2",
 	        "c.h/2",
-	        "c.w - bo/2"
+	        "c.t - bo/2"
 	      ],
 	      "demensions": [
 	        "pbw",
@@ -16254,7 +16274,7 @@ function (require, exports, module) {
 	      ],
 	      "rotation": [
 	        0,
-	        "135",
+	        "45",
 	        0
 	      ],
 	      "name": "Panel.Back",
@@ -16285,9 +16305,9 @@ function (require, exports, module) {
 	    {
 	      "type": "Panel",
 	      "center": [
-	        "(c.t - pr.w) + pr.w / 2",
+	        "pl.w/2",
 	        "c.h / 2",
-	        "pr.t / 2"
+	        "pl.t/2"
 	      ],
 	      "demensions": [
 	        "c.w",
@@ -16296,19 +16316,19 @@ function (require, exports, module) {
 	      ],
 	      "rotation": [
 	        0,
-	        0,
+	        "0",
 	        0
 	      ],
-	      "name": "Panel.Right",
-	      "code": "pr",
+	      "name": "Panel.Left",
+	      "code": "pl",
 	      "id": "67tkjp5"
 	    },
 	    {
 	      "type": "Panel",
 	      "center": [
-	        "pl.t/2",
+	        "pr.t/2",
 	        "c.h/2",
-	        "(c.w - pl.w) + pl.w/2"
+	        "pr.w/2"
 	      ],
 	      "demensions": [
 	        "c.t",
@@ -16320,8 +16340,8 @@ function (require, exports, module) {
 	        "90",
 	        0
 	      ],
-	      "name": "Panel.Left",
-	      "code": "pl",
+	      "name": "Panel.Right",
+	      "code": "pr",
 	      "id": "kfuwf6d"
 	    },
 	    {
@@ -16329,10 +16349,10 @@ function (require, exports, module) {
 	      "center": [
 	        "pbl.w / 2 + pl.t ",
 	        "c.h/2",
-	        "c.w - t / 2"
+	        "c.t - t / 2"
 	      ],
 	      "demensions": [
-	        "c.t - bo",
+	        "c.w - bo",
 	        "c.h",
 	        "pwt34"
 	      ],
@@ -16348,7 +16368,7 @@ function (require, exports, module) {
 	    {
 	      "type": "Cutter",
 	      "center": [
-	        "pbl.c.x",
+	        "1000",
 	        "pbl.c.y",
 	        "pbl.c.z + pbl.t"
 	      ],
@@ -16369,12 +16389,12 @@ function (require, exports, module) {
 	    {
 	      "type": "Panel",
 	      "center": [
-	        "c.t - pbr.t/2",
+	        "c.w - pbr.t/2",
 	        "c.h/2",
 	        "pbr.w/2 + pr.t"
 	      ],
 	      "demensions": [
-	        "c.w - bo",
+	        "c.t - bo",
 	        "c.h",
 	        "pwt34"
 	      ],
@@ -16390,7 +16410,7 @@ function (require, exports, module) {
 	    {
 	      "type": "Cutter",
 	      "center": [
-	        "pbr.c.x + pbr.t",
+	        "1000",
 	        "pbr.c.y",
 	        "pbr.c.z"
 	      ],
@@ -16411,13 +16431,13 @@ function (require, exports, module) {
 	    {
 	      "type": "Panel",
 	      "center": [
-	        "c.t / 2",
+	        "c.w / 2",
 	        "c.h - topInsetDepth - t / 2",
-	        "c.w / 2"
+	        "c.t / 2"
 	      ],
 	      "demensions": [
-	        "c.t - pbr.t - pl.t",
-	        "c.w - pbl.t - pr.t",
+	        "c.w - pbr.t - pl.t",
+	        "c.t - pbl.t - pr.t",
 	        "pwt34"
 	      ],
 	      "rotation": [
@@ -16432,13 +16452,13 @@ function (require, exports, module) {
 	    {
 	      "type": "Panel",
 	      "center": [
-	        "c.t / 2",
+	        "c.w / 2",
 	        "bottomInsetDepth + t / 2",
-	        "c.w / 2"
+	        "c.t / 2"
 	      ],
 	      "demensions": [
-	        "c.t - pbr.t - pl.t",
-	        "c.w - pbl.t - pr.t",
+	        "c.w - pbr.t - pl.t",
+	        "c.t - pbl.t - pr.t",
 	        "pwt34"
 	      ],
 	      "rotation": [
@@ -16464,7 +16484,7 @@ function (require, exports, module) {
 	      ],
 	      "rotation": [
 	        "90",
-	        "90 + Math.toDegrees(frontLeftTheta)",
+	        "Math.toDegrees(frontLeftTheta)",
 	        0
 	      ],
 	      "name": "Cutter.Front",
@@ -16659,51 +16679,68 @@ function (require, exports, module) {
 	  "openings": [
 	    {
 	      "_Type": "location",
-	      "rotation": {"x": 0, "z":0, "y":"-90 + Math.toDegrees(frontLeftTheta)"},
-	      "coordinates" : {
+	      "rotation": {
+	        "x": 0,
+	        "z": 0,
+	        "y": "270+ Math.toDegrees(frontLeftTheta)"
+	      },
+	      "flipNormal": true, 
+	      "coordinates": {
 	        "inner": [
+	          {
+	            "x": "rightInnerLimit - leftCutT",
+	            "y": "topInnerLimit",
+	            "z": "frontDepthMin + pl.t"
+	          },
 	          {
 	            "x": "leftInnerLimit",
 	            "y": "topInnerLimit",
-	            "z": "frontDepthMax - leftCutT"
-	          }, {
-	            "x": "rightInnerLimit - rightCutX",
-	            "y": "topInnerLimit",
-	            "z": "frontDepthMin + pr.t"
-	          }, {
-	            "x": "rightInnerLimit - rightCutX",
-	            "y": "bottomInnerLimit",
-	            "z": "frontDepthMin + pr.t"
-	          }, {
+	            "z": "frontDepthMax - rightCutX"
+	          },
+	          {
 	            "x": "leftInnerLimit",
 	            "y": "bottomInnerLimit",
-	            "z": "frontDepthMax - leftCutT"
+	            "z": "frontDepthMax - rightCutX"
+	          },
+	          {
+	            "x": "rightInnerLimit - leftCutT",
+	            "y": "bottomInnerLimit",
+	            "z": "frontDepthMin + pl.t"
 	          }
 	        ],
 	        "outer": [
 	          {
+	              "x": "rightOuterLimit",
+	              "y": "topOuterLimit",
+	              "z": "frontDepthMin"
+	          },
+	          {
 	            "x": "leftOuterLimit",
 	            "y": "topOuterLimit",
 	            "z": "frontDepthMax"
-	          }, {
-	            "x": "rightOuterLimit",
-	            "y": "topOuterLimit",
-	            "z": "frontDepthMin"
-	          }, {
-	            "x": "rightOuterLimit",
-	            "y": "bottomOuterLimit",
-	            "z": "frontDepthMin"
-	          }, {
+	          },
+	          {
 	            "x": "leftOuterLimit",
 	            "y": "bottomOuterLimit",
 	            "z": "frontDepthMax"
+	          },
+	          {
+	            "x": "rightOuterLimit",
+	            "y": "bottomOuterLimit",
+	            "z": "frontDepthMin"
 	          }
 	        ]
+	      },
+	
+	      "state": {
+	        "innerOouter": true,
+	        "index": 0,
+	        "xOyOz": "z"
 	      }
 	    }
 	  ]
 	},
-	  "corner-wall(L)": {
+	"corner-wall(L)": {
 	    "_TYPE": "CabinetTemplate",
 	    "ID_ATTRIBUTE": "id",
 	    "shape": "cornerL",
@@ -18583,185 +18620,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/utils.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const removeSuffixes = ['Part', 'Section'].join('|');
-	function formatConstructorId (obj) {
-	  return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
-	}
-	
-	function getDefaultSize(instance) {
-	  const constructorName = instance.constructor.name;
-	  if (constructorName === 'Cabinet') return {length: 24 * 2.54, width: 50*2.54, thickness: 21*2.54};
-	  return {length: 0, width: 0, thickness: 0};
-	}
-	
-	exports.formatConstructorId = formatConstructorId;
-	exports.getDefaultSize = getDefaultSize;
-	
-});
-
-
-RequireJS.addFunction('./app-src/error.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	class InvalidComputation {
-	  constructor(attributes) {
-	    this.errorCode = 400;
-	    this.message = 'Error within input parameters';
-	    const keys = Object.keys(attributes);
-	    for (let index = 0; index < keys.length; index += 1) {
-	      const key = keys[index];
-	      this.message += `\n\t${key}: '${value}'`;
-	    }
-	  }
-	}
-	module.exports = InvalidComputation
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/init.js',
-function (require, exports, module) {
-	
-
-	
-	require('../../../public/js/utils/utils.js');
-	const $t = require('../../../public/js/utils/$t');
-	$t.loadFunctions(require('../generated/html-templates'));
-	require('./displays/user.js');
-	
-	// Object Classes
-	// require('./bind.js');
-	require('./objects/assembly/init-assem');
-	require('./objects/joint/init');
-	require('./two-d/objects/snap/init');
-	const Order = require('./objects/order.js');
-	const Assembly = require('./objects/assembly/assembly.js');
-	const Properties = require('./config/properties.js');
-	const PopUp = require('../../../public/js/utils/display/pop-up.js');
-	
-	// Display classes
-	const du = require('../../../public/js/utils/dom-utils.js');
-	const EPNTS = require('../generated/EPNTS.js');
-	const Displays = require('./services/display-svc.js');
-	const OrderDisplay = require('./displays/order.js');
-	const TwoDLayout = require('./two-d/layout.js');
-	const ThreeDMainModel = require('./displays/three-d-main.js');
-	const PropertyDisplay = require('./displays/property.js');
-	const DisplayManager = require('./display-utils/displayManager.js');
-	const utils = require('./utils.js');
-	
-	// Run Tests
-	if (EPNTS.getEnv() === 'local') {
-	  require('../test/run');
-	}
-	
-	function updateDivisions (target) {
-	  const name = target.getAttribute('name');
-	  const index = Number.parseInt(target.getAttribute('index'));
-	  const value = Number.parseFloat(target.value);
-	  const inputs = target.parentElement.parentElement.querySelectorAll('.division-pattern-input');
-	  const id = du.find.up('.opening-cnt', target).getAttribute('opening-id');
-	  const opening = Assembly.get(id);
-	  const values = opening.dividerLayout().fill;
-	  for (let index = 0; values && index < inputs.length; index += 1){
-	    const value = values[index];
-	    if(value) inputs[index].value = value;
-	  }
-	  ThreeDMainModel.update(opening);
-	}
-	
-	function getValue(code, obj) {
-	  if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
-	  return CONSTANTS[code].value;
-	}
-	
-	
-	const urlSuffix = du.url.breakdown().path.split('/')[2];
-	const pageId = {template: 'template-manager', cost: 'cost-manager', home: 'app',
-	                pattern: 'pattern-manager', property: 'property-manager-cnt'
-	              }[urlSuffix] || 'app';
-	function init(body){
-	  Properties.load(body);
-	  let roomDisplay;
-	  let order;
-	
-	  const propertyDisplay = new PropertyDisplay('#property-manager');
-	  Displays.register('propertyDisplay', propertyDisplay);
-	  require('./cost/init-costs.js');
-	  const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId);
-	  const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
-	  if (urlSuffix === 'cost') {
-	    const CostManager = require('./displays/managers/cost.js');
-	    const costManager = new CostManager('cost-manager', 'cost');
-	  } else if (urlSuffix === 'template') {
-	    const TemplateManager = require('./displays/managers/template.js');
-	    const templateDisplayManager = new TemplateManager('template-manager');
-	  } else {
-	    du.on.match('change', '.open-orientation-radio,.open-division-input', updateDivisions);
-	    orderDisplay = new OrderDisplay('#order-cnt');
-	    setTimeout(TwoDLayout.init, 1000);
-	    setTimeout(ThreeDMainModel.init, 1000);
-	  }
-	}
-	
-	Request.get(EPNTS.config.get(), init, console.error);
-	
-	const popUp = new PopUp({resize: false, noBackdrop: true});
-	
-	du.on.match('click', '*', (elem, event) => {
-	  const errorMsg = elem.getAttribute('error-msg');
-	  if (errorMsg) {
-	    popUp.positionOnElement(elem).bottom();
-	    popUp.updateContent(errorMsg);
-	    popUp.show();
-	    event.stopPropagation();
-	  } else popUp.close();
-	});
-	
-});
-
-
-RequireJS.addFunction('./app-src/show.js',
-function (require, exports, module) {
-	
-
-	
-	const Panel = require('./objects/assembly/assemblies/panel.js');
-	
-	class Show {
-	  constructor(name) {
-	    this.name = name;
-	    Show.types[name] = this;
-	  }
-	}
-	Show.types = {};
-	Show.listTypes = () => Object.values(Show.types);
-	new Show('None');
-	new Show('Flat');
-	new Show('Inset Panel');
-	module.exports = Show
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('./app-src/position.js',
 function (require, exports, module) {
 	
@@ -18940,6 +18798,162 @@ function (require, exports, module) {
 	}
 	Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
 	module.exports = Position
+	
+});
+
+
+RequireJS.addFunction('./app-src/init.js',
+function (require, exports, module) {
+	
+
+	
+	require('../../../public/js/utils/utils.js');
+	const $t = require('../../../public/js/utils/$t');
+	$t.loadFunctions(require('../generated/html-templates'));
+	require('./displays/user.js');
+	
+	// Object Classes
+	// require('./bind.js');
+	require('./objects/assembly/init-assem');
+	require('./objects/joint/init');
+	require('./two-d/objects/snap/init');
+	const Order = require('./objects/order.js');
+	const Assembly = require('./objects/assembly/assembly.js');
+	const Properties = require('./config/properties.js');
+	const PopUp = require('../../../public/js/utils/display/pop-up.js');
+	
+	// Display classes
+	const du = require('../../../public/js/utils/dom-utils.js');
+	const EPNTS = require('../generated/EPNTS.js');
+	const Displays = require('./services/display-svc.js');
+	const OrderDisplay = require('./displays/order.js');
+	const TwoDLayout = require('./two-d/layout.js');
+	const ThreeDMainModel = require('./displays/three-d-main.js');
+	const PropertyDisplay = require('./displays/property.js');
+	const DisplayManager = require('./display-utils/displayManager.js');
+	const utils = require('./utils.js');
+	
+	// Run Tests
+	if (EPNTS.getEnv() === 'local') {
+	  require('../test/run');
+	}
+	
+	function updateDivisions (target) {
+	  const name = target.getAttribute('name');
+	  const index = Number.parseInt(target.getAttribute('index'));
+	  const value = Number.parseFloat(target.value);
+	  const inputs = target.parentElement.parentElement.querySelectorAll('.division-pattern-input');
+	  const id = du.find.up('.opening-cnt', target).getAttribute('opening-id');
+	  const opening = Assembly.get(id);
+	  const values = opening.dividerLayout().fill;
+	  for (let index = 0; values && index < inputs.length; index += 1){
+	    const value = values[index];
+	    if(value) inputs[index].value = value;
+	  }
+	  ThreeDMainModel.update(opening);
+	}
+	
+	function getValue(code, obj) {
+	  if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
+	  return CONSTANTS[code].value;
+	}
+	
+	
+	const urlSuffix = du.url.breakdown().path.split('/')[2];
+	const pageId = {template: 'template-manager', cost: 'cost-manager', home: 'app',
+	                pattern: 'pattern-manager', property: 'property-manager-cnt'
+	              }[urlSuffix] || 'app';
+	function init(body){
+	  Properties.load(body);
+	  let roomDisplay;
+	  let order;
+	
+	  const propertyDisplay = new PropertyDisplay('#property-manager');
+	  Displays.register('propertyDisplay', propertyDisplay);
+	  require('./cost/init-costs.js');
+	  const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId);
+	  const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
+	  if (urlSuffix === 'cost') {
+	    const CostManager = require('./displays/managers/cost.js');
+	    const costManager = new CostManager('cost-manager', 'cost');
+	  } else if (urlSuffix === 'template') {
+	    const TemplateManager = require('./displays/managers/template.js');
+	    const templateDisplayManager = new TemplateManager('template-manager');
+	  } else {
+	    du.on.match('change', '.open-orientation-radio,.open-division-input', updateDivisions);
+	    orderDisplay = new OrderDisplay('#order-cnt');
+	    setTimeout(TwoDLayout.init, 1000);
+	    setTimeout(ThreeDMainModel.init, 1000);
+	  }
+	}
+	
+	Request.get(EPNTS.config.get(), init, console.error);
+	
+	const popUp = new PopUp({resize: false, noBackdrop: true});
+	
+	du.on.match('click', '*', (elem, event) => {
+	  const errorMsg = elem.getAttribute('error-msg');
+	  if (errorMsg) {
+	    popUp.positionOnElement(elem).bottom();
+	    popUp.updateContent(errorMsg);
+	    popUp.show();
+	    event.stopPropagation();
+	  } else popUp.close();
+	});
+	
+});
+
+
+RequireJS.addFunction('./app-src/show.js',
+function (require, exports, module) {
+	
+
+	
+	const Panel = require('./objects/assembly/assemblies/panel.js');
+	
+	class Show {
+	  constructor(name) {
+	    this.name = name;
+	    Show.types[name] = this;
+	  }
+	}
+	Show.types = {};
+	Show.listTypes = () => Object.values(Show.types);
+	new Show('None');
+	new Show('Flat');
+	new Show('Inset Panel');
+	module.exports = Show
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/error.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	class InvalidComputation {
+	  constructor(attributes) {
+	    this.errorCode = 400;
+	    this.message = 'Error within input parameters';
+	    const keys = Object.keys(attributes);
+	    for (let index = 0; index < keys.length; index += 1) {
+	      const key = keys[index];
+	      this.message += `\n\t${key}: '${value}'`;
+	    }
+	  }
+	}
+	module.exports = InvalidComputation
+	
+	
+	
+	
 	
 });
 
@@ -19127,18 +19141,25 @@ const Measurement = require('../../../public/js/utils/measurement.js')
 });
 
 
-RequireJS.addFunction('./app-src/cost/init-costs.js',
+RequireJS.addFunction('./app-src/utils.js',
 function (require, exports, module) {
 	
 
 	
 	
-	const Cost = require('./cost.js');
-	const Material = require('./types/material.js');
-	const Labor = require('./types/labor.js');
+	const removeSuffixes = ['Part', 'Section'].join('|');
+	function formatConstructorId (obj) {
+	  return obj.constructor.name.replace(new RegExp(`(${removeSuffixes})$`), '');
+	}
 	
-	Cost.register(Material);
-	Cost.register(Labor);
+	function getDefaultSize(instance) {
+	  const constructorName = instance.constructor.name;
+	  if (constructorName === 'Cabinet') return {length: 24 * 2.54, width: 50*2.54, thickness: 21*2.54};
+	  return {length: 0, width: 0, thickness: 0};
+	}
+	
+	exports.formatConstructorId = formatConstructorId;
+	exports.getDefaultSize = getDefaultSize;
 	
 });
 
@@ -19235,2143 +19256,435 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/two-d/pan-zoom.js',
+RequireJS.addFunction('./app-src/config/property.js',
 function (require, exports, module) {
 	
-// Took thiss code from https://stackoverflow.com/a/33929456
-	function panZoom(canvas, draw) {
-	  let mrx, mry;
-	  const eventFuncs = [];
-	  const instance = this;
+const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
 	
-	  this.on = (eventName) => {
-	    if (eventFuncs[eventName] === undefined) eventFuncs[eventName] = [];
-	    return (func) => {
-	      if ((typeof func) === 'function') {
-	        eventFuncs[eventName].push(func);
+	
+	
+	class Property extends Lookup {
+	  // clone constructor(code, value) {
+	  constructor(code, name, props) {
+	    super();
+	    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
+	    const children = [];
+	
+	    const initVals = {
+	      code, name, description: props instanceof Object ? props.description : undefined
+	    }
+	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
+	
+	    this.value = (val, notMetric) => {
+	      if (val !== undefined && value !== val) {
+	        const measurement = new Measurement(val, notMetric);
+	        const measurementVal = measurement.value();
+	        value = Number.isNaN(measurementVal) ? val : measurement;
 	      }
+	      return value instanceof Measurement ? value.value() : value;
 	    }
-	  }
-	  let sleeping = null;
-	  let nextUpdateId = 0;
-	  this.sleep = () => sleeping = true;
-	  this.wake = () => {
-	    if (sleeping) {
-	      sleeping = false;
-	      requestAnimationFrame(() => update(nextUpdateId));
+	
+	    this.display = () => {
+	      return value instanceof Measurement ? value.display() : value;
 	    }
-	  };
-	  this.once = () => {
-	    requestAnimationFrame(() => update(nextUpdateId, true))
-	  };
 	
-	  this.onMove = this.on('move');
-	  this.onClick = this.on('click');
-	  this.onMousedown = this.on('mousedown');
-	  this.onMouseup = this.on('mouseup');
+	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
 	
-	  function eventObject(eventName, event) {
-	    let x  =  mouse.rx;
-	    let y = mouse.ry;
-	    const dt = displayTransform;
-	    x -= dt.x;
-	    y -= dt.y;
-	    // screenX and screen Y are the screen coordinates.
-	    screenX = event.pageX;//dt.scale*(x * dt.matrix[0] + y * dt.matrix[2])+dt.cox;
-	    screenY = event.pageY;//dt.scale*(x * dt.matrix[1] + y * dt.matrix[3])+dt.coy;
-	    return {
-	      eventName, screenX, screenY,
-	      imageX: mouse.rx,
-	      imageY: mouse.ry,
-	      dx: mrx,
-	      dy: mry,
-	    };
-	  }
-	
-	  function runOn(type, event) {
-	    const dt = displayTransform;
-	    let performingFunction = false;
-	    const funcs = eventFuncs[type];
-	    const eventObj  = eventObject(type, event);
-	    for (let index = 0; !performingFunction && index < funcs.length; index += 1) {
-	      performingFunction = funcs[index](eventObj, event);
+	    if ((typeof props) !== 'object' ||  props === null) {
+	      this.value(props);
+	      props = {};
 	    }
-	    return performingFunction;
-	  }
+	    this.properties(props || {});
 	
-	  var ctx = canvas.getContext("2d");
-	  var mouse = {
-	      x : 0,
-	      y : 0,
-	      w : 0,
-	      alt : false,
-	      shift : false,
-	      ctrl : false,
-	      buttonLastRaw : 0, // user modified value
-	      buttonRaw : 0,
-	      over : false,
-	      buttons : [1, 2, 4, 6, 5, 3], // masks for setting and clearing button raw bits;
-	  };
-	  let lastMouseMovementId = 0;
-	  function mouseMove(event) {
-	      const mouseMovementId = ++lastMouseMovementId;
-	      mouse.x = event.offsetX;
-	      mouse.y = event.offsetY;
-	      if (mouse.x === undefined) {
-	          mouse.x = event.clientX;
-	          mouse.y = event.clientY;
+	    const existingProp = Property.list[code];
+	    let clone = false;
+	    if (this.properties().value !== undefined) {
+	      this.value(this.properties().value, this.properties().notMetric);
+	    }
+	
+	    // if (existingProp) {
+	    //   value = value || existingProp.value();
+	    //   name = existingProp.name();
+	    //   this.properties(existingProp.properties());
+	    //   clone = true;
+	    // }
+	
+	    if ((typeof value) === 'number')
+	      value = new Measurement(value, this.properties().notMetric);
+	
+	
+	    this.addChild = (property) => {
+	      if (property instanceof Property && property.code() === this.code()) {
+	            if (children.indexOf(property) === -1) children.push(property);
+	            else throw new Error('Property is already a child');
 	      }
-	      runOn('move', event);
-	      mouse.alt = event.altKey;
-	      mouse.shift = event.shiftKey;
-	      mouse.ctrl = event.ctrlKey;
-	      if (event.type === "mousedown") {
-	        if (!runOn('mousedown', event))  {
-	          event.preventDefault()
-	          mouse.buttonRaw |= mouse.buttons[event.which-1];
-	        }
-	      } else if (event.type === "mouseup") {
-	        if (!runOn('mouseup', event)) {
-	          mouse.buttonRaw &= mouse.buttons[event.which + 2];
-	        }
-	      } else if (event.type === "mouseout") {
-	          mouse.buttonRaw = 0;
-	          mouse.over = false;
-	      } else if (event.type === "mouseover") {
-	          mouse.over = true;
-	      } else if (event.type === "mousewheel") {
-	          event.preventDefault()
-	          mouse.w = event.wheelDelta;
-	      } else if (event.type === "DOMMouseScroll") { // FF you pedantic doffus
-	         mouse.w = -event.detail;
-	      }
-	      instance.wake();
-	      setTimeout(() => {
-	        if (mouseMovementId === lastMouseMovementId) instance.sleep()
-	      }, 500);
-	  }
-	
-	  function setupMouse(e) {
-	      e.addEventListener('mousemove', mouseMove);
-	      e.addEventListener('mousedown', mouseMove);
-	      e.addEventListener('mouseup', mouseMove);
-	      e.addEventListener('mouseout', mouseMove);
-	      e.addEventListener('mouseover', mouseMove);
-	      e.addEventListener('mousewheel', mouseMove);
-	      e.addEventListener('DOMMouseScroll', mouseMove); // fire fox
-	
-	      e.addEventListener("contextmenu", function (e) {
-	          e.preventDefault();
-	      }, false);
-	  }
-	  setupMouse(canvas);
-	
-	  let transformCount = 0;
-	  const round = (val) => Math.round((val*100)/displayTransform.scale) / 100;
-	  const print = (...attrs) => {
-	    if (transformCount++ % 100 !== 0) return;
-	    let str = '';
-	    for (let index = 0; index < attrs.length; index += 1) {
-	      const attr = attrs[index];
-	      str += `${attr}: ${round(displayTransform[attr])} `;
+	      else throw new Error('Child is not an instance of Property or Code does not match');
 	    }
-	  }
-	  // terms.
-	  // Real space, real, r (prefix) refers to the transformed canvas space.
-	  // c (prefix), chase is the value that chases a requiered value
-	  var displayTransform = {
-	      x:0,
-	      y:0,
-	      ox:0,
-	      oy:0,
-	      scale:1,
-	      rotate:0,
-	      cx:0,  // chase values Hold the actual display
-	      cy:0,
-	      cox:0,
-	      coy:0,
-	      cscale:1,
-	      crotate:0,
-	      dx:0,  // deltat values
-	      dy:0,
-	      dox:0,
-	      doy:0,
-	      dscale:1,
-	      drotate:0,
-	      drag:0.2,  // drag for movements
-	      accel:0.7, // acceleration
-	      matrix:[0,0,0,0,0,0], // main matrix
-	      invMatrix:[0,0,0,0,0,0], // invers matrix;
-	      mouseX:0,
-	      mouseY:0,
-	      ctx:ctx,
-	      setTransform:function(){
-	          var m = this.matrix;
-	          var i = 0;
-	          const dt = displayTransform;
-	          print('x', 'y',  'dx', 'dy', 'mouseX', 'mouseY', 'scale');
-	          this.ctx.setTransform(m[i++],m[i++],m[i++],m[i++],m[i++],m[i++]);
-	      },
-	      setHome:function(){
-	          this.ctx.setTransform(1,0,0,1,0,0);
 	
-	      },
-	      update:function(){
-	          // smooth all movement out. drag and accel control how this moves
-	          // acceleration
-	          this.dx += (this.x-this.cx)*this.accel;
-	          this.dy += (this.y-this.cy)*this.accel;
-	          this.dox += (this.ox-this.cox)*this.accel;
-	          this.doy += (this.oy-this.coy)*this.accel;
-	          this.dscale += (this.scale-this.cscale)*this.accel;
-	          this.drotate += (this.rotate-this.crotate)*this.accel;
-	          // drag
-	          this.dx *= this.drag;
-	          this.dy *= this.drag;
-	          this.dox *= this.drag;
-	          this.doy *= this.drag;
-	          this.dscale *= this.drag;
-	          this.drotate *= this.drag;
-	          // set the chase values. Chase chases the requiered values
-	          this.cx += this.dx;
-	          this.cy += this.dy;
-	          this.cox += this.dox;
-	          this.coy += this.doy;
-	          this.cscale += this.dscale;
-	          this.crotate += this.drotate;
+	    this.children = () => JSON.clone(children);
 	
-	          // create the display matrix
-	          this.matrix[0] = Math.cos(this.crotate)*this.cscale;
-	          this.matrix[1] = Math.sin(this.crotate)*this.cscale;
-	          this.matrix[2] =  - this.matrix[1];
-	          this.matrix[3] = this.matrix[0];
+	    this.equals = (other) =>
+	        other instanceof Property &&
+	        this.value() === other.value() &&
+	        this.code() === other.code() &&
+	        this.name() === other.name() &&
+	        this.description() === other.description();
 	
-	          // set the coords relative to the origin
-	          this.matrix[4] = -(this.cx * this.matrix[0] + this.cy * this.matrix[2])+this.cox;
-	          this.matrix[5] = -(this.cx * this.matrix[1] + this.cy * this.matrix[3])+this.coy;
-	
-	
-	          // create invers matrix
-	          var det = (this.matrix[0] * this.matrix[3] - this.matrix[1] * this.matrix[2]);
-	          this.invMatrix[0] = this.matrix[3] / det;
-	          this.invMatrix[1] =  - this.matrix[1] / det;
-	          this.invMatrix[2] =  - this.matrix[2] / det;
-	          this.invMatrix[3] = this.matrix[0] / det;
-	
-	          // check for mouse. Do controls and get real position of mouse.
-	          if(mouse !== undefined){  // if there is a mouse get the real cavas coordinates of the mouse
-	              let mdx = mouse.x-mouse.oldX; // get the mouse movement
-	              let mdy = mouse.y-mouse.oldY;
-	              mrx = (mdx * this.invMatrix[0] + mdy * this.invMatrix[2]);
-	              mry = (mdx * this.invMatrix[1] + mdy * this.invMatrix[3]);
-	              if(mouse.oldX !== undefined && (mouse.buttonRaw & 1)===1){ // check if panning (middle button)
-	                  // get the movement in real space
-	                  this.x -= mrx;
-	                  this.y -= mry;
-	              }
-	              // do the zoom with mouse wheel
-	              if(mouse.w !== undefined && mouse.w !== 0){
-	                  this.ox = mouse.x;
-	                  this.oy = mouse.y;
-	                  this.x = this.mouseX;
-	                  this.y = this.mouseY;
-	                  /* Special note from answer */
-	                  // comment out the following is you change drag and accel
-	                  // and the zoom does not feel right (lagging and not
-	                  // zooming around the mouse
-	                  /*
-	                  this.cox = mouse.x;
-	                  this.coy = mouse.y;
-	                  this.cx = this.mouseX;
-	                  this.cy = this.mouseY;
-	                  */
-	                  if(mouse.w > 0){ // zoom in
-	                      this.scale *= 1.1;
-	                      mouse.w -= 20;
-	                      if(mouse.w < 0){
-	                          mouse.w = 0;
-	                      }
-	                  }
-	                  if(mouse.w < 0){ // zoom out
-	                      this.scale *= 1/1.1;
-	                      mouse.w += 20;
-	                      if(mouse.w > 0){
-	                          mouse.w = 0;
-	                      }
-	                  }
-	
-	              }
-	              // get the real mouse position
-	              var screenX = (mouse.x - this.cox);
-	              var screenY = (mouse.y - this.coy);
-	              this.screenX = screenX;
-	              this.screenY = screenY;
-	              this.mouseX = this.cx + (screenX * this.invMatrix[0] + screenY * this.invMatrix[2]);
-	              this.mouseY = this.cy + (screenX * this.invMatrix[1] + screenY * this.invMatrix[3]);
-	              mouse.rx = this.mouseX;  // add the coordinates to the mouse. r is for real
-	              mouse.ry = this.mouseY;
-	              // save old mouse position
-	              mouse.oldX = mouse.x;
-	              mouse.oldY = mouse.y;
-	          }
-	
-	      }
-	  }
-	  // image to show
-	  var img = new Image();
-	  img.src = "https://upload.wikimedia.org/wikipedia/commons/e/e5/Fiat_500_in_Emilia-Romagna.jpg"
-	  // set up font
-	  ctx.font = "14px verdana";
-	  ctx.textAlign = "center";
-	  ctx.textBaseline = "middle";
-	  // timer for stuff
-	  var timer =0;
-	  function update(updateId, once){
-	    if (nextUpdateId !== updateId) return;
-	      nextUpdateId++;
-	      timer += 1; // update timere
-	      // update the transform
-	      displayTransform.update();
-	      // set home transform to clear the screem
-	      displayTransform.setHome();
-	      ctx.clearRect(0,0,canvas.width,canvas.height);
-	      // if the image loaded show it
-	      if(img.complete){
-	        displayTransform.setTransform();
-	        draw(canvas);
-	        ctx.fillStyle = "white";
-	        // if(Math.floor(timer/100)%2 === 0){
-	        //     ctx.fillText("Left but to pan",mouse.rx,mouse.ry);
-	        // }else{
-	        //     ctx.fillText("Wheel to zoom",mouse.rx,mouse.ry);
-	        // }
-	    }else{
-	        // waiting for image to load
-	        displayTransform.setTransform();
-	        ctx.fillText("Loading image...",100,100);
-	
+	    this.clone = (val) => {
+	      const cProps = this.properties();
+	      cProps.clone = true;
+	      cProps.value = val === undefined ? this.value() : val;
+	      cProps.description = this.description();
+	      delete cProps.notMetric;
+	      return new Property(this.code(), this.name(), cProps);
 	    }
-	    if(mouse.buttonRaw === 4){ // right click to return to homw
-	         displayTransform.x = 0;
-	         displayTransform.y = 0;
-	         displayTransform.scale = 1;
-	         displayTransform.rotate = 0;
-	         displayTransform.ox = 0;
-	         displayTransform.oy = 0;
-	     }
-	    // reaquest next frame
-	    if (sleeping === false) {
-	      if (once) sleeping = true;
-	      setTimeout(() => requestAnimationFrame(() => update(nextUpdateId)), 10);
-	    }
+	    if(!clone) Property.list[code] = this;
+	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
 	  }
-	  update(nextUpdateId); // start it happening
-	
-	  this.centerOn = function(x, y) {
-	    displayTransform.scale = 1;
-	    displayTransform.x = x - (canvas.width / 2) - displayTransform.x - displayTransform.dx;
-	    displayTransform.y = y - (canvas.height / 2) - displayTransform.y - displayTransform.dy;
-	  };
-	
-	  return this;
 	}
+	Property.list = {};
+	Property.DO_NOT_CLONE = true;
 	
-	module.exports = panZoom;
+	new Property();
+	
+	module.exports = Property
 	
 });
 
 
-RequireJS.addFunction('./app-src/display-utils/displayManager.js',
+RequireJS.addFunction('./app-src/displays/layout-sketch.js',
 function (require, exports, module) {
 	
-
+const du = require('../../../../public/js/utils/dom-utils.js');
+	const Draw2D = require('../two-d/draw.js');
+	const Line2d = require('../two-d/objects/line.js');
+	const Vertex2d = require('../two-d/objects/vertex.js');
+	const PanZoom = require('../two-d/pan-zoom.js');
+	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
 	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../public/js/utils/$t.js');
 	
-	class DisplayManager {
-	  constructor(displayId, listId, switchId, selected) {
-	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
-	    const id = String.random();
-	    const instance = this;
-	    this.list = (func) => {
-	      const list = [];
-	      const runFunc = (typeof func) === 'function';
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        let id = elem.id || String.random(7);
-	        elem.id = id;
-	        name = elem.getAttribute('name') || id;
-	        const item = {id, name, link: elem.getAttribute('link')};
-	        if (runFunc) func(elem);
-	        list.push(item);
+	class LayouSketch {
+	  constructor(id) {
+	    let sketch, panZ, elem, cabinet;
+	
+	    function getSections(sections, list) {
+	      list ||= [];
+	      for (let index = 0; index < sections.length; index++) {
+	        const section = sections[index];
+	        if (sections.length > 0 || sections.cover()) {
+	          list.push(section);
+	          getSections(section.sections, list);
+	        }
 	      }
 	      return list;
 	    }
 	
-	    function updateActive(id) {
-	      const items = document.querySelectorAll('.display-manager-input');
-	      for (let index = 0; index < items.length; index += 1) {
-	        const elem = items[index];
-	        elem.getAttribute('display-id') === id ?
-	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
-	      }
-	    }
+	    function draw() {
+	      if (cabinet === undefined) return;
+	      // sketch.ctx().drawImage(0,0)
 	
-	    function open(id) {
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        if (elem.id === id) {
-	          const link = elem.getAttribute('link');
-	          if (link) {
-	            window.location.href = link;
-	            return;
+	      const allLines = [];
+	      for (let index = 0; index < cabinet.openings.length; index++) {
+	        const sections = getSections(cabinet.openings[index].sections);
+	        for (let si = 0; si < sections.length; si++) {
+	          const section = sections[si];
+	          if (section.sections.length < 1) {
+	            const center = JSON.copy(section.innerCenter());
+	            center.y*=-1;
+	            sketch.text(section.partCode(), center, 6, 'grey');
 	          }
-	          elem.hidden = false;
+	          const inner = JSON.copy(section.coordinates().inner);
+	          // For some reason the sketch canvas is mirrored in the y direction
+	          inner[0].y*=-1;inner[1].y*=-1;inner[2].y*=-1;inner[3].y*=-1;
+	          const lines = [new Line2d(inner[0], inner[1]),
+	                          new Line2d(inner[1], inner[2]),
+	                          new Line2d(inner[2], inner[3]),
+	                          new Line2d(inner[3], inner[0])];
+	          sketch(lines, undefined, .3);
+	          allLines.concatInPlace(lines);
 	        }
-	        else elem.hidden = true;
 	      }
-	      updateActive(id);
+	      const cabLimits = cabinet.position().limits();
+	      const cabinetOutline = [
+	        new Line2d({x: 0, y: -2*cabLimits['y']}, {x: 2*cabLimits['x'], y: -2*cabLimits['y']}),
+	        new Line2d({x: 2*cabLimits['x'], y: -2*cabLimits['y']}, {x: 2*cabLimits['x'], y: 0}),
+	        new Line2d({x: 2*cabLimits['x'], y: 0}, {x: 0, y: 0}),
+	        new Line2d({x: 0, y: 0}, {x: 0, y: -2*cabLimits['y']}),
+	      ];
+	      sketch(cabinetOutline, 'red', .3);
+	      allLines.concatInPlace(cabinetOutline);
+	
+	      const measurements = LineMeasurement2d.measurements(allLines);
+	      sketch(measurements, 'grey', 1);
 	    }
 	
-	    this.open = open;
+	    function init() {
+	      elem = du.id(id);
+	      const canvas = du.create.element('canvas');
+	      elem.append(canvas);
+	      sketch = new Draw2D(canvas);
+	      panZ = new PanZoom(sketch.canvas(), draw);
+	    }
 	
-	    const children = du.id(displayId).children;
+	    this.cabinet = (cab) => (cab.constructor.name === 'Cabinet' && (cabinet = cab)) || cabinet;
 	
-	    if (switchId) {
-	      du.on.match('click', `#${switchId}`, (target, event) => {
-	        const listElem = du.id(listId);
-	        listElem.hidden = !listElem.hidden;
-	      });
-	      document.addEventListener('click', (event) => {
-	        const listElem = du.id(listId);
-	        const target = event.target;
-	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
-	        if (!withinList && target.id !== switchId &&listElem)
-	          listElem.hidden = true;
-	      });
-	    }
-	    DisplayManager.instances[id] = this
-	    if ((typeof selected) === 'string') setTimeout(() => open(selected), 100);
-	    else if (children.length > 0) {
-	      this.list();
-	      open(children[0].id);
-	    }
-	    if (listId) {
-	      du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
-	    }
+	    setTimeout(init, 500);
 	  }
 	}
 	
-	DisplayManager.instances = {};
-	DisplayManager.template = new $t('display-manager');
-	
-	du.on.match('click', '.display-manager-input', (target, event) => {
-	  const displayManager = du.find.up('.display-manager', target);
-	  const displayManagerId = displayManager.id;
-	  const displayId = target.getAttribute('display-id');
-	  DisplayManager.instances[displayManagerId].open(displayId);
-	});
-	module.exports = DisplayManager
+	module.exports = LayouSketch;
 	
 });
 
 
-RequireJS.addFunction('./app-src/display-utils/information-bar.js',
+RequireJS.addFunction('./app-src/config/properties.js',
 function (require, exports, module) {
 	
 
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	class InformationBar {
-	  constructor() {
-	    const container = du.create.element('div');
-	    container.className = 'information-bar';
-	
-	    this.show = () => container.hidden = false;
-	    this.hide = () => container.hidden = true;
-	    this.update = (html) => container.innerHTML = html;
-	
-	    document.body.append(container);
-	  }
-	}
-	module.exports = InformationBar
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/radio-display.js',
-function (require, exports, module) {
-	
-
-	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
-	const InformationBar = require('./information-bar.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	class RadioDisplay {
-	  constructor(radioClass, groupAttr, alternateToggleClass) {
-	    const afterSwitchEvent = new CustomEvent('afterSwitch');
-	    const beforeSwitchEvent = new CustomEvent('beforeSwitch');
-	    const selector = (attrVal) => {
-	      return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
-	    }
-	
-	    const infoBar = new InformationBar();
-	
-	    function path () {
-	      let path = '';
-	      const info = du.find.downInfo(`.${radioClass}.open`, document.body, null, `.${radioClass}.close`);
-	      info.matches.forEach((obj) => {
-	        const header = obj.node.children[0];
-	        if (header && header.getBoundingClientRect().y < 8) {
-	          path += `${header.innerText}=>`
-	        }
-	      });
-	      return path;
-	    }
-	
-	    function triggerAlternateToggles(target) {
-	      if (alternateToggleClass) {
-	        const alterToggles = document.querySelectorAll(alternateToggleClass);
-	        alterToggles.forEach((elem) => elem.hidden = false);
-	        const closest = du.closest(alternateToggleClass, target);
-	        if (closest) closest.hidden = true;
-	      }
-	    }
-	    this.beforeSwitch = (func) => beforeSwitchEvent.on(func);
-	    this.afterSwitch = (func) => afterSwitchEvent.on(func);
-	
-	
-	    du.on.match('scroll', `*`, (target, event) => {
-	      infoBar.update(path());
-	    });
-	
-	    let previousHeader;
-	    du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
-	      const target = targetHeader.parentElement;
-	      const attrVal = target.getAttribute(groupAttr);
-	      const targetBody = target.children[1];
-	      const hidden = targetBody.hidden;
-	      targetBody.hidden = !hidden;
-	      beforeSwitchEvent.trigger(previousHeader, {previousHeader, targetHeader});
-	      if (hidden) {
-	        du.class.add(targetHeader, 'active');
-	        du.class.swap(target, 'open', 'close');
-	        const siblings = document.querySelectorAll(selector(attrVal));
-	        for (let index = 0; index < siblings.length; index += 1) {
-	          if (siblings[index] !== target) {
-	            const sibHeader = siblings[index].children[0];
-	            const sibBody = siblings[index].children[1];
-	            du.class.swap(siblings[index], 'close', 'open');
-	            sibBody.hidden = true;
-	            du.class.remove(sibHeader, 'active');
-	          }
-	        }
-	        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
-	        previousHeader = targetHeader;
-	      } else {
-	        du.class.swap(target, 'close', 'open');
-	        du.class.remove(targetHeader, 'active');
-	        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
-	        previousHeader = null;
-	      }
-	      infoBar.update(path());
-	    });
-	  }
-	}
-	module.exports = RadioDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	
-	const ToggleDisplayList = {};
-	ToggleDisplayList.class = 'toggle-display-list';
-	ToggleDisplayList.funcs = {};
-	
-	ToggleDisplayList.onShow = (displayId, func) => {
-	  if ((typeof func) === 'function') {
-	    if (ToggleDisplayList.funcs[displayId] === undefined) {
-	      ToggleDisplayList.funcs[displayId] = [];
-	    }
-	    ToggleDisplayList.funcs[displayId].push(func);
-	  }
-	}
-	
-	ToggleDisplayList.runFuncs = (displayId) => {
-	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
-	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
-	}
-	
-	ToggleDisplayList.toggle = function (elem, event) {
-	  const target = event.target;
-	  const children = elem.children;
-	  for (let index = 0; index < children.length; index += 1) {
-	    const child = children[index];
-	    if (target === child) {
-	      du.class.add(child, 'active');
-	      const displayId = child.getAttribute('display-id');
-	      du.id(displayId).hidden = false;
-	      ToggleDisplayList.runFuncs(displayId);
-	    } else {
-	      du.class.remove(child, 'active');
-	      du.id(child.getAttribute('display-id')).hidden = true;
-	    }
-	  }
-	}
-	
-	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
-	
-	module.exports = ToggleDisplayList;
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/cabinet.js',
-function (require, exports, module) {
-	
-
-	
-	const Show = require('../show.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const ThreeDMain = require('../displays/three-d-main.js');
-	const TwoDLayout = require('../two-d/layout');
-	const OpenSectionDisplay = require('./open-section.js');
-	const CabinetConfig = require('../config/cabinet-configs.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const Property = require('./property');
+	const Defs = require('./property/definitions');
 	const Measurement = require('../../../../public/js/utils/measurement.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const { Object2d } = require('../objects/layout.js');//.Object2d;
-	const Inputs = require('../input/inputs.js');
 	const EPNTS = require('../../generated/EPNTS');
+	const Request = require('../../../../public/js/utils/request.js');
 	
+	let unitCount = 0;
+	const UNITS = [];
+	Measurement.units().forEach((unit) =>
+	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
+	UNITS._VALUE = Measurement.unit();
 	
-	function getHtmlElemCabinet (elem) {
-	  const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
-	  return Cabinet.get(cabinetId);
-	}
+	const assemProps = {}
+	const add = (key, properties) => properties.forEach((prop) => {
+	  if (assemProps[key] === undefined) assemProps[key] = {};
+	  assemProps[key][prop.code()] = prop;
+	});
 	
-	class CabinetDisplay {
-	  constructor(parentSelector, group) {
-	    let propId = 'Half Overlay';
-	    let displayId = String.random();
-	    const instance = this;
-	    this.propId = (id) => {
-	      if (id ===  undefined) return propId;
-	      propId = id;
-	    }
-	    function displayValue(val) {
-	      return new Measurement(val).display();
-	    }
-	    const getHeader = (cabinet, $index) =>
-	        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
-	    const showTypes = Show.listTypes();
-	    const getBody = (cabinet, $index) => {
-	      if (expandList.activeKey() === $index) {
-	        TwoDLayout.panZoom.once();
-	        ThreeDMain.update(cabinet);
-	      }
-	      const scope = {$index, cabinet, showTypes, OpenSectionDisplay};
-	      return CabinetDisplay.bodyTemplate.render(scope);
-	    }
+	add('Overlay', [Defs.ov]);
+	add('Reveal', [Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl]);
+	add('Inset', [Defs.is]);
+	add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
+	                Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
+	                Defs.frw,Defs.frt]);
+	add('Panel', [Defs.h,Defs.w,Defs.t]);
+	add('Guides', [Defs.l,Defs.dbtos,Defs.dbsos,Defs.dbbos]);
+	add('DoorAndFront', [Defs.daffrw,Defs.dafip])
+	add('Door', [Defs.h,Defs.w,Defs.t]);
+	add('DrawerBox', [Defs.h,Defs.w,Defs.d,Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn]);
+	add('DrawerFront', [Defs.h,Defs.w,Defs.t,Defs.mfdfd]);
+	add('Frame', [Defs.h,Defs.w,Defs.t]);
+	add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
+	add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
+	add('Opening', []);
 	
-	    function inputValidation(values) {
-	      // const validName = values.name !== undefined;
-	      // const validType = CabinetConfig.valid(values.type, values.id);
-	      if(true) return true;
-	      return {type: 'You must select a defined type.'};
-	    }
-	
-	    function updateLayout(target) {
-	      setTimeout(() => {
-	        const attr = target.name === 'thickness' ? 'height' : 'width';
-	        const cabinet = getHtmlElemCabinet(target);
-	        const obj2d = Object2d.get(cabinet.id());
-	        const value = new Measurement(target.value, true).decimal();
-	        console.log('new cab val', value);
-	        obj2d.topview()[attr](value);
-	        TwoDLayout.panZoom.once();
-	      }, 1000);
-	    }
-	
-	    du.on.match('change', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
-	    du.on.match('blur', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
-	
-	    function updateCabValue(cabinet, attr) {
-	      const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
-	      const input = du.find.down(`[name='${attr}']`, inputCnt);
-	      input.value = displayValue(cabinet[attr]());
-	    }
-	
-	    function removeFromLayout(elem, cabinet) {
-	      group.room().layout().removeByPayload(cabinet);
-	      TwoDLayout.panZoom.once();
-	    }
-	
-	    function linkLayout(cabinet, obj2d) {
-	      const topview = obj2d.topview();
-	      if (topview.width() !== cabinet.width()) {
-	        cabinet.width(topview.width());
-	        updateCabValue(cabinet, 'width');
-	      }
-	      if (topview.height() !== cabinet.thickness()) {
-	        cabinet.thickness(topview.height());
-	        updateCabValue(cabinet, 'thickness');
-	      }
-	    }
-	
-	    function updateObjLayout(cabinet) {
-	      const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
-	      obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
-	    }
-	
-	    const getObject = (values) => {
-	      const cabinet = CabinetConfig.get(group, values.type, values.propertyId, values.name || values.id);
-	      setTimeout(() => updateObjLayout(cabinet));
-	      return cabinet;
-	    };
-	    this.active = () => expandList.active();
-	    const expListProps = {
-	      list: group.objects,
-	      dontOpenOnAdd: true,
-	      type: 'top-add-list',
-	      inputTree:   CabinetConfig.inputTree(),
-	      parentSelector, getHeader, getBody, getObject, inputValidation,
-	      listElemLable: 'Cabinet'
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	    expandList.afterRemoval(removeFromLayout);
-	    this.refresh = () => expandList.refresh();
-	
-	    const cabinetKey = (path) => {
-	      const split = path.split('.');
-	      const index = split[0];
-	      const key = split[1];
-	      const cabinet = expListProps.list[index];
-	      return {cabinet, key};
-	    }
-	
-	    const valueUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      const decimal = new Measurement(value, true).decimal();
-	      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : val);
-	      TwoDLayout.panZoom.once();
-	      ThreeDMain.update(cabKey.cabinet);
-	    }
-	
-	    const attrUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      cabKey.cabinet[cabKey.key](value);
-	      TwoDLayout.panZoom.once();
-	    }
-	
-	    const saveSuccess = () => console.log('success');
-	    const saveFail = () => console.log('failure');
-	    const save = (target) => {
-	      const index = target.getAttribute('index');
-	      const cabinet = expListProps.list[index];
-	      if (cabinet.name !== undefined) {
-	        Request.post(EPNTS.cabinet.add(cabinet.name()), cabinet.toJson(), saveSuccess, saveFail);
-	        console.log('saving');
-	      } else {
-	        alert('Please enter a name if you want to save the cabinet.')
-	      }
-	    }
-	
-	    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-	    bind(`.cabinet-input`, valueUpdate,
-	                  {validation: Measurement.validation('(0,)')});
-	    bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
-	    du.on.match('click', '.save-cabinet-btn', save);
-	  }
-	}
-	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
-	CabinetDisplay.headTemplate = new $t('cabinet/head');
-	module.exports = CabinetDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/feature.js',
-function (require, exports, module) {
-	
-
-	const $t = require('../../../../public/js/utils/$t');
-	
-	class FeatureDisplay {
-	  constructor(assembly, parentSelector) {
-	    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
-	    this.refresh = () => {
-	      const container = document.querySelector(parentSelector);
-	      container.innerHTML = this.html;
-	    }
-	  }
-	}
-	FeatureDisplay.template = new $t('features');
-	module.exports = FeatureDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/group.js',
-function (require, exports, module) {
-	
-
-	
-	const Group = require('../objects/group.js');
-	const PropertyConfig = require('../config/property/config.js');
-	const Properties = require('../config/properties.js');
-	const CabinetDisplay = require('./cabinet.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const ThreeDMain = require('../displays/three-d-main.js');
-	
-	const currentStyleState = {};
-	
-	function disableButton(values, dit, elem) {
-	  const nId = dit.node.constructor.decode(dit.root().id()).id;
-	  const currState = currentStyleState[nId];
-	  const rootId = dit.node.constructor.decode(dit.root().id()).id;
-	  const button = du.find(`button[root-id='${rootId}']`);
-	  if (button) button.hidden = Object.equals(currState, values);
-	  const headers = du.find.downAll('.group-header', du.find.up('.group-cnt', button));
-	  headers.forEach((header) => {
-	    header.hidden = currState.style !== header.getAttribute("cab-style");
-	    if (!header.hidden) du.find.down('.group-key', header).innerText = currState.subStyle;
+	function definitionsRequired(group) {
+	  const required = [];
+	  if (assemProps[group] === undefined) return [];
+	  Object.values(assemProps[group]).forEach((prop) => {
+	    if (prop instanceof Property && prop.value() !== null) required.push(prop);
 	  });
+	  return required;
 	}
 	
-	class GroupDisplay extends Lookup {
-	  constructor(group) {
-	    super();
-	    function setCurrentStyleState(values) {
-	      values = values || dit.values();
-	      const nId = dit.node.constructor.decode(dit.root().id()).id;
-	      currentStyleState[nId] = values;
-	      disableButton(values, dit);
-	      return values;
+	function propertiesToDefine() {
+	  const propNames = [];
+	  const keys = Object.keys(assemProps);
+	  keys.forEach((key) => {
+	    if (definitionsRequired(key).length !== 0) {
+	      propNames.push(key);
 	    }
-	    function onCabinetStyleSubmit(values) {
-	      setCurrentStyleState(values);
-	      group.propertyConfig.set(values.style, values.subStyle);
-	      ThreeDMain.update();
-	    }
-	
-	    let initialized = false;
-	    function initializeDitButton() {
-	      if (initialized) disableButton(dit.values(), dit);
-	      else {
-	        disableButton(setCurrentStyleState(), dit);
-	        initialized = true;
-	      }
-	    }
-	    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleSubmit, group.propertyConfig);
-	    function styleSelector() {
-	      return dit.root().payload().html();
-	    }
-	    function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
-	    this.html = () => {
-	      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this});
-	    }
-	    this.bodyHtml = () =>  {
-	      setTimeout(initializeDitButton, 200);
-	      return GroupDisplay.bodyTemplate.render({group, propertyHtml});
-	    }
-	
-	    this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
-	    this.cabinet = () => this.cabinetDisplay().active();
-	  }
-	}
-	
-	GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
-	  const dit = new DecisionInputTree(undefined, {buttonText: 'Change'});
-	  dit.onChange(disableButton);
-	  dit.onSubmit(onSubmit);
-	  const propertyConfig = new PropertyConfig();
-	  const styles = propertyConfig.cabinetStyles();
-	  const cabinetStyles = new Select({
-	    name: 'style',
-	    list: styles,
-	    label: 'Style',
-	    value: propertyConfigInst.cabinetStyle()
 	  });
-	
-	  const hasFrame = new Select({
-	      name: 'FrameStyle',
-	      list: ['Frameless', 'Framed', 'Frame Only'],
-	      value: 'Frameless'
-	    });
-	
-	  const style = dit.branch('style', [hasFrame, cabinetStyles]);
-	  styles.forEach((styleName) => {
-	    const properties = Properties.groupList(styleName);
-	    const selectObj = Object.keys(properties);
-	    const select = new Select({
-	      name: 'subStyle',
-	      list: selectObj,
-	      value: propertyConfigInst.cabinetStyleName()
-	    });
-	    const condtionalPayload = new DecisionInputTree.ValueCondition('style', [styleName], [select]);
-	    style.conditional(styleName, condtionalPayload);
-	  });
-	
-	  return dit;
+	  return propNames;
 	}
 	
-	du.on.match('click', `.group-display-header`, (target) => {
-	  const allBodys = du.find.all('.group-display-body');
-	  for (let index = 0; index < allBodys.length; index += 1) {
-	    allBodys[index].hidden = true;
-	  }
-	  const allHeaders = du.find.all('.group-display-header');
-	  for (let index = 0; index < allHeaders.length; index += 1) {
-	    du.class.remove(allHeaders[index], 'active');
-	  }
-	  du.class.add(target, 'active');
-	  const body = du.find.closest('.group-display-body', target);
-	  const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
-	  const groupDisplay = GroupDisplay.get(groupDisplayId);
-	  body.innerHTML = groupDisplay.bodyHtml();
-	  groupDisplay.cabinetDisplay.refresh();
-	  body.hidden = false;
-	});
-	
-	GroupDisplay.valueUpdate = (target) => {
-	  const group = Group.get(target.getAttribute('group-id'));
-	  const value = target.value;
-	  group.name(value);
+	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
+	function assemProperties(clazz, filter) {
+	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
+	  props = assemProps[clazz] || [];
+	  if ((typeof filter) != 'function') return props;
+	  props = props.filter(filter);
+	  return props;
 	}
 	
-	du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
 	
-	GroupDisplay.headTemplate = new $t('group/head');
-	GroupDisplay.bodyTemplate = new $t('group/body');
-	GroupDisplay.propertyMenuTemplate = new $t('properties/property-menu');
-	module.exports = GroupDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/layout.js',
-function (require, exports, module) {
-	const Layout2D = require('../objects/layout');
-	const panZoom = require('./pan-zoom');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const PopUp = require('../../../../public/js/utils/display/pop-up');
-	const Properties = require('../config/properties');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
-	const Draw2D = require('./draw.js');
-	const Vertex2d = require('../two-d/objects/vertex.js');
-	const Line2d = require('../two-d/objects/line.js');
-	const Snap2d = require('../two-d/objects/snap.js');
-	const Circle2d = require('../two-d/objects/circle.js');
-	const SnapLocation2d = require('../two-d/objects/snap-location.js');
-	const LineMeasurement2d = require('../two-d/objects/line-measurement');
-	
-	// TODO: Rename
-	const TwoDLayout = {};
-	
-	let draw;
-	const eval = new StringMathEvaluator({Math}).eval;
-	const popUp = new PopUp({resize: false});
-	
-	let layout;
-	TwoDLayout.set = (l) => {
-	  if (l instanceof Layout2D) {
-	    layout = l;
-	    panZ.once();
-	  }
-	}
-	
-	let hoverMap;
-	
-	const resetHoverMap = () => hoverMap = {
-	    Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2d: {}, LineMeasurement2d: {},
-	    Object2d: {}, Square2d: {}, Snap2d: {}, SnapLocation2d: {}
-	  };
-	
-	const windowLineWidth = 8;
-	const tolerance = 1;
-	let lastImagePoint;
-	let hovering;
-	let dragging;
-	let clickHolding = false;
-	let popupOpen = false;
-	let measurementModify = false;
-	let lastDown = 0;
-	const selectTimeBuffer = 200;
-	const quickChangeFuncs = {};
-	
-	function getPopUpAttrs(elem) {
-	  const cnt =  du.find.up('[type-2d]', elem);
-	  if (cnt === undefined) return {};
-	  const type = cnt.getAttribute('type-2d');
-	  const key = elem.getAttribute('key');
-	  const raw = elem.type === 'input' ? eval(elem.value) : elem.value;
-	  let value, display;
-	  if (elem.getAttribute('convert') === 'false') {
-	    value = raw;
-	    display = raw;
-	  } else {
-	    const measurement = new Measurement(raw, true);
-	    value = measurement.decimal();
-	    display = measurement.display();
-	  }
-	  const id = cnt.id;
-	  return {
-	    type,id,key,value,display,raw,
-	    obj:  Layout2D.get(id),
-	    point: {
-	      x: cnt.getAttribute('x'),
-	      y: cnt.getAttribute('y')
-	    }
-	  };
-	}
-	
-	du.on.match('enter', '.value-2d', (elem) => {
-	  const props = getPopUpAttrs(elem);
-	  const member = elem.getAttribute('member');
-	  switch (member) {
-	    case 'object':
-	      props.obj[props.key](props.raw);
-	      const cab = props.obj.payload();
-	      if (cab && cab.constructor.name === 'Cabinet') {
-	        const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.id()}']`);
-	        const idInput = du.find.closest('.cabinet-id-input', cabDemCnt);
-	        idInput.value = props.raw;
-	      }
-	      panZ.once();
-	      return;
-	    case 'cabinet':
-	      const cabinet = props.obj.payload();
-	      const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.id()}']`);
-	      if (cabCnt) {
-	        const input = du.find.down(`input[name='${props.key}']`, cabCnt);
-	        input.value = props.display;
-	      }
-	      cabinet[props.key](props.value);
-	      const poly = props.obj.topview();
-	      poly[props.key === 'thickness' ? 'height' : props.key](props.value);
-	      poly.update();
-	      panZ.once();
-	      return;
-	  }
-	  if (props.obj.payload && props.obj.payload() === 'placeholder') {
-	    if (props.key === 'thickness') props.key = 'height';
-	    props.obj = props.obj.topview().object();
-	  }
-	
-	  props.obj.topview()[props.key](props.value);
-	  elem.value = props.display;
-	  props.obj.topview().update();
-	  panZ.once();
-	});
-	
-	du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
-	  const props = getPopUpAttrs(elem);
-	  const input = du.find.closest('.measurement-mod', elem);
-	  if (input) setTimeout(() =>
-	      input.value = props.obj.display(), 0);
-	});
-	
-	function remove() {
-	  if (hovering.parent) {
-	    if (hovering.parent().payload().constructor.name === 'Cabinet') {
-	      const cabinet = hovering.parent().payload();
-	      const cabinetHeader = du.find(`.cabinet-header[cabinet-id='${cabinet.id()}']`);
-	      const removeButton = du.find.closest('.expandable-item-rm-btn', cabinetHeader)
-	      if (removeButton) removeButton.click();
-	      else console.warn('Remove button for cabinet should be present but is not present');
-	    }
-	    layout.remove(hovering.parent().id());
-	  } else {
-	    layout.remove(hovering.id());
-	  }
-	  popUp.close();
-	  TwoDLayout.panZoom.once();
-	}
-	
-	du.on.match('click', '.remove-btn-2d', remove, popUp.container());
-	
-	du.on.match('click', '.add-door-btn-2d', (elem) => {
-	  const attrs = getPopUpAttrs(elem);
-	  const distance = attrs.obj.startVertex().distance(attrs.point);
-	  attrs.obj.addDoor(distance);
-	  panZ.once();
-	});
-	
-	du.on.match('click', '.hinge-btn', (elem) => {
-	  const attrs = getPopUpAttrs(elem);
-	  attrs.obj.hinge(true);
-	  panZ.once();
-	});
-	
-	du.on.match('click', '.add-window-btn-2d', (elem) => {
-	  const attrs = getPopUpAttrs(elem);
-	  const distance = attrs.obj.startVertex().distance(attrs.point);
-	  attrs.obj.addWindow(distance);
-	  panZ.once();
-	});
-	
-	du.on.match('click', '.add-object-btn-2d', (elem) => {
-	  const props = getPopUpAttrs(elem);
-	  const obj = layout.addObject(props.point, 'placeholder');
-	  obj.topview().onChange(console.log);
-	  panZ.once();
-	});
-	
-	du.on.match('click', '.add-vertex-btn-2d', (elem) => {
-	  const attrs = getPopUpAttrs(elem);
-	  const point = hovering.closestPointOnLine(attrs.point);
-	  layout.addVertex(point, hovering);
-	  panZ.once();
-	});
-	
-	du.on.match('enter', '.measurement-mod', (elem) => {
-	  const value = eval(elem.value);
-	  getPopUpAttrs(elem).obj.modify(value);
-	  panZ.once();
-	});
-	
-	// TODO: define cache better.
-	function clearCache() {
-	  measurementIs = {};
-	}
-	
-	function undo(target) {
-	  layout.history().back();
-	  clearCache();
-	  panZ.once();
-	}
-	
-	function redo () {
-	  layout.history().forward();
-	  clearCache();
-	  panZ.once();
-	}
-	
-	function registerQuickChangeFunc(type, func) {
-	  if ((typeof func) === 'function') quickChangeFuncs[type] = func;
-	}
-	
-	function onMousedown(event, stdEvent) {
-	  lastDown = clickHolding ? 0 : new Date().getTime();
-	  lastImagePoint = {x: event.imageX, y: event.imageY};
-	  if (stdEvent.button == 0) {
-	    clickHolding = !popupOpen && (clickHolding || hovering !== undefined);
-	    return clickHolding;
-	  } else {
-	    if (hovering && quickChangeFuncs[hovering.constructor.name]) {
-	      quickChangeFuncs[hovering.constructor.name](hovering, event, stdEvent);
-	    }
-	    return true;
-	  }
-	}
-	
-	function addVertex(hovering, event, stdEvent) {
-	  const point = {x: event.imageX, y: event.imageY};
-	  layout.addVertex(point, hovering);
-	}
-	
-	registerQuickChangeFunc('Wall2D', addVertex);
-	registerQuickChangeFunc('Vertex2d', remove);
-	registerQuickChangeFunc('Window2D', remove);
-	registerQuickChangeFunc('SnapLocation2d', (snapLoc) => snapLoc.disconnect());
-	registerQuickChangeFunc('Door2D', (door) => door.hinge(true));
-	
-	function hoverId () {
-	  return hovering ? hovering.toString() : undefined;
-	}
-	
-	const templateMap = {};
-	function getTemplate(item) {
-	  const isSnap = item instanceof Snap2d;
-	  const templateLocation = `2d/pop-up/${isSnap ? 'snap-2d' : item.constructor.name.toKebab()}`;
-	  if (templateMap[templateLocation] === undefined) {
-	    templateMap[templateLocation] = new $t(templateLocation);
-	  }
-	  return templateMap[templateLocation];
-	}
-	
-	function display(value) {
-	  return new Measurement(value).display();
-	}
-	
-	function openPopup(event, stdEvent) {
-	  if (hovering) {
-	    if (hovering instanceof Snap2d) hovering.pairWithLast();
-	    popupOpen = true;
-	    const msg = `${hovering.constructor.name}: ${hoverId()}`;
-	    const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
-	    const html = getTemplate(hovering).render(scope);
-	    popUp.open(html, {x: event.screenX, y: event.screenY});
-	  }
-	}
-	
-	popUp.onClose((elem, event) => {
-	  setTimeout(() => popupOpen = false, 200);
-	  const attrs = getPopUpAttrs(du.find.closest('[type-2d]',popUp.container()));
-	  measurementModify = attrs.type === 'LineMeasurement2d';
-	  lastDown = new Date().getTime();
-	  clickHolding = false;
-	  if (layout) layout.history().newState();
-	});
-	
-	function onMouseup(event, stdEvent) {
-	  if (stdEvent.button == 0) {
-	    if (lastDown > new Date().getTime() - selectTimeBuffer) {
-	      if (hovering) {
-	        setTimeout(() => openPopup(event, stdEvent), 5);
-	      } else {
-	        measurementModify = !measurementModify;
-	      }
+	let config = {};
+	const changes = {};
+	const copyMap = {};
+	assemProperties.changes = {
+	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
+	  save: (id) => {
+	    const list = changes[id];
+	    if (!list) throw new Error(`Unkown change id '${id}'`);
+	    const group = list._GROUP;
+	    if (config[group] === undefined) config[group] = [];
+	    if(copyMap[id] === undefined) {
+	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
+	      copyMap[list._ID] = config[group][list._NAME].properties;
 	    } else {
-	      const clickWasHolding = clickHolding;
-	      clickHolding = false;
-	      hovering = undefined;
-	      if (layout) layout.history().newState();
-	      return clickWasHolding;
+	      const tempList = changes[id];
+	      for (let index = 0; index < tempList.length; index += 1) {
+	        const tempProp = tempList[index];
+	        const configProp = copyMap[id][index];
+	        configProp.value(tempProp.value());
+	      }
 	    }
-	  } else {
-	    console.log('rightClick: do stuff!!');
-	    if (layout) layout.history().newState();
-	  }
-	}
-	
-	let pending = 0;
-	function  drag(event)  {
-	  const dragging = !popupOpen && clickHolding && hovering;
-	  if (dragging)
-	    hovering.move && hovering.move({x: event.imageX, y: event.imageY}, event);
-	  return dragging;
-	}
-	
-	function hover(event) {
-	  if (clickHolding) return true;
-	  let found = false;
-	  const tuple = {x: event.imageX, y: event.imageY};
-	  function  check(list) {
+	   },
+	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
+	  delete: (id) => {
+	    delete config[changes[id][0].name()][changes[id]._NAME];
+	    delete changes[id];
+	    delete copyMap[id];
+	  },
+	  changed: (id) => {
+	    const list = changes[id];
+	    if (list === undefined) return false;
 	    for (let index = 0; index < list.length; index += 1) {
-	      if (withinTolerance(tuple, list[index])) {
-	        hovering = list[index].item;
-	        found = true;
+	      const prop = list[index];
+	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
+	        console.log('booyacka!');
+	      }
+	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
+	        return true;
 	      }
 	    }
-	    if (!clickHolding && !found) hovering = undefined;
-	  }
-	
-	  if (measurementModify) {
-	    check(Object.values(hoverMap.LineMeasurement2d));
-	    found || check(Object.values(hoverMap.SnapLocation2d));
-	    found || check(Object.values(hoverMap.Snap2d));
-	    found || check(Object.values(hoverMap.Object2d));
-	    found || check(Object.values(hoverMap.Square2d));
-	  } else {
-	    check(Object.values(hoverMap.Vertex2d));
-	    found || check(Object.values(hoverMap.Window2D));
-	    found || check(Object.values(hoverMap.Door2D));
-	    found || check(Object.values(hoverMap.Wall2D));
-	  }
-	
-	  return found;
-	}
-	
-	function onMove(event) {
-	  if (layout === undefined) return;
-	  const canDrag = !popupOpen && lastDown < new Date().getTime() - selectTimeBuffer * 1.5;
-	  return (canDrag && drag(event)) || hover(event);
-	}
-	
-	function withinTolerance(point, map) {
-	  const x0 = point.x;
-	  const y0 = point.y;
-	  const x1 = map.start.x;
-	  const y1 = map.start.y;
-	  const x2 = map.end.x;
-	  const y2 = map.end.y;
-	  const num = Math.abs((y2 - y1)*x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
-	  const denom = Math.sqrt(Math.pow(y2 - y1, 2) + Math.pow(x2 - x1, 2));
-	  return num / denom < map.tolerance;
-	}
-	
-	function withinTolerance(point, map) {
-	  const t = map.tolerance;
-	  const start = map.start.point ? map.start.point() : map.start;
-	  const end = map.end.point ? map.end.point() : map.end;
-	  const x0 = point.x;
-	  const y0 = point.y;
-	  const x1 = start.x > end.x ? end.x : start.x;
-	  const y1 = start.y > end.y ? end.y : start.y;
-	  const x2 = start.x < end.x ? end.x : start.x;
-	  const y2 = start.y < end.y ? end.y : start.y;
-	  return x0>x1-t && x0 < x2+t && y0>y1-t && y0<y2+t;
-	}
-	
-	function updateHoverMap(item, start, end, tolerance) {
-	  let group;
-	  if (item instanceof Snap2d) group = 'Snap2d';
-	  else group = item.constructor.name;
-	  hoverMap[group][item.toString()] = {start, end, tolerance, item};
-	}
-	
-	let windowCount = 0;
-	let getWindowColor = () => {
-	  switch (Math.floor(Math.random() * 4)) {
-	    case 0: return 'red'; case 1: return 'green';
-	    case 2: return 'yellow'; case 3: return 'pink';
-	  }
-	  return 'white';
-	}
-	
-	const windowDrawMap = {};
-	function drawWindow(wallStartPoint, window, wallTheta) {
-	  draw.beginPath();
-	  const points = window.endpoints2D(wallStartPoint);
-	  const lookupKey = window.toString();
-	  const ctx = draw.ctx();
-	  if (windowDrawMap[lookupKey] === undefined) {
-	    windowDrawMap[lookupKey] = () => {
-	      ctx.moveTo(points.start.x(), points.start.y());
-	      ctx.lineWidth = 8;
-	      ctx.strokeStyle = hoverId() === window.toString() ? 'green' : 'blue';
-	      ctx.lineTo(points.end.x(), points.end.y());
-	      updateHoverMap(window, points.start, points.end, 5);
-	      ctx.stroke();
-	    }
-	  }
-	  windowDrawMap[lookupKey]();
-	}
-	
-	function updateDoorHoverMap(door, startpointRight, startpointLeft) {
-	  updateHoverMap(door, startpointRight, startpointLeft, 15);
-	}
-	
-	function doorDrawingFunc(startpointLeft, startpointRight) {
-	  return (door) => {
-	    const ctx = draw.ctx();
-	    ctx.beginPath();
-	    ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'black';
-	    const hinge = door.hinge();
-	
-	    if (hinge === 4) {
-	      ctx.moveTo(startpointLeft.x, startpointLeft.y);
-	      ctx.lineWidth = 8;
-	      ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'white';
-	      ctx.lineTo(startpointRight.x, startpointRight.y);
-	      updateDoorHoverMap(door, startpointRight, startpointLeft, 10);
-	      ctx.stroke();
-	    } else {
-	      const offset = Math.PI * hinge / 2;
-	      const initialAngle = (door.wall().radians() + offset) % (2 * Math.PI);
-	      const endAngle = initialAngle + (Math.PI / 2);
-	
-	      if (hinge === 0 || hinge === 3) {
-	        ctx.moveTo(startpointRight.x, startpointRight.y);
-	        ctx.arc(startpointRight.x, startpointRight.y, door.width(), initialAngle, endAngle, false);
-	        ctx.lineTo(startpointRight.x, startpointRight.y);
-	      } else {
-	        ctx.moveTo(startpointLeft.x, startpointLeft.y);
-	        ctx.arc(startpointLeft.x, startpointLeft.y, door.width(), endAngle, initialAngle, true);
-	        ctx.lineTo(startpointLeft.x, startpointLeft.y);
-	      }
-	
-	      ctx.fillStyle = 'white';
-	      ctx.fill();
-	    }
-	    updateHoverMap(door, startpointRight, startpointLeft, 10);
-	    ctx.stroke();
-	  }
-	}
-	
-	const doorDrawMap = {};
-	function drawDoor(startpoint, door, wallTheta) {
-	  const lookupKey = door.toString();
-	  if (doorDrawMap[lookupKey] === undefined) {
-	    const initialAngle = wallTheta;
-	    const width = door.width();
-	
-	    const distLeft = door.fromPreviousWall() + width;
-	    const startpointLeft = {x: startpoint.x + distLeft * Math.cos(theta), y: startpoint.y + distLeft * Math.sin(theta)};
-	    const distRight = door.fromPreviousWall();
-	    const startpointRight = {x: startpoint.x + distRight * Math.cos(theta), y: startpoint.y + distRight * Math.sin(theta)};
-	    doorDrawMap[lookupKey] = doorDrawingFunc(startpointLeft, startpointRight, initialAngle);
-	  }
-	  doorDrawMap[lookupKey](door);
-	}
-	
-	const blank = 40;
-	const hblank = blank/2;
-	function drawMeasurementValue(line, midpoint, measurement) {
-	  if (line === undefined) return;
-	  const ctx = draw.ctx();
-	  midpoint = line.midpoint();
-	
-	  ctx.save();
-	  ctx.lineWidth = 0;
-	  const length = measurement.display();
-	  const textLength = length.length;
-	  ctx.translate(midpoint.x(), midpoint.y());
-	  ctx.rotate(line.radians());
-	  ctx.beginPath();
-	  ctx.fillStyle = hoverId() === measurement.toString() ? 'green' : "white";
-	  ctx.strokeStyle = 'white';
-	  ctx.rect(textLength * -3, -8, textLength * 6, 16);
-	  ctx.fill();
-	  ctx.stroke();
-	
-	  ctx.beginPath();
-	  ctx.lineWidth = 4;
-	  ctx.strokeStyle = 'black';
-	  ctx.fillStyle =  'black';
-	  ctx.fillText(length, 0, 0);
-	  ctx.stroke()
-	  ctx.restore();
-	}
-	
-	const measurementLineMap = {};
-	const getMeasurementLine = (vertex1, vertex2) => {
-	  const lookupKey = `${vertex1} => ${vertex2}`;
-	  if (measurementLineMap[lookupKey] === undefined) {
-	    const line = new Line2d(vertex1, vertex2);
-	    measurementLineMap[lookupKey] = new LineMeasurement2d(line)
-	  }
-	  return measurementLineMap[lookupKey];
-	}
-	
-	let measurementValues = [];
-	function measurementValueToDraw(line, midpoint, measurement) {
-	  measurementValues.push({line, midpoint, measurement});
-	}
-	
-	function drawMeasurementValues() {
-	  let values = measurementValues;
-	  measurementValues = [];
-	  for (let index = 0; index < values.length; index += 1) {
-	    let m = values[index];
-	    drawMeasurementValue(m.line, m.midpoint, m.measurement);
-	  }
-	}
-	
-	const measurementLineWidth = 3;
-	let measurementIs = {};
-	function drawMeasurement(measurement, level, focalVertex)  {
-	  const lookupKey = `${measurement.toString()}-[${level}]`;
-	  // if (measurementIs[lookupKey] === undefined) {
-	    measurementIs[lookupKey] = measurement.I(level);
-	  // }
-	  const lines = measurementIs[lookupKey];
-	  const center = layout.verticies(focalVertex, 2, 3);
-	  const measurementColor = hoverId() === measurement.toString() ? 'green' : 'grey';
-	  try {
-	    draw.beginPath();
-	    const isWithin = layout.within(lines.furtherLine().midpoint());
-	    const line = isWithin ? lines.closerLine() : lines.furtherLine();
-	    const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
-	    if (measurementModify || popupOpen) {
-	      draw.line(line.startLine, measurementColor, measurementLineWidth);
-	      draw.line(line.endLine, measurementColor, measurementLineWidth);
-	      draw.line(line, measurementColor, measurementLineWidth);
-	      updateHoverMap(measurement, midpoint, midpoint, 15);
-	    }
-	    measurementValueToDraw(line, midpoint, measurement);
-	    return line;
-	  } catch (e) {
-	    console.error('Measurement render error:', e);
-	  }
-	}
-	
-	function measureOnWall(list, level) {
-	  for (let index = 0; index < list.length; index += 1) {
-	    let item = list[index];
-	    const wall = item.wall();
-	    const points = item.endpoints2D();
-	    const measureLine1 = getMeasurementLine(wall.startVertex(), points.start);
-	    const measureLine2 = getMeasurementLine(points.end, wall.endVertex());
-	    measureLine1.modificationFunction(item.fromPreviousWall);
-	    measureLine2.modificationFunction(item.fromNextWall);
-	    drawMeasurement(measureLine1, level, wall.startVertex())
-	    drawMeasurement(measureLine2, level, wall.startVertex())
-	    level += 4;
-	  }
-	  return level;
-	}
-	
-	function includeDetails() {
-	  return !dragging && (measurementModify || popupOpen)
-	}
-	
-	function drawWall(wall) {
-	  const ctx = draw.ctx();
-	  const startpoint = wall.startVertex().point();
-	  r =  wall.length();
-	  theta = wall.radians();
-	  ctx.beginPath();
-	  ctx.moveTo(startpoint.x, startpoint.y);
-	  ctx.lineWidth = 10;
-	  ctx.strokeStyle = hoverId() === wall.toString() ? 'green' : 'black';
-	  const endpoint = wall.endVertex().point();
-	  ctx.lineTo(endpoint.x, endpoint.y);
-	  ctx.stroke();
-	
-	  wall.doors().forEach((door) =>
-	    drawDoor(startpoint, door, wall.radians()));
-	  wall.windows().forEach((window) =>
-	    drawWindow(startpoint, window, wall.radians()));
-	
-	  let level = 8;
-	  if (includeDetails()) {
-	    const verticies = wall.verticies();
-	    let measLines = {};
-	    level = measureOnWall(wall.doors(), level);
-	    level = measureOnWall(wall.windows(), level);
-	  }
-	  const measurement = new LineMeasurement2d(wall, undefined, undefined, layout.reconsileLength(wall));
-	  drawMeasurement(measurement, level, wall.startVertex());
-	
-	  updateHoverMap(wall, startpoint, endpoint, 5);
-	
-	  return endpoint;
-	}
-	
-	function drawVertex(vertex) {
-	  const fillColor = hoverId() === vertex.toString() ? 'green' : 'white';
-	  const p = vertex.point();
-	  const radius = 10;
-	  const circle = new Circle2d(radius, p);
-	  draw.circle(circle, 'black', fillColor);
-	  updateHoverMap(vertex, p, p, 12);
-	}
-	
-	function snapLocColor(snapLoc) {
-	  switch (snapLoc.location()) {
-	    case "backRight": return 'red';
-	    case "frontRight": return 'yellow';
-	    case "frontLeft": return 'green';
-	    case "backLeft": return 'blue';
-	    case "backCenter": return 'purple';
-	    case "diagonalRight": return 'lime';
-	    case "diagonalLeft": return 'azure';
-	    default: return "grey"
-	  }
-	}
-	
-	function drawSnapLocation(locations, color) {
-	  for (let index = 0; index < locations.length; index += 1) {
-	    const loc = locations[index];
-	    const c = hoverId() === loc.toString() ? 'green' : (color || snapLocColor(loc));
-	    draw.circle(loc.circle(), 'black', c);
-	    const vertex = loc.vertex();
-	    updateHoverMap(loc, vertex.point(), vertex.point(), 8);
-	  }
-	}
-	
-	let showAllSnapLocations = true;
-	function drawObject(object) {
-	  let center, coolor, potentalSnap;
-	  switch (object.object().constructor.name) {
-	    case 'Square2d':
-	      const square = object.object();
-	      center = square.center();
-	      updateHoverMap(object, center, center, 30);
-	      color = hoverId() === object.toString() ? 'green' : 'white';
-	      draw.square(square, color, object.parent().name());
-	      potentalSnap = object.potentalSnapLocation();
-	      if (showAllSnapLocations)
-	        drawSnapLocation(object.snapLocations());
-	
-	      drawSnapLocation(object.snapLocations.paired(), 'black');
-	      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
-	      SnapLocation2d.active(object.snapLocations.notPaired());
-	      break;
-	    case 'Polygon2d':
-	      const poly = object.object();
-	      center = poly.center();
-	      updateHoverMap(object, center, center, 30);
-	      color = hoverId() === object.toString() ? 'green' : 'black';
-	      draw(poly, color, object.parent().name());
-	      potentalSnap = object.potentalSnapLocation();
-	      if (showAllSnapLocations)
-	        drawSnapLocation(object.snapLocations());
-	
-	      drawSnapLocation(object.snapLocations.paired(), 'black');
-	      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
-	      SnapLocation2d.active(object.snapLocations.notPaired());
-	      break;
-	    case 'Line2d':
-	      draw.line(object);
-	      break;
-	    case 'Circle2d':
-	      draw.circle(object);
-	      break;
-	    case 'Layout2d':
-	      drawLayout(object); // NOT IMPLEMENTED YET!!!
-	      break;
-	    default:
-	      throw new Error(`Cannot draw object with constructor: ${object.object().constructor.name}`);
-	  }
-	}
-	
-	function illustrate(canvas) {
-	  if (layout === undefined) return;
-	  SnapLocation2d.clear();
-	  resetHoverMap();
-	  let lastEndPoint = {x: 20, y: 20};
-	
-	  draw.beginPath();
-	  const walls = layout.walls();
-	  let previousEndpoint;
-	  let wl = walls.length;
-	  walls.forEach((wall, index) => {
-	    lastEndPoint = drawWall(wall, lastEndPoint);
-	    const previousWall = walls[(index - 1) % wl];
-	    if (previousEndpoint)
-	      drawVertex(wall.startVertex());
-	    previousEndpoint = lastEndPoint;
-	  }, true);
-	  drawVertex(walls[0].startVertex());
-	  drawMeasurementValues();
-	  layout.objects().forEach((obj) => drawObject(obj.topview()));
-	}
-	
-	function updateCanvasSize(canvas) {
-	  canvas.style.width = '80vh';
-	  const dem = Math.floor(canvas.getBoundingClientRect().width);
-	  canvas.width = dem;
-	  canvas.height = dem;
-	  canvas.style.width = `${dem}px`;
-	  canvas.style.width = `${dem}px`;
-	}
-	
-	let panZ;
-	function init() {
-	  const canvas = document.getElementById('two-d-model');
-	  draw = new Draw2D(canvas);
-	  updateCanvasSize(draw.canvas());
-	  panZ = panZoom(canvas, illustrate);
-	  panZ.onMove(onMove);
-	  panZ.onMousedown(onMousedown);
-	  panZ.onMouseup(onMouseup);
-	  // draw(canvas);
-	  TwoDLayout.panZoom = panZ;
-	  du.on.match('keycombo:Control,z', '*', undo);
-	  du.on.match('keycombo:Control,Shift,Z', '*', redo);
-	}
-	
-	TwoDLayout.init = init;
-	module.exports = TwoDLayout;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/draw.js',
-function (require, exports, module) {
-	
-const Circle2d = require('./objects/circle');
-	const Line2d = require('./objects/line');
-	const LineMeasurement2d = require('./objects/line-measurement');
-	
-	class Draw2d {
-	  constructor(canvas) {
-	    const ctx = canvas.getContext('2d');
-	
-	    function draw(object, color, width) {
-	      if (object === undefined) return;
-	      if (Array.isArray(object)) {
-	        for (let index = 0; index < object.length; index += 1)
-	          draw(object[index], color, width);
-	        return;
-	      }
-	      switch (object.constructor.name) {
-	        case 'Line2d':
-	          draw.line(object, color, width);
-	          break;
-	        case 'Circle2d':
-	          draw.circle(object, color, width);
-	          break;
-	        case 'Plane2d':
-	          draw.plane(object, color, width);
-	          break;
-	        case 'Polygon2d':
-	          draw.polygon(object, color, width);
-	          break;
-	        case 'Square2d':
-	          draw.square(object, color, width);
-	          break;
-	        case 'LineMeasurement2d':
-	          draw.measurement(object, color, width);
-	          break;
-	        default:
-	          console.error(`Cannot Draw '${object.constructor.name}'`);
-	      }
-	    }
-	
-	    draw.canvas = () => canvas;
-	    draw.ctx = () => ctx;
-	    draw.beginPath = () => ctx.beginPath();
-	    draw.moveTo = () => ctx.moveTo();
-	
-	    draw.clear = () => {
-	      ctx.save();
-	      ctx.setTransform(1, 0, 0, 1, 0, 0);
-	      ctx.clearRect(0, 0, canvas.width, canvas.height);
-	      ctx.restore();
-	    }
-	    draw.line = (line, color, width, doNotMeasure) => {
-	      if (line === undefined) return;
-	      color = color ||  'black';
-	      width = width || 10;
-	      const measurePoints = line.measureTo();
-	      ctx.beginPath();
-	      ctx.strokeStyle = color;
-	      ctx.lineWidth = width;
-	      ctx.moveTo(line.startVertex().x(), line.startVertex().y());
-	      ctx.lineTo(line.endVertex().x(), line.endVertex().y());
-	      ctx.stroke();
-	    }
-	
-	    draw.plane = (plane, color, width) => {
-	      if (plane === undefined) return;
-	      color = color ||  'black';
-	      width = width || .1;
-	      plane.getLines().forEach((line) => draw.line(line, color, width));
-	    }
-	
-	    draw.polygon = (poly, color, width) => {
-	      if (poly === undefined) return;
-	      color = color ||  'black';
-	      width = width || .1;
-	      poly.lines().forEach((line) => draw.line(line, color, width));
-	      if ((typeof poly.getTextInfo) === 'function') {
-	        ctx.save();
-	        const info = poly.getTextInfo();
-	        ctx.translate(info.center.x(), info.center.y());
-	        ctx.rotate(info.radians);
-	        ctx.beginPath();
-	        ctx.lineWidth = 4;
-	        ctx.strokeStyle = 'black';
-	        ctx.fillStyle =  'black';
-	        const text = info.limit === undefined ? info.text : info.text.substring(0, info.limit);
-	        ctx.fillText(text, info.x, info.y, info.maxWidth);
-	        ctx.stroke()
-	        ctx.restore();
-	      }
-	    }
-	
-	    draw.square = (square, color, text) => {
-	      ctx.save();
-	      ctx.beginPath();
-	      ctx.lineWidth = 2;
-	      ctx.strokeStyle = 'black';
-	      ctx.fillStyle = color;
-	
-	      const center = square.center();
-	      ctx.translate(center.x(), center.y());
-	      ctx.rotate(square.radians());
-	      ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
-	      ctx.stroke();
-	      ctx.fill();
-	
-	      if (text) {
-	        ctx.beginPath();
-	        ctx.lineWidth = 4;
-	        ctx.strokeStyle = 'black';
-	        ctx.fillStyle =  'black';
-	        ctx.fillText(text, 0, square.height() / 4, square.width());
-	        ctx.stroke()
-	      }
-	
-	      ctx.restore();
-	    }
-	
-	    draw.circle = (circle, lineColor, fillColor, lineWidth) => {
-	      const center = circle.center();
-	      ctx.beginPath();
-	      ctx.lineWidth = lineWidth || 2;
-	      ctx.strokeStyle = lineColor || 'black';
-	      ctx.fillStyle = fillColor || 'white';
-	      ctx.arc(center.x(),center.y(), circle.radius(),0, 2*Math.PI);
-	      ctx.stroke();
-	      ctx.fill();
-	    }
-	
-	    const blank = 4;
-	    const hblank = blank/2;
-	    function drawMeasurementLabel(line, measurement) {
-	      if (measurement === undefined) return;
-	      const ctx = draw.ctx();
-	      const midpoint = line.midpoint();
-	
-	      ctx.save();
-	      ctx.lineWidth = 0;
-	      const length = measurement.display();
-	      const textLength = length.length;
-	      ctx.translate(midpoint.x(), midpoint.y());
-	      ctx.rotate(line.radians());
-	      ctx.beginPath();
-	      ctx.fillStyle = "white";
-	      ctx.strokeStyle = 'white';
-	      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
-	      ctx.fill();
-	      ctx.stroke();
-	
-	      ctx.beginPath();
-	      ctx.font = "1px Arial";
-	      ctx.lineWidth = .2;
-	      ctx.strokeStyle = 'black';
-	      ctx.fillStyle =  'black';
-	      ctx.fillText(length, 0, 0);
-	      ctx.stroke()
-	      ctx.restore();
-	    }
-	
-	    draw.measurement = (measurement, color) => {
-	      const measurementColor = color || 'grey';
-	      const measurementLineWidth = '.1';
-	      const lines = measurement.I();
-	      try {
-	        const winner = lines.furtherLine();
-	        draw.beginPath();
-	        draw.line(winner.startLine, measurementColor, measurementLineWidth, true);
-	        draw.line(winner.endLine, measurementColor, measurementLineWidth, true);
-	        draw.line(winner, measurementColor, measurementLineWidth, true);
-	        drawMeasurementLabel(winner, measurement);
-	      } catch (e) {
-	        console.error('Measurement render error:', e);
-	      }
-	    }
-	
-	    return draw;
-	  }
-	}
-	
-	module.exports = Draw2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/three-d-model.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../public/js/3d-modeling/csg');
-	
-	const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
-	const Polygon3D = require('./objects/polygon');
-	const Assembly = require('../objects/assembly/assembly');
-	const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
-	const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
-	const pull = require('./models/pull.js');
-	const drawerBox = require('./models/drawer-box.js');
-	const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
-	const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
-	
-	const colors = {
-	  indianred: [205, 92, 92],
-	  lightcoral: [240, 128, 128],
-	  salmon: [250, 128, 114],
-	  darksalmon: [233, 150, 122],
-	  lightsalmon: [255, 160, 122],
-	  white: [255, 255, 255],
-	  silver: [192, 192, 192],
-	  gray: [128, 128, 128],
-	  black: [0, 0, 0],
-	  red: [255, 0, 0],
-	  maroon: [128, 0, 0],
-	  yellow: [255, 255, 0],
-	  olive: [128, 128, 0],
-	  lime: [0, 255, 0],
-	  green: [0, 128, 0],
-	  aqua: [0, 255, 255],
-	  teal: [0, 128, 128],
-	  blue: [0, 0, 255],
-	  navy: [0, 0, 128],
-	  fuchsia: [255, 0, 255],
-	  purple: [128, 0, 128]
-	}
-	
-	const colorChoices = Object.keys(colors);
-	function getColor(name) {
-	  if(colors[name]) return colors[name];
-	  return colors[colorChoices[Math.floor(Math.random() * colorChoices.length)]];
-	}
-	
-	class ThreeDModel {
-	  constructor(assembly, viewer) {
-	    const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
-	    const hiddenPartIds = {};
-	    const hiddenPartNames = {};
-	    const hiddenPrefixes = {};
-	    const instance = this;
-	    let hiddenPrefixReg;
-	    let extraObjects = [];
-	    let inclusiveTarget = {};
-	    let partMap;
-	    let renderId;
-	    let targetPartCode;
-	    let rootAssembly = assembly.getRoot();
-	    this.setTargetPartCode = (id) => targetPartCode = id;
-	
-	    this.assembly = (a) => {
-	      if (a !== undefined) {
-	        assembly = a;
-	        rootAssembly = a.getRoot();
-	      }
-	      return assembly;
-	    }
-	
-	    this.partMap = () => partMap;
-	    this.isTarget = (type, value) => {
-	      return inclusiveTarget.type === type && inclusiveTarget.value === value;
-	    }
-	    this.inclusiveTarget = function(type, value) {
-	      let prefixReg;
-	      if (type === 'prefix') prefixReg = new RegExp(`^${value}`)
-	      inclusiveTarget = {type, value, prefixReg};
-	    }
-	
-	    function inclusiveMatch(part) {
-	      if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
-	      switch (inclusiveTarget.type) {
-	        case 'prefix':
-	          return part.partName().match(inclusiveTarget.prefixReg) !== null;
-	          break;
-	        case 'part-name':
-	          return part.partName() === inclusiveTarget.value;
-	        case 'part-id':
-	          return part.id() === inclusiveTarget.value;
-	        default:
-	          throw new Error('unknown inclusiveTarget type');
-	      }
-	    }
-	
-	    function manageHidden(object) {
-	      return function (attr, value) {
-	        if (value === undefined) return object[attr] === true;
-	       object[attr] = value === true;
-	       instance.render();
-	      }
-	    }
-	
-	    function buildHiddenPrefixReg() {
-	      const list = [];
-	      const keys = Object.keys(hiddenPrefixes);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        if (hiddenPrefixes[key] === true) {
-	          list.push(key);
+	    return false;
+	  },
+	  changesExist: () => {
+	      const lists = Object.values(changes);
+	      for (let index = 0; index < lists.length; index += 1) {
+	        if (assemProperties.changes.changed(lists[index]._ID)) {
+	          return true;
 	        }
 	      }
-	      hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
-	    }
-	
-	    this.hidePartId = manageHidden(hiddenPartIds);
-	    this.hidePartName = manageHidden(hiddenPartNames);
-	    this.hidePrefix = manageHidden(hiddenPrefixes);
-	
-	    function hasHidden(hiddenObj) {
-	      const keys = Object.keys(hiddenObj);
-	      for(let i = 0; i < hiddenObj.length; i += 1)
-	        if (hidden[keys[index]])return true;
 	      return false;
-	    }
-	    this.noneHidden = () => !hasHidden(hiddenPartIds) &&
-	        !hasHidden(hiddenPartNames) && !hasHidden(hiddenPrefixes);
-	
-	    this.depth = (label) => label.split('.').length - 1;
-	
-	    function hidden(part, level) {
-	      if (!part.included()) return true;
-	      const im = inclusiveMatch(part);
-	      if (im !== null) return !im;
-	      if (instance.hidePartId(part.id())) return true;
-	      if (instance.hidePartName(part.partName())) return true;
-	      if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
-	      return false;
-	    }
-	
-	    function coloring(part) {
-	      if (part.partName() && part.partName().match(/.*Frame.*/)) return getColor('blue');
-	      else if (part.partName() && part.partName().match(/.*Drawer.Box.*/)) return getColor('green');
-	      else if (part.partName() && part.partName().match(/.*Handle.*/)) return getColor('silver');
-	      return getColor('red');
-	    }
-	
-	    const randInt = (start, range) => start + Math.floor(Math.random() * range);
-	    function debugColoring() {
-	      return [randInt(0, 255),randInt(0, 255),randInt(0, 255)];
-	    }
-	
-	    this.addVertex = (center, radius, color) => {
-	      radius ||= .5;
-	      center.z *= -1;
-	      const vertex = CSG.sphere({center, radius});
-	      vertex.setColor(getColor(color));
-	      extraObjects.push(vertex);
-	    }
-	
-	    this.removeAllExtraObjects = () => extraObjects = [];
-	
-	    function getModel(assem) {
-	      const pos = assem.position().current();
-	      if (pos.rotation.x % 45 !== 0 || pos.rotation.y % 45 !== 0 || pos.rotation.z % 45 !== 0) {
-	        console.log('position off')
-	      }
-	      let model;
-	      if (assem instanceof DrawerBox) {
-	        model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
-	      } else if (assem instanceof Handle) {
-	        model = pull(pos.demension.y, pos.demension.z);
-	      } else {
-	        const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
-	        model = CSG.cube({ radius });
-	      }
-	      model.rotate(pos.rotation);
-	      pos.center.z *= -1;
-	      model.center(pos.center);
-	      // serialize({}, model);
-	      return model;
-	    }
-	
-	    let lm;
-	    this.lastModel = () => {
-	      if (lm === undefined) return undefined;
-	      const polys = [];
-	      const map = {xy: [], xz: [], zy: []};
-	      lm.polygons.forEach((p, index) => {
-	        const norm = p.vertices[0].normal;
-	        const verticies = p.vertices.map((v) => ({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
-	        polys.push(new Polygon3D(verticies));
-	      });
-	      // Polygon3D.merge(polys);
-	      const twoDpolys = Polygon3D.toTwoD(polys);
-	      return twoDpolys;
-	    }
-	
-	    this.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
-	
-	    this.render = function () {
-	      ThreeDModel.lastActive = this;
-	      const cacheId = rootAssembly.id();
-	      // FunctionCache.on(cacheId);
-	      FunctionCache.on('sme');
-	
-	      const startTime = new Date().getTime();
-	      buildHiddenPrefixReg();
-	      function buildObject(assem) {
-	        let a = getModel(assem);
-	        const c = assem.position().center();
-	        const e=1;
-	        a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
-	        a.setColor(...getColor());
-	        assem.getJoints().female.forEach((joint) => {
-	          const male = joint.getMale();
-	          const m = getModel(male, male.position().current());
-	          a = a.subtract(m);
-	        });
-	        // else a.setColor(1, 0, 0);
-	        return a;
-	      }
-	      const assemblies = this.assembly().getParts();
-	      let a;
-	      partMap = {};
-	      for (let index = 0; index < assemblies.length; index += 1) {
-	        const assem = assemblies[index];
-	        partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
-	        if (!hidden(assem)) {
-	          const b = buildObject(assem);
-	          // const c = assem.position().center();
-	          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
-	          if (a === undefined) a = b;
-	          else if (b && b.polygons.length !== 0) {
-	            a = a.union(b);
-	          }
-	          if (assem.partCode() === targetPartCode) {
-	            lm = b.clone();
-	            const rotation = assem.position().rotation();
-	            rotation.x *=-1;
-	            rotation.y = (360 - rotation.y)  % 360;
-	            rotation.z *=-1;
-	            lm.center({x:0,y:0,z:0})
-	            lm.rotate(rotation);
-	            const lastModel = this.lastModel();
-	            lastModelUpdateEvent.trigger(undefined, lastModel);
-	          }
-	        }
-	      }
-	      for (let index = 0; index < extraObjects.length; index++) {
-	        a = a.union(extraObjects[index]);
-	      }
-	      if (a) {
-	        // a.polygons.forEach((p) => p.shared = getColor());
-	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
-	        viewer.mesh = a.toMesh();
-	        viewer.gl.ondraw();
-	        console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
-	      }
-	      // FunctionCache.off(cacheId);
-	      FunctionCache.off('sme');
-	    }
-	
-	    this.update = () => {
-	      const rId = renderId = String.random();
-	      ThreeDModel.renderId = renderId;
-	      setTimeout(() => {
-	        if(renderId === rId) instance.render();
-	      }, 250);
-	    };
 	  }
 	}
 	
-	ThreeDModel.models = {};
-	ThreeDModel.get = (assembly, viewer) => {
-	  if (assembly === undefined) return ThreeDModel.lastActive;
-	  if (ThreeDModel.models[assembly.id()] === undefined) {
-	    ThreeDModel.models[assembly.id()] = new ThreeDModel(assembly, viewer);
-	  }
-	  return ThreeDModel.models[assembly.id()];
-	}
-	ThreeDModel.render = (part) => {
-	  const renderId = String.random();
-	  ThreeDModel.renderId = renderId;
-	  setTimeout(() => {
-	    if(ThreeDModel.renderId === renderId) {
-	      const cacheId = part.getRoot().id();
-	      FunctionCache.on(cacheId);
-	      ThreeDModel.get(part).render();
-	      FunctionCache.off(cacheId);
+	assemProperties.config = () => {
+	  const plainObj = {};
+	  const keys = Object.keys(config);
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    const lists = config[key];
+	    const listKeys = Object.keys(lists);
+	    plainObj[key] = {};
+	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
+	      const listKey = listKeys[lIndex];
+	      const list = lists[listKey];
+	      const propObj = {name: listKey, properties: []};
+	      plainObj[key][listKey] = propObj;
+	      list.properties.forEach((property) =>
+	          propObj.properties.push(property.toJson(excludeKeys, true)))
 	    }
-	  }, 2500);
+	  }
+	  return plainObj;
+	}
+	assemProperties.list = () => Object.keys(assemProps);
+	assemProperties.new = (group, name) => {
+	  if (assemProps[group]) {
+	    const list = [];
+	    let addIndex = 0;
+	    const ogList = Object.values(assemProps[group]);
+	    for (let index = 0; index < ogList.length; index += 1) {
+	      if (hasValueFilter(ogList[index])) {
+	        list[addIndex++] = ogList[index].clone();
+	      }
+	    }
+	    list._ID = String.random();
+	    list._GROUP = group;
+	    list._NAME = name;
+	    changes[list._ID] = list;
+	    return list;
+	  }
+	  throw new Error(`Requesting invalid Property Group '${group}'`);
+	}
+	
+	assemProperties.instance = () => {
+	  const keys = Object.keys(assemProps);
+	  const clone = {};
+	  keys.forEach((key) => {
+	    const props = Object.values(assemProps[key]);
+	    if (clone[key] === undefined) clone[key] = {};
+	    props[keys] = {};
+	    props.forEach((prop) => clone[key][prop.code()] = prop.clone());
+	  });
+	  return clone;
 	};
 	
-	module.exports = ThreeDModel
+	assemProperties.getSet = (group, setName) => {
+	  const clone = {};
+	  let propertyObj = config[group][setName];
+	  propertyObj.properties.forEach((prop) => clone[prop.code()] = prop.clone());
+	  clone.__KEY = setName;
+	  return clone;
+	}
+	
+	const dummyFilter = () => true;
+	assemProperties.groupList = (group, filter) => {
+	  filter = filter || dummyFilter;
+	  const groupList = config[group];
+	  const changeList = {};
+	  if (groupList === undefined) return {};
+	  const groupKeys = Object.keys(groupList);
+	  for (let index = 0; index < groupKeys.length; index += 1) {
+	    const groupKey = groupKeys[index];
+	    const list = groupList[groupKey];
+	    const properties = groupList[list.name].properties;
+	    const codes = properties.map((prop) => prop.code());
+	    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
+	    //                   .filter(filter);
+	    // newProps.forEach((prop) => properties.push(prop.clone()));
+	    changeList[list.name] = {name: list.name, properties: []};
+	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
+	      const prop = properties[pIndex];
+	      changeList[list.name].properties.push(prop.clone());
+	    }
+	    const id = String.random();
+	    const set = changeList[list.name].properties;
+	    set._ID = id;
+	    set._NAME = list.name;
+	    changes[id] = set;
+	    copyMap[id] = properties;
+	  }
+	  return changeList;
+	}
+	
+	const hasValueFilter = (prop) => prop.value() !== null;
+	assemProperties.hasValue = (group) => {
+	  if (props === undefined) return [];
+	  return assemProperties.groupList(group, hasValueFilter);
+	}
+	
+	const list = (key) =>
+	    assemProps[key] ? Object.values(assemProps[key]) : [];
+	
+	const noValueFilter = (prop) => prop.value() === null;
+	assemProperties.noValue = (group) => {
+	  const props = list(group);
+	  if (props === undefined) return [];
+	  return props.filter(noValueFilter);
+	}
+	
+	assemProperties.all = () => {
+	  const props = {};
+	  const keys = Object.keys(assemProps);
+	  keys.forEach((key) => {
+	    const l = [];
+	    list(key).forEach((prop) => l.push(prop));
+	    props[key] = l;
+	  });
+	  return props;
+	}
+	
+	assemProperties.UNITS = UNITS;
+	
+	assemProperties.load = (body) => {
+	  config = Object.fromJson(body);
+	}
+	
+	assemProperties.definitionsRequired = definitionsRequired;
+	assemProperties.propertiesToDefine = propertiesToDefine;
+	module.exports = assemProperties;
 	
 });
 
@@ -22247,12 +20560,13 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	const Layout2D = require('../objects/layout.js')
 	const Draw2D = require('../two-d/draw.js');
 	const Polygon2d = require('../two-d/objects/polygon.js');
+	const Polygon3D = require('../three-d/objects/polygon.js');
+	const BiPolygon = require('../three-d/objects/bi-polygon.js');
 	const Line2d = require('../two-d/objects/line.js');
 	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
 	const PanZoom = require('../two-d/pan-zoom.js');
 	
 	const CSG = require('../../public/js/3d-modeling/csg');
-	
 	
 	function csgVert(pos, normal) {
 	  return new CSG.Vertex(pos, normal);
@@ -22290,8 +20604,8 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	    const maxDem = window.innerHeight * .45;
 	    const cnt = du.create.element('div');
 	    // const p = pull(5,2);
-	    const p = door([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}],
-	          [{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}]);
+	    const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
+	          new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel();
 	    // const p = door([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}],
 	    //       [{x:0, y: 4, z: 4}, {x:4, y: 4, z: 4}, {x:4, y: 0, z: 4}, {x:0, y: 0, z: 4}]);
 	    // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
@@ -22345,6 +20659,12 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	      }
 	    }
 	
+	    function onPartSelect(elem) {
+	      console.log(elem.value);
+	      instance.isolatePart(elem.value);
+	      elem.value = '';
+	    }
+	
 	    function init() {
 	      if (viewer === undefined) {
 	        viewer = new Viewer(p, maxDem, maxDem, 50);
@@ -22360,6 +20680,8 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	      panzFront.centerOn(0, 0);
 	      panzLeft.centerOn(0, 0);
 	      panzTop.centerOn(0, 0);
+	
+	      du.on.match('change', '[name="partSelector"]', onPartSelect);
 	    }
 	
 	    this.update = (cabinet) => {
@@ -22372,7 +20694,7 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	      }, 1000);
 	    }
 	
-	    this.isolatePart = (partCode, cabinet) => {
+	    this.isolatePart = (partCode) => {
 	      threeDModel = ThreeDModel.get();
 	      threeDModel.setTargetPartCode(partCode);
 	      threeDModel.update();
@@ -22529,253 +20851,246 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 });
 
 
-RequireJS.addFunction('./app-src/config/properties.js',
+RequireJS.addFunction('./app-src/objects/company.js',
 function (require, exports, module) {
 	
 
-	const Property = require('./property');
-	const Defs = require('./property/definitions');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const Request = require('../../../../public/js/utils/request.js');
 	
-	let unitCount = 0;
-	const UNITS = [];
-	Measurement.units().forEach((unit) =>
-	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
-	UNITS._VALUE = Measurement.unit();
+	const Door = require('./assembly/assemblies/door/door.js');
 	
-	const assemProps = {}
-	const add = (key, properties) => properties.forEach((prop) => {
-	  if (assemProps[key] === undefined) assemProps[key] = {};
-	  assemProps[key][prop.code()] = prop;
-	});
+	class Company {
+	  constructor(properties) {
+	    if (!properties.name) throw new Error('Company name must be defined')
+	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
+	    this.name = () => properties.name;
+	    this.email = () => properties.email;
+	    this.address = () => properties.address;
+	    Company.list[this.name()] = this;
+	  }
+	}
 	
-	add('Overlay', [Defs.ov]);
-	add('Reveal', [Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl]);
-	add('Inset', [Defs.is]);
-	add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
-	                Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
-	                Defs.frw,Defs.frt]);
-	add('Panel', [Defs.h,Defs.w,Defs.t]);
-	add('Guides', [Defs.l,Defs.dbtos,Defs.dbsos,Defs.dbbos]);
-	add('DoorAndFront', [Defs.daffrw,Defs.dafip])
-	add('Door', [Defs.h,Defs.w,Defs.t]);
-	add('DrawerBox', [Defs.h,Defs.w,Defs.d,Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn]);
-	add('DrawerFront', [Defs.h,Defs.w,Defs.t,Defs.mfdfd]);
-	add('Frame', [Defs.h,Defs.w,Defs.t]);
-	add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
-	add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
-	add('Opening', []);
+	Company.list = {};
+	new Company({name: 'Central Door'});
+	new Company({name: 'Central Wood'});
+	new Company({name: 'ADC'});
+	new Company({name: 'Accessa'});
+	new Company({name: 'Top Knobs'});
+	new Company({name: 'Richelieu'});
+	module.exports = Company
 	
-	function definitionsRequired(group) {
-	  const required = [];
-	  if (assemProps[group] === undefined) return [];
-	  Object.values(assemProps[group]).forEach((prop) => {
-	    if (prop instanceof Property && prop.value() !== null) required.push(prop);
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/group.js',
+function (require, exports, module) {
+	
+const PropertyConfig = require('../config/property/config');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	
+	class Group extends Lookup {
+	  constructor(room, name, id) {
+	    super(id);
+	    const initialVals = {
+	      name: name || 'Group',
+	    }
+	    Object.getSet(this, initialVals);
+	    this.propertyConfig = new PropertyConfig();
+	    this.objects = [];
+	    this.room = () => room;
+	    this.toJson = () => {
+	      const json = {objects: [], _TYPE: 'Group'};
+	      this.objects.forEach((obj) => json.objects.push(obj.toJson()));
+	      json.name = this.name();
+	      json.id = this.id();
+	      json.roomId = this.room().id();
+	      json.propertyConfig = this.propertyConfig.toJson();
+	      return json;
+	    }
+	  }
+	}
+	
+	Group.count = 0;
+	new Group();
+	
+	Group.fromJson = (json) => {
+	  const room = Lookup.get(json.roomId);
+	  const group = new Group(room, json.name, json.id);
+	  group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
+	  json.objects.forEach((objJson) => {
+	    const jsonClazz = Object.class.get(json.objects[0]._TYPE);
+	    const obj = jsonClazz.fromJson(objJson, group);
+	    group.objects.push(obj);
+	    obj.group(group);
 	  });
-	  return required;
+	  return group;
 	}
 	
-	function propertiesToDefine() {
-	  const propNames = [];
-	  const keys = Object.keys(assemProps);
-	  keys.forEach((key) => {
-	    if (definitionsRequired(key).length !== 0) {
-	      propNames.push(key);
-	    }
-	  });
-	  return propNames;
-	}
+	module.exports = Group;
 	
-	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
-	function assemProperties(clazz, filter) {
-	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	  props = assemProps[clazz] || [];
-	  if ((typeof filter) != 'function') return props;
-	  props = props.filter(filter);
-	  return props;
-	}
+});
+
+
+RequireJS.addFunction('./app-src/cost/cost-tree.js',
+function (require, exports, module) {
 	
+const Properties = require('../config/properties.js');
+	const Assembly = require('../objects/assembly/assembly.js');
+	const LogicTree = require('../../../../public/js/utils/logic-tree.js');
+	const LogicWrapper = LogicTree.LogicWrapper;
 	
-	let config = {};
-	const changes = {};
-	const copyMap = {};
-	assemProperties.changes = {
-	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
-	  save: (id) => {
-	    const list = changes[id];
-	    if (!list) throw new Error(`Unkown change id '${id}'`);
-	    const group = list._GROUP;
-	    if (config[group] === undefined) config[group] = [];
-	    if(copyMap[id] === undefined) {
-	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
-	      copyMap[list._ID] = config[group][list._NAME].properties;
-	    } else {
-	      const tempList = changes[id];
-	      for (let index = 0; index < tempList.length; index += 1) {
-	        const tempProp = tempList[index];
-	        const configProp = copyMap[id][index];
-	        configProp.value(tempProp.value());
-	      }
-	    }
-	   },
-	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
-	  delete: (id) => {
-	    delete config[changes[id][0].name()][changes[id]._NAME];
-	    delete changes[id];
-	    delete copyMap[id];
-	  },
-	  changed: (id) => {
-	    const list = changes[id];
-	    if (list === undefined) return false;
-	    for (let index = 0; index < list.length; index += 1) {
-	      const prop = list[index];
-	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
-	        console.log('booyacka!');
-	      }
-	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
-	        return true;
-	      }
-	    }
-	    return false;
-	  },
-	  changesExist: () => {
-	      const lists = Object.values(changes);
-	      for (let index = 0; index < lists.length; index += 1) {
-	        if (assemProperties.changes.changed(lists[index]._ID)) {
+	class CostDecision {
+	  constructor(type, name, relation, formula) {
+	    Object.getSet(this, {type, name, costs: [], relation, isChoice: false});
+	    this.requiredProperties = Properties.noValue(name);
+	    if (this.relation) {
+	      if (formula) {
+	        function makeDecision(wrapper) {
 	          return true;
 	        }
-	      }
-	      return false;
-	  }
-	}
-	
-	assemProperties.config = () => {
-	  const plainObj = {};
-	  const keys = Object.keys(config);
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    const lists = config[key];
-	    const listKeys = Object.keys(lists);
-	    plainObj[key] = {};
-	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
-	      const listKey = listKeys[lIndex];
-	      const list = lists[listKey];
-	      const propObj = {name: listKey, properties: []};
-	      plainObj[key][listKey] = propObj;
-	      list.properties.forEach((property) =>
-	          propObj.properties.push(property.toJson(excludeKeys, true)))
-	    }
-	  }
-	  return plainObj;
-	}
-	assemProperties.list = () => Object.keys(assemProps);
-	assemProperties.new = (group, name) => {
-	  if (assemProps[group]) {
-	    const list = [];
-	    let addIndex = 0;
-	    const ogList = Object.values(assemProps[group]);
-	    for (let index = 0; index < ogList.length; index += 1) {
-	      if (hasValueFilter(ogList[index])) {
-	        list[addIndex++] = ogList[index].clone();
+	        this.relation = RelationInput.relationsObjs[relation](makeDecision);
+	        this.condition = (wrapper) => this.relation.eval(wrapper.children(), wrapper.payload.value());
+	      } else {
+	        this.isChoice(true);
 	      }
 	    }
-	    list._ID = String.random();
-	    list._GROUP = group;
-	    list._NAME = name;
-	    changes[list._ID] = list;
-	    return list;
 	  }
-	  throw new Error(`Requesting invalid Property Group '${group}'`);
 	}
 	
-	assemProperties.instance = () => {
-	  const keys = Object.keys(assemProps);
-	  const clone = {};
-	  keys.forEach((key) => {
-	    const props = Object.values(assemProps[key]);
-	    if (clone[key] === undefined) clone[key] = {};
-	    props[keys] = {};
-	    props.forEach((prop) => clone[key][prop.code()] = prop.clone());
+	class CostTree {
+	  constructor(logicTree) {
+	    const idMap = {};
+	    logicTree = CostTree.suplement(logicTree);
+	    this.tree = () => logicTree;
+	    this.root = () => logicTree.root();
+	    const getWrapper = (wrapperId) => (LogicWrapper.get(wrapperId) || this.root());
+	
+	    this.branch = (wrapperId, name) =>
+	            get(wrapperId).branch(String.random(), new CostDecision('Branch', name));
+	    this.leaf = (wrapperId, name) =>
+	            get(wrapperId).leaf(String.random(), new CostDecision('Leaf', name));
+	    this.select = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).select(String.random(), new CostDecision('Select', name, relation, formula));
+	    this.multiselect = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).multiselect(String.random(), new CostDecision('Multiselect', name, relation, formula));
+	    this.conditional = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).conditional(String.random(), new CostDecision('Conditional', name, relation, formula));
+	
+	  }
+	}
+	
+	
+	CostTree.propertyList = Properties.all();
+	CostTree.types = ['branch', 'select', 'conditional', 'multiselect', 'leaf'];
+	CostTree.suplement = (logicTree) => {
+	  if (!(logicTree instanceof LogicWrapper)) {
+	    logicTree = new LogicTree();
+	    logicTree.branch('root');
+	  }
+	  const root = logicTree.root();
+	  const assemClassIds = Properties.list();
+	  assemClassIds.forEach((classId) => {
+	    if (root.node.getNodeByPath(classId) === undefined)
+	      root.branch(classId, new CostDecision('Branch', classId));
 	  });
-	  return clone;
-	};
-	
-	assemProperties.getSet = (group, setName) => {
-	  const clone = {};
-	  let propertyObj = config[group][setName];
-	  propertyObj.properties.forEach((prop) => clone[prop.code()] = prop.clone());
-	  clone.__KEY = setName;
-	  return clone;
+	  return logicTree;
 	}
+	CostTree.choices = [];
 	
-	const dummyFilter = () => true;
-	assemProperties.groupList = (group, filter) => {
-	  filter = filter || dummyFilter;
-	  const groupList = config[group];
-	  const changeList = {};
-	  if (groupList === undefined) return {};
-	  const groupKeys = Object.keys(groupList);
-	  for (let index = 0; index < groupKeys.length; index += 1) {
-	    const groupKey = groupKeys[index];
-	    const list = groupList[groupKey];
-	    const properties = groupList[list.name].properties;
-	    const codes = properties.map((prop) => prop.code());
-	    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
-	    //                   .filter(filter);
-	    // newProps.forEach((prop) => properties.push(prop.clone()));
-	    changeList[list.name] = {name: list.name, properties: []};
-	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
-	      const prop = properties[pIndex];
-	      changeList[list.name].properties.push(prop.clone());
+	
+	CostTree.CostDecision = CostDecision;
+	module.exports = CostTree;
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/init-costs.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Cost = require('./cost.js');
+	const Material = require('./types/material.js');
+	const Labor = require('./types/labor.js');
+	
+	Cost.register(Material);
+	Cost.register(Labor);
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/cost.js',
+function (require, exports, module) {
+	
+
+	
+	const Company = require('../objects/company.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
+	const Assembly = require('../objects/assembly/assembly.js');
+	
+	
+	// constructors
+	// Cost({name, Method: Cost.methods.LINEAR_FEET, cost, length})
+	// Cost({name, Method: Cost.methods.SQUARE_FEET, cost, length, width})
+	// Cost({name, Method: Cost.methods.CUBIC_FEET, cost, length, width, depth})
+	// Cost({name, Method: Cost.methods.UNIT, cost})
+	// Cost((name, Cost, formula));
+	// props. - (optional*)
+	// id - Cost identifier
+	// method - Method for calculating cost
+	// length - length of piece used to calculate unit cost
+	// width - width of piece used to calculate unit cost
+	// depth - depth of piece used to calculate unit cost
+	// cost - cost of piece used to calculate unit cost
+	// formula* - formula used to apply cost to part
+	// company* - Company to order from.
+	// partNumber* - Part number to order part from company
+	// Cost* - Reference Cost.
+	
+	class Cost extends Lookup {
+	  //constructor(id, Cost, formula)
+	  constructor(props) {
+	    super(props.name);
+	    props = props || {};
+	    this.props = () => props;
+	    let deleted = false;
+	    const instance = this;
+	    const lastUpdated = props.lastUpdated || new Date().getTime();
+	    props.requiredBranches = props.requiredBranches || [];
+	    this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
+	    Object.getSet(this, props, 'group', 'objectId', 'id', 'parent');
+	    this.level = () => {
+	      let level = -1;
+	      let curr = this;
+	      while(curr instanceof Cost) {
+	        level++;
+	        curr = curr.parent();
+	      }
+	      return level;
 	    }
-	    const id = String.random();
-	    const set = changeList[list.name].properties;
-	    set._ID = id;
-	    set._NAME = list.name;
-	    changes[id] = set;
-	    copyMap[id] = properties;
 	  }
-	  return changeList;
 	}
 	
-	const hasValueFilter = (prop) => prop.value() !== null;
-	assemProperties.hasValue = (group) => {
-	  if (props === undefined) return [];
-	  return assemProperties.groupList(group, hasValueFilter);
+	Cost.types = {};
+	
+	Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
+	Cost.remove = (id) => Cost.get(id).remove();
+	
+	Cost.constructorId = (name) => name.replace(/Cost$/, '');
+	Cost.register = (clazz) => {
+	  Cost.types[Cost.constructorId(clazz.prototype.constructor.name)] = clazz;
+	  Cost.typeList = Object.keys(Cost.types).sort();
 	}
 	
-	const list = (key) =>
-	    assemProps[key] ? Object.values(assemProps[key]) : [];
+	Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
 	
-	const noValueFilter = (prop) => prop.value() === null;
-	assemProperties.noValue = (group) => {
-	  const props = list(group);
-	  if (props === undefined) return [];
-	  return props.filter(noValueFilter);
-	}
-	
-	assemProperties.all = () => {
-	  const props = {};
-	  const keys = Object.keys(assemProps);
-	  keys.forEach((key) => {
-	    const l = [];
-	    list(key).forEach((prop) => l.push(prop));
-	    props[key] = l;
-	  });
-	  return props;
-	}
-	
-	assemProperties.UNITS = UNITS;
-	
-	assemProperties.load = (body) => {
-	  config = Object.fromJson(body);
-	}
-	
-	assemProperties.definitionsRequired = definitionsRequired;
-	assemProperties.propertiesToDefine = propertiesToDefine;
-	module.exports = assemProperties;
+	module.exports = Cost
 	
 });
 
@@ -22854,62 +21169,6 @@ function (require, exports, module) {
 	
 	
 	
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/cabinet-opening-coordinates.js',
-function (require, exports, module) {
-	
-class CabinetOpeningCorrdinates {
-	  constructor(cabinet, config, sectionProperties) {
-	
-	    this.divide = sectionProperties.divide;
-	    this.setSection = sectionProperties.setSection;
-	    this.sections = sectionProperties.sections;
-	    this.vertical = sectionProperties.vertical;
-	    this.sectionProperties = () => sectionProperties;
-	    this.update = () => {
-	      let coords;
-	      if (config._Type === 'location') {
-	        coords = cabinet.evalObject(config.coordinates);
-	      } else {
-	        const right = cabinet.getAssembly(config.right);
-	        const left = cabinet.getAssembly(config.left);
-	        const top = cabinet.getAssembly(config.top);
-	        const bottom = cabinet.getAssembly(config.bottom);
-	
-	        const topMax = top.position().centerAdjust('y', '+z');
-	        const topMin = top.position().centerAdjust('y', '-z');
-	        const leftMax = left.position().centerAdjust('x', '+z');
-	        const leftMin = left.position().centerAdjust('x', '-z');
-	        const rightMin = right.position().centerAdjust('x', '-z');
-	        const rightMax = right.position().centerAdjust('x', '+z');
-	        const bottomMin = bottom.position().centerAdjust('y', '-z');
-	        const bottomMax = bottom.position().centerAdjust('y', '+z');
-	
-	        coords = {
-	          inner: [
-	            {x: leftMax, y: topMin, z: 0},
-	            {x: rightMin, y: topMin, z: 0},
-	            {x: rightMin, y: bottomMax, z: 0},
-	            {x: leftMax, y: bottomMax, z: 0}
-	          ],
-	          outer: [
-	            {x: leftMin, y: topMax, z: 0},
-	            {x: rightMax, y: topMax, z: 0},
-	            {x: rightMax, y: bottomMin, z: 0},
-	            {x: leftMin, y: bottomMin, z: 0}
-	          ]
-	        }
-	      }
-	      sectionProperties.updateCoordinates(coords);
-	      return coords;
-	    }
-	  }
-	}
-	
-	module.exports = CabinetOpeningCorrdinates;
 	
 });
 
@@ -23305,7 +21564,7 @@ const cabinetsJson = require('../../public/json/cabinets.json');
 	  const list = [];
 	  const keys = Object.keys(cabinetsJson);
 	  // comment out to get corner-wall to be the first.
-	  keys.sort();
+	  // keys.sort();
 	  for (let index = 0; index < keys.length; index += 1) {
 	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
 	  }
@@ -23337,347 +21596,6 @@ const cabinetsJson = require('../../public/json/cabinets.json');
 	});
 	
 	module.exports = CabinetTemplate;
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/cost-tree.js',
-function (require, exports, module) {
-	
-const Properties = require('../config/properties.js');
-	const Assembly = require('../objects/assembly/assembly.js');
-	const LogicTree = require('../../../../public/js/utils/logic-tree.js');
-	const LogicWrapper = LogicTree.LogicWrapper;
-	
-	class CostDecision {
-	  constructor(type, name, relation, formula) {
-	    Object.getSet(this, {type, name, costs: [], relation, isChoice: false});
-	    this.requiredProperties = Properties.noValue(name);
-	    if (this.relation) {
-	      if (formula) {
-	        function makeDecision(wrapper) {
-	          return true;
-	        }
-	        this.relation = RelationInput.relationsObjs[relation](makeDecision);
-	        this.condition = (wrapper) => this.relation.eval(wrapper.children(), wrapper.payload.value());
-	      } else {
-	        this.isChoice(true);
-	      }
-	    }
-	  }
-	}
-	
-	class CostTree {
-	  constructor(logicTree) {
-	    const idMap = {};
-	    logicTree = CostTree.suplement(logicTree);
-	    this.tree = () => logicTree;
-	    this.root = () => logicTree.root();
-	    const getWrapper = (wrapperId) => (LogicWrapper.get(wrapperId) || this.root());
-	
-	    this.branch = (wrapperId, name) =>
-	            get(wrapperId).branch(String.random(), new CostDecision('Branch', name));
-	    this.leaf = (wrapperId, name) =>
-	            get(wrapperId).leaf(String.random(), new CostDecision('Leaf', name));
-	    this.select = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).select(String.random(), new CostDecision('Select', name, relation, formula));
-	    this.multiselect = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).multiselect(String.random(), new CostDecision('Multiselect', name, relation, formula));
-	    this.conditional = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).conditional(String.random(), new CostDecision('Conditional', name, relation, formula));
-	
-	  }
-	}
-	
-	
-	CostTree.propertyList = Properties.all();
-	CostTree.types = ['branch', 'select', 'conditional', 'multiselect', 'leaf'];
-	CostTree.suplement = (logicTree) => {
-	  if (!(logicTree instanceof LogicWrapper)) {
-	    logicTree = new LogicTree();
-	    logicTree.branch('root');
-	  }
-	  const root = logicTree.root();
-	  const assemClassIds = Properties.list();
-	  assemClassIds.forEach((classId) => {
-	    if (root.node.getNodeByPath(classId) === undefined)
-	      root.branch(classId, new CostDecision('Branch', classId));
-	  });
-	  return logicTree;
-	}
-	CostTree.choices = [];
-	
-	
-	CostTree.CostDecision = CostDecision;
-	module.exports = CostTree;
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/history.js',
-function (require, exports, module) {
-	
-class History {
-	  constructor() {
-	    let changes = [];
-	    let changesIndex = [];
-	
-	      this.addChange = (forward, back) => {
-	        changes = changes.slice(0, changesIndex);
-	        changes.push({forward, back});
-	        changesIndex++;
-	      }
-	
-	    this.getSet = (obj, initialVals, ...attrs) => {
-	      attrs = Object.getSet(obj, initialVals, ...attrs);
-	      const objFuncs = {};
-	      attrs.forEach((attr) => {
-	        objFuncs[attr] = obj[attr];
-	        obj[attr] = (value) => {
-	          if (value !== undefined) {
-	            const oldValue = objFuncs[attr]();
-	            const back = () => objFuncs[attr](oldValue);
-	            const forward = () => objFuncs[attr](value);
-	            this.addChange(obj, forward, back);
-	          }
-	          return objFuncs[attr](value);
-	        }
-	      });
-	    }
-	
-	    this.undo = () => {
-	      const change = changes[--changesIndex];
-	      change.back();
-	    }
-	
-	    this.redo = () => {
-	      const change = changes[++changesIndex];
-	      change.forward();
-	    }
-	
-	    this.canUndo =() => changesIndex > 0;
-	    this.canRedo = () => changeIndex < changes.length - 1;
-	  }
-	}
-	
-	module.exports = History;
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/divide-properties.js',
-function (require, exports, module) {
-	
-
-	class DivideProperties {
-	  constructor(length, center, rotation) {
-	    Object.getSet(this, {length, center, rotation})
-	  }
-	}
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/display-svc.js',
-function (require, exports, module) {
-	class Register {
-	  constructor() {
-	    const registered = {};
-	    this.register = function (nameOobj, obj) {
-	      if ((typeof nameOobj) !== 'object') {
-	        registered[nameOobj] = obj;
-	      } else {
-	        const keys = Object.keys(nameOobj);
-	        for (let index = 0; index < keys.length; index += 1) {
-	          const key = keys[index];
-	          registered[key] = nameOobj[key];
-	        }
-	      }
-	    }
-	    this.get = (name) => registered[name];
-	  }
-	}
-	
-	module.exports = new Register();
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/property.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	
-	
-	
-	class Property extends Lookup {
-	  // clone constructor(code, value) {
-	  constructor(code, name, props) {
-	    super();
-	    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
-	    const children = [];
-	
-	    const initVals = {
-	      code, name, description: props instanceof Object ? props.description : undefined
-	    }
-	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
-	
-	    this.value = (val, notMetric) => {
-	      if (val !== undefined && value !== val) {
-	        const measurement = new Measurement(val, notMetric);
-	        const measurementVal = measurement.value();
-	        value = Number.isNaN(measurementVal) ? val : measurement;
-	      }
-	      return value instanceof Measurement ? value.value() : value;
-	    }
-	
-	    this.display = () => {
-	      return value instanceof Measurement ? value.display() : value;
-	    }
-	
-	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
-	
-	    if ((typeof props) !== 'object' ||  props === null) {
-	      this.value(props);
-	      props = {};
-	    }
-	    this.properties(props || {});
-	
-	    const existingProp = Property.list[code];
-	    let clone = false;
-	    if (this.properties().value !== undefined) {
-	      this.value(this.properties().value, this.properties().notMetric);
-	    }
-	
-	    // if (existingProp) {
-	    //   value = value || existingProp.value();
-	    //   name = existingProp.name();
-	    //   this.properties(existingProp.properties());
-	    //   clone = true;
-	    // }
-	
-	    if ((typeof value) === 'number')
-	      value = new Measurement(value, this.properties().notMetric);
-	
-	
-	    this.addChild = (property) => {
-	      if (property instanceof Property && property.code() === this.code()) {
-	            if (children.indexOf(property) === -1) children.push(property);
-	            else throw new Error('Property is already a child');
-	      }
-	      else throw new Error('Child is not an instance of Property or Code does not match');
-	    }
-	
-	    this.children = () => JSON.clone(children);
-	
-	    this.equals = (other) =>
-	        other instanceof Property &&
-	        this.value() === other.value() &&
-	        this.code() === other.code() &&
-	        this.name() === other.name() &&
-	        this.description() === other.description();
-	
-	    this.clone = (val) => {
-	      const cProps = this.properties();
-	      cProps.clone = true;
-	      cProps.value = val === undefined ? this.value() : val;
-	      cProps.description = this.description();
-	      delete cProps.notMetric;
-	      return new Property(this.code(), this.name(), cProps);
-	    }
-	    if(!clone) Property.list[code] = this;
-	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
-	  }
-	}
-	Property.list = {};
-	Property.DO_NOT_CLONE = true;
-	
-	new Property();
-	
-	module.exports = Property
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/room.js',
-function (require, exports, module) {
-	
-
-	
-	const Cabinet = require('./assembly/assemblies/cabinet.js');
-	const Group = require('./group.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup');
-	const Layout2D = require('../objects/layout');
-	
-	
-	class Room extends Lookup {
-	  constructor(name, id) {
-	    super(id || String.random(32));
-	    const instance = this;
-	
-	    function groupMap(map, detailLists, listId) {
-	      for(let index = 0; index < detailLists[listId].length; index += 1) {
-	        const cabinet = detailLists[listId][index];
-	        const groupId = cabinet.group().id();
-	        if (map[groupId] === undefined) map[groupId] = {added: [], removed: []};
-	        map[groupId][listId].push(cabinet);
-	      }
-	    }
-	
-	    function onLayoutChange(elem, detail) {
-	      const cabGroupMap = {};
-	      groupMap(cabGroupMap, detail.objects, 'removed');
-	      groupMap(cabGroupMap, detail.objects, 'added');
-	
-	      instance.groups.forEach((g) => {
-	        if (cabGroupMap[g.id()]) {
-	          g.objects.removeAll(cabGroupMap[g.id()].removed);
-	          g.objects.concatInPlace(cabGroupMap[g.id()].added);
-	        }
-	      });
-	      console.log('onlaychan', detail);
-	    }
-	    const initialVals = {
-	      name: name || `Room ${Room.count++}`,
-	      layout: new Layout2D()
-	    }
-	    initialVals.layout.onStateChange(onLayoutChange);
-	    Object.getSet(this, initialVals, 'groups');
-	    this.groups = [new Group(this)];
-	    this.addGroup = () => this.groups.push(new Group(this));
-	  }
-	};
-	Room.count = 0;
-	new Room();
-	
-	module.exports = Room;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/order.js',
-function (require, exports, module) {
-	
-
-	
-	const Room = require('./room.js');
-	
-	class Order {
-	  constructor(name, id) {
-	    if (id === null) this.loaded = false;
-	    else this.loaded = true;
-	    const initialVals = {
-	      name: name || ++Order.count,
-	      id: id || String.random(32),
-	    }
-	    Object.getSet(this, initialVals, 'rooms');
-	    this.rooms = {};
-	  }
-	}
-	
-	Order.count = 0;
-	module.exports = Order
 	
 });
 
@@ -24326,471 +22244,2395 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 });
 
 
-RequireJS.addFunction('./app-src/objects/group.js',
-function (require, exports, module) {
-	
-const PropertyConfig = require('../config/property/config');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	
-	class Group extends Lookup {
-	  constructor(room, name, id) {
-	    super(id);
-	    const initialVals = {
-	      name: name || 'Group',
-	    }
-	    Object.getSet(this, initialVals);
-	    this.propertyConfig = new PropertyConfig();
-	    this.objects = [];
-	    this.room = () => room;
-	    this.toJson = () => {
-	      const json = {objects: [], _TYPE: 'Group'};
-	      this.objects.forEach((obj) => json.objects.push(obj.toJson()));
-	      json.name = this.name();
-	      json.id = this.id();
-	      json.roomId = this.room().id();
-	      json.propertyConfig = this.propertyConfig.toJson();
-	      return json;
-	    }
-	  }
-	}
-	
-	Group.count = 0;
-	new Group();
-	
-	Group.fromJson = (json) => {
-	  const room = Lookup.get(json.roomId);
-	  const group = new Group(room, json.name, json.id);
-	  group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
-	  json.objects.forEach((objJson) => {
-	    const jsonClazz = Object.class.get(json.objects[0]._TYPE);
-	    const obj = jsonClazz.fromJson(objJson, group);
-	    group.objects.push(obj);
-	    obj.group(group);
-	  });
-	  return group;
-	}
-	
-	module.exports = Group;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/company.js',
+RequireJS.addFunction('./app-src/objects/room.js',
 function (require, exports, module) {
 	
 
 	
-	const Door = require('./assembly/assemblies/door/door.js');
-	
-	class Company {
-	  constructor(properties) {
-	    if (!properties.name) throw new Error('Company name must be defined')
-	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
-	    this.name = () => properties.name;
-	    this.email = () => properties.email;
-	    this.address = () => properties.address;
-	    Company.list[this.name()] = this;
-	  }
-	}
-	
-	Company.list = {};
-	new Company({name: 'Central Door'});
-	new Company({name: 'Central Wood'});
-	new Company({name: 'ADC'});
-	new Company({name: 'Accessa'});
-	new Company({name: 'Top Knobs'});
-	new Company({name: 'Richelieu'});
-	module.exports = Company
+	const Cabinet = require('./assembly/assemblies/cabinet.js');
+	const Group = require('./group.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup');
+	const Layout2D = require('../objects/layout');
 	
 	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/cost.js',
-function (require, exports, module) {
-	
-
-	
-	const Company = require('../objects/company.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
-	const Assembly = require('../objects/assembly/assembly.js');
-	
-	
-	// constructors
-	// Cost({name, Method: Cost.methods.LINEAR_FEET, cost, length})
-	// Cost({name, Method: Cost.methods.SQUARE_FEET, cost, length, width})
-	// Cost({name, Method: Cost.methods.CUBIC_FEET, cost, length, width, depth})
-	// Cost({name, Method: Cost.methods.UNIT, cost})
-	// Cost((name, Cost, formula));
-	// props. - (optional*)
-	// id - Cost identifier
-	// method - Method for calculating cost
-	// length - length of piece used to calculate unit cost
-	// width - width of piece used to calculate unit cost
-	// depth - depth of piece used to calculate unit cost
-	// cost - cost of piece used to calculate unit cost
-	// formula* - formula used to apply cost to part
-	// company* - Company to order from.
-	// partNumber* - Part number to order part from company
-	// Cost* - Reference Cost.
-	
-	class Cost extends Lookup {
-	  //constructor(id, Cost, formula)
-	  constructor(props) {
-	    super(props.name);
-	    props = props || {};
-	    this.props = () => props;
-	    let deleted = false;
+	class Room extends Lookup {
+	  constructor(name, id) {
+	    super(id || String.random(32));
 	    const instance = this;
-	    const lastUpdated = props.lastUpdated || new Date().getTime();
-	    props.requiredBranches = props.requiredBranches || [];
-	    this.lastUpdated = new Date(lastUpdated).toLocaleDateString();
-	    Object.getSet(this, props, 'group', 'objectId', 'id', 'parent');
-	    this.level = () => {
-	      let level = -1;
-	      let curr = this;
-	      while(curr instanceof Cost) {
-	        level++;
-	        curr = curr.parent();
+	
+	    function groupMap(map, detailLists, listId) {
+	      for(let index = 0; index < detailLists[listId].length; index += 1) {
+	        const cabinet = detailLists[listId][index];
+	        const groupId = cabinet.group().id();
+	        if (map[groupId] === undefined) map[groupId] = {added: [], removed: []};
+	        map[groupId][listId].push(cabinet);
 	      }
-	      return level;
 	    }
+	
+	    function onLayoutChange(elem, detail) {
+	      const cabGroupMap = {};
+	      groupMap(cabGroupMap, detail.objects, 'removed');
+	      groupMap(cabGroupMap, detail.objects, 'added');
+	
+	      instance.groups.forEach((g) => {
+	        if (cabGroupMap[g.id()]) {
+	          g.objects.removeAll(cabGroupMap[g.id()].removed);
+	          g.objects.concatInPlace(cabGroupMap[g.id()].added);
+	        }
+	      });
+	      console.log('onlaychan', detail);
+	    }
+	    const initialVals = {
+	      name: name || `Room ${Room.count++}`,
+	      layout: new Layout2D()
+	    }
+	    initialVals.layout.onStateChange(onLayoutChange);
+	    Object.getSet(this, initialVals, 'groups');
+	    this.groups = [new Group(this)];
+	    this.addGroup = () => this.groups.push(new Group(this));
 	  }
-	}
+	};
+	Room.count = 0;
+	new Room();
 	
-	Cost.types = {};
-	
-	Cost.freeId = (group, id) => Object.values(Cost.group(group).defined).indexOf(id) === -1;
-	Cost.remove = (id) => Cost.get(id).remove();
-	
-	Cost.constructorId = (name) => name.replace(/Cost$/, '');
-	Cost.register = (clazz) => {
-	  Cost.types[Cost.constructorId(clazz.prototype.constructor.name)] = clazz;
-	  Cost.typeList = Object.keys(Cost.types).sort();
-	}
-	
-	Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
-	
-	module.exports = Cost
+	module.exports = Room;
 	
 });
 
 
-RequireJS.addFunction('./app-src/three-d/objects/matrix.js',
+RequireJS.addFunction('./app-src/objects/order.js',
 function (require, exports, module) {
 	
-const Approximate = require('../../../../../public/js/utils/approximate.js');
+
 	
-	function findRowColumnCount (array) {
-	  let rows = array.length;
-	  let columns = array[0].length;
-	  for (let i = 0; i < array.length; i++) {
-	    const row = array[i];
-	    columns = row.length > columns ? row.length : columns;
-	  }
-	  return {rows, columns};
-	}
+	const Room = require('./room.js');
 	
-	function columnValidator (min, max) {
-	  return (target, key, value) => {
-	    if (key > max || key < min) {
-	      throw new Error('An assignment error was made or you need to resize your matrix');
+	class Order {
+	  constructor(name, id) {
+	    if (id === null) this.loaded = false;
+	    else this.loaded = true;
+	    const initialVals = {
+	      name: name || ++Order.count,
+	      id: id || String.random(32),
 	    }
-	    if ((typeof value) !== 'number') {
-	      throw new Error('Matrix must be filled with numbers');
-	    }
-	    target[key] = value;
-	    return true;
+	    Object.getSet(this, initialVals, 'rooms');
+	    this.rooms = {};
 	  }
 	}
 	
-	function rowValidator () {
-	  return (target, key, value) => {
-	    if (Number.isNaN(Number.parseInt(key))) {
-	      throw new Error('You do not have access to the numerical attributes of a Matrix object, they are reserved for rows and cannot be modified');
+	Order.count = 0;
+	module.exports = Order
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/history.js',
+function (require, exports, module) {
+	
+class History {
+	  constructor() {
+	    let changes = [];
+	    let changesIndex = [];
+	
+	      this.addChange = (forward, back) => {
+	        changes = changes.slice(0, changesIndex);
+	        changes.push({forward, back});
+	        changesIndex++;
+	      }
+	
+	    this.getSet = (obj, initialVals, ...attrs) => {
+	      attrs = Object.getSet(obj, initialVals, ...attrs);
+	      const objFuncs = {};
+	      attrs.forEach((attr) => {
+	        objFuncs[attr] = obj[attr];
+	        obj[attr] = (value) => {
+	          if (value !== undefined) {
+	            const oldValue = objFuncs[attr]();
+	            const back = () => objFuncs[attr](oldValue);
+	            const forward = () => objFuncs[attr](value);
+	            this.addChange(obj, forward, back);
+	          }
+	          return objFuncs[attr](value);
+	        }
+	      });
 	    }
-	    target[key] = value;
-	    return true;
+	
+	    this.undo = () => {
+	      const change = changes[--changesIndex];
+	      change.back();
+	    }
+	
+	    this.redo = () => {
+	      const change = changes[++changesIndex];
+	      change.forward();
+	    }
+	
+	    this.canUndo =() => changesIndex > 0;
+	    this.canRedo = () => changeIndex < changes.length - 1;
 	  }
 	}
 	
-	class Matrix extends Array {
-	  constructor(values, rows, columns) {
+	module.exports = History;
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/display-svc.js',
+function (require, exports, module) {
+	class Register {
+	  constructor() {
+	    const registered = {};
+	    this.register = function (nameOobj, obj) {
+	      if ((typeof nameOobj) !== 'object') {
+	        registered[nameOobj] = obj;
+	      } else {
+	        const keys = Object.keys(nameOobj);
+	        for (let index = 0; index < keys.length; index += 1) {
+	          const key = keys[index];
+	          registered[key] = nameOobj[key];
+	        }
+	      }
+	    }
+	    this.get = (name) => registered[name];
+	  }
+	}
+	
+	module.exports = new Register();
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/divide-properties.js',
+function (require, exports, module) {
+	
+
+	class DivideProperties {
+	  constructor(length, center, rotation) {
+	    Object.getSet(this, {length, center, rotation})
+	  }
+	}
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/cabinet-opening-coordinates.js',
+function (require, exports, module) {
+	
+class CabinetOpeningCorrdinates {
+	  constructor(cabinet, config, sectionProperties) {
+	
+	    this.divide = sectionProperties.divide;
+	    this.setSection = sectionProperties.setSection;
+	    this.sections = sectionProperties.sections;
+	    this.vertical = sectionProperties.vertical;
+	    this.sectionProperties = () => sectionProperties;
+	    this.update = () => {
+	      let coords;
+	      if (config._Type === 'location') {
+	        coords = cabinet.evalObject(config.coordinates);
+	      } else {
+	        const right = cabinet.getAssembly(config.right);
+	        const left = cabinet.getAssembly(config.left);
+	        const top = cabinet.getAssembly(config.top);
+	        const bottom = cabinet.getAssembly(config.bottom);
+	
+	        const topMax = top.position().centerAdjust('y', '+z');
+	        const topMin = top.position().centerAdjust('y', '-z');
+	        const leftMax = left.position().centerAdjust('x', '+z');
+	        const leftMin = left.position().centerAdjust('x', '-z');
+	        const rightMin = right.position().centerAdjust('x', '-z');
+	        const rightMax = right.position().centerAdjust('x', '+z');
+	        const bottomMin = bottom.position().centerAdjust('y', '-z');
+	        const bottomMax = bottom.position().centerAdjust('y', '+z');
+	
+	        coords = {
+	          inner: [
+	            {x: leftMax, y: topMin, z: 0},
+	            {x: rightMin, y: topMin, z: 0},
+	            {x: rightMin, y: bottomMax, z: 0},
+	            {x: leftMax, y: bottomMax, z: 0}
+	          ],
+	          outer: [
+	            {x: leftMin, y: topMax, z: 0},
+	            {x: rightMax, y: topMax, z: 0},
+	            {x: rightMax, y: bottomMin, z: 0},
+	            {x: leftMin, y: bottomMin, z: 0}
+	          ]
+	        }
+	      }
+	      sectionProperties.updateCoordinates(coords);
+	      return coords;
+	    }
+	  }
+	}
+	
+	module.exports = CabinetOpeningCorrdinates;
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/displayManager.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	
+	class DisplayManager {
+	  constructor(displayId, listId, switchId, selected) {
+	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
+	    const id = String.random();
+	    const instance = this;
+	    this.list = (func) => {
+	      const list = [];
+	      const runFunc = (typeof func) === 'function';
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        let id = elem.id || String.random(7);
+	        elem.id = id;
+	        name = elem.getAttribute('name') || id;
+	        const item = {id, name, link: elem.getAttribute('link')};
+	        if (runFunc) func(elem);
+	        list.push(item);
+	      }
+	      return list;
+	    }
+	
+	    function updateActive(id) {
+	      const items = document.querySelectorAll('.display-manager-input');
+	      for (let index = 0; index < items.length; index += 1) {
+	        const elem = items[index];
+	        elem.getAttribute('display-id') === id ?
+	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
+	      }
+	    }
+	
+	    function open(id) {
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        if (elem.id === id) {
+	          const link = elem.getAttribute('link');
+	          if (link) {
+	            window.location.href = link;
+	            return;
+	          }
+	          elem.hidden = false;
+	        }
+	        else elem.hidden = true;
+	      }
+	      updateActive(id);
+	    }
+	
+	    this.open = open;
+	
+	    const children = du.id(displayId).children;
+	
+	    if (switchId) {
+	      du.on.match('click', `#${switchId}`, (target, event) => {
+	        const listElem = du.id(listId);
+	        listElem.hidden = !listElem.hidden;
+	      });
+	      document.addEventListener('click', (event) => {
+	        const listElem = du.id(listId);
+	        const target = event.target;
+	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
+	        if (!withinList && target.id !== switchId &&listElem)
+	          listElem.hidden = true;
+	      });
+	    }
+	    DisplayManager.instances[id] = this
+	    if ((typeof selected) === 'string') setTimeout(() => open(selected), 100);
+	    else if (children.length > 0) {
+	      this.list();
+	      open(children[0].id);
+	    }
+	    if (listId) {
+	      du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
+	    }
+	  }
+	}
+	
+	DisplayManager.instances = {};
+	DisplayManager.template = new $t('display-manager');
+	
+	du.on.match('click', '.display-manager-input', (target, event) => {
+	  const displayManager = du.find.up('.display-manager', target);
+	  const displayManagerId = displayManager.id;
+	  const displayId = target.getAttribute('display-id');
+	  DisplayManager.instances[displayManagerId].open(displayId);
+	});
+	module.exports = DisplayManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/information-bar.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	class InformationBar {
+	  constructor() {
+	    const container = du.create.element('div');
+	    container.className = 'information-bar';
+	
+	    this.show = () => container.hidden = false;
+	    this.hide = () => container.hidden = true;
+	    this.update = (html) => container.innerHTML = html;
+	
+	    document.body.append(container);
+	  }
+	}
+	module.exports = InformationBar
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/radio-display.js',
+function (require, exports, module) {
+	
+
+	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+	const InformationBar = require('./information-bar.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	class RadioDisplay {
+	  constructor(radioClass, groupAttr, alternateToggleClass) {
+	    const afterSwitchEvent = new CustomEvent('afterSwitch');
+	    const beforeSwitchEvent = new CustomEvent('beforeSwitch');
+	    const selector = (attrVal) => {
+	      return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
+	    }
+	
+	    const infoBar = new InformationBar();
+	
+	    function path () {
+	      let path = '';
+	      const info = du.find.downInfo(`.${radioClass}.open`, document.body, null, `.${radioClass}.close`);
+	      info.matches.forEach((obj) => {
+	        const header = obj.node.children[0];
+	        if (header && header.getBoundingClientRect().y < 8) {
+	          path += `${header.innerText}=>`
+	        }
+	      });
+	      return path;
+	    }
+	
+	    function triggerAlternateToggles(target) {
+	      if (alternateToggleClass) {
+	        const alterToggles = document.querySelectorAll(alternateToggleClass);
+	        alterToggles.forEach((elem) => elem.hidden = false);
+	        const closest = du.closest(alternateToggleClass, target);
+	        if (closest) closest.hidden = true;
+	      }
+	    }
+	    this.beforeSwitch = (func) => beforeSwitchEvent.on(func);
+	    this.afterSwitch = (func) => afterSwitchEvent.on(func);
+	
+	
+	    du.on.match('scroll', `*`, (target, event) => {
+	      infoBar.update(path());
+	    });
+	
+	    let previousHeader;
+	    du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
+	      const target = targetHeader.parentElement;
+	      const attrVal = target.getAttribute(groupAttr);
+	      const targetBody = target.children[1];
+	      const hidden = targetBody.hidden;
+	      targetBody.hidden = !hidden;
+	      beforeSwitchEvent.trigger(previousHeader, {previousHeader, targetHeader});
+	      if (hidden) {
+	        du.class.add(targetHeader, 'active');
+	        du.class.swap(target, 'open', 'close');
+	        const siblings = document.querySelectorAll(selector(attrVal));
+	        for (let index = 0; index < siblings.length; index += 1) {
+	          if (siblings[index] !== target) {
+	            const sibHeader = siblings[index].children[0];
+	            const sibBody = siblings[index].children[1];
+	            du.class.swap(siblings[index], 'close', 'open');
+	            sibBody.hidden = true;
+	            du.class.remove(sibHeader, 'active');
+	          }
+	        }
+	        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
+	        previousHeader = targetHeader;
+	      } else {
+	        du.class.swap(target, 'close', 'open');
+	        du.class.remove(targetHeader, 'active');
+	        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
+	        previousHeader = null;
+	      }
+	      infoBar.update(path());
+	    });
+	  }
+	}
+	module.exports = RadioDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	
+	const ToggleDisplayList = {};
+	ToggleDisplayList.class = 'toggle-display-list';
+	ToggleDisplayList.funcs = {};
+	
+	ToggleDisplayList.onShow = (displayId, func) => {
+	  if ((typeof func) === 'function') {
+	    if (ToggleDisplayList.funcs[displayId] === undefined) {
+	      ToggleDisplayList.funcs[displayId] = [];
+	    }
+	    ToggleDisplayList.funcs[displayId].push(func);
+	  }
+	}
+	
+	ToggleDisplayList.runFuncs = (displayId) => {
+	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
+	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
+	}
+	
+	ToggleDisplayList.toggle = function (elem, event) {
+	  const target = event.target;
+	  const children = elem.children;
+	  for (let index = 0; index < children.length; index += 1) {
+	    const child = children[index];
+	    if (target === child) {
+	      du.class.add(child, 'active');
+	      const displayId = child.getAttribute('display-id');
+	      du.id(displayId).hidden = false;
+	      ToggleDisplayList.runFuncs(displayId);
+	    } else {
+	      du.class.remove(child, 'active');
+	      du.id(child.getAttribute('display-id')).hidden = true;
+	    }
+	  }
+	}
+	
+	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
+	
+	module.exports = ToggleDisplayList;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/feature.js',
+function (require, exports, module) {
+	
+
+	const $t = require('../../../../public/js/utils/$t');
+	
+	class FeatureDisplay {
+	  constructor(assembly, parentSelector) {
+	    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
+	    this.refresh = () => {
+	      const container = document.querySelector(parentSelector);
+	      container.innerHTML = this.html;
+	    }
+	  }
+	}
+	FeatureDisplay.template = new $t('features');
+	module.exports = FeatureDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/cabinet.js',
+function (require, exports, module) {
+	
+
+	
+	const Show = require('../show.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const ThreeDMain = require('../displays/three-d-main.js');
+	const TwoDLayout = require('../two-d/layout');
+	const OpenSectionDisplay = require('./open-section.js');
+	const CabinetConfig = require('../config/cabinet-configs.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const { Object2d } = require('../objects/layout.js');//.Object2d;
+	const Inputs = require('../input/inputs.js');
+	const EPNTS = require('../../generated/EPNTS');
+	
+	
+	function getHtmlElemCabinet (elem) {
+	  const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
+	  return Cabinet.get(cabinetId);
+	}
+	
+	class CabinetDisplay {
+	  constructor(parentSelector, group) {
+	    let propId = 'Half Overlay';
+	    let displayId = String.random();
+	    const instance = this;
+	    this.propId = (id) => {
+	      if (id ===  undefined) return propId;
+	      propId = id;
+	    }
+	    function displayValue(val) {
+	      return new Measurement(val).display();
+	    }
+	    const getHeader = (cabinet, $index) =>
+	        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
+	    const showTypes = Show.listTypes();
+	    const getBody = (cabinet, $index) => {
+	      if (expandList.activeKey() === $index) {
+	        TwoDLayout.panZoom.once();
+	        ThreeDMain.update(cabinet);
+	      }
+	      const scope = {$index, cabinet, showTypes, OpenSectionDisplay};
+	      return CabinetDisplay.bodyTemplate.render(scope);
+	    }
+	
+	    function inputValidation(values) {
+	      // const validName = values.name !== undefined;
+	      // const validType = CabinetConfig.valid(values.type, values.id);
+	      if(true) return true;
+	      return {type: 'You must select a defined type.'};
+	    }
+	
+	    function updateLayout(target) {
+	      setTimeout(() => {
+	        const attr = target.name === 'thickness' ? 'height' : 'width';
+	        const cabinet = getHtmlElemCabinet(target);
+	        const obj2d = Object2d.get(cabinet.id());
+	        const value = new Measurement(target.value, true).decimal();
+	        console.log('new cab val', value);
+	        obj2d.topview()[attr](value);
+	        TwoDLayout.panZoom.once();
+	      }, 1000);
+	    }
+	
+	    du.on.match('change', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
+	    du.on.match('blur', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
+	
+	    function updateCabValue(cabinet, attr) {
+	      const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
+	      const input = du.find.down(`[name='${attr}']`, inputCnt);
+	      input.value = displayValue(cabinet[attr]());
+	    }
+	
+	    function removeFromLayout(elem, cabinet) {
+	      group.room().layout().removeByPayload(cabinet);
+	      TwoDLayout.panZoom.once();
+	    }
+	
+	    function linkLayout(cabinet, obj2d) {
+	      const topview = obj2d.topview();
+	      if (topview.width() !== cabinet.width()) {
+	        cabinet.width(topview.width());
+	        updateCabValue(cabinet, 'width');
+	      }
+	      if (topview.height() !== cabinet.thickness()) {
+	        cabinet.thickness(topview.height());
+	        updateCabValue(cabinet, 'thickness');
+	      }
+	    }
+	
+	    function updateObjLayout(cabinet) {
+	      const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
+	      obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
+	    }
+	
+	    const getObject = (values) => {
+	      const cabinet = CabinetConfig.get(group, values.type, values.propertyId, values.name || values.id);
+	      setTimeout(() => updateObjLayout(cabinet));
+	      return cabinet;
+	    };
+	    this.active = () => expandList.active();
+	    const expListProps = {
+	      list: group.objects,
+	      dontOpenOnAdd: true,
+	      type: 'top-add-list',
+	      inputTree:   CabinetConfig.inputTree(),
+	      parentSelector, getHeader, getBody, getObject, inputValidation,
+	      listElemLable: 'Cabinet'
+	    };
+	    const expandList = new ExpandableList(expListProps);
+	    expandList.afterRemoval(removeFromLayout);
+	    this.refresh = () => expandList.refresh();
+	
+	    const cabinetKey = (path) => {
+	      const split = path.split('.');
+	      const index = split[0];
+	      const key = split[1];
+	      const cabinet = expListProps.list[index];
+	      return {cabinet, key};
+	    }
+	
+	    const valueUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      const decimal = new Measurement(value, true).decimal();
+	      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : val);
+	      TwoDLayout.panZoom.once();
+	      ThreeDMain.update(cabKey.cabinet);
+	    }
+	
+	    const attrUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      cabKey.cabinet[cabKey.key](value);
+	      TwoDLayout.panZoom.once();
+	    }
+	
+	    const saveSuccess = () => console.log('success');
+	    const saveFail = () => console.log('failure');
+	    const save = (target) => {
+	      const index = target.getAttribute('index');
+	      const cabinet = expListProps.list[index];
+	      if (cabinet.name !== undefined) {
+	        Request.post(EPNTS.cabinet.add(cabinet.name()), cabinet.toJson(), saveSuccess, saveFail);
+	        console.log('saving');
+	      } else {
+	        alert('Please enter a name if you want to save the cabinet.')
+	      }
+	    }
+	
+	    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
+	    bind(`.cabinet-input`, valueUpdate,
+	                  {validation: Measurement.validation('(0,)')});
+	    bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
+	    du.on.match('click', '.save-cabinet-btn', save);
+	  }
+	}
+	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
+	CabinetDisplay.headTemplate = new $t('cabinet/head');
+	module.exports = CabinetDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/group.js',
+function (require, exports, module) {
+	
+
+	
+	const Group = require('../objects/group.js');
+	const PropertyConfig = require('../config/property/config.js');
+	const Properties = require('../config/properties.js');
+	const CabinetDisplay = require('./cabinet.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const ThreeDMain = require('../displays/three-d-main.js');
+	
+	const currentStyleState = {};
+	
+	function disableButton(values, dit, elem) {
+	  const nId = dit.node.constructor.decode(dit.root().id()).id;
+	  const currState = currentStyleState[nId];
+	  const rootId = dit.node.constructor.decode(dit.root().id()).id;
+	  const button = du.find(`button[root-id='${rootId}']`);
+	  if (button) button.hidden = Object.equals(currState, values);
+	  const headers = du.find.downAll('.group-header', du.find.up('.group-cnt', button));
+	  headers.forEach((header) => {
+	    header.hidden = currState.style !== header.getAttribute("cab-style");
+	    if (!header.hidden) du.find.down('.group-key', header).innerText = currState.subStyle;
+	  });
+	}
+	
+	class GroupDisplay extends Lookup {
+	  constructor(group) {
 	    super();
-	    if (!rows || !columns) {
-	      const max = findRowColumnCount(values);
-	      if (!rows) rows = max.rows;
-	      if (!columns) columns = max.columns;
+	    function setCurrentStyleState(values) {
+	      values = values || dit.values();
+	      const nId = dit.node.constructor.decode(dit.root().id()).id;
+	      currentStyleState[nId] = values;
+	      disableButton(values, dit);
+	      return values;
+	    }
+	    function onCabinetStyleSubmit(values) {
+	      setCurrentStyleState(values);
+	      group.propertyConfig.set(values.style, values.subStyle);
+	      ThreeDMain.update();
 	    }
 	
-	    for (let i = 0; i < rows; i +=1) {
-	      this[i] = new Proxy([], { set: columnValidator(0, columns) });
-	      for (let j = 0; j < columns; j ++) {
-	        const value = values && values[i] && values[i][j];
-	        this[i][j] = !value ? 0 : value;
+	    let initialized = false;
+	    function initializeDitButton() {
+	      if (initialized) disableButton(dit.values(), dit);
+	      else {
+	        disableButton(setCurrentStyleState(), dit);
+	        initialized = true;
 	      }
 	    }
-	
-	    new Proxy(this, {set: rowValidator()});
-	
-	    this.rows = () => rows;
-	    this.columns = () => columns;
-	
-	    this.remove = (rowIndex, columnIndex) => {
-	      if ((typeof rowIndex) !== 'number') rowIndex = Number.MAX_SAFE_INTEGER;
-	      else rowIndex = Math.mod(rowIndex, rows);
-	      if ((typeof columnIndex) !== 'number') columnIndex = Number.MAX_SAFE_INTEGER;
-	      else columnIndex = Math.mod(columnIndex, columns);
-	
-	      const rowLimit = rowIndex > -1 && rowIndex < rows ? rows - 1 : rows;
-	      const columnLimit = columnIndex > -1 && columnIndex < columns ? columns - 1 : columns;
-	      let matrix = new Matrix(null, rowLimit, columnLimit);
-	      for (let i = 0; i < rows; i++) {
-	        if (i !== rowIndex) {
-	          const rowI = i < rowIndex ? i : i - 1;
-	          for (let j = 0; j < columns; j++) {
-	            if (j !== columnIndex) {
-	              const columnJ = j < columnIndex ? j : j - 1;
-	              matrix[rowI][columnJ] = this[i][j];
-	            }
-	          }
-	        }
-	      }
-	      return matrix;
+	    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleSubmit, group.propertyConfig);
+	    function styleSelector() {
+	      return dit.root().payload().html();
+	    }
+	    function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
+	    this.html = () => {
+	      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this});
+	    }
+	    this.bodyHtml = () =>  {
+	      setTimeout(initializeDitButton, 200);
+	      return GroupDisplay.bodyTemplate.render({group, propertyHtml});
 	    }
 	
-	    this.replaceRow = (rowIndex, values) => {
-	      rowIndex = Math.mod(rowIndex, rows);
-	
-	      for (let j = 0; j < columns; j++) {
-	        this[rowIndex][j] = values[j];
-	      }
-	    }
-	
-	    this.replaceColumn = (columnIndex, values) => {
-	      columnIndex = Math.mod(columnIndex, rows);
-	
-	      for (let i = 0; i < rows; i++) {
-	        this[i][columnIndex] = values[i];
-	      }
-	    }
-	
-	    this.minor = (index) => {
-	      return this.remove(0, index);
-	    }
-	
-	    this.determinate = () => {
-	      if (rows === 2) return this[0][0] * this[1][1] - this[0][1] * this[1][0];
-	
-	      let sign = 1;
-	      let sum = 0;
-	      let colNum = 0;
-	      while (colNum < columns) {
-	        const minor = this.minor(colNum);
-	        const determinate = minor.determinate();
-	        sum += this[0][colNum++] * determinate * sign;
-	        sign *= -1;
-	      }
-	      return sum;
-	    }
-	
-	    this.solve = (answer) => {
-	      const solution = new Matrix(null, columns, 1);
-	      answer ||= new Array(columns).fill(0);
-	      const determinate = this.determinate();
-	      for (let j = 0; j < columns; j++) {
-	        const matrix = this.copy()
-	        matrix.replaceColumn(j, answer);
-	        const matrixDeterminate = matrix.determinate();
-	        solution[j][0] = matrixDeterminate / determinate;
-	      }
-	      return solution;
-	    }
-	
-	    this.dot = (other) => {
-	      if (this.columns() !== other.rows()) throw new Error('this.columns() and other.rows() much match for a dot product');
-	      const result = new Matrix(null, this.rows(), other.columns());
-	      let ri = 0;
-	      let rj = 0;
-	      for (let i = 0; i < rows; i++) {
-	        for (let oj = 0; oj < other.columns(); oj++) {
-	          let value = 0;
-	          for (let j = 0; j < columns; j++) {
-	            value = value + this[i][j] * other[j][oj];
-	          }
-	          result[i][oj] = value;
-	        }
-	      }
-	      return result;
-	    }
-	
-	    this.scale = (coef, oddOnly) => {
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < columns; j++) {
-	          if (!oddOnly || (i + j) % 2 === 1) {
-	            this[i][j] = this[i][j] * coef;
-	          }
-	        }
-	      }
-	    }
-	
-	    this.approximate = (accuracy) => {
-	      const approximate = Approximate.new(accuracy);
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < columns; j++) {
-	          this[i][j] = approximate(this[i][j]);
-	        }
-	      }
-	    }
-	
-	    this.transpose = () => {
-	      const rows = this.rows();
-	      const cols = this.columns();
-	      const result = new Matrix(null, cols, rows);
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < cols; j++) {
-	          result[j][i] = this[i][j];
-	        }
-	      }
-	      return result;
-	    }
-	
-	    this.diagonal = () => {
-	      const rows = this.rows();
-	      const cols = this.columns();
-	      const result = new Matrix(null, cols, rows);
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < cols; j++) {
-	          if (i + j !== rows - 1) {
-	            result[rows - i - 1][cols - j - 1] = this[i][j];
-	          } else {
-	            result[i][j] = this[i][j];
-	          }
-	        }
-	      }
-	      return result;
-	    }
-	
-	    this.multiply = (other) => {
-	      const result = new Matrix(null, this.rows(), other.columns());
-	      for (let i = 0; i < this.rows(); i++) {
-	        for (let j = 0; j < this.columns(); j++) {
-	          let sum = 0
-	          for (let k = 0; k < other.rows(); k++) {
-	            sum = sum + this[i][k] * other[k][j]
-	            result[i][j] = sum
-	          }
-	        }
-	      }
-	      return result;
-	    }
-	
-	    this.inverse = () => {
-	      let inverse;
-	      if (this.rows() === 2) {
-	        inverse = this.diagonal();
-	        inverse.scale(-1, true);
-	        inverse.scale(1/this.determinate());
-	        return inverse;
-	      }
-	
-	      const rows = this.rows();
-	      const cols = this.columns();
-	      inverse = new Matrix(null, rows, columns);
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < cols; j++) {
-	          const minor = this.remove(i, j);
-	          const value = minor.determinate();
-	          inverse[i][j] = value;
-	        }
-	      }
-	      inverse.scale(-1, true);
-	      inverse = inverse.transpose();
-	      inverse.scale(1/this.determinate());
-	      return inverse;
-	    }
-	
-	    this.toString = () => {
-	      let str = '';
-	      for (let i = 0; i < rows; i++) {
-	        str += '|'
-	        for (let j = 0; j < columns; j++) {
-	          str += `${this[i][j]}  `;
-	        }
-	        str = str.substring(0, str.length - 2) + '|\n'
-	      }
-	      return str.substring(0, str.length - 1);
-	    }
-	
-	    this.equals = (other) => {
-	      if (other.rows() !== rows || other.columns() !== columns) return false;
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < columns; j++) {
-	          if (other[i][j] !== this[i][j]) return false;
-	        }
-	      }
-	      return true;
-	    }
-	
-	    this.copy = () => new Matrix(this);
-	
+	    this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
+	    this.cabinet = () => this.cabinetDisplay().active();
 	  }
 	}
 	
-	Matrix.identity = (rows) => {
-	  let identity = new Matrix(null, rows, rows);
-	  for (let i = 0; i < rows; i++) {
-	    for (let j = 0; j < rows; j++) {
-	      if (i === j) identity[i][i] = 1;
-	      else identity[i][j] = 0;
+	GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
+	  const dit = new DecisionInputTree(undefined, {buttonText: 'Change'});
+	  dit.onChange(disableButton);
+	  dit.onSubmit(onSubmit);
+	  const propertyConfig = new PropertyConfig();
+	  const styles = propertyConfig.cabinetStyles();
+	  const cabinetStyles = new Select({
+	    name: 'style',
+	    list: styles,
+	    label: 'Style',
+	    value: propertyConfigInst.cabinetStyle()
+	  });
+	
+	  const hasFrame = new Select({
+	      name: 'FrameStyle',
+	      list: ['Frameless', 'Framed', 'Frame Only'],
+	      value: 'Frameless'
+	    });
+	
+	  const style = dit.branch('style', [hasFrame, cabinetStyles]);
+	  styles.forEach((styleName) => {
+	    const properties = Properties.groupList(styleName);
+	    const selectObj = Object.keys(properties);
+	    const select = new Select({
+	      name: 'subStyle',
+	      list: selectObj,
+	      value: propertyConfigInst.cabinetStyleName()
+	    });
+	    const condtionalPayload = new DecisionInputTree.ValueCondition('style', [styleName], [select]);
+	    style.conditional(styleName, condtionalPayload);
+	  });
+	
+	  return dit;
+	}
+	
+	du.on.match('click', `.group-display-header`, (target) => {
+	  const allBodys = du.find.all('.group-display-body');
+	  for (let index = 0; index < allBodys.length; index += 1) {
+	    allBodys[index].hidden = true;
+	  }
+	  const allHeaders = du.find.all('.group-display-header');
+	  for (let index = 0; index < allHeaders.length; index += 1) {
+	    du.class.remove(allHeaders[index], 'active');
+	  }
+	  du.class.add(target, 'active');
+	  const body = du.find.closest('.group-display-body', target);
+	  const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
+	  const groupDisplay = GroupDisplay.get(groupDisplayId);
+	  body.innerHTML = groupDisplay.bodyHtml();
+	  groupDisplay.cabinetDisplay.refresh();
+	  body.hidden = false;
+	});
+	
+	GroupDisplay.valueUpdate = (target) => {
+	  const group = Group.get(target.getAttribute('group-id'));
+	  const value = target.value;
+	  group.name(value);
+	}
+	
+	du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
+	
+	GroupDisplay.headTemplate = new $t('group/head');
+	GroupDisplay.bodyTemplate = new $t('group/body');
+	GroupDisplay.propertyMenuTemplate = new $t('properties/property-menu');
+	module.exports = GroupDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/pan-zoom.js',
+function (require, exports, module) {
+	
+// Took thiss code from https://stackoverflow.com/a/33929456
+	function panZoom(canvas, draw) {
+	  let mrx, mry;
+	  const eventFuncs = [];
+	  const instance = this;
+	
+	  this.on = (eventName) => {
+	    if (eventFuncs[eventName] === undefined) eventFuncs[eventName] = [];
+	    return (func) => {
+	      if ((typeof func) === 'function') {
+	        eventFuncs[eventName].push(func);
+	      }
 	    }
 	  }
-	  return identity;
-	}
+	  let sleeping = null;
+	  let nextUpdateId = 0;
+	  this.sleep = () => sleeping = true;
+	  this.wake = () => {
+	    if (sleeping) {
+	      sleeping = false;
+	      requestAnimationFrame(() => update(nextUpdateId));
+	    }
+	  };
+	  this.once = () => {
+	    requestAnimationFrame(() => update(nextUpdateId, true))
+	  };
 	
-	Matrix.rotation = function (roll, pitch, yaw) {
-	  if (roll instanceof Object) {
-	    pitch = Math.toRadians(roll.y);
-	    yaw = Math.toRadians(roll.z);
-	    roll = Math.toRadians(roll.x);
+	  this.onMove = this.on('move');
+	  this.onClick = this.on('click');
+	  this.onMousedown = this.on('mousedown');
+	  this.onMouseup = this.on('mouseup');
+	
+	  function eventObject(eventName, event) {
+	    let x  =  mouse.rx;
+	    let y = mouse.ry;
+	    const dt = displayTransform;
+	    x -= dt.x;
+	    y -= dt.y;
+	    // screenX and screen Y are the screen coordinates.
+	    screenX = event.pageX;//dt.scale*(x * dt.matrix[0] + y * dt.matrix[2])+dt.cox;
+	    screenY = event.pageY;//dt.scale*(x * dt.matrix[1] + y * dt.matrix[3])+dt.coy;
+	    return {
+	      eventName, screenX, screenY,
+	      imageX: mouse.rx,
+	      imageY: mouse.ry,
+	      dx: mrx,
+	      dy: mry,
+	    };
 	  }
-	  roll ||= 0;
-	  pitch ||= 0;
-	  yaw ||= 0;
-	  var cosa = Math.cos(yaw);
-	  var sina = Math.sin(yaw);
 	
-	  var cosb = Math.cos(pitch);
-	  var sinb = Math.sin(pitch);
+	  function runOn(type, event) {
+	    const dt = displayTransform;
+	    let performingFunction = false;
+	    const funcs = eventFuncs[type];
+	    const eventObj  = eventObject(type, event);
+	    for (let index = 0; !performingFunction && index < funcs.length; index += 1) {
+	      performingFunction = funcs[index](eventObj, event);
+	    }
+	    return performingFunction;
+	  }
 	
-	  var cosc = -1*Math.cos(roll);
-	  var sinc = -1*Math.sin(roll);
+	  var ctx = canvas.getContext("2d");
+	  var mouse = {
+	      x : 0,
+	      y : 0,
+	      w : 0,
+	      alt : false,
+	      shift : false,
+	      ctrl : false,
+	      buttonLastRaw : 0, // user modified value
+	      buttonRaw : 0,
+	      over : false,
+	      buttons : [1, 2, 4, 6, 5, 3], // masks for setting and clearing button raw bits;
+	  };
+	  let lastMouseMovementId = 0;
+	  function mouseMove(event) {
+	      const mouseMovementId = ++lastMouseMovementId;
+	      mouse.x = event.offsetX;
+	      mouse.y = event.offsetY;
+	      if (mouse.x === undefined) {
+	          mouse.x = event.clientX;
+	          mouse.y = event.clientY;
+	      }
+	      runOn('move', event);
+	      mouse.alt = event.altKey;
+	      mouse.shift = event.shiftKey;
+	      mouse.ctrl = event.ctrlKey;
+	      if (event.type === "mousedown") {
+	        if (!runOn('mousedown', event))  {
+	          event.preventDefault()
+	          mouse.buttonRaw |= mouse.buttons[event.which-1];
+	        }
+	      } else if (event.type === "mouseup") {
+	        if (!runOn('mouseup', event)) {
+	          mouse.buttonRaw &= mouse.buttons[event.which + 2];
+	        }
+	      } else if (event.type === "mouseout") {
+	          mouse.buttonRaw = 0;
+	          mouse.over = false;
+	      } else if (event.type === "mouseover") {
+	          mouse.over = true;
+	      } else if (event.type === "mousewheel") {
+	          event.preventDefault()
+	          mouse.w = event.wheelDelta;
+	      } else if (event.type === "DOMMouseScroll") { // FF you pedantic doffus
+	         mouse.w = -event.detail;
+	      }
+	      instance.wake();
+	      setTimeout(() => {
+	        if (mouseMovementId === lastMouseMovementId) instance.sleep()
+	      }, 500);
+	  }
 	
-	  var Axx = cosa*cosb;
-	  var Axy = cosa*sinb*sinc - sina*cosc;
-	  var Axz = cosa*sinb*cosc + sina*sinc;
+	  function setupMouse(e) {
+	      e.addEventListener('mousemove', mouseMove);
+	      e.addEventListener('mousedown', mouseMove);
+	      e.addEventListener('mouseup', mouseMove);
+	      e.addEventListener('mouseout', mouseMove);
+	      e.addEventListener('mouseover', mouseMove);
+	      e.addEventListener('mousewheel', mouseMove);
+	      e.addEventListener('DOMMouseScroll', mouseMove); // fire fox
 	
-	  var Ayx = sina*cosb;
-	  var Ayy = sina*sinb*sinc + cosa*cosc;
-	  var Ayz = sina*sinb*cosc - cosa*sinc;
+	      e.addEventListener("contextmenu", function (e) {
+	          e.preventDefault();
+	      }, false);
+	  }
+	  setupMouse(canvas);
 	
-	  var Azx = -sinb;
-	  var Azy = cosb*sinc;
-	  var Azz = cosb*cosc;
+	  let transformCount = 0;
+	  const round = (val) => Math.round((val*100)/displayTransform.scale) / 100;
+	  const print = (...attrs) => {
+	    if (transformCount++ % 100 !== 0) return;
+	    let str = '';
+	    for (let index = 0; index < attrs.length; index += 1) {
+	      const attr = attrs[index];
+	      str += `${attr}: ${round(displayTransform[attr])} `;
+	    }
+	  }
+	  this.displayTransform = displayTransform;
+	  // terms.
+	  // Real space, real, r (prefix) refers to the transformed canvas space.
+	  // c (prefix), chase is the value that chases a requiered value
+	  var displayTransform = {
+	      x:0,
+	      y:0,
+	      ox:0,
+	      oy:0,
+	      scale:1,
+	      rotate:0,
+	      cx:0,  // chase values Hold the actual display
+	      cy:0,
+	      cox:0,
+	      coy:0,
+	      cscale:1,
+	      crotate:0,
+	      dx:0,  // deltat values
+	      dy:0,
+	      dox:0,
+	      doy:0,
+	      dscale:1,
+	      drotate:0,
+	      drag:0.2,  // drag for movements
+	      accel:0.7, // acceleration
+	      matrix:[0,0,0,0,0,0], // main matrix
+	      invMatrix:[0,0,0,0,0,0], // invers matrix;
+	      mouseX:0,
+	      mouseY:0,
+	      ctx:ctx,
+	      setTransform:function(){
+	          var m = this.matrix;
+	          var i = 0;
+	          const dt = displayTransform;
+	          print('x', 'y',  'dx', 'dy', 'mouseX', 'mouseY', 'scale');
+	          this.ctx.setTransform(m[i++],m[i++],m[i++],m[i++],m[i++],m[i++]);
+	      },
+	      setHome:function(){
+	          this.ctx.setTransform(1,0,0,1,0,0);
 	
-	  return new Matrix([
-	    [Axx, Axy, Axz],
-	    [Ayx, Ayy, Ayz],
-	    [Azx, Azy, Azz],
-	  ]);
+	      },
+	      update:function(){
+	          // smooth all movement out. drag and accel control how this moves
+	          // acceleration
+	          this.dx += (this.x-this.cx)*this.accel;
+	          this.dy += (this.y-this.cy)*this.accel;
+	          this.dox += (this.ox-this.cox)*this.accel;
+	          this.doy += (this.oy-this.coy)*this.accel;
+	          this.dscale += (this.scale-this.cscale)*this.accel;
+	          this.drotate += (this.rotate-this.crotate)*this.accel;
+	          // drag
+	          this.dx *= this.drag;
+	          this.dy *= this.drag;
+	          this.dox *= this.drag;
+	          this.doy *= this.drag;
+	          this.dscale *= this.drag;
+	          this.drotate *= this.drag;
+	          // set the chase values. Chase chases the requiered values
+	          this.cx += this.dx;
+	          this.cy += this.dy;
+	          this.cox += this.dox;
+	          this.coy += this.doy;
+	          this.cscale += this.dscale;
+	          this.crotate += this.drotate;
+	
+	          // create the display matrix
+	          this.matrix[0] = Math.cos(this.crotate)*this.cscale;
+	          this.matrix[1] = Math.sin(this.crotate)*this.cscale;
+	          this.matrix[2] =  - this.matrix[1];
+	          this.matrix[3] = this.matrix[0];
+	
+	          // set the coords relative to the origin
+	          this.matrix[4] = -(this.cx * this.matrix[0] + this.cy * this.matrix[2])+this.cox;
+	          this.matrix[5] = -(this.cx * this.matrix[1] + this.cy * this.matrix[3])+this.coy;
+	
+	
+	          // create invers matrix
+	          var det = (this.matrix[0] * this.matrix[3] - this.matrix[1] * this.matrix[2]);
+	          this.invMatrix[0] = this.matrix[3] / det;
+	          this.invMatrix[1] =  - this.matrix[1] / det;
+	          this.invMatrix[2] =  - this.matrix[2] / det;
+	          this.invMatrix[3] = this.matrix[0] / det;
+	
+	          // check for mouse. Do controls and get real position of mouse.
+	          if(mouse !== undefined){  // if there is a mouse get the real cavas coordinates of the mouse
+	              let mdx = mouse.x-mouse.oldX; // get the mouse movement
+	              let mdy = mouse.y-mouse.oldY;
+	              mrx = (mdx * this.invMatrix[0] + mdy * this.invMatrix[2]);
+	              mry = (mdx * this.invMatrix[1] + mdy * this.invMatrix[3]);
+	              if(mouse.oldX !== undefined && (mouse.buttonRaw & 1)===1){ // check if panning (middle button)
+	                  // get the movement in real space
+	                  this.x -= mrx;
+	                  this.y -= mry;
+	              }
+	              // do the zoom with mouse wheel
+	              if(mouse.w !== undefined && mouse.w !== 0){
+	                  this.ox = mouse.x;
+	                  this.oy = mouse.y;
+	                  this.x = this.mouseX;
+	                  this.y = this.mouseY;
+	                  /* Special note from answer */
+	                  // comment out the following is you change drag and accel
+	                  // and the zoom does not feel right (lagging and not
+	                  // zooming around the mouse
+	                  /*
+	                  this.cox = mouse.x;
+	                  this.coy = mouse.y;
+	                  this.cx = this.mouseX;
+	                  this.cy = this.mouseY;
+	                  */
+	                  if(mouse.w > 0){ // zoom in
+	                      this.scale *= 1.1;
+	                      mouse.w -= 20;
+	                      if(mouse.w < 0){
+	                          mouse.w = 0;
+	                      }
+	                  }
+	                  if(mouse.w < 0){ // zoom out
+	                      this.scale *= 1/1.1;
+	                      mouse.w += 20;
+	                      if(mouse.w > 0){
+	                          mouse.w = 0;
+	                      }
+	                  }
+	
+	              }
+	              // get the real mouse position
+	              var screenX = (mouse.x - this.cox);
+	              var screenY = (mouse.y - this.coy);
+	              this.screenX = screenX;
+	              this.screenY = screenY;
+	              this.mouseX = this.cx + (screenX * this.invMatrix[0] + screenY * this.invMatrix[2]);
+	              this.mouseY = this.cy + (screenX * this.invMatrix[1] + screenY * this.invMatrix[3]);
+	              mouse.rx = this.mouseX;  // add the coordinates to the mouse. r is for real
+	              mouse.ry = this.mouseY;
+	              // save old mouse position
+	              mouse.oldX = mouse.x;
+	              mouse.oldY = mouse.y;
+	          }
+	
+	      }
+	  }
+	  // image to show
+	  var img = new Image();
+	  img.src = "https://upload.wikimedia.org/wikipedia/commons/e/e5/Fiat_500_in_Emilia-Romagna.jpg"
+	  // set up font
+	  ctx.font = "14px verdana";
+	  ctx.textAlign = "center";
+	  ctx.textBaseline = "middle";
+	  // timer for stuff
+	  var timer =0;
+	  function update(updateId, once){
+	    if (nextUpdateId !== updateId) return;
+	      nextUpdateId++;
+	      timer += 1; // update timere
+	      // update the transform
+	      displayTransform.update();
+	      // set home transform to clear the screem
+	      displayTransform.setHome();
+	      ctx.clearRect(0,0,canvas.width,canvas.height);
+	      // if the image loaded show it
+	      if(img.complete){
+	        displayTransform.setTransform();
+	        draw(canvas);
+	        ctx.fillStyle = "white";
+	        // if(Math.floor(timer/100)%2 === 0){
+	        //     ctx.fillText("Left but to pan",mouse.rx,mouse.ry);
+	        // }else{
+	        //     ctx.fillText("Wheel to zoom",mouse.rx,mouse.ry);
+	        // }
+	    }else{
+	        // waiting for image to load
+	        displayTransform.setTransform();
+	        ctx.fillText("Loading image...",100,100);
+	
+	    }
+	    if(mouse.buttonRaw === 4){ // right click to return to homw
+	         displayTransform.x = 0;
+	         displayTransform.y = 0;
+	         displayTransform.scale = 1;
+	         displayTransform.rotate = 0;
+	         displayTransform.ox = 0;
+	         displayTransform.oy = 0;
+	     }
+	    // reaquest next frame
+	    if (sleeping === false) {
+	      if (once) sleeping = true;
+	      setTimeout(() => requestAnimationFrame(() => update(nextUpdateId)), 10);
+	    }
+	  }
+	  update(nextUpdateId); // start it happening
+	
+	  this.centerOn = function(x, y) {
+	    displayTransform.scale = 1;
+	    displayTransform.x = x - (canvas.width / 2) - displayTransform.x - displayTransform.dx;
+	    displayTransform.y = y - (canvas.height / 2) - displayTransform.y - displayTransform.dy;
+	  };
+	
+	  return this;
 	}
 	
-	module.exports = Matrix;
+	module.exports = panZoom;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/draw.js',
+function (require, exports, module) {
+	
+const Circle2d = require('./objects/circle');
+	const Line2d = require('./objects/line');
+	const LineMeasurement2d = require('./objects/line-measurement');
+	
+	class Draw2d {
+	  constructor(canvas) {
+	    const ctx = canvas.getContext('2d');
+	
+	    function draw(object, color, width) {
+	      if (object === undefined) return;
+	      if (Array.isArray(object)) {
+	        for (let index = 0; index < object.length; index += 1)
+	          draw(object[index], color, width);
+	        return;
+	      }
+	      switch (object.constructor.name) {
+	        case 'Line2d':
+	          draw.line(object, color, width);
+	          break;
+	        case 'Circle2d':
+	          draw.circle(object, color, width);
+	          break;
+	        case 'Plane2d':
+	          draw.plane(object, color, width);
+	          break;
+	        case 'Polygon2d':
+	          draw.polygon(object, color, width);
+	          break;
+	        case 'Square2d':
+	          draw.square(object, color, width);
+	          break;
+	        case 'LineMeasurement2d':
+	          draw.measurement(object, color, width);
+	          break;
+	        default:
+	          console.error(`Cannot Draw '${object.constructor.name}'`);
+	      }
+	    }
+	
+	    draw.canvas = () => canvas;
+	    draw.ctx = () => ctx;
+	    draw.beginPath = () => ctx.beginPath();
+	    draw.moveTo = () => ctx.moveTo();
+	
+	    draw.clear = () => {
+	      ctx.save();
+	      ctx.setTransform(1, 0, 0, 1, 0, 0);
+	      ctx.clearRect(0, 0, canvas.width, canvas.height);
+	      ctx.restore();
+	    }
+	    draw.line = (line, color, width, doNotMeasure) => {
+	      if (line === undefined) return;
+	      color = color ||  'black';
+	      width = width || 10;
+	      const measurePoints = line.measureTo();
+	      ctx.beginPath();
+	      ctx.strokeStyle = color;
+	      ctx.lineWidth = width;
+	      ctx.moveTo(line.startVertex().x(), line.startVertex().y());
+	      ctx.lineTo(line.endVertex().x(), line.endVertex().y());
+	      ctx.stroke();
+	    }
+	
+	    draw.plane = (plane, color, width) => {
+	      if (plane === undefined) return;
+	      color = color ||  'black';
+	      width = width || .1;
+	      plane.getLines().forEach((line) => draw.line(line, color, width));
+	    }
+	
+	    draw.polygon = (poly, color, width) => {
+	      if (poly === undefined) return;
+	      color = color ||  'black';
+	      width = width || .1;
+	      poly.lines().forEach((line) => draw.line(line, color, width));
+	      if ((typeof poly.getTextInfo) === 'function') {
+	        ctx.save();
+	        const info = poly.getTextInfo();
+	        ctx.translate(info.center.x(), info.center.y());
+	        ctx.rotate(info.radians);
+	        ctx.beginPath();
+	        ctx.lineWidth = 4;
+	        ctx.strokeStyle = 'black';
+	        ctx.fillStyle =  'black';
+	        const text = info.limit === undefined ? info.text : info.text.substring(0, info.limit);
+	        ctx.fillText(text, info.x, info.y, info.maxWidth);
+	        ctx.stroke()
+	        ctx.restore();
+	      }
+	    }
+	
+	    draw.square = (square, color, text) => {
+	      ctx.save();
+	      ctx.beginPath();
+	      ctx.lineWidth = 2;
+	      ctx.strokeStyle = 'black';
+	      ctx.fillStyle = color;
+	
+	      const center = square.center();
+	      ctx.translate(center.x(), center.y());
+	      ctx.rotate(square.radians());
+	      ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
+	      ctx.stroke();
+	      ctx.fill();
+	
+	      if (text) {
+	        ctx.beginPath();
+	        ctx.lineWidth = 4;
+	        ctx.strokeStyle = 'black';
+	        ctx.fillStyle =  'black';
+	        ctx.fillText(text, 0, square.height() / 4, square.width());
+	        ctx.stroke()
+	      }
+	
+	      ctx.restore();
+	    }
+	
+	    draw.text = (text, center, width, color, maxWidth) => {
+	      ctx.beginPath();
+	      ctx.lineWidth = width || 4;
+	      ctx.strokeStyle = color || 'black';
+	      ctx.fillStyle =  color || 'black';
+	      ctx.font = width + "px Arial";
+	      ctx.fillText(text, center.x, center.y, maxWidth);
+	      ctx.stroke()
+	    }
+	
+	    draw.circle = (circle, lineColor, fillColor, lineWidth) => {
+	      const center = circle.center();
+	      ctx.beginPath();
+	      ctx.lineWidth = lineWidth || 2;
+	      ctx.strokeStyle = lineColor || 'black';
+	      ctx.fillStyle = fillColor || 'white';
+	      ctx.arc(center.x(),center.y(), circle.radius(),0, 2*Math.PI);
+	      ctx.stroke();
+	      ctx.fill();
+	    }
+	
+	    const blank = 4;
+	    const hblank = blank/2;
+	    function drawMeasurementLabel(line, measurement) {
+	      if (measurement === undefined) return;
+	      const ctx = draw.ctx();
+	      const midpoint = line.midpoint();
+	
+	      ctx.save();
+	      ctx.lineWidth = 0;
+	      const length = measurement.display();
+	      const textLength = length.length;
+	      ctx.translate(midpoint.x(), midpoint.y());
+	      ctx.rotate(line.radians());
+	      ctx.beginPath();
+	      ctx.fillStyle = "white";
+	      ctx.strokeStyle = 'white';
+	      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
+	      ctx.fill();
+	      ctx.stroke();
+	
+	      ctx.beginPath();
+	      ctx.font = (Math.abs((Math.log(Math.floor(line.length() * 10)))) || .1) + "px Arial";
+	      ctx.lineWidth = .2;
+	      ctx.strokeStyle = 'black';
+	      ctx.fillStyle =  'black';
+	      ctx.fillText(length, 0, 0);
+	      ctx.stroke()
+	      ctx.restore();
+	    }
+	
+	    draw.measurement = (measurement, color, textWidth) => {
+	      const measurementColor = color || 'grey';
+	      const measurementLineWidth = '.1';
+	      const lines = measurement.I();
+	      try {
+	        const winner = lines.furtherLine();
+	        draw.beginPath();
+	        draw.line(winner.startLine, measurementColor, measurementLineWidth, true);
+	        draw.line(winner.endLine, measurementColor, measurementLineWidth, true);
+	        draw.line(winner, measurementColor, measurementLineWidth, true);
+	        drawMeasurementLabel(winner, measurement);
+	      } catch (e) {
+	        console.error('Measurement render error:', e);
+	      }
+	    }
+	
+	    return draw;
+	  }
+	}
+	
+	module.exports = Draw2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/three-d-model.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../public/js/3d-modeling/csg');
+	
+	const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
+	const Polygon3D = require('./objects/polygon');
+	const Assembly = require('../objects/assembly/assembly');
+	const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
+	const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
+	const pull = require('./models/pull.js');
+	const drawerBox = require('./models/drawer-box.js');
+	const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
+	const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+	
+	const colors = {
+	  indianred: [205, 92, 92],
+	  lightcoral: [240, 128, 128],
+	  salmon: [250, 128, 114],
+	  darksalmon: [233, 150, 122],
+	  lightsalmon: [255, 160, 122],
+	  white: [255, 255, 255],
+	  silver: [192, 192, 192],
+	  gray: [128, 128, 128],
+	  black: [0, 0, 0],
+	  red: [255, 0, 0],
+	  maroon: [128, 0, 0],
+	  yellow: [255, 255, 0],
+	  olive: [128, 128, 0],
+	  lime: [0, 255, 0],
+	  green: [0, 128, 0],
+	  aqua: [0, 255, 255],
+	  teal: [0, 128, 128],
+	  blue: [0, 0, 255],
+	  navy: [0, 0, 128],
+	  fuchsia: [255, 0, 255],
+	  purple: [128, 0, 128]
+	}
+	
+	const colorChoices = Object.keys(colors);
+	function getColor(name) {
+	  if(colors[name]) return colors[name];
+	  return colors[colorChoices[Math.floor(Math.random() * colorChoices.length)]];
+	}
+	
+	class ThreeDModel {
+	  constructor(assembly, viewer) {
+	    const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
+	    const hiddenPartIds = {};
+	    const hiddenPartNames = {};
+	    const hiddenPrefixes = {};
+	    const instance = this;
+	    let hiddenPrefixReg;
+	    let extraObjects = [];
+	    let inclusiveTarget = {};
+	    let partMap;
+	    let renderId;
+	    let targetPartCode;
+	    let rootAssembly = assembly.getRoot();
+	    this.setTargetPartCode = (id) => targetPartCode = id;
+	
+	    this.assembly = (a) => {
+	      if (a !== undefined) {
+	        assembly = a;
+	        rootAssembly = a.getRoot();
+	      }
+	      return assembly;
+	    }
+	
+	    this.partMap = () => partMap;
+	    this.isTarget = (type, value) => {
+	      return inclusiveTarget.type === type && inclusiveTarget.value === value;
+	    }
+	    this.inclusiveTarget = function(type, value) {
+	      let prefixReg;
+	      if (type === 'prefix') prefixReg = new RegExp(`^${value}`)
+	      inclusiveTarget = {type, value, prefixReg};
+	    }
+	
+	    function inclusiveMatch(part) {
+	      if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
+	      switch (inclusiveTarget.type) {
+	        case 'prefix':
+	          return part.partName().match(inclusiveTarget.prefixReg) !== null;
+	          break;
+	        case 'part-name':
+	          return part.partName() === inclusiveTarget.value;
+	        case 'part-id':
+	          return part.id() === inclusiveTarget.value;
+	        default:
+	          throw new Error('unknown inclusiveTarget type');
+	      }
+	    }
+	
+	    function manageHidden(object) {
+	      return function (attr, value) {
+	        if (value === undefined) return object[attr] === true;
+	       object[attr] = value === true;
+	       instance.render();
+	      }
+	    }
+	
+	    // Quick and dirty
+	    function centerModel(model) {
+	      const offset = model.distCenter();
+	      offset.z += 100;
+	      offset.y -= 50;
+	      offset.x -= 50;
+	      model.translate(offset);
+	    }
+	
+	    function buildHiddenPrefixReg() {
+	      const list = [];
+	      const keys = Object.keys(hiddenPrefixes);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        if (hiddenPrefixes[key] === true) {
+	          list.push(key);
+	        }
+	      }
+	      hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
+	    }
+	
+	    this.hidePartId = manageHidden(hiddenPartIds);
+	    this.hidePartName = manageHidden(hiddenPartNames);
+	    this.hidePrefix = manageHidden(hiddenPrefixes);
+	
+	    function hasHidden(hiddenObj) {
+	      const keys = Object.keys(hiddenObj);
+	      for(let i = 0; i < hiddenObj.length; i += 1)
+	        if (hidden[keys[index]])return true;
+	      return false;
+	    }
+	    this.noneHidden = () => !hasHidden(hiddenPartIds) &&
+	        !hasHidden(hiddenPartNames) && !hasHidden(hiddenPrefixes);
+	
+	    this.depth = (label) => label.split('.').length - 1;
+	
+	    function hidden(part, level) {
+	      if (!part.included()) return true;
+	      const im = inclusiveMatch(part);
+	      if (im !== null) return !im;
+	      if (instance.hidePartId(part.id())) return true;
+	      if (instance.hidePartName(part.partName())) return true;
+	      if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
+	      return false;
+	    }
+	
+	    function coloring(part) {
+	      if (part.partName() && part.partName().match(/.*Frame.*/)) return getColor('blue');
+	      else if (part.partName() && part.partName().match(/.*Drawer.Box.*/)) return getColor('green');
+	      else if (part.partName() && part.partName().match(/.*Handle.*/)) return getColor('silver');
+	      return getColor('red');
+	    }
+	
+	    const randInt = (start, range) => start + Math.floor(Math.random() * range);
+	    function debugColoring() {
+	      return [randInt(0, 255),randInt(0, 255),randInt(0, 255)];
+	    }
+	
+	    this.addVertex = (center, radius, color) => {
+	      radius ||= .5;
+	      const vertex = CSG.sphere({center, radius});
+	      vertex.setColor(getColor(color));
+	      extraObjects.push(vertex);
+	    }
+	
+	    this.removeAllExtraObjects = () => extraObjects = [];
+	
+	    function getModel(assem) {
+	      if (assem.constructor.name === 'Door') {
+	        console.log('here');
+	      }
+	      let model = assem.toModel && assem.toModel();
+	      if (model === undefined) {
+	        const pos = assem.position().current();
+	        if (pos.rotation.x % 45 !== 0 || pos.rotation.y % 45 !== 0 || pos.rotation.z % 45 !== 0) {
+	          console.log('position off')
+	        }
+	        if (assem instanceof DrawerBox) {
+	          model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
+	        } else if (assem instanceof Handle) {
+	          model = pull(pos.demension.y, pos.demension.z);
+	        } else {
+	          const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
+	          model = CSG.cube({ radius });
+	        }
+	        model.rotate(pos.rotation);
+	        // pos.center.z *= -1;
+	        model.center(pos.center);
+	      }
+	      // serialize({}, model);
+	      return model;
+	    }
+	
+	    let lm;
+	    this.lastModel = () => {
+	      if (lm === undefined) return undefined;
+	      const polys = [];
+	      const map = {xy: [], xz: [], zy: []};
+	      lm.polygons.forEach((p, index) => {
+	        const norm = p.vertices[0].normal;
+	        const verticies = p.vertices.map((v) => ({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
+	        polys.push(new Polygon3D(verticies));
+	      });
+	      // Polygon3D.merge(polys);
+	      const twoDpolys = Polygon3D.toTwoD(polys);
+	      return twoDpolys;
+	    }
+	
+	    this.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
+	
+	    this.render = function () {
+	      ThreeDModel.lastActive = this;
+	      const cacheId = rootAssembly.id();
+	      // FunctionCache.on(cacheId);
+	      FunctionCache.on('sme');
+	
+	      const startTime = new Date().getTime();
+	      buildHiddenPrefixReg();
+	      function buildObject(assem) {
+	        let a = getModel(assem);
+	        // const c = assem.position().center();
+	        const e=1;
+	        // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
+	        a.setColor(...getColor());
+	        assem.getJoints().female.forEach((joint) => {
+	          const male = joint.getMale();
+	          const m = getModel(male, male.position().current());
+	          a = a.subtract(m);
+	        });
+	        // else a.setColor(1, 0, 0);
+	        return a;
+	      }
+	      const assemblies = this.assembly().getParts();
+	      let a;
+	      partMap = {};
+	      for (let index = 0; index < assemblies.length; index += 1) {
+	        const assem = assemblies[index];
+	        partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
+	        if (!hidden(assem)) {
+	          const b = buildObject(assem);
+	          // const c = assem.position().center();
+	          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+	          if (a === undefined) a = b;
+	          else if (b && b.polygons.length !== 0) {
+	            a = a.union(b);
+	          }
+	          if (assem.partCode() === targetPartCode) {
+	            lm = b.clone();
+	            const rotation = assem.position().rotation();
+	            rotation.x *=-1;
+	            rotation.y = (360 - rotation.y)  % 360;
+	            rotation.z *=-1;
+	            lm.center({x:0,y:0,z:0})
+	            lm.rotate(rotation);
+	            const lastModel = this.lastModel();
+	            lastModelUpdateEvent.trigger(undefined, lastModel);
+	          }
+	        }
+	      }
+	      for (let index = 0; index < extraObjects.length; index++) {
+	        a = a.union(extraObjects[index]);
+	      }
+	      if (a) {
+	        // a.polygons.forEach((p) => p.shared = getColor());
+	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
+	        centerModel(a);
+	        viewer.mesh = a.toMesh();
+	        viewer.gl.ondraw();
+	        console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
+	      }
+	      // FunctionCache.off(cacheId);
+	      FunctionCache.off('sme');
+	    }
+	
+	    this.update = () => {
+	      const rId = renderId = String.random();
+	      ThreeDModel.renderId = renderId;
+	      setTimeout(() => {
+	        if(renderId === rId) instance.render();
+	      }, 250);
+	    };
+	  }
+	}
+	
+	ThreeDModel.models = {};
+	ThreeDModel.get = (assembly, viewer) => {
+	  if (assembly === undefined) return ThreeDModel.lastActive;
+	  if (ThreeDModel.models[assembly.id()] === undefined) {
+	    ThreeDModel.models[assembly.id()] = new ThreeDModel(assembly, viewer);
+	  }
+	  return ThreeDModel.models[assembly.id()];
+	}
+	ThreeDModel.render = (part) => {
+	  const renderId = String.random();
+	  ThreeDModel.renderId = renderId;
+	  setTimeout(() => {
+	    if(ThreeDModel.renderId === renderId) {
+	      const cacheId = part.getRoot().id();
+	      FunctionCache.on(cacheId);
+	      ThreeDModel.get(part).render();
+	      FunctionCache.off(cacheId);
+	    }
+	  }, 2500);
+	};
+	
+	module.exports = ThreeDModel
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/layout.js',
+function (require, exports, module) {
+	const Layout2D = require('../objects/layout');
+	const panZoom = require('./pan-zoom');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const PopUp = require('../../../../public/js/utils/display/pop-up');
+	const Properties = require('../config/properties');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
+	const Draw2D = require('./draw.js');
+	const Vertex2d = require('../two-d/objects/vertex.js');
+	const Line2d = require('../two-d/objects/line.js');
+	const Snap2d = require('../two-d/objects/snap.js');
+	const Circle2d = require('../two-d/objects/circle.js');
+	const SnapLocation2d = require('../two-d/objects/snap-location.js');
+	const LineMeasurement2d = require('../two-d/objects/line-measurement');
+	
+	// TODO: Rename
+	const TwoDLayout = {};
+	
+	let draw;
+	const eval = new StringMathEvaluator({Math}).eval;
+	const popUp = new PopUp({resize: false});
+	
+	let layout;
+	TwoDLayout.set = (l) => {
+	  if (l instanceof Layout2D) {
+	    layout = l;
+	    panZ.once();
+	  }
+	}
+	
+	let hoverMap;
+	
+	const resetHoverMap = () => hoverMap = {
+	    Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2d: {}, LineMeasurement2d: {},
+	    Object2d: {}, Square2d: {}, Snap2d: {}, SnapLocation2d: {}
+	  };
+	
+	const windowLineWidth = 8;
+	const tolerance = 1;
+	let lastImagePoint;
+	let hovering;
+	let dragging;
+	let clickHolding = false;
+	let popupOpen = false;
+	let measurementModify = false;
+	let lastDown = 0;
+	const selectTimeBuffer = 200;
+	const quickChangeFuncs = {};
+	
+	function getPopUpAttrs(elem) {
+	  const cnt =  du.find.up('[type-2d]', elem);
+	  if (cnt === undefined) return {};
+	  const type = cnt.getAttribute('type-2d');
+	  const key = elem.getAttribute('key');
+	  const raw = elem.type === 'input' ? eval(elem.value) : elem.value;
+	  let value, display;
+	  if (elem.getAttribute('convert') === 'false') {
+	    value = raw;
+	    display = raw;
+	  } else {
+	    const measurement = new Measurement(raw, true);
+	    value = measurement.decimal();
+	    display = measurement.display();
+	  }
+	  const id = cnt.id;
+	  return {
+	    type,id,key,value,display,raw,
+	    obj:  Layout2D.get(id),
+	    point: {
+	      x: cnt.getAttribute('x'),
+	      y: cnt.getAttribute('y')
+	    }
+	  };
+	}
+	
+	du.on.match('enter', '.value-2d', (elem) => {
+	  const props = getPopUpAttrs(elem);
+	  const member = elem.getAttribute('member');
+	  switch (member) {
+	    case 'object':
+	      props.obj[props.key](props.raw);
+	      const cab = props.obj.payload();
+	      if (cab && cab.constructor.name === 'Cabinet') {
+	        const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.id()}']`);
+	        const idInput = du.find.closest('.cabinet-id-input', cabDemCnt);
+	        idInput.value = props.raw;
+	      }
+	      panZ.once();
+	      return;
+	    case 'cabinet':
+	      const cabinet = props.obj.payload();
+	      const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.id()}']`);
+	      if (cabCnt) {
+	        const input = du.find.down(`input[name='${props.key}']`, cabCnt);
+	        input.value = props.display;
+	      }
+	      cabinet[props.key](props.value);
+	      const poly = props.obj.topview();
+	      poly[props.key === 'thickness' ? 'height' : props.key](props.value);
+	      poly.update();
+	      panZ.once();
+	      return;
+	  }
+	  if (props.obj.payload && props.obj.payload() === 'placeholder') {
+	    if (props.key === 'thickness') props.key = 'height';
+	    props.obj = props.obj.topview().object();
+	  }
+	
+	  props.obj.topview()[props.key](props.value);
+	  elem.value = props.display;
+	  props.obj.topview().update();
+	  panZ.once();
+	});
+	
+	du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
+	  const props = getPopUpAttrs(elem);
+	  const input = du.find.closest('.measurement-mod', elem);
+	  if (input) setTimeout(() =>
+	      input.value = props.obj.display(), 0);
+	});
+	
+	function remove() {
+	  if (hovering.parent) {
+	    if (hovering.parent().payload().constructor.name === 'Cabinet') {
+	      const cabinet = hovering.parent().payload();
+	      const cabinetHeader = du.find(`.cabinet-header[cabinet-id='${cabinet.id()}']`);
+	      const removeButton = du.find.closest('.expandable-item-rm-btn', cabinetHeader)
+	      if (removeButton) removeButton.click();
+	      else console.warn('Remove button for cabinet should be present but is not present');
+	    }
+	    layout.remove(hovering.parent().id());
+	  } else {
+	    layout.remove(hovering.id());
+	  }
+	  popUp.close();
+	  TwoDLayout.panZoom.once();
+	}
+	
+	du.on.match('click', '.remove-btn-2d', remove, popUp.container());
+	
+	du.on.match('click', '.add-door-btn-2d', (elem) => {
+	  const attrs = getPopUpAttrs(elem);
+	  const distance = attrs.obj.startVertex().distance(attrs.point);
+	  attrs.obj.addDoor(distance);
+	  panZ.once();
+	});
+	
+	du.on.match('click', '.hinge-btn', (elem) => {
+	  const attrs = getPopUpAttrs(elem);
+	  attrs.obj.hinge(true);
+	  panZ.once();
+	});
+	
+	du.on.match('click', '.add-window-btn-2d', (elem) => {
+	  const attrs = getPopUpAttrs(elem);
+	  const distance = attrs.obj.startVertex().distance(attrs.point);
+	  attrs.obj.addWindow(distance);
+	  panZ.once();
+	});
+	
+	du.on.match('click', '.add-object-btn-2d', (elem) => {
+	  const props = getPopUpAttrs(elem);
+	  const obj = layout.addObject(props.point, 'placeholder');
+	  obj.topview().onChange(console.log);
+	  panZ.once();
+	});
+	
+	du.on.match('click', '.add-vertex-btn-2d', (elem) => {
+	  const attrs = getPopUpAttrs(elem);
+	  const point = hovering.closestPointOnLine(attrs.point);
+	  layout.addVertex(point, hovering);
+	  panZ.once();
+	});
+	
+	du.on.match('enter', '.measurement-mod', (elem) => {
+	  const value = eval(elem.value);
+	  getPopUpAttrs(elem).obj.modify(value);
+	  panZ.once();
+	});
+	
+	// TODO: define cache better.
+	function clearCache() {
+	  measurementIs = {};
+	}
+	
+	function undo(target) {
+	  layout.history().back();
+	  clearCache();
+	  panZ.once();
+	}
+	
+	function redo () {
+	  layout.history().forward();
+	  clearCache();
+	  panZ.once();
+	}
+	
+	function registerQuickChangeFunc(type, func) {
+	  if ((typeof func) === 'function') quickChangeFuncs[type] = func;
+	}
+	
+	function onMousedown(event, stdEvent) {
+	  lastDown = clickHolding ? 0 : new Date().getTime();
+	  lastImagePoint = {x: event.imageX, y: event.imageY};
+	  if (stdEvent.button == 0) {
+	    clickHolding = !popupOpen && (clickHolding || hovering !== undefined);
+	    return clickHolding;
+	  } else {
+	    if (hovering && quickChangeFuncs[hovering.constructor.name]) {
+	      quickChangeFuncs[hovering.constructor.name](hovering, event, stdEvent);
+	    }
+	    return true;
+	  }
+	}
+	
+	function addVertex(hovering, event, stdEvent) {
+	  const point = {x: event.imageX, y: event.imageY};
+	  layout.addVertex(point, hovering);
+	}
+	
+	registerQuickChangeFunc('Wall2D', addVertex);
+	registerQuickChangeFunc('Vertex2d', remove);
+	registerQuickChangeFunc('Window2D', remove);
+	registerQuickChangeFunc('SnapLocation2d', (snapLoc) => snapLoc.disconnect());
+	registerQuickChangeFunc('Door2D', (door) => door.hinge(true));
+	
+	function hoverId () {
+	  return hovering ? hovering.toString() : undefined;
+	}
+	
+	const templateMap = {};
+	function getTemplate(item) {
+	  const isSnap = item instanceof Snap2d;
+	  const templateLocation = `2d/pop-up/${isSnap ? 'snap-2d' : item.constructor.name.toKebab()}`;
+	  if (templateMap[templateLocation] === undefined) {
+	    templateMap[templateLocation] = new $t(templateLocation);
+	  }
+	  return templateMap[templateLocation];
+	}
+	
+	function display(value) {
+	  return new Measurement(value).display();
+	}
+	
+	function openPopup(event, stdEvent) {
+	  if (hovering) {
+	    if (hovering instanceof Snap2d) hovering.pairWithLast();
+	    popupOpen = true;
+	    const msg = `${hovering.constructor.name}: ${hoverId()}`;
+	    const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
+	    const html = getTemplate(hovering).render(scope);
+	    popUp.open(html, {x: event.screenX, y: event.screenY});
+	  }
+	}
+	
+	popUp.onClose((elem, event) => {
+	  setTimeout(() => popupOpen = false, 200);
+	  const attrs = getPopUpAttrs(du.find.closest('[type-2d]',popUp.container()));
+	  measurementModify = attrs.type === 'LineMeasurement2d';
+	  lastDown = new Date().getTime();
+	  clickHolding = false;
+	  if (layout) layout.history().newState();
+	});
+	
+	function onMouseup(event, stdEvent) {
+	  if (stdEvent.button == 0) {
+	    if (lastDown > new Date().getTime() - selectTimeBuffer) {
+	      if (hovering) {
+	        setTimeout(() => openPopup(event, stdEvent), 5);
+	      } else {
+	        measurementModify = !measurementModify;
+	      }
+	    } else {
+	      const clickWasHolding = clickHolding;
+	      clickHolding = false;
+	      hovering = undefined;
+	      if (layout) layout.history().newState();
+	      return clickWasHolding;
+	    }
+	  } else {
+	    console.log('rightClick: do stuff!!');
+	    if (layout) layout.history().newState();
+	  }
+	}
+	
+	let pending = 0;
+	function  drag(event)  {
+	  const dragging = !popupOpen && clickHolding && hovering;
+	  if (dragging)
+	    hovering.move && hovering.move({x: event.imageX, y: event.imageY}, event);
+	  return dragging;
+	}
+	
+	function hover(event) {
+	  if (clickHolding) return true;
+	  let found = false;
+	  const tuple = {x: event.imageX, y: event.imageY};
+	  function  check(list) {
+	    for (let index = 0; index < list.length; index += 1) {
+	      if (withinTolerance(tuple, list[index])) {
+	        hovering = list[index].item;
+	        found = true;
+	      }
+	    }
+	    if (!clickHolding && !found) hovering = undefined;
+	  }
+	
+	  if (measurementModify) {
+	    check(Object.values(hoverMap.LineMeasurement2d));
+	    found || check(Object.values(hoverMap.SnapLocation2d));
+	    found || check(Object.values(hoverMap.Snap2d));
+	    found || check(Object.values(hoverMap.Object2d));
+	    found || check(Object.values(hoverMap.Square2d));
+	  } else {
+	    check(Object.values(hoverMap.Vertex2d));
+	    found || check(Object.values(hoverMap.Window2D));
+	    found || check(Object.values(hoverMap.Door2D));
+	    found || check(Object.values(hoverMap.Wall2D));
+	  }
+	
+	  return found;
+	}
+	
+	function onMove(event) {
+	  if (layout === undefined) return;
+	  const canDrag = !popupOpen && lastDown < new Date().getTime() - selectTimeBuffer * 1.5;
+	  return (canDrag && drag(event)) || hover(event);
+	}
+	
+	function withinTolerance(point, map) {
+	  const x0 = point.x;
+	  const y0 = point.y;
+	  const x1 = map.start.x;
+	  const y1 = map.start.y;
+	  const x2 = map.end.x;
+	  const y2 = map.end.y;
+	  const num = Math.abs((y2 - y1)*x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
+	  const denom = Math.sqrt(Math.pow(y2 - y1, 2) + Math.pow(x2 - x1, 2));
+	  return num / denom < map.tolerance;
+	}
+	
+	function withinTolerance(point, map) {
+	  const t = map.tolerance;
+	  const start = map.start.point ? map.start.point() : map.start;
+	  const end = map.end.point ? map.end.point() : map.end;
+	  const x0 = point.x;
+	  const y0 = point.y;
+	  const x1 = start.x > end.x ? end.x : start.x;
+	  const y1 = start.y > end.y ? end.y : start.y;
+	  const x2 = start.x < end.x ? end.x : start.x;
+	  const y2 = start.y < end.y ? end.y : start.y;
+	  return x0>x1-t && x0 < x2+t && y0>y1-t && y0<y2+t;
+	}
+	
+	function updateHoverMap(item, start, end, tolerance) {
+	  let group;
+	  if (item instanceof Snap2d) group = 'Snap2d';
+	  else group = item.constructor.name;
+	  hoverMap[group][item.toString()] = {start, end, tolerance, item};
+	}
+	
+	let windowCount = 0;
+	let getWindowColor = () => {
+	  switch (Math.floor(Math.random() * 4)) {
+	    case 0: return 'red'; case 1: return 'green';
+	    case 2: return 'yellow'; case 3: return 'pink';
+	  }
+	  return 'white';
+	}
+	
+	const windowDrawMap = {};
+	function drawWindow(wallStartPoint, window, wallTheta) {
+	  draw.beginPath();
+	  const points = window.endpoints2D(wallStartPoint);
+	  const lookupKey = window.toString();
+	  const ctx = draw.ctx();
+	  if (windowDrawMap[lookupKey] === undefined) {
+	    windowDrawMap[lookupKey] = () => {
+	      ctx.moveTo(points.start.x(), points.start.y());
+	      ctx.lineWidth = 8;
+	      ctx.strokeStyle = hoverId() === window.toString() ? 'green' : 'blue';
+	      ctx.lineTo(points.end.x(), points.end.y());
+	      updateHoverMap(window, points.start, points.end, 5);
+	      ctx.stroke();
+	    }
+	  }
+	  windowDrawMap[lookupKey]();
+	}
+	
+	function updateDoorHoverMap(door, startpointRight, startpointLeft) {
+	  updateHoverMap(door, startpointRight, startpointLeft, 15);
+	}
+	
+	function doorDrawingFunc(startpointLeft, startpointRight) {
+	  return (door) => {
+	    const ctx = draw.ctx();
+	    ctx.beginPath();
+	    ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'black';
+	    const hinge = door.hinge();
+	
+	    if (hinge === 4) {
+	      ctx.moveTo(startpointLeft.x, startpointLeft.y);
+	      ctx.lineWidth = 8;
+	      ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'white';
+	      ctx.lineTo(startpointRight.x, startpointRight.y);
+	      updateDoorHoverMap(door, startpointRight, startpointLeft, 10);
+	      ctx.stroke();
+	    } else {
+	      const offset = Math.PI * hinge / 2;
+	      const initialAngle = (door.wall().radians() + offset) % (2 * Math.PI);
+	      const endAngle = initialAngle + (Math.PI / 2);
+	
+	      if (hinge === 0 || hinge === 3) {
+	        ctx.moveTo(startpointRight.x, startpointRight.y);
+	        ctx.arc(startpointRight.x, startpointRight.y, door.width(), initialAngle, endAngle, false);
+	        ctx.lineTo(startpointRight.x, startpointRight.y);
+	      } else {
+	        ctx.moveTo(startpointLeft.x, startpointLeft.y);
+	        ctx.arc(startpointLeft.x, startpointLeft.y, door.width(), endAngle, initialAngle, true);
+	        ctx.lineTo(startpointLeft.x, startpointLeft.y);
+	      }
+	
+	      ctx.fillStyle = 'white';
+	      ctx.fill();
+	    }
+	    updateHoverMap(door, startpointRight, startpointLeft, 10);
+	    ctx.stroke();
+	  }
+	}
+	
+	const doorDrawMap = {};
+	function drawDoor(startpoint, door, wallTheta) {
+	  const lookupKey = door.toString();
+	  if (doorDrawMap[lookupKey] === undefined) {
+	    const initialAngle = wallTheta;
+	    const width = door.width();
+	
+	    const distLeft = door.fromPreviousWall() + width;
+	    const startpointLeft = {x: startpoint.x + distLeft * Math.cos(theta), y: startpoint.y + distLeft * Math.sin(theta)};
+	    const distRight = door.fromPreviousWall();
+	    const startpointRight = {x: startpoint.x + distRight * Math.cos(theta), y: startpoint.y + distRight * Math.sin(theta)};
+	    doorDrawMap[lookupKey] = doorDrawingFunc(startpointLeft, startpointRight, initialAngle);
+	  }
+	  doorDrawMap[lookupKey](door);
+	}
+	
+	const blank = 40;
+	const hblank = blank/2;
+	function drawMeasurementValue(line, midpoint, measurement) {
+	  if (line === undefined) return;
+	  const ctx = draw.ctx();
+	  midpoint = line.midpoint();
+	
+	  ctx.save();
+	  ctx.lineWidth = 0;
+	  const length = measurement.display();
+	  const textLength = length.length;
+	  ctx.translate(midpoint.x(), midpoint.y());
+	  ctx.rotate(line.radians());
+	  ctx.beginPath();
+	  ctx.fillStyle = hoverId() === measurement.toString() ? 'green' : "white";
+	  ctx.strokeStyle = 'white';
+	  ctx.rect(textLength * -3, -8, textLength * 6, 16);
+	  ctx.fill();
+	  ctx.stroke();
+	
+	  ctx.beginPath();
+	  ctx.lineWidth = 4;
+	  ctx.strokeStyle = 'black';
+	  ctx.fillStyle =  'black';
+	  ctx.fillText(length, 0, 0);
+	  ctx.stroke()
+	  ctx.restore();
+	}
+	
+	const measurementLineMap = {};
+	const getMeasurementLine = (vertex1, vertex2) => {
+	  const lookupKey = `${vertex1} => ${vertex2}`;
+	  if (measurementLineMap[lookupKey] === undefined) {
+	    const line = new Line2d(vertex1, vertex2);
+	    measurementLineMap[lookupKey] = new LineMeasurement2d(line)
+	  }
+	  return measurementLineMap[lookupKey];
+	}
+	
+	let measurementValues = [];
+	function measurementValueToDraw(line, midpoint, measurement) {
+	  measurementValues.push({line, midpoint, measurement});
+	}
+	
+	function drawMeasurementValues() {
+	  let values = measurementValues;
+	  measurementValues = [];
+	  for (let index = 0; index < values.length; index += 1) {
+	    let m = values[index];
+	    drawMeasurementValue(m.line, m.midpoint, m.measurement);
+	  }
+	}
+	
+	const measurementLineWidth = 3;
+	let measurementIs = {};
+	function drawMeasurement(measurement, level, focalVertex)  {
+	  const lookupKey = `${measurement.toString()}-[${level}]`;
+	  // if (measurementIs[lookupKey] === undefined) {
+	    measurementIs[lookupKey] = measurement.I(level);
+	  // }
+	  const lines = measurementIs[lookupKey];
+	  const center = layout.verticies(focalVertex, 2, 3);
+	  const measurementColor = hoverId() === measurement.toString() ? 'green' : 'grey';
+	  try {
+	    draw.beginPath();
+	    const isWithin = layout.within(lines.furtherLine().midpoint());
+	    const line = isWithin ? lines.closerLine() : lines.furtherLine();
+	    const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
+	    if (measurementModify || popupOpen) {
+	      draw.line(line.startLine, measurementColor, measurementLineWidth);
+	      draw.line(line.endLine, measurementColor, measurementLineWidth);
+	      draw.line(line, measurementColor, measurementLineWidth);
+	      updateHoverMap(measurement, midpoint, midpoint, 15);
+	    }
+	    measurementValueToDraw(line, midpoint, measurement);
+	    return line;
+	  } catch (e) {
+	    console.error('Measurement render error:', e);
+	  }
+	}
+	
+	function measureOnWall(list, level) {
+	  for (let index = 0; index < list.length; index += 1) {
+	    let item = list[index];
+	    const wall = item.wall();
+	    const points = item.endpoints2D();
+	    const measureLine1 = getMeasurementLine(wall.startVertex(), points.start);
+	    const measureLine2 = getMeasurementLine(points.end, wall.endVertex());
+	    measureLine1.modificationFunction(item.fromPreviousWall);
+	    measureLine2.modificationFunction(item.fromNextWall);
+	    drawMeasurement(measureLine1, level, wall.startVertex())
+	    drawMeasurement(measureLine2, level, wall.startVertex())
+	    level += 4;
+	  }
+	  return level;
+	}
+	
+	function includeDetails() {
+	  return !dragging && (measurementModify || popupOpen)
+	}
+	
+	function drawWall(wall) {
+	  const ctx = draw.ctx();
+	  const startpoint = wall.startVertex().point();
+	  r =  wall.length();
+	  theta = wall.radians();
+	  ctx.beginPath();
+	  ctx.moveTo(startpoint.x, startpoint.y);
+	  ctx.lineWidth = 10;
+	  ctx.strokeStyle = hoverId() === wall.toString() ? 'green' : 'black';
+	  const endpoint = wall.endVertex().point();
+	  ctx.lineTo(endpoint.x, endpoint.y);
+	  ctx.stroke();
+	
+	  wall.doors().forEach((door) =>
+	    drawDoor(startpoint, door, wall.radians()));
+	  wall.windows().forEach((window) =>
+	    drawWindow(startpoint, window, wall.radians()));
+	
+	  let level = 8;
+	  if (includeDetails()) {
+	    const verticies = wall.verticies();
+	    let measLines = {};
+	    level = measureOnWall(wall.doors(), level);
+	    level = measureOnWall(wall.windows(), level);
+	  }
+	  const measurement = new LineMeasurement2d(wall, undefined, undefined, layout.reconsileLength(wall));
+	  drawMeasurement(measurement, level, wall.startVertex());
+	
+	  updateHoverMap(wall, startpoint, endpoint, 5);
+	
+	  return endpoint;
+	}
+	
+	function drawVertex(vertex) {
+	  const fillColor = hoverId() === vertex.toString() ? 'green' : 'white';
+	  const p = vertex.point();
+	  const radius = 10;
+	  const circle = new Circle2d(radius, p);
+	  draw.circle(circle, 'black', fillColor);
+	  updateHoverMap(vertex, p, p, 12);
+	}
+	
+	function snapLocColor(snapLoc) {
+	  switch (snapLoc.location()) {
+	    case "backRight": return 'red';
+	    case "frontRight": return 'yellow';
+	    case "frontLeft": return 'green';
+	    case "backLeft": return 'blue';
+	    case "backCenter": return 'purple';
+	    case "diagonalRight": return 'lime';
+	    case "diagonalLeft": return 'azure';
+	    default: return "grey"
+	  }
+	}
+	
+	function drawSnapLocation(locations, color) {
+	  for (let index = 0; index < locations.length; index += 1) {
+	    const loc = locations[index];
+	    const c = hoverId() === loc.toString() ? 'green' : (color || snapLocColor(loc));
+	    draw.circle(loc.circle(), 'black', c);
+	    const vertex = loc.vertex();
+	    updateHoverMap(loc, vertex.point(), vertex.point(), 8);
+	  }
+	}
+	
+	let showAllSnapLocations = true;
+	function drawObject(object) {
+	  let center, coolor, potentalSnap;
+	  switch (object.object().constructor.name) {
+	    case 'Square2d':
+	      const square = object.object();
+	      center = square.center();
+	      updateHoverMap(object, center, center, 30);
+	      color = hoverId() === object.toString() ? 'green' : 'white';
+	      draw.square(square, color, object.parent().name());
+	      potentalSnap = object.potentalSnapLocation();
+	      if (showAllSnapLocations)
+	        drawSnapLocation(object.snapLocations());
+	
+	      drawSnapLocation(object.snapLocations.paired(), 'black');
+	      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
+	      SnapLocation2d.active(object.snapLocations.notPaired());
+	      break;
+	    case 'Polygon2d':
+	      const poly = object.object();
+	      center = poly.center();
+	      updateHoverMap(object, center, center, 30);
+	      color = hoverId() === object.toString() ? 'green' : 'black';
+	      draw(poly, color, object.parent().name());
+	      potentalSnap = object.potentalSnapLocation();
+	      if (showAllSnapLocations)
+	        drawSnapLocation(object.snapLocations());
+	
+	      drawSnapLocation(object.snapLocations.paired(), 'black');
+	      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
+	      SnapLocation2d.active(object.snapLocations.notPaired());
+	      break;
+	    case 'Line2d':
+	      draw.line(object);
+	      break;
+	    case 'Circle2d':
+	      draw.circle(object);
+	      break;
+	    case 'Layout2d':
+	      drawLayout(object); // NOT IMPLEMENTED YET!!!
+	      break;
+	    default:
+	      throw new Error(`Cannot draw object with constructor: ${object.object().constructor.name}`);
+	  }
+	}
+	
+	function illustrate(canvas) {
+	  if (layout === undefined) return;
+	  SnapLocation2d.clear();
+	  resetHoverMap();
+	  let lastEndPoint = {x: 20, y: 20};
+	
+	  draw.beginPath();
+	  const walls = layout.walls();
+	  let previousEndpoint;
+	  let wl = walls.length;
+	  walls.forEach((wall, index) => {
+	    lastEndPoint = drawWall(wall, lastEndPoint);
+	    const previousWall = walls[(index - 1) % wl];
+	    if (previousEndpoint)
+	      drawVertex(wall.startVertex());
+	    previousEndpoint = lastEndPoint;
+	  }, true);
+	  drawVertex(walls[0].startVertex());
+	  drawMeasurementValues();
+	  layout.objects().forEach((obj) => drawObject(obj.topview()));
+	}
+	
+	function updateCanvasSize(canvas) {
+	  canvas.style.width = '80vh';
+	  const dem = Math.floor(canvas.getBoundingClientRect().width);
+	  canvas.width = dem;
+	  canvas.height = dem;
+	  canvas.style.width = `${dem}px`;
+	  canvas.style.width = `${dem}px`;
+	}
+	
+	let panZ;
+	function init() {
+	  const canvas = document.getElementById('two-d-model');
+	  draw = new Draw2D(canvas);
+	  updateCanvasSize(draw.canvas());
+	  panZ = panZoom(canvas, illustrate);
+	  panZ.onMove(onMove);
+	  panZ.onMousedown(onMousedown);
+	  panZ.onMouseup(onMouseup);
+	  // draw(canvas);
+	  TwoDLayout.panZoom = panZ;
+	  du.on.match('keycombo:Control,z', '*', undo);
+	  du.on.match('keycombo:Control,Shift,Z', '*', redo);
+	}
+	
+	TwoDLayout.init = init;
+	module.exports = TwoDLayout;
 	
 });
 
@@ -24801,6 +24643,7 @@ function (require, exports, module) {
 const Matrix = require('./matrix');
 	const Vector3D = require('./vector');
 	const approximate = require('../../../../../public/js/utils/approximate.js');
+	const approx10 = approximate.new(10);
 	const CSG = require('../../../public/js/3d-modeling/csg.js');
 	
 	
@@ -24830,7 +24673,7 @@ const Matrix = require('./matrix');
 	      if (doNotModify === true) vertex = this.copy();
 	      vertex.x += vector.i();
 	      vertex.y += vector.j();
-	      vertex.z += vector.z();
+	      vertex.z += vector.k();
 	      return vertex;
 	    }
 	
@@ -24883,9 +24726,10 @@ const Matrix = require('./matrix');
 	    }
 	
 	    this.copy = () => new Vertex3D(this.x, this.y, this.z);
+	    this.clone = this.copy;
 	    this.equals = (other) => other && approximate.eq(this.x, other.x) &&
 	          approximate.eq(this.y, other.y);
-	    this.toString = () => `${this.x},${this.y},${this.z}`;
+	    this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
 	  }
 	}
 	
@@ -24959,797 +24803,100 @@ const Matrix = require('./matrix');
 });
 
 
-RequireJS.addFunction('./app-src/config/property/definitions.js',
+RequireJS.addFunction('./app-src/three-d/objects/bi-polygon.js',
 function (require, exports, module) {
-	const Property = require('../property');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const IMPERIAL_US = Measurement.units()[1];
 	
-	const defs = {};
+const CSG = require('../../../public/js/3d-modeling/csg.js');
+	const Line3D = require('line');
+	const Polygon3D = require('polygon');
 	
-	defs.h = new Property('h', 'height', null);
-	defs.w = new Property('w', 'width', null);
-	defs.d = new Property('d', 'depth', null);
-	defs.t = new Property('t', 'thickness', null);
-	defs.l = new Property('l', 'length', null);
+	class BiPolygon {
+	  constructor(polygon1, polygon2, flipNormal) {
+	    const face1 = polygon1.verticies();
+	    const face2 = polygon2.verticies();
+	    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
+	    if (face1.length !== 4) throw new Error('BiPolygon implementation is limited to 4 point polygons. Plans to expand must not have been exicuted yet');
 	
-	//   Overlay
-	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
 	
-	//   Reveal
-	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvr = new Property('rvr', 'Reveal Right', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvl = new Property('rvl', 'Reveal Left', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
 	
-	//   Inset
-	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
+	    this.front = () => new Polygon3D(face1);
+	    this.back = () => new Polygon3D(face2);
 	
-	//   Cabinet
-	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
-	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
-	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
-	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
-	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
-	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
-	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US})
-	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US})
-	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US})
+	    function normalize (verts, reverse) {
+	      const normal =  new Polygon3D(verts).normal().toArray();
+	      const returnValue = [];
+	      for (let index = 0; index < verts.length; index++)
+	        returnValue[index] = new CSG.Vertex(verts[index], normal);
+	      if (flipNormal) return !reverse ? returnValue.reverse() : returnValue;
+	      else return reverse ? returnValue.reverse() : returnValue;
+	    }
 	
-	// Cabinet.AngledBackCorner
-	defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
-	defs.lbo = new Property('lbo', 'Left Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
-	defs.rbo = new Property('rbo', 'Right Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	    this.toModel = () => {
+	      const front = new CSG.Polygon(normalize(face1));
+	      front.plane.normal = new CSG.Vector([0,1, 0,0]);
+	      const back = new CSG.Polygon(normalize(face2, true));
+	      back.plane.normal = new CSG.Vector([0,0,1,0,0]);
+	      const top = new CSG.Polygon(normalize([face1[0], face1[1], face2[1], face2[0]], true));
+	      top.plane.normal = new CSG.Vector([0, 1, 0]);
+	      const left = new CSG.Polygon(normalize([face2[3], face2[0], face1[0], face1[3]]));
+	      left.plane.normal = new CSG.Vector([-1, 0, 0]);
+	      const right = new CSG.Polygon(normalize([face1[1], face1[2], face2[2], face2[1]], true));
+	      right.plane.normal = new CSG.Vector([1, 0, 0]);
+	      const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]]));
+	      bottom.plane.normal = new CSG.Vector([0, -1, 0]);
 	
-	// Cabinet.Lshaped
-	defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 24, notMetric: IMPERIAL_US})
-	defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US})
+	      const poly = CSG.fromPolygons([front, back, top, left, right, bottom]);
+	      return poly;
+	    }
 	
-	//   Panel
+	    this.toString = () =>
+	    `(${face1[0].toString()}), (${face1[1].toString()}), (${face1[2].toString()}), (${face1[3].toString()})\n` +
+	    `(${face2[0].toString()}), (${face2[1].toString()},${face2[2].toString()}), (${face2[3].toString()})`;
+	  }
+	}
 	
-	//   Guides
-	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', null),
-	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', null),
-	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', null)
+	BiPolygon.fromPolygon = (polygon, distance1, distance2, offset, flipNormal) => {
+	  offset ||= {};
+	  const verts = polygon.verticies();
+	  if (verts.length < 4) return undefined;
+	  const verts1 = JSON.clone(verts);
+	  Line3D.adjustVerticies(verts1[0], verts1[1], offset.x);
+	  Line3D.adjustVerticies(verts1[1], verts1[2], offset.y);
+	  Line3D.adjustVerticies(verts1[2], verts1[3], offset.x);
+	  Line3D.adjustVerticies(verts1[3], verts1[0], offset.y);
+	  const verts2 = JSON.clone(verts1);
+	  const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
+	  const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
+	  return new BiPolygon(poly1, poly2, flipNormal);
+	}
 	
-	//   DoorAndFront
-	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
-	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null})
-	
-	//   Door
-	
-	//   DrawerBox
-	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
-	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
-	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
-	
-	//   DrawerFront
-	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
-	
-	//   Frame
-	
-	//   Handle
-	defs.c2c = new Property('c2c', 'Center To Center', null),
-	defs.proj = new Property('proj', 'Projection', null),
-	
-	//   Hinge
-	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null),
-	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
-	defs.maxol = new Property('maxol', 'Max Door Overlay', null),
-	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
-	
-	//   Opening
-	
-	module.exports = defs;
+	module.exports = BiPolygon;
 	
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/labor.js',
-function (require, exports, module) {
-	
-
-	
-	const Material = require('./material.js');
-	const Cost = require('../cost.js');
-	
-	
-	// unitCost.value = (hourlyRate*hours)/length
-	// calc(assembly) = unitCost.value * formula
-	
-	class Labor extends Material {
-	  constructor (props) {
-	    super(props);
-	    const type = props.laborType;
-	    props.hourlyRate = Labor.hourlyRates[type]
-	    const parentCalc = this.calc;
-	    this.cost = () => this.hourlyRate() * props.hours;
-	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
-	    Labor.hourlyRate(type, props.hourlyRate);
-	
-	    const parentToJson = this.toJson;
-	  }
-	}
-	
-	
-	Labor.defaultRate = 40;
-	Labor.hourlyRate = (type, rate) => {
-	  rate = Cost.evaluator.eval(new String(rate));
-	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
-	  return Labor.hourlyRates[type] || Labor.defaultRate;
-	}
-	Labor.hourlyRates = {};
-	Labor.types = [];
-	Labor.explanation = `Cost to be calculated hourly`;
-	
-	module.exports = Labor
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/material.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
-	
-	class Material extends Cost {
-	  constructor (props) {
-	    super(props);
-	    props = this.props();
-	    props.cost = props.cost / (props.count || 1);
-	    const instance = this;
-	    Object.getSet(props, 'company', 'formula', 'partNumber',
-	                'method', 'length', 'width', 'depth', 'cost');
-	
-	
-	    this.unitCost = (attr) => {
-	      const unitCost = Material.configure(instance.method(), instance.cost(),
-	        instance.length(), instance.width(), instance.depth());
-	      const copy = JSON.parse(JSON.stringify(unitCost));
-	      if (attr) return copy[attr];
-	      return copy;
-	    }
-	
-	    this.calc = (assemblyOrCount) => {
-	      const unitCost = this.unitCost();
-	      const formula = this.formula() || unitCost.formula;
-	      if (assemblyOrCount instanceof Assembly)
-	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
-	      else if (Number.isFinite(assemblyOrCount))
-	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
-	      else
-	        throw new Error('calc argument must be a number or Assembly');
-	    }
-	  }
-	}
-	
-	Material.methods = {
-	  LINEAR_FEET: 'Linear Feet',
-	  SQUARE_FEET: 'Square Feet',
-	  CUBIC_FEET: 'Cubic Feet',
-	  UNIT: 'Unit'
-	};
-	
-	Material.methodList = Object.values(Material.methods);
-	
-	
-	Material.configure = (method, cost, length, width, depth) => {
-	  const unitCost = {};
-	  switch (method) {
-	    case Material.methods.LINEAR_FEET:
-	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
-	      unitCost.name = 'Linear Inch';
-	      unitCost.value = perLinearInch;
-	      unitCost.formula = 'l';
-	      return unitCost;
-	    case Material.methods.SQUARE_FEET:
-	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
-	      unitCost.name = 'Square Inch';
-	      unitCost.value = perSquareInch;
-	      unitCost.formula = 'l*w';
-	      return unitCost;
-	    case Material.methods.CUBIC_FEET:
-	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
-	      unitCost.name = 'Cubic Inch';
-	      unitCost.value = perCubicInch;
-	      unitCost.formula = 'l*w*d';
-	      return unitCost;
-	    case Material.methods.UNIT:
-	      unitCost.name = 'Unit';
-	      unitCost.value = cost;
-	      return unitCost;
-	    default:
-	      throw new Error('wtf');
-	      unitCost.name = 'Unknown';
-	      unitCost = -0.01;
-	      formula = -0.01;
-	      return unitCost;
-	  }
-	};
-	
-	Material.explanation = `Cost to be calculated by number of units or demensions`;
-	
-	module.exports = Material
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/vertex.js',
-function (require, exports, module) {
-	
-const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
-	const approximate10 = require('../../../../../public/js/utils/approximate.js').new(10);
-	
-	
-	class Vertex2d {
-	  constructor(point) {
-	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
-	    if (point instanceof Vertex2d) return point;
-	    let modificationFunction;
-	    point = point || {x:0,y:0};
-	    Object.getSet(this, {point});
-	    this.layer = point.layer;
-	    const instance = this;
-	    this.move = (center) => {
-	      this.point(center);
-	      return true;
-	    };
-	    this.point = (newPoint) => {
-	      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
-	      if (newPoint) this.x(newPoint.x);
-	      if (newPoint) this.y(newPoint.y);
-	      return point;
-	    }
-	
-	    this.modificationFunction = (func) => {
-	      if ((typeof func) === 'function') {
-	        if ((typeof this.id) !== 'function') Lookup.convert(this);
-	        modificationFunction = func;
-	      }
-	      return modificationFunction;
-	    }
-	
-	    this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
-	    this.x = (val) => {
-	      if ((typeof val) === 'number') point.x = val;
-	      return this.point().x;
-	    }
-	    this.y = (val) => {
-	      if ((typeof val) === 'number') this.point().y = val;
-	      return this.point().y;
-	    }
-	
-	    const dummyFunc = () => true;
-	    this.forEach = (func, backward) => {
-	      let currVert = this;
-	      let lastVert;
-	      do {
-	        lastVert = currVert;
-	        func(currVert);
-	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
-	      } while (currVert && currVert !== this);
-	      return currVert || lastVert;
-	    }
-	
-	    this.distance = (vertex) => {
-	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
-	      const xDiff = vertex.x() - this.x();
-	      const yDiff = vertex.y() - this.y();
-	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
-	    }
-	
-	    this.toString = () => `(${this.x()}, ${this.y()})`;
-	    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
-	    const parentToJson = this.toJson;
-	
-	    this.offset = (x, y) => {
-	      if (x instanceof Vertex2d) {
-	        y = x.y();
-	        x = x.x();
-	      }
-	      const copy = this.toJson().point;
-	      if (y !== undefined) copy.y += y;
-	      if (x !== undefined) copy.x += x;
-	      return new Vertex2d(copy);
-	    }
-	
-	    this.copy = () => new Vertex2d([this.x(), this.y()]);
-	
-	    this.differance = (x, y) => {
-	      if (x instanceof Vertex2d) {
-	        y = x.y();
-	        x = x.x();
-	      }
-	      return new Vertex2d({x: this.x() - x, y: this.y() - y});
-	    }
-	
-	    this.point(point);
-	  }
-	}
-	
-	Vertex2d.fromJson = (json) => {
-	  return new Vertex2d(json.point);
-	}
-	
-	Vertex2d.center = (...verticies) => {
-	  if (Array.isArray(verticies[0])) verticies = verticies[0];
-	  let x = 0;
-	  let y = 0;
-	  let count = 0;
-	  verticies.forEach((vertex) => {
-	    if (Number.isFinite(vertex.x() + vertex.y())) {
-	      count++;
-	      x += vertex.x();
-	      y += vertex.y();
-	    }
-	  });
-	  return new Vertex2d({x: x/count, y: y/count});
-	}
-	
-	Vertex2d.sort = (a, b) =>
-	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
-	
-	Vertex2d.sortByCenter = (center) => {
-	  return (v1, v2) => {
-	    const d1 = v1.distance(center);
-	    const d2 = v2.distance(center);
-	    return d2 - d1;
-	  }
-	}
-	
-	
-	Vertex2d.reusable = true;
-	new Vertex2d();
-	
-	module.exports = Vertex2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assembly.js',
-function (require, exports, module) {
-	
-
-	
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Position = require('../../position.js');
-	const getDefaultSize = require('../../utils.js').getDefaultSize;
-	const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
-	
-	const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
-	
-	class Assembly extends KeyValue {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
-	    super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
-	
-	    const instance = this;
-	    let group;
-	    const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
-	    const initialVals = {
-	      part: true,
-	      included: true,
-	      centerConfig, demensionConfig, rotationConfig, partCode, partName,
-	      propertyId: undefined,
-	    }
-	    const subAssems = this.subassemblies;
-	    Object.getSet(this, initialVals, 'values', 'subassemblies', 'joints');
-	    this.subassemblies = subAssems;
-	    Object.getSet(this, temporaryInitialVals);
-	    this.path = () => `${this.constructor.name}.${partName}`.toDot();
-	
-	    if ((typeof centerConfig) === 'function') this.centerConfig = centerConfig;
-	    else this.centerConfig = centerConfig
-	    if ((typeof demensionConfig) === 'function') this.demensionConfig = demensionConfig;
-	    else this.demensionConfig = demensionConfig
-	    if ((typeof rotationConfig) === 'function') this.rotationConfig = rotationConfig;
-	    else this.rotationConfig = rotationConfig
-	
-	    const parentIncluded = this.included;
-	
-	    this.included = (value) => {
-	        value = parentIncluded(value);
-	        if ((typeof value) === 'string') return  group.propertyConfig(value);
-	        switch (value) {
-	          case true: return true;
-	          case false: return false;
-	          default: return true;
-	        }
-	    }
-	
-	    function getValueSmeFormatter(path) {
-	      const split = path.split('.');
-	      let attr = split[0];
-	      let objIdStr;
-	      if (split.length > 2) {
-	      }
-	      if (split.length > 1) {
-	        objIdStr = split[0];
-	        attr = split.slice(1).join('.');
-	      }
-	
-	      let obj;
-	      if (objIdStr === undefined) {
-	        obj = instance;
-	      } else {
-	        obj = instance.getAssembly(objIdStr);
-	      }
-	      const returnVal = Assembly.resolveAttr(obj, attr);
-	      return returnVal;
-	    }
-	    const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
-	
-	    // KeyValue setup
-	    const funcReg = /length|width|thickness/;
-	    this.value.addCustomFunction((key, value) => key.match(funcReg) ? this[code](value) : undefined)
-	    this.value.evaluators.string = (value) => sme.eval(value, this);
-	    this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
-	
-	    this.eval = (eqn) => sme.eval(eqn, this);
-	    this.evalObject = (obj) => sme.evalObject(obj, this);
-	
-	    this.group = (g) => {
-	      if (g) group = g;
-	      return group;
-	    }
-	    this.propertyConfig = (one, two) => {
-	      const parent = this.parentAssembly();
-	      if (parent instanceof Assembly) return parent.propertyConfig(one, two);
-	      const group = this.group();
-	      if (group) {
-	        if (one) return group.propertyConfig(one, two);
-	        return group.propertyConfig;
-	      }
-	    }
-	
-	    this.getAssembly = (partCode, callingAssem) => {
-	      if (callingAssem === this) return undefined;
-	      if (this.partCode() === partCode) return this;
-	      if (this.subassemblies[partCode]) return this.subassemblies[partCode];
-	      if (callingAssem !== undefined) {
-	        const children = Object.values(this.subassemblies);
-	        for (let index = 0; index < children.length; index += 1) {
-	          const assem = children[index].getAssembly(partCode, this);
-	          if (assem !== undefined) return assem;
-	        }
-	      }
-	      if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
-	        return this.parentAssembly().getAssembly(partCode, this);
-	      return undefined;
-	    }
-	    let position = new Position(this, sme);
-	    this.position = () => position;
-	    this.updatePosition = () => position = new Position(this, sme);
-	    this.joints = [];
-	    this.values = {};
-	    this.rootAssembly = () => {
-	      let currAssem = this;
-	      while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
-	      return currAssem;
-	    }
-	    this.getJoints = (pc) => {
-	      const root = this.getRoot();
-	      if (root !== this) return root.getJoints(pc || partCode);
-	      pc = pc || partCode;
-	      const assemList = this.getSubassemblies();
-	      let jointList = [].concat(this.joints);
-	      assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
-	      let joints = {male: [], female: []};
-	      jointList.forEach((joint) => {
-	        if (joint.malePartCode() === pc) {
-	          joints.male.push(joint);
-	        } else if (joint.femalePartCode() === pc) {
-	          joints.female.push(joint);
-	        }
-	      });
-	      return joints;
-	    }
-	    function initObj(value) {
-	      const obj = {};
-	      for (let index = 1; index < arguments.length; index += 1) {
-	        obj[arguments[index]] = value;
-	      }
-	      return obj;
-	    }
-	
-	
-	    this.setSubassemblies = (assemblies) => {
-	      this.subassemblies = {};
-	      assemblies.forEach((assem) => this.subassemblies[assem.partCode()] = assem);
-	    };
-	
-	    this.partsOf = (clazz) => {
-	      const parts = this.getRoot().getParts();
-	      if (clazz === undefined) return parts;
-	      return parts.filter((p) => p instanceof clazz);
-	    }
-	
-	    // TODO: wierd dependency on inherited class.... fix!!!
-	    const defaultPartCode = () =>
-	      instance.partCode(instance.partCode() || Assembly.partCode(this));
-	
-	    this.setParentAssembly = (pa) => {
-	      this.parentAssembly(pa);
-	      defaultPartCode();
-	    }
-	    this.addSubAssembly = (assembly) => {
-	      this.subassemblies[assembly.partCode()] = assembly;
-	      // assembly.setParentAssembly(this);
-	    }
-	
-	    this.objId = this.constructor.name;
-	
-	    this.addJoints = function () {
-	      for (let i = 0; i < arguments.length; i += 1) {
-	        const joint = arguments[i];
-	        this.joints.push(joint);
-	        joint.parentAssemblyId(this.id());
-	      }
-	    }
-	
-	    this.addSubassemblies = function () {
-	      for (let i = 0; i < arguments.length; i += 1) {
-	        this.addSubAssembly(arguments[i]);
-	      }
-	    }
-	
-	    this.children = () => Object.values(this.subassemblies);
-	
-	    this.getSubassemblies = () => {
-	      let assemblies = [];
-	      this.children().forEach((assem) => {
-	        assemblies.push(assem);
-	        assemblies = assemblies.concat(assem.getSubassemblies());
-	      });
-	      return assemblies;
-	    }
-	    this.getParts = () => {
-	      return this.getSubassemblies().filter((a) => {
-	        if ((typeof a.part) !== 'function') {
-	          console.log('party')
-	        }
-	        return a.part() && a.included()
-	      });
-	    }
-	
-	    if (Assembly.idCounters[this.objId] === undefined) {
-	      Assembly.idCounters[this.objId] = 0;
-	    }
-	
-	    Assembly.add(this);
-	
-	    this.width = (value) => position.setDemension('x', value);
-	    this.length = (value) => position.setDemension('y', value);
-	    this.thickness = (value) => position.setDemension('z', value);
-	    defaultPartCode();
-	  }
-	}
-	
-	Assembly.list = {};
-	Assembly.get = (id) => {
-	  const keys = Object.keys(Assembly.list);
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const assembly = Assembly.list[keys[index]][id];
-	    if (assembly !== undefined) return assembly;
-	  }
-	  return null;
-	}
-	Assembly.add = (assembly) => {
-	  const name = assembly.constructor.name;
-	  if (Assembly.list[name] === undefined) Assembly.list[name] = {};
-	  Assembly.list[name][assembly.id()] = assembly;
-	}
-	Assembly.all = () => {
-	  const list = [];
-	  const keys = Object.keys(Assembly.list);
-	  keys.forEach((key) => list.concat(Object.values(Assembly.list[key])));
-	  return list;
-	}
-	
-	const positionReg = /^(c|r|d|center|rotation|demension).(x|y|z)$/;
-	Assembly.resolveAttr = (assembly, attr) => {
-	  if (!(assembly instanceof Assembly)) return undefined;
-	  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
-	    return assembly.length();
-	  } else if (attr === 'w' || attr === 'width') {
-	    return assembly.width();
-	  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
-	    return assembly.thickness();
-	  }
-	
-	  const positionMatch = attr.match(positionReg);
-	  if (positionMatch) {
-	    const func = positionMatch[1];
-	    const axis = positionMatch[2];
-	    if (func === 'r' || func === 'rotation') return assembly.position().rotation(axis);
-	    if (func === 'c' || func === 'center') return assembly.position().center(axis);
-	    if (func === 'd' || func === 'demension') return assembly.position().demension(axis);
-	  }
-	  return assembly.value(attr);
-	}
-	Assembly.fromJson = (assemblyJson) => {
-	  const demensionConfig = assemblyJson.demensionConfig;
-	  const centerConfig = assemblyJson.centerConfig;
-	  const rotationConfig = assemblyJson.rotationConfig;
-	  const partCode = assemblyJson.partCode;
-	  const partName = assemblyJson.partName;
-	  const clazz = Object.class.get(assemblyJson._TYPE);
-	  const assembly = new (clazz)(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	  assembly.id(assemblyJson.id);
-	  assembly.values = assemblyJson.values;
-	  assembly.setParentAssembly(assemblyJson.parent)
-	  Object.values(assemblyJson.subassemblies).forEach((json) =>
-	    assembly.addSubAssembly(Assembly.class(json._TYPE)
-	                              .fromJson(json, assembly)));
-	  if (assemblyJson.length) assembly.length(assemblyJson.length);
-	  if (assemblyJson.width) assembly.width(assemblyJson.width);
-	  if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
-	  return assembly;
-	}
-	
-	Assembly.classes = Object.class.object;
-	Assembly.new = function (id) {
-	  return new (Object.class.get(id))(...Array.from(arguments).slice(1));
-	};
-	Assembly.class = Object.class.get;
-	Assembly.classObj = Object.class.filter;
-	
-	Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
-	Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
-	Assembly.lists = {};
-	Assembly.idCounters = {};
-	
-	Assembly.partCode = (assembly) => {
-	  const cabinet = assembly.getAssembly('c');
-	  if (cabinet) {
-	    const name = assembly.constructor.name;
-	    cabinet.partIndex = cabinet.partIndex || 0;
-	    return `${assembly.constructor.abbriviation}`;
-	  }
-	}
-	
-	module.exports = Assembly
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/init-assem.js',
-function (require, exports, module) {
-	
-const Assembly = require('./assembly.js');
-	new Assembly();
-	
-	const Cabinet = require('./assemblies/cabinet.js');
-	new Cabinet();
-	
-	const Divider = require('./assemblies/divider.js');
-	new Divider();
-	
-	const DoorCatch = require('./assemblies/door/door-catch.js');
-	new DoorCatch();
-	
-	const Door = require('./assemblies/door/door.js');
-	new Door();
-	
-	const Hinges = require('./assemblies/door/hinges.js');
-	new Hinges();
-	
-	const DrawerBox = require('./assemblies/drawer/drawer-box.js');
-	new DrawerBox();
-	
-	const DrawerFront = require('./assemblies/drawer/drawer-front.js');
-	new DrawerFront();
-	
-	const Guides = require('./assemblies/drawer/guides.js');
-	new Guides();
-	
-	const Frame = require('./assemblies/frame.js');
-	new Frame();
-	
-	const Handle = require('./assemblies/hardware/pull.js');
-	new Handle();
-	
-	const Screw = require('./assemblies/hardware/screw.js');
-	new Screw();
-	
-	const Panel = require('./assemblies/panel.js');
-	new Panel();
-	
-	// const PartitionSection = require('./assemblies/section/partition/sections/divider.js');
-	// new PartitionSection();
-	//
-	// const DividerSection = require('./assemblies/section/partition/partition');
-	// new DividerSection();
-	//
-	// const Section = require('./assemblies/section/section.js');
-	// new Section();
-	//
-	// const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
-	// new DivideSection();
-	//
-	// const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
-	// new OpeningCoverSection();
-	
-	const DoorSection = require('./assemblies/section/sections/door.js');
-	new DoorSection();
-	
-	const DrawerSection = require('./assemblies/section/sections/drawer.js');
-	new DrawerSection();
-	
-	const DualDoorSection = require('./assemblies/section/sections/duel-door.js');
-	new DualDoorSection();
-	
-	const FalseFrontSection = require('./assemblies/section/sections/false-front.js');
-	new FalseFrontSection();
-	
-	// const SpaceSection = require('./assemblies/section/space/space.js');
-	// new SpaceSection();
-	
-	const Cutter = require('./assemblies/cutter.js');
-	new Cutter();
-	
-	Assembly.components = {
-	  Door, DrawerBox, DrawerFront, Frame, Panel, Cutter,
-	};
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/snap.js',
+RequireJS.addFunction('./app-src/two-d/objects/corner.js',
 function (require, exports, module) {
 	
 const Vertex2d = require('vertex');
-	const SnapLocation2d = require('snap-location');
 	
-	class Snap2d {
-	  constructor(parent, object, tolerance) {
-	    name = 'booyacka';
-	    Object.getSet(this, {object, tolerance}, 'layoutId');
-	    if (parent === undefined) return;
+	class Corner {
+	  constructor(center, height, width, radians) {
+	    width = width === undefined ? 121.92 : width;
+	    height = height === undefined ? 60.96 : height;
+	    radians = radians === undefined ? 0 : radians;
 	    const instance = this;
-	    const id = String.random();
-	    let start = new Vertex2d();
-	    let end = new Vertex2d();
-	    let layout = parent.layout();
+	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
+	    if ((typeof center) === 'function') this.center = center;
+	    const startPoint = new Vertex2d(null);
 	
-	    this.dl = () => 24 * 2.54;
-	    this.dr = () => 24 * 2.54;
-	    this.dol = () => 12;
-	    this.dor = () => 12;
-	    this.toString = () => `SNAP (${tolerance}):${object}`
-	    this.position = {};
-	    this.id = () => id;
-	    this.parent = () => parent;
-	    this.x = (val) => {
-	      if (val !== undefined) {
-	        notify(this.parent().center().x(), val);
-	        this.parent().center().x(val);
-	      }
-	      return this.parent().center().x();
+	    const getterHeight = this.height;
+	    this.height = (v) => {
+	      notify(getterHeight(), v);
+	      return getterHeight(v);
 	    }
-	    this.y = (val) => {
-	      if (val !== undefined) {
-	        notify(this.parent().center().y(), val);
-	        this.parent().center().y(val);
-	      }
-	      return this.parent().center().y();
-	    }
-	
-	    this.angle = (value) => {
-	      if (value !== undefined) {
-	        notify(this.angle(), value);
-	        this.radians(Math.toRadians(value));
-	      }
-	      return Math.toDegrees(this.radians());
-	    }
-	
+	    const getterWidth = this.width;
+	    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
 	
 	    const changeFuncs = [];
 	    this.onChange = (func) => {
@@ -25770,7 +24917,6 @@ const Vertex2d = require('vertex');
 	      }
 	    }
 	
-	    let radians = 0;
 	    this.radians = (newValue) => {
 	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
 	        notify(radians, newValue);
@@ -25778,800 +24924,221 @@ const Vertex2d = require('vertex');
 	      }
 	      return radians;
 	    };
-	
-	    let height = 60.96;
-	    let width = 121.92;
-	    this.height = (h) => {
-	      if ((typeof h) === 'number') {
-	        const newVal = h;
-	        notify(height, newVal);
-	        height = newVal;
-	      }
-	      return height;
+	    this.startPoint = () => {
+	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+	      return startPoint;
 	    }
-	    this.width = (w) => {
-	      if ((typeof w) === 'number') {
-	        const newVal = w;
-	        notify(width, newVal);
-	        width = newVal;
-	      }
-	      return width;
+	    this.angle = (value) => {
+	      if (value !== undefined) this.radians(Math.toRadians(value));
+	      return Math.toDegrees(this.radians());
 	    }
 	
+	    // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
+	    // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
+	    this.x = (val) => {
+	      if (val !== undefined) this.center().x(val);
+	      return this.center().x();
+	    }
+	    this.y = (val) => {
+	      if (val !== undefined) this.center().y(val);
+	      return this.center().y();
+	    }
 	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
 	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
 	
-	    this.view = () => {
-	      switch (this) {
-	        case parent.topview(): return 'topview';
-	        case parent.bottomview(): return 'bottomview';
-	        case parent.leftview(): return 'leftview';
-	        case parent.rightview(): return 'rightview';
-	        case parent.frontview(): return 'frontview';
-	        case parent.backview(): return 'backview';
-	        default: return null;
-	      }
-	    }
-	
-	    const snapLocations = [];
-	    this.addLocation = (snapLoc) => {
-	      if (snapLoc instanceof SnapLocation2d && this.position[snapLoc.location()] === undefined) {
-	        snapLocations.push(snapLoc);
-	        this.position[snapLoc.location()] = snapLoc.at;
-	      }
-	    }
-	    function getSnapLocations(func) {
-	      const locs = [];
-	      for (let index = 0; index < snapLocations.length; index += 1) {
-	        const loc = snapLocations[index];
-	        if ((typeof func) === 'function') {
-	          if (func(loc)) locs.push(loc);
-	        } else locs.push(loc);
-	      }
-	      return locs;
-	    }
-	
-	    this.snapLocations = getSnapLocations;
-	    this.snapLocations.notPaired = () => getSnapLocations((loc) => loc.pairedWith() === null);
-	    this.snapLocations.paired = () => getSnapLocations((loc) => loc.pairedWith() !== null);
-	    this.snapLocations.wallPairable = () => getSnapLocations((loc) => loc.wallThetaOffset() !== undefined);
-	    // this.snapLocations.rotate = backCenter.rotate;
-	    function resetVertices() {
-	      for (let index = 0; index < snapLocations.length; index += 1) {
-	        const snapLoc = snapLocations[index];
-	        instance.position[snapLoc.location()]();
-	      }
-	    }
-	
-	    function calculateMaxAndMin(closestVertex, furthestVertex, wall, position, axis) {
-	      const maxAttr = `max${axis.toUpperCase()}`;
-	      const minAttr = `min${axis.toUpperCase()}`;
-	      if (closestVertex[axis]() === furthestVertex[axis]()) {
-	        const perpLine = wall.perpendicular(10, null, true);
-	        const externalVertex = !layout.within(perpLine.startVertex()) ?
-	                perpLine.endVertex() : perpLine.startVertex();
-	        if (externalVertex[axis]() < closestVertex[axis]()) position[maxAttr] = closestVertex[axis]();
-	        else position[minAttr] = closestVertex[axis]();
-	      } else if (closestVertex[axis]() < furthestVertex[axis]()) position[minAttr] = closestVertex[axis]();
-	      else position[maxAttr] = closestVertex[axis]();
-	    }
-	
-	    function findWallSnapLocation(center) {
-	      const centerWithin = layout.within(center);
-	      let wallObj;
-	      layout.walls().forEach((wall) => {
-	        const point = wall.closestPointOnLine(center, true);
-	        if (point) {
-	          const wallDist = point.distance(center);
-	          const isCloser = (!centerWithin || wallDist < tolerance*2) &&
-	                          (wallObj === undefined || wallObj.distance > wallDist);
-	          if (isCloser) {
-	            wallObj = {point, distance: wallDist, wall};
-	          }
-	        }
-	      });
-	      if (wallObj) {
-	        const wall = wallObj.wall;
-	        const point = wallObj.point;
-	        center = point;
-	        let theta = wall.radians();
-	
-	        let position = {center, theta};
-	
-	        const wallPairables = instance.snapLocations.wallPairable();
-	        let pairWith;
-	        if (centerWithin) pairWith = wallPairables[1];
-	        else pairWith = wallPairables[0];
-	
-	        theta += Math.toRadians(pairWith.wallThetaOffset());
-	        const objCenter = pairWith.at({center, theta});
-	
-	        return {center: objCenter, theta, wall, pairWith};
-	      }
-	    }
-	
-	    function findObjectSnapLocation (center) {
-	      let snapObj;
-	      SnapLocation2d.active().forEach((snapLoc) => {
-	        const tarVertId = snapLoc.targetVertex();
-	        if ((typeof instance.position[tarVertId]) !== 'function') return;
-	        const targetSnapLoc = instance.position[tarVertId]();
-	        if (snapLoc.isConnected(instance) ||
-	            snapLoc.pairedWith() !== null || targetSnapLoc.pairedWith() !== null) return;
-	        const vertDist = snapLoc.vertex().distance(center);
-	        const vertCloser = (snapObj === undefined && vertDist < tolerance) ||
-	        (snapObj !== undefined && snapObj.distance > vertDist);
-	        if (vertCloser) snapObj = {snapLoc: snapLoc, distance: vertDist, targetSnapLoc};
-	      });
-	      if (snapObj) {
-	        const snapLoc = snapObj.snapLoc;
-	        const tarSnap = snapObj.targetSnapLoc;
-	        let theta = snapLoc.parent().radians();
-	        const center = snapLoc.vertex();
-	        const funcName = snapLoc.targetVertex();
-	        theta += Math.toRadians(tarSnap.thetaOffset(snapLoc));
-	        lastPotentalPair = [snapLoc, tarSnap];
-	        return {snapLoc, center: instance.position[funcName]({center, theta}), theta};
-	      }
-	    }
-	
-	    let lastPotentalPair;
-	    this.setLastPotentialPair = (lpp) => lastPotentalPair = lpp;
-	    function checkPotentialPair() {
-	      if (!lastPotentalPair) return;
-	      if (!(lastPotentalPair[1] instanceof SnapLocation2d)) return true;
-	      const snap1 = lastPotentalPair[0];
-	      const snap2 = lastPotentalPair[1];
-	      snap1.eval();
-	      snap2.eval();
-	      if (!snap1.vertex().equal(snap2.vertex())) lastPotentalPair = null;
+	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	    this.move = (position, theta) => {
+	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	      this.radians(position.theta);
+	      this.center().point(center);
 	      return true;
-	    }
-	
-	    this.potentalSnapLocation = () => checkPotentialPair() && lastPotentalPair && lastPotentalPair[0];
-	    this.pairWithLast = () => {
-	      if (lastPotentalPair) {
-	        if ((typeof lastPotentalPair[0].pairWith) === 'function') {
-	          lastPotentalPair && lastPotentalPair[0].pairWith(lastPotentalPair[1])
-	        } else {
-	          console.log('nope');
-	        }
-	      }
-	      lastPotentalPair = null;
 	    };
 	
-	    let lastValidMove;
-	    this.makeMove = (position, force) => {
-	      const originalPos = {center: this.parent().center(), theta: this.radians()};
-	      instance.parent().center().point(position.center);
-	      if (position.theta !== undefined) instance.radians(position.theta);
-	      if (!force) {
-	        let validMove = true;
-	        instance.snapLocations().forEach((l) => validMove &&= layout.within(l.at().vertex()));
-	        if (!validMove) return this.makeMove(lastValidMove, true); // No move was made return undefined
-	        else lastValidMove = position;
+	    function centerMethod(widthMultiplier, heightMultiplier, position) {
+	      const center = instance.center();
+	      const rads = instance.radians();
+	      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
+	                        instance.height() * heightMultiplier * Math.sin(rads);
+	      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
+	                        instance.width() * widthMultiplier * Math.sin(rads);
+	
+	      if (position !== undefined) {
+	        const posCenter = new Vertex2d(position.center);
+	        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
 	      }
-	      instance.update();
-	    }
-	    this.move = (center) => {
-	      checkPotentialPair();
-	      const pairedSnapLocs = this.snapLocations.paired();
-	      resetVertices();
-	      if (pairedSnapLocs.length > 0) {
-	        const snapInfo = findObjectSnapLocation(center);
-	        if (snapInfo) {
-	          const obj = snapInfo.snapLoc.parent();
-	          if (snapInfo.theta !== undefined) {
-	            const theta = ((snapInfo.theta + 2 * Math.PI) - this.radians()) % (2*Math.PI);
-	            snapInfo.theta = undefined;
-	            this.snapLocations.rotate(theta);
-	          }
-	          const snapLoc = snapInfo.snapLoc;
-	          const targetVertex = snapLoc.targetVertex();
-	          const targetSnapLoc = this[targetVertex]();
-	          lastPotentalPair = [targetSnapLoc, snapLoc];
-	          const vertexCenter = snapLoc.parent().position[snapLoc.location()]().vertex();
-	          return targetSnapLoc.move(vertexCenter);
-	        }
-	        const snapLoc = pairedSnapLocs[0];
-	        return snapLoc.move(center);
-	      }
-	      const centerWithin = layout.within(center);
-	      let closest = {};
-	      const snapLocation = findObjectSnapLocation(center);
-	      const wallSnapLocation = findWallSnapLocation(center);
-	      if (snapLocation) {
-	        return this.makeMove(snapLocation);
-	      } else if (wallSnapLocation !== undefined) {
-	        const move = this.makeMove(wallSnapLocation);
-	        const wallSnapLoc = this.snapLocations.wallPairable()[0];
-	        lastPotentalPair = [wallSnapLoc.pairWith, wallSnapLocation.wall];
-	        return move;
-	      } else if (centerWithin) {
-	        return this.makeMove({center});
-	      }
+	      const backLeftLocation = {
+	            x: instance.center().x() - offsetX ,
+	            y: instance.center().y() - offsetY
+	      };
+	      return new Vertex2d(backLeftLocation);
 	    }
 	
-	    const objData = (funcName) => {
-	      const obj = this.object();
-	      return obj && (typeof obj[funcName]) === 'function';
-	    }
-	    function updateObject() {
-	      if (objData('radians')) object.radians(radians);
-	      if (objData('height')) object.height(height);
-	      if (objData('width')) object.width(width);
-	      instance.snapLocations().forEach((snapLoc) => snapLoc.at());
-	    }
 	
-	    this.update = updateObject;
-	    this.onChange(updateObject);
+	    this.frontCenter = (position) => centerMethod(0, -.5, position);
+	    this.backCenter = (position) => centerMethod(0, .5, position);
+	    this.leftCenter = (position) => centerMethod(.5, 0, position);
+	    this.rightCenter = (position) => centerMethod(-.5, 0, position);
+	
+	    this.backLeft = (position) => centerMethod(.5, .5, position);
+	    this.backRight = (position) => centerMethod(-.5, .5, position);
+	    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
+	    this.frontRight = (position) => centerMethod(-.5, -.5, position);
+	
+	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
+	
+	    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
 	  }
 	}
 	
-	Snap2d.get = {};
-	Snap2d.registar = (clazz) => {
-	  const instance = new clazz();
-	  if (instance instanceof Snap2d) {
-	    const name = clazz.prototype.constructor.name.replace(/^Snap/, '').toCamel();
-	    if (Snap2d.get[name] === undefined)
-	      Snap2d.get[name] = (parent, tolerance) => new clazz(parent, tolerance);
-	    else throw new Error(`Double registering Snap2d: ${name}`);
-	  }
-	}
+	new Square2d();
 	
-	
-	Snap2d.fromJson = (json) => {
-	  const layout = Layout2d.get(json.layoutId);
-	  const object = Object.fromJson(json.object);
-	  const snapObj = new Snap2d(layout, object, json.tolerance);
-	  snapObj.id(json.id);
-	  return snapObj;
-	}
-	
-	new Snap2d();
-	
-	module.exports = Snap2d;
+	module.exports = Square2d;
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/init.js',
+RequireJS.addFunction('./app-src/two-d/objects/circle.js',
 function (require, exports, module) {
 	
-const Joint = require('./joint');
+const Vertex2d = require('./vertex');
 	
-	const Butt = require('./joints/butt.js');
-	const Dado = require('./joints/dado.js');
-	const Miter = require('./joints/miter.js');
-	const Rabbet = require('./joints/rabbet.js');
-	
-	Joint.types = {
-	  Butt, Dado, Miter, Rabbet
-	};
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joint.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../../public/js/utils/object/lookup.js')
-	
-	
-	class Joint {
-	  constructor(malePartCode, femalePartCode) {
-	    let parentAssembly;
-	    const initialVals = {
-	      maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
-	      malePartCode, femalePartCode, demensionAxis: '', centerAxis: ''
-	    }
-	    Object.getSet(this, initialVals);
-	
-	    this.parentAssembly = () => {
-	      if (!parentAssembly && this.parentAssemblyId()) {
-	        parentAssembly = Lookup.get(this.parentAssemblyId());
-	        this.parentAssemblyId = () => parentAssembly.id();
-	      }
-	      return parentAssembly;
-	    }
-	
-	    this.updatePosition = () => {};
-	
-	    this.getFemale = () => this.parentAssembly().getAssembly(this.femalePartCode());
-	    this.getMale = () => this.parentAssembly().getAssembly(this.malePartCode());
-	
-	    this.getDemensions = () => {
-	      const malePos = getMale();
-	      const femalePos = getFemale();
-	      // I created a loop but it was harder to understand
-	      return undefined;
-	    }
-	    this.toString = () => `${this.constructor.name}:${this.malePartCode()}->${this.femalePartCode()}`;
-	
-	    if (Joint.list[this.malePartCode()] === undefined) Joint.list[this.malePartCode()] = [];
-	    if (Joint.list[this.femalePartCode()] === undefined) Joint.list[this.femalePartCode()] = [];
-	    Joint.list[this.malePartCode()].push(this);
-	    Joint.list[this.femalePartCode()].push(this);
-	  }
-	}
-	Joint.list = {};
-	Joint.regex = /([a-z0-9-_\.]{1,})->([a-z0-9-_\.]{1,})/;
-	
-	Joint.classes = {};
-	Joint.register = (clazz) => {
-	  new clazz();
-	  Joint.classes[clazz.prototype.constructor.name] = clazz;
-	}
-	Joint.new = function (id, json) {
-	  return new Joint.classes[id]().fromJson(json);
-	}
-	module.exports = Joint
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/snap-location.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('vertex');
-	const Circle2d = require('circle');
-	
-	class SnapLocation2d {
-	  constructor(parent, location, vertex, targetVertex, pairedWith) {
-	    Object.getSet(this, {location, vertex, targetVertex}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
-	    let locationFunction;
-	    const circle = new Circle2d(5, vertex);
-	    pairedWith = pairedWith || null;
-	
-	    const thetaOffset = {_DEFAULT: 0};
-	    this.thetaOffset = (cxtrNameOinstance, location, value) => {
-	      const cxtrName = cxtrNameOinstance instanceof SnapLocation2d ?
-	              cxtrNameOinstance.parent().constructor.name :
-	              cxtrNameOinstance ? cxtrNameOinstance : parent.constructor.name;
-	      if (cxtrNameOinstance instanceof SnapLocation2d && location === undefined)
-	        location = cxtrNameOinstance.location();
-	      if (cxtrName !== undefined && Number.isFinite(value)) {
-	        if (thetaOffset._DEFAULT === undefined) thetaOffset._DEFAULT = value;
-	        if (thetaOffset[cxtrName] === undefined) thetaOffset[cxtrName] = {};
-	        if (thetaOffset[cxtrName]._DEFAULT === undefined) thetaOffset[cxtrName]._DEFAULT = value;
-	        if (location) thetaOffset[cxtrName][location] = value;
-	      }
-	      return thetaOffset[cxtrName] === undefined ? thetaOffset._DEFAULT :
-	          (thetaOffset[cxtrName][location] === undefined ? thetaOffset[cxtrName]._DEFAULT :
-	          thetaOffset[cxtrName][location]);
-	    }
-	
-	    // If position is defined and a Vertex2d:
-	    //        returns the position of parents center iff this location was at position
-	    // else
-	    //        returns current postion based off of the parents current center
-	
-	    this.at = (position) => (typeof locationFunction) === 'function' ? locationFunction(position) : null;
-	    this.locationFunction = (lf) => {
-	      if ((typeof lf) === 'function') locationFunction = lf;
-	      return lf;
-	    }
-	    this.circle = () => circle;
-	    this.eval = () => this.parent().position[location]();
-	    this.parent = () => parent;
-	    this.parentId = () => parent.id();
-	    this.pairedWithId = () => pairedWith && pairedWith.id();
-	    this.pairedWith = () => pairedWith;
-	    this.disconnect = () => {
-	      if (pairedWith === null) return;
-	      const wasPaired = pairedWith;
-	      pairedWith = null;
-	      if (wasPaired instanceof SnapLocation2d) wasPaired.disconnect();
-	    }
-	    this.pairWith = (otherSnapLoc) => {
-	      const alreadyPaired = otherSnapLoc === pairedWith;
-	      if (!alreadyPaired) {
-	        pairedWith = otherSnapLoc;
-	        if (otherSnapLoc instanceof SnapLocation2d) otherSnapLoc.pairWith(this);
-	      }
-	    }
-	
-	    this.forEachObject = (func, objMap) => {
-	      objMap = objMap || {};
-	      objMap[this.parent().toString()] = this.parent();
-	      const locs = this.parent().snapLocations.paired();
-	      for (let index = 0; index < locs.length; index += 1) {
-	        const loc = locs[index];
-	        const connSnap = loc.pairedWith();
-	        if (connSnap instanceof SnapLocation2d) {
-	          const connObj = connSnap.parent();
-	          if (connObj && objMap[connObj.id()] === undefined) {
-	            objMap[connObj.id()] = connObj;
-	            connSnap.forEachObject(undefined, objMap);
-	          }
+	class Circle2d {
+	  constructor(radius, center) {
+	    center = new Vertex2d(center);
+	    Object.getSet(this, {radius, center});
+	    // ( x - h )^2 + ( y - k )^2 = r^2
+	    const instance = this;
+	    // Stole the root code from: https://stackoverflow.com/a/37225895
+	    function lineIntersects (line, bounded) {
+	      const p1 = line.startVertex();
+	      const p2 = line.endVertex();
+	        var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
+	        v1 = {};
+	        v2 = {};
+	        v1.x = p2.x() - p1.x();
+	        v1.y = p2.y() - p1.y();
+	        v2.x = p1.x() - instance.center().x();
+	        v2.y = p1.y() - instance.center().y();
+	        b = (v1.x * v2.x + v1.y * v2.y);
+	        c = 2 * (v1.x * v1.x + v1.y * v1.y);
+	        b *= -2;
+	        d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - instance.radius() * instance.radius()));
+	        if(isNaN(d)){ // no intercept
+	            return [];
 	        }
-	      }
-	      if ((typeof func) === 'function') {
-	        const objs = Object.values(objMap);
-	        for (let index = 0; index < objs.length; index += 1) {
-	          func(objs[index]);
+	        u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
+	        u2 = (b + d) / c;
+	        retP1 = {};   // return points
+	        retP2 = {}
+	        ret = []; // return array
+	        if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
+	            retP1.x = p1.x() + v1.x * u1;
+	            retP1.y = p1.y() + v1.y * u1;
+	            ret[0] = retP1;
 	        }
-	      } else return objMap;
-	    };
-	
-	    this.forEachConnectedSnap = (func, pairedMap) => {
-	      pairedMap ||= {};
-	      const locs = this.parent().snapLocations.paired();
-	      for (let index = 0; index < locs.length; index += 1) {
-	        const loc = locs[index];
-	        pairedMap[loc.toString()]  = loc;
-	        const connSnap = loc.pairedWith();
-	        if (connSnap instanceof SnapLocation2d) {
-	          const snapStr = connSnap.toString();
-	          if (pairedMap[snapStr] === undefined) {
-	            pairedMap[snapStr] = connSnap;
-	            connSnap.forEachConnectedSnap(undefined, pairedMap);
-	          }
+	        if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
+	            retP2.x = p1.x() + v1.x * u2;
+	            retP2.y = p1.y() + v1.y * u2;
+	            ret[ret.length] = retP2;
 	        }
-	      }
-	
-	      if ((typeof func) === 'function') {
-	        const snaps = Object.values(pairedMap);
-	        for (let index = 0; index < snaps.length; index += 1) {
-	          func(snaps[index]);
-	        }
-	      } else return pairedMap;
+	        return ret;
 	    }
 	
-	    this.getNonSnap = () => {
-	      let nonSnap = undefined;
-	      this.forEachConnectedSnap((snap) => {
-	        const pw = snap.pairedWith();
-	        if (pw !== undefined && !(pw instanceof SnapLocation2d)) nonSnap = pw;
-	      });
-	      return nonSnap;
+	    function circleIntersects(circle) {
+	      return Circle2d.intersectionOfTwo(instance, circle);
 	    }
 	
-	    this.isConnected = (obj) => {
-	      let connected = false;
-	      this.forEachObject((connObj) => connected = connected || obj.id() === connObj.id());
-	      return connected;
-	    }
+	    this.toString = () => `(${this.radius()}${this.center()}----)`;
 	
-	    this.rotate = (theta) => {
-	      this.forEachObject((obj) => obj.radians((obj.radians() + theta) % (2*Math.PI)));
-	    }
-	
-	    let lastMove = 0;
-	    this.move = (vertexLocation, moveId) => {
-	      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
-	      if (lastMove === moveId) return;
-	      vertexLocation = new Vertex2d(vertexLocation);
-	      const parent = this.parent();
-	      const thisNewCenterLoc = this.parent().position[location]({center: vertexLocation});
-	      parent.parent().center().point(thisNewCenterLoc);
-	      parent.update();
-	      lastMove = moveId;
-	      const pairedLocs = parent.snapLocations.paired();
-	      for (let index = 0; index < pairedLocs.length; index += 1) {
-	        const loc = pairedLocs[index];
-	        const paired = loc.pairedWith();
-	        const tarVertexLoc = this.parent().position[loc.location()]().vertex();
-	        if (paired instanceof SnapLocation2d) paired.move(tarVertexLoc, moveId);
-	      }
-	    }
-	    this.notPaired = () => pairedWith === null;
-	
-	    this.instString = () => `${parent.id()}:${location}`;
-	    this.toString = () => pairedWith  instanceof SnapLocation2d ?
-	                  `${this.instString()}=>${pairedWith && pairedWith.instString()}` :
-	                  `${this.instString()}=>${pairedWith}`;
-	    this.toJson = () => {
-	      const pw = pairedWith;
-	      if (pw === undefined) return;
-	      const json = [{
-	        location, objectId: parent.parent().id()
-	      }];
-	      json[1] = pw instanceof SnapLocation2d ?
-	                  {location: pw.location(), objectId: pw.parent().parent().id()} :
-	                  pw.constructor.name;
-	      const thisStr = this.toString();
-	      const pairStr = pw.toString();
-	      json.view = parent.view();
-	      json.UNIQUE_ID = thisStr < pairStr ? thisStr : pairStr;;
-	      return json;
+	    this.intersections = (input) => {
+	      if (input === undefined)
+	        console.log('here');
+	      if (input instanceof Circle2d) return circleIntersects(input);
+	      if (input.constructor.name === 'Line2d') return lineIntersects(input);
+	      throw new Error(`Cannot find intersections for ${input.constructor.name}`);
 	    }
 	  }
 	}
 	
-	SnapLocation2d.fromJson = (json) => {
-	  console.log('jsoned it up!')
+	// Ripped off from: https://stackoverflow.com/a/12221389
+	Circle2d.intersectionOfTwo = (circle0, circle1) => {
+	    const x0 = circle0.center().x();
+	    const y0 = circle0.center().y();
+	    const r0 = circle0.radius();
+	
+	    const x1 = circle1.center().x();
+	    const y1 = circle1.center().y();
+	    const r1 = circle1.radius();
+	    var a, dx, dy, d, h, rx, ry;
+	    var x2, y2;
+	
+	    /* dx and dy are the vertical and horizontal distances between
+	     * the circle centers.
+	     */
+	    dx = x1 - x0;
+	    dy = y1 - y0;
+	
+	    /* Determine the straight-line distance between the centers. */
+	    d = Math.sqrt((dy*dy) + (dx*dx));
+	
+	    /* Check for solvability. */
+	    if (d > (r0 + r1)) {
+	        /* no solution. circles do not intersect. */
+	        return [];
+	    }
+	    if (d < Math.abs(r0 - r1)) {
+	        /* no solution. one circle is contained in the other */
+	        return [];
+	    }
+	
+	    /* 'point 2' is the point where the line through the circle
+	     * intersection points crosses the line between the circle
+	     * centers.
+	     */
+	
+	    /* Determine the distance from point 0 to point 2. */
+	    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
+	
+	    /* Determine the coordinates of point 2. */
+	    x2 = x0 + (dx * a/d);
+	    y2 = y0 + (dy * a/d);
+	
+	    /* Determine the distance from point 2 to either of the
+	     * intersection points.
+	     */
+	    h = Math.sqrt((r0*r0) - (a*a));
+	
+	    /* Now determine the offsets of the intersection points from
+	     * point 2.
+	     */
+	    rx = -dy * (h/d);
+	    ry = dx * (h/d);
+	
+	    /* Determine the absolute intersection points. */
+	    var xi = x2 + rx;
+	    var xi_prime = x2 - rx;
+	    var yi = y2 + ry;
+	    var yi_prime = y2 - ry;
+	
+	    const list = [];
+	    return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
 	}
 	
-	let activeLocations = [];
-	SnapLocation2d.active = (locs) => {
-	  if (Array.isArray(locs)) activeLocations = activeLocations.concat(locs);
-	  return activeLocations;
+	Circle2d.reusable = true;
+	Circle2d.instance = (radius, center) => {
+	  const inst = Lookup.instance(Circle2d.name);
+	  inst.radius(radius);
+	  inst.center(center);
+	  return inst;
 	}
-	SnapLocation2d.clear = () => activeLocations = [];
+	new Circle2d();
 	
-	function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
-	  return (position) => {
-	    const xDiff = xDiffFunc();
-	    const yDiff = yDiffFunc();
-	    const vertex = snapLoc.vertex();
-	    if (xDiff === 0 && yDiff === 0) {
-	      if (position) return snapLoc.parent().parent().center().clone();
-	      vertex.point(snapLoc.parent().parent().center().clone());
-	      return snapLoc;
-	    }
-	    const center = snapLoc.parent().parent().center();
-	    const direction = xDiff >= 0 ? 1 : -1;
-	    const hypeLen = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
-	    let rads = Math.atan(yDiff/xDiff);
-	    if (position) {
-	      rads += position.theta === undefined ? snapLoc.parent().radians() : position.theta;
-	      const newPoint = position.center;
-	      return new Vertex2d({
-	        x: newPoint.x() - direction * (hypeLen * Math.cos(rads)),
-	        y: newPoint.y() - direction * (hypeLen * Math.sin(rads))
-	      });
-	    } else {
-	      rads += snapLoc.parent().radians();
-	      vertex.point({
-	        x: center.x() + direction * (hypeLen * Math.cos(rads)),
-	        y: center.y() + direction * (hypeLen * Math.sin(rads))
-	      });
-	      return snapLoc;
-	    }
-	  }
-	}
-	SnapLocation2d.fromToPoint = fromToPoint;
-	
-	const f = (snapLoc, attr, attrM, props) => () => {
-	  let val = snapLoc.parent()[attr]() * attrM;
-	  let keys = Object.keys(props || {});
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    val += snapLoc.parent()[key]() * props[key];
-	  }
-	  return val;
-	};
-	
-	SnapLocation2d.locationFunction = f;
-	
-	module.exports = SnapLocation2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/polygon.js',
-function (require, exports, module) {
-	const Vertex2d = require('./vertex');
-	const Line2d = require('./line');
-	
-	class Polygon2d {
-	  constructor(initialVerticies) {
-	    const lines = [];
-	    let map;
-	
-	    this.verticies = (target, before, after) => {
-	      if (lines.length === 0) return [];
-	      const fullList = [];
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        fullList.push(line.startVertex());
-	      }
-	      if (target) {
-	        const verticies = [];
-	        const index = fullList.indexOf(target);
-	        if (index === undefined) return null;
-	        verticies = [];
-	        for (let i = before; i < before + after + 1; i += 1) verticies.push(fullList[i]);
-	        return verticies;
-	      } else return fullList;
-	
-	      return verticies;
-	    }
-	
-	    this.lines = () => lines;
-	    this.startLine = () => lines[0];
-	    this.endLine = () => lines[lines.length - 1];
-	
-	    this.lineMap = (force) => {
-	      if (!force && map !== undefined) return map;
-	      if (lines.length === 0) return {};
-	      map = {};
-	      let lastEnd;
-	      if (!lines[0].startVertex().equal(lines[lines.length - 1].endVertex())) throw new Error('Broken Polygon');
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        if (lastEnd && !line.startVertex().equal(lastEnd)) throw new Error('Broken Polygon');
-	        lastEnd = line.endVertex();
-	        map[line.toString()] = line;
-	      }
-	      return map;
-	    }
-	
-	    this.equal = (other) => {
-	      if (!(other instanceof Polygon2d)) return false;
-	      const verts = this.verticies();
-	      const otherVerts = other.verticies();
-	      if (verts.length !== otherVerts.length) return false;
-	      let otherIndex = undefined;
-	      let direction;
-	      for (let index = 0; index < verts.length * 2; index += 1) {
-	        const vIndex = index % verts.length;
-	        if (otherIndex === undefined) {
-	          if (index > verts.length) {
-	            return false
-	          } if(verts[index].equal(otherVerts[0])) {
-	            otherIndex = otherVerts.length * 2;
-	          }
-	        } else if (otherIndex === otherVerts.length * 2) {
-	          if (verts[vIndex].equal(otherVerts[1])) direction = 1;
-	          else if(verts[vIndex].equal(otherVerts[otherVerts.length - 1])) direction = -1;
-	          else return false;
-	          otherIndex += direction * 2;
-	        } else if (!verts[vIndex].equal(otherVerts[otherIndex % otherVerts.length])) {
-	          return false;
-	        } else {
-	          otherIndex += direction;
-	        }
-	      }
-	      return true;
-	    }
-	
-	    function getLine(line) {
-	      const lineMap = this.lineMap();
-	      return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
-	    }
-	
-	    this.getLines = (startVertex, endVertex, reverse) => {
-	      const inc = reverse ? -1 : 1;
-	      const subSection = [];
-	      let completed = false;
-	      const doubleLen = lines.length * 2;
-	      for (let steps = 0; steps < doubleLen; steps += 1) {
-	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
-	        const curr = lines[index];
-	        if (subSection.length === 0) {
-	          if (startVertex.equal(!reverse ? curr.startVertex() : curr.endVertex())) {
-	            subSection.push(!reverse ? curr : curr.negitive());
-	            if (endVertex.equal(reverse ? curr.startVertex() : curr.endVertex())) {
-	              completed = true;
-	              break;
-	            }
-	          }
-	        } else {
-	          subSection.push(!reverse ? curr : curr.negitive());
-	          if (endVertex.equal(reverse ? curr.startVertex() : curr.endVertex())) {
-	            completed = true;
-	            break;
-	          }
-	        }
-	      }
-	      if (completed) return subSection;
-	    }
-	
-	    this.center = () => Vertex2d.center(...this.verticies());
-	
-	    this.addVerticies = (list) => {
-	      if (list === undefined) return;
-	      if ((lines.length === 0) && list.length < 3) return;//console.error('A Polygon Must be initialized with 3 verticies');
-	      const verts = [];
-	      const endLine = this.endLine();
-	      for (let index = 0; index < list.length + 1; index += 1) {
-	        if (index < list.length) verts[index] = new Vertex2d(list[index]);
-	        if (index === 0 && endLine) endLine.endVertex() = verts[0];
-	        else if (index > 0) {
-	          const startVertex = verts[index - 1];
-	          const endVertex = verts[index] || this.startLine().startVertex();
-	          const line = new Line2d(startVertex, endVertex);
-	          lines.push(line);
-	        }
-	      }
-	      if (verts.length > 0 && lines.length > 0) {
-	        if (endLine) endline.endVertex() = verts[0];
-	      }
-	      // this.removeLoops();
-	      this.lineMap(true);
-	    }
-	
-	    this.path = () => {
-	      let path = '';
-	      this.verticies().forEach((v) => path += `${v.toString()} => `);
-	      return path.substring(0, path.length - 4);
-	    }
-	
-	    this.toString = this.path;
-	
-	    this.removeLoops = () => {
-	      const map = {}
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        const key = line.toString();
-	        const negKey = line.toNegitiveString();
-	        if (map[key]) {
-	          lines.splice(map[key].index, index - map[key].index + 1);
-	        } else if (map[negKey]) {
-	          lines.splice(map[negKey].index, index - map[negKey].index + 1);
-	        } else {
-	          map[key] = {line, index};
-	        }
-	      }
-	    }
-	
-	    this.addVerticies(initialVerticies);
-	  }
-	}
-	
-	Polygon2d.center = (...polys) => {
-	  const centers = [];
-	  for (let index = 0; index < polys.length; index += 1) {
-	    centers.push(polys[index].center());
-	  }
-	  return Vertex2d.center(...centers);
-	}
-	
-	Polygon2d.lines = (...polys) => {
-	  let lines = [];
-	  for (let index = 0; index < polys.length; index += 1) {
-	    lines = lines.concat(polys[index].lines());
-	  }
-	  const consolidated = Line2d.consolidate(...Line2d.consolidate(...lines));
-	  if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
-	    console.error('Line Consolidation malfunction');
-	  }
-	  return consolidated;
-	}
-	
-	new Polygon2d();
-	module.exports = Polygon2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/plane.js',
-function (require, exports, module) {
-	
-class Plane2d {
-	  constructor(verticies) {
-	    this.getLines = () => {
-	      const lines = [];
-	      for (let index = 0; index < verticies.length; index += 1) {
-	        lines.push(new Line2d(verticies[index], verticies[(index + 1) % verticies.length]));
-	      }
-	      return lines;
-	    }
-	  }
-	}
-	
-	Plane2d.getPlanes = (planes) => {
-	  const ps = [];
-	  planes.forEach((p) => ps.push(new Plane2d(p)));
-	  return ps;
-	}
-	
-	Plane2d.consolidatePolygons = (polygons) => {
-	  const consolidated = {top: {}, left: {}, front: {}};
-	  function group(g, poly) {
-	
-	    map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
-	    map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
-	    map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
-	  }
-	  const map = {xy: [], xz: [], yz: []};
-	  polygons.forEach((p, index) => {
-	    map.xy.push([]);
-	    map.xz.push([]);
-	    map.yz.push([]);
-	    p.vertices.forEach((v) => {
-	      map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
-	      map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
-	      map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
-	    });
-	  });
-	  return map;
-	}
-	
-	new Plane2d();
-	module.exports = Plane2d;
+	module.exports = Circle2d;
 	
 });
 
@@ -27138,6 +25705,55 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 });
 
 
+RequireJS.addFunction('./app-src/two-d/objects/plane.js',
+function (require, exports, module) {
+	
+class Plane2d {
+	  constructor(verticies) {
+	    this.getLines = () => {
+	      const lines = [];
+	      for (let index = 0; index < verticies.length; index += 1) {
+	        lines.push(new Line2d(verticies[index], verticies[(index + 1) % verticies.length]));
+	      }
+	      return lines;
+	    }
+	  }
+	}
+	
+	Plane2d.getPlanes = (planes) => {
+	  const ps = [];
+	  planes.forEach((p) => ps.push(new Plane2d(p)));
+	  return ps;
+	}
+	
+	Plane2d.consolidatePolygons = (polygons) => {
+	  const consolidated = {top: {}, left: {}, front: {}};
+	  function group(g, poly) {
+	
+	    map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+	    map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+	    map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+	  }
+	  const map = {xy: [], xz: [], yz: []};
+	  polygons.forEach((p, index) => {
+	    map.xy.push([]);
+	    map.xz.push([]);
+	    map.yz.push([]);
+	    p.vertices.forEach((v) => {
+	      map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+	      map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+	      map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+	    });
+	  });
+	  return map;
+	}
+	
+	new Plane2d();
+	module.exports = Plane2d;
+	
+});
+
+
 RequireJS.addFunction('./app-src/two-d/objects/line-measurement.js',
 function (require, exports, module) {
 	
@@ -27146,6 +25762,7 @@ const Circle2d = require('circle');
 	const Line2d = require('line');
 	const Lookup = require('../../../../../public/js/utils/object/lookup');
 	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const approximate = require('../../../../../public/js/utils/approximate.js');
 	
 	class LineMeasurement2d {
 	  constructor(line, center, layer, modificationFunction) {
@@ -27202,10 +25819,19 @@ const Circle2d = require('circle');
 	  }
 	}
 	
+	function measurementLevel(line) {
+	  if ((typeof line.length) !== 'function')
+	    console.log(line);
+	
+	  return Math.log(line.length()*line.length())*2;
+	}
+	
 	LineMeasurement2d.measurements = (lines) => {
+	  lines.reorder();
 	  const verts = Line2d.vertices(lines);
 	  const center = Vertex2d.center(...verts);
 	  const measurements = [];
+	  const lengthMap = {};
 	  for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
 	    const tarVerts = lines[tIndex].liesOn(verts);
 	    if (tarVerts.length > 2) {
@@ -27213,16 +25839,50 @@ const Circle2d = require('circle');
 	        const sv = tarVerts[index - 1];
 	        const ev = tarVerts[index];
 	        const line = new Line2d(sv,ev);
-	        measurements.push(new LineMeasurement2d(line, center, 1));
+	        const length = approximate(line.length());
+	        if (lengthMap[length] === undefined) lengthMap[length] = [];
+	        lengthMap[length].push(line);
+	        // measurements.push(new LineMeasurement2d(line, center, 1));
 	      }
 	    }
 	    if (tarVerts.length > 1) {
 	      const sv = tarVerts[0];
 	      const ev = tarVerts[tarVerts.length - 1];
 	      const line = new Line2d(sv,ev);
-	      measurements.push(new LineMeasurement2d(line, center, 2));
+	      const length = approximate(line.length());
+	      if (lengthMap[length] === undefined) lengthMap[length] = [];
+	      lengthMap[length].push(line);
+	      // measurements.push(new LineMeasurement2d(line, center, 2));
 	    }
 	  }
+	
+	  const lengths = Object.keys(lengthMap);
+	  for (index = 0; index < lengths.length; index += 1) {
+	    const slopeMap = {};
+	    let lines = lengthMap[lengths[index]];
+	    for(let li = 1; li < lines.length; li++) {
+	      const line = lines[li];
+	      const center2center = new Line2d(lines[li-1].midpoint(), line.midpoint());
+	      const slopeMag = approximate.abs(center2center.slope());
+	      if (!slopeMap[slopeMag] && approximate(line.length()) !== 0) {
+	        for (let si = 0; si < li; si++) {
+	          const c2c = new Line2d(lines[si].midpoint(), line.midpoint());
+	          const slopeMag = approximate.abs(center2center.slope());
+	          slopeMap[slopeMag] = true;
+	        }
+	      } else {
+	        lines.splice(li, 1);
+	        li--;
+	      }
+	    }
+	    if (lines.length > 1) lines.splice(0,1);
+	    measurements.concatInPlace(lines);
+	  }
+	
+	  for (let index = 0; index < measurements.length; index++)
+	    if (approximate.abs(measurements[index].length()) !== 0)
+	      measurements[index] = new LineMeasurement2d(measurements[index], center, measurementLevel(measurements[index]));
+	
 	  return measurements;
 	}
 	
@@ -27237,412 +25897,222 @@ const Circle2d = require('circle');
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/corner.js',
+RequireJS.addFunction('./app-src/two-d/objects/polygon.js',
 function (require, exports, module) {
+	const Vertex2d = require('./vertex');
+	const Line2d = require('./line');
 	
-const Vertex2d = require('vertex');
+	class Polygon2d {
+	  constructor(initialVerticies) {
+	    const lines = [];
+	    let map;
 	
-	class Corner {
-	  constructor(center, height, width, radians) {
-	    width = width === undefined ? 121.92 : width;
-	    height = height === undefined ? 60.96 : height;
-	    radians = radians === undefined ? 0 : radians;
-	    const instance = this;
-	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
-	    if ((typeof center) === 'function') this.center = center;
-	    const startPoint = new Vertex2d(null);
-	
-	    const getterHeight = this.height;
-	    this.height = (v) => {
-	      notify(getterHeight(), v);
-	      return getterHeight(v);
-	    }
-	    const getterWidth = this.width;
-	    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
-	
-	    const changeFuncs = [];
-	    this.onChange = (func) => {
-	      if ((typeof func) === 'function') {
-	        changeFuncs.push(func);
+	    this.verticies = (target, before, after) => {
+	      if (lines.length === 0) return [];
+	      const fullList = [];
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        fullList.push(line.startVertex());
 	      }
+	      if (target) {
+	        const verticies = [];
+	        const index = fullList.indexOf(target);
+	        if (index === undefined) return null;
+	        verticies = [];
+	        for (let i = before; i < before + after + 1; i += 1) verticies.push(fullList[i]);
+	        return verticies;
+	      } else return fullList;
+	
+	      return verticies;
 	    }
 	
-	    let lastNotificationId = 0;
-	    function notify(currentValue, newValue) {
-	      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
-	      if (newValue !== currentValue) {
-	        const id = ++lastNotificationId;
-	        setTimeout(() => {
-	          if (id === lastNotificationId)
-	            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
-	        }, 100);
+	    this.lines = () => lines;
+	    this.startLine = () => lines[0];
+	    this.endLine = () => lines[lines.length - 1];
+	
+	    this.lineMap = (force) => {
+	      if (!force && map !== undefined) return map;
+	      if (lines.length === 0) return {};
+	      map = {};
+	      let lastEnd;
+	      if (!lines[0].startVertex().equal(lines[lines.length - 1].endVertex())) throw new Error('Broken Polygon');
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        if (lastEnd && !line.startVertex().equal(lastEnd)) throw new Error('Broken Polygon');
+	        lastEnd = line.endVertex();
+	        map[line.toString()] = line;
 	      }
+	      return map;
 	    }
 	
-	    this.radians = (newValue) => {
-	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	        notify(radians, newValue);
-	        radians = newValue;
+	    this.equal = (other) => {
+	      if (!(other instanceof Polygon2d)) return false;
+	      const verts = this.verticies();
+	      const otherVerts = other.verticies();
+	      if (verts.length !== otherVerts.length) return false;
+	      let otherIndex = undefined;
+	      let direction;
+	      for (let index = 0; index < verts.length * 2; index += 1) {
+	        const vIndex = index % verts.length;
+	        if (otherIndex === undefined) {
+	          if (index > verts.length) {
+	            return false
+	          } if(verts[index].equal(otherVerts[0])) {
+	            otherIndex = otherVerts.length * 2;
+	          }
+	        } else if (otherIndex === otherVerts.length * 2) {
+	          if (verts[vIndex].equal(otherVerts[1])) direction = 1;
+	          else if(verts[vIndex].equal(otherVerts[otherVerts.length - 1])) direction = -1;
+	          else return false;
+	          otherIndex += direction * 2;
+	        } else if (!verts[vIndex].equal(otherVerts[otherIndex % otherVerts.length])) {
+	          return false;
+	        } else {
+	          otherIndex += direction;
+	        }
 	      }
-	      return radians;
-	    };
-	    this.startPoint = () => {
-	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
-	      return startPoint;
-	    }
-	    this.angle = (value) => {
-	      if (value !== undefined) this.radians(Math.toRadians(value));
-	      return Math.toDegrees(this.radians());
-	    }
-	
-	    // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
-	    // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
-	    this.x = (val) => {
-	      if (val !== undefined) this.center().x(val);
-	      return this.center().x();
-	    }
-	    this.y = (val) => {
-	      if (val !== undefined) this.center().y(val);
-	      return this.center().y();
-	    }
-	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	
-	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	    this.move = (position, theta) => {
-	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	      this.radians(position.theta);
-	      this.center().point(center);
 	      return true;
-	    };
-	
-	    function centerMethod(widthMultiplier, heightMultiplier, position) {
-	      const center = instance.center();
-	      const rads = instance.radians();
-	      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
-	                        instance.height() * heightMultiplier * Math.sin(rads);
-	      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
-	                        instance.width() * widthMultiplier * Math.sin(rads);
-	
-	      if (position !== undefined) {
-	        const posCenter = new Vertex2d(position.center);
-	        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
-	      }
-	      const backLeftLocation = {
-	            x: instance.center().x() - offsetX ,
-	            y: instance.center().y() - offsetY
-	      };
-	      return new Vertex2d(backLeftLocation);
 	    }
 	
-	
-	    this.frontCenter = (position) => centerMethod(0, -.5, position);
-	    this.backCenter = (position) => centerMethod(0, .5, position);
-	    this.leftCenter = (position) => centerMethod(.5, 0, position);
-	    this.rightCenter = (position) => centerMethod(-.5, 0, position);
-	
-	    this.backLeft = (position) => centerMethod(.5, .5, position);
-	    this.backRight = (position) => centerMethod(-.5, .5, position);
-	    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
-	    this.frontRight = (position) => centerMethod(-.5, -.5, position);
-	
-	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	
-	    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
-	  }
-	}
-	
-	new Square2d();
-	
-	module.exports = Square2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/circle.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('./vertex');
-	
-	class Circle2d {
-	  constructor(radius, center) {
-	    center = new Vertex2d(center);
-	    Object.getSet(this, {radius, center});
-	    // ( x - h )^2 + ( y - k )^2 = r^2
-	    const instance = this;
-	    // Stole the root code from: https://stackoverflow.com/a/37225895
-	    function lineIntersects (line, bounded) {
-	      const p1 = line.startVertex();
-	      const p2 = line.endVertex();
-	        var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
-	        v1 = {};
-	        v2 = {};
-	        v1.x = p2.x() - p1.x();
-	        v1.y = p2.y() - p1.y();
-	        v2.x = p1.x() - instance.center().x();
-	        v2.y = p1.y() - instance.center().y();
-	        b = (v1.x * v2.x + v1.y * v2.y);
-	        c = 2 * (v1.x * v1.x + v1.y * v1.y);
-	        b *= -2;
-	        d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - instance.radius() * instance.radius()));
-	        if(isNaN(d)){ // no intercept
-	            return [];
-	        }
-	        u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
-	        u2 = (b + d) / c;
-	        retP1 = {};   // return points
-	        retP2 = {}
-	        ret = []; // return array
-	        if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
-	            retP1.x = p1.x() + v1.x * u1;
-	            retP1.y = p1.y() + v1.y * u1;
-	            ret[0] = retP1;
-	        }
-	        if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
-	            retP2.x = p1.x() + v1.x * u2;
-	            retP2.y = p1.y() + v1.y * u2;
-	            ret[ret.length] = retP2;
-	        }
-	        return ret;
+	    function getLine(line) {
+	      const lineMap = this.lineMap();
+	      return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
 	    }
 	
-	    function circleIntersects(circle) {
-	      return Circle2d.intersectionOfTwo(instance, circle);
-	    }
-	
-	    this.toString = () => `(${this.radius()}${this.center()}----)`;
-	
-	    this.intersections = (input) => {
-	      if (input === undefined)
-	        console.log('here');
-	      if (input instanceof Circle2d) return circleIntersects(input);
-	      if (input.constructor.name === 'Line2d') return lineIntersects(input);
-	      throw new Error(`Cannot find intersections for ${input.constructor.name}`);
-	    }
-	  }
-	}
-	
-	// Ripped off from: https://stackoverflow.com/a/12221389
-	Circle2d.intersectionOfTwo = (circle0, circle1) => {
-	    const x0 = circle0.center().x();
-	    const y0 = circle0.center().y();
-	    const r0 = circle0.radius();
-	
-	    const x1 = circle1.center().x();
-	    const y1 = circle1.center().y();
-	    const r1 = circle1.radius();
-	    var a, dx, dy, d, h, rx, ry;
-	    var x2, y2;
-	
-	    /* dx and dy are the vertical and horizontal distances between
-	     * the circle centers.
-	     */
-	    dx = x1 - x0;
-	    dy = y1 - y0;
-	
-	    /* Determine the straight-line distance between the centers. */
-	    d = Math.sqrt((dy*dy) + (dx*dx));
-	
-	    /* Check for solvability. */
-	    if (d > (r0 + r1)) {
-	        /* no solution. circles do not intersect. */
-	        return [];
-	    }
-	    if (d < Math.abs(r0 - r1)) {
-	        /* no solution. one circle is contained in the other */
-	        return [];
-	    }
-	
-	    /* 'point 2' is the point where the line through the circle
-	     * intersection points crosses the line between the circle
-	     * centers.
-	     */
-	
-	    /* Determine the distance from point 0 to point 2. */
-	    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
-	
-	    /* Determine the coordinates of point 2. */
-	    x2 = x0 + (dx * a/d);
-	    y2 = y0 + (dy * a/d);
-	
-	    /* Determine the distance from point 2 to either of the
-	     * intersection points.
-	     */
-	    h = Math.sqrt((r0*r0) - (a*a));
-	
-	    /* Now determine the offsets of the intersection points from
-	     * point 2.
-	     */
-	    rx = -dy * (h/d);
-	    ry = dx * (h/d);
-	
-	    /* Determine the absolute intersection points. */
-	    var xi = x2 + rx;
-	    var xi_prime = x2 - rx;
-	    var yi = y2 + ry;
-	    var yi_prime = y2 - ry;
-	
-	    const list = [];
-	    return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
-	}
-	
-	Circle2d.reusable = true;
-	Circle2d.instance = (radius, center) => {
-	  const inst = Lookup.instance(Circle2d.name);
-	  inst.radius(radius);
-	  inst.center(center);
-	  return inst;
-	}
-	new Circle2d();
-	
-	module.exports = Circle2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function drawerBox(length, width, depth) {
-	  const bottomHeight = 7/8;
-	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-	  box.setColor(1, 0, 0);
-	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-	  inside.setColor(0, 0, 1);
-	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-	  bInside.setColor(0, 0, 1);
-	
-	  return box.subtract(bInside).subtract(inside);
-	}
-	module.exports = drawerBox
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/models/pull.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	
-	function pull(length, height) {
-	  var rspx = length - .75;
-	  var h = height-.125;
-	  var gerth = .27
-	  // var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
-	  // var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
-	  // var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
-	  var rCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/2, 0, h/-2]});
-	  var lCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/-2, 0, h/-2]});
-	  var mainCyl = CSG.cube({demensions: [length, gerth, gerth], center: [0, 0, 0]});
-	
-	  return mainCyl.union(lCyl).union(rCyl);
-	}
-	module.exports = pull
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/line.js',
-function (require, exports, module) {
-	
-const Vector3D = require('./vector');
-	const Plane = require('./plane');
-	
-	class Line3D {
-	  constructor(startVertex, endVertex) {
-	    this.startVertex = startVertex;
-	    this.endVertex = endVertex;
-	
-	
-	    let i = endVertex.x - startVertex.x;
-	    let j = endVertex.y - startVertex.y;
-	    let k = endVertex.z - startVertex.z;
-	    const vector = new Vector3D(i,j,k);
-	
-	    this.negitive = () => new Line3D(endVertex, startVertex);
-	    this.equals = (other) => startVertex && endVertex && other &&
-	        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
-	    this.vector = () => vector;
-	
-	    this.planeAt = (rotation) => {
-	      const two = new Vertex3D({x: startVertex.x + 1, y: startVertex.y, z: startVertex.z});
-	      two.rotate(rotation, startVertex);
-	      const three = {x: endVertex.x + 1, y: endVertex.y, z: endVertex.z};
-	      thtee.rotate(rotation, endVertex);
-	      return new Plane(startVertex.copy(), two, three, endVertex.copy());
-	    }
-	
-	    this.on = (vertex, tolerance) => {
-	      tolerance ||= .01;
-	    }
-	
-	    this.equation = () => {
-	      const returnValue = {};
-	      for (let i = 0; i < 3; i++) {
-	        let coord = String.fromCharCode(i + 120);
-	        let t = (endVertex[coord] - startVertex[coord]) / 1;
-	        if (t !== 0) {
-	          let coef = String.fromCharCode(i + 97);
-	          returnValue[coef] = 1;
-	
-	          let offset = ((i + 1) % 3);
-	          coord = String.fromCharCode(offset + 120);
-	          coef = String.fromCharCode(offset + 97);
-	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
-	
-	          offset = ((i + 2) % 3);
-	          coord = String.fromCharCode(offset + 120);
-	          coef = String.fromCharCode(offset + 97);
-	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
-	          break;
+	    this.getLines = (startVertex, endVertex, reverse) => {
+	      const inc = reverse ? -1 : 1;
+	      const subSection = [];
+	      let completed = false;
+	      const doubleLen = lines.length * 2;
+	      for (let steps = 0; steps < doubleLen; steps += 1) {
+	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
+	        const curr = lines[index];
+	        if (subSection.length === 0) {
+	          if (startVertex.equal(!reverse ? curr.startVertex() : curr.endVertex())) {
+	            subSection.push(!reverse ? curr : curr.negitive());
+	            if (endVertex.equal(reverse ? curr.startVertex() : curr.endVertex())) {
+	              completed = true;
+	              break;
+	            }
+	          }
+	        } else {
+	          subSection.push(!reverse ? curr : curr.negitive());
+	          if (endVertex.equal(reverse ? curr.startVertex() : curr.endVertex())) {
+	            completed = true;
+	            break;
+	          }
 	        }
 	      }
-	      if (returnValue.a === undefined) throw new Error('This Line is a point... I think...');
-	      return returnValue;
+	      if (completed) return subSection;
 	    }
 	
-	    this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
-	    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
+	    this.center = () => Vertex2d.center(...this.verticies());
 	
-	    this.midpoint = () => ({
-	      x: endVertex.x - startVertex.x,
-	      x: endVertex.y - startVertex.y,
-	      x: endVertex.z - startVertex.z
-	    })
-	
-	    this.rotate = (rotation, center) => {
-	      center ||= this.midpoint();
-	      startVertex.rotate(rotations, center);
-	      endVertex.rotate(rotations, center);
+	    this.addVerticies = (list) => {
+	      if (list === undefined) return;
+	      if ((lines.length === 0) && list.length < 3) return;//console.error('A Polygon Must be initialized with 3 verticies');
+	      const verts = [];
+	      const endLine = this.endLine();
+	      for (let index = 0; index < list.length + 1; index += 1) {
+	        if (index < list.length) verts[index] = new Vertex2d(list[index]);
+	        if (index === 0 && endLine) endLine.endVertex() = verts[0];
+	        else if (index > 0) {
+	          const startVertex = verts[index - 1];
+	          const endVertex = verts[index] || this.startLine().startVertex();
+	          const line = new Line2d(startVertex, endVertex);
+	          lines.push(line);
+	        }
+	      }
+	      if (verts.length > 0 && lines.length > 0) {
+	        if (endLine) endline.endVertex() = verts[0];
+	      }
+	      // this.removeLoops();
+	      this.lineMap(true);
 	    }
 	
-	    this.reverseRotate = (rotation, center) => {
-	      center ||= this.midpoint();
-	      startVertex.reverseRotate(rotations, center);
-	      endVertex.reverseRotate(rotations, center);
+	    this.path = () => {
+	      let path = '';
+	      this.verticies().forEach((v) => path += `${v.toString()} => `);
+	      return path.substring(0, path.length - 4);
 	    }
 	
+	    this.toString = this.path;
+	
+	    this.removeLoops = () => {
+	      const map = {}
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        const key = line.toString();
+	        const negKey = line.toNegitiveString();
+	        if (map[key]) {
+	          lines.splice(map[key].index, index - map[key].index + 1);
+	        } else if (map[negKey]) {
+	          lines.splice(map[negKey].index, index - map[negKey].index + 1);
+	        } else {
+	          map[key] = {line, index};
+	        }
+	      }
+	    }
+	
+	    this.addVerticies(initialVerticies);
 	  }
 	}
 	
-	Line3D.verticies = (lines) => {
-	  const verts = [];
-	  for (let index = 0; index < lines.length; index += 1) {
-	    verts.push(lines[index].endVertex);
+	Polygon2d.center = (...polys) => {
+	  const centers = [];
+	  for (let index = 0; index < polys.length; index += 1) {
+	    centers.push(polys[index].center());
 	  }
-	  return verts;
+	  return Vertex2d.center(...centers);
 	}
 	
-	module.exports = Line3D;
+	Polygon2d.lines = (...polys) => {
+	  let lines = [];
+	  for (let index = 0; index < polys.length; index += 1) {
+	    lines = lines.concat(polys[index].lines());
+	  }
+	  const consolidated = Line2d.consolidate(...Line2d.consolidate(...lines));
+	  if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
+	    console.error('Line Consolidation malfunction');
+	  }
+	  return consolidated;
+	}
+	
+	new Polygon2d();
+	module.exports = Polygon2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/bi-plane.js',
+function (require, exports, module) {
+	
+
+	class BiPolygon {
+	  constructor(polygon1, polygon2) {
+	    const face1 = polygon1.verticies();
+	    const face2 = polygon.verticies();
+	    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
+	
+	    this.toModel = () => {
+	      const front = new CSG.Polygon(normalize(face1, [+1, 0, 0]));
+	      front.plane.normal = new CSG.Vector([0,0+1, 0,0]);
+	      const back = new CSG.Polygon(normalize(face2, [-1, 0, 0], true));
+	      back.plane.normal = new CSG.Vector([0,0,1,0,0]);
+	      const top = new CSG.Polygon(normalize([face1[0], face1[1], face2[1], face2[0]], [0,1,0], true));
+	      top.plane.normal = new CSG.Vector([0, 1, 0]);
+	      const left = new CSG.Polygon(normalize([face2[3], face2[0], face1[0], face1[3]], [-1,0,0]));
+	      left.plane.normal = new CSG.Vector([-1, 0, 0]);
+	      const right = new CSG.Polygon(normalize([face1[1], face1[2], face2[2], face2[1]], [1,0,0], true));
+	      right.plane.normal = new CSG.Vector([1, 0, 0]);
+	      const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]], [0,-1,0]));
+	      bottom.plane.normal = new CSG.Vector([0, -1, 0]);
+	
+	      const poly = CSG.fromPolygons([front, back, top, left, right, bottom]);
+	      return poly;
+	    }
+	  }
+	}
 	
 });
 
@@ -27802,6 +26272,968 @@ const Properties = require('../properties');
 	}
 	
 	module.exports = PropertyConfig;
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/property/definitions.js',
+function (require, exports, module) {
+	const Property = require('../property');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const IMPERIAL_US = Measurement.units()[1];
+	
+	const defs = {};
+	
+	defs.h = new Property('h', 'height', null);
+	defs.w = new Property('w', 'width', null);
+	defs.d = new Property('d', 'depth', null);
+	defs.t = new Property('t', 'thickness', null);
+	defs.l = new Property('l', 'length', null);
+	
+	//   Overlay
+	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
+	
+	//   Reveal
+	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvr = new Property('rvr', 'Reveal Right', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvl = new Property('rvl', 'Reveal Left', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
+	
+	//   Inset
+	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
+	
+	//   Cabinet
+	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
+	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
+	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
+	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
+	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
+	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
+	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US})
+	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US})
+	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US})
+	
+	// Cabinet.AngledBackCorner
+	defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	defs.lbo = new Property('lbo', 'Left Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	defs.rbo = new Property('rbo', 'Right Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	
+	// Cabinet.Lshaped
+	defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 24, notMetric: IMPERIAL_US})
+	defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US})
+	
+	//   Panel
+	
+	//   Guides
+	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', null),
+	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', null),
+	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', null)
+	
+	//   DoorAndFront
+	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
+	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null})
+	
+	//   Door
+	
+	//   DrawerBox
+	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
+	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
+	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
+	
+	//   DrawerFront
+	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
+	
+	//   Frame
+	
+	//   Handle
+	defs.c2c = new Property('c2c', 'Center To Center', null),
+	defs.proj = new Property('proj', 'Projection', null),
+	
+	//   Hinge
+	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null),
+	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
+	defs.maxol = new Property('maxol', 'Max Door Overlay', null),
+	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
+	
+	//   Opening
+	
+	module.exports = defs;
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/labor.js',
+function (require, exports, module) {
+	
+
+	
+	const Material = require('./material.js');
+	const Cost = require('../cost.js');
+	
+	
+	// unitCost.value = (hourlyRate*hours)/length
+	// calc(assembly) = unitCost.value * formula
+	
+	class Labor extends Material {
+	  constructor (props) {
+	    super(props);
+	    const type = props.laborType;
+	    props.hourlyRate = Labor.hourlyRates[type]
+	    const parentCalc = this.calc;
+	    this.cost = () => this.hourlyRate() * props.hours;
+	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
+	    Labor.hourlyRate(type, props.hourlyRate);
+	
+	    const parentToJson = this.toJson;
+	  }
+	}
+	
+	
+	Labor.defaultRate = 40;
+	Labor.hourlyRate = (type, rate) => {
+	  rate = Cost.evaluator.eval(new String(rate));
+	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
+	  return Labor.hourlyRates[type] || Labor.defaultRate;
+	}
+	Labor.hourlyRates = {};
+	Labor.types = [];
+	Labor.explanation = `Cost to be calculated hourly`;
+	
+	module.exports = Labor
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/snap.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('vertex');
+	const SnapLocation2d = require('snap-location');
+	
+	class Snap2d {
+	  constructor(parent, object, tolerance) {
+	    name = 'booyacka';
+	    Object.getSet(this, {object, tolerance}, 'layoutId');
+	    if (parent === undefined) return;
+	    const instance = this;
+	    const id = String.random();
+	    let start = new Vertex2d();
+	    let end = new Vertex2d();
+	    let layout = parent.layout();
+	
+	    this.dl = () => 24 * 2.54;
+	    this.dr = () => 24 * 2.54;
+	    this.dol = () => 12;
+	    this.dor = () => 12;
+	    this.toString = () => `SNAP (${tolerance}):${object}`
+	    this.position = {};
+	    this.id = () => id;
+	    this.parent = () => parent;
+	    this.x = (val) => {
+	      if (val !== undefined) {
+	        notify(this.parent().center().x(), val);
+	        this.parent().center().x(val);
+	      }
+	      return this.parent().center().x();
+	    }
+	    this.y = (val) => {
+	      if (val !== undefined) {
+	        notify(this.parent().center().y(), val);
+	        this.parent().center().y(val);
+	      }
+	      return this.parent().center().y();
+	    }
+	
+	    this.angle = (value) => {
+	      if (value !== undefined) {
+	        notify(this.angle(), value);
+	        this.radians(Math.toRadians(value));
+	      }
+	      return Math.toDegrees(this.radians());
+	    }
+	
+	
+	    const changeFuncs = [];
+	    this.onChange = (func) => {
+	      if ((typeof func) === 'function') {
+	        changeFuncs.push(func);
+	      }
+	    }
+	
+	    let lastNotificationId = 0;
+	    function notify(currentValue, newValue) {
+	      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
+	      if (newValue !== currentValue) {
+	        const id = ++lastNotificationId;
+	        setTimeout(() => {
+	          if (id === lastNotificationId)
+	            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
+	        }, 100);
+	      }
+	    }
+	
+	    let radians = 0;
+	    this.radians = (newValue) => {
+	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        notify(radians, newValue);
+	        radians = newValue;
+	      }
+	      return radians;
+	    };
+	
+	    let height = 60.96;
+	    let width = 121.92;
+	    this.height = (h) => {
+	      if ((typeof h) === 'number') {
+	        const newVal = h;
+	        notify(height, newVal);
+	        height = newVal;
+	      }
+	      return height;
+	    }
+	    this.width = (w) => {
+	      if ((typeof w) === 'number') {
+	        const newVal = w;
+	        notify(width, newVal);
+	        width = newVal;
+	      }
+	      return width;
+	    }
+	
+	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+	
+	    this.view = () => {
+	      switch (this) {
+	        case parent.topview(): return 'topview';
+	        case parent.bottomview(): return 'bottomview';
+	        case parent.leftview(): return 'leftview';
+	        case parent.rightview(): return 'rightview';
+	        case parent.frontview(): return 'frontview';
+	        case parent.backview(): return 'backview';
+	        default: return null;
+	      }
+	    }
+	
+	    const snapLocations = [];
+	    this.addLocation = (snapLoc) => {
+	      if (snapLoc instanceof SnapLocation2d && this.position[snapLoc.location()] === undefined) {
+	        snapLocations.push(snapLoc);
+	        this.position[snapLoc.location()] = snapLoc.at;
+	      }
+	    }
+	    function getSnapLocations(func) {
+	      const locs = [];
+	      for (let index = 0; index < snapLocations.length; index += 1) {
+	        const loc = snapLocations[index];
+	        if ((typeof func) === 'function') {
+	          if (func(loc)) locs.push(loc);
+	        } else locs.push(loc);
+	      }
+	      return locs;
+	    }
+	
+	    this.snapLocations = getSnapLocations;
+	    this.snapLocations.notPaired = () => getSnapLocations((loc) => loc.pairedWith() === null);
+	    this.snapLocations.paired = () => getSnapLocations((loc) => loc.pairedWith() !== null);
+	    this.snapLocations.wallPairable = () => getSnapLocations((loc) => loc.wallThetaOffset() !== undefined);
+	    // this.snapLocations.rotate = backCenter.rotate;
+	    function resetVertices() {
+	      for (let index = 0; index < snapLocations.length; index += 1) {
+	        const snapLoc = snapLocations[index];
+	        instance.position[snapLoc.location()]();
+	      }
+	    }
+	
+	    function calculateMaxAndMin(closestVertex, furthestVertex, wall, position, axis) {
+	      const maxAttr = `max${axis.toUpperCase()}`;
+	      const minAttr = `min${axis.toUpperCase()}`;
+	      if (closestVertex[axis]() === furthestVertex[axis]()) {
+	        const perpLine = wall.perpendicular(10, null, true);
+	        const externalVertex = !layout.within(perpLine.startVertex()) ?
+	                perpLine.endVertex() : perpLine.startVertex();
+	        if (externalVertex[axis]() < closestVertex[axis]()) position[maxAttr] = closestVertex[axis]();
+	        else position[minAttr] = closestVertex[axis]();
+	      } else if (closestVertex[axis]() < furthestVertex[axis]()) position[minAttr] = closestVertex[axis]();
+	      else position[maxAttr] = closestVertex[axis]();
+	    }
+	
+	    function findWallSnapLocation(center) {
+	      const centerWithin = layout.within(center);
+	      let wallObj;
+	      layout.walls().forEach((wall) => {
+	        const point = wall.closestPointOnLine(center, true);
+	        if (point) {
+	          const wallDist = point.distance(center);
+	          const isCloser = (!centerWithin || wallDist < tolerance*2) &&
+	                          (wallObj === undefined || wallObj.distance > wallDist);
+	          if (isCloser) {
+	            wallObj = {point, distance: wallDist, wall};
+	          }
+	        }
+	      });
+	      if (wallObj) {
+	        const wall = wallObj.wall;
+	        const point = wallObj.point;
+	        center = point;
+	        let theta = wall.radians();
+	
+	        let position = {center, theta};
+	
+	        const wallPairables = instance.snapLocations.wallPairable();
+	        let pairWith;
+	        if (centerWithin) pairWith = wallPairables[1];
+	        else pairWith = wallPairables[0];
+	
+	        theta += Math.toRadians(pairWith.wallThetaOffset());
+	        const objCenter = pairWith.at({center, theta});
+	
+	        return {center: objCenter, theta, wall, pairWith};
+	      }
+	    }
+	
+	    function findObjectSnapLocation (center) {
+	      let snapObj;
+	      SnapLocation2d.active().forEach((snapLoc) => {
+	        const tarVertId = snapLoc.targetVertex();
+	        if ((typeof instance.position[tarVertId]) !== 'function') return;
+	        const targetSnapLoc = instance.position[tarVertId]();
+	        if (snapLoc.isConnected(instance) ||
+	            snapLoc.pairedWith() !== null || targetSnapLoc.pairedWith() !== null) return;
+	        const vertDist = snapLoc.vertex().distance(center);
+	        const vertCloser = (snapObj === undefined && vertDist < tolerance) ||
+	        (snapObj !== undefined && snapObj.distance > vertDist);
+	        if (vertCloser) snapObj = {snapLoc: snapLoc, distance: vertDist, targetSnapLoc};
+	      });
+	      if (snapObj) {
+	        const snapLoc = snapObj.snapLoc;
+	        const tarSnap = snapObj.targetSnapLoc;
+	        let theta = snapLoc.parent().radians();
+	        const center = snapLoc.vertex();
+	        const funcName = snapLoc.targetVertex();
+	        theta += Math.toRadians(tarSnap.thetaOffset(snapLoc));
+	        lastPotentalPair = [snapLoc, tarSnap];
+	        return {snapLoc, center: instance.position[funcName]({center, theta}), theta};
+	      }
+	    }
+	
+	    let lastPotentalPair;
+	    this.setLastPotentialPair = (lpp) => lastPotentalPair = lpp;
+	    function checkPotentialPair() {
+	      if (!lastPotentalPair) return;
+	      if (!(lastPotentalPair[1] instanceof SnapLocation2d)) return true;
+	      const snap1 = lastPotentalPair[0];
+	      const snap2 = lastPotentalPair[1];
+	      snap1.eval();
+	      snap2.eval();
+	      if (!snap1.vertex().equal(snap2.vertex())) lastPotentalPair = null;
+	      return true;
+	    }
+	
+	    this.potentalSnapLocation = () => checkPotentialPair() && lastPotentalPair && lastPotentalPair[0];
+	    this.pairWithLast = () => {
+	      if (lastPotentalPair) {
+	        if ((typeof lastPotentalPair[0].pairWith) === 'function') {
+	          lastPotentalPair && lastPotentalPair[0].pairWith(lastPotentalPair[1])
+	        } else {
+	          console.log('nope');
+	        }
+	      }
+	      lastPotentalPair = null;
+	    };
+	
+	    let lastValidMove;
+	    this.makeMove = (position, force) => {
+	      const originalPos = {center: this.parent().center(), theta: this.radians()};
+	      instance.parent().center().point(position.center);
+	      if (position.theta !== undefined) instance.radians(position.theta);
+	      if (!force) {
+	        let validMove = true;
+	        instance.snapLocations().forEach((l) => validMove &&= layout.within(l.at().vertex()));
+	        if (!validMove) return this.makeMove(lastValidMove, true); // No move was made return undefined
+	        else lastValidMove = position;
+	      }
+	      instance.update();
+	    }
+	    this.move = (center) => {
+	      checkPotentialPair();
+	      const pairedSnapLocs = this.snapLocations.paired();
+	      resetVertices();
+	      if (pairedSnapLocs.length > 0) {
+	        const snapInfo = findObjectSnapLocation(center);
+	        if (snapInfo) {
+	          const obj = snapInfo.snapLoc.parent();
+	          if (snapInfo.theta !== undefined) {
+	            const theta = ((snapInfo.theta + 2 * Math.PI) - this.radians()) % (2*Math.PI);
+	            snapInfo.theta = undefined;
+	            this.snapLocations.rotate(theta);
+	          }
+	          const snapLoc = snapInfo.snapLoc;
+	          const targetVertex = snapLoc.targetVertex();
+	          const targetSnapLoc = this[targetVertex]();
+	          lastPotentalPair = [targetSnapLoc, snapLoc];
+	          const vertexCenter = snapLoc.parent().position[snapLoc.location()]().vertex();
+	          return targetSnapLoc.move(vertexCenter);
+	        }
+	        const snapLoc = pairedSnapLocs[0];
+	        return snapLoc.move(center);
+	      }
+	      const centerWithin = layout.within(center);
+	      let closest = {};
+	      const snapLocation = findObjectSnapLocation(center);
+	      const wallSnapLocation = findWallSnapLocation(center);
+	      if (snapLocation) {
+	        return this.makeMove(snapLocation);
+	      } else if (wallSnapLocation !== undefined) {
+	        const move = this.makeMove(wallSnapLocation);
+	        const wallSnapLoc = this.snapLocations.wallPairable()[0];
+	        lastPotentalPair = [wallSnapLoc.pairWith, wallSnapLocation.wall];
+	        return move;
+	      } else if (centerWithin) {
+	        return this.makeMove({center});
+	      }
+	    }
+	
+	    const objData = (funcName) => {
+	      const obj = this.object();
+	      return obj && (typeof obj[funcName]) === 'function';
+	    }
+	    function updateObject() {
+	      if (objData('radians')) object.radians(radians);
+	      if (objData('height')) object.height(height);
+	      if (objData('width')) object.width(width);
+	      instance.snapLocations().forEach((snapLoc) => snapLoc.at());
+	    }
+	
+	    this.update = updateObject;
+	    this.onChange(updateObject);
+	  }
+	}
+	
+	Snap2d.get = {};
+	Snap2d.registar = (clazz) => {
+	  const instance = new clazz();
+	  if (instance instanceof Snap2d) {
+	    const name = clazz.prototype.constructor.name.replace(/^Snap/, '').toCamel();
+	    if (Snap2d.get[name] === undefined)
+	      Snap2d.get[name] = (parent, tolerance) => new clazz(parent, tolerance);
+	    else throw new Error(`Double registering Snap2d: ${name}`);
+	  }
+	}
+	
+	
+	Snap2d.fromJson = (json) => {
+	  const layout = Layout2d.get(json.layoutId);
+	  const object = Object.fromJson(json.object);
+	  const snapObj = new Snap2d(layout, object, json.tolerance);
+	  snapObj.id(json.id);
+	  return snapObj;
+	}
+	
+	new Snap2d();
+	
+	module.exports = Snap2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/snap-location.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('vertex');
+	const Circle2d = require('circle');
+	
+	class SnapLocation2d {
+	  constructor(parent, location, vertex, targetVertex, pairedWith) {
+	    Object.getSet(this, {location, vertex, targetVertex}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
+	    let locationFunction;
+	    const circle = new Circle2d(5, vertex);
+	    pairedWith = pairedWith || null;
+	
+	    const thetaOffset = {_DEFAULT: 0};
+	    this.thetaOffset = (cxtrNameOinstance, location, value) => {
+	      const cxtrName = cxtrNameOinstance instanceof SnapLocation2d ?
+	              cxtrNameOinstance.parent().constructor.name :
+	              cxtrNameOinstance ? cxtrNameOinstance : parent.constructor.name;
+	      if (cxtrNameOinstance instanceof SnapLocation2d && location === undefined)
+	        location = cxtrNameOinstance.location();
+	      if (cxtrName !== undefined && Number.isFinite(value)) {
+	        if (thetaOffset._DEFAULT === undefined) thetaOffset._DEFAULT = value;
+	        if (thetaOffset[cxtrName] === undefined) thetaOffset[cxtrName] = {};
+	        if (thetaOffset[cxtrName]._DEFAULT === undefined) thetaOffset[cxtrName]._DEFAULT = value;
+	        if (location) thetaOffset[cxtrName][location] = value;
+	      }
+	      return thetaOffset[cxtrName] === undefined ? thetaOffset._DEFAULT :
+	          (thetaOffset[cxtrName][location] === undefined ? thetaOffset[cxtrName]._DEFAULT :
+	          thetaOffset[cxtrName][location]);
+	    }
+	
+	    // If position is defined and a Vertex2d:
+	    //        returns the position of parents center iff this location was at position
+	    // else
+	    //        returns current postion based off of the parents current center
+	
+	    this.at = (position) => (typeof locationFunction) === 'function' ? locationFunction(position) : null;
+	    this.locationFunction = (lf) => {
+	      if ((typeof lf) === 'function') locationFunction = lf;
+	      return lf;
+	    }
+	    this.circle = () => circle;
+	    this.eval = () => this.parent().position[location]();
+	    this.parent = () => parent;
+	    this.parentId = () => parent.id();
+	    this.pairedWithId = () => pairedWith && pairedWith.id();
+	    this.pairedWith = () => pairedWith;
+	    this.disconnect = () => {
+	      if (pairedWith === null) return;
+	      const wasPaired = pairedWith;
+	      pairedWith = null;
+	      if (wasPaired instanceof SnapLocation2d) wasPaired.disconnect();
+	    }
+	    this.pairWith = (otherSnapLoc) => {
+	      const alreadyPaired = otherSnapLoc === pairedWith;
+	      if (!alreadyPaired) {
+	        pairedWith = otherSnapLoc;
+	        if (otherSnapLoc instanceof SnapLocation2d) otherSnapLoc.pairWith(this);
+	      }
+	    }
+	
+	    this.forEachObject = (func, objMap) => {
+	      objMap = objMap || {};
+	      objMap[this.parent().toString()] = this.parent();
+	      const locs = this.parent().snapLocations.paired();
+	      for (let index = 0; index < locs.length; index += 1) {
+	        const loc = locs[index];
+	        const connSnap = loc.pairedWith();
+	        if (connSnap instanceof SnapLocation2d) {
+	          const connObj = connSnap.parent();
+	          if (connObj && objMap[connObj.id()] === undefined) {
+	            objMap[connObj.id()] = connObj;
+	            connSnap.forEachObject(undefined, objMap);
+	          }
+	        }
+	      }
+	      if ((typeof func) === 'function') {
+	        const objs = Object.values(objMap);
+	        for (let index = 0; index < objs.length; index += 1) {
+	          func(objs[index]);
+	        }
+	      } else return objMap;
+	    };
+	
+	    this.forEachConnectedSnap = (func, pairedMap) => {
+	      pairedMap ||= {};
+	      const locs = this.parent().snapLocations.paired();
+	      for (let index = 0; index < locs.length; index += 1) {
+	        const loc = locs[index];
+	        pairedMap[loc.toString()]  = loc;
+	        const connSnap = loc.pairedWith();
+	        if (connSnap instanceof SnapLocation2d) {
+	          const snapStr = connSnap.toString();
+	          if (pairedMap[snapStr] === undefined) {
+	            pairedMap[snapStr] = connSnap;
+	            connSnap.forEachConnectedSnap(undefined, pairedMap);
+	          }
+	        }
+	      }
+	
+	      if ((typeof func) === 'function') {
+	        const snaps = Object.values(pairedMap);
+	        for (let index = 0; index < snaps.length; index += 1) {
+	          func(snaps[index]);
+	        }
+	      } else return pairedMap;
+	    }
+	
+	    this.getNonSnap = () => {
+	      let nonSnap = undefined;
+	      this.forEachConnectedSnap((snap) => {
+	        const pw = snap.pairedWith();
+	        if (pw !== undefined && !(pw instanceof SnapLocation2d)) nonSnap = pw;
+	      });
+	      return nonSnap;
+	    }
+	
+	    this.isConnected = (obj) => {
+	      let connected = false;
+	      this.forEachObject((connObj) => connected = connected || obj.id() === connObj.id());
+	      return connected;
+	    }
+	
+	    this.rotate = (theta) => {
+	      this.forEachObject((obj) => obj.radians((obj.radians() + theta) % (2*Math.PI)));
+	    }
+	
+	    let lastMove = 0;
+	    this.move = (vertexLocation, moveId) => {
+	      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
+	      if (lastMove === moveId) return;
+	      vertexLocation = new Vertex2d(vertexLocation);
+	      const parent = this.parent();
+	      const thisNewCenterLoc = this.parent().position[location]({center: vertexLocation});
+	      parent.parent().center().point(thisNewCenterLoc);
+	      parent.update();
+	      lastMove = moveId;
+	      const pairedLocs = parent.snapLocations.paired();
+	      for (let index = 0; index < pairedLocs.length; index += 1) {
+	        const loc = pairedLocs[index];
+	        const paired = loc.pairedWith();
+	        const tarVertexLoc = this.parent().position[loc.location()]().vertex();
+	        if (paired instanceof SnapLocation2d) paired.move(tarVertexLoc, moveId);
+	      }
+	    }
+	    this.notPaired = () => pairedWith === null;
+	
+	    this.instString = () => `${parent.id()}:${location}`;
+	    this.toString = () => pairedWith  instanceof SnapLocation2d ?
+	                  `${this.instString()}=>${pairedWith && pairedWith.instString()}` :
+	                  `${this.instString()}=>${pairedWith}`;
+	    this.toJson = () => {
+	      const pw = pairedWith;
+	      if (pw === undefined) return;
+	      const json = [{
+	        location, objectId: parent.parent().id()
+	      }];
+	      json[1] = pw instanceof SnapLocation2d ?
+	                  {location: pw.location(), objectId: pw.parent().parent().id()} :
+	                  pw.constructor.name;
+	      const thisStr = this.toString();
+	      const pairStr = pw.toString();
+	      json.view = parent.view();
+	      json.UNIQUE_ID = thisStr < pairStr ? thisStr : pairStr;;
+	      return json;
+	    }
+	  }
+	}
+	
+	SnapLocation2d.fromJson = (json) => {
+	  console.log('jsoned it up!')
+	}
+	
+	let activeLocations = [];
+	SnapLocation2d.active = (locs) => {
+	  if (Array.isArray(locs)) activeLocations = activeLocations.concat(locs);
+	  return activeLocations;
+	}
+	SnapLocation2d.clear = () => activeLocations = [];
+	
+	function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
+	  return (position) => {
+	    const xDiff = xDiffFunc();
+	    const yDiff = yDiffFunc();
+	    const vertex = snapLoc.vertex();
+	    if (xDiff === 0 && yDiff === 0) {
+	      if (position) return snapLoc.parent().parent().center().clone();
+	      vertex.point(snapLoc.parent().parent().center().clone());
+	      return snapLoc;
+	    }
+	    const center = snapLoc.parent().parent().center();
+	    const direction = xDiff >= 0 ? 1 : -1;
+	    const hypeLen = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+	    let rads = Math.atan(yDiff/xDiff);
+	    if (position) {
+	      rads += position.theta === undefined ? snapLoc.parent().radians() : position.theta;
+	      const newPoint = position.center;
+	      return new Vertex2d({
+	        x: newPoint.x() - direction * (hypeLen * Math.cos(rads)),
+	        y: newPoint.y() - direction * (hypeLen * Math.sin(rads))
+	      });
+	    } else {
+	      rads += snapLoc.parent().radians();
+	      vertex.point({
+	        x: center.x() + direction * (hypeLen * Math.cos(rads)),
+	        y: center.y() + direction * (hypeLen * Math.sin(rads))
+	      });
+	      return snapLoc;
+	    }
+	  }
+	}
+	SnapLocation2d.fromToPoint = fromToPoint;
+	
+	const f = (snapLoc, attr, attrM, props) => () => {
+	  let val = snapLoc.parent()[attr]() * attrM;
+	  let keys = Object.keys(props || {});
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    val += snapLoc.parent()[key]() * props[key];
+	  }
+	  return val;
+	};
+	
+	SnapLocation2d.locationFunction = f;
+	
+	module.exports = SnapLocation2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/square.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('vertex');
+	
+	class Square2d {
+	  constructor(center, height, width, radians) {
+	    width = width === undefined ? 121.92 : width;
+	    height = height === undefined ? 60.96 : height;
+	    radians = radians === undefined ? 0 : radians;
+	    const id = String.random();
+	    const instance = this;
+	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
+	    if ((typeof center) === 'function') this.center = center;
+	    const startPoint = new Vertex2d(null);
+	
+	
+	    this.radians = (newValue) => {
+	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        radians = newValue;
+	      }
+	      return radians;
+	    };
+	    this.startPoint = () => {
+	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+	      return startPoint;
+	    }
+	    this.angle = (value) => {
+	      if (value !== undefined) this.radians(Math.toRadians(value));
+	      return Math.toDegrees(this.radians());
+	    }
+	
+	    this.x = (val) => {
+	      if (val !== undefined) this.center().x(val);
+	      return this.center().x();
+	    }
+	    this.y = (val) => {
+	      if (val !== undefined) this.center().y(val);
+	      return this.center().y();
+	    }
+	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+	
+	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	    this.move = (position, theta) => {
+	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	      this.radians(position.theta);
+	      this.center().point(center);
+	      return true;
+	    };
+	
+	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
+	
+	    this.toString = () => `Square2d(${id}): ${this.width()} X ${this.height()}] @ ${this.center()}`
+	  }
+	}
+	
+	new Square2d();
+	
+	module.exports = Square2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/vertex.js',
+function (require, exports, module) {
+	
+const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
+	const approximate10 = require('../../../../../public/js/utils/approximate.js').new(10);
+	
+	
+	class Vertex2d {
+	  constructor(point) {
+	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
+	    if (point instanceof Vertex2d) return point;
+	    let modificationFunction;
+	    point = point || {x:0,y:0};
+	    Object.getSet(this, {point});
+	    this.layer = point.layer;
+	    const instance = this;
+	    this.move = (center) => {
+	      this.point(center);
+	      return true;
+	    };
+	    this.point = (newPoint) => {
+	      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
+	      if (newPoint) this.x(newPoint.x);
+	      if (newPoint) this.y(newPoint.y);
+	      return point;
+	    }
+	
+	    this.modificationFunction = (func) => {
+	      if ((typeof func) === 'function') {
+	        if ((typeof this.id) !== 'function') Lookup.convert(this);
+	        modificationFunction = func;
+	      }
+	      return modificationFunction;
+	    }
+	
+	    this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
+	    this.x = (val) => {
+	      if ((typeof val) === 'number') point.x = val;
+	      return this.point().x;
+	    }
+	    this.y = (val) => {
+	      if ((typeof val) === 'number') this.point().y = val;
+	      return this.point().y;
+	    }
+	
+	    const dummyFunc = () => true;
+	    this.forEach = (func, backward) => {
+	      let currVert = this;
+	      let lastVert;
+	      do {
+	        lastVert = currVert;
+	        func(currVert);
+	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
+	      } while (currVert && currVert !== this);
+	      return currVert || lastVert;
+	    }
+	
+	    this.distance = (vertex) => {
+	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
+	      const xDiff = vertex.x() - this.x();
+	      const yDiff = vertex.y() - this.y();
+	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+	    }
+	
+	    this.toString = () => `(${this.x()}, ${this.y()})`;
+	    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
+	    const parentToJson = this.toJson;
+	
+	    this.offset = (x, y) => {
+	      if (x instanceof Vertex2d) {
+	        y = x.y();
+	        x = x.x();
+	      }
+	      const copy = this.toJson().point;
+	      if (y !== undefined) copy.y += y;
+	      if (x !== undefined) copy.x += x;
+	      return new Vertex2d(copy);
+	    }
+	
+	    this.copy = () => new Vertex2d([this.x(), this.y()]);
+	
+	    this.differance = (x, y) => {
+	      if (x instanceof Vertex2d) {
+	        y = x.y();
+	        x = x.x();
+	      }
+	      return new Vertex2d({x: this.x() - x, y: this.y() - y});
+	    }
+	
+	    this.point(point);
+	  }
+	}
+	
+	Vertex2d.fromJson = (json) => {
+	  return new Vertex2d(json.point);
+	}
+	
+	Vertex2d.center = (...verticies) => {
+	  if (Array.isArray(verticies[0])) verticies = verticies[0];
+	  let x = 0;
+	  let y = 0;
+	  let count = 0;
+	  verticies.forEach((vertex) => {
+	    if (Number.isFinite(vertex.x() + vertex.y())) {
+	      count++;
+	      x += vertex.x();
+	      y += vertex.y();
+	    }
+	  });
+	  return new Vertex2d({x: x/count, y: y/count});
+	}
+	
+	Vertex2d.sort = (a, b) =>
+	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
+	
+	Vertex2d.sortByCenter = (center) => {
+	  return (v1, v2) => {
+	    const d1 = v1.distance(center);
+	    const d2 = v2.distance(center);
+	    return d2 - d1;
+	  }
+	}
+	
+	
+	Vertex2d.reusable = true;
+	new Vertex2d();
+	
+	module.exports = Vertex2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/vector.js',
+function (require, exports, module) {
+	
+const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
+	
+	class Vector3D {
+	  constructor(i, j, k) {
+	    this.i = () => i;
+	    this.j = () => j;
+	    this.k = () => k;
+	
+	    this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
+	    this.minus = (vector) => {
+	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+	      return new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k());
+	    }
+	    this.add = (vector) => {
+	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+	      return new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k());
+	    }
+	    this.scale = (coef) => {
+	      return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
+	    }
+	    this.divide = (vector) => {
+	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+	      return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
+	    }
+	    this.toArray = () => [this.i(), this.j(), this.k()];
+	    this.dot = (vector) =>
+	      this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
+	    this.perpendicular = (vector) =>
+	      approximate.eq(this.dot(vector), 0);
+	    this.parrelle = (vector) => {
+	      let coef = approximate(this.i()) / approximate(vector.i()) ||
+	                  approximate(this.j()) / approximate(vector.j()) ||
+	                  approximate(this.k()) / approximate(vector.k());
+	      if (Math.abs(coef) === Infinity || coef === 0 || Number.isNaN(coef)) return null;
+	      return approximate.eq(vector.i() * coef, this.i()) &&
+	              approximate.eq(vector.j() * coef, this.j()) &&
+	              approximate.eq(vector.k() * coef, this.k());
+	    }
+	    this.crossProduct = (other) => {
+	      const i = this.j() * other.k() - this.k() * other.j();
+	      const j = this.i() * other.k() - this.k() * other.i();
+	      const k = this.i() * other.j() - this.j() * other.i();
+	      const mag = Math.sqrt(i*i+j*j+k*k);
+	      return new Vector3D(i/mag,j/-mag,k/mag);
+	    }
+	    this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
+	
+	    this.unit = () => {
+	      const i = this.i();const j = this.j();const k = this.k();
+	      const magnitude = Math.sqrt(i*i+j*j+k*k);
+	      return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
+	    }
+	    this.equals = this.parrelle;
+	    this.toString = () => `<${i},  ${j},  ${k}>`;
+	  }
+	}
+	
+	module.exports = Vector3D;
 	
 });
 
@@ -27973,9 +27405,10 @@ function (require, exports, module) {
 	
 	    this.normal = () => {
 	      const points = this.findPoints();
-	      const vector1 = points[1].minus(points[0]);
-	      const vector2 = points[2].minus(points[0]);
-	      return vector1.crossProduct(vector2);
+	      const vector1 = points[0].minus(points[1]);
+	      const vector2 = points[2].minus(points[1]);
+	      const normVect = vector1.crossProduct(vector2);
+	      return normVect.scale(1 / normVect.magnitude());
 	    }
 	
 	    this.center = () => Vertex3D.center.apply(null, this);
@@ -28090,7 +27523,1565 @@ function (require, exports, module) {
 	  return {obtuse: plane2, accute: plane1};
 	}
 	
+	// TODO: not used but could be helpful. - fix
+	Plane.fromPointNormal = (point, normal) => {
+	  const a = normal.i();
+	  const b = normal.j();
+	  const c = normal.k();
+	  const x0 = point.x;
+	  const y0 = point.y;
+	  const z0 = point.z;
+	  const getZ = (x,y) => (a*(x-x0)+b*(y-y0)-c*z0)/-c;
+	  // there is a chance that these three points will be colinear.... not likely and I have more important stuff to do.
+	  const point1 = {x: 13, y: 677, z: getZ(13,677)};
+	  const point2 = {x: 127, y: 43, z: getZ(127,43)};
+	  const point3 = {x: 107, y: 563, z: getZ(107,563)};
+	  return new Plane(point1, point2, point3);
+	}
+	
 	module.exports = Plane;
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/material.js',
+function (require, exports, module) {
+	
+
+	
+	const Cost = require('../cost.js');
+	const Assembly = require('../../objects/assembly/assembly.js');
+	
+	class Material extends Cost {
+	  constructor (props) {
+	    super(props);
+	    props = this.props();
+	    props.cost = props.cost / (props.count || 1);
+	    const instance = this;
+	    Object.getSet(props, 'company', 'formula', 'partNumber',
+	                'method', 'length', 'width', 'depth', 'cost');
+	
+	
+	    this.unitCost = (attr) => {
+	      const unitCost = Material.configure(instance.method(), instance.cost(),
+	        instance.length(), instance.width(), instance.depth());
+	      const copy = JSON.parse(JSON.stringify(unitCost));
+	      if (attr) return copy[attr];
+	      return copy;
+	    }
+	
+	    this.calc = (assemblyOrCount) => {
+	      const unitCost = this.unitCost();
+	      const formula = this.formula() || unitCost.formula;
+	      if (assemblyOrCount instanceof Assembly)
+	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
+	      else if (Number.isFinite(assemblyOrCount))
+	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
+	      else
+	        throw new Error('calc argument must be a number or Assembly');
+	    }
+	  }
+	}
+	
+	Material.methods = {
+	  LINEAR_FEET: 'Linear Feet',
+	  SQUARE_FEET: 'Square Feet',
+	  CUBIC_FEET: 'Cubic Feet',
+	  UNIT: 'Unit'
+	};
+	
+	Material.methodList = Object.values(Material.methods);
+	
+	
+	Material.configure = (method, cost, length, width, depth) => {
+	  const unitCost = {};
+	  switch (method) {
+	    case Material.methods.LINEAR_FEET:
+	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
+	      unitCost.name = 'Linear Inch';
+	      unitCost.value = perLinearInch;
+	      unitCost.formula = 'l';
+	      return unitCost;
+	    case Material.methods.SQUARE_FEET:
+	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
+	      unitCost.name = 'Square Inch';
+	      unitCost.value = perSquareInch;
+	      unitCost.formula = 'l*w';
+	      return unitCost;
+	    case Material.methods.CUBIC_FEET:
+	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
+	      unitCost.name = 'Cubic Inch';
+	      unitCost.value = perCubicInch;
+	      unitCost.formula = 'l*w*d';
+	      return unitCost;
+	    case Material.methods.UNIT:
+	      unitCost.name = 'Unit';
+	      unitCost.value = cost;
+	      return unitCost;
+	    default:
+	      throw new Error('wtf');
+	      unitCost.name = 'Unknown';
+	      unitCost = -0.01;
+	      formula = -0.01;
+	      return unitCost;
+	  }
+	};
+	
+	Material.explanation = `Cost to be calculated by number of units or demensions`;
+	
+	module.exports = Material
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
+function (require, exports, module) {
+	
+
+	
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	
+	class UFObj {
+	  constructor(order) {
+	    class Row {
+	      constructor(groupName, assembly, index) {
+	        this.groupName = groupName;
+	        this.type = assembly.constructor.name;
+	        const dems = assembly.position().demension();
+	        dems.y = new Measurement(dems.y).display();
+	        dems.x = new Measurement(dems.x).display();
+	        dems.z = new Measurement(dems.z).display();
+	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
+	        this.quantity = 1;
+	        this.cost = '$0';
+	        this.notes = assembly.notes || '';
+	      }
+	    }
+	    const cabinets = [];
+	    const obj = [];
+	    Object.values(order.rooms).forEach((room, rIndex) => room.groups.forEach((group, gIndex) => {
+	      group.cabinets.forEach((cabinet, index) => {
+	        const cabinetId = `${rIndex+1}-${gIndex+1}-${index+1}`;
+	        cabinet.getParts().forEach((part) => {
+	          const row = new Row(group.name(), part, cabinetId);
+	          if (obj[row.size] === undefined) obj[row.size] = row;
+	          else {
+	            obj[row.size].quantity++;
+	          }
+	        });
+	      });
+	    }));
+	    return Object.values(obj);
+	  }
+	}
+	module.exports = UFObj
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/managers/cost.js',
+function (require, exports, module) {
+	
+
+	
+	const CostTree = require('../../cost/cost-tree.js');
+	const Assembly = require('../../objects/assembly/assembly.js');
+	const du = require('../../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../../public/js/utils/$t.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select');
+	const Input = require('../../../../../public/js/utils/input/input');
+	const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation');
+	const Inputs = require('../../input/inputs.js');
+	const RadioDisplay = require('../../display-utils/radio-display.js');
+	
+	class CostManager {
+	  constructor(id, name) {
+	    const costTree = new CostTree();
+	    this.root = () => costTree.root();
+	    this.update = () => {
+	      const html = CostManager.mainTemplate.render(this);
+	      du.find(`#${id}`).innerHTML = html;
+	    }
+	    this.nodeInputHtml = () => CostManager.nodeInput().payload().html();
+	    this.headHtml = (node) =>
+	        CostManager.headTemplate.render({node, CostManager: this});
+	    this.bodyHtml = (node) =>
+	        CostManager.bodyTemplate.render({node, CostManager: this});
+	    this.loadPoint = () => console.log('load');
+	    this.savePoint = () => console.log('save');
+	    this.fromJson = () => {};
+	    this.update();
+	  }
+	}
+	
+	CostManager.mainTemplate = new $t('managers/cost/main');
+	CostManager.headTemplate = new $t('managers/cost/head');
+	CostManager.bodyTemplate = new $t('managers/cost/body');
+	CostManager.propertySelectTemplate = new $t('managers/cost/property-select');
+	CostManager.costInputTree = (costTypes, objId, onUpdate) => {
+	  const logicTree = new LogicTree();
+	  return logicTree;
+	}
+	CostManager.nodeInput = () => {
+	  const dit = new DecisionInputTree();
+	  const typeSelect = new Select({
+	    name: 'type',
+	    list: CostTree.types,
+	    value: CostTree.types[0]
+	  });
+	  const selectorType = new Select({
+	    name: 'selectorType',
+	    list: ['Manual', 'Auto'],
+	    value: 'Manual'
+	  });
+	  const propertySelector = new Select({
+	    name: 'propertySelector',
+	    list: CostTree.propertyList,
+	  });
+	
+	  const accVals = ['select', 'multiselect', 'conditional'];
+	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', accVals, [selectorType]);
+	  const type = dit.branch('Node', [Inputs('name'), typeSelect]);
+	  const selectType = type.conditional('selectorType', condtionalPayload);
+	  const payload = [Inputs('formula'), propertySelector, RelationInput.selector];
+	  const condtionalPayload2 = new DecisionInputTree.ValueCondition('selectorType', 'Auto', payload);
+	  selectType.conditional('formula', condtionalPayload2);
+	  return dit;
+	}
+	new RadioDisplay('cost-tree', 'radio-id');
+	
+	new CostManager('cost-manager', 'cost');
+	
+	function abbriviation(group) {
+	  return Assembly.classes[group] ? Assembly.classes[group].abbriviation : 'nope';
+	}
+	const scope = {groups: CostTree.propertyList, abbriviation};
+	// du.id('property-select-cnt').innerHTML =
+	//       CostManager.propertySelectTemplate.render(scope);
+	module.exports = CostManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/managers/template.js',
+function (require, exports, module) {
+	
+
+	const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
+	
+	const Assembly = require('../../objects/assembly/assembly.js');
+	const Input = require('../../../../../public/js/utils/input/input.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select.js');
+	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+	const Inputs = require('../../input/inputs.js');
+	const CabinetTemplate = require('../../config/cabinet-template.js');
+	const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
+	const $t = require('../../../../../public/js/utils/$t.js');
+	const du = require('../../../../../public/js/utils/dom-utils.js');
+	const RadioDisplay = require('../../display-utils/radio-display.js');
+	const Bind = require('../../../../../public/js/utils/input/bind.js');
+	const Joint = require('../../objects/joint/joint.js');
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const ThreeView = require('../three-view.js');
+	const Layout2D = require('../../objects/layout.js');
+	const Draw2D = require('../../two-d/draw.js');
+	const Vertex3D = require('../../three-d/objects/vertex');
+	const Snap2d = require('../../two-d/objects/snap');
+	const PropertyConfig = require('../../config/property/config.js');
+	const cabinetBuildConfig = require('../../../public/json/cabinets.json');
+	const Pattern = require('../../division-patterns.js');
+	const Handle = require('../../objects/assembly/assemblies/hardware/pull.js');
+	const LayouSketch = require('../layout-sketch');
+	const CSG = require('../../../public/js/3d-modeling/csg.js');
+	const approximate = require('../../../../../public/js/utils/approximate').new(10);
+	
+	let template;
+	let modifyingOpening = false;
+	const sectionState = {
+	  style: 'Overlay',
+	  vertical: false,
+	  innerOouter: 'true',
+	  xOyOz: 'x',
+	  index: 0,
+	  count: 0,
+	};
+	
+	const layoutSketch = new LayouSketch('layout-sketch-cnt');
+	function updateState(elem) {
+	  const opening = ExpandableList.get(elem);
+	  sectionState.id = opening.id;
+	  const attr = elem.name.replace(/(.*?)-.*/, '$1');
+	  if (attr === 'index') sectionState[attr] = Number.parseInt(elem.value);
+	  else sectionState[attr] = elem.value;
+	}
+	
+	function updateConfig(elem) {
+	  const value = elem.type === 'checkbox' ? elem.checked : elem.value;
+	  sectionState[elem.name] = value;
+	}
+	
+	du.on.match('keydown', '#template-divider-count-input', (elem,ev) => ev.preventDefault());
+	du.on.match('change', '.border-location-cnt>input', updateState);
+	du.on.match('change', '.section-properties>input', updateConfig);
+	
+	function applyDividers(cabinet) {
+	  for (let index = 0; index < cabinet.openings.length; index++) {
+	    const divideCount = Number.parseInt(sectionState.count);
+	    const opening = cabinet.openings[index];
+	    opening.vertical(sectionState.vertical);
+	    opening.divide(divideCount);
+	    const sectionType = sectionState.sectionType;
+	    if (sectionType) {
+	      for (let si = 0; si < opening.sections.length; si++) {
+	        opening.sections[si].setSection(sectionType);
+	      }
+	    }
+	    const coords = opening.update();
+	  }
+	}
+	
+	function applyTestConfiguration(cabinet) {
+	  cabinet.width(60*2.54);
+	
+	  const opening = cabinet.openings[0];
+	  opening.divide(2);
+	  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
+	  const left = opening.sections[0];
+	  const center = opening.sections[1];
+	  const right = opening.sections[2];
+	  const a = 6*2.54
+	
+	  left.divide(2);
+	  left.vertical(false);
+	  left.sections[0].setSection("DrawerSection");
+	  left.sections[1].setSection("DrawerSection");
+	  left.sections[2].setSection("DrawerSection");
+	  left.pattern('abb').value('a', a);
+	
+	  center.divide(1);
+	  center.vertical(false);
+	  center.sections[1].setSection('DualDoorSection');
+	  center.pattern('ab').value('a', a);
+	  const centerTop = center.sections[0];
+	
+	  centerTop.divide(2);
+	  centerTop.sections[0].setSection("DoorSection");
+	  centerTop.sections[1].setSection("FalseFrontSection");
+	  centerTop.sections[2].setSection("DoorSection");
+	  centerTop.pattern('ztz').value('t', 15*2.54);
+	  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+	
+	  right.divide(2);
+	  right.vertical(false);
+	  right.sections[0].setSection("DrawerSection");
+	  right.sections[1].setSection("DrawerSection");
+	  right.sections[2].setSection("DrawerSection");
+	  right.pattern('abb').value('a', a);
+	}
+	
+	FunctionCache.disable();
+	function getCabinet(elem) {
+	  const templateBody = du.find.closest(`.template-body[template-id]`, elem);
+	  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
+	  const height = new Measurement(templateBody.children[4].value, true).decimal();
+	  const width = new Measurement(templateBody.children[3].value, true).decimal();
+	  const thickness = new Measurement(templateBody.children[5].value, true).decimal();
+	  const cabinet = template.getCabinet(height, width, thickness);
+	  cabinet.propertyConfig().set(sectionState.style);
+	
+	  if (sectionState.testDividers) applyTestConfiguration(cabinet);
+	  else applyDividers(cabinet);
+	  layoutSketch.cabinet(cabinet);
+	  console.log(`Cabinet Demesions: ${cabinet.width()} !== ${cabinet.eval('c.w')} x ${cabinet.length()} x ${cabinet.thickness()}`)
+	  return cabinet;
+	}
+	
+	const toDisplay = (value) =>  new Measurement(value).display();
+	const threeView = new ThreeView();
+	du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
+	  du.move.inFront(elem));
+	du.on.match('click', `#${threeView.id()}>.three-view-two-d-cnt>.three-view-canvases-cnt`, (elem) =>
+	  du.move.inFront(elem));
+	
+	const containerClasses = {
+	  values: `template-values`,
+	  subassemblies: `template-subassemblies`,
+	  joints: `template-joints`,
+	  dividerJoint: `template-divider-joint`,
+	  openings: `template-openings`
+	};
+	
+	function resetHeaderErrors() {
+	  const containers = du.find.all('.cabinet-template-input-cnt');
+	  containers.forEach((cnt) => {
+	    const headers = du.find.downAll('.expand-header', cnt);
+	    headers.forEach((h) => du.class.remove(h, 'error'))
+	  });
+	}
+	
+	function setHeaderErrors(elem) {
+	  const firstHeader = du.find.closest('.expand-header', elem);
+	  const secondHeader = du.find.up('.cabinet-template-input-cnt', firstHeader).children[0];
+	  du.class.add(firstHeader, 'error');
+	  du.class.add(secondHeader, 'error');
+	}
+	
+	function updateCss(elem, isValid, errorMsg) {
+	  if (elem) {
+	    if (isValid) {
+	      du.class.remove(elem, 'error');
+	      elem.setAttribute('error-msg', '');
+	    } else {
+	      du.class.add(elem, 'error');
+	      elem.setAttribute('error-msg', errorMsg);
+	      setHeaderErrors(elem);
+	    }
+	  }
+	}
+	
+	const varReg = /^[$_a-zA-Z][$_a-zA-Z0-9\.]*$/;
+	const variableNameCheck = (elem) => updateCss(elem, elem.value.match(varReg), `Illegal characters: ${varReg}`);
+	const positiveValueCheck = (elem) => updateCss(elem, Number.parseFloat(elem.value) > 0, 'Value must be positive');
+	const partCodeCheck = (template) => (elem) => updateCss(elem, template.validPartCode(elem.value), 'Invalid Part Code');
+	
+	function openingCodeCheck(template, opening, input) {
+	  if (opening._Type === 'location') return true;
+	  let count = 0;
+	  let errorString = '';
+	  if (!template.validPartCode(opening.top)) {count++; (errorString += 'top,');}
+	  if (!template.validPartCode(opening.bottom)) {count++; (errorString += 'bottom,');}
+	  if (!template.validPartCode(opening.left)) {count++; (errorString += 'left,');}
+	  if (!template.validPartCode(opening.right)) {count++; (errorString += 'right,');}
+	  if (!template.validPartCode(opening.back)) {count++; (errorString += 'back,');}
+	  if (count === 0) updateCss(input, true);
+	  else {
+	    errorString = errorString.substring(0, errorString.length - 1);
+	    if (count === 1) updateCss(input, false, `'${errorString}' part code is invalid (CABINET WILL NOT RENDER)`);
+	    else updateCss(input, false, `Multiple part codes are invalid: ${errorString} (CABINET WILL NOT RENDER)`);
+	  }
+	  return count === 0;
+	}
+	
+	function openingsCodeCheck (template, inputs) {
+	  const openings = template.openings();
+	  let valid = true;
+	  for (let index = 0; index < openings.length; index += 1) {
+	    const opening = openings[index];
+	    const input = inputs[index];
+	    valid &&= openingCodeCheck(template, opening, input)
+	  }
+	  return valid;
+	}
+	
+	function validateEquations(template, cabinet, valueInput, eqnInput, valueIndex, eqnMap) {
+	  let errorString = '';
+	  let errorCount = 0;
+	  let eqnKeys = Object.keys(eqnMap);
+	  for (let index = 0; index < eqnKeys.length; index += 1) {
+	    const key = eqnKeys[index];
+	    const eqn = eqnMap[key];
+	    if (index === valueIndex) {
+	      const value = template.evalEqn(eqn, cabinet);
+	      if (Number.isNaN(value)) {
+	        errorString += `${key},`;
+	        errorCount++;
+	      } else {
+	        const convertCheckBox = valueInput.nextElementSibling;
+	        if (convertCheckBox && convertCheckBox.getAttribute('name') === 'convert' &&
+	              convertCheckBox.checked) {
+	          valueInput.value = new Measurement(value).display();
+	        } else {
+	          valueInput.value = value;
+	        }
+	      }
+	    } else {
+	      if (!template.validateEquation(eqn, cabinet)) {
+	        errorString += `${key},`;
+	        errorCount++;
+	      }
+	    }
+	  }
+	  if (errorCount > 0) {
+	    du.class.add(eqnInput, 'error');
+	    if (eqnKeys.length > 1) {
+	      errorString = errorString.substring(0, errorString.length - 1);
+	      updateCss(eqnInput, false, `Errors found within the following equations:${errorString}`);
+	    } else {
+	      updateCss(eqnInput, false, `Errors found within the equation.`)
+	    }
+	  } else {
+	    du.class.remove(eqnInput, 'error');
+	    updateCss(eqnInput, true);
+	  }
+	}
+	
+	const valueEqnCheck = (template, cabinet) => (eqnInput) => {
+	  const valueInput = du.find.closest('[name="value"]', eqnInput);
+	  const name = eqnInput.name;
+	  const eqn = eqnInput.value;
+	  const eqnMap = {};
+	  eqnMap[name] = eqn;
+	  validateEquations(template, cabinet, valueInput, eqnInput, 0, eqnMap);
+	}
+	
+	const xyzEqnCheck = (template, cabinet) => (xyzInput) => {
+	  const valueInput = du.find.closest('[name="value"]', xyzInput);
+	  const index = Number.parseInt(du.find.closest('select', xyzInput).value);
+	  const subAssem = ExpandableList.get(xyzInput);
+	  const part = cabinet.getAssembly(subAssem.code);
+	  const eqns = subAssem[xyzInput.name];
+	  const eqnMap = {x: eqns[0], y: eqns[1], z: eqns[2]};
+	  validateEquations(template, cabinet, valueInput, xyzInput, index, eqnMap);
+	}
+	
+	function updatePartsDataList() {
+	  const partMap = threeView.partMap();
+	  if (!partMap) return;
+	  const partKeys = Object.keys(partMap);
+	  let html = '';
+	  for (let index = 0; index < partKeys.length; index += 1) {
+	    const id = partKeys[index];
+	    const partCode = partMap[id].code;
+	    const partName = partMap[id].name;
+	    html += `<option value='${partCode}'></option>`;
+	  }
+	
+	  const datalist = du.id('part-list');
+	  datalist.innerHTML = html;
+	}
+	
+	function vertexToDisplay(vertex) {
+	  const x = new Measurement(vertex.x).display();
+	  const y = new Measurement(vertex.y).display();
+	  const z = new Measurement(vertex.z).display();
+	  return `(${x}, ${y}, ${z})`;
+	}
+	
+	function target(io, i) {
+	  const targetIndex = i + (io === 'inner' ? 0 : 4);
+	  return (index) => targetIndex === index;
+	}
+	
+	function updateOpenLocationDisplay (opening, elem) {
+	  const state = sectionState;
+	
+	  const io = state.innerOouter === 'true' ? 'inner' : 'outer';
+	  const i = state.index;
+	  const description = `Current formula describes the ${io} boundry ${state.xOyOz} coordinate of vertex ${state.index}.`;
+	  du.find.closest('.opening-location-description-cnt', elem).innerText = description;
+	
+	  const eqnPoint = opening.coordinates && opening.coordinates[io] && opening.coordinates[io][i];
+	
+	  if (eqnPoint && elem.name !== 'opening-coordinate-value')
+	    du.find.closest('[name="opening-coordinate-value"]', elem).value = eqnPoint[state.xOyOz];
+	
+	  const cabinet = getCabinet(elem);
+	  const coords = cabinet.openings[0].update();
+	
+	
+	  const html = openingPointTemplate.render({display: vertexToDisplay, coords, target: target(io, i)});
+	  du.find.closest('.opening-location-value-cnt', elem).innerHTML = html;
+	}
+	
+	const openingPointTemplate = new $t('managers/template/openings/points');
+	
+	function onOpeningLocationChange(elem) {
+	  const opening = ExpandableList.get(elem);
+	  // const state = opening.state;
+	  // let value = elem.value;
+	  // if (value === 'true') value = true;
+	  // else if (value === 'false') value = false;
+	  // const attr = elem.name.replace(/(.*?)-.*/, '$1');
+	  // state[attr] = value;
+	
+	  updateOpenLocationDisplay(opening, elem);
+	}
+	
+	function onOpeningTypeChange(elem) {
+	  const opening = ExpandableList.get(elem);
+	  if (opening._Type !== elem.value) {
+	    const isLocation = elem.checked;
+	    const defaultFunc = isLocation ? 'defaultLocationOpening' : 'defaultPartCodeOpening';
+	    const def = CabinetTemplate[defaultFunc]();
+	    Object.merge(opening, def, true);
+	    opening._Type = isLocation ? 'location' : undefined;
+	    du.find.closest('.border-location-cnt', elem).hidden = !isLocation;
+	    updateOpeningPartCode(du.find.closest('select', elem));
+	  }
+	}
+	
+	du.on.match('change', '.border-location-cnt>input,.border-location-cnt>span>input', onOpeningLocationChange);
+	du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
+	
+	function updateOpeningPoints(template, cabinet) {
+	  const threeDModel = threeView.threeDModel();
+	  if (threeDModel) {
+	    threeDModel.removeAllExtraObjects();
+	    const openings = cabinet.openings;
+	    for (let index = 0; index < openings.length; index++) {
+	      const opening = openings[index];
+	      const size = modifyingOpening ? 1 : .25;
+	      const state = sectionState;
+	      const i = state.index;
+	      const vertexColor = (io, i) => io !== state.innerOouter ? 'black' :
+	            (modifyingOpening && i === state.index ? 'lime' : 'white');
+	
+	      const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
+	
+	      const coords = opening.update();
+	      threeDModel.addVertex(coords.inner[0], vertexSize('true'), vertexColor('true', '0'));
+	      threeDModel.addVertex(coords.inner[1], vertexSize('true'), vertexColor('true', '1'));
+	      threeDModel.addVertex(coords.inner[2], vertexSize('true'), vertexColor('true', '2'));
+	      threeDModel.addVertex(coords.inner[3], vertexSize('true'), vertexColor('true', '3'));
+	
+	      threeDModel.addVertex(coords.outer[0], vertexSize('false'), vertexColor('false', '0'));
+	      threeDModel.addVertex(coords.outer[1], vertexSize('false'), vertexColor('false', '1'));
+	      threeDModel.addVertex(coords.outer[2], vertexSize('false'), vertexColor('false', '2'));
+	      threeDModel.addVertex(coords.outer[3], vertexSize('false'), vertexColor('false', '3'));
+	    }
+	  }
+	}
+	
+	const topView = du.id('three-view-top');
+	const leftView = du.id('three-view-left');
+	const frongView = du.id('three-view-front');
+	function validateOpenTemplate (elem) {
+	  const templateBody = du.find('.template-body[template-id]');
+	  if (!templateBody || du.is.hidden(templateBody)) return;
+	  resetHeaderErrors();
+	  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
+	
+	  const valueNameInputs = du.find.downAll('input[attr="values"][name="name"]', templateBody);
+	  valueNameInputs.forEach(variableNameCheck);
+	  const subNameInputs = du.find.downAll('input[attr="subassemblies"][name="name"]', templateBody);
+	  subNameInputs.forEach(variableNameCheck);
+	  const subCodeInputs = du.find.downAll('input[attr="subassemblies"][name="code"]', templateBody);
+	  subCodeInputs.forEach(variableNameCheck);
+	
+	  const positiveInputs = du.find.downAll('input[name="thickness"],input[name="width"],input[name="height"]', templateBody);
+	  positiveInputs.forEach(positiveValueCheck);
+	
+	  const pcc = partCodeCheck(template);
+	  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="malePartCode"]', templateBody);
+	  jointMaleInputs.forEach(pcc);
+	  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="femalePartCode"]', templateBody);
+	  jointFemaleInputs.forEach(pcc);
+	
+	  const openingCodeInputs = du.find.downAll('input[attr="openings"][name="partCode"]', templateBody);
+	  openingsCodeCheck(template, openingCodeInputs);
+	
+	  try {
+	    const cabinet = getCabinet(templateBody);
+	
+	    const depthInputs = du.find.downAll('[name=depth]', templateBody);
+	    depthInputs.forEach(valueEqnCheck(template, cabinet));
+	    const valueEqnInputs = du.find.downAll('input[attr="values"][name="eqn"]', templateBody);
+	    valueEqnInputs.forEach(valueEqnCheck(template, cabinet));
+	    const subDemInputs = du.find.downAll('input[attr="subassemblies"][name="demensions"]', templateBody);
+	    subDemInputs.forEach(xyzEqnCheck(template, cabinet));
+	    const subCenterInputs = du.find.downAll('input[attr="subassemblies"][name="center"]', templateBody);
+	    subCenterInputs.forEach(xyzEqnCheck(template, cabinet));
+	    const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
+	    subRotInputs.forEach(xyzEqnCheck(template, cabinet));
+	    updateOpeningPoints(template, cabinet);
+	    threeView.update(cabinet);
+	    setTimeout(updatePartsDataList, 500);
+	  } catch (e) {
+	    console.log(e);
+	  }
+	
+	
+	}
+	
+	function getEqn(select, values) {
+	  return values && values[select.value()];
+	}
+	
+	const depthValidation = (measurment) =>
+	        measurment.decimal() > 0;
+	
+	function getJointInputTree(func, joint, dividerJoint) {
+	  joint.type ||= 'Butt';
+	  const selectType = new Select({
+	    name: 'type',
+	    list: Object.keys(Joint.types),
+	    class: 'template-select',
+	    value: joint.type
+	  });
+	
+	  const centerOffsetInput = new Select({
+	    name: 'centerAxis',
+	    list: ['+x', '+y', '+z', '-x', '-y', '-z'],
+	    value: joint.centerAxis
+	  });
+	  const demensionOffsetInput = new Select({
+	    name: 'demensionAxis',
+	    list: ['x', 'y', 'z'],
+	    value: joint.demensionAxis
+	  });
+	
+	  const depthInput = new Input({
+	    name: 'maleOffset',
+	    value: joint.maleOffset
+	  });
+	
+	  const dadoInputs = dividerJoint ? [depthInput] : [depthInput, centerOffsetInput, demensionOffsetInput];
+	
+	  const dit = new DecisionInputTree(undefined, {noSubmission: true});
+	  const type = dit.branch('Type', [selectType]);
+	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', 'Dado', dadoInputs);
+	  type.conditional('dado', condtionalPayload);
+	  dit.onChange(func);
+	  return dit;
+	}
+	
+	let lastDepth;
+	const jointOnChange = (vals, dit) => {
+	  const selectId = dit.payload().inputArray[0].id();
+	  const joint = ExpandableList.get(du.id(selectId));
+	  joint.type = vals.type;
+	  lastDepth = vals.maleOffset || lastDepth;
+	  joint.maleOffset = lastDepth || undefined;
+	  const depthInput = dit.children()[0].payload().inputArray[0];
+	  // depthInput.updateDisplay();
+	  joint.demensionAxis = vals.demensionAxis || undefined;
+	  joint.centerAxis = vals.centerAxis || undefined;
+	  console.log(vals);
+	}
+	
+	function getTypeInput(obj) {
+	  return new Select({
+	    name: 'type',
+	    value: obj.type,
+	    class: 'template-input',
+	    list: Object.keys(Assembly.components),
+	    inline: true
+	  });
+	}
+	
+	function getXyzSelect(label) {
+	  return new Select({
+	    label,
+	    name: 'xyz',
+	    list: {'0': 'X', '1': 'Y', '2':'Z'},
+	    inline: true
+	  });
+	}
+	
+	function getWhdSelect(label) {
+	  return new Select({
+	    label,
+	    name: 'xyz',
+	    list: {'0': 'W', '1': 'H', '2':'D'},
+	    inline: true
+	  });
+	}
+	
+	function getOpeningLocationSelect() {
+	  return new Select({
+	    name: 'openingLocation',
+	    list: ['top', 'bottom', 'left', 'right', 'back'],
+	    inline: true
+	  });
+	}
+	
+	function getJoint(obj) {
+	  return {obj, jointInput: getJointInputTree(jointOnChange, obj).payload()};
+	}
+	function getSubassembly(obj) {
+	  return {typeInput:  getTypeInput(obj),
+	          centerXyzSelect: getXyzSelect('Center'),
+	          demensionXyzSelect: getWhdSelect('Demension'),
+	          rotationXyzSelect: getXyzSelect('Rotation'),
+	          getEqn, obj
+	        };
+	}
+	
+	function getOpening(obj) {
+	  return {obj, select: getOpeningLocationSelect(), state: sectionState};
+	}
+	
+	const scopes = {};
+	function getScope(type, obj) {
+	  obj.id = obj.id || String.random();
+	  if (scopes[obj.id]) return scopes[obj.id];
+	  switch (type) {
+	    case 'joints':
+	      scopes[obj.id] = getJoint(obj);
+	      break;
+	    case 'subassemblies':
+	      scopes[obj.id] = getSubassembly(obj);
+	      break;
+	    case 'openings':
+	      scopes[obj.id] = getOpening(obj);
+	      break;
+	    default:
+	      scopes[obj.id] = {obj};
+	  }
+	  return scopes[obj.id];
+	}
+	
+	const getObjects = {
+	    subassemblies: () => (      {
+	      type: "Panel",
+	      center: [0,0,0],
+	      demensions: [1,1,1],
+	      rotation: [0,0,0],
+	      include: 'All'
+	    })
+	}
+	
+	function updateTemplateDisplay() {
+	  const managerElems = du.find.all('[template-manager]');
+	  for (let index = 0; index < managerElems.length; index += 1) {
+	    const templateManagerId = managerElems[index].getAttribute('template-manager');
+	    const templateManager =TemplateManager.get(templateManagerId);
+	    templateManager.update();
+	  }
+	}
+	
+	
+	function addExpandable(template, type) {
+	  const containerClass = containerClasses[type];
+	  let parentSelector = `[template-id='${template.id()}']>.${containerClass}`;
+	  TemplateManager.headTemplate[type] ||= new $t(`managers/template/${type.toKebab()}/head`);
+	  TemplateManager.bodyTemplate[type] = TemplateManager.bodyTemplate[type] === undefined ?
+	                    new $t(`managers/template/${type.toKebab()}/body`) : TemplateManager.bodyTemplate[type];
+	  let getHeader = (obj) => TemplateManager.headTemplate[type].render(getScope(type, obj));
+	  let getBody = TemplateManager.bodyTemplate[type] ? ((obj) => TemplateManager.bodyTemplate[type].render(getScope(type, obj))) : undefined;
+	  const expListProps = {
+	    idAttribute: 'name',
+	    list: template[type](),
+	    getObject: getObjects[type],
+	    renderBodyOnOpen: false,
+	    parentSelector, getHeader, getBody,
+	    listElemLable: type.toSentance(),
+	  };
+	  const expandList = new ExpandableList(expListProps);
+	  expandList.afterRemoval(updateTemplateDisplay);
+	  return expandList;
+	}
+	
+	class TemplateManager extends Lookup {
+	  constructor(id) {
+	    super(id);
+	    const parentId = `template-list-${this.id()}`;
+	    this.parentId = () => parentId;
+	    let currentTemplate;
+	    const parentSelector = `#${parentId}`;
+	    const dividerJointChange = (template) => (vals) => {
+	      template.dividerJoint(vals);
+	    }
+	    const templateShapeInput = (template) => TemplateManager.templateShapeInput(template.shape());
+	    const dividerJointInput = (template) =>
+	      getJointInputTree(dividerJointChange(template), template.dividerJoint(), true).payload();
+	
+	    const containerSelector = (template, containerClass) => `[template-id="${template.id()}"]>.${containerClass}`;
+	
+	    const getHeader = (template) =>
+	      TemplateManager.headTemplate.render({template, TemplateManager: this});
+	    const getBody = (template) => {
+	      currentTemplate = template;
+	      setTimeout(() => {
+	        updateExpandables(template);
+	      }, 100);
+	      setTimeout(() => {
+	        validateOpenTemplate(du.id(parentId));
+	      }, 1000);
+	      return TemplateManager.bodyTemplate.render({template, TemplateManager: this,
+	        containerClasses, dividerJointInput: dividerJointInput(template), toDisplay,
+	        templateShapeInput: templateShapeInput(template)});
+	      }
+	
+	    this.sectionState = sectionState;
+	    const expandables = {};
+	    function initTemplate(template) {
+	      const list = [];
+	      expandables[template.id()] = list;
+	      return () => {
+	        list.push(addExpandable(template, 'values'));
+	        list.push(addExpandable(template, 'subassemblies'));
+	        list.push(addExpandable(template, 'joints'));
+	        list.push(addExpandable(template, 'openings', true));
+	      };
+	    }
+	
+	    function updateExpandables(template) {
+	      template ||= currentTemplate;
+	      if (template === undefined) return;
+	      if (!expandables[template.id()]) initTemplate(template)();
+	      expandables[template.id()].forEach((e) => e.refresh());
+	    }
+	    this.updateExpandables = updateExpandables;
+	
+	    const getObject = (values) => {
+	      const cabTemp = new CabinetTemplate(values.name);
+	      initTemplate(cabTemp)();
+	      return cabTemp;
+	    }
+	
+	    this.active = () => expandList.active();
+	    const expListProps = {
+	      list: CabinetTemplate.defaultList(),
+	      inputTree: TemplateManager.inputTree(),
+	      parentSelector, getHeader, getBody, getObject,
+	      listElemLable: 'Template',
+	      type: 'sidebar'
+	    };
+	    setTimeout(initTemplate(expListProps.list[0]), 200);
+	    const expandList = new ExpandableList(expListProps);
+	
+	    this.update = () => {
+	      expandList.refresh();
+	    }
+	    this.loadPoint = () => console.log('load');
+	    this.savePoint = () => console.log('save');
+	    this.fromJson = () => {};
+	    const html = TemplateManager.mainTemplate.render(this);
+	    du.find(`#${id}`).innerHTML = html;
+	  }
+	}
+	
+	const radioDisplay = new RadioDisplay('cabinet-template-input-cnt', 'template-id');
+	radioDisplay.afterSwitch(function (header){
+	  const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
+	  const opening = ExpandableList.get(coordinateInput);
+	  if (opening && opening._Type === 'location') {
+	    const state = opening.state;
+	    const io = state.innerOouter ? 'inner' : 'outer';
+	    coordinateInput.value = opening.coordinates[io][state.index][state.xOyOz];
+	  }
+	
+	  console.log(opening);
+	});
+	
+	TemplateManager.inputTree = () => {
+	  const dit = new DecisionInputTree();
+	  dit.leaf('Template Name', [Inputs('name')]);
+	  return dit;
+	}
+	
+	TemplateManager.templateShapeInput = (value) => {
+	  return new Select({
+	      name: 'templateShape',
+	      list: Object.keys(Snap2d.get),
+	      class: 'template-shape-input',
+	      value: value
+	    });
+	};
+	
+	radioDisplay.afterSwitch((elem, detail) => {
+	  const newState = detail.targetHeader.innerText === 'Openings';
+	  const updateModel = newState !== modifyingOpening;
+	  modifyingOpening = newState;
+	  updateModel && validateOpenTemplate(detail.targetHeader);
+	});
+	
+	TemplateManager.mainTemplate = new $t('managers/template/main');
+	TemplateManager.headTemplate = new $t('managers/template/head');
+	TemplateManager.bodyTemplate = new $t('managers/template/body');
+	TemplateManager.bodyTemplate.values = false;
+	new TemplateManager('template-manager', 'template');
+	
+	function updateValuesTemplate(elem, template) {
+	  const nameInput = du.find.closest('[name="name"]', elem);
+	  const name = nameInput.value;
+	  const eqn = du.find.closest('[name="eqn"]', elem).value;
+	  const valueObj = ExpandableList.get(elem);
+	  valueObj.key = name;
+	  valueObj.eqn = eqn;
+	  return true
+	}
+	
+	function updateSubassembliesTemplate(elem, template) {
+	  const nameInput = du.find.closest('[name="name"]', elem);
+	  const type = du.find.closest('[name="type"]', elem).value;
+	  const name = `${type}.${nameInput.value.toDot()}`;
+	  const subAssem = ExpandableList.get(elem);
+	  subAssem.name = nameInput.value;
+	  if (elem.name === 'name') return;
+	  if (elem.name === 'center' || elem.name === 'demensions' || elem.name === 'rotation') {
+	    const index = du.find.closest('[name="xyz"]', elem).value;
+	    const eqn = elem.value;
+	    if (subAssem[elem.name] === undefined) subAssem[elem.name] = [];
+	    subAssem[elem.name][index] = eqn;
+	  } else if (elem.name !== 'name') {
+	    subAssem[elem.name] = elem.value;
+	  }
+	}
+	
+	function switchEqn(elem) {
+	  const nameInput = du.find.closest('[name="name"]', elem);
+	  const type = du.find.closest('[name="type"]', elem).value;
+	  const name = `${type}.${nameInput.value.toDot()}`;
+	  const subAssem = ExpandableList.get(elem);
+	  if (subAssem) {
+	    const eqnInput = du.find.closest('input', elem);
+	    const index = elem.value;
+	    if (subAssem[eqnInput.name] === undefined) subAssem[eqnInput.name] = [];
+	    const value = subAssem[eqnInput.name][index];
+	    eqnInput.value = value === undefined ? '' : value;
+	  }
+	}
+	
+	function updateOpeningsTemplate(elem, template) {
+	  const partCode = elem.value;
+	  const attr = du.find.closest('select', elem).value;
+	  const listElem = ExpandableList.get(elem);
+	  listElem[attr] = elem.value;
+	  console.log(ExpandableList.get(elem,1).toJson());
+	}
+	
+	function updateViewShape(elem) {
+	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+	  const template = CabinetTemplate.get(templateId);
+	  template.shape(elem.value);
+	}
+	
+	function updateJointPartCode(elem) {
+	  const attr = elem.name;
+	  const listElem = ExpandableList.get(elem);
+	  listElem[attr] = elem.value;
+	}
+	
+	function updateOpeningPartCode(elem) {
+	  const attr = elem.value;
+	  const opening = ExpandableList.get(elem);
+	  const partCodeInput = du.find.closest('input', elem);
+	  partCodeInput.value = opening[attr] || '';
+	  updateOpenLocationDisplay(opening, elem);
+	}
+	
+	function updateTemplate(elem, template) {
+	  const attr = du.find.closest('[attr]', elem).getAttribute('attr');
+	  switch (attr) {
+	    case 'values': return updateValuesTemplate(elem, template);
+	    case 'subassemblies': return updateSubassembliesTemplate(elem, template);
+	    case 'openings': return updateOpeningsTemplate(elem, template);
+	
+	    default:
+	
+	  }
+	}
+	
+	function updateInclude(elem) {
+	  const subAssem = ExpandableList.get(elem);;
+	  subAssem.include = elem.value;
+	  console.log(subAssem);
+	}
+	
+	du.on.match('change', '.template-include', updateInclude);
+	du.on.match('change', '.opening-part-code-input', updateOpeningsTemplate);
+	du.on.match('change', '.template-shape-input', updateViewShape);
+	du.on.match('change', '[name="xyz"]', switchEqn);
+	du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
+	du.on.match('change', '.template-input[name="malePartCode"],.template-input[name="femalePartCode"]', updateJointPartCode);
+	du.on.match('click', '.copy-template', (elem) => {
+	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+	  const template = CabinetTemplate.get(templateId);
+	  let jsonStr = JSON.stringify(template.toJson(), null, 2);
+	  jsonStr = jsonStr.replace(/.*"id":.*($|,)/g, '');
+	  du.copy(jsonStr);
+	});
+	
+	du.on.match('click', '.paste-template', (elem) => {
+	  navigator.clipboard.readText()
+	  .then(text => {
+	    try {
+	      const obj = Object.fromJson(JSON.parse(text));
+	      if (!(obj instanceof CabinetTemplate)) throw new Error(`Json is of type ${obj.constructor.name}`);
+	      const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+	      const template = CabinetTemplate.get(templateId);
+	      template.fromJson(obj.toJson());
+	      const templateManagerId = du.find.up('[template-manager]', elem).getAttribute('template-manager');
+	      const templateManager =TemplateManager.get(templateManagerId);
+	      templateManager.update();
+	    } catch (e) {
+	      alert('clipboard does not contain a valid CabinetTemplate');
+	    }
+	  })
+	  .catch(err => {
+	    console.error('Failed to read clipboard contents: ', err);
+	  });
+	});
+	
+	du.on.match('change', '.template-input', function (elem) {
+	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+	  template = CabinetTemplate.get(templateId);
+	  updateTemplate(elem, template);
+	});
+	
+	du.on.match('change', 'input,select',   () => setTimeout(validateOpenTemplate, 0));
+	
+	
+	module.exports = TemplateManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assembly.js',
+function (require, exports, module) {
+	
+
+	
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Position = require('../../position.js');
+	const getDefaultSize = require('../../utils.js').getDefaultSize;
+	const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
+	
+	const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
+	
+	class Assembly extends KeyValue {
+	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
+	    super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
+	
+	    const instance = this;
+	    let group;
+	    const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
+	    const initialVals = {
+	      part: true,
+	      included: true,
+	      centerConfig, demensionConfig, rotationConfig, partCode, partName,
+	      propertyId: undefined,
+	    }
+	    const subAssems = this.subassemblies;
+	    Object.getSet(this, initialVals, 'values', 'subassemblies', 'joints');
+	    this.subassemblies = subAssems;
+	    Object.getSet(this, temporaryInitialVals);
+	    this.path = () => `${this.constructor.name}.${partName}`.toDot();
+	
+	    if ((typeof centerConfig) === 'function') this.centerConfig = centerConfig;
+	    else this.centerConfig = centerConfig
+	    if ((typeof demensionConfig) === 'function') this.demensionConfig = demensionConfig;
+	    else this.demensionConfig = demensionConfig
+	    if ((typeof rotationConfig) === 'function') this.rotationConfig = rotationConfig;
+	    else this.rotationConfig = rotationConfig
+	
+	    const parentIncluded = this.included;
+	
+	    this.included = (value) => {
+	        value = parentIncluded(value);
+	        if ((typeof value) === 'string') return  group.propertyConfig(value);
+	        switch (value) {
+	          case true: return true;
+	          case false: return false;
+	          default: return true;
+	        }
+	    }
+	
+	    function getValueSmeFormatter(path) {
+	      const split = path.split('.');
+	      let attr = split[0];
+	      let objIdStr;
+	      if (split.length > 2) {
+	      }
+	      if (split.length > 1) {
+	        objIdStr = split[0];
+	        attr = split.slice(1).join('.');
+	      }
+	
+	      let obj;
+	      if (objIdStr === undefined) {
+	        obj = instance;
+	      } else {
+	        obj = instance.getAssembly(objIdStr);
+	      }
+	      const returnVal = Assembly.resolveAttr(obj, attr);
+	      return returnVal;
+	    }
+	    const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
+	
+	    // KeyValue setup
+	    const funcReg = /length|width|thickness/;
+	    this.value.addCustomFunction((key, value) => key.match(funcReg) ? this[code](value) : undefined)
+	    this.value.evaluators.string = (value) => sme.eval(value, this);
+	    this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
+	
+	    this.eval = (eqn) => sme.eval(eqn, this);
+	    this.evalObject = (obj) => sme.evalObject(obj, this);
+	
+	    this.group = (g) => {
+	      if (g) group = g;
+	      return group;
+	    }
+	    this.propertyConfig = (one, two) => {
+	      const parent = this.parentAssembly();
+	      if (parent instanceof Assembly) return parent.propertyConfig(one, two);
+	      const group = this.group();
+	      if (group) {
+	        if (one) return group.propertyConfig(one, two);
+	        return group.propertyConfig;
+	      }
+	    }
+	
+	    this.getAssembly = (partCode, callingAssem) => {
+	      if (callingAssem === this) return undefined;
+	      if (this.partCode() === partCode) return this;
+	      if (this.subassemblies[partCode]) return this.subassemblies[partCode];
+	      if (callingAssem !== undefined) {
+	        const children = Object.values(this.subassemblies);
+	        for (let index = 0; index < children.length; index += 1) {
+	          const assem = children[index].getAssembly(partCode, this);
+	          if (assem !== undefined) return assem;
+	        }
+	      }
+	      if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
+	        return this.parentAssembly().getAssembly(partCode, this);
+	      return undefined;
+	    }
+	    let position = new Position(this, sme);
+	    this.position = () => position;
+	    this.updatePosition = () => position = new Position(this, sme);
+	    this.joints = [];
+	    this.values = {};
+	    this.rootAssembly = () => {
+	      let currAssem = this;
+	      while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
+	      return currAssem;
+	    }
+	    this.getJoints = (pc) => {
+	      const root = this.getRoot();
+	      if (root !== this) return root.getJoints(pc || partCode);
+	      pc = pc || partCode;
+	      const assemList = this.getSubassemblies();
+	      let jointList = [].concat(this.joints);
+	      assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
+	      let joints = {male: [], female: []};
+	      jointList.forEach((joint) => {
+	        if (joint.malePartCode() === pc) {
+	          joints.male.push(joint);
+	        } else if (joint.femalePartCode() === pc) {
+	          joints.female.push(joint);
+	        }
+	      });
+	      return joints;
+	    }
+	    function initObj(value) {
+	      const obj = {};
+	      for (let index = 1; index < arguments.length; index += 1) {
+	        obj[arguments[index]] = value;
+	      }
+	      return obj;
+	    }
+	
+	
+	    this.setSubassemblies = (assemblies) => {
+	      this.subassemblies = {};
+	      assemblies.forEach((assem) => this.subassemblies[assem.partCode()] = assem);
+	    };
+	
+	    this.partsOf = (clazz) => {
+	      const parts = this.getRoot().getParts();
+	      if (clazz === undefined) return parts;
+	      return parts.filter((p) => p instanceof clazz);
+	    }
+	
+	    // TODO: wierd dependency on inherited class.... fix!!!
+	    const defaultPartCode = () =>
+	      instance.partCode(instance.partCode() || Assembly.partCode(this));
+	
+	    this.setParentAssembly = (pa) => {
+	      this.parentAssembly(pa);
+	      defaultPartCode();
+	    }
+	    this.addSubAssembly = (assembly) => {
+	      this.subassemblies[assembly.partCode()] = assembly;
+	      // assembly.setParentAssembly(this);
+	    }
+	
+	    this.objId = this.constructor.name;
+	
+	    this.addJoints = function () {
+	      for (let i = 0; i < arguments.length; i += 1) {
+	        const joint = arguments[i];
+	        this.joints.push(joint);
+	        joint.parentAssemblyId(this.id());
+	      }
+	    }
+	
+	    this.addSubassemblies = function () {
+	      for (let i = 0; i < arguments.length; i += 1) {
+	        this.addSubAssembly(arguments[i]);
+	      }
+	    }
+	
+	    this.children = () => Object.values(this.subassemblies);
+	
+	    this.getSubassemblies = () => {
+	      let assemblies = [];
+	      this.children().forEach((assem) => {
+	        assemblies.push(assem);
+	        assemblies = assemblies.concat(assem.getSubassemblies());
+	      });
+	      return assemblies;
+	    }
+	    this.getParts = () => {
+	      return this.getSubassemblies().filter((a) => {
+	        if ((typeof a.part) !== 'function') {
+	          console.log('party')
+	        }
+	        return a.part() && a.included()
+	      });
+	    }
+	
+	    if (Assembly.idCounters[this.objId] === undefined) {
+	      Assembly.idCounters[this.objId] = 0;
+	    }
+	
+	    Assembly.add(this);
+	
+	    this.width = (value) => position.setDemension('x', value);
+	    this.length = (value) => position.setDemension('y', value);
+	    this.thickness = (value) => position.setDemension('z', value);
+	    defaultPartCode();
+	  }
+	}
+	
+	Assembly.list = {};
+	Assembly.get = (id) => {
+	  const keys = Object.keys(Assembly.list);
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const assembly = Assembly.list[keys[index]][id];
+	    if (assembly !== undefined) return assembly;
+	  }
+	  return null;
+	}
+	Assembly.add = (assembly) => {
+	  const name = assembly.constructor.name;
+	  if (Assembly.list[name] === undefined) Assembly.list[name] = {};
+	  Assembly.list[name][assembly.id()] = assembly;
+	}
+	Assembly.all = () => {
+	  const list = [];
+	  const keys = Object.keys(Assembly.list);
+	  keys.forEach((key) => list.concat(Object.values(Assembly.list[key])));
+	  return list;
+	}
+	
+	const positionReg = /^(c|r|d|center|rotation|demension).(x|y|z)$/;
+	Assembly.resolveAttr = (assembly, attr) => {
+	  if (!(assembly instanceof Assembly)) return undefined;
+	  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
+	    return assembly.length();
+	  } else if (attr === 'w' || attr === 'width') {
+	    return assembly.width();
+	  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
+	    return assembly.thickness();
+	  }
+	
+	  const positionMatch = attr.match(positionReg);
+	  if (positionMatch) {
+	    const func = positionMatch[1];
+	    const axis = positionMatch[2];
+	    if (func === 'r' || func === 'rotation') return assembly.position().rotation(axis);
+	    if (func === 'c' || func === 'center') return assembly.position().center(axis);
+	    if (func === 'd' || func === 'demension') return assembly.position().demension(axis);
+	  }
+	  return assembly.value(attr);
+	}
+	Assembly.fromJson = (assemblyJson) => {
+	  const demensionConfig = assemblyJson.demensionConfig;
+	  const centerConfig = assemblyJson.centerConfig;
+	  const rotationConfig = assemblyJson.rotationConfig;
+	  const partCode = assemblyJson.partCode;
+	  const partName = assemblyJson.partName;
+	  const clazz = Object.class.get(assemblyJson._TYPE);
+	  const assembly = new (clazz)(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+	  assembly.id(assemblyJson.id);
+	  assembly.values = assemblyJson.values;
+	  assembly.setParentAssembly(assemblyJson.parent)
+	  Object.values(assemblyJson.subassemblies).forEach((json) =>
+	    assembly.addSubAssembly(Assembly.class(json._TYPE)
+	                              .fromJson(json, assembly)));
+	  if (assemblyJson.length) assembly.length(assemblyJson.length);
+	  if (assemblyJson.width) assembly.width(assemblyJson.width);
+	  if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
+	  return assembly;
+	}
+	
+	Assembly.classes = Object.class.object;
+	Assembly.new = function (id) {
+	  return new (Object.class.get(id))(...Array.from(arguments).slice(1));
+	};
+	Assembly.class = Object.class.get;
+	Assembly.classObj = Object.class.filter;
+	
+	Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
+	Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
+	Assembly.lists = {};
+	Assembly.idCounters = {};
+	
+	Assembly.partCode = (assembly) => {
+	  const cabinet = assembly.getAssembly('c');
+	  if (cabinet) {
+	    const name = assembly.constructor.name;
+	    cabinet.partIndex = cabinet.partIndex || 0;
+	    return `${assembly.constructor.abbriviation}`;
+	  }
+	}
+	
+	module.exports = Assembly
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/init-assem.js',
+function (require, exports, module) {
+	
+const Assembly = require('./assembly.js');
+	new Assembly();
+	
+	const Cabinet = require('./assemblies/cabinet.js');
+	new Cabinet();
+	
+	const Divider = require('./assemblies/divider.js');
+	new Divider();
+	
+	const DoorCatch = require('./assemblies/door/door-catch.js');
+	new DoorCatch();
+	
+	const Door = require('./assemblies/door/door.js');
+	new Door();
+	
+	const Hinges = require('./assemblies/door/hinges.js');
+	new Hinges();
+	
+	const DrawerBox = require('./assemblies/drawer/drawer-box.js');
+	new DrawerBox();
+	
+	const DrawerFront = require('./assemblies/drawer/drawer-front.js');
+	new DrawerFront();
+	
+	const Guides = require('./assemblies/drawer/guides.js');
+	new Guides();
+	
+	const Frame = require('./assemblies/frame.js');
+	new Frame();
+	
+	const Handle = require('./assemblies/hardware/pull.js');
+	new Handle();
+	
+	const Screw = require('./assemblies/hardware/screw.js');
+	new Screw();
+	
+	const Panel = require('./assemblies/panel.js');
+	new Panel();
+	
+	// const PartitionSection = require('./assemblies/section/partition/sections/divider.js');
+	// new PartitionSection();
+	//
+	// const DividerSection = require('./assemblies/section/partition/partition');
+	// new DividerSection();
+	//
+	// const Section = require('./assemblies/section/section.js');
+	// new Section();
+	//
+	// const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
+	// new DivideSection();
+	//
+	// const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
+	// new OpeningCoverSection();
+	
+	const DoorSection = require('./assemblies/section/sections/door.js');
+	new DoorSection();
+	
+	const DrawerSection = require('./assemblies/section/sections/drawer.js');
+	new DrawerSection();
+	
+	const DualDoorSection = require('./assemblies/section/sections/duel-door.js');
+	new DualDoorSection();
+	
+	const FalseFrontSection = require('./assemblies/section/sections/false-front.js');
+	new FalseFrontSection();
+	
+	// const SpaceSection = require('./assemblies/section/space/space.js');
+	// new SpaceSection();
+	
+	const Cutter = require('./assemblies/cutter.js');
+	new Cutter();
+	
+	Assembly.components = {
+	  Door, DrawerBox, DrawerFront, Frame, Panel, Cutter,
+	};
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/init.js',
+function (require, exports, module) {
+	
+const Joint = require('./joint');
+	
+	const Butt = require('./joints/butt.js');
+	const Dado = require('./joints/dado.js');
+	const Miter = require('./joints/miter.js');
+	const Rabbet = require('./joints/rabbet.js');
+	
+	Joint.types = {
+	  Butt, Dado, Miter, Rabbet
+	};
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joint.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../../public/js/utils/object/lookup.js')
+	
+	
+	class Joint {
+	  constructor(malePartCode, femalePartCode) {
+	    let parentAssembly;
+	    const initialVals = {
+	      maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
+	      malePartCode, femalePartCode, demensionAxis: '', centerAxis: ''
+	    }
+	    Object.getSet(this, initialVals);
+	
+	    this.parentAssembly = () => {
+	      if (!parentAssembly && this.parentAssemblyId()) {
+	        parentAssembly = Lookup.get(this.parentAssemblyId());
+	        this.parentAssemblyId = () => parentAssembly.id();
+	      }
+	      return parentAssembly;
+	    }
+	
+	    this.updatePosition = () => {};
+	
+	    this.getFemale = () => this.parentAssembly().getAssembly(this.femalePartCode());
+	    this.getMale = () => this.parentAssembly().getAssembly(this.malePartCode());
+	
+	    this.getDemensions = () => {
+	      const malePos = getMale();
+	      const femalePos = getFemale();
+	      // I created a loop but it was harder to understand
+	      return undefined;
+	    }
+	    this.toString = () => `${this.constructor.name}:${this.malePartCode()}->${this.femalePartCode()}`;
+	
+	    if (Joint.list[this.malePartCode()] === undefined) Joint.list[this.malePartCode()] = [];
+	    if (Joint.list[this.femalePartCode()] === undefined) Joint.list[this.femalePartCode()] = [];
+	    Joint.list[this.malePartCode()].push(this);
+	    Joint.list[this.femalePartCode()].push(this);
+	  }
+	}
+	Joint.list = {};
+	Joint.regex = /([a-z0-9-_\.]{1,})->([a-z0-9-_\.]{1,})/;
+	
+	Joint.classes = {};
+	Joint.register = (clazz) => {
+	  new clazz();
+	  Joint.classes[clazz.prototype.constructor.name] = clazz;
+	}
+	Joint.new = function (id, json) {
+	  return new Joint.classes[id]().fromJson(json);
+	}
+	module.exports = Joint
 	
 });
 
@@ -28113,18 +29104,23 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	    let normal;
 	
 	    function calcNormal() {
-	      let normals = [];
-	      for (let index = 1; index < lines.length; index++) {
-	        normals[index-1] = lines[index-1].vector().crossProduct(lines[index].vector()).unit();
-	      }
-	
-	      for (let index = 1; index < normals.length; index++) {
-	        if (!normals[index -1] || !normals[index - 1].equals(normals[index])) {
-	          console.log('ne')
-	        }
-	      }
-	
-	      return normals[0];
+	      // let normals = [];
+	      // for (let index = 1; index < lines.length; index++) {
+	      //   normals[index-1] = lines[index-1].vector().crossProduct(lines[index].vector()).unit();
+	      // }
+	      //
+	      // for (let index = 1; index < normals.length; index++) {
+	      //   if (!normals[index -1] || !normals[index - 1].equals(normals[index])) {
+	      //     console.log('ne')
+	      //   }
+	      // }
+	      //
+	      // return normals[0];
+	        const points = [lines[0].startVertex, lines[1].startVertex, lines[2].startVertex];
+	        const vector1 = points[1].minus(points[0]);
+	        const vector2 = points[2].minus(points[0]);
+	        const normVect = vector1.crossProduct(vector2);
+	        return normVect.scale(1 / normVect.magnitude());
 	    }
 	    this.normal = calcNormal;
 	
@@ -28143,6 +29139,16 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	      return normal.parrelle(poly.normal());
 	    }
 	
+	    this.parrelleAt = (distance) => {
+	      const normal = this.normal();
+	      const scaled = normal.scale(distance);
+	      const verticies = this.verticies();
+	      for (let index = 0; index < verticies.length; index++) {
+	        verticies[index].translate(scaled);
+	      }
+	      return new Polygon3D(verticies);
+	    }
+	
 	    this.verticies = () => {
 	      if (lines.length === 0) return [];
 	      const verticies = [];
@@ -28151,10 +29157,21 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	        verticies.push(line.startVertex);
 	      }
 	
-	      return verticies;
+	      return JSON.clone(verticies);
 	    }
 	
-	    this.lines = () => lines;
+	    this.isClockwise = () => {
+	      let sum = 0;
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const point1 = lines[index].startVertex;
+	        const point2 = lines[index].startVertex;
+	        sum += (point2.x - point1.x)*(point2.y + point1.y)*(point2.z - point1.z);
+	      }
+	      return sum > 0;
+	    }
+	
+	    this.lines = () => JSON.clone(lines);
+	    this.line = (index) => JSON.clone(lines[Math.mod(index, lines.length)]);
 	    this.startLine = () => lines[0];
 	    this.endLine = () => lines[lines.length - 1];
 	
@@ -28384,1142 +29401,894 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 });
 
 
-RequireJS.addFunction('./app-src/three-d/objects/vector.js',
+RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
 function (require, exports, module) {
 	
-const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
 	
-	class Vector3D {
-	  constructor(i, j, k) {
-	    this.i = () => i;
-	    this.j = () => j;
-	    this.k = () => k;
+	function drawerBox(length, width, depth) {
+	  const bottomHeight = 7/8;
+	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+	  box.setColor(1, 0, 0);
+	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+	  inside.setColor(0, 0, 1);
+	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+	  bInside.setColor(0, 0, 1);
 	
-	    this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
-	    this.minus = (vector) => {
-	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-	      return new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k());
-	    }
-	    this.add = (vector) => {
-	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-	      return new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k());
-	    }
-	    this.divide = (vector) => {
-	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-	      return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
-	    }
-	    this.dot = (vector) =>
-	      this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
-	    this.perpendicular = (vector) =>
-	      approximate.eq(this.dot(vector), 0);
-	    this.parrelle = (vector) => {
-	      let coef = approximate(this.i()) / approximate(vector.i()) ||
-	                  approximate(this.j()) / approximate(vector.j()) ||
-	                  approximate(this.k()) / approximate(vector.k());
-	      if (Math.abs(coef) === Infinity || coef === 0 || Number.isNaN(coef)) return null;
-	      return approximate.eq(vector.i() * coef, this.i()) &&
-	              approximate.eq(vector.j() * coef, this.j()) &&
-	              approximate.eq(vector.k() * coef, this.k());
-	    }
-	    this.crossProduct = (other) => {
-	      const i = this.j() * other.k() - this.k() * other.j();
-	      const j = this.i() * other.k() - this.k() * other.i();
-	      const k = this.i() * other.j() - this.j() * other.i();
-	      const mag = Math.sqrt(i*i+j*j+k*k);
-	      return new Vector3D(i/mag,j/-mag,k/mag);
-	    }
-	
-	    this.unit = () => {
-	      const attrs = ['i', 'j', 'k'];
-	      let maxIndex = 0;
-	      for (let index = 1; index < 3; index++)
-	        if (Math.abs(this[attrs[maxIndex]]()) < Math.abs(this[attrs[index]]())) maxIndex = index;
-	      const unit = [];
-	      const maxAttr = attrs[maxIndex];
-	      unit[maxIndex] = attrs[maxIndex] > 0 ? 1 : -1;
-	      const magnitudeOfMaxValue = this[maxAttr]() * (unit[maxAttr] < 0 ? -1 : 1);
-	      for (let index = 1; index < 4; index++) {
-	        const targetIndex = (index + maxIndex) % 3;
-	        const attr = attrs[targetIndex];
-	        unit[targetIndex] = this[attr]() / magnitudeOfMaxValue;
-	      }
-	      return new Vector3D(...unit);
-	    }
-	    this.equals = this.parrelle;
-	    this.toString = () => `<${i},  ${j},  ${k}>`;
-	  }
+	  return box.subtract(bInside).subtract(inside);
 	}
-	
-	module.exports = Vector3D;
+	module.exports = drawerBox
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
+RequireJS.addFunction('./app-src/three-d/objects/matrix.js',
 function (require, exports, module) {
 	
-
+const Approximate = require('../../../../../public/js/utils/approximate.js');
 	
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	function findRowColumnCount (array) {
+	  let rows = array.length;
+	  let columns = array[0].length;
+	  for (let i = 0; i < array.length; i++) {
+	    const row = array[i];
+	    columns = row.length > columns ? row.length : columns;
+	  }
+	  return {rows, columns};
+	}
 	
-	class UFObj {
-	  constructor(order) {
-	    class Row {
-	      constructor(groupName, assembly, index) {
-	        this.groupName = groupName;
-	        this.type = assembly.constructor.name;
-	        const dems = assembly.position().demension();
-	        dems.y = new Measurement(dems.y).display();
-	        dems.x = new Measurement(dems.x).display();
-	        dems.z = new Measurement(dems.z).display();
-	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
-	        this.quantity = 1;
-	        this.cost = '$0';
-	        this.notes = assembly.notes || '';
+	function columnValidator (min, max) {
+	  return (target, key, value) => {
+	    if (key > max || key < min) {
+	      throw new Error('An assignment error was made or you need to resize your matrix');
+	    }
+	    if ((typeof value) !== 'number') {
+	      throw new Error('Matrix must be filled with numbers');
+	    }
+	    target[key] = value;
+	    return true;
+	  }
+	}
+	
+	function rowValidator () {
+	  return (target, key, value) => {
+	    if (Number.isNaN(Number.parseInt(key))) {
+	      throw new Error('You do not have access to the numerical attributes of a Matrix object, they are reserved for rows and cannot be modified');
+	    }
+	    target[key] = value;
+	    return true;
+	  }
+	}
+	
+	class Matrix extends Array {
+	  constructor(values, rows, columns) {
+	    super();
+	    if (!rows || !columns) {
+	      const max = findRowColumnCount(values);
+	      if (!rows) rows = max.rows;
+	      if (!columns) columns = max.columns;
+	    }
+	
+	    for (let i = 0; i < rows; i +=1) {
+	      this[i] = new Proxy([], { set: columnValidator(0, columns) });
+	      for (let j = 0; j < columns; j ++) {
+	        const value = values && values[i] && values[i][j];
+	        this[i][j] = !value ? 0 : value;
 	      }
 	    }
-	    const cabinets = [];
-	    const obj = [];
-	    Object.values(order.rooms).forEach((room, rIndex) => room.groups.forEach((group, gIndex) => {
-	      group.cabinets.forEach((cabinet, index) => {
-	        const cabinetId = `${rIndex+1}-${gIndex+1}-${index+1}`;
-	        cabinet.getParts().forEach((part) => {
-	          const row = new Row(group.name(), part, cabinetId);
-	          if (obj[row.size] === undefined) obj[row.size] = row;
-	          else {
-	            obj[row.size].quantity++;
+	
+	    new Proxy(this, {set: rowValidator()});
+	
+	    this.rows = () => rows;
+	    this.columns = () => columns;
+	
+	    this.remove = (rowIndex, columnIndex) => {
+	      if ((typeof rowIndex) !== 'number') rowIndex = Number.MAX_SAFE_INTEGER;
+	      else rowIndex = Math.mod(rowIndex, rows);
+	      if ((typeof columnIndex) !== 'number') columnIndex = Number.MAX_SAFE_INTEGER;
+	      else columnIndex = Math.mod(columnIndex, columns);
+	
+	      const rowLimit = rowIndex > -1 && rowIndex < rows ? rows - 1 : rows;
+	      const columnLimit = columnIndex > -1 && columnIndex < columns ? columns - 1 : columns;
+	      let matrix = new Matrix(null, rowLimit, columnLimit);
+	      for (let i = 0; i < rows; i++) {
+	        if (i !== rowIndex) {
+	          const rowI = i < rowIndex ? i : i - 1;
+	          for (let j = 0; j < columns; j++) {
+	            if (j !== columnIndex) {
+	              const columnJ = j < columnIndex ? j : j - 1;
+	              matrix[rowI][columnJ] = this[i][j];
+	            }
 	          }
-	        });
-	      });
-	    }));
-	    return Object.values(obj);
-	  }
-	}
-	module.exports = UFObj
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/managers/template.js',
-function (require, exports, module) {
-	
-
-	const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
-	
-	const Assembly = require('../../objects/assembly/assembly.js');
-	const Input = require('../../../../../public/js/utils/input/input.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select.js');
-	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-	const Inputs = require('../../input/inputs.js');
-	const CabinetTemplate = require('../../config/cabinet-template.js');
-	const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
-	const $t = require('../../../../../public/js/utils/$t.js');
-	const du = require('../../../../../public/js/utils/dom-utils.js');
-	const RadioDisplay = require('../../display-utils/radio-display.js');
-	const Bind = require('../../../../../public/js/utils/input/bind.js');
-	const Joint = require('../../objects/joint/joint.js');
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const ThreeView = require('../three-view.js');
-	const Layout2D = require('../../objects/layout.js');
-	const Draw2D = require('../../two-d/draw.js');
-	const Snap2d = require('../../two-d/objects/snap');
-	const PropertyConfig = require('../../config/property/config.js');
-	const cabinetBuildConfig = require('../../../public/json/cabinets.json');
-	const Pattern = require('../../division-patterns.js');
-	const Handle = require('../../objects/assembly/assemblies/hardware/pull.js');
-	
-	let template;
-	let modifyingOpening = false;
-	const sectionState = {
-	  style: 'Overlay',
-	  vertical: false,
-	  count: 0,
-	};
-	
-	du.on.match('keydown', '#template-divider-count-input', (elem,ev) => ev.preventDefault());
-	du.on.match('change', '.section-properties>input', (elem) => {
-	  const attr = elem.name;
-	  const value = elem.type === 'checkbox' ? elem.checked : elem.value;
-	  sectionState[attr] = value;
-	});
-	
-	function applyDividers(cabinet) {
-	  for (let index = 0; index < cabinet.openings.length; index++) {
-	    const divideCount = Number.parseInt(sectionState.count);
-	    const opening = cabinet.openings[index];
-	    opening.divide(divideCount);
-	    opening.vertical(sectionState.vertical);
-	    const sectionType = sectionState.sectionType;
-	    if (sectionType) {
-	      for (let si = 0; si < opening.sections.length; si++) {
-	        opening.sections[si].setSection(sectionType);
-	      }
-	    }
-	    const coords = opening.update();
-	  }
-	}
-	
-	function applyTestConfiguration(cabinet) {
-	  cabinet.width(60*2.54);
-	
-	  const opening = cabinet.openings[0];
-	  opening.divide(2);
-	  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
-	  const left = opening.sections[0];
-	  const center = opening.sections[1];
-	  const right = opening.sections[2];
-	  const a = 6*2.54
-	
-	  left.divide(2);
-	  left.vertical(false);
-	  left.sections[0].setSection("DrawerSection");
-	  left.sections[1].setSection("DrawerSection");
-	  left.sections[2].setSection("DrawerSection");
-	  left.pattern('abb').value('a', a);
-	
-	  center.divide(1);
-	  center.vertical(false);
-	  center.sections[0].setSection('DualDoorSection');
-	  center.pattern('ab').value('a', a);
-	  const centerTop = center.sections[1];
-	
-	  centerTop.divide(2);
-	  centerTop.sections[0].setSection("DoorSection");
-	  centerTop.sections[1].setSection("FalseFrontSection");
-	  centerTop.sections[2].setSection("DoorSection");
-	  centerTop.pattern('ztz').value('t', 15*2.54);
-	  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
-	
-	  right.divide(2);
-	  right.vertical(false);
-	  right.sections[0].setSection("DrawerSection");
-	  right.sections[1].setSection("DrawerSection");
-	  right.sections[2].setSection("DrawerSection");
-	  right.pattern('abb').value('a', a);
-	}
-	
-	FunctionCache.disable();
-	function getCabinet(elem) {
-	  const templateBody = du.find.closest(`.template-body[template-id]`, elem);
-	  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
-	  const height = new Measurement(templateBody.children[4].value, true).decimal();
-	  const width = new Measurement(templateBody.children[3].value, true).decimal();
-	  const thickness = new Measurement(templateBody.children[5].value, true).decimal();
-	  const cabinet = template.getCabinet(height, width, thickness);
-	  cabinet.propertyConfig().set(sectionState.style);
-	
-	  if (sectionState.testDividers) applyTestConfiguration(cabinet);
-	  else applyDividers(cabinet);
-	
-	  console.log(`Cabinet Demesions: ${cabinet.width()} !== ${cabinet.eval('c.w')} x ${cabinet.length()} x ${cabinet.thickness()}`)
-	  return cabinet;
-	}
-	
-	const toDisplay = (value) =>  new Measurement(value).display();
-	const threeView = new ThreeView();
-	du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
-	  du.move.inFront(elem));
-	du.on.match('click', `#${threeView.id()}>.three-view-two-d-cnt>.three-view-canvases-cnt`, (elem) =>
-	  du.move.inFront(elem));
-	
-	const containerClasses = {
-	  values: `template-values`,
-	  subassemblies: `template-subassemblies`,
-	  joints: `template-joints`,
-	  dividerJoint: `template-divider-joint`,
-	  openings: `template-openings`
-	};
-	
-	function resetHeaderErrors() {
-	  const containers = du.find.all('.cabinet-template-input-cnt');
-	  containers.forEach((cnt) => {
-	    const headers = du.find.downAll('.expand-header', cnt);
-	    headers.forEach((h) => du.class.remove(h, 'error'))
-	  });
-	}
-	
-	function setHeaderErrors(elem) {
-	  const firstHeader = du.find.closest('.expand-header', elem);
-	  const secondHeader = du.find.up('.cabinet-template-input-cnt', firstHeader).children[0];
-	  du.class.add(firstHeader, 'error');
-	  du.class.add(secondHeader, 'error');
-	}
-	
-	function updateCss(elem, isValid, errorMsg) {
-	  if (elem) {
-	    if (isValid) {
-	      du.class.remove(elem, 'error');
-	      elem.setAttribute('error-msg', '');
-	    } else {
-	      du.class.add(elem, 'error');
-	      elem.setAttribute('error-msg', errorMsg);
-	      setHeaderErrors(elem);
-	    }
-	  }
-	}
-	
-	const varReg = /^[$_a-zA-Z][$_a-zA-Z0-9\.]*$/;
-	const variableNameCheck = (elem) => updateCss(elem, elem.value.match(varReg), `Illegal characters: ${varReg}`);
-	const positiveValueCheck = (elem) => updateCss(elem, Number.parseFloat(elem.value) > 0, 'Value must be positive');
-	const partCodeCheck = (template) => (elem) => updateCss(elem, template.validPartCode(elem.value), 'Invalid Part Code');
-	
-	function openingCodeCheck(template, opening, input) {
-	  if (opening._Type === 'location') return true;
-	  let count = 0;
-	  let errorString = '';
-	  if (!template.validPartCode(opening.top)) {count++; (errorString += 'top,');}
-	  if (!template.validPartCode(opening.bottom)) {count++; (errorString += 'bottom,');}
-	  if (!template.validPartCode(opening.left)) {count++; (errorString += 'left,');}
-	  if (!template.validPartCode(opening.right)) {count++; (errorString += 'right,');}
-	  if (!template.validPartCode(opening.back)) {count++; (errorString += 'back,');}
-	  if (count === 0) updateCss(input, true);
-	  else {
-	    errorString = errorString.substring(0, errorString.length - 1);
-	    if (count === 1) updateCss(input, false, `'${errorString}' part code is invalid (CABINET WILL NOT RENDER)`);
-	    else updateCss(input, false, `Multiple part codes are invalid: ${errorString} (CABINET WILL NOT RENDER)`);
-	  }
-	  return count === 0;
-	}
-	
-	function openingsCodeCheck (template, inputs) {
-	  const openings = template.openings();
-	  let valid = true;
-	  for (let index = 0; index < openings.length; index += 1) {
-	    const opening = openings[index];
-	    const input = inputs[index];
-	    valid &&= openingCodeCheck(template, opening, input)
-	  }
-	  return valid;
-	}
-	
-	function validateEquations(template, cabinet, valueInput, eqnInput, valueIndex, eqnMap) {
-	  let errorString = '';
-	  let errorCount = 0;
-	  let eqnKeys = Object.keys(eqnMap);
-	  for (let index = 0; index < eqnKeys.length; index += 1) {
-	    const key = eqnKeys[index];
-	    const eqn = eqnMap[key];
-	    if (index === valueIndex) {
-	      const value = template.evalEqn(eqn, cabinet);
-	      if (Number.isNaN(value)) {
-	        errorString += `${key},`;
-	        errorCount++;
-	      } else {
-	        const convertCheckBox = valueInput.nextElementSibling;
-	        if (convertCheckBox && convertCheckBox.getAttribute('name') === 'convert' &&
-	              convertCheckBox.checked) {
-	          valueInput.value = new Measurement(value).display();
-	        } else {
-	          valueInput.value = value;
 	        }
 	      }
-	    } else {
-	      if (!template.validateEquation(eqn, cabinet)) {
-	        errorString += `${key},`;
-	        errorCount++;
+	      return matrix;
+	    }
+	
+	    this.replaceRow = (rowIndex, values) => {
+	      rowIndex = Math.mod(rowIndex, rows);
+	
+	      for (let j = 0; j < columns; j++) {
+	        this[rowIndex][j] = values[j];
 	      }
 	    }
-	  }
-	  if (errorCount > 0) {
-	    du.class.add(eqnInput, 'error');
-	    if (eqnKeys.length > 1) {
-	      errorString = errorString.substring(0, errorString.length - 1);
-	      updateCss(eqnInput, false, `Errors found within the following equations:${errorString}`);
-	    } else {
-	      updateCss(eqnInput, false, `Errors found within the equation.`)
+	
+	    this.replaceColumn = (columnIndex, values) => {
+	      columnIndex = Math.mod(columnIndex, rows);
+	
+	      for (let i = 0; i < rows; i++) {
+	        this[i][columnIndex] = values[i];
+	      }
 	    }
-	  } else {
-	    du.class.remove(eqnInput, 'error');
-	    updateCss(eqnInput, true);
-	  }
-	}
 	
-	const valueEqnCheck = (template, cabinet) => (eqnInput) => {
-	  const valueInput = du.find.closest('[name="value"]', eqnInput);
-	  const name = eqnInput.name;
-	  const eqn = eqnInput.value;
-	  const eqnMap = {};
-	  eqnMap[name] = eqn;
-	  validateEquations(template, cabinet, valueInput, eqnInput, 0, eqnMap);
-	}
-	
-	const xyzEqnCheck = (template, cabinet) => (xyzInput) => {
-	  const valueInput = du.find.closest('[name="value"]', xyzInput);
-	  const index = Number.parseInt(du.find.closest('select', xyzInput).value);
-	  const subAssem = ExpandableList.get(xyzInput);
-	  const part = cabinet.getAssembly(subAssem.code);
-	  const eqns = subAssem[xyzInput.name];
-	  const eqnMap = {x: eqns[0], y: eqns[1], z: eqns[2]};
-	  validateEquations(template, cabinet, valueInput, xyzInput, index, eqnMap);
-	}
-	
-	function updatePartsDataList() {
-	  const partMap = threeView.partMap();
-	  if (!partMap) return;
-	  const partKeys = Object.keys(partMap);
-	  let html = '';
-	  for (let index = 0; index < partKeys.length; index += 1) {
-	    const id = partKeys[index];
-	    const partCode = partMap[id].code;
-	    const partName = partMap[id].name;
-	    html += `<option value='${partCode}'></option>`;
-	  }
-	
-	  const datalist = du.id('part-list');
-	  datalist.innerHTML = html;
-	}
-	
-	function onPartSelect(elem) {
-	  console.log(elem.value);
-	  threeView.isolatePart(elem.value, template);
-	  elem.value = '';
-	}
-	
-	function updateOpenLocationDisplay (opening, elem) {
-	  const state = opening.state;
-	
-	  const io = state.innerOouter ? 'inner' : 'outer';
-	  const i = state.index;
-	  const description = `Current formula describes the ${io} boundry ${state.xOyOz} coordinate of vertex ${state.index}.`;
-	  du.find.closest('.opening-location-description-cnt', elem).innerText = description;
-	
-	  const targetPoint = opening.coordinates[io][i];
-	
-	  if (elem.name !== 'opening-coordinate-value')
-	    du.find.closest('[name="opening-coordinate-value"]', elem).value = targetPoint[state.xOyOz];
-	  else targetPoint[state.xOyOz] = elem.value;
-	
-	  const cabinet = getCabinet(elem);
-	    console.log(cabinet.width());
-	    const x = new Measurement(cabinet.eval(targetPoint.x)).display();
-	    const y = new Measurement(cabinet.eval(targetPoint.y)).display();
-	    const z = new Measurement(cabinet.eval(targetPoint.z)).display();
-	
-	    const position = `(${x}, ${y}, ${z})`;
-	    du.find.closest('.opening-location-value-cnt', elem).innerText = position;
-	}
-	
-	const changeEvent = new Event("change");
-	function onOpeningLocationChange(elem) {
-	  const opening = ExpandableList.get(elem);
-	  const state = opening.state;
-	  let value = elem.value;
-	  if (value === 'true') value = true;
-	  else if (value === 'false') value = false;
-	  const attr = elem.name.replace(/(.*?)-.*/, '$1');
-	  state[attr] = value;
-	
-	  updateOpenLocationDisplay(opening, elem);
-	}
-	
-	function onOpeningTypeChange(elem) {
-	  const opening = ExpandableList.get(elem);
-	  if (opening._Type !== elem.value) {
-	    const isLocation = elem.value === 'location';
-	    const defaultFunc = isLocation ? 'defaultLocationOpening' : 'defaultPartCodeOpening';
-	    const def = CabinetTemplate[defaultFunc]();
-	    Object.merge(opening, def, true);
-	    opening._Type = elem.value;
-	    du.find.closest('.border-location-cnt', elem).hidden = !isLocation;
-	    du.find.closest('.border-part-code-cnt', elem).hidden = isLocation;
-	    updateOpeningPartCode(du.find.closest('select', elem));
-	  }
-	}
-	
-	du.on.match('change', '.border-location-cnt>input,.border-location-cnt>span>input', onOpeningLocationChange);
-	du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
-	du.on.match('change', '.template-body>span>input[name="partSelector"]', onPartSelect);
-	
-	function updateOpeningPoints(template, cabinet) {
-	  const threeDModel = threeView.threeDModel();
-	  if (threeDModel) {
-	    threeDModel.removeAllExtraObjects();
-	    const openings = cabinet.openings;
-	    for (let index = 0; index < openings.length; index++) {
-	      const opening = openings[index];
-	      const size = modifyingOpening ? 1 : .25;
-	      if (opening.state === undefined) opening.state = getLocationOpeningState();
-	      const state = opening.state;
-	      const i = state.index;
-	      const vertexColor = (io, i) => io !== state.innerOouter ? 'black' :
-	            (modifyingOpening && i === state.index ? 'lime' : 'white');
-	
-	      const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
-	
-	      const coords = opening.update();
-	      threeDModel.addVertex(coords.inner[0], vertexSize(true), vertexColor(true, 0));
-	      threeDModel.addVertex(coords.inner[1], vertexSize(true), vertexColor(true, 1));
-	      threeDModel.addVertex(coords.inner[2], vertexSize(true), vertexColor(true, 2));
-	      threeDModel.addVertex(coords.inner[3], vertexSize(true), vertexColor(true, 3));
-	
-	      threeDModel.addVertex(coords.outer[0], vertexSize(false), vertexColor(false, 0));
-	      threeDModel.addVertex(coords.outer[1], vertexSize(false), vertexColor(false, 1));
-	      threeDModel.addVertex(coords.outer[2], vertexSize(false), vertexColor(false, 2));
-	      threeDModel.addVertex(coords.outer[3], vertexSize(false), vertexColor(false, 3));
+	    this.minor = (index) => {
+	      return this.remove(0, index);
 	    }
-	  }
-	}
 	
-	const topView = du.id('three-view-top');
-	const leftView = du.id('three-view-left');
-	const frongView = du.id('three-view-front');
-	function validateOpenTemplate (elem) {
-	  const templateBody = du.find('.template-body[template-id]');
-	  if (!templateBody || du.is.hidden(templateBody)) return;
-	  resetHeaderErrors();
-	  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
+	    this.determinate = () => {
+	      if (rows === 2) return this[0][0] * this[1][1] - this[0][1] * this[1][0];
 	
-	  const valueNameInputs = du.find.downAll('input[attr="values"][name="name"]', templateBody);
-	  valueNameInputs.forEach(variableNameCheck);
-	  const subNameInputs = du.find.downAll('input[attr="subassemblies"][name="name"]', templateBody);
-	  subNameInputs.forEach(variableNameCheck);
-	  const subCodeInputs = du.find.downAll('input[attr="subassemblies"][name="code"]', templateBody);
-	  subCodeInputs.forEach(variableNameCheck);
-	
-	  const positiveInputs = du.find.downAll('input[name="thickness"],input[name="width"],input[name="height"]', templateBody);
-	  positiveInputs.forEach(positiveValueCheck);
-	
-	  const pcc = partCodeCheck(template);
-	  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="malePartCode"]', templateBody);
-	  jointMaleInputs.forEach(pcc);
-	  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="femalePartCode"]', templateBody);
-	  jointFemaleInputs.forEach(pcc);
-	
-	  const openingCodeInputs = du.find.downAll('input[attr="openings"][name="partCode"]', templateBody);
-	  openingsCodeCheck(template, openingCodeInputs);
-	
-	  try {
-	    const cabinet = getCabinet(templateBody);
-	
-	    const depthInputs = du.find.downAll('[name=depth]', templateBody);
-	    depthInputs.forEach(valueEqnCheck(template, cabinet));
-	    const valueEqnInputs = du.find.downAll('input[attr="values"][name="eqn"]', templateBody);
-	    valueEqnInputs.forEach(valueEqnCheck(template, cabinet));
-	    const subDemInputs = du.find.downAll('input[attr="subassemblies"][name="demensions"]', templateBody);
-	    subDemInputs.forEach(xyzEqnCheck(template, cabinet));
-	    const subCenterInputs = du.find.downAll('input[attr="subassemblies"][name="center"]', templateBody);
-	    subCenterInputs.forEach(xyzEqnCheck(template, cabinet));
-	    const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
-	    subRotInputs.forEach(xyzEqnCheck(template, cabinet));
-	    updateOpeningPoints(template, cabinet);
-	    threeView.update(cabinet);
-	    setTimeout(updatePartsDataList, 500);
-	  } catch (e) {
-	    console.log(e);
-	  }
-	
-	
-	}
-	
-	function getEqn(select, values) {
-	  return values && values[select.value()];
-	}
-	
-	const depthValidation = (measurment) =>
-	        measurment.decimal() > 0;
-	
-	function getJointInputTree(func, joint, dividerJoint) {
-	  joint.type ||= 'Butt';
-	  const selectType = new Select({
-	    name: 'type',
-	    list: Object.keys(Joint.types),
-	    class: 'template-select',
-	    value: joint.type
-	  });
-	
-	  const centerOffsetInput = new Select({
-	    name: 'centerAxis',
-	    list: ['+x', '+y', '+z', '-x', '-y', '-z'],
-	    value: joint.centerAxis
-	  });
-	  const demensionOffsetInput = new Select({
-	    name: 'demensionAxis',
-	    list: ['x', 'y', 'z'],
-	    value: joint.demensionAxis
-	  });
-	
-	  const depthInput = new Input({
-	    name: 'maleOffset',
-	    value: joint.maleOffset
-	  });
-	
-	  const dadoInputs = dividerJoint ? [depthInput] : [depthInput, centerOffsetInput, demensionOffsetInput];
-	
-	  const dit = new DecisionInputTree(undefined, {noSubmission: true});
-	  const type = dit.branch('Type', [selectType]);
-	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', 'Dado', dadoInputs);
-	  type.conditional('dado', condtionalPayload);
-	  dit.onChange(func);
-	  return dit;
-	}
-	
-	let lastDepth;
-	const jointOnChange = (vals, dit) => {
-	  const selectId = dit.payload().inputArray[0].id();
-	  const joint = ExpandableList.get(du.id(selectId));
-	  joint.type = vals.type;
-	  lastDepth = vals.maleOffset || lastDepth;
-	  joint.maleOffset = lastDepth || undefined;
-	  const depthInput = dit.children()[0].payload().inputArray[0];
-	  // depthInput.updateDisplay();
-	  joint.demensionAxis = vals.demensionAxis || undefined;
-	  joint.centerAxis = vals.centerAxis || undefined;
-	  console.log(vals);
-	}
-	
-	function getTypeInput(obj) {
-	  return new Select({
-	    name: 'type',
-	    value: obj.type,
-	    class: 'template-input',
-	    list: Object.keys(Assembly.components),
-	    inline: true
-	  });
-	}
-	
-	function getXyzSelect(label) {
-	  return new Select({
-	    label,
-	    name: 'xyz',
-	    list: {'0': 'X', '1': 'Y', '2':'Z'},
-	    inline: true
-	  });
-	}
-	
-	function getWhdSelect(label) {
-	  return new Select({
-	    label,
-	    name: 'xyz',
-	    list: {'0': 'W', '1': 'H', '2':'D'},
-	    inline: true
-	  });
-	}
-	
-	function getOpeningLocationSelect() {
-	  return new Select({
-	    name: 'openingLocation',
-	    list: ['top', 'bottom', 'left', 'right', 'back'],
-	    inline: true
-	  });
-	}
-	
-	function getJoint(obj) {
-	  return {obj, jointInput: getJointInputTree(jointOnChange, obj).payload()};
-	}
-	function getSubassembly(obj) {
-	  return {typeInput:  getTypeInput(obj),
-	          centerXyzSelect: getXyzSelect('Center'),
-	          demensionXyzSelect: getWhdSelect('Demension'),
-	          rotationXyzSelect: getXyzSelect('Rotation'),
-	          getEqn, obj
-	        };
-	}
-	
-	const getLocationOpeningState = () => ({
-	    innerOouter: true,
-	    index: 0,
-	    xOyOz: 'x'
-	  });
-	
-	function getOpening(obj) {
-	  obj.state ||= getLocationOpeningState();
-	  return {obj, select: getOpeningLocationSelect(), state: obj.state};
-	}
-	
-	const scopes = {};
-	function getScope(type, obj) {
-	  obj.id = obj.id || String.random();
-	  if (scopes[obj.id]) return scopes[obj.id];
-	  switch (type) {
-	    case 'joints':
-	      scopes[obj.id] = getJoint(obj);
-	      break;
-	    case 'subassemblies':
-	      scopes[obj.id] = getSubassembly(obj);
-	      break;
-	    case 'openings':
-	      scopes[obj.id] = getOpening(obj);
-	      break;
-	    default:
-	      scopes[obj.id] = {obj};
-	  }
-	  return scopes[obj.id];
-	}
-	
-	const getObjects = {
-	    subassemblies: () => (      {
-	      type: "Panel",
-	      center: [0,0,0],
-	      demensions: [1,1,1],
-	      rotation: [0,0,0],
-	      include: 'All'
-	    })
-	}
-	
-	function updateTemplateDisplay() {
-	  const managerElems = du.find.all('[template-manager]');
-	  for (let index = 0; index < managerElems.length; index += 1) {
-	    const templateManagerId = managerElems[index].getAttribute('template-manager');
-	    const templateManager =TemplateManager.get(templateManagerId);
-	    templateManager.update();
-	  }
-	}
-	
-	
-	function addExpandable(template, type) {
-	  const containerClass = containerClasses[type];
-	  let parentSelector = `[template-id='${template.id()}']>.${containerClass}`;
-	  TemplateManager.headTemplate[type] ||= new $t(`managers/template/${type.toKebab()}/head`);
-	  TemplateManager.bodyTemplate[type] = TemplateManager.bodyTemplate[type] === undefined ?
-	                    new $t(`managers/template/${type.toKebab()}/body`) : TemplateManager.bodyTemplate[type];
-	  let getHeader = (obj) => TemplateManager.headTemplate[type].render(getScope(type, obj));
-	  let getBody = TemplateManager.bodyTemplate[type] ? ((obj) => TemplateManager.bodyTemplate[type].render(getScope(type, obj))) : undefined;
-	  const expListProps = {
-	    idAttribute: 'name',
-	    list: template[type](),
-	    getObject: getObjects[type],
-	    renderBodyOnOpen: false,
-	    parentSelector, getHeader, getBody,
-	    listElemLable: type.toSentance(),
-	  };
-	  const expandList = new ExpandableList(expListProps);
-	  expandList.afterRemoval(updateTemplateDisplay);
-	  return expandList;
-	}
-	
-	class TemplateManager extends Lookup {
-	  constructor(id) {
-	    super(id);
-	    const parentId = `template-list-${this.id()}`;
-	    this.parentId = () => parentId;
-	    let currentTemplate;
-	    const parentSelector = `#${parentId}`;
-	    const dividerJointChange = (template) => (vals) => {
-	      template.dividerJoint(vals);
+	      let sign = 1;
+	      let sum = 0;
+	      let colNum = 0;
+	      while (colNum < columns) {
+	        const minor = this.minor(colNum);
+	        const determinate = minor.determinate();
+	        sum += this[0][colNum++] * determinate * sign;
+	        sign *= -1;
+	      }
+	      return sum;
 	    }
-	    const templateShapeInput = (template) => TemplateManager.templateShapeInput(template.shape());
-	    const dividerJointInput = (template) =>
-	      getJointInputTree(dividerJointChange(template), template.dividerJoint(), true).payload();
 	
-	    const containerSelector = (template, containerClass) => `[template-id="${template.id()}"]>.${containerClass}`;
+	    this.solve = (answer) => {
+	      const solution = new Matrix(null, columns, 1);
+	      answer ||= new Array(columns).fill(0);
+	      const determinate = this.determinate();
+	      for (let j = 0; j < columns; j++) {
+	        const matrix = this.copy()
+	        matrix.replaceColumn(j, answer);
+	        const matrixDeterminate = matrix.determinate();
+	        solution[j][0] = matrixDeterminate / determinate;
+	      }
+	      return solution;
+	    }
 	
-	    const getHeader = (template) =>
-	      TemplateManager.headTemplate.render({template, TemplateManager: this});
-	    const getBody = (template) => {
-	      currentTemplate = template;
-	      setTimeout(() => {
-	        updateExpandables(template);
-	      }, 100);
-	      setTimeout(() => {
-	        validateOpenTemplate(du.id(parentId));
-	      }, 1000);
-	      return TemplateManager.bodyTemplate.render({template, TemplateManager: this,
-	        containerClasses, dividerJointInput: dividerJointInput(template), toDisplay,
-	        templateShapeInput: templateShapeInput(template)});
+	    this.dot = (other) => {
+	      if (this.columns() !== other.rows()) throw new Error('this.columns() and other.rows() much match for a dot product');
+	      const result = new Matrix(null, this.rows(), other.columns());
+	      let ri = 0;
+	      let rj = 0;
+	      for (let i = 0; i < rows; i++) {
+	        for (let oj = 0; oj < other.columns(); oj++) {
+	          let value = 0;
+	          for (let j = 0; j < columns; j++) {
+	            value = value + this[i][j] * other[j][oj];
+	          }
+	          result[i][oj] = value;
+	        }
+	      }
+	      return result;
+	    }
+	
+	    this.scale = (coef, oddOnly) => {
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < columns; j++) {
+	          if (!oddOnly || (i + j) % 2 === 1) {
+	            this[i][j] = this[i][j] * coef;
+	          }
+	        }
+	      }
+	    }
+	
+	    this.approximate = (accuracy) => {
+	      const approximate = Approximate.new(accuracy);
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < columns; j++) {
+	          this[i][j] = approximate(this[i][j]);
+	        }
+	      }
+	    }
+	
+	    this.transpose = () => {
+	      const rows = this.rows();
+	      const cols = this.columns();
+	      const result = new Matrix(null, cols, rows);
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < cols; j++) {
+	          result[j][i] = this[i][j];
+	        }
+	      }
+	      return result;
+	    }
+	
+	    this.diagonal = () => {
+	      const rows = this.rows();
+	      const cols = this.columns();
+	      const result = new Matrix(null, cols, rows);
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < cols; j++) {
+	          if (i + j !== rows - 1) {
+	            result[rows - i - 1][cols - j - 1] = this[i][j];
+	          } else {
+	            result[i][j] = this[i][j];
+	          }
+	        }
+	      }
+	      return result;
+	    }
+	
+	    this.multiply = (other) => {
+	      const result = new Matrix(null, this.rows(), other.columns());
+	      for (let i = 0; i < this.rows(); i++) {
+	        for (let j = 0; j < this.columns(); j++) {
+	          let sum = 0
+	          for (let k = 0; k < other.rows(); k++) {
+	            sum = sum + this[i][k] * other[k][j]
+	            result[i][j] = sum
+	          }
+	        }
+	      }
+	      return result;
+	    }
+	
+	    this.inverse = () => {
+	      let inverse;
+	      if (this.rows() === 2) {
+	        inverse = this.diagonal();
+	        inverse.scale(-1, true);
+	        inverse.scale(1/this.determinate());
+	        return inverse;
 	      }
 	
-	    this.sectionState = sectionState;
-	    const expandables = {};
-	    function initTemplate(template) {
-	      const list = [];
-	      expandables[template.id()] = list;
-	      return () => {
-	        list.push(addExpandable(template, 'values'));
-	        list.push(addExpandable(template, 'subassemblies'));
-	        list.push(addExpandable(template, 'joints'));
-	        list.push(addExpandable(template, 'openings', true));
-	      };
+	      const rows = this.rows();
+	      const cols = this.columns();
+	      inverse = new Matrix(null, rows, columns);
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < cols; j++) {
+	          const minor = this.remove(i, j);
+	          const value = minor.determinate();
+	          inverse[i][j] = value;
+	        }
+	      }
+	      inverse.scale(-1, true);
+	      inverse = inverse.transpose();
+	      inverse.scale(1/this.determinate());
+	      return inverse;
 	    }
 	
-	    function updateExpandables(template) {
-	      template ||= currentTemplate;
-	      if (template === undefined) return;
-	      if (!expandables[template.id()]) initTemplate(template)();
-	      expandables[template.id()].forEach((e) => e.refresh());
-	    }
-	    this.updateExpandables = updateExpandables;
-	
-	    const getObject = (values) => {
-	      const cabTemp = new CabinetTemplate(values.name);
-	      initTemplate(cabTemp)();
-	      return cabTemp;
+	    this.toString = () => {
+	      let str = '';
+	      for (let i = 0; i < rows; i++) {
+	        str += '|'
+	        for (let j = 0; j < columns; j++) {
+	          str += `${this[i][j]}  `;
+	        }
+	        str = str.substring(0, str.length - 2) + '|\n'
+	      }
+	      return str.substring(0, str.length - 1);
 	    }
 	
-	    this.active = () => expandList.active();
-	    const expListProps = {
-	      list: CabinetTemplate.defaultList(),
-	      inputTree: TemplateManager.inputTree(),
-	      parentSelector, getHeader, getBody, getObject,
-	      listElemLable: 'Template',
-	      type: 'sidebar'
+	    this.equals = (other) => {
+	      if (other.rows() !== rows || other.columns() !== columns) return false;
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < columns; j++) {
+	          if (other[i][j] !== this[i][j]) return false;
+	        }
+	      }
+	      return true;
+	    }
+	
+	    this.copy = () => new Matrix(this);
+	
+	  }
+	}
+	
+	Matrix.identity = (rows) => {
+	  let identity = new Matrix(null, rows, rows);
+	  for (let i = 0; i < rows; i++) {
+	    for (let j = 0; j < rows; j++) {
+	      if (i === j) identity[i][i] = 1;
+	      else identity[i][j] = 0;
+	    }
+	  }
+	  return identity;
+	}
+	
+	Matrix.rotation = function (roll, pitch, yaw) {
+	  if (roll instanceof Object) {
+	    pitch = Math.toRadians(roll.y);
+	    yaw = Math.toRadians(roll.z);
+	    roll = Math.toRadians(roll.x);
+	  }
+	  roll ||= 0;
+	  pitch ||= 0;
+	  yaw ||= 0;
+	  var cosa = Math.cos(yaw);
+	  var sina = Math.sin(yaw);
+	
+	  var cosb = Math.cos(pitch);
+	  var sinb = Math.sin(pitch);
+	
+	  var cosc = -1*Math.cos(roll);
+	  var sinc = -1*Math.sin(roll);
+	
+	  var Axx = cosa*cosb;
+	  var Axy = cosa*sinb*sinc - sina*cosc;
+	  var Axz = cosa*sinb*cosc + sina*sinc;
+	
+	  var Ayx = sina*cosb;
+	  var Ayy = sina*sinb*sinc + cosa*cosc;
+	  var Ayz = sina*sinb*cosc - cosa*sinc;
+	
+	  var Azx = -sinb;
+	  var Azy = cosb*sinc;
+	  var Azz = cosb*cosc;
+	
+	  return new Matrix([
+	    [Axx, Axy, Axz],
+	    [Ayx, Ayy, Ayz],
+	    [Azx, Azy, Azz],
+	  ]);
+	}
+	
+	module.exports = Matrix;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/pull.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	
+	function pull(length, height) {
+	  var rspx = length - .75;
+	  var h = height-.125;
+	  var gerth = .27
+	  // var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+	  // var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+	  // var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+	  var rCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/2, 0, h/-2]});
+	  var lCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/-2, 0, h/-2]});
+	  var mainCyl = CSG.cube({demensions: [length, gerth, gerth], center: [0, 0, 0]});
+	
+	  return mainCyl.union(lCyl).union(rCyl);
+	}
+	module.exports = pull
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/line.js',
+function (require, exports, module) {
+	
+const Vector3D = require('./vector');
+	const Vertex3D = require('./vertex');
+	const Plane = require('./plane');
+	
+	class Line3D {
+	  constructor(startVertex, endVertex) {
+	    if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
+	    startVertex = new Vertex3D(startVertex);
+	    endVertex = new Vertex3D(endVertex);
+	    this.startVertex = startVertex;
+	    this.endVertex = endVertex;
+	
+	    this.clone = () => new Line3D(startVertex.clone(), endVertex.clone());
+	
+	    this.negitive = () => new Line3D(endVertex, startVertex);
+	    this.equals = (other) => startVertex && endVertex && other &&
+	        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
+	    this.vector = () => {
+	      let i = endVertex.x - startVertex.x;
+	      let j = endVertex.y - startVertex.y;
+	      let k = endVertex.z - startVertex.z;
+	      return new Vector3D(i,j,k);
 	    };
-	    setTimeout(initTemplate(expListProps.list[0]), 200);
-	    const expandList = new ExpandableList(expListProps);
 	
-	    this.update = () => {
-	      expandList.refresh();
+	    this.translate = (vector) => {
+	      this.startVertex.translate(vector);
+	      this.endVertex.translate(vector);
 	    }
-	    this.loadPoint = () => console.log('load');
-	    this.savePoint = () => console.log('save');
-	    this.fromJson = () => {};
-	    const html = TemplateManager.mainTemplate.render(this);
-	    du.find(`#${id}`).innerHTML = html;
+	
+	    this.planeAt = (rotation) => {
+	      const two = new Vertex3D({x: startVertex.x + 1, y: startVertex.y, z: startVertex.z});
+	      two.rotate(rotation, startVertex);
+	      const three = {x: endVertex.x + 1, y: endVertex.y, z: endVertex.z};
+	      thtee.rotate(rotation, endVertex);
+	      return new Plane(startVertex.copy(), two, three, endVertex.copy());
+	    }
+	
+	    this.on = (vertex, tolerance) => {
+	      tolerance ||= .01;
+	    }
+	
+	    this.equation = () => {
+	      const returnValue = {};
+	      for (let i = 0; i < 3; i++) {
+	        let coord = String.fromCharCode(i + 120);
+	        let t = (endVertex[coord] - startVertex[coord]) / 1;
+	        if (t !== 0) {
+	          let coef = String.fromCharCode(i + 97);
+	          returnValue[coef] = 1;
+	
+	          let offset = ((i + 1) % 3);
+	          coord = String.fromCharCode(offset + 120);
+	          coef = String.fromCharCode(offset + 97);
+	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
+	
+	          offset = ((i + 2) % 3);
+	          coord = String.fromCharCode(offset + 120);
+	          coef = String.fromCharCode(offset + 97);
+	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
+	          break;
+	        }
+	      }
+	      if (returnValue.a === undefined) throw new Error('This Line is a point... I think...');
+	      return returnValue;
+	    }
+	
+	    this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
+	    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
+	
+	    this.midpoint = () => new Vertex3D(
+	      (endVertex.x + startVertex.x) / 2,
+	      (endVertex.y + startVertex.y) / 2,
+	      (endVertex.z + startVertex.z) / 2
+	    );
+	
+	    this.length = () => this.vector().magnitude();
+	
+	    this.adjustLength = (change) => {
+	      if ((typeof change) !== 'number' || change === 0) return;
+	      const len = this.length();
+	      const halfChangeMag = change/2;
+	      const unitVec = this.vector().unit();
+	      const halfDistVec = unitVec.scale(halfChangeMag);
+	      startVertex.translate(halfDistVec.inverse());
+	      endVertex.translate(halfDistVec);
+	    }
+	
+	    this.pointAtDistance = (distance) => {
+	      const point = startVertex.copy();
+	      const unitVec = this.vector().unit();
+	      point.translate(unitVec.scale(distance));
+	      return point;
+	    }
+	
+	    this.rotate = (rotation, center) => {
+	      center ||= this.midpoint();
+	      startVertex.rotate(rotations, center);
+	      endVertex.rotate(rotations, center);
+	    }
+	
+	    this.reverseRotate = (rotation, center) => {
+	      center ||= this.midpoint();
+	      startVertex.reverseRotate(rotations, center);
+	      endVertex.reverseRotate(rotations, center);
+	    }
+	
 	  }
 	}
 	
-	const radioDisplay = new RadioDisplay('cabinet-template-input-cnt', 'template-id');
-	radioDisplay.afterSwitch(function (header){
-	  const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
-	  const opening = ExpandableList.get(coordinateInput);
-	  if (opening._Type === 'location') {
-	    const state = opening.state;
-	    const io = state.innerOouter ? 'inner' : 'outer';
-	    coordinateInput.value = opening.coordinates[io][state.index][state.xOyOz];
+	Line3D.verticies = (lines) => {
+	  const verts = [];
+	  for (let index = 0; index < lines.length; index += 1) {
+	    verts.push(lines[index].endVertex);
 	  }
-	
-	  console.log(opening);
-	});
-	
-	TemplateManager.inputTree = () => {
-	  const dit = new DecisionInputTree();
-	  dit.leaf('Template Name', [Inputs('name')]);
-	  return dit;
+	  return verts;
 	}
 	
-	TemplateManager.templateShapeInput = (value) => {
-	  return new Select({
-	      name: 'templateShape',
-	      list: Object.keys(Snap2d.get),
-	      class: 'template-shape-input',
-	      value: value
-	    });
+	Line3D.adjustVerticies = (vert1, vert2, change) => {
+	  const line = new Line3D(vert1, vert2);
+	  line.adjustLength(change);
+	}
+	
+	module.exports = Line3D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/snap/init.js',
+function (require, exports, module) {
+	const Snap2d = require('../snap');
+	
+	Snap2d.registar(require('./square.js'));
+	Snap2d.registar(require('./corner.js'));
+	Snap2d.registar(require('./corner-l.js'));
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
+function (require, exports, module) {
+	
+const Joint = require('../joint.js');
+	
+	class Dado extends Joint {
+	  constructor(malePartCode, femalePartCode) {
+	    super(malePartCode, femalePartCode);
+	
+	    this.updatePosition = (position) => {
+	      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
+	      const centerAxis = this.centerAxis()[1].toLowerCase();
+	      const offset = this.parentAssembly().eval(this.maleOffset());
+	      const demAxis = this.demensionAxis().toLowerCase();
+	      position.demension[demAxis] = position.demension[demAxis] + offset;
+	      position.center[centerAxis] = position.center[centerAxis] + (offset/2 * direction);
+	    };
+	
+	  }
+	}
+	
+	Joint.register(Dado);
+	module.exports = Dado
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/snap/corner-l.js',
+function (require, exports, module) {
+	
+const Snap2d = require('../snap');
+	const SnapCorner = require('../snap/corner');
+	const Square2d = require('../square');
+	const Polygon2d = require('../polygon');
+	const SnapLocation2d = require('../snap-location');
+	const Vertex2d = require('../vertex');
+	
+	class SnapCornerL extends Snap2d {
+	  constructor(parent, tolerance) {
+	    const polygon = new Polygon2d();
+	    super(parent, polygon, tolerance);
+	    polygon.getTextInfo = () => {
+	      const fwr = (this.height() - this.dl());
+	      const fwl = (this.width() - this.dr());
+	      const areaL = this.dl() * fwr;
+	      const areaR = this.dr() * fwl;
+	      const center = polygon.center();
+	      const info = {
+	        text: this.parent().name(),
+	        center: polygon.center(),
+	        maxWidth: this.width(),
+	        limit: 4
+	      };
+	
+	      if (areaR > areaL) {
+	        // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
+	        info.x = this.height()/2 - fwr/2;
+	        info.y = this.width()/-2 + this.dr();
+	        info.maxWidth = fwr*.75;
+	        info.radians = Math.toRadians(-90) + this.radians();
+	      } else {
+	        info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
+	        info.y = this.height()/-2 + 3 * this.dl() / 4;
+	        info.maxWidth = fwl;
+	        info.radians = Math.toRadians(180) + this.radians();
+	      }
+	      return info;
+	    }
+	    if (parent === undefined) return this;
+	
+	    this.addLocation(SnapCorner.backRight(this));
+	    this.addLocation(SnapCorner.frontRight(this));
+	    this.addLocation(SnapCornerL.frontCenter(this));
+	    this.addLocation(SnapCorner.frontLeft(this));
+	    this.addLocation(SnapCorner.backLeft(this));
+	
+	    this.addLocation(SnapCorner.daginalLeft(this));
+	    this.addLocation(SnapCorner.diagonalRight(this));
+	    const verticies = this.snapLocations().map((snap) =>
+	      snap.vertex());
+	    polygon.addVerticies(verticies);
+	  }
+	}
+	
+	const f = SnapLocation2d.locationFunction;
+	const fromToPoint = SnapLocation2d.fromToPoint;
+	const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
+	const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
+	
+	SnapCornerL.frontCenter = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "frontCenter",  new Vertex2d(null),  null);
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, .5, {dl: -1})));
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	module.exports = SnapCornerL;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/snap/corner.js',
+function (require, exports, module) {
+	
+const Snap2d = require('../snap');
+	const Square2d = require('../square');
+	const Polygon2d = require('../polygon');
+	const SnapLocation2d = require('../snap-location');
+	const Vertex2d = require('../vertex');
+	const Line2d = require('../line');
+	
+	class SnapCorner extends Snap2d {
+	  constructor(parent, tolerance) {
+	    const polygon = new Polygon2d();
+	    // super(parent, new Square2d(parent.center), tolerance);
+	    super(parent, polygon, tolerance);
+	    if (parent === undefined) return this;
+	    polygon.getTextInfo = () => {
+	      const fwr = (this.height() - this.dl());
+	      const fwl = (this.width() - this.dr());
+	      const areaL = this.dl() * fwr;
+	      const areaR = this.dr() * fwl;
+	      const center = polygon.center();
+	      const info = {
+	        text: this.parent().name(),
+	        center: polygon.center(),
+	        maxWidth: this.width(),
+	        limit: 4
+	      };
+	
+	      if (areaR > areaL) {
+	        // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
+	        info.x = this.height()/2 - fwr/2;
+	        info.y = this.width()/-2 + this.dr();
+	        info.maxWidth = fwr*.75;
+	        info.radians = Math.toRadians(-90) + this.radians();
+	      } else {
+	        info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
+	        info.y = this.height()/-2 + 3 * this.dl() / 4;
+	        info.maxWidth = fwl;
+	        info.radians = Math.toRadians(180) + this.radians();
+	      }
+	      return info;
+	    }
+	
+	    this.addLocation(SnapCorner.backRight(this));
+	    this.addLocation(SnapCorner.frontRight(this));
+	    this.addLocation(SnapCorner.frontLeft(this));
+	    this.addLocation(SnapCorner.backLeft(this));
+	
+	    this.addLocation(SnapCorner.daginalLeft(this));
+	    this.addLocation(SnapCorner.diagonalRight(this));
+	    const verticies = this.snapLocations().map((snap) =>
+	      snap.vertex());
+	    polygon.addVerticies(verticies);
+	  }
+	}
+	
+	const f = (snapLoc, attr, attrM, props) => () => {
+	  let val = snapLoc.parent()[attr]() * attrM;
+	  let keys = Object.keys(props || {});
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    val += snapLoc.parent()[key]() * props[key];
+	  }
+	  return val;
 	};
 	
-	radioDisplay.afterSwitch((elem, detail) => {
-	  const newState = detail.targetHeader.innerText === 'Openings';
-	  const updateModel = newState !== modifyingOpening;
-	  modifyingOpening = newState;
-	  updateModel && validateOpenTemplate(detail.targetHeader);
-	});
+	const fromToPoint = SnapLocation2d.fromToPoint;
+	const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
+	const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
 	
-	TemplateManager.mainTemplate = new $t('managers/template/main');
-	TemplateManager.headTemplate = new $t('managers/template/head');
-	TemplateManager.bodyTemplate = new $t('managers/template/body');
-	TemplateManager.bodyTemplate.values = false;
-	new TemplateManager('template-manager', 'template');
-	
-	function updateValuesTemplate(elem, template) {
-	  const nameInput = du.find.closest('[name="name"]', elem);
-	  const name = nameInput.value;
-	  const eqn = du.find.closest('[name="eqn"]', elem).value;
-	  const valueObj = ExpandableList.get(elem);
-	  valueObj.key = name;
-	  valueObj.eqn = eqn;
-	  return true
+	SnapCorner.diagonalRight = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "diagonalRight",  new Vertex2d(null),  'daginalLeft');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, .5, {dol: -1})));
+	  snapLoc.wallThetaOffset(90);
+	  snapLoc.thetaOffset('SnapCorner', null, 180);
+	  snapLoc.thetaOffset('SnapCornerL', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
 	}
 	
-	function updateSubassembliesTemplate(elem, template) {
-	  const nameInput = du.find.closest('[name="name"]', elem);
-	  const type = du.find.closest('[name="type"]', elem).value;
-	  const name = `${type}.${nameInput.value.toDot()}`;
-	  const subAssem = ExpandableList.get(elem);
-	  subAssem.name = nameInput.value;
-	  if (elem.name === 'name') return;
-	  if (elem.name === 'center' || elem.name === 'demensions' || elem.name === 'rotation') {
-	    const index = du.find.closest('[name="xyz"]', elem).value;
-	    const eqn = elem.value;
-	    if (subAssem[elem.name] === undefined) subAssem[elem.name] = [];
-	    subAssem[elem.name][index] = eqn;
-	  } else if (elem.name !== 'name') {
-	    subAssem[elem.name] = elem.value;
-	  }
+	SnapCorner.daginalLeft = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "daginalLeft",  new Vertex2d(null),  'diagonalRight');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dor: 1}), hf(snapLoc, .5)));
+	  snapLoc.wallThetaOffset(180);
+	  snapLoc.thetaOffset('SnapCorner', null, 180);
+	  snapLoc.thetaOffset('SnapCornerL', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
 	}
 	
-	function switchEqn(elem) {
-	  const nameInput = du.find.closest('[name="name"]', elem);
-	  const type = du.find.closest('[name="type"]', elem).value;
-	  const name = `${type}.${nameInput.value.toDot()}`;
-	  const subAssem = ExpandableList.get(elem);
-	  if (subAssem) {
-	    const eqnInput = du.find.closest('input', elem);
-	    const index = elem.value;
-	    if (subAssem[eqnInput.name] === undefined) subAssem[eqnInput.name] = [];
-	    const value = subAssem[eqnInput.name][index];
-	    eqnInput.value = value === undefined ? '' : value;
-	  }
+	SnapCorner.backRight = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "backRight",  new Vertex2d(null),  'backLeft');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, -.5)));
+	  snapLoc.thetaOffset('SnapCorner', null, -90);
+	  snapLoc.thetaOffset('SnapCornerL', null, -90);
+	  snapLoc.thetaOffset('SnapSquare', null, 90);
+	  snapLoc.at();
+	  return snapLoc;
 	}
 	
-	function updateOpeningsTemplate(elem, template) {
-	  const partCode = elem.value;
-	  const attr = du.find.closest('select', elem).value;
-	  const listElem = ExpandableList.get(elem);
-	  listElem[attr] = elem.value;
-	  console.log(ExpandableList.get(elem,1).toJson());
+	SnapCorner.frontRight = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "frontRight",  new Vertex2d(null),  'frontLeft');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, -.5)));
+	  snapLoc.thetaOffset('SnapCorner', null, -90);
+	  snapLoc.thetaOffset('SnapCornerL', null, -90);
+	  snapLoc.thetaOffset('SnapSquare', null, 90);
+	  snapLoc.at();
+	  return snapLoc;
 	}
 	
-	function updateViewShape(elem) {
-	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-	  const template = CabinetTemplate.get(templateId);
-	  template.shape(elem.value);
+	SnapCorner.backLeft = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "backLeft",  new Vertex2d(null),  'backRight');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, .5), hf(snapLoc, .5)));
+	  snapLoc.thetaOffset('SnapCorner', null, 90);
+	  snapLoc.thetaOffset('SnapCornerL', null, 90);
+	  snapLoc.thetaOffset('SnapSquare', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
 	}
 	
-	function updateJointPartCode(elem) {
-	  const attr = elem.name;
-	  const listElem = ExpandableList.get(elem);
-	  listElem[attr] = elem.value;
+	SnapCorner.frontLeft = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "frontLeft",  new Vertex2d(null),  'frontRight');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc,.5), hf(snapLoc, .5, {dl: -1})));
+	  snapLoc.thetaOffset('SnapCorner', null, 90);
+	  snapLoc.thetaOffset('SnapCornerL', null, 90);
+	  snapLoc.thetaOffset('SnapSquare', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
 	}
 	
-	function updateOpeningPartCode(elem) {
-	  const attr = elem.value;
-	  const listElem = ExpandableList.get(elem);
-	  const partCodeInput = du.find.closest('input', elem);
-	  partCodeInput.value = listElem[attr] || '';
-	}
-	
-	function updateTemplate(elem, template) {
-	  const attr = du.find.closest('[attr]', elem).getAttribute('attr');
-	  switch (attr) {
-	    case 'values': return updateValuesTemplate(elem, template);
-	    case 'subassemblies': return updateSubassembliesTemplate(elem, template);
-	    case 'openings': return updateOpeningsTemplate(elem, template);
-	
-	    default:
-	
-	  }
-	}
-	
-	function updateInclude(elem) {
-	  const subAssem = ExpandableList.get(elem);;
-	  subAssem.include = elem.value;
-	  console.log(subAssem);
-	}
-	
-	du.on.match('change', '.template-include', updateInclude);
-	du.on.match('change', '.opening-part-code-input', updateOpeningsTemplate);
-	du.on.match('change', '.template-shape-input', updateViewShape);
-	du.on.match('change', '[name="xyz"]', switchEqn);
-	du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
-	du.on.match('change', '.template-input[name="malePartCode"],.template-input[name="femalePartCode"]', updateJointPartCode);
-	du.on.match('click', '.copy-template', (elem) => {
-	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-	  const template = CabinetTemplate.get(templateId);
-	  let jsonStr = JSON.stringify(template.toJson(), null, 2);
-	  jsonStr = jsonStr.replace(/.*"id":.*($|,)/g, '');
-	  du.copy(jsonStr);
-	});
-	
-	du.on.match('click', '.paste-template', (elem) => {
-	  navigator.clipboard.readText()
-	  .then(text => {
-	    try {
-	      const obj = Object.fromJson(JSON.parse(text));
-	      if (!(obj instanceof CabinetTemplate)) throw new Error(`Json is of type ${obj.constructor.name}`);
-	      const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-	      const template = CabinetTemplate.get(templateId);
-	      template.fromJson(obj.toJson());
-	      const templateManagerId = du.find.up('[template-manager]', elem).getAttribute('template-manager');
-	      const templateManager =TemplateManager.get(templateManagerId);
-	      templateManager.update();
-	    } catch (e) {
-	      alert('clipboard does not contain a valid CabinetTemplate');
-	    }
-	  })
-	  .catch(err => {
-	    console.error('Failed to read clipboard contents: ', err);
-	  });
-	});
-	
-	du.on.match('change', '.template-input', function (elem) {
-	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-	  template = CabinetTemplate.get(templateId);
-	  updateTemplate(elem, template);
-	});
-	
-	du.on.match('change', 'input,select',   () => setTimeout(validateOpenTemplate, 0));
-	
-	
-	module.exports = TemplateManager
+	module.exports = SnapCorner;
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/managers/cost.js',
+RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
 function (require, exports, module) {
 	
 
 	
-	const CostTree = require('../../cost/cost-tree.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
-	const du = require('../../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../../public/js/utils/$t.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select');
-	const Input = require('../../../../../public/js/utils/input/input');
-	const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation');
-	const Inputs = require('../../input/inputs.js');
-	const RadioDisplay = require('../../display-utils/radio-display.js');
+	const Joint = require('../joint.js');
 	
-	class CostManager {
-	  constructor(id, name) {
-	    const costTree = new CostTree();
-	    this.root = () => costTree.root();
-	    this.update = () => {
-	      const html = CostManager.mainTemplate.render(this);
-	      du.find(`#${id}`).innerHTML = html;
-	    }
-	    this.nodeInputHtml = () => CostManager.nodeInput().payload().html();
-	    this.headHtml = (node) =>
-	        CostManager.headTemplate.render({node, CostManager: this});
-	    this.bodyHtml = (node) =>
-	        CostManager.bodyTemplate.render({node, CostManager: this});
-	    this.loadPoint = () => console.log('load');
-	    this.savePoint = () => console.log('save');
-	    this.fromJson = () => {};
-	    this.update();
+	class Butt extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
 	  }
 	}
 	
-	CostManager.mainTemplate = new $t('managers/cost/main');
-	CostManager.headTemplate = new $t('managers/cost/head');
-	CostManager.bodyTemplate = new $t('managers/cost/body');
-	CostManager.propertySelectTemplate = new $t('managers/cost/property-select');
-	CostManager.costInputTree = (costTypes, objId, onUpdate) => {
-	  const logicTree = new LogicTree();
-	  return logicTree;
-	}
-	CostManager.nodeInput = () => {
-	  const dit = new DecisionInputTree();
-	  const typeSelect = new Select({
-	    name: 'type',
-	    list: CostTree.types,
-	    value: CostTree.types[0]
-	  });
-	  const selectorType = new Select({
-	    name: 'selectorType',
-	    list: ['Manual', 'Auto'],
-	    value: 'Manual'
-	  });
-	  const propertySelector = new Select({
-	    name: 'propertySelector',
-	    list: CostTree.propertyList,
-	  });
+	Joint.register(Butt);
+	module.exports = Butt
 	
-	  const accVals = ['select', 'multiselect', 'conditional'];
-	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', accVals, [selectorType]);
-	  const type = dit.branch('Node', [Inputs('name'), typeSelect]);
-	  const selectType = type.conditional('selectorType', condtionalPayload);
-	  const payload = [Inputs('formula'), propertySelector, RelationInput.selector];
-	  const condtionalPayload2 = new DecisionInputTree.ValueCondition('selectorType', 'Auto', payload);
-	  selectType.conditional('formula', condtionalPayload2);
-	  return dit;
-	}
-	new RadioDisplay('cost-tree', 'radio-id');
 	
-	new CostManager('cost-manager', 'cost');
 	
-	function abbriviation(group) {
-	  return Assembly.classes[group] ? Assembly.classes[group].abbriviation : 'nope';
-	}
-	const scope = {groups: CostTree.propertyList, abbriviation};
-	// du.id('property-select-cnt').innerHTML =
-	//       CostManager.propertySelectTemplate.render(scope);
-	module.exports = CostManager
+	
 	
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/square.js',
+RequireJS.addFunction('./app-src/two-d/objects/snap/square.js',
 function (require, exports, module) {
+	const Snap2d = require('../snap');
+	const Square2d = require('../square');
+	const Polygon2d = require('../polygon');
+	const SnapLocation2d = require('../snap-location');
+	const Vertex2d = require('../vertex');
 	
-const Vertex2d = require('vertex');
-	
-	class Square2d {
-	  constructor(center, height, width, radians) {
-	    width = width === undefined ? 121.92 : width;
-	    height = height === undefined ? 60.96 : height;
-	    radians = radians === undefined ? 0 : radians;
-	    const id = String.random();
-	    const instance = this;
-	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
-	    if ((typeof center) === 'function') this.center = center;
-	    const startPoint = new Vertex2d(null);
-	
-	
-	    this.radians = (newValue) => {
-	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	        radians = newValue;
-	      }
-	      return radians;
-	    };
-	    this.startPoint = () => {
-	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
-	      return startPoint;
-	    }
-	    this.angle = (value) => {
-	      if (value !== undefined) this.radians(Math.toRadians(value));
-	      return Math.toDegrees(this.radians());
-	    }
-	
-	    this.x = (val) => {
-	      if (val !== undefined) this.center().x(val);
-	      return this.center().x();
-	    }
-	    this.y = (val) => {
-	      if (val !== undefined) this.center().y(val);
-	      return this.center().y();
-	    }
-	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	
-	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	    this.move = (position, theta) => {
-	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	      this.radians(position.theta);
-	      this.center().point(center);
-	      return true;
-	    };
-	
-	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	
-	    this.toString = () => `Square2d(${id}): ${this.width()} X ${this.height()}] @ ${this.center()}`
+	class SnapSquare extends Snap2d {
+	  constructor(parent, tolerance) {
+	    const polygon = new Polygon2d();
+	    polygon.getTextInfo = () => ({
+	      text: this.parent().name(),
+	      center: this.object().center(),
+	      radians: this.radians(),
+	      x: 0,
+	      y: this.height() / 4,
+	      maxWidth: this.width(),
+	      limit: 10
+	    });
+	    // super(parent, new Square2d(parent.center), tolerance);
+	    super(parent, polygon, tolerance);
+	    if (parent === undefined) return this;
+	    this.addLocation(SnapSquare.backCenter(this));
+	    this.addLocation(SnapSquare.backRight(this));
+	    this.addLocation(SnapSquare.rightCenter(this));
+	    this.addLocation(SnapSquare.frontRight(this));
+	    this.addLocation(SnapSquare.frontLeft(this));
+	    this.addLocation(SnapSquare.leftCenter(this));
+	    this.addLocation(SnapSquare.backLeft(this));
+	    const verticies = this.snapLocations().map((snap) =>
+	      snap.vertex());
+	    polygon.addVerticies(verticies);
 	  }
 	}
 	
-	new Square2d();
+	const fromToPoint = SnapLocation2d.fromToPoint;
+	const wFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 'width', multiplier);
+	const hFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 'height', multiplier);
 	
-	module.exports = Square2d;
+	SnapSquare.backCenter = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "backCenter",  new Vertex2d(null),  'backCenter');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), hFunc(snapLoc, -.5)));
+	  snapLoc.wallThetaOffset(0);
+	  snapLoc.thetaOffset(null, null, 180);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	SnapSquare.frontCenter = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "frontCenter",  new Vertex2d(null),  'frontCenter');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), () => hFunc(snapLoc, .5)));
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	SnapSquare.leftCenter = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "leftCenter",  new Vertex2d(null),  'rightCenter');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, 0)));
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	SnapSquare.rightCenter = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "rightCenter",  new Vertex2d(null),  'leftCenter');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, 0)));
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	SnapSquare.backLeft = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "backLeft",  new Vertex2d(null),  'backRight');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, -.5)));
+	  snapLoc.wallThetaOffset(-90);
+	  snapLoc.thetaOffset('SnapCorner', null, 270);
+	  snapLoc.thetaOffset('SnapCornerL', null, 270);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	SnapSquare.backRight = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "backRight",  new Vertex2d(null),  'backLeft');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, -.5)));
+	  snapLoc.wallThetaOffset(90);
+	  snapLoc.thetaOffset('SnapCorner', null, 180);
+	  snapLoc.thetaOffset('SnapCornerL', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	SnapSquare.frontRight = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "frontRight",  new Vertex2d(null),  'frontLeft');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, .5)));
+	  snapLoc.thetaOffset('SnapCorner', null, 180);
+	  snapLoc.thetaOffset('SnapCornerL', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	SnapSquare.frontLeft = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "frontLeft",  new Vertex2d(null),  'frontRight');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, .5)));
+	  snapLoc.thetaOffset('SnapCorner', null, 270);
+	  snapLoc.thetaOffset('SnapCornerL', null, 270);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	module.exports = SnapSquare;
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
+RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
 function (require, exports, module) {
 	
 
 	
-	const Assembly = require('../assembly.js');
+	const Joint = require('../joint.js');
 	
-	class Panel extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	
-	    this.railThickness = () => this.thickness();
-	    Object.getSet(this, {hasFrame: false});
+	class Miter extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
 	  }
 	}
 	
-	Panel.abbriviation = 'pn';
+	Joint.register(Miter);
+	module.exports = Miter
 	
 	
-	module.exports = Panel
+	
+	
 	
 });
 
@@ -29552,8 +30321,10 @@ function (require, exports, module) {
 	const Assembly = require('../assembly.js');
 	
 	class Divider extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+	  constructor(partCode, partName, toModel) {
+	    super(partCode, partName);
+	
+	    this.toModel = toModel;
 	  }
 	}
 	Divider.count = 0;
@@ -29561,91 +30332,6 @@ function (require, exports, module) {
 	Divider.abbriviation = 'dv';
 	
 	module.exports = Divider
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Rabbet extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
-	    }
-	
-	    if (axis === undefined) return;
-	
-	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
-	    };
-	  }
-	}
-	
-	Joint.register(Rabbet);
-	module.exports = Rabbet
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Miter extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
-	  }
-	}
-	
-	Joint.register(Miter);
-	module.exports = Miter
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
-function (require, exports, module) {
-	
-const Joint = require('../joint.js');
-	
-	class Dado extends Joint {
-	  constructor(malePartCode, femalePartCode) {
-	    super(malePartCode, femalePartCode);
-	
-	    this.updatePosition = (position) => {
-	      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
-	      const centerAxis = this.centerAxis()[1].toLowerCase();
-	      const offset = this.parentAssembly().eval(this.maleOffset());
-	      const demAxis = this.demensionAxis().toLowerCase();
-	      position.demension[demAxis] = position.demension[demAxis] + offset;
-	      position.center[centerAxis] = position.center[centerAxis] + (offset/2 * direction);
-	    };
-	
-	  }
-	}
-	
-	Joint.register(Dado);
-	module.exports = Dado
 	
 });
 
@@ -29842,7 +30528,6 @@ function (require, exports, module) {
 	    cabinet.addSubAssembly(sectionProperties);
 	    cabOpenCoords.update();
 	  });
-	  const c = cabinet.subassemblies['sp'].coordinates();
 	  return cabinet;
 	}
 	
@@ -29960,276 +30645,64 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/snap/corner.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
 function (require, exports, module) {
 	
-const Snap2d = require('../snap');
-	const Square2d = require('../square');
-	const Polygon2d = require('../polygon');
-	const SnapLocation2d = require('../snap-location');
-	const Vertex2d = require('../vertex');
-	const Line2d = require('../line');
+
 	
-	class SnapCorner extends Snap2d {
-	  constructor(parent, tolerance) {
-	    const polygon = new Polygon2d();
-	    // super(parent, new Square2d(parent.center), tolerance);
-	    super(parent, polygon, tolerance);
-	    if (parent === undefined) return this;
-	    polygon.getTextInfo = () => {
-	      const fwr = (this.height() - this.dl());
-	      const fwl = (this.width() - this.dr());
-	      const areaL = this.dl() * fwr;
-	      const areaR = this.dr() * fwl;
-	      const center = polygon.center();
-	      const info = {
-	        text: this.parent().name(),
-	        center: polygon.center(),
-	        maxWidth: this.width(),
-	        limit: 4
-	      };
+	const Assembly = require('../assembly.js');
 	
-	      if (areaR > areaL) {
-	        // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
-	        info.x = this.height()/2 - fwr/2;
-	        info.y = this.width()/-2 + this.dr();
-	        info.maxWidth = fwr*.75;
-	        info.radians = Math.toRadians(-90) + this.radians();
-	      } else {
-	        info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
-	        info.y = this.height()/-2 + 3 * this.dl() / 4;
-	        info.maxWidth = fwl;
-	        info.radians = Math.toRadians(180) + this.radians();
-	      }
-	      return info;
-	    }
+	class Panel extends Assembly {
+	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
+	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
 	
-	    this.addLocation(SnapCorner.backRight(this));
-	    this.addLocation(SnapCorner.frontRight(this));
-	    this.addLocation(SnapCorner.frontLeft(this));
-	    this.addLocation(SnapCorner.backLeft(this));
-	
-	    this.addLocation(SnapCorner.daginalLeft(this));
-	    this.addLocation(SnapCorner.diagonalRight(this));
-	    const verticies = this.snapLocations().map((snap) =>
-	      snap.vertex());
-	    polygon.addVerticies(verticies);
+	    this.railThickness = () => this.thickness();
+	    Object.getSet(this, {hasFrame: false});
 	  }
 	}
 	
-	const f = (snapLoc, attr, attrM, props) => () => {
-	  let val = snapLoc.parent()[attr]() * attrM;
-	  let keys = Object.keys(props || {});
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    val += snapLoc.parent()[key]() * props[key];
+	Panel.abbriviation = 'pn';
+	
+	class PanelModel extends Panel {
+	  constructor(partCode, partName, toModel) {
+	    super(partCode, partName);
+	    this.toModel = toModel;
 	  }
-	  return val;
-	};
-	
-	const fromToPoint = SnapLocation2d.fromToPoint;
-	const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
-	const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
-	
-	SnapCorner.diagonalRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "diagonalRight",  new Vertex2d(null),  'daginalLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, .5, {dol: -1})));
-	  snapLoc.wallThetaOffset(90);
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
 	}
 	
-	SnapCorner.daginalLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "daginalLeft",  new Vertex2d(null),  'diagonalRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dor: 1}), hf(snapLoc, .5)));
-	  snapLoc.wallThetaOffset(180);
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.backRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backRight",  new Vertex2d(null),  'backLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, -.5)));
-	  snapLoc.thetaOffset('SnapCorner', null, -90);
-	  snapLoc.thetaOffset('SnapCornerL', null, -90);
-	  snapLoc.thetaOffset('SnapSquare', null, 90);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.frontRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontRight",  new Vertex2d(null),  'frontLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, -.5)));
-	  snapLoc.thetaOffset('SnapCorner', null, -90);
-	  snapLoc.thetaOffset('SnapCornerL', null, -90);
-	  snapLoc.thetaOffset('SnapSquare', null, 90);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.backLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backLeft",  new Vertex2d(null),  'backRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, .5), hf(snapLoc, .5)));
-	  snapLoc.thetaOffset('SnapCorner', null, 90);
-	  snapLoc.thetaOffset('SnapCornerL', null, 90);
-	  snapLoc.thetaOffset('SnapSquare', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.frontLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontLeft",  new Vertex2d(null),  'frontRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc,.5), hf(snapLoc, .5, {dl: -1})));
-	  snapLoc.thetaOffset('SnapCorner', null, 90);
-	  snapLoc.thetaOffset('SnapCornerL', null, 90);
-	  snapLoc.thetaOffset('SnapSquare', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	module.exports = SnapCorner;
+	Panel.Model = PanelModel;
+	module.exports = Panel
 	
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/snap/init.js',
-function (require, exports, module) {
-	const Snap2d = require('../snap');
-	
-	Snap2d.registar(require('./square.js'));
-	Snap2d.registar(require('./corner.js'));
-	Snap2d.registar(require('./corner-l.js'));
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/snap/square.js',
-function (require, exports, module) {
-	const Snap2d = require('../snap');
-	const Square2d = require('../square');
-	const Polygon2d = require('../polygon');
-	const SnapLocation2d = require('../snap-location');
-	const Vertex2d = require('../vertex');
-	
-	class SnapSquare extends Snap2d {
-	  constructor(parent, tolerance) {
-	    const polygon = new Polygon2d();
-	    polygon.getTextInfo = () => ({
-	      text: this.parent().name(),
-	      center: this.object().center(),
-	      radians: this.radians(),
-	      x: 0,
-	      y: this.height() / 4,
-	      maxWidth: this.width(),
-	      limit: 10
-	    });
-	    // super(parent, new Square2d(parent.center), tolerance);
-	    super(parent, polygon, tolerance);
-	    if (parent === undefined) return this;
-	    this.addLocation(SnapSquare.backCenter(this));
-	    this.addLocation(SnapSquare.backRight(this));
-	    this.addLocation(SnapSquare.rightCenter(this));
-	    this.addLocation(SnapSquare.frontRight(this));
-	    this.addLocation(SnapSquare.frontLeft(this));
-	    this.addLocation(SnapSquare.leftCenter(this));
-	    this.addLocation(SnapSquare.backLeft(this));
-	    const verticies = this.snapLocations().map((snap) =>
-	      snap.vertex());
-	    polygon.addVerticies(verticies);
-	  }
-	}
-	
-	const fromToPoint = SnapLocation2d.fromToPoint;
-	const wFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 'width', multiplier);
-	const hFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 'height', multiplier);
-	
-	SnapSquare.backCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backCenter",  new Vertex2d(null),  'backCenter');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), hFunc(snapLoc, -.5)));
-	  snapLoc.wallThetaOffset(0);
-	  snapLoc.thetaOffset(null, null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.frontCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontCenter",  new Vertex2d(null),  'frontCenter');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), () => hFunc(snapLoc, .5)));
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.leftCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "leftCenter",  new Vertex2d(null),  'rightCenter');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, 0)));
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.rightCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "rightCenter",  new Vertex2d(null),  'leftCenter');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, 0)));
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapSquare.backLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backLeft",  new Vertex2d(null),  'backRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, -.5)));
-	  snapLoc.wallThetaOffset(-90);
-	  snapLoc.thetaOffset('SnapCorner', null, 270);
-	  snapLoc.thetaOffset('SnapCornerL', null, 270);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.backRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backRight",  new Vertex2d(null),  'backLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, -.5)));
-	  snapLoc.wallThetaOffset(90);
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapSquare.frontRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontRight",  new Vertex2d(null),  'frontLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, .5)));
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.frontLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontLeft",  new Vertex2d(null),  'frontRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, .5)));
-	  snapLoc.thetaOffset('SnapCorner', null, 270);
-	  snapLoc.thetaOffset('SnapCornerL', null, 270);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	module.exports = SnapSquare;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
+RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
 function (require, exports, module) {
 	
 
 	
 	const Joint = require('../joint.js');
 	
-	class Butt extends Joint {
-	  constructor(joinStr) {
+	class Rabbet extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
 	    super(joinStr);
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
+	    }
+	
+	    if (axis === undefined) return;
+	
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
+	    };
 	  }
 	}
 	
-	Joint.register(Butt);
-	module.exports = Butt
+	Joint.register(Rabbet);
+	module.exports = Rabbet
 	
 	
 	
@@ -30259,128 +30732,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/snap/corner-l.js',
-function (require, exports, module) {
-	
-const Snap2d = require('../snap');
-	const SnapCorner = require('../snap/corner');
-	const Square2d = require('../square');
-	const Polygon2d = require('../polygon');
-	const SnapLocation2d = require('../snap-location');
-	const Vertex2d = require('../vertex');
-	
-	class SnapCornerL extends Snap2d {
-	  constructor(parent, tolerance) {
-	    const polygon = new Polygon2d();
-	    super(parent, polygon, tolerance);
-	    polygon.getTextInfo = () => {
-	      const fwr = (this.height() - this.dl());
-	      const fwl = (this.width() - this.dr());
-	      const areaL = this.dl() * fwr;
-	      const areaR = this.dr() * fwl;
-	      const center = polygon.center();
-	      const info = {
-	        text: this.parent().name(),
-	        center: polygon.center(),
-	        maxWidth: this.width(),
-	        limit: 4
-	      };
-	
-	      if (areaR > areaL) {
-	        // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
-	        info.x = this.height()/2 - fwr/2;
-	        info.y = this.width()/-2 + this.dr();
-	        info.maxWidth = fwr*.75;
-	        info.radians = Math.toRadians(-90) + this.radians();
-	      } else {
-	        info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
-	        info.y = this.height()/-2 + 3 * this.dl() / 4;
-	        info.maxWidth = fwl;
-	        info.radians = Math.toRadians(180) + this.radians();
-	      }
-	      return info;
-	    }
-	    if (parent === undefined) return this;
-	
-	    this.addLocation(SnapCorner.backRight(this));
-	    this.addLocation(SnapCorner.frontRight(this));
-	    this.addLocation(SnapCornerL.frontCenter(this));
-	    this.addLocation(SnapCorner.frontLeft(this));
-	    this.addLocation(SnapCorner.backLeft(this));
-	
-	    this.addLocation(SnapCorner.daginalLeft(this));
-	    this.addLocation(SnapCorner.diagonalRight(this));
-	    const verticies = this.snapLocations().map((snap) =>
-	      snap.vertex());
-	    polygon.addVerticies(verticies);
-	  }
-	}
-	
-	const f = SnapLocation2d.locationFunction;
-	const fromToPoint = SnapLocation2d.fromToPoint;
-	const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
-	const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
-	
-	SnapCornerL.frontCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontCenter",  new Vertex2d(null),  null);
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, .5, {dl: -1})));
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	module.exports = SnapCornerL;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	const Handle = require('../hardware/pull.js');
-	
-	class DrawerFront extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
-	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	    this.setParentAssembly(parent);
-	    const instance = this;
-	    let pulls = [new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, 1)];
-	    if (demensionConfig === undefined) return;
-	    let handleCount = 1;
-	
-	    function pullCount() {
-	      if (instance.demensionConfig().x < 55.88) return 1;
-	      return 2;
-	    }
-	
-	    this.children = () => this.updateHandles();
-	
-	    this.updateHandles = (count) => {
-	      count = count || pullCount();
-	      pulls.splice(count);
-	      for (let index = 0; index < count; index += 1) {
-	        if (index === pulls.length) {
-	          pulls.push(new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
-	        } else {
-	          pulls[index].count(count);
-	        }
-	      }
-	      return pulls;
-	    };
-	    // if (demensionConfig !== undefined)this.updatePosition();
-	  }
-	}
-	
-	DrawerFront.abbriviation = 'df';
-	
-	
-	module.exports = DrawerFront
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-box.js',
 function (require, exports, module) {
 	
@@ -30402,69 +30753,130 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
+	const CSG = require('../../../../../public/js/3d-modeling/csg.js');
+	/*
+	    a,b,c
+	    d,e,f
+	    g,h,i
+	*/
+	class Handle extends Assembly {
+	  constructor(partCode, partName, door, location, index, count) {
+	    let instance;
+	    function rotationConfig() {
+	      const rotation = door.position().rotation();
+	      if (!instance || !instance.location) return rotation;
+	      if (instance.location && instance.location() && instance.location().rotate) {
+	        return [{x:0,y:0,z:90}, rotation];
+	      }
+	      return rotation;
+	    }
+	    function demensionConfig(attr) {
+	      if (!instance || !instance.location) return {x:0,y:0,z:0};
+	      const dems = {x: 1, y: 9.6, z: 1.9};
+	      return attr ? dems[attr] : dems;
+	    }
+	    function centerConfig(attr) {
+	      if (!instance || !instance.location) return {x:0,y:0,z:0};
+	        let center;
+	        let pullDems = instance.demensionConfig();
+	        const edgeOffset = (19 * 2.54) / 16;
+	        const toCenter = 3 * 2.54;
+	        const front = door.front();
 	
+	        switch (instance.location()) {
+	          case Handle.location.TOP_RIGHT:
+	            offset.x = doorDems.x / 2 -  edgeOffset;
+	            offset.y = doorDems.y / 2 - (pullDems.y / 2 + toCenter);
+	            break;
+	          case Handle.location.TOP_LEFT:
+	            offset.x = -doorDems.x / 2 +  edgeOffset;
+	            offset.y = doorDems.y / 2 - (pullDems.y / 2 + toCenter);
+	            break;
+	          case Handle.location.BOTTOM_RIGHT:
+	            offset.x = doorDems.x / 2 -  edgeOffset;
+	            offset.y = -doorDems.y / 2 + (pullDems.y / 2 + toCenter);
+	            break;
+	          case Handle.location.BOTTOM_LEFT:
+	            offset.x = -doorDems.x / 2 +  edgeOffset;
+	            offset.y = -doorDems.y / 2 + (pullDems.y / 2 + toCenter);
+	            break;
+	          case Handle.location.TOP:
+	            offset.x = 0;//offset(offset.x, doorDems.x);
+	            offset.y = doorDems.y / 2 - edgeOffset;
+	            break;
+	          case Handle.location.BOTTOM:
+	            offset.x = 0;//offset(offset.x, doorDems.x);
+	            offset.y = doorDems.y / -2 + edgeOffset;
+	            break;
+	          case Handle.location.RIGHT:
+	            offset.y = 0;
+	            offset.x = doorDems.x / 2 - edgeOffset;
+	            break;
+	          case Handle.location.LEFT:
+	            const top = front.line(0);
+	            center = top.startVertex;
+	            center.translate(top.vector().unit().scale(edgeOffset));
+	            const left = front.line(3);
+	            center.translate(left.vector().unit().inverse().scale(toCenter));
+	            break;
+	          case Handle.location.CENTER:
+	            offset.x = 0;
+	            offset.y = 0;
+	          break;
+	          case undefined:
+	            offset.x = 0;
+	            offset.y = 0;
+	            break;
+	          default:
+	            throw new Error('Invalid pull location');
+	        }
+	        const norm = front.normal().inverse();
+	        center.translate(norm.scale(pullDems.z / 2));
+	        return attr ? center[attr] : center;
+	    };
 	
-	class Hinge extends Assembly {
-	  constructor() {
-	    super();
+	    super(partCode, 'Handle', centerConfig, demensionConfig, rotationConfig);
+	    // super(partCode, 'Handle', '0,0,0', '0,0,0', '0,0,0');
+	    Object.getSet(this, {location});
+	    this.setParentAssembly(door);
+	    instance = this;
+	    index = index || 0;
+	    count = count || 1;
+	
+	    this.count = (c) => {
+	      if (c > 0) {
+	        count = c;
+	      }
+	      return count;
+	    }
+	
+	    function offset(center, distance) {
+	      const spacing = distance / count;
+	      return center - (distance / 2) + spacing / 2 + spacing * (index);
+	    }
 	  }
 	}
+	Handle.location = {};
+	Handle.location.TOP_RIGHT = {rotate: true, position: 'TOP_Right'};
+	Handle.location.TOP_LEFT = {rotate: true, position: 'TOP_LEFT'};
+	Handle.location.BOTTOM_RIGHT = {rotate: true};
+	Handle.location.BOTTOM_LEFT = {rotate: true};
+	Handle.location.TOP = {multiple: true};
+	Handle.location.BOTTOM = {multiple: true};
+	Handle.location.RIGHT = {multiple: true, rotate: true};
+	Handle.location.LEFT = {multiple: true, rotate: true};
+	Handle.location.CENTER = {multiple: true};
 	
-	Hinge.abbriviation = 'hg';
-	
-	module.exports = Hinge
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	const Handle = require('../hardware/pull.js');
-	const pull = require('../../../../three-d/models/pull.js');
+	Handle.abbriviation = 'hn';
 	
 	
-	class Door extends Assembly {
-	  constructor(partCode, partName, coverCenter, coverDems, rotationConfig) {
-	    super(partCode, partName, coverCenter, coverDems, rotationConfig);
-	    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, Handle.location.LEFT);
-	    this.pull = () => pull;
-	    this.addSubAssembly(pull);
-	  }
-	}
-	
-	Door.abbriviation = 'dr';
-	
-	
-	module.exports = Door
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class DoorCatch extends Assembly {
-	  constructor() {
-	    super();
-	  }
-	}
-	
-	module.exports = DoorCatch
+	module.exports = Handle
 	
 });
 
@@ -30473,6 +30885,9 @@ RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/section-pro
 function (require, exports, module) {
 	
 const Vertex3D = require('../../../../three-d/objects/vertex.js');
+	const Polygon3D = require('../../../../three-d/objects/polygon.js');
+	const Line3D = require('../../../../three-d/objects/line.js');
+	const BiPolygon = require('../../../../three-d/objects/bi-polygon.js');
 	const KeyValue = require('../../../../../../../public/js/utils/object/key-value.js');
 	const Notification = require('../../../../../../../public/js/utils/collections/notification.js');
 	const Assembly = require('../../assembly.js');
@@ -30482,10 +30897,12 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	
 	const v = () => new Vertex3D();
 	class SectionProperties extends KeyValue{
-	  constructor(config) {
+	  constructor(config, index) {
 	    super({childrenAttribute: 'sections', parentAttribute: 'parentAssembly'})
 	
-	    const coordinates = new Notification(true, {inner: [v(),v(),v(),v()], outer: [v(),v(),v(),v()]});
+	    index ||= 0;
+	    this.index = () => index;
+	    const coordinates = {inner: [v(),v(),v(),v()], outer: [v(),v(),v(),v()]};
 	    let rotation, innerCenter, outerCenter, outerLength, innerLength, outerWidth, innerWidth = null;
 	    const temporaryInitialVals = {parent, _TEMPORARY: true};
 	    Object.getSet(this, temporaryInitialVals);
@@ -30493,14 +30910,22 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	    const instance = this;
 	    let pattern;
 	
-	    this.coordinates = () => coordinates;
-	    this.partCode = () => 'sp';
+	    this.partCode = () => {
+	      const oreintation = this.vertical() ? 'V' : 'H';
+	      if (index === 0) return oreintation;
+	      const pPartCode = this.parentAssembly().partCode();
+	      return `${pPartCode}${index}${this.sections.length > 1 ? oreintation : ''}`;
+	    }
+	    this.coordinates = () => JSON.clone(coordinates);
+	    this.reverseInner = () => CSG.reverseRotateAll(this.coordinates().inner);
+	    this.reverseOuter = () => CSG.reverseRotateAll(this.coordinates().outer);
 	    this.part = () => false;
 	    this.included = () => false;
 	    this.joints = [];
 	    this.subassemblies = [];
-	    this.vertical = (is) => !instance.value('vertical', is);
-	    this.vertical(true);
+	    this.vertical = (is) =>
+	        instance.value('vertical', is);
+	    this.vertical(false);
 	    this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
 	    this.verticalDivisions = () => {
 	      const parent = this.parentAssembly();
@@ -30509,7 +30934,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	    }
 	    this.rotation = () => {
 	      if (config.rotation === undefined || config._Type === 'part-code') return {x:0,y:0,z:0};
-	      if (rotation === null) rotation = this.getRoot().evalObject(config.rotation);
+	      if (true || rotation === null) rotation = this.getRoot().evalObject(config.rotation);
 	      return JSON.copy(rotation);
 	    }
 	
@@ -30522,17 +30947,33 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      const cabinet = this.getCabinet();
 	      if (cabinet && (config.rotation === undefined || config._Type === 'part-code'))
 	        return cabinet.getAssembly(config.back).position().centerAdjust('z', '-z');
-	      return 30;
+	      // TODO: access Variable.
+	      return 4*2.54;
 	    };
 	
 	    function offsetCenter(center, left, right, up, down, forward, backward) {
-	        const offset = {
-	          x: (right - left) / 2,
-	          y: (up - down) / 2,
-	          z: (forward - backward) / -2
-	        }
-	        return CSG.transRotate(center, offset, instance.rotation());
+	      center = JSON.copy(center);
+	      const offset = {
+	        x: (right - left) / 2,
+	        y: (up - down) / 2,
+	        z: (forward - backward) / 2
+	      }
+	      const rotated = CSG.rotatePointAroundCenter(instance.rotation(), offset, {x:0,y:0, z:0});
+	
+	      return {x: center.x + rotated.x, y: center.y + rotated.y, z: center.z + rotated.z};
 	    }
+	
+	    function offsetRotatedPoint(point, x, y, z, rotation) {
+	      rotation ||= instance.rotation();
+	      point = JSON.copy(point);
+	      const originalPosition = CSG.reverseRotate(point, rotation);
+	      originalPosition.x += x;
+	      originalPosition.y += y;
+	      originalPosition.z += z;
+	      return CSG.rotate(originalPosition, rotation);
+	    }
+	    this.offsetRotatedPoint = offsetRotatedPoint;
+	    this.transRotate = CSG.transRotate;
 	
 	    function offsetPoint(point, x, y, z) {
 	      const offset = {x,y,z};
@@ -30542,9 +30983,8 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	
 	    function init () {
 	      if (instance.sections.length === 0) {
-	        instance.sections.push(new SectionProperties({rotation: config.rotation, back: config.back}));
+	        instance.sections.push(new SectionProperties({rotation: config.rotation, back: config.back, flipNormal: config.flipNormal}, 1));
 	      }
-	      return true;
 	    }
 	    this.dividerCount = () => this.sections.length - 1;
 	    this.sectionCount = () => this.sections.length;
@@ -30632,50 +31072,64 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	
 	    function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter) {
 	      const coords = {};
-	      const outer = instance.coordinates().outer;
-	      const inner = instance.coordinates().inner;
-	      if (instance.vertical()) {
-	        coords.outer = [{x: outer[0].x, y: endOuter, z: outer[0].z},
-	                        {x: outer[1].x, y: endOuter, z: outer[1].z},
-	                        {x: outer[2].x, y: startOuter, z: outer[2].z},
-	                        {x: outer[3].x, y: startOuter, z: outer[3].z}];
-	        coords.inner = [{x: inner[0].x, y: endInner, z: inner[0].z},
-	                        {x: inner[1].x, y: endInner, z: inner[1].z},
-	                        {x: inner[2].x, y: startInner, z: inner[2].z},
-	                        {x: inner[3].x, y: startInner, z: inner[3].z}];
+	      instance.getRoot().openings[0].update();
+	      const fresh = instance.coordinates();
+	      const outer = fresh.outer;
+	      const inner = fresh.inner;
+	      const rotation = instance.rotation();
+	      if (!instance.vertical()) {
+	        const leftOutLine = new Line3D(outer[3], outer[0]);
+	        const leftInnerLine = new Line3D(inner[3], inner[0]);
+	        const rightOutLine = new Line3D(outer[2], outer[1]);
+	        const rightInnerLine = new Line3D(inner[2], inner[1]);
+	        coords.outer = [leftOutLine.pointAtDistance(endOuter),
+	                        rightOutLine.pointAtDistance(endOuter),
+	                        rightOutLine.pointAtDistance(startOuter),
+	                        leftOutLine.pointAtDistance(startOuter)];
+	        coords.inner = [leftInnerLine.pointAtDistance(endInner),
+	                        rightInnerLine.pointAtDistance(endInner),
+	                        rightInnerLine.pointAtDistance(startInner),
+	                        leftInnerLine.pointAtDistance(startInner)];
+	
 	      } else {
-	        coords.outer = [{y: outer[0].y, x: startOuter, z: outer[0].z},
-	                        {y: outer[1].y, x: endOuter, z: outer[1].z},
-	                        {y: outer[2].y, x: endOuter, z: outer[2].z},
-	                        {y: outer[3].y, x: startOuter, z: outer[3].z}];
-	        coords.inner = [{y: inner[0].y, x: startInner, z: inner[0].z},
-	                        {y: inner[1].y, x: endInner, z: inner[1].z},
-	                        {y: inner[2].y, x: endInner, z: inner[2].z},
-	                        {y: inner[3].y, x: startInner, z: inner[3].z}];
+	        const topOutLine = new Line3D(outer[0], outer[1]);
+	        const topInnerLine = new Line3D(inner[0], inner[1]);
+	        const bottomOutLine = new Line3D(outer[3], outer[2]);
+	        const bottomInnerLine = new Line3D(inner[3], inner[2]);
+	        coords.outer = [topOutLine.pointAtDistance(startOuter),
+	                        topOutLine.pointAtDistance(endOuter),
+	                        bottomOutLine.pointAtDistance(endOuter),
+	                        bottomOutLine.pointAtDistance(startOuter)];
+	        coords.inner = [topInnerLine.pointAtDistance(startInner),
+	                        topInnerLine.pointAtDistance(endInner),
+	                        bottomInnerLine.pointAtDistance(endInner),
+	                        bottomInnerLine.pointAtDistance(startInner)];
 	      }
 	      section.updateCoordinates(coords);
 	    }
 	
 	    function setSectionCoordinates() {
+	      instance.getRoot().openings[0].update();
 	      const vertical = instance.vertical();
 	      const dividerOffsetInfo = instance.dividerOffsetInfo();
 	      const revealOffsetInfo = instance.revealOffsetInfo();
 	      const isReveal = instance.propertyConfig().isReveal();
 	      let distance = isReveal ?
-	              (vertical ? instance.outerLength() : instance.outerWidth()) :
-	              (vertical ? instance.innerLength() : instance.innerWidth());
+	              (!vertical ? instance.outerLength() : instance.outerWidth()) :
+	              (!vertical ? instance.innerLength() : instance.innerWidth());
 	      if (revealOffsetInfo.length > 1) {
 	        distance -= revealOffsetInfo._TOTAL;
 	        const patternInfo = instance.pattern().calc(distance);
 	
-	        let offset = instance.coordinates().inner[3][vertical ? 'y' : 'x'];
+	        let offset = 0;
 	        for (let index = 0; index < instance.sections.length; index++) {
 	          const section = instance.sections[index];
 	          const patVal = patternInfo.list;
-	          const startOuter = offset;
-	          const startInner = startOuter + revealOffsetInfo[index].offset/2;
-	          const endInner = startInner + patVal[!vertical ? index : instance.sections.length - index - 1];
-	          const endOuter = endInner + revealOffsetInfo[index + 1].offset / 2;
+	          let startOuter, startInner, endInner, endOuter;
+	          startOuter = offset;
+	          startInner = startOuter + revealOffsetInfo[index].offset/2;
+	          endInner = startInner + patVal[index];
+	          endOuter = endInner + revealOffsetInfo[index + 1].offset / 2;
 	          if (index < instance.sections.length - 1) section.divideRight(true);
 	          updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter);
 	          offset = endOuter;
@@ -30752,7 +31206,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	        } else {
 	          const diff = dividerCount - currDividerCount;
 	          for (let index = currDividerCount; index < dividerCount; index +=1) {
-	            const section = new SectionProperties({rotation: config.rotation, back: config.back});
+	            const section = new SectionProperties({rotation: config.rotation, back: config.back, flipNormal: config.flipNormal}, index + 2);
 	            this.sections.push(section);
 	          }
 	          if (diff !== 0) setSectionCoordinates();
@@ -30774,44 +31228,36 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      return pattern;
 	    }
 	
-	    this.dividerLayout = () => {
-	      let distance;
-	      const coverable = this.coverable();
-	      distance = this.vertical() ? coverable.dems.x : coverable.dems.y;
-	      distance -= this.dividerReveal();
-	      return this.pattern().calc(distance);
-	    };
-	
 	    this.outerCenter = () => {
-	      if (outerCenter === null) outerCenter = Vertex3D.center(coordinates.outer);
+	      if (true || outerCenter === null) outerCenter = Vertex3D.center(coordinates.outer);
 	      return outerCenter;
 	    }
 	
 	    this.innerCenter = () => {
-	      if (innerCenter === null) innerCenter = Vertex3D.center(coordinates.inner);
+	      if (true || innerCenter === null) innerCenter = Vertex3D.center(coordinates.inner);
 	      return innerCenter;
 	    }
 	
 	    this.outerLength = () => {
-	      if (outerLength === null)
+	      if (true || outerLength === null)
 	        outerLength = coordinates.outer[0].distance(coordinates.outer[3]);
 	      return outerLength;
 	    }
 	
 	    this.outerWidth = () => {
-	      if (outerWidth === null)
+	      if (true || outerWidth === null)
 	        outerWidth = coordinates.outer[0].distance(coordinates.outer[1]);
 	      return outerWidth;
 	    }
 	
 	    this.innerLength = () => {
-	      if (innerLength === null)
+	      if (true || innerLength === null)
 	        innerLength = coordinates.inner[0].distance(coordinates.inner[3]);
 	      return innerLength;
 	    }
 	
 	    this.innerWidth = () => {
-	      if (innerWidth === null)
+	      if (true || innerWidth === null)
 	        innerWidth = coordinates.inner[0].distance(coordinates.inner[1]);
 	      return innerWidth;
 	    }
@@ -30827,58 +31273,66 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	    };
 	
 	    this.coverInfo = () => {
+	      this.getRoot().openings[0].update();
 	      const propConfig = this.propertyConfig();
-	      let center, length, width;
+	      let biPolygon, backOffset, frontOffset, offset, coords;
 	      const doorThickness = 3 * 2.54/4;
 	      const bumperThickness = 3 * 2.54 / 16;
-	      const bumperOffset = bumperThickness * - 2
 	      if (propConfig.isInset()) {
-	        const offset = propConfig('Inset').is.value();
-	        const negOffset = -1 * offset;
+	        coords = this.coordinates().inner;
+	        offset = propConfig('Inset').is.value() * -2;
 	        const projection = 3 * 2.54/64;
-	        const zOffset = (projection - doorThickness) / 2;
-	        center = offsetCenter(this.innerCenter(), 0, 0, 0, 0, zOffset, projection);
-	        length = this.innerLength() - 2*offset;
-	        width = this.innerWidth() - 2*offset;
+	        frontOffset = projection;
+	        backOffset = projection - doorThickness;
 	      } else if (propConfig.isReveal()) {
-	        const offset =propConfig.reveal().r.value() / 2;
-	        const negOffset = -1 * offset;
-	        const projection = 3 * 2.54/64;
-	        center = offsetCenter(this.outerCenter(), 0, 0, 0, 0, doorThickness, bumperOffset);
-	        length = this.outerLength() - 2*offset;
-	        width = this.outerWidth() - 2*offset;
+	        coords = this.coordinates().outer;
+	        offset = -propConfig.reveal().r.value();
+	        frontOffset = (doorThickness + bumperThickness);
+	        backOffset = bumperThickness;
 	      } else {
-	        const offset = propConfig.overlay();
-	        const negOffset = -1 * offset;
-	        center = offsetCenter(this.innerCenter(), 0, 0, 0, 0, doorThickness, bumperOffset);
-	        length = this.innerLength() + 2*offset;
-	        width = this.innerWidth() + 2*offset;
+	        coords = this.coordinates().inner;
+	        offset = propConfig.overlay();
+	        frontOffset = (doorThickness + bumperThickness);
+	        backOffset = bumperThickness;
 	      }
 	
-	      return {center, doorThickness, length, width, rotation};
+	      const offsetObj = {x: offset, y: offset};
+	      if (config.flipNormal) {
+	        frontOffset *= -1;
+	        backOffset *= -1;
+	      }
+	      biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj, config.flipNormal);
+	      return {biPolygon};
 	    }
 	
-	    this.dividerInfo = () => {
-	      const depth = this.innerDepth();
+	    this.dividerInfo = (panelThickness) => {
+	      const depth = this.innerDepth() * (config.flipNormal ? 1 : -1);
 	      const length = this.innerLength();
 	      const width = this.innerWidth();
 	      const innerCenter = this.innerCenter();
-	      if (this.verticalDivisions()) {
-	        const topCenter = Vertex3D.center(coordinates.inner[0],coordinates.inner[1]);
-	        const point1 = offsetCenter(topCenter, width*2, 0, 0, 0, 0, 0);
-	        const point4 = offsetCenter(topCenter, -width*2, 0, 0, 0, 0, 0);
-	        const point2 = offsetCenter(point1, 0,0,0,0,0,depth*2);
-	        const point3 = offsetCenter(point4, 0,0,0,0,0,depth*2);
-	        const center = Vertex3D.center(point1, point2, point3, point4);
-	        return {center, length: width, width: depth};
+	      const coordinates = this.coordinates();
+	      if (!this.verticalDivisions()) {
+	        const outer = coordinates.inner;
+	        const point1 = outer[0];
+	        const point2 = outer[1];
+	        let depthVector = new Polygon3D(outer).normal();
+	        depthVector = depthVector.scale(depth);
+	        const point3 = outer[1].translate(depthVector, true);
+	        const point4 = outer[0].translate(depthVector, true);
+	        const points = [point1, point2, point3, point4];
+	        const offset = panelThickness / (config.flipNormal ? -2 : 2);
+	        return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset, null, config.flipNormal);
 	      }
-	      const rightCenter = Vertex3D.center(coordinates.inner[1],coordinates.inner[2]);
-	      const point1 = offsetCenter(rightCenter, 0, 0, length*2, 0, 0, 0);
-	      const point4 = offsetCenter(rightCenter, 0, 0, length*-2, 0, 0, 0);
-	      const point2 = offsetCenter(point1, 0,0,0,0,0,depth*2);
-	      const point3 = offsetCenter(point4, 0,0,0,0,0,depth*2);
-	      const center = Vertex3D.center(point1, point2, point3, point4);
-	      return {center, length: length, width: depth};
+	      const outer = coordinates.inner;
+	      const point1 = outer[1];
+	      const point2 = outer[2];
+	      let depthVector = new Polygon3D(outer).normal();
+	      depthVector = depthVector.scale(depth);
+	      const point3 = point2.translate(depthVector, true);
+	      const point4 = point1.translate(depthVector, true);
+	      const points = [point1, point2, point3, point4];
+	      const offset = panelThickness / (config.flipNormal ? -2 : 2);
+	      return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset, null, config.flipNormal);
 	    }
 	
 	    const assemToJson = this.toJson;
@@ -30920,7 +31374,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	    }
 	
 	    this.divider(new DividerSection('divider', this));
-	    coordinates.onAfterChange(setSectionCoordinates);
+	    // coordinates.onAfterChange(setSectionCoordinates);
 	  }
 	}
 	
@@ -30965,6 +31419,73 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	const Handle = require('../hardware/pull.js');
+	
+	class DrawerFront extends Assembly {
+	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
+	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+	    this.setParentAssembly(parent);
+	    const instance = this;
+	    let pulls = [new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, 1)];
+	    if (demensionConfig === undefined) return;
+	    let handleCount = 1;
+	
+	    function pullCount() {
+	      if (instance.demensionConfig().x < 55.88) return 1;
+	      return 2;
+	    }
+	
+	    this.children = () => this.updateHandles();
+	
+	    this.updateHandles = (count) => {
+	      count = count || pullCount();
+	      pulls.splice(count);
+	      for (let index = 0; index < count; index += 1) {
+	        if (index === pulls.length) {
+	          pulls.push(new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
+	        } else {
+	          pulls[index].count(count);
+	        }
+	      }
+	      return pulls;
+	    };
+	    // if (demensionConfig !== undefined)this.updatePosition();
+	  }
+	}
+	
+	DrawerFront.abbriviation = 'df';
+	
+	
+	module.exports = DrawerFront
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class DoorCatch extends Assembly {
+	  constructor() {
+	    super();
+	  }
+	}
+	
+	module.exports = DoorCatch
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
 function (require, exports, module) {
 	
@@ -30981,6 +31502,72 @@ function (require, exports, module) {
 	
 	
 	module.exports = Screw
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	const Handle = require('../hardware/pull.js');
+	const pull = require('../../../../three-d/models/pull.js');
+	
+	
+	class Door extends Assembly {
+	  constructor(partCode, partName, getBiPolygon) {
+	    super(partCode, partName);
+	
+	    this.toModel = () => {
+	      const biPolygon = getBiPolygon();
+	      if (biPolygon) return biPolygon.toModel();
+	      return undefined;
+	    }
+	
+	    this.front = () => {
+	      const biPoly = getBiPolygon();
+	      if (biPoly === undefined) return;
+	      return biPoly.front();
+	    }
+	    this.back = () => {
+	      const biPoly = getBiPolygon();
+	      if (biPoly === undefined) return;
+	      return biPoly.back();
+	    }
+	
+	    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, Handle.location.LEFT);
+	    this.pull = () => pull;
+	    this.addSubAssembly(pull);
+	  }
+	}
+	
+	Door.abbriviation = 'dr';
+	
+	
+	module.exports = Door
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Hinge extends Assembly {
+	  constructor() {
+	    super();
+	  }
+	}
+	
+	Hinge.abbriviation = 'hg';
+	
+	module.exports = Hinge
 	
 });
 
@@ -31007,165 +31594,49 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/divider.js',
 function (require, exports, module) {
 	
 
 	
-	const Assembly = require('../../assembly.js');
-	
-	/*
-	    a,b,c
-	    d,e,f
-	    g,h,i
-	*/
-	class Handle extends Assembly {
-	  constructor(partCode, partName, door, location, index, count) {
-	    let instance;
-	    function rotationConfig() {
-	      if (!instance || !instance.location) return {x:0,y:0,z:0};
-	      return instance.location && instance.location() && instance.location().rotate ?
-	          {x: 0, y:0, z: 90} : {x: 0, y:0, z: 0};
-	    }
-	    function demensionConfig(attr) {
-	      if (!instance || !instance.location) return {x:0,y:0,z:0};
-	      const dems = {x: 1, y: 9.6, z: 1.9};
-	      return attr ? dems[attr] : dems;
-	    }
-	    function centerConfig(attr) {
-	      if (!instance || !instance.location) return {x:0,y:0,z:0};
-	        let center = door.position().center();
-	        let doorDems = door.position().demension();
-	        let pullDems = instance.demensionConfig();
-	        center.z -= (doorDems.z + pullDems.z) / 2;
-	        const edgeOffset = (19 * 2.54) / 16;
-	        const toCenter = 3 * 2.54;
-	
-	        switch (instance.location()) {
-	          case Handle.location.TOP_RIGHT:
-	            center.x = center.x + doorDems.x / 2 -  edgeOffset;
-	            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-	            break;
-	          case Handle.location.TOP_LEFT:
-	            center.x = center.x - doorDems.x / 2 +  edgeOffset;
-	            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-	            break;
-	          case Handle.location.BOTTOM_RIGHT:
-	            center.x = center.x + doorDems.x / 2 -  edgeOffset;
-	            center.y = center.y - doorDems.y / 2 + (pullDems.y / 2 + toCenter);
-	            break;
-	          case Handle.location.BOTTOM_LEFT:
-	            center.x = center.x - doorDems.x / 2 +  edgeOffset;
-	            center.y = center.y - doorDems.y / 2 + (pullDems.y / 2 + toCenter);
-	            break;
-	          case Handle.location.TOP:
-	            center.x = offset(center.x, doorDems.x);
-	            center.y += doorDems.y / 2 - edgeOffset;
-	            break;
-	          case Handle.location.BOTTOM:
-	            center.x = offset(center.x, doorDems.x);
-	            center.y -= doorDems.y / 2 - edgeOffset;
-	            break;
-	          case Handle.location.RIGHT:
-	            center.y = center.y;
-	            center.x += doorDems.x / 2 - edgeOffset;
-	            break;
-	          case Handle.location.LEFT:
-	            center.y = center.y;
-	            center.x -= doorDems.x / 2 - edgeOffset;
-	            break;
-	          case Handle.location.CENTER:
-	            center.x = offset(center.x, doorDems.x);
-	            break;
-	          case undefined:
-	            center.x = 0;
-	            center.y = 0;
-	            center.z = 0;
-	            break;
-	          default:
-	            throw new Error('Invalid pull location');
-	        }
-	        return attr ? center[attr] : center;
-	    };
-	
-	    super(partCode, 'Handle', centerConfig, demensionConfig, rotationConfig);
-	    // super(partCode, 'Handle', '0,0,0', '0,0,0', '0,0,0');
-	    Object.getSet(this, {location});
-	    this.setParentAssembly(door);
-	    instance = this;
-	    index = index || 0;
-	    count = count || 1;
-	
-	    this.count = (c) => {
-	      if (c > 0) {
-	        count = c;
-	      }
-	      return count;
-	    }
-	
-	    function offset(center, distance) {
-	      const spacing = distance / count;
-	      return center - (distance / 2) + spacing / 2 + spacing * (index);
-	    }
-	  }
-	}
-	Handle.location = {};
-	Handle.location.TOP_RIGHT = {rotate: true, position: 'TOP_Right'};
-	Handle.location.TOP_LEFT = {rotate: true, position: 'TOP_LEFT'};
-	Handle.location.BOTTOM_RIGHT = {rotate: true};
-	Handle.location.BOTTOM_LEFT = {rotate: true};
-	Handle.location.TOP = {multiple: true};
-	Handle.location.BOTTOM = {multiple: true};
-	Handle.location.RIGHT = {multiple: true, rotate: true};
-	Handle.location.LEFT = {multiple: true, rotate: true};
-	Handle.location.CENTER = {multiple: true};
-	
-	Handle.abbriviation = 'hn';
-	
-	
-	module.exports = Handle
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/false-front.js',
-function (require, exports, module) {
-	
-
-	
-	const SectionProperties = require('../section-properties.js');
-	const PULL_TYPE = require('../../../../../../globals/CONSTANTS.js').PULL_TYPE;
-	const DrawerFront = require('../../drawer/drawer-front.js');
+	const Divider = require('../../divider.js');
+	const Position = require('../../../../../position.js');
+	const PanelModel = require('../../panel.js').Model;
+	const Frame = require('../../frame.js');
 	const Assembly = require('../../../assembly.js');
+	const Joint = require('../../../../joint/joint');
 	
-	class FalseFrontSection extends Assembly {
-	  constructor(sectionProperties) {
-	    super();
+	class DividerSection extends Assembly {
+	  constructor(partCode, sectionProperties) {
+	    super(partCode, 'Divider');
 	    if (sectionProperties === undefined) return;
-	    this.part = () => false;
+	    const props = sectionProperties;
+	    const instance = this;
+	    let panel;
 	
-	    function center() {
-	      return sectionProperties.coverInfo().center;
-	    }
-	    this.part = () => false;
-	
-	    function dems() {
-	      const coverInfo = sectionProperties.coverInfo();
-	      return {
-	        x: coverInfo.width,
-	        y: coverInfo.length,
-	        z: coverInfo.doorThickness
-	      }
+	    function toModel() {
+	      const biPoly = sectionProperties.dividerInfo(3*2.54/4);
+	      return biPoly.toModel();
 	    }
 	
-	    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', center, dems, sectionProperties.rotation));
+	    this.part = () => false;
+	    this.included = () => false;
+	
+	
+	    this.maxWidth = () => 2.54*3/4;
+	
+	
+	    panel = new PanelModel(`${partCode}-p`, 'Divider.Panel', toModel);
+	    // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
+	    this.addSubAssembly(panel);
+	    // this.addSubAssembly(frame);
 	  }
 	}
 	
-	FalseFrontSection.abbriviation = 'ffs';
+	DividerSection.abbriviation = 'dvrs';
 	
 	
-	module.exports = FalseFrontSection
+	module.exports = DividerSection
 	
 });
 
@@ -31240,118 +31711,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/divider.js',
-function (require, exports, module) {
-	
-
-	
-	const Divider = require('../../divider.js');
-	const Position = require('../../../../../position.js');
-	const Panel = require('../../panel.js');
-	const Frame = require('../../frame.js');
-	const Assembly = require('../../../assembly.js');
-	const Joint = require('../../../../joint/joint');
-	
-	class DividerSection extends Assembly {
-	  constructor(partCode, sectionProperties) {
-	    super(partCode, 'Divider');
-	    if (sectionProperties === undefined) return;
-	    const props = sectionProperties;
-	    const instance = this;
-	    let panel;
-	
-	    const panelCenterFunc = (attr) => {
-	      const center = sectionProperties.dividerInfo().center;
-	      if (attr) return attr ? dem[attr] : dem;
-	      return center;
-	    };
-	
-	    this.part = () => false;
-	    this.included = () => false;
-	
-	    const panelDemFunc = (attr) => {
-	      const thickness = 3 * 2.54 / 4;
-	      if (attr === 'z') return thickness;
-	      const props = sectionProperties.dividerInfo();
-	      const dem = {
-	        x: props.width,
-	        y: props.length,
-	        z: thickness
-	      };
-	      return attr ? dem[attr] : dem;
-	    };
-	
-	    const panelRotFunc = (attr) => {
-	      const rotation = sectionProperties.rotation();
-	      if (sectionProperties.verticalDivisions()) {
-	        rotation.x += 90;
-	        rotation.y -= 90;
-	      } else {
-	        rotation.x += 90;
-	        rotation.y -= 90;
-	        rotation.z += 90;
-	
-	      }
-	      return attr ? rotation[att] : rotation;
-	    }
-	
-	    this.maxWidth = () => Math.max(panelDemFunc('z'), 0);
-	
-	
-	    panel = new Panel(`${partCode}-p`, 'Divider.Panel', panelCenterFunc, panelDemFunc, panelRotFunc);
-	    // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
-	    this.addSubAssembly(panel);
-	    // this.addSubAssembly(frame);
-	  }
-	}
-	
-	DividerSection.abbriviation = 'dvrs';
-	
-	
-	module.exports = DividerSection
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/door.js',
-function (require, exports, module) {
-	
-
-	
-	const Door = require('../../door/door.js');
-	const Assembly = require('../../../assembly.js');
-	
-	class DoorSection extends Assembly {
-	  constructor(sectionProperties) {
-	    super();
-	    if (sectionProperties === undefined) return;
-	    function center() {
-	      return sectionProperties.coverInfo().center;
-	    }
-	    this.part = () => false;
-	
-	    function dems() {
-	      const coverInfo = sectionProperties.coverInfo();
-	      return {
-	        x: coverInfo.width,
-	        y: coverInfo.length,
-	        z: coverInfo.doorThickness
-	      }
-	    }
-	    const door = new Door('d', 'Door', center, dems, sectionProperties.rotation);
-	    this.door = () => door;
-	    this.pull = () => door.pull();
-	    this.addSubAssembly(door);
-	  }
-	}
-	
-	DoorSection.abbriviation = 'drs';
-	
-	module.exports = DoorSection
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/duel-door.js',
 function (require, exports, module) {
 	
@@ -31365,22 +31724,29 @@ function (require, exports, module) {
 	  constructor(sectionProperties) {
 	    super('dds', 'Duel.Door.Section');
 	    if (sectionProperties === undefined) return;
+	    const instance = this;
 	
 	
 	
-	    function center() {
-	      return sectionProperties.coverInfo().center;
-	    }
 	    this.part = () => false;
 	
 	    function duelDoorCenter(right) {
 	      return function () {
-	        const direction = right ? -1 : 1;
+	        const cabinet = sectionProperties.getAssembly('c');
+	        if (cabinet)
+	          cabinet.openings[0].update();
+	        let direction = sectionProperties.vertical() ? 1 : -1;
+	        direction *= right ? 1 : -1;
 	        const doorGap = 2.54/16
 	        const coverInfo = sectionProperties.coverInfo();
-	        let center = coverInfo.center;
+	        let center = JSON.copy(coverInfo.center);
 	        const dems = duelDoorDems();
-	        center = sectionProperties.offsetPoint(center, (dems.x + doorGap) / 2 * direction, 0, 0);
+	        const xOffset = (dems.x + doorGap) / 2 * direction;
+	        const rotation = sectionProperties.rotation();
+	          rotation.x += 180;
+	          rotation.y += 180;
+	          rotation.z += 180;
+	        center = sectionProperties.transRotate(center, {z:0, y:0, x:xOffset}, rotation);
 	        return center;
 	      }
 	    }
@@ -31411,6 +31777,82 @@ function (require, exports, module) {
 	
 	
 	module.exports = DualDoorSection
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/false-front.js',
+function (require, exports, module) {
+	
+
+	
+	const SectionProperties = require('../section-properties.js');
+	const PULL_TYPE = require('../../../../../../globals/CONSTANTS.js').PULL_TYPE;
+	const DrawerFront = require('../../drawer/drawer-front.js');
+	const Assembly = require('../../../assembly.js');
+	
+	class FalseFrontSection extends Assembly {
+	  constructor(sectionProperties) {
+	    super();
+	    if (sectionProperties === undefined) return;
+	    this.part = () => false;
+	
+	    function center() {
+	      return sectionProperties.coverInfo().center;
+	    }
+	    this.part = () => false;
+	
+	    function dems() {
+	      const coverInfo = sectionProperties.coverInfo();
+	      return {
+	        x: coverInfo.width,
+	        y: coverInfo.length,
+	        z: coverInfo.doorThickness
+	      }
+	    }
+	
+	    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', center, dems, sectionProperties.rotation));
+	  }
+	}
+	
+	FalseFrontSection.abbriviation = 'ffs';
+	
+	
+	module.exports = FalseFrontSection
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/door.js',
+function (require, exports, module) {
+	
+
+	
+	const Door = require('../../door/door.js');
+	const Assembly = require('../../../assembly.js');
+	
+	class DoorSection extends Assembly {
+	  constructor(sectionProperties) {
+	    super();
+	    if (sectionProperties === undefined) return;
+	    const instance = this;
+	    this.part = () => false;
+	
+	
+	    function getBiPolygon () {
+	      return sectionProperties.coverInfo().biPolygon;
+	    }
+	
+	    const door = new Door('d', 'Door', getBiPolygon);
+	    this.door = () => door;
+	    this.pull = () => door.pull();
+	    this.addSubAssembly(door);
+	  }
+	}
+	
+	DoorSection.abbriviation = 'drs';
+	
+	module.exports = DoorSection
 	
 });
 
@@ -31714,448 +32156,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./test/tests/polygon-merge.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
-	
-	
-	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]])
-	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
-	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
-	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
-	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
-	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
-	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
-	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
-	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]]);
-	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
-	
-	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
-	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
-	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
-	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
-	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
-	
-	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
-	Test.add('Polygon3D merge',(ts) => {
-	  // const poly = A.merge(B).merge(J);
-	  const AB = A.merge(B);
-	  const IF = [F,I];
-	  Polygon3D.merge(IF);
-	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
-	  ABCDEFGHIJ.shuffle();
-	  Polygon3D.merge(ABCDEFGHIJ);
-	
-	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
-	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
-	  ts.assertFalse(polyAB.equals(undefined));
-	  ts.assertFalse(polyAB.equals(A));
-	  ts.assertTrue(IF[0].equals(polyIF));
-	  ts.assertTrue(polyIF.equals(IF[0]));
-	  ts.assertTrue(ABCDEFGHIJ.length === 2);
-	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
-	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./test/tests/cabinet.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
-	const approximate = require('../../../../public/js/utils/approximate.js').new(100);
-	
-	
-	Test.add('Cabinet: doorIntersect',(ts) => {
-	  ts.assertEquals(6, 6);
-	  let dx;
-	
-	  //Parrelle up with no right point
-	  let llp = {x:0,y:0};
-	  let lcp = {x:0,y:10};
-	  let rcp = {x:0,y:20};
-	  let rrp = undefined;
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
-	  ts.assertEquals(dx.center.length, 9.8125);
-	  ts.assertEquals(dx.center.center.x(), .5, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.center.left.reveal, 1/16);
-	  ts.assertEquals(dx.center.right.reveal, 1/8);
-	  ts.assertEquals(dx.left.reveal, 1/16);
-	
-	  //Parrelle down with no leftPoint.
-	  llp = undefined;
-	  lcp = {x:0,y:20};
-	  rcp = {x:0,y:10};
-	  rrp = {x:0,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
-	  ts.assertEquals(dx.center.length, 9.8125);
-	  ts.assertEquals(dx.center.center.x(), -.5, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.center.left.reveal, 1/8);
-	  ts.assertEquals(dx.center.right.reveal, 1/16);
-	  ts.assertEquals(dx.right.reveal, 1/16);
-	
-	  //Parrelle right
-	  llp = {x:0,y:0};
-	  lcp = {x:10,y:0};
-	  rcp = {x:20,y:0};
-	  rrp = {x:30,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
-	  ts.assertEquals(dx.center.length, 9.875);
-	  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), -.5, null, 1000);
-	  ts.assertEquals(dx.center.left.reveal, 1/16);
-	  ts.assertEquals(dx.center.right.reveal, 1/16);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.left.reveal, 1/16);
-	  ts.assertEquals(dx.right.reveal, 1/16);
-	
-	  //Parrelle left
-	  llp = {x:30,y:0};
-	  lcp = {x:20,y:0};
-	  rcp = {x:10,y:0};
-	  rrp = {x:0,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
-	  ts.assertEquals(dx.center.length, 9.875);
-	  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), .5, null, 1000);
-	  ts.assertEquals(dx.center.left.reveal, 1/16);
-	  ts.assertEquals(dx.center.right.reveal, 1/16);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.left.reveal, 1/16);
-	  ts.assertEquals(dx.right.reveal, 1/16);
-	
-	  // Inner Horse Shoe
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:10,y:10};
-	  rrp = {x:10,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
-	  ts.assertEquals(dx.center.length, 7.75);
-	  ts.assertEquals(dx.center.left.reveal, 1.125);
-	  ts.assertEquals(dx.center.right.reveal, 1.125);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.left.reveal, 1);
-	  ts.assertEquals(dx.right.reveal, 1);
-	
-	  // Inner Horse Shoe 3/4
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:10,y:10};
-	  rrp = {x:10,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 3/4, 3/4, 3/4, .125, 1/4);
-	  ts.assertEquals(dx.center.length, 7.75);
-	  ts.assertEquals(dx.center.center.x(), 5, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), 9.375, null, 1000);
-	  ts.assertEquals(dx.center.left.reveal, 1.125);
-	  ts.assertEquals(dx.center.right.reveal, 1.125);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.left.reveal, 1);
-	  ts.assertEquals(dx.right.reveal, 1);
-	
-	  // Outer Horse Shoo
-	  rrp = {x:0,y:0};
-	  rcp = {x:0,y:10};
-	  lcp = {x:10,y:10};
-	  llp = {x:10,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
-	  ts.assertEquals(dx.center.length, 11.75);
-	  ts.assertEquals(dx.center.left.reveal, -.875);
-	  ts.assertEquals(dx.center.right.reveal, -.875);
-	  ts.assertEquals(approximate(Math.toDegrees(dx.left.theta)), 45);
-	  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 45);
-	  ts.assertEquals(dx.left.reveal, -1);
-	  ts.assertEquals(dx.right.reveal, -1);
-	
-	  // Zig
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:10,y:20};
-	  rrp = {x:10,y:30};
-	
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 22.5);
-	
-	  // Wall right
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:10,y:20};
-	  rrp = {x:30,y:20};
-	
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 0, .125);
-	  ts.assertEquals(dx.center.left.theta, undefined);
-	  ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 45);
-	
-	  // Wall left
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:9,y:25};
-	  rrp = {x:30,y:20};
-	
-	  // dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 0, 1, 1, .125);
-	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 17.57);
-	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.left.theta)), 59.04);
-	
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./test/tests/line-consolidate.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Polygon2d = require('../../app-src/two-d/objects/polygon.js');
-	const Line2d = require('../../app-src/two-d/objects/line.js');
-	const Line3D = require('../../app-src/three-d/objects/line.js');
-	const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
-	const approximate = require('../../../../public/js/utils/approximate.js');
-	
-	const extraLinePoly = new Polygon2d([[0,0],[0,1],[0,2],[0,3],
-	                [1,3],[1,4],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],
-	                [3,5],[4,5],[5,4],[6,3],[5,3],[5,2],[6,2],[6,1],
-	                [6,0],[5,0],[4,0],[4,-1],[4,-2],[1,0]]);
-	
-	const consisePoly = new Polygon2d([[0,0],[0,3],[1,3],[1,4],
-	                [0,4],[0,6],[3,6],[3,5],[4,5],[6,3],[5,3],[5,2],
-	                [6,2],[6,0],[4,0],[4,-2],[1,0]]);
-	
-	const root2 = Math.sqrt(2);
-	
-	
-	// const A = new Polygon3D([[,],[,],[,],[,]])
-	Test.add('Line2d: consolidate',(ts) => {
-	  const lines = Polygon2d.lines(extraLinePoly);
-	  ts.assertTrue(lines.length === consisePoly.lines().length);
-	  ts.success();
-	});
-	
-	
-	Test.add('Line2d: perpendicular', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:1, y:0});
-	  let perp = line.perpendicular(1, null, true);
-	  let expectedMidpoint = new Vertex2d({x: .5, y: 0});
-	  let expectedLine = new Line2d({x: .5, y: .5}, {x: .5, y: -.5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(-2, null, true);
-	  expectedLine = new Line2d({x: .5, y: 1}, {x: .5, y: -1});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(1);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 1});
-	  expectedMidpoint = new Vertex2d({x: .5, y: .5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(-2);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -2});
-	  expectedMidpoint = new Vertex2d({x: .5, y: -1});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(-1);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -1});
-	  expectedMidpoint = new Vertex2d({x: .5, y: -.5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(2);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 2});
-	  expectedMidpoint = new Vertex2d({x: .5, y: 1});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:0,y:0}, {x:2, y:2});
-	  perp = line.perpendicular(root2);
-	  expectedLine = new Line2d({x: 1, y: 1}, {x: 0, y: 2});
-	  expectedMidpoint = new Vertex2d({x: .5, y: 1.5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:0,y:0}, {x:2, y:2});
-	  perp = line.perpendicular(-1 * root2);
-	  expectedLine = new Line2d({x: 1, y: 1}, {x: 2, y: 0});
-	  expectedMidpoint = new Vertex2d({x: 1.5, y: .5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  ts.success();
-	});
-	
-	Test.add('Line2d: parrelle', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:2, y:2});
-	  let expectedLine = new Line2d({x: -1, y: 1}, {x: 1, y: 3});
-	  let expectedMidpoint = new Vertex2d({x: 0, y: 2});
-	  let parrelle = line.parrelle(-1 * root2);
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  expectedLine = new Line2d({x: 1, y: -1}, {x: 3, y: 1});
-	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
-	  parrelle = line.parrelle(root2);
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:2, y:2}, {x:0,y:0});
-	  expectedLine = new Line2d({x: 1, y: 3}, {x: -1, y: 1});
-	  expectedMidpoint = new Vertex2d({x: 0, y: 2});
-	  parrelle = line.parrelle(root2);
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  expectedLine = new Line2d({x: 3, y: 1}, {x: 1, y: -1});
-	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
-	  parrelle = line.parrelle(-1 * root2);
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:3,y:1}, {x:8, y:4});
-	  expectedMidpoint = new Vertex2d({x: -.5, y: 12.5});
-	  expectedLine = new Line2d({x: -3, y: 11}, {x: 2, y: 14});
-	  parrelle = line.parrelle(-1 * expectedMidpoint.distance(line.midpoint()));
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  expectedMidpoint = new Vertex2d({x: 11.5, y: -7.5});
-	  expectedLine = new Line2d({x: 9, y: -9}, {x: 14, y: -6});
-	  parrelle = line.parrelle(expectedMidpoint.distance(line.midpoint()));
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  ts.success();
-	});
-	
-	Test.add('Line2d: trimmed', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:0, y:8});
-	
-	  let trimmed = line.trimmed(.5);
-	  let expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 8});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(-.5);
-	  expectedLine = new Line2d({x: 0, y: 0}, {x: 0, y: 7.5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(.5, true);
-	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(-.5, true);
-	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:-4,y:-8}, {x:0, y:-4});
-	  trimmed = line.trimmed(root2, true);
-	  expectedLine = new Line2d({x: -3, y: -7}, {x: -1, y: -5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(root2);
-	  expectedLine = new Line2d({x: -3, y: -7}, {x: 0, y: -4});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(-1 * root2);
-	  expectedLine = new Line2d({x: -4, y: -8}, {x: -1, y: -5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  ts.success();
-	});
-	
-	Test.add('Line2d: thetaBetween', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:0, y:10});
-	  let line2 = new Line2d({x:0,y:10}, {x:10, y:20});
-	  let line3 = new Line2d({x:10,y:20}, {x:10, y:30})
-	
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 135);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line3))), 225);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 225);
-	  ts.assertEquals(approximate(Math.toDegrees(line3.thetaBetween(line2))), 135);
-	
-	  let origin = {x:3, y:22};
-	  line = Line2d.startAndTheta(origin, Math.toRadians(16), 10);
-	  line2 = Line2d.startAndTheta(origin, Math.toRadians(251), 10);
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
-	
-	  line2 = line2.negitive();
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
-	
-	  line = line.negitive();
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
-	
-	  line2 = line2.negitive();
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
-	
-	  ts.success();
-	});
-	
-	// Test.add('Line3D: intersects', (ts) => {
-	//   const line1 = new Line3D({x: 10, y: 10, z: 10}, {x: 5, y: 5, z: 5});
-	//   const line2 = new Line3D({x: 10, y: 10, z: -10}, {x: 5, y: 5, z: -5});
-	//   let intersection = line1.intersects(line2);
-	//   ts.assertTrue(intersection.equals({x: 0, y:0, z:0}));
-	//   ts.success();
-	// });
-	
-});
-
-
 RequireJS.addFunction('./test/tests/plane.js',
 function (require, exports, module) {
 	
@@ -32322,6 +32322,63 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	  ts.assertEquals(bisector.obtuse.equationEqualToZ(), '(-0.000279x + 0.001991y + -0.023131) / -0.00366');
 	  ts.assertEquals(bisector.accute.equationEqualToZ(), '(0.005197x + 0.008144y + 0.151916) / 0.004034');
 	
+	  ts.success();
+	});
+	
+	
+	Test.add('Plane: bisector',(ts) => {
+	  const xyPlane = Plane.fromPointNormal({x: 12, y: 41, z: 0}, new Vector3D(1, 1, 1));
+	  const yzPlane = Plane.fromPointNormal({x: 0, y: 41, z: 1}, new Vector3D(0, 3, -1));
+	  const xzPlane = Plane.fromPointNormal({x: 12, y: 0, z: 50}, new Vector3D(5, 0, 13));
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('./test/tests/polygon-merge.js',
+function (require, exports, module) {
+	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
+	
+	
+	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]])
+	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
+	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
+	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
+	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
+	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
+	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
+	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
+	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]]);
+	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
+	
+	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
+	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
+	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
+	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
+	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
+	
+	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
+	Test.add('Polygon3D merge',(ts) => {
+	  // const poly = A.merge(B).merge(J);
+	  const AB = A.merge(B);
+	  const IF = [F,I];
+	  Polygon3D.merge(IF);
+	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
+	  ABCDEFGHIJ.shuffle();
+	  Polygon3D.merge(ABCDEFGHIJ);
+	
+	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
+	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
+	  ts.assertFalse(polyAB.equals(undefined));
+	  ts.assertFalse(polyAB.equals(A));
+	  ts.assertTrue(IF[0].equals(polyIF));
+	  ts.assertTrue(polyIF.equals(IF[0]));
+	  ts.assertTrue(ABCDEFGHIJ.length === 2);
+	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
+	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
 	  ts.success();
 	});
 	
@@ -32748,94 +32805,395 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./test/tests/cost/category.js',
+RequireJS.addFunction('./test/tests/line-consolidate.js',
 function (require, exports, module) {
 	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Polygon2d = require('../../app-src/two-d/objects/polygon.js');
+	const Line2d = require('../../app-src/two-d/objects/line.js');
+	const Line3D = require('../../app-src/three-d/objects/line.js');
+	const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
+	const approximate = require('../../../../public/js/utils/approximate.js');
+	
+	const extraLinePoly = new Polygon2d([[0,0],[0,1],[0,2],[0,3],
+	                [1,3],[1,4],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],
+	                [3,5],[4,5],[5,4],[6,3],[5,3],[5,2],[6,2],[6,1],
+	                [6,0],[5,0],[4,0],[4,-1],[4,-2],[1,0]]);
+	
+	const consisePoly = new Polygon2d([[0,0],[0,3],[1,3],[1,4],
+	                [0,4],[0,6],[3,6],[3,5],[4,5],[6,3],[5,3],[5,2],
+	                [6,2],[6,0],[4,0],[4,-2],[1,0]]);
+	
+	const root2 = Math.sqrt(2);
+	
+	
+	// const A = new Polygon3D([[,],[,],[,],[,]])
+	Test.add('Line2d: consolidate',(ts) => {
+	  const lines = Polygon2d.lines(extraLinePoly);
+	  ts.assertTrue(lines.length === consisePoly.lines().length);
+	  ts.success();
+	});
+	
+	
+	Test.add('Line2d: perpendicular', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:1, y:0});
+	  let perp = line.perpendicular(1, null, true);
+	  let expectedMidpoint = new Vertex2d({x: .5, y: 0});
+	  let expectedLine = new Line2d({x: .5, y: .5}, {x: .5, y: -.5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(-2, null, true);
+	  expectedLine = new Line2d({x: .5, y: 1}, {x: .5, y: -1});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(1);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 1});
+	  expectedMidpoint = new Vertex2d({x: .5, y: .5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(-2);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -2});
+	  expectedMidpoint = new Vertex2d({x: .5, y: -1});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(-1);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -1});
+	  expectedMidpoint = new Vertex2d({x: .5, y: -.5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(2);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 2});
+	  expectedMidpoint = new Vertex2d({x: .5, y: 1});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:0,y:0}, {x:2, y:2});
+	  perp = line.perpendicular(root2);
+	  expectedLine = new Line2d({x: 1, y: 1}, {x: 0, y: 2});
+	  expectedMidpoint = new Vertex2d({x: .5, y: 1.5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:0,y:0}, {x:2, y:2});
+	  perp = line.perpendicular(-1 * root2);
+	  expectedLine = new Line2d({x: 1, y: 1}, {x: 2, y: 0});
+	  expectedMidpoint = new Vertex2d({x: 1.5, y: .5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  ts.success();
+	});
+	
+	Test.add('Line2d: parrelle', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:2, y:2});
+	  let expectedLine = new Line2d({x: -1, y: 1}, {x: 1, y: 3});
+	  let expectedMidpoint = new Vertex2d({x: 0, y: 2});
+	  let parrelle = line.parrelle(-1 * root2);
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  expectedLine = new Line2d({x: 1, y: -1}, {x: 3, y: 1});
+	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
+	  parrelle = line.parrelle(root2);
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:2, y:2}, {x:0,y:0});
+	  expectedLine = new Line2d({x: 1, y: 3}, {x: -1, y: 1});
+	  expectedMidpoint = new Vertex2d({x: 0, y: 2});
+	  parrelle = line.parrelle(root2);
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  expectedLine = new Line2d({x: 3, y: 1}, {x: 1, y: -1});
+	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
+	  parrelle = line.parrelle(-1 * root2);
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:3,y:1}, {x:8, y:4});
+	  expectedMidpoint = new Vertex2d({x: -.5, y: 12.5});
+	  expectedLine = new Line2d({x: -3, y: 11}, {x: 2, y: 14});
+	  parrelle = line.parrelle(-1 * expectedMidpoint.distance(line.midpoint()));
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  expectedMidpoint = new Vertex2d({x: 11.5, y: -7.5});
+	  expectedLine = new Line2d({x: 9, y: -9}, {x: 14, y: -6});
+	  parrelle = line.parrelle(expectedMidpoint.distance(line.midpoint()));
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  ts.success();
+	});
+	
+	Test.add('Line2d: trimmed', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:0, y:8});
+	
+	  let trimmed = line.trimmed(.5);
+	  let expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 8});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(-.5);
+	  expectedLine = new Line2d({x: 0, y: 0}, {x: 0, y: 7.5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(.5, true);
+	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(-.5, true);
+	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:-4,y:-8}, {x:0, y:-4});
+	  trimmed = line.trimmed(root2, true);
+	  expectedLine = new Line2d({x: -3, y: -7}, {x: -1, y: -5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(root2);
+	  expectedLine = new Line2d({x: -3, y: -7}, {x: 0, y: -4});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(-1 * root2);
+	  expectedLine = new Line2d({x: -4, y: -8}, {x: -1, y: -5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  ts.success();
+	});
+	
+	Test.add('Line2d: thetaBetween', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:0, y:10});
+	  let line2 = new Line2d({x:0,y:10}, {x:10, y:20});
+	  let line3 = new Line2d({x:10,y:20}, {x:10, y:30})
+	
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 135);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line3))), 225);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 225);
+	  ts.assertEquals(approximate(Math.toDegrees(line3.thetaBetween(line2))), 135);
+	
+	  let origin = {x:3, y:22};
+	  line = Line2d.startAndTheta(origin, Math.toRadians(16), 10);
+	  line2 = Line2d.startAndTheta(origin, Math.toRadians(251), 10);
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	
+	  line2 = line2.negitive();
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	
+	  line = line.negitive();
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	
+	  line2 = line2.negitive();
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	
+	  ts.success();
+	});
+	
+	// Test.add('Line3D: intersects', (ts) => {
+	//   const line1 = new Line3D({x: 10, y: 10, z: 10}, {x: 5, y: 5, z: 5});
+	//   const line2 = new Line3D({x: 10, y: 10, z: -10}, {x: 5, y: 5, z: -5});
+	//   let intersection = line1.intersects(line2);
+	//   ts.assertTrue(intersection.equals({x: 0, y:0, z:0}));
+	//   ts.success();
+	// });
+	
+});
 
+
+RequireJS.addFunction('./test/tests/cabinet.js',
+function (require, exports, module) {
 	
-	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
-	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Category = require('../../../app-src/cost/types/category.js');
-	const Material = require('../../../app-src/cost/types/material.js');
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
+	const approximate = require('../../../../public/js/utils/approximate.js').new(100);
 	
-	//
-	//
-	// {
-	//   const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
-	//   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
-	//   const frame.addSubAssembly(panel);
-	//   const props = {};
-	//   const smeRound = StringMathEvaluator.round;
-	//
-	//   let unitCostValue = smeRound(15.37/(8*12));
-	//   let costValue = smeRound(unitCostValue * 2 * 196 * 12);
-	//   let assembly = frame;
-	//   props.linear = {
-	//     id: 'frame',
-	//     method: 'Linear Feet',
-	//     length: '8\'',
-	//     cost: '15.37',
-	//     formula: '2*l',
-	//     unitCostValue, costValue, assembly
-	//   };
-	//
-	//   unitCostValue = smeRound((75.13)/(96*48));
-	//   costValue = smeRound(unitCostValue * 24 * 10);
-	//   props.square = {
-	//     id: 'panel0',
-	//     method: 'Square Feet',
-	//     length: '96',
-	//     width: '48',
-	//     cost: 75.13,
-	//     unitCostValue, costValue, assembly
-	//   };
-	//
-	//   unitCostValue = smeRound(29.86/(12*6*1));
-	//   costValue = smeRound(unitCostValue * 24 * 10 * .75);
-	//   props.cubic = {
-	//     id: 'metal',
-	//     method: 'Cubic Feet',
-	//     length: '12',
-	//     width: '6',
-	//     depth: '1',
-	//     cost: 29.86,
-	//     unitCostValue, costValue, assembly
-	//   };
-	//
-	//   unitCostValue = smeRound(50.12/10);
-	//   costValue = smeRound(unitCostValue * 13);
-	//   props.unit = {
-	//     id: 'parts',
-	//     method: 'Unit',
-	//     laborType: 'Instalation',
-	//     hourlyRate: '20',
-	//     hours: '.66',
-	//     cost: '50.12',
-	//     count: '10',
-	//     unitCostValue, costValue,
-	//     assembly: 13
-	//   };
-	//   const catCost = new Category({id: 'catTest'});
-	//
-	//   Test.add('CategoryCost: calc',(ts) => {
-	//     let totalCost = 0;
-	//     function testProps(props) {
-	//       const matCost = new Material(props);
-	//       catCost.addChild(matCost);
-	//       totalCost += matCost.calc(props.assembly);
-	//     }
-	//     Object.values(props).forEach(testProps);
-	//     ts.assertTolerance(totalCost, catCost.calc(), .0001);
-	//     ts.success();
-	//   });
-	// }
 	
-	exports.Frame = Frame
-	exports.Panel = Panel
-	exports.StringMathEvaluator = StringMathEvaluator
-	exports.Category = Category
-	exports.Material = Material
+	Test.add('Cabinet: doorIntersect',(ts) => {
+	  ts.assertEquals(6, 6);
+	  let dx;
+	
+	  //Parrelle up with no right point
+	  let llp = {x:0,y:0};
+	  let lcp = {x:0,y:10};
+	  let rcp = {x:0,y:20};
+	  let rrp = undefined;
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
+	  ts.assertEquals(dx.center.length, 9.8125);
+	  ts.assertEquals(dx.center.center.x(), .5, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.center.left.reveal, 1/16);
+	  ts.assertEquals(dx.center.right.reveal, 1/8);
+	  ts.assertEquals(dx.left.reveal, 1/16);
+	
+	  //Parrelle down with no leftPoint.
+	  llp = undefined;
+	  lcp = {x:0,y:20};
+	  rcp = {x:0,y:10};
+	  rrp = {x:0,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
+	  ts.assertEquals(dx.center.length, 9.8125);
+	  ts.assertEquals(dx.center.center.x(), -.5, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.center.left.reveal, 1/8);
+	  ts.assertEquals(dx.center.right.reveal, 1/16);
+	  ts.assertEquals(dx.right.reveal, 1/16);
+	
+	  //Parrelle right
+	  llp = {x:0,y:0};
+	  lcp = {x:10,y:0};
+	  rcp = {x:20,y:0};
+	  rrp = {x:30,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
+	  ts.assertEquals(dx.center.length, 9.875);
+	  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), -.5, null, 1000);
+	  ts.assertEquals(dx.center.left.reveal, 1/16);
+	  ts.assertEquals(dx.center.right.reveal, 1/16);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.left.reveal, 1/16);
+	  ts.assertEquals(dx.right.reveal, 1/16);
+	
+	  //Parrelle left
+	  llp = {x:30,y:0};
+	  lcp = {x:20,y:0};
+	  rcp = {x:10,y:0};
+	  rrp = {x:0,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
+	  ts.assertEquals(dx.center.length, 9.875);
+	  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), .5, null, 1000);
+	  ts.assertEquals(dx.center.left.reveal, 1/16);
+	  ts.assertEquals(dx.center.right.reveal, 1/16);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.left.reveal, 1/16);
+	  ts.assertEquals(dx.right.reveal, 1/16);
+	
+	  // Inner Horse Shoe
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:10,y:10};
+	  rrp = {x:10,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
+	  ts.assertEquals(dx.center.length, 7.75);
+	  ts.assertEquals(dx.center.left.reveal, 1.125);
+	  ts.assertEquals(dx.center.right.reveal, 1.125);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.left.reveal, 1);
+	  ts.assertEquals(dx.right.reveal, 1);
+	
+	  // Inner Horse Shoe 3/4
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:10,y:10};
+	  rrp = {x:10,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 3/4, 3/4, 3/4, .125, 1/4);
+	  ts.assertEquals(dx.center.length, 7.75);
+	  ts.assertEquals(dx.center.center.x(), 5, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), 9.375, null, 1000);
+	  ts.assertEquals(dx.center.left.reveal, 1.125);
+	  ts.assertEquals(dx.center.right.reveal, 1.125);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.left.reveal, 1);
+	  ts.assertEquals(dx.right.reveal, 1);
+	
+	  // Outer Horse Shoo
+	  rrp = {x:0,y:0};
+	  rcp = {x:0,y:10};
+	  lcp = {x:10,y:10};
+	  llp = {x:10,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
+	  ts.assertEquals(dx.center.length, 11.75);
+	  ts.assertEquals(dx.center.left.reveal, -.875);
+	  ts.assertEquals(dx.center.right.reveal, -.875);
+	  ts.assertEquals(approximate(Math.toDegrees(dx.left.theta)), 45);
+	  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 45);
+	  ts.assertEquals(dx.left.reveal, -1);
+	  ts.assertEquals(dx.right.reveal, -1);
+	
+	  // Zig
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:10,y:20};
+	  rrp = {x:10,y:30};
+	
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 22.5);
+	
+	  // Wall right
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:10,y:20};
+	  rrp = {x:30,y:20};
+	
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 0, .125);
+	  ts.assertEquals(dx.center.left.theta, undefined);
+	  ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 45);
+	
+	  // Wall left
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:9,y:25};
+	  rrp = {x:30,y:20};
+	
+	  // dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 0, 1, 1, .125);
+	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 17.57);
+	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.left.theta)), 59.04);
+	
+	  ts.success();
+	});
 	
 });
 
@@ -32947,6 +33305,98 @@ function (require, exports, module) {
 	exports.StringMathEvaluator = StringMathEvaluator
 	exports.Labor = Labor
 	exports.FunctionArgumentTest = FunctionArgumentTest
+	
+});
+
+
+RequireJS.addFunction('./test/tests/cost/category.js',
+function (require, exports, module) {
+	
+
+	
+	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
+	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Category = require('../../../app-src/cost/types/category.js');
+	const Material = require('../../../app-src/cost/types/material.js');
+	
+	//
+	//
+	// {
+	//   const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
+	//   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
+	//   const frame.addSubAssembly(panel);
+	//   const props = {};
+	//   const smeRound = StringMathEvaluator.round;
+	//
+	//   let unitCostValue = smeRound(15.37/(8*12));
+	//   let costValue = smeRound(unitCostValue * 2 * 196 * 12);
+	//   let assembly = frame;
+	//   props.linear = {
+	//     id: 'frame',
+	//     method: 'Linear Feet',
+	//     length: '8\'',
+	//     cost: '15.37',
+	//     formula: '2*l',
+	//     unitCostValue, costValue, assembly
+	//   };
+	//
+	//   unitCostValue = smeRound((75.13)/(96*48));
+	//   costValue = smeRound(unitCostValue * 24 * 10);
+	//   props.square = {
+	//     id: 'panel0',
+	//     method: 'Square Feet',
+	//     length: '96',
+	//     width: '48',
+	//     cost: 75.13,
+	//     unitCostValue, costValue, assembly
+	//   };
+	//
+	//   unitCostValue = smeRound(29.86/(12*6*1));
+	//   costValue = smeRound(unitCostValue * 24 * 10 * .75);
+	//   props.cubic = {
+	//     id: 'metal',
+	//     method: 'Cubic Feet',
+	//     length: '12',
+	//     width: '6',
+	//     depth: '1',
+	//     cost: 29.86,
+	//     unitCostValue, costValue, assembly
+	//   };
+	//
+	//   unitCostValue = smeRound(50.12/10);
+	//   costValue = smeRound(unitCostValue * 13);
+	//   props.unit = {
+	//     id: 'parts',
+	//     method: 'Unit',
+	//     laborType: 'Instalation',
+	//     hourlyRate: '20',
+	//     hours: '.66',
+	//     cost: '50.12',
+	//     count: '10',
+	//     unitCostValue, costValue,
+	//     assembly: 13
+	//   };
+	//   const catCost = new Category({id: 'catTest'});
+	//
+	//   Test.add('CategoryCost: calc',(ts) => {
+	//     let totalCost = 0;
+	//     function testProps(props) {
+	//       const matCost = new Material(props);
+	//       catCost.addChild(matCost);
+	//       totalCost += matCost.calc(props.assembly);
+	//     }
+	//     Object.values(props).forEach(testProps);
+	//     ts.assertTolerance(totalCost, catCost.calc(), .0001);
+	//     ts.success();
+	//   });
+	// }
+	
+	exports.Frame = Frame
+	exports.Panel = Panel
+	exports.StringMathEvaluator = StringMathEvaluator
+	exports.Category = Category
+	exports.Material = Material
 	
 });
 

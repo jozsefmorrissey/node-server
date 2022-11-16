@@ -2,6 +2,10 @@
   <div class='three-view-three-d-cnt'></div>
   <div class='three-view-two-d-cnt'>
     <div class='three-view-canvases-cnt inline-flex' id='{{id()}}-cnt'>
+      <div class='part-input-cnt center-vert'>
+        <input type="text" name="partSelector" list='part-list'>
+        <datalist id='part-list'></datalist>
+      </div>
       <div class='center-vert'>Part Code: <b id='three-view-part-code-{{id()}}'></b></div>
       <span class='three-view-canvas-cnt'>
         <b>Top</b>

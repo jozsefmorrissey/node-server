@@ -14,18 +14,23 @@ class Polygon3D {
     let normal;
 
     function calcNormal() {
-      let normals = [];
-      for (let index = 1; index < lines.length; index++) {
-        normals[index-1] = lines[index-1].vector().crossProduct(lines[index].vector()).unit();
-      }
-
-      for (let index = 1; index < normals.length; index++) {
-        if (!normals[index -1] || !normals[index - 1].equals(normals[index])) {
-          console.log('ne')
-        }
-      }
-
-      return normals[0];
+      // let normals = [];
+      // for (let index = 1; index < lines.length; index++) {
+      //   normals[index-1] = lines[index-1].vector().crossProduct(lines[index].vector()).unit();
+      // }
+      //
+      // for (let index = 1; index < normals.length; index++) {
+      //   if (!normals[index -1] || !normals[index - 1].equals(normals[index])) {
+      //     console.log('ne')
+      //   }
+      // }
+      //
+      // return normals[0];
+        const points = [lines[0].startVertex, lines[1].startVertex, lines[2].startVertex];
+        const vector1 = points[1].minus(points[0]);
+        const vector2 = points[2].minus(points[0]);
+        const normVect = vector1.crossProduct(vector2);
+        return normVect.scale(1 / normVect.magnitude());
     }
     this.normal = calcNormal;
 
@@ -44,6 +49,16 @@ class Polygon3D {
       return normal.parrelle(poly.normal());
     }
 
+    this.parrelleAt = (distance) => {
+      const normal = this.normal();
+      const scaled = normal.scale(distance);
+      const verticies = this.verticies();
+      for (let index = 0; index < verticies.length; index++) {
+        verticies[index].translate(scaled);
+      }
+      return new Polygon3D(verticies);
+    }
+
     this.verticies = () => {
       if (lines.length === 0) return [];
       const verticies = [];
@@ -52,10 +67,21 @@ class Polygon3D {
         verticies.push(line.startVertex);
       }
 
-      return verticies;
+      return JSON.clone(verticies);
     }
 
-    this.lines = () => lines;
+    this.isClockwise = () => {
+      let sum = 0;
+      for (let index = 0; index < lines.length; index += 1) {
+        const point1 = lines[index].startVertex;
+        const point2 = lines[index].startVertex;
+        sum += (point2.x - point1.x)*(point2.y + point1.y)*(point2.z - point1.z);
+      }
+      return sum > 0;
+    }
+
+    this.lines = () => JSON.clone(lines);
+    this.line = (index) => JSON.clone(lines[Math.mod(index, lines.length)]);
     this.startLine = () => lines[0];
     this.endLine = () => lines[lines.length - 1];
 

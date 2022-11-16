@@ -1,42 +1,46 @@
 <div>
-  <div class='border-part-code-cnt' {{obj._Type !== 'location' ? '' : 'hidden'}}>
-    <h4>Opening Border Part Codes</h4>
+  <h4>Opening Border Part Codes</h4>
+  <div class='tab border-part-code-cnt'>
     {{select.html()}}
     <input class='opening-part-code-input' attr='openings' name='partCode' value="{{obj[select.value()]}}">
+    <b>Flip Normal</b>
+    <input type="checkbox" name="flipNormal" {{obj.flipNormal ? 'checked' : ''}}>
   </div>
-  <div class='border-location-cnt' {{obj._Type === 'location' ? '' : 'hidden'}}>
-    <h4>Opening Border Locations</h4>
-    <label>Z Rotation</label>
-    <input type="text" name="zRotation" value="{{obj.zRotation}}">
-    <br><br>
-    <label>Inner</label>
-    <input type="radio" name="innerOouter-{{obj.id}}" value="true"
-        {{state.innerOouter === true ? 'checked' : ''}}>
-    <label>Outer</label>
-    <input type="radio" name="innerOouter-{{obj.id}}" value="false"
-        {{state.innerOouter === false ? 'checked' : ''}}>
-    <br><br>
+  <h4>Opening Border Locations</h4>
+  <div class='tab'>
+    Custom Vertex Formula:
+    <input class='opening-type-selector' type="checkbox" name="custom-formula"
+          {{obj._Type === 'location' ? 'checked' : ''}}>
+    <div class='border-location-cnt' {{obj._Type === 'location' ? '' : 'hidden'}}>
+      <label>Inner</label>
+      <input type="radio" name="innerOouter-{{obj.id}}" value="true"
+          {{state.innerOouter === 'true' ? 'checked' : ''}}>
+      <label>Outer</label>
+      <input type="radio" name="innerOouter-{{obj.id}}" value="false"
+          {{state.innerOouter === 'false' ? 'checked' : ''}}>
+      <br><br>
 
-    <label>Vertex:</label>
-    <br>
-    <span:t repeat='i in 0..4'>
-      <label>{{i}}</label>
-      <input type="radio" name="index-{{obj.id}}" value="{{i}}"
-          {{state.index === i ? 'checked' : ''}}>
-    </span:t>
+      <label>Vertex:</label>
+      <br>
+      <span:t repeat='i in 0..4' class='border-location-cnt'>
+        <label>{{i}}</label>
+        <input type="radio" name="index-{{obj.id}}" value="{{i}}"
+            {{state.index === i ? 'checked' : ''}}>
+      </span:t>
 
-    <br><br>
-    <label>X</label>
-    <input type="radio" name="xOyOz-{{obj.id}}" value="x"
-        {{state.xOyOz === 'x' ? 'checked' : ''}}>
-    <label>Y</label>
-    <input type="radio" name="xOyOz-{{obj.id}}" value="y"
-        {{state.xOyOz === 'y' ? 'checked' : ''}}>
-    <label>Z</label>
-    <input type="radio" name="xOyOz-{{obj.id}}" value="z"
-        {{state.xOyOz === 'z' ? 'checked' : ''}}>
-    <br><br>
-    <input type='text' name='opening-coordinate-value' value=''>
+      <br><br>
+      <label>X</label>
+      <input type="radio" name="xOyOz-{{obj.id}}" value="x"
+          {{state.xOyOz === 'x' ? 'checked' : ''}}>
+      <label>Y</label>
+      <input type="radio" name="xOyOz-{{obj.id}}" value="y"
+          {{state.xOyOz === 'y' ? 'checked' : ''}}>
+      <label>Z</label>
+      <input type="radio" name="xOyOz-{{obj.id}}" value="z"
+          {{state.xOyOz === 'z' ? 'checked' : ''}}>
+      <br><br>
+      <input type='text' name='opening-coordinate-value' value=''>
+    </div>
     <div class='opening-location-value-cnt'></div>
     <div class='opening-location-description-cnt'></div>
   </div>

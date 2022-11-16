@@ -29,6 +29,11 @@ class Approximate {
     approximate.eqAbs = approximateFunc((one, two) => Math.abs(one) === Math.abs(two));
     approximate.neqAbs = approximateFunc((one, two) => Math.abs(one) !== Math.abs(two));
     approximate.abs = (value) => Math.abs(approximate(value));
+    approximate.object = (obj) => {
+      const approx = {};
+      return Object.forAllRecursive(obj,
+            (value) => (typeof value) === 'number' ? approximate(value) : value);
+    }
     return approximate;
   }
 }

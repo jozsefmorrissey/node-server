@@ -9,22 +9,29 @@ class DualDoorSection extends Assembly {
   constructor(sectionProperties) {
     super('dds', 'Duel.Door.Section');
     if (sectionProperties === undefined) return;
+    const instance = this;
 
 
 
-    function center() {
-      return sectionProperties.coverInfo().center;
-    }
     this.part = () => false;
 
     function duelDoorCenter(right) {
       return function () {
-        const direction = right ? -1 : 1;
+        const cabinet = sectionProperties.getAssembly('c');
+        if (cabinet)
+          cabinet.openings[0].update();
+        let direction = sectionProperties.vertical() ? 1 : -1;
+        direction *= right ? 1 : -1;
         const doorGap = 2.54/16
         const coverInfo = sectionProperties.coverInfo();
-        let center = coverInfo.center;
+        let center = JSON.copy(coverInfo.center);
         const dems = duelDoorDems();
-        center = sectionProperties.offsetPoint(center, (dems.x + doorGap) / 2 * direction, 0, 0);
+        const xOffset = (dems.x + doorGap) / 2 * direction;
+        const rotation = sectionProperties.rotation();
+          rotation.x += 180;
+          rotation.y += 180;
+          rotation.z += 180;
+        center = sectionProperties.transRotate(center, {z:0, y:0, x:xOffset}, rotation);
         return center;
       }
     }

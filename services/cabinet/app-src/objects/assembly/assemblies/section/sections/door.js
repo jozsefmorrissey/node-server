@@ -8,20 +8,15 @@ class DoorSection extends Assembly {
   constructor(sectionProperties) {
     super();
     if (sectionProperties === undefined) return;
-    function center() {
-      return sectionProperties.coverInfo().center;
-    }
+    const instance = this;
     this.part = () => false;
 
-    function dems() {
-      const coverInfo = sectionProperties.coverInfo();
-      return {
-        x: coverInfo.width,
-        y: coverInfo.length,
-        z: coverInfo.doorThickness
-      }
+
+    function getBiPolygon () {
+      return sectionProperties.coverInfo().biPolygon;
     }
-    const door = new Door('d', 'Door', center, dems, sectionProperties.rotation);
+
+    const door = new Door('d', 'Door', getBiPolygon);
     this.door = () => door;
     this.pull = () => door.pull();
     this.addSubAssembly(door);

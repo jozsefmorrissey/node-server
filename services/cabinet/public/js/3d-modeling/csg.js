@@ -263,6 +263,10 @@ CSG.prototype = {
   },
 
   rotate: function (rotations) {
+    if (Array.isArray(rotations)) {
+      for (let i = 0; i < rotations.length; i++) this.rotate(rotations[i])
+      return;
+    }
     this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
       let newPos = vertex.pos;
       newPos = ArbitraryRotate(newPos, rotations.x, {x: 1, y:0, z:0});

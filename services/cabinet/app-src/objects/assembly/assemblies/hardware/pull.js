@@ -2,7 +2,7 @@
 
 
 const Assembly = require('../../assembly.js');
-
+const CSG = require('../../../../../public/js/3d-modeling/csg.js');
 /*
     a,b,c
     d,e,f
@@ -12,9 +12,12 @@ class Handle extends Assembly {
   constructor(partCode, partName, door, location, index, count) {
     let instance;
     function rotationConfig() {
-      if (!instance || !instance.location) return {x:0,y:0,z:0};
-      return instance.location && instance.location() && instance.location().rotate ?
-          {x: 0, y:0, z: 90} : {x: 0, y:0, z: 0};
+      const rotation = door.position().rotation();
+      if (!instance || !instance.location) return rotation;
+      if (instance.location && instance.location() && instance.location().rotate) {
+        return [{x:0,y:0,z:90}, rotation];
+      }
+      return rotation;
     }
     function demensionConfig(attr) {
       if (!instance || !instance.location) return {x:0,y:0,z:0};
@@ -23,57 +26,61 @@ class Handle extends Assembly {
     }
     function centerConfig(attr) {
       if (!instance || !instance.location) return {x:0,y:0,z:0};
-        let center = door.position().center();
-        let doorDems = door.position().demension();
+        let center;
         let pullDems = instance.demensionConfig();
-        center.z -= (doorDems.z + pullDems.z) / 2;
         const edgeOffset = (19 * 2.54) / 16;
         const toCenter = 3 * 2.54;
+        const front = door.front();
 
         switch (instance.location()) {
           case Handle.location.TOP_RIGHT:
-            center.x = center.x + doorDems.x / 2 -  edgeOffset;
-            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
+            offset.x = doorDems.x / 2 -  edgeOffset;
+            offset.y = doorDems.y / 2 - (pullDems.y / 2 + toCenter);
             break;
           case Handle.location.TOP_LEFT:
-            center.x = center.x - doorDems.x / 2 +  edgeOffset;
-            center.y = center.y + doorDems.y / 2 - (pullDems.y / 2 + toCenter);
+            offset.x = -doorDems.x / 2 +  edgeOffset;
+            offset.y = doorDems.y / 2 - (pullDems.y / 2 + toCenter);
             break;
           case Handle.location.BOTTOM_RIGHT:
-            center.x = center.x + doorDems.x / 2 -  edgeOffset;
-            center.y = center.y - doorDems.y / 2 + (pullDems.y / 2 + toCenter);
+            offset.x = doorDems.x / 2 -  edgeOffset;
+            offset.y = -doorDems.y / 2 + (pullDems.y / 2 + toCenter);
             break;
           case Handle.location.BOTTOM_LEFT:
-            center.x = center.x - doorDems.x / 2 +  edgeOffset;
-            center.y = center.y - doorDems.y / 2 + (pullDems.y / 2 + toCenter);
+            offset.x = -doorDems.x / 2 +  edgeOffset;
+            offset.y = -doorDems.y / 2 + (pullDems.y / 2 + toCenter);
             break;
           case Handle.location.TOP:
-            center.x = offset(center.x, doorDems.x);
-            center.y += doorDems.y / 2 - edgeOffset;
+            offset.x = 0;//offset(offset.x, doorDems.x);
+            offset.y = doorDems.y / 2 - edgeOffset;
             break;
           case Handle.location.BOTTOM:
-            center.x = offset(center.x, doorDems.x);
-            center.y -= doorDems.y / 2 - edgeOffset;
+            offset.x = 0;//offset(offset.x, doorDems.x);
+            offset.y = doorDems.y / -2 + edgeOffset;
             break;
           case Handle.location.RIGHT:
-            center.y = center.y;
-            center.x += doorDems.x / 2 - edgeOffset;
+            offset.y = 0;
+            offset.x = doorDems.x / 2 - edgeOffset;
             break;
           case Handle.location.LEFT:
-            center.y = center.y;
-            center.x -= doorDems.x / 2 - edgeOffset;
+            const top = front.line(0);
+            center = top.startVertex;
+            center.translate(top.vector().unit().scale(edgeOffset));
+            const left = front.line(3);
+            center.translate(left.vector().unit().inverse().scale(toCenter));
             break;
           case Handle.location.CENTER:
-            center.x = offset(center.x, doorDems.x);
-            break;
+            offset.x = 0;
+            offset.y = 0;
+          break;
           case undefined:
-            center.x = 0;
-            center.y = 0;
-            center.z = 0;
+            offset.x = 0;
+            offset.y = 0;
             break;
           default:
             throw new Error('Invalid pull location');
         }
+        const norm = front.normal().inverse();
+        center.translate(norm.scale(pullDems.z / 2));
         return attr ? center[attr] : center;
     };
 
