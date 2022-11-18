@@ -40,11 +40,19 @@ class LayouSketch {
           const inner = JSON.copy(section.coordinates().inner);
           // For some reason the sketch canvas is mirrored in the y direction
           inner[0].y*=-1;inner[1].y*=-1;inner[2].y*=-1;inner[3].y*=-1;
-          const lines = [new Line2d(inner[0], inner[1]),
+          let lines = [new Line2d(inner[0], inner[1]),
                           new Line2d(inner[1], inner[2]),
                           new Line2d(inner[2], inner[3]),
                           new Line2d(inner[3], inner[0])];
           sketch(lines, undefined, .3);
+          const outer = JSON.copy(section.coordinates().outer);
+          // For some reason the sketch canvas is mirrored in the y direction
+          outer[0].y*=-1;outer[1].y*=-1;outer[2].y*=-1;outer[3].y*=-1;
+          lines = [new Line2d(outer[0], outer[1]),
+                          new Line2d(outer[1], outer[2]),
+                          new Line2d(outer[2], outer[3]),
+                          new Line2d(outer[3], outer[0])];
+          sketch(lines, 'green', .3);
           allLines.concatInPlace(lines);
         }
       }

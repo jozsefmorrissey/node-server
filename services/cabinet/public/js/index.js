@@ -19397,11 +19397,19 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 	          const inner = JSON.copy(section.coordinates().inner);
 	          // For some reason the sketch canvas is mirrored in the y direction
 	          inner[0].y*=-1;inner[1].y*=-1;inner[2].y*=-1;inner[3].y*=-1;
-	          const lines = [new Line2d(inner[0], inner[1]),
+	          let lines = [new Line2d(inner[0], inner[1]),
 	                          new Line2d(inner[1], inner[2]),
 	                          new Line2d(inner[2], inner[3]),
 	                          new Line2d(inner[3], inner[0])];
 	          sketch(lines, undefined, .3);
+	          const outer = JSON.copy(section.coordinates().outer);
+	          // For some reason the sketch canvas is mirrored in the y direction
+	          outer[0].y*=-1;outer[1].y*=-1;outer[2].y*=-1;outer[3].y*=-1;
+	          lines = [new Line2d(outer[0], outer[1]),
+	                          new Line2d(outer[1], outer[2]),
+	                          new Line2d(outer[2], outer[3]),
+	                          new Line2d(outer[3], outer[0])];
+	          sketch(lines, 'green', .3);
 	          allLines.concatInPlace(lines);
 	        }
 	      }
@@ -27349,11 +27357,11 @@ function (require, exports, module) {
 	      const pts = this.points();
 	      const include = [];
 	      const constants = {};
-	      if (true || !this.parrelleTo('x')) include.push({axis: 'x', coef: 'a'});
+	      if (!this.parrelleTo('x')) include.push({axis: 'x', coef: 'a'});
 	      else constants['x'] = pts[0].x;
-	      if (true || !this.parrelleTo('y')) include.push({axis: 'y', coef: 'b'});
+	      if (!this.parrelleTo('y')) include.push({axis: 'y', coef: 'b'});
 	      else constants['y'] = pts[0].y;
-	      if (true || !this.parrelleTo('z')) include.push({axis: 'z', coef: 'c'});
+	      if (!this.parrelleTo('z')) include.push({axis: 'z', coef: 'c'});
 	      else constants['z'] = pts[0].z;
 	
 	      const systemOfEquations = new Matrix(null, include.length, include.length);
@@ -27428,6 +27436,12 @@ function (require, exports, module) {
 	      const a2 = lEqn.a;
 	      const b2 = lEqn.b;
 	      const c2 = lEqn.c;
+	
+	      const sv = line.startVertex;
+	      const p = this.points()[0];
+	      if (a2 === 0 && b2 === 0 && c1 === 0) return new Vertex3D(sv.x, sv.y, p.z);
+	      if (a2 === 0 && c2 === 0 && b1 === 0) return new Vertex3D(sv.x, p.y, sv.z);
+	      if (b2 === 0 && c2 === 0 && a1 === 0) return new Vertex3D(p.x, sv.y, sv.z);
 	
 	      const t = -(a1*x0+b1*y0+c1*z0-d)/(a1*a2+b1*b2+c1*c2);
 	
@@ -27525,17 +27539,34 @@ function (require, exports, module) {
 	
 	// TODO: not used but could be helpful. - fix
 	Plane.fromPointNormal = (point, normal) => {
+	  const fixed = [];
 	  const a = normal.i();
 	  const b = normal.j();
 	  const c = normal.k();
+	  const vectArray = normal.toArray();
+	
+	  if (a===0 && b===0 && c===0) return;
+	
 	  const x0 = point.x;
 	  const y0 = point.y;
 	  const z0 = point.z;
-	  const getZ = (x,y) => (a*(x-x0)+b*(y-y0)-c*z0)/-c;
+	  const pointArray = [x0, y0, z0];
+	  let startIndex = 0;
+	  while (vectArray[startIndex] === 0) startIndex++;
+	  const get = (x,y) => {
+	    const ansI = startIndex;
+	    const aI = (startIndex + 1) % 3;
+	    const bI = (startIndex + 2) % 3;
+	    const answer = (vectArray[aI]*(x-pointArray[aI])+vectArray[bI]*(y-pointArray[bI])-vectArray[ansI]*pointArray[ansI])/-vectArray[ansI];
+	    const p = [];p[ansI] = answer;p[aI] = x;p[bI] = y;
+	    return new Vertex3D(...p);
+	    // (a*(x-x0)+b*(y-y0)-c*z0)/-c;
+	  }
 	  // there is a chance that these three points will be colinear.... not likely and I have more important stuff to do.
-	  const point1 = {x: 13, y: 677, z: getZ(13,677)};
-	  const point2 = {x: 127, y: 43, z: getZ(127,43)};
-	  const point3 = {x: 107, y: 563, z: getZ(107,563)};
+	
+	  const point1 = get(13,677);
+	  const point2 = get(127,43);
+	  const point3 = get(107,563);
 	  return new Plane(point1, point2, point3);
 	}
 	
@@ -30887,6 +30918,7 @@ function (require, exports, module) {
 const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	const Polygon3D = require('../../../../three-d/objects/polygon.js');
 	const Line3D = require('../../../../three-d/objects/line.js');
+	const Plane = require('../../../../three-d/objects/plane.js');
 	const BiPolygon = require('../../../../three-d/objects/bi-polygon.js');
 	const KeyValue = require('../../../../../../../public/js/utils/object/key-value.js');
 	const Notification = require('../../../../../../../public/js/utils/collections/notification.js');
@@ -31070,7 +31102,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	    //
 	    // }
 	
-	    function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter) {
+	    function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset) {
 	      const coords = {};
 	      instance.getRoot().openings[0].update();
 	      const fresh = instance.coordinates();
@@ -31086,10 +31118,10 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	                        rightOutLine.pointAtDistance(endOuter),
 	                        rightOutLine.pointAtDistance(startOuter),
 	                        leftOutLine.pointAtDistance(startOuter)];
-	        coords.inner = [leftInnerLine.pointAtDistance(endInner),
-	                        rightInnerLine.pointAtDistance(endInner),
-	                        rightInnerLine.pointAtDistance(startInner),
-	                        leftInnerLine.pointAtDistance(startInner)];
+	        coords.inner = [leftInnerLine.pointAtDistance(endInner - innerOffset),
+	                        rightInnerLine.pointAtDistance(endInner - innerOffset),
+	                        rightInnerLine.pointAtDistance(startInner - innerOffset),
+	                        leftInnerLine.pointAtDistance(startInner - innerOffset)];
 	
 	      } else {
 	        const topOutLine = new Line3D(outer[0], outer[1]);
@@ -31100,93 +31132,127 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	                        topOutLine.pointAtDistance(endOuter),
 	                        bottomOutLine.pointAtDistance(endOuter),
 	                        bottomOutLine.pointAtDistance(startOuter)];
-	        coords.inner = [topInnerLine.pointAtDistance(startInner),
-	                        topInnerLine.pointAtDistance(endInner),
-	                        bottomInnerLine.pointAtDistance(endInner),
-	                        bottomInnerLine.pointAtDistance(startInner)];
+	        coords.inner = [topInnerLine.pointAtDistance(startInner - innerOffset),
+	                        topInnerLine.pointAtDistance(endInner - innerOffset),
+	                        bottomInnerLine.pointAtDistance(endInner - innerOffset),
+	                        bottomInnerLine.pointAtDistance(startInner - innerOffset)];
 	      }
 	      section.updateCoordinates(coords);
 	    }
 	
 	    function setSectionCoordinates() {
 	      instance.getRoot().openings[0].update();
-	      const vertical = instance.vertical();
 	      const dividerOffsetInfo = instance.dividerOffsetInfo();
-	      const revealOffsetInfo = instance.revealOffsetInfo();
-	      const isReveal = instance.propertyConfig().isReveal();
-	      let distance = isReveal ?
-	              (!vertical ? instance.outerLength() : instance.outerWidth()) :
-	              (!vertical ? instance.innerLength() : instance.innerWidth());
-	      if (revealOffsetInfo.length > 1) {
-	        distance -= revealOffsetInfo._TOTAL;
-	        const patternInfo = instance.pattern().calc(distance);
+	      const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
+	
+	      if (coverage.length > 1) {
+	        const patternInfo = instance.pattern().calc(coverage._TOTAL);
 	
 	        let offset = 0;
+	        const innerOffset = dividerOffsetInfo[0].offset;
 	        for (let index = 0; index < instance.sections.length; index++) {
 	          const section = instance.sections[index];
 	          const patVal = patternInfo.list;
+	          const overlayOffset = coverage[index * 2].overlay + coverage[index * 2 + 1].overlay;
 	          let startOuter, startInner, endInner, endOuter;
+	
 	          startOuter = offset;
-	          startInner = startOuter + revealOffsetInfo[index].offset/2;
-	          endInner = startInner + patVal[index];
-	          endOuter = endInner + revealOffsetInfo[index + 1].offset / 2;
+	          if (index === 0) startInner = startOuter + dividerOffsetInfo[index].offset;
+	          else startInner = startOuter + dividerOffsetInfo[index].offset/2;
+	
+	
+	          endInner = startInner + patVal[index] - overlayOffset;
+	          if (index === instance.sections.length - 1) endOuter = endInner + dividerOffsetInfo[index + 1].offset;
+	          else endOuter = endInner + dividerOffsetInfo[index + 1].offset / 2;
 	          if (index < instance.sections.length - 1) section.divideRight(true);
-	          updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter);
+	          updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset);
 	          offset = endOuter;
 	        }
 	      }
 	    }
 	
-	    this.revealOffsetInfo = () => {
-	      const info = [{offset: 0}];
-	      info._TOTAL = 0;
+	    function perpendicularDistance(point, line) {
+	      if (instance.sectionCount() !== 0) {
+	        const plane = Plane.fromPointNormal(point, line.vector());
+	        const intersection = plane.lineIntersection(line);
+	        const distance = line.startVertex.distance(intersection);
+	        return distance;
+	      }
+	      return 0;
+	    }
+	
+	    this.coverage = (startOffset, endOffset) => {
+	      const info = [];
 	      const propConfig = this.propertyConfig();
-	      for (let index = 0; index < this.sections.length; index += 1) {
-	        const section = this.sections[index];
+	      const isReveal = propConfig.isReveal();
+	      const isInset = propConfig.isInset();
+	      const vertical = instance.vertical();
+	      info._TOTAL = isReveal ?
+	              (!vertical ? instance.outerLength() : instance.outerWidth()) :
+	              (!vertical ? instance.innerLength() : instance.innerWidth());
+	
+	      let overlay, reveal, insetValue;
+	      if (isReveal) reveal = propConfig.reveal().r.value();
+	      else if (propConfig.isInset()) insetValue = propConfig('Inset').is.value();
+	      else overlay = propConfig.overlay();
+	
+	      for (let index = 0; index < this.sections.length * 2; index += 1) {
+	        const section = this.sections[Math.ceil((index - 1)/2)];
 	        let offset = 0;
-	        if (index < this.sections.length - 1) {
-	          const divider = section.divider();
-	          if (propConfig.isReveal()) {
-	            if (offset === 0) offset += propConfig.reveal().r.value();
-	            offset += propConfig.reveal().r.value();
-	          }  else if (propConfig.isInset()) {
-	            const insetValue = propConfig('Inset').is.value();
-	            offset += divider.maxWidth() + insetValue * 2;
-	          } else {
-	            offset += divider.maxWidth();
-	            offset -= propConfig.overlay() * 2;
+	        const divider = section.divider();
+	        if (isReveal) {
+	          if (index % 2 === 0) {
+	            if (index === 0) info._TOTAL -= reveal;
+	            else info._TOTAL -= reveal;
 	          }
-	          info[index + 1] = {offset, divider};
+	          if (index === 0) info.push({overlay: startOffset - reveal / 2});
+	          if (index === this.sections.length - 1) info.push({overlay: endOffset - reveal / 2});
+	          else info.push({overlay: (divider.maxWidth() - reveal)/2});
+	        }  else if (isInset) {
+	          if (index % 2 === 0) {
+	            if (index === this.sections.length * 2 - 2) info._TOTAL -= insetValue * 2;
+	            else info._TOTAL -= (divider.maxWidth() + insetValue * 2);
+	          }
+	          info.push({overlay: -insetValue});
 	        } else {
-	          info[index + 1] = {offset};
+	          if (index % 2 === 0) {
+	            if (index === this.sections.length * 2 - 2) info._TOTAL += overlay * 2;
+	            else info._TOTAL += overlay * 2 - divider.maxWidth();
+	          }
+	          info.push({overlay: overlay});
 	        }
-	        info._TOTAL += offset;
 	      }
 	      return info;
 	    }
 	
 	    this.dividerOffsetInfo = () => {
-	      const info = [];
+	      let startOffset = 0;
+	      let endOffset = 0;
+	
+	      const coords = this.coordinates();
+	      const outer = coords.outer;
+	      const inner = coords.inner;
+	      if (this.vertical()) {
+	         startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[1]));
+	         endOffset = perpendicularDistance(outer[1], new Line3D(inner[0], inner[1]));
+	       } else {
+	         startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[3]));
+	         endOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[0]));
+	       }
+	       const info = [{offset: startOffset}];
+	       info.startOffset = startOffset;
+	       info.endOffset = endOffset;
+	
 	      let offset = this.isVertical() ? this.outerLength() : this.outerWidth();
 	      const propConfig = this.propertyConfig();
 	      for (let index = 0; index < this.sections.length; index += 1) {
-	        const section = this.sections[index];
 	        if (index < this.sections.length - 1) {
+	          const section = this.sections[index];
 	          const divider = section.divider();
-	          const maxWidth = divider.maxWidth();
-	          let halfReveal;
-	          if (propConfig.isReveal()) {
-	            halfReveal = propConfig.reveal().r.value() / 2;
-	          } else if (propConfig.isInset()) {
-	            const insetValue = propConfig('Inset').is.value();
-	            halfReveal = (divider.maxWidth() + insetValue * 2) / 2;
-	          } else {
-	            halfReveal = (maxWidth - propConfig.overlay() * 2)/2;
-	          }
-	          info[index] = {offset, divider};
-	          offset = offset + index < this.sections.length - 1 ? halfReveal*2 : halfReveal;
+	          const offset = divider.maxWidth();
+	          info[index + 1] = {offset, divider};
 	        } else {
-	          info[index] = {offset};
+	          info[index + 1] = {offset: endOffset};
 	        }
 	      }
 	      return info;
@@ -31312,7 +31378,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      const innerCenter = this.innerCenter();
 	      const coordinates = this.coordinates();
 	      if (!this.verticalDivisions()) {
-	        const outer = coordinates.inner;
+	        const outer = coordinates.outer;
 	        const point1 = outer[0];
 	        const point2 = outer[1];
 	        let depthVector = new Polygon3D(outer).normal();
@@ -31323,7 +31389,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	        const offset = panelThickness / (config.flipNormal ? -2 : 2);
 	        return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset, null, config.flipNormal);
 	      }
-	      const outer = coordinates.inner;
+	      const outer = coordinates.outer;
 	      const point1 = outer[1];
 	      const point2 = outer[2];
 	      let depthVector = new Polygon3D(outer).normal();

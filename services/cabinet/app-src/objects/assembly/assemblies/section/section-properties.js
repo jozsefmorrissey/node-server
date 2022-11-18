@@ -2,6 +2,7 @@
 const Vertex3D = require('../../../../three-d/objects/vertex.js');
 const Polygon3D = require('../../../../three-d/objects/polygon.js');
 const Line3D = require('../../../../three-d/objects/line.js');
+const Plane = require('../../../../three-d/objects/plane.js');
 const BiPolygon = require('../../../../three-d/objects/bi-polygon.js');
 const KeyValue = require('../../../../../../../public/js/utils/object/key-value.js');
 const Notification = require('../../../../../../../public/js/utils/collections/notification.js');
@@ -185,7 +186,7 @@ class SectionProperties extends KeyValue{
     //
     // }
 
-    function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter) {
+    function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset) {
       const coords = {};
       instance.getRoot().openings[0].update();
       const fresh = instance.coordinates();
@@ -201,10 +202,10 @@ class SectionProperties extends KeyValue{
                         rightOutLine.pointAtDistance(endOuter),
                         rightOutLine.pointAtDistance(startOuter),
                         leftOutLine.pointAtDistance(startOuter)];
-        coords.inner = [leftInnerLine.pointAtDistance(endInner),
-                        rightInnerLine.pointAtDistance(endInner),
-                        rightInnerLine.pointAtDistance(startInner),
-                        leftInnerLine.pointAtDistance(startInner)];
+        coords.inner = [leftInnerLine.pointAtDistance(endInner - innerOffset),
+                        rightInnerLine.pointAtDistance(endInner - innerOffset),
+                        rightInnerLine.pointAtDistance(startInner - innerOffset),
+                        leftInnerLine.pointAtDistance(startInner - innerOffset)];
 
       } else {
         const topOutLine = new Line3D(outer[0], outer[1]);
@@ -215,93 +216,127 @@ class SectionProperties extends KeyValue{
                         topOutLine.pointAtDistance(endOuter),
                         bottomOutLine.pointAtDistance(endOuter),
                         bottomOutLine.pointAtDistance(startOuter)];
-        coords.inner = [topInnerLine.pointAtDistance(startInner),
-                        topInnerLine.pointAtDistance(endInner),
-                        bottomInnerLine.pointAtDistance(endInner),
-                        bottomInnerLine.pointAtDistance(startInner)];
+        coords.inner = [topInnerLine.pointAtDistance(startInner - innerOffset),
+                        topInnerLine.pointAtDistance(endInner - innerOffset),
+                        bottomInnerLine.pointAtDistance(endInner - innerOffset),
+                        bottomInnerLine.pointAtDistance(startInner - innerOffset)];
       }
       section.updateCoordinates(coords);
     }
 
     function setSectionCoordinates() {
       instance.getRoot().openings[0].update();
-      const vertical = instance.vertical();
       const dividerOffsetInfo = instance.dividerOffsetInfo();
-      const revealOffsetInfo = instance.revealOffsetInfo();
-      const isReveal = instance.propertyConfig().isReveal();
-      let distance = isReveal ?
-              (!vertical ? instance.outerLength() : instance.outerWidth()) :
-              (!vertical ? instance.innerLength() : instance.innerWidth());
-      if (revealOffsetInfo.length > 1) {
-        distance -= revealOffsetInfo._TOTAL;
-        const patternInfo = instance.pattern().calc(distance);
+      const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
+
+      if (coverage.length > 1) {
+        const patternInfo = instance.pattern().calc(coverage._TOTAL);
 
         let offset = 0;
+        const innerOffset = dividerOffsetInfo[0].offset;
         for (let index = 0; index < instance.sections.length; index++) {
           const section = instance.sections[index];
           const patVal = patternInfo.list;
+          const overlayOffset = coverage[index * 2].overlay + coverage[index * 2 + 1].overlay;
           let startOuter, startInner, endInner, endOuter;
+
           startOuter = offset;
-          startInner = startOuter + revealOffsetInfo[index].offset/2;
-          endInner = startInner + patVal[index];
-          endOuter = endInner + revealOffsetInfo[index + 1].offset / 2;
+          if (index === 0) startInner = startOuter + dividerOffsetInfo[index].offset;
+          else startInner = startOuter + dividerOffsetInfo[index].offset/2;
+
+
+          endInner = startInner + patVal[index] - overlayOffset;
+          if (index === instance.sections.length - 1) endOuter = endInner + dividerOffsetInfo[index + 1].offset;
+          else endOuter = endInner + dividerOffsetInfo[index + 1].offset / 2;
           if (index < instance.sections.length - 1) section.divideRight(true);
-          updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter);
+          updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset);
           offset = endOuter;
         }
       }
     }
 
-    this.revealOffsetInfo = () => {
-      const info = [{offset: 0}];
-      info._TOTAL = 0;
+    function perpendicularDistance(point, line) {
+      if (instance.sectionCount() !== 0) {
+        const plane = Plane.fromPointNormal(point, line.vector());
+        const intersection = plane.lineIntersection(line);
+        const distance = line.startVertex.distance(intersection);
+        return distance;
+      }
+      return 0;
+    }
+
+    this.coverage = (startOffset, endOffset) => {
+      const info = [];
       const propConfig = this.propertyConfig();
-      for (let index = 0; index < this.sections.length; index += 1) {
-        const section = this.sections[index];
+      const isReveal = propConfig.isReveal();
+      const isInset = propConfig.isInset();
+      const vertical = instance.vertical();
+      info._TOTAL = isReveal ?
+              (!vertical ? instance.outerLength() : instance.outerWidth()) :
+              (!vertical ? instance.innerLength() : instance.innerWidth());
+
+      let overlay, reveal, insetValue;
+      if (isReveal) reveal = propConfig.reveal().r.value();
+      else if (propConfig.isInset()) insetValue = propConfig('Inset').is.value();
+      else overlay = propConfig.overlay();
+
+      for (let index = 0; index < this.sections.length * 2; index += 1) {
+        const section = this.sections[Math.ceil((index - 1)/2)];
         let offset = 0;
-        if (index < this.sections.length - 1) {
-          const divider = section.divider();
-          if (propConfig.isReveal()) {
-            if (offset === 0) offset += propConfig.reveal().r.value();
-            offset += propConfig.reveal().r.value();
-          }  else if (propConfig.isInset()) {
-            const insetValue = propConfig('Inset').is.value();
-            offset += divider.maxWidth() + insetValue * 2;
-          } else {
-            offset += divider.maxWidth();
-            offset -= propConfig.overlay() * 2;
+        const divider = section.divider();
+        if (isReveal) {
+          if (index % 2 === 0) {
+            if (index === 0) info._TOTAL -= reveal;
+            else info._TOTAL -= reveal;
           }
-          info[index + 1] = {offset, divider};
+          if (index === 0) info.push({overlay: startOffset - reveal / 2});
+          if (index === this.sections.length - 1) info.push({overlay: endOffset - reveal / 2});
+          else info.push({overlay: (divider.maxWidth() - reveal)/2});
+        }  else if (isInset) {
+          if (index % 2 === 0) {
+            if (index === this.sections.length * 2 - 2) info._TOTAL -= insetValue * 2;
+            else info._TOTAL -= (divider.maxWidth() + insetValue * 2);
+          }
+          info.push({overlay: -insetValue});
         } else {
-          info[index + 1] = {offset};
+          if (index % 2 === 0) {
+            if (index === this.sections.length * 2 - 2) info._TOTAL += overlay * 2;
+            else info._TOTAL += overlay * 2 - divider.maxWidth();
+          }
+          info.push({overlay: overlay});
         }
-        info._TOTAL += offset;
       }
       return info;
     }
 
     this.dividerOffsetInfo = () => {
-      const info = [];
+      let startOffset = 0;
+      let endOffset = 0;
+
+      const coords = this.coordinates();
+      const outer = coords.outer;
+      const inner = coords.inner;
+      if (this.vertical()) {
+         startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[1]));
+         endOffset = perpendicularDistance(outer[1], new Line3D(inner[0], inner[1]));
+       } else {
+         startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[3]));
+         endOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[0]));
+       }
+       const info = [{offset: startOffset}];
+       info.startOffset = startOffset;
+       info.endOffset = endOffset;
+
       let offset = this.isVertical() ? this.outerLength() : this.outerWidth();
       const propConfig = this.propertyConfig();
       for (let index = 0; index < this.sections.length; index += 1) {
-        const section = this.sections[index];
         if (index < this.sections.length - 1) {
+          const section = this.sections[index];
           const divider = section.divider();
-          const maxWidth = divider.maxWidth();
-          let halfReveal;
-          if (propConfig.isReveal()) {
-            halfReveal = propConfig.reveal().r.value() / 2;
-          } else if (propConfig.isInset()) {
-            const insetValue = propConfig('Inset').is.value();
-            halfReveal = (divider.maxWidth() + insetValue * 2) / 2;
-          } else {
-            halfReveal = (maxWidth - propConfig.overlay() * 2)/2;
-          }
-          info[index] = {offset, divider};
-          offset = offset + index < this.sections.length - 1 ? halfReveal*2 : halfReveal;
+          const offset = divider.maxWidth();
+          info[index + 1] = {offset, divider};
         } else {
-          info[index] = {offset};
+          info[index + 1] = {offset: endOffset};
         }
       }
       return info;
@@ -427,7 +462,7 @@ class SectionProperties extends KeyValue{
       const innerCenter = this.innerCenter();
       const coordinates = this.coordinates();
       if (!this.verticalDivisions()) {
-        const outer = coordinates.inner;
+        const outer = coordinates.outer;
         const point1 = outer[0];
         const point2 = outer[1];
         let depthVector = new Polygon3D(outer).normal();
@@ -438,7 +473,7 @@ class SectionProperties extends KeyValue{
         const offset = panelThickness / (config.flipNormal ? -2 : 2);
         return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset, null, config.flipNormal);
       }
-      const outer = coordinates.inner;
+      const outer = coordinates.outer;
       const point1 = outer[1];
       const point2 = outer[2];
       let depthVector = new Polygon3D(outer).normal();

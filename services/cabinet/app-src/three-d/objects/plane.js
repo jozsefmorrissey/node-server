@@ -107,11 +107,11 @@ class Plane extends Array {
       const pts = this.points();
       const include = [];
       const constants = {};
-      if (true || !this.parrelleTo('x')) include.push({axis: 'x', coef: 'a'});
+      if (!this.parrelleTo('x')) include.push({axis: 'x', coef: 'a'});
       else constants['x'] = pts[0].x;
-      if (true || !this.parrelleTo('y')) include.push({axis: 'y', coef: 'b'});
+      if (!this.parrelleTo('y')) include.push({axis: 'y', coef: 'b'});
       else constants['y'] = pts[0].y;
-      if (true || !this.parrelleTo('z')) include.push({axis: 'z', coef: 'c'});
+      if (!this.parrelleTo('z')) include.push({axis: 'z', coef: 'c'});
       else constants['z'] = pts[0].z;
 
       const systemOfEquations = new Matrix(null, include.length, include.length);
@@ -186,6 +186,12 @@ class Plane extends Array {
       const a2 = lEqn.a;
       const b2 = lEqn.b;
       const c2 = lEqn.c;
+
+      const sv = line.startVertex;
+      const p = this.points()[0];
+      if (a2 === 0 && b2 === 0 && c1 === 0) return new Vertex3D(sv.x, sv.y, p.z);
+      if (a2 === 0 && c2 === 0 && b1 === 0) return new Vertex3D(sv.x, p.y, sv.z);
+      if (b2 === 0 && c2 === 0 && a1 === 0) return new Vertex3D(p.x, sv.y, sv.z);
 
       const t = -(a1*x0+b1*y0+c1*z0-d)/(a1*a2+b1*b2+c1*c2);
 
@@ -283,17 +289,34 @@ Plane.bisector = (p1, p2) => {
 
 // TODO: not used but could be helpful. - fix
 Plane.fromPointNormal = (point, normal) => {
+  const fixed = [];
   const a = normal.i();
   const b = normal.j();
   const c = normal.k();
+  const vectArray = normal.toArray();
+
+  if (a===0 && b===0 && c===0) return;
+
   const x0 = point.x;
   const y0 = point.y;
   const z0 = point.z;
-  const getZ = (x,y) => (a*(x-x0)+b*(y-y0)-c*z0)/-c;
+  const pointArray = [x0, y0, z0];
+  let startIndex = 0;
+  while (vectArray[startIndex] === 0) startIndex++;
+  const get = (x,y) => {
+    const ansI = startIndex;
+    const aI = (startIndex + 1) % 3;
+    const bI = (startIndex + 2) % 3;
+    const answer = (vectArray[aI]*(x-pointArray[aI])+vectArray[bI]*(y-pointArray[bI])-vectArray[ansI]*pointArray[ansI])/-vectArray[ansI];
+    const p = [];p[ansI] = answer;p[aI] = x;p[bI] = y;
+    return new Vertex3D(...p);
+    // (a*(x-x0)+b*(y-y0)-c*z0)/-c;
+  }
   // there is a chance that these three points will be colinear.... not likely and I have more important stuff to do.
-  const point1 = {x: 13, y: 677, z: getZ(13,677)};
-  const point2 = {x: 127, y: 43, z: getZ(127,43)};
-  const point3 = {x: 107, y: 563, z: getZ(107,563)};
+
+  const point1 = get(13,677);
+  const point2 = get(127,43);
+  const point3 = get(107,563);
   return new Plane(point1, point2, point3);
 }
 
