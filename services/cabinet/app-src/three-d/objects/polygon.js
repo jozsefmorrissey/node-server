@@ -14,18 +14,6 @@ class Polygon3D {
     let normal;
 
     function calcNormal() {
-      // let normals = [];
-      // for (let index = 1; index < lines.length; index++) {
-      //   normals[index-1] = lines[index-1].vector().crossProduct(lines[index].vector()).unit();
-      // }
-      //
-      // for (let index = 1; index < normals.length; index++) {
-      //   if (!normals[index -1] || !normals[index - 1].equals(normals[index])) {
-      //     console.log('ne')
-      //   }
-      // }
-      //
-      // return normals[0];
         const points = [lines[0].startVertex, lines[1].startVertex, lines[2].startVertex];
         const vector1 = points[1].minus(points[0]);
         const vector2 = points[2].minus(points[0]);
@@ -33,6 +21,14 @@ class Polygon3D {
         return normVect.scale(1 / normVect.magnitude());
     }
     this.normal = calcNormal;
+
+    this.translate = (vector) => {
+      const verts = [];
+      for (let index = 0; index < lines.length; index++) {
+        verts.push(lines[index].startVertex.translate(vector, true));
+      }
+      return new Polygon3D(verts);
+    }
 
     this.perpendicular = (poly) => {
       return this.normal().perpendicular(poly.normal());
@@ -69,6 +65,8 @@ class Polygon3D {
 
       return JSON.clone(verticies);
     }
+
+    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex.copy();
 
     this.isClockwise = () => {
       let sum = 0;
@@ -161,6 +159,14 @@ class Polygon3D {
       if (completed) return subSection;
     }
 
+    this.center = () => {
+      const verts = [];
+      for (let index = 0; index < lines.length; index++) {
+        verts.push(lines[index].startVertex);
+      }
+      return Vertex3D.center(verts);
+    }
+
     this.addVerticies = (list) => {
       if (list === undefined) return;
       const verts = [];
@@ -249,6 +255,16 @@ class Polygon3D {
         return merged;
       }
     }
+
+    this.toString = () => {
+      let startStr = '';
+      let endStr = '';
+      for (let index = 0; index < lines.length; index++) {
+        startStr += ` => ${lines[index].startVertex.toString()}`;
+        endStr += ` => ${lines[Math.mod(index - 1, lines.length)].endVertex.toString()}`;
+      }
+      return `Start Verticies: ${startStr.substring(4)}\nEnd   Verticies: ${endStr.substring(4)}`;
+    }
     this.addVerticies(initialVerticies);
   }
 }
@@ -304,6 +320,28 @@ Polygon3D.toTwoD = (polygons) => {
     if (includeZY) map.zy[indexZY] = new Polygon2D(map.zy[indexZY]);
   }
   return map;
+}
+
+Polygon3D.fromVectorObject =
+    (vectorObj, center, height, width) => {
+  const hh = height/2;
+  const hw = width/2;
+  const hV = vectorObj.height;
+  const wV = vectorObj.width;
+  const vector1 = center.translate(hV.scale(hh), true).translate(wV.scale(-hw));
+  const vector2 = center.translate(hV.scale(hh), true).translate(wV.scale(hw));
+  const vector3 = center.translate(hV.scale(-hh), true).translate(wV.scale(hw));
+  const vector4 = center.translate(hV.scale(-hh), true).translate(wV.scale(-hw));
+  return new Polygon3D([vector1, vector2, vector3, vector4]);
+}
+
+Polygon3D.fromLines = (lines) => {
+  const verts = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!lines[index].startVertex.equals(lines[Math.mod(index - 1, lines.length)].endVertex)) throw new Error('Lines must be connected');
+    verts.push(lines[index].startVertex);
+  }
+  return new Polygon3D(verts);
 }
 
 module.exports = Polygon3D;

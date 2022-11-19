@@ -3,6 +3,7 @@
 
 const Assembly = require('../../assembly.js');
 const CSG = require('../../../../../public/js/3d-modeling/csg.js');
+const pull = require('../../../../three-d/models/pull.js');
 /*
     a,b,c
     d,e,f
@@ -11,83 +12,66 @@ const CSG = require('../../../../../public/js/3d-modeling/csg.js');
 class Handle extends Assembly {
   constructor(partCode, partName, door, location, index, count) {
     let instance;
-    function rotationConfig() {
-      const rotation = door.position().rotation();
-      if (!instance || !instance.location) return rotation;
-      if (instance.location && instance.location() && instance.location().rotate) {
-        return [{x:0,y:0,z:90}, rotation];
-      }
-      return rotation;
-    }
-    function demensionConfig(attr) {
-      if (!instance || !instance.location) return {x:0,y:0,z:0};
-      const dems = {x: 1, y: 9.6, z: 1.9};
-      return attr ? dems[attr] : dems;
-    }
-    function centerConfig(attr) {
-      if (!instance || !instance.location) return {x:0,y:0,z:0};
-        let center;
-        let pullDems = instance.demensionConfig();
-        const edgeOffset = (19 * 2.54) / 16;
-        const toCenter = 3 * 2.54;
-        const front = door.front();
+    location ||= Handle.location.CENTER;
+    function baseCenter() {
+      let center;
+      const edgeOffset = (19 * 2.54) / 16;
+      const toCenter = 3 * 2.54 + instance.centerToCenter() / 2;
+      const front = door.front();
+      const top = front.line(0);
+      const left = front.line(-1);
+      const right = front.line(1);
+      const bottom = front.line(2);
 
-        switch (instance.location()) {
-          case Handle.location.TOP_RIGHT:
-            offset.x = doorDems.x / 2 -  edgeOffset;
-            offset.y = doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-            break;
-          case Handle.location.TOP_LEFT:
-            offset.x = -doorDems.x / 2 +  edgeOffset;
-            offset.y = doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-            break;
-          case Handle.location.BOTTOM_RIGHT:
-            offset.x = doorDems.x / 2 -  edgeOffset;
-            offset.y = -doorDems.y / 2 + (pullDems.y / 2 + toCenter);
-            break;
-          case Handle.location.BOTTOM_LEFT:
-            offset.x = -doorDems.x / 2 +  edgeOffset;
-            offset.y = -doorDems.y / 2 + (pullDems.y / 2 + toCenter);
-            break;
-          case Handle.location.TOP:
-            offset.x = 0;//offset(offset.x, doorDems.x);
-            offset.y = doorDems.y / 2 - edgeOffset;
-            break;
-          case Handle.location.BOTTOM:
-            offset.x = 0;//offset(offset.x, doorDems.x);
-            offset.y = doorDems.y / -2 + edgeOffset;
-            break;
-          case Handle.location.RIGHT:
-            offset.y = 0;
-            offset.x = doorDems.x / 2 - edgeOffset;
-            break;
-          case Handle.location.LEFT:
-            const top = front.line(0);
-            center = top.startVertex;
-            center.translate(top.vector().unit().scale(edgeOffset));
-            const left = front.line(3);
-            center.translate(left.vector().unit().inverse().scale(toCenter));
-            break;
-          case Handle.location.CENTER:
-            offset.x = 0;
-            offset.y = 0;
+      switch (instance.location()) {
+        case Handle.location.TOP_RIGHT:
+          center = top.endVertex;
+          center.translate(top.vector().unit().scale(-edgeOffset));
+          center.translate(right.vector().unit().scale(toCenter));
           break;
-          case undefined:
-            offset.x = 0;
-            offset.y = 0;
-            break;
-          default:
-            throw new Error('Invalid pull location');
-        }
-        const norm = front.normal().inverse();
-        center.translate(norm.scale(pullDems.z / 2));
-        return attr ? center[attr] : center;
+        case Handle.location.TOP_LEFT:
+          center = top.startVertex;
+          center.translate(top.vector().unit().scale(edgeOffset));
+          center.translate(left.vector().unit().scale(-toCenter));
+          break;
+        case Handle.location.BOTTOM_RIGHT:
+          center = bottom.startVertex;
+          center.translate(bottom.vector().unit().scale(edgeOffset));
+          center.translate(right.vector().unit().scale(-toCenter));
+          break;
+        case Handle.location.BOTTOM_LEFT:
+          center = bottom.endVertex;
+          center.translate(bottom.vector().unit().scale(-edgeOffset));
+          center.translate(left.vector().unit().scale(toCenter));
+          break;
+        case Handle.location.TOP:
+          center = top.midpoint();
+          center.translate(right.vector().unit().scale(edgeOffset));
+          break;
+        case Handle.location.BOTTOM:
+          center = bottom.midpoint();
+          center.translate(right.vector().unit().scale(-edgeOffset));
+          break;
+        case Handle.location.RIGHT:
+          center = right.midpoint();
+          center.translate(top.vector().unit().scale(-edgeOffset));
+          break;
+        case Handle.location.LEFT:
+          center = left.midpoint();
+          center.translate(top.vector().unit().scale(edgeOffset));
+          break;
+        case Handle.location.CENTER:
+          center = front.center();
+          break;
+        break;
+        default:
+          throw new Error('Invalid pull location');
+      }
+      return center;
     };
 
-    super(partCode, 'Handle', centerConfig, demensionConfig, rotationConfig);
-    // super(partCode, 'Handle', '0,0,0', '0,0,0', '0,0,0');
+    super(`${partCode}-${location.position.toKebab()}`, 'Handle');
     Object.getSet(this, {location});
-    this.setParentAssembly(door);
     instance = this;
     index = index || 0;
     count = count || 1;
@@ -103,18 +87,31 @@ class Handle extends Assembly {
       const spacing = distance / count;
       return center - (distance / 2) + spacing / 2 + spacing * (index);
     }
+
+    this.toModel = () => {
+      const baseC = baseCenter();
+      const biPolygon = door.biPolygon();
+      const front = biPolygon.front();
+      const rotated =  instance.location().rotate;
+      const line = rotated ? front.line(-1) : front.line(0);
+      const normal = biPolygon.flipNormal() ? front.normal().inverse() : front.normal();
+      return pull(baseC, line, normal, this.projection(), this.centerToCenter());
+    }
+
+    this.projection = () => 2.54;
+    this.centerToCenter = () => 9.6;
   }
 }
 Handle.location = {};
 Handle.location.TOP_RIGHT = {rotate: true, position: 'TOP_Right'};
 Handle.location.TOP_LEFT = {rotate: true, position: 'TOP_LEFT'};
-Handle.location.BOTTOM_RIGHT = {rotate: true};
-Handle.location.BOTTOM_LEFT = {rotate: true};
-Handle.location.TOP = {multiple: true};
-Handle.location.BOTTOM = {multiple: true};
-Handle.location.RIGHT = {multiple: true, rotate: true};
-Handle.location.LEFT = {multiple: true, rotate: true};
-Handle.location.CENTER = {multiple: true};
+Handle.location.BOTTOM_RIGHT = {rotate: true, position: 'BOTTOM_RIGHT'};
+Handle.location.BOTTOM_LEFT = {rotate: true, position: 'BOTTOM_LEFT'};
+Handle.location.TOP = {multiple: true, position: 'TOP'};
+Handle.location.BOTTOM = {multiple: true, position: 'BOTTOM'};
+Handle.location.RIGHT = {multiple: true, rotate: true, position: 'RIGHT'};
+Handle.location.LEFT = {multiple: true, rotate: true, position: 'LEFT'};
+Handle.location.CENTER = {multiple: true, position: 'CENTER'};
 
 Handle.abbriviation = 'hn';
 

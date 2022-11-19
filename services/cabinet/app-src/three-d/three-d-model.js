@@ -170,7 +170,7 @@ class ThreeDModel {
     this.removeAllExtraObjects = () => extraObjects = [];
 
     function getModel(assem) {
-      if (assem.constructor.name === 'Door') {
+      if (assem.constructor.name === 'Handle') {
         console.log('here');
       }
       let model = assem.toModel && assem.toModel();
@@ -181,8 +181,6 @@ class ThreeDModel {
         }
         if (assem instanceof DrawerBox) {
           model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
-        } else if (assem instanceof Handle) {
-          model = pull(pos.demension.y, pos.demension.z);
         } else {
           const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
           model = CSG.cube({ radius });

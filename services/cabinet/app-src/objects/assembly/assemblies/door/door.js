@@ -1,14 +1,12 @@
 
 
 
-const Assembly = require('../../assembly.js');
+const HasPull = require('../has-pull.js');
 const Handle = require('../hardware/pull.js');
-const pull = require('../../../../three-d/models/pull.js');
 
-
-class Door extends Assembly {
+class Door extends HasPull {
   constructor(partCode, partName, getBiPolygon) {
-    super(partCode, partName);
+    super(partCode, partName, getBiPolygon);
 
     this.toModel = () => {
       const biPolygon = getBiPolygon();
@@ -27,9 +25,16 @@ class Door extends Assembly {
       return biPoly.back();
     }
 
-    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, Handle.location.LEFT);
-    this.pull = () => pull;
-    this.addSubAssembly(pull);
+    this.addPull(Handle.location.LEFT);
+    // this.setPulls([Handle.location.TOP_RIGHT,
+    // Handle.location.TOP_LEFT,
+    // Handle.location.BOTTOM_RIGHT,
+    // Handle.location.BOTTOM_LEFT,
+    // Handle.location.TOP,
+    // Handle.location.BOTTOM,
+    // Handle.location.CENTER,
+    // Handle.location.RIGHT,
+    // Handle.location.LEFT]);
   }
 }
 

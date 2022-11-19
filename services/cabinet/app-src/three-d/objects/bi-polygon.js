@@ -9,7 +9,7 @@ class BiPolygon {
     const face2 = polygon2.verticies();
     if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
     if (face1.length !== 4) throw new Error('BiPolygon implementation is limited to 4 point polygons. Plans to expand must not have been exicuted yet');
-
+    this.flipNormal = () => flipNormal;
 
 
     this.front = () => new Polygon3D(face1);
@@ -61,6 +61,15 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset, flipNormal) => {
   const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
   const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
   return new BiPolygon(poly1, poly2, flipNormal);
+}
+
+BiPolygon.fromVectorObject =
+    (vectorObj, center, depth, height, width) => {
+      const frontCenter = center.translate(vectorObj.depth.scale(depth/2), true);
+      const front = Polygon3D.fromVectorObject(vectorObj, frontCenter, height, width);
+      const backCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
+      const back = Polygon3D.fromVectorObject(vectorObj, backCenter, height, width);
+      return new BiPolygon(front, back);
 }
 
 module.exports = BiPolygon;

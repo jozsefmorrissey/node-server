@@ -76,14 +76,22 @@ class Line3D {
 
     this.length = () => this.vector().magnitude();
 
-    this.adjustLength = (change) => {
+    this.adjustLength = (change, fromStartVertex) => {
       if ((typeof change) !== 'number' || change === 0) return;
-      const len = this.length();
-      const halfChangeMag = change/2;
       const unitVec = this.vector().unit();
-      const halfDistVec = unitVec.scale(halfChangeMag);
-      startVertex.translate(halfDistVec.inverse());
-      endVertex.translate(halfDistVec);
+      if (fromStartVertex !== undefined) {
+        if (fromStartVertex === true) {
+          this.endVertex = this.startVertex.translate(unitVec.scale(change), true);
+        } else {
+          this.startVertex = this.endVertex.translate(unitVec.scale(change), true);
+        }
+      } else {
+        const len = this.length();
+        const halfChangeMag = change/2;
+        const halfDistVec = unitVec.scale(halfChangeMag);
+        startVertex.translate(halfDistVec.inverse());
+        endVertex.translate(halfDistVec);
+      }
     }
 
     this.pointAtDistance = (distance) => {

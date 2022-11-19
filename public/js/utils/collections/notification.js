@@ -31,6 +31,7 @@ function notify(parentPath, beforeEvent, afterEvent) {
 class Notifiction {
   constructor(recursive, object, path, beforeChangeEvent, afterChangeEvent) {
     path ||= '';
+    const instance = this;
     afterChangeEvent ||= new CustomEvent('afterChange');
     beforeChangeEvent ||= new CustomEvent('beforeChange');
     let proxy;
@@ -57,6 +58,17 @@ class Notifiction {
         enumerable: false,
         configurable: false,
         value: beforeChangeEvent.on
+    });
+    Object.defineProperty(proxy, "deleteAll", {
+        writable: false,
+        enumerable: false,
+        configurable: false,
+        value: () => {
+          const keys = Object.keys(instance);
+          for (let index = 0; index < keys.length; index++) {
+            delete instance[keys[index]];
+          }
+        }
     });
 
     return proxy;

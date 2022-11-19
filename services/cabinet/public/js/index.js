@@ -12021,6 +12021,7 @@ const CustomEvent = require('../custom-event');
 	class Notifiction {
 	  constructor(recursive, object, path, beforeChangeEvent, afterChangeEvent) {
 	    path ||= '';
+	    const instance = this;
 	    afterChangeEvent ||= new CustomEvent('afterChange');
 	    beforeChangeEvent ||= new CustomEvent('beforeChange');
 	    let proxy;
@@ -12047,6 +12048,17 @@ const CustomEvent = require('../custom-event');
 	        enumerable: false,
 	        configurable: false,
 	        value: beforeChangeEvent.on
+	    });
+	    Object.defineProperty(proxy, "deleteAll", {
+	        writable: false,
+	        enumerable: false,
+	        configurable: false,
+	        value: () => {
+	          const keys = Object.keys(instance);
+	          for (let index = 0; index < keys.length; index++) {
+	            delete instance[keys[index]];
+	          }
+	        }
 	    });
 	
 	    return proxy;
@@ -21572,7 +21584,7 @@ const cabinetsJson = require('../../public/json/cabinets.json');
 	  const list = [];
 	  const keys = Object.keys(cabinetsJson);
 	  // comment out to get corner-wall to be the first.
-	  // keys.sort();
+	  keys.sort();
 	  for (let index = 0; index < keys.length; index += 1) {
 	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
 	  }
@@ -23790,7 +23802,7 @@ function (require, exports, module) {
 	    this.removeAllExtraObjects = () => extraObjects = [];
 	
 	    function getModel(assem) {
-	      if (assem.constructor.name === 'Door') {
+	      if (assem.constructor.name === 'Handle') {
 	        console.log('here');
 	      }
 	      let model = assem.toModel && assem.toModel();
@@ -23801,8 +23813,6 @@ function (require, exports, module) {
 	        }
 	        if (assem instanceof DrawerBox) {
 	          model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
-	        } else if (assem instanceof Handle) {
-	          model = pull(pos.demension.y, pos.demension.z);
 	        } else {
 	          const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
 	          model = CSG.cube({ radius });
@@ -24645,6 +24655,64 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/joint/joint.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../../public/js/utils/object/lookup.js')
+	
+	
+	class Joint {
+	  constructor(malePartCode, femalePartCode) {
+	    let parentAssembly;
+	    const initialVals = {
+	      maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
+	      malePartCode, femalePartCode, demensionAxis: '', centerAxis: ''
+	    }
+	    Object.getSet(this, initialVals);
+	
+	    this.parentAssembly = () => {
+	      if (!parentAssembly && this.parentAssemblyId()) {
+	        parentAssembly = Lookup.get(this.parentAssemblyId());
+	        this.parentAssemblyId = () => parentAssembly.id();
+	      }
+	      return parentAssembly;
+	    }
+	
+	    this.updatePosition = () => {};
+	
+	    this.getFemale = () => this.parentAssembly().getAssembly(this.femalePartCode());
+	    this.getMale = () => this.parentAssembly().getAssembly(this.malePartCode());
+	
+	    this.getDemensions = () => {
+	      const malePos = getMale();
+	      const femalePos = getFemale();
+	      // I created a loop but it was harder to understand
+	      return undefined;
+	    }
+	    this.toString = () => `${this.constructor.name}:${this.malePartCode()}->${this.femalePartCode()}`;
+	
+	    if (Joint.list[this.malePartCode()] === undefined) Joint.list[this.malePartCode()] = [];
+	    if (Joint.list[this.femalePartCode()] === undefined) Joint.list[this.femalePartCode()] = [];
+	    Joint.list[this.malePartCode()].push(this);
+	    Joint.list[this.femalePartCode()].push(this);
+	  }
+	}
+	Joint.list = {};
+	Joint.regex = /([a-z0-9-_\.]{1,})->([a-z0-9-_\.]{1,})/;
+	
+	Joint.classes = {};
+	Joint.register = (clazz) => {
+	  new clazz();
+	  Joint.classes[clazz.prototype.constructor.name] = clazz;
+	}
+	Joint.new = function (id, json) {
+	  return new Joint.classes[id]().fromJson(json);
+	}
+	module.exports = Joint
+	
+});
+
+
 RequireJS.addFunction('./app-src/three-d/objects/vertex.js',
 function (require, exports, module) {
 	
@@ -24719,6 +24787,14 @@ const Matrix = require('./matrix');
 	      const zDiff = this.z - other.z;
 	
 	      return Math.sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff);
+	    }
+	
+	    this.distanceVector = (other) => {
+	      const xDiff = other.x - this.x;
+	      const yDiff = other.y - this.y;
+	      const zDiff = other.z - this.z;
+	
+	      return new Vector3D(xDiff, yDiff, zDiff);
 	    }
 	
 	    this.minus = (other) => {
@@ -24807,78 +24883,6 @@ const Matrix = require('./matrix');
 	}
 	
 	module.exports = Vertex3D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/bi-polygon.js',
-function (require, exports, module) {
-	
-const CSG = require('../../../public/js/3d-modeling/csg.js');
-	const Line3D = require('line');
-	const Polygon3D = require('polygon');
-	
-	class BiPolygon {
-	  constructor(polygon1, polygon2, flipNormal) {
-	    const face1 = polygon1.verticies();
-	    const face2 = polygon2.verticies();
-	    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
-	    if (face1.length !== 4) throw new Error('BiPolygon implementation is limited to 4 point polygons. Plans to expand must not have been exicuted yet');
-	
-	
-	
-	    this.front = () => new Polygon3D(face1);
-	    this.back = () => new Polygon3D(face2);
-	
-	    function normalize (verts, reverse) {
-	      const normal =  new Polygon3D(verts).normal().toArray();
-	      const returnValue = [];
-	      for (let index = 0; index < verts.length; index++)
-	        returnValue[index] = new CSG.Vertex(verts[index], normal);
-	      if (flipNormal) return !reverse ? returnValue.reverse() : returnValue;
-	      else return reverse ? returnValue.reverse() : returnValue;
-	    }
-	
-	    this.toModel = () => {
-	      const front = new CSG.Polygon(normalize(face1));
-	      front.plane.normal = new CSG.Vector([0,1, 0,0]);
-	      const back = new CSG.Polygon(normalize(face2, true));
-	      back.plane.normal = new CSG.Vector([0,0,1,0,0]);
-	      const top = new CSG.Polygon(normalize([face1[0], face1[1], face2[1], face2[0]], true));
-	      top.plane.normal = new CSG.Vector([0, 1, 0]);
-	      const left = new CSG.Polygon(normalize([face2[3], face2[0], face1[0], face1[3]]));
-	      left.plane.normal = new CSG.Vector([-1, 0, 0]);
-	      const right = new CSG.Polygon(normalize([face1[1], face1[2], face2[2], face2[1]], true));
-	      right.plane.normal = new CSG.Vector([1, 0, 0]);
-	      const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]]));
-	      bottom.plane.normal = new CSG.Vector([0, -1, 0]);
-	
-	      const poly = CSG.fromPolygons([front, back, top, left, right, bottom]);
-	      return poly;
-	    }
-	
-	    this.toString = () =>
-	    `(${face1[0].toString()}), (${face1[1].toString()}), (${face1[2].toString()}), (${face1[3].toString()})\n` +
-	    `(${face2[0].toString()}), (${face2[1].toString()},${face2[2].toString()}), (${face2[3].toString()})`;
-	  }
-	}
-	
-	BiPolygon.fromPolygon = (polygon, distance1, distance2, offset, flipNormal) => {
-	  offset ||= {};
-	  const verts = polygon.verticies();
-	  if (verts.length < 4) return undefined;
-	  const verts1 = JSON.clone(verts);
-	  Line3D.adjustVerticies(verts1[0], verts1[1], offset.x);
-	  Line3D.adjustVerticies(verts1[1], verts1[2], offset.y);
-	  Line3D.adjustVerticies(verts1[2], verts1[3], offset.x);
-	  Line3D.adjustVerticies(verts1[3], verts1[0], offset.y);
-	  const verts2 = JSON.clone(verts1);
-	  const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
-	  const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
-	  return new BiPolygon(poly1, poly2, flipNormal);
-	}
-	
-	module.exports = BiPolygon;
 	
 });
 
@@ -26092,6 +26096,87 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/three-d/objects/bi-polygon.js',
+function (require, exports, module) {
+	
+const CSG = require('../../../public/js/3d-modeling/csg.js');
+	const Line3D = require('line');
+	const Polygon3D = require('polygon');
+	
+	class BiPolygon {
+	  constructor(polygon1, polygon2, flipNormal) {
+	    const face1 = polygon1.verticies();
+	    const face2 = polygon2.verticies();
+	    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
+	    if (face1.length !== 4) throw new Error('BiPolygon implementation is limited to 4 point polygons. Plans to expand must not have been exicuted yet');
+	    this.flipNormal = () => flipNormal;
+	
+	
+	    this.front = () => new Polygon3D(face1);
+	    this.back = () => new Polygon3D(face2);
+	
+	    function normalize (verts, reverse) {
+	      const normal =  new Polygon3D(verts).normal().toArray();
+	      const returnValue = [];
+	      for (let index = 0; index < verts.length; index++)
+	        returnValue[index] = new CSG.Vertex(verts[index], normal);
+	      if (flipNormal) return !reverse ? returnValue.reverse() : returnValue;
+	      else return reverse ? returnValue.reverse() : returnValue;
+	    }
+	
+	    this.toModel = () => {
+	      const front = new CSG.Polygon(normalize(face1));
+	      front.plane.normal = new CSG.Vector([0,1, 0,0]);
+	      const back = new CSG.Polygon(normalize(face2, true));
+	      back.plane.normal = new CSG.Vector([0,0,1,0,0]);
+	      const top = new CSG.Polygon(normalize([face1[0], face1[1], face2[1], face2[0]], true));
+	      top.plane.normal = new CSG.Vector([0, 1, 0]);
+	      const left = new CSG.Polygon(normalize([face2[3], face2[0], face1[0], face1[3]]));
+	      left.plane.normal = new CSG.Vector([-1, 0, 0]);
+	      const right = new CSG.Polygon(normalize([face1[1], face1[2], face2[2], face2[1]], true));
+	      right.plane.normal = new CSG.Vector([1, 0, 0]);
+	      const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]]));
+	      bottom.plane.normal = new CSG.Vector([0, -1, 0]);
+	
+	      const poly = CSG.fromPolygons([front, back, top, left, right, bottom]);
+	      return poly;
+	    }
+	
+	    this.toString = () =>
+	    `(${face1[0].toString()}), (${face1[1].toString()}), (${face1[2].toString()}), (${face1[3].toString()})\n` +
+	    `(${face2[0].toString()}), (${face2[1].toString()},${face2[2].toString()}), (${face2[3].toString()})`;
+	  }
+	}
+	
+	BiPolygon.fromPolygon = (polygon, distance1, distance2, offset, flipNormal) => {
+	  offset ||= {};
+	  const verts = polygon.verticies();
+	  if (verts.length < 4) return undefined;
+	  const verts1 = JSON.clone(verts);
+	  Line3D.adjustVerticies(verts1[0], verts1[1], offset.x);
+	  Line3D.adjustVerticies(verts1[1], verts1[2], offset.y);
+	  Line3D.adjustVerticies(verts1[2], verts1[3], offset.x);
+	  Line3D.adjustVerticies(verts1[3], verts1[0], offset.y);
+	  const verts2 = JSON.clone(verts1);
+	  const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
+	  const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
+	  return new BiPolygon(poly1, poly2, flipNormal);
+	}
+	
+	BiPolygon.fromVectorObject =
+	    (vectorObj, center, depth, height, width) => {
+	      const frontCenter = center.translate(vectorObj.depth.scale(depth/2), true);
+	      const front = Polygon3D.fromVectorObject(vectorObj, frontCenter, height, width);
+	      const backCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
+	      const back = Polygon3D.fromVectorObject(vectorObj, backCenter, height, width);
+	      return new BiPolygon(front, back);
+	}
+	
+	module.exports = BiPolygon;
+	
+});
+
+
 RequireJS.addFunction('./app-src/three-d/objects/bi-plane.js',
 function (require, exports, module) {
 	
@@ -26371,48 +26456,6 @@ function (require, exports, module) {
 	//   Opening
 	
 	module.exports = defs;
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/labor.js',
-function (require, exports, module) {
-	
-
-	
-	const Material = require('./material.js');
-	const Cost = require('../cost.js');
-	
-	
-	// unitCost.value = (hourlyRate*hours)/length
-	// calc(assembly) = unitCost.value * formula
-	
-	class Labor extends Material {
-	  constructor (props) {
-	    super(props);
-	    const type = props.laborType;
-	    props.hourlyRate = Labor.hourlyRates[type]
-	    const parentCalc = this.calc;
-	    this.cost = () => this.hourlyRate() * props.hours;
-	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
-	    Labor.hourlyRate(type, props.hourlyRate);
-	
-	    const parentToJson = this.toJson;
-	  }
-	}
-	
-	
-	Labor.defaultRate = 40;
-	Labor.hourlyRate = (type, rate) => {
-	  rate = Cost.evaluator.eval(new String(rate));
-	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
-	  return Labor.hourlyRates[type] || Labor.defaultRate;
-	}
-	Labor.hourlyRates = {};
-	Labor.types = [];
-	Labor.explanation = `Cost to be calculated hourly`;
-	
-	module.exports = Labor
 	
 });
 
@@ -27571,6 +27614,48 @@ function (require, exports, module) {
 	}
 	
 	module.exports = Plane;
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/labor.js',
+function (require, exports, module) {
+	
+
+	
+	const Material = require('./material.js');
+	const Cost = require('../cost.js');
+	
+	
+	// unitCost.value = (hourlyRate*hours)/length
+	// calc(assembly) = unitCost.value * formula
+	
+	class Labor extends Material {
+	  constructor (props) {
+	    super(props);
+	    const type = props.laborType;
+	    props.hourlyRate = Labor.hourlyRates[type]
+	    const parentCalc = this.calc;
+	    this.cost = () => this.hourlyRate() * props.hours;
+	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
+	    Labor.hourlyRate(type, props.hourlyRate);
+	
+	    const parentToJson = this.toJson;
+	  }
+	}
+	
+	
+	Labor.defaultRate = 40;
+	Labor.hourlyRate = (type, rate) => {
+	  rate = Cost.evaluator.eval(new String(rate));
+	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
+	  return Labor.hourlyRates[type] || Labor.defaultRate;
+	}
+	Labor.hourlyRates = {};
+	Labor.types = [];
+	Labor.explanation = `Cost to be calculated hourly`;
+	
+	module.exports = Labor
 	
 });
 
@@ -29059,64 +29144,6 @@ const Joint = require('./joint');
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joint.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../../public/js/utils/object/lookup.js')
-	
-	
-	class Joint {
-	  constructor(malePartCode, femalePartCode) {
-	    let parentAssembly;
-	    const initialVals = {
-	      maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
-	      malePartCode, femalePartCode, demensionAxis: '', centerAxis: ''
-	    }
-	    Object.getSet(this, initialVals);
-	
-	    this.parentAssembly = () => {
-	      if (!parentAssembly && this.parentAssemblyId()) {
-	        parentAssembly = Lookup.get(this.parentAssemblyId());
-	        this.parentAssemblyId = () => parentAssembly.id();
-	      }
-	      return parentAssembly;
-	    }
-	
-	    this.updatePosition = () => {};
-	
-	    this.getFemale = () => this.parentAssembly().getAssembly(this.femalePartCode());
-	    this.getMale = () => this.parentAssembly().getAssembly(this.malePartCode());
-	
-	    this.getDemensions = () => {
-	      const malePos = getMale();
-	      const femalePos = getFemale();
-	      // I created a loop but it was harder to understand
-	      return undefined;
-	    }
-	    this.toString = () => `${this.constructor.name}:${this.malePartCode()}->${this.femalePartCode()}`;
-	
-	    if (Joint.list[this.malePartCode()] === undefined) Joint.list[this.malePartCode()] = [];
-	    if (Joint.list[this.femalePartCode()] === undefined) Joint.list[this.femalePartCode()] = [];
-	    Joint.list[this.malePartCode()].push(this);
-	    Joint.list[this.femalePartCode()].push(this);
-	  }
-	}
-	Joint.list = {};
-	Joint.regex = /([a-z0-9-_\.]{1,})->([a-z0-9-_\.]{1,})/;
-	
-	Joint.classes = {};
-	Joint.register = (clazz) => {
-	  new clazz();
-	  Joint.classes[clazz.prototype.constructor.name] = clazz;
-	}
-	Joint.new = function (id, json) {
-	  return new Joint.classes[id]().fromJson(json);
-	}
-	module.exports = Joint
-	
-});
-
-
 RequireJS.addFunction('./app-src/three-d/objects/polygon.js',
 function (require, exports, module) {
 	
@@ -29135,18 +29162,6 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	    let normal;
 	
 	    function calcNormal() {
-	      // let normals = [];
-	      // for (let index = 1; index < lines.length; index++) {
-	      //   normals[index-1] = lines[index-1].vector().crossProduct(lines[index].vector()).unit();
-	      // }
-	      //
-	      // for (let index = 1; index < normals.length; index++) {
-	      //   if (!normals[index -1] || !normals[index - 1].equals(normals[index])) {
-	      //     console.log('ne')
-	      //   }
-	      // }
-	      //
-	      // return normals[0];
 	        const points = [lines[0].startVertex, lines[1].startVertex, lines[2].startVertex];
 	        const vector1 = points[1].minus(points[0]);
 	        const vector2 = points[2].minus(points[0]);
@@ -29154,6 +29169,14 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	        return normVect.scale(1 / normVect.magnitude());
 	    }
 	    this.normal = calcNormal;
+	
+	    this.translate = (vector) => {
+	      const verts = [];
+	      for (let index = 0; index < lines.length; index++) {
+	        verts.push(lines[index].startVertex.translate(vector, true));
+	      }
+	      return new Polygon3D(verts);
+	    }
 	
 	    this.perpendicular = (poly) => {
 	      return this.normal().perpendicular(poly.normal());
@@ -29190,6 +29213,8 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	
 	      return JSON.clone(verticies);
 	    }
+	
+	    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex.copy();
 	
 	    this.isClockwise = () => {
 	      let sum = 0;
@@ -29282,6 +29307,14 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	      if (completed) return subSection;
 	    }
 	
+	    this.center = () => {
+	      const verts = [];
+	      for (let index = 0; index < lines.length; index++) {
+	        verts.push(lines[index].startVertex);
+	      }
+	      return Vertex3D.center(verts);
+	    }
+	
 	    this.addVerticies = (list) => {
 	      if (list === undefined) return;
 	      const verts = [];
@@ -29370,6 +29403,16 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	        return merged;
 	      }
 	    }
+	
+	    this.toString = () => {
+	      let startStr = '';
+	      let endStr = '';
+	      for (let index = 0; index < lines.length; index++) {
+	        startStr += ` => ${lines[index].startVertex.toString()}`;
+	        endStr += ` => ${lines[Math.mod(index - 1, lines.length)].endVertex.toString()}`;
+	      }
+	      return `Start Verticies: ${startStr.substring(4)}\nEnd   Verticies: ${endStr.substring(4)}`;
+	    }
 	    this.addVerticies(initialVerticies);
 	  }
 	}
@@ -29427,6 +29470,28 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	  return map;
 	}
 	
+	Polygon3D.fromVectorObject =
+	    (vectorObj, center, height, width) => {
+	  const hh = height/2;
+	  const hw = width/2;
+	  const hV = vectorObj.height;
+	  const wV = vectorObj.width;
+	  const vector1 = center.translate(hV.scale(hh), true).translate(wV.scale(-hw));
+	  const vector2 = center.translate(hV.scale(hh), true).translate(wV.scale(hw));
+	  const vector3 = center.translate(hV.scale(-hh), true).translate(wV.scale(hw));
+	  const vector4 = center.translate(hV.scale(-hh), true).translate(wV.scale(-hw));
+	  return new Polygon3D([vector1, vector2, vector3, vector4]);
+	}
+	
+	Polygon3D.fromLines = (lines) => {
+	  const verts = [];
+	  for (let index = 0; index < lines.length; index += 1) {
+	    if (!lines[index].startVertex.equals(lines[Math.mod(index - 1, lines.length)].endVertex)) throw new Error('Lines must be connected');
+	    verts.push(lines[index].startVertex);
+	  }
+	  return new Polygon3D(verts);
+	}
+	
 	module.exports = Polygon3D;
 	
 });
@@ -29437,6 +29502,8 @@ function (require, exports, module) {
 	
 
 	const CSG = require('../../../public/js/3d-modeling/csg');
+	const Polygon3D = require('../objects/polygon.js');
+	const BiPolygon = require('../objects/bi-polygon.js');
 	
 	function drawerBox(length, width, depth) {
 	  const bottomHeight = 7/8;
@@ -29448,6 +29515,37 @@ function (require, exports, module) {
 	  bInside.setColor(0, 0, 1);
 	
 	  return box.subtract(bInside).subtract(inside);
+	}
+	
+	function unionAll(...polygons) {
+	  let model = polygons[0].toModel();
+	  for (let index = 1; index < polygons.length; index++) {
+	    model = model.union(polygons[index].toModel());
+	  }
+	  return model;
+	}
+	
+	function drawerBox(frontPoly, length) {
+	  const sideThickness = (2.54 * 5) / 8
+	  const bottomThickness = (2.54 * 3) / 8;
+	  const bottomHeight = (7*2.54)/8;
+	  const norm = frontPoly.normal();
+	
+	  // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: verticies are if facing polygon topLeft, topRight, bottomRight, bottomLeft
+	  const fP = frontPoly;
+	  const fPm = fP.translate(norm.scale(-length));
+	  const bP = new Polygon3D([fPm.vertex(1), fPm.vertex(0), fPm.vertex(3), fPm.vertex(2)]);
+	  const lP = new Polygon3D([bP.vertex(1), fP.vertex(0), fP.vertex(3), bP.vertex(2)]);
+	  const rP = new Polygon3D([fP.vertex(1), bP.vertex(0), bP.vertex(3), fP.vertex(2)]);
+	  const tP = new Polygon3D([bP.vertex(1), bP.vertex(0), fP.vertex(1), bP.vertex(0)]);
+	  const btmP = new Polygon3D([bP.vertex(2), bP.vertex(3), fP.vertex(2), fP.vertex(3)]);
+	
+	  const front = BiPolygon.fromPolygon(fP, 0, -sideThickness);
+	  const back = BiPolygon.fromPolygon(bP, 0, -sideThickness);
+	  const left = BiPolygon.fromPolygon(lP, 0, -sideThickness);
+	  const right = BiPolygon.fromPolygon(rP, 0, -sideThickness);
+	  const bottom = BiPolygon.fromPolygon(btmP, -bottomHeight, -bottomHeight-bottomThickness);
+	  return unionAll(front, back, left, right, bottom);
 	}
 	module.exports = drawerBox
 	
@@ -29773,6 +29871,8 @@ function (require, exports, module) {
 	
 
 	const CSG = require('../../../public/js/3d-modeling/csg');
+	const Polygon3D = require('../objects/polygon.js');
+	const BiPolygon = require('../objects/bi-polygon.js');
 	
 	function pull(length, height) {
 	  var rspx = length - .75;
@@ -29786,6 +29886,30 @@ function (require, exports, module) {
 	  var mainCyl = CSG.cube({demensions: [length, gerth, gerth], center: [0, 0, 0]});
 	
 	  return mainCyl.union(lCyl).union(rCyl);
+	}
+	
+	function pull(baseCenter, line, normal, projection, cTOc) {
+	  let gerth = .27
+	  let length = cTOc + gerth;
+	  const midNormOffset = line.midpoint().translate(normal);
+	  const lineNormPoly = new Polygon3D([line.startVertex.copy(), line.endVertex.copy(), midNormOffset]);
+	  const vecObj = {
+	    depth: normal,
+	    width: line.vector().unit(),
+	    height: lineNormPoly.normal(),
+	  };
+	
+	  let sideProjection = projection - gerth;
+	  const centerRL = baseCenter.translate(vecObj.depth.scale(sideProjection/2), true);
+	  const centerLeft = centerRL.translate(vecObj.width.scale(cTOc/-2), true);
+	  const centerRight = centerRL.translate(vecObj.width.scale(cTOc/2), true);
+	  const centerMain = baseCenter.translate(vecObj.depth.scale(projection - gerth/2));
+	
+	  var lCyl = BiPolygon.fromVectorObject(vecObj, centerLeft, sideProjection, gerth, gerth);
+	  var rCyl = BiPolygon.fromVectorObject(vecObj, centerRight, sideProjection, gerth, gerth);
+	  var mainCyl = BiPolygon.fromVectorObject(vecObj, centerMain, gerth, gerth, length);
+	
+	  return mainCyl.toModel().union(lCyl.toModel()).union(rCyl.toModel());
 	}
 	module.exports = pull
 	
@@ -29872,14 +29996,22 @@ const Vector3D = require('./vector');
 	
 	    this.length = () => this.vector().magnitude();
 	
-	    this.adjustLength = (change) => {
+	    this.adjustLength = (change, fromStartVertex) => {
 	      if ((typeof change) !== 'number' || change === 0) return;
-	      const len = this.length();
-	      const halfChangeMag = change/2;
 	      const unitVec = this.vector().unit();
-	      const halfDistVec = unitVec.scale(halfChangeMag);
-	      startVertex.translate(halfDistVec.inverse());
-	      endVertex.translate(halfDistVec);
+	      if (fromStartVertex !== undefined) {
+	        if (fromStartVertex === true) {
+	          this.endVertex = this.startVertex.translate(unitVec.scale(change), true);
+	        } else {
+	          this.startVertex = this.endVertex.translate(unitVec.scale(change), true);
+	        }
+	      } else {
+	        const len = this.length();
+	        const halfChangeMag = change/2;
+	        const halfDistVec = unitVec.scale(halfChangeMag);
+	        startVertex.translate(halfDistVec.inverse());
+	        endVertex.translate(halfDistVec);
+	      }
 	    }
 	
 	    this.pointAtDistance = (distance) => {
@@ -29929,6 +30061,35 @@ function (require, exports, module) {
 	Snap2d.registar(require('./square.js'));
 	Snap2d.registar(require('./corner.js'));
 	Snap2d.registar(require('./corner-l.js'));
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/has-pull.js',
+function (require, exports, module) {
+	const Assembly = require('../assembly.js');
+	const Handle = require('./hardware/pull.js');
+	
+	class HasPull extends Assembly {
+	  constructor(partCode, partName, getBiPolygon) {
+	    super(partCode, partName);
+	    const pulls = [];
+	    this.pull = (index) => pulls[index || 0];
+	    this.addPull = (location) => {
+	      pulls.push(new Handle(`${partCode}-dp`, 'Door.Handle', this, location));
+	      this.addSubAssembly(pulls[pulls.length - 1]);
+	    }
+	    this.setPulls = (locations) => {
+	      pulls.copy([]);
+	      this.subassemblies.deleteAll();
+	      locations.forEach((location) => this.addPull(location));
+	    }
+	    this.biPolygon = () => getBiPolygon();
+	
+	  }
+	}
+	
+	module.exports = HasPull;
 	
 });
 
@@ -30030,6 +30191,29 @@ const Snap2d = require('../snap');
 	}
 	
 	module.exports = SnapCornerL;
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Butt extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
+	  }
+	}
+	
+	Joint.register(Butt);
+	module.exports = Butt
+	
+	
+	
+	
 	
 });
 
@@ -30166,29 +30350,6 @@ const Snap2d = require('../snap');
 	}
 	
 	module.exports = SnapCorner;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Butt extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
-	  }
-	}
-	
-	Joint.register(Butt);
-	module.exports = Butt
-	
-	
-	
-	
 	
 });
 
@@ -30763,27 +30924,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-box.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	class DrawerBox extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	  }
-	}
-	
-	DrawerBox.abbriviation = 'db';
-	
-	
-	module.exports = DrawerBox
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
 function (require, exports, module) {
 	
@@ -30791,6 +30931,7 @@ function (require, exports, module) {
 	
 	const Assembly = require('../../assembly.js');
 	const CSG = require('../../../../../public/js/3d-modeling/csg.js');
+	const pull = require('../../../../three-d/models/pull.js');
 	/*
 	    a,b,c
 	    d,e,f
@@ -30799,83 +30940,66 @@ function (require, exports, module) {
 	class Handle extends Assembly {
 	  constructor(partCode, partName, door, location, index, count) {
 	    let instance;
-	    function rotationConfig() {
-	      const rotation = door.position().rotation();
-	      if (!instance || !instance.location) return rotation;
-	      if (instance.location && instance.location() && instance.location().rotate) {
-	        return [{x:0,y:0,z:90}, rotation];
-	      }
-	      return rotation;
-	    }
-	    function demensionConfig(attr) {
-	      if (!instance || !instance.location) return {x:0,y:0,z:0};
-	      const dems = {x: 1, y: 9.6, z: 1.9};
-	      return attr ? dems[attr] : dems;
-	    }
-	    function centerConfig(attr) {
-	      if (!instance || !instance.location) return {x:0,y:0,z:0};
-	        let center;
-	        let pullDems = instance.demensionConfig();
-	        const edgeOffset = (19 * 2.54) / 16;
-	        const toCenter = 3 * 2.54;
-	        const front = door.front();
+	    location ||= Handle.location.CENTER;
+	    function baseCenter() {
+	      let center;
+	      const edgeOffset = (19 * 2.54) / 16;
+	      const toCenter = 3 * 2.54 + instance.centerToCenter() / 2;
+	      const front = door.front();
+	      const top = front.line(0);
+	      const left = front.line(-1);
+	      const right = front.line(1);
+	      const bottom = front.line(2);
 	
-	        switch (instance.location()) {
-	          case Handle.location.TOP_RIGHT:
-	            offset.x = doorDems.x / 2 -  edgeOffset;
-	            offset.y = doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-	            break;
-	          case Handle.location.TOP_LEFT:
-	            offset.x = -doorDems.x / 2 +  edgeOffset;
-	            offset.y = doorDems.y / 2 - (pullDems.y / 2 + toCenter);
-	            break;
-	          case Handle.location.BOTTOM_RIGHT:
-	            offset.x = doorDems.x / 2 -  edgeOffset;
-	            offset.y = -doorDems.y / 2 + (pullDems.y / 2 + toCenter);
-	            break;
-	          case Handle.location.BOTTOM_LEFT:
-	            offset.x = -doorDems.x / 2 +  edgeOffset;
-	            offset.y = -doorDems.y / 2 + (pullDems.y / 2 + toCenter);
-	            break;
-	          case Handle.location.TOP:
-	            offset.x = 0;//offset(offset.x, doorDems.x);
-	            offset.y = doorDems.y / 2 - edgeOffset;
-	            break;
-	          case Handle.location.BOTTOM:
-	            offset.x = 0;//offset(offset.x, doorDems.x);
-	            offset.y = doorDems.y / -2 + edgeOffset;
-	            break;
-	          case Handle.location.RIGHT:
-	            offset.y = 0;
-	            offset.x = doorDems.x / 2 - edgeOffset;
-	            break;
-	          case Handle.location.LEFT:
-	            const top = front.line(0);
-	            center = top.startVertex;
-	            center.translate(top.vector().unit().scale(edgeOffset));
-	            const left = front.line(3);
-	            center.translate(left.vector().unit().inverse().scale(toCenter));
-	            break;
-	          case Handle.location.CENTER:
-	            offset.x = 0;
-	            offset.y = 0;
+	      switch (instance.location()) {
+	        case Handle.location.TOP_RIGHT:
+	          center = top.endVertex;
+	          center.translate(top.vector().unit().scale(-edgeOffset));
+	          center.translate(right.vector().unit().scale(toCenter));
 	          break;
-	          case undefined:
-	            offset.x = 0;
-	            offset.y = 0;
-	            break;
-	          default:
-	            throw new Error('Invalid pull location');
-	        }
-	        const norm = front.normal().inverse();
-	        center.translate(norm.scale(pullDems.z / 2));
-	        return attr ? center[attr] : center;
+	        case Handle.location.TOP_LEFT:
+	          center = top.startVertex;
+	          center.translate(top.vector().unit().scale(edgeOffset));
+	          center.translate(left.vector().unit().scale(-toCenter));
+	          break;
+	        case Handle.location.BOTTOM_RIGHT:
+	          center = bottom.startVertex;
+	          center.translate(bottom.vector().unit().scale(edgeOffset));
+	          center.translate(right.vector().unit().scale(-toCenter));
+	          break;
+	        case Handle.location.BOTTOM_LEFT:
+	          center = bottom.endVertex;
+	          center.translate(bottom.vector().unit().scale(-edgeOffset));
+	          center.translate(left.vector().unit().scale(toCenter));
+	          break;
+	        case Handle.location.TOP:
+	          center = top.midpoint();
+	          center.translate(right.vector().unit().scale(edgeOffset));
+	          break;
+	        case Handle.location.BOTTOM:
+	          center = bottom.midpoint();
+	          center.translate(right.vector().unit().scale(-edgeOffset));
+	          break;
+	        case Handle.location.RIGHT:
+	          center = right.midpoint();
+	          center.translate(top.vector().unit().scale(-edgeOffset));
+	          break;
+	        case Handle.location.LEFT:
+	          center = left.midpoint();
+	          center.translate(top.vector().unit().scale(edgeOffset));
+	          break;
+	        case Handle.location.CENTER:
+	          center = front.center();
+	          break;
+	        break;
+	        default:
+	          throw new Error('Invalid pull location');
+	      }
+	      return center;
 	    };
 	
-	    super(partCode, 'Handle', centerConfig, demensionConfig, rotationConfig);
-	    // super(partCode, 'Handle', '0,0,0', '0,0,0', '0,0,0');
+	    super(`${partCode}-${location.position.toKebab()}`, 'Handle');
 	    Object.getSet(this, {location});
-	    this.setParentAssembly(door);
 	    instance = this;
 	    index = index || 0;
 	    count = count || 1;
@@ -30891,18 +31015,31 @@ function (require, exports, module) {
 	      const spacing = distance / count;
 	      return center - (distance / 2) + spacing / 2 + spacing * (index);
 	    }
+	
+	    this.toModel = () => {
+	      const baseC = baseCenter();
+	      const biPolygon = door.biPolygon();
+	      const front = biPolygon.front();
+	      const rotated =  instance.location().rotate;
+	      const line = rotated ? front.line(-1) : front.line(0);
+	      const normal = biPolygon.flipNormal() ? front.normal().inverse() : front.normal();
+	      return pull(baseC, line, normal, this.projection(), this.centerToCenter());
+	    }
+	
+	    this.projection = () => 2.54;
+	    this.centerToCenter = () => 9.6;
 	  }
 	}
 	Handle.location = {};
 	Handle.location.TOP_RIGHT = {rotate: true, position: 'TOP_Right'};
 	Handle.location.TOP_LEFT = {rotate: true, position: 'TOP_LEFT'};
-	Handle.location.BOTTOM_RIGHT = {rotate: true};
-	Handle.location.BOTTOM_LEFT = {rotate: true};
-	Handle.location.TOP = {multiple: true};
-	Handle.location.BOTTOM = {multiple: true};
-	Handle.location.RIGHT = {multiple: true, rotate: true};
-	Handle.location.LEFT = {multiple: true, rotate: true};
-	Handle.location.CENTER = {multiple: true};
+	Handle.location.BOTTOM_RIGHT = {rotate: true, position: 'BOTTOM_RIGHT'};
+	Handle.location.BOTTOM_LEFT = {rotate: true, position: 'BOTTOM_LEFT'};
+	Handle.location.TOP = {multiple: true, position: 'TOP'};
+	Handle.location.BOTTOM = {multiple: true, position: 'BOTTOM'};
+	Handle.location.RIGHT = {multiple: true, rotate: true, position: 'RIGHT'};
+	Handle.location.LEFT = {multiple: true, rotate: true, position: 'LEFT'};
+	Handle.location.CENTER = {multiple: true, position: 'CENTER'};
 	
 	Handle.abbriviation = 'hn';
 	
@@ -31368,7 +31505,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	        backOffset *= -1;
 	      }
 	      biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj, config.flipNormal);
-	      return {biPolygon};
+	      return {biPolygon, frontOffset, backOffset, flipNormal: config.flipNormal};
 	    }
 	
 	    this.dividerInfo = (panelThickness) => {
@@ -31485,50 +31622,26 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-box.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
-	const Handle = require('../hardware/pull.js');
+	const drawerBox = require('../../../../three-d/models/drawer-box.js');
 	
-	class DrawerFront extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
-	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	    this.setParentAssembly(parent);
-	    const instance = this;
-	    let pulls = [new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, 1)];
-	    if (demensionConfig === undefined) return;
-	    let handleCount = 1;
+	class DrawerBox extends Assembly {
+	  constructor(partCode, partName, getFrontPoly, getDepth) {
+	    super(partCode, partName);
 	
-	    function pullCount() {
-	      if (instance.demensionConfig().x < 55.88) return 1;
-	      return 2;
-	    }
-	
-	    this.children = () => this.updateHandles();
-	
-	    this.updateHandles = (count) => {
-	      count = count || pullCount();
-	      pulls.splice(count);
-	      for (let index = 0; index < count; index += 1) {
-	        if (index === pulls.length) {
-	          pulls.push(new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
-	        } else {
-	          pulls[index].count(count);
-	        }
-	      }
-	      return pulls;
-	    };
-	    // if (demensionConfig !== undefined)this.updatePosition();
+	    this.toModel = () => drawerBox(getFrontPoly(), getDepth());
 	  }
 	}
 	
-	DrawerFront.abbriviation = 'df';
+	DrawerBox.abbriviation = 'db';
 	
 	
-	module.exports = DrawerFront
+	module.exports = DrawerBox
 	
 });
 
@@ -31577,14 +31690,12 @@ function (require, exports, module) {
 	
 
 	
-	const Assembly = require('../../assembly.js');
+	const HasPull = require('../has-pull.js');
 	const Handle = require('../hardware/pull.js');
-	const pull = require('../../../../three-d/models/pull.js');
 	
-	
-	class Door extends Assembly {
+	class Door extends HasPull {
 	  constructor(partCode, partName, getBiPolygon) {
-	    super(partCode, partName);
+	    super(partCode, partName, getBiPolygon);
 	
 	    this.toModel = () => {
 	      const biPolygon = getBiPolygon();
@@ -31603,9 +31714,16 @@ function (require, exports, module) {
 	      return biPoly.back();
 	    }
 	
-	    let pull = new Handle(`${partCode}-dp`, 'Door.Handle', this, Handle.location.LEFT);
-	    this.pull = () => pull;
-	    this.addSubAssembly(pull);
+	    this.addPull(Handle.location.LEFT);
+	    // this.setPulls([Handle.location.TOP_RIGHT,
+	    // Handle.location.TOP_LEFT,
+	    // Handle.location.BOTTOM_RIGHT,
+	    // Handle.location.BOTTOM_LEFT,
+	    // Handle.location.TOP,
+	    // Handle.location.BOTTOM,
+	    // Handle.location.CENTER,
+	    // Handle.location.RIGHT,
+	    // Handle.location.LEFT]);
 	  }
 	}
 	
@@ -31656,6 +31774,47 @@ function (require, exports, module) {
 	
 	
 	module.exports = Guides
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
+function (require, exports, module) {
+	
+
+	
+	const HasPull = require('../has-pull.js');
+	const Handle = require('../hardware/pull.js');
+	
+	class DrawerFront extends HasPull {
+	  constructor(partCode, partName, getBiPolygon) {
+	    super(partCode, partName, getBiPolygon);
+	    const instance = this;
+	    this.addPull(Handle.location.CENTER);
+	
+	    this.toModel = () => {
+	      const biPolygon = getBiPolygon();
+	      if (biPolygon) return biPolygon.toModel();
+	      return undefined;
+	    }
+	
+	    this.front = () => {
+	      const biPoly = getBiPolygon();
+	      if (biPoly === undefined) return;
+	      return biPoly.front();
+	    }
+	    this.back = () => {
+	      const biPoly = getBiPolygon();
+	      if (biPoly === undefined) return;
+	      return biPoly.back();
+	    }
+	  }
+	}
+	
+	DrawerFront.abbriviation = 'df';
+	
+	
+	module.exports = DrawerFront
 	
 });
 
@@ -31717,6 +31876,7 @@ function (require, exports, module) {
 	const DrawerBox = require('../../drawer/drawer-box.js');
 	const DrawerFront = require('../../drawer/drawer-front.js');
 	const Assembly = require('../../../assembly.js');
+	const Polygon3D = require('../../../../../three-d/objects/polygon.js');
 	
 	class DrawerSection extends Assembly {
 	  constructor(sectionProperties) {
@@ -31725,47 +31885,37 @@ function (require, exports, module) {
 	    const instance = this;
 	    this.part = () => false;
 	
-	    function center() {
-	      return sectionProperties.coverInfo().center;
-	    }
-	    this.part = () => false;
-	
-	    function dems() {
-	      const coverInfo = sectionProperties.coverInfo();
-	      return {
-	        x: coverInfo.width,
-	        y: coverInfo.length,
-	        z: coverInfo.doorThickness
-	      }
+	    function getFrontBiPolygon () {
+	      return sectionProperties.coverInfo().biPolygon;
 	    }
 	
-	    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', center, dems, sectionProperties.rotation));
+	    const front = new DrawerFront('ff', 'DrawerFront', getFrontBiPolygon);
+	    this.front = () => door;
+	    this.pull = (i) => front.pull(i);
+	    this.addSubAssembly(front);
 	
 	
 	
-	    function getDrawerDepth(depth) {
+	    function getDrawerDepth() {
+	      const depth = sectionProperties.innerDepth();
 	      if (depth < 3) return 0;
-	      return (Math.ceil((depth / 2.54 - 1)/2) * 2) * 2.54;
+	      return (Math.floor(((depth - 2.54) / 2.54)/2) * 2) * 2.54;
 	    }
 	
-	    function drawerCenter(attr) {
+	
+	
+	    function getFrontPoly() {
+	      const innerPoly = new Polygon3D(sectionProperties.coordinates().inner);
 	      const coverInfo = sectionProperties.coverInfo();
-	      const drawerDepth = drawerDems().z;
-	      let center = coverInfo.center;
-	      center = sectionProperties.offsetPoint(center, 0 , 0, (coverInfo.doorThickness + drawerDepth) / 2);
-	      return attr ? center[attr] : center;
+	      const biPoly = coverInfo.biPolygon;
+	      const depth = getDrawerDepth(sectionProperties.innerDepth);
+	      const offsetVect = biPoly.front().normal().scale(coverInfo.frontOffset);
+	      return innerPoly.translate(offsetVect);
 	    }
 	
-	    function drawerDems(attr) {
-	      const coverInfo = sectionProperties.coverInfo();
-	      // TODO add box depth tolerance variable
-	      dems.z = getDrawerDepth(sectionProperties.innerDepth() - 2.54);
-	      dems.x = sectionProperties.innerWidth() - 0.9525;
-	      dems.y = sectionProperties.innerLength() - 2.54;
-	      return attr ? dems[attr] : dems;
-	    }
-	
-	    this.addSubAssembly(new DrawerBox('db', 'Drawer.Box', drawerCenter, drawerDems, sectionProperties.rotation));
+	    const drawerBox = new DrawerBox('db', 'Drawer.Box', getFrontPoly, getDrawerDepth);
+	    this.box = () => drawerBox;
+	    this.addSubAssembly(drawerBox);
 	  }
 	}
 	
@@ -31785,6 +31935,8 @@ function (require, exports, module) {
 	const Door = require('../../door/door.js');
 	const Handle = require('../../hardware/pull.js');
 	const Assembly = require('../../../assembly.js');
+	const Polygon3D = require('../../../../../three-d/objects/polygon.js');
+	const BiPolygon = require('../../../../../three-d/objects/bi-polygon.js');
 	
 	class DualDoorSection extends Assembly {
 	  constructor(sectionProperties) {
@@ -31792,48 +31944,45 @@ function (require, exports, module) {
 	    if (sectionProperties === undefined) return;
 	    const instance = this;
 	
-	
-	
 	    this.part = () => false;
 	
-	    function duelDoorCenter(right) {
-	      return function () {
-	        const cabinet = sectionProperties.getAssembly('c');
-	        if (cabinet)
-	          cabinet.openings[0].update();
-	        let direction = sectionProperties.vertical() ? 1 : -1;
-	        direction *= right ? 1 : -1;
-	        const doorGap = 2.54/16
-	        const coverInfo = sectionProperties.coverInfo();
-	        let center = JSON.copy(coverInfo.center);
-	        const dems = duelDoorDems();
-	        const xOffset = (dems.x + doorGap) / 2 * direction;
-	        const rotation = sectionProperties.rotation();
-	          rotation.x += 180;
-	          rotation.y += 180;
-	          rotation.z += 180;
-	        center = sectionProperties.transRotate(center, {z:0, y:0, x:xOffset}, rotation);
-	        return center;
+	    function shrinkPoly(poly, left) {
+	      const lines = JSON.clone(poly.lines());
+	      const offset = (lines[0].length() - instance.gap()) / 2;
+	      if (left) {
+	        lines[0].adjustLength(offset, true);
+	        lines[1].startVertex = lines[0].endVertex;
+	        lines[2].adjustLength(-offset, false);
+	        lines[1].endVertex = lines[2].startVertex;
+	      } else {
+	        lines[0].adjustLength(-offset, false);
+	        lines[3].endVertex = lines[0].startVertex;
+	        lines[2].adjustLength(offset, true);
+	        lines[3].startVertex = lines[2].endVertex;
+	      }
+	      return Polygon3D.fromLines(lines);
+	
+	    }
+	
+	    function getBiPolygon(left) {
+	      return () => {
+	        const fullPoly = sectionProperties.coverInfo().biPolygon;
+	        const front = shrinkPoly(fullPoly.front(), left);
+	        const back = shrinkPoly(fullPoly.back(), left);
+	        return new BiPolygon(front, back, fullPoly.flipNormal());
 	      }
 	    }
 	
-	    function duelDoorDems() {
-	      const coverInfo = sectionProperties.coverInfo();
-	      const doorGap = 2.54/16
-	      return {
-	        x: (coverInfo.width - doorGap)/2,
-	        y: coverInfo.length,
-	        z: coverInfo.doorThickness
-	      }
-	    }
-	
-	    const rightDoor = new Door('dr', 'DoorRight', duelDoorCenter(), duelDoorDems, sectionProperties.rotation);
-	    this.addSubAssembly(rightDoor);
-	    rightDoor.pull().location(Handle.location.TOP_LEFT);
-	
-	    const leftDoor = new Door('dl', 'DoorLeft', duelDoorCenter(true), duelDoorDems, sectionProperties.rotation);
+	    const leftDoor = new Door('dl', 'DoorLeft', getBiPolygon(true));
 	    this.addSubAssembly(leftDoor);
-	    leftDoor.pull().location(Handle.location.TOP_RIGHT);
+	    leftDoor.setPulls([Handle.location.TOP_RIGHT]);
+	
+	    const rightDoor = new Door('dr', 'DoorRight', getBiPolygon(false));
+	    this.addSubAssembly(rightDoor);
+	    rightDoor.setPulls([Handle.location.TOP_LEFT]);
+	
+	
+	    this.gap = () => 2.54 / 16;
 	  }
 	}
 	
@@ -31863,21 +32012,14 @@ function (require, exports, module) {
 	    if (sectionProperties === undefined) return;
 	    this.part = () => false;
 	
-	    function center() {
-	      return sectionProperties.coverInfo().center;
-	    }
-	    this.part = () => false;
-	
-	    function dems() {
-	      const coverInfo = sectionProperties.coverInfo();
-	      return {
-	        x: coverInfo.width,
-	        y: coverInfo.length,
-	        z: coverInfo.doorThickness
-	      }
+	    function getBiPolygon () {
+	      return sectionProperties.coverInfo().biPolygon;
 	    }
 	
-	    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', center, dems, sectionProperties.rotation));
+	    const front = new DrawerFront('ff', 'DrawerFront', getBiPolygon);
+	    this.front = () => door;
+	    this.pull = (i) => front.pull(i);
+	    this.addSubAssembly(front);
 	  }
 	}
 	
@@ -31911,7 +32053,7 @@ function (require, exports, module) {
 	
 	    const door = new Door('d', 'Door', getBiPolygon);
 	    this.door = () => door;
-	    this.pull = () => door.pull();
+	    this.pull = (i) => door.pull(i);
 	    this.addSubAssembly(door);
 	  }
 	}
@@ -32222,231 +32364,241 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./test/tests/plane.js',
+RequireJS.addFunction('./test/tests/line-consolidate.js',
 function (require, exports, module) {
 	
 const Test = require('../../../../public/js/utils/test/test').Test;
-	const Plane = require('../../app-src/three-d/objects/plane.js');
-	const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
-	const Vector3D = require('../../app-src/three-d/objects/vector.js');
+	const Polygon2d = require('../../app-src/two-d/objects/polygon.js');
+	const Line2d = require('../../app-src/two-d/objects/line.js');
 	const Line3D = require('../../app-src/three-d/objects/line.js');
-	const CSG = require('../../public/js/3d-modeling/csg');
+	const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
+	const approximate = require('../../../../public/js/utils/approximate.js');
 	
-	const Notification = require('../../../../public/js/utils/collections/notification.js');
+	const extraLinePoly = new Polygon2d([[0,0],[0,1],[0,2],[0,3],
+	                [1,3],[1,4],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],
+	                [3,5],[4,5],[5,4],[6,3],[5,3],[5,2],[6,2],[6,1],
+	                [6,0],[5,0],[4,0],[4,-1],[4,-2],[1,0]]);
+	
+	const consisePoly = new Polygon2d([[0,0],[0,3],[1,3],[1,4],
+	                [0,4],[0,6],[3,6],[3,5],[4,5],[6,3],[5,3],[5,2],
+	                [6,2],[6,0],[4,0],[4,-2],[1,0]]);
+	
+	const root2 = Math.sqrt(2);
 	
 	
-	
-	
-	Test.add('Plane: makePlane1MeetPlane2',(ts) => {
-	
-	  let plane1 = [{x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 2, y: 3, z: 0}, {x: 2, y: 0, z: 0}];
-	  let plane2 = [{x: 4, y: 3, z: -1}, {x: 4, y: 0, z: -1}, {x: 4, y: 3, z: 1}, {x: 4, y: 0, z: 1}];
-	  let answer = new Plane({x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 4, y: 0, z: 0});
-	  let rotation = {x: 0, y: 0, z: 0};
-	  let result = Plane.makePlane1MeetPlane2(JSON.copy(plane1), plane2, rotation);
-	  ts.assertTrue(answer.equals(result));
-	
-	  rotation = {x: 0, y: 90, z: 0};
-	  let center = Vertex3D.center.apply(null, plane1);
-	  let plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
-	  let plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
-	  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
-	  let reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
-	  ts.assertTrue(answer.equals(reverted));
-	
-	  rotation = {x: 111, y: 62, z: 212};
-	  center = Vertex3D.center.apply(null, plane1);
-	  plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
-	  plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
-	  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
-	  reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
-	  ts.assertTrue(answer.equals(reverted));
-	
+	// const A = new Polygon3D([[,],[,],[,],[,]])
+	Test.add('Line2d: consolidate',(ts) => {
+	  const lines = Polygon2d.lines(extraLinePoly);
+	  ts.assertTrue(lines.length === consisePoly.lines().length);
 	  ts.success();
 	});
 	
 	
-	Test.add('Plane: equation',(ts) => {
-	  const p1 = {x: 1, y: -2, z: 1};
-	  const p2 = {x: 4, y: -2, z: -2};
-	  const p3 = {x: 4, y: 1, z: 4};
+	Test.add('Line2d: perpendicular', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:1, y:0});
+	  let perp = line.perpendicular(1, null, true);
+	  let expectedMidpoint = new Vertex2d({x: .5, y: 0});
+	  let expectedLine = new Line2d({x: .5, y: .5}, {x: .5, y: -.5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
 	
-	  const equation = new Plane(p1, p2, p3).equation();
-	  ts.assertEquals(equation.a * 54, 9);
-	  ts.assertEquals(equation.b * 54, -18);
-	  ts.assertEquals(equation.c * 54, 9);
-	  ts.assertEquals(equation.d * 54, 54);
-	  ts.success();
-	});
+	  perp = line.perpendicular(-2, null, true);
+	  expectedLine = new Line2d({x: .5, y: 1}, {x: .5, y: -1});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
 	
-	Test.add('Plane: XYrotation',(ts) => {
-	  const p1 = {x: 1, y: -2, z: 1};
-	  const p2 = {x: 4, y: -2, z: -2};
-	  const p3 = {x: 4, y: 1, z: 4};
+	  perp = line.perpendicular(1);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 1});
+	  expectedMidpoint = new Vertex2d({x: .5, y: .5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
 	
-	  const equation = new Plane(p1, p2, p3).equation();
-	  const plane = new Plane(equation);
-	  const rotation = plane.XYrotation();
-	  const result = plane.matrixRotation(rotation);
-	  ts.success();
-	});
+	  perp = line.perpendicular(-2);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -2});
+	  expectedMidpoint = new Vertex2d({x: .5, y: -1});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
 	
-	Test.add('Plane: findPoints',(ts) => {
-	  const p1 = {x: 1, y: -2, z: 4};
-	  const p2 = {x: 4, y: -2, z: 4};
-	  const p3 = {x: 4, y: 1, z: 4};
+	  perp = line.perpendicular(-1);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -1});
+	  expectedMidpoint = new Vertex2d({x: .5, y: -.5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
 	
-	  const equation = new Plane(p1, p2, p3).equation();
-	  const plane = new Plane(equation);
+	  perp = line.perpendicular(2);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 2});
+	  expectedMidpoint = new Vertex2d({x: .5, y: 1});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
 	
-	  const result = plane.findPoints(13);
-	  ts.assertEquals(result.length, 13);
-	  ts.success();
-	});
+	  line = new Line2d({x:0,y:0}, {x:2, y:2});
+	  perp = line.perpendicular(root2);
+	  expectedLine = new Line2d({x: 1, y: 1}, {x: 0, y: 2});
+	  expectedMidpoint = new Vertex2d({x: .5, y: 1.5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
 	
-	Test.add('Vector: crossProduct',(ts) => {
-	  const vect1 = new Vector3D(3,1,4);
-	  const vect2 = new Vector3D(3,2,6);
-	  const crossP = vect1.crossProduct(vect2);
-	  ts.assertEquals(crossP.i(), -2/7);
-	  ts.assertEquals(crossP.j(), -6/7);
-	  ts.assertEquals(crossP.k(), 3/7);
-	  ts.success();
-	});
-	
-	Test.add('Plane: normal',(ts) => {
-	  const p1 = {x: 1, y: 2, z: 4};
-	  const p2 = {x: 4, y: 2, z: 4};
-	  const p3 = {x: 4, y: 1, z: 4};
-	
-	  const equation = new Plane(p1, p2, p3).equation();
-	  let plane = new Plane(equation);
-	
-	  let normal = plane.normal();
-	
-	  plane = new Plane(p1,p2,p3);
-	  plane.rotate({x: 90, y:0, z:0});
-	  normal = plane.normal();
-	
-	  plane = new Plane(p1,p2,p3);
-	  plane.rotate({x: 0, y:90, z:0});
-	  normal = plane.normal();
-	
-	  ts.success();
-	});
-	
-	Test.add('Plane: lineIntersection',(ts) => {
-	  const p1 = {x: 1, y: 2, z: 4};
-	  const p2 = {x: 4, y: 2, z: 4};
-	  const p3 = {x: 4, y: 1, z: 4};
-	
-	  let plane = new Plane(p1,p2,p3);
-	  let line = new Line3D({x:0,y:0,z:0}, {x:0,y:0,z:2});
-	  let intersection = plane.lineIntersection(line);
-	  ts.assertTrue(intersection.equals({x: 0, y: 0, z: 4}));
-	
-	  line = new Line3D({x:0,y:0,z:0}, {x:0,y:1,z:1});
-	  intersection = plane.lineIntersection(line);
-	  ts.assertTrue(intersection.equals({x: 0, y: 4, z: 4}));
-	
-	  line = new Line3D({x:-1,y:-1,z:-1}, {x:6,y:-1,z:6});
-	  intersection = plane.lineIntersection(line);
-	  ts.assertTrue(intersection.equals({x: 4, y: -1, z: 4}));
-	
-	  line = new Line3D({x:-1,y:-1,z:-1}, {x:1,y:1,z:1});
-	  intersection = plane.lineIntersection(line);
-	  ts.assertTrue(intersection.equals({x: 4, y: 4, z: 4}));
+	  line = new Line2d({x:0,y:0}, {x:2, y:2});
+	  perp = line.perpendicular(-1 * root2);
+	  expectedLine = new Line2d({x: 1, y: 1}, {x: 2, y: 0});
+	  expectedMidpoint = new Vertex2d({x: 1.5, y: .5});
+	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
 	
 	  ts.success();
 	});
 	
-	Test.add('Plane: bisector',(ts) => {
-	  let eqn1 = {a: 2, b: -1, c: 2, d: 3};
-	  let eqn2 = {a: 3, b: -2, c: 6, d: 8};
+	Test.add('Line2d: parrelle', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:2, y:2});
+	  let expectedLine = new Line2d({x: -1, y: 1}, {x: 1, y: 3});
+	  let expectedMidpoint = new Vertex2d({x: 0, y: 2});
+	  let parrelle = line.parrelle(-1 * root2);
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
 	
-	  let plane1 = new Plane(eqn1);
-	  let plane2 = new Plane(eqn2);
-	  let bisector = Plane.bisector(plane1, plane2);
-	  let eqn = bisector.accute.equation();
-	  ts.assertEquals(eqn.a, 23);
-	  ts.assertEquals(eqn.b, -13);
-	  ts.assertEquals(eqn.c, 32);
-	  ts.assertEquals(eqn.d, 45);
+	  expectedLine = new Line2d({x: 1, y: -1}, {x: 3, y: 1});
+	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
+	  parrelle = line.parrelle(root2);
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
 	
-	  eqn = bisector.obtuse.equation();
-	  ts.assertEquals(eqn.a, 5);
-	  ts.assertEquals(eqn.b, -1);
-	  ts.assertEquals(eqn.c, -4);
-	  ts.assertEquals(eqn.d, -3);
+	  line = new Line2d({x:2, y:2}, {x:0,y:0});
+	  expectedLine = new Line2d({x: 1, y: 3}, {x: -1, y: 1});
+	  expectedMidpoint = new Vertex2d({x: 0, y: 2});
+	  parrelle = line.parrelle(root2);
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
 	
-	  plane1 = new Plane({x:3, y: 8, z: 88}, {x:1, y: 12, z: 6}, {x:30, y: -2, z: 4});
-	  plane2 = new Plane({x:5, y: 44, z: -16}, {x:-13, y: -20, z: 48}, {x:30, y: -2, z: 3});
-	  bisector = Plane.bisector(plane1, plane2);
+	  expectedLine = new Line2d({x: 3, y: 1}, {x: 1, y: -1});
+	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
+	  parrelle = line.parrelle(-1 * root2);
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
 	
-	  ts.assertEquals(plane1.equationEqualToZ(), '(0.038192x + 0.078697y + 1) / 0.002907');
-	  ts.assertEquals(plane2.equationEqualToZ(), '(0.031282x + 0.035156y + 1) / 0.043954');
-	  ts.assertEquals(bisector.obtuse.equationEqualToZ(), '(-0.000279x + 0.001991y + -0.023131) / -0.00366');
-	  ts.assertEquals(bisector.accute.equationEqualToZ(), '(0.005197x + 0.008144y + 0.151916) / 0.004034');
+	  line = new Line2d({x:3,y:1}, {x:8, y:4});
+	  expectedMidpoint = new Vertex2d({x: -.5, y: 12.5});
+	  expectedLine = new Line2d({x: -3, y: 11}, {x: 2, y: 14});
+	  parrelle = line.parrelle(-1 * expectedMidpoint.distance(line.midpoint()));
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  expectedMidpoint = new Vertex2d({x: 11.5, y: -7.5});
+	  expectedLine = new Line2d({x: 9, y: -9}, {x: 14, y: -6});
+	  parrelle = line.parrelle(expectedMidpoint.distance(line.midpoint()));
+	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
 	
 	  ts.success();
 	});
 	
+	Test.add('Line2d: trimmed', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:0, y:8});
 	
-	Test.add('Plane: bisector',(ts) => {
-	  const xyPlane = Plane.fromPointNormal({x: 12, y: 41, z: 0}, new Vector3D(1, 1, 1));
-	  const yzPlane = Plane.fromPointNormal({x: 0, y: 41, z: 1}, new Vector3D(0, 3, -1));
-	  const xzPlane = Plane.fromPointNormal({x: 12, y: 0, z: 50}, new Vector3D(5, 0, 13));
+	  let trimmed = line.trimmed(.5);
+	  let expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 8});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(-.5);
+	  expectedLine = new Line2d({x: 0, y: 0}, {x: 0, y: 7.5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(.5, true);
+	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(-.5, true);
+	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:-4,y:-8}, {x:0, y:-4});
+	  trimmed = line.trimmed(root2, true);
+	  expectedLine = new Line2d({x: -3, y: -7}, {x: -1, y: -5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(root2);
+	  expectedLine = new Line2d({x: -3, y: -7}, {x: 0, y: -4});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(-1 * root2);
+	  expectedLine = new Line2d({x: -4, y: -8}, {x: -1, y: -5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
 	  ts.success();
 	});
 	
-});
-
-
-RequireJS.addFunction('./test/tests/polygon-merge.js',
-function (require, exports, module) {
+	Test.add('Line2d: thetaBetween', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:0, y:10});
+	  let line2 = new Line2d({x:0,y:10}, {x:10, y:20});
+	  let line3 = new Line2d({x:10,y:20}, {x:10, y:30})
 	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 135);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line3))), 225);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 225);
+	  ts.assertEquals(approximate(Math.toDegrees(line3.thetaBetween(line2))), 135);
 	
+	  let origin = {x:3, y:22};
+	  line = Line2d.startAndTheta(origin, Math.toRadians(16), 10);
+	  line2 = Line2d.startAndTheta(origin, Math.toRadians(251), 10);
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
 	
-	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]])
-	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
-	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
-	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
-	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
-	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
-	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
-	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
-	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]]);
-	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
+	  line2 = line2.negitive();
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
 	
-	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
-	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
-	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
-	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
-	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
+	  line = line.negitive();
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
 	
-	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
-	Test.add('Polygon3D merge',(ts) => {
-	  // const poly = A.merge(B).merge(J);
-	  const AB = A.merge(B);
-	  const IF = [F,I];
-	  Polygon3D.merge(IF);
-	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
-	  ABCDEFGHIJ.shuffle();
-	  Polygon3D.merge(ABCDEFGHIJ);
+	  line2 = line2.negitive();
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
 	
-	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
-	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
-	  ts.assertFalse(polyAB.equals(undefined));
-	  ts.assertFalse(polyAB.equals(A));
-	  ts.assertTrue(IF[0].equals(polyIF));
-	  ts.assertTrue(polyIF.equals(IF[0]));
-	  ts.assertTrue(ABCDEFGHIJ.length === 2);
-	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
-	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
 	  ts.success();
 	});
+	
+	// Test.add('Line3D: intersects', (ts) => {
+	//   const line1 = new Line3D({x: 10, y: 10, z: 10}, {x: 5, y: 5, z: 5});
+	//   const line2 = new Line3D({x: 10, y: 10, z: -10}, {x: 5, y: 5, z: -5});
+	//   let intersection = line1.intersects(line2);
+	//   ts.assertTrue(intersection.equals({x: 0, y:0, z:0}));
+	//   ts.success();
+	// });
 	
 });
 
@@ -32508,6 +32660,55 @@ function (require, exports, module) {
 	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
 	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], -2), 0);
 	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,undefined,8,9], 8), 6);
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('./test/tests/polygon-merge.js',
+function (require, exports, module) {
+	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
+	
+	
+	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]])
+	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
+	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
+	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
+	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
+	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
+	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
+	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
+	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]]);
+	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
+	
+	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
+	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
+	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
+	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
+	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
+	
+	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
+	Test.add('Polygon3D merge',(ts) => {
+	  // const poly = A.merge(B).merge(J);
+	  const AB = A.merge(B);
+	  const IF = [F,I];
+	  Polygon3D.merge(IF);
+	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
+	  ABCDEFGHIJ.shuffle();
+	  Polygon3D.merge(ABCDEFGHIJ);
+	
+	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
+	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
+	  ts.assertFalse(polyAB.equals(undefined));
+	  ts.assertFalse(polyAB.equals(A));
+	  ts.assertTrue(IF[0].equals(polyIF));
+	  ts.assertTrue(polyIF.equals(IF[0]));
+	  ts.assertTrue(ABCDEFGHIJ.length === 2);
+	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
+	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
 	  ts.success();
 	});
 	
@@ -32871,241 +33072,182 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./test/tests/line-consolidate.js',
+RequireJS.addFunction('./test/tests/plane.js',
 function (require, exports, module) {
 	
 const Test = require('../../../../public/js/utils/test/test').Test;
-	const Polygon2d = require('../../app-src/two-d/objects/polygon.js');
-	const Line2d = require('../../app-src/two-d/objects/line.js');
+	const Plane = require('../../app-src/three-d/objects/plane.js');
+	const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
+	const Vector3D = require('../../app-src/three-d/objects/vector.js');
 	const Line3D = require('../../app-src/three-d/objects/line.js');
-	const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
-	const approximate = require('../../../../public/js/utils/approximate.js');
+	const CSG = require('../../public/js/3d-modeling/csg');
 	
-	const extraLinePoly = new Polygon2d([[0,0],[0,1],[0,2],[0,3],
-	                [1,3],[1,4],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],
-	                [3,5],[4,5],[5,4],[6,3],[5,3],[5,2],[6,2],[6,1],
-	                [6,0],[5,0],[4,0],[4,-1],[4,-2],[1,0]]);
-	
-	const consisePoly = new Polygon2d([[0,0],[0,3],[1,3],[1,4],
-	                [0,4],[0,6],[3,6],[3,5],[4,5],[6,3],[5,3],[5,2],
-	                [6,2],[6,0],[4,0],[4,-2],[1,0]]);
-	
-	const root2 = Math.sqrt(2);
+	const Notification = require('../../../../public/js/utils/collections/notification.js');
 	
 	
-	// const A = new Polygon3D([[,],[,],[,],[,]])
-	Test.add('Line2d: consolidate',(ts) => {
-	  const lines = Polygon2d.lines(extraLinePoly);
-	  ts.assertTrue(lines.length === consisePoly.lines().length);
-	  ts.success();
-	});
 	
 	
-	Test.add('Line2d: perpendicular', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:1, y:0});
-	  let perp = line.perpendicular(1, null, true);
-	  let expectedMidpoint = new Vertex2d({x: .5, y: 0});
-	  let expectedLine = new Line2d({x: .5, y: .5}, {x: .5, y: -.5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
+	Test.add('Plane: makePlane1MeetPlane2',(ts) => {
 	
-	  perp = line.perpendicular(-2, null, true);
-	  expectedLine = new Line2d({x: .5, y: 1}, {x: .5, y: -1});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
+	  let plane1 = [{x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 2, y: 3, z: 0}, {x: 2, y: 0, z: 0}];
+	  let plane2 = [{x: 4, y: 3, z: -1}, {x: 4, y: 0, z: -1}, {x: 4, y: 3, z: 1}, {x: 4, y: 0, z: 1}];
+	  let answer = new Plane({x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 4, y: 0, z: 0});
+	  let rotation = {x: 0, y: 0, z: 0};
+	  let result = Plane.makePlane1MeetPlane2(JSON.copy(plane1), plane2, rotation);
+	  ts.assertTrue(answer.equals(result));
 	
-	  perp = line.perpendicular(1);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 1});
-	  expectedMidpoint = new Vertex2d({x: .5, y: .5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
+	  rotation = {x: 0, y: 90, z: 0};
+	  let center = Vertex3D.center.apply(null, plane1);
+	  let plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
+	  let plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
+	  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
+	  let reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
+	  ts.assertTrue(answer.equals(reverted));
 	
-	  perp = line.perpendicular(-2);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -2});
-	  expectedMidpoint = new Vertex2d({x: .5, y: -1});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(-1);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -1});
-	  expectedMidpoint = new Vertex2d({x: .5, y: -.5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(2);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 2});
-	  expectedMidpoint = new Vertex2d({x: .5, y: 1});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:0,y:0}, {x:2, y:2});
-	  perp = line.perpendicular(root2);
-	  expectedLine = new Line2d({x: 1, y: 1}, {x: 0, y: 2});
-	  expectedMidpoint = new Vertex2d({x: .5, y: 1.5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:0,y:0}, {x:2, y:2});
-	  perp = line.perpendicular(-1 * root2);
-	  expectedLine = new Line2d({x: 1, y: 1}, {x: 2, y: 0});
-	  expectedMidpoint = new Vertex2d({x: 1.5, y: .5});
-	  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
+	  rotation = {x: 111, y: 62, z: 212};
+	  center = Vertex3D.center.apply(null, plane1);
+	  plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
+	  plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
+	  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
+	  reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
+	  ts.assertTrue(answer.equals(reverted));
 	
 	  ts.success();
 	});
 	
-	Test.add('Line2d: parrelle', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:2, y:2});
-	  let expectedLine = new Line2d({x: -1, y: 1}, {x: 1, y: 3});
-	  let expectedMidpoint = new Vertex2d({x: 0, y: 2});
-	  let parrelle = line.parrelle(-1 * root2);
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
 	
-	  expectedLine = new Line2d({x: 1, y: -1}, {x: 3, y: 1});
-	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
-	  parrelle = line.parrelle(root2);
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	Test.add('Plane: equation',(ts) => {
+	  const p1 = {x: 1, y: -2, z: 1};
+	  const p2 = {x: 4, y: -2, z: -2};
+	  const p3 = {x: 4, y: 1, z: 4};
 	
-	  line = new Line2d({x:2, y:2}, {x:0,y:0});
-	  expectedLine = new Line2d({x: 1, y: 3}, {x: -1, y: 1});
-	  expectedMidpoint = new Vertex2d({x: 0, y: 2});
-	  parrelle = line.parrelle(root2);
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	  const equation = new Plane(p1, p2, p3).equation();
+	  ts.assertEquals(equation.a * 54, 9);
+	  ts.assertEquals(equation.b * 54, -18);
+	  ts.assertEquals(equation.c * 54, 9);
+	  ts.assertEquals(equation.d * 54, 54);
+	  ts.success();
+	});
 	
-	  expectedLine = new Line2d({x: 3, y: 1}, {x: 1, y: -1});
-	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
-	  parrelle = line.parrelle(-1 * root2);
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	Test.add('Plane: XYrotation',(ts) => {
+	  const p1 = {x: 1, y: -2, z: 1};
+	  const p2 = {x: 4, y: -2, z: -2};
+	  const p3 = {x: 4, y: 1, z: 4};
 	
-	  line = new Line2d({x:3,y:1}, {x:8, y:4});
-	  expectedMidpoint = new Vertex2d({x: -.5, y: 12.5});
-	  expectedLine = new Line2d({x: -3, y: 11}, {x: 2, y: 14});
-	  parrelle = line.parrelle(-1 * expectedMidpoint.distance(line.midpoint()));
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	  const equation = new Plane(p1, p2, p3).equation();
+	  const plane = new Plane(equation);
+	  const rotation = plane.XYrotation();
+	  const result = plane.matrixRotation(rotation);
+	  ts.success();
+	});
 	
-	  expectedMidpoint = new Vertex2d({x: 11.5, y: -7.5});
-	  expectedLine = new Line2d({x: 9, y: -9}, {x: 14, y: -6});
-	  parrelle = line.parrelle(expectedMidpoint.distance(line.midpoint()));
-	  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	Test.add('Plane: findPoints',(ts) => {
+	  const p1 = {x: 1, y: -2, z: 4};
+	  const p2 = {x: 4, y: -2, z: 4};
+	  const p3 = {x: 4, y: 1, z: 4};
+	
+	  const equation = new Plane(p1, p2, p3).equation();
+	  const plane = new Plane(equation);
+	
+	  const result = plane.findPoints(13);
+	  ts.assertEquals(result.length, 13);
+	  ts.success();
+	});
+	
+	Test.add('Vector: crossProduct',(ts) => {
+	  const vect1 = new Vector3D(3,1,4);
+	  const vect2 = new Vector3D(3,2,6);
+	  const crossP = vect1.crossProduct(vect2);
+	  ts.assertEquals(crossP.i(), -2/7);
+	  ts.assertEquals(crossP.j(), -6/7);
+	  ts.assertEquals(crossP.k(), 3/7);
+	  ts.success();
+	});
+	
+	Test.add('Plane: normal',(ts) => {
+	  const p1 = {x: 1, y: 2, z: 4};
+	  const p2 = {x: 4, y: 2, z: 4};
+	  const p3 = {x: 4, y: 1, z: 4};
+	
+	  const equation = new Plane(p1, p2, p3).equation();
+	  let plane = new Plane(equation);
+	
+	  let normal = plane.normal();
+	
+	  plane = new Plane(p1,p2,p3);
+	  plane.rotate({x: 90, y:0, z:0});
+	  normal = plane.normal();
+	
+	  plane = new Plane(p1,p2,p3);
+	  plane.rotate({x: 0, y:90, z:0});
+	  normal = plane.normal();
 	
 	  ts.success();
 	});
 	
-	Test.add('Line2d: trimmed', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:0, y:8});
+	Test.add('Plane: lineIntersection',(ts) => {
+	  const p1 = {x: 1, y: 2, z: 4};
+	  const p2 = {x: 4, y: 2, z: 4};
+	  const p3 = {x: 4, y: 1, z: 4};
 	
-	  let trimmed = line.trimmed(.5);
-	  let expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 8});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	  let plane = new Plane(p1,p2,p3);
+	  let line = new Line3D({x:0,y:0,z:0}, {x:0,y:0,z:2});
+	  let intersection = plane.lineIntersection(line);
+	  ts.assertTrue(intersection.equals({x: 0, y: 0, z: 4}));
 	
-	  trimmed = line.trimmed(-.5);
-	  expectedLine = new Line2d({x: 0, y: 0}, {x: 0, y: 7.5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	  line = new Line3D({x:0,y:0,z:0}, {x:0,y:1,z:1});
+	  intersection = plane.lineIntersection(line);
+	  ts.assertTrue(intersection.equals({x: 0, y: 4, z: 4}));
 	
-	  trimmed = line.trimmed(.5, true);
-	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	  line = new Line3D({x:-1,y:-1,z:-1}, {x:6,y:-1,z:6});
+	  intersection = plane.lineIntersection(line);
+	  ts.assertTrue(intersection.equals({x: 4, y: -1, z: 4}));
 	
-	  trimmed = line.trimmed(-.5, true);
-	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:-4,y:-8}, {x:0, y:-4});
-	  trimmed = line.trimmed(root2, true);
-	  expectedLine = new Line2d({x: -3, y: -7}, {x: -1, y: -5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(root2);
-	  expectedLine = new Line2d({x: -3, y: -7}, {x: 0, y: -4});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(-1 * root2);
-	  expectedLine = new Line2d({x: -4, y: -8}, {x: -1, y: -5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	  line = new Line3D({x:-1,y:-1,z:-1}, {x:1,y:1,z:1});
+	  intersection = plane.lineIntersection(line);
+	  ts.assertTrue(intersection.equals({x: 4, y: 4, z: 4}));
 	
 	  ts.success();
 	});
 	
-	Test.add('Line2d: thetaBetween', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:0, y:10});
-	  let line2 = new Line2d({x:0,y:10}, {x:10, y:20});
-	  let line3 = new Line2d({x:10,y:20}, {x:10, y:30})
+	Test.add('Plane: bisector',(ts) => {
+	  let eqn1 = {a: 2, b: -1, c: 2, d: 3};
+	  let eqn2 = {a: 3, b: -2, c: 6, d: 8};
 	
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 135);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line3))), 225);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 225);
-	  ts.assertEquals(approximate(Math.toDegrees(line3.thetaBetween(line2))), 135);
+	  let plane1 = new Plane(eqn1);
+	  let plane2 = new Plane(eqn2);
+	  let bisector = Plane.bisector(plane1, plane2);
+	  let eqn = bisector.accute.equation();
+	  ts.assertEquals(eqn.a, 23);
+	  ts.assertEquals(eqn.b, -13);
+	  ts.assertEquals(eqn.c, 32);
+	  ts.assertEquals(eqn.d, 45);
 	
-	  let origin = {x:3, y:22};
-	  line = Line2d.startAndTheta(origin, Math.toRadians(16), 10);
-	  line2 = Line2d.startAndTheta(origin, Math.toRadians(251), 10);
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	  eqn = bisector.obtuse.equation();
+	  ts.assertEquals(eqn.a, 5);
+	  ts.assertEquals(eqn.b, -1);
+	  ts.assertEquals(eqn.c, -4);
+	  ts.assertEquals(eqn.d, -3);
 	
-	  line2 = line2.negitive();
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	  plane1 = new Plane({x:3, y: 8, z: 88}, {x:1, y: 12, z: 6}, {x:30, y: -2, z: 4});
+	  plane2 = new Plane({x:5, y: 44, z: -16}, {x:-13, y: -20, z: 48}, {x:30, y: -2, z: 3});
+	  bisector = Plane.bisector(plane1, plane2);
 	
-	  line = line.negitive();
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
-	
-	  line2 = line2.negitive();
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	  ts.assertEquals(plane1.equationEqualToZ(), '(0.038192x + 0.078697y + 1) / 0.002907');
+	  ts.assertEquals(plane2.equationEqualToZ(), '(0.031282x + 0.035156y + 1) / 0.043954');
+	  ts.assertEquals(bisector.obtuse.equationEqualToZ(), '(-0.000279x + 0.001991y + -0.023131) / -0.00366');
+	  ts.assertEquals(bisector.accute.equationEqualToZ(), '(0.005197x + 0.008144y + 0.151916) / 0.004034');
 	
 	  ts.success();
 	});
 	
-	// Test.add('Line3D: intersects', (ts) => {
-	//   const line1 = new Line3D({x: 10, y: 10, z: 10}, {x: 5, y: 5, z: 5});
-	//   const line2 = new Line3D({x: 10, y: 10, z: -10}, {x: 5, y: 5, z: -5});
-	//   let intersection = line1.intersects(line2);
-	//   ts.assertTrue(intersection.equals({x: 0, y:0, z:0}));
-	//   ts.success();
-	// });
+	
+	Test.add('Plane: bisector',(ts) => {
+	  const xyPlane = Plane.fromPointNormal({x: 12, y: 41, z: 0}, new Vector3D(1, 1, 1));
+	  const yzPlane = Plane.fromPointNormal({x: 0, y: 41, z: 1}, new Vector3D(0, 3, -1));
+	  const xzPlane = Plane.fromPointNormal({x: 12, y: 0, z: 50}, new Vector3D(5, 0, 13));
+	  ts.success();
+	});
 	
 });
 
@@ -33260,117 +33402,6 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	
 	  ts.success();
 	});
-	
-});
-
-
-RequireJS.addFunction('./test/tests/cost/labor.js',
-function (require, exports, module) {
-	
-
-	
-	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
-	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Labor = require('../../../app-src/cost/types/material/labor.js');
-	const FunctionArgumentTest = require('../../test.js').FunctionArgumentTest;
-	
-	
-	{
-	  const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
-	  const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
-	  const props = {};
-	  const smeRound = StringMathEvaluator.round;
-	  const referenceable = true;
-	  const group = 'localTest30487';
-	
-	  let unitCostValue = smeRound((35*.017)/(8*12));
-	  let costValue = smeRound(unitCostValue * 196 * 12);
-	  let assembly = frame;
-	  props.linear = {
-	    id: 'Sand Frame',
-	    method: 'Linear Feet',
-	    laborType: 'Sand',
-	    objectId: 'Frame',
-	    hourlyRate: '35',
-	    length: '8\'',
-	    hours: '.017',
-	    formula: 'l',
-	    referenceable, unitCostValue, costValue, assembly, group
-	  };
-	
-	  unitCostValue = smeRound((35*.08)/(48*48));
-	  costValue = smeRound(unitCostValue * 24 * 10);
-	  assembly = panel;
-	  props.square = {
-	    id: 'Sand Panel',
-	    method: 'Square Feet',
-	    laborType: 'Sand',
-	    length: '48',
-	    objectId: 'Panel',
-	    width: '48',
-	    hours: '.08',
-	    formula: 'l*w',
-	    referenceable, unitCostValue, costValue, assembly, group
-	  };
-	
-	  unitCostValue = smeRound((35*.06)/(12*6*1));
-	  costValue = smeRound(unitCostValue * 24 * 10 * .75);
-	  props.cubic = {
-	    id: 'Sand Block',
-	    method: 'Cubic Feet',
-	    laborType: 'Sand',
-	    hourlyRate: '35',
-	    objectId: 'Panel',
-	    length: '12',
-	    width: '6',
-	    depth: '1',
-	    hours: '.06',
-	    formula: 'l*w*d',
-	    referenceable, unitCostValue, costValue, assembly, group
-	  };
-	
-	  unitCostValue = smeRound(20*.66);
-	  costValue = smeRound(unitCostValue * 13);
-	  props.unit = {
-	    id: 'instalation',
-	    method: 'Unit',
-	    laborType: 'Instalation',
-	    hourlyRate: '20',
-	    hours: '.66',
-	    referenceable, unitCostValue, costValue, group,
-	    assembly: 13
-	  };
-	
-	  Test.add('LaborCost: unitCost/calc',(ts) => {
-	    const costs = [];
-	    function testProps(props) {
-	      const labor = new Labor(props);
-	      costs.push(labor);
-	      ts.assertTolerance(labor.unitCost().value, props.unitCostValue, .00001);
-	      ts.assertTolerance(labor.calc(props.assembly), props.costValue, .00001);
-	    }
-	    Object.values(props).forEach(testProps);
-	    costs.forEach((cost) => cost.delete());
-	    ts.success();
-	  });
-	
-	  // Test.add('LaborCost: argument validation',(ts) => {
-	  //   const args = [props.linear];
-	  //   const func = function (args) {new (Labor.prototype.constructor)(...arguments);}
-	  //   new FunctionArgumentTest(ts, func, args)
-	  //       .setIndex(0)
-	  //       .add('id', undefined)
-	  //       .run();
-	  //   ts.success();
-	  // });
-	}
-	
-	exports.Frame = Frame
-	exports.Panel = Panel
-	exports.StringMathEvaluator = StringMathEvaluator
-	exports.Labor = Labor
-	exports.FunctionArgumentTest = FunctionArgumentTest
 	
 });
 
@@ -33552,6 +33583,117 @@ function (require, exports, module) {
 	
 	exports.Frame = Frame
 	exports.Material = Material
+	
+});
+
+
+RequireJS.addFunction('./test/tests/cost/labor.js',
+function (require, exports, module) {
+	
+
+	
+	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
+	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Labor = require('../../../app-src/cost/types/material/labor.js');
+	const FunctionArgumentTest = require('../../test.js').FunctionArgumentTest;
+	
+	
+	{
+	  const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
+	  const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
+	  const props = {};
+	  const smeRound = StringMathEvaluator.round;
+	  const referenceable = true;
+	  const group = 'localTest30487';
+	
+	  let unitCostValue = smeRound((35*.017)/(8*12));
+	  let costValue = smeRound(unitCostValue * 196 * 12);
+	  let assembly = frame;
+	  props.linear = {
+	    id: 'Sand Frame',
+	    method: 'Linear Feet',
+	    laborType: 'Sand',
+	    objectId: 'Frame',
+	    hourlyRate: '35',
+	    length: '8\'',
+	    hours: '.017',
+	    formula: 'l',
+	    referenceable, unitCostValue, costValue, assembly, group
+	  };
+	
+	  unitCostValue = smeRound((35*.08)/(48*48));
+	  costValue = smeRound(unitCostValue * 24 * 10);
+	  assembly = panel;
+	  props.square = {
+	    id: 'Sand Panel',
+	    method: 'Square Feet',
+	    laborType: 'Sand',
+	    length: '48',
+	    objectId: 'Panel',
+	    width: '48',
+	    hours: '.08',
+	    formula: 'l*w',
+	    referenceable, unitCostValue, costValue, assembly, group
+	  };
+	
+	  unitCostValue = smeRound((35*.06)/(12*6*1));
+	  costValue = smeRound(unitCostValue * 24 * 10 * .75);
+	  props.cubic = {
+	    id: 'Sand Block',
+	    method: 'Cubic Feet',
+	    laborType: 'Sand',
+	    hourlyRate: '35',
+	    objectId: 'Panel',
+	    length: '12',
+	    width: '6',
+	    depth: '1',
+	    hours: '.06',
+	    formula: 'l*w*d',
+	    referenceable, unitCostValue, costValue, assembly, group
+	  };
+	
+	  unitCostValue = smeRound(20*.66);
+	  costValue = smeRound(unitCostValue * 13);
+	  props.unit = {
+	    id: 'instalation',
+	    method: 'Unit',
+	    laborType: 'Instalation',
+	    hourlyRate: '20',
+	    hours: '.66',
+	    referenceable, unitCostValue, costValue, group,
+	    assembly: 13
+	  };
+	
+	  Test.add('LaborCost: unitCost/calc',(ts) => {
+	    const costs = [];
+	    function testProps(props) {
+	      const labor = new Labor(props);
+	      costs.push(labor);
+	      ts.assertTolerance(labor.unitCost().value, props.unitCostValue, .00001);
+	      ts.assertTolerance(labor.calc(props.assembly), props.costValue, .00001);
+	    }
+	    Object.values(props).forEach(testProps);
+	    costs.forEach((cost) => cost.delete());
+	    ts.success();
+	  });
+	
+	  // Test.add('LaborCost: argument validation',(ts) => {
+	  //   const args = [props.linear];
+	  //   const func = function (args) {new (Labor.prototype.constructor)(...arguments);}
+	  //   new FunctionArgumentTest(ts, func, args)
+	  //       .setIndex(0)
+	  //       .add('id', undefined)
+	  //       .run();
+	  //   ts.success();
+	  // });
+	}
+	
+	exports.Frame = Frame
+	exports.Panel = Panel
+	exports.StringMathEvaluator = StringMathEvaluator
+	exports.Labor = Labor
+	exports.FunctionArgumentTest = FunctionArgumentTest
 	
 });
 

@@ -452,7 +452,7 @@ class SectionProperties extends KeyValue{
         backOffset *= -1;
       }
       biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj, config.flipNormal);
-      return {biPolygon};
+      return {biPolygon, frontOffset, backOffset, flipNormal: config.flipNormal};
     }
 
     this.dividerInfo = (panelThickness) => {

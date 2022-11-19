@@ -12,21 +12,14 @@ class FalseFrontSection extends Assembly {
     if (sectionProperties === undefined) return;
     this.part = () => false;
 
-    function center() {
-      return sectionProperties.coverInfo().center;
-    }
-    this.part = () => false;
-
-    function dems() {
-      const coverInfo = sectionProperties.coverInfo();
-      return {
-        x: coverInfo.width,
-        y: coverInfo.length,
-        z: coverInfo.doorThickness
-      }
+    function getBiPolygon () {
+      return sectionProperties.coverInfo().biPolygon;
     }
 
-    this.addSubAssembly(new DrawerFront('ff', 'DrawerFront', center, dems, sectionProperties.rotation));
+    const front = new DrawerFront('ff', 'DrawerFront', getBiPolygon);
+    this.front = () => door;
+    this.pull = (i) => front.pull(i);
+    this.addSubAssembly(front);
   }
 }
 

@@ -72,6 +72,14 @@ class Vertex3D {
       return Math.sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff);
     }
 
+    this.distanceVector = (other) => {
+      const xDiff = other.x - this.x;
+      const yDiff = other.y - this.y;
+      const zDiff = other.z - this.z;
+
+      return new Vector3D(xDiff, yDiff, zDiff);
+    }
+
     this.minus = (other) => {
       const xDiff = this.x - other.x;
       const yDiff = this.y - other.y;

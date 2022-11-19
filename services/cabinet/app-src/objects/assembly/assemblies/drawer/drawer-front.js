@@ -1,38 +1,31 @@
 
 
 
-const Assembly = require('../../assembly.js');
+const HasPull = require('../has-pull.js');
 const Handle = require('../hardware/pull.js');
 
-class DrawerFront extends Assembly {
-  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
-    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-    this.setParentAssembly(parent);
+class DrawerFront extends HasPull {
+  constructor(partCode, partName, getBiPolygon) {
+    super(partCode, partName, getBiPolygon);
     const instance = this;
-    let pulls = [new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, 1)];
-    if (demensionConfig === undefined) return;
-    let handleCount = 1;
+    this.addPull(Handle.location.CENTER);
 
-    function pullCount() {
-      if (instance.demensionConfig().x < 55.88) return 1;
-      return 2;
+    this.toModel = () => {
+      const biPolygon = getBiPolygon();
+      if (biPolygon) return biPolygon.toModel();
+      return undefined;
     }
 
-    this.children = () => this.updateHandles();
-
-    this.updateHandles = (count) => {
-      count = count || pullCount();
-      pulls.splice(count);
-      for (let index = 0; index < count; index += 1) {
-        if (index === pulls.length) {
-          pulls.push(new Handle(undefined, 'Drawer.Handle', this, Handle.location.CENTER, index, count));
-        } else {
-          pulls[index].count(count);
-        }
-      }
-      return pulls;
-    };
-    // if (demensionConfig !== undefined)this.updatePosition();
+    this.front = () => {
+      const biPoly = getBiPolygon();
+      if (biPoly === undefined) return;
+      return biPoly.front();
+    }
+    this.back = () => {
+      const biPoly = getBiPolygon();
+      if (biPoly === undefined) return;
+      return biPoly.back();
+    }
   }
 }
 
