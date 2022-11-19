@@ -19,6 +19,6 @@
     <button class='save-cabinet-btn' index='{{$index}}'>Save</button>
   </div>
   <div:t repeat='opening in cabinet.openings' class='divison-section-cnt'>
-    {{OpenSectionDisplay.html(opening)}}
+    {{OpenSectionDisplay.html(opening.sectionProperties())}}
   </div:t>
 </div>

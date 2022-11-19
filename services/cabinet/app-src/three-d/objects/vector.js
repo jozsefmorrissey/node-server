@@ -19,6 +19,11 @@ class Vector3D {
     this.scale = (coef) => {
       return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
     }
+    this.sameDirection = (otherVect) => {
+      return approximate.sameSign(otherVect.i(), this.i()) &&
+              approximate.sameSign(otherVect.j(), this.j()) &&
+              approximate.sameSign(otherVect.k(), this.k());
+    }
     this.divide = (vector) => {
       if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
       return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());

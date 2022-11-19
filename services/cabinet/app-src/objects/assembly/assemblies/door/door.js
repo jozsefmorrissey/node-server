@@ -25,7 +25,7 @@ class Door extends HasPull {
       return biPoly.back();
     }
 
-    this.addPull(Handle.location.LEFT);
+    this.addPull(Handle.location.TOP_RIGHT);
     // this.setPulls([Handle.location.TOP_RIGHT,
     // Handle.location.TOP_LEFT,
     // Handle.location.BOTTOM_RIGHT,

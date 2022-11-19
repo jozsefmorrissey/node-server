@@ -20,20 +20,24 @@ class Approximate {
         return true;
       }
     }
-    approximate.eq = approximateFunc((one, two) => one === two);
-    approximate.neq = approximateFunc((one, two) => one !== two);
-    approximate.gt = approximateFunc((one, two) => one > two);
-    approximate.lt = approximateFunc((one, two) => one < two);
-    approximate.gteq = approximateFunc((one, two) => one >= two);
-    approximate.lteq = approximateFunc((one, two) => one <= two);
-    approximate.eqAbs = approximateFunc((one, two) => Math.abs(one) === Math.abs(two));
-    approximate.neqAbs = approximateFunc((one, two) => Math.abs(one) !== Math.abs(two));
+    const af = approximateFunc;
+    approximate.eq = af((one, two) => one === two);
+    approximate.neq = af((one, two) => one !== two);
+    approximate.gt = af((one, two) => one > two);
+    approximate.lt = af((one, two) => one < two);
+    approximate.gteq = af((one, two) => one >= two);
+    approximate.lteq = af((one, two) => one <= two);
+    approximate.eqAbs = af((one, two) => Math.abs(one) === Math.abs(two));
+    approximate.neqAbs = af((one, two) => Math.abs(one) !== Math.abs(two));
     approximate.abs = (value) => Math.abs(approximate(value));
     approximate.object = (obj) => {
       const approx = {};
       return Object.forAllRecursive(obj,
             (value) => (typeof value) === 'number' ? approximate(value) : value);
     }
+    approximate.sameSign = af((value1, value2) => (value1 === 0 && value2 === 0) || 
+                                                      (value2 > 0 && value1 > 0) ||
+                                                      (value2 < 0 && value1 < 0));
     return approximate;
   }
 }

@@ -39,9 +39,11 @@ class SectionProperties extends KeyValue{
     this.included = () => false;
     this.joints = [];
     this.subassemblies = [];
-    this.vertical = (is) =>
-        instance.value('vertical', is);
-    this.vertical(false);
+    this.vertical = (is) => {
+      const curr = instance.value('vertical', is);
+      if (is !== undefined && curr !== is) removeCachedValues();
+      return curr;
+    }
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
     this.verticalDivisions = () => {
       const parent = this.parentAssembly();
@@ -102,6 +104,8 @@ class SectionProperties extends KeyValue{
         instance.sections.push(new SectionProperties({rotation: config.rotation, back: config.back, flipNormal: config.flipNormal}, 1));
       }
     }
+
+    this.init = init;
     this.dividerCount = () => this.sections.length - 1;
     this.sectionCount = () => this.sections.length;
     this.children = () => this.sections;
@@ -188,7 +192,6 @@ class SectionProperties extends KeyValue{
 
     function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset) {
       const coords = {};
-      instance.getRoot().openings[0].update();
       const fresh = instance.coordinates();
       const outer = fresh.outer;
       const inner = fresh.inner;
@@ -224,8 +227,14 @@ class SectionProperties extends KeyValue{
       section.updateCoordinates(coords);
     }
 
+    this.dividerLayout = () => {
+      init();
+      const dividerOffsetInfo = instance.dividerOffsetInfo();
+      const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
+      return instance.pattern().calc(coverage._TOTAL);
+    }
+
     function setSectionCoordinates() {
-      instance.getRoot().openings[0].update();
       const dividerOffsetInfo = instance.dividerOffsetInfo();
       const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
 
@@ -423,7 +432,6 @@ class SectionProperties extends KeyValue{
     };
 
     this.coverInfo = () => {
-      this.getRoot().openings[0].update();
       const propConfig = this.propertyConfig();
       let biPolygon, backOffset, frontOffset, offset, coords;
       const doorThickness = 3 * 2.54/4;
@@ -446,13 +454,19 @@ class SectionProperties extends KeyValue{
         backOffset = bumperThickness;
       }
 
+      frontOffset *= -1;
+      backOffset *= -1;
       const offsetObj = {x: offset, y: offset};
-      if (config.flipNormal) {
-        frontOffset *= -1;
-        backOffset *= -1;
+      if (!config.flipNormal) {
+        let temp = coords[0];
+        coords[0] = coords[1];
+        coords[1] = temp;
+        temp = coords[2];
+        coords[2] = coords[3];
+        coords[3] = temp;
       }
-      biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj, config.flipNormal);
-      return {biPolygon, frontOffset, backOffset, flipNormal: config.flipNormal};
+      biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
+      return {biPolygon, frontOffset, backOffset};
     }
 
     this.dividerInfo = (panelThickness) => {
@@ -515,6 +529,7 @@ class SectionProperties extends KeyValue{
       let change = updateCoordinates(coordinates.outer, newCoords.outer) | updateCoordinates(coordinates.inner, newCoords.inner);
       if (change) {
         removeCachedValues();
+        setSectionCoordinates();
       }
     }
 
@@ -524,6 +539,8 @@ class SectionProperties extends KeyValue{
     }
 
     this.divider(new DividerSection('divider', this));
+    this.value('vertical', true);
+    // this.vertical(true);
     // coordinates.onAfterChange(setSectionCoordinates);
   }
 }
@@ -563,5 +580,9 @@ SectionProperties.new = function (constructorId) {
   const section = Assembly.new.apply(null, arguments);
   return section;
 }
+
+const sections = [];
+SectionProperties.sections = () => [].concat(sections);
+SectionProperties.addSection = (clazz) => list.push(clazz);
 
 module.exports = SectionProperties;

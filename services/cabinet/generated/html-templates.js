@@ -527,7 +527,7 @@ exports['cabinet/body'] = (get, $t) =>
 		` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
 		$t.clean(get("$index")) +
 		`'>Save</button> </div> ` +
-		$t.clean( new $t('-1702305177').render(get("cabinet").openings, 'opening', get)) +
+		$t.clean( new $t('-1304800590').render(get("cabinet").openings, 'opening', get)) +
 		` </div> `
 
 exports['-970877277'] = (get, $t) => 
@@ -1315,3 +1315,8 @@ exports['managers/template/openings/points'] = (get, $t) =>
 		`>` +
 		$t.clean(get("display")(get("coords").outer[2])) +
 		`</td> </tr> </table> `
+
+exports['-1304800590'] = (get, $t) => 
+		`<div class='divison-section-cnt'> ` +
+		$t.clean(get("OpenSectionDisplay").html(get("opening").sectionProperties())) +
+		` </div>`

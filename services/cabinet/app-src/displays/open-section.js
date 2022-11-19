@@ -18,8 +18,8 @@ class SectionDisplay {
   constructor (section) {
     this.render = (scope) => {
       scope.featureDisplay = new FeatureDisplay(scope.opening).html();
-      const cId = scope.opening.constructorId;
-      if (cId === 'DivideSection') {
+      const cId = scope.opening.constructor.name;
+      if (cId === 'SectionProperties') {
         return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
       }
       return SectionDisplay.template(section).render(scope);
@@ -77,7 +77,7 @@ OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.id()}`;
 OpenSectionDisplay.getList = (root) => {
   let openId = root.id();
   if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
-  const sections = Section.sections();
+  const sections = SectionProperties.sections();
   const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
   const parentSelector = `#${OpenSectionDisplay.getId(root)}`
   const list = root.sections;
@@ -86,7 +86,7 @@ OpenSectionDisplay.getList = (root) => {
   let exList;
   const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
   const getHeader = (opening, index) => {
-    const sections = index % 2 === 0 ? Section.getSections(false) : [];
+    const sections = index % 2 === 0 ? SectionProperties.sections() : [];
     return OpenSectionDisplay.listHeadTemplate.render({opening, sections, clean});
   }
   const getBody = (opening) => {

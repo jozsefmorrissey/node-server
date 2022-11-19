@@ -1,6 +1,7 @@
 
 
 
+const SectionProperties = require('../section-properties.js');
 const Door = require('../../door/door.js');
 const Handle = require('../../hardware/pull.js');
 const Assembly = require('../../../assembly.js');
@@ -38,7 +39,7 @@ class DualDoorSection extends Assembly {
         const fullPoly = sectionProperties.coverInfo().biPolygon;
         const front = shrinkPoly(fullPoly.front(), left);
         const back = shrinkPoly(fullPoly.back(), left);
-        return new BiPolygon(front, back, fullPoly.flipNormal());
+        return new BiPolygon(front, back);
       }
     }
 
@@ -57,6 +58,7 @@ class DualDoorSection extends Assembly {
 
 
 DualDoorSection.abbriviation = 'dds';
+SectionProperties.addSection(DualDoorSection);
 
 
 

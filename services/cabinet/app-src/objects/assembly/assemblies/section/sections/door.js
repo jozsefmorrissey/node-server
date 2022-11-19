@@ -1,6 +1,6 @@
 
 
-
+const SectionProperties = require('../section-properties.js');
 const Door = require('../../door/door.js');
 const Assembly = require('../../../assembly.js');
 
@@ -24,5 +24,6 @@ class DoorSection extends Assembly {
 }
 
 DoorSection.abbriviation = 'drs';
+SectionProperties.addSection(DoorSection);
 
 module.exports = DoorSection

@@ -105,7 +105,8 @@ function applyTestConfiguration(cabinet) {
   centerTop.sections[1].setSection("FalseFrontSection");
   centerTop.sections[2].setSection("DoorSection");
   centerTop.pattern('ztz').value('t', 15*2.54);
-  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+  centerTop.sections[0].cover().pull().location(Handle.location.LEFT);
+  centerTop.sections[2].cover().pull().location(Handle.location.RIGHT);
 
   right.divide(2);
   right.vertical(false);

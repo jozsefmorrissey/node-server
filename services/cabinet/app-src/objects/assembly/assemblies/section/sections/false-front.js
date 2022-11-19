@@ -24,6 +24,8 @@ class FalseFrontSection extends Assembly {
 }
 
 FalseFrontSection.abbriviation = 'ffs';
+SectionProperties.addSection(FalseFrontSection);
+
 
 
 module.exports = FalseFrontSection

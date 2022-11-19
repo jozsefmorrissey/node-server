@@ -32,24 +32,25 @@ class DrawerSection extends Assembly {
       return (Math.floor(((depth - 2.54) / 2.54)/2) * 2) * 2.54;
     }
 
-
+    const getNormal = () => front.biPolygon().normal();
 
     function getFrontPoly() {
       const innerPoly = new Polygon3D(sectionProperties.coordinates().inner);
       const coverInfo = sectionProperties.coverInfo();
-      const biPoly = coverInfo.biPolygon;
+      const biPoly = front.biPolygon();
       const depth = getDrawerDepth(sectionProperties.innerDepth);
-      const offsetVect = biPoly.front().normal().scale(coverInfo.frontOffset);
+      const offsetVect = biPoly.normal().scale(coverInfo.backOffset);
       return innerPoly.translate(offsetVect);
     }
 
-    const drawerBox = new DrawerBox('db', 'Drawer.Box', getFrontPoly, getDrawerDepth);
+    const drawerBox = new DrawerBox('db', 'Drawer.Box', getFrontPoly, getNormal, getDrawerDepth);
     this.box = () => drawerBox;
     this.addSubAssembly(drawerBox);
   }
 }
 
 DrawerSection.abbriviation = 'dws';
+SectionProperties.addSection(DrawerSection);
 
 
 module.exports = DrawerSection

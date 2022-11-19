@@ -9676,20 +9676,24 @@ function (require, exports, module) {
 	        return true;
 	      }
 	    }
-	    approximate.eq = approximateFunc((one, two) => one === two);
-	    approximate.neq = approximateFunc((one, two) => one !== two);
-	    approximate.gt = approximateFunc((one, two) => one > two);
-	    approximate.lt = approximateFunc((one, two) => one < two);
-	    approximate.gteq = approximateFunc((one, two) => one >= two);
-	    approximate.lteq = approximateFunc((one, two) => one <= two);
-	    approximate.eqAbs = approximateFunc((one, two) => Math.abs(one) === Math.abs(two));
-	    approximate.neqAbs = approximateFunc((one, two) => Math.abs(one) !== Math.abs(two));
+	    const af = approximateFunc;
+	    approximate.eq = af((one, two) => one === two);
+	    approximate.neq = af((one, two) => one !== two);
+	    approximate.gt = af((one, two) => one > two);
+	    approximate.lt = af((one, two) => one < two);
+	    approximate.gteq = af((one, two) => one >= two);
+	    approximate.lteq = af((one, two) => one <= two);
+	    approximate.eqAbs = af((one, two) => Math.abs(one) === Math.abs(two));
+	    approximate.neqAbs = af((one, two) => Math.abs(one) !== Math.abs(two));
 	    approximate.abs = (value) => Math.abs(approximate(value));
 	    approximate.object = (obj) => {
 	      const approx = {};
 	      return Object.forAllRecursive(obj,
 	            (value) => (typeof value) === 'number' ? approximate(value) : value);
 	    }
+	    approximate.sameSign = af((value1, value2) => (value1 === 0 && value2 === 0) || 
+	                                                      (value2 > 0 && value1 > 0) ||
+	                                                      (value2 < 0 && value1 < 0));
 	    return approximate;
 	  }
 	}
@@ -15309,7 +15313,7 @@ exports['101748844'] = (get, $t) =>
 			` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
 			$t.clean(get("$index")) +
 			`'>Save</button> </div> ` +
-			$t.clean( new $t('-1702305177').render(get("cabinet").openings, 'opening', get)) +
+			$t.clean( new $t('-1304800590').render(get("cabinet").openings, 'opening', get)) +
 			` </div> `
 	
 	exports['-970877277'] = (get, $t) => 
@@ -16097,6 +16101,11 @@ exports['101748844'] = (get, $t) =>
 			`>` +
 			$t.clean(get("display")(get("coords").outer[2])) +
 			`</td> </tr> </table> `
+	
+	exports['-1304800590'] = (get, $t) => 
+			`<div class='divison-section-cnt'> ` +
+			$t.clean(get("OpenSectionDisplay").html(get("opening").sectionProperties())) +
+			` </div>`
 	
 });
 
@@ -19731,8 +19740,8 @@ function (require, exports, module) {
 	  constructor (section) {
 	    this.render = (scope) => {
 	      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
-	      const cId = scope.opening.constructorId;
-	      if (cId === 'DivideSection') {
+	      const cId = scope.opening.constructor.name;
+	      if (cId === 'SectionProperties') {
 	        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
 	      }
 	      return SectionDisplay.template(section).render(scope);
@@ -19790,7 +19799,7 @@ function (require, exports, module) {
 	OpenSectionDisplay.getList = (root) => {
 	  let openId = root.id();
 	  if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
-	  const sections = Section.sections();
+	  const sections = SectionProperties.sections();
 	  const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
 	  const parentSelector = `#${OpenSectionDisplay.getId(root)}`
 	  const list = root.sections;
@@ -19799,7 +19808,7 @@ function (require, exports, module) {
 	  let exList;
 	  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
 	  const getHeader = (opening, index) => {
-	    const sections = index % 2 === 0 ? Section.getSections(false) : [];
+	    const sections = index % 2 === 0 ? SectionProperties.sections() : [];
 	    return OpenSectionDisplay.listHeadTemplate.render({opening, sections, clean});
 	  }
 	  const getBody = (opening) => {
@@ -26104,38 +26113,43 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	const Polygon3D = require('polygon');
 	
 	class BiPolygon {
-	  constructor(polygon1, polygon2, flipNormal) {
+	  constructor(polygon1, polygon2) {
 	    const face1 = polygon1.verticies();
 	    const face2 = polygon2.verticies();
 	    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
 	    if (face1.length !== 4) throw new Error('BiPolygon implementation is limited to 4 point polygons. Plans to expand must not have been exicuted yet');
-	    this.flipNormal = () => flipNormal;
-	
 	
 	    this.front = () => new Polygon3D(face1);
 	    this.back = () => new Polygon3D(face2);
+	    this.normal = () => face2[0].distanceVector(face1[0]).unit();
+	
+	    this.flippedNormal = () => {
+	      const face1Norm = new Polygon3D(face1).normal();
+	      return this.normal().sameDirection(face1Norm);
+	    }
+	
 	
 	    function normalize (verts, reverse) {
 	      const normal =  new Polygon3D(verts).normal().toArray();
 	      const returnValue = [];
 	      for (let index = 0; index < verts.length; index++)
 	        returnValue[index] = new CSG.Vertex(verts[index], normal);
-	      if (flipNormal) return !reverse ? returnValue.reverse() : returnValue;
-	      else return reverse ? returnValue.reverse() : returnValue;
+	      return reverse ? returnValue.reverse() : returnValue;
 	    }
 	
 	    this.toModel = () => {
-	      const front = new CSG.Polygon(normalize(face1));
+	      const flippedNormal = this.flippedNormal();
+	      const front = new CSG.Polygon(normalize(face1, !flippedNormal));
 	      front.plane.normal = new CSG.Vector([0,1, 0,0]);
-	      const back = new CSG.Polygon(normalize(face2, true));
+	      const back = new CSG.Polygon(normalize(face2, flippedNormal));
 	      back.plane.normal = new CSG.Vector([0,0,1,0,0]);
-	      const top = new CSG.Polygon(normalize([face1[0], face1[1], face2[1], face2[0]], true));
+	      const top = new CSG.Polygon(normalize([face1[0], face1[1], face2[1], face2[0]], flippedNormal));
 	      top.plane.normal = new CSG.Vector([0, 1, 0]);
-	      const left = new CSG.Polygon(normalize([face2[3], face2[0], face1[0], face1[3]]));
+	      const left = new CSG.Polygon(normalize([face2[3], face2[0], face1[0], face1[3]], !flippedNormal));
 	      left.plane.normal = new CSG.Vector([-1, 0, 0]);
-	      const right = new CSG.Polygon(normalize([face1[1], face1[2], face2[2], face2[1]], true));
+	      const right = new CSG.Polygon(normalize([face1[1], face1[2], face2[2], face2[1]], flippedNormal));
 	      right.plane.normal = new CSG.Vector([1, 0, 0]);
-	      const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]]));
+	      const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]], !flippedNormal));
 	      bottom.plane.normal = new CSG.Vector([0, -1, 0]);
 	
 	      const poly = CSG.fromPolygons([front, back, top, left, right, bottom]);
@@ -26148,7 +26162,7 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	  }
 	}
 	
-	BiPolygon.fromPolygon = (polygon, distance1, distance2, offset, flipNormal) => {
+	BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
 	  offset ||= {};
 	  const verts = polygon.verticies();
 	  if (verts.length < 4) return undefined;
@@ -26160,7 +26174,7 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	  const verts2 = JSON.clone(verts1);
 	  const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
 	  const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
-	  return new BiPolygon(poly1, poly2, flipNormal);
+	  return new BiPolygon(poly1, poly2);
 	}
 	
 	BiPolygon.fromVectorObject =
@@ -27247,6 +27261,11 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 	    this.scale = (coef) => {
 	      return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
 	    }
+	    this.sameDirection = (otherVect) => {
+	      return approximate.sameSign(otherVect.i(), this.i()) &&
+	              approximate.sameSign(otherVect.j(), this.j()) &&
+	              approximate.sameSign(otherVect.k(), this.k());
+	    }
 	    this.divide = (vector) => {
 	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
 	      return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
@@ -27989,7 +28008,8 @@ function (require, exports, module) {
 	  centerTop.sections[1].setSection("FalseFrontSection");
 	  centerTop.sections[2].setSection("DoorSection");
 	  centerTop.pattern('ztz').value('t', 15*2.54);
-	  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+	  centerTop.sections[0].cover().pull().location(Handle.location.LEFT);
+	  centerTop.sections[2].cover().pull().location(Handle.location.RIGHT);
 	
 	  right.divide(2);
 	  right.vertical(false);
@@ -29525,11 +29545,11 @@ function (require, exports, module) {
 	  return model;
 	}
 	
-	function drawerBox(frontPoly, length) {
+	function drawerBox(frontPoly, normal, length) {
 	  const sideThickness = (2.54 * 5) / 8
 	  const bottomThickness = (2.54 * 3) / 8;
 	  const bottomHeight = (7*2.54)/8;
-	  const norm = frontPoly.normal();
+	  const norm = normal;
 	
 	  // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: verticies are if facing polygon topLeft, topRight, bottomRight, bottomLeft
 	  const fP = frontPoly;
@@ -30947,6 +30967,7 @@ function (require, exports, module) {
 	      const toCenter = 3 * 2.54 + instance.centerToCenter() / 2;
 	      const front = door.front();
 	      const top = front.line(0);
+	      // TODO: Maybe... not sure why these are flipped.
 	      const left = front.line(-1);
 	      const right = front.line(1);
 	      const bottom = front.line(2);
@@ -31022,7 +31043,7 @@ function (require, exports, module) {
 	      const front = biPolygon.front();
 	      const rotated =  instance.location().rotate;
 	      const line = rotated ? front.line(-1) : front.line(0);
-	      const normal = biPolygon.flipNormal() ? front.normal().inverse() : front.normal();
+	      const normal = biPolygon.normal();
 	      return pull(baseC, line, normal, this.projection(), this.centerToCenter());
 	    }
 	
@@ -31092,9 +31113,11 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	    this.included = () => false;
 	    this.joints = [];
 	    this.subassemblies = [];
-	    this.vertical = (is) =>
-	        instance.value('vertical', is);
-	    this.vertical(false);
+	    this.vertical = (is) => {
+	      const curr = instance.value('vertical', is);
+	      if (is !== undefined && curr !== is) removeCachedValues();
+	      return curr;
+	    }
 	    this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
 	    this.verticalDivisions = () => {
 	      const parent = this.parentAssembly();
@@ -31155,6 +31178,8 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	        instance.sections.push(new SectionProperties({rotation: config.rotation, back: config.back, flipNormal: config.flipNormal}, 1));
 	      }
 	    }
+	
+	    this.init = init;
 	    this.dividerCount = () => this.sections.length - 1;
 	    this.sectionCount = () => this.sections.length;
 	    this.children = () => this.sections;
@@ -31241,7 +31266,6 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	
 	    function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset) {
 	      const coords = {};
-	      instance.getRoot().openings[0].update();
 	      const fresh = instance.coordinates();
 	      const outer = fresh.outer;
 	      const inner = fresh.inner;
@@ -31277,8 +31301,14 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      section.updateCoordinates(coords);
 	    }
 	
+	    this.dividerLayout = () => {
+	      init();
+	      const dividerOffsetInfo = instance.dividerOffsetInfo();
+	      const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
+	      return instance.pattern().calc(coverage._TOTAL);
+	    }
+	
 	    function setSectionCoordinates() {
-	      instance.getRoot().openings[0].update();
 	      const dividerOffsetInfo = instance.dividerOffsetInfo();
 	      const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
 	
@@ -31476,7 +31506,6 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	    };
 	
 	    this.coverInfo = () => {
-	      this.getRoot().openings[0].update();
 	      const propConfig = this.propertyConfig();
 	      let biPolygon, backOffset, frontOffset, offset, coords;
 	      const doorThickness = 3 * 2.54/4;
@@ -31499,13 +31528,19 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	        backOffset = bumperThickness;
 	      }
 	
+	      frontOffset *= -1;
+	      backOffset *= -1;
 	      const offsetObj = {x: offset, y: offset};
-	      if (config.flipNormal) {
-	        frontOffset *= -1;
-	        backOffset *= -1;
+	      if (!config.flipNormal) {
+	        let temp = coords[0];
+	        coords[0] = coords[1];
+	        coords[1] = temp;
+	        temp = coords[2];
+	        coords[2] = coords[3];
+	        coords[3] = temp;
 	      }
-	      biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj, config.flipNormal);
-	      return {biPolygon, frontOffset, backOffset, flipNormal: config.flipNormal};
+	      biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
+	      return {biPolygon, frontOffset, backOffset};
 	    }
 	
 	    this.dividerInfo = (panelThickness) => {
@@ -31568,6 +31603,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      let change = updateCoordinates(coordinates.outer, newCoords.outer) | updateCoordinates(coordinates.inner, newCoords.inner);
 	      if (change) {
 	        removeCachedValues();
+	        setSectionCoordinates();
 	      }
 	    }
 	
@@ -31577,6 +31613,8 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	    }
 	
 	    this.divider(new DividerSection('divider', this));
+	    this.value('vertical', true);
+	    // this.vertical(true);
 	    // coordinates.onAfterChange(setSectionCoordinates);
 	  }
 	}
@@ -31617,6 +31655,10 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	  return section;
 	}
 	
+	const sections = [];
+	SectionProperties.sections = () => [].concat(sections);
+	SectionProperties.addSection = (clazz) => list.push(clazz);
+	
 	module.exports = SectionProperties;
 	
 });
@@ -31631,10 +31673,10 @@ function (require, exports, module) {
 	const drawerBox = require('../../../../three-d/models/drawer-box.js');
 	
 	class DrawerBox extends Assembly {
-	  constructor(partCode, partName, getFrontPoly, getDepth) {
+	  constructor(partCode, partName, getFrontPoly, getNormal, getDepth) {
 	    super(partCode, partName);
 	
-	    this.toModel = () => drawerBox(getFrontPoly(), getDepth());
+	    this.toModel = () => drawerBox(getFrontPoly(), getNormal(), getDepth());
 	  }
 	}
 	
@@ -31714,7 +31756,7 @@ function (require, exports, module) {
 	      return biPoly.back();
 	    }
 	
-	    this.addPull(Handle.location.LEFT);
+	    this.addPull(Handle.location.TOP_RIGHT);
 	    // this.setPulls([Handle.location.TOP_RIGHT,
 	    // Handle.location.TOP_LEFT,
 	    // Handle.location.BOTTOM_RIGHT,
@@ -31902,24 +31944,25 @@ function (require, exports, module) {
 	      return (Math.floor(((depth - 2.54) / 2.54)/2) * 2) * 2.54;
 	    }
 	
-	
+	    const getNormal = () => front.biPolygon().normal();
 	
 	    function getFrontPoly() {
 	      const innerPoly = new Polygon3D(sectionProperties.coordinates().inner);
 	      const coverInfo = sectionProperties.coverInfo();
-	      const biPoly = coverInfo.biPolygon;
+	      const biPoly = front.biPolygon();
 	      const depth = getDrawerDepth(sectionProperties.innerDepth);
-	      const offsetVect = biPoly.front().normal().scale(coverInfo.frontOffset);
+	      const offsetVect = biPoly.normal().scale(coverInfo.backOffset);
 	      return innerPoly.translate(offsetVect);
 	    }
 	
-	    const drawerBox = new DrawerBox('db', 'Drawer.Box', getFrontPoly, getDrawerDepth);
+	    const drawerBox = new DrawerBox('db', 'Drawer.Box', getFrontPoly, getNormal, getDrawerDepth);
 	    this.box = () => drawerBox;
 	    this.addSubAssembly(drawerBox);
 	  }
 	}
 	
 	DrawerSection.abbriviation = 'dws';
+	SectionProperties.addSection(DrawerSection);
 	
 	
 	module.exports = DrawerSection
@@ -31932,6 +31975,7 @@ function (require, exports, module) {
 	
 
 	
+	const SectionProperties = require('../section-properties.js');
 	const Door = require('../../door/door.js');
 	const Handle = require('../../hardware/pull.js');
 	const Assembly = require('../../../assembly.js');
@@ -31969,7 +32013,7 @@ function (require, exports, module) {
 	        const fullPoly = sectionProperties.coverInfo().biPolygon;
 	        const front = shrinkPoly(fullPoly.front(), left);
 	        const back = shrinkPoly(fullPoly.back(), left);
-	        return new BiPolygon(front, back, fullPoly.flipNormal());
+	        return new BiPolygon(front, back);
 	      }
 	    }
 	
@@ -31988,6 +32032,7 @@ function (require, exports, module) {
 	
 	
 	DualDoorSection.abbriviation = 'dds';
+	SectionProperties.addSection(DualDoorSection);
 	
 	
 	
@@ -32024,6 +32069,8 @@ function (require, exports, module) {
 	}
 	
 	FalseFrontSection.abbriviation = 'ffs';
+	SectionProperties.addSection(FalseFrontSection);
+	
 	
 	
 	module.exports = FalseFrontSection
@@ -32035,7 +32082,7 @@ RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/do
 function (require, exports, module) {
 	
 
-	
+	const SectionProperties = require('../section-properties.js');
 	const Door = require('../../door/door.js');
 	const Assembly = require('../../../assembly.js');
 	
@@ -32059,6 +32106,7 @@ function (require, exports, module) {
 	}
 	
 	DoorSection.abbriviation = 'drs';
+	SectionProperties.addSection(DoorSection);
 	
 	module.exports = DoorSection
 	

@@ -19,6 +19,7 @@ class Handle extends Assembly {
       const toCenter = 3 * 2.54 + instance.centerToCenter() / 2;
       const front = door.front();
       const top = front.line(0);
+      // TODO: Maybe... not sure why these are flipped.
       const left = front.line(-1);
       const right = front.line(1);
       const bottom = front.line(2);
@@ -94,7 +95,7 @@ class Handle extends Assembly {
       const front = biPolygon.front();
       const rotated =  instance.location().rotate;
       const line = rotated ? front.line(-1) : front.line(0);
-      const normal = biPolygon.flipNormal() ? front.normal().inverse() : front.normal();
+      const normal = biPolygon.normal();
       return pull(baseC, line, normal, this.projection(), this.centerToCenter());
     }
 

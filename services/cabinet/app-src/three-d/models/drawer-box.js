@@ -24,11 +24,11 @@ function unionAll(...polygons) {
   return model;
 }
 
-function drawerBox(frontPoly, length) {
+function drawerBox(frontPoly, normal, length) {
   const sideThickness = (2.54 * 5) / 8
   const bottomThickness = (2.54 * 3) / 8;
   const bottomHeight = (7*2.54)/8;
-  const norm = frontPoly.normal();
+  const norm = normal;
 
   // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: verticies are if facing polygon topLeft, topRight, bottomRight, bottomLeft
   const fP = frontPoly;
