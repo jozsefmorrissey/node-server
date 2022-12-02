@@ -149,10 +149,16 @@ const jsWatcher = new Watcher(jsBundler.change, jsBundler.write)
         .add('./app-src');
 
 if (global.ENV === 'local') {
-  jsWatcher.add('./test')
+  jsWatcher.add('./test');
 }
 
-// const jsDumpLoc = './public/js/test-rewrite';
-// const jsBundler = new JsBundler(jsDumpLoc, [], {projectDir: __dirname, main: 'app/app.js'});
-// const jsWatcher = new Watcher(jsBundler.change, jsBundler.write)
-//         .add('./test-rewrite/');
+// const saHTML = './public/html/sa.html';
+// jsBundler.onChange((js) => {
+//   const js = `<script type="text/javascript" src='/cabinet/js/index.js'></script>
+//               <script src="/js/utility-filter.js" run-type='auto'></script>`;
+//   const css = `<link rel="stylesheet" href="/cabinet/styles/estimate.css">
+//                 <link rel="stylesheet" href="/styles/expandable-list.css">`;
+//   const body = 'hello World!';
+//   const html = `<html><head><script>${js}</script>${css}</head><body>${body}</body></html>`;
+//   fs.writeFile(saHTML, html, () => {});
+// });

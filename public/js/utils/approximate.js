@@ -35,7 +35,7 @@ class Approximate {
       return Object.forAllRecursive(obj,
             (value) => (typeof value) === 'number' ? approximate(value) : value);
     }
-    approximate.sameSign = af((value1, value2) => (value1 === 0 && value2 === 0) || 
+    approximate.sameSign = af((value1, value2) => (value1 === 0 && value2 === 0) ||
                                                       (value2 > 0 && value1 > 0) ||
                                                       (value2 < 0 && value1 < 0));
     return approximate;
@@ -51,6 +51,6 @@ Approximate.setDefault = (accuracy) => {
   Approximate.default.setDefault = Approximate.default;
 }
 
-Approximate.setDefault(1000);
+Approximate.setDefault(1000000);
 
 module.exports  = Approximate.default;

@@ -93,7 +93,7 @@ canvas {
 }
 
 .display-manager-item > button {
-  width: 100%;
+  width: fit-content;
   margin: 1pt;
   border-radius: 5pt;
   font-weight: 600;
@@ -201,8 +201,9 @@ a {
 
 }
 
-.model-label.active {
-  background-color: blue;
+.model-state.active {
+  background-color: #d0d0ff;
+  border-radius: 2px;
 }
 
 .open-divider-select {
@@ -243,7 +244,7 @@ a {
 #order-cnt {
   position: absolute;
   z-index: 10;
-  top: 0;
+  top: 10%;
   left: 0;
   min-width: 50vw;
 }

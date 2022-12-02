@@ -10,14 +10,23 @@ class User {
     const stateAttr = 'user-state';
     let state, cnt, email, password;
 
+    let la;
+    function loginAvailible(){
+      if (la === undefined) la = du.id('login') !== null;
+      return la;
+    }
     function updateDisplay(s) {
       state = s ? User.states[s] : state;
       cnt = cnt || du.id('login-cnt');
       cnt.innerHTML = state.template.render({email, password});
     }
 
-    const hideLogin = () => du.id('login').hidden = true;
-    const showLogin = () => du.id('login').hidden = false;
+    const hideLogin = () => {
+      if (loginAvailible()) du.id('login').hidden = true;
+    }
+    const showLogin = () =>{
+      if (loginAvailible()) du.id('login').hidden = false;
+    }
     function successfulRegistration(body) {
       updateDisplay('CONFIRMATION_MESSAGE');
     }

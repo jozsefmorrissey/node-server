@@ -6,10 +6,12 @@ const LineMeasurement2d = require('./objects/line-measurement');
 class Draw2d {
   constructor(canvas) {
     const ctx = canvas.getContext('2d');
+    let takenLocations;
 
     function draw(object, color, width) {
       if (object === undefined) return;
       if (Array.isArray(object)) {
+        takenLocations = [];
         for (let index = 0; index < object.length; index += 1)
           draw(object[index], color, width);
         return;
@@ -170,9 +172,10 @@ class Draw2d {
     draw.measurement = (measurement, color, textWidth) => {
       const measurementColor = color || 'grey';
       const measurementLineWidth = '.1';
-      const lines = measurement.I();
+      const lines = measurement.I(1, takenLocations);
       try {
-        const winner = lines.furtherLine();
+        const winner = lines.midpointClear();
+        if (winner === undefined) return;
         draw.beginPath();
         draw.line(winner.startLine, measurementColor, measurementLineWidth, true);
         draw.line(winner.endLine, measurementColor, measurementLineWidth, true);

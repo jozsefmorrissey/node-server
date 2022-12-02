@@ -20,6 +20,7 @@ class DrawerSection extends Assembly {
     }
 
     const front = new DrawerFront('ff', 'DrawerFront', getFrontBiPolygon);
+    front.partName = () => `${sectionProperties.partName()}-df`;
     this.front = () => door;
     this.pull = (i) => front.pull(i);
     this.addSubAssembly(front);
@@ -44,6 +45,7 @@ class DrawerSection extends Assembly {
     }
 
     const drawerBox = new DrawerBox('db', 'Drawer.Box', getFrontPoly, getNormal, getDrawerDepth);
+    drawerBox.partName = () => `${sectionProperties.partName()}-db`;
     this.box = () => drawerBox;
     this.addSubAssembly(drawerBox);
   }

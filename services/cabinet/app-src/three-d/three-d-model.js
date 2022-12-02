@@ -47,7 +47,6 @@ function getColor(name) {
 
 class ThreeDModel {
   constructor(assembly, viewer) {
-    const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
     const hiddenPartIds = {};
     const hiddenPartNames = {};
     const hiddenPrefixes = {};
@@ -57,9 +56,9 @@ class ThreeDModel {
     let inclusiveTarget = {};
     let partMap;
     let renderId;
-    let targetPartCode;
+    let targetPartName;
     let rootAssembly = assembly.getRoot();
-    this.setTargetPartCode = (id) => targetPartCode = id;
+    this.setTargetPartName = (id) => targetPartName = id;
 
     this.assembly = (a) => {
       if (a !== undefined) {
@@ -169,30 +168,6 @@ class ThreeDModel {
 
     this.removeAllExtraObjects = () => extraObjects = [];
 
-    function getModel(assem) {
-      if (assem.constructor.name === 'Handle') {
-        console.log('here');
-      }
-      let model = assem.toModel && assem.toModel();
-      if (model === undefined) {
-        const pos = assem.position().current();
-        if (pos.rotation.x % 45 !== 0 || pos.rotation.y % 45 !== 0 || pos.rotation.z % 45 !== 0) {
-          console.log('position off')
-        }
-        if (assem instanceof DrawerBox) {
-          model = drawerBox(pos.demension.y, pos.demension.x, pos.demension.z);
-        } else {
-          const radius = [pos.demension.x / 2, pos.demension.y / 2, pos.demension.z / 2];
-          model = CSG.cube({ radius });
-        }
-        model.rotate(pos.rotation);
-        // pos.center.z *= -1;
-        model.center(pos.center);
-      }
-      // serialize({}, model);
-      return model;
-    }
-
     let lm;
     this.lastModel = () => {
       if (lm === undefined) return undefined;
@@ -203,12 +178,11 @@ class ThreeDModel {
         const verticies = p.vertices.map((v) => ({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
         polys.push(new Polygon3D(verticies));
       });
+      polys.normals = lm.normals;
       // Polygon3D.merge(polys);
       const twoDpolys = Polygon3D.toTwoD(polys);
       return twoDpolys;
     }
-
-    this.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
 
     this.render = function () {
       ThreeDModel.lastActive = this;
@@ -219,17 +193,19 @@ class ThreeDModel {
       const startTime = new Date().getTime();
       buildHiddenPrefixReg();
       function buildObject(assem) {
-        let a = getModel(assem);
+        let a = assem.toModel();
+        let normals = a.normals;
         // const c = assem.position().center();
         const e=1;
         // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
         a.setColor(...getColor());
         assem.getJoints().female.forEach((joint) => {
           const male = joint.getMale();
-          const m = getModel(male, male.position().current());
+          const m = male.toModel();
           a = a.subtract(m);
         });
         // else a.setColor(1, 0, 0);
+        a.normals = normals;
         return a;
       }
       const assemblies = this.assembly().getParts();
@@ -246,7 +222,7 @@ class ThreeDModel {
           else if (b && b.polygons.length !== 0) {
             a = a.union(b);
           }
-          if (assem.partCode() === targetPartCode) {
+          if (assem.partName() === targetPartName) {
             lm = b.clone();
             const rotation = assem.position().rotation();
             rotation.x *=-1;
@@ -304,5 +280,9 @@ ThreeDModel.render = (part) => {
     }
   }, 2500);
 };
+
+const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
+ThreeDModel.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
+
 
 module.exports = ThreeDModel

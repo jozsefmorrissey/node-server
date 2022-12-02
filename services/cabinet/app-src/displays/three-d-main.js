@@ -18,21 +18,6 @@ const ThreeView = require('three-view');
 const cube = new CSG.cube({radius: [3,5,1]});
 const consts = require('../../globals/CONSTANTS');
 let viewer, threeView;
-function init() {
-  // const p = pull(5,2);
-  const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
-  p.setColor('black')
-  // const db = drawerBox(10, 15, 22);
-  const canvas2d = du.id('two-d-model');
-  viewer = new Viewer(p, canvas2d.height, canvas2d.width, 50);
-  addViewer(viewer, '#three-d-model');
-  threeView = new ThreeView(viewer);
-
-  const setZFunc = setGreaterZindex('order-cnt', 'model-cnt', `${threeView.id()}-cnt`);
-  du.on.match('click', '#model-cnt', setZFunc);
-  du.on.match('click', '#order-cnt', setZFunc);
-  du.on.match('click', `#${threeView.id()}-cnt`, setZFunc);
-}
 
 // TODO: ????
 function displayPart(part) {
@@ -65,14 +50,15 @@ function groupParts(cabinet) {
 
 const modelContTemplate = new $t('model-controller');
 
-du.on.match('click', '.model-label', (target) => {
+du.on.match('click', '.model-state', (target) => {
   if (event.target.tagName === 'INPUT') return;
   const has = target.matches('.active');
   deselectPrefix();
   !has ? du.class.add(target, 'active') : du.class.remove(target, 'active');
   let label = target.children[0]
   let type = label.getAttribute('type');
-  let value = type !== 'prefix' ? label.innerText :
+  let value = type !== 'prefix' ?
+        (type !== 'part-name' ? label.innerText : label.getAttribute('part-name')) :
         label.nextElementSibling.getAttribute('prefix');
   const cabinet = lastRendered;
   const tdm = ThreeDModel.get(cabinet, viewer);
@@ -93,7 +79,7 @@ du.on.match('click', '.model-label', (target) => {
 });
 
 function deselectPrefix() {
-  document.querySelectorAll('.model-label')
+  document.querySelectorAll('.model-state')
     .forEach((elem) => du.class.remove(elem, 'active'));
   const cabinet = lastRendered;
   const tdm = ThreeDModel.get(cabinet, viewer);
@@ -124,13 +110,33 @@ function setGreaterZindex(...ids) {
   };
 }
 
+const toggleClassStr = '.model-label,.model-selector';
+function focusControls(target) {
+  const all = du.find.all(toggleClassStr);
+  for (let index = 0; index < all.length; index++) {
+    all[index].hidden = true;
+  }
+  const active = du.find.upAll(toggleClassStr, target);
+  active.push(du.find.down(toggleClassStr, target));
+  for (let index = 0; index < active.length; index++) {
+    active[index].hidden = false;
+    const siblings = active[index].parentElement.children;
+    for (let s = 0; s < siblings.length; s++) {
+      if (siblings[s].matches(toggleClassStr)) siblings[s].hidden = false;
+    }
+  }
+}
+
 du.on.match('click', '.prefix-switch', (target, event) => {
-  const eventTarg = event.target;
-  const active = du.find.upAll('.model-selector', target);
-  active.push(target.parentElement.parentElement);
-  const all = document.querySelectorAll('.prefix-body');
-  all.forEach((pb) => pb.hidden = true);
-  active.forEach((ms) => ms.children[0].children[1].hidden = false);
+  focusControls(target);
+  // const eventTarg = event.target;
+  //
+  //
+  // const active = du.find.upAll('.model-selector', target);
+  // active.push(target.parentElement.parentElement);
+  // const all = document.querySelectorAll('.prefix-body');
+  // all.forEach((pb) => pb.hidden = true);
+  // active.forEach((ms) => ms.children[2].hidden = false);
 });
 
 du.on.match('change', '.prefix-checkbox', (target) => {
@@ -160,14 +166,12 @@ du.on.match('change', '.part-id-checkbox', (target) => {
 
 let controllerModel;
 function updateController() {
-  if (controllerModel !== lastRendered) {
-    controllerModel = lastRendered;
-    const controller = du.id('model-controller');
-    const grouping = groupParts(controllerModel);
-    grouping.tdm = ThreeDModel.get(controllerModel, viewer);
-    controller.innerHTML = modelContTemplate.render(grouping);
-    controller.hidden = false;
-  }
+  controllerModel = lastRendered;
+  const controller = du.id('model-controller');
+  const grouping = groupParts(controllerModel);
+  grouping.tdm = ThreeDModel.get(controllerModel, viewer);
+  controller.innerHTML = modelContTemplate.render(grouping);
+  controller.hidden = false;
 }
 
 
@@ -179,6 +183,23 @@ function update(part) {
     threeDModel.update(lastRendered);
     updateController();
   }
+}
+
+function init() {
+  // const p = pull(5,2);
+  const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
+  p.setColor('black')
+  // const db = drawerBox(10, 15, 22);
+  const canvas2d = du.id('two-d-model');
+  viewer = new Viewer(p, canvas2d.height, canvas2d.width, 50);
+  addViewer(viewer, '#three-d-model');
+  threeView = new ThreeView(viewer);
+
+  const setZFunc = setGreaterZindex('order-cnt', 'model-cnt', `${threeView.id()}-cnt`);
+  du.on.match('click', '#model-cnt', setZFunc);
+  du.on.match('click', '#order-cnt', setZFunc);
+  du.on.match('click', `#${threeView.id()}-cnt`, setZFunc);
+  ThreeDModel.onLastModelUpdate(updateController);
 }
 
 module.exports = {init, update}

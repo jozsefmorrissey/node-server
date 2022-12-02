@@ -13,6 +13,7 @@ class Order {
     }
     Object.getSet(this, initialVals, 'rooms');
     this.rooms = {};
+    this.addRoom = (name) => this.rooms[name] = new Room(name);
   }
 }
 

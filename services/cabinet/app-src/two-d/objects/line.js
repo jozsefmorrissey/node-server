@@ -80,9 +80,16 @@ class Line2d {
       }
     }
 
+    this.translate = (line) => {
+      const xOffset = line.endVertex().x() - line.startVertex().x();
+      const yOffset = line.endVertex().y() - line.startVertex().y();
+      this.startVertex().translate(xOffset, yOffset);
+      this.endVertex().translate(xOffset, yOffset);
+    }
+
     this.length = (value) => {
       value = Number.parseFloat(value);
-      if (!Number.isNaN(value)) {
+      if (!Number.isNaN(value) && value !== 0) {
         const sv = this.startVertex();
         const x = value * Math.cos(this.radians()) + sv.x();
         const y = value * Math.sin(this.radians()) + sv.y();

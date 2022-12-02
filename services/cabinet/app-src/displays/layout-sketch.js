@@ -35,9 +35,14 @@ class LayouSketch {
           if (section.sections.length < 1) {
             const center = JSON.copy(section.innerCenter());
             center.y*=-1;
-            sketch.text(section.partCode(), center, 6, 'grey');
+            center.x*=-1;
+            sketch.text(section.partName(), center, 6, 'grey');
           }
           const inner = JSON.copy(section.coordinates().inner);
+          const outer = JSON.copy(section.coordinates().outer);
+
+          inner[0].x*=-1;inner[1].x*=-1;inner[2].x*=-1;inner[3].x*=-1;
+          outer[0].x*=-1;outer[1].x*=-1;outer[2].x*=-1;outer[3].x*=-1;
           // For some reason the sketch canvas is mirrored in the y direction
           inner[0].y*=-1;inner[1].y*=-1;inner[2].y*=-1;inner[3].y*=-1;
           let lines = [new Line2d(inner[0], inner[1]),
@@ -45,7 +50,6 @@ class LayouSketch {
                           new Line2d(inner[2], inner[3]),
                           new Line2d(inner[3], inner[0])];
           sketch(lines, undefined, .3);
-          const outer = JSON.copy(section.coordinates().outer);
           // For some reason the sketch canvas is mirrored in the y direction
           outer[0].y*=-1;outer[1].y*=-1;outer[2].y*=-1;outer[3].y*=-1;
           lines = [new Line2d(outer[0], outer[1]),
@@ -57,11 +61,12 @@ class LayouSketch {
         }
       }
       const cabLimits = cabinet.position().limits();
+      const dir = -1;
       const cabinetOutline = [
-        new Line2d({x: 0, y: -2*cabLimits['y']}, {x: 2*cabLimits['x'], y: -2*cabLimits['y']}),
-        new Line2d({x: 2*cabLimits['x'], y: -2*cabLimits['y']}, {x: 2*cabLimits['x'], y: 0}),
-        new Line2d({x: 2*cabLimits['x'], y: 0}, {x: 0, y: 0}),
-        new Line2d({x: 0, y: 0}, {x: 0, y: -2*cabLimits['y']}),
+        new Line2d({x: dir*0, y: -2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: -2*cabLimits['y']}),
+        new Line2d({x: dir*2*cabLimits['x'], y: -2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 0}),
+        new Line2d({x: dir*2*cabLimits['x'], y: 0}, {x: dir*0, y: 0}),
+        new Line2d({x: dir*0, y: 0}, {x: dir*0, y: -2*cabLimits['y']}),
       ];
       sketch(cabinetOutline, 'red', .3);
       allLines.concatInPlace(cabinetOutline);

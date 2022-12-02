@@ -9,7 +9,11 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 class Vertex3D {
   constructor(x, y, z) {
     if (x instanceof Vertex3D) return x;
-    if (x === undefined) {
+    if (x instanceof Vector3D) {
+      this.x = x.i();
+      this.y = x.j();
+      this.z = x.k();
+    } else if (x === undefined) {
       this.x = 0;
       this.y = 0;
       this.z = 0;
@@ -51,13 +55,13 @@ class Vertex3D {
     }
 
     this.rotate = (rotations, center) => {
-      if (center === undefined) return;
       CSG.rotatePointAroundCenter(rotations, this, center);
+      return this;
     }
 
     this.reverseRotate = (rotations, center) => {
-      if (center === undefined) return;
       CSG.rotatePointAroundCenter(rotations, this, center, true);
+      return this;
     }
 
     this.matrix = () => {
@@ -96,7 +100,8 @@ class Vertex3D {
     this.clone = this.copy;
     this.equals = (other) => other && approximate.eq(this.x, other.x) &&
           approximate.eq(this.y, other.y);
-    this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
+      this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
+      this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
   }
 }
 

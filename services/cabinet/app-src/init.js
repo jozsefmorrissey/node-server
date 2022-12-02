@@ -20,7 +20,6 @@ const PopUp = require('../../../public/js/utils/display/pop-up.js');
 const du = require('../../../public/js/utils/dom-utils.js');
 const EPNTS = require('../generated/EPNTS.js');
 const Displays = require('./services/display-svc.js');
-const OrderDisplay = require('./displays/order.js');
 const TwoDLayout = require('./two-d/layout.js');
 const ThreeDMainModel = require('./displays/three-d-main.js');
 const PropertyDisplay = require('./displays/property.js');
@@ -53,29 +52,41 @@ function getValue(code, obj) {
 }
 
 
-const urlSuffix = du.url.breakdown().path.split('/')[2];
+const breakPathSplit = du.url.breakdown().path.split('/');
+const urlSuffix = breakPathSplit.length === 3 ? breakPathSplit[2] : undefined;
 const pageId = {template: 'template-manager', cost: 'cost-manager', home: 'app',
                 pattern: 'pattern-manager', property: 'property-manager-cnt'
               }[urlSuffix] || 'app';
 function init(body){
   Properties.load(body);
   let roomDisplay;
-  let order;
 
-  const propertyDisplay = new PropertyDisplay('#property-manager');
-  Displays.register('propertyDisplay', propertyDisplay);
-  require('./cost/init-costs.js');
-  const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId);
-  const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
-  if (urlSuffix === 'cost') {
-    const CostManager = require('./displays/managers/cost.js');
-    const costManager = new CostManager('cost-manager', 'cost');
-  } else if (urlSuffix === 'template') {
-    const TemplateManager = require('./displays/managers/template.js');
-    const templateDisplayManager = new TemplateManager('template-manager');
+  if (urlSuffix) {
+      require('./cost/init-costs.js');
+      const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId);
+      if (urlSuffix === 'cost') {
+        const CostManager = require('./displays/managers/cost.js');
+        const costManager = new CostManager('cost-manager', 'cost');
+      } else if (urlSuffix === 'template') {
+        const TemplateManager = require('./displays/managers/template.js');
+        const templateDisplayManager = new TemplateManager('template-manager');
+      } else {
+        const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
+        const propertyDisplay = new PropertyDisplay('#property-manager');
+        Displays.register('propertyDisplay', propertyDisplay);
+        const OrderDisplay = require('./displays/order.js');
+        du.on.match('change', '.open-orientation-radio,.open-division-input', updateDivisions);
+        orderDisplay = new OrderDisplay('#order-cnt');
+        setTimeout(TwoDLayout.init, 1000);
+        setTimeout(ThreeDMainModel.init, 1000);
+    }
   } else {
-    du.on.match('change', '.open-orientation-radio,.open-division-input', updateDivisions);
-    orderDisplay = new OrderDisplay('#order-cnt');
+    const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
+    const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
+    const RoomDisplay = require('./displays/room');
+    let order = new Order();
+    order.addRoom('carpet');
+    roomDisplay = new RoomDisplay('#room-cnt', order);
     setTimeout(TwoDLayout.init, 1000);
     setTimeout(ThreeDMainModel.init, 1000);
   }

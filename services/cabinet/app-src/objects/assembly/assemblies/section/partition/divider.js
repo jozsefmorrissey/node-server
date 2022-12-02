@@ -9,12 +9,14 @@ const Assembly = require('../../../assembly.js');
 const Joint = require('../../../../joint/joint');
 
 class DividerSection extends Assembly {
-  constructor(partCode, sectionProperties) {
-    super(partCode, 'Divider');
+  constructor(sectionProperties) {
+    super(undefined, 'Divider');
     if (sectionProperties === undefined) return;
     const props = sectionProperties;
     const instance = this;
     let panel;
+
+    this.partCode = () => `${sectionProperties.partCode()}-dp`;
 
     function toModel() {
       const biPoly = sectionProperties.dividerInfo(3*2.54/4);
@@ -27,9 +29,13 @@ class DividerSection extends Assembly {
 
     this.maxWidth = () => 2.54*3/4;
 
+    this.partName = () => `${sectionProperties.partName()}`;
+    const panelPartName = () =>
+        `${this.partName()}.Divider.Panel`;
 
-    panel = new PanelModel(`${partCode}-p`, 'Divider.Panel', toModel);
+    panel = new PanelModel('dvp', panelPartName, toModel);
     // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
+    panel.parentAssembly(this);
     this.addSubAssembly(panel);
     // this.addSubAssembly(frame);
   }

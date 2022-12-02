@@ -99,7 +99,7 @@ class CabinetDisplay {
     }
 
     const getObject = (values) => {
-      const cabinet = CabinetConfig.get(group, values.type, values.propertyId, values.name || values.id);
+      const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
       setTimeout(() => updateObjLayout(cabinet));
       return cabinet;
     };

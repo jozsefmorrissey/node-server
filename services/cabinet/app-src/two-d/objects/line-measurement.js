@@ -10,7 +10,47 @@ class LineMeasurement2d {
   constructor(line, center, layer, modificationFunction) {
     const offset = 3;
     this.line = () => line;
-    this.I = (l) => {
+
+    function modifyMeasurment(offsetLine, line, buffer, takenLocations) {
+      const startLength = line.startLine.length();
+      line.startLine.length(startLength + buffer);
+      line.endLine.length(startLength + buffer);
+      line.translate(offsetLine);
+      let notTaken = true;
+      const point = line.midpoint();
+      for (let index = 0; index < takenLocations.length; index++) {
+        const locationInfo = takenLocations[index];
+        const takenPoint = locationInfo.point;
+        const biggestBuffer = locationInfo.buffer < buffer ? locationInfo.buffer : buffer;
+        if (takenPoint.distance(point) < biggestBuffer) {
+          if (takenPoint.length === length) return;
+          notTaken = false;
+        }
+      }
+      return notTaken === true ? point : undefined;
+    }
+
+    function notTaken(obj) {
+      return (buffer) => {
+        buffer ||= 20;
+        const closer = obj.closerLine();
+        const further = obj.furtherLine();
+        const cStartL = closer.startLine
+        const cEndL = closer.endLine
+        const offsetLine = cStartL.copy();
+        offsetLine.length(buffer);
+        const length = approximate(closer.length());
+        do {
+          const point = modifyMeasurment(offsetLine, closer, buffer, obj.takenLocations);
+          if (point) {
+            obj.takenLocations.push({point, buffer, length});
+            return closer;
+          } else if (point === undefined) return;
+        } while (true);
+      }
+    }
+    this.I = (l, takenLocations) => {
+      takenLocations ||= [];
       l = l || layer || 1;
       const termDist = (l + 1) * offset;
       const measureDist = l * offset;
@@ -37,8 +77,11 @@ class LineMeasurement2d {
         l2.endLine = new Line2d(line.endVertex(), endTerminationVerticies[0]);
         const furtherLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center);
         const closerLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center, true);
-        return {furtherLine, closerLine};
+        const obj = {furtherLine, closerLine, takenLocations};
+        obj.midpointClear = notTaken(obj);
+        return obj;
       } else {
+        throw new Error('No Intersection???');
         return {};
       }
     }

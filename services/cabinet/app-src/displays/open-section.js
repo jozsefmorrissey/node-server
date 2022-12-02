@@ -86,7 +86,7 @@ OpenSectionDisplay.getList = (root) => {
   let exList;
   const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
   const getHeader = (opening, index) => {
-    const sections = index % 2 === 0 ? SectionProperties.sections() : [];
+    const sections = SectionProperties.sections();
     return OpenSectionDisplay.listHeadTemplate.render({opening, sections, clean});
   }
   const getBody = (opening) => {

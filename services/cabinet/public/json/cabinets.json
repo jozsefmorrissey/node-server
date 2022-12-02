@@ -19,18 +19,18 @@ module.exports = {
         "rotation": [0,0,90]
       },
       {
-        "name": "Right",
+        "name": "Panel.Left",
         "type": "Panel",
-        "code": "pr",
-        "center": ["c.w - (pr.t / 2)", "l / 2", "(w / 2)"],
+        "code": "pl",
+        "center": ["c.w - (pl.t / 2)", "pl.l / 2", "(w / 2)"],
         "demensions": ["c.t", "c.l", "pwt34"],
         "rotation": [0,90,0]
       },
       {
-        "name": "Left",
+        "name": "Panel.Right",
         "type": "Panel",
-        "code": "pl",
-        "center": ["(t / 2)", " l / 2", " (w/2)"],
+        "code": "pr",
+        "center": ["(pr.t / 2)", "pr.l / 2", " (w/2)"],
         "demensions": ["c.t", "c.l", "pwt34"],
         "rotation": [0,90,0]
       },
@@ -763,7 +763,6 @@ module.exports = {
         "z": 0,
         "y": "270+ Math.toDegrees(frontLeftTheta)"
       },
-      "flipNormal": true,
       "coordinates": {
         "inner": [
           {

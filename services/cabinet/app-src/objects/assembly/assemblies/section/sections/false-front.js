@@ -17,7 +17,8 @@ class FalseFrontSection extends Assembly {
     }
 
     const front = new DrawerFront('ff', 'DrawerFront', getBiPolygon);
-    this.front = () => door;
+    this.front = () => front;
+    front.partName = () => `${sectionProperties.partName()}-ff`;
     this.pull = (i) => front.pull(i);
     this.addSubAssembly(front);
   }

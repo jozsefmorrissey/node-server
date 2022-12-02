@@ -3,11 +3,18 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 
 class Vector3D {
   constructor(i, j, k) {
+    if (i instanceof Vector3D) return i;
+    if (i instanceof Object) {
+      k = i.z;
+      j = i.y;
+      i = i.x;
+    }
     this.i = () => i;
     this.j = () => j;
     this.k = () => k;
 
     this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
+    this.magnitudeSQ = () => this.i()*this.i() + this.j()*this.j() + this.k()*this.k();
     this.minus = (vector) => {
       if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
       return new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k());
@@ -50,6 +57,11 @@ class Vector3D {
       return new Vector3D(i/mag,j/-mag,k/mag);
     }
     this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
+
+    this.projectOnTo = (v) => {
+      const multiplier = this.dot(v) / v.magnitudeSQ();
+      return v.scale(multiplier);
+    }
 
     this.unit = () => {
       const i = this.i();const j = this.j();const k = this.k();

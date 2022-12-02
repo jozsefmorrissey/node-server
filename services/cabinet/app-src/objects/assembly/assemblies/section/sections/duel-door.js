@@ -46,10 +46,13 @@ class DualDoorSection extends Assembly {
     const leftDoor = new Door('dl', 'DoorLeft', getBiPolygon(true));
     this.addSubAssembly(leftDoor);
     leftDoor.setPulls([Handle.location.TOP_RIGHT]);
+    leftDoor.partName = () => `${sectionProperties.partName()}-dl`;
+
 
     const rightDoor = new Door('dr', 'DoorRight', getBiPolygon(false));
     this.addSubAssembly(rightDoor);
     rightDoor.setPulls([Handle.location.TOP_LEFT]);
+    rightDoor.partName = () => `${sectionProperties.partName()}-dr`;
 
 
     this.gap = () => 2.54 / 16;

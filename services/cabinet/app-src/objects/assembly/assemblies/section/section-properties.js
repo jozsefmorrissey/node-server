@@ -26,11 +26,12 @@ class SectionProperties extends KeyValue{
     const instance = this;
     let pattern;
 
-    this.partCode = () => {
+    this.partCode = () => 'S';
+    this.partName = () => {
       const oreintation = this.vertical() ? 'V' : 'H';
-      if (index === 0) return oreintation;
-      const pPartCode = this.parentAssembly().partCode();
-      return `${pPartCode}${index}${this.sections.length > 1 ? oreintation : ''}`;
+      if (!(this.parentAssembly() instanceof SectionProperties)) return oreintation;
+      const pPartName = this.parentAssembly().partName();
+      return `${pPartName}${index}.${oreintation}`;
     }
     this.coordinates = () => JSON.clone(coordinates);
     this.reverseInner = () => CSG.reverseRotateAll(this.coordinates().inner);
@@ -101,7 +102,7 @@ class SectionProperties extends KeyValue{
 
     function init () {
       if (instance.sections.length === 0) {
-        instance.sections.push(new SectionProperties({rotation: config.rotation, back: config.back, flipNormal: config.flipNormal}, 1));
+        instance.sections.push(new SectionProperties({rotation: config.rotation, back: config.back}, 1));
       }
     }
 
@@ -138,58 +139,6 @@ class SectionProperties extends KeyValue{
       return undefined;
     }
 
-    function makePlane1ToMeetPlane2(plane1, plane2, rotation) {
-      const rotated1 = CSG.reverseRotate(plane1, rotation);
-      const rotated2 = CSG.reverseRotate(plane2, rotation);
-      const center1 = Vertex3D.center(rotated1);
-      if (approximate.eq(center1.z, 0)) throw new Error('Invalid planeRotation: Rotation reversed should make plane1.z === 0');
-      const keep1 = [];
-      const keep2 = [];
-      const intersections = [];
-      const plane2Line2d = Line2d.combine(new Line2d(rotated2[0], rotated2[1]), new Line2d(rotated2[2], rotated2[3]));
-      const p2l2Midpoint = plane2Line2d.midPoint();
-      const len = plane1.length;
-      let keep = keep1;
-      for (let index = 0; index < plane1.length; index++) {
-        const nextIndex = (index + 1) % len;
-        const prevIndex = (index + 1) % len;
-        const positiveLine = new Line2d(plane1[nextIndex], plane1[index]);
-        const negativeLine = new Line2d(plane1[prevIndex], plane1[index]);
-        const intersection1 = plane2Line2d.findDirectionalIntersection(positiveLine);
-        const intersection2 = plane2Line2d.findDirectionalIntersection(negativeLine);
-        if (intersections.length > 0) keep = keep2;
-        if (!intersection1 && !intersection2) keep.push(plan1[index]);
-        else if (!intersection1) intersections.push(intersection2);
-        else if (!intersection2) intersections.push(intersection1);
-        else {
-          const dist1 = p2l2Midpoint.distance(intersection1);
-          const dist2 = p2l2Midpoint.distance(intersection2);
-          intersections.push(dist1 > dist2 ? intersection1 : intersection2);
-        }
-      }
-      plane1.removeAll();
-      plane1.concat(keep1.concat(intersections).concat(keep2));
-    }
-
-    // function updateDividerCoordinates(section, patVal, dividerOffsetInfo) {
-    //   const pos = section.position();
-    //   const dOffset = dividerOffsetInfo[index];
-    //   const widthOffset = section.maxWidth() / 2;
-    //   const divideCenter = dOffset + patVal + widthOffset;
-    //   pos.depth = instance.innerDepth();
-    //   if (instance.vertical()) {
-    //     pos.center = {y: divideCenter};
-    //     pos.center.x = instance.innerCenter().x;
-    //     pos.length = instance.innerWidth();
-    //   } else {
-    //     pos.center = {x: divideCenter};
-    //     pos.center.y = instance.innerCenter().y;
-    //     pos.length = instance.innerLength();
-    //   }
-    //   pos.center.z = pos.depth / 2
-    //
-    // }
-
     function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset) {
       const coords = {};
       const fresh = instance.coordinates();
@@ -197,18 +146,21 @@ class SectionProperties extends KeyValue{
       const inner = fresh.inner;
       const rotation = instance.rotation();
       if (!instance.vertical()) {
-        const leftOutLine = new Line3D(outer[3], outer[0]);
-        const leftInnerLine = new Line3D(inner[3], inner[0]);
-        const rightOutLine = new Line3D(outer[2], outer[1]);
-        const rightInnerLine = new Line3D(inner[2], inner[1]);
-        coords.outer = [leftOutLine.pointAtDistance(endOuter),
-                        rightOutLine.pointAtDistance(endOuter),
+        const leftOutLine = new Line3D(outer[0], outer[3]);
+        const leftInnerLine = new Line3D(inner[0], inner[3]);
+        const rightOutLine = new Line3D(outer[1], outer[2]);
+        const rightInnerLine = new Line3D(inner[1], inner[2]);
+        coords.outer = [leftOutLine.pointAtDistance(startOuter),
                         rightOutLine.pointAtDistance(startOuter),
-                        leftOutLine.pointAtDistance(startOuter)];
-        coords.inner = [leftInnerLine.pointAtDistance(endInner - innerOffset),
-                        rightInnerLine.pointAtDistance(endInner - innerOffset),
-                        rightInnerLine.pointAtDistance(startInner - innerOffset),
-                        leftInnerLine.pointAtDistance(startInner - innerOffset)];
+                        rightOutLine.pointAtDistance(endOuter),
+                        leftOutLine.pointAtDistance(endOuter)];
+        coords.inner = [
+                        leftInnerLine.pointAtDistance((startInner - innerOffset)),
+                        rightInnerLine.pointAtDistance((startInner - innerOffset)),
+                        rightInnerLine.pointAtDistance((endInner - innerOffset)),
+                        leftInnerLine.pointAtDistance((endInner - innerOffset))
+                                    ];
+
 
       } else {
         const topOutLine = new Line3D(outer[0], outer[1]);
@@ -326,8 +278,8 @@ class SectionProperties extends KeyValue{
       const outer = coords.outer;
       const inner = coords.inner;
       if (this.vertical()) {
-         startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[1]));
-         endOffset = perpendicularDistance(outer[1], new Line3D(inner[0], inner[1]));
+         startOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[2]));
+         endOffset = perpendicularDistance(outer[2], new Line3D(inner[2], inner[3]));
        } else {
          startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[3]));
          endOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[0]));
@@ -365,7 +317,7 @@ class SectionProperties extends KeyValue{
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
-            const section = new SectionProperties({rotation: config.rotation, back: config.back, flipNormal: config.flipNormal}, index + 2);
+            const section = new SectionProperties({rotation: config.rotation, back: config.back}, index + 2);
             this.sections.push(section);
           }
           if (diff !== 0) setSectionCoordinates();
@@ -457,46 +409,38 @@ class SectionProperties extends KeyValue{
       frontOffset *= -1;
       backOffset *= -1;
       const offsetObj = {x: offset, y: offset};
-      if (!config.flipNormal) {
-        let temp = coords[0];
-        coords[0] = coords[1];
-        coords[1] = temp;
-        temp = coords[2];
-        coords[2] = coords[3];
-        coords[3] = temp;
-      }
       biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
       return {biPolygon, frontOffset, backOffset};
     }
 
     this.dividerInfo = (panelThickness) => {
-      const depth = this.innerDepth() * (config.flipNormal ? 1 : -1);
+      const coverInfo = this.coverInfo();
+      const normal = coverInfo.biPolygon.normal().inverse();
+      const depth = this.innerDepth();
       const length = this.innerLength();
       const width = this.innerWidth();
       const innerCenter = this.innerCenter();
       const coordinates = this.coordinates();
       if (!this.verticalDivisions()) {
         const outer = coordinates.outer;
-        const point1 = outer[0];
-        const point2 = outer[1];
-        let depthVector = new Polygon3D(outer).normal();
-        depthVector = depthVector.scale(depth);
-        const point3 = outer[1].translate(depthVector, true);
-        const point4 = outer[0].translate(depthVector, true);
+        const point1 = outer[3];
+        const point2 = outer[2];
+        let depthVector = normal.scale(depth);
+        const point3 = point2.translate(depthVector, true);
+        const point4 = point1.translate(depthVector, true);
         const points = [point1, point2, point3, point4];
-        const offset = panelThickness / (config.flipNormal ? -2 : 2);
-        return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset, null, config.flipNormal);
+        const offset = panelThickness / 2;
+        return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
       }
       const outer = coordinates.outer;
       const point1 = outer[1];
       const point2 = outer[2];
-      let depthVector = new Polygon3D(outer).normal();
-      depthVector = depthVector.scale(depth);
+      let depthVector = normal.scale(depth);
       const point3 = point2.translate(depthVector, true);
       const point4 = point1.translate(depthVector, true);
       const points = [point1, point2, point3, point4];
-      const offset = panelThickness / (config.flipNormal ? -2 : 2);
-      return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset, null, config.flipNormal);
+      const offset = panelThickness / -2;
+      return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
     }
 
     const assemToJson = this.toJson;
@@ -538,7 +482,9 @@ class SectionProperties extends KeyValue{
       this.cover(SectionProperties.new(constructorIdOobject, this));
     }
 
-    this.divider(new DividerSection('divider', this));
+    const divider = new DividerSection(this);
+    divider.parentAssembly(this);
+    this.divider(divider);
     this.value('vertical', true);
     // this.vertical(true);
     // coordinates.onAfterChange(setSectionCoordinates);

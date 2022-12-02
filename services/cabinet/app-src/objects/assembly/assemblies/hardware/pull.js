@@ -73,6 +73,7 @@ class Handle extends Assembly {
 
     super(`${partCode}-${location.position.toKebab()}`, 'Handle');
     Object.getSet(this, {location});
+    this.partName = () => `${door.partName()}.Pull.${this.location().position}`
     instance = this;
     index = index || 0;
     count = count || 1;

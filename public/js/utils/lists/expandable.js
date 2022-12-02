@@ -48,7 +48,8 @@ class Expandable {
     this.getHeader = props.getHeader; delete props.getHeader;
     this.getBody = props.getBody; delete props.getBody;
     props.id = Expandable.lists.length;
-    props.activeKey = 0; //TODO ???
+    const firstKey = Object.keys(props.list)[0];
+    props.activeKey = firstKey || 0; //TODO ???
     Object.getSet(this, props, 'listElemLable');
     let pendingRefresh = false;
     let lastRefresh = new Date().getTime();
@@ -186,6 +187,11 @@ class Expandable {
     }
     this.list = () => props.list;
     this.refresh();
+    // setTimeout(() => {
+    //   const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
+    //   const activeHeader = du.find(headerSelector);
+    //   if (activeHeader) activeHeader.click();
+    // }, 2000);
   }
 }
 Expandable.lists = [];

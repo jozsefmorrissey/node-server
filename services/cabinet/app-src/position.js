@@ -3,6 +3,8 @@
 
 const getDefaultSize = require('./utils.js').getDefaultSize;
 const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
+const Vertex3D = require('./three-d/objects/vertex');
+const BiPolygon = require('./three-d/objects/bi-polygon');
 
 class Position {
   constructor(assembly, sme) {
@@ -106,6 +108,25 @@ class Position {
         z: d.z / 2,
         '-z': -d.z / 2,
       }
+    }
+
+    //TODO: this could be simpler and more effecient using vector rotations instead of line rotations.
+    const modelVecObj = (rotations) => ({
+        width: new Vertex3D(1,0,0).rotate(rotations).vector(),
+        height: new Vertex3D(0,1,0).rotate(rotations).vector(),
+        depth: new Vertex3D(0,0,1).rotate(rotations).vector()
+    });
+
+    this.toBiPolygon = () => {
+      const current = this.current();
+      const dem = current.demension;
+      const center = new Vertex3D(current.center);
+      const vecObj = modelVecObj(current.rotation);
+      return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj);
+    }
+
+    this.toModel = () => {
+      return this.toBiPolygon().toModel();
     }
 
     this.set = (obj, type, value) => {

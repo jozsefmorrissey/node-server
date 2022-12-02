@@ -27,9 +27,8 @@ class Input extends Lookup {
     super(id);
     props.hidden = props.hide || false;
     props.list = props.list || [];
-    this.inline = props.inline;
     Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'placeholder',
-                            'class', 'list', 'value');
+                            'class', 'list', 'value', 'inline');
 
     const immutableProps = {
       _IMMUTABLE: true,

@@ -16,6 +16,11 @@ class Vertex2d {
       this.point(center);
       return true;
     };
+
+    this.translate = (xOffset, yOffset) => {
+      this.point().x += xOffset;
+      this.point().y += yOffset;
+    }
     this.point = (newPoint) => {
       newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
       if (newPoint) this.x(newPoint.x);

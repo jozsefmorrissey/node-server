@@ -77,6 +77,7 @@ CSG.toString = function () {
 CSG.prototype = {
   clone: function() {
     var csg = new CSG();
+    csg.normals = this.normals;
     csg.polygons = this.polygons.map(function(p) { return p.clone(); });
     return csg;
   },
@@ -844,6 +845,7 @@ function reverseRotateAll (points, rotation) {
 }
 
 function rotatePointAroundCenter(rotation, point, center, reverse) {
+  center ||= {x:0, y:0, z:0};
   point.x -=  center.x;
   point.y -= center.y;
   point.z -= center.z;

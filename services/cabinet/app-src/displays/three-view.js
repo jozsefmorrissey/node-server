@@ -89,7 +89,7 @@ class ThreeView extends Lookup {
       Layout2D.release('three-view-left');
       const lm = this.lastModel();
       if (lm === undefined) return;
-      const twoDmap = Polygon2d.lines(...lm.zy);
+      const twoDmap = Polygon2d.lines(...lm.xz);
       if (twoDmap.length < 100) {
         left(twoDmap, color, width);
         const measurements = LineMeasurement2d.measurements(twoDmap);
@@ -100,7 +100,7 @@ class ThreeView extends Lookup {
       Layout2D.release('three-view-top');
       const lm = this.lastModel();
       if (lm === undefined) return;
-      const twoDmap = Polygon2d.lines(...lm.xz);
+      const twoDmap = Polygon2d.lines(...lm.yz);
       if (twoDmap.length < 100) {
         top(twoDmap, color, width);
         const measurements = LineMeasurement2d.measurements(twoDmap);
@@ -110,6 +110,7 @@ class ThreeView extends Lookup {
 
     function onPartSelect(elem) {
       console.log(elem.value);
+      const partCode = du.find.closest(`[value="${elem.value}"`, elem).getAttribute('part-code');
       instance.isolatePart(elem.value);
       elem.value = '';
     }
@@ -145,7 +146,7 @@ class ThreeView extends Lookup {
 
     this.isolatePart = (partCode) => {
       threeDModel = ThreeDModel.get();
-      threeDModel.setTargetPartCode(partCode);
+      threeDModel.setTargetPartName(partCode);
       threeDModel.update();
       setTimeout(() => {
         panzFront.once();

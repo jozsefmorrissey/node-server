@@ -7,6 +7,7 @@ class CabinetOpeningCorrdinates {
     this.sections = sectionProperties.sections;
     this.vertical = sectionProperties.vertical;
     this.sectionProperties = () => sectionProperties;
+    this.pattern = sectionProperties.pattern;
     this.update = () => {
       let coords;
       if (config._Type === 'location') {
@@ -19,10 +20,10 @@ class CabinetOpeningCorrdinates {
 
         const topMax = top.position().centerAdjust('y', '+z');
         const topMin = top.position().centerAdjust('y', '-z');
-        const leftMax = left.position().centerAdjust('x', '+z');
-        const leftMin = left.position().centerAdjust('x', '-z');
-        const rightMin = right.position().centerAdjust('x', '-z');
-        const rightMax = right.position().centerAdjust('x', '+z');
+        const leftMax = left.position().centerAdjust('x', '-z');
+        const leftMin = left.position().centerAdjust('x', '+z');
+        const rightMin = right.position().centerAdjust('x', '+z');
+        const rightMax = right.position().centerAdjust('x', '-z');
         const bottomMin = bottom.position().centerAdjust('y', '-z');
         const bottomMax = bottom.position().centerAdjust('y', '+z');
 

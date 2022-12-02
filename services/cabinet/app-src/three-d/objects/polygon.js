@@ -4,6 +4,7 @@ const Line2D = require('../../two-d/objects/line.js');
 const Line3D = require('./line');
 const Vertex3D = require('./vertex');
 const Vector3D = require('./vector');
+const approximate = require('../../../../../public/js/utils/approximate.js');
 
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 
@@ -12,6 +13,7 @@ class Polygon3D {
     const lines = [];
     let map;
     let normal;
+    let instance = this;
 
     function calcNormal() {
         const points = [lines[0].startVertex, lines[1].startVertex, lines[2].startVertex];
@@ -256,6 +258,36 @@ class Polygon3D {
       }
     }
 
+    function mostInformation() {
+      const verts = instance.verticies();
+      const center = instance.center();
+      const diff = {x: 0, y:0, z: 0};
+      for(let index = 0; index < verts.length; index++) {
+        const v = verts[index];
+        diff.x = Math.abs(v.x - center.x);
+        diff.y = Math.abs(v.y - center.y);
+        diff.z = Math.abs(v.z - center.z);
+      }
+      return diff.x < diff.y ?
+            (diff.x < diff.z ? ['y', 'z'] :
+            (diff.z < diff.y ? ['x', 'y'] : ['x', 'z'])) :
+            (diff.y < diff.z ? ['x', 'z'] : ['x', 'y']);
+    }
+
+    this.to2D = (x, y) => {
+      if (!x || !y) {
+        const mi = mostInformation();
+        x ||= mi[0];
+        y ||= mi[1];
+      }
+      const verts = this.verticies();
+      const verts2D = [];
+      for (let index = 0; index < verts.length; index++) {
+        verts2D.push({x: verts[index][x], y: verts[index][y]});
+      }
+      return new Polygon2D(verts2D);
+    }
+
     this.toString = () => {
       let startStr = '';
       let endStr = '';
@@ -293,41 +325,27 @@ const xzPoly = new Polygon3D([[0,11,13],[0,12,23],[0,22,3]]);
 // const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
 // const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
 const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
+const to2D = (x,y) => (p) => p.to2D(x,y)
 Polygon3D.toTwoD = (polygons) => {
-  const map = {xy: [], xz: [], zy: []};
-  for (let index = 0; index < polygons.length; index += 1) {
-    const poly = polygons[index];
-    const norm = poly.normal();
-    const inXY = poly.inXY();//include(norm, [0,0,1]);//include(norm[0], norm[1], norm[2]);
-    const inXZ = poly.inXZ();//include(norm, [0,1,0]);//include(norm[0], norm[2], norm[1]);
-    const inZY = poly.inYZ();//include(norm, [1,0,0]);//include(norm[2], norm[1], norm[0]);
-    const includeXY = inXY;//!inXZ && !inZY;
-    const includeXZ = inXZ;//!inXY && !inZY;
-    const includeZY = inZY;//!inXY && !inXZ;
-    const indexXY = map.xy.length;
-    const indexXZ = map.xz.length;
-    const indexZY = map.zy.length;
-    if (includeXY) map.xy[indexXY] = [];
-    if (includeXZ) map.xz[indexXZ] = [];
-    if (includeZY) map.zy[indexZY] = [];
-    poly.verticies().forEach((vertex) => {
-      if (includeXY) map.xy[indexXY].push({x: vertex.x, y: -1 * vertex.y, layer: vertex.z});
-      if (includeXZ) map.xz[indexXZ].push({x: vertex.x, y: -1 * vertex.z, layer: vertex.y});
-      if (includeZY) map.zy[indexZY].push({x: -1 * vertex.z, y: -1 * vertex.y, layer: vertex.x});
-    });
-    if (includeXY) map.xy[indexXY] = new Polygon2D(map.xy[indexXY]);
-    if (includeXZ) map.xz[indexXZ] = new Polygon2D(map.xz[indexXZ]);
-    if (includeZY) map.zy[indexZY] = new Polygon2D(map.zy[indexZY]);
-  }
+  const frontView = Polygon3D.viewFromVector(polygons, polygons.normals.front);
+  const leftView = Polygon3D.viewFromVector(polygons, polygons.normals.left);
+  const topView = Polygon3D.viewFromVector(polygons, polygons.normals.top);
+  const map = {xy: frontView.map(to2D()),
+                xz: leftView.map(to2D()),
+                yz: topView.map(to2D())};
   return map;
 }
 
+
+
 Polygon3D.fromVectorObject =
-    (vectorObj, center, height, width) => {
-  const hh = height/2;
+    (width, height, center, vectorObj) => {
+  center ||= new Vertex(0,0,0);
+  vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0)}
   const hw = width/2;
-  const hV = vectorObj.height;
+  const hh = height/2;
   const wV = vectorObj.width;
+  const hV = vectorObj.height;
   const vector1 = center.translate(hV.scale(hh), true).translate(wV.scale(-hw));
   const vector2 = center.translate(hV.scale(hh), true).translate(wV.scale(hw));
   const vector3 = center.translate(hV.scale(-hh), true).translate(wV.scale(hw));
@@ -342,6 +360,28 @@ Polygon3D.fromLines = (lines) => {
     verts.push(lines[index].startVertex);
   }
   return new Polygon3D(verts);
+}
+
+Polygon3D.viewFromVector = (polygons, vector) => {
+  const orthoPolys = [];
+  for (let p = 0; p < polygons.length; p++) {
+    const verticies = polygons[p].verticies();
+    const orthoVerts = [];
+    const vertLocs = {};
+    let valid = true;
+    for (let v = 0; valid && v < verticies.length; v++) {
+      const vertex = verticies[v];
+      const u = new Vector3D(vertex.x, vertex.y, vertex.z);
+      const projection = u.projectOnTo(vector);
+      const orthogonal = new Vertex3D(u.minus(projection));
+      const accStr = orthogonal.toString();
+      if (vertLocs[accStr]) valid = false;
+      else vertLocs[accStr] = true;
+      orthoVerts.push(orthogonal);
+    }
+    if (valid) orthoPolys.push(new Polygon3D(orthoVerts))
+  }
+  return orthoPolys;
 }
 
 module.exports = Polygon3D;

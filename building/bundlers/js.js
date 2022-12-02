@@ -12,6 +12,7 @@ class JsBundler extends Bundler {
     const requireJs = new RequireJS(options.projectDir, options.main);
     // requireJs.guess(true);
     super();
+    const instance = this;
     options = options || {};
     const bundler = this;
     let encaps = !(options.encapsulate === false);
@@ -121,7 +122,8 @@ class JsBundler extends Bundler {
       function writeBundle () {
         bundle += encaps ? requireJs.footer() : '';
         console.log(`Writing ${maxFileCount} files into ./${id}.js`);
-        fs.writeFile(`./${file}.js`, bundle, () => {});;
+        fs.writeFile(`./${file}.js`, bundle, () => {});
+        instance.trigger(bundle);
       }
 
       function addScript(item, i) {

@@ -2,6 +2,7 @@
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 const Line3D = require('line');
 const Polygon3D = require('polygon');
+const Plane = require('plane');
 
 class BiPolygon {
   constructor(polygon1, polygon2) {
@@ -13,6 +14,20 @@ class BiPolygon {
     this.front = () => new Polygon3D(face1);
     this.back = () => new Polygon3D(face2);
     this.normal = () => face2[0].distanceVector(face1[0]).unit();
+    this.normalTop = () => face2[3].distanceVector(face2[0]).unit();
+    this.normalLeft = () => face2[1].distanceVector(face2[0]).unit();
+
+    this.closerPlane = (vertex) => {
+      const poly1 = new Plane(...face1);
+      const poly2 = new Plane(...face2);
+      return poly1.center().distance(vertex) < poly2.center().distance(vertex) ? poly1 : poly2;
+    }
+
+    this.furtherPlane = (vertex) => {
+      const poly1 = new Plane(...face1);
+      const poly2 = new Plane(...face2);
+      return poly1.center().distance(vertex) > poly2.center().distance(vertex) ? poly1 : poly2;
+    }
 
     this.flippedNormal = () => {
       const face1Norm = new Polygon3D(face1).normal();
@@ -43,8 +58,13 @@ class BiPolygon {
       const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]], !flippedNormal));
       bottom.plane.normal = new CSG.Vector([0, -1, 0]);
 
-      const poly = CSG.fromPolygons([front, back, top, left, right, bottom]);
-      return poly;
+      const polys = CSG.fromPolygons([front, back, top, left, right, bottom]);
+      polys.normals = {
+        front: this.normal(),
+        left: this.normalLeft(),
+        top: this.normalTop()
+      }
+      return polys;
     }
 
     this.toString = () =>
@@ -69,11 +89,13 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
 }
 
 BiPolygon.fromVectorObject =
-    (vectorObj, center, depth, height, width) => {
+    (width, height, depth, center, vectorObj) => {
+      center ||= new Vertex(0,0,0);
+      vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0), depth: new Vector3D(0,0,1)};
       const frontCenter = center.translate(vectorObj.depth.scale(depth/2), true);
-      const front = Polygon3D.fromVectorObject(vectorObj, frontCenter, height, width);
+      const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);
       const backCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
-      const back = Polygon3D.fromVectorObject(vectorObj, backCenter, height, width);
+      const back = Polygon3D.fromVectorObject(width, height, backCenter, vectorObj);
       return new BiPolygon(front, back);
 }
 

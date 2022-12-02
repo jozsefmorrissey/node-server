@@ -151,6 +151,23 @@ class Cabinet extends Assembly {
       if (borderObj.inner) return bordersByEndPoints(borderObj);
       return bordersByIds(borderObj);
     }
+
+    function updateOpeningPoints(func, test) {
+      return (...args) => {
+        if (test && test(...args)) instance.updateOpenings();
+        return func(...args);
+      }
+    }
+
+    this.updateOpenings = () => {
+      for (let index = 0; index < this.openings.length; index++) {
+        this.openings[index].update();
+      }
+    };
+
+    this.width = updateOpeningPoints(this.width, (w) => w && this.width() !== w);
+    this.length = updateOpeningPoints(this.length, (l) => l && this.length() !== l);
+    this.thickness = updateOpeningPoints(this.thickness, (t) => t && this.thickness() !== t);
   }
 }
 

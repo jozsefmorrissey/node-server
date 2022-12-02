@@ -92,7 +92,7 @@ function applyTestConfiguration(cabinet) {
   left.sections[0].setSection("DrawerSection");
   left.sections[1].setSection("DrawerSection");
   left.sections[2].setSection("DrawerSection");
-  left.pattern('abb').value('a', a);
+  left.pattern('abb').value('a', a*2);
 
   center.divide(1);
   center.vertical(false);
@@ -105,8 +105,8 @@ function applyTestConfiguration(cabinet) {
   centerTop.sections[1].setSection("FalseFrontSection");
   centerTop.sections[2].setSection("DoorSection");
   centerTop.pattern('ztz').value('t', 15*2.54);
-  centerTop.sections[0].cover().pull().location(Handle.location.LEFT);
-  centerTop.sections[2].cover().pull().location(Handle.location.RIGHT);
+  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+  centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
 
   right.divide(2);
   right.vertical(false);
@@ -275,16 +275,16 @@ function updatePartsDataList() {
   const partMap = threeView.partMap();
   if (!partMap) return;
   const partKeys = Object.keys(partMap);
-  let html = '';
+  let htmlArr = [];
   for (let index = 0; index < partKeys.length; index += 1) {
     const id = partKeys[index];
     const partCode = partMap[id].code;
     const partName = partMap[id].name;
-    html += `<option value='${partCode}'></option>`;
+    htmlArr.push(`<option value='${partName}' part-code='${partCode}'></option>`);
   }
-
+  htmlArr.sort()
   const datalist = du.id('part-list');
-  datalist.innerHTML = html;
+  datalist.innerHTML = htmlArr.join('');
 }
 
 function vertexToDisplay(vertex) {

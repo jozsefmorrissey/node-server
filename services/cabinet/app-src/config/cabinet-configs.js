@@ -12,6 +12,7 @@ const Request = require('../../../../public/js/utils/request.js');
 const EPNTS = require('../../generated/EPNTS.js');
 const CabinetTemplate = require('./cabinet-template');
 const ValueCondition = require('../../../../public/js/utils/input/decision/decision.js').ValueCondition;
+const CabinetLayouts = require('./cabinet-layouts');
 
 class CabinetConfig {
   constructor() {
@@ -41,40 +42,40 @@ class CabinetConfig {
       const types = JSON.parse(JSON.stringify(configKeys));
       const typeInput = new Select({
         name: 'type',
+        label: 'Type',
+        inline: false,
         class: 'center',
         list: types
       });
       const nameInput = new Input({
         name: 'name',
+        inline: true,
         label: 'Name (optional)',
         class: 'center',
       });
-      const inputs = [typeInput, nameInput];
-      const inputTree = new DecisionInputTree();
-      inputTree.onSubmit((t) => {
-        inputTree.payload().inputArray[1].setValue('', true)
-        inputTree.children()[0].payload().inputArray[0].setValue('', true)
+      const layoutInput = new Input({
+        label: 'Layout (Optional)',
+        name: 'layout',
+        inline: true,
+        class: 'center',
+        clearOnDblClick: true,
+        list: CabinetLayouts.list()
       });
-      const cabinet = inputTree.branch('Cabinet', inputs);
-      const cabinetTypes = Object.keys(cabinetKeys);
-      types.forEach((type) => {
 
-        const cabinetInput = new Input({
-          label: 'Layout (Optional)',
-          name: 'id',
-          class: 'center',
-          clearOnDblClick: true,
-          list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
-        });
-        cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
-      });
+      const inputs = [layoutInput, nameInput, typeInput];
+      const inputTree = new DecisionInputTree();
+      // inputTree.onSubmit((t) => {
+      //   inputTree.payload().inputArray[1].setValue('', true)
+      //   inputTree.children()[0].payload().inputArray[0].setValue('', true)
+      // });
+      inputTree.leaf('leaf', inputs);
+
       return inputTree;
     };
-    this.get = (group, type, propertyId, id) => {
-      let cabinet;
-      if (!cabinetList || !cabinetList[id]) cabinet = Cabinet.build(type, group);
-      else cabinet = Cabinet.fromJson(cabinetList[id], group);
-      cabinet.name(id);
+    this.get = (group, type, layout, name) => {
+      let cabinet = Cabinet.build(type, group);
+      if (layout && CabinetLayouts.map[layout]) CabinetLayouts.map[layout].build(cabinet);
+      cabinet.name(name);
       return cabinet;
     };
 
@@ -84,3 +85,48 @@ class CabinetConfig {
 
 CabinetConfig = new CabinetConfig();
 module.exports = CabinetConfig
+
+
+
+
+
+
+
+// ---------------------- Layout Specific Input Tree -----------------------//
+// this.inputTree = () => {
+//   const types = JSON.parse(JSON.stringify(configKeys));
+//   const typeInput = new Select({
+//     name: 'type',
+//     label: 'Type',
+//     inline: false,
+//     class: 'center',
+//     list: types
+//   });
+//   const nameInput = new Input({
+//     name: 'name',
+//     inline: false,
+//     label: 'Name (optional)',
+//     class: 'center',
+//   });
+//   const inputs = [typeInput, nameInput];
+//   const inputTree = new DecisionInputTree();
+//   inputTree.onSubmit((t) => {
+//     inputTree.payload().inputArray[1].setValue('', true)
+//     inputTree.children()[0].payload().inputArray[0].setValue('', true)
+//   });
+//   const cabinet = inputTree.branch('Cabinet', inputs);
+//   const cabinetTypes = Object.keys(cabinetKeys);
+//   types.forEach((type) => {
+//
+//     const cabinetInput = new Input({
+//       label: 'Layout (Optional)',
+//       name: 'id',
+//       inline: false,
+//       class: 'center',
+//       clearOnDblClick: true,
+//       list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
+//     });
+//     cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
+//   });
+//   return inputTree;
+// };

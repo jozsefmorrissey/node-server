@@ -19,6 +19,8 @@ class DoorSection extends Assembly {
     const door = new Door('d', 'Door', getBiPolygon);
     this.door = () => door;
     this.pull = (i) => door.pull(i);
+    door.partName = () => `${sectionProperties.partName()}-d`;
+
     this.addSubAssembly(door);
   }
 }

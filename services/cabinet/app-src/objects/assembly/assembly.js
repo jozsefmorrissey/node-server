@@ -108,6 +108,8 @@ class Assembly extends KeyValue {
     }
     let position = new Position(this, sme);
     this.position = () => position;
+    this.toModel = position.toModel;
+    this.toBiPolygon = position.toBiPolygon;
     this.updatePosition = () => position = new Position(this, sme);
     this.joints = [];
     this.values = {};

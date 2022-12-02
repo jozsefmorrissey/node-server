@@ -58,12 +58,12 @@ class GroupDisplay extends Lookup {
       return dit.root().payload().html();
     }
     function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
-    this.html = () => {
-      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this});
-    }
     this.bodyHtml = () =>  {
       setTimeout(initializeDitButton, 200);
       return GroupDisplay.bodyTemplate.render({group, propertyHtml});
+    }
+    this.html = () => {
+      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this, body: this.bodyHtml()});
     }
 
     this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
@@ -80,12 +80,14 @@ GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
   const cabinetStyles = new Select({
     name: 'style',
     list: styles,
+    inline: true,
     label: 'Style',
     value: propertyConfigInst.cabinetStyle()
   });
 
   const hasFrame = new Select({
       name: 'FrameStyle',
+      inline: true,
       list: ['Frameless', 'Framed', 'Frame Only'],
       value: 'Frameless'
     });
@@ -96,6 +98,7 @@ GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
     const selectObj = Object.keys(properties);
     const select = new Select({
       name: 'subStyle',
+      inline: true,
       list: selectObj,
       value: propertyConfigInst.cabinetStyleName()
     });
