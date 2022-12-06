@@ -511,7 +511,7 @@ class Layout2D extends Lookup {
       const allIntersections = [];
       this.walls().forEach((wall) => {
 
-        const intersection = wall.findSegmentIntersection(escapeLine);
+        const intersection = wall.findSegmentIntersection(escapeLine, true);
         allIntersections.push(intersection);
         if (intersection) {
           // Todo make more accurate

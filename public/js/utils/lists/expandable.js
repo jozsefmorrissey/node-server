@@ -25,6 +25,7 @@ const $t = require('../$t.js');
 //  type: defaults to list,
 //  selfCloseTab: defalts to true - allows clicking on header to close body,
 //  findElement: used to find elemenents related to header - defaults to closest
+//  removeButton: true by default;
 //}
 class Expandable {
   constructor(props) {
@@ -130,9 +131,11 @@ class Expandable {
         setTimeout(() => {
           props.inputs.forEach((input) => input.id = input.id || String.random(7));
           const parent = document.querySelector(props.parentSelector);
+          const focusInfo = du.focusInfo();
           const html = this.html();
           if (parent && html !== undefined) {
             parent.innerHTML = html;
+            du.focus(focusInfo);
             afterRefreshEvent.trigger();
           }
           pendingRefresh = false;
@@ -173,7 +176,7 @@ class Expandable {
         const key = target.getAttribute('key');
         this.activeKey(key);
         if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
-        target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+        if (props.removeButton) target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
         target.className += ' active' + (this.hasBody() ? '' : ' no-body');
         afterRenderEvent.trigger();
         // du.scroll.intoView(target.parentElement, 3, 25, document.body);

@@ -49,9 +49,9 @@ defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value:
 //   Panel
 
 //   Guides
-defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', null),
-defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', null),
-defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', null)
+defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54),
+defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', 3*2.54/8),
+defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', 2.54/2)
 
 //   DoorAndFront
 defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),

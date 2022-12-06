@@ -24,14 +24,16 @@ class SectionProperties extends KeyValue{
     Object.getSet(this, temporaryInitialVals);
     Object.getSet(this, {divideRight: false}, 'divider', 'parentAssembly', 'cover');
     const instance = this;
-    let pattern;
+    let pattern = new Pattern('a');
 
+    this.divideRight = () =>
+      this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
     this.partCode = () => 'S';
     this.partName = () => {
-      const oreintation = this.vertical() ? 'V' : 'H';
-      if (!(this.parentAssembly() instanceof SectionProperties)) return oreintation;
+      const orientation = this.vertical() ? 'V' : 'H';
+      if (!(this.parentAssembly() instanceof SectionProperties)) return orientation;
       const pPartName = this.parentAssembly().partName();
-      return `${pPartName}${index}.${oreintation}`;
+      return `${pPartName}${index}.${orientation}`;
     }
     this.coordinates = () => JSON.clone(coordinates);
     this.reverseInner = () => CSG.reverseRotateAll(this.coordinates().inner);
@@ -39,6 +41,7 @@ class SectionProperties extends KeyValue{
     this.part = () => false;
     this.included = () => false;
     this.joints = [];
+    this.coverType = () => this.cover() && this.cover().constructor.name;
     this.subassemblies = [];
     this.vertical = (is) => {
       const curr = instance.value('vertical', is);
@@ -108,7 +111,7 @@ class SectionProperties extends KeyValue{
 
     this.init = init;
     this.dividerCount = () => this.sections.length - 1;
-    this.sectionCount = () => this.sections.length;
+    this.sectionCount = () => this.sections.length || 1;
     this.children = () => this.sections;
     this.getSubassemblies = () => {
       const assems = Object.values(this.sections);
@@ -330,11 +333,13 @@ class SectionProperties extends KeyValue{
     this.pattern = (patternStr) => {
       if ((typeof patternStr) === 'string') {
         const sectionCount = patternStr.length;
+        pattern = pattern.clone(patternStr);
         this.divide(sectionCount - 1);
-        pattern = new Pattern(patternStr);
       } else {
-        if (!pattern || pattern.str.length !== this.sectionCount())
-          pattern = new Pattern(new Array(this.sectionCount()).fill('a').join(''));
+        if (!pattern || pattern.str.length !== this.sectionCount()) {
+          const patStr = new Array(this.sectionCount()).fill('a').join('');
+          pattern = pattern.clone(patStr);
+        }
       }
       return pattern;
     }
@@ -478,14 +483,16 @@ class SectionProperties extends KeyValue{
     }
 
     this.setSection = (constructorIdOobject) => {
-      let section;
-      this.cover(SectionProperties.new(constructorIdOobject, this));
+      let section = SectionProperties.new(constructorIdOobject, this);
+      this.cover(section);
+      section.parentAssembly(this);
     }
 
     const divider = new DividerSection(this);
     divider.parentAssembly(this);
     this.divider(divider);
     this.value('vertical', true);
+    this.pattern().onChange(setSectionCoordinates);
     // this.vertical(true);
     // coordinates.onAfterChange(setSectionCoordinates);
   }
@@ -528,7 +535,7 @@ SectionProperties.new = function (constructorId) {
 }
 
 const sections = [];
-SectionProperties.sections = () => [].concat(sections);
-SectionProperties.addSection = (clazz) => list.push(clazz);
+SectionProperties.addSection = (clazz) => sections.push(clazz);
+SectionProperties.list = () => [].concat(sections);
 
 module.exports = SectionProperties;

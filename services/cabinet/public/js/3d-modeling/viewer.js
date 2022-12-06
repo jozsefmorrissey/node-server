@@ -47,6 +47,7 @@ Viewer.lineOverlay = false;
 // A viewer is a WebGL canvas that lets the user view a mesh. The user can
 // tumble it around by dragging the mouse.
 function Viewer(csg, width, height, depth) {
+  const originalDepth = depth;
   viewers.push(this);
   this.setDepth = (d) => depth = d;
   let x = 0;
@@ -173,15 +174,45 @@ function Viewer(csg, width, height, depth) {
     shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
   }
 
+  function viewFrom(point, rotation) {
+      gl.makeCurrent();
+
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.loadIdentity();
+      const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+      gl.translate(relDir[0], relDir[1], relDir[2]);
+      gl.rotate(rotation.x, -1, 0, 0);
+      gl.rotate(rotation.y, 0, -1, 0);
+      gl.rotate(rotation.z, 0, 0, -1);
+
+      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+
+      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+      gl.enable(gl.BLEND);
+      // that.blackShader.draw(that.mesh, gl.LINES);
+      gl.disable(gl.BLEND);
+      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+  }
+  this.viewFrom = viewFrom;
+
+  function applyZoom() {
+    // const depthArr = GL.Matrix.relitiveDirection(0,0,depth,gl.modelviewMatrix);
+    const transArr = GL.Matrix.relitiveDirection(x,-y,depth,gl.modelviewMatrix);
+    gl.translate(-transArr[0], -transArr[1], transArr[2])
+  }
+
   var that = this;
   gl.ondraw = function() {
     gl.makeCurrent();
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.loadIdentity();
-    gl.translate(-x, y, -depth);
+    // gl.loadIdentity();
+    applyZoom();
     gl.rotate(angleX, -1, 0, 0);
     gl.rotate(angleY, 0, -1, 0);
+    x = 0; y = 0; angleX = 0; angleY = 0; depth = 0;
 
     if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
     that.lightingShader.draw(that.mesh, gl.TRIANGLES);

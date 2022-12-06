@@ -25,7 +25,7 @@ let layout;
 TwoDLayout.set = (l) => {
   if (l instanceof Layout2D) {
     layout = l;
-    panZ.once();
+    if (panZ) panZ.once();
   }
 }
 

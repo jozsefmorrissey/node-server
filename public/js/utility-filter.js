@@ -589,7 +589,7 @@ function UtilityFilter() {
   }
 
   function buildDisplay(elem, data, canEdit) {
-    data = data || JSON.parse(elem.innerHTML);
+    data = data || JSON.parse(elem.innerHTML || '[]');
     setEventHandlers(elem);
     if (Array.isArray(data)) {
       const dataId = initDataMapElem(elem, data);

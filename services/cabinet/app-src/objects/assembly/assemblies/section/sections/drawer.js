@@ -36,11 +36,17 @@ class DrawerSection extends Assembly {
     const getNormal = () => front.biPolygon().normal();
 
     function getFrontPoly() {
+      const propConfig = sectionProperties.getRoot().group().propertyConfig;
+      const props = propConfig('Guides');
       const innerPoly = new Polygon3D(sectionProperties.coordinates().inner);
       const coverInfo = sectionProperties.coverInfo();
       const biPoly = front.biPolygon();
       const depth = getDrawerDepth(sectionProperties.innerDepth);
-      const offsetVect = biPoly.normal().scale(coverInfo.backOffset);
+      const offsetVect = biPoly.normal().scale(coverInfo.backOffset * -1);
+      const sideOffset = props.dbsos.value();
+      const topOffset = props.dbtos.value();
+      const bottomOffset = props.dbbos.value();
+      innerPoly.offset(sideOffset/2, sideOffset/2, topOffset, bottomOffset);
       return innerPoly.translate(offsetVect);
     }
 

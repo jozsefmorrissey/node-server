@@ -226,6 +226,10 @@ a {
   padding-left: 15pt;
 }
 
+.relitive {
+  position: relative;
+}
+
 #model-cnt {
   background-position: -1px -1px;
   position: fixed;
@@ -233,6 +237,10 @@ a {
   top: 0;
   z-index: 20;
   background-color: #ffffff94;
+}
+
+#display-menu {
+  text-align: center;
 }
 
 #display-menu > .display-manager {
@@ -253,8 +261,8 @@ a {
   position: absolute;
 }
 
-#three-d-model {
-  display: inline-flex;
+.inline {
+  display: inline-block;
 }
 
 #three-d-model > #max-min-btn {
@@ -304,7 +312,7 @@ a {
   white-space: nowrap;
 }
 
-.cabinet-input.dem {
+.cabinet-id-input.dem {
   width: 40pt;
 }
 
@@ -354,4 +362,45 @@ a {
   bottom: 0;
   right: 0;
   z-index: -1;
+}
+
+#three-d-orientation-controls > .c{
+  top: 0;
+  right: 30pt;
+}
+
+#three-d-orientation-controls > .u{
+  top: 0;
+  right: 30pt;
+}
+
+#three-d-orientation-controls > .d{
+  top: 20pt;
+  right: 30pt;
+}
+
+#three-d-orientation-controls > .r{
+  top: 10pt;
+  right: 10pt;
+}
+
+#three-d-orientation-controls > .l{
+  top: 10pt;
+  right: 50pt;
+}
+
+#three-d-orientation-controls > div {
+  font-size: 20pt;
+  position: absolute;
+}
+
+.orientation-arrows-table, .orientation-arrows-table > tbody,
+.orientation-arrows-table > tbody > tr, .orientation-arrows-table > tbody > tr > td {
+  border: none;
+}
+
+.orientation-arrows {
+  position: absolute;
+  top: 0;
+  right: 10px;
 }

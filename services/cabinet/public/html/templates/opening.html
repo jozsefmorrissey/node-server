@@ -1,6 +1,16 @@
 <div class='opening-cnt' opening-id='{{opening.id()}}'>
   <div class='divider-controls'>
+    {{OpenSectionDisplay.dividerHtml(opening)}}
   </div>
 </div>
+<label>Section Type:</label>
+<select class='section-selection'>
+  <option>Open</option>
+  <option:t repeat='section in sections'
+        value='{{section.prototype.constructor.name}}'
+        {{opening.coverType() === section.name ? 'selected' : ''}}>
+    {{section.name.toSentance().replace('Section', '')}}
+  </option:t>
+</select>
 <div id='{{openDispId}}'>
 </div>

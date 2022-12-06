@@ -69,6 +69,7 @@
 .expand-header.pill {
   display: inline-block;
   border-radius: 10pt 10pt 0pt 0pt;
+  padding: 0 10pt;
 }
 
 .expand-body {

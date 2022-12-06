@@ -41,4 +41,15 @@ class CustomEvent {
   }
 }
 
+CustomEvent.all = (obj, ...eventNames) => {
+  if (obj.on === undefined) obj.on = {};
+  if (obj.trigger === undefined) obj.trigger = {};
+  for (let index = 0; index < eventNames.length; index++) {
+    const name = eventNames[index];
+    const e = new CustomEvent(name);
+    obj.on[name] = e.on;
+    obj.trigger[name] = (...args) => e.trigger.apply(e, args);
+  }
+}
+
 module.exports = CustomEvent;

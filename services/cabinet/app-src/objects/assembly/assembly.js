@@ -280,7 +280,10 @@ Assembly.fromJson = (assemblyJson) => {
 
 Assembly.classes = Object.class.object;
 Assembly.new = function (id) {
-  return new (Object.class.get(id))(...Array.from(arguments).slice(1));
+  const clazz = Object.class.get(id);
+  if (clazz)
+    return new (clazz)(...Array.from(arguments).slice(1));
+  return null;
 };
 Assembly.class = Object.class.get;
 Assembly.classObj = Object.class.filter;

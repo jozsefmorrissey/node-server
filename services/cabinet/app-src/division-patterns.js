@@ -1,8 +1,33 @@
 
-const Measurement = require('../../../public/js/utils/measurement.js')
+const Measurement = require('../../../public/js/utils/measurement.js');
+const CustomEvent = require('../../../public/js/utils/custom-event.js');
+
+const mostResent = {};
+const defaullt = {'a': 6, 'b': 10, 'c': 12};
+function bestGuess(char) {
+  return mostResent[char] || defaullt[char] || 4;
+}
+
+class Element {
+  constructor(id, index, count) {
+    let value;
+    this.id = id;
+    this.count = count || 1;
+    this.indexes = [index];
+    this.value = (val) => {
+      if (val !== undefined) {
+        value = new Measurement(val);
+      }
+      return value;
+    }
+    this.value(bestGuess(id));
+  }
+}
 
 class Pattern {
-  constructor(str) {
+  constructor(str, updateOrder, changeEvent) {
+    changeEvent ||= new CustomEvent('change');
+    this.onChange = changeEvent.on;
     this.str = str;
     let unique = {};
     for (let index = 0; index < str.length; index += 1) {
@@ -16,20 +41,12 @@ class Pattern {
     const uniqueStr = Object.keys(unique).join('');
     this.unique = () => uniqueStr;
     this.equal = this.unique.length === 1;
-    class Element {
-      constructor(id, index, count) {
-        let value;
-        this.id = id;
-        this.count = count || 1;
-        this.indexes = [index];
-        this.value = (val) => {
-          if (val !== undefined) {
-            Pattern.mostResent[id] = val;
-            value = new Measurement(val);
-          }
-          return value;
-        }
-      }
+
+    this.clone = (str) => {
+      const clone = new Pattern(str, updateOrder, changeEvent);
+      clone.elements = elements;
+      setTimeout(() => changeEvent.trigger(null, clone), 10);
+      return clone;
     }
 
     if ((typeof str) !== 'string' || str.length === 0)
@@ -37,7 +54,7 @@ class Pattern {
 
     const elements = {};
     const values = {};
-    const updateOrder = [];
+    updateOrder ||= [];
     for (let index = 0; index < str.length; index += 1) {
       const char = str[index];
       if (elements[char]) {
@@ -45,10 +62,6 @@ class Pattern {
         elements[char].indexes.push(index);
       } else {
         elements[char] = new Element(char, index);
-        if (Pattern.mostResent[char] !== undefined) {
-          elements[char].value(Pattern.mostResent[char]);
-          updateOrder.push(char);
-        }
       }
     }
 
@@ -57,68 +70,81 @@ class Pattern {
     let lastElem;
     this.satisfied = () => updateOrder.length === uniqueStr.length - 1;
 
+    function onlyOneUnique(uniqueVals, dist) {
+      const count = uniqueVals[0].count;
+      const value = dist / count;
+      const values = new Array(count).fill(value);
+      const list = new Array(count).fill(value);
+      const fill = [new Measurement(value).display()];
+      return {values, list, fill, str};
+    }
+
+    function numbersOnly(uniqueVals, dist) {
+      let count = 0;
+      for (let index = 0; index < str.length; index += 1) {
+        count += Number.parseInt(str.charAt(index));
+      }
+      const unitDist = dist / count;
+      let retObj = {list: [], fill: [], str, values: {}};
+      for (let index = 0; index < str.length; index += 1) {
+        const char = str.charAt(index);
+        const units = Number.parseInt(char);
+        const value = units * unitDist;
+        retObj.list[index] = value;
+        if (retObj.values[char] === undefined) {
+          retObj.values[char] = value;
+          retObj.fill[retObj.list.fill.length] = value;
+        }
+      }
+      return retObj;
+    }
+
+    function ensureValidUpdateOrder(uniqueVals) {
+      for (let index = 0; index < updateOrder.length; index++) {
+        if (uniqueVals[updateOrder[index]] === undefined) updateOrder.splice(index, 1);
+      }
+      for (let index = 0; index < uniqueVals.length; index++) {
+        const char = uniqueVals[index].char;
+        const orderTooShort = updateOrder.length < uniqueVals.length - 1;
+        const includedInOrder = updateOrder.indexOf(char) !== -1;
+        if (orderTooShort && !includedInOrder) updateOrder.push(char);
+        else if (!orderTooShort && !includedInOrder) {
+          lastElem = elements[uniqueVals[index].char];
+        }
+      }
+      while (updateOrder.length > uniqueVals.length - 1) {
+        lastElem = elements[updateOrder.splice(0, 1)[0]];
+      }
+    }
+
     const numbersOnlyReg = /^[0-9]{1,}$/;
     const calc = (dist) => {
+      // map of unitValues
       const values = {};
 
       const uniqueVals = Object.values(unique);
-      if (uniqueVals.length === 1) {
-        const count = uniqueVals[0].count;
-        const value = dist / count;
-        const str = uniqueVals.char;
-        //Cant remember exactly what values is used for... bad naming
-        const values = new Array(count).fill(value);
-        const list = new Array(count).fill(value);
-        const fill = [value];
-        return {values, list, fill, str};
-      }
+      if (uniqueVals.length === 1) return onlyOneUnique(uniqueVals, dist);
 
-      if (str.trim().match(numbersOnlyReg)) {
-        let count = 0;
-        for (let index = 0; index < str.length; index += 1) {
-          count += Number.parseInt(str.charAt(index));
-        }
-        const unitDist = dist / count;
-        let retObj = {list: [], fill: [], str, values: {}};
-        for (let index = 0; index < str.length; index += 1) {
-          const char = str.charAt(index);
-          const units = Number.parseInt(char);
-          const value = units * unitDist;
-          retObj.list[index] = value;
-          if (retObj.values[char] === undefined) {
-            retObj.values[char] = value;
-            retObj.fill[retObj.list.fill.length] = value;
-          }
-        }
-        return retObj;
-      }
+      if (str.trim().match(numbersOnlyReg)) return numbersOnly(uniqueVals, dist);
+
+      ensureValidUpdateOrder(uniqueVals);
       updateOrder.forEach((id) => {
         const elem = elements[id];
         dist -= elem.count * elem.value().decimal();
         values[elem.id] = elem.value().value();
       });
-      if (lastElem === undefined) {
-        for (let index = 0; index < uniqueVals.length; index += 1) {
-          const char = uniqueVals[index].char;
-          if (!values[char]) {
-            if (lastElem === undefined) lastElem = elements[char];
-            else {lastElem = undefined; break;}
-          }
-        }
-      }
-      if (lastElem !== undefined) {
-        lastElem.value(new Measurement(dist / lastElem.count).value());
-        values[lastElem.id] = lastElem.value().value();
-      }
+      if (lastElem === undefined) throw new Error('This should not happen');
+
+      lastElem.value(new Measurement(dist / lastElem.count).value());
+      values[lastElem.id] = lastElem.value().value();
+
       const list = [];
-      const fill = [];
-      if (lastElem){
-        for (let index = 0; index < uniqueVals.length; index += 1) {
-          fill[index] = elements[uniqueVals[index].char].value().display();
-        }
-      }
+      let fill = [];
       for (let index = 0; index < str.length; index += 1)
         list[index] = values[str[index]];
+      for (let index = 0; index < uniqueVals.length; index += 1) {
+        fill[index] = elements[uniqueVals[index].char].value().display();
+      }
       const retObj = {values, list, fill, str};
       return retObj;
     }
@@ -132,7 +158,10 @@ class Pattern {
           lastElem = elements[updateOrder[0]];
           updateOrder.splice(0, 1);
         }
-        elements[id].value(value);
+        value = elements[id].value(value);
+        changeEvent.trigger(null, this);
+        mostResent[id] = value.decimal();
+        return value;
       } else {
         return elements[id].value().decimal();
       }
@@ -163,7 +192,6 @@ Pattern.fromJson = (json) => {
   keys.foEach((key) => pattern.value(key, pattern.values[key]));
   return pattern;
 };
-Pattern.mostResent = {};
 
 const p1 = new Pattern('babcdaf');
 p1.value('b', 2);

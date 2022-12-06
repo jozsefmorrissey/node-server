@@ -2,7 +2,6 @@
 
 
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
-const cabinetBuildConfig = require('../../public/json/cabinets.json');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const Input = require('../../../../public/js/utils/input/input.js');
 const Inputs = require('../input/inputs.js');
@@ -12,32 +11,19 @@ const Request = require('../../../../public/js/utils/request.js');
 const EPNTS = require('../../generated/EPNTS.js');
 const CabinetTemplate = require('./cabinet-template');
 const ValueCondition = require('../../../../public/js/utils/input/decision/decision.js').ValueCondition;
+const Cabinets = require('./cabinets.json');
 const CabinetLayouts = require('./cabinet-layouts');
 
+const configs = {};
 class CabinetConfig {
-  constructor() {
+  constructor(cabinets, id) {
     let cabinetList = {};
     let cabinetKeys = {};
     let configKeys;
-    const updateEvent = new CustomEvent('update');
-    function setLists(cabinets) {
-      const allCabinetKeys = Object.keys(cabinets);
-      allCabinetKeys.forEach((key) => {
-        const type = cabinets[key].partName;
-        if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
-        if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
-        cabinetKeys[type][key] = cabinets[key];
-      });
-
-      cabinetList = cabinets;
-      configKeys = Object.keys(cabinetBuildConfig);
-      updateEvent.trigger();
-    }
 
     this.valid = (type, id) => (!id ?
-    cabinetBuildConfig[type] : cabinetKeys[type][id]) !== undefined;
+                  cabinets[type] : cabinetKeys[type][id]) !== undefined;
 
-    this.onUpdate = (func) => updateEvent.on(func);
     this.inputTree = () => {
       const types = JSON.parse(JSON.stringify(configKeys));
       const typeInput = new Select({
@@ -68,7 +54,7 @@ class CabinetConfig {
       //   inputTree.payload().inputArray[1].setValue('', true)
       //   inputTree.children()[0].payload().inputArray[0].setValue('', true)
       // });
-      inputTree.leaf('leaf', inputs);
+      inputTree.leaf('Cabinet', inputs);
 
       return inputTree;
     };
@@ -79,13 +65,42 @@ class CabinetConfig {
       return cabinet;
     };
 
-    Request.get(EPNTS.cabinet.list(), setLists, setLists);
+    const allCabinetKeys = Object.keys(cabinets);
+    allCabinetKeys.forEach((key) => {
+      const type = cabinets[key].partName;
+      if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
+      if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
+      cabinetKeys[type][key] = cabinets[key];
+    });
+
+    cabinetList = cabinets;
+    configKeys = Object.keys(cabinets);
+    configs[id] = this;
   }
 }
 
-CabinetConfig = new CabinetConfig();
-module.exports = CabinetConfig
+let currConfig = new CabinetConfig(Cabinets, 'default');
+const updateEvent = new CustomEvent('update');
 
+module.exports = {
+  switch: (configId) => {
+    if (configs[configId] !== undefined) {
+      currConfig = configs[configId];
+      updateEvent.trigger();
+    }
+  },
+  configList: () => Object.keys(configs),
+  valid: (...args) => currConfig.valid(...args),
+  onUpdate: (func) => updateEvent.on(func),
+  inputTree: (...args) => currConfig.inputTree(...args),
+  get: (...args) => currConfig.get(...args),
+  new: (json, id) => new CabinetConfig(json, id)
+}
+
+// Request.get(EPNTS.cabinet.list(), (cabinets) => {
+//   new CabinetConfig(cabinets, 'user');
+//   module.exports.switch('user');
+// }, console.error);
 
 
 

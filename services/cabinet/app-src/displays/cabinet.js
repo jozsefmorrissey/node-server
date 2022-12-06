@@ -127,15 +127,17 @@ class CabinetDisplay {
     const valueUpdate = (path, value) => {
       const cabKey = cabinetKey(path);
       const decimal = new Measurement(value, true).decimal();
-      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : val);
+      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : value);
       TwoDLayout.panZoom.once();
       ThreeDMain.update(cabKey.cabinet);
     }
 
     const attrUpdate = (path, value) => {
       const cabKey = cabinetKey(path);
-      cabKey.cabinet[cabKey.key](value);
+      const decimal = new Measurement(value, true).decimal();
+      cabKey.cabinet[cabKey.key](!Number.isNaN(decimal) ? decimal : value);
       TwoDLayout.panZoom.once();
+      ThreeDMain.update(cabKey.cabinet);
     }
 
     const saveSuccess = () => console.log('success');
@@ -151,7 +153,8 @@ class CabinetDisplay {
       }
     }
 
-    CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
+    // WTFs
+    // CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
     bind(`.cabinet-input`, valueUpdate,
                   {validation: Measurement.validation('(0,)')});
     bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);

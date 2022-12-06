@@ -280,8 +280,8 @@ function panZoom(canvas, draw) {
       }
   }
   // image to show
-  var img = new Image();
-  img.src = "https://upload.wikimedia.org/wikipedia/commons/e/e5/Fiat_500_in_Emilia-Romagna.jpg"
+  // var img = new Image();
+  // img.src = "https://upload.wikimedia.org/wikipedia/commons/e/e5/Fiat_500_in_Emilia-Romagna.jpg"
   // set up font
   ctx.font = "14px verdana";
   ctx.textAlign = "center";
@@ -290,29 +290,14 @@ function panZoom(canvas, draw) {
   var timer =0;
   function update(updateId, once){
     if (nextUpdateId !== updateId) return;
-      nextUpdateId++;
-      timer += 1; // update timere
-      // update the transform
-      displayTransform.update();
-      // set home transform to clear the screem
-      displayTransform.setHome();
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      // if the image loaded show it
-      if(img.complete){
-        displayTransform.setTransform();
-        draw(canvas);
-        ctx.fillStyle = "white";
-        // if(Math.floor(timer/100)%2 === 0){
-        //     ctx.fillText("Left but to pan",mouse.rx,mouse.ry);
-        // }else{
-        //     ctx.fillText("Wheel to zoom",mouse.rx,mouse.ry);
-        // }
-    }else{
-        // waiting for image to load
-        displayTransform.setTransform();
-        ctx.fillText("Loading image...",100,100);
-
-    }
+    nextUpdateId++;
+    timer += 1; // update timere
+    displayTransform.update();
+    displayTransform.setHome();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    displayTransform.setTransform();
+    draw(canvas);
+    ctx.fillStyle = "white";
     if(mouse.buttonRaw === 4){ // right click to return to homw
          displayTransform.x = 0;
          displayTransform.y = 0;
@@ -321,7 +306,6 @@ function panZoom(canvas, draw) {
          displayTransform.ox = 0;
          displayTransform.oy = 0;
      }
-    // reaquest next frame
     if (sleeping === false) {
       if (once) sleeping = true;
       setTimeout(() => requestAnimationFrame(() => update(nextUpdateId)), 10);

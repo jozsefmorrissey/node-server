@@ -154,8 +154,10 @@ class Cabinet extends Assembly {
 
     function updateOpeningPoints(func, test) {
       return (...args) => {
-        if (test && test(...args)) instance.updateOpenings();
-        return func(...args);
+        const shouldUpdate = test && test(...args);
+        const value = func(...args);
+        if (shouldUpdate) instance.updateOpenings();
+        return value;
       }
     }
 

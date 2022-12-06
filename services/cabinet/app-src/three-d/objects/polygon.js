@@ -47,6 +47,18 @@ class Polygon3D {
       return normal.parrelle(poly.normal());
     }
 
+    this.offset = (left, right, up, down) => {
+      lines[0].adjustLength(left - lines[0].length(), false);
+      lines[0].adjustLength(lines[0].length() - right, true);
+      lines[2].adjustLength(lines[2].length() - left, true);
+      lines[2].adjustLength(right - lines[2].length(), false);
+
+      lines[1].adjustLength(up - lines[1].length(), false);
+      lines[1].adjustLength(lines[1].length() - down, true);
+      lines[3].adjustLength(lines[3].length() - up, true);
+      lines[3].adjustLength(down - lines[3].length(), false);
+    }
+
     this.parrelleAt = (distance) => {
       const normal = this.normal();
       const scaled = normal.scale(distance);

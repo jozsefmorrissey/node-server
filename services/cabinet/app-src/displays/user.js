@@ -15,6 +15,8 @@ class User {
       if (la === undefined) la = du.id('login') !== null;
       return la;
     }
+    this.loginAvailible = loginAvailible;
+
     function updateDisplay(s) {
       state = s ? User.states[s] : state;
       cnt = cnt || du.id('login-cnt');
@@ -107,8 +109,8 @@ class User {
     }
 
     Request.globalHeader('Authorization', this.credential);
-    if (this.credential()) Request.get(EPNTS.user.status(), statusCheck);
-    else updateDisplay('LOGIN');
+    if (this.loginAvailible() && this.credential()) Request.get(EPNTS.user.status(), statusCheck);
+    else if (loginAvailible()) updateDisplay('LOGIN');
   }
 }
 

@@ -8,7 +8,10 @@ class DrawerBox extends Assembly {
   constructor(partCode, partName, getFrontPoly, getNormal, getDepth) {
     super(partCode, partName);
 
-    this.toModel = () => drawerBox(getFrontPoly(), getNormal(), getDepth());
+    this.toModel = () => {
+      const props = this.getRoot().group().propertyConfig('DrawerBox');
+      return drawerBox(getFrontPoly(), getNormal(), getDepth(), props);
+    }
   }
 }
 

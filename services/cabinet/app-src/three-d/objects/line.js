@@ -81,9 +81,9 @@ class Line3D {
       const unitVec = this.vector().unit();
       if (fromStartVertex !== undefined) {
         if (fromStartVertex === true) {
-          this.endVertex = this.startVertex.translate(unitVec.scale(change), true);
+          this.endVertex.positionAt(this.startVertex.translate(unitVec.scale(change), true));
         } else {
-          this.startVertex = this.endVertex.translate(unitVec.scale(change), true);
+          this.startVertex.positionAt(this.endVertex.translate(unitVec.scale(change), true));
         }
       } else {
         const len = this.length();
@@ -103,14 +103,14 @@ class Line3D {
 
     this.rotate = (rotation, center) => {
       center ||= this.midpoint();
-      startVertex.rotate(rotations, center);
-      endVertex.rotate(rotations, center);
+      startVertex.rotate(rotation, center);
+      endVertex.rotate(rotation, center);
     }
 
     this.reverseRotate = (rotation, center) => {
       center ||= this.midpoint();
-      startVertex.reverseRotate(rotations, center);
-      endVertex.reverseRotate(rotations, center);
+      startVertex.reverseRotate(rotation, center);
+      endVertex.reverseRotate(rotation, center);
     }
 
   }

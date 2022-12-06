@@ -242,8 +242,10 @@ class Snap2d {
       if (!force) {
         let validMove = true;
         instance.snapLocations().forEach((l) => validMove &&= layout.within(l.at().vertex()));
-        if (!validMove) return this.makeMove(lastValidMove, true); // No move was made return undefined
-        else lastValidMove = position;
+        if (!validMove) {
+          if (lastValidMove) return this.makeMove(lastValidMove, true); // No move was made return undefined
+        } else lastValidMove = position;
+        lastValidMove = position;
       }
       instance.update();
     }

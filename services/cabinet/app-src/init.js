@@ -4,7 +4,7 @@
 require('../../../public/js/utils/utils.js');
 const $t = require('../../../public/js/utils/$t');
 $t.loadFunctions(require('../generated/html-templates'));
-require('./displays/user.js');
+const User = require('./displays/user.js');
 
 // Object Classes
 // require('./bind.js');
@@ -58,7 +58,7 @@ const pageId = {template: 'template-manager', cost: 'cost-manager', home: 'app',
                 pattern: 'pattern-manager', property: 'property-manager-cnt'
               }[urlSuffix] || 'app';
 function init(body){
-  Properties.load(body);
+  if (body) Properties.load(body);
   let roomDisplay;
 
   if (urlSuffix) {
@@ -92,7 +92,8 @@ function init(body){
   }
 }
 
-Request.get(EPNTS.config.get(), init, console.error);
+if (User.loginAvailible()) Request.get(EPNTS.config.get(), init, console.error);
+else init();
 
 const popUp = new PopUp({resize: false, noBackdrop: true});
 

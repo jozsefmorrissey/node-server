@@ -4,13 +4,14 @@ const CSG = require('../../public/js/3d-modeling/csg');
 
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
 const Polygon3D = require('./objects/polygon');
+const Vertex3D = require('./objects/vertex');
 const Assembly = require('../objects/assembly/assembly');
 const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
 const pull = require('./models/pull.js');
 const drawerBox = require('./models/drawer-box.js');
-const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
-const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
+// const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
+// const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
@@ -57,8 +58,10 @@ class ThreeDModel {
     let partMap;
     let renderId;
     let targetPartName;
+    let lastRendered;
     let rootAssembly = assembly.getRoot();
     this.setTargetPartName = (id) => targetPartName = id;
+    this.getLastRendered = () => lastRendered;
 
     this.assembly = (a) => {
       if (a !== undefined) {
@@ -184,6 +187,26 @@ class ThreeDModel {
       return twoDpolys;
     }
 
+    function addModelAttrs(model) {
+      const max = new Vertex3D(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
+      const min = new Vertex3D(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER);
+      for (let index = 0; index < model.polygons.length; index++) {
+        const verts = model.polygons[index].vertices;
+        for (let vIndex = 0; vIndex < verts.length; vIndex++) {
+          const v = verts[vIndex].pos;
+          if (v.x > max.x) max.x = v.x;
+          if (v.x < min.x) min.x = v.x;
+          if (v.y > max.y) max.y = v.y;
+          if (v.y < min.y) min.y = v.y;
+          if (v.z > max.z) max.z = v.z;
+          if (v.z < min.z) min.z = v.z;
+        }
+      }
+      model.center = Vertex3D.center(max, min);
+      model.max = max;
+      model.min = min;
+    }
+
     this.render = function () {
       ThreeDModel.lastActive = this;
       const cacheId = rootAssembly.id();
@@ -244,6 +267,8 @@ class ThreeDModel {
         centerModel(a);
         viewer.mesh = a.toMesh();
         viewer.gl.ondraw();
+        addModelAttrs(a);
+        lastRendered = a;
         console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
       }
       // FunctionCache.off(cacheId);

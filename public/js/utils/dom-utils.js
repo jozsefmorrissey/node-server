@@ -579,6 +579,57 @@ du.copy = (textOelem) => {
   document.execCommand("copy");
 }
 
+const attrReg = /^[a-zA-Z-]*$/;
+du.uniqueSelector = function selector(focusElem) {
+  if (!focusElem) return '';
+  let selector = '';
+  let percice;
+  let attrSelector;
+  let currSelector;
+  let currElem = focusElem;
+  do {
+    attrSelector = `${currElem.tagName}${currElem.id ? '#' + currElem.id : ''}`;
+
+    currSelector = `${attrSelector}${selector}`;
+    let found = du.find.all(currSelector);
+    percice = found && (found.length === 1 || (selector.length > 0 && found[0] === focusElem));
+    if (!percice) {
+      const index = Array.from(currElem.parentElement.children).indexOf(currElem);
+      selector = ` > :nth-child(${index + 1})${selector}`;
+      currElem = currElem.parentElement;
+      if (currElem === null) return '';
+    }
+  } while (!percice);
+  return currSelector;
+}
+
+class FocusInfo {
+  constructor() {
+    this.elem = document.activeElement;
+    if (this.elem) {
+      this.selector = du.uniqueSelector(this.elem);
+      this.start =  this.elem.selectionStart;
+      this.end = this.elem.selectionEnd;
+    } else return null;
+  }
+}
+
+du.focusInfo = function () { return new FocusInfo();}
+
+du.focus = function (selector) {
+  if ((typeof selector) === 'string') {
+    const elem = du.find(selector);
+    if (elem) elem.focus();
+  } else if (selector instanceof FocusInfo) {
+    const elem = du.find(selector.selector);
+    if (elem) {
+      elem.focus();
+      elem.selectionStart = selector.start;
+      elem.selectorEnd = selector.end;
+    }
+  }
+}
+
 try {
   module.exports = du;
 } catch (e) {}

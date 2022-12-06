@@ -24,10 +24,10 @@ function unionAll(...polygons) {
   return model;
 }
 
-function drawerBox(frontPoly, normal, length) {
-  const sideThickness = (2.54 * 5) / 8
-  const bottomThickness = (2.54 * 3) / 8;
-  const bottomHeight = (7*2.54)/8;
+function drawerBox(frontPoly, normal, length, props) {
+  const sideThickness = props.dbst.value();
+  const bottomThickness = props.dbbt.value();
+  const bottomHeight = props.dbid.value();
   const norm = normal;
 
   // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: verticies are if facing polygon topLeft, topRight, bottomRight, bottomLeft
@@ -39,10 +39,10 @@ function drawerBox(frontPoly, normal, length) {
   const tP = new Polygon3D([bP.vertex(1), bP.vertex(0), fP.vertex(1), bP.vertex(0)]);
   const btmP = new Polygon3D([bP.vertex(2), bP.vertex(3), fP.vertex(2), fP.vertex(3)]);
 
-  const front = BiPolygon.fromPolygon(fP, 0, -sideThickness);
-  const back = BiPolygon.fromPolygon(bP, 0, -sideThickness);
-  const left = BiPolygon.fromPolygon(lP, 0, -sideThickness);
-  const right = BiPolygon.fromPolygon(rP, 0, -sideThickness);
+  const front = BiPolygon.fromPolygon(fP, 0, sideThickness);
+  const back = BiPolygon.fromPolygon(bP, 0, sideThickness);
+  const left = BiPolygon.fromPolygon(lP, 0, sideThickness);
+  const right = BiPolygon.fromPolygon(rP, 0, sideThickness);
   const bottom = BiPolygon.fromPolygon(btmP, -bottomHeight, -bottomHeight-bottomThickness);
   return unionAll(front, back, left, right, bottom);
 }

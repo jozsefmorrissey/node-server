@@ -20,18 +20,25 @@
           <div id='room-cnt'></div>
         </div>
         <div id='model-cnt'>
-          <div id='display-menu'></div>
-          <div id='model-display-cnt'>
-            <canvas id="two-d-model"></canvas>
-            <div id="three-d-model" class="viewer small">
-              <span id="model-controller"></span>
-              <span id="three-d-model-display"></span>
+          <div class='relitive'>
+            <div id='display-menu'></div>
+            <div id='model-display-cnt'>
+              <canvas id="two-d-model"></canvas>
+              <div id="three-d-model" class="viewer small">
+                <div class='inline left'>
+                  <div id='three-d-orientation-controls'></div>
+                  <span id="model-controller"></span>
+                  <span id="three-d-model-display"></span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
       <div id='information-display'>
-        <utility-filter id='uf-info-{{order.id()}}' edit='true'></utility-filter>
+        <utility-filter id='uf-info-{{order.id()}}' edit='true'>
+        []
+        </utility-filter>
       </div>
     </div>
   </body>

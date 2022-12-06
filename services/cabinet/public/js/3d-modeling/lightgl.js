@@ -915,6 +915,9 @@ function addMatrixStack() {
   gl.loadIdentity = function() {
     Matrix.identity(gl[matrix]);
   };
+  gl.setIdentity = function (m) {
+    gl[matrix] = m;
+  }
   gl.loadMatrix = function(m) {
     var from = m.m, to = gl[matrix].m;
     for (var i = 0; i < 16; i++) {
@@ -943,7 +946,7 @@ function addMatrixStack() {
     gl.multMatrix(Matrix.rotate(a, x, y, z, tempMatrix));
   };
   gl.lookAt = function(ex, ey, ez, cx, cy, cz, ux, uy, uz) {
-    gl.multMatrix(Matrix.lookAt(ex, ey, ez, cx, cy, cz, ux, uy, uz, tempMatrix));
+    return gl.multMatrix(Matrix.lookAt(ex, ey, ez, cx, cy, cz, ux, uy, uz, tempMatrix));
   };
   gl.pushMatrix = function() {
     stack.push(Array.prototype.slice.call(gl[matrix].m));
@@ -1985,6 +1988,23 @@ Matrix.translate = function(x, y, z, result) {
 
   return result;
 };
+
+Matrix.relitiveDirection = function(x,y,z,matrix) {
+  const m = matrix.m;
+  let v = [
+    m[0] * x + m[1] * y + m[2] * z,
+    m[4] * x + m[5] * y + m[6] * z,
+    m[8] * x + m[9] * y + m[10] * z
+  ];
+
+  return v;
+}
+
+// const zOnly = new Matrix();
+// zOnly.m[0] = zOnly.m[5] = 0;
+// const zRotation = new Matrix();
+
+// zRotation.m[0] = zRotation.m[5] = 0;
 
 // ### GL.Matrix.rotate(a, x, y, z[, result])
 //

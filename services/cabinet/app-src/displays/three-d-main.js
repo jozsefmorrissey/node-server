@@ -1,6 +1,6 @@
 
 
-const CSG = require('../../public/js/3d-modeling/csg');
+// const CSG = require('../../public/js/3d-modeling/csg');
 
 const Assembly = require('../objects/assembly/assembly');
 const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
@@ -13,9 +13,12 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const ThreeView = require('three-view');
+const OrientationArrows = require('orientation-arrows');
+const Vector3D = require('../three-d/objects/vector.js');
+const Line3D = require('../three-d/objects/line.js');
+const Vertex3D = require('../three-d/objects/vertex.js');
 
-
-const cube = new CSG.cube({radius: [3,5,1]});
+// const cube = new CSG.cube({radius: [3,5,1]});
 const consts = require('../../globals/CONSTANTS');
 let viewer, threeView;
 
@@ -185,13 +188,39 @@ function update(part) {
   }
 }
 
+function modelCenter() {
+  const model = ThreeDModel.lastActive.getLastRendered();
+  const vertices = [];
+  for (let index = 0; index < model.polygons.length; index++) {
+    const verts = model.polygons[index].vertices;
+    for (let vIndex = 0; vIndex < verts.length; vIndex++) {
+      vertices.push(verts[vIndex].pos);
+    }
+  }
+
+  return Vertex3D.center(...vertices);
+}
+
+function centerOnObj(x,y,z) {
+  // const offset = [200*y,-200*x,200];
+  // const center = modelCenter();
+  const model = ThreeDModel.lastActive.getLastRendered();
+  const center = model.center.copy();
+  center.x += 200 * y;
+  center.y += -200 * x;
+  center.z += 100;
+  const rotation = {x: x*90, y: y*90, z: z*90};
+
+  return [center, rotation];
+}
+
 function init() {
   // const p = pull(5,2);
-  const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
-  p.setColor('black')
+  // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
+  // p.setColor('black')
   // const db = drawerBox(10, 15, 22);
   const canvas2d = du.id('two-d-model');
-  viewer = new Viewer(p, canvas2d.height, canvas2d.width, 50);
+  viewer = new Viewer(undefined, canvas2d.height, canvas2d.width, 50);
   addViewer(viewer, '#three-d-model');
   threeView = new ThreeView(viewer);
 
@@ -200,6 +229,17 @@ function init() {
   du.on.match('click', '#order-cnt', setZFunc);
   du.on.match('click', `#${threeView.id()}-cnt`, setZFunc);
   ThreeDModel.onLastModelUpdate(updateController);
+  const orientArrows = new OrientationArrows('#three-d-orientation-controls');
+  orientArrows.on.center(() =>
+    viewer.viewFrom(...centerOnObj(0,0, 0)));
+  orientArrows.on.up(() =>
+    viewer.viewFrom(...centerOnObj(1, 0,0)));
+  orientArrows.on.down(() =>
+    viewer.viewFrom(...centerOnObj(-1,0,0)));
+  orientArrows.on.left(() =>
+    viewer.viewFrom(...centerOnObj(0,-1,0)));
+  orientArrows.on.right(() =>
+    viewer.viewFrom(...centerOnObj(0,1,0)));
 }
 
 module.exports = {init, update}
