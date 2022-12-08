@@ -20,10 +20,10 @@ class Polygon3D {
       let points = this.verticies();
       let vector1, vector2;
       let parrelle = true;
-      let index = 1;
-      while (parrelle && index < points.length - 1) {
-        vector1 = points[index].minus(points[index - 1])
-        vector2 = points[index].minus(points[index + 1]);
+      let index = 0;
+      while (parrelle && index < points.length - 2) {
+        vector1 = points[index + 1].minus(points[index])
+        vector2 = points[index + 2].minus(points[index]);
         parrelle = vector1.parrelle(vector2);
         index++;
       }
@@ -220,7 +220,7 @@ class Polygon3D {
         if (endLine) endline.endVertex = verts[0];
       }
       this.lineMap(true);
-      // this.removeLoops();
+      this.removeLoops();
     }
 
     this.rebuild = (newVerticies) => {

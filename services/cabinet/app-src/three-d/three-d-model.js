@@ -243,12 +243,12 @@ class ThreeDModel {
         const e=1;
         // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
         a.setColor(...getColor());
-        // assem.getJoints().female.forEach((joint) => {
-        //   const male = joint.getMale();
-        //   const m = male.toModel();
-        //   console.log(male, m);
-        //   a = a.subtract(m);
-        // });
+        assem.getJoints().female.forEach((joint) => {
+          const male = joint.getMale();
+          const m = male.toModel();
+          console.log(male, m);
+          a = a.subtract(m);
+        });
         // else a.setColor(1, 0, 0);
         a.normals = normals;
         return a;
@@ -260,7 +260,6 @@ class ThreeDModel {
         const assem = assemblies[index];
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
         if (!hidden(assem)) {
-          console.log(assem);
           const b = buildObject(assem);
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});

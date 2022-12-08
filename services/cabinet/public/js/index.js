@@ -23478,12 +23478,12 @@ function (require, exports, module) {
 	        const e=1;
 	        // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
 	        a.setColor(...getColor());
-	        // assem.getJoints().female.forEach((joint) => {
-	        //   const male = joint.getMale();
-	        //   const m = male.toModel();
-	        //   console.log(male, m);
-	        //   a = a.subtract(m);
-	        // });
+	        assem.getJoints().female.forEach((joint) => {
+	          const male = joint.getMale();
+	          const m = male.toModel();
+	          console.log(male, m);
+	          a = a.subtract(m);
+	        });
 	        // else a.setColor(1, 0, 0);
 	        a.normals = normals;
 	        return a;
@@ -23495,7 +23495,6 @@ function (require, exports, module) {
 	        const assem = assemblies[index];
 	        partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
 	        if (!hidden(assem)) {
-	          console.log(assem);
 	          const b = buildObject(assem);
 	          // const c = assem.position().center();
 	          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
@@ -29588,10 +29587,10 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	      let points = this.verticies();
 	      let vector1, vector2;
 	      let parrelle = true;
-	      let index = 1;
-	      while (parrelle && index < points.length - 1) {
-	        vector1 = points[index].minus(points[index - 1])
-	        vector2 = points[index].minus(points[index + 1]);
+	      let index = 0;
+	      while (parrelle && index < points.length - 2) {
+	        vector1 = points[index + 1].minus(points[index])
+	        vector2 = points[index + 2].minus(points[index]);
 	        parrelle = vector1.parrelle(vector2);
 	        index++;
 	      }
@@ -29788,7 +29787,7 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	        if (endLine) endline.endVertex = verts[0];
 	      }
 	      this.lineMap(true);
-	      // this.removeLoops();
+	      this.removeLoops();
 	    }
 	
 	    this.rebuild = (newVerticies) => {
