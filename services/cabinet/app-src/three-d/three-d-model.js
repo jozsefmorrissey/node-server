@@ -2,52 +2,53 @@
 
 const CSG = require('../../public/js/3d-modeling/csg');
 
-const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
-const Polygon3D = require('./objects/polygon');
-const Vertex3D = require('./objects/vertex');
-const Assembly = require('../objects/assembly/assembly');
-const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
-const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
-const pull = require('./models/pull.js');
-const drawerBox = require('./models/drawer-box.js');
-// const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
-// const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
+const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
+
+const Polygon3D = require('./objects/polygon');
+const Polygon2d = require('../two-d/objects/polygon');
+const Vertex3D = require('./objects/vertex');
+const Vector3D = require('./objects/vector');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+const OrientationArrows = require('../displays/orientation-arrows.js');
+const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
+const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 
 const colors = {
   indianred: [205, 92, 92],
-  lightcoral: [240, 128, 128],
-  salmon: [250, 128, 114],
-  darksalmon: [233, 150, 122],
-  lightsalmon: [255, 160, 122],
-  white: [255, 255, 255],
-  silver: [192, 192, 192],
   gray: [128, 128, 128],
+  fuchsia: [255, 0, 255],
+  lime: [0, 255, 0],
   black: [0, 0, 0],
+  lightsalmon: [255, 160, 122],
   red: [255, 0, 0],
   maroon: [128, 0, 0],
   yellow: [255, 255, 0],
   olive: [128, 128, 0],
-  lime: [0, 255, 0],
+  lightcoral: [240, 128, 128],
   green: [0, 128, 0],
   aqua: [0, 255, 255],
+  white: [255, 255, 255],
   teal: [0, 128, 128],
+  darksalmon: [233, 150, 122],
   blue: [0, 0, 255],
   navy: [0, 0, 128],
-  fuchsia: [255, 0, 255],
+  salmon: [250, 128, 114],
+  silver: [192, 192, 192],
   purple: [128, 0, 128]
 }
 
 const colorChoices = Object.keys(colors);
+let colorIndex = 0;
 function getColor(name) {
   if(colors[name]) return colors[name];
-  return colors[colorChoices[Math.floor(Math.random() * colorChoices.length)]];
+  return colors[colorChoices[colorIndex++ % colorChoices.length]];
+  // return colors.white;
 }
 
 class ThreeDModel {
-  constructor(assembly, viewer) {
+  constructor(assembly) {
     const hiddenPartIds = {};
     const hiddenPartNames = {};
     const hiddenPrefixes = {};
@@ -150,6 +151,15 @@ class ThreeDModel {
       return false;
     }
 
+    let xzFootprint;
+    function createXZfootprint(model, cabinet) {
+      const cube = CSG.cube({demensions: [cabinet.width(),1,cabinet.thickness()], center: model.center});
+      xzFootprint = cube.intersect(model);
+      // xzFootprint = Polygon2d.lines(...twoDmap.xz);
+    }
+
+    this.xzFootprint = () => xzFootprint;
+
     function coloring(part) {
       if (part.partName() && part.partName().match(/.*Frame.*/)) return getColor('blue');
       else if (part.partName() && part.partName().match(/.*Drawer.Box.*/)) return getColor('green');
@@ -171,21 +181,32 @@ class ThreeDModel {
 
     this.removeAllExtraObjects = () => extraObjects = [];
 
-    let lm;
-    this.lastModel = () => {
-      if (lm === undefined) return undefined;
+    function distance(verts) {
+      let dist = 0;
+      for (let index = 1; index < verts.length; index++) {
+        dist += verts[index -1].distance(verts[index]);
+      }
+      return dist;
+    }
+
+    function toTwoDpolys(model) {
+      if (model === undefined) return undefined;
       const polys = [];
       const map = {xy: [], xz: [], zy: []};
-      lm.polygons.forEach((p, index) => {
+      model.polygons.forEach((p, index) => {
         const norm = p.vertices[0].normal;
-        const verticies = p.vertices.map((v) => ({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
+        const verticies = p.vertices.map((v) => (new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z})));
+        const dist = distance(verticies);
         polys.push(new Polygon3D(verticies));
       });
-      polys.normals = lm.normals;
+      polys.normals = model.normals;
       // Polygon3D.merge(polys);
       const twoDpolys = Polygon3D.toTwoD(polys);
       return twoDpolys;
     }
+
+    let lm;
+    this.lastModel = () => toTwoDpolys(lm);
 
     function addModelAttrs(model) {
       const max = new Vertex3D(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
@@ -222,11 +243,12 @@ class ThreeDModel {
         const e=1;
         // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
         a.setColor(...getColor());
-        assem.getJoints().female.forEach((joint) => {
-          const male = joint.getMale();
-          const m = male.toModel();
-          a = a.subtract(m);
-        });
+        // assem.getJoints().female.forEach((joint) => {
+        //   const male = joint.getMale();
+        //   const m = male.toModel();
+        //   console.log(male, m);
+        //   a = a.subtract(m);
+        // });
         // else a.setColor(1, 0, 0);
         a.normals = normals;
         return a;
@@ -238,6 +260,7 @@ class ThreeDModel {
         const assem = assemblies[index];
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
         if (!hidden(assem)) {
+          console.log(assem);
           const b = buildObject(assem);
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
@@ -258,16 +281,20 @@ class ThreeDModel {
           }
         }
       }
-      for (let index = 0; index < extraObjects.length; index++) {
-        a = a.union(extraObjects[index]);
-      }
-      if (a) {
+      if (a && ThreeDModel.getViewer(a)) {
         // a.polygons.forEach((p) => p.shared = getColor());
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
-        centerModel(a);
-        viewer.mesh = a.toMesh();
-        viewer.gl.ondraw();
         addModelAttrs(a);
+        // createXZfootprint(a, assemblies[0].getAssembly('c'));
+        // extraObjects = [];
+        // xzFootprint.polygons.forEach(p => p.vertices.forEach(v => this.addVertex(v.pos)))
+        // xzFootprint.polygons = [];
+        // for (let index = 0; index < extraObjects.length; index++) {
+        //   xzFootprint.polygons.concatInPlace(extraObjects[index].polygons);
+        // }
+        centerModel(a);
+        viewer.mesh = a.toMesh();//a.toMesh();
+        viewer.gl.ondraw();
         lastRendered = a;
         console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
       }
@@ -285,11 +312,63 @@ class ThreeDModel {
   }
 }
 
+function centerOnObj(x,y,z) {
+  const model = ThreeDModel.lastActive.getLastRendered();
+  const center = model.center.copy();
+  center.x += 200 * y;
+  center.y += -200 * x;
+  center.z += 100;
+  const rotation = {x: x*90, y: y*90, z: z*90};
+
+  return [center, rotation];
+}
+
+let viewer;
+let viewerSelector = '#three-d-model';
+let viewerSize = '60vh';
+ThreeDModel.setViewerSelector = (selector, size) => {
+  viewerSelector = selector;
+  viewerSize = size || viewerSize;
+  viewer = undefined;
+}
+
+// function updateCanvasSize(canvas) {
+//   canvas.style.width = viewerSize;
+//   const dem = Math.floor(canvas.getBoundingClientRect().width);
+//   canvas.width = dem;
+//   canvas.height = dem;
+//   canvas.style.width = `${dem}px`;
+//   canvas.style.width = `${dem}px`;
+// }
+
+ThreeDModel.getViewer = (model) => {
+  if (viewer) return viewer;
+  const canvas = du.find(viewerSelector);
+  if (canvas) {
+    const size = du.convertCssUnit(viewerSize);
+    if (model === undefined) return undefined;
+    viewer = new Viewer(model, size, size, 50);
+    addViewer(viewer, viewerSelector);
+    const orientArrows = new OrientationArrows(`${viewerSelector} .orientation-controls`);
+    orientArrows.on.center(() =>
+      viewer.viewFrom(...centerOnObj(0,0, 0)));
+    orientArrows.on.up(() =>
+      viewer.viewFrom(...centerOnObj(1, 0,0)));
+    orientArrows.on.down(() =>
+      viewer.viewFrom(...centerOnObj(-1,0,0)));
+    orientArrows.on.left(() =>
+      viewer.viewFrom(...centerOnObj(0,-1,0)));
+    orientArrows.on.right(() =>
+      viewer.viewFrom(...centerOnObj(0,1,0)));
+  }
+  return viewer;
+}
+
 ThreeDModel.models = {};
-ThreeDModel.get = (assembly, viewer) => {
+ThreeDModel.get = (assembly) => {
   if (assembly === undefined) return ThreeDModel.lastActive;
   if (ThreeDModel.models[assembly.id()] === undefined) {
-    ThreeDModel.models[assembly.id()] = new ThreeDModel(assembly, viewer);
+    ThreeDModel.models[assembly.id()] = new ThreeDModel(assembly);
   }
   return ThreeDModel.models[assembly.id()];
 }

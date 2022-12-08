@@ -1,5 +1,6 @@
 
 const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 
 class Vector3D {
   constructor(i, j, k) {
@@ -41,13 +42,12 @@ class Vector3D {
     this.perpendicular = (vector) =>
       approximate.eq(this.dot(vector), 0);
     this.parrelle = (vector) => {
-      let coef = approximate(this.i()) / approximate(vector.i()) ||
-                  approximate(this.j()) / approximate(vector.j()) ||
-                  approximate(this.k()) / approximate(vector.k());
-      if (Math.abs(coef) === Infinity || coef === 0 || Number.isNaN(coef)) return null;
-      return approximate.eq(vector.i() * coef, this.i()) &&
-              approximate.eq(vector.j() * coef, this.j()) &&
-              approximate.eq(vector.k() * coef, this.k());
+      let coef = this.i() / vector.i();
+      if (!Number.isFinite(coef)) coef = this.j() / vector.j();
+      if (!Number.isFinite(coef)) coef = this.k() / vector.k();
+      if (!Number.isFinite(coef) || coef === 0) return false;
+      const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
+      return Vector3D.tolerance.within(equivVect, this);
     }
     this.crossProduct = (other) => {
       const i = this.j() * other.k() - this.k() * other.j();
@@ -68,9 +68,12 @@ class Vector3D {
       const magnitude = Math.sqrt(i*i+j*j+k*k);
       return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
     }
-    this.equals = this.parrelle;
+    this.equals = (vector) => Vector.tolerance.within(vector, this);
     this.toString = () => `<${i},  ${j},  ${k}>`;
   }
 }
+
+const tol = .00000001;
+Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
 
 module.exports = Vector3D;

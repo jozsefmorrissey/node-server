@@ -2,8 +2,6 @@
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils');
-const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
-const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const pull = require('../three-d/models/pull.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const Layout2D = require('../objects/layout.js')
@@ -47,7 +45,7 @@ function door(face1, face2) {
 }
 
 class ThreeView extends Lookup {
-  constructor(viewer) {
+  constructor() {
     super();
     const instance = this;
     const maxDem = window.innerHeight * .45;
@@ -116,10 +114,6 @@ class ThreeView extends Lookup {
     }
 
     function init() {
-      if (viewer === undefined) {
-        viewer = new Viewer(p, maxDem, maxDem, 50);
-        addViewer(viewer, `#${instance.id()}>.three-view-three-d-cnt`);
-      }
       front = new Draw2D(du.id('three-view-front'));
       left = new Draw2D(du.id('three-view-left'));
       top = new Draw2D(du.id('three-view-top'));
@@ -131,12 +125,16 @@ class ThreeView extends Lookup {
       panzLeft.centerOn(0, 0);
       panzTop.centerOn(0, 0);
 
+      if (du.url.breakdown().path.match(/\/.*template$/)) {
+        setTimeout(() =>
+          ThreeDModel.setViewerSelector(`#${instance.id()}>.three-view-three-d-cnt`, '40vh'), 500);
+      }
       du.on.match('change', '[name="partSelector"]', onPartSelect);
     }
 
     this.update = (cabinet) => {
-      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet, viewer);
-      threeDModel.assembly(cabinet, viewer);
+      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
+      threeDModel.assembly(cabinet);
       threeDModel.update(cabinet);
       front.clear();left.clear();top.clear();
       setTimeout(() => {

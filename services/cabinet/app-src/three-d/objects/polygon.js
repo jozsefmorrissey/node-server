@@ -5,22 +5,33 @@ const Line3D = require('./line');
 const Vertex3D = require('./vertex');
 const Vector3D = require('./vector');
 const approximate = require('../../../../../public/js/utils/approximate.js');
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 
 class Polygon3D {
   constructor(initialVerticies) {
-    const lines = [];
+    let lines = [];
     let map;
     let normal;
     let instance = this;
 
     function calcNormal() {
-        const points = [lines[0].startVertex, lines[1].startVertex, lines[2].startVertex];
-        const vector1 = points[1].minus(points[0]);
-        const vector2 = points[2].minus(points[0]);
-        const normVect = vector1.crossProduct(vector2);
-        return normVect.scale(1 / normVect.magnitude());
+      let points = this.verticies();
+      let vector1, vector2;
+      let parrelle = true;
+      let index = 1;
+      while (parrelle && index < points.length - 1) {
+        vector1 = points[index].minus(points[index - 1])
+        vector2 = points[index].minus(points[index + 1]);
+        parrelle = vector1.parrelle(vector2);
+        index++;
+      }
+      if (parrelle)
+        throw new Error('InvalidPolygon: points are in a line');
+
+      const normVect = vector1.crossProduct(vector2);
+      return normVect.scale(1 / normVect.magnitude());
     }
     this.normal = calcNormal;
 
@@ -97,17 +108,17 @@ class Polygon3D {
     this.startLine = () => lines[0];
     this.endLine = () => lines[lines.length - 1];
 
+    const tol = .00000001;
     this.lineMap = (force) => {
       if (!force && map !== undefined) return map;
       if (lines.length === 0) return {};
-      map = {};
+      map = new ToleranceMap({'startVertex.x': tol, 'startVertex.y': tol, 'endVertex.z': tol,
+                              'endVertex.x': tol, 'endVertex.y': tol, 'endVertex.z': tol});
       let lastEnd;
       if (!lines[0].startVertex.equals(lines[lines.length - 1].endVertex)) throw new Error('Broken Polygon');
-      for (let index = 0; index < lines.length; index += 1) {
-        const line = lines[index];
-        if (lastEnd && !line.startVertex.equals(lastEnd)) throw new Error('Broken Polygon');
-        lastEnd = line.endVertex;
-        map[line.toString()] = line;
+      for (let index = 0; index < lines.length; index++) {
+        lines[index]._POLY_INDEX = index;
+        map.add(lines[index]);
       }
       return map;
     }
@@ -143,7 +154,9 @@ class Polygon3D {
 
     function getLine(line) {
       const lineMap = this.lineMap();
-      return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
+      const matches = lineMap.matches(line) || lineMap.matches(line.negitive());
+      if (matches && matches.length > 1) throw new Error('THIS SHOULD NOT HAPPEN!!!! REMOVE LINES IS BROKEN... probably');
+      return matches ? matches[0] : null;
     }
 
     this.getLines = (startVertex, endVertex, reverse) => {
@@ -206,23 +219,44 @@ class Polygon3D {
       if (verts.length > 0 && lines.length > 0) {
         if (endLine) endline.endVertex = verts[0];
       }
-      this.removeLoops();
       this.lineMap(true);
+      // this.removeLoops();
+    }
+
+    this.rebuild = (newVerticies) => {
+      lines = [];
+      this.addVerticies(newVerticies);
     }
 
     this.removeLoops = () => {
-      const map = {}
-      for (let index = 0; index < lines.length; index += 1) {
-        const line = lines[index];
-        const key = line.toString();
-        const negKey = line.toNegitiveString();
-        if (map[key]) {
-          lines.splice(map[key].index, index - map[key].index + 1);
-        } else if (map[negKey]) {
-          lines.splice(map[negKey].index, index - map[negKey].index + 1);
-        } else {
-          map[key] = {line, index};
+      let removed = true;
+      while (removed) {
+        removed = false;
+        const map = this.lineMap();
+        for (let index = 0; index < lines.length; index += 1) {
+          const line = lines[index];
+          const posMatch = map.matches(line);
+          const negMatch = map.matches(line.negitive());
+          if (posMatch.length > 1 || (negMatch && negMatch.length !== 0)) {
+            let match = negMatch ? negMatch[0] : posMatch[1];
+            const startIndex = line._POLY_INDEX;
+            const endIndex = match._POLY_INDEX;
+            if (startIndex > endIndex)
+                  throw new Error('THIS SHOULD NOT HAPPEN!!!!!! WTF!!!!');
+            const forwardDiff = endIndex - startIndex;
+            const reverseDiff = lines.length - forwardDiff;
+            if (forwardDiff > reverseDiff) {
+              lines = lines.slice(startIndex, endIndex);
+            } else {
+              lines = lines.slice(0, startIndex).concat(lines.slice(endIndex + 1));
+            }
+            const newVerts = Line3D.verticies(lines);
+            this.rebuild(newVerts);
+            removed = true;
+            break;
+          }
         }
+        if (removed) this.lineMap(true);
       }
     }
 
@@ -233,16 +267,13 @@ class Polygon3D {
     }
 
     this.merge = (other) => {
-      // if (!this.normal.equals(other.normal)) return;
-      const sharedMap = [];
-      const inverseMap = [];
-      const notShared = [];
+      if (!this.normal().parrelle(other.normal())) return;
       const lineMap = this.lineMap();
       const otherLines = other.lines();
       let merged;
       for (let index = 0; index < otherLines.length; index += 1) {
         const curr = otherLines[index];
-        if (lineMap[curr.toString()] !== undefined) {
+        if (lineMap.matches(curr) !== null) {
           let thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
           let otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
           if (thisLines && otherLines) {
@@ -253,7 +284,7 @@ class Polygon3D {
             }
           }
         }
-        if (lineMap[curr.toNegitiveString()] !== undefined) {
+        if (lineMap.matches(curr.negitive()) !== null) {
           let thisLines = this.getLines(curr.endVertex, curr.startVertex, true);
           let otherLines = other.getLines(curr.startVertex, curr.endVertex, true);
           if (thisLines[0].startVertex.equals(otherLines[0].startVertex)) {
@@ -265,7 +296,6 @@ class Polygon3D {
       }
 
       if (merged) {
-        // merged.removeLoops();
         return merged;
       }
     }

@@ -7,20 +7,17 @@ const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
 const pull = require('../three-d/models/pull.js');
 const drawerBox = require('../three-d/models/drawer-box.js');
-const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
-const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const ThreeView = require('three-view');
-const OrientationArrows = require('orientation-arrows');
 const Vector3D = require('../three-d/objects/vector.js');
 const Line3D = require('../three-d/objects/line.js');
 const Vertex3D = require('../three-d/objects/vertex.js');
 
 // const cube = new CSG.cube({radius: [3,5,1]});
 const consts = require('../../globals/CONSTANTS');
-let viewer, threeView;
+let threeView;
 
 // TODO: ????
 function displayPart(part) {
@@ -64,7 +61,7 @@ du.on.match('click', '.model-state', (target) => {
         (type !== 'part-name' ? label.innerText : label.getAttribute('part-name')) :
         label.nextElementSibling.getAttribute('prefix');
   const cabinet = lastRendered;
-  const tdm = ThreeDModel.get(cabinet, viewer);
+  const tdm = ThreeDModel.get(cabinet);
   let partCode = target.getAttribute('part-code');
   let partId = target.getAttribute('part-id');
   if (partId) {
@@ -85,7 +82,7 @@ function deselectPrefix() {
   document.querySelectorAll('.model-state')
     .forEach((elem) => du.class.remove(elem, 'active'));
   const cabinet = lastRendered;
-  const tdm = ThreeDModel.get(cabinet, viewer);
+  const tdm = ThreeDModel.get(cabinet);
   tdm.inclusiveTarget(undefined, undefined);
 }
 
@@ -146,14 +143,14 @@ du.on.match('change', '.prefix-checkbox', (target) => {
   const cabinet = lastRendered;
   const attr = target.getAttribute('prefix');
   deselectPrefix();
-  ThreeDModel.get(cabinet, viewer).hidePrefix(attr, !target.checked);
+  ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
 });
 
 du.on.match('change', '.part-name-checkbox', (target) => {
   const cabinet = lastRendered;
   const attr = target.getAttribute('part-name');
   deselectPrefix();
-  const tdm = ThreeDModel.get(cabinet, viewer);
+  const tdm = ThreeDModel.get(cabinet);
   tdm.hidePartName(attr, !target.checked);
   tdm.render();
 });
@@ -162,7 +159,7 @@ du.on.match('change', '.part-id-checkbox', (target) => {
   const cabinet = lastRendered;
   const attr = target.getAttribute('part-id');
   deselectPrefix();
-  const tdm = ThreeDModel.get(cabinet, viewer);
+  const tdm = ThreeDModel.get(cabinet);
   tdm.hidePartId(attr, !target.checked);
   tdm.render();
 })
@@ -172,7 +169,7 @@ function updateController() {
   controllerModel = lastRendered;
   const controller = du.id('model-controller');
   const grouping = groupParts(controllerModel);
-  grouping.tdm = ThreeDModel.get(controllerModel, viewer);
+  grouping.tdm = ThreeDModel.get(controllerModel);
   controller.innerHTML = modelContTemplate.render(grouping);
   controller.hidden = false;
 }
@@ -181,7 +178,7 @@ function updateController() {
 let lastRendered;
 function update(part) {
   if (part) lastRendered = part.getAssembly('c');
-  const threeDModel = ThreeDModel.get(lastRendered, viewer);
+  const threeDModel = ThreeDModel.get(lastRendered);
   if (threeDModel) {
     threeDModel.update(lastRendered);
     updateController();
@@ -201,45 +198,18 @@ function modelCenter() {
   return Vertex3D.center(...vertices);
 }
 
-function centerOnObj(x,y,z) {
-  // const offset = [200*y,-200*x,200];
-  // const center = modelCenter();
-  const model = ThreeDModel.lastActive.getLastRendered();
-  const center = model.center.copy();
-  center.x += 200 * y;
-  center.y += -200 * x;
-  center.z += 100;
-  const rotation = {x: x*90, y: y*90, z: z*90};
-
-  return [center, rotation];
-}
-
 function init() {
   // const p = pull(5,2);
   // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
   // p.setColor('black')
   // const db = drawerBox(10, 15, 22);
-  const canvas2d = du.id('two-d-model');
-  viewer = new Viewer(undefined, canvas2d.height, canvas2d.width, 50);
-  addViewer(viewer, '#three-d-model');
-  threeView = new ThreeView(viewer);
+  threeView = new ThreeView();
 
   const setZFunc = setGreaterZindex('order-cnt', 'model-cnt', `${threeView.id()}-cnt`);
   du.on.match('click', '#model-cnt', setZFunc);
   du.on.match('click', '#order-cnt', setZFunc);
   du.on.match('click', `#${threeView.id()}-cnt`, setZFunc);
   ThreeDModel.onLastModelUpdate(updateController);
-  const orientArrows = new OrientationArrows('#three-d-orientation-controls');
-  orientArrows.on.center(() =>
-    viewer.viewFrom(...centerOnObj(0,0, 0)));
-  orientArrows.on.up(() =>
-    viewer.viewFrom(...centerOnObj(1, 0,0)));
-  orientArrows.on.down(() =>
-    viewer.viewFrom(...centerOnObj(-1,0,0)));
-  orientArrows.on.left(() =>
-    viewer.viewFrom(...centerOnObj(0,-1,0)));
-  orientArrows.on.right(() =>
-    viewer.viewFrom(...centerOnObj(0,1,0)));
 }
 
 module.exports = {init, update}

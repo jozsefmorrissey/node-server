@@ -236,6 +236,8 @@ a {
   right: 0;
   top: 0;
   z-index: 20;
+  min-height: 50vh;
+  min-width: 50vw;
   background-color: #ffffff94;
 }
 
@@ -269,6 +271,11 @@ a {
   position: absolute;
   top: 0;
   right: 0;
+}
+
+#two-d-model {
+  width: 80vh;
+  height: 80vh;
 }
 
 #model-display-cnt {
@@ -364,34 +371,38 @@ a {
   z-index: -1;
 }
 
-#three-d-orientation-controls > .c{
+.orientation-controls > .c{
   top: 0;
   right: 30pt;
 }
 
-#three-d-orientation-controls > .u{
+.orientation-controls > .u{
   top: 0;
   right: 30pt;
 }
 
-#three-d-orientation-controls > .d{
+.orientation-controls > .d{
   top: 20pt;
   right: 30pt;
 }
 
-#three-d-orientation-controls > .r{
+.orientation-controls > .r{
   top: 10pt;
   right: 10pt;
 }
 
-#three-d-orientation-controls > .l{
+.orientation-controls > .l{
   top: 10pt;
   right: 50pt;
 }
 
-#three-d-orientation-controls > div {
+.orientation-controls > div {
   font-size: 20pt;
   position: absolute;
+}
+
+td[dir] {
+  font-size: 20pt;
 }
 
 .orientation-arrows-table, .orientation-arrows-table > tbody,
@@ -401,6 +412,6 @@ a {
 
 .orientation-arrows {
   position: absolute;
-  top: 0;
+  bottom: 0;
   right: 10px;
 }

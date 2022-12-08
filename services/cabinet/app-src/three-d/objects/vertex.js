@@ -4,6 +4,7 @@ const Vector3D = require('./vector');
 const approximate = require('../../../../../public/js/utils/approximate.js');
 const approx10 = approximate.new(10);
 const CSG = require('../../../public/js/3d-modeling/csg.js');
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 
 
 class Vertex3D {
@@ -98,12 +99,14 @@ class Vertex3D {
 
     this.copy = () => new Vertex3D(this.x, this.y, this.z);
     this.clone = this.copy;
-    this.equals = (other) => other && approximate.eq(this.x, other.x) &&
-          approximate.eq(this.y, other.y);
-      this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
-      this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
+    this.equals = (other) => other && Vertex3D.tolerance.within(this, other);
+    this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
+    this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
   }
 }
+
+const tol = .000000001;
+Vertex3D.tolerance = new Tolerance({x: tol, y: tol});
 
 // returned direction is of list2 relitive to list 1
 // dirArr = [forward, backward, up, down, left, right];

@@ -650,7 +650,7 @@ Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
   for (let index = 0; index < lastIndex; index += 1) {
     let attr = attrs[index];
     if (currObj[attr] === undefined) currObj[attr] = {};
-    currObj = currObj[attr];
+    currObj = (typeof currObj[attr]) === 'function' ? currObj[attr]() : currObj[attr];
   }
 
   const lastAttr = attrs[lastIndex];

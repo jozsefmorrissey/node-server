@@ -679,20 +679,10 @@ function illustrate(canvas) {
   layout.objects().forEach((obj) => drawObject(obj.topview()));
 }
 
-function updateCanvasSize(canvas) {
-  canvas.style.width = '80vh';
-  const dem = Math.floor(canvas.getBoundingClientRect().width);
-  canvas.width = dem;
-  canvas.height = dem;
-  canvas.style.width = `${dem}px`;
-  canvas.style.width = `${dem}px`;
-}
-
 let panZ;
 function init() {
   const canvas = document.getElementById('two-d-model');
   draw = new Draw2D(canvas);
-  updateCanvasSize(draw.canvas());
   panZ = panZoom(canvas, illustrate);
   panZ.onMove(onMove);
   panZ.onMousedown(onMousedown);
