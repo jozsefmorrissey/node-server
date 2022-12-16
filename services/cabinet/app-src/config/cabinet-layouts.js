@@ -69,12 +69,12 @@ new CabinetLayout('3dsb3d', (cabinet) => {
   left.sections[0].setSection("DrawerSection");
   left.sections[1].setSection("DrawerSection");
   left.sections[2].setSection("DrawerSection");
-  left.pattern('abb').value('a', 6);
+  left.pattern('abb').value('a', a);
 
   center.divide(1);
   center.vertical(false);
   center.sections[1].setSection('DualDoorSection');
-  center.pattern('ab').value('a', 6);
+  center.pattern('ab').value('a', a);
   const centerTop = center.sections[0];
 
   centerTop.divide(2);
@@ -90,5 +90,5 @@ new CabinetLayout('3dsb3d', (cabinet) => {
   right.sections[0].setSection("DrawerSection");
   right.sections[1].setSection("DrawerSection");
   right.sections[2].setSection("DrawerSection");
-  right.pattern('abb').value('a', 6);
+  right.pattern('abb').value('a', a);
 });

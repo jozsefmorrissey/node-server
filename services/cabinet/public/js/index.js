@@ -19456,13 +19456,13 @@ const Measurement = require('../../../public/js/utils/measurement.js');
 	
 	    function ensureValidUpdateOrder(uniqueVals) {
 	      for (let index = 0; index < updateOrder.length; index++) {
-	        if (uniqueVals[updateOrder[index]] === undefined) updateOrder.splice(index, 1);
+	        if (uniqueVals.filter(o => o.char === updateOrder[index]).length !== 1) updateOrder.splice(index, 1);
 	      }
 	      for (let index = 0; index < uniqueVals.length; index++) {
 	        const char = uniqueVals[index].char;
 	        const orderTooShort = updateOrder.length < uniqueVals.length - 1;
 	        const includedInOrder = updateOrder.indexOf(char) !== -1;
-	        if (orderTooShort && !includedInOrder) updateOrder.push(char);
+	        if (orderTooShort && !includedInOrder) updateOrder = [char].concat(updateOrder);
 	        else if (!orderTooShort && !includedInOrder) {
 	          lastElem = elements[uniqueVals[index].char];
 	        }
@@ -19482,7 +19482,7 @@ const Measurement = require('../../../public/js/utils/measurement.js');
 	
 	      if (str.trim().match(numbersOnlyReg)) return numbersOnly(uniqueVals, dist);
 	
-	      ensureValidUpdateOrder(uniqueVals);
+	      if (uniqueVals.length > 1) ensureValidUpdateOrder(uniqueVals);
 	      updateOrder.forEach((id) => {
 	        const elem = elements[id];
 	        dist -= elem.count * elem.value().decimal();
@@ -19514,8 +19514,8 @@ const Measurement = require('../../../public/js/utils/measurement.js');
 	          updateOrder.splice(0, 1);
 	        }
 	        value = elements[id].value(value);
-	        changeEvent.trigger(null, this);
 	        mostResent[id] = value.decimal();
+	        changeEvent.trigger(null, this);
 	        return value;
 	      } else {
 	        return elements[id].value().decimal();
@@ -19926,12 +19926,12 @@ const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 	  left.sections[0].setSection("DrawerSection");
 	  left.sections[1].setSection("DrawerSection");
 	  left.sections[2].setSection("DrawerSection");
-	  left.pattern('abb').value('a', 6);
+	  left.pattern('abb').value('a', a);
 	
 	  center.divide(1);
 	  center.vertical(false);
 	  center.sections[1].setSection('DualDoorSection');
-	  center.pattern('ab').value('a', 6);
+	  center.pattern('ab').value('a', a);
 	  const centerTop = center.sections[0];
 	
 	  centerTop.divide(2);
@@ -19947,7 +19947,7 @@ const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 	  right.sections[0].setSection("DrawerSection");
 	  right.sections[1].setSection("DrawerSection");
 	  right.sections[2].setSection("DrawerSection");
-	  right.pattern('abb').value('a', 6);
+	  right.pattern('abb').value('a', a);
 	});
 	
 });
@@ -30660,8 +30660,8 @@ function (require, exports, module) {
 	  cabinet.width(60*2.54);
 	
 	  const opening = cabinet.openings[0];
-	  opening.divide(2);
 	  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
+	  opening.divide(2);
 	  const left = opening.sections[0];
 	  const center = opening.sections[1];
 	  const right = opening.sections[2];

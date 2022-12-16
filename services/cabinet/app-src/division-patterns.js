@@ -101,13 +101,13 @@ class Pattern {
 
     function ensureValidUpdateOrder(uniqueVals) {
       for (let index = 0; index < updateOrder.length; index++) {
-        if (uniqueVals[updateOrder[index]] === undefined) updateOrder.splice(index, 1);
+        if (uniqueVals.filter(o => o.char === updateOrder[index]).length !== 1) updateOrder.splice(index, 1);
       }
       for (let index = 0; index < uniqueVals.length; index++) {
         const char = uniqueVals[index].char;
         const orderTooShort = updateOrder.length < uniqueVals.length - 1;
         const includedInOrder = updateOrder.indexOf(char) !== -1;
-        if (orderTooShort && !includedInOrder) updateOrder.push(char);
+        if (orderTooShort && !includedInOrder) updateOrder = [char].concat(updateOrder);
         else if (!orderTooShort && !includedInOrder) {
           lastElem = elements[uniqueVals[index].char];
         }
@@ -127,7 +127,7 @@ class Pattern {
 
       if (str.trim().match(numbersOnlyReg)) return numbersOnly(uniqueVals, dist);
 
-      ensureValidUpdateOrder(uniqueVals);
+      if (uniqueVals.length > 1) ensureValidUpdateOrder(uniqueVals);
       updateOrder.forEach((id) => {
         const elem = elements[id];
         dist -= elem.count * elem.value().decimal();
@@ -159,8 +159,8 @@ class Pattern {
           updateOrder.splice(0, 1);
         }
         value = elements[id].value(value);
-        changeEvent.trigger(null, this);
         mostResent[id] = value.decimal();
+        changeEvent.trigger(null, this);
         return value;
       } else {
         return elements[id].value().decimal();
