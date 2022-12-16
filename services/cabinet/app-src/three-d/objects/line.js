@@ -28,6 +28,8 @@ class Line3D {
       this.endVertex.translate(vector);
     }
 
+    this.isPoint = () => this.startVertex.equals(this.endVertex);
+
     this.planeAt = (rotation) => {
       const two = new Vertex3D({x: startVertex.x + 1, y: startVertex.y, z: startVertex.z});
       two.rotate(rotation, startVertex);
@@ -119,7 +121,7 @@ class Line3D {
 Line3D.verticies = (lines) => {
   const verts = [];
   for (let index = 0; index < lines.length; index += 1) {
-    verts.push(lines[index].endVertex);
+    verts.push(lines[index].endVertex.copy());
   }
   return verts;
 }
@@ -127,6 +129,14 @@ Line3D.verticies = (lines) => {
 Line3D.adjustVerticies = (vert1, vert2, change) => {
   const line = new Line3D(vert1, vert2);
   line.adjustLength(change);
+}
+
+Line3D.reverse = (list) => {
+  let reversed = [];
+  for (let index = list.length - 1; index > -1; index--) {
+    reversed.push(list[index].negitive());
+  }
+  return reversed;
 }
 
 module.exports = Line3D;

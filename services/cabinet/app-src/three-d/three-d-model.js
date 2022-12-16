@@ -191,17 +191,17 @@ class ThreeDModel {
 
     function toTwoDpolys(model) {
       if (model === undefined) return undefined;
+      if (model.twoDpolys) return model.twoDpolys;
       const polys = [];
-      const map = {xy: [], xz: [], zy: []};
       model.polygons.forEach((p, index) => {
         const norm = p.vertices[0].normal;
         const verticies = p.vertices.map((v) => (new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z})));
-        const dist = distance(verticies);
         polys.push(new Polygon3D(verticies));
       });
       polys.normals = model.normals;
-      // Polygon3D.merge(polys);
+      Polygon3D.merge(polys);
       const twoDpolys = Polygon3D.toTwoD(polys);
+      model.twoDpolys = twoDpolys;
       return twoDpolys;
     }
 
@@ -246,7 +246,6 @@ class ThreeDModel {
         assem.getJoints().female.forEach((joint) => {
           const male = joint.getMale();
           const m = male.toModel();
-          console.log(male, m);
           a = a.subtract(m);
         });
         // else a.setColor(1, 0, 0);
@@ -269,12 +268,6 @@ class ThreeDModel {
           }
           if (assem.partName() === targetPartName) {
             lm = b.clone();
-            const rotation = assem.position().rotation();
-            rotation.x *=-1;
-            rotation.y = (360 - rotation.y)  % 360;
-            rotation.z *=-1;
-            lm.center({x:0,y:0,z:0})
-            lm.rotate(rotation);
             const lastModel = this.lastModel();
             lastModelUpdateEvent.trigger(undefined, lastModel);
           }

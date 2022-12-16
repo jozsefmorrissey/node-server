@@ -106,7 +106,7 @@ class Vertex3D {
 }
 
 const tol = .000000001;
-Vertex3D.tolerance = new Tolerance({x: tol, y: tol});
+Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
 
 // returned direction is of list2 relitive to list 1
 // dirArr = [forward, backward, up, down, left, right];

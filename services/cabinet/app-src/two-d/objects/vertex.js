@@ -116,12 +116,22 @@ Vertex2d.center = (...verticies) => {
 Vertex2d.sort = (a, b) =>
     a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
 
-Vertex2d.sortByCenter = (center) => {
-  return (v1, v2) => {
-    const d1 = v1.distance(center);
-    const d2 = v2.distance(center);
-    return d2 - d1;
+const ignoreVerySmall = (v) => Math.abs(v) < .000001 ? 0 : v;
+Vertex2d.sortByMax = (verts) => {
+  let max;
+  const center = Vertex2d.center(verts);
+  for (let index = 0; index < verts.length; index++) {
+    let v = verts[index];
+    let curr = {v, distance: v.distance(center)};
+    if (max === undefined || max.distance < curr.distance) {
+      max = curr;
+    }
   }
+  return verts.sort((v1, v2) => {
+    const d1 = v1.distance(max.v);
+    const d2 = v2.distance(max.v);
+    return d2 - d1;
+  });
 }
 
 

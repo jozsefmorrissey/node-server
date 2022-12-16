@@ -11,6 +11,24 @@ class BiPolygon {
     if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
     if (face1.length !== 4) throw new Error('BiPolygon implementation is limited to 4 point polygons. Plans to expand must not have been exicuted yet');
 
+    let normal = {};
+    function calcNormal() {
+      if (normal === undefined) {
+        const pNorm1 = polygon1.normal();
+        const pNorm1I = pNorm1.inverse();
+        const center1 = polygon1.center();
+        const center2 = polygon2.center();
+        const cOffsetNorm = center1.translate(pNorm1, true);
+        const cOffsetNormI = center1.translate(pNorm1I, true);
+        normal.front = cOffsetNorm.distance(center2) > cOffsetNormI.distance(center2) ?
+            cOffsetNorm : cOffsetNormI;
+        const topApproxVector = face2[3].distanceVector(face2[0]).unit();
+        const normVert = new Vertex3D(normal.front);
+        normVect.rotate({x:1,y:0,z:0});
+      }
+      return normal;
+    }
+
     this.front = () => new Polygon3D(face1);
     this.back = () => new Polygon3D(face2);
     this.normal = () => face2[0].distanceVector(face1[0]).unit();

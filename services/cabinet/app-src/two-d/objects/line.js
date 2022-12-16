@@ -4,6 +4,10 @@ const approximate100 = approximate.new(100000000000000);
 const Vertex2d = require('./vertex');
 const Circle2d = require('./circle');
 
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const tol = .00001;
+const withinTol = new Tolerance({'value': tol}).bounds.value.within;
+
 class Line2d {
   constructor(startVertex, endVertex) {
     startVertex = new Vertex2d(startVertex);
@@ -51,10 +55,20 @@ class Line2d {
       return withinLimit;
     }
 
-    this.withinSegmentBounds = (point) => {
-      point = new Vertex2d(point);
-      return approximate100.lteq(this.minX(), point.x()) && approximate100.lteq(this.minY(), point.y()) &&
-            approximate100.gteq(this.maxX(), point.x()) && approximate100.gteq(this.maxY(), point.y());
+    this.withinSegmentBounds = (pointOline) => {
+      if (pointOline instanceof Line2d) {
+        const l = pointOline
+        const slopeEqual = withinTol(this.slope(), l.slope());
+        const c = l.midpoint();
+        const xBounded = c.x() < this.maxX() + tol && c.x() > this.minX() - tol;
+        const yBounded = c.y() < this.maxY() + tol && c.y() > this.minY() - tol;
+        if (slopeEqual && xBounded && yBounded) return true;
+        return this.withinSegmentBounds(l.startVertex()) || this.withinSegmentBounds(l.endVertex());
+      } else {
+        let point = new Vertex2d(pointOline);
+        return this.minX() - tol < point.x() && this.minY() - tol < point.y() &&
+          this.maxX() + tol > point.x() && this.maxY() + tol > point.y();
+      }
     }
 
 
@@ -106,9 +120,10 @@ class Line2d {
       const x1 = v1.x();
       const x2 = v2.x();
       const slope = (y2 - y1) / (x2 - x1);
-      if (slope > 10000) return Infinity;
-      if (slope < -10000) return -Infinity;
+      if (slope > 10000 || slope < -10000) return Infinity;
       if (slope > -0.00001 && slope < 0.00001) return 0;
+      if (Number.NaNfinity(slope))
+        console.log('wtf')
       return slope;
     }
 
@@ -178,7 +193,7 @@ class Line2d {
     this.y = (x) => {
       x ||= this.startVertex().x();
       const slope = this.slope();
-      if (Math.abs(slope) === Infinity) return Infinity;
+      if (slope === Infinity) return Infinity;
       if (slope === 0) return this.startVertex().y();
       return  (this.slope()*x + this.yIntercept());
     }
@@ -186,7 +201,7 @@ class Line2d {
     this.x = (y) => {
       y ||= this.startVertex().y();
       const slope = this.slope();
-      if (Math.abs(slope) === Infinity) return this.startVertex().x();
+      if (slope === Infinity) return this.startVertex().x();
       if (slope === 0) {
         return Infinity;
       }
@@ -279,7 +294,7 @@ class Line2d {
       return this;
     }
 
-    this.vertical = () => Math.abs(this.slope()) === Infinity;
+    this.vertical = () => this.slope() === Infinity;
 
     this.findIntersection = (line) => {
       if (this.slope() === 0 && line.slope() === 0) {
@@ -295,8 +310,8 @@ class Line2d {
       if (this.slope() === 0) return line.findIntersection(this);
 
 
-      if (approximate.eq(line.radians(), this.radians()) &&
-              approximate.eq(line.yIntercept(), this.yIntercept())) {
+      if (withinTol(line.radians(), this.radians()) &&
+              withinTol(line.yIntercept(), this.yIntercept())) {
         return Vertex2d.center(line.startVertex(), this.startVertex(), line.endVertex(), this.endVertex());
       }
       const slope = this.slope();
@@ -333,6 +348,24 @@ class Line2d {
         return intersection;
       }
       return false;
+    }
+
+    this.distance = (other) => {
+      if (other instanceof Vertex2d) {
+        const point =  this.closestPointOnLine(other, true);
+        if (point) return point.distance(other);
+        const dist1 = startVertex.distance(other);
+        const dist2 = endVertex.distance(other);
+        return dist1 > dist2 ? dist2 : dist1;
+      }
+      if (other instanceof Line2d) {
+        if (this.findSegmentIntersection(other, true)) return 0;
+        const dist1 = this.distance(other.startVertex());
+        const dist2 = this.distance(other.endVertex());
+        const dist3 = other.distance(this.startVertex());
+        const dist4 = other.distance(this.endVertex());
+        return Math.min(...[dist1,dist2,dist3,dist4].filter((d) => Number.isFinite(d)));
+      }
     }
 
     this.minX = () => this.startVertex().x() < this.endVertex().x() ?
@@ -372,8 +405,7 @@ class Line2d {
       const posRads = Math.mod(this.radians(), 2*Math.PI);
       const negRads = Math.mod(this.radians() + Math.PI, 2*Math.PI);
       const otherRads = Math.mod(other.radians(), 2*Math.PI);
-      return approximate.eq(posRads, otherRads) ||
-              approximate.eq(negRads, otherRads);
+      return withinTol(posRads, otherRads) || withinTol(negRads, otherRads);
     }
 
     this.equals = (other) => {
@@ -397,22 +429,29 @@ class Line2d {
       if (!(other instanceof Line2d)) return;
       const clean = this.clean(other);
       if (clean) return clean;
-      if (approximate.neqAbs(this.slope(), other.slope())) return;
+      if (!withinTol(this.slope(), other.slope()) && !withinTol(this.slope(), -1*other.slope())) return;
       const otherNeg = other.negitive();
-      const posEq = approximate.eq(this.y(other.x()), other.y()) &&
-                    approximate.eq(this.x(other.y()), other.x());
-      const negEq = approximate.eq(this.y(otherNeg.x()), otherNeg.y()) &&
-                    approximate.eq(this.x(otherNeg.y()), otherNeg.x());
+      const posEq = withinTol(this.y(other.x()), other.y()) &&
+                    withinTol(this.x(other.y()), other.x());
+      const negEq = withinTol(this.y(otherNeg.x()), otherNeg.y()) &&
+                    withinTol(this.x(otherNeg.y()), otherNeg.x());
       if (!posEq && !negEq) return;
       const v1 = this.startVertex();
       const v2 = this.endVertex();
       const ov1 = other.startVertex();
       const ov2 = other.endVertex();
-      if (!this.withinSegmentBounds(ov1) && !this.withinSegmentBounds(ov2)) return;
+      if (!this.withinSegmentBounds(other)) {
+        const dist = this.distance(other);
+        if (dist < .1) {
+          console.warn('distance is incorrect:', dist);
+          this.withinSegmentBounds(other);
+        }
+        return;
+      }
       // Fix sort method
-      const vs = [v1, v2, ov1, ov2].sort(Vertex2d.sortByCenter(Vertex2d.center([v1, v2, ov1, ov2])));
-      const combined = new Line2d(vs[0], vs[1]);
-      return approximate.eq(this.radians(), combined.radians()) ? combined : combined.negitive();
+      const vs = Vertex2d.sortByMax([v1, v2, ov1, ov2]);
+      const combined = new Line2d(vs[0], vs[vs.length - 1]);
+      return withinTol(this.radians(), combined.radians()) ? combined : combined.negitive();
     }
 
     this.trimmed = (distance, both) => {
@@ -446,7 +485,7 @@ class Line2d {
       const startVertex = {x: midPoint.x() - xOffsetBack, y: midPoint.y() - yOffsetBack};
       const endVertex = {x: midPoint.x() - xOffsetFront, y: midPoint.y() - yOffsetFront};
       const line = new Line2d(startVertex, endVertex);
-      return approximate.eq(line.radians(), this.radians()) ? line : line.negitive();
+      return withinTol(line.radians(), this.radians()) ? line : line.negitive();
     }
 
     this.move = (center) => {
@@ -469,6 +508,9 @@ class Line2d {
 
     this.negitive = () => new Line2d(this.endVertex(), this.startVertex());
     this.toString = () => `${this.startVertex().toString()} => ${this.endVertex().toString()}`;
+    this.toInfoString = () => `slope: ${this.slope()}\n` +
+                        `angle: ${this.angle()}\n` +
+                        `segment: ${this.toString()}`;
     this.toNegitiveString = () => `${this.endVertex().toString()} => ${this.startVertex().toString()}`;
     this.approxToString = () => `${this.startVertex().approxToString()} => ${this.endVertex().approxToString()}`;
   }
@@ -521,38 +563,46 @@ Line2d.vertices = (lines) => {
   return Object.values(verts);
 }
 
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 Line2d.consolidate = (...lines) => {
+  const tolMap = new ToleranceMap({'slope': tol});
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const slope = approximate.abs(line.slope());
-    if (!Number.isNaN(slope)) {
-      if (lineMap[slope] === undefined) lineMap[slope] = [];
-      lineMap[slope].push(line);
+    if (Number.isNaN(lines[index].slope())) {
+      console.log('here');
+      lines[index].slope();
     }
+    tolMap.add(lines[index]);
   }
-  const keys = Object.keys(lineMap);
   let minList = [];
-  for (let lIndex = 0; lIndex < keys.length; lIndex += 1) {
-    const list = lineMap[keys[lIndex]];
-    for (let tIndex = 0; tIndex < list.length; tIndex += 1) {
-      let target = list[tIndex];
-      for (let index = 0; index < list.length; index += 1) {
-        if (index !== tIndex) {
-          const combined = target.combine(list[index]);
-          if (combined) {
-            const lowIndex = index < tIndex ? index : tIndex;
-            const highIndex = index > tIndex ? index : tIndex;
-            list.splice(highIndex, 1);
-            list[lowIndex] = combined;
-            target = combined;
-            tIndex--;
-            break;
+  const combinedKeys = {};
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const matches = tolMap.matches(line);
+    const mapId = tolMap.tolerance().boundries(line);
+    if (!combinedKeys[mapId]) {
+      combinedKeys[mapId] = true;
+      for (let tIndex = 0; tIndex < matches.length; tIndex += 1) {
+        let target = matches[tIndex];
+        for (let mIndex = tIndex + 1; mIndex < matches.length; mIndex += 1) {
+          if (mIndex !== tIndex) {
+            const combined = target.combine(matches[mIndex]);
+            if (combined) {
+              const lowIndex = mIndex < tIndex ? mIndex : tIndex;
+              const highIndex = mIndex > tIndex ? mIndex : tIndex;
+              if (lowIndex == highIndex)
+                console.log('STF');
+              matches.splice(highIndex, 1);
+              matches[lowIndex] = combined;
+              target = combined;
+              tIndex--;
+              break;
+            }
           }
         }
       }
+      minList = minList.concat(matches);
     }
-    minList = minList.concat(lineMap[keys[lIndex]]);
   }
 
   return minList;

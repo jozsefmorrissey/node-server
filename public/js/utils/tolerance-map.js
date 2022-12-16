@@ -21,8 +21,12 @@ class ToleranceMap {
         }
         curr = curr[id];
       }
-      return curr;
+
+      if (create) return curr;
+      return curr.filter((elem2) => tolerance.within(elem, elem2));
     }
+
+    this.tolerance = () => tolerance;
 
     this.matches = (elem) => matches(elem);
 
@@ -35,7 +39,7 @@ class ToleranceMap {
       const matchArr = matches(elem);
       if (matchArr) {
         const index = matchArr.indexOf(elem);
-        if (index !== -1)matchArr.splice(index, 1);
+        if (index !== -1) matchArr.splice(index, 1);
       }
     }
 

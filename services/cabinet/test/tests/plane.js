@@ -111,8 +111,8 @@ Test.add('Plane: normal',(ts) => {
 
 Test.add('Plane: lineIntersection',(ts) => {
   const p1 = {x: 1, y: 2, z: 4};
-  const p2 = {x: 4, y: 2, z: 4};
-  const p3 = {x: 4, y: 1, z: 4};
+  const p3 = {x: 4, y: 2, z: 4};
+  const p2 = {x: 4, y: 1, z: 4};
 
   let plane = new Plane(p1,p2,p3);
   let line = new Line3D({x:0,y:0,z:0}, {x:0,y:0,z:2});

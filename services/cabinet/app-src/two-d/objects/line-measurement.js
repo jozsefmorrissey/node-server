@@ -147,17 +147,21 @@ LineMeasurement2d.measurements = (lines) => {
     let lines = lengthMap[lengths[index]];
     for(let li = 1; li < lines.length; li++) {
       const line = lines[li];
-      const center2center = new Line2d(lines[li-1].midpoint(), line.midpoint());
-      const slopeMag = approximate.abs(center2center.slope());
-      if (!slopeMap[slopeMag] && approximate(line.length()) !== 0) {
-        for (let si = 0; si < li; si++) {
-          const c2c = new Line2d(lines[si].midpoint(), line.midpoint());
-          const slopeMag = approximate.abs(center2center.slope());
-          slopeMap[slopeMag] = true;
+      const mp1 = lines[li-1].midpoint();
+      const mp2 = line.midpoint();
+      if (!mp1.equal(mp2)) {
+        const center2center = new Line2d(mp1, mp2);
+        const slopeMag = approximate.abs(center2center.slope());
+        if (!slopeMap[slopeMag] && approximate(line.length()) !== 0) {
+          for (let si = 0; si < li; si++) {
+            const c2c = new Line2d(lines[si].midpoint(), line.midpoint());
+            const slopeMag = approximate.abs(center2center.slope());
+            slopeMap[slopeMag] = true;
+          }
+        } else {
+          lines.splice(li, 1);
+          li--;
         }
-      } else {
-        lines.splice(li, 1);
-        li--;
       }
     }
     if (lines.length > 1) lines.splice(0,1);

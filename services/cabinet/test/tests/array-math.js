@@ -216,7 +216,28 @@ Test.add('Matrix: identity',(ts) => {
   ts.success();
 });
 
+Test.add('Matrix: consise',(ts) => {
+  let cloudyMatirx = new Matrix([
+    [0,0,3,-5,4,0,0],
+    [0,0,3,-5,4,0,0],
+    [0,0,5,2,1,0,0],
+    [0,0,5,2,1,0,0],
+    [0,0,2,3,-2,0,0],
+  ]);
 
+  const consiseObj = cloudyMatirx.consise();
+  ts.assertTrue([6,5,1,0].equals(consiseObj.removedColumns));
+
+  let solution = new Matrix([
+    [3,-5,4],
+    [5,2,1],
+    [2,3,-2],
+  ]);
+  ts.assertTrue(solution.equals(consiseObj.matrix));
+
+  ts.success();
+
+});
 
 Test.add('Matrix: solve',(ts) => {
   let equations = new Matrix([
@@ -224,14 +245,24 @@ Test.add('Matrix: solve',(ts) => {
     [5,2,1],
     [2,3,-2],
   ]);
-  let answer = [5, 0, 3];
+  let dColumn = [5, 0, 3];
+  let answer = new Matrix([[2],[-3],[-4]]);
 
-  const solution = equations.solve(answer);
-  solution.equals(new Matrix([
-    [2],
-    [-3],
-    [-4]
-  ]));
+  let solution = equations.solve(dColumn);
+  ts.assertTrue(solution.equals(answer));
+
+  let cloudyMatirx = new Matrix([
+    [0,0,3,-5,4,0,0],
+    [0,0,3,-5,4,0,0],
+    [0,0,5,2,1,0,0],
+    [0,0,5,2,1,0,0],
+    [0,0,2,3,-2,0,0],
+  ]);
+
+  let unknownValue = 0;
+  answer = new Matrix([[unknownValue],[unknownValue],[2],[-3],[-4],[unknownValue],[unknownValue]]);
+  solution = cloudyMatirx.solve(dColumn);
+  ts.assertTrue(solution.equals(answer));
 
   ts.success();
 });

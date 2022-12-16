@@ -75,7 +75,7 @@ class ThreeView extends Lookup {
         if (lm === undefined) return;
         const xy = lm.xy;
         const twoDmap = Polygon2d.lines(...xy);
-        if (twoDmap.length < 100) {
+        if (twoDmap.length < 300) {
           const measurements = LineMeasurement2d.measurements(twoDmap);
           cache.front.twoDmap = twoDmap;
           cache.front.measurements = measurements;

@@ -3,7 +3,7 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 
 
-const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]])
+const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
 const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
 const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
 const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
@@ -11,7 +11,7 @@ const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
 const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
 const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
 const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
-const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]]);
+const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]].reverse());
 const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
 
 const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);

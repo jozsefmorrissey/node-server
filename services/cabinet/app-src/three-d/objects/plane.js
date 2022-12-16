@@ -5,6 +5,8 @@ const Matrix = require('matrix');
 const Line2d = require('../../two-d/objects/line.js');
 const Vertex2d = require('../../two-d/objects/vertex.js');
 const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
+const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
+console.log('within');
 
 function isDefined(...values) {
   for (let index = 0; index < values.length; index++) {
@@ -25,7 +27,6 @@ class Plane extends Array {
       this[index] = new Vertex3D(points[index]);
     }
 
-    this.equation = () => this.length > 2 ? Plane.equation(this[0], this[1], this[2]) : equation;
     this.indexOf = (point) => {
       for (let index = 0; index < points.length; index++) {
         if (this[index].equals(point)) return index;
@@ -34,6 +35,17 @@ class Plane extends Array {
     }
 
     this.points = () => this.length > 2 ? points.slice(0,3) : this.findPoints();
+
+    this.equivalent = (other) => {
+      if (!(other instanceof Plane)) return false;
+      const oPoints = other.points();
+      for (let index = 0; index < oPoints.length; index++) {
+        const p = oPoints[index];
+        const thisZ = this.z(p.x, p.y);
+        if (!withinTol(thisZ, p.z)) return false;
+      }
+      return true;
+    }
 
     this.XYrotation = () => {
       const eqn = this.equation();
@@ -105,32 +117,24 @@ class Plane extends Array {
     this.equation = () => {
       if (equation && this.length < 3) return equation;
       const pts = this.points();
-      const include = [];
-      const constants = {};
-      if (!this.parrelleTo('x')) include.push({axis: 'x', coef: 'a'});
-      else constants['x'] = pts[0].x;
-      if (!this.parrelleTo('y')) include.push({axis: 'y', coef: 'b'});
-      else constants['y'] = pts[0].y;
-      if (!this.parrelleTo('z')) include.push({axis: 'z', coef: 'c'});
-      else constants['z'] = pts[0].z;
+      const include = ['x','y','z'];
 
       const systemOfEquations = new Matrix(null, include.length, include.length);
 
       for (let i = 0; i < include.length; i++) {
         const point = pts[i];
         for (let j = 0; j < include.length; j++) {
-          systemOfEquations[i][j] = point[include[j].axis];
+          systemOfEquations[i][j] = point[include[j]];
         }
       }
 
-      let r = systemOfEquations.remove(undefined, 2);
-      let rr = r.remove(0);
-      // console.log(rr.solve([1,1]));
-
-      const answer = systemOfEquations.solve([1,1,1]);
-      const returnValue = {a: 0, b: 0, c: 0, d: 1};
-      for (let i = 0; i < include.length; i++) returnValue[include[i].coef] = answer[i][0];
-      return returnValue;//{a: answer[0][0], b: answer[1][0], c: answer[2][0], d: 1};
+      try {
+        const answer = systemOfEquations.solve([1,1,1]);
+        const returnValue = {a: answer[0][0], b: answer[1][0], c: answer[2][0], d: 1};
+        return returnValue;
+      } catch (e) {
+        console.log('booblaa booblaa');
+      }
     }
 
     this.equationEqualToZ = () => {

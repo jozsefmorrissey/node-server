@@ -170,7 +170,7 @@ Polygon2d.lines = (...polys) => {
   for (let index = 0; index < polys.length; index += 1) {
     lines = lines.concat(polys[index].lines());
   }
-  const consolidated = Line2d.consolidate(...Line2d.consolidate(...lines));
+  const consolidated = Line2d.consolidate(...lines);
   if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
     console.error('Line Consolidation malfunction');
   }

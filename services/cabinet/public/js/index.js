@@ -7561,8 +7561,12 @@ const Tolerance = require('tolerance');
 	        }
 	        curr = curr[id];
 	      }
-	      return curr;
+	
+	      if (create) return curr;
+	      return curr.filter((elem2) => tolerance.within(elem, elem2));
 	    }
+	
+	    this.tolerance = () => tolerance;
 	
 	    this.matches = (elem) => matches(elem);
 	
@@ -7575,7 +7579,7 @@ const Tolerance = require('tolerance');
 	      const matchArr = matches(elem);
 	      if (matchArr) {
 	        const index = matchArr.indexOf(elem);
-	        if (index !== -1)matchArr.splice(index, 1);
+	        if (index !== -1) matchArr.splice(index, 1);
 	      }
 	    }
 	
@@ -7606,21 +7610,54 @@ function (require, exports, module) {
 	    this.bounds = {};
 	    this.attributes = () => attrs;
 	
+	    function round(val) {
+	      return Math.round(1000000000000 * val)/1000000000000
+	    }
+	
+	    function decimalLimit(value, limit) {
+	      return (new String(value)).replace(/([0-9]{1,})(.[0-9]{1,}|)/, '$2').length > limit;
+	    }
+	
 	    function bounds(attr) {
 	      return (elem) => {
 	        const tol = attributeMap[attr];
 	        const value = Object.pathValue(elem, attr);
-	        const mod = Math.mod(value, tol);
-	        const lowerLimit = value - mod;
-	        const upperLimit = value + (tol - mod);
-	        const id = `${lowerLimit} => ${upperLimit}`;
-	        return {lowerLimit, upperLimit, id};
+	        let lower, upper;
+	        if (Number.NaNfinity(value)) lower = upper = value;
+	        else {
+	          const mod = value % tol;
+	          const center = mod > tol/2 ? value + (tol - mod) : value - mod;
+	          lower = round(center - tol);
+	          upper = round(center + tol);
+	          if (lower>upper) {const temp = lower; lower = upper; upper = temp;}
+	        }
+	        const id = `${lower} => ${upper}`;
+	        if (decimalLimit(lower, 10) || decimalLimit(upper, 10))
+	          console.warn(`Bounding limits may be incorrect: ${id}`);
+	        return {lower, upper, id};
+	      }
+	    }
+	
+	    this.boundries = (elem) => {
+	      let boundries = '';
+	      for (let index = 0; index < attrs.length; index++) {
+	        boundries += this.bounds[attrs[index]](elem).id + '\n';
+	      }
+	      return boundries.substr(0,boundries.length - 1);
+	    }
+	
+	    function withinBounds(attr) {
+	      return (value1, value2) => {
+	        if (value1 === value2) return true;
+	        const tolerance = attributeMap[attr];
+	        return Math.abs(value1 - value2) < tolerance;
 	      }
 	    }
 	
 	    for (let index = 0; index < attrs.length; index++) {
 	      const attr = attrs[index];
 	      this.bounds[attr] = bounds(attr);
+	      this.bounds[attr].within = withinBounds(attr);
 	    }
 	
 	    this.within = (elem1, elem2) => {
@@ -7629,8 +7666,7 @@ function (require, exports, module) {
 	        const attr = attrs[index];
 	        const value1 = Object.pathValue(elem1, attr);
 	        const value2 = Object.pathValue(elem2, attr);
-	        const tolerance = attributeMap[attr];
-	        within &&= Math.abs(value1 - value2) < tolerance;
+	        within &&= this.bounds[attr].within(value1, value2);
 	        if (!within) return false;
 	      }
 	      return within;
@@ -22899,7 +22935,7 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	        if (lm === undefined) return;
 	        const xy = lm.xy;
 	        const twoDmap = Polygon2d.lines(...xy);
-	        if (twoDmap.length < 100) {
+	        if (twoDmap.length < 300) {
 	          const measurements = LineMeasurement2d.measurements(twoDmap);
 	          cache.front.twoDmap = twoDmap;
 	          cache.front.measurements = measurements;
@@ -23426,17 +23462,17 @@ function (require, exports, module) {
 	
 	    function toTwoDpolys(model) {
 	      if (model === undefined) return undefined;
+	      if (model.twoDpolys) return model.twoDpolys;
 	      const polys = [];
-	      const map = {xy: [], xz: [], zy: []};
 	      model.polygons.forEach((p, index) => {
 	        const norm = p.vertices[0].normal;
 	        const verticies = p.vertices.map((v) => (new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z})));
-	        const dist = distance(verticies);
 	        polys.push(new Polygon3D(verticies));
 	      });
 	      polys.normals = model.normals;
-	      // Polygon3D.merge(polys);
+	      Polygon3D.merge(polys);
 	      const twoDpolys = Polygon3D.toTwoD(polys);
+	      model.twoDpolys = twoDpolys;
 	      return twoDpolys;
 	    }
 	
@@ -23481,7 +23517,6 @@ function (require, exports, module) {
 	        assem.getJoints().female.forEach((joint) => {
 	          const male = joint.getMale();
 	          const m = male.toModel();
-	          console.log(male, m);
 	          a = a.subtract(m);
 	        });
 	        // else a.setColor(1, 0, 0);
@@ -23504,12 +23539,6 @@ function (require, exports, module) {
 	          }
 	          if (assem.partName() === targetPartName) {
 	            lm = b.clone();
-	            const rotation = assem.position().rotation();
-	            rotation.x *=-1;
-	            rotation.y = (360 - rotation.y)  % 360;
-	            rotation.z *=-1;
-	            lm.center({x:0,y:0,z:0})
-	            lm.rotate(rotation);
 	            const lastModel = this.lastModel();
 	            lastModelUpdateEvent.trigger(undefined, lastModel);
 	          }
@@ -26197,6 +26226,10 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	const Vertex2d = require('./vertex');
 	const Circle2d = require('./circle');
 	
+	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	const tol = .00001;
+	const withinTol = new Tolerance({'value': tol}).bounds.value.within;
+	
 	class Line2d {
 	  constructor(startVertex, endVertex) {
 	    startVertex = new Vertex2d(startVertex);
@@ -26244,10 +26277,20 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	      return withinLimit;
 	    }
 	
-	    this.withinSegmentBounds = (point) => {
-	      point = new Vertex2d(point);
-	      return approximate100.lteq(this.minX(), point.x()) && approximate100.lteq(this.minY(), point.y()) &&
-	            approximate100.gteq(this.maxX(), point.x()) && approximate100.gteq(this.maxY(), point.y());
+	    this.withinSegmentBounds = (pointOline) => {
+	      if (pointOline instanceof Line2d) {
+	        const l = pointOline
+	        const slopeEqual = withinTol(this.slope(), l.slope());
+	        const c = l.midpoint();
+	        const xBounded = c.x() < this.maxX() + tol && c.x() > this.minX() - tol;
+	        const yBounded = c.y() < this.maxY() + tol && c.y() > this.minY() - tol;
+	        if (slopeEqual && xBounded && yBounded) return true;
+	        return this.withinSegmentBounds(l.startVertex()) || this.withinSegmentBounds(l.endVertex());
+	      } else {
+	        let point = new Vertex2d(pointOline);
+	        return this.minX() - tol < point.x() && this.minY() - tol < point.y() &&
+	          this.maxX() + tol > point.x() && this.maxY() + tol > point.y();
+	      }
 	    }
 	
 	
@@ -26299,9 +26342,10 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	      const x1 = v1.x();
 	      const x2 = v2.x();
 	      const slope = (y2 - y1) / (x2 - x1);
-	      if (slope > 10000) return Infinity;
-	      if (slope < -10000) return -Infinity;
+	      if (slope > 10000 || slope < -10000) return Infinity;
 	      if (slope > -0.00001 && slope < 0.00001) return 0;
+	      if (Number.NaNfinity(slope))
+	        console.log('wtf')
 	      return slope;
 	    }
 	
@@ -26371,7 +26415,7 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	    this.y = (x) => {
 	      x ||= this.startVertex().x();
 	      const slope = this.slope();
-	      if (Math.abs(slope) === Infinity) return Infinity;
+	      if (slope === Infinity) return Infinity;
 	      if (slope === 0) return this.startVertex().y();
 	      return  (this.slope()*x + this.yIntercept());
 	    }
@@ -26379,7 +26423,7 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	    this.x = (y) => {
 	      y ||= this.startVertex().y();
 	      const slope = this.slope();
-	      if (Math.abs(slope) === Infinity) return this.startVertex().x();
+	      if (slope === Infinity) return this.startVertex().x();
 	      if (slope === 0) {
 	        return Infinity;
 	      }
@@ -26472,7 +26516,7 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	      return this;
 	    }
 	
-	    this.vertical = () => Math.abs(this.slope()) === Infinity;
+	    this.vertical = () => this.slope() === Infinity;
 	
 	    this.findIntersection = (line) => {
 	      if (this.slope() === 0 && line.slope() === 0) {
@@ -26488,8 +26532,8 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	      if (this.slope() === 0) return line.findIntersection(this);
 	
 	
-	      if (approximate.eq(line.radians(), this.radians()) &&
-	              approximate.eq(line.yIntercept(), this.yIntercept())) {
+	      if (withinTol(line.radians(), this.radians()) &&
+	              withinTol(line.yIntercept(), this.yIntercept())) {
 	        return Vertex2d.center(line.startVertex(), this.startVertex(), line.endVertex(), this.endVertex());
 	      }
 	      const slope = this.slope();
@@ -26526,6 +26570,24 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	        return intersection;
 	      }
 	      return false;
+	    }
+	
+	    this.distance = (other) => {
+	      if (other instanceof Vertex2d) {
+	        const point =  this.closestPointOnLine(other, true);
+	        if (point) return point.distance(other);
+	        const dist1 = startVertex.distance(other);
+	        const dist2 = endVertex.distance(other);
+	        return dist1 > dist2 ? dist2 : dist1;
+	      }
+	      if (other instanceof Line2d) {
+	        if (this.findSegmentIntersection(other, true)) return 0;
+	        const dist1 = this.distance(other.startVertex());
+	        const dist2 = this.distance(other.endVertex());
+	        const dist3 = other.distance(this.startVertex());
+	        const dist4 = other.distance(this.endVertex());
+	        return Math.min(...[dist1,dist2,dist3,dist4].filter((d) => Number.isFinite(d)));
+	      }
 	    }
 	
 	    this.minX = () => this.startVertex().x() < this.endVertex().x() ?
@@ -26565,8 +26627,7 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	      const posRads = Math.mod(this.radians(), 2*Math.PI);
 	      const negRads = Math.mod(this.radians() + Math.PI, 2*Math.PI);
 	      const otherRads = Math.mod(other.radians(), 2*Math.PI);
-	      return approximate.eq(posRads, otherRads) ||
-	              approximate.eq(negRads, otherRads);
+	      return withinTol(posRads, otherRads) || withinTol(negRads, otherRads);
 	    }
 	
 	    this.equals = (other) => {
@@ -26590,22 +26651,29 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	      if (!(other instanceof Line2d)) return;
 	      const clean = this.clean(other);
 	      if (clean) return clean;
-	      if (approximate.neqAbs(this.slope(), other.slope())) return;
+	      if (!withinTol(this.slope(), other.slope()) && !withinTol(this.slope(), -1*other.slope())) return;
 	      const otherNeg = other.negitive();
-	      const posEq = approximate.eq(this.y(other.x()), other.y()) &&
-	                    approximate.eq(this.x(other.y()), other.x());
-	      const negEq = approximate.eq(this.y(otherNeg.x()), otherNeg.y()) &&
-	                    approximate.eq(this.x(otherNeg.y()), otherNeg.x());
+	      const posEq = withinTol(this.y(other.x()), other.y()) &&
+	                    withinTol(this.x(other.y()), other.x());
+	      const negEq = withinTol(this.y(otherNeg.x()), otherNeg.y()) &&
+	                    withinTol(this.x(otherNeg.y()), otherNeg.x());
 	      if (!posEq && !negEq) return;
 	      const v1 = this.startVertex();
 	      const v2 = this.endVertex();
 	      const ov1 = other.startVertex();
 	      const ov2 = other.endVertex();
-	      if (!this.withinSegmentBounds(ov1) && !this.withinSegmentBounds(ov2)) return;
+	      if (!this.withinSegmentBounds(other)) {
+	        const dist = this.distance(other);
+	        if (dist < .1) {
+	          console.warn('distance is incorrect:', dist);
+	          this.withinSegmentBounds(other);
+	        }
+	        return;
+	      }
 	      // Fix sort method
-	      const vs = [v1, v2, ov1, ov2].sort(Vertex2d.sortByCenter(Vertex2d.center([v1, v2, ov1, ov2])));
-	      const combined = new Line2d(vs[0], vs[1]);
-	      return approximate.eq(this.radians(), combined.radians()) ? combined : combined.negitive();
+	      const vs = Vertex2d.sortByMax([v1, v2, ov1, ov2]);
+	      const combined = new Line2d(vs[0], vs[vs.length - 1]);
+	      return withinTol(this.radians(), combined.radians()) ? combined : combined.negitive();
 	    }
 	
 	    this.trimmed = (distance, both) => {
@@ -26639,7 +26707,7 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	      const startVertex = {x: midPoint.x() - xOffsetBack, y: midPoint.y() - yOffsetBack};
 	      const endVertex = {x: midPoint.x() - xOffsetFront, y: midPoint.y() - yOffsetFront};
 	      const line = new Line2d(startVertex, endVertex);
-	      return approximate.eq(line.radians(), this.radians()) ? line : line.negitive();
+	      return withinTol(line.radians(), this.radians()) ? line : line.negitive();
 	    }
 	
 	    this.move = (center) => {
@@ -26662,6 +26730,9 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	
 	    this.negitive = () => new Line2d(this.endVertex(), this.startVertex());
 	    this.toString = () => `${this.startVertex().toString()} => ${this.endVertex().toString()}`;
+	    this.toInfoString = () => `slope: ${this.slope()}\n` +
+	                        `angle: ${this.angle()}\n` +
+	                        `segment: ${this.toString()}`;
 	    this.toNegitiveString = () => `${this.endVertex().toString()} => ${this.startVertex().toString()}`;
 	    this.approxToString = () => `${this.startVertex().approxToString()} => ${this.endVertex().approxToString()}`;
 	  }
@@ -26714,38 +26785,46 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 	  return Object.values(verts);
 	}
 	
+	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 	Line2d.consolidate = (...lines) => {
+	  const tolMap = new ToleranceMap({'slope': tol});
 	  const lineMap = {};
 	  for (let index = 0; index < lines.length; index += 1) {
-	    const line = lines[index];
-	    const slope = approximate.abs(line.slope());
-	    if (!Number.isNaN(slope)) {
-	      if (lineMap[slope] === undefined) lineMap[slope] = [];
-	      lineMap[slope].push(line);
+	    if (Number.isNaN(lines[index].slope())) {
+	      console.log('here');
+	      lines[index].slope();
 	    }
+	    tolMap.add(lines[index]);
 	  }
-	  const keys = Object.keys(lineMap);
 	  let minList = [];
-	  for (let lIndex = 0; lIndex < keys.length; lIndex += 1) {
-	    const list = lineMap[keys[lIndex]];
-	    for (let tIndex = 0; tIndex < list.length; tIndex += 1) {
-	      let target = list[tIndex];
-	      for (let index = 0; index < list.length; index += 1) {
-	        if (index !== tIndex) {
-	          const combined = target.combine(list[index]);
-	          if (combined) {
-	            const lowIndex = index < tIndex ? index : tIndex;
-	            const highIndex = index > tIndex ? index : tIndex;
-	            list.splice(highIndex, 1);
-	            list[lowIndex] = combined;
-	            target = combined;
-	            tIndex--;
-	            break;
+	  const combinedKeys = {};
+	  for (let index = 0; index < lines.length; index += 1) {
+	    const line = lines[index];
+	    const matches = tolMap.matches(line);
+	    const mapId = tolMap.tolerance().boundries(line);
+	    if (!combinedKeys[mapId]) {
+	      combinedKeys[mapId] = true;
+	      for (let tIndex = 0; tIndex < matches.length; tIndex += 1) {
+	        let target = matches[tIndex];
+	        for (let mIndex = tIndex + 1; mIndex < matches.length; mIndex += 1) {
+	          if (mIndex !== tIndex) {
+	            const combined = target.combine(matches[mIndex]);
+	            if (combined) {
+	              const lowIndex = mIndex < tIndex ? mIndex : tIndex;
+	              const highIndex = mIndex > tIndex ? mIndex : tIndex;
+	              if (lowIndex == highIndex)
+	                console.log('STF');
+	              matches.splice(highIndex, 1);
+	              matches[lowIndex] = combined;
+	              target = combined;
+	              tIndex--;
+	              break;
+	            }
 	          }
 	        }
 	      }
+	      minList = minList.concat(matches);
 	    }
-	    minList = minList.concat(lineMap[keys[lIndex]]);
 	  }
 	
 	  return minList;
@@ -26767,6 +26846,8 @@ function (require, exports, module) {
 	const Line2d = require('../../two-d/objects/line.js');
 	const Vertex2d = require('../../two-d/objects/vertex.js');
 	const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
+	const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
+	console.log('within');
 	
 	function isDefined(...values) {
 	  for (let index = 0; index < values.length; index++) {
@@ -26787,7 +26868,6 @@ function (require, exports, module) {
 	      this[index] = new Vertex3D(points[index]);
 	    }
 	
-	    this.equation = () => this.length > 2 ? Plane.equation(this[0], this[1], this[2]) : equation;
 	    this.indexOf = (point) => {
 	      for (let index = 0; index < points.length; index++) {
 	        if (this[index].equals(point)) return index;
@@ -26796,6 +26876,17 @@ function (require, exports, module) {
 	    }
 	
 	    this.points = () => this.length > 2 ? points.slice(0,3) : this.findPoints();
+	
+	    this.equivalent = (other) => {
+	      if (!(other instanceof Plane)) return false;
+	      const oPoints = other.points();
+	      for (let index = 0; index < oPoints.length; index++) {
+	        const p = oPoints[index];
+	        const thisZ = this.z(p.x, p.y);
+	        if (!withinTol(thisZ, p.z)) return false;
+	      }
+	      return true;
+	    }
 	
 	    this.XYrotation = () => {
 	      const eqn = this.equation();
@@ -26867,32 +26958,24 @@ function (require, exports, module) {
 	    this.equation = () => {
 	      if (equation && this.length < 3) return equation;
 	      const pts = this.points();
-	      const include = [];
-	      const constants = {};
-	      if (!this.parrelleTo('x')) include.push({axis: 'x', coef: 'a'});
-	      else constants['x'] = pts[0].x;
-	      if (!this.parrelleTo('y')) include.push({axis: 'y', coef: 'b'});
-	      else constants['y'] = pts[0].y;
-	      if (!this.parrelleTo('z')) include.push({axis: 'z', coef: 'c'});
-	      else constants['z'] = pts[0].z;
+	      const include = ['x','y','z'];
 	
 	      const systemOfEquations = new Matrix(null, include.length, include.length);
 	
 	      for (let i = 0; i < include.length; i++) {
 	        const point = pts[i];
 	        for (let j = 0; j < include.length; j++) {
-	          systemOfEquations[i][j] = point[include[j].axis];
+	          systemOfEquations[i][j] = point[include[j]];
 	        }
 	      }
 	
-	      let r = systemOfEquations.remove(undefined, 2);
-	      let rr = r.remove(0);
-	      // console.log(rr.solve([1,1]));
-	
-	      const answer = systemOfEquations.solve([1,1,1]);
-	      const returnValue = {a: 0, b: 0, c: 0, d: 1};
-	      for (let i = 0; i < include.length; i++) returnValue[include[i].coef] = answer[i][0];
-	      return returnValue;//{a: answer[0][0], b: answer[1][0], c: answer[2][0], d: 1};
+	      try {
+	        const answer = systemOfEquations.solve([1,1,1]);
+	        const returnValue = {a: answer[0][0], b: answer[1][0], c: answer[2][0], d: 1};
+	        return returnValue;
+	      } catch (e) {
+	        console.log('booblaa booblaa');
+	      }
 	    }
 	
 	    this.equationEqualToZ = () => {
@@ -27342,12 +27425,22 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 	Vertex2d.sort = (a, b) =>
 	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
 	
-	Vertex2d.sortByCenter = (center) => {
-	  return (v1, v2) => {
-	    const d1 = v1.distance(center);
-	    const d2 = v2.distance(center);
-	    return d2 - d1;
+	const ignoreVerySmall = (v) => Math.abs(v) < .000001 ? 0 : v;
+	Vertex2d.sortByMax = (verts) => {
+	  let max;
+	  const center = Vertex2d.center(verts);
+	  for (let index = 0; index < verts.length; index++) {
+	    let v = verts[index];
+	    let curr = {v, distance: v.distance(center)};
+	    if (max === undefined || max.distance < curr.distance) {
+	      max = curr;
+	    }
 	  }
+	  return verts.sort((v1, v2) => {
+	    const d1 = v1.distance(max.v);
+	    const d2 = v2.distance(max.v);
+	    return d2 - d1;
+	  });
 	}
 	
 	
@@ -28794,7 +28887,7 @@ function (require, exports, module) {
 	  for (let index = 0; index < polys.length; index += 1) {
 	    lines = lines.concat(polys[index].lines());
 	  }
-	  const consolidated = Line2d.consolidate(...Line2d.consolidate(...lines));
+	  const consolidated = Line2d.consolidate(...lines);
 	  if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
 	    console.error('Line Consolidation malfunction');
 	  }
@@ -29018,6 +29111,24 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
 	    if (face1.length !== 4) throw new Error('BiPolygon implementation is limited to 4 point polygons. Plans to expand must not have been exicuted yet');
 	
+	    let normal = {};
+	    function calcNormal() {
+	      if (normal === undefined) {
+	        const pNorm1 = polygon1.normal();
+	        const pNorm1I = pNorm1.inverse();
+	        const center1 = polygon1.center();
+	        const center2 = polygon2.center();
+	        const cOffsetNorm = center1.translate(pNorm1, true);
+	        const cOffsetNormI = center1.translate(pNorm1I, true);
+	        normal.front = cOffsetNorm.distance(center2) > cOffsetNormI.distance(center2) ?
+	            cOffsetNorm : cOffsetNormI;
+	        const topApproxVector = face2[3].distanceVector(face2[0]).unit();
+	        const normVert = new Vertex3D(normal.front);
+	        normVect.rotate({x:1,y:0,z:0});
+	      }
+	      return normal;
+	    }
+	
 	    this.front = () => new Polygon3D(face1);
 	    this.back = () => new Polygon3D(face2);
 	    this.normal = () => face2[0].distanceVector(face1[0]).unit();
@@ -29143,6 +29254,8 @@ const Vector3D = require('./vector');
 	      this.endVertex.translate(vector);
 	    }
 	
+	    this.isPoint = () => this.startVertex.equals(this.endVertex);
+	
 	    this.planeAt = (rotation) => {
 	      const two = new Vertex3D({x: startVertex.x + 1, y: startVertex.y, z: startVertex.z});
 	      two.rotate(rotation, startVertex);
@@ -29234,7 +29347,7 @@ const Vector3D = require('./vector');
 	Line3D.verticies = (lines) => {
 	  const verts = [];
 	  for (let index = 0; index < lines.length; index += 1) {
-	    verts.push(lines[index].endVertex);
+	    verts.push(lines[index].endVertex.copy());
 	  }
 	  return verts;
 	}
@@ -29242,6 +29355,14 @@ const Vector3D = require('./vector');
 	Line3D.adjustVerticies = (vert1, vert2, change) => {
 	  const line = new Line3D(vert1, vert2);
 	  line.adjustLength(change);
+	}
+	
+	Line3D.reverse = (list) => {
+	  let reversed = [];
+	  for (let index = list.length - 1; index > -1; index--) {
+	    reversed.push(list[index].negitive());
+	  }
+	  return reversed;
 	}
 	
 	module.exports = Line3D;
@@ -29352,6 +29473,43 @@ const Approximate = require('../../../../../public/js/utils/approximate.js');
 	      return this.remove(0, index);
 	    }
 	
+	    const bigEnough = (val) => Math.abs(val) > .00000001;
+	    this.consise = () => {
+	      const removedColumns = [];
+	      let consiseMatrix = this.copy();
+	      for (let j = columns - 1; j > -1; j--) {
+	        // const initialValue = this[0][j];
+	        let notZero = false;
+	        for (let i = 0; i < rows; i++) {
+	            notZero ||= bigEnough(this[i][j]);
+	        }
+	        if (!notZero) {
+	          removedColumns.push(j);
+	          consiseMatrix = consiseMatrix.remove(undefined, j);
+	        }
+	      }
+	
+	      const changes = [];
+	      const keepRows = [consiseMatrix[0]];
+	      const moreInfo = (row) => {
+	        for (let i = 0; i < keepRows.length; i++) {
+	          const kRow = keepRows[i];
+	          for (let j = 0; j < kRow.length; j++) {
+	            if (!changes[j] && kRow[j] != row[j]) {
+	              changes[j] = true;
+	              keepRows.push(row);
+	              return;
+	            }
+	          }
+	        }
+	      }
+	      for (let i = 1; keepRows.length < keepRows[0].length && i < rows; i++) {
+	        const row = consiseMatrix[i];
+	        if (keepRows.equalIndexOf(row) === -1) moreInfo(row);
+	      }
+	      return {removedColumns, matrix:  new Matrix(keepRows)};
+	    }
+	
 	    this.determinate = () => {
 	      if (rows === 2) return this[0][0] * this[1][1] - this[0][1] * this[1][0];
 	
@@ -29368,14 +29526,23 @@ const Approximate = require('../../../../../public/js/utils/approximate.js');
 	    }
 	
 	    this.solve = (answer) => {
+	      const consiseObj = this.consise();
+	      const consiseMatrix = consiseObj.matrix;
+	      const removedColumns = consiseObj.removedColumns;
 	      const solution = new Matrix(null, columns, 1);
 	      answer ||= new Array(columns).fill(0);
-	      const determinate = this.determinate();
+	      let consiseIndex = 0;
+	      const determinate = consiseMatrix.determinate();
 	      for (let j = 0; j < columns; j++) {
-	        const matrix = this.copy()
-	        matrix.replaceColumn(j, answer);
-	        const matrixDeterminate = matrix.determinate();
-	        solution[j][0] = matrixDeterminate / determinate;
+	        let value;
+	        if (removedColumns.indexOf(j) !== -1) value = 0;
+	        else {
+	          const matrix = consiseMatrix.copy()
+	          matrix.replaceColumn(consiseIndex++, answer);
+	          const matrixDeterminate = matrix.determinate();
+	          value = matrixDeterminate / determinate;
+	        }
+	        solution[j][0] = value;
 	      }
 	      return solution;
 	    }
@@ -29571,6 +29738,7 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	const Line3D = require('./line');
 	const Vertex3D = require('./vertex');
 	const Vector3D = require('./vector');
+	const Plane = require('./plane');
 	const approximate = require('../../../../../public/js/utils/approximate.js');
 	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 	
@@ -29582,6 +29750,24 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	    let map;
 	    let normal;
 	    let instance = this;
+	
+	    function getPlane() {
+	      let points = this.verticies();
+	      let parrelle = true;
+	      let index = 2;
+	      const point1 = points[0];
+	      const point2 = points[1];
+	      let point3;
+	      while (parrelle && index < points.length) {
+	        point3 = points[index]
+	        let vector1 = point1.minus(point2);
+	        let vector2 = point3.minus(point2);
+	        parrelle = vector1.parrelle(vector2);
+	        index++;
+	      }
+	      return new Plane(point1, point2, point3);
+	    }
+	    this.toPlane = getPlane;
 	
 	    function calcNormal() {
 	      let points = this.verticies();
@@ -29675,11 +29861,11 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	    this.startLine = () => lines[0];
 	    this.endLine = () => lines[lines.length - 1];
 	
-	    const tol = .00000001;
+	    const tol = .00001;
 	    this.lineMap = (force) => {
 	      if (!force && map !== undefined) return map;
 	      if (lines.length === 0) return {};
-	      map = new ToleranceMap({'startVertex.x': tol, 'startVertex.y': tol, 'endVertex.z': tol,
+	      map = new ToleranceMap({'startVertex.x': tol, 'startVertex.y': tol, 'startVertex.z': tol,
 	                              'endVertex.x': tol, 'endVertex.y': tol, 'endVertex.z': tol});
 	      let lastEnd;
 	      if (!lines[0].startVertex.equals(lines[lines.length - 1].endVertex)) throw new Error('Broken Polygon');
@@ -29689,6 +29875,8 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	      }
 	      return map;
 	    }
+	
+	    this.copy = () => new Polygon3D(Line3D.verticies(lines));
 	
 	    this.equals = (other) => {
 	      if (!(other instanceof Polygon3D)) return false;
@@ -29727,27 +29915,23 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	    }
 	
 	    this.getLines = (startVertex, endVertex, reverse) => {
-	      const inc = reverse ? -1 : 1;
 	      const subSection = [];
 	      let completed = false;
+	      let shared;
+	      const compareLine = new Line3D(startVertex, endVertex);
+	      const compareLineI = new Line3D(endVertex,startVertex);
+	
 	      const doubleLen = lines.length * 2;
 	      for (let steps = 0; steps < doubleLen; steps += 1) {
 	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
 	        const curr = lines[index];
-	        if (subSection.length === 0) {
-	          if (startVertex.equals(!reverse ? curr.startVertex : curr.endVertex)) {
-	            subSection.push(!reverse ? curr : curr.negitive());
-	            if (endVertex.equals(reverse ? curr.startVertex : curr.endVertex)) {
-	              completed = true;
-	              break;
-	            }
-	          }
+	        if (!shared) {
+	          if (compareLine.equals(curr) || compareLineI.equals(curr)) shared = curr;
 	        } else {
-	          subSection.push(!reverse ? curr : curr.negitive());
-	          if (endVertex.equals(reverse ? curr.startVertex : curr.endVertex)) {
+	          if (shared === curr) {
 	            completed = true;
 	            break;
-	          }
+	          } else subSection.push(!reverse ? curr : curr.negitive());
 	        }
 	      }
 	      if (completed) return subSection;
@@ -29797,31 +29981,48 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	
 	    this.removeLoops = () => {
 	      let removed = true;
-	      while (removed) {
+	      const orig = lines;
+	      while (removed && lines.length > 0) {
 	        removed = false;
 	        const map = this.lineMap();
 	        for (let index = 0; index < lines.length; index += 1) {
 	          const line = lines[index];
-	          const posMatch = map.matches(line);
-	          const negMatch = map.matches(line.negitive());
-	          if (posMatch.length > 1 || (negMatch && negMatch.length !== 0)) {
-	            let match = negMatch ? negMatch[0] : posMatch[1];
-	            const startIndex = line._POLY_INDEX;
-	            const endIndex = match._POLY_INDEX;
-	            if (startIndex > endIndex)
-	                  throw new Error('THIS SHOULD NOT HAPPEN!!!!!! WTF!!!!');
-	            const forwardDiff = endIndex - startIndex;
-	            const reverseDiff = lines.length - forwardDiff;
-	            if (forwardDiff > reverseDiff) {
-	              lines = lines.slice(startIndex, endIndex);
-	            } else {
-	              lines = lines.slice(0, startIndex).concat(lines.slice(endIndex + 1));
-	            }
-	            const newVerts = Line3D.verticies(lines);
-	            this.rebuild(newVerts);
-	            removed = true;
-	            break;
+	          if (line.isPoint()) {
+	            console.log('chew chew');
 	          }
+	          if (line.isPoint()) {
+	            lines = JSON.clone(lines);
+	            lines.splice(index, 1);
+	            removed = true;
+	          } else {
+	            const posMatch = map.matches(line);
+	            const negMatch = map.matches(line.negitive());
+	            if (posMatch.length > 1 || (negMatch && negMatch.length !== 0)) {
+	              let match = negMatch ? negMatch[0] : posMatch[1];
+	              const startIndex = line._POLY_INDEX;
+	              const endIndex = match._POLY_INDEX;
+	              if (startIndex > endIndex)
+	              throw new Error('THIS SHOULD NOT HAPPEN!!!!!! WTF!!!!');
+	              const forwardDiff = endIndex - startIndex;
+	              const reverseDiff = lines.length - forwardDiff;
+	              if (Math.max(forwardDiff, reverseDiff) < 3) {
+	                console.log('che che');
+	              }
+	              if (forwardDiff > reverseDiff) {
+	                lines = lines.slice(startIndex, endIndex);
+	              } else {
+	                lines = lines.slice(0, startIndex).concat(lines.slice(endIndex));
+	              }
+	
+	              const newVerts = Line3D.verticies(lines);
+	              this.rebuild(newVerts);
+	              removed = true;
+	              break;
+	            }
+	          }
+	        }
+	        if (lines.length < 3) {
+	          console.log('che che check it out');
 	        }
 	        if (removed) this.lineMap(true);
 	      }
@@ -29833,31 +30034,43 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	      return path.substring(0, path.length - 4);
 	    }
 	
+	
 	    this.merge = (other) => {
 	      if (!this.normal().parrelle(other.normal())) return;
+	      const thisPlane = this.toPlane();
+	      const otherPlane = other.toPlane();
+	      if (!thisPlane.equivalent(otherPlane)) return;
 	      const lineMap = this.lineMap();
-	      const otherLines = other.lines();
+	      const allOtherLines = other.lines();
 	      let merged;
-	      for (let index = 0; index < otherLines.length; index += 1) {
-	        const curr = otherLines[index];
+	      for (let index = 0; index < allOtherLines.length; index += 1) {
+	        const curr = allOtherLines[index];
+	        let verticies, thisLines, otherLines;
 	        if (lineMap.matches(curr) !== null) {
-	          let thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
-	          let otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
-	          if (thisLines && otherLines) {
-	            if (thisLines[0].startVertex.equals(otherLines[0].startVertex)) {
-	              merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines.reverse())));
-	            } else {
-	              merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines)));
-	            }
-	          }
+	          thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
+	          otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
+	        } else if (lineMap.matches(curr.negitive()) !== null) {
+	          thisLines = this.getLines(curr.endVertex, curr.startVertex, true);
+	          otherLines = other.getLines(curr.startVertex, curr.endVertex, true);
 	        }
-	        if (lineMap.matches(curr.negitive()) !== null) {
-	          let thisLines = this.getLines(curr.endVertex, curr.startVertex, true);
-	          let otherLines = other.getLines(curr.startVertex, curr.endVertex, true);
-	          if (thisLines[0].startVertex.equals(otherLines[0].startVertex)) {
-	            merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines.reverse())));
-	          } else {
-	            merged = new Polygon3D(Line3D.verticies(thisLines.concat(otherLines)));
+	
+	        if (thisLines && otherLines) {
+	          if (thisLines[0].startVertex.equals(otherLines[0].startVertex))
+	            thisLines = Line3D.reverse(thisLines);
+	
+	          const startCheck = thisLines[0].startVertex.equals(otherLines[otherLines.length - 1].endVertex);
+	          const middleCheck = thisLines[thisLines.length - 1].endVertex.equals(otherLines[0].startVertex);
+	          if (!(middleCheck && startCheck))
+	            console.warn('coommmmooon!!!!');
+	          verticies = Line3D.verticies(otherLines.concat(thisLines));
+	          merged = new Polygon3D(verticies);
+	          try {
+	            merged.normal();
+	          } catch (e) {
+	            console.warn('again wtf!!!');
+	            new Polygon3D(verticies);
+	            new Polygon3D(verticies);
+	            new Polygon3D(verticies);
 	          }
 	        }
 	      }
@@ -29888,6 +30101,11 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	        const mi = mostInformation();
 	        x ||= mi[0];
 	        y ||= mi[1];
+	      } else {
+	        const mi = mostInformation();
+	        if (x !== mi[0] || y !== mi[1]) {
+	          console.log('some ting wong');
+	        }
 	      }
 	      const verts = this.verticies();
 	      const verts2D = [];
@@ -29912,6 +30130,7 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	
 	Polygon3D.merge = (polygons) => {
 	  let currIndex = 0;
+	  console.log(polygons.length);
 	  while (currIndex < polygons.length - 1) {
 	    const target = polygons[currIndex];
 	    for (let index = currIndex + 1; index < polygons.length; index += 1) {
@@ -29925,6 +30144,7 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	    }
 	    currIndex++;
 	  }
+	  console.log(polygons.length);
 	}
 	
 	const xyPoly = new Polygon3D([[1,10,0],[11,2,0],[22,1,0]]);
@@ -29988,7 +30208,7 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	      else vertLocs[accStr] = true;
 	      orthoVerts.push(orthogonal);
 	    }
-	    if (valid) orthoPolys.push(new Polygon3D(orthoVerts))
+	    if (valid) orthoPolys.push(new Polygon3D(orthoVerts));
 	  }
 	  return orthoPolys;
 	}
@@ -30193,7 +30413,7 @@ const Matrix = require('./matrix');
 	}
 	
 	const tol = .000000001;
-	Vertex3D.tolerance = new Tolerance({x: tol, y: tol});
+	Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
 	
 	// returned direction is of list2 relitive to list 1
 	// dirArr = [forward, backward, up, down, left, right];
@@ -31720,17 +31940,21 @@ const Circle2d = require('circle');
 	    let lines = lengthMap[lengths[index]];
 	    for(let li = 1; li < lines.length; li++) {
 	      const line = lines[li];
-	      const center2center = new Line2d(lines[li-1].midpoint(), line.midpoint());
-	      const slopeMag = approximate.abs(center2center.slope());
-	      if (!slopeMap[slopeMag] && approximate(line.length()) !== 0) {
-	        for (let si = 0; si < li; si++) {
-	          const c2c = new Line2d(lines[si].midpoint(), line.midpoint());
-	          const slopeMag = approximate.abs(center2center.slope());
-	          slopeMap[slopeMag] = true;
+	      const mp1 = lines[li-1].midpoint();
+	      const mp2 = line.midpoint();
+	      if (!mp1.equal(mp2)) {
+	        const center2center = new Line2d(mp1, mp2);
+	        const slopeMag = approximate.abs(center2center.slope());
+	        if (!slopeMap[slopeMag] && approximate(line.length()) !== 0) {
+	          for (let si = 0; si < li; si++) {
+	            const c2c = new Line2d(lines[si].midpoint(), line.midpoint());
+	            const slopeMag = approximate.abs(center2center.slope());
+	            slopeMap[slopeMag] = true;
+	          }
+	        } else {
+	          lines.splice(li, 1);
+	          li--;
 	        }
-	      } else {
-	        lines.splice(li, 1);
-	        li--;
 	      }
 	    }
 	    if (lines.length > 1) lines.splice(0,1);
@@ -34549,7 +34773,28 @@ function (require, exports, module) {
 	  ts.success();
 	});
 	
+	Test.add('Matrix: consise',(ts) => {
+	  let cloudyMatirx = new Matrix([
+	    [0,0,3,-5,4,0,0],
+	    [0,0,3,-5,4,0,0],
+	    [0,0,5,2,1,0,0],
+	    [0,0,5,2,1,0,0],
+	    [0,0,2,3,-2,0,0],
+	  ]);
 	
+	  const consiseObj = cloudyMatirx.consise();
+	  ts.assertTrue([6,5,1,0].equals(consiseObj.removedColumns));
+	
+	  let solution = new Matrix([
+	    [3,-5,4],
+	    [5,2,1],
+	    [2,3,-2],
+	  ]);
+	  ts.assertTrue(solution.equals(consiseObj.matrix));
+	
+	  ts.success();
+	
+	});
 	
 	Test.add('Matrix: solve',(ts) => {
 	  let equations = new Matrix([
@@ -34557,14 +34802,24 @@ function (require, exports, module) {
 	    [5,2,1],
 	    [2,3,-2],
 	  ]);
-	  let answer = [5, 0, 3];
+	  let dColumn = [5, 0, 3];
+	  let answer = new Matrix([[2],[-3],[-4]]);
 	
-	  const solution = equations.solve(answer);
-	  solution.equals(new Matrix([
-	    [2],
-	    [-3],
-	    [-4]
-	  ]));
+	  let solution = equations.solve(dColumn);
+	  ts.assertTrue(solution.equals(answer));
+	
+	  let cloudyMatirx = new Matrix([
+	    [0,0,3,-5,4,0,0],
+	    [0,0,3,-5,4,0,0],
+	    [0,0,5,2,1,0,0],
+	    [0,0,5,2,1,0,0],
+	    [0,0,2,3,-2,0,0],
+	  ]);
+	
+	  let unknownValue = 0;
+	  answer = new Matrix([[unknownValue],[unknownValue],[2],[-3],[-4],[unknownValue],[unknownValue]]);
+	  solution = cloudyMatirx.solve(dColumn);
+	  ts.assertTrue(solution.equals(answer));
 	
 	  ts.success();
 	});
@@ -35018,8 +35273,8 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	
 	Test.add('Plane: lineIntersection',(ts) => {
 	  const p1 = {x: 1, y: 2, z: 4};
-	  const p2 = {x: 4, y: 2, z: 4};
-	  const p3 = {x: 4, y: 1, z: 4};
+	  const p3 = {x: 4, y: 2, z: 4};
+	  const p2 = {x: 4, y: 1, z: 4};
 	
 	  let plane = new Plane(p1,p2,p3);
 	  let line = new Line3D({x:0,y:0,z:0}, {x:0,y:0,z:2});
@@ -35090,7 +35345,7 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 	
 	
-	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]])
+	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
 	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
 	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
 	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
@@ -35098,7 +35353,7 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
 	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
 	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
-	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]]);
+	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]].reverse());
 	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
 	
 	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);

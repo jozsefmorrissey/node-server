@@ -99,6 +99,43 @@ class Matrix extends Array {
       return this.remove(0, index);
     }
 
+    const bigEnough = (val) => Math.abs(val) > .00000001;
+    this.consise = () => {
+      const removedColumns = [];
+      let consiseMatrix = this.copy();
+      for (let j = columns - 1; j > -1; j--) {
+        // const initialValue = this[0][j];
+        let notZero = false;
+        for (let i = 0; i < rows; i++) {
+            notZero ||= bigEnough(this[i][j]);
+        }
+        if (!notZero) {
+          removedColumns.push(j);
+          consiseMatrix = consiseMatrix.remove(undefined, j);
+        }
+      }
+
+      const changes = [];
+      const keepRows = [consiseMatrix[0]];
+      const moreInfo = (row) => {
+        for (let i = 0; i < keepRows.length; i++) {
+          const kRow = keepRows[i];
+          for (let j = 0; j < kRow.length; j++) {
+            if (!changes[j] && kRow[j] != row[j]) {
+              changes[j] = true;
+              keepRows.push(row);
+              return;
+            }
+          }
+        }
+      }
+      for (let i = 1; keepRows.length < keepRows[0].length && i < rows; i++) {
+        const row = consiseMatrix[i];
+        if (keepRows.equalIndexOf(row) === -1) moreInfo(row);
+      }
+      return {removedColumns, matrix:  new Matrix(keepRows)};
+    }
+
     this.determinate = () => {
       if (rows === 2) return this[0][0] * this[1][1] - this[0][1] * this[1][0];
 
@@ -115,14 +152,23 @@ class Matrix extends Array {
     }
 
     this.solve = (answer) => {
+      const consiseObj = this.consise();
+      const consiseMatrix = consiseObj.matrix;
+      const removedColumns = consiseObj.removedColumns;
       const solution = new Matrix(null, columns, 1);
       answer ||= new Array(columns).fill(0);
-      const determinate = this.determinate();
+      let consiseIndex = 0;
+      const determinate = consiseMatrix.determinate();
       for (let j = 0; j < columns; j++) {
-        const matrix = this.copy()
-        matrix.replaceColumn(j, answer);
-        const matrixDeterminate = matrix.determinate();
-        solution[j][0] = matrixDeterminate / determinate;
+        let value;
+        if (removedColumns.indexOf(j) !== -1) value = 0;
+        else {
+          const matrix = consiseMatrix.copy()
+          matrix.replaceColumn(consiseIndex++, answer);
+          const matrixDeterminate = matrix.determinate();
+          value = matrixDeterminate / determinate;
+        }
+        solution[j][0] = value;
       }
       return solution;
     }
