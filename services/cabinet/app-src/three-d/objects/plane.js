@@ -22,6 +22,7 @@ class Plane extends Array {
     if (Array.isArray(points[0])) points = points[0];
     if (isDefined(points[0], points[0].a, points[0].b, points[0].c, points[0].d)) {
       equation = points[0];
+      points = [];
     }
     for (let index = 0; index < points.length; index++) {
       this[index] = new Vertex3D(points[index]);
@@ -40,9 +41,14 @@ class Plane extends Array {
       if (!(other instanceof Plane)) return false;
       const oPoints = other.points();
       for (let index = 0; index < oPoints.length; index++) {
-        const p = oPoints[index];
-        const thisZ = this.z(p.x, p.y);
-        if (!withinTol(thisZ, p.z)) return false;
+        // const p = oPoints[index];
+        // const thisZ = this.z(p.x, p.y);
+        // if (!withinTol(thisZ, p.z)) return false;
+        const thisEqn = this.equation();
+        const otherEqn = other.equation();
+        if (!withinTol(thisEqn.a, otherEqn.a)) return false;
+        if (!withinTol(thisEqn.b, otherEqn.b))  return false;
+        if (!withinTol(thisEqn.c, otherEqn.c))  return false;
       }
       return true;
     }
@@ -143,21 +149,23 @@ class Plane extends Array {
       return `(${a(eqn.a)}x + ${a(eqn.b)}y + ${a(eqn.d)}) / ${a(eqn.c)}`;
     }
 
+    // TODO: this function does not work!
     this.findPoints = (count) => {
+      console.warn.subtle(60000, 'This Function does not work properly');
       count ||= 3;
       const limit = count * 3 + 11;
-      const points = [];
+      const pts = [];
       let state = 0;
       let value = 100000;
-      while (points.length < count) {
+      while (pts.length < count) {
          let func = state === 0 ? this.x : (state === 1 ? this.y : this.z);
          let point = value % 2 ? func(value * 2, value*-1, true) : func(value, value, true);
-         if (!point.usless() && (points.length === 0 || (points.equalIndexOf(point)))) points.push(point);
+         if (!point.usless() && (pts.length === 0 || (pts.equalIndexOf(point)))) pts.push(point);
          value += 13;
          state = ++state % 3;
          // if (value > limit) throw new Error('Cant find points');
       }
-      return points;
+      return pts;
     }
 
     this.parrelleTo = (axis) => {
@@ -167,8 +175,8 @@ class Plane extends Array {
 
     this.normal = () => {
       const points = this.findPoints();
-      const vector1 = points[0].minus(points[1]);
-      const vector2 = points[2].minus(points[1]);
+      const vector1 = points[1].minus(points[0]);
+      const vector2 = points[2].minus(points[0]);
       const normVect = vector1.crossProduct(vector2);
       return normVect.scale(1 / normVect.magnitude());
     }

@@ -107,6 +107,19 @@ class Polygon2d {
 
     this.center = () => Vertex2d.center(...this.verticies());
 
+    this.translate = (xDiff, yDiff) => {
+      for (let index = 0; index < lines.length; index++) {
+        lines[index].startVertex().translate(xDiff, yDiff);
+      }
+    }
+
+    this.centerOn = (newCenter) => {
+      newCenter = new Vertex2d(newCenter);
+      const center = this.center();
+      const diff = newCenter.copy().differance(center);
+      this.translate(diff.x(), diff.y());
+    }
+
     this.addVerticies = (list) => {
       if (list === undefined) return;
       if ((lines.length === 0) && list.length < 3) return;//console.error('A Polygon Must be initialized with 3 verticies');
@@ -157,24 +170,97 @@ class Polygon2d {
   }
 }
 
-Polygon2d.center = (...polys) => {
-  const centers = [];
-  for (let index = 0; index < polys.length; index += 1) {
-    centers.push(polys[index].center());
+Polygon2d.centerOn = (newCenter, polys) => {
+  newCenter = new Vertex2d(newCenter);
+  const center = Polygon2d.center(...polys);
+  const diff = newCenter.copy().differance(center);
+  for (let index = 0; index < polys.length; index++) {
+    const poly = polys[index];
+    poly.translate(diff.x(), diff.y());
   }
-  return Vertex2d.center(...centers);
+}
+
+Polygon2d.minMax = (...polys) => {
+  const centers = [];
+  const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
+  const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+  for (let index = 0; index < polys.length; index += 1) {
+    const verts = polys[index].verticies();
+    for (let vIndex = 0; vIndex < verts.length; vIndex++) {
+      const vert = verts[vIndex];
+      if (max.x() < vert.x()) max.x(vert.x());
+      if (max.y() < vert.y()) max.y(vert.y());
+      if (min.x() > vert.x()) min.x(vert.x());
+      if (min.y() > vert.y()) min.y(vert.y());
+    }
+  }
+  return {min, max};
+}
+
+Polygon2d.center = (...polys) => {
+  const minMax = Polygon2d.minMax(...polys);
+  return Vertex2d.center(minMax.min, minMax.max);
 }
 
 Polygon2d.lines = (...polys) => {
+  if (Array.isArray(polys[0])) polys = polys[0];
   let lines = [];
   for (let index = 0; index < polys.length; index += 1) {
     lines = lines.concat(polys[index].lines());
   }
-  const consolidated = Line2d.consolidate(...lines);
+  // return lines;
+  const consolidated = Line2d.consolidate(...Line2d.consolidate(...lines));
   if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
-    console.error('Line Consolidation malfunction');
+    console.error.subtle('Line Consolidation malfunction');
   }
   return consolidated;
+}
+
+Polygon2d.outline = (lines, searchLineCount) => {
+  searchLineCount ||= 16;
+  const center = Vertex2d.center(Line2d.vertices(lines));
+  const offset = (2 * Math.PI) / searchLineCount;
+  const parremeter = [];
+  let radians = -Math.PI;
+  let lastLine;
+  for (let index = 0; index < searchLineCount; index++) {
+    const radial = Line2d.startAndTheta(center, radians, 1000000);
+    let max;
+    for (let lIndex = 0; lIndex < lines.length; lIndex++) {
+      let line = lines[lIndex];
+      if (lastLine && lastLine.endVertex().distance(line.endVertex()) <
+          lastLine.endVertex().distance(line.startVertex())) {
+        line = line.negitive();
+      }
+      const intersection = line.findSegmentIntersection(radial, true);
+      if (intersection) {
+        const distance = intersection.distance(center);
+        if (max === undefined || max.distance < distance) {
+          max = {line, distance};
+        }
+      }
+    }
+    if ((!lastLine && max) || (max && !max.line.equals(lastLine))) {
+      lastLine = max.line;
+      parremeter.push(lastLine);
+    }
+    radians += offset;
+  }
+  const verts = [parremeter[0].startVertex()];
+  let lastParremterLine;
+  for (let index = 0; index < parremeter.length; index++) {
+    const line = parremeter[index];
+    if (!line.equals(lastParremterLine)) {
+      if (!line.startVertex().equal(verts[verts.length - 1])) {
+        verts.push(line.startVertex());
+      }
+      if (!line.endVertex().equal(verts[verts.length - 1])) {
+        verts.push(line.endVertex());
+      }
+    }
+    lastParremterLine = line;
+  }
+  return new Polygon2d(verts);
 }
 
 new Polygon2d();

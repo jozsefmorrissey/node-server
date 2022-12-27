@@ -342,9 +342,9 @@ module.exports = {
     {
       "type": "Panel",
       "center": [
-        "c.w - bo/2",
+        "c.w - (bo - pb.t)/2 * Math.sin(Math.PI12)",
         "c.h/2",
-        "c.t - bo/2"
+        "c.t - (bo - pb.t)/2 * Math.sin(Math.PI12)"
       ],
       "demensions": [
         "pbw",
@@ -363,14 +363,14 @@ module.exports = {
     {
       "type": "Cutter",
       "center": [
-        "c.t",
+        "c.w + bo/4*Math.sin(Math.PI/2)",
         "c.h/2",
-        "c.w"
+        "c.t + bo/4*Math.sin(Math.PI/2)"
       ],
       "demensions": [
-        "backCutterDem",
+        "bo*2",
         "c.h",
-        "backCutterDem"
+        "bo*2"
       ],
       "rotation": [
         0,
@@ -426,7 +426,7 @@ module.exports = {
     {
       "type": "Panel",
       "center": [
-        "pbl.w / 2 + pl.t ",
+        "pbr.w / 2 + pl.t ",
         "c.h/2",
         "c.t - t / 2"
       ],
@@ -440,16 +440,16 @@ module.exports = {
         0,
         0
       ],
-      "name": "Panel.Back.Left",
-      "code": "pbl",
-      "id": "qnpktr8"
+      "name": "Panel.Back.Right",
+      "code": "pbr",
+      "id": "a1yypp5"
     },
     {
       "type": "Cutter",
       "center": [
-        "1000",
+        "pbl.c.x + cpbl.t",
         "pbl.c.y",
-        "pbl.c.z + pbl.t"
+        "pbl.c.z"
       ],
       "demensions": [
         "pbl.d.x",
@@ -470,7 +470,7 @@ module.exports = {
       "center": [
         "c.w - pbr.t/2",
         "c.h/2",
-        "pbr.w/2 + pr.t"
+        "pbl.w/2 + pr.t"
       ],
       "demensions": [
         "c.t - bo",
@@ -482,16 +482,16 @@ module.exports = {
         "90",
         0
       ],
-      "name": "Panel.Back.Right",
-      "code": "pbr",
-      "id": "a1yypp5"
+      "name": "Panel.Back.Left",
+      "code": "pbl",
+      "id": "qnpktr8"
     },
     {
       "type": "Cutter",
       "center": [
-        "1000",
+        "pbr.c.x",
         "pbr.c.y",
-        "pbr.c.z"
+        "pbr.c.z + cpbr.t"
       ],
       "demensions": [
         "pbr.d.x",
@@ -511,7 +511,7 @@ module.exports = {
       "type": "Panel",
       "center": [
         "c.w / 2",
-        "c.h - topInsetDepth - t / 2",
+        "c.h - topInsetDepth - pt.t / 2",
         "c.t / 2"
       ],
       "demensions": [
@@ -524,7 +524,7 @@ module.exports = {
         "0",
         0
       ],
-      "name": "Panal.top",
+      "name": "Panel.Top",
       "code": "pt",
       "id": "0p8zyq0"
     },
@@ -532,7 +532,7 @@ module.exports = {
       "type": "Panel",
       "center": [
         "c.w / 2",
-        "bottomInsetDepth + t / 2",
+        "bottomInsetDepth + pbtm.t / 2",
         "c.t / 2"
       ],
       "demensions": [
@@ -545,7 +545,7 @@ module.exports = {
         "0",
         0
       ],
-      "name": "Panal.top",
+      "name": "Panel.Bottom",
       "code": "pbtm",
       "id": "uqb7ksc"
     },
@@ -666,18 +666,18 @@ module.exports = {
       "type": "Dado",
       "malePartCode": "pbl",
       "femalePartCode": "pl",
-      "maleOffset": "pl.t",
+      "maleOffset": "pbl.t/2",
       "demensionAxis": "x",
-      "centerAxis": "+y",
+      "centerAxis": "-z",
       "id": "861ea5i"
     },
     {
       "type": "Dado",
       "malePartCode": "pbr",
       "femalePartCode": "pr",
-      "maleOffset": "pr.t",
+      "maleOffset": "pr.t / 2",
       "demensionAxis": "x",
-      "centerAxis": "+y",
+      "centerAxis": "-x",
       "id": "t0ywrvc"
     },
     {
@@ -788,9 +788,9 @@ module.exports = {
         ],
         "outer": [
           {
-              "x": "rightOuterLimit",
-              "y": "topOuterLimit",
-              "z": "frontDepthMin"
+            "x": "rightOuterLimit",
+            "y": "topOuterLimit",
+            "z": "frontDepthMin"
           },
           {
             "x": "leftOuterLimit",
@@ -809,12 +809,12 @@ module.exports = {
           }
         ]
       },
-
       "state": {
         "innerOouter": true,
         "index": 0,
         "xOyOz": "z"
-      }
+      },
+      "id": "hofivl0"
     }
   ]
 },
@@ -1198,7 +1198,7 @@ module.exports = {
           "0",
           0
         ],
-        "name": "Panal.top",
+        "name": "Panel.Top",
         "code": "pt"
       },
       {
@@ -1498,7 +1498,7 @@ module.exports = {
           "0",
           0
         ],
-        "name": "Panal.top",
+        "name": "Panal-Top",
         "code": "pt"
       },
       {
@@ -1518,7 +1518,7 @@ module.exports = {
           "0",
           0
         ],
-        "name": "Panal.top",
+        "name": "Panel.Bottom",
         "code": "pbtm"
       },
       {
@@ -1932,7 +1932,7 @@ module.exports = {
         "0",
         0
       ],
-      "name": "Panal.top",
+      "name": "Panel.Top",
       "code": "pt"
     },
     {
@@ -1952,7 +1952,7 @@ module.exports = {
         "0",
         0
       ],
-      "name": "Panal.top",
+      "name": "Panel.Bottom",
       "code": "pbtm"
     },
     {

@@ -26,24 +26,6 @@ function normalize (verts, normal, reverse) {
   return reverse ? returnValue.reverse() : returnValue;
 }
 
-function door(face1, face2) {
-  const front = new CSG.Polygon(normalize(face1, [+1, 0, 0]));
-  front.plane.normal = new CSG.Vector([0,0+1, 0,0]);
-  const back = new CSG.Polygon(normalize(face2, [-1, 0, 0], true));
-  back.plane.normal = new CSG.Vector([0,0,1,0,0]);
-  const top = new CSG.Polygon(normalize([face1[0], face1[1], face2[1], face2[0]], [0,1,0], true));
-  top.plane.normal = new CSG.Vector([0, 1, 0]);
-  const left = new CSG.Polygon(normalize([face2[3], face2[0], face1[0], face1[3]], [-1,0,0]));
-  left.plane.normal = new CSG.Vector([-1, 0, 0]);
-  const right = new CSG.Polygon(normalize([face1[1], face1[2], face2[2], face2[1]], [1,0,0], true));
-  right.plane.normal = new CSG.Vector([1, 0, 0]);
-  const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]], [0,-1,0]));
-  bottom.plane.normal = new CSG.Vector([0, -1, 0]);
-
-  const poly = CSG.fromPolygons([front, back, top, left, right, bottom]);
-  return poly;
-}
-
 class ThreeView extends Lookup {
   constructor() {
     super();
@@ -53,13 +35,10 @@ class ThreeView extends Lookup {
     // const p = pull(5,2);
     const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
           new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel();
-    // const p = door([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}],
-    //       [{x:0, y: 4, z: 4}, {x:4, y: 4, z: 4}, {x:4, y: 0, z: 4}, {x:0, y: 0, z: 4}]);
     // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
     // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
     p.setColor([0, 255, 0])
-    let front, left, top;
-    let panzFront, panzLeft, panzTop;
+    let draw, panz;
     let threeDModel;
     document.body.append(cnt);
     this.maxDem = () => maxDem;
@@ -67,43 +46,21 @@ class ThreeView extends Lookup {
 
     const color = 'black';
     const width = .2;
-    const cache = {front: {}, left: {}, top: {}};
 
-    const drawFront = (refresh) => {
-      Layout2D.release('three-view-front');
-        const lm = this.lastModel();
-        if (lm === undefined) return;
-        const xy = lm.xy;
-        const twoDmap = Polygon2d.lines(...xy);
-        if (twoDmap.length < 300) {
-          const measurements = LineMeasurement2d.measurements(twoDmap);
-          cache.front.twoDmap = twoDmap;
-          cache.front.measurements = measurements;
-        }
-      front(cache.front.twoDmap, color, width);
-      front(cache.front.measurements, 'grey');
-    }
-    const drawLeft = (refresh) => {
-      Layout2D.release('three-view-left');
-      const lm = this.lastModel();
-      if (lm === undefined) return;
-      const twoDmap = Polygon2d.lines(...lm.xz);
-      if (twoDmap.length < 100) {
-        left(twoDmap, color, width);
-        const measurements = LineMeasurement2d.measurements(twoDmap);
-        left(measurements, 'grey');
+    function drawView (refresh) {
+      Layout2D.release(`three-view`);
+      let model = instance.lastModel();
+      model ||= instance.lastRendered();
+      if (model === undefined) return;
+      const twoDmap = model.threeView;
+      if (twoDmap.measurments === undefined) {
+        const allLines = twoDmap.front.concat(twoDmap.right.concat(twoDmap.top));
+        twoDmap.measurments = LineMeasurement2d.measurements(allLines);
       }
-    }
-    const drawTop = (refresh) => {
-      Layout2D.release('three-view-top');
-      const lm = this.lastModel();
-      if (lm === undefined) return;
-      const twoDmap = Polygon2d.lines(...lm.yz);
-      if (twoDmap.length < 100) {
-        top(twoDmap, color, width);
-        const measurements = LineMeasurement2d.measurements(twoDmap);
-        top(measurements, 'grey');
-      }
+      draw(twoDmap.front, color, width);
+      draw(twoDmap.right, color, width);
+      draw(twoDmap.top, color, width);
+      draw(twoDmap.measurments, 'grey');
     }
 
     function onPartSelect(elem) {
@@ -114,16 +71,10 @@ class ThreeView extends Lookup {
     }
 
     function init() {
-      front = new Draw2D(du.id('three-view-front'));
-      left = new Draw2D(du.id('three-view-left'));
-      top = new Draw2D(du.id('three-view-top'));
+      draw = new Draw2D(du.id('three-view'));
 
-      panzFront = new PanZoom(front.canvas(), drawFront);
-      panzLeft = new PanZoom(left.canvas(), drawLeft);
-      panzTop = new PanZoom(top.canvas(), drawTop);
-      panzFront.centerOn(0, 0);
-      panzLeft.centerOn(0, 0);
-      panzTop.centerOn(0, 0);
+      panz = new PanZoom(draw.canvas(), drawView);
+      panz.centerOn(0, 0);
 
       if (du.url.breakdown().path.match(/\/.*template$/)) {
         setTimeout(() =>
@@ -136,9 +87,9 @@ class ThreeView extends Lookup {
       if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
       threeDModel.assembly(cabinet);
       threeDModel.update(cabinet);
-      front.clear();left.clear();top.clear();
+      draw.clear();
       setTimeout(() => {
-        drawTop(true);drawLeft(true);drawFront(true);
+        drawView(true);
       }, 1000);
     }
 
@@ -147,15 +98,14 @@ class ThreeView extends Lookup {
       threeDModel.setTargetPartName(partCode);
       threeDModel.update();
       setTimeout(() => {
-        panzFront.once();
-        panzLeft.once();
-        panzTop.once();
+        panz.once();
       }, 500);
       du.id(`three-view-part-code-${this.id()}`).innerText = partCode;
     }
 
     this.threeDModel = () => threeDModel;
     this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;
+    this.lastRendered = () => threeDModel ? threeDModel.getLastRendered() : undefined;
     this.partMap = () => threeDModel ? threeDModel.partMap() : {};
 
     setTimeout(init, 1000);

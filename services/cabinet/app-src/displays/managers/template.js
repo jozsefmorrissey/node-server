@@ -380,7 +380,7 @@ function updateOpeningPoints(template, cabinet) {
 }
 
 const topView = du.id('three-view-top');
-const leftView = du.id('three-view-left');
+const leftView = du.id('three-view-right');
 const frongView = du.id('three-view-front');
 function validateOpenTemplate (elem) {
   const templateBody = du.find('.template-body[template-id]');

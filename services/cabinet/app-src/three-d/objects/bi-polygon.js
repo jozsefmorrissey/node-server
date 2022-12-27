@@ -33,7 +33,7 @@ class BiPolygon {
     this.back = () => new Polygon3D(face2);
     this.normal = () => face2[0].distanceVector(face1[0]).unit();
     this.normalTop = () => face2[3].distanceVector(face2[0]).unit();
-    this.normalLeft = () => face2[1].distanceVector(face2[0]).unit();
+    this.normalRight = () => face2[1].distanceVector(face2[0]).unit();
 
     this.closerPlane = (vertex) => {
       const poly1 = new Plane(...face1);
@@ -79,7 +79,7 @@ class BiPolygon {
       const polys = CSG.fromPolygons([front, back, top, left, right, bottom]);
       polys.normals = {
         front: this.normal(),
-        left: this.normalLeft(),
+        right: this.normalRight(),
         top: this.normalTop()
       }
       return polys;

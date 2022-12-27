@@ -1,12 +1,63 @@
 
 const Tolerance = require('tolerance');
 
+function sortByAttr(attr) {
+  function sort(obj1, obj2) {
+    if (obj2[attr] === obj1[attr]) {
+      return 0;
+    }
+    return obj2[attr]() < obj1[attr]() ? 1 : -1;
+  }
+  return sort;
+}
+
 class ToleranceMap {
   constructor(attributeMap) {
-    const map = [];
+    const map = {};
     const tolerance = new Tolerance(attributeMap);
+    const finalAttrSort = sortByAttr(tolerance.finalAttr());
 
-    function matches(elem, create) {
+    function forEachSet(func, node, attrs, attrIndex) {
+      if ((typeof func) !== 'function') throw new Error('Arg1 must be of type function');
+      if (Array.isArray(node)) {
+        func(node);
+        return;
+      }
+      if (attrs && !node) return;
+      attrs ||= tolerance.attributes();
+      node ||= map;
+      attrIndex ||= 0;
+      const keys = Object.keys(node);
+      for (let index = 0; index < keys.length; index++) {
+        forEachSet(func, node[keys[index]], attrs, attrIndex + 1);
+      }
+    }
+
+    function matches(elem, node, attrs, list, attrIndex) {
+      if (Array.isArray(node)) {
+        list.concatInPlace(node);
+        return;
+      }
+      if (attrs && !node) return;
+      list ||= [];
+      attrs ||= tolerance.attributes();
+      node ||= map;
+      attrIndex ||= 0;
+      const attr = attrs[attrIndex];
+      const bounds = tolerance.bounds[attr](elem);
+      const id = bounds.id;
+      matches(elem, node[bounds.nextId], attrs, list, attrIndex + 1);
+      matches(elem, node[bounds.id], attrs, list, attrIndex + 1);
+      matches(elem, node[bounds.prevId], attrs, list, attrIndex + 1);
+
+      if (attrIndex === 0) {
+        const matchList = list.filter((other) => tolerance.within(elem, other));
+        matchList.sort(finalAttrSort);
+        return matchList;
+      }
+    }
+
+    function getSet(elem) {
       let curr = map;
       let attrs = tolerance.attributes();
       for (let index = 0; index < attrs.length; index += 1) {
@@ -14,29 +65,41 @@ class ToleranceMap {
         const bounds = tolerance.bounds[attr](elem);
         const id = bounds.id;
         if (curr[id] === undefined) {
-          if (create) {
-            if (index < attrs.length -1) curr[id] = {};
-            else curr[id] = [];
-          } else return null;
+          if (index < attrs.length -1) curr[id] = {};
+          else curr[id] = [];
         }
         curr = curr[id];
       }
 
-      if (create) return curr;
-      return curr.filter((elem2) => tolerance.within(elem, elem2));
+      return curr;
     }
 
+    this.forEachSet = forEachSet;
+    this.maxSet = () => {
+      const maxSet = [];
+      forEachSet((set) => maxSet.push(set[0]));
+      maxSet.sort(finalAttrSort);
+      maxSet.reverse();
+      return maxSet;
+    }
+    this.minSet = () => {
+      const minSet = [];
+      forEachSet((set) => minSet.push(set[set.length - 1]));
+      minSet.sort(finalAttrSort);
+      return minSet;
+    }
     this.tolerance = () => tolerance;
 
     this.matches = (elem) => matches(elem);
 
     this.add = (elem) => {
-      let matchArr = matches(elem, true);
+      let matchArr = getSet(elem, true);
       matchArr.push(elem);
+      matchArr.sort(finalAttrSort);
     }
 
     this.remove = (elem) => {
-      const matchArr = matches(elem);
+      const matchArr = getSet(elem);
       if (matchArr) {
         const index = matchArr.indexOf(elem);
         if (index !== -1) matchArr.splice(index, 1);
@@ -46,9 +109,10 @@ class ToleranceMap {
     this.addAll = (list) => {
       for (let index = 0; index < list.length; index++) {
         const elem = list[index];
-        let matchArr = matches(elem, true);
+        let matchArr = getSet(elem, true);
         matchArr.push(elem);
       }
+      matchArr.sort(finalAttrSort);
     }
 
     this.map = () => map;

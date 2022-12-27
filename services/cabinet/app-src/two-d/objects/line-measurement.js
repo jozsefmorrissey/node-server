@@ -5,6 +5,7 @@ const Line2d = require('line');
 const Lookup = require('../../../../../public/js/utils/object/lookup');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
 const approximate = require('../../../../../public/js/utils/approximate.js');
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
 class LineMeasurement2d {
   constructor(line, center, layer, modificationFunction) {
@@ -32,21 +33,21 @@ class LineMeasurement2d {
 
     function notTaken(obj) {
       return (buffer) => {
-        buffer ||= 20;
+        buffer ||= 7.5;
         const closer = obj.closerLine();
         const further = obj.furtherLine();
-        const cStartL = closer.startLine
-        const cEndL = closer.endLine
+        const cStartL = further.startLine
+        const cEndL = further.endLine
         const offsetLine = cStartL.copy();
         offsetLine.length(buffer);
-        const length = approximate(closer.length());
+        const length = approximate(further.length());
         do {
-          const point = modifyMeasurment(offsetLine, closer, buffer, obj.takenLocations);
+          const point = modifyMeasurment(offsetLine, further, buffer, obj.takenLocations);
           if (point) {
             obj.takenLocations.push({point, buffer, length});
-            return closer;
-          } else if (point === undefined) return;
-        } while (true);
+            return further;
+          }
+        } while (buffer < 1000);
       }
     }
     this.I = (l, takenLocations) => {
@@ -111,12 +112,19 @@ function measurementLevel(line) {
   return Math.log(line.length()*line.length())*2;
 }
 
+const lengthSortFunc = (center) => (l1, l2) => {
+  const lengthDiff = l1.length() - l2.length();
+  if (lengthDiff !== 0)
+    return lengthDiff;
+  return center.distance(l2.midpoint()) - center.distance(l1.midpoint());
+}
 LineMeasurement2d.measurements = (lines) => {
-  lines.reorder();
   const verts = Line2d.vertices(lines);
   const center = Vertex2d.center(...verts);
+  lines.sort(lengthSortFunc(center));
+  // lines.sort(lengthSortFunc(center));
   const measurements = [];
-  const lengthMap = {};
+  const lengthMap = new ToleranceMap({length: .00001});
   for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
     const tarVerts = lines[tIndex].liesOn(verts);
     if (tarVerts.length > 2) {
@@ -124,53 +132,41 @@ LineMeasurement2d.measurements = (lines) => {
         const sv = tarVerts[index - 1];
         const ev = tarVerts[index];
         const line = new Line2d(sv,ev);
-        const length = approximate(line.length());
-        if (lengthMap[length] === undefined) lengthMap[length] = [];
-        lengthMap[length].push(line);
-        // measurements.push(new LineMeasurement2d(line, center, 1));
+        lengthMap.add(line);
       }
     }
     if (tarVerts.length > 1) {
       const sv = tarVerts[0];
       const ev = tarVerts[tarVerts.length - 1];
       const line = new Line2d(sv,ev);
-      const length = approximate(line.length());
-      if (lengthMap[length] === undefined) lengthMap[length] = [];
-      lengthMap[length].push(line);
-      // measurements.push(new LineMeasurement2d(line, center, 2));
+      lengthMap.add(line);
     }
   }
 
-  const lengths = Object.keys(lengthMap);
+
+  const lengths = Object.keys(lengthMap.map());
+  const slopeMap = new ToleranceMap({length: .00001, slope: .1});
   for (index = 0; index < lengths.length; index += 1) {
-    const slopeMap = {};
-    let lines = lengthMap[lengths[index]];
-    for(let li = 1; li < lines.length; li++) {
+    let lines = lengthMap.map()[lengths[index]];
+    //TODO: possibly restrict the measurements that display....
+    for(let li = 0; li < lines.length; li++) {
       const line = lines[li];
-      const mp1 = lines[li-1].midpoint();
-      const mp2 = line.midpoint();
-      if (!mp1.equal(mp2)) {
-        const center2center = new Line2d(mp1, mp2);
-        const slopeMag = approximate.abs(center2center.slope());
-        if (!slopeMap[slopeMag] && approximate(line.length()) !== 0) {
-          for (let si = 0; si < li; si++) {
-            const c2c = new Line2d(lines[si].midpoint(), line.midpoint());
-            const slopeMag = approximate.abs(center2center.slope());
-            slopeMap[slopeMag] = true;
-          }
-        } else {
-          lines.splice(li, 1);
-          li--;
-        }
+      const perpLine = line.perpendicular();
+      if (slopeMap.matches(perpLine).length === 0) {
+        slopeMap.add(perpLine);
+      } else {
+        lines.splice(li, 1);
+        li--;
       }
     }
-    if (lines.length > 1) lines.splice(0,1);
     measurements.concatInPlace(lines);
   }
 
   for (let index = 0; index < measurements.length; index++)
     if (approximate.abs(measurements[index].length()) !== 0)
       measurements[index] = new LineMeasurement2d(measurements[index], center, measurementLevel(measurements[index]));
+    else
+      measurements.splice(index--, 1);
 
   return measurements;
 }

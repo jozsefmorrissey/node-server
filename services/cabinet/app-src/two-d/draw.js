@@ -1,17 +1,20 @@
 
 const Circle2d = require('./objects/circle');
-const Line2d = require('./objects/line');
-const LineMeasurement2d = require('./objects/line-measurement');
+const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
+const tol = .1;
+let vertLocTolMap;
 
 class Draw2d {
   constructor(canvas) {
     const ctx = canvas.getContext('2d');
     let takenLocations;
+    let coloredLocations;
 
     function draw(object, color, width) {
       if (object === undefined) return;
       if (Array.isArray(object)) {
         takenLocations = [];
+        vertLocTolMap = new ToleranceMap({x: tol, y: tol});
         for (let index = 0; index < object.length; index += 1)
           draw(object[index], color, width);
         return;
@@ -51,6 +54,29 @@ class Draw2d {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
     }
+    const colors = [
+      'indianred', 'gray', 'fuchsia', 'lime', 'black', 'lightsalmon', 'red',
+      'maroon', 'yellow', 'olive', 'lightcoral', 'green', 'aqua', 'white',
+      'teal', 'darksalmon', 'blue', 'navy', 'salmon', 'silver', 'purple'
+    ];
+    let colorIndex = 0;
+
+    let rMultiplier = 1;
+    function identifyVerticies(line) {
+      vertLocTolMap.add(line.startVertex());
+      vertLocTolMap.add(line.endVertex());
+      const svHits = vertLocTolMap.matches(line.startVertex()).length;
+      const evHits = vertLocTolMap.matches(line.endVertex()).length;
+      const svRadius = Math.pow(.5,  1 + ((svHits - 1) * .75));
+      const evRadius = Math.pow(.5,  1 + ((evHits - 1) * .75));
+
+      const vertId = 13*(line.startVertex().x() + line.endVertex().x() + 13*(line.startVertex().y() + line.endVertex().y()));
+      const ccolor = colors[Math.floor(line.length() + vertId) % colors.length];
+
+      draw.circle(new Circle2d(svRadius * rMultiplier, line.startVertex()), null, ccolor, .01);
+      draw.circle(new Circle2d(evRadius * rMultiplier, line.endVertex()), null, ccolor, .01);
+    }
+
     draw.line = (line, color, width, doNotMeasure) => {
       if (line === undefined) return;
       color = color ||  'black';
@@ -62,6 +88,7 @@ class Draw2d {
       ctx.moveTo(line.startVertex().x(), line.startVertex().y());
       ctx.lineTo(line.endVertex().x(), line.endVertex().y());
       ctx.stroke();
+      // identifyVerticies(line);
     }
 
     draw.plane = (plane, color, width) => {
@@ -131,7 +158,7 @@ class Draw2d {
     draw.circle = (circle, lineColor, fillColor, lineWidth) => {
       const center = circle.center();
       ctx.beginPath();
-      ctx.lineWidth = lineWidth || 2;
+      ctx.lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
       ctx.strokeStyle = lineColor || 'black';
       ctx.fillStyle = fillColor || 'white';
       ctx.arc(center.x(),center.y(), circle.radius(),0, 2*Math.PI);
@@ -160,7 +187,7 @@ class Draw2d {
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.font = (Math.abs((Math.log(Math.floor(line.length() * 10)))) || .1) + "px Arial";
+      ctx.font = '3px Arial';//(Math.abs((Math.log(Math.floor(line.length() * 10)))) || .1) + "px Arial";
       ctx.lineWidth = .2;
       ctx.strokeStyle = 'black';
       ctx.fillStyle =  'black';

@@ -387,16 +387,23 @@ Function.safeStdLibAddition(Array, 'shuffle', function() {
   return this;
 });
 
-Function.safeStdLibAddition(Array, 'concatInPlace', function (arr) {
+Function.safeStdLibAddition(Array, 'concatInPlace', function (arr, checkForDuplicats) {
   if (arr === this) return;
   for (let index = 0; index < arr.length; index += 1) {
-    if (this.indexOf(arr[index]) !== -1) {
+    if (checkForDuplicats && this.indexOf(arr[index]) !== -1) {
       console.error('duplicate');
     } else {
       this[this.length] = arr[index];
     }
   }
 });
+
+// const nativeSort = Array.sort;
+// Function.safeStdLibAddition(Array, 'sort', function() {
+//   if ((typeof stringOfunc) === 'string')
+//     return nativeSort.apply(this, [sortByAttr(stringOfunc)]);
+//   return nativeSort.apply(this, arguments);
+// }, true);
 
 Function.safeStdLibAddition(Array, 'copy', function (arr) {
   this.length = 0;
@@ -627,6 +634,23 @@ Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
   if (!(obj instanceof Object)) return obj;
   return JSON.parse(JSON.stringify(obj));
 }, true);
+
+const defaultInterval = 1000;
+const lastTimeStamps = {};
+function intervalFunction() {
+  const caller = intervalFunction.caller;
+  let interval = arguments[0];
+  if (!Number.isFinite(interval) || interval > 60000) interval = defaultInterval;
+  else {
+    arguments = Array.from(arguments)
+    arguments.splice(0,1);
+  }
+  const lastTime = lastTimeStamps[caller];
+  const thisTime = new Date().getTime();
+  if (lastTime === undefined || lastTime + interval < thisTime) this(...arguments);
+  lastTimeStamps[caller] = thisTime;
+}
+Function.safeStdLibAddition(Function, 'subtle',   intervalFunction);
 
 Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
   if (isRegex !== true) {

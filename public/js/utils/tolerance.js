@@ -1,40 +1,70 @@
 
+const DEFAULT_TOLERANCE = .0001;
+
+function round(val) {
+  return Math.round(1000000000000 * val)/1000000000000
+}
+
+function decimalLimit(value, limit) {
+  return (new String(value)).replace(/([0-9]{1,})(.[0-9]{1,}|)/, '$2').length > limit;
+}
+
+function rangeStr(lower, upper) {
+  return `${round(lower)} => ${round(upper)}`;
+}
+
+function boundsFunc(attr, attributeMap, tolerance) {
+  const singleValue = attr === undefined;
+  return (elem) => {
+    const tol = singleValue ? tolerance : attributeMap[attr];
+    const value = singleValue ? elem : Object.pathValue(elem, attr);
+    let lower, upper, center;
+    if (Number.NaNfinity(value)) return {lower: value, upper: value, id: rangeStr(value, value)};
+    else {
+      const mod = value % tol;
+      const center = mod > tol/2 ? value + (tol - mod) : value - mod;
+      lower = round(center - tol);
+      upper = round(center + tol);
+      if (lower>upper) {const temp = lower; lower = upper; upper = temp;}
+      const prevId = rangeStr(lower - tol, center);
+      const id = rangeStr(lower, upper);
+      const nextId = rangeStr(center, upper + tol);
+      if (decimalLimit(lower, 10) || decimalLimit(upper, 10))
+        console.warn.subtle(`Bounding limits may be incorrect: ${id}`);
+      return {lower, upper, prevId, id, nextId};
+    }
+  }
+}
+
+function withinBounds(attr, attributeMap, tolerance) {
+  const singleValue = attr === undefined;
+  return (value1, value2) => {
+    if (value1 === value2) return true;
+    const tol = singleValue ? tolerance : attributeMap[attr];
+    return Math.abs(value1 - value2) < tol;
+  }
+}
 
 class Tolerance {
-  constructor(attributeMap) {
+  constructor(attributeMap, tolerance) {
+    attributeMap ||= {};
+    let within, bounds;
     const attrs = Object.keys(attributeMap);
+    const singleValue = attrs.length === 0;
     this.bounds = {};
-    this.attributes = () => attrs;
-
-    function round(val) {
-      return Math.round(1000000000000 * val)/1000000000000
+    if (!singleValue)
+      this.attributes = () => attrs;
+    else {
+      tolerance ||= DEFAULT_TOLERANCE;
+      bounds = boundsFunc();
+      within = withinBounds(undefined, undefined, tolerance);
     }
 
-    function decimalLimit(value, limit) {
-      return (new String(value)).replace(/([0-9]{1,})(.[0-9]{1,}|)/, '$2').length > limit;
-    }
+    this.finalAttr = () => attrs[attrs.length - 1];
 
-    function bounds(attr) {
-      return (elem) => {
-        const tol = attributeMap[attr];
-        const value = Object.pathValue(elem, attr);
-        let lower, upper;
-        if (Number.NaNfinity(value)) lower = upper = value;
-        else {
-          const mod = value % tol;
-          const center = mod > tol/2 ? value + (tol - mod) : value - mod;
-          lower = round(center - tol);
-          upper = round(center + tol);
-          if (lower>upper) {const temp = lower; lower = upper; upper = temp;}
-        }
-        const id = `${lower} => ${upper}`;
-        if (decimalLimit(lower, 10) || decimalLimit(upper, 10))
-          console.warn(`Bounding limits may be incorrect: ${id}`);
-        return {lower, upper, id};
-      }
-    }
 
     this.boundries = (elem) => {
+      if (singleValue) return bounds(elem).id;
       let boundries = '';
       for (let index = 0; index < attrs.length; index++) {
         boundries += this.bounds[attrs[index]](elem).id + '\n';
@@ -42,30 +72,23 @@ class Tolerance {
       return boundries.substr(0,boundries.length - 1);
     }
 
-    function withinBounds(attr) {
-      return (value1, value2) => {
-        if (value1 === value2) return true;
-        const tolerance = attributeMap[attr];
-        return Math.abs(value1 - value2) < tolerance;
-      }
-    }
-
     for (let index = 0; index < attrs.length; index++) {
       const attr = attrs[index];
-      this.bounds[attr] = bounds(attr);
-      this.bounds[attr].within = withinBounds(attr);
+      this.bounds[attr] = boundsFunc(attr, attributeMap);
+      this.bounds[attr].within = withinBounds(attr, attributeMap);
     }
 
     this.within = (elem1, elem2) => {
-      let within = true;
+      if (singleValue) return within(elem1, elem2);
+      let isWithin = true;
       for (let index = 0; index < attrs.length; index++) {
         const attr = attrs[index];
         const value1 = Object.pathValue(elem1, attr);
         const value2 = Object.pathValue(elem2, attr);
-        within &&= this.bounds[attr].within(value1, value2);
-        if (!within) return false;
+        isWithin &&= this.bounds[attr].within(value1, value2);
+        if (!isWithin) return false;
       }
-      return within;
+      return isWithin;
     }
   }
 }

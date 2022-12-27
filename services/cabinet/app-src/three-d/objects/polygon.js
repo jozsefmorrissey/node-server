@@ -5,10 +5,11 @@ const Line3D = require('./line');
 const Vertex3D = require('./vertex');
 const Vector3D = require('./vector');
 const Plane = require('./plane');
-const approximate = require('../../../../../public/js/utils/approximate.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 
 const CSG = require('../../../public/js/3d-modeling/csg.js');
+let lastMi;
 
 class Polygon3D {
   constructor(initialVerticies) {
@@ -254,9 +255,6 @@ class Polygon3D {
         for (let index = 0; index < lines.length; index += 1) {
           const line = lines[index];
           if (line.isPoint()) {
-            console.log('chew chew');
-          }
-          if (line.isPoint()) {
             lines = JSON.clone(lines);
             lines.splice(index, 1);
             removed = true;
@@ -305,7 +303,7 @@ class Polygon3D {
       if (!this.normal().parrelle(other.normal())) return;
       const thisPlane = this.toPlane();
       const otherPlane = other.toPlane();
-      if (!thisPlane.equivalent(otherPlane)) return;
+      // if (!thisPlane.equivalent(otherPlane)) return;
       const lineMap = this.lineMap();
       const allOtherLines = other.lines();
       let merged;
@@ -316,8 +314,8 @@ class Polygon3D {
           thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
           otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
         } else if (lineMap.matches(curr.negitive()) !== null) {
-          thisLines = this.getLines(curr.endVertex, curr.startVertex, true);
-          otherLines = other.getLines(curr.startVertex, curr.endVertex, true);
+          thisLines = this.getLines(curr.endVertex, curr.startVertex, false);
+          otherLines = other.getLines(curr.startVertex, curr.endVertex, false);
         }
 
         if (thisLines && otherLines) {
@@ -346,33 +344,20 @@ class Polygon3D {
       }
     }
 
-    function mostInformation() {
-      const verts = instance.verticies();
-      const center = instance.center();
-      const diff = {x: 0, y:0, z: 0};
-      for(let index = 0; index < verts.length; index++) {
-        const v = verts[index];
-        diff.x = Math.abs(v.x - center.x);
-        diff.y = Math.abs(v.y - center.y);
-        diff.z = Math.abs(v.z - center.z);
-      }
-      return diff.x < diff.y ?
-            (diff.x < diff.z ? ['y', 'z'] :
-            (diff.z < diff.y ? ['x', 'y'] : ['x', 'z'])) :
-            (diff.y < diff.z ? ['x', 'z'] : ['x', 'y']);
-    }
+    this.viewFromVector = () => Polygon3D.viewFromVector([this])[0];
+    this.mostInformation = () => Polygon3D.mostInformation([this])[0];
 
     this.to2D = (x, y) => {
       if (!x || !y) {
-        const mi = mostInformation();
+        const mi = this.mostInformation();
         x ||= mi[0];
         y ||= mi[1];
-      } else {
-        const mi = mostInformation();
-        if (x !== mi[0] || y !== mi[1]) {
-          console.log('some ting wong');
+        if (lastMi && (mi[0] !== lastMi[0] || mi[1] !== lastMi[1])) {
+          console.info.subtle('change in mi');
         }
+        lastMi = mi;
       }
+
       const verts = this.verticies();
       const verts2D = [];
       for (let index = 0; index < verts.length; index++) {
@@ -382,6 +367,15 @@ class Polygon3D {
     }
 
     this.toString = () => {
+      let str = '';
+      for (let index = 0; index < lines.length; index++) {
+        str += ` => ${lines[index].startVertex.toString()}`;
+      }
+      return `${str.substring(4)} normal: ${this.normal()}`;
+    }
+
+
+    this.toDetailString = () => {
       let startStr = '';
       let endStr = '';
       for (let index = 0; index < lines.length; index++) {
@@ -394,15 +388,23 @@ class Polygon3D {
   }
 }
 
+function printMerge(target, other, merged) {
+  console.log(`target: ${target.toString()}`);
+  console.log(`other: ${other.toString()}`);
+  console.log(`merged: ${merged.toString()}`);
+  target.merge(other);
+}
+
+let doIt = false;
 Polygon3D.merge = (polygons) => {
   let currIndex = 0;
-  console.log(polygons.length);
   while (currIndex < polygons.length - 1) {
     const target = polygons[currIndex];
     for (let index = currIndex + 1; index < polygons.length; index += 1) {
       const other = polygons[index];
       const merged = target.merge(other);
       if (merged) {
+        if (doIt) printMerge(target, other, merged);
         polygons[currIndex--] = merged;
         polygons.splice(index, 1);
         break;
@@ -410,25 +412,87 @@ Polygon3D.merge = (polygons) => {
     }
     currIndex++;
   }
-  console.log(polygons.length);
 }
 
 const xyPoly = new Polygon3D([[1,10,0],[11,2,0],[22,1,0]]);
 const yzPoly = new Polygon3D([[6,0,1],[10,0,27],[2,0,11]]);
 const xzPoly = new Polygon3D([[0,11,13],[0,12,23],[0,22,3]]);
 
+Polygon3D.mostInformation = (polygons) => {
+  const diff = {x: 0, y:0, z: 0};
+  for (let pIndex = 0; pIndex < polygons.length; pIndex++) {
+    const poly = polygons[pIndex];
+    const verts = poly.verticies();
+    const center = poly.center();
+    for(let index = 0; index < verts.length; index++) {
+      const v = verts[index];
+      diff.x += Math.abs(v.x - center.x);
+      diff.y += Math.abs(v.y - center.y);
+      diff.z += Math.abs(v.z - center.z);
+    }
+  }
+  return diff.x < diff.y ?
+        (diff.x < diff.z ? ['y', 'z'] :
+        (diff.z < diff.y ? ['x', 'y'] : ['x', 'z'])) :
+        (diff.y < diff.z ? ['x', 'z'] : ['x', 'y']);
+}
+
 // const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
 // const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
 const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
-const to2D = (x,y) => (p) => p.to2D(x,y)
-Polygon3D.toTwoD = (polygons) => {
-  const frontView = Polygon3D.viewFromVector(polygons, polygons.normals.front);
-  const leftView = Polygon3D.viewFromVector(polygons, polygons.normals.left);
-  const topView = Polygon3D.viewFromVector(polygons, polygons.normals.top);
-  const map = {xy: frontView.map(to2D()),
-                xz: leftView.map(to2D()),
-                yz: topView.map(to2D())};
-  return map;
+const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
+const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
+Polygon3D.toTwoD = (polygons, normals, gap) => {
+  normals ||= defaultNormals;
+  gap ||= 20;
+  const frontView = Polygon3D.viewFromVector(polygons, normals.front);
+  const rightView = Polygon3D.viewFromVector(polygons, normals.right);
+  const topView = Polygon3D.viewFromVector(polygons, normals.top);
+
+  const frontAxis = Polygon3D.mostInformation(frontView);
+  const rightAxis = Polygon3D.mostInformation(rightView);
+  const topAxis = Polygon3D.mostInformation(topView);
+
+  if (topAxis.indexOf(frontAxis[1]) !== -1) frontAxis.reverse();
+  if (topAxis.indexOf(rightAxis[1]) !== -1) rightAxis.reverse();
+  if (frontAxis.indexOf(topAxis[1]) !== -1) topAxis.reverse();
+
+  const front2D = frontView.map(to2D(frontAxis));
+  const right2D = rightView.map(to2D(rightAxis));
+  const top2D = topView.map(to2D(topAxis));
+
+  const frontMinMax = Polygon2D.minMax(...front2D);
+  const rightMinMax = Polygon2D.minMax(...right2D);
+  const topMinMax = Polygon2D.minMax(...top2D);
+
+  const rightCenterOffset = frontMinMax.max.x()/2 + gap + rightMinMax.max.x()/2;
+  const leftCenterOffset = -1 * (frontMinMax.max.y()/2 + gap + topMinMax.max.y()/2);
+  Polygon2D.centerOn({x:0,y:0}, front2D);
+  Polygon2D.centerOn({x:rightCenterOffset, y:0}, right2D);
+  Polygon2D.centerOn({x:0,y:leftCenterOffset}, top2D);
+
+  const front = Polygon2D.lines(front2D);
+  const right = Polygon2D.lines(right2D);
+  const top = Polygon2D.lines(top2D);
+
+  return {front, right, top}
+}
+
+Polygon3D.fromCSG = (polys) => {
+  const isArray = Array.isArray(polys);
+  if (!isArray) polys = [polys];
+  const poly3Ds = [];
+  for (let index = 0; index < polys.length; index++) {
+    const poly = polys[index];
+    const verts = [];
+    for (let vIndex = 0; vIndex < poly.vertices.length; vIndex++) {
+      const v = poly.vertices[vIndex];
+      verts.push(new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
+    }
+    poly3Ds.push(new Polygon3D(verts));
+  }
+  if (!isArray) return poly3Ds[0];
+  return poly3Ds;
 }
 
 

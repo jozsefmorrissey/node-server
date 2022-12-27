@@ -5,6 +5,7 @@ const approximate10 = require('../../../../../public/js/utils/approximate.js').n
 
 class Vertex2d {
   constructor(point) {
+    if (arguments.length === 2) point = {x:arguments[0], y: arguments[1]};
     if (Array.isArray(point)) point = {x: point[0], y: point[1]};
     if (point instanceof Vertex2d) return point;
     let modificationFunction;
@@ -98,7 +99,29 @@ Vertex2d.fromJson = (json) => {
   return new Vertex2d(json.point);
 }
 
+Vertex2d.minMax = (...verticies) => {
+  if (Array.isArray(verticies[0])) verticies = verticies[0];
+  const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
+  const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+  for (let index = 0; index < verticies.length; index += 1) {
+    const vert = verticies[index];
+    if (max.x() < vert.x()) max.x(vert.x());
+    if (max.y() < vert.y()) max.y(vert.y());
+    if (min.x() > vert.x()) min.x(vert.x());
+    if (min.y() > vert.y()) min.y(vert.y());
+  }
+  return {min, max};
+}
+
 Vertex2d.center = (...verticies) => {
+  if (Array.isArray(verticies[0])) verticies = verticies[0];
+  const minMax = Vertex2d.minMax(...verticies);
+  const centerX = minMax.min.x() + (minMax.max.x() - minMax.min.x())/2;
+  const centerY = minMax.min.y() + (minMax.max.y() - minMax.min.y())/2;
+  return new Vertex2d(centerX, centerY);
+}
+
+Vertex2d.weightedCenter = (...verticies) => {
   if (Array.isArray(verticies[0])) verticies = verticies[0];
   let x = 0;
   let y = 0;
@@ -112,6 +135,8 @@ Vertex2d.center = (...verticies) => {
   });
   return new Vertex2d({x: x/count, y: y/count});
 }
+
+// Vertex2d.center = Vertex2d.weightedCenter;
 
 Vertex2d.sort = (a, b) =>
     a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);

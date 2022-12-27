@@ -10,10 +10,13 @@ const Polygon3D = require('./objects/polygon');
 const Polygon2d = require('../two-d/objects/polygon');
 const Vertex3D = require('./objects/vertex');
 const Vector3D = require('./objects/vector');
+const Line3D = require('./objects/line');
+const Plane = require('./objects/plane');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const OrientationArrows = require('../displays/orientation-arrows.js');
 const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
+const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
 
 const colors = {
   indianred: [205, 92, 92],
@@ -191,28 +194,38 @@ class ThreeDModel {
 
     function toTwoDpolys(model) {
       if (model === undefined) return undefined;
-      if (model.twoDpolys) return model.twoDpolys;
-      const polys = [];
-      model.polygons.forEach((p, index) => {
-        const norm = p.vertices[0].normal;
-        const verticies = p.vertices.map((v) => (new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z})));
-        polys.push(new Polygon3D(verticies));
-      });
+      if (model.threeView) return model;
+      const polys = Polygon3D.fromCSG(model.polygons);
       polys.normals = model.normals;
       Polygon3D.merge(polys);
-      const twoDpolys = Polygon3D.toTwoD(polys);
-      model.twoDpolys = twoDpolys;
-      return twoDpolys;
+      const twoDpolys = Polygon3D.toTwoD(polys, polys.normals);
+      model.threeView = twoDpolys;
+      return model;
     }
 
     let lm;
     this.lastModel = () => toTwoDpolys(lm);
 
+    const topVector = new Vector3D(0,-1,0);
+
+
+    const polyToleranceMap = new ToleranceMap({'vector.i': .1,'vector.j': .1,'vector.k': .1, length: .0001});
+    function create2DcabinetImage(model) {
+      model.threeView = Polygon3D.toTwoD(Polygon3D.fromCSG(model.polygons));
+      model.threeView.front = Polygon2d.outline(model.threeView.front).lines();
+      model.threeView.right = Polygon2d.outline(model.threeView.right).lines();
+      model.threeView.top = Polygon2d.outline(model.threeView.top).lines();
+      return model;
+    }
+
     function addModelAttrs(model) {
       const max = new Vertex3D(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
       const min = new Vertex3D(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER);
       for (let index = 0; index < model.polygons.length; index++) {
-        const verts = model.polygons[index].vertices;
+        const poly = model.polygons[index];
+
+        const verts = poly.vertices;
+        const vs = [];
         for (let vIndex = 0; vIndex < verts.length; vIndex++) {
           const v = verts[vIndex].pos;
           if (v.x > max.x) max.x = v.x;
@@ -221,11 +234,16 @@ class ThreeDModel {
           if (v.y < min.y) min.y = v.y;
           if (v.z > max.z) max.z = v.z;
           if (v.z < min.z) min.z = v.z;
+          vs[vIndex] = v;
         }
+        poly.center = Vertex3D.center(vs);
+        poly.plane = new Plane(vs[0], vs[1], vs[2]);
       }
       model.center = Vertex3D.center(max, min);
       model.max = max;
       model.min = min;
+
+      create2DcabinetImage(model);
     }
 
     this.render = function () {

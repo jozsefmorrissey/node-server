@@ -2,6 +2,12 @@
 const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 
+
+function isZero(val) {
+  return Vector3D.tolerance.bounds.i.within(val, 0);
+}
+
+
 class Vector3D {
   constructor(i, j, k) {
     if (i instanceof Vector3D) return i;
@@ -40,12 +46,12 @@ class Vector3D {
     this.dot = (vector) =>
       this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
     this.perpendicular = (vector) =>
-      approximate.eq(this.dot(vector), 0);
+      Vector3D.tolerance.within(this.dot(vector), 0);
     this.parrelle = (vector) => {
-      let coef = this.i() / vector.i();
-      if (!Number.isFinite(coef)) coef = this.j() / vector.j();
-      if (!Number.isFinite(coef)) coef = this.k() / vector.k();
-      if (!Number.isFinite(coef) || coef === 0) return false;
+      let coef = isZero(this.i()) ? 0 : this.i() / vector.i();
+      if (isZero(coef)) coef = isZero(this.j()) ? 0 : this.j() / vector.j();
+      if (isZero(coef)) coef = isZero(this.k()) ? 0 : this.k() / vector.k();
+      if (isZero(coef)) return false;
       const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
       return Vector3D.tolerance.within(equivVect, this);
     }

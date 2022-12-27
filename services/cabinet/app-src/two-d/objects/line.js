@@ -5,7 +5,7 @@ const Vertex2d = require('./vertex');
 const Circle2d = require('./circle');
 
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-const tol = .00001;
+const tol = .0001;
 const withinTol = new Tolerance({'value': tol}).bounds.value.within;
 
 class Line2d {
@@ -63,7 +63,8 @@ class Line2d {
         const xBounded = c.x() < this.maxX() + tol && c.x() > this.minX() - tol;
         const yBounded = c.y() < this.maxY() + tol && c.y() > this.minY() - tol;
         if (slopeEqual && xBounded && yBounded) return true;
-        return this.withinSegmentBounds(l.startVertex()) || this.withinSegmentBounds(l.endVertex());
+        return this.withinSegmentBounds(l.startVertex()) || this.withinSegmentBounds(l.endVertex()) ||
+                l.withinSegmentBounds(this.startVertex()) || l.withinSegmentBounds(this.endVertex());
       } else {
         let point = new Vertex2d(pointOline);
         return this.minX() - tol < point.x() && this.minY() - tol < point.y() &&
@@ -120,10 +121,8 @@ class Line2d {
       const x1 = v1.x();
       const x2 = v2.x();
       const slope = (y2 - y1) / (x2 - x1);
-      if (slope > 10000 || slope < -10000) return Infinity;
+      if (Number.NaNfinity(slope) || slope > 10000 || slope < -10000) return Infinity;
       if (slope > -0.00001 && slope < 0.00001) return 0;
-      if (Number.NaNfinity(slope))
-        console.log('wtf')
       return slope;
     }
 
@@ -214,7 +213,7 @@ class Line2d {
       for (let index = 0; index < vertices.length; index += 1) {
         const v = vertices[index];
         const y = this.y(v.x());
-        if ((y === v.y() || Math.abs(y) === Infinity) && this.withinSegmentBounds(v)) {
+        if ((withinTol(y, v.y()) || Math.abs(y) === Infinity) && this.withinSegmentBounds(v)) {
           liesOn.push(v);
         }
       }
@@ -409,6 +408,7 @@ class Line2d {
     }
 
     this.equals = (other) => {
+      if (!(other instanceof Line2d)) return false;
       if (other === this) return true;
       const forwardEq = this.startVertex().equal(other.startVertex()) && this.endVertex().equal(other.endVertex());
       const backwardEq = this.startVertex().equal(other.endVertex()) && this.endVertex().equal(other.startVertex());
@@ -429,20 +429,18 @@ class Line2d {
       if (!(other instanceof Line2d)) return;
       const clean = this.clean(other);
       if (clean) return clean;
-      if (!withinTol(this.slope(), other.slope()) && !withinTol(this.slope(), -1*other.slope())) return;
+      if (!withinTol(this.slope(), other.slope())) return;
       const otherNeg = other.negitive();
-      const posEq = withinTol(this.y(other.x()), other.y()) &&
+      const outputWithinTol = withinTol(this.y(other.x()), other.y()) &&
                     withinTol(this.x(other.y()), other.x());
-      const negEq = withinTol(this.y(otherNeg.x()), otherNeg.y()) &&
-                    withinTol(this.x(otherNeg.y()), otherNeg.x());
-      if (!posEq && !negEq) return;
+      if (!outputWithinTol) return;
       const v1 = this.startVertex();
       const v2 = this.endVertex();
       const ov1 = other.startVertex();
       const ov2 = other.endVertex();
       if (!this.withinSegmentBounds(other)) {
         const dist = this.distance(other);
-        if (dist < .1) {
+        if (dist < tol) {
           console.warn('distance is incorrect:', dist);
           this.withinSegmentBounds(other);
         }
@@ -594,7 +592,6 @@ Line2d.consolidate = (...lines) => {
                 console.log('STF');
               matches.splice(highIndex, 1);
               matches[lowIndex] = combined;
-              target = combined;
               tIndex--;
               break;
             }
