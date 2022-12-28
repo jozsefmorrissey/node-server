@@ -7,7 +7,7 @@ const PanZoom = require('../two-d/pan-zoom.js');
 const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
 
 
-class LayouSketch {
+class OpeningSketch {
   constructor(id) {
     let sketch, panZ, elem, cabinet;
 
@@ -34,7 +34,6 @@ class LayouSketch {
           const section = sections[si];
           if (section.sections.length < 1) {
             const center = JSON.copy(section.innerCenter());
-            center.y*=-1;
             center.x*=-1;
             sketch.text(section.partName(), center, 6, 'grey');
           }
@@ -43,15 +42,11 @@ class LayouSketch {
 
           inner[0].x*=-1;inner[1].x*=-1;inner[2].x*=-1;inner[3].x*=-1;
           outer[0].x*=-1;outer[1].x*=-1;outer[2].x*=-1;outer[3].x*=-1;
-          // For some reason the sketch canvas is mirrored in the y direction
-          inner[0].y*=-1;inner[1].y*=-1;inner[2].y*=-1;inner[3].y*=-1;
           let lines = [new Line2d(inner[0], inner[1]),
                           new Line2d(inner[1], inner[2]),
                           new Line2d(inner[2], inner[3]),
                           new Line2d(inner[3], inner[0])];
           sketch(lines, undefined, .3);
-          // For some reason the sketch canvas is mirrored in the y direction
-          outer[0].y*=-1;outer[1].y*=-1;outer[2].y*=-1;outer[3].y*=-1;
           lines = [new Line2d(outer[0], outer[1]),
                           new Line2d(outer[1], outer[2]),
                           new Line2d(outer[2], outer[3]),
@@ -63,10 +58,10 @@ class LayouSketch {
       const cabLimits = cabinet.position().limits();
       const dir = -1;
       const cabinetOutline = [
-        new Line2d({x: dir*0, y: -2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: -2*cabLimits['y']}),
-        new Line2d({x: dir*2*cabLimits['x'], y: -2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 0}),
+        new Line2d({x: dir*0, y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}),
+        new Line2d({x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 0}),
         new Line2d({x: dir*2*cabLimits['x'], y: 0}, {x: dir*0, y: 0}),
-        new Line2d({x: dir*0, y: 0}, {x: dir*0, y: -2*cabLimits['y']}),
+        new Line2d({x: dir*0, y: 0}, {x: dir*0, y: 2*cabLimits['y']}),
       ];
       sketch(cabinetOutline, 'red', .3);
       allLines.concatInPlace(cabinetOutline);
@@ -89,4 +84,4 @@ class LayouSketch {
   }
 }
 
-module.exports = LayouSketch;
+module.exports = OpeningSketch;

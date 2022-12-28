@@ -85,8 +85,8 @@ class Draw2d {
       ctx.beginPath();
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
-      ctx.moveTo(line.startVertex().x(), line.startVertex().y());
-      ctx.lineTo(line.endVertex().x(), line.endVertex().y());
+      ctx.moveTo(line.startVertex().x(), -1 * line.startVertex().y());
+      ctx.lineTo(line.endVertex().x(), -1 * line.endVertex().y());
       ctx.stroke();
       // identifyVerticies(line);
     }
@@ -106,14 +106,14 @@ class Draw2d {
       if ((typeof poly.getTextInfo) === 'function') {
         ctx.save();
         const info = poly.getTextInfo();
-        ctx.translate(info.center.x(), info.center.y());
+        ctx.translate(info.center.x(), -1 * info.center.y());
         ctx.rotate(info.radians);
         ctx.beginPath();
         ctx.lineWidth = 4;
         ctx.strokeStyle = 'black';
         ctx.fillStyle =  'black';
         const text = info.limit === undefined ? info.text : info.text.substring(0, info.limit);
-        ctx.fillText(text, info.x, info.y, info.maxWidth);
+        ctx.fillText(text, info.x, -1 * info.y, info.maxWidth);
         ctx.stroke()
         ctx.restore();
       }
@@ -127,7 +127,7 @@ class Draw2d {
       ctx.fillStyle = color;
 
       const center = square.center();
-      ctx.translate(center.x(), center.y());
+      ctx.translate(center.x(), -1 * center.y());
       ctx.rotate(square.radians());
       ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
       ctx.stroke();
@@ -151,7 +151,7 @@ class Draw2d {
       ctx.strokeStyle = color || 'black';
       ctx.fillStyle =  color || 'black';
       ctx.font = width + "px Arial";
-      ctx.fillText(text, center.x, center.y, maxWidth);
+      ctx.fillText(text, center.x, -1 * center.y, maxWidth);
       ctx.stroke()
     }
 
@@ -161,7 +161,7 @@ class Draw2d {
       ctx.lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
       ctx.strokeStyle = lineColor || 'black';
       ctx.fillStyle = fillColor || 'white';
-      ctx.arc(center.x(),center.y(), circle.radius(),0, 2*Math.PI);
+      ctx.arc(center.x(),-1 * center.y(), circle.radius(),0, 2*Math.PI);
       ctx.stroke();
       ctx.fill();
     }
@@ -177,7 +177,7 @@ class Draw2d {
       ctx.lineWidth = 0;
       const length = measurement.display();
       const textLength = length.length;
-      ctx.translate(midpoint.x(), midpoint.y());
+      ctx.translate(midpoint.x(), -1 * midpoint.y());
       ctx.rotate(line.radians());
       ctx.beginPath();
       ctx.fillStyle = "white";

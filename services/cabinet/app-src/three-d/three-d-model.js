@@ -7,7 +7,10 @@ const $t = require('../../../../public/js/utils/$t.js');
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
 
 const Polygon3D = require('./objects/polygon');
+const BiPolygon = require('./objects/bi-polygon');
 const Polygon2d = require('../two-d/objects/polygon');
+const Line2d = require('../two-d/objects/line');
+const Vertex2d = require('../two-d/objects/vertex');
 const Vertex3D = require('./objects/vertex');
 const Vector3D = require('./objects/vector');
 const Line3D = require('./objects/line');
@@ -208,13 +211,35 @@ class ThreeDModel {
 
     const topVector = new Vector3D(0,-1,0);
 
-
-    const polyToleranceMap = new ToleranceMap({'vector.i': .1,'vector.j': .1,'vector.k': .1, length: .0001});
+    const polyTol = .01;
+    const polyToleranceMap = new ToleranceMap({'i': polyTol,'j': polyTol,'k': polyTol, length: .0001});
     function create2DcabinetImage(model) {
-      model.threeView = Polygon3D.toTwoD(Polygon3D.fromCSG(model.polygons));
+      // for (let index = 0; index < model.polygons.length; index++) {
+      //   const poly = model.polygons[index];
+      //   const vector = poly.center.minus(model.center).unit();
+      //   vector.polygon = poly;
+      //   polyToleranceMap.add(vector);
+      // }
+      // const maxList = polyToleranceMap.maxSet().map(v => Polygon3D.fromCSG(v.polygon));
+      let polygons = model.cabinetOnly ? model.cabinetOnly.polygons : model.polygons;
+      const polys = Polygon3D.fromCSG(polygons);
+      model.threeView = Polygon3D.toTwoD(polys);
       model.threeView.front = Polygon2d.outline(model.threeView.front).lines();
       model.threeView.right = Polygon2d.outline(model.threeView.right).lines();
-      model.threeView.top = Polygon2d.outline(model.threeView.top).lines();
+      const topPoly2d = Polygon2d.outline(model.threeView.top);
+      model.threeView.top = topPoly2d.lines();
+
+      const frontMinMax = Vertex2d.minMax(Line2d.vertices(model.threeView.front));
+      const height = frontMinMax.diff.y();
+      const width = frontMinMax.diff.x();
+      const depth = Vertex2d.minMax(Line2d.vertices(model.threeView.right)).diff.x();
+      const topPoly = Polygon3D.from2D(topPoly2d);
+      topPoly.rotate({x:90,y:0,z:0});
+      model.cabinetSolid = BiPolygon.fromPolygon(topPoly, 0, height);
+      model.cabinetSolid.center(model.center);
+      model.simple = model.cabinetSolid.toModel();
+      const defualtCube = CSG.cube({demesions: [width, height, depth], center: [model.center.x, model.center.y, model.center.z]});
+      if (model.frontsOnly) model.simple = model.simple.union(model.frontsOnly);
       return model;
     }
 
@@ -223,27 +248,16 @@ class ThreeDModel {
       const min = new Vertex3D(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER);
       for (let index = 0; index < model.polygons.length; index++) {
         const poly = model.polygons[index];
-
         const verts = poly.vertices;
-        const vs = [];
-        for (let vIndex = 0; vIndex < verts.length; vIndex++) {
-          const v = verts[vIndex].pos;
-          if (v.x > max.x) max.x = v.x;
-          if (v.x < min.x) min.x = v.x;
-          if (v.y > max.y) max.y = v.y;
-          if (v.y < min.y) min.y = v.y;
-          if (v.z > max.z) max.z = v.z;
-          if (v.z < min.z) min.z = v.z;
-          vs[vIndex] = v;
-        }
-        poly.center = Vertex3D.center(vs);
-        poly.plane = new Plane(vs[0], vs[1], vs[2]);
+        const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
+        const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
+        poly.center = new Vertex3D(midrangePoint);
+        poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
       }
-      model.center = Vertex3D.center(max, min);
+      const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
+      model.center = new Vertex3D(Math.midrange(model.polygons, targetAttrs));
       model.max = max;
       model.min = min;
-
-      create2DcabinetImage(model);
     }
 
     this.render = function () {
@@ -271,7 +285,8 @@ class ThreeDModel {
         return a;
       }
       const assemblies = this.assembly().getParts();
-      let a;
+      const root = assemblies[0].getRoot();
+      let a, cabinetOnly, frontsOnly;
       partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
@@ -280,6 +295,13 @@ class ThreeDModel {
           const b = buildObject(assem);
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+          if (cabinetOnly === undefined && root.children().indexOf(assem) === -1) {
+            cabinetOnly = a;
+          }
+          if (cabinetOnly && assem.inElivation) {
+            if (frontsOnly === undefined) frontsOnly = b;
+            else frontsOnly = frontsOnly.union(b);
+          }
           if (a === undefined) a = b;
           else if (b && b.polygons.length !== 0) {
             a = a.union(b);
@@ -291,21 +313,18 @@ class ThreeDModel {
           }
         }
       }
+      a.cabinetOnly = cabinetOnly;
+      a.frontsOnly = frontsOnly;
       if (a && ThreeDModel.getViewer(a)) {
-        // a.polygons.forEach((p) => p.shared = getColor());
-        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         addModelAttrs(a);
-        // createXZfootprint(a, assemblies[0].getAssembly('c'));
-        // extraObjects = [];
-        // xzFootprint.polygons.forEach(p => p.vertices.forEach(v => this.addVertex(v.pos)))
-        // xzFootprint.polygons = [];
-        // for (let index = 0; index < extraObjects.length; index++) {
-        //   xzFootprint.polygons.concatInPlace(extraObjects[index].polygons);
-        // }
-        centerModel(a);
-        viewer.mesh = a.toMesh();//a.toMesh();
+        create2DcabinetImage(a);
+        const displayModel = a;//a.simple ? a.simple : a;
+        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
+        // centerModel(displayModel);
+        viewer.mesh = displayModel.toMesh();
         viewer.gl.ondraw();
         lastRendered = a;
+        renderObjectUpdateEvent.trigger(undefined, lastRendered);
         console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
       }
       // FunctionCache.off(cacheId);
@@ -397,6 +416,9 @@ ThreeDModel.render = (part) => {
 
 const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
 ThreeDModel.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
+
+const renderObjectUpdateEvent = new CustomEvent('renderObjectUpdate');
+ThreeDModel.onRenderObjectUpdate = (func) => renderObjectUpdateEvent.on(func);
 
 
 module.exports = ThreeDModel

@@ -14,6 +14,8 @@ class Door extends HasPull {
       return undefined;
     }
 
+    this.inElivation = true;
+
     this.front = () => {
       const biPoly = getBiPolygon();
       if (biPoly === undefined) return;

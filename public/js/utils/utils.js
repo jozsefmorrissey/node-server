@@ -709,3 +709,67 @@ Function.safeStdLibAddition(Array, 'inverse', function (doNotModify) {
   }
   return arr;
 });
+
+const MSI = Number.MAX_SAFE_INTEGER;
+const msi = Number.MIN_SAFE_INTEGER;
+Function.safeStdLibAddition(Math, 'minMax', function (items, targetAttrs) {
+  let min,max, total, count;
+  if (!targetAttrs) {
+    max = msi;
+    min = MSI;
+    total = 0;
+  }
+  const maxMinObject = {};
+  for (let index = 0; index < items.length; index++) {
+    const item = items[index];
+    if (max !== undefined) {
+      if (max < item) max = item;
+      if (min > item) min = item;
+      total += item;
+    } else {
+      const attrs = Array.isArray(targetAttrs) ? targetAttrs : Object.keys(targetAttrs);
+      for (let tIndex = 0; tIndex < attrs.length; tIndex++) {
+        const attr = attrs[tIndex];
+        const value = Object.pathValue(item, attr);
+        const key = targetAttrs[attr] === undefined ? attr : targetAttrs[attr];
+        if (!maxMinObject[key]) maxMinObject[key] = {max: msi, min: MSI, total: 0};
+        if (maxMinObject[key].max < value) maxMinObject[key].max = value;
+        if (maxMinObject[key].min > value) maxMinObject[key].min = value;
+        maxMinObject[key].total += value;
+        maxMinObject[key].count++;
+      }
+    }
+  }
+  if (max !== undefined) return {max, min, total};
+  return maxMinObject;
+}, true);
+
+Function.safeStdLibAddition(Math, 'midrange', function (items, targetAttrs) {
+  const maxMin = Math.minMax(items, targetAttrs);
+  if (!targetAttrs) {
+    return (maxMin.max + maxMin.min)/2;
+  }
+  const midRangeObject = {};
+  const attrs = Array.isArray(targetAttrs) ? targetAttrs : Object.keys(targetAttrs);
+  for (let tIndex = 0; tIndex < attrs.length; tIndex++) {
+    const attr = attrs[tIndex];
+    const key = targetAttrs[attr] === undefined ? attr : targetAttrs[attr];
+    midRangeObject[key] = (maxMin[key].max + maxMin[key].min)/2;
+  }
+  return midRangeObject;
+}, true);
+
+Function.safeStdLibAddition(Math, 'mean', function (items, targetAttrs) {
+  const maxMin = Math.minMax(items, targetAttrs);
+  if (!targetAttrs) {
+    return maxMin.total / items.length;
+  }
+  const meanObject = {};
+  const attrs = Array.isArray(targetAttrs) ? targetAttrs : Object.keys(targetAttrs);
+  for (let tIndex = 0; tIndex < attrs.length; tIndex++) {
+    const attr = attrs[tIndex];
+    const key = targetAttrs[attr] === undefined ? attr : targetAttrs[attr];
+    meanObject[key] = maxMin[key].total/items.length;
+  }
+  return meanObject;
+}, true);

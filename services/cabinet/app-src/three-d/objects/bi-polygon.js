@@ -1,6 +1,8 @@
 
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 const Line3D = require('line');
+const Vector3D = require('vector');
+const Vertex3D = require('vertex');
 const Polygon3D = require('polygon');
 const Plane = require('plane');
 
@@ -9,7 +11,6 @@ class BiPolygon {
     const face1 = polygon1.verticies();
     const face2 = polygon2.verticies();
     if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
-    if (face1.length !== 4) throw new Error('BiPolygon implementation is limited to 4 point polygons. Plans to expand must not have been exicuted yet');
 
     let normal = {};
     function calcNormal() {
@@ -34,6 +35,21 @@ class BiPolygon {
     this.normal = () => face2[0].distanceVector(face1[0]).unit();
     this.normalTop = () => face2[3].distanceVector(face2[0]).unit();
     this.normalRight = () => face2[1].distanceVector(face2[0]).unit();
+
+    this.translate = (vector) => {
+      for (let index = 0; index < face1.length; index++) {
+        face1[index].translate(vector);
+        face2[index].translate(vector);
+      }
+    }
+
+    this.center = (newCenter) => {
+      if (!(newCenter instanceof Vertex3D))
+        return new Vertex3D(Math.midrange(face1.concat(face2), ['x', 'y', 'z']));
+      const center = this.center();
+      this.translate(newCenter.minus(center));
+      return this.center();
+    }
 
     this.closerPlane = (vertex) => {
       const poly1 = new Plane(...face1);
@@ -64,19 +80,20 @@ class BiPolygon {
     this.toModel = () => {
       const flippedNormal = this.flippedNormal();
       const front = new CSG.Polygon(normalize(face1, !flippedNormal));
-      front.plane.normal = new CSG.Vector([0,1, 0,0]);
+      front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
       const back = new CSG.Polygon(normalize(face2, flippedNormal));
-      back.plane.normal = new CSG.Vector([0,0,1,0,0]);
-      const top = new CSG.Polygon(normalize([face1[0], face1[1], face2[1], face2[0]], flippedNormal));
-      top.plane.normal = new CSG.Vector([0, 1, 0]);
-      const left = new CSG.Polygon(normalize([face2[3], face2[0], face1[0], face1[3]], !flippedNormal));
-      left.plane.normal = new CSG.Vector([-1, 0, 0]);
-      const right = new CSG.Polygon(normalize([face1[1], face1[2], face2[2], face2[1]], flippedNormal));
-      right.plane.normal = new CSG.Vector([1, 0, 0]);
-      const bottom = new CSG.Polygon(normalize([face1[3], face1[2], face2[2], face2[3]], !flippedNormal));
-      bottom.plane.normal = new CSG.Vector([0, -1, 0]);
+      back.plane.normal = back.vertices[0].normal.clone();//new CSG.Vector([0,0,1,0,0]);
+      const polygonSets = [front, back];
 
-      const polys = CSG.fromPolygons([front, back, top, left, right, bottom]);
+      for (let index = 0; index < face1.length; index++) {
+        const index2 = (index + 1) % face1.length;
+         const verticies = [face1[index], face1[index2], face2[index2], face2[index]];
+         const normalized = normalize(verticies, flippedNormal);
+         polygonSets.push(new CSG.Polygon(normalized));
+         polygonSets[polygonSets.length - 1].plane.normal = normalized[0].normal.clone();
+      }
+
+      const polys = CSG.fromPolygons(polygonSets);
       polys.normals = {
         front: this.normal(),
         right: this.normalRight(),
@@ -85,9 +102,17 @@ class BiPolygon {
       return polys;
     }
 
-    this.toString = () =>
-    `(${face1[0].toString()}), (${face1[1].toString()}), (${face1[2].toString()}), (${face1[3].toString()})\n` +
-    `(${face2[0].toString()}), (${face2[1].toString()},${face2[2].toString()}), (${face2[3].toString()})`;
+    this.toString = () => {
+      let face1Str = '';
+      let face2Str = '';
+      for (let index = 0; index < face1.length; index++) {
+        face1Str += `(${face1[index].toString()}), `;
+        face2Str += `(${face2[index].toString()}), `;
+      }
+      face1Str = face1Str.substring(0, face1Str.length - 2);
+      face2Str = face2Str.substring(0, face2Str.length - 2);
+      return `${face1Str}\n${face2Str}`;
+    }
   }
 }
 
@@ -108,7 +133,7 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
 
 BiPolygon.fromVectorObject =
     (width, height, depth, center, vectorObj) => {
-      center ||= new Vertex(0,0,0);
+      center ||= new Vertex3D(0,0,0);
       vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0), depth: new Vector3D(0,0,1)};
       const frontCenter = center.translate(vectorObj.depth.scale(depth/2), true);
       const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);

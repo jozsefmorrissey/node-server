@@ -27,7 +27,8 @@ const PropertyConfig = require('../../config/property/config.js');
 const cabinetBuildConfig = require('../../../public/json/cabinets.json');
 const Pattern = require('../../division-patterns.js');
 const Handle = require('../../objects/assembly/assemblies/hardware/pull.js');
-const LayouSketch = require('../layout-sketch');
+const OpeningSketch = require('../opening-sketch');
+const FaceSketch = require('../face-sketch');
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 const approximate = require('../../../../../public/js/utils/approximate').new(10);
 
@@ -42,7 +43,8 @@ const sectionState = {
   count: 0,
 };
 
-const layoutSketch = new LayouSketch('layout-sketch-cnt');
+const openingSketch = new OpeningSketch('opening-sketch-cnt');
+const faceSketch = new FaceSketch('front-sketch');
 function updateState(elem) {
   const opening = ExpandableList.get(elem);
   sectionState.id = opening.id;
@@ -128,7 +130,7 @@ function getCabinet(elem) {
 
   if (sectionState.testDividers) applyTestConfiguration(cabinet);
   else applyDividers(cabinet);
-  layoutSketch.cabinet(cabinet);
+  openingSketch.cabinet(cabinet);
   console.log(`Cabinet Demesions: ${cabinet.width()} !== ${cabinet.eval('c.w')} x ${cabinet.length()} x ${cabinet.thickness()}`)
   return cabinet;
 }

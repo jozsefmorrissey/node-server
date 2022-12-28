@@ -217,34 +217,40 @@ Polygon2d.lines = (...polys) => {
 }
 
 Polygon2d.outline = (lines, searchLineCount) => {
+  // return lines;
   searchLineCount ||= 16;
   const center = Vertex2d.center(Line2d.vertices(lines));
   const offset = (2 * Math.PI) / searchLineCount;
-  const parremeter = [];
+  let parremeter, prevParremeter;
   let radians = -Math.PI;
   let lastLine;
-  for (let index = 0; index < searchLineCount; index++) {
-    const radial = Line2d.startAndTheta(center, radians, 1000000);
-    let max;
-    for (let lIndex = 0; lIndex < lines.length; lIndex++) {
-      let line = lines[lIndex];
-      if (lastLine && lastLine.endVertex().distance(line.endVertex()) <
-          lastLine.endVertex().distance(line.startVertex())) {
-        line = line.negitive();
-      }
-      const intersection = line.findSegmentIntersection(radial, true);
-      if (intersection) {
-        const distance = intersection.distance(center);
-        if (max === undefined || max.distance < distance) {
-          max = {line, distance};
+  // TODO: while loop is a hacky fix function should isolate outline with only one run.
+  while (!prevParremeter || prevParremeter.length !== parremeter.length) {
+    prevParremeter = parremeter;
+    parremeter = [];
+    for (let index = 0; index < searchLineCount; index++) {
+      const radial = Line2d.startAndTheta(center, radians, 1000000);
+      let max;
+      for (let lIndex = 0; lIndex < lines.length; lIndex++) {
+        let line = lines[lIndex];
+        if (lastLine && lastLine.endVertex().distance(line.endVertex()) <
+        lastLine.endVertex().distance(line.startVertex())) {
+          line = line.negitive();
+        }
+        const intersection = line.findSegmentIntersection(radial, true);
+        if (intersection) {
+          const distance = intersection.distance(center);
+          if (max === undefined || max.distance < distance) {
+            max = {line, distance};
+          }
         }
       }
+      if ((!lastLine && max) || (max && !max.line.equals(lastLine))) {
+        lastLine = max.line;
+        parremeter.push(lastLine);
+      }
+      radians += offset;
     }
-    if ((!lastLine && max) || (max && !max.line.equals(lastLine))) {
-      lastLine = max.line;
-      parremeter.push(lastLine);
-    }
-    radians += offset;
   }
   const verts = [parremeter[0].startVertex()];
   let lastParremterLine;

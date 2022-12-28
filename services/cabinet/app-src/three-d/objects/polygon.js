@@ -36,6 +36,13 @@ class Polygon3D {
     }
     this.toPlane = getPlane;
 
+    this.rotate = (rotations, center) => {
+      center ||= this.center();
+      for(let index = 0; index < lines.length; index++) {
+        lines[index].startVertex.rotate(rotations, center);
+      }
+    }
+
     function calcNormal() {
       let points = this.verticies();
       let vector1, vector2;
@@ -444,7 +451,7 @@ const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
 const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
 Polygon3D.toTwoD = (polygons, normals, gap) => {
   normals ||= defaultNormals;
-  gap ||= 20;
+  gap ||= 10;
   const frontView = Polygon3D.viewFromVector(polygons, normals.front);
   const rightView = Polygon3D.viewFromVector(polygons, normals.right);
   const topView = Polygon3D.viewFromVector(polygons, normals.top);
@@ -461,15 +468,16 @@ Polygon3D.toTwoD = (polygons, normals, gap) => {
   const right2D = rightView.map(to2D(rightAxis));
   const top2D = topView.map(to2D(topAxis));
 
+  Polygon2D.centerOn({x:0,y:0}, front2D);
+
   const frontMinMax = Polygon2D.minMax(...front2D);
   const rightMinMax = Polygon2D.minMax(...right2D);
   const topMinMax = Polygon2D.minMax(...top2D);
+  const rightCenterOffset = frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2;
+  const topCenterOffset = frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2;
 
-  const rightCenterOffset = frontMinMax.max.x()/2 + gap + rightMinMax.max.x()/2;
-  const leftCenterOffset = -1 * (frontMinMax.max.y()/2 + gap + topMinMax.max.y()/2);
-  Polygon2D.centerOn({x:0,y:0}, front2D);
   Polygon2D.centerOn({x:rightCenterOffset, y:0}, right2D);
-  Polygon2D.centerOn({x:0,y:leftCenterOffset}, top2D);
+  Polygon2D.centerOn({x:0,y:topCenterOffset}, top2D);
 
   const front = Polygon2D.lines(front2D);
   const right = Polygon2D.lines(right2D);
@@ -495,8 +503,6 @@ Polygon3D.fromCSG = (polys) => {
   return poly3Ds;
 }
 
-
-
 Polygon3D.fromVectorObject =
     (width, height, center, vectorObj) => {
   center ||= new Vertex(0,0,0);
@@ -519,6 +525,16 @@ Polygon3D.fromLines = (lines) => {
     verts.push(lines[index].startVertex);
   }
   return new Polygon3D(verts);
+}
+
+Polygon3D.from2D = (polygon2d) => {
+  const verts = polygon2d.verticies();
+  const initialVerticies = [];
+  for (let index = 0; index < verts.length; index++) {
+    const vert = verts[index];
+    initialVerticies.push(new Vertex3D(vert.x(), vert.y(), 0));
+  }
+  return new Polygon3D(initialVerticies);
 }
 
 Polygon3D.viewFromVector = (polygons, vector) => {

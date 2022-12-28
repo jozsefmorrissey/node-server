@@ -110,7 +110,7 @@ Vertex2d.minMax = (...verticies) => {
     if (min.x() > vert.x()) min.x(vert.x());
     if (min.y() > vert.y()) min.y(vert.y());
   }
-  return {min, max};
+  return {min, max, diff: new Vertex2d(max.x() - min.x(), max.y() - min.y())};
 }
 
 Vertex2d.center = (...verticies) => {

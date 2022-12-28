@@ -38,6 +38,11 @@
   </div>
   <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
     <div class='expand-header'>View Shape</div>
-    <div hidden>{{templateShapeInput.html()}}</div>
+    <div hidden>
+      <div template-id='{{template.id()}}' class='layout-shape-display'>
+        <canvas class="top-sketch" width="200" height="200"></canvas>
+        <canvas class="front-sketch" width="200" height="200"></canvas>
+      </div>
+    </div>
   </div>
 </div>
