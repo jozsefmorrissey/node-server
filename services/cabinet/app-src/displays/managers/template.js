@@ -118,13 +118,23 @@ function applyTestConfiguration(cabinet) {
   right.pattern('abb').value('a', a);
 }
 
+function getDemPosElems () {
+  const templateBody = du.find('.template-body');
+  return {
+    width: du.find.closest('input[name="width"', templateBody),
+    height: du.find.closest('input[name="height"', templateBody),
+    depth: du.find.closest('input[name="thickness"', templateBody),
+  };
+}
+
 FunctionCache.disable();
 function getCabinet(elem) {
-  const templateBody = du.find.closest(`.template-body[template-id]`, elem);
+  const templateBody = du.find('.template-body');
   const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
-  const height = new Measurement(templateBody.children[4].value, true).decimal();
-  const width = new Measurement(templateBody.children[3].value, true).decimal();
-  const thickness = new Measurement(templateBody.children[5].value, true).decimal();
+  const dPElems = getDemPosElems();
+  const width = new Measurement(dPElems.width.value, true).decimal();
+  const height = new Measurement(dPElems.height.value, true).decimal();
+  const thickness = new Measurement(dPElems.depth.value, true).decimal();
   const cabinet = template.getCabinet(height, width, thickness);
   cabinet.propertyConfig().set(sectionState.style);
 
@@ -136,6 +146,12 @@ function getCabinet(elem) {
 }
 
 const toDisplay = (value) =>  new Measurement(value).display();
+const centerDisplay = (t) => {
+  const x = t.getCabinet().eval(t.x());
+  const y = t.getCabinet().eval(t.y());
+  const z = t.getCabinet().eval(t.z());
+  return `(${toDisplay(x)},${toDisplay(y)},${toDisplay(z)})`;
+}
 const threeView = new ThreeView();
 du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
   du.move.inFront(elem));
@@ -385,7 +401,7 @@ const topView = du.id('three-view-top');
 const leftView = du.id('three-view-right');
 const frongView = du.id('three-view-front');
 function validateOpenTemplate (elem) {
-  const templateBody = du.find('.template-body[template-id]');
+  const templateBody = du.find('.template-body');
   if (!templateBody || du.is.hidden(templateBody)) return;
   resetHeaderErrors();
   const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
@@ -628,7 +644,8 @@ class TemplateManager extends Lookup {
         validateOpenTemplate(du.id(parentId));
       }, 1000);
       return TemplateManager.bodyTemplate.render({template, TemplateManager: this,
-        containerClasses, dividerJointInput: dividerJointInput(template), toDisplay,
+        containerClasses, centerDisplay, toDisplay,
+        dividerJointInput: dividerJointInput(template),
         templateShapeInput: templateShapeInput(template)});
       }
 

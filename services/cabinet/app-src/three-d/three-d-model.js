@@ -20,6 +20,7 @@ const OrientationArrows = require('../displays/orientation-arrows.js');
 const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
+const ThreeDModelSimple = require('./simple');
 
 const colors = {
   indianred: [205, 92, 92],
@@ -201,8 +202,8 @@ class ThreeDModel {
       const polys = Polygon3D.fromCSG(model.polygons);
       polys.normals = model.normals;
       Polygon3D.merge(polys);
-      const twoDpolys = Polygon3D.toTwoD(polys, polys.normals);
-      model.threeView = twoDpolys;
+      const threeView = Polygon3D.toThreeView(polys, polys.normals);
+      model.threeView = threeView;
       return model;
     }
 
@@ -214,16 +215,9 @@ class ThreeDModel {
     const polyTol = .01;
     const polyToleranceMap = new ToleranceMap({'i': polyTol,'j': polyTol,'k': polyTol, length: .0001});
     function create2DcabinetImage(model) {
-      // for (let index = 0; index < model.polygons.length; index++) {
-      //   const poly = model.polygons[index];
-      //   const vector = poly.center.minus(model.center).unit();
-      //   vector.polygon = poly;
-      //   polyToleranceMap.add(vector);
-      // }
-      // const maxList = polyToleranceMap.maxSet().map(v => Polygon3D.fromCSG(v.polygon));
-      let polygons = model.cabinetOnly ? model.cabinetOnly.polygons : model.polygons;
+      let polygons = (model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
       const polys = Polygon3D.fromCSG(polygons);
-      model.threeView = Polygon3D.toTwoD(polys);
+      model.threeView = Polygon3D.toThreeView(polys);
       model.threeView.front = Polygon2d.outline(model.threeView.front).lines();
       model.threeView.right = Polygon2d.outline(model.threeView.right).lines();
       const topPoly2d = Polygon2d.outline(model.threeView.top);
@@ -239,15 +233,15 @@ class ThreeDModel {
       model.cabinetSolid.center(model.center);
       model.simple = model.cabinetSolid.toModel();
       const defualtCube = CSG.cube({demesions: [width, height, depth], center: [model.center.x, model.center.y, model.center.z]});
-      if (model.frontsOnly) model.simple = model.simple.union(model.frontsOnly);
       return model;
     }
 
     function addModelAttrs(model) {
       const max = new Vertex3D(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
       const min = new Vertex3D(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER);
-      for (let index = 0; index < model.polygons.length; index++) {
-        const poly = model.polygons[index];
+      const polys = model.polygons;
+      for (let index = 0; index < polys.length; index++) {
+        const poly = polys[index];
         const verts = poly.vertices;
         const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
         const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
@@ -255,11 +249,12 @@ class ThreeDModel {
         poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
       }
       const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
-      model.center = new Vertex3D(Math.midrange(model.polygons, targetAttrs));
+      model.center = new Vertex3D(Math.midrange(polys, targetAttrs));
       model.max = max;
       model.min = min;
     }
 
+    let simpleModel;
     this.render = function () {
       ThreeDModel.lastActive = this;
       const cacheId = rootAssembly.id();
@@ -286,22 +281,17 @@ class ThreeDModel {
       }
       const assemblies = this.assembly().getParts();
       const root = assemblies[0].getRoot();
-      let a, cabinetOnly, frontsOnly;
+      simpleModel = new ThreeDModelSimple(root);
+      let a;
       partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
         if (!hidden(assem)) {
+          simpleModel.add(assem);
           const b = buildObject(assem);
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
-          if (cabinetOnly === undefined && root.children().indexOf(assem) === -1) {
-            cabinetOnly = a;
-          }
-          if (cabinetOnly && assem.inElivation) {
-            if (frontsOnly === undefined) frontsOnly = b;
-            else frontsOnly = frontsOnly.union(b);
-          }
           if (a === undefined) a = b;
           else if (b && b.polygons.length !== 0) {
             a = a.union(b);
@@ -313,17 +303,17 @@ class ThreeDModel {
           }
         }
       }
-      a.cabinetOnly = cabinetOnly;
-      a.frontsOnly = frontsOnly;
+      a.simpleModel = simpleModel;
       if (a && ThreeDModel.getViewer(a)) {
-        addModelAttrs(a);
+        //addModelAttrs(a);
         create2DcabinetImage(a);
-        const displayModel = a;//a.simple ? a.simple : a;
+        const displayModel = simpleModel.toModel(true);//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         // centerModel(displayModel);
         viewer.mesh = displayModel.toMesh();
         viewer.gl.ondraw();
         lastRendered = a;
+        lastRendered.threeView = lastRendered.simpleModel.threeView;
         renderObjectUpdateEvent.trigger(undefined, lastRendered);
         console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
       }

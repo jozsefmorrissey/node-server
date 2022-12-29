@@ -54,18 +54,26 @@ class Position {
       return sme;
     }
 
+    // function centerRelitiveToRoot(attr) {
+    //   const objectCenter = center(attr);
+    //   if (attr) {
+    //
+    //   }
+    // }
+
 
     const rootAssembly = assembly.getRoot();
-    if (rootAssembly.constructor.name === 'Cabinet') {
-      const cacheId = rootAssembly.id();
-      this.rotation = new FunctionCache((attr) => rotation(attr), null, cacheId, assembly);
-      this.center = new FunctionCache((attr) => center(attr), null, cacheId, assembly);
-      this.demension = new FunctionCache((attr) => demension(attr), null, cacheId, assembly);
-    } else {
+    // TODO: good Idea does not work now that parentAssembly is set programatically after object is built;
+    // if (rootAssembly.constructor.name === 'Cabinet') {
+    //   const cacheId = rootAssembly.id();
+    //   this.rotation = new FunctionCache((attr) => rotation(attr), null, cacheId, assembly);
+    //   this.center = new FunctionCache((attr) => center(attr), null, cacheId, assembly);
+    //   this.demension = new FunctionCache((attr) => demension(attr), null, cacheId, assembly);
+    // } else {
       this.rotation = (attr) => rotation(attr);
       this.center = (attr) => center(attr);
       this.demension = (attr) => demension(attr);
-    }
+    // }
 
     this.current = () => {
       const position = {

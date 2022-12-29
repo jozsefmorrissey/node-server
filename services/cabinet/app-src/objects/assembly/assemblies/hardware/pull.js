@@ -91,14 +91,17 @@ class Handle extends Assembly {
       return center - (distance / 2) + spacing / 2 + spacing * (index);
     }
 
-    this.toModel = () => {
+    this.toModel = (simple) => {
       const baseC = baseCenter();
       const biPolygon = door.biPolygon();
       const front = biPolygon.front();
       const rotated =  instance.location().rotate;
       const line = rotated ? front.line(-1) : front.line(0);
       const normal = biPolygon.normal();
-      return pull(baseC, line, normal, this.projection(), this.centerToCenter());
+      if (simple)
+        return pull.simple(baseC, line, normal, this.projection(), this.centerToCenter());
+      else
+        return pull(baseC, line, normal, this.projection(), this.centerToCenter());
     }
 
     this.projection = () => 2.54;

@@ -15,6 +15,9 @@ class CabinetTemplate extends Lookup {
 
       height: 34 * 2.54,
       thickness: 24 * 2.54,
+      x: 'w / 2',
+      y: 'h / 2',
+      z: 't / 2',
       openings: [CabinetTemplate.defaultPartCodeOpening()]
     };
     Object.getSet(this, initialVals);

@@ -846,7 +846,7 @@ exports['managers/template/body'] = (get, $t) =>
 		$t.clean(get("template").id()) +
 		`> <div class='inline-flex full-width'> <h4>` +
 		$t.clean(get("template").type()) +
-		`</h4> <div class='full-width'> <button class='copy-template right'>Copy</button> <button class='paste-template right'>Paste</button> </div> </div> <div></div> <div></div> <input class='cabinet-input dem' type="text" name="width" value="` +
+		`</h4> <div class='full-width'> <button class='copy-template right'>Copy</button> <button class='paste-template right'>Paste</button> </div> </div> <div></div> <div></div> <label>Demensions: </label> <input class='cabinet-input dem' type="text" name="width" value="` +
 		$t.clean(get("toDisplay")(get("template").width())) +
 		`"> X <input class='cabinet-input dem' type="text" name="height" value="` +
 		$t.clean(get("toDisplay")(get("template").height())) +

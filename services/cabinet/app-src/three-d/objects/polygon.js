@@ -292,9 +292,10 @@ class Polygon3D {
             }
           }
         }
-        if (lines.length < 3) {
-          console.log('che che check it out');
-        }
+        // TODO: not sure if this will cause an issue but polygons should not have less than 3 verticies this will break toPlane functionality.
+        // if (lines.length < 3) {
+        //   console.log('che che check it out', lines.length);
+        // }
         if (removed) this.lineMap(true);
       }
     }
@@ -449,7 +450,16 @@ Polygon3D.mostInformation = (polygons) => {
 const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
 const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
 const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
-Polygon3D.toTwoD = (polygons, normals, gap) => {
+Polygon3D.toTwoD = (polygons, vector, axis) => {
+  const view = Polygon3D.viewFromVector(polygons, vector);
+  axis ||= Polygon3D.mostInformation(view);
+  const twoD = view.map(to2D(axis));
+  const twoDlines = Polygon2D.lines(twoD);
+  twoDlines.axis = axis;
+  return twoDlines;
+}
+
+Polygon3D.toThreeView = (polygons, normals, gap) => {
   normals ||= defaultNormals;
   gap ||= 10;
   const frontView = Polygon3D.viewFromVector(polygons, normals.front);

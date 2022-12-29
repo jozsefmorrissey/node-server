@@ -159,6 +159,16 @@ Vertex2d.sortByMax = (verts) => {
   });
 }
 
+Vertex2d.centerOn = (newCenter, verticies) => {
+  newCenter = new Vertex2d(newCenter);
+  const center = Vertex2d.center(...verticies);
+  const diff = newCenter.copy().differance(center);
+  for (let index = 0; index < polys.length; index++) {
+    const vert = verticies[index];
+    vert.translate(diff.x(), diff.y());
+  }
+}
+
 
 Vertex2d.reusable = true;
 new Vertex2d();

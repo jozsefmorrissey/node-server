@@ -102,6 +102,18 @@ class BiPolygon {
       return polys;
     }
 
+    this.toPolygons = () => {
+      const polygons = [new Polygon3D(face1), new Polygon3D(face2)];
+
+      for (let index = 0; index < face1.length; index++) {
+        const index2 = (index + 1) % face1.length;
+         const verticies = [face1[index], face1[index2], face2[index2], face2[index]];
+         polygons.push(new Polygon3D(vertices));
+      }
+      return polygons;
+    }
+
+
     this.toString = () => {
       let face1Str = '';
       let face2Str = '';
