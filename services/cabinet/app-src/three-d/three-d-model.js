@@ -215,7 +215,7 @@ class ThreeDModel {
     const polyTol = .01;
     const polyToleranceMap = new ToleranceMap({'i': polyTol,'j': polyTol,'k': polyTol, length: .0001});
     function create2DcabinetImage(model) {
-      let polygons = (model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
+      let polygons = model.cabinetOnly.polygons;//(model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
       const polys = Polygon3D.fromCSG(polygons);
       model.threeView = Polygon3D.toThreeView(polys);
       model.threeView.front = Polygon2d.outline(model.threeView.front).lines();
@@ -233,6 +233,7 @@ class ThreeDModel {
       model.cabinetSolid.center(model.center);
       model.simple = model.cabinetSolid.toModel();
       const defualtCube = CSG.cube({demesions: [width, height, depth], center: [model.center.x, model.center.y, model.center.z]});
+      if (model.frontsOnly) model.simple = model.simple.union(model.frontsOnly);
       return model;
     }
 
@@ -282,16 +283,24 @@ class ThreeDModel {
       const assemblies = this.assembly().getParts();
       const root = assemblies[0].getRoot();
       simpleModel = new ThreeDModelSimple(root);
-      let a;
+      let a, cabinetOnly, frontsOnly;
       partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
         if (!hidden(assem)) {
-          simpleModel.add(assem);
           const b = buildObject(assem);
+          simpleModel.add(assem, b);
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+          if (root.children().indexOf(assem) !== -1) {
+            if (cabinetOnly === undefined) cabinetOnly = b;
+            else cabinetOnly = cabinetOnly.union(b);
+          }
+          if (cabinetOnly && assem.inElivation) {
+            if (frontsOnly === undefined) frontsOnly = b;
+            else frontsOnly = frontsOnly.union(b);
+          }
           if (a === undefined) a = b;
           else if (b && b.polygons.length !== 0) {
             a = a.union(b);
@@ -303,9 +312,11 @@ class ThreeDModel {
           }
         }
       }
+      a.cabinetOnly = cabinetOnly;
+      a.frontsOnly = frontsOnly;
       a.simpleModel = simpleModel;
       if (a && ThreeDModel.getViewer(a)) {
-        //addModelAttrs(a);
+        addModelAttrs(a);
         create2DcabinetImage(a);
         const displayModel = simpleModel.toModel(true);//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);

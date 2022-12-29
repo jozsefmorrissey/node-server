@@ -14,13 +14,14 @@ class ThreeDModelSimple {
     let center, threeView, silhouette;
 
     this.cabinet = () => cabinet;
-    this.add = (assembly) => {
+    this.add = (assembly, csg) => {
       if (assembly && assembly.inElivation) {
         assemblies.push(assembly);
       }
       if (cabinet.children().indexOf(assembly) !== -1) {
-        if (cabinetCSG === undefined) cabinetCSG = assembly.toModel(true);
-        else cabinetCSG = cabinetCSG.union(assembly.toModel(true));
+        // TODO: Hacky fix errors created by toModel not including joint information
+        if (cabinetCSG === undefined) cabinetCSG = csg;//assembly.toModel(true);
+        else cabinetCSG = cabinetCSG.union(csg);//assembly.toModel(true));
       }
     }
 

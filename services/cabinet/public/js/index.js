@@ -7055,75 +7055,6 @@ const DEFAULT_TOLERANCE = .0001;
 });
 
 
-RequireJS.addFunction('../../public/js/utils/custom-event-delay.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class CustomEvent {
-	  constructor(name, delay) {
-	    if (delay === undefined) delay = 0;
-	    let triggerId = 0;
-	    const watchers = [];
-	    this.name = name;
-	
-	    let lastTriggerTime;
-	    let lastTriggerId;
-	    const runFuncs = (e, detail, tId) => {
-	      const time = new Date().getTime();
-	      if (lastTriggerId === tId ) {
-	        if (lastTriggerTime + delay < time) {
-	          watchers.forEach((func) => func(e, detail));
-	        } else {
-	          setTimeout(() => {
-	            runFuncs(e, detail, tId);
-	          }, delay);
-	        }
-	      }
-	    }
-	
-	    this.on = function (func) {
-	      if ((typeof func) === 'function') {
-	        watchers.push(func);
-	      } else {
-	        return 'on' + name;
-	      }
-	    }
-	
-	    this.trigger = function (element, detail) {
-	      element = element ? element : window;
-	      lastTriggerTime = new Date().getTime();
-	      const tId = triggerId + 1;
-	      triggerId += 1;
-	      lastTriggerId = tId;
-	      runFuncs(element, detail, tId);
-	      this.event.detail = detail;
-	      if(document.createEvent){
-	          element.dispatchEvent(this.event);
-	      } else {
-	          element.fireEvent("on" + this.event.eventType, this.event);
-	      }
-	    }
-	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-	    this.event;
-	    if(document.createEvent){
-	        this.event = document.createEvent("HTMLEvents");
-	        this.event.initEvent(name, true, true);
-	        this.event.eventName = name;
-	    } else {
-	        this.event = document.createEventObject();
-	        this.event.eventName = name;
-	        this.event.eventType = name;
-	    }
-	  }
-	}
-	
-	module.exports = CustomEvent;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/tolerance-map.js',
 function (require, exports, module) {
 	
@@ -7248,6 +7179,136 @@ const Tolerance = require('tolerance');
 	}
 	
 	module.exports = ToleranceMap;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/custom-event-delay.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class CustomEvent {
+	  constructor(name, delay) {
+	    if (delay === undefined) delay = 0;
+	    let triggerId = 0;
+	    const watchers = [];
+	    this.name = name;
+	
+	    let lastTriggerTime;
+	    let lastTriggerId;
+	    const runFuncs = (e, detail, tId) => {
+	      const time = new Date().getTime();
+	      if (lastTriggerId === tId ) {
+	        if (lastTriggerTime + delay < time) {
+	          watchers.forEach((func) => func(e, detail));
+	        } else {
+	          setTimeout(() => {
+	            runFuncs(e, detail, tId);
+	          }, delay);
+	        }
+	      }
+	    }
+	
+	    this.on = function (func) {
+	      if ((typeof func) === 'function') {
+	        watchers.push(func);
+	      } else {
+	        return 'on' + name;
+	      }
+	    }
+	
+	    this.trigger = function (element, detail) {
+	      element = element ? element : window;
+	      lastTriggerTime = new Date().getTime();
+	      const tId = triggerId + 1;
+	      triggerId += 1;
+	      lastTriggerId = tId;
+	      runFuncs(element, detail, tId);
+	      this.event.detail = detail;
+	      if(document.createEvent){
+	          element.dispatchEvent(this.event);
+	      } else {
+	          element.fireEvent("on" + this.event.eventType, this.event);
+	      }
+	    }
+	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+	    this.event;
+	    if(document.createEvent){
+	        this.event = document.createEvent("HTMLEvents");
+	        this.event.initEvent(name, true, true);
+	        this.event.eventName = name;
+	    } else {
+	        this.event = document.createEventObject();
+	        this.event.eventName = name;
+	        this.event.eventType = name;
+	    }
+	  }
+	}
+	
+	module.exports = CustomEvent;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/custom-event.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class CustomEvent {
+	  constructor(name) {
+	    const watchers = [];
+	    this.name = name;
+	
+	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
+	
+	    this.on = function (func) {
+	      if ((typeof func) === 'function') {
+	        watchers.push(func);
+	      } else {
+	        return 'on' + name;
+	      }
+	    }
+	
+	    this.trigger = function (element, detail) {
+	      element = element ? element : window;
+	      runFuncs(element, detail);
+	      this.event.detail = detail;
+	      if(document.createEvent){
+	          element.dispatchEvent(this.event);
+	      } else {
+	          element.fireEvent("on" + this.event.eventType, this.event);
+	      }
+	    }
+	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+	    this.event;
+	    if(document.createEvent){
+	        this.event = document.createEvent("HTMLEvents");
+	        this.event.initEvent(name, true, true);
+	        this.event.eventName = name;
+	    } else {
+	        this.event = document.createEventObject();
+	        this.event.eventName = name;
+	        this.event.eventType = name;
+	    }
+	  }
+	}
+	
+	CustomEvent.all = (obj, ...eventNames) => {
+	  if (obj.on === undefined) obj.on = {};
+	  if (obj.trigger === undefined) obj.trigger = {};
+	  for (let index = 0; index < eventNames.length; index++) {
+	    const name = eventNames[index];
+	    const e = new CustomEvent(name);
+	    obj.on[name] = e.on;
+	    obj.trigger[name] = (...args) => e.trigger.apply(e, args);
+	  }
+	}
+	
+	module.exports = CustomEvent;
 	
 });
 
@@ -7387,387 +7448,6 @@ function (require, exports, module) {
 	}
 	
 	module.exports = DataSync;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/string-math-evaluator.js',
-function (require, exports, module) {
-	let FunctionCache;
-	try {
-	  FunctionCache = require('./services/function-cache.js');
-	} catch(e) {
-	
-	}
-	
-	function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	class StringMathEvaluator {
-	  constructor(globalScope, resolver) {
-	    globalScope = globalScope || {};
-	    const instance = this;
-	    let splitter = '.';
-	
-	    function resolve (path, currObj, globalCheck) {
-	      if (path === '') return currObj;
-	      const resolved = !globalCheck && resolver && resolver(path, currObj);
-	      if (Number.isFinite(resolved)) return resolved;
-	      try {
-	        if ((typeof path) === 'string') path = path.split(splitter);
-	        for (let index = 0; index < path.length; index += 1) {
-	          currObj = currObj[path[index]];
-	        }
-	        if (currObj === undefined && !globalCheck) throw Error('try global');
-	        return currObj;
-	      }  catch (e) {
-	        if (!globalCheck) return resolve(path, globalScope, true);
-	      }
-	    }
-	
-	    function multiplyOrDivide (values, operands) {
-	      const op = operands[operands.length - 1];
-	      if (op === StringMathEvaluator.multi || op === StringMathEvaluator.div) {
-	        const len = values.length;
-	        values[len - 2] = op(values[len - 2], values[len - 1])
-	        values.pop();
-	        operands.pop();
-	      }
-	    }
-	
-	    const resolveArguments = (initialChar, func) => {
-	      return function (expr, index, values, operands, scope, path) {
-	        if (expr[index] === initialChar) {
-	          const args = [];
-	          let endIndex = index += 1;
-	          const terminationChar = expr[index - 1] === '(' ? ')' : ']';
-	          let terminate = false;
-	          let openParenCount = 0;
-	          while(!terminate && endIndex < expr.length) {
-	            const currChar = expr[endIndex++];
-	            if (currChar === '(') openParenCount++;
-	            else if (openParenCount > 0 && currChar === ')') openParenCount--;
-	            else if (openParenCount === 0) {
-	              if (currChar === ',') {
-	                args.push(expr.substr(index, endIndex - index - 1));
-	                index = endIndex;
-	              } else if (openParenCount === 0 && currChar === terminationChar) {
-	                args.push(expr.substr(index, endIndex++ - index - 1));
-	                terminate = true;
-	              }
-	            }
-	          }
-	
-	          for (let index = 0; index < args.length; index += 1) {
-	            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
-	            if (stringMatch) {
-	              args[index] = stringMatch[1];
-	            } else {
-	              args[index] =  instance.eval(args[index], scope);
-	            }
-	          }
-	          const state = func(expr, path, scope, args, endIndex);
-	          if (state) {
-	            values.push(state.value);
-	            return state.endIndex;
-	          }
-	        }
-	      }
-	    };
-	
-	    function chainedExpressions(expr, value, endIndex, path) {
-	      if (expr.length === endIndex) return {value, endIndex};
-	      let values = [];
-	      let offsetIndex;
-	      let valueIndex = 0;
-	      let chained = false;
-	      do {
-	        const subStr = expr.substr(endIndex);
-	        const offsetIndex = isolateArray(subStr, 0, values, [], value, path) ||
-	                            isolateFunction(subStr, 0, values, [], value, path) ||
-	                            (subStr[0] === '.' &&
-	                              isolateVar(subStr, 1, values, [], value));
-	        if (Number.isInteger(offsetIndex)) {
-	          value = values[valueIndex];
-	          endIndex += offsetIndex - 1;
-	          chained = true;
-	        }
-	      } while (offsetIndex !== undefined);
-	      return {value, endIndex};
-	    }
-	
-	    const isolateArray = resolveArguments('[',
-	      (expr, path, scope, args, endIndex) => {
-	        endIndex = endIndex - 1;
-	        let value = resolve(path, scope)[args[args.length - 1]];
-	        return chainedExpressions(expr, value, endIndex, '');
-	      });
-	
-	    const isolateFunction = resolveArguments('(',
-	      (expr, path, scope, args, endIndex) =>
-	          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
-	
-	    function isolateParenthesis(expr, index, values, operands, scope) {
-	      const char = expr[index];
-	      if (char === ')') throw new Error('UnExpected closing parenthesis');
-	      if (char === '(') {
-	        let openParenCount = 1;
-	        let endIndex = index + 1;
-	        while(openParenCount > 0 && endIndex < expr.length) {
-	          const currChar = expr[endIndex++];
-	          if (currChar === '(') openParenCount++;
-	          if (currChar === ')') openParenCount--;
-	        }
-	        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
-	        const len = endIndex - index - 2;
-	        values.push(instance.eval(expr.substr(index + 1, len), scope));
-	        multiplyOrDivide(values, operands);
-	        return endIndex;
-	      }
-	    };
-	
-	    function isolateOperand (char, operands) {
-	      if (char === ')') throw new Error('UnExpected closing parenthesis');
-	      switch (char) {
-	        case '*':
-	        operands.push(StringMathEvaluator.multi);
-	        return true;
-	        break;
-	        case '/':
-	        operands.push(StringMathEvaluator.div);
-	        return true;
-	        break;
-	        case '+':
-	        operands.push(StringMathEvaluator.add);
-	        return true;
-	        break;
-	        case '-':
-	        operands.push(StringMathEvaluator.sub);
-	        return true;
-	        break;
-	      }
-	      return false;
-	    }
-	
-	    function isolateValueReg(reg, resolver) {
-	      return function (expr, index, values, operands, scope) {
-	        const match = expr.substr(index).match(reg);
-	        let args;
-	        if (match) {
-	          let endIndex = index + match[0].length;
-	          let value = resolver(match[0], scope);
-	          if (!Number.isFinite(value)) {
-	            const state = chainedExpressions(expr, scope, endIndex, match[0]);
-	            if (state !== undefined) {
-	              value = state.value;
-	              endIndex = state.endIndex;
-	            }
-	          }
-	          values.push(value);
-	          multiplyOrDivide(values, operands);
-	          return endIndex;
-	        }
-	      }
-	    }
-	
-	    function convertFeetInchNotation(expr) {
-	      expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
-	      expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
-	      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
-	      return expr = expr.replace(StringMathEvaluator.multiMixedNumberReg, '($1+$2)') || expr;
-	    }
-	    function addUnexpressedMultiplicationSigns(expr) {
-	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
-	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
-	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
-	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
-	    }
-	
-	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
-	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
-	
-	    function evaluate(expr, scope, percision) {
-	      if (Number.isFinite(expr))
-	        return expr;
-	      expr = new String(expr);
-	      expr = addUnexpressedMultiplicationSigns(expr);
-	      expr = convertFeetInchNotation(expr);
-	      scope = scope || globalScope;
-	      const allowVars = (typeof scope) === 'object';
-	      let operands = [];
-	      let values = [];
-	      let prevWasOpperand = true;
-	      for (let index = 0; index < expr.length; index += 1) {
-	        const char = expr[index];
-	        if (prevWasOpperand) {
-	          try {
-	            let newIndex = isolateNumber(expr, index, values, operands, scope);
-	            if (!newIndex && isolateOperand(char, operands))
-	                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
-	            newIndex ||= isolateParenthesis(expr, index, values, operands, scope) ||
-	                (allowVars && isolateVar(expr, index, values, operands, scope));
-	            if (Number.isInteger(newIndex)) {
-	              index = newIndex - 1;
-	              prevWasOpperand = false;
-	            }
-	          } catch (e) {
-	            console.error(e);
-	            return NaN;
-	          }
-	        } else {
-	          prevWasOpperand = isolateOperand(char, operands);
-	        }
-	      }
-	      if (prevWasOpperand) return NaN;
-	
-	      let value = values[0];
-	      for (let index = 0; index < values.length - 1; index += 1) {
-	        value = operands[index](values[index], values[index + 1]);
-	        values[index + 1] = value;
-	      }
-	
-	      if (Number.isFinite(value)) {
-	        value = value;
-	        return value;
-	      }
-	      return NaN;
-	    }
-	
-	    function evalObject(obj, scope) {
-	      const returnObj = Object.forEachConditional(obj, (value, key, object) => {
-	        value = evaluate(value, scope);
-	        if (!Number.isNaN(value)) object[key] = value;
-	      }, (value) => (typeof value) === 'string');
-	      return returnObj;
-	    }
-	
-	    this.eval = FunctionCache ? new FunctionCache(evaluate, this, 'sme') : evaluate;
-	    this.evalObject = FunctionCache ? new FunctionCache(evalObject, this, 'sme') : evalObject;
-	  }
-	}
-	
-	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	
-	const mixNumberRegStr = "([0-9]{1,})\\s{1,}(([0-9]{1,})\\/([0-9]{1,}))";
-	StringMathEvaluator.mixedNumberReg = new RegExp(`^${mixNumberRegStr}$`);
-	StringMathEvaluator.multiMixedNumberReg = new RegExp(mixNumberRegStr, 'g');///([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
-	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
-	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
-	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
-	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
-	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
-	const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
-	StringMathEvaluator.decimalReg = new RegExp(`^${decimalRegStr}`);///^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(\.|)|(\.)[0-9]{1,})/;
-	StringMathEvaluator.multiDecimalReg = new RegExp(decimalRegStr, 'g');
-	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
-	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
-	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
-	StringMathEvaluator.div = (n1, n2) => n1 / n2;
-	StringMathEvaluator.add = (n1, n2) => n1 + n2;
-	StringMathEvaluator.sub = (n1, n2) => n1 - n2;
-	
-	const npf = Number.parseFloat;
-	StringMathEvaluator.convert = {eqn: {}};
-	StringMathEvaluator.convert.metricToImperial = (value) => {
-	  value = npf(value);
-	  return value / 2.54;
-	}
-	
-	StringMathEvaluator.resolveMixedNumber = (value) => {
-	  const match = value.match(StringMathEvaluator.mixedNumberReg);
-	  if (match) {
-	    value = npf(match[1]) + (npf(match[3]) / npf(match[4]));
-	  }
-	  value = npf(value);
-	  return value;
-	}
-	
-	StringMathEvaluator.convert.imperialToMetric = (value) => {
-	  value = npf(value);
-	  return value * 2.54;
-	}
-	
-	StringMathEvaluator.convert.eqn.metricToImperial = (str) =>
-	  str.replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.metricToImperial);
-	
-	StringMathEvaluator.convert.eqn.imperialToMetric = (str) =>
-	  str.replace(StringMathEvaluator.multiMixedNumberReg, StringMathEvaluator.resolveMixedNumber)
-	  .replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.imperialToMetric);
-	
-	StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	
-	
-	StringMathEvaluator.reduce = function(numerator, denominator) {
-	  let reduced = true;
-	  while (reduced) {
-	    reduced = false;
-	    for (let index = 0; index < StringMathEvaluator.primes.length; index += 1) {
-	      const prime = StringMathEvaluator.primes[index];
-	      if (prime >= denominator) break;
-	      if (numerator % prime === 0 && denominator % prime === 0) {
-	        numerator = numerator / prime;
-	        denominator = denominator / prime;
-	        reduced = true;
-	        break;
-	      }
-	    }
-	  }
-	  if (numerator === 0) {
-	    return '';
-	  }
-	  return `${numerator}/${denominator}`;
-	}
-	
-	StringMathEvaluator.parseFraction = function (str) {
-	  const regObj = regexToObject(str, StringMathEvaluator.regex, null, 'integer', null, 'numerator', 'denominator');
-	  regObj.integer = Number.parseInt(regObj.integer) || 0;
-	  regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	  regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	  if(regObj.denominator === 0) {
-	    regObj.numerator = 0;
-	    regObj.denominator = 1;
-	  }
-	  regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	  return regObj;
-	}
-	
-	StringMathEvaluator.toFraction = function (decimal, accuracy) {
-	  if (decimal === NaN) return NaN;
-	  accuracy = accuracy || '1/1000'
-	  const fracObj = StringMathEvaluator.parseFraction(accuracy);
-	  const denominator = fracObj.denominator;
-	  if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	    throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	  }
-	  let remainder = decimal;
-	  let currRemainder = remainder;
-	  let value = 0;
-	  let numerator = 0;
-	  while (currRemainder > 0) {
-	    numerator += fracObj.numerator;
-	    currRemainder -= fracObj.decimal;
-	  }
-	  const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
-	  const diff2 = (numerator / denominator) - decimal;
-	  numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	  const integer = Math.floor(numerator / denominator);
-	  numerator = numerator % denominator;
-	  const fraction = StringMathEvaluator.reduce(numerator, denominator);
-	  return (integer && fraction ? `${integer} ${fraction}` :
-	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
-	}
-	
-	try {
-	  module.exports = StringMathEvaluator;
-	} catch (e) {/* TODO: Consider Removing */}
 	
 });
 
@@ -8201,63 +7881,383 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/custom-event.js',
+RequireJS.addFunction('../../public/js/utils/string-math-evaluator.js',
 function (require, exports, module) {
+	let FunctionCache;
+	try {
+	  FunctionCache = require('./services/function-cache.js');
+	} catch(e) {
 	
-
+	}
 	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
 	
-	class CustomEvent {
-	  constructor(name) {
-	    const watchers = [];
-	    this.name = name;
+	class StringMathEvaluator {
+	  constructor(globalScope, resolver) {
+	    globalScope = globalScope || {};
+	    const instance = this;
+	    let splitter = '.';
 	
-	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
-	
-	    this.on = function (func) {
-	      if ((typeof func) === 'function') {
-	        watchers.push(func);
-	      } else {
-	        return 'on' + name;
+	    function resolve (path, currObj, globalCheck) {
+	      if (path === '') return currObj;
+	      const resolved = !globalCheck && resolver && resolver(path, currObj);
+	      if (Number.isFinite(resolved)) return resolved;
+	      try {
+	        if ((typeof path) === 'string') path = path.split(splitter);
+	        for (let index = 0; index < path.length; index += 1) {
+	          currObj = currObj[path[index]];
+	        }
+	        if (currObj === undefined && !globalCheck) throw Error('try global');
+	        return currObj;
+	      }  catch (e) {
+	        if (!globalCheck) return resolve(path, globalScope, true);
 	      }
 	    }
 	
-	    this.trigger = function (element, detail) {
-	      element = element ? element : window;
-	      runFuncs(element, detail);
-	      this.event.detail = detail;
-	      if(document.createEvent){
-	          element.dispatchEvent(this.event);
-	      } else {
-	          element.fireEvent("on" + this.event.eventType, this.event);
+	    function multiplyOrDivide (values, operands) {
+	      const op = operands[operands.length - 1];
+	      if (op === StringMathEvaluator.multi || op === StringMathEvaluator.div) {
+	        const len = values.length;
+	        values[len - 2] = op(values[len - 2], values[len - 1])
+	        values.pop();
+	        operands.pop();
 	      }
 	    }
-	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-	    this.event;
-	    if(document.createEvent){
-	        this.event = document.createEvent("HTMLEvents");
-	        this.event.initEvent(name, true, true);
-	        this.event.eventName = name;
-	    } else {
-	        this.event = document.createEventObject();
-	        this.event.eventName = name;
-	        this.event.eventType = name;
+	
+	    const resolveArguments = (initialChar, func) => {
+	      return function (expr, index, values, operands, scope, path) {
+	        if (expr[index] === initialChar) {
+	          const args = [];
+	          let endIndex = index += 1;
+	          const terminationChar = expr[index - 1] === '(' ? ')' : ']';
+	          let terminate = false;
+	          let openParenCount = 0;
+	          while(!terminate && endIndex < expr.length) {
+	            const currChar = expr[endIndex++];
+	            if (currChar === '(') openParenCount++;
+	            else if (openParenCount > 0 && currChar === ')') openParenCount--;
+	            else if (openParenCount === 0) {
+	              if (currChar === ',') {
+	                args.push(expr.substr(index, endIndex - index - 1));
+	                index = endIndex;
+	              } else if (openParenCount === 0 && currChar === terminationChar) {
+	                args.push(expr.substr(index, endIndex++ - index - 1));
+	                terminate = true;
+	              }
+	            }
+	          }
+	
+	          for (let index = 0; index < args.length; index += 1) {
+	            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
+	            if (stringMatch) {
+	              args[index] = stringMatch[1];
+	            } else {
+	              args[index] =  instance.eval(args[index], scope);
+	            }
+	          }
+	          const state = func(expr, path, scope, args, endIndex);
+	          if (state) {
+	            values.push(state.value);
+	            return state.endIndex;
+	          }
+	        }
+	      }
+	    };
+	
+	    function chainedExpressions(expr, value, endIndex, path) {
+	      if (expr.length === endIndex) return {value, endIndex};
+	      let values = [];
+	      let offsetIndex;
+	      let valueIndex = 0;
+	      let chained = false;
+	      do {
+	        const subStr = expr.substr(endIndex);
+	        const offsetIndex = isolateArray(subStr, 0, values, [], value, path) ||
+	                            isolateFunction(subStr, 0, values, [], value, path) ||
+	                            (subStr[0] === '.' &&
+	                              isolateVar(subStr, 1, values, [], value));
+	        if (Number.isInteger(offsetIndex)) {
+	          value = values[valueIndex];
+	          endIndex += offsetIndex - 1;
+	          chained = true;
+	        }
+	      } while (offsetIndex !== undefined);
+	      return {value, endIndex};
+	    }
+	
+	    const isolateArray = resolveArguments('[',
+	      (expr, path, scope, args, endIndex) => {
+	        endIndex = endIndex - 1;
+	        let value = resolve(path, scope)[args[args.length - 1]];
+	        return chainedExpressions(expr, value, endIndex, '');
+	      });
+	
+	    const isolateFunction = resolveArguments('(',
+	      (expr, path, scope, args, endIndex) =>
+	          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
+	
+	    function isolateParenthesis(expr, index, values, operands, scope) {
+	      const char = expr[index];
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      if (char === '(') {
+	        let openParenCount = 1;
+	        let endIndex = index + 1;
+	        while(openParenCount > 0 && endIndex < expr.length) {
+	          const currChar = expr[endIndex++];
+	          if (currChar === '(') openParenCount++;
+	          if (currChar === ')') openParenCount--;
+	        }
+	        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
+	        const len = endIndex - index - 2;
+	        values.push(instance.eval(expr.substr(index + 1, len), scope));
+	        multiplyOrDivide(values, operands);
+	        return endIndex;
+	      }
+	    };
+	
+	    function isolateOperand (char, operands) {
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      switch (char) {
+	        case '*':
+	        operands.push(StringMathEvaluator.multi);
+	        return true;
+	        break;
+	        case '/':
+	        operands.push(StringMathEvaluator.div);
+	        return true;
+	        break;
+	        case '+':
+	        operands.push(StringMathEvaluator.add);
+	        return true;
+	        break;
+	        case '-':
+	        operands.push(StringMathEvaluator.sub);
+	        return true;
+	        break;
+	      }
+	      return false;
+	    }
+	
+	    function isolateValueReg(reg, resolver) {
+	      return function (expr, index, values, operands, scope) {
+	        const match = expr.substr(index).match(reg);
+	        let args;
+	        if (match) {
+	          let endIndex = index + match[0].length;
+	          let value = resolver(match[0], scope);
+	          if (!Number.isFinite(value)) {
+	            const state = chainedExpressions(expr, scope, endIndex, match[0]);
+	            if (state !== undefined) {
+	              value = state.value;
+	              endIndex = state.endIndex;
+	            }
+	          }
+	          values.push(value);
+	          multiplyOrDivide(values, operands);
+	          return endIndex;
+	        }
+	      }
+	    }
+	
+	    function convertFeetInchNotation(expr) {
+	      expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
+	      expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
+	      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
+	      return expr = expr.replace(StringMathEvaluator.multiMixedNumberReg, '($1+$2)') || expr;
+	    }
+	    function addUnexpressedMultiplicationSigns(expr) {
+	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
+	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
+	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
+	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
+	    }
+	
+	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
+	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
+	
+	    function evaluate(expr, scope, percision) {
+	      if (Number.isFinite(expr))
+	        return expr;
+	      expr = new String(expr);
+	      expr = addUnexpressedMultiplicationSigns(expr);
+	      expr = convertFeetInchNotation(expr);
+	      scope = scope || globalScope;
+	      const allowVars = (typeof scope) === 'object';
+	      let operands = [];
+	      let values = [];
+	      let prevWasOpperand = true;
+	      for (let index = 0; index < expr.length; index += 1) {
+	        const char = expr[index];
+	        if (prevWasOpperand) {
+	          try {
+	            let newIndex = isolateNumber(expr, index, values, operands, scope);
+	            if (!newIndex && isolateOperand(char, operands))
+	                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
+	            newIndex ||= isolateParenthesis(expr, index, values, operands, scope) ||
+	                (allowVars && isolateVar(expr, index, values, operands, scope));
+	            if (Number.isInteger(newIndex)) {
+	              index = newIndex - 1;
+	              prevWasOpperand = false;
+	            }
+	          } catch (e) {
+	            console.error(e);
+	            return NaN;
+	          }
+	        } else {
+	          prevWasOpperand = isolateOperand(char, operands);
+	        }
+	      }
+	      if (prevWasOpperand) return NaN;
+	
+	      let value = values[0];
+	      for (let index = 0; index < values.length - 1; index += 1) {
+	        value = operands[index](values[index], values[index + 1]);
+	        values[index + 1] = value;
+	      }
+	
+	      if (Number.isFinite(value)) {
+	        value = value;
+	        return value;
+	      }
+	      return NaN;
+	    }
+	
+	    function evalObject(obj, scope) {
+	      const returnObj = Object.forEachConditional(obj, (value, key, object) => {
+	        value = evaluate(value, scope);
+	        if (!Number.isNaN(value)) object[key] = value;
+	      }, (value) => (typeof value) === 'string');
+	      return returnObj;
+	    }
+	
+	    this.eval = FunctionCache ? new FunctionCache(evaluate, this, 'sme') : evaluate;
+	    this.evalObject = FunctionCache ? new FunctionCache(evalObject, this, 'sme') : evalObject;
+	  }
+	}
+	
+	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	
+	const mixNumberRegStr = "([0-9]{1,})\\s{1,}(([0-9]{1,})\\/([0-9]{1,}))";
+	StringMathEvaluator.mixedNumberReg = new RegExp(`^${mixNumberRegStr}$`);
+	StringMathEvaluator.multiMixedNumberReg = new RegExp(mixNumberRegStr, 'g');///([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
+	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
+	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
+	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
+	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
+	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
+	const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
+	StringMathEvaluator.decimalReg = new RegExp(`^${decimalRegStr}`);///^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(\.|)|(\.)[0-9]{1,})/;
+	StringMathEvaluator.multiDecimalReg = new RegExp(decimalRegStr, 'g');
+	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
+	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
+	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
+	StringMathEvaluator.div = (n1, n2) => n1 / n2;
+	StringMathEvaluator.add = (n1, n2) => n1 + n2;
+	StringMathEvaluator.sub = (n1, n2) => n1 - n2;
+	
+	const npf = Number.parseFloat;
+	StringMathEvaluator.convert = {eqn: {}};
+	StringMathEvaluator.convert.metricToImperial = (value) => {
+	  value = npf(value);
+	  return value / 2.54;
+	}
+	
+	StringMathEvaluator.resolveMixedNumber = (value) => {
+	  const match = value.match(StringMathEvaluator.mixedNumberReg);
+	  if (match) {
+	    value = npf(match[1]) + (npf(match[3]) / npf(match[4]));
+	  }
+	  value = npf(value);
+	  return value;
+	}
+	
+	StringMathEvaluator.convert.imperialToMetric = (value) => {
+	  value = npf(value);
+	  return value * 2.54;
+	}
+	
+	StringMathEvaluator.convert.eqn.metricToImperial = (str) =>
+	  str.replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.metricToImperial);
+	
+	StringMathEvaluator.convert.eqn.imperialToMetric = (str) =>
+	  str.replace(StringMathEvaluator.multiMixedNumberReg, StringMathEvaluator.resolveMixedNumber)
+	  .replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.imperialToMetric);
+	
+	StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	
+	
+	StringMathEvaluator.reduce = function(numerator, denominator) {
+	  let reduced = true;
+	  while (reduced) {
+	    reduced = false;
+	    for (let index = 0; index < StringMathEvaluator.primes.length; index += 1) {
+	      const prime = StringMathEvaluator.primes[index];
+	      if (prime >= denominator) break;
+	      if (numerator % prime === 0 && denominator % prime === 0) {
+	        numerator = numerator / prime;
+	        denominator = denominator / prime;
+	        reduced = true;
+	        break;
+	      }
 	    }
 	  }
-	}
-	
-	CustomEvent.all = (obj, ...eventNames) => {
-	  if (obj.on === undefined) obj.on = {};
-	  if (obj.trigger === undefined) obj.trigger = {};
-	  for (let index = 0; index < eventNames.length; index++) {
-	    const name = eventNames[index];
-	    const e = new CustomEvent(name);
-	    obj.on[name] = e.on;
-	    obj.trigger[name] = (...args) => e.trigger.apply(e, args);
+	  if (numerator === 0) {
+	    return '';
 	  }
+	  return `${numerator}/${denominator}`;
 	}
 	
-	module.exports = CustomEvent;
+	StringMathEvaluator.parseFraction = function (str) {
+	  const regObj = regexToObject(str, StringMathEvaluator.regex, null, 'integer', null, 'numerator', 'denominator');
+	  regObj.integer = Number.parseInt(regObj.integer) || 0;
+	  regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	  regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	  if(regObj.denominator === 0) {
+	    regObj.numerator = 0;
+	    regObj.denominator = 1;
+	  }
+	  regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	  return regObj;
+	}
+	
+	StringMathEvaluator.toFraction = function (decimal, accuracy) {
+	  if (decimal === NaN) return NaN;
+	  accuracy = accuracy || '1/1000'
+	  const fracObj = StringMathEvaluator.parseFraction(accuracy);
+	  const denominator = fracObj.denominator;
+	  if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	    throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	  }
+	  let remainder = decimal;
+	  let currRemainder = remainder;
+	  let value = 0;
+	  let numerator = 0;
+	  while (currRemainder > 0) {
+	    numerator += fracObj.numerator;
+	    currRemainder -= fracObj.decimal;
+	  }
+	  const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
+	  const diff2 = (numerator / denominator) - decimal;
+	  numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	  const integer = Math.floor(numerator / denominator);
+	  numerator = numerator % denominator;
+	  const fraction = StringMathEvaluator.reduce(numerator, denominator);
+	  return (integer && fraction ? `${integer} ${fraction}` :
+	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
+	}
+	
+	try {
+	  module.exports = StringMathEvaluator;
+	} catch (e) {/* TODO: Consider Removing */}
 	
 });
 
@@ -9384,6 +9384,330 @@ class Endpoints {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/expression-definition.js',
+function (require, exports, module) {
+	
+
+	
+	
+	let idCount = 0;
+	class ExprDef {
+	  constructor(name, options, notify, stages, alwaysPossible) {
+	    this.id = idCount++;
+	    let id = this.id;
+	    let string;
+	    let modified = '';
+	    let start;
+	    let end;
+	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
+	    stages = stages ? stages : {};
+	    let currStage = stages;
+	
+	    function getRoutes(prefix, stage) {
+	      let routes = [];
+	      let keys = Object.keys(stage);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        if (key !== '_meta') {
+	          let newPrefix;
+	          if (prefix) {
+	            newPrefix = `${prefix}.${key}`;
+	          } else {
+	            newPrefix = key;
+	          }
+	          const deepRoutes = getRoutes(newPrefix, stage[key]);
+	          if (deepRoutes.length > 0) {
+	            routes = routes.concat(deepRoutes);
+	          }
+	          if (stage[key]._meta && stage[key]._meta.end) {
+	            routes.push(newPrefix + '.end');
+	          }
+	          if (stage[key]._meta && stage[key]._meta.repeat) {
+	            routes.push(newPrefix + '.repeat');
+	          }
+	        }
+	      }
+	      return routes;
+	    }
+	
+	    this.always = function () {
+	      for (let index = 0; index < arguments.length; index += 1) {
+	        alwaysPossible.push(arguments[index]);
+	      }
+	    };
+	    this.getAlways = function (exprDef) {return alwaysPossible;};
+	
+	    this.allRoutes = function () {
+	      return getRoutes(null, stages);
+	    }
+	
+	    function getNotice (exprDef) {
+	      let isInAlways = false;
+	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
+	      if (isInAlways) return;
+	      if (!exprDef.closed()) {
+	        if (currStage[exprDef.getName()] === undefined) {
+	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
+	        }
+	        currStage = currStage[exprDef.getName()];
+	      }
+	    }
+	    this.getNotice = getNotice;
+	
+	    function getName () {return name;};
+	    this.getName = getName;
+	    this.onClose = function (start, end) {
+	      return function (str, start, end) {
+	        if (notify) notify(this);
+	        options.onClose(str, start, end);
+	      }
+	    }
+	
+	    function setMeta(targetNodes, attr, value) {
+	      return function () {
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          targetNodes[lIndex]._meta[attr] = value;
+	        }
+	      }
+	    }
+	
+	    function then (targetNodes) {
+	      return function () {
+	        const createdNodes = [];
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          const targetNode = targetNodes[lIndex];
+	          for (let index = 0; index < arguments.length; index += 1) {
+	            const exprDef = arguments[index];
+	            if (!exprDef instanceof ExprDef) {
+	              throw new Error(`Argument is not an instanceof ExprDef`);
+	            }
+	            const nextExpr = exprDef.clone(getNotice);
+	            if (targetNode[nextExpr.getName()] === undefined) {
+	              targetNode[nextExpr.getName()] = {
+	                _meta: {
+	                  expr: nextExpr
+	                }
+	              };
+	            }
+	            createdNodes.push(targetNode[nextExpr.getName()]);
+	          }
+	        }
+	        return {
+	          then: then(createdNodes),
+	          repeat: setMeta(createdNodes, 'repeat', true),
+	          end: setMeta(createdNodes, 'end', true),
+	        };
+	      }
+	    }
+	
+	    this.if = function () {return then([stages]).apply(this, arguments);}
+	
+	    function isEscaped(str, index) {
+	      if (options.escape === undefined) {
+	        return false;
+	      }
+	      let count = -1;
+	      let firstIndex, secondIndex;
+	      do {
+	        count += 1;
+	        firstIndex = index - (options.escape.length * (count + 1));
+	        secondIndex = options.escape.length;
+	      } while (str.substr(firstIndex, secondIndex) === options.escape);
+	      return count % 2 == 0;
+	    }
+	
+	    function foundCall(onFind, sub) {
+	      if ((typeof notify) === 'function') {
+	        notify(this);
+	      }
+	      if ((typeof onFind) === 'function') {
+	        return onFind(sub);
+	      } else {
+	        return sub;
+	      }
+	    }
+	
+	    this.find = function (str, index) {
+	      let startedThisCall = false;
+	      let needle = options.closing;
+	      let starting = false;
+	      if (start === undefined) {
+	        needle = options.opening;
+	        starting = true;
+	      }
+	      const sub = str.substr(index);
+	      let needleLength;
+	      if (needle instanceof RegExp) {
+	        const match = sub.match(needle);
+	        if (match && match.index === 0) {
+	          needleLength = match[0].length;
+	        }
+	      } else if ((typeof needle) === 'string') {
+	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
+	          needleLength = needle.length;
+	      } else if (needle === undefined || needle === null) {
+	        needleLength = 0;
+	      } else {
+	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
+	      }
+	      needleLength += options.tailOffset ? options.tailOffset : 0;
+	      let changes = '';
+	      if (start === undefined && starting && (needleLength || needle === null)) {
+	        string = str;
+	        start = index;
+	        startedThisCall = true;
+	        if (needle === null) {
+	          if ((typeof notify) === 'function') {
+	            notify(this);
+	          }          return {index, changes}
+	        } else {
+	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
+	        }
+	      }
+	      if ((!startedThisCall && needleLength) ||
+	            (startedThisCall && options.closing === undefined) ||
+	            (!startedThisCall && options.closing === null)) {
+	        if (str !== string) {
+	          throw new Error ('Trying to apply an expression to two different strings.');
+	        }
+	        end = index + needleLength;
+	        if (options.closing === null) {
+	          return {index, changes}
+	        }
+	        if (!startedThisCall) {
+	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
+	        }
+	        return { index: end, changes };
+	      }
+	
+	      return start !== undefined ? { index: start + needleLength, changes } :
+	                      { index: -1, changes };
+	    }
+	
+	    this.clone = function (notify) {
+	      return new ExprDef(name, options, notify, stages, alwaysPossible);
+	    };
+	    this.name = this.getName();
+	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
+	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
+	    this.location = function () {return {start, end, length: end - start}};
+	    this.closed = function () {return end !== undefined;}
+	    this.open = function () {return start !== undefined;}
+	    this.next =  function () {
+	      const expressions = [];
+	      if (currStage._meta && currStage._meta.repeat) {
+	        currStage = stages;
+	      }
+	      Object.values(currStage).map(
+	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
+	      )
+	      return alwaysPossible.concat(expressions);
+	    };
+	  }
+	}
+	
+	function parse(exprDef, str) {
+	  exprDef = exprDef.clone();
+	  let index = 0;
+	  let modified = '';
+	  const breakDown = [];
+	  const stack = [];
+	
+	  function topOfStack() {
+	    return stack[stack.length - 1];
+	  }
+	
+	  function closeCheck(exprDef) {
+	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
+	      let result = exprDef.find(str, index);
+	      if (result.index) {
+	        modified += result.changes;
+	        return result.index;
+	      }
+	    }
+	  }
+	
+	  function checkArray(exprDef, array) {
+	    if (exprDef.endDefined()) {
+	      let nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
+	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
+	      const result = childExprDef.find(str, index);
+	      if (result.index !== -1) {
+	        modified += result.changes;
+	        if (childExprDef.closed()) {
+	          breakDown.push(childExprDef);
+	        } else {
+	          stack.push(childExprDef);
+	        }
+	        return result.index;
+	      }
+	    }
+	    if (exprDef.canEnd()) {
+	      nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
+	  }
+	
+	  function open(exprDef, index) {
+	    const always = exprDef.getAlways();
+	    while (!exprDef.open()) {
+	      let result = exprDef.find(str, index);
+	      modified += result.changes;
+	      if(result.index === -1) {
+	        let newIndex = checkArray(exprDef, always);
+	        index = newIndex;
+	      } else {
+	        if (exprDef.closed()) {
+	          breakDown.push(exprDef);
+	        } else {
+	          stack.push(exprDef);
+	        }
+	        index = result.index;
+	      }
+	    }
+	    return index;
+	  }
+	
+	  let loopCount = 0;
+	  index = open(exprDef, index);
+	  progress = [-3, -2, -1];
+	  while (topOfStack() !== undefined) {
+	    const tos = topOfStack();
+	    if (progress[0] === index) {
+	      throw new Error(`ExprDef stopped making progress`);
+	    }
+	    let stackIds = '';
+	    let options = '';
+	    stack.map(function (value) {stackIds+=value.getName() + ','});
+	    tos.next().map(function (value) {options+=value.getName() + ','})
+	    index = checkArray(tos, tos.next());
+	    if (tos.closed()) {
+	      stack.pop();
+	    }
+	    loopCount++;
+	  }
+	  // if (index < str.length) {
+	  //   throw new Error("String not fully read");
+	  // }
+	  return modified;
+	}
+	
+	
+	ExprDef.parse = parse;
+	
+	module.exports = ExprDef;
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/logic-tree.js',
 function (require, exports, module) {
 	
@@ -9948,330 +10272,6 @@ function (require, exports, module) {
 	LogicTree.LogicWrapper = LogicWrapper;
 	
 	module.exports = LogicTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/expression-definition.js',
-function (require, exports, module) {
-	
-
-	
-	
-	let idCount = 0;
-	class ExprDef {
-	  constructor(name, options, notify, stages, alwaysPossible) {
-	    this.id = idCount++;
-	    let id = this.id;
-	    let string;
-	    let modified = '';
-	    let start;
-	    let end;
-	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
-	    stages = stages ? stages : {};
-	    let currStage = stages;
-	
-	    function getRoutes(prefix, stage) {
-	      let routes = [];
-	      let keys = Object.keys(stage);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        if (key !== '_meta') {
-	          let newPrefix;
-	          if (prefix) {
-	            newPrefix = `${prefix}.${key}`;
-	          } else {
-	            newPrefix = key;
-	          }
-	          const deepRoutes = getRoutes(newPrefix, stage[key]);
-	          if (deepRoutes.length > 0) {
-	            routes = routes.concat(deepRoutes);
-	          }
-	          if (stage[key]._meta && stage[key]._meta.end) {
-	            routes.push(newPrefix + '.end');
-	          }
-	          if (stage[key]._meta && stage[key]._meta.repeat) {
-	            routes.push(newPrefix + '.repeat');
-	          }
-	        }
-	      }
-	      return routes;
-	    }
-	
-	    this.always = function () {
-	      for (let index = 0; index < arguments.length; index += 1) {
-	        alwaysPossible.push(arguments[index]);
-	      }
-	    };
-	    this.getAlways = function (exprDef) {return alwaysPossible;};
-	
-	    this.allRoutes = function () {
-	      return getRoutes(null, stages);
-	    }
-	
-	    function getNotice (exprDef) {
-	      let isInAlways = false;
-	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
-	      if (isInAlways) return;
-	      if (!exprDef.closed()) {
-	        if (currStage[exprDef.getName()] === undefined) {
-	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
-	        }
-	        currStage = currStage[exprDef.getName()];
-	      }
-	    }
-	    this.getNotice = getNotice;
-	
-	    function getName () {return name;};
-	    this.getName = getName;
-	    this.onClose = function (start, end) {
-	      return function (str, start, end) {
-	        if (notify) notify(this);
-	        options.onClose(str, start, end);
-	      }
-	    }
-	
-	    function setMeta(targetNodes, attr, value) {
-	      return function () {
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          targetNodes[lIndex]._meta[attr] = value;
-	        }
-	      }
-	    }
-	
-	    function then (targetNodes) {
-	      return function () {
-	        const createdNodes = [];
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          const targetNode = targetNodes[lIndex];
-	          for (let index = 0; index < arguments.length; index += 1) {
-	            const exprDef = arguments[index];
-	            if (!exprDef instanceof ExprDef) {
-	              throw new Error(`Argument is not an instanceof ExprDef`);
-	            }
-	            const nextExpr = exprDef.clone(getNotice);
-	            if (targetNode[nextExpr.getName()] === undefined) {
-	              targetNode[nextExpr.getName()] = {
-	                _meta: {
-	                  expr: nextExpr
-	                }
-	              };
-	            }
-	            createdNodes.push(targetNode[nextExpr.getName()]);
-	          }
-	        }
-	        return {
-	          then: then(createdNodes),
-	          repeat: setMeta(createdNodes, 'repeat', true),
-	          end: setMeta(createdNodes, 'end', true),
-	        };
-	      }
-	    }
-	
-	    this.if = function () {return then([stages]).apply(this, arguments);}
-	
-	    function isEscaped(str, index) {
-	      if (options.escape === undefined) {
-	        return false;
-	      }
-	      let count = -1;
-	      let firstIndex, secondIndex;
-	      do {
-	        count += 1;
-	        firstIndex = index - (options.escape.length * (count + 1));
-	        secondIndex = options.escape.length;
-	      } while (str.substr(firstIndex, secondIndex) === options.escape);
-	      return count % 2 == 0;
-	    }
-	
-	    function foundCall(onFind, sub) {
-	      if ((typeof notify) === 'function') {
-	        notify(this);
-	      }
-	      if ((typeof onFind) === 'function') {
-	        return onFind(sub);
-	      } else {
-	        return sub;
-	      }
-	    }
-	
-	    this.find = function (str, index) {
-	      let startedThisCall = false;
-	      let needle = options.closing;
-	      let starting = false;
-	      if (start === undefined) {
-	        needle = options.opening;
-	        starting = true;
-	      }
-	      const sub = str.substr(index);
-	      let needleLength;
-	      if (needle instanceof RegExp) {
-	        const match = sub.match(needle);
-	        if (match && match.index === 0) {
-	          needleLength = match[0].length;
-	        }
-	      } else if ((typeof needle) === 'string') {
-	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
-	          needleLength = needle.length;
-	      } else if (needle === undefined || needle === null) {
-	        needleLength = 0;
-	      } else {
-	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
-	      }
-	      needleLength += options.tailOffset ? options.tailOffset : 0;
-	      let changes = '';
-	      if (start === undefined && starting && (needleLength || needle === null)) {
-	        string = str;
-	        start = index;
-	        startedThisCall = true;
-	        if (needle === null) {
-	          if ((typeof notify) === 'function') {
-	            notify(this);
-	          }          return {index, changes}
-	        } else {
-	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
-	        }
-	      }
-	      if ((!startedThisCall && needleLength) ||
-	            (startedThisCall && options.closing === undefined) ||
-	            (!startedThisCall && options.closing === null)) {
-	        if (str !== string) {
-	          throw new Error ('Trying to apply an expression to two different strings.');
-	        }
-	        end = index + needleLength;
-	        if (options.closing === null) {
-	          return {index, changes}
-	        }
-	        if (!startedThisCall) {
-	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
-	        }
-	        return { index: end, changes };
-	      }
-	
-	      return start !== undefined ? { index: start + needleLength, changes } :
-	                      { index: -1, changes };
-	    }
-	
-	    this.clone = function (notify) {
-	      return new ExprDef(name, options, notify, stages, alwaysPossible);
-	    };
-	    this.name = this.getName();
-	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
-	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
-	    this.location = function () {return {start, end, length: end - start}};
-	    this.closed = function () {return end !== undefined;}
-	    this.open = function () {return start !== undefined;}
-	    this.next =  function () {
-	      const expressions = [];
-	      if (currStage._meta && currStage._meta.repeat) {
-	        currStage = stages;
-	      }
-	      Object.values(currStage).map(
-	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
-	      )
-	      return alwaysPossible.concat(expressions);
-	    };
-	  }
-	}
-	
-	function parse(exprDef, str) {
-	  exprDef = exprDef.clone();
-	  let index = 0;
-	  let modified = '';
-	  const breakDown = [];
-	  const stack = [];
-	
-	  function topOfStack() {
-	    return stack[stack.length - 1];
-	  }
-	
-	  function closeCheck(exprDef) {
-	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
-	      let result = exprDef.find(str, index);
-	      if (result.index) {
-	        modified += result.changes;
-	        return result.index;
-	      }
-	    }
-	  }
-	
-	  function checkArray(exprDef, array) {
-	    if (exprDef.endDefined()) {
-	      let nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
-	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
-	      const result = childExprDef.find(str, index);
-	      if (result.index !== -1) {
-	        modified += result.changes;
-	        if (childExprDef.closed()) {
-	          breakDown.push(childExprDef);
-	        } else {
-	          stack.push(childExprDef);
-	        }
-	        return result.index;
-	      }
-	    }
-	    if (exprDef.canEnd()) {
-	      nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
-	  }
-	
-	  function open(exprDef, index) {
-	    const always = exprDef.getAlways();
-	    while (!exprDef.open()) {
-	      let result = exprDef.find(str, index);
-	      modified += result.changes;
-	      if(result.index === -1) {
-	        let newIndex = checkArray(exprDef, always);
-	        index = newIndex;
-	      } else {
-	        if (exprDef.closed()) {
-	          breakDown.push(exprDef);
-	        } else {
-	          stack.push(exprDef);
-	        }
-	        index = result.index;
-	      }
-	    }
-	    return index;
-	  }
-	
-	  let loopCount = 0;
-	  index = open(exprDef, index);
-	  progress = [-3, -2, -1];
-	  while (topOfStack() !== undefined) {
-	    const tos = topOfStack();
-	    if (progress[0] === index) {
-	      throw new Error(`ExprDef stopped making progress`);
-	    }
-	    let stackIds = '';
-	    let options = '';
-	    stack.map(function (value) {stackIds+=value.getName() + ','});
-	    tos.next().map(function (value) {options+=value.getName() + ','})
-	    index = checkArray(tos, tos.next());
-	    if (tos.closed()) {
-	      stack.pop();
-	    }
-	    loopCount++;
-	  }
-	  // if (index < str.length) {
-	  //   throw new Error("String not fully read");
-	  // }
-	  return modified;
-	}
-	
-	
-	ExprDef.parse = parse;
-	
-	module.exports = ExprDef;
-	
-	
-	
-	
 	
 });
 
@@ -13694,6 +13694,80 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/collections/collection.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class Collection {
+	  constructor(members) {
+	    const list = [];
+	    const instance = this;
+	
+	    function runForEach(func) {
+	      let bool = true;
+	      for (let index = 0; index < members.length; index += 1) {
+	        bool = func(members[index]) && bool;
+	      }
+	      return bool;
+	    }
+	    function refMember(name) {
+	      instance[name] = () => {
+	        const attrId = list[0][name]();
+	        return attrId;
+	      }
+	    };
+	    runForEach(refMember);
+	
+	    this.options = () => list[0].options() || [];
+	    this.cost = () => {
+	      let totalCost = 0;
+	      list.forEach((el) => totalCost += el.cost());
+	      return totalCost;
+	    }
+	    this.belongs = (el) =>
+	      list.length === 0 ||
+	        runForEach((member) => el[member]() === list[0][member]());
+	
+	    this.add = (elem) => {
+	      if (!this.belongs(elem)) throw new Error ('Cannot add element that does not belong.');
+	      list.push(elem);
+	      runForEach(refMember);
+	    }
+	    this.list = list;
+	    this.typeId = () => {
+	      let typeId = '';
+	      runForEach((member) => typeId += `:${list[0][member]()}`);
+	      return typeId;
+	    }
+	  }
+	}
+	
+	Collection.create = function (members, objs) {
+	  let collections = {};
+	  for (let index = 0; index < objs.length; index += 1) {
+	    let collection = new Collection(members);
+	    collection.add(objs[index]);
+	    const typeId = collection.typeId();
+	    if (collections[typeId] === undefined) {
+	      collections[typeId] = collection;
+	    } else {
+	      collections[typeId].add(objs[index]);
+	    }
+	  }
+	  return Object.values(collections);
+	}
+	
+	module.exports = Collection;
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/collections/notification.js',
 function (require, exports, module) {
 	
@@ -13794,80 +13868,6 @@ const CustomEvent = require('../custom-event');
 	
 	Notifiction.Array = NotifictionArray;
 	module.exports = Notifiction;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/collections/collection.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class Collection {
-	  constructor(members) {
-	    const list = [];
-	    const instance = this;
-	
-	    function runForEach(func) {
-	      let bool = true;
-	      for (let index = 0; index < members.length; index += 1) {
-	        bool = func(members[index]) && bool;
-	      }
-	      return bool;
-	    }
-	    function refMember(name) {
-	      instance[name] = () => {
-	        const attrId = list[0][name]();
-	        return attrId;
-	      }
-	    };
-	    runForEach(refMember);
-	
-	    this.options = () => list[0].options() || [];
-	    this.cost = () => {
-	      let totalCost = 0;
-	      list.forEach((el) => totalCost += el.cost());
-	      return totalCost;
-	    }
-	    this.belongs = (el) =>
-	      list.length === 0 ||
-	        runForEach((member) => el[member]() === list[0][member]());
-	
-	    this.add = (elem) => {
-	      if (!this.belongs(elem)) throw new Error ('Cannot add element that does not belong.');
-	      list.push(elem);
-	      runForEach(refMember);
-	    }
-	    this.list = list;
-	    this.typeId = () => {
-	      let typeId = '';
-	      runForEach((member) => typeId += `:${list[0][member]()}`);
-	      return typeId;
-	    }
-	  }
-	}
-	
-	Collection.create = function (members, objs) {
-	  let collections = {};
-	  for (let index = 0; index < objs.length; index += 1) {
-	    let collection = new Collection(members);
-	    collection.add(objs[index]);
-	    const typeId = collection.typeId();
-	    if (collections[typeId] === undefined) {
-	      collections[typeId] = collection;
-	    } else {
-	      collections[typeId].add(objs[index]);
-	    }
-	  }
-	  return Object.values(collections);
-	}
-	
-	module.exports = Collection;
-	
-	
-	
-	
 	
 });
 
@@ -14837,6 +14837,88 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const Measurement = require('../../measurement');
+	
+	class MeasurementInput extends Input {
+	  constructor(props) {
+	    let value = new Measurement(props.value, true);
+	    props.value = () => value;
+	    super(props);
+	    props.validation = (val) =>
+	        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
+	    }
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
+	    }
+	  }
+	}
+	
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	
+	
+	module.exports = MeasurementInput;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Select extends Input {
+	  constructor(props) {
+	    super(props);
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.index && props.list[props.index] ?
+	      props.list[props.index] : props.list[0];
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
+	    }
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    const parentHidden = this.hidden;
+	    this.hidden = () => props.list.length < 2 || parentHidden();
+	
+	    this.selected = (value) => value === this.value();
+	  }
+	}
+	
+	Select.template = new $t('input/select');
+	Select.html = (instance) => () => Select.template.render(instance);
+	
+	module.exports = Select;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
 function (require, exports, module) {
 	
@@ -15125,88 +15207,6 @@ function (require, exports, module) {
 	DecisionInputTree.template = new $t('input/decision/decisionTree');
 	
 	module.exports = DecisionInputTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Select extends Input {
-	  constructor(props) {
-	    super(props);
-	    const isArray = Array.isArray(props.list);
-	    let value;
-	    if (isArray) {
-	      value = props.index && props.list[props.index] ?
-	      props.list[props.index] : props.list[0];
-	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
-	    } else {
-	      const key = Object.keys(props.list)[0];
-	      value = props.value || key;
-	    }
-	    props.value = undefined;
-	    this.setValue(value);
-	    this.isArray = () => isArray;
-	    const parentHidden = this.hidden;
-	    this.hidden = () => props.list.length < 2 || parentHidden();
-	
-	    this.selected = (value) => value === this.value();
-	  }
-	}
-	
-	Select.template = new $t('input/select');
-	Select.html = (instance) => () => Select.template.render(instance);
-	
-	module.exports = Select;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const Measurement = require('../../measurement');
-	
-	class MeasurementInput extends Input {
-	  constructor(props) {
-	    let value = new Measurement(props.value, true);
-	    props.value = () => value;
-	    super(props);
-	    props.validation = (val) =>
-	        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
-	    }
-	    const parentSetVal = this.setValue;
-	    this.setValue = (val) => {
-	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
-	    }
-	  }
-	}
-	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
-	
-	
-	module.exports = MeasurementInput;
 	
 });
 
@@ -15615,23 +15615,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 			` </div> `
 	
-	exports['input/decision/decisionTree'] = (get, $t) => 
-			`<div class='` +
-			$t.clean(get("DecisionInputTree").class) +
-			`' root-id='` +
-			$t.clean(get("wrapper").nodeId()) +
-			`'> ` +
-			$t.clean(get("inputHtml")) +
-			` <button class='` +
-			$t.clean(get("DecisionInputTree").buttonClass) +
-			`' root-id='` +
-			$t.clean(get("wrapper").nodeId()) +
-			`' ` +
-			$t.clean(get("tree").hideButton ? 'hidden' : '') +
-			`> ` +
-			$t.clean(get("tree").buttonText()) +
-			` </button> </div> `
-	
 	exports['input/input'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
@@ -15670,6 +15653,46 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("item")) +
 			`" ></option>`
 	
+	exports['input/measurement'] = (get, $t) => 
+			`<div class='fit input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <input class='measurement-input ` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' value='` +
+			$t.clean(get("value")() ? get("value")() : "") +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`'> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
+	
+	exports['input/decision/decisionTree'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("DecisionInputTree").class) +
+			`' root-id='` +
+			$t.clean(get("wrapper").nodeId()) +
+			`'> ` +
+			$t.clean(get("inputHtml")) +
+			` <button class='` +
+			$t.clean(get("DecisionInputTree").buttonClass) +
+			`' root-id='` +
+			$t.clean(get("wrapper").nodeId()) +
+			`' ` +
+			$t.clean(get("tree").hideButton ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("tree").buttonText()) +
+			` </button> </div> `
+	
 	exports['input/select'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
@@ -15694,29 +15717,6 @@ exports['101748844'] = (get, $t) =>
 			`</div> </` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			`> `
-	
-	exports['input/measurement'] = (get, $t) => 
-			`<div class='fit input-cnt'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			`> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <input class='measurement-input ` +
-			$t.clean(get("class")()) +
-			`' id='` +
-			$t.clean(get("id")()) +
-			`' value='` +
-			$t.clean(get("value")() ? get("value")() : "") +
-			`' placeholder='` +
-			$t.clean(get("placeholder")()) +
-			`' type='` +
-			$t.clean(get("type")()) +
-			`' name='` +
-			$t.clean(get("name")()) +
-			`'> <div class='error' id='` +
-			$t.clean(get("errorMsgId")()) +
-			`' hidden>` +
-			$t.clean(get("errorMsg")()) +
-			`</div> </div> `
 	
 	exports['2d/pop-up/door-2d'] = (get, $t) => 
 			`<div type-2d='` +
@@ -15788,6 +15788,17 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("display")(get("target").y())) +
 			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d transparent'>Remove</button></td> </tr> <tr> </table> </div> `
 	
+	exports['2d/pop-up/wall-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+	
 	exports['2d/pop-up/window-2d'] = (get, $t) => 
 			`<div type-2d='` +
 			$t.clean(get("target").constructor.name) +
@@ -15805,16 +15816,23 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("display")(get("target").fromFloor())) +
 			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
 	
-	exports['2d/pop-up/wall-2d'] = (get, $t) => 
-			`<div type-2d='` +
-			$t.clean(get("target").constructor.name) +
-			`' id='` +
-			$t.clean(get("target").id()) +
-			`' x='` +
-			$t.clean(get("lastImagePoint").x) +
-			`' y='` +
-			$t.clean(get("lastImagePoint").y) +
-			`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+	exports['cabinet/body'] = (get, $t) => 
+			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
+			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
+			` </select> </div> <div class='property-id-container center inline-flex'>` +
+			$t.clean(get("selectHtml")) +
+			`</div> <div class='right'> <select class="show-right-select"> ` +
+			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
+			` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
+			$t.clean(get("$index")) +
+			`'>Save</button> </div> ` +
+			$t.clean( new $t('800055541').render(get("cabinet").openings, 'opening', get)) +
+			` </div> `
+	
+	exports['-970877277'] = (get, $t) => 
+			`<option >` +
+			$t.clean(get("showType").name) +
+			`</option>`
 	
 	exports['cabinet/head'] = (get, $t) => 
 			`<div class='cabinet-header' cabinet-id='` +
@@ -15851,6 +15869,13 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("displayValue")(get("cabinet").thickness())) +
 			`'> </div> </div> `
 	
+	exports['divide/body'] = (get, $t) => 
+			`<h2>` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> val: ` +
+			$t.clean(get("list").value()('selected')) +
+			` `
+	
 	exports['display-manager'] = (get, $t) => 
 			`<div class='display-manager' id='` +
 			$t.clean(get("id")) +
@@ -15868,31 +15893,6 @@ exports['101748844'] = (get, $t) =>
 			`'>` +
 			$t.clean(get("item").name) +
 			`</button> </span>`
-	
-	exports['divide/body'] = (get, $t) => 
-			`<h2>` +
-			$t.clean(get("list").activeKey()) +
-			`</h2> val: ` +
-			$t.clean(get("list").value()('selected')) +
-			` `
-	
-	exports['cabinet/body'] = (get, $t) => 
-			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
-			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
-			` </select> </div> <div class='property-id-container center inline-flex'>` +
-			$t.clean(get("selectHtml")) +
-			`</div> <div class='right'> <select class="show-right-select"> ` +
-			$t.clean( new $t('-970877277').render(get("showTypes"), 'showType', get)) +
-			` </select> <label>Show Right</label> </div> </div> <br> <div class='center'> <button class='save-cabinet-btn' index='` +
-			$t.clean(get("$index")) +
-			`'>Save</button> </div> ` +
-			$t.clean( new $t('800055541').render(get("cabinet").openings, 'opening', get)) +
-			` </div> `
-	
-	exports['-970877277'] = (get, $t) => 
-			`<option >` +
-			$t.clean(get("showType").name) +
-			`</option>`
 	
 	exports['divide/head'] = (get, $t) => 
 			`<div> <div class='open-divider-select` +
@@ -15969,19 +15969,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("body")) +
 			`</div> </div> <br> `
 	
-	exports['index'] = (get, $t) => 
-			`<html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>Estimate</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login'><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
-			$t.clean(get("id") !== 'home' ? "link='/cabinet/home'" : '') +
-			` hidden> <div id='order-cnt'></div> <div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <canvas id="two-d-model"></canvas> <div id="three-d-model" class="viewer small"> <div class='inline left'> <div id='three-d-orientation-controls'></div> <span id="model-controller"></span> </div> </div> </div> </div> </div> <div name='Property Manager' ` +
-			$t.clean(get("id") !== 'home' ? "link='/cabinet/property'" : '') +
-			` id='property-manager-cnt' hidden> <div class='center'> <button id='property-manager-save-all'>Save All</button> </div> <div id='property-manager'></div> </div> <div id='cost-manager' "link='/cabinet/cost'" name='Cost Manager' ` +
-			$t.clean(get("id") !== 'cost' ? "link='/cabinet/cost'" : '') +
-			` hidden></div> <div id='template-manager' name='Template Manager' ` +
-			$t.clean(get("id") !== 'template' ? "link='/cabinet/template'" : '') +
-			` hidden>Temp Man</div> <div id='pattern-manager' name='Pattern Manager' ` +
-			$t.clean(get("id") !== 'home' ? "link='/cabinet/pattern'" : '') +
-			` hidden>Pat Man</div> </div> <div id='property-select-cnt'></div> </body> </html> `
-	
 	exports['login/confirmation-message'] = (get, $t) => 
 			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
 	
@@ -15998,6 +15985,19 @@ exports['101748844'] = (get, $t) =>
 			`'> <input type='password' placeholder="password" name='password' value='` +
 			$t.clean(get("password")) +
 			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	
+	exports['index'] = (get, $t) => 
+			`<html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>Estimate</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login'><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
+			$t.clean(get("id") !== 'home' ? "link='/cabinet/home'" : '') +
+			` hidden> <div id='order-cnt'></div> <div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <canvas id="two-d-model"></canvas> <div id="three-d-model" class="viewer small"> <div class='inline left'> <div id='three-d-orientation-controls'></div> <span id="model-controller"></span> </div> </div> </div> </div> </div> <div name='Property Manager' ` +
+			$t.clean(get("id") !== 'home' ? "link='/cabinet/property'" : '') +
+			` id='property-manager-cnt' hidden> <div class='center'> <button id='property-manager-save-all'>Save All</button> </div> <div id='property-manager'></div> </div> <div id='cost-manager' "link='/cabinet/cost'" name='Cost Manager' ` +
+			$t.clean(get("id") !== 'cost' ? "link='/cabinet/cost'" : '') +
+			` hidden></div> <div id='template-manager' name='Template Manager' ` +
+			$t.clean(get("id") !== 'template' ? "link='/cabinet/template'" : '') +
+			` hidden>Temp Man</div> <div id='pattern-manager' name='Pattern Manager' ` +
+			$t.clean(get("id") !== 'home' ? "link='/cabinet/pattern'" : '') +
+			` hidden>Pat Man</div> </div> <div id='property-select-cnt'></div> </body> </html> `
 	
 	exports['login/reset-password'] = (get, $t) => 
 			`<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -19737,258 +19737,206 @@ const Measurement = require('../../../public/js/utils/measurement.js');
 });
 
 
-RequireJS.addFunction('./app-src/displays/user.js',
+RequireJS.addFunction('./app-src/objects/company.js',
 function (require, exports, module) {
 	
-const du = require('../../../../public/js/utils/dom-utils.js');
-	const APP_ID = require('../../globals/CONSTANTS.js').APP_ID;
-	const Request = require('../../../../public/js/utils/request.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const $t = require('../../../../public/js/utils/$t.js');
+
 	
-	class User {
-	  constructor() {
-	    const stateAttr = 'user-state';
-	    let state, cnt, email, password;
+	const Door = require('./assembly/assemblies/door/door.js');
 	
-	    let la;
-	    function loginAvailible(){
-	      if (la === undefined) la = du.id('login') !== null;
-	      return la;
-	    }
-	    this.loginAvailible = loginAvailible;
-	
-	    function updateDisplay(s) {
-	      state = s ? User.states[s] : state;
-	      cnt = cnt || du.id('login-cnt');
-	      cnt.innerHTML = state.template.render({email, password});
-	    }
-	
-	    const hideLogin = () => {
-	      if (loginAvailible()) du.id('login').hidden = true;
-	    }
-	    const showLogin = () =>{
-	      if (loginAvailible()) du.id('login').hidden = false;
-	    }
-	    function successfulRegistration(body) {
-	      updateDisplay('CONFIRMATION_MESSAGE');
-	    }
-	
-	    function register(target) {password
-	      const fail = du.appendError(target, 'Registration Failed: Email already registered');
-	      const body = {email, password};
-	      document.cookie = `${APP_ID}=${email}:invalid`;
-	      Request.post(EPNTS.user.register(), body, successfulRegistration, fail);
-	    }
-	
-	    function successfulLogin(body, res) {
-	      const newAuth = res.getResponseHeader('authorization');
-	      document.cookie = `${APP_ID}=${newAuth}`;
-	      hideLogin();
-	    }
-	
-	    const getEmail = () => du.cookie.get(APP_ID, ':', 'email').email;
-	    this.credential = User.credential;
-	
-	    function login(target) {
-	      const fail = du.appendError(target, 'Login Failed: Invalid Email and/or Password');
-	      const body = {email, password};
-	      Request.post(EPNTS.user.login(), body, successfulLogin, fail);
-	    }
-	
-	    function resendActivation(target) {
-	      const fail = du.appendError(target, 'Email Not Registered Or Already Active');
-	      const body = {email: getEmail()};
-	      Request.post(EPNTS.user.resendActivation(), body, successfulRegistration, fail);
-	    }
-	
-	    function logout() {
-	      du.cookie.remove(APP_ID);
-	      showLogin();
-	      updateDisplay('LOGIN')
-	    }
-	
-	    function resetPassword(target) {
-	      const fail = du.appendError(target, 'Server Error Must have occured... try again in a few minutes');
-	      const body = {email, newPassword: password};
-	      Request.post(EPNTS.user.resetPasswordRequest(), body, successfulRegistration, fail);
-	    }
-	
-	    du.on.match('click', `[${stateAttr}]`, (elem) => {
-	      const stateId = elem.getAttribute(stateAttr);
-	      if (User.states[stateId]) {
-	        updateDisplay(stateId);
-	      } else console.error(`Invalid State: '${stateId}'`);
-	    });
-	
-	    du.on.match('click', '#register', register);
-	    du.on.match('click', '#login-btn', login);
-	    du.on.match('click', '#resend-activation', resendActivation);
-	    du.on.match('click', '#reset-password', resetPassword);
-	    du.on.match('click', '#logout-btn', logout);
-	
-	    du.on.match('change', 'input[name="email"]', (elem) => email = elem.value);
-	    du.on.match('change', 'input[name="password"]', (elem) => password = elem.value);
-	
-	    function statusCheck(body) {
-	      switch (body) {
-	        case 'Not Registered':
-	          updateDisplay('LOGIN')
-	          break;
-	        case 'Not Activated':
-	          updateDisplay('CONFIRMATION_MESSAGE');
-	          break;
-	        case 'Logged In':
-	          hideLogin();
-	          break;
-	        case 'Logged Out':
-	          updateDisplay('LOGIN')
-	          break;
-	        default:
-	
-	      }
-	    }
-	
-	    Request.globalHeader('Authorization', this.credential);
-	    if (this.loginAvailible() && this.credential()) Request.get(EPNTS.user.status(), statusCheck);
-	    else if (loginAvailible()) updateDisplay('LOGIN');
+	class Company {
+	  constructor(properties) {
+	    if (!properties.name) throw new Error('Company name must be defined')
+	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
+	    this.name = () => properties.name;
+	    this.email = () => properties.email;
+	    this.address = () => properties.address;
+	    Company.list[this.name()] = this;
 	  }
 	}
 	
-	User.states = {};
-	User.states.LOGIN = {
-	  template: new $t('login/login')
-	};
-	User.states.CONFIRMATION_MESSAGE = {
-	  template: new $t('login/confirmation-message')
-	};
-	User.states.CREATE_ACCOUNT = {
-	  template: new $t('login/create-account')
-	};
-	User.states.RESET_PASSWORD = {
-	  template: new $t('login/reset-password')
-	};
-	
-	User.credential = () => du.cookie.get(APP_ID);
+	Company.list = {};
+	new Company({name: 'Central Door'});
+	new Company({name: 'Central Wood'});
+	new Company({name: 'ADC'});
+	new Company({name: 'Accessa'});
+	new Company({name: 'Top Knobs'});
+	new Company({name: 'Richelieu'});
+	module.exports = Company
 	
 	
-	User = new User();
-	module.exports = User
+	
+	
 	
 });
 
 
-RequireJS.addFunction('./app-src/three-d/simple.js',
+RequireJS.addFunction('./app-src/config/property.js',
 function (require, exports, module) {
 	
-const Vertex3D = require('./objects/vertex');
-	const Polygon3D = require('./objects/polygon');
-	const BiPolygon = require('./objects/bi-polygon');
-	const Plane = require('./objects/plane');
-	const Polygon2d = require('../two-d/objects/polygon');
-	const Vertex2d = require('../two-d/objects/vertex');
-	const Line2d = require('../two-d/objects/line');
+const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
 	
-	class ThreeDModelSimple {
-	  constructor(cabinet) {
-	    const assemblies = [];
-	    let cabinetCSG;
-	    let center, threeView, silhouette;
 	
-	    this.cabinet = () => cabinet;
-	    this.add = (assembly) => {
-	      if (assembly && assembly.inElivation) {
-	        assemblies.push(assembly);
+	
+	class Property extends Lookup {
+	  // clone constructor(code, value) {
+	  constructor(code, name, props) {
+	    super();
+	    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
+	    const children = [];
+	
+	    const initVals = {
+	      code, name, description: props instanceof Object ? props.description : undefined
+	    }
+	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
+	
+	    this.value = (val, notMetric) => {
+	      if (val !== undefined && value !== val) {
+	        const measurement = new Measurement(val, notMetric);
+	        const measurementVal = measurement.value();
+	        value = Number.isNaN(measurementVal) ? val : measurement;
 	      }
-	      if (cabinet.children().indexOf(assembly) !== -1) {
-	        if (cabinetCSG === undefined) cabinetCSG = assembly.toModel(true);
-	        else cabinetCSG = cabinetCSG.union(assembly.toModel(true));
-	      }
+	      return value instanceof Measurement ? value.value() : value;
 	    }
 	
-	    this.center = () => {
-	      if (!center) {
-	        if (cabinetCSG === undefined) return new Vertex3D(0,0,0);
-	        const polys = cabinetCSG.polygons;
-	        for (let index = 0; index < polys.length; index++) {
-	          const poly = polys[index];
-	          const verts = poly.vertices;
-	          const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
-	          const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
-	          poly.center = new Vertex3D(midrangePoint);
-	          poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
+	    this.display = () => {
+	      return value instanceof Measurement ? value.display() : value;
+	    }
+	
+	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
+	
+	    if ((typeof props) !== 'object' ||  props === null) {
+	      this.value(props);
+	      props = {};
+	    }
+	    this.properties(props || {});
+	
+	    const existingProp = Property.list[code];
+	    let clone = false;
+	    if (this.properties().value !== undefined) {
+	      this.value(this.properties().value, this.properties().notMetric);
+	    }
+	
+	    // if (existingProp) {
+	    //   value = value || existingProp.value();
+	    //   name = existingProp.name();
+	    //   this.properties(existingProp.properties());
+	    //   clone = true;
+	    // }
+	
+	    if ((typeof value) === 'number')
+	      value = new Measurement(value, this.properties().notMetric);
+	
+	
+	    this.addChild = (property) => {
+	      if (property instanceof Property && property.code() === this.code()) {
+	            if (children.indexOf(property) === -1) children.push(property);
+	            else throw new Error('Property is already a child');
+	      }
+	      else throw new Error('Child is not an instance of Property or Code does not match');
+	    }
+	
+	    this.children = () => JSON.clone(children);
+	
+	    this.equals = (other) =>
+	        other instanceof Property &&
+	        this.value() === other.value() &&
+	        this.code() === other.code() &&
+	        this.name() === other.name() &&
+	        this.description() === other.description();
+	
+	    this.clone = (val) => {
+	      const cProps = this.properties();
+	      cProps.clone = true;
+	      cProps.value = val === undefined ? this.value() : val;
+	      cProps.description = this.description();
+	      delete cProps.notMetric;
+	      return new Property(this.code(), this.name(), cProps);
+	    }
+	    if(!clone) Property.list[code] = this;
+	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
+	  }
+	}
+	Property.list = {};
+	Property.DO_NOT_CLONE = true;
+	
+	new Property();
+	
+	module.exports = Property
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/cost-tree.js',
+function (require, exports, module) {
+	
+const Properties = require('../config/properties.js');
+	const Assembly = require('../objects/assembly/assembly.js');
+	const LogicTree = require('../../../../public/js/utils/logic-tree.js');
+	const LogicWrapper = LogicTree.LogicWrapper;
+	
+	class CostDecision {
+	  constructor(type, name, relation, formula) {
+	    Object.getSet(this, {type, name, costs: [], relation, isChoice: false});
+	    this.requiredProperties = Properties.noValue(name);
+	    if (this.relation) {
+	      if (formula) {
+	        function makeDecision(wrapper) {
+	          return true;
 	        }
-	        const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
-	        center = new Vertex3D(Math.midrange(polys, targetAttrs));
-	      }
-	      return center;
-	    }
-	
-	    this.threeView = () => {
-	      if (!threeView) {
-	        const polys = Polygon3D.fromCSG(cabinetCSG.polygons);
-	        threeView = Polygon3D.toThreeView(polys);
-	        threeView.front = Polygon2d.outline(threeView.front).lines();
-	        threeView.right = Polygon2d.outline(threeView.right).lines();
-	        const topPoly2d = Polygon2d.outline(threeView.top);
-	        threeView.top = topPoly2d.lines();
-	      }
-	      return threeView;
-	    }
-	
-	    this.cabinetSilhouette = () => {
-	      if (!silhouette) {
-	        let polygons = cabinetCSG.polygons;
-	        const polys = Polygon3D.fromCSG(polygons);
-	        const threeView = Polygon3D.toThreeView(polys);
-	        threeView.front = Polygon2d.outline(threeView.front).lines();
-	        threeView.right = Polygon2d.outline(threeView.right).lines();
-	        const topPoly2d = Polygon2d.outline(threeView.top);
-	        threeView.top = topPoly2d.lines();
-	
-	        const frontMinMax = Vertex2d.minMax(Line2d.vertices(threeView.front));
-	        const height = frontMinMax.diff.y();
-	        const width = frontMinMax.diff.x();
-	        const depth = Vertex2d.minMax(Line2d.vertices(threeView.right)).diff.x();
-	        const topPoly = Polygon3D.from2D(topPoly2d);
-	        topPoly.rotate({x:90,y:0,z:0});
-	        silhouette = BiPolygon.fromPolygon(topPoly, 0, height);
-	        silhouette.center(this.center());
-	      }
-	      return silhouette;
-	    }
-	
-	    this.toModel = (simpler) => {
-	      const offset = new Vertex3D(new Vertex3D(cabinet.position().center()).minus(this.center()));
-	      let model = this.cabinetSilhouette().toModel();
-	      for (let index = 0; !simpler && index < assemblies.length; index++) {
-	        const csg = assemblies[index].toModel(true);
-	        csg.translate(offset);
-	        model = model.union(csg);
-	      }
-	      return model;
-	    }
-	
-	    this.viewFromVector = (vector, in2D, axis) => {
-	      let output = cabinet.toBiPolygon();
-	      if (in2D) {
-	        output = Polygon3D.toTwoD(output.polygons(), vector, axis);
-	        axis ||= output.axis;
+	        this.relation = RelationInput.relationsObjs[relation](makeDecision);
+	        this.condition = (wrapper) => this.relation.eval(wrapper.children(), wrapper.payload.value());
 	      } else {
-	        output = output.toModel();
+	        this.isChoice(true);
 	      }
-	      for (let i = 0; i < assemblies.length; i++) {
-	        if (in2D)
-	          output.concat(Polygon.toTwoD(assemblies[i], vector, axis));
-	        else
-	          output.union(assemblies[i].toModel());
-	      }
-	      return output;
 	    }
 	  }
 	}
 	
-	module.exports = ThreeDModelSimple;
+	class CostTree {
+	  constructor(logicTree) {
+	    const idMap = {};
+	    logicTree = CostTree.suplement(logicTree);
+	    this.tree = () => logicTree;
+	    this.root = () => logicTree.root();
+	    const getWrapper = (wrapperId) => (LogicWrapper.get(wrapperId) || this.root());
+	
+	    this.branch = (wrapperId, name) =>
+	            get(wrapperId).branch(String.random(), new CostDecision('Branch', name));
+	    this.leaf = (wrapperId, name) =>
+	            get(wrapperId).leaf(String.random(), new CostDecision('Leaf', name));
+	    this.select = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).select(String.random(), new CostDecision('Select', name, relation, formula));
+	    this.multiselect = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).multiselect(String.random(), new CostDecision('Multiselect', name, relation, formula));
+	    this.conditional = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).conditional(String.random(), new CostDecision('Conditional', name, relation, formula));
+	
+	  }
+	}
+	
+	
+	CostTree.propertyList = Properties.all();
+	CostTree.types = ['branch', 'select', 'conditional', 'multiselect', 'leaf'];
+	CostTree.suplement = (logicTree) => {
+	  if (!(logicTree instanceof LogicWrapper)) {
+	    logicTree = new LogicTree();
+	    logicTree.branch('root');
+	  }
+	  const root = logicTree.root();
+	  const assemClassIds = Properties.list();
+	  assemClassIds.forEach((classId) => {
+	    if (root.node.getNodeByPath(classId) === undefined)
+	      root.branch(classId, new CostDecision('Branch', classId));
+	  });
+	  return logicTree;
+	}
+	CostTree.choices = [];
+	
+	
+	CostTree.CostDecision = CostDecision;
+	module.exports = CostTree;
 	
 });
 
@@ -20077,3286 +20025,6 @@ function (require, exports, module) {
 	
 	Cost.register(Material);
 	Cost.register(Labor);
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/displayManager.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	
-	class DisplayManager {
-	  constructor(displayId, listId, switchId, selected) {
-	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
-	    const id = String.random();
-	    const instance = this;
-	    this.list = (func) => {
-	      const list = [];
-	      const runFunc = (typeof func) === 'function';
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        let id = elem.id || String.random(7);
-	        elem.id = id;
-	        name = elem.getAttribute('name') || id;
-	        const item = {id, name, link: elem.getAttribute('link')};
-	        if (runFunc) func(elem);
-	        list.push(item);
-	      }
-	      return list;
-	    }
-	
-	    function updateActive(id) {
-	      const items = document.querySelectorAll('.display-manager-input');
-	      for (let index = 0; index < items.length; index += 1) {
-	        const elem = items[index];
-	        elem.getAttribute('display-id') === id ?
-	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
-	      }
-	    }
-	
-	    function open(id) {
-	      const displayElems = du.id(displayId).children;
-	      for (let index = 0; index < displayElems.length; index += 1) {
-	        const elem = displayElems[index];
-	        if (elem.id === id) {
-	          const link = elem.getAttribute('link');
-	          if (link) {
-	            window.location.href = link;
-	            return;
-	          }
-	          elem.hidden = false;
-	        }
-	        else elem.hidden = true;
-	      }
-	      updateActive(id);
-	    }
-	
-	    this.open = open;
-	
-	    const children = du.id(displayId).children;
-	
-	    if (switchId) {
-	      du.on.match('click', `#${switchId}`, (target, event) => {
-	        const listElem = du.id(listId);
-	        listElem.hidden = !listElem.hidden;
-	      });
-	      document.addEventListener('click', (event) => {
-	        const listElem = du.id(listId);
-	        const target = event.target;
-	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
-	        if (!withinList && target.id !== switchId &&listElem)
-	          listElem.hidden = true;
-	      });
-	    }
-	    DisplayManager.instances[id] = this
-	    if ((typeof selected) === 'string') setTimeout(() => open(selected), 100);
-	    else if (children.length > 0) {
-	      this.list();
-	      open(children[0].id);
-	    }
-	    if (listId) {
-	      du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
-	    }
-	  }
-	}
-	
-	DisplayManager.instances = {};
-	DisplayManager.template = new $t('display-manager');
-	
-	du.on.match('click', '.display-manager-input', (target, event) => {
-	  const displayManager = du.find.up('.display-manager', target);
-	  const displayManagerId = displayManager.id;
-	  const displayId = target.getAttribute('display-id');
-	  DisplayManager.instances[displayManagerId].open(displayId);
-	});
-	module.exports = DisplayManager
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/information-bar.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	class InformationBar {
-	  constructor() {
-	    const container = du.create.element('div');
-	    container.className = 'information-bar';
-	
-	    this.show = () => container.hidden = false;
-	    this.hide = () => container.hidden = true;
-	    this.update = (html) => container.innerHTML = html;
-	
-	    document.body.append(container);
-	  }
-	}
-	module.exports = InformationBar
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/radio-display.js',
-function (require, exports, module) {
-	
-
-	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
-	const InformationBar = require('./information-bar.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	class RadioDisplay {
-	  constructor(radioClass, groupAttr, alternateToggleClass) {
-	    const afterSwitchEvent = new CustomEvent('afterSwitch');
-	    const beforeSwitchEvent = new CustomEvent('beforeSwitch');
-	    const selector = (attrVal) => {
-	      return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
-	    }
-	
-	    const infoBar = new InformationBar();
-	
-	    function path () {
-	      let path = '';
-	      const info = du.find.downInfo(`.${radioClass}.open`, document.body, null, `.${radioClass}.close`);
-	      info.matches.forEach((obj) => {
-	        const header = obj.node.children[0];
-	        if (header && header.getBoundingClientRect().y < 8) {
-	          path += `${header.innerText}=>`
-	        }
-	      });
-	      return path;
-	    }
-	
-	    function triggerAlternateToggles(target) {
-	      if (alternateToggleClass) {
-	        const alterToggles = document.querySelectorAll(alternateToggleClass);
-	        alterToggles.forEach((elem) => elem.hidden = false);
-	        const closest = du.closest(alternateToggleClass, target);
-	        if (closest) closest.hidden = true;
-	      }
-	    }
-	    this.beforeSwitch = (func) => beforeSwitchEvent.on(func);
-	    this.afterSwitch = (func) => afterSwitchEvent.on(func);
-	
-	
-	    du.on.match('scroll', `*`, (target, event) => {
-	      infoBar.update(path());
-	    });
-	
-	    let previousHeader;
-	    du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
-	      const target = targetHeader.parentElement;
-	      const attrVal = target.getAttribute(groupAttr);
-	      const targetBody = target.children[1];
-	      const hidden = targetBody.hidden;
-	      targetBody.hidden = !hidden;
-	      beforeSwitchEvent.trigger(previousHeader, {previousHeader, targetHeader});
-	      if (hidden) {
-	        du.class.add(targetHeader, 'active');
-	        du.class.swap(target, 'open', 'close');
-	        const siblings = document.querySelectorAll(selector(attrVal));
-	        for (let index = 0; index < siblings.length; index += 1) {
-	          if (siblings[index] !== target) {
-	            const sibHeader = siblings[index].children[0];
-	            const sibBody = siblings[index].children[1];
-	            du.class.swap(siblings[index], 'close', 'open');
-	            sibBody.hidden = true;
-	            du.class.remove(sibHeader, 'active');
-	          }
-	        }
-	        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
-	        previousHeader = targetHeader;
-	      } else {
-	        du.class.swap(target, 'close', 'open');
-	        du.class.remove(targetHeader, 'active');
-	        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
-	        previousHeader = null;
-	      }
-	      infoBar.update(path());
-	    });
-	  }
-	}
-	module.exports = RadioDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	
-	const ToggleDisplayList = {};
-	ToggleDisplayList.class = 'toggle-display-list';
-	ToggleDisplayList.funcs = {};
-	
-	ToggleDisplayList.onShow = (displayId, func) => {
-	  if ((typeof func) === 'function') {
-	    if (ToggleDisplayList.funcs[displayId] === undefined) {
-	      ToggleDisplayList.funcs[displayId] = [];
-	    }
-	    ToggleDisplayList.funcs[displayId].push(func);
-	  }
-	}
-	
-	ToggleDisplayList.runFuncs = (displayId) => {
-	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
-	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
-	}
-	
-	ToggleDisplayList.toggle = function (elem, event) {
-	  const target = event.target;
-	  const children = elem.children;
-	  for (let index = 0; index < children.length; index += 1) {
-	    const child = children[index];
-	    if (target === child) {
-	      du.class.add(child, 'active');
-	      const displayId = child.getAttribute('display-id');
-	      du.id(displayId).hidden = false;
-	      ToggleDisplayList.runFuncs(displayId);
-	    } else {
-	      du.class.remove(child, 'active');
-	      du.id(child.getAttribute('display-id')).hidden = true;
-	    }
-	  }
-	}
-	
-	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
-	
-	module.exports = ToggleDisplayList;
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/cabinet.js',
-function (require, exports, module) {
-	
-
-	
-	const Show = require('../show.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const ThreeDMain = require('../displays/three-d-main.js');
-	const TwoDLayout = require('../two-d/layout');
-	const OpenSectionDisplay = require('./open-section.js');
-	const CabinetConfig = require('../config/cabinet-configs.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const { Object2d } = require('../objects/layout.js');//.Object2d;
-	const Inputs = require('../input/inputs.js');
-	const EPNTS = require('../../generated/EPNTS');
-	
-	
-	function getHtmlElemCabinet (elem) {
-	  const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
-	  return Cabinet.get(cabinetId);
-	}
-	
-	class CabinetDisplay {
-	  constructor(parentSelector, group) {
-	    let propId = 'Half Overlay';
-	    let displayId = String.random();
-	    const instance = this;
-	    this.propId = (id) => {
-	      if (id ===  undefined) return propId;
-	      propId = id;
-	    }
-	    function displayValue(val) {
-	      return new Measurement(val).display();
-	    }
-	    const getHeader = (cabinet, $index) =>
-	        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
-	    const showTypes = Show.listTypes();
-	    const getBody = (cabinet, $index) => {
-	      if (expandList.activeKey() === $index) {
-	        TwoDLayout.panZoom.once();
-	        ThreeDMain.update(cabinet);
-	      }
-	      const scope = {$index, cabinet, showTypes, OpenSectionDisplay};
-	      return CabinetDisplay.bodyTemplate.render(scope);
-	    }
-	
-	    function inputValidation(values) {
-	      // const validName = values.name !== undefined;
-	      // const validType = CabinetConfig.valid(values.type, values.id);
-	      if(true) return true;
-	      return {type: 'You must select a defined type.'};
-	    }
-	
-	    function updateLayout(target) {
-	      setTimeout(() => {
-	        const attr = target.name === 'thickness' ? 'height' : 'width';
-	        const cabinet = getHtmlElemCabinet(target);
-	        const obj2d = Object2d.get(cabinet.id());
-	        const value = new Measurement(target.value, true).decimal();
-	        console.log('new cab val', value);
-	        obj2d.topview()[attr](value);
-	        TwoDLayout.panZoom.once();
-	      }, 1000);
-	    }
-	
-	    du.on.match('change', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
-	    du.on.match('blur', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
-	
-	    function updateCabValue(cabinet, attr) {
-	      const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
-	      const input = du.find.down(`[name='${attr}']`, inputCnt);
-	      input.value = displayValue(cabinet[attr]());
-	    }
-	
-	    function removeFromLayout(elem, cabinet) {
-	      group.room().layout().removeByPayload(cabinet);
-	      TwoDLayout.panZoom.once();
-	    }
-	
-	    function linkLayout(cabinet, obj2d) {
-	      const topview = obj2d.topview();
-	      if (topview.width() !== cabinet.width()) {
-	        cabinet.width(topview.width());
-	        updateCabValue(cabinet, 'width');
-	      }
-	      if (topview.height() !== cabinet.thickness()) {
-	        cabinet.thickness(topview.height());
-	        updateCabValue(cabinet, 'thickness');
-	      }
-	    }
-	
-	    function updateObjLayout(cabinet) {
-	      const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
-	      obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
-	    }
-	
-	    const getObject = (values) => {
-	      const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
-	      setTimeout(() => updateObjLayout(cabinet));
-	      return cabinet;
-	    };
-	    this.active = () => expandList.active();
-	    const expListProps = {
-	      list: group.objects,
-	      dontOpenOnAdd: true,
-	      type: 'top-add-list',
-	      inputTree:   CabinetConfig.inputTree(),
-	      parentSelector, getHeader, getBody, getObject, inputValidation,
-	      listElemLable: 'Cabinet'
-	    };
-	    const expandList = new ExpandableList(expListProps);
-	    expandList.afterRemoval(removeFromLayout);
-	    this.refresh = () => expandList.refresh();
-	
-	    const cabinetKey = (path) => {
-	      const split = path.split('.');
-	      const index = split[0];
-	      const key = split[1];
-	      const cabinet = expListProps.list[index];
-	      return {cabinet, key};
-	    }
-	
-	    const valueUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      const decimal = new Measurement(value, true).decimal();
-	      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : value);
-	      TwoDLayout.panZoom.once();
-	      ThreeDMain.update(cabKey.cabinet);
-	    }
-	
-	    const attrUpdate = (path, value) => {
-	      const cabKey = cabinetKey(path);
-	      const decimal = new Measurement(value, true).decimal();
-	      cabKey.cabinet[cabKey.key](!Number.isNaN(decimal) ? decimal : value);
-	      TwoDLayout.panZoom.once();
-	      ThreeDMain.update(cabKey.cabinet);
-	    }
-	
-	    const saveSuccess = () => console.log('success');
-	    const saveFail = () => console.log('failure');
-	    const save = (target) => {
-	      const index = target.getAttribute('index');
-	      const cabinet = expListProps.list[index];
-	      if (cabinet.name !== undefined) {
-	        Request.post(EPNTS.cabinet.add(cabinet.name()), cabinet.toJson(), saveSuccess, saveFail);
-	        console.log('saving');
-	      } else {
-	        alert('Please enter a name if you want to save the cabinet.')
-	      }
-	    }
-	
-	    // WTFs
-	    // CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-	    bind(`.cabinet-input`, valueUpdate,
-	                  {validation: Measurement.validation('(0,)')});
-	    bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
-	    du.on.match('click', '.save-cabinet-btn', save);
-	  }
-	}
-	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
-	CabinetDisplay.headTemplate = new $t('cabinet/head');
-	module.exports = CabinetDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/face-sketch.js',
-function (require, exports, module) {
-	
-const du = require('../../../../public/js/utils/dom-utils.js');
-	const Draw2D = require('../two-d/draw.js');
-	const Line2d = require('../two-d/objects/line.js');
-	const Vertex2d = require('../two-d/objects/vertex.js');
-	const PanZoom = require('../two-d/pan-zoom.js');
-	const ThreeDModel = require('../three-d/three-d-model.js');
-	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
-	
-	
-	class FaceSketch {
-	  constructor(clazz) {
-	    clazz ||= 'front-sketch';
-	    function draw(event, model) {
-	      if (model === undefined) return;
-	      let centerOn = new Vertex2d({x:0, y:0});
-	      console.log(model);
-	    }
-	
-	    ThreeDModel.onRenderObjectUpdate(draw);
-	  }
-	}
-	
-	module.exports = FaceSketch;
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/feature.js',
-function (require, exports, module) {
-	
-
-	const $t = require('../../../../public/js/utils/$t');
-	
-	class FeatureDisplay {
-	  constructor(assembly, parentSelector) {
-	    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
-	    this.refresh = () => {
-	      const container = document.querySelector(parentSelector);
-	      container.innerHTML = this.html;
-	    }
-	  }
-	}
-	FeatureDisplay.template = new $t('features');
-	module.exports = FeatureDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/group.js',
-function (require, exports, module) {
-	
-
-	
-	const Group = require('../objects/group.js');
-	const PropertyConfig = require('../config/property/config.js');
-	const Properties = require('../config/properties.js');
-	const CabinetDisplay = require('./cabinet.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const ThreeDMain = require('../displays/three-d-main.js');
-	
-	const currentStyleState = {};
-	
-	function disableButton(values, dit, elem) {
-	  const nId = dit.node.constructor.decode(dit.root().id()).id;
-	  const currState = currentStyleState[nId];
-	  const rootId = dit.node.constructor.decode(dit.root().id()).id;
-	  const button = du.find(`button[root-id='${rootId}']`);
-	  if (button) button.hidden = Object.equals(currState, values);
-	  const headers = du.find.downAll('.group-header', du.find.up('.group-cnt', button));
-	  headers.forEach((header) => {
-	    header.hidden = currState.style !== header.getAttribute("cab-style");
-	    if (!header.hidden) du.find.down('.group-key', header).innerText = currState.subStyle;
-	  });
-	}
-	
-	class GroupDisplay extends Lookup {
-	  constructor(group) {
-	    super();
-	    function setCurrentStyleState(values) {
-	      values = values || dit.values();
-	      const nId = dit.node.constructor.decode(dit.root().id()).id;
-	      currentStyleState[nId] = values;
-	      disableButton(values, dit);
-	      return values;
-	    }
-	    function onCabinetStyleSubmit(values) {
-	      setCurrentStyleState(values);
-	      group.propertyConfig.set(values.style, values.subStyle);
-	      ThreeDMain.update();
-	    }
-	
-	    let initialized = false;
-	    function initializeDitButton() {
-	      if (initialized) disableButton(dit.values(), dit);
-	      else {
-	        disableButton(setCurrentStyleState(), dit);
-	        initialized = true;
-	      }
-	    }
-	    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleSubmit, group.propertyConfig);
-	    function styleSelector() {
-	      return dit.root().payload().html();
-	    }
-	    function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
-	    this.bodyHtml = () =>  {
-	      setTimeout(initializeDitButton, 200);
-	      return GroupDisplay.bodyTemplate.render({group, propertyHtml});
-	    }
-	    this.html = () => {
-	      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this, body: this.bodyHtml()});
-	    }
-	
-	    this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
-	    this.cabinet = () => this.cabinetDisplay().active();
-	  }
-	}
-	
-	GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
-	  const dit = new DecisionInputTree(undefined, {buttonText: 'Change'});
-	  dit.onChange(disableButton);
-	  dit.onSubmit(onSubmit);
-	  const propertyConfig = new PropertyConfig();
-	  const styles = propertyConfig.cabinetStyles();
-	  const cabinetStyles = new Select({
-	    name: 'style',
-	    list: styles,
-	    inline: true,
-	    label: 'Style',
-	    value: propertyConfigInst.cabinetStyle()
-	  });
-	
-	  const hasFrame = new Select({
-	      name: 'FrameStyle',
-	      inline: true,
-	      list: ['Frameless', 'Framed', 'Frame Only'],
-	      value: 'Frameless'
-	    });
-	
-	  const style = dit.branch('style', [hasFrame, cabinetStyles]);
-	  styles.forEach((styleName) => {
-	    const properties = Properties.groupList(styleName);
-	    const selectObj = Object.keys(properties);
-	    const select = new Select({
-	      name: 'subStyle',
-	      inline: true,
-	      list: selectObj,
-	      value: propertyConfigInst.cabinetStyleName()
-	    });
-	    const condtionalPayload = new DecisionInputTree.ValueCondition('style', [styleName], [select]);
-	    style.conditional(styleName, condtionalPayload);
-	  });
-	
-	  return dit;
-	}
-	
-	du.on.match('click', `.group-display-header`, (target) => {
-	  const allBodys = du.find.all('.group-display-body');
-	  for (let index = 0; index < allBodys.length; index += 1) {
-	    allBodys[index].hidden = true;
-	  }
-	  const allHeaders = du.find.all('.group-display-header');
-	  for (let index = 0; index < allHeaders.length; index += 1) {
-	    du.class.remove(allHeaders[index], 'active');
-	  }
-	  du.class.add(target, 'active');
-	  const body = du.find.closest('.group-display-body', target);
-	  const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
-	  const groupDisplay = GroupDisplay.get(groupDisplayId);
-	  body.innerHTML = groupDisplay.bodyHtml();
-	  groupDisplay.cabinetDisplay.refresh();
-	  body.hidden = false;
-	});
-	
-	GroupDisplay.valueUpdate = (target) => {
-	  const group = Group.get(target.getAttribute('group-id'));
-	  const value = target.value;
-	  group.name(value);
-	}
-	
-	du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
-	
-	GroupDisplay.headTemplate = new $t('group/head');
-	GroupDisplay.bodyTemplate = new $t('group/body');
-	GroupDisplay.propertyMenuTemplate = new $t('properties/property-menu');
-	module.exports = GroupDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/open-section.js',
-function (require, exports, module) {
-	
-
-	
-	const SectionProperties = require('../objects/assembly/assemblies/section/section-properties.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
-	const ThreeDMain = require('./three-d-main.js');
-	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const FeatureDisplay = require('./feature');
-	const Inputs = require('../input/inputs.js');
-	
-	
-	class SectionDisplay {
-	  constructor (section) {
-	    this.render = (scope) => {
-	      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
-	      const cId = scope.opening.constructor.name;
-	      if (cId === 'SectionProperties') {
-	        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
-	      }
-	      return SectionDisplay.template(section).render(scope);
-	    }
-	  }
-	}
-	
-	const templates = {};
-	const fileLocations = {};
-	SectionDisplay.template = (section) => {
-	  const cName = section.constructor.name;
-	  if (fileLocations[cName] === undefined) {
-	    const filename = cName.replace(/Section$/, '')
-	                            .replace(/([a-z])([A-Z])/g, '$1-$2')
-	                            .toLowerCase();
-	    fileLocations[cName] = `sections/${filename}`;
-	  }
-	  const templatePath = fileLocations[cName];
-	  if (templates[templatePath] === undefined) templates[templatePath] = new $t(templatePath);
-	  return templates[templatePath];
-	}
-	
-	du.on.match('change', '.feature-radio', (target) => {
-	  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
-	  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
-	  target.nextElementSibling.hidden = !target.checked;
-	});
-	
-	displays = {};
-	SectionDisplay.render = (scope) => {
-	  const uId = scope.opening.id();
-	  if (displays[uId] === undefined) displays[uId] = new SectionDisplay(scope.opening);
-	  return displays[uId].render(scope);
-	}
-	
-	const OpenSectionDisplay = {};
-	
-	OpenSectionDisplay.html = (opening) => {
-	  const openDispId = OpenSectionDisplay.getId(opening);
-	  OpenSectionDisplay.sections[opening.id()] = opening;
-	  if (opening.sectionCount() > 1) OpenSectionDisplay.refresh(opening, true);
-	  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
-	  const sections = SectionProperties.list();
-	  return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml,
-	                                            sections, OpenSectionDisplay});
-	}
-	
-	OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.id()}`;
-	OpenSectionDisplay.template = new $t('opening');
-	OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
-	OpenSectionDisplay.listHeadTemplate = new $t('divide/head');
-	OpenSectionDisplay.sections = {};
-	OpenSectionDisplay.lists = {};
-	OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.id()}`;
-	
-	OpenSectionDisplay.getList = (root) => {
-	  let openId = root.id();
-	  if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
-	  // const sections = SectionProperties.sections();
-	  // const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
-	  const parentSelector = `#${OpenSectionDisplay.getId(root)}`
-	  const list = root.sections;
-	  const hideAddBtn = true;
-	  const selfCloseTab = true;
-	  let exList;
-	  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
-	  const getHeader = (opening, index) => {
-	    return OpenSectionDisplay.listHeadTemplate.render({opening, clean});
-	  }
-	  const getBody = (opening) => {
-	    const list = OpenSectionDisplay.getList(root);
-	    const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
-	    const assemblies = opening.getSubassemblies();
-	    return SectionDisplay.render({assemblies, getFeatureDisplay, opening, list});
-	  }
-	  const findElement = (selector, target) => du.find.down(selector, du.find.up('.expandable-list', target));
-	  const expListProps = {
-	    parentSelector, getHeader, getBody, list, hideAddBtn,
-	    selfCloseTab, findElement, startClosed: true, removeButton: false
-	  }
-	  exList = new ExpandableList(expListProps);
-	  OpenSectionDisplay.lists[openId] = exList;
-	  return exList;
-	}
-	OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
-	OpenSectionDisplay.dividerHtml = (opening) => {
-	  const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls`;
-	  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
-	  return OpenSectionDisplay.dividerControlTemplate.render({opening, patternInputHtml});
-	}
-	OpenSectionDisplay.updateDividers = (opening) => {
-	  const focusInfo = du.focusInfo();
-	  const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls`;
-	  const dividerControlsCnt = document.querySelector(selector);
-	  dividerControlsCnt.innerHTML = OpenSectionDisplay.dividerHtml(opening);
-	  du.focus(focusInfo);
-	  console.log();
-	}
-	
-	OpenSectionDisplay.changeIds = {};
-	OpenSectionDisplay.refresh = (opening, rapid, onlyIfPending) => {
-	  if (OpenSectionDisplay.changeIds[opening.id()] === undefined)
-	    OpenSectionDisplay.changeIds[opening.id()] = {nextId: 0, lastId: 0};
-	  let idObj = OpenSectionDisplay.changeIds[opening.id()];
-	  let changeId = idObj.nextId;
-	  if (!onlyIfPending || changeId > idObj.lastId) {
-	    idObj.nextId = ++changeId;
-	    setTimeout(()=> {
-	      if (changeId === idObj.nextId) {
-	        idObj.lastId = changeId;
-	        const id = OpenSectionDisplay.getId(opening);
-	        const target = du.id(id);
-	        const listCnt = du.find.up('.expandable-list', target);
-	        if (!listCnt) return;
-	        const listId = Number.parseInt(listCnt.getAttribute('ex-list-id'));
-	
-	        const type = opening.isVertical() === true ? 'pill' : 'sidebar';
-	        OpenSectionDisplay.updateDividers(opening);
-	        OpenSectionDisplay.getList(opening).refresh(type);
-	        const dividerSelector = `[opening-id='${opening.id()}'].division-count-input`;
-	        // listCnt.querySelector(dividerSelector).focus();
-	      }
-	    }, rapid ? 200 : 2000);
-	  }
-	}
-	
-	OpenSectionDisplay.patternContainerSelector = (opening) =>
-	  `.open-pattern-input-cnt[opening-id='${opening.id()}']`;
-	
-	OpenSectionDisplay.lastInputValues = {};
-	OpenSectionDisplay.patterInputHtml = (opening) => {
-	  const pattern = opening.pattern();
-	  const patCntSelector = OpenSectionDisplay.patternContainerSelector(opening);
-	
-	  let inputHtml = '';
-	  const unique = pattern.unique();
-	  for (let index = 0; index < unique.length; index += 1) {
-	    const id = unique[index];
-	    let fill = opening.dividerLayout().fill;
-	    const measInput = Inputs('pattern', {
-	      label: id,
-	      placeholder: id,
-	      name: id,
-	      value: fill[index]
-	    });
-	    measInput.on('keyup', (value, target) => {
-	      opening.pattern().value(target.name, Measurement.decimal(target.value));
-	      fill = opening.dividerLayout().fill;
-	      const patternCnt = document.querySelector(patCntSelector);
-	      const inputs = patternCnt.querySelectorAll('input');
-	      fill.forEach((value, index) => {
-	        if (inputs[index] !== target)
-	          inputs[index].value = value;
-	      });
-	
-	    });
-	    inputHtml += measInput.html();
-	    measInput.on('change', (value, target) => {
-	      if (opening.pattern().satisfied()) {
-	        const cabinet = opening.getAssembly('c');
-	        ThreeDMain.update(cabinet);
-	      }
-	    })
-	  }
-	  return inputHtml;
-	};
-	
-	OpenSectionDisplay.getOpening = (target) => {
-	  const openId = target.getAttribute('opening-id');
-	  return OpenSectionDisplay.sections[openId];
-	}
-	
-	OpenSectionDisplay.evaluator = new StringMathEvaluator();
-	
-	OpenSectionDisplay.patternInputSelector = (opening) =>
-	  `[name='pattern'][opening-id='${opening.id()}']`;
-	
-	OpenSectionDisplay.onPatternChange = (target) => {
-	  const opening = OpenSectionDisplay.getOpening(target);
-	  const newVal = target.value || 'a';
-	  const cntSelector = OpenSectionDisplay.patternContainerSelector(opening);
-	  const inputCnt = document.querySelector(OpenSectionDisplay.patternContainerSelector(opening));
-	  if (opening.pattern().str !== newVal) {
-	    opening.pattern(newVal).str;
-	    const html = OpenSectionDisplay.patterInputHtml(opening);
-	    document.querySelector(cntSelector).innerHTML = html;
-	    if (newVal.length < 2) du.id(OpenSectionDisplay.getId(opening)).innerHTML = '';
-	    else OpenSectionDisplay.refresh(opening);
-	    const cabinet = opening.getAssembly('c');
-	    ThreeDMain.update(cabinet);
-	  }
-	  if (inputCnt !== null) {
-	    inputCnt.hidden = opening.pattern().equal;
-	  }
-	}
-	
-	function expiditeRefresh(target) {
-	  const opening = OpenSectionDisplay.getOpening(target);
-	  OpenSectionDisplay.refresh(opening, true, true);
-	}
-	
-	OpenSectionDisplay.onOrientation = (target) => {
-	  const openId = target.getAttribute('open-id');
-	  const value = target.value;
-	  const opening = OpenSectionDisplay.sections[openId];
-	  opening.vertical(value === 'vertical');
-	  OpenSectionDisplay.refresh(opening);
-	};
-	
-	OpenSectionDisplay.onSectionChange = (target) => {
-	  // ExpandableList.value('selected', target.value, target);
-	  let section = ExpandableList.get(target);
-	  if (!(section instanceof SectionProperties)) {
-	    const index = du.find.up('[index]', target).getAttribute('index');
-	    section = section.openings[index].sectionProperties();
-	  }
-	  section.setSection(target.value === "Open" ? null : target.value);
-	  ThreeDMain.update(section);
-	}
-	
-	du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
-	du.on.match('change', '.division-pattern-input', expiditeRefresh);
-	du.on.match('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
-	du.on.match('change', '.section-selection', OpenSectionDisplay.onSectionChange)
-	module.exports = OpenSectionDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/opening-sketch.js',
-function (require, exports, module) {
-	
-const du = require('../../../../public/js/utils/dom-utils.js');
-	const Draw2D = require('../two-d/draw.js');
-	const Line2d = require('../two-d/objects/line.js');
-	const Vertex2d = require('../two-d/objects/vertex.js');
-	const PanZoom = require('../two-d/pan-zoom.js');
-	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
-	
-	
-	class OpeningSketch {
-	  constructor(id) {
-	    let sketch, panZ, elem, cabinet;
-	
-	    function getSections(sections, list) {
-	      list ||= [];
-	      for (let index = 0; index < sections.length; index++) {
-	        const section = sections[index];
-	        if (sections.length > 0 || sections.cover()) {
-	          list.push(section);
-	          getSections(section.sections, list);
-	        }
-	      }
-	      return list;
-	    }
-	
-	    function draw() {
-	      if (cabinet === undefined) return;
-	      // sketch.ctx().drawImage(0,0)
-	
-	      const allLines = [];
-	      for (let index = 0; index < cabinet.openings.length; index++) {
-	        const sections = getSections(cabinet.openings[index].sections);
-	        for (let si = 0; si < sections.length; si++) {
-	          const section = sections[si];
-	          if (section.sections.length < 1) {
-	            const center = JSON.copy(section.innerCenter());
-	            center.x*=-1;
-	            sketch.text(section.partName(), center, 6, 'grey');
-	          }
-	          const inner = JSON.copy(section.coordinates().inner);
-	          const outer = JSON.copy(section.coordinates().outer);
-	
-	          inner[0].x*=-1;inner[1].x*=-1;inner[2].x*=-1;inner[3].x*=-1;
-	          outer[0].x*=-1;outer[1].x*=-1;outer[2].x*=-1;outer[3].x*=-1;
-	          let lines = [new Line2d(inner[0], inner[1]),
-	                          new Line2d(inner[1], inner[2]),
-	                          new Line2d(inner[2], inner[3]),
-	                          new Line2d(inner[3], inner[0])];
-	          sketch(lines, undefined, .3);
-	          lines = [new Line2d(outer[0], outer[1]),
-	                          new Line2d(outer[1], outer[2]),
-	                          new Line2d(outer[2], outer[3]),
-	                          new Line2d(outer[3], outer[0])];
-	          sketch(lines, 'green', .3);
-	          allLines.concatInPlace(lines);
-	        }
-	      }
-	      const cabLimits = cabinet.position().limits();
-	      const dir = -1;
-	      const cabinetOutline = [
-	        new Line2d({x: dir*0, y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}),
-	        new Line2d({x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 0}),
-	        new Line2d({x: dir*2*cabLimits['x'], y: 0}, {x: dir*0, y: 0}),
-	        new Line2d({x: dir*0, y: 0}, {x: dir*0, y: 2*cabLimits['y']}),
-	      ];
-	      sketch(cabinetOutline, 'red', .3);
-	      allLines.concatInPlace(cabinetOutline);
-	
-	      const measurements = LineMeasurement2d.measurements(allLines);
-	      sketch(measurements, 'grey', 1);
-	    }
-	
-	    function init() {
-	      elem = du.id(id);
-	      const canvas = du.create.element('canvas');
-	      elem.append(canvas);
-	      sketch = new Draw2D(canvas);
-	      panZ = new PanZoom(sketch.canvas(), draw);
-	    }
-	
-	    this.cabinet = (cab) => (cab.constructor.name === 'Cabinet' && (cabinet = cab)) || cabinet;
-	
-	    setTimeout(init, 500);
-	  }
-	}
-	
-	module.exports = OpeningSketch;
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/order.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const UFObj = require('./information/utility-filter.js');
-	const RoomDisplay = require('./room.js');
-	const Order = require('../objects/order.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const EPNTS = require('../../generated/EPNTS.js')
-	const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
-	const Inputs = require('../input/inputs.js');
-	
-	class OrderDisplay {
-	  constructor(parentSelector, orders) {
-	    const roomDisplays = {};
-	    let active;
-	    const getHeader = (order, $index) =>
-	        OrderDisplay.headTemplate.render({order, $index});
-	
-	    const setInfo = (order, index) => () => {
-	      console.log('oid:', order.id());
-	      const elem = du.id(`uf-info-${order.id()}`);
-	      if (elem)
-	        UTF.buildDisplay(elem, new UFObj(order));
-	    }
-	
-	    function initOrder(order, index) {
-	      roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
-	      ToggleDisplayList.onShow(`information-display-${order.id()}`, setInfo(order, index));
-	      // expandList.afterRender(setInfo(order, index));
-	      return order;
-	    }
-	
-	    function loadOrder(index, start) {
-	      return function (orderData) {
-	        const order = new Order().fromJson(orderData);
-	        initOrder(order, index);
-	        expandList.set(index, order);
-	        expandList.refresh();
-	        console.log('load Time:', new Date().getTime() - start);
-	      }
-	    }
-	
-	    const getBody = (order, $index) => {
-	      if (order.loaded) {
-	        let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
-	        active = roomDisplays[order.id()];
-	        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
-	      } else {
-	        const start = new Date().getTime();
-	        Request.get(EPNTS.order.get(order.name()), loadOrder($index, start), console.error);
-	        return 'Loading...';
-	      }
-	    }
-	    const getObject = (values) => initOrder(new Order(values.name));
-	    this.active = () => active;
-	
-	    const expListProps = {
-	      list: orders,
-	      inputValidation: (values) => values.name ? true :
-	          'You must Define a name',
-	      parentSelector, getHeader, getBody, getObject,
-	      listElemLable: 'Order', type: 'sidebar',
-	      inputTree: OrderDisplay.configInputTree()
-	    };
-	    const expandList = new ExpandableObject(expListProps);
-	    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
-	
-	    const saveSuccess = () => console.log('success');
-	    const saveFail = () => console.log('failure');
-	    const save = (target) => {
-	      const index = target.getAttribute('index');
-	      const order = expandList.get(index);
-	      Request.post(EPNTS.order.add(order.name()), order.toJson(), saveSuccess, saveFail);
-	      console.log('saving');
-	    }
-	
-	    const attrUpdate = (attr) => (target) => {
-	      const index = target.getAttribute('index');
-	      const order = expandList.get(index);
-	      order[attr] = target.value;
-	    };
-	
-	    function addOrders(names) {
-	      names.forEach((name) => expListProps.list[name] = new Order(name, null));
-	      expandList.refresh();
-	    }
-	    Request.get(EPNTS.order.list(), addOrders);
-	
-	    du.on.match('change', '.order-name-input', attrUpdate('name'));
-	    du.on.match('click', '.save-order-btn', save);
-	  }
-	}
-	OrderDisplay.bodyTemplate = new $t('order/body');
-	OrderDisplay.headTemplate = new $t('order/head');
-	OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
-	OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
-	OrderDisplay.infoBodyTemplate = new $t('order/information/body');
-	OrderDisplay.infoHeadTemplate = new $t('order/information/head');
-	
-	OrderDisplay.configInputTree = () => {
-	  const dit = new DecisionInputTree();
-	  dit.leaf('Config', [Inputs('name')]);
-	  return dit;
-	}
-	module.exports = OrderDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/orientation-arrows.js',
-function (require, exports, module) {
-	
-const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
-	
-	class OrientationArrows extends Lookup {
-	  constructor(parentSelector) {
-	    super();
-	    const navId = `orientation-arrows-${this.id()}`;
-	    this.navId = () => navId;
-	    this.space = () => '&nbsp;&nbsp;';
-	    CustomEvent.all(this, 'up', 'right', 'down', 'left', 'center');
-	
-	    const elem = du.find(parentSelector);
-	    if (elem === undefined) throw new Error(`No container found: '${parentSelector}'`);
-	    elem.innerHTML = OrientationArrows.template.render(this);
-	
-	    this.on.up((elem, detail) => console.log('up', detail.direction));
-	    this.on.right((elem, detail) => console.log('right', detail.direction));
-	    this.on.down((elem, detail) => console.log('down', detail.direction));
-	    this.on.left((elem, detail) => console.log('left', detail.direction));
-	    this.on.center((elem, detail) => console.log('center', detail.direction));
-	
-	  }
-	}
-	
-	OrientationArrows.template = new $t('orientation-arrows');
-	
-	du.on.match('click', '[dir]', function (target) {
-	  const tableElem = du.find.up('[l-id]', target);
-	  if (!tableElem) return;
-	  const id = tableElem.getAttribute('l-id');
-	  const instance = OrientationArrows.get(id);
-	  const direction = target.getAttribute('dir');
-	  switch (direction) {
-	    case 'u':
-	      instance.trigger.up(target, {direction, instance});
-	      break;
-	    case 'r':
-	      instance.trigger.right(target, {direction, instance});
-	      break;
-	    case 'd':
-	      instance.trigger.down(null, {direction, instance});
-	      break;
-	    case 'l':
-	      instance.trigger.left(target, {direction, instance});
-	      break;
-	    case 'c':
-	      instance.trigger.center(target, {direction, instance});
-	      break;
-	  }
-	});
-	
-	module.exports = OrientationArrows;
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/property.js',
-function (require, exports, module) {
-	
-
-	
-	const Properties = require('../config/properties.js');
-	const Property = require('../config/property.js');
-	const Cost = require('../cost/cost.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const RadioDisplay = require('../display-utils/radio-display.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const Inputs = require('../input/inputs.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	
-	// TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
-	const changed = (id) => Properties.changes.changed(id);
-	const shouldHide = (prop) => prop.value() === null;
-	const hideAll = (properties) => {
-	  for (let index = 0; index < properties.length; index += 1) {
-	    if (properties[index].value() !== null) return false;
-	  }
-	  return properties.length > 0;
-	}
-	
-	function updateSaveAll() {
-	  const saveAllBtn = du.find('#property-manager-save-all');
-	  saveAllBtn.hidden = !Properties.changes.changesExist();
-	  if (saveAllBtn.hidden) {
-	    const saveBtns = du.find.all('.save-change');
-	    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
-	  }
-	}
-	
-	function saveAll() {
-	  Properties.changes.saveAll();
-	  save();
-	  updateSaveAll();
-	}
-	
-	
-	function save() {
-	  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
-	}
-	
-	function get() {
-	  Request.get(EPNTS.config.get(), console.log);
-	}
-	
-	class PropertyDisplay {
-	  constructor(containerSelector) {
-	    let currProps;
-	
-	    const noChildren = (properties, groups) => () =>
-	          properties.length === 0 && Object.keys(groups).length === 0;
-	
-	    function childScope (key) {
-	      const list = Properties.hasValue(key);
-	      if (list.length === 0) return;
-	
-	      const id = String.random();
-	      const getObject = (values) => {
-	        let properties = Properties.new(key,  values.name);
-	        return {name: values.name, id, changed, properties};
-	      }
-	      const inputTree = PropertyDisplay.configInputTree();
-	      const expListProps = {
-	        parentSelector: `#config-expand-list-${id}`,
-	        getHeader: (scope) =>
-	                    PropertyDisplay.configHeadTemplate.render(scope),
-	        getBody: (scope) =>
-	                    PropertyDisplay.configBodyTemplate.render({
-	                      name: scope.name,
-	                      properties: scope.properties,
-	                      changed
-	                    }),
-	        inputValidation: inputTree.validate,
-	        listElemLable: 'Config',
-	        list, getObject, inputTree
-	      };
-	      setTimeout(() => {
-	        const expList = new ExpandableObject(expListProps);
-	        expList.afterRemoval((element, detail) => {
-	          console.log(detail);
-	          console.log('placehoder');
-	          Properties.changes.delete(detail.properties._ID);
-	        });
-	      }, 500);
-	      return id;
-	    }
-	
-	    function getScope(key, group) {
-	      key = key || '';
-	      const id = String.random();
-	      let radioId = group.radioId || PropertyDisplay.counter++;
-	      const properties = [];
-	      const groups = {};
-	      const label = key.replace(PropertyDisplay.camelReg, '$1 $2');
-	      const scope = {key, label, properties, groups, recurse, radioId, id,
-	                      noChildren: noChildren(properties, groups),
-	                      branch: key.match(PropertyDisplay.branchReg)};
-	      PropertyDisplay.uniqueMap[id] = scope;
-	      const keys = Object.keys(group.values);
-	      radioId = PropertyDisplay.counter++;
-	      for( let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        const value = group.values[key];
-	        childScope(key, id);
-	      }
-	      return scope;
-	    }
-	
-	    this.update = () => {
-	      const propKeys = Properties.propertiesToDefine();
-	      const propertyObjs = {};
-	      const childIdMap = [];
-	      for (let index = 0; index < propKeys.length; index += 1) {
-	        const key = propKeys[index];
-	        const props = Properties(key);
-	        const propObj = props;
-	        propertyObjs[key] = propObj;
-	        childIdMap[key] = childScope(key);
-	      }
-	      const id = String.random();
-	      const values = {values: propertyObjs, id, childIdMap, hideAll, Properties};
-	      const contianer = document.querySelector(containerSelector);
-	      contianer.innerHTML =
-	          PropertyDisplay.template.render(values);
-	    };
-	
-	    function updateProperties(name, value) {
-	    }
-	    bind('property-cnt', updateProperties);
-	    new RadioDisplay('property-container', 'radio-id');
-	    this.update();
-	  }
-	}
-	
-	// bind('property-branch-selector', '');
-	
-	du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
-	  const childTargets = target.parentElement.children[1].children;
-	  const childElem = childTargets[target.value];
-	  // TODO: set config property: childElem.innerText;
-	  du.hide(childTargets);
-	  du.show(childElem);
-	});
-	
-	function setPropertyElemValue(elem, idAttr, value) {
-	  const id = elem.getAttribute(idAttr);
-	  const group = elem.getAttribute('name');
-	  const property = Property.get(id);
-	  property.value(value, true);
-	}
-	
-	function updateMeasurements () {
-	  measureElems = du.find.all('[measurement-id]:not([measurement-id=""])');
-	  measureElems.forEach((elem) => {
-	    const id = elem.getAttribute('measurement-id');
-	    const measurement = Measurement.get(id);
-	    elem.value = measurement.display();
-	  });
-	}
-	
-	function updateRadio(elem) {
-	  const name = elem.getAttribute('name');
-	  Properties.config()
-	  const elems = du.find.all(`input[type="radio"][name='${name}']`);
-	  elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
-	  setPropertyElemValue(elem, 'prop-radio-update', true);
-	  if (name.substr(0, 4) === 'UNIT') {
-	    Measurement.unit(elem.value);
-	    updateMeasurements();
-	  }
-	}
-	
-	function updateValueDisplay(elem) {
-	  const id = elem.getAttribute('measurement-id');
-	  const measurement = Measurement.get(id);
-	  elem.value = measurement.display();
-	}
-	
-	function updateValue(elem) {
-	  setPropertyElemValue(elem, 'prop-value-update', elem.value);
-	  const saveBtn = du.find.closest('.save-change', elem);
-	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
-	  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
-	  elem.setAttribute('measurement-id', measurementId);
-	  updateSaveAll();
-	}
-	
-	function updateBoolean(elem) {
-	  setPropertyElemValue(elem, 'prop-boolean-update', elem.checked);
-	  const saveBtn = du.find.closest('.save-change', elem);
-	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
-	  updateSaveAll();
-	}
-	
-	function saveChange(elem) {
-	  const id = elem.getAttribute('properties-id');
-	  Properties.changes.save(id);
-	  elem.hidden = true;
-	  updateSaveAll();
-	  save();
-	}
-	
-	
-	du.on.match('keyup', '[prop-value-update]', updateValue);
-	du.on.match('change', '[prop-boolean-update]', updateBoolean);
-	du.on.match('focusout', '[measurement-id]', updateValueDisplay);
-	du.on.match('change', '[prop-radio-update]', updateRadio);
-	du.on.match('click', '#property-manager-save-all', saveAll);
-	du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
-	
-	PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
-	PropertyDisplay.branchReg = /^OR_(.{1,})/;
-	PropertyDisplay.camelReg = /([a-z])([A-Z])/g;
-	PropertyDisplay.counter = 0;
-	PropertyDisplay.template = new $t('properties/properties');
-	PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
-	PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
-	PropertyDisplay.radioTemplate = new $t('properties/radio');
-	PropertyDisplay.uniqueMap = {};
-	PropertyDisplay.configMap = {};
-	
-	PropertyDisplay.configInputTree = () => {
-	  const dit = new DecisionInputTree(console.log);
-	  dit.leaf('Config', [Inputs('name')]);
-	  return dit;
-	}
-	
-	module.exports = PropertyDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/room.js',
-function (require, exports, module) {
-	
-
-	
-	const Room = require('../objects/room.js');
-	const CabinetDisplay = require('./cabinet.js');
-	const GroupDisplay = require('./group.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const Inputs = require('../input/inputs.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const TwoDLayout = require('../two-d/layout');
-	
-	class RoomDisplay extends Lookup {
-	  constructor(parentSelector, order) {
-	    super(order.id());
-	    const groupDisplays = {};
-	    const getHeader = (room, $index) =>
-	        RoomDisplay.headTemplate.render({room, $index});
-	
-	    const getBody = (room, $index) => {
-	      TwoDLayout.set(room.layout());
-	      return RoomDisplay.bodyTemplate.render({$index, room, groupHtml});
-	    }
-	
-	    const groupHtml = (group) => {
-	      if (groupDisplays[group.id()] === undefined) {
-	        groupDisplays[group.id()] = new GroupDisplay(group);
-	      }
-	      return groupDisplays[group.id()].html();
-	    }
-	
-	    const getObject = (values) => {
-	      const room = new Room(values.name);
-	      return room;
-	    }
-	    this.active = () => expandList.active();
-	
-	    const expListProps = {
-	      list: order.rooms,
-	      parentSelector, getHeader, getBody, getObject,
-	      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
-	      listElemLable: 'Room', type: 'pill',
-	      inputTree: RoomDisplay.configInputTree()
-	    };
-	    const expandList = new ExpandableObject(expListProps);
-	    this.refresh = () => expandList.refresh();
-	  }
-	}
-	
-	du.on.match('click', '.group-add-btn', (target) => {
-	  const id = target.getAttribute('room-id');
-	  const room = Room.get(id);
-	  const orderId = du.find.up('[order-id]', target).getAttribute('order-id');
-	  const roomDisplay = RoomDisplay.get(orderId);
-	  roomDisplay.refresh();
-	  room.addGroup();
-	});
-	
-	RoomDisplay.configInputTree = () => {
-	  const dit = new DecisionInputTree(console.log);
-	  dit.leaf('Room', [Inputs('name')]);
-	  return dit;
-	}
-	RoomDisplay.bodyTemplate = new $t('room/body');
-	RoomDisplay.headTemplate = new $t('room/head');
-	module.exports = RoomDisplay
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/section.js',
-function (require, exports, module) {
-	
-
-});
-
-
-RequireJS.addFunction('./app-src/displays/three-d-main.js',
-function (require, exports, module) {
-	
-
-	// const CSG = require('../../public/js/3d-modeling/csg');
-	
-	const Assembly = require('../objects/assembly/assembly');
-	const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
-	const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
-	const pull = require('../three-d/models/pull.js');
-	const drawerBox = require('../three-d/models/drawer-box.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const ThreeDModel = require('../three-d/three-d-model.js');
-	const ThreeView = require('three-view');
-	const Vector3D = require('../three-d/objects/vector.js');
-	const Line3D = require('../three-d/objects/line.js');
-	const Vertex3D = require('../three-d/objects/vertex.js');
-	
-	// const cube = new CSG.cube({radius: [3,5,1]});
-	const consts = require('../../globals/CONSTANTS');
-	let threeView;
-	
-	// TODO: ????
-	function displayPart(part) {
-	  return true;
-	}
-	
-	function groupParts(cabinet) {
-	  const grouping = {displayPart, group: {groups: {}, parts: {}, level: 0}};
-	  const parts = cabinet.getParts();
-	  for (let index = 0; index < parts.length; index += 1) {
-	    const part = parts[index];
-	    const namePieces = part.partName().split('.');
-	    let currObj = grouping.group;
-	    let level = 0;
-	    let prefix = '';
-	    for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
-	      const piece = namePieces[nIndex];
-	      prefix += piece;
-	      if (currObj.groups[piece] === undefined) currObj.groups[piece] = {groups: {}, parts: {}};
-	      currObj = currObj.groups[piece];
-	      currObj.level = ++level;
-	      currObj.prefix = prefix;
-	      prefix += '.'
-	    }
-	    if (currObj.parts[part.partName()] === undefined) currObj.parts[part.partName()] = [];
-	    currObj.parts[part.partName()].push(part);
-	  }
-	  return grouping;
-	}
-	
-	const modelContTemplate = new $t('model-controller');
-	
-	du.on.match('click', '.model-state', (target) => {
-	  if (event.target.tagName === 'INPUT') return;
-	  const has = target.matches('.active');
-	  deselectPrefix();
-	  !has ? du.class.add(target, 'active') : du.class.remove(target, 'active');
-	  let label = target.children[0]
-	  let type = label.getAttribute('type');
-	  let value = type !== 'prefix' ?
-	        (type !== 'part-name' ? label.innerText : label.getAttribute('part-name')) :
-	        label.nextElementSibling.getAttribute('prefix');
-	  const cabinet = lastRendered;
-	  const tdm = ThreeDModel.get(cabinet);
-	  let partCode = target.getAttribute('part-code');
-	  let partId = target.getAttribute('part-id');
-	  if (partId) {
-	    if (!has) {
-	      tdm.inclusiveTarget(type, partId);
-	      threeView.isolatePart(partCode, cabinet);
-	    }
-	  } else {
-	    tdm.inclusiveTarget(type, has ? undefined : value);
-	    const elem = du.find.closest('[part-code]', target);
-	    partCode = elem.getAttribute('part-code');
-	    threeView.isolatePart(partCode, cabinet);
-	  }
-	  tdm.render();
-	});
-	
-	function deselectPrefix() {
-	  document.querySelectorAll('.model-state')
-	    .forEach((elem) => du.class.remove(elem, 'active'));
-	  const cabinet = lastRendered;
-	  const tdm = ThreeDModel.get(cabinet);
-	  tdm.inclusiveTarget(undefined, undefined);
-	}
-	
-	function setGreaterZindex(...ids) {
-	  return (target) => {
-	    const zMap = [];
-	    let zIndexes = [];
-	    for (let index = 0; index < ids.length; index += 1) {
-	      const id = ids[index];
-	      const elem = du.id(id);
-	      const zIndex = du.zIndex(elem);
-	      zIndexes.push(zIndex);
-	      zMap[zIndex] = elem;
-	    }
-	    zIndexes.sort().reverse();
-	    target.style.zIndex = zIndexes[0];
-	    for (let index = 0; index < zIndexes.length; index += 1) {
-	      const elem = zMap[zIndexes[index]];
-	      if (elem === target) {
-	        break;
-	      } else {
-	        elem.style.zIndex = zIndexes[index + 1];
-	      }
-	    }
-	  };
-	}
-	
-	const toggleClassStr = '.model-label,.model-selector';
-	function focusControls(target) {
-	  const all = du.find.all(toggleClassStr);
-	  for (let index = 0; index < all.length; index++) {
-	    all[index].hidden = true;
-	  }
-	  const active = du.find.upAll(toggleClassStr, target);
-	  active.push(du.find.down(toggleClassStr, target));
-	  for (let index = 0; index < active.length; index++) {
-	    active[index].hidden = false;
-	    const siblings = active[index].parentElement.children;
-	    for (let s = 0; s < siblings.length; s++) {
-	      if (siblings[s].matches(toggleClassStr)) siblings[s].hidden = false;
-	    }
-	  }
-	}
-	
-	du.on.match('click', '.prefix-switch', (target, event) => {
-	  focusControls(target);
-	  // const eventTarg = event.target;
-	  //
-	  //
-	  // const active = du.find.upAll('.model-selector', target);
-	  // active.push(target.parentElement.parentElement);
-	  // const all = document.querySelectorAll('.prefix-body');
-	  // all.forEach((pb) => pb.hidden = true);
-	  // active.forEach((ms) => ms.children[2].hidden = false);
-	});
-	
-	du.on.match('change', '.prefix-checkbox', (target) => {
-	  const cabinet = lastRendered;
-	  const attr = target.getAttribute('prefix');
-	  deselectPrefix();
-	  ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
-	});
-	
-	du.on.match('change', '.part-name-checkbox', (target) => {
-	  const cabinet = lastRendered;
-	  const attr = target.getAttribute('part-name');
-	  deselectPrefix();
-	  const tdm = ThreeDModel.get(cabinet);
-	  tdm.hidePartName(attr, !target.checked);
-	  tdm.render();
-	});
-	
-	du.on.match('change', '.part-id-checkbox', (target) => {
-	  const cabinet = lastRendered;
-	  const attr = target.getAttribute('part-id');
-	  deselectPrefix();
-	  const tdm = ThreeDModel.get(cabinet);
-	  tdm.hidePartId(attr, !target.checked);
-	  tdm.render();
-	})
-	
-	let controllerModel;
-	function updateController() {
-	  controllerModel = lastRendered;
-	  const controller = du.id('model-controller');
-	  const grouping = groupParts(controllerModel);
-	  grouping.tdm = ThreeDModel.get(controllerModel);
-	  controller.innerHTML = modelContTemplate.render(grouping);
-	  controller.hidden = false;
-	}
-	
-	
-	let lastRendered;
-	function update(part) {
-	  if (part) lastRendered = part.getAssembly('c');
-	  const threeDModel = ThreeDModel.get(lastRendered);
-	  if (threeDModel) {
-	    threeDModel.update(lastRendered);
-	    updateController();
-	  }
-	}
-	
-	function modelCenter() {
-	  const model = ThreeDModel.lastActive.getLastRendered();
-	  const vertices = [];
-	  for (let index = 0; index < model.polygons.length; index++) {
-	    const verts = model.polygons[index].vertices;
-	    for (let vIndex = 0; vIndex < verts.length; vIndex++) {
-	      vertices.push(verts[vIndex].pos);
-	    }
-	  }
-	
-	  return Vertex3D.center(...vertices);
-	}
-	
-	function init() {
-	  // const p = pull(5,2);
-	  // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
-	  // p.setColor('black')
-	  // const db = drawerBox(10, 15, 22);
-	  threeView = new ThreeView();
-	
-	  const setZFunc = setGreaterZindex('order-cnt', 'model-cnt', `${threeView.id()}-cnt`);
-	  du.on.match('click', '#model-cnt', setZFunc);
-	  du.on.match('click', '#order-cnt', setZFunc);
-	  du.on.match('click', `#${threeView.id()}-cnt`, setZFunc);
-	  ThreeDModel.onLastModelUpdate(updateController);
-	}
-	
-	module.exports = {init, update}
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/three-view.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils');
-	const pull = require('../three-d/models/pull.js');
-	const ThreeDModel = require('../three-d/three-d-model.js');
-	const Layout2D = require('../objects/layout.js')
-	const Draw2D = require('../two-d/draw.js');
-	const Polygon2d = require('../two-d/objects/polygon.js');
-	const Polygon3D = require('../three-d/objects/polygon.js');
-	const BiPolygon = require('../three-d/objects/bi-polygon.js');
-	const Line2d = require('../two-d/objects/line.js');
-	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
-	const PanZoom = require('../two-d/pan-zoom.js');
-	
-	const CSG = require('../../public/js/3d-modeling/csg');
-	
-	function csgVert(pos, normal) {
-	  return new CSG.Vertex(pos, normal);
-	}
-	
-	function normalize (verts, normal, reverse) {
-	  const returnValue = [];
-	  for (let index = 0; index < verts.length; index++)
-	    returnValue[index] = new CSG.Vertex(verts[index], normal);
-	  return reverse ? returnValue.reverse() : returnValue;
-	}
-	
-	class ThreeView extends Lookup {
-	  constructor() {
-	    super();
-	    const instance = this;
-	    const maxDem = window.innerHeight * .45;
-	    const cnt = du.create.element('div');
-	    // const p = pull(5,2);
-	    const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
-	          new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel();
-	    // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
-	    // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
-	    p.setColor([0, 255, 0])
-	    let draw, panz;
-	    let threeDModel;
-	    document.body.append(cnt);
-	    this.maxDem = () => maxDem;
-	    cnt.innerHTML = ThreeView.template.render(this);
-	
-	    const color = 'black';
-	    const width = .2;
-	
-	    function drawView (refresh) {
-	      Layout2D.release(`three-view`);
-	      let model = instance.lastModel();
-	      model ||= instance.lastRendered();
-	      if (model === undefined) return;
-	      const twoDmap = model.threeView();
-	      if (twoDmap.measurments === undefined) {
-	        const allLines = twoDmap.front.concat(twoDmap.right.concat(twoDmap.top));
-	        twoDmap.measurments = LineMeasurement2d.measurements(allLines);
-	      }
-	      draw(twoDmap.front, color, width);
-	      draw(twoDmap.right, color, width);
-	      draw(twoDmap.top, color, width);
-	      draw(twoDmap.measurments, 'grey');
-	    }
-	
-	    function onPartSelect(elem) {
-	      console.log(elem.value);
-	      const partCode = du.find.closest(`[value="${elem.value}"`, elem).getAttribute('part-code');
-	      instance.isolatePart(elem.value);
-	      elem.value = '';
-	    }
-	
-	    function init() {
-	      draw = new Draw2D(du.id('three-view'));
-	
-	      panz = new PanZoom(draw.canvas(), drawView);
-	      panz.centerOn(0, 0);
-	
-	      if (du.url.breakdown().path.match(/\/.*template$/)) {
-	        setTimeout(() =>
-	          ThreeDModel.setViewerSelector(`#${instance.id()}>.three-view-three-d-cnt`, '40vh'), 500);
-	      }
-	      du.on.match('change', '[name="partSelector"]', onPartSelect);
-	    }
-	
-	    this.update = (cabinet) => {
-	      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
-	      threeDModel.assembly(cabinet);
-	      threeDModel.update(cabinet);
-	      draw.clear();
-	      setTimeout(() => {
-	        drawView(true);
-	      }, 1000);
-	    }
-	
-	    this.isolatePart = (partCode) => {
-	      threeDModel = ThreeDModel.get();
-	      threeDModel.setTargetPartName(partCode);
-	      threeDModel.update();
-	      setTimeout(() => {
-	        panz.once();
-	      }, 500);
-	      du.id(`three-view-part-code-${this.id()}`).innerText = partCode;
-	    }
-	
-	    this.threeDModel = () => threeDModel;
-	    this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;
-	    this.lastRendered = () => threeDModel ? threeDModel.getLastRendered() : undefined;
-	    this.partMap = () => threeDModel ? threeDModel.partMap() : {};
-	
-	    setTimeout(init, 1000);
-	  }
-	}
-	
-	ThreeView.template = new $t('three-view');
-	
-	module.exports = ThreeView;
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/cost-tree.js',
-function (require, exports, module) {
-	
-const Properties = require('../config/properties.js');
-	const Assembly = require('../objects/assembly/assembly.js');
-	const LogicTree = require('../../../../public/js/utils/logic-tree.js');
-	const LogicWrapper = LogicTree.LogicWrapper;
-	
-	class CostDecision {
-	  constructor(type, name, relation, formula) {
-	    Object.getSet(this, {type, name, costs: [], relation, isChoice: false});
-	    this.requiredProperties = Properties.noValue(name);
-	    if (this.relation) {
-	      if (formula) {
-	        function makeDecision(wrapper) {
-	          return true;
-	        }
-	        this.relation = RelationInput.relationsObjs[relation](makeDecision);
-	        this.condition = (wrapper) => this.relation.eval(wrapper.children(), wrapper.payload.value());
-	      } else {
-	        this.isChoice(true);
-	      }
-	    }
-	  }
-	}
-	
-	class CostTree {
-	  constructor(logicTree) {
-	    const idMap = {};
-	    logicTree = CostTree.suplement(logicTree);
-	    this.tree = () => logicTree;
-	    this.root = () => logicTree.root();
-	    const getWrapper = (wrapperId) => (LogicWrapper.get(wrapperId) || this.root());
-	
-	    this.branch = (wrapperId, name) =>
-	            get(wrapperId).branch(String.random(), new CostDecision('Branch', name));
-	    this.leaf = (wrapperId, name) =>
-	            get(wrapperId).leaf(String.random(), new CostDecision('Leaf', name));
-	    this.select = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).select(String.random(), new CostDecision('Select', name, relation, formula));
-	    this.multiselect = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).multiselect(String.random(), new CostDecision('Multiselect', name, relation, formula));
-	    this.conditional = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).conditional(String.random(), new CostDecision('Conditional', name, relation, formula));
-	
-	  }
-	}
-	
-	
-	CostTree.propertyList = Properties.all();
-	CostTree.types = ['branch', 'select', 'conditional', 'multiselect', 'leaf'];
-	CostTree.suplement = (logicTree) => {
-	  if (!(logicTree instanceof LogicWrapper)) {
-	    logicTree = new LogicTree();
-	    logicTree.branch('root');
-	  }
-	  const root = logicTree.root();
-	  const assemClassIds = Properties.list();
-	  assemClassIds.forEach((classId) => {
-	    if (root.node.getNodeByPath(classId) === undefined)
-	      root.branch(classId, new CostDecision('Branch', classId));
-	  });
-	  return logicTree;
-	}
-	CostTree.choices = [];
-	
-	
-	CostTree.CostDecision = CostDecision;
-	module.exports = CostTree;
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/properties.js',
-function (require, exports, module) {
-	
-
-	const Property = require('./property');
-	const Defs = require('./property/definitions');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	const EPNTS = require('../../generated/EPNTS');
-	const Request = require('../../../../public/js/utils/request.js');
-	
-	let unitCount = 0;
-	const UNITS = [];
-	Measurement.units().forEach((unit) =>
-	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
-	UNITS._VALUE = Measurement.unit();
-	
-	const assemProps = {}
-	const add = (key, properties) => properties.forEach((prop) => {
-	  if (assemProps[key] === undefined) assemProps[key] = {};
-	  assemProps[key][prop.code()] = prop;
-	});
-	
-	add('Overlay', [Defs.ov]);
-	add('Reveal', [Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl]);
-	add('Inset', [Defs.is]);
-	add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
-	                Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
-	                Defs.frw,Defs.frt]);
-	add('Panel', [Defs.h,Defs.w,Defs.t]);
-	add('Guides', [Defs.l,Defs.dbtos,Defs.dbsos,Defs.dbbos]);
-	add('DoorAndFront', [Defs.daffrw,Defs.dafip])
-	add('Door', [Defs.h,Defs.w,Defs.t]);
-	add('DrawerBox', [Defs.h,Defs.w,Defs.d,Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn]);
-	add('DrawerFront', [Defs.h,Defs.w,Defs.t,Defs.mfdfd]);
-	add('Frame', [Defs.h,Defs.w,Defs.t]);
-	add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
-	add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
-	add('Opening', []);
-	
-	function definitionsRequired(group) {
-	  const required = [];
-	  if (assemProps[group] === undefined) return [];
-	  Object.values(assemProps[group]).forEach((prop) => {
-	    if (prop instanceof Property && prop.value() !== null) required.push(prop);
-	  });
-	  return required;
-	}
-	
-	function propertiesToDefine() {
-	  const propNames = [];
-	  const keys = Object.keys(assemProps);
-	  keys.forEach((key) => {
-	    if (definitionsRequired(key).length !== 0) {
-	      propNames.push(key);
-	    }
-	  });
-	  return propNames;
-	}
-	
-	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
-	function assemProperties(clazz, filter) {
-	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	  props = assemProps[clazz] || [];
-	  if ((typeof filter) != 'function') return props;
-	  props = props.filter(filter);
-	  return props;
-	}
-	
-	
-	let config = {};
-	const changes = {};
-	const copyMap = {};
-	assemProperties.changes = {
-	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
-	  save: (id) => {
-	    const list = changes[id];
-	    if (!list) throw new Error(`Unkown change id '${id}'`);
-	    const group = list._GROUP;
-	    if (config[group] === undefined) config[group] = [];
-	    if(copyMap[id] === undefined) {
-	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
-	      copyMap[list._ID] = config[group][list._NAME].properties;
-	    } else {
-	      const tempList = changes[id];
-	      for (let index = 0; index < tempList.length; index += 1) {
-	        const tempProp = tempList[index];
-	        const configProp = copyMap[id][index];
-	        configProp.value(tempProp.value());
-	      }
-	    }
-	   },
-	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
-	  delete: (id) => {
-	    delete config[changes[id][0].name()][changes[id]._NAME];
-	    delete changes[id];
-	    delete copyMap[id];
-	  },
-	  changed: (id) => {
-	    const list = changes[id];
-	    if (list === undefined) return false;
-	    for (let index = 0; index < list.length; index += 1) {
-	      const prop = list[index];
-	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
-	        console.log('booyacka!');
-	      }
-	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
-	        return true;
-	      }
-	    }
-	    return false;
-	  },
-	  changesExist: () => {
-	      const lists = Object.values(changes);
-	      for (let index = 0; index < lists.length; index += 1) {
-	        if (assemProperties.changes.changed(lists[index]._ID)) {
-	          return true;
-	        }
-	      }
-	      return false;
-	  }
-	}
-	
-	assemProperties.config = () => {
-	  const plainObj = {};
-	  const keys = Object.keys(config);
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    const lists = config[key];
-	    const listKeys = Object.keys(lists);
-	    plainObj[key] = {};
-	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
-	      const listKey = listKeys[lIndex];
-	      const list = lists[listKey];
-	      const propObj = {name: listKey, properties: []};
-	      plainObj[key][listKey] = propObj;
-	      list.properties.forEach((property) =>
-	          propObj.properties.push(property.toJson(excludeKeys, true)))
-	    }
-	  }
-	  return plainObj;
-	}
-	assemProperties.list = () => Object.keys(assemProps);
-	assemProperties.new = (group, name) => {
-	  if (assemProps[group]) {
-	    const list = [];
-	    let addIndex = 0;
-	    const ogList = Object.values(assemProps[group]);
-	    for (let index = 0; index < ogList.length; index += 1) {
-	      if (hasValueFilter(ogList[index])) {
-	        list[addIndex++] = ogList[index].clone();
-	      }
-	    }
-	    list._ID = String.random();
-	    list._GROUP = group;
-	    list._NAME = name;
-	    changes[list._ID] = list;
-	    return list;
-	  }
-	  throw new Error(`Requesting invalid Property Group '${group}'`);
-	}
-	
-	assemProperties.instance = () => {
-	  const keys = Object.keys(assemProps);
-	  const clone = {};
-	  keys.forEach((key) => {
-	    const props = Object.values(assemProps[key]);
-	    if (clone[key] === undefined) clone[key] = {};
-	    props[keys] = {};
-	    props.forEach((prop) => clone[key][prop.code()] = prop.clone());
-	  });
-	  return clone;
-	};
-	
-	assemProperties.getSet = (group, setName) => {
-	  const clone = {};
-	  let propertyObj = config[group][setName];
-	  propertyObj.properties.forEach((prop) => clone[prop.code()] = prop.clone());
-	  clone.__KEY = setName;
-	  return clone;
-	}
-	
-	const dummyFilter = () => true;
-	assemProperties.groupList = (group, filter) => {
-	  filter = filter || dummyFilter;
-	  const groupList = config[group];
-	  const changeList = {};
-	  if (groupList === undefined) return {};
-	  const groupKeys = Object.keys(groupList);
-	  for (let index = 0; index < groupKeys.length; index += 1) {
-	    const groupKey = groupKeys[index];
-	    const list = groupList[groupKey];
-	    const properties = groupList[list.name].properties;
-	    const codes = properties.map((prop) => prop.code());
-	    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
-	    //                   .filter(filter);
-	    // newProps.forEach((prop) => properties.push(prop.clone()));
-	    changeList[list.name] = {name: list.name, properties: []};
-	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
-	      const prop = properties[pIndex];
-	      changeList[list.name].properties.push(prop.clone());
-	    }
-	    const id = String.random();
-	    const set = changeList[list.name].properties;
-	    set._ID = id;
-	    set._NAME = list.name;
-	    changes[id] = set;
-	    copyMap[id] = properties;
-	  }
-	  return changeList;
-	}
-	
-	const hasValueFilter = (prop) => prop.value() !== null;
-	assemProperties.hasValue = (group) => {
-	  if (props === undefined) return [];
-	  return assemProperties.groupList(group, hasValueFilter);
-	}
-	
-	const list = (key) =>
-	    assemProps[key] ? Object.values(assemProps[key]) : [];
-	
-	const noValueFilter = (prop) => prop.value() === null;
-	assemProperties.noValue = (group) => {
-	  const props = list(group);
-	  if (props === undefined) return [];
-	  return props.filter(noValueFilter);
-	}
-	
-	assemProperties.all = () => {
-	  const props = {};
-	  const keys = Object.keys(assemProps);
-	  keys.forEach((key) => {
-	    const l = [];
-	    list(key).forEach((prop) => l.push(prop));
-	    props[key] = l;
-	  });
-	  return props;
-	}
-	
-	assemProperties.UNITS = UNITS;
-	
-	assemProperties.load = (body) => {
-	  config = Object.fromJson(body);
-	}
-	
-	assemProperties.definitionsRequired = definitionsRequired;
-	assemProperties.propertiesToDefine = propertiesToDefine;
-	module.exports = assemProperties;
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/cabinets.json',
-function (require, exports, module) {
-	module.exports = {
-	  "base": {
-	    "type": "base",
-	    "width": 45.72,
-	    "height": 86.36,
-	    "thickness": 60.96,
-	    "values": [
-	      {"key": "brh", "eqn": "tkb.w + pback.t + brr"},
-	      {"key": "innerWidth", "eqn": "c.w - pwt34 * 2"},
-	      {"key": "innerWidthCenter", "eqn": "innerWidth + pwt34"}
-	    ],
-	    "subassemblies": [
-	      {
-	        "name": "ToeKickBacker",
-	        "type": "Panel",
-	        "code": "tkb",
-	        "center": ["c.w / 2", "w / 2", "tkd + (t / 2)"],
-	        "demensions": ["tkh", "innerWidth", "tkbw"],
-	        "rotation": [0,0,90]
-	      },
-	      {
-	        "name": "Panel.Left",
-	        "type": "Panel",
-	        "code": "pl",
-	        "center": ["c.w - (pl.t / 2)", "pl.l / 2", "(w / 2)"],
-	        "demensions": ["c.t", "c.l", "pwt34"],
-	        "rotation": [0,90,0]
-	      },
-	      {
-	        "name": "Panel.Right",
-	        "type": "Panel",
-	        "code": "pr",
-	        "center": ["(pr.t / 2)", "pr.l / 2", " (w/2)"],
-	        "demensions": ["c.t", "c.l", "pwt34"],
-	        "rotation": [0,90,0]
-	      },
-	      {
-	        "name": "Back",
-	        "type": "Panel",
-	        "code": "pback",
-	        "center": ["l / 2 + pl.t", " (w / 2) + tkb.w", " c.t - (t / 2)"],
-	        "demensions": ["c.l - tkb.w", "innerWidth", "pwt34"],
-	        "rotation": [0,0,90]
-	      },
-	      {
-	        "name": "Bottom",
-	        "type": "Panel",
-	        "code": "pb",
-	        "center": ["c.w / 2", "tkh + (t/2)", "w / 2"],
-	        "demensions": ["c.t - pback.t", "innerWidth", "pwt34"],
-	        "rotation": [90,90, 0]
-	      },
-	      {
-	        "name": "Top",
-	        "type": "Panel",
-	        "code": "pt",
-	        "center": ["c.w / 2", "c.h - pwt34/2", "(w / 2)"],
-	        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
-	        "rotation": [90,90, 0]
-	      },
-	      {
-	        "name": "Top",
-	        "type": "Panel",
-	        "code": "pt2",
-	        "center": ["c.w / 2", "c.h - pwt34/2", "c.t - pback.t - (w / 2)"],
-	        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
-	        "rotation": [90,90, 0]
-	      }
-	    ],
-	    "joints": [
-	      {
-	        "malePartCode": "pt",
-	        "femalePartCode": "pl",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis": "y",
-	        "centerAxis": "-x"
-	      },
-	      {
-	        "malePartCode": "pt",
-	        "femalePartCode": "pr",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis":"y",
-	        "centerAxis": "+x"
-	      },
-	      {
-	        "malePartCode": "pt2",
-	        "femalePartCode": "pl",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis": "y",
-	        "centerAxis": "-x"
-	      },
-	      {
-	        "malePartCode": "pt2",
-	        "femalePartCode": "pr",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis":"y",
-	        "centerAxis": "+x"
-	      },
-	      {
-	        "malePartCode": "pback",
-	        "femalePartCode": "pl",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis": "y",
-	        "centerAxis": "-x"
-	      },
-	      {
-	        "malePartCode": "pback",
-	        "femalePartCode": "pr",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis":"y",
-	        "centerAxis": "+x"
-	      },
-	      {
-	        "malePartCode": "tkb",
-	        "femalePartCode": "pl",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis":"y",
-	        "centerAxis": "-x"
-	      },
-	      {
-	        "malePartCode": "tkb",
-	        "femalePartCode": "pr",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis":"y",
-	        "centerAxis": "+x"
-	      },
-	      {
-	        "malePartCode": "pb",
-	        "femalePartCode": "pl",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis":"y",
-	        "centerAxis": "-x"
-	      },
-	      {
-	        "malePartCode": "pb",
-	        "femalePartCode": "pr",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis":"y",
-	        "centerAxis": "+x"
-	      },
-	      {
-	        "malePartCode": "tkb",
-	        "femalePartCode": "pb",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis":"x",
-	        "centerAxis": "+y"
-	      }
-	    ],
-	    "dividerJoint": {
-	      "type": "Dado",
-	      "maleOffset": 0.9525
-	    },
-	    "openings": [
-	      {
-	        "top": "pt",
-	        "bottom": "pb",
-	        "left": "pl",
-	        "right": "pr",
-	        "back": "pback"
-	      }
-	    ]
-	  },
-	  "corner-wall": {
-	    "_TYPE": "CabinetTemplate",
-	
-	    "ID_ATTRIBUTE": "id",
-	    "type": "corner-wall",
-	    "values": [
-	      {
-	        "key": "bo",
-	        "eqn": "4*2.54",
-	        "id": "pz0usts"
-	      },
-	      {
-	        "key": "fwl",
-	        "eqn": "c.w - rw",
-	        "id": "v47f8o3"
-	      },
-	      {
-	        "key": "fwr",
-	        "eqn": "c.t - lw",
-	        "id": "ammy5c5"
-	      },
-	      {
-	        "key": "bottomInsetDepth",
-	        "eqn": "0",
-	        "id": "h1i4yon"
-	      },
-	      {
-	        "key": "topInsetDepth",
-	        "eqn": "0",
-	        "id": "r30qsyq"
-	      },
-	      {
-	        "key": "lw",
-	        "eqn": "30.48",
-	        "id": "r8els3r"
-	      },
-	      {
-	        "key": "rw",
-	        "eqn": "30.48",
-	        "id": "zoxsnu9"
-	      },
-	      {
-	        "key": "cnrD",
-	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
-	        "id": "vju4ekg"
-	      },
-	      {
-	        "key": "pbw",
-	        "eqn": "Math.sqrt((bo+pb.t)*(bo+pb.t)*2)",
-	        "id": "bg3l1cw"
-	      },
-	      {
-	        "key": "backhyp",
-	        "eqn": "Math.sqrt((pl.t*pl.t)*2)",
-	        "id": "zmra3po"
-	      },
-	      {
-	        "key": "frontLeftTheta",
-	        "eqn": "Math.atan(fwr/fwl)",
-	        "id": "woqnfe1"
-	      },
-	      {
-	        "key": "frontHype",
-	        "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)",
-	        "id": "u1sgalg"
-	      },
-	      {
-	        "key": "cutWidth",
-	        "eqn": "frontHype * 2",
-	        "id": "egcyi4x"
-	      },
-	      {
-	        "key": "frontHypeCenterD",
-	        "eqn": "fwr/2",
-	        "id": "fwll2bq"
-	      },
-	      {
-	        "key": "frontHypeCenterX",
-	        "eqn": "fwl/2",
-	        "id": "c0gj6ud"
-	      },
-	      {
-	        "key": "cutCenterX",
-	        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontLeftTheta)",
-	        "id": "otayvu9"
-	      },
-	      {
-	        "key": "cutCenterD",
-	        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontLeftTheta)",
-	        "id": "ekillpb"
-	      },
-	      {
-	        "key": "backCutterDem",
-	        "eqn": "bo*2*Math.sin(Math.toRadians(pb.r.y))",
-	        "id": "nvnsugh"
-	      },
-	      {
-	        "key": "topInnerLimit",
-	        "eqn": "c.h - topInsetDepth - pt.t",
-	        "id": "zj8uuj1"
-	      },
-	      {
-	        "key": "topOuterLimit",
-	        "eqn": "c.h",
-	        "id": "3liro7c"
-	      },
-	      {
-	        "key": "bottomInnerLimit",
-	        "eqn": "bottomInsetDepth + pbtm.t",
-	        "id": "ddjl8d0"
-	      },
-	      {
-	        "key": "bottomOuterLimit",
-	        "eqn": 0,
-	        "id": "0y39vqw"
-	      },
-	      {
-	        "key": "leftInnerLimit",
-	        "eqn": "pl.t",
-	        "id": "oto8hml"
-	      },
-	      {
-	        "key": "leftOuterLimit",
-	        "eqn": "0",
-	        "id": "s0ynin6"
-	      },
-	      {
-	        "key": "leftCutTheta",
-	        "eqn": "Math.PI - frontLeftTheta - Math.PI12",
-	        "id": "d91x5l5"
-	      },
-	      {
-	        "key": "leftCutT",
-	        "eqn": "pl.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
-	        "id": "c1zmc1s"
-	      },
-	      {
-	        "key": "rightCutTheta",
-	        "eqn": "frontLeftTheta",
-	        "id": "moxhnw5"
-	      },
-	      {
-	        "key": "rightCutX",
-	        "eqn": "pr.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
-	        "id": "476p6b2"
-	      },
-	      {
-	        "key": "rightInnerLimit",
-	        "eqn": "fwl",
-	        "id": "dnmesi3"
-	      },
-	      {
-	        "key": "rightOuterLimit",
-	        "eqn": "fwl",
-	        "id": "9syndoq"
-	      },
-	      {
-	        "key": "frontDepthMin",
-	        "eqn": 0,
-	        "id": "2pfov96"
-	      },
-	      {
-	        "key": "frontDepthMax",
-	        "eqn": "fwr",
-	        "id": "eflejko"
-	      }
-	    ],
-	    "subassemblies": [
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w - bo/2",
-	          "c.h/2",
-	          "c.t - bo/2"
-	        ],
-	        "demensions": [
-	          "pbw",
-	          "c.h",
-	          "pwt14"
-	        ],
-	        "rotation": [
-	          0,
-	          "45",
-	          0
-	        ],
-	        "name": "Panel.Back",
-	        "code": "pb",
-	        "id": "ly2p41u"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "c.t",
-	          "c.h/2",
-	          "c.w"
-	        ],
-	        "demensions": [
-	          "backCutterDem",
-	          "c.h",
-	          "backCutterDem"
-	        ],
-	        "rotation": [
-	          0,
-	          "135",
-	          0
-	        ],
-	        "name": "Cutter.Back",
-	        "code": "cb",
-	        "id": "ly2p41z"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "pl.w/2",
-	          "c.h / 2",
-	          "pl.t/2"
-	        ],
-	        "demensions": [
-	          "c.w",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          "0",
-	          0
-	        ],
-	        "name": "Panel.Left",
-	        "code": "pl",
-	        "id": "67tkjp5"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "pr.t/2",
-	          "c.h/2",
-	          "pr.w/2"
-	        ],
-	        "demensions": [
-	          "c.t",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          "90",
-	          0
-	        ],
-	        "name": "Panel.Right",
-	        "code": "pr",
-	        "id": "kfuwf6d"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "pbl.w / 2 + pl.t ",
-	          "c.h/2",
-	          "c.t - t / 2"
-	        ],
-	        "demensions": [
-	          "c.w - bo",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          0,
-	          0
-	        ],
-	        "name": "Panel.Back.Left",
-	        "code": "pbl",
-	        "id": "qnpktr8"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "1000",
-	          "pbl.c.y",
-	          "pbl.c.z + pbl.t"
-	        ],
-	        "demensions": [
-	          "pbl.d.x",
-	          "pbl.d.y",
-	          "pbl.d.z"
-	        ],
-	        "rotation": [
-	          "pbl.r.x",
-	          "pbl.r.y",
-	          "pbl.r.z"
-	        ],
-	        "name": "Cutter.Back.Left",
-	        "code": "cpbl",
-	        "id": "qnpktr2"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w - pbr.t/2",
-	          "c.h/2",
-	          "pbr.w/2 + pr.t"
-	        ],
-	        "demensions": [
-	          "c.t - bo",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          "90",
-	          0
-	        ],
-	        "name": "Panel.Back.Right",
-	        "code": "pbr",
-	        "id": "a1yypp5"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "1000",
-	          "pbr.c.y",
-	          "pbr.c.z"
-	        ],
-	        "demensions": [
-	          "pbr.d.x",
-	          "pbr.d.y",
-	          "pbr.d.z"
-	        ],
-	        "rotation": [
-	          "pbr.r.x",
-	          "pbr.r.y",
-	          "pbr.r.z"
-	        ],
-	        "name": "Cutter.Back.Right",
-	        "code": "cpbr",
-	        "id": "qnpktw2"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w / 2",
-	          "c.h - topInsetDepth - t / 2",
-	          "c.t / 2"
-	        ],
-	        "demensions": [
-	          "c.w - pbr.t - pl.t",
-	          "c.t - pbl.t - pr.t",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          "90",
-	          "0",
-	          0
-	        ],
-	        "name": "Panal.top",
-	        "code": "pt",
-	        "id": "0p8zyq0"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w / 2",
-	          "bottomInsetDepth + t / 2",
-	          "c.t / 2"
-	        ],
-	        "demensions": [
-	          "c.w - pbr.t - pl.t",
-	          "c.t - pbl.t - pr.t",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          "90",
-	          "0",
-	          0
-	        ],
-	        "name": "Panal.top",
-	        "code": "pbtm",
-	        "id": "uqb7ksc"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "cutCenterX",
-	          "c.h/2",
-	          "cutCenterD"
-	        ],
-	        "demensions": [
-	          "frontHype * 2",
-	          "frontHype*2",
-	          "c.h"
-	        ],
-	        "rotation": [
-	          "90",
-	          "Math.toDegrees(frontLeftTheta)",
-	          0
-	        ],
-	        "name": "Cutter.Front",
-	        "code": "cut",
-	        "id": "t2nx210"
-	      }
-	    ],
-	    "joints": [
-	      {
-	        "malePartCode": "pb",
-	        "femalePartCode": "pbtm",
-	        "type": "Butt",
-	        "id": "jhdiitu"
-	      },
-	      {
-	        "malePartCode": "pb",
-	        "femalePartCode": "pbr",
-	        "type": "Butt",
-	        "id": "tfovv9r"
-	      },
-	      {
-	        "malePartCode": "pb",
-	        "femalePartCode": "pbl",
-	        "type": "Butt",
-	        "id": "i49ifbe"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pbtm",
-	        "femalePartCode": "pr",
-	        "maleOffset": "pr.t / 2",
-	        "demensionAxis": "y",
-	        "centerAxis": "-z",
-	        "id": "0zszlb9"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pbtm",
-	        "femalePartCode": "pl",
-	        "maleOffset": "pl.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "vbwtc6l"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pbtm",
-	        "femalePartCode": "pbl",
-	        "maleOffset": "pbl.t/2",
-	        "demensionAxis": "y",
-	        "centerAxis": "+z",
-	        "id": "x8qno2z"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pbtm",
-	        "femalePartCode": "pbr",
-	        "maleOffset": "pbr.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "3zyqkyg"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pt",
-	        "femalePartCode": "pr",
-	        "maleOffset": "pr.t / 2",
-	        "demensionAxis": "y",
-	        "centerAxis": "-z",
-	        "id": "ho44x8c"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pt",
-	        "femalePartCode": "pl",
-	        "maleOffset": "pl.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "f2yqowv"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pt",
-	        "femalePartCode": "pbl",
-	        "maleOffset": "pbl.t/2",
-	        "demensionAxis": "y",
-	        "centerAxis": "+z",
-	        "id": "xlic9x8"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pt",
-	        "femalePartCode": "pbr",
-	        "maleOffset": "pbr.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "dv1u67c"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pbl",
-	        "femalePartCode": "pl",
-	        "maleOffset": "pl.t",
-	        "demensionAxis": "x",
-	        "centerAxis": "+y",
-	        "id": "861ea5i"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pbr",
-	        "femalePartCode": "pr",
-	        "maleOffset": "pr.t",
-	        "demensionAxis": "x",
-	        "centerAxis": "+y",
-	        "id": "t0ywrvc"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "pb",
-	        "femalePartCode": "pt",
-	        "id": "e3z7qur"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cut",
-	        "femalePartCode": "pt",
-	        "id": "k0atwnf"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cut",
-	        "femalePartCode": "pbtm",
-	        "id": "4ke3jn9"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cut",
-	        "femalePartCode": "pr",
-	        "id": "lr1xqx8"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cut",
-	        "femalePartCode": "pl",
-	        "id": "bk2rjwz"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "pt",
-	        "id": "1l5u1lk"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "pbtm",
-	        "id": "1zp5rfv"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "pbr",
-	        "id": "rs2316q"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "pbl",
-	        "id": "m9e5p7l"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cpbl",
-	        "femalePartCode": "pb",
-	        "id": "l85jpd3"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cpbr",
-	        "femalePartCode": "pb",
-	        "id": "h3xmpm4"
-	      }
-	    ],
-	    "dividerJoint": {
-	      "type": "Dado",
-	      "maleOffset": "33"
-	    },
-	    "shape": "corner",
-	    "width": 50.8,
-	    "height": 76.2,
-	    "thickness": 91.44,
-	    "openings": [
-	      {
-	        "_Type": "location",
-	        "rotation": {
-	          "x": 0,
-	          "z": 0,
-	          "y": "270+ Math.toDegrees(frontLeftTheta)"
-	        },
-	        "coordinates": {
-	          "inner": [
-	            {
-	              "x": "rightInnerLimit - leftCutT",
-	              "y": "topInnerLimit",
-	              "z": "frontDepthMin + pl.t"
-	            },
-	            {
-	              "x": "leftInnerLimit",
-	              "y": "topInnerLimit",
-	              "z": "frontDepthMax - rightCutX"
-	            },
-	            {
-	              "x": "leftInnerLimit",
-	              "y": "bottomInnerLimit",
-	              "z": "frontDepthMax - rightCutX"
-	            },
-	            {
-	              "x": "rightInnerLimit - leftCutT",
-	              "y": "bottomInnerLimit",
-	              "z": "frontDepthMin + pl.t"
-	            }
-	          ],
-	          "outer": [
-	            {
-	                "x": "rightOuterLimit",
-	                "y": "topOuterLimit",
-	                "z": "frontDepthMin"
-	            },
-	            {
-	              "x": "leftOuterLimit",
-	              "y": "topOuterLimit",
-	              "z": "frontDepthMax"
-	            },
-	            {
-	              "x": "leftOuterLimit",
-	              "y": "bottomOuterLimit",
-	              "z": "frontDepthMax"
-	            },
-	            {
-	              "x": "rightOuterLimit",
-	              "y": "bottomOuterLimit",
-	              "z": "frontDepthMin"
-	            }
-	          ]
-	        },
-	
-	        "state": {
-	          "innerOouter": true,
-	          "index": 0,
-	          "xOyOz": "z"
-	        }
-	      }
-	    ]
-	  }
-	};
-});
-
-
-RequireJS.addFunction('./app-src/input/inputs.js',
-function (require, exports, module) {
-	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
-	const Cost = require('../cost/cost.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Material = require('../cost/types/material.js');
-	const Company = require('../objects/company.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const Labor = require('../cost/types/labor.js');
-	
-	
-	const defined = {};
-	function add (name, input) {
-	  if (defined[name]) {
-	    throw new Error(`Input by the name of '${name}' is already defined`)
-	  }
-	  defined[name] = input;
-	}
-	
-	module.exports = (name, properties) => defined[name].clone(properties);
-	
-	
-	add('length', new MeasurementInput({
-	  type: 'text',
-	  placeholder: 'Length',
-	  name: 'length',
-	  class: 'center'
-	}));
-	
-	add('width', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Width',
-	  name: 'width',
-	  class: 'center'
-	}));
-	
-	add('depth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Depth',
-	  name: 'depth',
-	  class: 'center'
-	}));
-	
-	add('cost', new MeasurementInput({
-	  type: 'number',
-	  label: '$',
-	  placeholder: 'Cost',
-	  name: 'cost'
-	}));
-	
-	add('pattern', new MeasurementInput({
-	  type: 'text',
-	  class: 'pattern-input',
-	}));
-	
-	
-	add('offsetLen', new MeasurementInput({
-	  type: 'text',
-	  label: 'Offset',
-	  placeholder: 'Length',
-	  name: 'offsetLength',
-	  class: 'center',
-	}));
-	
-	add('offsetWidth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Width',
-	  name: 'offsetWidth',
-	  class: 'center',
-	}));
-	
-	add('offsetDepth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Depth',
-	  name: 'offsetDepth',
-	  class: 'center',
-	}));
-	
-	
-	add('costType', new Select({
-	  placeholder: 'Type',
-	  name: 'type',
-	  class: 'center',
-	  list: Cost.typeList
-	}));
-	
-	add('method', new Select({
-	  name: 'method',
-	  class: 'center',
-	  list: Material.methodList,
-	}));
-	
-	add('company', new Select({
-	  name: 'company',
-	  label: 'Company',
-	  class: 'center',
-	  list: [''].concat(Object.keys(Company.list)),
-	  value: ''
-	}));
-	
-	add('childCost', new Select({
-	    name: 'child',
-	    label: 'Default',
-	    class: 'center',
-	}));
-	
-	
-	add('id', new Input({
-	  type: 'text',
-	  placeholder: 'Id',
-	  name: 'id',
-	  class: 'center',
-	  validation: /^\s*[^\s]{1,}\s*$/,
-	  errorMsg: 'You must enter an Id'
-	}));
-	
-	add('propertyId', new Input({
-	  type: 'text',
-	  placeholder: 'Property Id',
-	  name: 'propertyId',
-	  class: 'center',
-	  validation: /^[a-zA-Z\.]{1}$/,
-	  errorMsg: 'Alpha Numeric Value seperated by \'.\'.<br>I.E. Cabinet=>1/2 Overlay = Cabinet.12Overlay'
-	}));
-	
-	add('propertyValue', new Input({
-	  type: 'text',
-	  placeholder: 'Property Value',
-	  name: 'propertyValue',
-	  class: 'center'
-	}));
-	
-	add('costId', new Input({
-	  type: 'text',
-	  placeholder: 'Id',
-	  name: 'id',
-	  class: 'center',
-	  validation: (id, values) =>
-	      id !== '' && (!values.referenceable || Object.values(Cost.defined).indexOf(id) === -1),
-	  errorMsg: 'You must an Id: value must be unique if Referencable.'
-	}));
-	
-	add('name', new Input({
-	  type: 'text',
-	  placeholder: 'Name',
-	  name: 'name',
-	  value: 'peach',
-	  class: 'center',
-	  validation: /^\s*[^\s].*$/,
-	  errorMsg: 'You must enter a Name'
-	}));
-	
-	add('color', new Input({
-	  type: 'color',
-	  validation: /.*/,
-	  placeholder: 'color',
-	  name: 'color',
-	  class: 'center'
-	}));
-	
-	add('optional', new Input({
-	  label: 'Optional',
-	  name: 'optional',
-	  type: 'checkbox',
-	  default: false,
-	  validation: [true, false],
-	  targetAttr: 'checked'
-	}));
-	
-	add('modifyDemension', new Input({
-	  label: 'Modify Demension',
-	  name: 'modifyDemension',
-	  type: 'checkbox',
-	  default: false,
-	  validation: [true, false],
-	  targetAttr: 'checked'
-	}));
-	
-	add('partNumber', new Input({
-	  label: 'Part Number',
-	  name: 'partNumber',
-	  type: 'text'
-	}));
-	
-	add('count', new Input({
-	  label: 'Count',
-	  name: 'count',
-	  type: 'number',
-	  value: 1
-	}));
-	
-	add('quantity', new Input({
-	  label: 'Quantity',
-	  name: 'quantity',
-	  type: 'number',
-	  value: 0
-	}));
-	
-	add('hourlyRate', new Input({
-	  label: 'Hourly Rate',
-	  name: 'hourlyRate',
-	  type: 'number',
-	}));
-	
-	add('hours', new Input({
-	  label: 'Hours',
-	  name: 'hours',
-	  type: 'number',
-	  value: 0
-	}));
-	
-	add('laborType', new Input({
-	  name: 'laborType',
-	  placeholder: 'Labor Type',
-	  label: 'Type',
-	  class: 'center',
-	  clearOnClick: true,
-	  list: Labor.types
-	}));
-	
-	add('formula', new Input({
-	  name: 'formula',
-	  placeholder: 'Formula',
-	  label: 'Formula',
-	  class: 'center'
-	}));
-	
-});
-
-
-RequireJS.addFunction('./app-src/input/validation.js',
-function (require, exports, module) {
-	
-
-	
-	const InvalidComputation = require('./error.js');
-	
-	class ObjectValidator {
-	  constructor() {
-	    const validators =  {};
-	    this.add = (name, validator) => {
-	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
-	        throw new Error('Invalid Validator');
-	      }
-	      validator[name] = validator;
-	    }
-	    this.validate = (obj) => {
-	      if (typeof obj !== 'object') throw new InvalidComputation()
-	      const keys = Object.keys(validators);
-	    }
-	  }
-	}
-	
-	
-	class Validator {
-	  constructor(validator, props, info) {
-	    let type, validate;
-	    const complement = props.explanation;
-	
-	    let defaultExpl;
-	    if (validator instanceof Regex) {
-	      type = 'Regex';
-	      if (props.complement) {
-	        defaultExpl = 'Value must fit regex expression';
-	        validate = (value) => validator.match('value');
-	      } else {
-	        defaultExpl = 'Value must not fit regex expression';
-	        validate = (value) => !validator.match('value');
-	      }
-	    } else if (Array.isArray(validator)) {
-	      if (props.complement) {
-	        defaultExpl = 'Value must exist within array';
-	        validate = (value) => validator.indexOf(value) !== -1;
-	      } else {
-	        defaultExpl = 'Value must not exist within array';
-	        validate = (value) => validator.indexOf(value) === -1;
-	      }
-	    }
-	
-	    props.explanation = props.explanation || defaultExpl;
-	
-	    val = val === undefined && elem ? elem.value : val;
-	    if (val === undefined) return false;
-	    if (valid !== undefined && val === value) return valid;
-	    let valValid = true;
-	    if (props.validation instanceof RegExp) {
-	      valValid = val.match(props.validation) !== null;
-	    }
-	    else if ((typeof props.validation) === 'function') {
-	      valValid = props.validation.apply(null, arguments);
-	    }
-	    else if (Array.isArray(props.validation)) {
-	      valValid = props.validation.indexOf(val) !== -1;
-	    }
-	
-	    return valValid;
-	  }
-	}
-	exports.ObjectValidator = ObjectValidator
-	exports.Validator = Validator
-	
-	
-	
-	
 	
 });
 
@@ -23841,6 +20509,636 @@ function (require, exports, module) {
 	}
 	
 	module.exports = panZoom;
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/displayManager.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	
+	class DisplayManager {
+	  constructor(displayId, listId, switchId, selected) {
+	    if (switchId && !listId) throw new Error('switchId can be defined iff listId is defined');
+	    const id = String.random();
+	    const instance = this;
+	    this.list = (func) => {
+	      const list = [];
+	      const runFunc = (typeof func) === 'function';
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        let id = elem.id || String.random(7);
+	        elem.id = id;
+	        name = elem.getAttribute('name') || id;
+	        const item = {id, name, link: elem.getAttribute('link')};
+	        if (runFunc) func(elem);
+	        list.push(item);
+	      }
+	      return list;
+	    }
+	
+	    function updateActive(id) {
+	      const items = document.querySelectorAll('.display-manager-input');
+	      for (let index = 0; index < items.length; index += 1) {
+	        const elem = items[index];
+	        elem.getAttribute('display-id') === id ?
+	              du.class.add(elem, 'active') : du.class.remove(elem, 'active');
+	      }
+	    }
+	
+	    function open(id) {
+	      const displayElems = du.id(displayId).children;
+	      for (let index = 0; index < displayElems.length; index += 1) {
+	        const elem = displayElems[index];
+	        if (elem.id === id) {
+	          const link = elem.getAttribute('link');
+	          if (link) {
+	            window.location.href = link;
+	            return;
+	          }
+	          elem.hidden = false;
+	        }
+	        else elem.hidden = true;
+	      }
+	      updateActive(id);
+	    }
+	
+	    this.open = open;
+	
+	    const children = du.id(displayId).children;
+	
+	    if (switchId) {
+	      du.on.match('click', `#${switchId}`, (target, event) => {
+	        const listElem = du.id(listId);
+	        listElem.hidden = !listElem.hidden;
+	      });
+	      document.addEventListener('click', (event) => {
+	        const listElem = du.id(listId);
+	        const target = event.target;
+	        const withinList = du.find.up(`#${listId}`, target) !== undefined;
+	        if (!withinList && target.id !== switchId &&listElem)
+	          listElem.hidden = true;
+	      });
+	    }
+	    DisplayManager.instances[id] = this
+	    if ((typeof selected) === 'string') setTimeout(() => open(selected), 100);
+	    else if (children.length > 0) {
+	      this.list();
+	      open(children[0].id);
+	    }
+	    if (listId) {
+	      du.id(listId).innerHTML = DisplayManager.template.render({id, switchId, list: this.list()});
+	    }
+	  }
+	}
+	
+	DisplayManager.instances = {};
+	DisplayManager.template = new $t('display-manager');
+	
+	du.on.match('click', '.display-manager-input', (target, event) => {
+	  const displayManager = du.find.up('.display-manager', target);
+	  const displayManagerId = displayManager.id;
+	  const displayId = target.getAttribute('display-id');
+	  DisplayManager.instances[displayManagerId].open(displayId);
+	});
+	module.exports = DisplayManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/information-bar.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	class InformationBar {
+	  constructor() {
+	    const container = du.create.element('div');
+	    container.className = 'information-bar';
+	
+	    this.show = () => container.hidden = false;
+	    this.hide = () => container.hidden = true;
+	    this.update = (html) => container.innerHTML = html;
+	
+	    document.body.append(container);
+	  }
+	}
+	module.exports = InformationBar
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/radio-display.js',
+function (require, exports, module) {
+	
+
+	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+	const InformationBar = require('./information-bar.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	class RadioDisplay {
+	  constructor(radioClass, groupAttr, alternateToggleClass) {
+	    const afterSwitchEvent = new CustomEvent('afterSwitch');
+	    const beforeSwitchEvent = new CustomEvent('beforeSwitch');
+	    const selector = (attrVal) => {
+	      return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
+	    }
+	
+	    const infoBar = new InformationBar();
+	
+	    function path () {
+	      let path = '';
+	      const info = du.find.downInfo(`.${radioClass}.open`, document.body, null, `.${radioClass}.close`);
+	      info.matches.forEach((obj) => {
+	        const header = obj.node.children[0];
+	        if (header && header.getBoundingClientRect().y < 8) {
+	          path += `${header.innerText}=>`
+	        }
+	      });
+	      return path;
+	    }
+	
+	    function triggerAlternateToggles(target) {
+	      if (alternateToggleClass) {
+	        const alterToggles = document.querySelectorAll(alternateToggleClass);
+	        alterToggles.forEach((elem) => elem.hidden = false);
+	        const closest = du.closest(alternateToggleClass, target);
+	        if (closest) closest.hidden = true;
+	      }
+	    }
+	    this.beforeSwitch = (func) => beforeSwitchEvent.on(func);
+	    this.afterSwitch = (func) => afterSwitchEvent.on(func);
+	
+	
+	    du.on.match('scroll', `*`, (target, event) => {
+	      infoBar.update(path());
+	    });
+	
+	    let previousHeader;
+	    du.on.match('click', `.${radioClass} > .expand-header`, (targetHeader, event) => {
+	      const target = targetHeader.parentElement;
+	      const attrVal = target.getAttribute(groupAttr);
+	      const targetBody = target.children[1];
+	      const hidden = targetBody.hidden;
+	      targetBody.hidden = !hidden;
+	      beforeSwitchEvent.trigger(previousHeader, {previousHeader, targetHeader});
+	      if (hidden) {
+	        du.class.add(targetHeader, 'active');
+	        du.class.swap(target, 'open', 'close');
+	        const siblings = document.querySelectorAll(selector(attrVal));
+	        for (let index = 0; index < siblings.length; index += 1) {
+	          if (siblings[index] !== target) {
+	            const sibHeader = siblings[index].children[0];
+	            const sibBody = siblings[index].children[1];
+	            du.class.swap(siblings[index], 'close', 'open');
+	            sibBody.hidden = true;
+	            du.class.remove(sibHeader, 'active');
+	          }
+	        }
+	        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
+	        previousHeader = targetHeader;
+	      } else {
+	        du.class.swap(target, 'close', 'open');
+	        du.class.remove(targetHeader, 'active');
+	        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
+	        previousHeader = null;
+	      }
+	      infoBar.update(path());
+	    });
+	  }
+	}
+	module.exports = RadioDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/display-utils/toggle-display-list.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	
+	const ToggleDisplayList = {};
+	ToggleDisplayList.class = 'toggle-display-list';
+	ToggleDisplayList.funcs = {};
+	
+	ToggleDisplayList.onShow = (displayId, func) => {
+	  if ((typeof func) === 'function') {
+	    if (ToggleDisplayList.funcs[displayId] === undefined) {
+	      ToggleDisplayList.funcs[displayId] = [];
+	    }
+	    ToggleDisplayList.funcs[displayId].push(func);
+	  }
+	}
+	
+	ToggleDisplayList.runFuncs = (displayId) => {
+	  if (ToggleDisplayList.funcs[displayId] === undefined) return;
+	  ToggleDisplayList.funcs[displayId].forEach((func) => func(displayId));
+	}
+	
+	ToggleDisplayList.toggle = function (elem, event) {
+	  const target = event.target;
+	  const children = elem.children;
+	  for (let index = 0; index < children.length; index += 1) {
+	    const child = children[index];
+	    if (target === child) {
+	      du.class.add(child, 'active');
+	      const displayId = child.getAttribute('display-id');
+	      du.id(displayId).hidden = false;
+	      ToggleDisplayList.runFuncs(displayId);
+	    } else {
+	      du.class.remove(child, 'active');
+	      du.id(child.getAttribute('display-id')).hidden = true;
+	    }
+	  }
+	}
+	
+	du.on.match('click', `.${ToggleDisplayList.class}`, ToggleDisplayList.toggle);
+	
+	module.exports = ToggleDisplayList;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/cabinet.js',
+function (require, exports, module) {
+	
+
+	
+	const Show = require('../show.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const ThreeDMain = require('../displays/three-d-main.js');
+	const TwoDLayout = require('../two-d/layout');
+	const OpenSectionDisplay = require('./open-section.js');
+	const CabinetConfig = require('../config/cabinet-configs.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const { Object2d } = require('../objects/layout.js');//.Object2d;
+	const Inputs = require('../input/inputs.js');
+	const EPNTS = require('../../generated/EPNTS');
+	
+	
+	function getHtmlElemCabinet (elem) {
+	  const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
+	  return Cabinet.get(cabinetId);
+	}
+	
+	class CabinetDisplay {
+	  constructor(parentSelector, group) {
+	    let propId = 'Half Overlay';
+	    let displayId = String.random();
+	    const instance = this;
+	    this.propId = (id) => {
+	      if (id ===  undefined) return propId;
+	      propId = id;
+	    }
+	    function displayValue(val) {
+	      return new Measurement(val).display();
+	    }
+	    const getHeader = (cabinet, $index) =>
+	        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
+	    const showTypes = Show.listTypes();
+	    const getBody = (cabinet, $index) => {
+	      if (expandList.activeKey() === $index) {
+	        TwoDLayout.panZoom.once();
+	        ThreeDMain.update(cabinet);
+	      }
+	      const scope = {$index, cabinet, showTypes, OpenSectionDisplay};
+	      return CabinetDisplay.bodyTemplate.render(scope);
+	    }
+	
+	    function inputValidation(values) {
+	      // const validName = values.name !== undefined;
+	      // const validType = CabinetConfig.valid(values.type, values.id);
+	      if(true) return true;
+	      return {type: 'You must select a defined type.'};
+	    }
+	
+	    function updateLayout(target) {
+	      setTimeout(() => {
+	        const attr = target.name === 'thickness' ? 'height' : 'width';
+	        const cabinet = getHtmlElemCabinet(target);
+	        const obj2d = Object2d.get(cabinet.id());
+	        const value = new Measurement(target.value, true).decimal();
+	        console.log('new cab val', value);
+	        obj2d.topview()[attr](value);
+	        TwoDLayout.panZoom.once();
+	      }, 1000);
+	    }
+	
+	    du.on.match('change', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
+	    du.on.match('blur', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
+	
+	    function updateCabValue(cabinet, attr) {
+	      const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
+	      const input = du.find.down(`[name='${attr}']`, inputCnt);
+	      input.value = displayValue(cabinet[attr]());
+	    }
+	
+	    function removeFromLayout(elem, cabinet) {
+	      group.room().layout().removeByPayload(cabinet);
+	      TwoDLayout.panZoom.once();
+	    }
+	
+	    function linkLayout(cabinet, obj2d) {
+	      const topview = obj2d.topview();
+	      if (topview.width() !== cabinet.width()) {
+	        cabinet.width(topview.width());
+	        updateCabValue(cabinet, 'width');
+	      }
+	      if (topview.height() !== cabinet.thickness()) {
+	        cabinet.thickness(topview.height());
+	        updateCabValue(cabinet, 'thickness');
+	      }
+	    }
+	
+	    function updateObjLayout(cabinet) {
+	      const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
+	      obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
+	    }
+	
+	    const getObject = (values) => {
+	      const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
+	      setTimeout(() => updateObjLayout(cabinet));
+	      return cabinet;
+	    };
+	    this.active = () => expandList.active();
+	    const expListProps = {
+	      list: group.objects,
+	      dontOpenOnAdd: true,
+	      type: 'top-add-list',
+	      inputTree:   CabinetConfig.inputTree(),
+	      parentSelector, getHeader, getBody, getObject, inputValidation,
+	      listElemLable: 'Cabinet'
+	    };
+	    const expandList = new ExpandableList(expListProps);
+	    expandList.afterRemoval(removeFromLayout);
+	    this.refresh = () => expandList.refresh();
+	
+	    const cabinetKey = (path) => {
+	      const split = path.split('.');
+	      const index = split[0];
+	      const key = split[1];
+	      const cabinet = expListProps.list[index];
+	      return {cabinet, key};
+	    }
+	
+	    const valueUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      const decimal = new Measurement(value, true).decimal();
+	      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : value);
+	      TwoDLayout.panZoom.once();
+	      ThreeDMain.update(cabKey.cabinet);
+	    }
+	
+	    const attrUpdate = (path, value) => {
+	      const cabKey = cabinetKey(path);
+	      const decimal = new Measurement(value, true).decimal();
+	      cabKey.cabinet[cabKey.key](!Number.isNaN(decimal) ? decimal : value);
+	      TwoDLayout.panZoom.once();
+	      ThreeDMain.update(cabKey.cabinet);
+	    }
+	
+	    const saveSuccess = () => console.log('success');
+	    const saveFail = () => console.log('failure');
+	    const save = (target) => {
+	      const index = target.getAttribute('index');
+	      const cabinet = expListProps.list[index];
+	      if (cabinet.name !== undefined) {
+	        Request.post(EPNTS.cabinet.add(cabinet.name()), cabinet.toJson(), saveSuccess, saveFail);
+	        console.log('saving');
+	      } else {
+	        alert('Please enter a name if you want to save the cabinet.')
+	      }
+	    }
+	
+	    // WTFs
+	    // CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
+	    bind(`.cabinet-input`, valueUpdate,
+	                  {validation: Measurement.validation('(0,)')});
+	    bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
+	    du.on.match('click', '.save-cabinet-btn', save);
+	  }
+	}
+	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
+	CabinetDisplay.headTemplate = new $t('cabinet/head');
+	module.exports = CabinetDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/face-sketch.js',
+function (require, exports, module) {
+	
+const du = require('../../../../public/js/utils/dom-utils.js');
+	const Draw2D = require('../two-d/draw.js');
+	const Line2d = require('../two-d/objects/line.js');
+	const Vertex2d = require('../two-d/objects/vertex.js');
+	const PanZoom = require('../two-d/pan-zoom.js');
+	const ThreeDModel = require('../three-d/three-d-model.js');
+	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
+	
+	
+	class FaceSketch {
+	  constructor(clazz) {
+	    clazz ||= 'front-sketch';
+	    function draw(event, model) {
+	      if (model === undefined) return;
+	      let centerOn = new Vertex2d({x:0, y:0});
+	      console.log(model);
+	    }
+	
+	    ThreeDModel.onRenderObjectUpdate(draw);
+	  }
+	}
+	
+	module.exports = FaceSketch;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/group.js',
+function (require, exports, module) {
+	
+
+	
+	const Group = require('../objects/group.js');
+	const PropertyConfig = require('../config/property/config.js');
+	const Properties = require('../config/properties.js');
+	const CabinetDisplay = require('./cabinet.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const ThreeDMain = require('../displays/three-d-main.js');
+	
+	const currentStyleState = {};
+	
+	function disableButton(values, dit, elem) {
+	  const nId = dit.node.constructor.decode(dit.root().id()).id;
+	  const currState = currentStyleState[nId];
+	  const rootId = dit.node.constructor.decode(dit.root().id()).id;
+	  const button = du.find(`button[root-id='${rootId}']`);
+	  if (button) button.hidden = Object.equals(currState, values);
+	  const headers = du.find.downAll('.group-header', du.find.up('.group-cnt', button));
+	  headers.forEach((header) => {
+	    header.hidden = currState.style !== header.getAttribute("cab-style");
+	    if (!header.hidden) du.find.down('.group-key', header).innerText = currState.subStyle;
+	  });
+	}
+	
+	class GroupDisplay extends Lookup {
+	  constructor(group) {
+	    super();
+	    function setCurrentStyleState(values) {
+	      values = values || dit.values();
+	      const nId = dit.node.constructor.decode(dit.root().id()).id;
+	      currentStyleState[nId] = values;
+	      disableButton(values, dit);
+	      return values;
+	    }
+	    function onCabinetStyleSubmit(values) {
+	      setCurrentStyleState(values);
+	      group.propertyConfig.set(values.style, values.subStyle);
+	      ThreeDMain.update();
+	    }
+	
+	    let initialized = false;
+	    function initializeDitButton() {
+	      if (initialized) disableButton(dit.values(), dit);
+	      else {
+	        disableButton(setCurrentStyleState(), dit);
+	        initialized = true;
+	      }
+	    }
+	    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleSubmit, group.propertyConfig);
+	    function styleSelector() {
+	      return dit.root().payload().html();
+	    }
+	    function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
+	    this.bodyHtml = () =>  {
+	      setTimeout(initializeDitButton, 200);
+	      return GroupDisplay.bodyTemplate.render({group, propertyHtml});
+	    }
+	    this.html = () => {
+	      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this, body: this.bodyHtml()});
+	    }
+	
+	    this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
+	    this.cabinet = () => this.cabinetDisplay().active();
+	  }
+	}
+	
+	GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
+	  const dit = new DecisionInputTree(undefined, {buttonText: 'Change'});
+	  dit.onChange(disableButton);
+	  dit.onSubmit(onSubmit);
+	  const propertyConfig = new PropertyConfig();
+	  const styles = propertyConfig.cabinetStyles();
+	  const cabinetStyles = new Select({
+	    name: 'style',
+	    list: styles,
+	    inline: true,
+	    label: 'Style',
+	    value: propertyConfigInst.cabinetStyle()
+	  });
+	
+	  const hasFrame = new Select({
+	      name: 'FrameStyle',
+	      inline: true,
+	      list: ['Frameless', 'Framed', 'Frame Only'],
+	      value: 'Frameless'
+	    });
+	
+	  const style = dit.branch('style', [hasFrame, cabinetStyles]);
+	  styles.forEach((styleName) => {
+	    const properties = Properties.groupList(styleName);
+	    const selectObj = Object.keys(properties);
+	    const select = new Select({
+	      name: 'subStyle',
+	      inline: true,
+	      list: selectObj,
+	      value: propertyConfigInst.cabinetStyleName()
+	    });
+	    const condtionalPayload = new DecisionInputTree.ValueCondition('style', [styleName], [select]);
+	    style.conditional(styleName, condtionalPayload);
+	  });
+	
+	  return dit;
+	}
+	
+	du.on.match('click', `.group-display-header`, (target) => {
+	  const allBodys = du.find.all('.group-display-body');
+	  for (let index = 0; index < allBodys.length; index += 1) {
+	    allBodys[index].hidden = true;
+	  }
+	  const allHeaders = du.find.all('.group-display-header');
+	  for (let index = 0; index < allHeaders.length; index += 1) {
+	    du.class.remove(allHeaders[index], 'active');
+	  }
+	  du.class.add(target, 'active');
+	  const body = du.find.closest('.group-display-body', target);
+	  const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
+	  const groupDisplay = GroupDisplay.get(groupDisplayId);
+	  body.innerHTML = groupDisplay.bodyHtml();
+	  groupDisplay.cabinetDisplay.refresh();
+	  body.hidden = false;
+	});
+	
+	GroupDisplay.valueUpdate = (target) => {
+	  const group = Group.get(target.getAttribute('group-id'));
+	  const value = target.value;
+	  group.name(value);
+	}
+	
+	du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
+	
+	GroupDisplay.headTemplate = new $t('group/head');
+	GroupDisplay.bodyTemplate = new $t('group/body');
+	GroupDisplay.propertyMenuTemplate = new $t('properties/property-menu');
+	module.exports = GroupDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/feature.js',
+function (require, exports, module) {
+	
+
+	const $t = require('../../../../public/js/utils/$t');
+	
+	class FeatureDisplay {
+	  constructor(assembly, parentSelector) {
+	    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
+	    this.refresh = () => {
+	      const container = document.querySelector(parentSelector);
+	      container.innerHTML = this.html;
+	    }
+	  }
+	}
+	FeatureDisplay.template = new $t('features');
+	module.exports = FeatureDisplay
 	
 });
 
@@ -24993,7 +22291,7 @@ function (require, exports, module) {
 	    const polyTol = .01;
 	    const polyToleranceMap = new ToleranceMap({'i': polyTol,'j': polyTol,'k': polyTol, length: .0001});
 	    function create2DcabinetImage(model) {
-	      let polygons = (model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
+	      let polygons = model.cabinetOnly.polygons;//(model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
 	      const polys = Polygon3D.fromCSG(polygons);
 	      model.threeView = Polygon3D.toThreeView(polys);
 	      model.threeView.front = Polygon2d.outline(model.threeView.front).lines();
@@ -25011,6 +22309,7 @@ function (require, exports, module) {
 	      model.cabinetSolid.center(model.center);
 	      model.simple = model.cabinetSolid.toModel();
 	      const defualtCube = CSG.cube({demesions: [width, height, depth], center: [model.center.x, model.center.y, model.center.z]});
+	      if (model.frontsOnly) model.simple = model.simple.union(model.frontsOnly);
 	      return model;
 	    }
 	
@@ -25060,16 +22359,24 @@ function (require, exports, module) {
 	      const assemblies = this.assembly().getParts();
 	      const root = assemblies[0].getRoot();
 	      simpleModel = new ThreeDModelSimple(root);
-	      let a;
+	      let a, cabinetOnly, frontsOnly;
 	      partMap = {};
 	      for (let index = 0; index < assemblies.length; index += 1) {
 	        const assem = assemblies[index];
 	        partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
 	        if (!hidden(assem)) {
-	          simpleModel.add(assem);
 	          const b = buildObject(assem);
+	          simpleModel.add(assem, b);
 	          // const c = assem.position().center();
 	          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+	          if (root.children().indexOf(assem) !== -1) {
+	            if (cabinetOnly === undefined) cabinetOnly = b;
+	            else cabinetOnly = cabinetOnly.union(b);
+	          }
+	          if (cabinetOnly && assem.inElivation) {
+	            if (frontsOnly === undefined) frontsOnly = b;
+	            else frontsOnly = frontsOnly.union(b);
+	          }
 	          if (a === undefined) a = b;
 	          else if (b && b.polygons.length !== 0) {
 	            a = a.union(b);
@@ -25081,9 +22388,11 @@ function (require, exports, module) {
 	          }
 	        }
 	      }
+	      a.cabinetOnly = cabinetOnly;
+	      a.frontsOnly = frontsOnly;
 	      a.simpleModel = simpleModel;
 	      if (a && ThreeDModel.getViewer(a)) {
-	        //addModelAttrs(a);
+	        addModelAttrs(a);
 	        create2DcabinetImage(a);
 	        const displayModel = simpleModel.toModel(true);//a.simple ? a.simple : a;
 	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
@@ -25194,182 +22503,2836 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/config/property.js',
+RequireJS.addFunction('./app-src/displays/open-section.js',
+function (require, exports, module) {
+	
+
+	
+	const SectionProperties = require('../objects/assembly/assemblies/section/section-properties.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
+	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
+	const ThreeDMain = require('./three-d-main.js');
+	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const FeatureDisplay = require('./feature');
+	const Inputs = require('../input/inputs.js');
+	
+	
+	class SectionDisplay {
+	  constructor (section) {
+	    this.render = (scope) => {
+	      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
+	      const cId = scope.opening.constructor.name;
+	      if (cId === 'SectionProperties') {
+	        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
+	      }
+	      return SectionDisplay.template(section).render(scope);
+	    }
+	  }
+	}
+	
+	const templates = {};
+	const fileLocations = {};
+	SectionDisplay.template = (section) => {
+	  const cName = section.constructor.name;
+	  if (fileLocations[cName] === undefined) {
+	    const filename = cName.replace(/Section$/, '')
+	                            .replace(/([a-z])([A-Z])/g, '$1-$2')
+	                            .toLowerCase();
+	    fileLocations[cName] = `sections/${filename}`;
+	  }
+	  const templatePath = fileLocations[cName];
+	  if (templates[templatePath] === undefined) templates[templatePath] = new $t(templatePath);
+	  return templates[templatePath];
+	}
+	
+	du.on.match('change', '.feature-radio', (target) => {
+	  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+	  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+	  target.nextElementSibling.hidden = !target.checked;
+	});
+	
+	displays = {};
+	SectionDisplay.render = (scope) => {
+	  const uId = scope.opening.id();
+	  if (displays[uId] === undefined) displays[uId] = new SectionDisplay(scope.opening);
+	  return displays[uId].render(scope);
+	}
+	
+	const OpenSectionDisplay = {};
+	
+	OpenSectionDisplay.html = (opening) => {
+	  const openDispId = OpenSectionDisplay.getId(opening);
+	  OpenSectionDisplay.sections[opening.id()] = opening;
+	  if (opening.sectionCount() > 1) OpenSectionDisplay.refresh(opening, true);
+	  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
+	  const sections = SectionProperties.list();
+	  return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml,
+	                                            sections, OpenSectionDisplay});
+	}
+	
+	OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.id()}`;
+	OpenSectionDisplay.template = new $t('opening');
+	OpenSectionDisplay.listBodyTemplate = new $t('divide/body');
+	OpenSectionDisplay.listHeadTemplate = new $t('divide/head');
+	OpenSectionDisplay.sections = {};
+	OpenSectionDisplay.lists = {};
+	OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.id()}`;
+	
+	OpenSectionDisplay.getList = (root) => {
+	  let openId = root.id();
+	  if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
+	  // const sections = SectionProperties.sections();
+	  // const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
+	  const parentSelector = `#${OpenSectionDisplay.getId(root)}`
+	  const list = root.sections;
+	  const hideAddBtn = true;
+	  const selfCloseTab = true;
+	  let exList;
+	  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
+	  const getHeader = (opening, index) => {
+	    return OpenSectionDisplay.listHeadTemplate.render({opening, clean});
+	  }
+	  const getBody = (opening) => {
+	    const list = OpenSectionDisplay.getList(root);
+	    const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
+	    const assemblies = opening.getSubassemblies();
+	    return SectionDisplay.render({assemblies, getFeatureDisplay, opening, list});
+	  }
+	  const findElement = (selector, target) => du.find.down(selector, du.find.up('.expandable-list', target));
+	  const expListProps = {
+	    parentSelector, getHeader, getBody, list, hideAddBtn,
+	    selfCloseTab, findElement, startClosed: true, removeButton: false
+	  }
+	  exList = new ExpandableList(expListProps);
+	  OpenSectionDisplay.lists[openId] = exList;
+	  return exList;
+	}
+	OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
+	OpenSectionDisplay.dividerHtml = (opening) => {
+	  const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls`;
+	  const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
+	  return OpenSectionDisplay.dividerControlTemplate.render({opening, patternInputHtml});
+	}
+	OpenSectionDisplay.updateDividers = (opening) => {
+	  const focusInfo = du.focusInfo();
+	  const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls`;
+	  const dividerControlsCnt = document.querySelector(selector);
+	  dividerControlsCnt.innerHTML = OpenSectionDisplay.dividerHtml(opening);
+	  du.focus(focusInfo);
+	  console.log();
+	}
+	
+	OpenSectionDisplay.changeIds = {};
+	OpenSectionDisplay.refresh = (opening, rapid, onlyIfPending) => {
+	  if (OpenSectionDisplay.changeIds[opening.id()] === undefined)
+	    OpenSectionDisplay.changeIds[opening.id()] = {nextId: 0, lastId: 0};
+	  let idObj = OpenSectionDisplay.changeIds[opening.id()];
+	  let changeId = idObj.nextId;
+	  if (!onlyIfPending || changeId > idObj.lastId) {
+	    idObj.nextId = ++changeId;
+	    setTimeout(()=> {
+	      if (changeId === idObj.nextId) {
+	        idObj.lastId = changeId;
+	        const id = OpenSectionDisplay.getId(opening);
+	        const target = du.id(id);
+	        const listCnt = du.find.up('.expandable-list', target);
+	        if (!listCnt) return;
+	        const listId = Number.parseInt(listCnt.getAttribute('ex-list-id'));
+	
+	        const type = opening.isVertical() === true ? 'pill' : 'sidebar';
+	        OpenSectionDisplay.updateDividers(opening);
+	        OpenSectionDisplay.getList(opening).refresh(type);
+	        const dividerSelector = `[opening-id='${opening.id()}'].division-count-input`;
+	        // listCnt.querySelector(dividerSelector).focus();
+	      }
+	    }, rapid ? 200 : 2000);
+	  }
+	}
+	
+	OpenSectionDisplay.patternContainerSelector = (opening) =>
+	  `.open-pattern-input-cnt[opening-id='${opening.id()}']`;
+	
+	OpenSectionDisplay.lastInputValues = {};
+	OpenSectionDisplay.patterInputHtml = (opening) => {
+	  const pattern = opening.pattern();
+	  const patCntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+	
+	  let inputHtml = '';
+	  const unique = pattern.unique();
+	  for (let index = 0; index < unique.length; index += 1) {
+	    const id = unique[index];
+	    let fill = opening.dividerLayout().fill;
+	    const measInput = Inputs('pattern', {
+	      label: id,
+	      placeholder: id,
+	      name: id,
+	      value: fill[index]
+	    });
+	    measInput.on('keyup', (value, target) => {
+	      opening.pattern().value(target.name, Measurement.decimal(target.value));
+	      fill = opening.dividerLayout().fill;
+	      const patternCnt = document.querySelector(patCntSelector);
+	      const inputs = patternCnt.querySelectorAll('input');
+	      fill.forEach((value, index) => {
+	        if (inputs[index] !== target)
+	          inputs[index].value = value;
+	      });
+	
+	    });
+	    inputHtml += measInput.html();
+	    measInput.on('change', (value, target) => {
+	      if (opening.pattern().satisfied()) {
+	        const cabinet = opening.getAssembly('c');
+	        ThreeDMain.update(cabinet);
+	      }
+	    })
+	  }
+	  return inputHtml;
+	};
+	
+	OpenSectionDisplay.getOpening = (target) => {
+	  const openId = target.getAttribute('opening-id');
+	  return OpenSectionDisplay.sections[openId];
+	}
+	
+	OpenSectionDisplay.evaluator = new StringMathEvaluator();
+	
+	OpenSectionDisplay.patternInputSelector = (opening) =>
+	  `[name='pattern'][opening-id='${opening.id()}']`;
+	
+	OpenSectionDisplay.onPatternChange = (target) => {
+	  const opening = OpenSectionDisplay.getOpening(target);
+	  const newVal = target.value || 'a';
+	  const cntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+	  const inputCnt = document.querySelector(OpenSectionDisplay.patternContainerSelector(opening));
+	  if (opening.pattern().str !== newVal) {
+	    opening.pattern(newVal).str;
+	    const html = OpenSectionDisplay.patterInputHtml(opening);
+	    document.querySelector(cntSelector).innerHTML = html;
+	    if (newVal.length < 2) du.id(OpenSectionDisplay.getId(opening)).innerHTML = '';
+	    else OpenSectionDisplay.refresh(opening);
+	    const cabinet = opening.getAssembly('c');
+	    ThreeDMain.update(cabinet);
+	  }
+	  if (inputCnt !== null) {
+	    inputCnt.hidden = opening.pattern().equal;
+	  }
+	}
+	
+	function expiditeRefresh(target) {
+	  const opening = OpenSectionDisplay.getOpening(target);
+	  OpenSectionDisplay.refresh(opening, true, true);
+	}
+	
+	OpenSectionDisplay.onOrientation = (target) => {
+	  const openId = target.getAttribute('open-id');
+	  const value = target.value;
+	  const opening = OpenSectionDisplay.sections[openId];
+	  opening.vertical(value === 'vertical');
+	  OpenSectionDisplay.refresh(opening);
+	};
+	
+	OpenSectionDisplay.onSectionChange = (target) => {
+	  // ExpandableList.value('selected', target.value, target);
+	  let section = ExpandableList.get(target);
+	  if (!(section instanceof SectionProperties)) {
+	    const index = du.find.up('[index]', target).getAttribute('index');
+	    section = section.openings[index].sectionProperties();
+	  }
+	  section.setSection(target.value === "Open" ? null : target.value);
+	  ThreeDMain.update(section);
+	}
+	
+	du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
+	du.on.match('change', '.division-pattern-input', expiditeRefresh);
+	du.on.match('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
+	du.on.match('change', '.section-selection', OpenSectionDisplay.onSectionChange)
+	module.exports = OpenSectionDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/opening-sketch.js',
+function (require, exports, module) {
+	
+const du = require('../../../../public/js/utils/dom-utils.js');
+	const Draw2D = require('../two-d/draw.js');
+	const Line2d = require('../two-d/objects/line.js');
+	const Vertex2d = require('../two-d/objects/vertex.js');
+	const PanZoom = require('../two-d/pan-zoom.js');
+	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
+	
+	
+	class OpeningSketch {
+	  constructor(id) {
+	    let sketch, panZ, elem, cabinet;
+	
+	    function getSections(sections, list) {
+	      list ||= [];
+	      for (let index = 0; index < sections.length; index++) {
+	        const section = sections[index];
+	        if (sections.length > 0 || sections.cover()) {
+	          list.push(section);
+	          getSections(section.sections, list);
+	        }
+	      }
+	      return list;
+	    }
+	
+	    function draw() {
+	      if (cabinet === undefined) return;
+	      // sketch.ctx().drawImage(0,0)
+	
+	      const allLines = [];
+	      for (let index = 0; index < cabinet.openings.length; index++) {
+	        const sections = getSections(cabinet.openings[index].sections);
+	        for (let si = 0; si < sections.length; si++) {
+	          const section = sections[si];
+	          if (section.sections.length < 1) {
+	            const center = JSON.copy(section.innerCenter());
+	            center.x*=-1;
+	            sketch.text(section.partName(), center, 6, 'grey');
+	          }
+	          const inner = JSON.copy(section.coordinates().inner);
+	          const outer = JSON.copy(section.coordinates().outer);
+	
+	          inner[0].x*=-1;inner[1].x*=-1;inner[2].x*=-1;inner[3].x*=-1;
+	          outer[0].x*=-1;outer[1].x*=-1;outer[2].x*=-1;outer[3].x*=-1;
+	          let lines = [new Line2d(inner[0], inner[1]),
+	                          new Line2d(inner[1], inner[2]),
+	                          new Line2d(inner[2], inner[3]),
+	                          new Line2d(inner[3], inner[0])];
+	          sketch(lines, undefined, .3);
+	          lines = [new Line2d(outer[0], outer[1]),
+	                          new Line2d(outer[1], outer[2]),
+	                          new Line2d(outer[2], outer[3]),
+	                          new Line2d(outer[3], outer[0])];
+	          sketch(lines, 'green', .3);
+	          allLines.concatInPlace(lines);
+	        }
+	      }
+	      const cabLimits = cabinet.position().limits();
+	      const dir = -1;
+	      const cabinetOutline = [
+	        new Line2d({x: dir*0, y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}),
+	        new Line2d({x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 0}),
+	        new Line2d({x: dir*2*cabLimits['x'], y: 0}, {x: dir*0, y: 0}),
+	        new Line2d({x: dir*0, y: 0}, {x: dir*0, y: 2*cabLimits['y']}),
+	      ];
+	      sketch(cabinetOutline, 'red', .3);
+	      allLines.concatInPlace(cabinetOutline);
+	
+	      const measurements = LineMeasurement2d.measurements(allLines);
+	      sketch(measurements, 'grey', 1);
+	    }
+	
+	    function init() {
+	      elem = du.id(id);
+	      const canvas = du.create.element('canvas');
+	      elem.append(canvas);
+	      sketch = new Draw2D(canvas);
+	      panZ = new PanZoom(sketch.canvas(), draw);
+	    }
+	
+	    this.cabinet = (cab) => (cab.constructor.name === 'Cabinet' && (cabinet = cab)) || cabinet;
+	
+	    setTimeout(init, 500);
+	  }
+	}
+	
+	module.exports = OpeningSketch;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/order.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const UFObj = require('./information/utility-filter.js');
+	const RoomDisplay = require('./room.js');
+	const Order = require('../objects/order.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const EPNTS = require('../../generated/EPNTS.js')
+	const ToggleDisplayList = require('../../app-src/display-utils/toggle-display-list');
+	const Inputs = require('../input/inputs.js');
+	
+	class OrderDisplay {
+	  constructor(parentSelector, orders) {
+	    const roomDisplays = {};
+	    let active;
+	    const getHeader = (order, $index) =>
+	        OrderDisplay.headTemplate.render({order, $index});
+	
+	    const setInfo = (order, index) => () => {
+	      console.log('oid:', order.id());
+	      const elem = du.id(`uf-info-${order.id()}`);
+	      if (elem)
+	        UTF.buildDisplay(elem, new UFObj(order));
+	    }
+	
+	    function initOrder(order, index) {
+	      roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
+	      ToggleDisplayList.onShow(`information-display-${order.id()}`, setInfo(order, index));
+	      // expandList.afterRender(setInfo(order, index));
+	      return order;
+	    }
+	
+	    function loadOrder(index, start) {
+	      return function (orderData) {
+	        const order = new Order().fromJson(orderData);
+	        initOrder(order, index);
+	        expandList.set(index, order);
+	        expandList.refresh();
+	        console.log('load Time:', new Date().getTime() - start);
+	      }
+	    }
+	
+	    const getBody = (order, $index) => {
+	      if (order.loaded) {
+	        let propertyTypes = Object.keys(['insetfordabet', 'pickles']);
+	        active = roomDisplays[order.id()];
+	        return OrderDisplay.bodyTemplate.render({$index, order, propertyTypes});
+	      } else {
+	        const start = new Date().getTime();
+	        Request.get(EPNTS.order.get(order.name()), loadOrder($index, start), console.error);
+	        return 'Loading...';
+	      }
+	    }
+	    const getObject = (values) => initOrder(new Order(values.name));
+	    this.active = () => active;
+	
+	    const expListProps = {
+	      list: orders,
+	      inputValidation: (values) => values.name ? true :
+	          'You must Define a name',
+	      parentSelector, getHeader, getBody, getObject,
+	      listElemLable: 'Order', type: 'sidebar',
+	      inputTree: OrderDisplay.configInputTree()
+	    };
+	    const expandList = new ExpandableObject(expListProps);
+	    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
+	
+	    const saveSuccess = () => console.log('success');
+	    const saveFail = () => console.log('failure');
+	    const save = (target) => {
+	      const index = target.getAttribute('index');
+	      const order = expandList.get(index);
+	      Request.post(EPNTS.order.add(order.name()), order.toJson(), saveSuccess, saveFail);
+	      console.log('saving');
+	    }
+	
+	    const attrUpdate = (attr) => (target) => {
+	      const index = target.getAttribute('index');
+	      const order = expandList.get(index);
+	      order[attr] = target.value;
+	    };
+	
+	    function addOrders(names) {
+	      names.forEach((name) => expListProps.list[name] = new Order(name, null));
+	      expandList.refresh();
+	    }
+	    Request.get(EPNTS.order.list(), addOrders);
+	
+	    du.on.match('change', '.order-name-input', attrUpdate('name'));
+	    du.on.match('click', '.save-order-btn', save);
+	  }
+	}
+	OrderDisplay.bodyTemplate = new $t('order/body');
+	OrderDisplay.headTemplate = new $t('order/head');
+	OrderDisplay.builderBodyTemplate = new $t('order/builder/body');
+	OrderDisplay.builderHeadTemplate = new $t('order/builder/head');
+	OrderDisplay.infoBodyTemplate = new $t('order/information/body');
+	OrderDisplay.infoHeadTemplate = new $t('order/information/head');
+	
+	OrderDisplay.configInputTree = () => {
+	  const dit = new DecisionInputTree();
+	  dit.leaf('Config', [Inputs('name')]);
+	  return dit;
+	}
+	module.exports = OrderDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/orientation-arrows.js',
+function (require, exports, module) {
+	
+const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+	
+	class OrientationArrows extends Lookup {
+	  constructor(parentSelector) {
+	    super();
+	    const navId = `orientation-arrows-${this.id()}`;
+	    this.navId = () => navId;
+	    this.space = () => '&nbsp;&nbsp;';
+	    CustomEvent.all(this, 'up', 'right', 'down', 'left', 'center');
+	
+	    const elem = du.find(parentSelector);
+	    if (elem === undefined) throw new Error(`No container found: '${parentSelector}'`);
+	    elem.innerHTML = OrientationArrows.template.render(this);
+	
+	    this.on.up((elem, detail) => console.log('up', detail.direction));
+	    this.on.right((elem, detail) => console.log('right', detail.direction));
+	    this.on.down((elem, detail) => console.log('down', detail.direction));
+	    this.on.left((elem, detail) => console.log('left', detail.direction));
+	    this.on.center((elem, detail) => console.log('center', detail.direction));
+	
+	  }
+	}
+	
+	OrientationArrows.template = new $t('orientation-arrows');
+	
+	du.on.match('click', '[dir]', function (target) {
+	  const tableElem = du.find.up('[l-id]', target);
+	  if (!tableElem) return;
+	  const id = tableElem.getAttribute('l-id');
+	  const instance = OrientationArrows.get(id);
+	  const direction = target.getAttribute('dir');
+	  switch (direction) {
+	    case 'u':
+	      instance.trigger.up(target, {direction, instance});
+	      break;
+	    case 'r':
+	      instance.trigger.right(target, {direction, instance});
+	      break;
+	    case 'd':
+	      instance.trigger.down(null, {direction, instance});
+	      break;
+	    case 'l':
+	      instance.trigger.left(target, {direction, instance});
+	      break;
+	    case 'c':
+	      instance.trigger.center(target, {direction, instance});
+	      break;
+	  }
+	});
+	
+	module.exports = OrientationArrows;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/property.js',
+function (require, exports, module) {
+	
+
+	
+	const Properties = require('../config/properties.js');
+	const Property = require('../config/property.js');
+	const Cost = require('../cost/cost.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const RadioDisplay = require('../display-utils/radio-display.js');
+	const EPNTS = require('../../generated/EPNTS');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const Inputs = require('../input/inputs.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	
+	// TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
+	const changed = (id) => Properties.changes.changed(id);
+	const shouldHide = (prop) => prop.value() === null;
+	const hideAll = (properties) => {
+	  for (let index = 0; index < properties.length; index += 1) {
+	    if (properties[index].value() !== null) return false;
+	  }
+	  return properties.length > 0;
+	}
+	
+	function updateSaveAll() {
+	  const saveAllBtn = du.find('#property-manager-save-all');
+	  saveAllBtn.hidden = !Properties.changes.changesExist();
+	  if (saveAllBtn.hidden) {
+	    const saveBtns = du.find.all('.save-change');
+	    saveBtns.forEach((saveBtn) => saveBtn.hidden = true);
+	  }
+	}
+	
+	function saveAll() {
+	  Properties.changes.saveAll();
+	  save();
+	  updateSaveAll();
+	}
+	
+	
+	function save() {
+	  Request.post(EPNTS.config.save(), Properties.config(), console.log, console.error);
+	}
+	
+	function get() {
+	  Request.get(EPNTS.config.get(), console.log);
+	}
+	
+	class PropertyDisplay {
+	  constructor(containerSelector) {
+	    let currProps;
+	
+	    const noChildren = (properties, groups) => () =>
+	          properties.length === 0 && Object.keys(groups).length === 0;
+	
+	    function childScope (key) {
+	      const list = Properties.hasValue(key);
+	      if (list.length === 0) return;
+	
+	      const id = String.random();
+	      const getObject = (values) => {
+	        let properties = Properties.new(key,  values.name);
+	        return {name: values.name, id, changed, properties};
+	      }
+	      const inputTree = PropertyDisplay.configInputTree();
+	      const expListProps = {
+	        parentSelector: `#config-expand-list-${id}`,
+	        getHeader: (scope) =>
+	                    PropertyDisplay.configHeadTemplate.render(scope),
+	        getBody: (scope) =>
+	                    PropertyDisplay.configBodyTemplate.render({
+	                      name: scope.name,
+	                      properties: scope.properties,
+	                      changed
+	                    }),
+	        inputValidation: inputTree.validate,
+	        listElemLable: 'Config',
+	        list, getObject, inputTree
+	      };
+	      setTimeout(() => {
+	        const expList = new ExpandableObject(expListProps);
+	        expList.afterRemoval((element, detail) => {
+	          console.log(detail);
+	          console.log('placehoder');
+	          Properties.changes.delete(detail.properties._ID);
+	        });
+	      }, 500);
+	      return id;
+	    }
+	
+	    function getScope(key, group) {
+	      key = key || '';
+	      const id = String.random();
+	      let radioId = group.radioId || PropertyDisplay.counter++;
+	      const properties = [];
+	      const groups = {};
+	      const label = key.replace(PropertyDisplay.camelReg, '$1 $2');
+	      const scope = {key, label, properties, groups, recurse, radioId, id,
+	                      noChildren: noChildren(properties, groups),
+	                      branch: key.match(PropertyDisplay.branchReg)};
+	      PropertyDisplay.uniqueMap[id] = scope;
+	      const keys = Object.keys(group.values);
+	      radioId = PropertyDisplay.counter++;
+	      for( let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = group.values[key];
+	        childScope(key, id);
+	      }
+	      return scope;
+	    }
+	
+	    this.update = () => {
+	      const propKeys = Properties.propertiesToDefine();
+	      const propertyObjs = {};
+	      const childIdMap = [];
+	      for (let index = 0; index < propKeys.length; index += 1) {
+	        const key = propKeys[index];
+	        const props = Properties(key);
+	        const propObj = props;
+	        propertyObjs[key] = propObj;
+	        childIdMap[key] = childScope(key);
+	      }
+	      const id = String.random();
+	      const values = {values: propertyObjs, id, childIdMap, hideAll, Properties};
+	      const contianer = document.querySelector(containerSelector);
+	      contianer.innerHTML =
+	          PropertyDisplay.template.render(values);
+	    };
+	
+	    function updateProperties(name, value) {
+	    }
+	    bind('property-cnt', updateProperties);
+	    new RadioDisplay('property-container', 'radio-id');
+	    this.update();
+	  }
+	}
+	
+	// bind('property-branch-selector', '');
+	
+	du.on.match('change', 'select[name="property-branch-selector"]', (target) => {
+	  const childTargets = target.parentElement.children[1].children;
+	  const childElem = childTargets[target.value];
+	  // TODO: set config property: childElem.innerText;
+	  du.hide(childTargets);
+	  du.show(childElem);
+	});
+	
+	function setPropertyElemValue(elem, idAttr, value) {
+	  const id = elem.getAttribute(idAttr);
+	  const group = elem.getAttribute('name');
+	  const property = Property.get(id);
+	  property.value(value, true);
+	}
+	
+	function updateMeasurements () {
+	  measureElems = du.find.all('[measurement-id]:not([measurement-id=""])');
+	  measureElems.forEach((elem) => {
+	    const id = elem.getAttribute('measurement-id');
+	    const measurement = Measurement.get(id);
+	    elem.value = measurement.display();
+	  });
+	}
+	
+	function updateRadio(elem) {
+	  const name = elem.getAttribute('name');
+	  Properties.config()
+	  const elems = du.find.all(`input[type="radio"][name='${name}']`);
+	  elems.forEach((elem) => setPropertyElemValue(elem, 'prop-radio-update', false));
+	  setPropertyElemValue(elem, 'prop-radio-update', true);
+	  if (name.substr(0, 4) === 'UNIT') {
+	    Measurement.unit(elem.value);
+	    updateMeasurements();
+	  }
+	}
+	
+	function updateValueDisplay(elem) {
+	  const id = elem.getAttribute('measurement-id');
+	  const measurement = Measurement.get(id);
+	  elem.value = measurement.display();
+	}
+	
+	function updateValue(elem) {
+	  setPropertyElemValue(elem, 'prop-value-update', elem.value);
+	  const saveBtn = du.find.closest('.save-change', elem);
+	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+	  const measurementId = Property.get(elem.getAttribute('prop-value-update')).measurementId();
+	  elem.setAttribute('measurement-id', measurementId);
+	  updateSaveAll();
+	}
+	
+	function updateBoolean(elem) {
+	  setPropertyElemValue(elem, 'prop-boolean-update', elem.checked);
+	  const saveBtn = du.find.closest('.save-change', elem);
+	  saveBtn.hidden = !changed(saveBtn.getAttribute('properties-id'));
+	  updateSaveAll();
+	}
+	
+	function saveChange(elem) {
+	  const id = elem.getAttribute('properties-id');
+	  Properties.changes.save(id);
+	  elem.hidden = true;
+	  updateSaveAll();
+	  save();
+	}
+	
+	
+	du.on.match('keyup', '[prop-value-update]', updateValue);
+	du.on.match('change', '[prop-boolean-update]', updateBoolean);
+	du.on.match('focusout', '[measurement-id]', updateValueDisplay);
+	du.on.match('change', '[prop-radio-update]', updateRadio);
+	du.on.match('click', '#property-manager-save-all', saveAll);
+	du.on.match('click', '[properties-id]:not([properties-id=""])', saveChange);
+	
+	PropertyDisplay.attrReg = /^_[A-Z_]{1,}/;
+	PropertyDisplay.branchReg = /^OR_(.{1,})/;
+	PropertyDisplay.camelReg = /([a-z])([A-Z])/g;
+	PropertyDisplay.counter = 0;
+	PropertyDisplay.template = new $t('properties/properties');
+	PropertyDisplay.configBodyTemplate = new $t('properties/config-body');
+	PropertyDisplay.configHeadTemplate = new $t('properties/config-head');
+	PropertyDisplay.radioTemplate = new $t('properties/radio');
+	PropertyDisplay.uniqueMap = {};
+	PropertyDisplay.configMap = {};
+	
+	PropertyDisplay.configInputTree = () => {
+	  const dit = new DecisionInputTree(console.log);
+	  dit.leaf('Config', [Inputs('name')]);
+	  return dit;
+	}
+	
+	module.exports = PropertyDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/room.js',
+function (require, exports, module) {
+	
+
+	
+	const Room = require('../objects/room.js');
+	const CabinetDisplay = require('./cabinet.js');
+	const GroupDisplay = require('./group.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const Inputs = require('../input/inputs.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const TwoDLayout = require('../two-d/layout');
+	
+	class RoomDisplay extends Lookup {
+	  constructor(parentSelector, order) {
+	    super(order.id());
+	    const groupDisplays = {};
+	    const getHeader = (room, $index) =>
+	        RoomDisplay.headTemplate.render({room, $index});
+	
+	    const getBody = (room, $index) => {
+	      TwoDLayout.set(room.layout());
+	      return RoomDisplay.bodyTemplate.render({$index, room, groupHtml});
+	    }
+	
+	    const groupHtml = (group) => {
+	      if (groupDisplays[group.id()] === undefined) {
+	        groupDisplays[group.id()] = new GroupDisplay(group);
+	      }
+	      return groupDisplays[group.id()].html();
+	    }
+	
+	    const getObject = (values) => {
+	      const room = new Room(values.name);
+	      return room;
+	    }
+	    this.active = () => expandList.active();
+	
+	    const expListProps = {
+	      list: order.rooms,
+	      parentSelector, getHeader, getBody, getObject,
+	      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
+	      listElemLable: 'Room', type: 'pill',
+	      inputTree: RoomDisplay.configInputTree()
+	    };
+	    const expandList = new ExpandableObject(expListProps);
+	    this.refresh = () => expandList.refresh();
+	  }
+	}
+	
+	du.on.match('click', '.group-add-btn', (target) => {
+	  const id = target.getAttribute('room-id');
+	  const room = Room.get(id);
+	  const orderId = du.find.up('[order-id]', target).getAttribute('order-id');
+	  const roomDisplay = RoomDisplay.get(orderId);
+	  roomDisplay.refresh();
+	  room.addGroup();
+	});
+	
+	RoomDisplay.configInputTree = () => {
+	  const dit = new DecisionInputTree(console.log);
+	  dit.leaf('Room', [Inputs('name')]);
+	  return dit;
+	}
+	RoomDisplay.bodyTemplate = new $t('room/body');
+	RoomDisplay.headTemplate = new $t('room/head');
+	module.exports = RoomDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/section.js',
+function (require, exports, module) {
+	
+
+});
+
+
+RequireJS.addFunction('./app-src/displays/three-d-main.js',
+function (require, exports, module) {
+	
+
+	// const CSG = require('../../public/js/3d-modeling/csg');
+	
+	const Assembly = require('../objects/assembly/assembly');
+	const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
+	const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
+	const pull = require('../three-d/models/pull.js');
+	const drawerBox = require('../three-d/models/drawer-box.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const ThreeDModel = require('../three-d/three-d-model.js');
+	const ThreeView = require('three-view');
+	const Vector3D = require('../three-d/objects/vector.js');
+	const Line3D = require('../three-d/objects/line.js');
+	const Vertex3D = require('../three-d/objects/vertex.js');
+	
+	// const cube = new CSG.cube({radius: [3,5,1]});
+	const consts = require('../../globals/CONSTANTS');
+	let threeView;
+	
+	// TODO: ????
+	function displayPart(part) {
+	  return true;
+	}
+	
+	function groupParts(cabinet) {
+	  const grouping = {displayPart, group: {groups: {}, parts: {}, level: 0}};
+	  const parts = cabinet.getParts();
+	  for (let index = 0; index < parts.length; index += 1) {
+	    const part = parts[index];
+	    const namePieces = part.partName().split('.');
+	    let currObj = grouping.group;
+	    let level = 0;
+	    let prefix = '';
+	    for (let nIndex = 0; nIndex < namePieces.length - 1; nIndex += 1) {
+	      const piece = namePieces[nIndex];
+	      prefix += piece;
+	      if (currObj.groups[piece] === undefined) currObj.groups[piece] = {groups: {}, parts: {}};
+	      currObj = currObj.groups[piece];
+	      currObj.level = ++level;
+	      currObj.prefix = prefix;
+	      prefix += '.'
+	    }
+	    if (currObj.parts[part.partName()] === undefined) currObj.parts[part.partName()] = [];
+	    currObj.parts[part.partName()].push(part);
+	  }
+	  return grouping;
+	}
+	
+	const modelContTemplate = new $t('model-controller');
+	
+	du.on.match('click', '.model-state', (target) => {
+	  if (event.target.tagName === 'INPUT') return;
+	  const has = target.matches('.active');
+	  deselectPrefix();
+	  !has ? du.class.add(target, 'active') : du.class.remove(target, 'active');
+	  let label = target.children[0]
+	  let type = label.getAttribute('type');
+	  let value = type !== 'prefix' ?
+	        (type !== 'part-name' ? label.innerText : label.getAttribute('part-name')) :
+	        label.nextElementSibling.getAttribute('prefix');
+	  const cabinet = lastRendered;
+	  const tdm = ThreeDModel.get(cabinet);
+	  let partCode = target.getAttribute('part-code');
+	  let partId = target.getAttribute('part-id');
+	  if (partId) {
+	    if (!has) {
+	      tdm.inclusiveTarget(type, partId);
+	      threeView.isolatePart(partCode, cabinet);
+	    }
+	  } else {
+	    tdm.inclusiveTarget(type, has ? undefined : value);
+	    const elem = du.find.closest('[part-code]', target);
+	    partCode = elem.getAttribute('part-code');
+	    threeView.isolatePart(partCode, cabinet);
+	  }
+	  tdm.render();
+	});
+	
+	function deselectPrefix() {
+	  document.querySelectorAll('.model-state')
+	    .forEach((elem) => du.class.remove(elem, 'active'));
+	  const cabinet = lastRendered;
+	  const tdm = ThreeDModel.get(cabinet);
+	  tdm.inclusiveTarget(undefined, undefined);
+	}
+	
+	function setGreaterZindex(...ids) {
+	  return (target) => {
+	    const zMap = [];
+	    let zIndexes = [];
+	    for (let index = 0; index < ids.length; index += 1) {
+	      const id = ids[index];
+	      const elem = du.id(id);
+	      const zIndex = du.zIndex(elem);
+	      zIndexes.push(zIndex);
+	      zMap[zIndex] = elem;
+	    }
+	    zIndexes.sort().reverse();
+	    target.style.zIndex = zIndexes[0];
+	    for (let index = 0; index < zIndexes.length; index += 1) {
+	      const elem = zMap[zIndexes[index]];
+	      if (elem === target) {
+	        break;
+	      } else {
+	        elem.style.zIndex = zIndexes[index + 1];
+	      }
+	    }
+	  };
+	}
+	
+	const toggleClassStr = '.model-label,.model-selector';
+	function focusControls(target) {
+	  const all = du.find.all(toggleClassStr);
+	  for (let index = 0; index < all.length; index++) {
+	    all[index].hidden = true;
+	  }
+	  const active = du.find.upAll(toggleClassStr, target);
+	  active.push(du.find.down(toggleClassStr, target));
+	  for (let index = 0; index < active.length; index++) {
+	    active[index].hidden = false;
+	    const siblings = active[index].parentElement.children;
+	    for (let s = 0; s < siblings.length; s++) {
+	      if (siblings[s].matches(toggleClassStr)) siblings[s].hidden = false;
+	    }
+	  }
+	}
+	
+	du.on.match('click', '.prefix-switch', (target, event) => {
+	  focusControls(target);
+	  // const eventTarg = event.target;
+	  //
+	  //
+	  // const active = du.find.upAll('.model-selector', target);
+	  // active.push(target.parentElement.parentElement);
+	  // const all = document.querySelectorAll('.prefix-body');
+	  // all.forEach((pb) => pb.hidden = true);
+	  // active.forEach((ms) => ms.children[2].hidden = false);
+	});
+	
+	du.on.match('change', '.prefix-checkbox', (target) => {
+	  const cabinet = lastRendered;
+	  const attr = target.getAttribute('prefix');
+	  deselectPrefix();
+	  ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
+	});
+	
+	du.on.match('change', '.part-name-checkbox', (target) => {
+	  const cabinet = lastRendered;
+	  const attr = target.getAttribute('part-name');
+	  deselectPrefix();
+	  const tdm = ThreeDModel.get(cabinet);
+	  tdm.hidePartName(attr, !target.checked);
+	  tdm.render();
+	});
+	
+	du.on.match('change', '.part-id-checkbox', (target) => {
+	  const cabinet = lastRendered;
+	  const attr = target.getAttribute('part-id');
+	  deselectPrefix();
+	  const tdm = ThreeDModel.get(cabinet);
+	  tdm.hidePartId(attr, !target.checked);
+	  tdm.render();
+	})
+	
+	let controllerModel;
+	function updateController() {
+	  controllerModel = lastRendered;
+	  const controller = du.id('model-controller');
+	  const grouping = groupParts(controllerModel);
+	  grouping.tdm = ThreeDModel.get(controllerModel);
+	  controller.innerHTML = modelContTemplate.render(grouping);
+	  controller.hidden = false;
+	}
+	
+	
+	let lastRendered;
+	function update(part) {
+	  if (part) lastRendered = part.getAssembly('c');
+	  const threeDModel = ThreeDModel.get(lastRendered);
+	  if (threeDModel) {
+	    threeDModel.update(lastRendered);
+	    updateController();
+	  }
+	}
+	
+	function modelCenter() {
+	  const model = ThreeDModel.lastActive.getLastRendered();
+	  const vertices = [];
+	  for (let index = 0; index < model.polygons.length; index++) {
+	    const verts = model.polygons[index].vertices;
+	    for (let vIndex = 0; vIndex < verts.length; vIndex++) {
+	      vertices.push(verts[vIndex].pos);
+	    }
+	  }
+	
+	  return Vertex3D.center(...vertices);
+	}
+	
+	function init() {
+	  // const p = pull(5,2);
+	  // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
+	  // p.setColor('black')
+	  // const db = drawerBox(10, 15, 22);
+	  threeView = new ThreeView();
+	
+	  const setZFunc = setGreaterZindex('order-cnt', 'model-cnt', `${threeView.id()}-cnt`);
+	  du.on.match('click', '#model-cnt', setZFunc);
+	  du.on.match('click', '#order-cnt', setZFunc);
+	  du.on.match('click', `#${threeView.id()}-cnt`, setZFunc);
+	  ThreeDModel.onLastModelUpdate(updateController);
+	}
+	
+	module.exports = {init, update}
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/three-view.js',
 function (require, exports, module) {
 	
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils');
+	const pull = require('../three-d/models/pull.js');
+	const ThreeDModel = require('../three-d/three-d-model.js');
+	const Layout2D = require('../objects/layout.js')
+	const Draw2D = require('../two-d/draw.js');
+	const Polygon2d = require('../two-d/objects/polygon.js');
+	const Polygon3D = require('../three-d/objects/polygon.js');
+	const BiPolygon = require('../three-d/objects/bi-polygon.js');
+	const Line2d = require('../two-d/objects/line.js');
+	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
+	const PanZoom = require('../two-d/pan-zoom.js');
 	
+	const CSG = require('../../public/js/3d-modeling/csg');
 	
+	function csgVert(pos, normal) {
+	  return new CSG.Vertex(pos, normal);
+	}
 	
-	class Property extends Lookup {
-	  // clone constructor(code, value) {
-	  constructor(code, name, props) {
+	function normalize (verts, normal, reverse) {
+	  const returnValue = [];
+	  for (let index = 0; index < verts.length; index++)
+	    returnValue[index] = new CSG.Vertex(verts[index], normal);
+	  return reverse ? returnValue.reverse() : returnValue;
+	}
+	
+	class ThreeView extends Lookup {
+	  constructor() {
 	    super();
-	    let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
-	    const children = [];
+	    const instance = this;
+	    const maxDem = window.innerHeight * .45;
+	    const cnt = du.create.element('div');
+	    // const p = pull(5,2);
+	    const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
+	          new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel();
+	    // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
+	    // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
+	    p.setColor([0, 255, 0])
+	    let draw, panz;
+	    let threeDModel;
+	    document.body.append(cnt);
+	    this.maxDem = () => maxDem;
+	    cnt.innerHTML = ThreeView.template.render(this);
 	
-	    const initVals = {
-	      code, name, description: props instanceof Object ? props.description : undefined
-	    }
-	    Object.getSet(this, initVals, 'value', 'code', 'name', 'description', 'properties');
+	    const color = 'black';
+	    const width = .2;
 	
-	    this.value = (val, notMetric) => {
-	      if (val !== undefined && value !== val) {
-	        const measurement = new Measurement(val, notMetric);
-	        const measurementVal = measurement.value();
-	        value = Number.isNaN(measurementVal) ? val : measurement;
+	    function drawView (refresh) {
+	      Layout2D.release(`three-view`);
+	      let model = instance.lastModel();
+	      model ||= instance.lastRendered();
+	      if (model === undefined) return;
+	      const twoDmap = model.threeView;
+	      if (twoDmap.measurments === undefined) {
+	        const allLines = twoDmap.front.concat(twoDmap.right.concat(twoDmap.top));
+	        twoDmap.measurments = LineMeasurement2d.measurements(allLines);
 	      }
-	      return value instanceof Measurement ? value.value() : value;
+	      draw(twoDmap.front, color, width);
+	      draw(twoDmap.right, color, width);
+	      draw(twoDmap.top, color, width);
+	      draw(twoDmap.measurments, 'grey');
 	    }
 	
-	    this.display = () => {
-	      return value instanceof Measurement ? value.display() : value;
+	    function onPartSelect(elem) {
+	      console.log(elem.value);
+	      const partCode = du.find.closest(`[value="${elem.value}"`, elem).getAttribute('part-code');
+	      instance.isolatePart(elem.value);
+	      elem.value = '';
 	    }
 	
-	    this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
+	    function init() {
+	      draw = new Draw2D(du.id('three-view'));
 	
-	    if ((typeof props) !== 'object' ||  props === null) {
-	      this.value(props);
-	      props = {};
-	    }
-	    this.properties(props || {});
+	      panz = new PanZoom(draw.canvas(), drawView);
+	      panz.centerOn(0, 0);
 	
-	    const existingProp = Property.list[code];
-	    let clone = false;
-	    if (this.properties().value !== undefined) {
-	      this.value(this.properties().value, this.properties().notMetric);
-	    }
-	
-	    // if (existingProp) {
-	    //   value = value || existingProp.value();
-	    //   name = existingProp.name();
-	    //   this.properties(existingProp.properties());
-	    //   clone = true;
-	    // }
-	
-	    if ((typeof value) === 'number')
-	      value = new Measurement(value, this.properties().notMetric);
-	
-	
-	    this.addChild = (property) => {
-	      if (property instanceof Property && property.code() === this.code()) {
-	            if (children.indexOf(property) === -1) children.push(property);
-	            else throw new Error('Property is already a child');
+	      if (du.url.breakdown().path.match(/\/.*template$/)) {
+	        setTimeout(() =>
+	          ThreeDModel.setViewerSelector(`#${instance.id()}>.three-view-three-d-cnt`, '40vh'), 500);
 	      }
-	      else throw new Error('Child is not an instance of Property or Code does not match');
+	      du.on.match('change', '[name="partSelector"]', onPartSelect);
 	    }
 	
-	    this.children = () => JSON.clone(children);
-	
-	    this.equals = (other) =>
-	        other instanceof Property &&
-	        this.value() === other.value() &&
-	        this.code() === other.code() &&
-	        this.name() === other.name() &&
-	        this.description() === other.description();
-	
-	    this.clone = (val) => {
-	      const cProps = this.properties();
-	      cProps.clone = true;
-	      cProps.value = val === undefined ? this.value() : val;
-	      cProps.description = this.description();
-	      delete cProps.notMetric;
-	      return new Property(this.code(), this.name(), cProps);
+	    this.update = (cabinet) => {
+	      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
+	      threeDModel.assembly(cabinet);
+	      threeDModel.update(cabinet);
+	      draw.clear();
+	      setTimeout(() => {
+	        drawView(true);
+	      }, 1000);
 	    }
-	    if(!clone) Property.list[code] = this;
-	    else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
+	
+	    this.isolatePart = (partCode) => {
+	      threeDModel = ThreeDModel.get();
+	      threeDModel.setTargetPartName(partCode);
+	      threeDModel.update();
+	      setTimeout(() => {
+	        panz.once();
+	      }, 500);
+	      du.id(`three-view-part-code-${this.id()}`).innerText = partCode;
+	    }
+	
+	    this.threeDModel = () => threeDModel;
+	    this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;
+	    this.lastRendered = () => threeDModel ? threeDModel.getLastRendered() : undefined;
+	    this.partMap = () => threeDModel ? threeDModel.partMap() : {};
+	
+	    setTimeout(init, 1000);
 	  }
 	}
-	Property.list = {};
-	Property.DO_NOT_CLONE = true;
 	
-	new Property();
+	ThreeView.template = new $t('three-view');
 	
-	module.exports = Property
+	module.exports = ThreeView;
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/company.js',
+RequireJS.addFunction('./app-src/displays/user.js',
 function (require, exports, module) {
 	
-
+const du = require('../../../../public/js/utils/dom-utils.js');
+	const APP_ID = require('../../globals/CONSTANTS.js').APP_ID;
+	const Request = require('../../../../public/js/utils/request.js');
+	const EPNTS = require('../../generated/EPNTS');
+	const $t = require('../../../../public/js/utils/$t.js');
 	
-	const Door = require('./assembly/assemblies/door/door.js');
+	class User {
+	  constructor() {
+	    const stateAttr = 'user-state';
+	    let state, cnt, email, password;
 	
-	class Company {
-	  constructor(properties) {
-	    if (!properties.name) throw new Error('Company name must be defined')
-	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
-	    this.name = () => properties.name;
-	    this.email = () => properties.email;
-	    this.address = () => properties.address;
-	    Company.list[this.name()] = this;
+	    let la;
+	    function loginAvailible(){
+	      if (la === undefined) la = du.id('login') !== null;
+	      return la;
+	    }
+	    this.loginAvailible = loginAvailible;
+	
+	    function updateDisplay(s) {
+	      state = s ? User.states[s] : state;
+	      cnt = cnt || du.id('login-cnt');
+	      cnt.innerHTML = state.template.render({email, password});
+	    }
+	
+	    const hideLogin = () => {
+	      if (loginAvailible()) du.id('login').hidden = true;
+	    }
+	    const showLogin = () =>{
+	      if (loginAvailible()) du.id('login').hidden = false;
+	    }
+	    function successfulRegistration(body) {
+	      updateDisplay('CONFIRMATION_MESSAGE');
+	    }
+	
+	    function register(target) {password
+	      const fail = du.appendError(target, 'Registration Failed: Email already registered');
+	      const body = {email, password};
+	      document.cookie = `${APP_ID}=${email}:invalid`;
+	      Request.post(EPNTS.user.register(), body, successfulRegistration, fail);
+	    }
+	
+	    function successfulLogin(body, res) {
+	      const newAuth = res.getResponseHeader('authorization');
+	      document.cookie = `${APP_ID}=${newAuth}`;
+	      hideLogin();
+	    }
+	
+	    const getEmail = () => du.cookie.get(APP_ID, ':', 'email').email;
+	    this.credential = User.credential;
+	
+	    function login(target) {
+	      const fail = du.appendError(target, 'Login Failed: Invalid Email and/or Password');
+	      const body = {email, password};
+	      Request.post(EPNTS.user.login(), body, successfulLogin, fail);
+	    }
+	
+	    function resendActivation(target) {
+	      const fail = du.appendError(target, 'Email Not Registered Or Already Active');
+	      const body = {email: getEmail()};
+	      Request.post(EPNTS.user.resendActivation(), body, successfulRegistration, fail);
+	    }
+	
+	    function logout() {
+	      du.cookie.remove(APP_ID);
+	      showLogin();
+	      updateDisplay('LOGIN')
+	    }
+	
+	    function resetPassword(target) {
+	      const fail = du.appendError(target, 'Server Error Must have occured... try again in a few minutes');
+	      const body = {email, newPassword: password};
+	      Request.post(EPNTS.user.resetPasswordRequest(), body, successfulRegistration, fail);
+	    }
+	
+	    du.on.match('click', `[${stateAttr}]`, (elem) => {
+	      const stateId = elem.getAttribute(stateAttr);
+	      if (User.states[stateId]) {
+	        updateDisplay(stateId);
+	      } else console.error(`Invalid State: '${stateId}'`);
+	    });
+	
+	    du.on.match('click', '#register', register);
+	    du.on.match('click', '#login-btn', login);
+	    du.on.match('click', '#resend-activation', resendActivation);
+	    du.on.match('click', '#reset-password', resetPassword);
+	    du.on.match('click', '#logout-btn', logout);
+	
+	    du.on.match('change', 'input[name="email"]', (elem) => email = elem.value);
+	    du.on.match('change', 'input[name="password"]', (elem) => password = elem.value);
+	
+	    function statusCheck(body) {
+	      switch (body) {
+	        case 'Not Registered':
+	          updateDisplay('LOGIN')
+	          break;
+	        case 'Not Activated':
+	          updateDisplay('CONFIRMATION_MESSAGE');
+	          break;
+	        case 'Logged In':
+	          hideLogin();
+	          break;
+	        case 'Logged Out':
+	          updateDisplay('LOGIN')
+	          break;
+	        default:
+	
+	      }
+	    }
+	
+	    Request.globalHeader('Authorization', this.credential);
+	    if (this.loginAvailible() && this.credential()) Request.get(EPNTS.user.status(), statusCheck);
+	    else if (loginAvailible()) updateDisplay('LOGIN');
 	  }
 	}
 	
-	Company.list = {};
-	new Company({name: 'Central Door'});
-	new Company({name: 'Central Wood'});
-	new Company({name: 'ADC'});
-	new Company({name: 'Accessa'});
-	new Company({name: 'Top Knobs'});
-	new Company({name: 'Richelieu'});
-	module.exports = Company
+	User.states = {};
+	User.states.LOGIN = {
+	  template: new $t('login/login')
+	};
+	User.states.CONFIRMATION_MESSAGE = {
+	  template: new $t('login/confirmation-message')
+	};
+	User.states.CREATE_ACCOUNT = {
+	  template: new $t('login/create-account')
+	};
+	User.states.RESET_PASSWORD = {
+	  template: new $t('login/reset-password')
+	};
+	
+	User.credential = () => du.cookie.get(APP_ID);
 	
 	
-	
-	
+	User = new User();
+	module.exports = User
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/group.js',
+RequireJS.addFunction('./app-src/config/cabinets.json',
+function (require, exports, module) {
+	module.exports = {
+	  "base": {
+	    "type": "base",
+	    "width": 45.72,
+	    "height": 86.36,
+	    "thickness": 60.96,
+	    "values": [
+	      {"key": "brh", "eqn": "tkb.w + pback.t + brr"},
+	      {"key": "innerWidth", "eqn": "c.w - pwt34 * 2"},
+	      {"key": "innerWidthCenter", "eqn": "innerWidth + pwt34"}
+	    ],
+	    "subassemblies": [
+	      {
+	        "name": "ToeKickBacker",
+	        "type": "Panel",
+	        "code": "tkb",
+	        "center": ["c.w / 2", "w / 2", "tkd + (t / 2)"],
+	        "demensions": ["tkh", "innerWidth", "tkbw"],
+	        "rotation": [0,0,90]
+	      },
+	      {
+	        "name": "Panel.Left",
+	        "type": "Panel",
+	        "code": "pl",
+	        "center": ["c.w - (pl.t / 2)", "pl.l / 2", "(w / 2)"],
+	        "demensions": ["c.t", "c.l", "pwt34"],
+	        "rotation": [0,90,0]
+	      },
+	      {
+	        "name": "Panel.Right",
+	        "type": "Panel",
+	        "code": "pr",
+	        "center": ["(pr.t / 2)", "pr.l / 2", " (w/2)"],
+	        "demensions": ["c.t", "c.l", "pwt34"],
+	        "rotation": [0,90,0]
+	      },
+	      {
+	        "name": "Back",
+	        "type": "Panel",
+	        "code": "pback",
+	        "center": ["l / 2 + pl.t", " (w / 2) + tkb.w", " c.t - (t / 2)"],
+	        "demensions": ["c.l - tkb.w", "innerWidth", "pwt34"],
+	        "rotation": [0,0,90]
+	      },
+	      {
+	        "name": "Bottom",
+	        "type": "Panel",
+	        "code": "pb",
+	        "center": ["c.w / 2", "tkh + (t/2)", "w / 2"],
+	        "demensions": ["c.t - pback.t", "innerWidth", "pwt34"],
+	        "rotation": [90,90, 0]
+	      },
+	      {
+	        "name": "Top",
+	        "type": "Panel",
+	        "code": "pt",
+	        "center": ["c.w / 2", "c.h - pwt34/2", "(w / 2)"],
+	        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
+	        "rotation": [90,90, 0]
+	      },
+	      {
+	        "name": "Top",
+	        "type": "Panel",
+	        "code": "pt2",
+	        "center": ["c.w / 2", "c.h - pwt34/2", "c.t - pback.t - (w / 2)"],
+	        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
+	        "rotation": [90,90, 0]
+	      }
+	    ],
+	    "joints": [
+	      {
+	        "malePartCode": "pt",
+	        "femalePartCode": "pl",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis": "y",
+	        "centerAxis": "-x"
+	      },
+	      {
+	        "malePartCode": "pt",
+	        "femalePartCode": "pr",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis":"y",
+	        "centerAxis": "+x"
+	      },
+	      {
+	        "malePartCode": "pt2",
+	        "femalePartCode": "pl",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis": "y",
+	        "centerAxis": "-x"
+	      },
+	      {
+	        "malePartCode": "pt2",
+	        "femalePartCode": "pr",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis":"y",
+	        "centerAxis": "+x"
+	      },
+	      {
+	        "malePartCode": "pback",
+	        "femalePartCode": "pl",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis": "y",
+	        "centerAxis": "-x"
+	      },
+	      {
+	        "malePartCode": "pback",
+	        "femalePartCode": "pr",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis":"y",
+	        "centerAxis": "+x"
+	      },
+	      {
+	        "malePartCode": "tkb",
+	        "femalePartCode": "pl",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis":"y",
+	        "centerAxis": "-x"
+	      },
+	      {
+	        "malePartCode": "tkb",
+	        "femalePartCode": "pr",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis":"y",
+	        "centerAxis": "+x"
+	      },
+	      {
+	        "malePartCode": "pb",
+	        "femalePartCode": "pl",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis":"y",
+	        "centerAxis": "-x"
+	      },
+	      {
+	        "malePartCode": "pb",
+	        "femalePartCode": "pr",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis":"y",
+	        "centerAxis": "+x"
+	      },
+	      {
+	        "malePartCode": "tkb",
+	        "femalePartCode": "pb",
+	        "type": "Dado",
+	        "maleOffset": 0.9525,
+	        "demensionAxis":"x",
+	        "centerAxis": "+y"
+	      }
+	    ],
+	    "dividerJoint": {
+	      "type": "Dado",
+	      "maleOffset": 0.9525
+	    },
+	    "openings": [
+	      {
+	        "top": "pt",
+	        "bottom": "pb",
+	        "left": "pl",
+	        "right": "pr",
+	        "back": "pback"
+	      }
+	    ]
+	  },
+	  "corner-wall": {
+	    "_TYPE": "CabinetTemplate",
+	
+	    "ID_ATTRIBUTE": "id",
+	    "type": "corner-wall",
+	    "values": [
+	      {
+	        "key": "bo",
+	        "eqn": "4*2.54",
+	        "id": "pz0usts"
+	      },
+	      {
+	        "key": "fwl",
+	        "eqn": "c.w - rw",
+	        "id": "v47f8o3"
+	      },
+	      {
+	        "key": "fwr",
+	        "eqn": "c.t - lw",
+	        "id": "ammy5c5"
+	      },
+	      {
+	        "key": "bottomInsetDepth",
+	        "eqn": "0",
+	        "id": "h1i4yon"
+	      },
+	      {
+	        "key": "topInsetDepth",
+	        "eqn": "0",
+	        "id": "r30qsyq"
+	      },
+	      {
+	        "key": "lw",
+	        "eqn": "30.48",
+	        "id": "r8els3r"
+	      },
+	      {
+	        "key": "rw",
+	        "eqn": "30.48",
+	        "id": "zoxsnu9"
+	      },
+	      {
+	        "key": "cnrD",
+	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
+	        "id": "vju4ekg"
+	      },
+	      {
+	        "key": "pbw",
+	        "eqn": "Math.sqrt((bo+pb.t)*(bo+pb.t)*2)",
+	        "id": "bg3l1cw"
+	      },
+	      {
+	        "key": "backhyp",
+	        "eqn": "Math.sqrt((pl.t*pl.t)*2)",
+	        "id": "zmra3po"
+	      },
+	      {
+	        "key": "frontLeftTheta",
+	        "eqn": "Math.atan(fwr/fwl)",
+	        "id": "woqnfe1"
+	      },
+	      {
+	        "key": "frontHype",
+	        "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)",
+	        "id": "u1sgalg"
+	      },
+	      {
+	        "key": "cutWidth",
+	        "eqn": "frontHype * 2",
+	        "id": "egcyi4x"
+	      },
+	      {
+	        "key": "frontHypeCenterD",
+	        "eqn": "fwr/2",
+	        "id": "fwll2bq"
+	      },
+	      {
+	        "key": "frontHypeCenterX",
+	        "eqn": "fwl/2",
+	        "id": "c0gj6ud"
+	      },
+	      {
+	        "key": "cutCenterX",
+	        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontLeftTheta)",
+	        "id": "otayvu9"
+	      },
+	      {
+	        "key": "cutCenterD",
+	        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontLeftTheta)",
+	        "id": "ekillpb"
+	      },
+	      {
+	        "key": "backCutterDem",
+	        "eqn": "bo*2*Math.sin(Math.toRadians(pb.r.y))",
+	        "id": "nvnsugh"
+	      },
+	      {
+	        "key": "topInnerLimit",
+	        "eqn": "c.h - topInsetDepth - pt.t",
+	        "id": "zj8uuj1"
+	      },
+	      {
+	        "key": "topOuterLimit",
+	        "eqn": "c.h",
+	        "id": "3liro7c"
+	      },
+	      {
+	        "key": "bottomInnerLimit",
+	        "eqn": "bottomInsetDepth + pbtm.t",
+	        "id": "ddjl8d0"
+	      },
+	      {
+	        "key": "bottomOuterLimit",
+	        "eqn": 0,
+	        "id": "0y39vqw"
+	      },
+	      {
+	        "key": "leftInnerLimit",
+	        "eqn": "pl.t",
+	        "id": "oto8hml"
+	      },
+	      {
+	        "key": "leftOuterLimit",
+	        "eqn": "0",
+	        "id": "s0ynin6"
+	      },
+	      {
+	        "key": "leftCutTheta",
+	        "eqn": "Math.PI - frontLeftTheta - Math.PI12",
+	        "id": "d91x5l5"
+	      },
+	      {
+	        "key": "leftCutT",
+	        "eqn": "pl.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
+	        "id": "c1zmc1s"
+	      },
+	      {
+	        "key": "rightCutTheta",
+	        "eqn": "frontLeftTheta",
+	        "id": "moxhnw5"
+	      },
+	      {
+	        "key": "rightCutX",
+	        "eqn": "pr.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
+	        "id": "476p6b2"
+	      },
+	      {
+	        "key": "rightInnerLimit",
+	        "eqn": "fwl",
+	        "id": "dnmesi3"
+	      },
+	      {
+	        "key": "rightOuterLimit",
+	        "eqn": "fwl",
+	        "id": "9syndoq"
+	      },
+	      {
+	        "key": "frontDepthMin",
+	        "eqn": 0,
+	        "id": "2pfov96"
+	      },
+	      {
+	        "key": "frontDepthMax",
+	        "eqn": "fwr",
+	        "id": "eflejko"
+	      }
+	    ],
+	    "subassemblies": [
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "c.w - bo/2",
+	          "c.h/2",
+	          "c.t - bo/2"
+	        ],
+	        "demensions": [
+	          "pbw",
+	          "c.h",
+	          "pwt14"
+	        ],
+	        "rotation": [
+	          0,
+	          "45",
+	          0
+	        ],
+	        "name": "Panel.Back",
+	        "code": "pb",
+	        "id": "ly2p41u"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "c.t",
+	          "c.h/2",
+	          "c.w"
+	        ],
+	        "demensions": [
+	          "backCutterDem",
+	          "c.h",
+	          "backCutterDem"
+	        ],
+	        "rotation": [
+	          0,
+	          "135",
+	          0
+	        ],
+	        "name": "Cutter.Back",
+	        "code": "cb",
+	        "id": "ly2p41z"
+	      },
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "pl.w/2",
+	          "c.h / 2",
+	          "pl.t/2"
+	        ],
+	        "demensions": [
+	          "c.w",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "0",
+	          0
+	        ],
+	        "name": "Panel.Left",
+	        "code": "pl",
+	        "id": "67tkjp5"
+	      },
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "pr.t/2",
+	          "c.h/2",
+	          "pr.w/2"
+	        ],
+	        "demensions": [
+	          "c.t",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "90",
+	          0
+	        ],
+	        "name": "Panel.Right",
+	        "code": "pr",
+	        "id": "kfuwf6d"
+	      },
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "pbl.w / 2 + pl.t ",
+	          "c.h/2",
+	          "c.t - t / 2"
+	        ],
+	        "demensions": [
+	          "c.w - bo",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          0,
+	          0
+	        ],
+	        "name": "Panel.Back.Left",
+	        "code": "pbl",
+	        "id": "qnpktr8"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "1000",
+	          "pbl.c.y",
+	          "pbl.c.z + pbl.t"
+	        ],
+	        "demensions": [
+	          "pbl.d.x",
+	          "pbl.d.y",
+	          "pbl.d.z"
+	        ],
+	        "rotation": [
+	          "pbl.r.x",
+	          "pbl.r.y",
+	          "pbl.r.z"
+	        ],
+	        "name": "Cutter.Back.Left",
+	        "code": "cpbl",
+	        "id": "qnpktr2"
+	      },
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "c.w - pbr.t/2",
+	          "c.h/2",
+	          "pbr.w/2 + pr.t"
+	        ],
+	        "demensions": [
+	          "c.t - bo",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "90",
+	          0
+	        ],
+	        "name": "Panel.Back.Right",
+	        "code": "pbr",
+	        "id": "a1yypp5"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "1000",
+	          "pbr.c.y",
+	          "pbr.c.z"
+	        ],
+	        "demensions": [
+	          "pbr.d.x",
+	          "pbr.d.y",
+	          "pbr.d.z"
+	        ],
+	        "rotation": [
+	          "pbr.r.x",
+	          "pbr.r.y",
+	          "pbr.r.z"
+	        ],
+	        "name": "Cutter.Back.Right",
+	        "code": "cpbr",
+	        "id": "qnpktw2"
+	      },
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "c.w / 2",
+	          "c.h - topInsetDepth - t / 2",
+	          "c.t / 2"
+	        ],
+	        "demensions": [
+	          "c.w - pbr.t - pl.t",
+	          "c.t - pbl.t - pr.t",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          "90",
+	          "0",
+	          0
+	        ],
+	        "name": "Panal.top",
+	        "code": "pt",
+	        "id": "0p8zyq0"
+	      },
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "c.w / 2",
+	          "bottomInsetDepth + t / 2",
+	          "c.t / 2"
+	        ],
+	        "demensions": [
+	          "c.w - pbr.t - pl.t",
+	          "c.t - pbl.t - pr.t",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          "90",
+	          "0",
+	          0
+	        ],
+	        "name": "Panal.top",
+	        "code": "pbtm",
+	        "id": "uqb7ksc"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "cutCenterX",
+	          "c.h/2",
+	          "cutCenterD"
+	        ],
+	        "demensions": [
+	          "frontHype * 2",
+	          "frontHype*2",
+	          "c.h"
+	        ],
+	        "rotation": [
+	          "90",
+	          "Math.toDegrees(frontLeftTheta)",
+	          0
+	        ],
+	        "name": "Cutter.Front",
+	        "code": "cut",
+	        "id": "t2nx210"
+	      }
+	    ],
+	    "joints": [
+	      {
+	        "malePartCode": "pb",
+	        "femalePartCode": "pbtm",
+	        "type": "Butt",
+	        "id": "jhdiitu"
+	      },
+	      {
+	        "malePartCode": "pb",
+	        "femalePartCode": "pbr",
+	        "type": "Butt",
+	        "id": "tfovv9r"
+	      },
+	      {
+	        "malePartCode": "pb",
+	        "femalePartCode": "pbl",
+	        "type": "Butt",
+	        "id": "i49ifbe"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbtm",
+	        "femalePartCode": "pr",
+	        "maleOffset": "pr.t / 2",
+	        "demensionAxis": "y",
+	        "centerAxis": "-z",
+	        "id": "0zszlb9"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbtm",
+	        "femalePartCode": "pl",
+	        "maleOffset": "pl.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "-x",
+	        "id": "vbwtc6l"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbtm",
+	        "femalePartCode": "pbl",
+	        "maleOffset": "pbl.t/2",
+	        "demensionAxis": "y",
+	        "centerAxis": "+z",
+	        "id": "x8qno2z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbtm",
+	        "femalePartCode": "pbr",
+	        "maleOffset": "pbr.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "+x",
+	        "id": "3zyqkyg"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pt",
+	        "femalePartCode": "pr",
+	        "maleOffset": "pr.t / 2",
+	        "demensionAxis": "y",
+	        "centerAxis": "-z",
+	        "id": "ho44x8c"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pt",
+	        "femalePartCode": "pl",
+	        "maleOffset": "pl.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "-x",
+	        "id": "f2yqowv"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pt",
+	        "femalePartCode": "pbl",
+	        "maleOffset": "pbl.t/2",
+	        "demensionAxis": "y",
+	        "centerAxis": "+z",
+	        "id": "xlic9x8"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pt",
+	        "femalePartCode": "pbr",
+	        "maleOffset": "pbr.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "+x",
+	        "id": "dv1u67c"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbl",
+	        "femalePartCode": "pl",
+	        "maleOffset": "pl.t",
+	        "demensionAxis": "x",
+	        "centerAxis": "+y",
+	        "id": "861ea5i"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbr",
+	        "femalePartCode": "pr",
+	        "maleOffset": "pr.t",
+	        "demensionAxis": "x",
+	        "centerAxis": "+y",
+	        "id": "t0ywrvc"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "pb",
+	        "femalePartCode": "pt",
+	        "id": "e3z7qur"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cut",
+	        "femalePartCode": "pt",
+	        "id": "k0atwnf"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cut",
+	        "femalePartCode": "pbtm",
+	        "id": "4ke3jn9"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cut",
+	        "femalePartCode": "pr",
+	        "id": "lr1xqx8"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cut",
+	        "femalePartCode": "pl",
+	        "id": "bk2rjwz"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cb",
+	        "femalePartCode": "pt",
+	        "id": "1l5u1lk"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cb",
+	        "femalePartCode": "pbtm",
+	        "id": "1zp5rfv"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cb",
+	        "femalePartCode": "pbr",
+	        "id": "rs2316q"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cb",
+	        "femalePartCode": "pbl",
+	        "id": "m9e5p7l"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cpbl",
+	        "femalePartCode": "pb",
+	        "id": "l85jpd3"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cpbr",
+	        "femalePartCode": "pb",
+	        "id": "h3xmpm4"
+	      }
+	    ],
+	    "dividerJoint": {
+	      "type": "Dado",
+	      "maleOffset": "33"
+	    },
+	    "shape": "corner",
+	    "width": 50.8,
+	    "height": 76.2,
+	    "thickness": 91.44,
+	    "openings": [
+	      {
+	        "_Type": "location",
+	        "rotation": {
+	          "x": 0,
+	          "z": 0,
+	          "y": "270+ Math.toDegrees(frontLeftTheta)"
+	        },
+	        "coordinates": {
+	          "inner": [
+	            {
+	              "x": "rightInnerLimit - leftCutT",
+	              "y": "topInnerLimit",
+	              "z": "frontDepthMin + pl.t"
+	            },
+	            {
+	              "x": "leftInnerLimit",
+	              "y": "topInnerLimit",
+	              "z": "frontDepthMax - rightCutX"
+	            },
+	            {
+	              "x": "leftInnerLimit",
+	              "y": "bottomInnerLimit",
+	              "z": "frontDepthMax - rightCutX"
+	            },
+	            {
+	              "x": "rightInnerLimit - leftCutT",
+	              "y": "bottomInnerLimit",
+	              "z": "frontDepthMin + pl.t"
+	            }
+	          ],
+	          "outer": [
+	            {
+	                "x": "rightOuterLimit",
+	                "y": "topOuterLimit",
+	                "z": "frontDepthMin"
+	            },
+	            {
+	              "x": "leftOuterLimit",
+	              "y": "topOuterLimit",
+	              "z": "frontDepthMax"
+	            },
+	            {
+	              "x": "leftOuterLimit",
+	              "y": "bottomOuterLimit",
+	              "z": "frontDepthMax"
+	            },
+	            {
+	              "x": "rightOuterLimit",
+	              "y": "bottomOuterLimit",
+	              "z": "frontDepthMin"
+	            }
+	          ]
+	        },
+	
+	        "state": {
+	          "innerOouter": true,
+	          "index": 0,
+	          "xOyOz": "z"
+	        }
+	      }
+	    ]
+	  }
+	};
+});
+
+
+RequireJS.addFunction('./app-src/config/properties.js',
 function (require, exports, module) {
 	
-const PropertyConfig = require('../config/property/config');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+
+	const Property = require('./property');
+	const Defs = require('./property/definitions');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	const EPNTS = require('../../generated/EPNTS');
+	const Request = require('../../../../public/js/utils/request.js');
 	
-	class Group extends Lookup {
-	  constructor(room, name, id) {
-	    super(id);
-	    const initialVals = {
-	      name: name || 'Group',
-	    }
-	    Object.getSet(this, initialVals);
-	    this.propertyConfig = new PropertyConfig();
-	    this.objects = [];
-	    this.room = () => room;
-	    this.toJson = () => {
-	      const json = {objects: [], _TYPE: 'Group'};
-	      this.objects.forEach((obj) => json.objects.push(obj.toJson()));
-	      json.name = this.name();
-	      json.id = this.id();
-	      json.roomId = this.room().id();
-	      json.propertyConfig = this.propertyConfig.toJson();
-	      return json;
-	    }
-	  }
-	}
+	let unitCount = 0;
+	const UNITS = [];
+	Measurement.units().forEach((unit) =>
+	      UNITS.push(new Property('Unit' + ++unitCount, unit, unit === Measurement.unit())));
+	UNITS._VALUE = Measurement.unit();
 	
-	Group.count = 0;
-	new Group();
+	const assemProps = {}
+	const add = (key, properties) => properties.forEach((prop) => {
+	  if (assemProps[key] === undefined) assemProps[key] = {};
+	  assemProps[key][prop.code()] = prop;
+	});
 	
-	Group.fromJson = (json) => {
-	  const room = Lookup.get(json.roomId);
-	  const group = new Group(room, json.name, json.id);
-	  group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
-	  json.objects.forEach((objJson) => {
-	    const jsonClazz = Object.class.get(json.objects[0]._TYPE);
-	    const obj = jsonClazz.fromJson(objJson, group);
-	    group.objects.push(obj);
-	    obj.group(group);
+	add('Overlay', [Defs.ov]);
+	add('Reveal', [Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl]);
+	add('Inset', [Defs.is]);
+	add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
+	                Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
+	                Defs.frw,Defs.frt]);
+	add('Panel', [Defs.h,Defs.w,Defs.t]);
+	add('Guides', [Defs.l,Defs.dbtos,Defs.dbsos,Defs.dbbos]);
+	add('DoorAndFront', [Defs.daffrw,Defs.dafip])
+	add('Door', [Defs.h,Defs.w,Defs.t]);
+	add('DrawerBox', [Defs.h,Defs.w,Defs.d,Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn]);
+	add('DrawerFront', [Defs.h,Defs.w,Defs.t,Defs.mfdfd]);
+	add('Frame', [Defs.h,Defs.w,Defs.t]);
+	add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
+	add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
+	add('Opening', []);
+	
+	function definitionsRequired(group) {
+	  const required = [];
+	  if (assemProps[group] === undefined) return [];
+	  Object.values(assemProps[group]).forEach((prop) => {
+	    if (prop instanceof Property && prop.value() !== null) required.push(prop);
 	  });
-	  return group;
+	  return required;
 	}
 	
-	module.exports = Group;
+	function propertiesToDefine() {
+	  const propNames = [];
+	  const keys = Object.keys(assemProps);
+	  keys.forEach((key) => {
+	    if (definitionsRequired(key).length !== 0) {
+	      propNames.push(key);
+	    }
+	  });
+	  return propNames;
+	}
+	
+	const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
+	function assemProperties(clazz, filter) {
+	  clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
+	  props = assemProps[clazz] || [];
+	  if ((typeof filter) != 'function') return props;
+	  props = props.filter(filter);
+	  return props;
+	}
+	
+	
+	let config = {};
+	const changes = {};
+	const copyMap = {};
+	assemProperties.changes = {
+	  saveAll: () => Object.values(changes).forEach((list) => assemProperties.changes.save(list._ID)),
+	  save: (id) => {
+	    const list = changes[id];
+	    if (!list) throw new Error(`Unkown change id '${id}'`);
+	    const group = list._GROUP;
+	    if (config[group] === undefined) config[group] = [];
+	    if(copyMap[id] === undefined) {
+	      config[group][list._NAME] = {name: list._NAME, properties: JSON.clone(list, excludeKeys, true)};
+	      copyMap[list._ID] = config[group][list._NAME].properties;
+	    } else {
+	      const tempList = changes[id];
+	      for (let index = 0; index < tempList.length; index += 1) {
+	        const tempProp = tempList[index];
+	        const configProp = copyMap[id][index];
+	        configProp.value(tempProp.value());
+	      }
+	    }
+	   },
+	  deleteAll: () => Object.values(changes).forEach((list) => assemProperties.changes.delete(list._GROUP)),
+	  delete: (id) => {
+	    delete config[changes[id][0].name()][changes[id]._NAME];
+	    delete changes[id];
+	    delete copyMap[id];
+	  },
+	  changed: (id) => {
+	    const list = changes[id];
+	    if (list === undefined) return false;
+	    for (let index = 0; index < list.length; index += 1) {
+	      const prop = list[index];
+	      if (prop === undefined || (copyMap[list._ID] !== undefined && copyMap[list._ID][index] === undefined)) {
+	        console.log('booyacka!');
+	      }
+	      if (copyMap[list._ID] === undefined || !copyMap[list._ID][index].equals(prop)) {
+	        return true;
+	      }
+	    }
+	    return false;
+	  },
+	  changesExist: () => {
+	      const lists = Object.values(changes);
+	      for (let index = 0; index < lists.length; index += 1) {
+	        if (assemProperties.changes.changed(lists[index]._ID)) {
+	          return true;
+	        }
+	      }
+	      return false;
+	  }
+	}
+	
+	assemProperties.config = () => {
+	  const plainObj = {};
+	  const keys = Object.keys(config);
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    const lists = config[key];
+	    const listKeys = Object.keys(lists);
+	    plainObj[key] = {};
+	    for (let lIndex = 0; lIndex < listKeys.length; lIndex += 1) {
+	      const listKey = listKeys[lIndex];
+	      const list = lists[listKey];
+	      const propObj = {name: listKey, properties: []};
+	      plainObj[key][listKey] = propObj;
+	      list.properties.forEach((property) =>
+	          propObj.properties.push(property.toJson(excludeKeys, true)))
+	    }
+	  }
+	  return plainObj;
+	}
+	assemProperties.list = () => Object.keys(assemProps);
+	assemProperties.new = (group, name) => {
+	  if (assemProps[group]) {
+	    const list = [];
+	    let addIndex = 0;
+	    const ogList = Object.values(assemProps[group]);
+	    for (let index = 0; index < ogList.length; index += 1) {
+	      if (hasValueFilter(ogList[index])) {
+	        list[addIndex++] = ogList[index].clone();
+	      }
+	    }
+	    list._ID = String.random();
+	    list._GROUP = group;
+	    list._NAME = name;
+	    changes[list._ID] = list;
+	    return list;
+	  }
+	  throw new Error(`Requesting invalid Property Group '${group}'`);
+	}
+	
+	assemProperties.instance = () => {
+	  const keys = Object.keys(assemProps);
+	  const clone = {};
+	  keys.forEach((key) => {
+	    const props = Object.values(assemProps[key]);
+	    if (clone[key] === undefined) clone[key] = {};
+	    props[keys] = {};
+	    props.forEach((prop) => clone[key][prop.code()] = prop.clone());
+	  });
+	  return clone;
+	};
+	
+	assemProperties.getSet = (group, setName) => {
+	  const clone = {};
+	  let propertyObj = config[group][setName];
+	  propertyObj.properties.forEach((prop) => clone[prop.code()] = prop.clone());
+	  clone.__KEY = setName;
+	  return clone;
+	}
+	
+	const dummyFilter = () => true;
+	assemProperties.groupList = (group, filter) => {
+	  filter = filter || dummyFilter;
+	  const groupList = config[group];
+	  const changeList = {};
+	  if (groupList === undefined) return {};
+	  const groupKeys = Object.keys(groupList);
+	  for (let index = 0; index < groupKeys.length; index += 1) {
+	    const groupKey = groupKeys[index];
+	    const list = groupList[groupKey];
+	    const properties = groupList[list.name].properties;
+	    const codes = properties.map((prop) => prop.code());
+	    // const newProps = assemProps[group].filter((prop) => codes.indexOf(prop.code()) === -1)
+	    //                   .filter(filter);
+	    // newProps.forEach((prop) => properties.push(prop.clone()));
+	    changeList[list.name] = {name: list.name, properties: []};
+	    for (let pIndex = 0; pIndex < properties.length; pIndex += 1) {
+	      const prop = properties[pIndex];
+	      changeList[list.name].properties.push(prop.clone());
+	    }
+	    const id = String.random();
+	    const set = changeList[list.name].properties;
+	    set._ID = id;
+	    set._NAME = list.name;
+	    changes[id] = set;
+	    copyMap[id] = properties;
+	  }
+	  return changeList;
+	}
+	
+	const hasValueFilter = (prop) => prop.value() !== null;
+	assemProperties.hasValue = (group) => {
+	  if (props === undefined) return [];
+	  return assemProperties.groupList(group, hasValueFilter);
+	}
+	
+	const list = (key) =>
+	    assemProps[key] ? Object.values(assemProps[key]) : [];
+	
+	const noValueFilter = (prop) => prop.value() === null;
+	assemProperties.noValue = (group) => {
+	  const props = list(group);
+	  if (props === undefined) return [];
+	  return props.filter(noValueFilter);
+	}
+	
+	assemProperties.all = () => {
+	  const props = {};
+	  const keys = Object.keys(assemProps);
+	  keys.forEach((key) => {
+	    const l = [];
+	    list(key).forEach((prop) => l.push(prop));
+	    props[key] = l;
+	  });
+	  return props;
+	}
+	
+	assemProperties.UNITS = UNITS;
+	
+	assemProperties.load = (body) => {
+	  config = Object.fromJson(body);
+	}
+	
+	assemProperties.definitionsRequired = definitionsRequired;
+	assemProperties.propertiesToDefine = propertiesToDefine;
+	module.exports = assemProperties;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/simple.js',
+function (require, exports, module) {
+	
+const Vertex3D = require('./objects/vertex');
+	const Polygon3D = require('./objects/polygon');
+	const BiPolygon = require('./objects/bi-polygon');
+	const Plane = require('./objects/plane');
+	const Polygon2d = require('../two-d/objects/polygon');
+	const Vertex2d = require('../two-d/objects/vertex');
+	const Line2d = require('../two-d/objects/line');
+	
+	class ThreeDModelSimple {
+	  constructor(cabinet) {
+	    const assemblies = [];
+	    let cabinetCSG;
+	    let center, threeView, silhouette;
+	
+	    this.cabinet = () => cabinet;
+	    this.add = (assembly, csg) => {
+	      if (assembly && assembly.inElivation) {
+	        assemblies.push(assembly);
+	      }
+	      if (cabinet.children().indexOf(assembly) !== -1) {
+	        // TODO: Hacky fix errors created by toModel not including joint information
+	        if (cabinetCSG === undefined) cabinetCSG = csg;//assembly.toModel(true);
+	        else cabinetCSG = cabinetCSG.union(csg);//assembly.toModel(true));
+	      }
+	    }
+	
+	    this.center = () => {
+	      if (!center) {
+	        if (cabinetCSG === undefined) return new Vertex3D(0,0,0);
+	        const polys = cabinetCSG.polygons;
+	        for (let index = 0; index < polys.length; index++) {
+	          const poly = polys[index];
+	          const verts = poly.vertices;
+	          const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
+	          const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
+	          poly.center = new Vertex3D(midrangePoint);
+	          poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
+	        }
+	        const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
+	        center = new Vertex3D(Math.midrange(polys, targetAttrs));
+	      }
+	      return center;
+	    }
+	
+	    this.threeView = () => {
+	      if (!threeView) {
+	        const polys = Polygon3D.fromCSG(cabinetCSG.polygons);
+	        threeView = Polygon3D.toThreeView(polys);
+	        threeView.front = Polygon2d.outline(threeView.front).lines();
+	        threeView.right = Polygon2d.outline(threeView.right).lines();
+	        const topPoly2d = Polygon2d.outline(threeView.top);
+	        threeView.top = topPoly2d.lines();
+	      }
+	      return threeView;
+	    }
+	
+	    this.cabinetSilhouette = () => {
+	      if (!silhouette) {
+	        let polygons = cabinetCSG.polygons;
+	        const polys = Polygon3D.fromCSG(polygons);
+	        const threeView = Polygon3D.toThreeView(polys);
+	        threeView.front = Polygon2d.outline(threeView.front).lines();
+	        threeView.right = Polygon2d.outline(threeView.right).lines();
+	        const topPoly2d = Polygon2d.outline(threeView.top);
+	        threeView.top = topPoly2d.lines();
+	
+	        const frontMinMax = Vertex2d.minMax(Line2d.vertices(threeView.front));
+	        const height = frontMinMax.diff.y();
+	        const width = frontMinMax.diff.x();
+	        const depth = Vertex2d.minMax(Line2d.vertices(threeView.right)).diff.x();
+	        const topPoly = Polygon3D.from2D(topPoly2d);
+	        topPoly.rotate({x:90,y:0,z:0});
+	        silhouette = BiPolygon.fromPolygon(topPoly, 0, height);
+	        silhouette.center(this.center());
+	      }
+	      return silhouette;
+	    }
+	
+	    this.toModel = (simpler) => {
+	      const offset = new Vertex3D(new Vertex3D(cabinet.position().center()).minus(this.center()));
+	      let model = this.cabinetSilhouette().toModel();
+	      for (let index = 0; !simpler && index < assemblies.length; index++) {
+	        const csg = assemblies[index].toModel(true);
+	        csg.translate(offset);
+	        model = model.union(csg);
+	      }
+	      return model;
+	    }
+	
+	    this.viewFromVector = (vector, in2D, axis) => {
+	      let output = cabinet.toBiPolygon();
+	      if (in2D) {
+	        output = Polygon3D.toTwoD(output.polygons(), vector, axis);
+	        axis ||= output.axis;
+	      } else {
+	        output = output.toModel();
+	      }
+	      for (let i = 0; i < assemblies.length; i++) {
+	        if (in2D)
+	          output.concat(Polygon.toTwoD(assemblies[i], vector, axis));
+	        else
+	          output.union(assemblies[i].toModel());
+	      }
+	      return output;
+	    }
+	  }
+	}
+	
+	module.exports = ThreeDModelSimple;
+	
+});
+
+
+RequireJS.addFunction('./app-src/input/inputs.js',
+function (require, exports, module) {
+	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
+	const Cost = require('../cost/cost.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Material = require('../cost/types/material.js');
+	const Company = require('../objects/company.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const Labor = require('../cost/types/labor.js');
+	
+	
+	const defined = {};
+	function add (name, input) {
+	  if (defined[name]) {
+	    throw new Error(`Input by the name of '${name}' is already defined`)
+	  }
+	  defined[name] = input;
+	}
+	
+	module.exports = (name, properties) => defined[name].clone(properties);
+	
+	
+	add('length', new MeasurementInput({
+	  type: 'text',
+	  placeholder: 'Length',
+	  name: 'length',
+	  class: 'center'
+	}));
+	
+	add('width', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Width',
+	  name: 'width',
+	  class: 'center'
+	}));
+	
+	add('depth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Depth',
+	  name: 'depth',
+	  class: 'center'
+	}));
+	
+	add('cost', new MeasurementInput({
+	  type: 'number',
+	  label: '$',
+	  placeholder: 'Cost',
+	  name: 'cost'
+	}));
+	
+	add('pattern', new MeasurementInput({
+	  type: 'text',
+	  class: 'pattern-input',
+	}));
+	
+	
+	add('offsetLen', new MeasurementInput({
+	  type: 'text',
+	  label: 'Offset',
+	  placeholder: 'Length',
+	  name: 'offsetLength',
+	  class: 'center',
+	}));
+	
+	add('offsetWidth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Width',
+	  name: 'offsetWidth',
+	  class: 'center',
+	}));
+	
+	add('offsetDepth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Depth',
+	  name: 'offsetDepth',
+	  class: 'center',
+	}));
+	
+	
+	add('costType', new Select({
+	  placeholder: 'Type',
+	  name: 'type',
+	  class: 'center',
+	  list: Cost.typeList
+	}));
+	
+	add('method', new Select({
+	  name: 'method',
+	  class: 'center',
+	  list: Material.methodList,
+	}));
+	
+	add('company', new Select({
+	  name: 'company',
+	  label: 'Company',
+	  class: 'center',
+	  list: [''].concat(Object.keys(Company.list)),
+	  value: ''
+	}));
+	
+	add('childCost', new Select({
+	    name: 'child',
+	    label: 'Default',
+	    class: 'center',
+	}));
+	
+	
+	add('id', new Input({
+	  type: 'text',
+	  placeholder: 'Id',
+	  name: 'id',
+	  class: 'center',
+	  validation: /^\s*[^\s]{1,}\s*$/,
+	  errorMsg: 'You must enter an Id'
+	}));
+	
+	add('propertyId', new Input({
+	  type: 'text',
+	  placeholder: 'Property Id',
+	  name: 'propertyId',
+	  class: 'center',
+	  validation: /^[a-zA-Z\.]{1}$/,
+	  errorMsg: 'Alpha Numeric Value seperated by \'.\'.<br>I.E. Cabinet=>1/2 Overlay = Cabinet.12Overlay'
+	}));
+	
+	add('propertyValue', new Input({
+	  type: 'text',
+	  placeholder: 'Property Value',
+	  name: 'propertyValue',
+	  class: 'center'
+	}));
+	
+	add('costId', new Input({
+	  type: 'text',
+	  placeholder: 'Id',
+	  name: 'id',
+	  class: 'center',
+	  validation: (id, values) =>
+	      id !== '' && (!values.referenceable || Object.values(Cost.defined).indexOf(id) === -1),
+	  errorMsg: 'You must an Id: value must be unique if Referencable.'
+	}));
+	
+	add('name', new Input({
+	  type: 'text',
+	  placeholder: 'Name',
+	  name: 'name',
+	  value: 'peach',
+	  class: 'center',
+	  validation: /^\s*[^\s].*$/,
+	  errorMsg: 'You must enter a Name'
+	}));
+	
+	add('color', new Input({
+	  type: 'color',
+	  validation: /.*/,
+	  placeholder: 'color',
+	  name: 'color',
+	  class: 'center'
+	}));
+	
+	add('optional', new Input({
+	  label: 'Optional',
+	  name: 'optional',
+	  type: 'checkbox',
+	  default: false,
+	  validation: [true, false],
+	  targetAttr: 'checked'
+	}));
+	
+	add('modifyDemension', new Input({
+	  label: 'Modify Demension',
+	  name: 'modifyDemension',
+	  type: 'checkbox',
+	  default: false,
+	  validation: [true, false],
+	  targetAttr: 'checked'
+	}));
+	
+	add('partNumber', new Input({
+	  label: 'Part Number',
+	  name: 'partNumber',
+	  type: 'text'
+	}));
+	
+	add('count', new Input({
+	  label: 'Count',
+	  name: 'count',
+	  type: 'number',
+	  value: 1
+	}));
+	
+	add('quantity', new Input({
+	  label: 'Quantity',
+	  name: 'quantity',
+	  type: 'number',
+	  value: 0
+	}));
+	
+	add('hourlyRate', new Input({
+	  label: 'Hourly Rate',
+	  name: 'hourlyRate',
+	  type: 'number',
+	}));
+	
+	add('hours', new Input({
+	  label: 'Hours',
+	  name: 'hours',
+	  type: 'number',
+	  value: 0
+	}));
+	
+	add('laborType', new Input({
+	  name: 'laborType',
+	  placeholder: 'Labor Type',
+	  label: 'Type',
+	  class: 'center',
+	  clearOnClick: true,
+	  list: Labor.types
+	}));
+	
+	add('formula', new Input({
+	  name: 'formula',
+	  placeholder: 'Formula',
+	  label: 'Formula',
+	  class: 'center'
+	}));
+	
+});
+
+
+RequireJS.addFunction('./app-src/input/validation.js',
+function (require, exports, module) {
+	
+
+	
+	const InvalidComputation = require('./error.js');
+	
+	class ObjectValidator {
+	  constructor() {
+	    const validators =  {};
+	    this.add = (name, validator) => {
+	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
+	        throw new Error('Invalid Validator');
+	      }
+	      validator[name] = validator;
+	    }
+	    this.validate = (obj) => {
+	      if (typeof obj !== 'object') throw new InvalidComputation()
+	      const keys = Object.keys(validators);
+	    }
+	  }
+	}
+	
+	
+	class Validator {
+	  constructor(validator, props, info) {
+	    let type, validate;
+	    const complement = props.explanation;
+	
+	    let defaultExpl;
+	    if (validator instanceof Regex) {
+	      type = 'Regex';
+	      if (props.complement) {
+	        defaultExpl = 'Value must fit regex expression';
+	        validate = (value) => validator.match('value');
+	      } else {
+	        defaultExpl = 'Value must not fit regex expression';
+	        validate = (value) => !validator.match('value');
+	      }
+	    } else if (Array.isArray(validator)) {
+	      if (props.complement) {
+	        defaultExpl = 'Value must exist within array';
+	        validate = (value) => validator.indexOf(value) !== -1;
+	      } else {
+	        defaultExpl = 'Value must not exist within array';
+	        validate = (value) => validator.indexOf(value) === -1;
+	      }
+	    }
+	
+	    props.explanation = props.explanation || defaultExpl;
+	
+	    val = val === undefined && elem ? elem.value : val;
+	    if (val === undefined) return false;
+	    if (valid !== undefined && val === value) return valid;
+	    let valValid = true;
+	    if (props.validation instanceof RegExp) {
+	      valValid = val.match(props.validation) !== null;
+	    }
+	    else if ((typeof props.validation) === 'function') {
+	      valValid = props.validation.apply(null, arguments);
+	    }
+	    else if (Array.isArray(props.validation)) {
+	      valValid = props.validation.indexOf(val) !== -1;
+	    }
+	
+	    return valValid;
+	  }
+	}
+	exports.ObjectValidator = ObjectValidator
+	exports.Validator = Validator
+	
+	
+	
+	
 	
 });
 
@@ -25470,6 +25433,428 @@ const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 	  right.sections[2].setSection("DrawerSection");
 	  right.pattern('abb').value('a', a);
 	});
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/history.js',
+function (require, exports, module) {
+	
+class History {
+	  constructor() {
+	    let changes = [];
+	    let changesIndex = [];
+	
+	      this.addChange = (forward, back) => {
+	        changes = changes.slice(0, changesIndex);
+	        changes.push({forward, back});
+	        changesIndex++;
+	      }
+	
+	    this.getSet = (obj, initialVals, ...attrs) => {
+	      attrs = Object.getSet(obj, initialVals, ...attrs);
+	      const objFuncs = {};
+	      attrs.forEach((attr) => {
+	        objFuncs[attr] = obj[attr];
+	        obj[attr] = (value) => {
+	          if (value !== undefined) {
+	            const oldValue = objFuncs[attr]();
+	            const back = () => objFuncs[attr](oldValue);
+	            const forward = () => objFuncs[attr](value);
+	            this.addChange(obj, forward, back);
+	          }
+	          return objFuncs[attr](value);
+	        }
+	      });
+	    }
+	
+	    this.undo = () => {
+	      const change = changes[--changesIndex];
+	      change.back();
+	    }
+	
+	    this.redo = () => {
+	      const change = changes[++changesIndex];
+	      change.forward();
+	    }
+	
+	    this.canUndo =() => changesIndex > 0;
+	    this.canRedo = () => changeIndex < changes.length - 1;
+	  }
+	}
+	
+	module.exports = History;
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/divide-properties.js',
+function (require, exports, module) {
+	
+
+	class DivideProperties {
+	  constructor(length, center, rotation) {
+	    Object.getSet(this, {length, center, rotation})
+	  }
+	}
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/display-svc.js',
+function (require, exports, module) {
+	class Register {
+	  constructor() {
+	    const registered = {};
+	    this.register = function (nameOobj, obj) {
+	      if ((typeof nameOobj) !== 'object') {
+	        registered[nameOobj] = obj;
+	      } else {
+	        const keys = Object.keys(nameOobj);
+	        for (let index = 0; index < keys.length; index += 1) {
+	          const key = keys[index];
+	          registered[key] = nameOobj[key];
+	        }
+	      }
+	    }
+	    this.get = (name) => registered[name];
+	  }
+	}
+	
+	module.exports = new Register();
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/cabinet-opening-coordinates.js',
+function (require, exports, module) {
+	
+class CabinetOpeningCorrdinates {
+	  constructor(cabinet, config, sectionProperties) {
+	
+	    this.divide = sectionProperties.divide;
+	    this.setSection = sectionProperties.setSection;
+	    this.sections = sectionProperties.sections;
+	    this.vertical = sectionProperties.vertical;
+	    this.sectionProperties = () => sectionProperties;
+	    this.pattern = sectionProperties.pattern;
+	    this.update = () => {
+	      let coords;
+	      if (config._Type === 'location') {
+	        coords = cabinet.evalObject(config.coordinates);
+	      } else {
+	        const right = cabinet.getAssembly(config.right);
+	        const left = cabinet.getAssembly(config.left);
+	        const top = cabinet.getAssembly(config.top);
+	        const bottom = cabinet.getAssembly(config.bottom);
+	
+	        const topMax = top.position().centerAdjust('y', '+z');
+	        const topMin = top.position().centerAdjust('y', '-z');
+	        const leftMax = left.position().centerAdjust('x', '-z');
+	        const leftMin = left.position().centerAdjust('x', '+z');
+	        const rightMin = right.position().centerAdjust('x', '+z');
+	        const rightMax = right.position().centerAdjust('x', '-z');
+	        const bottomMin = bottom.position().centerAdjust('y', '-z');
+	        const bottomMax = bottom.position().centerAdjust('y', '+z');
+	
+	        coords = {
+	          inner: [
+	            {x: leftMax, y: topMin, z: 0},
+	            {x: rightMin, y: topMin, z: 0},
+	            {x: rightMin, y: bottomMax, z: 0},
+	            {x: leftMax, y: bottomMax, z: 0}
+	          ],
+	          outer: [
+	            {x: leftMin, y: topMax, z: 0},
+	            {x: rightMax, y: topMax, z: 0},
+	            {x: rightMax, y: bottomMin, z: 0},
+	            {x: leftMin, y: bottomMin, z: 0}
+	          ]
+	        }
+	      }
+	      sectionProperties.updateCoordinates(coords);
+	      return coords;
+	    }
+	  }
+	}
+	
+	module.exports = CabinetOpeningCorrdinates;
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/cabinet-template.js',
+function (require, exports, module) {
+	
+const cabinetsJson = require('../../public/json/cabinets.json');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const PropertyConfig = require('./property/config');
+	
+	class CabinetTemplate extends Lookup {
+	  constructor(type) {
+	    super();
+	    const instance = this;
+	    const initialVals = (typeof type) === 'object' ? type : {
+	      type, values: [], subassemblies: [], joints: [], dividerJoint: {},
+	      shape: 'square',
+	      width: 18 * 2.54,
+	
+	      height: 34 * 2.54,
+	      thickness: 24 * 2.54,
+	      openings: [CabinetTemplate.defaultPartCodeOpening()]
+	    };
+	    Object.getSet(this, initialVals);
+	    CabinetTemplate.map[type] = this;
+	
+	    function getCabinet(length, width, thickness, pc) {
+	      const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
+	      cabinet.length(length);
+	      cabinet.width(width);
+	      cabinet.thickness(thickness);
+	
+	      cabinet.propertyConfig(pc instanceof PropertyConfig ? pc : new PropertyConfig());
+	      return cabinet;
+	    }
+	    this.getCabinet = getCabinet;
+	
+	    this.codeMap = () => {
+	      let codeMap = {};
+	      Object.values(this.subassemblies()).forEach((sa) => codeMap[sa.code] = sa);
+	      return codeMap;
+	    }
+	
+	    this.validPartCode = (code) => this.codeMap()[code] !== undefined;
+	    const vpc = this.validPartCode;
+	
+	    this.validOpenings = () => {
+	      const bms = this.openings();
+	      for (let index = 0; index < bms.length; index += 1) {
+	        const bm = bms[index];
+	        if (!(vpc(bm.top) && vpc(bm.bottom) && vpc(bm.right) &&
+	                vpc(bm.left) && vpc(bm.bottom))) {
+	          return false;
+	        }
+	      }
+	      return true;
+	    }
+	    this.validateDividerJoint = () => {
+	      const j = this.dividerJoint();
+	      return j.type === 'Butt' || (j.type === 'Dado' && j.maleOffset > 0);
+	    }
+	
+	    const offsetReg = /(-|\+|)[xyz]/;
+	    this.validOffset = (offset) => offset && offset.match(offsetReg) !== null;
+	    const vo = this.validOffset;
+	
+	    this.validateJoint = (joint, malePartCode, femalePartCode) => {
+	      let isValid = vpc(malePartCode) && vpc(femalePartCode);
+	      switch (joint.type) {
+	        case "Dado":
+	          return isValid && joint.maleOffset > 0 && vo(joint.demensionToOffset) &&
+	                  vo(joint.centerOffset);
+	        default:
+	          return true;
+	      }
+	    }
+	    this.validateJoints = () => {
+	      let joints = this.joints();
+	      for (let index = 0; index < joints.length; index += 1) {
+	        if (!this.validateJoint(joints[index])) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.evalEqn = (eqn, cab) => {
+	      cab ||= getCabinet();
+	      return cab.eval(eqn);
+	    }
+	
+	    this.evalObject = (eqn, cab) => {
+	      cab ||= getCabinet();
+	      return cab.evalObject(eqn);
+	    }
+	
+	    this.validateEquation = (eqn, cab) => {
+	      return !Number.isNaN(this.evalEqn(eqn, cab));
+	    }
+	    const veq = this.validateEquation;
+	
+	    this.validateValues = (cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	      const values = Object.values(this.values());
+	      for (let index = 0; index < values.length; index += 1) {
+	        if (!veq(values[index].eqn, cab)) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.validateSubassembly = (subAssem, cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	
+	      const c = subAssem.center;
+	      const d = subAssem.demensions;
+	      const r = subAssem.rotation;
+	      return vpc(subAssem.code) &&
+	              r.length === 3 && veq(r[0], cab) && veq(r[1], cab) && veq(r[2], cab) &&
+	              veq(c[0], cab) && veq(c[1], cab) && veq(c[2], cab) &&
+	              veq(d[0], cab) && veq(d[1], cab) && veq(d[2], cab);
+	    }
+	
+	    this.validateSubassemblies = (cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }      const subAssems = Object.values(this.subassemblies());
+	      for (let index = 0; index < subAssems.length; index += 1) {
+	        if (!this.validateSubassembly(subAssems[index])) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.valid = () => {
+	      let cab;
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	      return this.validateValues(cab) && this.validOpenings() &&
+	              this.validateDividerJoint() && this.validateJoints() &&
+	              this.validateSubassemblies(cab);
+	    }
+	  }
+	}
+	
+	CabinetTemplate.map = {};
+	CabinetTemplate.defaultList = () => {
+	  const list = [];
+	  const keys = Object.keys(cabinetsJson);
+	  // comment out to get corner-wall to be the first.
+	  // keys.sort();
+	  for (let index = 0; index < keys.length; index += 1) {
+	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
+	  }
+	  return list;
+	}
+	
+	CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
+	CabinetTemplate.defaultPartCodeOpening = () => ({
+	    _Type: "part-code",
+	    top: "pt",
+	    bottom: "pb",
+	    left: "pl",
+	    right: "pr",
+	    back: "pback"
+	  }
+	);
+	
+	CabinetTemplate.defaultLocationOpening = () => ({
+	  _Type: "location",
+	  zRotation: 0,
+	  inner: {
+	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
+	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
+	  },
+	  outer: {
+	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
+	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
+	  }
+	});
+	
+	module.exports = CabinetTemplate;
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/room.js',
+function (require, exports, module) {
+	
+
+	
+	const Cabinet = require('./assembly/assemblies/cabinet.js');
+	const Group = require('./group.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup');
+	const Layout2D = require('../objects/layout');
+	
+	
+	class Room extends Lookup {
+	  constructor(name, id) {
+	    super(id || String.random(32));
+	    const instance = this;
+	
+	    function groupMap(map, detailLists, listId) {
+	      for(let index = 0; index < detailLists[listId].length; index += 1) {
+	        const cabinet = detailLists[listId][index];
+	        const groupId = cabinet.group().id();
+	        if (map[groupId] === undefined) map[groupId] = {added: [], removed: []};
+	        map[groupId][listId].push(cabinet);
+	      }
+	    }
+	
+	    function onLayoutChange(elem, detail) {
+	      const cabGroupMap = {};
+	      groupMap(cabGroupMap, detail.objects, 'removed');
+	      groupMap(cabGroupMap, detail.objects, 'added');
+	
+	      instance.groups.forEach((g) => {
+	        if (cabGroupMap[g.id()]) {
+	          g.objects.removeAll(cabGroupMap[g.id()].removed);
+	          g.objects.concatInPlace(cabGroupMap[g.id()].added);
+	        }
+	      });
+	      console.log('onlaychan', detail);
+	    }
+	    const initialVals = {
+	      name: name || `Room ${Room.count++}`,
+	      layout: new Layout2D()
+	    }
+	    initialVals.layout.onStateChange(onLayoutChange);
+	    Object.getSet(this, initialVals, 'groups');
+	    this.groups = [new Group(this)];
+	    this.addGroup = () => this.groups.push(new Group(this));
+	  }
+	};
+	Room.count = 0;
+	new Room();
+	
+	module.exports = Room;
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/order.js',
+function (require, exports, module) {
+	
+
+	
+	const Room = require('./room.js');
+	
+	class Order {
+	  constructor(name, id) {
+	    if (id === null) this.loaded = false;
+	    else this.loaded = true;
+	    const initialVals = {
+	      name: name || ++Order.count,
+	      id: id || String.random(32),
+	    }
+	    Object.getSet(this, initialVals, 'rooms');
+	    this.rooms = {};
+	    this.addRoom = (name) => this.rooms[name] = new Room(name);
+	  }
+	}
+	
+	Order.count = 0;
+	module.exports = Order
 	
 });
 
@@ -26118,1880 +26503,174 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 });
 
 
-RequireJS.addFunction('./app-src/objects/order.js',
+RequireJS.addFunction('./app-src/objects/group.js',
 function (require, exports, module) {
 	
-
-	
-	const Room = require('./room.js');
-	
-	class Order {
-	  constructor(name, id) {
-	    if (id === null) this.loaded = false;
-	    else this.loaded = true;
-	    const initialVals = {
-	      name: name || ++Order.count,
-	      id: id || String.random(32),
-	    }
-	    Object.getSet(this, initialVals, 'rooms');
-	    this.rooms = {};
-	    this.addRoom = (name) => this.rooms[name] = new Room(name);
-	  }
-	}
-	
-	Order.count = 0;
-	module.exports = Order
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/room.js',
-function (require, exports, module) {
-	
-
-	
-	const Cabinet = require('./assembly/assemblies/cabinet.js');
-	const Group = require('./group.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup');
-	const Layout2D = require('../objects/layout');
-	
-	
-	class Room extends Lookup {
-	  constructor(name, id) {
-	    super(id || String.random(32));
-	    const instance = this;
-	
-	    function groupMap(map, detailLists, listId) {
-	      for(let index = 0; index < detailLists[listId].length; index += 1) {
-	        const cabinet = detailLists[listId][index];
-	        const groupId = cabinet.group().id();
-	        if (map[groupId] === undefined) map[groupId] = {added: [], removed: []};
-	        map[groupId][listId].push(cabinet);
-	      }
-	    }
-	
-	    function onLayoutChange(elem, detail) {
-	      const cabGroupMap = {};
-	      groupMap(cabGroupMap, detail.objects, 'removed');
-	      groupMap(cabGroupMap, detail.objects, 'added');
-	
-	      instance.groups.forEach((g) => {
-	        if (cabGroupMap[g.id()]) {
-	          g.objects.removeAll(cabGroupMap[g.id()].removed);
-	          g.objects.concatInPlace(cabGroupMap[g.id()].added);
-	        }
-	      });
-	      console.log('onlaychan', detail);
-	    }
-	    const initialVals = {
-	      name: name || `Room ${Room.count++}`,
-	      layout: new Layout2D()
-	    }
-	    initialVals.layout.onStateChange(onLayoutChange);
-	    Object.getSet(this, initialVals, 'groups');
-	    this.groups = [new Group(this)];
-	    this.addGroup = () => this.groups.push(new Group(this));
-	  }
-	};
-	Room.count = 0;
-	new Room();
-	
-	module.exports = Room;
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/cabinet-template.js',
-function (require, exports, module) {
-	
-const cabinetsJson = require('../../public/json/cabinets.json');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
+const PropertyConfig = require('../config/property/config');
 	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const PropertyConfig = require('./property/config');
 	
-	class CabinetTemplate extends Lookup {
-	  constructor(type) {
-	    super();
-	    const instance = this;
-	    const initialVals = (typeof type) === 'object' ? type : {
-	      type, values: [], subassemblies: [], joints: [], dividerJoint: {},
-	      shape: 'square',
-	      width: 18 * 2.54,
-	
-	      height: 34 * 2.54,
-	      thickness: 24 * 2.54,
-	      x: 'w / 2',
-	      y: 'h / 2',
-	      z: 't / 2',
-	      openings: [CabinetTemplate.defaultPartCodeOpening()]
-	    };
+	class Group extends Lookup {
+	  constructor(room, name, id) {
+	    super(id);
+	    const initialVals = {
+	      name: name || 'Group',
+	    }
 	    Object.getSet(this, initialVals);
-	    CabinetTemplate.map[type] = this;
-	
-	    function getCabinet(length, width, thickness, pc) {
-	      const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
-	      cabinet.length(length);
-	      cabinet.width(width);
-	      cabinet.thickness(thickness);
-	
-	      cabinet.propertyConfig(pc instanceof PropertyConfig ? pc : new PropertyConfig());
-	      return cabinet;
-	    }
-	    this.getCabinet = getCabinet;
-	
-	    this.codeMap = () => {
-	      let codeMap = {};
-	      Object.values(this.subassemblies()).forEach((sa) => codeMap[sa.code] = sa);
-	      return codeMap;
-	    }
-	
-	    this.validPartCode = (code) => this.codeMap()[code] !== undefined;
-	    const vpc = this.validPartCode;
-	
-	    this.validOpenings = () => {
-	      const bms = this.openings();
-	      for (let index = 0; index < bms.length; index += 1) {
-	        const bm = bms[index];
-	        if (!(vpc(bm.top) && vpc(bm.bottom) && vpc(bm.right) &&
-	                vpc(bm.left) && vpc(bm.bottom))) {
-	          return false;
-	        }
-	      }
-	      return true;
-	    }
-	    this.validateDividerJoint = () => {
-	      const j = this.dividerJoint();
-	      return j.type === 'Butt' || (j.type === 'Dado' && j.maleOffset > 0);
-	    }
-	
-	    const offsetReg = /(-|\+|)[xyz]/;
-	    this.validOffset = (offset) => offset && offset.match(offsetReg) !== null;
-	    const vo = this.validOffset;
-	
-	    this.validateJoint = (joint, malePartCode, femalePartCode) => {
-	      let isValid = vpc(malePartCode) && vpc(femalePartCode);
-	      switch (joint.type) {
-	        case "Dado":
-	          return isValid && joint.maleOffset > 0 && vo(joint.demensionToOffset) &&
-	                  vo(joint.centerOffset);
-	        default:
-	          return true;
-	      }
-	    }
-	    this.validateJoints = () => {
-	      let joints = this.joints();
-	      for (let index = 0; index < joints.length; index += 1) {
-	        if (!this.validateJoint(joints[index])) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.evalEqn = (eqn, cab) => {
-	      cab ||= getCabinet();
-	      return cab.eval(eqn);
-	    }
-	
-	    this.evalObject = (eqn, cab) => {
-	      cab ||= getCabinet();
-	      return cab.evalObject(eqn);
-	    }
-	
-	    this.validateEquation = (eqn, cab) => {
-	      return !Number.isNaN(this.evalEqn(eqn, cab));
-	    }
-	    const veq = this.validateEquation;
-	
-	    this.validateValues = (cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	      const values = Object.values(this.values());
-	      for (let index = 0; index < values.length; index += 1) {
-	        if (!veq(values[index].eqn, cab)) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.validateSubassembly = (subAssem, cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	
-	      const c = subAssem.center;
-	      const d = subAssem.demensions;
-	      const r = subAssem.rotation;
-	      return vpc(subAssem.code) &&
-	              r.length === 3 && veq(r[0], cab) && veq(r[1], cab) && veq(r[2], cab) &&
-	              veq(c[0], cab) && veq(c[1], cab) && veq(c[2], cab) &&
-	              veq(d[0], cab) && veq(d[1], cab) && veq(d[2], cab);
-	    }
-	
-	    this.validateSubassemblies = (cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }      const subAssems = Object.values(this.subassemblies());
-	      for (let index = 0; index < subAssems.length; index += 1) {
-	        if (!this.validateSubassembly(subAssems[index])) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.valid = () => {
-	      let cab;
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	      return this.validateValues(cab) && this.validOpenings() &&
-	              this.validateDividerJoint() && this.validateJoints() &&
-	              this.validateSubassemblies(cab);
-	    }
-	  }
-	}
-	
-	CabinetTemplate.map = {};
-	CabinetTemplate.defaultList = () => {
-	  const list = [];
-	  const keys = Object.keys(cabinetsJson);
-	  // comment out to get corner-wall to be the first.
-	  // keys.sort();
-	  for (let index = 0; index < keys.length; index += 1) {
-	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
-	  }
-	  return list;
-	}
-	
-	CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
-	CabinetTemplate.defaultPartCodeOpening = () => ({
-	    _Type: "part-code",
-	    top: "pt",
-	    bottom: "pb",
-	    left: "pl",
-	    right: "pr",
-	    back: "pback"
-	  }
-	);
-	
-	CabinetTemplate.defaultLocationOpening = () => ({
-	  _Type: "location",
-	  zRotation: 0,
-	  inner: {
-	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
-	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
-	  },
-	  outer: {
-	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
-	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
-	  }
-	});
-	
-	module.exports = CabinetTemplate;
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/cabinet-opening-coordinates.js',
-function (require, exports, module) {
-	
-class CabinetOpeningCorrdinates {
-	  constructor(cabinet, config, sectionProperties) {
-	
-	    this.divide = sectionProperties.divide;
-	    this.setSection = sectionProperties.setSection;
-	    this.sections = sectionProperties.sections;
-	    this.vertical = sectionProperties.vertical;
-	    this.sectionProperties = () => sectionProperties;
-	    this.pattern = sectionProperties.pattern;
-	    this.update = () => {
-	      let coords;
-	      if (config._Type === 'location') {
-	        coords = cabinet.evalObject(config.coordinates);
-	      } else {
-	        const right = cabinet.getAssembly(config.right);
-	        const left = cabinet.getAssembly(config.left);
-	        const top = cabinet.getAssembly(config.top);
-	        const bottom = cabinet.getAssembly(config.bottom);
-	
-	        const topMax = top.position().centerAdjust('y', '+z');
-	        const topMin = top.position().centerAdjust('y', '-z');
-	        const leftMax = left.position().centerAdjust('x', '-z');
-	        const leftMin = left.position().centerAdjust('x', '+z');
-	        const rightMin = right.position().centerAdjust('x', '+z');
-	        const rightMax = right.position().centerAdjust('x', '-z');
-	        const bottomMin = bottom.position().centerAdjust('y', '-z');
-	        const bottomMax = bottom.position().centerAdjust('y', '+z');
-	
-	        coords = {
-	          inner: [
-	            {x: leftMax, y: topMin, z: 0},
-	            {x: rightMin, y: topMin, z: 0},
-	            {x: rightMin, y: bottomMax, z: 0},
-	            {x: leftMax, y: bottomMax, z: 0}
-	          ],
-	          outer: [
-	            {x: leftMin, y: topMax, z: 0},
-	            {x: rightMax, y: topMax, z: 0},
-	            {x: rightMax, y: bottomMin, z: 0},
-	            {x: leftMin, y: bottomMin, z: 0}
-	          ]
-	        }
-	      }
-	      sectionProperties.updateCoordinates(coords);
-	      return coords;
-	    }
-	  }
-	}
-	
-	module.exports = CabinetOpeningCorrdinates;
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/display-svc.js',
-function (require, exports, module) {
-	class Register {
-	  constructor() {
-	    const registered = {};
-	    this.register = function (nameOobj, obj) {
-	      if ((typeof nameOobj) !== 'object') {
-	        registered[nameOobj] = obj;
-	      } else {
-	        const keys = Object.keys(nameOobj);
-	        for (let index = 0; index < keys.length; index += 1) {
-	          const key = keys[index];
-	          registered[key] = nameOobj[key];
-	        }
-	      }
-	    }
-	    this.get = (name) => registered[name];
-	  }
-	}
-	
-	module.exports = new Register();
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/divide-properties.js',
-function (require, exports, module) {
-	
-
-	class DivideProperties {
-	  constructor(length, center, rotation) {
-	    Object.getSet(this, {length, center, rotation})
-	  }
-	}
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/history.js',
-function (require, exports, module) {
-	
-class History {
-	  constructor() {
-	    let changes = [];
-	    let changesIndex = [];
-	
-	      this.addChange = (forward, back) => {
-	        changes = changes.slice(0, changesIndex);
-	        changes.push({forward, back});
-	        changesIndex++;
-	      }
-	
-	    this.getSet = (obj, initialVals, ...attrs) => {
-	      attrs = Object.getSet(obj, initialVals, ...attrs);
-	      const objFuncs = {};
-	      attrs.forEach((attr) => {
-	        objFuncs[attr] = obj[attr];
-	        obj[attr] = (value) => {
-	          if (value !== undefined) {
-	            const oldValue = objFuncs[attr]();
-	            const back = () => objFuncs[attr](oldValue);
-	            const forward = () => objFuncs[attr](value);
-	            this.addChange(obj, forward, back);
-	          }
-	          return objFuncs[attr](value);
-	        }
-	      });
-	    }
-	
-	    this.undo = () => {
-	      const change = changes[--changesIndex];
-	      change.back();
-	    }
-	
-	    this.redo = () => {
-	      const change = changes[++changesIndex];
-	      change.forward();
-	    }
-	
-	    this.canUndo =() => changesIndex > 0;
-	    this.canRedo = () => changeIndex < changes.length - 1;
-	  }
-	}
-	
-	module.exports = History;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/corner.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('vertex');
-	
-	class Corner {
-	  constructor(center, height, width, radians) {
-	    width = width === undefined ? 121.92 : width;
-	    height = height === undefined ? 60.96 : height;
-	    radians = radians === undefined ? 0 : radians;
-	    const instance = this;
-	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
-	    if ((typeof center) === 'function') this.center = center;
-	    const startPoint = new Vertex2d(null);
-	
-	    const getterHeight = this.height;
-	    this.height = (v) => {
-	      notify(getterHeight(), v);
-	      return getterHeight(v);
-	    }
-	    const getterWidth = this.width;
-	    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
-	
-	    const changeFuncs = [];
-	    this.onChange = (func) => {
-	      if ((typeof func) === 'function') {
-	        changeFuncs.push(func);
-	      }
-	    }
-	
-	    let lastNotificationId = 0;
-	    function notify(currentValue, newValue) {
-	      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
-	      if (newValue !== currentValue) {
-	        const id = ++lastNotificationId;
-	        setTimeout(() => {
-	          if (id === lastNotificationId)
-	            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
-	        }, 100);
-	      }
-	    }
-	
-	    this.radians = (newValue) => {
-	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	        notify(radians, newValue);
-	        radians = newValue;
-	      }
-	      return radians;
-	    };
-	    this.startPoint = () => {
-	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
-	      return startPoint;
-	    }
-	    this.angle = (value) => {
-	      if (value !== undefined) this.radians(Math.toRadians(value));
-	      return Math.toDegrees(this.radians());
-	    }
-	
-	    // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
-	    // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
-	    this.x = (val) => {
-	      if (val !== undefined) this.center().x(val);
-	      return this.center().x();
-	    }
-	    this.y = (val) => {
-	      if (val !== undefined) this.center().y(val);
-	      return this.center().y();
-	    }
-	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	
-	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	    this.move = (position, theta) => {
-	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	      this.radians(position.theta);
-	      this.center().point(center);
-	      return true;
-	    };
-	
-	    function centerMethod(widthMultiplier, heightMultiplier, position) {
-	      const center = instance.center();
-	      const rads = instance.radians();
-	      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
-	                        instance.height() * heightMultiplier * Math.sin(rads);
-	      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
-	                        instance.width() * widthMultiplier * Math.sin(rads);
-	
-	      if (position !== undefined) {
-	        const posCenter = new Vertex2d(position.center);
-	        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
-	      }
-	      const backLeftLocation = {
-	            x: instance.center().x() - offsetX ,
-	            y: instance.center().y() - offsetY
-	      };
-	      return new Vertex2d(backLeftLocation);
-	    }
-	
-	
-	    this.frontCenter = (position) => centerMethod(0, -.5, position);
-	    this.backCenter = (position) => centerMethod(0, .5, position);
-	    this.leftCenter = (position) => centerMethod(.5, 0, position);
-	    this.rightCenter = (position) => centerMethod(-.5, 0, position);
-	
-	    this.backLeft = (position) => centerMethod(.5, .5, position);
-	    this.backRight = (position) => centerMethod(-.5, .5, position);
-	    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
-	    this.frontRight = (position) => centerMethod(-.5, -.5, position);
-	
-	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	
-	    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
-	  }
-	}
-	
-	new Square2d();
-	
-	module.exports = Square2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/circle.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('./vertex');
-	
-	class Circle2d {
-	  constructor(radius, center) {
-	    center = new Vertex2d(center);
-	    Object.getSet(this, {radius, center});
-	    // ( x - h )^2 + ( y - k )^2 = r^2
-	    const instance = this;
-	    // Stole the root code from: https://stackoverflow.com/a/37225895
-	    function lineIntersects (line, bounded) {
-	      const p1 = line.startVertex();
-	      const p2 = line.endVertex();
-	        var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
-	        v1 = {};
-	        v2 = {};
-	        v1.x = p2.x() - p1.x();
-	        v1.y = p2.y() - p1.y();
-	        v2.x = p1.x() - instance.center().x();
-	        v2.y = p1.y() - instance.center().y();
-	        b = (v1.x * v2.x + v1.y * v2.y);
-	        c = 2 * (v1.x * v1.x + v1.y * v1.y);
-	        b *= -2;
-	        d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - instance.radius() * instance.radius()));
-	        if(isNaN(d)){ // no intercept
-	            return [];
-	        }
-	        u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
-	        u2 = (b + d) / c;
-	        retP1 = {};   // return points
-	        retP2 = {}
-	        ret = []; // return array
-	        if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
-	            retP1.x = p1.x() + v1.x * u1;
-	            retP1.y = p1.y() + v1.y * u1;
-	            ret[0] = retP1;
-	        }
-	        if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
-	            retP2.x = p1.x() + v1.x * u2;
-	            retP2.y = p1.y() + v1.y * u2;
-	            ret[ret.length] = retP2;
-	        }
-	        return ret;
-	    }
-	
-	    function circleIntersects(circle) {
-	      return Circle2d.intersectionOfTwo(instance, circle);
-	    }
-	
-	    this.toString = () => `(${this.radius()}${this.center()}----)`;
-	
-	    this.intersections = (input) => {
-	      if (input === undefined)
-	        console.log('here');
-	      if (input instanceof Circle2d) return circleIntersects(input);
-	      if (input.constructor.name === 'Line2d') return lineIntersects(input);
-	      throw new Error(`Cannot find intersections for ${input.constructor.name}`);
-	    }
-	  }
-	}
-	
-	// Ripped off from: https://stackoverflow.com/a/12221389
-	Circle2d.intersectionOfTwo = (circle0, circle1) => {
-	    const x0 = circle0.center().x();
-	    const y0 = circle0.center().y();
-	    const r0 = circle0.radius();
-	
-	    const x1 = circle1.center().x();
-	    const y1 = circle1.center().y();
-	    const r1 = circle1.radius();
-	    var a, dx, dy, d, h, rx, ry;
-	    var x2, y2;
-	
-	    /* dx and dy are the vertical and horizontal distances between
-	     * the circle centers.
-	     */
-	    dx = x1 - x0;
-	    dy = y1 - y0;
-	
-	    /* Determine the straight-line distance between the centers. */
-	    d = Math.sqrt((dy*dy) + (dx*dx));
-	
-	    /* Check for solvability. */
-	    if (d > (r0 + r1)) {
-	        /* no solution. circles do not intersect. */
-	        return [];
-	    }
-	    if (d < Math.abs(r0 - r1)) {
-	        /* no solution. one circle is contained in the other */
-	        return [];
-	    }
-	
-	    /* 'point 2' is the point where the line through the circle
-	     * intersection points crosses the line between the circle
-	     * centers.
-	     */
-	
-	    /* Determine the distance from point 0 to point 2. */
-	    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
-	
-	    /* Determine the coordinates of point 2. */
-	    x2 = x0 + (dx * a/d);
-	    y2 = y0 + (dy * a/d);
-	
-	    /* Determine the distance from point 2 to either of the
-	     * intersection points.
-	     */
-	    h = Math.sqrt((r0*r0) - (a*a));
-	
-	    /* Now determine the offsets of the intersection points from
-	     * point 2.
-	     */
-	    rx = -dy * (h/d);
-	    ry = dx * (h/d);
-	
-	    /* Determine the absolute intersection points. */
-	    var xi = x2 + rx;
-	    var xi_prime = x2 - rx;
-	    var yi = y2 + ry;
-	    var yi_prime = y2 - ry;
-	
-	    const list = [];
-	    return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
-	}
-	
-	Circle2d.reusable = true;
-	Circle2d.instance = (radius, center) => {
-	  const inst = Lookup.instance(Circle2d.name);
-	  inst.radius(radius);
-	  inst.center(center);
-	  return inst;
-	}
-	new Circle2d();
-	
-	module.exports = Circle2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/property/config.js',
-function (require, exports, module) {
-	
-const Properties = require('../properties');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const IMPERIAL_US = Measurement.units()[1];
-	
-	class PropertyConfig {
-	  constructor(props) {
-	    Object.getSet(this);
-	    props = props || Properties.instance();
-	    let style = props.style || PropertyConfig.lastStyle;
-	    let styleName = props.styleName || PropertyConfig.lastStyleName ||
-	                    Object.keys(Properties.groupList(style))[0];
-	    if (styleName)
-	      props[style] = Properties.getSet(style, styleName);
-	
-	    function isReveal() {return style === 'Reveal';}
-	    function isInset() {return style === 'Inset';}
-	    function isOverlay() {return !isReveal() && !isInset();}
-	    function overlay() {return props['Overlay'].ov.value()}
-	    function reveal() {return props['Reveal']};
-	
-	    function cabinetStyles() {
-	      return ['Overlay', 'Inset', 'Reveal'];
-	    }
-	    function cabinetStyle() {
-	      return style;
-	    }
-	    function cabinetStyleName() {
-	      return styleName;
-	    }
-	
-	    function set(group, name) {
-	      if (cabinetStyles().indexOf(group) !== -1) {
-	        style = group;
-	        styleName = name;
-	      } else {
-	        const newSet = Properties.getSet(group, name);
-	        newSet.__KEY = name;
-	        if (newSet === undefined) throw new Error(`Attempting to switch '${group}' to unknown property set '${name}'`);
-	        props[group] = newSet;
-	      }
-	    }
-	
-	    const panelThicknessRegMetric = /^pwt([0-9]{1,})([0-9][0-9])$/;
-	    const panelThicknessRegImperial = /^pwt([0-9])([0-9])$/;
-	    const resolvePanelThickness = (code) => {
-	      let match = code.match(panelThicknessRegImperial);
-	      if (match) return new Measurement(match[1]/match[2], IMPERIAL_US).value();
-	      match = code.match(panelThicknessRegMetric);
-	      if (match) return new Measurement(`${match[1]}.${match[2]}`).value();
-	      return undefined;
-	    }
-	
-	    const outerCodeReg = /^(rrv|lrv|brv|trv)$/;
-	    const resolveOuterReveal = (code, props) => {
-	      if (!code.match(outerCodeReg)) return undefined;
-	      switch (code) {
-	        case 'rrv':
-	          return 0.3175
-	        case 'lrv':
-	          return 0.3175
-	        case 'brv':
-	          return 0.3175
-	        case 'trv':
-	          return 0.3175
-	        default:
-	          return 0.3175
-	      }
-	    }
-	
-	    const resolveStyleStatus = (code) => {
-	      switch (code) {
-	        case 'isReveal': return isReveal();
-	        case 'isInset': return isInset();
-	        case 'isOverlay': return isOverlay();
-	      }
-	    }
-	
-	    const resolveReveals = (code, props) => {
-	      switch (code) {
-	        case 'frorl': return new Measurement(1/8, IMPERIAL_US).value();
-	        case 'frorr': return new Measurement(1/8, IMPERIAL_US).value();
-	        case 'r': if (isInset()) return 0;
-	          if (isReveal()) return new Measurement(props.Reveal.r.value()).value();
-	          return new Measurement(props.Cabinet.frw.value() - 2 * props.Overlay.ov.value()).value();
-	        default: return resolveCostProps(code, props);
-	      }
-	    }
-	
-	    const resolveComplexProps = (code, props) => {
-	      if (code === undefined) return undefined;
-	      let value = resolvePanelThickness(code, props);
-	      if (value !== undefined) return value;
-	      value = resolveOuterReveal(code, props);
-	      if (value !== undefined) return value;
-	      console.log(code);
-	      value = resolveStyleStatus(code);
-	      // if (value !== undefined) return value;
-	      // value = resolveReveals(code, props);
-	      return value;
-	    }
-	
-	    const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
-	    function getProperties(clazz, code) {
-	      clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	      const classProps = props[clazz] || {};
-	      if (code === undefined) return classProps;
-	      return classProps[code] === undefined ? resolveComplexProps(code, props) : classProps[code].value();
-	    }
-	
-	    function toJson() {
-	      const json = {style, styleName};
-	      const keys = Object.keys(props).filter((key) => key.match(/^[A-Z]/));
-	      keys.forEach((key) => {
-	        json[key] = [];
-	        const propKeys = Object.keys(props[key]);
-	        propKeys.forEach((propKey) => {
-	          if (props[key][propKey] && (typeof props[key][propKey].toJson) === 'function')
-	            json[key].push(props[key][propKey].toJson())
-	        });
-	      });
+	    this.propertyConfig = new PropertyConfig();
+	    this.objects = [];
+	    this.room = () => room;
+	    this.toJson = () => {
+	      const json = {objects: [], _TYPE: 'Group'};
+	      this.objects.forEach((obj) => json.objects.push(obj.toJson()));
+	      json.name = this.name();
+	      json.id = this.id();
+	      json.roomId = this.room().id();
+	      json.propertyConfig = this.propertyConfig.toJson();
 	      return json;
 	    }
-	
-	    getProperties.isReveal = isReveal;
-	    getProperties.isInset = isInset;
-	    getProperties.overlay = overlay;
-	    getProperties.reveal = reveal;
-	    getProperties.toJson = toJson;
-	    getProperties.cabinetStyles = cabinetStyles;
-	    getProperties.cabinetStyle = cabinetStyle;
-	    getProperties.cabinetStyleName = cabinetStyleName;
-	    getProperties.set = set;
-	
-	    return getProperties;
 	  }
 	}
 	
-	PropertyConfig.lastStyle = 'Overlay';
+	Group.count = 0;
+	new Group();
 	
-	PropertyConfig.fromJson = (json) => {
-	  const propConfig = {style: json.style, styleName: json.styleName};
-	  const keys = Object.keys(json).filter((key) => key.match(/^[A-Z]/));
-	  keys.forEach((key) => {
-	    const propKeys = Object.keys(json[key]);
-	    propConfig[key] = {};
-	    propKeys.forEach((propKey) =>
-	                propConfig[key][json[key][propKey].code] = Object.fromJson(json[key][propKey]));
+	Group.fromJson = (json) => {
+	  const room = Lookup.get(json.roomId);
+	  const group = new Group(room, json.name, json.id);
+	  group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
+	  json.objects.forEach((objJson) => {
+	    const jsonClazz = Object.class.get(json.objects[0]._TYPE);
+	    const obj = jsonClazz.fromJson(objJson, group);
+	    group.objects.push(obj);
+	    obj.group(group);
 	  });
-	  return new PropertyConfig(propConfig);
+	  return group;
 	}
 	
-	module.exports = PropertyConfig;
+	module.exports = Group;
 	
 });
 
 
-RequireJS.addFunction('./app-src/displays/managers/cost.js',
+RequireJS.addFunction('./app-src/displays/.goutputstream-LCKIX1.js',
 function (require, exports, module) {
 	
-
+const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils');
+	const pull = require('../three-d/models/pull.js');
+	const ThreeDModel = require('../three-d/three-d-model.js');
+	const Layout2D = require('../objects/layout.js')
+	const Draw2D = require('../two-d/draw.js');
+	const Polygon2d = require('../two-d/objects/polygon.js');
+	const Polygon3D = require('../three-d/objects/polygon.js');
+	const BiPolygon = require('../three-d/objects/bi-polygon.js');
+	const Line2d = require('../two-d/objects/line.js');
+	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
+	const PanZoom = require('../two-d/pan-zoom.js');
 	
-	const CostTree = require('../../cost/cost-tree.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
-	const du = require('../../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../../public/js/utils/$t.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select');
-	const Input = require('../../../../../public/js/utils/input/input');
-	const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation');
-	const Inputs = require('../../input/inputs.js');
-	const RadioDisplay = require('../../display-utils/radio-display.js');
+	const CSG = require('../../public/js/3d-modeling/csg');
 	
-	class CostManager {
-	  constructor(id, name) {
-	    const costTree = new CostTree();
-	    this.root = () => costTree.root();
-	    this.update = () => {
-	      const html = CostManager.mainTemplate.render(this);
-	      du.find(`#${id}`).innerHTML = html;
-	    }
-	    this.nodeInputHtml = () => CostManager.nodeInput().payload().html();
-	    this.headHtml = (node) =>
-	        CostManager.headTemplate.render({node, CostManager: this});
-	    this.bodyHtml = (node) =>
-	        CostManager.bodyTemplate.render({node, CostManager: this});
-	    this.loadPoint = () => console.log('load');
-	    this.savePoint = () => console.log('save');
-	    this.fromJson = () => {};
-	    this.update();
-	  }
+	function csgVert(pos, normal) {
+	  return new CSG.Vertex(pos, normal);
 	}
 	
-	CostManager.mainTemplate = new $t('managers/cost/main');
-	CostManager.headTemplate = new $t('managers/cost/head');
-	CostManager.bodyTemplate = new $t('managers/cost/body');
-	CostManager.propertySelectTemplate = new $t('managers/cost/property-select');
-	CostManager.costInputTree = (costTypes, objId, onUpdate) => {
-	  const logicTree = new LogicTree();
-	  return logicTree;
+	function normalize (verts, normal, reverse) {
+	  const returnValue = [];
+	  for (let index = 0; index < verts.length; index++)
+	    returnValue[index] = new CSG.Vertex(verts[index], normal);
+	  return reverse ? returnValue.reverse() : returnValue;
 	}
-	CostManager.nodeInput = () => {
-	  const dit = new DecisionInputTree();
-	  const typeSelect = new Select({
-	    name: 'type',
-	    list: CostTree.types,
-	    value: CostTree.types[0]
-	  });
-	  const selectorType = new Select({
-	    name: 'selectorType',
-	    list: ['Manual', 'Auto'],
-	    value: 'Manual'
-	  });
-	  const propertySelector = new Select({
-	    name: 'propertySelector',
-	    list: CostTree.propertyList,
-	  });
 	
-	  const accVals = ['select', 'multiselect', 'conditional'];
-	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', accVals, [selectorType]);
-	  const type = dit.branch('Node', [Inputs('name'), typeSelect]);
-	  const selectType = type.conditional('selectorType', condtionalPayload);
-	  const payload = [Inputs('formula'), propertySelector, RelationInput.selector];
-	  const condtionalPayload2 = new DecisionInputTree.ValueCondition('selectorType', 'Auto', payload);
-	  selectType.conditional('formula', condtionalPayload2);
-	  return dit;
-	}
-	new RadioDisplay('cost-tree', 'radio-id');
-	
-	new CostManager('cost-manager', 'cost');
-	
-	function abbriviation(group) {
-	  return Assembly.classes[group] ? Assembly.classes[group].abbriviation : 'nope';
-	}
-	const scope = {groups: CostTree.propertyList, abbriviation};
-	// du.id('property-select-cnt').innerHTML =
-	//       CostManager.propertySelectTemplate.render(scope);
-	module.exports = CostManager
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/material.js',
-function (require, exports, module) {
-	
-
-	
-	const Cost = require('../cost.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
-	
-	class Material extends Cost {
-	  constructor (props) {
-	    super(props);
-	    props = this.props();
-	    props.cost = props.cost / (props.count || 1);
+	class ThreeView extends Lookup {
+	  constructor() {
+	    super();
 	    const instance = this;
-	    Object.getSet(props, 'company', 'formula', 'partNumber',
-	                'method', 'length', 'width', 'depth', 'cost');
+	    const maxDem = window.innerHeight * .45;
+	    const cnt = du.create.element('div');
+	    // const p = pull(5,2);
+	    const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
+	          new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel();
+	    // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
+	    // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
+	    p.setColor([0, 255, 0])
+	    let draw, panz;
+	    let threeDModel;
+	    document.body.append(cnt);
+	    this.maxDem = () => maxDem;
+	    cnt.innerHTML = ThreeView.template.render(this);
 	
+	    const color = 'black';
+	    const width = .2;
 	
-	    this.unitCost = (attr) => {
-	      const unitCost = Material.configure(instance.method(), instance.cost(),
-	        instance.length(), instance.width(), instance.depth());
-	      const copy = JSON.parse(JSON.stringify(unitCost));
-	      if (attr) return copy[attr];
-	      return copy;
+	    function drawView (refresh) {
+	      Layout2D.release(`three-view`);
+	      let model = instance.lastModel();
+	      model ||= instance.lastRendered();
+	      if (model === undefined) return;
+	      const twoDmap = model.threeView;
+	      if (twoDmap.measurments === undefined) {
+	        const allLines = twoDmap.front.concat(twoDmap.right.concat(twoDmap.top));
+	        twoDmap.measurments = LineMeasurement2d.measurements(allLines);
+	      }
+	      draw(twoDmap.front, color, width);
+	      draw(twoDmap.right, color, width);
+	      draw(twoDmap.top, color, width);
+	      draw(twoDmap.measurments, 'grey');
 	    }
 	
-	    this.calc = (assemblyOrCount) => {
-	      const unitCost = this.unitCost();
-	      const formula = this.formula() || unitCost.formula;
-	      if (assemblyOrCount instanceof Assembly)
-	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
-	      else if (Number.isFinite(assemblyOrCount))
-	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
-	      else
-	        throw new Error('calc argument must be a number or Assembly');
+	    function onPartSelect(elem) {
+	      console.log(elem.value);
+	      const partCode = du.find.closest(`[value="${elem.value}"`, elem).getAttribute('part-code');
+	      instance.isolatePart(elem.value);
+	      elem.value = '';
 	    }
+	
+	    function init() {
+	      draw = new Draw2D(du.id('three-view'));
+	
+	      panz = new PanZoom(draw.canvas(), drawView);
+	      panz.centerOn(0, 0);
+	
+	      if (du.url.breakdown().path.match(/\/.*template$/)) {
+	        setTimeout(() =>
+	          ThreeDModel.setViewerSelector(`#${instance.id()}>.three-view-three-d-cnt`, '40vh'), 500);
+	      }
+	      du.on.match('change', '[name="partSelector"]', onPartSelect);
+	    }
+	
+	    this.update = (cabinet) => {
+	      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
+	      threeDModel.assembly(cabinet);
+	      threeDModel.update(cabinet);
+	      draw.clear();
+	      setTimeout(() => {
+	        drawView(true);
+	      }, 1000);
+	    }
+	
+	    this.isolatePart = (partCode) => {
+	      threeDModel = ThreeDModel.get();
+	      threeDModel.setTargetPartName(partCode);
+	      threeDModel.update();
+	      setTimeout(() => {
+	        panz.once();
+	      }, 500);
+	      du.id(`three-view-part-code-${this.id()}`).innerText = partCode;
+	    }
+	
+	    this.threeDModel = () => threeDModel;
+	    this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;
+	    this.lastRendered = () => threeDModel ? threeDModel.getLastRendered() : undefined;
+	    this.partMap = () => threeDModel ? threeDModel.partMap() : {};
+	
+	    setTimeout(init, 1000);
 	  }
 	}
 	
-	Material.methods = {
-	  LINEAR_FEET: 'Linear Feet',
-	  SQUARE_FEET: 'Square Feet',
-	  CUBIC_FEET: 'Cubic Feet',
-	  UNIT: 'Unit'
-	};
+	ThreeView.template = new $t('three-view');
 	
-	Material.methodList = Object.values(Material.methods);
-	
-	
-	Material.configure = (method, cost, length, width, depth) => {
-	  const unitCost = {};
-	  switch (method) {
-	    case Material.methods.LINEAR_FEET:
-	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
-	      unitCost.name = 'Linear Inch';
-	      unitCost.value = perLinearInch;
-	      unitCost.formula = 'l';
-	      return unitCost;
-	    case Material.methods.SQUARE_FEET:
-	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
-	      unitCost.name = 'Square Inch';
-	      unitCost.value = perSquareInch;
-	      unitCost.formula = 'l*w';
-	      return unitCost;
-	    case Material.methods.CUBIC_FEET:
-	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
-	      unitCost.name = 'Cubic Inch';
-	      unitCost.value = perCubicInch;
-	      unitCost.formula = 'l*w*d';
-	      return unitCost;
-	    case Material.methods.UNIT:
-	      unitCost.name = 'Unit';
-	      unitCost.value = cost;
-	      return unitCost;
-	    default:
-	      throw new Error('wtf');
-	      unitCost.name = 'Unknown';
-	      unitCost = -0.01;
-	      formula = -0.01;
-	      return unitCost;
-	  }
-	};
-	
-	Material.explanation = `Cost to be calculated by number of units or demensions`;
-	
-	module.exports = Material
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/vertex.js',
-function (require, exports, module) {
-	
-const Matrix = require('./matrix');
-	const Vector3D = require('./vector');
-	const approximate = require('../../../../../public/js/utils/approximate.js');
-	const approx10 = approximate.new(10);
-	const CSG = require('../../../public/js/3d-modeling/csg.js');
-	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-	
-	
-	class Vertex3D {
-	  constructor(x, y, z) {
-	    if (x instanceof Vertex3D) return x;
-	    if (x instanceof Vector3D) {
-	      this.x = x.i();
-	      this.y = x.j();
-	      this.z = x.k();
-	    } else if (x === undefined) {
-	      this.x = 0;
-	      this.y = 0;
-	      this.z = 0;
-	    } else if (arguments.length == 3) {
-	      this.x = x;
-	      this.y = y;
-	      this.z = z;
-	    } else if ('x' in x) {
-	      this.x = x.x;
-	      this.y = x.y;
-	      this.z = x.z;
-	    } else {
-	      this.x = x[0];
-	      this.y = x[1];
-	      this.z = x[2];
-	    }
-	
-	    this.translate = (vector, doNotModify) => {
-	      let vertex = this;
-	      if (doNotModify === true) vertex = this.copy();
-	      vertex.x += vector.i();
-	      vertex.y += vector.j();
-	      vertex.z += vector.k();
-	      return vertex;
-	    }
-	
-	    this.positionAt = (vertex) => {
-	      this.x = vertex.x;
-	      this.y = vertex.y;
-	      this.z = vertex.z;
-	    }
-	
-	    this.usless = () => Number.NaNfinity(x, y, z);
-	
-	    this.vector = (vector) => {
-	      const v = vector;
-	      if (v) return new Vector3D(this.x + v.i(), this.y + v.j(), this.z + v.k());
-	      return new Vector3D(this.x, this.y, this.z);
-	    }
-	
-	    this.rotate = (rotations, center) => {
-	      CSG.rotatePointAroundCenter(rotations, this, center);
-	      return this;
-	    }
-	
-	    this.reverseRotate = (rotations, center) => {
-	      CSG.rotatePointAroundCenter(rotations, this, center, true);
-	      return this;
-	    }
-	
-	    this.matrix = () => {
-	      return new Matrix([[this.x, this.y, this.z]]);
-	    }
-	
-	    this.distance = (other) => {
-	      const xDiff = this.x - other.x;
-	      const yDiff = this.y - other.y;
-	      const zDiff = this.z - other.z;
-	
-	      return Math.sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff);
-	    }
-	
-	    this.distanceVector = (other) => {
-	      const xDiff = other.x - this.x;
-	      const yDiff = other.y - this.y;
-	      const zDiff = other.z - this.z;
-	
-	      return new Vector3D(xDiff, yDiff, zDiff);
-	    }
-	
-	    this.minus = (other) => {
-	      const xDiff = this.x - other.x;
-	      const yDiff = this.y - other.y;
-	      const zDiff = this.z - other.z;
-	
-	      return new Vector3D(xDiff, yDiff, zDiff);
-	    }
-	
-	    this.inverseVector = () => {
-	      return new Vertex3D(this.x * -1, this.y* -1, this.z * -1);
-	    }
-	
-	    this.copy = () => new Vertex3D(this.x, this.y, this.z);
-	    this.clone = this.copy;
-	    this.equals = (other) => other && Vertex3D.tolerance.within(this, other);
-	    this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
-	    this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
-	  }
-	}
-	
-	const tol = .000000001;
-	Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
-	
-	// returned direction is of list2 relitive to list 1
-	// dirArr = [forward, backward, up, down, left, right];
-	Vertex3D.direction = (vertList1, vertList2, tolerance, axisOnly) => {
-	  tolerance ||= .1;
-	  let dirArr = [true, true, true, true, true, true];
-	  for (let i = 0; i < vertList1.length; i++) {
-	    const vert1 = vertList1[i];
-	    for (let j = 0; j < vertList2.length; j++) {
-	      const vert2 = vertList2[j];
-	      dirArr[0] &&= vert1.z > vert2.z - tolerance;
-	      dirArr[1] &&= vert1.z < vert2.z + tolerance;
-	      dirArr[2] &&= vert1.y < vert2.y + tolerance;
-	      dirArr[3] &&= vert1.y > vert2.y - tolerance;
-	      dirArr[4] &&= vert1.x > vert2.x - tolerance;
-	      dirArr[5] &&= vert1.x < vert2.x + tolerance;
-	    }
-	    if (dirArr[0] && dirArr[1]) dirArr[0] = dirArr[1] = false;
-	    if (dirArr[2] && dirArr[3]) dirArr[2] = dirArr[3] = false;
-	    if (dirArr[4] && dirArr[5]) dirArr[4] = dirArr[5] = false;
-	
-	    const zDir = dirArr[0] ? 'forward' : (dirArr[1] ? 'backward' : undefined);
-	    const yDir = dirArr[2] ? 'up' : (dirArr[3] ? 'down' : undefined);
-	    const xDir = dirArr[4] ? 'left' : (dirArr[5] ? 'right' : undefined);
-	
-	    if (zDir && yDir && xDir) return axisOnly ? null : `${xDir} ${yDir} ${zDir}`;
-	    if (zDir) {
-	      if (yDir) return axisOnly ? null : `${yDir} ${zDir}`;
-	      if (xDir) return axisOnly ? null : `${xDir} ${zDir}`;
-	      return zDir;
-	    }
-	    if (xDir) {
-	      if (yDir) return axisOnly ? null : `${xDir} ${yDir}`;
-	      return xDir
-	    }
-	    return yDir ? yDir : null;
-	  }
-	}
-	
-	Vertex3D.center = (...verticies) => {
-	  if (Array.isArray(verticies[0])) verticies = verticies[0];
-	  let x = 0;
-	  let y = 0;
-	  let z = 0;
-	  let count = 0;
-	  verticies.forEach((vertex) => {
-	    if (Number.isFinite(vertex.x + vertex.y + vertex.z)) {
-	      count++;
-	      x += vertex.x;
-	      y += vertex.y;
-	      z += vertex.z;
-	    } else {
-	      throw new Error("Vertex contains a non-number");
-	    }
-	  });
-	  return new Vertex3D({x: x/count, y: y/count, z: z/count});
-	}
-	
-	Vertex3D.sortByCenter = (center) => {
-	  return (v1, v2) => {
-	    const d1 = v1.distance(v2);
-	    const d2 = v2.distance(v1);
-	    d1 === d2 ? 0 : (d1 < d2 ? -1 : 1);
-	  }
-	}
-	
-	module.exports = Vertex3D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/vector.js',
-function (require, exports, module) {
-	
-const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
-	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-	
-	
-	function isZero(val) {
-	  return Vector3D.tolerance.bounds.i.within(val, 0);
-	}
-	
-	
-	class Vector3D {
-	  constructor(i, j, k) {
-	    if (i instanceof Vector3D) return i;
-	    if (i instanceof Object) {
-	      k = i.z;
-	      j = i.y;
-	      i = i.x;
-	    }
-	    this.i = () => i;
-	    this.j = () => j;
-	    this.k = () => k;
-	
-	    this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
-	    this.magnitudeSQ = () => this.i()*this.i() + this.j()*this.j() + this.k()*this.k();
-	    this.minus = (vector) => {
-	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-	      return new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k());
-	    }
-	    this.add = (vector) => {
-	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-	      return new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k());
-	    }
-	    this.scale = (coef) => {
-	      return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
-	    }
-	    this.sameDirection = (otherVect) => {
-	      return approximate.sameSign(otherVect.i(), this.i()) &&
-	              approximate.sameSign(otherVect.j(), this.j()) &&
-	              approximate.sameSign(otherVect.k(), this.k());
-	    }
-	    this.divide = (vector) => {
-	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-	      return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
-	    }
-	    this.toArray = () => [this.i(), this.j(), this.k()];
-	    this.dot = (vector) =>
-	      this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
-	    this.perpendicular = (vector) =>
-	      Vector3D.tolerance.within(this.dot(vector), 0);
-	    this.parrelle = (vector) => {
-	      let coef = isZero(this.i()) ? 0 : this.i() / vector.i();
-	      if (isZero(coef)) coef = isZero(this.j()) ? 0 : this.j() / vector.j();
-	      if (isZero(coef)) coef = isZero(this.k()) ? 0 : this.k() / vector.k();
-	      if (isZero(coef)) return false;
-	      const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
-	      return Vector3D.tolerance.within(equivVect, this);
-	    }
-	    this.crossProduct = (other) => {
-	      const i = this.j() * other.k() - this.k() * other.j();
-	      const j = this.i() * other.k() - this.k() * other.i();
-	      const k = this.i() * other.j() - this.j() * other.i();
-	      const mag = Math.sqrt(i*i+j*j+k*k);
-	      return new Vector3D(i/mag,j/-mag,k/mag);
-	    }
-	    this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
-	
-	    this.projectOnTo = (v) => {
-	      const multiplier = this.dot(v) / v.magnitudeSQ();
-	      return v.scale(multiplier);
-	    }
-	
-	    this.unit = () => {
-	      const i = this.i();const j = this.j();const k = this.k();
-	      const magnitude = Math.sqrt(i*i+j*j+k*k);
-	      return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
-	    }
-	    this.equals = (vector) => Vector.tolerance.within(vector, this);
-	    this.toString = () => `<${i},  ${j},  ${k}>`;
-	  }
-	}
-	
-	const tol = .00000001;
-	Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
-	
-	module.exports = Vector3D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/polygon.js',
-function (require, exports, module) {
-	
-const Polygon2D = require('../../two-d/objects/polygon.js');
-	const Line2D = require('../../two-d/objects/line.js');
-	const Line3D = require('./line');
-	const Vertex3D = require('./vertex');
-	const Vector3D = require('./vector');
-	const Plane = require('./plane');
-	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-	
-	const CSG = require('../../../public/js/3d-modeling/csg.js');
-	let lastMi;
-	
-	class Polygon3D {
-	  constructor(initialVerticies) {
-	    let lines = [];
-	    let map;
-	    let normal;
-	    let instance = this;
-	
-	    function getPlane() {
-	      let points = this.verticies();
-	      let parrelle = true;
-	      let index = 2;
-	      const point1 = points[0];
-	      const point2 = points[1];
-	      let point3;
-	      while (parrelle && index < points.length) {
-	        point3 = points[index]
-	        let vector1 = point1.minus(point2);
-	        let vector2 = point3.minus(point2);
-	        parrelle = vector1.parrelle(vector2);
-	        index++;
-	      }
-	      return new Plane(point1, point2, point3);
-	    }
-	    this.toPlane = getPlane;
-	
-	    this.rotate = (rotations, center) => {
-	      center ||= this.center();
-	      for(let index = 0; index < lines.length; index++) {
-	        lines[index].startVertex.rotate(rotations, center);
-	      }
-	    }
-	
-	    function calcNormal() {
-	      let points = this.verticies();
-	      let vector1, vector2;
-	      let parrelle = true;
-	      let index = 0;
-	      while (parrelle && index < points.length - 2) {
-	        vector1 = points[index + 1].minus(points[index])
-	        vector2 = points[index + 2].minus(points[index]);
-	        parrelle = vector1.parrelle(vector2);
-	        index++;
-	      }
-	      if (parrelle)
-	        throw new Error('InvalidPolygon: points are in a line');
-	
-	      const normVect = vector1.crossProduct(vector2);
-	      return normVect.scale(1 / normVect.magnitude());
-	    }
-	    this.normal = calcNormal;
-	
-	    this.translate = (vector) => {
-	      const verts = [];
-	      for (let index = 0; index < lines.length; index++) {
-	        verts.push(lines[index].startVertex.translate(vector, true));
-	      }
-	      return new Polygon3D(verts);
-	    }
-	
-	    this.perpendicular = (poly) => {
-	      return this.normal().perpendicular(poly.normal());
-	    }
-	    const xyNormal = new Vector3D(0,0,1);
-	    const yzNormal = new Vector3D(1,0,0);
-	    const xzNormal = new Vector3D(0,1,0);
-	    this.inXY = () => this.perpendicular(xyPoly);
-	    this.inYZ = () => this.perpendicular(yzPoly);
-	    this.inXZ = () => this.perpendicular(xzPoly);
-	
-	    this.parrelle = (poly) => {
-	      if (normal === undefined || poly.normal() === undefined) return false;
-	      return normal.parrelle(poly.normal());
-	    }
-	
-	    this.offset = (left, right, up, down) => {
-	      lines[0].adjustLength(left - lines[0].length(), false);
-	      lines[0].adjustLength(lines[0].length() - right, true);
-	      lines[2].adjustLength(lines[2].length() - left, true);
-	      lines[2].adjustLength(right - lines[2].length(), false);
-	
-	      lines[1].adjustLength(up - lines[1].length(), false);
-	      lines[1].adjustLength(lines[1].length() - down, true);
-	      lines[3].adjustLength(lines[3].length() - up, true);
-	      lines[3].adjustLength(down - lines[3].length(), false);
-	    }
-	
-	    this.parrelleAt = (distance) => {
-	      const normal = this.normal();
-	      const scaled = normal.scale(distance);
-	      const verticies = this.verticies();
-	      for (let index = 0; index < verticies.length; index++) {
-	        verticies[index].translate(scaled);
-	      }
-	      return new Polygon3D(verticies);
-	    }
-	
-	    this.verticies = () => {
-	      if (lines.length === 0) return [];
-	      const verticies = [];
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        verticies.push(line.startVertex);
-	      }
-	
-	      return JSON.clone(verticies);
-	    }
-	
-	    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex.copy();
-	
-	    this.isClockwise = () => {
-	      let sum = 0;
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const point1 = lines[index].startVertex;
-	        const point2 = lines[index].startVertex;
-	        sum += (point2.x - point1.x)*(point2.y + point1.y)*(point2.z - point1.z);
-	      }
-	      return sum > 0;
-	    }
-	
-	    this.lines = () => JSON.clone(lines);
-	    this.line = (index) => JSON.clone(lines[Math.mod(index, lines.length)]);
-	    this.startLine = () => lines[0];
-	    this.endLine = () => lines[lines.length - 1];
-	
-	    const tol = .00001;
-	    this.lineMap = (force) => {
-	      if (!force && map !== undefined) return map;
-	      if (lines.length === 0) return {};
-	      map = new ToleranceMap({'startVertex.x': tol, 'startVertex.y': tol, 'startVertex.z': tol,
-	                              'endVertex.x': tol, 'endVertex.y': tol, 'endVertex.z': tol});
-	      let lastEnd;
-	      if (!lines[0].startVertex.equals(lines[lines.length - 1].endVertex)) throw new Error('Broken Polygon');
-	      for (let index = 0; index < lines.length; index++) {
-	        lines[index]._POLY_INDEX = index;
-	        map.add(lines[index]);
-	      }
-	      return map;
-	    }
-	
-	    this.copy = () => new Polygon3D(Line3D.verticies(lines));
-	
-	    this.equals = (other) => {
-	      if (!(other instanceof Polygon3D)) return false;
-	      const verts = this.verticies();
-	      const otherVerts = other.verticies();
-	      if (verts.length !== otherVerts.length) return false;
-	      let otherIndex = undefined;
-	      let direction;
-	      for (let index = 0; index < verts.length * 2; index += 1) {
-	        const vIndex = index % verts.length;
-	        if (otherIndex === undefined) {
-	          if (index > verts.length) {
-	            return false
-	          } if(verts[index].equals(otherVerts[0])) {
-	            otherIndex = otherVerts.length * 2;
-	          }
-	        } else if (otherIndex === otherVerts.length * 2) {
-	          if (verts[vIndex].equals(otherVerts[1])) direction = 1;
-	          else if(verts[vIndex].equals(otherVerts[otherVerts.length - 1])) direction = -1;
-	          else return false;
-	          otherIndex += direction * 2;
-	        } else if (!verts[vIndex].equals(otherVerts[otherIndex % otherVerts.length])) {
-	          return false;
-	        } else {
-	          otherIndex += direction;
-	        }
-	      }
-	      return true;
-	    }
-	
-	    function getLine(line) {
-	      const lineMap = this.lineMap();
-	      const matches = lineMap.matches(line) || lineMap.matches(line.negitive());
-	      if (matches && matches.length > 1) throw new Error('THIS SHOULD NOT HAPPEN!!!! REMOVE LINES IS BROKEN... probably');
-	      return matches ? matches[0] : null;
-	    }
-	
-	    this.getLines = (startVertex, endVertex, reverse) => {
-	      const subSection = [];
-	      let completed = false;
-	      let shared;
-	      const compareLine = new Line3D(startVertex, endVertex);
-	      const compareLineI = new Line3D(endVertex,startVertex);
-	
-	      const doubleLen = lines.length * 2;
-	      for (let steps = 0; steps < doubleLen; steps += 1) {
-	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
-	        const curr = lines[index];
-	        if (!shared) {
-	          if (compareLine.equals(curr) || compareLineI.equals(curr)) shared = curr;
-	        } else {
-	          if (shared === curr) {
-	            completed = true;
-	            break;
-	          } else subSection.push(!reverse ? curr : curr.negitive());
-	        }
-	      }
-	      if (completed) return subSection;
-	    }
-	
-	    this.center = () => {
-	      const verts = [];
-	      for (let index = 0; index < lines.length; index++) {
-	        verts.push(lines[index].startVertex);
-	      }
-	      return Vertex3D.center(verts);
-	    }
-	
-	    this.addVerticies = (list) => {
-	      if (list === undefined) return;
-	      const verts = [];
-	      const endLine = this.endLine();
-	      for (let index = 0; index < list.length + 1; index += 1) {
-	        if (index < list.length) verts[index] = new Vertex3D(list[index]);
-	        if (index === 0 && endLine) endLine.endVertex = verts[0];
-	        else if (index > 0) {
-	          const startVertex = verts[index - 1];
-	          const endVertex = verts[index] || this.startLine().startVertex;
-	          const line = new Line3D(startVertex, endVertex);
-	          lines.push(line);
-	          const prevLine = lines[lines.length - 2];
-	          // if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
-	          // else if (lines.length > 2) {
-	          //   const equal = normal.equals(calcNormal(line, prevLine));
-	          //   if (equal === false) {
-	          //     console.log('Trying to add vertex that does not lie in the existing plane');
-	          //   }
-	          // }
-	        }
-	      }
-	      if (verts.length > 0 && lines.length > 0) {
-	        if (endLine) endline.endVertex = verts[0];
-	      }
-	      this.lineMap(true);
-	      this.removeLoops();
-	    }
-	
-	    this.rebuild = (newVerticies) => {
-	      lines = [];
-	      this.addVerticies(newVerticies);
-	    }
-	
-	    this.removeLoops = () => {
-	      let removed = true;
-	      const orig = lines;
-	      while (removed && lines.length > 0) {
-	        removed = false;
-	        const map = this.lineMap();
-	        for (let index = 0; index < lines.length; index += 1) {
-	          const line = lines[index];
-	          if (line.isPoint()) {
-	            lines = JSON.clone(lines);
-	            lines.splice(index, 1);
-	            removed = true;
-	          } else {
-	            const posMatch = map.matches(line);
-	            const negMatch = map.matches(line.negitive());
-	            if (posMatch.length > 1 || (negMatch && negMatch.length !== 0)) {
-	              let match = negMatch ? negMatch[0] : posMatch[1];
-	              const startIndex = line._POLY_INDEX;
-	              const endIndex = match._POLY_INDEX;
-	              if (startIndex > endIndex)
-	              throw new Error('THIS SHOULD NOT HAPPEN!!!!!! WTF!!!!');
-	              const forwardDiff = endIndex - startIndex;
-	              const reverseDiff = lines.length - forwardDiff;
-	              if (Math.max(forwardDiff, reverseDiff) < 3) {
-	                console.log('che che');
-	              }
-	              if (forwardDiff > reverseDiff) {
-	                lines = lines.slice(startIndex, endIndex);
-	              } else {
-	                lines = lines.slice(0, startIndex).concat(lines.slice(endIndex));
-	              }
-	
-	              const newVerts = Line3D.verticies(lines);
-	              this.rebuild(newVerts);
-	              removed = true;
-	              break;
-	            }
-	          }
-	        }
-	        // TODO: not sure if this will cause an issue but polygons should not have less than 3 verticies this will break toPlane functionality.
-	        // if (lines.length < 3) {
-	        //   console.log('che che check it out', lines.length);
-	        // }
-	        if (removed) this.lineMap(true);
-	      }
-	    }
-	
-	    this.path = () => {
-	      let path = '';
-	      this.verticies().forEach((v) => path += `${v.toString()} => `);
-	      return path.substring(0, path.length - 4);
-	    }
-	
-	
-	    this.merge = (other) => {
-	      if (!this.normal().parrelle(other.normal())) return;
-	      const thisPlane = this.toPlane();
-	      const otherPlane = other.toPlane();
-	      // if (!thisPlane.equivalent(otherPlane)) return;
-	      const lineMap = this.lineMap();
-	      const allOtherLines = other.lines();
-	      let merged;
-	      for (let index = 0; index < allOtherLines.length; index += 1) {
-	        const curr = allOtherLines[index];
-	        let verticies, thisLines, otherLines;
-	        if (lineMap.matches(curr) !== null) {
-	          thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
-	          otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
-	        } else if (lineMap.matches(curr.negitive()) !== null) {
-	          thisLines = this.getLines(curr.endVertex, curr.startVertex, false);
-	          otherLines = other.getLines(curr.startVertex, curr.endVertex, false);
-	        }
-	
-	        if (thisLines && otherLines) {
-	          if (thisLines[0].startVertex.equals(otherLines[0].startVertex))
-	            thisLines = Line3D.reverse(thisLines);
-	
-	          const startCheck = thisLines[0].startVertex.equals(otherLines[otherLines.length - 1].endVertex);
-	          const middleCheck = thisLines[thisLines.length - 1].endVertex.equals(otherLines[0].startVertex);
-	          if (!(middleCheck && startCheck))
-	            console.warn('coommmmooon!!!!');
-	          verticies = Line3D.verticies(otherLines.concat(thisLines));
-	          merged = new Polygon3D(verticies);
-	          try {
-	            merged.normal();
-	          } catch (e) {
-	            console.warn('again wtf!!!');
-	            new Polygon3D(verticies);
-	            new Polygon3D(verticies);
-	            new Polygon3D(verticies);
-	          }
-	        }
-	      }
-	
-	      if (merged) {
-	        return merged;
-	      }
-	    }
-	
-	    this.viewFromVector = () => Polygon3D.viewFromVector([this])[0];
-	    this.mostInformation = () => Polygon3D.mostInformation([this])[0];
-	
-	    this.to2D = (x, y) => {
-	      if (!x || !y) {
-	        const mi = this.mostInformation();
-	        x ||= mi[0];
-	        y ||= mi[1];
-	        if (lastMi && (mi[0] !== lastMi[0] || mi[1] !== lastMi[1])) {
-	          console.info.subtle('change in mi');
-	        }
-	        lastMi = mi;
-	      }
-	
-	      const verts = this.verticies();
-	      const verts2D = [];
-	      for (let index = 0; index < verts.length; index++) {
-	        verts2D.push({x: verts[index][x], y: verts[index][y]});
-	      }
-	      return new Polygon2D(verts2D);
-	    }
-	
-	    this.toString = () => {
-	      let str = '';
-	      for (let index = 0; index < lines.length; index++) {
-	        str += ` => ${lines[index].startVertex.toString()}`;
-	      }
-	      return `${str.substring(4)} normal: ${this.normal()}`;
-	    }
-	
-	
-	    this.toDetailString = () => {
-	      let startStr = '';
-	      let endStr = '';
-	      for (let index = 0; index < lines.length; index++) {
-	        startStr += ` => ${lines[index].startVertex.toString()}`;
-	        endStr += ` => ${lines[Math.mod(index - 1, lines.length)].endVertex.toString()}`;
-	      }
-	      return `Start Verticies: ${startStr.substring(4)}\nEnd   Verticies: ${endStr.substring(4)}`;
-	    }
-	    this.addVerticies(initialVerticies);
-	  }
-	}
-	
-	function printMerge(target, other, merged) {
-	  console.log(`target: ${target.toString()}`);
-	  console.log(`other: ${other.toString()}`);
-	  console.log(`merged: ${merged.toString()}`);
-	  target.merge(other);
-	}
-	
-	let doIt = false;
-	Polygon3D.merge = (polygons) => {
-	  let currIndex = 0;
-	  while (currIndex < polygons.length - 1) {
-	    const target = polygons[currIndex];
-	    for (let index = currIndex + 1; index < polygons.length; index += 1) {
-	      const other = polygons[index];
-	      const merged = target.merge(other);
-	      if (merged) {
-	        if (doIt) printMerge(target, other, merged);
-	        polygons[currIndex--] = merged;
-	        polygons.splice(index, 1);
-	        break;
-	      }
-	    }
-	    currIndex++;
-	  }
-	}
-	
-	const xyPoly = new Polygon3D([[1,10,0],[11,2,0],[22,1,0]]);
-	const yzPoly = new Polygon3D([[6,0,1],[10,0,27],[2,0,11]]);
-	const xzPoly = new Polygon3D([[0,11,13],[0,12,23],[0,22,3]]);
-	
-	Polygon3D.mostInformation = (polygons) => {
-	  const diff = {x: 0, y:0, z: 0};
-	  for (let pIndex = 0; pIndex < polygons.length; pIndex++) {
-	    const poly = polygons[pIndex];
-	    const verts = poly.verticies();
-	    const center = poly.center();
-	    for(let index = 0; index < verts.length; index++) {
-	      const v = verts[index];
-	      diff.x += Math.abs(v.x - center.x);
-	      diff.y += Math.abs(v.y - center.y);
-	      diff.z += Math.abs(v.z - center.z);
-	    }
-	  }
-	  return diff.x < diff.y ?
-	        (diff.x < diff.z ? ['y', 'z'] :
-	        (diff.z < diff.y ? ['x', 'y'] : ['x', 'z'])) :
-	        (diff.y < diff.z ? ['x', 'z'] : ['x', 'y']);
-	}
-	
-	// const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
-	// const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
-	const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
-	const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
-	const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
-	Polygon3D.toTwoD = (polygons, vector, axis) => {
-	  const view = Polygon3D.viewFromVector(polygons, vector);
-	  axis ||= Polygon3D.mostInformation(view);
-	  const twoD = view.map(to2D(axis));
-	  const twoDlines = Polygon2D.lines(twoD);
-	  twoDlines.axis = axis;
-	  return twoDlines;
-	}
-	
-	Polygon3D.toThreeView = (polygons, normals, gap) => {
-	  normals ||= defaultNormals;
-	  gap ||= 10;
-	  const frontView = Polygon3D.viewFromVector(polygons, normals.front);
-	  const rightView = Polygon3D.viewFromVector(polygons, normals.right);
-	  const topView = Polygon3D.viewFromVector(polygons, normals.top);
-	
-	  const frontAxis = Polygon3D.mostInformation(frontView);
-	  const rightAxis = Polygon3D.mostInformation(rightView);
-	  const topAxis = Polygon3D.mostInformation(topView);
-	
-	  if (topAxis.indexOf(frontAxis[1]) !== -1) frontAxis.reverse();
-	  if (topAxis.indexOf(rightAxis[1]) !== -1) rightAxis.reverse();
-	  if (frontAxis.indexOf(topAxis[1]) !== -1) topAxis.reverse();
-	
-	  const front2D = frontView.map(to2D(frontAxis));
-	  const right2D = rightView.map(to2D(rightAxis));
-	  const top2D = topView.map(to2D(topAxis));
-	
-	  Polygon2D.centerOn({x:0,y:0}, front2D);
-	
-	  const frontMinMax = Polygon2D.minMax(...front2D);
-	  const rightMinMax = Polygon2D.minMax(...right2D);
-	  const topMinMax = Polygon2D.minMax(...top2D);
-	  const rightCenterOffset = frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2;
-	  const topCenterOffset = frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2;
-	
-	  Polygon2D.centerOn({x:rightCenterOffset, y:0}, right2D);
-	  Polygon2D.centerOn({x:0,y:topCenterOffset}, top2D);
-	
-	  const front = Polygon2D.lines(front2D);
-	  const right = Polygon2D.lines(right2D);
-	  const top = Polygon2D.lines(top2D);
-	
-	  return {front, right, top}
-	}
-	
-	Polygon3D.fromCSG = (polys) => {
-	  const isArray = Array.isArray(polys);
-	  if (!isArray) polys = [polys];
-	  const poly3Ds = [];
-	  for (let index = 0; index < polys.length; index++) {
-	    const poly = polys[index];
-	    const verts = [];
-	    for (let vIndex = 0; vIndex < poly.vertices.length; vIndex++) {
-	      const v = poly.vertices[vIndex];
-	      verts.push(new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
-	    }
-	    poly3Ds.push(new Polygon3D(verts));
-	  }
-	  if (!isArray) return poly3Ds[0];
-	  return poly3Ds;
-	}
-	
-	Polygon3D.fromVectorObject =
-	    (width, height, center, vectorObj) => {
-	  center ||= new Vertex(0,0,0);
-	  vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0)}
-	  const hw = width/2;
-	  const hh = height/2;
-	  const wV = vectorObj.width;
-	  const hV = vectorObj.height;
-	  const vector1 = center.translate(hV.scale(hh), true).translate(wV.scale(-hw));
-	  const vector2 = center.translate(hV.scale(hh), true).translate(wV.scale(hw));
-	  const vector3 = center.translate(hV.scale(-hh), true).translate(wV.scale(hw));
-	  const vector4 = center.translate(hV.scale(-hh), true).translate(wV.scale(-hw));
-	  return new Polygon3D([vector1, vector2, vector3, vector4]);
-	}
-	
-	Polygon3D.fromLines = (lines) => {
-	  const verts = [];
-	  for (let index = 0; index < lines.length; index += 1) {
-	    if (!lines[index].startVertex.equals(lines[Math.mod(index - 1, lines.length)].endVertex)) throw new Error('Lines must be connected');
-	    verts.push(lines[index].startVertex);
-	  }
-	  return new Polygon3D(verts);
-	}
-	
-	Polygon3D.from2D = (polygon2d) => {
-	  const verts = polygon2d.verticies();
-	  const initialVerticies = [];
-	  for (let index = 0; index < verts.length; index++) {
-	    const vert = verts[index];
-	    initialVerticies.push(new Vertex3D(vert.x(), vert.y(), 0));
-	  }
-	  return new Polygon3D(initialVerticies);
-	}
-	
-	Polygon3D.viewFromVector = (polygons, vector) => {
-	  const orthoPolys = [];
-	  for (let p = 0; p < polygons.length; p++) {
-	    const verticies = polygons[p].verticies();
-	    const orthoVerts = [];
-	    const vertLocs = {};
-	    let valid = true;
-	    for (let v = 0; valid && v < verticies.length; v++) {
-	      const vertex = verticies[v];
-	      const u = new Vector3D(vertex.x, vertex.y, vertex.z);
-	      const projection = u.projectOnTo(vector);
-	      const orthogonal = new Vertex3D(u.minus(projection));
-	      const accStr = orthogonal.toString();
-	      if (vertLocs[accStr]) valid = false;
-	      else vertLocs[accStr] = true;
-	      orthoVerts.push(orthogonal);
-	    }
-	    if (valid) orthoPolys.push(new Polygon3D(orthoVerts));
-	  }
-	  return orthoPolys;
-	}
-	
-	module.exports = Polygon3D;
+	module.exports = ThreeView;
 	
 });
 
@@ -28337,916 +27016,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/three-d/objects/matrix.js',
-function (require, exports, module) {
-	
-const Approximate = require('../../../../../public/js/utils/approximate.js');
-	
-	function findRowColumnCount (array) {
-	  let rows = array.length;
-	  let columns = array[0].length;
-	  for (let i = 0; i < array.length; i++) {
-	    const row = array[i];
-	    columns = row.length > columns ? row.length : columns;
-	  }
-	  return {rows, columns};
-	}
-	
-	function columnValidator (min, max) {
-	  return (target, key, value) => {
-	    if (key > max || key < min) {
-	      throw new Error('An assignment error was made or you need to resize your matrix');
-	    }
-	    if ((typeof value) !== 'number') {
-	      throw new Error('Matrix must be filled with numbers');
-	    }
-	    target[key] = value;
-	    return true;
-	  }
-	}
-	
-	function rowValidator () {
-	  return (target, key, value) => {
-	    if (Number.isNaN(Number.parseInt(key))) {
-	      throw new Error('You do not have access to the numerical attributes of a Matrix object, they are reserved for rows and cannot be modified');
-	    }
-	    target[key] = value;
-	    return true;
-	  }
-	}
-	
-	class Matrix extends Array {
-	  constructor(values, rows, columns) {
-	    super();
-	    if (!rows || !columns) {
-	      const max = findRowColumnCount(values);
-	      if (!rows) rows = max.rows;
-	      if (!columns) columns = max.columns;
-	    }
-	
-	    for (let i = 0; i < rows; i +=1) {
-	      this[i] = new Proxy([], { set: columnValidator(0, columns) });
-	      for (let j = 0; j < columns; j ++) {
-	        const value = values && values[i] && values[i][j];
-	        this[i][j] = !value ? 0 : value;
-	      }
-	    }
-	
-	    new Proxy(this, {set: rowValidator()});
-	
-	    this.rows = () => rows;
-	    this.columns = () => columns;
-	
-	    this.remove = (rowIndex, columnIndex) => {
-	      if ((typeof rowIndex) !== 'number') rowIndex = Number.MAX_SAFE_INTEGER;
-	      else rowIndex = Math.mod(rowIndex, rows);
-	      if ((typeof columnIndex) !== 'number') columnIndex = Number.MAX_SAFE_INTEGER;
-	      else columnIndex = Math.mod(columnIndex, columns);
-	
-	      const rowLimit = rowIndex > -1 && rowIndex < rows ? rows - 1 : rows;
-	      const columnLimit = columnIndex > -1 && columnIndex < columns ? columns - 1 : columns;
-	      let matrix = new Matrix(null, rowLimit, columnLimit);
-	      for (let i = 0; i < rows; i++) {
-	        if (i !== rowIndex) {
-	          const rowI = i < rowIndex ? i : i - 1;
-	          for (let j = 0; j < columns; j++) {
-	            if (j !== columnIndex) {
-	              const columnJ = j < columnIndex ? j : j - 1;
-	              matrix[rowI][columnJ] = this[i][j];
-	            }
-	          }
-	        }
-	      }
-	      return matrix;
-	    }
-	
-	    this.replaceRow = (rowIndex, values) => {
-	      rowIndex = Math.mod(rowIndex, rows);
-	
-	      for (let j = 0; j < columns; j++) {
-	        this[rowIndex][j] = values[j];
-	      }
-	    }
-	
-	    this.replaceColumn = (columnIndex, values) => {
-	      columnIndex = Math.mod(columnIndex, rows);
-	
-	      for (let i = 0; i < rows; i++) {
-	        this[i][columnIndex] = values[i];
-	      }
-	    }
-	
-	    this.minor = (index) => {
-	      return this.remove(0, index);
-	    }
-	
-	    const bigEnough = (val) => Math.abs(val) > .00000001;
-	    this.consise = () => {
-	      const removedColumns = [];
-	      let consiseMatrix = this.copy();
-	      for (let j = columns - 1; j > -1; j--) {
-	        // const initialValue = this[0][j];
-	        let notZero = false;
-	        for (let i = 0; i < rows; i++) {
-	            notZero ||= bigEnough(this[i][j]);
-	        }
-	        if (!notZero) {
-	          removedColumns.push(j);
-	          consiseMatrix = consiseMatrix.remove(undefined, j);
-	        }
-	      }
-	
-	      const changes = [];
-	      const keepRows = [consiseMatrix[0]];
-	      const moreInfo = (row) => {
-	        for (let i = 0; i < keepRows.length; i++) {
-	          const kRow = keepRows[i];
-	          for (let j = 0; j < kRow.length; j++) {
-	            if (!changes[j] && kRow[j] != row[j]) {
-	              changes[j] = true;
-	              keepRows.push(row);
-	              return;
-	            }
-	          }
-	        }
-	      }
-	      for (let i = 1; keepRows.length < keepRows[0].length && i < rows; i++) {
-	        const row = consiseMatrix[i];
-	        if (keepRows.equalIndexOf(row) === -1) moreInfo(row);
-	      }
-	      return {removedColumns, matrix:  new Matrix(keepRows)};
-	    }
-	
-	    this.determinate = () => {
-	      if (rows === 2) return this[0][0] * this[1][1] - this[0][1] * this[1][0];
-	
-	      let sign = 1;
-	      let sum = 0;
-	      let colNum = 0;
-	      while (colNum < columns) {
-	        const minor = this.minor(colNum);
-	        const determinate = minor.determinate();
-	        sum += this[0][colNum++] * determinate * sign;
-	        sign *= -1;
-	      }
-	      return sum;
-	    }
-	
-	    this.solve = (answer) => {
-	      const consiseObj = this.consise();
-	      const consiseMatrix = consiseObj.matrix;
-	      const removedColumns = consiseObj.removedColumns;
-	      const solution = new Matrix(null, columns, 1);
-	      answer ||= new Array(columns).fill(0);
-	      let consiseIndex = 0;
-	      const determinate = consiseMatrix.determinate();
-	      for (let j = 0; j < columns; j++) {
-	        let value;
-	        if (removedColumns.indexOf(j) !== -1) value = 0;
-	        else {
-	          const matrix = consiseMatrix.copy()
-	          matrix.replaceColumn(consiseIndex++, answer);
-	          const matrixDeterminate = matrix.determinate();
-	          value = matrixDeterminate / determinate;
-	        }
-	        solution[j][0] = value;
-	      }
-	      return solution;
-	    }
-	
-	    this.dot = (other) => {
-	      if (this.columns() !== other.rows()) throw new Error('this.columns() and other.rows() much match for a dot product');
-	      const result = new Matrix(null, this.rows(), other.columns());
-	      let ri = 0;
-	      let rj = 0;
-	      for (let i = 0; i < rows; i++) {
-	        for (let oj = 0; oj < other.columns(); oj++) {
-	          let value = 0;
-	          for (let j = 0; j < columns; j++) {
-	            value = value + this[i][j] * other[j][oj];
-	          }
-	          result[i][oj] = value;
-	        }
-	      }
-	      return result;
-	    }
-	
-	    this.scale = (coef, oddOnly) => {
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < columns; j++) {
-	          if (!oddOnly || (i + j) % 2 === 1) {
-	            this[i][j] = this[i][j] * coef;
-	          }
-	        }
-	      }
-	    }
-	
-	    this.approximate = (accuracy) => {
-	      const approximate = Approximate.new(accuracy);
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < columns; j++) {
-	          this[i][j] = approximate(this[i][j]);
-	        }
-	      }
-	    }
-	
-	    this.transpose = () => {
-	      const rows = this.rows();
-	      const cols = this.columns();
-	      const result = new Matrix(null, cols, rows);
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < cols; j++) {
-	          result[j][i] = this[i][j];
-	        }
-	      }
-	      return result;
-	    }
-	
-	    this.diagonal = () => {
-	      const rows = this.rows();
-	      const cols = this.columns();
-	      const result = new Matrix(null, cols, rows);
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < cols; j++) {
-	          if (i + j !== rows - 1) {
-	            result[rows - i - 1][cols - j - 1] = this[i][j];
-	          } else {
-	            result[i][j] = this[i][j];
-	          }
-	        }
-	      }
-	      return result;
-	    }
-	
-	    this.multiply = (other) => {
-	      const result = new Matrix(null, this.rows(), other.columns());
-	      for (let i = 0; i < this.rows(); i++) {
-	        for (let j = 0; j < this.columns(); j++) {
-	          let sum = 0
-	          for (let k = 0; k < other.rows(); k++) {
-	            sum = sum + this[i][k] * other[k][j]
-	            result[i][j] = sum
-	          }
-	        }
-	      }
-	      return result;
-	    }
-	
-	    this.inverse = () => {
-	      let inverse;
-	      if (this.rows() === 2) {
-	        inverse = this.diagonal();
-	        inverse.scale(-1, true);
-	        inverse.scale(1/this.determinate());
-	        return inverse;
-	      }
-	
-	      const rows = this.rows();
-	      const cols = this.columns();
-	      inverse = new Matrix(null, rows, columns);
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < cols; j++) {
-	          const minor = this.remove(i, j);
-	          const value = minor.determinate();
-	          inverse[i][j] = value;
-	        }
-	      }
-	      inverse.scale(-1, true);
-	      inverse = inverse.transpose();
-	      inverse.scale(1/this.determinate());
-	      return inverse;
-	    }
-	
-	    this.toString = () => {
-	      let str = '';
-	      for (let i = 0; i < rows; i++) {
-	        str += '|'
-	        for (let j = 0; j < columns; j++) {
-	          str += `${this[i][j]}  `;
-	        }
-	        str = str.substring(0, str.length - 2) + '|\n'
-	      }
-	      return str.substring(0, str.length - 1);
-	    }
-	
-	    this.equals = (other) => {
-	      if (other.rows() !== rows || other.columns() !== columns) return false;
-	      for (let i = 0; i < rows; i++) {
-	        for (let j = 0; j < columns; j++) {
-	          if (other[i][j] !== this[i][j]) return false;
-	        }
-	      }
-	      return true;
-	    }
-	
-	    this.copy = () => new Matrix(this);
-	
-	  }
-	}
-	
-	Matrix.identity = (rows) => {
-	  let identity = new Matrix(null, rows, rows);
-	  for (let i = 0; i < rows; i++) {
-	    for (let j = 0; j < rows; j++) {
-	      if (i === j) identity[i][i] = 1;
-	      else identity[i][j] = 0;
-	    }
-	  }
-	  return identity;
-	}
-	
-	Matrix.rotation = function (roll, pitch, yaw) {
-	  if (roll instanceof Object) {
-	    pitch = Math.toRadians(roll.y);
-	    yaw = Math.toRadians(roll.z);
-	    roll = Math.toRadians(roll.x);
-	  }
-	  roll ||= 0;
-	  pitch ||= 0;
-	  yaw ||= 0;
-	  var cosa = Math.cos(yaw);
-	  var sina = Math.sin(yaw);
-	
-	  var cosb = Math.cos(pitch);
-	  var sinb = Math.sin(pitch);
-	
-	  var cosc = -1*Math.cos(roll);
-	  var sinc = -1*Math.sin(roll);
-	
-	  var Axx = cosa*cosb;
-	  var Axy = cosa*sinb*sinc - sina*cosc;
-	  var Axz = cosa*sinb*cosc + sina*sinc;
-	
-	  var Ayx = sina*cosb;
-	  var Ayy = sina*sinb*sinc + cosa*cosc;
-	  var Ayz = sina*sinb*cosc - cosa*sinc;
-	
-	  var Azx = -sinb;
-	  var Azy = cosb*sinc;
-	  var Azz = cosb*cosc;
-	
-	  return new Matrix([
-	    [Axx, Axy, Axz],
-	    [Ayx, Ayy, Ayz],
-	    [Azx, Azy, Azz],
-	  ]);
-	}
-	
-	module.exports = Matrix;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/line.js',
-function (require, exports, module) {
-	
-const Vector3D = require('./vector');
-	const Vertex3D = require('./vertex');
-	const Plane = require('./plane');
-	
-	class Line3D {
-	  constructor(startVertex, endVertex) {
-	    if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
-	    startVertex = new Vertex3D(startVertex);
-	    endVertex = new Vertex3D(endVertex);
-	    this.startVertex = startVertex;
-	    this.endVertex = endVertex;
-	
-	    this.clone = () => new Line3D(startVertex.clone(), endVertex.clone());
-	
-	    this.negitive = () => new Line3D(endVertex, startVertex);
-	    this.equals = (other) => startVertex && endVertex && other &&
-	        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
-	    this.vector = () => {
-	      let i = endVertex.x - startVertex.x;
-	      let j = endVertex.y - startVertex.y;
-	      let k = endVertex.z - startVertex.z;
-	      return new Vector3D(i,j,k);
-	    };
-	
-	    this.translate = (vector) => {
-	      this.startVertex.translate(vector);
-	      this.endVertex.translate(vector);
-	    }
-	
-	    this.isPoint = () => this.startVertex.equals(this.endVertex);
-	
-	    this.planeAt = (rotation) => {
-	      const two = new Vertex3D({x: startVertex.x + 1, y: startVertex.y, z: startVertex.z});
-	      two.rotate(rotation, startVertex);
-	      const three = {x: endVertex.x + 1, y: endVertex.y, z: endVertex.z};
-	      thtee.rotate(rotation, endVertex);
-	      return new Plane(startVertex.copy(), two, three, endVertex.copy());
-	    }
-	
-	    this.on = (vertex, tolerance) => {
-	      tolerance ||= .01;
-	    }
-	
-	    this.equation = () => {
-	      const returnValue = {};
-	      for (let i = 0; i < 3; i++) {
-	        let coord = String.fromCharCode(i + 120);
-	        let t = (endVertex[coord] - startVertex[coord]) / 1;
-	        if (t !== 0) {
-	          let coef = String.fromCharCode(i + 97);
-	          returnValue[coef] = 1;
-	
-	          let offset = ((i + 1) % 3);
-	          coord = String.fromCharCode(offset + 120);
-	          coef = String.fromCharCode(offset + 97);
-	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
-	
-	          offset = ((i + 2) % 3);
-	          coord = String.fromCharCode(offset + 120);
-	          coef = String.fromCharCode(offset + 97);
-	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
-	          break;
-	        }
-	      }
-	      if (returnValue.a === undefined) throw new Error('This Line is a point... I think...');
-	      return returnValue;
-	    }
-	
-	    this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
-	    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
-	
-	    this.midpoint = () => new Vertex3D(
-	      (endVertex.x + startVertex.x) / 2,
-	      (endVertex.y + startVertex.y) / 2,
-	      (endVertex.z + startVertex.z) / 2
-	    );
-	
-	    this.length = () => this.vector().magnitude();
-	
-	    this.adjustLength = (change, fromStartVertex) => {
-	      if ((typeof change) !== 'number' || change === 0) return;
-	      const unitVec = this.vector().unit();
-	      if (fromStartVertex !== undefined) {
-	        if (fromStartVertex === true) {
-	          this.endVertex.positionAt(this.startVertex.translate(unitVec.scale(change), true));
-	        } else {
-	          this.startVertex.positionAt(this.endVertex.translate(unitVec.scale(change), true));
-	        }
-	      } else {
-	        const len = this.length();
-	        const halfChangeMag = change/2;
-	        const halfDistVec = unitVec.scale(halfChangeMag);
-	        startVertex.translate(halfDistVec.inverse());
-	        endVertex.translate(halfDistVec);
-	      }
-	    }
-	
-	    this.pointAtDistance = (distance) => {
-	      const point = startVertex.copy();
-	      const unitVec = this.vector().unit();
-	      point.translate(unitVec.scale(distance));
-	      return point;
-	    }
-	
-	    this.rotate = (rotation, center) => {
-	      center ||= this.midpoint();
-	      startVertex.rotate(rotation, center);
-	      endVertex.rotate(rotation, center);
-	    }
-	
-	    this.reverseRotate = (rotation, center) => {
-	      center ||= this.midpoint();
-	      startVertex.reverseRotate(rotation, center);
-	      endVertex.reverseRotate(rotation, center);
-	    }
-	
-	  }
-	}
-	
-	Line3D.verticies = (lines) => {
-	  const verts = [];
-	  for (let index = 0; index < lines.length; index += 1) {
-	    verts.push(lines[index].endVertex.copy());
-	  }
-	  return verts;
-	}
-	
-	Line3D.adjustVerticies = (vert1, vert2, change) => {
-	  const line = new Line3D(vert1, vert2);
-	  line.adjustLength(change);
-	}
-	
-	Line3D.reverse = (list) => {
-	  let reversed = [];
-	  for (let index = list.length - 1; index > -1; index--) {
-	    reversed.push(list[index].negitive());
-	  }
-	  return reversed;
-	}
-	
-	module.exports = Line3D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assembly.js',
-function (require, exports, module) {
-	
-
-	
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Position = require('../../position.js');
-	const getDefaultSize = require('../../utils.js').getDefaultSize;
-	const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
-	
-	const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
-	
-	class Assembly extends KeyValue {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
-	    super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
-	
-	    const instance = this;
-	    let group;
-	    const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
-	    const initialVals = {
-	      part: true,
-	      included: true,
-	      centerConfig, demensionConfig, rotationConfig, partCode, partName,
-	      propertyId: undefined,
-	    }
-	    const subAssems = this.subassemblies;
-	    Object.getSet(this, initialVals, 'values', 'subassemblies', 'joints');
-	    this.subassemblies = subAssems;
-	    Object.getSet(this, temporaryInitialVals);
-	    this.path = () => `${this.constructor.name}.${partName}`.toDot();
-	
-	    if ((typeof centerConfig) === 'function') this.centerConfig = centerConfig;
-	    else this.centerConfig = centerConfig
-	    if ((typeof demensionConfig) === 'function') this.demensionConfig = demensionConfig;
-	    else this.demensionConfig = demensionConfig
-	    if ((typeof rotationConfig) === 'function') this.rotationConfig = rotationConfig;
-	    else this.rotationConfig = rotationConfig
-	
-	    const parentIncluded = this.included;
-	
-	    this.included = (value) => {
-	        value = parentIncluded(value);
-	        if ((typeof value) === 'string') return  group.propertyConfig(value);
-	        switch (value) {
-	          case true: return true;
-	          case false: return false;
-	          default: return true;
-	        }
-	    }
-	
-	    function getValueSmeFormatter(path) {
-	      const split = path.split('.');
-	      let attr = split[0];
-	      let objIdStr;
-	      if (split.length > 2) {
-	      }
-	      if (split.length > 1) {
-	        objIdStr = split[0];
-	        attr = split.slice(1).join('.');
-	      }
-	
-	      let obj;
-	      if (objIdStr === undefined) {
-	        obj = instance;
-	      } else {
-	        obj = instance.getAssembly(objIdStr);
-	      }
-	      const returnVal = Assembly.resolveAttr(obj, attr);
-	      return returnVal;
-	    }
-	    const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
-	
-	    // KeyValue setup
-	    const funcReg = /length|width|thickness/;
-	    this.value.addCustomFunction((key, value) => key.match(funcReg) ? this[code](value) : undefined)
-	    this.value.evaluators.string = (value) => sme.eval(value, this);
-	    this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
-	
-	    this.eval = (eqn) => sme.eval(eqn, this);
-	    this.evalObject = (obj) => sme.evalObject(obj, this);
-	
-	    this.group = (g) => {
-	      if (g) group = g;
-	      return group;
-	    }
-	    this.propertyConfig = (one, two) => {
-	      const parent = this.parentAssembly();
-	      if (parent instanceof Assembly) return parent.propertyConfig(one, two);
-	      const group = this.group();
-	      if (group) {
-	        if (one) return group.propertyConfig(one, two);
-	        return group.propertyConfig;
-	      }
-	    }
-	
-	    this.getAssembly = (partCode, callingAssem) => {
-	      if (callingAssem === this) return undefined;
-	      if (this.partCode() === partCode) return this;
-	      if (this.subassemblies[partCode]) return this.subassemblies[partCode];
-	      if (callingAssem !== undefined) {
-	        const children = Object.values(this.subassemblies);
-	        for (let index = 0; index < children.length; index += 1) {
-	          const assem = children[index].getAssembly(partCode, this);
-	          if (assem !== undefined) return assem;
-	        }
-	      }
-	      if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
-	        return this.parentAssembly().getAssembly(partCode, this);
-	      return undefined;
-	    }
-	    let position = new Position(this, sme);
-	    this.position = () => position;
-	    this.toModel = position.toModel;
-	    this.toBiPolygon = position.toBiPolygon;
-	    this.updatePosition = () => position = new Position(this, sme);
-	    this.joints = [];
-	    this.values = {};
-	    this.rootAssembly = () => {
-	      let currAssem = this;
-	      while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
-	      return currAssem;
-	    }
-	    this.getJoints = (pc) => {
-	      const root = this.getRoot();
-	      if (root !== this) return root.getJoints(pc || partCode);
-	      pc = pc || partCode;
-	      const assemList = this.getSubassemblies();
-	      let jointList = [].concat(this.joints);
-	      assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
-	      let joints = {male: [], female: []};
-	      jointList.forEach((joint) => {
-	        if (joint.malePartCode() === pc) {
-	          joints.male.push(joint);
-	        } else if (joint.femalePartCode() === pc) {
-	          joints.female.push(joint);
-	        }
-	      });
-	      return joints;
-	    }
-	    function initObj(value) {
-	      const obj = {};
-	      for (let index = 1; index < arguments.length; index += 1) {
-	        obj[arguments[index]] = value;
-	      }
-	      return obj;
-	    }
-	
-	
-	    this.setSubassemblies = (assemblies) => {
-	      this.subassemblies = {};
-	      assemblies.forEach((assem) => this.subassemblies[assem.partCode()] = assem);
-	    };
-	
-	    this.partsOf = (clazz) => {
-	      const parts = this.getRoot().getParts();
-	      if (clazz === undefined) return parts;
-	      return parts.filter((p) => p instanceof clazz);
-	    }
-	
-	    // TODO: wierd dependency on inherited class.... fix!!!
-	    const defaultPartCode = () =>
-	      instance.partCode(instance.partCode() || Assembly.partCode(this));
-	
-	    this.setParentAssembly = (pa) => {
-	      this.parentAssembly(pa);
-	      defaultPartCode();
-	    }
-	    this.addSubAssembly = (assembly) => {
-	      this.subassemblies[assembly.partCode()] = assembly;
-	      // assembly.setParentAssembly(this);
-	    }
-	
-	    this.objId = this.constructor.name;
-	
-	    this.addJoints = function () {
-	      for (let i = 0; i < arguments.length; i += 1) {
-	        const joint = arguments[i];
-	        this.joints.push(joint);
-	        joint.parentAssemblyId(this.id());
-	      }
-	    }
-	
-	    this.addSubassemblies = function () {
-	      for (let i = 0; i < arguments.length; i += 1) {
-	        this.addSubAssembly(arguments[i]);
-	      }
-	    }
-	
-	    this.children = () => Object.values(this.subassemblies);
-	
-	    this.getSubassemblies = () => {
-	      let assemblies = [];
-	      this.children().forEach((assem) => {
-	        assemblies.push(assem);
-	        assemblies = assemblies.concat(assem.getSubassemblies());
-	      });
-	      return assemblies;
-	    }
-	    this.getParts = () => {
-	      return this.getSubassemblies().filter((a) => {
-	        if ((typeof a.part) !== 'function') {
-	          console.log('party')
-	        }
-	        return a.part() && a.included()
-	      });
-	    }
-	
-	    if (Assembly.idCounters[this.objId] === undefined) {
-	      Assembly.idCounters[this.objId] = 0;
-	    }
-	
-	    Assembly.add(this);
-	
-	    this.width = (value) => position.setDemension('x', value);
-	    this.length = (value) => position.setDemension('y', value);
-	    this.thickness = (value) => position.setDemension('z', value);
-	    defaultPartCode();
-	  }
-	}
-	
-	Assembly.list = {};
-	Assembly.get = (id) => {
-	  const keys = Object.keys(Assembly.list);
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const assembly = Assembly.list[keys[index]][id];
-	    if (assembly !== undefined) return assembly;
-	  }
-	  return null;
-	}
-	Assembly.add = (assembly) => {
-	  const name = assembly.constructor.name;
-	  if (Assembly.list[name] === undefined) Assembly.list[name] = {};
-	  Assembly.list[name][assembly.id()] = assembly;
-	}
-	Assembly.all = () => {
-	  const list = [];
-	  const keys = Object.keys(Assembly.list);
-	  keys.forEach((key) => list.concat(Object.values(Assembly.list[key])));
-	  return list;
-	}
-	
-	const positionReg = /^(c|r|d|center|rotation|demension).(x|y|z)$/;
-	Assembly.resolveAttr = (assembly, attr) => {
-	  if (!(assembly instanceof Assembly)) return undefined;
-	  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
-	    return assembly.length();
-	  } else if (attr === 'w' || attr === 'width') {
-	    return assembly.width();
-	  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
-	    return assembly.thickness();
-	  }
-	
-	  const positionMatch = attr.match(positionReg);
-	  if (positionMatch) {
-	    const func = positionMatch[1];
-	    const axis = positionMatch[2];
-	    if (func === 'r' || func === 'rotation') return assembly.position().rotation(axis);
-	    if (func === 'c' || func === 'center') return assembly.position().center(axis);
-	    if (func === 'd' || func === 'demension') return assembly.position().demension(axis);
-	  }
-	  return assembly.value(attr);
-	}
-	Assembly.fromJson = (assemblyJson) => {
-	  const demensionConfig = assemblyJson.demensionConfig;
-	  const centerConfig = assemblyJson.centerConfig;
-	  const rotationConfig = assemblyJson.rotationConfig;
-	  const partCode = assemblyJson.partCode;
-	  const partName = assemblyJson.partName;
-	  const clazz = Object.class.get(assemblyJson._TYPE);
-	  const assembly = new (clazz)(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	  assembly.id(assemblyJson.id);
-	  assembly.values = assemblyJson.values;
-	  assembly.setParentAssembly(assemblyJson.parent)
-	  Object.values(assemblyJson.subassemblies).forEach((json) =>
-	    assembly.addSubAssembly(Assembly.class(json._TYPE)
-	                              .fromJson(json, assembly)));
-	  if (assemblyJson.length) assembly.length(assemblyJson.length);
-	  if (assemblyJson.width) assembly.width(assemblyJson.width);
-	  if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
-	  return assembly;
-	}
-	
-	Assembly.classes = Object.class.object;
-	Assembly.new = function (id) {
-	  const clazz = Object.class.get(id);
-	  if (clazz)
-	    return new (clazz)(...Array.from(arguments).slice(1));
-	  return null;
-	};
-	Assembly.class = Object.class.get;
-	Assembly.classObj = Object.class.filter;
-	
-	Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
-	Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
-	Assembly.lists = {};
-	Assembly.idCounters = {};
-	
-	Assembly.partCode = (assembly) => {
-	  const cabinet = assembly.getAssembly('c');
-	  if (cabinet) {
-	    const name = assembly.constructor.name;
-	    cabinet.partIndex = cabinet.partIndex || 0;
-	    return `${assembly.constructor.abbriviation}`;
-	  }
-	}
-	
-	module.exports = Assembly
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/property/definitions.js',
-function (require, exports, module) {
-	const Property = require('../property');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const IMPERIAL_US = Measurement.units()[1];
-	
-	const defs = {};
-	
-	defs.h = new Property('h', 'height', null);
-	defs.w = new Property('w', 'width', null);
-	defs.d = new Property('d', 'depth', null);
-	defs.t = new Property('t', 'thickness', null);
-	defs.l = new Property('l', 'length', null);
-	
-	//   Overlay
-	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
-	
-	//   Reveal
-	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvr = new Property('rvr', 'Reveal Right', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvl = new Property('rvl', 'Reveal Left', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
-	
-	//   Inset
-	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
-	
-	//   Cabinet
-	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
-	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
-	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
-	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
-	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
-	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
-	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US})
-	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US})
-	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US})
-	
-	// Cabinet.AngledBackCorner
-	defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
-	defs.lbo = new Property('lbo', 'Left Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
-	defs.rbo = new Property('rbo', 'Right Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
-	
-	// Cabinet.Lshaped
-	defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 24, notMetric: IMPERIAL_US})
-	defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US})
-	
-	//   Panel
-	
-	//   Guides
-	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54),
-	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', 3*2.54/8),
-	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', 2.54/2)
-	
-	//   DoorAndFront
-	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
-	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null})
-	
-	//   Door
-	
-	//   DrawerBox
-	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
-	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
-	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
-	
-	//   DrawerFront
-	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
-	
-	//   Frame
-	
-	//   Handle
-	defs.c2c = new Property('c2c', 'Center To Center', null),
-	defs.proj = new Property('proj', 'Projection', null),
-	
-	//   Hinge
-	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null),
-	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
-	defs.maxol = new Property('maxol', 'Max Door Overlay', null),
-	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
-	
-	//   Opening
-	
-	module.exports = defs;
-	
-});
-
-
 RequireJS.addFunction('./app-src/cost/types/labor.js',
 function (require, exports, module) {
 	
@@ -29289,1287 +27058,92 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
+RequireJS.addFunction('./app-src/cost/types/material.js',
 function (require, exports, module) {
 	
 
 	
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	
-	class UFObj {
-	  constructor(order) {
-	    class Row {
-	      constructor(groupName, assembly, index) {
-	        this.groupName = groupName;
-	        this.type = assembly.constructor.name;
-	        const dems = assembly.position().demension();
-	        dems.y = new Measurement(dems.y).display();
-	        dems.x = new Measurement(dems.x).display();
-	        dems.z = new Measurement(dems.z).display();
-	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
-	        this.quantity = 1;
-	        this.cost = '$0';
-	        this.notes = assembly.notes || '';
-	      }
-	    }
-	    const cabinets = [];
-	    const obj = [];
-	    Object.values(order.rooms).forEach((room, rIndex) => room.groups.forEach((group, gIndex) => {
-	      group.cabinets.forEach((cabinet, index) => {
-	        const cabinetId = `${rIndex+1}-${gIndex+1}-${index+1}`;
-	        cabinet.getParts().forEach((part) => {
-	          const row = new Row(group.name(), part, cabinetId);
-	          if (obj[row.size] === undefined) obj[row.size] = row;
-	          else {
-	            obj[row.size].quantity++;
-	          }
-	        });
-	      });
-	    }));
-	    return Object.values(obj);
-	  }
-	}
-	module.exports = UFObj
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/init.js',
-function (require, exports, module) {
-	
-const Joint = require('./joint');
-	
-	const Butt = require('./joints/butt.js');
-	const Dado = require('./joints/dado.js');
-	const Miter = require('./joints/miter.js');
-	const Rabbet = require('./joints/rabbet.js');
-	
-	Joint.types = {
-	  Butt, Dado, Miter, Rabbet
-	};
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joint.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../../public/js/utils/object/lookup.js')
-	
-	
-	class Joint {
-	  constructor(malePartCode, femalePartCode) {
-	    let parentAssembly;
-	    const initialVals = {
-	      maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
-	      malePartCode, femalePartCode, demensionAxis: '', centerAxis: ''
-	    }
-	    Object.getSet(this, initialVals);
-	
-	    this.parentAssembly = () => {
-	      if (!parentAssembly && this.parentAssemblyId()) {
-	        parentAssembly = Lookup.get(this.parentAssemblyId());
-	        this.parentAssemblyId = () => parentAssembly.id();
-	      }
-	      return parentAssembly;
-	    }
-	
-	    this.updatePosition = () => {};
-	
-	    this.getFemale = () => this.parentAssembly().getAssembly(this.femalePartCode());
-	    this.getMale = () => this.parentAssembly().getAssembly(this.malePartCode());
-	
-	    this.getDemensions = () => {
-	      const malePos = getMale();
-	      const femalePos = getFemale();
-	      // I created a loop but it was harder to understand
-	      return undefined;
-	    }
-	    this.toString = () => `${this.constructor.name}:${this.malePartCode()}->${this.femalePartCode()}`;
-	
-	    if (Joint.list[this.malePartCode()] === undefined) Joint.list[this.malePartCode()] = [];
-	    if (Joint.list[this.femalePartCode()] === undefined) Joint.list[this.femalePartCode()] = [];
-	    Joint.list[this.malePartCode()].push(this);
-	    Joint.list[this.femalePartCode()].push(this);
-	  }
-	}
-	Joint.list = {};
-	Joint.regex = /([a-z0-9-_\.]{1,})->([a-z0-9-_\.]{1,})/;
-	
-	Joint.classes = {};
-	Joint.register = (clazz) => {
-	  new clazz();
-	  Joint.classes[clazz.prototype.constructor.name] = clazz;
-	}
-	Joint.new = function (id, json) {
-	  return new Joint.classes[id]().fromJson(json);
-	}
-	module.exports = Joint
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/bi-polygon.js',
-function (require, exports, module) {
-	
-const CSG = require('../../../public/js/3d-modeling/csg.js');
-	const Line3D = require('line');
-	const Vector3D = require('vector');
-	const Vertex3D = require('vertex');
-	const Polygon3D = require('polygon');
-	const Plane = require('plane');
-	
-	class BiPolygon {
-	  constructor(polygon1, polygon2) {
-	    const face1 = polygon1.verticies();
-	    const face2 = polygon2.verticies();
-	    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
-	
-	    let normal = {};
-	    function calcNormal() {
-	      if (normal === undefined) {
-	        const pNorm1 = polygon1.normal();
-	        const pNorm1I = pNorm1.inverse();
-	        const center1 = polygon1.center();
-	        const center2 = polygon2.center();
-	        const cOffsetNorm = center1.translate(pNorm1, true);
-	        const cOffsetNormI = center1.translate(pNorm1I, true);
-	        normal.front = cOffsetNorm.distance(center2) > cOffsetNormI.distance(center2) ?
-	            cOffsetNorm : cOffsetNormI;
-	        const topApproxVector = face2[3].distanceVector(face2[0]).unit();
-	        const normVert = new Vertex3D(normal.front);
-	        normVect.rotate({x:1,y:0,z:0});
-	      }
-	      return normal;
-	    }
-	
-	    this.front = () => new Polygon3D(face1);
-	    this.back = () => new Polygon3D(face2);
-	    this.normal = () => face2[0].distanceVector(face1[0]).unit();
-	    this.normalTop = () => face2[3].distanceVector(face2[0]).unit();
-	    this.normalRight = () => face2[1].distanceVector(face2[0]).unit();
-	
-	    this.translate = (vector) => {
-	      for (let index = 0; index < face1.length; index++) {
-	        face1[index].translate(vector);
-	        face2[index].translate(vector);
-	      }
-	    }
-	
-	    this.center = (newCenter) => {
-	      if (!(newCenter instanceof Vertex3D))
-	        return new Vertex3D(Math.midrange(face1.concat(face2), ['x', 'y', 'z']));
-	      const center = this.center();
-	      this.translate(newCenter.minus(center));
-	      return this.center();
-	    }
-	
-	    this.closerPlane = (vertex) => {
-	      const poly1 = new Plane(...face1);
-	      const poly2 = new Plane(...face2);
-	      return poly1.center().distance(vertex) < poly2.center().distance(vertex) ? poly1 : poly2;
-	    }
-	
-	    this.furtherPlane = (vertex) => {
-	      const poly1 = new Plane(...face1);
-	      const poly2 = new Plane(...face2);
-	      return poly1.center().distance(vertex) > poly2.center().distance(vertex) ? poly1 : poly2;
-	    }
-	
-	    this.flippedNormal = () => {
-	      const face1Norm = new Polygon3D(face1).normal();
-	      return this.normal().sameDirection(face1Norm);
-	    }
-	
-	
-	    function normalize (verts, reverse) {
-	      const normal =  new Polygon3D(verts).normal().toArray();
-	      const returnValue = [];
-	      for (let index = 0; index < verts.length; index++)
-	        returnValue[index] = new CSG.Vertex(verts[index], normal);
-	      return reverse ? returnValue.reverse() : returnValue;
-	    }
-	
-	    this.toModel = () => {
-	      const flippedNormal = this.flippedNormal();
-	      const front = new CSG.Polygon(normalize(face1, !flippedNormal));
-	      front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
-	      const back = new CSG.Polygon(normalize(face2, flippedNormal));
-	      back.plane.normal = back.vertices[0].normal.clone();//new CSG.Vector([0,0,1,0,0]);
-	      const polygonSets = [front, back];
-	
-	      for (let index = 0; index < face1.length; index++) {
-	        const index2 = (index + 1) % face1.length;
-	         const verticies = [face1[index], face1[index2], face2[index2], face2[index]];
-	         const normalized = normalize(verticies, flippedNormal);
-	         polygonSets.push(new CSG.Polygon(normalized));
-	         polygonSets[polygonSets.length - 1].plane.normal = normalized[0].normal.clone();
-	      }
-	
-	      const polys = CSG.fromPolygons(polygonSets);
-	      polys.normals = {
-	        front: this.normal(),
-	        right: this.normalRight(),
-	        top: this.normalTop()
-	      }
-	      return polys;
-	    }
-	
-	    this.toPolygons = () => {
-	      const polygons = [new Polygon3D(face1), new Polygon3D(face2)];
-	
-	      for (let index = 0; index < face1.length; index++) {
-	        const index2 = (index + 1) % face1.length;
-	         const verticies = [face1[index], face1[index2], face2[index2], face2[index]];
-	         polygons.push(new Polygon3D(vertices));
-	      }
-	      return polygons;
-	    }
-	
-	
-	    this.toString = () => {
-	      let face1Str = '';
-	      let face2Str = '';
-	      for (let index = 0; index < face1.length; index++) {
-	        face1Str += `(${face1[index].toString()}), `;
-	        face2Str += `(${face2[index].toString()}), `;
-	      }
-	      face1Str = face1Str.substring(0, face1Str.length - 2);
-	      face2Str = face2Str.substring(0, face2Str.length - 2);
-	      return `${face1Str}\n${face2Str}`;
-	    }
-	  }
-	}
-	
-	BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
-	  offset ||= {};
-	  const verts = polygon.verticies();
-	  if (verts.length < 4) return undefined;
-	  const verts1 = JSON.clone(verts);
-	  Line3D.adjustVerticies(verts1[0], verts1[1], offset.x);
-	  Line3D.adjustVerticies(verts1[1], verts1[2], offset.y);
-	  Line3D.adjustVerticies(verts1[2], verts1[3], offset.x);
-	  Line3D.adjustVerticies(verts1[3], verts1[0], offset.y);
-	  const verts2 = JSON.clone(verts1);
-	  const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
-	  const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
-	  return new BiPolygon(poly1, poly2);
-	}
-	
-	BiPolygon.fromVectorObject =
-	    (width, height, depth, center, vectorObj) => {
-	      center ||= new Vertex3D(0,0,0);
-	      vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0), depth: new Vector3D(0,0,1)};
-	      const frontCenter = center.translate(vectorObj.depth.scale(depth/2), true);
-	      const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);
-	      const backCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
-	      const back = Polygon3D.fromVectorObject(width, height, backCenter, vectorObj);
-	      return new BiPolygon(front, back);
-	}
-	
-	module.exports = BiPolygon;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/models/pull.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	const Polygon3D = require('../objects/polygon.js');
-	const BiPolygon = require('../objects/bi-polygon.js');
-	
-	function pull(length, height) {
-	  var rspx = length - .75;
-	  var h = height-.125;
-	  var gerth = 2.54/4;
-	  // var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
-	  // var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
-	  // var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
-	  var rCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/2, 0, h/-2]});
-	  var lCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/-2, 0, h/-2]});
-	  var mainCyl = CSG.cube({demensions: [length, gerth, gerth], center: [0, 0, 0]});
-	
-	  return mainCyl.union(lCyl).union(rCyl);
-	}
-	
-	function getVectorObj(line, normal) {
-	  const midNormOffset = line.midpoint().translate(normal);
-	  const lineNormPoly = new Polygon3D([line.startVertex.copy(), line.endVertex.copy(), midNormOffset]);
-	  return {
-	    depth: normal,
-	    width: line.vector().unit(),
-	    height: lineNormPoly.normal(),
-	  };
-	}
-	
-	function pull(baseCenter, line, normal, projection, cTOc) {
-	  var gerth = 2.54/4;
-	  let length = cTOc + gerth;
-	  const vecObj = getVectorObj(line, normal);
-	
-	  let sideProjection = projection - gerth;
-	  const centerRL = baseCenter.translate(vecObj.depth.scale(sideProjection/2), true);
-	  const centerLeft = centerRL.translate(vecObj.width.scale(cTOc/-2), true);
-	  const centerRight = centerRL.translate(vecObj.width.scale(cTOc/2), true);
-	  const centerMain = baseCenter.translate(vecObj.depth.scale(projection - gerth/2));
-	
-	  var lCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerLeft, vecObj);
-	  var rCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerRight, vecObj);
-	  var mainCyl = BiPolygon.fromVectorObject(length, gerth, gerth, centerMain, vecObj);
-	
-	  return mainCyl.toModel().union(lCyl.toModel()).union(rCyl.toModel());
-	}
-	
-	function simple(baseCenter, line, normal, projection, cTOc) {
-	  var gerth = 2.54/4;
-	  let length = cTOc + gerth;
-	  const vecObj = getVectorObj(line, normal);
-	
-	  let sideProjection = projection - gerth;
-	  const center = baseCenter.translate(vecObj.depth.scale((sideProjection + gerth) /2), true);
-	
-	  return BiPolygon.fromVectorObject(length, gerth, projection, center, vecObj).toModel();
-	}
-	
-	pull.simple = simple;
-	
-	module.exports = pull
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	const Polygon3D = require('../objects/polygon.js');
-	const BiPolygon = require('../objects/bi-polygon.js');
-	
-	function drawerBox(length, width, depth) {
-	  const bottomHeight = 7/8;
-	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-	  box.setColor(1, 0, 0);
-	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-	  inside.setColor(0, 0, 1);
-	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-	  bInside.setColor(0, 0, 1);
-	
-	  return box.subtract(bInside).subtract(inside);
-	}
-	
-	function unionAll(...polygons) {
-	  let model = polygons[0].toModel();
-	  for (let index = 1; index < polygons.length; index++) {
-	    model = model.union(polygons[index].toModel());
-	  }
-	  return model;
-	}
-	
-	function drawerBox(frontPoly, normal, length, props) {
-	  const sideThickness = props.dbst.value();
-	  const bottomThickness = props.dbbt.value();
-	  const bottomHeight = props.dbid.value();
-	  const norm = normal;
-	
-	  // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: verticies are if facing polygon topLeft, topRight, bottomRight, bottomLeft
-	  const fP = frontPoly;
-	  const fPm = fP.translate(norm.scale(-length));
-	  const bP = new Polygon3D([fPm.vertex(1), fPm.vertex(0), fPm.vertex(3), fPm.vertex(2)]);
-	  const lP = new Polygon3D([bP.vertex(1), fP.vertex(0), fP.vertex(3), bP.vertex(2)]);
-	  const rP = new Polygon3D([fP.vertex(1), bP.vertex(0), bP.vertex(3), fP.vertex(2)]);
-	  const tP = new Polygon3D([bP.vertex(1), bP.vertex(0), fP.vertex(1), bP.vertex(0)]);
-	  const btmP = new Polygon3D([bP.vertex(2), bP.vertex(3), fP.vertex(2), fP.vertex(3)]);
-	
-	  const front = BiPolygon.fromPolygon(fP, 0, sideThickness);
-	  const back = BiPolygon.fromPolygon(bP, 0, sideThickness);
-	  const left = BiPolygon.fromPolygon(lP, 0, sideThickness);
-	  const right = BiPolygon.fromPolygon(rP, 0, sideThickness);
-	  const bottom = BiPolygon.fromPolygon(btmP, -bottomHeight, -bottomHeight-bottomThickness);
-	  return unionAll(front, back, left, right, bottom);
-	}
-	module.exports = drawerBox
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/managers/template.js',
-function (require, exports, module) {
-	
-
-	const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
-	
+	const Cost = require('../cost.js');
 	const Assembly = require('../../objects/assembly/assembly.js');
-	const Input = require('../../../../../public/js/utils/input/input.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select.js');
-	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-	const Inputs = require('../../input/inputs.js');
-	const CabinetTemplate = require('../../config/cabinet-template.js');
-	const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
-	const $t = require('../../../../../public/js/utils/$t.js');
-	const du = require('../../../../../public/js/utils/dom-utils.js');
-	const RadioDisplay = require('../../display-utils/radio-display.js');
-	const Bind = require('../../../../../public/js/utils/input/bind.js');
-	const Joint = require('../../objects/joint/joint.js');
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const ThreeView = require('../three-view.js');
-	const Layout2D = require('../../objects/layout.js');
-	const Draw2D = require('../../two-d/draw.js');
-	const Vertex3D = require('../../three-d/objects/vertex');
-	const Snap2d = require('../../two-d/objects/snap');
-	const PropertyConfig = require('../../config/property/config.js');
-	const cabinetBuildConfig = require('../../../public/json/cabinets.json');
-	const Pattern = require('../../division-patterns.js');
-	const Handle = require('../../objects/assembly/assemblies/hardware/pull.js');
-	const OpeningSketch = require('../opening-sketch');
-	const FaceSketch = require('../face-sketch');
-	const CSG = require('../../../public/js/3d-modeling/csg.js');
-	const approximate = require('../../../../../public/js/utils/approximate').new(10);
 	
-	let template;
-	let modifyingOpening = false;
-	const sectionState = {
-	  style: 'Overlay',
-	  vertical: false,
-	  innerOouter: 'true',
-	  xOyOz: 'x',
-	  index: 0,
-	  count: 0,
+	class Material extends Cost {
+	  constructor (props) {
+	    super(props);
+	    props = this.props();
+	    props.cost = props.cost / (props.count || 1);
+	    const instance = this;
+	    Object.getSet(props, 'company', 'formula', 'partNumber',
+	                'method', 'length', 'width', 'depth', 'cost');
+	
+	
+	    this.unitCost = (attr) => {
+	      const unitCost = Material.configure(instance.method(), instance.cost(),
+	        instance.length(), instance.width(), instance.depth());
+	      const copy = JSON.parse(JSON.stringify(unitCost));
+	      if (attr) return copy[attr];
+	      return copy;
+	    }
+	
+	    this.calc = (assemblyOrCount) => {
+	      const unitCost = this.unitCost();
+	      const formula = this.formula() || unitCost.formula;
+	      if (assemblyOrCount instanceof Assembly)
+	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
+	      else if (Number.isFinite(assemblyOrCount))
+	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
+	      else
+	        throw new Error('calc argument must be a number or Assembly');
+	    }
+	  }
+	}
+	
+	Material.methods = {
+	  LINEAR_FEET: 'Linear Feet',
+	  SQUARE_FEET: 'Square Feet',
+	  CUBIC_FEET: 'Cubic Feet',
+	  UNIT: 'Unit'
 	};
 	
-	const openingSketch = new OpeningSketch('opening-sketch-cnt');
-	const faceSketch = new FaceSketch('front-sketch');
-	function updateState(elem) {
-	  const opening = ExpandableList.get(elem);
-	  sectionState.id = opening.id;
-	  const attr = elem.name.replace(/(.*?)-.*/, '$1');
-	  if (attr === 'index') sectionState[attr] = Number.parseInt(elem.value);
-	  else sectionState[attr] = elem.value;
-	}
-	
-	function updateConfig(elem) {
-	  const value = elem.type === 'checkbox' ? elem.checked : elem.value;
-	  sectionState[elem.name] = value;
-	}
-	
-	du.on.match('keydown', '#template-divider-count-input', (elem,ev) => ev.preventDefault());
-	du.on.match('change', '.border-location-cnt>input', updateState);
-	du.on.match('change', '.section-properties>input', updateConfig);
-	
-	function applyDividers(cabinet) {
-	  for (let index = 0; index < cabinet.openings.length; index++) {
-	    const divideCount = Number.parseInt(sectionState.count);
-	    const opening = cabinet.openings[index];
-	    opening.vertical(sectionState.vertical);
-	    opening.divide(divideCount);
-	    const sectionType = sectionState.sectionType;
-	    if (sectionType) {
-	      for (let si = 0; si < opening.sections.length; si++) {
-	        opening.sections[si].setSection(sectionType);
-	      }
-	    }
-	    const coords = opening.update();
-	  }
-	}
-	
-	function applyTestConfiguration(cabinet) {
-	  cabinet.width(60*2.54);
-	
-	  const opening = cabinet.openings[0];
-	  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
-	  opening.divide(2);
-	  const left = opening.sections[0];
-	  const center = opening.sections[1];
-	  const right = opening.sections[2];
-	  const a = 6*2.54
-	
-	  left.divide(2);
-	  left.vertical(false);
-	  left.sections[0].setSection("DrawerSection");
-	  left.sections[1].setSection("DrawerSection");
-	  left.sections[2].setSection("DrawerSection");
-	  left.pattern('abb').value('a', a*2);
-	
-	  center.divide(1);
-	  center.vertical(false);
-	  center.sections[1].setSection('DualDoorSection');
-	  center.pattern('ab').value('a', a);
-	  const centerTop = center.sections[0];
-	
-	  centerTop.divide(2);
-	  centerTop.sections[0].setSection("DoorSection");
-	  centerTop.sections[1].setSection("FalseFrontSection");
-	  centerTop.sections[2].setSection("DoorSection");
-	  centerTop.pattern('ztz').value('t', 15*2.54);
-	  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
-	  centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
-	
-	  right.divide(2);
-	  right.vertical(false);
-	  right.sections[0].setSection("DrawerSection");
-	  right.sections[1].setSection("DrawerSection");
-	  right.sections[2].setSection("DrawerSection");
-	  right.pattern('abb').value('a', a);
-	}
-	
-	function getDemPosElems () {
-	  const templateBody = du.find('.template-body');
-	  return {
-	    width: du.find.closest('input[name="width"', templateBody),
-	    height: du.find.closest('input[name="height"', templateBody),
-	    depth: du.find.closest('input[name="thickness"', templateBody),
-	  };
-	}
-	
-	FunctionCache.disable();
-	function getCabinet(elem) {
-	  const templateBody = du.find('.template-body');
-	  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
-	  const dPElems = getDemPosElems();
-	  const width = new Measurement(dPElems.width.value, true).decimal();
-	  const height = new Measurement(dPElems.height.value, true).decimal();
-	  const thickness = new Measurement(dPElems.depth.value, true).decimal();
-	  const cabinet = template.getCabinet(height, width, thickness);
-	  cabinet.propertyConfig().set(sectionState.style);
-	
-	  if (sectionState.testDividers) applyTestConfiguration(cabinet);
-	  else applyDividers(cabinet);
-	  openingSketch.cabinet(cabinet);
-	  console.log(`Cabinet Demesions: ${cabinet.width()} !== ${cabinet.eval('c.w')} x ${cabinet.length()} x ${cabinet.thickness()}`)
-	  return cabinet;
-	}
-	
-	const toDisplay = (value) =>  new Measurement(value).display();
-	const centerDisplay = (t) => {
-	  const x = t.getCabinet().eval(t.x());
-	  const y = t.getCabinet().eval(t.y());
-	  const z = t.getCabinet().eval(t.z());
-	  return `(${toDisplay(x)},${toDisplay(y)},${toDisplay(z)})`;
-	}
-	const threeView = new ThreeView();
-	du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
-	  du.move.inFront(elem));
-	du.on.match('click', `#${threeView.id()}>.three-view-two-d-cnt>.three-view-canvases-cnt`, (elem) =>
-	  du.move.inFront(elem));
-	
-	const containerClasses = {
-	  values: `template-values`,
-	  subassemblies: `template-subassemblies`,
-	  joints: `template-joints`,
-	  dividerJoint: `template-divider-joint`,
-	  openings: `template-openings`
-	};
-	
-	function resetHeaderErrors() {
-	  const containers = du.find.all('.cabinet-template-input-cnt');
-	  containers.forEach((cnt) => {
-	    const headers = du.find.downAll('.expand-header', cnt);
-	    headers.forEach((h) => du.class.remove(h, 'error'))
-	  });
-	}
-	
-	function setHeaderErrors(elem) {
-	  const firstHeader = du.find.closest('.expand-header', elem);
-	  const secondHeader = du.find.up('.cabinet-template-input-cnt', firstHeader).children[0];
-	  du.class.add(firstHeader, 'error');
-	  du.class.add(secondHeader, 'error');
-	}
-	
-	function updateCss(elem, isValid, errorMsg) {
-	  if (elem) {
-	    if (isValid) {
-	      du.class.remove(elem, 'error');
-	      elem.setAttribute('error-msg', '');
-	    } else {
-	      du.class.add(elem, 'error');
-	      elem.setAttribute('error-msg', errorMsg);
-	      setHeaderErrors(elem);
-	    }
-	  }
-	}
-	
-	const varReg = /^[$_a-zA-Z][$_a-zA-Z0-9\.]*$/;
-	const variableNameCheck = (elem) => updateCss(elem, elem.value.match(varReg), `Illegal characters: ${varReg}`);
-	const positiveValueCheck = (elem) => updateCss(elem, Number.parseFloat(elem.value) > 0, 'Value must be positive');
-	const partCodeCheck = (template) => (elem) => updateCss(elem, template.validPartCode(elem.value), 'Invalid Part Code');
-	
-	function openingCodeCheck(template, opening, input) {
-	  if (opening._Type === 'location') return true;
-	  let count = 0;
-	  let errorString = '';
-	  if (!template.validPartCode(opening.top)) {count++; (errorString += 'top,');}
-	  if (!template.validPartCode(opening.bottom)) {count++; (errorString += 'bottom,');}
-	  if (!template.validPartCode(opening.left)) {count++; (errorString += 'left,');}
-	  if (!template.validPartCode(opening.right)) {count++; (errorString += 'right,');}
-	  if (!template.validPartCode(opening.back)) {count++; (errorString += 'back,');}
-	  if (count === 0) updateCss(input, true);
-	  else {
-	    errorString = errorString.substring(0, errorString.length - 1);
-	    if (count === 1) updateCss(input, false, `'${errorString}' part code is invalid (CABINET WILL NOT RENDER)`);
-	    else updateCss(input, false, `Multiple part codes are invalid: ${errorString} (CABINET WILL NOT RENDER)`);
-	  }
-	  return count === 0;
-	}
-	
-	function openingsCodeCheck (template, inputs) {
-	  const openings = template.openings();
-	  let valid = true;
-	  for (let index = 0; index < openings.length; index += 1) {
-	    const opening = openings[index];
-	    const input = inputs[index];
-	    valid &&= openingCodeCheck(template, opening, input)
-	  }
-	  return valid;
-	}
-	
-	function validateEquations(template, cabinet, valueInput, eqnInput, valueIndex, eqnMap) {
-	  let errorString = '';
-	  let errorCount = 0;
-	  let eqnKeys = Object.keys(eqnMap);
-	  for (let index = 0; index < eqnKeys.length; index += 1) {
-	    const key = eqnKeys[index];
-	    const eqn = eqnMap[key];
-	    if (index === valueIndex) {
-	      const value = template.evalEqn(eqn, cabinet);
-	      if (Number.isNaN(value)) {
-	        errorString += `${key},`;
-	        errorCount++;
-	      } else {
-	        const convertCheckBox = valueInput.nextElementSibling;
-	        if (convertCheckBox && convertCheckBox.getAttribute('name') === 'convert' &&
-	              convertCheckBox.checked) {
-	          valueInput.value = new Measurement(value).display();
-	        } else {
-	          valueInput.value = value;
-	        }
-	      }
-	    } else {
-	      if (!template.validateEquation(eqn, cabinet)) {
-	        errorString += `${key},`;
-	        errorCount++;
-	      }
-	    }
-	  }
-	  if (errorCount > 0) {
-	    du.class.add(eqnInput, 'error');
-	    if (eqnKeys.length > 1) {
-	      errorString = errorString.substring(0, errorString.length - 1);
-	      updateCss(eqnInput, false, `Errors found within the following equations:${errorString}`);
-	    } else {
-	      updateCss(eqnInput, false, `Errors found within the equation.`)
-	    }
-	  } else {
-	    du.class.remove(eqnInput, 'error');
-	    updateCss(eqnInput, true);
-	  }
-	}
-	
-	const valueEqnCheck = (template, cabinet) => (eqnInput) => {
-	  const valueInput = du.find.closest('[name="value"]', eqnInput);
-	  const name = eqnInput.name;
-	  const eqn = eqnInput.value;
-	  const eqnMap = {};
-	  eqnMap[name] = eqn;
-	  validateEquations(template, cabinet, valueInput, eqnInput, 0, eqnMap);
-	}
-	
-	const xyzEqnCheck = (template, cabinet) => (xyzInput) => {
-	  const valueInput = du.find.closest('[name="value"]', xyzInput);
-	  const index = Number.parseInt(du.find.closest('select', xyzInput).value);
-	  const subAssem = ExpandableList.get(xyzInput);
-	  const part = cabinet.getAssembly(subAssem.code);
-	  const eqns = subAssem[xyzInput.name];
-	  const eqnMap = {x: eqns[0], y: eqns[1], z: eqns[2]};
-	  validateEquations(template, cabinet, valueInput, xyzInput, index, eqnMap);
-	}
-	
-	function updatePartsDataList() {
-	  const partMap = threeView.partMap();
-	  if (!partMap) return;
-	  const partKeys = Object.keys(partMap);
-	  let htmlArr = [];
-	  for (let index = 0; index < partKeys.length; index += 1) {
-	    const id = partKeys[index];
-	    const partCode = partMap[id].code;
-	    const partName = partMap[id].name;
-	    htmlArr.push(`<option value='${partName}' part-code='${partCode}'></option>`);
-	  }
-	  htmlArr.sort()
-	  const datalist = du.id('part-list');
-	  datalist.innerHTML = htmlArr.join('');
-	}
-	
-	function vertexToDisplay(vertex) {
-	  const x = new Measurement(vertex.x).display();
-	  const y = new Measurement(vertex.y).display();
-	  const z = new Measurement(vertex.z).display();
-	  return `(${x}, ${y}, ${z})`;
-	}
-	
-	function target(io, i) {
-	  const targetIndex = i + (io === 'inner' ? 0 : 4);
-	  return (index) => targetIndex === index;
-	}
-	
-	function updateOpenLocationDisplay (opening, elem) {
-	  const state = sectionState;
-	
-	  const io = state.innerOouter === 'true' ? 'inner' : 'outer';
-	  const i = state.index;
-	  const description = `Current formula describes the ${io} boundry ${state.xOyOz} coordinate of vertex ${state.index}.`;
-	  du.find.closest('.opening-location-description-cnt', elem).innerText = description;
-	
-	  const eqnPoint = opening.coordinates && opening.coordinates[io] && opening.coordinates[io][i];
-	
-	  if (eqnPoint && elem.name !== 'opening-coordinate-value')
-	    du.find.closest('[name="opening-coordinate-value"]', elem).value = eqnPoint[state.xOyOz];
-	
-	  const cabinet = getCabinet(elem);
-	  const coords = cabinet.openings[0].update();
-	
-	
-	  const html = openingPointTemplate.render({display: vertexToDisplay, coords, target: target(io, i)});
-	  du.find.closest('.opening-location-value-cnt', elem).innerHTML = html;
-	}
-	
-	const openingPointTemplate = new $t('managers/template/openings/points');
-	
-	function onOpeningLocationChange(elem) {
-	  const opening = ExpandableList.get(elem);
-	  // const state = opening.state;
-	  // let value = elem.value;
-	  // if (value === 'true') value = true;
-	  // else if (value === 'false') value = false;
-	  // const attr = elem.name.replace(/(.*?)-.*/, '$1');
-	  // state[attr] = value;
-	
-	  updateOpenLocationDisplay(opening, elem);
-	}
-	
-	function onOpeningTypeChange(elem) {
-	  const opening = ExpandableList.get(elem);
-	  if (opening._Type !== elem.value) {
-	    const isLocation = elem.checked;
-	    const defaultFunc = isLocation ? 'defaultLocationOpening' : 'defaultPartCodeOpening';
-	    const def = CabinetTemplate[defaultFunc]();
-	    Object.merge(opening, def, true);
-	    opening._Type = isLocation ? 'location' : undefined;
-	    du.find.closest('.border-location-cnt', elem).hidden = !isLocation;
-	    updateOpeningPartCode(du.find.closest('select', elem));
-	  }
-	}
-	
-	du.on.match('change', '.border-location-cnt>input,.border-location-cnt>span>input', onOpeningLocationChange);
-	du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
-	
-	function updateOpeningPoints(template, cabinet) {
-	  const threeDModel = threeView.threeDModel();
-	  if (threeDModel) {
-	    threeDModel.removeAllExtraObjects();
-	    const openings = cabinet.openings;
-	    for (let index = 0; index < openings.length; index++) {
-	      const opening = openings[index];
-	      const size = modifyingOpening ? 1 : .25;
-	      const state = sectionState;
-	      const i = state.index;
-	      const vertexColor = (io, i) => io !== state.innerOouter ? 'black' :
-	            (modifyingOpening && i === state.index ? 'lime' : 'white');
-	
-	      const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
-	
-	      const coords = opening.update();
-	      threeDModel.addVertex(coords.inner[0], vertexSize('true'), vertexColor('true', '0'));
-	      threeDModel.addVertex(coords.inner[1], vertexSize('true'), vertexColor('true', '1'));
-	      threeDModel.addVertex(coords.inner[2], vertexSize('true'), vertexColor('true', '2'));
-	      threeDModel.addVertex(coords.inner[3], vertexSize('true'), vertexColor('true', '3'));
-	
-	      threeDModel.addVertex(coords.outer[0], vertexSize('false'), vertexColor('false', '0'));
-	      threeDModel.addVertex(coords.outer[1], vertexSize('false'), vertexColor('false', '1'));
-	      threeDModel.addVertex(coords.outer[2], vertexSize('false'), vertexColor('false', '2'));
-	      threeDModel.addVertex(coords.outer[3], vertexSize('false'), vertexColor('false', '3'));
-	    }
-	  }
-	}
-	
-	const topView = du.id('three-view-top');
-	const leftView = du.id('three-view-right');
-	const frongView = du.id('three-view-front');
-	function validateOpenTemplate (elem) {
-	  const templateBody = du.find('.template-body');
-	  if (!templateBody || du.is.hidden(templateBody)) return;
-	  resetHeaderErrors();
-	  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
-	
-	  const valueNameInputs = du.find.downAll('input[attr="values"][name="name"]', templateBody);
-	  valueNameInputs.forEach(variableNameCheck);
-	  const subNameInputs = du.find.downAll('input[attr="subassemblies"][name="name"]', templateBody);
-	  subNameInputs.forEach(variableNameCheck);
-	  const subCodeInputs = du.find.downAll('input[attr="subassemblies"][name="code"]', templateBody);
-	  subCodeInputs.forEach(variableNameCheck);
-	
-	  const positiveInputs = du.find.downAll('input[name="thickness"],input[name="width"],input[name="height"]', templateBody);
-	  positiveInputs.forEach(positiveValueCheck);
-	
-	  const pcc = partCodeCheck(template);
-	  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="malePartCode"]', templateBody);
-	  jointMaleInputs.forEach(pcc);
-	  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="femalePartCode"]', templateBody);
-	  jointFemaleInputs.forEach(pcc);
-	
-	  const openingCodeInputs = du.find.downAll('input[attr="openings"][name="partCode"]', templateBody);
-	  openingsCodeCheck(template, openingCodeInputs);
-	
-	  try {
-	    const cabinet = getCabinet(templateBody);
-	
-	    const depthInputs = du.find.downAll('[name=depth]', templateBody);
-	    depthInputs.forEach(valueEqnCheck(template, cabinet));
-	    const valueEqnInputs = du.find.downAll('input[attr="values"][name="eqn"]', templateBody);
-	    valueEqnInputs.forEach(valueEqnCheck(template, cabinet));
-	    const subDemInputs = du.find.downAll('input[attr="subassemblies"][name="demensions"]', templateBody);
-	    subDemInputs.forEach(xyzEqnCheck(template, cabinet));
-	    const subCenterInputs = du.find.downAll('input[attr="subassemblies"][name="center"]', templateBody);
-	    subCenterInputs.forEach(xyzEqnCheck(template, cabinet));
-	    const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
-	    subRotInputs.forEach(xyzEqnCheck(template, cabinet));
-	    updateOpeningPoints(template, cabinet);
-	    threeView.update(cabinet);
-	    setTimeout(updatePartsDataList, 500);
-	  } catch (e) {
-	    console.log(e);
-	  }
-	
-	
-	}
-	
-	function getEqn(select, values) {
-	  return values && values[select.value()];
-	}
-	
-	const depthValidation = (measurment) =>
-	        measurment.decimal() > 0;
-	
-	function getJointInputTree(func, joint, dividerJoint) {
-	  joint.type ||= 'Butt';
-	  const selectType = new Select({
-	    name: 'type',
-	    list: Object.keys(Joint.types),
-	    class: 'template-select',
-	    value: joint.type
-	  });
-	
-	  const centerOffsetInput = new Select({
-	    name: 'centerAxis',
-	    list: ['+x', '+y', '+z', '-x', '-y', '-z'],
-	    value: joint.centerAxis
-	  });
-	  const demensionOffsetInput = new Select({
-	    name: 'demensionAxis',
-	    list: ['x', 'y', 'z'],
-	    value: joint.demensionAxis
-	  });
-	
-	  const depthInput = new Input({
-	    name: 'maleOffset',
-	    value: joint.maleOffset
-	  });
-	
-	  const dadoInputs = dividerJoint ? [depthInput] : [depthInput, centerOffsetInput, demensionOffsetInput];
-	
-	  const dit = new DecisionInputTree(undefined, {noSubmission: true});
-	  const type = dit.branch('Type', [selectType]);
-	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', 'Dado', dadoInputs);
-	  type.conditional('dado', condtionalPayload);
-	  dit.onChange(func);
-	  return dit;
-	}
-	
-	let lastDepth;
-	const jointOnChange = (vals, dit) => {
-	  const selectId = dit.payload().inputArray[0].id();
-	  const joint = ExpandableList.get(du.id(selectId));
-	  joint.type = vals.type;
-	  lastDepth = vals.maleOffset || lastDepth;
-	  joint.maleOffset = lastDepth || undefined;
-	  const depthInput = dit.children()[0].payload().inputArray[0];
-	  // depthInput.updateDisplay();
-	  joint.demensionAxis = vals.demensionAxis || undefined;
-	  joint.centerAxis = vals.centerAxis || undefined;
-	  console.log(vals);
-	}
-	
-	function getTypeInput(obj) {
-	  return new Select({
-	    name: 'type',
-	    value: obj.type,
-	    class: 'template-input',
-	    list: Object.keys(Assembly.components),
-	    inline: true
-	  });
-	}
-	
-	function getXyzSelect(label) {
-	  return new Select({
-	    label,
-	    name: 'xyz',
-	    list: {'0': 'X', '1': 'Y', '2':'Z'},
-	    inline: true
-	  });
-	}
-	
-	function getWhdSelect(label) {
-	  return new Select({
-	    label,
-	    name: 'xyz',
-	    list: {'0': 'W', '1': 'H', '2':'D'},
-	    inline: true
-	  });
-	}
-	
-	function getOpeningLocationSelect() {
-	  return new Select({
-	    name: 'openingLocation',
-	    list: ['top', 'bottom', 'left', 'right', 'back'],
-	    inline: true
-	  });
-	}
-	
-	function getJoint(obj) {
-	  return {obj, jointInput: getJointInputTree(jointOnChange, obj).payload()};
-	}
-	function getSubassembly(obj) {
-	  return {typeInput:  getTypeInput(obj),
-	          centerXyzSelect: getXyzSelect('Center'),
-	          demensionXyzSelect: getWhdSelect('Demension'),
-	          rotationXyzSelect: getXyzSelect('Rotation'),
-	          getEqn, obj
-	        };
-	}
-	
-	function getOpening(obj) {
-	  return {obj, select: getOpeningLocationSelect(), state: sectionState};
-	}
-	
-	const scopes = {};
-	function getScope(type, obj) {
-	  obj.id = obj.id || String.random();
-	  if (scopes[obj.id]) return scopes[obj.id];
-	  switch (type) {
-	    case 'joints':
-	      scopes[obj.id] = getJoint(obj);
-	      break;
-	    case 'subassemblies':
-	      scopes[obj.id] = getSubassembly(obj);
-	      break;
-	    case 'openings':
-	      scopes[obj.id] = getOpening(obj);
-	      break;
+	Material.methodList = Object.values(Material.methods);
+	
+	
+	Material.configure = (method, cost, length, width, depth) => {
+	  const unitCost = {};
+	  switch (method) {
+	    case Material.methods.LINEAR_FEET:
+	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
+	      unitCost.name = 'Linear Inch';
+	      unitCost.value = perLinearInch;
+	      unitCost.formula = 'l';
+	      return unitCost;
+	    case Material.methods.SQUARE_FEET:
+	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
+	      unitCost.name = 'Square Inch';
+	      unitCost.value = perSquareInch;
+	      unitCost.formula = 'l*w';
+	      return unitCost;
+	    case Material.methods.CUBIC_FEET:
+	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
+	      unitCost.name = 'Cubic Inch';
+	      unitCost.value = perCubicInch;
+	      unitCost.formula = 'l*w*d';
+	      return unitCost;
+	    case Material.methods.UNIT:
+	      unitCost.name = 'Unit';
+	      unitCost.value = cost;
+	      return unitCost;
 	    default:
-	      scopes[obj.id] = {obj};
+	      throw new Error('wtf');
+	      unitCost.name = 'Unknown';
+	      unitCost = -0.01;
+	      formula = -0.01;
+	      return unitCost;
 	  }
-	  return scopes[obj.id];
-	}
-	
-	const getObjects = {
-	    subassemblies: () => (      {
-	      type: "Panel",
-	      center: [0,0,0],
-	      demensions: [1,1,1],
-	      rotation: [0,0,0],
-	      include: 'All'
-	    })
-	}
-	
-	function updateTemplateDisplay() {
-	  const managerElems = du.find.all('[template-manager]');
-	  for (let index = 0; index < managerElems.length; index += 1) {
-	    const templateManagerId = managerElems[index].getAttribute('template-manager');
-	    const templateManager =TemplateManager.get(templateManagerId);
-	    templateManager.update();
-	  }
-	}
-	
-	
-	function addExpandable(template, type) {
-	  const containerClass = containerClasses[type];
-	  let parentSelector = `[template-id='${template.id()}']>.${containerClass}`;
-	  TemplateManager.headTemplate[type] ||= new $t(`managers/template/${type.toKebab()}/head`);
-	  TemplateManager.bodyTemplate[type] = TemplateManager.bodyTemplate[type] === undefined ?
-	                    new $t(`managers/template/${type.toKebab()}/body`) : TemplateManager.bodyTemplate[type];
-	  let getHeader = (obj) => TemplateManager.headTemplate[type].render(getScope(type, obj));
-	  let getBody = TemplateManager.bodyTemplate[type] ? ((obj) => TemplateManager.bodyTemplate[type].render(getScope(type, obj))) : undefined;
-	  const expListProps = {
-	    idAttribute: 'name',
-	    list: template[type](),
-	    getObject: getObjects[type],
-	    renderBodyOnOpen: false,
-	    parentSelector, getHeader, getBody,
-	    listElemLable: type.toSentance(),
-	  };
-	  const expandList = new ExpandableList(expListProps);
-	  expandList.afterRemoval(updateTemplateDisplay);
-	  return expandList;
-	}
-	
-	class TemplateManager extends Lookup {
-	  constructor(id) {
-	    super(id);
-	    const parentId = `template-list-${this.id()}`;
-	    this.parentId = () => parentId;
-	    let currentTemplate;
-	    const parentSelector = `#${parentId}`;
-	    const dividerJointChange = (template) => (vals) => {
-	      template.dividerJoint(vals);
-	    }
-	    const templateShapeInput = (template) => TemplateManager.templateShapeInput(template.shape());
-	    const dividerJointInput = (template) =>
-	      getJointInputTree(dividerJointChange(template), template.dividerJoint(), true).payload();
-	
-	    const containerSelector = (template, containerClass) => `[template-id="${template.id()}"]>.${containerClass}`;
-	
-	    const getHeader = (template) =>
-	      TemplateManager.headTemplate.render({template, TemplateManager: this});
-	    const getBody = (template) => {
-	      currentTemplate = template;
-	      setTimeout(() => {
-	        updateExpandables(template);
-	      }, 100);
-	      setTimeout(() => {
-	        validateOpenTemplate(du.id(parentId));
-	      }, 1000);
-	      return TemplateManager.bodyTemplate.render({template, TemplateManager: this,
-	        containerClasses, centerDisplay, toDisplay,
-	        dividerJointInput: dividerJointInput(template),
-	        templateShapeInput: templateShapeInput(template)});
-	      }
-	
-	    this.sectionState = sectionState;
-	    const expandables = {};
-	    function initTemplate(template) {
-	      const list = [];
-	      expandables[template.id()] = list;
-	      return () => {
-	        list.push(addExpandable(template, 'values'));
-	        list.push(addExpandable(template, 'subassemblies'));
-	        list.push(addExpandable(template, 'joints'));
-	        list.push(addExpandable(template, 'openings', true));
-	      };
-	    }
-	
-	    function updateExpandables(template) {
-	      template ||= currentTemplate;
-	      if (template === undefined) return;
-	      if (!expandables[template.id()]) initTemplate(template)();
-	      expandables[template.id()].forEach((e) => e.refresh());
-	    }
-	    this.updateExpandables = updateExpandables;
-	
-	    const getObject = (values) => {
-	      const cabTemp = new CabinetTemplate(values.name);
-	      initTemplate(cabTemp)();
-	      return cabTemp;
-	    }
-	
-	    this.active = () => expandList.active();
-	    const expListProps = {
-	      list: CabinetTemplate.defaultList(),
-	      inputTree: TemplateManager.inputTree(),
-	      parentSelector, getHeader, getBody, getObject,
-	      listElemLable: 'Template',
-	      type: 'sidebar'
-	    };
-	    setTimeout(initTemplate(expListProps.list[0]), 200);
-	    const expandList = new ExpandableList(expListProps);
-	
-	    this.update = () => {
-	      expandList.refresh();
-	    }
-	    this.loadPoint = () => console.log('load');
-	    this.savePoint = () => console.log('save');
-	    this.fromJson = () => {};
-	    const html = TemplateManager.mainTemplate.render(this);
-	    du.find(`#${id}`).innerHTML = html;
-	  }
-	}
-	
-	const radioDisplay = new RadioDisplay('cabinet-template-input-cnt', 'template-id');
-	radioDisplay.afterSwitch(function (header){
-	  const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
-	  const opening = ExpandableList.get(coordinateInput);
-	  if (opening && opening._Type === 'location') {
-	    const state = opening.state;
-	    const io = state.innerOouter ? 'inner' : 'outer';
-	    coordinateInput.value = opening.coordinates[io][state.index][state.xOyOz];
-	  }
-	
-	  console.log(opening);
-	});
-	
-	TemplateManager.inputTree = () => {
-	  const dit = new DecisionInputTree();
-	  dit.leaf('Template Name', [Inputs('name')]);
-	  return dit;
-	}
-	
-	TemplateManager.templateShapeInput = (value) => {
-	  return new Select({
-	      name: 'templateShape',
-	      list: Object.keys(Snap2d.get),
-	      class: 'template-shape-input',
-	      value: value
-	    });
 	};
 	
-	radioDisplay.afterSwitch((elem, detail) => {
-	  const newState = detail.targetHeader.innerText === 'Openings';
-	  const updateModel = newState !== modifyingOpening;
-	  modifyingOpening = newState;
-	  updateModel && validateOpenTemplate(detail.targetHeader);
-	});
+	Material.explanation = `Cost to be calculated by number of units or demensions`;
 	
-	TemplateManager.mainTemplate = new $t('managers/template/main');
-	TemplateManager.headTemplate = new $t('managers/template/head');
-	TemplateManager.bodyTemplate = new $t('managers/template/body');
-	TemplateManager.bodyTemplate.values = false;
-	new TemplateManager('template-manager', 'template');
-	
-	function updateValuesTemplate(elem, template) {
-	  const nameInput = du.find.closest('[name="name"]', elem);
-	  const name = nameInput.value;
-	  const eqn = du.find.closest('[name="eqn"]', elem).value;
-	  const valueObj = ExpandableList.get(elem);
-	  valueObj.key = name;
-	  valueObj.eqn = eqn;
-	  return true
-	}
-	
-	function updateSubassembliesTemplate(elem, template) {
-	  const nameInput = du.find.closest('[name="name"]', elem);
-	  const type = du.find.closest('[name="type"]', elem).value;
-	  const name = `${type}.${nameInput.value.toDot()}`;
-	  const subAssem = ExpandableList.get(elem);
-	  subAssem.name = nameInput.value;
-	  if (elem.name === 'name') return;
-	  if (elem.name === 'center' || elem.name === 'demensions' || elem.name === 'rotation') {
-	    const index = du.find.closest('[name="xyz"]', elem).value;
-	    const eqn = elem.value;
-	    if (subAssem[elem.name] === undefined) subAssem[elem.name] = [];
-	    subAssem[elem.name][index] = eqn;
-	  } else if (elem.name !== 'name') {
-	    subAssem[elem.name] = elem.value;
-	  }
-	}
-	
-	function switchEqn(elem) {
-	  const nameInput = du.find.closest('[name="name"]', elem);
-	  const type = du.find.closest('[name="type"]', elem).value;
-	  const name = `${type}.${nameInput.value.toDot()}`;
-	  const subAssem = ExpandableList.get(elem);
-	  if (subAssem) {
-	    const eqnInput = du.find.closest('input', elem);
-	    const index = elem.value;
-	    if (subAssem[eqnInput.name] === undefined) subAssem[eqnInput.name] = [];
-	    const value = subAssem[eqnInput.name][index];
-	    eqnInput.value = value === undefined ? '' : value;
-	  }
-	}
-	
-	function updateOpeningsTemplate(elem, template) {
-	  const partCode = elem.value;
-	  const attr = du.find.closest('select', elem).value;
-	  const listElem = ExpandableList.get(elem);
-	  listElem[attr] = elem.value;
-	  console.log(ExpandableList.get(elem,1).toJson());
-	}
-	
-	function updateViewShape(elem) {
-	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-	  const template = CabinetTemplate.get(templateId);
-	  template.shape(elem.value);
-	}
-	
-	function updateJointPartCode(elem) {
-	  const attr = elem.name;
-	  const listElem = ExpandableList.get(elem);
-	  listElem[attr] = elem.value;
-	}
-	
-	function updateOpeningPartCode(elem) {
-	  const attr = elem.value;
-	  const opening = ExpandableList.get(elem);
-	  const partCodeInput = du.find.closest('input', elem);
-	  partCodeInput.value = opening[attr] || '';
-	  updateOpenLocationDisplay(opening, elem);
-	}
-	
-	function updateTemplate(elem, template) {
-	  const attr = du.find.closest('[attr]', elem).getAttribute('attr');
-	  switch (attr) {
-	    case 'values': return updateValuesTemplate(elem, template);
-	    case 'subassemblies': return updateSubassembliesTemplate(elem, template);
-	    case 'openings': return updateOpeningsTemplate(elem, template);
-	
-	    default:
-	
-	  }
-	}
-	
-	function updateInclude(elem) {
-	  const subAssem = ExpandableList.get(elem);;
-	  subAssem.include = elem.value;
-	  console.log(subAssem);
-	}
-	
-	du.on.match('change', '.template-include', updateInclude);
-	du.on.match('change', '.opening-part-code-input', updateOpeningsTemplate);
-	du.on.match('change', '.template-shape-input', updateViewShape);
-	du.on.match('change', '[name="xyz"]', switchEqn);
-	du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
-	du.on.match('change', '.template-input[name="malePartCode"],.template-input[name="femalePartCode"]', updateJointPartCode);
-	du.on.match('click', '.copy-template', (elem) => {
-	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-	  const template = CabinetTemplate.get(templateId);
-	  let jsonStr = JSON.stringify(template.toJson(), null, 2);
-	  jsonStr = jsonStr.replace(/.*"id":.*($|,)/g, '');
-	  du.copy(jsonStr);
-	});
-	
-	du.on.match('click', '.paste-template', (elem) => {
-	  navigator.clipboard.readText()
-	  .then(text => {
-	    try {
-	      const obj = Object.fromJson(JSON.parse(text));
-	      if (!(obj instanceof CabinetTemplate)) throw new Error(`Json is of type ${obj.constructor.name}`);
-	      const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-	      const template = CabinetTemplate.get(templateId);
-	      template.fromJson(obj.toJson());
-	      const templateManagerId = du.find.up('[template-manager]', elem).getAttribute('template-manager');
-	      const templateManager =TemplateManager.get(templateManagerId);
-	      templateManager.update();
-	    } catch (e) {
-	      alert('clipboard does not contain a valid CabinetTemplate');
-	    }
-	  })
-	  .catch(err => {
-	    console.error('Failed to read clipboard contents: ', err);
-	  });
-	});
-	
-	du.on.match('change', '.template-input', function (elem) {
-	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-	  template = CabinetTemplate.get(templateId);
-	  updateTemplate(elem, template);
-	});
-	
-	du.on.match('change', 'input,select',   () => setTimeout(validateOpenTemplate, 0));
-	
-	
-	module.exports = TemplateManager
+	module.exports = Material
 	
 });
 
@@ -31669,55 +28243,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/plane.js',
-function (require, exports, module) {
-	
-class Plane2d {
-	  constructor(verticies) {
-	    this.getLines = () => {
-	      const lines = [];
-	      for (let index = 0; index < verticies.length; index += 1) {
-	        lines.push(new Line2d(verticies[index], verticies[(index + 1) % verticies.length]));
-	      }
-	      return lines;
-	    }
-	  }
-	}
-	
-	Plane2d.getPlanes = (planes) => {
-	  const ps = [];
-	  planes.forEach((p) => ps.push(new Plane2d(p)));
-	  return ps;
-	}
-	
-	Plane2d.consolidatePolygons = (polygons) => {
-	  const consolidated = {top: {}, left: {}, front: {}};
-	  function group(g, poly) {
-	
-	    map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
-	    map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
-	    map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
-	  }
-	  const map = {xy: [], xz: [], yz: []};
-	  polygons.forEach((p, index) => {
-	    map.xy.push([]);
-	    map.xz.push([]);
-	    map.yz.push([]);
-	    p.vertices.forEach((v) => {
-	      map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
-	      map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
-	      map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
-	    });
-	  });
-	  return map;
-	}
-	
-	new Plane2d();
-	module.exports = Plane2d;
-	
-});
-
-
 RequireJS.addFunction('./app-src/two-d/objects/line.js',
 function (require, exports, module) {
 	
@@ -32334,6 +28859,539 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 });
 
 
+RequireJS.addFunction('./app-src/two-d/objects/plane.js',
+function (require, exports, module) {
+	
+class Plane2d {
+	  constructor(verticies) {
+	    this.getLines = () => {
+	      const lines = [];
+	      for (let index = 0; index < verticies.length; index += 1) {
+	        lines.push(new Line2d(verticies[index], verticies[(index + 1) % verticies.length]));
+	      }
+	      return lines;
+	    }
+	  }
+	}
+	
+	Plane2d.getPlanes = (planes) => {
+	  const ps = [];
+	  planes.forEach((p) => ps.push(new Plane2d(p)));
+	  return ps;
+	}
+	
+	Plane2d.consolidatePolygons = (polygons) => {
+	  const consolidated = {top: {}, left: {}, front: {}};
+	  function group(g, poly) {
+	
+	    map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+	    map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+	    map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+	  }
+	  const map = {xy: [], xz: [], yz: []};
+	  polygons.forEach((p, index) => {
+	    map.xy.push([]);
+	    map.xz.push([]);
+	    map.yz.push([]);
+	    p.vertices.forEach((v) => {
+	      map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+	      map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+	      map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+	    });
+	  });
+	  return map;
+	}
+	
+	new Plane2d();
+	module.exports = Plane2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assembly.js',
+function (require, exports, module) {
+	
+
+	
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Position = require('../../position.js');
+	const getDefaultSize = require('../../utils.js').getDefaultSize;
+	const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
+	
+	const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
+	
+	class Assembly extends KeyValue {
+	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
+	    super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
+	
+	    const instance = this;
+	    let group;
+	    const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
+	    const initialVals = {
+	      part: true,
+	      included: true,
+	      centerConfig, demensionConfig, rotationConfig, partCode, partName,
+	      propertyId: undefined,
+	    }
+	    const subAssems = this.subassemblies;
+	    Object.getSet(this, initialVals, 'values', 'subassemblies', 'joints');
+	    this.subassemblies = subAssems;
+	    Object.getSet(this, temporaryInitialVals);
+	    this.path = () => `${this.constructor.name}.${partName}`.toDot();
+	
+	    if ((typeof centerConfig) === 'function') this.centerConfig = centerConfig;
+	    else this.centerConfig = centerConfig
+	    if ((typeof demensionConfig) === 'function') this.demensionConfig = demensionConfig;
+	    else this.demensionConfig = demensionConfig
+	    if ((typeof rotationConfig) === 'function') this.rotationConfig = rotationConfig;
+	    else this.rotationConfig = rotationConfig
+	
+	    const parentIncluded = this.included;
+	
+	    this.included = (value) => {
+	        value = parentIncluded(value);
+	        if ((typeof value) === 'string') return  group.propertyConfig(value);
+	        switch (value) {
+	          case true: return true;
+	          case false: return false;
+	          default: return true;
+	        }
+	    }
+	
+	    function getValueSmeFormatter(path) {
+	      const split = path.split('.');
+	      let attr = split[0];
+	      let objIdStr;
+	      if (split.length > 2) {
+	      }
+	      if (split.length > 1) {
+	        objIdStr = split[0];
+	        attr = split.slice(1).join('.');
+	      }
+	
+	      let obj;
+	      if (objIdStr === undefined) {
+	        obj = instance;
+	      } else {
+	        obj = instance.getAssembly(objIdStr);
+	      }
+	      const returnVal = Assembly.resolveAttr(obj, attr);
+	      return returnVal;
+	    }
+	    const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
+	
+	    // KeyValue setup
+	    const funcReg = /length|width|thickness/;
+	    this.value.addCustomFunction((key, value) => key.match(funcReg) ? this[code](value) : undefined)
+	    this.value.evaluators.string = (value) => sme.eval(value, this);
+	    this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
+	
+	    this.eval = (eqn) => sme.eval(eqn, this);
+	    this.evalObject = (obj) => sme.evalObject(obj, this);
+	
+	    this.group = (g) => {
+	      if (g) group = g;
+	      return group;
+	    }
+	    this.propertyConfig = (one, two) => {
+	      const parent = this.parentAssembly();
+	      if (parent instanceof Assembly) return parent.propertyConfig(one, two);
+	      const group = this.group();
+	      if (group) {
+	        if (one) return group.propertyConfig(one, two);
+	        return group.propertyConfig;
+	      }
+	    }
+	
+	    this.getAssembly = (partCode, callingAssem) => {
+	      if (callingAssem === this) return undefined;
+	      if (this.partCode() === partCode) return this;
+	      if (this.subassemblies[partCode]) return this.subassemblies[partCode];
+	      if (callingAssem !== undefined) {
+	        const children = Object.values(this.subassemblies);
+	        for (let index = 0; index < children.length; index += 1) {
+	          const assem = children[index].getAssembly(partCode, this);
+	          if (assem !== undefined) return assem;
+	        }
+	      }
+	      if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
+	        return this.parentAssembly().getAssembly(partCode, this);
+	      return undefined;
+	    }
+	    let position = new Position(this, sme);
+	    this.position = () => position;
+	    this.toModel = position.toModel;
+	    this.toBiPolygon = position.toBiPolygon;
+	    this.updatePosition = () => position = new Position(this, sme);
+	    this.joints = [];
+	    this.values = {};
+	    this.rootAssembly = () => {
+	      let currAssem = this;
+	      while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
+	      return currAssem;
+	    }
+	    this.getJoints = (pc) => {
+	      const root = this.getRoot();
+	      if (root !== this) return root.getJoints(pc || partCode);
+	      pc = pc || partCode;
+	      const assemList = this.getSubassemblies();
+	      let jointList = [].concat(this.joints);
+	      assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
+	      let joints = {male: [], female: []};
+	      jointList.forEach((joint) => {
+	        if (joint.malePartCode() === pc) {
+	          joints.male.push(joint);
+	        } else if (joint.femalePartCode() === pc) {
+	          joints.female.push(joint);
+	        }
+	      });
+	      return joints;
+	    }
+	    function initObj(value) {
+	      const obj = {};
+	      for (let index = 1; index < arguments.length; index += 1) {
+	        obj[arguments[index]] = value;
+	      }
+	      return obj;
+	    }
+	
+	
+	    this.setSubassemblies = (assemblies) => {
+	      this.subassemblies = {};
+	      assemblies.forEach((assem) => this.subassemblies[assem.partCode()] = assem);
+	    };
+	
+	    this.partsOf = (clazz) => {
+	      const parts = this.getRoot().getParts();
+	      if (clazz === undefined) return parts;
+	      return parts.filter((p) => p instanceof clazz);
+	    }
+	
+	    // TODO: wierd dependency on inherited class.... fix!!!
+	    const defaultPartCode = () =>
+	      instance.partCode(instance.partCode() || Assembly.partCode(this));
+	
+	    this.setParentAssembly = (pa) => {
+	      this.parentAssembly(pa);
+	      defaultPartCode();
+	    }
+	    this.addSubAssembly = (assembly) => {
+	      this.subassemblies[assembly.partCode()] = assembly;
+	      // assembly.setParentAssembly(this);
+	    }
+	
+	    this.objId = this.constructor.name;
+	
+	    this.addJoints = function () {
+	      for (let i = 0; i < arguments.length; i += 1) {
+	        const joint = arguments[i];
+	        this.joints.push(joint);
+	        joint.parentAssemblyId(this.id());
+	      }
+	    }
+	
+	    this.addSubassemblies = function () {
+	      for (let i = 0; i < arguments.length; i += 1) {
+	        this.addSubAssembly(arguments[i]);
+	      }
+	    }
+	
+	    this.children = () => Object.values(this.subassemblies);
+	
+	    this.getSubassemblies = () => {
+	      let assemblies = [];
+	      this.children().forEach((assem) => {
+	        assemblies.push(assem);
+	        assemblies = assemblies.concat(assem.getSubassemblies());
+	      });
+	      return assemblies;
+	    }
+	    this.getParts = () => {
+	      return this.getSubassemblies().filter((a) => {
+	        if ((typeof a.part) !== 'function') {
+	          console.log('party')
+	        }
+	        return a.part() && a.included()
+	      });
+	    }
+	
+	    if (Assembly.idCounters[this.objId] === undefined) {
+	      Assembly.idCounters[this.objId] = 0;
+	    }
+	
+	    Assembly.add(this);
+	
+	    this.width = (value) => position.setDemension('x', value);
+	    this.length = (value) => position.setDemension('y', value);
+	    this.thickness = (value) => position.setDemension('z', value);
+	    defaultPartCode();
+	  }
+	}
+	
+	Assembly.list = {};
+	Assembly.get = (id) => {
+	  const keys = Object.keys(Assembly.list);
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const assembly = Assembly.list[keys[index]][id];
+	    if (assembly !== undefined) return assembly;
+	  }
+	  return null;
+	}
+	Assembly.add = (assembly) => {
+	  const name = assembly.constructor.name;
+	  if (Assembly.list[name] === undefined) Assembly.list[name] = {};
+	  Assembly.list[name][assembly.id()] = assembly;
+	}
+	Assembly.all = () => {
+	  const list = [];
+	  const keys = Object.keys(Assembly.list);
+	  keys.forEach((key) => list.concat(Object.values(Assembly.list[key])));
+	  return list;
+	}
+	
+	const positionReg = /^(c|r|d|center|rotation|demension).(x|y|z)$/;
+	Assembly.resolveAttr = (assembly, attr) => {
+	  if (!(assembly instanceof Assembly)) return undefined;
+	  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
+	    return assembly.length();
+	  } else if (attr === 'w' || attr === 'width') {
+	    return assembly.width();
+	  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
+	    return assembly.thickness();
+	  }
+	
+	  const positionMatch = attr.match(positionReg);
+	  if (positionMatch) {
+	    const func = positionMatch[1];
+	    const axis = positionMatch[2];
+	    if (func === 'r' || func === 'rotation') return assembly.position().rotation(axis);
+	    if (func === 'c' || func === 'center') return assembly.position().center(axis);
+	    if (func === 'd' || func === 'demension') return assembly.position().demension(axis);
+	  }
+	  return assembly.value(attr);
+	}
+	Assembly.fromJson = (assemblyJson) => {
+	  const demensionConfig = assemblyJson.demensionConfig;
+	  const centerConfig = assemblyJson.centerConfig;
+	  const rotationConfig = assemblyJson.rotationConfig;
+	  const partCode = assemblyJson.partCode;
+	  const partName = assemblyJson.partName;
+	  const clazz = Object.class.get(assemblyJson._TYPE);
+	  const assembly = new (clazz)(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+	  assembly.id(assemblyJson.id);
+	  assembly.values = assemblyJson.values;
+	  assembly.setParentAssembly(assemblyJson.parent)
+	  Object.values(assemblyJson.subassemblies).forEach((json) =>
+	    assembly.addSubAssembly(Assembly.class(json._TYPE)
+	                              .fromJson(json, assembly)));
+	  if (assemblyJson.length) assembly.length(assemblyJson.length);
+	  if (assemblyJson.width) assembly.width(assemblyJson.width);
+	  if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
+	  return assembly;
+	}
+	
+	Assembly.classes = Object.class.object;
+	Assembly.new = function (id) {
+	  const clazz = Object.class.get(id);
+	  if (clazz)
+	    return new (clazz)(...Array.from(arguments).slice(1));
+	  return null;
+	};
+	Assembly.class = Object.class.get;
+	Assembly.classObj = Object.class.filter;
+	
+	Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
+	Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
+	Assembly.lists = {};
+	Assembly.idCounters = {};
+	
+	Assembly.partCode = (assembly) => {
+	  const cabinet = assembly.getAssembly('c');
+	  if (cabinet) {
+	    const name = assembly.constructor.name;
+	    cabinet.partIndex = cabinet.partIndex || 0;
+	    return `${assembly.constructor.abbriviation}`;
+	  }
+	}
+	
+	module.exports = Assembly
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/init-assem.js',
+function (require, exports, module) {
+	
+const Assembly = require('./assembly.js');
+	new Assembly();
+	
+	const Cabinet = require('./assemblies/cabinet.js');
+	new Cabinet();
+	
+	const Divider = require('./assemblies/divider.js');
+	new Divider();
+	
+	const DoorCatch = require('./assemblies/door/door-catch.js');
+	new DoorCatch();
+	
+	const Door = require('./assemblies/door/door.js');
+	new Door();
+	
+	const Hinges = require('./assemblies/door/hinges.js');
+	new Hinges();
+	
+	const DrawerBox = require('./assemblies/drawer/drawer-box.js');
+	new DrawerBox();
+	
+	const DrawerFront = require('./assemblies/drawer/drawer-front.js');
+	new DrawerFront();
+	
+	const Guides = require('./assemblies/drawer/guides.js');
+	new Guides();
+	
+	const Frame = require('./assemblies/frame.js');
+	new Frame();
+	
+	const Handle = require('./assemblies/hardware/pull.js');
+	new Handle();
+	
+	const Screw = require('./assemblies/hardware/screw.js');
+	new Screw();
+	
+	const Panel = require('./assemblies/panel.js');
+	new Panel();
+	
+	// const PartitionSection = require('./assemblies/section/partition/sections/divider.js');
+	// new PartitionSection();
+	//
+	// const DividerSection = require('./assemblies/section/partition/partition');
+	// new DividerSection();
+	//
+	// const Section = require('./assemblies/section/section.js');
+	// new Section();
+	//
+	// const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
+	// new DivideSection();
+	//
+	// const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
+	// new OpeningCoverSection();
+	
+	const DoorSection = require('./assemblies/section/sections/door.js');
+	new DoorSection();
+	
+	const DrawerSection = require('./assemblies/section/sections/drawer.js');
+	new DrawerSection();
+	
+	const DualDoorSection = require('./assemblies/section/sections/duel-door.js');
+	new DualDoorSection();
+	
+	const FalseFrontSection = require('./assemblies/section/sections/false-front.js');
+	new FalseFrontSection();
+	
+	// const SpaceSection = require('./assemblies/section/space/space.js');
+	// new SpaceSection();
+	
+	const Cutter = require('./assemblies/cutter.js');
+	new Cutter();
+	
+	Assembly.components = {
+	  Door, DrawerBox, DrawerFront, Frame, Panel, Cutter,
+	};
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/property/definitions.js',
+function (require, exports, module) {
+	const Property = require('../property');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const IMPERIAL_US = Measurement.units()[1];
+	
+	const defs = {};
+	
+	defs.h = new Property('h', 'height', null);
+	defs.w = new Property('w', 'width', null);
+	defs.d = new Property('d', 'depth', null);
+	defs.t = new Property('t', 'thickness', null);
+	defs.l = new Property('l', 'length', null);
+	
+	//   Overlay
+	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
+	
+	//   Reveal
+	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvr = new Property('rvr', 'Reveal Right', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvl = new Property('rvl', 'Reveal Left', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
+	
+	//   Inset
+	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
+	
+	//   Cabinet
+	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
+	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
+	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
+	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
+	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
+	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
+	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US})
+	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US})
+	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US})
+	
+	// Cabinet.AngledBackCorner
+	defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	defs.lbo = new Property('lbo', 'Left Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	defs.rbo = new Property('rbo', 'Right Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	
+	// Cabinet.Lshaped
+	defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 24, notMetric: IMPERIAL_US})
+	defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US})
+	
+	//   Panel
+	
+	//   Guides
+	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54),
+	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', 3*2.54/8),
+	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', 2.54/2)
+	
+	//   DoorAndFront
+	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
+	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null})
+	
+	//   Door
+	
+	//   DrawerBox
+	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
+	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
+	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
+	
+	//   DrawerFront
+	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
+	
+	//   Frame
+	
+	//   Handle
+	defs.c2c = new Property('c2c', 'Center To Center', null),
+	defs.proj = new Property('proj', 'Projection', null),
+	
+	//   Hinge
+	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null),
+	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
+	defs.maxol = new Property('maxol', 'Max Door Overlay', null),
+	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
+	
+	//   Opening
+	
+	module.exports = defs;
+	
+});
+
+
 RequireJS.addFunction('./app-src/two-d/objects/line-measurement.js',
 function (require, exports, module) {
 	
@@ -32520,169 +29578,3294 @@ const Circle2d = require('circle');
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/init-assem.js',
+RequireJS.addFunction('./app-src/objects/joint/init.js',
 function (require, exports, module) {
 	
-const Assembly = require('./assembly.js');
-	new Assembly();
+const Joint = require('./joint');
 	
-	const Cabinet = require('./assemblies/cabinet.js');
-	new Cabinet();
+	const Butt = require('./joints/butt.js');
+	const Dado = require('./joints/dado.js');
+	const Miter = require('./joints/miter.js');
+	const Rabbet = require('./joints/rabbet.js');
 	
-	const Divider = require('./assemblies/divider.js');
-	new Divider();
-	
-	const DoorCatch = require('./assemblies/door/door-catch.js');
-	new DoorCatch();
-	
-	const Door = require('./assemblies/door/door.js');
-	new Door();
-	
-	const Hinges = require('./assemblies/door/hinges.js');
-	new Hinges();
-	
-	const DrawerBox = require('./assemblies/drawer/drawer-box.js');
-	new DrawerBox();
-	
-	const DrawerFront = require('./assemblies/drawer/drawer-front.js');
-	new DrawerFront();
-	
-	const Guides = require('./assemblies/drawer/guides.js');
-	new Guides();
-	
-	const Frame = require('./assemblies/frame.js');
-	new Frame();
-	
-	const Handle = require('./assemblies/hardware/pull.js');
-	new Handle();
-	
-	const Screw = require('./assemblies/hardware/screw.js');
-	new Screw();
-	
-	const Panel = require('./assemblies/panel.js');
-	new Panel();
-	
-	// const PartitionSection = require('./assemblies/section/partition/sections/divider.js');
-	// new PartitionSection();
-	//
-	// const DividerSection = require('./assemblies/section/partition/partition');
-	// new DividerSection();
-	//
-	// const Section = require('./assemblies/section/section.js');
-	// new Section();
-	//
-	// const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
-	// new DivideSection();
-	//
-	// const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
-	// new OpeningCoverSection();
-	
-	const DoorSection = require('./assemblies/section/sections/door.js');
-	new DoorSection();
-	
-	const DrawerSection = require('./assemblies/section/sections/drawer.js');
-	new DrawerSection();
-	
-	const DualDoorSection = require('./assemblies/section/sections/duel-door.js');
-	new DualDoorSection();
-	
-	const FalseFrontSection = require('./assemblies/section/sections/false-front.js');
-	new FalseFrontSection();
-	
-	// const SpaceSection = require('./assemblies/section/space/space.js');
-	// new SpaceSection();
-	
-	const Cutter = require('./assemblies/cutter.js');
-	new Cutter();
-	
-	Assembly.components = {
-	  Door, DrawerBox, DrawerFront, Frame, Panel, Cutter,
+	Joint.types = {
+	  Butt, Dado, Miter, Rabbet
 	};
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
+RequireJS.addFunction('./app-src/objects/joint/joint.js',
 function (require, exports, module) {
 	
-
+const Lookup = require('../../../../../public/js/utils/object/lookup.js')
 	
-	const Joint = require('../joint.js');
 	
-	class Rabbet extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
+	class Joint {
+	  constructor(malePartCode, femalePartCode) {
+	    let parentAssembly;
+	    const initialVals = {
+	      maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
+	      malePartCode, femalePartCode, demensionAxis: '', centerAxis: ''
+	    }
+	    Object.getSet(this, initialVals);
+	
+	    this.parentAssembly = () => {
+	      if (!parentAssembly && this.parentAssemblyId()) {
+	        parentAssembly = Lookup.get(this.parentAssemblyId());
+	        this.parentAssemblyId = () => parentAssembly.id();
+	      }
+	      return parentAssembly;
 	    }
 	
-	    if (axis === undefined) return;
+	    this.updatePosition = () => {};
 	
-	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
-	    };
+	    this.getFemale = () => this.parentAssembly().getAssembly(this.femalePartCode());
+	    this.getMale = () => this.parentAssembly().getAssembly(this.malePartCode());
+	
+	    this.getDemensions = () => {
+	      const malePos = getMale();
+	      const femalePos = getFemale();
+	      // I created a loop but it was harder to understand
+	      return undefined;
+	    }
+	    this.toString = () => `${this.constructor.name}:${this.malePartCode()}->${this.femalePartCode()}`;
+	
+	    if (Joint.list[this.malePartCode()] === undefined) Joint.list[this.malePartCode()] = [];
+	    if (Joint.list[this.femalePartCode()] === undefined) Joint.list[this.femalePartCode()] = [];
+	    Joint.list[this.malePartCode()].push(this);
+	    Joint.list[this.femalePartCode()].push(this);
 	  }
 	}
+	Joint.list = {};
+	Joint.regex = /([a-z0-9-_\.]{1,})->([a-z0-9-_\.]{1,})/;
 	
-	Joint.register(Rabbet);
-	module.exports = Rabbet
-	
-	
-	
-	
+	Joint.classes = {};
+	Joint.register = (clazz) => {
+	  new clazz();
+	  Joint.classes[clazz.prototype.constructor.name] = clazz;
+	}
+	Joint.new = function (id, json) {
+	  return new Joint.classes[id]().fromJson(json);
+	}
+	module.exports = Joint
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
+RequireJS.addFunction('./app-src/two-d/objects/corner.js',
 function (require, exports, module) {
 	
-const Joint = require('../joint.js');
+const Vertex2d = require('vertex');
 	
-	class Dado extends Joint {
-	  constructor(malePartCode, femalePartCode) {
-	    super(malePartCode, femalePartCode);
+	class Corner {
+	  constructor(center, height, width, radians) {
+	    width = width === undefined ? 121.92 : width;
+	    height = height === undefined ? 60.96 : height;
+	    radians = radians === undefined ? 0 : radians;
+	    const instance = this;
+	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
+	    if ((typeof center) === 'function') this.center = center;
+	    const startPoint = new Vertex2d(null);
 	
-	    this.updatePosition = (position) => {
-	      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
-	      const centerAxis = this.centerAxis()[1].toLowerCase();
-	      const offset = this.parentAssembly().eval(this.maleOffset());
-	      const demAxis = this.demensionAxis().toLowerCase();
-	      position.demension[demAxis] = position.demension[demAxis] + offset;
-	      position.center[centerAxis] = position.center[centerAxis] + (offset/2 * direction);
+	    const getterHeight = this.height;
+	    this.height = (v) => {
+	      notify(getterHeight(), v);
+	      return getterHeight(v);
+	    }
+	    const getterWidth = this.width;
+	    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
+	
+	    const changeFuncs = [];
+	    this.onChange = (func) => {
+	      if ((typeof func) === 'function') {
+	        changeFuncs.push(func);
+	      }
+	    }
+	
+	    let lastNotificationId = 0;
+	    function notify(currentValue, newValue) {
+	      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
+	      if (newValue !== currentValue) {
+	        const id = ++lastNotificationId;
+	        setTimeout(() => {
+	          if (id === lastNotificationId)
+	            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
+	        }, 100);
+	      }
+	    }
+	
+	    this.radians = (newValue) => {
+	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        notify(radians, newValue);
+	        radians = newValue;
+	      }
+	      return radians;
+	    };
+	    this.startPoint = () => {
+	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+	      return startPoint;
+	    }
+	    this.angle = (value) => {
+	      if (value !== undefined) this.radians(Math.toRadians(value));
+	      return Math.toDegrees(this.radians());
+	    }
+	
+	    // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
+	    // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
+	    this.x = (val) => {
+	      if (val !== undefined) this.center().x(val);
+	      return this.center().x();
+	    }
+	    this.y = (val) => {
+	      if (val !== undefined) this.center().y(val);
+	      return this.center().y();
+	    }
+	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+	
+	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	    this.move = (position, theta) => {
+	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	      this.radians(position.theta);
+	      this.center().point(center);
+	      return true;
 	    };
 	
+	    function centerMethod(widthMultiplier, heightMultiplier, position) {
+	      const center = instance.center();
+	      const rads = instance.radians();
+	      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
+	                        instance.height() * heightMultiplier * Math.sin(rads);
+	      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
+	                        instance.width() * widthMultiplier * Math.sin(rads);
+	
+	      if (position !== undefined) {
+	        const posCenter = new Vertex2d(position.center);
+	        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+	      }
+	      const backLeftLocation = {
+	            x: instance.center().x() - offsetX ,
+	            y: instance.center().y() - offsetY
+	      };
+	      return new Vertex2d(backLeftLocation);
+	    }
+	
+	
+	    this.frontCenter = (position) => centerMethod(0, -.5, position);
+	    this.backCenter = (position) => centerMethod(0, .5, position);
+	    this.leftCenter = (position) => centerMethod(.5, 0, position);
+	    this.rightCenter = (position) => centerMethod(-.5, 0, position);
+	
+	    this.backLeft = (position) => centerMethod(.5, .5, position);
+	    this.backRight = (position) => centerMethod(-.5, .5, position);
+	    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
+	    this.frontRight = (position) => centerMethod(-.5, -.5, position);
+	
+	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
+	
+	    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
 	  }
 	}
 	
-	Joint.register(Dado);
-	module.exports = Dado
+	new Square2d();
+	
+	module.exports = Square2d;
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
+RequireJS.addFunction('./app-src/two-d/objects/circle.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('./vertex');
+	
+	class Circle2d {
+	  constructor(radius, center) {
+	    center = new Vertex2d(center);
+	    Object.getSet(this, {radius, center});
+	    // ( x - h )^2 + ( y - k )^2 = r^2
+	    const instance = this;
+	    // Stole the root code from: https://stackoverflow.com/a/37225895
+	    function lineIntersects (line, bounded) {
+	      const p1 = line.startVertex();
+	      const p2 = line.endVertex();
+	        var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
+	        v1 = {};
+	        v2 = {};
+	        v1.x = p2.x() - p1.x();
+	        v1.y = p2.y() - p1.y();
+	        v2.x = p1.x() - instance.center().x();
+	        v2.y = p1.y() - instance.center().y();
+	        b = (v1.x * v2.x + v1.y * v2.y);
+	        c = 2 * (v1.x * v1.x + v1.y * v1.y);
+	        b *= -2;
+	        d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - instance.radius() * instance.radius()));
+	        if(isNaN(d)){ // no intercept
+	            return [];
+	        }
+	        u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
+	        u2 = (b + d) / c;
+	        retP1 = {};   // return points
+	        retP2 = {}
+	        ret = []; // return array
+	        if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
+	            retP1.x = p1.x() + v1.x * u1;
+	            retP1.y = p1.y() + v1.y * u1;
+	            ret[0] = retP1;
+	        }
+	        if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
+	            retP2.x = p1.x() + v1.x * u2;
+	            retP2.y = p1.y() + v1.y * u2;
+	            ret[ret.length] = retP2;
+	        }
+	        return ret;
+	    }
+	
+	    function circleIntersects(circle) {
+	      return Circle2d.intersectionOfTwo(instance, circle);
+	    }
+	
+	    this.toString = () => `(${this.radius()}${this.center()}----)`;
+	
+	    this.intersections = (input) => {
+	      if (input === undefined)
+	        console.log('here');
+	      if (input instanceof Circle2d) return circleIntersects(input);
+	      if (input.constructor.name === 'Line2d') return lineIntersects(input);
+	      throw new Error(`Cannot find intersections for ${input.constructor.name}`);
+	    }
+	  }
+	}
+	
+	// Ripped off from: https://stackoverflow.com/a/12221389
+	Circle2d.intersectionOfTwo = (circle0, circle1) => {
+	    const x0 = circle0.center().x();
+	    const y0 = circle0.center().y();
+	    const r0 = circle0.radius();
+	
+	    const x1 = circle1.center().x();
+	    const y1 = circle1.center().y();
+	    const r1 = circle1.radius();
+	    var a, dx, dy, d, h, rx, ry;
+	    var x2, y2;
+	
+	    /* dx and dy are the vertical and horizontal distances between
+	     * the circle centers.
+	     */
+	    dx = x1 - x0;
+	    dy = y1 - y0;
+	
+	    /* Determine the straight-line distance between the centers. */
+	    d = Math.sqrt((dy*dy) + (dx*dx));
+	
+	    /* Check for solvability. */
+	    if (d > (r0 + r1)) {
+	        /* no solution. circles do not intersect. */
+	        return [];
+	    }
+	    if (d < Math.abs(r0 - r1)) {
+	        /* no solution. one circle is contained in the other */
+	        return [];
+	    }
+	
+	    /* 'point 2' is the point where the line through the circle
+	     * intersection points crosses the line between the circle
+	     * centers.
+	     */
+	
+	    /* Determine the distance from point 0 to point 2. */
+	    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
+	
+	    /* Determine the coordinates of point 2. */
+	    x2 = x0 + (dx * a/d);
+	    y2 = y0 + (dy * a/d);
+	
+	    /* Determine the distance from point 2 to either of the
+	     * intersection points.
+	     */
+	    h = Math.sqrt((r0*r0) - (a*a));
+	
+	    /* Now determine the offsets of the intersection points from
+	     * point 2.
+	     */
+	    rx = -dy * (h/d);
+	    ry = dx * (h/d);
+	
+	    /* Determine the absolute intersection points. */
+	    var xi = x2 + rx;
+	    var xi_prime = x2 - rx;
+	    var yi = y2 + ry;
+	    var yi_prime = y2 - ry;
+	
+	    const list = [];
+	    return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
+	}
+	
+	Circle2d.reusable = true;
+	Circle2d.instance = (radius, center) => {
+	  const inst = Lookup.instance(Circle2d.name);
+	  inst.radius(radius);
+	  inst.center(center);
+	  return inst;
+	}
+	new Circle2d();
+	
+	module.exports = Circle2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
 function (require, exports, module) {
 	
 
 	
-	const Joint = require('../joint.js');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
 	
-	class Butt extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
+	class UFObj {
+	  constructor(order) {
+	    class Row {
+	      constructor(groupName, assembly, index) {
+	        this.groupName = groupName;
+	        this.type = assembly.constructor.name;
+	        const dems = assembly.position().demension();
+	        dems.y = new Measurement(dems.y).display();
+	        dems.x = new Measurement(dems.x).display();
+	        dems.z = new Measurement(dems.z).display();
+	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
+	        this.quantity = 1;
+	        this.cost = '$0';
+	        this.notes = assembly.notes || '';
+	      }
+	    }
+	    const cabinets = [];
+	    const obj = [];
+	    Object.values(order.rooms).forEach((room, rIndex) => room.groups.forEach((group, gIndex) => {
+	      group.cabinets.forEach((cabinet, index) => {
+	        const cabinetId = `${rIndex+1}-${gIndex+1}-${index+1}`;
+	        cabinet.getParts().forEach((part) => {
+	          const row = new Row(group.name(), part, cabinetId);
+	          if (obj[row.size] === undefined) obj[row.size] = row;
+	          else {
+	            obj[row.size].quantity++;
+	          }
+	        });
+	      });
+	    }));
+	    return Object.values(obj);
+	  }
+	}
+	module.exports = UFObj
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/managers/cost.js',
+function (require, exports, module) {
+	
+
+	
+	const CostTree = require('../../cost/cost-tree.js');
+	const Assembly = require('../../objects/assembly/assembly.js');
+	const du = require('../../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../../public/js/utils/$t.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select');
+	const Input = require('../../../../../public/js/utils/input/input');
+	const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation');
+	const Inputs = require('../../input/inputs.js');
+	const RadioDisplay = require('../../display-utils/radio-display.js');
+	
+	class CostManager {
+	  constructor(id, name) {
+	    const costTree = new CostTree();
+	    this.root = () => costTree.root();
+	    this.update = () => {
+	      const html = CostManager.mainTemplate.render(this);
+	      du.find(`#${id}`).innerHTML = html;
+	    }
+	    this.nodeInputHtml = () => CostManager.nodeInput().payload().html();
+	    this.headHtml = (node) =>
+	        CostManager.headTemplate.render({node, CostManager: this});
+	    this.bodyHtml = (node) =>
+	        CostManager.bodyTemplate.render({node, CostManager: this});
+	    this.loadPoint = () => console.log('load');
+	    this.savePoint = () => console.log('save');
+	    this.fromJson = () => {};
+	    this.update();
 	  }
 	}
 	
-	Joint.register(Butt);
-	module.exports = Butt
+	CostManager.mainTemplate = new $t('managers/cost/main');
+	CostManager.headTemplate = new $t('managers/cost/head');
+	CostManager.bodyTemplate = new $t('managers/cost/body');
+	CostManager.propertySelectTemplate = new $t('managers/cost/property-select');
+	CostManager.costInputTree = (costTypes, objId, onUpdate) => {
+	  const logicTree = new LogicTree();
+	  return logicTree;
+	}
+	CostManager.nodeInput = () => {
+	  const dit = new DecisionInputTree();
+	  const typeSelect = new Select({
+	    name: 'type',
+	    list: CostTree.types,
+	    value: CostTree.types[0]
+	  });
+	  const selectorType = new Select({
+	    name: 'selectorType',
+	    list: ['Manual', 'Auto'],
+	    value: 'Manual'
+	  });
+	  const propertySelector = new Select({
+	    name: 'propertySelector',
+	    list: CostTree.propertyList,
+	  });
+	
+	  const accVals = ['select', 'multiselect', 'conditional'];
+	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', accVals, [selectorType]);
+	  const type = dit.branch('Node', [Inputs('name'), typeSelect]);
+	  const selectType = type.conditional('selectorType', condtionalPayload);
+	  const payload = [Inputs('formula'), propertySelector, RelationInput.selector];
+	  const condtionalPayload2 = new DecisionInputTree.ValueCondition('selectorType', 'Auto', payload);
+	  selectType.conditional('formula', condtionalPayload2);
+	  return dit;
+	}
+	new RadioDisplay('cost-tree', 'radio-id');
+	
+	new CostManager('cost-manager', 'cost');
+	
+	function abbriviation(group) {
+	  return Assembly.classes[group] ? Assembly.classes[group].abbriviation : 'nope';
+	}
+	const scope = {groups: CostTree.propertyList, abbriviation};
+	// du.id('property-select-cnt').innerHTML =
+	//       CostManager.propertySelectTemplate.render(scope);
+	module.exports = CostManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/managers/template.js',
+function (require, exports, module) {
+	
+
+	const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
+	
+	const Assembly = require('../../objects/assembly/assembly.js');
+	const Input = require('../../../../../public/js/utils/input/input.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select.js');
+	const MeasurementInput = require('../../../../../public/js/utils/input/styles/measurement.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+	const Inputs = require('../../input/inputs.js');
+	const CabinetTemplate = require('../../config/cabinet-template.js');
+	const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
+	const $t = require('../../../../../public/js/utils/$t.js');
+	const du = require('../../../../../public/js/utils/dom-utils.js');
+	const RadioDisplay = require('../../display-utils/radio-display.js');
+	const Bind = require('../../../../../public/js/utils/input/bind.js');
+	const Joint = require('../../objects/joint/joint.js');
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const ThreeView = require('../three-view.js');
+	const Layout2D = require('../../objects/layout.js');
+	const Draw2D = require('../../two-d/draw.js');
+	const Vertex3D = require('../../three-d/objects/vertex');
+	const Snap2d = require('../../two-d/objects/snap');
+	const PropertyConfig = require('../../config/property/config.js');
+	const cabinetBuildConfig = require('../../../public/json/cabinets.json');
+	const Pattern = require('../../division-patterns.js');
+	const Handle = require('../../objects/assembly/assemblies/hardware/pull.js');
+	const OpeningSketch = require('../opening-sketch');
+	const FaceSketch = require('../face-sketch');
+	const CSG = require('../../../public/js/3d-modeling/csg.js');
+	const approximate = require('../../../../../public/js/utils/approximate').new(10);
+	
+	let template;
+	let modifyingOpening = false;
+	const sectionState = {
+	  style: 'Overlay',
+	  vertical: false,
+	  innerOouter: 'true',
+	  xOyOz: 'x',
+	  index: 0,
+	  count: 0,
+	};
+	
+	const openingSketch = new OpeningSketch('opening-sketch-cnt');
+	const faceSketch = new FaceSketch('front-sketch');
+	function updateState(elem) {
+	  const opening = ExpandableList.get(elem);
+	  sectionState.id = opening.id;
+	  const attr = elem.name.replace(/(.*?)-.*/, '$1');
+	  if (attr === 'index') sectionState[attr] = Number.parseInt(elem.value);
+	  else sectionState[attr] = elem.value;
+	}
+	
+	function updateConfig(elem) {
+	  const value = elem.type === 'checkbox' ? elem.checked : elem.value;
+	  sectionState[elem.name] = value;
+	}
+	
+	du.on.match('keydown', '#template-divider-count-input', (elem,ev) => ev.preventDefault());
+	du.on.match('change', '.border-location-cnt>input', updateState);
+	du.on.match('change', '.section-properties>input', updateConfig);
+	
+	function applyDividers(cabinet) {
+	  for (let index = 0; index < cabinet.openings.length; index++) {
+	    const divideCount = Number.parseInt(sectionState.count);
+	    const opening = cabinet.openings[index];
+	    opening.vertical(sectionState.vertical);
+	    opening.divide(divideCount);
+	    const sectionType = sectionState.sectionType;
+	    if (sectionType) {
+	      for (let si = 0; si < opening.sections.length; si++) {
+	        opening.sections[si].setSection(sectionType);
+	      }
+	    }
+	    const coords = opening.update();
+	  }
+	}
+	
+	function applyTestConfiguration(cabinet) {
+	  cabinet.width(60*2.54);
+	
+	  const opening = cabinet.openings[0];
+	  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
+	  opening.divide(2);
+	  const left = opening.sections[0];
+	  const center = opening.sections[1];
+	  const right = opening.sections[2];
+	  const a = 6*2.54
+	
+	  left.divide(2);
+	  left.vertical(false);
+	  left.sections[0].setSection("DrawerSection");
+	  left.sections[1].setSection("DrawerSection");
+	  left.sections[2].setSection("DrawerSection");
+	  left.pattern('abb').value('a', a*2);
+	
+	  center.divide(1);
+	  center.vertical(false);
+	  center.sections[1].setSection('DualDoorSection');
+	  center.pattern('ab').value('a', a);
+	  const centerTop = center.sections[0];
+	
+	  centerTop.divide(2);
+	  centerTop.sections[0].setSection("DoorSection");
+	  centerTop.sections[1].setSection("FalseFrontSection");
+	  centerTop.sections[2].setSection("DoorSection");
+	  centerTop.pattern('ztz').value('t', 15*2.54);
+	  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+	  centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
+	
+	  right.divide(2);
+	  right.vertical(false);
+	  right.sections[0].setSection("DrawerSection");
+	  right.sections[1].setSection("DrawerSection");
+	  right.sections[2].setSection("DrawerSection");
+	  right.pattern('abb').value('a', a);
+	}
+	
+	function getDemPosElems () {
+	  const templateBody = du.find('.template-body');
+	  return {
+	    width: du.find.closest('input[name="width"', templateBody),
+	    height: du.find.closest('input[name="height"', templateBody),
+	    depth: du.find.closest('input[name="thickness"', templateBody),
+	  };
+	}
+	
+	FunctionCache.disable();
+	function getCabinet(elem) {
+	  const templateBody = du.find('.template-body');
+	  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
+	  const dPElems = getDemPosElems();
+	  const width = new Measurement(dPElems.width.value, true).decimal();
+	  const height = new Measurement(dPElems.height.value, true).decimal();
+	  const thickness = new Measurement(dPElems.depth.value, true).decimal();
+	  const cabinet = template.getCabinet(height, width, thickness);
+	  cabinet.propertyConfig().set(sectionState.style);
+	
+	  if (sectionState.testDividers) applyTestConfiguration(cabinet);
+	  else applyDividers(cabinet);
+	  openingSketch.cabinet(cabinet);
+	  console.log(`Cabinet Demesions: ${cabinet.width()} !== ${cabinet.eval('c.w')} x ${cabinet.length()} x ${cabinet.thickness()}`)
+	  return cabinet;
+	}
+	
+	const toDisplay = (value) =>  new Measurement(value).display();
+	const centerDisplay = (t) => {
+	  const x = t.getCabinet().eval(t.x());
+	  const y = t.getCabinet().eval(t.y());
+	  const z = t.getCabinet().eval(t.z());
+	  return `(${toDisplay(x)},${toDisplay(y)},${toDisplay(z)})`;
+	}
+	const threeView = new ThreeView();
+	du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
+	  du.move.inFront(elem));
+	du.on.match('click', `#${threeView.id()}>.three-view-two-d-cnt>.three-view-canvases-cnt`, (elem) =>
+	  du.move.inFront(elem));
+	
+	const containerClasses = {
+	  values: `template-values`,
+	  subassemblies: `template-subassemblies`,
+	  joints: `template-joints`,
+	  dividerJoint: `template-divider-joint`,
+	  openings: `template-openings`
+	};
+	
+	function resetHeaderErrors() {
+	  const containers = du.find.all('.cabinet-template-input-cnt');
+	  containers.forEach((cnt) => {
+	    const headers = du.find.downAll('.expand-header', cnt);
+	    headers.forEach((h) => du.class.remove(h, 'error'))
+	  });
+	}
+	
+	function setHeaderErrors(elem) {
+	  const firstHeader = du.find.closest('.expand-header', elem);
+	  const secondHeader = du.find.up('.cabinet-template-input-cnt', firstHeader).children[0];
+	  du.class.add(firstHeader, 'error');
+	  du.class.add(secondHeader, 'error');
+	}
+	
+	function updateCss(elem, isValid, errorMsg) {
+	  if (elem) {
+	    if (isValid) {
+	      du.class.remove(elem, 'error');
+	      elem.setAttribute('error-msg', '');
+	    } else {
+	      du.class.add(elem, 'error');
+	      elem.setAttribute('error-msg', errorMsg);
+	      setHeaderErrors(elem);
+	    }
+	  }
+	}
+	
+	const varReg = /^[$_a-zA-Z][$_a-zA-Z0-9\.]*$/;
+	const variableNameCheck = (elem) => updateCss(elem, elem.value.match(varReg), `Illegal characters: ${varReg}`);
+	const positiveValueCheck = (elem) => updateCss(elem, Number.parseFloat(elem.value) > 0, 'Value must be positive');
+	const partCodeCheck = (template) => (elem) => updateCss(elem, template.validPartCode(elem.value), 'Invalid Part Code');
+	
+	function openingCodeCheck(template, opening, input) {
+	  if (opening._Type === 'location') return true;
+	  let count = 0;
+	  let errorString = '';
+	  if (!template.validPartCode(opening.top)) {count++; (errorString += 'top,');}
+	  if (!template.validPartCode(opening.bottom)) {count++; (errorString += 'bottom,');}
+	  if (!template.validPartCode(opening.left)) {count++; (errorString += 'left,');}
+	  if (!template.validPartCode(opening.right)) {count++; (errorString += 'right,');}
+	  if (!template.validPartCode(opening.back)) {count++; (errorString += 'back,');}
+	  if (count === 0) updateCss(input, true);
+	  else {
+	    errorString = errorString.substring(0, errorString.length - 1);
+	    if (count === 1) updateCss(input, false, `'${errorString}' part code is invalid (CABINET WILL NOT RENDER)`);
+	    else updateCss(input, false, `Multiple part codes are invalid: ${errorString} (CABINET WILL NOT RENDER)`);
+	  }
+	  return count === 0;
+	}
+	
+	function openingsCodeCheck (template, inputs) {
+	  const openings = template.openings();
+	  let valid = true;
+	  for (let index = 0; index < openings.length; index += 1) {
+	    const opening = openings[index];
+	    const input = inputs[index];
+	    valid &&= openingCodeCheck(template, opening, input)
+	  }
+	  return valid;
+	}
+	
+	function validateEquations(template, cabinet, valueInput, eqnInput, valueIndex, eqnMap) {
+	  let errorString = '';
+	  let errorCount = 0;
+	  let eqnKeys = Object.keys(eqnMap);
+	  for (let index = 0; index < eqnKeys.length; index += 1) {
+	    const key = eqnKeys[index];
+	    const eqn = eqnMap[key];
+	    if (index === valueIndex) {
+	      const value = template.evalEqn(eqn, cabinet);
+	      if (Number.isNaN(value)) {
+	        errorString += `${key},`;
+	        errorCount++;
+	      } else {
+	        const convertCheckBox = valueInput.nextElementSibling;
+	        if (convertCheckBox && convertCheckBox.getAttribute('name') === 'convert' &&
+	              convertCheckBox.checked) {
+	          valueInput.value = new Measurement(value).display();
+	        } else {
+	          valueInput.value = value;
+	        }
+	      }
+	    } else {
+	      if (!template.validateEquation(eqn, cabinet)) {
+	        errorString += `${key},`;
+	        errorCount++;
+	      }
+	    }
+	  }
+	  if (errorCount > 0) {
+	    du.class.add(eqnInput, 'error');
+	    if (eqnKeys.length > 1) {
+	      errorString = errorString.substring(0, errorString.length - 1);
+	      updateCss(eqnInput, false, `Errors found within the following equations:${errorString}`);
+	    } else {
+	      updateCss(eqnInput, false, `Errors found within the equation.`)
+	    }
+	  } else {
+	    du.class.remove(eqnInput, 'error');
+	    updateCss(eqnInput, true);
+	  }
+	}
+	
+	const valueEqnCheck = (template, cabinet) => (eqnInput) => {
+	  const valueInput = du.find.closest('[name="value"]', eqnInput);
+	  const name = eqnInput.name;
+	  const eqn = eqnInput.value;
+	  const eqnMap = {};
+	  eqnMap[name] = eqn;
+	  validateEquations(template, cabinet, valueInput, eqnInput, 0, eqnMap);
+	}
+	
+	const xyzEqnCheck = (template, cabinet) => (xyzInput) => {
+	  const valueInput = du.find.closest('[name="value"]', xyzInput);
+	  const index = Number.parseInt(du.find.closest('select', xyzInput).value);
+	  const subAssem = ExpandableList.get(xyzInput);
+	  const part = cabinet.getAssembly(subAssem.code);
+	  const eqns = subAssem[xyzInput.name];
+	  const eqnMap = {x: eqns[0], y: eqns[1], z: eqns[2]};
+	  validateEquations(template, cabinet, valueInput, xyzInput, index, eqnMap);
+	}
+	
+	function updatePartsDataList() {
+	  const partMap = threeView.partMap();
+	  if (!partMap) return;
+	  const partKeys = Object.keys(partMap);
+	  let htmlArr = [];
+	  for (let index = 0; index < partKeys.length; index += 1) {
+	    const id = partKeys[index];
+	    const partCode = partMap[id].code;
+	    const partName = partMap[id].name;
+	    htmlArr.push(`<option value='${partName}' part-code='${partCode}'></option>`);
+	  }
+	  htmlArr.sort()
+	  const datalist = du.id('part-list');
+	  datalist.innerHTML = htmlArr.join('');
+	}
+	
+	function vertexToDisplay(vertex) {
+	  const x = new Measurement(vertex.x).display();
+	  const y = new Measurement(vertex.y).display();
+	  const z = new Measurement(vertex.z).display();
+	  return `(${x}, ${y}, ${z})`;
+	}
+	
+	function target(io, i) {
+	  const targetIndex = i + (io === 'inner' ? 0 : 4);
+	  return (index) => targetIndex === index;
+	}
+	
+	function updateOpenLocationDisplay (opening, elem) {
+	  const state = sectionState;
+	
+	  const io = state.innerOouter === 'true' ? 'inner' : 'outer';
+	  const i = state.index;
+	  const description = `Current formula describes the ${io} boundry ${state.xOyOz} coordinate of vertex ${state.index}.`;
+	  du.find.closest('.opening-location-description-cnt', elem).innerText = description;
+	
+	  const eqnPoint = opening.coordinates && opening.coordinates[io] && opening.coordinates[io][i];
+	
+	  if (eqnPoint && elem.name !== 'opening-coordinate-value')
+	    du.find.closest('[name="opening-coordinate-value"]', elem).value = eqnPoint[state.xOyOz];
+	
+	  const cabinet = getCabinet(elem);
+	  const coords = cabinet.openings[0].update();
 	
 	
+	  const html = openingPointTemplate.render({display: vertexToDisplay, coords, target: target(io, i)});
+	  du.find.closest('.opening-location-value-cnt', elem).innerHTML = html;
+	}
+	
+	const openingPointTemplate = new $t('managers/template/openings/points');
+	
+	function onOpeningLocationChange(elem) {
+	  const opening = ExpandableList.get(elem);
+	  // const state = opening.state;
+	  // let value = elem.value;
+	  // if (value === 'true') value = true;
+	  // else if (value === 'false') value = false;
+	  // const attr = elem.name.replace(/(.*?)-.*/, '$1');
+	  // state[attr] = value;
+	
+	  updateOpenLocationDisplay(opening, elem);
+	}
+	
+	function onOpeningTypeChange(elem) {
+	  const opening = ExpandableList.get(elem);
+	  if (opening._Type !== elem.value) {
+	    const isLocation = elem.checked;
+	    const defaultFunc = isLocation ? 'defaultLocationOpening' : 'defaultPartCodeOpening';
+	    const def = CabinetTemplate[defaultFunc]();
+	    Object.merge(opening, def, true);
+	    opening._Type = isLocation ? 'location' : undefined;
+	    du.find.closest('.border-location-cnt', elem).hidden = !isLocation;
+	    updateOpeningPartCode(du.find.closest('select', elem));
+	  }
+	}
+	
+	du.on.match('change', '.border-location-cnt>input,.border-location-cnt>span>input', onOpeningLocationChange);
+	du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
+	
+	function updateOpeningPoints(template, cabinet) {
+	  const threeDModel = threeView.threeDModel();
+	  if (threeDModel) {
+	    threeDModel.removeAllExtraObjects();
+	    const openings = cabinet.openings;
+	    for (let index = 0; index < openings.length; index++) {
+	      const opening = openings[index];
+	      const size = modifyingOpening ? 1 : .25;
+	      const state = sectionState;
+	      const i = state.index;
+	      const vertexColor = (io, i) => io !== state.innerOouter ? 'black' :
+	            (modifyingOpening && i === state.index ? 'lime' : 'white');
+	
+	      const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
+	
+	      const coords = opening.update();
+	      threeDModel.addVertex(coords.inner[0], vertexSize('true'), vertexColor('true', '0'));
+	      threeDModel.addVertex(coords.inner[1], vertexSize('true'), vertexColor('true', '1'));
+	      threeDModel.addVertex(coords.inner[2], vertexSize('true'), vertexColor('true', '2'));
+	      threeDModel.addVertex(coords.inner[3], vertexSize('true'), vertexColor('true', '3'));
+	
+	      threeDModel.addVertex(coords.outer[0], vertexSize('false'), vertexColor('false', '0'));
+	      threeDModel.addVertex(coords.outer[1], vertexSize('false'), vertexColor('false', '1'));
+	      threeDModel.addVertex(coords.outer[2], vertexSize('false'), vertexColor('false', '2'));
+	      threeDModel.addVertex(coords.outer[3], vertexSize('false'), vertexColor('false', '3'));
+	    }
+	  }
+	}
+	
+	const topView = du.id('three-view-top');
+	const leftView = du.id('three-view-right');
+	const frongView = du.id('three-view-front');
+	function validateOpenTemplate (elem) {
+	  const templateBody = du.find('.template-body');
+	  if (!templateBody || du.is.hidden(templateBody)) return;
+	  resetHeaderErrors();
+	  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
+	
+	  const valueNameInputs = du.find.downAll('input[attr="values"][name="name"]', templateBody);
+	  valueNameInputs.forEach(variableNameCheck);
+	  const subNameInputs = du.find.downAll('input[attr="subassemblies"][name="name"]', templateBody);
+	  subNameInputs.forEach(variableNameCheck);
+	  const subCodeInputs = du.find.downAll('input[attr="subassemblies"][name="code"]', templateBody);
+	  subCodeInputs.forEach(variableNameCheck);
+	
+	  const positiveInputs = du.find.downAll('input[name="thickness"],input[name="width"],input[name="height"]', templateBody);
+	  positiveInputs.forEach(positiveValueCheck);
+	
+	  const pcc = partCodeCheck(template);
+	  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="malePartCode"]', templateBody);
+	  jointMaleInputs.forEach(pcc);
+	  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="femalePartCode"]', templateBody);
+	  jointFemaleInputs.forEach(pcc);
+	
+	  const openingCodeInputs = du.find.downAll('input[attr="openings"][name="partCode"]', templateBody);
+	  openingsCodeCheck(template, openingCodeInputs);
+	
+	  try {
+	    const cabinet = getCabinet(templateBody);
+	
+	    const depthInputs = du.find.downAll('[name=depth]', templateBody);
+	    depthInputs.forEach(valueEqnCheck(template, cabinet));
+	    const valueEqnInputs = du.find.downAll('input[attr="values"][name="eqn"]', templateBody);
+	    valueEqnInputs.forEach(valueEqnCheck(template, cabinet));
+	    const subDemInputs = du.find.downAll('input[attr="subassemblies"][name="demensions"]', templateBody);
+	    subDemInputs.forEach(xyzEqnCheck(template, cabinet));
+	    const subCenterInputs = du.find.downAll('input[attr="subassemblies"][name="center"]', templateBody);
+	    subCenterInputs.forEach(xyzEqnCheck(template, cabinet));
+	    const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
+	    subRotInputs.forEach(xyzEqnCheck(template, cabinet));
+	    updateOpeningPoints(template, cabinet);
+	    threeView.update(cabinet);
+	    setTimeout(updatePartsDataList, 500);
+	  } catch (e) {
+	    console.log(e);
+	  }
 	
 	
+	}
+	
+	function getEqn(select, values) {
+	  return values && values[select.value()];
+	}
+	
+	const depthValidation = (measurment) =>
+	        measurment.decimal() > 0;
+	
+	function getJointInputTree(func, joint, dividerJoint) {
+	  joint.type ||= 'Butt';
+	  const selectType = new Select({
+	    name: 'type',
+	    list: Object.keys(Joint.types),
+	    class: 'template-select',
+	    value: joint.type
+	  });
+	
+	  const centerOffsetInput = new Select({
+	    name: 'centerAxis',
+	    list: ['+x', '+y', '+z', '-x', '-y', '-z'],
+	    value: joint.centerAxis
+	  });
+	  const demensionOffsetInput = new Select({
+	    name: 'demensionAxis',
+	    list: ['x', 'y', 'z'],
+	    value: joint.demensionAxis
+	  });
+	
+	  const depthInput = new Input({
+	    name: 'maleOffset',
+	    value: joint.maleOffset
+	  });
+	
+	  const dadoInputs = dividerJoint ? [depthInput] : [depthInput, centerOffsetInput, demensionOffsetInput];
+	
+	  const dit = new DecisionInputTree(undefined, {noSubmission: true});
+	  const type = dit.branch('Type', [selectType]);
+	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', 'Dado', dadoInputs);
+	  type.conditional('dado', condtionalPayload);
+	  dit.onChange(func);
+	  return dit;
+	}
+	
+	let lastDepth;
+	const jointOnChange = (vals, dit) => {
+	  const selectId = dit.payload().inputArray[0].id();
+	  const joint = ExpandableList.get(du.id(selectId));
+	  joint.type = vals.type;
+	  lastDepth = vals.maleOffset || lastDepth;
+	  joint.maleOffset = lastDepth || undefined;
+	  const depthInput = dit.children()[0].payload().inputArray[0];
+	  // depthInput.updateDisplay();
+	  joint.demensionAxis = vals.demensionAxis || undefined;
+	  joint.centerAxis = vals.centerAxis || undefined;
+	  console.log(vals);
+	}
+	
+	function getTypeInput(obj) {
+	  return new Select({
+	    name: 'type',
+	    value: obj.type,
+	    class: 'template-input',
+	    list: Object.keys(Assembly.components),
+	    inline: true
+	  });
+	}
+	
+	function getXyzSelect(label) {
+	  return new Select({
+	    label,
+	    name: 'xyz',
+	    list: {'0': 'X', '1': 'Y', '2':'Z'},
+	    inline: true
+	  });
+	}
+	
+	function getWhdSelect(label) {
+	  return new Select({
+	    label,
+	    name: 'xyz',
+	    list: {'0': 'W', '1': 'H', '2':'D'},
+	    inline: true
+	  });
+	}
+	
+	function getOpeningLocationSelect() {
+	  return new Select({
+	    name: 'openingLocation',
+	    list: ['top', 'bottom', 'left', 'right', 'back'],
+	    inline: true
+	  });
+	}
+	
+	function getJoint(obj) {
+	  return {obj, jointInput: getJointInputTree(jointOnChange, obj).payload()};
+	}
+	function getSubassembly(obj) {
+	  return {typeInput:  getTypeInput(obj),
+	          centerXyzSelect: getXyzSelect('Center'),
+	          demensionXyzSelect: getWhdSelect('Demension'),
+	          rotationXyzSelect: getXyzSelect('Rotation'),
+	          getEqn, obj
+	        };
+	}
+	
+	function getOpening(obj) {
+	  return {obj, select: getOpeningLocationSelect(), state: sectionState};
+	}
+	
+	const scopes = {};
+	function getScope(type, obj) {
+	  obj.id = obj.id || String.random();
+	  if (scopes[obj.id]) return scopes[obj.id];
+	  switch (type) {
+	    case 'joints':
+	      scopes[obj.id] = getJoint(obj);
+	      break;
+	    case 'subassemblies':
+	      scopes[obj.id] = getSubassembly(obj);
+	      break;
+	    case 'openings':
+	      scopes[obj.id] = getOpening(obj);
+	      break;
+	    default:
+	      scopes[obj.id] = {obj};
+	  }
+	  return scopes[obj.id];
+	}
+	
+	const getObjects = {
+	    subassemblies: () => (      {
+	      type: "Panel",
+	      center: [0,0,0],
+	      demensions: [1,1,1],
+	      rotation: [0,0,0],
+	      include: 'All'
+	    })
+	}
+	
+	function updateTemplateDisplay() {
+	  const managerElems = du.find.all('[template-manager]');
+	  for (let index = 0; index < managerElems.length; index += 1) {
+	    const templateManagerId = managerElems[index].getAttribute('template-manager');
+	    const templateManager =TemplateManager.get(templateManagerId);
+	    templateManager.update();
+	  }
+	}
+	
+	
+	function addExpandable(template, type) {
+	  const containerClass = containerClasses[type];
+	  let parentSelector = `[template-id='${template.id()}']>.${containerClass}`;
+	  TemplateManager.headTemplate[type] ||= new $t(`managers/template/${type.toKebab()}/head`);
+	  TemplateManager.bodyTemplate[type] = TemplateManager.bodyTemplate[type] === undefined ?
+	                    new $t(`managers/template/${type.toKebab()}/body`) : TemplateManager.bodyTemplate[type];
+	  let getHeader = (obj) => TemplateManager.headTemplate[type].render(getScope(type, obj));
+	  let getBody = TemplateManager.bodyTemplate[type] ? ((obj) => TemplateManager.bodyTemplate[type].render(getScope(type, obj))) : undefined;
+	  const expListProps = {
+	    idAttribute: 'name',
+	    list: template[type](),
+	    getObject: getObjects[type],
+	    renderBodyOnOpen: false,
+	    parentSelector, getHeader, getBody,
+	    listElemLable: type.toSentance(),
+	  };
+	  const expandList = new ExpandableList(expListProps);
+	  expandList.afterRemoval(updateTemplateDisplay);
+	  return expandList;
+	}
+	
+	class TemplateManager extends Lookup {
+	  constructor(id) {
+	    super(id);
+	    const parentId = `template-list-${this.id()}`;
+	    this.parentId = () => parentId;
+	    let currentTemplate;
+	    const parentSelector = `#${parentId}`;
+	    const dividerJointChange = (template) => (vals) => {
+	      template.dividerJoint(vals);
+	    }
+	    const templateShapeInput = (template) => TemplateManager.templateShapeInput(template.shape());
+	    const dividerJointInput = (template) =>
+	      getJointInputTree(dividerJointChange(template), template.dividerJoint(), true).payload();
+	
+	    const containerSelector = (template, containerClass) => `[template-id="${template.id()}"]>.${containerClass}`;
+	
+	    const getHeader = (template) =>
+	      TemplateManager.headTemplate.render({template, TemplateManager: this});
+	    const getBody = (template) => {
+	      currentTemplate = template;
+	      setTimeout(() => {
+	        updateExpandables(template);
+	      }, 100);
+	      setTimeout(() => {
+	        validateOpenTemplate(du.id(parentId));
+	      }, 1000);
+	      return TemplateManager.bodyTemplate.render({template, TemplateManager: this,
+	        containerClasses, centerDisplay, toDisplay,
+	        dividerJointInput: dividerJointInput(template),
+	        templateShapeInput: templateShapeInput(template)});
+	      }
+	
+	    this.sectionState = sectionState;
+	    const expandables = {};
+	    function initTemplate(template) {
+	      const list = [];
+	      expandables[template.id()] = list;
+	      return () => {
+	        list.push(addExpandable(template, 'values'));
+	        list.push(addExpandable(template, 'subassemblies'));
+	        list.push(addExpandable(template, 'joints'));
+	        list.push(addExpandable(template, 'openings', true));
+	      };
+	    }
+	
+	    function updateExpandables(template) {
+	      template ||= currentTemplate;
+	      if (template === undefined) return;
+	      if (!expandables[template.id()]) initTemplate(template)();
+	      expandables[template.id()].forEach((e) => e.refresh());
+	    }
+	    this.updateExpandables = updateExpandables;
+	
+	    const getObject = (values) => {
+	      const cabTemp = new CabinetTemplate(values.name);
+	      initTemplate(cabTemp)();
+	      return cabTemp;
+	    }
+	
+	    this.active = () => expandList.active();
+	    const expListProps = {
+	      list: CabinetTemplate.defaultList(),
+	      inputTree: TemplateManager.inputTree(),
+	      parentSelector, getHeader, getBody, getObject,
+	      listElemLable: 'Template',
+	      type: 'sidebar'
+	    };
+	    setTimeout(initTemplate(expListProps.list[0]), 200);
+	    const expandList = new ExpandableList(expListProps);
+	
+	    this.update = () => {
+	      expandList.refresh();
+	    }
+	    this.loadPoint = () => console.log('load');
+	    this.savePoint = () => console.log('save');
+	    this.fromJson = () => {};
+	    const html = TemplateManager.mainTemplate.render(this);
+	    du.find(`#${id}`).innerHTML = html;
+	  }
+	}
+	
+	const radioDisplay = new RadioDisplay('cabinet-template-input-cnt', 'template-id');
+	radioDisplay.afterSwitch(function (header){
+	  const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
+	  const opening = ExpandableList.get(coordinateInput);
+	  if (opening && opening._Type === 'location') {
+	    const state = opening.state;
+	    const io = state.innerOouter ? 'inner' : 'outer';
+	    coordinateInput.value = opening.coordinates[io][state.index][state.xOyOz];
+	  }
+	
+	  console.log(opening);
+	});
+	
+	TemplateManager.inputTree = () => {
+	  const dit = new DecisionInputTree();
+	  dit.leaf('Template Name', [Inputs('name')]);
+	  return dit;
+	}
+	
+	TemplateManager.templateShapeInput = (value) => {
+	  return new Select({
+	      name: 'templateShape',
+	      list: Object.keys(Snap2d.get),
+	      class: 'template-shape-input',
+	      value: value
+	    });
+	};
+	
+	radioDisplay.afterSwitch((elem, detail) => {
+	  const newState = detail.targetHeader.innerText === 'Openings';
+	  const updateModel = newState !== modifyingOpening;
+	  modifyingOpening = newState;
+	  updateModel && validateOpenTemplate(detail.targetHeader);
+	});
+	
+	TemplateManager.mainTemplate = new $t('managers/template/main');
+	TemplateManager.headTemplate = new $t('managers/template/head');
+	TemplateManager.bodyTemplate = new $t('managers/template/body');
+	TemplateManager.bodyTemplate.values = false;
+	new TemplateManager('template-manager', 'template');
+	
+	function updateValuesTemplate(elem, template) {
+	  const nameInput = du.find.closest('[name="name"]', elem);
+	  const name = nameInput.value;
+	  const eqn = du.find.closest('[name="eqn"]', elem).value;
+	  const valueObj = ExpandableList.get(elem);
+	  valueObj.key = name;
+	  valueObj.eqn = eqn;
+	  return true
+	}
+	
+	function updateSubassembliesTemplate(elem, template) {
+	  const nameInput = du.find.closest('[name="name"]', elem);
+	  const type = du.find.closest('[name="type"]', elem).value;
+	  const name = `${type}.${nameInput.value.toDot()}`;
+	  const subAssem = ExpandableList.get(elem);
+	  subAssem.name = nameInput.value;
+	  if (elem.name === 'name') return;
+	  if (elem.name === 'center' || elem.name === 'demensions' || elem.name === 'rotation') {
+	    const index = du.find.closest('[name="xyz"]', elem).value;
+	    const eqn = elem.value;
+	    if (subAssem[elem.name] === undefined) subAssem[elem.name] = [];
+	    subAssem[elem.name][index] = eqn;
+	  } else if (elem.name !== 'name') {
+	    subAssem[elem.name] = elem.value;
+	  }
+	}
+	
+	function switchEqn(elem) {
+	  const nameInput = du.find.closest('[name="name"]', elem);
+	  const type = du.find.closest('[name="type"]', elem).value;
+	  const name = `${type}.${nameInput.value.toDot()}`;
+	  const subAssem = ExpandableList.get(elem);
+	  if (subAssem) {
+	    const eqnInput = du.find.closest('input', elem);
+	    const index = elem.value;
+	    if (subAssem[eqnInput.name] === undefined) subAssem[eqnInput.name] = [];
+	    const value = subAssem[eqnInput.name][index];
+	    eqnInput.value = value === undefined ? '' : value;
+	  }
+	}
+	
+	function updateOpeningsTemplate(elem, template) {
+	  const partCode = elem.value;
+	  const attr = du.find.closest('select', elem).value;
+	  const listElem = ExpandableList.get(elem);
+	  listElem[attr] = elem.value;
+	  console.log(ExpandableList.get(elem,1).toJson());
+	}
+	
+	function updateViewShape(elem) {
+	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+	  const template = CabinetTemplate.get(templateId);
+	  template.shape(elem.value);
+	}
+	
+	function updateJointPartCode(elem) {
+	  const attr = elem.name;
+	  const listElem = ExpandableList.get(elem);
+	  listElem[attr] = elem.value;
+	}
+	
+	function updateOpeningPartCode(elem) {
+	  const attr = elem.value;
+	  const opening = ExpandableList.get(elem);
+	  const partCodeInput = du.find.closest('input', elem);
+	  partCodeInput.value = opening[attr] || '';
+	  updateOpenLocationDisplay(opening, elem);
+	}
+	
+	function updateTemplate(elem, template) {
+	  const attr = du.find.closest('[attr]', elem).getAttribute('attr');
+	  switch (attr) {
+	    case 'values': return updateValuesTemplate(elem, template);
+	    case 'subassemblies': return updateSubassembliesTemplate(elem, template);
+	    case 'openings': return updateOpeningsTemplate(elem, template);
+	
+	    default:
+	
+	  }
+	}
+	
+	function updateInclude(elem) {
+	  const subAssem = ExpandableList.get(elem);;
+	  subAssem.include = elem.value;
+	  console.log(subAssem);
+	}
+	
+	du.on.match('change', '.template-include', updateInclude);
+	du.on.match('change', '.opening-part-code-input', updateOpeningsTemplate);
+	du.on.match('change', '.template-shape-input', updateViewShape);
+	du.on.match('change', '[name="xyz"]', switchEqn);
+	du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
+	du.on.match('change', '.template-input[name="malePartCode"],.template-input[name="femalePartCode"]', updateJointPartCode);
+	du.on.match('click', '.copy-template', (elem) => {
+	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+	  const template = CabinetTemplate.get(templateId);
+	  let jsonStr = JSON.stringify(template.toJson(), null, 2);
+	  jsonStr = jsonStr.replace(/.*"id":.*($|,)/g, '');
+	  du.copy(jsonStr);
+	});
+	
+	du.on.match('click', '.paste-template', (elem) => {
+	  navigator.clipboard.readText()
+	  .then(text => {
+	    try {
+	      const obj = Object.fromJson(JSON.parse(text));
+	      if (!(obj instanceof CabinetTemplate)) throw new Error(`Json is of type ${obj.constructor.name}`);
+	      const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+	      const template = CabinetTemplate.get(templateId);
+	      template.fromJson(obj.toJson());
+	      const templateManagerId = du.find.up('[template-manager]', elem).getAttribute('template-manager');
+	      const templateManager =TemplateManager.get(templateManagerId);
+	      templateManager.update();
+	    } catch (e) {
+	      alert('clipboard does not contain a valid CabinetTemplate');
+	    }
+	  })
+	  .catch(err => {
+	    console.error('Failed to read clipboard contents: ', err);
+	  });
+	});
+	
+	du.on.match('change', '.template-input', function (elem) {
+	  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+	  template = CabinetTemplate.get(templateId);
+	  updateTemplate(elem, template);
+	});
+	
+	du.on.match('change', 'input,select',   () => setTimeout(validateOpenTemplate, 0));
+	
+	
+	module.exports = TemplateManager
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/property/config.js',
+function (require, exports, module) {
+	
+const Properties = require('../properties');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const IMPERIAL_US = Measurement.units()[1];
+	
+	class PropertyConfig {
+	  constructor(props) {
+	    Object.getSet(this);
+	    props = props || Properties.instance();
+	    let style = props.style || PropertyConfig.lastStyle;
+	    let styleName = props.styleName || PropertyConfig.lastStyleName ||
+	                    Object.keys(Properties.groupList(style))[0];
+	    if (styleName)
+	      props[style] = Properties.getSet(style, styleName);
+	
+	    function isReveal() {return style === 'Reveal';}
+	    function isInset() {return style === 'Inset';}
+	    function isOverlay() {return !isReveal() && !isInset();}
+	    function overlay() {return props['Overlay'].ov.value()}
+	    function reveal() {return props['Reveal']};
+	
+	    function cabinetStyles() {
+	      return ['Overlay', 'Inset', 'Reveal'];
+	    }
+	    function cabinetStyle() {
+	      return style;
+	    }
+	    function cabinetStyleName() {
+	      return styleName;
+	    }
+	
+	    function set(group, name) {
+	      if (cabinetStyles().indexOf(group) !== -1) {
+	        style = group;
+	        styleName = name;
+	      } else {
+	        const newSet = Properties.getSet(group, name);
+	        newSet.__KEY = name;
+	        if (newSet === undefined) throw new Error(`Attempting to switch '${group}' to unknown property set '${name}'`);
+	        props[group] = newSet;
+	      }
+	    }
+	
+	    const panelThicknessRegMetric = /^pwt([0-9]{1,})([0-9][0-9])$/;
+	    const panelThicknessRegImperial = /^pwt([0-9])([0-9])$/;
+	    const resolvePanelThickness = (code) => {
+	      let match = code.match(panelThicknessRegImperial);
+	      if (match) return new Measurement(match[1]/match[2], IMPERIAL_US).value();
+	      match = code.match(panelThicknessRegMetric);
+	      if (match) return new Measurement(`${match[1]}.${match[2]}`).value();
+	      return undefined;
+	    }
+	
+	    const outerCodeReg = /^(rrv|lrv|brv|trv)$/;
+	    const resolveOuterReveal = (code, props) => {
+	      if (!code.match(outerCodeReg)) return undefined;
+	      switch (code) {
+	        case 'rrv':
+	          return 0.3175
+	        case 'lrv':
+	          return 0.3175
+	        case 'brv':
+	          return 0.3175
+	        case 'trv':
+	          return 0.3175
+	        default:
+	          return 0.3175
+	      }
+	    }
+	
+	    const resolveStyleStatus = (code) => {
+	      switch (code) {
+	        case 'isReveal': return isReveal();
+	        case 'isInset': return isInset();
+	        case 'isOverlay': return isOverlay();
+	      }
+	    }
+	
+	    const resolveReveals = (code, props) => {
+	      switch (code) {
+	        case 'frorl': return new Measurement(1/8, IMPERIAL_US).value();
+	        case 'frorr': return new Measurement(1/8, IMPERIAL_US).value();
+	        case 'r': if (isInset()) return 0;
+	          if (isReveal()) return new Measurement(props.Reveal.r.value()).value();
+	          return new Measurement(props.Cabinet.frw.value() - 2 * props.Overlay.ov.value()).value();
+	        default: return resolveCostProps(code, props);
+	      }
+	    }
+	
+	    const resolveComplexProps = (code, props) => {
+	      if (code === undefined) return undefined;
+	      let value = resolvePanelThickness(code, props);
+	      if (value !== undefined) return value;
+	      value = resolveOuterReveal(code, props);
+	      if (value !== undefined) return value;
+	      console.log(code);
+	      value = resolveStyleStatus(code);
+	      // if (value !== undefined) return value;
+	      // value = resolveReveals(code, props);
+	      return value;
+	    }
+	
+	    const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
+	    function getProperties(clazz, code) {
+	      clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
+	      const classProps = props[clazz] || {};
+	      if (code === undefined) return classProps;
+	      return classProps[code] === undefined ? resolveComplexProps(code, props) : classProps[code].value();
+	    }
+	
+	    function toJson() {
+	      const json = {style, styleName};
+	      const keys = Object.keys(props).filter((key) => key.match(/^[A-Z]/));
+	      keys.forEach((key) => {
+	        json[key] = [];
+	        const propKeys = Object.keys(props[key]);
+	        propKeys.forEach((propKey) => {
+	          if (props[key][propKey] && (typeof props[key][propKey].toJson) === 'function')
+	            json[key].push(props[key][propKey].toJson())
+	        });
+	      });
+	      return json;
+	    }
+	
+	    getProperties.isReveal = isReveal;
+	    getProperties.isInset = isInset;
+	    getProperties.overlay = overlay;
+	    getProperties.reveal = reveal;
+	    getProperties.toJson = toJson;
+	    getProperties.cabinetStyles = cabinetStyles;
+	    getProperties.cabinetStyle = cabinetStyle;
+	    getProperties.cabinetStyleName = cabinetStyleName;
+	    getProperties.set = set;
+	
+	    return getProperties;
+	  }
+	}
+	
+	PropertyConfig.lastStyle = 'Overlay';
+	
+	PropertyConfig.fromJson = (json) => {
+	  const propConfig = {style: json.style, styleName: json.styleName};
+	  const keys = Object.keys(json).filter((key) => key.match(/^[A-Z]/));
+	  keys.forEach((key) => {
+	    const propKeys = Object.keys(json[key]);
+	    propConfig[key] = {};
+	    propKeys.forEach((propKey) =>
+	                propConfig[key][json[key][propKey].code] = Object.fromJson(json[key][propKey]));
+	  });
+	  return new PropertyConfig(propConfig);
+	}
+	
+	module.exports = PropertyConfig;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/vertex.js',
+function (require, exports, module) {
+	
+const Matrix = require('./matrix');
+	const Vector3D = require('./vector');
+	const approximate = require('../../../../../public/js/utils/approximate.js');
+	const approx10 = approximate.new(10);
+	const CSG = require('../../../public/js/3d-modeling/csg.js');
+	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	
+	
+	class Vertex3D {
+	  constructor(x, y, z) {
+	    if (x instanceof Vertex3D) return x;
+	    if (x instanceof Vector3D) {
+	      this.x = x.i();
+	      this.y = x.j();
+	      this.z = x.k();
+	    } else if (x === undefined) {
+	      this.x = 0;
+	      this.y = 0;
+	      this.z = 0;
+	    } else if (arguments.length == 3) {
+	      this.x = x;
+	      this.y = y;
+	      this.z = z;
+	    } else if ('x' in x) {
+	      this.x = x.x;
+	      this.y = x.y;
+	      this.z = x.z;
+	    } else {
+	      this.x = x[0];
+	      this.y = x[1];
+	      this.z = x[2];
+	    }
+	
+	    this.translate = (vector, doNotModify) => {
+	      let vertex = this;
+	      if (doNotModify === true) vertex = this.copy();
+	      vertex.x += vector.i();
+	      vertex.y += vector.j();
+	      vertex.z += vector.k();
+	      return vertex;
+	    }
+	
+	    this.positionAt = (vertex) => {
+	      this.x = vertex.x;
+	      this.y = vertex.y;
+	      this.z = vertex.z;
+	    }
+	
+	    this.usless = () => Number.NaNfinity(x, y, z);
+	
+	    this.vector = (vector) => {
+	      const v = vector;
+	      if (v) return new Vector3D(this.x + v.i(), this.y + v.j(), this.z + v.k());
+	      return new Vector3D(this.x, this.y, this.z);
+	    }
+	
+	    this.rotate = (rotations, center) => {
+	      CSG.rotatePointAroundCenter(rotations, this, center);
+	      return this;
+	    }
+	
+	    this.reverseRotate = (rotations, center) => {
+	      CSG.rotatePointAroundCenter(rotations, this, center, true);
+	      return this;
+	    }
+	
+	    this.matrix = () => {
+	      return new Matrix([[this.x, this.y, this.z]]);
+	    }
+	
+	    this.distance = (other) => {
+	      const xDiff = this.x - other.x;
+	      const yDiff = this.y - other.y;
+	      const zDiff = this.z - other.z;
+	
+	      return Math.sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff);
+	    }
+	
+	    this.distanceVector = (other) => {
+	      const xDiff = other.x - this.x;
+	      const yDiff = other.y - this.y;
+	      const zDiff = other.z - this.z;
+	
+	      return new Vector3D(xDiff, yDiff, zDiff);
+	    }
+	
+	    this.minus = (other) => {
+	      const xDiff = this.x - other.x;
+	      const yDiff = this.y - other.y;
+	      const zDiff = this.z - other.z;
+	
+	      return new Vector3D(xDiff, yDiff, zDiff);
+	    }
+	
+	    this.inverseVector = () => {
+	      return new Vertex3D(this.x * -1, this.y* -1, this.z * -1);
+	    }
+	
+	    this.copy = () => new Vertex3D(this.x, this.y, this.z);
+	    this.clone = this.copy;
+	    this.equals = (other) => other && Vertex3D.tolerance.within(this, other);
+	    this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
+	    this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
+	  }
+	}
+	
+	const tol = .000000001;
+	Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
+	
+	// returned direction is of list2 relitive to list 1
+	// dirArr = [forward, backward, up, down, left, right];
+	Vertex3D.direction = (vertList1, vertList2, tolerance, axisOnly) => {
+	  tolerance ||= .1;
+	  let dirArr = [true, true, true, true, true, true];
+	  for (let i = 0; i < vertList1.length; i++) {
+	    const vert1 = vertList1[i];
+	    for (let j = 0; j < vertList2.length; j++) {
+	      const vert2 = vertList2[j];
+	      dirArr[0] &&= vert1.z > vert2.z - tolerance;
+	      dirArr[1] &&= vert1.z < vert2.z + tolerance;
+	      dirArr[2] &&= vert1.y < vert2.y + tolerance;
+	      dirArr[3] &&= vert1.y > vert2.y - tolerance;
+	      dirArr[4] &&= vert1.x > vert2.x - tolerance;
+	      dirArr[5] &&= vert1.x < vert2.x + tolerance;
+	    }
+	    if (dirArr[0] && dirArr[1]) dirArr[0] = dirArr[1] = false;
+	    if (dirArr[2] && dirArr[3]) dirArr[2] = dirArr[3] = false;
+	    if (dirArr[4] && dirArr[5]) dirArr[4] = dirArr[5] = false;
+	
+	    const zDir = dirArr[0] ? 'forward' : (dirArr[1] ? 'backward' : undefined);
+	    const yDir = dirArr[2] ? 'up' : (dirArr[3] ? 'down' : undefined);
+	    const xDir = dirArr[4] ? 'left' : (dirArr[5] ? 'right' : undefined);
+	
+	    if (zDir && yDir && xDir) return axisOnly ? null : `${xDir} ${yDir} ${zDir}`;
+	    if (zDir) {
+	      if (yDir) return axisOnly ? null : `${yDir} ${zDir}`;
+	      if (xDir) return axisOnly ? null : `${xDir} ${zDir}`;
+	      return zDir;
+	    }
+	    if (xDir) {
+	      if (yDir) return axisOnly ? null : `${xDir} ${yDir}`;
+	      return xDir
+	    }
+	    return yDir ? yDir : null;
+	  }
+	}
+	
+	Vertex3D.center = (...verticies) => {
+	  if (Array.isArray(verticies[0])) verticies = verticies[0];
+	  let x = 0;
+	  let y = 0;
+	  let z = 0;
+	  let count = 0;
+	  verticies.forEach((vertex) => {
+	    if (Number.isFinite(vertex.x + vertex.y + vertex.z)) {
+	      count++;
+	      x += vertex.x;
+	      y += vertex.y;
+	      z += vertex.z;
+	    } else {
+	      throw new Error("Vertex contains a non-number");
+	    }
+	  });
+	  return new Vertex3D({x: x/count, y: y/count, z: z/count});
+	}
+	
+	Vertex3D.sortByCenter = (center) => {
+	  return (v1, v2) => {
+	    const d1 = v1.distance(v2);
+	    const d2 = v2.distance(v1);
+	    d1 === d2 ? 0 : (d1 < d2 ? -1 : 1);
+	  }
+	}
+	
+	module.exports = Vertex3D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/vector.js',
+function (require, exports, module) {
+	
+const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
+	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	
+	
+	function isZero(val) {
+	  return Vector3D.tolerance.bounds.i.within(val, 0);
+	}
+	
+	
+	class Vector3D {
+	  constructor(i, j, k) {
+	    if (i instanceof Vector3D) return i;
+	    if (i instanceof Object) {
+	      k = i.z;
+	      j = i.y;
+	      i = i.x;
+	    }
+	    this.i = () => i;
+	    this.j = () => j;
+	    this.k = () => k;
+	
+	    this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
+	    this.magnitudeSQ = () => this.i()*this.i() + this.j()*this.j() + this.k()*this.k();
+	    this.minus = (vector) => {
+	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+	      return new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k());
+	    }
+	    this.add = (vector) => {
+	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+	      return new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k());
+	    }
+	    this.scale = (coef) => {
+	      return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
+	    }
+	    this.sameDirection = (otherVect) => {
+	      return approximate.sameSign(otherVect.i(), this.i()) &&
+	              approximate.sameSign(otherVect.j(), this.j()) &&
+	              approximate.sameSign(otherVect.k(), this.k());
+	    }
+	    this.divide = (vector) => {
+	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+	      return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
+	    }
+	    this.toArray = () => [this.i(), this.j(), this.k()];
+	    this.dot = (vector) =>
+	      this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
+	    this.perpendicular = (vector) =>
+	      Vector3D.tolerance.within(this.dot(vector), 0);
+	    this.parrelle = (vector) => {
+	      let coef = isZero(this.i()) ? 0 : this.i() / vector.i();
+	      if (isZero(coef)) coef = isZero(this.j()) ? 0 : this.j() / vector.j();
+	      if (isZero(coef)) coef = isZero(this.k()) ? 0 : this.k() / vector.k();
+	      if (isZero(coef)) return false;
+	      const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
+	      return Vector3D.tolerance.within(equivVect, this);
+	    }
+	    this.crossProduct = (other) => {
+	      const i = this.j() * other.k() - this.k() * other.j();
+	      const j = this.i() * other.k() - this.k() * other.i();
+	      const k = this.i() * other.j() - this.j() * other.i();
+	      const mag = Math.sqrt(i*i+j*j+k*k);
+	      return new Vector3D(i/mag,j/-mag,k/mag);
+	    }
+	    this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
+	
+	    this.projectOnTo = (v) => {
+	      const multiplier = this.dot(v) / v.magnitudeSQ();
+	      return v.scale(multiplier);
+	    }
+	
+	    this.unit = () => {
+	      const i = this.i();const j = this.j();const k = this.k();
+	      const magnitude = Math.sqrt(i*i+j*j+k*k);
+	      return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
+	    }
+	    this.equals = (vector) => Vector.tolerance.within(vector, this);
+	    this.toString = () => `<${i},  ${j},  ${k}>`;
+	  }
+	}
+	
+	const tol = .00000001;
+	Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
+	
+	module.exports = Vector3D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/polygon.js',
+function (require, exports, module) {
+	
+const Polygon2D = require('../../two-d/objects/polygon.js');
+	const Line2D = require('../../two-d/objects/line.js');
+	const Line3D = require('./line');
+	const Vertex3D = require('./vertex');
+	const Vector3D = require('./vector');
+	const Plane = require('./plane');
+	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	
+	const CSG = require('../../../public/js/3d-modeling/csg.js');
+	let lastMi;
+	
+	class Polygon3D {
+	  constructor(initialVerticies) {
+	    let lines = [];
+	    let map;
+	    let normal;
+	    let instance = this;
+	
+	    function getPlane() {
+	      let points = this.verticies();
+	      let parrelle = true;
+	      let index = 2;
+	      const point1 = points[0];
+	      const point2 = points[1];
+	      let point3;
+	      while (parrelle && index < points.length) {
+	        point3 = points[index]
+	        let vector1 = point1.minus(point2);
+	        let vector2 = point3.minus(point2);
+	        parrelle = vector1.parrelle(vector2);
+	        index++;
+	      }
+	      return new Plane(point1, point2, point3);
+	    }
+	    this.toPlane = getPlane;
+	
+	    this.rotate = (rotations, center) => {
+	      center ||= this.center();
+	      for(let index = 0; index < lines.length; index++) {
+	        lines[index].startVertex.rotate(rotations, center);
+	      }
+	    }
+	
+	    function calcNormal() {
+	      let points = this.verticies();
+	      let vector1, vector2;
+	      let parrelle = true;
+	      let index = 0;
+	      while (parrelle && index < points.length - 2) {
+	        vector1 = points[index + 1].minus(points[index])
+	        vector2 = points[index + 2].minus(points[index]);
+	        parrelle = vector1.parrelle(vector2);
+	        index++;
+	      }
+	      if (parrelle)
+	        throw new Error('InvalidPolygon: points are in a line');
+	
+	      const normVect = vector1.crossProduct(vector2);
+	      return normVect.scale(1 / normVect.magnitude());
+	    }
+	    this.normal = calcNormal;
+	
+	    this.translate = (vector) => {
+	      const verts = [];
+	      for (let index = 0; index < lines.length; index++) {
+	        verts.push(lines[index].startVertex.translate(vector, true));
+	      }
+	      return new Polygon3D(verts);
+	    }
+	
+	    this.perpendicular = (poly) => {
+	      return this.normal().perpendicular(poly.normal());
+	    }
+	    const xyNormal = new Vector3D(0,0,1);
+	    const yzNormal = new Vector3D(1,0,0);
+	    const xzNormal = new Vector3D(0,1,0);
+	    this.inXY = () => this.perpendicular(xyPoly);
+	    this.inYZ = () => this.perpendicular(yzPoly);
+	    this.inXZ = () => this.perpendicular(xzPoly);
+	
+	    this.parrelle = (poly) => {
+	      if (normal === undefined || poly.normal() === undefined) return false;
+	      return normal.parrelle(poly.normal());
+	    }
+	
+	    this.offset = (left, right, up, down) => {
+	      lines[0].adjustLength(left - lines[0].length(), false);
+	      lines[0].adjustLength(lines[0].length() - right, true);
+	      lines[2].adjustLength(lines[2].length() - left, true);
+	      lines[2].adjustLength(right - lines[2].length(), false);
+	
+	      lines[1].adjustLength(up - lines[1].length(), false);
+	      lines[1].adjustLength(lines[1].length() - down, true);
+	      lines[3].adjustLength(lines[3].length() - up, true);
+	      lines[3].adjustLength(down - lines[3].length(), false);
+	    }
+	
+	    this.parrelleAt = (distance) => {
+	      const normal = this.normal();
+	      const scaled = normal.scale(distance);
+	      const verticies = this.verticies();
+	      for (let index = 0; index < verticies.length; index++) {
+	        verticies[index].translate(scaled);
+	      }
+	      return new Polygon3D(verticies);
+	    }
+	
+	    this.verticies = () => {
+	      if (lines.length === 0) return [];
+	      const verticies = [];
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        verticies.push(line.startVertex);
+	      }
+	
+	      return JSON.clone(verticies);
+	    }
+	
+	    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex.copy();
+	
+	    this.isClockwise = () => {
+	      let sum = 0;
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const point1 = lines[index].startVertex;
+	        const point2 = lines[index].startVertex;
+	        sum += (point2.x - point1.x)*(point2.y + point1.y)*(point2.z - point1.z);
+	      }
+	      return sum > 0;
+	    }
+	
+	    this.lines = () => JSON.clone(lines);
+	    this.line = (index) => JSON.clone(lines[Math.mod(index, lines.length)]);
+	    this.startLine = () => lines[0];
+	    this.endLine = () => lines[lines.length - 1];
+	
+	    const tol = .00001;
+	    this.lineMap = (force) => {
+	      if (!force && map !== undefined) return map;
+	      if (lines.length === 0) return {};
+	      map = new ToleranceMap({'startVertex.x': tol, 'startVertex.y': tol, 'startVertex.z': tol,
+	                              'endVertex.x': tol, 'endVertex.y': tol, 'endVertex.z': tol});
+	      let lastEnd;
+	      if (!lines[0].startVertex.equals(lines[lines.length - 1].endVertex)) throw new Error('Broken Polygon');
+	      for (let index = 0; index < lines.length; index++) {
+	        lines[index]._POLY_INDEX = index;
+	        map.add(lines[index]);
+	      }
+	      return map;
+	    }
+	
+	    this.copy = () => new Polygon3D(Line3D.verticies(lines));
+	
+	    this.equals = (other) => {
+	      if (!(other instanceof Polygon3D)) return false;
+	      const verts = this.verticies();
+	      const otherVerts = other.verticies();
+	      if (verts.length !== otherVerts.length) return false;
+	      let otherIndex = undefined;
+	      let direction;
+	      for (let index = 0; index < verts.length * 2; index += 1) {
+	        const vIndex = index % verts.length;
+	        if (otherIndex === undefined) {
+	          if (index > verts.length) {
+	            return false
+	          } if(verts[index].equals(otherVerts[0])) {
+	            otherIndex = otherVerts.length * 2;
+	          }
+	        } else if (otherIndex === otherVerts.length * 2) {
+	          if (verts[vIndex].equals(otherVerts[1])) direction = 1;
+	          else if(verts[vIndex].equals(otherVerts[otherVerts.length - 1])) direction = -1;
+	          else return false;
+	          otherIndex += direction * 2;
+	        } else if (!verts[vIndex].equals(otherVerts[otherIndex % otherVerts.length])) {
+	          return false;
+	        } else {
+	          otherIndex += direction;
+	        }
+	      }
+	      return true;
+	    }
+	
+	    function getLine(line) {
+	      const lineMap = this.lineMap();
+	      const matches = lineMap.matches(line) || lineMap.matches(line.negitive());
+	      if (matches && matches.length > 1) throw new Error('THIS SHOULD NOT HAPPEN!!!! REMOVE LINES IS BROKEN... probably');
+	      return matches ? matches[0] : null;
+	    }
+	
+	    this.getLines = (startVertex, endVertex, reverse) => {
+	      const subSection = [];
+	      let completed = false;
+	      let shared;
+	      const compareLine = new Line3D(startVertex, endVertex);
+	      const compareLineI = new Line3D(endVertex,startVertex);
+	
+	      const doubleLen = lines.length * 2;
+	      for (let steps = 0; steps < doubleLen; steps += 1) {
+	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
+	        const curr = lines[index];
+	        if (!shared) {
+	          if (compareLine.equals(curr) || compareLineI.equals(curr)) shared = curr;
+	        } else {
+	          if (shared === curr) {
+	            completed = true;
+	            break;
+	          } else subSection.push(!reverse ? curr : curr.negitive());
+	        }
+	      }
+	      if (completed) return subSection;
+	    }
+	
+	    this.center = () => {
+	      const verts = [];
+	      for (let index = 0; index < lines.length; index++) {
+	        verts.push(lines[index].startVertex);
+	      }
+	      return Vertex3D.center(verts);
+	    }
+	
+	    this.addVerticies = (list) => {
+	      if (list === undefined) return;
+	      const verts = [];
+	      const endLine = this.endLine();
+	      for (let index = 0; index < list.length + 1; index += 1) {
+	        if (index < list.length) verts[index] = new Vertex3D(list[index]);
+	        if (index === 0 && endLine) endLine.endVertex = verts[0];
+	        else if (index > 0) {
+	          const startVertex = verts[index - 1];
+	          const endVertex = verts[index] || this.startLine().startVertex;
+	          const line = new Line3D(startVertex, endVertex);
+	          lines.push(line);
+	          const prevLine = lines[lines.length - 2];
+	          // if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
+	          // else if (lines.length > 2) {
+	          //   const equal = normal.equals(calcNormal(line, prevLine));
+	          //   if (equal === false) {
+	          //     console.log('Trying to add vertex that does not lie in the existing plane');
+	          //   }
+	          // }
+	        }
+	      }
+	      if (verts.length > 0 && lines.length > 0) {
+	        if (endLine) endline.endVertex = verts[0];
+	      }
+	      this.lineMap(true);
+	      this.removeLoops();
+	    }
+	
+	    this.rebuild = (newVerticies) => {
+	      lines = [];
+	      this.addVerticies(newVerticies);
+	    }
+	
+	    this.removeLoops = () => {
+	      let removed = true;
+	      const orig = lines;
+	      while (removed && lines.length > 0) {
+	        removed = false;
+	        const map = this.lineMap();
+	        for (let index = 0; index < lines.length; index += 1) {
+	          const line = lines[index];
+	          if (line.isPoint()) {
+	            lines = JSON.clone(lines);
+	            lines.splice(index, 1);
+	            removed = true;
+	          } else {
+	            const posMatch = map.matches(line);
+	            const negMatch = map.matches(line.negitive());
+	            if (posMatch.length > 1 || (negMatch && negMatch.length !== 0)) {
+	              let match = negMatch ? negMatch[0] : posMatch[1];
+	              const startIndex = line._POLY_INDEX;
+	              const endIndex = match._POLY_INDEX;
+	              if (startIndex > endIndex)
+	              throw new Error('THIS SHOULD NOT HAPPEN!!!!!! WTF!!!!');
+	              const forwardDiff = endIndex - startIndex;
+	              const reverseDiff = lines.length - forwardDiff;
+	              if (Math.max(forwardDiff, reverseDiff) < 3) {
+	                console.log('che che');
+	              }
+	              if (forwardDiff > reverseDiff) {
+	                lines = lines.slice(startIndex, endIndex);
+	              } else {
+	                lines = lines.slice(0, startIndex).concat(lines.slice(endIndex));
+	              }
+	
+	              const newVerts = Line3D.verticies(lines);
+	              this.rebuild(newVerts);
+	              removed = true;
+	              break;
+	            }
+	          }
+	        }
+	        // TODO: not sure if this will cause an issue but polygons should not have less than 3 verticies this will break toPlane functionality.
+	        // if (lines.length < 3) {
+	        //   console.log('che che check it out', lines.length);
+	        // }
+	        if (removed) this.lineMap(true);
+	      }
+	    }
+	
+	    this.path = () => {
+	      let path = '';
+	      this.verticies().forEach((v) => path += `${v.toString()} => `);
+	      return path.substring(0, path.length - 4);
+	    }
+	
+	
+	    this.merge = (other) => {
+	      if (!this.normal().parrelle(other.normal())) return;
+	      const thisPlane = this.toPlane();
+	      const otherPlane = other.toPlane();
+	      // if (!thisPlane.equivalent(otherPlane)) return;
+	      const lineMap = this.lineMap();
+	      const allOtherLines = other.lines();
+	      let merged;
+	      for (let index = 0; index < allOtherLines.length; index += 1) {
+	        const curr = allOtherLines[index];
+	        let verticies, thisLines, otherLines;
+	        if (lineMap.matches(curr) !== null) {
+	          thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
+	          otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
+	        } else if (lineMap.matches(curr.negitive()) !== null) {
+	          thisLines = this.getLines(curr.endVertex, curr.startVertex, false);
+	          otherLines = other.getLines(curr.startVertex, curr.endVertex, false);
+	        }
+	
+	        if (thisLines && otherLines) {
+	          if (thisLines[0].startVertex.equals(otherLines[0].startVertex))
+	            thisLines = Line3D.reverse(thisLines);
+	
+	          const startCheck = thisLines[0].startVertex.equals(otherLines[otherLines.length - 1].endVertex);
+	          const middleCheck = thisLines[thisLines.length - 1].endVertex.equals(otherLines[0].startVertex);
+	          if (!(middleCheck && startCheck))
+	            console.warn('coommmmooon!!!!');
+	          verticies = Line3D.verticies(otherLines.concat(thisLines));
+	          merged = new Polygon3D(verticies);
+	          try {
+	            merged.normal();
+	          } catch (e) {
+	            console.warn('again wtf!!!');
+	            new Polygon3D(verticies);
+	            new Polygon3D(verticies);
+	            new Polygon3D(verticies);
+	          }
+	        }
+	      }
+	
+	      if (merged) {
+	        return merged;
+	      }
+	    }
+	
+	    this.viewFromVector = () => Polygon3D.viewFromVector([this])[0];
+	    this.mostInformation = () => Polygon3D.mostInformation([this])[0];
+	
+	    this.to2D = (x, y) => {
+	      if (!x || !y) {
+	        const mi = this.mostInformation();
+	        x ||= mi[0];
+	        y ||= mi[1];
+	        if (lastMi && (mi[0] !== lastMi[0] || mi[1] !== lastMi[1])) {
+	          console.info.subtle('change in mi');
+	        }
+	        lastMi = mi;
+	      }
+	
+	      const verts = this.verticies();
+	      const verts2D = [];
+	      for (let index = 0; index < verts.length; index++) {
+	        verts2D.push({x: verts[index][x], y: verts[index][y]});
+	      }
+	      return new Polygon2D(verts2D);
+	    }
+	
+	    this.toString = () => {
+	      let str = '';
+	      for (let index = 0; index < lines.length; index++) {
+	        str += ` => ${lines[index].startVertex.toString()}`;
+	      }
+	      return `${str.substring(4)} normal: ${this.normal()}`;
+	    }
+	
+	
+	    this.toDetailString = () => {
+	      let startStr = '';
+	      let endStr = '';
+	      for (let index = 0; index < lines.length; index++) {
+	        startStr += ` => ${lines[index].startVertex.toString()}`;
+	        endStr += ` => ${lines[Math.mod(index - 1, lines.length)].endVertex.toString()}`;
+	      }
+	      return `Start Verticies: ${startStr.substring(4)}\nEnd   Verticies: ${endStr.substring(4)}`;
+	    }
+	    this.addVerticies(initialVerticies);
+	  }
+	}
+	
+	function printMerge(target, other, merged) {
+	  console.log(`target: ${target.toString()}`);
+	  console.log(`other: ${other.toString()}`);
+	  console.log(`merged: ${merged.toString()}`);
+	  target.merge(other);
+	}
+	
+	let doIt = false;
+	Polygon3D.merge = (polygons) => {
+	  let currIndex = 0;
+	  while (currIndex < polygons.length - 1) {
+	    const target = polygons[currIndex];
+	    for (let index = currIndex + 1; index < polygons.length; index += 1) {
+	      const other = polygons[index];
+	      const merged = target.merge(other);
+	      if (merged) {
+	        if (doIt) printMerge(target, other, merged);
+	        polygons[currIndex--] = merged;
+	        polygons.splice(index, 1);
+	        break;
+	      }
+	    }
+	    currIndex++;
+	  }
+	}
+	
+	const xyPoly = new Polygon3D([[1,10,0],[11,2,0],[22,1,0]]);
+	const yzPoly = new Polygon3D([[6,0,1],[10,0,27],[2,0,11]]);
+	const xzPoly = new Polygon3D([[0,11,13],[0,12,23],[0,22,3]]);
+	
+	Polygon3D.mostInformation = (polygons) => {
+	  const diff = {x: 0, y:0, z: 0};
+	  for (let pIndex = 0; pIndex < polygons.length; pIndex++) {
+	    const poly = polygons[pIndex];
+	    const verts = poly.verticies();
+	    const center = poly.center();
+	    for(let index = 0; index < verts.length; index++) {
+	      const v = verts[index];
+	      diff.x += Math.abs(v.x - center.x);
+	      diff.y += Math.abs(v.y - center.y);
+	      diff.z += Math.abs(v.z - center.z);
+	    }
+	  }
+	  return diff.x < diff.y ?
+	        (diff.x < diff.z ? ['y', 'z'] :
+	        (diff.z < diff.y ? ['x', 'y'] : ['x', 'z'])) :
+	        (diff.y < diff.z ? ['x', 'z'] : ['x', 'y']);
+	}
+	
+	// const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
+	// const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
+	const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
+	const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
+	const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
+	Polygon3D.toTwoD = (polygons, vector, axis) => {
+	  const view = Polygon3D.viewFromVector(polygons, vector);
+	  axis ||= Polygon3D.mostInformation(view);
+	  const twoD = view.map(to2D(axis));
+	  const twoDlines = Polygon2D.lines(twoD);
+	  twoDlines.axis = axis;
+	  return twoDlines;
+	}
+	
+	Polygon3D.toThreeView = (polygons, normals, gap) => {
+	  normals ||= defaultNormals;
+	  gap ||= 10;
+	  const frontView = Polygon3D.viewFromVector(polygons, normals.front);
+	  const rightView = Polygon3D.viewFromVector(polygons, normals.right);
+	  const topView = Polygon3D.viewFromVector(polygons, normals.top);
+	
+	  const frontAxis = Polygon3D.mostInformation(frontView);
+	  const rightAxis = Polygon3D.mostInformation(rightView);
+	  const topAxis = Polygon3D.mostInformation(topView);
+	
+	  if (topAxis.indexOf(frontAxis[1]) !== -1) frontAxis.reverse();
+	  if (topAxis.indexOf(rightAxis[1]) !== -1) rightAxis.reverse();
+	  if (frontAxis.indexOf(topAxis[1]) !== -1) topAxis.reverse();
+	
+	  const front2D = frontView.map(to2D(frontAxis));
+	  const right2D = rightView.map(to2D(rightAxis));
+	  const top2D = topView.map(to2D(topAxis));
+	
+	  Polygon2D.centerOn({x:0,y:0}, front2D);
+	
+	  const frontMinMax = Polygon2D.minMax(...front2D);
+	  const rightMinMax = Polygon2D.minMax(...right2D);
+	  const topMinMax = Polygon2D.minMax(...top2D);
+	  const rightCenterOffset = frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2;
+	  const topCenterOffset = frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2;
+	
+	  Polygon2D.centerOn({x:rightCenterOffset, y:0}, right2D);
+	  Polygon2D.centerOn({x:0,y:topCenterOffset}, top2D);
+	
+	  const front = Polygon2D.lines(front2D);
+	  const right = Polygon2D.lines(right2D);
+	  const top = Polygon2D.lines(top2D);
+	
+	  return {front, right, top}
+	}
+	
+	Polygon3D.fromCSG = (polys) => {
+	  const isArray = Array.isArray(polys);
+	  if (!isArray) polys = [polys];
+	  const poly3Ds = [];
+	  for (let index = 0; index < polys.length; index++) {
+	    const poly = polys[index];
+	    const verts = [];
+	    for (let vIndex = 0; vIndex < poly.vertices.length; vIndex++) {
+	      const v = poly.vertices[vIndex];
+	      verts.push(new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
+	    }
+	    poly3Ds.push(new Polygon3D(verts));
+	  }
+	  if (!isArray) return poly3Ds[0];
+	  return poly3Ds;
+	}
+	
+	Polygon3D.fromVectorObject =
+	    (width, height, center, vectorObj) => {
+	  center ||= new Vertex(0,0,0);
+	  vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0)}
+	  const hw = width/2;
+	  const hh = height/2;
+	  const wV = vectorObj.width;
+	  const hV = vectorObj.height;
+	  const vector1 = center.translate(hV.scale(hh), true).translate(wV.scale(-hw));
+	  const vector2 = center.translate(hV.scale(hh), true).translate(wV.scale(hw));
+	  const vector3 = center.translate(hV.scale(-hh), true).translate(wV.scale(hw));
+	  const vector4 = center.translate(hV.scale(-hh), true).translate(wV.scale(-hw));
+	  return new Polygon3D([vector1, vector2, vector3, vector4]);
+	}
+	
+	Polygon3D.fromLines = (lines) => {
+	  const verts = [];
+	  for (let index = 0; index < lines.length; index += 1) {
+	    if (!lines[index].startVertex.equals(lines[Math.mod(index - 1, lines.length)].endVertex)) throw new Error('Lines must be connected');
+	    verts.push(lines[index].startVertex);
+	  }
+	  return new Polygon3D(verts);
+	}
+	
+	Polygon3D.from2D = (polygon2d) => {
+	  const verts = polygon2d.verticies();
+	  const initialVerticies = [];
+	  for (let index = 0; index < verts.length; index++) {
+	    const vert = verts[index];
+	    initialVerticies.push(new Vertex3D(vert.x(), vert.y(), 0));
+	  }
+	  return new Polygon3D(initialVerticies);
+	}
+	
+	Polygon3D.viewFromVector = (polygons, vector) => {
+	  const orthoPolys = [];
+	  for (let p = 0; p < polygons.length; p++) {
+	    const verticies = polygons[p].verticies();
+	    const orthoVerts = [];
+	    const vertLocs = {};
+	    let valid = true;
+	    for (let v = 0; valid && v < verticies.length; v++) {
+	      const vertex = verticies[v];
+	      const u = new Vector3D(vertex.x, vertex.y, vertex.z);
+	      const projection = u.projectOnTo(vector);
+	      const orthogonal = new Vertex3D(u.minus(projection));
+	      const accStr = orthogonal.toString();
+	      if (vertLocs[accStr]) valid = false;
+	      else vertLocs[accStr] = true;
+	      orthoVerts.push(orthogonal);
+	    }
+	    if (valid) orthoPolys.push(new Polygon3D(orthoVerts));
+	  }
+	  return orthoPolys;
+	}
+	
+	module.exports = Polygon3D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/matrix.js',
+function (require, exports, module) {
+	
+const Approximate = require('../../../../../public/js/utils/approximate.js');
+	
+	function findRowColumnCount (array) {
+	  let rows = array.length;
+	  let columns = array[0].length;
+	  for (let i = 0; i < array.length; i++) {
+	    const row = array[i];
+	    columns = row.length > columns ? row.length : columns;
+	  }
+	  return {rows, columns};
+	}
+	
+	function columnValidator (min, max) {
+	  return (target, key, value) => {
+	    if (key > max || key < min) {
+	      throw new Error('An assignment error was made or you need to resize your matrix');
+	    }
+	    if ((typeof value) !== 'number') {
+	      throw new Error('Matrix must be filled with numbers');
+	    }
+	    target[key] = value;
+	    return true;
+	  }
+	}
+	
+	function rowValidator () {
+	  return (target, key, value) => {
+	    if (Number.isNaN(Number.parseInt(key))) {
+	      throw new Error('You do not have access to the numerical attributes of a Matrix object, they are reserved for rows and cannot be modified');
+	    }
+	    target[key] = value;
+	    return true;
+	  }
+	}
+	
+	class Matrix extends Array {
+	  constructor(values, rows, columns) {
+	    super();
+	    if (!rows || !columns) {
+	      const max = findRowColumnCount(values);
+	      if (!rows) rows = max.rows;
+	      if (!columns) columns = max.columns;
+	    }
+	
+	    for (let i = 0; i < rows; i +=1) {
+	      this[i] = new Proxy([], { set: columnValidator(0, columns) });
+	      for (let j = 0; j < columns; j ++) {
+	        const value = values && values[i] && values[i][j];
+	        this[i][j] = !value ? 0 : value;
+	      }
+	    }
+	
+	    new Proxy(this, {set: rowValidator()});
+	
+	    this.rows = () => rows;
+	    this.columns = () => columns;
+	
+	    this.remove = (rowIndex, columnIndex) => {
+	      if ((typeof rowIndex) !== 'number') rowIndex = Number.MAX_SAFE_INTEGER;
+	      else rowIndex = Math.mod(rowIndex, rows);
+	      if ((typeof columnIndex) !== 'number') columnIndex = Number.MAX_SAFE_INTEGER;
+	      else columnIndex = Math.mod(columnIndex, columns);
+	
+	      const rowLimit = rowIndex > -1 && rowIndex < rows ? rows - 1 : rows;
+	      const columnLimit = columnIndex > -1 && columnIndex < columns ? columns - 1 : columns;
+	      let matrix = new Matrix(null, rowLimit, columnLimit);
+	      for (let i = 0; i < rows; i++) {
+	        if (i !== rowIndex) {
+	          const rowI = i < rowIndex ? i : i - 1;
+	          for (let j = 0; j < columns; j++) {
+	            if (j !== columnIndex) {
+	              const columnJ = j < columnIndex ? j : j - 1;
+	              matrix[rowI][columnJ] = this[i][j];
+	            }
+	          }
+	        }
+	      }
+	      return matrix;
+	    }
+	
+	    this.replaceRow = (rowIndex, values) => {
+	      rowIndex = Math.mod(rowIndex, rows);
+	
+	      for (let j = 0; j < columns; j++) {
+	        this[rowIndex][j] = values[j];
+	      }
+	    }
+	
+	    this.replaceColumn = (columnIndex, values) => {
+	      columnIndex = Math.mod(columnIndex, rows);
+	
+	      for (let i = 0; i < rows; i++) {
+	        this[i][columnIndex] = values[i];
+	      }
+	    }
+	
+	    this.minor = (index) => {
+	      return this.remove(0, index);
+	    }
+	
+	    const bigEnough = (val) => Math.abs(val) > .00000001;
+	    this.consise = () => {
+	      const removedColumns = [];
+	      let consiseMatrix = this.copy();
+	      for (let j = columns - 1; j > -1; j--) {
+	        // const initialValue = this[0][j];
+	        let notZero = false;
+	        for (let i = 0; i < rows; i++) {
+	            notZero ||= bigEnough(this[i][j]);
+	        }
+	        if (!notZero) {
+	          removedColumns.push(j);
+	          consiseMatrix = consiseMatrix.remove(undefined, j);
+	        }
+	      }
+	
+	      const changes = [];
+	      const keepRows = [consiseMatrix[0]];
+	      const moreInfo = (row) => {
+	        for (let i = 0; i < keepRows.length; i++) {
+	          const kRow = keepRows[i];
+	          for (let j = 0; j < kRow.length; j++) {
+	            if (!changes[j] && kRow[j] != row[j]) {
+	              changes[j] = true;
+	              keepRows.push(row);
+	              return;
+	            }
+	          }
+	        }
+	      }
+	      for (let i = 1; keepRows.length < keepRows[0].length && i < rows; i++) {
+	        const row = consiseMatrix[i];
+	        if (keepRows.equalIndexOf(row) === -1) moreInfo(row);
+	      }
+	      return {removedColumns, matrix:  new Matrix(keepRows)};
+	    }
+	
+	    this.determinate = () => {
+	      if (rows === 2) return this[0][0] * this[1][1] - this[0][1] * this[1][0];
+	
+	      let sign = 1;
+	      let sum = 0;
+	      let colNum = 0;
+	      while (colNum < columns) {
+	        const minor = this.minor(colNum);
+	        const determinate = minor.determinate();
+	        sum += this[0][colNum++] * determinate * sign;
+	        sign *= -1;
+	      }
+	      return sum;
+	    }
+	
+	    this.solve = (answer) => {
+	      const consiseObj = this.consise();
+	      const consiseMatrix = consiseObj.matrix;
+	      const removedColumns = consiseObj.removedColumns;
+	      const solution = new Matrix(null, columns, 1);
+	      answer ||= new Array(columns).fill(0);
+	      let consiseIndex = 0;
+	      const determinate = consiseMatrix.determinate();
+	      for (let j = 0; j < columns; j++) {
+	        let value;
+	        if (removedColumns.indexOf(j) !== -1) value = 0;
+	        else {
+	          const matrix = consiseMatrix.copy()
+	          matrix.replaceColumn(consiseIndex++, answer);
+	          const matrixDeterminate = matrix.determinate();
+	          value = matrixDeterminate / determinate;
+	        }
+	        solution[j][0] = value;
+	      }
+	      return solution;
+	    }
+	
+	    this.dot = (other) => {
+	      if (this.columns() !== other.rows()) throw new Error('this.columns() and other.rows() much match for a dot product');
+	      const result = new Matrix(null, this.rows(), other.columns());
+	      let ri = 0;
+	      let rj = 0;
+	      for (let i = 0; i < rows; i++) {
+	        for (let oj = 0; oj < other.columns(); oj++) {
+	          let value = 0;
+	          for (let j = 0; j < columns; j++) {
+	            value = value + this[i][j] * other[j][oj];
+	          }
+	          result[i][oj] = value;
+	        }
+	      }
+	      return result;
+	    }
+	
+	    this.scale = (coef, oddOnly) => {
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < columns; j++) {
+	          if (!oddOnly || (i + j) % 2 === 1) {
+	            this[i][j] = this[i][j] * coef;
+	          }
+	        }
+	      }
+	    }
+	
+	    this.approximate = (accuracy) => {
+	      const approximate = Approximate.new(accuracy);
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < columns; j++) {
+	          this[i][j] = approximate(this[i][j]);
+	        }
+	      }
+	    }
+	
+	    this.transpose = () => {
+	      const rows = this.rows();
+	      const cols = this.columns();
+	      const result = new Matrix(null, cols, rows);
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < cols; j++) {
+	          result[j][i] = this[i][j];
+	        }
+	      }
+	      return result;
+	    }
+	
+	    this.diagonal = () => {
+	      const rows = this.rows();
+	      const cols = this.columns();
+	      const result = new Matrix(null, cols, rows);
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < cols; j++) {
+	          if (i + j !== rows - 1) {
+	            result[rows - i - 1][cols - j - 1] = this[i][j];
+	          } else {
+	            result[i][j] = this[i][j];
+	          }
+	        }
+	      }
+	      return result;
+	    }
+	
+	    this.multiply = (other) => {
+	      const result = new Matrix(null, this.rows(), other.columns());
+	      for (let i = 0; i < this.rows(); i++) {
+	        for (let j = 0; j < this.columns(); j++) {
+	          let sum = 0
+	          for (let k = 0; k < other.rows(); k++) {
+	            sum = sum + this[i][k] * other[k][j]
+	            result[i][j] = sum
+	          }
+	        }
+	      }
+	      return result;
+	    }
+	
+	    this.inverse = () => {
+	      let inverse;
+	      if (this.rows() === 2) {
+	        inverse = this.diagonal();
+	        inverse.scale(-1, true);
+	        inverse.scale(1/this.determinate());
+	        return inverse;
+	      }
+	
+	      const rows = this.rows();
+	      const cols = this.columns();
+	      inverse = new Matrix(null, rows, columns);
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < cols; j++) {
+	          const minor = this.remove(i, j);
+	          const value = minor.determinate();
+	          inverse[i][j] = value;
+	        }
+	      }
+	      inverse.scale(-1, true);
+	      inverse = inverse.transpose();
+	      inverse.scale(1/this.determinate());
+	      return inverse;
+	    }
+	
+	    this.toString = () => {
+	      let str = '';
+	      for (let i = 0; i < rows; i++) {
+	        str += '|'
+	        for (let j = 0; j < columns; j++) {
+	          str += `${this[i][j]}  `;
+	        }
+	        str = str.substring(0, str.length - 2) + '|\n'
+	      }
+	      return str.substring(0, str.length - 1);
+	    }
+	
+	    this.equals = (other) => {
+	      if (other.rows() !== rows || other.columns() !== columns) return false;
+	      for (let i = 0; i < rows; i++) {
+	        for (let j = 0; j < columns; j++) {
+	          if (other[i][j] !== this[i][j]) return false;
+	        }
+	      }
+	      return true;
+	    }
+	
+	    this.copy = () => new Matrix(this);
+	
+	  }
+	}
+	
+	Matrix.identity = (rows) => {
+	  let identity = new Matrix(null, rows, rows);
+	  for (let i = 0; i < rows; i++) {
+	    for (let j = 0; j < rows; j++) {
+	      if (i === j) identity[i][i] = 1;
+	      else identity[i][j] = 0;
+	    }
+	  }
+	  return identity;
+	}
+	
+	Matrix.rotation = function (roll, pitch, yaw) {
+	  if (roll instanceof Object) {
+	    pitch = Math.toRadians(roll.y);
+	    yaw = Math.toRadians(roll.z);
+	    roll = Math.toRadians(roll.x);
+	  }
+	  roll ||= 0;
+	  pitch ||= 0;
+	  yaw ||= 0;
+	  var cosa = Math.cos(yaw);
+	  var sina = Math.sin(yaw);
+	
+	  var cosb = Math.cos(pitch);
+	  var sinb = Math.sin(pitch);
+	
+	  var cosc = -1*Math.cos(roll);
+	  var sinc = -1*Math.sin(roll);
+	
+	  var Axx = cosa*cosb;
+	  var Axy = cosa*sinb*sinc - sina*cosc;
+	  var Axz = cosa*sinb*cosc + sina*sinc;
+	
+	  var Ayx = sina*cosb;
+	  var Ayy = sina*sinb*sinc + cosa*cosc;
+	  var Ayz = sina*sinb*cosc - cosa*sinc;
+	
+	  var Azx = -sinb;
+	  var Azy = cosb*sinc;
+	  var Azz = cosb*cosc;
+	
+	  return new Matrix([
+	    [Axx, Axy, Axz],
+	    [Ayx, Ayy, Ayz],
+	    [Azx, Azy, Azz],
+	  ]);
+	}
+	
+	module.exports = Matrix;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/line.js',
+function (require, exports, module) {
+	
+const Vector3D = require('./vector');
+	const Vertex3D = require('./vertex');
+	const Plane = require('./plane');
+	
+	class Line3D {
+	  constructor(startVertex, endVertex) {
+	    if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
+	    startVertex = new Vertex3D(startVertex);
+	    endVertex = new Vertex3D(endVertex);
+	    this.startVertex = startVertex;
+	    this.endVertex = endVertex;
+	
+	    this.clone = () => new Line3D(startVertex.clone(), endVertex.clone());
+	
+	    this.negitive = () => new Line3D(endVertex, startVertex);
+	    this.equals = (other) => startVertex && endVertex && other &&
+	        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
+	    this.vector = () => {
+	      let i = endVertex.x - startVertex.x;
+	      let j = endVertex.y - startVertex.y;
+	      let k = endVertex.z - startVertex.z;
+	      return new Vector3D(i,j,k);
+	    };
+	
+	    this.translate = (vector) => {
+	      this.startVertex.translate(vector);
+	      this.endVertex.translate(vector);
+	    }
+	
+	    this.isPoint = () => this.startVertex.equals(this.endVertex);
+	
+	    this.planeAt = (rotation) => {
+	      const two = new Vertex3D({x: startVertex.x + 1, y: startVertex.y, z: startVertex.z});
+	      two.rotate(rotation, startVertex);
+	      const three = {x: endVertex.x + 1, y: endVertex.y, z: endVertex.z};
+	      thtee.rotate(rotation, endVertex);
+	      return new Plane(startVertex.copy(), two, three, endVertex.copy());
+	    }
+	
+	    this.on = (vertex, tolerance) => {
+	      tolerance ||= .01;
+	    }
+	
+	    this.equation = () => {
+	      const returnValue = {};
+	      for (let i = 0; i < 3; i++) {
+	        let coord = String.fromCharCode(i + 120);
+	        let t = (endVertex[coord] - startVertex[coord]) / 1;
+	        if (t !== 0) {
+	          let coef = String.fromCharCode(i + 97);
+	          returnValue[coef] = 1;
+	
+	          let offset = ((i + 1) % 3);
+	          coord = String.fromCharCode(offset + 120);
+	          coef = String.fromCharCode(offset + 97);
+	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
+	
+	          offset = ((i + 2) % 3);
+	          coord = String.fromCharCode(offset + 120);
+	          coef = String.fromCharCode(offset + 97);
+	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
+	          break;
+	        }
+	      }
+	      if (returnValue.a === undefined) throw new Error('This Line is a point... I think...');
+	      return returnValue;
+	    }
+	
+	    this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
+	    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
+	
+	    this.midpoint = () => new Vertex3D(
+	      (endVertex.x + startVertex.x) / 2,
+	      (endVertex.y + startVertex.y) / 2,
+	      (endVertex.z + startVertex.z) / 2
+	    );
+	
+	    this.length = () => this.vector().magnitude();
+	
+	    this.adjustLength = (change, fromStartVertex) => {
+	      if ((typeof change) !== 'number' || change === 0) return;
+	      const unitVec = this.vector().unit();
+	      if (fromStartVertex !== undefined) {
+	        if (fromStartVertex === true) {
+	          this.endVertex.positionAt(this.startVertex.translate(unitVec.scale(change), true));
+	        } else {
+	          this.startVertex.positionAt(this.endVertex.translate(unitVec.scale(change), true));
+	        }
+	      } else {
+	        const len = this.length();
+	        const halfChangeMag = change/2;
+	        const halfDistVec = unitVec.scale(halfChangeMag);
+	        startVertex.translate(halfDistVec.inverse());
+	        endVertex.translate(halfDistVec);
+	      }
+	    }
+	
+	    this.pointAtDistance = (distance) => {
+	      const point = startVertex.copy();
+	      const unitVec = this.vector().unit();
+	      point.translate(unitVec.scale(distance));
+	      return point;
+	    }
+	
+	    this.rotate = (rotation, center) => {
+	      center ||= this.midpoint();
+	      startVertex.rotate(rotation, center);
+	      endVertex.rotate(rotation, center);
+	    }
+	
+	    this.reverseRotate = (rotation, center) => {
+	      center ||= this.midpoint();
+	      startVertex.reverseRotate(rotation, center);
+	      endVertex.reverseRotate(rotation, center);
+	    }
+	
+	  }
+	}
+	
+	Line3D.verticies = (lines) => {
+	  const verts = [];
+	  for (let index = 0; index < lines.length; index += 1) {
+	    verts.push(lines[index].endVertex.copy());
+	  }
+	  return verts;
+	}
+	
+	Line3D.adjustVerticies = (vert1, vert2, change) => {
+	  const line = new Line3D(vert1, vert2);
+	  line.adjustLength(change);
+	}
+	
+	Line3D.reverse = (list) => {
+	  let reversed = [];
+	  for (let index = list.length - 1; index > -1; index--) {
+	    reversed.push(list[index].negitive());
+	  }
+	  return reversed;
+	}
+	
+	module.exports = Line3D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/bi-polygon.js',
+function (require, exports, module) {
+	
+const CSG = require('../../../public/js/3d-modeling/csg.js');
+	const Line3D = require('line');
+	const Vector3D = require('vector');
+	const Vertex3D = require('vertex');
+	const Polygon3D = require('polygon');
+	const Plane = require('plane');
+	
+	class BiPolygon {
+	  constructor(polygon1, polygon2) {
+	    const face1 = polygon1.verticies();
+	    const face2 = polygon2.verticies();
+	    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
+	
+	    let normal = {};
+	    function calcNormal() {
+	      if (normal === undefined) {
+	        const pNorm1 = polygon1.normal();
+	        const pNorm1I = pNorm1.inverse();
+	        const center1 = polygon1.center();
+	        const center2 = polygon2.center();
+	        const cOffsetNorm = center1.translate(pNorm1, true);
+	        const cOffsetNormI = center1.translate(pNorm1I, true);
+	        normal.front = cOffsetNorm.distance(center2) > cOffsetNormI.distance(center2) ?
+	            cOffsetNorm : cOffsetNormI;
+	        const topApproxVector = face2[3].distanceVector(face2[0]).unit();
+	        const normVert = new Vertex3D(normal.front);
+	        normVect.rotate({x:1,y:0,z:0});
+	      }
+	      return normal;
+	    }
+	
+	    this.front = () => new Polygon3D(face1);
+	    this.back = () => new Polygon3D(face2);
+	    this.normal = () => face2[0].distanceVector(face1[0]).unit();
+	    this.normalTop = () => face2[3].distanceVector(face2[0]).unit();
+	    this.normalRight = () => face2[1].distanceVector(face2[0]).unit();
+	
+	    this.translate = (vector) => {
+	      for (let index = 0; index < face1.length; index++) {
+	        face1[index].translate(vector);
+	        face2[index].translate(vector);
+	      }
+	    }
+	
+	    this.center = (newCenter) => {
+	      if (!(newCenter instanceof Vertex3D))
+	        return new Vertex3D(Math.midrange(face1.concat(face2), ['x', 'y', 'z']));
+	      const center = this.center();
+	      this.translate(newCenter.minus(center));
+	      return this.center();
+	    }
+	
+	    this.closerPlane = (vertex) => {
+	      const poly1 = new Plane(...face1);
+	      const poly2 = new Plane(...face2);
+	      return poly1.center().distance(vertex) < poly2.center().distance(vertex) ? poly1 : poly2;
+	    }
+	
+	    this.furtherPlane = (vertex) => {
+	      const poly1 = new Plane(...face1);
+	      const poly2 = new Plane(...face2);
+	      return poly1.center().distance(vertex) > poly2.center().distance(vertex) ? poly1 : poly2;
+	    }
+	
+	    this.flippedNormal = () => {
+	      const face1Norm = new Polygon3D(face1).normal();
+	      return this.normal().sameDirection(face1Norm);
+	    }
+	
+	
+	    function normalize (verts, reverse) {
+	      const normal =  new Polygon3D(verts).normal().toArray();
+	      const returnValue = [];
+	      for (let index = 0; index < verts.length; index++)
+	        returnValue[index] = new CSG.Vertex(verts[index], normal);
+	      return reverse ? returnValue.reverse() : returnValue;
+	    }
+	
+	    this.toModel = () => {
+	      const flippedNormal = this.flippedNormal();
+	      const front = new CSG.Polygon(normalize(face1, !flippedNormal));
+	      front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
+	      const back = new CSG.Polygon(normalize(face2, flippedNormal));
+	      back.plane.normal = back.vertices[0].normal.clone();//new CSG.Vector([0,0,1,0,0]);
+	      const polygonSets = [front, back];
+	
+	      for (let index = 0; index < face1.length; index++) {
+	        const index2 = (index + 1) % face1.length;
+	         const verticies = [face1[index], face1[index2], face2[index2], face2[index]];
+	         const normalized = normalize(verticies, flippedNormal);
+	         polygonSets.push(new CSG.Polygon(normalized));
+	         polygonSets[polygonSets.length - 1].plane.normal = normalized[0].normal.clone();
+	      }
+	
+	      const polys = CSG.fromPolygons(polygonSets);
+	      polys.normals = {
+	        front: this.normal(),
+	        right: this.normalRight(),
+	        top: this.normalTop()
+	      }
+	      return polys;
+	    }
+	
+	    this.toPolygons = () => {
+	      const polygons = [new Polygon3D(face1), new Polygon3D(face2)];
+	
+	      for (let index = 0; index < face1.length; index++) {
+	        const index2 = (index + 1) % face1.length;
+	         const verticies = [face1[index], face1[index2], face2[index2], face2[index]];
+	         polygons.push(new Polygon3D(vertices));
+	      }
+	      return polygons;
+	    }
+	
+	
+	    this.toString = () => {
+	      let face1Str = '';
+	      let face2Str = '';
+	      for (let index = 0; index < face1.length; index++) {
+	        face1Str += `(${face1[index].toString()}), `;
+	        face2Str += `(${face2[index].toString()}), `;
+	      }
+	      face1Str = face1Str.substring(0, face1Str.length - 2);
+	      face2Str = face2Str.substring(0, face2Str.length - 2);
+	      return `${face1Str}\n${face2Str}`;
+	    }
+	  }
+	}
+	
+	BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
+	  offset ||= {};
+	  const verts = polygon.verticies();
+	  if (verts.length < 4) return undefined;
+	  const verts1 = JSON.clone(verts);
+	  Line3D.adjustVerticies(verts1[0], verts1[1], offset.x);
+	  Line3D.adjustVerticies(verts1[1], verts1[2], offset.y);
+	  Line3D.adjustVerticies(verts1[2], verts1[3], offset.x);
+	  Line3D.adjustVerticies(verts1[3], verts1[0], offset.y);
+	  const verts2 = JSON.clone(verts1);
+	  const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
+	  const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
+	  return new BiPolygon(poly1, poly2);
+	}
+	
+	BiPolygon.fromVectorObject =
+	    (width, height, depth, center, vectorObj) => {
+	      center ||= new Vertex3D(0,0,0);
+	      vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0), depth: new Vector3D(0,0,1)};
+	      const frontCenter = center.translate(vectorObj.depth.scale(depth/2), true);
+	      const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);
+	      const backCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
+	      const back = Polygon3D.fromVectorObject(width, height, backCenter, vectorObj);
+	      return new BiPolygon(front, back);
+	}
+	
+	module.exports = BiPolygon;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/pull.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	const Polygon3D = require('../objects/polygon.js');
+	const BiPolygon = require('../objects/bi-polygon.js');
+	
+	function pull(length, height) {
+	  var rspx = length - .75;
+	  var h = height-.125;
+	  var gerth = 2.54/4;
+	  // var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+	  // var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+	  // var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+	  var rCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/2, 0, h/-2]});
+	  var lCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/-2, 0, h/-2]});
+	  var mainCyl = CSG.cube({demensions: [length, gerth, gerth], center: [0, 0, 0]});
+	
+	  return mainCyl.union(lCyl).union(rCyl);
+	}
+	
+	function getVectorObj(line, normal) {
+	  const midNormOffset = line.midpoint().translate(normal);
+	  const lineNormPoly = new Polygon3D([line.startVertex.copy(), line.endVertex.copy(), midNormOffset]);
+	  return {
+	    depth: normal,
+	    width: line.vector().unit(),
+	    height: lineNormPoly.normal(),
+	  };
+	}
+	
+	function pull(baseCenter, line, normal, projection, cTOc) {
+	  var gerth = 2.54/4;
+	  let length = cTOc + gerth;
+	  const vecObj = getVectorObj(line, normal);
+	
+	  let sideProjection = projection - gerth;
+	  const centerRL = baseCenter.translate(vecObj.depth.scale(sideProjection/2), true);
+	  const centerLeft = centerRL.translate(vecObj.width.scale(cTOc/-2), true);
+	  const centerRight = centerRL.translate(vecObj.width.scale(cTOc/2), true);
+	  const centerMain = baseCenter.translate(vecObj.depth.scale(projection - gerth/2));
+	
+	  var lCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerLeft, vecObj);
+	  var rCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerRight, vecObj);
+	  var mainCyl = BiPolygon.fromVectorObject(length, gerth, gerth, centerMain, vecObj);
+	
+	  return mainCyl.toModel().union(lCyl.toModel()).union(rCyl.toModel());
+	}
+	
+	function simple(baseCenter, line, normal, projection, cTOc) {
+	  var gerth = 2.54/4;
+	  let length = cTOc + gerth;
+	  const vecObj = getVectorObj(line, normal);
+	
+	  let sideProjection = projection - gerth;
+	  const center = baseCenter.translate(vecObj.depth.scale((sideProjection + gerth) /2), true);
+	
+	  return BiPolygon.fromVectorObject(length, gerth, projection, center, vecObj).toModel();
+	}
+	
+	pull.simple = simple;
+	
+	module.exports = pull
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/models/drawer-box.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	const Polygon3D = require('../objects/polygon.js');
+	const BiPolygon = require('../objects/bi-polygon.js');
+	
+	function drawerBox(length, width, depth) {
+	  const bottomHeight = 7/8;
+	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+	  box.setColor(1, 0, 0);
+	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+	  inside.setColor(0, 0, 1);
+	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+	  bInside.setColor(0, 0, 1);
+	
+	  return box.subtract(bInside).subtract(inside);
+	}
+	
+	function unionAll(...polygons) {
+	  let model = polygons[0].toModel();
+	  for (let index = 1; index < polygons.length; index++) {
+	    model = model.union(polygons[index].toModel());
+	  }
+	  return model;
+	}
+	
+	function drawerBox(frontPoly, normal, length, props) {
+	  const sideThickness = props.dbst.value();
+	  const bottomThickness = props.dbbt.value();
+	  const bottomHeight = props.dbid.value();
+	  const norm = normal;
+	
+	  // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: verticies are if facing polygon topLeft, topRight, bottomRight, bottomLeft
+	  const fP = frontPoly;
+	  const fPm = fP.translate(norm.scale(-length));
+	  const bP = new Polygon3D([fPm.vertex(1), fPm.vertex(0), fPm.vertex(3), fPm.vertex(2)]);
+	  const lP = new Polygon3D([bP.vertex(1), fP.vertex(0), fP.vertex(3), bP.vertex(2)]);
+	  const rP = new Polygon3D([fP.vertex(1), bP.vertex(0), bP.vertex(3), fP.vertex(2)]);
+	  const tP = new Polygon3D([bP.vertex(1), bP.vertex(0), fP.vertex(1), bP.vertex(0)]);
+	  const btmP = new Polygon3D([bP.vertex(2), bP.vertex(3), fP.vertex(2), fP.vertex(3)]);
+	
+	  const front = BiPolygon.fromPolygon(fP, 0, sideThickness);
+	  const back = BiPolygon.fromPolygon(bP, 0, sideThickness);
+	  const left = BiPolygon.fromPolygon(lP, 0, sideThickness);
+	  const right = BiPolygon.fromPolygon(rP, 0, sideThickness);
+	  const bottom = BiPolygon.fromPolygon(btmP, -bottomHeight, -bottomHeight-bottomThickness);
+	  return unionAll(front, back, left, right, bottom);
+	}
+	module.exports = drawerBox
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/snap/corner.js',
+function (require, exports, module) {
+	
+const Snap2d = require('../snap');
+	const Square2d = require('../square');
+	const Polygon2d = require('../polygon');
+	const SnapLocation2d = require('../snap-location');
+	const Vertex2d = require('../vertex');
+	const Line2d = require('../line');
+	
+	class SnapCorner extends Snap2d {
+	  constructor(parent, tolerance) {
+	    const polygon = new Polygon2d();
+	    // super(parent, new Square2d(parent.center), tolerance);
+	    super(parent, polygon, tolerance);
+	    if (parent === undefined) return this;
+	    polygon.getTextInfo = () => {
+	      const fwr = (this.height() - this.dl());
+	      const fwl = (this.width() - this.dr());
+	      const areaL = this.dl() * fwr;
+	      const areaR = this.dr() * fwl;
+	      const center = polygon.center();
+	      const info = {
+	        text: this.parent().name(),
+	        center: polygon.center(),
+	        maxWidth: this.width(),
+	        limit: 4
+	      };
+	
+	      if (areaR > areaL) {
+	        // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
+	        info.x = this.height()/2 - fwr/2;
+	        info.y = this.width()/-2 + this.dr();
+	        info.maxWidth = fwr*.75;
+	        info.radians = Math.toRadians(-90) + this.radians();
+	      } else {
+	        info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
+	        info.y = this.height()/-2 + 3 * this.dl() / 4;
+	        info.maxWidth = fwl;
+	        info.radians = Math.toRadians(180) + this.radians();
+	      }
+	      return info;
+	    }
+	
+	    this.addLocation(SnapCorner.backRight(this));
+	    this.addLocation(SnapCorner.frontRight(this));
+	    this.addLocation(SnapCorner.frontLeft(this));
+	    this.addLocation(SnapCorner.backLeft(this));
+	
+	    this.addLocation(SnapCorner.daginalLeft(this));
+	    this.addLocation(SnapCorner.diagonalRight(this));
+	    const verticies = this.snapLocations().map((snap) =>
+	      snap.vertex());
+	    polygon.addVerticies(verticies);
+	  }
+	}
+	
+	const f = (snapLoc, attr, attrM, props) => () => {
+	  let val = snapLoc.parent()[attr]() * attrM;
+	  let keys = Object.keys(props || {});
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    val += snapLoc.parent()[key]() * props[key];
+	  }
+	  return val;
+	};
+	
+	const fromToPoint = SnapLocation2d.fromToPoint;
+	const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
+	const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
+	
+	SnapCorner.diagonalRight = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "diagonalRight",  new Vertex2d(null),  'daginalLeft');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, .5, {dol: -1})));
+	  snapLoc.wallThetaOffset(90);
+	  snapLoc.thetaOffset('SnapCorner', null, 180);
+	  snapLoc.thetaOffset('SnapCornerL', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	SnapCorner.daginalLeft = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "daginalLeft",  new Vertex2d(null),  'diagonalRight');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dor: 1}), hf(snapLoc, .5)));
+	  snapLoc.wallThetaOffset(180);
+	  snapLoc.thetaOffset('SnapCorner', null, 180);
+	  snapLoc.thetaOffset('SnapCornerL', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	SnapCorner.backRight = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "backRight",  new Vertex2d(null),  'backLeft');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, -.5)));
+	  snapLoc.thetaOffset('SnapCorner', null, -90);
+	  snapLoc.thetaOffset('SnapCornerL', null, -90);
+	  snapLoc.thetaOffset('SnapSquare', null, 90);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	SnapCorner.frontRight = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "frontRight",  new Vertex2d(null),  'frontLeft');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, -.5)));
+	  snapLoc.thetaOffset('SnapCorner', null, -90);
+	  snapLoc.thetaOffset('SnapCornerL', null, -90);
+	  snapLoc.thetaOffset('SnapSquare', null, 90);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	SnapCorner.backLeft = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "backLeft",  new Vertex2d(null),  'backRight');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, .5), hf(snapLoc, .5)));
+	  snapLoc.thetaOffset('SnapCorner', null, 90);
+	  snapLoc.thetaOffset('SnapCornerL', null, 90);
+	  snapLoc.thetaOffset('SnapSquare', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	SnapCorner.frontLeft = (parent) => {
+	  const snapLoc = new SnapLocation2d(parent, "frontLeft",  new Vertex2d(null),  'frontRight');
+	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc,.5), hf(snapLoc, .5, {dl: -1})));
+	  snapLoc.thetaOffset('SnapCorner', null, 90);
+	  snapLoc.thetaOffset('SnapCornerL', null, 90);
+	  snapLoc.thetaOffset('SnapSquare', null, 180);
+	  snapLoc.at();
+	  return snapLoc;
+	}
+	
+	module.exports = SnapCorner;
 	
 });
 
@@ -33015,26 +33198,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/cutter.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Cutter extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	    this.included(false);
-	  }
-	}
-	Cutter.abbriviation = 'cut';
-	
-	module.exports = Cutter;
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
 function (require, exports, module) {
 	
@@ -33054,6 +33217,67 @@ function (require, exports, module) {
 	Divider.abbriviation = 'dv';
 	
 	module.exports = Divider
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/has-pull.js',
+function (require, exports, module) {
+	const Assembly = require('../assembly.js');
+	const Handle = require('./hardware/pull.js');
+	
+	class HasPull extends Assembly {
+	  constructor(partCode, partName, getBiPolygon) {
+	    super(partCode, partName);
+	    const pulls = [];
+	    this.pull = (index) => pulls[index || 0];
+	    this.addPull = (location) => {
+	      pulls.push(new Handle('pu', 'Pull', this, location));
+	      this.addSubAssembly(pulls[pulls.length - 1]);
+	    }
+	    this.setPulls = (locations) => {
+	      pulls.copy([]);
+	      this.subassemblies.deleteAll();
+	      locations.forEach((location) => this.addPull(location));
+	    }
+	    this.biPolygon = () => getBiPolygon();
+	
+	  }
+	}
+	
+	module.exports = HasPull;
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Panel extends Assembly {
+	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
+	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+	
+	    this.railThickness = () => this.thickness();
+	    Object.getSet(this, {hasFrame: false});
+	  }
+	}
+	
+	Panel.abbriviation = 'pn';
+	
+	class PanelModel extends Panel {
+	  constructor(partCode, partNameFunc, toModel) {
+	    super(partCode);
+	    this.toModel = toModel;
+	    this.partName = partNameFunc;
+	  }
+	}
+	
+	Panel.Model = PanelModel;
+	module.exports = Panel
 	
 });
 
@@ -33177,25 +33401,22 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/cutter.js',
 function (require, exports, module) {
 	
 
 	
-	const Joint = require('../joint.js');
+	const Assembly = require('../assembly.js');
 	
-	class Miter extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
+	class Cutter extends Assembly {
+	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
+	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+	    this.included(false);
 	  }
 	}
+	Cutter.abbriviation = 'cut';
 	
-	Joint.register(Miter);
-	module.exports = Miter
-	
-	
-	
-	
+	module.exports = Cutter;
 	
 });
 
@@ -33274,67 +33495,6 @@ const Snap2d = require('../snap');
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Panel extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	
-	    this.railThickness = () => this.thickness();
-	    Object.getSet(this, {hasFrame: false});
-	  }
-	}
-	
-	Panel.abbriviation = 'pn';
-	
-	class PanelModel extends Panel {
-	  constructor(partCode, partNameFunc, toModel) {
-	    super(partCode);
-	    this.toModel = toModel;
-	    this.partName = partNameFunc;
-	  }
-	}
-	
-	Panel.Model = PanelModel;
-	module.exports = Panel
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/has-pull.js',
-function (require, exports, module) {
-	const Assembly = require('../assembly.js');
-	const Handle = require('./hardware/pull.js');
-	
-	class HasPull extends Assembly {
-	  constructor(partCode, partName, getBiPolygon) {
-	    super(partCode, partName);
-	    const pulls = [];
-	    this.pull = (index) => pulls[index || 0];
-	    this.addPull = (location) => {
-	      pulls.push(new Handle('pu', 'Pull', this, location));
-	      this.addSubAssembly(pulls[pulls.length - 1]);
-	    }
-	    this.setPulls = (locations) => {
-	      pulls.copy([]);
-	      this.subassemblies.deleteAll();
-	      locations.forEach((location) => this.addPull(location));
-	    }
-	    this.biPolygon = () => getBiPolygon();
-	
-	  }
-	}
-	
-	module.exports = HasPull;
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/frame.js',
 function (require, exports, module) {
 	
@@ -33356,269 +33516,130 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/snap/corner.js',
+RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
 function (require, exports, module) {
 	
-const Snap2d = require('../snap');
-	const Square2d = require('../square');
-	const Polygon2d = require('../polygon');
-	const SnapLocation2d = require('../snap-location');
-	const Vertex2d = require('../vertex');
-	const Line2d = require('../line');
+
 	
-	class SnapCorner extends Snap2d {
-	  constructor(parent, tolerance) {
-	    const polygon = new Polygon2d();
-	    // super(parent, new Square2d(parent.center), tolerance);
-	    super(parent, polygon, tolerance);
-	    if (parent === undefined) return this;
-	    polygon.getTextInfo = () => {
-	      const fwr = (this.height() - this.dl());
-	      const fwl = (this.width() - this.dr());
-	      const areaL = this.dl() * fwr;
-	      const areaR = this.dr() * fwl;
-	      const center = polygon.center();
-	      const info = {
-	        text: this.parent().name(),
-	        center: polygon.center(),
-	        maxWidth: this.width(),
-	        limit: 4
-	      };
+	const Joint = require('../joint.js');
 	
-	      if (areaR > areaL) {
-	        // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
-	        info.x = this.height()/2 - fwr/2;
-	        info.y = this.width()/-2 + this.dr();
-	        info.maxWidth = fwr*.75;
-	        info.radians = Math.toRadians(-90) + this.radians();
-	      } else {
-	        info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
-	        info.y = this.height()/-2 + 3 * this.dl() / 4;
-	        info.maxWidth = fwl;
-	        info.radians = Math.toRadians(180) + this.radians();
-	      }
-	      return info;
+	class Rabbet extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
+	    super(joinStr);
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
 	    }
 	
-	    this.addLocation(SnapCorner.backRight(this));
-	    this.addLocation(SnapCorner.frontRight(this));
-	    this.addLocation(SnapCorner.frontLeft(this));
-	    this.addLocation(SnapCorner.backLeft(this));
+	    if (axis === undefined) return;
 	
-	    this.addLocation(SnapCorner.daginalLeft(this));
-	    this.addLocation(SnapCorner.diagonalRight(this));
-	    const verticies = this.snapLocations().map((snap) =>
-	      snap.vertex());
-	    polygon.addVerticies(verticies);
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
+	    };
 	  }
 	}
 	
-	const f = (snapLoc, attr, attrM, props) => () => {
-	  let val = snapLoc.parent()[attr]() * attrM;
-	  let keys = Object.keys(props || {});
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    val += snapLoc.parent()[key]() * props[key];
-	  }
-	  return val;
-	};
+	Joint.register(Rabbet);
+	module.exports = Rabbet
 	
-	const fromToPoint = SnapLocation2d.fromToPoint;
-	const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
-	const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
 	
-	SnapCorner.diagonalRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "diagonalRight",  new Vertex2d(null),  'daginalLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, .5, {dol: -1})));
-	  snapLoc.wallThetaOffset(90);
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
 	
-	SnapCorner.daginalLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "daginalLeft",  new Vertex2d(null),  'diagonalRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dor: 1}), hf(snapLoc, .5)));
-	  snapLoc.wallThetaOffset(180);
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
 	
-	SnapCorner.backRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backRight",  new Vertex2d(null),  'backLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, -.5)));
-	  snapLoc.thetaOffset('SnapCorner', null, -90);
-	  snapLoc.thetaOffset('SnapCornerL', null, -90);
-	  snapLoc.thetaOffset('SnapSquare', null, 90);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.frontRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontRight",  new Vertex2d(null),  'frontLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, -.5)));
-	  snapLoc.thetaOffset('SnapCorner', null, -90);
-	  snapLoc.thetaOffset('SnapCornerL', null, -90);
-	  snapLoc.thetaOffset('SnapSquare', null, 90);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.backLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backLeft",  new Vertex2d(null),  'backRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, .5), hf(snapLoc, .5)));
-	  snapLoc.thetaOffset('SnapCorner', null, 90);
-	  snapLoc.thetaOffset('SnapCornerL', null, 90);
-	  snapLoc.thetaOffset('SnapSquare', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.frontLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontLeft",  new Vertex2d(null),  'frontRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc,.5), hf(snapLoc, .5, {dl: -1})));
-	  snapLoc.thetaOffset('SnapCorner', null, 90);
-	  snapLoc.thetaOffset('SnapCornerL', null, 90);
-	  snapLoc.thetaOffset('SnapSquare', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	module.exports = SnapCorner;
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
+RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Miter extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
+	  }
+	}
+	
+	Joint.register(Miter);
+	module.exports = Miter
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
+function (require, exports, module) {
+	
+const Joint = require('../joint.js');
+	
+	class Dado extends Joint {
+	  constructor(malePartCode, femalePartCode) {
+	    super(malePartCode, femalePartCode);
+	
+	    this.updatePosition = (position) => {
+	      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
+	      const centerAxis = this.centerAxis()[1].toLowerCase();
+	      const offset = this.parentAssembly().eval(this.maleOffset());
+	      const demAxis = this.demensionAxis().toLowerCase();
+	      position.demension[demAxis] = position.demension[demAxis] + offset;
+	      position.center[centerAxis] = position.center[centerAxis] + (offset/2 * direction);
+	    };
+	
+	  }
+	}
+	
+	Joint.register(Dado);
+	module.exports = Dado
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/butt.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Butt extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
+	  }
+	}
+	
+	Joint.register(Butt);
+	module.exports = Butt
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
-	const CSG = require('../../../../../public/js/3d-modeling/csg.js');
-	const pull = require('../../../../three-d/models/pull.js');
-	/*
-	    a,b,c
-	    d,e,f
-	    g,h,i
-	*/
-	class Handle extends Assembly {
-	  constructor(partCode, partName, door, location, index, count) {
-	    let instance;
-	    location ||= Handle.location.CENTER;
-	    function baseCenter() {
-	      let center;
-	      const edgeOffset = (19 * 2.54) / 16;
-	      const toCenter = 3 * 2.54 + instance.centerToCenter() / 2;
-	      const front = door.front();
-	      const top = front.line(0);
-	      // TODO: Maybe... not sure why these are flipped.
-	      const left = front.line(-1);
-	      const right = front.line(1);
-	      const bottom = front.line(2);
 	
-	      switch (instance.location()) {
-	        case Handle.location.TOP_RIGHT:
-	          center = top.endVertex;
-	          center.translate(top.vector().unit().scale(-edgeOffset));
-	          center.translate(right.vector().unit().scale(toCenter));
-	          break;
-	        case Handle.location.TOP_LEFT:
-	          center = top.startVertex;
-	          center.translate(top.vector().unit().scale(edgeOffset));
-	          center.translate(left.vector().unit().scale(-toCenter));
-	          break;
-	        case Handle.location.BOTTOM_RIGHT:
-	          center = bottom.startVertex;
-	          center.translate(bottom.vector().unit().scale(edgeOffset));
-	          center.translate(right.vector().unit().scale(-toCenter));
-	          break;
-	        case Handle.location.BOTTOM_LEFT:
-	          center = bottom.endVertex;
-	          center.translate(bottom.vector().unit().scale(-edgeOffset));
-	          center.translate(left.vector().unit().scale(toCenter));
-	          break;
-	        case Handle.location.TOP:
-	          center = top.midpoint();
-	          center.translate(right.vector().unit().scale(edgeOffset));
-	          break;
-	        case Handle.location.BOTTOM:
-	          center = bottom.midpoint();
-	          center.translate(right.vector().unit().scale(-edgeOffset));
-	          break;
-	        case Handle.location.RIGHT:
-	          center = right.midpoint();
-	          center.translate(top.vector().unit().scale(-edgeOffset));
-	          break;
-	        case Handle.location.LEFT:
-	          center = left.midpoint();
-	          center.translate(top.vector().unit().scale(edgeOffset));
-	          break;
-	        case Handle.location.CENTER:
-	          center = front.center();
-	          break;
-	        break;
-	        default:
-	          throw new Error('Invalid pull location');
-	      }
-	      return center;
-	    };
 	
-	    super(`${partCode}-${location.position.toKebab()}`, 'Handle');
-	    Object.getSet(this, {location});
-	    this.partName = () => `${door.partName()}.Pull.${this.location().position}`
-	    this.inElivation = true;
-	    instance = this;
-	    index = index || 0;
-	    count = count || 1;
-	
-	    this.count = (c) => {
-	      if (c > 0) {
-	        count = c;
-	      }
-	      return count;
-	    }
-	
-	    function offset(center, distance) {
-	      const spacing = distance / count;
-	      return center - (distance / 2) + spacing / 2 + spacing * (index);
-	    }
-	
-	    this.toModel = (simple) => {
-	      const baseC = baseCenter();
-	      const biPolygon = door.biPolygon();
-	      const front = biPolygon.front();
-	      const rotated =  instance.location().rotate;
-	      const line = rotated ? front.line(-1) : front.line(0);
-	      const normal = biPolygon.normal();
-	      if (simple)
-	        return pull.simple(baseC, line, normal, this.projection(), this.centerToCenter());
-	      else
-	        return pull(baseC, line, normal, this.projection(), this.centerToCenter());
-	    }
-	
-	    this.projection = () => 2.54;
-	    this.centerToCenter = () => 9.6;
+	class Screw extends Assembly {
+	  constructor() {
+	    super();
 	  }
 	}
-	Handle.location = {};
-	Handle.location.TOP_RIGHT = {rotate: true, position: 'TOP_Right'};
-	Handle.location.TOP_LEFT = {rotate: true, position: 'TOP_LEFT'};
-	Handle.location.BOTTOM_RIGHT = {rotate: true, position: 'BOTTOM_RIGHT'};
-	Handle.location.BOTTOM_LEFT = {rotate: true, position: 'BOTTOM_LEFT'};
-	Handle.location.TOP = {multiple: true, position: 'TOP'};
-	Handle.location.BOTTOM = {multiple: true, position: 'BOTTOM'};
-	Handle.location.RIGHT = {multiple: true, rotate: true, position: 'RIGHT'};
-	Handle.location.LEFT = {multiple: true, rotate: true, position: 'LEFT'};
-	Handle.location.CENTER = {multiple: true, position: 'CENTER'};
-	
-	Handle.abbriviation = 'hn';
 	
 	
-	module.exports = Handle
+	module.exports = Screw
 	
 });
 
@@ -33645,76 +33666,7 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
-function (require, exports, module) {
-	
-
-	
-	const HasPull = require('../has-pull.js');
-	const Handle = require('../hardware/pull.js');
-	
-	class DrawerFront extends HasPull {
-	  constructor(partCode, partName, getBiPolygon) {
-	    super(partCode, partName, getBiPolygon);
-	    const instance = this;
-	    this.addPull(Handle.location.CENTER);
-	    this.inElivation = true;
-	
-	    this.toModel = () => {
-	      const biPolygon = getBiPolygon();
-	      if (biPolygon) return biPolygon.toModel();
-	      return undefined;
-	    }
-	
-	    this.front = () => {
-	      const biPoly = getBiPolygon();
-	      if (biPoly === undefined) return;
-	      return biPoly.front();
-	    }
-	    this.back = () => {
-	      const biPoly = getBiPolygon();
-	      if (biPoly === undefined) return;
-	      return biPoly.back();
-	    }
-	  }
-	}
-	
-	DrawerFront.abbriviation = 'df';
-	
-	
-	module.exports = DrawerFront
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-box.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	const drawerBox = require('../../../../three-d/models/drawer-box.js');
-	
-	class DrawerBox extends Assembly {
-	  constructor(partCode, partName, getFrontPoly, getNormal, getDepth) {
-	    super(partCode, partName);
-	
-	    this.toModel = () => {
-	      const props = this.getRoot().group().propertyConfig('DrawerBox');
-	      return drawerBox(getFrontPoly(), getNormal(), getDepth(), props);
-	    }
-	  }
-	}
-	
-	DrawerBox.abbriviation = 'db';
-	
-	
-	module.exports = DrawerBox
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
 function (require, exports, module) {
 	
 
@@ -33722,14 +33674,13 @@ function (require, exports, module) {
 	const Assembly = require('../../assembly.js');
 	
 	
-	class Screw extends Assembly {
+	class DoorCatch extends Assembly {
 	  constructor() {
 	    super();
 	  }
 	}
 	
-	
-	module.exports = Screw
+	module.exports = DoorCatch
 	
 });
 
@@ -34281,7 +34232,76 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
+function (require, exports, module) {
+	
+
+	
+	const HasPull = require('../has-pull.js');
+	const Handle = require('../hardware/pull.js');
+	
+	class DrawerFront extends HasPull {
+	  constructor(partCode, partName, getBiPolygon) {
+	    super(partCode, partName, getBiPolygon);
+	    const instance = this;
+	    this.addPull(Handle.location.CENTER);
+	    this.inElivation = true;
+	
+	    this.toModel = () => {
+	      const biPolygon = getBiPolygon();
+	      if (biPolygon) return biPolygon.toModel();
+	      return undefined;
+	    }
+	
+	    this.front = () => {
+	      const biPoly = getBiPolygon();
+	      if (biPoly === undefined) return;
+	      return biPoly.front();
+	    }
+	    this.back = () => {
+	      const biPoly = getBiPolygon();
+	      if (biPoly === undefined) return;
+	      return biPoly.back();
+	    }
+	  }
+	}
+	
+	DrawerFront.abbriviation = 'df';
+	
+	
+	module.exports = DrawerFront
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-box.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	const drawerBox = require('../../../../three-d/models/drawer-box.js');
+	
+	class DrawerBox extends Assembly {
+	  constructor(partCode, partName, getFrontPoly, getNormal, getDepth) {
+	    super(partCode, partName);
+	
+	    this.toModel = () => {
+	      const props = this.getRoot().group().propertyConfig('DrawerBox');
+	      return drawerBox(getFrontPoly(), getNormal(), getDepth(), props);
+	    }
+	  }
+	}
+	
+	DrawerBox.abbriviation = 'db';
+	
+	
+	module.exports = DrawerBox
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
 function (require, exports, module) {
 	
 
@@ -34289,13 +34309,15 @@ function (require, exports, module) {
 	const Assembly = require('../../assembly.js');
 	
 	
-	class DoorCatch extends Assembly {
+	class Hinge extends Assembly {
 	  constructor() {
 	    super();
 	  }
 	}
 	
-	module.exports = DoorCatch
+	Hinge.abbriviation = 'hg';
+	
+	module.exports = Hinge
 	
 });
 
@@ -34352,23 +34374,133 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/pull.js',
 function (require, exports, module) {
 	
 
 	
 	const Assembly = require('../../assembly.js');
+	const CSG = require('../../../../../public/js/3d-modeling/csg.js');
+	const pull = require('../../../../three-d/models/pull.js');
+	/*
+	    a,b,c
+	    d,e,f
+	    g,h,i
+	*/
+	class Handle extends Assembly {
+	  constructor(partCode, partName, door, location, index, count) {
+	    let instance;
+	    location ||= Handle.location.CENTER;
+	    function baseCenter() {
+	      let center;
+	      const edgeOffset = (19 * 2.54) / 16;
+	      const toCenter = 3 * 2.54 + instance.centerToCenter() / 2;
+	      const front = door.front();
+	      const top = front.line(0);
+	      // TODO: Maybe... not sure why these are flipped.
+	      const left = front.line(-1);
+	      const right = front.line(1);
+	      const bottom = front.line(2);
 	
+	      switch (instance.location()) {
+	        case Handle.location.TOP_RIGHT:
+	          center = top.endVertex;
+	          center.translate(top.vector().unit().scale(-edgeOffset));
+	          center.translate(right.vector().unit().scale(toCenter));
+	          break;
+	        case Handle.location.TOP_LEFT:
+	          center = top.startVertex;
+	          center.translate(top.vector().unit().scale(edgeOffset));
+	          center.translate(left.vector().unit().scale(-toCenter));
+	          break;
+	        case Handle.location.BOTTOM_RIGHT:
+	          center = bottom.startVertex;
+	          center.translate(bottom.vector().unit().scale(edgeOffset));
+	          center.translate(right.vector().unit().scale(-toCenter));
+	          break;
+	        case Handle.location.BOTTOM_LEFT:
+	          center = bottom.endVertex;
+	          center.translate(bottom.vector().unit().scale(-edgeOffset));
+	          center.translate(left.vector().unit().scale(toCenter));
+	          break;
+	        case Handle.location.TOP:
+	          center = top.midpoint();
+	          center.translate(right.vector().unit().scale(edgeOffset));
+	          break;
+	        case Handle.location.BOTTOM:
+	          center = bottom.midpoint();
+	          center.translate(right.vector().unit().scale(-edgeOffset));
+	          break;
+	        case Handle.location.RIGHT:
+	          center = right.midpoint();
+	          center.translate(top.vector().unit().scale(-edgeOffset));
+	          break;
+	        case Handle.location.LEFT:
+	          center = left.midpoint();
+	          center.translate(top.vector().unit().scale(edgeOffset));
+	          break;
+	        case Handle.location.CENTER:
+	          center = front.center();
+	          break;
+	        break;
+	        default:
+	          throw new Error('Invalid pull location');
+	      }
+	      return center;
+	    };
 	
-	class Hinge extends Assembly {
-	  constructor() {
-	    super();
+	    super(`${partCode}-${location.position.toKebab()}`, 'Handle');
+	    Object.getSet(this, {location});
+	    this.partName = () => `${door.partName()}.Pull.${this.location().position}`
+	    this.inElivation = true;
+	    instance = this;
+	    index = index || 0;
+	    count = count || 1;
+	
+	    this.count = (c) => {
+	      if (c > 0) {
+	        count = c;
+	      }
+	      return count;
+	    }
+	
+	    function offset(center, distance) {
+	      const spacing = distance / count;
+	      return center - (distance / 2) + spacing / 2 + spacing * (index);
+	    }
+	
+	    this.toModel = (simple) => {
+	      const baseC = baseCenter();
+	      const biPolygon = door.biPolygon();
+	      const front = biPolygon.front();
+	      const rotated =  instance.location().rotate;
+	      const line = rotated ? front.line(-1) : front.line(0);
+	      const normal = biPolygon.normal();
+	      if (simple)
+	        return pull.simple(baseC, line, normal, this.projection(), this.centerToCenter());
+	      else
+	        return pull(baseC, line, normal, this.projection(), this.centerToCenter());
+	    }
+	
+	    this.projection = () => 2.54;
+	    this.centerToCenter = () => 9.6;
 	  }
 	}
+	Handle.location = {};
+	Handle.location.TOP_RIGHT = {rotate: true, position: 'TOP_Right'};
+	Handle.location.TOP_LEFT = {rotate: true, position: 'TOP_LEFT'};
+	Handle.location.BOTTOM_RIGHT = {rotate: true, position: 'BOTTOM_RIGHT'};
+	Handle.location.BOTTOM_LEFT = {rotate: true, position: 'BOTTOM_LEFT'};
+	Handle.location.TOP = {multiple: true, position: 'TOP'};
+	Handle.location.BOTTOM = {multiple: true, position: 'BOTTOM'};
+	Handle.location.RIGHT = {multiple: true, rotate: true, position: 'RIGHT'};
+	Handle.location.LEFT = {multiple: true, rotate: true, position: 'LEFT'};
+	Handle.location.CENTER = {multiple: true, position: 'CENTER'};
 	
-	Hinge.abbriviation = 'hg';
+	Handle.abbriviation = 'hn';
 	
-	module.exports = Hinge
+	
+	module.exports = Handle
 	
 });
 
@@ -34439,44 +34571,6 @@ function (require, exports, module) {
 	
 	
 	module.exports = DrawerSection
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/false-front.js',
-function (require, exports, module) {
-	
-
-	
-	const SectionProperties = require('../section-properties.js');
-	const PULL_TYPE = require('../../../../../../globals/CONSTANTS.js').PULL_TYPE;
-	const DrawerFront = require('../../drawer/drawer-front.js');
-	const Assembly = require('../../../assembly.js');
-	
-	class FalseFrontSection extends Assembly {
-	  constructor(sectionProperties) {
-	    super();
-	    if (sectionProperties === undefined) return;
-	    this.part = () => false;
-	
-	    function getBiPolygon () {
-	      return sectionProperties.coverInfo().biPolygon;
-	    }
-	
-	    const front = new DrawerFront('ff', 'DrawerFront', getBiPolygon);
-	    this.front = () => front;
-	    front.partName = () => `${sectionProperties.partName()}-ff`;
-	    this.pull = (i) => front.pull(i);
-	    this.addSubAssembly(front);
-	  }
-	}
-	
-	FalseFrontSection.abbriviation = 'ffs';
-	SectionProperties.addSection(FalseFrontSection);
-	
-	
-	
-	module.exports = FalseFrontSection
 	
 });
 
@@ -34641,6 +34735,44 @@ function (require, exports, module) {
 	SectionProperties.addSection(DoorSection);
 	
 	module.exports = DoorSection
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/false-front.js',
+function (require, exports, module) {
+	
+
+	
+	const SectionProperties = require('../section-properties.js');
+	const PULL_TYPE = require('../../../../../../globals/CONSTANTS.js').PULL_TYPE;
+	const DrawerFront = require('../../drawer/drawer-front.js');
+	const Assembly = require('../../../assembly.js');
+	
+	class FalseFrontSection extends Assembly {
+	  constructor(sectionProperties) {
+	    super();
+	    if (sectionProperties === undefined) return;
+	    this.part = () => false;
+	
+	    function getBiPolygon () {
+	      return sectionProperties.coverInfo().biPolygon;
+	    }
+	
+	    const front = new DrawerFront('ff', 'DrawerFront', getBiPolygon);
+	    this.front = () => front;
+	    front.partName = () => `${sectionProperties.partName()}-ff`;
+	    this.pull = (i) => front.pull(i);
+	    this.addSubAssembly(front);
+	  }
+	}
+	
+	FalseFrontSection.abbriviation = 'ffs';
+	SectionProperties.addSection(FalseFrontSection);
+	
+	
+	
+	module.exports = FalseFrontSection
 	
 });
 
@@ -35092,6 +35224,118 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 17.57);
 	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.left.theta)), 59.04);
 	
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('./test/tests/RelationInput.js',
+function (require, exports, module) {
+	
+
+	
+	const RelationInput = require('../../../../public/js/utils/input/styles/select/relation.js');
+	
+	
+	
+	Test.add('RelationInput: Equal',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Equal', [1,4,3,5,6,4,8,9], 6), 4);
+	  ts.assertEquals(RelationInput.eval('equal', [1,4,3,5,6,4,8,9], 7), undefined);
+	  ts.assertEquals(RelationInput.eval('EQual', [1,4,3,5,6,4,8,9], 1), 0);
+	  ts.assertEquals(RelationInput.eval('EqUAL', [1,4,3,5,6,4,8,9], 9), 7);
+	  ts.assertEquals(RelationInput.eval('EquaL', [1,4,3,5,6,4,8,9], 4), 1);
+	  ts.assertEquals(RelationInput.eval('EqUal', [1,4,3,5,6,undefined,8,9], 8), 6);
+	  ts.success();
+	});
+	
+	
+	Test.add('RelationInput: Less Than',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Less ThAn', [1,4,3,5,6,4,8,9], 6), 3);
+	  ts.assertEquals(RelationInput.eval('LeSs_Than', [1,4,3,5,6,4,8,9], 1), undefined);
+	  ts.assertEquals(RelationInput.eval('LeSS Than', [1,4,3,5,6,4,8,9], 200), 7);
+	  ts.assertEquals(RelationInput.eval('less than', [1,4,3,5,6,4,8,9], 9), 6);
+	  ts.assertEquals(RelationInput.eval('Less Than', [1,4,3,5,6,4,8,9], -2), undefined);
+	  ts.assertEquals(RelationInput.eval('Less Than', [1,4,3,5,6,undefined,8,9], 8), 4);
+	  ts.success();
+	});
+	
+	Test.add('RelationInput: Greater Than',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Greater ThAn', [1,4,3,5,6,4,8,9], 6), 6);
+	  ts.assertEquals(RelationInput.eval('Greater_Than', [1,4,3,5,6,4,8,9], 1), 2);
+	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,4,8,9], 200), undefined);
+	  ts.assertEquals(RelationInput.eval('Greater than', [1,4,3,5,6,4,8,9], 9), undefined);
+	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,4,8,9], -2), 0);
+	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,undefined,8,9], 8), 7);
+	  ts.success();
+	});
+	
+	Test.add('RelationInput: Less Than Or Equal',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 6), 4);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 2), 0);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 200), 7);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], -2), undefined);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,undefined,8,9], 7.5), 4);
+	  ts.success();
+	});
+	
+	Test.add('RelationInput: Greater Than Or Equal',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 6), 4);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 1.01), 2);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 200), undefined);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], -2), 0);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,undefined,8,9], 8), 6);
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('./test/tests/polygon-merge.js',
+function (require, exports, module) {
+	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
+	
+	
+	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
+	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
+	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
+	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
+	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
+	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
+	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
+	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
+	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]].reverse());
+	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
+	
+	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
+	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
+	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
+	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
+	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
+	
+	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
+	Test.add('Polygon3D merge',(ts) => {
+	  // const poly = A.merge(B).merge(J);
+	  const AB = A.merge(B);
+	  const IF = [F,I];
+	  Polygon3D.merge(IF);
+	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
+	  ABCDEFGHIJ.shuffle();
+	  Polygon3D.merge(ABCDEFGHIJ);
+	
+	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
+	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
+	  ts.assertFalse(polyAB.equals(undefined));
+	  ts.assertFalse(polyAB.equals(A));
+	  ts.assertTrue(IF[0].equals(polyIF));
+	  ts.assertTrue(polyIF.equals(IF[0]));
+	  ts.assertTrue(ABCDEFGHIJ.length === 2);
+	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
+	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
 	  ts.success();
 	});
 	
@@ -35899,118 +36143,6 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	  const xyPlane = Plane.fromPointNormal({x: 12, y: 41, z: 0}, new Vector3D(1, 1, 1));
 	  const yzPlane = Plane.fromPointNormal({x: 0, y: 41, z: 1}, new Vector3D(0, 3, -1));
 	  const xzPlane = Plane.fromPointNormal({x: 12, y: 0, z: 50}, new Vector3D(5, 0, 13));
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./test/tests/polygon-merge.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
-	
-	
-	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
-	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
-	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
-	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
-	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
-	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
-	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
-	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
-	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]].reverse());
-	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
-	
-	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
-	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
-	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
-	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
-	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
-	
-	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
-	Test.add('Polygon3D merge',(ts) => {
-	  // const poly = A.merge(B).merge(J);
-	  const AB = A.merge(B);
-	  const IF = [F,I];
-	  Polygon3D.merge(IF);
-	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
-	  ABCDEFGHIJ.shuffle();
-	  Polygon3D.merge(ABCDEFGHIJ);
-	
-	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
-	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
-	  ts.assertFalse(polyAB.equals(undefined));
-	  ts.assertFalse(polyAB.equals(A));
-	  ts.assertTrue(IF[0].equals(polyIF));
-	  ts.assertTrue(polyIF.equals(IF[0]));
-	  ts.assertTrue(ABCDEFGHIJ.length === 2);
-	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
-	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./test/tests/RelationInput.js',
-function (require, exports, module) {
-	
-
-	
-	const RelationInput = require('../../../../public/js/utils/input/styles/select/relation.js');
-	
-	
-	
-	Test.add('RelationInput: Equal',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Equal', [1,4,3,5,6,4,8,9], 6), 4);
-	  ts.assertEquals(RelationInput.eval('equal', [1,4,3,5,6,4,8,9], 7), undefined);
-	  ts.assertEquals(RelationInput.eval('EQual', [1,4,3,5,6,4,8,9], 1), 0);
-	  ts.assertEquals(RelationInput.eval('EqUAL', [1,4,3,5,6,4,8,9], 9), 7);
-	  ts.assertEquals(RelationInput.eval('EquaL', [1,4,3,5,6,4,8,9], 4), 1);
-	  ts.assertEquals(RelationInput.eval('EqUal', [1,4,3,5,6,undefined,8,9], 8), 6);
-	  ts.success();
-	});
-	
-	
-	Test.add('RelationInput: Less Than',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Less ThAn', [1,4,3,5,6,4,8,9], 6), 3);
-	  ts.assertEquals(RelationInput.eval('LeSs_Than', [1,4,3,5,6,4,8,9], 1), undefined);
-	  ts.assertEquals(RelationInput.eval('LeSS Than', [1,4,3,5,6,4,8,9], 200), 7);
-	  ts.assertEquals(RelationInput.eval('less than', [1,4,3,5,6,4,8,9], 9), 6);
-	  ts.assertEquals(RelationInput.eval('Less Than', [1,4,3,5,6,4,8,9], -2), undefined);
-	  ts.assertEquals(RelationInput.eval('Less Than', [1,4,3,5,6,undefined,8,9], 8), 4);
-	  ts.success();
-	});
-	
-	Test.add('RelationInput: Greater Than',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Greater ThAn', [1,4,3,5,6,4,8,9], 6), 6);
-	  ts.assertEquals(RelationInput.eval('Greater_Than', [1,4,3,5,6,4,8,9], 1), 2);
-	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,4,8,9], 200), undefined);
-	  ts.assertEquals(RelationInput.eval('Greater than', [1,4,3,5,6,4,8,9], 9), undefined);
-	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,4,8,9], -2), 0);
-	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,undefined,8,9], 8), 7);
-	  ts.success();
-	});
-	
-	Test.add('RelationInput: Less Than Or Equal',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 6), 4);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 2), 0);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 200), 7);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], -2), undefined);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,undefined,8,9], 7.5), 4);
-	  ts.success();
-	});
-	
-	Test.add('RelationInput: Greater Than Or Equal',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 6), 4);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 1.01), 2);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 200), undefined);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], -2), 0);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,undefined,8,9], 8), 6);
 	  ts.success();
 	});
 	

@@ -52,7 +52,7 @@ class ThreeView extends Lookup {
       let model = instance.lastModel();
       model ||= instance.lastRendered();
       if (model === undefined) return;
-      const twoDmap = model.threeView();
+      const twoDmap = model.threeView;
       if (twoDmap.measurments === undefined) {
         const allLines = twoDmap.front.concat(twoDmap.right.concat(twoDmap.top));
         twoDmap.measurments = LineMeasurement2d.measurements(allLines);
