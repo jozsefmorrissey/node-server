@@ -19,9 +19,11 @@ const Joint = require('../../objects/joint/joint.js');
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
 const ThreeView = require('../three-view.js');
+const ThreeDModel = require('../../three-d/three-d-model.js');
 const Layout2D = require('../../objects/layout.js');
 const Draw2D = require('../../two-d/draw.js');
-const Vertex3D = require('../../three-d/objects/vertex');
+const Vertex2d = require('../../two-d/objects/vertex');
+const Line2d = require('../../two-d/objects/line');
 const Snap2d = require('../../two-d/objects/snap');
 const PropertyConfig = require('../../config/property/config.js');
 const cabinetBuildConfig = require('../../../public/json/cabinets.json');
@@ -31,6 +33,7 @@ const OpeningSketch = require('../opening-sketch');
 const FaceSketch = require('../face-sketch');
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 const approximate = require('../../../../../public/js/utils/approximate').new(10);
+const PanZoom = require('../../two-d/pan-zoom.js');
 
 let template;
 let modifyingOpening = false;
@@ -397,6 +400,34 @@ function updateOpeningPoints(template, cabinet) {
   }
 }
 
+let drawFront, drawTop, lastModel, frontView;
+function updateShapeSketches(elem, model) {
+  if (drawFront === undefined) {
+    const templateBody = du.find('.template-body');
+    if (templateBody) {
+      const frontCanvas = du.find.down('.front-sketch', templateBody);
+      const topCanvas = du.find.down('.top-sketch', templateBody);
+      if (frontCanvas !== undefined) {
+        drawFront = new Draw2D(frontCanvas);
+        panz = new PanZoom(frontCanvas, updateShapeSketches);
+        panz.centerOn(0, 0);
+        drawTop = new Draw2D(topCanvas);
+      }
+    }
+  }
+  if (drawFront === undefined) return;
+  if (model) {
+    frontView = model.simpleModel.frontView();
+    // const center = Vertex2d.center(Line2d.vertices(frontView));
+    // const offsetVertex = center.differance(new Vertex2d());
+    // const lineVector = new Line2d(new Vertex2d(), offsetVertex);
+    // frontView.forEach(l => l.translate(lineVector));
+  }
+  drawFront(frontView, null, 2);
+}
+
+ThreeDModel.onRenderObjectUpdate(updateShapeSketches);
+
 const topView = du.id('three-view-top');
 const leftView = du.id('three-view-right');
 const frongView = du.id('three-view-front');
@@ -439,7 +470,7 @@ function validateOpenTemplate (elem) {
     const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
     subRotInputs.forEach(xyzEqnCheck(template, cabinet));
     updateOpeningPoints(template, cabinet);
-    threeView.update(cabinet);
+    const model = threeView.update(cabinet);
     setTimeout(updatePartsDataList, 500);
   } catch (e) {
     console.log(e);

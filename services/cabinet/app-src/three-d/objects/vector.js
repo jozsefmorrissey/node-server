@@ -12,9 +12,15 @@ class Vector3D {
   constructor(i, j, k) {
     if (i instanceof Vector3D) return i;
     if (i instanceof Object) {
-      k = i.z;
-      j = i.y;
-      i = i.x;
+      if (i.x !== undefined) {
+        k = i.z;
+        j = i.y;
+        i = i.x;
+      } else {
+        k = i.k;
+        j = i.j;
+        i = i.i;
+      }
     }
     this.i = () => i;
     this.j = () => j;
@@ -74,6 +80,9 @@ class Vector3D {
       const magnitude = Math.sqrt(i*i+j*j+k*k);
       return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
     }
+    this.positive = () =>
+      i > 0 || (i === 0 && j > 0) || (i === 0 && j === 0 && k > 0) ||
+      (i === 0 && j === 0 && k === 0);
     this.equals = (vector) => Vector.tolerance.within(vector, this);
     this.toString = () => `<${i},  ${j},  ${k}>`;
   }

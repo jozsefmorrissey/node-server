@@ -35,6 +35,9 @@ class SectionProperties extends KeyValue{
       const pPartName = this.parentAssembly().partName();
       return `${pPartName}${index}.${orientation}`;
     }
+
+    this.outerPoly = () => new Polygon3D(this.coordinates().outer);
+    this.innerPoly = () => new Polygon3D(this.coordinates().inner);
     this.coordinates = () => JSON.clone(coordinates);
     this.reverseInner = () => CSG.reverseRotateAll(this.coordinates().inner);
     this.reverseOuter = () => CSG.reverseRotateAll(this.coordinates().outer);

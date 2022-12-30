@@ -1,5 +1,6 @@
 
 const Vertex3D = require('./objects/vertex');
+const Vector3D = require('./objects/vector');
 const Polygon3D = require('./objects/polygon');
 const BiPolygon = require('./objects/bi-polygon');
 const Plane = require('./objects/plane');
@@ -24,6 +25,17 @@ class ThreeDModelSimple {
         else cabinetCSG = cabinetCSG.union(csg);//assembly.toModel(true));
       }
     }
+
+    this.normals = () => {
+      const normals = [];
+      for (let index = 0; index < cabinet.openings.length; index++) {
+        const sectionProps = cabinet.openings[index].sectionProperties();
+        normals.push(sectionProps.outerPoly().normal());
+      }
+      return normals;
+    }
+
+    this.normal = () => new Vector3D(Math.mean(this.normals(), ['i', 'j', 'k']));
 
     this.center = () => {
       if (!center) {
@@ -77,9 +89,10 @@ class ThreeDModelSimple {
       return silhouette;
     }
 
-    this.toModel = (simpler) => {
-      const offset = new Vertex3D(new Vertex3D(cabinet.position().center()).minus(this.center()));
+    this.toModel = (simpler, centerOn) => {
+      const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
       let model = this.cabinetSilhouette().toModel();
+      model.translate(offset);
       for (let index = 0; !simpler && index < assemblies.length; index++) {
         const csg = assemblies[index].toModel(true);
         csg.translate(offset);
@@ -90,20 +103,27 @@ class ThreeDModelSimple {
 
     this.viewFromVector = (vector, in2D, axis) => {
       let output = cabinet.toBiPolygon();
+      output.center(this.center());
       if (in2D) {
-        output = Polygon3D.toTwoD(output.polygons(), vector, axis);
+        output = Polygon3D.toTwoD(output.toPolygons(), vector, axis);
         axis ||= output.axis;
       } else {
         output = output.toModel();
       }
       for (let i = 0; i < assemblies.length; i++) {
-        if (in2D)
-          output.concat(Polygon.toTwoD(assemblies[i], vector, axis));
-        else
+        if (in2D) {
+          // TODO: overwiting this.toModel causes the commented line to fail.... should be rectified.
+          // const twoDlines = Polygon3D.toTwoD(assemblies[i].toBiPolygon().toPolygons(), vector, axis);
+          const polygons = Polygon3D.fromCSG(assemblies[i].toModel(true).polygons);
+          const twoDlines = Polygon3D.toTwoD(polygons, vector.inverse(), axis);
+          output.concatInPlace(twoDlines);
+        } else
           output.union(assemblies[i].toModel());
       }
       return output;
     }
+
+    this.frontView = () => this.viewFromVector(this.normal(), true);
   }
 }
 

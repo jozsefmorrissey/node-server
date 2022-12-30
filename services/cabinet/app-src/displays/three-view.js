@@ -71,7 +71,7 @@ class ThreeView extends Lookup {
     }
 
     function init() {
-      draw = new Draw2D(du.id('three-view'));
+      draw = new Draw2D(du.id('three-view'), true);
 
       panz = new PanZoom(draw.canvas(), drawView);
       panz.centerOn(0, 0);
@@ -86,11 +86,12 @@ class ThreeView extends Lookup {
     this.update = (cabinet) => {
       if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
       threeDModel.assembly(cabinet);
-      threeDModel.update(cabinet);
+      const model = threeDModel.update(cabinet);
       draw.clear();
       setTimeout(() => {
         drawView(true);
       }, 1000);
+      return model;
     }
 
     this.isolatePart = (partCode) => {

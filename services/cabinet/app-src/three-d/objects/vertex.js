@@ -5,6 +5,7 @@ const approximate = require('../../../../../public/js/utils/approximate.js');
 const approx10 = approximate.new(10);
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
 
 class Vertex3D {
@@ -143,6 +144,16 @@ Vertex3D.direction = (vertList1, vertList2, tolerance, axisOnly) => {
       return xDir
     }
     return yDir ? yDir : null;
+  }
+}
+
+Vertex3D.uniqueFilter = () => {
+  const map = new ToleranceMap({x: tol, y: tol, z: tol});
+  return (vert) => {
+    if (!(vert instanceof Vertex3D)) return false;
+    if (map.matches(vert).length > 0) return false;
+    map.add(vert);
+    return true;
   }
 }
 

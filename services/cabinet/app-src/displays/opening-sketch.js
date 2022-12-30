@@ -74,7 +74,7 @@ class OpeningSketch {
       elem = du.id(id);
       const canvas = du.create.element('canvas');
       elem.append(canvas);
-      sketch = new Draw2D(canvas);
+      sketch = new Draw2D(canvas, true);
       panZ = new PanZoom(sketch.canvas(), draw);
     }
 

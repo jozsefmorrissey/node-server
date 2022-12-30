@@ -21855,7 +21855,8 @@ const Circle2d = require('./objects/circle');
 	let vertLocTolMap;
 	
 	class Draw2d {
-	  constructor(canvas) {
+	  constructor(canvas, invertY) {
+	    const yCoef = -1;//= invertY ? -1 : 1;
 	    const ctx = canvas.getContext('2d');
 	    let takenLocations;
 	    let coloredLocations;
@@ -21935,8 +21936,8 @@ const Circle2d = require('./objects/circle');
 	      ctx.beginPath();
 	      ctx.strokeStyle = color;
 	      ctx.lineWidth = width;
-	      ctx.moveTo(line.startVertex().x(), -1 * line.startVertex().y());
-	      ctx.lineTo(line.endVertex().x(), -1 * line.endVertex().y());
+	      ctx.moveTo(line.startVertex().x(), yCoef * line.startVertex().y());
+	      ctx.lineTo(line.endVertex().x(), yCoef * line.endVertex().y());
 	      ctx.stroke();
 	      // identifyVerticies(line);
 	    }
@@ -21956,14 +21957,14 @@ const Circle2d = require('./objects/circle');
 	      if ((typeof poly.getTextInfo) === 'function') {
 	        ctx.save();
 	        const info = poly.getTextInfo();
-	        ctx.translate(info.center.x(), -1 * info.center.y());
+	        ctx.translate(info.center.x(), yCoef * info.center.y());
 	        ctx.rotate(info.radians);
 	        ctx.beginPath();
 	        ctx.lineWidth = 4;
 	        ctx.strokeStyle = 'black';
 	        ctx.fillStyle =  'black';
 	        const text = info.limit === undefined ? info.text : info.text.substring(0, info.limit);
-	        ctx.fillText(text, info.x, -1 * info.y, info.maxWidth);
+	        ctx.fillText(text, info.x, yCoef * info.y, info.maxWidth);
 	        ctx.stroke()
 	        ctx.restore();
 	      }
@@ -21977,7 +21978,7 @@ const Circle2d = require('./objects/circle');
 	      ctx.fillStyle = color;
 	
 	      const center = square.center();
-	      ctx.translate(center.x(), -1 * center.y());
+	      ctx.translate(center.x(), yCoef * center.y());
 	      ctx.rotate(square.radians());
 	      ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
 	      ctx.stroke();
@@ -22001,7 +22002,7 @@ const Circle2d = require('./objects/circle');
 	      ctx.strokeStyle = color || 'black';
 	      ctx.fillStyle =  color || 'black';
 	      ctx.font = width + "px Arial";
-	      ctx.fillText(text, center.x, -1 * center.y, maxWidth);
+	      ctx.fillText(text, center.x, yCoef * center.y, maxWidth);
 	      ctx.stroke()
 	    }
 	
@@ -22011,7 +22012,7 @@ const Circle2d = require('./objects/circle');
 	      ctx.lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
 	      ctx.strokeStyle = lineColor || 'black';
 	      ctx.fillStyle = fillColor || 'white';
-	      ctx.arc(center.x(),-1 * center.y(), circle.radius(),0, 2*Math.PI);
+	      ctx.arc(center.x(),yCoef * center.y(), circle.radius(),0, 2*Math.PI);
 	      ctx.stroke();
 	      ctx.fill();
 	    }
@@ -22027,7 +22028,7 @@ const Circle2d = require('./objects/circle');
 	      ctx.lineWidth = 0;
 	      const length = measurement.display();
 	      const textLength = length.length;
-	      ctx.translate(midpoint.x(), -1 * midpoint.y());
+	      ctx.translate(midpoint.x(), yCoef * midpoint.y());
 	      ctx.rotate(line.radians());
 	      ctx.beginPath();
 	      ctx.fillStyle = "white";
@@ -22291,7 +22292,7 @@ function (require, exports, module) {
 	    const polyTol = .01;
 	    const polyToleranceMap = new ToleranceMap({'i': polyTol,'j': polyTol,'k': polyTol, length: .0001});
 	    function create2DcabinetImage(model) {
-	      let polygons = model.cabinetOnly.polygons;//(model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
+	      let polygons = (model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
 	      const polys = Polygon3D.fromCSG(polygons);
 	      model.threeView = Polygon3D.toThreeView(polys);
 	      model.threeView.front = Polygon2d.outline(model.threeView.front).lines();
@@ -22309,7 +22310,6 @@ function (require, exports, module) {
 	      model.cabinetSolid.center(model.center);
 	      model.simple = model.cabinetSolid.toModel();
 	      const defualtCube = CSG.cube({demesions: [width, height, depth], center: [model.center.x, model.center.y, model.center.z]});
-	      if (model.frontsOnly) model.simple = model.simple.union(model.frontsOnly);
 	      return model;
 	    }
 	
@@ -22359,7 +22359,7 @@ function (require, exports, module) {
 	      const assemblies = this.assembly().getParts();
 	      const root = assemblies[0].getRoot();
 	      simpleModel = new ThreeDModelSimple(root);
-	      let a, cabinetOnly, frontsOnly;
+	      let a;
 	      partMap = {};
 	      for (let index = 0; index < assemblies.length; index += 1) {
 	        const assem = assemblies[index];
@@ -22369,14 +22369,6 @@ function (require, exports, module) {
 	          simpleModel.add(assem, b);
 	          // const c = assem.position().center();
 	          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
-	          if (root.children().indexOf(assem) !== -1) {
-	            if (cabinetOnly === undefined) cabinetOnly = b;
-	            else cabinetOnly = cabinetOnly.union(b);
-	          }
-	          if (cabinetOnly && assem.inElivation) {
-	            if (frontsOnly === undefined) frontsOnly = b;
-	            else frontsOnly = frontsOnly.union(b);
-	          }
 	          if (a === undefined) a = b;
 	          else if (b && b.polygons.length !== 0) {
 	            a = a.union(b);
@@ -22388,19 +22380,17 @@ function (require, exports, module) {
 	          }
 	        }
 	      }
-	      a.cabinetOnly = cabinetOnly;
-	      a.frontsOnly = frontsOnly;
 	      a.simpleModel = simpleModel;
 	      if (a && ThreeDModel.getViewer(a)) {
 	        addModelAttrs(a);
 	        create2DcabinetImage(a);
-	        const displayModel = simpleModel.toModel(true);//a.simple ? a.simple : a;
+	        const displayModel = simpleModel.toModel();//a.simple ? a.simple : a;
 	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
 	        // centerModel(displayModel);
 	        viewer.mesh = displayModel.toMesh();
 	        viewer.gl.ondraw();
 	        lastRendered = a;
-	        lastRendered.threeView = lastRendered.simpleModel.threeView;
+	        lastRendered.threeView = lastRendered.simpleModel.threeView();
 	        renderObjectUpdateEvent.trigger(undefined, lastRendered);
 	        console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
 	      }
@@ -22834,7 +22824,7 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 	      elem = du.id(id);
 	      const canvas = du.create.element('canvas');
 	      elem.append(canvas);
-	      sketch = new Draw2D(canvas);
+	      sketch = new Draw2D(canvas, true);
 	      panZ = new PanZoom(sketch.canvas(), draw);
 	    }
 	
@@ -23643,7 +23633,7 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	    }
 	
 	    function init() {
-	      draw = new Draw2D(du.id('three-view'));
+	      draw = new Draw2D(du.id('three-view'), true);
 	
 	      panz = new PanZoom(draw.canvas(), drawView);
 	      panz.centerOn(0, 0);
@@ -23658,11 +23648,12 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	    this.update = (cabinet) => {
 	      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
 	      threeDModel.assembly(cabinet);
-	      threeDModel.update(cabinet);
+	      const model = threeDModel.update(cabinet);
 	      draw.clear();
 	      setTimeout(() => {
 	        drawView(true);
 	      }, 1000);
+	      return model;
 	    }
 	
 	    this.isolatePart = (partCode) => {
@@ -24913,6 +24904,7 @@ RequireJS.addFunction('./app-src/three-d/simple.js',
 function (require, exports, module) {
 	
 const Vertex3D = require('./objects/vertex');
+	const Vector3D = require('./objects/vector');
 	const Polygon3D = require('./objects/polygon');
 	const BiPolygon = require('./objects/bi-polygon');
 	const Plane = require('./objects/plane');
@@ -24937,6 +24929,17 @@ const Vertex3D = require('./objects/vertex');
 	        else cabinetCSG = cabinetCSG.union(csg);//assembly.toModel(true));
 	      }
 	    }
+	
+	    this.normals = () => {
+	      const normals = [];
+	      for (let index = 0; index < cabinet.openings.length; index++) {
+	        const sectionProps = cabinet.openings[index].sectionProperties();
+	        normals.push(sectionProps.outerPoly().normal());
+	      }
+	      return normals;
+	    }
+	
+	    this.normal = () => new Vector3D(Math.mean(this.normals(), ['i', 'j', 'k']));
 	
 	    this.center = () => {
 	      if (!center) {
@@ -24990,9 +24993,10 @@ const Vertex3D = require('./objects/vertex');
 	      return silhouette;
 	    }
 	
-	    this.toModel = (simpler) => {
-	      const offset = new Vertex3D(new Vertex3D(cabinet.position().center()).minus(this.center()));
+	    this.toModel = (simpler, centerOn) => {
+	      const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
 	      let model = this.cabinetSilhouette().toModel();
+	      model.translate(offset);
 	      for (let index = 0; !simpler && index < assemblies.length; index++) {
 	        const csg = assemblies[index].toModel(true);
 	        csg.translate(offset);
@@ -25003,20 +25007,27 @@ const Vertex3D = require('./objects/vertex');
 	
 	    this.viewFromVector = (vector, in2D, axis) => {
 	      let output = cabinet.toBiPolygon();
+	      output.center(this.center());
 	      if (in2D) {
-	        output = Polygon3D.toTwoD(output.polygons(), vector, axis);
+	        output = Polygon3D.toTwoD(output.toPolygons(), vector, axis);
 	        axis ||= output.axis;
 	      } else {
 	        output = output.toModel();
 	      }
 	      for (let i = 0; i < assemblies.length; i++) {
-	        if (in2D)
-	          output.concat(Polygon.toTwoD(assemblies[i], vector, axis));
-	        else
+	        if (in2D) {
+	          // TODO: overwiting this.toModel causes the commented line to fail.... should be rectified.
+	          // const twoDlines = Polygon3D.toTwoD(assemblies[i].toBiPolygon().toPolygons(), vector, axis);
+	          const polygons = Polygon3D.fromCSG(assemblies[i].toModel(true).polygons);
+	          const twoDlines = Polygon3D.toTwoD(polygons, vector.inverse(), axis);
+	          output.concatInPlace(twoDlines);
+	        } else
 	          output.union(assemblies[i].toModel());
 	      }
 	      return output;
 	    }
+	
+	    this.frontView = () => this.viewFromVector(this.normal(), true);
 	  }
 	}
 	
@@ -29020,8 +29031,8 @@ function (require, exports, module) {
 	    }
 	    let position = new Position(this, sme);
 	    this.position = () => position;
-	    this.toModel = position.toModel;
-	    this.toBiPolygon = position.toBiPolygon;
+	    this.toModel = this.position().toModel;
+	    this.toBiPolygon = this.position().toBiPolygon;
 	    this.updatePosition = () => position = new Position(this, sme);
 	    this.joints = [];
 	    this.values = {};
@@ -30074,9 +30085,11 @@ function (require, exports, module) {
 	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 	const Measurement = require('../../../../../public/js/utils/measurement.js');
 	const ThreeView = require('../three-view.js');
+	const ThreeDModel = require('../../three-d/three-d-model.js');
 	const Layout2D = require('../../objects/layout.js');
 	const Draw2D = require('../../two-d/draw.js');
-	const Vertex3D = require('../../three-d/objects/vertex');
+	const Vertex2d = require('../../two-d/objects/vertex');
+	const Line2d = require('../../two-d/objects/line');
 	const Snap2d = require('../../two-d/objects/snap');
 	const PropertyConfig = require('../../config/property/config.js');
 	const cabinetBuildConfig = require('../../../public/json/cabinets.json');
@@ -30086,6 +30099,7 @@ function (require, exports, module) {
 	const FaceSketch = require('../face-sketch');
 	const CSG = require('../../../public/js/3d-modeling/csg.js');
 	const approximate = require('../../../../../public/js/utils/approximate').new(10);
+	const PanZoom = require('../../two-d/pan-zoom.js');
 	
 	let template;
 	let modifyingOpening = false;
@@ -30452,6 +30466,34 @@ function (require, exports, module) {
 	  }
 	}
 	
+	let drawFront, drawTop, lastModel, frontView;
+	function updateShapeSketches(elem, model) {
+	  if (drawFront === undefined) {
+	    const templateBody = du.find('.template-body');
+	    if (templateBody) {
+	      const frontCanvas = du.find.down('.front-sketch', templateBody);
+	      const topCanvas = du.find.down('.top-sketch', templateBody);
+	      if (frontCanvas !== undefined) {
+	        drawFront = new Draw2D(frontCanvas);
+	        panz = new PanZoom(frontCanvas, updateShapeSketches);
+	        panz.centerOn(0, 0);
+	        drawTop = new Draw2D(topCanvas);
+	      }
+	    }
+	  }
+	  if (drawFront === undefined) return;
+	  if (model) {
+	    frontView = model.simpleModel.frontView();
+	    // const center = Vertex2d.center(Line2d.vertices(frontView));
+	    // const offsetVertex = center.differance(new Vertex2d());
+	    // const lineVector = new Line2d(new Vertex2d(), offsetVertex);
+	    // frontView.forEach(l => l.translate(lineVector));
+	  }
+	  drawFront(frontView, null, 2);
+	}
+	
+	ThreeDModel.onRenderObjectUpdate(updateShapeSketches);
+	
 	const topView = du.id('three-view-top');
 	const leftView = du.id('three-view-right');
 	const frongView = du.id('three-view-front');
@@ -30494,7 +30536,7 @@ function (require, exports, module) {
 	    const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
 	    subRotInputs.forEach(xyzEqnCheck(template, cabinet));
 	    updateOpeningPoints(template, cabinet);
-	    threeView.update(cabinet);
+	    const model = threeView.update(cabinet);
 	    setTimeout(updatePartsDataList, 500);
 	  } catch (e) {
 	    console.log(e);
@@ -31098,6 +31140,7 @@ const Matrix = require('./matrix');
 	const approx10 = approximate.new(10);
 	const CSG = require('../../../public/js/3d-modeling/csg.js');
 	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 	
 	
 	class Vertex3D {
@@ -31239,6 +31282,16 @@ const Matrix = require('./matrix');
 	  }
 	}
 	
+	Vertex3D.uniqueFilter = () => {
+	  const map = new ToleranceMap({x: tol, y: tol, z: tol});
+	  return (vert) => {
+	    if (!(vert instanceof Vertex3D)) return false;
+	    if (map.matches(vert).length > 0) return false;
+	    map.add(vert);
+	    return true;
+	  }
+	}
+	
 	Vertex3D.center = (...verticies) => {
 	  if (Array.isArray(verticies[0])) verticies = verticies[0];
 	  let x = 0;
@@ -31287,9 +31340,15 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 	  constructor(i, j, k) {
 	    if (i instanceof Vector3D) return i;
 	    if (i instanceof Object) {
-	      k = i.z;
-	      j = i.y;
-	      i = i.x;
+	      if (i.x !== undefined) {
+	        k = i.z;
+	        j = i.y;
+	        i = i.x;
+	      } else {
+	        k = i.k;
+	        j = i.j;
+	        i = i.i;
+	      }
 	    }
 	    this.i = () => i;
 	    this.j = () => j;
@@ -31349,6 +31408,9 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 	      const magnitude = Math.sqrt(i*i+j*j+k*k);
 	      return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
 	    }
+	    this.positive = () =>
+	      i > 0 || (i === 0 && j > 0) || (i === 0 && j === 0 && k > 0) ||
+	      (i === 0 && j === 0 && k === 0);
 	    this.equals = (vector) => Vector.tolerance.within(vector, this);
 	    this.toString = () => `<${i},  ${j},  ${k}>`;
 	  }
@@ -31516,7 +31578,7 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	      return map;
 	    }
 	
-	    this.copy = () => new Polygon3D(Line3D.verticies(lines));
+	    this.copy = () => new Polygon3D(Line3D.verticies(lines, false));
 	
 	    this.equals = (other) => {
 	      if (!(other instanceof Polygon3D)) return false;
@@ -31651,7 +31713,7 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	                lines = lines.slice(0, startIndex).concat(lines.slice(endIndex));
 	              }
 	
-	              const newVerts = Line3D.verticies(lines);
+	              const newVerts = Line3D.verticies(lines, false);
 	              this.rebuild(newVerts);
 	              removed = true;
 	              break;
@@ -31700,7 +31762,7 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	          const middleCheck = thisLines[thisLines.length - 1].endVertex.equals(otherLines[0].startVertex);
 	          if (!(middleCheck && startCheck))
 	            console.warn('coommmmooon!!!!');
-	          verticies = Line3D.verticies(otherLines.concat(thisLines));
+	          verticies = Line3D.verticies(otherLines.concat(thisLines), false);
 	          merged = new Polygon3D(verticies);
 	          try {
 	            merged.normal();
@@ -31913,8 +31975,23 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	  return new Polygon3D(initialVerticies);
 	}
 	
+	const randValue = () => Math.random() > .5 ? Math.random() * 200000 - 100000 : 0;
+	for (let index = 0; index < 10000; index++) {
+	  const vector = new Vector3D(randValue(), randValue(), randValue());
+	}
+	
+	// let inverseSignCheck = (v) => v.positive() === v.inverse().positive() && console.log('failed', v.toString());
+	// inverseSignCheck(new Vector3D(0,0,0));
+	// inverseSignCheck(new Vector3D(4,0,0));
+	// inverseSignCheck(new Vector3D(0,5,0));
+	// inverseSignCheck(new Vector3D(0,0,6));
+	// inverseSignCheck(new Vector3D(-3,0,0));
+	// inverseSignCheck(new Vector3D(0,-44,0));
+	// inverseSignCheck(new Vector3D(0,0,-.0000001));
+	
 	Polygon3D.viewFromVector = (polygons, vector) => {
 	  const orthoPolys = [];
+	  const positive = true;//vector.positive();
 	  for (let p = 0; p < polygons.length; p++) {
 	    const verticies = polygons[p].verticies();
 	    const orthoVerts = [];
@@ -31924,7 +32001,10 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	      const vertex = verticies[v];
 	      const u = new Vector3D(vertex.x, vertex.y, vertex.z);
 	      const projection = u.projectOnTo(vector);
-	      const orthogonal = new Vertex3D(u.minus(projection));
+	      //TODO: figure out how this should be written.
+	
+	      const orthogonal = new Vertex3D(u.minus(projection).scale(positive ? 1 : -1));
+	      // const orthogonal = new Vertex3D(projection.minus(u));
 	      const accStr = orthogonal.toString();
 	      if (vertLocs[accStr]) valid = false;
 	      else vertLocs[accStr] = true;
@@ -32422,7 +32502,19 @@ const Vector3D = require('./vector');
 	  }
 	}
 	
-	Line3D.verticies = (lines) => {
+	Line3D.verticies = (lines, true4startfalse4end) => {
+	  const verts = [];
+	  const includeBoth = true4startfalse4end !== true && true4startfalse4end !== false;
+	  const includeStart = includeBoth || true4startfalse4end === true;
+	  const includeEnd = includeBoth || true4startfalse4end === false;
+	  for (let index = 0; index < lines.length; index += 1) {
+	    if (includeStart) verts.push(lines[index].startVertex.copy());
+	    if (includeEnd) verts.push(lines[index].endVertex.copy());
+	  }
+	  return verts;
+	}
+	
+	Line3D.verticies1 = (lines) => {
 	  const verts = [];
 	  for (let index = 0; index < lines.length; index += 1) {
 	    verts.push(lines[index].endVertex.copy());
@@ -32559,10 +32651,14 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	
 	      for (let index = 0; index < face1.length; index++) {
 	        const index2 = (index + 1) % face1.length;
-	         const verticies = [face1[index], face1[index2], face2[index2], face2[index]];
+	         const vertices = [face1[index], face1[index2], face2[index2], face2[index]];
 	         polygons.push(new Polygon3D(vertices));
 	      }
 	      return polygons;
+	    }
+	
+	    this.to2D = (vector) => {
+	      Polygon3D.toTwoD()
 	    }
 	
 	
@@ -33724,6 +33820,9 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      const pPartName = this.parentAssembly().partName();
 	      return `${pPartName}${index}.${orientation}`;
 	    }
+	
+	    this.outerPoly = () => new Polygon3D(this.coordinates().outer);
+	    this.innerPoly = () => new Polygon3D(this.coordinates().inner);
 	    this.coordinates = () => JSON.clone(coordinates);
 	    this.reverseInner = () => CSG.reverseRotateAll(this.coordinates().inner);
 	    this.reverseOuter = () => CSG.reverseRotateAll(this.coordinates().outer);

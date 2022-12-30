@@ -118,7 +118,19 @@ class Line3D {
   }
 }
 
-Line3D.verticies = (lines) => {
+Line3D.verticies = (lines, true4startfalse4end) => {
+  const verts = [];
+  const includeBoth = true4startfalse4end !== true && true4startfalse4end !== false;
+  const includeStart = includeBoth || true4startfalse4end === true;
+  const includeEnd = includeBoth || true4startfalse4end === false;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (includeStart) verts.push(lines[index].startVertex.copy());
+    if (includeEnd) verts.push(lines[index].endVertex.copy());
+  }
+  return verts;
+}
+
+Line3D.verticies1 = (lines) => {
   const verts = [];
   for (let index = 0; index < lines.length; index += 1) {
     verts.push(lines[index].endVertex.copy());

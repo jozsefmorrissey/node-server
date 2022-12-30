@@ -150,7 +150,7 @@ class Polygon3D {
       return map;
     }
 
-    this.copy = () => new Polygon3D(Line3D.verticies(lines));
+    this.copy = () => new Polygon3D(Line3D.verticies(lines, false));
 
     this.equals = (other) => {
       if (!(other instanceof Polygon3D)) return false;
@@ -285,7 +285,7 @@ class Polygon3D {
                 lines = lines.slice(0, startIndex).concat(lines.slice(endIndex));
               }
 
-              const newVerts = Line3D.verticies(lines);
+              const newVerts = Line3D.verticies(lines, false);
               this.rebuild(newVerts);
               removed = true;
               break;
@@ -334,7 +334,7 @@ class Polygon3D {
           const middleCheck = thisLines[thisLines.length - 1].endVertex.equals(otherLines[0].startVertex);
           if (!(middleCheck && startCheck))
             console.warn('coommmmooon!!!!');
-          verticies = Line3D.verticies(otherLines.concat(thisLines));
+          verticies = Line3D.verticies(otherLines.concat(thisLines), false);
           merged = new Polygon3D(verticies);
           try {
             merged.normal();
@@ -547,8 +547,23 @@ Polygon3D.from2D = (polygon2d) => {
   return new Polygon3D(initialVerticies);
 }
 
+const randValue = () => Math.random() > .5 ? Math.random() * 200000 - 100000 : 0;
+for (let index = 0; index < 10000; index++) {
+  const vector = new Vector3D(randValue(), randValue(), randValue());
+}
+
+// let inverseSignCheck = (v) => v.positive() === v.inverse().positive() && console.log('failed', v.toString());
+// inverseSignCheck(new Vector3D(0,0,0));
+// inverseSignCheck(new Vector3D(4,0,0));
+// inverseSignCheck(new Vector3D(0,5,0));
+// inverseSignCheck(new Vector3D(0,0,6));
+// inverseSignCheck(new Vector3D(-3,0,0));
+// inverseSignCheck(new Vector3D(0,-44,0));
+// inverseSignCheck(new Vector3D(0,0,-.0000001));
+
 Polygon3D.viewFromVector = (polygons, vector) => {
   const orthoPolys = [];
+  const positive = true;//vector.positive();
   for (let p = 0; p < polygons.length; p++) {
     const verticies = polygons[p].verticies();
     const orthoVerts = [];
@@ -558,7 +573,10 @@ Polygon3D.viewFromVector = (polygons, vector) => {
       const vertex = verticies[v];
       const u = new Vector3D(vertex.x, vertex.y, vertex.z);
       const projection = u.projectOnTo(vector);
-      const orthogonal = new Vertex3D(u.minus(projection));
+      //TODO: figure out how this should be written.
+
+      const orthogonal = new Vertex3D(u.minus(projection).scale(positive ? 1 : -1));
+      // const orthogonal = new Vertex3D(projection.minus(u));
       const accStr = orthogonal.toString();
       if (vertLocs[accStr]) valid = false;
       else vertLocs[accStr] = true;
