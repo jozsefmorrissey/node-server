@@ -62,6 +62,14 @@ class Tolerance {
 
     this.finalAttr = () => attrs[attrs.length - 1];
 
+    this.details = (elem) => {
+      if (singleValue) return bounds(elem);
+      let details = {};
+      for (let index = 0; index < attrs.length; index++) {
+        details[attrs[index]] = this.bounds[attrs[index]](elem);
+      }
+      return details;
+    }
 
     this.boundries = (elem) => {
       if (singleValue) return bounds(elem).id;
@@ -92,5 +100,7 @@ class Tolerance {
     }
   }
 }
+
+Tolerance.within = (tol) => new Tolerance({'value': tol}).bounds.value.within;
 
 module.exports = Tolerance;

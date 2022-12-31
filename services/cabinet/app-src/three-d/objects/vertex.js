@@ -157,13 +157,13 @@ Vertex3D.uniqueFilter = () => {
   }
 }
 
-Vertex3D.center = (...verticies) => {
-  if (Array.isArray(verticies[0])) verticies = verticies[0];
+Vertex3D.center = (...vertices) => {
+  if (Array.isArray(vertices[0])) vertices = vertices[0];
   let x = 0;
   let y = 0;
   let z = 0;
   let count = 0;
-  verticies.forEach((vertex) => {
+  vertices.forEach((vertex) => {
     if (Number.isFinite(vertex.x + vertex.y + vertex.z)) {
       count++;
       x += vertex.x;

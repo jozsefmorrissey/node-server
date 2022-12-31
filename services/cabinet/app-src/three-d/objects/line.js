@@ -118,7 +118,7 @@ class Line3D {
   }
 }
 
-Line3D.verticies = (lines, true4startfalse4end) => {
+Line3D.vertices = (lines, true4startfalse4end) => {
   const verts = [];
   const includeBoth = true4startfalse4end !== true && true4startfalse4end !== false;
   const includeStart = includeBoth || true4startfalse4end === true;
@@ -130,7 +130,7 @@ Line3D.verticies = (lines, true4startfalse4end) => {
   return verts;
 }
 
-Line3D.verticies1 = (lines) => {
+Line3D.vertices1 = (lines) => {
   const verts = [];
   for (let index = 0; index < lines.length; index += 1) {
     verts.push(lines[index].endVertex.copy());
@@ -138,7 +138,7 @@ Line3D.verticies1 = (lines) => {
   return verts;
 }
 
-Line3D.adjustVerticies = (vert1, vert2, change) => {
+Line3D.adjustVertices = (vert1, vert2, change) => {
   const line = new Line3D(vert1, vert2);
   line.adjustLength(change);
 }

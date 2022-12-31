@@ -59,9 +59,9 @@ class ThreeDModelSimple {
       if (!threeView) {
         const polys = Polygon3D.fromCSG(cabinetCSG.polygons);
         threeView = Polygon3D.toThreeView(polys);
-        threeView.front = Polygon2d.outline(threeView.front).lines();
-        threeView.right = Polygon2d.outline(threeView.right).lines();
-        const topPoly2d = Polygon2d.outline(threeView.top);
+        threeView.front = Polygon2d.toParimeter(threeView.front).lines();
+        threeView.right = Polygon2d.toParimeter(threeView.right).lines();
+        const topPoly2d = Polygon2d.toParimeter(threeView.top);
         threeView.top = topPoly2d.lines();
       }
       return threeView;
@@ -72,9 +72,9 @@ class ThreeDModelSimple {
         let polygons = cabinetCSG.polygons;
         const polys = Polygon3D.fromCSG(polygons);
         const threeView = Polygon3D.toThreeView(polys);
-        threeView.front = Polygon2d.outline(threeView.front).lines();
-        threeView.right = Polygon2d.outline(threeView.right).lines();
-        const topPoly2d = Polygon2d.outline(threeView.top);
+        threeView.front = Polygon2d.toParimeter(threeView.front).lines();
+        threeView.right = Polygon2d.toParimeter(threeView.right).lines();
+        const topPoly2d = Polygon2d.toParimeter(threeView.top);
         threeView.top = topPoly2d.lines();
 
         const frontMinMax = Vertex2d.minMax(Line2d.vertices(threeView.front));
@@ -107,6 +107,7 @@ class ThreeDModelSimple {
       if (in2D) {
         output = Polygon3D.toTwoD(output.toPolygons(), vector, axis);
         axis ||= output.axis;
+        output = Polygon2d.toParimeter(output).lines();
       } else {
         output = output.toModel();
       }
@@ -115,7 +116,7 @@ class ThreeDModelSimple {
           // TODO: overwiting this.toModel causes the commented line to fail.... should be rectified.
           // const twoDlines = Polygon3D.toTwoD(assemblies[i].toBiPolygon().toPolygons(), vector, axis);
           const polygons = Polygon3D.fromCSG(assemblies[i].toModel(true).polygons);
-          const twoDlines = Polygon3D.toTwoD(polygons, vector.inverse(), axis);
+          const twoDlines = Polygon3D.toTwoD(polygons, vector, axis);
           output.concatInPlace(twoDlines);
         } else
           output.union(assemblies[i].toModel());

@@ -215,12 +215,12 @@ class ThreeDModel {
     const polyTol = .01;
     const polyToleranceMap = new ToleranceMap({'i': polyTol,'j': polyTol,'k': polyTol, length: .0001});
     function create2DcabinetImage(model) {
-      let polygons = (model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
+      let polygons = model.polygons;//(model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
       const polys = Polygon3D.fromCSG(polygons);
       model.threeView = Polygon3D.toThreeView(polys);
-      model.threeView.front = Polygon2d.outline(model.threeView.front).lines();
-      model.threeView.right = Polygon2d.outline(model.threeView.right).lines();
-      const topPoly2d = Polygon2d.outline(model.threeView.top);
+      model.threeView.front = Polygon2d.toParimeter(model.threeView.front).lines();
+      model.threeView.right = Polygon2d.toParimeter(model.threeView.right).lines();
+      const topPoly2d = Polygon2d.toParimeter(model.threeView.top);
       model.threeView.top = topPoly2d.lines();
 
       const frontMinMax = Vertex2d.minMax(Line2d.vertices(model.threeView.front));
@@ -306,7 +306,7 @@ class ThreeDModel {
       a.simpleModel = simpleModel;
       if (a && ThreeDModel.getViewer(a)) {
         addModelAttrs(a);
-        create2DcabinetImage(a);
+        // create2DcabinetImage(a);
         const displayModel = simpleModel.toModel();//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         // centerModel(displayModel);

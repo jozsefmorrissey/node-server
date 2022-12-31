@@ -30,7 +30,7 @@ function drawerBox(frontPoly, normal, length, props) {
   const bottomHeight = props.dbid.value();
   const norm = normal;
 
-  // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: verticies are if facing polygon topLeft, topRight, bottomRight, bottomLeft
+  // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: vertices are if facing polygon topLeft, topRight, bottomRight, bottomLeft
   const fP = frontPoly;
   const fPm = fP.translate(norm.scale(-length));
   const bP = new Polygon3D([fPm.vertex(1), fPm.vertex(0), fPm.vertex(3), fPm.vertex(2)]);

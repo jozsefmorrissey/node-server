@@ -1,6 +1,9 @@
 
-const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
 const approximate10 = require('../../../../../public/js/utils/approximate.js').new(10);
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const tol = .01;
+const within = Tolerance.within(tol);
 
 
 class Vertex2d {
@@ -37,7 +40,7 @@ class Vertex2d {
       return modificationFunction;
     }
 
-    this.equal = (other) => approximate.eq(other.x(), this.x()) && approximate.eq(other.y(), this.y());
+    this.equal = (other) => within(other.x(), this.x()) && within(other.y(), this.y());
     this.x = (val) => {
       if ((typeof val) === 'number') point.x = val;
       return this.point().x;
@@ -99,12 +102,12 @@ Vertex2d.fromJson = (json) => {
   return new Vertex2d(json.point);
 }
 
-Vertex2d.minMax = (...verticies) => {
-  if (Array.isArray(verticies[0])) verticies = verticies[0];
+Vertex2d.minMax = (...vertices) => {
+  if (Array.isArray(vertices[0])) vertices = vertices[0];
   const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
   const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
-  for (let index = 0; index < verticies.length; index += 1) {
-    const vert = verticies[index];
+  for (let index = 0; index < vertices.length; index += 1) {
+    const vert = vertices[index];
     if (max.x() < vert.x()) max.x(vert.x());
     if (max.y() < vert.y()) max.y(vert.y());
     if (min.x() > vert.x()) min.x(vert.x());
@@ -113,20 +116,20 @@ Vertex2d.minMax = (...verticies) => {
   return {min, max, diff: new Vertex2d(max.x() - min.x(), max.y() - min.y())};
 }
 
-Vertex2d.center = (...verticies) => {
-  if (Array.isArray(verticies[0])) verticies = verticies[0];
-  const minMax = Vertex2d.minMax(...verticies);
+Vertex2d.center = (...vertices) => {
+  if (Array.isArray(vertices[0])) vertices = vertices[0];
+  const minMax = Vertex2d.minMax(...vertices);
   const centerX = minMax.min.x() + (minMax.max.x() - minMax.min.x())/2;
   const centerY = minMax.min.y() + (minMax.max.y() - minMax.min.y())/2;
   return new Vertex2d(centerX, centerY);
 }
 
-Vertex2d.weightedCenter = (...verticies) => {
-  if (Array.isArray(verticies[0])) verticies = verticies[0];
+Vertex2d.weightedCenter = (...vertices) => {
+  if (Array.isArray(vertices[0])) vertices = vertices[0];
   let x = 0;
   let y = 0;
   let count = 0;
-  verticies.forEach((vertex) => {
+  vertices.forEach((vertex) => {
     if (Number.isFinite(vertex.x() + vertex.y())) {
       count++;
       x += vertex.x();
@@ -159,16 +162,25 @@ Vertex2d.sortByMax = (verts) => {
   });
 }
 
-Vertex2d.centerOn = (newCenter, verticies) => {
+Vertex2d.centerOn = (newCenter, vertices) => {
   newCenter = new Vertex2d(newCenter);
-  const center = Vertex2d.center(...verticies);
+  const center = Vertex2d.center(...vertices);
   const diff = newCenter.copy().differance(center);
   for (let index = 0; index < polys.length; index++) {
-    const vert = verticies[index];
+    const vert = vertices[index];
     vert.translate(diff.x(), diff.y());
   }
 }
 
+Vertex2d.toleranceMap = (tolerance, vertices) => {
+  tolerance ||= tol;
+  vertices = [];
+  const map = new ToleranceMap({x: tolerance, y: tolerance});
+  for (let index = 0; index < vertices.length; index++) {
+    map.add(vertices[index]);
+  }
+  return map;
+}
 
 Vertex2d.reusable = true;
 new Vertex2d();

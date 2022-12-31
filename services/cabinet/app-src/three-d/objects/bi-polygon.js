@@ -8,9 +8,9 @@ const Plane = require('plane');
 
 class BiPolygon {
   constructor(polygon1, polygon2) {
-    const face1 = polygon1.verticies();
-    const face2 = polygon2.verticies();
-    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of verticies');
+    const face1 = polygon1.vertices();
+    const face2 = polygon2.vertices();
+    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of vertices');
 
     let normal = {};
     function calcNormal() {
@@ -87,8 +87,8 @@ class BiPolygon {
 
       for (let index = 0; index < face1.length; index++) {
         const index2 = (index + 1) % face1.length;
-         const verticies = [face1[index], face1[index2], face2[index2], face2[index]];
-         const normalized = normalize(verticies, flippedNormal);
+         const vertices = [face1[index], face1[index2], face2[index2], face2[index]];
+         const normalized = normalize(vertices, flippedNormal);
          polygonSets.push(new CSG.Polygon(normalized));
          polygonSets[polygonSets.length - 1].plane.normal = normalized[0].normal.clone();
       }
@@ -134,13 +134,13 @@ class BiPolygon {
 
 BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   offset ||= {};
-  const verts = polygon.verticies();
+  const verts = polygon.vertices();
   if (verts.length < 4) return undefined;
   const verts1 = JSON.clone(verts);
-  Line3D.adjustVerticies(verts1[0], verts1[1], offset.x);
-  Line3D.adjustVerticies(verts1[1], verts1[2], offset.y);
-  Line3D.adjustVerticies(verts1[2], verts1[3], offset.x);
-  Line3D.adjustVerticies(verts1[3], verts1[0], offset.y);
+  Line3D.adjustVertices(verts1[0], verts1[1], offset.x);
+  Line3D.adjustVertices(verts1[1], verts1[2], offset.y);
+  Line3D.adjustVertices(verts1[2], verts1[3], offset.x);
+  Line3D.adjustVertices(verts1[3], verts1[0], offset.y);
   const verts2 = JSON.clone(verts1);
   const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
   const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);

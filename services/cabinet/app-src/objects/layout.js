@@ -154,7 +154,7 @@ class Wall2D extends Line2d {
     this.addWindow = (fromPreviousWall) => windows.push(new Window2D(this, fromPreviousWall));
     this.doors = () => doors;
     this.addDoor = (fromPreviousWall) => doors.push(new Door2D(this, fromPreviousWall));
-    this.verticies = () => {
+    this.vertices = () => {
       const verts = [this.startVertex()];
       const doorsAndWindows = doors.concat(windows);
       doorsAndWindows.sort(OnWall.sort);
@@ -371,7 +371,7 @@ class Layout2D extends Lookup {
     }
 
     this.addObject = (id, payload, name) => {
-      const center = Vertex2d.center.apply(null, this.verticies())
+      const center = Vertex2d.center.apply(null, this.vertices())
       const obj = new Object2d(center, this, payload, name);
       obj.id(id);
       this.objects().push(obj);
@@ -472,13 +472,13 @@ class Layout2D extends Lookup {
       const item = idMap[id];
       if (item === undefined) throw new Error(`Unknown id: ${id}`);
       if (wallCount < 3 && (item instanceof Wall2D || item instanceof Vertex2d))
-          throw new Error('Cannot Remove any more verticies or walls');
+          throw new Error('Cannot Remove any more vertices or walls');
 
       return this.removeVertex(item) || this.removeWall(item) ||
               this.removeObject(item) || item.remove();
     }
 
-    this.verticies = (target, before, after) => {
+    this.vertices = (target, before, after) => {
       const lines = this.walls();
       if (lines.length === 0) return [];
       const fullList = [];
@@ -487,21 +487,21 @@ class Layout2D extends Lookup {
         fullList.push(line.startVertex());
       }
       if (target) {
-        const verticies = [];
+        const vertices = [];
         const index = fullList.indexOf(target);
         if (index === undefined) return null;
         for (let i = before; i < before + after + 1; i += 1)
-            verticies.push(fullList[Math.mod(i, fullList.length)]);
-        return verticies;
+            vertices.push(fullList[Math.mod(i, fullList.length)]);
+        return vertices;
       } else return fullList;
 
-      return verticies;
+      return vertices;
     }
 
     this.within = (vertex) => {
       vertex = new Vertex2d(vertex);
       const endpoint = {x: 0, y: 0};
-      this.verticies().forEach(v => {
+      this.vertices().forEach(v => {
         endpoint.x -= v.x();
         endpoint.y -= v.y();
       });

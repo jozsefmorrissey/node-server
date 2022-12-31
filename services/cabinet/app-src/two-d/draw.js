@@ -1,15 +1,21 @@
 
 const Circle2d = require('./objects/circle');
 const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
+const du = require('dom-utils');
 const tol = .1;
 let vertLocTolMap;
 
 class Draw2d {
-  constructor(canvas, invertY) {
-    const yCoef = -1;//= invertY ? -1 : 1;
-    const ctx = canvas.getContext('2d');
+  constructor(canvasOselector, invertY) {
+    const yCoef = invertY ? -1 : 1;
     let takenLocations;
     let coloredLocations;
+
+    function canvas() {
+      if (typeof canvasOid === 'string') return du.find(canvasOselector);
+      return canvasOselector;
+    }
+    const ctx = () => canvas().getContext('2d');
 
     function draw(object, color, width) {
       if (object === undefined) return;
@@ -44,16 +50,16 @@ class Draw2d {
       }
     }
 
-    draw.canvas = () => canvas;
-    draw.ctx = () => ctx;
-    draw.beginPath = () => ctx.beginPath();
-    draw.moveTo = () => ctx.moveTo();
+    draw.canvas = canvas;
+    draw.ctx = ctx;
+    draw.beginPath = () => ctx().beginPath();
+    draw.moveTo = () => ctx().moveTo();
 
     draw.clear = () => {
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.restore();
+      ctx().save();
+      ctx().setTransform(1, 0, 0, 1, 0, 0);
+      ctx().clearRect(0, 0, canvas().width, canvas().height);
+      ctx().restore();
     }
     const colors = [
       'indianred', 'gray', 'fuchsia', 'lime', 'black', 'lightsalmon', 'red',
@@ -63,7 +69,7 @@ class Draw2d {
     let colorIndex = 0;
 
     let rMultiplier = 1;
-    function identifyVerticies(line) {
+    function identifyVertices(line) {
       vertLocTolMap.add(line.startVertex());
       vertLocTolMap.add(line.endVertex());
       const svHits = vertLocTolMap.matches(line.startVertex()).length;
@@ -83,13 +89,13 @@ class Draw2d {
       color = color ||  'black';
       width = width || 10;
       const measurePoints = line.measureTo();
-      ctx.beginPath();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      ctx.moveTo(line.startVertex().x(), yCoef * line.startVertex().y());
-      ctx.lineTo(line.endVertex().x(), yCoef * line.endVertex().y());
-      ctx.stroke();
-      // identifyVerticies(line);
+      ctx().beginPath();
+      ctx().strokeStyle = color;
+      ctx().lineWidth = width;
+      ctx().moveTo(line.startVertex().x(), yCoef * line.startVertex().y());
+      ctx().lineTo(line.endVertex().x(), yCoef * line.endVertex().y());
+      ctx().stroke();
+      // identifyVertices(line);
     }
 
     draw.plane = (plane, color, width) => {
@@ -105,66 +111,66 @@ class Draw2d {
       width = width || .1;
       poly.lines().forEach((line) => draw.line(line, color, width));
       if ((typeof poly.getTextInfo) === 'function') {
-        ctx.save();
+        ctx().save();
         const info = poly.getTextInfo();
-        ctx.translate(info.center.x(), yCoef * info.center.y());
-        ctx.rotate(info.radians);
-        ctx.beginPath();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'black';
-        ctx.fillStyle =  'black';
+        ctx().translate(info.center.x(), yCoef * info.center.y());
+        ctx().rotate(info.radians);
+        ctx().beginPath();
+        ctx().lineWidth = 4;
+        ctx().strokeStyle = 'black';
+        ctx().fillStyle =  'black';
         const text = info.limit === undefined ? info.text : info.text.substring(0, info.limit);
-        ctx.fillText(text, info.x, yCoef * info.y, info.maxWidth);
-        ctx.stroke()
-        ctx.restore();
+        ctx().fillText(text, info.x, yCoef * info.y, info.maxWidth);
+        ctx().stroke()
+        ctx().restore();
       }
     }
 
     draw.square = (square, color, text) => {
-      ctx.save();
-      ctx.beginPath();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'black';
-      ctx.fillStyle = color;
+      ctx().save();
+      ctx().beginPath();
+      ctx().lineWidth = 2;
+      ctx().strokeStyle = 'black';
+      ctx().fillStyle = color;
 
       const center = square.center();
-      ctx.translate(center.x(), yCoef * center.y());
-      ctx.rotate(square.radians());
-      ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
-      ctx.stroke();
-      ctx.fill();
+      ctx().translate(center.x(), yCoef * center.y());
+      ctx().rotate(square.radians());
+      ctx().rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
+      ctx().stroke();
+      ctx().fill();
 
       if (text) {
-        ctx.beginPath();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'black';
-        ctx.fillStyle =  'black';
-        ctx.fillText(text, 0, square.height() / 4, square.width());
-        ctx.stroke()
+        ctx().beginPath();
+        ctx().lineWidth = 4;
+        ctx().strokeStyle = 'black';
+        ctx().fillStyle =  'black';
+        ctx().fillText(text, 0, square.height() / 4, square.width());
+        ctx().stroke()
       }
 
-      ctx.restore();
+      ctx().restore();
     }
 
     draw.text = (text, center, width, color, maxWidth) => {
-      ctx.beginPath();
-      ctx.lineWidth = width || 4;
-      ctx.strokeStyle = color || 'black';
-      ctx.fillStyle =  color || 'black';
-      ctx.font = width + "px Arial";
-      ctx.fillText(text, center.x, yCoef * center.y, maxWidth);
-      ctx.stroke()
+      ctx().beginPath();
+      ctx().lineWidth = width || 4;
+      ctx().strokeStyle = color || 'black';
+      ctx().fillStyle =  color || 'black';
+      ctx().font = width + "px Arial";
+      ctx().fillText(text, center.x, yCoef * center.y, maxWidth);
+      ctx().stroke()
     }
 
     draw.circle = (circle, lineColor, fillColor, lineWidth) => {
       const center = circle.center();
-      ctx.beginPath();
-      ctx.lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
-      ctx.strokeStyle = lineColor || 'black';
-      ctx.fillStyle = fillColor || 'white';
-      ctx.arc(center.x(),yCoef * center.y(), circle.radius(),0, 2*Math.PI);
-      ctx.stroke();
-      ctx.fill();
+      ctx().beginPath();
+      ctx().lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
+      ctx().strokeStyle = lineColor || 'black';
+      ctx().fillStyle = fillColor || 'white';
+      ctx().arc(center.x(),yCoef * center.y(), circle.radius(),0, 2*Math.PI);
+      ctx().stroke();
+      ctx().fill();
     }
 
     const blank = 4;

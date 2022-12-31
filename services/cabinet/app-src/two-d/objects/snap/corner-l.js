@@ -47,9 +47,9 @@ class SnapCornerL extends Snap2d {
 
     this.addLocation(SnapCorner.daginalLeft(this));
     this.addLocation(SnapCorner.diagonalRight(this));
-    const verticies = this.snapLocations().map((snap) =>
+    const vertices = this.snapLocations().map((snap) =>
       snap.vertex());
-    polygon.addVerticies(verticies);
+    polygon.addVertices(vertices);
   }
 }
 

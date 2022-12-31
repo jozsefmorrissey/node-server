@@ -1,12 +1,10 @@
 
-const approximate = require('../../../../../public/js/utils/approximate.js');
-const approximate100 = approximate.new(100000000000000);
 const Vertex2d = require('./vertex');
 const Circle2d = require('./circle');
-
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-const tol = .0001;
-const withinTol = new Tolerance({'value': tol}).bounds.value.within;
+const tol = .001;
+const withinTol = Tolerance.within(tol);
 
 class Line2d {
   constructor(startVertex, endVertex) {
@@ -407,6 +405,15 @@ class Line2d {
       return withinTol(posRads, otherRads) || withinTol(negRads, otherRads);
     }
 
+    this.radianDifference = (other) => {
+      const posRads = Math.mod(this.radians(), 2*Math.PI);
+      const negRads = Math.mod(this.radians() + Math.PI, 2*Math.PI);
+      const otherRads = Math.mod(other.radians(), 2*Math.PI);
+      const positiveDiff = Math.abs(otherRads - posRads);
+      const negitiveDiff = Math.abs(otherRads - negRads);
+      return positiveDiff > negitiveDiff ? positiveDiff : negitiveDiff;
+    }
+
     this.equals = (other) => {
       if (!(other instanceof Line2d)) return false;
       if (other === this) return true;
@@ -504,6 +511,14 @@ class Line2d {
       this.endVertex().point().y = newEnd.y;
     };
 
+    this.acquiescent = (trendSetter) => {
+      if (!(trendSetter instanceof Line2d)) return this;
+      const shouldReverse = trendSetter.endVertex().distance(this.endVertex()) <
+                            trendSetter.endVertex().distance(this.startVertex());
+      if (shouldReverse) return this.negitive();
+      return this;
+    }
+
     this.negitive = () => new Line2d(this.endVertex(), this.startVertex());
     this.toString = () => `${this.startVertex().toString()} => ${this.endVertex().toString()}`;
     this.toInfoString = () => `slope: ${this.slope()}\n` +
@@ -549,6 +564,12 @@ Line2d.trendLine = (...points) => {
   return line;
 }
 
+const distanceObj = (line, trendLine) => ({
+  line: line.acquiescent(trendLine),
+  distance: line.distance(vertex),
+  deltaRad: trendLine.radianDifference(line.radians())
+});
+
 Line2d.vertices = (lines) => {
   const verts = {};
   for (let index = 0; index < lines.length; index += 1) {
@@ -561,7 +582,6 @@ Line2d.vertices = (lines) => {
   return Object.values(verts);
 }
 
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 Line2d.consolidate = (...lines) => {
   const tolMap = new ToleranceMap({'slope': tol});
   const lineMap = {};
@@ -603,6 +623,57 @@ Line2d.consolidate = (...lines) => {
   }
 
   return minList;
+}
+
+const within = Tolerance.within(.00001);
+Line2d.favored = (trendLine,lines) => {
+  if (lines.length < 2) return lines[0].acquiescent(trendLine);
+  const best = distanceObj(lines[0], trendLine);
+  for (let index = 1; index < lines.length; index++) {
+    const curr = distanceObj(line[index], trendLine);
+    const closer = within(curr.distance, best.distance) || curr.distance < best.distance;
+    const straighter = within(curr.deltaRad, best.deltaRad) || curr.deltaRad < best.deltaRad;
+    if (straighter && closer) best = curr;
+  }
+  return best.line;
+}
+
+const distLine = (line, vertex, index) => {
+  return {line, distance: line.distance(vertex), index};
+}
+Line2d.isolateFurthestLine = (vertex, lines) => {
+  let retLines = [];
+  let max = distLine(lines[0], vertex, index);
+  for (let index = 1; index < lines.length; index++) {
+    let curr = distLine(lines[index], vertex, index);
+    if (curr.distance > max.distance) {
+      retLines = retLines.slice(0, max.index)
+                  .concat([max.line]).concat(retLines.slice(max.index));
+      max = curr;
+    } else retLines.push(curr.line);
+  }
+  return {line: max.line, lines: retLines};
+}
+
+Line2d.toleranceMap = (tol, startEndBoth, lines) => {
+  tol ||= .01;
+  lines ||= [];
+  const tolAttrs = {};
+  const both = startEndBoth !== true && startEndBoth !== false;
+  if (both || startEndBoth === true) {
+    tolAttrs['startVertex.x'] = tol;
+    tolAttrs['startVertex.y'] = tol;
+  }
+  if (both || startEndBoth === false) {
+    tolAttrs['endVertex.x'] = tol;
+    tolAttrs['endVertex.y'] = tol;
+  }
+  const map = new ToleranceMap(tolAttrs);
+  for (let index = 0; index < lines.length; index++) {
+    map.add(lines[index]);
+    if (!both) map.add(lines[index].negitive());
+  }
+  return map;
 }
 
 new Line2d();

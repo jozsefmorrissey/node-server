@@ -61,21 +61,21 @@ class LineMeasurement2d {
       const endCircle = new Circle2d(measureDist, line.endVertex());
       const startTerminationCircle = new Circle2d(termDist - 2.5, line.startVertex());
       const endTerminationCircle = new Circle2d(termDist - 2.5, line.endVertex());
-      const startVerticies = startCircle.intersections(startLine);
-      const endVerticies = endCircle.intersections(endLine);
+      const startVertices = startCircle.intersections(startLine);
+      const endVertices = endCircle.intersections(endLine);
       let l1, l2;
-      if (startVerticies.length > 0 && endVerticies.length > 0) {
-        const startTerminationVerticies = startTerminationCircle.intersections(startLine);
-        const endTerminationVerticies = endTerminationCircle.intersections(endLine);
+      if (startVertices.length > 0 && endVertices.length > 0) {
+        const startTerminationVertices = startTerminationCircle.intersections(startLine);
+        const endTerminationVertices = endTerminationCircle.intersections(endLine);
         let startTerminationLine, endTerminationLine, measurementLine;
 
-        l1 = new Line2d(startVerticies[1], endVerticies[1]);
-        l1.startLine = new Line2d(line.startVertex(), startTerminationVerticies[1]);
-        l1.endLine = new Line2d(line.endVertex(), endTerminationVerticies[1]);
+        l1 = new Line2d(startVertices[1], endVertices[1]);
+        l1.startLine = new Line2d(line.startVertex(), startTerminationVertices[1]);
+        l1.endLine = new Line2d(line.endVertex(), endTerminationVertices[1]);
 
-        l2 = new Line2d(startVerticies[0], endVerticies[0]);
-        l2.startLine = new Line2d(line.startVertex(), startTerminationVerticies[0]);
-        l2.endLine = new Line2d(line.endVertex(), endTerminationVerticies[0]);
+        l2 = new Line2d(startVertices[0], endVertices[0]);
+        l2.startLine = new Line2d(line.startVertex(), startTerminationVertices[0]);
+        l2.endLine = new Line2d(line.endVertex(), endTerminationVertices[0]);
         const furtherLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center);
         const closerLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center, true);
         const obj = {furtherLine, closerLine, takenLocations};

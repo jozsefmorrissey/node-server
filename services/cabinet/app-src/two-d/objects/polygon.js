@@ -2,11 +2,11 @@ const Vertex2d = require('./vertex');
 const Line2d = require('./line');
 
 class Polygon2d {
-  constructor(initialVerticies) {
+  constructor(initialVertices) {
     const lines = [];
     let map;
 
-    this.verticies = (target, before, after) => {
+    this.vertices = (target, before, after) => {
       if (lines.length === 0) return [];
       const fullList = [];
       for (let index = 0; index < lines.length; index += 1) {
@@ -14,15 +14,15 @@ class Polygon2d {
         fullList.push(line.startVertex());
       }
       if (target) {
-        const verticies = [];
+        const vertices = [];
         const index = fullList.indexOf(target);
         if (index === undefined) return null;
-        verticies = [];
-        for (let i = before; i < before + after + 1; i += 1) verticies.push(fullList[i]);
-        return verticies;
+        vertices = [];
+        for (let i = before; i < before + after + 1; i += 1) vertices.push(fullList[i]);
+        return vertices;
       } else return fullList;
 
-      return verticies;
+      return vertices;
     }
 
     this.lines = () => lines;
@@ -46,8 +46,8 @@ class Polygon2d {
 
     this.equal = (other) => {
       if (!(other instanceof Polygon2d)) return false;
-      const verts = this.verticies();
-      const otherVerts = other.verticies();
+      const verts = this.vertices();
+      const otherVerts = other.vertices();
       if (verts.length !== otherVerts.length) return false;
       let otherIndex = undefined;
       let direction;
@@ -105,7 +105,7 @@ class Polygon2d {
       if (completed) return subSection;
     }
 
-    this.center = () => Vertex2d.center(...this.verticies());
+    this.center = () => Vertex2d.center(...this.vertices());
 
     this.translate = (xDiff, yDiff) => {
       for (let index = 0; index < lines.length; index++) {
@@ -120,9 +120,9 @@ class Polygon2d {
       this.translate(diff.x(), diff.y());
     }
 
-    this.addVerticies = (list) => {
+    this.addVertices = (list) => {
       if (list === undefined) return;
-      if ((lines.length === 0) && list.length < 3) return;//console.error('A Polygon Must be initialized with 3 verticies');
+      if ((lines.length === 0) && list.length < 3) return;//console.error('A Polygon Must be initialized with 3 vertices');
       const verts = [];
       const endLine = this.endLine();
       for (let index = 0; index < list.length + 1; index += 1) {
@@ -142,13 +142,33 @@ class Polygon2d {
       this.lineMap(true);
     }
 
-    this.path = () => {
+    this.path = (offset) => {
+      offset ||= 0;
       let path = '';
-      this.verticies().forEach((v) => path += `${v.toString()} => `);
+      const verts = this.vertices();
+      for (let index = 0; index < verts.length; index++) {
+        const i = Math.mod(index + offset, verts.length);
+        path += `${verts[i].toString()} => `
+      }
       return path.substring(0, path.length - 4);
     }
 
     this.toString = this.path;
+    this.area = () => {
+      let total = 0;
+      let verts = this.vertices();
+      for (var i = 0, l = verts.length; i < l; i++) {
+        var addX = verts[i].x();
+        var addY = verts[i == verts.length - 1 ? 0 : i + 1].y();
+        var subX = verts[i == verts.length - 1 ? 0 : i + 1].x();
+        var subY = verts[i].y();
+
+        total += (addX * addY * 0.5);
+        total -= (subX * subY * 0.5);
+      }
+
+      return Math.abs(total);
+    }
 
     this.removeLoops = () => {
       const map = {}
@@ -166,7 +186,7 @@ class Polygon2d {
       }
     }
 
-    this.addVerticies(initialVerticies);
+    this.addVertices(initialVertices);
   }
 }
 
@@ -180,12 +200,30 @@ Polygon2d.centerOn = (newCenter, polys) => {
   }
 }
 
+Polygon2d.fromLines = (lines) => {
+  if (lines === undefined || lines.length === 0) return new Polygon2d();
+  let lastLine = lines[0];
+  const verts = [lastLine.startVertex()];
+  for (let index = 1; index < lines.length; index++) {
+    let line = lines[index].acquiescent(lastLine);
+    if (!line.startVertex().equal(verts[verts.length - 1])) {
+      verts.push(line.startVertex());
+    }
+    if (!line.endVertex().equal(verts[verts.length - 1])) {
+      if (index !== lines.length - 1 || !line.endVertex().equal(verts[0]))
+        verts.push(line.endVertex());
+    }
+    lastLine = line;
+  }
+  return new Polygon2d(verts);
+}
+
 Polygon2d.minMax = (...polys) => {
   const centers = [];
   const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
   const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
   for (let index = 0; index < polys.length; index += 1) {
-    const verts = polys[index].verticies();
+    const verts = polys[index].vertices();
     for (let vIndex = 0; vIndex < verts.length; vIndex++) {
       const vert = verts[vIndex];
       if (max.x() < vert.x()) max.x(vert.x());
@@ -216,58 +254,67 @@ Polygon2d.lines = (...polys) => {
   return consolidated;
 }
 
-Polygon2d.outline = (lines, searchLineCount) => {
-  // return lines;
-  searchLineCount ||= 16;
-  const center = Vertex2d.center(Line2d.vertices(lines));
-  const offset = (2 * Math.PI) / searchLineCount;
-  let parremeter, prevParremeter;
-  let radians = -Math.PI;
-  let lastLine;
-  // TODO: while loop is a hacky fix function should isolate outline with only one run.
-  while (!prevParremeter || prevParremeter.length !== parremeter.length) {
-    prevParremeter = parremeter;
-    parremeter = [];
-    for (let index = 0; index < searchLineCount; index++) {
-      const radial = Line2d.startAndTheta(center, radians, 1000000);
-      let max;
-      for (let lIndex = 0; lIndex < lines.length; lIndex++) {
-        let line = lines[lIndex];
-        if (lastLine && lastLine.endVertex().distance(line.endVertex()) <
-        lastLine.endVertex().distance(line.startVertex())) {
-          line = line.negitive();
-        }
-        const intersection = line.findSegmentIntersection(radial, true);
-        if (intersection) {
-          const distance = intersection.distance(center);
-          if (max === undefined || max.distance < distance) {
-            max = {line, distance};
-          }
-        }
-      }
-      if ((!lastLine && max) || (max && !max.line.equals(lastLine))) {
-        lastLine = max.line;
-        parremeter.push(lastLine);
-      }
-      radians += offset;
+
+const tol = .000001;
+Polygon2d.toParimeter = (lines, recurseObj, print) => {
+  if (lines.length < 2) throw new Error('Not enough lines to create a parimeter');
+  let lineMap, splitMap, parimeter;
+  if (recurseObj) {
+    lineMap = recurseObj.lineMap;
+    splitMap = recurseObj.splitMap;
+    parimeter = recurseObj.parimeter;
+  } else {
+    lineMap = Line2d.toleranceMap(tol, true, lines);
+    const center = Vertex2d.center(Line2d.vertices(lines));
+    const isolate = Line2d.isolateFurthestLine(center, lines);
+    if (print) console.log('Longest Line:', isolate.line.toString());
+    splitMap = Vertex2d.toleranceMap();
+    // splitMap.add(isolate.line.startVertex());
+    parimeter = [isolate.line];
+  }
+  parimeter.slice(1).forEach((l) => {
+    if (splitMap.matches(l.startVertex()).length === 0)
+      throw new Error('wtf');
+  });
+  if (parimeter.length > lines.length) return new Polygon2d();
+  const sv = parimeter[0].startVertex();
+  const ev = parimeter[parimeter.length - 1].endVertex();
+  const alreadyVisitedStart = splitMap.matches(sv).length !== 0;
+  const alreadyVisitedEnd = splitMap.matches(ev).length !== 0;
+  if (alreadyVisitedEnd || alreadyVisitedStart) return new Polygon2d();
+  const madeItAround = parimeter.length > 1 && sv.equal(ev);
+  if (madeItAround) return Polygon2d.fromLines(parimeter);
+
+  const startLine = parimeter[0];
+  const partialParimeters = []
+  const lastLine = parimeter[parimeter.length - 1];
+  let matches = lineMap.matches(lastLine.negitive());
+  if (matches.length < 2) {
+    if (parimeter.length === 1) {
+      lines.remove(lastLine);
+      return Polygon2d.toParimeter(lines);
+    } else return new Polygon2d();
+  }
+    // throw new Error('A parimeter must exist between lines for function to work');
+  for (let index = 0; index < matches.length; index++) {
+    if (splitMap.matches(matches[index].endVertex()).length === 0) {
+      const newParim = Array.from(parimeter).concat(matches[index]);
+      const newSplitMap = splitMap.clone();
+      newSplitMap.add(matches[index].startVertex());
+      partialParimeters.push({parimeter: newParim, splitMap: newSplitMap, lineMap});
     }
   }
-  const verts = [parremeter[0].startVertex()];
-  let lastParremterLine;
-  for (let index = 0; index < parremeter.length; index++) {
-    const line = parremeter[index];
-    if (!line.equals(lastParremterLine)) {
-      if (!line.startVertex().equal(verts[verts.length - 1])) {
-        verts.push(line.startVertex());
-      }
-      if (!line.endVertex().equal(verts[verts.length - 1])) {
-        verts.push(line.endVertex());
-      }
-    }
-    lastParremterLine = line;
+
+  let biggest = new Polygon2d();
+  for (let index = 0; index < partialParimeters.length; index ++) {
+    const recObj = partialParimeters[index];
+    const searchResult = Polygon2d.toParimeter(lines, recObj);
+    biggest = biggest.area() < searchResult.area() ? searchResult : biggest;
   }
-  return new Polygon2d(verts);
+  if (print) console.log(biggest.area(), biggest.toString());
+  return biggest;
 }
+
 
 new Polygon2d();
 module.exports = Polygon2d;

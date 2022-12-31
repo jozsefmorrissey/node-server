@@ -400,37 +400,6 @@ function updateOpeningPoints(template, cabinet) {
   }
 }
 
-let drawFront, drawTop, lastModel, frontView;
-function updateShapeSketches(elem, model) {
-  if (drawFront === undefined) {
-    const templateBody = du.find('.template-body');
-    if (templateBody) {
-      const frontCanvas = du.find.down('.front-sketch', templateBody);
-      const topCanvas = du.find.down('.top-sketch', templateBody);
-      if (frontCanvas !== undefined) {
-        drawFront = new Draw2D(frontCanvas);
-        panz = new PanZoom(frontCanvas, updateShapeSketches);
-        panz.centerOn(0, 0);
-        drawTop = new Draw2D(topCanvas);
-      }
-    }
-  }
-  if (drawFront === undefined) return;
-  if (model) {
-    frontView = model.simpleModel.frontView();
-    // const center = Vertex2d.center(Line2d.vertices(frontView));
-    // const offsetVertex = center.differance(new Vertex2d());
-    // const lineVector = new Line2d(new Vertex2d(), offsetVertex);
-    // frontView.forEach(l => l.translate(lineVector));
-  }
-  drawFront(frontView, null, 2);
-}
-
-ThreeDModel.onRenderObjectUpdate(updateShapeSketches);
-
-const topView = du.id('three-view-top');
-const leftView = du.id('three-view-right');
-const frongView = du.id('three-view-front');
 function validateOpenTemplate (elem) {
   const templateBody = du.find('.template-body');
   if (!templateBody || du.is.hidden(templateBody)) return;
@@ -693,11 +662,42 @@ class TemplateManager extends Lookup {
       };
     }
 
+    function initiateCanvasViews() {
+      let drawFront, drawTop, lastModel, frontView;
+      function updateShapeSketches(elem, model) {
+        if (drawFront === undefined) {
+          const templateBody = du.find('.template-body');
+          if (templateBody) {
+            const frontCanvas = du.find.down('.front-sketch', templateBody);
+            const topCanvas = du.find.down('.top-sketch', templateBody);
+            if (frontCanvas !== undefined) {
+              drawFront = new Draw2D(frontCanvas);
+              const panz = new PanZoom(frontCanvas, updateShapeSketches);
+              panz.centerOn(0, 0);
+              drawTop = new Draw2D(topCanvas);
+            }
+          }
+        }
+        if (drawFront === undefined) return;
+        if (model) {
+          frontView = model.simpleModel.frontView();
+          // const center = Vertex2d.center(Line2d.vertices(frontView));
+          // const offsetVertex = center.differance(new Vertex2d());
+          // const lineVector = new Line2d(new Vertex2d(), offsetVertex);
+          // frontView.forEach(l => l.translate(lineVector));
+        }
+        drawFront(frontView, null, 2);
+      }
+
+      ThreeDModel.onRenderObjectUpdate(updateShapeSketches);
+    }
+
     function updateExpandables(template) {
       template ||= currentTemplate;
       if (template === undefined) return;
       if (!expandables[template.id()]) initTemplate(template)();
       expandables[template.id()].forEach((e) => e.refresh());
+      initiateCanvasViews();
     }
     this.updateExpandables = updateExpandables;
 

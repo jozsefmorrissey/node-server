@@ -506,7 +506,7 @@ function drawMeasurement(measurement, level, focalVertex)  {
     measurementIs[lookupKey] = measurement.I(level);
   // }
   const lines = measurementIs[lookupKey];
-  const center = layout.verticies(focalVertex, 2, 3);
+  const center = layout.vertices(focalVertex, 2, 3);
   const measurementColor = hoverId() === measurement.toString() ? 'green' : 'grey';
   try {
     draw.beginPath();
@@ -566,7 +566,7 @@ function drawWall(wall) {
 
   let level = 8;
   if (includeDetails()) {
-    const verticies = wall.verticies();
+    const vertices = wall.vertices();
     let measLines = {};
     level = measureOnWall(wall.doors(), level);
     level = measureOnWall(wall.windows(), level);

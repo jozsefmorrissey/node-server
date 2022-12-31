@@ -12,11 +12,16 @@ function sortByAttr(attr) {
 }
 
 class ToleranceMap {
-  constructor(attributeMap) {
-    const map = {};
+  constructor(attributeMap, toleranceMap) {
+    const map = toleranceMap || {};
     const tolerance = new Tolerance(attributeMap);
     const finalAttrSort = sortByAttr(tolerance.finalAttr());
 
+    this.clone = () => {
+      const tMap = new ToleranceMap(attributeMap);
+      this.forEach(value => tMap.add(value));
+      return tMap;
+    }
     function forEachSet(func, node, attrs, attrIndex) {
       if ((typeof func) !== 'function') throw new Error('Arg1 must be of type function');
       if (Array.isArray(node)) {
@@ -87,6 +92,19 @@ class ToleranceMap {
       forEachSet((set) => minSet.push(set[set.length - 1]));
       minSet.sort(finalAttrSort);
       return minSet;
+    }
+    this.forEach = (func, detailed) => {
+      if (!(typeof func) === 'function') return;
+      forEachSet(set => set.forEach((value) => {
+        const details = detailed ? undefined : tolerance.details(value);
+        func(value, details);
+      }));
+    };
+
+    this.values = () => {
+      const values = [];
+      forEachSet(set => values.concatInPlace(set));
+      return values;
     }
     this.tolerance = () => tolerance;
 

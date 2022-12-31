@@ -11,6 +11,7 @@ if (EPNTS.getEnv() === 'local') {
   require('./tests/polygon-merge');
   require('./tests/array-math');
   require('./tests/plane');
+  require('./tests/line2d');
   require('./tests/line-consolidate');
 }
 

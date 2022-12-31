@@ -26,9 +26,9 @@ class SnapSquare extends Snap2d {
     this.addLocation(SnapSquare.frontLeft(this));
     this.addLocation(SnapSquare.leftCenter(this));
     this.addLocation(SnapSquare.backLeft(this));
-    const verticies = this.snapLocations().map((snap) =>
+    const vertices = this.snapLocations().map((snap) =>
       snap.vertex());
-    polygon.addVerticies(verticies);
+    polygon.addVertices(vertices);
   }
 }
 
