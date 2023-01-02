@@ -279,6 +279,16 @@ function panZoom(canvas, draw) {
 
       }
   }
+  const min = -.000000000001;
+  const max = .000000000001;
+  function hasDelta() {
+    const dt = displayTransform;
+    return !((dt.dx > min && dt.dx < max) &&
+            (dt.dy > min && dt.dy < max) &&
+            (dt.dox > min && dt.dox < max) &&
+            (dt.doy > min && dt.doy < max));
+  }
+
   // image to show
   // var img = new Image();
   // img.src = "https://upload.wikimedia.org/wikipedia/commons/e/e5/Fiat_500_in_Emilia-Romagna.jpg"
@@ -306,7 +316,7 @@ function panZoom(canvas, draw) {
          displayTransform.ox = 0;
          displayTransform.oy = 0;
      }
-    if (sleeping === false) {
+    if (hasDelta() || sleeping === false) {
       if (once) sleeping = true;
       setTimeout(() => requestAnimationFrame(() => update(nextUpdateId)), 10);
     }
@@ -315,8 +325,18 @@ function panZoom(canvas, draw) {
 
   this.centerOn = function(x, y) {
     displayTransform.scale = 1;
-    displayTransform.x = x - (canvas.width / 2) - displayTransform.x - displayTransform.dx;
-    displayTransform.y = y - (canvas.height / 2) - displayTransform.y - displayTransform.dy;
+    displayTransform.cox = 0;
+    displayTransform.coy = 0;
+    displayTransform.dox = 0;
+    displayTransform.doy = 0;
+    displayTransform.dx = 0;
+    displayTransform.dy = 0;
+    displayTransform.ox = 0;
+    displayTransform.oy = 0;
+    displayTransform.x = x - (canvas.width / 2);
+    displayTransform.y = y - (canvas.height / 2);
+    displayTransform.update();
+    this.once();
   };
 
   return this;

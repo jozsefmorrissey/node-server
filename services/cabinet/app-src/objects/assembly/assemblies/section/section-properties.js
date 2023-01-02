@@ -421,6 +421,8 @@ class SectionProperties extends KeyValue{
       return {biPolygon, frontOffset, backOffset};
     }
 
+    this.normal = () => this.coverInfo().biPolygon.normal()
+
     this.dividerInfo = (panelThickness) => {
       const coverInfo = this.coverInfo();
       const normal = coverInfo.biPolygon.normal().inverse();

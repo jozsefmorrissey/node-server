@@ -1,5 +1,6 @@
 
 const Vertex3D = require('./objects/vertex');
+const Line3D = require('./objects/line');
 const Vector3D = require('./objects/vector');
 const Polygon3D = require('./objects/polygon');
 const BiPolygon = require('./objects/bi-polygon');
@@ -7,6 +8,8 @@ const Plane = require('./objects/plane');
 const Polygon2d = require('../two-d/objects/polygon');
 const Vertex2d = require('../two-d/objects/vertex');
 const Line2d = require('../two-d/objects/line');
+const SnapPolygon = require('../two-d/objects/snap/polygon');
+
 
 class ThreeDModelSimple {
   constructor(cabinet) {
@@ -122,6 +125,39 @@ class ThreeDModelSimple {
           output.union(assemblies[i].toModel());
       }
       return output;
+    }
+
+    this.topViewSnap = () => {
+      const c = cabinet;
+      if (c.snapObject === undefined) {
+        const polys = this.cabinetSilhouette().toPolygons();
+        const threeView = Polygon3D.toThreeView(polys);
+        let topView = Polygon2d.toParimeter(threeView.top);
+        console.log('isClockwise?', topView.clockWise());
+        const layout = c.group().room().layout();
+        const normals = c.normals();
+        const dist = c.width() > c.thickness() ? c.width() : c.thickness();
+        const lines = topView.lines();
+        const topCenter = Vertex2d.center(Line2d.vertices(lines));
+        const normalLines = normals.map((n) => {
+          const searchLine = Line3D.startAndVector(this.center(), n.scale(dist));
+          const searchLine2d = searchLine.to2D(threeView.axis.top[0], threeView.axis.top[1]);
+          searchLine2d.translate(new Line2d(searchLine2d.startVertex(), topCenter));
+          return searchLine2d;
+        });
+        const faceIndecies = normalLines.map((normalLine) => {
+          for (let index = 0; index < lines.length; index++) {
+            if (lines[index].findSegmentIntersection(normalLine, true))
+              return index;
+          }
+        });
+        topView.faceIndecies(faceIndecies)
+        const layoutObject = layout.addObject(c.id(), c, c.partName(), topView);
+        layoutObject.topview().normals = normalLines;
+        c.snapObject = layoutObject;
+
+      }
+      return cabinet.snapObject.topview();
     }
 
     this.frontView = () => this.viewFromVector(this.normal(), true);

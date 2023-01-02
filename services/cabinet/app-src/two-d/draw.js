@@ -1,7 +1,7 @@
 
 const Circle2d = require('./objects/circle');
 const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
-const du = require('dom-utils');
+const du = require('../../../../public/js/utils/dom-utils.js');
 const tol = .1;
 let vertLocTolMap;
 
@@ -26,7 +26,9 @@ class Draw2d {
           draw(object[index], color, width);
         return;
       }
-      switch (object.constructor.name) {
+      let constructorId = object.constructor.name;
+      constructorId = constructorId.replace(/^(Snap).*$/, '$1')
+      switch (constructorId) {
         case 'Line2d':
           draw.line(object, color, width);
           break;
@@ -44,6 +46,9 @@ class Draw2d {
           break;
         case 'LineMeasurement2d':
           draw.measurement(object, color, width);
+          break;
+        case 'Snap':
+          draw.snap(object, color, width);
           break;
         default:
           console.error(`Cannot Draw '${object.constructor.name}'`);
@@ -218,6 +223,35 @@ class Draw2d {
       } catch (e) {
         console.error('Measurement render error:', e);
       }
+    }
+
+    function snapLocColor(snapLoc) {
+      const locIdentifier = snapLoc.location().replace(/(back)[0-9]*(Center|)/, '$1$2');
+      switch (locIdentifier) {
+        case "right": return 'red';
+        case "rightCenter": return 'pink';
+        case "left": return 'blue';
+        case "leftCenter": return 'aqua';
+        case "back": return 'green';
+        case "backCenter": return 'yellow';
+        default: return "grey"
+      }
+    }
+
+    function drawSnapLocation(locations, color) {
+      for (let index = 0; index < locations.length; index += 1) {
+        const loc = locations[index];
+        const c = color || snapLocColor(loc);
+        const pos = loc.at();
+        draw.circle(loc.circle(), 'black', c);
+        const vertex = loc.vertex();
+      }
+    }
+
+    draw.snap = (snap, color, width) => {
+      draw(snap.normals);
+      draw(snap.object(), color, width);
+      drawSnapLocation(snap.snapLocations());
     }
 
     return draw;

@@ -365,13 +365,7 @@ class Polygon3D {
         }
         lastMi = mi;
       }
-
-      const verts = this.vertices();
-      const verts2D = [];
-      for (let index = 0; index < verts.length; index++) {
-        verts2D.push({x: verts[index][x], y: verts[index][y]});
-      }
-      return new Polygon2D(verts2D);
+      return new Polygon2D(Vertex3D.to2D(this.vertices(),  x, y));
     }
 
     this.toString = () => {
@@ -466,17 +460,18 @@ Polygon3D.toThreeView = (polygons, normals, gap) => {
   const rightView = Polygon3D.viewFromVector(polygons, normals.right);
   const topView = Polygon3D.viewFromVector(polygons, normals.top);
 
-  const frontAxis = Polygon3D.mostInformation(frontView);
-  const rightAxis = Polygon3D.mostInformation(rightView);
-  const topAxis = Polygon3D.mostInformation(topView);
+  const axis = {};
+  axis.front = Polygon3D.mostInformation(frontView);
+  axis.right = Polygon3D.mostInformation(rightView);
+  axis.top = Polygon3D.mostInformation(topView);
 
-  if (topAxis.indexOf(frontAxis[1]) !== -1) frontAxis.reverse();
-  if (topAxis.indexOf(rightAxis[1]) !== -1) rightAxis.reverse();
-  if (frontAxis.indexOf(topAxis[1]) !== -1) topAxis.reverse();
+  if (axis.front.indexOf('y') === 0) axis.front.reverse();
+  if (axis.top.indexOf(axis.right[1]) !== -1) axis.right.reverse();
+  if (axis.front.indexOf(axis.top[1]) !== -1) axis.top.reverse();
 
-  const front2D = frontView.map(to2D(frontAxis));
-  const right2D = rightView.map(to2D(rightAxis));
-  const top2D = topView.map(to2D(topAxis));
+  const front2D = frontView.map(to2D(axis.front));
+  const right2D = rightView.map(to2D(axis.right));
+  const top2D = topView.map(to2D(axis.top));
 
   Polygon2D.centerOn({x:0,y:0}, front2D);
 
@@ -493,7 +488,7 @@ Polygon3D.toThreeView = (polygons, normals, gap) => {
   const right = Polygon2D.lines(right2D);
   const top = Polygon2D.lines(top2D);
 
-  return {front, right, top}
+  return {front, right, top, axis}
 }
 
 Polygon3D.fromCSG = (polys) => {
@@ -566,23 +561,15 @@ Polygon3D.viewFromVector = (polygons, vector) => {
   const negitive = !vector.positive();
   for (let p = 0; p < polygons.length; p++) {
     const vertices = polygons[p].vertices();
-    const orthoVerts = [];
     const vertLocs = {};
     let valid = true;
-    for (let v = 0; valid && v < vertices.length; v++) {
-      const vertex = vertices[v];
-      const u = new Vector3D(vertex.x, vertex.y, vertex.z);
-      const projection = u.projectOnTo(vector);
-      //TODO: figure out how this should be written.
-
-      let orthogonal = u.minus(projection).scale(negitive ? 1 : -1);
-      orthogonal = new Vertex3D(orthogonal);
-      // const orthogonal = new Vertex3D(projection.minus(u));
+    const perpendicularCheck = (orthogonal) => {
       const accStr = orthogonal.toString();
       if (vertLocs[accStr]) valid = false;
       else vertLocs[accStr] = true;
-      orthoVerts.push(orthogonal);
+      return true;
     }
+    const orthoVerts = Vertex3D.viewFromVector(vertices, vector, perpendicularCheck);
     if (valid) orthoPolys.push(new Polygon3D(orthoVerts));
   }
   return orthoPolys;

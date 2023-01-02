@@ -5,6 +5,7 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 class Group extends Lookup {
   constructor(room, name, id) {
     super(id);
+    room ||= Group.defaultRoom;
     const initialVals = {
       name: name || 'Group',
     }

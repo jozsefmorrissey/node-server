@@ -1,6 +1,7 @@
 
 const Vector3D = require('./vector');
 const Vertex3D = require('./vertex');
+const Line2d = require('../../two-d/objects/line');
 const Plane = require('./plane');
 
 class Line3D {
@@ -115,6 +116,8 @@ class Line3D {
       endVertex.reverseRotate(rotation, center);
     }
 
+    this.to2D = (x,y) => Line3D.to2D([this], x, y)[0];
+
   }
 }
 
@@ -141,6 +144,21 @@ Line3D.vertices1 = (lines) => {
 Line3D.adjustVertices = (vert1, vert2, change) => {
   const line = new Line3D(vert1, vert2);
   line.adjustLength(change);
+}
+
+Line3D.startAndVector = (startVertex, offsetVector) => {
+  const endVertex = startVertex.translate(offsetVector, true);
+  return new Line3D(startVertex, endVertex);
+}
+
+Line3D.to2D = (lines, x, y) => {
+  const lines2d = [];
+  for (let index = 0; index < lines.length; index++) {
+    const startV = lines[index].startVertex.to2D(x, y);
+    const endV = lines[index].endVertex.to2D(x, y);
+    lines2d.push(new Line2d(startV, endV));
+  }
+  return lines2d;
 }
 
 Line3D.reverse = (list) => {

@@ -8,7 +8,7 @@ class SnapSquare extends Snap2d {
   constructor(parent, tolerance) {
     const polygon = new Polygon2d();
     polygon.getTextInfo = () => ({
-      text: this.parent().name(),
+      text: this.parent().name() || 'kazzooi',
       center: this.object().center(),
       radians: this.radians(),
       x: 0,

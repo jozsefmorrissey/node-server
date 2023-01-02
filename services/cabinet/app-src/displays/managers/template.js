@@ -20,7 +20,7 @@ const StringMathEvaluator = require('../../../../../public/js/utils/string-math-
 const Measurement = require('../../../../../public/js/utils/measurement.js');
 const ThreeView = require('../three-view.js');
 const ThreeDModel = require('../../three-d/three-d-model.js');
-const Layout2D = require('../../objects/layout.js');
+const Layout2D = require('../../two-d/layout/layout.js');
 const Draw2D = require('../../two-d/draw.js');
 const Vertex2d = require('../../two-d/objects/vertex');
 const Line2d = require('../../two-d/objects/line');
@@ -663,30 +663,39 @@ class TemplateManager extends Lookup {
     }
 
     function initiateCanvasViews() {
-      let drawFront, drawTop, lastModel, frontView;
-      function updateShapeSketches(elem, model) {
-        if (drawFront === undefined) {
-          const templateBody = du.find('.template-body');
-          if (templateBody) {
-            const frontCanvas = du.find.down('.front-sketch', templateBody);
-            const topCanvas = du.find.down('.top-sketch', templateBody);
-            if (frontCanvas !== undefined) {
-              drawFront = new Draw2D(frontCanvas);
-              const panz = new PanZoom(frontCanvas, updateShapeSketches);
-              panz.centerOn(0, 0);
-              drawTop = new Draw2D(topCanvas);
-            }
-          }
-        }
+      let drawFront, drawTop, lastModel, frontView, topViewSnap, panz, panzT;
+      const renderFront = () => {
         if (drawFront === undefined) return;
+        drawFront(frontView, null, 2);
+      }
+      const renderTop = () => {
+        if (drawFront === undefined) return;
+        drawTop(topViewSnap, null, 2);
+      }
+      const templateBody = du.find('.template-body');
+      const frontCanvas = du.find.down('.front-sketch', templateBody);
+      const topCanvas = du.find.down('.top-sketch', templateBody);
+      if (frontCanvas !== undefined) {
+        drawFront = new Draw2D(frontCanvas);
+        drawTop = new Draw2D(topCanvas);
+        panz = new PanZoom(frontCanvas, renderFront);
+        panz.centerOn(0, 0);
+        drawTop = new Draw2D(topCanvas);
+        panzT = new PanZoom(topCanvas, renderTop);
+        panzT.centerOn(0,0);
+      }
+
+      function updateShapeSketches(elem, model) {
         if (model) {
           frontView = model.simpleModel.frontView();
-          // const center = Vertex2d.center(Line2d.vertices(frontView));
-          // const offsetVertex = center.differance(new Vertex2d());
-          // const lineVector = new Line2d(new Vertex2d(), offsetVertex);
-          // frontView.forEach(l => l.translate(lineVector));
+          const center = Vertex2d.center(Line2d.vertices(frontView));
+          panz.centerOn(center.x(), center.y());
+          topViewSnap = model.simpleModel.topViewSnap();
+          const centerT = Vertex2d.center(Line2d.vertices(topViewSnap));
+          panzT.centerOn(centerT.x(), centerT.y());
+          renderTop();
+          renderFront();
         }
-        drawFront(frontView, null, 2);
       }
 
       ThreeDModel.onRenderObjectUpdate(updateShapeSketches);

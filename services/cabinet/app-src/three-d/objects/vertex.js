@@ -1,6 +1,7 @@
 
 const Matrix = require('./matrix');
 const Vector3D = require('./vector');
+const Vertex2d = require('../../two-d/objects/vertex');
 const approximate = require('../../../../../public/js/utils/approximate.js');
 const approx10 = approximate.new(10);
 const CSG = require('../../../public/js/3d-modeling/csg.js');
@@ -32,6 +33,8 @@ class Vertex3D {
       this.y = x[1];
       this.z = x[2];
     }
+
+    this.viewFromVector = (vector) => Vertex3D.viewFromVector([this], vector);
 
     this.translate = (vector, doNotModify) => {
       let vertex = this;
@@ -97,6 +100,8 @@ class Vertex3D {
     this.inverseVector = () => {
       return new Vertex3D(this.x * -1, this.y* -1, this.z * -1);
     }
+
+    this.to2D = (x, y) => Vertex3D.to2D([this], x, y)[0];
 
     this.copy = () => new Vertex3D(this.x, this.y, this.z);
     this.clone = this.copy;
@@ -174,6 +179,30 @@ Vertex3D.center = (...vertices) => {
     }
   });
   return new Vertex3D({x: x/count, y: y/count, z: z/count});
+}
+
+Vertex3D.to2D = (vertices, x, y) => {
+  const verts2D = [];
+  for (let index = 0; index < vertices.length; index++) {
+    verts2D.push(new Vertex2d(vertices[index][x], vertices[index][y]));
+  }
+  return verts2D;
+}
+
+Vertex3D.viewFromVector = (vertices, vector, filter) => {
+  const negitive = !vector.positive();
+  const orthoVerts = [];
+  const runFilter = (typeof filter) === 'function';
+  for (let index = 0; index < vertices.length; index++) {
+    const vertex = vertices[index];
+    const u = new Vector3D(vertex.x, vertex.y, vertex.z);
+    const projection = u.projectOnTo(vector);
+    let orthogonal = u.minus(projection).scale(negitive ? 1 : -1);
+    orthogonal = new Vertex3D(orthogonal);
+    if (!runFilter || (runFilter && filter(orthogonal, vertex)))
+      orthoVerts.push(orthogonal);
+  }
+  return orthoVerts;
 }
 
 Vertex3D.sortByCenter = (center) => {

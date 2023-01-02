@@ -4,7 +4,7 @@
 const Cabinet = require('./assembly/assemblies/cabinet.js');
 const Group = require('./group.js');
 const Lookup = require('../../../../public/js/utils/object/lookup');
-const Layout2D = require('../objects/layout');
+const Layout2D = require('../two-d/layout/layout.js');
 
 
 class Room extends Lookup {
@@ -45,6 +45,6 @@ class Room extends Lookup {
   }
 };
 Room.count = 0;
-new Room();
+Group.defaultRoom = new Room('defaultRoom');
 
 module.exports = Room;

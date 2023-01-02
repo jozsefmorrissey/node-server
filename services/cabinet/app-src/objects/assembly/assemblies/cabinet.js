@@ -167,6 +167,14 @@ class Cabinet extends Assembly {
       }
     };
 
+    this.normals = () => {
+      const normals = [];
+      for (let index = 0; index < this.openings.length; index++) {
+        normals.push(this.openings[index].normal());
+      }
+      return normals;
+    }
+
     this.width = updateOpeningPoints(this.width, (w) => w && this.width() !== w);
     this.length = updateOpeningPoints(this.length, (l) => l && this.length() !== l);
     this.thickness = updateOpeningPoints(this.thickness, (t) => t && this.thickness() !== t);

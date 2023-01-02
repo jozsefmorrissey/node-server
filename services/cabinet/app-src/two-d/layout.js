@@ -1,4 +1,4 @@
-const Layout2D = require('../objects/layout');
+const Layout2D = require('../two-d/layout/layout.js');
 const panZoom = require('./pan-zoom');
 const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');

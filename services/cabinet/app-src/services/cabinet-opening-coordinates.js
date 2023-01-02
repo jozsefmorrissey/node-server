@@ -6,6 +6,7 @@ class CabinetOpeningCorrdinates {
     this.setSection = sectionProperties.setSection;
     this.sections = sectionProperties.sections;
     this.vertical = sectionProperties.vertical;
+    this.normal = sectionProperties.normal;
     this.sectionProperties = () => sectionProperties;
     this.pattern = sectionProperties.pattern;
     this.update = () => {

@@ -4,7 +4,8 @@ const Line2d = require('./line');
 class Polygon2d {
   constructor(initialVertices) {
     const lines = [];
-    let map;
+    let faceIndecies = [2];
+    let map
 
     this.vertices = (target, before, after) => {
       if (lines.length === 0) return [];
@@ -25,9 +26,21 @@ class Polygon2d {
       return vertices;
     }
 
+    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex().copy();
+    this.midpoint = (index) => lines[Math.mod(index, lines.length)].midpoint();
+
+    this.faceIndecies = (indicies) => {
+      if (indicies) {
+        faceIndecies = indicies;
+      }
+      return faceIndecies;
+    }
+    this.faces = () => this.lines().filter((l, i) => faceIndecies.indexOf(i) !== -1);
+
     this.lines = () => lines;
     this.startLine = () => lines[0];
     this.endLine = () => lines[lines.length - 1];
+    this.valid = () => lines.length > 2;
 
     this.lineMap = (force) => {
       if (!force && map !== undefined) return map;
@@ -170,6 +183,15 @@ class Polygon2d {
       return Math.abs(total);
     }
 
+    this.clockWise = () => {
+      let sum = 0;
+      for (let index = 0; index < lines.length; index++) {
+        const l = lines[index];
+        sum += (l.endVertex().x() - l.startVertex().x()) * (l.endVertex().y() + l.startVertex().y());
+      }
+      return sum >= 0;
+    }
+
     this.removeLoops = () => {
       const map = {}
       for (let index = 0; index < lines.length; index += 1) {
@@ -201,7 +223,7 @@ Polygon2d.centerOn = (newCenter, polys) => {
 }
 
 Polygon2d.fromLines = (lines) => {
-  if (lines === undefined || lines.length === 0) return new Polygon2d();
+  if (lines === undefined || lines.length === 0) return null;
   let lastLine = lines[0];
   const verts = [lastLine.startVertex()];
   for (let index = 1; index < lines.length; index++) {
@@ -276,12 +298,12 @@ Polygon2d.toParimeter = (lines, recurseObj, print) => {
     if (splitMap.matches(l.startVertex()).length === 0)
       throw new Error('wtf');
   });
-  if (parimeter.length > lines.length) return new Polygon2d();
+  if (parimeter.length > lines.length) return null;
   const sv = parimeter[0].startVertex();
   const ev = parimeter[parimeter.length - 1].endVertex();
   const alreadyVisitedStart = splitMap.matches(sv).length !== 0;
   const alreadyVisitedEnd = splitMap.matches(ev).length !== 0;
-  if (alreadyVisitedEnd || alreadyVisitedStart) return new Polygon2d();
+  if (alreadyVisitedEnd || alreadyVisitedStart) return null;
   const madeItAround = parimeter.length > 1 && sv.equal(ev);
   if (madeItAround) return Polygon2d.fromLines(parimeter);
 
@@ -293,7 +315,7 @@ Polygon2d.toParimeter = (lines, recurseObj, print) => {
     if (parimeter.length === 1) {
       lines.remove(lastLine);
       return Polygon2d.toParimeter(lines);
-    } else return new Polygon2d();
+    } else return null;
   }
     // throw new Error('A parimeter must exist between lines for function to work');
   for (let index = 0; index < matches.length; index++) {
@@ -305,13 +327,15 @@ Polygon2d.toParimeter = (lines, recurseObj, print) => {
     }
   }
 
-  let biggest = new Polygon2d();
+  let biggest = null;
   for (let index = 0; index < partialParimeters.length; index ++) {
     const recObj = partialParimeters[index];
     const searchResult = Polygon2d.toParimeter(lines, recObj);
-    biggest = biggest.area() < searchResult.area() ? searchResult : biggest;
+    biggest = biggest === null || biggest.area() < searchResult.area() ? searchResult : biggest;
   }
   if (print) console.log(biggest.area(), biggest.toString());
+  if (recurseObj === undefined)
+    biggest = biggest.clockWise() ? biggest : new Polygon2d(biggest.vertices().reverse());
   return biggest;
 }
 

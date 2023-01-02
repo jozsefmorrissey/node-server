@@ -14,7 +14,7 @@ const Request = require('../../../../public/js/utils/request.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
 const $t = require('../../../../public/js/utils/$t.js');
-const { Object2d } = require('../objects/layout.js');//.Object2d;
+const Object2d = require('../two-d/layout/object.js');
 const Inputs = require('../input/inputs.js');
 const EPNTS = require('../../generated/EPNTS');
 
