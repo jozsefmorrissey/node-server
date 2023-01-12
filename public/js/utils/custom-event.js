@@ -7,7 +7,15 @@ class CustomEvent {
     const watchers = [];
     this.name = name;
 
-    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
+    const runFuncs = (elem, detail) => 
+    watchers.forEach((func) => {
+      try {
+        func(elem, detail);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+
 
     this.on = function (func) {
       if ((typeof func) === 'function') {

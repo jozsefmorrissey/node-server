@@ -1,4 +1,8 @@
 const Line2d = require('../objects/line.js');
+const OnWall = require('./on-wall');
+const Door2D = require('./door');
+const Window2D = require('./window');
+const HoverMap2d = require('../hover-map')
 
 function modifyVertex(vertex) {
   return (props) => {
@@ -44,6 +48,21 @@ class Wall2D extends Line2d {
         const startVertex = this.startVertex();
         nextLine.startVertex(startVertex);
         startVertex.nextLine(nextLine);
+    }
+
+    const hoveringStart = new HoverMap2d(() => this.startVertex(), 12).hovering;
+    const hoveringEnd = new HoverMap2d(() => this.endVertex(), 12).hovering;
+    const hoveringWall = new HoverMap2d(() => this, 5).hovering;
+    this.hovering = (v) => {
+      if (hoveringStart(v)) return this.startVertex();
+      if (hoveringEnd(v)) return this.endVertex();
+      for (let index = 0; index < windows.length; index++) {
+        if (windows[index].hovering(v)) return windows[index];
+      }
+      for (let index = 0; index < doors.length; index++) {
+        if (doors[index].hovering(v)) return doors[index];
+      }
+      return hoveringWall(v) && this;
     }
 
     this.removeDoor = (door) => doors.splice(doors.indexOf(door), 1);

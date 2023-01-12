@@ -34,9 +34,11 @@ class Object2d extends Lookup {
     }
 
     let topview;
-    if (polygon) topview = new SnapPolygon(this, polygon, 30);
-    else topview = new SnapSquare(this, 30);
+    if (polygon) topview = new SnapPolygon(this, polygon, 10);
+    // else topview = new SnapSquare(this, 30);
 
+    // TODO: If more views are imolemented center function will not be sufficient.
+    this.center = () => topview.object().center();
     this.topview = () => topview;
 
     if ((typeof name) === 'function') this.name = name;

@@ -1,15 +1,18 @@
 
 const Vertex2d = require('vertex');
+const Line2d = require('line');
 const Circle2d = require('circle');
+const HoverMap2d = require('../hover-map')
 
 class SnapLocation2d {
-  constructor(parent, location, vertex, targetVertex, pairedWith) {
-    Object.getSet(this, {location, vertex, targetVertex}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
-    let locationFunction;
-    const circle = new Circle2d(5, vertex);
+  constructor(parent, location, centerFunction, targetVertex, pairedWith) {
+    Object.getSet(this, {location, targetVertex}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
     pairedWith = pairedWith || null;
+    let courting;
+    const instance = this;
 
     const thetaOffset = {_DEFAULT: 0};
+    this.center = () => centerFunction();
     this.thetaOffset = (cxtrNameOinstance, location, value) => {
       const cxtrName = cxtrNameOinstance instanceof SnapLocation2d ?
               cxtrNameOinstance.parent().constructor.name :
@@ -32,12 +35,14 @@ class SnapLocation2d {
     // else
     //        returns current postion based off of the parents current center
 
-    this.at = (position) => (typeof locationFunction) === 'function' ? locationFunction(position) : null;
-    this.locationFunction = (lf) => {
-      if ((typeof lf) === 'function') locationFunction = lf;
+    this.at = (position) => {
+      return centerFunction(position);
+    }
+    this.centerFunction = (lf) => {
+      if ((typeof lf) === 'function') centerFunction = lf;
       return lf;
     }
-    this.circle = () => circle;
+    this.circle = () => new Circle2d(5, centerFunction());
     this.eval = () => this.parent().position[location]();
     this.parent = () => parent;
     this.parentId = () => parent.id();
@@ -50,11 +55,35 @@ class SnapLocation2d {
       if (wasPaired instanceof SnapLocation2d) wasPaired.disconnect();
     }
     this.pairWith = (otherSnapLoc) => {
+      otherSnapLoc ||= courting;
       const alreadyPaired = otherSnapLoc === pairedWith;
       if (!alreadyPaired) {
         pairedWith = otherSnapLoc;
         if (otherSnapLoc instanceof SnapLocation2d) otherSnapLoc.pairWith(this);
       }
+    }
+
+    // TODO: location should be immutible and so should these;
+    this.isRight = this.location().indexOf('right') === 0;
+    this.isLeft = this.location().indexOf('left') === 0;
+    this.isBack = this.location().indexOf('back') === 0;
+    this.isCenter = this.location().match(/center$/) !== null;
+
+    this.courting = (otherSnapLoc) => {
+      if (courting === otherSnapLoc) return courting;
+      if (!pairedWith) {
+        if (otherSnapLoc instanceof SnapLocation2d) {
+          courting = otherSnapLoc;
+          otherSnapLoc.courting(this);
+        } else if (otherSnapLoc === null && courting) {
+          const tempLocation = courting;
+          courting = null;
+          tempLocation.courting(null);
+        }
+      } else {
+        throw new Error('You cannot court a location when alreadyPaired');
+      }
+      return courting;
     }
 
     this.forEachObject = (func, objMap) => {
@@ -113,6 +142,13 @@ class SnapLocation2d {
       return nonSnap;
     }
 
+    this.neighbors = (...indicies) => {
+      const vertexNeighbors = parent.object().neighbors(this.center(), ...indicies);
+      return vertexNeighbors.map((vert) => parent.snapLocations.at(vert));
+    }
+
+    this.neighbor = (index) => this.neighbors(index)[0];
+
     this.isConnected = (obj) => {
       let connected = false;
       this.forEachObject((connObj) => connected = connected || obj.id() === connObj.id());
@@ -123,25 +159,83 @@ class SnapLocation2d {
       this.forEachObject((obj) => obj.radians((obj.radians() + theta) % (2*Math.PI)));
     }
 
-    let lastMove = 0;
-    this.move = (vertexLocation, moveId) => {
-      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
-      if (lastMove === moveId) return;
-      vertexLocation = new Vertex2d(vertexLocation);
-      const parent = this.parent();
-      const thisNewCenterLoc = this.parent().position[location]({center: vertexLocation});
-      parent.parent().center().point(thisNewCenterLoc);
-      parent.update();
-      lastMove = moveId;
+    this.slope = (offsetIndex) => {
+      const neighbor = parent.object().neighbors(this.center(), offsetIndex)[0];
+      const nCenter = neighbor.point();
+      const center = this.center().point();
+      if (offsetIndex < 0)
+        return Line2d.getSlope(nCenter.x, nCenter.y, center.x, center.y);
+      return Line2d.getSlope(center.x, center.y, nCenter.x, nCenter.y);
+    }
+
+    this.forwardSlope = () => this.slope(1);
+    this.reverseSlope =  () => this.slope(-1);
+    this.forwardRadians = () => Math.atan(this.slope(1));
+    this.reverseRadians = () => Math.atan(this.slope(-1));
+
+
+    function moveConnectedObjects(moveId) {
       const pairedLocs = parent.snapLocations.paired();
       for (let index = 0; index < pairedLocs.length; index += 1) {
         const loc = pairedLocs[index];
         const paired = loc.pairedWith();
-        const tarVertexLoc = this.parent().position[loc.location()]().vertex();
+        const tarVertexLoc = instance.parent().position[loc.location()]().center();
         if (paired instanceof SnapLocation2d) paired.move(tarVertexLoc, moveId);
       }
     }
+
+    function makeMove(thisNewCenterLoc, moveId, theta) {
+      if (theta) instance.parent().object().rotate(theta);
+      instance.parent().radians(thisNewCenterLoc);
+      instance.parent().update();
+      lastMove = moveId;
+      moveConnectedObjects(moveId);
+    }
+
+    this.snapToLocation = (otherSnapLoc) => {
+      const center = otherSnapLoc.center();
+      const otherRads = otherSnapLoc.forwardRadians();
+      const rads = instance.forwardRadians();
+      const changeInTheta = otherRads - rads;
+      const position1 = {center: center, theta: changeInTheta};
+      const position2 = {center: center, theta: changeInTheta - Math.PI};
+      const newPosition1 = instance.parent().position[location](position1);
+      const newPosition2 = instance.parent().position[location](position2);
+      const otherObjectCenter = otherSnapLoc.parent().object().center()
+      const dist1 = newPosition1.distance(otherObjectCenter);
+      const dist2 = newPosition2.distance(otherObjectCenter);
+      const objTheta = instance.parent().radians();
+      const theta = objTheta - changeInTheta;
+      if (dist1 > dist2) {
+        instance.parent().makeMove({center: newPosition1, theta});
+      } else {
+        instance.parent().makeMove({center: newPosition2, theta: theta - Math.PI});
+      }
+    }
+
+    function snapToObject(vertex, moveId) {
+      const otherSnapLoc = parent.otherHoveringSnap(vertex);
+      if (!otherSnapLoc) return false;
+      instance.courting(otherSnapLoc);
+      instance.snapToLocation(otherSnapLoc);
+      return true;
+    }
+
+    let lastMove = 0;
+    this.move = (vertex, moveId) => {
+      const shouldNotSnap = (typeof moveId) === 'number' || moveId === null;
+      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
+      if (lastMove === moveId) return;
+      vertex = new Vertex2d(vertex);
+      if (shouldNotSnap || !snapToObject(vertex)) {
+        const thisNewCenterLoc = this.parent().position[location]({center: vertex});
+        this.parent().makeMove({center: thisNewCenterLoc});
+        // makeMove(thisNewCenterLoc, moveId);
+      }
+    }
     this.notPaired = () => pairedWith === null;
+
+    this.hovering = new HoverMap2d(() => this.center(), 12).hovering;
 
     this.instString = () => `${parent.id()}:${location}`;
     this.toString = () => pairedWith  instanceof SnapLocation2d ?

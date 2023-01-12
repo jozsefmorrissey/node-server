@@ -21,9 +21,26 @@ class Vertex2d {
       return true;
     };
 
-    this.translate = (xOffset, yOffset) => {
-      this.point().x += xOffset;
-      this.point().y += yOffset;
+    this.translate = (xOffset, yOffset, doNotModify) => {
+      const vertex = doNotModify ? this.copy() : this;
+      vertex.point().x += xOffset;
+      vertex.point().y += yOffset;
+      return vertex;
+    }
+
+    this.rotate = (radians, pivot, doNotModify) => {
+      const vertex = doNotModify ? this.copy() : this;
+      const point = vertex.point();
+      pivot ||= new Vertex2d(0,0);
+      const s = Math.sin(radians);
+      const c = Math.cos(radians);
+      point.x -= pivot.x();
+      point.y -= pivot.y();
+      const newX = point.x * c - point.y * s;
+      const newY = point.x * s + point.y * c;
+      point.x = newX + pivot.x();
+      point.y = newY + pivot.y();
+      return vertex;
     }
     this.point = (newPoint) => {
       newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;

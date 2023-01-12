@@ -20,7 +20,7 @@ const OrientationArrows = require('../displays/orientation-arrows.js');
 const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
-const ThreeDModelSimple = require('./simple');
+const CabinetModel = require('./cabinet-model');
 
 const colors = {
   indianred: [205, 92, 92],
@@ -158,6 +158,7 @@ class ThreeDModel {
       return false;
     }
 
+    // Remove if colors start behaving correctly, can be use to debug.
     let xzFootprint;
     function createXZfootprint(model, cabinet) {
       const cube = CSG.cube({demensions: [cabinet.width(),1,cabinet.thickness()], center: model.center});
@@ -188,13 +189,6 @@ class ThreeDModel {
 
     this.removeAllExtraObjects = () => extraObjects = [];
 
-    function distance(verts) {
-      let dist = 0;
-      for (let index = 1; index < verts.length; index++) {
-        dist += verts[index -1].distance(verts[index]);
-      }
-      return dist;
-    }
 
     function toTwoDpolys(model) {
       if (model === undefined) return undefined;
@@ -210,55 +204,10 @@ class ThreeDModel {
     let lm;
     this.lastModel = () => toTwoDpolys(lm);
 
-    const topVector = new Vector3D(0,-1,0);
-
-    const polyTol = .01;
-    const polyToleranceMap = new ToleranceMap({'i': polyTol,'j': polyTol,'k': polyTol, length: .0001});
-    function create2DcabinetImage(model) {
-      let polygons = model.polygons;//(model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
-      const polys = Polygon3D.fromCSG(polygons);
-      model.threeView = Polygon3D.toThreeView(polys);
-      model.threeView.front = Polygon2d.toParimeter(model.threeView.front).lines();
-      model.threeView.right = Polygon2d.toParimeter(model.threeView.right).lines();
-      const topPoly2d = Polygon2d.toParimeter(model.threeView.top);
-      model.threeView.top = topPoly2d.lines();
-
-      const frontMinMax = Vertex2d.minMax(Line2d.vertices(model.threeView.front));
-      const height = frontMinMax.diff.y();
-      const width = frontMinMax.diff.x();
-      const depth = Vertex2d.minMax(Line2d.vertices(model.threeView.right)).diff.x();
-      const topPoly = Polygon3D.from2D(topPoly2d);
-      topPoly.rotate({x:90,y:0,z:0});
-      model.cabinetSolid = BiPolygon.fromPolygon(topPoly, 0, height);
-      model.cabinetSolid.center(model.center);
-      model.simple = model.cabinetSolid.toModel();
-      const defualtCube = CSG.cube({demesions: [width, height, depth], center: [model.center.x, model.center.y, model.center.z]});
-      return model;
-    }
-
-    function addModelAttrs(model) {
-      const max = new Vertex3D(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
-      const min = new Vertex3D(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER);
-      const polys = model.polygons;
-      for (let index = 0; index < polys.length; index++) {
-        const poly = polys[index];
-        const verts = poly.vertices;
-        const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
-        const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
-        poly.center = new Vertex3D(midrangePoint);
-        poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
-      }
-      const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
-      model.center = new Vertex3D(Math.midrange(polys, targetAttrs));
-      model.max = max;
-      model.min = min;
-    }
-
-    let simpleModel;
+    let cabinetModel;
     this.render = function () {
       ThreeDModel.lastActive = this;
       const cacheId = rootAssembly.id();
-      // FunctionCache.on(cacheId);
       FunctionCache.on('sme');
 
       const startTime = new Date().getTime();
@@ -281,7 +230,7 @@ class ThreeDModel {
       }
       const assemblies = this.assembly().getParts();
       const root = assemblies[0].getRoot();
-      simpleModel = new ThreeDModelSimple(root);
+      cabinetModel = new CabinetModel(root);
       let a;
       partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
@@ -289,7 +238,7 @@ class ThreeDModel {
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
         if (!hidden(assem)) {
           const b = buildObject(assem);
-          simpleModel.add(assem, b);
+          cabinetModel.add(assem, b);
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
           if (a === undefined) a = b;
@@ -303,17 +252,14 @@ class ThreeDModel {
           }
         }
       }
-      a.simpleModel = simpleModel;
+      cabinetModel.complexModel(a);
       if (a && ThreeDModel.getViewer(a)) {
-        addModelAttrs(a);
-        // create2DcabinetImage(a);
-        const displayModel = simpleModel.toModel();//a.simple ? a.simple : a;
+        const displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         // centerModel(displayModel);
         viewer.mesh = displayModel.toMesh();
         viewer.gl.ondraw();
-        lastRendered = a;
-        lastRendered.threeView = lastRendered.simpleModel.threeView();
+        lastRendered = cabinetModel;
         renderObjectUpdateEvent.trigger(undefined, lastRendered);
         console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
       }
@@ -332,7 +278,7 @@ class ThreeDModel {
 }
 
 function centerOnObj(x,y,z) {
-  const model = ThreeDModel.lastActive.getLastRendered();
+  const model = ThreeDModel.lastActive.getLastRendered().complexModel();
   const center = model.center.copy();
   center.x += 200 * y;
   center.y += -200 * x;
@@ -350,15 +296,6 @@ ThreeDModel.setViewerSelector = (selector, size) => {
   viewerSize = size || viewerSize;
   viewer = undefined;
 }
-
-// function updateCanvasSize(canvas) {
-//   canvas.style.width = viewerSize;
-//   const dem = Math.floor(canvas.getBoundingClientRect().width);
-//   canvas.width = dem;
-//   canvas.height = dem;
-//   canvas.style.width = `${dem}px`;
-//   canvas.style.width = `${dem}px`;
-// }
 
 ThreeDModel.getViewer = (model) => {
   if (viewer) return viewer;

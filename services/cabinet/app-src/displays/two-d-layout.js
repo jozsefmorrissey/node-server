@@ -1,19 +1,21 @@
 const Layout2D = require('../two-d/layout/layout.js');
-const panZoom = require('./pan-zoom');
+const panZoom = require('../two-d/pan-zoom');
 const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const PopUp = require('../../../../public/js/utils/display/pop-up');
 const Properties = require('../config/properties');
 const Measurement = require('../../../../public/js/utils/measurement.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
-const Draw2D = require('./draw.js');
+const Draw2D = require('../two-d/draw.js');
 const Vertex2d = require('../two-d/objects/vertex.js');
 const Line2d = require('../two-d/objects/line.js');
+const EPNTS = require('../../generated/EPNTS.js');
 const Snap2d = require('../two-d/objects/snap.js');
 const Circle2d = require('../two-d/objects/circle.js');
 const SnapLocation2d = require('../two-d/objects/snap-location.js');
 const LineMeasurement2d = require('../two-d/objects/line-measurement');
 
+const localEnv = EPNTS.getEnv() === 'local';
 // TODO: Rename
 const TwoDLayout = {};
 
@@ -28,13 +30,6 @@ TwoDLayout.set = (l) => {
     if (panZ) panZ.once();
   }
 }
-
-let hoverMap;
-
-const resetHoverMap = () => hoverMap = {
-    Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2d: {}, LineMeasurement2d: {},
-    Object2d: {}, Square2d: {}, Snap2d: {}, SnapLocation2d: {}
-  };
 
 const windowLineWidth = 8;
 const tolerance = 1;
@@ -294,31 +289,9 @@ function  drag(event)  {
 
 function hover(event) {
   if (clickHolding) return true;
-  let found = false;
   const tuple = {x: event.imageX, y: event.imageY};
-  function  check(list) {
-    for (let index = 0; index < list.length; index += 1) {
-      if (withinTolerance(tuple, list[index])) {
-        hovering = list[index].item;
-        found = true;
-      }
-    }
-    if (!clickHolding && !found) hovering = undefined;
-  }
-
-  if (measurementModify) {
-    check(Object.values(hoverMap.LineMeasurement2d));
-    found || check(Object.values(hoverMap.SnapLocation2d));
-    found || check(Object.values(hoverMap.Snap2d));
-    found || check(Object.values(hoverMap.Object2d));
-    found || check(Object.values(hoverMap.Square2d));
-  } else {
-    check(Object.values(hoverMap.Vertex2d));
-    found || check(Object.values(hoverMap.Window2D));
-    found || check(Object.values(hoverMap.Door2D));
-    found || check(Object.values(hoverMap.Wall2D));
-  }
-
+  hovering = layout.at(new Vertex2d(tuple));
+  let found = hovering == true;
   return found;
 }
 
@@ -353,13 +326,6 @@ function withinTolerance(point, map) {
   return x0>x1-t && x0 < x2+t && y0>y1-t && y0<y2+t;
 }
 
-function updateHoverMap(item, start, end, tolerance) {
-  let group;
-  if (item instanceof Snap2d) group = 'Snap2d';
-  else group = item.constructor.name;
-  hoverMap[group][item.toString()] = {start, end, tolerance, item};
-}
-
 let windowCount = 0;
 let getWindowColor = () => {
   switch (Math.floor(Math.random() * 4)) {
@@ -381,15 +347,10 @@ function drawWindow(wallStartPoint, window, wallTheta) {
       ctx.lineWidth = 8;
       ctx.strokeStyle = hoverId() === window.toString() ? 'green' : 'blue';
       ctx.lineTo(points.end.x(), points.end.y());
-      updateHoverMap(window, points.start, points.end, 5);
       ctx.stroke();
     }
   }
   windowDrawMap[lookupKey]();
-}
-
-function updateDoorHoverMap(door, startpointRight, startpointLeft) {
-  updateHoverMap(door, startpointRight, startpointLeft, 15);
 }
 
 function doorDrawingFunc(startpointLeft, startpointRight) {
@@ -400,11 +361,10 @@ function doorDrawingFunc(startpointLeft, startpointRight) {
     const hinge = door.hinge();
 
     if (hinge === 4) {
-      ctx.moveTo(startpointLeft.x, startpointLeft.y);
+      ctx.moveTo(startpointLeft.x(), startpointLeft.y());
       ctx.lineWidth = 8;
       ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'white';
-      ctx.lineTo(startpointRight.x, startpointRight.y);
-      updateDoorHoverMap(door, startpointRight, startpointLeft, 10);
+      ctx.lineTo(startpointRight.x(), startpointRight.y());
       ctx.stroke();
     } else {
       const offset = Math.PI * hinge / 2;
@@ -412,19 +372,18 @@ function doorDrawingFunc(startpointLeft, startpointRight) {
       const endAngle = initialAngle + (Math.PI / 2);
 
       if (hinge === 0 || hinge === 3) {
-        ctx.moveTo(startpointRight.x, startpointRight.y);
-        ctx.arc(startpointRight.x, startpointRight.y, door.width(), initialAngle, endAngle, false);
-        ctx.lineTo(startpointRight.x, startpointRight.y);
+        ctx.moveTo(startpointRight.x(), startpointRight.y());
+        ctx.arc(startpointRight.x(), startpointRight.y(), door.width(), initialAngle, endAngle, false);
+        ctx.lineTo(startpointRight.x(), startpointRight.y());
       } else {
-        ctx.moveTo(startpointLeft.x, startpointLeft.y);
-        ctx.arc(startpointLeft.x, startpointLeft.y, door.width(), endAngle, initialAngle, true);
-        ctx.lineTo(startpointLeft.x, startpointLeft.y);
+        ctx.moveTo(startpointLeft.x(), startpointLeft.y());
+        ctx.arc(startpointLeft.x(), startpointLeft.y(), door.width(), endAngle, initialAngle, true);
+        ctx.lineTo(startpointLeft.x(), startpointLeft.y());
       }
 
       ctx.fillStyle = 'white';
       ctx.fill();
     }
-    updateHoverMap(door, startpointRight, startpointLeft, 10);
     ctx.stroke();
   }
 }
@@ -440,7 +399,7 @@ function drawDoor(startpoint, door, wallTheta) {
     const startpointLeft = {x: startpoint.x + distLeft * Math.cos(theta), y: startpoint.y + distLeft * Math.sin(theta)};
     const distRight = door.fromPreviousWall();
     const startpointRight = {x: startpoint.x + distRight * Math.cos(theta), y: startpoint.y + distRight * Math.sin(theta)};
-    doorDrawMap[lookupKey] = doorDrawingFunc(startpointLeft, startpointRight, initialAngle);
+    doorDrawMap[lookupKey] = doorDrawingFunc(door.startVertex(), door.endVertex(), initialAngle);
   }
   doorDrawMap[lookupKey](door);
 }
@@ -517,7 +476,6 @@ function drawMeasurement(measurement, level, focalVertex)  {
       draw.line(line.startLine, measurementColor, measurementLineWidth);
       draw.line(line.endLine, measurementColor, measurementLineWidth);
       draw.line(line, measurementColor, measurementLineWidth);
-      updateHoverMap(measurement, midpoint, midpoint, 15);
     }
     measurementValueToDraw(line, midpoint, measurement);
     return line;
@@ -574,8 +532,6 @@ function drawWall(wall) {
   const measurement = new LineMeasurement2d(wall, undefined, undefined, layout.reconsileLength(wall));
   drawMeasurement(measurement, level, wall.startVertex());
 
-  updateHoverMap(wall, startpoint, endpoint, 5);
-
   return endpoint;
 }
 
@@ -585,82 +541,23 @@ function drawVertex(vertex) {
   const radius = 10;
   const circle = new Circle2d(radius, p);
   draw.circle(circle, 'black', fillColor);
-  updateHoverMap(vertex, p, p, 12);
 }
 
-function snapLocColor(snapLoc) {
-  switch (snapLoc.location()) {
-    case "backRight": return 'red';
-    case "frontRight": return 'yellow';
-    case "frontLeft": return 'green';
-    case "backLeft": return 'blue';
-    case "backCenter": return 'purple';
-    case "diagonalRight": return 'lime';
-    case "diagonalLeft": return 'azure';
-    default: return "grey"
-  }
-}
-
-function drawSnapLocation(locations, color) {
-  for (let index = 0; index < locations.length; index += 1) {
-    const loc = locations[index];
-    const c = hoverId() === loc.toString() ? 'green' : (color || snapLocColor(loc));
-    draw.circle(loc.circle(), 'black', c);
-    const vertex = loc.vertex();
-    updateHoverMap(loc, vertex.point(), vertex.point(), 8);
-  }
-}
-
-let showAllSnapLocations = true;
-function drawObject(object) {
-  let center, coolor, potentalSnap;
-  switch (object.object().constructor.name) {
-    case 'Square2d':
-      const square = object.object();
-      center = square.center();
-      updateHoverMap(object, center, center, 30);
-      color = hoverId() === object.toString() ? 'green' : 'white';
-      draw.square(square, color, object.parent().name());
-      potentalSnap = object.potentalSnapLocation();
-      if (showAllSnapLocations)
-        drawSnapLocation(object.snapLocations());
-
-      drawSnapLocation(object.snapLocations.paired(), 'black');
-      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
-      SnapLocation2d.active(object.snapLocations.notPaired());
-      break;
-    case 'Polygon2d':
-      const poly = object.object();
-      center = poly.center();
-      updateHoverMap(object, center, center, 30);
-      color = hoverId() === object.toString() ? 'green' : 'black';
-      draw(poly, color, object.parent().name());
-      potentalSnap = object.potentalSnapLocation();
-      if (showAllSnapLocations)
-        drawSnapLocation(object.snapLocations());
-
-      drawSnapLocation(object.snapLocations.paired(), 'black');
-      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
-      SnapLocation2d.active(object.snapLocations.notPaired());
-      break;
-    case 'Line2d':
-      draw.line(object);
-      break;
-    case 'Circle2d':
-      draw.circle(object);
-      break;
-    case 'Layout2d':
-      drawLayout(object); // NOT IMPLEMENTED YET!!!
-      break;
-    default:
-      throw new Error(`Cannot draw object with constructor: ${object.object().constructor.name}`);
-  }
+function drawObjects() {
+  layout.objects().forEach((obj) => {
+    const color = hoverId() === obj.topview().toString() ? 'green' : 'black';
+    draw(obj.topview(), color, 3);
+    obj.topview().snapLocations().forEach((snapLoc) => {
+      const snapColor = snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined);
+      if (snapLoc.courting() || snapLoc.pairedWith() || hoverId() === snapLoc.toString())
+        draw(snapLoc, snapColor, 3);
+    });
+  });
 }
 
 function illustrate(canvas) {
   if (layout === undefined) return;
   SnapLocation2d.clear();
-  resetHoverMap();
   let lastEndPoint = {x: 20, y: 20};
 
   draw.beginPath();
@@ -676,12 +573,15 @@ function illustrate(canvas) {
   }, true);
   drawVertex(walls[0].startVertex());
   drawMeasurementValues();
-  layout.objects().forEach((obj) => drawObject(obj.topview()));
+  drawObjects();
 }
 
 let panZ;
 function init() {
   const canvas = document.getElementById('two-d-model');
+  const height = du.convertCssUnit('80vh');
+  canvas.height = height;
+  canvas.width = height;
   draw = new Draw2D(canvas);
   panZ = panZoom(canvas, illustrate);
   panZ.onMove(onMove);

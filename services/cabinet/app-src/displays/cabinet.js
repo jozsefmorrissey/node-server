@@ -4,7 +4,8 @@
 const Show = require('../show.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const ThreeDMain = require('../displays/three-d-main.js');
-const TwoDLayout = require('../two-d/layout');
+const ThreeDModel = require('../three-d/three-d-model.js');
+const TwoDLayout = require('../displays/two-d-layout');
 const OpenSectionDisplay = require('./open-section.js');
 const CabinetConfig = require('../config/cabinet-configs.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
@@ -93,14 +94,16 @@ class CabinetDisplay {
       }
     }
 
-    function updateObjLayout(cabinet) {
-      const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
-      obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
+    function updateObjLayout(elem, cabinetModel) {
+      console.log('model update');
+      // const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
+      // obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
     }
+
+    ThreeDModel.onRenderObjectUpdate(updateObjLayout);
 
     const getObject = (values) => {
       const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
-      setTimeout(() => updateObjLayout(cabinet));
       return cabinet;
     };
     this.active = () => expandList.active();

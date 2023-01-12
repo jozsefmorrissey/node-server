@@ -11,11 +11,11 @@ const Line2d = require('../two-d/objects/line');
 const SnapPolygon = require('../two-d/objects/snap/polygon');
 
 
-class ThreeDModelSimple {
+class CabinetModel {
   constructor(cabinet) {
     const assemblies = [];
     let cabinetCSG;
-    let center, threeView, silhouette;
+    let center, threeView, silhouette, complexModel;
 
     this.cabinet = () => cabinet;
     this.add = (assembly, csg) => {
@@ -133,7 +133,6 @@ class ThreeDModelSimple {
         const polys = this.cabinetSilhouette().toPolygons();
         const threeView = Polygon3D.toThreeView(polys);
         let topView = Polygon2d.toParimeter(threeView.top);
-        console.log('isClockwise?', topView.clockWise());
         const layout = c.group().room().layout();
         const normals = c.normals();
         const dist = c.width() > c.thickness() ? c.width() : c.thickness();
@@ -160,8 +159,35 @@ class ThreeDModelSimple {
       return cabinet.snapObject.topview();
     }
 
+    function addComplexModelAttrs(model) {
+      const max = new Vertex3D(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
+      const min = new Vertex3D(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER);
+      const polys = model.polygons;
+      for (let index = 0; index < polys.length; index++) {
+        const poly = polys[index];
+        const verts = poly.vertices;
+        const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
+        const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
+        poly.center = new Vertex3D(midrangePoint);
+        poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
+      }
+      const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
+      model.center = new Vertex3D(Math.midrange(polys, targetAttrs));
+      model.max = max;
+      model.min = min;
+    }
+
+    this.complexModel = (model) => {
+      if (model !== undefined) {
+        addComplexModelAttrs(model);
+        complexModel = model;
+        this.topViewSnap();
+      }
+      return complexModel;
+    }
+
     this.frontView = () => this.viewFromVector(this.normal(), true);
   }
 }
 
-module.exports = ThreeDModelSimple;
+module.exports = CabinetModel;

@@ -42,6 +42,9 @@ class Line2d {
       }
     }
 
+    this.isVertical = () => this.slope() > 1000;
+    this.isHorizontal = () => Math.abs(this.slope()) < .001;
+
     this.withinDirectionalBounds = (point, limit) => {
       point = new Vertex2d(point);
       const withinLimit = limit === undefined || (limit > point.y() && limit > point.x());
@@ -114,14 +117,7 @@ class Line2d {
     }
 
     function getSlope(v1, v2) {
-      const y1 = v1.y();
-      const y2 = v2.y();
-      const x1 = v1.x();
-      const x2 = v2.x();
-      const slope = (y2 - y1) / (x2 - x1);
-      if (Number.NaNfinity(slope) || slope > 10000 || slope < -10000) return Infinity;
-      if (slope > -0.00001 && slope < 0.00001) return 0;
-      return slope;
+      return Line2d.getSlope(v1.x(), v1.y(), v2.x(), v2.y());
     }
 
     function getB(x, y, slope) {
@@ -653,6 +649,13 @@ Line2d.isolateFurthestLine = (vertex, lines) => {
     } else retLines.push(curr.line);
   }
   return {line: max.line, lines: retLines};
+}
+
+Line2d.getSlope = function(x1, y1, x2, y2) {
+  const slope = (y2 - y1) / (x2 - x1);
+  if (Number.NaNfinity(slope) || slope > 10000 || slope < -10000) return Infinity;
+  if (slope > -0.00001 && slope < 0.00001) return 0;
+  return slope;
 }
 
 Line2d.toleranceMap = (tol, startEndBoth, lines) => {

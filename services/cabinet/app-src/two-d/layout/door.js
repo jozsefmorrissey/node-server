@@ -1,5 +1,6 @@
 
 const OnWall = require('on-wall');
+const HoverMap2d = require('../hover-map.js');
 
 class Door2D extends OnWall {
   constructor() {
@@ -14,6 +15,8 @@ class Door2D extends OnWall {
     this.remove = () => this.wall().removeDoor(this);
     this.hinge = (val) => val === undefined ? hinge :
       hinge = ((typeof val) === 'number' ? val : hinge + 1) % 5;
+
+    this.hovering = new HoverMap2d(this.toLine, 20).hovering;
   }
 }
 

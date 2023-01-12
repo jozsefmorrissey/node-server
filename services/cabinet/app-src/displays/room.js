@@ -11,7 +11,7 @@ const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const Inputs = require('../input/inputs.js');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
-const TwoDLayout = require('../two-d/layout');
+const TwoDLayout = require('../displays/two-d-layout');
 
 class RoomDisplay extends Lookup {
   constructor(parentSelector, order) {

@@ -11,6 +11,19 @@ const Window2D = require('./window');
 const Object2d = require('./object');
 const Door2D = require('./door');
 
+function withinTolerance(point, map) {
+  const t = map.tolerance;
+  const start = map.start.point ? map.start.point() : map.start;
+  const end = map.end.point ? map.end.point() : map.end;
+  const x0 = point.x;
+  const y0 = point.y;
+  const x1 = start.x > end.x ? end.x : start.x;
+  const y1 = start.y > end.y ? end.y : start.y;
+  const x2 = start.x < end.x ? end.x : start.x;
+  const y2 = start.y < end.y ? end.y : start.y;
+  return x0>x1-t && x0 < x2+t && y0>y1-t && y0<y2+t;
+}
+
 const ww = 500;
 class Layout2D extends Lookup {
   constructor(walls, objects) {
@@ -262,8 +275,11 @@ class Layout2D extends Lookup {
       vertex = new Vertex2d(vertex);
       const endpoint = {x: 0, y: 0};
       this.vertices().forEach(v => {
-        endpoint.x -= v.x();
-        endpoint.y -= v.y();
+        // TODO: figure out why negating the components causes errors....
+        // endpoint.x -= v.x() * 2;
+        // endpoint.y -= v.y() * 2;
+        endpoint.x += v.x() * 2;
+        endpoint.y += v.y() * 2;
       });
       const escapeLine = new Line2d(vertex, endpoint);
       const intersections = [];
@@ -333,11 +349,33 @@ class Layout2D extends Lookup {
       }
     }
 
-    if (!initialized) this.push({x:1, y:1}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
+    // if (!initialized) this.push({x:0, y:0}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
+    if (!initialized) this.push({x:1, y:1}, {x:ww+1, y:0}, {x:ww + 1,y:ww + 1}, {x:1,y:ww});
     this.walls = () => walls;
 
     history = new StateHistory(this.toJson, this.fromJson);
     this.history = () => history;
+
+    this.snapAt = (vertex, excuded) => {
+      for (let index = 0; index < objects.length; index++) {
+        const obj = objects[index];
+        if (excuded !== obj || Array.exists(excuded, obj)) {
+          const hovering = obj.topview().hoveringSnap(vertex, excuded);
+          if (hovering) return hovering;
+        }
+      }
+    }
+
+    this.at = (vertex) => {
+      for (let index = 0; index < walls.length; index++) {
+        const hovering = walls[index].hovering(vertex);
+        if (hovering) return hovering;
+      }
+      for (let index = 0; index < objects.length; index++) {
+        const hovering = objects[index].topview().hovering(vertex);
+        if (hovering) return hovering;
+      }
+    }
   }
 }
 

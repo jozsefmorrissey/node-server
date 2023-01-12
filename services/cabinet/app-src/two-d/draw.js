@@ -27,7 +27,8 @@ class Draw2d {
         return;
       }
       let constructorId = object.constructor.name;
-      constructorId = constructorId.replace(/^(Snap).*$/, '$1')
+      if (constructorId !== 'SnapLocation2d')
+        constructorId = constructorId.replace(/^(Snap).*$/, '$1')
       switch (constructorId) {
         case 'Line2d':
           draw.line(object, color, width);
@@ -50,6 +51,9 @@ class Draw2d {
         case 'Snap':
           draw.snap(object, color, width);
           break;
+        case 'SnapLocation2d':
+          draw.snapLocation(object, color);
+        break;
         default:
           console.error(`Cannot Draw '${object.constructor.name}'`);
       }
@@ -113,7 +117,7 @@ class Draw2d {
     draw.polygon = (poly, color, width) => {
       if (poly === undefined) return;
       color = color ||  'black';
-      width = width || .1;
+      width = width || 1;
       poly.lines().forEach((line) => draw.line(line, color, width));
       if ((typeof poly.getTextInfo) === 'function') {
         ctx().save();
@@ -226,32 +230,25 @@ class Draw2d {
     }
 
     function snapLocColor(snapLoc) {
-      const locIdentifier = snapLoc.location().replace(/(back)[0-9]*(Center|)/, '$1$2');
+      const locIdentifier = snapLoc.location().replace(/(.{1,}?)[0-9]{1,}(.*)/, '$1$2');
       switch (locIdentifier) {
         case "right": return 'red';
-        case "rightCenter": return 'pink';
-        case "left": return 'blue';
-        case "leftCenter": return 'aqua';
-        case "back": return 'green';
-        case "backCenter": return 'yellow';
+        case "rightcenter": return 'pink';
+        case "left": return '#b57edc';
+        case "leftcenter": return 'lavender';
+        case "back": return 'gray';
+        case "backcenter": return 'yellow';
         default: return "grey"
       }
     }
 
-    function drawSnapLocation(locations, color) {
-      for (let index = 0; index < locations.length; index += 1) {
-        const loc = locations[index];
-        const c = color || snapLocColor(loc);
-        const pos = loc.at();
-        draw.circle(loc.circle(), 'black', c);
-        const vertex = loc.vertex();
-      }
+    draw.snapLocation = (location, color) => {
+      const c = color || snapLocColor(location);
+      draw.circle(location.circle(), 'black', c);
     }
 
     draw.snap = (snap, color, width) => {
-      draw(snap.normals);
       draw(snap.object(), color, width);
-      drawSnapLocation(snap.snapLocations());
     }
 
     return draw;

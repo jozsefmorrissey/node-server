@@ -242,7 +242,7 @@ Function.safeStdLibAddition(Object, 'equals', objEq, true);
 
 
 Function.safeStdLibAddition(Math, 'toDegrees', function (rads) {
-  return rads * 180/Math.PI % 360;
+  return Math.mod(rads * 180/Math.PI, 360);
 }, true);
 
 Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {
@@ -303,7 +303,8 @@ Function.safeStdLibAddition(Array, 'equalIndexOf', function (elem, startIndex, e
     startIndex =  startIndex > -1 ? startIndex : 0;
     endIndex = endIndex < this.length ? endIndex : this.length;
     for (let index = startIndex; index < endIndex; index += 1) {
-      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
+      if (elem && ((typeof elem.equals) === 'function' && elem.equals(this[index])
+          || (typeof elem.equal) === 'function' && elem.equal(this[index]))) {
         return index;
       } else if (elem === this[index]) {
         return index;
@@ -335,6 +336,53 @@ Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
       this.remove(arr[index]);
     }
 });
+
+Function.safeStdLibAddition(Array, 'condition', function (initalValue, conditionFunc) {
+  const valueFuncDefined = (typeof valueFunc) === 'function';
+  for (let index = 0; index < this.length; index += 1) {
+    const elem = this[index];
+    initalValue = conditionFunc(initalValue, elem);
+  }
+  return initalValue;
+});
+
+Function.safeStdLibAddition(Array, 'max', function (max, func) {
+  const funcDefined = (typeof func) === 'function';
+  const initalValue = max || max === 0 ? {elem: max, value: funcDefined ? func(max) : max} : undefined;
+  return this.condition(initalValue, (max, elem) => {
+    let value = funcDefined ? func(elem, index) : elem;
+    if (!(max instanceof Object) || value > max.value) return {value, elem};
+    return max
+  }).elem;
+});
+
+Function.safeStdLibAddition(Array, 'min', function (min, func) {
+  const funcDefined = (typeof func) === 'function';
+  const initalValue = min || min === 0 ? {elem: min, value: funcDefined ? func(min) : min} : undefined;
+  return this.condition(initalValue, (min, elem) => {
+    let value = funcDefined ? func(elem, index) : elem;
+    if (!(min instanceof Object) || value < min.value) return {value, elem};
+    return min
+  }).elem;
+});
+
+Function.safeStdLibAddition(Array, 'print', function (min, func) {
+  const maxLength = new String(this.length).length;
+  for (let index = 0; index < this.length; index++) {
+    const elem = this[index];
+    const length = new String(index).length;
+    const position = new Array(maxLength - length).fill(' ').join('') + index + ':';
+    console.log(position, elem && elem.toString ? elem.toString() : elem);
+  }
+});
+
+Function.safeStdLibAddition(Array, 'exists', function (array, obj) {
+  if (!Array.isArray(array)) return false;
+  for (let index = 0; index < array.length; index += 1) {
+    if (array[index] === obj) return true;
+  }
+  return false;
+}, true);
 
 Function.safeStdLibAddition(Array, 'remove', function (elem) {
     for (let index = 0; index < this.length; index += 1) {

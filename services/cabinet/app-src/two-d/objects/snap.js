@@ -1,6 +1,10 @@
 
 const Vertex2d = require('vertex');
+const Line2d = require('line');
 const SnapLocation2d = require('snap-location');
+const HoverMap2d = require('../hover-map');
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const withinTol = Tolerance.within(.1);
 
 class Snap2d {
   constructor(parent, object, tolerance) {
@@ -67,11 +71,16 @@ class Snap2d {
     let radians = 0;
     this.radians = (newValue) => {
       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+        const radianDifference = newValue - radians;
+        this.object().rotate(radianDifference);
         notify(radians, newValue);
-        radians = newValue;
+        radians = Math.mod(newValue, 2*Math.PI);
       }
       return radians;
     };
+    this.rotate = (rads) => {
+      this.radians(rads + radians);
+    }
 
     let height = 60.96;
     let width = 121.92;
@@ -110,7 +119,10 @@ class Snap2d {
     const snapLocations = [];
     this.addLocation = (snapLoc) => {
       if (snapLoc instanceof SnapLocation2d && this.position[snapLoc.location()] === undefined) {
+        const index = snapLocations.length;
         snapLocations.push(snapLoc);
+        snapLoc.prev = () => snapLocations[Math.mod(index - 1, snapLocations.length)];
+        snapLoc.next = () => snapLocations[Math.mod(index + 1, snapLocations.length)];
         this.position[snapLoc.location()] = snapLoc.at;
       }
     }
@@ -125,10 +137,29 @@ class Snap2d {
       return locs;
     }
 
+    const backReg = /^back[0-9]{1,}$/;
+    const rightCenterReg = /^right[0-9]{1,}center$/;
+    const leftCenterReg = /^left[0-9]{1,}center$/;
+    const backCenterReg = /^back[0-9]{1,}center$/;
+    const centerReg = /^[a-z]{1,}[0-9]{1,}center$/;
     this.snapLocations = getSnapLocations;
     this.snapLocations.notPaired = () => getSnapLocations((loc) => loc.pairedWith() === null);
     this.snapLocations.paired = () => getSnapLocations((loc) => loc.pairedWith() !== null);
-    this.snapLocations.wallPairable = () => getSnapLocations((loc) => loc.wallThetaOffset() !== undefined);
+    this.snapLocations.wallPairable = () => getSnapLocations((loc) => loc.location().match(backReg));
+    this.snapLocations.rightCenter = () => getSnapLocations((loc) => loc.location().match(rightCenterReg));
+    this.snapLocations.leftCenter = () => getSnapLocations((loc) => loc.location().match(leftCenterReg));
+    this.snapLocations.backCenter = () => getSnapLocations((loc) => loc.location().match(backCenterReg));
+    this.snapLocations.center = () => getSnapLocations((loc) => loc.location().match(centerReg));
+    this.snapLocations.at = (vertex) => {
+      for (let index = 0; index < snapLocations.length; index++)
+        if (snapLocations[index].center().equal(vertex)) return snapLocations[index];
+      return null;
+    }
+    this.snapLocations.resetCourting = () => {
+      for (let index = 0; index < snapLocations.length; index++) {
+        snapLocations[index].courting(null);
+      }
+    }
     // this.snapLocations.rotate = backCenter.rotate;
     function resetVertices() {
       for (let index = 0; index < snapLocations.length; index += 1) {
@@ -136,6 +167,58 @@ class Snap2d {
         instance.position[snapLoc.location()]();
       }
     }
+
+    this.maxRadius = () => {
+      const center = this.parent().center();
+      let maxDist = 0;
+      for (let index = 0; index < snapLocations.length; index++) {
+        const loc = snapLocations[index].center();
+        const currDist = center.distance(loc);
+        if (currDist > maxDist) {
+          maxDist = currDist;
+        }
+      }
+      return maxDist;
+    }
+
+    this.minRadius = () => {
+      const center = this.parent().center();
+      let minDist = Number.MAX_SAFE_INTEGER;
+      for (let index = 0; index < snapLocations.length; index++) {
+        const loc = snapLocations[index].center();
+        const currDist = center.distance(loc);
+        if (currDist < minDist) {
+          minDist = currDist;
+        }
+      }
+      return minDist;
+    }
+
+    const hoveringNear = new HoverMap2d(this.object().center, () => this.maxRadius() + 10).hovering;
+    const hoveringObject = new HoverMap2d(this.object().center, () => this.minRadius() * 1.3).hovering;
+    this.hovering = (vertex) => {
+      const isNear = hoveringNear(vertex);
+      if (!isNear) return;
+      for (let index = 0; index < snapLocations.length; index++) {
+        const hoveringSnap = snapLocations[index].hovering(vertex);
+        if (hoveringSnap) return snapLocations[index];
+      }
+      return hoveringObject(vertex) && this;
+    }
+
+    this.hoveringSnap = (vertex, excluded) => {
+      if (this === excluded || Array.exists(excluded, this)) return false;
+      const isNear = hoveringNear(vertex);
+      if (!isNear) return;
+      for (let index = 0; index < snapLocations.length; index++) {
+        const hoveringSnap = snapLocations[index].hovering(vertex);
+        if (hoveringSnap) return snapLocations[index];
+      }
+      return false;
+    }
+
+    this.otherHoveringSnap = (vertex) =>
+      parent.layout().snapAt(vertex, this);
 
     function calculateMaxAndMin(closestVertex, furthestVertex, wall, position, axis) {
       const maxAttr = `max${axis.toUpperCase()}`;
@@ -148,6 +231,37 @@ class Snap2d {
         else position[minAttr] = closestVertex[axis]();
       } else if (closestVertex[axis]() < furthestVertex[axis]()) position[minAttr] = closestVertex[axis]();
       else position[maxAttr] = closestVertex[axis]();
+    }
+
+    function sameSlopeAsWall(wall, v1, v2, v3) {
+      const wallSlope = wall.slope();
+      const p1 = v1.point();
+      const p2 = v2.point()
+      const p3 = v3.point()
+      return withinTol(wallSlope, Line2d.getSlope(p1.x, p1.y, p2.x, p2.y)) ||
+              withinTol(wallSlope, Line2d.getSlope(p2.x, p2.y, p3.x, p3.y));
+    }
+
+    function findBestWallSnapLoc(center, wall, wallPairables, theta) {
+      let best;
+      const currentCenter = instance.parent().center();
+      for (let index = 0; index < wallPairables.length; index++) {
+        const snapLoc = wallPairables[index];
+        const neighbors = instance.object().neighbors(snapLoc.center(), -1, 1);
+        if (theta === 180)
+          console.log('rotated');
+        if (sameSlopeAsWall(wall, neighbors[0], snapLoc.center(), neighbors[1])) {
+          const centerVertex = snapLoc.at({center, theta});
+          const moveIsWithin = layout.within(centerVertex);
+          if (moveIsWithin) {
+            const dist = centerVertex.distance(currentCenter);
+            if (best === undefined || best.dist > dist) {
+              best = {center: centerVertex, theta, wall, pairWith: snapLoc};
+            }
+          }
+        }
+      }
+      return best;
     }
 
     function findWallSnapLocation(center) {
@@ -167,45 +281,143 @@ class Snap2d {
       if (wallObj) {
         const wall = wallObj.wall;
         const point = wallObj.point;
-        center = point;
-        let theta = wall.radians();
-
-        let position = {center, theta};
-
         const wallPairables = instance.snapLocations.wallPairable();
-        let pairWith;
-        if (centerWithin) pairWith = wallPairables[1];
-        else pairWith = wallPairables[0];
-
-        theta += Math.toRadians(pairWith.wallThetaOffset());
-        const objCenter = pairWith.at({center, theta});
-
-        return {center: objCenter, theta, wall, pairWith};
+        return findBestWallSnapLoc(point, wall, wallPairables, 0) ||
+                    findBestWallSnapLoc(point, wall, wallPairables, Math.PI);
       }
     }
 
-    function findObjectSnapLocation (center) {
-      let snapObj;
-      SnapLocation2d.active().forEach((snapLoc) => {
-        const tarVertId = snapLoc.targetVertex();
-        if ((typeof instance.position[tarVertId]) !== 'function') return;
-        const targetSnapLoc = instance.position[tarVertId]();
-        if (snapLoc.isConnected(instance) ||
-            snapLoc.pairedWith() !== null || targetSnapLoc.pairedWith() !== null) return;
-        const vertDist = snapLoc.vertex().distance(center);
-        const vertCloser = (snapObj === undefined && vertDist < tolerance) ||
-        (snapObj !== undefined && snapObj.distance > vertDist);
-        if (vertCloser) snapObj = {snapLoc: snapLoc, distance: vertDist, targetSnapLoc};
-      });
-      if (snapObj) {
-        const snapLoc = snapObj.snapLoc;
-        const tarSnap = snapObj.targetSnapLoc;
-        let theta = snapLoc.parent().radians();
-        const center = snapLoc.vertex();
-        const funcName = snapLoc.targetVertex();
-        theta += Math.toRadians(tarSnap.thetaOffset(snapLoc));
-        lastPotentalPair = [snapLoc, tarSnap];
-        return {snapLoc, center: instance.position[funcName]({center, theta}), theta};
+    const neighborSelectFunc = (cursorCenter, neighborSeperation) => (min, index) =>
+      min.distance(cursorCenter);// + (index === 1 ? neighborSeperation / 2 : 0);
+
+    function findClosestNeighbor(otherMidpoint, radians, targetMidpoint, otherLoc, cursorCenter) {
+      const obj = instance.object();
+      const tempPoly = obj.copy();
+      const objVerts = obj.verticesAndMidpoints();
+      const targetIndex = objVerts.equalIndexOf(targetMidpoint.center());
+
+      if (targetIndex === undefined) {
+        console.log('wtf');
+      }
+
+      tempPoly.rotate(radians);
+      const newCenter = tempPoly.point(targetIndex, {center: otherMidpoint.center()});
+      tempPoly.centerOn(newCenter);
+      const neighbors = tempPoly.neighbors(otherMidpoint.center(), -1, 0, 1);
+      const neighborSeperation = neighbors[0].distance(neighbors[2]);
+      const neighbor = neighbors.min(null, neighborSelectFunc(cursorCenter, neighborSeperation));
+      const neighborIndex = tempPoly.verticesAndMidpoints().equalIndexOf(neighbor);
+      const locCount = instance.snapLocations().length;
+
+      const originalPosition = objVerts[neighborIndex + locCount % locCount];
+      if (originalPosition === undefined) { // Vertex
+        console.log('wtff');
+      }
+      const targetLoc = instance.snapLocations.at(originalPosition);
+      if (!targetLoc) {
+        // console.log(targetLoc.location());
+        return;
+      }
+
+      const dist = neighbor.distance(cursorCenter);
+      const centerDist = tempPoly.center().distance(otherMidpoint.parent().object().center());
+      return {targetLoc, dist, radians, targetMidpoint, otherMidpoint, centerDist};
+    }
+
+    function closestSnap(otherMidpoint, otherLoc, snapList, cursorCenter) {
+      let closest = null;
+      const c = cursorCenter;
+      const om = otherMidpoint;
+      const ol = otherLoc;
+      for (let index = 0; index < snapList.length; index++) {
+        const targetMidpoint = snapList[index];
+        const tm = targetMidpoint;
+        const radDiff = otherMidpoint.forwardRadians() - targetMidpoint.forwardRadians();
+        const parrelle = findClosestNeighbor(om, radDiff, tm, ol, c);
+        const antiParrelle = findClosestNeighbor(om, radDiff - Math.PI, tm, ol, c);
+        const furthestCenter =
+          parrelle.centerDist > antiParrelle.centerDist ? parrelle : antiParrelle;
+        furthestCenter.otherLoc = otherLoc;
+        if (furthestCenter.radians === 0) return furthestCenter;
+        if (!closest || closest.dist < furthestCenter.dist) {
+          closest = furthestCenter;
+        }
+      }
+      return closest;
+    }
+
+
+    function closestBackSnapInfo(otherLoc, cursorCenter) {
+      const snapList = instance.snapLocations.center();
+      let midpoint = otherLoc.neighbor(1);
+      let snapInfo1 = closestSnap(midpoint, otherLoc, snapList, cursorCenter);
+      if (snapInfo1.radians === 0) return snapInfo1;
+      midpoint = otherLoc.neighbor(-1);
+      let snapInfo2 = closestSnap(midpoint, otherLoc, snapList, cursorCenter);
+      if (snapInfo2.radians === 0) return snapInfo2;
+      if (snapInfo1.radians === Math.PI) return snapInfo1;
+      if (snapInfo2.radians === Math.PI) return snapInfo2;
+      const rotation1isSmallest = snapInfo2.radians > snapInfo1.radians;
+      return rotation1isSmallest ? snapInfo1 : snapInfo2;
+    }
+
+    function closestCenterSnap(otherLoc, cursorCenter) {
+      const snapList = instance.snapLocations.center();
+    }
+
+    let lastClosestSnapLocation;
+    const distanceFunc = (center) => (snapLoc) => snapLoc.center().distance(center);// +
+//          (lastClosestSnapLocation === snapLoc ? -10 : 0);
+    function findClosestSnapLoc (center) {
+      const objects = parent.layout().objects();
+      const instObj = instance.object();
+      const instCenter = instObj.center();
+      let closest = null;
+      for (let index = 0; index < objects.length; index++) {
+        const object = objects[index];
+        if (object !== parent) {
+          const otherSnap = object.topview();
+          const combinedRadius = otherSnap.maxRadius() + instance.maxRadius();
+          const center2centerDist = otherSnap.object().center().distance(instCenter);
+          if (center2centerDist - 1 < combinedRadius) {
+            const snapLocs = otherSnap.snapLocations();
+            closest = snapLocs.min(closest, distanceFunc(center));
+          }
+        }
+      }
+      lastClosestSnapLocation = closest;
+      return closest;
+    }
+
+    function snapMove(snapInfo) {
+      if (snapInfo) {
+        snapInfo.targetLoc.move(snapInfo.otherLoc.center(), null);
+        instance.rotate(snapInfo.radians, snapInfo.otherLoc.center());
+        snapInfo.targetLoc.courting(snapInfo.otherLoc);
+      }
+    }
+
+    function findObjectSnapLocation(center) {
+      const closestOtherLoc = findClosestSnapLoc(center);
+      if (closestOtherLoc === null) return;
+      let snapList, midpointOffset;
+      if (closestOtherLoc.isLeft) {
+        if (!closestOtherLoc.isCenter) midpointOffset = -1;
+        snapList = instance.snapLocations.rightCenter();
+      } else if (closestOtherLoc.isRight) {
+        if (!closestOtherLoc.isCenter) midpointOffset = 1;
+        snapList = instance.snapLocations.leftCenter();
+      } else if (closestOtherLoc.isBack && ! closestOtherLoc.isCenter) {
+        const snapInfo = closestBackSnapInfo(closestOtherLoc, center);
+        snapMove(snapInfo);
+        return;
+      } else {
+        snapList = instance.snapLocations.backCenter();
+      }
+      if (snapList) {
+        let midpoint = midpointOffset ? closestOtherLoc.neighbor(midpointOffset) : closestOtherLoc;
+        const snapInfo = closestSnap(midpoint, closestOtherLoc, snapList, center);
+        snapMove(snapInfo);
       }
     }
 
@@ -236,14 +448,17 @@ class Snap2d {
 
     let lastValidMove;
     this.makeMove = (position, force) => {
-      const originalPos = {center: this.parent().center(), theta: this.radians()};
-      instance.parent().center().point(position.center);
+      this.snapLocations.resetCourting();
+      instance.object().centerOn(position.center);
       if (position.theta !== undefined) instance.radians(position.theta);
       if (!force) {
         let validMove = true;
-        instance.snapLocations().forEach((l) => validMove &&= layout.within(l.at().vertex()));
+        instance.object().centerOn(position.center);
         if (!validMove) {
-          if (lastValidMove) return this.makeMove(lastValidMove, true); // No move was made return undefined
+          if (lastValidMove) {
+            console.log('Invalid Move');
+            return this.makeMove(lastValidMove, true); // No move was made return undefined
+          }
         } else lastValidMove = position;
         lastValidMove = position;
       }
@@ -252,39 +467,18 @@ class Snap2d {
     this.move = (center) => {
       checkPotentialPair();
       const pairedSnapLocs = this.snapLocations.paired();
-      resetVertices();
-      if (pairedSnapLocs.length > 0) {
-        const snapInfo = findObjectSnapLocation(center);
-        if (snapInfo) {
-          const obj = snapInfo.snapLoc.parent();
-          if (snapInfo.theta !== undefined) {
-            const theta = ((snapInfo.theta + 2 * Math.PI) - this.radians()) % (2*Math.PI);
-            snapInfo.theta = undefined;
-            this.snapLocations.rotate(theta);
-          }
-          const snapLoc = snapInfo.snapLoc;
-          const targetVertex = snapLoc.targetVertex();
-          const targetSnapLoc = this[targetVertex]();
-          lastPotentalPair = [targetSnapLoc, snapLoc];
-          const vertexCenter = snapLoc.parent().position[snapLoc.location()]().vertex();
-          return targetSnapLoc.move(vertexCenter);
-        }
-        const snapLoc = pairedSnapLocs[0];
-        return snapLoc.move(center);
-      }
       const centerWithin = layout.within(center);
       let closest = {};
-      const snapLocation = findObjectSnapLocation(center);
       const wallSnapLocation = findWallSnapLocation(center);
-      if (snapLocation) {
-        return this.makeMove(snapLocation);
-      } else if (wallSnapLocation !== undefined) {
+      if (wallSnapLocation !== undefined) {
         const move = this.makeMove(wallSnapLocation);
         const wallSnapLoc = this.snapLocations.wallPairable()[0];
         lastPotentalPair = [wallSnapLoc.pairWith, wallSnapLocation.wall];
         return move;
       } else if (centerWithin) {
-        return this.makeMove({center});
+        const move = this.makeMove({center});
+        findObjectSnapLocation(center);
+        return move;
       }
     }
 
@@ -296,7 +490,6 @@ class Snap2d {
       if (objData('radians')) object.radians(radians);
       if (objData('height')) object.height(height);
       if (objData('width')) object.width(width);
-      instance.snapLocations().forEach((snapLoc) => snapLoc.at());
     }
 
     this.update = updateObject;

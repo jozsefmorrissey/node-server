@@ -687,10 +687,10 @@ class TemplateManager extends Lookup {
 
       function updateShapeSketches(elem, model) {
         if (model) {
-          frontView = model.simpleModel.frontView();
+          frontView = model.frontView();
           const center = Vertex2d.center(Line2d.vertices(frontView));
           panz.centerOn(center.x(), center.y());
-          topViewSnap = model.simpleModel.topViewSnap();
+          topViewSnap = model.topViewSnap();
           const centerT = Vertex2d.center(Line2d.vertices(topViewSnap));
           panzT.centerOn(centerT.x(), centerT.y());
           renderTop();

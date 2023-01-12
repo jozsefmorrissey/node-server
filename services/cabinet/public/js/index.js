@@ -6953,125 +6953,260 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/approximate.js',
+RequireJS.addFunction('../../public/js/utils/tolerance.js',
 function (require, exports, module) {
 	
-
+const DEFAULT_TOLERANCE = .0001;
 	
-	let defaultAccuracy;
+	function round(val) {
+	  return Math.round(1000000000000 * val)/1000000000000
+	}
 	
-	class Approximate {
-	  constructor(accuracy) {
-	    if ((typeof accuracy) !== 'number' || accuracy === defaultAccuracy) return Approximate.default;
+	function decimalLimit(value, limit) {
+	  return (new String(value)).replace(/([0-9]{1,})(.[0-9]{1,}|)/, '$2').length > limit;
+	}
 	
-	    function approximate(value) {
-	      return Math.round(value * accuracy) / accuracy;
+	function rangeStr(lower, upper) {
+	  return `${round(lower)} => ${round(upper)}`;
+	}
+	
+	function boundsFunc(attr, attributeMap, tolerance) {
+	  const singleValue = attr === undefined;
+	  return (elem) => {
+	    const tol = singleValue ? tolerance : attributeMap[attr];
+	    const value = singleValue ? elem : Object.pathValue(elem, attr);
+	    let lower, upper, center;
+	    if (Number.NaNfinity(value)) return {lower: value, upper: value, id: rangeStr(value, value)};
+	    else {
+	      const mod = value % tol;
+	      const center = mod > tol/2 ? value + (tol - mod) : value - mod;
+	      lower = round(center - tol);
+	      upper = round(center + tol);
+	      if (lower>upper) {const temp = lower; lower = upper; upper = temp;}
+	      const prevId = rangeStr(lower - tol, center);
+	      const id = rangeStr(lower, upper);
+	      const nextId = rangeStr(center, upper + tol);
+	      if (decimalLimit(lower, 10) || decimalLimit(upper, 10))
+	        console.warn.subtle(`Bounding limits may be incorrect: ${id}`);
+	      return {lower, upper, prevId, id, nextId};
 	    }
-	
-	    function approximateFunc(test) {
-	      return function () {
-	        if (arguments.length === 2) return test(approximate(arguments[0]), approximate(arguments[1]));
-	        for (let index = 1; index < arguments.length; index++) {
-	          if (!test(approximate(arguments[index - 1]), approximate(arguments[index]))) return false;
-	        }
-	        return true;
-	      }
-	    }
-	    const af = approximateFunc;
-	    approximate.eq = af((one, two) => one === two);
-	    approximate.neq = af((one, two) => one !== two);
-	    approximate.gt = af((one, two) => one > two);
-	    approximate.lt = af((one, two) => one < two);
-	    approximate.gteq = af((one, two) => one >= two);
-	    approximate.lteq = af((one, two) => one <= two);
-	    approximate.eqAbs = af((one, two) => Math.abs(one) === Math.abs(two));
-	    approximate.neqAbs = af((one, two) => Math.abs(one) !== Math.abs(two));
-	    approximate.abs = (value) => Math.abs(approximate(value));
-	    approximate.object = (obj) => {
-	      const approx = {};
-	      return Object.forAllRecursive(obj,
-	            (value) => (typeof value) === 'number' ? approximate(value) : value);
-	    }
-	    approximate.sameSign = af((value1, value2) => (value1 === 0 && value2 === 0) ||
-	                                                      (value2 > 0 && value1 > 0) ||
-	                                                      (value2 < 0 && value1 < 0));
-	    return approximate;
 	  }
 	}
 	
-	
-	Approximate.setDefault = (accuracy) => {
-	  if ((typeof accuracy) !== 'number') throw new Error('Must enter a number for accuracy: hint must be a power of 10');
-	  Approximate.default = new Approximate(accuracy);
-	  defaultAccuracy = accuracy;
-	  Approximate.default.new = (acc) => new Approximate(acc);
-	  Approximate.default.setDefault = Approximate.default;
+	function withinBounds(attr, attributeMap, tolerance) {
+	  const singleValue = attr === undefined;
+	  return (value1, value2) => {
+	    if (value1 === value2) return true;
+	    const tol = singleValue ? tolerance : attributeMap[attr];
+	    return Math.abs(value1 - value2) < tol;
+	  }
 	}
 	
-	Approximate.setDefault(1000000);
+	class Tolerance {
+	  constructor(attributeMap, tolerance) {
+	    attributeMap ||= {};
+	    let within, bounds;
+	    const attrs = Object.keys(attributeMap);
+	    const singleValue = attrs.length === 0;
+	    this.bounds = {};
+	    if (!singleValue)
+	      this.attributes = () => attrs;
+	    else {
+	      tolerance ||= DEFAULT_TOLERANCE;
+	      bounds = boundsFunc();
+	      within = withinBounds(undefined, undefined, tolerance);
+	    }
 	
-	module.exports  = Approximate.default;
+	    this.finalAttr = () => attrs[attrs.length - 1];
+	
+	    this.details = (elem) => {
+	      if (singleValue) return bounds(elem);
+	      let details = {};
+	      for (let index = 0; index < attrs.length; index++) {
+	        details[attrs[index]] = this.bounds[attrs[index]](elem);
+	      }
+	      return details;
+	    }
+	
+	    this.boundries = (elem) => {
+	      if (singleValue) return bounds(elem).id;
+	      let boundries = '';
+	      for (let index = 0; index < attrs.length; index++) {
+	        boundries += this.bounds[attrs[index]](elem).id + '\n';
+	      }
+	      return boundries.substr(0,boundries.length - 1);
+	    }
+	
+	    for (let index = 0; index < attrs.length; index++) {
+	      const attr = attrs[index];
+	      this.bounds[attr] = boundsFunc(attr, attributeMap);
+	      this.bounds[attr].within = withinBounds(attr, attributeMap);
+	    }
+	
+	    this.within = (elem1, elem2) => {
+	      if (singleValue) return within(elem1, elem2);
+	      let isWithin = true;
+	      for (let index = 0; index < attrs.length; index++) {
+	        const attr = attrs[index];
+	        const value1 = Object.pathValue(elem1, attr);
+	        const value2 = Object.pathValue(elem2, attr);
+	        isWithin &&= this.bounds[attr].within(value1, value2);
+	        if (!isWithin) return false;
+	      }
+	      return isWithin;
+	    }
+	  }
+	}
+	
+	Tolerance.within = (tol) => new Tolerance({'value': tol}).bounds.value.within;
+	
+	module.exports = Tolerance;
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/custom-event.js',
+RequireJS.addFunction('../../public/js/utils/tolerance-map.js',
 function (require, exports, module) {
 	
-
+const Tolerance = require('tolerance');
 	
+	function sortByAttr(attr) {
+	  function sort(obj1, obj2) {
+	    if (obj2[attr] === obj1[attr]) {
+	      return 0;
+	    }
+	    return obj2[attr]() < obj1[attr]() ? 1 : -1;
+	  }
+	  return sort;
+	}
 	
-	class CustomEvent {
-	  constructor(name) {
-	    const watchers = [];
-	    this.name = name;
+	class ToleranceMap {
+	  constructor(attributeMap, toleranceMap) {
+	    const map = toleranceMap || {};
+	    const tolerance = new Tolerance(attributeMap);
+	    const finalAttrSort = sortByAttr(tolerance.finalAttr());
 	
-	    const runFuncs = (e, detail) => watchers.forEach((func) => func(e, detail));
-	
-	    this.on = function (func) {
-	      if ((typeof func) === 'function') {
-	        watchers.push(func);
-	      } else {
-	        return 'on' + name;
+	    this.clone = () => {
+	      const tMap = new ToleranceMap(attributeMap);
+	      this.forEach(value => tMap.add(value));
+	      return tMap;
+	    }
+	    function forEachSet(func, node, attrs, attrIndex) {
+	      if ((typeof func) !== 'function') throw new Error('Arg1 must be of type function');
+	      if (Array.isArray(node)) {
+	        func(node);
+	        return;
+	      }
+	      if (attrs && !node) return;
+	      attrs ||= tolerance.attributes();
+	      node ||= map;
+	      attrIndex ||= 0;
+	      const keys = Object.keys(node);
+	      for (let index = 0; index < keys.length; index++) {
+	        forEachSet(func, node[keys[index]], attrs, attrIndex + 1);
 	      }
 	    }
 	
-	    this.trigger = function (element, detail) {
-	      element = element ? element : window;
-	      runFuncs(element, detail);
-	      this.event.detail = detail;
-	      if(document.createEvent){
-	          element.dispatchEvent(this.event);
-	      } else {
-	          element.fireEvent("on" + this.event.eventType, this.event);
+	    function matches(elem, node, attrs, list, attrIndex) {
+	      if (Array.isArray(node)) {
+	        list.concatInPlace(node);
+	        return;
+	      }
+	      if (attrs && !node) return;
+	      list ||= [];
+	      attrs ||= tolerance.attributes();
+	      node ||= map;
+	      attrIndex ||= 0;
+	      const attr = attrs[attrIndex];
+	      const bounds = tolerance.bounds[attr](elem);
+	      const id = bounds.id;
+	      matches(elem, node[bounds.nextId], attrs, list, attrIndex + 1);
+	      matches(elem, node[bounds.id], attrs, list, attrIndex + 1);
+	      matches(elem, node[bounds.prevId], attrs, list, attrIndex + 1);
+	
+	      if (attrIndex === 0) {
+	        const matchList = list.filter((other) => tolerance.within(elem, other));
+	        matchList.sort(finalAttrSort);
+	        return matchList;
 	      }
 	    }
-	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-	    this.event;
-	    if(document.createEvent){
-	        this.event = document.createEvent("HTMLEvents");
-	        this.event.initEvent(name, true, true);
-	        this.event.eventName = name;
-	    } else {
-	        this.event = document.createEventObject();
-	        this.event.eventName = name;
-	        this.event.eventType = name;
+	
+	    function getSet(elem) {
+	      let curr = map;
+	      let attrs = tolerance.attributes();
+	      for (let index = 0; index < attrs.length; index += 1) {
+	        const attr = attrs[index];
+	        const bounds = tolerance.bounds[attr](elem);
+	        const id = bounds.id;
+	        if (curr[id] === undefined) {
+	          if (index < attrs.length -1) curr[id] = {};
+	          else curr[id] = [];
+	        }
+	        curr = curr[id];
+	      }
+	
+	      return curr;
 	    }
+	
+	    this.forEachSet = forEachSet;
+	    this.maxSet = () => {
+	      const maxSet = [];
+	      forEachSet((set) => maxSet.push(set[0]));
+	      maxSet.sort(finalAttrSort);
+	      maxSet.reverse();
+	      return maxSet;
+	    }
+	    this.minSet = () => {
+	      const minSet = [];
+	      forEachSet((set) => minSet.push(set[set.length - 1]));
+	      minSet.sort(finalAttrSort);
+	      return minSet;
+	    }
+	    this.forEach = (func, detailed) => {
+	      if (!(typeof func) === 'function') return;
+	      forEachSet(set => set.forEach((value) => {
+	        const details = detailed ? undefined : tolerance.details(value);
+	        func(value, details);
+	      }));
+	    };
+	
+	    this.values = () => {
+	      const values = [];
+	      forEachSet(set => values.concatInPlace(set));
+	      return values;
+	    }
+	    this.tolerance = () => tolerance;
+	
+	    this.matches = (elem) => matches(elem);
+	
+	    this.add = (elem) => {
+	      let matchArr = getSet(elem, true);
+	      matchArr.push(elem);
+	      matchArr.sort(finalAttrSort);
+	    }
+	
+	    this.remove = (elem) => {
+	      const matchArr = getSet(elem);
+	      if (matchArr) {
+	        const index = matchArr.indexOf(elem);
+	        if (index !== -1) matchArr.splice(index, 1);
+	      }
+	    }
+	
+	    this.addAll = (list) => {
+	      for (let index = 0; index < list.length; index++) {
+	        const elem = list[index];
+	        let matchArr = getSet(elem, true);
+	        matchArr.push(elem);
+	      }
+	      matchArr.sort(finalAttrSort);
+	    }
+	
+	    this.map = () => map;
 	  }
 	}
 	
-	CustomEvent.all = (obj, ...eventNames) => {
-	  if (obj.on === undefined) obj.on = {};
-	  if (obj.trigger === undefined) obj.trigger = {};
-	  for (let index = 0; index < eventNames.length; index++) {
-	    const name = eventNames[index];
-	    const e = new CustomEvent(name);
-	    obj.on[name] = e.on;
-	    obj.trigger[name] = (...args) => e.trigger.apply(e, args);
-	  }
-	}
-	
-	module.exports = CustomEvent;
+	module.exports = ToleranceMap;
 	
 });
 
@@ -7640,6 +7775,665 @@ function (require, exports, module) {
 	
 	DecisionTree.DecisionNode = DecisionNode;
 	module.exports = DecisionTree;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/custom-event.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class CustomEvent {
+	  constructor(name) {
+	    const watchers = [];
+	    this.name = name;
+	
+	    const runFuncs = (elem, detail) => 
+	    watchers.forEach((func) => {
+	      try {
+	        func(elem, detail);
+	      } catch (e) {
+	        console.error(e);
+	      }
+	    });
+	
+	
+	    this.on = function (func) {
+	      if ((typeof func) === 'function') {
+	        watchers.push(func);
+	      } else {
+	        return 'on' + name;
+	      }
+	    }
+	
+	    this.trigger = function (element, detail) {
+	      element = element ? element : window;
+	      runFuncs(element, detail);
+	      this.event.detail = detail;
+	      if(document.createEvent){
+	          element.dispatchEvent(this.event);
+	      } else {
+	          element.fireEvent("on" + this.event.eventType, this.event);
+	      }
+	    }
+	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+	    this.event;
+	    if(document.createEvent){
+	        this.event = document.createEvent("HTMLEvents");
+	        this.event.initEvent(name, true, true);
+	        this.event.eventName = name;
+	    } else {
+	        this.event = document.createEventObject();
+	        this.event.eventName = name;
+	        this.event.eventType = name;
+	    }
+	  }
+	}
+	
+	CustomEvent.all = (obj, ...eventNames) => {
+	  if (obj.on === undefined) obj.on = {};
+	  if (obj.trigger === undefined) obj.trigger = {};
+	  for (let index = 0; index < eventNames.length; index++) {
+	    const name = eventNames[index];
+	    const e = new CustomEvent(name);
+	    obj.on[name] = e.on;
+	    obj.trigger[name] = (...args) => e.trigger.apply(e, args);
+	  }
+	}
+	
+	module.exports = CustomEvent;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/custom-event-delay.js',
+function (require, exports, module) {
+	
+
+	
+	
+	class CustomEvent {
+	  constructor(name, delay) {
+	    if (delay === undefined) delay = 0;
+	    let triggerId = 0;
+	    const watchers = [];
+	    this.name = name;
+	
+	    let lastTriggerTime;
+	    let lastTriggerId;
+	    const runFuncs = (e, detail, tId) => {
+	      const time = new Date().getTime();
+	      if (lastTriggerId === tId ) {
+	        if (lastTriggerTime + delay < time) {
+	          watchers.forEach((func) => func(e, detail));
+	        } else {
+	          setTimeout(() => {
+	            runFuncs(e, detail, tId);
+	          }, delay);
+	        }
+	      }
+	    }
+	
+	    this.on = function (func) {
+	      if ((typeof func) === 'function') {
+	        watchers.push(func);
+	      } else {
+	        return 'on' + name;
+	      }
+	    }
+	
+	    this.trigger = function (element, detail) {
+	      element = element ? element : window;
+	      lastTriggerTime = new Date().getTime();
+	      const tId = triggerId + 1;
+	      triggerId += 1;
+	      lastTriggerId = tId;
+	      runFuncs(element, detail, tId);
+	      this.event.detail = detail;
+	      if(document.createEvent){
+	          element.dispatchEvent(this.event);
+	      } else {
+	          element.fireEvent("on" + this.event.eventType, this.event);
+	      }
+	    }
+	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+	    this.event;
+	    if(document.createEvent){
+	        this.event = document.createEvent("HTMLEvents");
+	        this.event.initEvent(name, true, true);
+	        this.event.eventName = name;
+	    } else {
+	        this.event = document.createEventObject();
+	        this.event.eventName = name;
+	        this.event.eventType = name;
+	    }
+	  }
+	}
+	
+	module.exports = CustomEvent;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/string-math-evaluator.js',
+function (require, exports, module) {
+	let FunctionCache;
+	try {
+	  FunctionCache = require('./services/function-cache.js');
+	} catch(e) {
+	
+	}
+	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	class StringMathEvaluator {
+	  constructor(globalScope, resolver) {
+	    globalScope = globalScope || {};
+	    const instance = this;
+	    let splitter = '.';
+	
+	    function resolve (path, currObj, globalCheck) {
+	      if (path === '') return currObj;
+	      const resolved = !globalCheck && resolver && resolver(path, currObj);
+	      if (Number.isFinite(resolved)) return resolved;
+	      try {
+	        if ((typeof path) === 'string') path = path.split(splitter);
+	        for (let index = 0; index < path.length; index += 1) {
+	          currObj = currObj[path[index]];
+	        }
+	        if (currObj === undefined && !globalCheck) throw Error('try global');
+	        return currObj;
+	      }  catch (e) {
+	        if (!globalCheck) return resolve(path, globalScope, true);
+	      }
+	    }
+	
+	    function multiplyOrDivide (values, operands) {
+	      const op = operands[operands.length - 1];
+	      if (op === StringMathEvaluator.multi || op === StringMathEvaluator.div) {
+	        const len = values.length;
+	        values[len - 2] = op(values[len - 2], values[len - 1])
+	        values.pop();
+	        operands.pop();
+	      }
+	    }
+	
+	    const resolveArguments = (initialChar, func) => {
+	      return function (expr, index, values, operands, scope, path) {
+	        if (expr[index] === initialChar) {
+	          const args = [];
+	          let endIndex = index += 1;
+	          const terminationChar = expr[index - 1] === '(' ? ')' : ']';
+	          let terminate = false;
+	          let openParenCount = 0;
+	          while(!terminate && endIndex < expr.length) {
+	            const currChar = expr[endIndex++];
+	            if (currChar === '(') openParenCount++;
+	            else if (openParenCount > 0 && currChar === ')') openParenCount--;
+	            else if (openParenCount === 0) {
+	              if (currChar === ',') {
+	                args.push(expr.substr(index, endIndex - index - 1));
+	                index = endIndex;
+	              } else if (openParenCount === 0 && currChar === terminationChar) {
+	                args.push(expr.substr(index, endIndex++ - index - 1));
+	                terminate = true;
+	              }
+	            }
+	          }
+	
+	          for (let index = 0; index < args.length; index += 1) {
+	            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
+	            if (stringMatch) {
+	              args[index] = stringMatch[1];
+	            } else {
+	              args[index] =  instance.eval(args[index], scope);
+	            }
+	          }
+	          const state = func(expr, path, scope, args, endIndex);
+	          if (state) {
+	            values.push(state.value);
+	            return state.endIndex;
+	          }
+	        }
+	      }
+	    };
+	
+	    function chainedExpressions(expr, value, endIndex, path) {
+	      if (expr.length === endIndex) return {value, endIndex};
+	      let values = [];
+	      let offsetIndex;
+	      let valueIndex = 0;
+	      let chained = false;
+	      do {
+	        const subStr = expr.substr(endIndex);
+	        const offsetIndex = isolateArray(subStr, 0, values, [], value, path) ||
+	                            isolateFunction(subStr, 0, values, [], value, path) ||
+	                            (subStr[0] === '.' &&
+	                              isolateVar(subStr, 1, values, [], value));
+	        if (Number.isInteger(offsetIndex)) {
+	          value = values[valueIndex];
+	          endIndex += offsetIndex - 1;
+	          chained = true;
+	        }
+	      } while (offsetIndex !== undefined);
+	      return {value, endIndex};
+	    }
+	
+	    const isolateArray = resolveArguments('[',
+	      (expr, path, scope, args, endIndex) => {
+	        endIndex = endIndex - 1;
+	        let value = resolve(path, scope)[args[args.length - 1]];
+	        return chainedExpressions(expr, value, endIndex, '');
+	      });
+	
+	    const isolateFunction = resolveArguments('(',
+	      (expr, path, scope, args, endIndex) =>
+	          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
+	
+	    function isolateParenthesis(expr, index, values, operands, scope) {
+	      const char = expr[index];
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      if (char === '(') {
+	        let openParenCount = 1;
+	        let endIndex = index + 1;
+	        while(openParenCount > 0 && endIndex < expr.length) {
+	          const currChar = expr[endIndex++];
+	          if (currChar === '(') openParenCount++;
+	          if (currChar === ')') openParenCount--;
+	        }
+	        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
+	        const len = endIndex - index - 2;
+	        values.push(instance.eval(expr.substr(index + 1, len), scope));
+	        multiplyOrDivide(values, operands);
+	        return endIndex;
+	      }
+	    };
+	
+	    function isolateOperand (char, operands) {
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      switch (char) {
+	        case '*':
+	        operands.push(StringMathEvaluator.multi);
+	        return true;
+	        break;
+	        case '/':
+	        operands.push(StringMathEvaluator.div);
+	        return true;
+	        break;
+	        case '+':
+	        operands.push(StringMathEvaluator.add);
+	        return true;
+	        break;
+	        case '-':
+	        operands.push(StringMathEvaluator.sub);
+	        return true;
+	        break;
+	      }
+	      return false;
+	    }
+	
+	    function isolateValueReg(reg, resolver) {
+	      return function (expr, index, values, operands, scope) {
+	        const match = expr.substr(index).match(reg);
+	        let args;
+	        if (match) {
+	          let endIndex = index + match[0].length;
+	          let value = resolver(match[0], scope);
+	          if (!Number.isFinite(value)) {
+	            const state = chainedExpressions(expr, scope, endIndex, match[0]);
+	            if (state !== undefined) {
+	              value = state.value;
+	              endIndex = state.endIndex;
+	            }
+	          }
+	          values.push(value);
+	          multiplyOrDivide(values, operands);
+	          return endIndex;
+	        }
+	      }
+	    }
+	
+	    function convertFeetInchNotation(expr) {
+	      expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
+	      expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
+	      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
+	      return expr = expr.replace(StringMathEvaluator.multiMixedNumberReg, '($1+$2)') || expr;
+	    }
+	    function addUnexpressedMultiplicationSigns(expr) {
+	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
+	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
+	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
+	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
+	    }
+	
+	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
+	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
+	
+	    function evaluate(expr, scope, percision) {
+	      if (Number.isFinite(expr))
+	        return expr;
+	      expr = new String(expr);
+	      expr = addUnexpressedMultiplicationSigns(expr);
+	      expr = convertFeetInchNotation(expr);
+	      scope = scope || globalScope;
+	      const allowVars = (typeof scope) === 'object';
+	      let operands = [];
+	      let values = [];
+	      let prevWasOpperand = true;
+	      for (let index = 0; index < expr.length; index += 1) {
+	        const char = expr[index];
+	        if (prevWasOpperand) {
+	          try {
+	            let newIndex = isolateNumber(expr, index, values, operands, scope);
+	            if (!newIndex && isolateOperand(char, operands))
+	                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
+	            newIndex ||= isolateParenthesis(expr, index, values, operands, scope) ||
+	                (allowVars && isolateVar(expr, index, values, operands, scope));
+	            if (Number.isInteger(newIndex)) {
+	              index = newIndex - 1;
+	              prevWasOpperand = false;
+	            }
+	          } catch (e) {
+	            console.error(e);
+	            return NaN;
+	          }
+	        } else {
+	          prevWasOpperand = isolateOperand(char, operands);
+	        }
+	      }
+	      if (prevWasOpperand) return NaN;
+	
+	      let value = values[0];
+	      for (let index = 0; index < values.length - 1; index += 1) {
+	        value = operands[index](values[index], values[index + 1]);
+	        values[index + 1] = value;
+	      }
+	
+	      if (Number.isFinite(value)) {
+	        value = value;
+	        return value;
+	      }
+	      return NaN;
+	    }
+	
+	    function evalObject(obj, scope) {
+	      const returnObj = Object.forEachConditional(obj, (value, key, object) => {
+	        value = evaluate(value, scope);
+	        if (!Number.isNaN(value)) object[key] = value;
+	      }, (value) => (typeof value) === 'string');
+	      return returnObj;
+	    }
+	
+	    this.eval = FunctionCache ? new FunctionCache(evaluate, this, 'sme') : evaluate;
+	    this.evalObject = FunctionCache ? new FunctionCache(evalObject, this, 'sme') : evalObject;
+	  }
+	}
+	
+	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	
+	const mixNumberRegStr = "([0-9]{1,})\\s{1,}(([0-9]{1,})\\/([0-9]{1,}))";
+	StringMathEvaluator.mixedNumberReg = new RegExp(`^${mixNumberRegStr}$`);
+	StringMathEvaluator.multiMixedNumberReg = new RegExp(mixNumberRegStr, 'g');///([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
+	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
+	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
+	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
+	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
+	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
+	const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
+	StringMathEvaluator.decimalReg = new RegExp(`^${decimalRegStr}`);///^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(\.|)|(\.)[0-9]{1,})/;
+	StringMathEvaluator.multiDecimalReg = new RegExp(decimalRegStr, 'g');
+	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
+	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
+	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
+	StringMathEvaluator.div = (n1, n2) => n1 / n2;
+	StringMathEvaluator.add = (n1, n2) => n1 + n2;
+	StringMathEvaluator.sub = (n1, n2) => n1 - n2;
+	
+	const npf = Number.parseFloat;
+	StringMathEvaluator.convert = {eqn: {}};
+	StringMathEvaluator.convert.metricToImperial = (value) => {
+	  value = npf(value);
+	  return value / 2.54;
+	}
+	
+	StringMathEvaluator.resolveMixedNumber = (value) => {
+	  const match = value.match(StringMathEvaluator.mixedNumberReg);
+	  if (match) {
+	    value = npf(match[1]) + (npf(match[3]) / npf(match[4]));
+	  }
+	  value = npf(value);
+	  return value;
+	}
+	
+	StringMathEvaluator.convert.imperialToMetric = (value) => {
+	  value = npf(value);
+	  return value * 2.54;
+	}
+	
+	StringMathEvaluator.convert.eqn.metricToImperial = (str) =>
+	  str.replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.metricToImperial);
+	
+	StringMathEvaluator.convert.eqn.imperialToMetric = (str) =>
+	  str.replace(StringMathEvaluator.multiMixedNumberReg, StringMathEvaluator.resolveMixedNumber)
+	  .replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.imperialToMetric);
+	
+	StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	
+	
+	StringMathEvaluator.reduce = function(numerator, denominator) {
+	  let reduced = true;
+	  while (reduced) {
+	    reduced = false;
+	    for (let index = 0; index < StringMathEvaluator.primes.length; index += 1) {
+	      const prime = StringMathEvaluator.primes[index];
+	      if (prime >= denominator) break;
+	      if (numerator % prime === 0 && denominator % prime === 0) {
+	        numerator = numerator / prime;
+	        denominator = denominator / prime;
+	        reduced = true;
+	        break;
+	      }
+	    }
+	  }
+	  if (numerator === 0) {
+	    return '';
+	  }
+	  return `${numerator}/${denominator}`;
+	}
+	
+	StringMathEvaluator.parseFraction = function (str) {
+	  const regObj = regexToObject(str, StringMathEvaluator.regex, null, 'integer', null, 'numerator', 'denominator');
+	  regObj.integer = Number.parseInt(regObj.integer) || 0;
+	  regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	  regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	  if(regObj.denominator === 0) {
+	    regObj.numerator = 0;
+	    regObj.denominator = 1;
+	  }
+	  regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	  return regObj;
+	}
+	
+	StringMathEvaluator.toFraction = function (decimal, accuracy) {
+	  if (decimal === NaN) return NaN;
+	  accuracy = accuracy || '1/1000'
+	  const fracObj = StringMathEvaluator.parseFraction(accuracy);
+	  const denominator = fracObj.denominator;
+	  if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	    throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	  }
+	  let remainder = decimal;
+	  let currRemainder = remainder;
+	  let value = 0;
+	  let numerator = 0;
+	  while (currRemainder > 0) {
+	    numerator += fracObj.numerator;
+	    currRemainder -= fracObj.decimal;
+	  }
+	  const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
+	  const diff2 = (numerator / denominator) - decimal;
+	  numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	  const integer = Math.floor(numerator / denominator);
+	  numerator = numerator % denominator;
+	  const fraction = StringMathEvaluator.reduce(numerator, denominator);
+	  return (integer && fraction ? `${integer} ${fraction}` :
+	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
+	}
+	
+	try {
+	  module.exports = StringMathEvaluator;
+	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/request.js',
+function (require, exports, module) {
+	
+
+	Request = {
+	    onStateChange: function (success, failure, id) {
+	      return function () {
+	        if (this.readyState === 4) {
+	          if (this.status == 200) {
+	            try {
+	              resp = JSON.parse(this.responseText);
+	            } catch (e){
+	              resp = this.responseText;
+	            }
+	            if (success) {
+	              success(resp, this);
+	            }
+	          } else if (failure) {
+	            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
+	            if (errorMsgMatch) {
+	              this.errorMsg = errorMsgMatch[1].trim();
+	            }
+	            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
+	            if (errorCodeMatch) {
+	              this.errorCode = errorCodeMatch[1];
+	
+	            }
+	            failure(this);
+	          }
+	          var resp = this.responseText;
+	        }
+	      }
+	    },
+	
+	    id: function (url, method) {
+	      return `request.${method}.${url.replace(/\./g, ',')}`;
+	    },
+	
+	    get: function (url, success, failure) {
+	      const xhr = new Request.xmlhr();
+	      xhr.open("GET", url, true);
+	      const id = Request.id(url, 'GET');
+	      xhr.setRequestHeader('Content-Type', 'text/pdf');
+	      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+	      Request.setGlobalHeaders(xhr);
+	      if (success === undefined && failure === undefined) return xhr;
+	      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	      xhr.send();
+	      return xhr;
+	    },
+	
+	    hasBody: function (method) {
+	      return function (url, body, success, failure) {
+	        const xhr = new Request.xmlhr();
+	        xhr.open(method, url, true);
+	        const id = Request.id(url, method);
+	        xhr.setRequestHeader('Content-Type', 'application/json');
+	        Request.setGlobalHeaders(xhr);
+	        if (success === undefined && failure === undefined) return xhr;
+	        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	        xhr.send(JSON.stringify(body));
+	        return xhr;
+	      }
+	    },
+	
+	    post: function () {return Request.hasBody('POST')(...arguments)},
+	    delete: function () {return Request.hasBody('DELETE')(...arguments)},
+	    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
+	    head: function () {return Request.hasBody('HEAD')(...arguments)},
+	    put: function () {return Request.hasBody('PUT')(...arguments)},
+	    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
+	}
+	
+	Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
+	Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
+	const globalHeaders = {};
+	Request.globalHeader = (header, funcOval) => {
+	  globalHeaders[header] = funcOval;
+	}
+	Request.setGlobalHeaders = (xhr) => {
+	  const headers = Object.keys(globalHeaders);
+	  headers.forEach((header) => {
+	    const value = (typeof globalHeaders[header]) === 'function' ? globalHeaders[header]() : globalHeaders[header];
+	    xhr.setRequestHeader(header, value, xhr);
+	  });
+	}
+	try {
+	  Request.xmlhr = XMLHttpRequest;
+	} catch (e) {
+	  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
+	}
+	
+	try {
+	  module.exports = Request;
+	} catch (e) {}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/parse-arguments.js',
+function (require, exports, module) {
+	const trueReg = /^true$/;
+	const falseReg = /^false$/;
+	const numberReg = /^[0-9]{1,}$/;
+	const arrayReg = /^(.*[,].*(,|)){1,}$/;
+	
+	function getValue(str) {
+	  if (str === '') return undefined;
+	  if (str.match(trueReg)) return true;
+	  if (str.match(falseReg)) return false;
+	  if (str.match(numberReg)) return Number.parseInt(str);
+	  if (str.match(arrayReg)) {
+	    const arr = [];
+	    const elems = str.split(',');
+	    for (let index = 0; index < elems.length; index += 1) {
+	      arr.push(getValue(elems[index]));
+	    }
+	    return arr;
+	  }
+	  return str;
+	}
+	
+	const valueRegex = /[A-Z.a-z]{1,}=.*$/;
+	function argParser() {
+	  for (let index = 2; index < process.argv.length; index += 1) {
+	    const arg = process.argv[index];
+	    if (arg.match(valueRegex)) {
+	      const varName = arg.split('=', 1)[0];
+	      const valueStr = arg.substr(varName.length + 1);
+	      global[varName] = getValue(valueStr.trim());
+	    }
+	  }
+	}
+	
+	global.__basedir = __dirname;
+	argParser();
 	
 });
 
@@ -8329,999 +9123,6 @@ const frag = document.createDocumentFragment();
 });
 
 
-RequireJS.addFunction('../../public/js/utils/endpoints.js',
-function (require, exports, module) {
-	
-class Endpoints {
-	  constructor(config, host) {
-	    const instance = this;
-	    let environment;
-	
-	    if ((typeof config) !== 'object') {
-	      host = config;
-	      config = Endpoints.defaultConfig;
-	    }
-	
-	    host = host || '';
-	    this.setHost = (newHost) => {
-	      if ((typeof newHost) === 'string') {
-	        if (config._envs[newHost]) environment = newHost;
-	        host = config._envs[newHost] || newHost;
-	      }
-	    };
-	    this.setHost(host);
-	    this.getHost = (env) => env === undefined ? host : config._envs[env];
-	    this.getEnv = () => environment;
-	
-	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
-	    this.getFuncObj = function () {return endPointFuncs;};
-	
-	
-	    function build(str) {
-	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
-	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
-	      return function () {
-	        let values = [];
-	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
-	          values = arguments;
-	        } else {
-	          const obj = arguments[0];
-	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
-	        }
-	        let endpoint = '';
-	        for (let index = 0; index < pieces.length; index += 1) {
-	          const arg = values[index];
-	          let value = '';
-	          if (index < pieces.length - 1) {
-	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
-	          }
-	          endpoint += pieces[index] + value;
-	        }
-	        return `${host}${endpoint}`;
-	      }
-	    }
-	
-	    function configRecurse(currConfig, currFunc) {
-	      const keys = Object.keys(currConfig);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        const value = currConfig[key];
-	        if (key.indexOf('_') !== 0) {
-	          if (value instanceof Object) {
-	            currFunc[key] = {};
-	            configRecurse(value, currFunc[key]);
-	          } else {
-	            currFunc[key] = build(value);
-	          }
-	        } else {
-	          currFunc[key] = value;
-	        }
-	      }
-	    }
-	
-	    configRecurse(config, endPointFuncs);
-	  }
-	}
-	
-	module.exports = Endpoints;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/expression-definition.js',
-function (require, exports, module) {
-	
-
-	
-	
-	let idCount = 0;
-	class ExprDef {
-	  constructor(name, options, notify, stages, alwaysPossible) {
-	    this.id = idCount++;
-	    let id = this.id;
-	    let string;
-	    let modified = '';
-	    let start;
-	    let end;
-	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
-	    stages = stages ? stages : {};
-	    let currStage = stages;
-	
-	    function getRoutes(prefix, stage) {
-	      let routes = [];
-	      let keys = Object.keys(stage);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        if (key !== '_meta') {
-	          let newPrefix;
-	          if (prefix) {
-	            newPrefix = `${prefix}.${key}`;
-	          } else {
-	            newPrefix = key;
-	          }
-	          const deepRoutes = getRoutes(newPrefix, stage[key]);
-	          if (deepRoutes.length > 0) {
-	            routes = routes.concat(deepRoutes);
-	          }
-	          if (stage[key]._meta && stage[key]._meta.end) {
-	            routes.push(newPrefix + '.end');
-	          }
-	          if (stage[key]._meta && stage[key]._meta.repeat) {
-	            routes.push(newPrefix + '.repeat');
-	          }
-	        }
-	      }
-	      return routes;
-	    }
-	
-	    this.always = function () {
-	      for (let index = 0; index < arguments.length; index += 1) {
-	        alwaysPossible.push(arguments[index]);
-	      }
-	    };
-	    this.getAlways = function (exprDef) {return alwaysPossible;};
-	
-	    this.allRoutes = function () {
-	      return getRoutes(null, stages);
-	    }
-	
-	    function getNotice (exprDef) {
-	      let isInAlways = false;
-	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
-	      if (isInAlways) return;
-	      if (!exprDef.closed()) {
-	        if (currStage[exprDef.getName()] === undefined) {
-	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
-	        }
-	        currStage = currStage[exprDef.getName()];
-	      }
-	    }
-	    this.getNotice = getNotice;
-	
-	    function getName () {return name;};
-	    this.getName = getName;
-	    this.onClose = function (start, end) {
-	      return function (str, start, end) {
-	        if (notify) notify(this);
-	        options.onClose(str, start, end);
-	      }
-	    }
-	
-	    function setMeta(targetNodes, attr, value) {
-	      return function () {
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          targetNodes[lIndex]._meta[attr] = value;
-	        }
-	      }
-	    }
-	
-	    function then (targetNodes) {
-	      return function () {
-	        const createdNodes = [];
-	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
-	          const targetNode = targetNodes[lIndex];
-	          for (let index = 0; index < arguments.length; index += 1) {
-	            const exprDef = arguments[index];
-	            if (!exprDef instanceof ExprDef) {
-	              throw new Error(`Argument is not an instanceof ExprDef`);
-	            }
-	            const nextExpr = exprDef.clone(getNotice);
-	            if (targetNode[nextExpr.getName()] === undefined) {
-	              targetNode[nextExpr.getName()] = {
-	                _meta: {
-	                  expr: nextExpr
-	                }
-	              };
-	            }
-	            createdNodes.push(targetNode[nextExpr.getName()]);
-	          }
-	        }
-	        return {
-	          then: then(createdNodes),
-	          repeat: setMeta(createdNodes, 'repeat', true),
-	          end: setMeta(createdNodes, 'end', true),
-	        };
-	      }
-	    }
-	
-	    this.if = function () {return then([stages]).apply(this, arguments);}
-	
-	    function isEscaped(str, index) {
-	      if (options.escape === undefined) {
-	        return false;
-	      }
-	      let count = -1;
-	      let firstIndex, secondIndex;
-	      do {
-	        count += 1;
-	        firstIndex = index - (options.escape.length * (count + 1));
-	        secondIndex = options.escape.length;
-	      } while (str.substr(firstIndex, secondIndex) === options.escape);
-	      return count % 2 == 0;
-	    }
-	
-	    function foundCall(onFind, sub) {
-	      if ((typeof notify) === 'function') {
-	        notify(this);
-	      }
-	      if ((typeof onFind) === 'function') {
-	        return onFind(sub);
-	      } else {
-	        return sub;
-	      }
-	    }
-	
-	    this.find = function (str, index) {
-	      let startedThisCall = false;
-	      let needle = options.closing;
-	      let starting = false;
-	      if (start === undefined) {
-	        needle = options.opening;
-	        starting = true;
-	      }
-	      const sub = str.substr(index);
-	      let needleLength;
-	      if (needle instanceof RegExp) {
-	        const match = sub.match(needle);
-	        if (match && match.index === 0) {
-	          needleLength = match[0].length;
-	        }
-	      } else if ((typeof needle) === 'string') {
-	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
-	          needleLength = needle.length;
-	      } else if (needle === undefined || needle === null) {
-	        needleLength = 0;
-	      } else {
-	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
-	      }
-	      needleLength += options.tailOffset ? options.tailOffset : 0;
-	      let changes = '';
-	      if (start === undefined && starting && (needleLength || needle === null)) {
-	        string = str;
-	        start = index;
-	        startedThisCall = true;
-	        if (needle === null) {
-	          if ((typeof notify) === 'function') {
-	            notify(this);
-	          }          return {index, changes}
-	        } else {
-	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
-	        }
-	      }
-	      if ((!startedThisCall && needleLength) ||
-	            (startedThisCall && options.closing === undefined) ||
-	            (!startedThisCall && options.closing === null)) {
-	        if (str !== string) {
-	          throw new Error ('Trying to apply an expression to two different strings.');
-	        }
-	        end = index + needleLength;
-	        if (options.closing === null) {
-	          return {index, changes}
-	        }
-	        if (!startedThisCall) {
-	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
-	        }
-	        return { index: end, changes };
-	      }
-	
-	      return start !== undefined ? { index: start + needleLength, changes } :
-	                      { index: -1, changes };
-	    }
-	
-	    this.clone = function (notify) {
-	      return new ExprDef(name, options, notify, stages, alwaysPossible);
-	    };
-	    this.name = this.getName();
-	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
-	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
-	    this.location = function () {return {start, end, length: end - start}};
-	    this.closed = function () {return end !== undefined;}
-	    this.open = function () {return start !== undefined;}
-	    this.next =  function () {
-	      const expressions = [];
-	      if (currStage._meta && currStage._meta.repeat) {
-	        currStage = stages;
-	      }
-	      Object.values(currStage).map(
-	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
-	      )
-	      return alwaysPossible.concat(expressions);
-	    };
-	  }
-	}
-	
-	function parse(exprDef, str) {
-	  exprDef = exprDef.clone();
-	  let index = 0;
-	  let modified = '';
-	  const breakDown = [];
-	  const stack = [];
-	
-	  function topOfStack() {
-	    return stack[stack.length - 1];
-	  }
-	
-	  function closeCheck(exprDef) {
-	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
-	      let result = exprDef.find(str, index);
-	      if (result.index) {
-	        modified += result.changes;
-	        return result.index;
-	      }
-	    }
-	  }
-	
-	  function checkArray(exprDef, array) {
-	    if (exprDef.endDefined()) {
-	      let nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
-	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
-	      const result = childExprDef.find(str, index);
-	      if (result.index !== -1) {
-	        modified += result.changes;
-	        if (childExprDef.closed()) {
-	          breakDown.push(childExprDef);
-	        } else {
-	          stack.push(childExprDef);
-	        }
-	        return result.index;
-	      }
-	    }
-	    if (exprDef.canEnd()) {
-	      nextIndex = closeCheck(exprDef);
-	      if (nextIndex) return nextIndex;
-	    }
-	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
-	  }
-	
-	  function open(exprDef, index) {
-	    const always = exprDef.getAlways();
-	    while (!exprDef.open()) {
-	      let result = exprDef.find(str, index);
-	      modified += result.changes;
-	      if(result.index === -1) {
-	        let newIndex = checkArray(exprDef, always);
-	        index = newIndex;
-	      } else {
-	        if (exprDef.closed()) {
-	          breakDown.push(exprDef);
-	        } else {
-	          stack.push(exprDef);
-	        }
-	        index = result.index;
-	      }
-	    }
-	    return index;
-	  }
-	
-	  let loopCount = 0;
-	  index = open(exprDef, index);
-	  progress = [-3, -2, -1];
-	  while (topOfStack() !== undefined) {
-	    const tos = topOfStack();
-	    if (progress[0] === index) {
-	      throw new Error(`ExprDef stopped making progress`);
-	    }
-	    let stackIds = '';
-	    let options = '';
-	    stack.map(function (value) {stackIds+=value.getName() + ','});
-	    tos.next().map(function (value) {options+=value.getName() + ','})
-	    index = checkArray(tos, tos.next());
-	    if (tos.closed()) {
-	      stack.pop();
-	    }
-	    loopCount++;
-	  }
-	  // if (index < str.length) {
-	  //   throw new Error("String not fully read");
-	  // }
-	  return modified;
-	}
-	
-	
-	ExprDef.parse = parse;
-	
-	module.exports = ExprDef;
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/$t.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const CustomEvent = require('./custom-event');
-	const ExprDef = require('./expression-definition');
-	
-	class $t {
-		constructor(template, id, selector) {
-			if (selector) {
-				const afterRenderEvent = new CustomEvent('afterRender');
-				const beforeRenderEvent = new CustomEvent('beforeRender');
-			}
-	
-			function varReg(prefix, suffix) {
-			  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
-			  prefix = prefix ? prefix : '';
-			  suffix = suffix ? suffix : '';
-			  return new RegExp(`${prefix}${vReg}${suffix}`)
-			};
-	
-			function replace(needleRegEx, replaceStr, exceptions) {
-			  return function (sub) {
-			    if (!exceptions || exceptions.indexOf(sub) === -1) {
-			      return sub.replace(needleRegEx, replaceStr)
-			    } else {
-			      return sub;
-			    }
-			  }
-			}
-	
-			const signProps = {opening: /([-+\!])/};
-			const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
-			const ternaryProps = {opening: /\?/};
-			const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-			const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
-			const commaProps = {opening: /,/};
-			const colonProps = {opening: /:/};
-			const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
-			const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
-			const spaceProps = {opening: /\s{1}/};
-			const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};
-			const objectProps = {opening: '{', closing: '}'};
-			const objectLabelProps = {opening: varReg(null, '\\:')};
-			const groupProps = {opening: /\(/, closing: /\)/};
-			const expressionProps = {opening: null, closing: null};
-			const attrProps = {opening: varReg('(\\.', '){1,}')};
-	
-			// const funcProps = {
-			//   opening: varReg(null, '\\('),
-			//   onOpen: replace(varReg(null, '\\('), 'get("$1")('),
-			//   closing: /\)/
-			// };
-			const arrayProps = {
-			  opening: varReg(null, '\\['),
-			  onOpen: replace(varReg(null, '\\['), 'get("$1")['),
-			  closing: /\]/
-			};
-			const funcRefProps = {
-				opening: /\[|\(/,
-				closing: /\]|\)/
-			};
-			const memberRefProps = {
-				opening: varReg('\\.', ''),
-			};
-			const variableProps = {
-			  opening: varReg(),
-			  onOpen: replace(varReg(), 'get("$1")'),
-			};
-			const objectShorthandProps = {
-			  opening: varReg(),
-			  onOpen: replace(varReg(), '$1: get("$1")'),
-			};
-	
-	
-			const expression = new ExprDef('expression', expressionProps);
-			const ternary = new ExprDef('ternary', ternaryProps);
-			const relational = new ExprDef('relational', relationalProps);
-			const comma = new ExprDef('comma', commaProps);
-			const colon = new ExprDef('colon', colonProps);
-			const attr = new ExprDef('attr', attrProps);
-			// const func = new ExprDef('func', funcProps);
-			const funcRef = new ExprDef('funcRef', funcRefProps);
-			const memberRef = new ExprDef('memberRef', memberRefProps);
-			const string = new ExprDef('string', stringProps);
-			const space = new ExprDef('space', spaceProps);
-			const keyWord = new ExprDef('keyWord', keyWordProps);
-			const group = new ExprDef('group', groupProps);
-			const object = new ExprDef('object', objectProps);
-			const array = new ExprDef('array', arrayProps);
-			const number = new ExprDef('number', numberProps);
-			const multiplier = new ExprDef('multiplier', multiplierProps);
-			const sign = new ExprDef('sign', signProps);
-			const ignore = new ExprDef('ignore', ignoreProps);
-			const variable = new ExprDef('variable', variableProps);
-			const objectLabel = new ExprDef('objectLabel', objectLabelProps);
-			const objectShorthand = new ExprDef('objectShorthand', objectShorthandProps);
-	
-			expression.always(space, ignore, keyWord);
-			expression.if(string, number, group, array, variable, funcRef, memberRef)
-			      .then(multiplier, sign, relational, group)
-			      .repeat();
-			expression.if(string, group, array, variable, funcRef, memberRef)
-						.then(attr)
-			      .then(multiplier, sign, relational, expression, funcRef, memberRef)
-						.repeat();
-			expression.if(string, group, array, variable, funcRef, memberRef)
-						.then(attr)
-						.end();
-	
-			funcRef.if(expression).then(comma).repeat();
-			funcRef.if(expression).end();
-			memberRef.if(expression).then(comma).repeat();
-			memberRef.if(expression).end();
-	
-			expression.if(sign)
-			      .then(expression)
-			      .then(multiplier, sign, relational, group)
-			      .repeat();
-			expression.if(string, number, group, array, variable)
-			      .then(ternary)
-			      .then(expression)
-			      .then(colon)
-			      .then(expression)
-			      .end();
-			expression.if(ternary)
-			      .then(expression)
-			      .then(colon)
-			      .then(expression)
-			      .end();
-			expression.if(object, string, number, group, array, variable)
-			      .end();
-			expression.if(sign)
-			      .then(number)
-			      .end();
-	
-			object.always(space, ignore, keyWord);
-			object.if(objectLabel).then(expression).then(comma).repeat();
-			object.if(objectShorthand).then(comma).repeat();
-			object.if(objectLabel).then(expression).end();
-			object.if(objectShorthand).end();
-	
-			group.always(space, ignore, keyWord);
-			group.if(expression).then(comma).repeat();
-			group.if(expression).end();
-	
-			array.always(space, ignore, keyWord);
-			array.if(expression).then(comma).repeat();
-			array.if(expression).end();
-	
-			function getter(scope, parentScope) {
-				parentScope = parentScope || function () {return undefined};
-				function get(name) {
-					if (name === 'scope') return scope;
-					const split = new String(name).split('.');
-					let currObj = scope;
-					for (let index = 0; currObj != undefined && index < split.length; index += 1) {
-						currObj = currObj[split[index]];
-					}
-					if (currObj !== undefined) return currObj;
-					const parentScopeVal = parentScope(name);
-					if (parentScopeVal !== undefined) return parentScopeVal;
-	        else {
-	          const globalVal = $t.global(name);
-	          return globalVal === undefined ? '' : globalVal;
-	        }
-				}
-				return get;
-			}
-	
-			function defaultArray(elemName, get) {
-				let resp = '';
-				for (let index = 0; index < get('scope').length; index += 1) {
-					if (elemName) {
-						const obj = {};
-	          obj.$index = index;
-						obj[elemName] = get(index);
-						resp += new $t(template).render(obj, undefined, get);
-					} else {
-						resp += new $t(template).render(get(index), undefined, get);
-					}
-				}
-				return `${resp}`;
-			}
-	
-			function arrayExp(varName, get) {
-				varName = varName.trim();
-				const array = get('scope');
-				let built = '';
-				for (let index = 0; index < array.length; index += 1) {
-					const obj = {};
-					obj[varName] = array[index];
-					obj.$index = index;
-					built += new $t(template).render(obj, undefined, get);
-				}
-				return built;
-			}
-	
-			function itOverObject(varNames, get) {
-				const match = varNames.match($t.objectNameReg);
-				const keyName = match[1];
-				const valueName = match[2];
-				const obj = get('scope');
-				const keys = Object.keys(obj);
-				const isArray = Array.isArray(obj);
-				let built = '';
-				for (let index = 0; index < keys.length; index += 1) {
-					const key = keys[index];
-					if (!isArray || key.match(/^[0-9]{1,}$/)) {
-						const childScope = {};
-						childScope[keyName] = key;
-						childScope[valueName] = obj[key];
-						childScope.$index = index;
-						built += new $t(template).render(childScope, undefined, get);
-					}
-				}
-	      return built;
-			}
-	
-			function rangeExp(elemName, rangeItExpr, get) {
-				const match = rangeItExpr.match($t.rangeItExpReg);
-				let startIndex = match[1].match(/^[0-9]{1,}$/) ?
-							match[1] : get(match[1]);
-				let endIndex = match[2].match(/^[0-9]*$/) ?
-							match[2] : get(match[2]);
-				if (((typeof startIndex) !== 'string' &&
-								(typeof	startIndex) !== 'number') ||
-									(typeof endIndex) !== 'string' &&
-									(typeof endIndex) !== 'number') {
-										throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
-				}
-	
-				try {
-					startIndex = Number.parseInt(startIndex);
-				} catch (e) {
-					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
-				}
-				try {
-					endIndex = Number.parseInt(endIndex);
-				} catch (e) {
-					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
-				}
-	
-				let index = startIndex;
-				let built = '';
-				while (true) {
-					let increment = 1;
-					if (startIndex > endIndex) {
-						if (index <= endIndex) {
-							break;
-						}
-						increment = -1;
-					} else if (index >= endIndex) {
-						break;
-					}
-					const obj = {$index: index};
-					obj[elemName] = index;
-					built += new $t(template).render(obj, undefined, get);
-					index += increment;
-				}
-				return built;
-			}
-	
-			function evaluate(get) {
-				if ($t.functions[id]) {
-					try {
-						return $t.functions[id](get, $t);
-					} catch (e) {
-					  console.error(e);
-					}
-				} else {
-					return eval($t.templates[id])
-				}
-			}
-	
-			function type(scope, expression) {
-				if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
-					if (scope.match($t.rangeItExpReg)) {
-						return 'rangeExp'
-					}
-					return 'rangeExpFormatError';
-				} else if (Array.isArray(scope)) {
-					if (expression === undefined) {
-						return 'defaultArray';
-					} else if (expression.match($t.nameScopeExpReg)) {
-						return 'nameArrayExp';
-					}
-				}
-	
-				if ((typeof scope) === 'object') {
-					if (expression === undefined) {
-						return 'defaultObject';
-					} else if (expression.match($t.objectNameReg)){
-						return 'itOverObject';
-					} else if (expression.match($t.arrayNameReg)){
-						return 'arrayExp';
-					} else {
-						return 'invalidObject';
-					}
-				} else {
-					return 'defaultObject';
-				}
-			}
-	
-			// TODO: itExp is not longer an iteration expression. fix!!!!
-			function render(scope, itExp, parentScope) {
-	      if (scope === undefined) return '';
-				let rendered = '';
-				const get = getter(scope, parentScope);
-				switch (type(scope, itExp)) {
-					case 'rangeExp':
-						rendered = rangeExp(itExp, scope, get);
-						break;
-					case 'rangeExpFormatError':
-						throw new Error(`Invalid range itteration expression "${scope}"`);
-					case 'defaultArray':
-						rendered = defaultArray(itExp, get);
-						break;
-					case 'nameArrayExp':
-						rendered = defaultArray(itExp, get);
-						break;
-					case 'arrayExp':
-						rendered = arrayExp(itExp, get);
-						break;
-					case 'invalidArray':
-						throw new Error(`Invalid iterative expression for an array "${itExp}"`);
-					case 'defaultObject':
-						rendered = evaluate(get);
-						break;
-					case 'itOverObject':
-						rendered = itOverObject(itExp, get);
-						break;
-					case 'invalidObject':
-						throw new Error(`Invalid iterative expression for an object "${itExp}"`);
-					default:
-						throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
-				}
-	
-	      if (selector) {
-	        const elem = document.querySelector(selector);
-	        if (elem !== null) {
-	          beforeRenderEvent.trigger();
-	          elem.innerHTML = rendered;
-	          afterRenderEvent.trigger();
-	        }
-	      }
-				return rendered;
-			}
-	
-	
-	//---------------------  Compile Functions ---------------//
-	
-			function stringHash(string) {
-				let hashString = string;
-				let hash = 0;
-				for (let i = 0; i < hashString.length; i += 1) {
-					const character = hashString.charCodeAt(i);
-					hash = ((hash << 5) - hash) + character;
-					hash &= hash; // Convert to 32bit integer
-				}
-				return hash;
-			}
-	
-			function isolateBlocks(template) {
-				let inBlock = false;
-				let openBracketCount = 0;
-				let block = '';
-				let blocks = [];
-				let str = template;
-				for (let index = 0; index < str.length; index += 1) {
-					if (inBlock) {
-						block += str[index];
-					}
-					if (!inBlock && index > 0 &&
-						str[index] == '{' && str[index - 1] == '{') {
-						inBlock = true;
-					} else if (inBlock && str[index] == '{') {
-						openBracketCount++;
-					} else if (openBracketCount > 0 && str[index] == '}') {
-						openBracketCount--;
-					} else if (str[index + 1] == '}' && str[index] == '}' ) {
-						inBlock = false;
-						blocks.push(`${block.substr(0, block.length - 1)}`);
-						block = '';
-					}
-				}
-				return blocks;
-			}
-	
-			function compile() {
-				const blocks = isolateBlocks(template);
-				let str = template;
-				for (let index = 0; index < blocks.length; index += 1) {
-					const block = blocks[index];
-					const parced = ExprDef.parse(expression, block);
-					str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
-				}
-				return `\`${str}\``;
-			}
-	
-	
-					const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
-					function formatRepeat(string) {
-						// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
-						// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
-						let match;
-						while (match = string.match(repeatReg)) {
-							let tagContents = match[2] + match[8];
-	            let tagName = match[1];
-	            let varNames = match[6];
-	            let realScope = match[7];
-							let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-							let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
-							let scope = 'scope';
-							template = templateName !== tagContents ? templateName : template;
-							const t = eval(`new $t(\`${template}\`)`);
-	            let resolvedScope = "get('scope')";;
-	            try {
-	              // console.log('tagName', tagName);
-	              // console.log('varNames', varNames);
-	              // console.log('realScope', realScope);
-	              // console.log('tagContents', tagContents);
-								if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
-	                resolvedScope = `'${realScope}'`;
-	              } else {
-	                resolvedScope = ExprDef.parse(expression, realScope);
-	              }
-	            } catch (e) {}
-	            string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
-						}
-						return string;
-					}
-	
-			if (id) {
-				$t.templates[id] = undefined;
-				$t.functions[id] = undefined;
-			}
-	
-			template = template.replace(/\s{1,}/g, ' ');
-			id = $t.functions[template] ? template : id || stringHash(template);
-			if (!$t.functions[id]) {
-				if (!$t.templates[id]) {
-					template = template.replace(/\s{2,}|\n/g, ' ');
-					template = formatRepeat(template);
-					$t.templates[id] = compile();
-				}
-			}
-			this.compiled = function () { return $t.templates[id];}
-			this.render = render;
-	    this.afterRender = (func) => afterRenderEvent.on(func);
-	    this.beforeRender = (func) => beforeRenderEvent.on(func);
-			this.type = type;
-			this.isolateBlocks = isolateBlocks;
-	    this.id = () => id;
-		}
-	}
-	
-	$t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
-	$t.functions = {};
-	$t.loadFunctions = (functions) => {
-		Object.keys(functions).forEach((name) => {
-			$t.functions[name] = functions[name];
-		});
-	
-	}
-	$t.isTemplate = (id) => $t.functions[id] !== undefined;
-	$t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-	$t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-	$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
-	$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*\.\.\s*([a-z0-9A-Z]*)\s*$/;
-	$t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-	$t.quoteStr = function (str) {
-			str = str.replace(/\\`/g, '\\\\\\`')
-			str = str.replace(/([^\\])`/g, '$1\\\`')
-			return `\`${str.replace(/``/g, '`\\`')}\``;
-		}
-	$t.formatName = function (string) {
-	    function toCamel(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
-	    return string.replace(/([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g, toCamel);
-	}
-	$t.dumpTemplates = function (debug) {
-		let templateFunctions = '';
-		let tempNames = Object.keys($t.templates);
-		for (let index = 0; index < tempNames.length; index += 1) {
-			const tempName = tempNames[index];
-			if (tempName) {
-				let template = $t.templates[tempName];
-	      if (debug === true) {
-	        const endTagReg = /( \+) /g;
-	        template = template.replace(endTagReg, '$1\n\t\t');
-	      }
-				templateFunctions += `\nexports['${tempName}'] = (get, $t) => \n\t\t${template}\n`;
-			}
-		}
-		return templateFunctions;
-	}
-	
-	$t.clean = (val) => val === undefined ? '' : val;
-	
-	function createGlobalsInterface() {
-	  const GLOBALS = {};
-	  const isMotifiable = (name) => GLOBALS[name] === undefined ||
-	        GLOBALS[name].imutable !== 'true';
-	  $t.global = function (name, value, imutable) {
-	    if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
-	    if (isMotifiable(name)) GLOBALS[name] = {value, imutable};
-	  }
-	  $t.rmGlobal = function(name) {
-	    if (isMotifiable(name)) delete GLOBALS[name];
-	  }
-	}
-	createGlobalsInterface();
-	
-	module.exports = $t;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/custom-event-delay.js',
-function (require, exports, module) {
-	
-
-	
-	
-	class CustomEvent {
-	  constructor(name, delay) {
-	    if (delay === undefined) delay = 0;
-	    let triggerId = 0;
-	    const watchers = [];
-	    this.name = name;
-	
-	    let lastTriggerTime;
-	    let lastTriggerId;
-	    const runFuncs = (e, detail, tId) => {
-	      const time = new Date().getTime();
-	      if (lastTriggerId === tId ) {
-	        if (lastTriggerTime + delay < time) {
-	          watchers.forEach((func) => func(e, detail));
-	        } else {
-	          setTimeout(() => {
-	            runFuncs(e, detail, tId);
-	          }, delay);
-	        }
-	      }
-	    }
-	
-	    this.on = function (func) {
-	      if ((typeof func) === 'function') {
-	        watchers.push(func);
-	      } else {
-	        return 'on' + name;
-	      }
-	    }
-	
-	    this.trigger = function (element, detail) {
-	      element = element ? element : window;
-	      lastTriggerTime = new Date().getTime();
-	      const tId = triggerId + 1;
-	      triggerId += 1;
-	      lastTriggerId = tId;
-	      runFuncs(element, detail, tId);
-	      this.event.detail = detail;
-	      if(document.createEvent){
-	          element.dispatchEvent(this.event);
-	      } else {
-	          element.fireEvent("on" + this.event.eventType, this.event);
-	      }
-	    }
-	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-	    this.event;
-	    if(document.createEvent){
-	        this.event = document.createEvent("HTMLEvents");
-	        this.event.initEvent(name, true, true);
-	        this.event.eventName = name;
-	    } else {
-	        this.event = document.createEventObject();
-	        this.event.eventName = name;
-	        this.event.eventType = name;
-	    }
-	  }
-	}
-	
-	module.exports = CustomEvent;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/logic-tree.js',
 function (require, exports, module) {
 	
@@ -9890,999 +9691,405 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/measurement.js',
+RequireJS.addFunction('../../public/js/utils/endpoints.js',
 function (require, exports, module) {
 	
-  try {
-	    Lookup = require('./object/lookup');
-	    StringMathEvaluator = require('./string-math-evaluator');
-	  } catch(e) {}
-	
-	
-	function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	let units = [
-	  'Metric',
-	  'Imperial (US)'
-	]
-	let unit = units[1];
-	
-	
-	class Measurement extends Lookup {
-	  constructor(value, notMetric) {
-	    super();
-	    if ((typeof value) === 'string') {
-	      value += ' '; // Hacky fix for regularExpression
-	    }
-	
-	    const determineUnit = () => {
-	      if ((typeof notMetric === 'string')) {
-	        const index = units.indexOf(notMetric);
-	        if (index !== -1) return units[index];
-	      } else if ((typeof notMetric) === 'boolean') {
-	        if (notMetric === true) return unit;
-	      }
-	      return units[0];
-	    }
-	
-	    let decimal = 0;
-	    let nan = value === null || value === undefined;
-	    this.isNaN = () => nan;
-	
-	    const parseFraction = (str) => {
-	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
-	      regObj.integer = Number.parseInt(regObj.integer) || 0;
-	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	      if(regObj.denominator === 0) {
-	        regObj.numerator = 0;
-	        regObj.denominator = 1;
-	      }
-	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	      return regObj;
-	    };
-	
-	    function reduce(numerator, denominator) {
-	      let reduced = true;
-	      while (reduced) {
-	        reduced = false;
-	        for (let index = 0; index < Measurement.primes.length; index += 1) {
-	          const prime = Measurement.primes[index];
-	          if (prime >= denominator) break;
-	          if (numerator % prime === 0 && denominator % prime === 0) {
-	            numerator = numerator / prime;
-	            denominator = denominator / prime;
-	            reduced = true;
-	            break;
-	          }
-	        }
-	      }
-	      if (numerator === 0) {
-	        return '';
-	      }
-	      return ` ${numerator}/${denominator}`;
-	    }
-	
-	    function fractionEquivalent(decimalValue, accuracy) {
-	      accuracy = accuracy || '1/32'
-	      const fracObj = parseFraction(accuracy);
-	      const denominator = fracObj.denominator;
-	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	      }
-	      let sign = decimalValue > 0 ? 1 : -1;
-	      let remainder = Math.abs(decimalValue);
-	      let currRemainder = remainder;
-	      let value = 0;
-	      let numerator = 0;
-	      while (currRemainder > 0) {
-	        numerator += fracObj.numerator;
-	        currRemainder -= fracObj.decimal;
-	      }
-	      const diff1 = decimalValue - ((numerator - fracObj.numerator) / denominator);
-	      const diff2 = (numerator / denominator) - decimalValue;
-	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	      const integer = sign * Math.floor(numerator / denominator);
-	      numerator = numerator % denominator;
-	      return {integer, numerator, denominator};
-	    }
-	
-	    this.fraction = (accuracy, standardDecimal) => {
-	      standardDecimal = standardDecimal || decimal;
-	      if (nan) return NaN;
-	      const obj = fractionEquivalent(standardDecimal, accuracy);
-	      if (obj.integer === 0 && obj.numerator === 0) return '0';
-	      const integer = obj.integer !== 0 ? obj.integer : '';
-	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
-	    }
-	    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
-	
-	    this.display = (accuracy) => {
-	      switch (unit) {
-	        case units[0]: return new String(this.decimal(10));
-	        case units[1]: return this.standardUS(accuracy);
-	        default:
-	            return this.standardUS(accuracy);
-	      }
-	    }
-	
-	    this.value = (accuracy) => this.decimal(accuracy);
-	
-	    this.decimal = (accuracy) => {
-	      if (nan) return NaN;
-	      accuracy = accuracy % 10 ? accuracy : 10000;
-	      return Math.round(decimal * accuracy) / accuracy;
-	    }
-	
-	    function getDecimalEquivalant(string) {
-	      string = string.trim();
-	      if (string.match(Measurement.decimalReg)) {
-	        return Number.parseFloat(string);
-	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
-	        return parseFraction(string).decimal
-	      }
-	      nan = true;
-	      return NaN;
-	    }
-	
-	    const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
-	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
-	
-	    function standardize(ambiguousDecimal) {
-	      switch (determineUnit()) {
-	        case units[0]:
-	          return ambiguousDecimal;
-	        case units[1]:
-	          return convertUsToMetric(ambiguousDecimal);
-	        default:
-	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
-	      }
-	    }
-	
-	    if ((typeof value) === 'number') {
-	      decimal = standardize(value);
-	    } else if ((typeof value) === 'string') {
-	      try {
-	        const ambiguousDecimal = getDecimalEquivalant(value);
-	        decimal = standardize(ambiguousDecimal);
-	      } catch (e) {
-	        nan = true;
-	      }
-	    } else {
-	      nan = true;
-	    }
-	  }
-	}
-	
-	Measurement.unit = (newUnit) => {
-	  for (index = 0; index < units.length; index += 1) {
-	    if (newUnit === units[index]) unit = newUnit;
-	  }
-	  return unit
-	};
-	Measurement.units = () => JSON.parse(JSON.stringify(units));
-	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
-	Measurement.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
-	
-	
-	Measurement.validation = function (range) {
-	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
-	  let min = obj.min.trim() !== '' ?
-	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
-	  let max = obj.max.trim() !== '' ?
-	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
-	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
-	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
-	  return function (value) {
-	    const decimal = new Measurement(value).decimal();
-	    if (decimal === NaN) return false;
-	    return minCheck(decimal) && maxCheck(decimal);
-	  }
-	}
-	
-	Measurement.decimal = (value) => {
-	  return new Measurement(value, true).decimal();
-	}
-	
-	Measurement.round = (value, percision) => {
-	  if (percision)
-	  return new Measurement(value).decimal(percision);
-	  return Math.round(value * 10000000) / 10000000;
-	}
-	
-	try {
-	  module.exports = Measurement;
-	} catch (e) {/* TODO: Consider Removing */}
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/parse-arguments.js',
-function (require, exports, module) {
-	const trueReg = /^true$/;
-	const falseReg = /^false$/;
-	const numberReg = /^[0-9]{1,}$/;
-	const arrayReg = /^(.*[,].*(,|)){1,}$/;
-	
-	function getValue(str) {
-	  if (str === '') return undefined;
-	  if (str.match(trueReg)) return true;
-	  if (str.match(falseReg)) return false;
-	  if (str.match(numberReg)) return Number.parseInt(str);
-	  if (str.match(arrayReg)) {
-	    const arr = [];
-	    const elems = str.split(',');
-	    for (let index = 0; index < elems.length; index += 1) {
-	      arr.push(getValue(elems[index]));
-	    }
-	    return arr;
-	  }
-	  return str;
-	}
-	
-	const valueRegex = /[A-Z.a-z]{1,}=.*$/;
-	function argParser() {
-	  for (let index = 2; index < process.argv.length; index += 1) {
-	    const arg = process.argv[index];
-	    if (arg.match(valueRegex)) {
-	      const varName = arg.split('=', 1)[0];
-	      const valueStr = arg.substr(varName.length + 1);
-	      global[varName] = getValue(valueStr.trim());
-	    }
-	  }
-	}
-	
-	global.__basedir = __dirname;
-	argParser();
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/request.js',
-function (require, exports, module) {
-	
-
-	Request = {
-	    onStateChange: function (success, failure, id) {
-	      return function () {
-	        if (this.readyState === 4) {
-	          if (this.status == 200) {
-	            try {
-	              resp = JSON.parse(this.responseText);
-	            } catch (e){
-	              resp = this.responseText;
-	            }
-	            if (success) {
-	              success(resp, this);
-	            }
-	          } else if (failure) {
-	            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
-	            if (errorMsgMatch) {
-	              this.errorMsg = errorMsgMatch[1].trim();
-	            }
-	            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
-	            if (errorCodeMatch) {
-	              this.errorCode = errorCodeMatch[1];
-	
-	            }
-	            failure(this);
-	          }
-	          var resp = this.responseText;
-	        }
-	      }
-	    },
-	
-	    id: function (url, method) {
-	      return `request.${method}.${url.replace(/\./g, ',')}`;
-	    },
-	
-	    get: function (url, success, failure) {
-	      const xhr = new Request.xmlhr();
-	      xhr.open("GET", url, true);
-	      const id = Request.id(url, 'GET');
-	      xhr.setRequestHeader('Content-Type', 'text/pdf');
-	      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
-	      Request.setGlobalHeaders(xhr);
-	      if (success === undefined && failure === undefined) return xhr;
-	      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
-	      xhr.send();
-	      return xhr;
-	    },
-	
-	    hasBody: function (method) {
-	      return function (url, body, success, failure) {
-	        const xhr = new Request.xmlhr();
-	        xhr.open(method, url, true);
-	        const id = Request.id(url, method);
-	        xhr.setRequestHeader('Content-Type', 'application/json');
-	        Request.setGlobalHeaders(xhr);
-	        if (success === undefined && failure === undefined) return xhr;
-	        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
-	        xhr.send(JSON.stringify(body));
-	        return xhr;
-	      }
-	    },
-	
-	    post: function () {return Request.hasBody('POST')(...arguments)},
-	    delete: function () {return Request.hasBody('DELETE')(...arguments)},
-	    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
-	    head: function () {return Request.hasBody('HEAD')(...arguments)},
-	    put: function () {return Request.hasBody('PUT')(...arguments)},
-	    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
-	}
-	
-	Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
-	Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
-	const globalHeaders = {};
-	Request.globalHeader = (header, funcOval) => {
-	  globalHeaders[header] = funcOval;
-	}
-	Request.setGlobalHeaders = (xhr) => {
-	  const headers = Object.keys(globalHeaders);
-	  headers.forEach((header) => {
-	    const value = (typeof globalHeaders[header]) === 'function' ? globalHeaders[header]() : globalHeaders[header];
-	    xhr.setRequestHeader(header, value, xhr);
-	  });
-	}
-	try {
-	  Request.xmlhr = XMLHttpRequest;
-	} catch (e) {
-	  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
-	}
-	
-	try {
-	  module.exports = Request;
-	} catch (e) {}
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/string-math-evaluator.js',
-function (require, exports, module) {
-	let FunctionCache;
-	try {
-	  FunctionCache = require('./services/function-cache.js');
-	} catch(e) {
-	
-	}
-	
-	function regexToObject (str, reg) {
-	  const match = str.match(reg);
-	  if (match === null) return null;
-	  const returnVal = {};
-	  for (let index = 2; index < arguments.length; index += 1) {
-	    const attr = arguments[index];
-	    if (attr) returnVal[attr] = match[index - 1];
-	  }
-	  return returnVal;
-	}
-	
-	class StringMathEvaluator {
-	  constructor(globalScope, resolver) {
-	    globalScope = globalScope || {};
+class Endpoints {
+	  constructor(config, host) {
 	    const instance = this;
-	    let splitter = '.';
+	    let environment;
 	
-	    function resolve (path, currObj, globalCheck) {
-	      if (path === '') return currObj;
-	      const resolved = !globalCheck && resolver && resolver(path, currObj);
-	      if (Number.isFinite(resolved)) return resolved;
-	      try {
-	        if ((typeof path) === 'string') path = path.split(splitter);
-	        for (let index = 0; index < path.length; index += 1) {
-	          currObj = currObj[path[index]];
-	        }
-	        if (currObj === undefined && !globalCheck) throw Error('try global');
-	        return currObj;
-	      }  catch (e) {
-	        if (!globalCheck) return resolve(path, globalScope, true);
-	      }
+	    if ((typeof config) !== 'object') {
+	      host = config;
+	      config = Endpoints.defaultConfig;
 	    }
 	
-	    function multiplyOrDivide (values, operands) {
-	      const op = operands[operands.length - 1];
-	      if (op === StringMathEvaluator.multi || op === StringMathEvaluator.div) {
-	        const len = values.length;
-	        values[len - 2] = op(values[len - 2], values[len - 1])
-	        values.pop();
-	        operands.pop();
-	      }
-	    }
-	
-	    const resolveArguments = (initialChar, func) => {
-	      return function (expr, index, values, operands, scope, path) {
-	        if (expr[index] === initialChar) {
-	          const args = [];
-	          let endIndex = index += 1;
-	          const terminationChar = expr[index - 1] === '(' ? ')' : ']';
-	          let terminate = false;
-	          let openParenCount = 0;
-	          while(!terminate && endIndex < expr.length) {
-	            const currChar = expr[endIndex++];
-	            if (currChar === '(') openParenCount++;
-	            else if (openParenCount > 0 && currChar === ')') openParenCount--;
-	            else if (openParenCount === 0) {
-	              if (currChar === ',') {
-	                args.push(expr.substr(index, endIndex - index - 1));
-	                index = endIndex;
-	              } else if (openParenCount === 0 && currChar === terminationChar) {
-	                args.push(expr.substr(index, endIndex++ - index - 1));
-	                terminate = true;
-	              }
-	            }
-	          }
-	
-	          for (let index = 0; index < args.length; index += 1) {
-	            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
-	            if (stringMatch) {
-	              args[index] = stringMatch[1];
-	            } else {
-	              args[index] =  instance.eval(args[index], scope);
-	            }
-	          }
-	          const state = func(expr, path, scope, args, endIndex);
-	          if (state) {
-	            values.push(state.value);
-	            return state.endIndex;
-	          }
-	        }
+	    host = host || '';
+	    this.setHost = (newHost) => {
+	      if ((typeof newHost) === 'string') {
+	        if (config._envs[newHost]) environment = newHost;
+	        host = config._envs[newHost] || newHost;
 	      }
 	    };
+	    this.setHost(host);
+	    this.getHost = (env) => env === undefined ? host : config._envs[env];
+	    this.getEnv = () => environment;
 	
-	    function chainedExpressions(expr, value, endIndex, path) {
-	      if (expr.length === endIndex) return {value, endIndex};
-	      let values = [];
-	      let offsetIndex;
-	      let valueIndex = 0;
-	      let chained = false;
-	      do {
-	        const subStr = expr.substr(endIndex);
-	        const offsetIndex = isolateArray(subStr, 0, values, [], value, path) ||
-	                            isolateFunction(subStr, 0, values, [], value, path) ||
-	                            (subStr[0] === '.' &&
-	                              isolateVar(subStr, 1, values, [], value));
-	        if (Number.isInteger(offsetIndex)) {
-	          value = values[valueIndex];
-	          endIndex += offsetIndex - 1;
-	          chained = true;
+	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
+	    this.getFuncObj = function () {return endPointFuncs;};
+	
+	
+	    function build(str) {
+	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
+	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
+	      return function () {
+	        let values = [];
+	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
+	          values = arguments;
+	        } else {
+	          const obj = arguments[0];
+	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
 	        }
-	      } while (offsetIndex !== undefined);
-	      return {value, endIndex};
-	    }
-	
-	    const isolateArray = resolveArguments('[',
-	      (expr, path, scope, args, endIndex) => {
-	        endIndex = endIndex - 1;
-	        let value = resolve(path, scope)[args[args.length - 1]];
-	        return chainedExpressions(expr, value, endIndex, '');
-	      });
-	
-	    const isolateFunction = resolveArguments('(',
-	      (expr, path, scope, args, endIndex) =>
-	          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
-	
-	    function isolateParenthesis(expr, index, values, operands, scope) {
-	      const char = expr[index];
-	      if (char === ')') throw new Error('UnExpected closing parenthesis');
-	      if (char === '(') {
-	        let openParenCount = 1;
-	        let endIndex = index + 1;
-	        while(openParenCount > 0 && endIndex < expr.length) {
-	          const currChar = expr[endIndex++];
-	          if (currChar === '(') openParenCount++;
-	          if (currChar === ')') openParenCount--;
-	        }
-	        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
-	        const len = endIndex - index - 2;
-	        values.push(instance.eval(expr.substr(index + 1, len), scope));
-	        multiplyOrDivide(values, operands);
-	        return endIndex;
-	      }
-	    };
-	
-	    function isolateOperand (char, operands) {
-	      if (char === ')') throw new Error('UnExpected closing parenthesis');
-	      switch (char) {
-	        case '*':
-	        operands.push(StringMathEvaluator.multi);
-	        return true;
-	        break;
-	        case '/':
-	        operands.push(StringMathEvaluator.div);
-	        return true;
-	        break;
-	        case '+':
-	        operands.push(StringMathEvaluator.add);
-	        return true;
-	        break;
-	        case '-':
-	        operands.push(StringMathEvaluator.sub);
-	        return true;
-	        break;
-	      }
-	      return false;
-	    }
-	
-	    function isolateValueReg(reg, resolver) {
-	      return function (expr, index, values, operands, scope) {
-	        const match = expr.substr(index).match(reg);
-	        let args;
-	        if (match) {
-	          let endIndex = index + match[0].length;
-	          let value = resolver(match[0], scope);
-	          if (!Number.isFinite(value)) {
-	            const state = chainedExpressions(expr, scope, endIndex, match[0]);
-	            if (state !== undefined) {
-	              value = state.value;
-	              endIndex = state.endIndex;
-	            }
+	        let endpoint = '';
+	        for (let index = 0; index < pieces.length; index += 1) {
+	          const arg = values[index];
+	          let value = '';
+	          if (index < pieces.length - 1) {
+	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
 	          }
-	          values.push(value);
-	          multiplyOrDivide(values, operands);
-	          return endIndex;
+	          endpoint += pieces[index] + value;
 	        }
+	        return `${host}${endpoint}`;
 	      }
 	    }
 	
-	    function convertFeetInchNotation(expr) {
-	      expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
-	      expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
-	      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
-	      return expr = expr.replace(StringMathEvaluator.multiMixedNumberReg, '($1+$2)') || expr;
-	    }
-	    function addUnexpressedMultiplicationSigns(expr) {
-	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
-	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
-	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
-	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
-	    }
-	
-	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
-	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
-	
-	    function evaluate(expr, scope, percision) {
-	      if (Number.isFinite(expr))
-	        return expr;
-	      expr = new String(expr);
-	      expr = addUnexpressedMultiplicationSigns(expr);
-	      expr = convertFeetInchNotation(expr);
-	      scope = scope || globalScope;
-	      const allowVars = (typeof scope) === 'object';
-	      let operands = [];
-	      let values = [];
-	      let prevWasOpperand = true;
-	      for (let index = 0; index < expr.length; index += 1) {
-	        const char = expr[index];
-	        if (prevWasOpperand) {
-	          try {
-	            let newIndex = isolateNumber(expr, index, values, operands, scope);
-	            if (!newIndex && isolateOperand(char, operands))
-	                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
-	            newIndex ||= isolateParenthesis(expr, index, values, operands, scope) ||
-	                (allowVars && isolateVar(expr, index, values, operands, scope));
-	            if (Number.isInteger(newIndex)) {
-	              index = newIndex - 1;
-	              prevWasOpperand = false;
-	            }
-	          } catch (e) {
-	            console.error(e);
-	            return NaN;
+	    function configRecurse(currConfig, currFunc) {
+	      const keys = Object.keys(currConfig);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = currConfig[key];
+	        if (key.indexOf('_') !== 0) {
+	          if (value instanceof Object) {
+	            currFunc[key] = {};
+	            configRecurse(value, currFunc[key]);
+	          } else {
+	            currFunc[key] = build(value);
 	          }
 	        } else {
-	          prevWasOpperand = isolateOperand(char, operands);
+	          currFunc[key] = value;
 	        }
 	      }
-	      if (prevWasOpperand) return NaN;
-	
-	      let value = values[0];
-	      for (let index = 0; index < values.length - 1; index += 1) {
-	        value = operands[index](values[index], values[index + 1]);
-	        values[index + 1] = value;
-	      }
-	
-	      if (Number.isFinite(value)) {
-	        value = value;
-	        return value;
-	      }
-	      return NaN;
 	    }
 	
-	    function evalObject(obj, scope) {
-	      const returnObj = Object.forEachConditional(obj, (value, key, object) => {
-	        value = evaluate(value, scope);
-	        if (!Number.isNaN(value)) object[key] = value;
-	      }, (value) => (typeof value) === 'string');
-	      return returnObj;
-	    }
-	
-	    this.eval = FunctionCache ? new FunctionCache(evaluate, this, 'sme') : evaluate;
-	    this.evalObject = FunctionCache ? new FunctionCache(evalObject, this, 'sme') : evalObject;
+	    configRecurse(config, endPointFuncs);
 	  }
 	}
 	
-	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
-	
-	const mixNumberRegStr = "([0-9]{1,})\\s{1,}(([0-9]{1,})\\/([0-9]{1,}))";
-	StringMathEvaluator.mixedNumberReg = new RegExp(`^${mixNumberRegStr}$`);
-	StringMathEvaluator.multiMixedNumberReg = new RegExp(mixNumberRegStr, 'g');///([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
-	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
-	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
-	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
-	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
-	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
-	const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
-	StringMathEvaluator.decimalReg = new RegExp(`^${decimalRegStr}`);///^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(\.|)|(\.)[0-9]{1,})/;
-	StringMathEvaluator.multiDecimalReg = new RegExp(decimalRegStr, 'g');
-	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
-	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
-	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
-	StringMathEvaluator.div = (n1, n2) => n1 / n2;
-	StringMathEvaluator.add = (n1, n2) => n1 + n2;
-	StringMathEvaluator.sub = (n1, n2) => n1 - n2;
-	
-	const npf = Number.parseFloat;
-	StringMathEvaluator.convert = {eqn: {}};
-	StringMathEvaluator.convert.metricToImperial = (value) => {
-	  value = npf(value);
-	  return value / 2.54;
-	}
-	
-	StringMathEvaluator.resolveMixedNumber = (value) => {
-	  const match = value.match(StringMathEvaluator.mixedNumberReg);
-	  if (match) {
-	    value = npf(match[1]) + (npf(match[3]) / npf(match[4]));
-	  }
-	  value = npf(value);
-	  return value;
-	}
-	
-	StringMathEvaluator.convert.imperialToMetric = (value) => {
-	  value = npf(value);
-	  return value * 2.54;
-	}
-	
-	StringMathEvaluator.convert.eqn.metricToImperial = (str) =>
-	  str.replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.metricToImperial);
-	
-	StringMathEvaluator.convert.eqn.imperialToMetric = (str) =>
-	  str.replace(StringMathEvaluator.multiMixedNumberReg, StringMathEvaluator.resolveMixedNumber)
-	  .replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.imperialToMetric);
-	
-	StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
-	
-	
-	StringMathEvaluator.reduce = function(numerator, denominator) {
-	  let reduced = true;
-	  while (reduced) {
-	    reduced = false;
-	    for (let index = 0; index < StringMathEvaluator.primes.length; index += 1) {
-	      const prime = StringMathEvaluator.primes[index];
-	      if (prime >= denominator) break;
-	      if (numerator % prime === 0 && denominator % prime === 0) {
-	        numerator = numerator / prime;
-	        denominator = denominator / prime;
-	        reduced = true;
-	        break;
-	      }
-	    }
-	  }
-	  if (numerator === 0) {
-	    return '';
-	  }
-	  return `${numerator}/${denominator}`;
-	}
-	
-	StringMathEvaluator.parseFraction = function (str) {
-	  const regObj = regexToObject(str, StringMathEvaluator.regex, null, 'integer', null, 'numerator', 'denominator');
-	  regObj.integer = Number.parseInt(regObj.integer) || 0;
-	  regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-	  regObj.denominator = Number.parseInt(regObj.denominator) || 0;
-	  if(regObj.denominator === 0) {
-	    regObj.numerator = 0;
-	    regObj.denominator = 1;
-	  }
-	  regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
-	  return regObj;
-	}
-	
-	StringMathEvaluator.toFraction = function (decimal, accuracy) {
-	  if (decimal === NaN) return NaN;
-	  accuracy = accuracy || '1/1000'
-	  const fracObj = StringMathEvaluator.parseFraction(accuracy);
-	  const denominator = fracObj.denominator;
-	  if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
-	    throw new Error('Please enter a fraction with a denominator between (0, 1000]')
-	  }
-	  let remainder = decimal;
-	  let currRemainder = remainder;
-	  let value = 0;
-	  let numerator = 0;
-	  while (currRemainder > 0) {
-	    numerator += fracObj.numerator;
-	    currRemainder -= fracObj.decimal;
-	  }
-	  const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
-	  const diff2 = (numerator / denominator) - decimal;
-	  numerator -= diff1 < diff2 ? fracObj.numerator : 0;
-	  const integer = Math.floor(numerator / denominator);
-	  numerator = numerator % denominator;
-	  const fraction = StringMathEvaluator.reduce(numerator, denominator);
-	  return (integer && fraction ? `${integer} ${fraction}` :
-	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
-	}
-	
-	try {
-	  module.exports = StringMathEvaluator;
-	} catch (e) {/* TODO: Consider Removing */}
+	module.exports = Endpoints;
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/tolerance-map.js',
+RequireJS.addFunction('../../public/js/utils/expression-definition.js',
 function (require, exports, module) {
 	
-const Tolerance = require('tolerance');
+
 	
-	function sortByAttr(attr) {
-	  function sort(obj1, obj2) {
-	    if (obj2[attr] === obj1[attr]) {
-	      return 0;
-	    }
-	    return obj2[attr]() < obj1[attr]() ? 1 : -1;
-	  }
-	  return sort;
-	}
 	
-	class ToleranceMap {
-	  constructor(attributeMap, toleranceMap) {
-	    const map = toleranceMap || {};
-	    const tolerance = new Tolerance(attributeMap);
-	    const finalAttrSort = sortByAttr(tolerance.finalAttr());
+	let idCount = 0;
+	class ExprDef {
+	  constructor(name, options, notify, stages, alwaysPossible) {
+	    this.id = idCount++;
+	    let id = this.id;
+	    let string;
+	    let modified = '';
+	    let start;
+	    let end;
+	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
+	    stages = stages ? stages : {};
+	    let currStage = stages;
 	
-	    this.clone = () => {
-	      const tMap = new ToleranceMap(attributeMap);
-	      this.forEach(value => tMap.add(value));
-	      return tMap;
-	    }
-	    function forEachSet(func, node, attrs, attrIndex) {
-	      if ((typeof func) !== 'function') throw new Error('Arg1 must be of type function');
-	      if (Array.isArray(node)) {
-	        func(node);
-	        return;
-	      }
-	      if (attrs && !node) return;
-	      attrs ||= tolerance.attributes();
-	      node ||= map;
-	      attrIndex ||= 0;
-	      const keys = Object.keys(node);
-	      for (let index = 0; index < keys.length; index++) {
-	        forEachSet(func, node[keys[index]], attrs, attrIndex + 1);
-	      }
-	    }
-	
-	    function matches(elem, node, attrs, list, attrIndex) {
-	      if (Array.isArray(node)) {
-	        list.concatInPlace(node);
-	        return;
-	      }
-	      if (attrs && !node) return;
-	      list ||= [];
-	      attrs ||= tolerance.attributes();
-	      node ||= map;
-	      attrIndex ||= 0;
-	      const attr = attrs[attrIndex];
-	      const bounds = tolerance.bounds[attr](elem);
-	      const id = bounds.id;
-	      matches(elem, node[bounds.nextId], attrs, list, attrIndex + 1);
-	      matches(elem, node[bounds.id], attrs, list, attrIndex + 1);
-	      matches(elem, node[bounds.prevId], attrs, list, attrIndex + 1);
-	
-	      if (attrIndex === 0) {
-	        const matchList = list.filter((other) => tolerance.within(elem, other));
-	        matchList.sort(finalAttrSort);
-	        return matchList;
-	      }
-	    }
-	
-	    function getSet(elem) {
-	      let curr = map;
-	      let attrs = tolerance.attributes();
-	      for (let index = 0; index < attrs.length; index += 1) {
-	        const attr = attrs[index];
-	        const bounds = tolerance.bounds[attr](elem);
-	        const id = bounds.id;
-	        if (curr[id] === undefined) {
-	          if (index < attrs.length -1) curr[id] = {};
-	          else curr[id] = [];
+	    function getRoutes(prefix, stage) {
+	      let routes = [];
+	      let keys = Object.keys(stage);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        if (key !== '_meta') {
+	          let newPrefix;
+	          if (prefix) {
+	            newPrefix = `${prefix}.${key}`;
+	          } else {
+	            newPrefix = key;
+	          }
+	          const deepRoutes = getRoutes(newPrefix, stage[key]);
+	          if (deepRoutes.length > 0) {
+	            routes = routes.concat(deepRoutes);
+	          }
+	          if (stage[key]._meta && stage[key]._meta.end) {
+	            routes.push(newPrefix + '.end');
+	          }
+	          if (stage[key]._meta && stage[key]._meta.repeat) {
+	            routes.push(newPrefix + '.repeat');
+	          }
 	        }
-	        curr = curr[id];
 	      }
-	
-	      return curr;
+	      return routes;
 	    }
 	
-	    this.forEachSet = forEachSet;
-	    this.maxSet = () => {
-	      const maxSet = [];
-	      forEachSet((set) => maxSet.push(set[0]));
-	      maxSet.sort(finalAttrSort);
-	      maxSet.reverse();
-	      return maxSet;
-	    }
-	    this.minSet = () => {
-	      const minSet = [];
-	      forEachSet((set) => minSet.push(set[set.length - 1]));
-	      minSet.sort(finalAttrSort);
-	      return minSet;
-	    }
-	    this.forEach = (func, detailed) => {
-	      if (!(typeof func) === 'function') return;
-	      forEachSet(set => set.forEach((value) => {
-	        const details = detailed ? undefined : tolerance.details(value);
-	        func(value, details);
-	      }));
+	    this.always = function () {
+	      for (let index = 0; index < arguments.length; index += 1) {
+	        alwaysPossible.push(arguments[index]);
+	      }
 	    };
+	    this.getAlways = function (exprDef) {return alwaysPossible;};
 	
-	    this.values = () => {
-	      const values = [];
-	      forEachSet(set => values.concatInPlace(set));
-	      return values;
-	    }
-	    this.tolerance = () => tolerance;
-	
-	    this.matches = (elem) => matches(elem);
-	
-	    this.add = (elem) => {
-	      let matchArr = getSet(elem, true);
-	      matchArr.push(elem);
-	      matchArr.sort(finalAttrSort);
+	    this.allRoutes = function () {
+	      return getRoutes(null, stages);
 	    }
 	
-	    this.remove = (elem) => {
-	      const matchArr = getSet(elem);
-	      if (matchArr) {
-	        const index = matchArr.indexOf(elem);
-	        if (index !== -1) matchArr.splice(index, 1);
+	    function getNotice (exprDef) {
+	      let isInAlways = false;
+	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
+	      if (isInAlways) return;
+	      if (!exprDef.closed()) {
+	        if (currStage[exprDef.getName()] === undefined) {
+	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
+	        }
+	        currStage = currStage[exprDef.getName()];
+	      }
+	    }
+	    this.getNotice = getNotice;
+	
+	    function getName () {return name;};
+	    this.getName = getName;
+	    this.onClose = function (start, end) {
+	      return function (str, start, end) {
+	        if (notify) notify(this);
+	        options.onClose(str, start, end);
 	      }
 	    }
 	
-	    this.addAll = (list) => {
-	      for (let index = 0; index < list.length; index++) {
-	        const elem = list[index];
-	        let matchArr = getSet(elem, true);
-	        matchArr.push(elem);
+	    function setMeta(targetNodes, attr, value) {
+	      return function () {
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          targetNodes[lIndex]._meta[attr] = value;
+	        }
 	      }
-	      matchArr.sort(finalAttrSort);
 	    }
 	
-	    this.map = () => map;
+	    function then (targetNodes) {
+	      return function () {
+	        const createdNodes = [];
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          const targetNode = targetNodes[lIndex];
+	          for (let index = 0; index < arguments.length; index += 1) {
+	            const exprDef = arguments[index];
+	            if (!exprDef instanceof ExprDef) {
+	              throw new Error(`Argument is not an instanceof ExprDef`);
+	            }
+	            const nextExpr = exprDef.clone(getNotice);
+	            if (targetNode[nextExpr.getName()] === undefined) {
+	              targetNode[nextExpr.getName()] = {
+	                _meta: {
+	                  expr: nextExpr
+	                }
+	              };
+	            }
+	            createdNodes.push(targetNode[nextExpr.getName()]);
+	          }
+	        }
+	        return {
+	          then: then(createdNodes),
+	          repeat: setMeta(createdNodes, 'repeat', true),
+	          end: setMeta(createdNodes, 'end', true),
+	        };
+	      }
+	    }
+	
+	    this.if = function () {return then([stages]).apply(this, arguments);}
+	
+	    function isEscaped(str, index) {
+	      if (options.escape === undefined) {
+	        return false;
+	      }
+	      let count = -1;
+	      let firstIndex, secondIndex;
+	      do {
+	        count += 1;
+	        firstIndex = index - (options.escape.length * (count + 1));
+	        secondIndex = options.escape.length;
+	      } while (str.substr(firstIndex, secondIndex) === options.escape);
+	      return count % 2 == 0;
+	    }
+	
+	    function foundCall(onFind, sub) {
+	      if ((typeof notify) === 'function') {
+	        notify(this);
+	      }
+	      if ((typeof onFind) === 'function') {
+	        return onFind(sub);
+	      } else {
+	        return sub;
+	      }
+	    }
+	
+	    this.find = function (str, index) {
+	      let startedThisCall = false;
+	      let needle = options.closing;
+	      let starting = false;
+	      if (start === undefined) {
+	        needle = options.opening;
+	        starting = true;
+	      }
+	      const sub = str.substr(index);
+	      let needleLength;
+	      if (needle instanceof RegExp) {
+	        const match = sub.match(needle);
+	        if (match && match.index === 0) {
+	          needleLength = match[0].length;
+	        }
+	      } else if ((typeof needle) === 'string') {
+	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
+	          needleLength = needle.length;
+	      } else if (needle === undefined || needle === null) {
+	        needleLength = 0;
+	      } else {
+	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
+	      }
+	      needleLength += options.tailOffset ? options.tailOffset : 0;
+	      let changes = '';
+	      if (start === undefined && starting && (needleLength || needle === null)) {
+	        string = str;
+	        start = index;
+	        startedThisCall = true;
+	        if (needle === null) {
+	          if ((typeof notify) === 'function') {
+	            notify(this);
+	          }          return {index, changes}
+	        } else {
+	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
+	        }
+	      }
+	      if ((!startedThisCall && needleLength) ||
+	            (startedThisCall && options.closing === undefined) ||
+	            (!startedThisCall && options.closing === null)) {
+	        if (str !== string) {
+	          throw new Error ('Trying to apply an expression to two different strings.');
+	        }
+	        end = index + needleLength;
+	        if (options.closing === null) {
+	          return {index, changes}
+	        }
+	        if (!startedThisCall) {
+	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
+	        }
+	        return { index: end, changes };
+	      }
+	
+	      return start !== undefined ? { index: start + needleLength, changes } :
+	                      { index: -1, changes };
+	    }
+	
+	    this.clone = function (notify) {
+	      return new ExprDef(name, options, notify, stages, alwaysPossible);
+	    };
+	    this.name = this.getName();
+	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
+	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
+	    this.location = function () {return {start, end, length: end - start}};
+	    this.closed = function () {return end !== undefined;}
+	    this.open = function () {return start !== undefined;}
+	    this.next =  function () {
+	      const expressions = [];
+	      if (currStage._meta && currStage._meta.repeat) {
+	        currStage = stages;
+	      }
+	      Object.values(currStage).map(
+	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
+	      )
+	      return alwaysPossible.concat(expressions);
+	    };
 	  }
 	}
 	
-	module.exports = ToleranceMap;
+	function parse(exprDef, str) {
+	  exprDef = exprDef.clone();
+	  let index = 0;
+	  let modified = '';
+	  const breakDown = [];
+	  const stack = [];
 	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/tolerance.js',
-function (require, exports, module) {
+	  function topOfStack() {
+	    return stack[stack.length - 1];
+	  }
 	
-const DEFAULT_TOLERANCE = .0001;
-	
-	function round(val) {
-	  return Math.round(1000000000000 * val)/1000000000000
-	}
-	
-	function decimalLimit(value, limit) {
-	  return (new String(value)).replace(/([0-9]{1,})(.[0-9]{1,}|)/, '$2').length > limit;
-	}
-	
-	function rangeStr(lower, upper) {
-	  return `${round(lower)} => ${round(upper)}`;
-	}
-	
-	function boundsFunc(attr, attributeMap, tolerance) {
-	  const singleValue = attr === undefined;
-	  return (elem) => {
-	    const tol = singleValue ? tolerance : attributeMap[attr];
-	    const value = singleValue ? elem : Object.pathValue(elem, attr);
-	    let lower, upper, center;
-	    if (Number.NaNfinity(value)) return {lower: value, upper: value, id: rangeStr(value, value)};
-	    else {
-	      const mod = value % tol;
-	      const center = mod > tol/2 ? value + (tol - mod) : value - mod;
-	      lower = round(center - tol);
-	      upper = round(center + tol);
-	      if (lower>upper) {const temp = lower; lower = upper; upper = temp;}
-	      const prevId = rangeStr(lower - tol, center);
-	      const id = rangeStr(lower, upper);
-	      const nextId = rangeStr(center, upper + tol);
-	      if (decimalLimit(lower, 10) || decimalLimit(upper, 10))
-	        console.warn.subtle(`Bounding limits may be incorrect: ${id}`);
-	      return {lower, upper, prevId, id, nextId};
+	  function closeCheck(exprDef) {
+	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
+	      let result = exprDef.find(str, index);
+	      if (result.index) {
+	        modified += result.changes;
+	        return result.index;
+	      }
 	    }
 	  }
-	}
 	
-	function withinBounds(attr, attributeMap, tolerance) {
-	  const singleValue = attr === undefined;
-	  return (value1, value2) => {
-	    if (value1 === value2) return true;
-	    const tol = singleValue ? tolerance : attributeMap[attr];
-	    return Math.abs(value1 - value2) < tol;
+	  function checkArray(exprDef, array) {
+	    if (exprDef.endDefined()) {
+	      let nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
+	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
+	      const result = childExprDef.find(str, index);
+	      if (result.index !== -1) {
+	        modified += result.changes;
+	        if (childExprDef.closed()) {
+	          breakDown.push(childExprDef);
+	        } else {
+	          stack.push(childExprDef);
+	        }
+	        return result.index;
+	      }
+	    }
+	    if (exprDef.canEnd()) {
+	      nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
 	  }
-	}
 	
-	class Tolerance {
-	  constructor(attributeMap, tolerance) {
-	    attributeMap ||= {};
-	    let within, bounds;
-	    const attrs = Object.keys(attributeMap);
-	    const singleValue = attrs.length === 0;
-	    this.bounds = {};
-	    if (!singleValue)
-	      this.attributes = () => attrs;
-	    else {
-	      tolerance ||= DEFAULT_TOLERANCE;
-	      bounds = boundsFunc();
-	      within = withinBounds(undefined, undefined, tolerance);
-	    }
-	
-	    this.finalAttr = () => attrs[attrs.length - 1];
-	
-	    this.details = (elem) => {
-	      if (singleValue) return bounds(elem);
-	      let details = {};
-	      for (let index = 0; index < attrs.length; index++) {
-	        details[attrs[index]] = this.bounds[attrs[index]](elem);
+	  function open(exprDef, index) {
+	    const always = exprDef.getAlways();
+	    while (!exprDef.open()) {
+	      let result = exprDef.find(str, index);
+	      modified += result.changes;
+	      if(result.index === -1) {
+	        let newIndex = checkArray(exprDef, always);
+	        index = newIndex;
+	      } else {
+	        if (exprDef.closed()) {
+	          breakDown.push(exprDef);
+	        } else {
+	          stack.push(exprDef);
+	        }
+	        index = result.index;
 	      }
-	      return details;
 	    }
-	
-	    this.boundries = (elem) => {
-	      if (singleValue) return bounds(elem).id;
-	      let boundries = '';
-	      for (let index = 0; index < attrs.length; index++) {
-	        boundries += this.bounds[attrs[index]](elem).id + '\n';
-	      }
-	      return boundries.substr(0,boundries.length - 1);
-	    }
-	
-	    for (let index = 0; index < attrs.length; index++) {
-	      const attr = attrs[index];
-	      this.bounds[attr] = boundsFunc(attr, attributeMap);
-	      this.bounds[attr].within = withinBounds(attr, attributeMap);
-	    }
-	
-	    this.within = (elem1, elem2) => {
-	      if (singleValue) return within(elem1, elem2);
-	      let isWithin = true;
-	      for (let index = 0; index < attrs.length; index++) {
-	        const attr = attrs[index];
-	        const value1 = Object.pathValue(elem1, attr);
-	        const value2 = Object.pathValue(elem2, attr);
-	        isWithin &&= this.bounds[attr].within(value1, value2);
-	        if (!isWithin) return false;
-	      }
-	      return isWithin;
-	    }
+	    return index;
 	  }
+	
+	  let loopCount = 0;
+	  index = open(exprDef, index);
+	  progress = [-3, -2, -1];
+	  while (topOfStack() !== undefined) {
+	    const tos = topOfStack();
+	    if (progress[0] === index) {
+	      throw new Error(`ExprDef stopped making progress`);
+	    }
+	    let stackIds = '';
+	    let options = '';
+	    stack.map(function (value) {stackIds+=value.getName() + ','});
+	    tos.next().map(function (value) {options+=value.getName() + ','})
+	    index = checkArray(tos, tos.next());
+	    if (tos.closed()) {
+	      stack.pop();
+	    }
+	    loopCount++;
+	  }
+	  // if (index < str.length) {
+	  //   throw new Error("String not fully read");
+	  // }
+	  return modified;
 	}
 	
-	Tolerance.within = (tol) => new Tolerance({'value': tol}).bounds.value.within;
 	
-	module.exports = Tolerance;
+	ExprDef.parse = parse;
+	
+	module.exports = ExprDef;
+	
+	
+	
+	
 	
 });
 
@@ -11133,7 +10340,7 @@ function (require, exports, module) {
 	
 	
 	Function.safeStdLibAddition(Math, 'toDegrees', function (rads) {
-	  return rads * 180/Math.PI % 360;
+	  return Math.mod(rads * 180/Math.PI, 360);
 	}, true);
 	
 	Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {
@@ -11194,7 +10401,8 @@ function (require, exports, module) {
 	    startIndex =  startIndex > -1 ? startIndex : 0;
 	    endIndex = endIndex < this.length ? endIndex : this.length;
 	    for (let index = startIndex; index < endIndex; index += 1) {
-	      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
+	      if (elem && ((typeof elem.equals) === 'function' && elem.equals(this[index])
+	          || (typeof elem.equal) === 'function' && elem.equal(this[index]))) {
 	        return index;
 	      } else if (elem === this[index]) {
 	        return index;
@@ -11226,6 +10434,53 @@ function (require, exports, module) {
 	      this.remove(arr[index]);
 	    }
 	});
+	
+	Function.safeStdLibAddition(Array, 'condition', function (initalValue, conditionFunc) {
+	  const valueFuncDefined = (typeof valueFunc) === 'function';
+	  for (let index = 0; index < this.length; index += 1) {
+	    const elem = this[index];
+	    initalValue = conditionFunc(initalValue, elem);
+	  }
+	  return initalValue;
+	});
+	
+	Function.safeStdLibAddition(Array, 'max', function (max, func) {
+	  const funcDefined = (typeof func) === 'function';
+	  const initalValue = max || max === 0 ? {elem: max, value: funcDefined ? func(max) : max} : undefined;
+	  return this.condition(initalValue, (max, elem) => {
+	    let value = funcDefined ? func(elem, index) : elem;
+	    if (!(max instanceof Object) || value > max.value) return {value, elem};
+	    return max
+	  }).elem;
+	});
+	
+	Function.safeStdLibAddition(Array, 'min', function (min, func) {
+	  const funcDefined = (typeof func) === 'function';
+	  const initalValue = min || min === 0 ? {elem: min, value: funcDefined ? func(min) : min} : undefined;
+	  return this.condition(initalValue, (min, elem) => {
+	    let value = funcDefined ? func(elem, index) : elem;
+	    if (!(min instanceof Object) || value < min.value) return {value, elem};
+	    return min
+	  }).elem;
+	});
+	
+	Function.safeStdLibAddition(Array, 'print', function (min, func) {
+	  const maxLength = new String(this.length).length;
+	  for (let index = 0; index < this.length; index++) {
+	    const elem = this[index];
+	    const length = new String(index).length;
+	    const position = new Array(maxLength - length).fill(' ').join('') + index + ':';
+	    console.log(position, elem && elem.toString ? elem.toString() : elem);
+	  }
+	});
+	
+	Function.safeStdLibAddition(Array, 'exists', function (array, obj) {
+	  if (!Array.isArray(array)) return false;
+	  for (let index = 0; index < array.length; index += 1) {
+	    if (array[index] === obj) return true;
+	  }
+	  return false;
+	}, true);
 	
 	Function.safeStdLibAddition(Array, 'remove', function (elem) {
 	    for (let index = 0; index < this.length; index += 1) {
@@ -11668,6 +10923,917 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/measurement.js',
+function (require, exports, module) {
+	
+  try {
+	    Lookup = require('./object/lookup');
+	    StringMathEvaluator = require('./string-math-evaluator');
+	  } catch(e) {}
+	
+	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	let units = [
+	  'Metric',
+	  'Imperial (US)'
+	]
+	let unit = units[1];
+	
+	
+	class Measurement extends Lookup {
+	  constructor(value, notMetric) {
+	    super();
+	    if ((typeof value) === 'string') {
+	      value += ' '; // Hacky fix for regularExpression
+	    }
+	
+	    const determineUnit = () => {
+	      if ((typeof notMetric === 'string')) {
+	        const index = units.indexOf(notMetric);
+	        if (index !== -1) return units[index];
+	      } else if ((typeof notMetric) === 'boolean') {
+	        if (notMetric === true) return unit;
+	      }
+	      return units[0];
+	    }
+	
+	    let decimal = 0;
+	    let nan = value === null || value === undefined;
+	    this.isNaN = () => nan;
+	
+	    const parseFraction = (str) => {
+	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
+	      regObj.integer = Number.parseInt(regObj.integer) || 0;
+	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	      if(regObj.denominator === 0) {
+	        regObj.numerator = 0;
+	        regObj.denominator = 1;
+	      }
+	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	      return regObj;
+	    };
+	
+	    function reduce(numerator, denominator) {
+	      let reduced = true;
+	      while (reduced) {
+	        reduced = false;
+	        for (let index = 0; index < Measurement.primes.length; index += 1) {
+	          const prime = Measurement.primes[index];
+	          if (prime >= denominator) break;
+	          if (numerator % prime === 0 && denominator % prime === 0) {
+	            numerator = numerator / prime;
+	            denominator = denominator / prime;
+	            reduced = true;
+	            break;
+	          }
+	        }
+	      }
+	      if (numerator === 0) {
+	        return '';
+	      }
+	      return ` ${numerator}/${denominator}`;
+	    }
+	
+	    function fractionEquivalent(decimalValue, accuracy) {
+	      accuracy = accuracy || '1/32'
+	      const fracObj = parseFraction(accuracy);
+	      const denominator = fracObj.denominator;
+	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	      }
+	      let sign = decimalValue > 0 ? 1 : -1;
+	      let remainder = Math.abs(decimalValue);
+	      let currRemainder = remainder;
+	      let value = 0;
+	      let numerator = 0;
+	      while (currRemainder > 0) {
+	        numerator += fracObj.numerator;
+	        currRemainder -= fracObj.decimal;
+	      }
+	      const diff1 = decimalValue - ((numerator - fracObj.numerator) / denominator);
+	      const diff2 = (numerator / denominator) - decimalValue;
+	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	      const integer = sign * Math.floor(numerator / denominator);
+	      numerator = numerator % denominator;
+	      return {integer, numerator, denominator};
+	    }
+	
+	    this.fraction = (accuracy, standardDecimal) => {
+	      standardDecimal = standardDecimal || decimal;
+	      if (nan) return NaN;
+	      const obj = fractionEquivalent(standardDecimal, accuracy);
+	      if (obj.integer === 0 && obj.numerator === 0) return '0';
+	      const integer = obj.integer !== 0 ? obj.integer : '';
+	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
+	    }
+	    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
+	
+	    this.display = (accuracy) => {
+	      switch (unit) {
+	        case units[0]: return new String(this.decimal(10));
+	        case units[1]: return this.standardUS(accuracy);
+	        default:
+	            return this.standardUS(accuracy);
+	      }
+	    }
+	
+	    this.value = (accuracy) => this.decimal(accuracy);
+	
+	    this.decimal = (accuracy) => {
+	      if (nan) return NaN;
+	      accuracy = accuracy % 10 ? accuracy : 10000;
+	      return Math.round(decimal * accuracy) / accuracy;
+	    }
+	
+	    function getDecimalEquivalant(string) {
+	      string = string.trim();
+	      if (string.match(Measurement.decimalReg)) {
+	        return Number.parseFloat(string);
+	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
+	        return parseFraction(string).decimal
+	      }
+	      nan = true;
+	      return NaN;
+	    }
+	
+	    const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
+	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+	
+	    function standardize(ambiguousDecimal) {
+	      switch (determineUnit()) {
+	        case units[0]:
+	          return ambiguousDecimal;
+	        case units[1]:
+	          return convertUsToMetric(ambiguousDecimal);
+	        default:
+	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
+	      }
+	    }
+	
+	    if ((typeof value) === 'number') {
+	      decimal = standardize(value);
+	    } else if ((typeof value) === 'string') {
+	      try {
+	        const ambiguousDecimal = getDecimalEquivalant(value);
+	        decimal = standardize(ambiguousDecimal);
+	      } catch (e) {
+	        nan = true;
+	      }
+	    } else {
+	      nan = true;
+	    }
+	  }
+	}
+	
+	Measurement.unit = (newUnit) => {
+	  for (index = 0; index < units.length; index += 1) {
+	    if (newUnit === units[index]) unit = newUnit;
+	  }
+	  return unit
+	};
+	Measurement.units = () => JSON.parse(JSON.stringify(units));
+	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
+	Measurement.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
+	
+	
+	Measurement.validation = function (range) {
+	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
+	  let min = obj.min.trim() !== '' ?
+	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
+	  let max = obj.max.trim() !== '' ?
+	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
+	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
+	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
+	  return function (value) {
+	    const decimal = new Measurement(value).decimal();
+	    if (decimal === NaN) return false;
+	    return minCheck(decimal) && maxCheck(decimal);
+	  }
+	}
+	
+	Measurement.decimal = (value) => {
+	  return new Measurement(value, true).decimal();
+	}
+	
+	Measurement.round = (value, percision) => {
+	  if (percision)
+	  return new Measurement(value).decimal(percision);
+	  return Math.round(value * 10000000) / 10000000;
+	}
+	
+	try {
+	  module.exports = Measurement;
+	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/approximate.js',
+function (require, exports, module) {
+	
+
+	
+	let defaultAccuracy;
+	
+	class Approximate {
+	  constructor(accuracy) {
+	    if ((typeof accuracy) !== 'number' || accuracy === defaultAccuracy) return Approximate.default;
+	
+	    function approximate(value) {
+	      return Math.round(value * accuracy) / accuracy;
+	    }
+	
+	    function approximateFunc(test) {
+	      return function () {
+	        if (arguments.length === 2) return test(approximate(arguments[0]), approximate(arguments[1]));
+	        for (let index = 1; index < arguments.length; index++) {
+	          if (!test(approximate(arguments[index - 1]), approximate(arguments[index]))) return false;
+	        }
+	        return true;
+	      }
+	    }
+	    const af = approximateFunc;
+	    approximate.eq = af((one, two) => one === two);
+	    approximate.neq = af((one, two) => one !== two);
+	    approximate.gt = af((one, two) => one > two);
+	    approximate.lt = af((one, two) => one < two);
+	    approximate.gteq = af((one, two) => one >= two);
+	    approximate.lteq = af((one, two) => one <= two);
+	    approximate.eqAbs = af((one, two) => Math.abs(one) === Math.abs(two));
+	    approximate.neqAbs = af((one, two) => Math.abs(one) !== Math.abs(two));
+	    approximate.abs = (value) => Math.abs(approximate(value));
+	    approximate.object = (obj) => {
+	      const approx = {};
+	      return Object.forAllRecursive(obj,
+	            (value) => (typeof value) === 'number' ? approximate(value) : value);
+	    }
+	    approximate.sameSign = af((value1, value2) => (value1 === 0 && value2 === 0) ||
+	                                                      (value2 > 0 && value1 > 0) ||
+	                                                      (value2 < 0 && value1 < 0));
+	    return approximate;
+	  }
+	}
+	
+	
+	Approximate.setDefault = (accuracy) => {
+	  if ((typeof accuracy) !== 'number') throw new Error('Must enter a number for accuracy: hint must be a power of 10');
+	  Approximate.default = new Approximate(accuracy);
+	  defaultAccuracy = accuracy;
+	  Approximate.default.new = (acc) => new Approximate(acc);
+	  Approximate.default.setDefault = Approximate.default;
+	}
+	
+	Approximate.setDefault(1000000);
+	
+	module.exports  = Approximate.default;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/$t.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const CustomEvent = require('./custom-event');
+	const ExprDef = require('./expression-definition');
+	
+	class $t {
+		constructor(template, id, selector) {
+			if (selector) {
+				const afterRenderEvent = new CustomEvent('afterRender');
+				const beforeRenderEvent = new CustomEvent('beforeRender');
+			}
+	
+			function varReg(prefix, suffix) {
+			  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
+			  prefix = prefix ? prefix : '';
+			  suffix = suffix ? suffix : '';
+			  return new RegExp(`${prefix}${vReg}${suffix}`)
+			};
+	
+			function replace(needleRegEx, replaceStr, exceptions) {
+			  return function (sub) {
+			    if (!exceptions || exceptions.indexOf(sub) === -1) {
+			      return sub.replace(needleRegEx, replaceStr)
+			    } else {
+			      return sub;
+			    }
+			  }
+			}
+	
+			const signProps = {opening: /([-+\!])/};
+			const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
+			const ternaryProps = {opening: /\?/};
+			const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
+			const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
+			const commaProps = {opening: /,/};
+			const colonProps = {opening: /:/};
+			const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
+			const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
+			const spaceProps = {opening: /\s{1}/};
+			const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};
+			const objectProps = {opening: '{', closing: '}'};
+			const objectLabelProps = {opening: varReg(null, '\\:')};
+			const groupProps = {opening: /\(/, closing: /\)/};
+			const expressionProps = {opening: null, closing: null};
+			const attrProps = {opening: varReg('(\\.', '){1,}')};
+	
+			// const funcProps = {
+			//   opening: varReg(null, '\\('),
+			//   onOpen: replace(varReg(null, '\\('), 'get("$1")('),
+			//   closing: /\)/
+			// };
+			const arrayProps = {
+			  opening: varReg(null, '\\['),
+			  onOpen: replace(varReg(null, '\\['), 'get("$1")['),
+			  closing: /\]/
+			};
+			const funcRefProps = {
+				opening: /\[|\(/,
+				closing: /\]|\)/
+			};
+			const memberRefProps = {
+				opening: varReg('\\.', ''),
+			};
+			const variableProps = {
+			  opening: varReg(),
+			  onOpen: replace(varReg(), 'get("$1")'),
+			};
+			const objectShorthandProps = {
+			  opening: varReg(),
+			  onOpen: replace(varReg(), '$1: get("$1")'),
+			};
+	
+	
+			const expression = new ExprDef('expression', expressionProps);
+			const ternary = new ExprDef('ternary', ternaryProps);
+			const relational = new ExprDef('relational', relationalProps);
+			const comma = new ExprDef('comma', commaProps);
+			const colon = new ExprDef('colon', colonProps);
+			const attr = new ExprDef('attr', attrProps);
+			// const func = new ExprDef('func', funcProps);
+			const funcRef = new ExprDef('funcRef', funcRefProps);
+			const memberRef = new ExprDef('memberRef', memberRefProps);
+			const string = new ExprDef('string', stringProps);
+			const space = new ExprDef('space', spaceProps);
+			const keyWord = new ExprDef('keyWord', keyWordProps);
+			const group = new ExprDef('group', groupProps);
+			const object = new ExprDef('object', objectProps);
+			const array = new ExprDef('array', arrayProps);
+			const number = new ExprDef('number', numberProps);
+			const multiplier = new ExprDef('multiplier', multiplierProps);
+			const sign = new ExprDef('sign', signProps);
+			const ignore = new ExprDef('ignore', ignoreProps);
+			const variable = new ExprDef('variable', variableProps);
+			const objectLabel = new ExprDef('objectLabel', objectLabelProps);
+			const objectShorthand = new ExprDef('objectShorthand', objectShorthandProps);
+	
+			expression.always(space, ignore, keyWord);
+			expression.if(string, number, group, array, variable, funcRef, memberRef)
+			      .then(multiplier, sign, relational, group)
+			      .repeat();
+			expression.if(string, group, array, variable, funcRef, memberRef)
+						.then(attr)
+			      .then(multiplier, sign, relational, expression, funcRef, memberRef)
+						.repeat();
+			expression.if(string, group, array, variable, funcRef, memberRef)
+						.then(attr)
+						.end();
+	
+			funcRef.if(expression).then(comma).repeat();
+			funcRef.if(expression).end();
+			memberRef.if(expression).then(comma).repeat();
+			memberRef.if(expression).end();
+	
+			expression.if(sign)
+			      .then(expression)
+			      .then(multiplier, sign, relational, group)
+			      .repeat();
+			expression.if(string, number, group, array, variable)
+			      .then(ternary)
+			      .then(expression)
+			      .then(colon)
+			      .then(expression)
+			      .end();
+			expression.if(ternary)
+			      .then(expression)
+			      .then(colon)
+			      .then(expression)
+			      .end();
+			expression.if(object, string, number, group, array, variable)
+			      .end();
+			expression.if(sign)
+			      .then(number)
+			      .end();
+	
+			object.always(space, ignore, keyWord);
+			object.if(objectLabel).then(expression).then(comma).repeat();
+			object.if(objectShorthand).then(comma).repeat();
+			object.if(objectLabel).then(expression).end();
+			object.if(objectShorthand).end();
+	
+			group.always(space, ignore, keyWord);
+			group.if(expression).then(comma).repeat();
+			group.if(expression).end();
+	
+			array.always(space, ignore, keyWord);
+			array.if(expression).then(comma).repeat();
+			array.if(expression).end();
+	
+			function getter(scope, parentScope) {
+				parentScope = parentScope || function () {return undefined};
+				function get(name) {
+					if (name === 'scope') return scope;
+					const split = new String(name).split('.');
+					let currObj = scope;
+					for (let index = 0; currObj != undefined && index < split.length; index += 1) {
+						currObj = currObj[split[index]];
+					}
+					if (currObj !== undefined) return currObj;
+					const parentScopeVal = parentScope(name);
+					if (parentScopeVal !== undefined) return parentScopeVal;
+	        else {
+	          const globalVal = $t.global(name);
+	          return globalVal === undefined ? '' : globalVal;
+	        }
+				}
+				return get;
+			}
+	
+			function defaultArray(elemName, get) {
+				let resp = '';
+				for (let index = 0; index < get('scope').length; index += 1) {
+					if (elemName) {
+						const obj = {};
+	          obj.$index = index;
+						obj[elemName] = get(index);
+						resp += new $t(template).render(obj, undefined, get);
+					} else {
+						resp += new $t(template).render(get(index), undefined, get);
+					}
+				}
+				return `${resp}`;
+			}
+	
+			function arrayExp(varName, get) {
+				varName = varName.trim();
+				const array = get('scope');
+				let built = '';
+				for (let index = 0; index < array.length; index += 1) {
+					const obj = {};
+					obj[varName] = array[index];
+					obj.$index = index;
+					built += new $t(template).render(obj, undefined, get);
+				}
+				return built;
+			}
+	
+			function itOverObject(varNames, get) {
+				const match = varNames.match($t.objectNameReg);
+				const keyName = match[1];
+				const valueName = match[2];
+				const obj = get('scope');
+				const keys = Object.keys(obj);
+				const isArray = Array.isArray(obj);
+				let built = '';
+				for (let index = 0; index < keys.length; index += 1) {
+					const key = keys[index];
+					if (!isArray || key.match(/^[0-9]{1,}$/)) {
+						const childScope = {};
+						childScope[keyName] = key;
+						childScope[valueName] = obj[key];
+						childScope.$index = index;
+						built += new $t(template).render(childScope, undefined, get);
+					}
+				}
+	      return built;
+			}
+	
+			function rangeExp(elemName, rangeItExpr, get) {
+				const match = rangeItExpr.match($t.rangeItExpReg);
+				let startIndex = match[1].match(/^[0-9]{1,}$/) ?
+							match[1] : get(match[1]);
+				let endIndex = match[2].match(/^[0-9]*$/) ?
+							match[2] : get(match[2]);
+				if (((typeof startIndex) !== 'string' &&
+								(typeof	startIndex) !== 'number') ||
+									(typeof endIndex) !== 'string' &&
+									(typeof endIndex) !== 'number') {
+										throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+	
+				try {
+					startIndex = Number.parseInt(startIndex);
+				} catch (e) {
+					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+				try {
+					endIndex = Number.parseInt(endIndex);
+				} catch (e) {
+					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+	
+				let index = startIndex;
+				let built = '';
+				while (true) {
+					let increment = 1;
+					if (startIndex > endIndex) {
+						if (index <= endIndex) {
+							break;
+						}
+						increment = -1;
+					} else if (index >= endIndex) {
+						break;
+					}
+					const obj = {$index: index};
+					obj[elemName] = index;
+					built += new $t(template).render(obj, undefined, get);
+					index += increment;
+				}
+				return built;
+			}
+	
+			function evaluate(get) {
+				if ($t.functions[id]) {
+					try {
+						return $t.functions[id](get, $t);
+					} catch (e) {
+					  console.error(e);
+					}
+				} else {
+					return eval($t.templates[id])
+				}
+			}
+	
+			function type(scope, expression) {
+				if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
+					if (scope.match($t.rangeItExpReg)) {
+						return 'rangeExp'
+					}
+					return 'rangeExpFormatError';
+				} else if (Array.isArray(scope)) {
+					if (expression === undefined) {
+						return 'defaultArray';
+					} else if (expression.match($t.nameScopeExpReg)) {
+						return 'nameArrayExp';
+					}
+				}
+	
+				if ((typeof scope) === 'object') {
+					if (expression === undefined) {
+						return 'defaultObject';
+					} else if (expression.match($t.objectNameReg)){
+						return 'itOverObject';
+					} else if (expression.match($t.arrayNameReg)){
+						return 'arrayExp';
+					} else {
+						return 'invalidObject';
+					}
+				} else {
+					return 'defaultObject';
+				}
+			}
+	
+			// TODO: itExp is not longer an iteration expression. fix!!!!
+			function render(scope, itExp, parentScope) {
+	      if (scope === undefined) return '';
+				let rendered = '';
+				const get = getter(scope, parentScope);
+				switch (type(scope, itExp)) {
+					case 'rangeExp':
+						rendered = rangeExp(itExp, scope, get);
+						break;
+					case 'rangeExpFormatError':
+						throw new Error(`Invalid range itteration expression "${scope}"`);
+					case 'defaultArray':
+						rendered = defaultArray(itExp, get);
+						break;
+					case 'nameArrayExp':
+						rendered = defaultArray(itExp, get);
+						break;
+					case 'arrayExp':
+						rendered = arrayExp(itExp, get);
+						break;
+					case 'invalidArray':
+						throw new Error(`Invalid iterative expression for an array "${itExp}"`);
+					case 'defaultObject':
+						rendered = evaluate(get);
+						break;
+					case 'itOverObject':
+						rendered = itOverObject(itExp, get);
+						break;
+					case 'invalidObject':
+						throw new Error(`Invalid iterative expression for an object "${itExp}"`);
+					default:
+						throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
+				}
+	
+	      if (selector) {
+	        const elem = document.querySelector(selector);
+	        if (elem !== null) {
+	          beforeRenderEvent.trigger();
+	          elem.innerHTML = rendered;
+	          afterRenderEvent.trigger();
+	        }
+	      }
+				return rendered;
+			}
+	
+	
+	//---------------------  Compile Functions ---------------//
+	
+			function stringHash(string) {
+				let hashString = string;
+				let hash = 0;
+				for (let i = 0; i < hashString.length; i += 1) {
+					const character = hashString.charCodeAt(i);
+					hash = ((hash << 5) - hash) + character;
+					hash &= hash; // Convert to 32bit integer
+				}
+				return hash;
+			}
+	
+			function isolateBlocks(template) {
+				let inBlock = false;
+				let openBracketCount = 0;
+				let block = '';
+				let blocks = [];
+				let str = template;
+				for (let index = 0; index < str.length; index += 1) {
+					if (inBlock) {
+						block += str[index];
+					}
+					if (!inBlock && index > 0 &&
+						str[index] == '{' && str[index - 1] == '{') {
+						inBlock = true;
+					} else if (inBlock && str[index] == '{') {
+						openBracketCount++;
+					} else if (openBracketCount > 0 && str[index] == '}') {
+						openBracketCount--;
+					} else if (str[index + 1] == '}' && str[index] == '}' ) {
+						inBlock = false;
+						blocks.push(`${block.substr(0, block.length - 1)}`);
+						block = '';
+					}
+				}
+				return blocks;
+			}
+	
+			function compile() {
+				const blocks = isolateBlocks(template);
+				let str = template;
+				for (let index = 0; index < blocks.length; index += 1) {
+					const block = blocks[index];
+					const parced = ExprDef.parse(expression, block);
+					str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
+				}
+				return `\`${str}\``;
+			}
+	
+	
+					const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+					function formatRepeat(string) {
+						// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
+						// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
+						let match;
+						while (match = string.match(repeatReg)) {
+							let tagContents = match[2] + match[8];
+	            let tagName = match[1];
+	            let varNames = match[6];
+	            let realScope = match[7];
+							let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+							let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+							let scope = 'scope';
+							template = templateName !== tagContents ? templateName : template;
+							const t = eval(`new $t(\`${template}\`)`);
+	            let resolvedScope = "get('scope')";;
+	            try {
+	              // console.log('tagName', tagName);
+	              // console.log('varNames', varNames);
+	              // console.log('realScope', realScope);
+	              // console.log('tagContents', tagContents);
+								if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+	                resolvedScope = `'${realScope}'`;
+	              } else {
+	                resolvedScope = ExprDef.parse(expression, realScope);
+	              }
+	            } catch (e) {}
+	            string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
+						}
+						return string;
+					}
+	
+			if (id) {
+				$t.templates[id] = undefined;
+				$t.functions[id] = undefined;
+			}
+	
+			template = template.replace(/\s{1,}/g, ' ');
+			id = $t.functions[template] ? template : id || stringHash(template);
+			if (!$t.functions[id]) {
+				if (!$t.templates[id]) {
+					template = template.replace(/\s{2,}|\n/g, ' ');
+					template = formatRepeat(template);
+					$t.templates[id] = compile();
+				}
+			}
+			this.compiled = function () { return $t.templates[id];}
+			this.render = render;
+	    this.afterRender = (func) => afterRenderEvent.on(func);
+	    this.beforeRender = (func) => beforeRenderEvent.on(func);
+			this.type = type;
+			this.isolateBlocks = isolateBlocks;
+	    this.id = () => id;
+		}
+	}
+	
+	$t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
+	$t.functions = {};
+	$t.loadFunctions = (functions) => {
+		Object.keys(functions).forEach((name) => {
+			$t.functions[name] = functions[name];
+		});
+	
+	}
+	$t.isTemplate = (id) => $t.functions[id] !== undefined;
+	$t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
+	$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*\.\.\s*([a-z0-9A-Z]*)\s*$/;
+	$t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.quoteStr = function (str) {
+			str = str.replace(/\\`/g, '\\\\\\`')
+			str = str.replace(/([^\\])`/g, '$1\\\`')
+			return `\`${str.replace(/``/g, '`\\`')}\``;
+		}
+	$t.formatName = function (string) {
+	    function toCamel(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
+	    return string.replace(/([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g, toCamel);
+	}
+	$t.dumpTemplates = function (debug) {
+		let templateFunctions = '';
+		let tempNames = Object.keys($t.templates);
+		for (let index = 0; index < tempNames.length; index += 1) {
+			const tempName = tempNames[index];
+			if (tempName) {
+				let template = $t.templates[tempName];
+	      if (debug === true) {
+	        const endTagReg = /( \+) /g;
+	        template = template.replace(endTagReg, '$1\n\t\t');
+	      }
+				templateFunctions += `\nexports['${tempName}'] = (get, $t) => \n\t\t${template}\n`;
+			}
+		}
+		return templateFunctions;
+	}
+	
+	$t.clean = (val) => val === undefined ? '' : val;
+	
+	function createGlobalsInterface() {
+	  const GLOBALS = {};
+	  const isMotifiable = (name) => GLOBALS[name] === undefined ||
+	        GLOBALS[name].imutable !== 'true';
+	  $t.global = function (name, value, imutable) {
+	    if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
+	    if (isMotifiable(name)) GLOBALS[name] = {value, imutable};
+	  }
+	  $t.rmGlobal = function(name) {
+	    if (isMotifiable(name)) delete GLOBALS[name];
+	  }
+	}
+	createGlobalsInterface();
+	
+	module.exports = $t;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/display/pop-up.js',
+function (require, exports, module) {
+	const DragDropResize = require('./drag-drop');
+	
+	class PopUp {
+	  constructor (props) {
+	    props = props || {}
+	    const instance = this;
+	    const htmlFuncs = {};
+	    let forceOpen = false;
+	    let lockOpen = false;
+	    let currFuncs, currElem;
+	    let canClose = false;
+	
+	    const popupCnt = new DragDropResize(props);
+	
+	    popupCnt.hide();
+	
+	    this.position = () => popupCnt;
+	    this.positionOnElement = popupCnt.position;
+	
+	
+	    this.softClose = () => {
+	      if (!lockOpen) {
+	        instance.close();
+	      }
+	    }
+	
+	    this.close = popupCnt.close;
+	
+	    this.show = () => {
+	      popupCnt.show();
+	    };
+	
+	    function getFunctions(elem) {
+	      let foundFuncs;
+	      const queryStrs = Object.keys(htmlFuncs);
+	      queryStrs.forEach((queryStr) => {
+	        if (elem.matches(queryStr)) {
+	          if (foundFuncs) {
+	            throw new Error('Multiple functions being invoked on one hover event');
+	          } else {
+	            foundFuncs = htmlFuncs[queryStr];
+	          }
+	        }
+	      });
+	      return foundFuncs;
+	    }
+	
+	    function on(queryStr, funcObj) {
+	      if (htmlFuncs[queryStr] !== undefined) throw new Error('Assigning multiple functions to the same selector');
+	      htmlFuncs[queryStr] = funcObj;
+	    }
+	    this.on = on;
+	
+	    this.onClose = popupCnt.onClose;
+	
+	    function updateContent(html) {
+	      popupCnt.updateContent(html);
+	      if (currFuncs && currFuncs.after) currFuncs.after();
+	      return instance;
+	    }
+	    this.updateContent = updateContent;
+	
+	    this.open = (html, positionOn) => {
+	      this.updateContent(html);
+	      popupCnt.position(positionOn);
+	      this.show();
+	    }
+	
+	    this.container = popupCnt.container;
+	    this.hasMoved = popupCnt.hasMoved;
+	    this.lockSize = popupCnt.lockSize;
+	    this.unlockSize = popupCnt.unlockSize;
+	
+	    document.addEventListener('click', this.forceClose);
+	  }
+	}
+	
+	module.exports = PopUp;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
+function (require, exports, module) {
+	
+
+	
+	const CustomEvent = require('../custom-event.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
+	const Expandable = require('./expandable');
+	
+	class ExpandableList extends Expandable {
+	  constructor(props) {
+	    super(props);
+	    const superRemove = this.remove;
+	    this.remove = (index) => {
+	      superRemove(props.list.splice(index, 1)[0]);
+	      this.refresh();
+	    }
+	  }
+	}
+	
+	module.exports = ExpandableList
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/lists/expandable-object.js',
 function (require, exports, module) {
 	
@@ -11740,590 +11906,432 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/lists/expandable.js',
+RequireJS.addFunction('../../public/js/utils/input/input.js',
 function (require, exports, module) {
 	
 
 	
-	const CustomEvent = require('../custom-event.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
 	
-	// properties
-	//  required: {
-	//  getHeader: function returns html header string,
-	//  getBody: function returns html body string,
-	//}
-	//  optional: {
-	//  list: list to use, creates on undefined
-	//  getObject: function returns new list object default is generic js object,
-	//  parentSelector: cssSelector only reqired for refresh function,
-	//  listElemLable: nameOfElementType changes add button label,
-	//  dontOpenOnAdd: by default the active element will be switched to newly added elements.
-	//  hideAddBtn: defaults to false,
-	//  startClosed: all tabs are closed on list open.
-	//  input: true - require user to enter text before adding new
-	//  inputOptions: array of autofill inputs
-	//  inputs: [{placeholder, autofill},...]
-	//  inputValidation: function to validate input fields
-	//  type: defaults to list,
-	//  selfCloseTab: defalts to true - allows clicking on header to close body,
-	//  findElement: used to find elemenents related to header - defaults to closest
-	//  removeButton: true by default;
-	//}
-	class Expandable {
-	  constructor(props) {
-	    const afterRenderEvent = new CustomEvent('afterRender');
-	    const afterAddEvent = new CustomEvent('afterAdd');
-	    const afterRefreshEvent = new CustomEvent('afterRefresh');
-	    const afterRemovalEvent = new CustomEvent('afterRemoval');
-	    const instance = this;
-	    const renderBodyOnOpen = props.renderBodyOnOpen === false ? false : true;
-	    props.getObject = props.getObject || (() => ({}));
-	    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
-	    props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
-	    props.type = props.type || 'list';
-	    props.findElement = props.findElement || ((selector, target) =>  du.find.closest(selector, target));
-	    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
-	    props.getObject = props.getObject || (() => {});
-	    props.inputs = props.inputs || [];
-	    props.list = props.list || [];
-	    // props.list.DO_NOT_CLONE = true;
-	    this.hasBody = () => (typeof this.getBody) === 'function';
-	    this.getHeader = props.getHeader; delete props.getHeader;
-	    this.getBody = props.getBody; delete props.getBody;
-	    props.id = Expandable.lists.length;
-	    const firstKey = Object.keys(props.list)[0];
-	    props.activeKey = firstKey || 0; //TODO ???
-	    Object.getSet(this, props, 'listElemLable');
-	    let pendingRefresh = false;
-	    let lastRefresh = new Date().getTime();
-	    const storage = {};
-	    Expandable.lists[props.id] = this;
-	    this.inputTree = () => props.inputTree;
 	
-	    this.errorCntId = () => props.ERROR_CNT_ID;
-	    function setErrorMsg(msg) {
-	        du.id(props.ERROR_CNT_ID).innerHTML = msg;
-	    }
-	
-	    function values() {
-	      const values = {};
-	      props.inputs.forEach((input) =>
-	        values[input.placeholder] = du.id(input.id).value);
-	      return values;
-	    }
-	
-	    function getCnt() {
-	      return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
-	    }
-	
-	    function getBodyCnt() {
-	      return du.find.down('.expand-body', getCnt());
-	    }
-	
-	    function getInputCnt() {
-	      const cnt = du.find.down('.expand-input-cnt', getCnt());
-	      return cnt;
-	    }
-	    //changes....
-	    this.values = values;
-	    this.getInputCnt = getInputCnt;
-	
-	    this.add = (vals) => {
-	      const inputValues = vals || values();
-	      if ((typeof props.inputValidation) !== 'function' ||
-	              props.inputValidation(inputValues) === true) {
-	          const obj = props.getObject(inputValues, getInputCnt());
-	          const key = this.getKey(vals, obj);
-	          props.list[key] = obj;
-	          if (!props.dontOpenOnAdd) this.activeKey(key);
-	          this.refresh();
-	          afterAddEvent.trigger();
-	      } else {
-	        const errors = props.inputValidation(inputValues);
-	        let errorStr;
-	        if ((typeof errors) === 'object') {
-	          const keys = Object.keys(errors);
-	          errorStr = Object.values(errors).join('<br>');
-	        } else {
-	          errorStr = `Error: ${errors}`;
-	        }
-	        setErrorMsg(errorStr);
-	      }
-	    };
-	    this.hasInputTree = () =>
-	      this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
-	    if (this.hasInputTree())
-	      props.inputTree.onSubmit(this.add);
-	    props.hasInputTree = this.hasInputTree;
-	
-	    this.isSelfClosing = () => props.selfCloseTab;
-	    this.remove = (removed) => {
-	      afterRemovalEvent.trigger(undefined, removed);
-	      this.refresh();
-	    }
-	    this.html = () =>
-	      Expandable[`${instance.type().toCamel()}Template`].render(this);
-	    this.afterRender = (func) => afterRenderEvent.on(func);
-	    this.afterAdd = (func) => afterAddEvent.on(func);
-	    this.afterRemoval = (func) => afterRemovalEvent.on(func);
-	    this.refresh = (type) => {
-	      this.type((typeof type) === 'string' ? type : props.type);
-	      if (!pendingRefresh) {
-	        pendingRefresh = true;
-	        setTimeout(() => {
-	          props.inputs.forEach((input) => input.id = input.id || String.random(7));
-	          const parent = document.querySelector(props.parentSelector);
-	          const focusInfo = du.focusInfo();
-	          const html = this.html();
-	          if (parent && html !== undefined) {
-	            parent.innerHTML = html;
-	            du.focus(focusInfo);
-	            afterRefreshEvent.trigger();
-	          }
-	          pendingRefresh = false;
-	        }, 100);
-	      }
-	    };
-	    this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
-	    this.getKey = () => this.list().length;
-	    this.active = () => props.list[this.activeKey()];
-	    // TODO: figure out why i wrote this and if its neccisary.
-	    this.value = (key) => (key2, value) => {
-	      if (props.activeKey === undefined) props.activeKey = 0;
-	      if (key === undefined) key = props.activeKey;
-	      if (storage[key] === undefined) storage[key] = {};
-	      if (value === undefined) return storage[key][key2];
-	      storage[key][key2] = value;
-	    }
-	    this.inputHtml = () => this.hasInputTree() ?
-	          this.inputTree().payload().html() : Expandable.inputRepeatTemplate.render(this);
-	    this.set = (key, value) => props.list[key] = value;
-	    this.get = (key) => props.list[key];
-	    this.renderBody = (target) => {
-	      const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
-	      target = target || document.querySelector(headerSelector);
-	      if (target !== null) {
-	        const id = target.getAttribute('ex-list-id');
-	        const list = Expandable.lists[id];
-	        const headers = du.find.up('.expandable-list', target).querySelectorAll('.expand-header');
-	        const bodys = du.find.up('.expandable-list', target).querySelectorAll('.expand-body');
-	        const rmBtns = du.find.up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
-	        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
-	        bodys.forEach((body) => body.style.display = 'none');
-	        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-	        const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
-	        if (this.hasBody()) {
-	          body.style.display = 'block';
-	        }
-	        const key = target.getAttribute('key');
-	        this.activeKey(key);
-	        if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
-	        if (props.removeButton) target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
-	        target.className += ' active' + (this.hasBody() ? '' : ' no-body');
-	        afterRenderEvent.trigger();
-	        // du.scroll.intoView(target.parentElement, 3, 25, document.body);
-	      }
-	    };
-	    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
-	
-	    this.htmlBody = (key) => {
-	      getBodyCnt().setAttribute('key', key);
-	      return this.hasBody() ? this.getBody(this.list()[key], key) : '';
-	    }
-	    this.list = () => props.list;
-	    this.refresh();
-	    // setTimeout(() => {
-	    //   const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
-	    //   const activeHeader = du.find(headerSelector);
-	    //   if (activeHeader) activeHeader.click();
-	    // }, 2000);
-	  }
-	}
-	Expandable.lists = [];
-	Expandable.DO_NOT_CLONE = true;
-	Expandable.inputRepeatTemplate = new $t('expandable/input-repeat');
-	Expandable.listTemplate = new $t('expandable/list');
-	Expandable.pillTemplate = new $t('expandable/pill');
-	Expandable.sidebarTemplate = new $t('expandable/sidebar');
-	Expandable.topAddListTemplate = new $t('expandable/top-add-list');
-	Expandable.getIdAndKey = (target, level) => {
-	  level ||= 0;
-	  const elems = du.find.upAll('.expand-header,.expand-body', target);
-	  if (elems.length < level + 1) return undefined;
-	  const cnt = elems[level];
-	  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-	  const key = cnt.getAttribute('key');
-	  return {id, key};
-	}
-	Expandable.getValueFunc = (target) => {
-	  const idKey = Expandable.getIdAndKey(target);
-	  return Expandable.lists[idKey.id].value(idKey.key);
-	}
-	
-	Expandable.get = (target, level) => {
-	  const idKey = Expandable.getIdAndKey(target, level);
-	  if (idKey === undefined) return undefined;
-	  return Expandable.lists[idKey.id].get(idKey.key);
-	}
-	
-	Expandable.list = (target) => {
-	  const idKey = Expandable.getIdAndKey(target);
-	  return Expandable.lists[idKey.id];
-	}
-	
-	Expandable.set = (target, value) => {
-	  const idKey = Expandable.getIdAndKey(target);
-	  Expandable.lists[idKey.id].set(idKey.key, value);
-	}
-	
-	Expandable.value = (key, value, target) => {
-	  return Expandable.getValueFunc(target)(key, value);
-	}
-	du.on.match('click', '.expandable-list-add-btn', (target) => {
-	  const id = target.getAttribute('ex-list-id');
-	  Expandable.lists[id].add();
-	});
-	du.on.match('click', '.expandable-item-rm-btn', (target) => {
-	  const id = target.getAttribute('ex-list-id');
-	  const key = target.getAttribute('key');
-	  Expandable.lists[id].remove(key);
-	});
-	Expandable.closeAll = (header) => {
-	  const hello = 'world';
-	}
-	
-	du.on.match('click', '.expand-header', (target, event) => {
-	  const isActive = target.matches('.active');
-	  const id = target.getAttribute('ex-list-id');
-	  const list = Expandable.lists[id];
-	  if (list) {
-	    if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
-	      du.class.remove(target, 'active');
-	      du.find.closest('.expand-body', target).style.display = 'none';
-	      list.activeKey(null);
-	      target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
-	    } else if (!isActive) {
-	      list.renderBody(target);
-	    }
-	  }
-	});
-	
-	function getExpandObject(elem) {
-	  const exListElem = du.find.up('[ex-list-id]', elem);
-	  if (!exListElem) return undefined;
-	  const listId = exListElem.getAttribute('ex-list-id');
-	  return Expandable.lists[listId];
-	}
-	
-	du.on.match('click', '.input-open-cnt', (target) => {
-	  const inputCnts = document.querySelectorAll('.expand-input-cnt');
-	  const expandList = getExpandObject(target);
-	  if (expandList && !expandList.hasInputTree()) expandList.add();
-	  else {
-	    const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
-	    const closest = du.find.closest('.expand-input-cnt', target);
-	    inputCnts.forEach((elem) => elem.hidden = true);
-	    inputOpenCnts.forEach((elem) => elem.hidden = false);
-	    target.hidden = true;
-	    if (closest) closest.hidden = false;
-	  }
-	});
-	
-	module.exports = Expandable
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/collections/notification.js',
-function (require, exports, module) {
-	
-const CustomEvent = require('../custom-event');
-	
-	function searchAndConvert(obj, parentPath, beforeEvent, afterEvent) {
-	  const proxy = new Proxy(obj, {set: notify(parentPath, beforeEvent, afterEvent)});
-	  const keys = Object.keys(obj);
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const path = parentPath ? `${parentPath}.${key}` : key;
-	    if (obj[key] instanceof Object)
-	      obj[key] = new Notifiction(true, obj[key], path, beforeEvent, afterEvent);
-	  }
-	  return proxy;
-	}
-	
-	function notify(parentPath, beforeEvent, afterEvent) {
-	  return (target, key, value) => {
-	    const change = target[key] !== value;
-	    const path = parentPath ? `${parentPath}.${key}` : key;
-	    if (change) {
-	      if (target.isRecusive() && value instanceof Object) value = new Notifiction(true, value, path, beforeEvent, afterEvent);
-	    }
-	    const detail = {target, path, old: target[key], new: value};
-	    if (change) beforeEvent.trigger(null, detail);
-	    target[key] = value;
-	    if (change) afterEvent.trigger(null, detail);
-	    return true;
-	  }
-	}
-	
-	class Notifiction {
-	  constructor(recursive, object, path, beforeChangeEvent, afterChangeEvent) {
-	    path ||= '';
-	    const instance = this;
-	    afterChangeEvent ||= new CustomEvent('afterChange');
-	    beforeChangeEvent ||= new CustomEvent('beforeChange');
-	    let proxy;
-	    if (recursive) {
-	      proxy = searchAndConvert(object || this, path, beforeChangeEvent, afterChangeEvent);
-	    } else {
-	      proxy = new Proxy(object || this, {set: notify(path, beforeChangeEvent, afterChangeEvent)})
-	    }
-	
-	    Object.defineProperty(proxy, "isRecusive", {
-	        writable: false,
-	        enumerable: false,
-	        configurable: false,
-	        value: () => recursive === true
-	    });
-	    Object.defineProperty(proxy, "onAfterChange", {
-	        writable: false,
-	        enumerable: false,
-	        configurable: false,
-	        value: afterChangeEvent.on
-	    });
-	    Object.defineProperty(proxy, "onBeforeChange", {
-	        writable: false,
-	        enumerable: false,
-	        configurable: false,
-	        value: beforeChangeEvent.on
-	    });
-	    Object.defineProperty(proxy, "deleteAll", {
-	        writable: false,
-	        enumerable: false,
-	        configurable: false,
-	        value: () => {
-	          const keys = Object.keys(instance);
-	          for (let index = 0; index < keys.length; index++) {
-	            delete instance[keys[index]];
-	          }
-	        }
-	    });
-	
-	    return proxy;
-	  }
-	}
-	
-	class NotifictionArray extends Notifiction {
-	  constructor(recursive, array, path, beforeChangeEvent, afterChangeEvent) {
-	    super(recursive, array || [], path, beforeChangeEvent, afterChangeEvent);
-	  }
-	}
-	
-	const notifyArr = new Notifiction();
-	notifyArr.onAfterChange(console.log);
-	notifyArr.onBeforeChange(console.error);
-	notifyArr[4] = 'poop';
-	notifyArr.pickls = 5;
-	notifyArr[4] = 'y diapers';
-	notifyArr[0] = [];
-	notifyArr[0][69] = 'sooo fine'
-	notifyArr[0][6] = {}
-	notifyArr[0][6].punk = [1,2,3,4,66]
-	notifyArr[0][6].punk.skittles = 'taste the rainbow'
-	notifyArr[0][6].punk.skittles = 'uck!'
-	
-	Notifiction.Array = NotifictionArray;
-	module.exports = Notifiction;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/display/catch-all.js',
-function (require, exports, module) {
+	const $t = require('../$t');
 	const du = require('../dom-utils');
+	const Lookup = require('../object/lookup')
+	/*
+	supported attributes: type, placeholder, name, class, value
+	label: creates a text label preceeding input.
+	clearOnClick: removes value when clicked.
+	list: creates a dropdown with list values.
+	default: the default value if input is invalid.
+	targetAttr: attribute which defines the inputs value.
+	format: attribute which defines a function used to format value.
+	validation: Accepts
+	                Array: value must be included
+	                Regex: value must match
+	                Function: value is arg1, must return true
+	errorMsg: Message that shows when validation fails.
 	
-	class CatchAll {
-	  constructor(container) {
+	*/
+	class Input extends Lookup {
+	  constructor(props) {
+	    const id = props.id || `input-${String.random(7)}`;
+	    super(id);
+	    props.hidden = props.hide || false;
+	    props.list = props.list || [];
+	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'placeholder',
+	                            'class', 'list', 'value', 'inline');
+	
+	    const immutableProps = {
+	      _IMMUTABLE: true,
+	      targetAttr: props.targetAttr || 'value',
+	      errorMsg: props.errorMsg || 'Error',
+	      errorMsgId: props.errorMsgId || `error-msg-${this.id()}`,
+	    }
+	    Object.getSet(this, immutableProps)
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = props.validation;
+	      delete json.id;
+	      delete json.errorMsgId;
+	      Object.set(json, properties);
+	      return new this.constructor(json);
+	    }
+	
 	    const instance = this;
-	    container = container;
-	    let events = Array.from(arguments).splice(1);
-	    events = events.length > 0 ? events : CatchAll.allMouseEvents;
+	    const forAll = Input.forAll(this.id());
 	
-	    const backdrop = document.createElement('DIV');
-	    this.backdrop = backdrop;
+	    this.hide = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      this.hidden(cnt.hidden = true);
+	    });
+	    this.show = () => forAll((elem) => {
+	      const cnt = du.find.up('.input-cnt', elem);
+	      this.hidden(cnt.hidden = false);
+	    });
 	
-	    this.hide = () => {
-	      backdrop.hidden = true;
-	      backdrop.style.zIndex = 0;
+	    let valid;
+	    let value = props.value;
+	
+	    const idSelector = `#${this.id()}`;
+	
+	    const html = this.constructor.html(this);
+	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
+	    this.html = () =>
+	     html();
+	
+	    function valuePriority (func) {
+	      return (elem, event) => func(elem[instance.targetAttr()], elem, event);
+	    }
+	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
+	
+	    function getElem(id) {return document.getElementById(id);}
+	    this.get = () => getElem(this.id());
+	
+	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
+	    this.valid = () => this.setValue();
+	    function getValue() {
+	      const elem = getElem(instance.id());
+	      let val = value;
+	      if (elem) val = elem[instance.targetAttr()];
+	      if (val === undefined) val = props.default;
+	      return val;
+	    }
+	    this.updateDisplay = () => {
+	      const elem = getElem(instance.id());
+	      if (elem) elem[instance.targetAttr()] = this.value();
 	    };
-	    this.show = () => {
-	      backdrop.hidden = false
-	      instance.updateZindex();
-	    };
-	
-	    this.updateZindex = () => setTimeout(() => {
-	      if (container) {
-	        if (container.style.zIndex === '') {
-	          container.style.zIndex = 2;
-	        }
-	        backdrop.style.zIndex = Number.parseInt(container.style.zIndex) - 1;
-	      } else {
-	        backdrop.style.zIndex = CatchAll.findHigestZindex() + 1;
+	    this.setValue = (val, force) => {
+	      if (val === undefined) val = getValue();
+	      if(force || this.validation(val)) {
+	        valid = true;
+	        value = val;
+	        const elem = getElem(instance.id());
+	        if (elem) elem.value = value;
+	        return true;
 	      }
-	    }, 200);
+	      valid = false;
+	      value = undefined;
+	      return false;
+	    }
+	    this.value = () => {
+	      const unformatted = (typeof value === 'function') ? value() : getValue() || '';
+	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
+	    }
+	    this.doubleCheck = () => {
+	      valid = undefined;
+	      this.validate();
+	      return valid;
+	    }
+	    this.validation = function(val) {
+	      const elem = getElem(instance.id);
+	      val = val === undefined && elem ? elem.value : val;
+	      if (val === undefined) return false;
+	      if (valid !== undefined && val === value) return valid;
+	      let valValid = true;
+	      if (props.validation instanceof RegExp) {
+	        valValid = val.match(props.validation) !== null;
+	      }
+	      else if ((typeof props.validation) === 'function') {
+	        valValid = props.validation.apply(null, arguments);
+	      }
+	      else if (Array.isArray(props.validation)) {
+	        valValid = props.validation.indexOf(val) !== -1;
+	      }
 	
-	    this.on = (eventName, func) => backdrop.addEventListener(eventName, func);
+	      return valValid;
+	    };
 	
-	    backdrop.style.position = 'fixed';
-	    backdrop.style.backgroundColor = 'transparent';
+	    this.validate = (target) => {
+	      target = target || getElem(instance.id());
+	      if (target) {
+	        if (this.setValue(target[this.targetAttr()])) {
+	          getElem(this.errorMsgId()).hidden = true;
+	          valid = true;
+	        } else {
+	          getElem(this.errorMsgId()).hidden = false;
+	          valid = false;
+	        }
+	      }
+	    }
 	
-	    // backdrop.style.cursor = 'none';
-	    backdrop.style.top = 0;
-	    backdrop.style.bottom = 0;
-	    backdrop.style.right = 0;
-	    backdrop.style.left = 0;
-	    const stopPropagation = (e) => e.stopPropagation();
-	    events.forEach((eventName) => instance.on(eventName, stopPropagation));
-	    CatchAll.container.append(backdrop);
-	
-	    this.updateZindex();
-	    this.hide();
-	  }
-	}
-	
-	
-	CatchAll.allMouseEvents = ['auxclick', 'click', 'contextmenu', 'dblclick',
-	                        'mousedown', 'mouseenter', 'mouseleave', 'mousemove',
-	                        'mouseover', 'mouseout', 'mouseup', 'pointerlockchange',
-	                        'pointerlockerror', 'select', 'wheel'];
-	
-	// Ripped off of: https://stackoverflow.com/a/1120068
-	CatchAll.findHigestZindex = function () {
-	  var elems = document.querySelectorAll('*');
-	  var highest = Number.MIN_SAFE_INTEGER || -(Math.pow(2, 53) - 1);
-	  for (var i = 0; i < elems.length; i++)
-	  {
-	    var zindex = Number.parseInt(
-	      document.defaultView.getComputedStyle(elems[i], null).getPropertyValue("z-index"),
-	      10
-	    );
-	    if (zindex > highest && zindex !== 2147483647)
-	    {
-	      highest = zindex;
+	    if (props.clearOnDblClick) {
+	      du.on.match(`dblclick`, `#${this.id()}`, () => {
+	        const elem = getElem(this.id());
+	        if (elem) elem.value = '';
+	      });
+	    } else if (props.clearOnClick) {
+	      du.on.match(`mousedown`, `#${this.id()}`, () => {
+	        const elem = getElem(this.id());
+	        if (elem) elem.value = '';
+	      });
 	    }
 	  }
-	  return highest;
 	}
 	
-	CatchAll.container = du.create.element('div', {id: 'catch-all-cnt'});
-	document.body.append(CatchAll.container);
+	function runValidate(elem) {
+	  const input = Lookup.get(elem.id);
+	  if (input) input.validate(elem);
+	}
 	
-	module.exports = CatchAll;
+	du.on.match(`change`, `input`, runValidate);
+	du.on.match(`keyup`, `input`, runValidate);
+	du.on.match(`change`, `select`, runValidate);
+	du.on.match(`keyup`, `select`, runValidate);
+	
+	Input.forAll = (id) => {
+	  const idStr = `#${id}`;
+	  return (func) => {
+	    const elems = document.querySelectorAll(idStr);
+	    for (let index = 0; index < elems.length; index += 1) {
+	      func(elems[index]);
+	    }
+	  }
+	}
+	
+	Input.template = new $t('input/input');
+	Input.html = (instance) => () => Input.template.render(instance);
+	Input.flagAttrs = ['checked', 'selected'];
+	Input.attrString = (targetAttr, value) =>{
+	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
+	    return value === true ? targetAttr : '';
+	  }
+	  return `${targetAttr}='${value}'`
+	}
+	
+	Input.DO_NOT_CLONE = true;
+	
+	module.exports = Input;
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/object/key-value.js',
+RequireJS.addFunction('../../public/js/utils/display/resizer.js',
 function (require, exports, module) {
+	const CatchAll = require('./catch-all');
+	const du = require('../dom-utils');
+	const CustomEvent = require('../custom-event');
 	
-const Lookup = require('./lookup');
-	const Notifiction = require('../collections/notification.js');
-	const NotifictionArray = Notifiction.Array;
-	const CustomEvent = require('../custom-event.js');
+	class Resizer {
+	  constructor (elem, axisObj, cursor) {
+	    const instance = this;
+	    const minimumSize = 40;
+	    let resizeId = elem.getAttribute(Resizer.resizeAttr);
+	    let sizeLocked = false;
 	
-	function updateParent(keyValue) {
-	  return (target, detail) => {
-	    if (detail.new instanceof KeyValue) {
-	      const parentAttr = detail.new.value.parentAttribute();
-	      if (parentAttr) detail.new[parentAttr](keyValue);
+	    if (!resizeId) {
+	      resizeId = 'resize-' + Math.floor(Math.random() * 1000000);
+	      elem.setAttribute(Resizer.resizeAttr, resizeId);
 	    }
-	  }
-	}
 	
-	/**
-	  properties:
-	    @childrenAttribute - Attribute that defines children an object or an array;
-	    @object - true iff you want an object for your children
-	    @parentAttribute - Attribute that defines parent setting getting function;
-	    @keyMapFunction - function will be called to convert keys before processing.
-	    @id - Lookup id
-	    @idAttr - attribute for Lookup id.
-	    @evaluators - an object whos attributes are types and values are functions to resolve said type
-	**/
-	class KeyValue extends Lookup {
-	  constructor(properties) {
-	    super(properties.id, properties.idAttr);
-	    const childAttr = properties.childrenAttribute;
-	    const parentAttr = properties.parentAttribute;
-	    const customFuncs = [];
+	    this.show = () => {this.container.hidden = false; this.position()};
+	    this.hide = () => this.container.hidden = true;
 	
-	
-	    if (childAttr) {
-	      if (properties.object) this[childAttr] = new Notifiction(false);
-	      else this[childAttr] = new NotifictionArray(false);
-	      this[childAttr].onAfterChange(updateParent(this));
-	      this.getRoot = () => {
-	        let curr = this;
-	        while(curr.parentAssembly() !== undefined) curr = curr.parentAssembly();
-	        return curr;
+	    function updateZindex(zIndex) {
+	      if (instance.container.hidden === false) {
+	        instance.container.style.zIndex = zIndex;
+	        elem.style.zIndex = zIndex;
+	        Resizer.backdrop.updateZindex();
+	        instance.position();
 	      }
 	    }
+	    this.updateZindex = updateZindex;
+	    elem.addEventListener('click', () => Resizer.updateZindex(elem));
 	
-	    function runCustomFunctions(code, value) {
-	      for (let index = 0; index < customFuncs; index++) {
-	        const customVal = customFuncs[index](code, value);
-	        if(customVal) return customVal;
+	
+	    if (resizeId) {
+	      if (!Resizer.collections[resizeId]) {
+	        Resizer.collections[resizeId] = [];
 	      }
+	      Resizer.collections[resizeId].push(this);
+	    }
+	    const padding = 8;
+	    let resize = false;
+	    let lastPosition;
+	    this.getPadding = () => padding;
+	
+	    const attrs = Object.values(axisObj);
+	    const top = attrs.indexOf('top') !== -1;
+	    const bottom = attrs.indexOf('bottom') !== -1;
+	    const left = attrs.indexOf('left') !== -1;
+	    const right = attrs.indexOf('right') !== -1;
+	
+	    this.container = document.createElement('DIV');
+	    this.container.style.cursor = cursor;
+	    this.container.style.padding = padding/2 + 'px';
+	    this.container.style.position = axisObj.position || 'absolute';
+	    this.container.style.backgroundColor = 'transparent';
+	    Resizer.container.append(this.container);
+	
+	    function getComputedSize(element, property) {
+	      return Number.parseInt(window.getComputedStyle(element).getPropertyValue(property));
 	    }
 	
-	    this.value = (key, value) => {
-	      try {
-	        const formatted = (typeof this.value.keyFormatter) === 'function' ? this.value.keyFormatter(key) : undefined;
-	        if (formatted !== undefined) key = formatted;
-	        const customVal = runCustomFunctions(key, value)
-	        if(customVal !== undefined) return customVal;
-	
-	        if (value !== undefined) {
-	          this.value.values[key] = value;
-	        } else {
-	          const instVal = this.value.values[key];
-	          if (instVal !== undefined && instVal !== null) {
-	            const evaluator = this.value.evaluators[(typeof instVal)];
-	            if (evaluator) return evaluator(instVal);
-	            return instVal;
-	          }
-	          const parent = this[parentAttr]();
-	          if (parent) return parent.value(key);
-	          else {
-	            const defaultFunction = this.value.defaultFunction;
-	            if (defaultFunction) {
-	              value = (typeof this.value.defaultFunction) === 'function' ? this.value.defaultFunction(key) : undefined;
-	              if (value === undefined) throw new Error();
-	              return value;
+	    function resizeCnt (event) {
+	      if (resize) {
+	        Resizer.updateZindex(elem);
+	        let dy = resize.clientY - event.clientY;
+	        let dx = resize.clientX - event.clientX;
+	        let minHeight = getComputedSize(elem, 'min-height');
+	        let minWidth = getComputedSize(elem, 'min-width');
+	        if (axisObj.x) {
+	          if (left) dx *= -1;
+	          const newWidth = lastPosition.width - dx;
+	          if (newWidth > minWidth) {
+	            if (left) {
+	              elem.style.left = lastPosition.left + dx + 'px';
 	            }
+	            elem.style.width = newWidth + 'px'
 	          }
 	        }
-	      } catch (e) {
-	        console.error(`Failed to resolve key: '${key}'`);
-	        throw e;
-	        return NaN;
+	        if (axisObj.y) {
+	          if (top) dy *= -1;
+	          const newHeight = lastPosition.height - dy;
+	          if (newHeight > minHeight) {
+	            if (top) {
+	              elem.style.top = lastPosition.top + window.scrollY + dy + 'px';
+	            }
+	            elem.style.height = newHeight + 'px'
+	          }
+	        }
 	      }
 	    }
 	
+	    this.container.onmousedown = (e) => {
+	      resize = e;
+	      Resizer.backdrop.show();
+	      lastPosition = elem.getBoundingClientRect();
+	      // e.stopPropagation();
+	      // e.preventDefault();
+	    }
 	
-	    this.value.values = {};
-	    this.value.evaluators = properties.evaluators || {};
-	    this.value.defaultFunction = properties.defaultFunction;
-	    this.value.keyFormatter = properties.keyFormatter;
-	    this.value.parentAttribute = () => parentAttr;
-	    this.value.childrenAttribute = () => childAttr;
-	    this.value.addCustomFunction = (func) => (typeof func) === 'function' && customFuncs.push(func);
+	    function stopResizing() {
+	      if (resize) {
+	        resize = undefined;
+	        Resizer.position(elem);
+	        Resizer.backdrop.hide();
+	        Resizer.events.resize.trigger(elem);
+	      }
+	    }
+	
+	    function isFixed() {
+	      return axisObj.position && axisObj.position === 'fixed';
+	    }
+	
+	    // this.container.addEventListener('click',
+	    // (e) =>
+	    // e.stopPropagation()
+	    // );
+	    Resizer.backdrop.on('mouseup', stopResizing);
+	    this.container.onmouseup = stopResizing;
+	
+	    this.container.onmousemove = resizeCnt;
+	    Resizer.backdrop.on('mousemove', (event) =>
+	    resizeCnt(event));
+	    this.position = function () {
+	      const height = document.documentElement.clientHeight;
+	      const width = document.documentElement.clientWidth;
+	      const rect = elem.getBoundingClientRect();
+	      const cntStyle = instance.container.style;
+	      const scrollY =  isFixed() ? 0 : window.scrollY;
+	      const scrollX =  isFixed() ? 0 : window.scrollX;
+	      if (top) {
+	        cntStyle.top = rect.top - padding + scrollY + 'px';
+	      } else if (!bottom) {
+	        cntStyle.top = rect.top + scrollY + 'px';
+	      }
+	
+	      if (bottom) {
+	        cntStyle.bottom = (height - rect.bottom) - padding - scrollY + 'px';
+	      } else if (!top) {
+	        cntStyle.bottom = (height - rect.bottom) - scrollY + 'px';
+	      }
+	
+	      if (right) {
+	        cntStyle.right = (width - rect.right) - padding - scrollX + 'px';
+	      } else if (!left) {
+	        cntStyle.right = (width - rect.right) - scrollX + 'px';
+	      }
+	
+	      if (left) {
+	        cntStyle.left = rect.left - padding + scrollX + 'px';
+	      } else if (!right) {
+	        cntStyle.left = rect.left + scrollX + 'px';
+	      }
+	    }
 	  }
 	}
 	
-	module.exports = KeyValue;
+	Resizer.container = du.create.element('div', {id: 'resizer-cnt'});
+	document.body.append(Resizer.container);
+	
+	Resizer.lastZindexSearch = new Date().getTime();
+	Resizer.zIndex = (zindex) => {
+	  const time = new Date().getTime();
+	  if (time > Resizer.lastZindexSearch + 500) {
+	    Resizer.zed = CatchAll.findHigestZindex();
+	    lastZindexSearch = time;
+	  }
+	  return Resizer.zed;
+	}
+	Resizer.container.id = 'resize-id-id';
+	// Resizer.container.addEventListener('click', (e) => e.stopPropagation());
+	Resizer.events = {};
+	Resizer.events.resize = new CustomEvent ('resized')
+	
+	Resizer.backdrop = new CatchAll();
+	
+	Resizer.resizeAttr = 'resizer-id'
+	Resizer.collections = {};
+	Resizer.position = function (elem) {
+	  const resizeId = elem.getAttribute(Resizer.resizeAttr);
+	  const collection = Resizer.collections[resizeId];
+	  if (collection) {
+	    collection.forEach((item) => item.position());
+	  }
+	}
+	Resizer.onEach = function (elem, func) {
+	  const callArgs = Array.from(arguments).splice(2);
+	  const resizeId = elem.getAttribute(Resizer.resizeAttr);
+	  const collection = Resizer.collections[resizeId];
+	  if (collection) {
+	    collection.forEach((item) => item[func](...callArgs));
+	  }
+	}
+	Resizer.hide = (elem) => Resizer.onEach(elem, 'hide');
+	Resizer.show = (elem) => {
+	    if (!Resizer.isLocked(elem)) {
+	      Resizer.onEach(elem, 'show');
+	      Resizer.updateZindex(elem);
+	    }
+	};
+	Resizer.updateZindex = (elem, callback) => {
+	  const highestZIndex = Resizer.zIndex() - 3;
+	  if (!elem.style.zIndex ||
+	      (elem.style.zIndex.match(/[0-9]{1,}/) &&
+	        highestZIndex > Number.parseInt(elem.style.zIndex))) {
+	    Resizer.onEach(elem, 'updateZindex', highestZIndex + 4);
+	  }
+	}
+	
+	{
+	  const locked = {};
+	  Resizer.lock = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)] = true;
+	  Resizer.unlock = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)] = false;
+	  Resizer.isLocked  = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)];
+	}
+	
+	Resizer.all = (elem, position) => {
+	  new Resizer(elem, {y: 'top', position}, 'n-resize');
+	  new Resizer(elem, {y: 'bottom', position}, 's-resize');
+	  new Resizer(elem, {x: 'right', position}, 'e-resize');
+	  new Resizer(elem, {x: 'left', position}, 'w-resize', position);
+	  new Resizer(elem, {x: 'right', y: 'top', position}, 'ne-resize');
+	  new Resizer(elem, {x: 'left', y: 'top', position}, 'nw-resize');
+	  new Resizer(elem, {x: 'right', y: 'bottom', position}, 'se-resize');
+	  new Resizer(elem, {x: 'left', y: 'bottom', position}, 'sw-resize');
+	}
+	
+	module.exports = Resizer;
 	
 });
 
@@ -12549,6 +12557,109 @@ class Lookup {
 	try {
 	  module.exports = Lookup;
 	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/object/key-value.js',
+function (require, exports, module) {
+	
+const Lookup = require('./lookup');
+	const Notifiction = require('../collections/notification.js');
+	const NotifictionArray = Notifiction.Array;
+	const CustomEvent = require('../custom-event.js');
+	
+	function updateParent(keyValue) {
+	  return (target, detail) => {
+	    if (detail.new instanceof KeyValue) {
+	      const parentAttr = detail.new.value.parentAttribute();
+	      if (parentAttr) detail.new[parentAttr](keyValue);
+	    }
+	  }
+	}
+	
+	/**
+	  properties:
+	    @childrenAttribute - Attribute that defines children an object or an array;
+	    @object - true iff you want an object for your children
+	    @parentAttribute - Attribute that defines parent setting getting function;
+	    @keyMapFunction - function will be called to convert keys before processing.
+	    @id - Lookup id
+	    @idAttr - attribute for Lookup id.
+	    @evaluators - an object whos attributes are types and values are functions to resolve said type
+	**/
+	class KeyValue extends Lookup {
+	  constructor(properties) {
+	    super(properties.id, properties.idAttr);
+	    const childAttr = properties.childrenAttribute;
+	    const parentAttr = properties.parentAttribute;
+	    const customFuncs = [];
+	
+	
+	    if (childAttr) {
+	      if (properties.object) this[childAttr] = new Notifiction(false);
+	      else this[childAttr] = new NotifictionArray(false);
+	      this[childAttr].onAfterChange(updateParent(this));
+	      this.getRoot = () => {
+	        let curr = this;
+	        while(curr.parentAssembly() !== undefined) curr = curr.parentAssembly();
+	        return curr;
+	      }
+	    }
+	
+	    function runCustomFunctions(code, value) {
+	      for (let index = 0; index < customFuncs; index++) {
+	        const customVal = customFuncs[index](code, value);
+	        if(customVal) return customVal;
+	      }
+	    }
+	
+	    this.value = (key, value) => {
+	      try {
+	        const formatted = (typeof this.value.keyFormatter) === 'function' ? this.value.keyFormatter(key) : undefined;
+	        if (formatted !== undefined) key = formatted;
+	        const customVal = runCustomFunctions(key, value)
+	        if(customVal !== undefined) return customVal;
+	
+	        if (value !== undefined) {
+	          this.value.values[key] = value;
+	        } else {
+	          const instVal = this.value.values[key];
+	          if (instVal !== undefined && instVal !== null) {
+	            const evaluator = this.value.evaluators[(typeof instVal)];
+	            if (evaluator) return evaluator(instVal);
+	            return instVal;
+	          }
+	          const parent = this[parentAttr]();
+	          if (parent) return parent.value(key);
+	          else {
+	            const defaultFunction = this.value.defaultFunction;
+	            if (defaultFunction) {
+	              value = (typeof this.value.defaultFunction) === 'function' ? this.value.defaultFunction(key) : undefined;
+	              if (value === undefined) throw new Error();
+	              return value;
+	            }
+	          }
+	        }
+	      } catch (e) {
+	        console.error(`Failed to resolve key: '${key}'`);
+	        throw e;
+	        return NaN;
+	      }
+	    }
+	
+	
+	    this.value.values = {};
+	    this.value.evaluators = properties.evaluators || {};
+	    this.value.defaultFunction = properties.defaultFunction;
+	    this.value.keyFormatter = properties.keyFormatter;
+	    this.value.parentAttribute = () => parentAttr;
+	    this.value.childrenAttribute = () => childAttr;
+	    this.value.addCustomFunction = (func) => (typeof func) === 'function' && customFuncs.push(func);
+	  }
+	}
+	
+	module.exports = KeyValue;
 	
 });
 
@@ -13031,92 +13142,298 @@ const $t = require('../$t');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/bind.js',
+RequireJS.addFunction('../../public/js/utils/lists/expandable.js',
 function (require, exports, module) {
 	
-const du = require('../dom-utils');
-	const Input = require('./input');
+
 	
-	const defaultDynamInput = (value, type) => new Input({type, value});
+	const CustomEvent = require('../custom-event.js');
+	const du = require('../dom-utils.js');
+	const $t = require('../$t.js');
 	
-	module.exports = function(selector, objOrFunc, props) {
-	  let lastInputTime = {};
-	  props = props || {};
-	  const validations = props.validations || {};
-	  const inputs = props.inputs || {};
+	// properties
+	//  required: {
+	//  getHeader: function returns html header string,
+	//  getBody: function returns html body string,
+	//}
+	//  optional: {
+	//  list: list to use, creates on undefined
+	//  getObject: function returns new list object default is generic js object,
+	//  parentSelector: cssSelector only reqired for refresh function,
+	//  listElemLable: nameOfElementType changes add button label,
+	//  dontOpenOnAdd: by default the active element will be switched to newly added elements.
+	//  hideAddBtn: defaults to false,
+	//  startClosed: all tabs are closed on list open.
+	//  input: true - require user to enter text before adding new
+	//  inputOptions: array of autofill inputs
+	//  inputs: [{placeholder, autofill},...]
+	//  inputValidation: function to validate input fields
+	//  type: defaults to list,
+	//  selfCloseTab: defalts to true - allows clicking on header to close body,
+	//  findElement: used to find elemenents related to header - defaults to closest
+	//  removeButton: true by default;
+	//}
+	class Expandable {
+	  constructor(props) {
+	    const afterRenderEvent = new CustomEvent('afterRender');
+	    const afterAddEvent = new CustomEvent('afterAdd');
+	    const afterRefreshEvent = new CustomEvent('afterRefresh');
+	    const afterRemovalEvent = new CustomEvent('afterRemoval');
+	    const instance = this;
+	    const renderBodyOnOpen = props.renderBodyOnOpen === false ? false : true;
+	    props.getObject = props.getObject || (() => ({}));
+	    props.ERROR_CNT_ID = `expandable-error-msg-cnt-${props.id}`;
+	    props.inputTreeId = `expandable-input-tree-cnt-${props.id}`;
+	    props.type = props.type || 'list';
+	    props.findElement = props.findElement || ((selector, target) =>  du.find.closest(selector, target));
+	    props.selfCloseTab = props.selfCloseTab === undefined ? true : props.selfCloseTab;
+	    props.getObject = props.getObject || (() => {});
+	    props.inputs = props.inputs || [];
+	    props.list = props.list || [];
+	    // props.list.DO_NOT_CLONE = true;
+	    this.hasBody = () => (typeof this.getBody) === 'function';
+	    this.getHeader = props.getHeader; delete props.getHeader;
+	    this.getBody = props.getBody; delete props.getBody;
+	    props.id = Expandable.lists.length;
+	    const firstKey = Object.keys(props.list)[0];
+	    props.activeKey = firstKey || 0; //TODO ???
+	    Object.getSet(this, props, 'listElemLable');
+	    let pendingRefresh = false;
+	    let lastRefresh = new Date().getTime();
+	    const storage = {};
+	    Expandable.lists[props.id] = this;
+	    this.inputTree = () => props.inputTree;
 	
-	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
-	  const getValue = (updatePath, elem) => {
-	    const input = Object.pathValue(inputs, updatePath);
-	    return input ? input.value() : elem.value;
-	  }
-	  const getValidation = (updatePath) => {
-	    let validation = Object.pathValue(validations, updatePath);
-	    const input = Object.pathValue(inputs, updatePath);
-	    if (input) {
-	      validation = input.validation;
+	    this.errorCntId = () => props.ERROR_CNT_ID;
+	    function setErrorMsg(msg) {
+	        du.id(props.ERROR_CNT_ID).innerHTML = msg;
 	    }
-	    return validation;
-	  }
 	
-	  function update(elem) {
-	    const target = resolveTarget(elem);
-	    elem = du.find.down('input,select,textarea', elem);
-	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
-	    elem.id = elem.id || String.random(7);
-	    const thisInputTime = new Date().getTime();
-	    lastInputTime[elem.id] = thisInputTime;
-	    setTimeout(() => {
-	      if (thisInputTime === lastInputTime[elem.id]) {
-	        const validation = getValidation(updatePath);
-	        if (updatePath !== null) {
-	          const newValue = getValue(updatePath, elem);
-	          if ((typeof validation) === 'function' && !validation(newValue)) {
-	            console.error('badValue')
-	          } else if ((typeof objOrFunc) === 'function') {
-	            objOrFunc(updatePath, elem.value, elem);
-	          } else {
-	            Object.pathValue(objOrFunc, updatePath, elem.value);
-	          }
+	    function values() {
+	      const values = {};
+	      props.inputs.forEach((input) =>
+	        values[input.placeholder] = du.id(input.id).value);
+	      return values;
+	    }
 	
-	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
-	            target.innerHTML = newValue;
-	          }
+	    function getCnt() {
+	      return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
+	    }
+	
+	    function getBodyCnt() {
+	      return du.find.down('.expand-body', getCnt());
+	    }
+	
+	    function getInputCnt() {
+	      const cnt = du.find.down('.expand-input-cnt', getCnt());
+	      return cnt;
+	    }
+	    //changes....
+	    this.values = values;
+	    this.getInputCnt = getInputCnt;
+	
+	    this.add = (vals) => {
+	      const inputValues = vals || values();
+	      if ((typeof props.inputValidation) !== 'function' ||
+	              props.inputValidation(inputValues) === true) {
+	          const obj = props.getObject(inputValues, getInputCnt());
+	          const key = this.getKey(vals, obj);
+	          props.list[key] = obj;
+	          if (!props.dontOpenOnAdd) this.activeKey(key);
+	          this.refresh();
+	          afterAddEvent.trigger();
+	      } else {
+	        const errors = props.inputValidation(inputValues);
+	        let errorStr;
+	        if ((typeof errors) === 'object') {
+	          const keys = Object.keys(errors);
+	          errorStr = Object.values(errors).join('<br>');
+	        } else {
+	          errorStr = `Error: ${errors}`;
 	        }
+	        setErrorMsg(errorStr);
 	      }
-	    }, 2000);
-	  }
-	  const makeDynamic = (target) => {
-	    target = resolveTarget(target);
-	    if (target.getAttribute('resolved') === null) {
-	      target.setAttribute('resolved', 'dynam-input');
-	      const value = target.innerText;
-	      const type = target.getAttribute('type');
-	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
-	      const input = Object.pathValue(inputs, updatePath) || defaultDynamInput(value, type);
+	    };
+	    this.hasInputTree = () =>
+	      this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
+	    if (this.hasInputTree())
+	      props.inputTree.onSubmit(this.add);
+	    props.hasInputTree = this.hasInputTree;
 	
-	      target.innerHTML = input.html();
-	      const id = (typeof input.id === 'function') ? input.id() : input.id;
-	      const inputElem = du.find.down(`#${id}`, target);
-	      du.class.add(inputElem, 'dynam-input');
-	      inputElem.setAttribute('prop-update', updatePath);
-	      inputElem.focus();
+	    this.isSelfClosing = () => props.selfCloseTab;
+	    this.remove = (removed) => {
+	      afterRemovalEvent.trigger(undefined, removed);
+	      this.refresh();
+	    }
+	    this.html = () =>
+	      Expandable[`${instance.type().toCamel()}Template`].render(this);
+	    this.afterRender = (func) => afterRenderEvent.on(func);
+	    this.afterAdd = (func) => afterAddEvent.on(func);
+	    this.afterRemoval = (func) => afterRemovalEvent.on(func);
+	    this.refresh = (type) => {
+	      this.type((typeof type) === 'string' ? type : props.type);
+	      if (!pendingRefresh) {
+	        pendingRefresh = true;
+	        setTimeout(() => {
+	          props.inputs.forEach((input) => input.id = input.id || String.random(7));
+	          const parent = document.querySelector(props.parentSelector);
+	          const focusInfo = du.focusInfo();
+	          const html = this.html();
+	          if (parent && html !== undefined) {
+	            parent.innerHTML = html;
+	            du.focus(focusInfo);
+	            afterRefreshEvent.trigger();
+	          }
+	          pendingRefresh = false;
+	        }, 100);
+	      }
+	    };
+	    this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
+	    this.getKey = () => this.list().length;
+	    this.active = () => props.list[this.activeKey()];
+	    // TODO: figure out why i wrote this and if its neccisary.
+	    this.value = (key) => (key2, value) => {
+	      if (props.activeKey === undefined) props.activeKey = 0;
+	      if (key === undefined) key = props.activeKey;
+	      if (storage[key] === undefined) storage[key] = {};
+	      if (value === undefined) return storage[key][key2];
+	      storage[key][key2] = value;
+	    }
+	    this.inputHtml = () => this.hasInputTree() ?
+	          this.inputTree().payload().html() : Expandable.inputRepeatTemplate.render(this);
+	    this.set = (key, value) => props.list[key] = value;
+	    this.get = (key) => props.list[key];
+	    this.renderBody = (target) => {
+	      const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
+	      target = target || document.querySelector(headerSelector);
+	      if (target !== null) {
+	        const id = target.getAttribute('ex-list-id');
+	        const list = Expandable.lists[id];
+	        const headers = du.find.up('.expandable-list', target).querySelectorAll('.expand-header');
+	        const bodys = du.find.up('.expandable-list', target).querySelectorAll('.expand-body');
+	        const rmBtns = du.find.up('.expandable-list', target).querySelectorAll('.expandable-item-rm-btn');
+	        headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
+	        bodys.forEach((body) => body.style.display = 'none');
+	        rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
+	        const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
+	        if (this.hasBody()) {
+	          body.style.display = 'block';
+	        }
+	        const key = target.getAttribute('key');
+	        this.activeKey(key);
+	        if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
+	        if (props.removeButton) target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+	        target.className += ' active' + (this.hasBody() ? '' : ' no-body');
+	        afterRenderEvent.trigger();
+	        // du.scroll.intoView(target.parentElement, 3, 25, document.body);
+	      }
+	    };
+	    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+	
+	    this.htmlBody = (key) => {
+	      getBodyCnt().setAttribute('key', key);
+	      return this.hasBody() ? this.getBody(this.list()[key], key) : '';
+	    }
+	    this.list = () => props.list;
+	    this.refresh();
+	    // setTimeout(() => {
+	    //   const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
+	    //   const activeHeader = du.find(headerSelector);
+	    //   if (activeHeader) activeHeader.click();
+	    // }, 2000);
+	  }
+	}
+	Expandable.lists = [];
+	Expandable.DO_NOT_CLONE = true;
+	Expandable.inputRepeatTemplate = new $t('expandable/input-repeat');
+	Expandable.listTemplate = new $t('expandable/list');
+	Expandable.pillTemplate = new $t('expandable/pill');
+	Expandable.sidebarTemplate = new $t('expandable/sidebar');
+	Expandable.topAddListTemplate = new $t('expandable/top-add-list');
+	Expandable.getIdAndKey = (target, level) => {
+	  level ||= 0;
+	  const elems = du.find.upAll('.expand-header,.expand-body', target);
+	  if (elems.length < level + 1) return undefined;
+	  const cnt = elems[level];
+	  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
+	  const key = cnt.getAttribute('key');
+	  return {id, key};
+	}
+	Expandable.getValueFunc = (target) => {
+	  const idKey = Expandable.getIdAndKey(target);
+	  return Expandable.lists[idKey.id].value(idKey.key);
+	}
+	
+	Expandable.get = (target, level) => {
+	  const idKey = Expandable.getIdAndKey(target, level);
+	  if (idKey === undefined) return undefined;
+	  return Expandable.lists[idKey.id].get(idKey.key);
+	}
+	
+	Expandable.list = (target) => {
+	  const idKey = Expandable.getIdAndKey(target);
+	  return Expandable.lists[idKey.id];
+	}
+	
+	Expandable.set = (target, value) => {
+	  const idKey = Expandable.getIdAndKey(target);
+	  Expandable.lists[idKey.id].set(idKey.key, value);
+	}
+	
+	Expandable.value = (key, value, target) => {
+	  return Expandable.getValueFunc(target)(key, value);
+	}
+	du.on.match('click', '.expandable-list-add-btn', (target) => {
+	  const id = target.getAttribute('ex-list-id');
+	  Expandable.lists[id].add();
+	});
+	du.on.match('click', '.expandable-item-rm-btn', (target) => {
+	  const id = target.getAttribute('ex-list-id');
+	  const key = target.getAttribute('key');
+	  Expandable.lists[id].remove(key);
+	});
+	Expandable.closeAll = (header) => {
+	  const hello = 'world';
+	}
+	
+	du.on.match('click', '.expand-header', (target, event) => {
+	  const isActive = target.matches('.active');
+	  const id = target.getAttribute('ex-list-id');
+	  const list = Expandable.lists[id];
+	  if (list) {
+	    if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
+	      du.class.remove(target, 'active');
+	      du.find.closest('.expand-body', target).style.display = 'none';
+	      list.activeKey(null);
+	      target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
+	    } else if (!isActive) {
+	      list.renderBody(target);
 	    }
 	  }
+	});
 	
-	  du.on.match('keyup', selector, update);
-	  du.on.match('change', selector, update);
-	  du.on.match('click', selector, makeDynamic);
+	function getExpandObject(elem) {
+	  const exListElem = du.find.up('[ex-list-id]', elem);
+	  if (!exListElem) return undefined;
+	  const listId = exListElem.getAttribute('ex-list-id');
+	  return Expandable.lists[listId];
 	}
 	
+	du.on.match('click', '.input-open-cnt', (target) => {
+	  const inputCnts = document.querySelectorAll('.expand-input-cnt');
+	  const expandList = getExpandObject(target);
+	  if (expandList && !expandList.hasInputTree()) expandList.add();
+	  else {
+	    const inputOpenCnts = document.querySelectorAll('.input-open-cnt');
+	    const closest = du.find.closest('.expand-input-cnt', target);
+	    inputCnts.forEach((elem) => elem.hidden = true);
+	    inputOpenCnts.forEach((elem) => elem.hidden = false);
+	    target.hidden = true;
+	    if (closest) closest.hidden = false;
+	  }
+	});
 	
-	const undoDynamic = (target) => {
-	  const parent = du.find.up('[resolved="dynam-input"]', target)
-	  parent.innerText = target.value;
-	  parent.removeAttribute('resolved');
-	}
-	
-	du.on.match('focusout', '.dynam-input', undoDynamic);
+	module.exports = Expandable
 	
 });
 
@@ -13181,6 +13498,91 @@ const cacheState = {};
 	FunctionCache.disable = () => disabled = true;
 	FunctionCache.enable = () => disabled = false;
 	module.exports = FunctionCache;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/display/catch-all.js',
+function (require, exports, module) {
+	const du = require('../dom-utils');
+	
+	class CatchAll {
+	  constructor(container) {
+	    const instance = this;
+	    container = container;
+	    let events = Array.from(arguments).splice(1);
+	    events = events.length > 0 ? events : CatchAll.allMouseEvents;
+	
+	    const backdrop = document.createElement('DIV');
+	    this.backdrop = backdrop;
+	
+	    this.hide = () => {
+	      backdrop.hidden = true;
+	      backdrop.style.zIndex = 0;
+	    };
+	    this.show = () => {
+	      backdrop.hidden = false
+	      instance.updateZindex();
+	    };
+	
+	    this.updateZindex = () => setTimeout(() => {
+	      if (container) {
+	        if (container.style.zIndex === '') {
+	          container.style.zIndex = 2;
+	        }
+	        backdrop.style.zIndex = Number.parseInt(container.style.zIndex) - 1;
+	      } else {
+	        backdrop.style.zIndex = CatchAll.findHigestZindex() + 1;
+	      }
+	    }, 200);
+	
+	    this.on = (eventName, func) => backdrop.addEventListener(eventName, func);
+	
+	    backdrop.style.position = 'fixed';
+	    backdrop.style.backgroundColor = 'transparent';
+	
+	    // backdrop.style.cursor = 'none';
+	    backdrop.style.top = 0;
+	    backdrop.style.bottom = 0;
+	    backdrop.style.right = 0;
+	    backdrop.style.left = 0;
+	    const stopPropagation = (e) => e.stopPropagation();
+	    events.forEach((eventName) => instance.on(eventName, stopPropagation));
+	    CatchAll.container.append(backdrop);
+	
+	    this.updateZindex();
+	    this.hide();
+	  }
+	}
+	
+	
+	CatchAll.allMouseEvents = ['auxclick', 'click', 'contextmenu', 'dblclick',
+	                        'mousedown', 'mouseenter', 'mouseleave', 'mousemove',
+	                        'mouseover', 'mouseout', 'mouseup', 'pointerlockchange',
+	                        'pointerlockerror', 'select', 'wheel'];
+	
+	// Ripped off of: https://stackoverflow.com/a/1120068
+	CatchAll.findHigestZindex = function () {
+	  var elems = document.querySelectorAll('*');
+	  var highest = Number.MIN_SAFE_INTEGER || -(Math.pow(2, 53) - 1);
+	  for (var i = 0; i < elems.length; i++)
+	  {
+	    var zindex = Number.parseInt(
+	      document.defaultView.getComputedStyle(elems[i], null).getPropertyValue("z-index"),
+	      10
+	    );
+	    if (zindex > highest && zindex !== 2147483647)
+	    {
+	      highest = zindex;
+	    }
+	  }
+	  return highest;
+	}
+	
+	CatchAll.container = du.create.element('div', {id: 'catch-all-cnt'});
+	document.body.append(CatchAll.container);
+	
+	module.exports = CatchAll;
 	
 });
 
@@ -13269,205 +13671,6 @@ class StateHistory {
 	}
 	
 	module.exports = StateHistory;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/input.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const $t = require('../$t');
-	const du = require('../dom-utils');
-	const Lookup = require('../object/lookup')
-	/*
-	supported attributes: type, placeholder, name, class, value
-	label: creates a text label preceeding input.
-	clearOnClick: removes value when clicked.
-	list: creates a dropdown with list values.
-	default: the default value if input is invalid.
-	targetAttr: attribute which defines the inputs value.
-	format: attribute which defines a function used to format value.
-	validation: Accepts
-	                Array: value must be included
-	                Regex: value must match
-	                Function: value is arg1, must return true
-	errorMsg: Message that shows when validation fails.
-	
-	*/
-	class Input extends Lookup {
-	  constructor(props) {
-	    const id = props.id || `input-${String.random(7)}`;
-	    super(id);
-	    props.hidden = props.hide || false;
-	    props.list = props.list || [];
-	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'placeholder',
-	                            'class', 'list', 'value', 'inline');
-	
-	    const immutableProps = {
-	      _IMMUTABLE: true,
-	      targetAttr: props.targetAttr || 'value',
-	      errorMsg: props.errorMsg || 'Error',
-	      errorMsgId: props.errorMsgId || `error-msg-${this.id()}`,
-	    }
-	    Object.getSet(this, immutableProps)
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      json.validation = props.validation;
-	      delete json.id;
-	      delete json.errorMsgId;
-	      Object.set(json, properties);
-	      return new this.constructor(json);
-	    }
-	
-	    const instance = this;
-	    const forAll = Input.forAll(this.id());
-	
-	    this.hide = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      this.hidden(cnt.hidden = true);
-	    });
-	    this.show = () => forAll((elem) => {
-	      const cnt = du.find.up('.input-cnt', elem);
-	      this.hidden(cnt.hidden = false);
-	    });
-	
-	    let valid;
-	    let value = props.value;
-	
-	    const idSelector = `#${this.id()}`;
-	
-	    const html = this.constructor.html(this);
-	    if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
-	    this.html = () =>
-	     html();
-	
-	    function valuePriority (func) {
-	      return (elem, event) => func(elem[instance.targetAttr()], elem, event);
-	    }
-	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
-	
-	    function getElem(id) {return document.getElementById(id);}
-	    this.get = () => getElem(this.id());
-	
-	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
-	    this.valid = () => this.setValue();
-	    function getValue() {
-	      const elem = getElem(instance.id());
-	      let val = value;
-	      if (elem) val = elem[instance.targetAttr()];
-	      if (val === undefined) val = props.default;
-	      return val;
-	    }
-	    this.updateDisplay = () => {
-	      const elem = getElem(instance.id());
-	      if (elem) elem[instance.targetAttr()] = this.value();
-	    };
-	    this.setValue = (val, force) => {
-	      if (val === undefined) val = getValue();
-	      if(force || this.validation(val)) {
-	        valid = true;
-	        value = val;
-	        const elem = getElem(instance.id());
-	        if (elem) elem.value = value;
-	        return true;
-	      }
-	      valid = false;
-	      value = undefined;
-	      return false;
-	    }
-	    this.value = () => {
-	      const unformatted = (typeof value === 'function') ? value() : getValue() || '';
-	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
-	    }
-	    this.doubleCheck = () => {
-	      valid = undefined;
-	      this.validate();
-	      return valid;
-	    }
-	    this.validation = function(val) {
-	      const elem = getElem(instance.id);
-	      val = val === undefined && elem ? elem.value : val;
-	      if (val === undefined) return false;
-	      if (valid !== undefined && val === value) return valid;
-	      let valValid = true;
-	      if (props.validation instanceof RegExp) {
-	        valValid = val.match(props.validation) !== null;
-	      }
-	      else if ((typeof props.validation) === 'function') {
-	        valValid = props.validation.apply(null, arguments);
-	      }
-	      else if (Array.isArray(props.validation)) {
-	        valValid = props.validation.indexOf(val) !== -1;
-	      }
-	
-	      return valValid;
-	    };
-	
-	    this.validate = (target) => {
-	      target = target || getElem(instance.id());
-	      if (target) {
-	        if (this.setValue(target[this.targetAttr()])) {
-	          getElem(this.errorMsgId()).hidden = true;
-	          valid = true;
-	        } else {
-	          getElem(this.errorMsgId()).hidden = false;
-	          valid = false;
-	        }
-	      }
-	    }
-	
-	    if (props.clearOnDblClick) {
-	      du.on.match(`dblclick`, `#${this.id()}`, () => {
-	        const elem = getElem(this.id());
-	        if (elem) elem.value = '';
-	      });
-	    } else if (props.clearOnClick) {
-	      du.on.match(`mousedown`, `#${this.id()}`, () => {
-	        const elem = getElem(this.id());
-	        if (elem) elem.value = '';
-	      });
-	    }
-	  }
-	}
-	
-	function runValidate(elem) {
-	  const input = Lookup.get(elem.id);
-	  if (input) input.validate(elem);
-	}
-	
-	du.on.match(`change`, `input`, runValidate);
-	du.on.match(`keyup`, `input`, runValidate);
-	du.on.match(`change`, `select`, runValidate);
-	du.on.match(`keyup`, `select`, runValidate);
-	
-	Input.forAll = (id) => {
-	  const idStr = `#${id}`;
-	  return (func) => {
-	    const elems = document.querySelectorAll(idStr);
-	    for (let index = 0; index < elems.length; index += 1) {
-	      func(elems[index]);
-	    }
-	  }
-	}
-	
-	Input.template = new $t('input/input');
-	Input.html = (instance) => () => Input.template.render(instance);
-	Input.flagAttrs = ['checked', 'selected'];
-	Input.attrString = (targetAttr, value) =>{
-	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
-	    return value === true ? targetAttr : '';
-	  }
-	  return `${targetAttr}='${value}'`
-	}
-	
-	Input.DO_NOT_CLONE = true;
-	
-	module.exports = Input;
 	
 });
 
@@ -13684,317 +13887,106 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/display/pop-up.js',
+RequireJS.addFunction('../../public/js/utils/collections/notification.js',
 function (require, exports, module) {
-	const DragDropResize = require('./drag-drop');
 	
-	class PopUp {
-	  constructor (props) {
-	    props = props || {}
+const CustomEvent = require('../custom-event');
+	
+	function searchAndConvert(obj, parentPath, beforeEvent, afterEvent) {
+	  const proxy = new Proxy(obj, {set: notify(parentPath, beforeEvent, afterEvent)});
+	  const keys = Object.keys(obj);
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const path = parentPath ? `${parentPath}.${key}` : key;
+	    if (obj[key] instanceof Object)
+	      obj[key] = new Notifiction(true, obj[key], path, beforeEvent, afterEvent);
+	  }
+	  return proxy;
+	}
+	
+	function notify(parentPath, beforeEvent, afterEvent) {
+	  return (target, key, value) => {
+	    const change = target[key] !== value;
+	    const path = parentPath ? `${parentPath}.${key}` : key;
+	    if (change) {
+	      if (target.isRecusive() && value instanceof Object) value = new Notifiction(true, value, path, beforeEvent, afterEvent);
+	    }
+	    const detail = {target, path, old: target[key], new: value};
+	    if (change) beforeEvent.trigger(null, detail);
+	    target[key] = value;
+	    if (change) afterEvent.trigger(null, detail);
+	    return true;
+	  }
+	}
+	
+	class Notifiction {
+	  constructor(recursive, object, path, beforeChangeEvent, afterChangeEvent) {
+	    path ||= '';
 	    const instance = this;
-	    const htmlFuncs = {};
-	    let forceOpen = false;
-	    let lockOpen = false;
-	    let currFuncs, currElem;
-	    let canClose = false;
-	
-	    const popupCnt = new DragDropResize(props);
-	
-	    popupCnt.hide();
-	
-	    this.position = () => popupCnt;
-	    this.positionOnElement = popupCnt.position;
-	
-	
-	    this.softClose = () => {
-	      if (!lockOpen) {
-	        instance.close();
-	      }
+	    afterChangeEvent ||= new CustomEvent('afterChange');
+	    beforeChangeEvent ||= new CustomEvent('beforeChange');
+	    let proxy;
+	    if (recursive) {
+	      proxy = searchAndConvert(object || this, path, beforeChangeEvent, afterChangeEvent);
+	    } else {
+	      proxy = new Proxy(object || this, {set: notify(path, beforeChangeEvent, afterChangeEvent)})
 	    }
 	
-	    this.close = popupCnt.close;
-	
-	    this.show = () => {
-	      popupCnt.show();
-	    };
-	
-	    function getFunctions(elem) {
-	      let foundFuncs;
-	      const queryStrs = Object.keys(htmlFuncs);
-	      queryStrs.forEach((queryStr) => {
-	        if (elem.matches(queryStr)) {
-	          if (foundFuncs) {
-	            throw new Error('Multiple functions being invoked on one hover event');
-	          } else {
-	            foundFuncs = htmlFuncs[queryStr];
+	    Object.defineProperty(proxy, "isRecusive", {
+	        writable: false,
+	        enumerable: false,
+	        configurable: false,
+	        value: () => recursive === true
+	    });
+	    Object.defineProperty(proxy, "onAfterChange", {
+	        writable: false,
+	        enumerable: false,
+	        configurable: false,
+	        value: afterChangeEvent.on
+	    });
+	    Object.defineProperty(proxy, "onBeforeChange", {
+	        writable: false,
+	        enumerable: false,
+	        configurable: false,
+	        value: beforeChangeEvent.on
+	    });
+	    Object.defineProperty(proxy, "deleteAll", {
+	        writable: false,
+	        enumerable: false,
+	        configurable: false,
+	        value: () => {
+	          const keys = Object.keys(instance);
+	          for (let index = 0; index < keys.length; index++) {
+	            delete instance[keys[index]];
 	          }
 	        }
-	      });
-	      return foundFuncs;
-	    }
+	    });
 	
-	    function on(queryStr, funcObj) {
-	      if (htmlFuncs[queryStr] !== undefined) throw new Error('Assigning multiple functions to the same selector');
-	      htmlFuncs[queryStr] = funcObj;
-	    }
-	    this.on = on;
-	
-	    this.onClose = popupCnt.onClose;
-	
-	    function updateContent(html) {
-	      popupCnt.updateContent(html);
-	      if (currFuncs && currFuncs.after) currFuncs.after();
-	      return instance;
-	    }
-	    this.updateContent = updateContent;
-	
-	    this.open = (html, positionOn) => {
-	      this.updateContent(html);
-	      popupCnt.position(positionOn);
-	      this.show();
-	    }
-	
-	    this.container = popupCnt.container;
-	    this.hasMoved = popupCnt.hasMoved;
-	    this.lockSize = popupCnt.lockSize;
-	    this.unlockSize = popupCnt.unlockSize;
-	
-	    document.addEventListener('click', this.forceClose);
+	    return proxy;
 	  }
 	}
 	
-	module.exports = PopUp;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/display/resizer.js',
-function (require, exports, module) {
-	const CatchAll = require('./catch-all');
-	const du = require('../dom-utils');
-	const CustomEvent = require('../custom-event');
-	
-	class Resizer {
-	  constructor (elem, axisObj, cursor) {
-	    const instance = this;
-	    const minimumSize = 40;
-	    let resizeId = elem.getAttribute(Resizer.resizeAttr);
-	    let sizeLocked = false;
-	
-	    if (!resizeId) {
-	      resizeId = 'resize-' + Math.floor(Math.random() * 1000000);
-	      elem.setAttribute(Resizer.resizeAttr, resizeId);
-	    }
-	
-	    this.show = () => {this.container.hidden = false; this.position()};
-	    this.hide = () => this.container.hidden = true;
-	
-	    function updateZindex(zIndex) {
-	      if (instance.container.hidden === false) {
-	        instance.container.style.zIndex = zIndex;
-	        elem.style.zIndex = zIndex;
-	        Resizer.backdrop.updateZindex();
-	        instance.position();
-	      }
-	    }
-	    this.updateZindex = updateZindex;
-	    elem.addEventListener('click', () => Resizer.updateZindex(elem));
-	
-	
-	    if (resizeId) {
-	      if (!Resizer.collections[resizeId]) {
-	        Resizer.collections[resizeId] = [];
-	      }
-	      Resizer.collections[resizeId].push(this);
-	    }
-	    const padding = 8;
-	    let resize = false;
-	    let lastPosition;
-	    this.getPadding = () => padding;
-	
-	    const attrs = Object.values(axisObj);
-	    const top = attrs.indexOf('top') !== -1;
-	    const bottom = attrs.indexOf('bottom') !== -1;
-	    const left = attrs.indexOf('left') !== -1;
-	    const right = attrs.indexOf('right') !== -1;
-	
-	    this.container = document.createElement('DIV');
-	    this.container.style.cursor = cursor;
-	    this.container.style.padding = padding/2 + 'px';
-	    this.container.style.position = axisObj.position || 'absolute';
-	    this.container.style.backgroundColor = 'transparent';
-	    Resizer.container.append(this.container);
-	
-	    function getComputedSize(element, property) {
-	      return Number.parseInt(window.getComputedStyle(element).getPropertyValue(property));
-	    }
-	
-	    function resizeCnt (event) {
-	      if (resize) {
-	        Resizer.updateZindex(elem);
-	        let dy = resize.clientY - event.clientY;
-	        let dx = resize.clientX - event.clientX;
-	        let minHeight = getComputedSize(elem, 'min-height');
-	        let minWidth = getComputedSize(elem, 'min-width');
-	        if (axisObj.x) {
-	          if (left) dx *= -1;
-	          const newWidth = lastPosition.width - dx;
-	          if (newWidth > minWidth) {
-	            if (left) {
-	              elem.style.left = lastPosition.left + dx + 'px';
-	            }
-	            elem.style.width = newWidth + 'px'
-	          }
-	        }
-	        if (axisObj.y) {
-	          if (top) dy *= -1;
-	          const newHeight = lastPosition.height - dy;
-	          if (newHeight > minHeight) {
-	            if (top) {
-	              elem.style.top = lastPosition.top + window.scrollY + dy + 'px';
-	            }
-	            elem.style.height = newHeight + 'px'
-	          }
-	        }
-	      }
-	    }
-	
-	    this.container.onmousedown = (e) => {
-	      resize = e;
-	      Resizer.backdrop.show();
-	      lastPosition = elem.getBoundingClientRect();
-	      // e.stopPropagation();
-	      // e.preventDefault();
-	    }
-	
-	    function stopResizing() {
-	      if (resize) {
-	        resize = undefined;
-	        Resizer.position(elem);
-	        Resizer.backdrop.hide();
-	        Resizer.events.resize.trigger(elem);
-	      }
-	    }
-	
-	    function isFixed() {
-	      return axisObj.position && axisObj.position === 'fixed';
-	    }
-	
-	    // this.container.addEventListener('click',
-	    // (e) =>
-	    // e.stopPropagation()
-	    // );
-	    Resizer.backdrop.on('mouseup', stopResizing);
-	    this.container.onmouseup = stopResizing;
-	
-	    this.container.onmousemove = resizeCnt;
-	    Resizer.backdrop.on('mousemove', (event) =>
-	    resizeCnt(event));
-	    this.position = function () {
-	      const height = document.documentElement.clientHeight;
-	      const width = document.documentElement.clientWidth;
-	      const rect = elem.getBoundingClientRect();
-	      const cntStyle = instance.container.style;
-	      const scrollY =  isFixed() ? 0 : window.scrollY;
-	      const scrollX =  isFixed() ? 0 : window.scrollX;
-	      if (top) {
-	        cntStyle.top = rect.top - padding + scrollY + 'px';
-	      } else if (!bottom) {
-	        cntStyle.top = rect.top + scrollY + 'px';
-	      }
-	
-	      if (bottom) {
-	        cntStyle.bottom = (height - rect.bottom) - padding - scrollY + 'px';
-	      } else if (!top) {
-	        cntStyle.bottom = (height - rect.bottom) - scrollY + 'px';
-	      }
-	
-	      if (right) {
-	        cntStyle.right = (width - rect.right) - padding - scrollX + 'px';
-	      } else if (!left) {
-	        cntStyle.right = (width - rect.right) - scrollX + 'px';
-	      }
-	
-	      if (left) {
-	        cntStyle.left = rect.left - padding + scrollX + 'px';
-	      } else if (!right) {
-	        cntStyle.left = rect.left + scrollX + 'px';
-	      }
-	    }
+	class NotifictionArray extends Notifiction {
+	  constructor(recursive, array, path, beforeChangeEvent, afterChangeEvent) {
+	    super(recursive, array || [], path, beforeChangeEvent, afterChangeEvent);
 	  }
 	}
 	
-	Resizer.container = du.create.element('div', {id: 'resizer-cnt'});
-	document.body.append(Resizer.container);
+	const notifyArr = new Notifiction();
+	notifyArr.onAfterChange(console.log);
+	notifyArr.onBeforeChange(console.error);
+	notifyArr[4] = 'poop';
+	notifyArr.pickls = 5;
+	notifyArr[4] = 'y diapers';
+	notifyArr[0] = [];
+	notifyArr[0][69] = 'sooo fine'
+	notifyArr[0][6] = {}
+	notifyArr[0][6].punk = [1,2,3,4,66]
+	notifyArr[0][6].punk.skittles = 'taste the rainbow'
+	notifyArr[0][6].punk.skittles = 'uck!'
 	
-	Resizer.lastZindexSearch = new Date().getTime();
-	Resizer.zIndex = (zindex) => {
-	  const time = new Date().getTime();
-	  if (time > Resizer.lastZindexSearch + 500) {
-	    Resizer.zed = CatchAll.findHigestZindex();
-	    lastZindexSearch = time;
-	  }
-	  return Resizer.zed;
-	}
-	Resizer.container.id = 'resize-id-id';
-	// Resizer.container.addEventListener('click', (e) => e.stopPropagation());
-	Resizer.events = {};
-	Resizer.events.resize = new CustomEvent ('resized')
-	
-	Resizer.backdrop = new CatchAll();
-	
-	Resizer.resizeAttr = 'resizer-id'
-	Resizer.collections = {};
-	Resizer.position = function (elem) {
-	  const resizeId = elem.getAttribute(Resizer.resizeAttr);
-	  const collection = Resizer.collections[resizeId];
-	  if (collection) {
-	    collection.forEach((item) => item.position());
-	  }
-	}
-	Resizer.onEach = function (elem, func) {
-	  const callArgs = Array.from(arguments).splice(2);
-	  const resizeId = elem.getAttribute(Resizer.resizeAttr);
-	  const collection = Resizer.collections[resizeId];
-	  if (collection) {
-	    collection.forEach((item) => item[func](...callArgs));
-	  }
-	}
-	Resizer.hide = (elem) => Resizer.onEach(elem, 'hide');
-	Resizer.show = (elem) => {
-	    if (!Resizer.isLocked(elem)) {
-	      Resizer.onEach(elem, 'show');
-	      Resizer.updateZindex(elem);
-	    }
-	};
-	Resizer.updateZindex = (elem, callback) => {
-	  const highestZIndex = Resizer.zIndex() - 3;
-	  if (!elem.style.zIndex ||
-	      (elem.style.zIndex.match(/[0-9]{1,}/) &&
-	        highestZIndex > Number.parseInt(elem.style.zIndex))) {
-	    Resizer.onEach(elem, 'updateZindex', highestZIndex + 4);
-	  }
-	}
-	
-	{
-	  const locked = {};
-	  Resizer.lock = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)] = true;
-	  Resizer.unlock = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)] = false;
-	  Resizer.isLocked  = (elem) => locked[elem.getAttribute(Resizer.resizeAttr)];
-	}
-	
-	Resizer.all = (elem, position) => {
-	  new Resizer(elem, {y: 'top', position}, 'n-resize');
-	  new Resizer(elem, {y: 'bottom', position}, 's-resize');
-	  new Resizer(elem, {x: 'right', position}, 'e-resize');
-	  new Resizer(elem, {x: 'left', position}, 'w-resize', position);
-	  new Resizer(elem, {x: 'right', y: 'top', position}, 'ne-resize');
-	  new Resizer(elem, {x: 'left', y: 'top', position}, 'nw-resize');
-	  new Resizer(elem, {x: 'right', y: 'bottom', position}, 'se-resize');
-	  new Resizer(elem, {x: 'left', y: 'bottom', position}, 'sw-resize');
-	}
-	
-	module.exports = Resizer;
+	Notifiction.Array = NotifictionArray;
+	module.exports = Notifiction;
 	
 });
 
@@ -14073,28 +14065,174 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/lists/expandable-list.js',
+RequireJS.addFunction('../../public/js/utils/input/bind.js',
+function (require, exports, module) {
+	
+const du = require('../dom-utils');
+	const Input = require('./input');
+	
+	const defaultDynamInput = (value, type) => new Input({type, value});
+	
+	module.exports = function(selector, objOrFunc, props) {
+	  let lastInputTime = {};
+	  props = props || {};
+	  const validations = props.validations || {};
+	  const inputs = props.inputs || {};
+	
+	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
+	  const getValue = (updatePath, elem) => {
+	    const input = Object.pathValue(inputs, updatePath);
+	    return input ? input.value() : elem.value;
+	  }
+	  const getValidation = (updatePath) => {
+	    let validation = Object.pathValue(validations, updatePath);
+	    const input = Object.pathValue(inputs, updatePath);
+	    if (input) {
+	      validation = input.validation;
+	    }
+	    return validation;
+	  }
+	
+	  function update(elem) {
+	    const target = resolveTarget(elem);
+	    elem = du.find.down('input,select,textarea', elem);
+	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
+	    elem.id = elem.id || String.random(7);
+	    const thisInputTime = new Date().getTime();
+	    lastInputTime[elem.id] = thisInputTime;
+	    setTimeout(() => {
+	      if (thisInputTime === lastInputTime[elem.id]) {
+	        const validation = getValidation(updatePath);
+	        if (updatePath !== null) {
+	          const newValue = getValue(updatePath, elem);
+	          if ((typeof validation) === 'function' && !validation(newValue)) {
+	            console.error('badValue')
+	          } else if ((typeof objOrFunc) === 'function') {
+	            objOrFunc(updatePath, elem.value, elem);
+	          } else {
+	            Object.pathValue(objOrFunc, updatePath, elem.value);
+	          }
+	
+	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
+	            target.innerHTML = newValue;
+	          }
+	        }
+	      }
+	    }, 2000);
+	  }
+	  const makeDynamic = (target) => {
+	    target = resolveTarget(target);
+	    if (target.getAttribute('resolved') === null) {
+	      target.setAttribute('resolved', 'dynam-input');
+	      const value = target.innerText;
+	      const type = target.getAttribute('type');
+	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
+	      const input = Object.pathValue(inputs, updatePath) || defaultDynamInput(value, type);
+	
+	      target.innerHTML = input.html();
+	      const id = (typeof input.id === 'function') ? input.id() : input.id;
+	      const inputElem = du.find.down(`#${id}`, target);
+	      du.class.add(inputElem, 'dynam-input');
+	      inputElem.setAttribute('prop-update', updatePath);
+	      inputElem.focus();
+	    }
+	  }
+	
+	  du.on.match('keyup', selector, update);
+	  du.on.match('change', selector, update);
+	  du.on.match('click', selector, makeDynamic);
+	}
+	
+	
+	const undoDynamic = (target) => {
+	  const parent = du.find.up('[resolved="dynam-input"]', target)
+	  parent.innerText = target.value;
+	  parent.removeAttribute('resolved');
+	}
+	
+	du.on.match('focusout', '.dynam-input', undoDynamic);
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
 function (require, exports, module) {
 	
 
 	
-	const CustomEvent = require('../custom-event.js');
-	const du = require('../dom-utils.js');
-	const $t = require('../$t.js');
-	const Expandable = require('./expandable');
 	
-	class ExpandableList extends Expandable {
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Select extends Input {
 	  constructor(props) {
 	    super(props);
-	    const superRemove = this.remove;
-	    this.remove = (index) => {
-	      superRemove(props.list.splice(index, 1)[0]);
-	      this.refresh();
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.index && props.list[props.index] ?
+	      props.list[props.index] : props.list[0];
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
+	    }
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    const parentHidden = this.hidden;
+	    this.hidden = () => props.list.length < 2 || parentHidden();
+	
+	    this.selected = (value) => value === this.value();
+	  }
+	}
+	
+	Select.template = new $t('input/select');
+	Select.html = (instance) => () => Select.template.render(instance);
+	
+	module.exports = Select;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const Measurement = require('../../measurement');
+	
+	class MeasurementInput extends Input {
+	  constructor(props) {
+	    let value = new Measurement(props.value, true);
+	    props.value = () => value;
+	    super(props);
+	    props.validation = (val) =>
+	        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
+	    }
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
 	    }
 	  }
 	}
 	
-	module.exports = ExpandableList
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	
+	
+	module.exports = MeasurementInput;
 	
 });
 
@@ -15027,88 +15165,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Select extends Input {
-	  constructor(props) {
-	    super(props);
-	    const isArray = Array.isArray(props.list);
-	    let value;
-	    if (isArray) {
-	      value = props.index && props.list[props.index] ?
-	      props.list[props.index] : props.list[0];
-	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
-	    } else {
-	      const key = Object.keys(props.list)[0];
-	      value = props.value || key;
-	    }
-	    props.value = undefined;
-	    this.setValue(value);
-	    this.isArray = () => isArray;
-	    const parentHidden = this.hidden;
-	    this.hidden = () => props.list.length < 2 || parentHidden();
-	
-	    this.selected = (value) => value === this.value();
-	  }
-	}
-	
-	Select.template = new $t('input/select');
-	Select.html = (instance) => () => Select.template.render(instance);
-	
-	module.exports = Select;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const Measurement = require('../../measurement');
-	
-	class MeasurementInput extends Input {
-	  constructor(props) {
-	    let value = new Measurement(props.value, true);
-	    props.value = () => value;
-	    super(props);
-	    props.validation = (val) =>
-	        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
-	    }
-	    const parentSetVal = this.setValue;
-	    this.setValue = (val) => {
-	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
-	    }
-	  }
-	}
-	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
-	
-	
-	module.exports = MeasurementInput;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/test/tests/decision-tree.js',
 function (require, exports, module) {
 	
@@ -15500,6 +15556,21 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("CostManager").bodyHtml(get("child"))) +
 			` </div>`
 	
+	exports['expandable/list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
+			` <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> </div> `
+	
 	exports['expandable/input-repeat'] = (get, $t) => 
 			`<div> ` +
 			$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
@@ -15517,21 +15588,6 @@ exports['101748844'] = (get, $t) =>
 			`<option value="` +
 			$t.clean(get("option")) +
 			`" ></option>`
-	
-	exports['expandable/list'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
-			` <div class='expand-input-cnt' hidden has-input-tree='` +
-			$t.clean(get("hasInputTree")()) +
-			`'>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> </div> `
 	
 	exports['expandable/pill'] = (get, $t) => 
 			` <div class="expandable-list ` +
@@ -15617,17 +15673,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['input/decision/decision'] = (get, $t) => 
-			` <span class='decision-input-cnt' node-id='` +
-			$t.clean(get("_nodeId")) +
-			`' ` +
-			$t.clean(get("reachable")() ? '' : 'hidden') +
-			`> <span id='` +
-			$t.clean(get("id")) +
-			`'> ` +
-			$t.clean( new $t('101748844').render(get("inputArray"), 'input', get)) +
-			` </span> </span> `
-	
 	exports['expandable/top-add-list'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -15642,6 +15687,34 @@ exports['101748844'] = (get, $t) =>
 			`</button></div> ` +
 			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 			` </div> `
+	
+	exports['input/decision/decision'] = (get, $t) => 
+			` <span class='decision-input-cnt' node-id='` +
+			$t.clean(get("_nodeId")) +
+			`' ` +
+			$t.clean(get("reachable")() ? '' : 'hidden') +
+			`> <span id='` +
+			$t.clean(get("id")) +
+			`'> ` +
+			$t.clean( new $t('101748844').render(get("inputArray"), 'input', get)) +
+			` </span> </span> `
+	
+	exports['input/decision/decisionTree'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("DecisionInputTree").class) +
+			`' root-id='` +
+			$t.clean(get("wrapper").nodeId()) +
+			`'> ` +
+			$t.clean(get("inputHtml")) +
+			` <button class='` +
+			$t.clean(get("DecisionInputTree").buttonClass) +
+			`' root-id='` +
+			$t.clean(get("wrapper").nodeId()) +
+			`' ` +
+			$t.clean(get("tree").hideButton ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("tree").buttonText()) +
+			` </button> </div> `
 	
 	exports['input/input'] = (get, $t) => 
 			`<` +
@@ -15704,23 +15777,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("errorMsg")()) +
 			`</div> </div> `
 	
-	exports['input/decision/decisionTree'] = (get, $t) => 
-			`<div class='` +
-			$t.clean(get("DecisionInputTree").class) +
-			`' root-id='` +
-			$t.clean(get("wrapper").nodeId()) +
-			`'> ` +
-			$t.clean(get("inputHtml")) +
-			` <button class='` +
-			$t.clean(get("DecisionInputTree").buttonClass) +
-			`' root-id='` +
-			$t.clean(get("wrapper").nodeId()) +
-			`' ` +
-			$t.clean(get("tree").hideButton ? 'hidden' : '') +
-			`> ` +
-			$t.clean(get("tree").buttonText()) +
-			` </button> </div> `
-	
 	exports['input/select'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
@@ -15778,29 +15834,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("target").display()) +
 			`'> </div> `
 	
-	exports['2d/pop-up/snap-2d'] = (get, $t) => 
-			`<div type-2d='` +
-			$t.clean(get("target").parent().constructor.name) +
-			`' id='` +
-			$t.clean(get("target").parent().id()) +
-			`' x='` +
-			$t.clean(get("lastImagePoint").x) +
-			`' y='` +
-			$t.clean(get("lastImagePoint").y) +
-			`'> <label>Name</label> <input class='value-2d' member='object' type="text" key="name" value="` +
-			$t.clean(get("target").parent().name()) +
-			`"> <br><br> <label>Width</label> <input class='value-2d' member='cabinet' type="text" key="width" value="` +
-			$t.clean(get("display")(get("target").width())) +
-			`"> <br> <label>Depth</label> <input class='value-2d' member='cabinet' type="text" key="thickness" value="` +
-			$t.clean(get("display")(get("target").height())) +
-			`"> <br> <label>Angle</label> <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="` +
-			$t.clean(get("target").angle()) +
-			`"> <br> <label>X</label> <input class='value-2d' member='snap' type="text" key="x" value="` +
-			$t.clean(get("display")(get("target").x())) +
-			`"> <br> <label>Y</label> <input class='value-2d' member='snap' type="text" key="y" value="` +
-			$t.clean(get("display")(get("target").y())) +
-			`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
-	
 	exports['2d/pop-up/vertex-2d'] = (get, $t) => 
 			`<div type-2d='` +
 			$t.clean(get("target").constructor.name) +
@@ -15843,6 +15876,29 @@ exports['101748844'] = (get, $t) =>
 			`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
 			$t.clean(get("display")(get("target").fromFloor())) +
 			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
+	
+	exports['2d/pop-up/snap-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").parent().constructor.name) +
+			`' id='` +
+			$t.clean(get("target").parent().id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <label>Name</label> <input class='value-2d' member='object' type="text" key="name" value="` +
+			$t.clean(get("target").parent().name()) +
+			`"> <br><br> <label>Width</label> <input class='value-2d' member='cabinet' type="text" key="width" value="` +
+			$t.clean(get("display")(get("target").width())) +
+			`"> <br> <label>Depth</label> <input class='value-2d' member='cabinet' type="text" key="thickness" value="` +
+			$t.clean(get("display")(get("target").height())) +
+			`"> <br> <label>Angle</label> <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="` +
+			$t.clean(get("target").angle()) +
+			`"> <br> <label>X</label> <input class='value-2d' member='snap' type="text" key="x" value="` +
+			$t.clean(get("display")(get("target").x())) +
+			`"> <br> <label>Y</label> <input class='value-2d' member='snap' type="text" key="y" value="` +
+			$t.clean(get("display")(get("target").y())) +
+			`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
 	
 	exports['cabinet/body'] = (get, $t) => 
 			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
@@ -15897,13 +15953,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("displayValue")(get("cabinet").thickness())) +
 			`'> </div> </div> `
 	
-	exports['divide/body'] = (get, $t) => 
-			`<h2>` +
-			$t.clean(get("list").activeKey()) +
-			`</h2> val: ` +
-			$t.clean(get("list").value()('selected')) +
-			` `
-	
 	exports['display-manager'] = (get, $t) => 
 			`<div class='display-manager' id='` +
 			$t.clean(get("id")) +
@@ -15922,10 +15971,20 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("item").name) +
 			`</button> </span>`
 	
+	exports['divide/body'] = (get, $t) => 
+			`<h2>` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> val: ` +
+			$t.clean(get("list").value()('selected')) +
+			` `
+	
 	exports['divide/head'] = (get, $t) => 
 			`<div> <div class='open-divider-select` +
 			$t.clean(get("sections").length === 0 ? '' : ' hidden') +
 			`'> S </div> </div> `
+	
+	exports['feature'] = (get, $t) => 
+			`<h3>Feature Display</h3> `
 	
 	exports['divider-controls'] = (get, $t) => 
 			`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
@@ -15960,8 +16019,18 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("patternInputHtml")) +
 			` </div> </div> `
 	
-	exports['feature'] = (get, $t) => 
-			`<h3>Feature Display</h3> `
+	exports['index'] = (get, $t) => 
+			`<html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>Estimate</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login'><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
+			$t.clean(get("id") !== 'home' ? "link='/cabinet/home'" : '') +
+			` hidden> <div id='order-cnt'></div> <div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <canvas id="two-d-model"></canvas> <div id="three-d-model" class="viewer small"> <div class='inline left'> <div id='three-d-orientation-controls'></div> <span id="model-controller"></span> </div> </div> </div> </div> </div> <div name='Property Manager' ` +
+			$t.clean(get("id") !== 'home' ? "link='/cabinet/property'" : '') +
+			` id='property-manager-cnt' hidden> <div class='center'> <button id='property-manager-save-all'>Save All</button> </div> <div id='property-manager'></div> </div> <div id='cost-manager' "link='/cabinet/cost'" name='Cost Manager' ` +
+			$t.clean(get("id") !== 'cost' ? "link='/cabinet/cost'" : '') +
+			` hidden></div> <div id='template-manager' name='Template Manager' ` +
+			$t.clean(get("id") !== 'template' ? "link='/cabinet/template'" : '') +
+			` hidden>Temp Man</div> <div id='pattern-manager' name='Pattern Manager' ` +
+			$t.clean(get("id") !== 'home' ? "link='/cabinet/pattern'" : '') +
+			` hidden>Pat Man</div> </div> <div id='property-select-cnt'></div> </body> </html> `
 	
 	exports['group/body'] = (get, $t) => 
 			`<div class='group-cnt'> <div class='group-header' cab-style='Inset' ` +
@@ -15982,6 +16051,9 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("group").id()) +
 			`'></div> </div> `
 	
+	exports['login/confirmation-message'] = (get, $t) => 
+			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+	
 	exports['group/head'] = (get, $t) => 
 			`<div group-display-id='` +
 			$t.clean(get("groupDisplay").id()) +
@@ -15997,9 +16069,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("body")) +
 			`</div> </div> <br> `
 	
-	exports['login/confirmation-message'] = (get, $t) => 
-			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
-	
 	exports['login/create-account'] = (get, $t) => 
 			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
 			$t.clean(get("email")) +
@@ -16014,25 +16083,19 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("password")) +
 			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 	
-	exports['index'] = (get, $t) => 
-			`<html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>Estimate</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login'><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
-			$t.clean(get("id") !== 'home' ? "link='/cabinet/home'" : '') +
-			` hidden> <div id='order-cnt'></div> <div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <canvas id="two-d-model"></canvas> <div id="three-d-model" class="viewer small"> <div class='inline left'> <div id='three-d-orientation-controls'></div> <span id="model-controller"></span> </div> </div> </div> </div> </div> <div name='Property Manager' ` +
-			$t.clean(get("id") !== 'home' ? "link='/cabinet/property'" : '') +
-			` id='property-manager-cnt' hidden> <div class='center'> <button id='property-manager-save-all'>Save All</button> </div> <div id='property-manager'></div> </div> <div id='cost-manager' "link='/cabinet/cost'" name='Cost Manager' ` +
-			$t.clean(get("id") !== 'cost' ? "link='/cabinet/cost'" : '') +
-			` hidden></div> <div id='template-manager' name='Template Manager' ` +
-			$t.clean(get("id") !== 'template' ? "link='/cabinet/template'" : '') +
-			` hidden>Temp Man</div> <div id='pattern-manager' name='Pattern Manager' ` +
-			$t.clean(get("id") !== 'home' ? "link='/cabinet/pattern'" : '') +
-			` hidden>Pat Man</div> </div> <div id='property-select-cnt'></div> </body> </html> `
-	
 	exports['login/reset-password'] = (get, $t) => 
 			`<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` +
 			$t.clean(get("email")) +
 			`'> <input type='password' placeholder="password" name='password' value='` +
 			$t.clean(get("password")) +
 			`'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	
+	exports['managers/cost/body'] = (get, $t) => 
+			`<div hidden> <div> <span> ` +
+			$t.clean(get("CostManager").nodeInputHtml()) +
+			` <button>Add Cost</button> <button>Add Node</button> </span> <span> Cost Display </span> </div> ` +
+			$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
+			` </div> `
 	
 	exports['managers/abstract-manager'] = (get, $t) => 
 			`<div> <div class="center"> <h2 id='` +
@@ -16045,13 +16108,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("bodyId")) +
 			`"></div> </div> `
 	
-	exports['managers/cost/body'] = (get, $t) => 
-			`<div hidden> <div> <span> ` +
-			$t.clean(get("CostManager").nodeInputHtml()) +
-			` <button>Add Cost</button> <button>Add Node</button> </span> <span> Cost Display </span> </div> ` +
-			$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
-			` </div> `
-	
 	exports['managers/cost/head'] = (get, $t) => 
 			`<div class='expand-header' node-id='` +
 			$t.clean(get("node").nodeId()) +
@@ -16063,36 +16119,10 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('1417643187').render(get("node").payload().requiredProperties, 'property', get)) +
 			` </ul> </div> `
 	
-	exports['managers/cost/main'] = (get, $t) => 
-			`<div> <div class="center"> <h2 id='cost-manager-header'> Cost Tree Manager </h2> </div> ` +
-			$t.clean( new $t('-496477131').render(get("root")().children(), 'child', get)) +
-			` <button id='cost-manager-save-btn'>Save</button> </div> `
-	
-	exports['-496477131'] = (get, $t) => 
-			`<div class='expandable-list cost-tree' radio-id='poo'> ` +
-			$t.clean(get("headHtml")(get("child"))) +
-			` ` +
-			$t.clean(get("bodyHtml")(get("child"))) +
-			` </div>`
-	
-	exports['managers/cost/property-select'] = (get, $t) => 
-			`<div> ` +
-			$t.clean( new $t('-1569738859').render(get("groups"), 'group, properties', get)) +
-			` </div> `
-	
-	exports['-1569738859'] = (get, $t) => 
-			`<div > <b>` +
-			$t.clean(get("group")) +
-			` (` +
-			$t.clean(get("abbriviation")(get("group"))) +
-			`)</b> ` +
-			$t.clean( new $t('1036581066').render(get("properties"), 'property', get)) +
-			` </div>`
-	
-	exports['managers/cost/types/labor'] = (get, $t) => 
+	exports['managers/cost/types/material'] = (get, $t) => 
 			`<div cost-id='` +
 			$t.clean(get("cost").id()) +
-			`'> <b>Labor</b> <span` +
+			`'> <b>Material</b> <span` +
 			$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
 			`> <input value='` +
 			$t.clean(get("cost").length()) +
@@ -16112,10 +16142,10 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("cost").unitCost('value')) +
 			`</label> </div> </div> `
 	
-	exports['managers/cost/types/material'] = (get, $t) => 
+	exports['managers/cost/types/labor'] = (get, $t) => 
 			`<div cost-id='` +
 			$t.clean(get("cost").id()) +
-			`'> <b>Material</b> <span` +
+			`'> <b>Labor</b> <span` +
 			$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
 			`> <input value='` +
 			$t.clean(get("cost").length()) +
@@ -16191,17 +16221,17 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("template").type()) +
 			`</b> </div> `
 	
-	exports['managers/template/joints/body'] = (get, $t) => 
-			`` +
-			$t.clean(get("jointInput").html()) +
-			` <input type="text" name="value" disabled > <input type="checkbox" name="convert" checked> `
-	
 	exports['managers/template/joints/head'] = (get, $t) => 
 			`<b> <input class='template-input' value='` +
 			$t.clean(get("obj").malePartCode) +
 			`' attr='joints' placeholder='Male Part Code' name='malePartCode'> => <input class='template-input' value='` +
 			$t.clean(get("obj").femalePartCode) +
 			`' attr='joints' placeholder='Female Part Code' name='femalePartCode'> </b> `
+	
+	exports['managers/template/joints/body'] = (get, $t) => 
+			`` +
+			$t.clean(get("jointInput").html()) +
+			` <input type="text" name="value" disabled > <input type="checkbox" name="convert" checked> `
 	
 	exports['managers/template/main'] = (get, $t) => 
 			`<div template-manager=` +
@@ -16260,6 +16290,20 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("state").index === get("i") ? 'checked' : '') +
 			`> </span>`
 	
+	exports['managers/cost/property-select'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('-1569738859').render(get("groups"), 'group, properties', get)) +
+			` </div> `
+	
+	exports['-1569738859'] = (get, $t) => 
+			`<div > <b>` +
+			$t.clean(get("group")) +
+			` (` +
+			$t.clean(get("abbriviation")(get("group"))) +
+			`)</b> ` +
+			$t.clean( new $t('1036581066').render(get("properties"), 'property', get)) +
+			` </div>`
+	
 	exports['managers/template/openings/head'] = (get, $t) => 
 			`<div class='inline-flex' opening-id='` +
 			$t.clean(get("obj").id) +
@@ -16299,6 +16343,27 @@ exports['101748844'] = (get, $t) =>
 			`>` +
 			$t.clean(get("display")(get("coords").outer[2])) +
 			`</td> </tr> </table> `
+	
+	exports['managers/cost/main'] = (get, $t) => 
+			`<div> <div class="center"> <h2 id='cost-manager-header'> Cost Tree Manager </h2> </div> ` +
+			$t.clean( new $t('-496477131').render(get("root")().children(), 'child', get)) +
+			` <button id='cost-manager-save-btn'>Save</button> </div> `
+	
+	exports['-496477131'] = (get, $t) => 
+			`<div class='expandable-list cost-tree' radio-id='poo'> ` +
+			$t.clean(get("headHtml")(get("child"))) +
+			` ` +
+			$t.clean(get("bodyHtml")(get("child"))) +
+			` </div>`
+	
+	exports['managers/template/values/head'] = (get, $t) => 
+			`<div template-attr='values'> <input class='template-input' attr='values' type='text' name='name' value='` +
+			$t.clean(get("obj").key) +
+			`' placeholder="Variable Name"> <input class='measurement-input' type='text' name='value' value='` +
+			$t.clean(get("obj").eqn) +
+			`' placeholder="Value" disabled> <input type="checkbox" name="convert" checked> <br> <input class='template-input full-width' attr='values' type='text' name='eqn' value='` +
+			$t.clean(get("obj").eqn) +
+			`' placeholder="Equation"> </div> `
 	
 	exports['managers/template/subassemblies/body'] = (get, $t) => 
 			`<div template-attr='subassembles'> <div> <label>All</label> <input class='template-include' type='radio' name='is-` +
@@ -16340,15 +16405,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("typeInput").html()) +
 			` `
 	
-	exports['managers/template/values/head'] = (get, $t) => 
-			`<div template-attr='values'> <input class='template-input' attr='values' type='text' name='name' value='` +
-			$t.clean(get("obj").key) +
-			`' placeholder="Variable Name"> <input class='measurement-input' type='text' name='value' value='` +
-			$t.clean(get("obj").eqn) +
-			`' placeholder="Value" disabled> <input type="checkbox" name="convert" checked> <br> <input class='template-input full-width' attr='values' type='text' name='eqn' value='` +
-			$t.clean(get("obj").eqn) +
-			`' placeholder="Equation"> </div> `
-	
 	exports['model-controller'] = (get, $t) => 
 			`<div class='` +
 			$t.clean(get("group").level < 2 ? '' : 'model-selector indent') +
@@ -16369,6 +16425,13 @@ exports['101748844'] = (get, $t) =>
 			` </div> ` +
 			$t.clean( new $t('model-controller').render(get("group").groups, 'label, group', get)) +
 			` </div> </div> `
+	
+	exports['order/builder/body'] = (get, $t) => 
+			`<div> <b>` +
+			$t.clean(get("order").name) +
+			`</b> <button class='save-order-btn' index='` +
+			$t.clean(get("$index")) +
+			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> `
 	
 	exports['opening'] = (get, $t) => 
 			`<div class='opening-cnt' opening-id='` +
@@ -16402,18 +16465,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("order").id()) +
 			`' edit='true'> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> </div> </div> `
 	
-	exports['order/builder/body'] = (get, $t) => 
-			`<div> <b>` +
-			$t.clean(get("order").name) +
-			`</b> <button class='save-order-btn' index='` +
-			$t.clean(get("$index")) +
-			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> `
-	
-	exports['order/builder/head'] = (get, $t) => 
-			`<h3 class='margin-zero'> ` +
-			$t.clean(get("order").name) +
-			` </h3> `
-	
 	exports['order/head'] = (get, $t) => 
 			`<h3 class='margin-zero'> ` +
 			$t.clean(get("order").name()) +
@@ -16421,6 +16472,11 @@ exports['101748844'] = (get, $t) =>
 	
 	exports['order/information/body'] = (get, $t) => 
 			`<utility-filter hidden> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> `
+	
+	exports['order/builder/head'] = (get, $t) => 
+			`<h3 class='margin-zero'> ` +
+			$t.clean(get("order").name) +
+			` </h3> `
 	
 	exports['order/information/head'] = (get, $t) => 
 			`<b>Information</b> `
@@ -16494,24 +16550,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("name")) +
 			` `
 	
-	exports['properties/properties'] = (get, $t) => 
-			`<div class='center'> <div class='center'> <label>UNIT :&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
-			$t.clean( new $t('-766481261').render(get("Properties").UNITS, 'property', get)) +
-			` </div> ` +
-			$t.clean( new $t('115117775').render(get("values"), 'key, properties', get)) +
-			` </div> `
-	
-	exports['-766481261'] = (get, $t) => 
-			`<span > <label>` +
-			$t.clean(get("property").name()) +
-			`</label> <input type='radio' name='UNIT' prop-radio-update='` +
-			$t.clean(get("property").id()) +
-			`' value="` +
-			$t.clean(get("property").name()) +
-			`" ` +
-			$t.clean(get("property").value() === true ? 'checked' : '') +
-			`> </span>`
-	
 	exports['properties/properties0'] = (get, $t) => 
 			`<div class='center'> <div class='` +
 			$t.clean(get("key") ? "property-container close" : "") +
@@ -16533,10 +16571,23 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
 			` </div> </div> </div> </div> `
 	
-	exports['properties/property-menu'] = (get, $t) => 
-			` <div class='cabinet-style-selector-cnt'>` +
-			$t.clean(get("styleSelector")()) +
-			`</div> Property MeNu `
+	exports['properties/properties'] = (get, $t) => 
+			`<div class='center'> <div class='center'> <label>UNIT :&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
+			$t.clean( new $t('-766481261').render(get("Properties").UNITS, 'property', get)) +
+			` </div> ` +
+			$t.clean( new $t('115117775').render(get("values"), 'key, properties', get)) +
+			` </div> `
+	
+	exports['-766481261'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("property").name()) +
+			`</label> <input type='radio' name='UNIT' prop-radio-update='` +
+			$t.clean(get("property").id()) +
+			`' value="` +
+			$t.clean(get("property").name()) +
+			`" ` +
+			$t.clean(get("property").value() === true ? 'checked' : '') +
+			`> </span>`
 	
 	exports['properties/radio'] = (get, $t) => 
 			`<div class='center'> <label>` +
@@ -16544,6 +16595,11 @@ exports['101748844'] = (get, $t) =>
 			`:&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
 			$t.clean( new $t('1410278299').render(get("values"), 'property', get)) +
 			` </div> `
+	
+	exports['properties/property-menu'] = (get, $t) => 
+			` <div class='cabinet-style-selector-cnt'>` +
+			$t.clean(get("styleSelector")()) +
+			`</div> Property MeNu `
 	
 	exports['properties/unit'] = (get, $t) => 
 			`<div> <label>Standard</label> <input type='radio' name='unit' ` +
@@ -16564,18 +16620,18 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("room").name()) +
 			`</b> `
 	
-	exports['sections/divider'] = (get, $t) => 
-			`<h2>Divider: ` +
-			$t.clean(get("list").activeKey()) +
-			`</h2> <div class='section-feature-ctn'> ` +
-			$t.clean(get("featureDisplay")) +
-			` </div> `
-	
 	exports['sections/door'] = (get, $t) => 
 			`<h2>DoorSection(` +
 			$t.clean(get("list").activeKey()) +
 			`):</h2> <br><br> <div> ` +
 			$t.clean( new $t('990870856').render(get("assemblies"), 'assem', get)) +
+			` </div> `
+	
+	exports['sections/divider'] = (get, $t) => 
+			`<h2>Divider: ` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> <div class='section-feature-ctn'> ` +
+			$t.clean(get("featureDisplay")) +
 			` </div> `
 	
 	exports['sections/drawer'] = (get, $t) => 
@@ -16599,13 +16655,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("featureDisplay")) +
 			` </div> `
 	
-	exports['sections/open'] = (get, $t) => 
-			`<h2>Open: ` +
-			$t.clean(get("list").activeKey()) +
-			`</h2> <div class='section-feature-ctn'> ` +
-			$t.clean(get("featureDisplay")) +
-			` </div> `
-	
 	exports['three-view'] = (get, $t) => 
 			`<div class='three-view-cnt' id='` +
 			$t.clean(get("id")()) +
@@ -16618,6 +16667,13 @@ exports['101748844'] = (get, $t) =>
 			`" height="` +
 			$t.clean(get("maxDem")()) +
 			`"></canvas> </span> </div> </div> </div> `
+	
+	exports['sections/open'] = (get, $t) => 
+			`<h2>Open: ` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> <div class='section-feature-ctn'> ` +
+			$t.clean(get("featureDisplay")) +
+			` </div> `
 	
 });
 
@@ -19202,358 +19258,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/position.js',
-function (require, exports, module) {
-	
-
-	
-	const getDefaultSize = require('./utils.js').getDefaultSize;
-	const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
-	const Vertex3D = require('./three-d/objects/vertex');
-	const BiPolygon = require('./three-d/objects/bi-polygon');
-	
-	class Position {
-	  constructor(assembly, sme) {
-	
-	    function getSme(attr, obj) {
-	      if (attr === undefined) {
-	        return {x: sme.eval(obj.x),
-	          y: sme.eval(obj.y),
-	          z: sme.eval(obj.z)}
-	      } else {
-	        return sme.eval(obj[attr], assembly);
-	      }
-	    }
-	
-	    let center, demension, rotation;
-	    let demCoords = {};
-	    let centerCoords = {};
-	
-	    if ((typeof assembly.rotationConfig) !== 'function') {
-	      const rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0,0,0');
-	      rotation = (attr) => getSme(attr, rotCoords);
-	    } else {
-	      rotation = assembly.rotationConfig;
-	    }
-	
-	    if ((typeof assembly.centerConfig) !== 'function') {
-	      centerCoords = Position.parseCoordinates(assembly.centerConfig, '0,0,0');
-	      center = (attr) => getSme(attr, centerCoords);
-	    } else {
-	      center = assembly.centerConfig;
-	    }
-	
-	    if ((typeof assembly.demensionConfig) !== 'function') {
-	      const defSizes = getDefaultSize(assembly);
-	      demCoords = Position.parseCoordinates(assembly.demensionConfig,
-	      `${defSizes.width},${defSizes.length},${defSizes.thickness}`,
-	      '0,0,0');
-	      demension = (attr) => getSme(attr, demCoords);
-	    } else new Promise(function(resolve, reject) {
-	      demension = assembly.demensionConfig
-	    });
-	
-	
-	
-	    function get(func, sme) {
-	      if ((typeof func) === 'function' && (typeof func()) === 'object') return func;
-	      return sme;
-	    }
-	
-	    // function centerRelitiveToRoot(attr) {
-	    //   const objectCenter = center(attr);
-	    //   if (attr) {
-	    //
-	    //   }
-	    // }
-	
-	
-	    const rootAssembly = assembly.getRoot();
-	    // TODO: good Idea does not work now that parentAssembly is set programatically after object is built;
-	    // if (rootAssembly.constructor.name === 'Cabinet') {
-	    //   const cacheId = rootAssembly.id();
-	    //   this.rotation = new FunctionCache((attr) => rotation(attr), null, cacheId, assembly);
-	    //   this.center = new FunctionCache((attr) => center(attr), null, cacheId, assembly);
-	    //   this.demension = new FunctionCache((attr) => demension(attr), null, cacheId, assembly);
-	    // } else {
-	      this.rotation = (attr) => rotation(attr);
-	      this.center = (attr) => center(attr);
-	      this.demension = (attr) => demension(attr);
-	    // }
-	
-	    this.current = () => {
-	      const position = {
-	        center: this.center(),
-	        demension: this.demension(),
-	        rotation: this.rotation()
-	      };
-	      assembly.getJoints().male.forEach((joint) =>
-	        joint.updatePosition(position)
-	      );
-	      return position;
-	    }
-	
-	    this.centerAdjust = (center, direction) => {
-	      const magnitude = direction[0] === '-' ? -1 : 1;
-	      const axis = direction.replace(/\+|-/, '');
-	      return this.center(center) + (magnitude * this.demension(axis) / 2);
-	    }
-	
-	    this.limits = (targetStr) => {
-	      if (targetStr !== undefined) {
-	        const match = targetStr.match(/^(\+|-|)([xyz])$/)
-	        const attr = match[2];
-	        const d = this.demension(attr)/2;
-	        const pos = `+${attr}`;
-	        const neg = `-${attr}`;
-	        const limits = {};
-	        limits[pos] = d;
-	        if (match[1] === '+') return limits[pos];
-	        limits[neg] = -d;
-	        if (match[1] === '-') return limits[neg];
-	        return  limits;
-	      }
-	      const d = this.demension();
-	      return  {
-	        x: d.x / 2,
-	        '-x': -d.x / 2,
-	        y: d.y / 2,
-	        '-y': -d.y / 2,
-	        z: d.z / 2,
-	        '-z': -d.z / 2,
-	      }
-	    }
-	
-	    //TODO: this could be simpler and more effecient using vector rotations instead of line rotations.
-	    const modelVecObj = (rotations) => ({
-	        width: new Vertex3D(1,0,0).rotate(rotations).vector(),
-	        height: new Vertex3D(0,1,0).rotate(rotations).vector(),
-	        depth: new Vertex3D(0,0,1).rotate(rotations).vector()
-	    });
-	
-	    this.toBiPolygon = () => {
-	      const current = this.current();
-	      const dem = current.demension;
-	      const center = new Vertex3D(current.center);
-	      const vecObj = modelVecObj(current.rotation);
-	      return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj);
-	    }
-	
-	    this.toModel = () => {
-	      return this.toBiPolygon().toModel();
-	    }
-	
-	    this.set = (obj, type, value) => {
-	      if (value !== undefined) obj[type] = value;
-	      return demension(type);
-	    }
-	
-	    this.setDemension = (type, value) => this.set(demCoords, type, value);
-	    this.setCenter = (type, value) => this.set(centerCoords, type, value);
-	  }
-	}
-	
-	Position.targeted = (attr, x, y, z) => {
-	  const all = attr === undefined;
-	  const dem = {
-	    x: all || attr === 'x' && x(),
-	    y: all || attr === 'y' && y(),
-	    z: all || attr === 'z' && z()
-	  };
-	  return all ? {x,y,z} : dem[attr];
-	}
-	Position.axisStrRegex = /(([xyz])(\(([0-9]*)\)|))/;
-	Position.rotateStrRegex = new RegExp(Position.axisStrRegex, 'g');
-	Position.touching = (pos1, pos2) => {
-	  const touchingAxis = (axis) => {
-	    if (pos1[`${axis}1`] === pos2[`${axis}0`])
-	      return {axis: `${axis}`, direction: '+'};
-	    if (pos1[`${axis}0`] === pos2[`${axis}1`])
-	      return {axis: `${axis}`, direction: '-'};
-	  }
-	  if (!Position.within(pos1, pos2)) return null;
-	  return touchingAxis('x') || touchingAxis('y') || touchingAxis('z') || null;
-	}
-	Position.within = (pos1, pos2, axises) => {
-	  const axisTouching = (axis) => {
-	    if (axises !== undefined && axises.index(axis) === -1) return true;
-	    const p10 = pos1[`${axis}0`];
-	    const p11 = pos1[`${axis}1`];
-	    const p20 = pos2[`${axis}0`];
-	    const p21 = pos2[`${axis}1`];
-	    return (p10 >= p20 && p10 <= p21) ||
-	            (p11 <= p21 && p11 >= p20);
-	  }
-	  return axisTouching('x') && axisTouching('y') && axisTouching('z');
-	}
-	
-	Position.parseCoordinates = function() {
-	  let coordinateMatch = null;
-	  for (let index = 0; coordinateMatch === null && index < arguments.length; index += 1) {
-	    const str = arguments[index];
-	    if (index > 0 && arguments.length - 1 === index) {
-	      //console.error(`Attempted to parse invalid coordinateStr: '${JSON.stringify(arguments)}'`);
-	    }
-	    if (typeof str === 'string') {
-	      coordinateMatch = str.match(Position.demsRegex);
-	    }
-	  }
-	  if (coordinateMatch === null) {
-	    throw new Error(`Unable to parse coordinates`);
-	  }
-	  return {
-	    x: coordinateMatch[1],
-	    y: coordinateMatch[2],
-	    z: coordinateMatch[3]
-	  }
-	}
-	Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
-	module.exports = Position
-	
-});
-
-
-RequireJS.addFunction('./app-src/init.js',
-function (require, exports, module) {
-	
-
-	
-	require('../../../public/js/utils/utils.js');
-	const $t = require('../../../public/js/utils/$t');
-	$t.loadFunctions(require('../generated/html-templates'));
-	const User = require('./displays/user.js');
-	
-	// Object Classes
-	// require('./bind.js');
-	require('./objects/assembly/init-assem');
-	require('./objects/joint/init');
-	require('./two-d/objects/snap/init');
-	const Order = require('./objects/order.js');
-	const Assembly = require('./objects/assembly/assembly.js');
-	const Properties = require('./config/properties.js');
-	const PopUp = require('../../../public/js/utils/display/pop-up.js');
-	
-	// Display classes
-	const du = require('../../../public/js/utils/dom-utils.js');
-	const EPNTS = require('../generated/EPNTS.js');
-	const Displays = require('./services/display-svc.js');
-	const TwoDLayout = require('./two-d/layout.js');
-	const ThreeDMainModel = require('./displays/three-d-main.js');
-	const PropertyDisplay = require('./displays/property.js');
-	const DisplayManager = require('./display-utils/displayManager.js');
-	const utils = require('./utils.js');
-	
-	// Run Tests
-	if (EPNTS.getEnv() === 'local') {
-	  require('../test/run');
-	}
-	
-	function updateDivisions (target) {
-	  const name = target.getAttribute('name');
-	  const index = Number.parseInt(target.getAttribute('index'));
-	  const value = Number.parseFloat(target.value);
-	  const inputs = target.parentElement.parentElement.querySelectorAll('.division-pattern-input');
-	  const id = du.find.up('.opening-cnt', target).getAttribute('opening-id');
-	  const opening = Assembly.get(id);
-	  const values = opening.dividerLayout().fill;
-	  for (let index = 0; values && index < inputs.length; index += 1){
-	    const value = values[index];
-	    if(value) inputs[index].value = value;
-	  }
-	  ThreeDMainModel.update(opening);
-	}
-	
-	function getValue(code, obj) {
-	  if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
-	  return CONSTANTS[code].value;
-	}
-	
-	
-	const breakPathSplit = du.url.breakdown().path.split('/');
-	const urlSuffix = breakPathSplit.length === 3 ? breakPathSplit[2] : undefined;
-	const pageId = {template: 'template-manager', cost: 'cost-manager', home: 'app',
-	                pattern: 'pattern-manager', property: 'property-manager-cnt'
-	              }[urlSuffix] || 'app';
-	function init(body){
-	  if (body) Properties.load(body);
-	  let roomDisplay;
-	
-	  if (urlSuffix) {
-	      require('./cost/init-costs.js');
-	      const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId);
-	      if (urlSuffix === 'cost') {
-	        const CostManager = require('./displays/managers/cost.js');
-	        const costManager = new CostManager('cost-manager', 'cost');
-	      } else if (urlSuffix === 'template') {
-	        const TemplateManager = require('./displays/managers/template.js');
-	        const templateDisplayManager = new TemplateManager('template-manager');
-	      } else {
-	        const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
-	        const propertyDisplay = new PropertyDisplay('#property-manager');
-	        Displays.register('propertyDisplay', propertyDisplay);
-	        const OrderDisplay = require('./displays/order.js');
-	        du.on.match('change', '.open-orientation-radio,.open-division-input', updateDivisions);
-	        orderDisplay = new OrderDisplay('#order-cnt');
-	        setTimeout(TwoDLayout.init, 1000);
-	        setTimeout(ThreeDMainModel.init, 1000);
-	    }
-	  } else {
-	    const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
-	    const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
-	    const RoomDisplay = require('./displays/room');
-	    let order = new Order();
-	    order.addRoom('carpet');
-	    roomDisplay = new RoomDisplay('#room-cnt', order);
-	    setTimeout(TwoDLayout.init, 1000);
-	    setTimeout(ThreeDMainModel.init, 1000);
-	  }
-	}
-	
-	if (User.loginAvailible()) Request.get(EPNTS.config.get(), init, console.error);
-	else init();
-	
-	const popUp = new PopUp({resize: false, noBackdrop: true});
-	
-	du.on.match('click', '*', (elem, event) => {
-	  const errorMsg = elem.getAttribute('error-msg');
-	  if (errorMsg) {
-	    popUp.positionOnElement(elem).bottom();
-	    popUp.updateContent(errorMsg);
-	    popUp.show();
-	    event.stopPropagation();
-	  } else popUp.close();
-	});
-	
-});
-
-
-RequireJS.addFunction('./app-src/error.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	class InvalidComputation {
-	  constructor(attributes) {
-	    this.errorCode = 400;
-	    this.message = 'Error within input parameters';
-	    const keys = Object.keys(attributes);
-	    for (let index = 0; index < keys.length; index += 1) {
-	      const key = keys[index];
-	      this.message += `\n\t${key}: '${value}'`;
-	    }
-	  }
-	}
-	module.exports = InvalidComputation
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('./app-src/division-patterns.js',
 function (require, exports, module) {
 	
@@ -19765,6 +19469,410 @@ const Measurement = require('../../../public/js/utils/measurement.js');
 });
 
 
+RequireJS.addFunction('./app-src/init.js',
+function (require, exports, module) {
+	
+
+	
+	require('../../../public/js/utils/utils.js');
+	const $t = require('../../../public/js/utils/$t');
+	$t.loadFunctions(require('../generated/html-templates'));
+	const User = require('./displays/user.js');
+	
+	// Object Classes
+	// require('./bind.js');
+	require('./objects/assembly/init-assem');
+	require('./objects/joint/init');
+	require('./two-d/objects/snap/init');
+	const Order = require('./objects/order.js');
+	const Assembly = require('./objects/assembly/assembly.js');
+	const Properties = require('./config/properties.js');
+	const PopUp = require('../../../public/js/utils/display/pop-up.js');
+	
+	// Display classes
+	const du = require('../../../public/js/utils/dom-utils.js');
+	const EPNTS = require('../generated/EPNTS.js');
+	const Displays = require('./services/display-svc.js');
+	const TwoDLayout = require('./displays/two-d-layout.js');
+	const ThreeDMainModel = require('./displays/three-d-main.js');
+	const PropertyDisplay = require('./displays/property.js');
+	const DisplayManager = require('./display-utils/displayManager.js');
+	const utils = require('./utils.js');
+	
+	// Run Tests
+	if (EPNTS.getEnv() === 'local') {
+	  require('../test/run');
+	}
+	
+	function updateDivisions (target) {
+	  const name = target.getAttribute('name');
+	  const index = Number.parseInt(target.getAttribute('index'));
+	  const value = Number.parseFloat(target.value);
+	  const inputs = target.parentElement.parentElement.querySelectorAll('.division-pattern-input');
+	  const id = du.find.up('.opening-cnt', target).getAttribute('opening-id');
+	  const opening = Assembly.get(id);
+	  const values = opening.dividerLayout().fill;
+	  for (let index = 0; values && index < inputs.length; index += 1){
+	    const value = values[index];
+	    if(value) inputs[index].value = value;
+	  }
+	  ThreeDMainModel.update(opening);
+	}
+	
+	function getValue(code, obj) {
+	  if ((typeof obj) === 'object' && obj[code] !== undefined) return obj[code];
+	  return CONSTANTS[code].value;
+	}
+	
+	
+	const breakPathSplit = du.url.breakdown().path.split('/');
+	const urlSuffix = breakPathSplit.length === 3 ? breakPathSplit[2] : undefined;
+	const pageId = {template: 'template-manager', cost: 'cost-manager', home: 'app',
+	                pattern: 'pattern-manager', property: 'property-manager-cnt'
+	              }[urlSuffix] || 'app';
+	function init(body){
+	  if (body) Properties.load(body);
+	  let roomDisplay;
+	
+	  if (urlSuffix) {
+	      require('./cost/init-costs.js');
+	      const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId);
+	      if (urlSuffix === 'cost') {
+	        const CostManager = require('./displays/managers/cost.js');
+	        const costManager = new CostManager('cost-manager', 'cost');
+	      } else if (urlSuffix === 'template') {
+	        const TemplateManager = require('./displays/managers/template.js');
+	        const templateDisplayManager = new TemplateManager('template-manager');
+	      } else {
+	        const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
+	        const propertyDisplay = new PropertyDisplay('#property-manager');
+	        Displays.register('propertyDisplay', propertyDisplay);
+	        const OrderDisplay = require('./displays/order.js');
+	        du.on.match('change', '.open-orientation-radio,.open-division-input', updateDivisions);
+	        orderDisplay = new OrderDisplay('#order-cnt');
+	        setTimeout(TwoDLayout.init, 1000);
+	        setTimeout(ThreeDMainModel.init, 1000);
+	    }
+	  } else {
+	    const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
+	    const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
+	    const RoomDisplay = require('./displays/room');
+	    let order = new Order();
+	    order.addRoom('carpet');
+	    roomDisplay = new RoomDisplay('#room-cnt', order);
+	    setTimeout(TwoDLayout.init, 1000);
+	    setTimeout(ThreeDMainModel.init, 1000);
+	  }
+	}
+	
+	if (User.loginAvailible()) Request.get(EPNTS.config.get(), init, console.error);
+	else init();
+	
+	const popUp = new PopUp({resize: false, noBackdrop: true});
+	
+	du.on.match('click', '*', (elem, event) => {
+	  const errorMsg = elem.getAttribute('error-msg');
+	  if (errorMsg) {
+	    popUp.positionOnElement(elem).bottom();
+	    popUp.updateContent(errorMsg);
+	    popUp.show();
+	    event.stopPropagation();
+	  } else popUp.close();
+	});
+	
+});
+
+
+RequireJS.addFunction('./app-src/error.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	class InvalidComputation {
+	  constructor(attributes) {
+	    this.errorCode = 400;
+	    this.message = 'Error within input parameters';
+	    const keys = Object.keys(attributes);
+	    for (let index = 0; index < keys.length; index += 1) {
+	      const key = keys[index];
+	      this.message += `\n\t${key}: '${value}'`;
+	    }
+	  }
+	}
+	module.exports = InvalidComputation
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/position.js',
+function (require, exports, module) {
+	
+
+	
+	const getDefaultSize = require('./utils.js').getDefaultSize;
+	const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
+	const Vertex3D = require('./three-d/objects/vertex');
+	const BiPolygon = require('./three-d/objects/bi-polygon');
+	
+	class Position {
+	  constructor(assembly, sme) {
+	
+	    function getSme(attr, obj) {
+	      if (attr === undefined) {
+	        return {x: sme.eval(obj.x),
+	          y: sme.eval(obj.y),
+	          z: sme.eval(obj.z)}
+	      } else {
+	        return sme.eval(obj[attr], assembly);
+	      }
+	    }
+	
+	    let center, demension, rotation;
+	    let demCoords = {};
+	    let centerCoords = {};
+	
+	    if ((typeof assembly.rotationConfig) !== 'function') {
+	      const rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0,0,0');
+	      rotation = (attr) => getSme(attr, rotCoords);
+	    } else {
+	      rotation = assembly.rotationConfig;
+	    }
+	
+	    if ((typeof assembly.centerConfig) !== 'function') {
+	      centerCoords = Position.parseCoordinates(assembly.centerConfig, '0,0,0');
+	      center = (attr) => getSme(attr, centerCoords);
+	    } else {
+	      center = assembly.centerConfig;
+	    }
+	
+	    if ((typeof assembly.demensionConfig) !== 'function') {
+	      const defSizes = getDefaultSize(assembly);
+	      demCoords = Position.parseCoordinates(assembly.demensionConfig,
+	      `${defSizes.width},${defSizes.length},${defSizes.thickness}`,
+	      '0,0,0');
+	      demension = (attr) => getSme(attr, demCoords);
+	    } else new Promise(function(resolve, reject) {
+	      demension = assembly.demensionConfig
+	    });
+	
+	
+	
+	    function get(func, sme) {
+	      if ((typeof func) === 'function' && (typeof func()) === 'object') return func;
+	      return sme;
+	    }
+	
+	    // function centerRelitiveToRoot(attr) {
+	    //   const objectCenter = center(attr);
+	    //   if (attr) {
+	    //
+	    //   }
+	    // }
+	
+	
+	    const rootAssembly = assembly.getRoot();
+	    // TODO: good Idea does not work now that parentAssembly is set programatically after object is built;
+	    // if (rootAssembly.constructor.name === 'Cabinet') {
+	    //   const cacheId = rootAssembly.id();
+	    //   this.rotation = new FunctionCache((attr) => rotation(attr), null, cacheId, assembly);
+	    //   this.center = new FunctionCache((attr) => center(attr), null, cacheId, assembly);
+	    //   this.demension = new FunctionCache((attr) => demension(attr), null, cacheId, assembly);
+	    // } else {
+	      this.rotation = (attr) => rotation(attr);
+	      this.center = (attr) => center(attr);
+	      this.demension = (attr) => demension(attr);
+	    // }
+	
+	    this.current = () => {
+	      const position = {
+	        center: this.center(),
+	        demension: this.demension(),
+	        rotation: this.rotation()
+	      };
+	      assembly.getJoints().male.forEach((joint) =>
+	        joint.updatePosition(position)
+	      );
+	      return position;
+	    }
+	
+	    this.centerAdjust = (center, direction) => {
+	      const magnitude = direction[0] === '-' ? -1 : 1;
+	      const axis = direction.replace(/\+|-/, '');
+	      return this.center(center) + (magnitude * this.demension(axis) / 2);
+	    }
+	
+	    this.limits = (targetStr) => {
+	      if (targetStr !== undefined) {
+	        const match = targetStr.match(/^(\+|-|)([xyz])$/)
+	        const attr = match[2];
+	        const d = this.demension(attr)/2;
+	        const pos = `+${attr}`;
+	        const neg = `-${attr}`;
+	        const limits = {};
+	        limits[pos] = d;
+	        if (match[1] === '+') return limits[pos];
+	        limits[neg] = -d;
+	        if (match[1] === '-') return limits[neg];
+	        return  limits;
+	      }
+	      const d = this.demension();
+	      return  {
+	        x: d.x / 2,
+	        '-x': -d.x / 2,
+	        y: d.y / 2,
+	        '-y': -d.y / 2,
+	        z: d.z / 2,
+	        '-z': -d.z / 2,
+	      }
+	    }
+	
+	    //TODO: this could be simpler and more effecient using vector rotations instead of line rotations.
+	    const modelVecObj = (rotations) => ({
+	        width: new Vertex3D(1,0,0).rotate(rotations).vector(),
+	        height: new Vertex3D(0,1,0).rotate(rotations).vector(),
+	        depth: new Vertex3D(0,0,1).rotate(rotations).vector()
+	    });
+	
+	    this.toBiPolygon = () => {
+	      const current = this.current();
+	      const dem = current.demension;
+	      const center = new Vertex3D(current.center);
+	      const vecObj = modelVecObj(current.rotation);
+	      return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj);
+	    }
+	
+	    this.toModel = () => {
+	      return this.toBiPolygon().toModel();
+	    }
+	
+	    this.set = (obj, type, value) => {
+	      if (value !== undefined) obj[type] = value;
+	      return demension(type);
+	    }
+	
+	    this.setDemension = (type, value) => this.set(demCoords, type, value);
+	    this.setCenter = (type, value) => this.set(centerCoords, type, value);
+	  }
+	}
+	
+	Position.targeted = (attr, x, y, z) => {
+	  const all = attr === undefined;
+	  const dem = {
+	    x: all || attr === 'x' && x(),
+	    y: all || attr === 'y' && y(),
+	    z: all || attr === 'z' && z()
+	  };
+	  return all ? {x,y,z} : dem[attr];
+	}
+	Position.axisStrRegex = /(([xyz])(\(([0-9]*)\)|))/;
+	Position.rotateStrRegex = new RegExp(Position.axisStrRegex, 'g');
+	Position.touching = (pos1, pos2) => {
+	  const touchingAxis = (axis) => {
+	    if (pos1[`${axis}1`] === pos2[`${axis}0`])
+	      return {axis: `${axis}`, direction: '+'};
+	    if (pos1[`${axis}0`] === pos2[`${axis}1`])
+	      return {axis: `${axis}`, direction: '-'};
+	  }
+	  if (!Position.within(pos1, pos2)) return null;
+	  return touchingAxis('x') || touchingAxis('y') || touchingAxis('z') || null;
+	}
+	Position.within = (pos1, pos2, axises) => {
+	  const axisTouching = (axis) => {
+	    if (axises !== undefined && axises.index(axis) === -1) return true;
+	    const p10 = pos1[`${axis}0`];
+	    const p11 = pos1[`${axis}1`];
+	    const p20 = pos2[`${axis}0`];
+	    const p21 = pos2[`${axis}1`];
+	    return (p10 >= p20 && p10 <= p21) ||
+	            (p11 <= p21 && p11 >= p20);
+	  }
+	  return axisTouching('x') && axisTouching('y') && axisTouching('z');
+	}
+	
+	Position.parseCoordinates = function() {
+	  let coordinateMatch = null;
+	  for (let index = 0; coordinateMatch === null && index < arguments.length; index += 1) {
+	    const str = arguments[index];
+	    if (index > 0 && arguments.length - 1 === index) {
+	      //console.error(`Attempted to parse invalid coordinateStr: '${JSON.stringify(arguments)}'`);
+	    }
+	    if (typeof str === 'string') {
+	      coordinateMatch = str.match(Position.demsRegex);
+	    }
+	  }
+	  if (coordinateMatch === null) {
+	    throw new Error(`Unable to parse coordinates`);
+	  }
+	  return {
+	    x: coordinateMatch[1],
+	    y: coordinateMatch[2],
+	    z: coordinateMatch[3]
+	  }
+	}
+	Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
+	module.exports = Position
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/hover-map.js',
+function (require, exports, module) {
+	
+const Line2d = require('./objects/line')
+	class HoverMap2d {
+	  constructor(lineOrVertex, tolerance) {
+	    const toleranceFunction = (typeof tolerance) === 'function';
+	    const targetFunction = (typeof lineOrVertex) === 'function';
+	    function getTolerence() {
+	      if (toleranceFunction) return tolerance();
+	      return tolerance;
+	    }
+	    function vertexHovered(targetVertex, hoverVertex) {
+	      return targetVertex.distance(hoverVertex) < getTolerence();
+	    }
+	
+	    function lineHovered(targetLine, hoverVertex) {
+	      const tol = getTolerence();
+	      const hv = hoverVertex;
+	      const sv = targetLine.startVertex();
+	      const ev = targetLine.endVertex();
+	      if (targetLine.isVertical()) {
+	        return Math.abs(sv.x() - hv.x()) < tol &&
+	              ((sv.y() > hv.y() && ev.y() < hv.y()) ||
+	              (sv.y() < hv.y() && ev.y() > hv.y()));
+	      } else if (targetLine.isHorizontal()) {
+	        return Math.abs(sv.y() - hv.y()) < tol &&
+	              ((sv.x() > hv.x() && ev.x() < hv.x()) ||
+	              (sv.x() < hv.x() && ev.x() > hv.x()));
+	      } else if (Math.abs(sv.y() - ev.y()) < Math.abs(sv.x() - ev.x())) {
+	        const yValue = targetLine.y(hv.x());
+	        return yValue + tol > hv.y() && yValue - tol < hv.y();
+	      } else {
+	        const xValue = targetLine.x(hv.y());
+	        return xValue + tol > hv.x() && xValue - tol < hv.x();
+	      }
+	    }
+	
+	    this.hovering = (hoverVertex) => {
+	      const lov = targetFunction ? lineOrVertex() : lineOrVertex;
+	      if (lov instanceof Line2d)
+	        return lineHovered(lov, hoverVertex);
+	      return vertexHovered(lov, hoverVertex);
+	    }
+	  }
+	}
+	
+	module.exports = HoverMap2d;
+	
+});
+
+
 RequireJS.addFunction('./app-src/config/property.js',
 function (require, exports, module) {
 	
@@ -19862,6 +19970,79 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 });
 
 
+RequireJS.addFunction('./app-src/cost/cost-tree.js',
+function (require, exports, module) {
+	
+const Properties = require('../config/properties.js');
+	const Assembly = require('../objects/assembly/assembly.js');
+	const LogicTree = require('../../../../public/js/utils/logic-tree.js');
+	const LogicWrapper = LogicTree.LogicWrapper;
+	
+	class CostDecision {
+	  constructor(type, name, relation, formula) {
+	    Object.getSet(this, {type, name, costs: [], relation, isChoice: false});
+	    this.requiredProperties = Properties.noValue(name);
+	    if (this.relation) {
+	      if (formula) {
+	        function makeDecision(wrapper) {
+	          return true;
+	        }
+	        this.relation = RelationInput.relationsObjs[relation](makeDecision);
+	        this.condition = (wrapper) => this.relation.eval(wrapper.children(), wrapper.payload.value());
+	      } else {
+	        this.isChoice(true);
+	      }
+	    }
+	  }
+	}
+	
+	class CostTree {
+	  constructor(logicTree) {
+	    const idMap = {};
+	    logicTree = CostTree.suplement(logicTree);
+	    this.tree = () => logicTree;
+	    this.root = () => logicTree.root();
+	    const getWrapper = (wrapperId) => (LogicWrapper.get(wrapperId) || this.root());
+	
+	    this.branch = (wrapperId, name) =>
+	            get(wrapperId).branch(String.random(), new CostDecision('Branch', name));
+	    this.leaf = (wrapperId, name) =>
+	            get(wrapperId).leaf(String.random(), new CostDecision('Leaf', name));
+	    this.select = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).select(String.random(), new CostDecision('Select', name, relation, formula));
+	    this.multiselect = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).multiselect(String.random(), new CostDecision('Multiselect', name, relation, formula));
+	    this.conditional = (wrapperId, name, relation, formula) =>
+	            get(wrapperId).conditional(String.random(), new CostDecision('Conditional', name, relation, formula));
+	
+	  }
+	}
+	
+	
+	CostTree.propertyList = Properties.all();
+	CostTree.types = ['branch', 'select', 'conditional', 'multiselect', 'leaf'];
+	CostTree.suplement = (logicTree) => {
+	  if (!(logicTree instanceof LogicWrapper)) {
+	    logicTree = new LogicTree();
+	    logicTree.branch('root');
+	  }
+	  const root = logicTree.root();
+	  const assemClassIds = Properties.list();
+	  assemClassIds.forEach((classId) => {
+	    if (root.node.getNodeByPath(classId) === undefined)
+	      root.branch(classId, new CostDecision('Branch', classId));
+	  });
+	  return logicTree;
+	}
+	CostTree.choices = [];
+	
+	
+	CostTree.CostDecision = CostDecision;
+	module.exports = CostTree;
+	
+});
+
+
 RequireJS.addFunction('./app-src/cost/cost.js',
 function (require, exports, module) {
 	
@@ -19930,6 +20111,379 @@ function (require, exports, module) {
 	Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
 	
 	module.exports = Cost
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/three-d-model.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../public/js/3d-modeling/csg');
+	
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
+	
+	const Polygon3D = require('./objects/polygon');
+	const BiPolygon = require('./objects/bi-polygon');
+	const Polygon2d = require('../two-d/objects/polygon');
+	const Line2d = require('../two-d/objects/line');
+	const Vertex2d = require('../two-d/objects/vertex');
+	const Vertex3D = require('./objects/vertex');
+	const Vector3D = require('./objects/vector');
+	const Line3D = require('./objects/line');
+	const Plane = require('./objects/plane');
+	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+	const OrientationArrows = require('../displays/orientation-arrows.js');
+	const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
+	const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
+	const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
+	const CabinetModel = require('./cabinet-model');
+	
+	const colors = {
+	  indianred: [205, 92, 92],
+	  gray: [128, 128, 128],
+	  fuchsia: [255, 0, 255],
+	  lime: [0, 255, 0],
+	  black: [0, 0, 0],
+	  lightsalmon: [255, 160, 122],
+	  red: [255, 0, 0],
+	  maroon: [128, 0, 0],
+	  yellow: [255, 255, 0],
+	  olive: [128, 128, 0],
+	  lightcoral: [240, 128, 128],
+	  green: [0, 128, 0],
+	  aqua: [0, 255, 255],
+	  white: [255, 255, 255],
+	  teal: [0, 128, 128],
+	  darksalmon: [233, 150, 122],
+	  blue: [0, 0, 255],
+	  navy: [0, 0, 128],
+	  salmon: [250, 128, 114],
+	  silver: [192, 192, 192],
+	  purple: [128, 0, 128]
+	}
+	
+	const colorChoices = Object.keys(colors);
+	let colorIndex = 0;
+	function getColor(name) {
+	  if(colors[name]) return colors[name];
+	  return colors[colorChoices[colorIndex++ % colorChoices.length]];
+	  // return colors.white;
+	}
+	
+	class ThreeDModel {
+	  constructor(assembly) {
+	    const hiddenPartIds = {};
+	    const hiddenPartNames = {};
+	    const hiddenPrefixes = {};
+	    const instance = this;
+	    let hiddenPrefixReg;
+	    let extraObjects = [];
+	    let inclusiveTarget = {};
+	    let partMap;
+	    let renderId;
+	    let targetPartName;
+	    let lastRendered;
+	    let rootAssembly = assembly.getRoot();
+	    this.setTargetPartName = (id) => targetPartName = id;
+	    this.getLastRendered = () => lastRendered;
+	
+	    this.assembly = (a) => {
+	      if (a !== undefined) {
+	        assembly = a;
+	        rootAssembly = a.getRoot();
+	      }
+	      return assembly;
+	    }
+	
+	    this.partMap = () => partMap;
+	    this.isTarget = (type, value) => {
+	      return inclusiveTarget.type === type && inclusiveTarget.value === value;
+	    }
+	    this.inclusiveTarget = function(type, value) {
+	      let prefixReg;
+	      if (type === 'prefix') prefixReg = new RegExp(`^${value}`)
+	      inclusiveTarget = {type, value, prefixReg};
+	    }
+	
+	    function inclusiveMatch(part) {
+	      if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
+	      switch (inclusiveTarget.type) {
+	        case 'prefix':
+	          return part.partName().match(inclusiveTarget.prefixReg) !== null;
+	          break;
+	        case 'part-name':
+	          return part.partName() === inclusiveTarget.value;
+	        case 'part-id':
+	          return part.id() === inclusiveTarget.value;
+	        default:
+	          throw new Error('unknown inclusiveTarget type');
+	      }
+	    }
+	
+	    function manageHidden(object) {
+	      return function (attr, value) {
+	        if (value === undefined) return object[attr] === true;
+	       object[attr] = value === true;
+	       instance.render();
+	      }
+	    }
+	
+	    // Quick and dirty
+	    function centerModel(model) {
+	      const offset = model.distCenter();
+	      offset.z += 100;
+	      offset.y -= 50;
+	      offset.x -= 50;
+	      model.translate(offset);
+	    }
+	
+	    function buildHiddenPrefixReg() {
+	      const list = [];
+	      const keys = Object.keys(hiddenPrefixes);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        if (hiddenPrefixes[key] === true) {
+	          list.push(key);
+	        }
+	      }
+	      hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
+	    }
+	
+	    this.hidePartId = manageHidden(hiddenPartIds);
+	    this.hidePartName = manageHidden(hiddenPartNames);
+	    this.hidePrefix = manageHidden(hiddenPrefixes);
+	
+	    function hasHidden(hiddenObj) {
+	      const keys = Object.keys(hiddenObj);
+	      for(let i = 0; i < hiddenObj.length; i += 1)
+	        if (hidden[keys[index]])return true;
+	      return false;
+	    }
+	    this.noneHidden = () => !hasHidden(hiddenPartIds) &&
+	        !hasHidden(hiddenPartNames) && !hasHidden(hiddenPrefixes);
+	
+	    this.depth = (label) => label.split('.').length - 1;
+	
+	    function hidden(part, level) {
+	      if (!part.included()) return true;
+	      const im = inclusiveMatch(part);
+	      if (im !== null) return !im;
+	      if (instance.hidePartId(part.id())) return true;
+	      if (instance.hidePartName(part.partName())) return true;
+	      if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
+	      return false;
+	    }
+	
+	    // Remove if colors start behaving correctly, can be use to debug.
+	    let xzFootprint;
+	    function createXZfootprint(model, cabinet) {
+	      const cube = CSG.cube({demensions: [cabinet.width(),1,cabinet.thickness()], center: model.center});
+	      xzFootprint = cube.intersect(model);
+	      // xzFootprint = Polygon2d.lines(...twoDmap.xz);
+	    }
+	
+	    this.xzFootprint = () => xzFootprint;
+	
+	    function coloring(part) {
+	      if (part.partName() && part.partName().match(/.*Frame.*/)) return getColor('blue');
+	      else if (part.partName() && part.partName().match(/.*Drawer.Box.*/)) return getColor('green');
+	      else if (part.partName() && part.partName().match(/.*Handle.*/)) return getColor('silver');
+	      return getColor('red');
+	    }
+	
+	    const randInt = (start, range) => start + Math.floor(Math.random() * range);
+	    function debugColoring() {
+	      return [randInt(0, 255),randInt(0, 255),randInt(0, 255)];
+	    }
+	
+	    this.addVertex = (center, radius, color) => {
+	      radius ||= .5;
+	      const vertex = CSG.sphere({center, radius});
+	      vertex.setColor(getColor(color));
+	      extraObjects.push(vertex);
+	    }
+	
+	    this.removeAllExtraObjects = () => extraObjects = [];
+	
+	
+	    function toTwoDpolys(model) {
+	      if (model === undefined) return undefined;
+	      if (model.threeView) return model;
+	      const polys = Polygon3D.fromCSG(model.polygons);
+	      polys.normals = model.normals;
+	      Polygon3D.merge(polys);
+	      const threeView = Polygon3D.toThreeView(polys, polys.normals);
+	      model.threeView = threeView;
+	      return model;
+	    }
+	
+	    let lm;
+	    this.lastModel = () => toTwoDpolys(lm);
+	
+	    let cabinetModel;
+	    this.render = function () {
+	      ThreeDModel.lastActive = this;
+	      const cacheId = rootAssembly.id();
+	      FunctionCache.on('sme');
+	
+	      const startTime = new Date().getTime();
+	      buildHiddenPrefixReg();
+	      function buildObject(assem) {
+	        let a = assem.toModel();
+	        let normals = a.normals;
+	        // const c = assem.position().center();
+	        const e=1;
+	        // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
+	        a.setColor(...getColor());
+	        assem.getJoints().female.forEach((joint) => {
+	          const male = joint.getMale();
+	          const m = male.toModel();
+	          a = a.subtract(m);
+	        });
+	        // else a.setColor(1, 0, 0);
+	        a.normals = normals;
+	        return a;
+	      }
+	      const assemblies = this.assembly().getParts();
+	      const root = assemblies[0].getRoot();
+	      cabinetModel = new CabinetModel(root);
+	      let a;
+	      partMap = {};
+	      for (let index = 0; index < assemblies.length; index += 1) {
+	        const assem = assemblies[index];
+	        partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
+	        if (!hidden(assem)) {
+	          const b = buildObject(assem);
+	          cabinetModel.add(assem, b);
+	          // const c = assem.position().center();
+	          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+	          if (a === undefined) a = b;
+	          else if (b && b.polygons.length !== 0) {
+	            a = a.union(b);
+	          }
+	          if (assem.partName() === targetPartName) {
+	            lm = b.clone();
+	            const lastModel = this.lastModel();
+	            lastModelUpdateEvent.trigger(undefined, lastModel);
+	          }
+	        }
+	      }
+	      cabinetModel.complexModel(a);
+	      if (a && ThreeDModel.getViewer(a)) {
+	        const displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
+	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
+	        // centerModel(displayModel);
+	        viewer.mesh = displayModel.toMesh();
+	        viewer.gl.ondraw();
+	        lastRendered = cabinetModel;
+	        renderObjectUpdateEvent.trigger(undefined, lastRendered);
+	        console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
+	      }
+	      // FunctionCache.off(cacheId);
+	      FunctionCache.off('sme');
+	    }
+	
+	    this.update = () => {
+	      const rId = renderId = String.random();
+	      ThreeDModel.renderId = renderId;
+	      setTimeout(() => {
+	        if(renderId === rId) instance.render();
+	      }, 250);
+	    };
+	  }
+	}
+	
+	function centerOnObj(x,y,z) {
+	  const model = ThreeDModel.lastActive.getLastRendered().complexModel();
+	  const center = model.center.copy();
+	  center.x += 200 * y;
+	  center.y += -200 * x;
+	  center.z += 100;
+	  const rotation = {x: x*90, y: y*90, z: z*90};
+	
+	  return [center, rotation];
+	}
+	
+	let viewer;
+	let viewerSelector = '#three-d-model';
+	let viewerSize = '60vh';
+	ThreeDModel.setViewerSelector = (selector, size) => {
+	  viewerSelector = selector;
+	  viewerSize = size || viewerSize;
+	  viewer = undefined;
+	}
+	
+	ThreeDModel.getViewer = (model) => {
+	  if (viewer) return viewer;
+	  const canvas = du.find(viewerSelector);
+	  if (canvas) {
+	    const size = du.convertCssUnit(viewerSize);
+	    if (model === undefined) return undefined;
+	    viewer = new Viewer(model, size, size, 50);
+	    addViewer(viewer, viewerSelector);
+	    const orientArrows = new OrientationArrows(`${viewerSelector} .orientation-controls`);
+	    orientArrows.on.center(() =>
+	      viewer.viewFrom(...centerOnObj(0,0, 0)));
+	    orientArrows.on.up(() =>
+	      viewer.viewFrom(...centerOnObj(1, 0,0)));
+	    orientArrows.on.down(() =>
+	      viewer.viewFrom(...centerOnObj(-1,0,0)));
+	    orientArrows.on.left(() =>
+	      viewer.viewFrom(...centerOnObj(0,-1,0)));
+	    orientArrows.on.right(() =>
+	      viewer.viewFrom(...centerOnObj(0,1,0)));
+	  }
+	  return viewer;
+	}
+	
+	ThreeDModel.models = {};
+	ThreeDModel.get = (assembly) => {
+	  if (assembly === undefined) return ThreeDModel.lastActive;
+	  if (ThreeDModel.models[assembly.id()] === undefined) {
+	    ThreeDModel.models[assembly.id()] = new ThreeDModel(assembly);
+	  }
+	  return ThreeDModel.models[assembly.id()];
+	}
+	ThreeDModel.render = (part) => {
+	  const renderId = String.random();
+	  ThreeDModel.renderId = renderId;
+	  setTimeout(() => {
+	    if(ThreeDModel.renderId === renderId) {
+	      const cacheId = part.getRoot().id();
+	      FunctionCache.on(cacheId);
+	      ThreeDModel.get(part).render();
+	      FunctionCache.off(cacheId);
+	    }
+	  }, 2500);
+	};
+	
+	const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
+	ThreeDModel.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
+	
+	const renderObjectUpdateEvent = new CustomEvent('renderObjectUpdate');
+	ThreeDModel.onRenderObjectUpdate = (func) => renderObjectUpdateEvent.on(func);
+	
+	
+	module.exports = ThreeDModel
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/init-costs.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Cost = require('./cost.js');
+	const Material = require('./types/material.js');
+	const Labor = require('./types/labor.js');
+	
+	Cost.register(Material);
+	Cost.register(Labor);
 	
 });
 
@@ -20056,6 +20610,270 @@ function (require, exports, module) {
 	
 	
 	
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/draw.js',
+function (require, exports, module) {
+	
+const Circle2d = require('./objects/circle');
+	const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const tol = .1;
+	let vertLocTolMap;
+	
+	class Draw2d {
+	  constructor(canvasOselector, invertY) {
+	    const yCoef = invertY ? -1 : 1;
+	    let takenLocations;
+	    let coloredLocations;
+	
+	    function canvas() {
+	      if (typeof canvasOid === 'string') return du.find(canvasOselector);
+	      return canvasOselector;
+	    }
+	    const ctx = () => canvas().getContext('2d');
+	
+	    function draw(object, color, width) {
+	      if (object === undefined) return;
+	      if (Array.isArray(object)) {
+	        takenLocations = [];
+	        vertLocTolMap = new ToleranceMap({x: tol, y: tol});
+	        for (let index = 0; index < object.length; index += 1)
+	          draw(object[index], color, width);
+	        return;
+	      }
+	      let constructorId = object.constructor.name;
+	      if (constructorId !== 'SnapLocation2d')
+	        constructorId = constructorId.replace(/^(Snap).*$/, '$1')
+	      switch (constructorId) {
+	        case 'Line2d':
+	          draw.line(object, color, width);
+	          break;
+	        case 'Circle2d':
+	          draw.circle(object, color, width);
+	          break;
+	        case 'Plane2d':
+	          draw.plane(object, color, width);
+	          break;
+	        case 'Polygon2d':
+	          draw.polygon(object, color, width);
+	          break;
+	        case 'Square2d':
+	          draw.square(object, color, width);
+	          break;
+	        case 'LineMeasurement2d':
+	          draw.measurement(object, color, width);
+	          break;
+	        case 'Snap':
+	          draw.snap(object, color, width);
+	          break;
+	        case 'SnapLocation2d':
+	          draw.snapLocation(object, color);
+	        break;
+	        default:
+	          console.error(`Cannot Draw '${object.constructor.name}'`);
+	      }
+	    }
+	
+	    draw.canvas = canvas;
+	    draw.ctx = ctx;
+	    draw.beginPath = () => ctx().beginPath();
+	    draw.moveTo = () => ctx().moveTo();
+	
+	    draw.clear = () => {
+	      ctx().save();
+	      ctx().setTransform(1, 0, 0, 1, 0, 0);
+	      ctx().clearRect(0, 0, canvas().width, canvas().height);
+	      ctx().restore();
+	    }
+	    const colors = [
+	      'indianred', 'gray', 'fuchsia', 'lime', 'black', 'lightsalmon', 'red',
+	      'maroon', 'yellow', 'olive', 'lightcoral', 'green', 'aqua', 'white',
+	      'teal', 'darksalmon', 'blue', 'navy', 'salmon', 'silver', 'purple'
+	    ];
+	    let colorIndex = 0;
+	
+	    let rMultiplier = 1;
+	    function identifyVertices(line) {
+	      vertLocTolMap.add(line.startVertex());
+	      vertLocTolMap.add(line.endVertex());
+	      const svHits = vertLocTolMap.matches(line.startVertex()).length;
+	      const evHits = vertLocTolMap.matches(line.endVertex()).length;
+	      const svRadius = Math.pow(.5,  1 + ((svHits - 1) * .75));
+	      const evRadius = Math.pow(.5,  1 + ((evHits - 1) * .75));
+	
+	      const vertId = 13*(line.startVertex().x() + line.endVertex().x() + 13*(line.startVertex().y() + line.endVertex().y()));
+	      const ccolor = colors[Math.floor(line.length() + vertId) % colors.length];
+	
+	      draw.circle(new Circle2d(svRadius * rMultiplier, line.startVertex()), null, ccolor, .01);
+	      draw.circle(new Circle2d(evRadius * rMultiplier, line.endVertex()), null, ccolor, .01);
+	    }
+	
+	    draw.line = (line, color, width, doNotMeasure) => {
+	      if (line === undefined) return;
+	      color = color ||  'black';
+	      width = width || 10;
+	      const measurePoints = line.measureTo();
+	      ctx().beginPath();
+	      ctx().strokeStyle = color;
+	      ctx().lineWidth = width;
+	      ctx().moveTo(line.startVertex().x(), yCoef * line.startVertex().y());
+	      ctx().lineTo(line.endVertex().x(), yCoef * line.endVertex().y());
+	      ctx().stroke();
+	      // identifyVertices(line);
+	    }
+	
+	    draw.plane = (plane, color, width) => {
+	      if (plane === undefined) return;
+	      color = color ||  'black';
+	      width = width || .1;
+	      plane.getLines().forEach((line) => draw.line(line, color, width));
+	    }
+	
+	    draw.polygon = (poly, color, width) => {
+	      if (poly === undefined) return;
+	      color = color ||  'black';
+	      width = width || 1;
+	      poly.lines().forEach((line) => draw.line(line, color, width));
+	      if ((typeof poly.getTextInfo) === 'function') {
+	        ctx().save();
+	        const info = poly.getTextInfo();
+	        ctx().translate(info.center.x(), yCoef * info.center.y());
+	        ctx().rotate(info.radians);
+	        ctx().beginPath();
+	        ctx().lineWidth = 4;
+	        ctx().strokeStyle = 'black';
+	        ctx().fillStyle =  'black';
+	        const text = info.limit === undefined ? info.text : info.text.substring(0, info.limit);
+	        ctx().fillText(text, info.x, yCoef * info.y, info.maxWidth);
+	        ctx().stroke()
+	        ctx().restore();
+	      }
+	    }
+	
+	    draw.square = (square, color, text) => {
+	      ctx().save();
+	      ctx().beginPath();
+	      ctx().lineWidth = 2;
+	      ctx().strokeStyle = 'black';
+	      ctx().fillStyle = color;
+	
+	      const center = square.center();
+	      ctx().translate(center.x(), yCoef * center.y());
+	      ctx().rotate(square.radians());
+	      ctx().rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
+	      ctx().stroke();
+	      ctx().fill();
+	
+	      if (text) {
+	        ctx().beginPath();
+	        ctx().lineWidth = 4;
+	        ctx().strokeStyle = 'black';
+	        ctx().fillStyle =  'black';
+	        ctx().fillText(text, 0, square.height() / 4, square.width());
+	        ctx().stroke()
+	      }
+	
+	      ctx().restore();
+	    }
+	
+	    draw.text = (text, center, width, color, maxWidth) => {
+	      ctx().beginPath();
+	      ctx().lineWidth = width || 4;
+	      ctx().strokeStyle = color || 'black';
+	      ctx().fillStyle =  color || 'black';
+	      ctx().font = width + "px Arial";
+	      ctx().fillText(text, center.x, yCoef * center.y, maxWidth);
+	      ctx().stroke()
+	    }
+	
+	    draw.circle = (circle, lineColor, fillColor, lineWidth) => {
+	      const center = circle.center();
+	      ctx().beginPath();
+	      ctx().lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
+	      ctx().strokeStyle = lineColor || 'black';
+	      ctx().fillStyle = fillColor || 'white';
+	      ctx().arc(center.x(),yCoef * center.y(), circle.radius(),0, 2*Math.PI);
+	      ctx().stroke();
+	      ctx().fill();
+	    }
+	
+	    const blank = 4;
+	    const hblank = blank/2;
+	    function drawMeasurementLabel(line, measurement) {
+	      if (measurement === undefined) return;
+	      const ctx = draw.ctx();
+	      const midpoint = line.midpoint();
+	
+	      ctx.save();
+	      ctx.lineWidth = 0;
+	      const length = measurement.display();
+	      const textLength = length.length;
+	      ctx.translate(midpoint.x(), yCoef * midpoint.y());
+	      ctx.rotate(line.radians());
+	      ctx.beginPath();
+	      ctx.fillStyle = "white";
+	      ctx.strokeStyle = 'white';
+	      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
+	      ctx.fill();
+	      ctx.stroke();
+	
+	      ctx.beginPath();
+	      ctx.font = '3px Arial';//(Math.abs((Math.log(Math.floor(line.length() * 10)))) || .1) + "px Arial";
+	      ctx.lineWidth = .2;
+	      ctx.strokeStyle = 'black';
+	      ctx.fillStyle =  'black';
+	      ctx.fillText(length, 0, 0);
+	      ctx.stroke()
+	      ctx.restore();
+	    }
+	
+	    draw.measurement = (measurement, color, textWidth) => {
+	      const measurementColor = color || 'grey';
+	      const measurementLineWidth = '.1';
+	      const lines = measurement.I(1, takenLocations);
+	      try {
+	        const winner = lines.midpointClear();
+	        if (winner === undefined) return;
+	        draw.beginPath();
+	        draw.line(winner.startLine, measurementColor, measurementLineWidth, true);
+	        draw.line(winner.endLine, measurementColor, measurementLineWidth, true);
+	        draw.line(winner, measurementColor, measurementLineWidth, true);
+	        drawMeasurementLabel(winner, measurement);
+	      } catch (e) {
+	        console.error('Measurement render error:', e);
+	      }
+	    }
+	
+	    function snapLocColor(snapLoc) {
+	      const locIdentifier = snapLoc.location().replace(/(.{1,}?)[0-9]{1,}(.*)/, '$1$2');
+	      switch (locIdentifier) {
+	        case "right": return 'red';
+	        case "rightcenter": return 'pink';
+	        case "left": return '#b57edc';
+	        case "leftcenter": return 'lavender';
+	        case "back": return 'gray';
+	        case "backcenter": return 'yellow';
+	        default: return "grey"
+	      }
+	    }
+	
+	    draw.snapLocation = (location, color) => {
+	      const c = color || snapLocColor(location);
+	      draw.circle(location.circle(), 'black', c);
+	    }
+	
+	    draw.snap = (snap, color, width) => {
+	      draw(snap.object(), color, width);
+	    }
+	
+	    return draw;
+	  }
+	}
+	
+	module.exports = Draw2d;
 	
 });
 
@@ -20202,7 +21020,8 @@ function (require, exports, module) {
 	const Show = require('../show.js');
 	const Select = require('../../../../public/js/utils/input/styles/select.js');
 	const ThreeDMain = require('../displays/three-d-main.js');
-	const TwoDLayout = require('../two-d/layout');
+	const ThreeDModel = require('../three-d/three-d-model.js');
+	const TwoDLayout = require('../displays/two-d-layout');
 	const OpenSectionDisplay = require('./open-section.js');
 	const CabinetConfig = require('../config/cabinet-configs.js');
 	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
@@ -20291,14 +21110,16 @@ function (require, exports, module) {
 	      }
 	    }
 	
-	    function updateObjLayout(cabinet) {
-	      const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
-	      obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
+	    function updateObjLayout(elem, cabinetModel) {
+	      console.log('model update');
+	      // const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
+	      // obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
 	    }
+	
+	    ThreeDModel.onRenderObjectUpdate(updateObjLayout);
 	
 	    const getObject = (values) => {
 	      const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
-	      setTimeout(() => updateObjLayout(cabinet));
 	      return cabinet;
 	    };
 	    this.active = () => expandList.active();
@@ -20362,6 +21183,27 @@ function (require, exports, module) {
 	CabinetDisplay.bodyTemplate = new $t('cabinet/body');
 	CabinetDisplay.headTemplate = new $t('cabinet/head');
 	module.exports = CabinetDisplay
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/feature.js',
+function (require, exports, module) {
+	
+
+	const $t = require('../../../../public/js/utils/$t');
+	
+	class FeatureDisplay {
+	  constructor(assembly, parentSelector) {
+	    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
+	    this.refresh = () => {
+	      const container = document.querySelector(parentSelector);
+	      container.innerHTML = this.html;
+	    }
+	  }
+	}
+	FeatureDisplay.template = new $t('features');
+	module.exports = FeatureDisplay
 	
 });
 
@@ -20543,23 +21385,379 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/feature.js',
+RequireJS.addFunction('./app-src/three-d/cabinet-model.js',
+function (require, exports, module) {
+	
+const Vertex3D = require('./objects/vertex');
+	const Line3D = require('./objects/line');
+	const Vector3D = require('./objects/vector');
+	const Polygon3D = require('./objects/polygon');
+	const BiPolygon = require('./objects/bi-polygon');
+	const Plane = require('./objects/plane');
+	const Polygon2d = require('../two-d/objects/polygon');
+	const Vertex2d = require('../two-d/objects/vertex');
+	const Line2d = require('../two-d/objects/line');
+	const SnapPolygon = require('../two-d/objects/snap/polygon');
+	
+	
+	class CabinetModel {
+	  constructor(cabinet) {
+	    const assemblies = [];
+	    let cabinetCSG;
+	    let center, threeView, silhouette, complexModel;
+	
+	    this.cabinet = () => cabinet;
+	    this.add = (assembly, csg) => {
+	      if (assembly && assembly.inElivation) {
+	        assemblies.push(assembly);
+	      }
+	      if (cabinet.children().indexOf(assembly) !== -1) {
+	        // TODO: Hacky fix errors created by toModel not including joint information
+	        if (cabinetCSG === undefined) cabinetCSG = csg;//assembly.toModel(true);
+	        else cabinetCSG = cabinetCSG.union(csg);//assembly.toModel(true));
+	      }
+	    }
+	
+	    this.normals = () => {
+	      const normals = [];
+	      for (let index = 0; index < cabinet.openings.length; index++) {
+	        const sectionProps = cabinet.openings[index].sectionProperties();
+	        normals.push(sectionProps.outerPoly().normal());
+	      }
+	      return normals;
+	    }
+	
+	    this.normal = () => new Vector3D(Math.mean(this.normals(), ['i', 'j', 'k']));
+	
+	    this.center = () => {
+	      if (!center) {
+	        if (cabinetCSG === undefined) return new Vertex3D(0,0,0);
+	        const polys = cabinetCSG.polygons;
+	        for (let index = 0; index < polys.length; index++) {
+	          const poly = polys[index];
+	          const verts = poly.vertices;
+	          const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
+	          const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
+	          poly.center = new Vertex3D(midrangePoint);
+	          poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
+	        }
+	        const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
+	        center = new Vertex3D(Math.midrange(polys, targetAttrs));
+	      }
+	      return center;
+	    }
+	
+	    this.threeView = () => {
+	      if (!threeView) {
+	        const polys = Polygon3D.fromCSG(cabinetCSG.polygons);
+	        threeView = Polygon3D.toThreeView(polys);
+	        threeView.front = Polygon2d.toParimeter(threeView.front).lines();
+	        threeView.right = Polygon2d.toParimeter(threeView.right).lines();
+	        const topPoly2d = Polygon2d.toParimeter(threeView.top);
+	        threeView.top = topPoly2d.lines();
+	      }
+	      return threeView;
+	    }
+	
+	    this.cabinetSilhouette = () => {
+	      if (!silhouette) {
+	        let polygons = cabinetCSG.polygons;
+	        const polys = Polygon3D.fromCSG(polygons);
+	        const threeView = Polygon3D.toThreeView(polys);
+	        threeView.front = Polygon2d.toParimeter(threeView.front).lines();
+	        threeView.right = Polygon2d.toParimeter(threeView.right).lines();
+	        const topPoly2d = Polygon2d.toParimeter(threeView.top);
+	        threeView.top = topPoly2d.lines();
+	
+	        const frontMinMax = Vertex2d.minMax(Line2d.vertices(threeView.front));
+	        const height = frontMinMax.diff.y();
+	        const width = frontMinMax.diff.x();
+	        const depth = Vertex2d.minMax(Line2d.vertices(threeView.right)).diff.x();
+	        const topPoly = Polygon3D.from2D(topPoly2d);
+	        topPoly.rotate({x:90,y:0,z:0});
+	        silhouette = BiPolygon.fromPolygon(topPoly, 0, height);
+	        silhouette.center(this.center());
+	      }
+	      return silhouette;
+	    }
+	
+	    this.toModel = (simpler, centerOn) => {
+	      const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
+	      let model = this.cabinetSilhouette().toModel();
+	      model.translate(offset);
+	      for (let index = 0; !simpler && index < assemblies.length; index++) {
+	        const csg = assemblies[index].toModel(true);
+	        csg.translate(offset);
+	        model = model.union(csg);
+	      }
+	      return model;
+	    }
+	
+	    this.viewFromVector = (vector, in2D, axis) => {
+	      let output = cabinet.toBiPolygon();
+	      output.center(this.center());
+	      if (in2D) {
+	        output = Polygon3D.toTwoD(output.toPolygons(), vector, axis);
+	        axis ||= output.axis;
+	        output = Polygon2d.toParimeter(output).lines();
+	      } else {
+	        output = output.toModel();
+	      }
+	      for (let i = 0; i < assemblies.length; i++) {
+	        if (in2D) {
+	          // TODO: overwiting this.toModel causes the commented line to fail.... should be rectified.
+	          // const twoDlines = Polygon3D.toTwoD(assemblies[i].toBiPolygon().toPolygons(), vector, axis);
+	          const polygons = Polygon3D.fromCSG(assemblies[i].toModel(true).polygons);
+	          const twoDlines = Polygon3D.toTwoD(polygons, vector, axis);
+	          output.concatInPlace(twoDlines);
+	        } else
+	          output.union(assemblies[i].toModel());
+	      }
+	      return output;
+	    }
+	
+	    this.topViewSnap = () => {
+	      const c = cabinet;
+	      if (c.snapObject === undefined) {
+	        const polys = this.cabinetSilhouette().toPolygons();
+	        const threeView = Polygon3D.toThreeView(polys);
+	        let topView = Polygon2d.toParimeter(threeView.top);
+	        const layout = c.group().room().layout();
+	        const normals = c.normals();
+	        const dist = c.width() > c.thickness() ? c.width() : c.thickness();
+	        const lines = topView.lines();
+	        const topCenter = Vertex2d.center(Line2d.vertices(lines));
+	        const normalLines = normals.map((n) => {
+	          const searchLine = Line3D.startAndVector(this.center(), n.scale(dist));
+	          const searchLine2d = searchLine.to2D(threeView.axis.top[0], threeView.axis.top[1]);
+	          searchLine2d.translate(new Line2d(searchLine2d.startVertex(), topCenter));
+	          return searchLine2d;
+	        });
+	        const faceIndecies = normalLines.map((normalLine) => {
+	          for (let index = 0; index < lines.length; index++) {
+	            if (lines[index].findSegmentIntersection(normalLine, true))
+	              return index;
+	          }
+	        });
+	        topView.faceIndecies(faceIndecies)
+	        const layoutObject = layout.addObject(c.id(), c, c.partName(), topView);
+	        layoutObject.topview().normals = normalLines;
+	        c.snapObject = layoutObject;
+	
+	      }
+	      return cabinet.snapObject.topview();
+	    }
+	
+	    function addComplexModelAttrs(model) {
+	      const max = new Vertex3D(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
+	      const min = new Vertex3D(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER);
+	      const polys = model.polygons;
+	      for (let index = 0; index < polys.length; index++) {
+	        const poly = polys[index];
+	        const verts = poly.vertices;
+	        const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
+	        const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
+	        poly.center = new Vertex3D(midrangePoint);
+	        poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
+	      }
+	      const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
+	      model.center = new Vertex3D(Math.midrange(polys, targetAttrs));
+	      model.max = max;
+	      model.min = min;
+	    }
+	
+	    this.complexModel = (model) => {
+	      if (model !== undefined) {
+	        addComplexModelAttrs(model);
+	        complexModel = model;
+	        this.topViewSnap();
+	      }
+	      return complexModel;
+	    }
+	
+	    this.frontView = () => this.viewFromVector(this.normal(), true);
+	  }
+	}
+	
+	module.exports = CabinetModel;
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/cabinet-configs.js',
 function (require, exports, module) {
 	
 
-	const $t = require('../../../../public/js/utils/$t');
 	
-	class FeatureDisplay {
-	  constructor(assembly, parentSelector) {
-	    this.html = () => FeatureDisplay.template.render({features: assembly.features, id: 'root'});
-	    this.refresh = () => {
-	      const container = document.querySelector(parentSelector);
-	      container.innerHTML = this.html;
-	    }
+	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const Inputs = require('../input/inputs.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const EPNTS = require('../../generated/EPNTS.js');
+	const CabinetTemplate = require('./cabinet-template');
+	const ValueCondition = require('../../../../public/js/utils/input/decision/decision.js').ValueCondition;
+	const Cabinets = require('./cabinets.json');
+	const CabinetLayouts = require('./cabinet-layouts');
+	
+	const configs = {};
+	class CabinetConfig {
+	  constructor(cabinets, id) {
+	    let cabinetList = {};
+	    let cabinetKeys = {};
+	    let configKeys;
+	
+	    this.valid = (type, id) => (!id ?
+	                  cabinets[type] : cabinetKeys[type][id]) !== undefined;
+	
+	    this.inputTree = () => {
+	      const types = JSON.parse(JSON.stringify(configKeys));
+	      const typeInput = new Select({
+	        name: 'type',
+	        label: 'Type',
+	        inline: false,
+	        class: 'center',
+	        list: types
+	      });
+	      const nameInput = new Input({
+	        name: 'name',
+	        inline: true,
+	        label: 'Name (optional)',
+	        class: 'center',
+	      });
+	      const layoutInput = new Input({
+	        label: 'Layout (Optional)',
+	        name: 'layout',
+	        inline: true,
+	        class: 'center',
+	        clearOnDblClick: true,
+	        list: CabinetLayouts.list()
+	      });
+	
+	      const inputs = [layoutInput, nameInput, typeInput];
+	      const inputTree = new DecisionInputTree();
+	      // inputTree.onSubmit((t) => {
+	      //   inputTree.payload().inputArray[1].setValue('', true)
+	      //   inputTree.children()[0].payload().inputArray[0].setValue('', true)
+	      // });
+	      inputTree.leaf('Cabinet', inputs);
+	
+	      return inputTree;
+	    };
+	    this.get = (group, type, layout, name) => {
+	      let cabinet = Cabinet.build(type, group);
+	      if (layout && CabinetLayouts.map[layout]) CabinetLayouts.map[layout].build(cabinet);
+	      cabinet.name(name);
+	      return cabinet;
+	    };
+	
+	    const allCabinetKeys = Object.keys(cabinets);
+	    allCabinetKeys.forEach((key) => {
+	      const type = cabinets[key].partName;
+	      if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
+	      if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
+	      cabinetKeys[type][key] = cabinets[key];
+	    });
+	
+	    cabinetList = cabinets;
+	    configKeys = Object.keys(cabinets);
+	    configs[id] = this;
 	  }
 	}
-	FeatureDisplay.template = new $t('features');
-	module.exports = FeatureDisplay
+	
+	let currConfig = new CabinetConfig(Cabinets, 'default');
+	const updateEvent = new CustomEvent('update');
+	
+	module.exports = {
+	  switch: (configId) => {
+	    if (configs[configId] !== undefined) {
+	      currConfig = configs[configId];
+	      updateEvent.trigger();
+	    }
+	  },
+	  configList: () => Object.keys(configs),
+	  valid: (...args) => currConfig.valid(...args),
+	  onUpdate: (func) => updateEvent.on(func),
+	  inputTree: (...args) => currConfig.inputTree(...args),
+	  get: (...args) => currConfig.get(...args),
+	  new: (json, id) => new CabinetConfig(json, id)
+	}
+	
+	// Request.get(EPNTS.cabinet.list(), (cabinets) => {
+	//   new CabinetConfig(cabinets, 'user');
+	//   module.exports.switch('user');
+	// }, console.error);
+	
+	
+	
+	
+	
+	
+	// ---------------------- Layout Specific Input Tree -----------------------//
+	// this.inputTree = () => {
+	//   const types = JSON.parse(JSON.stringify(configKeys));
+	//   const typeInput = new Select({
+	//     name: 'type',
+	//     label: 'Type',
+	//     inline: false,
+	//     class: 'center',
+	//     list: types
+	//   });
+	//   const nameInput = new Input({
+	//     name: 'name',
+	//     inline: false,
+	//     label: 'Name (optional)',
+	//     class: 'center',
+	//   });
+	//   const inputs = [typeInput, nameInput];
+	//   const inputTree = new DecisionInputTree();
+	//   inputTree.onSubmit((t) => {
+	//     inputTree.payload().inputArray[1].setValue('', true)
+	//     inputTree.children()[0].payload().inputArray[0].setValue('', true)
+	//   });
+	//   const cabinet = inputTree.branch('Cabinet', inputs);
+	//   const cabinetTypes = Object.keys(cabinetKeys);
+	//   types.forEach((type) => {
+	//
+	//     const cabinetInput = new Input({
+	//       label: 'Layout (Optional)',
+	//       name: 'id',
+	//       inline: false,
+	//       class: 'center',
+	//       clearOnDblClick: true,
+	//       list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
+	//     });
+	//     cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
+	//   });
+	//   return inputTree;
+	// };
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/display-svc.js',
+function (require, exports, module) {
+	class Register {
+	  constructor() {
+	    const registered = {};
+	    this.register = function (nameOobj, obj) {
+	      if ((typeof nameOobj) !== 'object') {
+	        registered[nameOobj] = obj;
+	      } else {
+	        const keys = Object.keys(nameOobj);
+	        for (let index = 0; index < keys.length; index += 1) {
+	          const key = keys[index];
+	          registered[key] = nameOobj[key];
+	        }
+	      }
+	    }
+	    this.get = (name) => registered[name];
+	  }
+	}
+	
+	module.exports = new Register();
 	
 });
 
@@ -20817,99 +22015,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/opening-sketch.js',
-function (require, exports, module) {
-	
-const du = require('../../../../public/js/utils/dom-utils.js');
-	const Draw2D = require('../two-d/draw.js');
-	const Line2d = require('../two-d/objects/line.js');
-	const Vertex2d = require('../two-d/objects/vertex.js');
-	const PanZoom = require('../two-d/pan-zoom.js');
-	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
-	
-	
-	class OpeningSketch {
-	  constructor(id) {
-	    let sketch, panZ, elem, cabinet;
-	
-	    function getSections(sections, list) {
-	      list ||= [];
-	      for (let index = 0; index < sections.length; index++) {
-	        const section = sections[index];
-	        if (sections.length > 0 || sections.cover()) {
-	          list.push(section);
-	          getSections(section.sections, list);
-	        }
-	      }
-	      return list;
-	    }
-	
-	    function draw() {
-	      if (cabinet === undefined) return;
-	      // sketch.ctx().drawImage(0,0)
-	
-	      const allLines = [];
-	      for (let index = 0; index < cabinet.openings.length; index++) {
-	        const sections = getSections(cabinet.openings[index].sections);
-	        for (let si = 0; si < sections.length; si++) {
-	          const section = sections[si];
-	          if (section.sections.length < 1) {
-	            const center = JSON.copy(section.innerCenter());
-	            center.x*=-1;
-	            sketch.text(section.partName(), center, 6, 'grey');
-	          }
-	          const inner = JSON.copy(section.coordinates().inner);
-	          const outer = JSON.copy(section.coordinates().outer);
-	
-	          inner[0].x*=-1;inner[1].x*=-1;inner[2].x*=-1;inner[3].x*=-1;
-	          outer[0].x*=-1;outer[1].x*=-1;outer[2].x*=-1;outer[3].x*=-1;
-	          let lines = [new Line2d(inner[0], inner[1]),
-	                          new Line2d(inner[1], inner[2]),
-	                          new Line2d(inner[2], inner[3]),
-	                          new Line2d(inner[3], inner[0])];
-	          sketch(lines, undefined, .3);
-	          lines = [new Line2d(outer[0], outer[1]),
-	                          new Line2d(outer[1], outer[2]),
-	                          new Line2d(outer[2], outer[3]),
-	                          new Line2d(outer[3], outer[0])];
-	          sketch(lines, 'green', .3);
-	          allLines.concatInPlace(lines);
-	        }
-	      }
-	      const cabLimits = cabinet.position().limits();
-	      const dir = -1;
-	      const cabinetOutline = [
-	        new Line2d({x: dir*0, y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}),
-	        new Line2d({x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 0}),
-	        new Line2d({x: dir*2*cabLimits['x'], y: 0}, {x: dir*0, y: 0}),
-	        new Line2d({x: dir*0, y: 0}, {x: dir*0, y: 2*cabLimits['y']}),
-	      ];
-	      sketch(cabinetOutline, 'red', .3);
-	      allLines.concatInPlace(cabinetOutline);
-	
-	      const measurements = LineMeasurement2d.measurements(allLines);
-	      sketch(measurements, 'grey', 1);
-	    }
-	
-	    function init() {
-	      elem = du.id(id);
-	      const canvas = du.create.element('canvas');
-	      elem.append(canvas);
-	      sketch = new Draw2D(canvas, true);
-	      panZ = new PanZoom(sketch.canvas(), draw);
-	    }
-	
-	    this.cabinet = (cab) => (cab.constructor.name === 'Cabinet' && (cabinet = cab)) || cabinet;
-	
-	    setTimeout(init, 500);
-	  }
-	}
-	
-	module.exports = OpeningSketch;
-	
-});
-
-
 RequireJS.addFunction('./app-src/displays/order.js',
 function (require, exports, module) {
 	
@@ -21026,63 +22131,95 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/orientation-arrows.js',
+RequireJS.addFunction('./app-src/displays/opening-sketch.js',
 function (require, exports, module) {
 	
-const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+const du = require('../../../../public/js/utils/dom-utils.js');
+	const Draw2D = require('../two-d/draw.js');
+	const Line2d = require('../two-d/objects/line.js');
+	const Vertex2d = require('../two-d/objects/vertex.js');
+	const PanZoom = require('../two-d/pan-zoom.js');
+	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
 	
-	class OrientationArrows extends Lookup {
-	  constructor(parentSelector) {
-	    super();
-	    const navId = `orientation-arrows-${this.id()}`;
-	    this.navId = () => navId;
-	    this.space = () => '&nbsp;&nbsp;';
-	    CustomEvent.all(this, 'up', 'right', 'down', 'left', 'center');
 	
-	    const elem = du.find(parentSelector);
-	    if (elem === undefined) throw new Error(`No container found: '${parentSelector}'`);
-	    elem.innerHTML = OrientationArrows.template.render(this);
+	class OpeningSketch {
+	  constructor(id) {
+	    let sketch, panZ, elem, cabinet;
 	
-	    this.on.up((elem, detail) => console.log('up', detail.direction));
-	    this.on.right((elem, detail) => console.log('right', detail.direction));
-	    this.on.down((elem, detail) => console.log('down', detail.direction));
-	    this.on.left((elem, detail) => console.log('left', detail.direction));
-	    this.on.center((elem, detail) => console.log('center', detail.direction));
+	    function getSections(sections, list) {
+	      list ||= [];
+	      for (let index = 0; index < sections.length; index++) {
+	        const section = sections[index];
+	        if (sections.length > 0 || sections.cover()) {
+	          list.push(section);
+	          getSections(section.sections, list);
+	        }
+	      }
+	      return list;
+	    }
 	
+	    function draw() {
+	      if (cabinet === undefined) return;
+	      // sketch.ctx().drawImage(0,0)
+	
+	      const allLines = [];
+	      for (let index = 0; index < cabinet.openings.length; index++) {
+	        const sections = getSections(cabinet.openings[index].sections);
+	        for (let si = 0; si < sections.length; si++) {
+	          const section = sections[si];
+	          if (section.sections.length < 1) {
+	            const center = JSON.copy(section.innerCenter());
+	            center.x*=-1;
+	            sketch.text(section.partName(), center, 6, 'grey');
+	          }
+	          const inner = JSON.copy(section.coordinates().inner);
+	          const outer = JSON.copy(section.coordinates().outer);
+	
+	          inner[0].x*=-1;inner[1].x*=-1;inner[2].x*=-1;inner[3].x*=-1;
+	          outer[0].x*=-1;outer[1].x*=-1;outer[2].x*=-1;outer[3].x*=-1;
+	          let lines = [new Line2d(inner[0], inner[1]),
+	                          new Line2d(inner[1], inner[2]),
+	                          new Line2d(inner[2], inner[3]),
+	                          new Line2d(inner[3], inner[0])];
+	          sketch(lines, undefined, .3);
+	          lines = [new Line2d(outer[0], outer[1]),
+	                          new Line2d(outer[1], outer[2]),
+	                          new Line2d(outer[2], outer[3]),
+	                          new Line2d(outer[3], outer[0])];
+	          sketch(lines, 'green', .3);
+	          allLines.concatInPlace(lines);
+	        }
+	      }
+	      const cabLimits = cabinet.position().limits();
+	      const dir = -1;
+	      const cabinetOutline = [
+	        new Line2d({x: dir*0, y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}),
+	        new Line2d({x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 0}),
+	        new Line2d({x: dir*2*cabLimits['x'], y: 0}, {x: dir*0, y: 0}),
+	        new Line2d({x: dir*0, y: 0}, {x: dir*0, y: 2*cabLimits['y']}),
+	      ];
+	      sketch(cabinetOutline, 'red', .3);
+	      allLines.concatInPlace(cabinetOutline);
+	
+	      const measurements = LineMeasurement2d.measurements(allLines);
+	      sketch(measurements, 'grey', 1);
+	    }
+	
+	    function init() {
+	      elem = du.id(id);
+	      const canvas = du.create.element('canvas');
+	      elem.append(canvas);
+	      sketch = new Draw2D(canvas, true);
+	      panZ = new PanZoom(sketch.canvas(), draw);
+	    }
+	
+	    this.cabinet = (cab) => (cab.constructor.name === 'Cabinet' && (cabinet = cab)) || cabinet;
+	
+	    setTimeout(init, 500);
 	  }
 	}
 	
-	OrientationArrows.template = new $t('orientation-arrows');
-	
-	du.on.match('click', '[dir]', function (target) {
-	  const tableElem = du.find.up('[l-id]', target);
-	  if (!tableElem) return;
-	  const id = tableElem.getAttribute('l-id');
-	  const instance = OrientationArrows.get(id);
-	  const direction = target.getAttribute('dir');
-	  switch (direction) {
-	    case 'u':
-	      instance.trigger.up(target, {direction, instance});
-	      break;
-	    case 'r':
-	      instance.trigger.right(target, {direction, instance});
-	      break;
-	    case 'd':
-	      instance.trigger.down(null, {direction, instance});
-	      break;
-	    case 'l':
-	      instance.trigger.left(target, {direction, instance});
-	      break;
-	    case 'c':
-	      instance.trigger.center(target, {direction, instance});
-	      break;
-	  }
-	});
-	
-	module.exports = OrientationArrows;
+	module.exports = OpeningSketch;
 	
 });
 
@@ -21326,6 +22463,74 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/displays/orientation-arrows.js',
+function (require, exports, module) {
+	
+const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+	
+	class OrientationArrows extends Lookup {
+	  constructor(parentSelector) {
+	    super();
+	    const navId = `orientation-arrows-${this.id()}`;
+	    this.navId = () => navId;
+	    this.space = () => '&nbsp;&nbsp;';
+	    CustomEvent.all(this, 'up', 'right', 'down', 'left', 'center');
+	
+	    const elem = du.find(parentSelector);
+	    if (elem === undefined) throw new Error(`No container found: '${parentSelector}'`);
+	    elem.innerHTML = OrientationArrows.template.render(this);
+	
+	    this.on.up((elem, detail) => console.log('up', detail.direction));
+	    this.on.right((elem, detail) => console.log('right', detail.direction));
+	    this.on.down((elem, detail) => console.log('down', detail.direction));
+	    this.on.left((elem, detail) => console.log('left', detail.direction));
+	    this.on.center((elem, detail) => console.log('center', detail.direction));
+	
+	  }
+	}
+	
+	OrientationArrows.template = new $t('orientation-arrows');
+	
+	du.on.match('click', '[dir]', function (target) {
+	  const tableElem = du.find.up('[l-id]', target);
+	  if (!tableElem) return;
+	  const id = tableElem.getAttribute('l-id');
+	  const instance = OrientationArrows.get(id);
+	  const direction = target.getAttribute('dir');
+	  switch (direction) {
+	    case 'u':
+	      instance.trigger.up(target, {direction, instance});
+	      break;
+	    case 'r':
+	      instance.trigger.right(target, {direction, instance});
+	      break;
+	    case 'd':
+	      instance.trigger.down(null, {direction, instance});
+	      break;
+	    case 'l':
+	      instance.trigger.left(target, {direction, instance});
+	      break;
+	    case 'c':
+	      instance.trigger.center(target, {direction, instance});
+	      break;
+	  }
+	});
+	
+	module.exports = OrientationArrows;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/section.js',
+function (require, exports, module) {
+	
+
+});
+
+
 RequireJS.addFunction('./app-src/displays/room.js',
 function (require, exports, module) {
 	
@@ -21341,7 +22546,7 @@ function (require, exports, module) {
 	const du = require('../../../../public/js/utils/dom-utils.js');
 	const Inputs = require('../input/inputs.js');
 	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const TwoDLayout = require('../two-d/layout');
+	const TwoDLayout = require('../displays/two-d-layout');
 	
 	class RoomDisplay extends Lookup {
 	  constructor(parentSelector, order) {
@@ -21398,13 +22603,6 @@ function (require, exports, module) {
 	RoomDisplay.headTemplate = new $t('room/head');
 	module.exports = RoomDisplay
 	
-});
-
-
-RequireJS.addFunction('./app-src/displays/section.js',
-function (require, exports, module) {
-	
-
 });
 
 
@@ -21685,7 +22883,7 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	      let model = instance.lastModel();
 	      model ||= instance.lastRendered();
 	      if (model === undefined) return;
-	      const twoDmap = model.threeView;
+	      const twoDmap = (typeof model.threeView) === 'function' ? model.threeView() : model.threeView;
 	      if (twoDmap.measurments === undefined) {
 	        const allLines = twoDmap.front.concat(twoDmap.right.concat(twoDmap.top));
 	        twoDmap.measurments = LineMeasurement2d.measurements(allLines);
@@ -21749,6 +22947,802 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	ThreeView.template = new $t('three-view');
 	
 	module.exports = ThreeView;
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/two-d-layout.js',
+function (require, exports, module) {
+	const Layout2D = require('../two-d/layout/layout.js');
+	const panZoom = require('../two-d/pan-zoom');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const PopUp = require('../../../../public/js/utils/display/pop-up');
+	const Properties = require('../config/properties');
+	const Measurement = require('../../../../public/js/utils/measurement.js');
+	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
+	const Draw2D = require('../two-d/draw.js');
+	const Vertex2d = require('../two-d/objects/vertex.js');
+	const Line2d = require('../two-d/objects/line.js');
+	const EPNTS = require('../../generated/EPNTS.js');
+	const Snap2d = require('../two-d/objects/snap.js');
+	const Circle2d = require('../two-d/objects/circle.js');
+	const SnapLocation2d = require('../two-d/objects/snap-location.js');
+	const LineMeasurement2d = require('../two-d/objects/line-measurement');
+	
+	const localEnv = EPNTS.getEnv() === 'local';
+	// TODO: Rename
+	const TwoDLayout = {};
+	
+	let draw;
+	const eval = new StringMathEvaluator({Math}).eval;
+	const popUp = new PopUp({resize: false});
+	
+	let layout;
+	TwoDLayout.set = (l) => {
+	  if (l instanceof Layout2D) {
+	    layout = l;
+	    if (panZ) panZ.once();
+	  }
+	}
+	
+	const windowLineWidth = 8;
+	const tolerance = 1;
+	let lastImagePoint;
+	let hovering;
+	let dragging;
+	let clickHolding = false;
+	let popupOpen = false;
+	let measurementModify = false;
+	let lastDown = 0;
+	const selectTimeBuffer = 200;
+	const quickChangeFuncs = {};
+	
+	function getPopUpAttrs(elem) {
+	  const cnt =  du.find.up('[type-2d]', elem);
+	  if (cnt === undefined) return {};
+	  const type = cnt.getAttribute('type-2d');
+	  const key = elem.getAttribute('key');
+	  const raw = elem.type === 'input' ? eval(elem.value) : elem.value;
+	  let value, display;
+	  if (elem.getAttribute('convert') === 'false') {
+	    value = raw;
+	    display = raw;
+	  } else {
+	    const measurement = new Measurement(raw, true);
+	    value = measurement.decimal();
+	    display = measurement.display();
+	  }
+	  const id = cnt.id;
+	  return {
+	    type,id,key,value,display,raw,
+	    obj:  Layout2D.get(id),
+	    point: {
+	      x: cnt.getAttribute('x'),
+	      y: cnt.getAttribute('y')
+	    }
+	  };
+	}
+	
+	du.on.match('enter', '.value-2d', (elem) => {
+	  const props = getPopUpAttrs(elem);
+	  const member = elem.getAttribute('member');
+	  switch (member) {
+	    case 'object':
+	      props.obj[props.key](props.raw);
+	      const cab = props.obj.payload();
+	      if (cab && cab.constructor.name === 'Cabinet') {
+	        const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.id()}']`);
+	        const idInput = du.find.closest('.cabinet-id-input', cabDemCnt);
+	        idInput.value = props.raw;
+	      }
+	      panZ.once();
+	      return;
+	    case 'cabinet':
+	      const cabinet = props.obj.payload();
+	      const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.id()}']`);
+	      if (cabCnt) {
+	        const input = du.find.down(`input[name='${props.key}']`, cabCnt);
+	        input.value = props.display;
+	      }
+	      cabinet[props.key](props.value);
+	      const poly = props.obj.topview();
+	      poly[props.key === 'thickness' ? 'height' : props.key](props.value);
+	      poly.update();
+	      panZ.once();
+	      return;
+	  }
+	  if (props.obj.payload && props.obj.payload() === 'placeholder') {
+	    if (props.key === 'thickness') props.key = 'height';
+	    props.obj = props.obj.topview().object();
+	  }
+	
+	  props.obj.topview()[props.key](props.value);
+	  elem.value = props.display;
+	  props.obj.topview().update();
+	  panZ.once();
+	});
+	
+	du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
+	  const props = getPopUpAttrs(elem);
+	  const input = du.find.closest('.measurement-mod', elem);
+	  if (input) setTimeout(() =>
+	      input.value = props.obj.display(), 0);
+	});
+	
+	function remove() {
+	  if (hovering.parent) {
+	    if (hovering.parent().payload().constructor.name === 'Cabinet') {
+	      const cabinet = hovering.parent().payload();
+	      const cabinetHeader = du.find(`.cabinet-header[cabinet-id='${cabinet.id()}']`);
+	      const removeButton = du.find.closest('.expandable-item-rm-btn', cabinetHeader)
+	      if (removeButton) removeButton.click();
+	      else console.warn('Remove button for cabinet should be present but is not present');
+	    }
+	    layout.remove(hovering.parent().id());
+	  } else {
+	    layout.remove(hovering.id());
+	  }
+	  popUp.close();
+	  TwoDLayout.panZoom.once();
+	}
+	
+	du.on.match('click', '.remove-btn-2d', remove, popUp.container());
+	
+	du.on.match('click', '.add-door-btn-2d', (elem) => {
+	  const attrs = getPopUpAttrs(elem);
+	  const distance = attrs.obj.startVertex().distance(attrs.point);
+	  attrs.obj.addDoor(distance);
+	  panZ.once();
+	});
+	
+	du.on.match('click', '.hinge-btn', (elem) => {
+	  const attrs = getPopUpAttrs(elem);
+	  attrs.obj.hinge(true);
+	  panZ.once();
+	});
+	
+	du.on.match('click', '.add-window-btn-2d', (elem) => {
+	  const attrs = getPopUpAttrs(elem);
+	  const distance = attrs.obj.startVertex().distance(attrs.point);
+	  attrs.obj.addWindow(distance);
+	  panZ.once();
+	});
+	
+	du.on.match('click', '.add-object-btn-2d', (elem) => {
+	  const props = getPopUpAttrs(elem);
+	  const obj = layout.addObject(props.point, 'placeholder');
+	  obj.topview().onChange(console.log);
+	  panZ.once();
+	});
+	
+	du.on.match('click', '.add-vertex-btn-2d', (elem) => {
+	  const attrs = getPopUpAttrs(elem);
+	  const point = hovering.closestPointOnLine(attrs.point);
+	  layout.addVertex(point, hovering);
+	  panZ.once();
+	});
+	
+	du.on.match('enter', '.measurement-mod', (elem) => {
+	  const value = eval(elem.value);
+	  getPopUpAttrs(elem).obj.modify(value);
+	  panZ.once();
+	});
+	
+	// TODO: define cache better.
+	function clearCache() {
+	  measurementIs = {};
+	}
+	
+	function undo(target) {
+	  layout.history().back();
+	  clearCache();
+	  panZ.once();
+	}
+	
+	function redo () {
+	  layout.history().forward();
+	  clearCache();
+	  panZ.once();
+	}
+	
+	function registerQuickChangeFunc(type, func) {
+	  if ((typeof func) === 'function') quickChangeFuncs[type] = func;
+	}
+	
+	function onMousedown(event, stdEvent) {
+	  lastDown = clickHolding ? 0 : new Date().getTime();
+	  lastImagePoint = {x: event.imageX, y: event.imageY};
+	  if (stdEvent.button == 0) {
+	    clickHolding = !popupOpen && (clickHolding || hovering !== undefined);
+	    return clickHolding;
+	  } else {
+	    if (hovering && quickChangeFuncs[hovering.constructor.name]) {
+	      quickChangeFuncs[hovering.constructor.name](hovering, event, stdEvent);
+	    }
+	    return true;
+	  }
+	}
+	
+	function addVertex(hovering, event, stdEvent) {
+	  const point = {x: event.imageX, y: event.imageY};
+	  layout.addVertex(point, hovering);
+	}
+	
+	registerQuickChangeFunc('Wall2D', addVertex);
+	registerQuickChangeFunc('Vertex2d', remove);
+	registerQuickChangeFunc('Window2D', remove);
+	registerQuickChangeFunc('SnapLocation2d', (snapLoc) => snapLoc.disconnect());
+	registerQuickChangeFunc('Door2D', (door) => door.hinge(true));
+	
+	function hoverId () {
+	  return hovering ? hovering.toString() : undefined;
+	}
+	
+	const templateMap = {};
+	function getTemplate(item) {
+	  const isSnap = item instanceof Snap2d;
+	  const templateLocation = `2d/pop-up/${isSnap ? 'snap-2d' : item.constructor.name.toKebab()}`;
+	  if (templateMap[templateLocation] === undefined) {
+	    templateMap[templateLocation] = new $t(templateLocation);
+	  }
+	  return templateMap[templateLocation];
+	}
+	
+	function display(value) {
+	  return new Measurement(value).display();
+	}
+	
+	function openPopup(event, stdEvent) {
+	  if (hovering) {
+	    if (hovering instanceof Snap2d) hovering.pairWithLast();
+	    popupOpen = true;
+	    const msg = `${hovering.constructor.name}: ${hoverId()}`;
+	    const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
+	    const html = getTemplate(hovering).render(scope);
+	    popUp.open(html, {x: event.screenX, y: event.screenY});
+	  }
+	}
+	
+	popUp.onClose((elem, event) => {
+	  setTimeout(() => popupOpen = false, 200);
+	  const attrs = getPopUpAttrs(du.find.closest('[type-2d]',popUp.container()));
+	  measurementModify = attrs.type === 'LineMeasurement2d';
+	  lastDown = new Date().getTime();
+	  clickHolding = false;
+	  if (layout) layout.history().newState();
+	});
+	
+	function onMouseup(event, stdEvent) {
+	  if (stdEvent.button == 0) {
+	    if (lastDown > new Date().getTime() - selectTimeBuffer) {
+	      if (hovering) {
+	        setTimeout(() => openPopup(event, stdEvent), 5);
+	      } else {
+	        measurementModify = !measurementModify;
+	      }
+	    } else {
+	      const clickWasHolding = clickHolding;
+	      clickHolding = false;
+	      hovering = undefined;
+	      if (layout) layout.history().newState();
+	      return clickWasHolding;
+	    }
+	  } else {
+	    console.log('rightClick: do stuff!!');
+	    if (layout) layout.history().newState();
+	  }
+	}
+	
+	let pending = 0;
+	function  drag(event)  {
+	  const dragging = !popupOpen && clickHolding && hovering;
+	  if (dragging)
+	    hovering.move && hovering.move({x: event.imageX, y: event.imageY}, event);
+	  return dragging;
+	}
+	
+	function hover(event) {
+	  if (clickHolding) return true;
+	  const tuple = {x: event.imageX, y: event.imageY};
+	  hovering = layout.at(new Vertex2d(tuple));
+	  let found = hovering == true;
+	  return found;
+	}
+	
+	function onMove(event) {
+	  if (layout === undefined) return;
+	  const canDrag = !popupOpen && lastDown < new Date().getTime() - selectTimeBuffer * 1.5;
+	  return (canDrag && drag(event)) || hover(event);
+	}
+	
+	function withinTolerance(point, map) {
+	  const x0 = point.x;
+	  const y0 = point.y;
+	  const x1 = map.start.x;
+	  const y1 = map.start.y;
+	  const x2 = map.end.x;
+	  const y2 = map.end.y;
+	  const num = Math.abs((y2 - y1)*x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
+	  const denom = Math.sqrt(Math.pow(y2 - y1, 2) + Math.pow(x2 - x1, 2));
+	  return num / denom < map.tolerance;
+	}
+	
+	function withinTolerance(point, map) {
+	  const t = map.tolerance;
+	  const start = map.start.point ? map.start.point() : map.start;
+	  const end = map.end.point ? map.end.point() : map.end;
+	  const x0 = point.x;
+	  const y0 = point.y;
+	  const x1 = start.x > end.x ? end.x : start.x;
+	  const y1 = start.y > end.y ? end.y : start.y;
+	  const x2 = start.x < end.x ? end.x : start.x;
+	  const y2 = start.y < end.y ? end.y : start.y;
+	  return x0>x1-t && x0 < x2+t && y0>y1-t && y0<y2+t;
+	}
+	
+	let windowCount = 0;
+	let getWindowColor = () => {
+	  switch (Math.floor(Math.random() * 4)) {
+	    case 0: return 'red'; case 1: return 'green';
+	    case 2: return 'yellow'; case 3: return 'pink';
+	  }
+	  return 'white';
+	}
+	
+	const windowDrawMap = {};
+	function drawWindow(wallStartPoint, window, wallTheta) {
+	  draw.beginPath();
+	  const points = window.endpoints2D(wallStartPoint);
+	  const lookupKey = window.toString();
+	  const ctx = draw.ctx();
+	  if (windowDrawMap[lookupKey] === undefined) {
+	    windowDrawMap[lookupKey] = () => {
+	      ctx.moveTo(points.start.x(), points.start.y());
+	      ctx.lineWidth = 8;
+	      ctx.strokeStyle = hoverId() === window.toString() ? 'green' : 'blue';
+	      ctx.lineTo(points.end.x(), points.end.y());
+	      ctx.stroke();
+	    }
+	  }
+	  windowDrawMap[lookupKey]();
+	}
+	
+	function doorDrawingFunc(startpointLeft, startpointRight) {
+	  return (door) => {
+	    const ctx = draw.ctx();
+	    ctx.beginPath();
+	    ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'black';
+	    const hinge = door.hinge();
+	
+	    if (hinge === 4) {
+	      ctx.moveTo(startpointLeft.x(), startpointLeft.y());
+	      ctx.lineWidth = 8;
+	      ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'white';
+	      ctx.lineTo(startpointRight.x(), startpointRight.y());
+	      ctx.stroke();
+	    } else {
+	      const offset = Math.PI * hinge / 2;
+	      const initialAngle = (door.wall().radians() + offset) % (2 * Math.PI);
+	      const endAngle = initialAngle + (Math.PI / 2);
+	
+	      if (hinge === 0 || hinge === 3) {
+	        ctx.moveTo(startpointRight.x(), startpointRight.y());
+	        ctx.arc(startpointRight.x(), startpointRight.y(), door.width(), initialAngle, endAngle, false);
+	        ctx.lineTo(startpointRight.x(), startpointRight.y());
+	      } else {
+	        ctx.moveTo(startpointLeft.x(), startpointLeft.y());
+	        ctx.arc(startpointLeft.x(), startpointLeft.y(), door.width(), endAngle, initialAngle, true);
+	        ctx.lineTo(startpointLeft.x(), startpointLeft.y());
+	      }
+	
+	      ctx.fillStyle = 'white';
+	      ctx.fill();
+	    }
+	    ctx.stroke();
+	  }
+	}
+	
+	const doorDrawMap = {};
+	function drawDoor(startpoint, door, wallTheta) {
+	  const lookupKey = door.toString();
+	  if (doorDrawMap[lookupKey] === undefined) {
+	    const initialAngle = wallTheta;
+	    const width = door.width();
+	
+	    const distLeft = door.fromPreviousWall() + width;
+	    const startpointLeft = {x: startpoint.x + distLeft * Math.cos(theta), y: startpoint.y + distLeft * Math.sin(theta)};
+	    const distRight = door.fromPreviousWall();
+	    const startpointRight = {x: startpoint.x + distRight * Math.cos(theta), y: startpoint.y + distRight * Math.sin(theta)};
+	    doorDrawMap[lookupKey] = doorDrawingFunc(door.startVertex(), door.endVertex(), initialAngle);
+	  }
+	  doorDrawMap[lookupKey](door);
+	}
+	
+	const blank = 40;
+	const hblank = blank/2;
+	function drawMeasurementValue(line, midpoint, measurement) {
+	  if (line === undefined) return;
+	  const ctx = draw.ctx();
+	  midpoint = line.midpoint();
+	
+	  ctx.save();
+	  ctx.lineWidth = 0;
+	  const length = measurement.display();
+	  const textLength = length.length;
+	  ctx.translate(midpoint.x(), midpoint.y());
+	  ctx.rotate(line.radians());
+	  ctx.beginPath();
+	  ctx.fillStyle = hoverId() === measurement.toString() ? 'green' : "white";
+	  ctx.strokeStyle = 'white';
+	  ctx.rect(textLength * -3, -8, textLength * 6, 16);
+	  ctx.fill();
+	  ctx.stroke();
+	
+	  ctx.beginPath();
+	  ctx.lineWidth = 4;
+	  ctx.strokeStyle = 'black';
+	  ctx.fillStyle =  'black';
+	  ctx.fillText(length, 0, 0);
+	  ctx.stroke()
+	  ctx.restore();
+	}
+	
+	const measurementLineMap = {};
+	const getMeasurementLine = (vertex1, vertex2) => {
+	  const lookupKey = `${vertex1} => ${vertex2}`;
+	  if (measurementLineMap[lookupKey] === undefined) {
+	    const line = new Line2d(vertex1, vertex2);
+	    measurementLineMap[lookupKey] = new LineMeasurement2d(line)
+	  }
+	  return measurementLineMap[lookupKey];
+	}
+	
+	let measurementValues = [];
+	function measurementValueToDraw(line, midpoint, measurement) {
+	  measurementValues.push({line, midpoint, measurement});
+	}
+	
+	function drawMeasurementValues() {
+	  let values = measurementValues;
+	  measurementValues = [];
+	  for (let index = 0; index < values.length; index += 1) {
+	    let m = values[index];
+	    drawMeasurementValue(m.line, m.midpoint, m.measurement);
+	  }
+	}
+	
+	const measurementLineWidth = 3;
+	let measurementIs = {};
+	function drawMeasurement(measurement, level, focalVertex)  {
+	  const lookupKey = `${measurement.toString()}-[${level}]`;
+	  // if (measurementIs[lookupKey] === undefined) {
+	    measurementIs[lookupKey] = measurement.I(level);
+	  // }
+	  const lines = measurementIs[lookupKey];
+	  const center = layout.vertices(focalVertex, 2, 3);
+	  const measurementColor = hoverId() === measurement.toString() ? 'green' : 'grey';
+	  try {
+	    draw.beginPath();
+	    const isWithin = layout.within(lines.furtherLine().midpoint());
+	    const line = isWithin ? lines.closerLine() : lines.furtherLine();
+	    const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
+	    if (measurementModify || popupOpen) {
+	      draw.line(line.startLine, measurementColor, measurementLineWidth);
+	      draw.line(line.endLine, measurementColor, measurementLineWidth);
+	      draw.line(line, measurementColor, measurementLineWidth);
+	    }
+	    measurementValueToDraw(line, midpoint, measurement);
+	    return line;
+	  } catch (e) {
+	    console.error('Measurement render error:', e);
+	  }
+	}
+	
+	function measureOnWall(list, level) {
+	  for (let index = 0; index < list.length; index += 1) {
+	    let item = list[index];
+	    const wall = item.wall();
+	    const points = item.endpoints2D();
+	    const measureLine1 = getMeasurementLine(wall.startVertex(), points.start);
+	    const measureLine2 = getMeasurementLine(points.end, wall.endVertex());
+	    measureLine1.modificationFunction(item.fromPreviousWall);
+	    measureLine2.modificationFunction(item.fromNextWall);
+	    drawMeasurement(measureLine1, level, wall.startVertex())
+	    drawMeasurement(measureLine2, level, wall.startVertex())
+	    level += 4;
+	  }
+	  return level;
+	}
+	
+	function includeDetails() {
+	  return !dragging && (measurementModify || popupOpen)
+	}
+	
+	function drawWall(wall) {
+	  const ctx = draw.ctx();
+	  const startpoint = wall.startVertex().point();
+	  r =  wall.length();
+	  theta = wall.radians();
+	  ctx.beginPath();
+	  ctx.moveTo(startpoint.x, startpoint.y);
+	  ctx.lineWidth = 10;
+	  ctx.strokeStyle = hoverId() === wall.toString() ? 'green' : 'black';
+	  const endpoint = wall.endVertex().point();
+	  ctx.lineTo(endpoint.x, endpoint.y);
+	  ctx.stroke();
+	
+	  wall.doors().forEach((door) =>
+	    drawDoor(startpoint, door, wall.radians()));
+	  wall.windows().forEach((window) =>
+	    drawWindow(startpoint, window, wall.radians()));
+	
+	  let level = 8;
+	  if (includeDetails()) {
+	    const vertices = wall.vertices();
+	    let measLines = {};
+	    level = measureOnWall(wall.doors(), level);
+	    level = measureOnWall(wall.windows(), level);
+	  }
+	  const measurement = new LineMeasurement2d(wall, undefined, undefined, layout.reconsileLength(wall));
+	  drawMeasurement(measurement, level, wall.startVertex());
+	
+	  return endpoint;
+	}
+	
+	function drawVertex(vertex) {
+	  const fillColor = hoverId() === vertex.toString() ? 'green' : 'white';
+	  const p = vertex.point();
+	  const radius = 10;
+	  const circle = new Circle2d(radius, p);
+	  draw.circle(circle, 'black', fillColor);
+	}
+	
+	function drawObjects() {
+	  layout.objects().forEach((obj) => {
+	    const color = hoverId() === obj.topview().toString() ? 'green' : 'black';
+	    draw(obj.topview(), color, 3);
+	    obj.topview().snapLocations().forEach((snapLoc) => {
+	      const snapColor = snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined);
+	      if (snapLoc.courting() || snapLoc.pairedWith() || hoverId() === snapLoc.toString())
+	        draw(snapLoc, snapColor, 3);
+	    });
+	  });
+	}
+	
+	function illustrate(canvas) {
+	  if (layout === undefined) return;
+	  SnapLocation2d.clear();
+	  let lastEndPoint = {x: 20, y: 20};
+	
+	  draw.beginPath();
+	  const walls = layout.walls();
+	  let previousEndpoint;
+	  let wl = walls.length;
+	  walls.forEach((wall, index) => {
+	    lastEndPoint = drawWall(wall, lastEndPoint);
+	    const previousWall = walls[(index - 1) % wl];
+	    if (previousEndpoint)
+	      drawVertex(wall.startVertex());
+	    previousEndpoint = lastEndPoint;
+	  }, true);
+	  drawVertex(walls[0].startVertex());
+	  drawMeasurementValues();
+	  drawObjects();
+	}
+	
+	let panZ;
+	function init() {
+	  const canvas = document.getElementById('two-d-model');
+	  const height = du.convertCssUnit('80vh');
+	  canvas.height = height;
+	  canvas.width = height;
+	  draw = new Draw2D(canvas);
+	  panZ = panZoom(canvas, illustrate);
+	  panZ.onMove(onMove);
+	  panZ.onMousedown(onMousedown);
+	  panZ.onMouseup(onMouseup);
+	  // draw(canvas);
+	  TwoDLayout.panZoom = panZ;
+	  du.on.match('keycombo:Control,z', '*', undo);
+	  du.on.match('keycombo:Control,Shift,Z', '*', redo);
+	}
+	
+	TwoDLayout.init = init;
+	module.exports = TwoDLayout;
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/cabinet-template.js',
+function (require, exports, module) {
+	
+const cabinetsJson = require('../../public/json/cabinets.json');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const PropertyConfig = require('./property/config');
+	
+	class CabinetTemplate extends Lookup {
+	  constructor(type) {
+	    super();
+	    const instance = this;
+	    const initialVals = (typeof type) === 'object' ? type : {
+	      type, values: [], subassemblies: [], joints: [], dividerJoint: {},
+	      shape: 'square',
+	      width: 18 * 2.54,
+	
+	      height: 34 * 2.54,
+	      thickness: 24 * 2.54,
+	      openings: [CabinetTemplate.defaultPartCodeOpening()]
+	    };
+	    Object.getSet(this, initialVals);
+	    CabinetTemplate.map[type] = this;
+	
+	    function getCabinet(length, width, thickness, pc) {
+	      const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
+	      cabinet.length(length);
+	      cabinet.width(width);
+	      cabinet.thickness(thickness);
+	
+	      cabinet.propertyConfig(pc instanceof PropertyConfig ? pc : new PropertyConfig());
+	      return cabinet;
+	    }
+	    this.getCabinet = getCabinet;
+	
+	    this.codeMap = () => {
+	      let codeMap = {};
+	      Object.values(this.subassemblies()).forEach((sa) => codeMap[sa.code] = sa);
+	      return codeMap;
+	    }
+	
+	    this.validPartCode = (code) => this.codeMap()[code] !== undefined;
+	    const vpc = this.validPartCode;
+	
+	    this.validOpenings = () => {
+	      const bms = this.openings();
+	      for (let index = 0; index < bms.length; index += 1) {
+	        const bm = bms[index];
+	        if (!(vpc(bm.top) && vpc(bm.bottom) && vpc(bm.right) &&
+	                vpc(bm.left) && vpc(bm.bottom))) {
+	          return false;
+	        }
+	      }
+	      return true;
+	    }
+	    this.validateDividerJoint = () => {
+	      const j = this.dividerJoint();
+	      return j.type === 'Butt' || (j.type === 'Dado' && j.maleOffset > 0);
+	    }
+	
+	    const offsetReg = /(-|\+|)[xyz]/;
+	    this.validOffset = (offset) => offset && offset.match(offsetReg) !== null;
+	    const vo = this.validOffset;
+	
+	    this.validateJoint = (joint, malePartCode, femalePartCode) => {
+	      let isValid = vpc(malePartCode) && vpc(femalePartCode);
+	      switch (joint.type) {
+	        case "Dado":
+	          return isValid && joint.maleOffset > 0 && vo(joint.demensionToOffset) &&
+	                  vo(joint.centerOffset);
+	        default:
+	          return true;
+	      }
+	    }
+	    this.validateJoints = () => {
+	      let joints = this.joints();
+	      for (let index = 0; index < joints.length; index += 1) {
+	        if (!this.validateJoint(joints[index])) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.evalEqn = (eqn, cab) => {
+	      cab ||= getCabinet();
+	      return cab.eval(eqn);
+	    }
+	
+	    this.evalObject = (eqn, cab) => {
+	      cab ||= getCabinet();
+	      return cab.evalObject(eqn);
+	    }
+	
+	    this.validateEquation = (eqn, cab) => {
+	      return !Number.isNaN(this.evalEqn(eqn, cab));
+	    }
+	    const veq = this.validateEquation;
+	
+	    this.validateValues = (cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	      const values = Object.values(this.values());
+	      for (let index = 0; index < values.length; index += 1) {
+	        if (!veq(values[index].eqn, cab)) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.validateSubassembly = (subAssem, cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	
+	      const c = subAssem.center;
+	      const d = subAssem.demensions;
+	      const r = subAssem.rotation;
+	      return vpc(subAssem.code) &&
+	              r.length === 3 && veq(r[0], cab) && veq(r[1], cab) && veq(r[2], cab) &&
+	              veq(c[0], cab) && veq(c[1], cab) && veq(c[2], cab) &&
+	              veq(d[0], cab) && veq(d[1], cab) && veq(d[2], cab);
+	    }
+	
+	    this.validateSubassemblies = (cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }      const subAssems = Object.values(this.subassemblies());
+	      for (let index = 0; index < subAssems.length; index += 1) {
+	        if (!this.validateSubassembly(subAssems[index])) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.valid = () => {
+	      let cab;
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	      return this.validateValues(cab) && this.validOpenings() &&
+	              this.validateDividerJoint() && this.validateJoints() &&
+	              this.validateSubassemblies(cab);
+	    }
+	  }
+	}
+	
+	CabinetTemplate.map = {};
+	CabinetTemplate.defaultList = () => {
+	  const list = [];
+	  const keys = Object.keys(cabinetsJson);
+	  // comment out to get corner-wall to be the first.
+	  // keys.sort();
+	  for (let index = 0; index < keys.length; index += 1) {
+	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
+	  }
+	  return list;
+	}
+	
+	CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
+	CabinetTemplate.defaultPartCodeOpening = () => ({
+	    _Type: "part-code",
+	    top: "pt",
+	    bottom: "pb",
+	    left: "pl",
+	    right: "pr",
+	    back: "pback"
+	  }
+	);
+	
+	CabinetTemplate.defaultLocationOpening = () => ({
+	  _Type: "location",
+	  zRotation: 0,
+	  inner: {
+	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
+	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
+	  },
+	  outer: {
+	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
+	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
+	  }
+	});
+	
+	module.exports = CabinetTemplate;
 	
 });
 
@@ -21890,95 +23884,6 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 	
 	User = new User();
 	module.exports = User
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/cost-tree.js',
-function (require, exports, module) {
-	
-const Properties = require('../config/properties.js');
-	const Assembly = require('../objects/assembly/assembly.js');
-	const LogicTree = require('../../../../public/js/utils/logic-tree.js');
-	const LogicWrapper = LogicTree.LogicWrapper;
-	
-	class CostDecision {
-	  constructor(type, name, relation, formula) {
-	    Object.getSet(this, {type, name, costs: [], relation, isChoice: false});
-	    this.requiredProperties = Properties.noValue(name);
-	    if (this.relation) {
-	      if (formula) {
-	        function makeDecision(wrapper) {
-	          return true;
-	        }
-	        this.relation = RelationInput.relationsObjs[relation](makeDecision);
-	        this.condition = (wrapper) => this.relation.eval(wrapper.children(), wrapper.payload.value());
-	      } else {
-	        this.isChoice(true);
-	      }
-	    }
-	  }
-	}
-	
-	class CostTree {
-	  constructor(logicTree) {
-	    const idMap = {};
-	    logicTree = CostTree.suplement(logicTree);
-	    this.tree = () => logicTree;
-	    this.root = () => logicTree.root();
-	    const getWrapper = (wrapperId) => (LogicWrapper.get(wrapperId) || this.root());
-	
-	    this.branch = (wrapperId, name) =>
-	            get(wrapperId).branch(String.random(), new CostDecision('Branch', name));
-	    this.leaf = (wrapperId, name) =>
-	            get(wrapperId).leaf(String.random(), new CostDecision('Leaf', name));
-	    this.select = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).select(String.random(), new CostDecision('Select', name, relation, formula));
-	    this.multiselect = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).multiselect(String.random(), new CostDecision('Multiselect', name, relation, formula));
-	    this.conditional = (wrapperId, name, relation, formula) =>
-	            get(wrapperId).conditional(String.random(), new CostDecision('Conditional', name, relation, formula));
-	
-	  }
-	}
-	
-	
-	CostTree.propertyList = Properties.all();
-	CostTree.types = ['branch', 'select', 'conditional', 'multiselect', 'leaf'];
-	CostTree.suplement = (logicTree) => {
-	  if (!(logicTree instanceof LogicWrapper)) {
-	    logicTree = new LogicTree();
-	    logicTree.branch('root');
-	  }
-	  const root = logicTree.root();
-	  const assemClassIds = Properties.list();
-	  assemClassIds.forEach((classId) => {
-	    if (root.node.getNodeByPath(classId) === undefined)
-	      root.branch(classId, new CostDecision('Branch', classId));
-	  });
-	  return logicTree;
-	}
-	CostTree.choices = [];
-	
-	
-	CostTree.CostDecision = CostDecision;
-	module.exports = CostTree;
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/init-costs.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Cost = require('./cost.js');
-	const Material = require('./types/material.js');
-	const Labor = require('./types/labor.js');
-	
-	Cost.register(Material);
-	Cost.register(Labor);
 	
 });
 
@@ -22809,318 +24714,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/input/inputs.js',
-function (require, exports, module) {
-	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
-	const Cost = require('../cost/cost.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Material = require('../cost/types/material.js');
-	const Company = require('../objects/company.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const Labor = require('../cost/types/labor.js');
-	
-	
-	const defined = {};
-	function add (name, input) {
-	  if (defined[name]) {
-	    throw new Error(`Input by the name of '${name}' is already defined`)
-	  }
-	  defined[name] = input;
-	}
-	
-	module.exports = (name, properties) => defined[name].clone(properties);
-	
-	
-	add('length', new MeasurementInput({
-	  type: 'text',
-	  placeholder: 'Length',
-	  name: 'length',
-	  class: 'center'
-	}));
-	
-	add('width', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Width',
-	  name: 'width',
-	  class: 'center'
-	}));
-	
-	add('depth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Depth',
-	  name: 'depth',
-	  class: 'center'
-	}));
-	
-	add('cost', new MeasurementInput({
-	  type: 'number',
-	  label: '$',
-	  placeholder: 'Cost',
-	  name: 'cost'
-	}));
-	
-	add('pattern', new MeasurementInput({
-	  type: 'text',
-	  class: 'pattern-input',
-	}));
-	
-	
-	add('offsetLen', new MeasurementInput({
-	  type: 'text',
-	  label: 'Offset',
-	  placeholder: 'Length',
-	  name: 'offsetLength',
-	  class: 'center',
-	}));
-	
-	add('offsetWidth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Width',
-	  name: 'offsetWidth',
-	  class: 'center',
-	}));
-	
-	add('offsetDepth', new MeasurementInput({
-	  type: 'text',
-	  label: 'x',
-	  placeholder: 'Depth',
-	  name: 'offsetDepth',
-	  class: 'center',
-	}));
-	
-	
-	add('costType', new Select({
-	  placeholder: 'Type',
-	  name: 'type',
-	  class: 'center',
-	  list: Cost.typeList
-	}));
-	
-	add('method', new Select({
-	  name: 'method',
-	  class: 'center',
-	  list: Material.methodList,
-	}));
-	
-	add('company', new Select({
-	  name: 'company',
-	  label: 'Company',
-	  class: 'center',
-	  list: [''].concat(Object.keys(Company.list)),
-	  value: ''
-	}));
-	
-	add('childCost', new Select({
-	    name: 'child',
-	    label: 'Default',
-	    class: 'center',
-	}));
-	
-	
-	add('id', new Input({
-	  type: 'text',
-	  placeholder: 'Id',
-	  name: 'id',
-	  class: 'center',
-	  validation: /^\s*[^\s]{1,}\s*$/,
-	  errorMsg: 'You must enter an Id'
-	}));
-	
-	add('propertyId', new Input({
-	  type: 'text',
-	  placeholder: 'Property Id',
-	  name: 'propertyId',
-	  class: 'center',
-	  validation: /^[a-zA-Z\.]{1}$/,
-	  errorMsg: 'Alpha Numeric Value seperated by \'.\'.<br>I.E. Cabinet=>1/2 Overlay = Cabinet.12Overlay'
-	}));
-	
-	add('propertyValue', new Input({
-	  type: 'text',
-	  placeholder: 'Property Value',
-	  name: 'propertyValue',
-	  class: 'center'
-	}));
-	
-	add('costId', new Input({
-	  type: 'text',
-	  placeholder: 'Id',
-	  name: 'id',
-	  class: 'center',
-	  validation: (id, values) =>
-	      id !== '' && (!values.referenceable || Object.values(Cost.defined).indexOf(id) === -1),
-	  errorMsg: 'You must an Id: value must be unique if Referencable.'
-	}));
-	
-	add('name', new Input({
-	  type: 'text',
-	  placeholder: 'Name',
-	  name: 'name',
-	  value: 'peach',
-	  class: 'center',
-	  validation: /^\s*[^\s].*$/,
-	  errorMsg: 'You must enter a Name'
-	}));
-	
-	add('color', new Input({
-	  type: 'color',
-	  validation: /.*/,
-	  placeholder: 'color',
-	  name: 'color',
-	  class: 'center'
-	}));
-	
-	add('optional', new Input({
-	  label: 'Optional',
-	  name: 'optional',
-	  type: 'checkbox',
-	  default: false,
-	  validation: [true, false],
-	  targetAttr: 'checked'
-	}));
-	
-	add('modifyDemension', new Input({
-	  label: 'Modify Demension',
-	  name: 'modifyDemension',
-	  type: 'checkbox',
-	  default: false,
-	  validation: [true, false],
-	  targetAttr: 'checked'
-	}));
-	
-	add('partNumber', new Input({
-	  label: 'Part Number',
-	  name: 'partNumber',
-	  type: 'text'
-	}));
-	
-	add('count', new Input({
-	  label: 'Count',
-	  name: 'count',
-	  type: 'number',
-	  value: 1
-	}));
-	
-	add('quantity', new Input({
-	  label: 'Quantity',
-	  name: 'quantity',
-	  type: 'number',
-	  value: 0
-	}));
-	
-	add('hourlyRate', new Input({
-	  label: 'Hourly Rate',
-	  name: 'hourlyRate',
-	  type: 'number',
-	}));
-	
-	add('hours', new Input({
-	  label: 'Hours',
-	  name: 'hours',
-	  type: 'number',
-	  value: 0
-	}));
-	
-	add('laborType', new Input({
-	  name: 'laborType',
-	  placeholder: 'Labor Type',
-	  label: 'Type',
-	  class: 'center',
-	  clearOnClick: true,
-	  list: Labor.types
-	}));
-	
-	add('formula', new Input({
-	  name: 'formula',
-	  placeholder: 'Formula',
-	  label: 'Formula',
-	  class: 'center'
-	}));
-	
-});
-
-
-RequireJS.addFunction('./app-src/input/validation.js',
-function (require, exports, module) {
-	
-
-	
-	const InvalidComputation = require('./error.js');
-	
-	class ObjectValidator {
-	  constructor() {
-	    const validators =  {};
-	    this.add = (name, validator) => {
-	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
-	        throw new Error('Invalid Validator');
-	      }
-	      validator[name] = validator;
-	    }
-	    this.validate = (obj) => {
-	      if (typeof obj !== 'object') throw new InvalidComputation()
-	      const keys = Object.keys(validators);
-	    }
-	  }
-	}
-	
-	
-	class Validator {
-	  constructor(validator, props, info) {
-	    let type, validate;
-	    const complement = props.explanation;
-	
-	    let defaultExpl;
-	    if (validator instanceof Regex) {
-	      type = 'Regex';
-	      if (props.complement) {
-	        defaultExpl = 'Value must fit regex expression';
-	        validate = (value) => validator.match('value');
-	      } else {
-	        defaultExpl = 'Value must not fit regex expression';
-	        validate = (value) => !validator.match('value');
-	      }
-	    } else if (Array.isArray(validator)) {
-	      if (props.complement) {
-	        defaultExpl = 'Value must exist within array';
-	        validate = (value) => validator.indexOf(value) !== -1;
-	      } else {
-	        defaultExpl = 'Value must not exist within array';
-	        validate = (value) => validator.indexOf(value) === -1;
-	      }
-	    }
-	
-	    props.explanation = props.explanation || defaultExpl;
-	
-	    val = val === undefined && elem ? elem.value : val;
-	    if (val === undefined) return false;
-	    if (valid !== undefined && val === value) return valid;
-	    let valValid = true;
-	    if (props.validation instanceof RegExp) {
-	      valValid = val.match(props.validation) !== null;
-	    }
-	    else if ((typeof props.validation) === 'function') {
-	      valValid = props.validation.apply(null, arguments);
-	    }
-	    else if (Array.isArray(props.validation)) {
-	      valValid = props.validation.indexOf(val) !== -1;
-	    }
-	
-	    return valValid;
-	  }
-	}
-	exports.ObjectValidator = ObjectValidator
-	exports.Validator = Validator
-	
-	
-	
-	
-	
-});
-
-
 RequireJS.addFunction('./app-src/config/properties.js',
 function (require, exports, module) {
 	
@@ -23372,129 +24965,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/displays/.goutputstream-LCKIX1.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils');
-	const pull = require('../three-d/models/pull.js');
-	const ThreeDModel = require('../three-d/three-d-model.js');
-	const Layout2D = require('../objects/layout.js')
-	const Draw2D = require('../two-d/draw.js');
-	const Polygon2d = require('../two-d/objects/polygon.js');
-	const Polygon3D = require('../three-d/objects/polygon.js');
-	const BiPolygon = require('../three-d/objects/bi-polygon.js');
-	const Line2d = require('../two-d/objects/line.js');
-	const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
-	const PanZoom = require('../two-d/pan-zoom.js');
-	
-	const CSG = require('../../public/js/3d-modeling/csg');
-	
-	function csgVert(pos, normal) {
-	  return new CSG.Vertex(pos, normal);
-	}
-	
-	function normalize (verts, normal, reverse) {
-	  const returnValue = [];
-	  for (let index = 0; index < verts.length; index++)
-	    returnValue[index] = new CSG.Vertex(verts[index], normal);
-	  return reverse ? returnValue.reverse() : returnValue;
-	}
-	
-	class ThreeView extends Lookup {
-	  constructor() {
-	    super();
-	    const instance = this;
-	    const maxDem = window.innerHeight * .45;
-	    const cnt = du.create.element('div');
-	    // const p = pull(5,2);
-	    const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
-	          new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel();
-	    // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
-	    // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
-	    p.setColor([0, 255, 0])
-	    let draw, panz;
-	    let threeDModel;
-	    document.body.append(cnt);
-	    this.maxDem = () => maxDem;
-	    cnt.innerHTML = ThreeView.template.render(this);
-	
-	    const color = 'black';
-	    const width = .2;
-	
-	    function drawView (refresh) {
-	      Layout2D.release(`three-view`);
-	      let model = instance.lastModel();
-	      model ||= instance.lastRendered();
-	      if (model === undefined) return;
-	      const twoDmap = model.threeView;
-	      if (twoDmap.measurments === undefined) {
-	        const allLines = twoDmap.front.concat(twoDmap.right.concat(twoDmap.top));
-	        twoDmap.measurments = LineMeasurement2d.measurements(allLines);
-	      }
-	      draw(twoDmap.front, color, width);
-	      draw(twoDmap.right, color, width);
-	      draw(twoDmap.top, color, width);
-	      draw(twoDmap.measurments, 'grey');
-	    }
-	
-	    function onPartSelect(elem) {
-	      console.log(elem.value);
-	      const partCode = du.find.closest(`[value="${elem.value}"`, elem).getAttribute('part-code');
-	      instance.isolatePart(elem.value);
-	      elem.value = '';
-	    }
-	
-	    function init() {
-	      draw = new Draw2D(du.id('three-view'));
-	
-	      panz = new PanZoom(draw.canvas(), drawView);
-	      panz.centerOn(0, 0);
-	
-	      if (du.url.breakdown().path.match(/\/.*template$/)) {
-	        setTimeout(() =>
-	          ThreeDModel.setViewerSelector(`#${instance.id()}>.three-view-three-d-cnt`, '40vh'), 500);
-	      }
-	      du.on.match('change', '[name="partSelector"]', onPartSelect);
-	    }
-	
-	    this.update = (cabinet) => {
-	      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
-	      threeDModel.assembly(cabinet);
-	      threeDModel.update(cabinet);
-	      draw.clear();
-	      setTimeout(() => {
-	        drawView(true);
-	      }, 1000);
-	    }
-	
-	    this.isolatePart = (partCode) => {
-	      threeDModel = ThreeDModel.get();
-	      threeDModel.setTargetPartName(partCode);
-	      threeDModel.update();
-	      setTimeout(() => {
-	        panz.once();
-	      }, 500);
-	      du.id(`three-view-part-code-${this.id()}`).innerText = partCode;
-	    }
-	
-	    this.threeDModel = () => threeDModel;
-	    this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;
-	    this.lastRendered = () => threeDModel ? threeDModel.getLastRendered() : undefined;
-	    this.partMap = () => threeDModel ? threeDModel.partMap() : {};
-	
-	    setTimeout(init, 1000);
-	  }
-	}
-	
-	ThreeView.template = new $t('three-view');
-	
-	module.exports = ThreeView;
-	
-});
-
-
 RequireJS.addFunction('./app-src/config/cabinet-layouts.js',
 function (require, exports, module) {
 	
@@ -23591,6 +25061,389 @@ const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 	  right.sections[2].setSection("DrawerSection");
 	  right.pattern('abb').value('a', a);
 	});
+	
+});
+
+
+RequireJS.addFunction('./app-src/input/inputs.js',
+function (require, exports, module) {
+	const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
+	const Cost = require('../cost/cost.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Material = require('../cost/types/material.js');
+	const Company = require('../objects/company.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const Labor = require('../cost/types/labor.js');
+	
+	
+	const defined = {};
+	function add (name, input) {
+	  if (defined[name]) {
+	    throw new Error(`Input by the name of '${name}' is already defined`)
+	  }
+	  defined[name] = input;
+	}
+	
+	module.exports = (name, properties) => defined[name].clone(properties);
+	
+	
+	add('length', new MeasurementInput({
+	  type: 'text',
+	  placeholder: 'Length',
+	  name: 'length',
+	  class: 'center'
+	}));
+	
+	add('width', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Width',
+	  name: 'width',
+	  class: 'center'
+	}));
+	
+	add('depth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Depth',
+	  name: 'depth',
+	  class: 'center'
+	}));
+	
+	add('cost', new MeasurementInput({
+	  type: 'number',
+	  label: '$',
+	  placeholder: 'Cost',
+	  name: 'cost'
+	}));
+	
+	add('pattern', new MeasurementInput({
+	  type: 'text',
+	  class: 'pattern-input',
+	}));
+	
+	
+	add('offsetLen', new MeasurementInput({
+	  type: 'text',
+	  label: 'Offset',
+	  placeholder: 'Length',
+	  name: 'offsetLength',
+	  class: 'center',
+	}));
+	
+	add('offsetWidth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Width',
+	  name: 'offsetWidth',
+	  class: 'center',
+	}));
+	
+	add('offsetDepth', new MeasurementInput({
+	  type: 'text',
+	  label: 'x',
+	  placeholder: 'Depth',
+	  name: 'offsetDepth',
+	  class: 'center',
+	}));
+	
+	
+	add('costType', new Select({
+	  placeholder: 'Type',
+	  name: 'type',
+	  class: 'center',
+	  list: Cost.typeList
+	}));
+	
+	add('method', new Select({
+	  name: 'method',
+	  class: 'center',
+	  list: Material.methodList,
+	}));
+	
+	add('company', new Select({
+	  name: 'company',
+	  label: 'Company',
+	  class: 'center',
+	  list: [''].concat(Object.keys(Company.list)),
+	  value: ''
+	}));
+	
+	add('childCost', new Select({
+	    name: 'child',
+	    label: 'Default',
+	    class: 'center',
+	}));
+	
+	
+	add('id', new Input({
+	  type: 'text',
+	  placeholder: 'Id',
+	  name: 'id',
+	  class: 'center',
+	  validation: /^\s*[^\s]{1,}\s*$/,
+	  errorMsg: 'You must enter an Id'
+	}));
+	
+	add('propertyId', new Input({
+	  type: 'text',
+	  placeholder: 'Property Id',
+	  name: 'propertyId',
+	  class: 'center',
+	  validation: /^[a-zA-Z\.]{1}$/,
+	  errorMsg: 'Alpha Numeric Value seperated by \'.\'.<br>I.E. Cabinet=>1/2 Overlay = Cabinet.12Overlay'
+	}));
+	
+	add('propertyValue', new Input({
+	  type: 'text',
+	  placeholder: 'Property Value',
+	  name: 'propertyValue',
+	  class: 'center'
+	}));
+	
+	add('costId', new Input({
+	  type: 'text',
+	  placeholder: 'Id',
+	  name: 'id',
+	  class: 'center',
+	  validation: (id, values) =>
+	      id !== '' && (!values.referenceable || Object.values(Cost.defined).indexOf(id) === -1),
+	  errorMsg: 'You must an Id: value must be unique if Referencable.'
+	}));
+	
+	add('name', new Input({
+	  type: 'text',
+	  placeholder: 'Name',
+	  name: 'name',
+	  value: 'peach',
+	  class: 'center',
+	  validation: /^\s*[^\s].*$/,
+	  errorMsg: 'You must enter a Name'
+	}));
+	
+	add('color', new Input({
+	  type: 'color',
+	  validation: /.*/,
+	  placeholder: 'color',
+	  name: 'color',
+	  class: 'center'
+	}));
+	
+	add('optional', new Input({
+	  label: 'Optional',
+	  name: 'optional',
+	  type: 'checkbox',
+	  default: false,
+	  validation: [true, false],
+	  targetAttr: 'checked'
+	}));
+	
+	add('modifyDemension', new Input({
+	  label: 'Modify Demension',
+	  name: 'modifyDemension',
+	  type: 'checkbox',
+	  default: false,
+	  validation: [true, false],
+	  targetAttr: 'checked'
+	}));
+	
+	add('partNumber', new Input({
+	  label: 'Part Number',
+	  name: 'partNumber',
+	  type: 'text'
+	}));
+	
+	add('count', new Input({
+	  label: 'Count',
+	  name: 'count',
+	  type: 'number',
+	  value: 1
+	}));
+	
+	add('quantity', new Input({
+	  label: 'Quantity',
+	  name: 'quantity',
+	  type: 'number',
+	  value: 0
+	}));
+	
+	add('hourlyRate', new Input({
+	  label: 'Hourly Rate',
+	  name: 'hourlyRate',
+	  type: 'number',
+	}));
+	
+	add('hours', new Input({
+	  label: 'Hours',
+	  name: 'hours',
+	  type: 'number',
+	  value: 0
+	}));
+	
+	add('laborType', new Input({
+	  name: 'laborType',
+	  placeholder: 'Labor Type',
+	  label: 'Type',
+	  class: 'center',
+	  clearOnClick: true,
+	  list: Labor.types
+	}));
+	
+	add('formula', new Input({
+	  name: 'formula',
+	  placeholder: 'Formula',
+	  label: 'Formula',
+	  class: 'center'
+	}));
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/history.js',
+function (require, exports, module) {
+	
+class History {
+	  constructor() {
+	    let changes = [];
+	    let changesIndex = [];
+	
+	      this.addChange = (forward, back) => {
+	        changes = changes.slice(0, changesIndex);
+	        changes.push({forward, back});
+	        changesIndex++;
+	      }
+	
+	    this.getSet = (obj, initialVals, ...attrs) => {
+	      attrs = Object.getSet(obj, initialVals, ...attrs);
+	      const objFuncs = {};
+	      attrs.forEach((attr) => {
+	        objFuncs[attr] = obj[attr];
+	        obj[attr] = (value) => {
+	          if (value !== undefined) {
+	            const oldValue = objFuncs[attr]();
+	            const back = () => objFuncs[attr](oldValue);
+	            const forward = () => objFuncs[attr](value);
+	            this.addChange(obj, forward, back);
+	          }
+	          return objFuncs[attr](value);
+	        }
+	      });
+	    }
+	
+	    this.undo = () => {
+	      const change = changes[--changesIndex];
+	      change.back();
+	    }
+	
+	    this.redo = () => {
+	      const change = changes[++changesIndex];
+	      change.forward();
+	    }
+	
+	    this.canUndo =() => changesIndex > 0;
+	    this.canRedo = () => changeIndex < changes.length - 1;
+	  }
+	}
+	
+	module.exports = History;
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/divide-properties.js',
+function (require, exports, module) {
+	
+
+	class DivideProperties {
+	  constructor(length, center, rotation) {
+	    Object.getSet(this, {length, center, rotation})
+	  }
+	}
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/order.js',
+function (require, exports, module) {
+	
+
+	
+	const Room = require('./room.js');
+	
+	class Order {
+	  constructor(name, id) {
+	    if (id === null) this.loaded = false;
+	    else this.loaded = true;
+	    const initialVals = {
+	      name: name || ++Order.count,
+	      id: id || String.random(32),
+	    }
+	    Object.getSet(this, initialVals, 'rooms');
+	    this.rooms = {};
+	    this.addRoom = (name) => this.rooms[name] = new Room(name);
+	  }
+	}
+	
+	Order.count = 0;
+	module.exports = Order
+	
+});
+
+
+RequireJS.addFunction('./app-src/services/cabinet-opening-coordinates.js',
+function (require, exports, module) {
+	
+class CabinetOpeningCorrdinates {
+	  constructor(cabinet, config, sectionProperties) {
+	
+	    this.divide = sectionProperties.divide;
+	    this.setSection = sectionProperties.setSection;
+	    this.sections = sectionProperties.sections;
+	    this.vertical = sectionProperties.vertical;
+	    this.normal = sectionProperties.normal;
+	    this.sectionProperties = () => sectionProperties;
+	    this.pattern = sectionProperties.pattern;
+	    this.update = () => {
+	      let coords;
+	      if (config._Type === 'location') {
+	        coords = cabinet.evalObject(config.coordinates);
+	      } else {
+	        const right = cabinet.getAssembly(config.right);
+	        const left = cabinet.getAssembly(config.left);
+	        const top = cabinet.getAssembly(config.top);
+	        const bottom = cabinet.getAssembly(config.bottom);
+	
+	        const topMax = top.position().centerAdjust('y', '+z');
+	        const topMin = top.position().centerAdjust('y', '-z');
+	        const leftMax = left.position().centerAdjust('x', '-z');
+	        const leftMin = left.position().centerAdjust('x', '+z');
+	        const rightMin = right.position().centerAdjust('x', '+z');
+	        const rightMax = right.position().centerAdjust('x', '-z');
+	        const bottomMin = bottom.position().centerAdjust('y', '-z');
+	        const bottomMax = bottom.position().centerAdjust('y', '+z');
+	
+	        coords = {
+	          inner: [
+	            {x: leftMax, y: topMin, z: 0},
+	            {x: rightMin, y: topMin, z: 0},
+	            {x: rightMin, y: bottomMax, z: 0},
+	            {x: leftMax, y: bottomMax, z: 0}
+	          ],
+	          outer: [
+	            {x: leftMin, y: topMax, z: 0},
+	            {x: rightMax, y: topMax, z: 0},
+	            {x: rightMax, y: bottomMin, z: 0},
+	            {x: leftMin, y: bottomMin, z: 0}
+	          ]
+	        }
+	      }
+	      sectionProperties.updateCoordinates(coords);
+	      return coords;
+	    }
+	  }
+	}
+	
+	module.exports = CabinetOpeningCorrdinates;
 	
 });
 
@@ -23946,1698 +25799,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/two-d/layout.js',
-function (require, exports, module) {
-	const Layout2D = require('../two-d/layout/layout.js');
-	const panZoom = require('./pan-zoom');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const PopUp = require('../../../../public/js/utils/display/pop-up');
-	const Properties = require('../config/properties');
-	const Measurement = require('../../../../public/js/utils/measurement.js');
-	const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
-	const Draw2D = require('./draw.js');
-	const Vertex2d = require('../two-d/objects/vertex.js');
-	const Line2d = require('../two-d/objects/line.js');
-	const Snap2d = require('../two-d/objects/snap.js');
-	const Circle2d = require('../two-d/objects/circle.js');
-	const SnapLocation2d = require('../two-d/objects/snap-location.js');
-	const LineMeasurement2d = require('../two-d/objects/line-measurement');
-	
-	// TODO: Rename
-	const TwoDLayout = {};
-	
-	let draw;
-	const eval = new StringMathEvaluator({Math}).eval;
-	const popUp = new PopUp({resize: false});
-	
-	let layout;
-	TwoDLayout.set = (l) => {
-	  if (l instanceof Layout2D) {
-	    layout = l;
-	    if (panZ) panZ.once();
-	  }
-	}
-	
-	let hoverMap;
-	
-	const resetHoverMap = () => hoverMap = {
-	    Window2D: {}, Door2D: {}, Wall2D: {}, Vertex2d: {}, LineMeasurement2d: {},
-	    Object2d: {}, Square2d: {}, Snap2d: {}, SnapLocation2d: {}
-	  };
-	
-	const windowLineWidth = 8;
-	const tolerance = 1;
-	let lastImagePoint;
-	let hovering;
-	let dragging;
-	let clickHolding = false;
-	let popupOpen = false;
-	let measurementModify = false;
-	let lastDown = 0;
-	const selectTimeBuffer = 200;
-	const quickChangeFuncs = {};
-	
-	function getPopUpAttrs(elem) {
-	  const cnt =  du.find.up('[type-2d]', elem);
-	  if (cnt === undefined) return {};
-	  const type = cnt.getAttribute('type-2d');
-	  const key = elem.getAttribute('key');
-	  const raw = elem.type === 'input' ? eval(elem.value) : elem.value;
-	  let value, display;
-	  if (elem.getAttribute('convert') === 'false') {
-	    value = raw;
-	    display = raw;
-	  } else {
-	    const measurement = new Measurement(raw, true);
-	    value = measurement.decimal();
-	    display = measurement.display();
-	  }
-	  const id = cnt.id;
-	  return {
-	    type,id,key,value,display,raw,
-	    obj:  Layout2D.get(id),
-	    point: {
-	      x: cnt.getAttribute('x'),
-	      y: cnt.getAttribute('y')
-	    }
-	  };
-	}
-	
-	du.on.match('enter', '.value-2d', (elem) => {
-	  const props = getPopUpAttrs(elem);
-	  const member = elem.getAttribute('member');
-	  switch (member) {
-	    case 'object':
-	      props.obj[props.key](props.raw);
-	      const cab = props.obj.payload();
-	      if (cab && cab.constructor.name === 'Cabinet') {
-	        const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.id()}']`);
-	        const idInput = du.find.closest('.cabinet-id-input', cabDemCnt);
-	        idInput.value = props.raw;
-	      }
-	      panZ.once();
-	      return;
-	    case 'cabinet':
-	      const cabinet = props.obj.payload();
-	      const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.id()}']`);
-	      if (cabCnt) {
-	        const input = du.find.down(`input[name='${props.key}']`, cabCnt);
-	        input.value = props.display;
-	      }
-	      cabinet[props.key](props.value);
-	      const poly = props.obj.topview();
-	      poly[props.key === 'thickness' ? 'height' : props.key](props.value);
-	      poly.update();
-	      panZ.once();
-	      return;
-	  }
-	  if (props.obj.payload && props.obj.payload() === 'placeholder') {
-	    if (props.key === 'thickness') props.key = 'height';
-	    props.obj = props.obj.topview().object();
-	  }
-	
-	  props.obj.topview()[props.key](props.value);
-	  elem.value = props.display;
-	  props.obj.topview().update();
-	  panZ.once();
-	});
-	
-	du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
-	  const props = getPopUpAttrs(elem);
-	  const input = du.find.closest('.measurement-mod', elem);
-	  if (input) setTimeout(() =>
-	      input.value = props.obj.display(), 0);
-	});
-	
-	function remove() {
-	  if (hovering.parent) {
-	    if (hovering.parent().payload().constructor.name === 'Cabinet') {
-	      const cabinet = hovering.parent().payload();
-	      const cabinetHeader = du.find(`.cabinet-header[cabinet-id='${cabinet.id()}']`);
-	      const removeButton = du.find.closest('.expandable-item-rm-btn', cabinetHeader)
-	      if (removeButton) removeButton.click();
-	      else console.warn('Remove button for cabinet should be present but is not present');
-	    }
-	    layout.remove(hovering.parent().id());
-	  } else {
-	    layout.remove(hovering.id());
-	  }
-	  popUp.close();
-	  TwoDLayout.panZoom.once();
-	}
-	
-	du.on.match('click', '.remove-btn-2d', remove, popUp.container());
-	
-	du.on.match('click', '.add-door-btn-2d', (elem) => {
-	  const attrs = getPopUpAttrs(elem);
-	  const distance = attrs.obj.startVertex().distance(attrs.point);
-	  attrs.obj.addDoor(distance);
-	  panZ.once();
-	});
-	
-	du.on.match('click', '.hinge-btn', (elem) => {
-	  const attrs = getPopUpAttrs(elem);
-	  attrs.obj.hinge(true);
-	  panZ.once();
-	});
-	
-	du.on.match('click', '.add-window-btn-2d', (elem) => {
-	  const attrs = getPopUpAttrs(elem);
-	  const distance = attrs.obj.startVertex().distance(attrs.point);
-	  attrs.obj.addWindow(distance);
-	  panZ.once();
-	});
-	
-	du.on.match('click', '.add-object-btn-2d', (elem) => {
-	  const props = getPopUpAttrs(elem);
-	  const obj = layout.addObject(props.point, 'placeholder');
-	  obj.topview().onChange(console.log);
-	  panZ.once();
-	});
-	
-	du.on.match('click', '.add-vertex-btn-2d', (elem) => {
-	  const attrs = getPopUpAttrs(elem);
-	  const point = hovering.closestPointOnLine(attrs.point);
-	  layout.addVertex(point, hovering);
-	  panZ.once();
-	});
-	
-	du.on.match('enter', '.measurement-mod', (elem) => {
-	  const value = eval(elem.value);
-	  getPopUpAttrs(elem).obj.modify(value);
-	  panZ.once();
-	});
-	
-	// TODO: define cache better.
-	function clearCache() {
-	  measurementIs = {};
-	}
-	
-	function undo(target) {
-	  layout.history().back();
-	  clearCache();
-	  panZ.once();
-	}
-	
-	function redo () {
-	  layout.history().forward();
-	  clearCache();
-	  panZ.once();
-	}
-	
-	function registerQuickChangeFunc(type, func) {
-	  if ((typeof func) === 'function') quickChangeFuncs[type] = func;
-	}
-	
-	function onMousedown(event, stdEvent) {
-	  lastDown = clickHolding ? 0 : new Date().getTime();
-	  lastImagePoint = {x: event.imageX, y: event.imageY};
-	  if (stdEvent.button == 0) {
-	    clickHolding = !popupOpen && (clickHolding || hovering !== undefined);
-	    return clickHolding;
-	  } else {
-	    if (hovering && quickChangeFuncs[hovering.constructor.name]) {
-	      quickChangeFuncs[hovering.constructor.name](hovering, event, stdEvent);
-	    }
-	    return true;
-	  }
-	}
-	
-	function addVertex(hovering, event, stdEvent) {
-	  const point = {x: event.imageX, y: event.imageY};
-	  layout.addVertex(point, hovering);
-	}
-	
-	registerQuickChangeFunc('Wall2D', addVertex);
-	registerQuickChangeFunc('Vertex2d', remove);
-	registerQuickChangeFunc('Window2D', remove);
-	registerQuickChangeFunc('SnapLocation2d', (snapLoc) => snapLoc.disconnect());
-	registerQuickChangeFunc('Door2D', (door) => door.hinge(true));
-	
-	function hoverId () {
-	  return hovering ? hovering.toString() : undefined;
-	}
-	
-	const templateMap = {};
-	function getTemplate(item) {
-	  const isSnap = item instanceof Snap2d;
-	  const templateLocation = `2d/pop-up/${isSnap ? 'snap-2d' : item.constructor.name.toKebab()}`;
-	  if (templateMap[templateLocation] === undefined) {
-	    templateMap[templateLocation] = new $t(templateLocation);
-	  }
-	  return templateMap[templateLocation];
-	}
-	
-	function display(value) {
-	  return new Measurement(value).display();
-	}
-	
-	function openPopup(event, stdEvent) {
-	  if (hovering) {
-	    if (hovering instanceof Snap2d) hovering.pairWithLast();
-	    popupOpen = true;
-	    const msg = `${hovering.constructor.name}: ${hoverId()}`;
-	    const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
-	    const html = getTemplate(hovering).render(scope);
-	    popUp.open(html, {x: event.screenX, y: event.screenY});
-	  }
-	}
-	
-	popUp.onClose((elem, event) => {
-	  setTimeout(() => popupOpen = false, 200);
-	  const attrs = getPopUpAttrs(du.find.closest('[type-2d]',popUp.container()));
-	  measurementModify = attrs.type === 'LineMeasurement2d';
-	  lastDown = new Date().getTime();
-	  clickHolding = false;
-	  if (layout) layout.history().newState();
-	});
-	
-	function onMouseup(event, stdEvent) {
-	  if (stdEvent.button == 0) {
-	    if (lastDown > new Date().getTime() - selectTimeBuffer) {
-	      if (hovering) {
-	        setTimeout(() => openPopup(event, stdEvent), 5);
-	      } else {
-	        measurementModify = !measurementModify;
-	      }
-	    } else {
-	      const clickWasHolding = clickHolding;
-	      clickHolding = false;
-	      hovering = undefined;
-	      if (layout) layout.history().newState();
-	      return clickWasHolding;
-	    }
-	  } else {
-	    console.log('rightClick: do stuff!!');
-	    if (layout) layout.history().newState();
-	  }
-	}
-	
-	let pending = 0;
-	function  drag(event)  {
-	  const dragging = !popupOpen && clickHolding && hovering;
-	  if (dragging)
-	    hovering.move && hovering.move({x: event.imageX, y: event.imageY}, event);
-	  return dragging;
-	}
-	
-	function hover(event) {
-	  if (clickHolding) return true;
-	  let found = false;
-	  const tuple = {x: event.imageX, y: event.imageY};
-	  function  check(list) {
-	    for (let index = 0; index < list.length; index += 1) {
-	      if (withinTolerance(tuple, list[index])) {
-	        hovering = list[index].item;
-	        found = true;
-	      }
-	    }
-	    if (!clickHolding && !found) hovering = undefined;
-	  }
-	
-	  if (measurementModify) {
-	    check(Object.values(hoverMap.LineMeasurement2d));
-	    found || check(Object.values(hoverMap.SnapLocation2d));
-	    found || check(Object.values(hoverMap.Snap2d));
-	    found || check(Object.values(hoverMap.Object2d));
-	    found || check(Object.values(hoverMap.Square2d));
-	  } else {
-	    check(Object.values(hoverMap.Vertex2d));
-	    found || check(Object.values(hoverMap.Window2D));
-	    found || check(Object.values(hoverMap.Door2D));
-	    found || check(Object.values(hoverMap.Wall2D));
-	  }
-	
-	  return found;
-	}
-	
-	function onMove(event) {
-	  if (layout === undefined) return;
-	  const canDrag = !popupOpen && lastDown < new Date().getTime() - selectTimeBuffer * 1.5;
-	  return (canDrag && drag(event)) || hover(event);
-	}
-	
-	function withinTolerance(point, map) {
-	  const x0 = point.x;
-	  const y0 = point.y;
-	  const x1 = map.start.x;
-	  const y1 = map.start.y;
-	  const x2 = map.end.x;
-	  const y2 = map.end.y;
-	  const num = Math.abs((y2 - y1)*x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
-	  const denom = Math.sqrt(Math.pow(y2 - y1, 2) + Math.pow(x2 - x1, 2));
-	  return num / denom < map.tolerance;
-	}
-	
-	function withinTolerance(point, map) {
-	  const t = map.tolerance;
-	  const start = map.start.point ? map.start.point() : map.start;
-	  const end = map.end.point ? map.end.point() : map.end;
-	  const x0 = point.x;
-	  const y0 = point.y;
-	  const x1 = start.x > end.x ? end.x : start.x;
-	  const y1 = start.y > end.y ? end.y : start.y;
-	  const x2 = start.x < end.x ? end.x : start.x;
-	  const y2 = start.y < end.y ? end.y : start.y;
-	  return x0>x1-t && x0 < x2+t && y0>y1-t && y0<y2+t;
-	}
-	
-	function updateHoverMap(item, start, end, tolerance) {
-	  let group;
-	  if (item instanceof Snap2d) group = 'Snap2d';
-	  else group = item.constructor.name;
-	  hoverMap[group][item.toString()] = {start, end, tolerance, item};
-	}
-	
-	let windowCount = 0;
-	let getWindowColor = () => {
-	  switch (Math.floor(Math.random() * 4)) {
-	    case 0: return 'red'; case 1: return 'green';
-	    case 2: return 'yellow'; case 3: return 'pink';
-	  }
-	  return 'white';
-	}
-	
-	const windowDrawMap = {};
-	function drawWindow(wallStartPoint, window, wallTheta) {
-	  draw.beginPath();
-	  const points = window.endpoints2D(wallStartPoint);
-	  const lookupKey = window.toString();
-	  const ctx = draw.ctx();
-	  if (windowDrawMap[lookupKey] === undefined) {
-	    windowDrawMap[lookupKey] = () => {
-	      ctx.moveTo(points.start.x(), points.start.y());
-	      ctx.lineWidth = 8;
-	      ctx.strokeStyle = hoverId() === window.toString() ? 'green' : 'blue';
-	      ctx.lineTo(points.end.x(), points.end.y());
-	      updateHoverMap(window, points.start, points.end, 5);
-	      ctx.stroke();
-	    }
-	  }
-	  windowDrawMap[lookupKey]();
-	}
-	
-	function updateDoorHoverMap(door, startpointRight, startpointLeft) {
-	  updateHoverMap(door, startpointRight, startpointLeft, 15);
-	}
-	
-	function doorDrawingFunc(startpointLeft, startpointRight) {
-	  return (door) => {
-	    const ctx = draw.ctx();
-	    ctx.beginPath();
-	    ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'black';
-	    const hinge = door.hinge();
-	
-	    if (hinge === 4) {
-	      ctx.moveTo(startpointLeft.x, startpointLeft.y);
-	      ctx.lineWidth = 8;
-	      ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'white';
-	      ctx.lineTo(startpointRight.x, startpointRight.y);
-	      updateDoorHoverMap(door, startpointRight, startpointLeft, 10);
-	      ctx.stroke();
-	    } else {
-	      const offset = Math.PI * hinge / 2;
-	      const initialAngle = (door.wall().radians() + offset) % (2 * Math.PI);
-	      const endAngle = initialAngle + (Math.PI / 2);
-	
-	      if (hinge === 0 || hinge === 3) {
-	        ctx.moveTo(startpointRight.x, startpointRight.y);
-	        ctx.arc(startpointRight.x, startpointRight.y, door.width(), initialAngle, endAngle, false);
-	        ctx.lineTo(startpointRight.x, startpointRight.y);
-	      } else {
-	        ctx.moveTo(startpointLeft.x, startpointLeft.y);
-	        ctx.arc(startpointLeft.x, startpointLeft.y, door.width(), endAngle, initialAngle, true);
-	        ctx.lineTo(startpointLeft.x, startpointLeft.y);
-	      }
-	
-	      ctx.fillStyle = 'white';
-	      ctx.fill();
-	    }
-	    updateHoverMap(door, startpointRight, startpointLeft, 10);
-	    ctx.stroke();
-	  }
-	}
-	
-	const doorDrawMap = {};
-	function drawDoor(startpoint, door, wallTheta) {
-	  const lookupKey = door.toString();
-	  if (doorDrawMap[lookupKey] === undefined) {
-	    const initialAngle = wallTheta;
-	    const width = door.width();
-	
-	    const distLeft = door.fromPreviousWall() + width;
-	    const startpointLeft = {x: startpoint.x + distLeft * Math.cos(theta), y: startpoint.y + distLeft * Math.sin(theta)};
-	    const distRight = door.fromPreviousWall();
-	    const startpointRight = {x: startpoint.x + distRight * Math.cos(theta), y: startpoint.y + distRight * Math.sin(theta)};
-	    doorDrawMap[lookupKey] = doorDrawingFunc(startpointLeft, startpointRight, initialAngle);
-	  }
-	  doorDrawMap[lookupKey](door);
-	}
-	
-	const blank = 40;
-	const hblank = blank/2;
-	function drawMeasurementValue(line, midpoint, measurement) {
-	  if (line === undefined) return;
-	  const ctx = draw.ctx();
-	  midpoint = line.midpoint();
-	
-	  ctx.save();
-	  ctx.lineWidth = 0;
-	  const length = measurement.display();
-	  const textLength = length.length;
-	  ctx.translate(midpoint.x(), midpoint.y());
-	  ctx.rotate(line.radians());
-	  ctx.beginPath();
-	  ctx.fillStyle = hoverId() === measurement.toString() ? 'green' : "white";
-	  ctx.strokeStyle = 'white';
-	  ctx.rect(textLength * -3, -8, textLength * 6, 16);
-	  ctx.fill();
-	  ctx.stroke();
-	
-	  ctx.beginPath();
-	  ctx.lineWidth = 4;
-	  ctx.strokeStyle = 'black';
-	  ctx.fillStyle =  'black';
-	  ctx.fillText(length, 0, 0);
-	  ctx.stroke()
-	  ctx.restore();
-	}
-	
-	const measurementLineMap = {};
-	const getMeasurementLine = (vertex1, vertex2) => {
-	  const lookupKey = `${vertex1} => ${vertex2}`;
-	  if (measurementLineMap[lookupKey] === undefined) {
-	    const line = new Line2d(vertex1, vertex2);
-	    measurementLineMap[lookupKey] = new LineMeasurement2d(line)
-	  }
-	  return measurementLineMap[lookupKey];
-	}
-	
-	let measurementValues = [];
-	function measurementValueToDraw(line, midpoint, measurement) {
-	  measurementValues.push({line, midpoint, measurement});
-	}
-	
-	function drawMeasurementValues() {
-	  let values = measurementValues;
-	  measurementValues = [];
-	  for (let index = 0; index < values.length; index += 1) {
-	    let m = values[index];
-	    drawMeasurementValue(m.line, m.midpoint, m.measurement);
-	  }
-	}
-	
-	const measurementLineWidth = 3;
-	let measurementIs = {};
-	function drawMeasurement(measurement, level, focalVertex)  {
-	  const lookupKey = `${measurement.toString()}-[${level}]`;
-	  // if (measurementIs[lookupKey] === undefined) {
-	    measurementIs[lookupKey] = measurement.I(level);
-	  // }
-	  const lines = measurementIs[lookupKey];
-	  const center = layout.vertices(focalVertex, 2, 3);
-	  const measurementColor = hoverId() === measurement.toString() ? 'green' : 'grey';
-	  try {
-	    draw.beginPath();
-	    const isWithin = layout.within(lines.furtherLine().midpoint());
-	    const line = isWithin ? lines.closerLine() : lines.furtherLine();
-	    const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
-	    if (measurementModify || popupOpen) {
-	      draw.line(line.startLine, measurementColor, measurementLineWidth);
-	      draw.line(line.endLine, measurementColor, measurementLineWidth);
-	      draw.line(line, measurementColor, measurementLineWidth);
-	      updateHoverMap(measurement, midpoint, midpoint, 15);
-	    }
-	    measurementValueToDraw(line, midpoint, measurement);
-	    return line;
-	  } catch (e) {
-	    console.error('Measurement render error:', e);
-	  }
-	}
-	
-	function measureOnWall(list, level) {
-	  for (let index = 0; index < list.length; index += 1) {
-	    let item = list[index];
-	    const wall = item.wall();
-	    const points = item.endpoints2D();
-	    const measureLine1 = getMeasurementLine(wall.startVertex(), points.start);
-	    const measureLine2 = getMeasurementLine(points.end, wall.endVertex());
-	    measureLine1.modificationFunction(item.fromPreviousWall);
-	    measureLine2.modificationFunction(item.fromNextWall);
-	    drawMeasurement(measureLine1, level, wall.startVertex())
-	    drawMeasurement(measureLine2, level, wall.startVertex())
-	    level += 4;
-	  }
-	  return level;
-	}
-	
-	function includeDetails() {
-	  return !dragging && (measurementModify || popupOpen)
-	}
-	
-	function drawWall(wall) {
-	  const ctx = draw.ctx();
-	  const startpoint = wall.startVertex().point();
-	  r =  wall.length();
-	  theta = wall.radians();
-	  ctx.beginPath();
-	  ctx.moveTo(startpoint.x, startpoint.y);
-	  ctx.lineWidth = 10;
-	  ctx.strokeStyle = hoverId() === wall.toString() ? 'green' : 'black';
-	  const endpoint = wall.endVertex().point();
-	  ctx.lineTo(endpoint.x, endpoint.y);
-	  ctx.stroke();
-	
-	  wall.doors().forEach((door) =>
-	    drawDoor(startpoint, door, wall.radians()));
-	  wall.windows().forEach((window) =>
-	    drawWindow(startpoint, window, wall.radians()));
-	
-	  let level = 8;
-	  if (includeDetails()) {
-	    const vertices = wall.vertices();
-	    let measLines = {};
-	    level = measureOnWall(wall.doors(), level);
-	    level = measureOnWall(wall.windows(), level);
-	  }
-	  const measurement = new LineMeasurement2d(wall, undefined, undefined, layout.reconsileLength(wall));
-	  drawMeasurement(measurement, level, wall.startVertex());
-	
-	  updateHoverMap(wall, startpoint, endpoint, 5);
-	
-	  return endpoint;
-	}
-	
-	function drawVertex(vertex) {
-	  const fillColor = hoverId() === vertex.toString() ? 'green' : 'white';
-	  const p = vertex.point();
-	  const radius = 10;
-	  const circle = new Circle2d(radius, p);
-	  draw.circle(circle, 'black', fillColor);
-	  updateHoverMap(vertex, p, p, 12);
-	}
-	
-	function snapLocColor(snapLoc) {
-	  switch (snapLoc.location()) {
-	    case "backRight": return 'red';
-	    case "frontRight": return 'yellow';
-	    case "frontLeft": return 'green';
-	    case "backLeft": return 'blue';
-	    case "backCenter": return 'purple';
-	    case "diagonalRight": return 'lime';
-	    case "diagonalLeft": return 'azure';
-	    default: return "grey"
-	  }
-	}
-	
-	function drawSnapLocation(locations, color) {
-	  for (let index = 0; index < locations.length; index += 1) {
-	    const loc = locations[index];
-	    const c = hoverId() === loc.toString() ? 'green' : (color || snapLocColor(loc));
-	    draw.circle(loc.circle(), 'black', c);
-	    const vertex = loc.vertex();
-	    updateHoverMap(loc, vertex.point(), vertex.point(), 8);
-	  }
-	}
-	
-	let showAllSnapLocations = true;
-	function drawObject(object) {
-	  let center, coolor, potentalSnap;
-	  switch (object.object().constructor.name) {
-	    case 'Square2d':
-	      const square = object.object();
-	      center = square.center();
-	      updateHoverMap(object, center, center, 30);
-	      color = hoverId() === object.toString() ? 'green' : 'white';
-	      draw.square(square, color, object.parent().name());
-	      potentalSnap = object.potentalSnapLocation();
-	      if (showAllSnapLocations)
-	        drawSnapLocation(object.snapLocations());
-	
-	      drawSnapLocation(object.snapLocations.paired(), 'black');
-	      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
-	      SnapLocation2d.active(object.snapLocations.notPaired());
-	      break;
-	    case 'Polygon2d':
-	      const poly = object.object();
-	      center = poly.center();
-	      updateHoverMap(object, center, center, 30);
-	      color = hoverId() === object.toString() ? 'green' : 'black';
-	      draw(poly, color, object.parent().name());
-	      potentalSnap = object.potentalSnapLocation();
-	      if (showAllSnapLocations)
-	        drawSnapLocation(object.snapLocations());
-	
-	      drawSnapLocation(object.snapLocations.paired(), 'black');
-	      if (potentalSnap instanceof SnapLocation2d) drawSnapLocation([potentalSnap], 'white');
-	      SnapLocation2d.active(object.snapLocations.notPaired());
-	      break;
-	    case 'Line2d':
-	      draw.line(object);
-	      break;
-	    case 'Circle2d':
-	      draw.circle(object);
-	      break;
-	    case 'Layout2d':
-	      drawLayout(object); // NOT IMPLEMENTED YET!!!
-	      break;
-	    default:
-	      throw new Error(`Cannot draw object with constructor: ${object.object().constructor.name}`);
-	  }
-	}
-	
-	function illustrate(canvas) {
-	  if (layout === undefined) return;
-	  SnapLocation2d.clear();
-	  resetHoverMap();
-	  let lastEndPoint = {x: 20, y: 20};
-	
-	  draw.beginPath();
-	  const walls = layout.walls();
-	  let previousEndpoint;
-	  let wl = walls.length;
-	  walls.forEach((wall, index) => {
-	    lastEndPoint = drawWall(wall, lastEndPoint);
-	    const previousWall = walls[(index - 1) % wl];
-	    if (previousEndpoint)
-	      drawVertex(wall.startVertex());
-	    previousEndpoint = lastEndPoint;
-	  }, true);
-	  drawVertex(walls[0].startVertex());
-	  drawMeasurementValues();
-	  layout.objects().forEach((obj) => drawObject(obj.topview()));
-	}
-	
-	let panZ;
-	function init() {
-	  const canvas = document.getElementById('two-d-model');
-	  draw = new Draw2D(canvas);
-	  panZ = panZoom(canvas, illustrate);
-	  panZ.onMove(onMove);
-	  panZ.onMousedown(onMousedown);
-	  panZ.onMouseup(onMouseup);
-	  // draw(canvas);
-	  TwoDLayout.panZoom = panZ;
-	  du.on.match('keycombo:Control,z', '*', undo);
-	  du.on.match('keycombo:Control,Shift,Z', '*', redo);
-	}
-	
-	TwoDLayout.init = init;
-	module.exports = TwoDLayout;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/draw.js',
-function (require, exports, module) {
-	
-const Circle2d = require('./objects/circle');
-	const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const tol = .1;
-	let vertLocTolMap;
-	
-	class Draw2d {
-	  constructor(canvasOselector, invertY) {
-	    const yCoef = invertY ? -1 : 1;
-	    let takenLocations;
-	    let coloredLocations;
-	
-	    function canvas() {
-	      if (typeof canvasOid === 'string') return du.find(canvasOselector);
-	      return canvasOselector;
-	    }
-	    const ctx = () => canvas().getContext('2d');
-	
-	    function draw(object, color, width) {
-	      if (object === undefined) return;
-	      if (Array.isArray(object)) {
-	        takenLocations = [];
-	        vertLocTolMap = new ToleranceMap({x: tol, y: tol});
-	        for (let index = 0; index < object.length; index += 1)
-	          draw(object[index], color, width);
-	        return;
-	      }
-	      let constructorId = object.constructor.name;
-	      constructorId = constructorId.replace(/^(Snap).*$/, '$1')
-	      switch (constructorId) {
-	        case 'Line2d':
-	          draw.line(object, color, width);
-	          break;
-	        case 'Circle2d':
-	          draw.circle(object, color, width);
-	          break;
-	        case 'Plane2d':
-	          draw.plane(object, color, width);
-	          break;
-	        case 'Polygon2d':
-	          draw.polygon(object, color, width);
-	          break;
-	        case 'Square2d':
-	          draw.square(object, color, width);
-	          break;
-	        case 'LineMeasurement2d':
-	          draw.measurement(object, color, width);
-	          break;
-	        case 'Snap':
-	          draw.snap(object, color, width);
-	          break;
-	        default:
-	          console.error(`Cannot Draw '${object.constructor.name}'`);
-	      }
-	    }
-	
-	    draw.canvas = canvas;
-	    draw.ctx = ctx;
-	    draw.beginPath = () => ctx().beginPath();
-	    draw.moveTo = () => ctx().moveTo();
-	
-	    draw.clear = () => {
-	      ctx().save();
-	      ctx().setTransform(1, 0, 0, 1, 0, 0);
-	      ctx().clearRect(0, 0, canvas().width, canvas().height);
-	      ctx().restore();
-	    }
-	    const colors = [
-	      'indianred', 'gray', 'fuchsia', 'lime', 'black', 'lightsalmon', 'red',
-	      'maroon', 'yellow', 'olive', 'lightcoral', 'green', 'aqua', 'white',
-	      'teal', 'darksalmon', 'blue', 'navy', 'salmon', 'silver', 'purple'
-	    ];
-	    let colorIndex = 0;
-	
-	    let rMultiplier = 1;
-	    function identifyVertices(line) {
-	      vertLocTolMap.add(line.startVertex());
-	      vertLocTolMap.add(line.endVertex());
-	      const svHits = vertLocTolMap.matches(line.startVertex()).length;
-	      const evHits = vertLocTolMap.matches(line.endVertex()).length;
-	      const svRadius = Math.pow(.5,  1 + ((svHits - 1) * .75));
-	      const evRadius = Math.pow(.5,  1 + ((evHits - 1) * .75));
-	
-	      const vertId = 13*(line.startVertex().x() + line.endVertex().x() + 13*(line.startVertex().y() + line.endVertex().y()));
-	      const ccolor = colors[Math.floor(line.length() + vertId) % colors.length];
-	
-	      draw.circle(new Circle2d(svRadius * rMultiplier, line.startVertex()), null, ccolor, .01);
-	      draw.circle(new Circle2d(evRadius * rMultiplier, line.endVertex()), null, ccolor, .01);
-	    }
-	
-	    draw.line = (line, color, width, doNotMeasure) => {
-	      if (line === undefined) return;
-	      color = color ||  'black';
-	      width = width || 10;
-	      const measurePoints = line.measureTo();
-	      ctx().beginPath();
-	      ctx().strokeStyle = color;
-	      ctx().lineWidth = width;
-	      ctx().moveTo(line.startVertex().x(), yCoef * line.startVertex().y());
-	      ctx().lineTo(line.endVertex().x(), yCoef * line.endVertex().y());
-	      ctx().stroke();
-	      // identifyVertices(line);
-	    }
-	
-	    draw.plane = (plane, color, width) => {
-	      if (plane === undefined) return;
-	      color = color ||  'black';
-	      width = width || .1;
-	      plane.getLines().forEach((line) => draw.line(line, color, width));
-	    }
-	
-	    draw.polygon = (poly, color, width) => {
-	      if (poly === undefined) return;
-	      color = color ||  'black';
-	      width = width || .1;
-	      poly.lines().forEach((line) => draw.line(line, color, width));
-	      if ((typeof poly.getTextInfo) === 'function') {
-	        ctx().save();
-	        const info = poly.getTextInfo();
-	        ctx().translate(info.center.x(), yCoef * info.center.y());
-	        ctx().rotate(info.radians);
-	        ctx().beginPath();
-	        ctx().lineWidth = 4;
-	        ctx().strokeStyle = 'black';
-	        ctx().fillStyle =  'black';
-	        const text = info.limit === undefined ? info.text : info.text.substring(0, info.limit);
-	        ctx().fillText(text, info.x, yCoef * info.y, info.maxWidth);
-	        ctx().stroke()
-	        ctx().restore();
-	      }
-	    }
-	
-	    draw.square = (square, color, text) => {
-	      ctx().save();
-	      ctx().beginPath();
-	      ctx().lineWidth = 2;
-	      ctx().strokeStyle = 'black';
-	      ctx().fillStyle = color;
-	
-	      const center = square.center();
-	      ctx().translate(center.x(), yCoef * center.y());
-	      ctx().rotate(square.radians());
-	      ctx().rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
-	      ctx().stroke();
-	      ctx().fill();
-	
-	      if (text) {
-	        ctx().beginPath();
-	        ctx().lineWidth = 4;
-	        ctx().strokeStyle = 'black';
-	        ctx().fillStyle =  'black';
-	        ctx().fillText(text, 0, square.height() / 4, square.width());
-	        ctx().stroke()
-	      }
-	
-	      ctx().restore();
-	    }
-	
-	    draw.text = (text, center, width, color, maxWidth) => {
-	      ctx().beginPath();
-	      ctx().lineWidth = width || 4;
-	      ctx().strokeStyle = color || 'black';
-	      ctx().fillStyle =  color || 'black';
-	      ctx().font = width + "px Arial";
-	      ctx().fillText(text, center.x, yCoef * center.y, maxWidth);
-	      ctx().stroke()
-	    }
-	
-	    draw.circle = (circle, lineColor, fillColor, lineWidth) => {
-	      const center = circle.center();
-	      ctx().beginPath();
-	      ctx().lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
-	      ctx().strokeStyle = lineColor || 'black';
-	      ctx().fillStyle = fillColor || 'white';
-	      ctx().arc(center.x(),yCoef * center.y(), circle.radius(),0, 2*Math.PI);
-	      ctx().stroke();
-	      ctx().fill();
-	    }
-	
-	    const blank = 4;
-	    const hblank = blank/2;
-	    function drawMeasurementLabel(line, measurement) {
-	      if (measurement === undefined) return;
-	      const ctx = draw.ctx();
-	      const midpoint = line.midpoint();
-	
-	      ctx.save();
-	      ctx.lineWidth = 0;
-	      const length = measurement.display();
-	      const textLength = length.length;
-	      ctx.translate(midpoint.x(), yCoef * midpoint.y());
-	      ctx.rotate(line.radians());
-	      ctx.beginPath();
-	      ctx.fillStyle = "white";
-	      ctx.strokeStyle = 'white';
-	      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
-	      ctx.fill();
-	      ctx.stroke();
-	
-	      ctx.beginPath();
-	      ctx.font = '3px Arial';//(Math.abs((Math.log(Math.floor(line.length() * 10)))) || .1) + "px Arial";
-	      ctx.lineWidth = .2;
-	      ctx.strokeStyle = 'black';
-	      ctx.fillStyle =  'black';
-	      ctx.fillText(length, 0, 0);
-	      ctx.stroke()
-	      ctx.restore();
-	    }
-	
-	    draw.measurement = (measurement, color, textWidth) => {
-	      const measurementColor = color || 'grey';
-	      const measurementLineWidth = '.1';
-	      const lines = measurement.I(1, takenLocations);
-	      try {
-	        const winner = lines.midpointClear();
-	        if (winner === undefined) return;
-	        draw.beginPath();
-	        draw.line(winner.startLine, measurementColor, measurementLineWidth, true);
-	        draw.line(winner.endLine, measurementColor, measurementLineWidth, true);
-	        draw.line(winner, measurementColor, measurementLineWidth, true);
-	        drawMeasurementLabel(winner, measurement);
-	      } catch (e) {
-	        console.error('Measurement render error:', e);
-	      }
-	    }
-	
-	    function snapLocColor(snapLoc) {
-	      const locIdentifier = snapLoc.location().replace(/(back)[0-9]*(Center|)/, '$1$2');
-	      switch (locIdentifier) {
-	        case "right": return 'red';
-	        case "rightCenter": return 'pink';
-	        case "left": return 'blue';
-	        case "leftCenter": return 'aqua';
-	        case "back": return 'green';
-	        case "backCenter": return 'yellow';
-	        default: return "grey"
-	      }
-	    }
-	
-	    function drawSnapLocation(locations, color) {
-	      for (let index = 0; index < locations.length; index += 1) {
-	        const loc = locations[index];
-	        const c = color || snapLocColor(loc);
-	        const pos = loc.at();
-	        draw.circle(loc.circle(), 'black', c);
-	        const vertex = loc.vertex();
-	      }
-	    }
-	
-	    draw.snap = (snap, color, width) => {
-	      draw(snap.normals);
-	      draw(snap.object(), color, width);
-	      drawSnapLocation(snap.snapLocations());
-	    }
-	
-	    return draw;
-	  }
-	}
-	
-	module.exports = Draw2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/company.js',
-function (require, exports, module) {
-	
-
-	
-	const Door = require('./assembly/assemblies/door/door.js');
-	
-	class Company {
-	  constructor(properties) {
-	    if (!properties.name) throw new Error('Company name must be defined')
-	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
-	    this.name = () => properties.name;
-	    this.email = () => properties.email;
-	    this.address = () => properties.address;
-	    Company.list[this.name()] = this;
-	  }
-	}
-	
-	Company.list = {};
-	new Company({name: 'Central Door'});
-	new Company({name: 'Central Wood'});
-	new Company({name: 'ADC'});
-	new Company({name: 'Accessa'});
-	new Company({name: 'Top Knobs'});
-	new Company({name: 'Richelieu'});
-	module.exports = Company
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/group.js',
-function (require, exports, module) {
-	
-const PropertyConfig = require('../config/property/config');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	
-	class Group extends Lookup {
-	  constructor(room, name, id) {
-	    super(id);
-	    room ||= Group.defaultRoom;
-	    const initialVals = {
-	      name: name || 'Group',
-	    }
-	    Object.getSet(this, initialVals);
-	    this.propertyConfig = new PropertyConfig();
-	    this.objects = [];
-	    this.room = () => room;
-	    this.toJson = () => {
-	      const json = {objects: [], _TYPE: 'Group'};
-	      this.objects.forEach((obj) => json.objects.push(obj.toJson()));
-	      json.name = this.name();
-	      json.id = this.id();
-	      json.roomId = this.room().id();
-	      json.propertyConfig = this.propertyConfig.toJson();
-	      return json;
-	    }
-	  }
-	}
-	
-	Group.count = 0;
-	new Group();
-	
-	Group.fromJson = (json) => {
-	  const room = Lookup.get(json.roomId);
-	  const group = new Group(room, json.name, json.id);
-	  group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
-	  json.objects.forEach((objJson) => {
-	    const jsonClazz = Object.class.get(json.objects[0]._TYPE);
-	    const obj = jsonClazz.fromJson(objJson, group);
-	    group.objects.push(obj);
-	    obj.group(group);
-	  });
-	  return group;
-	}
-	
-	module.exports = Group;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/three-d-model.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../public/js/3d-modeling/csg');
-	
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
-	
-	const Polygon3D = require('./objects/polygon');
-	const BiPolygon = require('./objects/bi-polygon');
-	const Polygon2d = require('../two-d/objects/polygon');
-	const Line2d = require('../two-d/objects/line');
-	const Vertex2d = require('../two-d/objects/vertex');
-	const Vertex3D = require('./objects/vertex');
-	const Vector3D = require('./objects/vector');
-	const Line3D = require('./objects/line');
-	const Plane = require('./objects/plane');
-	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
-	const OrientationArrows = require('../displays/orientation-arrows.js');
-	const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
-	const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
-	const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
-	const ThreeDModelSimple = require('./simple');
-	
-	const colors = {
-	  indianred: [205, 92, 92],
-	  gray: [128, 128, 128],
-	  fuchsia: [255, 0, 255],
-	  lime: [0, 255, 0],
-	  black: [0, 0, 0],
-	  lightsalmon: [255, 160, 122],
-	  red: [255, 0, 0],
-	  maroon: [128, 0, 0],
-	  yellow: [255, 255, 0],
-	  olive: [128, 128, 0],
-	  lightcoral: [240, 128, 128],
-	  green: [0, 128, 0],
-	  aqua: [0, 255, 255],
-	  white: [255, 255, 255],
-	  teal: [0, 128, 128],
-	  darksalmon: [233, 150, 122],
-	  blue: [0, 0, 255],
-	  navy: [0, 0, 128],
-	  salmon: [250, 128, 114],
-	  silver: [192, 192, 192],
-	  purple: [128, 0, 128]
-	}
-	
-	const colorChoices = Object.keys(colors);
-	let colorIndex = 0;
-	function getColor(name) {
-	  if(colors[name]) return colors[name];
-	  return colors[colorChoices[colorIndex++ % colorChoices.length]];
-	  // return colors.white;
-	}
-	
-	class ThreeDModel {
-	  constructor(assembly) {
-	    const hiddenPartIds = {};
-	    const hiddenPartNames = {};
-	    const hiddenPrefixes = {};
-	    const instance = this;
-	    let hiddenPrefixReg;
-	    let extraObjects = [];
-	    let inclusiveTarget = {};
-	    let partMap;
-	    let renderId;
-	    let targetPartName;
-	    let lastRendered;
-	    let rootAssembly = assembly.getRoot();
-	    this.setTargetPartName = (id) => targetPartName = id;
-	    this.getLastRendered = () => lastRendered;
-	
-	    this.assembly = (a) => {
-	      if (a !== undefined) {
-	        assembly = a;
-	        rootAssembly = a.getRoot();
-	      }
-	      return assembly;
-	    }
-	
-	    this.partMap = () => partMap;
-	    this.isTarget = (type, value) => {
-	      return inclusiveTarget.type === type && inclusiveTarget.value === value;
-	    }
-	    this.inclusiveTarget = function(type, value) {
-	      let prefixReg;
-	      if (type === 'prefix') prefixReg = new RegExp(`^${value}`)
-	      inclusiveTarget = {type, value, prefixReg};
-	    }
-	
-	    function inclusiveMatch(part) {
-	      if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
-	      switch (inclusiveTarget.type) {
-	        case 'prefix':
-	          return part.partName().match(inclusiveTarget.prefixReg) !== null;
-	          break;
-	        case 'part-name':
-	          return part.partName() === inclusiveTarget.value;
-	        case 'part-id':
-	          return part.id() === inclusiveTarget.value;
-	        default:
-	          throw new Error('unknown inclusiveTarget type');
-	      }
-	    }
-	
-	    function manageHidden(object) {
-	      return function (attr, value) {
-	        if (value === undefined) return object[attr] === true;
-	       object[attr] = value === true;
-	       instance.render();
-	      }
-	    }
-	
-	    // Quick and dirty
-	    function centerModel(model) {
-	      const offset = model.distCenter();
-	      offset.z += 100;
-	      offset.y -= 50;
-	      offset.x -= 50;
-	      model.translate(offset);
-	    }
-	
-	    function buildHiddenPrefixReg() {
-	      const list = [];
-	      const keys = Object.keys(hiddenPrefixes);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        if (hiddenPrefixes[key] === true) {
-	          list.push(key);
-	        }
-	      }
-	      hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
-	    }
-	
-	    this.hidePartId = manageHidden(hiddenPartIds);
-	    this.hidePartName = manageHidden(hiddenPartNames);
-	    this.hidePrefix = manageHidden(hiddenPrefixes);
-	
-	    function hasHidden(hiddenObj) {
-	      const keys = Object.keys(hiddenObj);
-	      for(let i = 0; i < hiddenObj.length; i += 1)
-	        if (hidden[keys[index]])return true;
-	      return false;
-	    }
-	    this.noneHidden = () => !hasHidden(hiddenPartIds) &&
-	        !hasHidden(hiddenPartNames) && !hasHidden(hiddenPrefixes);
-	
-	    this.depth = (label) => label.split('.').length - 1;
-	
-	    function hidden(part, level) {
-	      if (!part.included()) return true;
-	      const im = inclusiveMatch(part);
-	      if (im !== null) return !im;
-	      if (instance.hidePartId(part.id())) return true;
-	      if (instance.hidePartName(part.partName())) return true;
-	      if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
-	      return false;
-	    }
-	
-	    let xzFootprint;
-	    function createXZfootprint(model, cabinet) {
-	      const cube = CSG.cube({demensions: [cabinet.width(),1,cabinet.thickness()], center: model.center});
-	      xzFootprint = cube.intersect(model);
-	      // xzFootprint = Polygon2d.lines(...twoDmap.xz);
-	    }
-	
-	    this.xzFootprint = () => xzFootprint;
-	
-	    function coloring(part) {
-	      if (part.partName() && part.partName().match(/.*Frame.*/)) return getColor('blue');
-	      else if (part.partName() && part.partName().match(/.*Drawer.Box.*/)) return getColor('green');
-	      else if (part.partName() && part.partName().match(/.*Handle.*/)) return getColor('silver');
-	      return getColor('red');
-	    }
-	
-	    const randInt = (start, range) => start + Math.floor(Math.random() * range);
-	    function debugColoring() {
-	      return [randInt(0, 255),randInt(0, 255),randInt(0, 255)];
-	    }
-	
-	    this.addVertex = (center, radius, color) => {
-	      radius ||= .5;
-	      const vertex = CSG.sphere({center, radius});
-	      vertex.setColor(getColor(color));
-	      extraObjects.push(vertex);
-	    }
-	
-	    this.removeAllExtraObjects = () => extraObjects = [];
-	
-	    function distance(verts) {
-	      let dist = 0;
-	      for (let index = 1; index < verts.length; index++) {
-	        dist += verts[index -1].distance(verts[index]);
-	      }
-	      return dist;
-	    }
-	
-	    function toTwoDpolys(model) {
-	      if (model === undefined) return undefined;
-	      if (model.threeView) return model;
-	      const polys = Polygon3D.fromCSG(model.polygons);
-	      polys.normals = model.normals;
-	      Polygon3D.merge(polys);
-	      const threeView = Polygon3D.toThreeView(polys, polys.normals);
-	      model.threeView = threeView;
-	      return model;
-	    }
-	
-	    let lm;
-	    this.lastModel = () => toTwoDpolys(lm);
-	
-	    const topVector = new Vector3D(0,-1,0);
-	
-	    const polyTol = .01;
-	    const polyToleranceMap = new ToleranceMap({'i': polyTol,'j': polyTol,'k': polyTol, length: .0001});
-	    function create2DcabinetImage(model) {
-	      let polygons = model.polygons;//(model.simpleModel ? model.simpleModel.toModel(true) : model).polygons;
-	      const polys = Polygon3D.fromCSG(polygons);
-	      model.threeView = Polygon3D.toThreeView(polys);
-	      model.threeView.front = Polygon2d.toParimeter(model.threeView.front).lines();
-	      model.threeView.right = Polygon2d.toParimeter(model.threeView.right).lines();
-	      const topPoly2d = Polygon2d.toParimeter(model.threeView.top);
-	      model.threeView.top = topPoly2d.lines();
-	
-	      const frontMinMax = Vertex2d.minMax(Line2d.vertices(model.threeView.front));
-	      const height = frontMinMax.diff.y();
-	      const width = frontMinMax.diff.x();
-	      const depth = Vertex2d.minMax(Line2d.vertices(model.threeView.right)).diff.x();
-	      const topPoly = Polygon3D.from2D(topPoly2d);
-	      topPoly.rotate({x:90,y:0,z:0});
-	      model.cabinetSolid = BiPolygon.fromPolygon(topPoly, 0, height);
-	      model.cabinetSolid.center(model.center);
-	      model.simple = model.cabinetSolid.toModel();
-	      const defualtCube = CSG.cube({demesions: [width, height, depth], center: [model.center.x, model.center.y, model.center.z]});
-	      return model;
-	    }
-	
-	    function addModelAttrs(model) {
-	      const max = new Vertex3D(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
-	      const min = new Vertex3D(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER);
-	      const polys = model.polygons;
-	      for (let index = 0; index < polys.length; index++) {
-	        const poly = polys[index];
-	        const verts = poly.vertices;
-	        const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
-	        const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
-	        poly.center = new Vertex3D(midrangePoint);
-	        poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
-	      }
-	      const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
-	      model.center = new Vertex3D(Math.midrange(polys, targetAttrs));
-	      model.max = max;
-	      model.min = min;
-	    }
-	
-	    let simpleModel;
-	    this.render = function () {
-	      ThreeDModel.lastActive = this;
-	      const cacheId = rootAssembly.id();
-	      // FunctionCache.on(cacheId);
-	      FunctionCache.on('sme');
-	
-	      const startTime = new Date().getTime();
-	      buildHiddenPrefixReg();
-	      function buildObject(assem) {
-	        let a = assem.toModel();
-	        let normals = a.normals;
-	        // const c = assem.position().center();
-	        const e=1;
-	        // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
-	        a.setColor(...getColor());
-	        assem.getJoints().female.forEach((joint) => {
-	          const male = joint.getMale();
-	          const m = male.toModel();
-	          a = a.subtract(m);
-	        });
-	        // else a.setColor(1, 0, 0);
-	        a.normals = normals;
-	        return a;
-	      }
-	      const assemblies = this.assembly().getParts();
-	      const root = assemblies[0].getRoot();
-	      simpleModel = new ThreeDModelSimple(root);
-	      let a;
-	      partMap = {};
-	      for (let index = 0; index < assemblies.length; index += 1) {
-	        const assem = assemblies[index];
-	        partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
-	        if (!hidden(assem)) {
-	          const b = buildObject(assem);
-	          simpleModel.add(assem, b);
-	          // const c = assem.position().center();
-	          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
-	          if (a === undefined) a = b;
-	          else if (b && b.polygons.length !== 0) {
-	            a = a.union(b);
-	          }
-	          if (assem.partName() === targetPartName) {
-	            lm = b.clone();
-	            const lastModel = this.lastModel();
-	            lastModelUpdateEvent.trigger(undefined, lastModel);
-	          }
-	        }
-	      }
-	      a.simpleModel = simpleModel;
-	      if (a && ThreeDModel.getViewer(a)) {
-	        addModelAttrs(a);
-	        // create2DcabinetImage(a);
-	        const displayModel = simpleModel.toModel();//a.simple ? a.simple : a;
-	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
-	        // centerModel(displayModel);
-	        viewer.mesh = displayModel.toMesh();
-	        viewer.gl.ondraw();
-	        lastRendered = a;
-	        lastRendered.threeView = lastRendered.simpleModel.threeView();
-	        renderObjectUpdateEvent.trigger(undefined, lastRendered);
-	        console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
-	      }
-	      // FunctionCache.off(cacheId);
-	      FunctionCache.off('sme');
-	    }
-	
-	    this.update = () => {
-	      const rId = renderId = String.random();
-	      ThreeDModel.renderId = renderId;
-	      setTimeout(() => {
-	        if(renderId === rId) instance.render();
-	      }, 250);
-	    };
-	  }
-	}
-	
-	function centerOnObj(x,y,z) {
-	  const model = ThreeDModel.lastActive.getLastRendered();
-	  const center = model.center.copy();
-	  center.x += 200 * y;
-	  center.y += -200 * x;
-	  center.z += 100;
-	  const rotation = {x: x*90, y: y*90, z: z*90};
-	
-	  return [center, rotation];
-	}
-	
-	let viewer;
-	let viewerSelector = '#three-d-model';
-	let viewerSize = '60vh';
-	ThreeDModel.setViewerSelector = (selector, size) => {
-	  viewerSelector = selector;
-	  viewerSize = size || viewerSize;
-	  viewer = undefined;
-	}
-	
-	// function updateCanvasSize(canvas) {
-	//   canvas.style.width = viewerSize;
-	//   const dem = Math.floor(canvas.getBoundingClientRect().width);
-	//   canvas.width = dem;
-	//   canvas.height = dem;
-	//   canvas.style.width = `${dem}px`;
-	//   canvas.style.width = `${dem}px`;
-	// }
-	
-	ThreeDModel.getViewer = (model) => {
-	  if (viewer) return viewer;
-	  const canvas = du.find(viewerSelector);
-	  if (canvas) {
-	    const size = du.convertCssUnit(viewerSize);
-	    if (model === undefined) return undefined;
-	    viewer = new Viewer(model, size, size, 50);
-	    addViewer(viewer, viewerSelector);
-	    const orientArrows = new OrientationArrows(`${viewerSelector} .orientation-controls`);
-	    orientArrows.on.center(() =>
-	      viewer.viewFrom(...centerOnObj(0,0, 0)));
-	    orientArrows.on.up(() =>
-	      viewer.viewFrom(...centerOnObj(1, 0,0)));
-	    orientArrows.on.down(() =>
-	      viewer.viewFrom(...centerOnObj(-1,0,0)));
-	    orientArrows.on.left(() =>
-	      viewer.viewFrom(...centerOnObj(0,-1,0)));
-	    orientArrows.on.right(() =>
-	      viewer.viewFrom(...centerOnObj(0,1,0)));
-	  }
-	  return viewer;
-	}
-	
-	ThreeDModel.models = {};
-	ThreeDModel.get = (assembly) => {
-	  if (assembly === undefined) return ThreeDModel.lastActive;
-	  if (ThreeDModel.models[assembly.id()] === undefined) {
-	    ThreeDModel.models[assembly.id()] = new ThreeDModel(assembly);
-	  }
-	  return ThreeDModel.models[assembly.id()];
-	}
-	ThreeDModel.render = (part) => {
-	  const renderId = String.random();
-	  ThreeDModel.renderId = renderId;
-	  setTimeout(() => {
-	    if(ThreeDModel.renderId === renderId) {
-	      const cacheId = part.getRoot().id();
-	      FunctionCache.on(cacheId);
-	      ThreeDModel.get(part).render();
-	      FunctionCache.off(cacheId);
-	    }
-	  }, 2500);
-	};
-	
-	const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
-	ThreeDModel.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
-	
-	const renderObjectUpdateEvent = new CustomEvent('renderObjectUpdate');
-	ThreeDModel.onRenderObjectUpdate = (func) => renderObjectUpdateEvent.on(func);
-	
-	
-	module.exports = ThreeDModel
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/simple.js',
-function (require, exports, module) {
-	
-const Vertex3D = require('./objects/vertex');
-	const Line3D = require('./objects/line');
-	const Vector3D = require('./objects/vector');
-	const Polygon3D = require('./objects/polygon');
-	const BiPolygon = require('./objects/bi-polygon');
-	const Plane = require('./objects/plane');
-	const Polygon2d = require('../two-d/objects/polygon');
-	const Vertex2d = require('../two-d/objects/vertex');
-	const Line2d = require('../two-d/objects/line');
-	const SnapPolygon = require('../two-d/objects/snap/polygon');
-	
-	
-	class ThreeDModelSimple {
-	  constructor(cabinet) {
-	    const assemblies = [];
-	    let cabinetCSG;
-	    let center, threeView, silhouette;
-	
-	    this.cabinet = () => cabinet;
-	    this.add = (assembly, csg) => {
-	      if (assembly && assembly.inElivation) {
-	        assemblies.push(assembly);
-	      }
-	      if (cabinet.children().indexOf(assembly) !== -1) {
-	        // TODO: Hacky fix errors created by toModel not including joint information
-	        if (cabinetCSG === undefined) cabinetCSG = csg;//assembly.toModel(true);
-	        else cabinetCSG = cabinetCSG.union(csg);//assembly.toModel(true));
-	      }
-	    }
-	
-	    this.normals = () => {
-	      const normals = [];
-	      for (let index = 0; index < cabinet.openings.length; index++) {
-	        const sectionProps = cabinet.openings[index].sectionProperties();
-	        normals.push(sectionProps.outerPoly().normal());
-	      }
-	      return normals;
-	    }
-	
-	    this.normal = () => new Vector3D(Math.mean(this.normals(), ['i', 'j', 'k']));
-	
-	    this.center = () => {
-	      if (!center) {
-	        if (cabinetCSG === undefined) return new Vertex3D(0,0,0);
-	        const polys = cabinetCSG.polygons;
-	        for (let index = 0; index < polys.length; index++) {
-	          const poly = polys[index];
-	          const verts = poly.vertices;
-	          const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
-	          const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
-	          poly.center = new Vertex3D(midrangePoint);
-	          poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
-	        }
-	        const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
-	        center = new Vertex3D(Math.midrange(polys, targetAttrs));
-	      }
-	      return center;
-	    }
-	
-	    this.threeView = () => {
-	      if (!threeView) {
-	        const polys = Polygon3D.fromCSG(cabinetCSG.polygons);
-	        threeView = Polygon3D.toThreeView(polys);
-	        threeView.front = Polygon2d.toParimeter(threeView.front).lines();
-	        threeView.right = Polygon2d.toParimeter(threeView.right).lines();
-	        const topPoly2d = Polygon2d.toParimeter(threeView.top);
-	        threeView.top = topPoly2d.lines();
-	      }
-	      return threeView;
-	    }
-	
-	    this.cabinetSilhouette = () => {
-	      if (!silhouette) {
-	        let polygons = cabinetCSG.polygons;
-	        const polys = Polygon3D.fromCSG(polygons);
-	        const threeView = Polygon3D.toThreeView(polys);
-	        threeView.front = Polygon2d.toParimeter(threeView.front).lines();
-	        threeView.right = Polygon2d.toParimeter(threeView.right).lines();
-	        const topPoly2d = Polygon2d.toParimeter(threeView.top);
-	        threeView.top = topPoly2d.lines();
-	
-	        const frontMinMax = Vertex2d.minMax(Line2d.vertices(threeView.front));
-	        const height = frontMinMax.diff.y();
-	        const width = frontMinMax.diff.x();
-	        const depth = Vertex2d.minMax(Line2d.vertices(threeView.right)).diff.x();
-	        const topPoly = Polygon3D.from2D(topPoly2d);
-	        topPoly.rotate({x:90,y:0,z:0});
-	        silhouette = BiPolygon.fromPolygon(topPoly, 0, height);
-	        silhouette.center(this.center());
-	      }
-	      return silhouette;
-	    }
-	
-	    this.toModel = (simpler, centerOn) => {
-	      const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
-	      let model = this.cabinetSilhouette().toModel();
-	      model.translate(offset);
-	      for (let index = 0; !simpler && index < assemblies.length; index++) {
-	        const csg = assemblies[index].toModel(true);
-	        csg.translate(offset);
-	        model = model.union(csg);
-	      }
-	      return model;
-	    }
-	
-	    this.viewFromVector = (vector, in2D, axis) => {
-	      let output = cabinet.toBiPolygon();
-	      output.center(this.center());
-	      if (in2D) {
-	        output = Polygon3D.toTwoD(output.toPolygons(), vector, axis);
-	        axis ||= output.axis;
-	        output = Polygon2d.toParimeter(output).lines();
-	      } else {
-	        output = output.toModel();
-	      }
-	      for (let i = 0; i < assemblies.length; i++) {
-	        if (in2D) {
-	          // TODO: overwiting this.toModel causes the commented line to fail.... should be rectified.
-	          // const twoDlines = Polygon3D.toTwoD(assemblies[i].toBiPolygon().toPolygons(), vector, axis);
-	          const polygons = Polygon3D.fromCSG(assemblies[i].toModel(true).polygons);
-	          const twoDlines = Polygon3D.toTwoD(polygons, vector, axis);
-	          output.concatInPlace(twoDlines);
-	        } else
-	          output.union(assemblies[i].toModel());
-	      }
-	      return output;
-	    }
-	
-	    this.topViewSnap = () => {
-	      const c = cabinet;
-	      if (c.snapObject === undefined) {
-	        const polys = this.cabinetSilhouette().toPolygons();
-	        const threeView = Polygon3D.toThreeView(polys);
-	        let topView = Polygon2d.toParimeter(threeView.top);
-	        console.log('isClockwise?', topView.clockWise());
-	        const layout = c.group().room().layout();
-	        const normals = c.normals();
-	        const dist = c.width() > c.thickness() ? c.width() : c.thickness();
-	        const lines = topView.lines();
-	        const topCenter = Vertex2d.center(Line2d.vertices(lines));
-	        const normalLines = normals.map((n) => {
-	          const searchLine = Line3D.startAndVector(this.center(), n.scale(dist));
-	          const searchLine2d = searchLine.to2D(threeView.axis.top[0], threeView.axis.top[1]);
-	          searchLine2d.translate(new Line2d(searchLine2d.startVertex(), topCenter));
-	          return searchLine2d;
-	        });
-	        const faceIndecies = normalLines.map((normalLine) => {
-	          for (let index = 0; index < lines.length; index++) {
-	            if (lines[index].findSegmentIntersection(normalLine, true))
-	              return index;
-	          }
-	        });
-	        topView.faceIndecies(faceIndecies)
-	        const layoutObject = layout.addObject(c.id(), c, c.partName(), topView);
-	        layoutObject.topview().normals = normalLines;
-	        c.snapObject = layoutObject;
-	
-	      }
-	      return cabinet.snapObject.topview();
-	    }
-	
-	    this.frontView = () => this.viewFromVector(this.normal(), true);
-	  }
-	}
-	
-	module.exports = ThreeDModelSimple;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/layout.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	
-	
-	Layout2D.Wall2D = Wall2D;
-	Layout2D.Window2D = Window2D;
-	Layout2D.Object2d = Object2d;
-	Layout2D.Door2D = Door2D;
-	module.exports = Layout2D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/order.js',
-function (require, exports, module) {
-	
-
-	
-	const Room = require('./room.js');
-	
-	class Order {
-	  constructor(name, id) {
-	    if (id === null) this.loaded = false;
-	    else this.loaded = true;
-	    const initialVals = {
-	      name: name || ++Order.count,
-	      id: id || String.random(32),
-	    }
-	    Object.getSet(this, initialVals, 'rooms');
-	    this.rooms = {};
-	    this.addRoom = (name) => this.rooms[name] = new Room(name);
-	  }
-	}
-	
-	Order.count = 0;
-	module.exports = Order
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/room.js',
 function (require, exports, module) {
 	
@@ -25694,495 +25855,1278 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/config/cabinet-configs.js',
+RequireJS.addFunction('./app-src/objects/group.js',
 function (require, exports, module) {
 	
-
-	
-	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const Inputs = require('../input/inputs.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const EPNTS = require('../../generated/EPNTS.js');
-	const CabinetTemplate = require('./cabinet-template');
-	const ValueCondition = require('../../../../public/js/utils/input/decision/decision.js').ValueCondition;
-	const Cabinets = require('./cabinets.json');
-	const CabinetLayouts = require('./cabinet-layouts');
-	
-	const configs = {};
-	class CabinetConfig {
-	  constructor(cabinets, id) {
-	    let cabinetList = {};
-	    let cabinetKeys = {};
-	    let configKeys;
-	
-	    this.valid = (type, id) => (!id ?
-	                  cabinets[type] : cabinetKeys[type][id]) !== undefined;
-	
-	    this.inputTree = () => {
-	      const types = JSON.parse(JSON.stringify(configKeys));
-	      const typeInput = new Select({
-	        name: 'type',
-	        label: 'Type',
-	        inline: false,
-	        class: 'center',
-	        list: types
-	      });
-	      const nameInput = new Input({
-	        name: 'name',
-	        inline: true,
-	        label: 'Name (optional)',
-	        class: 'center',
-	      });
-	      const layoutInput = new Input({
-	        label: 'Layout (Optional)',
-	        name: 'layout',
-	        inline: true,
-	        class: 'center',
-	        clearOnDblClick: true,
-	        list: CabinetLayouts.list()
-	      });
-	
-	      const inputs = [layoutInput, nameInput, typeInput];
-	      const inputTree = new DecisionInputTree();
-	      // inputTree.onSubmit((t) => {
-	      //   inputTree.payload().inputArray[1].setValue('', true)
-	      //   inputTree.children()[0].payload().inputArray[0].setValue('', true)
-	      // });
-	      inputTree.leaf('Cabinet', inputs);
-	
-	      return inputTree;
-	    };
-	    this.get = (group, type, layout, name) => {
-	      let cabinet = Cabinet.build(type, group);
-	      if (layout && CabinetLayouts.map[layout]) CabinetLayouts.map[layout].build(cabinet);
-	      cabinet.name(name);
-	      return cabinet;
-	    };
-	
-	    const allCabinetKeys = Object.keys(cabinets);
-	    allCabinetKeys.forEach((key) => {
-	      const type = cabinets[key].partName;
-	      if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
-	      if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
-	      cabinetKeys[type][key] = cabinets[key];
-	    });
-	
-	    cabinetList = cabinets;
-	    configKeys = Object.keys(cabinets);
-	    configs[id] = this;
-	  }
-	}
-	
-	let currConfig = new CabinetConfig(Cabinets, 'default');
-	const updateEvent = new CustomEvent('update');
-	
-	module.exports = {
-	  switch: (configId) => {
-	    if (configs[configId] !== undefined) {
-	      currConfig = configs[configId];
-	      updateEvent.trigger();
-	    }
-	  },
-	  configList: () => Object.keys(configs),
-	  valid: (...args) => currConfig.valid(...args),
-	  onUpdate: (func) => updateEvent.on(func),
-	  inputTree: (...args) => currConfig.inputTree(...args),
-	  get: (...args) => currConfig.get(...args),
-	  new: (json, id) => new CabinetConfig(json, id)
-	}
-	
-	// Request.get(EPNTS.cabinet.list(), (cabinets) => {
-	//   new CabinetConfig(cabinets, 'user');
-	//   module.exports.switch('user');
-	// }, console.error);
-	
-	
-	
-	
-	
-	
-	// ---------------------- Layout Specific Input Tree -----------------------//
-	// this.inputTree = () => {
-	//   const types = JSON.parse(JSON.stringify(configKeys));
-	//   const typeInput = new Select({
-	//     name: 'type',
-	//     label: 'Type',
-	//     inline: false,
-	//     class: 'center',
-	//     list: types
-	//   });
-	//   const nameInput = new Input({
-	//     name: 'name',
-	//     inline: false,
-	//     label: 'Name (optional)',
-	//     class: 'center',
-	//   });
-	//   const inputs = [typeInput, nameInput];
-	//   const inputTree = new DecisionInputTree();
-	//   inputTree.onSubmit((t) => {
-	//     inputTree.payload().inputArray[1].setValue('', true)
-	//     inputTree.children()[0].payload().inputArray[0].setValue('', true)
-	//   });
-	//   const cabinet = inputTree.branch('Cabinet', inputs);
-	//   const cabinetTypes = Object.keys(cabinetKeys);
-	//   types.forEach((type) => {
-	//
-	//     const cabinetInput = new Input({
-	//       label: 'Layout (Optional)',
-	//       name: 'id',
-	//       inline: false,
-	//       class: 'center',
-	//       clearOnDblClick: true,
-	//       list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
-	//     });
-	//     cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
-	//   });
-	//   return inputTree;
-	// };
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/cabinet-opening-coordinates.js',
-function (require, exports, module) {
-	
-class CabinetOpeningCorrdinates {
-	  constructor(cabinet, config, sectionProperties) {
-	
-	    this.divide = sectionProperties.divide;
-	    this.setSection = sectionProperties.setSection;
-	    this.sections = sectionProperties.sections;
-	    this.vertical = sectionProperties.vertical;
-	    this.normal = sectionProperties.normal;
-	    this.sectionProperties = () => sectionProperties;
-	    this.pattern = sectionProperties.pattern;
-	    this.update = () => {
-	      let coords;
-	      if (config._Type === 'location') {
-	        coords = cabinet.evalObject(config.coordinates);
-	      } else {
-	        const right = cabinet.getAssembly(config.right);
-	        const left = cabinet.getAssembly(config.left);
-	        const top = cabinet.getAssembly(config.top);
-	        const bottom = cabinet.getAssembly(config.bottom);
-	
-	        const topMax = top.position().centerAdjust('y', '+z');
-	        const topMin = top.position().centerAdjust('y', '-z');
-	        const leftMax = left.position().centerAdjust('x', '-z');
-	        const leftMin = left.position().centerAdjust('x', '+z');
-	        const rightMin = right.position().centerAdjust('x', '+z');
-	        const rightMax = right.position().centerAdjust('x', '-z');
-	        const bottomMin = bottom.position().centerAdjust('y', '-z');
-	        const bottomMax = bottom.position().centerAdjust('y', '+z');
-	
-	        coords = {
-	          inner: [
-	            {x: leftMax, y: topMin, z: 0},
-	            {x: rightMin, y: topMin, z: 0},
-	            {x: rightMin, y: bottomMax, z: 0},
-	            {x: leftMax, y: bottomMax, z: 0}
-	          ],
-	          outer: [
-	            {x: leftMin, y: topMax, z: 0},
-	            {x: rightMax, y: topMax, z: 0},
-	            {x: rightMax, y: bottomMin, z: 0},
-	            {x: leftMin, y: bottomMin, z: 0}
-	          ]
-	        }
-	      }
-	      sectionProperties.updateCoordinates(coords);
-	      return coords;
-	    }
-	  }
-	}
-	
-	module.exports = CabinetOpeningCorrdinates;
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/display-svc.js',
-function (require, exports, module) {
-	class Register {
-	  constructor() {
-	    const registered = {};
-	    this.register = function (nameOobj, obj) {
-	      if ((typeof nameOobj) !== 'object') {
-	        registered[nameOobj] = obj;
-	      } else {
-	        const keys = Object.keys(nameOobj);
-	        for (let index = 0; index < keys.length; index += 1) {
-	          const key = keys[index];
-	          registered[key] = nameOobj[key];
-	        }
-	      }
-	    }
-	    this.get = (name) => registered[name];
-	  }
-	}
-	
-	module.exports = new Register();
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/divide-properties.js',
-function (require, exports, module) {
-	
-
-	class DivideProperties {
-	  constructor(length, center, rotation) {
-	    Object.getSet(this, {length, center, rotation})
-	  }
-	}
-	
-});
-
-
-RequireJS.addFunction('./app-src/services/history.js',
-function (require, exports, module) {
-	
-class History {
-	  constructor() {
-	    let changes = [];
-	    let changesIndex = [];
-	
-	      this.addChange = (forward, back) => {
-	        changes = changes.slice(0, changesIndex);
-	        changes.push({forward, back});
-	        changesIndex++;
-	      }
-	
-	    this.getSet = (obj, initialVals, ...attrs) => {
-	      attrs = Object.getSet(obj, initialVals, ...attrs);
-	      const objFuncs = {};
-	      attrs.forEach((attr) => {
-	        objFuncs[attr] = obj[attr];
-	        obj[attr] = (value) => {
-	          if (value !== undefined) {
-	            const oldValue = objFuncs[attr]();
-	            const back = () => objFuncs[attr](oldValue);
-	            const forward = () => objFuncs[attr](value);
-	            this.addChange(obj, forward, back);
-	          }
-	          return objFuncs[attr](value);
-	        }
-	      });
-	    }
-	
-	    this.undo = () => {
-	      const change = changes[--changesIndex];
-	      change.back();
-	    }
-	
-	    this.redo = () => {
-	      const change = changes[++changesIndex];
-	      change.forward();
-	    }
-	
-	    this.canUndo =() => changesIndex > 0;
-	    this.canRedo = () => changeIndex < changes.length - 1;
-	  }
-	}
-	
-	module.exports = History;
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/cabinet-template.js',
-function (require, exports, module) {
-	
-const cabinetsJson = require('../../public/json/cabinets.json');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
+const PropertyConfig = require('../config/property/config');
 	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const PropertyConfig = require('./property/config');
 	
-	class CabinetTemplate extends Lookup {
-	  constructor(type) {
-	    super();
-	    const instance = this;
-	    const initialVals = (typeof type) === 'object' ? type : {
-	      type, values: [], subassemblies: [], joints: [], dividerJoint: {},
-	      shape: 'square',
-	      width: 18 * 2.54,
-	
-	      height: 34 * 2.54,
-	      thickness: 24 * 2.54,
-	      openings: [CabinetTemplate.defaultPartCodeOpening()]
-	    };
+	class Group extends Lookup {
+	  constructor(room, name, id) {
+	    super(id);
+	    room ||= Group.defaultRoom;
+	    const initialVals = {
+	      name: name || 'Group',
+	    }
 	    Object.getSet(this, initialVals);
-	    CabinetTemplate.map[type] = this;
-	
-	    function getCabinet(length, width, thickness, pc) {
-	      const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
-	      cabinet.length(length);
-	      cabinet.width(width);
-	      cabinet.thickness(thickness);
-	
-	      cabinet.propertyConfig(pc instanceof PropertyConfig ? pc : new PropertyConfig());
-	      return cabinet;
+	    this.propertyConfig = new PropertyConfig();
+	    this.objects = [];
+	    this.room = () => room;
+	    this.toJson = () => {
+	      const json = {objects: [], _TYPE: 'Group'};
+	      this.objects.forEach((obj) => json.objects.push(obj.toJson()));
+	      json.name = this.name();
+	      json.id = this.id();
+	      json.roomId = this.room().id();
+	      json.propertyConfig = this.propertyConfig.toJson();
+	      return json;
 	    }
-	    this.getCabinet = getCabinet;
+	  }
+	}
 	
-	    this.codeMap = () => {
-	      let codeMap = {};
-	      Object.values(this.subassemblies()).forEach((sa) => codeMap[sa.code] = sa);
-	      return codeMap;
+	Group.count = 0;
+	new Group();
+	
+	Group.fromJson = (json) => {
+	  const room = Lookup.get(json.roomId);
+	  const group = new Group(room, json.name, json.id);
+	  group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
+	  json.objects.forEach((objJson) => {
+	    const jsonClazz = Object.class.get(json.objects[0]._TYPE);
+	    const obj = jsonClazz.fromJson(objJson, group);
+	    group.objects.push(obj);
+	    obj.group(group);
+	  });
+	  return group;
+	}
+	
+	module.exports = Group;
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/company.js',
+function (require, exports, module) {
+	
+
+	
+	const Door = require('./assembly/assemblies/door/door.js');
+	
+	class Company {
+	  constructor(properties) {
+	    if (!properties.name) throw new Error('Company name must be defined')
+	    if (Company.list[properties.name] !== undefined) throw new Error('Company name must be unique: name already registered');
+	    this.name = () => properties.name;
+	    this.email = () => properties.email;
+	    this.address = () => properties.address;
+	    Company.list[this.name()] = this;
+	  }
+	}
+	
+	Company.list = {};
+	new Company({name: 'Central Door'});
+	new Company({name: 'Central Wood'});
+	new Company({name: 'ADC'});
+	new Company({name: 'Accessa'});
+	new Company({name: 'Top Knobs'});
+	new Company({name: 'Richelieu'});
+	module.exports = Company
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/input/validation.js',
+function (require, exports, module) {
+	
+
+	
+	const InvalidComputation = require('./error.js');
+	
+	class ObjectValidator {
+	  constructor() {
+	    const validators =  {};
+	    this.add = (name, validator) => {
+	      if (!(validator instanceof ObjectValidator) && !(validator instanceof Validator)) {
+	        throw new Error('Invalid Validator');
+	      }
+	      validator[name] = validator;
+	    }
+	    this.validate = (obj) => {
+	      if (typeof obj !== 'object') throw new InvalidComputation()
+	      const keys = Object.keys(validators);
+	    }
+	  }
+	}
+	
+	
+	class Validator {
+	  constructor(validator, props, info) {
+	    let type, validate;
+	    const complement = props.explanation;
+	
+	    let defaultExpl;
+	    if (validator instanceof Regex) {
+	      type = 'Regex';
+	      if (props.complement) {
+	        defaultExpl = 'Value must fit regex expression';
+	        validate = (value) => validator.match('value');
+	      } else {
+	        defaultExpl = 'Value must not fit regex expression';
+	        validate = (value) => !validator.match('value');
+	      }
+	    } else if (Array.isArray(validator)) {
+	      if (props.complement) {
+	        defaultExpl = 'Value must exist within array';
+	        validate = (value) => validator.indexOf(value) !== -1;
+	      } else {
+	        defaultExpl = 'Value must not exist within array';
+	        validate = (value) => validator.indexOf(value) === -1;
+	      }
 	    }
 	
-	    this.validPartCode = (code) => this.codeMap()[code] !== undefined;
-	    const vpc = this.validPartCode;
+	    props.explanation = props.explanation || defaultExpl;
 	
-	    this.validOpenings = () => {
-	      const bms = this.openings();
-	      for (let index = 0; index < bms.length; index += 1) {
-	        const bm = bms[index];
-	        if (!(vpc(bm.top) && vpc(bm.bottom) && vpc(bm.right) &&
-	                vpc(bm.left) && vpc(bm.bottom))) {
+	    val = val === undefined && elem ? elem.value : val;
+	    if (val === undefined) return false;
+	    if (valid !== undefined && val === value) return valid;
+	    let valValid = true;
+	    if (props.validation instanceof RegExp) {
+	      valValid = val.match(props.validation) !== null;
+	    }
+	    else if ((typeof props.validation) === 'function') {
+	      valValid = props.validation.apply(null, arguments);
+	    }
+	    else if (Array.isArray(props.validation)) {
+	      valValid = props.validation.indexOf(val) !== -1;
+	    }
+	
+	    return valValid;
+	  }
+	}
+	exports.ObjectValidator = ObjectValidator
+	exports.Validator = Validator
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/polygon.js',
+function (require, exports, module) {
+	
+const Polygon2D = require('../../two-d/objects/polygon.js');
+	const Line2D = require('../../two-d/objects/line.js');
+	const Line3D = require('./line');
+	const Vertex3D = require('./vertex');
+	const Vector3D = require('./vector');
+	const Plane = require('./plane');
+	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	
+	const CSG = require('../../../public/js/3d-modeling/csg.js');
+	let lastMi;
+	
+	class Polygon3D {
+	  constructor(initialVertices) {
+	    let lines = [];
+	    let map;
+	    let normal;
+	    let instance = this;
+	
+	    function getPlane() {
+	      let points = this.vertices();
+	      let parrelle = true;
+	      let index = 2;
+	      const point1 = points[0];
+	      const point2 = points[1];
+	      let point3;
+	      while (parrelle && index < points.length) {
+	        point3 = points[index]
+	        let vector1 = point1.minus(point2);
+	        let vector2 = point3.minus(point2);
+	        parrelle = vector1.parrelle(vector2);
+	        index++;
+	      }
+	      return new Plane(point1, point2, point3);
+	    }
+	    this.toPlane = getPlane;
+	
+	    this.rotate = (rotations, center) => {
+	      center ||= this.center();
+	      for(let index = 0; index < lines.length; index++) {
+	        lines[index].startVertex.rotate(rotations, center);
+	      }
+	    }
+	
+	    function calcNormal() {
+	      let points = this.vertices();
+	      let vector1, vector2;
+	      let parrelle = true;
+	      let index = 0;
+	      while (parrelle && index < points.length - 2) {
+	        vector1 = points[index + 1].minus(points[index])
+	        vector2 = points[index + 2].minus(points[index]);
+	        parrelle = vector1.parrelle(vector2);
+	        index++;
+	      }
+	      if (parrelle)
+	        throw new Error('InvalidPolygon: points are in a line');
+	
+	      const normVect = vector1.crossProduct(vector2);
+	      return normVect.scale(1 / normVect.magnitude());
+	    }
+	    this.normal = calcNormal;
+	
+	    this.translate = (vector) => {
+	      const verts = [];
+	      for (let index = 0; index < lines.length; index++) {
+	        verts.push(lines[index].startVertex.translate(vector, true));
+	      }
+	      return new Polygon3D(verts);
+	    }
+	
+	    this.perpendicular = (poly) => {
+	      return this.normal().perpendicular(poly.normal());
+	    }
+	    const xyNormal = new Vector3D(0,0,1);
+	    const yzNormal = new Vector3D(1,0,0);
+	    const xzNormal = new Vector3D(0,1,0);
+	    this.inXY = () => this.perpendicular(xyPoly);
+	    this.inYZ = () => this.perpendicular(yzPoly);
+	    this.inXZ = () => this.perpendicular(xzPoly);
+	
+	    this.parrelle = (poly) => {
+	      if (normal === undefined || poly.normal() === undefined) return false;
+	      return normal.parrelle(poly.normal());
+	    }
+	
+	    this.offset = (left, right, up, down) => {
+	      lines[0].adjustLength(left - lines[0].length(), false);
+	      lines[0].adjustLength(lines[0].length() - right, true);
+	      lines[2].adjustLength(lines[2].length() - left, true);
+	      lines[2].adjustLength(right - lines[2].length(), false);
+	
+	      lines[1].adjustLength(up - lines[1].length(), false);
+	      lines[1].adjustLength(lines[1].length() - down, true);
+	      lines[3].adjustLength(lines[3].length() - up, true);
+	      lines[3].adjustLength(down - lines[3].length(), false);
+	    }
+	
+	    this.parrelleAt = (distance) => {
+	      const normal = this.normal();
+	      const scaled = normal.scale(distance);
+	      const vertices = this.vertices();
+	      for (let index = 0; index < vertices.length; index++) {
+	        vertices[index].translate(scaled);
+	      }
+	      return new Polygon3D(vertices);
+	    }
+	
+	    this.vertices = () => {
+	      if (lines.length === 0) return [];
+	      const vertices = [];
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        vertices.push(line.startVertex);
+	      }
+	
+	      return JSON.clone(vertices);
+	    }
+	
+	    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex.copy();
+	
+	    this.isClockwise = () => {
+	      let sum = 0;
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const point1 = lines[index].startVertex;
+	        const point2 = lines[index].startVertex;
+	        sum += (point2.x - point1.x)*(point2.y + point1.y)*(point2.z - point1.z);
+	      }
+	      return sum > 0;
+	    }
+	
+	    this.lines = () => JSON.clone(lines);
+	    this.line = (index) => JSON.clone(lines[Math.mod(index, lines.length)]);
+	    this.startLine = () => lines[0];
+	    this.endLine = () => lines[lines.length - 1];
+	
+	    const tol = .00001;
+	    this.lineMap = (force) => {
+	      if (!force && map !== undefined) return map;
+	      if (lines.length === 0) return {};
+	      map = new ToleranceMap({'startVertex.x': tol, 'startVertex.y': tol, 'startVertex.z': tol,
+	                              'endVertex.x': tol, 'endVertex.y': tol, 'endVertex.z': tol});
+	      let lastEnd;
+	      if (!lines[0].startVertex.equals(lines[lines.length - 1].endVertex)) throw new Error('Broken Polygon');
+	      for (let index = 0; index < lines.length; index++) {
+	        lines[index]._POLY_INDEX = index;
+	        map.add(lines[index]);
+	      }
+	      return map;
+	    }
+	
+	    this.copy = () => new Polygon3D(Line3D.vertices(lines, false));
+	
+	    this.equals = (other) => {
+	      if (!(other instanceof Polygon3D)) return false;
+	      const verts = this.vertices();
+	      const otherVerts = other.vertices();
+	      if (verts.length !== otherVerts.length) return false;
+	      let otherIndex = undefined;
+	      let direction;
+	      for (let index = 0; index < verts.length * 2; index += 1) {
+	        const vIndex = index % verts.length;
+	        if (otherIndex === undefined) {
+	          if (index > verts.length) {
+	            return false
+	          } if(verts[index].equals(otherVerts[0])) {
+	            otherIndex = otherVerts.length * 2;
+	          }
+	        } else if (otherIndex === otherVerts.length * 2) {
+	          if (verts[vIndex].equals(otherVerts[1])) direction = 1;
+	          else if(verts[vIndex].equals(otherVerts[otherVerts.length - 1])) direction = -1;
+	          else return false;
+	          otherIndex += direction * 2;
+	        } else if (!verts[vIndex].equals(otherVerts[otherIndex % otherVerts.length])) {
 	          return false;
+	        } else {
+	          otherIndex += direction;
 	        }
 	      }
 	      return true;
 	    }
-	    this.validateDividerJoint = () => {
-	      const j = this.dividerJoint();
-	      return j.type === 'Butt' || (j.type === 'Dado' && j.maleOffset > 0);
+	
+	    function getLine(line) {
+	      const lineMap = this.lineMap();
+	      const matches = lineMap.matches(line) || lineMap.matches(line.negitive());
+	      if (matches && matches.length > 1) throw new Error('THIS SHOULD NOT HAPPEN!!!! REMOVE LINES IS BROKEN... probably');
+	      return matches ? matches[0] : null;
 	    }
 	
-	    const offsetReg = /(-|\+|)[xyz]/;
-	    this.validOffset = (offset) => offset && offset.match(offsetReg) !== null;
-	    const vo = this.validOffset;
+	    this.getLines = (startVertex, endVertex, reverse) => {
+	      const subSection = [];
+	      let completed = false;
+	      let shared;
+	      const compareLine = new Line3D(startVertex, endVertex);
+	      const compareLineI = new Line3D(endVertex,startVertex);
 	
-	    this.validateJoint = (joint, malePartCode, femalePartCode) => {
-	      let isValid = vpc(malePartCode) && vpc(femalePartCode);
-	      switch (joint.type) {
-	        case "Dado":
-	          return isValid && joint.maleOffset > 0 && vo(joint.demensionToOffset) &&
-	                  vo(joint.centerOffset);
+	      const doubleLen = lines.length * 2;
+	      for (let steps = 0; steps < doubleLen; steps += 1) {
+	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
+	        const curr = lines[index];
+	        if (!shared) {
+	          if (compareLine.equals(curr) || compareLineI.equals(curr)) shared = curr;
+	        } else {
+	          if (shared === curr) {
+	            completed = true;
+	            break;
+	          } else subSection.push(!reverse ? curr : curr.negitive());
+	        }
+	      }
+	      if (completed) return subSection;
+	    }
+	
+	    this.center = () => {
+	      const verts = [];
+	      for (let index = 0; index < lines.length; index++) {
+	        verts.push(lines[index].startVertex);
+	      }
+	      return Vertex3D.center(verts);
+	    }
+	
+	    this.addVertices = (list) => {
+	      if (list === undefined) return;
+	      const verts = [];
+	      const endLine = this.endLine();
+	      for (let index = 0; index < list.length + 1; index += 1) {
+	        if (index < list.length) verts[index] = new Vertex3D(list[index]);
+	        if (index === 0 && endLine) endLine.endVertex = verts[0];
+	        else if (index > 0) {
+	          const startVertex = verts[index - 1];
+	          const endVertex = verts[index] || this.startLine().startVertex;
+	          const line = new Line3D(startVertex, endVertex);
+	          lines.push(line);
+	          const prevLine = lines[lines.length - 2];
+	          // if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
+	          // else if (lines.length > 2) {
+	          //   const equal = normal.equals(calcNormal(line, prevLine));
+	          //   if (equal === false) {
+	          //     console.log('Trying to add vertex that does not lie in the existing plane');
+	          //   }
+	          // }
+	        }
+	      }
+	      if (verts.length > 0 && lines.length > 0) {
+	        if (endLine) endline.endVertex = verts[0];
+	      }
+	      this.lineMap(true);
+	      this.removeLoops();
+	    }
+	
+	    this.rebuild = (newVertices) => {
+	      lines = [];
+	      this.addVertices(newVertices);
+	    }
+	
+	    this.removeLoops = () => {
+	      let removed = true;
+	      const orig = lines;
+	      while (removed && lines.length > 0) {
+	        removed = false;
+	        const map = this.lineMap();
+	        for (let index = 0; index < lines.length; index += 1) {
+	          const line = lines[index];
+	          if (line.isPoint()) {
+	            lines = JSON.clone(lines);
+	            lines.splice(index, 1);
+	            removed = true;
+	          } else {
+	            const posMatch = map.matches(line);
+	            const negMatch = map.matches(line.negitive());
+	            if (posMatch.length > 1 || (negMatch && negMatch.length !== 0)) {
+	              let match = negMatch ? negMatch[0] : posMatch[1];
+	              const startIndex = line._POLY_INDEX;
+	              const endIndex = match._POLY_INDEX;
+	              if (startIndex > endIndex)
+	              throw new Error('THIS SHOULD NOT HAPPEN!!!!!! WTF!!!!');
+	              const forwardDiff = endIndex - startIndex;
+	              const reverseDiff = lines.length - forwardDiff;
+	              if (Math.max(forwardDiff, reverseDiff) < 3) {
+	                console.log('che che');
+	              }
+	              if (forwardDiff > reverseDiff) {
+	                lines = lines.slice(startIndex, endIndex);
+	              } else {
+	                lines = lines.slice(0, startIndex).concat(lines.slice(endIndex));
+	              }
+	
+	              const newVerts = Line3D.vertices(lines, false);
+	              this.rebuild(newVerts);
+	              removed = true;
+	              break;
+	            }
+	          }
+	        }
+	        // TODO: not sure if this will cause an issue but polygons should not have less than 3 vertices this will break toPlane functionality.
+	        // if (lines.length < 3) {
+	        //   console.log('che che check it out', lines.length);
+	        // }
+	        if (removed) this.lineMap(true);
+	      }
+	    }
+	
+	    this.path = () => {
+	      let path = '';
+	      this.vertices().forEach((v) => path += `${v.toString()} => `);
+	      return path.substring(0, path.length - 4);
+	    }
+	
+	
+	    this.merge = (other) => {
+	      if (!this.normal().parrelle(other.normal())) return;
+	      const thisPlane = this.toPlane();
+	      const otherPlane = other.toPlane();
+	      // if (!thisPlane.equivalent(otherPlane)) return;
+	      const lineMap = this.lineMap();
+	      const allOtherLines = other.lines();
+	      let merged;
+	      for (let index = 0; index < allOtherLines.length; index += 1) {
+	        const curr = allOtherLines[index];
+	        let vertices, thisLines, otherLines;
+	        if (lineMap.matches(curr) !== null) {
+	          thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
+	          otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
+	        } else if (lineMap.matches(curr.negitive()) !== null) {
+	          thisLines = this.getLines(curr.endVertex, curr.startVertex, false);
+	          otherLines = other.getLines(curr.startVertex, curr.endVertex, false);
+	        }
+	
+	        if (thisLines && otherLines) {
+	          if (thisLines[0].startVertex.equals(otherLines[0].startVertex))
+	            thisLines = Line3D.reverse(thisLines);
+	
+	          const startCheck = thisLines[0].startVertex.equals(otherLines[otherLines.length - 1].endVertex);
+	          const middleCheck = thisLines[thisLines.length - 1].endVertex.equals(otherLines[0].startVertex);
+	          if (!(middleCheck && startCheck))
+	            console.warn('coommmmooon!!!!');
+	          vertices = Line3D.vertices(otherLines.concat(thisLines), false);
+	          merged = new Polygon3D(vertices);
+	          try {
+	            merged.normal();
+	          } catch (e) {
+	            console.warn('again wtf!!!');
+	            new Polygon3D(vertices);
+	            new Polygon3D(vertices);
+	            new Polygon3D(vertices);
+	          }
+	        }
+	      }
+	
+	      if (merged) {
+	        return merged;
+	      }
+	    }
+	
+	    this.viewFromVector = () => Polygon3D.viewFromVector([this])[0];
+	    this.mostInformation = () => Polygon3D.mostInformation([this])[0];
+	
+	    this.to2D = (x, y) => {
+	      if (!x || !y) {
+	        const mi = this.mostInformation();
+	        x ||= mi[0];
+	        y ||= mi[1];
+	        if (lastMi && (mi[0] !== lastMi[0] || mi[1] !== lastMi[1])) {
+	          console.info.subtle('change in mi');
+	        }
+	        lastMi = mi;
+	      }
+	      return new Polygon2D(Vertex3D.to2D(this.vertices(),  x, y));
+	    }
+	
+	    this.toString = () => {
+	      let str = '';
+	      for (let index = 0; index < lines.length; index++) {
+	        str += ` => ${lines[index].startVertex.toString()}`;
+	      }
+	      return `${str.substring(4)} normal: ${this.normal()}`;
+	    }
+	
+	
+	    this.toDetailString = () => {
+	      let startStr = '';
+	      let endStr = '';
+	      for (let index = 0; index < lines.length; index++) {
+	        startStr += ` => ${lines[index].startVertex.toString()}`;
+	        endStr += ` => ${lines[Math.mod(index - 1, lines.length)].endVertex.toString()}`;
+	      }
+	      return `Start Vertices: ${startStr.substring(4)}\nEnd   Vertices: ${endStr.substring(4)}`;
+	    }
+	    this.addVertices(initialVertices);
+	  }
+	}
+	
+	function printMerge(target, other, merged) {
+	  console.log(`target: ${target.toString()}`);
+	  console.log(`other: ${other.toString()}`);
+	  console.log(`merged: ${merged.toString()}`);
+	  target.merge(other);
+	}
+	
+	let doIt = false;
+	Polygon3D.merge = (polygons) => {
+	  let currIndex = 0;
+	  while (currIndex < polygons.length - 1) {
+	    const target = polygons[currIndex];
+	    for (let index = currIndex + 1; index < polygons.length; index += 1) {
+	      const other = polygons[index];
+	      const merged = target.merge(other);
+	      if (merged) {
+	        if (doIt) printMerge(target, other, merged);
+	        polygons[currIndex--] = merged;
+	        polygons.splice(index, 1);
+	        break;
+	      }
+	    }
+	    currIndex++;
+	  }
+	}
+	
+	const xyPoly = new Polygon3D([[1,10,0],[11,2,0],[22,1,0]]);
+	const yzPoly = new Polygon3D([[6,0,1],[10,0,27],[2,0,11]]);
+	const xzPoly = new Polygon3D([[0,11,13],[0,12,23],[0,22,3]]);
+	
+	Polygon3D.mostInformation = (polygons) => {
+	  const diff = {x: 0, y:0, z: 0};
+	  for (let pIndex = 0; pIndex < polygons.length; pIndex++) {
+	    const poly = polygons[pIndex];
+	    const verts = poly.vertices();
+	    const center = poly.center();
+	    for(let index = 0; index < verts.length; index++) {
+	      const v = verts[index];
+	      diff.x += Math.abs(v.x - center.x);
+	      diff.y += Math.abs(v.y - center.y);
+	      diff.z += Math.abs(v.z - center.z);
+	    }
+	  }
+	  return diff.x < diff.y ?
+	        (diff.x < diff.z ? ['y', 'z'] :
+	        (diff.z < diff.y ? ['x', 'y'] : ['x', 'z'])) :
+	        (diff.y < diff.z ? ['x', 'z'] : ['x', 'y']);
+	}
+	
+	// const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
+	// const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
+	const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
+	const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
+	const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
+	Polygon3D.toTwoD = (polygons, vector, axis) => {
+	  const view = Polygon3D.viewFromVector(polygons, vector, true);
+	  axis ||= Polygon3D.mostInformation(view);
+	  const twoD = view.map(to2D(axis));
+	  const twoDlines = Polygon2D.lines(twoD);
+	  twoDlines.axis = axis;
+	  return twoDlines;
+	}
+	
+	Polygon3D.toThreeView = (polygons, normals, gap) => {
+	  normals ||= defaultNormals;
+	  gap ||= 10;
+	  const frontView = Polygon3D.viewFromVector(polygons, normals.front);
+	  const rightView = Polygon3D.viewFromVector(polygons, normals.right);
+	  const topView = Polygon3D.viewFromVector(polygons, normals.top);
+	
+	  const axis = {};
+	  axis.front = Polygon3D.mostInformation(frontView);
+	  axis.right = Polygon3D.mostInformation(rightView);
+	  axis.top = Polygon3D.mostInformation(topView);
+	
+	  if (axis.front.indexOf('y') === 0) axis.front.reverse();
+	  if (axis.top.indexOf(axis.right[1]) !== -1) axis.right.reverse();
+	  if (axis.front.indexOf(axis.top[1]) !== -1) axis.top.reverse();
+	
+	  const front2D = frontView.map(to2D(axis.front));
+	  const right2D = rightView.map(to2D(axis.right));
+	  const top2D = topView.map(to2D(axis.top));
+	
+	  Polygon2D.centerOn({x:0,y:0}, front2D);
+	
+	  const frontMinMax = Polygon2D.minMax(...front2D);
+	  const rightMinMax = Polygon2D.minMax(...right2D);
+	  const topMinMax = Polygon2D.minMax(...top2D);
+	  const rightCenterOffset = frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2;
+	  const topCenterOffset = frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2;
+	
+	  Polygon2D.centerOn({x:rightCenterOffset, y:0}, right2D);
+	  Polygon2D.centerOn({x:0,y:topCenterOffset}, top2D);
+	
+	  const front = Polygon2D.lines(front2D);
+	  const right = Polygon2D.lines(right2D);
+	  const top = Polygon2D.lines(top2D);
+	
+	  return {front, right, top, axis}
+	}
+	
+	Polygon3D.fromCSG = (polys) => {
+	  const isArray = Array.isArray(polys);
+	  if (!isArray) polys = [polys];
+	  const poly3Ds = [];
+	  for (let index = 0; index < polys.length; index++) {
+	    const poly = polys[index];
+	    const verts = [];
+	    for (let vIndex = 0; vIndex < poly.vertices.length; vIndex++) {
+	      const v = poly.vertices[vIndex];
+	      verts.push(new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
+	    }
+	    poly3Ds.push(new Polygon3D(verts));
+	  }
+	  if (!isArray) return poly3Ds[0];
+	  return poly3Ds;
+	}
+	
+	Polygon3D.fromVectorObject =
+	    (width, height, center, vectorObj) => {
+	  center ||= new Vertex(0,0,0);
+	  vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0)}
+	  const hw = width/2;
+	  const hh = height/2;
+	  const wV = vectorObj.width;
+	  const hV = vectorObj.height;
+	  const vector1 = center.translate(hV.scale(hh), true).translate(wV.scale(-hw));
+	  const vector2 = center.translate(hV.scale(hh), true).translate(wV.scale(hw));
+	  const vector3 = center.translate(hV.scale(-hh), true).translate(wV.scale(hw));
+	  const vector4 = center.translate(hV.scale(-hh), true).translate(wV.scale(-hw));
+	  return new Polygon3D([vector1, vector2, vector3, vector4]);
+	}
+	
+	Polygon3D.fromLines = (lines) => {
+	  const verts = [];
+	  for (let index = 0; index < lines.length; index += 1) {
+	    if (!lines[index].startVertex.equals(lines[Math.mod(index - 1, lines.length)].endVertex)) throw new Error('Lines must be connected');
+	    verts.push(lines[index].startVertex);
+	  }
+	  return new Polygon3D(verts);
+	}
+	
+	Polygon3D.from2D = (polygon2d) => {
+	  const verts = polygon2d.vertices();
+	  const initialVertices = [];
+	  for (let index = 0; index < verts.length; index++) {
+	    const vert = verts[index];
+	    initialVertices.push(new Vertex3D(vert.x(), vert.y(), 0));
+	  }
+	  return new Polygon3D(initialVertices);
+	}
+	
+	const randValue = () => Math.random() > .5 ? Math.random() * 200000 - 100000 : 0;
+	for (let index = 0; index < 10000; index++) {
+	  const vector = new Vector3D(randValue(), randValue(), randValue());
+	}
+	
+	// let inverseSignCheck = (v) => v.positive() === v.inverse().positive() && console.log('failed', v.toString());
+	// inverseSignCheck(new Vector3D(0,0,0));
+	// inverseSignCheck(new Vector3D(4,0,0));
+	// inverseSignCheck(new Vector3D(0,5,0));
+	// inverseSignCheck(new Vector3D(0,0,6));
+	// inverseSignCheck(new Vector3D(-3,0,0));
+	// inverseSignCheck(new Vector3D(0,-44,0));
+	// inverseSignCheck(new Vector3D(0,0,-.0000001));
+	
+	Polygon3D.viewFromVector = (polygons, vector) => {
+	  const orthoPolys = [];
+	  const negitive = !vector.positive();
+	  for (let p = 0; p < polygons.length; p++) {
+	    const vertices = polygons[p].vertices();
+	    const vertLocs = {};
+	    let valid = true;
+	    const perpendicularCheck = (orthogonal) => {
+	      const accStr = orthogonal.toString();
+	      if (vertLocs[accStr]) valid = false;
+	      else vertLocs[accStr] = true;
+	      return true;
+	    }
+	    const orthoVerts = Vertex3D.viewFromVector(vertices, vector, perpendicularCheck);
+	    if (valid) orthoPolys.push(new Polygon3D(orthoVerts));
+	  }
+	  return orthoPolys;
+	}
+	
+	module.exports = Polygon3D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/property/definitions.js',
+function (require, exports, module) {
+	const Property = require('../property');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const IMPERIAL_US = Measurement.units()[1];
+	
+	const defs = {};
+	
+	defs.h = new Property('h', 'height', null);
+	defs.w = new Property('w', 'width', null);
+	defs.d = new Property('d', 'depth', null);
+	defs.t = new Property('t', 'thickness', null);
+	defs.l = new Property('l', 'length', null);
+	
+	//   Overlay
+	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
+	
+	//   Reveal
+	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvr = new Property('rvr', 'Reveal Right', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvl = new Property('rvl', 'Reveal Left', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
+	
+	//   Inset
+	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
+	
+	//   Cabinet
+	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
+	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
+	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
+	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
+	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
+	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
+	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
+	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US})
+	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US})
+	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US})
+	
+	// Cabinet.AngledBackCorner
+	defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	defs.lbo = new Property('lbo', 'Left Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	defs.rbo = new Property('rbo', 'Right Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
+	
+	// Cabinet.Lshaped
+	defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 24, notMetric: IMPERIAL_US})
+	defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US})
+	
+	//   Panel
+	
+	//   Guides
+	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54),
+	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', 3*2.54/8),
+	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', 2.54/2)
+	
+	//   DoorAndFront
+	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
+	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null})
+	
+	//   Door
+	
+	//   DrawerBox
+	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
+	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
+	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
+	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
+	
+	//   DrawerFront
+	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
+	
+	//   Frame
+	
+	//   Handle
+	defs.c2c = new Property('c2c', 'Center To Center', null),
+	defs.proj = new Property('proj', 'Projection', null),
+	
+	//   Hinge
+	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null),
+	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
+	defs.maxol = new Property('maxol', 'Max Door Overlay', null),
+	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
+	
+	//   Opening
+	
+	module.exports = defs;
+	
+});
+
+
+RequireJS.addFunction('./app-src/config/property/config.js',
+function (require, exports, module) {
+	
+const Properties = require('../properties');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const IMPERIAL_US = Measurement.units()[1];
+	
+	class PropertyConfig {
+	  constructor(props) {
+	    Object.getSet(this);
+	    props = props || Properties.instance();
+	    let style = props.style || PropertyConfig.lastStyle;
+	    let styleName = props.styleName || PropertyConfig.lastStyleName ||
+	                    Object.keys(Properties.groupList(style))[0];
+	    if (styleName)
+	      props[style] = Properties.getSet(style, styleName);
+	
+	    function isReveal() {return style === 'Reveal';}
+	    function isInset() {return style === 'Inset';}
+	    function isOverlay() {return !isReveal() && !isInset();}
+	    function overlay() {return props['Overlay'].ov.value()}
+	    function reveal() {return props['Reveal']};
+	
+	    function cabinetStyles() {
+	      return ['Overlay', 'Inset', 'Reveal'];
+	    }
+	    function cabinetStyle() {
+	      return style;
+	    }
+	    function cabinetStyleName() {
+	      return styleName;
+	    }
+	
+	    function set(group, name) {
+	      if (cabinetStyles().indexOf(group) !== -1) {
+	        style = group;
+	        styleName = name;
+	      } else {
+	        const newSet = Properties.getSet(group, name);
+	        newSet.__KEY = name;
+	        if (newSet === undefined) throw new Error(`Attempting to switch '${group}' to unknown property set '${name}'`);
+	        props[group] = newSet;
+	      }
+	    }
+	
+	    const panelThicknessRegMetric = /^pwt([0-9]{1,})([0-9][0-9])$/;
+	    const panelThicknessRegImperial = /^pwt([0-9])([0-9])$/;
+	    const resolvePanelThickness = (code) => {
+	      let match = code.match(panelThicknessRegImperial);
+	      if (match) return new Measurement(match[1]/match[2], IMPERIAL_US).value();
+	      match = code.match(panelThicknessRegMetric);
+	      if (match) return new Measurement(`${match[1]}.${match[2]}`).value();
+	      return undefined;
+	    }
+	
+	    const outerCodeReg = /^(rrv|lrv|brv|trv)$/;
+	    const resolveOuterReveal = (code, props) => {
+	      if (!code.match(outerCodeReg)) return undefined;
+	      switch (code) {
+	        case 'rrv':
+	          return 0.3175
+	        case 'lrv':
+	          return 0.3175
+	        case 'brv':
+	          return 0.3175
+	        case 'trv':
+	          return 0.3175
 	        default:
-	          return true;
+	          return 0.3175
 	      }
 	    }
-	    this.validateJoints = () => {
-	      let joints = this.joints();
-	      for (let index = 0; index < joints.length; index += 1) {
-	        if (!this.validateJoint(joints[index])) return false;
+	
+	    const resolveStyleStatus = (code) => {
+	      switch (code) {
+	        case 'isReveal': return isReveal();
+	        case 'isInset': return isInset();
+	        case 'isOverlay': return isOverlay();
 	      }
-	      return true;
 	    }
 	
-	    this.evalEqn = (eqn, cab) => {
-	      cab ||= getCabinet();
-	      return cab.eval(eqn);
-	    }
-	
-	    this.evalObject = (eqn, cab) => {
-	      cab ||= getCabinet();
-	      return cab.evalObject(eqn);
-	    }
-	
-	    this.validateEquation = (eqn, cab) => {
-	      return !Number.isNaN(this.evalEqn(eqn, cab));
-	    }
-	    const veq = this.validateEquation;
-	
-	    this.validateValues = (cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
+	    const resolveReveals = (code, props) => {
+	      switch (code) {
+	        case 'frorl': return new Measurement(1/8, IMPERIAL_US).value();
+	        case 'frorr': return new Measurement(1/8, IMPERIAL_US).value();
+	        case 'r': if (isInset()) return 0;
+	          if (isReveal()) return new Measurement(props.Reveal.r.value()).value();
+	          return new Measurement(props.Cabinet.frw.value() - 2 * props.Overlay.ov.value()).value();
+	        default: return resolveCostProps(code, props);
 	      }
-	      const values = Object.values(this.values());
-	      for (let index = 0; index < values.length; index += 1) {
-	        if (!veq(values[index].eqn, cab)) return false;
-	      }
-	      return true;
 	    }
 	
-	    this.validateSubassembly = (subAssem, cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	
-	      const c = subAssem.center;
-	      const d = subAssem.demensions;
-	      const r = subAssem.rotation;
-	      return vpc(subAssem.code) &&
-	              r.length === 3 && veq(r[0], cab) && veq(r[1], cab) && veq(r[2], cab) &&
-	              veq(c[0], cab) && veq(c[1], cab) && veq(c[2], cab) &&
-	              veq(d[0], cab) && veq(d[1], cab) && veq(d[2], cab);
+	    const resolveComplexProps = (code, props) => {
+	      if (code === undefined) return undefined;
+	      let value = resolvePanelThickness(code, props);
+	      if (value !== undefined) return value;
+	      value = resolveOuterReveal(code, props);
+	      if (value !== undefined) return value;
+	      console.log(code);
+	      value = resolveStyleStatus(code);
+	      // if (value !== undefined) return value;
+	      // value = resolveReveals(code, props);
+	      return value;
 	    }
 	
-	    this.validateSubassemblies = (cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }      const subAssems = Object.values(this.subassemblies());
-	      for (let index = 0; index < subAssems.length; index += 1) {
-	        if (!this.validateSubassembly(subAssems[index])) return false;
-	      }
-	      return true;
+	    const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
+	    function getProperties(clazz, code) {
+	      clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
+	      const classProps = props[clazz] || {};
+	      if (code === undefined) return classProps;
+	      return classProps[code] === undefined ? resolveComplexProps(code, props) : classProps[code].value();
 	    }
 	
-	    this.valid = () => {
-	      let cab;
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	      return this.validateValues(cab) && this.validOpenings() &&
-	              this.validateDividerJoint() && this.validateJoints() &&
-	              this.validateSubassemblies(cab);
+	    function toJson() {
+	      const json = {style, styleName};
+	      const keys = Object.keys(props).filter((key) => key.match(/^[A-Z]/));
+	      keys.forEach((key) => {
+	        json[key] = [];
+	        const propKeys = Object.keys(props[key]);
+	        propKeys.forEach((propKey) => {
+	          if (props[key][propKey] && (typeof props[key][propKey].toJson) === 'function')
+	            json[key].push(props[key][propKey].toJson())
+	        });
+	      });
+	      return json;
 	    }
+	
+	    getProperties.isReveal = isReveal;
+	    getProperties.isInset = isInset;
+	    getProperties.overlay = overlay;
+	    getProperties.reveal = reveal;
+	    getProperties.toJson = toJson;
+	    getProperties.cabinetStyles = cabinetStyles;
+	    getProperties.cabinetStyle = cabinetStyle;
+	    getProperties.cabinetStyleName = cabinetStyleName;
+	    getProperties.set = set;
+	
+	    return getProperties;
 	  }
 	}
 	
-	CabinetTemplate.map = {};
-	CabinetTemplate.defaultList = () => {
-	  const list = [];
-	  const keys = Object.keys(cabinetsJson);
-	  // comment out to get corner-wall to be the first.
-	  // keys.sort();
-	  for (let index = 0; index < keys.length; index += 1) {
-	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
-	  }
-	  return list;
+	PropertyConfig.lastStyle = 'Overlay';
+	
+	PropertyConfig.fromJson = (json) => {
+	  const propConfig = {style: json.style, styleName: json.styleName};
+	  const keys = Object.keys(json).filter((key) => key.match(/^[A-Z]/));
+	  keys.forEach((key) => {
+	    const propKeys = Object.keys(json[key]);
+	    propConfig[key] = {};
+	    propKeys.forEach((propKey) =>
+	                propConfig[key][json[key][propKey].code] = Object.fromJson(json[key][propKey]));
+	  });
+	  return new PropertyConfig(propConfig);
 	}
 	
-	CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
-	CabinetTemplate.defaultPartCodeOpening = () => ({
-	    _Type: "part-code",
-	    top: "pt",
-	    bottom: "pb",
-	    left: "pl",
-	    right: "pr",
-	    back: "pback"
-	  }
-	);
+	module.exports = PropertyConfig;
 	
-	CabinetTemplate.defaultLocationOpening = () => ({
-	  _Type: "location",
-	  zRotation: 0,
-	  inner: {
-	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
-	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
-	  },
-	  outer: {
-	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
-	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
-	  }
-	});
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/square.js',
+function (require, exports, module) {
 	
-	module.exports = CabinetTemplate;
+const Vertex2d = require('vertex');
+	
+	class Square2d {
+	  constructor(center, height, width, radians) {
+	    width = width === undefined ? 121.92 : width;
+	    height = height === undefined ? 60.96 : height;
+	    radians = radians === undefined ? 0 : radians;
+	    const id = String.random();
+	    const instance = this;
+	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
+	    if ((typeof center) === 'function') this.center = center;
+	    const startPoint = new Vertex2d(null);
+	
+	
+	    this.radians = (newValue) => {
+	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        radians = newValue;
+	      }
+	      return radians;
+	    };
+	    this.startPoint = () => {
+	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+	      return startPoint;
+	    }
+	    this.angle = (value) => {
+	      if (value !== undefined) this.radians(Math.toRadians(value));
+	      return Math.toDegrees(this.radians());
+	    }
+	
+	    this.x = (val) => {
+	      if (val !== undefined) this.center().x(val);
+	      return this.center().x();
+	    }
+	    this.y = (val) => {
+	      if (val !== undefined) this.center().y(val);
+	      return this.center().y();
+	    }
+	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+	
+	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	    this.move = (position, theta) => {
+	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	      this.radians(position.theta);
+	      this.center().point(center);
+	      return true;
+	    };
+	
+	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
+	
+	    this.toString = () => `Square2d(${id}): ${this.width()} X ${this.height()}] @ ${this.center()}`
+	  }
+	}
+	
+	new Square2d();
+	
+	module.exports = Square2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/vertex.js',
+function (require, exports, module) {
+	
+const approximate10 = require('../../../../../public/js/utils/approximate.js').new(10);
+	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	const tol = .01;
+	const within = Tolerance.within(tol);
+	
+	
+	class Vertex2d {
+	  constructor(point) {
+	    if (arguments.length === 2) point = {x:arguments[0], y: arguments[1]};
+	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
+	    if (point instanceof Vertex2d) return point;
+	    let modificationFunction;
+	    point = point || {x:0,y:0};
+	    Object.getSet(this, {point});
+	    this.layer = point.layer;
+	    const instance = this;
+	    this.move = (center) => {
+	      this.point(center);
+	      return true;
+	    };
+	
+	    this.translate = (xOffset, yOffset, doNotModify) => {
+	      const vertex = doNotModify ? this.copy() : this;
+	      vertex.point().x += xOffset;
+	      vertex.point().y += yOffset;
+	      return vertex;
+	    }
+	
+	    this.rotate = (radians, pivot, doNotModify) => {
+	      const vertex = doNotModify ? this.copy() : this;
+	      const point = vertex.point();
+	      pivot ||= new Vertex2d(0,0);
+	      const s = Math.sin(radians);
+	      const c = Math.cos(radians);
+	      point.x -= pivot.x();
+	      point.y -= pivot.y();
+	      const newX = point.x * c - point.y * s;
+	      const newY = point.x * s + point.y * c;
+	      point.x = newX + pivot.x();
+	      point.y = newY + pivot.y();
+	      return vertex;
+	    }
+	    this.point = (newPoint) => {
+	      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
+	      if (newPoint) this.x(newPoint.x);
+	      if (newPoint) this.y(newPoint.y);
+	      return point;
+	    }
+	
+	    this.modificationFunction = (func) => {
+	      if ((typeof func) === 'function') {
+	        if ((typeof this.id) !== 'function') Lookup.convert(this);
+	        modificationFunction = func;
+	      }
+	      return modificationFunction;
+	    }
+	
+	    this.equal = (other) => within(other.x(), this.x()) && within(other.y(), this.y());
+	    this.x = (val) => {
+	      if ((typeof val) === 'number') point.x = val;
+	      return this.point().x;
+	    }
+	    this.y = (val) => {
+	      if ((typeof val) === 'number') this.point().y = val;
+	      return this.point().y;
+	    }
+	
+	    const dummyFunc = () => true;
+	    this.forEach = (func, backward) => {
+	      let currVert = this;
+	      let lastVert;
+	      do {
+	        lastVert = currVert;
+	        func(currVert);
+	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
+	      } while (currVert && currVert !== this);
+	      return currVert || lastVert;
+	    }
+	
+	    this.distance = (vertex) => {
+	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
+	      const xDiff = vertex.x() - this.x();
+	      const yDiff = vertex.y() - this.y();
+	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+	    }
+	
+	    this.toString = () => `(${this.x()}, ${this.y()})`;
+	    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
+	    const parentToJson = this.toJson;
+	
+	    this.offset = (x, y) => {
+	      if (x instanceof Vertex2d) {
+	        y = x.y();
+	        x = x.x();
+	      }
+	      const copy = this.toJson().point;
+	      if (y !== undefined) copy.y += y;
+	      if (x !== undefined) copy.x += x;
+	      return new Vertex2d(copy);
+	    }
+	
+	    this.copy = () => new Vertex2d([this.x(), this.y()]);
+	
+	    this.differance = (x, y) => {
+	      if (x instanceof Vertex2d) {
+	        y = x.y();
+	        x = x.x();
+	      }
+	      return new Vertex2d({x: this.x() - x, y: this.y() - y});
+	    }
+	
+	    this.point(point);
+	  }
+	}
+	
+	Vertex2d.fromJson = (json) => {
+	  return new Vertex2d(json.point);
+	}
+	
+	Vertex2d.minMax = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
+	  const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
+	  const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+	  for (let index = 0; index < vertices.length; index += 1) {
+	    const vert = vertices[index];
+	    if (max.x() < vert.x()) max.x(vert.x());
+	    if (max.y() < vert.y()) max.y(vert.y());
+	    if (min.x() > vert.x()) min.x(vert.x());
+	    if (min.y() > vert.y()) min.y(vert.y());
+	  }
+	  return {min, max, diff: new Vertex2d(max.x() - min.x(), max.y() - min.y())};
+	}
+	
+	Vertex2d.center = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
+	  const minMax = Vertex2d.minMax(...vertices);
+	  const centerX = minMax.min.x() + (minMax.max.x() - minMax.min.x())/2;
+	  const centerY = minMax.min.y() + (minMax.max.y() - minMax.min.y())/2;
+	  return new Vertex2d(centerX, centerY);
+	}
+	
+	Vertex2d.weightedCenter = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
+	  let x = 0;
+	  let y = 0;
+	  let count = 0;
+	  vertices.forEach((vertex) => {
+	    if (Number.isFinite(vertex.x() + vertex.y())) {
+	      count++;
+	      x += vertex.x();
+	      y += vertex.y();
+	    }
+	  });
+	  return new Vertex2d({x: x/count, y: y/count});
+	}
+	
+	// Vertex2d.center = Vertex2d.weightedCenter;
+	
+	Vertex2d.sort = (a, b) =>
+	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
+	
+	const ignoreVerySmall = (v) => Math.abs(v) < .000001 ? 0 : v;
+	Vertex2d.sortByMax = (verts) => {
+	  let max;
+	  const center = Vertex2d.center(verts);
+	  for (let index = 0; index < verts.length; index++) {
+	    let v = verts[index];
+	    let curr = {v, distance: v.distance(center)};
+	    if (max === undefined || max.distance < curr.distance) {
+	      max = curr;
+	    }
+	  }
+	  return verts.sort((v1, v2) => {
+	    const d1 = v1.distance(max.v);
+	    const d2 = v2.distance(max.v);
+	    return d2 - d1;
+	  });
+	}
+	
+	Vertex2d.centerOn = (newCenter, vertices) => {
+	  newCenter = new Vertex2d(newCenter);
+	  const center = Vertex2d.center(...vertices);
+	  const diff = newCenter.copy().differance(center);
+	  for (let index = 0; index < polys.length; index++) {
+	    const vert = vertices[index];
+	    vert.translate(diff.x(), diff.y());
+	  }
+	}
+	
+	Vertex2d.toleranceMap = (tolerance, vertices) => {
+	  tolerance ||= tol;
+	  vertices = [];
+	  const map = new ToleranceMap({x: tolerance, y: tolerance});
+	  for (let index = 0; index < vertices.length; index++) {
+	    map.add(vertices[index]);
+	  }
+	  return map;
+	}
+	
+	Vertex2d.reusable = true;
+	new Vertex2d();
+	
+	module.exports = Vertex2d;
 	
 });
 
@@ -26191,7 +27135,11 @@ RequireJS.addFunction('./app-src/two-d/objects/snap.js',
 function (require, exports, module) {
 	
 const Vertex2d = require('vertex');
+	const Line2d = require('line');
 	const SnapLocation2d = require('snap-location');
+	const HoverMap2d = require('../hover-map');
+	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	const withinTol = Tolerance.within(.1);
 	
 	class Snap2d {
 	  constructor(parent, object, tolerance) {
@@ -26258,11 +27206,16 @@ const Vertex2d = require('vertex');
 	    let radians = 0;
 	    this.radians = (newValue) => {
 	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        const radianDifference = newValue - radians;
+	        this.object().rotate(radianDifference);
 	        notify(radians, newValue);
-	        radians = newValue;
+	        radians = Math.mod(newValue, 2*Math.PI);
 	      }
 	      return radians;
 	    };
+	    this.rotate = (rads) => {
+	      this.radians(rads + radians);
+	    }
 	
 	    let height = 60.96;
 	    let width = 121.92;
@@ -26301,7 +27254,10 @@ const Vertex2d = require('vertex');
 	    const snapLocations = [];
 	    this.addLocation = (snapLoc) => {
 	      if (snapLoc instanceof SnapLocation2d && this.position[snapLoc.location()] === undefined) {
+	        const index = snapLocations.length;
 	        snapLocations.push(snapLoc);
+	        snapLoc.prev = () => snapLocations[Math.mod(index - 1, snapLocations.length)];
+	        snapLoc.next = () => snapLocations[Math.mod(index + 1, snapLocations.length)];
 	        this.position[snapLoc.location()] = snapLoc.at;
 	      }
 	    }
@@ -26316,10 +27272,29 @@ const Vertex2d = require('vertex');
 	      return locs;
 	    }
 	
+	    const backReg = /^back[0-9]{1,}$/;
+	    const rightCenterReg = /^right[0-9]{1,}center$/;
+	    const leftCenterReg = /^left[0-9]{1,}center$/;
+	    const backCenterReg = /^back[0-9]{1,}center$/;
+	    const centerReg = /^[a-z]{1,}[0-9]{1,}center$/;
 	    this.snapLocations = getSnapLocations;
 	    this.snapLocations.notPaired = () => getSnapLocations((loc) => loc.pairedWith() === null);
 	    this.snapLocations.paired = () => getSnapLocations((loc) => loc.pairedWith() !== null);
-	    this.snapLocations.wallPairable = () => getSnapLocations((loc) => loc.wallThetaOffset() !== undefined);
+	    this.snapLocations.wallPairable = () => getSnapLocations((loc) => loc.location().match(backReg));
+	    this.snapLocations.rightCenter = () => getSnapLocations((loc) => loc.location().match(rightCenterReg));
+	    this.snapLocations.leftCenter = () => getSnapLocations((loc) => loc.location().match(leftCenterReg));
+	    this.snapLocations.backCenter = () => getSnapLocations((loc) => loc.location().match(backCenterReg));
+	    this.snapLocations.center = () => getSnapLocations((loc) => loc.location().match(centerReg));
+	    this.snapLocations.at = (vertex) => {
+	      for (let index = 0; index < snapLocations.length; index++)
+	        if (snapLocations[index].center().equal(vertex)) return snapLocations[index];
+	      return null;
+	    }
+	    this.snapLocations.resetCourting = () => {
+	      for (let index = 0; index < snapLocations.length; index++) {
+	        snapLocations[index].courting(null);
+	      }
+	    }
 	    // this.snapLocations.rotate = backCenter.rotate;
 	    function resetVertices() {
 	      for (let index = 0; index < snapLocations.length; index += 1) {
@@ -26327,6 +27302,58 @@ const Vertex2d = require('vertex');
 	        instance.position[snapLoc.location()]();
 	      }
 	    }
+	
+	    this.maxRadius = () => {
+	      const center = this.parent().center();
+	      let maxDist = 0;
+	      for (let index = 0; index < snapLocations.length; index++) {
+	        const loc = snapLocations[index].center();
+	        const currDist = center.distance(loc);
+	        if (currDist > maxDist) {
+	          maxDist = currDist;
+	        }
+	      }
+	      return maxDist;
+	    }
+	
+	    this.minRadius = () => {
+	      const center = this.parent().center();
+	      let minDist = Number.MAX_SAFE_INTEGER;
+	      for (let index = 0; index < snapLocations.length; index++) {
+	        const loc = snapLocations[index].center();
+	        const currDist = center.distance(loc);
+	        if (currDist < minDist) {
+	          minDist = currDist;
+	        }
+	      }
+	      return minDist;
+	    }
+	
+	    const hoveringNear = new HoverMap2d(this.object().center, () => this.maxRadius() + 10).hovering;
+	    const hoveringObject = new HoverMap2d(this.object().center, () => this.minRadius() * 1.3).hovering;
+	    this.hovering = (vertex) => {
+	      const isNear = hoveringNear(vertex);
+	      if (!isNear) return;
+	      for (let index = 0; index < snapLocations.length; index++) {
+	        const hoveringSnap = snapLocations[index].hovering(vertex);
+	        if (hoveringSnap) return snapLocations[index];
+	      }
+	      return hoveringObject(vertex) && this;
+	    }
+	
+	    this.hoveringSnap = (vertex, excluded) => {
+	      if (this === excluded || Array.exists(excluded, this)) return false;
+	      const isNear = hoveringNear(vertex);
+	      if (!isNear) return;
+	      for (let index = 0; index < snapLocations.length; index++) {
+	        const hoveringSnap = snapLocations[index].hovering(vertex);
+	        if (hoveringSnap) return snapLocations[index];
+	      }
+	      return false;
+	    }
+	
+	    this.otherHoveringSnap = (vertex) =>
+	      parent.layout().snapAt(vertex, this);
 	
 	    function calculateMaxAndMin(closestVertex, furthestVertex, wall, position, axis) {
 	      const maxAttr = `max${axis.toUpperCase()}`;
@@ -26339,6 +27366,37 @@ const Vertex2d = require('vertex');
 	        else position[minAttr] = closestVertex[axis]();
 	      } else if (closestVertex[axis]() < furthestVertex[axis]()) position[minAttr] = closestVertex[axis]();
 	      else position[maxAttr] = closestVertex[axis]();
+	    }
+	
+	    function sameSlopeAsWall(wall, v1, v2, v3) {
+	      const wallSlope = wall.slope();
+	      const p1 = v1.point();
+	      const p2 = v2.point()
+	      const p3 = v3.point()
+	      return withinTol(wallSlope, Line2d.getSlope(p1.x, p1.y, p2.x, p2.y)) ||
+	              withinTol(wallSlope, Line2d.getSlope(p2.x, p2.y, p3.x, p3.y));
+	    }
+	
+	    function findBestWallSnapLoc(center, wall, wallPairables, theta) {
+	      let best;
+	      const currentCenter = instance.parent().center();
+	      for (let index = 0; index < wallPairables.length; index++) {
+	        const snapLoc = wallPairables[index];
+	        const neighbors = instance.object().neighbors(snapLoc.center(), -1, 1);
+	        if (theta === 180)
+	          console.log('rotated');
+	        if (sameSlopeAsWall(wall, neighbors[0], snapLoc.center(), neighbors[1])) {
+	          const centerVertex = snapLoc.at({center, theta});
+	          const moveIsWithin = layout.within(centerVertex);
+	          if (moveIsWithin) {
+	            const dist = centerVertex.distance(currentCenter);
+	            if (best === undefined || best.dist > dist) {
+	              best = {center: centerVertex, theta, wall, pairWith: snapLoc};
+	            }
+	          }
+	        }
+	      }
+	      return best;
 	    }
 	
 	    function findWallSnapLocation(center) {
@@ -26358,45 +27416,143 @@ const Vertex2d = require('vertex');
 	      if (wallObj) {
 	        const wall = wallObj.wall;
 	        const point = wallObj.point;
-	        center = point;
-	        let theta = wall.radians();
-	
-	        let position = {center, theta};
-	
 	        const wallPairables = instance.snapLocations.wallPairable();
-	        let pairWith;
-	        if (centerWithin) pairWith = wallPairables[1];
-	        else pairWith = wallPairables[0];
-	
-	        theta += Math.toRadians(pairWith.wallThetaOffset());
-	        const objCenter = pairWith.at({center, theta});
-	
-	        return {center: objCenter, theta, wall, pairWith};
+	        return findBestWallSnapLoc(point, wall, wallPairables, 0) ||
+	                    findBestWallSnapLoc(point, wall, wallPairables, Math.PI);
 	      }
 	    }
 	
-	    function findObjectSnapLocation (center) {
-	      let snapObj;
-	      SnapLocation2d.active().forEach((snapLoc) => {
-	        const tarVertId = snapLoc.targetVertex();
-	        if ((typeof instance.position[tarVertId]) !== 'function') return;
-	        const targetSnapLoc = instance.position[tarVertId]();
-	        if (snapLoc.isConnected(instance) ||
-	            snapLoc.pairedWith() !== null || targetSnapLoc.pairedWith() !== null) return;
-	        const vertDist = snapLoc.vertex().distance(center);
-	        const vertCloser = (snapObj === undefined && vertDist < tolerance) ||
-	        (snapObj !== undefined && snapObj.distance > vertDist);
-	        if (vertCloser) snapObj = {snapLoc: snapLoc, distance: vertDist, targetSnapLoc};
-	      });
-	      if (snapObj) {
-	        const snapLoc = snapObj.snapLoc;
-	        const tarSnap = snapObj.targetSnapLoc;
-	        let theta = snapLoc.parent().radians();
-	        const center = snapLoc.vertex();
-	        const funcName = snapLoc.targetVertex();
-	        theta += Math.toRadians(tarSnap.thetaOffset(snapLoc));
-	        lastPotentalPair = [snapLoc, tarSnap];
-	        return {snapLoc, center: instance.position[funcName]({center, theta}), theta};
+	    const neighborSelectFunc = (cursorCenter, neighborSeperation) => (min, index) =>
+	      min.distance(cursorCenter);// + (index === 1 ? neighborSeperation / 2 : 0);
+	
+	    function findClosestNeighbor(otherMidpoint, radians, targetMidpoint, otherLoc, cursorCenter) {
+	      const obj = instance.object();
+	      const tempPoly = obj.copy();
+	      const objVerts = obj.verticesAndMidpoints();
+	      const targetIndex = objVerts.equalIndexOf(targetMidpoint.center());
+	
+	      if (targetIndex === undefined) {
+	        console.log('wtf');
+	      }
+	
+	      tempPoly.rotate(radians);
+	      const newCenter = tempPoly.point(targetIndex, {center: otherMidpoint.center()});
+	      tempPoly.centerOn(newCenter);
+	      const neighbors = tempPoly.neighbors(otherMidpoint.center(), -1, 0, 1);
+	      const neighborSeperation = neighbors[0].distance(neighbors[2]);
+	      const neighbor = neighbors.min(null, neighborSelectFunc(cursorCenter, neighborSeperation));
+	      const neighborIndex = tempPoly.verticesAndMidpoints().equalIndexOf(neighbor);
+	      const locCount = instance.snapLocations().length;
+	
+	      const originalPosition = objVerts[neighborIndex + locCount % locCount];
+	      if (originalPosition === undefined) { // Vertex
+	        console.log('wtff');
+	      }
+	      const targetLoc = instance.snapLocations.at(originalPosition);
+	      if (!targetLoc) {
+	        // console.log(targetLoc.location());
+	        return;
+	      }
+	
+	      const dist = neighbor.distance(cursorCenter);
+	      const centerDist = tempPoly.center().distance(otherMidpoint.parent().object().center());
+	      return {targetLoc, dist, radians, targetMidpoint, otherMidpoint, centerDist};
+	    }
+	
+	    function closestSnap(otherMidpoint, otherLoc, snapList, cursorCenter) {
+	      let closest = null;
+	      const c = cursorCenter;
+	      const om = otherMidpoint;
+	      const ol = otherLoc;
+	      for (let index = 0; index < snapList.length; index++) {
+	        const targetMidpoint = snapList[index];
+	        const tm = targetMidpoint;
+	        const radDiff = otherMidpoint.forwardRadians() - targetMidpoint.forwardRadians();
+	        const parrelle = findClosestNeighbor(om, radDiff, tm, ol, c);
+	        const antiParrelle = findClosestNeighbor(om, radDiff - Math.PI, tm, ol, c);
+	        const furthestCenter =
+	          parrelle.centerDist > antiParrelle.centerDist ? parrelle : antiParrelle;
+	        furthestCenter.otherLoc = otherLoc;
+	        if (furthestCenter.radians === 0) return furthestCenter;
+	        if (!closest || closest.dist < furthestCenter.dist) {
+	          closest = furthestCenter;
+	        }
+	      }
+	      return closest;
+	    }
+	
+	
+	    function closestBackSnapInfo(otherLoc, cursorCenter) {
+	      const snapList = instance.snapLocations.center();
+	      let midpoint = otherLoc.neighbor(1);
+	      let snapInfo1 = closestSnap(midpoint, otherLoc, snapList, cursorCenter);
+	      if (snapInfo1.radians === 0) return snapInfo1;
+	      midpoint = otherLoc.neighbor(-1);
+	      let snapInfo2 = closestSnap(midpoint, otherLoc, snapList, cursorCenter);
+	      if (snapInfo2.radians === 0) return snapInfo2;
+	      if (snapInfo1.radians === Math.PI) return snapInfo1;
+	      if (snapInfo2.radians === Math.PI) return snapInfo2;
+	      const rotation1isSmallest = snapInfo2.radians > snapInfo1.radians;
+	      return rotation1isSmallest ? snapInfo1 : snapInfo2;
+	    }
+	
+	    function closestCenterSnap(otherLoc, cursorCenter) {
+	      const snapList = instance.snapLocations.center();
+	    }
+	
+	    let lastClosestSnapLocation;
+	    const distanceFunc = (center) => (snapLoc) => snapLoc.center().distance(center);// +
+	//          (lastClosestSnapLocation === snapLoc ? -10 : 0);
+	    function findClosestSnapLoc (center) {
+	      const objects = parent.layout().objects();
+	      const instObj = instance.object();
+	      const instCenter = instObj.center();
+	      let closest = null;
+	      for (let index = 0; index < objects.length; index++) {
+	        const object = objects[index];
+	        if (object !== parent) {
+	          const otherSnap = object.topview();
+	          const combinedRadius = otherSnap.maxRadius() + instance.maxRadius();
+	          const center2centerDist = otherSnap.object().center().distance(instCenter);
+	          if (center2centerDist - 1 < combinedRadius) {
+	            const snapLocs = otherSnap.snapLocations();
+	            closest = snapLocs.min(closest, distanceFunc(center));
+	          }
+	        }
+	      }
+	      lastClosestSnapLocation = closest;
+	      return closest;
+	    }
+	
+	    function snapMove(snapInfo) {
+	      if (snapInfo) {
+	        snapInfo.targetLoc.move(snapInfo.otherLoc.center(), null);
+	        instance.rotate(snapInfo.radians, snapInfo.otherLoc.center());
+	        snapInfo.targetLoc.courting(snapInfo.otherLoc);
+	      }
+	    }
+	
+	    function findObjectSnapLocation(center) {
+	      const closestOtherLoc = findClosestSnapLoc(center);
+	      if (closestOtherLoc === null) return;
+	      let snapList, midpointOffset;
+	      if (closestOtherLoc.isLeft) {
+	        if (!closestOtherLoc.isCenter) midpointOffset = -1;
+	        snapList = instance.snapLocations.rightCenter();
+	      } else if (closestOtherLoc.isRight) {
+	        if (!closestOtherLoc.isCenter) midpointOffset = 1;
+	        snapList = instance.snapLocations.leftCenter();
+	      } else if (closestOtherLoc.isBack && ! closestOtherLoc.isCenter) {
+	        const snapInfo = closestBackSnapInfo(closestOtherLoc, center);
+	        snapMove(snapInfo);
+	        return;
+	      } else {
+	        snapList = instance.snapLocations.backCenter();
+	      }
+	      if (snapList) {
+	        let midpoint = midpointOffset ? closestOtherLoc.neighbor(midpointOffset) : closestOtherLoc;
+	        const snapInfo = closestSnap(midpoint, closestOtherLoc, snapList, center);
+	        snapMove(snapInfo);
 	      }
 	    }
 	
@@ -26427,14 +27583,17 @@ const Vertex2d = require('vertex');
 	
 	    let lastValidMove;
 	    this.makeMove = (position, force) => {
-	      const originalPos = {center: this.parent().center(), theta: this.radians()};
-	      instance.parent().center().point(position.center);
+	      this.snapLocations.resetCourting();
+	      instance.object().centerOn(position.center);
 	      if (position.theta !== undefined) instance.radians(position.theta);
 	      if (!force) {
 	        let validMove = true;
-	        instance.snapLocations().forEach((l) => validMove &&= layout.within(l.at().vertex()));
+	        instance.object().centerOn(position.center);
 	        if (!validMove) {
-	          if (lastValidMove) return this.makeMove(lastValidMove, true); // No move was made return undefined
+	          if (lastValidMove) {
+	            console.log('Invalid Move');
+	            return this.makeMove(lastValidMove, true); // No move was made return undefined
+	          }
 	        } else lastValidMove = position;
 	        lastValidMove = position;
 	      }
@@ -26443,39 +27602,18 @@ const Vertex2d = require('vertex');
 	    this.move = (center) => {
 	      checkPotentialPair();
 	      const pairedSnapLocs = this.snapLocations.paired();
-	      resetVertices();
-	      if (pairedSnapLocs.length > 0) {
-	        const snapInfo = findObjectSnapLocation(center);
-	        if (snapInfo) {
-	          const obj = snapInfo.snapLoc.parent();
-	          if (snapInfo.theta !== undefined) {
-	            const theta = ((snapInfo.theta + 2 * Math.PI) - this.radians()) % (2*Math.PI);
-	            snapInfo.theta = undefined;
-	            this.snapLocations.rotate(theta);
-	          }
-	          const snapLoc = snapInfo.snapLoc;
-	          const targetVertex = snapLoc.targetVertex();
-	          const targetSnapLoc = this[targetVertex]();
-	          lastPotentalPair = [targetSnapLoc, snapLoc];
-	          const vertexCenter = snapLoc.parent().position[snapLoc.location()]().vertex();
-	          return targetSnapLoc.move(vertexCenter);
-	        }
-	        const snapLoc = pairedSnapLocs[0];
-	        return snapLoc.move(center);
-	      }
 	      const centerWithin = layout.within(center);
 	      let closest = {};
-	      const snapLocation = findObjectSnapLocation(center);
 	      const wallSnapLocation = findWallSnapLocation(center);
-	      if (snapLocation) {
-	        return this.makeMove(snapLocation);
-	      } else if (wallSnapLocation !== undefined) {
+	      if (wallSnapLocation !== undefined) {
 	        const move = this.makeMove(wallSnapLocation);
 	        const wallSnapLoc = this.snapLocations.wallPairable()[0];
 	        lastPotentalPair = [wallSnapLoc.pairWith, wallSnapLocation.wall];
 	        return move;
 	      } else if (centerWithin) {
-	        return this.makeMove({center});
+	        const move = this.makeMove({center});
+	        findObjectSnapLocation(center);
+	        return move;
 	      }
 	    }
 	
@@ -26487,7 +27625,6 @@ const Vertex2d = require('vertex');
 	      if (objData('radians')) object.radians(radians);
 	      if (objData('height')) object.height(height);
 	      if (objData('width')) object.width(width);
-	      instance.snapLocations().forEach((snapLoc) => snapLoc.at());
 	    }
 	
 	    this.update = updateObject;
@@ -26526,16 +27663,19 @@ RequireJS.addFunction('./app-src/two-d/objects/snap-location.js',
 function (require, exports, module) {
 	
 const Vertex2d = require('vertex');
+	const Line2d = require('line');
 	const Circle2d = require('circle');
+	const HoverMap2d = require('../hover-map')
 	
 	class SnapLocation2d {
-	  constructor(parent, location, vertex, targetVertex, pairedWith) {
-	    Object.getSet(this, {location, vertex, targetVertex}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
-	    let locationFunction;
-	    const circle = new Circle2d(5, vertex);
+	  constructor(parent, location, centerFunction, targetVertex, pairedWith) {
+	    Object.getSet(this, {location, targetVertex}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
 	    pairedWith = pairedWith || null;
+	    let courting;
+	    const instance = this;
 	
 	    const thetaOffset = {_DEFAULT: 0};
+	    this.center = () => centerFunction();
 	    this.thetaOffset = (cxtrNameOinstance, location, value) => {
 	      const cxtrName = cxtrNameOinstance instanceof SnapLocation2d ?
 	              cxtrNameOinstance.parent().constructor.name :
@@ -26558,12 +27698,14 @@ const Vertex2d = require('vertex');
 	    // else
 	    //        returns current postion based off of the parents current center
 	
-	    this.at = (position) => (typeof locationFunction) === 'function' ? locationFunction(position) : null;
-	    this.locationFunction = (lf) => {
-	      if ((typeof lf) === 'function') locationFunction = lf;
+	    this.at = (position) => {
+	      return centerFunction(position);
+	    }
+	    this.centerFunction = (lf) => {
+	      if ((typeof lf) === 'function') centerFunction = lf;
 	      return lf;
 	    }
-	    this.circle = () => circle;
+	    this.circle = () => new Circle2d(5, centerFunction());
 	    this.eval = () => this.parent().position[location]();
 	    this.parent = () => parent;
 	    this.parentId = () => parent.id();
@@ -26576,11 +27718,35 @@ const Vertex2d = require('vertex');
 	      if (wasPaired instanceof SnapLocation2d) wasPaired.disconnect();
 	    }
 	    this.pairWith = (otherSnapLoc) => {
+	      otherSnapLoc ||= courting;
 	      const alreadyPaired = otherSnapLoc === pairedWith;
 	      if (!alreadyPaired) {
 	        pairedWith = otherSnapLoc;
 	        if (otherSnapLoc instanceof SnapLocation2d) otherSnapLoc.pairWith(this);
 	      }
+	    }
+	
+	    // TODO: location should be immutible and so should these;
+	    this.isRight = this.location().indexOf('right') === 0;
+	    this.isLeft = this.location().indexOf('left') === 0;
+	    this.isBack = this.location().indexOf('back') === 0;
+	    this.isCenter = this.location().match(/center$/) !== null;
+	
+	    this.courting = (otherSnapLoc) => {
+	      if (courting === otherSnapLoc) return courting;
+	      if (!pairedWith) {
+	        if (otherSnapLoc instanceof SnapLocation2d) {
+	          courting = otherSnapLoc;
+	          otherSnapLoc.courting(this);
+	        } else if (otherSnapLoc === null && courting) {
+	          const tempLocation = courting;
+	          courting = null;
+	          tempLocation.courting(null);
+	        }
+	      } else {
+	        throw new Error('You cannot court a location when alreadyPaired');
+	      }
+	      return courting;
 	    }
 	
 	    this.forEachObject = (func, objMap) => {
@@ -26639,6 +27805,13 @@ const Vertex2d = require('vertex');
 	      return nonSnap;
 	    }
 	
+	    this.neighbors = (...indicies) => {
+	      const vertexNeighbors = parent.object().neighbors(this.center(), ...indicies);
+	      return vertexNeighbors.map((vert) => parent.snapLocations.at(vert));
+	    }
+	
+	    this.neighbor = (index) => this.neighbors(index)[0];
+	
 	    this.isConnected = (obj) => {
 	      let connected = false;
 	      this.forEachObject((connObj) => connected = connected || obj.id() === connObj.id());
@@ -26649,25 +27822,83 @@ const Vertex2d = require('vertex');
 	      this.forEachObject((obj) => obj.radians((obj.radians() + theta) % (2*Math.PI)));
 	    }
 	
-	    let lastMove = 0;
-	    this.move = (vertexLocation, moveId) => {
-	      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
-	      if (lastMove === moveId) return;
-	      vertexLocation = new Vertex2d(vertexLocation);
-	      const parent = this.parent();
-	      const thisNewCenterLoc = this.parent().position[location]({center: vertexLocation});
-	      parent.parent().center().point(thisNewCenterLoc);
-	      parent.update();
-	      lastMove = moveId;
+	    this.slope = (offsetIndex) => {
+	      const neighbor = parent.object().neighbors(this.center(), offsetIndex)[0];
+	      const nCenter = neighbor.point();
+	      const center = this.center().point();
+	      if (offsetIndex < 0)
+	        return Line2d.getSlope(nCenter.x, nCenter.y, center.x, center.y);
+	      return Line2d.getSlope(center.x, center.y, nCenter.x, nCenter.y);
+	    }
+	
+	    this.forwardSlope = () => this.slope(1);
+	    this.reverseSlope =  () => this.slope(-1);
+	    this.forwardRadians = () => Math.atan(this.slope(1));
+	    this.reverseRadians = () => Math.atan(this.slope(-1));
+	
+	
+	    function moveConnectedObjects(moveId) {
 	      const pairedLocs = parent.snapLocations.paired();
 	      for (let index = 0; index < pairedLocs.length; index += 1) {
 	        const loc = pairedLocs[index];
 	        const paired = loc.pairedWith();
-	        const tarVertexLoc = this.parent().position[loc.location()]().vertex();
+	        const tarVertexLoc = instance.parent().position[loc.location()]().center();
 	        if (paired instanceof SnapLocation2d) paired.move(tarVertexLoc, moveId);
 	      }
 	    }
+	
+	    function makeMove(thisNewCenterLoc, moveId, theta) {
+	      if (theta) instance.parent().object().rotate(theta);
+	      instance.parent().radians(thisNewCenterLoc);
+	      instance.parent().update();
+	      lastMove = moveId;
+	      moveConnectedObjects(moveId);
+	    }
+	
+	    this.snapToLocation = (otherSnapLoc) => {
+	      const center = otherSnapLoc.center();
+	      const otherRads = otherSnapLoc.forwardRadians();
+	      const rads = instance.forwardRadians();
+	      const changeInTheta = otherRads - rads;
+	      const position1 = {center: center, theta: changeInTheta};
+	      const position2 = {center: center, theta: changeInTheta - Math.PI};
+	      const newPosition1 = instance.parent().position[location](position1);
+	      const newPosition2 = instance.parent().position[location](position2);
+	      const otherObjectCenter = otherSnapLoc.parent().object().center()
+	      const dist1 = newPosition1.distance(otherObjectCenter);
+	      const dist2 = newPosition2.distance(otherObjectCenter);
+	      const objTheta = instance.parent().radians();
+	      const theta = objTheta - changeInTheta;
+	      if (dist1 > dist2) {
+	        instance.parent().makeMove({center: newPosition1, theta});
+	      } else {
+	        instance.parent().makeMove({center: newPosition2, theta: theta - Math.PI});
+	      }
+	    }
+	
+	    function snapToObject(vertex, moveId) {
+	      const otherSnapLoc = parent.otherHoveringSnap(vertex);
+	      if (!otherSnapLoc) return false;
+	      instance.courting(otherSnapLoc);
+	      instance.snapToLocation(otherSnapLoc);
+	      return true;
+	    }
+	
+	    let lastMove = 0;
+	    this.move = (vertex, moveId) => {
+	      const shouldNotSnap = (typeof moveId) === 'number' || moveId === null;
+	      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
+	      if (lastMove === moveId) return;
+	      vertex = new Vertex2d(vertex);
+	      if (shouldNotSnap || !snapToObject(vertex)) {
+	        const thisNewCenterLoc = this.parent().position[location]({center: vertex});
+	        this.parent().makeMove({center: thisNewCenterLoc});
+	        // makeMove(thisNewCenterLoc, moveId);
+	      }
+	    }
 	    this.notPaired = () => pairedWith === null;
+	
+	    this.hovering = new HoverMap2d(() => this.center(), 12).hovering;
 	
 	    this.instString = () => `${parent.id()}:${location}`;
 	    this.toString = () => pairedWith  instanceof SnapLocation2d ?
@@ -26752,6 +27983,33 @@ const Vertex2d = require('vertex');
 });
 
 
+RequireJS.addFunction('./app-src/two-d/layout/window.js',
+function (require, exports, module) {
+	
+const OnWall = require('./on-wall');
+	const HoverMap2d = require('../hover-map.js');
+	
+	class Window2D extends OnWall {
+	  constructor(wall, fromPreviousWall, fromFloor, height, width) {
+	    width = width || 81.28;
+	    height = height || 91.44;
+	    fromFloor = fromFloor || 101.6;
+	    fromPreviousWall = fromPreviousWall || 20;
+	    super(wall, fromPreviousWall, fromFloor, height, width);
+	    const instance = this;
+	    this.remove = () => this.wall().removeWindow(this);
+	    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}`;
+	
+	    this.hovering = new HoverMap2d(this.toLine, 5).hovering;
+	  }
+	}
+	
+	new Window2D();
+	module.exports = Window2D;
+	
+});
+
+
 RequireJS.addFunction('./app-src/two-d/objects/polygon.js',
 function (require, exports, module) {
 	const Vertex2d = require('./vertex');
@@ -26760,6 +28018,7 @@ function (require, exports, module) {
 	class Polygon2d {
 	  constructor(initialVertices) {
 	    const lines = [];
+	    const instance = this;
 	    let faceIndecies = [2];
 	    let map
 	
@@ -26782,8 +28041,88 @@ function (require, exports, module) {
 	      return vertices;
 	    }
 	
-	    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex().copy();
-	    this.midpoint = (index) => lines[Math.mod(index, lines.length)].midpoint();
+	    this.verticesAndMidpoints = (target, before, after) => {
+	      const verts = this.vertices();
+	      const both = [];
+	      for (let index = 0; index < verts.length; index++) {
+	        const sv = verts[index];
+	        const ev = verts[index + 1 === verts.length ? 0 : index + 1];
+	        both.push(sv);
+	        both.push(Vertex2d.center(sv, ev));
+	      }
+	      return both;
+	    }
+	
+	    function addNieghborsOfVertexWithinLine(vertex, indicies) {
+	      const list = [];
+	      for (let index = 0; index < indicies.length; index++) {
+	        const i = indicies[index];
+	        let found = false;
+	        for (let index = 0; !found && index < lines.length; index++) {
+	          const line = lines[index];
+	          if (line.withinSegmentBounds(vertex)) {
+	            found = true;
+	            if (i > 0) {
+	              list.push(instance.neighbors(line.endVertex(), i - 1)[0]);
+	            } else if (i < 0) {
+	              list.push(instance.neighbors(line.startVertex(), i + 1)[0]);
+	            } else {
+	              list.push(vertex);
+	            }
+	          }
+	        }
+	        if (!found) list.push(null);
+	      }
+	      return list;
+	    }
+	
+	    this.neighbors = (vertex,...indicies) => {
+	      const verts = this.verticesAndMidpoints();
+	      const targetIndex = verts.equalIndexOf(vertex);
+	      if (targetIndex !== -1) {
+	        const list = [];
+	        for (let index = 0; index < indicies.length; index++) {
+	          const i = indicies[index];
+	          const offsetIndex = Math.mod(targetIndex + i, verts.length);
+	          list.push(verts[offsetIndex]);
+	        }
+	        return list;
+	      }
+	      return addNieghborsOfVertexWithinLine(vertex, indicies);
+	    }
+	
+	    function vertexFunction(midpoint) {
+	      const getVertex = midpoint ? (line) => line.midpoint() : (line) => line.startVertex().copy();
+	      return (index, moveTo) => {
+	        const vertex = getVertex(lines[Math.mod(index, lines.length)]);
+	        if (moveTo === undefined) return vertex.copy();
+	        // const offset = vertex.differance(center);
+	        if (moveTo.theta) {
+	          const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
+	          const rotatedCenter = rotatedPoly.center();
+	          const offset = rotatedCenter.differance(vertex);
+	          return moveTo.center.translate(offset.x(), offset.y(), true);
+	        }
+	        const center = instance.center();
+	        const offset = center.differance(vertex);
+	        return moveTo.center.translate(offset.x(), offset.y(), true);
+	      }
+	    }
+	
+	    this.vertex = vertexFunction();
+	    this.midpoint = vertexFunction(true);
+	    this.point = (index, moveTo) => {
+	      if (index % 2 === 0) return this.vertex(index/2, moveTo);
+	      else return this.midpoint((index - 1)/2, moveTo);
+	    }
+	
+	    this.midpoints = () => {
+	      const list = [];
+	      for (let index = 0; index < lines.length; index++) {
+	        list.push(this.midpoint(index));
+	      }
+	      return list;
+	    }
 	
 	    this.faceIndecies = (indicies) => {
 	      if (indicies) {
@@ -26882,6 +28221,16 @@ function (require, exports, module) {
 	      }
 	    }
 	
+	    this.rotate = (theta, pivot, doNotModify) => {
+	      pivot ||= this.center();
+	      const poly = doNotModify ? this.copy() : this;
+	      if (doNotModify) return this.copy().rotate(theta, pivot);
+	      for (let index = 0; index < lines.length; index++) {
+	        lines[index].startVertex().rotate(theta, pivot);
+	      }
+	      return this;
+	    }
+	
 	    this.centerOn = (newCenter) => {
 	      newCenter = new Vertex2d(newCenter);
 	      const center = this.center();
@@ -26963,6 +28312,8 @@ function (require, exports, module) {
 	        }
 	      }
 	    }
+	
+	    this.copy = () => new Polygon2d(this.vertices().map((v) => v.copy()));
 	
 	    this.addVertices(initialVertices);
 	  }
@@ -27087,7 +28438,8 @@ function (require, exports, module) {
 	  for (let index = 0; index < partialParimeters.length; index ++) {
 	    const recObj = partialParimeters[index];
 	    const searchResult = Polygon2d.toParimeter(lines, recObj);
-	    biggest = biggest === null || biggest.area() < searchResult.area() ? searchResult : biggest;
+	    if (biggest === null || (searchResult !== null && biggest.area() < searchResult.area()))
+	      biggest = searchResult;
 	  }
 	  if (print) console.log(biggest.area(), biggest.toString());
 	  if (recurseObj === undefined)
@@ -27098,6 +28450,241 @@ function (require, exports, module) {
 	
 	new Polygon2d();
 	module.exports = Polygon2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/line-measurement.js',
+function (require, exports, module) {
+	
+const Circle2d = require('circle');
+	const Vertex2d = require('vertex');
+	const Line2d = require('line');
+	const Lookup = require('../../../../../public/js/utils/object/lookup');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const approximate = require('../../../../../public/js/utils/approximate.js');
+	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+	
+	class LineMeasurement2d {
+	  constructor(line, center, layer, modificationFunction) {
+	    const offset = 3;
+	    this.line = () => line;
+	
+	    function modifyMeasurment(offsetLine, line, buffer, takenLocations) {
+	      const startLength = line.startLine.length();
+	      line.startLine.length(startLength + buffer);
+	      line.endLine.length(startLength + buffer);
+	      line.translate(offsetLine);
+	      let notTaken = true;
+	      const point = line.midpoint();
+	      for (let index = 0; index < takenLocations.length; index++) {
+	        const locationInfo = takenLocations[index];
+	        const takenPoint = locationInfo.point;
+	        const biggestBuffer = locationInfo.buffer < buffer ? locationInfo.buffer : buffer;
+	        if (takenPoint.distance(point) < biggestBuffer) {
+	          if (takenPoint.length === length) return;
+	          notTaken = false;
+	        }
+	      }
+	      return notTaken === true ? point : undefined;
+	    }
+	
+	    function notTaken(obj) {
+	      return (buffer) => {
+	        buffer ||= 7.5;
+	        const closer = obj.closerLine();
+	        const further = obj.furtherLine();
+	        const cStartL = further.startLine
+	        const cEndL = further.endLine
+	        const offsetLine = cStartL.copy();
+	        offsetLine.length(buffer);
+	        const length = approximate(further.length());
+	        do {
+	          const point = modifyMeasurment(offsetLine, further, buffer, obj.takenLocations);
+	          if (point) {
+	            obj.takenLocations.push({point, buffer, length});
+	            return further;
+	          }
+	        } while (buffer < 1000);
+	      }
+	    }
+	    this.I = (l, takenLocations) => {
+	      takenLocations ||= [];
+	      l = l || layer || 1;
+	      const termDist = (l + 1) * offset;
+	      const measureDist = l * offset;
+	      const startLine = line.perpendicular(termDist * 2, line.startVertex(), true);
+	      const endLine = line.perpendicular(termDist * 2, line.endVertex(), true);
+	      const startCircle = new Circle2d(measureDist, line.startVertex());
+	      const endCircle = new Circle2d(measureDist, line.endVertex());
+	      const startTerminationCircle = new Circle2d(termDist - 2.5, line.startVertex());
+	      const endTerminationCircle = new Circle2d(termDist - 2.5, line.endVertex());
+	      const startVertices = startCircle.intersections(startLine);
+	      const endVertices = endCircle.intersections(endLine);
+	      let l1, l2;
+	      if (startVertices.length > 0 && endVertices.length > 0) {
+	        const startTerminationVertices = startTerminationCircle.intersections(startLine);
+	        const endTerminationVertices = endTerminationCircle.intersections(endLine);
+	        let startTerminationLine, endTerminationLine, measurementLine;
+	
+	        l1 = new Line2d(startVertices[1], endVertices[1]);
+	        l1.startLine = new Line2d(line.startVertex(), startTerminationVertices[1]);
+	        l1.endLine = new Line2d(line.endVertex(), endTerminationVertices[1]);
+	
+	        l2 = new Line2d(startVertices[0], endVertices[0]);
+	        l2.startLine = new Line2d(line.startVertex(), startTerminationVertices[0]);
+	        l2.endLine = new Line2d(line.endVertex(), endTerminationVertices[0]);
+	        const furtherLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center);
+	        const closerLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center, true);
+	        const obj = {furtherLine, closerLine, takenLocations};
+	        obj.midpointClear = notTaken(obj);
+	        return obj;
+	      } else {
+	        throw new Error('No Intersection???');
+	        return {};
+	      }
+	    }
+	
+	    this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
+	    this.modificationFunction = (func) => {
+	      if ((typeof func) === 'function') {
+	        if ((typeof this.id) !== 'function') Lookup.convert(this);
+	        modificationFunction = func;
+	      }
+	      return modificationFunction;
+	    }
+	
+	    this.toString = () => `|--${this.line()}--|`;
+	    this.display = () => new Measurement(line.length()).display();
+	
+	    this.modify = (value) => modificationFunction(new Measurement(value, true).decimal());
+	
+	    this.modificationFunction(modificationFunction);
+	  }
+	}
+	
+	function measurementLevel(line) {
+	  if ((typeof line.length) !== 'function')
+	    console.log(line);
+	
+	  return Math.log(line.length()*line.length())*2;
+	}
+	
+	const lengthSortFunc = (center) => (l1, l2) => {
+	  const lengthDiff = l1.length() - l2.length();
+	  if (lengthDiff !== 0)
+	    return lengthDiff;
+	  return center.distance(l2.midpoint()) - center.distance(l1.midpoint());
+	}
+	LineMeasurement2d.measurements = (lines) => {
+	  const verts = Line2d.vertices(lines);
+	  const center = Vertex2d.center(...verts);
+	  lines.sort(lengthSortFunc(center));
+	  // lines.sort(lengthSortFunc(center));
+	  const measurements = [];
+	  const lengthMap = new ToleranceMap({length: .00001});
+	  for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
+	    const tarVerts = lines[tIndex].liesOn(verts);
+	    if (tarVerts.length > 2) {
+	      for (let index = 1; index < tarVerts.length; index += 1) {
+	        const sv = tarVerts[index - 1];
+	        const ev = tarVerts[index];
+	        const line = new Line2d(sv,ev);
+	        lengthMap.add(line);
+	      }
+	    }
+	    if (tarVerts.length > 1) {
+	      const sv = tarVerts[0];
+	      const ev = tarVerts[tarVerts.length - 1];
+	      const line = new Line2d(sv,ev);
+	      lengthMap.add(line);
+	    }
+	  }
+	
+	
+	  const lengths = Object.keys(lengthMap.map());
+	  const slopeMap = new ToleranceMap({length: .00001, slope: .1});
+	  for (index = 0; index < lengths.length; index += 1) {
+	    let lines = lengthMap.map()[lengths[index]];
+	    //TODO: possibly restrict the measurements that display....
+	    for(let li = 0; li < lines.length; li++) {
+	      const line = lines[li];
+	      const perpLine = line.perpendicular();
+	      if (slopeMap.matches(perpLine).length === 0) {
+	        slopeMap.add(perpLine);
+	      } else {
+	        lines.splice(li, 1);
+	        li--;
+	      }
+	    }
+	    measurements.concatInPlace(lines);
+	  }
+	
+	  for (let index = 0; index < measurements.length; index++)
+	    if (approximate.abs(measurements[index].length()) !== 0)
+	      measurements[index] = new LineMeasurement2d(measurements[index], center, measurementLevel(measurements[index]));
+	    else
+	      measurements.splice(index--, 1);
+	
+	  return measurements;
+	}
+	
+	LineMeasurement2d.furtherLine = (l1, l2, point, closer) =>
+	    point === undefined ? (closer ? l1 : l2) :
+	    (l1.midpoint().distance(point) > l2.midpoint().distance(point) ?
+	      (closer ? l2 : l1) :
+	      (closer ? l1 : l2));
+	
+	module.exports = LineMeasurement2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/plane.js',
+function (require, exports, module) {
+	
+class Plane2d {
+	  constructor(vertices) {
+	    this.getLines = () => {
+	      const lines = [];
+	      for (let index = 0; index < vertices.length; index += 1) {
+	        lines.push(new Line2d(vertices[index], vertices[(index + 1) % vertices.length]));
+	      }
+	      return lines;
+	    }
+	  }
+	}
+	
+	Plane2d.getPlanes = (planes) => {
+	  const ps = [];
+	  planes.forEach((p) => ps.push(new Plane2d(p)));
+	  return ps;
+	}
+	
+	Plane2d.consolidatePolygons = (polygons) => {
+	  const consolidated = {top: {}, left: {}, front: {}};
+	  function group(g, poly) {
+	
+	    map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+	    map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+	    map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+	  }
+	  const map = {xy: [], xz: [], yz: []};
+	  polygons.forEach((p, index) => {
+	    map.xy.push([]);
+	    map.xz.push([]);
+	    map.yz.push([]);
+	    p.vertices.forEach((v) => {
+	      map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
+	      map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
+	      map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
+	    });
+	  });
+	  return map;
+	}
+	
+	new Plane2d();
+	module.exports = Plane2d;
 	
 });
 
@@ -27147,6 +28734,9 @@ const Vertex2d = require('./vertex');
 	        instance.endVertex(points[0]);
 	      }
 	    }
+	
+	    this.isVertical = () => this.slope() > 1000;
+	    this.isHorizontal = () => Math.abs(this.slope()) < .001;
 	
 	    this.withinDirectionalBounds = (point, limit) => {
 	      point = new Vertex2d(point);
@@ -27220,14 +28810,7 @@ const Vertex2d = require('./vertex');
 	    }
 	
 	    function getSlope(v1, v2) {
-	      const y1 = v1.y();
-	      const y2 = v2.y();
-	      const x1 = v1.x();
-	      const x2 = v2.x();
-	      const slope = (y2 - y1) / (x2 - x1);
-	      if (Number.NaNfinity(slope) || slope > 10000 || slope < -10000) return Infinity;
-	      if (slope > -0.00001 && slope < 0.00001) return 0;
-	      return slope;
+	      return Line2d.getSlope(v1.x(), v1.y(), v2.x(), v2.y());
 	    }
 	
 	    function getB(x, y, slope) {
@@ -27761,6 +29344,13 @@ const Vertex2d = require('./vertex');
 	  return {line: max.line, lines: retLines};
 	}
 	
+	Line2d.getSlope = function(x1, y1, x2, y2) {
+	  const slope = (y2 - y1) / (x2 - x1);
+	  if (Number.NaNfinity(slope) || slope > 10000 || slope < -10000) return Infinity;
+	  if (slope > -0.00001 && slope < 0.00001) return 0;
+	  return slope;
+	}
+	
 	Line2d.toleranceMap = (tol, startEndBoth, lines) => {
 	  tol ||= .01;
 	  lines ||= [];
@@ -27785,645 +29375,6 @@ const Vertex2d = require('./vertex');
 	new Line2d();
 	
 	module.exports = Line2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/plane.js',
-function (require, exports, module) {
-	
-class Plane2d {
-	  constructor(vertices) {
-	    this.getLines = () => {
-	      const lines = [];
-	      for (let index = 0; index < vertices.length; index += 1) {
-	        lines.push(new Line2d(vertices[index], vertices[(index + 1) % vertices.length]));
-	      }
-	      return lines;
-	    }
-	  }
-	}
-	
-	Plane2d.getPlanes = (planes) => {
-	  const ps = [];
-	  planes.forEach((p) => ps.push(new Plane2d(p)));
-	  return ps;
-	}
-	
-	Plane2d.consolidatePolygons = (polygons) => {
-	  const consolidated = {top: {}, left: {}, front: {}};
-	  function group(g, poly) {
-	
-	    map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
-	    map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
-	    map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
-	  }
-	  const map = {xy: [], xz: [], yz: []};
-	  polygons.forEach((p, index) => {
-	    map.xy.push([]);
-	    map.xz.push([]);
-	    map.yz.push([]);
-	    p.vertices.forEach((v) => {
-	      map.xy[index].push({x: v.pos.x, y: v.pos.y, level: v.pos.z});
-	      map.xz[index].push({x: v.pos.x, y: v.pos.z, level: v.pos.y});
-	      map.yz[index].push({x: v.pos.y, y: v.pos.z, level: v.pos.x});
-	    });
-	  });
-	  return map;
-	}
-	
-	new Plane2d();
-	module.exports = Plane2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/line-measurement.js',
-function (require, exports, module) {
-	
-const Circle2d = require('circle');
-	const Vertex2d = require('vertex');
-	const Line2d = require('line');
-	const Lookup = require('../../../../../public/js/utils/object/lookup');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const approximate = require('../../../../../public/js/utils/approximate.js');
-	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-	
-	class LineMeasurement2d {
-	  constructor(line, center, layer, modificationFunction) {
-	    const offset = 3;
-	    this.line = () => line;
-	
-	    function modifyMeasurment(offsetLine, line, buffer, takenLocations) {
-	      const startLength = line.startLine.length();
-	      line.startLine.length(startLength + buffer);
-	      line.endLine.length(startLength + buffer);
-	      line.translate(offsetLine);
-	      let notTaken = true;
-	      const point = line.midpoint();
-	      for (let index = 0; index < takenLocations.length; index++) {
-	        const locationInfo = takenLocations[index];
-	        const takenPoint = locationInfo.point;
-	        const biggestBuffer = locationInfo.buffer < buffer ? locationInfo.buffer : buffer;
-	        if (takenPoint.distance(point) < biggestBuffer) {
-	          if (takenPoint.length === length) return;
-	          notTaken = false;
-	        }
-	      }
-	      return notTaken === true ? point : undefined;
-	    }
-	
-	    function notTaken(obj) {
-	      return (buffer) => {
-	        buffer ||= 7.5;
-	        const closer = obj.closerLine();
-	        const further = obj.furtherLine();
-	        const cStartL = further.startLine
-	        const cEndL = further.endLine
-	        const offsetLine = cStartL.copy();
-	        offsetLine.length(buffer);
-	        const length = approximate(further.length());
-	        do {
-	          const point = modifyMeasurment(offsetLine, further, buffer, obj.takenLocations);
-	          if (point) {
-	            obj.takenLocations.push({point, buffer, length});
-	            return further;
-	          }
-	        } while (buffer < 1000);
-	      }
-	    }
-	    this.I = (l, takenLocations) => {
-	      takenLocations ||= [];
-	      l = l || layer || 1;
-	      const termDist = (l + 1) * offset;
-	      const measureDist = l * offset;
-	      const startLine = line.perpendicular(termDist * 2, line.startVertex(), true);
-	      const endLine = line.perpendicular(termDist * 2, line.endVertex(), true);
-	      const startCircle = new Circle2d(measureDist, line.startVertex());
-	      const endCircle = new Circle2d(measureDist, line.endVertex());
-	      const startTerminationCircle = new Circle2d(termDist - 2.5, line.startVertex());
-	      const endTerminationCircle = new Circle2d(termDist - 2.5, line.endVertex());
-	      const startVertices = startCircle.intersections(startLine);
-	      const endVertices = endCircle.intersections(endLine);
-	      let l1, l2;
-	      if (startVertices.length > 0 && endVertices.length > 0) {
-	        const startTerminationVertices = startTerminationCircle.intersections(startLine);
-	        const endTerminationVertices = endTerminationCircle.intersections(endLine);
-	        let startTerminationLine, endTerminationLine, measurementLine;
-	
-	        l1 = new Line2d(startVertices[1], endVertices[1]);
-	        l1.startLine = new Line2d(line.startVertex(), startTerminationVertices[1]);
-	        l1.endLine = new Line2d(line.endVertex(), endTerminationVertices[1]);
-	
-	        l2 = new Line2d(startVertices[0], endVertices[0]);
-	        l2.startLine = new Line2d(line.startVertex(), startTerminationVertices[0]);
-	        l2.endLine = new Line2d(line.endVertex(), endTerminationVertices[0]);
-	        const furtherLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center);
-	        const closerLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center, true);
-	        const obj = {furtherLine, closerLine, takenLocations};
-	        obj.midpointClear = notTaken(obj);
-	        return obj;
-	      } else {
-	        throw new Error('No Intersection???');
-	        return {};
-	      }
-	    }
-	
-	    this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
-	    this.modificationFunction = (func) => {
-	      if ((typeof func) === 'function') {
-	        if ((typeof this.id) !== 'function') Lookup.convert(this);
-	        modificationFunction = func;
-	      }
-	      return modificationFunction;
-	    }
-	
-	    this.toString = () => `|--${this.line()}--|`;
-	    this.display = () => new Measurement(line.length()).display();
-	
-	    this.modify = (value) => modificationFunction(new Measurement(value, true).decimal());
-	
-	    this.modificationFunction(modificationFunction);
-	  }
-	}
-	
-	function measurementLevel(line) {
-	  if ((typeof line.length) !== 'function')
-	    console.log(line);
-	
-	  return Math.log(line.length()*line.length())*2;
-	}
-	
-	const lengthSortFunc = (center) => (l1, l2) => {
-	  const lengthDiff = l1.length() - l2.length();
-	  if (lengthDiff !== 0)
-	    return lengthDiff;
-	  return center.distance(l2.midpoint()) - center.distance(l1.midpoint());
-	}
-	LineMeasurement2d.measurements = (lines) => {
-	  const verts = Line2d.vertices(lines);
-	  const center = Vertex2d.center(...verts);
-	  lines.sort(lengthSortFunc(center));
-	  // lines.sort(lengthSortFunc(center));
-	  const measurements = [];
-	  const lengthMap = new ToleranceMap({length: .00001});
-	  for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
-	    const tarVerts = lines[tIndex].liesOn(verts);
-	    if (tarVerts.length > 2) {
-	      for (let index = 1; index < tarVerts.length; index += 1) {
-	        const sv = tarVerts[index - 1];
-	        const ev = tarVerts[index];
-	        const line = new Line2d(sv,ev);
-	        lengthMap.add(line);
-	      }
-	    }
-	    if (tarVerts.length > 1) {
-	      const sv = tarVerts[0];
-	      const ev = tarVerts[tarVerts.length - 1];
-	      const line = new Line2d(sv,ev);
-	      lengthMap.add(line);
-	    }
-	  }
-	
-	
-	  const lengths = Object.keys(lengthMap.map());
-	  const slopeMap = new ToleranceMap({length: .00001, slope: .1});
-	  for (index = 0; index < lengths.length; index += 1) {
-	    let lines = lengthMap.map()[lengths[index]];
-	    //TODO: possibly restrict the measurements that display....
-	    for(let li = 0; li < lines.length; li++) {
-	      const line = lines[li];
-	      const perpLine = line.perpendicular();
-	      if (slopeMap.matches(perpLine).length === 0) {
-	        slopeMap.add(perpLine);
-	      } else {
-	        lines.splice(li, 1);
-	        li--;
-	      }
-	    }
-	    measurements.concatInPlace(lines);
-	  }
-	
-	  for (let index = 0; index < measurements.length; index++)
-	    if (approximate.abs(measurements[index].length()) !== 0)
-	      measurements[index] = new LineMeasurement2d(measurements[index], center, measurementLevel(measurements[index]));
-	    else
-	      measurements.splice(index--, 1);
-	
-	  return measurements;
-	}
-	
-	LineMeasurement2d.furtherLine = (l1, l2, point, closer) =>
-	    point === undefined ? (closer ? l1 : l2) :
-	    (l1.midpoint().distance(point) > l2.midpoint().distance(point) ?
-	      (closer ? l2 : l1) :
-	      (closer ? l1 : l2));
-	
-	module.exports = LineMeasurement2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/corner.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('vertex');
-	
-	class Corner {
-	  constructor(center, height, width, radians) {
-	    width = width === undefined ? 121.92 : width;
-	    height = height === undefined ? 60.96 : height;
-	    radians = radians === undefined ? 0 : radians;
-	    const instance = this;
-	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
-	    if ((typeof center) === 'function') this.center = center;
-	    const startPoint = new Vertex2d(null);
-	
-	    const getterHeight = this.height;
-	    this.height = (v) => {
-	      notify(getterHeight(), v);
-	      return getterHeight(v);
-	    }
-	    const getterWidth = this.width;
-	    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
-	
-	    const changeFuncs = [];
-	    this.onChange = (func) => {
-	      if ((typeof func) === 'function') {
-	        changeFuncs.push(func);
-	      }
-	    }
-	
-	    let lastNotificationId = 0;
-	    function notify(currentValue, newValue) {
-	      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
-	      if (newValue !== currentValue) {
-	        const id = ++lastNotificationId;
-	        setTimeout(() => {
-	          if (id === lastNotificationId)
-	            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
-	        }, 100);
-	      }
-	    }
-	
-	    this.radians = (newValue) => {
-	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	        notify(radians, newValue);
-	        radians = newValue;
-	      }
-	      return radians;
-	    };
-	    this.startPoint = () => {
-	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
-	      return startPoint;
-	    }
-	    this.angle = (value) => {
-	      if (value !== undefined) this.radians(Math.toRadians(value));
-	      return Math.toDegrees(this.radians());
-	    }
-	
-	    // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
-	    // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
-	    this.x = (val) => {
-	      if (val !== undefined) this.center().x(val);
-	      return this.center().x();
-	    }
-	    this.y = (val) => {
-	      if (val !== undefined) this.center().y(val);
-	      return this.center().y();
-	    }
-	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	
-	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	    this.move = (position, theta) => {
-	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	      this.radians(position.theta);
-	      this.center().point(center);
-	      return true;
-	    };
-	
-	    function centerMethod(widthMultiplier, heightMultiplier, position) {
-	      const center = instance.center();
-	      const rads = instance.radians();
-	      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
-	                        instance.height() * heightMultiplier * Math.sin(rads);
-	      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
-	                        instance.width() * widthMultiplier * Math.sin(rads);
-	
-	      if (position !== undefined) {
-	        const posCenter = new Vertex2d(position.center);
-	        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
-	      }
-	      const backLeftLocation = {
-	            x: instance.center().x() - offsetX ,
-	            y: instance.center().y() - offsetY
-	      };
-	      return new Vertex2d(backLeftLocation);
-	    }
-	
-	
-	    this.frontCenter = (position) => centerMethod(0, -.5, position);
-	    this.backCenter = (position) => centerMethod(0, .5, position);
-	    this.leftCenter = (position) => centerMethod(.5, 0, position);
-	    this.rightCenter = (position) => centerMethod(-.5, 0, position);
-	
-	    this.backLeft = (position) => centerMethod(.5, .5, position);
-	    this.backRight = (position) => centerMethod(-.5, .5, position);
-	    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
-	    this.frontRight = (position) => centerMethod(-.5, -.5, position);
-	
-	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	
-	    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
-	  }
-	}
-	
-	new Square2d();
-	
-	module.exports = Square2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/circle.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('./vertex');
-	
-	class Circle2d {
-	  constructor(radius, center) {
-	    center = new Vertex2d(center);
-	    Object.getSet(this, {radius, center});
-	    // ( x - h )^2 + ( y - k )^2 = r^2
-	    const instance = this;
-	    // Stole the root code from: https://stackoverflow.com/a/37225895
-	    function lineIntersects (line, bounded) {
-	      const p1 = line.startVertex();
-	      const p2 = line.endVertex();
-	        var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
-	        v1 = {};
-	        v2 = {};
-	        v1.x = p2.x() - p1.x();
-	        v1.y = p2.y() - p1.y();
-	        v2.x = p1.x() - instance.center().x();
-	        v2.y = p1.y() - instance.center().y();
-	        b = (v1.x * v2.x + v1.y * v2.y);
-	        c = 2 * (v1.x * v1.x + v1.y * v1.y);
-	        b *= -2;
-	        d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - instance.radius() * instance.radius()));
-	        if(isNaN(d)){ // no intercept
-	            return [];
-	        }
-	        u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
-	        u2 = (b + d) / c;
-	        retP1 = {};   // return points
-	        retP2 = {}
-	        ret = []; // return array
-	        if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
-	            retP1.x = p1.x() + v1.x * u1;
-	            retP1.y = p1.y() + v1.y * u1;
-	            ret[0] = retP1;
-	        }
-	        if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
-	            retP2.x = p1.x() + v1.x * u2;
-	            retP2.y = p1.y() + v1.y * u2;
-	            ret[ret.length] = retP2;
-	        }
-	        return ret;
-	    }
-	
-	    function circleIntersects(circle) {
-	      return Circle2d.intersectionOfTwo(instance, circle);
-	    }
-	
-	    this.toString = () => `(${this.radius()}${this.center()}----)`;
-	
-	    this.intersections = (input) => {
-	      if (input === undefined)
-	        console.log('here');
-	      if (input instanceof Circle2d) return circleIntersects(input);
-	      if (input.constructor.name === 'Line2d') return lineIntersects(input);
-	      throw new Error(`Cannot find intersections for ${input.constructor.name}`);
-	    }
-	  }
-	}
-	
-	// Ripped off from: https://stackoverflow.com/a/12221389
-	Circle2d.intersectionOfTwo = (circle0, circle1) => {
-	    const x0 = circle0.center().x();
-	    const y0 = circle0.center().y();
-	    const r0 = circle0.radius();
-	
-	    const x1 = circle1.center().x();
-	    const y1 = circle1.center().y();
-	    const r1 = circle1.radius();
-	    var a, dx, dy, d, h, rx, ry;
-	    var x2, y2;
-	
-	    /* dx and dy are the vertical and horizontal distances between
-	     * the circle centers.
-	     */
-	    dx = x1 - x0;
-	    dy = y1 - y0;
-	
-	    /* Determine the straight-line distance between the centers. */
-	    d = Math.sqrt((dy*dy) + (dx*dx));
-	
-	    /* Check for solvability. */
-	    if (d > (r0 + r1)) {
-	        /* no solution. circles do not intersect. */
-	        return [];
-	    }
-	    if (d < Math.abs(r0 - r1)) {
-	        /* no solution. one circle is contained in the other */
-	        return [];
-	    }
-	
-	    /* 'point 2' is the point where the line through the circle
-	     * intersection points crosses the line between the circle
-	     * centers.
-	     */
-	
-	    /* Determine the distance from point 0 to point 2. */
-	    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
-	
-	    /* Determine the coordinates of point 2. */
-	    x2 = x0 + (dx * a/d);
-	    y2 = y0 + (dy * a/d);
-	
-	    /* Determine the distance from point 2 to either of the
-	     * intersection points.
-	     */
-	    h = Math.sqrt((r0*r0) - (a*a));
-	
-	    /* Now determine the offsets of the intersection points from
-	     * point 2.
-	     */
-	    rx = -dy * (h/d);
-	    ry = dx * (h/d);
-	
-	    /* Determine the absolute intersection points. */
-	    var xi = x2 + rx;
-	    var xi_prime = x2 - rx;
-	    var yi = y2 + ry;
-	    var yi_prime = y2 - ry;
-	
-	    const list = [];
-	    return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
-	}
-	
-	Circle2d.reusable = true;
-	Circle2d.instance = (radius, center) => {
-	  const inst = Lookup.instance(Circle2d.name);
-	  inst.radius(radius);
-	  inst.center(center);
-	  return inst;
-	}
-	new Circle2d();
-	
-	module.exports = Circle2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/property/definitions.js',
-function (require, exports, module) {
-	const Property = require('../property');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const IMPERIAL_US = Measurement.units()[1];
-	
-	const defs = {};
-	
-	defs.h = new Property('h', 'height', null);
-	defs.w = new Property('w', 'width', null);
-	defs.d = new Property('d', 'depth', null);
-	defs.t = new Property('t', 'thickness', null);
-	defs.l = new Property('l', 'length', null);
-	
-	//   Overlay
-	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US})
-	
-	//   Reveal
-	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvr = new Property('rvr', 'Reveal Right', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvl = new Property('rvl', 'Reveal Left', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US})
-	
-	//   Inset
-	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US})
-	
-	//   Cabinet
-	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US}),
-	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US}),
-	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US}),
-	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US}),
-	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US}),
-	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US}),
-	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US})
-	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US})
-	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US})
-	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US})
-	
-	// Cabinet.AngledBackCorner
-	defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
-	defs.lbo = new Property('lbo', 'Left Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
-	defs.rbo = new Property('rbo', 'Right Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US})
-	
-	// Cabinet.Lshaped
-	defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 24, notMetric: IMPERIAL_US})
-	defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US})
-	
-	//   Panel
-	
-	//   Guides
-	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54),
-	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', 3*2.54/8),
-	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', 2.54/2)
-	
-	//   DoorAndFront
-	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US}),
-	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null})
-	
-	//   Door
-	
-	//   DrawerBox
-	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US}),
-	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US}),
-	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US}),
-	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US})
-	
-	//   DrawerFront
-	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
-	
-	//   Frame
-	
-	//   Handle
-	defs.c2c = new Property('c2c', 'Center To Center', null),
-	defs.proj = new Property('proj', 'Projection', null),
-	
-	//   Hinge
-	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null),
-	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null),
-	defs.maxol = new Property('maxol', 'Max Door Overlay', null),
-	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
-	
-	//   Opening
-	
-	module.exports = defs;
-	
-});
-
-
-RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
-function (require, exports, module) {
-	
-
-	
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	
-	class UFObj {
-	  constructor(order) {
-	    class Row {
-	      constructor(groupName, assembly, index) {
-	        this.groupName = groupName;
-	        this.type = assembly.constructor.name;
-	        const dems = assembly.position().demension();
-	        dems.y = new Measurement(dems.y).display();
-	        dems.x = new Measurement(dems.x).display();
-	        dems.z = new Measurement(dems.z).display();
-	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
-	        this.quantity = 1;
-	        this.cost = '$0';
-	        this.notes = assembly.notes || '';
-	      }
-	    }
-	    const cabinets = [];
-	    const obj = [];
-	    Object.values(order.rooms).forEach((room, rIndex) => room.groups.forEach((group, gIndex) => {
-	      group.cabinets.forEach((cabinet, index) => {
-	        const cabinetId = `${rIndex+1}-${gIndex+1}-${index+1}`;
-	        cabinet.getParts().forEach((part) => {
-	          const row = new Row(group.name(), part, cabinetId);
-	          if (obj[row.size] === undefined) obj[row.size] = row;
-	          else {
-	            obj[row.size].quantity++;
-	          }
-	        });
-	      });
-	    }));
-	    return Object.values(obj);
-	  }
-	}
-	module.exports = UFObj
 	
 });
 
@@ -28821,129 +29772,270 @@ const Assembly = require('./assembly.js');
 });
 
 
-RequireJS.addFunction('./app-src/displays/managers/cost.js',
+RequireJS.addFunction('./app-src/two-d/objects/corner.js',
 function (require, exports, module) {
 	
-
+const Vertex2d = require('vertex');
 	
-	const CostTree = require('../../cost/cost-tree.js');
-	const Assembly = require('../../objects/assembly/assembly.js');
-	const du = require('../../../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../../../public/js/utils/$t.js');
-	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
-	const Select = require('../../../../../public/js/utils/input/styles/select');
-	const Input = require('../../../../../public/js/utils/input/input');
-	const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation');
-	const Inputs = require('../../input/inputs.js');
-	const RadioDisplay = require('../../display-utils/radio-display.js');
+	class Corner {
+	  constructor(center, height, width, radians) {
+	    width = width === undefined ? 121.92 : width;
+	    height = height === undefined ? 60.96 : height;
+	    radians = radians === undefined ? 0 : radians;
+	    const instance = this;
+	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
+	    if ((typeof center) === 'function') this.center = center;
+	    const startPoint = new Vertex2d(null);
 	
-	class CostManager {
-	  constructor(id, name) {
-	    const costTree = new CostTree();
-	    this.root = () => costTree.root();
-	    this.update = () => {
-	      const html = CostManager.mainTemplate.render(this);
-	      du.find(`#${id}`).innerHTML = html;
+	    const getterHeight = this.height;
+	    this.height = (v) => {
+	      notify(getterHeight(), v);
+	      return getterHeight(v);
 	    }
-	    this.nodeInputHtml = () => CostManager.nodeInput().payload().html();
-	    this.headHtml = (node) =>
-	        CostManager.headTemplate.render({node, CostManager: this});
-	    this.bodyHtml = (node) =>
-	        CostManager.bodyTemplate.render({node, CostManager: this});
-	    this.loadPoint = () => console.log('load');
-	    this.savePoint = () => console.log('save');
-	    this.fromJson = () => {};
-	    this.update();
+	    const getterWidth = this.width;
+	    this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
+	
+	    const changeFuncs = [];
+	    this.onChange = (func) => {
+	      if ((typeof func) === 'function') {
+	        changeFuncs.push(func);
+	      }
+	    }
+	
+	    let lastNotificationId = 0;
+	    function notify(currentValue, newValue) {
+	      if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
+	      if (newValue !== currentValue) {
+	        const id = ++lastNotificationId;
+	        setTimeout(() => {
+	          if (id === lastNotificationId)
+	            for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
+	        }, 100);
+	      }
+	    }
+	
+	    this.radians = (newValue) => {
+	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        notify(radians, newValue);
+	        radians = newValue;
+	      }
+	      return radians;
+	    };
+	    this.startPoint = () => {
+	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+	      return startPoint;
+	    }
+	    this.angle = (value) => {
+	      if (value !== undefined) this.radians(Math.toRadians(value));
+	      return Math.toDegrees(this.radians());
+	    }
+	
+	    // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
+	    // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
+	    this.x = (val) => {
+	      if (val !== undefined) this.center().x(val);
+	      return this.center().x();
+	    }
+	    this.y = (val) => {
+	      if (val !== undefined) this.center().y(val);
+	      return this.center().y();
+	    }
+	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+	
+	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	    this.move = (position, theta) => {
+	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	      this.radians(position.theta);
+	      this.center().point(center);
+	      return true;
+	    };
+	
+	    function centerMethod(widthMultiplier, heightMultiplier, position) {
+	      const center = instance.center();
+	      const rads = instance.radians();
+	      const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
+	                        instance.height() * heightMultiplier * Math.sin(rads);
+	      const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
+	                        instance.width() * widthMultiplier * Math.sin(rads);
+	
+	      if (position !== undefined) {
+	        const posCenter = new Vertex2d(position.center);
+	        return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+	      }
+	      const backLeftLocation = {
+	            x: instance.center().x() - offsetX ,
+	            y: instance.center().y() - offsetY
+	      };
+	      return new Vertex2d(backLeftLocation);
+	    }
+	
+	
+	    this.frontCenter = (position) => centerMethod(0, -.5, position);
+	    this.backCenter = (position) => centerMethod(0, .5, position);
+	    this.leftCenter = (position) => centerMethod(.5, 0, position);
+	    this.rightCenter = (position) => centerMethod(-.5, 0, position);
+	
+	    this.backLeft = (position) => centerMethod(.5, .5, position);
+	    this.backRight = (position) => centerMethod(-.5, .5, position);
+	    this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
+	    this.frontRight = (position) => centerMethod(-.5, -.5, position);
+	
+	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
+	
+	    this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
 	  }
 	}
 	
-	CostManager.mainTemplate = new $t('managers/cost/main');
-	CostManager.headTemplate = new $t('managers/cost/head');
-	CostManager.bodyTemplate = new $t('managers/cost/body');
-	CostManager.propertySelectTemplate = new $t('managers/cost/property-select');
-	CostManager.costInputTree = (costTypes, objId, onUpdate) => {
-	  const logicTree = new LogicTree();
-	  return logicTree;
-	}
-	CostManager.nodeInput = () => {
-	  const dit = new DecisionInputTree();
-	  const typeSelect = new Select({
-	    name: 'type',
-	    list: CostTree.types,
-	    value: CostTree.types[0]
-	  });
-	  const selectorType = new Select({
-	    name: 'selectorType',
-	    list: ['Manual', 'Auto'],
-	    value: 'Manual'
-	  });
-	  const propertySelector = new Select({
-	    name: 'propertySelector',
-	    list: CostTree.propertyList,
-	  });
+	new Square2d();
 	
-	  const accVals = ['select', 'multiselect', 'conditional'];
-	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', accVals, [selectorType]);
-	  const type = dit.branch('Node', [Inputs('name'), typeSelect]);
-	  const selectType = type.conditional('selectorType', condtionalPayload);
-	  const payload = [Inputs('formula'), propertySelector, RelationInput.selector];
-	  const condtionalPayload2 = new DecisionInputTree.ValueCondition('selectorType', 'Auto', payload);
-	  selectType.conditional('formula', condtionalPayload2);
-	  return dit;
-	}
-	new RadioDisplay('cost-tree', 'radio-id');
-	
-	new CostManager('cost-manager', 'cost');
-	
-	function abbriviation(group) {
-	  return Assembly.classes[group] ? Assembly.classes[group].abbriviation : 'nope';
-	}
-	const scope = {groups: CostTree.propertyList, abbriviation};
-	// du.id('property-select-cnt').innerHTML =
-	//       CostManager.propertySelectTemplate.render(scope);
-	module.exports = CostManager
+	module.exports = Square2d;
 	
 });
 
 
-RequireJS.addFunction('./app-src/cost/types/labor.js',
+RequireJS.addFunction('./app-src/two-d/objects/circle.js',
 function (require, exports, module) {
 	
-
+const Vertex2d = require('./vertex');
 	
-	const Material = require('./material.js');
-	const Cost = require('../cost.js');
+	class Circle2d {
+	  constructor(radius, center) {
+	    center = new Vertex2d(center);
+	    Object.getSet(this, {radius, center});
+	    // ( x - h )^2 + ( y - k )^2 = r^2
+	    const instance = this;
+	    // Stole the root code from: https://stackoverflow.com/a/37225895
+	    function lineIntersects (line, bounded) {
+	      const p1 = line.startVertex();
+	      const p2 = line.endVertex();
+	        var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
+	        v1 = {};
+	        v2 = {};
+	        v1.x = p2.x() - p1.x();
+	        v1.y = p2.y() - p1.y();
+	        v2.x = p1.x() - instance.center().x();
+	        v2.y = p1.y() - instance.center().y();
+	        b = (v1.x * v2.x + v1.y * v2.y);
+	        c = 2 * (v1.x * v1.x + v1.y * v1.y);
+	        b *= -2;
+	        d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - instance.radius() * instance.radius()));
+	        if(isNaN(d)){ // no intercept
+	            return [];
+	        }
+	        u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
+	        u2 = (b + d) / c;
+	        retP1 = {};   // return points
+	        retP2 = {}
+	        ret = []; // return array
+	        if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
+	            retP1.x = p1.x() + v1.x * u1;
+	            retP1.y = p1.y() + v1.y * u1;
+	            ret[0] = retP1;
+	        }
+	        if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
+	            retP2.x = p1.x() + v1.x * u2;
+	            retP2.y = p1.y() + v1.y * u2;
+	            ret[ret.length] = retP2;
+	        }
+	        return ret;
+	    }
 	
+	    function circleIntersects(circle) {
+	      return Circle2d.intersectionOfTwo(instance, circle);
+	    }
 	
-	// unitCost.value = (hourlyRate*hours)/length
-	// calc(assembly) = unitCost.value * formula
+	    this.toString = () => `(${this.radius()}${this.center()}----)`;
 	
-	class Labor extends Material {
-	  constructor (props) {
-	    super(props);
-	    const type = props.laborType;
-	    props.hourlyRate = Labor.hourlyRates[type]
-	    const parentCalc = this.calc;
-	    this.cost = () => this.hourlyRate() * props.hours;
-	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
-	    Labor.hourlyRate(type, props.hourlyRate);
-	
-	    const parentToJson = this.toJson;
+	    this.intersections = (input) => {
+	      if (input === undefined)
+	        console.log('here');
+	      if (input instanceof Circle2d) return circleIntersects(input);
+	      if (input.constructor.name === 'Line2d') return lineIntersects(input);
+	      throw new Error(`Cannot find intersections for ${input.constructor.name}`);
+	    }
 	  }
 	}
 	
+	// Ripped off from: https://stackoverflow.com/a/12221389
+	Circle2d.intersectionOfTwo = (circle0, circle1) => {
+	    const x0 = circle0.center().x();
+	    const y0 = circle0.center().y();
+	    const r0 = circle0.radius();
 	
-	Labor.defaultRate = 40;
-	Labor.hourlyRate = (type, rate) => {
-	  rate = Cost.evaluator.eval(new String(rate));
-	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
-	  return Labor.hourlyRates[type] || Labor.defaultRate;
+	    const x1 = circle1.center().x();
+	    const y1 = circle1.center().y();
+	    const r1 = circle1.radius();
+	    var a, dx, dy, d, h, rx, ry;
+	    var x2, y2;
+	
+	    /* dx and dy are the vertical and horizontal distances between
+	     * the circle centers.
+	     */
+	    dx = x1 - x0;
+	    dy = y1 - y0;
+	
+	    /* Determine the straight-line distance between the centers. */
+	    d = Math.sqrt((dy*dy) + (dx*dx));
+	
+	    /* Check for solvability. */
+	    if (d > (r0 + r1)) {
+	        /* no solution. circles do not intersect. */
+	        return [];
+	    }
+	    if (d < Math.abs(r0 - r1)) {
+	        /* no solution. one circle is contained in the other */
+	        return [];
+	    }
+	
+	    /* 'point 2' is the point where the line through the circle
+	     * intersection points crosses the line between the circle
+	     * centers.
+	     */
+	
+	    /* Determine the distance from point 0 to point 2. */
+	    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
+	
+	    /* Determine the coordinates of point 2. */
+	    x2 = x0 + (dx * a/d);
+	    y2 = y0 + (dy * a/d);
+	
+	    /* Determine the distance from point 2 to either of the
+	     * intersection points.
+	     */
+	    h = Math.sqrt((r0*r0) - (a*a));
+	
+	    /* Now determine the offsets of the intersection points from
+	     * point 2.
+	     */
+	    rx = -dy * (h/d);
+	    ry = dx * (h/d);
+	
+	    /* Determine the absolute intersection points. */
+	    var xi = x2 + rx;
+	    var xi_prime = x2 - rx;
+	    var yi = y2 + ry;
+	    var yi_prime = y2 - ry;
+	
+	    const list = [];
+	    return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
 	}
-	Labor.hourlyRates = {};
-	Labor.types = [];
-	Labor.explanation = `Cost to be calculated hourly`;
 	
-	module.exports = Labor
+	Circle2d.reusable = true;
+	Circle2d.instance = (radius, center) => {
+	  const inst = Lookup.instance(Circle2d.name);
+	  inst.radius(radius);
+	  inst.center(center);
+	  return inst;
+	}
+	new Circle2d();
+	
+	module.exports = Circle2d;
 	
 });
 
@@ -29019,6 +30111,1503 @@ const Lookup = require('../../../../../public/js/utils/object/lookup.js')
 	  return new Joint.classes[id]().fromJson(json);
 	}
 	module.exports = Joint
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/layout/wall.js',
+function (require, exports, module) {
+	const Line2d = require('../objects/line.js');
+	const OnWall = require('./on-wall');
+	const Door2D = require('./door');
+	const Window2D = require('./window');
+	const HoverMap2d = require('../hover-map')
+	
+	function modifyVertex(vertex) {
+	  return (props) => {
+	      console.log('DummyFuncNotIntendedToBeCalled');
+	  }
+	}
+	
+	class Wall2D extends Line2d {
+	  constructor(startVertex, endVertex, height, windows, doors) {
+	    super(startVertex, endVertex);
+	    this.startVertex().modificationFunction(modifyVertex(this.startVertex()));
+	    this.endVertex().modificationFunction(modifyVertex(this.endVertex()));
+	    Lookup.convert(this);
+	    windows = windows || [];
+	    windows.forEach((win) => win.setWall(this));
+	    doors = doors || [];
+	    doors.forEach((door) => door.setWall(this));
+	    const wall = this;
+	
+	    height = height || 243.84;
+	    Object.getSet(this, {height, windows, doors});
+	    // this.copy = () => new Wall2D(this.length(), this.radians());
+	    this.windows = () => windows;
+	    this.addWindow = (fromPreviousWall) => windows.push(new Window2D(this, fromPreviousWall));
+	    this.doors = () => doors;
+	    this.addDoor = (fromPreviousWall) => doors.push(new Door2D(this, fromPreviousWall));
+	    this.vertices = () => {
+	      const verts = [this.startVertex()];
+	      const doorsAndWindows = doors.concat(windows);
+	      doorsAndWindows.sort(OnWall.sort);
+	      doorsAndWindows.forEach((onWall) => {
+	        const endpoints = onWall.endpoints2D();
+	        verts.push(endpoints.start);
+	        verts.push(endpoints.end);
+	      });
+	      verts.push(this.endVertex());
+	      return verts;
+	    }
+	
+	    this.remove = () => {
+	        const prevWall = this.startVertex().prevLine();
+	        const nextLine = this.endVertex().nextLine();
+	        const startVertex = this.startVertex();
+	        nextLine.startVertex(startVertex);
+	        startVertex.nextLine(nextLine);
+	    }
+	
+	    const hoveringStart = new HoverMap2d(() => this.startVertex(), 12).hovering;
+	    const hoveringEnd = new HoverMap2d(() => this.endVertex(), 12).hovering;
+	    const hoveringWall = new HoverMap2d(() => this, 5).hovering;
+	    this.hovering = (v) => {
+	      if (hoveringStart(v)) return this.startVertex();
+	      if (hoveringEnd(v)) return this.endVertex();
+	      for (let index = 0; index < windows.length; index++) {
+	        if (windows[index].hovering(v)) return windows[index];
+	      }
+	      for (let index = 0; index < doors.length; index++) {
+	        if (doors[index].hovering(v)) return doors[index];
+	      }
+	      return hoveringWall(v) && this;
+	    }
+	
+	    this.removeDoor = (door) => doors.splice(doors.indexOf(door), 1);
+	    this.removeWindow = (window) => windows.splice(windows.indexOf(window), 1);
+	  }
+	}
+	Wall2D.fromJson = (json, vertexMap) => {
+	  vertexMap ||= {};
+	  const newSv = Object.fromJson(json.startVertex);
+	  const svStr = newSv.toString();
+	  const newEv = Object.fromJson(json.endVertex);
+	  const evStr = newEv.toString();
+	  if (vertexMap[svStr] === undefined) vertexMap[svStr] = newSv;
+	  if (vertexMap[evStr] === undefined) vertexMap[evStr] = newEv;
+	  const sv = vertexMap[svStr];
+	  const ev = vertexMap[evStr];
+	  const windows = Object.fromJson(json.windows);
+	  const doors = Object.fromJson(json.doors);
+	  const inst = new Wall2D(sv, ev, json.height, windows, doors);
+	  inst.id(json.id);
+	  return inst;
+	}
+	
+	new Wall2D();
+	module.exports = Wall2D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/layout/on-wall.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+	const Vertex2d = require('../objects/vertex.js');
+	const Line2d = require('../objects/line.js');
+	
+	class OnWall extends Lookup {
+	  constructor(wall, fromPreviousWall, fromFloor, height, width) {
+	    super();
+	    Object.getSet(this, {width, height, fromFloor, fromPreviousWall}, 'wallId');
+	    let start = new Vertex2d();
+	    let end = new Vertex2d();
+	    this.wallId = () => wall.id();
+	    this.endpoints2D = () => {
+	      const wallStartPoint = wall.startVertex();
+	      const dist = this.fromPreviousWall();
+	      const total = dist + this.width();
+	      const theta = wall.radians();
+	      const startPoint = {};
+	      startPoint.x = wallStartPoint.x() + dist * Math.cos(theta);
+	      startPoint.y = wallStartPoint.y() + dist * Math.sin(theta);
+	      start.point(startPoint);
+	
+	      const endPoint = {};
+	      endPoint.x = (wallStartPoint.x() + total * Math.cos(theta));
+	      endPoint.y = (wallStartPoint.y() + total * Math.sin(theta));
+	      end.point(endPoint);
+	
+	      return { start, end, toString: () => `${start.toString()} => ${end.toString()}`};
+	    }
+	    this.fromPreviousWall = (value) => {
+	      value = Number.parseFloat(value);
+	      if (!Number.isNaN(value)) fromPreviousWall = value;
+	      return fromPreviousWall;
+	    }
+	    this.fromNextWall = (value) => {
+	      value = Number.parseFloat(value);
+	      if (value) {
+	        this.fromPreviousWall(wall.length() - this.width() - value);
+	      }
+	      return wall.length() - this.width() - this.fromPreviousWall();
+	    }
+	    this.startVertex = () => {
+	      const startpoint = wall.startVertex().point();
+	      const theta = wall.radians();
+	      const distLeft = this.fromPreviousWall() + width;
+	      return new Vertex2d({x: startpoint.x + distLeft * Math.cos(theta),
+	                    y: startpoint.y + distLeft * Math.sin(theta)});
+	    }
+	    this.endVertex = () => {
+	      const startpoint = wall.startVertex().point();
+	      const theta = wall.radians();
+	      const distRight = this.fromPreviousWall();
+	      return new Vertex2d({x: startpoint.x + distRight * Math.cos(theta),
+	                            y: startpoint.y + distRight * Math.sin(theta)});
+	    }
+	    this.toLine = () => new Line2d(this.startVertex(), this.endVertex());
+	    this.wall = () => wall;
+	    this.setWall = (w) => wall = w;
+	    this.move = (center) => {
+	      const point = wall.closestPointOnLine(center);
+	      const onLine = wall.closestPointOnLine(point, true);
+	      let distanceStart = wall.startVertex().distance(point);
+	      if (!onLine) {
+	        let distanceEnd = wall.endVertex().distance(point);
+	        if (distanceStart < distanceEnd) this.fromPreviousWall(0);
+	        else this.fromPreviousWall(wall.length() - this.width());
+	      } else {
+	        const max = wall.length() - this.width();
+	        distanceStart = distanceStart > max ? max : distanceStart;
+	        this.fromPreviousWall(distanceStart);
+	      }
+	    };
+	    this.toString = () => `${this.constructor.name}:${wall}, ${fromPreviousWall}, ${fromFloor}, ${height}, ${width}`
+	  }
+	}
+	OnWall.sort = (ow1, ow2) => ow1.fromPreviousWall() - ow2.fromPreviousWall();
+	OnWall.fromJson = (json) => {
+	  const cxtr = Lookup.decode(json.id).constructor;
+	  const instance = new cxtr(null, json.fromPreviousWall, json.fromFloor, json.height, json.width);
+	  instance.id(json.id);
+	  return instance;
+	}
+	
+	
+	module.exports = OnWall;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/layout/layout.js',
+function (require, exports, module) {
+	
+const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
+	const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+	const StateHistory = require('../../../../../public/js/utils/services/state-history');
+	const Vertex2d = require('../objects/vertex.js');
+	const Line2d = require('../objects/line.js');
+	const Circle2d = require('../../two-d/objects/circle.js');
+	const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
+	const Wall2D = require('./wall');
+	const Window2D = require('./window');
+	const Object2d = require('./object');
+	const Door2D = require('./door');
+	
+	function withinTolerance(point, map) {
+	  const t = map.tolerance;
+	  const start = map.start.point ? map.start.point() : map.start;
+	  const end = map.end.point ? map.end.point() : map.end;
+	  const x0 = point.x;
+	  const y0 = point.y;
+	  const x1 = start.x > end.x ? end.x : start.x;
+	  const y1 = start.y > end.y ? end.y : start.y;
+	  const x2 = start.x < end.x ? end.x : start.x;
+	  const y2 = start.y < end.y ? end.y : start.y;
+	  return x0>x1-t && x0 < x2+t && y0>y1-t && y0<y2+t;
+	}
+	
+	const ww = 500;
+	class Layout2D extends Lookup {
+	  constructor(walls, objects) {
+	    super();
+	    let history;
+	    const addEvent = new CustomEvent('add');
+	    const removeEvent = new CustomEvent('remove');
+	    const stateChangeEvent = new CustomEvent('stateChange');
+	    this.onAdd = (func) => addEvent.on(func);
+	    this.onRemove = (func) => removeEvent.on(func);
+	    this.onStateChange = (func) => stateChangeEvent.on(func);
+	
+	    walls = walls || [];
+	    objects = objects || [];
+	    Object.getSet(this, {objects, walls});
+	    const initialized = walls.length > 0;
+	    const instance = this;
+	
+	    this.startLine = () => this.walls()[0];
+	    this.endLine = () => this.walls()[this.walls().length - 1];
+	
+	    function sortByAttr(attr) {
+	      function sort(obj1, obj2) {
+	        if (obj2[attr] === obj1[attr]) {
+	          return 0;
+	        }
+	        return obj2[attr] < obj1[attr] ? 1 : -1;
+	      }
+	      return sort;
+	    }
+	
+	    this.wallIndex = (wallOrIndex) => {
+	      if (wallOrIndex instanceof Wall2D) {
+	        for (let index = 0; index < walls.length; index += 1) {
+	          if (walls[index] === wallOrIndex) return index;
+	        }
+	        return -1;
+	      } else {
+	        while(wallOrIndex < 0) wallOrIndex += walls.length;
+	        return wallOrIndex % walls.length;
+	      }
+	    }
+	
+	    function relitiveWall(wall, i) {
+	      let position = instance.wallIndex(wall);
+	      if (position === undefined) return null;
+	      const relitiveList = walls.slice(position).concat(walls.slice(0, position));
+	      return relitiveList[instance.wallIndex(i)];
+	    }
+	    this.relitiveWall = relitiveWall;
+	    this.nextWall = (wall) => relitiveWall(wall, 1);
+	    this.prevWall = (wall) => relitiveWall(wall, -1);
+	
+	    function reconsileLength (wall) {
+	      return (newLength) => {
+	        const moveVertex = wall.endVertex();
+	        const nextLine = instance.nextWall(wall);
+	        if (nextLine === undefined) wall.length(newLength);
+	
+	        const vertex1 = nextLine.endVertex();
+	        const circle1 = new Circle2d(nextLine.length(), vertex1);
+	        const vertex2 = wall.startVertex();
+	        const circle2 = new Circle2d(newLength, vertex2);
+	        const intersections = circle1.intersections(circle2);
+	
+	        const useFirst = (intersections.length !== 0 && intersections.length === 1) ||
+	                  moveVertex.distance(intersections[0]) < moveVertex.distance(intersections[1]);
+	        if (intersections.length === 0) {
+	          wall.length(newLength);
+	        } else if (useFirst) {
+	          moveVertex.point(intersections[0]);
+	        } else {
+	          moveVertex.point(intersections[1]);
+	        }
+	      }
+	    }
+	    this.reconsileLength = reconsileLength;
+	
+	    const sortById = sortByAttr('id');
+	    this.toJson = () => {
+	      const objs = this.objects();
+	      const json = {walls: []};
+	      json.id = this.id();
+	      json.objects = Array.toJson(objs);
+	      this.walls().forEach((wall) => {
+	        json.walls.push(wall.toJson());
+	      });
+	      // json.walls.sort(sortById);
+	      json.objects.sort(sortById);
+	      const snapMap = {};
+	      objs.forEach((obj) => {
+	        const snapLocs = obj.topview().snapLocations.paired();
+	        snapLocs.forEach((snapLoc) => {
+	          const snapLocJson = snapLoc.toJson();
+	          if (snapMap[snapLocJson.UNIQUE_ID] === undefined) {
+	            snapMap[snapLocJson.UNIQUE_ID] = snapLocJson;
+	          }
+	        });
+	      });
+	      json.snapLocations = Object.values(snapMap);
+	      json._TYPE = this.constructor.name;
+	      delete json.id;
+	      return json;
+	    }
+	
+	    this.push = (...points) => {
+	      if (this.startLine() === undefined) {
+	        const walls = this.walls();
+	        if (points.length < 3) throw Error('Layout must be initialized with atleast three vertices');
+	        walls[0] = new Wall2D(points[0], points[1]);
+	      }
+	      for (let index = 1; index < points.length; index += 1) {
+	        const endLine = this.endLine();
+	        const startV = endLine.endVertex();
+	        const endV = new Vertex2d(points[(index + 1) % points.length]);
+	        walls.push(new Wall2D(startV, endV));
+	      }
+	    }
+	
+	    this.addObject = (id, payload, name, polygon) => {
+	      const center = Vertex2d.center.apply(null, this.vertices())
+	      const obj = new Object2d(center, this, payload, name, polygon);
+	      obj.id(id);
+	      this.objects().push(obj);
+	      history.newState();
+	      addEvent.trigger(undefined, payload);
+	      return obj;
+	    }
+	
+	    this.removeObject = (obj) => {
+	      for (index = 0; index < objects.length; index += 1) {
+	        if (objects[index] === obj) {
+	          const obj = objects.splice(index, 1);
+	          removeEvent.trigger(undefined, obj.payload());
+	          return obj;
+	        }
+	      }
+	      return null;
+	    }
+	
+	    this.removeByPayload = (payload) => {
+	      for (index = 0; index < objects.length; index += 1) {
+	        if (objects[index].payload() === payload) {
+	          const obj = objects.splice(index, 1);
+	          removeEvent.trigger(undefined, payload);
+	          return obj;
+	        }
+	      }
+	      return null;
+	    }
+	
+	    this.idMap = () => {
+	      const idMap = {};
+	      const walls = this.walls();
+	      idMap[walls[0].startVertex().id()] = walls[0].startVertex();
+	      walls.forEach((wall) => {
+	        idMap[wall.id()] = wall;
+	        const endV = wall.endVertex();
+	        idMap[endV.id()] = endV;
+	        wall.windows().forEach((window) => idMap[window.id()] = window);
+	        wall.windows().forEach((window) => idMap[window.id()] = window);
+	        wall.doors().forEach((door) => idMap[door.id()] = door);
+	      });
+	      objects.forEach((obj) => idMap[obj.id()] = obj);
+	      return idMap;
+	    }
+	
+	    this.removeWall = (wall) => {
+	      if (!(wall instanceof Wall2D)) return undefined;
+	      const walls = this.walls();
+	      for (index = 0; index < walls.length; index += 1) {
+	        const currWall = walls[index];
+	        if (currWall === wall) {
+	          const nextWallSv = walls[this.wallIndex(index + 1)].startVertex();
+	          walls[this.wallIndex(index - 1)].endVertex(nextWallSv);
+	          walls.splice(index, 1);
+	          return currWall;
+	        }
+	      }
+	      return null;
+	    }
+	
+	    this.addVertex = (vertex, wall) => {
+	      vertex = new Vertex2d(vertex);
+	      let wallIndex = this.wallIndex(wall);
+	      if (wallIndex === -1) {
+	        wall = walls[walls.length - 1];
+	        wallIndex = this.wallIndex(wall);
+	      }
+	      let newWall = new Wall2D(vertex, wall.endVertex());
+	      wall.endVertex(vertex);
+	
+	      const tail = [newWall].concat(walls.slice(wallIndex + 1));
+	      walls = walls.slice(0, wallIndex + 1).concat(tail);
+	    }
+	
+	    this.removeVertex = (vertex) => {
+	      if (!(vertex instanceof Vertex2d)) return undefined;
+	      const walls = this.walls();
+	      for (index = 0; index < walls.length; index += 1) {
+	        const wall = walls[index];
+	        if (wall.startVertex() === vertex) {
+	          walls[this.wallIndex(index - 1)].endVertex(walls[this.wallIndex(index + 1)].startVertex());
+	          return walls.splice(index, 1);
+	        }
+	        if (wall.endVertex() === vertex) {
+	          walls[this.wallIndex(index + 1)].startVertex(walls[this.wallIndex(index - 1)].endVertex());
+	          return walls.splice(index, 1);
+	        }
+	      }
+	      return null;
+	    }
+	
+	    this.remove = (id) => {
+	      id = id instanceof Lookup ? id.id() : id;
+	      const idMap = this.idMap();
+	      const walls = this.walls();
+	      const wallCount = walls.length;
+	      const item = idMap[id];
+	      if (item === undefined) throw new Error(`Unknown id: ${id}`);
+	      if (wallCount < 3 && (item instanceof Wall2D || item instanceof Vertex2d))
+	          throw new Error('Cannot Remove any more vertices or walls');
+	
+	      return this.removeVertex(item) || this.removeWall(item) ||
+	              this.removeObject(item) || item.remove();
+	    }
+	
+	    this.vertices = (target, before, after) => {
+	      const lines = this.walls();
+	      if (lines.length === 0) return [];
+	      const fullList = [];
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        fullList.push(line.startVertex());
+	      }
+	      if (target) {
+	        const vertices = [];
+	        const index = fullList.indexOf(target);
+	        if (index === undefined) return null;
+	        for (let i = before; i < before + after + 1; i += 1)
+	            vertices.push(fullList[Math.mod(i, fullList.length)]);
+	        return vertices;
+	      } else return fullList;
+	
+	      return vertices;
+	    }
+	
+	    this.within = (vertex) => {
+	      vertex = new Vertex2d(vertex);
+	      const endpoint = {x: 0, y: 0};
+	      this.vertices().forEach(v => {
+	        // TODO: figure out why negating the components causes errors....
+	        // endpoint.x -= v.x() * 2;
+	        // endpoint.y -= v.y() * 2;
+	        endpoint.x += v.x() * 2;
+	        endpoint.y += v.y() * 2;
+	      });
+	      const escapeLine = new Line2d(vertex, endpoint);
+	      const intersections = [];
+	      let onLine = false;
+	      const allIntersections = [];
+	      this.walls().forEach((wall) => {
+	
+	        const intersection = wall.findSegmentIntersection(escapeLine, true);
+	        allIntersections.push(intersection);
+	        if (intersection) {
+	          // Todo make more accurate
+	          const xEqual = approximate.eq(intersection.x(), vertex.x());
+	          const yEqual = approximate.eq(intersection.y(), vertex.y());
+	          if (xEqual && yEqual) onLine = true;
+	          intersections.push(intersection);
+	        }
+	      });
+	
+	      return onLine || intersections.length % 2 === 1;
+	    }
+	
+	    this.connected = () => {
+	      for (let index = 0; index < walls.length; index += 1) {
+	        const wall = walls[index];
+	        const prevWall = this.prevWall(wall);
+	        if (wall.startVertex() !== prevWall.endVertex()) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.payloads = () => {
+	      const payloads = [];
+	      this.objects().forEach((obj) => {
+	        const center = obj.center();
+	        const payload = obj.payload();
+	        payloads.push({center, payload});
+	      });
+	      return payloads;
+	    }
+	
+	    function filterCompare(list) {
+	      list = list.map((o) => o.payload());
+	      return list.filter((o) => o);
+	    }
+	
+	    this.fromJson = (json) => {
+	      const layout = Layout2D.fromJson(json);
+	      const origWalls = this.walls();
+	      const newWalls = layout.walls();
+	      const wallCompare = Array.compare(origWalls, newWalls, true);
+	
+	      const origObjects = this.objects();
+	      const newObjects = layout.objects();
+	      const objCompare = Array.compare(origObjects, newObjects, true);
+	
+	      if (objCompare || wallCompare) {
+	        const detail = {layout, objects: {added: [], removed: []}, walls: {added: [], removed: []}};
+	        if (objCompare) {
+	          detail.objects.added = filterCompare(objCompare.added);
+	          detail.objects.removed = filterCompare(objCompare.removed);
+	        }
+	        if (wallCompare) {
+	          detail.walls.added = filterCompare(wallCompare.added);
+	          detail.walls.removed = filterCompare(wallCompare.removed);
+	        }
+	        stateChangeEvent.trigger(undefined, detail);
+	      }
+	    }
+	
+	    // if (!initialized) this.push({x:0, y:0}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
+	    if (!initialized) this.push({x:1, y:1}, {x:ww+1, y:0}, {x:ww + 1,y:ww + 1}, {x:1,y:ww});
+	    this.walls = () => walls;
+	
+	    history = new StateHistory(this.toJson, this.fromJson);
+	    this.history = () => history;
+	
+	    this.snapAt = (vertex, excuded) => {
+	      for (let index = 0; index < objects.length; index++) {
+	        const obj = objects[index];
+	        if (excuded !== obj || Array.exists(excuded, obj)) {
+	          const hovering = obj.topview().hoveringSnap(vertex, excuded);
+	          if (hovering) return hovering;
+	        }
+	      }
+	    }
+	
+	    this.at = (vertex) => {
+	      for (let index = 0; index < walls.length; index++) {
+	        const hovering = walls[index].hovering(vertex);
+	        if (hovering) return hovering;
+	      }
+	      for (let index = 0; index < objects.length; index++) {
+	        const hovering = objects[index].topview().hovering(vertex);
+	        if (hovering) return hovering;
+	      }
+	    }
+	  }
+	}
+	
+	// Needs to be internal!!!!
+	Layout2D.fromJson = (json) => {
+	  const walls = [];
+	  const vertexMap = {};
+	  json.walls.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, vertexMap)));
+	
+	  const layout = new Layout2D(walls);
+	  layout.id(json.id);
+	
+	  const objects = [];
+	  json.objects.forEach((o) => {
+	    const center = Vertex2d.fromJson(o.center);
+	    let obj = Object2d.get(o.id);
+	    if (obj === undefined) {
+	      obj = new Object2d(center, layout, undefined, o.name);
+	      obj.payloadId(o.payloadId);
+	      obj.id(o.id);
+	    } else obj.fromJson(o);
+	    objects.push(obj);
+	  });
+	  layout.objects(objects);
+	  json.snapLocations.forEach((snapLocJson) => {
+	    const view = snapLocJson.view;
+	    const obj1 = Lookup.get(snapLocJson[0].objectId);
+	    const obj2 = Lookup.get(snapLocJson[1].objectId);
+	    const snapLoc1 = obj1[view]().position[snapLocJson[0].location]();
+	    const snapLoc2 = obj2[view]().position[snapLocJson[1].location]();
+	    snapLoc2.pairWith(snapLoc1);
+	  });
+	
+	  console.log('isConnected:', layout.connected());
+	  return layout;
+	}
+	
+	new Layout2D();
+	module.exports = Layout2D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/labor.js',
+function (require, exports, module) {
+	
+
+	
+	const Material = require('./material.js');
+	const Cost = require('../cost.js');
+	
+	
+	// unitCost.value = (hourlyRate*hours)/length
+	// calc(assembly) = unitCost.value * formula
+	
+	class Labor extends Material {
+	  constructor (props) {
+	    super(props);
+	    const type = props.laborType;
+	    props.hourlyRate = Labor.hourlyRates[type]
+	    const parentCalc = this.calc;
+	    this.cost = () => this.hourlyRate() * props.hours;
+	    if (Labor.hourlyRates[type] === undefined) Labor.types.push(type);
+	    Labor.hourlyRate(type, props.hourlyRate);
+	
+	    const parentToJson = this.toJson;
+	  }
+	}
+	
+	
+	Labor.defaultRate = 40;
+	Labor.hourlyRate = (type, rate) => {
+	  rate = Cost.evaluator.eval(new String(rate));
+	  if (!Number.isNaN(rate)) Labor.hourlyRates[type] = rate;
+	  return Labor.hourlyRates[type] || Labor.defaultRate;
+	}
+	Labor.hourlyRates = {};
+	Labor.types = [];
+	Labor.explanation = `Cost to be calculated hourly`;
+	
+	module.exports = Labor
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/layout/object.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+	const Vertex2d = require('../objects/vertex.js');
+	const SnapPolygon = require('../objects/snap/polygon');
+	const SnapSquare = require('../objects/snap/square');
+	
+	class Object2d extends Lookup {
+	  constructor(center, layout, payload, name, polygon) {
+	    super(undefined, undefined, true);
+	    center = new Vertex2d(center);
+	    let payloadId;
+	    this.layout = () => layout;
+	    Object.getSet(this, {name, center}, 'payloadId');
+	    this.payload = () => {
+	      if (payload === undefined) payload = Lookup.get(this.payloadId());
+	      return payload;
+	    };
+	
+	    // Ids should only be equal if one object was built using the other as a replacement
+	    this.equals = (obj) => this.id() === obj.id();
+	
+	    this.payloadId = (pId) => {
+	      if ((typeof pId) === 'string') payloadId = pId;
+	      if (!payload) return payloadId;
+	      if (payload.ID_ATTRIBUTE) return payload[payload.ID_ATTRIBUTE()]();
+	      return (typeof payload.id) === 'function' ? payload.id() : payload.id;
+	    }
+	
+	    this.name = (val) => {
+	      if (val) name = val;
+	      if (this.payload() === undefined) return name;
+	      if ((typeof this.payload().name) === 'function') return this.payload().name(val);
+	      return this.payload.name;
+	    }
+	
+	    let topview;
+	    if (polygon) topview = new SnapPolygon(this, polygon, 10);
+	    // else topview = new SnapSquare(this, 30);
+	
+	    // TODO: If more views are imolemented center function will not be sufficient.
+	    this.center = () => topview.object().center();
+	    this.topview = () => topview;
+	
+	    if ((typeof name) === 'function') this.name = name;
+	    this.toString = () => `Object2d: ${center}`;
+	  }
+	}
+	
+	new Object2d();
+	module.exports = Object2d;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/layout/door.js',
+function (require, exports, module) {
+	
+const OnWall = require('on-wall');
+	const HoverMap2d = require('../hover-map.js');
+	
+	class Door2D extends OnWall {
+	  constructor() {
+	    super(...arguments);
+	    this.width(this.width() || 91.44);
+	    this.height(this.height() || 198.12);
+	    this.fromPreviousWall(this.fromPreviousWall() || 150);
+	    this.fromFloor(this.fromFloor() || 0);
+	    let hinge = 0;
+	    Object.getSet(this, 'hinge');
+	    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}:${hinge}`;
+	    this.remove = () => this.wall().removeDoor(this);
+	    this.hinge = (val) => val === undefined ? hinge :
+	      hinge = ((typeof val) === 'number' ? val : hinge + 1) % 5;
+	
+	    this.hovering = new HoverMap2d(this.toLine, 20).hovering;
+	  }
+	}
+	
+	Door2D.fromJson = (json) => {
+	  const inst = OnWall.fromJson(json);
+	  inst.hinge(json.hinge);
+	  return inst;
+	}
+	
+	new Door2D();
+	module.exports = Door2D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/vertex.js',
+function (require, exports, module) {
+	
+const Matrix = require('./matrix');
+	const Vector3D = require('./vector');
+	const Vertex2d = require('../../two-d/objects/vertex');
+	const approximate = require('../../../../../public/js/utils/approximate.js');
+	const approx10 = approximate.new(10);
+	const CSG = require('../../../public/js/3d-modeling/csg.js');
+	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+	
+	
+	class Vertex3D {
+	  constructor(x, y, z) {
+	    if (x instanceof Vertex3D) return x;
+	    if (x instanceof Vector3D) {
+	      this.x = x.i();
+	      this.y = x.j();
+	      this.z = x.k();
+	    } else if (x === undefined) {
+	      this.x = 0;
+	      this.y = 0;
+	      this.z = 0;
+	    } else if (arguments.length == 3) {
+	      this.x = x;
+	      this.y = y;
+	      this.z = z;
+	    } else if ('x' in x) {
+	      this.x = x.x;
+	      this.y = x.y;
+	      this.z = x.z;
+	    } else {
+	      this.x = x[0];
+	      this.y = x[1];
+	      this.z = x[2];
+	    }
+	
+	    this.viewFromVector = (vector) => Vertex3D.viewFromVector([this], vector);
+	
+	    this.translate = (vector, doNotModify) => {
+	      let vertex = this;
+	      if (doNotModify === true) vertex = this.copy();
+	      vertex.x += vector.i();
+	      vertex.y += vector.j();
+	      vertex.z += vector.k();
+	      return vertex;
+	    }
+	
+	    this.positionAt = (vertex) => {
+	      this.x = vertex.x;
+	      this.y = vertex.y;
+	      this.z = vertex.z;
+	    }
+	
+	    this.usless = () => Number.NaNfinity(x, y, z);
+	
+	    this.vector = (vector) => {
+	      const v = vector;
+	      if (v) return new Vector3D(this.x + v.i(), this.y + v.j(), this.z + v.k());
+	      return new Vector3D(this.x, this.y, this.z);
+	    }
+	
+	    this.rotate = (rotations, center) => {
+	      CSG.rotatePointAroundCenter(rotations, this, center);
+	      return this;
+	    }
+	
+	    this.reverseRotate = (rotations, center) => {
+	      CSG.rotatePointAroundCenter(rotations, this, center, true);
+	      return this;
+	    }
+	
+	    this.matrix = () => {
+	      return new Matrix([[this.x, this.y, this.z]]);
+	    }
+	
+	    this.distance = (other) => {
+	      const xDiff = this.x - other.x;
+	      const yDiff = this.y - other.y;
+	      const zDiff = this.z - other.z;
+	
+	      return Math.sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff);
+	    }
+	
+	    this.distanceVector = (other) => {
+	      const xDiff = other.x - this.x;
+	      const yDiff = other.y - this.y;
+	      const zDiff = other.z - this.z;
+	
+	      return new Vector3D(xDiff, yDiff, zDiff);
+	    }
+	
+	    this.minus = (other) => {
+	      const xDiff = this.x - other.x;
+	      const yDiff = this.y - other.y;
+	      const zDiff = this.z - other.z;
+	
+	      return new Vector3D(xDiff, yDiff, zDiff);
+	    }
+	
+	    this.inverseVector = () => {
+	      return new Vertex3D(this.x * -1, this.y* -1, this.z * -1);
+	    }
+	
+	    this.to2D = (x, y) => Vertex3D.to2D([this], x, y)[0];
+	
+	    this.copy = () => new Vertex3D(this.x, this.y, this.z);
+	    this.clone = this.copy;
+	    this.equals = (other) => other && Vertex3D.tolerance.within(this, other);
+	    this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
+	    this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
+	  }
+	}
+	
+	const tol = .000000001;
+	Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
+	
+	// returned direction is of list2 relitive to list 1
+	// dirArr = [forward, backward, up, down, left, right];
+	Vertex3D.direction = (vertList1, vertList2, tolerance, axisOnly) => {
+	  tolerance ||= .1;
+	  let dirArr = [true, true, true, true, true, true];
+	  for (let i = 0; i < vertList1.length; i++) {
+	    const vert1 = vertList1[i];
+	    for (let j = 0; j < vertList2.length; j++) {
+	      const vert2 = vertList2[j];
+	      dirArr[0] &&= vert1.z > vert2.z - tolerance;
+	      dirArr[1] &&= vert1.z < vert2.z + tolerance;
+	      dirArr[2] &&= vert1.y < vert2.y + tolerance;
+	      dirArr[3] &&= vert1.y > vert2.y - tolerance;
+	      dirArr[4] &&= vert1.x > vert2.x - tolerance;
+	      dirArr[5] &&= vert1.x < vert2.x + tolerance;
+	    }
+	    if (dirArr[0] && dirArr[1]) dirArr[0] = dirArr[1] = false;
+	    if (dirArr[2] && dirArr[3]) dirArr[2] = dirArr[3] = false;
+	    if (dirArr[4] && dirArr[5]) dirArr[4] = dirArr[5] = false;
+	
+	    const zDir = dirArr[0] ? 'forward' : (dirArr[1] ? 'backward' : undefined);
+	    const yDir = dirArr[2] ? 'up' : (dirArr[3] ? 'down' : undefined);
+	    const xDir = dirArr[4] ? 'left' : (dirArr[5] ? 'right' : undefined);
+	
+	    if (zDir && yDir && xDir) return axisOnly ? null : `${xDir} ${yDir} ${zDir}`;
+	    if (zDir) {
+	      if (yDir) return axisOnly ? null : `${yDir} ${zDir}`;
+	      if (xDir) return axisOnly ? null : `${xDir} ${zDir}`;
+	      return zDir;
+	    }
+	    if (xDir) {
+	      if (yDir) return axisOnly ? null : `${xDir} ${yDir}`;
+	      return xDir
+	    }
+	    return yDir ? yDir : null;
+	  }
+	}
+	
+	Vertex3D.uniqueFilter = () => {
+	  const map = new ToleranceMap({x: tol, y: tol, z: tol});
+	  return (vert) => {
+	    if (!(vert instanceof Vertex3D)) return false;
+	    if (map.matches(vert).length > 0) return false;
+	    map.add(vert);
+	    return true;
+	  }
+	}
+	
+	Vertex3D.center = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
+	  let x = 0;
+	  let y = 0;
+	  let z = 0;
+	  let count = 0;
+	  vertices.forEach((vertex) => {
+	    if (Number.isFinite(vertex.x + vertex.y + vertex.z)) {
+	      count++;
+	      x += vertex.x;
+	      y += vertex.y;
+	      z += vertex.z;
+	    } else {
+	      throw new Error("Vertex contains a non-number");
+	    }
+	  });
+	  return new Vertex3D({x: x/count, y: y/count, z: z/count});
+	}
+	
+	Vertex3D.to2D = (vertices, x, y) => {
+	  const verts2D = [];
+	  for (let index = 0; index < vertices.length; index++) {
+	    verts2D.push(new Vertex2d(vertices[index][x], vertices[index][y]));
+	  }
+	  return verts2D;
+	}
+	
+	Vertex3D.viewFromVector = (vertices, vector, filter) => {
+	  const negitive = !vector.positive();
+	  const orthoVerts = [];
+	  const runFilter = (typeof filter) === 'function';
+	  for (let index = 0; index < vertices.length; index++) {
+	    const vertex = vertices[index];
+	    const u = new Vector3D(vertex.x, vertex.y, vertex.z);
+	    const projection = u.projectOnTo(vector);
+	    let orthogonal = u.minus(projection).scale(negitive ? 1 : -1);
+	    orthogonal = new Vertex3D(orthogonal);
+	    if (!runFilter || (runFilter && filter(orthogonal, vertex)))
+	      orthoVerts.push(orthogonal);
+	  }
+	  return orthoVerts;
+	}
+	
+	Vertex3D.sortByCenter = (center) => {
+	  return (v1, v2) => {
+	    const d1 = v1.distance(v2);
+	    const d2 = v2.distance(v1);
+	    d1 === d2 ? 0 : (d1 < d2 ? -1 : 1);
+	  }
+	}
+	
+	module.exports = Vertex3D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/cost/types/material.js',
+function (require, exports, module) {
+	
+
+	
+	const Cost = require('../cost.js');
+	const Assembly = require('../../objects/assembly/assembly.js');
+	
+	class Material extends Cost {
+	  constructor (props) {
+	    super(props);
+	    props = this.props();
+	    props.cost = props.cost / (props.count || 1);
+	    const instance = this;
+	    Object.getSet(props, 'company', 'formula', 'partNumber',
+	                'method', 'length', 'width', 'depth', 'cost');
+	
+	
+	    this.unitCost = (attr) => {
+	      const unitCost = Material.configure(instance.method(), instance.cost(),
+	        instance.length(), instance.width(), instance.depth());
+	      const copy = JSON.parse(JSON.stringify(unitCost));
+	      if (attr) return copy[attr];
+	      return copy;
+	    }
+	
+	    this.calc = (assemblyOrCount) => {
+	      const unitCost = this.unitCost();
+	      const formula = this.formula() || unitCost.formula;
+	      if (assemblyOrCount instanceof Assembly)
+	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
+	      else if (Number.isFinite(assemblyOrCount))
+	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
+	      else
+	        throw new Error('calc argument must be a number or Assembly');
+	    }
+	  }
+	}
+	
+	Material.methods = {
+	  LINEAR_FEET: 'Linear Feet',
+	  SQUARE_FEET: 'Square Feet',
+	  CUBIC_FEET: 'Cubic Feet',
+	  UNIT: 'Unit'
+	};
+	
+	Material.methodList = Object.values(Material.methods);
+	
+	
+	Material.configure = (method, cost, length, width, depth) => {
+	  const unitCost = {};
+	  switch (method) {
+	    case Material.methods.LINEAR_FEET:
+	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
+	      unitCost.name = 'Linear Inch';
+	      unitCost.value = perLinearInch;
+	      unitCost.formula = 'l';
+	      return unitCost;
+	    case Material.methods.SQUARE_FEET:
+	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
+	      unitCost.name = 'Square Inch';
+	      unitCost.value = perSquareInch;
+	      unitCost.formula = 'l*w';
+	      return unitCost;
+	    case Material.methods.CUBIC_FEET:
+	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
+	      unitCost.name = 'Cubic Inch';
+	      unitCost.value = perCubicInch;
+	      unitCost.formula = 'l*w*d';
+	      return unitCost;
+	    case Material.methods.UNIT:
+	      unitCost.name = 'Unit';
+	      unitCost.value = cost;
+	      return unitCost;
+	    default:
+	      throw new Error('wtf');
+	      unitCost.name = 'Unknown';
+	      unitCost = -0.01;
+	      formula = -0.01;
+	      return unitCost;
+	  }
+	};
+	
+	Material.explanation = `Cost to be calculated by number of units or demensions`;
+	
+	module.exports = Material
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/vector.js',
+function (require, exports, module) {
+	
+const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
+	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	
+	
+	function isZero(val) {
+	  return Vector3D.tolerance.bounds.i.within(val, 0);
+	}
+	
+	
+	class Vector3D {
+	  constructor(i, j, k) {
+	    if (i instanceof Vector3D) return i;
+	    if (i instanceof Object) {
+	      if (i.x !== undefined) {
+	        k = i.z;
+	        j = i.y;
+	        i = i.x;
+	      } else {
+	        k = i.k;
+	        j = i.j;
+	        i = i.i;
+	      }
+	    }
+	    this.i = () => i;
+	    this.j = () => j;
+	    this.k = () => k;
+	
+	    this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
+	    this.magnitudeSQ = () => this.i()*this.i() + this.j()*this.j() + this.k()*this.k();
+	    this.minus = (vector) => {
+	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+	      return new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k());
+	    }
+	    this.add = (vector) => {
+	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+	      return new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k());
+	    }
+	    this.scale = (coef) => {
+	      return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
+	    }
+	    this.sameDirection = (otherVect) => {
+	      return approximate.sameSign(otherVect.i(), this.i()) &&
+	              approximate.sameSign(otherVect.j(), this.j()) &&
+	              approximate.sameSign(otherVect.k(), this.k());
+	    }
+	    this.divide = (vector) => {
+	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+	      return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
+	    }
+	    this.toArray = () => [this.i(), this.j(), this.k()];
+	    this.dot = (vector) =>
+	      this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
+	    this.perpendicular = (vector) =>
+	      Vector3D.tolerance.within(this.dot(vector), 0);
+	    this.parrelle = (vector) => {
+	      let coef = isZero(this.i()) ? 0 : this.i() / vector.i();
+	      if (isZero(coef)) coef = isZero(this.j()) ? 0 : this.j() / vector.j();
+	      if (isZero(coef)) coef = isZero(this.k()) ? 0 : this.k() / vector.k();
+	      if (isZero(coef)) return false;
+	      const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
+	      return Vector3D.tolerance.within(equivVect, this);
+	    }
+	    this.crossProduct = (other) => {
+	      const i = this.j() * other.k() - this.k() * other.j();
+	      const j = this.i() * other.k() - this.k() * other.i();
+	      const k = this.i() * other.j() - this.j() * other.i();
+	      const mag = Math.sqrt(i*i+j*j+k*k);
+	      return new Vector3D(i/mag,j/-mag,k/mag);
+	    }
+	    this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
+	
+	    this.projectOnTo = (v) => {
+	      const multiplier = this.dot(v) / v.magnitudeSQ();
+	      return v.scale(multiplier);
+	    }
+	
+	    this.unit = () => {
+	      const i = this.i();const j = this.j();const k = this.k();
+	      const magnitude = Math.sqrt(i*i+j*j+k*k);
+	      return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
+	    }
+	    this.positive = () =>
+	      i > 0 || (i === 0 && j > 0) || (i === 0 && j === 0 && k > 0) ||
+	      (i === 0 && j === 0 && k === 0);
+	    this.equals = (vector) => Vector.tolerance.within(vector, this);
+	    this.toString = () => `<${i},  ${j},  ${k}>`;
+	  }
+	}
+	
+	const tol = .00000001;
+	Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
+	
+	module.exports = Vector3D;
+	
+});
+
+
+RequireJS.addFunction('./app-src/three-d/objects/plane.js',
+function (require, exports, module) {
+	const CSG = require('../../../public/js/3d-modeling/csg.js');
+	const Vector3D = require('vector');
+	const Vertex3D = require('vertex');
+	const Matrix = require('matrix');
+	const Line2d = require('../../two-d/objects/line.js');
+	const Vertex2d = require('../../two-d/objects/vertex.js');
+	const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
+	const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
+	console.log('within');
+	
+	function isDefined(...values) {
+	  for (let index = 0; index < values.length; index++) {
+	    if (values[index] === undefined) return false;
+	  }
+	  return true;
+	}
+	
+	class Plane extends Array {
+	  constructor(...points) {
+	    super();
+	    let equation;
+	    if (Array.isArray(points[0])) points = points[0];
+	    if (isDefined(points[0], points[0].a, points[0].b, points[0].c, points[0].d)) {
+	      equation = points[0];
+	      points = [];
+	    }
+	    for (let index = 0; index < points.length; index++) {
+	      this[index] = new Vertex3D(points[index]);
+	    }
+	
+	    this.indexOf = (point) => {
+	      for (let index = 0; index < points.length; index++) {
+	        if (this[index].equals(point)) return index;
+	      }
+	      return -1;
+	    }
+	
+	    this.points = () => this.length > 2 ? points.slice(0,3) : this.findPoints();
+	
+	    this.equivalent = (other) => {
+	      if (!(other instanceof Plane)) return false;
+	      const oPoints = other.points();
+	      for (let index = 0; index < oPoints.length; index++) {
+	        // const p = oPoints[index];
+	        // const thisZ = this.z(p.x, p.y);
+	        // if (!withinTol(thisZ, p.z)) return false;
+	        const thisEqn = this.equation();
+	        const otherEqn = other.equation();
+	        if (!withinTol(thisEqn.a, otherEqn.a)) return false;
+	        if (!withinTol(thisEqn.b, otherEqn.b))  return false;
+	        if (!withinTol(thisEqn.c, otherEqn.c))  return false;
+	      }
+	      return true;
+	    }
+	
+	    this.XYrotation = () => {
+	      const eqn = this.equation();
+	
+	      const a2b2 = eqn.a * eqn.a + eqn.b * eqn.b;
+	      const a2b2c2 = eqn.a * eqn.a + eqn.b * eqn.b + eqn.c * eqn.c;
+	      const roota2b2c2 = Math.sqrt(a2b2c2);
+	      const cos = eqn.c / roota2b2c2;
+	      const sin = Math.sqrt(a2b2 / a2b2c2);
+	      const u1 = eqn.b / Math.sqrt(a2b2);
+	      const u2 = - eqn.a / Math.sqrt(a2b2);
+	
+	      const rotationMatrix = new Matrix([
+	        [cos+u1*u1*(1-cos), u1*u2*(1-cos),     u2*sin],
+	        [u1*u2*(1-cos),     cos+u2*u2*(1-cos), -u1*sin],
+	        [-u2*sin,           u1*sin,             cos],
+	      ])
+	      return rotationMatrix;
+	    }
+	
+	    this.rotate = (rotation, center) => {
+	      center ||= this.center();
+	      for (let index = 0; index < this.length; index++) {
+	        this[index].rotate(rotation, center);
+	      }
+	    }
+	
+	    this.matrixRotation = (rotationMatrix) => {
+	      const eqn = this.equation();
+	      const planeMatrix = new Matrix([[eqn.a], [eqn.b], [eqn.c]]);
+	      const planeMatrix2 = new Matrix([[eqn.a, eqn.b, eqn.c]]);
+	      return rotationMatrix.dot(planeMatrix);
+	    }
+	
+	    this.reverseRotate = (rotation, center) => {
+	      center ||= this.center();
+	      for (let index = 0; index < this.length; index++) {
+	        this[index].reverseRotate(rotation, center);
+	      }
+	    }
+	
+	    this.x = (y,z, vertex) => {
+	      y ||= 0;
+	      z ||= 0;
+	      const eqn = this.equation();
+	      const x = (eqn.b * y + eqn.c * z + eqn.d) / eqn.a
+	      if (x) return new Vertex3D(x,y,z);
+	      return x;
+	    }
+	
+	    this.y = (x,z, vertex) => {
+	      x ||= 0;
+	      z ||= 0;
+	      const eqn = this.equation();
+	      const y = (eqn.a * x + eqn.c * z + eqn.d) / eqn.b
+	      if (y) return new Vertex3D(x,y,z);
+	      return y;
+	    }
+	
+	    this.z = (x,y, vertex) => {
+	      x ||= 0;
+	      y ||= 0;
+	      const eqn = this.equation();
+	      const z = (eqn.b * y + eqn.a * x + eqn.d) / eqn.c;
+	      if (z) return new Vertex3D(x,y,z);
+	      return z;
+	    }
+	
+	    this.equation = () => {
+	      if (equation && this.length < 3) return equation;
+	      const pts = this.points();
+	      const include = ['x','y','z'];
+	
+	      const systemOfEquations = new Matrix(null, include.length, include.length);
+	
+	      for (let i = 0; i < include.length; i++) {
+	        const point = pts[i];
+	        for (let j = 0; j < include.length; j++) {
+	          systemOfEquations[i][j] = point[include[j]];
+	        }
+	      }
+	
+	      try {
+	        const answer = systemOfEquations.solve([1,1,1]);
+	        const returnValue = {a: answer[0][0], b: answer[1][0], c: answer[2][0], d: 1};
+	        return returnValue;
+	      } catch (e) {
+	        console.log('booblaa booblaa');
+	      }
+	    }
+	
+	    this.equationEqualToZ = () => {
+	      const eqn = this.equation();
+	      const a = approximate;
+	      return `(${a(eqn.a)}x + ${a(eqn.b)}y + ${a(eqn.d)}) / ${a(eqn.c)}`;
+	    }
+	
+	    // TODO: this function does not work!
+	    this.findPoints = (count) => {
+	      console.warn.subtle(60000, 'This Function does not work properly');
+	      count ||= 3;
+	      const limit = count * 3 + 11;
+	      const pts = [];
+	      let state = 0;
+	      let value = 100000;
+	      while (pts.length < count) {
+	         let func = state === 0 ? this.x : (state === 1 ? this.y : this.z);
+	         let point = value % 2 ? func(value * 2, value*-1, true) : func(value, value, true);
+	         if (!point.usless() && (pts.length === 0 || (pts.equalIndexOf(point)))) pts.push(point);
+	         value += 13;
+	         state = ++state % 3;
+	         // if (value > limit) throw new Error('Cant find points');
+	      }
+	      return pts;
+	    }
+	
+	    this.parrelleTo = (axis) => {
+	      const pts = this.points();
+	      return approximate.eq(pts[0][axis], pts[1][axis], pts[2][axis]);
+	    }
+	
+	    this.normal = () => {
+	      const points = this.findPoints();
+	      const vector1 = points[1].minus(points[0]);
+	      const vector2 = points[2].minus(points[0]);
+	      const normVect = vector1.crossProduct(vector2);
+	      return normVect.scale(1 / normVect.magnitude());
+	    }
+	
+	    this.center = () => Vertex3D.center.apply(null, this);
+	
+	    this.lineIntersection = (line) => {
+	      const eqn = this.equation();
+	      const lEqn = line.equation();
+	      const x0 = line.startVertex.x;
+	      const y0 = line.startVertex.y;
+	      const z0 = line.startVertex.z;
+	
+	      const a1 = eqn.a;
+	      const b1 = eqn.b;
+	      const c1 = eqn.c;
+	      const d = eqn.d;
+	
+	      const a2 = lEqn.a;
+	      const b2 = lEqn.b;
+	      const c2 = lEqn.c;
+	
+	      const sv = line.startVertex;
+	      const p = this.points()[0];
+	      if (a2 === 0 && b2 === 0 && c1 === 0) return new Vertex3D(sv.x, sv.y, p.z);
+	      if (a2 === 0 && c2 === 0 && b1 === 0) return new Vertex3D(sv.x, p.y, sv.z);
+	      if (b2 === 0 && c2 === 0 && a1 === 0) return new Vertex3D(p.x, sv.y, sv.z);
+	
+	      const t = -(a1*x0+b1*y0+c1*z0-d)/(a1*a2+b1*b2+c1*c2);
+	
+	      const x = x0+t*a2;
+	      const y = y0+t*b2;
+	      const z = z0+t*c2;
+	      return new Vertex3D(x,y,z);
+	    }
+	
+	    this.equals = (other) => {
+	      if (!Array.isArray(other) || this.length !== other.length) return false;
+	      const startIndex = this.indexOf(other[0]);
+	      if (startIndex === -1) return false;
+	      for (let index = startIndex; index < this.length + startIndex; index++) {
+	        const i = Math.mod(index, this.length);
+	        if (!this[i].equals(other[i])) return false;
+	      }
+	      return true;
+	    }
+	  }
+	}
+	
+	Plane.makePlane1MeetPlane2 = function (plane1, plane2, rotation) {
+	  const centerP1 = Vertex3D.center.apply(null, plane1);
+	  const rotated1 = new Plane(JSON.copy(plane1));
+	  const rotated2 = new Plane(JSON.copy(plane2));
+	  rotated1.reverseRotate(rotation, centerP1);
+	  rotated2.reverseRotate(rotation, centerP1);
+	  const center1 = Vertex3D.center.apply(null, rotated1);
+	  for (let index = 1; index < rotated1.length; index++)
+	    if (approximate.neq(rotated1[0].z, rotated1[index].z)) throw new Error('Invalid planeRotation: Rotation reversed should make all z coordinates equal to each other');
+	  const zValue = rotated1[0].z;
+	  const keep1 = [];
+	  const keep2 = [];
+	  const intersections = [];
+	  const plane2Line2d = new Line2d(rotated2[0], rotated2[1]).combine(new Line2d(rotated2[2], rotated2[3]));
+	  const p2l2Midpoint = plane2Line2d.midpoint();
+	  const len = rotated1.length;
+	  let keep = keep1;
+	  for (let index = 0; index < rotated1.length; index++) {
+	    rotated1[index] = new Vertex2d(rotated1[index]);
+	    const nextIndex = (index + 1) % len;
+	    const prevIndex = Math.mod(index - 1, len);
+	    const positiveLine = new Line2d(rotated1[nextIndex], rotated1[index]);
+	    const negativeLine = new Line2d(rotated1[prevIndex], rotated1[index]);
+	    const intersection1 = positiveLine.findDirectionalIntersection(plane2Line2d, 1000);
+	    const intersection2 = negativeLine.findDirectionalIntersection(plane2Line2d, 1000);
+	    if (intersections.length > 0) keep = keep2;
+	    if (!intersection1 && !intersection2) keep.push(rotated1[index]);
+	    else if (!intersection1) intersections.push(intersection2);
+	    else if (!intersection2) intersections.push(intersection1);
+	    else {
+	      const dist1 = p2l2Midpoint.distance(intersection1);
+	      const dist2 = p2l2Midpoint.distance(intersection2);
+	      intersections.push(dist1 > dist2 ? intersection1 : intersection2);
+	    }
+	  }
+	  const newPlaneRotated = keep1.concat(intersections).concat(keep2);
+	  for (let index = 0; index < newPlaneRotated.length; index++) {
+	    newPlaneRotated[index] = {
+	      x: newPlaneRotated[index].x(),
+	      y: newPlaneRotated[index].y(),
+	      z: zValue
+	    }
+	  }
+	
+	  CSG.rotatePointsAroundCenter(rotation, newPlaneRotated, centerP1);
+	  return new Plane(...newPlaneRotated);
+	}
+	
+	Plane.bisector = (p1, p2) => {
+	  const eq1 = p1.equation();
+	  const eq2 = p2.equation();
+	
+	  const denom1 = Math.sqrt(eq1.a * eq1.a + eq1.b * eq1.b + eq1.c * eq1.c);
+	  const denom2 = Math.sqrt(eq2.a * eq2.a + eq2.b * eq2.b + eq2.c * eq2.c);
+	
+	  const a1 = denom2*eq1.a;
+	  const b1 = denom2*eq1.b;
+	  const c1 = denom2*eq1.c;
+	  const d1 = denom2*eq1.d;
+	
+	  const a2 = denom1*eq2.a;
+	  const b2 = denom1*eq2.b;
+	  const c2 = denom1*eq2.c;
+	  const d2 = denom1*eq2.d;
+	
+	  const plane1 = new Plane({a: a1 + a2, b: b1 + b2, c: c1 + c2, d: d1 + d2});
+	  const plane2 = new Plane({a: a1 - a2, b: b1 - b2, c: c1 - c2, d: d1 - d2});
+	
+	  const obtuse = (eq1.a*eq2.a + eq1.b*eq2.b + eq1.c*eq2.c) < 0
+	  if (obtuse) return {obtuse: plane1, accute: plane2};
+	  return {obtuse: plane2, accute: plane1};
+	}
+	
+	// TODO: not used but could be helpful. - fix
+	Plane.fromPointNormal = (point, normal) => {
+	  const fixed = [];
+	  const a = normal.i();
+	  const b = normal.j();
+	  const c = normal.k();
+	  const vectArray = normal.toArray();
+	
+	  if (a===0 && b===0 && c===0) return;
+	
+	  const x0 = point.x;
+	  const y0 = point.y;
+	  const z0 = point.z;
+	  const pointArray = [x0, y0, z0];
+	  let startIndex = 0;
+	  while (vectArray[startIndex] === 0) startIndex++;
+	  const get = (x,y) => {
+	    const ansI = startIndex;
+	    const aI = (startIndex + 1) % 3;
+	    const bI = (startIndex + 2) % 3;
+	    const answer = (vectArray[aI]*(x-pointArray[aI])+vectArray[bI]*(y-pointArray[bI])-vectArray[ansI]*pointArray[ansI])/-vectArray[ansI];
+	    const p = [];p[ansI] = answer;p[aI] = x;p[bI] = y;
+	    return new Vertex3D(...p);
+	    // (a*(x-x0)+b*(y-y0)-c*z0)/-c;
+	  }
+	  // there is a chance that these three points will be colinear.... not likely and I have more important stuff to do.
+	
+	  const point1 = get(13,677);
+	  const point2 = get(127,43);
+	  const point3 = get(107,563);
+	  return new Plane(point1, point2, point3);
+	}
+	
+	module.exports = Plane;
 	
 });
 
@@ -29714,10 +32303,10 @@ function (require, exports, module) {
 	
 	      function updateShapeSketches(elem, model) {
 	        if (model) {
-	          frontView = model.simpleModel.frontView();
+	          frontView = model.frontView();
 	          const center = Vertex2d.center(Line2d.vertices(frontView));
 	          panz.centerOn(center.x(), center.y());
-	          topViewSnap = model.simpleModel.topViewSnap();
+	          topViewSnap = model.topViewSnap();
 	          const centerT = Vertex2d.center(Line2d.vertices(topViewSnap));
 	          panzT.centerOn(centerT.x(), centerT.y());
 	          renderTop();
@@ -29942,1483 +32531,87 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/two-d/layout/object.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-	const Vertex2d = require('../objects/vertex.js');
-	const SnapPolygon = require('../objects/snap/polygon');
-	const SnapSquare = require('../objects/snap/square');
-	
-	class Object2d extends Lookup {
-	  constructor(center, layout, payload, name, polygon) {
-	    super(undefined, undefined, true);
-	    center = new Vertex2d(center);
-	    let payloadId;
-	    this.layout = () => layout;
-	    Object.getSet(this, {name, center}, 'payloadId');
-	    this.payload = () => {
-	      if (payload === undefined) payload = Lookup.get(this.payloadId());
-	      return payload;
-	    };
-	
-	    // Ids should only be equal if one object was built using the other as a replacement
-	    this.equals = (obj) => this.id() === obj.id();
-	
-	    this.payloadId = (pId) => {
-	      if ((typeof pId) === 'string') payloadId = pId;
-	      if (!payload) return payloadId;
-	      if (payload.ID_ATTRIBUTE) return payload[payload.ID_ATTRIBUTE()]();
-	      return (typeof payload.id) === 'function' ? payload.id() : payload.id;
-	    }
-	
-	    this.name = (val) => {
-	      if (val) name = val;
-	      if (this.payload() === undefined) return name;
-	      if ((typeof this.payload().name) === 'function') return this.payload().name(val);
-	      return this.payload.name;
-	    }
-	
-	    let topview;
-	    if (polygon) topview = new SnapPolygon(this, polygon, 30);
-	    else topview = new SnapSquare(this, 30);
-	
-	    this.topview = () => topview;
-	
-	    if ((typeof name) === 'function') this.name = name;
-	    this.toString = () => `Object2d: ${center}`;
-	  }
-	}
-	
-	new Object2d();
-	module.exports = Object2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/vertex.js',
-function (require, exports, module) {
-	
-const Matrix = require('./matrix');
-	const Vector3D = require('./vector');
-	const Vertex2d = require('../../two-d/objects/vertex');
-	const approximate = require('../../../../../public/js/utils/approximate.js');
-	const approx10 = approximate.new(10);
-	const CSG = require('../../../public/js/3d-modeling/csg.js');
-	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-	
-	
-	class Vertex3D {
-	  constructor(x, y, z) {
-	    if (x instanceof Vertex3D) return x;
-	    if (x instanceof Vector3D) {
-	      this.x = x.i();
-	      this.y = x.j();
-	      this.z = x.k();
-	    } else if (x === undefined) {
-	      this.x = 0;
-	      this.y = 0;
-	      this.z = 0;
-	    } else if (arguments.length == 3) {
-	      this.x = x;
-	      this.y = y;
-	      this.z = z;
-	    } else if ('x' in x) {
-	      this.x = x.x;
-	      this.y = x.y;
-	      this.z = x.z;
-	    } else {
-	      this.x = x[0];
-	      this.y = x[1];
-	      this.z = x[2];
-	    }
-	
-	    this.viewFromVector = (vector) => Vertex3D.viewFromVector([this], vector);
-	
-	    this.translate = (vector, doNotModify) => {
-	      let vertex = this;
-	      if (doNotModify === true) vertex = this.copy();
-	      vertex.x += vector.i();
-	      vertex.y += vector.j();
-	      vertex.z += vector.k();
-	      return vertex;
-	    }
-	
-	    this.positionAt = (vertex) => {
-	      this.x = vertex.x;
-	      this.y = vertex.y;
-	      this.z = vertex.z;
-	    }
-	
-	    this.usless = () => Number.NaNfinity(x, y, z);
-	
-	    this.vector = (vector) => {
-	      const v = vector;
-	      if (v) return new Vector3D(this.x + v.i(), this.y + v.j(), this.z + v.k());
-	      return new Vector3D(this.x, this.y, this.z);
-	    }
-	
-	    this.rotate = (rotations, center) => {
-	      CSG.rotatePointAroundCenter(rotations, this, center);
-	      return this;
-	    }
-	
-	    this.reverseRotate = (rotations, center) => {
-	      CSG.rotatePointAroundCenter(rotations, this, center, true);
-	      return this;
-	    }
-	
-	    this.matrix = () => {
-	      return new Matrix([[this.x, this.y, this.z]]);
-	    }
-	
-	    this.distance = (other) => {
-	      const xDiff = this.x - other.x;
-	      const yDiff = this.y - other.y;
-	      const zDiff = this.z - other.z;
-	
-	      return Math.sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff);
-	    }
-	
-	    this.distanceVector = (other) => {
-	      const xDiff = other.x - this.x;
-	      const yDiff = other.y - this.y;
-	      const zDiff = other.z - this.z;
-	
-	      return new Vector3D(xDiff, yDiff, zDiff);
-	    }
-	
-	    this.minus = (other) => {
-	      const xDiff = this.x - other.x;
-	      const yDiff = this.y - other.y;
-	      const zDiff = this.z - other.z;
-	
-	      return new Vector3D(xDiff, yDiff, zDiff);
-	    }
-	
-	    this.inverseVector = () => {
-	      return new Vertex3D(this.x * -1, this.y* -1, this.z * -1);
-	    }
-	
-	    this.to2D = (x, y) => Vertex3D.to2D([this], x, y)[0];
-	
-	    this.copy = () => new Vertex3D(this.x, this.y, this.z);
-	    this.clone = this.copy;
-	    this.equals = (other) => other && Vertex3D.tolerance.within(this, other);
-	    this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
-	    this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
-	  }
-	}
-	
-	const tol = .000000001;
-	Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
-	
-	// returned direction is of list2 relitive to list 1
-	// dirArr = [forward, backward, up, down, left, right];
-	Vertex3D.direction = (vertList1, vertList2, tolerance, axisOnly) => {
-	  tolerance ||= .1;
-	  let dirArr = [true, true, true, true, true, true];
-	  for (let i = 0; i < vertList1.length; i++) {
-	    const vert1 = vertList1[i];
-	    for (let j = 0; j < vertList2.length; j++) {
-	      const vert2 = vertList2[j];
-	      dirArr[0] &&= vert1.z > vert2.z - tolerance;
-	      dirArr[1] &&= vert1.z < vert2.z + tolerance;
-	      dirArr[2] &&= vert1.y < vert2.y + tolerance;
-	      dirArr[3] &&= vert1.y > vert2.y - tolerance;
-	      dirArr[4] &&= vert1.x > vert2.x - tolerance;
-	      dirArr[5] &&= vert1.x < vert2.x + tolerance;
-	    }
-	    if (dirArr[0] && dirArr[1]) dirArr[0] = dirArr[1] = false;
-	    if (dirArr[2] && dirArr[3]) dirArr[2] = dirArr[3] = false;
-	    if (dirArr[4] && dirArr[5]) dirArr[4] = dirArr[5] = false;
-	
-	    const zDir = dirArr[0] ? 'forward' : (dirArr[1] ? 'backward' : undefined);
-	    const yDir = dirArr[2] ? 'up' : (dirArr[3] ? 'down' : undefined);
-	    const xDir = dirArr[4] ? 'left' : (dirArr[5] ? 'right' : undefined);
-	
-	    if (zDir && yDir && xDir) return axisOnly ? null : `${xDir} ${yDir} ${zDir}`;
-	    if (zDir) {
-	      if (yDir) return axisOnly ? null : `${yDir} ${zDir}`;
-	      if (xDir) return axisOnly ? null : `${xDir} ${zDir}`;
-	      return zDir;
-	    }
-	    if (xDir) {
-	      if (yDir) return axisOnly ? null : `${xDir} ${yDir}`;
-	      return xDir
-	    }
-	    return yDir ? yDir : null;
-	  }
-	}
-	
-	Vertex3D.uniqueFilter = () => {
-	  const map = new ToleranceMap({x: tol, y: tol, z: tol});
-	  return (vert) => {
-	    if (!(vert instanceof Vertex3D)) return false;
-	    if (map.matches(vert).length > 0) return false;
-	    map.add(vert);
-	    return true;
-	  }
-	}
-	
-	Vertex3D.center = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  let x = 0;
-	  let y = 0;
-	  let z = 0;
-	  let count = 0;
-	  vertices.forEach((vertex) => {
-	    if (Number.isFinite(vertex.x + vertex.y + vertex.z)) {
-	      count++;
-	      x += vertex.x;
-	      y += vertex.y;
-	      z += vertex.z;
-	    } else {
-	      throw new Error("Vertex contains a non-number");
-	    }
-	  });
-	  return new Vertex3D({x: x/count, y: y/count, z: z/count});
-	}
-	
-	Vertex3D.to2D = (vertices, x, y) => {
-	  const verts2D = [];
-	  for (let index = 0; index < vertices.length; index++) {
-	    verts2D.push(new Vertex2d(vertices[index][x], vertices[index][y]));
-	  }
-	  return verts2D;
-	}
-	
-	Vertex3D.viewFromVector = (vertices, vector, filter) => {
-	  const negitive = !vector.positive();
-	  const orthoVerts = [];
-	  const runFilter = (typeof filter) === 'function';
-	  for (let index = 0; index < vertices.length; index++) {
-	    const vertex = vertices[index];
-	    const u = new Vector3D(vertex.x, vertex.y, vertex.z);
-	    const projection = u.projectOnTo(vector);
-	    let orthogonal = u.minus(projection).scale(negitive ? 1 : -1);
-	    orthogonal = new Vertex3D(orthogonal);
-	    if (!runFilter || (runFilter && filter(orthogonal, vertex)))
-	      orthoVerts.push(orthogonal);
-	  }
-	  return orthoVerts;
-	}
-	
-	Vertex3D.sortByCenter = (center) => {
-	  return (v1, v2) => {
-	    const d1 = v1.distance(v2);
-	    const d2 = v2.distance(v1);
-	    d1 === d2 ? 0 : (d1 < d2 ? -1 : 1);
-	  }
-	}
-	
-	module.exports = Vertex3D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/vector.js',
-function (require, exports, module) {
-	
-const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
-	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-	
-	
-	function isZero(val) {
-	  return Vector3D.tolerance.bounds.i.within(val, 0);
-	}
-	
-	
-	class Vector3D {
-	  constructor(i, j, k) {
-	    if (i instanceof Vector3D) return i;
-	    if (i instanceof Object) {
-	      if (i.x !== undefined) {
-	        k = i.z;
-	        j = i.y;
-	        i = i.x;
-	      } else {
-	        k = i.k;
-	        j = i.j;
-	        i = i.i;
-	      }
-	    }
-	    this.i = () => i;
-	    this.j = () => j;
-	    this.k = () => k;
-	
-	    this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
-	    this.magnitudeSQ = () => this.i()*this.i() + this.j()*this.j() + this.k()*this.k();
-	    this.minus = (vector) => {
-	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-	      return new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k());
-	    }
-	    this.add = (vector) => {
-	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-	      return new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k());
-	    }
-	    this.scale = (coef) => {
-	      return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
-	    }
-	    this.sameDirection = (otherVect) => {
-	      return approximate.sameSign(otherVect.i(), this.i()) &&
-	              approximate.sameSign(otherVect.j(), this.j()) &&
-	              approximate.sameSign(otherVect.k(), this.k());
-	    }
-	    this.divide = (vector) => {
-	      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-	      return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
-	    }
-	    this.toArray = () => [this.i(), this.j(), this.k()];
-	    this.dot = (vector) =>
-	      this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
-	    this.perpendicular = (vector) =>
-	      Vector3D.tolerance.within(this.dot(vector), 0);
-	    this.parrelle = (vector) => {
-	      let coef = isZero(this.i()) ? 0 : this.i() / vector.i();
-	      if (isZero(coef)) coef = isZero(this.j()) ? 0 : this.j() / vector.j();
-	      if (isZero(coef)) coef = isZero(this.k()) ? 0 : this.k() / vector.k();
-	      if (isZero(coef)) return false;
-	      const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
-	      return Vector3D.tolerance.within(equivVect, this);
-	    }
-	    this.crossProduct = (other) => {
-	      const i = this.j() * other.k() - this.k() * other.j();
-	      const j = this.i() * other.k() - this.k() * other.i();
-	      const k = this.i() * other.j() - this.j() * other.i();
-	      const mag = Math.sqrt(i*i+j*j+k*k);
-	      return new Vector3D(i/mag,j/-mag,k/mag);
-	    }
-	    this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
-	
-	    this.projectOnTo = (v) => {
-	      const multiplier = this.dot(v) / v.magnitudeSQ();
-	      return v.scale(multiplier);
-	    }
-	
-	    this.unit = () => {
-	      const i = this.i();const j = this.j();const k = this.k();
-	      const magnitude = Math.sqrt(i*i+j*j+k*k);
-	      return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
-	    }
-	    this.positive = () =>
-	      i > 0 || (i === 0 && j > 0) || (i === 0 && j === 0 && k > 0) ||
-	      (i === 0 && j === 0 && k === 0);
-	    this.equals = (vector) => Vector.tolerance.within(vector, this);
-	    this.toString = () => `<${i},  ${j},  ${k}>`;
-	  }
-	}
-	
-	const tol = .00000001;
-	Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
-	
-	module.exports = Vector3D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/layout/on-wall.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-	const Vertex2d = require('../objects/vertex.js');
-	
-	class OnWall extends Lookup {
-	  constructor(wall, fromPreviousWall, fromFloor, height, width) {
-	    super();
-	    Object.getSet(this, {width, height, fromFloor, fromPreviousWall}, 'wallId');
-	    let start = new Vertex2d();
-	    let end = new Vertex2d();
-	    this.wallId = () => wall.id();
-	    this.endpoints2D = () => {
-	      const wallStartPoint = wall.startVertex();
-	      const dist = this.fromPreviousWall();
-	      const total = dist + this.width();
-	      const theta = wall.radians();
-	      const startPoint = {};
-	      startPoint.x = wallStartPoint.x() + dist * Math.cos(theta);
-	      startPoint.y = wallStartPoint.y() + dist * Math.sin(theta);
-	      start.point(startPoint);
-	
-	      const endPoint = {};
-	      endPoint.x = (wallStartPoint.x() + total * Math.cos(theta));
-	      endPoint.y = (wallStartPoint.y() + total * Math.sin(theta));
-	      end.point(endPoint);
-	
-	      return { start, end, toString: () => `${start.toString()} => ${end.toString()}`};
-	    }
-	    this.fromPreviousWall = (value) => {
-	      value = Number.parseFloat(value);
-	      if (!Number.isNaN(value)) fromPreviousWall = value;
-	      return fromPreviousWall;
-	    }
-	    this.fromNextWall = (value) => {
-	      value = Number.parseFloat(value);
-	      if (value) {
-	        this.fromPreviousWall(wall.length() - this.width() - value);
-	      }
-	      return wall.length() - this.width() - this.fromPreviousWall();
-	    }
-	    this.wall = () => wall;
-	    this.setWall = (w) => wall = w;
-	    this.move = (center) => {
-	      const point = wall.closestPointOnLine(center);
-	      const onLine = wall.closestPointOnLine(point, true);
-	      let distanceStart = wall.startVertex().distance(point);
-	      if (!onLine) {
-	        let distanceEnd = wall.endVertex().distance(point);
-	        if (distanceStart < distanceEnd) this.fromPreviousWall(0);
-	        else this.fromPreviousWall(wall.length() - this.width());
-	      } else {
-	        const max = wall.length() - this.width();
-	        distanceStart = distanceStart > max ? max : distanceStart;
-	        this.fromPreviousWall(distanceStart);
-	      }
-	    };
-	    this.toString = () => `${this.constructor.name}:${wall}, ${fromPreviousWall}, ${fromFloor}, ${height}, ${width}`
-	  }
-	}
-	OnWall.sort = (ow1, ow2) => ow1.fromPreviousWall() - ow2.fromPreviousWall();
-	OnWall.fromJson = (json) => {
-	  const cxtr = Lookup.decode(json.id).constructor;
-	  const instance = new cxtr(null, json.fromPreviousWall, json.fromFloor, json.height, json.width);
-	  instance.id(json.id);
-	  return instance;
-	}
-	
-	
-	module.exports = OnWall;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/layout/door.js',
-function (require, exports, module) {
-	
-const OnWall = require('on-wall');
-	
-	class Door2D extends OnWall {
-	  constructor() {
-	    super(...arguments);
-	    this.width(this.width() || 91.44);
-	    this.height(this.height() || 198.12);
-	    this.fromPreviousWall(this.fromPreviousWall() || 150);
-	    this.fromFloor(this.fromFloor() || 0);
-	    let hinge = 0;
-	    Object.getSet(this, 'hinge');
-	    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}:${hinge}`;
-	    this.remove = () => this.wall().removeDoor(this);
-	    this.hinge = (val) => val === undefined ? hinge :
-	      hinge = ((typeof val) === 'number' ? val : hinge + 1) % 5;
-	  }
-	}
-	
-	Door2D.fromJson = (json) => {
-	  const inst = OnWall.fromJson(json);
-	  inst.hinge(json.hinge);
-	  return inst;
-	}
-	
-	new Door2D();
-	module.exports = Door2D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/layout/window.js',
-function (require, exports, module) {
-	
-const OnWall = require('./on-wall');
-	
-	class Window2D extends OnWall {
-	  constructor(wall, fromPreviousWall, fromFloor, height, width) {
-	    width = width || 81.28;
-	    height = height || 91.44;
-	    fromFloor = fromFloor || 101.6;
-	    fromPreviousWall = fromPreviousWall || 20;
-	    super(wall, fromPreviousWall, fromFloor, height, width);
-	    this.remove = () => this.wall().removeWindow(this);
-	    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}`;
-	  }
-	}
-	
-	new Window2D();
-	module.exports = Window2D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/layout/wall.js',
-function (require, exports, module) {
-	const Line2d = require('../objects/line.js');
-	
-	function modifyVertex(vertex) {
-	  return (props) => {
-	      console.log('DummyFuncNotIntendedToBeCalled');
-	  }
-	}
-	
-	class Wall2D extends Line2d {
-	  constructor(startVertex, endVertex, height, windows, doors) {
-	    super(startVertex, endVertex);
-	    this.startVertex().modificationFunction(modifyVertex(this.startVertex()));
-	    this.endVertex().modificationFunction(modifyVertex(this.endVertex()));
-	    Lookup.convert(this);
-	    windows = windows || [];
-	    windows.forEach((win) => win.setWall(this));
-	    doors = doors || [];
-	    doors.forEach((door) => door.setWall(this));
-	    const wall = this;
-	
-	    height = height || 243.84;
-	    Object.getSet(this, {height, windows, doors});
-	    // this.copy = () => new Wall2D(this.length(), this.radians());
-	    this.windows = () => windows;
-	    this.addWindow = (fromPreviousWall) => windows.push(new Window2D(this, fromPreviousWall));
-	    this.doors = () => doors;
-	    this.addDoor = (fromPreviousWall) => doors.push(new Door2D(this, fromPreviousWall));
-	    this.vertices = () => {
-	      const verts = [this.startVertex()];
-	      const doorsAndWindows = doors.concat(windows);
-	      doorsAndWindows.sort(OnWall.sort);
-	      doorsAndWindows.forEach((onWall) => {
-	        const endpoints = onWall.endpoints2D();
-	        verts.push(endpoints.start);
-	        verts.push(endpoints.end);
-	      });
-	      verts.push(this.endVertex());
-	      return verts;
-	    }
-	
-	    this.remove = () => {
-	        const prevWall = this.startVertex().prevLine();
-	        const nextLine = this.endVertex().nextLine();
-	        const startVertex = this.startVertex();
-	        nextLine.startVertex(startVertex);
-	        startVertex.nextLine(nextLine);
-	    }
-	
-	    this.removeDoor = (door) => doors.splice(doors.indexOf(door), 1);
-	    this.removeWindow = (window) => windows.splice(windows.indexOf(window), 1);
-	  }
-	}
-	Wall2D.fromJson = (json, vertexMap) => {
-	  vertexMap ||= {};
-	  const newSv = Object.fromJson(json.startVertex);
-	  const svStr = newSv.toString();
-	  const newEv = Object.fromJson(json.endVertex);
-	  const evStr = newEv.toString();
-	  if (vertexMap[svStr] === undefined) vertexMap[svStr] = newSv;
-	  if (vertexMap[evStr] === undefined) vertexMap[evStr] = newEv;
-	  const sv = vertexMap[svStr];
-	  const ev = vertexMap[evStr];
-	  const windows = Object.fromJson(json.windows);
-	  const doors = Object.fromJson(json.doors);
-	  const inst = new Wall2D(sv, ev, json.height, windows, doors);
-	  inst.id(json.id);
-	  return inst;
-	}
-	
-	new Wall2D();
-	module.exports = Wall2D;
-	
-});
-
-
-RequireJS.addFunction('./app-src/cost/types/material.js',
+RequireJS.addFunction('./app-src/displays/managers/cost.js',
 function (require, exports, module) {
 	
 
 	
-	const Cost = require('../cost.js');
+	const CostTree = require('../../cost/cost-tree.js');
 	const Assembly = require('../../objects/assembly/assembly.js');
+	const du = require('../../../../../public/js/utils/dom-utils.js');
+	const $t = require('../../../../../public/js/utils/$t.js');
+	const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+	const Select = require('../../../../../public/js/utils/input/styles/select');
+	const Input = require('../../../../../public/js/utils/input/input');
+	const RelationInput = require('../../../../../public/js/utils/input/styles/select/relation');
+	const Inputs = require('../../input/inputs.js');
+	const RadioDisplay = require('../../display-utils/radio-display.js');
 	
-	class Material extends Cost {
-	  constructor (props) {
-	    super(props);
-	    props = this.props();
-	    props.cost = props.cost / (props.count || 1);
-	    const instance = this;
-	    Object.getSet(props, 'company', 'formula', 'partNumber',
-	                'method', 'length', 'width', 'depth', 'cost');
-	
-	
-	    this.unitCost = (attr) => {
-	      const unitCost = Material.configure(instance.method(), instance.cost(),
-	        instance.length(), instance.width(), instance.depth());
-	      const copy = JSON.parse(JSON.stringify(unitCost));
-	      if (attr) return copy[attr];
-	      return copy;
+	class CostManager {
+	  constructor(id, name) {
+	    const costTree = new CostTree();
+	    this.root = () => costTree.root();
+	    this.update = () => {
+	      const html = CostManager.mainTemplate.render(this);
+	      du.find(`#${id}`).innerHTML = html;
 	    }
-	
-	    this.calc = (assemblyOrCount) => {
-	      const unitCost = this.unitCost();
-	      const formula = this.formula() || unitCost.formula;
-	      if (assemblyOrCount instanceof Assembly)
-	        return Cost.evaluator.eval(`${unitCost.value}*${formula}`, assemblyOrCount);
-	      else if (Number.isFinite(assemblyOrCount))
-	        return Cost.evaluator.eval(`${unitCost.value}*${assemblyOrCount}`);
-	      else
-	        throw new Error('calc argument must be a number or Assembly');
-	    }
+	    this.nodeInputHtml = () => CostManager.nodeInput().payload().html();
+	    this.headHtml = (node) =>
+	        CostManager.headTemplate.render({node, CostManager: this});
+	    this.bodyHtml = (node) =>
+	        CostManager.bodyTemplate.render({node, CostManager: this});
+	    this.loadPoint = () => console.log('load');
+	    this.savePoint = () => console.log('save');
+	    this.fromJson = () => {};
+	    this.update();
 	  }
 	}
 	
-	Material.methods = {
-	  LINEAR_FEET: 'Linear Feet',
-	  SQUARE_FEET: 'Square Feet',
-	  CUBIC_FEET: 'Cubic Feet',
-	  UNIT: 'Unit'
-	};
-	
-	Material.methodList = Object.values(Material.methods);
-	
-	
-	Material.configure = (method, cost, length, width, depth) => {
-	  const unitCost = {};
-	  switch (method) {
-	    case Material.methods.LINEAR_FEET:
-	      const perLinearInch = Cost.evaluator.eval(`${cost}/${length}`);
-	      unitCost.name = 'Linear Inch';
-	      unitCost.value = perLinearInch;
-	      unitCost.formula = 'l';
-	      return unitCost;
-	    case Material.methods.SQUARE_FEET:
-	      const perSquareInch = Cost.evaluator.eval(`${cost}/(${length}*${width})`);
-	      unitCost.name = 'Square Inch';
-	      unitCost.value = perSquareInch;
-	      unitCost.formula = 'l*w';
-	      return unitCost;
-	    case Material.methods.CUBIC_FEET:
-	      const perCubicInch = Cost.evaluator.eval(`${cost}/(${length}*${width}*${depth})`);
-	      unitCost.name = 'Cubic Inch';
-	      unitCost.value = perCubicInch;
-	      unitCost.formula = 'l*w*d';
-	      return unitCost;
-	    case Material.methods.UNIT:
-	      unitCost.name = 'Unit';
-	      unitCost.value = cost;
-	      return unitCost;
-	    default:
-	      throw new Error('wtf');
-	      unitCost.name = 'Unknown';
-	      unitCost = -0.01;
-	      formula = -0.01;
-	      return unitCost;
-	  }
-	};
-	
-	Material.explanation = `Cost to be calculated by number of units or demensions`;
-	
-	module.exports = Material
-	
-});
-
-
-RequireJS.addFunction('./app-src/config/property/config.js',
-function (require, exports, module) {
-	
-const Properties = require('../properties');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const IMPERIAL_US = Measurement.units()[1];
-	
-	class PropertyConfig {
-	  constructor(props) {
-	    Object.getSet(this);
-	    props = props || Properties.instance();
-	    let style = props.style || PropertyConfig.lastStyle;
-	    let styleName = props.styleName || PropertyConfig.lastStyleName ||
-	                    Object.keys(Properties.groupList(style))[0];
-	    if (styleName)
-	      props[style] = Properties.getSet(style, styleName);
-	
-	    function isReveal() {return style === 'Reveal';}
-	    function isInset() {return style === 'Inset';}
-	    function isOverlay() {return !isReveal() && !isInset();}
-	    function overlay() {return props['Overlay'].ov.value()}
-	    function reveal() {return props['Reveal']};
-	
-	    function cabinetStyles() {
-	      return ['Overlay', 'Inset', 'Reveal'];
-	    }
-	    function cabinetStyle() {
-	      return style;
-	    }
-	    function cabinetStyleName() {
-	      return styleName;
-	    }
-	
-	    function set(group, name) {
-	      if (cabinetStyles().indexOf(group) !== -1) {
-	        style = group;
-	        styleName = name;
-	      } else {
-	        const newSet = Properties.getSet(group, name);
-	        newSet.__KEY = name;
-	        if (newSet === undefined) throw new Error(`Attempting to switch '${group}' to unknown property set '${name}'`);
-	        props[group] = newSet;
-	      }
-	    }
-	
-	    const panelThicknessRegMetric = /^pwt([0-9]{1,})([0-9][0-9])$/;
-	    const panelThicknessRegImperial = /^pwt([0-9])([0-9])$/;
-	    const resolvePanelThickness = (code) => {
-	      let match = code.match(panelThicknessRegImperial);
-	      if (match) return new Measurement(match[1]/match[2], IMPERIAL_US).value();
-	      match = code.match(panelThicknessRegMetric);
-	      if (match) return new Measurement(`${match[1]}.${match[2]}`).value();
-	      return undefined;
-	    }
-	
-	    const outerCodeReg = /^(rrv|lrv|brv|trv)$/;
-	    const resolveOuterReveal = (code, props) => {
-	      if (!code.match(outerCodeReg)) return undefined;
-	      switch (code) {
-	        case 'rrv':
-	          return 0.3175
-	        case 'lrv':
-	          return 0.3175
-	        case 'brv':
-	          return 0.3175
-	        case 'trv':
-	          return 0.3175
-	        default:
-	          return 0.3175
-	      }
-	    }
-	
-	    const resolveStyleStatus = (code) => {
-	      switch (code) {
-	        case 'isReveal': return isReveal();
-	        case 'isInset': return isInset();
-	        case 'isOverlay': return isOverlay();
-	      }
-	    }
-	
-	    const resolveReveals = (code, props) => {
-	      switch (code) {
-	        case 'frorl': return new Measurement(1/8, IMPERIAL_US).value();
-	        case 'frorr': return new Measurement(1/8, IMPERIAL_US).value();
-	        case 'r': if (isInset()) return 0;
-	          if (isReveal()) return new Measurement(props.Reveal.r.value()).value();
-	          return new Measurement(props.Cabinet.frw.value() - 2 * props.Overlay.ov.value()).value();
-	        default: return resolveCostProps(code, props);
-	      }
-	    }
-	
-	    const resolveComplexProps = (code, props) => {
-	      if (code === undefined) return undefined;
-	      let value = resolvePanelThickness(code, props);
-	      if (value !== undefined) return value;
-	      value = resolveOuterReveal(code, props);
-	      if (value !== undefined) return value;
-	      console.log(code);
-	      value = resolveStyleStatus(code);
-	      // if (value !== undefined) return value;
-	      // value = resolveReveals(code, props);
-	      return value;
-	    }
-	
-	    const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
-	    function getProperties(clazz, code) {
-	      clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	      const classProps = props[clazz] || {};
-	      if (code === undefined) return classProps;
-	      return classProps[code] === undefined ? resolveComplexProps(code, props) : classProps[code].value();
-	    }
-	
-	    function toJson() {
-	      const json = {style, styleName};
-	      const keys = Object.keys(props).filter((key) => key.match(/^[A-Z]/));
-	      keys.forEach((key) => {
-	        json[key] = [];
-	        const propKeys = Object.keys(props[key]);
-	        propKeys.forEach((propKey) => {
-	          if (props[key][propKey] && (typeof props[key][propKey].toJson) === 'function')
-	            json[key].push(props[key][propKey].toJson())
-	        });
-	      });
-	      return json;
-	    }
-	
-	    getProperties.isReveal = isReveal;
-	    getProperties.isInset = isInset;
-	    getProperties.overlay = overlay;
-	    getProperties.reveal = reveal;
-	    getProperties.toJson = toJson;
-	    getProperties.cabinetStyles = cabinetStyles;
-	    getProperties.cabinetStyle = cabinetStyle;
-	    getProperties.cabinetStyleName = cabinetStyleName;
-	    getProperties.set = set;
-	
-	    return getProperties;
-	  }
+	CostManager.mainTemplate = new $t('managers/cost/main');
+	CostManager.headTemplate = new $t('managers/cost/head');
+	CostManager.bodyTemplate = new $t('managers/cost/body');
+	CostManager.propertySelectTemplate = new $t('managers/cost/property-select');
+	CostManager.costInputTree = (costTypes, objId, onUpdate) => {
+	  const logicTree = new LogicTree();
+	  return logicTree;
 	}
-	
-	PropertyConfig.lastStyle = 'Overlay';
-	
-	PropertyConfig.fromJson = (json) => {
-	  const propConfig = {style: json.style, styleName: json.styleName};
-	  const keys = Object.keys(json).filter((key) => key.match(/^[A-Z]/));
-	  keys.forEach((key) => {
-	    const propKeys = Object.keys(json[key]);
-	    propConfig[key] = {};
-	    propKeys.forEach((propKey) =>
-	                propConfig[key][json[key][propKey].code] = Object.fromJson(json[key][propKey]));
+	CostManager.nodeInput = () => {
+	  const dit = new DecisionInputTree();
+	  const typeSelect = new Select({
+	    name: 'type',
+	    list: CostTree.types,
+	    value: CostTree.types[0]
 	  });
-	  return new PropertyConfig(propConfig);
-	}
-	
-	module.exports = PropertyConfig;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/layout/layout.js',
-function (require, exports, module) {
-	
-const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
-	const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-	const StateHistory = require('../../../../../public/js/utils/services/state-history');
-	const Vertex2d = require('../objects/vertex.js');
-	const Line2d = require('../objects/line.js');
-	const Circle2d = require('../../two-d/objects/circle.js');
-	const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
-	const Wall2D = require('./wall');
-	const Window2D = require('./window');
-	const Object2d = require('./object');
-	const Door2D = require('./door');
-	
-	const ww = 500;
-	class Layout2D extends Lookup {
-	  constructor(walls, objects) {
-	    super();
-	    let history;
-	    const addEvent = new CustomEvent('add');
-	    const removeEvent = new CustomEvent('remove');
-	    const stateChangeEvent = new CustomEvent('stateChange');
-	    this.onAdd = (func) => addEvent.on(func);
-	    this.onRemove = (func) => removeEvent.on(func);
-	    this.onStateChange = (func) => stateChangeEvent.on(func);
-	
-	    walls = walls || [];
-	    objects = objects || [];
-	    Object.getSet(this, {objects, walls});
-	    const initialized = walls.length > 0;
-	    const instance = this;
-	
-	    this.startLine = () => this.walls()[0];
-	    this.endLine = () => this.walls()[this.walls().length - 1];
-	
-	    function sortByAttr(attr) {
-	      function sort(obj1, obj2) {
-	        if (obj2[attr] === obj1[attr]) {
-	          return 0;
-	        }
-	        return obj2[attr] < obj1[attr] ? 1 : -1;
-	      }
-	      return sort;
-	    }
-	
-	    this.wallIndex = (wallOrIndex) => {
-	      if (wallOrIndex instanceof Wall2D) {
-	        for (let index = 0; index < walls.length; index += 1) {
-	          if (walls[index] === wallOrIndex) return index;
-	        }
-	        return -1;
-	      } else {
-	        while(wallOrIndex < 0) wallOrIndex += walls.length;
-	        return wallOrIndex % walls.length;
-	      }
-	    }
-	
-	    function relitiveWall(wall, i) {
-	      let position = instance.wallIndex(wall);
-	      if (position === undefined) return null;
-	      const relitiveList = walls.slice(position).concat(walls.slice(0, position));
-	      return relitiveList[instance.wallIndex(i)];
-	    }
-	    this.relitiveWall = relitiveWall;
-	    this.nextWall = (wall) => relitiveWall(wall, 1);
-	    this.prevWall = (wall) => relitiveWall(wall, -1);
-	
-	    function reconsileLength (wall) {
-	      return (newLength) => {
-	        const moveVertex = wall.endVertex();
-	        const nextLine = instance.nextWall(wall);
-	        if (nextLine === undefined) wall.length(newLength);
-	
-	        const vertex1 = nextLine.endVertex();
-	        const circle1 = new Circle2d(nextLine.length(), vertex1);
-	        const vertex2 = wall.startVertex();
-	        const circle2 = new Circle2d(newLength, vertex2);
-	        const intersections = circle1.intersections(circle2);
-	
-	        const useFirst = (intersections.length !== 0 && intersections.length === 1) ||
-	                  moveVertex.distance(intersections[0]) < moveVertex.distance(intersections[1]);
-	        if (intersections.length === 0) {
-	          wall.length(newLength);
-	        } else if (useFirst) {
-	          moveVertex.point(intersections[0]);
-	        } else {
-	          moveVertex.point(intersections[1]);
-	        }
-	      }
-	    }
-	    this.reconsileLength = reconsileLength;
-	
-	    const sortById = sortByAttr('id');
-	    this.toJson = () => {
-	      const objs = this.objects();
-	      const json = {walls: []};
-	      json.id = this.id();
-	      json.objects = Array.toJson(objs);
-	      this.walls().forEach((wall) => {
-	        json.walls.push(wall.toJson());
-	      });
-	      // json.walls.sort(sortById);
-	      json.objects.sort(sortById);
-	      const snapMap = {};
-	      objs.forEach((obj) => {
-	        const snapLocs = obj.topview().snapLocations.paired();
-	        snapLocs.forEach((snapLoc) => {
-	          const snapLocJson = snapLoc.toJson();
-	          if (snapMap[snapLocJson.UNIQUE_ID] === undefined) {
-	            snapMap[snapLocJson.UNIQUE_ID] = snapLocJson;
-	          }
-	        });
-	      });
-	      json.snapLocations = Object.values(snapMap);
-	      json._TYPE = this.constructor.name;
-	      delete json.id;
-	      return json;
-	    }
-	
-	    this.push = (...points) => {
-	      if (this.startLine() === undefined) {
-	        const walls = this.walls();
-	        if (points.length < 3) throw Error('Layout must be initialized with atleast three vertices');
-	        walls[0] = new Wall2D(points[0], points[1]);
-	      }
-	      for (let index = 1; index < points.length; index += 1) {
-	        const endLine = this.endLine();
-	        const startV = endLine.endVertex();
-	        const endV = new Vertex2d(points[(index + 1) % points.length]);
-	        walls.push(new Wall2D(startV, endV));
-	      }
-	    }
-	
-	    this.addObject = (id, payload, name, polygon) => {
-	      const center = Vertex2d.center.apply(null, this.vertices())
-	      const obj = new Object2d(center, this, payload, name, polygon);
-	      obj.id(id);
-	      this.objects().push(obj);
-	      history.newState();
-	      addEvent.trigger(undefined, payload);
-	      return obj;
-	    }
-	
-	    this.removeObject = (obj) => {
-	      for (index = 0; index < objects.length; index += 1) {
-	        if (objects[index] === obj) {
-	          const obj = objects.splice(index, 1);
-	          removeEvent.trigger(undefined, obj.payload());
-	          return obj;
-	        }
-	      }
-	      return null;
-	    }
-	
-	    this.removeByPayload = (payload) => {
-	      for (index = 0; index < objects.length; index += 1) {
-	        if (objects[index].payload() === payload) {
-	          const obj = objects.splice(index, 1);
-	          removeEvent.trigger(undefined, payload);
-	          return obj;
-	        }
-	      }
-	      return null;
-	    }
-	
-	    this.idMap = () => {
-	      const idMap = {};
-	      const walls = this.walls();
-	      idMap[walls[0].startVertex().id()] = walls[0].startVertex();
-	      walls.forEach((wall) => {
-	        idMap[wall.id()] = wall;
-	        const endV = wall.endVertex();
-	        idMap[endV.id()] = endV;
-	        wall.windows().forEach((window) => idMap[window.id()] = window);
-	        wall.windows().forEach((window) => idMap[window.id()] = window);
-	        wall.doors().forEach((door) => idMap[door.id()] = door);
-	      });
-	      objects.forEach((obj) => idMap[obj.id()] = obj);
-	      return idMap;
-	    }
-	
-	    this.removeWall = (wall) => {
-	      if (!(wall instanceof Wall2D)) return undefined;
-	      const walls = this.walls();
-	      for (index = 0; index < walls.length; index += 1) {
-	        const currWall = walls[index];
-	        if (currWall === wall) {
-	          const nextWallSv = walls[this.wallIndex(index + 1)].startVertex();
-	          walls[this.wallIndex(index - 1)].endVertex(nextWallSv);
-	          walls.splice(index, 1);
-	          return currWall;
-	        }
-	      }
-	      return null;
-	    }
-	
-	    this.addVertex = (vertex, wall) => {
-	      vertex = new Vertex2d(vertex);
-	      let wallIndex = this.wallIndex(wall);
-	      if (wallIndex === -1) {
-	        wall = walls[walls.length - 1];
-	        wallIndex = this.wallIndex(wall);
-	      }
-	      let newWall = new Wall2D(vertex, wall.endVertex());
-	      wall.endVertex(vertex);
-	
-	      const tail = [newWall].concat(walls.slice(wallIndex + 1));
-	      walls = walls.slice(0, wallIndex + 1).concat(tail);
-	    }
-	
-	    this.removeVertex = (vertex) => {
-	      if (!(vertex instanceof Vertex2d)) return undefined;
-	      const walls = this.walls();
-	      for (index = 0; index < walls.length; index += 1) {
-	        const wall = walls[index];
-	        if (wall.startVertex() === vertex) {
-	          walls[this.wallIndex(index - 1)].endVertex(walls[this.wallIndex(index + 1)].startVertex());
-	          return walls.splice(index, 1);
-	        }
-	        if (wall.endVertex() === vertex) {
-	          walls[this.wallIndex(index + 1)].startVertex(walls[this.wallIndex(index - 1)].endVertex());
-	          return walls.splice(index, 1);
-	        }
-	      }
-	      return null;
-	    }
-	
-	    this.remove = (id) => {
-	      id = id instanceof Lookup ? id.id() : id;
-	      const idMap = this.idMap();
-	      const walls = this.walls();
-	      const wallCount = walls.length;
-	      const item = idMap[id];
-	      if (item === undefined) throw new Error(`Unknown id: ${id}`);
-	      if (wallCount < 3 && (item instanceof Wall2D || item instanceof Vertex2d))
-	          throw new Error('Cannot Remove any more vertices or walls');
-	
-	      return this.removeVertex(item) || this.removeWall(item) ||
-	              this.removeObject(item) || item.remove();
-	    }
-	
-	    this.vertices = (target, before, after) => {
-	      const lines = this.walls();
-	      if (lines.length === 0) return [];
-	      const fullList = [];
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        fullList.push(line.startVertex());
-	      }
-	      if (target) {
-	        const vertices = [];
-	        const index = fullList.indexOf(target);
-	        if (index === undefined) return null;
-	        for (let i = before; i < before + after + 1; i += 1)
-	            vertices.push(fullList[Math.mod(i, fullList.length)]);
-	        return vertices;
-	      } else return fullList;
-	
-	      return vertices;
-	    }
-	
-	    this.within = (vertex) => {
-	      vertex = new Vertex2d(vertex);
-	      const endpoint = {x: 0, y: 0};
-	      this.vertices().forEach(v => {
-	        endpoint.x -= v.x();
-	        endpoint.y -= v.y();
-	      });
-	      const escapeLine = new Line2d(vertex, endpoint);
-	      const intersections = [];
-	      let onLine = false;
-	      const allIntersections = [];
-	      this.walls().forEach((wall) => {
-	
-	        const intersection = wall.findSegmentIntersection(escapeLine, true);
-	        allIntersections.push(intersection);
-	        if (intersection) {
-	          // Todo make more accurate
-	          const xEqual = approximate.eq(intersection.x(), vertex.x());
-	          const yEqual = approximate.eq(intersection.y(), vertex.y());
-	          if (xEqual && yEqual) onLine = true;
-	          intersections.push(intersection);
-	        }
-	      });
-	
-	      return onLine || intersections.length % 2 === 1;
-	    }
-	
-	    this.connected = () => {
-	      for (let index = 0; index < walls.length; index += 1) {
-	        const wall = walls[index];
-	        const prevWall = this.prevWall(wall);
-	        if (wall.startVertex() !== prevWall.endVertex()) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.payloads = () => {
-	      const payloads = [];
-	      this.objects().forEach((obj) => {
-	        const center = obj.center();
-	        const payload = obj.payload();
-	        payloads.push({center, payload});
-	      });
-	      return payloads;
-	    }
-	
-	    function filterCompare(list) {
-	      list = list.map((o) => o.payload());
-	      return list.filter((o) => o);
-	    }
-	
-	    this.fromJson = (json) => {
-	      const layout = Layout2D.fromJson(json);
-	      const origWalls = this.walls();
-	      const newWalls = layout.walls();
-	      const wallCompare = Array.compare(origWalls, newWalls, true);
-	
-	      const origObjects = this.objects();
-	      const newObjects = layout.objects();
-	      const objCompare = Array.compare(origObjects, newObjects, true);
-	
-	      if (objCompare || wallCompare) {
-	        const detail = {layout, objects: {added: [], removed: []}, walls: {added: [], removed: []}};
-	        if (objCompare) {
-	          detail.objects.added = filterCompare(objCompare.added);
-	          detail.objects.removed = filterCompare(objCompare.removed);
-	        }
-	        if (wallCompare) {
-	          detail.walls.added = filterCompare(wallCompare.added);
-	          detail.walls.removed = filterCompare(wallCompare.removed);
-	        }
-	        stateChangeEvent.trigger(undefined, detail);
-	      }
-	    }
-	
-	    if (!initialized) this.push({x:1, y:1}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
-	    this.walls = () => walls;
-	
-	    history = new StateHistory(this.toJson, this.fromJson);
-	    this.history = () => history;
-	  }
-	}
-	
-	// Needs to be internal!!!!
-	Layout2D.fromJson = (json) => {
-	  const walls = [];
-	  const vertexMap = {};
-	  json.walls.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, vertexMap)));
-	
-	  const layout = new Layout2D(walls);
-	  layout.id(json.id);
-	
-	  const objects = [];
-	  json.objects.forEach((o) => {
-	    const center = Vertex2d.fromJson(o.center);
-	    let obj = Object2d.get(o.id);
-	    if (obj === undefined) {
-	      obj = new Object2d(center, layout, undefined, o.name);
-	      obj.payloadId(o.payloadId);
-	      obj.id(o.id);
-	    } else obj.fromJson(o);
-	    objects.push(obj);
+	  const selectorType = new Select({
+	    name: 'selectorType',
+	    list: ['Manual', 'Auto'],
+	    value: 'Manual'
 	  });
-	  layout.objects(objects);
-	  json.snapLocations.forEach((snapLocJson) => {
-	    const view = snapLocJson.view;
-	    const obj1 = Lookup.get(snapLocJson[0].objectId);
-	    const obj2 = Lookup.get(snapLocJson[1].objectId);
-	    const snapLoc1 = obj1[view]().position[snapLocJson[0].location]();
-	    const snapLoc2 = obj2[view]().position[snapLocJson[1].location]();
-	    snapLoc2.pairWith(snapLoc1);
+	  const propertySelector = new Select({
+	    name: 'propertySelector',
+	    list: CostTree.propertyList,
 	  });
 	
-	  console.log('isConnected:', layout.connected());
-	  return layout;
+	  const accVals = ['select', 'multiselect', 'conditional'];
+	  const condtionalPayload = new DecisionInputTree.ValueCondition('type', accVals, [selectorType]);
+	  const type = dit.branch('Node', [Inputs('name'), typeSelect]);
+	  const selectType = type.conditional('selectorType', condtionalPayload);
+	  const payload = [Inputs('formula'), propertySelector, RelationInput.selector];
+	  const condtionalPayload2 = new DecisionInputTree.ValueCondition('selectorType', 'Auto', payload);
+	  selectType.conditional('formula', condtionalPayload2);
+	  return dit;
 	}
+	new RadioDisplay('cost-tree', 'radio-id');
 	
-	new Layout2D();
-	module.exports = Layout2D;
+	new CostManager('cost-manager', 'cost');
 	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/vertex.js',
-function (require, exports, module) {
-	
-const approximate10 = require('../../../../../public/js/utils/approximate.js').new(10);
-	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-	const tol = .01;
-	const within = Tolerance.within(tol);
-	
-	
-	class Vertex2d {
-	  constructor(point) {
-	    if (arguments.length === 2) point = {x:arguments[0], y: arguments[1]};
-	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
-	    if (point instanceof Vertex2d) return point;
-	    let modificationFunction;
-	    point = point || {x:0,y:0};
-	    Object.getSet(this, {point});
-	    this.layer = point.layer;
-	    const instance = this;
-	    this.move = (center) => {
-	      this.point(center);
-	      return true;
-	    };
-	
-	    this.translate = (xOffset, yOffset) => {
-	      this.point().x += xOffset;
-	      this.point().y += yOffset;
-	    }
-	    this.point = (newPoint) => {
-	      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
-	      if (newPoint) this.x(newPoint.x);
-	      if (newPoint) this.y(newPoint.y);
-	      return point;
-	    }
-	
-	    this.modificationFunction = (func) => {
-	      if ((typeof func) === 'function') {
-	        if ((typeof this.id) !== 'function') Lookup.convert(this);
-	        modificationFunction = func;
-	      }
-	      return modificationFunction;
-	    }
-	
-	    this.equal = (other) => within(other.x(), this.x()) && within(other.y(), this.y());
-	    this.x = (val) => {
-	      if ((typeof val) === 'number') point.x = val;
-	      return this.point().x;
-	    }
-	    this.y = (val) => {
-	      if ((typeof val) === 'number') this.point().y = val;
-	      return this.point().y;
-	    }
-	
-	    const dummyFunc = () => true;
-	    this.forEach = (func, backward) => {
-	      let currVert = this;
-	      let lastVert;
-	      do {
-	        lastVert = currVert;
-	        func(currVert);
-	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
-	      } while (currVert && currVert !== this);
-	      return currVert || lastVert;
-	    }
-	
-	    this.distance = (vertex) => {
-	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
-	      const xDiff = vertex.x() - this.x();
-	      const yDiff = vertex.y() - this.y();
-	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
-	    }
-	
-	    this.toString = () => `(${this.x()}, ${this.y()})`;
-	    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
-	    const parentToJson = this.toJson;
-	
-	    this.offset = (x, y) => {
-	      if (x instanceof Vertex2d) {
-	        y = x.y();
-	        x = x.x();
-	      }
-	      const copy = this.toJson().point;
-	      if (y !== undefined) copy.y += y;
-	      if (x !== undefined) copy.x += x;
-	      return new Vertex2d(copy);
-	    }
-	
-	    this.copy = () => new Vertex2d([this.x(), this.y()]);
-	
-	    this.differance = (x, y) => {
-	      if (x instanceof Vertex2d) {
-	        y = x.y();
-	        x = x.x();
-	      }
-	      return new Vertex2d({x: this.x() - x, y: this.y() - y});
-	    }
-	
-	    this.point(point);
-	  }
+	function abbriviation(group) {
+	  return Assembly.classes[group] ? Assembly.classes[group].abbriviation : 'nope';
 	}
-	
-	Vertex2d.fromJson = (json) => {
-	  return new Vertex2d(json.point);
-	}
-	
-	Vertex2d.minMax = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
-	  const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
-	  for (let index = 0; index < vertices.length; index += 1) {
-	    const vert = vertices[index];
-	    if (max.x() < vert.x()) max.x(vert.x());
-	    if (max.y() < vert.y()) max.y(vert.y());
-	    if (min.x() > vert.x()) min.x(vert.x());
-	    if (min.y() > vert.y()) min.y(vert.y());
-	  }
-	  return {min, max, diff: new Vertex2d(max.x() - min.x(), max.y() - min.y())};
-	}
-	
-	Vertex2d.center = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  const minMax = Vertex2d.minMax(...vertices);
-	  const centerX = minMax.min.x() + (minMax.max.x() - minMax.min.x())/2;
-	  const centerY = minMax.min.y() + (minMax.max.y() - minMax.min.y())/2;
-	  return new Vertex2d(centerX, centerY);
-	}
-	
-	Vertex2d.weightedCenter = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  let x = 0;
-	  let y = 0;
-	  let count = 0;
-	  vertices.forEach((vertex) => {
-	    if (Number.isFinite(vertex.x() + vertex.y())) {
-	      count++;
-	      x += vertex.x();
-	      y += vertex.y();
-	    }
-	  });
-	  return new Vertex2d({x: x/count, y: y/count});
-	}
-	
-	// Vertex2d.center = Vertex2d.weightedCenter;
-	
-	Vertex2d.sort = (a, b) =>
-	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
-	
-	const ignoreVerySmall = (v) => Math.abs(v) < .000001 ? 0 : v;
-	Vertex2d.sortByMax = (verts) => {
-	  let max;
-	  const center = Vertex2d.center(verts);
-	  for (let index = 0; index < verts.length; index++) {
-	    let v = verts[index];
-	    let curr = {v, distance: v.distance(center)};
-	    if (max === undefined || max.distance < curr.distance) {
-	      max = curr;
-	    }
-	  }
-	  return verts.sort((v1, v2) => {
-	    const d1 = v1.distance(max.v);
-	    const d2 = v2.distance(max.v);
-	    return d2 - d1;
-	  });
-	}
-	
-	Vertex2d.centerOn = (newCenter, vertices) => {
-	  newCenter = new Vertex2d(newCenter);
-	  const center = Vertex2d.center(...vertices);
-	  const diff = newCenter.copy().differance(center);
-	  for (let index = 0; index < polys.length; index++) {
-	    const vert = vertices[index];
-	    vert.translate(diff.x(), diff.y());
-	  }
-	}
-	
-	Vertex2d.toleranceMap = (tolerance, vertices) => {
-	  tolerance ||= tol;
-	  vertices = [];
-	  const map = new ToleranceMap({x: tolerance, y: tolerance});
-	  for (let index = 0; index < vertices.length; index++) {
-	    map.add(vertices[index]);
-	  }
-	  return map;
-	}
-	
-	Vertex2d.reusable = true;
-	new Vertex2d();
-	
-	module.exports = Vertex2d;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/square.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('vertex');
-	
-	class Square2d {
-	  constructor(center, height, width, radians) {
-	    width = width === undefined ? 121.92 : width;
-	    height = height === undefined ? 60.96 : height;
-	    radians = radians === undefined ? 0 : radians;
-	    const id = String.random();
-	    const instance = this;
-	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
-	    if ((typeof center) === 'function') this.center = center;
-	    const startPoint = new Vertex2d(null);
-	
-	
-	    this.radians = (newValue) => {
-	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	        radians = newValue;
-	      }
-	      return radians;
-	    };
-	    this.startPoint = () => {
-	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
-	      return startPoint;
-	    }
-	    this.angle = (value) => {
-	      if (value !== undefined) this.radians(Math.toRadians(value));
-	      return Math.toDegrees(this.radians());
-	    }
-	
-	    this.x = (val) => {
-	      if (val !== undefined) this.center().x(val);
-	      return this.center().x();
-	    }
-	    this.y = (val) => {
-	      if (val !== undefined) this.center().y(val);
-	      return this.center().y();
-	    }
-	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	
-	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	    this.move = (position, theta) => {
-	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	      this.radians(position.theta);
-	      this.center().point(center);
-	      return true;
-	    };
-	
-	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	
-	    this.toString = () => `Square2d(${id}): ${this.width()} X ${this.height()}] @ ${this.center()}`
-	  }
-	}
-	
-	new Square2d();
-	
-	module.exports = Square2d;
+	const scope = {groups: CostTree.propertyList, abbriviation};
+	// du.id('property-select-cnt').innerHTML =
+	//       CostManager.propertySelectTemplate.render(scope);
+	module.exports = CostManager
 	
 });
 
@@ -31474,6 +32667,51 @@ function (require, exports, module) {
 	  return unionAll(front, back, left, right, bottom);
 	}
 	module.exports = drawerBox
+	
+});
+
+
+RequireJS.addFunction('./app-src/displays/information/utility-filter.js',
+function (require, exports, module) {
+	
+
+	
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	
+	class UFObj {
+	  constructor(order) {
+	    class Row {
+	      constructor(groupName, assembly, index) {
+	        this.groupName = groupName;
+	        this.type = assembly.constructor.name;
+	        const dems = assembly.position().demension();
+	        dems.y = new Measurement(dems.y).display();
+	        dems.x = new Measurement(dems.x).display();
+	        dems.z = new Measurement(dems.z).display();
+	        this.size = `${dems.y} x ${dems.x} x ${dems.z}`;
+	        this.quantity = 1;
+	        this.cost = '$0';
+	        this.notes = assembly.notes || '';
+	      }
+	    }
+	    const cabinets = [];
+	    const obj = [];
+	    Object.values(order.rooms).forEach((room, rIndex) => room.groups.forEach((group, gIndex) => {
+	      group.cabinets.forEach((cabinet, index) => {
+	        const cabinetId = `${rIndex+1}-${gIndex+1}-${index+1}`;
+	        cabinet.getParts().forEach((part) => {
+	          const row = new Row(group.name(), part, cabinetId);
+	          if (obj[row.size] === undefined) obj[row.size] = row;
+	          else {
+	            obj[row.size].quantity++;
+	          }
+	        });
+	      });
+	    }));
+	    return Object.values(obj);
+	  }
+	}
+	module.exports = UFObj
 	
 });
 
@@ -31709,184 +32947,6 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	}
 	
 	module.exports = BiPolygon;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/line.js',
-function (require, exports, module) {
-	
-const Vector3D = require('./vector');
-	const Vertex3D = require('./vertex');
-	const Line2d = require('../../two-d/objects/line');
-	const Plane = require('./plane');
-	
-	class Line3D {
-	  constructor(startVertex, endVertex) {
-	    if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
-	    startVertex = new Vertex3D(startVertex);
-	    endVertex = new Vertex3D(endVertex);
-	    this.startVertex = startVertex;
-	    this.endVertex = endVertex;
-	
-	    this.clone = () => new Line3D(startVertex.clone(), endVertex.clone());
-	
-	    this.negitive = () => new Line3D(endVertex, startVertex);
-	    this.equals = (other) => startVertex && endVertex && other &&
-	        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
-	    this.vector = () => {
-	      let i = endVertex.x - startVertex.x;
-	      let j = endVertex.y - startVertex.y;
-	      let k = endVertex.z - startVertex.z;
-	      return new Vector3D(i,j,k);
-	    };
-	
-	    this.translate = (vector) => {
-	      this.startVertex.translate(vector);
-	      this.endVertex.translate(vector);
-	    }
-	
-	    this.isPoint = () => this.startVertex.equals(this.endVertex);
-	
-	    this.planeAt = (rotation) => {
-	      const two = new Vertex3D({x: startVertex.x + 1, y: startVertex.y, z: startVertex.z});
-	      two.rotate(rotation, startVertex);
-	      const three = {x: endVertex.x + 1, y: endVertex.y, z: endVertex.z};
-	      thtee.rotate(rotation, endVertex);
-	      return new Plane(startVertex.copy(), two, three, endVertex.copy());
-	    }
-	
-	    this.on = (vertex, tolerance) => {
-	      tolerance ||= .01;
-	    }
-	
-	    this.equation = () => {
-	      const returnValue = {};
-	      for (let i = 0; i < 3; i++) {
-	        let coord = String.fromCharCode(i + 120);
-	        let t = (endVertex[coord] - startVertex[coord]) / 1;
-	        if (t !== 0) {
-	          let coef = String.fromCharCode(i + 97);
-	          returnValue[coef] = 1;
-	
-	          let offset = ((i + 1) % 3);
-	          coord = String.fromCharCode(offset + 120);
-	          coef = String.fromCharCode(offset + 97);
-	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
-	
-	          offset = ((i + 2) % 3);
-	          coord = String.fromCharCode(offset + 120);
-	          coef = String.fromCharCode(offset + 97);
-	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
-	          break;
-	        }
-	      }
-	      if (returnValue.a === undefined) throw new Error('This Line is a point... I think...');
-	      return returnValue;
-	    }
-	
-	    this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
-	    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
-	
-	    this.midpoint = () => new Vertex3D(
-	      (endVertex.x + startVertex.x) / 2,
-	      (endVertex.y + startVertex.y) / 2,
-	      (endVertex.z + startVertex.z) / 2
-	    );
-	
-	    this.length = () => this.vector().magnitude();
-	
-	    this.adjustLength = (change, fromStartVertex) => {
-	      if ((typeof change) !== 'number' || change === 0) return;
-	      const unitVec = this.vector().unit();
-	      if (fromStartVertex !== undefined) {
-	        if (fromStartVertex === true) {
-	          this.endVertex.positionAt(this.startVertex.translate(unitVec.scale(change), true));
-	        } else {
-	          this.startVertex.positionAt(this.endVertex.translate(unitVec.scale(change), true));
-	        }
-	      } else {
-	        const len = this.length();
-	        const halfChangeMag = change/2;
-	        const halfDistVec = unitVec.scale(halfChangeMag);
-	        startVertex.translate(halfDistVec.inverse());
-	        endVertex.translate(halfDistVec);
-	      }
-	    }
-	
-	    this.pointAtDistance = (distance) => {
-	      const point = startVertex.copy();
-	      const unitVec = this.vector().unit();
-	      point.translate(unitVec.scale(distance));
-	      return point;
-	    }
-	
-	    this.rotate = (rotation, center) => {
-	      center ||= this.midpoint();
-	      startVertex.rotate(rotation, center);
-	      endVertex.rotate(rotation, center);
-	    }
-	
-	    this.reverseRotate = (rotation, center) => {
-	      center ||= this.midpoint();
-	      startVertex.reverseRotate(rotation, center);
-	      endVertex.reverseRotate(rotation, center);
-	    }
-	
-	    this.to2D = (x,y) => Line3D.to2D([this], x, y)[0];
-	
-	  }
-	}
-	
-	Line3D.vertices = (lines, true4startfalse4end) => {
-	  const verts = [];
-	  const includeBoth = true4startfalse4end !== true && true4startfalse4end !== false;
-	  const includeStart = includeBoth || true4startfalse4end === true;
-	  const includeEnd = includeBoth || true4startfalse4end === false;
-	  for (let index = 0; index < lines.length; index += 1) {
-	    if (includeStart) verts.push(lines[index].startVertex.copy());
-	    if (includeEnd) verts.push(lines[index].endVertex.copy());
-	  }
-	  return verts;
-	}
-	
-	Line3D.vertices1 = (lines) => {
-	  const verts = [];
-	  for (let index = 0; index < lines.length; index += 1) {
-	    verts.push(lines[index].endVertex.copy());
-	  }
-	  return verts;
-	}
-	
-	Line3D.adjustVertices = (vert1, vert2, change) => {
-	  const line = new Line3D(vert1, vert2);
-	  line.adjustLength(change);
-	}
-	
-	Line3D.startAndVector = (startVertex, offsetVector) => {
-	  const endVertex = startVertex.translate(offsetVector, true);
-	  return new Line3D(startVertex, endVertex);
-	}
-	
-	Line3D.to2D = (lines, x, y) => {
-	  const lines2d = [];
-	  for (let index = 0; index < lines.length; index++) {
-	    const startV = lines[index].startVertex.to2D(x, y);
-	    const endV = lines[index].endVertex.to2D(x, y);
-	    lines2d.push(new Line2d(startV, endV));
-	  }
-	  return lines2d;
-	}
-	
-	Line3D.reverse = (list) => {
-	  let reversed = [];
-	  for (let index = list.length - 1; index > -1; index--) {
-	    reversed.push(list[index].negitive());
-	  }
-	  return reversed;
-	}
-	
-	module.exports = Line3D;
 	
 });
 
@@ -32251,962 +33311,295 @@ const Approximate = require('../../../../../public/js/utils/approximate.js');
 });
 
 
-RequireJS.addFunction('./app-src/three-d/objects/plane.js',
+RequireJS.addFunction('./app-src/three-d/objects/line.js',
 function (require, exports, module) {
-	const CSG = require('../../../public/js/3d-modeling/csg.js');
-	const Vector3D = require('vector');
-	const Vertex3D = require('vertex');
-	const Matrix = require('matrix');
-	const Line2d = require('../../two-d/objects/line.js');
-	const Vertex2d = require('../../two-d/objects/vertex.js');
-	const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
-	const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
-	console.log('within');
 	
-	function isDefined(...values) {
-	  for (let index = 0; index < values.length; index++) {
-	    if (values[index] === undefined) return false;
-	  }
-	  return true;
-	}
+const Vector3D = require('./vector');
+	const Vertex3D = require('./vertex');
+	const Line2d = require('../../two-d/objects/line');
+	const Plane = require('./plane');
 	
-	class Plane extends Array {
-	  constructor(...points) {
-	    super();
-	    let equation;
-	    if (Array.isArray(points[0])) points = points[0];
-	    if (isDefined(points[0], points[0].a, points[0].b, points[0].c, points[0].d)) {
-	      equation = points[0];
-	      points = [];
-	    }
-	    for (let index = 0; index < points.length; index++) {
-	      this[index] = new Vertex3D(points[index]);
-	    }
+	class Line3D {
+	  constructor(startVertex, endVertex) {
+	    if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
+	    startVertex = new Vertex3D(startVertex);
+	    endVertex = new Vertex3D(endVertex);
+	    this.startVertex = startVertex;
+	    this.endVertex = endVertex;
 	
-	    this.indexOf = (point) => {
-	      for (let index = 0; index < points.length; index++) {
-	        if (this[index].equals(point)) return index;
-	      }
-	      return -1;
+	    this.clone = () => new Line3D(startVertex.clone(), endVertex.clone());
+	
+	    this.negitive = () => new Line3D(endVertex, startVertex);
+	    this.equals = (other) => startVertex && endVertex && other &&
+	        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
+	    this.vector = () => {
+	      let i = endVertex.x - startVertex.x;
+	      let j = endVertex.y - startVertex.y;
+	      let k = endVertex.z - startVertex.z;
+	      return new Vector3D(i,j,k);
+	    };
+	
+	    this.translate = (vector) => {
+	      this.startVertex.translate(vector);
+	      this.endVertex.translate(vector);
 	    }
 	
-	    this.points = () => this.length > 2 ? points.slice(0,3) : this.findPoints();
+	    this.isPoint = () => this.startVertex.equals(this.endVertex);
 	
-	    this.equivalent = (other) => {
-	      if (!(other instanceof Plane)) return false;
-	      const oPoints = other.points();
-	      for (let index = 0; index < oPoints.length; index++) {
-	        // const p = oPoints[index];
-	        // const thisZ = this.z(p.x, p.y);
-	        // if (!withinTol(thisZ, p.z)) return false;
-	        const thisEqn = this.equation();
-	        const otherEqn = other.equation();
-	        if (!withinTol(thisEqn.a, otherEqn.a)) return false;
-	        if (!withinTol(thisEqn.b, otherEqn.b))  return false;
-	        if (!withinTol(thisEqn.c, otherEqn.c))  return false;
-	      }
-	      return true;
+	    this.planeAt = (rotation) => {
+	      const two = new Vertex3D({x: startVertex.x + 1, y: startVertex.y, z: startVertex.z});
+	      two.rotate(rotation, startVertex);
+	      const three = {x: endVertex.x + 1, y: endVertex.y, z: endVertex.z};
+	      thtee.rotate(rotation, endVertex);
+	      return new Plane(startVertex.copy(), two, three, endVertex.copy());
 	    }
 	
-	    this.XYrotation = () => {
-	      const eqn = this.equation();
-	
-	      const a2b2 = eqn.a * eqn.a + eqn.b * eqn.b;
-	      const a2b2c2 = eqn.a * eqn.a + eqn.b * eqn.b + eqn.c * eqn.c;
-	      const roota2b2c2 = Math.sqrt(a2b2c2);
-	      const cos = eqn.c / roota2b2c2;
-	      const sin = Math.sqrt(a2b2 / a2b2c2);
-	      const u1 = eqn.b / Math.sqrt(a2b2);
-	      const u2 = - eqn.a / Math.sqrt(a2b2);
-	
-	      const rotationMatrix = new Matrix([
-	        [cos+u1*u1*(1-cos), u1*u2*(1-cos),     u2*sin],
-	        [u1*u2*(1-cos),     cos+u2*u2*(1-cos), -u1*sin],
-	        [-u2*sin,           u1*sin,             cos],
-	      ])
-	      return rotationMatrix;
-	    }
-	
-	    this.rotate = (rotation, center) => {
-	      center ||= this.center();
-	      for (let index = 0; index < this.length; index++) {
-	        this[index].rotate(rotation, center);
-	      }
-	    }
-	
-	    this.matrixRotation = (rotationMatrix) => {
-	      const eqn = this.equation();
-	      const planeMatrix = new Matrix([[eqn.a], [eqn.b], [eqn.c]]);
-	      const planeMatrix2 = new Matrix([[eqn.a, eqn.b, eqn.c]]);
-	      return rotationMatrix.dot(planeMatrix);
-	    }
-	
-	    this.reverseRotate = (rotation, center) => {
-	      center ||= this.center();
-	      for (let index = 0; index < this.length; index++) {
-	        this[index].reverseRotate(rotation, center);
-	      }
-	    }
-	
-	    this.x = (y,z, vertex) => {
-	      y ||= 0;
-	      z ||= 0;
-	      const eqn = this.equation();
-	      const x = (eqn.b * y + eqn.c * z + eqn.d) / eqn.a
-	      if (x) return new Vertex3D(x,y,z);
-	      return x;
-	    }
-	
-	    this.y = (x,z, vertex) => {
-	      x ||= 0;
-	      z ||= 0;
-	      const eqn = this.equation();
-	      const y = (eqn.a * x + eqn.c * z + eqn.d) / eqn.b
-	      if (y) return new Vertex3D(x,y,z);
-	      return y;
-	    }
-	
-	    this.z = (x,y, vertex) => {
-	      x ||= 0;
-	      y ||= 0;
-	      const eqn = this.equation();
-	      const z = (eqn.b * y + eqn.a * x + eqn.d) / eqn.c;
-	      if (z) return new Vertex3D(x,y,z);
-	      return z;
+	    this.on = (vertex, tolerance) => {
+	      tolerance ||= .01;
 	    }
 	
 	    this.equation = () => {
-	      if (equation && this.length < 3) return equation;
-	      const pts = this.points();
-	      const include = ['x','y','z'];
+	      const returnValue = {};
+	      for (let i = 0; i < 3; i++) {
+	        let coord = String.fromCharCode(i + 120);
+	        let t = (endVertex[coord] - startVertex[coord]) / 1;
+	        if (t !== 0) {
+	          let coef = String.fromCharCode(i + 97);
+	          returnValue[coef] = 1;
 	
-	      const systemOfEquations = new Matrix(null, include.length, include.length);
+	          let offset = ((i + 1) % 3);
+	          coord = String.fromCharCode(offset + 120);
+	          coef = String.fromCharCode(offset + 97);
+	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
 	
-	      for (let i = 0; i < include.length; i++) {
-	        const point = pts[i];
-	        for (let j = 0; j < include.length; j++) {
-	          systemOfEquations[i][j] = point[include[j]];
+	          offset = ((i + 2) % 3);
+	          coord = String.fromCharCode(offset + 120);
+	          coef = String.fromCharCode(offset + 97);
+	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
+	          break;
 	        }
 	      }
-	
-	      try {
-	        const answer = systemOfEquations.solve([1,1,1]);
-	        const returnValue = {a: answer[0][0], b: answer[1][0], c: answer[2][0], d: 1};
-	        return returnValue;
-	      } catch (e) {
-	        console.log('booblaa booblaa');
-	      }
+	      if (returnValue.a === undefined) throw new Error('This Line is a point... I think...');
+	      return returnValue;
 	    }
 	
-	    this.equationEqualToZ = () => {
-	      const eqn = this.equation();
-	      const a = approximate;
-	      return `(${a(eqn.a)}x + ${a(eqn.b)}y + ${a(eqn.d)}) / ${a(eqn.c)}`;
-	    }
+	    this.toString = () => `${new String(this.startVertex)} => ${new String(this.endVertex)}`;
+	    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
 	
-	    // TODO: this function does not work!
-	    this.findPoints = (count) => {
-	      console.warn.subtle(60000, 'This Function does not work properly');
-	      count ||= 3;
-	      const limit = count * 3 + 11;
-	      const pts = [];
-	      let state = 0;
-	      let value = 100000;
-	      while (pts.length < count) {
-	         let func = state === 0 ? this.x : (state === 1 ? this.y : this.z);
-	         let point = value % 2 ? func(value * 2, value*-1, true) : func(value, value, true);
-	         if (!point.usless() && (pts.length === 0 || (pts.equalIndexOf(point)))) pts.push(point);
-	         value += 13;
-	         state = ++state % 3;
-	         // if (value > limit) throw new Error('Cant find points');
-	      }
-	      return pts;
-	    }
+	    this.midpoint = () => new Vertex3D(
+	      (endVertex.x + startVertex.x) / 2,
+	      (endVertex.y + startVertex.y) / 2,
+	      (endVertex.z + startVertex.z) / 2
+	    );
 	
-	    this.parrelleTo = (axis) => {
-	      const pts = this.points();
-	      return approximate.eq(pts[0][axis], pts[1][axis], pts[2][axis]);
-	    }
+	    this.length = () => this.vector().magnitude();
 	
-	    this.normal = () => {
-	      const points = this.findPoints();
-	      const vector1 = points[1].minus(points[0]);
-	      const vector2 = points[2].minus(points[0]);
-	      const normVect = vector1.crossProduct(vector2);
-	      return normVect.scale(1 / normVect.magnitude());
-	    }
-	
-	    this.center = () => Vertex3D.center.apply(null, this);
-	
-	    this.lineIntersection = (line) => {
-	      const eqn = this.equation();
-	      const lEqn = line.equation();
-	      const x0 = line.startVertex.x;
-	      const y0 = line.startVertex.y;
-	      const z0 = line.startVertex.z;
-	
-	      const a1 = eqn.a;
-	      const b1 = eqn.b;
-	      const c1 = eqn.c;
-	      const d = eqn.d;
-	
-	      const a2 = lEqn.a;
-	      const b2 = lEqn.b;
-	      const c2 = lEqn.c;
-	
-	      const sv = line.startVertex;
-	      const p = this.points()[0];
-	      if (a2 === 0 && b2 === 0 && c1 === 0) return new Vertex3D(sv.x, sv.y, p.z);
-	      if (a2 === 0 && c2 === 0 && b1 === 0) return new Vertex3D(sv.x, p.y, sv.z);
-	      if (b2 === 0 && c2 === 0 && a1 === 0) return new Vertex3D(p.x, sv.y, sv.z);
-	
-	      const t = -(a1*x0+b1*y0+c1*z0-d)/(a1*a2+b1*b2+c1*c2);
-	
-	      const x = x0+t*a2;
-	      const y = y0+t*b2;
-	      const z = z0+t*c2;
-	      return new Vertex3D(x,y,z);
-	    }
-	
-	    this.equals = (other) => {
-	      if (!Array.isArray(other) || this.length !== other.length) return false;
-	      const startIndex = this.indexOf(other[0]);
-	      if (startIndex === -1) return false;
-	      for (let index = startIndex; index < this.length + startIndex; index++) {
-	        const i = Math.mod(index, this.length);
-	        if (!this[i].equals(other[i])) return false;
-	      }
-	      return true;
-	    }
-	  }
-	}
-	
-	Plane.makePlane1MeetPlane2 = function (plane1, plane2, rotation) {
-	  const centerP1 = Vertex3D.center.apply(null, plane1);
-	  const rotated1 = new Plane(JSON.copy(plane1));
-	  const rotated2 = new Plane(JSON.copy(plane2));
-	  rotated1.reverseRotate(rotation, centerP1);
-	  rotated2.reverseRotate(rotation, centerP1);
-	  const center1 = Vertex3D.center.apply(null, rotated1);
-	  for (let index = 1; index < rotated1.length; index++)
-	    if (approximate.neq(rotated1[0].z, rotated1[index].z)) throw new Error('Invalid planeRotation: Rotation reversed should make all z coordinates equal to each other');
-	  const zValue = rotated1[0].z;
-	  const keep1 = [];
-	  const keep2 = [];
-	  const intersections = [];
-	  const plane2Line2d = new Line2d(rotated2[0], rotated2[1]).combine(new Line2d(rotated2[2], rotated2[3]));
-	  const p2l2Midpoint = plane2Line2d.midpoint();
-	  const len = rotated1.length;
-	  let keep = keep1;
-	  for (let index = 0; index < rotated1.length; index++) {
-	    rotated1[index] = new Vertex2d(rotated1[index]);
-	    const nextIndex = (index + 1) % len;
-	    const prevIndex = Math.mod(index - 1, len);
-	    const positiveLine = new Line2d(rotated1[nextIndex], rotated1[index]);
-	    const negativeLine = new Line2d(rotated1[prevIndex], rotated1[index]);
-	    const intersection1 = positiveLine.findDirectionalIntersection(plane2Line2d, 1000);
-	    const intersection2 = negativeLine.findDirectionalIntersection(plane2Line2d, 1000);
-	    if (intersections.length > 0) keep = keep2;
-	    if (!intersection1 && !intersection2) keep.push(rotated1[index]);
-	    else if (!intersection1) intersections.push(intersection2);
-	    else if (!intersection2) intersections.push(intersection1);
-	    else {
-	      const dist1 = p2l2Midpoint.distance(intersection1);
-	      const dist2 = p2l2Midpoint.distance(intersection2);
-	      intersections.push(dist1 > dist2 ? intersection1 : intersection2);
-	    }
-	  }
-	  const newPlaneRotated = keep1.concat(intersections).concat(keep2);
-	  for (let index = 0; index < newPlaneRotated.length; index++) {
-	    newPlaneRotated[index] = {
-	      x: newPlaneRotated[index].x(),
-	      y: newPlaneRotated[index].y(),
-	      z: zValue
-	    }
-	  }
-	
-	  CSG.rotatePointsAroundCenter(rotation, newPlaneRotated, centerP1);
-	  return new Plane(...newPlaneRotated);
-	}
-	
-	Plane.bisector = (p1, p2) => {
-	  const eq1 = p1.equation();
-	  const eq2 = p2.equation();
-	
-	  const denom1 = Math.sqrt(eq1.a * eq1.a + eq1.b * eq1.b + eq1.c * eq1.c);
-	  const denom2 = Math.sqrt(eq2.a * eq2.a + eq2.b * eq2.b + eq2.c * eq2.c);
-	
-	  const a1 = denom2*eq1.a;
-	  const b1 = denom2*eq1.b;
-	  const c1 = denom2*eq1.c;
-	  const d1 = denom2*eq1.d;
-	
-	  const a2 = denom1*eq2.a;
-	  const b2 = denom1*eq2.b;
-	  const c2 = denom1*eq2.c;
-	  const d2 = denom1*eq2.d;
-	
-	  const plane1 = new Plane({a: a1 + a2, b: b1 + b2, c: c1 + c2, d: d1 + d2});
-	  const plane2 = new Plane({a: a1 - a2, b: b1 - b2, c: c1 - c2, d: d1 - d2});
-	
-	  const obtuse = (eq1.a*eq2.a + eq1.b*eq2.b + eq1.c*eq2.c) < 0
-	  if (obtuse) return {obtuse: plane1, accute: plane2};
-	  return {obtuse: plane2, accute: plane1};
-	}
-	
-	// TODO: not used but could be helpful. - fix
-	Plane.fromPointNormal = (point, normal) => {
-	  const fixed = [];
-	  const a = normal.i();
-	  const b = normal.j();
-	  const c = normal.k();
-	  const vectArray = normal.toArray();
-	
-	  if (a===0 && b===0 && c===0) return;
-	
-	  const x0 = point.x;
-	  const y0 = point.y;
-	  const z0 = point.z;
-	  const pointArray = [x0, y0, z0];
-	  let startIndex = 0;
-	  while (vectArray[startIndex] === 0) startIndex++;
-	  const get = (x,y) => {
-	    const ansI = startIndex;
-	    const aI = (startIndex + 1) % 3;
-	    const bI = (startIndex + 2) % 3;
-	    const answer = (vectArray[aI]*(x-pointArray[aI])+vectArray[bI]*(y-pointArray[bI])-vectArray[ansI]*pointArray[ansI])/-vectArray[ansI];
-	    const p = [];p[ansI] = answer;p[aI] = x;p[bI] = y;
-	    return new Vertex3D(...p);
-	    // (a*(x-x0)+b*(y-y0)-c*z0)/-c;
-	  }
-	  // there is a chance that these three points will be colinear.... not likely and I have more important stuff to do.
-	
-	  const point1 = get(13,677);
-	  const point2 = get(127,43);
-	  const point3 = get(107,563);
-	  return new Plane(point1, point2, point3);
-	}
-	
-	module.exports = Plane;
-	
-});
-
-
-RequireJS.addFunction('./app-src/three-d/objects/polygon.js',
-function (require, exports, module) {
-	
-const Polygon2D = require('../../two-d/objects/polygon.js');
-	const Line2D = require('../../two-d/objects/line.js');
-	const Line3D = require('./line');
-	const Vertex3D = require('./vertex');
-	const Vector3D = require('./vector');
-	const Plane = require('./plane');
-	const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-	
-	const CSG = require('../../../public/js/3d-modeling/csg.js');
-	let lastMi;
-	
-	class Polygon3D {
-	  constructor(initialVertices) {
-	    let lines = [];
-	    let map;
-	    let normal;
-	    let instance = this;
-	
-	    function getPlane() {
-	      let points = this.vertices();
-	      let parrelle = true;
-	      let index = 2;
-	      const point1 = points[0];
-	      const point2 = points[1];
-	      let point3;
-	      while (parrelle && index < points.length) {
-	        point3 = points[index]
-	        let vector1 = point1.minus(point2);
-	        let vector2 = point3.minus(point2);
-	        parrelle = vector1.parrelle(vector2);
-	        index++;
-	      }
-	      return new Plane(point1, point2, point3);
-	    }
-	    this.toPlane = getPlane;
-	
-	    this.rotate = (rotations, center) => {
-	      center ||= this.center();
-	      for(let index = 0; index < lines.length; index++) {
-	        lines[index].startVertex.rotate(rotations, center);
-	      }
-	    }
-	
-	    function calcNormal() {
-	      let points = this.vertices();
-	      let vector1, vector2;
-	      let parrelle = true;
-	      let index = 0;
-	      while (parrelle && index < points.length - 2) {
-	        vector1 = points[index + 1].minus(points[index])
-	        vector2 = points[index + 2].minus(points[index]);
-	        parrelle = vector1.parrelle(vector2);
-	        index++;
-	      }
-	      if (parrelle)
-	        throw new Error('InvalidPolygon: points are in a line');
-	
-	      const normVect = vector1.crossProduct(vector2);
-	      return normVect.scale(1 / normVect.magnitude());
-	    }
-	    this.normal = calcNormal;
-	
-	    this.translate = (vector) => {
-	      const verts = [];
-	      for (let index = 0; index < lines.length; index++) {
-	        verts.push(lines[index].startVertex.translate(vector, true));
-	      }
-	      return new Polygon3D(verts);
-	    }
-	
-	    this.perpendicular = (poly) => {
-	      return this.normal().perpendicular(poly.normal());
-	    }
-	    const xyNormal = new Vector3D(0,0,1);
-	    const yzNormal = new Vector3D(1,0,0);
-	    const xzNormal = new Vector3D(0,1,0);
-	    this.inXY = () => this.perpendicular(xyPoly);
-	    this.inYZ = () => this.perpendicular(yzPoly);
-	    this.inXZ = () => this.perpendicular(xzPoly);
-	
-	    this.parrelle = (poly) => {
-	      if (normal === undefined || poly.normal() === undefined) return false;
-	      return normal.parrelle(poly.normal());
-	    }
-	
-	    this.offset = (left, right, up, down) => {
-	      lines[0].adjustLength(left - lines[0].length(), false);
-	      lines[0].adjustLength(lines[0].length() - right, true);
-	      lines[2].adjustLength(lines[2].length() - left, true);
-	      lines[2].adjustLength(right - lines[2].length(), false);
-	
-	      lines[1].adjustLength(up - lines[1].length(), false);
-	      lines[1].adjustLength(lines[1].length() - down, true);
-	      lines[3].adjustLength(lines[3].length() - up, true);
-	      lines[3].adjustLength(down - lines[3].length(), false);
-	    }
-	
-	    this.parrelleAt = (distance) => {
-	      const normal = this.normal();
-	      const scaled = normal.scale(distance);
-	      const vertices = this.vertices();
-	      for (let index = 0; index < vertices.length; index++) {
-	        vertices[index].translate(scaled);
-	      }
-	      return new Polygon3D(vertices);
-	    }
-	
-	    this.vertices = () => {
-	      if (lines.length === 0) return [];
-	      const vertices = [];
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        vertices.push(line.startVertex);
-	      }
-	
-	      return JSON.clone(vertices);
-	    }
-	
-	    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex.copy();
-	
-	    this.isClockwise = () => {
-	      let sum = 0;
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const point1 = lines[index].startVertex;
-	        const point2 = lines[index].startVertex;
-	        sum += (point2.x - point1.x)*(point2.y + point1.y)*(point2.z - point1.z);
-	      }
-	      return sum > 0;
-	    }
-	
-	    this.lines = () => JSON.clone(lines);
-	    this.line = (index) => JSON.clone(lines[Math.mod(index, lines.length)]);
-	    this.startLine = () => lines[0];
-	    this.endLine = () => lines[lines.length - 1];
-	
-	    const tol = .00001;
-	    this.lineMap = (force) => {
-	      if (!force && map !== undefined) return map;
-	      if (lines.length === 0) return {};
-	      map = new ToleranceMap({'startVertex.x': tol, 'startVertex.y': tol, 'startVertex.z': tol,
-	                              'endVertex.x': tol, 'endVertex.y': tol, 'endVertex.z': tol});
-	      let lastEnd;
-	      if (!lines[0].startVertex.equals(lines[lines.length - 1].endVertex)) throw new Error('Broken Polygon');
-	      for (let index = 0; index < lines.length; index++) {
-	        lines[index]._POLY_INDEX = index;
-	        map.add(lines[index]);
-	      }
-	      return map;
-	    }
-	
-	    this.copy = () => new Polygon3D(Line3D.vertices(lines, false));
-	
-	    this.equals = (other) => {
-	      if (!(other instanceof Polygon3D)) return false;
-	      const verts = this.vertices();
-	      const otherVerts = other.vertices();
-	      if (verts.length !== otherVerts.length) return false;
-	      let otherIndex = undefined;
-	      let direction;
-	      for (let index = 0; index < verts.length * 2; index += 1) {
-	        const vIndex = index % verts.length;
-	        if (otherIndex === undefined) {
-	          if (index > verts.length) {
-	            return false
-	          } if(verts[index].equals(otherVerts[0])) {
-	            otherIndex = otherVerts.length * 2;
-	          }
-	        } else if (otherIndex === otherVerts.length * 2) {
-	          if (verts[vIndex].equals(otherVerts[1])) direction = 1;
-	          else if(verts[vIndex].equals(otherVerts[otherVerts.length - 1])) direction = -1;
-	          else return false;
-	          otherIndex += direction * 2;
-	        } else if (!verts[vIndex].equals(otherVerts[otherIndex % otherVerts.length])) {
-	          return false;
+	    this.adjustLength = (change, fromStartVertex) => {
+	      if ((typeof change) !== 'number' || change === 0) return;
+	      const unitVec = this.vector().unit();
+	      if (fromStartVertex !== undefined) {
+	        if (fromStartVertex === true) {
+	          this.endVertex.positionAt(this.startVertex.translate(unitVec.scale(change), true));
 	        } else {
-	          otherIndex += direction;
+	          this.startVertex.positionAt(this.endVertex.translate(unitVec.scale(change), true));
 	        }
-	      }
-	      return true;
-	    }
-	
-	    function getLine(line) {
-	      const lineMap = this.lineMap();
-	      const matches = lineMap.matches(line) || lineMap.matches(line.negitive());
-	      if (matches && matches.length > 1) throw new Error('THIS SHOULD NOT HAPPEN!!!! REMOVE LINES IS BROKEN... probably');
-	      return matches ? matches[0] : null;
-	    }
-	
-	    this.getLines = (startVertex, endVertex, reverse) => {
-	      const subSection = [];
-	      let completed = false;
-	      let shared;
-	      const compareLine = new Line3D(startVertex, endVertex);
-	      const compareLineI = new Line3D(endVertex,startVertex);
-	
-	      const doubleLen = lines.length * 2;
-	      for (let steps = 0; steps < doubleLen; steps += 1) {
-	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
-	        const curr = lines[index];
-	        if (!shared) {
-	          if (compareLine.equals(curr) || compareLineI.equals(curr)) shared = curr;
-	        } else {
-	          if (shared === curr) {
-	            completed = true;
-	            break;
-	          } else subSection.push(!reverse ? curr : curr.negitive());
-	        }
-	      }
-	      if (completed) return subSection;
-	    }
-	
-	    this.center = () => {
-	      const verts = [];
-	      for (let index = 0; index < lines.length; index++) {
-	        verts.push(lines[index].startVertex);
-	      }
-	      return Vertex3D.center(verts);
-	    }
-	
-	    this.addVertices = (list) => {
-	      if (list === undefined) return;
-	      const verts = [];
-	      const endLine = this.endLine();
-	      for (let index = 0; index < list.length + 1; index += 1) {
-	        if (index < list.length) verts[index] = new Vertex3D(list[index]);
-	        if (index === 0 && endLine) endLine.endVertex = verts[0];
-	        else if (index > 0) {
-	          const startVertex = verts[index - 1];
-	          const endVertex = verts[index] || this.startLine().startVertex;
-	          const line = new Line3D(startVertex, endVertex);
-	          lines.push(line);
-	          const prevLine = lines[lines.length - 2];
-	          // if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
-	          // else if (lines.length > 2) {
-	          //   const equal = normal.equals(calcNormal(line, prevLine));
-	          //   if (equal === false) {
-	          //     console.log('Trying to add vertex that does not lie in the existing plane');
-	          //   }
-	          // }
-	        }
-	      }
-	      if (verts.length > 0 && lines.length > 0) {
-	        if (endLine) endline.endVertex = verts[0];
-	      }
-	      this.lineMap(true);
-	      this.removeLoops();
-	    }
-	
-	    this.rebuild = (newVertices) => {
-	      lines = [];
-	      this.addVertices(newVertices);
-	    }
-	
-	    this.removeLoops = () => {
-	      let removed = true;
-	      const orig = lines;
-	      while (removed && lines.length > 0) {
-	        removed = false;
-	        const map = this.lineMap();
-	        for (let index = 0; index < lines.length; index += 1) {
-	          const line = lines[index];
-	          if (line.isPoint()) {
-	            lines = JSON.clone(lines);
-	            lines.splice(index, 1);
-	            removed = true;
-	          } else {
-	            const posMatch = map.matches(line);
-	            const negMatch = map.matches(line.negitive());
-	            if (posMatch.length > 1 || (negMatch && negMatch.length !== 0)) {
-	              let match = negMatch ? negMatch[0] : posMatch[1];
-	              const startIndex = line._POLY_INDEX;
-	              const endIndex = match._POLY_INDEX;
-	              if (startIndex > endIndex)
-	              throw new Error('THIS SHOULD NOT HAPPEN!!!!!! WTF!!!!');
-	              const forwardDiff = endIndex - startIndex;
-	              const reverseDiff = lines.length - forwardDiff;
-	              if (Math.max(forwardDiff, reverseDiff) < 3) {
-	                console.log('che che');
-	              }
-	              if (forwardDiff > reverseDiff) {
-	                lines = lines.slice(startIndex, endIndex);
-	              } else {
-	                lines = lines.slice(0, startIndex).concat(lines.slice(endIndex));
-	              }
-	
-	              const newVerts = Line3D.vertices(lines, false);
-	              this.rebuild(newVerts);
-	              removed = true;
-	              break;
-	            }
-	          }
-	        }
-	        // TODO: not sure if this will cause an issue but polygons should not have less than 3 vertices this will break toPlane functionality.
-	        // if (lines.length < 3) {
-	        //   console.log('che che check it out', lines.length);
-	        // }
-	        if (removed) this.lineMap(true);
+	      } else {
+	        const len = this.length();
+	        const halfChangeMag = change/2;
+	        const halfDistVec = unitVec.scale(halfChangeMag);
+	        startVertex.translate(halfDistVec.inverse());
+	        endVertex.translate(halfDistVec);
 	      }
 	    }
 	
-	    this.path = () => {
-	      let path = '';
-	      this.vertices().forEach((v) => path += `${v.toString()} => `);
-	      return path.substring(0, path.length - 4);
+	    this.pointAtDistance = (distance) => {
+	      const point = startVertex.copy();
+	      const unitVec = this.vector().unit();
+	      point.translate(unitVec.scale(distance));
+	      return point;
 	    }
 	
-	
-	    this.merge = (other) => {
-	      if (!this.normal().parrelle(other.normal())) return;
-	      const thisPlane = this.toPlane();
-	      const otherPlane = other.toPlane();
-	      // if (!thisPlane.equivalent(otherPlane)) return;
-	      const lineMap = this.lineMap();
-	      const allOtherLines = other.lines();
-	      let merged;
-	      for (let index = 0; index < allOtherLines.length; index += 1) {
-	        const curr = allOtherLines[index];
-	        let vertices, thisLines, otherLines;
-	        if (lineMap.matches(curr) !== null) {
-	          thisLines = this.getLines(curr.startVertex, curr.endVertex, true);
-	          otherLines = other.getLines(curr.endVertex, curr.startVertex, false);
-	        } else if (lineMap.matches(curr.negitive()) !== null) {
-	          thisLines = this.getLines(curr.endVertex, curr.startVertex, false);
-	          otherLines = other.getLines(curr.startVertex, curr.endVertex, false);
-	        }
-	
-	        if (thisLines && otherLines) {
-	          if (thisLines[0].startVertex.equals(otherLines[0].startVertex))
-	            thisLines = Line3D.reverse(thisLines);
-	
-	          const startCheck = thisLines[0].startVertex.equals(otherLines[otherLines.length - 1].endVertex);
-	          const middleCheck = thisLines[thisLines.length - 1].endVertex.equals(otherLines[0].startVertex);
-	          if (!(middleCheck && startCheck))
-	            console.warn('coommmmooon!!!!');
-	          vertices = Line3D.vertices(otherLines.concat(thisLines), false);
-	          merged = new Polygon3D(vertices);
-	          try {
-	            merged.normal();
-	          } catch (e) {
-	            console.warn('again wtf!!!');
-	            new Polygon3D(vertices);
-	            new Polygon3D(vertices);
-	            new Polygon3D(vertices);
-	          }
-	        }
-	      }
-	
-	      if (merged) {
-	        return merged;
-	      }
+	    this.rotate = (rotation, center) => {
+	      center ||= this.midpoint();
+	      startVertex.rotate(rotation, center);
+	      endVertex.rotate(rotation, center);
 	    }
 	
-	    this.viewFromVector = () => Polygon3D.viewFromVector([this])[0];
-	    this.mostInformation = () => Polygon3D.mostInformation([this])[0];
-	
-	    this.to2D = (x, y) => {
-	      if (!x || !y) {
-	        const mi = this.mostInformation();
-	        x ||= mi[0];
-	        y ||= mi[1];
-	        if (lastMi && (mi[0] !== lastMi[0] || mi[1] !== lastMi[1])) {
-	          console.info.subtle('change in mi');
-	        }
-	        lastMi = mi;
-	      }
-	      return new Polygon2D(Vertex3D.to2D(this.vertices(),  x, y));
+	    this.reverseRotate = (rotation, center) => {
+	      center ||= this.midpoint();
+	      startVertex.reverseRotate(rotation, center);
+	      endVertex.reverseRotate(rotation, center);
 	    }
 	
-	    this.toString = () => {
-	      let str = '';
-	      for (let index = 0; index < lines.length; index++) {
-	        str += ` => ${lines[index].startVertex.toString()}`;
-	      }
-	      return `${str.substring(4)} normal: ${this.normal()}`;
-	    }
+	    this.to2D = (x,y) => Line3D.to2D([this], x, y)[0];
 	
-	
-	    this.toDetailString = () => {
-	      let startStr = '';
-	      let endStr = '';
-	      for (let index = 0; index < lines.length; index++) {
-	        startStr += ` => ${lines[index].startVertex.toString()}`;
-	        endStr += ` => ${lines[Math.mod(index - 1, lines.length)].endVertex.toString()}`;
-	      }
-	      return `Start Vertices: ${startStr.substring(4)}\nEnd   Vertices: ${endStr.substring(4)}`;
-	    }
-	    this.addVertices(initialVertices);
 	  }
 	}
 	
-	function printMerge(target, other, merged) {
-	  console.log(`target: ${target.toString()}`);
-	  console.log(`other: ${other.toString()}`);
-	  console.log(`merged: ${merged.toString()}`);
-	  target.merge(other);
-	}
-	
-	let doIt = false;
-	Polygon3D.merge = (polygons) => {
-	  let currIndex = 0;
-	  while (currIndex < polygons.length - 1) {
-	    const target = polygons[currIndex];
-	    for (let index = currIndex + 1; index < polygons.length; index += 1) {
-	      const other = polygons[index];
-	      const merged = target.merge(other);
-	      if (merged) {
-	        if (doIt) printMerge(target, other, merged);
-	        polygons[currIndex--] = merged;
-	        polygons.splice(index, 1);
-	        break;
-	      }
-	    }
-	    currIndex++;
+	Line3D.vertices = (lines, true4startfalse4end) => {
+	  const verts = [];
+	  const includeBoth = true4startfalse4end !== true && true4startfalse4end !== false;
+	  const includeStart = includeBoth || true4startfalse4end === true;
+	  const includeEnd = includeBoth || true4startfalse4end === false;
+	  for (let index = 0; index < lines.length; index += 1) {
+	    if (includeStart) verts.push(lines[index].startVertex.copy());
+	    if (includeEnd) verts.push(lines[index].endVertex.copy());
 	  }
+	  return verts;
 	}
 	
-	const xyPoly = new Polygon3D([[1,10,0],[11,2,0],[22,1,0]]);
-	const yzPoly = new Polygon3D([[6,0,1],[10,0,27],[2,0,11]]);
-	const xzPoly = new Polygon3D([[0,11,13],[0,12,23],[0,22,3]]);
-	
-	Polygon3D.mostInformation = (polygons) => {
-	  const diff = {x: 0, y:0, z: 0};
-	  for (let pIndex = 0; pIndex < polygons.length; pIndex++) {
-	    const poly = polygons[pIndex];
-	    const verts = poly.vertices();
-	    const center = poly.center();
-	    for(let index = 0; index < verts.length; index++) {
-	      const v = verts[index];
-	      diff.x += Math.abs(v.x - center.x);
-	      diff.y += Math.abs(v.y - center.y);
-	      diff.z += Math.abs(v.z - center.z);
-	    }
-	  }
-	  return diff.x < diff.y ?
-	        (diff.x < diff.z ? ['y', 'z'] :
-	        (diff.z < diff.y ? ['x', 'y'] : ['x', 'z'])) :
-	        (diff.y < diff.z ? ['x', 'z'] : ['x', 'y']);
-	}
-	
-	// const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
-	// const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
-	const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
-	const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
-	const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
-	Polygon3D.toTwoD = (polygons, vector, axis) => {
-	  const view = Polygon3D.viewFromVector(polygons, vector, true);
-	  axis ||= Polygon3D.mostInformation(view);
-	  const twoD = view.map(to2D(axis));
-	  const twoDlines = Polygon2D.lines(twoD);
-	  twoDlines.axis = axis;
-	  return twoDlines;
-	}
-	
-	Polygon3D.toThreeView = (polygons, normals, gap) => {
-	  normals ||= defaultNormals;
-	  gap ||= 10;
-	  const frontView = Polygon3D.viewFromVector(polygons, normals.front);
-	  const rightView = Polygon3D.viewFromVector(polygons, normals.right);
-	  const topView = Polygon3D.viewFromVector(polygons, normals.top);
-	
-	  const axis = {};
-	  axis.front = Polygon3D.mostInformation(frontView);
-	  axis.right = Polygon3D.mostInformation(rightView);
-	  axis.top = Polygon3D.mostInformation(topView);
-	
-	  if (axis.front.indexOf('y') === 0) axis.front.reverse();
-	  if (axis.top.indexOf(axis.right[1]) !== -1) axis.right.reverse();
-	  if (axis.front.indexOf(axis.top[1]) !== -1) axis.top.reverse();
-	
-	  const front2D = frontView.map(to2D(axis.front));
-	  const right2D = rightView.map(to2D(axis.right));
-	  const top2D = topView.map(to2D(axis.top));
-	
-	  Polygon2D.centerOn({x:0,y:0}, front2D);
-	
-	  const frontMinMax = Polygon2D.minMax(...front2D);
-	  const rightMinMax = Polygon2D.minMax(...right2D);
-	  const topMinMax = Polygon2D.minMax(...top2D);
-	  const rightCenterOffset = frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2;
-	  const topCenterOffset = frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2;
-	
-	  Polygon2D.centerOn({x:rightCenterOffset, y:0}, right2D);
-	  Polygon2D.centerOn({x:0,y:topCenterOffset}, top2D);
-	
-	  const front = Polygon2D.lines(front2D);
-	  const right = Polygon2D.lines(right2D);
-	  const top = Polygon2D.lines(top2D);
-	
-	  return {front, right, top, axis}
-	}
-	
-	Polygon3D.fromCSG = (polys) => {
-	  const isArray = Array.isArray(polys);
-	  if (!isArray) polys = [polys];
-	  const poly3Ds = [];
-	  for (let index = 0; index < polys.length; index++) {
-	    const poly = polys[index];
-	    const verts = [];
-	    for (let vIndex = 0; vIndex < poly.vertices.length; vIndex++) {
-	      const v = poly.vertices[vIndex];
-	      verts.push(new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
-	    }
-	    poly3Ds.push(new Polygon3D(verts));
-	  }
-	  if (!isArray) return poly3Ds[0];
-	  return poly3Ds;
-	}
-	
-	Polygon3D.fromVectorObject =
-	    (width, height, center, vectorObj) => {
-	  center ||= new Vertex(0,0,0);
-	  vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0)}
-	  const hw = width/2;
-	  const hh = height/2;
-	  const wV = vectorObj.width;
-	  const hV = vectorObj.height;
-	  const vector1 = center.translate(hV.scale(hh), true).translate(wV.scale(-hw));
-	  const vector2 = center.translate(hV.scale(hh), true).translate(wV.scale(hw));
-	  const vector3 = center.translate(hV.scale(-hh), true).translate(wV.scale(hw));
-	  const vector4 = center.translate(hV.scale(-hh), true).translate(wV.scale(-hw));
-	  return new Polygon3D([vector1, vector2, vector3, vector4]);
-	}
-	
-	Polygon3D.fromLines = (lines) => {
+	Line3D.vertices1 = (lines) => {
 	  const verts = [];
 	  for (let index = 0; index < lines.length; index += 1) {
-	    if (!lines[index].startVertex.equals(lines[Math.mod(index - 1, lines.length)].endVertex)) throw new Error('Lines must be connected');
-	    verts.push(lines[index].startVertex);
+	    verts.push(lines[index].endVertex.copy());
 	  }
-	  return new Polygon3D(verts);
+	  return verts;
 	}
 	
-	Polygon3D.from2D = (polygon2d) => {
-	  const verts = polygon2d.vertices();
-	  const initialVertices = [];
-	  for (let index = 0; index < verts.length; index++) {
-	    const vert = verts[index];
-	    initialVertices.push(new Vertex3D(vert.x(), vert.y(), 0));
+	Line3D.adjustVertices = (vert1, vert2, change) => {
+	  const line = new Line3D(vert1, vert2);
+	  line.adjustLength(change);
+	}
+	
+	Line3D.startAndVector = (startVertex, offsetVector) => {
+	  const endVertex = startVertex.translate(offsetVector, true);
+	  return new Line3D(startVertex, endVertex);
+	}
+	
+	Line3D.to2D = (lines, x, y) => {
+	  const lines2d = [];
+	  for (let index = 0; index < lines.length; index++) {
+	    const startV = lines[index].startVertex.to2D(x, y);
+	    const endV = lines[index].endVertex.to2D(x, y);
+	    lines2d.push(new Line2d(startV, endV));
 	  }
-	  return new Polygon3D(initialVertices);
+	  return lines2d;
 	}
 	
-	const randValue = () => Math.random() > .5 ? Math.random() * 200000 - 100000 : 0;
-	for (let index = 0; index < 10000; index++) {
-	  const vector = new Vector3D(randValue(), randValue(), randValue());
-	}
-	
-	// let inverseSignCheck = (v) => v.positive() === v.inverse().positive() && console.log('failed', v.toString());
-	// inverseSignCheck(new Vector3D(0,0,0));
-	// inverseSignCheck(new Vector3D(4,0,0));
-	// inverseSignCheck(new Vector3D(0,5,0));
-	// inverseSignCheck(new Vector3D(0,0,6));
-	// inverseSignCheck(new Vector3D(-3,0,0));
-	// inverseSignCheck(new Vector3D(0,-44,0));
-	// inverseSignCheck(new Vector3D(0,0,-.0000001));
-	
-	Polygon3D.viewFromVector = (polygons, vector) => {
-	  const orthoPolys = [];
-	  const negitive = !vector.positive();
-	  for (let p = 0; p < polygons.length; p++) {
-	    const vertices = polygons[p].vertices();
-	    const vertLocs = {};
-	    let valid = true;
-	    const perpendicularCheck = (orthogonal) => {
-	      const accStr = orthogonal.toString();
-	      if (vertLocs[accStr]) valid = false;
-	      else vertLocs[accStr] = true;
-	      return true;
-	    }
-	    const orthoVerts = Vertex3D.viewFromVector(vertices, vector, perpendicularCheck);
-	    if (valid) orthoPolys.push(new Polygon3D(orthoVerts));
+	Line3D.reverse = (list) => {
+	  let reversed = [];
+	  for (let index = list.length - 1; index > -1; index--) {
+	    reversed.push(list[index].negitive());
 	  }
-	  return orthoPolys;
+	  return reversed;
 	}
 	
-	module.exports = Polygon3D;
+	module.exports = Line3D;
 	
 });
 
 
-RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
+RequireJS.addFunction('./app-src/two-d/objects/snap/polygon.js',
 function (require, exports, module) {
+	const Snap2d = require('../snap');
+	const Line2d = require('../line');
+	const Square2d = require('../square');
+	const Polygon2d = require('../polygon');
+	const SnapLocation2d = require('../snap-location');
+	const Vertex2d = require('../vertex');
+	const ToleranceMap = require('../../../../../../public/js/utils/tolerance-map.js');
 	
-
+	class SnapPolygon extends Snap2d {
+	  constructor(parent, polygon, tolerance) {
+	    if (!(polygon instanceof Polygon2d) || !polygon.valid()) throw new Error('PolygonSnap requires a valid polygon to intialize');
+	    super(parent, polygon, tolerance);
+	    let locationCount = 0;
+	    polygon.centerOn(parent.center());
+	    if (parent === undefined) return this;
+	    const instance = this;
+	    let longestFaceLine;
 	
-	const Joint = require('../joint.js');
-	
-	class Rabbet extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
+	    const setOpeningLine = (index) => {
+	      const line = polygon.lines()[index];
+	      if (longestFaceLine === undefined || longestFaceLine.length() < line.length()) {
+	        longestFaceLine = line;
+	      }
 	    }
 	
-	    if (axis === undefined) return;
+	    const midpointMap = new ToleranceMap({x: .1, y:.1});
+	    const vertexFunc = (index) => (position) => polygon.vertex(index, position);
+	    const midpointFunc = (index) => (position) => polygon.midpoint(index, position);
+	    function addLine(index, name, targetName) {
+	      const locFunc = vertexFunc(index + 1);
+	      const snapLoc = new SnapLocation2d(instance, name + locationCount++,  locFunc,  targetName);
+	      instance.addLocation(snapLoc);
+	      const mpFunc = midpointFunc(index + (name === 'right' ? 1 : 0));
+	      const mpLoc = mpFunc();
+	      if(midpointMap.matches(mpLoc).length === 0) {
+	        midpointMap.add(mpLoc);
+	        const snapLocMidpoint = new SnapLocation2d(instance, `${name}${locationCount++}center`,  mpFunc,  `${targetName}Center`);
+	        instance.addLocation(snapLocMidpoint);
+	      }
 	
-	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
-	    };
+	      // snapLoc.wallThetaOffset(0);
+	      // snapLoc.thetaOffset(null, null, 180);
+	      snapLoc.at();
+	    }
+	
+	    const backs = [];
+	    function queBack (index) {backs.push(index)};
+	
+	    function addBacks(index) {
+	      for (let index = 0; index < backs.length; index++) {
+	        const i = backs[index];
+	        addLine(i, `back${i}`, 'back');
+	      }
+	    }
+	
+	    function addVertex(index, prevIsFace, targetIsFace, nextIsFace) {
+	      if (prevIsFace && !targetIsFace && nextIsFace){
+	        queBack(index);
+	      } else if (targetIsFace && !nextIsFace) {
+	        addLine(index, 'right', 'left');
+	        setOpeningLine(index);
+	      } else if (!targetIsFace && nextIsFace) {
+	        addLine(index, 'left', 'right');
+	      } else if (targetIsFace) {
+	        setOpeningLine(index);
+	        return;
+	      } else {
+	        queBack(index);
+	      }
+	    }
+	
+	    function build() {
+	      const faces = polygon.faces();
+	      const lines = polygon.lines();
+	      let prevPrevIsFace = faces.equalIndexOf(lines[lines.length -2]) !== -1;
+	      let prevIsFace = faces.equalIndexOf(lines[lines.length - 1]) !== -1;
+	      for (let index = 0; index < lines.length; index++) {
+	        const line = lines[index];
+	        const currIsFace = faces.equalIndexOf(line) !== -1;
+	        const currIndex = index === 0 ? lines.length - 1 : index - 1;
+	        addVertex(currIndex, prevPrevIsFace, prevIsFace, currIsFace);
+	        prevPrevIsFace = prevIsFace;
+	        prevIsFace = currIsFace;
+	      }
+	      addBacks();
+	    }
+	
+	    function textCenter () {
+	      const center = instance.object().center();
+	      // if (longestFaceLine)
+	      //   return new Line2d(longestFaceLine.midpoint(), center).midpoint();
+	      return center;
+	    }
+	
+	    polygon.getTextInfo = () => ({
+	      text: instance.parent().name() || 'banjo',
+	      center: textCenter(),
+	      radians: longestFaceLine ? longestFaceLine.radians() : 0,
+	      x: 0,
+	      y: instance.height() / 4,
+	      maxWidth: longestFaceLine ? longestFaceLine.length() : instance.width(),
+	      limit: 10
+	    });
+	
+	    build();
 	  }
 	}
 	
-	Joint.register(Rabbet);
-	module.exports = Rabbet
-	
-	
-	
-	
+	module.exports = SnapPolygon;
 	
 });
 
@@ -33547,6 +33940,267 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/has-pull.js',
+function (require, exports, module) {
+	const Assembly = require('../assembly.js');
+	const Handle = require('./hardware/pull.js');
+	
+	class HasPull extends Assembly {
+	  constructor(partCode, partName, getBiPolygon) {
+	    super(partCode, partName);
+	    const pulls = [];
+	    this.pull = (index) => pulls[index || 0];
+	    this.addPull = (location) => {
+	      pulls.push(new Handle('pu', 'Pull', this, location));
+	      this.addSubAssembly(pulls[pulls.length - 1]);
+	    }
+	    this.setPulls = (locations) => {
+	      pulls.copy([]);
+	      this.subassemblies.deleteAll();
+	      locations.forEach((location) => this.addPull(location));
+	    }
+	    this.biPolygon = () => getBiPolygon();
+	
+	  }
+	}
+	
+	module.exports = HasPull;
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Divider extends Assembly {
+	  constructor(partCode, partName, toModel) {
+	    super(partCode, partName);
+	
+	    this.toModel = toModel;
+	  }
+	}
+	Divider.count = 0;
+	
+	Divider.abbriviation = 'dv';
+	
+	module.exports = Divider
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Panel extends Assembly {
+	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
+	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+	
+	    this.railThickness = () => this.thickness();
+	    Object.getSet(this, {hasFrame: false});
+	  }
+	}
+	
+	Panel.abbriviation = 'pn';
+	
+	class PanelModel extends Panel {
+	  constructor(partCode, partNameFunc, toModel) {
+	    super(partCode);
+	    this.toModel = toModel;
+	    this.partName = partNameFunc;
+	  }
+	}
+	
+	Panel.Model = PanelModel;
+	module.exports = Panel
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/snap/square.js',
+function (require, exports, module) {
+	// const Snap2d = require('../snap');
+	// const Square2d = require('../square');
+	// const Polygon2d = require('../polygon');
+	// const SnapLocation2d = require('../snap-location');
+	// const Vertex2d = require('../vertex');
+	//
+	// class SnapSquare extends Snap2d {
+	//   constructor(parent, tolerance) {
+	//     const polygon = new Polygon2d();
+	//     polygon.getTextInfo = () => ({
+	//       text: this.parent().name() || 'kazzooi',
+	//       center: this.object().center(),
+	//       radians: this.radians(),
+	//       x: 0,
+	//       y: this.height() / 4,
+	//       maxWidth: this.width(),
+	//       limit: 10
+	//     });
+	//     // super(parent, new Square2d(parent.center), tolerance);
+	//     super(parent, polygon, tolerance);
+	//     if (parent === undefined) return this;
+	//     this.addLocation(SnapSquare.backCenter(this));
+	//     this.addLocation(SnapSquare.backRight(this));
+	//     this.addLocation(SnapSquare.rightCenter(this));
+	//     this.addLocation(SnapSquare.frontRight(this));
+	//     this.addLocation(SnapSquare.frontLeft(this));
+	//     this.addLocation(SnapSquare.leftCenter(this));
+	//     this.addLocation(SnapSquare.backLeft(this));
+	//     const vertices = this.snapLocations().map((snap) =>
+	//       snap.vertex());
+	//     polygon.addVertices(vertices);
+	//   }
+	// }
+	//
+	// const fromToPoint = SnapLocation2d.fromToPoint;
+	// const wFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 'width', multiplier);
+	// const hFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 'height', multiplier);
+	//
+	// SnapSquare.backCenter = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wFunc(snapLoc, 0), hFunc(snapLoc, -.5));
+	//   const snapLoc = new SnapLocation2d(parent, "backCenter",  centerFunc,  'backCenter');
+	//   snapLoc.wallThetaOffset(0);
+	//   snapLoc.thetaOffset(null, null, 180);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	// SnapSquare.frontCenter = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wFunc(snapLoc, 0), () => hFunc(snapLoc, .5));
+	//   const snapLoc = new SnapLocation2d(parent, "frontCenter",  centerFunc,  'frontCenter');
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	// SnapSquare.leftCenter = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, 0));
+	//   const snapLoc = new SnapLocation2d(parent, "leftCenter",  centerFunc,  'rightCenter');
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	// SnapSquare.rightCenter = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, 0));
+	//   const snapLoc = new SnapLocation2d(parent, "rightCenter",  centerFunc,  'leftCenter');
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// SnapSquare.backLeft = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, -.5));
+	//   const snapLoc = new SnapLocation2d(parent, "backLeft",  centerFunc,  'backRight');
+	//   snapLoc.wallThetaOffset(-90);
+	//   snapLoc.thetaOffset('SnapCorner', null, 270);
+	//   snapLoc.thetaOffset('SnapCornerL', null, 270);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	// SnapSquare.backRight = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, -.5));
+	//   const snapLoc = new SnapLocation2d(parent, "backRight",  centerFunc,  'backLeft');
+	//   snapLoc.wallThetaOffset(90);
+	//   snapLoc.thetaOffset('SnapCorner', null, 180);
+	//   snapLoc.thetaOffset('SnapCornerL', null, 180);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// SnapSquare.frontRight = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, .5));
+	//   const snapLoc = new SnapLocation2d(parent, "frontRight",  centerFunc,  'frontLeft');
+	//   snapLoc.thetaOffset('SnapCorner', null, 180);
+	//   snapLoc.thetaOffset('SnapCornerL', null, 180);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	// SnapSquare.frontLeft = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, .5));
+	//   const snapLoc = new SnapLocation2d(parent, "frontLeft",  centerFunc,  'frontRight');
+	//   snapLoc.thetaOffset('SnapCorner', null, 270);
+	//   snapLoc.thetaOffset('SnapCornerL', null, 270);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// module.exports = SnapSquare;
+	
+});
+
+
+RequireJS.addFunction('./app-src/two-d/objects/snap/init.js',
+function (require, exports, module) {
+	// const Snap2d = require('../snap');
+	//
+	// Snap2d.registar(require('./square.js'));
+	// Snap2d.registar(require('./corner.js'));
+	// Snap2d.registar(require('./corner-l.js'));
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Miter extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
+	  }
+	}
+	
+	Joint.register(Miter);
+	module.exports = Miter
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/joint/joints/rabbet.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Rabbet extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
+	    super(joinStr);
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
+	    }
+	
+	    if (axis === undefined) return;
+	
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
+	    };
+	  }
+	}
+	
+	Joint.register(Rabbet);
+	module.exports = Rabbet
+	
+	
+	
+	
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/joint/joints/dado.js',
 function (require, exports, module) {
 	
@@ -33617,143 +34271,212 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/divider.js',
+RequireJS.addFunction('./app-src/two-d/objects/snap/corner-l.js',
 function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Divider extends Assembly {
-	  constructor(partCode, partName, toModel) {
-	    super(partCode, partName);
-	
-	    this.toModel = toModel;
-	  }
-	}
-	Divider.count = 0;
-	
-	Divider.abbriviation = 'dv';
-	
-	module.exports = Divider
+	//
+	// const Snap2d = require('../snap');
+	// const SnapCorner = require('../snap/corner');
+	// const Square2d = require('../square');
+	// const Polygon2d = require('../polygon');
+	// const SnapLocation2d = require('../snap-location');
+	// const Vertex2d = require('../vertex');
+	//
+	// class SnapCornerL extends Snap2d {
+	//   constructor(parent, tolerance) {
+	//     const polygon = new Polygon2d();
+	//     super(parent, polygon, tolerance);
+	//     polygon.getTextInfo = () => {
+	//       const fwr = (this.height() - this.dl());
+	//       const fwl = (this.width() - this.dr());
+	//       const areaL = this.dl() * fwr;
+	//       const areaR = this.dr() * fwl;
+	//       const center = polygon.center();
+	//       const info = {
+	//         text: this.parent().name(),
+	//         center: polygon.center(),
+	//         maxWidth: this.width(),
+	//         limit: 4
+	//       };
+	//
+	//       if (areaR > areaL) {
+	//         // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
+	//         info.x = this.height()/2 - fwr/2;
+	//         info.y = this.width()/-2 + this.dr();
+	//         info.maxWidth = fwr*.75;
+	//         info.radians = Math.toRadians(-90) + this.radians();
+	//       } else {
+	//         info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
+	//         info.y = this.height()/-2 + 3 * this.dl() / 4;
+	//         info.maxWidth = fwl;
+	//         info.radians = Math.toRadians(180) + this.radians();
+	//       }
+	//       return info;
+	//     }
+	//     if (parent === undefined) return this;
+	//
+	//     this.addLocation(SnapCorner.backRight(this));
+	//     this.addLocation(SnapCorner.frontRight(this));
+	//     this.addLocation(SnapCornerL.frontCenter(this));
+	//     this.addLocation(SnapCorner.frontLeft(this));
+	//     this.addLocation(SnapCorner.backLeft(this));
+	//
+	//     this.addLocation(SnapCorner.daginalLeft(this));
+	//     this.addLocation(SnapCorner.diagonalRight(this));
+	//     const vertices = this.snapLocations().map((snap) =>
+	//       snap.vertex());
+	//     polygon.addVertices(vertices);
+	//   }
+	// }
+	//
+	// const f = SnapLocation2d.locationFunction;
+	// const fromToPoint = SnapLocation2d.fromToPoint;
+	// const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
+	// const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
+	//
+	// SnapCornerL.frontCenter = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, .5, {dl: -1}));
+	//   const snapLoc = new SnapLocation2d(parent, "frontCenter",  centerFunc,  null);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// module.exports = SnapCornerL;
 	
 });
 
 
-RequireJS.addFunction('./app-src/two-d/objects/snap/polygon.js',
+RequireJS.addFunction('./app-src/two-d/objects/snap/corner.js',
 function (require, exports, module) {
-	const Snap2d = require('../snap');
-	const Square2d = require('../square');
-	const Polygon2d = require('../polygon');
-	const SnapLocation2d = require('../snap-location');
-	const Vertex2d = require('../vertex');
-	const ToleranceMap = require('../../../../../../public/js/utils/tolerance-map.js');
-	
-	class SnapPolygon extends Snap2d {
-	  constructor(parent, polygon, tolerance) {
-	    if (!(polygon instanceof Polygon2d) || !polygon.valid()) throw new Error('PolygonSnap requires a valid polygon to intialize');
-	    super(parent, polygon, tolerance);
-	    if (parent === undefined) return this;
-	    const instance = this;
-	
-	    const midpointMap = new ToleranceMap({x: .1, y:.1});
-	    const vertexFunc = (index) => () => polygon.vertex(index);
-	    const midpointFunc = (index) => () => polygon.midpoint(index);
-	    function addLine(index, name, targetName) {
-	      const locFunc = vertexFunc(index + 1);
-	      const snapLoc = new SnapLocation2d(parent, name,  locFunc(),  targetName);
-	      snapLoc.locationFunction(locFunc);
-	      instance.addLocation(snapLoc);
-	      const mpFunc = midpointFunc(index + (name === 'right' ? 1 : 0));
-	      const mpLoc = mpFunc();
-	      if(midpointMap.matches(mpLoc).length === 0) {
-	        midpointMap.add(mpLoc);
-	        const snapLocMidpoint = new SnapLocation2d(parent, `${name}Center`,  mpLoc,  `${targetName}Center`);
-	        snapLocMidpoint.locationFunction(mpFunc);
-	        instance.addLocation(snapLocMidpoint);
-	      }
-	
-	      // snapLoc.wallThetaOffset(0);
-	      // snapLoc.thetaOffset(null, null, 180);
-	      snapLoc.at();
-	    }
-	
-	    const backs = [];
-	    function queBack (index) {backs.push(index)};
-	
-	    function addBacks(index) {
-	      for (let index = 0; index < backs.length; index++) {
-	        const i = backs[index];
-	        addLine(i, `back${i}`, 'back');
-	      }
-	    }
-	
-	    function addVertex(index, prevIsFace, targetIsFace, nextIsFace) {
-	      if (prevIsFace && !targetIsFace && nextIsFace) queBack(index);
-	      else if (targetIsFace && !nextIsFace) {
-	        addLine(index, 'right', 'left');
-	      } else if (!targetIsFace && nextIsFace) {
-	        addLine(index, 'left', 'right');
-	      } else if (targetIsFace) return;
-	      else {
-	        queBack(index);
-	      }
-	    }
-	
-	    function build() {
-	      const faces = polygon.faces();
-	      const lines = polygon.lines();
-	      let prevPrevIsFace = faces.equalIndexOf(lines[lines.length -2]) !== -1;
-	      let prevIsFace = faces.equalIndexOf(lines[lines.length - 1]) !== -1;
-	      for (let index = 0; index < lines.length; index++) {
-	        const line = lines[index];
-	        const currIsFace = faces.equalIndexOf(line) !== -1;
-	        const currIndex = index === 0 ? lines.length - 1 : index - 1;
-	        addVertex(currIndex, prevPrevIsFace, prevIsFace, currIsFace);
-	        prevPrevIsFace = prevIsFace;
-	        prevIsFace = currIsFace;
-	      }
-	      addBacks();
-	    }
-	
-	    polygon.getTextInfo = () => ({
-	      text: instance.parent().name() || 'banjo',
-	      center: instance.object().center(),
-	      radians: instance.radians(),
-	      x: 0,
-	      y: instance.height() / 4,
-	      maxWidth: instance.width(),
-	      limit: 10
-	    });
-	
-	    build();
-	  }
-	}
-	
-	module.exports = SnapPolygon;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/joint/joints/miter.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Miter extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
-	  }
-	}
-	
-	Joint.register(Miter);
-	module.exports = Miter
-	
-	
-	
-	
+	//
+	// const Snap2d = require('../snap');
+	// const Square2d = require('../square');
+	// const Polygon2d = require('../polygon');
+	// const SnapLocation2d = require('../snap-location');
+	// const Vertex2d = require('../vertex');
+	// const Line2d = require('../line');
+	//
+	// class SnapCorner extends Snap2d {
+	//   constructor(parent, tolerance) {
+	//     const polygon = new Polygon2d();
+	//     // super(parent, new Square2d(parent.center), tolerance);
+	//     super(parent, polygon, tolerance);
+	//     if (parent === undefined) return this;
+	//     polygon.getTextInfo = () => {
+	//       const fwr = (this.height() - this.dl());
+	//       const fwl = (this.width() - this.dr());
+	//       const areaL = this.dl() * fwr;
+	//       const areaR = this.dr() * fwl;
+	//       const center = polygon.center();
+	//       const info = {
+	//         text: this.parent().name(),
+	//         center: polygon.center(),
+	//         maxWidth: this.width(),
+	//         limit: 4
+	//       };
+	//
+	//       if (areaR > areaL) {
+	//         // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
+	//         info.x = this.height()/2 - fwr/2;
+	//         info.y = this.width()/-2 + this.dr();
+	//         info.maxWidth = fwr*.75;
+	//         info.radians = Math.toRadians(-90) + this.radians();
+	//       } else {
+	//         info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
+	//         info.y = this.height()/-2 + 3 * this.dl() / 4;
+	//         info.maxWidth = fwl;
+	//         info.radians = Math.toRadians(180) + this.radians();
+	//       }
+	//       return info;
+	//     }
+	//
+	//     this.addLocation(SnapCorner.backRight(this));
+	//     this.addLocation(SnapCorner.frontRight(this));
+	//     this.addLocation(SnapCorner.frontLeft(this));
+	//     this.addLocation(SnapCorner.backLeft(this));
+	//
+	//     this.addLocation(SnapCorner.daginalLeft(this));
+	//     this.addLocation(SnapCorner.diagonalRight(this));
+	//     const vertices = this.snapLocations().map((snap) =>
+	//       snap.vertex());
+	//     polygon.addVertices(vertices);
+	//   }
+	// }
+	//
+	// const f = (snapLoc, attr, attrM, props) => () => {
+	//   let val = snapLoc.parent()[attr]() * attrM;
+	//   let keys = Object.keys(props || {});
+	//   for (let index = 0; index < keys.length; index += 1) {
+	//     const key = keys[index];
+	//     val += snapLoc.parent()[key]() * props[key];
+	//   }
+	//   return val;
+	// };
+	//
+	// const fromToPoint = SnapLocation2d.fromToPoint;
+	// const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
+	// const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
+	//
+	// SnapCorner.diagonalRight = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, .5, {dol: -1}));
+	//   const snapLoc = new SnapLocation2d(parent, "diagonalRight",  centerFunc,  'daginalLeft');
+	//   snapLoc.wallThetaOffset(90);
+	//   snapLoc.thetaOffset('SnapCorner', null, 180);
+	//   snapLoc.thetaOffset('SnapCornerL', null, 180);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// SnapCorner.daginalLeft = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wf(snapLoc, -.5, {dor: 1}), hf(snapLoc, .5));
+	//   const snapLoc = new SnapLocation2d(parent, "daginalLeft",  centerFunc,  'diagonalRight');
+	//   snapLoc.wallThetaOffset(180);
+	//   snapLoc.thetaOffset('SnapCorner', null, 180);
+	//   snapLoc.thetaOffset('SnapCornerL', null, 180);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// SnapCorner.backRight = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, -.5));
+	//   const snapLoc = new SnapLocation2d(parent, "backRight",  centerFunc,  'backLeft');
+	//   snapLoc.thetaOffset('SnapCorner', null, -90);
+	//   snapLoc.thetaOffset('SnapCornerL', null, -90);
+	//   snapLoc.thetaOffset('SnapSquare', null, 90);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// SnapCorner.frontRight = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, -.5));
+	//   const snapLoc = new SnapLocation2d(parent, "frontRight",  centerFunc,  'frontLeft');
+	//   snapLoc.thetaOffset('SnapCorner', null, -90);
+	//   snapLoc.thetaOffset('SnapCornerL', null, -90);
+	//   snapLoc.thetaOffset('SnapSquare', null, 90);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// SnapCorner.backLeft = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wf(snapLoc, .5), hf(snapLoc, .5));
+	//   const snapLoc = new SnapLocation2d(parent, "backLeft",  centerFunc,  'backRight');
+	//   snapLoc.thetaOffset('SnapCorner', null, 90);
+	//   snapLoc.thetaOffset('SnapCornerL', null, 90);
+	//   snapLoc.thetaOffset('SnapSquare', null, 180);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// SnapCorner.frontLeft = (parent) => {
+	//   const centerFunc = fromToPoint(snapLoc, wf(snapLoc,.5), hf(snapLoc, .5, {dl: -1}));
+	//   const snapLoc = new SnapLocation2d(parent, "frontLeft",  centerFunc,  'frontRight');
+	//   snapLoc.thetaOffset('SnapCorner', null, 90);
+	//   snapLoc.thetaOffset('SnapCornerL', null, 90);
+	//   snapLoc.thetaOffset('SnapSquare', null, 180);
+	//   snapLoc.at();
+	//   return snapLoc;
+	// }
+	//
+	// module.exports = SnapCorner;
 	
 });
 
@@ -33779,439 +34502,7 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/has-pull.js',
-function (require, exports, module) {
-	const Assembly = require('../assembly.js');
-	const Handle = require('./hardware/pull.js');
-	
-	class HasPull extends Assembly {
-	  constructor(partCode, partName, getBiPolygon) {
-	    super(partCode, partName);
-	    const pulls = [];
-	    this.pull = (index) => pulls[index || 0];
-	    this.addPull = (location) => {
-	      pulls.push(new Handle('pu', 'Pull', this, location));
-	      this.addSubAssembly(pulls[pulls.length - 1]);
-	    }
-	    this.setPulls = (locations) => {
-	      pulls.copy([]);
-	      this.subassemblies.deleteAll();
-	      locations.forEach((location) => this.addPull(location));
-	    }
-	    this.biPolygon = () => getBiPolygon();
-	
-	  }
-	}
-	
-	module.exports = HasPull;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/snap/square.js',
-function (require, exports, module) {
-	const Snap2d = require('../snap');
-	const Square2d = require('../square');
-	const Polygon2d = require('../polygon');
-	const SnapLocation2d = require('../snap-location');
-	const Vertex2d = require('../vertex');
-	
-	class SnapSquare extends Snap2d {
-	  constructor(parent, tolerance) {
-	    const polygon = new Polygon2d();
-	    polygon.getTextInfo = () => ({
-	      text: this.parent().name() || 'kazzooi',
-	      center: this.object().center(),
-	      radians: this.radians(),
-	      x: 0,
-	      y: this.height() / 4,
-	      maxWidth: this.width(),
-	      limit: 10
-	    });
-	    // super(parent, new Square2d(parent.center), tolerance);
-	    super(parent, polygon, tolerance);
-	    if (parent === undefined) return this;
-	    this.addLocation(SnapSquare.backCenter(this));
-	    this.addLocation(SnapSquare.backRight(this));
-	    this.addLocation(SnapSquare.rightCenter(this));
-	    this.addLocation(SnapSquare.frontRight(this));
-	    this.addLocation(SnapSquare.frontLeft(this));
-	    this.addLocation(SnapSquare.leftCenter(this));
-	    this.addLocation(SnapSquare.backLeft(this));
-	    const vertices = this.snapLocations().map((snap) =>
-	      snap.vertex());
-	    polygon.addVertices(vertices);
-	  }
-	}
-	
-	const fromToPoint = SnapLocation2d.fromToPoint;
-	const wFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 'width', multiplier);
-	const hFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 'height', multiplier);
-	
-	SnapSquare.backCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backCenter",  new Vertex2d(null),  'backCenter');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), hFunc(snapLoc, -.5)));
-	  snapLoc.wallThetaOffset(0);
-	  snapLoc.thetaOffset(null, null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.frontCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontCenter",  new Vertex2d(null),  'frontCenter');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), () => hFunc(snapLoc, .5)));
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.leftCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "leftCenter",  new Vertex2d(null),  'rightCenter');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, 0)));
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.rightCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "rightCenter",  new Vertex2d(null),  'leftCenter');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, 0)));
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapSquare.backLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backLeft",  new Vertex2d(null),  'backRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, -.5)));
-	  snapLoc.wallThetaOffset(-90);
-	  snapLoc.thetaOffset('SnapCorner', null, 270);
-	  snapLoc.thetaOffset('SnapCornerL', null, 270);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.backRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backRight",  new Vertex2d(null),  'backLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, -.5)));
-	  snapLoc.wallThetaOffset(90);
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapSquare.frontRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontRight",  new Vertex2d(null),  'frontLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, .5)));
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	SnapSquare.frontLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontLeft",  new Vertex2d(null),  'frontRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, .5)));
-	  snapLoc.thetaOffset('SnapCorner', null, 270);
-	  snapLoc.thetaOffset('SnapCornerL', null, 270);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	module.exports = SnapSquare;
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/panel.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Panel extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	
-	    this.railThickness = () => this.thickness();
-	    Object.getSet(this, {hasFrame: false});
-	  }
-	}
-	
-	Panel.abbriviation = 'pn';
-	
-	class PanelModel extends Panel {
-	  constructor(partCode, partNameFunc, toModel) {
-	    super(partCode);
-	    this.toModel = toModel;
-	    this.partName = partNameFunc;
-	  }
-	}
-	
-	Panel.Model = PanelModel;
-	module.exports = Panel
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/snap/corner-l.js',
-function (require, exports, module) {
-	
-const Snap2d = require('../snap');
-	const SnapCorner = require('../snap/corner');
-	const Square2d = require('../square');
-	const Polygon2d = require('../polygon');
-	const SnapLocation2d = require('../snap-location');
-	const Vertex2d = require('../vertex');
-	
-	class SnapCornerL extends Snap2d {
-	  constructor(parent, tolerance) {
-	    const polygon = new Polygon2d();
-	    super(parent, polygon, tolerance);
-	    polygon.getTextInfo = () => {
-	      const fwr = (this.height() - this.dl());
-	      const fwl = (this.width() - this.dr());
-	      const areaL = this.dl() * fwr;
-	      const areaR = this.dr() * fwl;
-	      const center = polygon.center();
-	      const info = {
-	        text: this.parent().name(),
-	        center: polygon.center(),
-	        maxWidth: this.width(),
-	        limit: 4
-	      };
-	
-	      if (areaR > areaL) {
-	        // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
-	        info.x = this.height()/2 - fwr/2;
-	        info.y = this.width()/-2 + this.dr();
-	        info.maxWidth = fwr*.75;
-	        info.radians = Math.toRadians(-90) + this.radians();
-	      } else {
-	        info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
-	        info.y = this.height()/-2 + 3 * this.dl() / 4;
-	        info.maxWidth = fwl;
-	        info.radians = Math.toRadians(180) + this.radians();
-	      }
-	      return info;
-	    }
-	    if (parent === undefined) return this;
-	
-	    this.addLocation(SnapCorner.backRight(this));
-	    this.addLocation(SnapCorner.frontRight(this));
-	    this.addLocation(SnapCornerL.frontCenter(this));
-	    this.addLocation(SnapCorner.frontLeft(this));
-	    this.addLocation(SnapCorner.backLeft(this));
-	
-	    this.addLocation(SnapCorner.daginalLeft(this));
-	    this.addLocation(SnapCorner.diagonalRight(this));
-	    const vertices = this.snapLocations().map((snap) =>
-	      snap.vertex());
-	    polygon.addVertices(vertices);
-	  }
-	}
-	
-	const f = SnapLocation2d.locationFunction;
-	const fromToPoint = SnapLocation2d.fromToPoint;
-	const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
-	const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
-	
-	SnapCornerL.frontCenter = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontCenter",  new Vertex2d(null),  null);
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, .5, {dl: -1})));
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	module.exports = SnapCornerL;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/snap/corner.js',
-function (require, exports, module) {
-	
-const Snap2d = require('../snap');
-	const Square2d = require('../square');
-	const Polygon2d = require('../polygon');
-	const SnapLocation2d = require('../snap-location');
-	const Vertex2d = require('../vertex');
-	const Line2d = require('../line');
-	
-	class SnapCorner extends Snap2d {
-	  constructor(parent, tolerance) {
-	    const polygon = new Polygon2d();
-	    // super(parent, new Square2d(parent.center), tolerance);
-	    super(parent, polygon, tolerance);
-	    if (parent === undefined) return this;
-	    polygon.getTextInfo = () => {
-	      const fwr = (this.height() - this.dl());
-	      const fwl = (this.width() - this.dr());
-	      const areaL = this.dl() * fwr;
-	      const areaR = this.dr() * fwl;
-	      const center = polygon.center();
-	      const info = {
-	        text: this.parent().name(),
-	        center: polygon.center(),
-	        maxWidth: this.width(),
-	        limit: 4
-	      };
-	
-	      if (areaR > areaL) {
-	        // Dont know why radians cause the x and y axis to flip.... its not supposed to, check draw function
-	        info.x = this.height()/2 - fwr/2;
-	        info.y = this.width()/-2 + this.dr();
-	        info.maxWidth = fwr*.75;
-	        info.radians = Math.toRadians(-90) + this.radians();
-	      } else {
-	        info.x = this.width()/2 + -1 * (this.dr() + fwl/2);
-	        info.y = this.height()/-2 + 3 * this.dl() / 4;
-	        info.maxWidth = fwl;
-	        info.radians = Math.toRadians(180) + this.radians();
-	      }
-	      return info;
-	    }
-	
-	    this.addLocation(SnapCorner.backRight(this));
-	    this.addLocation(SnapCorner.frontRight(this));
-	    this.addLocation(SnapCorner.frontLeft(this));
-	    this.addLocation(SnapCorner.backLeft(this));
-	
-	    this.addLocation(SnapCorner.daginalLeft(this));
-	    this.addLocation(SnapCorner.diagonalRight(this));
-	    const vertices = this.snapLocations().map((snap) =>
-	      snap.vertex());
-	    polygon.addVertices(vertices);
-	  }
-	}
-	
-	const f = (snapLoc, attr, attrM, props) => () => {
-	  let val = snapLoc.parent()[attr]() * attrM;
-	  let keys = Object.keys(props || {});
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    val += snapLoc.parent()[key]() * props[key];
-	  }
-	  return val;
-	};
-	
-	const fromToPoint = SnapLocation2d.fromToPoint;
-	const wf = (snapLoc, attrM, props) => f(snapLoc, 'width', attrM, props);
-	const hf = (snapLoc, attrM, props) => f(snapLoc, 'height', attrM, props);
-	
-	SnapCorner.diagonalRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "diagonalRight",  new Vertex2d(null),  'daginalLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, .5, {dol: -1})));
-	  snapLoc.wallThetaOffset(90);
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.daginalLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "daginalLeft",  new Vertex2d(null),  'diagonalRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dor: 1}), hf(snapLoc, .5)));
-	  snapLoc.wallThetaOffset(180);
-	  snapLoc.thetaOffset('SnapCorner', null, 180);
-	  snapLoc.thetaOffset('SnapCornerL', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.backRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backRight",  new Vertex2d(null),  'backLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5), hf(snapLoc, -.5)));
-	  snapLoc.thetaOffset('SnapCorner', null, -90);
-	  snapLoc.thetaOffset('SnapCornerL', null, -90);
-	  snapLoc.thetaOffset('SnapSquare', null, 90);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.frontRight = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontRight",  new Vertex2d(null),  'frontLeft');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, -.5, {dr: 1}), hf(snapLoc, -.5)));
-	  snapLoc.thetaOffset('SnapCorner', null, -90);
-	  snapLoc.thetaOffset('SnapCornerL', null, -90);
-	  snapLoc.thetaOffset('SnapSquare', null, 90);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.backLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "backLeft",  new Vertex2d(null),  'backRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc, .5), hf(snapLoc, .5)));
-	  snapLoc.thetaOffset('SnapCorner', null, 90);
-	  snapLoc.thetaOffset('SnapCornerL', null, 90);
-	  snapLoc.thetaOffset('SnapSquare', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	SnapCorner.frontLeft = (parent) => {
-	  const snapLoc = new SnapLocation2d(parent, "frontLeft",  new Vertex2d(null),  'frontRight');
-	  snapLoc.locationFunction(fromToPoint(snapLoc, wf(snapLoc,.5), hf(snapLoc, .5, {dl: -1})));
-	  snapLoc.thetaOffset('SnapCorner', null, 90);
-	  snapLoc.thetaOffset('SnapCornerL', null, 90);
-	  snapLoc.thetaOffset('SnapSquare', null, 180);
-	  snapLoc.at();
-	  return snapLoc;
-	}
-	
-	module.exports = SnapCorner;
-	
-});
-
-
-RequireJS.addFunction('./app-src/two-d/objects/snap/init.js',
-function (require, exports, module) {
-	const Snap2d = require('../snap');
-	
-	Snap2d.registar(require('./square.js'));
-	Snap2d.registar(require('./corner.js'));
-	Snap2d.registar(require('./corner-l.js'));
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
-function (require, exports, module) {
-	
-
-	
-	const HasPull = require('../has-pull.js');
-	const Handle = require('../hardware/pull.js');
-	
-	class DrawerFront extends HasPull {
-	  constructor(partCode, partName, getBiPolygon) {
-	    super(partCode, partName, getBiPolygon);
-	    const instance = this;
-	    this.addPull(Handle.location.CENTER);
-	    this.inElivation = true;
-	
-	    this.toModel = () => {
-	      const biPolygon = getBiPolygon();
-	      if (biPolygon) return biPolygon.toModel();
-	      return undefined;
-	    }
-	
-	    this.front = () => {
-	      const biPoly = getBiPolygon();
-	      if (biPoly === undefined) return;
-	      return biPoly.front();
-	    }
-	    this.back = () => {
-	      const biPoly = getBiPolygon();
-	      if (biPoly === undefined) return;
-	      return biPoly.back();
-	    }
-	  }
-	}
-	
-	DrawerFront.abbriviation = 'df';
-	
-	
-	module.exports = DrawerFront
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/guides.js',
 function (require, exports, module) {
 	
 
@@ -34219,14 +34510,16 @@ function (require, exports, module) {
 	const Assembly = require('../../assembly.js');
 	
 	
-	class Screw extends Assembly {
+	class Guides extends Assembly {
 	  constructor() {
 	    super();
 	  }
 	}
 	
+	Guides.abbriviation = 'gu';
 	
-	module.exports = Screw
+	
+	module.exports = Guides
 	
 });
 
@@ -34362,47 +34655,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/guides.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class Guides extends Assembly {
-	  constructor() {
-	    super();
-	  }
-	}
-	
-	Guides.abbriviation = 'gu';
-	
-	
-	module.exports = Guides
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../../assembly.js');
-	
-	
-	class DoorCatch extends Assembly {
-	  constructor() {
-	    super();
-	  }
-	}
-	
-	module.exports = DoorCatch
-	
-});
-
-
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door.js',
 function (require, exports, module) {
 	
@@ -34455,7 +34707,7 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/hardware/screw.js',
 function (require, exports, module) {
 	
 
@@ -34463,15 +34715,56 @@ function (require, exports, module) {
 	const Assembly = require('../../assembly.js');
 	
 	
-	class Hinge extends Assembly {
+	class Screw extends Assembly {
 	  constructor() {
 	    super();
 	  }
 	}
 	
-	Hinge.abbriviation = 'hg';
 	
-	module.exports = Hinge
+	module.exports = Screw
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/drawer/drawer-front.js',
+function (require, exports, module) {
+	
+
+	
+	const HasPull = require('../has-pull.js');
+	const Handle = require('../hardware/pull.js');
+	
+	class DrawerFront extends HasPull {
+	  constructor(partCode, partName, getBiPolygon) {
+	    super(partCode, partName, getBiPolygon);
+	    const instance = this;
+	    this.addPull(Handle.location.CENTER);
+	    this.inElivation = true;
+	
+	    this.toModel = () => {
+	      const biPolygon = getBiPolygon();
+	      if (biPolygon) return biPolygon.toModel();
+	      return undefined;
+	    }
+	
+	    this.front = () => {
+	      const biPoly = getBiPolygon();
+	      if (biPoly === undefined) return;
+	      return biPoly.front();
+	    }
+	    this.back = () => {
+	      const biPoly = getBiPolygon();
+	      if (biPoly === undefined) return;
+	      return biPoly.back();
+	    }
+	  }
+	}
+	
+	DrawerFront.abbriviation = 'df';
+	
+	
+	module.exports = DrawerFront
 	
 });
 
@@ -35055,6 +35348,46 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 });
 
 
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/hinges.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class Hinge extends Assembly {
+	  constructor() {
+	    super();
+	  }
+	}
+	
+	Hinge.abbriviation = 'hg';
+	
+	module.exports = Hinge
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/door/door-catch.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../../assembly.js');
+	
+	
+	class DoorCatch extends Assembly {
+	  constructor() {
+	    super();
+	  }
+	}
+	
+	module.exports = DoorCatch
+	
+});
+
+
 RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/partition/divider.js',
 function (require, exports, module) {
 	
@@ -35104,76 +35437,6 @@ function (require, exports, module) {
 	
 	
 	module.exports = DividerSection
-	
-});
-
-
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/drawer.js',
-function (require, exports, module) {
-	
-
-	
-	const SectionProperties = require('../section-properties.js');
-	const PULL_TYPE = require('../../../../../../globals/CONSTANTS.js').PULL_TYPE;
-	const DrawerBox = require('../../drawer/drawer-box.js');
-	const DrawerFront = require('../../drawer/drawer-front.js');
-	const Assembly = require('../../../assembly.js');
-	const Polygon3D = require('../../../../../three-d/objects/polygon.js');
-	
-	class DrawerSection extends Assembly {
-	  constructor(sectionProperties) {
-	    super();
-	    if (sectionProperties === undefined) return;
-	    const instance = this;
-	    this.part = () => false;
-	
-	    function getFrontBiPolygon () {
-	      return sectionProperties.coverInfo().biPolygon;
-	    }
-	
-	    const front = new DrawerFront('ff', 'DrawerFront', getFrontBiPolygon);
-	    front.partName = () => `${sectionProperties.partName()}-df`;
-	    this.front = () => door;
-	    this.pull = (i) => front.pull(i);
-	    this.addSubAssembly(front);
-	
-	
-	
-	    function getDrawerDepth() {
-	      const depth = sectionProperties.innerDepth();
-	      if (depth < 3) return 0;
-	      return (Math.floor(((depth - 2.54) / 2.54)/2) * 2) * 2.54;
-	    }
-	
-	    const getNormal = () => front.biPolygon().normal();
-	
-	    function getFrontPoly() {
-	      const propConfig = sectionProperties.getRoot().group().propertyConfig;
-	      const props = propConfig('Guides');
-	      const innerPoly = new Polygon3D(sectionProperties.coordinates().inner);
-	      const coverInfo = sectionProperties.coverInfo();
-	      const biPoly = front.biPolygon();
-	      const depth = getDrawerDepth(sectionProperties.innerDepth);
-	      const offsetVect = biPoly.normal().scale(coverInfo.backOffset * -1);
-	      const sideOffset = props.dbsos.value();
-	      const topOffset = props.dbtos.value();
-	      const bottomOffset = props.dbbos.value();
-	      innerPoly.offset(sideOffset/2, sideOffset/2, topOffset, bottomOffset);
-	      return innerPoly.translate(offsetVect);
-	    }
-	
-	    const drawerBox = new DrawerBox('db', 'Drawer.Box', getFrontPoly, getNormal, getDrawerDepth);
-	    drawerBox.partName = () => `${sectionProperties.partName()}-db`;
-	    this.box = () => drawerBox;
-	    this.addSubAssembly(drawerBox);
-	  }
-	}
-	
-	DrawerSection.abbriviation = 'dws';
-	SectionProperties.addSection(DrawerSection);
-	
-	
-	module.exports = DrawerSection
 	
 });
 
@@ -35252,40 +35515,72 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/false-front.js',
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/drawer.js',
 function (require, exports, module) {
 	
 
 	
 	const SectionProperties = require('../section-properties.js');
 	const PULL_TYPE = require('../../../../../../globals/CONSTANTS.js').PULL_TYPE;
+	const DrawerBox = require('../../drawer/drawer-box.js');
 	const DrawerFront = require('../../drawer/drawer-front.js');
 	const Assembly = require('../../../assembly.js');
+	const Polygon3D = require('../../../../../three-d/objects/polygon.js');
 	
-	class FalseFrontSection extends Assembly {
+	class DrawerSection extends Assembly {
 	  constructor(sectionProperties) {
 	    super();
 	    if (sectionProperties === undefined) return;
+	    const instance = this;
 	    this.part = () => false;
 	
-	    function getBiPolygon () {
+	    function getFrontBiPolygon () {
 	      return sectionProperties.coverInfo().biPolygon;
 	    }
 	
-	    const front = new DrawerFront('ff', 'DrawerFront', getBiPolygon);
-	    this.front = () => front;
-	    front.partName = () => `${sectionProperties.partName()}-ff`;
+	    const front = new DrawerFront('ff', 'DrawerFront', getFrontBiPolygon);
+	    front.partName = () => `${sectionProperties.partName()}-df`;
+	    this.front = () => door;
 	    this.pull = (i) => front.pull(i);
 	    this.addSubAssembly(front);
+	
+	
+	
+	    function getDrawerDepth() {
+	      const depth = sectionProperties.innerDepth();
+	      if (depth < 3) return 0;
+	      return (Math.floor(((depth - 2.54) / 2.54)/2) * 2) * 2.54;
+	    }
+	
+	    const getNormal = () => front.biPolygon().normal();
+	
+	    function getFrontPoly() {
+	      const propConfig = sectionProperties.getRoot().group().propertyConfig;
+	      const props = propConfig('Guides');
+	      const innerPoly = new Polygon3D(sectionProperties.coordinates().inner);
+	      const coverInfo = sectionProperties.coverInfo();
+	      const biPoly = front.biPolygon();
+	      const depth = getDrawerDepth(sectionProperties.innerDepth);
+	      const offsetVect = biPoly.normal().scale(coverInfo.backOffset * -1);
+	      const sideOffset = props.dbsos.value();
+	      const topOffset = props.dbtos.value();
+	      const bottomOffset = props.dbbos.value();
+	      innerPoly.offset(sideOffset/2, sideOffset/2, topOffset, bottomOffset);
+	      return innerPoly.translate(offsetVect);
+	    }
+	
+	    const drawerBox = new DrawerBox('db', 'Drawer.Box', getFrontPoly, getNormal, getDrawerDepth);
+	    drawerBox.partName = () => `${sectionProperties.partName()}-db`;
+	    this.box = () => drawerBox;
+	    this.addSubAssembly(drawerBox);
 	  }
 	}
 	
-	FalseFrontSection.abbriviation = 'ffs';
-	SectionProperties.addSection(FalseFrontSection);
+	DrawerSection.abbriviation = 'dws';
+	SectionProperties.addSection(DrawerSection);
 	
 	
-	
-	module.exports = FalseFrontSection
+	module.exports = DrawerSection
 	
 });
 
@@ -35323,6 +35618,44 @@ function (require, exports, module) {
 	SectionProperties.addSection(DoorSection);
 	
 	module.exports = DoorSection
+	
+});
+
+
+RequireJS.addFunction('./app-src/objects/assembly/assemblies/section/sections/false-front.js',
+function (require, exports, module) {
+	
+
+	
+	const SectionProperties = require('../section-properties.js');
+	const PULL_TYPE = require('../../../../../../globals/CONSTANTS.js').PULL_TYPE;
+	const DrawerFront = require('../../drawer/drawer-front.js');
+	const Assembly = require('../../../assembly.js');
+	
+	class FalseFrontSection extends Assembly {
+	  constructor(sectionProperties) {
+	    super();
+	    if (sectionProperties === undefined) return;
+	    this.part = () => false;
+	
+	    function getBiPolygon () {
+	      return sectionProperties.coverInfo().biPolygon;
+	    }
+	
+	    const front = new DrawerFront('ff', 'DrawerFront', getBiPolygon);
+	    this.front = () => front;
+	    front.partName = () => `${sectionProperties.partName()}-ff`;
+	    this.pull = (i) => front.pull(i);
+	    this.addSubAssembly(front);
+	  }
+	}
+	
+	FalseFrontSection.abbriviation = 'ffs';
+	SectionProperties.addSection(FalseFrontSection);
+	
+	
+	
+	module.exports = FalseFrontSection
 	
 });
 
@@ -35627,180 +35960,237 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./test/tests/plane.js',
+RequireJS.addFunction('./test/tests/cabinet.js',
 function (require, exports, module) {
 	
 const Test = require('../../../../public/js/utils/test/test').Test;
-	const Plane = require('../../app-src/three-d/objects/plane.js');
-	const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
-	const Vector3D = require('../../app-src/three-d/objects/vector.js');
-	const Line3D = require('../../app-src/three-d/objects/line.js');
-	const CSG = require('../../public/js/3d-modeling/csg');
-	
-	const Notification = require('../../../../public/js/utils/collections/notification.js');
+	const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
+	const approximate = require('../../../../public/js/utils/approximate.js').new(100);
 	
 	
+	Test.add('Cabinet: doorIntersect',(ts) => {
+	  ts.assertEquals(6, 6);
+	  let dx;
 	
+	  //Parrelle up with no right point
+	  let llp = {x:0,y:0};
+	  let lcp = {x:0,y:10};
+	  let rcp = {x:0,y:20};
+	  let rrp = undefined;
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
+	  ts.assertEquals(dx.center.length, 9.8125);
+	  ts.assertEquals(dx.center.center.x(), .5, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.center.left.reveal, 1/16);
+	  ts.assertEquals(dx.center.right.reveal, 1/8);
+	  ts.assertEquals(dx.left.reveal, 1/16);
 	
-	Test.add('Plane: makePlane1MeetPlane2',(ts) => {
+	  //Parrelle down with no leftPoint.
+	  llp = undefined;
+	  lcp = {x:0,y:20};
+	  rcp = {x:0,y:10};
+	  rrp = {x:0,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
+	  ts.assertEquals(dx.center.length, 9.8125);
+	  ts.assertEquals(dx.center.center.x(), -.5, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.center.left.reveal, 1/8);
+	  ts.assertEquals(dx.center.right.reveal, 1/16);
+	  ts.assertEquals(dx.right.reveal, 1/16);
 	
-	  let plane1 = [{x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 2, y: 3, z: 0}, {x: 2, y: 0, z: 0}];
-	  let plane2 = [{x: 4, y: 3, z: -1}, {x: 4, y: 0, z: -1}, {x: 4, y: 3, z: 1}, {x: 4, y: 0, z: 1}];
-	  let answer = new Plane({x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 4, y: 0, z: 0});
-	  let rotation = {x: 0, y: 0, z: 0};
-	  let result = Plane.makePlane1MeetPlane2(JSON.copy(plane1), plane2, rotation);
-	  ts.assertTrue(answer.equals(result));
+	  //Parrelle right
+	  llp = {x:0,y:0};
+	  lcp = {x:10,y:0};
+	  rcp = {x:20,y:0};
+	  rrp = {x:30,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
+	  ts.assertEquals(dx.center.length, 9.875);
+	  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), -.5, null, 1000);
+	  ts.assertEquals(dx.center.left.reveal, 1/16);
+	  ts.assertEquals(dx.center.right.reveal, 1/16);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.left.reveal, 1/16);
+	  ts.assertEquals(dx.right.reveal, 1/16);
 	
-	  rotation = {x: 0, y: 90, z: 0};
-	  let center = Vertex3D.center.apply(null, plane1);
-	  let plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
-	  let plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
-	  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
-	  let reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
-	  ts.assertTrue(answer.equals(reverted));
+	  //Parrelle left
+	  llp = {x:30,y:0};
+	  lcp = {x:20,y:0};
+	  rcp = {x:10,y:0};
+	  rrp = {x:0,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
+	  ts.assertEquals(dx.center.length, 9.875);
+	  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), .5, null, 1000);
+	  ts.assertEquals(dx.center.left.reveal, 1/16);
+	  ts.assertEquals(dx.center.right.reveal, 1/16);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.left.reveal, 1/16);
+	  ts.assertEquals(dx.right.reveal, 1/16);
 	
-	  rotation = {x: 111, y: 62, z: 212};
-	  center = Vertex3D.center.apply(null, plane1);
-	  plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
-	  plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
-	  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
-	  reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
-	  ts.assertTrue(answer.equals(reverted));
+	  // Inner Horse Shoe
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:10,y:10};
+	  rrp = {x:10,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
+	  ts.assertEquals(dx.center.length, 7.75);
+	  ts.assertEquals(dx.center.left.reveal, 1.125);
+	  ts.assertEquals(dx.center.right.reveal, 1.125);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.left.reveal, 1);
+	  ts.assertEquals(dx.right.reveal, 1);
 	
-	  ts.success();
-	});
+	  // Inner Horse Shoe 3/4
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:10,y:10};
+	  rrp = {x:10,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 3/4, 3/4, 3/4, .125, 1/4);
+	  ts.assertEquals(dx.center.length, 7.75);
+	  ts.assertEquals(dx.center.center.x(), 5, null, 1000);
+	  ts.assertEquals(dx.center.center.y(), 9.375, null, 1000);
+	  ts.assertEquals(dx.center.left.reveal, 1.125);
+	  ts.assertEquals(dx.center.right.reveal, 1.125);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(dx.right.theta, undefined);
+	  ts.assertEquals(dx.left.reveal, 1);
+	  ts.assertEquals(dx.right.reveal, 1);
 	
+	  // Outer Horse Shoo
+	  rrp = {x:0,y:0};
+	  rcp = {x:0,y:10};
+	  lcp = {x:10,y:10};
+	  llp = {x:10,y:0};
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
+	  ts.assertEquals(dx.center.length, 11.75);
+	  ts.assertEquals(dx.center.left.reveal, -.875);
+	  ts.assertEquals(dx.center.right.reveal, -.875);
+	  ts.assertEquals(approximate(Math.toDegrees(dx.left.theta)), 45);
+	  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 45);
+	  ts.assertEquals(dx.left.reveal, -1);
+	  ts.assertEquals(dx.right.reveal, -1);
 	
-	Test.add('Plane: equation',(ts) => {
-	  const p1 = {x: 1, y: -2, z: 1};
-	  const p2 = {x: 4, y: -2, z: -2};
-	  const p3 = {x: 4, y: 1, z: 4};
+	  // Zig
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:10,y:20};
+	  rrp = {x:10,y:30};
 	
-	  const equation = new Plane(p1, p2, p3).equation();
-	  ts.assertEquals(equation.a * 54, 9);
-	  ts.assertEquals(equation.b * 54, -18);
-	  ts.assertEquals(equation.c * 54, 9);
-	  ts.assertEquals(equation.d * 54, 54);
-	  ts.success();
-	});
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
+	  ts.assertEquals(dx.left.theta, undefined);
+	  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 22.5);
 	
-	Test.add('Plane: XYrotation',(ts) => {
-	  const p1 = {x: 1, y: -2, z: 1};
-	  const p2 = {x: 4, y: -2, z: -2};
-	  const p3 = {x: 4, y: 1, z: 4};
+	  // Wall right
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:10,y:20};
+	  rrp = {x:30,y:20};
 	
-	  const equation = new Plane(p1, p2, p3).equation();
-	  const plane = new Plane(equation);
-	  const rotation = plane.XYrotation();
-	  const result = plane.matrixRotation(rotation);
-	  ts.success();
-	});
+	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 0, .125);
+	  ts.assertEquals(dx.center.left.theta, undefined);
+	  ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 45);
 	
-	Test.add('Plane: findPoints',(ts) => {
-	  const p1 = {x: 1, y: -2, z: 4};
-	  const p2 = {x: 4, y: -2, z: 4};
-	  const p3 = {x: 4, y: 1, z: 4};
+	  // Wall left
+	  llp = {x:0,y:0};
+	  lcp = {x:0,y:10};
+	  rcp = {x:9,y:25};
+	  rrp = {x:30,y:20};
 	
-	  const equation = new Plane(p1, p2, p3).equation();
-	  const plane = new Plane(equation);
-	
-	  const result = plane.findPoints(13);
-	  ts.assertEquals(result.length, 13);
-	  ts.success();
-	});
-	
-	Test.add('Vector: crossProduct',(ts) => {
-	  const vect1 = new Vector3D(3,1,4);
-	  const vect2 = new Vector3D(3,2,6);
-	  const crossP = vect1.crossProduct(vect2);
-	  ts.assertEquals(crossP.i(), -2/7);
-	  ts.assertEquals(crossP.j(), -6/7);
-	  ts.assertEquals(crossP.k(), 3/7);
-	  ts.success();
-	});
-	
-	Test.add('Plane: normal',(ts) => {
-	  const p1 = {x: 1, y: 2, z: 4};
-	  const p2 = {x: 4, y: 2, z: 4};
-	  const p3 = {x: 4, y: 1, z: 4};
-	
-	  const equation = new Plane(p1, p2, p3).equation();
-	  let plane = new Plane(equation);
-	
-	  let normal = plane.normal();
-	
-	  plane = new Plane(p1,p2,p3);
-	  plane.rotate({x: 90, y:0, z:0});
-	  normal = plane.normal();
-	
-	  plane = new Plane(p1,p2,p3);
-	  plane.rotate({x: 0, y:90, z:0});
-	  normal = plane.normal();
-	
-	  ts.success();
-	});
-	
-	Test.add('Plane: lineIntersection',(ts) => {
-	  const p1 = {x: 1, y: 2, z: 4};
-	  const p3 = {x: 4, y: 2, z: 4};
-	  const p2 = {x: 4, y: 1, z: 4};
-	
-	  let plane = new Plane(p1,p2,p3);
-	  let line = new Line3D({x:0,y:0,z:0}, {x:0,y:0,z:2});
-	  let intersection = plane.lineIntersection(line);
-	  ts.assertTrue(intersection.equals({x: 0, y: 0, z: 4}));
-	
-	  line = new Line3D({x:0,y:0,z:0}, {x:0,y:1,z:1});
-	  intersection = plane.lineIntersection(line);
-	  // ts.assertTrue(intersection.equals({x: 0, y: 4, z: 4}));
-	
-	  line = new Line3D({x:-1,y:-1,z:-1}, {x:6,y:-1,z:6});
-	  intersection = plane.lineIntersection(line);
-	  ts.assertTrue(intersection.equals({x: 4, y: -1, z: 4}));
-	
-	  line = new Line3D({x:-1,y:-1,z:-1}, {x:1,y:1,z:1});
-	  intersection = plane.lineIntersection(line);
-	  ts.assertTrue(intersection.equals({x: 4, y: 4, z: 4}));
-	
-	  ts.success();
-	});
-	
-	Test.add('Plane: bisector',(ts) => {
-	  let eqn1 = {a: 2, b: -1, c: 2, d: 3};
-	  let eqn2 = {a: 3, b: -2, c: 6, d: 8};
-	
-	  let plane1 = new Plane(eqn1);
-	  let plane2 = new Plane(eqn2);
-	  let bisector = Plane.bisector(plane1, plane2);
-	  let eqn = bisector.accute.equation();
-	  ts.assertEquals(eqn.a, 23);
-	  ts.assertEquals(eqn.b, -13);
-	  ts.assertEquals(eqn.c, 32);
-	  ts.assertEquals(eqn.d, 45);
-	
-	  eqn = bisector.obtuse.equation();
-	  ts.assertEquals(eqn.a, 5);
-	  ts.assertEquals(eqn.b, -1);
-	  ts.assertEquals(eqn.c, -4);
-	  ts.assertEquals(eqn.d, -3);
-	
-	  plane1 = new Plane({x:3, y: 8, z: 88}, {x:1, y: 12, z: 6}, {x:30, y: -2, z: 4});
-	  plane2 = new Plane({x:5, y: 44, z: -16}, {x:-13, y: -20, z: 48}, {x:30, y: -2, z: 3});
-	  bisector = Plane.bisector(plane1, plane2);
-	
-	  ts.assertEquals(plane1.equationEqualToZ(), '(0.038192x + 0.078697y + 1) / 0.002907');
-	  ts.assertEquals(plane2.equationEqualToZ(), '(0.031282x + 0.035156y + 1) / 0.043954');
-	  ts.assertEquals(bisector.obtuse.equationEqualToZ(), '(-0.000279x + 0.001991y + -0.023131) / -0.00366');
-	  ts.assertEquals(bisector.accute.equationEqualToZ(), '(0.005197x + 0.008144y + 0.151916) / 0.004034');
+	  // dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 0, 1, 1, .125);
+	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 17.57);
+	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.left.theta)), 59.04);
 	
 	  ts.success();
 	});
 	
+});
+
+
+RequireJS.addFunction('./test/tests/line2d.js',
+function (require, exports, module) {
 	
-	Test.add('Plane: bisector',(ts) => {
-	  const xyPlane = Plane.fromPointNormal({x: 12, y: 41, z: 0}, new Vector3D(1, 1, 1));
-	  const yzPlane = Plane.fromPointNormal({x: 0, y: 41, z: 1}, new Vector3D(0, 3, -1));
-	  const xzPlane = Plane.fromPointNormal({x: 12, y: 0, z: 50}, new Vector3D(5, 0, 13));
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Line2d = require('../../app-src/two-d/objects/line.js');
+	const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
+	const Polygon2d = require('../../app-src/two-d/objects/polygon.js');
+	
+	
+	const vertices = [
+	  null, // Didnt zero index my drawing;
+	  new Vertex2d(0,0), // 1
+	  new Vertex2d(0,1), // 2
+	  new Vertex2d(1,1), // 3
+	  new Vertex2d(2,1), // 4
+	  new Vertex2d(2,4), // 5
+	  new Vertex2d(1,4), // 6
+	  new Vertex2d(0,4), // 7
+	  new Vertex2d(0,2), // 8
+	  new Vertex2d(-1,2), // 9
+	  new Vertex2d(-1,5), // 10
+	  new Vertex2d(1,5), // 11
+	  new Vertex2d(3,5), // 12
+	  new Vertex2d(3,3), // 13
+	  new Vertex2d(3,-1), // 14
+	  new Vertex2d(2,-1), // 15
+	  new Vertex2d(2,0) // 16
+	];
+	
+	const parimeter = new Polygon2d(vertices.slice(1));
+	
+	const getLine = (index1, index2) => new Line2d(vertices[index1],vertices[index2]);
+	const noise = [
+	  getLine(1,3),
+	  getLine(2,16),
+	  getLine(3,16),
+	  getLine(4,16),
+	  getLine(16,14),
+	  getLine(16,13),
+	  getLine(13,15),
+	  getLine(4,13),
+	  getLine(13,5),
+	  getLine(5,12),
+	  // getLine(11,5),
+	  // getLine(6,11),
+	  // getLine(7,11),
+	  getLine(10,7),
+	  getLine(10,8),
+	  getLine(9,7)
+	];
+	
+	
+	Test.add('Line2d parimeter',(ts) => {
+	  ts.assertEquals(parimeter.area(), 13);
+	  ts.success();
+	});
+	
+	Test.add('Line2d parimeterArea',(ts) => {
+	  let p = Polygon2d.toParimeter(parimeter.lines(), undefined, true);
+	  ts.assertEquals(p.area(), 13);
+	  ts.assertTrue(p.equal(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
+	  let keepGoing = false;
+	  while (keepGoing) {
+	    noise.shuffle();
+	    const randNoise = noise.slice(0, Math.floor(Math.random() * noise.length));
+	    let lines = parimeter.lines().concat(randNoise);
+	    lines.shuffle();
+	    p = Polygon2d.toParimeter(lines);
+	    try {
+	      ts.assertEquals(p.area(), 13);
+	      ts.assertTrue(p.equal(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
+	    } catch (e) {
+	      console.log('error');
+	      Polygon2d.toParimeter(lines, undefined, true);
+	      Polygon2d.toParimeter(lines, undefined, true);
+	    }
+	  }
 	  ts.success();
 	});
 	
@@ -36046,138 +36436,6 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 });
 
 
-RequireJS.addFunction('./test/tests/line2d.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Line2d = require('../../app-src/two-d/objects/line.js');
-	const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
-	const Polygon2d = require('../../app-src/two-d/objects/polygon.js');
-	
-	
-	const vertices = [
-	  null, // Didnt zero index my drawing;
-	  new Vertex2d(0,0), // 1
-	  new Vertex2d(0,1), // 2
-	  new Vertex2d(1,1), // 3
-	  new Vertex2d(2,1), // 4
-	  new Vertex2d(2,4), // 5
-	  new Vertex2d(1,4), // 6
-	  new Vertex2d(0,4), // 7
-	  new Vertex2d(0,2), // 8
-	  new Vertex2d(-1,2), // 9
-	  new Vertex2d(-1,5), // 10
-	  new Vertex2d(1,5), // 11
-	  new Vertex2d(3,5), // 12
-	  new Vertex2d(3,3), // 13
-	  new Vertex2d(3,-1), // 14
-	  new Vertex2d(2,-1), // 15
-	  new Vertex2d(2,0) // 16
-	];
-	
-	const parimeter = new Polygon2d(vertices.slice(1));
-	
-	const getLine = (index1, index2) => new Line2d(vertices[index1],vertices[index2]);
-	const noise = [
-	  getLine(1,3),
-	  getLine(2,16),
-	  getLine(3,16),
-	  getLine(4,16),
-	  getLine(16,14),
-	  getLine(16,13),
-	  getLine(13,15),
-	  getLine(4,13),
-	  getLine(13,5),
-	  getLine(5,12),
-	  // getLine(11,5),
-	  // getLine(6,11),
-	  // getLine(7,11),
-	  getLine(10,7),
-	  getLine(10,8),
-	  getLine(9,7)
-	];
-	
-	
-	Test.add('Line2d parimeter',(ts) => {
-	  ts.assertEquals(parimeter.area(), 13);
-	  ts.success();
-	});
-	
-	Test.add('Line2d parimeterArea',(ts) => {
-	  let p = Polygon2d.toParimeter(parimeter.lines(), undefined, true);
-	  ts.assertEquals(p.area(), 13);
-	  ts.assertTrue(p.equal(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
-	  let keepGoing = false;
-	  while (keepGoing) {
-	    noise.shuffle();
-	    const randNoise = noise.slice(0, Math.floor(Math.random() * noise.length));
-	    let lines = parimeter.lines().concat(randNoise);
-	    lines.shuffle();
-	    p = Polygon2d.toParimeter(lines);
-	    try {
-	      ts.assertEquals(p.area(), 13);
-	      ts.assertTrue(p.equal(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
-	    } catch (e) {
-	      console.log('error');
-	      Polygon2d.toParimeter(lines, undefined, true);
-	      Polygon2d.toParimeter(lines, undefined, true);
-	    }
-	  }
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./test/tests/polygon-merge.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
-	
-	
-	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
-	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
-	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
-	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
-	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
-	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
-	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
-	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
-	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]].reverse());
-	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
-	
-	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
-	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
-	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
-	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
-	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
-	
-	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
-	Test.add('Polygon3D merge',(ts) => {
-	  // const poly = A.merge(B).merge(J);
-	  const AB = A.merge(B);
-	  const IF = [F,I];
-	  Polygon3D.merge(IF);
-	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
-	  ABCDEFGHIJ.shuffle();
-	  Polygon3D.merge(ABCDEFGHIJ);
-	
-	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
-	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
-	  ts.assertFalse(polyAB.equals(undefined));
-	  ts.assertFalse(polyAB.equals(A));
-	  ts.assertTrue(IF[0].equals(polyIF));
-	  ts.assertTrue(polyIF.equals(IF[0]));
-	  ts.assertTrue(ABCDEFGHIJ.length === 2);
-	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
-	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
-	  ts.success();
-	});
-	
-});
-
-
 RequireJS.addFunction('./test/tests/RelationInput.js',
 function (require, exports, module) {
 	
@@ -36235,160 +36493,6 @@ function (require, exports, module) {
 	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
 	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], -2), 0);
 	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,undefined,8,9], 8), 6);
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./test/tests/cabinet.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
-	const approximate = require('../../../../public/js/utils/approximate.js').new(100);
-	
-	
-	Test.add('Cabinet: doorIntersect',(ts) => {
-	  ts.assertEquals(6, 6);
-	  let dx;
-	
-	  //Parrelle up with no right point
-	  let llp = {x:0,y:0};
-	  let lcp = {x:0,y:10};
-	  let rcp = {x:0,y:20};
-	  let rrp = undefined;
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
-	  ts.assertEquals(dx.center.length, 9.8125);
-	  ts.assertEquals(dx.center.center.x(), .5, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.center.left.reveal, 1/16);
-	  ts.assertEquals(dx.center.right.reveal, 1/8);
-	  ts.assertEquals(dx.left.reveal, 1/16);
-	
-	  //Parrelle down with no leftPoint.
-	  llp = undefined;
-	  lcp = {x:0,y:20};
-	  rcp = {x:0,y:10};
-	  rrp = {x:0,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
-	  ts.assertEquals(dx.center.length, 9.8125);
-	  ts.assertEquals(dx.center.center.x(), -.5, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.center.left.reveal, 1/8);
-	  ts.assertEquals(dx.center.right.reveal, 1/16);
-	  ts.assertEquals(dx.right.reveal, 1/16);
-	
-	  //Parrelle right
-	  llp = {x:0,y:0};
-	  lcp = {x:10,y:0};
-	  rcp = {x:20,y:0};
-	  rrp = {x:30,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
-	  ts.assertEquals(dx.center.length, 9.875);
-	  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), -.5, null, 1000);
-	  ts.assertEquals(dx.center.left.reveal, 1/16);
-	  ts.assertEquals(dx.center.right.reveal, 1/16);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.left.reveal, 1/16);
-	  ts.assertEquals(dx.right.reveal, 1/16);
-	
-	  //Parrelle left
-	  llp = {x:30,y:0};
-	  lcp = {x:20,y:0};
-	  rcp = {x:10,y:0};
-	  rrp = {x:0,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
-	  ts.assertEquals(dx.center.length, 9.875);
-	  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), .5, null, 1000);
-	  ts.assertEquals(dx.center.left.reveal, 1/16);
-	  ts.assertEquals(dx.center.right.reveal, 1/16);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.left.reveal, 1/16);
-	  ts.assertEquals(dx.right.reveal, 1/16);
-	
-	  // Inner Horse Shoe
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:10,y:10};
-	  rrp = {x:10,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
-	  ts.assertEquals(dx.center.length, 7.75);
-	  ts.assertEquals(dx.center.left.reveal, 1.125);
-	  ts.assertEquals(dx.center.right.reveal, 1.125);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.left.reveal, 1);
-	  ts.assertEquals(dx.right.reveal, 1);
-	
-	  // Inner Horse Shoe 3/4
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:10,y:10};
-	  rrp = {x:10,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 3/4, 3/4, 3/4, .125, 1/4);
-	  ts.assertEquals(dx.center.length, 7.75);
-	  ts.assertEquals(dx.center.center.x(), 5, null, 1000);
-	  ts.assertEquals(dx.center.center.y(), 9.375, null, 1000);
-	  ts.assertEquals(dx.center.left.reveal, 1.125);
-	  ts.assertEquals(dx.center.right.reveal, 1.125);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(dx.right.theta, undefined);
-	  ts.assertEquals(dx.left.reveal, 1);
-	  ts.assertEquals(dx.right.reveal, 1);
-	
-	  // Outer Horse Shoo
-	  rrp = {x:0,y:0};
-	  rcp = {x:0,y:10};
-	  lcp = {x:10,y:10};
-	  llp = {x:10,y:0};
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
-	  ts.assertEquals(dx.center.length, 11.75);
-	  ts.assertEquals(dx.center.left.reveal, -.875);
-	  ts.assertEquals(dx.center.right.reveal, -.875);
-	  ts.assertEquals(approximate(Math.toDegrees(dx.left.theta)), 45);
-	  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 45);
-	  ts.assertEquals(dx.left.reveal, -1);
-	  ts.assertEquals(dx.right.reveal, -1);
-	
-	  // Zig
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:10,y:20};
-	  rrp = {x:10,y:30};
-	
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
-	  ts.assertEquals(dx.left.theta, undefined);
-	  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 22.5);
-	
-	  // Wall right
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:10,y:20};
-	  rrp = {x:30,y:20};
-	
-	  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 0, .125);
-	  ts.assertEquals(dx.center.left.theta, undefined);
-	  ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 45);
-	
-	  // Wall left
-	  llp = {x:0,y:0};
-	  lcp = {x:0,y:10};
-	  rcp = {x:9,y:25};
-	  rrp = {x:30,y:20};
-	
-	  // dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 0, 1, 1, .125);
-	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 17.57);
-	  // ts.assertEquals(approximate(Math.toDegrees(dx.center.left.theta)), 59.04);
-	
 	  ts.success();
 	});
 	
@@ -36783,94 +36887,231 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./test/tests/cost/category.js',
+RequireJS.addFunction('./test/tests/plane.js',
 function (require, exports, module) {
 	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Plane = require('../../app-src/three-d/objects/plane.js');
+	const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
+	const Vector3D = require('../../app-src/three-d/objects/vector.js');
+	const Line3D = require('../../app-src/three-d/objects/line.js');
+	const CSG = require('../../public/js/3d-modeling/csg');
+	
+	const Notification = require('../../../../public/js/utils/collections/notification.js');
+	
+	
+	
+	
+	Test.add('Plane: makePlane1MeetPlane2',(ts) => {
+	
+	  let plane1 = [{x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 2, y: 3, z: 0}, {x: 2, y: 0, z: 0}];
+	  let plane2 = [{x: 4, y: 3, z: -1}, {x: 4, y: 0, z: -1}, {x: 4, y: 3, z: 1}, {x: 4, y: 0, z: 1}];
+	  let answer = new Plane({x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 4, y: 0, z: 0});
+	  let rotation = {x: 0, y: 0, z: 0};
+	  let result = Plane.makePlane1MeetPlane2(JSON.copy(plane1), plane2, rotation);
+	  ts.assertTrue(answer.equals(result));
+	
+	  rotation = {x: 0, y: 90, z: 0};
+	  let center = Vertex3D.center.apply(null, plane1);
+	  let plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
+	  let plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
+	  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
+	  let reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
+	  ts.assertTrue(answer.equals(reverted));
+	
+	  rotation = {x: 111, y: 62, z: 212};
+	  center = Vertex3D.center.apply(null, plane1);
+	  plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
+	  plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
+	  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
+	  reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
+	  ts.assertTrue(answer.equals(reverted));
+	
+	  ts.success();
+	});
+	
+	
+	Test.add('Plane: equation',(ts) => {
+	  const p1 = {x: 1, y: -2, z: 1};
+	  const p2 = {x: 4, y: -2, z: -2};
+	  const p3 = {x: 4, y: 1, z: 4};
+	
+	  const equation = new Plane(p1, p2, p3).equation();
+	  ts.assertEquals(equation.a * 54, 9);
+	  ts.assertEquals(equation.b * 54, -18);
+	  ts.assertEquals(equation.c * 54, 9);
+	  ts.assertEquals(equation.d * 54, 54);
+	  ts.success();
+	});
+	
+	Test.add('Plane: XYrotation',(ts) => {
+	  const p1 = {x: 1, y: -2, z: 1};
+	  const p2 = {x: 4, y: -2, z: -2};
+	  const p3 = {x: 4, y: 1, z: 4};
+	
+	  const equation = new Plane(p1, p2, p3).equation();
+	  const plane = new Plane(equation);
+	  const rotation = plane.XYrotation();
+	  const result = plane.matrixRotation(rotation);
+	  ts.success();
+	});
+	
+	Test.add('Plane: findPoints',(ts) => {
+	  const p1 = {x: 1, y: -2, z: 4};
+	  const p2 = {x: 4, y: -2, z: 4};
+	  const p3 = {x: 4, y: 1, z: 4};
+	
+	  const equation = new Plane(p1, p2, p3).equation();
+	  const plane = new Plane(equation);
+	
+	  const result = plane.findPoints(13);
+	  ts.assertEquals(result.length, 13);
+	  ts.success();
+	});
+	
+	Test.add('Vector: crossProduct',(ts) => {
+	  const vect1 = new Vector3D(3,1,4);
+	  const vect2 = new Vector3D(3,2,6);
+	  const crossP = vect1.crossProduct(vect2);
+	  ts.assertEquals(crossP.i(), -2/7);
+	  ts.assertEquals(crossP.j(), -6/7);
+	  ts.assertEquals(crossP.k(), 3/7);
+	  ts.success();
+	});
+	
+	Test.add('Plane: normal',(ts) => {
+	  const p1 = {x: 1, y: 2, z: 4};
+	  const p2 = {x: 4, y: 2, z: 4};
+	  const p3 = {x: 4, y: 1, z: 4};
+	
+	  const equation = new Plane(p1, p2, p3).equation();
+	  let plane = new Plane(equation);
+	
+	  let normal = plane.normal();
+	
+	  plane = new Plane(p1,p2,p3);
+	  plane.rotate({x: 90, y:0, z:0});
+	  normal = plane.normal();
+	
+	  plane = new Plane(p1,p2,p3);
+	  plane.rotate({x: 0, y:90, z:0});
+	  normal = plane.normal();
+	
+	  ts.success();
+	});
+	
+	Test.add('Plane: lineIntersection',(ts) => {
+	  const p1 = {x: 1, y: 2, z: 4};
+	  const p3 = {x: 4, y: 2, z: 4};
+	  const p2 = {x: 4, y: 1, z: 4};
+	
+	  let plane = new Plane(p1,p2,p3);
+	  let line = new Line3D({x:0,y:0,z:0}, {x:0,y:0,z:2});
+	  let intersection = plane.lineIntersection(line);
+	  ts.assertTrue(intersection.equals({x: 0, y: 0, z: 4}));
+	
+	  line = new Line3D({x:0,y:0,z:0}, {x:0,y:1,z:1});
+	  intersection = plane.lineIntersection(line);
+	  // ts.assertTrue(intersection.equals({x: 0, y: 4, z: 4}));
+	
+	  line = new Line3D({x:-1,y:-1,z:-1}, {x:6,y:-1,z:6});
+	  intersection = plane.lineIntersection(line);
+	  ts.assertTrue(intersection.equals({x: 4, y: -1, z: 4}));
+	
+	  line = new Line3D({x:-1,y:-1,z:-1}, {x:1,y:1,z:1});
+	  intersection = plane.lineIntersection(line);
+	  ts.assertTrue(intersection.equals({x: 4, y: 4, z: 4}));
+	
+	  ts.success();
+	});
+	
+	Test.add('Plane: bisector',(ts) => {
+	  let eqn1 = {a: 2, b: -1, c: 2, d: 3};
+	  let eqn2 = {a: 3, b: -2, c: 6, d: 8};
+	
+	  let plane1 = new Plane(eqn1);
+	  let plane2 = new Plane(eqn2);
+	  let bisector = Plane.bisector(plane1, plane2);
+	  let eqn = bisector.accute.equation();
+	  ts.assertEquals(eqn.a, 23);
+	  ts.assertEquals(eqn.b, -13);
+	  ts.assertEquals(eqn.c, 32);
+	  ts.assertEquals(eqn.d, 45);
+	
+	  eqn = bisector.obtuse.equation();
+	  ts.assertEquals(eqn.a, 5);
+	  ts.assertEquals(eqn.b, -1);
+	  ts.assertEquals(eqn.c, -4);
+	  ts.assertEquals(eqn.d, -3);
+	
+	  plane1 = new Plane({x:3, y: 8, z: 88}, {x:1, y: 12, z: 6}, {x:30, y: -2, z: 4});
+	  plane2 = new Plane({x:5, y: 44, z: -16}, {x:-13, y: -20, z: 48}, {x:30, y: -2, z: 3});
+	  bisector = Plane.bisector(plane1, plane2);
+	
+	  ts.assertEquals(plane1.equationEqualToZ(), '(0.038192x + 0.078697y + 1) / 0.002907');
+	  ts.assertEquals(plane2.equationEqualToZ(), '(0.031282x + 0.035156y + 1) / 0.043954');
+	  ts.assertEquals(bisector.obtuse.equationEqualToZ(), '(-0.000279x + 0.001991y + -0.023131) / -0.00366');
+	  ts.assertEquals(bisector.accute.equationEqualToZ(), '(0.005197x + 0.008144y + 0.151916) / 0.004034');
+	
+	  ts.success();
+	});
+	
+	
+	Test.add('Plane: bisector',(ts) => {
+	  const xyPlane = Plane.fromPointNormal({x: 12, y: 41, z: 0}, new Vector3D(1, 1, 1));
+	  const yzPlane = Plane.fromPointNormal({x: 0, y: 41, z: 1}, new Vector3D(0, 3, -1));
+	  const xzPlane = Plane.fromPointNormal({x: 12, y: 0, z: 50}, new Vector3D(5, 0, 13));
+	  ts.success();
+	});
+	
+});
 
+
+RequireJS.addFunction('./test/tests/polygon-merge.js',
+function (require, exports, module) {
 	
-	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
-	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
-	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-	const Category = require('../../../app-src/cost/types/category.js');
-	const Material = require('../../../app-src/cost/types/material.js');
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 	
-	//
-	//
-	// {
-	//   const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
-	//   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
-	//   const frame.addSubAssembly(panel);
-	//   const props = {};
-	//   const smeRound = StringMathEvaluator.round;
-	//
-	//   let unitCostValue = smeRound(15.37/(8*12));
-	//   let costValue = smeRound(unitCostValue * 2 * 196 * 12);
-	//   let assembly = frame;
-	//   props.linear = {
-	//     id: 'frame',
-	//     method: 'Linear Feet',
-	//     length: '8\'',
-	//     cost: '15.37',
-	//     formula: '2*l',
-	//     unitCostValue, costValue, assembly
-	//   };
-	//
-	//   unitCostValue = smeRound((75.13)/(96*48));
-	//   costValue = smeRound(unitCostValue * 24 * 10);
-	//   props.square = {
-	//     id: 'panel0',
-	//     method: 'Square Feet',
-	//     length: '96',
-	//     width: '48',
-	//     cost: 75.13,
-	//     unitCostValue, costValue, assembly
-	//   };
-	//
-	//   unitCostValue = smeRound(29.86/(12*6*1));
-	//   costValue = smeRound(unitCostValue * 24 * 10 * .75);
-	//   props.cubic = {
-	//     id: 'metal',
-	//     method: 'Cubic Feet',
-	//     length: '12',
-	//     width: '6',
-	//     depth: '1',
-	//     cost: 29.86,
-	//     unitCostValue, costValue, assembly
-	//   };
-	//
-	//   unitCostValue = smeRound(50.12/10);
-	//   costValue = smeRound(unitCostValue * 13);
-	//   props.unit = {
-	//     id: 'parts',
-	//     method: 'Unit',
-	//     laborType: 'Instalation',
-	//     hourlyRate: '20',
-	//     hours: '.66',
-	//     cost: '50.12',
-	//     count: '10',
-	//     unitCostValue, costValue,
-	//     assembly: 13
-	//   };
-	//   const catCost = new Category({id: 'catTest'});
-	//
-	//   Test.add('CategoryCost: calc',(ts) => {
-	//     let totalCost = 0;
-	//     function testProps(props) {
-	//       const matCost = new Material(props);
-	//       catCost.addChild(matCost);
-	//       totalCost += matCost.calc(props.assembly);
-	//     }
-	//     Object.values(props).forEach(testProps);
-	//     ts.assertTolerance(totalCost, catCost.calc(), .0001);
-	//     ts.success();
-	//   });
-	// }
 	
-	exports.Frame = Frame
-	exports.Panel = Panel
-	exports.StringMathEvaluator = StringMathEvaluator
-	exports.Category = Category
-	exports.Material = Material
+	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
+	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
+	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
+	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
+	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
+	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
+	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
+	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
+	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]].reverse());
+	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
+	
+	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
+	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
+	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
+	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
+	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
+	
+	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
+	Test.add('Polygon3D merge',(ts) => {
+	  // const poly = A.merge(B).merge(J);
+	  const AB = A.merge(B);
+	  const IF = [F,I];
+	  Polygon3D.merge(IF);
+	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
+	  ABCDEFGHIJ.shuffle();
+	  Polygon3D.merge(ABCDEFGHIJ);
+	
+	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
+	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
+	  ts.assertFalse(polyAB.equals(undefined));
+	  ts.assertFalse(polyAB.equals(A));
+	  ts.assertTrue(IF[0].equals(polyIF));
+	  ts.assertTrue(polyIF.equals(IF[0]));
+	  ts.assertTrue(ABCDEFGHIJ.length === 2);
+	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
+	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
+	  ts.success();
+	});
 	
 });
 
@@ -36959,6 +37200,98 @@ function (require, exports, module) {
 	}
 	
 	exports.Frame = Frame
+	exports.Material = Material
+	
+});
+
+
+RequireJS.addFunction('./test/tests/cost/category.js',
+function (require, exports, module) {
+	
+
+	
+	const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
+	const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
+	const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
+	const Category = require('../../../app-src/cost/types/category.js');
+	const Material = require('../../../app-src/cost/types/material.js');
+	
+	//
+	//
+	// {
+	//   const frame = new Frame('f', 'Frame', '0,0,0', '4, 196\', .75');
+	//   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
+	//   const frame.addSubAssembly(panel);
+	//   const props = {};
+	//   const smeRound = StringMathEvaluator.round;
+	//
+	//   let unitCostValue = smeRound(15.37/(8*12));
+	//   let costValue = smeRound(unitCostValue * 2 * 196 * 12);
+	//   let assembly = frame;
+	//   props.linear = {
+	//     id: 'frame',
+	//     method: 'Linear Feet',
+	//     length: '8\'',
+	//     cost: '15.37',
+	//     formula: '2*l',
+	//     unitCostValue, costValue, assembly
+	//   };
+	//
+	//   unitCostValue = smeRound((75.13)/(96*48));
+	//   costValue = smeRound(unitCostValue * 24 * 10);
+	//   props.square = {
+	//     id: 'panel0',
+	//     method: 'Square Feet',
+	//     length: '96',
+	//     width: '48',
+	//     cost: 75.13,
+	//     unitCostValue, costValue, assembly
+	//   };
+	//
+	//   unitCostValue = smeRound(29.86/(12*6*1));
+	//   costValue = smeRound(unitCostValue * 24 * 10 * .75);
+	//   props.cubic = {
+	//     id: 'metal',
+	//     method: 'Cubic Feet',
+	//     length: '12',
+	//     width: '6',
+	//     depth: '1',
+	//     cost: 29.86,
+	//     unitCostValue, costValue, assembly
+	//   };
+	//
+	//   unitCostValue = smeRound(50.12/10);
+	//   costValue = smeRound(unitCostValue * 13);
+	//   props.unit = {
+	//     id: 'parts',
+	//     method: 'Unit',
+	//     laborType: 'Instalation',
+	//     hourlyRate: '20',
+	//     hours: '.66',
+	//     cost: '50.12',
+	//     count: '10',
+	//     unitCostValue, costValue,
+	//     assembly: 13
+	//   };
+	//   const catCost = new Category({id: 'catTest'});
+	//
+	//   Test.add('CategoryCost: calc',(ts) => {
+	//     let totalCost = 0;
+	//     function testProps(props) {
+	//       const matCost = new Material(props);
+	//       catCost.addChild(matCost);
+	//       totalCost += matCost.calc(props.assembly);
+	//     }
+	//     Object.values(props).forEach(testProps);
+	//     ts.assertTolerance(totalCost, catCost.calc(), .0001);
+	//     ts.success();
+	//   });
+	// }
+	
+	exports.Frame = Frame
+	exports.Panel = Panel
+	exports.StringMathEvaluator = StringMathEvaluator
+	exports.Category = Category
 	exports.Material = Material
 	
 });

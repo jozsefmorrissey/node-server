@@ -4,6 +4,7 @@ const Line2d = require('./line');
 class Polygon2d {
   constructor(initialVertices) {
     const lines = [];
+    const instance = this;
     let faceIndecies = [2];
     let map
 
@@ -26,8 +27,88 @@ class Polygon2d {
       return vertices;
     }
 
-    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex().copy();
-    this.midpoint = (index) => lines[Math.mod(index, lines.length)].midpoint();
+    this.verticesAndMidpoints = (target, before, after) => {
+      const verts = this.vertices();
+      const both = [];
+      for (let index = 0; index < verts.length; index++) {
+        const sv = verts[index];
+        const ev = verts[index + 1 === verts.length ? 0 : index + 1];
+        both.push(sv);
+        both.push(Vertex2d.center(sv, ev));
+      }
+      return both;
+    }
+
+    function addNieghborsOfVertexWithinLine(vertex, indicies) {
+      const list = [];
+      for (let index = 0; index < indicies.length; index++) {
+        const i = indicies[index];
+        let found = false;
+        for (let index = 0; !found && index < lines.length; index++) {
+          const line = lines[index];
+          if (line.withinSegmentBounds(vertex)) {
+            found = true;
+            if (i > 0) {
+              list.push(instance.neighbors(line.endVertex(), i - 1)[0]);
+            } else if (i < 0) {
+              list.push(instance.neighbors(line.startVertex(), i + 1)[0]);
+            } else {
+              list.push(vertex);
+            }
+          }
+        }
+        if (!found) list.push(null);
+      }
+      return list;
+    }
+
+    this.neighbors = (vertex,...indicies) => {
+      const verts = this.verticesAndMidpoints();
+      const targetIndex = verts.equalIndexOf(vertex);
+      if (targetIndex !== -1) {
+        const list = [];
+        for (let index = 0; index < indicies.length; index++) {
+          const i = indicies[index];
+          const offsetIndex = Math.mod(targetIndex + i, verts.length);
+          list.push(verts[offsetIndex]);
+        }
+        return list;
+      }
+      return addNieghborsOfVertexWithinLine(vertex, indicies);
+    }
+
+    function vertexFunction(midpoint) {
+      const getVertex = midpoint ? (line) => line.midpoint() : (line) => line.startVertex().copy();
+      return (index, moveTo) => {
+        const vertex = getVertex(lines[Math.mod(index, lines.length)]);
+        if (moveTo === undefined) return vertex.copy();
+        // const offset = vertex.differance(center);
+        if (moveTo.theta) {
+          const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
+          const rotatedCenter = rotatedPoly.center();
+          const offset = rotatedCenter.differance(vertex);
+          return moveTo.center.translate(offset.x(), offset.y(), true);
+        }
+        const center = instance.center();
+        const offset = center.differance(vertex);
+        return moveTo.center.translate(offset.x(), offset.y(), true);
+      }
+    }
+
+    this.vertex = vertexFunction();
+    this.midpoint = vertexFunction(true);
+    this.point = (index, moveTo) => {
+      if (index % 2 === 0) return this.vertex(index/2, moveTo);
+      else return this.midpoint((index - 1)/2, moveTo);
+    }
+
+    this.midpoints = () => {
+      const list = [];
+      for (let index = 0; index < lines.length; index++) {
+        list.push(this.midpoint(index));
+      }
+      return list;
+    }
 
     this.faceIndecies = (indicies) => {
       if (indicies) {
@@ -126,6 +207,16 @@ class Polygon2d {
       }
     }
 
+    this.rotate = (theta, pivot, doNotModify) => {
+      pivot ||= this.center();
+      const poly = doNotModify ? this.copy() : this;
+      if (doNotModify) return this.copy().rotate(theta, pivot);
+      for (let index = 0; index < lines.length; index++) {
+        lines[index].startVertex().rotate(theta, pivot);
+      }
+      return this;
+    }
+
     this.centerOn = (newCenter) => {
       newCenter = new Vertex2d(newCenter);
       const center = this.center();
@@ -207,6 +298,8 @@ class Polygon2d {
         }
       }
     }
+
+    this.copy = () => new Polygon2d(this.vertices().map((v) => v.copy()));
 
     this.addVertices(initialVertices);
   }
@@ -331,7 +424,8 @@ Polygon2d.toParimeter = (lines, recurseObj, print) => {
   for (let index = 0; index < partialParimeters.length; index ++) {
     const recObj = partialParimeters[index];
     const searchResult = Polygon2d.toParimeter(lines, recObj);
-    biggest = biggest === null || biggest.area() < searchResult.area() ? searchResult : biggest;
+    if (biggest === null || (searchResult !== null && biggest.area() < searchResult.area()))
+      biggest = searchResult;
   }
   if (print) console.log(biggest.area(), biggest.toString());
   if (recurseObj === undefined)

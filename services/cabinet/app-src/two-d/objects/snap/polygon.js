@@ -1,4 +1,5 @@
 const Snap2d = require('../snap');
+const Line2d = require('../line');
 const Square2d = require('../square');
 const Polygon2d = require('../polygon');
 const SnapLocation2d = require('../snap-location');
@@ -9,23 +10,31 @@ class SnapPolygon extends Snap2d {
   constructor(parent, polygon, tolerance) {
     if (!(polygon instanceof Polygon2d) || !polygon.valid()) throw new Error('PolygonSnap requires a valid polygon to intialize');
     super(parent, polygon, tolerance);
+    let locationCount = 0;
+    polygon.centerOn(parent.center());
     if (parent === undefined) return this;
     const instance = this;
+    let longestFaceLine;
+
+    const setOpeningLine = (index) => {
+      const line = polygon.lines()[index];
+      if (longestFaceLine === undefined || longestFaceLine.length() < line.length()) {
+        longestFaceLine = line;
+      }
+    }
 
     const midpointMap = new ToleranceMap({x: .1, y:.1});
-    const vertexFunc = (index) => () => polygon.vertex(index);
-    const midpointFunc = (index) => () => polygon.midpoint(index);
+    const vertexFunc = (index) => (position) => polygon.vertex(index, position);
+    const midpointFunc = (index) => (position) => polygon.midpoint(index, position);
     function addLine(index, name, targetName) {
       const locFunc = vertexFunc(index + 1);
-      const snapLoc = new SnapLocation2d(parent, name,  locFunc(),  targetName);
-      snapLoc.locationFunction(locFunc);
+      const snapLoc = new SnapLocation2d(instance, name + locationCount++,  locFunc,  targetName);
       instance.addLocation(snapLoc);
       const mpFunc = midpointFunc(index + (name === 'right' ? 1 : 0));
       const mpLoc = mpFunc();
       if(midpointMap.matches(mpLoc).length === 0) {
         midpointMap.add(mpLoc);
-        const snapLocMidpoint = new SnapLocation2d(parent, `${name}Center`,  mpLoc,  `${targetName}Center`);
-        snapLocMidpoint.locationFunction(mpFunc);
+        const snapLocMidpoint = new SnapLocation2d(instance, `${name}${locationCount++}center`,  mpFunc,  `${targetName}Center`);
         instance.addLocation(snapLocMidpoint);
       }
 
@@ -45,13 +54,17 @@ class SnapPolygon extends Snap2d {
     }
 
     function addVertex(index, prevIsFace, targetIsFace, nextIsFace) {
-      if (prevIsFace && !targetIsFace && nextIsFace) queBack(index);
-      else if (targetIsFace && !nextIsFace) {
+      if (prevIsFace && !targetIsFace && nextIsFace){
+        queBack(index);
+      } else if (targetIsFace && !nextIsFace) {
         addLine(index, 'right', 'left');
+        setOpeningLine(index);
       } else if (!targetIsFace && nextIsFace) {
         addLine(index, 'left', 'right');
-      } else if (targetIsFace) return;
-      else {
+      } else if (targetIsFace) {
+        setOpeningLine(index);
+        return;
+      } else {
         queBack(index);
       }
     }
@@ -72,13 +85,20 @@ class SnapPolygon extends Snap2d {
       addBacks();
     }
 
+    function textCenter () {
+      const center = instance.object().center();
+      // if (longestFaceLine)
+      //   return new Line2d(longestFaceLine.midpoint(), center).midpoint();
+      return center;
+    }
+
     polygon.getTextInfo = () => ({
       text: instance.parent().name() || 'banjo',
-      center: instance.object().center(),
-      radians: instance.radians(),
+      center: textCenter(),
+      radians: longestFaceLine ? longestFaceLine.radians() : 0,
       x: 0,
       y: instance.height() / 4,
-      maxWidth: instance.width(),
+      maxWidth: longestFaceLine ? longestFaceLine.length() : instance.width(),
       limit: 10
     });
 

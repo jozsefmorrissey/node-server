@@ -1,6 +1,7 @@
 
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 const Vertex2d = require('../objects/vertex.js');
+const Line2d = require('../objects/line.js');
 
 class OnWall extends Lookup {
   constructor(wall, fromPreviousWall, fromFloor, height, width) {
@@ -38,6 +39,21 @@ class OnWall extends Lookup {
       }
       return wall.length() - this.width() - this.fromPreviousWall();
     }
+    this.startVertex = () => {
+      const startpoint = wall.startVertex().point();
+      const theta = wall.radians();
+      const distLeft = this.fromPreviousWall() + width;
+      return new Vertex2d({x: startpoint.x + distLeft * Math.cos(theta),
+                    y: startpoint.y + distLeft * Math.sin(theta)});
+    }
+    this.endVertex = () => {
+      const startpoint = wall.startVertex().point();
+      const theta = wall.radians();
+      const distRight = this.fromPreviousWall();
+      return new Vertex2d({x: startpoint.x + distRight * Math.cos(theta),
+                            y: startpoint.y + distRight * Math.sin(theta)});
+    }
+    this.toLine = () => new Line2d(this.startVertex(), this.endVertex());
     this.wall = () => wall;
     this.setWall = (w) => wall = w;
     this.move = (center) => {
