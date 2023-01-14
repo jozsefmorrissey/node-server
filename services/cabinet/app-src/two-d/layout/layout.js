@@ -366,15 +366,19 @@ class Layout2D extends Lookup {
       }
     }
 
-    this.at = (vertex) => {
+    this.atWall = (vertex) => {
       for (let index = 0; index < walls.length; index++) {
         const hovering = walls[index].hovering(vertex);
         if (hovering) return hovering;
       }
+    }
+
+    this.at = (vertex) => {
       for (let index = 0; index < objects.length; index++) {
         const hovering = objects[index].topview().hovering(vertex);
         if (hovering) return hovering;
       }
+      return this.atWall(vertex);
     }
   }
 }
@@ -412,6 +416,9 @@ Layout2D.fromJson = (json) => {
   console.log('isConnected:', layout.connected());
   return layout;
 }
+
+const layoutStateChangeEvent = new CustomEvent('layoutStateChange');
+Layout2D.onStateChange = layoutStateChangeEvent.on;
 
 new Layout2D();
 module.exports = Layout2D;

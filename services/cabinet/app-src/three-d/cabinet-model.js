@@ -15,6 +15,7 @@ class CabinetModel {
   constructor(cabinet) {
     const assemblies = [];
     let cabinetCSG;
+    const instance = this;
     let center, threeView, silhouette, complexModel;
 
     this.cabinet = () => cabinet;
@@ -127,34 +128,52 @@ class CabinetModel {
       return output;
     }
 
-    this.topViewSnap = () => {
+    function build() {
       const c = cabinet;
-      if (c.snapObject === undefined) {
-        const polys = this.cabinetSilhouette().toPolygons();
-        const threeView = Polygon3D.toThreeView(polys);
-        let topView = Polygon2d.toParimeter(threeView.top);
-        const layout = c.group().room().layout();
-        const normals = c.normals();
-        const dist = c.width() > c.thickness() ? c.width() : c.thickness();
-        const lines = topView.lines();
-        const topCenter = Vertex2d.center(Line2d.vertices(lines));
-        const normalLines = normals.map((n) => {
-          const searchLine = Line3D.startAndVector(this.center(), n.scale(dist));
-          const searchLine2d = searchLine.to2D(threeView.axis.top[0], threeView.axis.top[1]);
-          searchLine2d.translate(new Line2d(searchLine2d.startVertex(), topCenter));
-          return searchLine2d;
-        });
-        const faceIndecies = normalLines.map((normalLine) => {
-          for (let index = 0; index < lines.length; index++) {
-            if (lines[index].findSegmentIntersection(normalLine, true))
-              return index;
-          }
-        });
-        topView.faceIndecies(faceIndecies)
-        const layoutObject = layout.addObject(c.id(), c, c.partName(), topView);
-        layoutObject.topview().normals = normalLines;
-        c.snapObject = layoutObject;
+      const polys = instance.cabinetSilhouette().toPolygons();
+      const threeView = Polygon3D.toThreeView(polys);
+      let topview = Polygon2d.toParimeter(threeView.top);
+      const layout = c.group().room().layout();
+      const normals = c.normals();
+      const dist = c.width() > c.thickness() ? c.width() : c.thickness();
+      const lines = topview.lines();
+      const topCenter = Vertex2d.center(Line2d.vertices(lines));
+      const normalLines = normals.map((n) => {
+        const searchLine = Line3D.startAndVector(instance.center(), n.scale(dist));
+        const searchLine2d = searchLine.to2D(threeView.axis.top[0], threeView.axis.top[1]);
+        searchLine2d.translate(new Line2d(searchLine2d.startVertex(), topCenter));
+        return searchLine2d;
+      });
+      const faceIndecies = normalLines.map((normalLine) => {
+        for (let index = 0; index < lines.length; index++) {
+          if (lines[index].findSegmentIntersection(normalLine, true))
+            return index;
+        }
+      });
+      topview.faceIndecies(faceIndecies);
+      return topview;
+    }
 
+    this.topviewSnap = () => {
+      const c = cabinet;
+      const shouldBuild = !c.snapObject || c.width() !== c.snapObject.width ||
+        c.thickness() !== c.snapObject.thickness;
+      if (shouldBuild)  {
+        const topview = build();
+        if (c.snapObject === undefined) {
+          const layout = c.group().room().layout();
+          const layoutObject = layout.addObject(c.id(), c, c.partName(), topview);
+          c.snapObject = layoutObject;
+        } else {
+          const polygon = c.snapObject.topview().object();
+          topview.centerOn(polygon.center());
+          const lines = polygon.lines();
+          for (let index = 0; index < lines.length; index++) {
+            const startVertex = lines[index].startVertex();
+            startVertex.point(topview.vertex(index).point());
+          }
+          console.log('merging?');
+        }
       }
       return cabinet.snapObject.topview();
     }
@@ -181,7 +200,7 @@ class CabinetModel {
       if (model !== undefined) {
         addComplexModelAttrs(model);
         complexModel = model;
-        this.topViewSnap();
+        this.topviewSnap();
       }
       return complexModel;
     }

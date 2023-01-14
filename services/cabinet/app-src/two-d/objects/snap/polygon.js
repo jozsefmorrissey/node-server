@@ -93,7 +93,7 @@ class SnapPolygon extends Snap2d {
     }
 
     polygon.getTextInfo = () => ({
-      text: instance.parent().name() || 'banjo',
+      text: instance.parent().name(),
       center: textCenter(),
       radians: longestFaceLine ? longestFaceLine.radians() : 0,
       x: 0,

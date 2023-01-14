@@ -1065,7 +1065,9 @@ exports['model-controller'] = (get, $t) =>
 		` </div> </div> `
 
 exports['order/builder/body'] = (get, $t) => 
-		`<div> <b>` +
+		`<div order-id='` +
+		$t.clean(get("order").id()) +
+		`'> <b>` +
 		$t.clean(get("order").name) +
 		`</b> <button class='save-order-btn' index='` +
 		$t.clean(get("$index")) +
@@ -1312,3 +1314,57 @@ exports['sections/open'] = (get, $t) =>
 		`</h2> <div class='section-feature-ctn'> ` +
 		$t.clean(get("featureDisplay")) +
 		` </div> `
+
+exports['2d/pop-up/snap-2d0'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").parent().constructor.name) +
+		`' id='` +
+		$t.clean(get("target").parent().id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <label>Name</label> <input class='value-2d' member='object' type="text" key="name" value="` +
+		$t.clean(get("target").parent().name()) +
+		`"> <br><br> <label>Width</label> <input class='value-2d' member='cabinet' type="text" key="width" value="` +
+		$t.clean(get("display")(get("target").width())) +
+		`"> <br> <label>Depth</label> <input class='value-2d' member='cabinet' type="text" key="thickness" value="` +
+		$t.clean(get("display")(get("target").height())) +
+		`"> <br> <label>Angle</label> <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="` +
+		$t.clean(get("target").angle()) +
+		`"> <br> <label>X</label> <input class='value-2d' member='snap' type="text" key="x" value="` +
+		$t.clean(get("display")(get("target").x())) +
+		`"> <br> <label>Y</label> <input class='value-2d' member='snap' type="text" key="y" value="` +
+		$t.clean(get("display")(get("target").y())) +
+		`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+
+exports['2d/pop-up/snap-location-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").parent().constructor.name) +
+		`' id='` +
+		$t.clean(get("target").parent().id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <div class='which-radio-cnt'` +
+		$t.clean(get("scope").snapPartner() ? '' : ' hidden') +
+		`> <label>Both</label> <input type="radio" name="which" checked value='Both'> <div class='tab'> <label>` +
+		$t.clean(get("name1")()) +
+		`</label> <input type="radio" name="which" value="` +
+		$t.clean(get("name1")()) +
+		`"> <br> <label>` +
+		$t.clean(get("name2")()) +
+		`</label> <input type="radio" name="which" value="` +
+		$t.clean(get("name2")()) +
+		`"> </div> <br> </div> <label>` +
+		$t.clean(get("scope").partner() ? 'Rotate' : 'Angle') +
+		`</label> <input member='snap-loc' type="text" convert='false' name="angle" value="` +
+		$t.clean(get("angle")()) +
+		`"> <br> <label>X</label> <input member='snap-loc' type="text" name="x" value="` +
+		$t.clean(get("display")(get("target").center().x())) +
+		`"> <br> <label>Y</label> <input member='snap-loc' type="text" name="y" value="` +
+		$t.clean(get("display")(get("target").center().y())) +
+		`"> <br> <button class='remove-btn-2d transparent'>Remove</button> <span class='fix-cnt right'` +
+		$t.clean(!get("scope").snapPartner() ? '' : ' hidden') +
+		`> <label>Fix</label> <input member='snap-loc' type="checkbox" name="fix" value=""> </span> </div> `

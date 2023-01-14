@@ -252,6 +252,17 @@ class Line2d {
       return false;
     }
 
+    this.closestVertex = (vertex) => {
+      const sv = this.startVertex()
+      const ev = this.endVertex()
+      return sv.distance(vertex) < ev.distance(vertex) ? sv : ev;
+    }
+    this.furthestVertex = (vertex) => {
+      const sv = this.startVertex()
+      const ev = this.endVertex()
+      return sv.distance(vertex) > ev.distance(vertex) ? sv : ev;
+    }
+
     this.inverseX = (y) => this.slope()*y + this.yIntercept();
     this.inverseY = (x) => (x-this.yIntercept())/this.slope();
     this.perpendicular = (distance, vertex, center) => {

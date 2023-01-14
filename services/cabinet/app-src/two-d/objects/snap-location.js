@@ -42,23 +42,26 @@ class SnapLocation2d {
       if ((typeof lf) === 'function') centerFunction = lf;
       return lf;
     }
-    this.circle = () => new Circle2d(5, centerFunction());
+    this.circle = (radius) => new Circle2d(radius || 2, centerFunction());
     this.eval = () => this.parent().position[location]();
     this.parent = () => parent;
     this.parentId = () => parent.id();
     this.pairedWithId = () => pairedWith && pairedWith.id();
     this.pairedWith = () => pairedWith;
     this.disconnect = () => {
-      if (pairedWith === null) return;
+      if (pairedWith === null) return false;
       const wasPaired = pairedWith;
       pairedWith = null;
       if (wasPaired instanceof SnapLocation2d) wasPaired.disconnect();
+      instance.parent().clearIdentifiedConstraints();
+      return true;
     }
     this.pairWith = (otherSnapLoc) => {
       otherSnapLoc ||= courting;
       const alreadyPaired = otherSnapLoc === pairedWith;
-      if (!alreadyPaired) {
+      if (!alreadyPaired && otherSnapLoc) {
         pairedWith = otherSnapLoc;
+        courting = null;
         if (otherSnapLoc instanceof SnapLocation2d) otherSnapLoc.pairWith(this);
       }
     }
@@ -72,74 +75,20 @@ class SnapLocation2d {
     this.courting = (otherSnapLoc) => {
       if (courting === otherSnapLoc) return courting;
       if (!pairedWith) {
-        if (otherSnapLoc instanceof SnapLocation2d) {
+        if (otherSnapLoc) {
           courting = otherSnapLoc;
-          otherSnapLoc.courting(this);
+          if (otherSnapLoc instanceof SnapLocation2d)
+            otherSnapLoc.courting(this);
         } else if (otherSnapLoc === null && courting) {
           const tempLocation = courting;
           courting = null;
-          tempLocation.courting(null);
+          if (tempLocation instanceof SnapLocation2d)
+            tempLocation.courting(null);
         }
-      } else {
+      } else if (otherSnapLoc) {
         throw new Error('You cannot court a location when alreadyPaired');
       }
       return courting;
-    }
-
-    this.forEachObject = (func, objMap) => {
-      objMap = objMap || {};
-      objMap[this.parent().toString()] = this.parent();
-      const locs = this.parent().snapLocations.paired();
-      for (let index = 0; index < locs.length; index += 1) {
-        const loc = locs[index];
-        const connSnap = loc.pairedWith();
-        if (connSnap instanceof SnapLocation2d) {
-          const connObj = connSnap.parent();
-          if (connObj && objMap[connObj.id()] === undefined) {
-            objMap[connObj.id()] = connObj;
-            connSnap.forEachObject(undefined, objMap);
-          }
-        }
-      }
-      if ((typeof func) === 'function') {
-        const objs = Object.values(objMap);
-        for (let index = 0; index < objs.length; index += 1) {
-          func(objs[index]);
-        }
-      } else return objMap;
-    };
-
-    this.forEachConnectedSnap = (func, pairedMap) => {
-      pairedMap ||= {};
-      const locs = this.parent().snapLocations.paired();
-      for (let index = 0; index < locs.length; index += 1) {
-        const loc = locs[index];
-        pairedMap[loc.toString()]  = loc;
-        const connSnap = loc.pairedWith();
-        if (connSnap instanceof SnapLocation2d) {
-          const snapStr = connSnap.toString();
-          if (pairedMap[snapStr] === undefined) {
-            pairedMap[snapStr] = connSnap;
-            connSnap.forEachConnectedSnap(undefined, pairedMap);
-          }
-        }
-      }
-
-      if ((typeof func) === 'function') {
-        const snaps = Object.values(pairedMap);
-        for (let index = 0; index < snaps.length; index += 1) {
-          func(snaps[index]);
-        }
-      } else return pairedMap;
-    }
-
-    this.getNonSnap = () => {
-      let nonSnap = undefined;
-      this.forEachConnectedSnap((snap) => {
-        const pw = snap.pairedWith();
-        if (pw !== undefined && !(pw instanceof SnapLocation2d)) nonSnap = pw;
-      });
-      return nonSnap;
     }
 
     this.neighbors = (...indicies) => {
@@ -148,16 +97,6 @@ class SnapLocation2d {
     }
 
     this.neighbor = (index) => this.neighbors(index)[0];
-
-    this.isConnected = (obj) => {
-      let connected = false;
-      this.forEachObject((connObj) => connected = connected || obj.id() === connObj.id());
-      return connected;
-    }
-
-    this.rotate = (theta) => {
-      this.forEachObject((obj) => obj.radians((obj.radians() + theta) % (2*Math.PI)));
-    }
 
     this.slope = (offsetIndex) => {
       const neighbor = parent.object().neighbors(this.center(), offsetIndex)[0];
@@ -173,24 +112,6 @@ class SnapLocation2d {
     this.forwardRadians = () => Math.atan(this.slope(1));
     this.reverseRadians = () => Math.atan(this.slope(-1));
 
-
-    function moveConnectedObjects(moveId) {
-      const pairedLocs = parent.snapLocations.paired();
-      for (let index = 0; index < pairedLocs.length; index += 1) {
-        const loc = pairedLocs[index];
-        const paired = loc.pairedWith();
-        const tarVertexLoc = instance.parent().position[loc.location()]().center();
-        if (paired instanceof SnapLocation2d) paired.move(tarVertexLoc, moveId);
-      }
-    }
-
-    function makeMove(thisNewCenterLoc, moveId, theta) {
-      if (theta) instance.parent().object().rotate(theta);
-      instance.parent().radians(thisNewCenterLoc);
-      instance.parent().update();
-      lastMove = moveId;
-      moveConnectedObjects(moveId);
-    }
 
     this.snapToLocation = (otherSnapLoc) => {
       const center = otherSnapLoc.center();
@@ -213,7 +134,7 @@ class SnapLocation2d {
       }
     }
 
-    function snapToObject(vertex, moveId) {
+    function snapToObject(vertex) {
       const otherSnapLoc = parent.otherHoveringSnap(vertex);
       if (!otherSnapLoc) return false;
       instance.courting(otherSnapLoc);
@@ -221,18 +142,31 @@ class SnapLocation2d {
       return true;
     }
 
-    let lastMove = 0;
     this.move = (vertex, moveId) => {
+      if (parent.connected()) return parent.moveConnected(this.at({center: vertex}));
       const shouldNotSnap = (typeof moveId) === 'number' || moveId === null;
-      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
-      if (lastMove === moveId) return;
       vertex = new Vertex2d(vertex);
       if (shouldNotSnap || !snapToObject(vertex)) {
         const thisNewCenterLoc = this.parent().position[location]({center: vertex});
         this.parent().makeMove({center: thisNewCenterLoc});
-        // makeMove(thisNewCenterLoc, moveId);
       }
     }
+
+    this.rotateAround = (theta) => {
+      const startPosition = {center: this.center()};
+      this.parent().moveConnected(null, theta);
+      const newCenter = this.at(startPosition);
+      this.parent().moveConnected(newCenter);
+    }
+
+    this.setRadians = (radians) => {
+      const startPosition = {center: this.center()};
+      const theta = radians - parent.radians();
+      this.parent().moveConnected(null, theta);
+      const newCenter = this.at(startPosition);
+      this.parent().moveConnected(newCenter);
+    }
+
     this.notPaired = () => pairedWith === null;
 
     this.hovering = new HoverMap2d(() => this.center(), 12).hovering;

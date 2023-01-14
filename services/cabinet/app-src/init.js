@@ -85,6 +85,7 @@ function init(body){
     const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
     const RoomDisplay = require('./displays/room');
     let order = new Order();
+    du.find('body').setAttribute('order-id', order.id());
     order.addRoom('carpet');
     roomDisplay = new RoomDisplay('#room-cnt', order);
     setTimeout(TwoDLayout.init, 1000);

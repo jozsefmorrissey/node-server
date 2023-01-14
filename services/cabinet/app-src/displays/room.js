@@ -55,8 +55,8 @@ du.on.match('click', '.group-add-btn', (target) => {
   const room = Room.get(id);
   const orderId = du.find.up('[order-id]', target).getAttribute('order-id');
   const roomDisplay = RoomDisplay.get(orderId);
-  roomDisplay.refresh();
   room.addGroup();
+  roomDisplay.refresh();
 });
 
 RoomDisplay.configInputTree = () => {

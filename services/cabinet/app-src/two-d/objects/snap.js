@@ -4,10 +4,12 @@ const Line2d = require('line');
 const SnapLocation2d = require('snap-location');
 const HoverMap2d = require('../hover-map');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 const withinTol = Tolerance.within(.1);
 
-class Snap2d {
+class Snap2d extends Lookup {
   constructor(parent, object, tolerance) {
+    super();
     name = 'booyacka';
     Object.getSet(this, {object, tolerance}, 'layoutId');
     if (parent === undefined) return;
@@ -21,7 +23,7 @@ class Snap2d {
     this.dr = () => 24 * 2.54;
     this.dol = () => 12;
     this.dor = () => 12;
-    this.toString = () => `SNAP (${tolerance}):${object}`
+    this.toString = () => `SNAP ${this.id()}(${tolerance}):${object}`
     this.position = {};
     this.id = () => id;
     this.parent = () => parent;
@@ -69,17 +71,24 @@ class Snap2d {
     }
 
     let radians = 0;
-    this.radians = (newValue) => {
+    this.radians = (newValue, moveId) => {
       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+        const constraint = this.constraint();
+        if (constraint === 'fixed') return;
+        const snapAnchor = constraint.snapLoc;
+        const originalPosition = snapAnchor && snapAnchor.center();
         const radianDifference = newValue - radians;
         this.object().rotate(radianDifference);
         notify(radians, newValue);
         radians = Math.mod(newValue, 2*Math.PI);
+        if (snapAnchor) this.object().centerOn(snapAnchor.at({center: originalPosition}));
       }
       return radians;
     };
-    this.rotate = (rads) => {
-      this.radians(rads + radians);
+    this.rotate = (rads, moveId) => {
+      if (rads) {
+        this.radians(rads + radians, moveId);
+      }
     }
 
     let height = 60.96;
@@ -116,6 +125,83 @@ class Snap2d {
       }
     }
 
+    this.forEachConnectedObject = (func, objMap) => {
+      objMap = objMap || {};
+      objMap[this.id()] = this;
+      const locs = this.snapLocations.paired();
+      for (let index = 0; index < locs.length; index += 1) {
+        const loc = locs[index];
+        const connSnap = loc.pairedWith();
+        if (connSnap instanceof SnapLocation2d) {
+          const connObj = connSnap.parent();
+          if (connObj && objMap[connOb.id()] === undefined) {
+            objMap[connObj.id()] = connObj;
+            connSnap.parent().forEachConnectedObject(undefined, objMap);
+          }
+        }
+      }
+      if ((typeof func) === 'function') {
+        const objs = Object.values(objMap);
+        for (let index = 0; index < objs.length; index += 1) {
+          func(objs[index]);
+        }
+      } else return objMap;
+    };
+
+    this.forEachConnectedSnap = (func, pairedMap) => {
+      pairedMap ||= {};
+      const locs = this.snapLocations.paired();
+      for (let index = 0; index < locs.length; index += 1) {
+        const loc = locs[index];
+        pairedMap[loc.toString()]  = loc;
+        const connSnap = loc.pairedWith();
+        if (connSnap instanceof SnapLocation2d) {
+          const snapStr = connSnap.toString();
+          if (pairedMap[snapStr] === undefined) {
+            pairedMap[snapStr] = connSnap;
+            connSnap.parent().forEachConnectedSnap(undefined, pairedMap);
+          }
+        }
+      }
+
+      if ((typeof func) === 'function') {
+        const snaps = Object.values(pairedMap);
+        for (let index = 0; index < snaps.length; index += 1) {
+          func(snaps[index]);
+        }
+      } else return pairedMap;
+    }
+
+    this.constraints = () => {
+      let constraints = [];
+      this.forEachConnectedSnap((snapLoc) => {
+        const possible = snapLoc.pairedWith();
+        if (!(possible instanceof SnapLocation2d)) constraints.push(snapLoc);
+      });
+      return constraints;
+    };
+
+    this.constraint = () => {
+      let constraints = this.constraints();
+      if (constraints.length === 0) return 'free';
+      const wallMap = {};
+      let anchor;
+      for (let index = 0; index < constraints.length; index++) {
+        const snapLoc = constraints[index];
+        const constraint = snapLoc.pairedWith();
+        if (constraint instanceof Line2d && !wallMap[constraint.toString()]) {
+          wallMap[constraint.toString()] = {wall: constraint, snapLoc};
+          if (Object.keys(wallMap).length === 2 || anchor) return 'fixed';
+        } else if (constraint instanceof Vertex2d) {
+          if (anchor || Object.keys(wallMap).length === 1) return 'fixed';
+          anchor = {vertex: constraint, snapLoc};
+        }
+      }
+      if (anchor) return anchor;
+      const walls = Object.values(wallMap);
+      return walls.length === 1 ? walls[0] : 'free';
+    }
+
     const snapLocations = [];
     this.addLocation = (snapLoc) => {
       if (snapLoc instanceof SnapLocation2d && this.position[snapLoc.location()] === undefined) {
@@ -150,6 +236,7 @@ class Snap2d {
     this.snapLocations.leftCenter = () => getSnapLocations((loc) => loc.location().match(leftCenterReg));
     this.snapLocations.backCenter = () => getSnapLocations((loc) => loc.location().match(backCenterReg));
     this.snapLocations.center = () => getSnapLocations((loc) => loc.location().match(centerReg));
+    this.snapLocations.byLocation = (name) => getSnapLocations((loc) => loc.location() === name);
     this.snapLocations.at = (vertex) => {
       for (let index = 0; index < snapLocations.length; index++)
         if (snapLocations[index].center().equal(vertex)) return snapLocations[index];
@@ -157,9 +244,13 @@ class Snap2d {
     }
     this.snapLocations.resetCourting = () => {
       for (let index = 0; index < snapLocations.length; index++) {
-        snapLocations[index].courting(null);
+        if (snapLocations[index] instanceof SnapLocation2d)
+          snapLocations[index].courting(null);
       }
     }
+
+    this.connected = () => this.snapLocations.paired().length > 0;
+
     // this.snapLocations.rotate = backCenter.rotate;
     function resetVertices() {
       for (let index = 0; index < snapLocations.length; index += 1) {
@@ -421,31 +512,6 @@ class Snap2d {
       }
     }
 
-    let lastPotentalPair;
-    this.setLastPotentialPair = (lpp) => lastPotentalPair = lpp;
-    function checkPotentialPair() {
-      if (!lastPotentalPair) return;
-      if (!(lastPotentalPair[1] instanceof SnapLocation2d)) return true;
-      const snap1 = lastPotentalPair[0];
-      const snap2 = lastPotentalPair[1];
-      snap1.eval();
-      snap2.eval();
-      if (!snap1.vertex().equal(snap2.vertex())) lastPotentalPair = null;
-      return true;
-    }
-
-    this.potentalSnapLocation = () => checkPotentialPair() && lastPotentalPair && lastPotentalPair[0];
-    this.pairWithLast = () => {
-      if (lastPotentalPair) {
-        if ((typeof lastPotentalPair[0].pairWith) === 'function') {
-          lastPotentalPair && lastPotentalPair[0].pairWith(lastPotentalPair[1])
-        } else {
-          console.log('nope');
-        }
-      }
-      lastPotentalPair = null;
-    };
-
     let lastValidMove;
     this.makeMove = (position, force) => {
       this.snapLocations.resetCourting();
@@ -464,22 +530,70 @@ class Snap2d {
       }
       instance.update();
     }
+
+    function clearIdentifiedConstraints() {
+      Snap2d.identifiedConstraints = null;
+    }
+    this.clearIdentifiedConstraints = clearIdentifiedConstraints;
+
     this.move = (center) => {
-      checkPotentialPair();
+      clearIdentifiedConstraints.subtle(2000);
+      let constraint = this.constraint();
+      if (constraint.wall) {
+        const snapCenter = constraint.wall.closestPointOnLine(center, true) ||
+          constraint.wall.closestVertex(center);
+        const vertCenter = constraint.snapLoc.at({center: snapCenter});
+        return this.moveConnected(vertCenter);
+      } else if (constraint.vertex) {
+        console.log('vertex constraint');
+        return;
+      } else if (constraint === 'fixed') {
+        Snap2d.identifiedConstraints = this.constraints();
+        return;
+      }
       const pairedSnapLocs = this.snapLocations.paired();
       const centerWithin = layout.within(center);
       let closest = {};
       const wallSnapLocation = findWallSnapLocation(center);
       if (wallSnapLocation !== undefined) {
-        const move = this.makeMove(wallSnapLocation);
-        const wallSnapLoc = this.snapLocations.wallPairable()[0];
-        lastPotentalPair = [wallSnapLoc.pairWith, wallSnapLocation.wall];
-        return move;
+        this.makeMove(wallSnapLocation);
+        wallSnapLocation.pairWith.courting(wallSnapLocation.wall);
+        this.moveConnected(null, wallSnapLocation.theta);
       } else if (centerWithin) {
-        const move = this.makeMove({center});
-        findObjectSnapLocation(center);
-        return move;
+        if (this.connected()) {
+          this.moveConnected(center);
+        } else {
+          this.makeMove({center});
+          findObjectSnapLocation(center);
+        }
       }
+    }
+
+    function moveConnectedObjects(moveId, theta) {
+      const pairedLocs = instance.snapLocations.paired();
+      for (let index = 0; index < pairedLocs.length; index += 1) {
+        const loc = pairedLocs[index];
+        const paired = loc.pairedWith();
+        if (paired instanceof SnapLocation2d) {
+          const tarVertexLoc = paired.at({center: loc.center()});
+          paired.parent().moveConnected(tarVertexLoc, theta, moveId);
+        }
+      }
+    }
+
+    let moveCounter = 0;
+    let lastMove;
+    this.moveConnected = (center, theta, moveId) => {
+      const alreadyMoved = moveId === false;
+      moveId ||= moveCounter++;
+      if (moveId === lastMove) return;
+      lastMove = moveId;
+      if (!alreadyMoved) {
+        if (theta) instance.rotate(theta, moveId);
+        if (center) instance.makeMove({center});
+      }
+      instance.update();
+      moveConnectedObjects(moveId, theta);
     }
 
     const objData = (funcName) => {
@@ -508,6 +622,8 @@ Snap2d.registar = (clazz) => {
   }
 }
 
+Snap2d.identfied = (snapLoc) => Snap2d.identifiedConstraints &&
+        Snap2d.identifiedConstraints.indexOf(snapLoc) !== -1;
 
 Snap2d.fromJson = (json) => {
   const layout = Layout2d.get(json.layoutId);

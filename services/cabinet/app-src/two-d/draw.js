@@ -52,7 +52,7 @@ class Draw2d {
           draw.snap(object, color, width);
           break;
         case 'SnapLocation2d':
-          draw.snapLocation(object, color);
+          draw.snapLocation(object, color, width);
         break;
         default:
           console.error(`Cannot Draw '${object.constructor.name}'`);
@@ -242,9 +242,9 @@ class Draw2d {
       }
     }
 
-    draw.snapLocation = (location, color) => {
+    draw.snapLocation = (location, color, radius) => {
       const c = color || snapLocColor(location);
-      draw.circle(location.circle(), 'black', c);
+      draw.circle(location.circle(radius), 'black', c);
     }
 
     draw.snap = (snap, color, width) => {

@@ -1,0 +1,33 @@
+<div type-2d='{{target.parent().constructor.name}}'
+        id='{{target.parent().id()}}'
+        x='{{lastImagePoint.x}}' y='{{lastImagePoint.y}}'>
+  <div class='which-radio-cnt'{{scope.snapPartner() ? '' : ' hidden'}}>
+    <label>Both</label>
+    <input type="radio" name="which" checked value='Both'>
+    <div class='tab'>
+      <label>{{name1()}}</label>
+      <input type="radio" name="which" value="{{name1()}}">
+      <br>
+      <label>{{name2()}}</label>
+      <input type="radio" name="which" value="{{name2()}}">
+    </div>
+    <br>
+  </div>
+  <label>{{scope.partner() ? 'Rotate' : 'Angle'}}</label>
+  <input member='snap-loc' type="text" convert='false'
+      name="angle" value="{{angle()}}">
+  <br>
+  <label>X</label>
+  <input member='snap-loc' type="text" name="x"
+      value="{{display(target.center().x())}}">
+  <br>
+  <label>Y</label>
+  <input member='snap-loc' type="text" name="y"
+      value="{{display(target.center().y())}}">
+  <br>
+  <button class='remove-btn-2d transparent'>Remove</button>
+  <span class='fix-cnt right'{{!scope.snapPartner() ? '' : ' hidden'}}>
+    <label>Fix</label>
+    <input member='snap-loc' type="checkbox" name="fix" value="">
+  </span>
+</div>

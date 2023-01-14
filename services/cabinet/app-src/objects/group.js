@@ -2,12 +2,13 @@
 const PropertyConfig = require('../config/property/config');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 
+let groupIndex = -2;
 class Group extends Lookup {
   constructor(room, name, id) {
     super(id);
     room ||= Group.defaultRoom;
     const initialVals = {
-      name: name || 'Group',
+      name: name || new String(groupIndex++),
     }
     Object.getSet(this, initialVals);
     this.propertyConfig = new PropertyConfig();

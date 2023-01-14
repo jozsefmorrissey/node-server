@@ -50,9 +50,9 @@ class Wall2D extends Line2d {
         startVertex.nextLine(nextLine);
     }
 
-    const hoveringStart = new HoverMap2d(() => this.startVertex(), 12).hovering;
-    const hoveringEnd = new HoverMap2d(() => this.endVertex(), 12).hovering;
-    const hoveringWall = new HoverMap2d(() => this, 5).hovering;
+    const hoveringStart = new HoverMap2d(() => this.startVertex(), 24).hovering;
+    const hoveringEnd = new HoverMap2d(() => this.endVertex(), 24).hovering;
+    const hoveringWall = new HoverMap2d(() => this, 10).hovering;
     this.hovering = (v) => {
       if (hoveringStart(v)) return this.startVertex();
       if (hoveringEnd(v)) return this.endVertex();

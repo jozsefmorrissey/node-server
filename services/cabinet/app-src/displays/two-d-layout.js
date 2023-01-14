@@ -198,6 +198,7 @@ function registerQuickChangeFunc(type, func) {
 function onMousedown(event, stdEvent) {
   lastDown = clickHolding ? 0 : new Date().getTime();
   lastImagePoint = {x: event.imageX, y: event.imageY};
+  event.lastImagePoint = new Vertex2d(lastImagePoint);
   if (stdEvent.button == 0) {
     clickHolding = !popupOpen && (clickHolding || hovering !== undefined);
     return clickHolding;
@@ -217,17 +218,31 @@ function addVertex(hovering, event, stdEvent) {
 registerQuickChangeFunc('Wall2D', addVertex);
 registerQuickChangeFunc('Vertex2d', remove);
 registerQuickChangeFunc('Window2D', remove);
-registerQuickChangeFunc('SnapLocation2d', (snapLoc) => snapLoc.disconnect());
+registerQuickChangeFunc('SnapLocation2d', (snapLoc, event) => {
+  if (!snapLoc.disconnect()) {
+    const possible = layout.atWall(event.lastImagePoint);
+    if (possible instanceof Line2d) {
+      snapLoc.pairWith(possible);
+      snapLoc.parent().move(event.lastImagePoint);
+    } else if (possible instanceof Vertex2d) {
+      snapLoc.pairWith(possible);
+      snapLoc.move(possible);
+    }
+    else snapLoc.pairWith(new Vertex2d(event.lastImagePoint));
+  }
+});
 registerQuickChangeFunc('Door2D', (door) => door.hinge(true));
 
 function hoverId () {
   return hovering ? hovering.toString() : undefined;
 }
 
+
 const templateMap = {};
 function getTemplate(item) {
   const isSnap = item instanceof Snap2d;
-  const templateLocation = `2d/pop-up/${isSnap ? 'snap-2d' : item.constructor.name.toKebab()}`;
+  const cxtrName = item.constructor.name;
+  const templateLocation = `2d/pop-up/${isSnap ? 'snap-2d' : cxtrName.toKebab()}`;
   if (templateMap[templateLocation] === undefined) {
     templateMap[templateLocation] = new $t(templateLocation);
   }
@@ -238,12 +253,114 @@ function display(value) {
   return new Measurement(value).display();
 }
 
+let which;
+let snapLoc;
+let snapLocScope = {
+  partner: () => snapLoc && (snapLoc.pairedWith() || snapLoc.courting()),
+  snapPartner: () => snapLocScope.partner() instanceof SnapLocation2d,
+  selected: () => snapLocScope.partner() && (which === snapLocScope.name1() ? snapLoc :
+    (which === snapLocScope.name2() ? snapLocScope.partner() : undefined)),
+  targetObject: () => {const sl = snapLocScope.selected(); return (sl && sl.parent()) || snapLoc},
+  name1: () => snapLoc && snapLoc.parent().parent().name(),
+  name2: () => {
+    const partner = snapLocScope.partner();
+    return partner instanceof SnapLocation2d && partner.parent().parent().name();
+  },
+  angle: () => {
+    if (!snapLoc) return hovering.parent().angle()
+    const partner = snapLocScope.partner();
+    if (!partner) return snapLoc.parent().angle();
+    if (which === snapLocScope.name1()) return snapLoc.parent().angle();
+    if (which === snapLocScope.name2()) return partner.parent().angle();
+    return 0;
+  }
+}
+
+function updateSnapLocDisplay(elem) {
+  const angleElem = du.find.closest('[name="angle"]', elem);
+  angleElem.value = snapLocScope.angle();
+}
+
+du.on.match('change', '[name="which"]', (elem) => {
+  which = elem.value
+  hovering = snapLocScope.targetObject();
+  const angleElem = du.find.closest('[name="angle"]', elem);
+  angleElem.previousElementSibling.innerText = which !== 'Both' ? 'Angle' : 'Rotate';
+  updateSnapLocDisplay(elem);
+  panZ.once();
+});
+
+du.on.match('change', '[member="snap-loc"][name="fix"]', (elem) => {
+  const angleElem = du.find.closest('[name="angle"]', elem);
+  if (elem.checked) {
+    const center = hovering.center().copy();
+    snapLoc = hovering;
+    hovering.pairWith(center);
+    angleElem.previousElementSibling.innerText = 'Rotate';
+  } else {
+    hovering.disconnect();
+    snapLoc = null;
+    angleElem.previousElementSibling.innerText = 'Angle';
+  }
+  panZ.once();
+});
+
+
+du.on.match('enter', '[member="snap-loc"][name="angle"]', (elem) => {
+  const radians = Math.toRadians(Number.parseFloat(elem.value || 0));
+  let selected = snapLocScope.selected();
+  if (selected || !snapLoc) {
+    selected ||= hovering;
+    selected.disconnect();
+    selected.setRadians(radians);
+    hovering = selected;
+    snapLoc = null;
+    du.find.closest('.which-radio-cnt', elem).hidden = true;
+    du.find.closest('.fix-cnt', elem).hidden = false;
+  } else snapLoc.rotateAround(radians);
+  panZ.once();
+});
+
+du.on.match('enter', '[member="snap-loc"][name="x"],[member="snap-loc"][name="y"]', (elem) => {
+  const value = new Measurement(elem.value || 0, true).decimal();
+  const coord = elem.getAttribute('name');
+  let selected = snapLocScope.selected();
+  if (selected || !snapLoc) {
+    selected ||= hovering;
+    selected.disconnect();
+    const center = selected.center();
+    center[coord](value);
+    selected.move(center);
+    hovering = selected;
+    snapLoc = null;
+    du.find.closest('.which-radio-cnt', elem).hidden = true;
+    du.find.closest('.fix-cnt', elem).hidden = false;
+  } else {
+    const center = snapLoc.center();
+    center[coord](value);
+    snapLoc.move(center);
+  }
+  panZ.once();
+});
+
+function getTemplateScope(cxtrName) {
+  const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
+  switch (cxtrName) {
+    case 'SnapLocation2d':
+      hovering.pairWith();
+      snapLoc = hovering.pairedWith() ? hovering : null;
+      which = null;
+      Object.merge(scope, snapLocScope);
+      break;
+  }
+  return scope;
+}
+
 function openPopup(event, stdEvent) {
   if (hovering) {
-    if (hovering instanceof Snap2d) hovering.pairWithLast();
     popupOpen = true;
     const msg = `${hovering.constructor.name}: ${hoverId()}`;
-    const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
+    const scope = getTemplateScope(hovering.constructor.name);
     const html = getTemplate(hovering).render(scope);
     popUp.open(html, {x: event.screenX, y: event.screenY});
   }
@@ -283,7 +400,7 @@ let pending = 0;
 function  drag(event)  {
   const dragging = !popupOpen && clickHolding && hovering;
   if (dragging)
-    hovering.move && hovering.move({x: event.imageX, y: event.imageY}, event);
+    hovering.move && hovering.move(new Vertex2d({x: event.imageX, y: event.imageY}), event);
   return dragging;
 }
 
@@ -511,7 +628,7 @@ function drawWall(wall) {
   theta = wall.radians();
   ctx.beginPath();
   ctx.moveTo(startpoint.x, startpoint.y);
-  ctx.lineWidth = 10;
+  ctx.lineWidth = 4;
   ctx.strokeStyle = hoverId() === wall.toString() ? 'green' : 'black';
   const endpoint = wall.endVertex().point();
   ctx.lineTo(endpoint.x, endpoint.y);
@@ -536,23 +653,31 @@ function drawWall(wall) {
 }
 
 function drawVertex(vertex) {
-  const fillColor = hoverId() === vertex.toString() ? 'green' : 'white';
+  const hovering = hoverId() === vertex.toString();
+  const fillColor = hovering ? 'green' : 'white';
   const p = vertex.point();
-  const radius = 10;
+  const radius = hovering ? 6 : 4;
   const circle = new Circle2d(radius, p);
   draw.circle(circle, 'black', fillColor);
 }
 
 function drawObjects() {
+  let target;
   layout.objects().forEach((obj) => {
     const color = hoverId() === obj.topview().toString() ? 'green' : 'black';
     draw(obj.topview(), color, 3);
     obj.topview().snapLocations().forEach((snapLoc) => {
-      const snapColor = snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined);
-      if (snapLoc.courting() || snapLoc.pairedWith() || hoverId() === snapLoc.toString())
-        draw(snapLoc, snapColor, 3);
+      const beingHovered = hoverId() === snapLoc.toString();
+      const identfied = Snap2d.identfied(snapLoc);
+      const snapColor = identfied ? 'red' : (beingHovered ? 'green' :
+            (snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined)));
+      const hasPartner = snapLoc.courting() || snapLoc.pairedWith();
+      const radius = identfied ? 6 : (beingHovered || hasPartner ? 4 : 1.5);
+      if (!beingHovered) draw(snapLoc, snapColor, radius);
+      else target = {radius, color: snapColor};
     });
   });
+  if (target) draw(hovering, target.color, target.radius);
 }
 
 function illustrate(canvas) {

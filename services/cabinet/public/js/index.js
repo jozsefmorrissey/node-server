@@ -10340,7 +10340,7 @@ function (require, exports, module) {
 	
 	
 	Function.safeStdLibAddition(Math, 'toDegrees', function (rads) {
-	  return Math.mod(rads * 180/Math.PI, 360);
+	  return Math.round(1000 * Math.mod(rads * 180/Math.PI, 360)) / 1000;
 	}, true);
 	
 	Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {
@@ -16427,7 +16427,9 @@ exports['101748844'] = (get, $t) =>
 			` </div> </div> `
 	
 	exports['order/builder/body'] = (get, $t) => 
-			`<div> <b>` +
+			`<div order-id='` +
+			$t.clean(get("order").id()) +
+			`'> <b>` +
 			$t.clean(get("order").name) +
 			`</b> <button class='save-order-btn' index='` +
 			$t.clean(get("$index")) +
@@ -16674,6 +16676,60 @@ exports['101748844'] = (get, $t) =>
 			`</h2> <div class='section-feature-ctn'> ` +
 			$t.clean(get("featureDisplay")) +
 			` </div> `
+	
+	exports['2d/pop-up/snap-2d0'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").parent().constructor.name) +
+			`' id='` +
+			$t.clean(get("target").parent().id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <label>Name</label> <input class='value-2d' member='object' type="text" key="name" value="` +
+			$t.clean(get("target").parent().name()) +
+			`"> <br><br> <label>Width</label> <input class='value-2d' member='cabinet' type="text" key="width" value="` +
+			$t.clean(get("display")(get("target").width())) +
+			`"> <br> <label>Depth</label> <input class='value-2d' member='cabinet' type="text" key="thickness" value="` +
+			$t.clean(get("display")(get("target").height())) +
+			`"> <br> <label>Angle</label> <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="` +
+			$t.clean(get("target").angle()) +
+			`"> <br> <label>X</label> <input class='value-2d' member='snap' type="text" key="x" value="` +
+			$t.clean(get("display")(get("target").x())) +
+			`"> <br> <label>Y</label> <input class='value-2d' member='snap' type="text" key="y" value="` +
+			$t.clean(get("display")(get("target").y())) +
+			`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+	
+	exports['2d/pop-up/snap-location-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").parent().constructor.name) +
+			`' id='` +
+			$t.clean(get("target").parent().id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <div class='which-radio-cnt'` +
+			$t.clean(get("scope").snapPartner() ? '' : ' hidden') +
+			`> <label>Both</label> <input type="radio" name="which" checked value='Both'> <div class='tab'> <label>` +
+			$t.clean(get("name1")()) +
+			`</label> <input type="radio" name="which" value="` +
+			$t.clean(get("name1")()) +
+			`"> <br> <label>` +
+			$t.clean(get("name2")()) +
+			`</label> <input type="radio" name="which" value="` +
+			$t.clean(get("name2")()) +
+			`"> </div> <br> </div> <label>` +
+			$t.clean(get("scope").partner() ? 'Rotate' : 'Angle') +
+			`</label> <input member='snap-loc' type="text" convert='false' name="angle" value="` +
+			$t.clean(get("angle")()) +
+			`"> <br> <label>X</label> <input member='snap-loc' type="text" name="x" value="` +
+			$t.clean(get("display")(get("target").center().x())) +
+			`"> <br> <label>Y</label> <input member='snap-loc' type="text" name="y" value="` +
+			$t.clean(get("display")(get("target").center().y())) +
+			`"> <br> <button class='remove-btn-2d transparent'>Remove</button> <span class='fix-cnt right'` +
+			$t.clean(!get("scope").snapPartner() ? '' : ' hidden') +
+			`> <label>Fix</label> <input member='snap-loc' type="checkbox" name="fix" value=""> </span> </div> `
 	
 });
 
@@ -19558,6 +19614,7 @@ function (require, exports, module) {
 	    const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
 	    const RoomDisplay = require('./displays/room');
 	    let order = new Order();
+	    du.find('body').setAttribute('order-id', order.id());
 	    order.addRoom('carpet');
 	    roomDisplay = new RoomDisplay('#room-cnt', order);
 	    setTimeout(TwoDLayout.init, 1000);
@@ -20670,7 +20727,7 @@ const Circle2d = require('./objects/circle');
 	          draw.snap(object, color, width);
 	          break;
 	        case 'SnapLocation2d':
-	          draw.snapLocation(object, color);
+	          draw.snapLocation(object, color, width);
 	        break;
 	        default:
 	          console.error(`Cannot Draw '${object.constructor.name}'`);
@@ -20860,9 +20917,9 @@ const Circle2d = require('./objects/circle');
 	      }
 	    }
 	
-	    draw.snapLocation = (location, color) => {
+	    draw.snapLocation = (location, color, radius) => {
 	      const c = color || snapLocColor(location);
-	      draw.circle(location.circle(), 'black', c);
+	      draw.circle(location.circle(radius), 'black', c);
 	    }
 	
 	    draw.snap = (snap, color, width) => {
@@ -21404,6 +21461,7 @@ const Vertex3D = require('./objects/vertex');
 	  constructor(cabinet) {
 	    const assemblies = [];
 	    let cabinetCSG;
+	    const instance = this;
 	    let center, threeView, silhouette, complexModel;
 	
 	    this.cabinet = () => cabinet;
@@ -21516,34 +21574,52 @@ const Vertex3D = require('./objects/vertex');
 	      return output;
 	    }
 	
-	    this.topViewSnap = () => {
+	    function build() {
 	      const c = cabinet;
-	      if (c.snapObject === undefined) {
-	        const polys = this.cabinetSilhouette().toPolygons();
-	        const threeView = Polygon3D.toThreeView(polys);
-	        let topView = Polygon2d.toParimeter(threeView.top);
-	        const layout = c.group().room().layout();
-	        const normals = c.normals();
-	        const dist = c.width() > c.thickness() ? c.width() : c.thickness();
-	        const lines = topView.lines();
-	        const topCenter = Vertex2d.center(Line2d.vertices(lines));
-	        const normalLines = normals.map((n) => {
-	          const searchLine = Line3D.startAndVector(this.center(), n.scale(dist));
-	          const searchLine2d = searchLine.to2D(threeView.axis.top[0], threeView.axis.top[1]);
-	          searchLine2d.translate(new Line2d(searchLine2d.startVertex(), topCenter));
-	          return searchLine2d;
-	        });
-	        const faceIndecies = normalLines.map((normalLine) => {
-	          for (let index = 0; index < lines.length; index++) {
-	            if (lines[index].findSegmentIntersection(normalLine, true))
-	              return index;
-	          }
-	        });
-	        topView.faceIndecies(faceIndecies)
-	        const layoutObject = layout.addObject(c.id(), c, c.partName(), topView);
-	        layoutObject.topview().normals = normalLines;
-	        c.snapObject = layoutObject;
+	      const polys = instance.cabinetSilhouette().toPolygons();
+	      const threeView = Polygon3D.toThreeView(polys);
+	      let topview = Polygon2d.toParimeter(threeView.top);
+	      const layout = c.group().room().layout();
+	      const normals = c.normals();
+	      const dist = c.width() > c.thickness() ? c.width() : c.thickness();
+	      const lines = topview.lines();
+	      const topCenter = Vertex2d.center(Line2d.vertices(lines));
+	      const normalLines = normals.map((n) => {
+	        const searchLine = Line3D.startAndVector(instance.center(), n.scale(dist));
+	        const searchLine2d = searchLine.to2D(threeView.axis.top[0], threeView.axis.top[1]);
+	        searchLine2d.translate(new Line2d(searchLine2d.startVertex(), topCenter));
+	        return searchLine2d;
+	      });
+	      const faceIndecies = normalLines.map((normalLine) => {
+	        for (let index = 0; index < lines.length; index++) {
+	          if (lines[index].findSegmentIntersection(normalLine, true))
+	            return index;
+	        }
+	      });
+	      topview.faceIndecies(faceIndecies);
+	      return topview;
+	    }
 	
+	    this.topviewSnap = () => {
+	      const c = cabinet;
+	      const shouldBuild = !c.snapObject || c.width() !== c.snapObject.width ||
+	        c.thickness() !== c.snapObject.thickness;
+	      if (shouldBuild)  {
+	        const topview = build();
+	        if (c.snapObject === undefined) {
+	          const layout = c.group().room().layout();
+	          const layoutObject = layout.addObject(c.id(), c, c.partName(), topview);
+	          c.snapObject = layoutObject;
+	        } else {
+	          const polygon = c.snapObject.topview().object();
+	          topview.centerOn(polygon.center());
+	          const lines = polygon.lines();
+	          for (let index = 0; index < lines.length; index++) {
+	            const startVertex = lines[index].startVertex();
+	            startVertex.point(topview.vertex(index).point());
+	          }
+	          console.log('merging?');
+	        }
 	      }
 	      return cabinet.snapObject.topview();
 	    }
@@ -21570,7 +21646,7 @@ const Vertex3D = require('./objects/vertex');
 	      if (model !== undefined) {
 	        addComplexModelAttrs(model);
 	        complexModel = model;
-	        this.topViewSnap();
+	        this.topviewSnap();
 	      }
 	      return complexModel;
 	    }
@@ -22590,8 +22666,8 @@ function (require, exports, module) {
 	  const room = Room.get(id);
 	  const orderId = du.find.up('[order-id]', target).getAttribute('order-id');
 	  const roomDisplay = RoomDisplay.get(orderId);
-	  roomDisplay.refresh();
 	  room.addGroup();
+	  roomDisplay.refresh();
 	});
 	
 	RoomDisplay.configInputTree = () => {
@@ -23153,6 +23229,7 @@ function (require, exports, module) {
 	function onMousedown(event, stdEvent) {
 	  lastDown = clickHolding ? 0 : new Date().getTime();
 	  lastImagePoint = {x: event.imageX, y: event.imageY};
+	  event.lastImagePoint = new Vertex2d(lastImagePoint);
 	  if (stdEvent.button == 0) {
 	    clickHolding = !popupOpen && (clickHolding || hovering !== undefined);
 	    return clickHolding;
@@ -23172,17 +23249,31 @@ function (require, exports, module) {
 	registerQuickChangeFunc('Wall2D', addVertex);
 	registerQuickChangeFunc('Vertex2d', remove);
 	registerQuickChangeFunc('Window2D', remove);
-	registerQuickChangeFunc('SnapLocation2d', (snapLoc) => snapLoc.disconnect());
+	registerQuickChangeFunc('SnapLocation2d', (snapLoc, event) => {
+	  if (!snapLoc.disconnect()) {
+	    const possible = layout.atWall(event.lastImagePoint);
+	    if (possible instanceof Line2d) {
+	      snapLoc.pairWith(possible);
+	      snapLoc.parent().move(event.lastImagePoint);
+	    } else if (possible instanceof Vertex2d) {
+	      snapLoc.pairWith(possible);
+	      snapLoc.move(possible);
+	    }
+	    else snapLoc.pairWith(new Vertex2d(event.lastImagePoint));
+	  }
+	});
 	registerQuickChangeFunc('Door2D', (door) => door.hinge(true));
 	
 	function hoverId () {
 	  return hovering ? hovering.toString() : undefined;
 	}
 	
+	
 	const templateMap = {};
 	function getTemplate(item) {
 	  const isSnap = item instanceof Snap2d;
-	  const templateLocation = `2d/pop-up/${isSnap ? 'snap-2d' : item.constructor.name.toKebab()}`;
+	  const cxtrName = item.constructor.name;
+	  const templateLocation = `2d/pop-up/${isSnap ? 'snap-2d' : cxtrName.toKebab()}`;
 	  if (templateMap[templateLocation] === undefined) {
 	    templateMap[templateLocation] = new $t(templateLocation);
 	  }
@@ -23193,12 +23284,114 @@ function (require, exports, module) {
 	  return new Measurement(value).display();
 	}
 	
+	let which;
+	let snapLoc;
+	let snapLocScope = {
+	  partner: () => snapLoc && (snapLoc.pairedWith() || snapLoc.courting()),
+	  snapPartner: () => snapLocScope.partner() instanceof SnapLocation2d,
+	  selected: () => snapLocScope.partner() && (which === snapLocScope.name1() ? snapLoc :
+	    (which === snapLocScope.name2() ? snapLocScope.partner() : undefined)),
+	  targetObject: () => {const sl = snapLocScope.selected(); return (sl && sl.parent()) || snapLoc},
+	  name1: () => snapLoc && snapLoc.parent().parent().name(),
+	  name2: () => {
+	    const partner = snapLocScope.partner();
+	    return partner instanceof SnapLocation2d && partner.parent().parent().name();
+	  },
+	  angle: () => {
+	    if (!snapLoc) return hovering.parent().angle()
+	    const partner = snapLocScope.partner();
+	    if (!partner) return snapLoc.parent().angle();
+	    if (which === snapLocScope.name1()) return snapLoc.parent().angle();
+	    if (which === snapLocScope.name2()) return partner.parent().angle();
+	    return 0;
+	  }
+	}
+	
+	function updateSnapLocDisplay(elem) {
+	  const angleElem = du.find.closest('[name="angle"]', elem);
+	  angleElem.value = snapLocScope.angle();
+	}
+	
+	du.on.match('change', '[name="which"]', (elem) => {
+	  which = elem.value
+	  hovering = snapLocScope.targetObject();
+	  const angleElem = du.find.closest('[name="angle"]', elem);
+	  angleElem.previousElementSibling.innerText = which !== 'Both' ? 'Angle' : 'Rotate';
+	  updateSnapLocDisplay(elem);
+	  panZ.once();
+	});
+	
+	du.on.match('change', '[member="snap-loc"][name="fix"]', (elem) => {
+	  const angleElem = du.find.closest('[name="angle"]', elem);
+	  if (elem.checked) {
+	    const center = hovering.center().copy();
+	    snapLoc = hovering;
+	    hovering.pairWith(center);
+	    angleElem.previousElementSibling.innerText = 'Rotate';
+	  } else {
+	    hovering.disconnect();
+	    snapLoc = null;
+	    angleElem.previousElementSibling.innerText = 'Angle';
+	  }
+	  panZ.once();
+	});
+	
+	
+	du.on.match('enter', '[member="snap-loc"][name="angle"]', (elem) => {
+	  const radians = Math.toRadians(Number.parseFloat(elem.value || 0));
+	  let selected = snapLocScope.selected();
+	  if (selected || !snapLoc) {
+	    selected ||= hovering;
+	    selected.disconnect();
+	    selected.setRadians(radians);
+	    hovering = selected;
+	    snapLoc = null;
+	    du.find.closest('.which-radio-cnt', elem).hidden = true;
+	    du.find.closest('.fix-cnt', elem).hidden = false;
+	  } else snapLoc.rotateAround(radians);
+	  panZ.once();
+	});
+	
+	du.on.match('enter', '[member="snap-loc"][name="x"],[member="snap-loc"][name="y"]', (elem) => {
+	  const value = new Measurement(elem.value || 0, true).decimal();
+	  const coord = elem.getAttribute('name');
+	  let selected = snapLocScope.selected();
+	  if (selected || !snapLoc) {
+	    selected ||= hovering;
+	    selected.disconnect();
+	    const center = selected.center();
+	    center[coord](value);
+	    selected.move(center);
+	    hovering = selected;
+	    snapLoc = null;
+	    du.find.closest('.which-radio-cnt', elem).hidden = true;
+	    du.find.closest('.fix-cnt', elem).hidden = false;
+	  } else {
+	    const center = snapLoc.center();
+	    center[coord](value);
+	    snapLoc.move(center);
+	  }
+	  panZ.once();
+	});
+	
+	function getTemplateScope(cxtrName) {
+	  const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
+	  switch (cxtrName) {
+	    case 'SnapLocation2d':
+	      hovering.pairWith();
+	      snapLoc = hovering.pairedWith() ? hovering : null;
+	      which = null;
+	      Object.merge(scope, snapLocScope);
+	      break;
+	  }
+	  return scope;
+	}
+	
 	function openPopup(event, stdEvent) {
 	  if (hovering) {
-	    if (hovering instanceof Snap2d) hovering.pairWithLast();
 	    popupOpen = true;
 	    const msg = `${hovering.constructor.name}: ${hoverId()}`;
-	    const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
+	    const scope = getTemplateScope(hovering.constructor.name);
 	    const html = getTemplate(hovering).render(scope);
 	    popUp.open(html, {x: event.screenX, y: event.screenY});
 	  }
@@ -23238,7 +23431,7 @@ function (require, exports, module) {
 	function  drag(event)  {
 	  const dragging = !popupOpen && clickHolding && hovering;
 	  if (dragging)
-	    hovering.move && hovering.move({x: event.imageX, y: event.imageY}, event);
+	    hovering.move && hovering.move(new Vertex2d({x: event.imageX, y: event.imageY}), event);
 	  return dragging;
 	}
 	
@@ -23466,7 +23659,7 @@ function (require, exports, module) {
 	  theta = wall.radians();
 	  ctx.beginPath();
 	  ctx.moveTo(startpoint.x, startpoint.y);
-	  ctx.lineWidth = 10;
+	  ctx.lineWidth = 4;
 	  ctx.strokeStyle = hoverId() === wall.toString() ? 'green' : 'black';
 	  const endpoint = wall.endVertex().point();
 	  ctx.lineTo(endpoint.x, endpoint.y);
@@ -23491,23 +23684,31 @@ function (require, exports, module) {
 	}
 	
 	function drawVertex(vertex) {
-	  const fillColor = hoverId() === vertex.toString() ? 'green' : 'white';
+	  const hovering = hoverId() === vertex.toString();
+	  const fillColor = hovering ? 'green' : 'white';
 	  const p = vertex.point();
-	  const radius = 10;
+	  const radius = hovering ? 6 : 4;
 	  const circle = new Circle2d(radius, p);
 	  draw.circle(circle, 'black', fillColor);
 	}
 	
 	function drawObjects() {
+	  let target;
 	  layout.objects().forEach((obj) => {
 	    const color = hoverId() === obj.topview().toString() ? 'green' : 'black';
 	    draw(obj.topview(), color, 3);
 	    obj.topview().snapLocations().forEach((snapLoc) => {
-	      const snapColor = snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined);
-	      if (snapLoc.courting() || snapLoc.pairedWith() || hoverId() === snapLoc.toString())
-	        draw(snapLoc, snapColor, 3);
+	      const beingHovered = hoverId() === snapLoc.toString();
+	      const identfied = Snap2d.identfied(snapLoc);
+	      const snapColor = identfied ? 'red' : (beingHovered ? 'green' :
+	            (snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined)));
+	      const hasPartner = snapLoc.courting() || snapLoc.pairedWith();
+	      const radius = identfied ? 6 : (beingHovered || hasPartner ? 4 : 1.5);
+	      if (!beingHovered) draw(snapLoc, snapColor, radius);
+	      else target = {radius, color: snapColor};
 	    });
 	  });
+	  if (target) draw(hovering, target.color, target.radius);
 	}
 	
 	function illustrate(canvas) {
@@ -25861,12 +26062,13 @@ function (require, exports, module) {
 const PropertyConfig = require('../config/property/config');
 	const Lookup = require('../../../../public/js/utils/object/lookup.js');
 	
+	let groupIndex = -2;
 	class Group extends Lookup {
 	  constructor(room, name, id) {
 	    super(id);
 	    room ||= Group.defaultRoom;
 	    const initialVals = {
-	      name: name || 'Group',
+	      name: name || new String(groupIndex++),
 	    }
 	    Object.getSet(this, initialVals);
 	    this.propertyConfig = new PropertyConfig();
@@ -26479,12 +26681,12 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	  gap ||= 10;
 	  const frontView = Polygon3D.viewFromVector(polygons, normals.front);
 	  const rightView = Polygon3D.viewFromVector(polygons, normals.right);
-	  const topView = Polygon3D.viewFromVector(polygons, normals.top);
+	  const topview = Polygon3D.viewFromVector(polygons, normals.top);
 	
 	  const axis = {};
 	  axis.front = Polygon3D.mostInformation(frontView);
 	  axis.right = Polygon3D.mostInformation(rightView);
-	  axis.top = Polygon3D.mostInformation(topView);
+	  axis.top = Polygon3D.mostInformation(topview);
 	
 	  if (axis.front.indexOf('y') === 0) axis.front.reverse();
 	  if (axis.top.indexOf(axis.right[1]) !== -1) axis.right.reverse();
@@ -26492,7 +26694,7 @@ const Polygon2D = require('../../two-d/objects/polygon.js');
 	
 	  const front2D = frontView.map(to2D(axis.front));
 	  const right2D = rightView.map(to2D(axis.right));
-	  const top2D = topView.map(to2D(axis.top));
+	  const top2D = topview.map(to2D(axis.top));
 	
 	  Polygon2D.centerOn({x:0,y:0}, front2D);
 	
@@ -27139,10 +27341,12 @@ const Vertex2d = require('vertex');
 	const SnapLocation2d = require('snap-location');
 	const HoverMap2d = require('../hover-map');
 	const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+	const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 	const withinTol = Tolerance.within(.1);
 	
-	class Snap2d {
+	class Snap2d extends Lookup {
 	  constructor(parent, object, tolerance) {
+	    super();
 	    name = 'booyacka';
 	    Object.getSet(this, {object, tolerance}, 'layoutId');
 	    if (parent === undefined) return;
@@ -27156,7 +27360,7 @@ const Vertex2d = require('vertex');
 	    this.dr = () => 24 * 2.54;
 	    this.dol = () => 12;
 	    this.dor = () => 12;
-	    this.toString = () => `SNAP (${tolerance}):${object}`
+	    this.toString = () => `SNAP ${this.id()}(${tolerance}):${object}`
 	    this.position = {};
 	    this.id = () => id;
 	    this.parent = () => parent;
@@ -27204,17 +27408,24 @@ const Vertex2d = require('vertex');
 	    }
 	
 	    let radians = 0;
-	    this.radians = (newValue) => {
+	    this.radians = (newValue, moveId) => {
 	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        const constraint = this.constraint();
+	        if (constraint === 'fixed') return;
+	        const snapAnchor = constraint.snapLoc;
+	        const originalPosition = snapAnchor && snapAnchor.center();
 	        const radianDifference = newValue - radians;
 	        this.object().rotate(radianDifference);
 	        notify(radians, newValue);
 	        radians = Math.mod(newValue, 2*Math.PI);
+	        if (snapAnchor) this.object().centerOn(snapAnchor.at({center: originalPosition}));
 	      }
 	      return radians;
 	    };
-	    this.rotate = (rads) => {
-	      this.radians(rads + radians);
+	    this.rotate = (rads, moveId) => {
+	      if (rads) {
+	        this.radians(rads + radians, moveId);
+	      }
 	    }
 	
 	    let height = 60.96;
@@ -27251,6 +27462,83 @@ const Vertex2d = require('vertex');
 	      }
 	    }
 	
+	    this.forEachConnectedObject = (func, objMap) => {
+	      objMap = objMap || {};
+	      objMap[this.id()] = this;
+	      const locs = this.snapLocations.paired();
+	      for (let index = 0; index < locs.length; index += 1) {
+	        const loc = locs[index];
+	        const connSnap = loc.pairedWith();
+	        if (connSnap instanceof SnapLocation2d) {
+	          const connObj = connSnap.parent();
+	          if (connObj && objMap[connOb.id()] === undefined) {
+	            objMap[connObj.id()] = connObj;
+	            connSnap.parent().forEachConnectedObject(undefined, objMap);
+	          }
+	        }
+	      }
+	      if ((typeof func) === 'function') {
+	        const objs = Object.values(objMap);
+	        for (let index = 0; index < objs.length; index += 1) {
+	          func(objs[index]);
+	        }
+	      } else return objMap;
+	    };
+	
+	    this.forEachConnectedSnap = (func, pairedMap) => {
+	      pairedMap ||= {};
+	      const locs = this.snapLocations.paired();
+	      for (let index = 0; index < locs.length; index += 1) {
+	        const loc = locs[index];
+	        pairedMap[loc.toString()]  = loc;
+	        const connSnap = loc.pairedWith();
+	        if (connSnap instanceof SnapLocation2d) {
+	          const snapStr = connSnap.toString();
+	          if (pairedMap[snapStr] === undefined) {
+	            pairedMap[snapStr] = connSnap;
+	            connSnap.parent().forEachConnectedSnap(undefined, pairedMap);
+	          }
+	        }
+	      }
+	
+	      if ((typeof func) === 'function') {
+	        const snaps = Object.values(pairedMap);
+	        for (let index = 0; index < snaps.length; index += 1) {
+	          func(snaps[index]);
+	        }
+	      } else return pairedMap;
+	    }
+	
+	    this.constraints = () => {
+	      let constraints = [];
+	      this.forEachConnectedSnap((snapLoc) => {
+	        const possible = snapLoc.pairedWith();
+	        if (!(possible instanceof SnapLocation2d)) constraints.push(snapLoc);
+	      });
+	      return constraints;
+	    };
+	
+	    this.constraint = () => {
+	      let constraints = this.constraints();
+	      if (constraints.length === 0) return 'free';
+	      const wallMap = {};
+	      let anchor;
+	      for (let index = 0; index < constraints.length; index++) {
+	        const snapLoc = constraints[index];
+	        const constraint = snapLoc.pairedWith();
+	        if (constraint instanceof Line2d && !wallMap[constraint.toString()]) {
+	          wallMap[constraint.toString()] = {wall: constraint, snapLoc};
+	          if (Object.keys(wallMap).length === 2 || anchor) return 'fixed';
+	        } else if (constraint instanceof Vertex2d) {
+	          if (anchor || Object.keys(wallMap).length === 1) return 'fixed';
+	          anchor = {vertex: constraint, snapLoc};
+	        }
+	      }
+	      if (anchor) return anchor;
+	      const walls = Object.values(wallMap);
+	      return walls.length === 1 ? walls[0] : 'free';
+	    }
+	
 	    const snapLocations = [];
 	    this.addLocation = (snapLoc) => {
 	      if (snapLoc instanceof SnapLocation2d && this.position[snapLoc.location()] === undefined) {
@@ -27285,6 +27573,7 @@ const Vertex2d = require('vertex');
 	    this.snapLocations.leftCenter = () => getSnapLocations((loc) => loc.location().match(leftCenterReg));
 	    this.snapLocations.backCenter = () => getSnapLocations((loc) => loc.location().match(backCenterReg));
 	    this.snapLocations.center = () => getSnapLocations((loc) => loc.location().match(centerReg));
+	    this.snapLocations.byLocation = (name) => getSnapLocations((loc) => loc.location() === name);
 	    this.snapLocations.at = (vertex) => {
 	      for (let index = 0; index < snapLocations.length; index++)
 	        if (snapLocations[index].center().equal(vertex)) return snapLocations[index];
@@ -27292,9 +27581,13 @@ const Vertex2d = require('vertex');
 	    }
 	    this.snapLocations.resetCourting = () => {
 	      for (let index = 0; index < snapLocations.length; index++) {
-	        snapLocations[index].courting(null);
+	        if (snapLocations[index] instanceof SnapLocation2d)
+	          snapLocations[index].courting(null);
 	      }
 	    }
+	
+	    this.connected = () => this.snapLocations.paired().length > 0;
+	
 	    // this.snapLocations.rotate = backCenter.rotate;
 	    function resetVertices() {
 	      for (let index = 0; index < snapLocations.length; index += 1) {
@@ -27556,31 +27849,6 @@ const Vertex2d = require('vertex');
 	      }
 	    }
 	
-	    let lastPotentalPair;
-	    this.setLastPotentialPair = (lpp) => lastPotentalPair = lpp;
-	    function checkPotentialPair() {
-	      if (!lastPotentalPair) return;
-	      if (!(lastPotentalPair[1] instanceof SnapLocation2d)) return true;
-	      const snap1 = lastPotentalPair[0];
-	      const snap2 = lastPotentalPair[1];
-	      snap1.eval();
-	      snap2.eval();
-	      if (!snap1.vertex().equal(snap2.vertex())) lastPotentalPair = null;
-	      return true;
-	    }
-	
-	    this.potentalSnapLocation = () => checkPotentialPair() && lastPotentalPair && lastPotentalPair[0];
-	    this.pairWithLast = () => {
-	      if (lastPotentalPair) {
-	        if ((typeof lastPotentalPair[0].pairWith) === 'function') {
-	          lastPotentalPair && lastPotentalPair[0].pairWith(lastPotentalPair[1])
-	        } else {
-	          console.log('nope');
-	        }
-	      }
-	      lastPotentalPair = null;
-	    };
-	
 	    let lastValidMove;
 	    this.makeMove = (position, force) => {
 	      this.snapLocations.resetCourting();
@@ -27599,22 +27867,70 @@ const Vertex2d = require('vertex');
 	      }
 	      instance.update();
 	    }
+	
+	    function clearIdentifiedConstraints() {
+	      Snap2d.identifiedConstraints = null;
+	    }
+	    this.clearIdentifiedConstraints = clearIdentifiedConstraints;
+	
 	    this.move = (center) => {
-	      checkPotentialPair();
+	      clearIdentifiedConstraints.subtle(2000);
+	      let constraint = this.constraint();
+	      if (constraint.wall) {
+	        const snapCenter = constraint.wall.closestPointOnLine(center, true) ||
+	          constraint.wall.closestVertex(center);
+	        const vertCenter = constraint.snapLoc.at({center: snapCenter});
+	        return this.moveConnected(vertCenter);
+	      } else if (constraint.vertex) {
+	        console.log('vertex constraint');
+	        return;
+	      } else if (constraint === 'fixed') {
+	        Snap2d.identifiedConstraints = this.constraints();
+	        return;
+	      }
 	      const pairedSnapLocs = this.snapLocations.paired();
 	      const centerWithin = layout.within(center);
 	      let closest = {};
 	      const wallSnapLocation = findWallSnapLocation(center);
 	      if (wallSnapLocation !== undefined) {
-	        const move = this.makeMove(wallSnapLocation);
-	        const wallSnapLoc = this.snapLocations.wallPairable()[0];
-	        lastPotentalPair = [wallSnapLoc.pairWith, wallSnapLocation.wall];
-	        return move;
+	        this.makeMove(wallSnapLocation);
+	        wallSnapLocation.pairWith.courting(wallSnapLocation.wall);
+	        this.moveConnected(null, wallSnapLocation.theta);
 	      } else if (centerWithin) {
-	        const move = this.makeMove({center});
-	        findObjectSnapLocation(center);
-	        return move;
+	        if (this.connected()) {
+	          this.moveConnected(center);
+	        } else {
+	          this.makeMove({center});
+	          findObjectSnapLocation(center);
+	        }
 	      }
+	    }
+	
+	    function moveConnectedObjects(moveId, theta) {
+	      const pairedLocs = instance.snapLocations.paired();
+	      for (let index = 0; index < pairedLocs.length; index += 1) {
+	        const loc = pairedLocs[index];
+	        const paired = loc.pairedWith();
+	        if (paired instanceof SnapLocation2d) {
+	          const tarVertexLoc = paired.at({center: loc.center()});
+	          paired.parent().moveConnected(tarVertexLoc, theta, moveId);
+	        }
+	      }
+	    }
+	
+	    let moveCounter = 0;
+	    let lastMove;
+	    this.moveConnected = (center, theta, moveId) => {
+	      const alreadyMoved = moveId === false;
+	      moveId ||= moveCounter++;
+	      if (moveId === lastMove) return;
+	      lastMove = moveId;
+	      if (!alreadyMoved) {
+	        if (theta) instance.rotate(theta, moveId);
+	        if (center) instance.makeMove({center});
+	      }
+	      instance.update();
+	      moveConnectedObjects(moveId, theta);
 	    }
 	
 	    const objData = (funcName) => {
@@ -27643,6 +27959,8 @@ const Vertex2d = require('vertex');
 	  }
 	}
 	
+	Snap2d.identfied = (snapLoc) => Snap2d.identifiedConstraints &&
+	        Snap2d.identifiedConstraints.indexOf(snapLoc) !== -1;
 	
 	Snap2d.fromJson = (json) => {
 	  const layout = Layout2d.get(json.layoutId);
@@ -27705,23 +28023,26 @@ const Vertex2d = require('vertex');
 	      if ((typeof lf) === 'function') centerFunction = lf;
 	      return lf;
 	    }
-	    this.circle = () => new Circle2d(5, centerFunction());
+	    this.circle = (radius) => new Circle2d(radius || 2, centerFunction());
 	    this.eval = () => this.parent().position[location]();
 	    this.parent = () => parent;
 	    this.parentId = () => parent.id();
 	    this.pairedWithId = () => pairedWith && pairedWith.id();
 	    this.pairedWith = () => pairedWith;
 	    this.disconnect = () => {
-	      if (pairedWith === null) return;
+	      if (pairedWith === null) return false;
 	      const wasPaired = pairedWith;
 	      pairedWith = null;
 	      if (wasPaired instanceof SnapLocation2d) wasPaired.disconnect();
+	      instance.parent().clearIdentifiedConstraints();
+	      return true;
 	    }
 	    this.pairWith = (otherSnapLoc) => {
 	      otherSnapLoc ||= courting;
 	      const alreadyPaired = otherSnapLoc === pairedWith;
-	      if (!alreadyPaired) {
+	      if (!alreadyPaired && otherSnapLoc) {
 	        pairedWith = otherSnapLoc;
+	        courting = null;
 	        if (otherSnapLoc instanceof SnapLocation2d) otherSnapLoc.pairWith(this);
 	      }
 	    }
@@ -27735,74 +28056,20 @@ const Vertex2d = require('vertex');
 	    this.courting = (otherSnapLoc) => {
 	      if (courting === otherSnapLoc) return courting;
 	      if (!pairedWith) {
-	        if (otherSnapLoc instanceof SnapLocation2d) {
+	        if (otherSnapLoc) {
 	          courting = otherSnapLoc;
-	          otherSnapLoc.courting(this);
+	          if (otherSnapLoc instanceof SnapLocation2d)
+	            otherSnapLoc.courting(this);
 	        } else if (otherSnapLoc === null && courting) {
 	          const tempLocation = courting;
 	          courting = null;
-	          tempLocation.courting(null);
+	          if (tempLocation instanceof SnapLocation2d)
+	            tempLocation.courting(null);
 	        }
-	      } else {
+	      } else if (otherSnapLoc) {
 	        throw new Error('You cannot court a location when alreadyPaired');
 	      }
 	      return courting;
-	    }
-	
-	    this.forEachObject = (func, objMap) => {
-	      objMap = objMap || {};
-	      objMap[this.parent().toString()] = this.parent();
-	      const locs = this.parent().snapLocations.paired();
-	      for (let index = 0; index < locs.length; index += 1) {
-	        const loc = locs[index];
-	        const connSnap = loc.pairedWith();
-	        if (connSnap instanceof SnapLocation2d) {
-	          const connObj = connSnap.parent();
-	          if (connObj && objMap[connObj.id()] === undefined) {
-	            objMap[connObj.id()] = connObj;
-	            connSnap.forEachObject(undefined, objMap);
-	          }
-	        }
-	      }
-	      if ((typeof func) === 'function') {
-	        const objs = Object.values(objMap);
-	        for (let index = 0; index < objs.length; index += 1) {
-	          func(objs[index]);
-	        }
-	      } else return objMap;
-	    };
-	
-	    this.forEachConnectedSnap = (func, pairedMap) => {
-	      pairedMap ||= {};
-	      const locs = this.parent().snapLocations.paired();
-	      for (let index = 0; index < locs.length; index += 1) {
-	        const loc = locs[index];
-	        pairedMap[loc.toString()]  = loc;
-	        const connSnap = loc.pairedWith();
-	        if (connSnap instanceof SnapLocation2d) {
-	          const snapStr = connSnap.toString();
-	          if (pairedMap[snapStr] === undefined) {
-	            pairedMap[snapStr] = connSnap;
-	            connSnap.forEachConnectedSnap(undefined, pairedMap);
-	          }
-	        }
-	      }
-	
-	      if ((typeof func) === 'function') {
-	        const snaps = Object.values(pairedMap);
-	        for (let index = 0; index < snaps.length; index += 1) {
-	          func(snaps[index]);
-	        }
-	      } else return pairedMap;
-	    }
-	
-	    this.getNonSnap = () => {
-	      let nonSnap = undefined;
-	      this.forEachConnectedSnap((snap) => {
-	        const pw = snap.pairedWith();
-	        if (pw !== undefined && !(pw instanceof SnapLocation2d)) nonSnap = pw;
-	      });
-	      return nonSnap;
 	    }
 	
 	    this.neighbors = (...indicies) => {
@@ -27811,16 +28078,6 @@ const Vertex2d = require('vertex');
 	    }
 	
 	    this.neighbor = (index) => this.neighbors(index)[0];
-	
-	    this.isConnected = (obj) => {
-	      let connected = false;
-	      this.forEachObject((connObj) => connected = connected || obj.id() === connObj.id());
-	      return connected;
-	    }
-	
-	    this.rotate = (theta) => {
-	      this.forEachObject((obj) => obj.radians((obj.radians() + theta) % (2*Math.PI)));
-	    }
 	
 	    this.slope = (offsetIndex) => {
 	      const neighbor = parent.object().neighbors(this.center(), offsetIndex)[0];
@@ -27836,24 +28093,6 @@ const Vertex2d = require('vertex');
 	    this.forwardRadians = () => Math.atan(this.slope(1));
 	    this.reverseRadians = () => Math.atan(this.slope(-1));
 	
-	
-	    function moveConnectedObjects(moveId) {
-	      const pairedLocs = parent.snapLocations.paired();
-	      for (let index = 0; index < pairedLocs.length; index += 1) {
-	        const loc = pairedLocs[index];
-	        const paired = loc.pairedWith();
-	        const tarVertexLoc = instance.parent().position[loc.location()]().center();
-	        if (paired instanceof SnapLocation2d) paired.move(tarVertexLoc, moveId);
-	      }
-	    }
-	
-	    function makeMove(thisNewCenterLoc, moveId, theta) {
-	      if (theta) instance.parent().object().rotate(theta);
-	      instance.parent().radians(thisNewCenterLoc);
-	      instance.parent().update();
-	      lastMove = moveId;
-	      moveConnectedObjects(moveId);
-	    }
 	
 	    this.snapToLocation = (otherSnapLoc) => {
 	      const center = otherSnapLoc.center();
@@ -27876,7 +28115,7 @@ const Vertex2d = require('vertex');
 	      }
 	    }
 	
-	    function snapToObject(vertex, moveId) {
+	    function snapToObject(vertex) {
 	      const otherSnapLoc = parent.otherHoveringSnap(vertex);
 	      if (!otherSnapLoc) return false;
 	      instance.courting(otherSnapLoc);
@@ -27884,18 +28123,31 @@ const Vertex2d = require('vertex');
 	      return true;
 	    }
 	
-	    let lastMove = 0;
 	    this.move = (vertex, moveId) => {
+	      if (parent.connected()) return parent.moveConnected(this.at({center: vertex}));
 	      const shouldNotSnap = (typeof moveId) === 'number' || moveId === null;
-	      moveId = (typeof moveId) !== 'number' ? lastMove + 1 : moveId;
-	      if (lastMove === moveId) return;
 	      vertex = new Vertex2d(vertex);
 	      if (shouldNotSnap || !snapToObject(vertex)) {
 	        const thisNewCenterLoc = this.parent().position[location]({center: vertex});
 	        this.parent().makeMove({center: thisNewCenterLoc});
-	        // makeMove(thisNewCenterLoc, moveId);
 	      }
 	    }
+	
+	    this.rotateAround = (theta) => {
+	      const startPosition = {center: this.center()};
+	      this.parent().moveConnected(null, theta);
+	      const newCenter = this.at(startPosition);
+	      this.parent().moveConnected(newCenter);
+	    }
+	
+	    this.setRadians = (radians) => {
+	      const startPosition = {center: this.center()};
+	      const theta = radians - parent.radians();
+	      this.parent().moveConnected(null, theta);
+	      const newCenter = this.at(startPosition);
+	      this.parent().moveConnected(newCenter);
+	    }
+	
 	    this.notPaired = () => pairedWith === null;
 	
 	    this.hovering = new HoverMap2d(() => this.center(), 12).hovering;
@@ -28017,7 +28269,7 @@ function (require, exports, module) {
 	
 	class Polygon2d {
 	  constructor(initialVertices) {
-	    const lines = [];
+	    let lines = [];
 	    const instance = this;
 	    let faceIndecies = [2];
 	    let map
@@ -28091,24 +28343,29 @@ function (require, exports, module) {
 	      return addNieghborsOfVertexWithinLine(vertex, indicies);
 	    }
 	
+	    function positionRelitiveToVertex(vertex, moveTo, externalVertex) {
+	      const center = instance.center();
+	      if (moveTo.theta) {
+	        if (externalVertex) vertex.rotate(moveTo.theta, center);
+	        const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
+	        const rotatedCenter = rotatedPoly.center();
+	        const offset = rotatedCenter.differance(vertex);
+	        return moveTo.center.translate(offset.x(), offset.y(), true);
+	      }
+	      const offset = center.differance(vertex);
+	      return moveTo.center.translate(offset.x(), offset.y(), true);
+	    }
+	
 	    function vertexFunction(midpoint) {
 	      const getVertex = midpoint ? (line) => line.midpoint() : (line) => line.startVertex().copy();
 	      return (index, moveTo) => {
 	        const vertex = getVertex(lines[Math.mod(index, lines.length)]);
-	        if (moveTo === undefined) return vertex.copy();
-	        // const offset = vertex.differance(center);
-	        if (moveTo.theta) {
-	          const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
-	          const rotatedCenter = rotatedPoly.center();
-	          const offset = rotatedCenter.differance(vertex);
-	          return moveTo.center.translate(offset.x(), offset.y(), true);
-	        }
-	        const center = instance.center();
-	        const offset = center.differance(vertex);
-	        return moveTo.center.translate(offset.x(), offset.y(), true);
+	        if (moveTo === undefined) return vertex;
+	        return positionRelitiveToVertex(vertex, moveTo);
 	      }
 	    }
 	
+	    this.relativeToExternalVertex = (vertex, moveTo) => positionRelitiveToVertex(vertex, moveTo, true);
 	    this.vertex = vertexFunction();
 	    this.midpoint = vertexFunction(true);
 	    this.point = (index, moveTo) => {
@@ -28126,7 +28383,10 @@ function (require, exports, module) {
 	
 	    this.faceIndecies = (indicies) => {
 	      if (indicies) {
-	        faceIndecies = indicies;
+	        if (indicies.length > 1) throw new Error('vertex sorting is not sufficient for multple faces');
+	        const i = indicies[0];
+	        lines = lines.slice(i).concat(lines.slice(0, i));
+	        faceIndecies = [0];
 	      }
 	      return faceIndecies;
 	    }
@@ -28232,10 +28492,12 @@ function (require, exports, module) {
 	    }
 	
 	    this.centerOn = (newCenter) => {
-	      newCenter = new Vertex2d(newCenter);
-	      const center = this.center();
-	      const diff = newCenter.copy().differance(center);
-	      this.translate(diff.x(), diff.y());
+	      if (newCenter) {
+	        newCenter = new Vertex2d(newCenter);
+	        const center = this.center();
+	        const diff = newCenter.copy().differance(center);
+	        this.translate(diff.x(), diff.y());
+	      }
 	    }
 	
 	    this.addVertices = (list) => {
@@ -28943,6 +29205,17 @@ const Vertex2d = require('./vertex');
 	      const closestPoint = new Vertex2d({x, y});
 	      if (!segment || this.withinSegmentBounds(closestPoint)) return closestPoint;
 	      return false;
+	    }
+	
+	    this.closestVertex = (vertex) => {
+	      const sv = this.startVertex()
+	      const ev = this.endVertex()
+	      return sv.distance(vertex) < ev.distance(vertex) ? sv : ev;
+	    }
+	    this.furthestVertex = (vertex) => {
+	      const sv = this.startVertex()
+	      const ev = this.endVertex()
+	      return sv.distance(vertex) > ev.distance(vertex) ? sv : ev;
 	    }
 	
 	    this.inverseX = (y) => this.slope()*y + this.yIntercept();
@@ -30169,9 +30442,9 @@ function (require, exports, module) {
 	        startVertex.nextLine(nextLine);
 	    }
 	
-	    const hoveringStart = new HoverMap2d(() => this.startVertex(), 12).hovering;
-	    const hoveringEnd = new HoverMap2d(() => this.endVertex(), 12).hovering;
-	    const hoveringWall = new HoverMap2d(() => this, 5).hovering;
+	    const hoveringStart = new HoverMap2d(() => this.startVertex(), 24).hovering;
+	    const hoveringEnd = new HoverMap2d(() => this.endVertex(), 24).hovering;
+	    const hoveringWall = new HoverMap2d(() => this, 10).hovering;
 	    this.hovering = (v) => {
 	      if (hoveringStart(v)) return this.startVertex();
 	      if (hoveringEnd(v)) return this.endVertex();
@@ -30672,15 +30945,19 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 	      }
 	    }
 	
-	    this.at = (vertex) => {
+	    this.atWall = (vertex) => {
 	      for (let index = 0; index < walls.length; index++) {
 	        const hovering = walls[index].hovering(vertex);
 	        if (hovering) return hovering;
 	      }
+	    }
+	
+	    this.at = (vertex) => {
 	      for (let index = 0; index < objects.length; index++) {
 	        const hovering = objects[index].topview().hovering(vertex);
 	        if (hovering) return hovering;
 	      }
+	      return this.atWall(vertex);
 	    }
 	  }
 	}
@@ -30718,6 +30995,9 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 	  console.log('isConnected:', layout.connected());
 	  return layout;
 	}
+	
+	const layoutStateChangeEvent = new CustomEvent('layoutStateChange');
+	Layout2D.onStateChange = layoutStateChangeEvent.on;
 	
 	new Layout2D();
 	module.exports = Layout2D;
@@ -30800,8 +31080,12 @@ const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 	    this.name = (val) => {
 	      if (val) name = val;
 	      if (this.payload() === undefined) return name;
-	      if ((typeof this.payload().name) === 'function') return this.payload().name(val);
-	      return this.payload.name;
+	      let name = this.payload.name;
+	      if ((typeof this.payload().name) === 'function')
+	        name = this.payload().name(val);
+	      if (!name && (typeof this.payload().index) === 'function')
+	        name = this.payload().index();
+	      return name;
 	    }
 	
 	    let topview;
@@ -32279,14 +32563,14 @@ function (require, exports, module) {
 	    }
 	
 	    function initiateCanvasViews() {
-	      let drawFront, drawTop, lastModel, frontView, topViewSnap, panz, panzT;
+	      let drawFront, drawTop, lastModel, frontView, topviewSnap, panz, panzT;
 	      const renderFront = () => {
 	        if (drawFront === undefined) return;
 	        drawFront(frontView, null, 2);
 	      }
 	      const renderTop = () => {
 	        if (drawFront === undefined) return;
-	        drawTop(topViewSnap, null, 2);
+	        drawTop(topviewSnap, null, 2);
 	      }
 	      const templateBody = du.find('.template-body');
 	      const frontCanvas = du.find.down('.front-sketch', templateBody);
@@ -32306,8 +32590,8 @@ function (require, exports, module) {
 	          frontView = model.frontView();
 	          const center = Vertex2d.center(Line2d.vertices(frontView));
 	          panz.centerOn(center.x(), center.y());
-	          topViewSnap = model.topViewSnap();
-	          const centerT = Vertex2d.center(Line2d.vertices(topViewSnap));
+	          topviewSnap = model.topviewSnap();
+	          const centerT = Vertex2d.center(Line2d.vertices(topviewSnap));
 	          panzT.centerOn(centerT.x(), centerT.y());
 	          renderTop();
 	          renderFront();
@@ -33586,7 +33870,7 @@ function (require, exports, module) {
 	    }
 	
 	    polygon.getTextInfo = () => ({
-	      text: instance.parent().name() || 'banjo',
+	      text: instance.parent().name(),
 	      center: textCenter(),
 	      radians: longestFaceLine ? longestFaceLine.radians() : 0,
 	      x: 0,
@@ -33753,6 +34037,11 @@ function (require, exports, module) {
 	
 	        return {position, depth, center, rotation};
 	      }
+	    }
+	
+	    this.index = () => {
+	      const group = this.group();
+	      return `${group.name()}-${group.objects.equalIndexOf(this)}`;
 	    }
 	
 	    this.borders = (borderObj) => {

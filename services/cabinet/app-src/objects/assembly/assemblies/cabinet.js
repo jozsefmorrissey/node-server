@@ -147,6 +147,11 @@ class Cabinet extends Assembly {
       }
     }
 
+    this.index = () => {
+      const group = this.group();
+      return `${group.name()}-${group.objects.equalIndexOf(this)}`;
+    }
+
     this.borders = (borderObj) => {
       if (borderObj.inner) return bordersByEndPoints(borderObj);
       return bordersByIds(borderObj);

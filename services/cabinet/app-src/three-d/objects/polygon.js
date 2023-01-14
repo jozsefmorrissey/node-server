@@ -458,12 +458,12 @@ Polygon3D.toThreeView = (polygons, normals, gap) => {
   gap ||= 10;
   const frontView = Polygon3D.viewFromVector(polygons, normals.front);
   const rightView = Polygon3D.viewFromVector(polygons, normals.right);
-  const topView = Polygon3D.viewFromVector(polygons, normals.top);
+  const topview = Polygon3D.viewFromVector(polygons, normals.top);
 
   const axis = {};
   axis.front = Polygon3D.mostInformation(frontView);
   axis.right = Polygon3D.mostInformation(rightView);
-  axis.top = Polygon3D.mostInformation(topView);
+  axis.top = Polygon3D.mostInformation(topview);
 
   if (axis.front.indexOf('y') === 0) axis.front.reverse();
   if (axis.top.indexOf(axis.right[1]) !== -1) axis.right.reverse();
@@ -471,7 +471,7 @@ Polygon3D.toThreeView = (polygons, normals, gap) => {
 
   const front2D = frontView.map(to2D(axis.front));
   const right2D = rightView.map(to2D(axis.right));
-  const top2D = topView.map(to2D(axis.top));
+  const top2D = topview.map(to2D(axis.top));
 
   Polygon2D.centerOn({x:0,y:0}, front2D);
 

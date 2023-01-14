@@ -29,8 +29,12 @@ class Object2d extends Lookup {
     this.name = (val) => {
       if (val) name = val;
       if (this.payload() === undefined) return name;
-      if ((typeof this.payload().name) === 'function') return this.payload().name(val);
-      return this.payload.name;
+      let name = this.payload.name;
+      if ((typeof this.payload().name) === 'function')
+        name = this.payload().name(val);
+      if (!name && (typeof this.payload().index) === 'function')
+        name = this.payload().index();
+      return name;
     }
 
     let topview;

@@ -242,7 +242,7 @@ Function.safeStdLibAddition(Object, 'equals', objEq, true);
 
 
 Function.safeStdLibAddition(Math, 'toDegrees', function (rads) {
-  return Math.mod(rads * 180/Math.PI, 360);
+  return Math.round(1000 * Math.mod(rads * 180/Math.PI, 360)) / 1000;
 }, true);
 
 Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {

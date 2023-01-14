@@ -3,7 +3,7 @@ const Line2d = require('./line');
 
 class Polygon2d {
   constructor(initialVertices) {
-    const lines = [];
+    let lines = [];
     const instance = this;
     let faceIndecies = [2];
     let map
@@ -77,24 +77,29 @@ class Polygon2d {
       return addNieghborsOfVertexWithinLine(vertex, indicies);
     }
 
+    function positionRelitiveToVertex(vertex, moveTo, externalVertex) {
+      const center = instance.center();
+      if (moveTo.theta) {
+        if (externalVertex) vertex.rotate(moveTo.theta, center);
+        const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
+        const rotatedCenter = rotatedPoly.center();
+        const offset = rotatedCenter.differance(vertex);
+        return moveTo.center.translate(offset.x(), offset.y(), true);
+      }
+      const offset = center.differance(vertex);
+      return moveTo.center.translate(offset.x(), offset.y(), true);
+    }
+
     function vertexFunction(midpoint) {
       const getVertex = midpoint ? (line) => line.midpoint() : (line) => line.startVertex().copy();
       return (index, moveTo) => {
         const vertex = getVertex(lines[Math.mod(index, lines.length)]);
-        if (moveTo === undefined) return vertex.copy();
-        // const offset = vertex.differance(center);
-        if (moveTo.theta) {
-          const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
-          const rotatedCenter = rotatedPoly.center();
-          const offset = rotatedCenter.differance(vertex);
-          return moveTo.center.translate(offset.x(), offset.y(), true);
-        }
-        const center = instance.center();
-        const offset = center.differance(vertex);
-        return moveTo.center.translate(offset.x(), offset.y(), true);
+        if (moveTo === undefined) return vertex;
+        return positionRelitiveToVertex(vertex, moveTo);
       }
     }
 
+    this.relativeToExternalVertex = (vertex, moveTo) => positionRelitiveToVertex(vertex, moveTo, true);
     this.vertex = vertexFunction();
     this.midpoint = vertexFunction(true);
     this.point = (index, moveTo) => {
@@ -112,7 +117,10 @@ class Polygon2d {
 
     this.faceIndecies = (indicies) => {
       if (indicies) {
-        faceIndecies = indicies;
+        if (indicies.length > 1) throw new Error('vertex sorting is not sufficient for multple faces');
+        const i = indicies[0];
+        lines = lines.slice(i).concat(lines.slice(0, i));
+        faceIndecies = [0];
       }
       return faceIndecies;
     }
@@ -218,10 +226,12 @@ class Polygon2d {
     }
 
     this.centerOn = (newCenter) => {
-      newCenter = new Vertex2d(newCenter);
-      const center = this.center();
-      const diff = newCenter.copy().differance(center);
-      this.translate(diff.x(), diff.y());
+      if (newCenter) {
+        newCenter = new Vertex2d(newCenter);
+        const center = this.center();
+        const diff = newCenter.copy().differance(center);
+        this.translate(diff.x(), diff.y());
+      }
     }
 
     this.addVertices = (list) => {
