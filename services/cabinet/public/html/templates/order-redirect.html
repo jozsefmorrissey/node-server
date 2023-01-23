@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>{{order.name()}}</title>
+    <data hidden>{{JSON.stringify(order.toJson())}}</data>
+    <script>
+      let stop = false;
+            let urlElem, countdownElem, buttonElem;
+            function postOrder() {
+              const xhr = new XMLHttpRequest();
+              const url = urlElem.value;
+              const body = 'heyoooo';
+              xhr.open('post', url, true);
+              xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+              xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+              xhr.setRequestHeader('Content-Type', 'application/json');
+              xhr.onreadystatechange = function () {
+                if (this.readyState != 4) return;
+                if (this.status == 200) {
+                  console.log('success');
+                } else {
+                  console.error('failure');
+                }
+              }
+              xhr.send(JSON.stringify(body));
+              return xhr;
+            }
+
+            window.addEventListener('click', () => {
+              stop = true;
+              urlElem.parentElement.hidden = false;
+              countdownElem.parentElement.hidden = true;
+            });
+
+            let count = 15;
+            const countdown = () => {
+              if (count === 0) return postOrder();
+              if (!stop) {
+                countdownElem.innerText = count--;
+                setTimeout(countdown, 1000);
+              }
+            }
+            window.onload = () => {
+              urlElem = document.getElementById('url-input');
+              countdownElem = document.getElementById('load-countdown');
+              buttonElem = document.getElementById('load-btn');
+              buttonElem.addEventListener('click', postOrder);
+              countdown();
+            }
+    </script>
+  </head>
+  <body>
+    <div>
+      <h3>
+        Loading '{{order.name()}}' using url: {{url}}
+      </h3>
+      <h3 id='load-countdown'></h3>
+      <h4> Click anywhare to stop/change url</h4>
+    </div>
+    <div hidden>
+      <input id='url-input' type="text" name="url" value="{{url}}">
+      <button id='load-btn'>Load</button>
+    </div>
+  </body>
+</html>

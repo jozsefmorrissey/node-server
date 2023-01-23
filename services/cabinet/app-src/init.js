@@ -11,7 +11,6 @@ const User = require('./displays/user.js');
 require('./objects/assembly/init-assem');
 require('./objects/joint/init');
 require('./two-d/objects/snap/init');
-const Order = require('./objects/order.js');
 const Assembly = require('./objects/assembly/assembly.js');
 const Properties = require('./config/properties.js');
 const PopUp = require('../../../public/js/utils/display/pop-up.js');
@@ -20,8 +19,10 @@ const PopUp = require('../../../public/js/utils/display/pop-up.js');
 const du = require('../../../public/js/utils/dom-utils.js');
 const EPNTS = require('../generated/EPNTS.js');
 const Displays = require('./services/display-svc.js');
+require('./objects/room');
 const TwoDLayout = require('./displays/two-d-layout.js');
 const ThreeDMainModel = require('./displays/three-d-main.js');
+require('./three-d/layout/init');
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
@@ -61,7 +62,7 @@ function init(body){
   if (body) Properties.load(body);
   let roomDisplay;
 
-  if (urlSuffix) {
+  if (urlSuffix && urlSuffix !== 'order') {
       require('./cost/init-costs.js');
       const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId);
       if (urlSuffix === 'cost') {
@@ -80,13 +81,11 @@ function init(body){
         setTimeout(TwoDLayout.init, 1000);
         setTimeout(ThreeDMainModel.init, 1000);
     }
-  } else {
+  } else if (urlSuffix === 'order') {
     const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
     const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
     const RoomDisplay = require('./displays/room');
-    let order = new Order();
-    du.find('body').setAttribute('order-id', order.id());
-    order.addRoom('carpet');
+    let order = require('./displays/single-order').order();
     roomDisplay = new RoomDisplay('#room-cnt', order);
     setTimeout(TwoDLayout.init, 1000);
     setTimeout(ThreeDMainModel.init, 1000);

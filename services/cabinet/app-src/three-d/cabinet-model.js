@@ -17,6 +17,8 @@ class CabinetModel {
     let cabinetCSG;
     const instance = this;
     let center, threeView, silhouette, complexModel;
+    cabinet.snap2d = {};
+    cabinet.view = {};
 
     this.cabinet = () => cabinet;
     this.add = (assembly, csg) => {
@@ -160,13 +162,15 @@ class CabinetModel {
         c.thickness() !== c.snapObject.thickness;
       if (shouldBuild)  {
         const topview = build();
-        if (c.snapObject === undefined) {
+        c.view.top =  topview;
+        if (!c.snap3d  || c.snap3d.snap2d.top === undefined) {
           const layout = c.group().room().layout();
           const layoutObject = layout.addObject(c.id(), c, c.partName(), topview);
-          c.snapObject = layoutObject;
+          c.snap3d = layoutObject;
         } else {
-          const polygon = c.snapObject.topview().object();
+          const polygon = c.snap3d.snap2d.top().object();
           topview.centerOn(polygon.center());
+          topview.radians(polygon.radians())
           const lines = polygon.lines();
           for (let index = 0; index < lines.length; index++) {
             const startVertex = lines[index].startVertex();
@@ -175,7 +179,7 @@ class CabinetModel {
           console.log('merging?');
         }
       }
-      return cabinet.snapObject.topview();
+      return c.snap3d.snap2d.top();
     }
 
     function addComplexModelAttrs(model) {

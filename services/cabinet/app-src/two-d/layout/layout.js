@@ -8,7 +8,7 @@ const Circle2d = require('../../two-d/objects/circle.js');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 const Wall2D = require('./wall');
 const Window2D = require('./window');
-const Object2d = require('./object');
+const Object3D = require('../../three-d/layout/object.js');
 const Door2D = require('./door');
 
 function withinTolerance(point, map) {
@@ -104,7 +104,7 @@ class Layout2D extends Lookup {
 
     const sortById = sortByAttr('id');
     this.toJson = () => {
-      const objs = this.objects();
+      const objs = this.objects().filter(o => o.shouldSave());
       const json = {walls: []};
       json.id = this.id();
       json.objects = Array.toJson(objs);
@@ -115,7 +115,7 @@ class Layout2D extends Lookup {
       json.objects.sort(sortById);
       const snapMap = {};
       objs.forEach((obj) => {
-        const snapLocs = obj.topview().snapLocations.paired();
+        const snapLocs = obj.snap2d.top().snapLocations.paired();
         snapLocs.forEach((snapLoc) => {
           const snapLocJson = snapLoc.toJson();
           if (snapMap[snapLocJson.UNIQUE_ID] === undefined) {
@@ -145,7 +145,7 @@ class Layout2D extends Lookup {
 
     this.addObject = (id, payload, name, polygon) => {
       const center = Vertex2d.center.apply(null, this.vertices())
-      const obj = new Object2d(center, this, payload, name, polygon);
+      const obj = Object3D.new(payload, polygon);
       obj.id(id);
       this.objects().push(obj);
       history.newState();
@@ -360,7 +360,7 @@ class Layout2D extends Lookup {
       for (let index = 0; index < objects.length; index++) {
         const obj = objects[index];
         if (excuded !== obj || Array.exists(excuded, obj)) {
-          const hovering = obj.topview().hoveringSnap(vertex, excuded);
+          const hovering = obj.snap2d.top().hoveringSnap(vertex, excuded);
           if (hovering) return hovering;
         }
       }
@@ -375,7 +375,7 @@ class Layout2D extends Lookup {
 
     this.at = (vertex) => {
       for (let index = 0; index < objects.length; index++) {
-        const hovering = objects[index].topview().hovering(vertex);
+        const hovering = objects[index].snap2d.top().hovering(vertex);
         if (hovering) return hovering;
       }
       return this.atWall(vertex);
@@ -395,9 +395,9 @@ Layout2D.fromJson = (json) => {
   const objects = [];
   json.objects.forEach((o) => {
     const center = Vertex2d.fromJson(o.center);
-    let obj = Object2d.get(o.id);
+    let obj = Object3D.get(o.id);
     if (obj === undefined) {
-      obj = new Object2d(center, layout, undefined, o.name);
+      obj = new Object3D(center, layout, undefined, o.name);
       obj.payloadId(o.payloadId);
       obj.id(o.id);
     } else obj.fromJson(o);

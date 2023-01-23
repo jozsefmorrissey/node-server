@@ -27,29 +27,28 @@ class Snap2d extends Lookup {
     this.position = {};
     this.id = () => id;
     this.parent = () => parent;
-    this.x = (val) => {
-      if (val !== undefined) {
-        notify(this.parent().center().x(), val);
-        this.parent().center().x(val);
-      }
-      return this.parent().center().x();
-    }
-    this.y = (val) => {
-      if (val !== undefined) {
-        notify(this.parent().center().y(), val);
-        this.parent().center().y(val);
-      }
-      return this.parent().center().y();
-    }
+    this.x = parent.x;
+    this.y = parent.y;
+    this.width = parent.width;
+    this.height = parent.height;
+    this.center = parent.center;
+    this.angle = parent.angle;
+    this.rotate = parent.rotate;
 
-    this.angle = (value) => {
-      if (value !== undefined) {
-        notify(this.angle(), value);
-        this.radians(Math.toRadians(value));
+    this.radians = (newValue) => {
+      if (newValue !== undefined ) {
+        const constraint = this.constraint();
+        if (constraint === 'fixed') return;
+        const radians = parent.radians(newValue);
+        const snapAnchor = constraint.snapLoc;
+        const originalPosition = snapAnchor && snapAnchor.center();
+        const radianDifference = newValue - radians;
+        this.parent().rotate(radianDifference);
+        // notify(radians, newValue);
+        if (snapAnchor) this.parent.center(snapAnchor.at({center: originalPosition}));
       }
-      return Math.toDegrees(this.radians());
-    }
-
+      return parent.radians();
+    };
 
     const changeFuncs = [];
     this.onChange = (func) => {
@@ -70,48 +69,8 @@ class Snap2d extends Lookup {
       }
     }
 
-    let radians = 0;
-    this.radians = (newValue, moveId) => {
-      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-        const constraint = this.constraint();
-        if (constraint === 'fixed') return;
-        const snapAnchor = constraint.snapLoc;
-        const originalPosition = snapAnchor && snapAnchor.center();
-        const radianDifference = newValue - radians;
-        this.object().rotate(radianDifference);
-        notify(radians, newValue);
-        radians = Math.mod(newValue, 2*Math.PI);
-        if (snapAnchor) this.object().centerOn(snapAnchor.at({center: originalPosition}));
-      }
-      return radians;
-    };
-    this.rotate = (rads, moveId) => {
-      if (rads) {
-        this.radians(rads + radians, moveId);
-      }
-    }
-
-    let height = 60.96;
-    let width = 121.92;
-    this.height = (h) => {
-      if ((typeof h) === 'number') {
-        const newVal = h;
-        notify(height, newVal);
-        height = newVal;
-      }
-      return height;
-    }
-    this.width = (w) => {
-      if ((typeof w) === 'number') {
-        const newVal = w;
-        notify(width, newVal);
-        width = newVal;
-      }
-      return width;
-    }
-
-    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+    // this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+    // this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
 
     this.view = () => {
       switch (this) {
@@ -260,7 +219,7 @@ class Snap2d extends Lookup {
     }
 
     this.maxRadius = () => {
-      const center = this.parent().center();
+      const center = this.center();
       let maxDist = 0;
       for (let index = 0; index < snapLocations.length; index++) {
         const loc = snapLocations[index].center();
@@ -273,7 +232,7 @@ class Snap2d extends Lookup {
     }
 
     this.minRadius = () => {
-      const center = this.parent().center();
+      const center = this.center();
       let minDist = Number.MAX_SAFE_INTEGER;
       for (let index = 0; index < snapLocations.length; index++) {
         const loc = snapLocations[index].center();
@@ -420,18 +379,22 @@ class Snap2d extends Lookup {
       const c = cursorCenter;
       const om = otherMidpoint;
       const ol = otherLoc;
+      const otherParent = otherMidpoint.parent();
       for (let index = 0; index < snapList.length; index++) {
-        const targetMidpoint = snapList[index];
-        const tm = targetMidpoint;
-        const radDiff = otherMidpoint.forwardRadians() - targetMidpoint.forwardRadians();
-        const parrelle = findClosestNeighbor(om, radDiff, tm, ol, c);
-        const antiParrelle = findClosestNeighbor(om, radDiff - Math.PI, tm, ol, c);
-        const furthestCenter =
+        const snapLoc = snapList[index];
+        if (snapLoc.parent() !== otherParent) {
+          const targetMidpoint = snapList[index];
+          const tm = targetMidpoint;
+          const radDiff = otherMidpoint.forwardRadians() - targetMidpoint.forwardRadians();
+          const parrelle = findClosestNeighbor(om, radDiff, tm, ol, c);
+          const antiParrelle = findClosestNeighbor(om, radDiff - Math.PI, tm, ol, c);
+          const furthestCenter =
           parrelle.centerDist > antiParrelle.centerDist ? parrelle : antiParrelle;
-        furthestCenter.otherLoc = otherLoc;
-        if (furthestCenter.radians === 0) return furthestCenter;
-        if (!closest || closest.dist < furthestCenter.dist) {
-          closest = furthestCenter;
+          furthestCenter.otherLoc = otherLoc;
+          if (furthestCenter.radians === 0) return furthestCenter;
+          if (!closest || closest.dist < furthestCenter.dist) {
+            closest = furthestCenter;
+          }
         }
       }
       return closest;
@@ -467,7 +430,7 @@ class Snap2d extends Lookup {
       for (let index = 0; index < objects.length; index++) {
         const object = objects[index];
         if (object !== parent) {
-          const otherSnap = object.topview();
+          const otherSnap = object.snap2d.top();
           const combinedRadius = otherSnap.maxRadius() + instance.maxRadius();
           const center2centerDist = otherSnap.object().center().distance(instCenter);
           if (center2centerDist - 1 < combinedRadius) {
@@ -515,11 +478,10 @@ class Snap2d extends Lookup {
     let lastValidMove;
     this.makeMove = (position, force) => {
       this.snapLocations.resetCourting();
-      instance.object().centerOn(position.center);
+      this.parent().center(position.center);
       if (position.theta !== undefined) instance.radians(position.theta);
       if (!force) {
         let validMove = true;
-        instance.object().centerOn(position.center);
         if (!validMove) {
           if (lastValidMove) {
             console.log('Invalid Move');
@@ -528,7 +490,6 @@ class Snap2d extends Lookup {
         } else lastValidMove = position;
         lastValidMove = position;
       }
-      instance.update();
     }
 
     function clearIdentifiedConstraints() {
@@ -592,22 +553,8 @@ class Snap2d extends Lookup {
         if (theta) instance.rotate(theta, moveId);
         if (center) instance.makeMove({center});
       }
-      instance.update();
       moveConnectedObjects(moveId, theta);
     }
-
-    const objData = (funcName) => {
-      const obj = this.object();
-      return obj && (typeof obj[funcName]) === 'function';
-    }
-    function updateObject() {
-      if (objData('radians')) object.radians(radians);
-      if (objData('height')) object.height(height);
-      if (objData('width')) object.width(width);
-    }
-
-    this.update = updateObject;
-    this.onChange(updateObject);
   }
 }
 

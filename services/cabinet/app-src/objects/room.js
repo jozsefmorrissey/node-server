@@ -9,7 +9,7 @@ const Layout2D = require('../two-d/layout/layout.js');
 
 class Room extends Lookup {
   constructor(name, id) {
-    super(id || String.random(32));
+    super(id || String.random());
     const instance = this;
 
     function groupMap(map, detailLists, listId) {

@@ -22,9 +22,10 @@ class Position {
     let center, demension, rotation;
     let demCoords = {};
     let centerCoords = {};
+    let rotCoords = {};
 
     if ((typeof assembly.rotationConfig) !== 'function') {
-      const rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0,0,0');
+      rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0,0,0');
       rotation = (attr) => getSme(attr, rotCoords);
     } else {
       rotation = assembly.rotationConfig;
@@ -137,13 +138,27 @@ class Position {
       return this.toBiPolygon().toModel();
     }
 
-    this.set = (obj, type, value) => {
+    this.set = (obj, type, value, getter) => {
+      if ((typeof type) !== 'string') {
+        this.set(obj, 'x', type.x, getter);
+        this.set(obj, 'y', type.y, getter);
+        this.set(obj, 'z', type.z, getter);
+        return getter();
+      }
       if (value !== undefined) obj[type] = value;
-      return demension(type);
+      return getter(type);
     }
 
-    this.setDemension = (type, value) => this.set(demCoords, type, value);
-    this.setCenter = (type, value) => this.set(centerCoords, type, value);
+    this.setDemension = (type, value) => this.set(demCoords, type, value, demension);
+    this.setCenter = (type, value) => this.set(centerCoords, type, value, center);
+    this.setRotation = (type, value) => this.set(rotCoords, type, value, rotation);
+    this.toString = () => {
+      const curr = this.current();
+      curr.center = new Vertex3D(curr.center);
+      curr.demension = new Vertex3D(curr.demension);
+      curr.rotation = new Vertex3D(curr.rotation);
+      return `center: ${curr.center}, demensions: ${curr.demension}, rotation: ${curr.rotation}`;
+    }
   }
 }
 

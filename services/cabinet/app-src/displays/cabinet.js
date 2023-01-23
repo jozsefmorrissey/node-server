@@ -15,7 +15,7 @@ const Request = require('../../../../public/js/utils/request.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
 const $t = require('../../../../public/js/utils/$t.js');
-const Object2d = require('../two-d/layout/object.js');
+const Object3D = require('../three-d/layout/object.js');
 const Inputs = require('../input/inputs.js');
 const EPNTS = require('../../generated/EPNTS');
 
@@ -57,19 +57,16 @@ class CabinetDisplay {
     }
 
     function updateLayout(target) {
-      setTimeout(() => {
-        const attr = target.name === 'thickness' ? 'height' : 'width';
-        const cabinet = getHtmlElemCabinet(target);
-        const obj2d = Object2d.get(cabinet.id());
-        const value = new Measurement(target.value, true).decimal();
-        console.log('new cab val', value);
-        obj2d.topview()[attr](value);
-        TwoDLayout.panZoom.once();
-      }, 1000);
+      const attr = target.name === 'thickness' ? 'height' : 'width';
+      const cabinet = getHtmlElemCabinet(target);
+      const obj3D = Object3D.get(cabinet.id());
+      const value = new Measurement(target.value, true).decimal();
+      console.log('new cab val', value);
+      // obj3D.snap.top()[attr](value);
+      ThreeDMain.update(cabinet);
     }
 
-    du.on.match('change', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
-    du.on.match('blur', '.cabinet-input.dem[name="width"],.cabinet-input.dem[name="thickness"', updateLayout);
+    du.on.match('enter,focusout', '.cabinet-id-input.dem[name="width"],.cabinet-id-input.dem[name="thickness"', updateLayout);
 
     function updateCabValue(cabinet, attr) {
       const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
@@ -82,22 +79,20 @@ class CabinetDisplay {
       TwoDLayout.panZoom.once();
     }
 
-    function linkLayout(cabinet, obj2d) {
-      const topview = obj2d.topview();
-      if (topview.width() !== cabinet.width()) {
-        cabinet.width(topview.width());
+    function linkLayout(cabinet, obj3D) {
+      const snap = obj3D.snap.top();
+      if (snap.width() !== cabinet.width()) {
+        cabinet.width(snap.width());
         updateCabValue(cabinet, 'width');
       }
-      if (topview.height() !== cabinet.thickness()) {
-        cabinet.thickness(topview.height());
+      if (snap.height() !== cabinet.thickness()) {
+        cabinet.thickness(snap.height());
         updateCabValue(cabinet, 'thickness');
       }
     }
 
     function updateObjLayout(elem, cabinetModel) {
       console.log('model update');
-      // const obj2d = group.room().layout().addObject(cabinet.id(), cabinet, cabinet.name);
-      // obj2d.topview().onChange(() => linkLayout(cabinet, obj2d));
     }
 
     ThreeDModel.onRenderObjectUpdate(updateObjLayout);
@@ -139,8 +134,6 @@ class CabinetDisplay {
       const cabKey = cabinetKey(path);
       const decimal = new Measurement(value, true).decimal();
       cabKey.cabinet[cabKey.key](!Number.isNaN(decimal) ? decimal : value);
-      TwoDLayout.panZoom.once();
-      ThreeDMain.update(cabKey.cabinet);
     }
 
     const saveSuccess = () => console.log('success');

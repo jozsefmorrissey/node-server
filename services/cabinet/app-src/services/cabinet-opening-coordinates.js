@@ -1,6 +1,7 @@
 
 class CabinetOpeningCorrdinates {
-  constructor(cabinet, config, sectionProperties) {
+  constructor(cabinet, sectionProperties) {
+    const config = sectionProperties.config();
 
     this.divide = sectionProperties.divide;
     this.setSection = sectionProperties.setSection;

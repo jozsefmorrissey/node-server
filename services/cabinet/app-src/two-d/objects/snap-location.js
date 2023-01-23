@@ -5,30 +5,13 @@ const Circle2d = require('circle');
 const HoverMap2d = require('../hover-map')
 
 class SnapLocation2d {
-  constructor(parent, location, centerFunction, targetVertex, pairedWith) {
-    Object.getSet(this, {location, targetVertex}, "wallThetaOffset", "parentId", "pairedWithId", "thetaOffset");
-    pairedWith = pairedWith || null;
+  constructor(parent, location, centerFunction) {
+    Object.getSet(this, {location});
+    let pairedWith = null;
     let courting;
     const instance = this;
 
-    const thetaOffset = {_DEFAULT: 0};
     this.center = () => centerFunction();
-    this.thetaOffset = (cxtrNameOinstance, location, value) => {
-      const cxtrName = cxtrNameOinstance instanceof SnapLocation2d ?
-              cxtrNameOinstance.parent().constructor.name :
-              cxtrNameOinstance ? cxtrNameOinstance : parent.constructor.name;
-      if (cxtrNameOinstance instanceof SnapLocation2d && location === undefined)
-        location = cxtrNameOinstance.location();
-      if (cxtrName !== undefined && Number.isFinite(value)) {
-        if (thetaOffset._DEFAULT === undefined) thetaOffset._DEFAULT = value;
-        if (thetaOffset[cxtrName] === undefined) thetaOffset[cxtrName] = {};
-        if (thetaOffset[cxtrName]._DEFAULT === undefined) thetaOffset[cxtrName]._DEFAULT = value;
-        if (location) thetaOffset[cxtrName][location] = value;
-      }
-      return thetaOffset[cxtrName] === undefined ? thetaOffset._DEFAULT :
-          (thetaOffset[cxtrName][location] === undefined ? thetaOffset[cxtrName]._DEFAULT :
-          thetaOffset[cxtrName][location]);
-    }
 
     // If position is defined and a Vertex2d:
     //        returns the position of parents center iff this location was at position
@@ -45,8 +28,6 @@ class SnapLocation2d {
     this.circle = (radius) => new Circle2d(radius || 2, centerFunction());
     this.eval = () => this.parent().position[location]();
     this.parent = () => parent;
-    this.parentId = () => parent.id();
-    this.pairedWithId = () => pairedWith && pairedWith.id();
     this.pairedWith = () => pairedWith;
     this.disconnect = () => {
       if (pairedWith === null) return false;
@@ -208,7 +189,7 @@ function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
   return (position) => {
     const xDiff = xDiffFunc();
     const yDiff = yDiffFunc();
-    const vertex = snapLoc.vertex();
+    const vertex = snapLoc.center();
     if (xDiff === 0 && yDiff === 0) {
       if (position) return snapLoc.parent().parent().center().clone();
       vertex.point(snapLoc.parent().parent().center().clone());

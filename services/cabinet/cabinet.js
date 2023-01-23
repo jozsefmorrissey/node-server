@@ -27,13 +27,27 @@ const setCredentials = (res, email, secret) => {
   res.header('authorization', `${email}:${secret}`);
 }
 
+function orderElem(req, res) {
+  return {order: 'poopy cock'};
+}
+
 const indexHtml = fs.readFileSync('./services/cabinet/public/html/estimate.html');
 
 const indexTemplate = new $t('index');
-function servePage(id) {
+const orderTemplate = new $t('order');
+const orderRedirectTemplate = new $t('order-redirect');
+function servePage(id, scopeFunc) {
+  let template = indexTemplate;
+  switch (id) {
+    case 'order': template = orderTemplate; break;
+    case 'order-redirect': template = orderRedirectTemplate; break;
+  }
   return (req, res) => {
+    scope = (typeof bodyFunc) === 'function' ? scopeFunc(req, res) : {};
+    // TODO: should probably change this to pageId;
+    scope.id = id;
     res.setHeader('Content-Type', 'text/html');
-    res.send(indexTemplate.render({id}));
+    res.send(template.render(scope));
   }
 }
 
@@ -46,6 +60,10 @@ function endpoints(app, prefix) {
   app.get(prefix + "/template", servePage('template'));
   app.get(prefix + "/property", servePage('home'));
   app.get(prefix + "/pattern", servePage('home'));
+
+  app.get(prefix + "/order", servePage('order', orderElem));
+  app.post(prefix + "/order", servePage('order', orderElem));
+
 
   //  ---------------------------- User -----------------------------//
   app.post(prefix + EPNTS.user.register(), function (req, res, next) {

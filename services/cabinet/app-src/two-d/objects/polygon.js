@@ -115,12 +115,26 @@ class Polygon2d {
       return list;
     }
 
+    this.radians = (rads) => {
+      const currRads = new Line2d(this.center(), this.faces()[0].midpoint()).radians();
+      if (Number.isFinite(rads)) {
+        const radOffset = rads - currRads;
+        this.rotate(radOffset);
+        return rads;
+      }
+      return currRads;
+    }
+    this.angle = (angle) => Math.toDegrees(this.radians(Math.toRadians(angle)));
+
     this.faceIndecies = (indicies) => {
       if (indicies) {
-        if (indicies.length > 1) throw new Error('vertex sorting is not sufficient for multple faces');
+        if (indicies.length > 1) console.warn('vertex sorting has not been tested for multple faces');
+        faceIndecies = [0];
         const i = indicies[0];
         lines = lines.slice(i).concat(lines.slice(0, i));
-        faceIndecies = [0];
+        for (let index = 1; index < lines.length; index++) {
+          faceIndecies.push(Math.mod(indicies[index] - i, lines.length));
+        }
       }
       return faceIndecies;
     }
@@ -241,8 +255,7 @@ class Polygon2d {
       const endLine = this.endLine();
       for (let index = 0; index < list.length + 1; index += 1) {
         if (index < list.length) verts[index] = new Vertex2d(list[index]);
-        if (index === 0 && endLine) endLine.endVertex() = verts[0];
-        else if (index > 0) {
+        if (index > 0) {
           const startVertex = verts[index - 1];
           const endVertex = verts[index] || this.startLine().startVertex();
           const line = new Line2d(startVertex, endVertex);
@@ -250,7 +263,7 @@ class Polygon2d {
         }
       }
       if (verts.length > 0 && lines.length > 0) {
-        if (endLine) endline.endVertex() = verts[0];
+        if (endLine) endline.endVertex(verts[0]);
       }
       // this.removeLoops();
       this.lineMap(true);
@@ -381,7 +394,7 @@ Polygon2d.lines = (...polys) => {
 
 
 const tol = .000001;
-Polygon2d.toParimeter = (lines, recurseObj, print) => {
+Polygon2d.toParimeter = (lines, recurseObj) => {
   if (lines.length < 2) throw new Error('Not enough lines to create a parimeter');
   let lineMap, splitMap, parimeter;
   if (recurseObj) {
@@ -392,7 +405,6 @@ Polygon2d.toParimeter = (lines, recurseObj, print) => {
     lineMap = Line2d.toleranceMap(tol, true, lines);
     const center = Vertex2d.center(Line2d.vertices(lines));
     const isolate = Line2d.isolateFurthestLine(center, lines);
-    if (print) console.log('Longest Line:', isolate.line.toString());
     splitMap = Vertex2d.toleranceMap();
     // splitMap.add(isolate.line.startVertex());
     parimeter = [isolate.line];
@@ -437,7 +449,6 @@ Polygon2d.toParimeter = (lines, recurseObj, print) => {
     if (biggest === null || (searchResult !== null && biggest.area() < searchResult.area()))
       biggest = searchResult;
   }
-  if (print) console.log(biggest.area(), biggest.toString());
   if (recurseObj === undefined)
     biggest = biggest.clockWise() ? biggest : new Polygon2d(biggest.vertices().reverse());
   return biggest;

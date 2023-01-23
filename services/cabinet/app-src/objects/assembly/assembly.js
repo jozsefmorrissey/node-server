@@ -81,6 +81,7 @@ class Assembly extends KeyValue {
       if (g) group = g;
       return group;
     }
+    this.layout = () => this.group().room().layout();
     this.propertyConfig = (one, two) => {
       const parent = this.parentAssembly();
       if (parent instanceof Assembly) return parent.propertyConfig(one, two);
@@ -212,6 +213,7 @@ class Assembly extends KeyValue {
     this.width = (value) => position.setDemension('x', value);
     this.length = (value) => position.setDemension('y', value);
     this.thickness = (value) => position.setDemension('z', value);
+    this.toString = () => `${this.id()} - ${this.partName()}`;
     defaultPartCode();
   }
 }

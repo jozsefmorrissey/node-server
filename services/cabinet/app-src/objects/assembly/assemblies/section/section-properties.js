@@ -21,8 +21,8 @@ class SectionProperties extends KeyValue{
     const coordinates = {inner: [v(),v(),v(),v()], outer: [v(),v(),v(),v()]};
     let rotation, innerCenter, outerCenter, outerLength, innerLength, outerWidth, innerWidth = null;
     const temporaryInitialVals = {parent, _TEMPORARY: true};
-    Object.getSet(this, temporaryInitialVals);
-    Object.getSet(this, {divideRight: false}, 'divider', 'parentAssembly', 'cover');
+    Object.getSet(this, temporaryInitialVals, 'parentAssembly');
+    Object.getSet(this, {divideRight: false, config}, 'divider', 'cover');
     const instance = this;
     let pattern = new Pattern('a');
 
@@ -36,6 +36,7 @@ class SectionProperties extends KeyValue{
       return `${pPartName}${index}.${orientation}`;
     }
 
+    this.config = () => JSON.copy(config);
     this.outerPoly = () => new Polygon3D(this.coordinates().outer);
     this.innerPoly = () => new Polygon3D(this.coordinates().inner);
     this.coordinates = () => JSON.clone(coordinates);

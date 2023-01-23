@@ -5,6 +5,7 @@ const EPNTS = require('../generated/EPNTS.js');
 const Test = require('../../../public/js/utils/test/test').Test;
 
 if (EPNTS.getEnv() === 'local') {
+  require('../../../public/js/utils/test/tests/imposter');
   require('./tests/cabinet');
   require('../../../public/js/utils/test/tests/decision-tree');
   require('../../../public/js/utils/test/tests/logic-tree');

@@ -663,14 +663,14 @@ class TemplateManager extends Lookup {
     }
 
     function initiateCanvasViews() {
-      let drawFront, drawTop, lastModel, frontView, topviewSnap, panz, panzT;
+      let drawFront, drawTop, lastModel, frontView, topSnap, panz, panzT;
       const renderFront = () => {
         if (drawFront === undefined) return;
         drawFront(frontView, null, 2);
       }
       const renderTop = () => {
         if (drawFront === undefined) return;
-        drawTop(topviewSnap, null, 2);
+        drawTop(topSnap, null, 2);
       }
       const templateBody = du.find('.template-body');
       const frontCanvas = du.find.down('.front-sketch', templateBody);
@@ -690,8 +690,8 @@ class TemplateManager extends Lookup {
           frontView = model.frontView();
           const center = Vertex2d.center(Line2d.vertices(frontView));
           panz.centerOn(center.x(), center.y());
-          topviewSnap = model.topviewSnap();
-          const centerT = Vertex2d.center(Line2d.vertices(topviewSnap));
+          topSnap = model.topviewSnap();
+          const centerT = Vertex2d.center(Line2d.vertices(topSnap));
           panzT.centerOn(centerT.x(), centerT.y());
           renderTop();
           renderFront();

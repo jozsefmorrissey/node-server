@@ -6,7 +6,6 @@ const Line2d = require('../../two-d/objects/line.js');
 const Vertex2d = require('../../two-d/objects/vertex.js');
 const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
 const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
-console.log('within');
 
 function isDefined(...values) {
   for (let index = 0; index < values.length; index++) {

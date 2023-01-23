@@ -9,14 +9,16 @@
     <title>CComp</title>
   </head>
   <body>
+    <div id='order-select-cnt'>
+      <span id='order-selector-cnt' hidden></span>
+      <button type="button" class='auto-save-btn' name="button">Choose Save Location</button>
+      <span id='save-time-cnt'></span>
+    </div>
     <div id='main-display-menu' class='display-manager'></div>
     <div id='display-cnt'>
       <div id='order-display-cnt'>
         <div id='order-cnt'>
-          <div class='center'>
-            <b>OrderName</b>
-            <button class='save-file-btn'>Save</button>
-          </div>
+          <div id='order-name-save-cnt'></div>
           <div id='room-cnt'></div>
         </div>
         <div id='model-cnt'>
@@ -33,10 +35,11 @@
         </div>
       </div>
       <div id='information-display'>
-        <utility-filter id='uf-info-{{order.id()}}' edit='true'>
+        <utility-filter id='uf-order-info' edit='true'>
         []
         </utility-filter>
       </div>
     </div>
+    <data>{{order}}</data>
   </body>
 </html>

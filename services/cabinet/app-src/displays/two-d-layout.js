@@ -14,6 +14,9 @@ const Snap2d = require('../two-d/objects/snap.js');
 const Circle2d = require('../two-d/objects/circle.js');
 const SnapLocation2d = require('../two-d/objects/snap-location.js');
 const LineMeasurement2d = require('../two-d/objects/line-measurement');
+const ThreeDMain = require('three-d-main');
+const ThreeDModel = require('../three-d/three-d-model.js');
+
 
 const localEnv = EPNTS.getEnv() === 'local';
 // TODO: Rename
@@ -69,7 +72,7 @@ function getPopUpAttrs(elem) {
   };
 }
 
-du.on.match('enter', '.value-2d', (elem) => {
+du.on.match('enter,focusout', '.value-2d', (elem) => {
   const props = getPopUpAttrs(elem);
   const member = elem.getAttribute('member');
   switch (member) {
@@ -81,7 +84,7 @@ du.on.match('enter', '.value-2d', (elem) => {
         const idInput = du.find.closest('.cabinet-id-input', cabDemCnt);
         idInput.value = props.raw;
       }
-      panZ.once();
+      // panZ.once();
       return;
     case 'cabinet':
       const cabinet = props.obj.payload();
@@ -91,21 +94,17 @@ du.on.match('enter', '.value-2d', (elem) => {
         input.value = props.display;
       }
       cabinet[props.key](props.value);
-      const poly = props.obj.topview();
-      poly[props.key === 'thickness' ? 'height' : props.key](props.value);
-      poly.update();
-      panZ.once();
+      ThreeDMain.update(cabinet)
       return;
   }
   if (props.obj.payload && props.obj.payload() === 'placeholder') {
     if (props.key === 'thickness') props.key = 'height';
-    props.obj = props.obj.topview().object();
+    props.obj = props.obj.snap2d.top().object();
   }
-
-  props.obj.topview()[props.key](props.value);
+  props.obj.snap2d.top()[props.key](props.value);
   elem.value = props.display;
-  props.obj.topview().update();
-  panZ.once();
+  // props.obj.snap2d.top().update();
+  // panZ.once();
 });
 
 du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
@@ -157,7 +156,7 @@ du.on.match('click', '.add-window-btn-2d', (elem) => {
 du.on.match('click', '.add-object-btn-2d', (elem) => {
   const props = getPopUpAttrs(elem);
   const obj = layout.addObject(props.point, 'placeholder');
-  obj.topview().onChange(console.log);
+  obj.snap2d.top().onChange(() => console.log('snap on change???????'));
   panZ.once();
 });
 
@@ -664,9 +663,9 @@ function drawVertex(vertex) {
 function drawObjects() {
   let target;
   layout.objects().forEach((obj) => {
-    const color = hoverId() === obj.topview().toString() ? 'green' : 'black';
-    draw(obj.topview(), color, 3);
-    obj.topview().snapLocations().forEach((snapLoc) => {
+    const color = hoverId() === obj.snap2d.top().toString() ? 'green' : 'black';
+    draw(obj.snap2d.top(), color, 3);
+    obj.snap2d.top().snapLocations().forEach((snapLoc) => {
       const beingHovered = hoverId() === snapLoc.toString();
       const identfied = Snap2d.identfied(snapLoc);
       const snapColor = identfied ? 'red' : (beingHovered ? 'green' :
@@ -714,6 +713,7 @@ function init() {
   panZ.onMouseup(onMouseup);
   // draw(canvas);
   TwoDLayout.panZoom = panZ;
+  ThreeDModel.onRenderObjectUpdate(panZ.once);
   du.on.match('keycombo:Control,z', '*', undo);
   du.on.match('keycombo:Control,Shift,Z', '*', redo);
 }
