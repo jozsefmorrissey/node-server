@@ -82,8 +82,8 @@ class NotifictionArray extends Notifiction {
 }
 
 const notifyArr = new Notifiction();
-notifyArr.onAfterChange(console.log);
-notifyArr.onBeforeChange(console.error);
+// notifyArr.onAfterChange(console.log);
+// notifyArr.onBeforeChange(console.error);
 notifyArr[4] = 'poop';
 notifyArr.pickls = 5;
 notifyArr[4] = 'y diapers';

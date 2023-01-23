@@ -32,12 +32,27 @@ const du = {create: {}, class: {}, cookie: {}, param: {}, style: {}, is: {},
       scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}, position: {}};
 du.find = (selector) => document.querySelector(selector);
 du.find.all = (selector) => document.querySelectorAll(selector);
+du.validSelector = VS;
 
 du.create.element = function (tagname, attributes) {
   const elem = document.createElement(tagname);
   const keys = Object.keys(attributes || {});
   keys.forEach((key) => elem.setAttribute(key, attributes[key]));
   return elem;
+}
+
+// Ripped off of: https://ourcodeworld.com/articles/read/189/how-to-create-a-file-and-generate-a-download-with-javascript-in-the-browser-without-a-server
+du.download = (filename, contents) => {
+  var element = document.createElement('a');
+  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(contents));
+  element.setAttribute('download', filename);
+
+  element.style.display = 'none';
+  document.body.appendChild(element);
+
+  element.click();
+
+  document.body.removeChild(element);
 }
 
 function keepInBounds (elem, minimum) {
@@ -363,6 +378,8 @@ function filterCustomEvent(event, func) {
 }
 
 du.on.match = function(event, selector, func, target) {
+  const events = event.split(',');
+  if (events.length > 1) return events.forEach((e) => du.on.match(e, selector, func, target));
   const filter = filterCustomEvent(event, func);
   target = target || document;
   selector = VS(selector);

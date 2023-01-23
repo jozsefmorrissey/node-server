@@ -49,7 +49,7 @@ module.exports = function(selector, objOrFunc, props) {
           }
         }
       }
-    }, 2000);
+    }, 20);
   }
   const makeDynamic = (target) => {
     target = resolveTarget(target);
@@ -69,8 +69,7 @@ module.exports = function(selector, objOrFunc, props) {
     }
   }
 
-  du.on.match('keyup', selector, update);
-  du.on.match('change', selector, update);
+  du.on.match('change,keyup,enter', selector, update);
   du.on.match('click', selector, makeDynamic);
 }
 

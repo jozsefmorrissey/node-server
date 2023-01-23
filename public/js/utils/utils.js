@@ -38,6 +38,18 @@ function safeStdLibAddition() {
 }
 safeStdLibAddition();
 
+Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
+  if ((typeof func) !== 'function') return console.warn('Object.map requires a function argument');
+  const keys = Object.keys(obj);
+  const map = {};
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const value = obj[key];
+    map[key] = func(value, key);
+  }
+  return map;
+}, true);
+
 function processValue(value) {
   let retVal;
   if ((typeof value) === 'object' && value !== null) {
@@ -78,6 +90,22 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     while (str.length < len) str += Math.random().toString(36).substr(2);
     return str.substr(0, len);
 }, true);
+
+Function.safeStdLibAddition(String, 'number',  function (str) {
+  str = new String(str);
+  const match = str.match(/([0-9]).([0-9]{1,})e\+([0-9]{2,})/);
+  if (match) {
+    const zeros = Number.parseInt(match[3]) - match[2].length;
+    str = match[1] + match[2] + new Array(zeros).fill('0').join('');
+  }
+  return new String(str)
+      .split('').reverse().join(',')
+      .replace(/([0-9]),([0-9]),([0-9]),/g, '$1$2$3,')
+      .replace(/,([0-9]{1,2}),/g, ',$1')
+      .replace(/,([0-9]{1,2}),/g, ',$1')
+      .split('').reverse().join('')
+}, true);
+
 
 Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
   while (val < 0) val += mod;
@@ -553,7 +581,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
             return values[attr];
             return obj.defaultGetterValue(attr);
           }
-          values[attr] = value;
+          return values[attr] = value;
         }
       }
     }
@@ -561,21 +589,25 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
   if (!temporary) {
     const origToJson = obj.toJson;
     obj.toJson = (members, exclusive) => {
-      const restrictions = Array.isArray(members) && members.length;
-      const json = (typeof origToJson === 'function') ? origToJson() : {};
-      json[identifierAttr] = obj.constructor.name;
-      for (let index = 0; index < attrs.length; index += 1) {
-        const attr = attrs[index];
-        const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
-        const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
-        if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
-          // if (obj.constructor.name === 'SnapLocation2D')
-          //   console.log('foundit!');
-          const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
-          json[attr] = processValue(value);
+      try {
+        const restrictions = Array.isArray(members) && members.length;
+        const json = (typeof origToJson === 'function') ? origToJson() : {};
+        json[identifierAttr] = obj.constructor.name;
+        for (let index = 0; index < attrs.length; index += 1) {
+          const attr = attrs[index];
+          const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
+          const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
+          if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
+            // if (obj.constructor.name === 'SnapLocation2D')
+            //   console.log('foundit!');
+            const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
+            json[attr] = processValue(value);
+          }
         }
+        return json;
+      } catch(e) {
+        return e.message();
       }
-      return json;
     }
   }
   obj.fromJson = (json) => {

@@ -26,6 +26,9 @@ class LogicType {
     this.wrapper = wrapperOrJson instanceof LogicWrapper ?
                       wrapperOrJson :
                       LogicWrapper.get(wrapperOrJson.nodeId);
+    if (this.wrapper === undefined) {
+      console.log('here');
+    }
     this.nodeId(this.wrapper.node.nodeId());
     let optional = false;
     this.optional = (val) => {
