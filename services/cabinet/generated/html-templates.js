@@ -286,13 +286,13 @@ exports['expandable/pill'] = (get, $t) =>
 		$t.clean(get("inputHtml")()) +
 		`</div> <br> <div class='error' id='` +
 		$t.clean(get("ERROR_CNT_ID")()) +
-		`'></div> </div> <div class="expand-body ` +
+		`'></div> </div> <div class='expand-tab'> <div class="expand-body ` +
 		$t.clean(get("type")()) +
 		`" ex-list-id='` +
 		$t.clean(get("id")()) +
 		`' key='` +
 		$t.clean(get("key")) +
-		`'></div> </div> `
+		`'></div> </div> </div> `
 
 exports['-2108278621'] = (get, $t) => 
 		`<div key='` +
@@ -592,7 +592,7 @@ exports['cabinet/head'] = (get, $t) =>
 		$t.clean(get("cabinet").id()) +
 		`'> ` +
 		$t.clean(get("$index")) +
-		`) <input class='cabinet-id-input' prop-update='` +
+		`) <input class='cabinet-id-input' name='name' prop-update='` +
 		$t.clean(get("$index")) +
 		`.name' index='` +
 		$t.clean(get("$index")) +
@@ -1153,9 +1153,7 @@ exports['order/information/head'] = (get, $t) =>
 		`<b>Information</b> `
 
 exports['order'] = (get, $t) => 
-		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>CComp</title> </head> <body> <div id='order-select-cnt'> <span id='order-selector-cnt' hidden></span> <button type="button" class='auto-save-btn' name="button">Choose Save Location</button> <span id='save-time-cnt'></span> </div> <div id='main-display-menu' class='display-manager'></div> <div id='display-cnt'> <div id='order-display-cnt'> <div id='order-cnt'> <div id='order-name-save-cnt'></div> <div id='room-cnt'></div> </div> <div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <canvas id="two-d-model"></canvas> <div id="three-d-model" class="viewer small"> <div class='inline left'> <div class='orientation-controls'></div> <span id="model-controller"></span> </div> </div> </div> </div> </div> <div id='information-display'> <utility-filter id='uf-order-info' edit='true'> [] </utility-filter> </div> </div> <data>` +
-		$t.clean(get("order")) +
-		`</data> </body> </html> `
+		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>CComp</title> </head> <body> <div id='order-select-cnt'> <span id='order-selector-cnt' hidden></span> <button type="button" class='auto-save-btn' name="button">Choose Save Location</button> <span id='save-time-cnt'></span> </div> <div class='expandable-list' id='single-order-cnt'> <div class='center'> <input id='order-name-input' class='header-input' size='20' type="text" name="order-name"> <input id='order-version-input' class='header-input' size='20' type="text" name="order-version"> </div> <div id='main-display-menu' class='display-manager center'></div> <div id='display-cnt'> <div id='order-display-cnt'> <div id='order-cnt'> <div id='order-name-save-cnt'></div> <div id='room-cnt'></div> </div> <div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <canvas id="two-d-model"></canvas> <div id="three-d-model" class="viewer small"> <div class='inline left'> <div class='orientation-controls'></div> <span id="model-controller"></span> </div> </div> </div> </div> </div> <div id='information-display'> <utility-filter id='uf-order-info' edit='true'> [] </utility-filter> </div> </div> </div> </body> </html> `
 
 exports['orientation-arrows'] = (get, $t) => 
 		`<div class='orientation-arrows' id='` +

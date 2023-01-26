@@ -22,7 +22,7 @@ class Assembly extends KeyValue {
       propertyId: undefined,
     }
     const subAssems = this.subassemblies;
-    Object.getSet(this, initialVals, 'values', 'subassemblies', 'joints');
+    Object.getSet(this, initialVals, 'subassemblies', 'joints');
     this.subassemblies = subAssems;
     Object.getSet(this, temporaryInitialVals);
     this.path = () => `${this.constructor.name}.${partName}`.toDot();
@@ -165,6 +165,8 @@ class Assembly extends KeyValue {
       defaultPartCode();
     }
     this.addSubAssembly = (assembly) => {
+      if ((typeof assembly.partCode) !== 'function')
+        console.log('wtf')
       this.subassemblies[assembly.partCode()] = assembly;
       // assembly.setParentAssembly(this);
     }
@@ -269,7 +271,7 @@ Assembly.fromJson = (assemblyJson) => {
   const clazz = Object.class.get(assemblyJson._TYPE);
   const assembly = new (clazz)(partCode, partName, centerConfig, demensionConfig, rotationConfig);
   assembly.id(assemblyJson.id);
-  assembly.values = assemblyJson.values;
+  assembly.value.all(assemblyJson.value.values);
   assembly.setParentAssembly(assemblyJson.parent)
   Object.values(assemblyJson.subassemblies).forEach((json) =>
     assembly.addSubAssembly(Assembly.class(json._TYPE)

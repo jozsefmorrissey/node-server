@@ -15,7 +15,8 @@ const TwoDLayout = require('../displays/two-d-layout');
 
 class RoomDisplay extends Lookup {
   constructor(parentSelector, order) {
-    super(order.id());
+    super();
+
     const groupDisplays = {};
     const getHeader = (room, $index) =>
         RoomDisplay.headTemplate.render({room, $index});
@@ -38,14 +39,31 @@ class RoomDisplay extends Lookup {
     }
     this.active = () => expandList.active();
 
-    const expListProps = {
-      list: order.rooms,
-      parentSelector, getHeader, getBody, getObject,
-      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
-      listElemLable: 'Room', type: 'pill',
-      inputTree: RoomDisplay.configInputTree()
-    };
-    const expandList = new ExpandableObject(expListProps);
+    function getExpandList() {
+      const expandParentSelector = `${parentSelector}[order-id="${order.id()}"]`;
+      const expandList = ExpandableObject.bySelector(parentSelector);
+      if (expandList) return expandList;
+
+      const expListProps = {
+        list: order.rooms,
+        parentSelector, getHeader, getBody, getObject,
+        inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
+        listElemLable: 'Room', type: 'pill',
+        inputTree: RoomDisplay.configInputTree()
+      };
+      return new ExpandableObject(expListProps);
+    }
+
+    this.order =(o) => {
+      if (o) {
+        order = o;
+        du.find(parentSelector).setAttribute('order-id', order.id());
+        getExpandList();
+      }
+      return order;
+    }
+    this.order(order);
+
     this.refresh = () => expandList.refresh();
   }
 }

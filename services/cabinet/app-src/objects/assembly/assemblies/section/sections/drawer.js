@@ -9,18 +9,20 @@ const Assembly = require('../../../assembly.js');
 const Polygon3D = require('../../../../../three-d/objects/polygon.js');
 
 class DrawerSection extends Assembly {
-  constructor(sectionProperties) {
+  constructor(front, box) {
     super();
-    if (sectionProperties === undefined) return;
     const instance = this;
+    const sectionProps = () => instance.parentAssembly();
     this.part = () => false;
 
     function getFrontBiPolygon () {
-      return sectionProperties.coverInfo().biPolygon;
+      return sectionProps().coverInfo().biPolygon;
     }
+    this.getBiPolygon = getFrontBiPolygon;
 
-    const front = new DrawerFront('ff', 'DrawerFront', getFrontBiPolygon);
-    front.partName = () => `${sectionProperties.partName()}-df`;
+    // TODO: change ff to df.
+    if (!front) front = new DrawerFront('ff', 'DrawerFront');
+    front.partName = () => `${sectionProps().partName()}-df`;
     this.front = () => door;
     this.pull = (i) => front.pull(i);
     this.addSubAssembly(front);
@@ -28,20 +30,21 @@ class DrawerSection extends Assembly {
 
 
     function getDrawerDepth() {
-      const depth = sectionProperties.innerDepth();
+      const depth = sectionProps().innerDepth();
       if (depth < 3) return 0;
       return (Math.floor(((depth - 2.54) / 2.54)/2) * 2) * 2.54;
     }
+    this.drawerDepth = getDrawerDepth;
 
-    const getNormal = () => front.biPolygon().normal();
+    this.getNormal = () => front.biPolygon().normal();
 
     function getFrontPoly() {
-      const propConfig = sectionProperties.getRoot().group().propertyConfig;
+      const propConfig = sectionProps().getRoot().group().propertyConfig;
       const props = propConfig('Guides');
-      const innerPoly = new Polygon3D(sectionProperties.coordinates().inner);
-      const coverInfo = sectionProperties.coverInfo();
+      const innerPoly = new Polygon3D(sectionProps().coordinates().inner);
+      const coverInfo = sectionProps().coverInfo();
       const biPoly = front.biPolygon();
-      const depth = getDrawerDepth(sectionProperties.innerDepth);
+      const depth = getDrawerDepth(sectionProps().innerDepth);
       const offsetVect = biPoly.normal().scale(coverInfo.backOffset * -1);
       const sideOffset = props.dbsos.value();
       const topOffset = props.dbtos.value();
@@ -50,11 +53,25 @@ class DrawerSection extends Assembly {
       return innerPoly.translate(offsetVect);
     }
 
-    const drawerBox = new DrawerBox('db', 'Drawer.Box', getFrontPoly, getNormal, getDrawerDepth);
-    drawerBox.partName = () => `${sectionProperties.partName()}-db`;
-    this.box = () => drawerBox;
-    this.addSubAssembly(drawerBox);
+    this.getBiPolygon = (partCode) => {
+      switch (partCode) {
+        case 'db': return getFrontPoly();
+        case 'ff': return getFrontBiPolygon();
+        default: throw new Error(`PartCode: '${partCode}' biPolygon has not been defined for this object`);
+      }
+    }
+
+    if (!box) box = new DrawerBox('db', 'Drawer.Box');
+    box.partName = () => `${sectionProps().partName()}-db`;
+    this.box = () => box;
+    this.addSubAssembly(box);
   }
+}
+
+DrawerSection.fromJson = (json) => {
+  const drawerFront = Object.fromJson(json.subassemblies.ff);
+  const drawerBox = Object.fromJson(json.subassemblies.df);
+  return new DrawerSection(drawerFront, drawerBox);
 }
 
 DrawerSection.abbriviation = 'dws';

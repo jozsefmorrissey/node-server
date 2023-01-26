@@ -17,11 +17,11 @@ function updateParent(keyValue) {
   properties:
     @childrenAttribute - Attribute that defines children an object or an array;
     @object - true iff you want an object for your children
-    @parentAttribute - Attribute that defines parent setting getting function;
+    @parentAttribute - Attribute that defines parent setting/getting function;
     @keyMapFunction - function will be called to convert keys before processing.
     @id - Lookup id
     @idAttr - attribute for Lookup id.
-    @evaluators - an object whos attributes are types and values are functions to resolve said type
+    @evaluators - an object whos attributes are types, the values are functions to resolve said type
 **/
 class KeyValue extends Lookup {
   constructor(properties) {
@@ -47,6 +47,13 @@ class KeyValue extends Lookup {
         const customVal = customFuncs[index](code, value);
         if(customVal) return customVal;
       }
+    }
+
+    const parentJson = this.toJson;
+    this.toJson = () => {
+      const json = (typeof parentJson) === 'function' ? parentJson() : {};
+      json.value = {values: this.value.values};
+      return json;
     }
 
     this.value = (key, value) => {
@@ -81,6 +88,9 @@ class KeyValue extends Lookup {
         throw e;
         return NaN;
       }
+    }
+    this.value.all = (valueObj) => {
+      Object.merge(this.value.values, valueObj);
     }
 
 

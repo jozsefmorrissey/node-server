@@ -13,8 +13,13 @@ const Pattern = require('../../../../division-patterns.js');
 
 const v = () => new Vertex3D();
 class SectionProperties extends KeyValue{
-  constructor(config, index) {
+  constructor(config, index, sections, pattern) {
     super({childrenAttribute: 'sections', parentAttribute: 'parentAssembly'})
+    if (sections) {
+      this.sections.copy(sections);
+    }
+    // TODO: consider getting rid of, sections and cover are the only ones that matter.
+    this.subassemblies = [];
 
     index ||= 0;
     this.index = () => index;
@@ -24,7 +29,7 @@ class SectionProperties extends KeyValue{
     Object.getSet(this, temporaryInitialVals, 'parentAssembly');
     Object.getSet(this, {divideRight: false, config}, 'divider', 'cover');
     const instance = this;
-    let pattern = new Pattern('a');
+    pattern ||= new Pattern('a');
 
     this.divideRight = () =>
       this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
@@ -46,7 +51,6 @@ class SectionProperties extends KeyValue{
     this.included = () => false;
     this.joints = [];
     this.coverType = () => this.cover() && this.cover().constructor.name;
-    this.subassemblies = [];
     this.vertical = (is) => {
       const curr = instance.value('vertical', is);
       if (is !== undefined && curr !== is) removeCachedValues();
@@ -334,6 +338,12 @@ class SectionProperties extends KeyValue{
       return false;
     }
 
+    this.setPattern = (patternObj) => {
+      if (patternObj instanceof Pattern) {
+        pattern = patternObj;
+      }
+    }
+
     this.pattern = (patternStr) => {
       if ((typeof patternStr) === 'string') {
         const sectionCount = patternStr.length;
@@ -489,7 +499,7 @@ class SectionProperties extends KeyValue{
     }
 
     this.setSection = (constructorIdOobject) => {
-      let section = SectionProperties.new(constructorIdOobject, this);
+      let section = SectionProperties.new(constructorIdOobject);
       this.cover(section);
       section.parentAssembly(this);
     }
@@ -540,8 +550,25 @@ SectionProperties.new = function (constructorId) {
   return section;
 }
 
+SectionProperties.fromJson = (json) => {
+  const sections = [];
+  const pattern = Pattern.fromJson(json.pattern);
+  for (let index = 0; index < json.subassemblies.length; index++) {
+    const sectionJson = json.subassemblies[index];
+    sections.push(Object.fromJson(sectionJson));
+  }
+  const sp  = new SectionProperties(json.config, json.index, sections, pattern);
+  sp.value.all(json.value.values);
+  sp.parentAssembly(json.parent);
+  sp.cover(Object.fromJson(json.cover));
+  if (sp.cover()) sp.cover().parentAssembly(sp);
+  sp.divider(new DividerSection(sp));
+  return sp;
+}
+
 const sections = [];
 SectionProperties.addSection = (clazz) => sections.push(clazz);
 SectionProperties.list = () => [].concat(sections);
 
+Object.class.register(SectionProperties);
 module.exports = SectionProperties;

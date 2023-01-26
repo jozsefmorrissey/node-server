@@ -60,7 +60,6 @@ const pageId = {template: 'template-manager', cost: 'cost-manager', home: 'app',
               }[urlSuffix] || 'app';
 function init(body){
   if (body) Properties.load(body);
-  let roomDisplay;
 
   if (urlSuffix && urlSuffix !== 'order') {
       require('./cost/init-costs.js');
@@ -84,9 +83,7 @@ function init(body){
   } else if (urlSuffix === 'order') {
     const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
     const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
-    const RoomDisplay = require('./displays/room');
     let order = require('./displays/single-order').order();
-    roomDisplay = new RoomDisplay('#room-cnt', order);
     setTimeout(TwoDLayout.init, 1000);
     setTimeout(ThreeDMainModel.init, 1000);
   }

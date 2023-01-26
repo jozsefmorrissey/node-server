@@ -9,14 +9,21 @@ const Input = require('../../../../public/js/utils/input/input.js');
 const NoActivityRunner = require('../../../../public/js/utils/services/no-activity-runner.js');
 
 const orderSelectCnt = du.id('order-select-cnt');
-const orders = {};
-let order = new Order(new Date().toLocaleDateString("en-US", options));
+const orderNameInput = du.id('order-name-input');
+const orderVersionInput = du.id('order-version-input');
+const dateStr = new Date().toLocaleDateString("en-US", options).replace(/\//g, '-');
+let order = new Order(`Orderststs ${dateStr}`);
+orderNameInput.value = order.name();
+orderVersionInput.value = order.versionId();
 
 var options = {  year: 'numeric', day: 'numeric' };
 var today  = new Date();
 
 console.log(today.toLocaleDateString("en-US", options)); // Saturday, September 17, 2016
 order.addRoom('kitchen');
+
+const RoomDisplay = require('./room');
+let roomDisplay = new RoomDisplay('#room-cnt', order);
 
 
 const saveCntId = 'order-select-cnt';
@@ -48,7 +55,6 @@ function onSubmit(values, dit) {
 }
 
 const orderSelCnt = du.id('order-selector-cnt');
-const orderNameInput = du.find('input[name="order-name"]');
 const orderInput = new Input({
   name: 'order',
   inline: true,
@@ -65,29 +71,17 @@ orderSelCnt.innerHTML = orderInput.html() + versionInput.html();
 const orderDataList = new DataList(orderInput);
 const versionDataList = new DataList(versionInput);
 
-function saveAllOrders() {
-  const  orderNames = Object.keys(orders);
-  for (let  index = 0; index < orderNames.length; index++) {
-    const orderName = orderNames[index];
-    const versionIds = Object.keys(orders[orderName]);
-    for (let vIndex = 0; vIndex < versionIds.length; vIndex++) {
-      const versionId = versionIds[vIndex];
-      const order = orders[orderName][versionId];
-      saveMan.save(orderName, versionId, order.toJson());
-    }
-  }
-}
-
 du.on.match('click', `#${saveCntId}>button`, async (elem) =>{
   if (elem.innerText === 'Choose Save Location') {
     await saveMan.init();
     orderSelCnt.hidden = false;
-    elem.innerHTML = 'Save';
+    elem.innerHTML = 'Open/Create';
   } else {
     const orderName = orderInput.value();
-    const versionId = versionInput.value() || 'original';
+    const versionId = versionInput.value();
     switch (elem.innerText) {
       case 'Create':
+        versionId ||= 'original';
         saveMan.switch(orderName, versionId);
         break;
       case 'Save':
@@ -102,7 +96,7 @@ du.on.match('click', `#${saveCntId}>button`, async (elem) =>{
 
 const noActRunnner = new NoActivityRunner(10000, () => saveMan.on(false));
 du.on.match('mouseout', '*', (elem) => {
-  saveMan.on(true);
+  saveMan.on(saveMan.initialized());
   noActRunnner();
 })
 
@@ -110,25 +104,27 @@ function updateButtonText() {
   const inputOrderName = orderInput.value();
   const inputVersionId = versionInput.value();
   const state = saveMan.state(inputOrderName, inputVersionId);
-  let buttonText;
+  let buttonText = 'Open/Create';
+  orderButton.disabled = false;
   switch (state) {
     case 'new order': buttonText = 'Create'; break;
     case 'new version': buttonText = 'Create'; break;
     case 'active': buttonText = 'Save'; break;
     case 'switch version': buttonText = 'Open'; break;
     case 'switch order': buttonText = 'Open'; break;
+    default:
+      orderButton.disabled = true;
   }
   orderButton.innerText = buttonText;
 
 }
 
 const orderButton = du.find(`#${saveCntId}>button`);
-const rename = () => orderButton.innerText === 'Rename';
 function updateOrderInput() {
   orderDataList.setList(saveMan.orderNames());
   const orderName = orderInput.value() || saveMan.activeOrderName();
   versionDataList.setList(saveMan.versionIds(orderName));
-  if (orderButton.innerText !== 'Rename') updateButtonText();
+  updateButtonText();
 }
 function onVersionChange(elem, details) {
   setCookie();
@@ -139,43 +135,65 @@ function updateTime() {
 }
 du.on.match('click', '#save-time-cnt', () => saveMan.save() || resetOrderAndVersion());
 
+let firstSwitch = true;
 function switchOrder(elem, details) {
+  if (order.worthSaveing()) {
+    if (firstSwitch) {
+      const state = saveMan.state(order.name(), order.versionId());
+      if (state === 'new order' || state === 'new version') {
+        saveMan.save(order.name(), order.versionId());
+      } else if (state === 'switch order' || state === 'active') {
+        const notTakenVersion = saveMan.undefinedVersion(order.name(), order.versionId());
+        if (confirm(`An order and version already exist with this\nname/version: '${order.name()}'/'${order.versionId()}'.\n\nPress ok to save as '${order.name()}'/'${notTakenVersion}'\nor\nPress cancel to avoid it being saving.`) == true) {
+          saveMan.save(order.name(), notTakenVersion, order.toJson());
+        }
+      }
+    }
+  }
+  firstSwitch = false;
   updateOrderInput();
-  if (details.contents === '') return order = new Order(details.orderName);
+  if (details.contents === '') return order = new Order(details.orderName, details.versionId);
   try {
     order = Object.fromJson(JSON.parse(details.contents));
+    roomDisplay.order(order);
+    orderNameInput.value = order.name(details.orderName);
+    orderVersionInput.value = order.versionId(details.versionId);
+    resetOrderAndVersion();
     console.log('details');
   } catch (e) {
     console.warn(e);
   }
 }
 
-function resetOrderAndVersion(elem, details) {
-  orderInput.setValue(saveMan.activeOrderName());
-  versionInput.setValue(saveMan.activeVersionId());
+function resetOrderAndVersion() {
+  orderInput.setValue('');
+  versionInput.setValue('');
   updateOrderInput();
 }
 
 let orderChangeInFocus = false;
-const noActRunnner2 = new NoActivityRunner(60000, resetOrderAndVersion);
-du.on.match('keypress,click', `#${saveCntId}`, (elem) => {
-  noActRunnner2();
-});
 
-du.on.match('dblclick', `#${saveCntId}`, (elem) => {
-  if (rename()) {
-    updateButtonText();
-  } else {
-    resetOrderAndVersion();
-    orderButton.innerText = 'Rename';
+let processing;
+du.on.match('focusout,enter', '#order-name-input', async () => {
+  const newName = orderNameInput.value;
+  if (!saveMan.on()) {
+    order.name(newName);
+  } else if (!processing && newName !== order.name()) {
+    if (confirm(`This will rename all versions. From '${order.name()}' to '${newName}'\n\nAre you sure?`) == true) {
+      processing = true;
+      await saveMan.changeOrderName(newName);
+      processing = false;
+    } else {
+      orderNameInput.value = order.name();
+    }
   }
-});
+})
 
-
-orderInput.on('keyup,change', updateOrderInput);
-versionInput.on('keyup,change', updateOrderInput);
-orderInput.on('focusin', () => !rename() && orderInput.setValue(''));
-versionInput.on('focusin', () => !rename() && versionInput.setValue(''));
+orderInput.on('keyup,change,click', updateOrderInput);
+versionInput.on('keyup,change,click', updateOrderInput);
+orderInput.on('change', () =>  versionInput.setValue(''));
+orderInput.on('focusin', () => orderInput.setValue(''));
+versionInput.on('focusin', () => versionInput.setValue(''));
 
 saveMan.onFileSystemChange(updateOrderInput);
 saveMan.onLoaded(resetOrderAndVersion);

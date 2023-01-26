@@ -21,7 +21,7 @@ class Assembly3D extends Object3D {
     this.height = assembly.length;
     this.width = assembly.width;
     this.thickness = assembly.thickness;
-    this.name = assembly.partName;
+    this.name = assembly.name;
     this.snap2d.top = () => topSnap;
     this.shouldSave = () => false;
 

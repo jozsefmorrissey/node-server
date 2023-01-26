@@ -205,6 +205,7 @@ const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
 
 const clazz = {};
 clazz.object = () => JSON.clone(classLookup);
+clazz.register = (clazz) => classLookup[clazz.name] = clazz;
 clazz.get = (name) => classLookup[name];
 clazz.filter = (filterFunc) => {
   const classes = clazz.object();
@@ -300,7 +301,7 @@ Function.safeStdLibAddition(Math, 'midpoint', function (s, e) {
 }, true);
 
 // Ripped off of: https://stackoverflow.com/a/2450976
-Function.safeStdLibAddition(Array, 'shuffle', function () {
+Function.safeStdLibAddition(Array, 'shuffle', function() {
   let currentIndex = this.length,  randomIndex;
   while (currentIndex != 0) {
     randomIndex = Math.floor(Math.random() * currentIndex);
@@ -308,7 +309,49 @@ Function.safeStdLibAddition(Array, 'shuffle', function () {
     [this[currentIndex], this[randomIndex]] = [
       this[randomIndex], this[currentIndex]];
   }
+
+  return this;
 });
+
+const primes = [3,5,7,11,17,19,23,29];
+const firstNotInList = (targetList, ignoreList) => {
+  for (let index = 0; index < targetList.length; index++) {
+    if (ignoreList.indexOf(targetList[index]) === -1) return {item: targetList[index], index};
+  }
+  return null;
+}
+Function.safeStdLibAddition(Array, 'systematicSuffle', function (numberOfSuffles, doNotShufflePrimes) {
+  // const ps = primes;
+  const ps = [];
+  ps.copy(primes);
+  // if (!doNotShufflePrimes) ps.systematicSuffle(numberOfSuffles, true);
+  const map = {};
+  let primeCount = 0;
+  let loops = 0;
+  const lastSeven = [];
+  for (let index = 0; index < numberOfSuffles; index++) {
+    let prime = ps[primeCount % ps.length];
+    if (lastSeven.indexOf(prime) !== -1) {
+      const info = firstNotInList(ps, lastSeven);
+      prime = info.item;
+      primeCount = info.index;
+    }
+    lastSeven[index % 7] = prime;
+    primeCount += prime + (prime * (ps[(primeCount + loops++) % ps.length])) % ps.length;
+    let shuffleIndex = 0;
+    while (shuffleIndex < this.length) {
+      const firstPart = this.slice(0, shuffleIndex)
+      const secondPart = this.slice(shuffleIndex, (shuffleIndex = shuffleIndex + prime));
+      const thirdPart = this.slice(shuffleIndex)
+      this.copy(secondPart.concat(firstPart.concat(thirdPart)));
+      // if (primeCount < shuffleIndex) this.reverse();
+    }
+    // console.log(this.join());
+    map[this.join().hash()] = true;
+  }
+  return Object.keys(map).length;
+});
+
 
 Function.safeStdLibAddition(Array, 'reorder', function () {
   let count = 2;
@@ -360,9 +403,9 @@ Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endInd
 });
 
 Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
-    for (let index = 0; index < arr.length; index += 1) {
-      this.remove(arr[index]);
-    }
+  for (let index = 0; index < arr.length; index += 1) {
+    this.remove(arr[index]);
+  }
 });
 
 Function.safeStdLibAddition(Array, 'condition', function (initalValue, conditionFunc) {
@@ -450,18 +493,6 @@ Function.safeStdLibAddition(Array, 'compare', function (original, neww, modify) 
     }
     return comparison.removed.length > 0 || comparison.added.length > 0 ? comparison : false;
 }, true);
-
-Function.safeStdLibAddition(Array, 'shuffle', function() {
-  let currentIndex = this.length,  randomIndex;
-  while (currentIndex != 0) {
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-    [this[currentIndex], this[randomIndex]] = [
-      this[randomIndex], this[currentIndex]];
-  }
-
-  return this;
-});
 
 Function.safeStdLibAddition(Array, 'concatInPlace', function (arr, checkForDuplicats) {
   if (arr === this) return;
@@ -606,7 +637,8 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
         }
         return json;
       } catch(e) {
-        return e.message();
+        console.warn(e.message);
+        return e.message;
       }
     }
   }

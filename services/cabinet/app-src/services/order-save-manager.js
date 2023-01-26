@@ -20,7 +20,7 @@ class OrderSaveManager {
     const savedEvent = new CustomEvent('saved');
     const fileSystemChangeEvent = new CustomEvent('fileSystemChange');
     const versionChangeEvent = new CustomEvent('versionChange');
-    this.onLooading = loadingEvent.on;
+    this.onLoading = loadingEvent.on;
     this.onLoaded = loadedEvent.on;
     this.onSaving = savingEvent.on;
     this.onSaved = savedEvent.on;
@@ -43,14 +43,21 @@ class OrderSaveManager {
       }
       return autoSaveOn;
     }
+    this.undefinedVersion = (orderName, versionId) => {
+      const versions = orderVersionObj[orderName];
+      if (versions.indexOf(clean(versionId)) === -1) return versionId;
+      let count = 1;
+      while (versions.indexOf(clean(`${versionId}-${count}`)) !== -1) count++;
+      return `${versionId}-${count}`;
+    }
     this.remove = (orderName) => {
       ordersDir.removeEntry(orderName);
       delete orderVersionObj[orderName];
     }
     this.toggle = () => this.on(!autoSaveOn);
     this.open = async (orderName, versionId) => {
-      orderName ||= initialOrderName;
-      versionId ||= initialVersionId;
+      if (!versionId && orderVersionObj[orderName].length === 1)
+        versionId = orderVersionObj[orderName][0]
       orderName = orderName.replace(/\//g, '-');
       versionId = versionId.replace(/\//g, '-');
       if (orderVersionObj[orderName] === undefined) orderVersionObj[orderName] = [];
@@ -63,14 +70,20 @@ class OrderSaveManager {
       return {orderDirectoryHandle, versionFileHandle};
     }
     this.state = (orderName, versionId) => {
+      if (!orderName) return 'invalid';
       if (orderVersionObj[orderName] === undefined) return 'new order';
-      if (orderVersionObj[orderName].indexOf(versionId) === -1) return 'new version';
       const isActiveOrder = orderName === this.activeOrderName();
+      const onlyOneVersion = orderVersionObj[orderName].length === 1;
       if (isActiveOrder) {
-        const isActiveVersion = versionId === this.activeVersionId();
+        const isActiveVersion = onlyOneVersion || versionId === this.activeVersionId();
         if (isActiveVersion) return 'active'
-        else return 'switch version';
+        else if (!versionId) return 'invalid';
+        else if (orderVersionObj[orderName].indexOf(versionId) !== -1) return 'switch version';
+        else return 'new version';
       }
+      if (onlyOneVersion) return 'switch order'
+      if (!versionId) return 'invalid';
+      if (orderVersionObj[orderName].indexOf(versionId) === -1) return 'new version';
       return  'switch order';
     }
 
@@ -80,9 +93,9 @@ class OrderSaveManager {
     this.versionIds = (orderName) => orderVersionObj[orderName];
     this.save = async function (orderName, versionId, data) {
       data ||= contentFunc();
-      const version = activeVersion;
+      let version = activeVersion;
       const argsDefined = orderName && versionId && data;
-      if (argsDefined) version = await this.open(orderName, versionId).versionFileHandle;
+      if (argsDefined) version = (await this.open(orderName, versionId)).versionFileHandle;
       if (version) {
         counter++;
         savingEvent.trigger(null, this);
@@ -113,7 +126,7 @@ class OrderSaveManager {
       activeOrderDir = opened.orderDirectoryHandle;
       orderName = activeOrderDir.name;
       activeVersion = opened.versionFileHandle;
-      versionId = activeVersion.name;
+      versionId = clean(activeVersion.name);
       const contents = await read();
       versionChangeEvent.trigger(null, {orderName, versionId, contents});
       return contents;
@@ -136,31 +149,35 @@ class OrderSaveManager {
         next = await versions.next();
         if (!orderVersionObj[orderName]) orderVersionObj[orderName] = [];
         if (next.value) {
-          const value = nameOnly ? next.value.name : next.value;
-          list.push(clean(value));
+          const value = nameOnly ? clean(next.value.name) : next.value;
+          list.push(value);
         }
       } while (!next.done)
       return list;
     }
 
     async function changeOrderName(newOrderName) {
-      const versionHandlers = versionList(activeOrderDir);
+      const versionHandlers = await versionList(activeOrderDir);
       for (let index = 0; index < versionHandlers.length; index++) {
         const vHandle = versionHandlers[index];
         const contents = await read(vHandle);
         const vId = vHandle.name;
-        this.save(newOrderName, vId, contents);
+        await this.save(newOrderName, vId, contents);
+        await activeOrderDir.removeEntry(format(vId));
       }
       this.remove(activeOrderName());
       this.switch(newOrderName, activeVersionId());
     }
     this.changeOrderName = changeOrderName;
 
+    let initialized = false;
+    this.initialized = () => initialized;
     async function init() {
-      loadingEvent.trigger(null, instance);
       workingDir = await window.showDirectoryPicker();
       let perms = await workingDir.queryPermission();
       ordersDir = await workingDir.getDirectoryHandle('orders', {create: true});
+      ordersDir = await workingDir.getDirectoryHandle('orders', {create: true});
+      loadingEvent.trigger(null, instance);
       cabinetConfig = await workingDir.getFileHandle('cabinet.json', { create: true });
       propertyConfig = await workingDir.getFileHandle('property.json', { create: true });
       costConfig = await workingDir.getFileHandle('cost.json', { create: true });
@@ -173,11 +190,12 @@ class OrderSaveManager {
           orderVersionObj[orderHandler.name] = await versionList(orderHandler, true);
         }
       } while(!next.done);
-      await instance.switch();
+      await instance.switch(initialOrderName, initialVersionId);
       const text = await read();
       loadedEvent.trigger(null, instance);
       fileSystemChangeEvent.trigger(null, instance);
       autoSaveOn = true;
+      initialized = true;
       autoSave();
     }
     this.init = init;

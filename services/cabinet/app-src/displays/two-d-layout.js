@@ -81,7 +81,7 @@ du.on.match('enter,focusout', '.value-2d', (elem) => {
       const cab = props.obj.payload();
       if (cab && cab.constructor.name === 'Cabinet') {
         const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.id()}']`);
-        const idInput = du.find.closest('.cabinet-id-input', cabDemCnt);
+        const idInput =  du.find.closest(`Input[name="${props.key}"]`, cabDemCnt);
         idInput.value = props.raw;
       }
       // panZ.once();

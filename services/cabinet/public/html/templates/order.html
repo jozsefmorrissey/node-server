@@ -14,32 +14,37 @@
       <button type="button" class='auto-save-btn' name="button">Choose Save Location</button>
       <span id='save-time-cnt'></span>
     </div>
-    <div id='main-display-menu' class='display-manager'></div>
-    <div id='display-cnt'>
-      <div id='order-display-cnt'>
-        <div id='order-cnt'>
-          <div id='order-name-save-cnt'></div>
-          <div id='room-cnt'></div>
-        </div>
-        <div id='model-cnt'>
-          <div id='display-menu'></div>
-          <div id='model-display-cnt'>
-            <canvas id="two-d-model"></canvas>
-            <div id="three-d-model" class="viewer small">
-              <div class='inline left'>
-                <div class='orientation-controls'></div>
-                <span id="model-controller"></span>
+    <div class='expandable-list' id='single-order-cnt'>
+      <div class='center'>
+        <input id='order-name-input' class='header-input' size='20' type="text" name="order-name">
+        <input id='order-version-input' class='header-input' size='20' type="text" name="order-version">
+      </div>
+      <div id='main-display-menu' class='display-manager center'></div>
+      <div id='display-cnt'>
+        <div id='order-display-cnt'>
+          <div id='order-cnt'>
+            <div id='order-name-save-cnt'></div>
+            <div id='room-cnt'></div>
+          </div>
+          <div id='model-cnt'>
+            <div id='display-menu'></div>
+            <div id='model-display-cnt'>
+              <canvas id="two-d-model"></canvas>
+              <div id="three-d-model" class="viewer small">
+                <div class='inline left'>
+                  <div class='orientation-controls'></div>
+                  <span id="model-controller"></span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      <div id='information-display'>
-        <utility-filter id='uf-order-info' edit='true'>
-        []
-        </utility-filter>
+        <div id='information-display'>
+          <utility-filter id='uf-order-info' edit='true'>
+          []
+          </utility-filter>
+        </div>
       </div>
     </div>
-    <data>{{order}}</data>
   </body>
 </html>

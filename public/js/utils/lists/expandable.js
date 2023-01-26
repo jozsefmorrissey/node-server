@@ -57,7 +57,8 @@ class Expandable {
     const storage = {};
     Expandable.lists[props.id] = this;
     this.inputTree = () => props.inputTree;
-
+    this.parentSelector = () => props.parentSelector;
+    
     this.errorCntId = () => props.ERROR_CNT_ID;
     function setErrorMsg(msg) {
         du.id(props.ERROR_CNT_ID).innerHTML = msg;
@@ -222,6 +223,17 @@ Expandable.get = (target, level) => {
   const idKey = Expandable.getIdAndKey(target, level);
   if (idKey === undefined) return undefined;
   return Expandable.lists[idKey.id].get(idKey.key);
+}
+
+Expandable.bySelector = (parentSelector) => {
+  const lists = Expandable.lists;
+  const expandKeys = Object.keys(lists);
+  if (expandKeys.length > 1000) console.warn.subtle(1000, 'Its time to start freeing expandable list data');
+  for (let i = 0; i < expandKeys.length; i++) {
+    const key = expandKeys[index];
+    if (lists[key].parentSelector() === parentSelector) return lists[key];
+  }
+  return null;
 }
 
 Expandable.list = (target) => {

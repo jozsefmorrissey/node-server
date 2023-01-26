@@ -26,7 +26,7 @@ function withinTolerance(point, map) {
 
 const ww = 500;
 class Layout2D extends Lookup {
-  constructor(walls, objects) {
+  constructor(walls) {
     super();
     let history;
     const addEvent = new CustomEvent('add');
@@ -37,8 +37,7 @@ class Layout2D extends Lookup {
     this.onStateChange = (func) => stateChangeEvent.on(func);
 
     walls = walls || [];
-    objects = objects || [];
-    Object.getSet(this, {objects, walls});
+    Object.getSet(this, {objects: [], walls});
     const initialized = walls.length > 0;
     const instance = this;
 
@@ -154,9 +153,9 @@ class Layout2D extends Lookup {
     }
 
     this.removeObject = (obj) => {
-      for (index = 0; index < objects.length; index += 1) {
-        if (objects[index] === obj) {
-          const obj = objects.splice(index, 1);
+      for (index = 0; index < this.objects().length; index += 1) {
+        if (this.objects()[index] === obj) {
+          const obj = this.objects().splice(index, 1);
           removeEvent.trigger(undefined, obj.payload());
           return obj;
         }
@@ -165,9 +164,9 @@ class Layout2D extends Lookup {
     }
 
     this.removeByPayload = (payload) => {
-      for (index = 0; index < objects.length; index += 1) {
-        if (objects[index].payload() === payload) {
-          const obj = objects.splice(index, 1);
+      for (index = 0; index < this.objects().length; index += 1) {
+        if (this.objects()[index].payload() === payload) {
+          const obj = this.objects().splice(index, 1);
           removeEvent.trigger(undefined, payload);
           return obj;
         }
@@ -187,7 +186,7 @@ class Layout2D extends Lookup {
         wall.windows().forEach((window) => idMap[window.id()] = window);
         wall.doors().forEach((door) => idMap[door.id()] = door);
       });
-      objects.forEach((obj) => idMap[obj.id()] = obj);
+      this.objects().forEach((obj) => idMap[obj.id()] = obj);
       return idMap;
     }
 
@@ -357,8 +356,8 @@ class Layout2D extends Lookup {
     this.history = () => history;
 
     this.snapAt = (vertex, excuded) => {
-      for (let index = 0; index < objects.length; index++) {
-        const obj = objects[index];
+      for (let index = 0; index < this.objects().length; index++) {
+        const obj = this.objects()[index];
         if (excuded !== obj || Array.exists(excuded, obj)) {
           const hovering = obj.snap2d.top().hoveringSnap(vertex, excuded);
           if (hovering) return hovering;
@@ -374,8 +373,8 @@ class Layout2D extends Lookup {
     }
 
     this.at = (vertex) => {
-      for (let index = 0; index < objects.length; index++) {
-        const hovering = objects[index].snap2d.top().hovering(vertex);
+      for (let index = 0; index < this.objects().length; index++) {
+        const hovering = this.objects()[index].snap2d.top().hovering(vertex);
         if (hovering) return hovering;
       }
       return this.atWall(vertex);

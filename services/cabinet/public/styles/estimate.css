@@ -254,8 +254,8 @@ a {
 #order-cnt {
   position: absolute;
   z-index: 10;
-  top: 10%;
-  left: 0;
+  top: 15%;
+  left: 1vw;
   min-width: 50vw;
 }
 
@@ -414,4 +414,18 @@ td[dir] {
   position: absolute;
   bottom: 0;
   right: 10px;
+}
+
+#header-input {
+  padding: 5pt 10pt;
+  border: none;
+  background-color: aliceblue;
+  border-radius: 10pt;
+  font-size: 18pt;
+  text-align: center;
+}
+
+#single-order-cnt {
+  height: 200vh;
+  width: 60vw;
 }

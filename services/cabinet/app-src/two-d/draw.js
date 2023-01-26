@@ -128,7 +128,7 @@ class Draw2d {
         ctx().lineWidth = 4;
         ctx().strokeStyle = 'black';
         ctx().fillStyle =  'black';
-        const text = info.limit === undefined ? info.text : info.text.substring(0, info.limit);
+        const text = info.limit === undefined ? info.text : (info.text || '').substring(0, info.limit);
         ctx().fillText(text, info.x, yCoef * info.y, info.maxWidth);
         ctx().stroke()
         ctx().restore();

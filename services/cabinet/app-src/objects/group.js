@@ -30,8 +30,7 @@ Group.count = 0;
 new Group();
 
 Group.fromJson = (json) => {
-  const room = Lookup.get(json.roomId);
-  const group = new Group(room, json.name, json.id);
+  const group = new Group(json.room, json.name, json.id);
   group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
   json.objects.forEach((objJson) => {
     const jsonClazz = Object.class.get(json.objects[0]._TYPE);

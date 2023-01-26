@@ -49,6 +49,17 @@ class Pattern {
       return clone;
     }
 
+    this.values = () => {
+      const valueObj = {};
+      const elems = Object.values(elements);
+      elems.forEach((elem) => {
+        const value = elem.value().decimal();
+        if (updateOrder.indexOf(elem.id) !== -1 && Number.isFinite(value))
+          valueObj[elem.id] = value;
+      });
+      return valueObj;
+    }
+
     if ((typeof str) !== 'string' || str.length === 0)
       throw new Error('Must define str (arg0) as string of length > 1');
 
@@ -170,15 +181,7 @@ class Pattern {
     this.display = (id) => elements[id].value().display();
 
     this.toJson = () => {
-      const json = this.calc();
-      delete json.list;
-      delete json.fill;
-      Object.keys(json.values).forEach((key) => {
-        if (Number.isNaN(json.values[key])) {
-          delete json.values[key];
-        }
-      })
-      return json;
+      return {str: this.str, values: this.values()};
     }
 
     this.elements = elements;
@@ -188,8 +191,8 @@ class Pattern {
 
 Pattern.fromJson = (json) => {
   const pattern = new Pattern(json.str);
-  const keys = Object.keys(pattern.values);
-  keys.foEach((key) => pattern.value(key, pattern.values[key]));
+  const keys = Object.keys(json.values);
+  keys.forEach((key) => pattern.value(key, json.values[key]));
   return pattern;
 };
 

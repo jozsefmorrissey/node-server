@@ -7,21 +7,27 @@ const DrawerFront = require('../../drawer/drawer-front.js');
 const Assembly = require('../../../assembly.js');
 
 class FalseFrontSection extends Assembly {
-  constructor(sectionProperties) {
+  constructor(front) {
     super();
-    if (sectionProperties === undefined) return;
+    const instance = this;
+    const sectionProps = () => instance.parentAssembly();
     this.part = () => false;
 
-    function getBiPolygon () {
-      return sectionProperties.coverInfo().biPolygon;
+    this.getBiPolygon = () => {
+      return sectionProps().coverInfo().biPolygon;
     }
 
-    const front = new DrawerFront('ff', 'DrawerFront', getBiPolygon);
+    if (!front) front = new DrawerFront('ff', 'DrawerFront');
     this.front = () => front;
-    front.partName = () => `${sectionProperties.partName()}-ff`;
+    front.partName = () => `${sectionProps().partName()}-ff`;
     this.pull = (i) => front.pull(i);
     this.addSubAssembly(front);
   }
+}
+
+FalseFrontSection.fromJson = (json) => {
+  const front = Object.fromJson(json.subassemblies.ff);
+  return new FalseFrontSection(front);
 }
 
 FalseFrontSection.abbriviation = 'ffs';

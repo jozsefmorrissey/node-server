@@ -641,8 +641,10 @@ du.focus = function (selector) {
     const elem = du.find(selector.selector);
     if (elem) {
       elem.focus();
-      elem.selectionStart = selector.start;
-      elem.selectorEnd = selector.end;
+      if (Number.isFinite(selector.start) && Number.isFinite(selector.end)) {
+        elem.selectionStart = selector.start;
+        elem.selectorEnd = selector.end;
+      }
     }
   }
 }

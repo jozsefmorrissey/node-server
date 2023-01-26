@@ -9,10 +9,10 @@ const Polygon3D = require('../../../../../three-d/objects/polygon.js');
 const BiPolygon = require('../../../../../three-d/objects/bi-polygon.js');
 
 class DualDoorSection extends Assembly {
-  constructor(sectionProperties) {
+  constructor(leftDoor, rightDoor) {
     super('dds', 'Duel.Door.Section');
-    if (sectionProperties === undefined) return;
     const instance = this;
+    const sectionProps = () => instance.parentAssembly();
 
     this.part = () => false;
 
@@ -35,28 +35,40 @@ class DualDoorSection extends Assembly {
     }
 
     function getBiPolygon(left) {
-      return () => {
-        const fullPoly = sectionProperties.coverInfo().biPolygon;
-        const front = shrinkPoly(fullPoly.front(), left);
-        const back = shrinkPoly(fullPoly.back(), left);
-        return new BiPolygon(front, back);
-      }
+      const fullPoly = sectionProps().coverInfo().biPolygon;
+      const front = shrinkPoly(fullPoly.front(), left);
+      const back = shrinkPoly(fullPoly.back(), left);
+      return new BiPolygon(front, back);
     }
 
-    const leftDoor = new Door('dl', 'DoorLeft', getBiPolygon(true));
+    this.getBiPolygon = (partCode) => {
+      return getBiPolygon(partCode === 'dl');
+    }
+
+    if (!leftDoor) {
+      leftDoor = new Door('dl', 'DoorLeft');
+      leftDoor.setPulls([Handle.location.TOP_RIGHT]);
+    }
     this.addSubAssembly(leftDoor);
-    leftDoor.setPulls([Handle.location.TOP_RIGHT]);
-    leftDoor.partName = () => `${sectionProperties.partName()}-dl`;
+    leftDoor.partName = () => `${sectionProps().partName()}-dl`;
+    this.left = () => leftDoor;
 
-
-    const rightDoor = new Door('dr', 'DoorRight', getBiPolygon(false));
+    if (!rightDoor) {
+      rightDoor ||= new Door('dr', 'DoorRight');
+      rightDoor.setPulls([Handle.location.TOP_LEFT]);
+    }
     this.addSubAssembly(rightDoor);
-    rightDoor.setPulls([Handle.location.TOP_LEFT]);
-    rightDoor.partName = () => `${sectionProperties.partName()}-dr`;
-
+    rightDoor.partName = () => `${sectionProps().partName()}-dr`;
+    this.right = () => rightDoor;
 
     this.gap = () => 2.54 / 16;
   }
+}
+
+DualDoorSection.fromJson = (json) => {
+  const doorLeft = Object.fromJson(json.subassemblies.dl);
+  const doorRight = Object.fromJson(json.subassemblies.dr);
+  return new DualDoorSection(doorLeft, doorRight);
 }
 
 

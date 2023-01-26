@@ -254,9 +254,10 @@ class ThreeDModel {
       }
       cabinetModel.complexModel(a);
       if (a && ThreeDModel.getViewer(a)) {
-        const displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
+        let displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         // centerModel(displayModel);
+        extraObjects.forEach(obj => displayModel = displayModel.union(obj));
         viewer.mesh = displayModel.toMesh();
         viewer.gl.ondraw();
         lastRendered = cabinetModel;

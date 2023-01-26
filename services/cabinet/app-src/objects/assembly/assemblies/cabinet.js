@@ -24,11 +24,12 @@ const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
 class Cabinet extends Assembly {
   constructor(partCode, partName) {
     super(partCode, partName);
-    Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
-    Object.getSet(this, 'propertyId', 'name');
+    // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
+    Object.getSet(this, 'propertyId', 'name', 'currentPosition');
     const instance = this;
     let toeKickHeight = 4;
     this.part = false;
+    this.currentPosition = () => this.position().current();
     this.display = false;
     this.overlay = OVERLAY.HALF;
     this.openings = [];
@@ -227,13 +228,14 @@ Cabinet.fromJson = (assemblyJson, group) => {
   group ||= new Group();
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
+  const pos = assemblyJson.currentPosition;
   const assembly = new Cabinet(partCode, partName);
   assembly.name(assemblyJson.name);
-  assembly.length(assemblyJson.length);
-  assembly.width(assemblyJson.width);
+  assembly.length(pos.demension.y);
+  assembly.width(pos.demension.x);
   assembly.group(group);
   assembly.id(assemblyJson.id);
-  assembly.values = assemblyJson.values;
+  assembly.value.all(assemblyJson.value.values);
   Object.values(assemblyJson.subassemblies).forEach((json) => {
     const clazz = Assembly.class(json._TYPE);
     json.parent = assembly;
@@ -241,13 +243,17 @@ Cabinet.fromJson = (assemblyJson, group) => {
       assembly.addSubAssembly(Object.fromJson(json));
     } else {
       const sectionProperties = clazz.fromJson(json, assembly);
-      assembly.openings.push(sectionProperties);
+      const openingCoords = new CabinetOpeningCorrdinates(assembly, sectionProperties);
+      openingCoords.update();
+      assembly.openings.push(openingCoords);
       assembly.addSubAssembly(sectionProperties);
     }
   });
-  assembly.thickness(assemblyJson.thickness);
+  assembly.thickness(pos.demension.z);
   const joints = Object.fromJson(assemblyJson.joints);
   assembly.addJoints.apply(assembly, joints);
+  assembly.position().setCenter(pos.center);
+  assembly.position().setRotation(pos.rotation)
   return assembly;
 }
 Cabinet.abbriviation = 'c';

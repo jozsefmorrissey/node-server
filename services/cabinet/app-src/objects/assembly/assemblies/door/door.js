@@ -5,11 +5,12 @@ const HasPull = require('../has-pull.js');
 const Handle = require('../hardware/pull.js');
 
 class Door extends HasPull {
-  constructor(partCode, partName, getBiPolygon) {
-    super(partCode, partName, getBiPolygon);
+  constructor(partCode, partName) {
+    super(partCode, partName);
 
+    this.biPolygon = () => this.parentAssembly().getBiPolygon(partCode);
     this.toModel = () => {
-      const biPolygon = getBiPolygon();
+      const biPolygon = this.biPolygon();
       if (biPolygon) return biPolygon.toModel();
       return undefined;
     }
@@ -17,12 +18,12 @@ class Door extends HasPull {
     this.inElivation = true;
 
     this.front = () => {
-      const biPoly = getBiPolygon();
+      const biPoly = this.biPolygon();
       if (biPoly === undefined) return;
       return biPoly.front();
     }
     this.back = () => {
-      const biPoly = getBiPolygon();
+      const biPoly = this.biPolygon();
       if (biPoly === undefined) return;
       return biPoly.back();
     }

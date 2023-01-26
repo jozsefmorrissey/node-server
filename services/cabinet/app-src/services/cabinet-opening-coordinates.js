@@ -1,4 +1,6 @@
 
+
+// TODO: fix required coordinate layout leftTop, rightTop, RightBottom, leftBottom
 class CabinetOpeningCorrdinates {
   constructor(cabinet, sectionProperties) {
     const config = sectionProperties.config();

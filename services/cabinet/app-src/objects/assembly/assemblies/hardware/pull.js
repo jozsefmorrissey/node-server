@@ -17,7 +17,7 @@ class Handle extends Assembly {
       let center;
       const edgeOffset = (19 * 2.54) / 16;
       const toCenter = 3 * 2.54 + instance.centerToCenter() / 2;
-      const front = door.front();
+      const front = instance.parentAssembly().front();
       const top = front.line(0);
       // TODO: Maybe... not sure why these are flipped.
       const left = front.line(-1);
@@ -73,7 +73,8 @@ class Handle extends Assembly {
 
     super(`${partCode}-${location.position.toKebab()}`, 'Handle');
     Object.getSet(this, {location});
-    this.partName = () => `${door.partName()}.Pull.${this.location().position}`
+    this.partName = () =>
+      `${this.parentAssembly().partName()}.Pull.${this.location().position}`;
     this.inElivation = true;
     instance = this;
     index = index || 0;
@@ -93,7 +94,7 @@ class Handle extends Assembly {
 
     this.toModel = (simple) => {
       const baseC = baseCenter();
-      const biPolygon = door.biPolygon();
+      const biPolygon = this.parentAssembly().biPolygon();
       const front = biPolygon.front();
       const rotated =  instance.location().rotate;
       const line = rotated ? front.line(-1) : front.line(0);

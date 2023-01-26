@@ -156,10 +156,10 @@ const centerDisplay = (t) => {
   return `(${toDisplay(x)},${toDisplay(y)},${toDisplay(z)})`;
 }
 const threeView = new ThreeView();
-du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
-  du.move.inFront(elem));
-du.on.match('click', `#${threeView.id()}>.three-view-two-d-cnt>.three-view-canvases-cnt`, (elem) =>
-  du.move.inFront(elem));
+// du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
+//   du.move.inFront(elem));
+// du.on.match('click', `#${threeView.id()}>.three-view-two-d-cnt>.three-view-canvases-cnt`, (elem) =>
+//   du.move.inFront(elem));
 
 const containerClasses = {
   values: `template-values`,
@@ -382,20 +382,20 @@ function updateOpeningPoints(template, cabinet) {
       const state = sectionState;
       const i = state.index;
       const vertexColor = (io, i) => io !== state.innerOouter ? 'black' :
-            (modifyingOpening && i === state.index ? 'lime' : 'white');
+            (modifyingOpening && i === state.index ? 'green' : 'white');
 
       const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
 
       const coords = opening.update();
-      threeDModel.addVertex(coords.inner[0], vertexSize('true'), vertexColor('true', '0'));
-      threeDModel.addVertex(coords.inner[1], vertexSize('true'), vertexColor('true', '1'));
-      threeDModel.addVertex(coords.inner[2], vertexSize('true'), vertexColor('true', '2'));
-      threeDModel.addVertex(coords.inner[3], vertexSize('true'), vertexColor('true', '3'));
+      threeDModel.addVertex(coords.inner[0], vertexSize('true'), vertexColor('true', 0));
+      threeDModel.addVertex(coords.inner[1], vertexSize('true'), vertexColor('true', 1));
+      threeDModel.addVertex(coords.inner[2], vertexSize('true'), vertexColor('true', 2));
+      threeDModel.addVertex(coords.inner[3], vertexSize('true'), vertexColor('true', 3));
 
-      threeDModel.addVertex(coords.outer[0], vertexSize('false'), vertexColor('false', '0'));
-      threeDModel.addVertex(coords.outer[1], vertexSize('false'), vertexColor('false', '1'));
-      threeDModel.addVertex(coords.outer[2], vertexSize('false'), vertexColor('false', '2'));
-      threeDModel.addVertex(coords.outer[3], vertexSize('false'), vertexColor('false', '3'));
+      threeDModel.addVertex(coords.outer[0], vertexSize('false'), vertexColor('false', 0));
+      threeDModel.addVertex(coords.outer[1], vertexSize('false'), vertexColor('false', 1));
+      threeDModel.addVertex(coords.outer[2], vertexSize('false'), vertexColor('false', 2));
+      threeDModel.addVertex(coords.outer[3], vertexSize('false'), vertexColor('false', 3));
     }
   }
 }

@@ -5,24 +5,32 @@ const Door = require('../../door/door.js');
 const Assembly = require('../../../assembly.js');
 
 class DoorSection extends Assembly {
-  constructor(sectionProperties) {
+  constructor(door) {
     super();
-    if (sectionProperties === undefined) return;
+    const sectionProps = () => instance.parentAssembly();
     const instance = this;
     this.part = () => false;
 
 
     function getBiPolygon () {
-      return sectionProperties.coverInfo().biPolygon;
+      return sectionProps().coverInfo().biPolygon;
     }
+    this.getBiPolygon = getBiPolygon;
 
-    const door = new Door('d', 'Door', getBiPolygon);
-    this.door = () => door;
-    this.pull = (i) => door.pull(i);
-    door.partName = () => `${sectionProperties.partName()}-d`;
+    if (!door) {
+      door = new Door('d', 'Door');
+      this.door = () => door;
+      this.pull = (i) => door.pull(i);
+    }
+    door.partName = () => `${sectionProps().partName()}-d`;
 
     this.addSubAssembly(door);
   }
+}
+
+DoorSection.fromJson = (json) => {
+  const door = Object.fromJson(json.subassemblies.d);
+  return new DoorSection(door);
 }
 
 DoorSection.abbriviation = 'drs';
