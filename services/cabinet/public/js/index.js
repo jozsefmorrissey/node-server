@@ -2947,6 +2947,23 @@ function (require, exports, module) {
 	  return CSG.fromPolygons(polygons);
 	};
 	
+	function axis(vector, origin) {
+	  origin ||= [0,0,0];
+	  const end = [vector[0]+origin[0],vector[1]+origin[1],vector[2]+origin[2]]
+	  const ax = CSG.cylinder({start: origin, end})
+	  return ax;
+	}
+	
+	CSG.axis =  function (size, origin) {
+	  size ||= 100;
+	  origin ||= [0,0,0];
+	  const center = CSG.sphere({center: origin, radius: size/50})
+	  const xAxis = axis([size,0,0]);
+	  const yAxis = axis([0,size,0]);
+	  const zAxis = axis([0,0,size]);
+	  return center.union(xAxis.union(yAxis).union(zAxis));
+	}
+	
 	// # class Vector
 	
 	// Represents a 3D vector.
@@ -6746,8 +6763,9 @@ function (require, exports, module) {
 	  gl.viewport(0, 0, width, height);
 	  gl.matrixMode(gl.PROJECTION);
 	  gl.loadIdentity();
-	  gl.perspective(100, width / height, 0.1, 1000);
-	  gl.rotate(180, 0, 1, 0);
+	  gl.perspective(100, width / height, 10, 300);
+	  gl.rotate(0, 0, 1, 0);
+	  gl.translate(0, 0, -200);
 	  gl.matrixMode(gl.MODELVIEW);
 	
 	  // Set up WebGL state
@@ -6841,12 +6859,16 @@ function (require, exports, module) {
 	      gl.makeCurrent();
 	
 	      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
 	      gl.loadIdentity();
-	      const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-	      gl.translate(relDir[0], relDir[1], relDir[2]);
-	      gl.rotate(rotation.x, -1, 0, 0);
-	      gl.rotate(rotation.y, 0, -1, 0);
-	      gl.rotate(rotation.z, 0, 0, -1);
+	
+	      gl.rotate(rotation.x, 1, 0, 0);
+	      gl.rotate(rotation.y, 0, 1, 0);
+	      gl.rotate(rotation.z, 0, 0, 1);
+	
+	      // gl.translate(0, 0, -20);
+	      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+	      // gl.translate(relDir[0], relDir[1], relDir[2]);
 	
 	      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
 	      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
@@ -26272,6 +26294,7 @@ function (require, exports, module) {
 	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
 	        // centerModel(displayModel);
 	        extraObjects.forEach(obj => displayModel = displayModel.union(obj));
+	        displayModel = displayModel.union(CSG.axis());
 	        viewer.mesh = displayModel.toMesh();
 	        viewer.gl.ondraw();
 	        lastRendered = cabinetModel;

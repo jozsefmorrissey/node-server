@@ -420,6 +420,23 @@ CSG.cylinder = function(options) {
   return CSG.fromPolygons(polygons);
 };
 
+function axis(vector, origin) {
+  origin ||= [0,0,0];
+  const end = [vector[0]+origin[0],vector[1]+origin[1],vector[2]+origin[2]]
+  const ax = CSG.cylinder({start: origin, end})
+  return ax;
+}
+
+CSG.axis =  function (size, origin) {
+  size ||= 100;
+  origin ||= [0,0,0];
+  const center = CSG.sphere({center: origin, radius: size/50})
+  const xAxis = axis([size,0,0]);
+  const yAxis = axis([0,size,0]);
+  const zAxis = axis([0,0,size]);
+  return center.union(xAxis.union(yAxis).union(zAxis));
+}
+
 // # class Vector
 
 // Represents a 3D vector.

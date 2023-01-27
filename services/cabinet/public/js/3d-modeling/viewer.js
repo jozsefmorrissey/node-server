@@ -85,8 +85,9 @@ function Viewer(csg, width, height, depth) {
   gl.viewport(0, 0, width, height);
   gl.matrixMode(gl.PROJECTION);
   gl.loadIdentity();
-  gl.perspective(100, width / height, 0.1, 1000);
-  gl.rotate(180, 0, 1, 0);
+  gl.perspective(100, width / height, 10, 300);
+  gl.rotate(0, 0, 1, 0);
+  gl.translate(0, 0, -200);
   gl.matrixMode(gl.MODELVIEW);
 
   // Set up WebGL state
@@ -180,12 +181,16 @@ function Viewer(csg, width, height, depth) {
       gl.makeCurrent();
 
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
       gl.loadIdentity();
-      const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-      gl.translate(relDir[0], relDir[1], relDir[2]);
-      gl.rotate(rotation.x, -1, 0, 0);
-      gl.rotate(rotation.y, 0, -1, 0);
-      gl.rotate(rotation.z, 0, 0, -1);
+
+      gl.rotate(rotation.x, 1, 0, 0);
+      gl.rotate(rotation.y, 0, 1, 0);
+      gl.rotate(rotation.z, 0, 0, 1);
+
+      // gl.translate(0, 0, -20);
+      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+      // gl.translate(relDir[0], relDir[1], relDir[2]);
 
       if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
       that.lightingShader.draw(that.mesh, gl.TRIANGLES);

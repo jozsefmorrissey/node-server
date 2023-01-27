@@ -258,6 +258,7 @@ class ThreeDModel {
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         // centerModel(displayModel);
         extraObjects.forEach(obj => displayModel = displayModel.union(obj));
+        displayModel = displayModel.union(CSG.axis());
         viewer.mesh = displayModel.toMesh();
         viewer.gl.ondraw();
         lastRendered = cabinetModel;
