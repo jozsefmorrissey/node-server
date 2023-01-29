@@ -151,9 +151,9 @@ BiPolygon.fromVectorObject =
     (width, height, depth, center, vectorObj) => {
       center ||= new Vertex3D(0,0,0);
       vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0), depth: new Vector3D(0,0,1)};
-      const frontCenter = center.translate(vectorObj.depth.scale(depth/2), true);
+      const frontCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
       const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);
-      const backCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
+      const backCenter = center.translate(vectorObj.depth.scale(depth/2), true);
       const back = Polygon3D.fromVectorObject(width, height, backCenter, vectorObj);
       return new BiPolygon(front, back);
 }

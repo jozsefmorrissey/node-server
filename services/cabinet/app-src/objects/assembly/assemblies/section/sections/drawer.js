@@ -45,7 +45,7 @@ class DrawerSection extends Assembly {
       const coverInfo = sectionProps().coverInfo();
       const biPoly = front.biPolygon();
       const depth = getDrawerDepth(sectionProps().innerDepth);
-      const offsetVect = biPoly.normal().scale(coverInfo.backOffset * -1);
+      const offsetVect = biPoly.normal().scale(coverInfo.backOffset);
       const sideOffset = props.dbsos.value();
       const topOffset = props.dbtos.value();
       const bottomOffset = props.dbbos.value();

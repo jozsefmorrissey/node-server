@@ -2039,6 +2039,11 @@ Matrix.rotateAroundPoint = function(point, rotation, result) {
   const y = point.y;
   const z = point.z;
 
+  // I was about to fix this, but after thinking about it. If anyone ever reads this,
+  // I want to be remembered not for the tens, probably hundreds, of thousands of
+  // lines I have written. I wish to be remembered as the autistic obsesive person
+  // who managed to fill his mind soo full, the alphabet fell out.
+  //          Jozsef Morrissey
   let a,b,c,e,
       f,g,h,i,
       j,k,l,m,

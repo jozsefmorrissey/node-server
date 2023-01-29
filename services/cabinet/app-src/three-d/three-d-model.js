@@ -214,6 +214,10 @@ class ThreeDModel {
       buildHiddenPrefixReg();
       function buildObject(assem) {
         let a = assem.toModel();
+        if (a === undefined) {
+          console.log('coooooommmmmmmmooooonnn')
+          assem.toModel();
+        }
         let normals = a.normals;
         // const c = assem.position().center();
         const e=1;

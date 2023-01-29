@@ -2470,6 +2470,11 @@ function (require, exports, module) {
 	  const y = point.y;
 	  const z = point.z;
 	
+	  // I was about to fix this, but after thinking about it. If anyone ever reads this,
+	  // I want to be remembered not for the tens, probably hundreds, of thousands of
+	  // lines I have written. I wish to be remembered as the autistic obsesive person
+	  // who managed to fill his mind soo full, the alphabet fell out.
+	  //          Jozsef Morrissey
 	  let a,b,c,e,
 	      f,g,h,i,
 	      j,k,l,m,
@@ -6883,7 +6888,7 @@ function (require, exports, module) {
 	
 	  function panEvent(e) {
 	    const st = document.documentElement.scrollTop;
-	    pan(e.deltaX, e.deltaY)
+	    pan(-e.deltaX, e.deltaY)
 	  }
 	
 	  let lastScrollTop = 0;
@@ -17209,7 +17214,7 @@ function (require, exports, module) {
 	        "name": "ToeKickBacker",
 	        "type": "Panel",
 	        "code": "tkb",
-	        "center": ["c.w / 2", "w / 2", "tkd + (t / 2)"],
+	        "center": ["c.w / 2", "w / 2", "-1*(tkd + (t / 2))"],
 	        "demensions": ["tkh", "innerWidth", "tkbw"],
 	        "rotation": [0,0,90]
 	      },
@@ -17217,7 +17222,7 @@ function (require, exports, module) {
 	        "name": "Panel.Left",
 	        "type": "Panel",
 	        "code": "L",
-	        "center": ["c.w - (L.t / 2)", "L.l / 2", "(w / 2)"],
+	        "center": ["c.w - (L.t / 2)", "L.l / 2", "(w / -2)"],
 	        "demensions": ["c.t", "c.l", "pwt34"],
 	        "rotation": [0,90,0]
 	      },
@@ -17225,7 +17230,7 @@ function (require, exports, module) {
 	        "name": "Panel.Right",
 	        "type": "Panel",
 	        "code": "R",
-	        "center": ["(R.t / 2)", "R.l / 2", " (w/2)"],
+	        "center": ["(R.t / 2)", "R.l / 2", " (w/-2)"],
 	        "demensions": ["c.t", "c.l", "pwt34"],
 	        "rotation": [0,90,0]
 	      },
@@ -17233,7 +17238,7 @@ function (require, exports, module) {
 	        "name": "Back",
 	        "type": "Panel",
 	        "code": "pback",
-	        "center": ["l / 2 + L.t", " (w / 2) + tkb.w", " c.t - (t / 2)"],
+	        "center": ["l / 2 + L.t", " (w / 2) + tkb.w", " -1*(c.t - (t / 2))"],
 	        "demensions": ["c.l - tkb.w", "innerWidth", "pwt34"],
 	        "rotation": [0,0,90]
 	      },
@@ -17241,7 +17246,7 @@ function (require, exports, module) {
 	        "name": "Bottom",
 	        "type": "Panel",
 	        "code": "B",
-	        "center": ["c.w / 2", "tkh + (t/2)", "w / 2"],
+	        "center": ["c.w / 2", "tkh + (t/2)", "w / -2"],
 	        "demensions": ["c.t - pback.t", "innerWidth", "pwt34"],
 	        "rotation": [90,90, 0]
 	      },
@@ -17249,7 +17254,7 @@ function (require, exports, module) {
 	        "name": "Top",
 	        "type": "Panel",
 	        "code": "T",
-	        "center": ["c.w / 2", "c.h - pwt34/2", "(w / 2)"],
+	        "center": ["c.w / 2", "c.h - pwt34/2", "(w / -2)"],
 	        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
 	        "rotation": [90,90, 0]
 	      },
@@ -17257,7 +17262,7 @@ function (require, exports, module) {
 	        "name": "Top",
 	        "type": "Panel",
 	        "code": "pt2",
-	        "center": ["c.w / 2", "c.h - pwt34/2", "c.t - pback.t - (w / 2)"],
+	        "center": ["c.w / 2", "c.h - pwt34/2", "-1*(c.t - pback.t - (w / 2))"],
 	        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
 	        "rotation": [90,90, 0]
 	      }
@@ -25867,6 +25872,10 @@ function (require, exports, module) {
 	      buildHiddenPrefixReg();
 	      function buildObject(assem) {
 	        let a = assem.toModel();
+	        if (a === undefined) {
+	          console.log('coooooommmmmmmmooooonnn')
+	          assem.toModel();
+	        }
 	        let normals = a.normals;
 	        // const c = assem.position().center();
 	        const e=1;
@@ -30506,9 +30515,9 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	    (width, height, depth, center, vectorObj) => {
 	      center ||= new Vertex3D(0,0,0);
 	      vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0), depth: new Vector3D(0,0,1)};
-	      const frontCenter = center.translate(vectorObj.depth.scale(depth/2), true);
+	      const frontCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
 	      const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);
-	      const backCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
+	      const backCenter = center.translate(vectorObj.depth.scale(depth/2), true);
 	      const back = Polygon3D.fromVectorObject(width, height, backCenter, vectorObj);
 	      return new BiPolygon(front, back);
 	}
@@ -35258,7 +35267,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	    this.innerDepth = () => {
 	      const cabinet = this.getCabinet();
 	      if (cabinet && (config.rotation === undefined || config._Type === 'part-code'))
-	        return cabinet.getAssembly(config.back).position().centerAdjust('z', '-z');
+	        return Math.abs(cabinet.getAssembly(config.back).position().centerAdjust('z', '+z'));
 	      // TODO: access Variable.
 	      return 4*2.54;
 	    };
@@ -35268,7 +35277,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      const offset = {
 	        x: (right - left) / 2,
 	        y: (up - down) / 2,
-	        z: (forward - backward) / 2
+	        z: (forward - backward) / -2
 	      }
 	      const rotated = CSG.rotatePointAroundCenter(instance.rotation(), offset, {x:0,y:0, z:0});
 	
@@ -35281,7 +35290,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      const originalPosition = CSG.reverseRotate(point, rotation);
 	      originalPosition.x += x;
 	      originalPosition.y += y;
-	      originalPosition.z += z;
+	      originalPosition.z -= z;
 	      return CSG.rotate(originalPosition, rotation);
 	    }
 	    this.offsetRotatedPoint = offsetRotatedPoint;
@@ -35591,7 +35600,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      const bumperThickness = 3 * 2.54 / 16;
 	      if (propConfig.isInset()) {
 	        coords = this.coordinates().inner;
-	        offset = propConfig('Inset').is.value() * -2;
+	        offset = propConfig('Inset').is.value() * 2;
 	        const projection = 3 * 2.54/64;
 	        frontOffset = projection;
 	        backOffset = projection - doorThickness;
@@ -35607,8 +35616,6 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	        backOffset = bumperThickness;
 	      }
 	
-	      frontOffset *= -1;
-	      backOffset *= -1;
 	      const offsetObj = {x: offset, y: offset};
 	      biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
 	      return {biPolygon, frontOffset, backOffset};
@@ -36096,7 +36103,7 @@ function (require, exports, module) {
 	      const coverInfo = sectionProps().coverInfo();
 	      const biPoly = front.biPolygon();
 	      const depth = getDrawerDepth(sectionProps().innerDepth);
-	      const offsetVect = biPoly.normal().scale(coverInfo.backOffset * -1);
+	      const offsetVect = biPoly.normal().scale(coverInfo.backOffset);
 	      const sideOffset = props.dbsos.value();
 	      const topOffset = props.dbtos.value();
 	      const bottomOffset = props.dbbos.value();

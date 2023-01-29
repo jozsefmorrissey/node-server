@@ -76,7 +76,7 @@ class SectionProperties extends KeyValue{
     this.innerDepth = () => {
       const cabinet = this.getCabinet();
       if (cabinet && (config.rotation === undefined || config._Type === 'part-code'))
-        return cabinet.getAssembly(config.back).position().centerAdjust('z', '-z');
+        return Math.abs(cabinet.getAssembly(config.back).position().centerAdjust('z', '+z'));
       // TODO: access Variable.
       return 4*2.54;
     };
@@ -86,7 +86,7 @@ class SectionProperties extends KeyValue{
       const offset = {
         x: (right - left) / 2,
         y: (up - down) / 2,
-        z: (forward - backward) / 2
+        z: (forward - backward) / -2
       }
       const rotated = CSG.rotatePointAroundCenter(instance.rotation(), offset, {x:0,y:0, z:0});
 
@@ -99,7 +99,7 @@ class SectionProperties extends KeyValue{
       const originalPosition = CSG.reverseRotate(point, rotation);
       originalPosition.x += x;
       originalPosition.y += y;
-      originalPosition.z += z;
+      originalPosition.z -= z;
       return CSG.rotate(originalPosition, rotation);
     }
     this.offsetRotatedPoint = offsetRotatedPoint;
@@ -409,7 +409,7 @@ class SectionProperties extends KeyValue{
       const bumperThickness = 3 * 2.54 / 16;
       if (propConfig.isInset()) {
         coords = this.coordinates().inner;
-        offset = propConfig('Inset').is.value() * -2;
+        offset = propConfig('Inset').is.value() * 2;
         const projection = 3 * 2.54/64;
         frontOffset = projection;
         backOffset = projection - doorThickness;
@@ -425,8 +425,6 @@ class SectionProperties extends KeyValue{
         backOffset = bumperThickness;
       }
 
-      frontOffset *= -1;
-      backOffset *= -1;
       const offsetObj = {x: offset, y: offset};
       biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
       return {biPolygon, frontOffset, backOffset};

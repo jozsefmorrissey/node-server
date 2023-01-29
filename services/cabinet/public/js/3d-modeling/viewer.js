@@ -202,7 +202,7 @@ function Viewer(csg, width, height, depth) {
 
   function panEvent(e) {
     const st = document.documentElement.scrollTop;
-    pan(e.deltaX, e.deltaY)
+    pan(-e.deltaX, e.deltaY)
   }
 
   let lastScrollTop = 0;
