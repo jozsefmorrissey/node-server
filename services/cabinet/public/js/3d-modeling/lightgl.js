@@ -30,6 +30,7 @@ module.exports = (function() {
 //     }).draw(mesh);
 
 function regexMap(regex, text, callback) {
+  let result;
   while ((result = regex.exec(text)) != null) {
     callback(result);
   }
@@ -941,6 +942,9 @@ function addMatrixStack() {
   };
   gl.translate = function(x, y, z) {
     gl.multMatrix(Matrix.translate(x, y, z, tempMatrix));
+  };
+  gl.rotateAroundPoint = function(point, rotations) {
+    gl.multMatrix(Matrix.rotateAroundPoint(point, rotations, tempMatrix));
   };
   gl.rotate = function(a, x, y, z) {
     gl.multMatrix(Matrix.rotate(a, x, y, z, tempMatrix));
@@ -1999,6 +2003,82 @@ Matrix.relitiveDirection = function(x,y,z,matrix) {
 
   return v;
 }
+
+function rotationMatrix(rotation) {
+  let result = new Matrix();
+  var m = result.m;
+
+  const yaw = rotation[0];
+  const pitch = rotation[1];
+  const roll = rotation[2];
+  const ca = Math.cos(yaw);
+  const sa = Math.sin(yaw);
+  const cb = Math.cos(pitch);
+  const sb = Math.sin(pitch);
+  const cc = Math.cos(roll);
+  const sc = Math.sin(roll);
+
+  result.m = [ca*cb, ca*sb*sc-sa*cc, ca*sb*cc+sa*sc, 0,
+              sa*cb, sa*sb*sc+ca*cc, sa*sb*cc-ca*sc, 0,
+              -sb,          cb*sc,          cb*cc, 0,
+                0,              0,              0, 1];
+
+  return result;
+}
+
+Matrix.rotationMatrix = rotationMatrix;
+
+Matrix.rotateAroundPoint = function(point, rotation, result) {
+  if (!rotation || (!rotation[0] && !rotation[1] && !rotation[2])) {
+    return Matrix.identity(result);
+  }
+  result = result || new Matrix();
+
+  const rm = rotationMatrix(rotation).m;
+  const x = point.x;
+  const y = point.y;
+  const z = point.z;
+
+  let a,b,c,e,
+      f,g,h,i,
+      j,k,l,m,
+      n,o,p,q;
+
+
+  a = rm[0]; b = rm[1]; c = rm[2];  e = rm[3];
+  f = rm[4]; g = rm[5]; h = rm[6];  i = rm[7];
+  j = rm[8]; k = rm[9]; l = rm[10]; m = rm[11];
+  n = rm[12]; o = rm[13]; p = rm[14]; q = rm[15];
+
+  result.m[0] = a+x*n;
+  result.m[1] = b+x*o;
+  result.m[2] = c+x*p;
+  result.m[3] = -x*(a+x*n)-y*(b+x*o)-z*(c+x*p)+x*q;
+
+  result.m[4] = f+y*n;
+  result.m[5] = g+y*o;
+  result.m[6] = h+y*p;
+  result.m[7] = -x*(f+y*n)-y*(g+y*o)-z*(h+y*p)+y*q;
+
+  result.m[8]  = j+z*n;
+  result.m[9]  = k+z*o;
+  result.m[10] = l+z*p;
+  result.m[11] = -x*(j+z*n)-y*(k+z*o)-z*(l+z*p)+z*q;
+
+  result.m[12] = n;
+  result.m[13] = o;
+  result.m[14] = p;
+  result.m[15] = -x*n-y*o-z*p+q;
+
+  return result;
+};
+
+const multiply = (matrix, point) => {
+
+}
+const result = Matrix.rotateAroundPoint({x: 0, y:0, z: 0}, [2, 5, 3]);
+
+
 
 // const zOnly = new Matrix();
 // zOnly.m[0] = zOnly.m[5] = 0;

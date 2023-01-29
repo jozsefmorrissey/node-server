@@ -1,5 +1,6 @@
 
 const Approximate = require('../../../../../public/js/utils/approximate.js');
+const within = require('../../../../../public/js/utils/tolerance.js').within(.0001);
 
 function findRowColumnCount (array) {
   let rows = array.length;
@@ -276,23 +277,59 @@ class Matrix extends Array {
       return inverse;
     }
 
-    this.toString = () => {
+    this.toString = (formatFunc) => {
+      const maxLen = {before: 1, after: 0};
+      formatFunc ||= (val) => val;
+      const format = (val) => {
+        val = `${formatFunc(val)}`;
+        const decimalIndex = val.indexOf('.');
+        let spaceBefore, spaceAfter;
+        if (decimalIndex === -1) {
+          spaceBefore = new Array(maxLen.before - val.length).fill(' ').join('');
+          spaceAfter = new Array(maxLen.after).fill(' ').join('');
+        } else {
+          spaceBefore = new Array(maxLen.before - decimalIndex).fill(' ').join('');
+          spaceAfter = new Array(maxLen.after - (val.length - decimalIndex)).fill(' ').join('');
+        }
+        return `${spaceBefore}${val}${spaceAfter}`;
+
+      }
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < columns; j++) {
+          let string = `${formatFunc(this[i][j])}`;
+          const decimalIndex = string.indexOf('.');
+          if (decimalIndex === -1) {
+            if (string.length > maxLen.before) maxLen.before = string.length;
+          } else {
+            const beforeLen = decimalIndex;
+            if (beforeLen > maxLen.before) maxLen.before = beforeLen;
+            const afterLen = string.length + 1 - decimalIndex;
+            if (afterLen > maxLen.after) maxLen.after = afterLen;
+          }
+        }
+      }
+
       let str = '';
       for (let i = 0; i < rows; i++) {
         str += '|'
         for (let j = 0; j < columns; j++) {
-          str += `${this[i][j]}  `;
+          str += `${format(this[i][j])}`;
         }
-        str = str.substring(0, str.length - 2) + '|\n'
+        str += '|\n'
       }
       return str.substring(0, str.length - 1);
+    }
+
+    this.approxToString = (accuracy) => {
+      const approximate = Approximate.new(accuracy);
+      return this.toString((val) => approximate(val));
     }
 
     this.equals = (other) => {
       if (other.rows() !== rows || other.columns() !== columns) return false;
       for (let i = 0; i < rows; i++) {
         for (let j = 0; j < columns; j++) {
-          if (other[i][j] !== this[i][j]) return false;
+          if (!within(other[i][j], this[i][j])) return false;
         }
       }
       return true;
@@ -349,6 +386,20 @@ Matrix.rotation = function (roll, pitch, yaw) {
     [Ayx, Ayy, Ayz],
     [Azx, Azy, Azz],
   ]);
+}
+
+Matrix.fromGL = (glMatrix) => {
+  return new Matrix( [[glMatrix[0], glMatrix[1], glMatrix[2], glMatrix[3]],
+                      [glMatrix[4], glMatrix[5], glMatrix[6], glMatrix[7]],
+                      [glMatrix[8], glMatrix[9], glMatrix[10],  glMatrix[11]],
+                      [glMatrix[12], glMatrix[13], glMatrix[14],  glMatrix[15]]]);
+}
+
+Matrix.fromVertex = (vertex) => {
+  return new Matrix( [[vertex.x],
+                      [vertex.y],
+                      [vertex.z],
+                      [1]]);
 }
 
 module.exports = Matrix;

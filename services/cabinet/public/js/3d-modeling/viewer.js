@@ -39,6 +39,7 @@ CSG.prototype.toMesh = function() {
 
 var angleX = 0;
 var angleY = 0;
+var angleZ = 0;
 var viewers = [];
 
 // Set to true so lines don't use the depth buffer
@@ -85,7 +86,7 @@ function Viewer(csg, width, height, depth) {
   gl.viewport(0, 0, width, height);
   gl.matrixMode(gl.PROJECTION);
   gl.loadIdentity();
-  gl.perspective(100, width / height, 10, 300);
+  gl.perspective(100, width / height, 10, 1000);
   gl.rotate(0, 0, 1, 0);
   gl.translate(0, 0, -200);
   gl.matrixMode(gl.MODELVIEW);
@@ -115,7 +116,7 @@ function Viewer(csg, width, height, depth) {
     varying vec3 light;
     void main() {
       const vec3 lightDir = vec3(${x}, ${y}, ${z}) / 3.741657386773941;
-      light = (gl_ModelViewMatrix * vec4(lightDir, 0.1)).xyz;
+      light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
       color = gl_Color.rgb;
       normal = gl_NormalMatrix * gl_Normal;
       gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
@@ -131,12 +132,54 @@ function Viewer(csg, width, height, depth) {
       gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
     }`);
 
-  // this.changeLightingShaderDirection(0, 0, 0);
-  this.changeLightingShaderDirection(3, 2, 3);
+  this.changeLightingShaderDirection(0, 0, 0);
+  // this.changeLightingShaderDirection(3, 2, 3);
 
+  let origCenter = {x:0, y:0};
+  let pointClicked = {x: 0, y: 0, z: 0};
+  function setPointClicked(e) {
+    const canvasPos = e.target.getBoundingClientRect();
+    const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
+    const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
+    const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
+    const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
+    const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
+    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
+    console.log(pointClicked);
+  }
+
+  let rotationUnit;
+  let rotationOffset = [0,0,0];
+  let panOffset;
+  let panUnit;
+
+  let rotationVector = new CSG.Vector(25, 12,11.5);
+  let point = {x: 0, y: 12, z: 11.5};
+  // let rotationVector = new CSG.Vector(25, 12,11.5);
   function rotateEvent(e) {
-    angleY += e.deltaX * 2;
-    angleX += e.deltaY * 2;
+    if (!rotationUnit) {
+      rotationUnit = {};
+      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
+      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
+      console.log(rotationUnit);
+    }
+    if (rotationUnit) {
+      const speed = 40;
+      if (e.deltaY) {
+        const dir = e.deltaY < 0 ? -speed : speed;
+        rotationOffset[0] += rotationUnit.y[0]/dir;
+        rotationOffset[1] += rotationUnit.y[1]/dir;
+        rotationOffset[2] += rotationUnit.y[2]/dir;
+      }
+      if (e.deltaX) {
+        const dir = e.deltaX < 0 ? -speed : speed;
+        rotationOffset[0] += rotationUnit.x[0]/dir;
+        rotationOffset[1] += rotationUnit.x[1]/dir;
+        rotationOffset[2] += rotationUnit.x[2]/dir;
+      }
+    }
+    // angleY += e.deltaX * 2;
+    // angleX += e.deltaY * 2;
     // angleX = Math.max(-90, Math.min(90, angleX));
   }
 
@@ -176,6 +219,17 @@ function Viewer(csg, width, height, depth) {
   window.onkeyup = (e) => {
     shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
   }
+
+  let clickHeld = false;
+  window.onclick = (e) => {
+    clickHeld = !clickHeld;
+    if (!clickHeld) {
+      rotationUnit = null;
+      panUnit = null;
+    }
+  }
+
+  window.onmousedown = setPointClicked;
 
   function viewFrom(point, rotation) {
       gl.makeCurrent();
@@ -217,9 +271,12 @@ function Viewer(csg, width, height, depth) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // gl.loadIdentity();
     applyZoom();
-    gl.rotate(angleX, -1, 0, 0);
-    gl.rotate(angleY, 0, -1, 0);
-    x = 0; y = 0; angleX = 0; angleY = 0; depth = 0;
+    gl.rotateAroundPoint(pointClicked, rotationOffset);
+
+    // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
+    // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
+    // gl.rotate(rotationOffset[2], 0, 0, -1);
+    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
 
     if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
     that.lightingShader.draw(that.mesh, gl.TRIANGLES);
@@ -287,6 +344,7 @@ function enableScroll(element) {
   element.removeEventListener('touchmove', preventDefault, wheelOpt);
   element.removeEventListener('keydown', preventDefaultForScrollKeys, false);
 }
+
 exports.Viewer = Viewer
 exports.addViewer = addViewer
 exports.preventDefault = preventDefault

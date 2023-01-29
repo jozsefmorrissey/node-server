@@ -6,6 +6,7 @@ const Line2d = require('../../app-src/two-d/objects/line.js');
 const approximate = require('../../../../public/js/utils/approximate.js');
 
 const CSG = require('../../public/js/3d-modeling/csg');
+const GL = require('../../public/js/3d-modeling/lightgl');
 
 
 Test.add('Array: translate',(ts) => {
@@ -377,6 +378,65 @@ Test.add('Vertex3D: direction',(ts) => {
   ts.assertEquals(Vertex3D.direction([{x:0, y: 0, z: 0}], [{x: 1, y: 1, z: 0}]), 'right up');
   ts.assertEquals(Vertex3D.direction([{x:0, y: 0, z: 0}], [{x: -1, y: 0, z: -1}]), 'left forward');
   ts.assertEquals(Vertex3D.direction([{x:0, y: 0, z: 0}], [{x: 1, y: 1, z: 1}]), 'right up backward');
+
+  ts.success();
+});
+
+function checkRotateAroundPoint(ts, point, rotation) {
+  rotation ||= [2, 0, 0];
+  const glMatrix = GL.Matrix.rotateAroundPoint(point, rotation).m;
+  const matrix = Matrix.fromGL(glMatrix);
+  const vertMatrix = Matrix.fromVertex(point);
+  const result = matrix.dot(vertMatrix);
+
+  const glRotationMatrix = GL.Matrix.rotationMatrix(rotation);
+  const rotationMatrix = Matrix.fromGL(glRotationMatrix.m);
+  const T = new Matrix([[1,0,0,point.x],[0,1,0,point.y],[0,0,1,point.z],[0,0,0,1]]);
+  const Tneg = new Matrix([[1,0,0,-point.x],[0,1,0,-point.y],[0,0,1,-point.z],[0,0,0,1]]);
+  const rotMatrix = T.dot(rotationMatrix).dot(Tneg);
+  const manualResult = rotMatrix.dot(vertMatrix);
+
+  ts.assertTrue(manualResult.equals(vertMatrix), `Manual matrix attempt to perform operations is malfunctioning:\n${manualResult.toString()}\n\nshould be \n${vertMatrix.toString()}`);
+  ts.assertTrue(matrix.equals(rotMatrix), `Point Rotation matrix is incorrect:\n${rotMatrix.toString()}\n\nshould be\n${rotMatrix.toString()}`);
+  ts.assertTrue(manualResult.equals(result), `Dot product with point rotation matrix is not producing the desired result:\n${result.toString()}\n\nshould be\n${manualResult.toString()}`);
+  ts.assertTrue(vertMatrix.equals(result), `Point rotated around should not move:\n${result.toString()}\n\nshould be\n${vertMatrix.toString()}`);
+}
+
+function allRotationsAroundPoint(ts, point) {
+  checkRotateAroundPoint(ts, point, [2,0,0]);
+  checkRotateAroundPoint(ts, point, [0,2,0]);
+  checkRotateAroundPoint(ts, point, [0,0,2]);
+  checkRotateAroundPoint(ts, point, [2,2,2]);
+}
+
+function testOtherPointRotation(ts, center, rotation, other, expectedResult) {
+  const glMatrix = GL.Matrix.rotateAroundPoint(center, rotation).m;
+  const rotMatrix = Matrix.fromGL(glMatrix);
+  const rotatedPoint = rotMatrix.dot(Matrix.fromVertex(other));
+  ts.assertTrue(rotatedPoint.equals(expectedResult), `Rotated point did not end where expected:\n${rotatedPoint.toString()}\n\nshould be\n${expectedResult}`);
+}
+
+Test.add('lightgl: rotateAroundPoint', (ts) => {
+  allRotationsAroundPoint(ts, new Vertex3D(0,0,0));
+  allRotationsAroundPoint(ts, new Vertex3D(1,0,0));
+  allRotationsAroundPoint(ts, new Vertex3D(0,1,0));
+  allRotationsAroundPoint(ts, new Vertex3D(0,0,1));
+  allRotationsAroundPoint(ts, new Vertex3D(1,1,1));
+
+  allRotationsAroundPoint(ts, new Vertex3D(4,2,1));
+  allRotationsAroundPoint(ts, new Vertex3D(5,4,3));
+  allRotationsAroundPoint(ts, new Vertex3D(22,1,0));
+  allRotationsAroundPoint(ts, new Vertex3D(0,18,1));
+  allRotationsAroundPoint(ts, new Vertex3D(1,5,1));
+
+  testOtherPointRotation(ts, new Vertex3D(1,1,1), [0,Math.PI,0], new Vertex3D(3,1,2), new Matrix([[-1],[1],[0],[1]]));
+  testOtherPointRotation(ts, new Vertex3D(1,1,1), [0,Math.PI/2,0], new Vertex3D(3,1,2), new Matrix([[2],[1],[-1],[1]]));
+
+  testOtherPointRotation(ts, new Vertex3D(1,1,1), [0,0,Math.PI], new Vertex3D(3,1,2), new Matrix([[3],[1],[0],[1]]));
+  testOtherPointRotation(ts, new Vertex3D(1,1,1), [0,0,Math.PI/2], new Vertex3D(3,1,2), new Matrix([[3],[0],[1],[1]]));
+
+  testOtherPointRotation(ts, new Vertex3D(1,1,1), [Math.PI,0,0], new Vertex3D(3,1,2), new Matrix([[-1],[1],[2],[1]]));
+  testOtherPointRotation(ts, new Vertex3D(1,1,1), [Math.PI/2,0,0], new Vertex3D(3,1,2), new Matrix([[1],[3],[2],[1]]));
 
   ts.success();
 });

@@ -52,7 +52,7 @@ const GL = require('./lightgl.js');
 // Holds a binary space partition tree representing a 3D solid. Two solids can
 // be combined using the `union()`, `subtract()`, and `intersect()` methods.
 
-const CSG = function() {
+CSG = function() {
   this.polygons = [];
 };
 
@@ -77,7 +77,7 @@ CSG.toString = function () {
 CSG.prototype = {
   clone: function() {
     var csg = new CSG();
-    csg.normals = this.normals;
+    //csg.normals = this.normals;
     csg.polygons = this.polygons.map(function(p) { return p.clone(); });
     return csg;
   },
@@ -127,71 +127,6 @@ CSG.prototype = {
   //          +-------+
   //
   subtract: function(csg) {
-    function cleanPolygons(polys) {
-      const vertexMap = {};
-      const polyMap = {};
-      for (let index = 0; index < polys.length; index += 1) {
-        const wrongList = [];
-        const poly = polys[index];
-        const connected = {};
-        let added = false;
-        for (let vIndex = 0; vIndex < poly.vertices.length; vIndex += 1) {
-          const vertex = poly.vertices[vIndex];
-          const vKey = vertex.toString();
-          if (vertexMap[vKey]) {
-            const key = vertexMap[vKey].key;
-            let obj = vertexMap[vKey];
-            if (vKey === '(50.8,0,0)') {
-              console.log('badKey')
-            }
-            if (!added) {
-              obj.list.push(poly);
-              added = key;
-            }
-            if (added !== vertexMap[vKey].key){
-              wrongList.push(obj);
-            }
-            connected[key] = obj;
-          } else {
-            let obj = {vertex};
-            vertexMap[vKey] = obj;
-            wrongList.push(obj);
-          }
-        }
-        let obj = {};
-        const connKeys = Object.keys(connected);
-        if (connKeys.length === 0) {
-          obj.list = [poly];
-          obj.key = String.random();
-          polyMap[obj.key] = obj;
-        } else {
-          obj = connected[connKeys[0]];
-          for (let index = 1; index < connKeys.length; index += 1) {
-            const connKey = connKeys[index];
-            const otherObj = connected[connKey];
-            if (connKey !== obj.key) delete polyMap[otherObj.key];
-            else
-              console.log('wtf');
-            otherObj.key = obj.key;
-            otherObj.connected = true;
-            obj.list.concatInPlace(otherObj.list);
-            polyMap[obj.key] = obj;
-            otherObj.list = obj.list;
-          }
-        }
-        for (let wIndex = 0; wIndex < wrongList.length; wIndex += 1) {
-          const wrongObj = wrongList[wIndex];
-          wrongObj.list = obj.list;
-          wrongObj.key = obj.key;
-        }
-      }
-      const polylists = Object.values(polyMap);
-      if (polylists.length === 0) return [];
-      let biggest = polylists[0].list;
-      for (let index = 1; index < polylists.length; index += 1)
-        if (biggest.length < polylists[index].list.length) biggest = polylists[index].list;
-      return biggest;
-    }
     var a = new CSG.Node(this.clone().polygons);
     var b = new CSG.Node(csg.clone().polygons);
     a.invert();
@@ -420,10 +355,11 @@ CSG.cylinder = function(options) {
   return CSG.fromPolygons(polygons);
 };
 
-function axis(vector, origin) {
+function axis(vector, origin, color) {
   origin ||= [0,0,0];
   const end = [vector[0]+origin[0],vector[1]+origin[1],vector[2]+origin[2]]
   const ax = CSG.cylinder({start: origin, end})
+  ax.setColor(color);
   return ax;
 }
 
@@ -431,9 +367,9 @@ CSG.axis =  function (size, origin) {
   size ||= 100;
   origin ||= [0,0,0];
   const center = CSG.sphere({center: origin, radius: size/50})
-  const xAxis = axis([size,0,0]);
-  const yAxis = axis([0,size,0]);
-  const zAxis = axis([0,0,size]);
+  const xAxis = axis([size,0,0], origin, [255,0,0]);
+  const yAxis = axis([0,size,0], origin, [0,128,0]);
+  const zAxis = axis([0,0,size], origin, [0,0,255]);
   return center.union(xAxis.union(yAxis).union(zAxis));
 }
 
@@ -462,8 +398,6 @@ CSG.Vector = function(x, y, z) {
     this.z = x[2];
   }
 };
-
-CSG.percision = 1000;
 
 CSG.Vector.prototype = {
   clone: function() {
@@ -528,7 +462,6 @@ CSG.Vector.prototype = {
 CSG.Vertex = function(pos, normal) {
   this.pos = new CSG.Vector(pos);
   this.normal = new CSG.Vector(normal);
-
 };
 
 CSG.Vertex.prototype = {
@@ -567,7 +500,7 @@ CSG.Plane = function(normal, w) {
 
 // `CSG.Plane.EPSILON` is the tolerance used by `splitPolygon()` to decide if a
 // point is on the plane.
-CSG.Plane.EPSILON = 1e-3;
+CSG.Plane.EPSILON = 1e-5;//1e-3;
 
 CSG.Plane.fromPoints = function(a, b, c) {
   var n = b.minus(a).cross(c.minus(a)).unit();
@@ -610,15 +543,12 @@ CSG.Plane.prototype = {
     switch (polygonType) {
       case COPLANAR:
         (this.normal.dot(polygon.plane.normal) > 0 ? coplanarFront : coplanarBack).push(polygon);
-        // console.log('COPLANAR');
         break;
       case FRONT:
         front.push(polygon);
-        // console.log('FRONT');
         break;
       case BACK:
         back.push(polygon);
-        // console.log('BACK');
         break;
       case SPANNING:
         var f = [], b = [];
@@ -637,7 +567,6 @@ CSG.Plane.prototype = {
         }
         if (f.length >= 3) front.push(new CSG.Polygon(f, polygon.shared));
         if (b.length >= 3) back.push(new CSG.Polygon(b, polygon.shared));
-        // console.log('SPANNING');
         break;
     }
   }
@@ -710,9 +639,6 @@ CSG.Node.prototype = {
     for (var i = 0; i < this.polygons.length; i++) {
       this.polygons[i].flip();
     }
-    if (this.plane === null) {
-      console.log(null);
-    }
     this.plane.flip();
     if (this.front) this.front.invert();
     if (this.back) this.back.invert();
@@ -756,7 +682,6 @@ CSG.Node.prototype = {
   // nodes there. Each set of polygons is partitioned using the first polygon
   // (no heuristic is used to pick a good split).
   build: function(polygons) {
-    // console.log('\n');
     if (!polygons.length) return;
     if (!this.plane) this.plane = polygons[0].plane.clone();
     var front = [], back = [];
@@ -783,9 +708,7 @@ CSG.Node.prototype = {
 */
 function ArbitraryRotate(point, degreestheta, radius)
 {
-  // theta = degreestheta * Math.PI/180;
   theta = degreestheta * Math.PI/180;
-  // console.log('theta', theta);
   let p = point;
   let r = radius;
    let q = {x: 0.0, y: 0.0, z: 0.0};
