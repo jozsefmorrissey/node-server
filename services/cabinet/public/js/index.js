@@ -6858,7 +6858,7 @@ function (require, exports, module) {
 	        rotationOffset[2] += rotationUnit.y[2]/dir;
 	      }
 	      if (e.deltaX) {
-	        const dir = e.deltaX < 0 ? -speed : speed;
+	        const dir = e.deltaX < 0 ? speed : -speed;
 	        rotationOffset[0] += rotationUnit.x[0]/dir;
 	        rotationOffset[1] += rotationUnit.x[1]/dir;
 	        rotationOffset[2] += rotationUnit.x[2]/dir;
@@ -7561,6 +7561,7 @@ function (require, exports, module) {
 	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
 	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
 	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
+	      expr = expr.replace(/-([a-z(])/g, '-1*$1');
 	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
 	    }
 	
@@ -12850,7 +12851,7 @@ function (require, exports, module) {
 	    Expandable.lists[props.id] = this;
 	    this.inputTree = () => props.inputTree;
 	    this.parentSelector = () => props.parentSelector;
-	    
+	
 	    this.errorCntId = () => props.ERROR_CNT_ID;
 	    function setErrorMsg(msg) {
 	        du.id(props.ERROR_CNT_ID).innerHTML = msg;
@@ -12969,7 +12970,7 @@ function (require, exports, module) {
 	        const key = target.getAttribute('key');
 	        this.activeKey(key);
 	        if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
-	        if (props.removeButton) target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+	        if (props.removeButton !== false) target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
 	        target.className += ' active' + (this.hasBody() ? '' : ' no-body');
 	        afterRenderEvent.trigger();
 	        // du.scroll.intoView(target.parentElement, 3, 25, document.body);
@@ -17205,7 +17206,7 @@ function (require, exports, module) {
 	    "height": 86.36,
 	    "thickness": 60.96,
 	    "values": [
-	      {"key": "brh", "eqn": "tkb.w + pback.t + brr"},
+	      {"key": "brh", "eqn": "tkb.w + BACK.t + brr"},
 	      {"key": "innerWidth", "eqn": "c.w - pwt34 * 2"},
 	      {"key": "innerWidthCenter", "eqn": "innerWidth + pwt34"}
 	    ],
@@ -17219,26 +17220,26 @@ function (require, exports, module) {
 	        "rotation": [0,0,90]
 	      },
 	      {
-	        "name": "Panel.Left",
+	        "name": "Panel.Right",
 	        "type": "Panel",
-	        "code": "L",
-	        "center": ["c.w - (L.t / 2)", "L.l / 2", "(w / -2)"],
+	        "code": "R",
+	        "center": ["c.w - (R.t / 2)", "R.l / 2", "(w / -2)"],
 	        "demensions": ["c.t", "c.l", "pwt34"],
 	        "rotation": [0,90,0]
 	      },
 	      {
-	        "name": "Panel.Right",
+	        "name": "Panel.Left",
 	        "type": "Panel",
-	        "code": "R",
-	        "center": ["(R.t / 2)", "R.l / 2", " (w/-2)"],
+	        "code": "L",
+	        "center": ["(L.t / 2)", "L.l / 2", " (w/-2)"],
 	        "demensions": ["c.t", "c.l", "pwt34"],
 	        "rotation": [0,90,0]
 	      },
 	      {
 	        "name": "Back",
 	        "type": "Panel",
-	        "code": "pback",
-	        "center": ["l / 2 + L.t", " (w / 2) + tkb.w", " -1*(c.t - (t / 2))"],
+	        "code": "BACK",
+	        "center": ["l / 2 + R.t", " (w / 2) + tkb.w", " -1*(c.t - (t / 2))"],
 	        "demensions": ["c.l - tkb.w", "innerWidth", "pwt34"],
 	        "rotation": [0,0,90]
 	      },
@@ -17247,7 +17248,7 @@ function (require, exports, module) {
 	        "type": "Panel",
 	        "code": "B",
 	        "center": ["c.w / 2", "tkh + (t/2)", "w / -2"],
-	        "demensions": ["c.t - pback.t", "innerWidth", "pwt34"],
+	        "demensions": ["c.t - BACK.t", "innerWidth", "pwt34"],
 	        "rotation": [90,90, 0]
 	      },
 	      {
@@ -17255,22 +17256,22 @@ function (require, exports, module) {
 	        "type": "Panel",
 	        "code": "T",
 	        "center": ["c.w / 2", "c.h - pwt34/2", "(w / -2)"],
-	        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
+	        "demensions": ["(c.t - BACK.t) * .2", "innerWidth", "pwt34"],
 	        "rotation": [90,90, 0]
 	      },
 	      {
 	        "name": "Top",
 	        "type": "Panel",
 	        "code": "pt2",
-	        "center": ["c.w / 2", "c.h - pwt34/2", "-1*(c.t - pback.t - (w / 2))"],
-	        "demensions": ["(c.t - pback.t) * .2", "innerWidth", "pwt34"],
+	        "center": ["c.w / 2", "c.h - pwt34/2", "-1*(c.t - BACK.t - (w / 2))"],
+	        "demensions": ["(c.t - BACK.t) * .2", "innerWidth", "pwt34"],
 	        "rotation": [90,90, 0]
 	      }
 	    ],
 	    "joints": [
 	      {
 	        "malePartCode": "T",
-	        "femalePartCode": "L",
+	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -17278,7 +17279,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "T",
-	        "femalePartCode": "R",
+	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis":"y",
@@ -17286,7 +17287,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "pt2",
-	        "femalePartCode": "L",
+	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -17294,23 +17295,23 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "pt2",
-	        "femalePartCode": "R",
+	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis":"y",
 	        "centerAxis": "+x"
 	      },
 	      {
-	        "malePartCode": "pback",
-	        "femalePartCode": "L",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
 	        "centerAxis": "-x"
 	      },
 	      {
-	        "malePartCode": "pback",
-	        "femalePartCode": "R",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis":"y",
@@ -17318,7 +17319,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "tkb",
-	        "femalePartCode": "L",
+	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis":"y",
@@ -17326,7 +17327,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "tkb",
-	        "femalePartCode": "R",
+	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis":"y",
@@ -17334,7 +17335,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "B",
-	        "femalePartCode": "L",
+	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis":"y",
@@ -17342,7 +17343,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "B",
-	        "femalePartCode": "R",
+	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis":"y",
@@ -17367,7 +17368,7 @@ function (require, exports, module) {
 	        "bottom": "B",
 	        "left": "L",
 	        "right": "R",
-	        "back": "pback"
+	        "back": "BACK"
 	      }
 	    ]
 	  },
@@ -17383,13 +17384,13 @@ function (require, exports, module) {
 	      "id": "pz0usts"
 	    },
 	    {
-	      "key": "fwl",
-	      "eqn": "c.w - rw",
+	      "key": "fwr",
+	      "eqn": "c.w - lw",
 	      "id": "v47f8o3"
 	    },
 	    {
-	      "key": "fwr",
-	      "eqn": "c.t - lw",
+	      "key": "fwl",
+	      "eqn": "c.t - rw",
 	      "id": "ammy5c5"
 	    },
 	    {
@@ -17429,12 +17430,12 @@ function (require, exports, module) {
 	    },
 	    {
 	      "key": "frontLeftTheta",
-	      "eqn": "Math.atan(fwr/fwl)",
+	      "eqn": "Math.atan(fwl/fwr)",
 	      "id": "woqnfe1"
 	    },
 	    {
 	      "key": "frontHype",
-	      "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)",
+	      "eqn": "Math.sqrt(fwr*fwr + fwl*fwl)",
 	      "id": "u1sgalg"
 	    },
 	    {
@@ -17444,12 +17445,12 @@ function (require, exports, module) {
 	    },
 	    {
 	      "key": "frontHypeCenterD",
-	      "eqn": "fwr/2",
+	      "eqn": "fwl/2",
 	      "id": "fwll2bq"
 	    },
 	    {
 	      "key": "frontHypeCenterX",
-	      "eqn": "fwl/2",
+	      "eqn": "fwr/2",
 	      "id": "c0gj6ud"
 	    },
 	    {
@@ -17519,12 +17520,12 @@ function (require, exports, module) {
 	    },
 	    {
 	      "key": "rightInnerLimit",
-	      "eqn": "fwl - leftCutT",
+	      "eqn": "fwr - leftCutT",
 	      "id": "dnmesi3"
 	    },
 	    {
 	      "key": "rightOuterLimit",
-	      "eqn": "fwl",
+	      "eqn": "fwr",
 	      "id": "9syndoq"
 	    },
 	    {
@@ -17534,7 +17535,7 @@ function (require, exports, module) {
 	    },
 	    {
 	      "key": "frontDepthMax",
-	      "eqn": "fwr",
+	      "eqn": "fwl",
 	      "id": "eflejko"
 	    }
 	  ],
@@ -17544,7 +17545,7 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
 	        "c.h/2",
-	        "c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12)"
+	        "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
 	      ],
 	      "demensions": [
 	        "pbw",
@@ -17553,7 +17554,7 @@ function (require, exports, module) {
 	      ],
 	      "rotation": [
 	        0,
-	        "45",
+	        "135",
 	        0
 	      ],
 	      "name": "Panel.Back",
@@ -17565,7 +17566,7 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w + bo/4*Math.sin(Math.PI/2)",
 	        "c.h/2",
-	        "c.t + bo/4*Math.sin(Math.PI/2)"
+	        "-(c.t + bo/4*Math.sin(Math.PI/2))"
 	      ],
 	      "demensions": [
 	        "bo*2",
@@ -17586,7 +17587,7 @@ function (require, exports, module) {
 	      "center": [
 	        "R.w/2",
 	        "c.h / 2",
-	        "R.t/2"
+	        "R.t/-2"
 	      ],
 	      "demensions": [
 	        "c.w",
@@ -17607,7 +17608,7 @@ function (require, exports, module) {
 	      "center": [
 	        "L.t/2",
 	        "c.h/2",
-	        "L.w/2"
+	        "L.w/-2"
 	      ],
 	      "demensions": [
 	        "c.t",
@@ -17628,7 +17629,7 @@ function (require, exports, module) {
 	      "center": [
 	        "pbr.w / 2 + R.t ",
 	        "c.h/2",
-	        "c.t - t / 2"
+	        "-(c.t - t / 2)"
 	      ],
 	      "demensions": [
 	        "c.w - bo",
@@ -17670,7 +17671,7 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w - pbr.t/2",
 	        "c.h/2",
-	        "pbl.w/2 + L.t"
+	        "-(pbl.w/2 + L.t)"
 	      ],
 	      "demensions": [
 	        "c.t - bo",
@@ -17691,7 +17692,7 @@ function (require, exports, module) {
 	      "center": [
 	        "pbr.c.x",
 	        "pbr.c.y",
-	        "pbr.c.z + cpbr.t"
+	        "pbr.c.z - cpbr.t"
 	      ],
 	      "demensions": [
 	        "pbr.d.x",
@@ -17712,7 +17713,7 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w / 2",
 	        "c.h - topInsetDepth - T.t / 2",
-	        "c.t / 2"
+	        "c.t / -2"
 	      ],
 	      "demensions": [
 	        "c.w - pbr.t - R.t",
@@ -17733,7 +17734,7 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w / 2",
 	        "bottomInsetDepth + B.t / 2",
-	        "c.t / 2"
+	        "c.t / -2"
 	      ],
 	      "demensions": [
 	        "c.w - pbr.t - R.t",
@@ -17754,7 +17755,7 @@ function (require, exports, module) {
 	      "center": [
 	        "cutCenterX",
 	        "c.h/2",
-	        "cutCenterD"
+	        "-cutCenterD"
 	      ],
 	      "demensions": [
 	        "frontHype * 2",
@@ -17763,7 +17764,7 @@ function (require, exports, module) {
 	      ],
 	      "rotation": [
 	        "90",
-	        "Math.toDegrees(frontLeftTheta)",
+	        "Math.toDegrees(Math.PI - frontLeftTheta)",
 	        0
 	      ],
 	      "name": "Cutter.Front",
@@ -17966,46 +17967,46 @@ function (require, exports, module) {
 	      "coordinates": {
 	        "inner": [
 	          {
+	            "x": "leftInnerLimit",
+	            "y": "topInnerLimit",
+	            "z": "-(frontDepthMax - rightCutX)"
+	          },
+	          {
 	            "x": "rightInnerLimit",
 	            "y": "topInnerLimit",
-	            "z": "frontDepthMin + R.t"
-	          },
-	          {
-	            "x": "leftInnerLimit",
-	            "y": "topInnerLimit",
-	            "z": "frontDepthMax - rightCutX"
-	          },
-	          {
-	            "x": "leftInnerLimit",
-	            "y": "bottomInnerLimit",
-	            "z": "frontDepthMax - rightCutX"
+	            "z": "-(frontDepthMin + R.t)"
 	          },
 	          {
 	            "x": "rightInnerLimit",
 	            "y": "bottomInnerLimit",
-	            "z": "frontDepthMin + R.t"
+	            "z": "-(frontDepthMin + R.t)"
+	          },
+	          {
+	            "x": "leftInnerLimit",
+	            "y": "bottomInnerLimit",
+	            "z": "-(frontDepthMax - rightCutX)"
 	          }
 	        ],
 	        "outer": [
 	          {
+	            "x": "leftOuterLimit",
+	            "y": "topOuterLimit",
+	            "z": "-frontDepthMax"
+	          },
+	          {
 	            "x": "rightOuterLimit",
 	            "y": "topOuterLimit",
-	            "z": "frontDepthMin"
-	          },
-	          {
-	            "x": "leftOuterLimit",
-	            "y": "topOuterLimit",
-	            "z": "frontDepthMax"
-	          },
-	          {
-	            "x": "leftOuterLimit",
-	            "y": "bottomOuterLimit",
-	            "z": "frontDepthMax"
+	            "z": "-frontDepthMin"
 	          },
 	          {
 	            "x": "rightOuterLimit",
 	            "y": "bottomOuterLimit",
-	            "z": "frontDepthMin"
+	            "z": "-frontDepthMin"
+	          },
+	          {
+	            "x": "leftOuterLimit",
+	            "y": "bottomOuterLimit",
+	            "z": "-frontDepthMax"
 	          }
 	        ]
 	      },
@@ -18028,7 +18029,7 @@ function (require, exports, module) {
 	    "values": [
 	      {
 	        "key": "brh",
-	        "eqn": "tkb.w + pback.t + brr",
+	        "eqn": "tkb.w + BACK.t + brr",
 	
 	      },
 	      {
@@ -18055,7 +18056,7 @@ function (require, exports, module) {
 	        "center": [
 	          "c.w / 2",
 	          "w / 2",
-	          "tkd + (t / 2)"
+	          "-(tkd + (t / 2))"
 	        ],
 	        "demensions": [
 	          "tkh",
@@ -18072,11 +18073,11 @@ function (require, exports, module) {
 	      {
 	        "name": "Right",
 	        "type": "Panel",
-	        "code": "L",
+	        "code": "R",
 	        "center": [
-	          "c.w - (L.t / 2)",
+	          "c.w - (R.t / 2)",
 	          "l / 2",
-	          "(w / 2)"
+	          "w / -2"
 	        ],
 	        "demensions": [
 	          "c.t",
@@ -18093,11 +18094,11 @@ function (require, exports, module) {
 	      {
 	        "name": "Left",
 	        "type": "Panel",
-	        "code": "R",
+	        "code": "L",
 	        "center": [
 	          "(t / 2)",
 	          " l / 2",
-	          " (w/2)"
+	          "w/-2"
 	        ],
 	        "demensions": [
 	          "c.t",
@@ -18114,11 +18115,11 @@ function (require, exports, module) {
 	      {
 	        "name": "Back",
 	        "type": "Panel",
-	        "code": "pback",
+	        "code": "BACK",
 	        "center": [
-	          "l / 2 + R.t",
+	          "l / 2 + L.t",
 	          " (w / 2) + tkb.w",
-	          " c.t - (t / 2)"
+	          "-(c.t - (t / 2))"
 	        ],
 	        "demensions": [
 	          "c.l - tkb.w - T.t - insetTop",
@@ -18139,10 +18140,10 @@ function (require, exports, module) {
 	        "center": [
 	          "c.w / 2",
 	          "tkh + (t/2)",
-	          "w / 2"
+	          "w / -2"
 	        ],
 	        "demensions": [
-	          "c.t - pback.t",
+	          "c.t - BACK.t",
 	          "innerWidth",
 	          "pwt34"
 	        ],
@@ -18160,7 +18161,7 @@ function (require, exports, module) {
 	        "center": [
 	          "c.w / 2",
 	          "c.h - pwt34/2 - insetTop",
-	          "(w / 2)"
+	          "w / -2"
 	        ],
 	        "demensions": [
 	          "c.t",
@@ -18177,9 +18178,9 @@ function (require, exports, module) {
 	      {
 	        "type": "Panel",
 	        "center": [
-	          "R.t + innerWidth/2",
+	          "L.t + innerWidth/2",
 	          "c.h - insetTop/2",
-	          "tf.t/2"
+	          "tf.t/-2"
 	        ],
 	        "demensions": [
 	          "insetTop",
@@ -18199,7 +18200,7 @@ function (require, exports, module) {
 	    "joints": [
 	      {
 	        "malePartCode": "T",
-	        "femalePartCode": "R",
+	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -18208,7 +18209,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "T",
-	        "femalePartCode": "L",
+	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -18216,8 +18217,8 @@ function (require, exports, module) {
 	
 	      },
 	      {
-	        "malePartCode": "pback",
-	        "femalePartCode": "R",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -18225,8 +18226,8 @@ function (require, exports, module) {
 	
 	      },
 	      {
-	        "malePartCode": "pback",
-	        "femalePartCode": "L",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -18235,7 +18236,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "tkb",
-	        "femalePartCode": "R",
+	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -18244,7 +18245,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "tkb",
-	        "femalePartCode": "L",
+	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -18253,7 +18254,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "B",
-	        "femalePartCode": "R",
+	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -18262,7 +18263,7 @@ function (require, exports, module) {
 	      },
 	      {
 	        "malePartCode": "B",
-	        "femalePartCode": "L",
+	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
@@ -18281,7 +18282,7 @@ function (require, exports, module) {
 	      {
 	
 	        "type": "Dado",
-	        "malePartCode": "pback",
+	        "malePartCode": "BACK",
 	        "femalePartCode": "T",
 	        "maleOffset": "T.t/2",
 	        "demensionAxis": "x",
@@ -18298,7 +18299,7 @@ function (require, exports, module) {
 	        "bottom": "B",
 	        "left": "L",
 	        "right": "R",
-	        "back": "pback",
+	        "back": "BACK",
 	
 	      }
 	    ]
@@ -18324,9 +18325,9 @@ function (require, exports, module) {
 	      {
 	        "type": "Panel",
 	        "center": [
-	          "c.w - L.t/2",
+	          "c.w - R.t/2",
 	          "c.h / 2",
-	          "L.w / 2"
+	          "R.w / -2"
 	        ],
 	        "demensions": [
 	          "c.t",
@@ -18339,14 +18340,14 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Right",
-	        "code": "L"
+	        "code": "R"
 	      },
 	      {
 	        "type": "Panel",
 	        "center": [
-	          "R.t/2",
+	          "L.t/2",
 	          "c.h/2",
-	          "R.w/2"
+	          "L.w/-2"
 	        ],
 	        "demensions": [
 	          "c.t",
@@ -18359,17 +18360,17 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Left",
-	        "code": "R"
+	        "code": "L"
 	      },
 	      {
 	        "type": "Panel",
 	        "center": [
-	          "R.t + BACK.w/2",
+	          "L.t + BACK.w/2",
 	          "BACK.h/2 + B.t",
-	          "c.t - BACK.t /2"
+	          "-(c.t - BACK.t /2)"
 	        ],
 	        "demensions": [
-	          "c.w - R.t - L.t",
+	          "c.w - L.t - R.t",
 	          "c.h - B.t -T.t",
 	          "pwt34"
 	        ],
@@ -18384,12 +18385,12 @@ function (require, exports, module) {
 	      {
 	        "type": "Panel",
 	        "center": [
-	          "R.t + T.w / 2",
+	          "L.t + T.w / 2",
 	          "c.h - T.t/2",
-	          "T.l/2 "
+	          "T.l/-2 "
 	        ],
 	        "demensions": [
-	          "c.w - R.t - L.t",
+	          "c.w - L.t - R.t",
 	          "c.t ",
 	          "pwt34"
 	        ],
@@ -18404,12 +18405,12 @@ function (require, exports, module) {
 	      {
 	        "type": "Panel",
 	        "center": [
-	          "B.w /2 + R.t",
+	          "B.w /2 + L.t",
 	          "B.t/2",
-	          "B.h / 2"
+	          "B.h / -2"
 	        ],
 	        "demensions": [
-	          "c.w - R.t - L.t",
+	          "c.w - L.t - R.t",
 	          "c.t",
 	          "pwt34"
 	        ],
@@ -18434,8 +18435,8 @@ function (require, exports, module) {
 	      {
 	        "type": "Dado",
 	        "malePartCode": "BACK",
-	        "femalePartCode": "L",
-	        "maleOffset": "L.t/2",
+	        "femalePartCode": "R",
+	        "maleOffset": "R.t/2",
 	        "demensionAxis": "x",
 	        "centerAxis": "+x"
 	      },
@@ -18450,8 +18451,8 @@ function (require, exports, module) {
 	      {
 	        "type": "Dado",
 	        "malePartCode": "BACK",
-	        "femalePartCode": "R",
-	        "maleOffset": "R.t/2",
+	        "femalePartCode": "L",
+	        "maleOffset": "L.t/2",
 	        "demensionAxis": "x",
 	        "centerAxis": "-x"
 	      }
@@ -18472,36 +18473,34 @@ function (require, exports, module) {
 	  },
 	  "corner-base-blind (R)": {
 	  "_TYPE": "CabinetTemplate",
-	  "width": 121.92,
-	  "height": 86.36,
-	  "thickness": 60.96,
+	
 	  "ID_ATTRIBUTE": "id",
 	  "type": "corner-base-blind",
 	  "values": [
 	    {
 	      "key": "brh",
-	      "eqn": "tkb.w + pback.t + brr",
-	
+	      "eqn": "tkb.w + BACK.t + brr",
+	      "id": "rytasvx"
 	    },
 	    {
 	      "key": "innerWidth",
 	      "eqn": "c.w - pwt34 * 2",
-	
+	      "id": "eirxtek"
 	    },
 	    {
 	      "key": "innerWidthCenter",
 	      "eqn": "innerWidth + pwt34",
-	
+	      "id": "j4e8h6b"
 	    },
 	    {
-	
 	      "key": "blindDepth",
-	      "eqn": "24*2.54"
+	      "eqn": "24*2.54",
+	      "id": "efbkt8b"
 	    },
 	    {
-	
 	      "key": "innerHeight",
-	      "eqn": "c.h - tkh - B.t"
+	      "eqn": "c.h - tkh - B.t",
+	      "id": "m8ntul7"
 	    }
 	  ],
 	  "subassemblies": [
@@ -18512,7 +18511,7 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w / 2",
 	        "w / 2",
-	        "tkd + (t / 2)"
+	        "-(tkd + (t / 2))"
 	      ],
 	      "demensions": [
 	        "tkh",
@@ -18524,7 +18523,7 @@ function (require, exports, module) {
 	        0,
 	        90
 	      ],
-	
+	      "id": "a5qdqn0"
 	    },
 	    {
 	      "name": "Right",
@@ -18533,7 +18532,7 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w - (R.t / 2)",
 	        "l / 2",
-	        "(w / 2)"
+	        "w / -2"
 	      ],
 	      "demensions": [
 	        "c.t",
@@ -18545,7 +18544,7 @@ function (require, exports, module) {
 	        90,
 	        0
 	      ],
-	
+	      "id": "92ph35l"
 	    },
 	    {
 	      "name": "Left",
@@ -18554,7 +18553,7 @@ function (require, exports, module) {
 	      "center": [
 	        "(t / 2)",
 	        " l / 2",
-	        " (w/2)"
+	        "w/-2"
 	      ],
 	      "demensions": [
 	        "c.t",
@@ -18566,16 +18565,16 @@ function (require, exports, module) {
 	        90,
 	        0
 	      ],
-	
+	      "id": "m3qw835"
 	    },
 	    {
 	      "name": "Back",
 	      "type": "Panel",
-	      "code": "pback",
+	      "code": "BACK",
 	      "center": [
 	        "l / 2 + L.t",
 	        " (w / 2) + tkb.w",
-	        " c.t - (t / 2)"
+	        "-(c.t - (t / 2))"
 	      ],
 	      "demensions": [
 	        "c.l - tkb.w",
@@ -18587,7 +18586,7 @@ function (require, exports, module) {
 	        0,
 	        90
 	      ],
-	
+	      "id": "xtnagor"
 	    },
 	    {
 	      "name": "Bottom",
@@ -18596,10 +18595,10 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w / 2",
 	        "tkh + (t/2)",
-	        "w / 2"
+	        "w / -2"
 	      ],
 	      "demensions": [
-	        "c.t - pback.t",
+	        "c.t - BACK.t",
 	        "innerWidth",
 	        "pwt34"
 	      ],
@@ -18608,7 +18607,7 @@ function (require, exports, module) {
 	        90,
 	        0
 	      ],
-	
+	      "id": "hqd66l3"
 	    },
 	    {
 	      "name": "Top",
@@ -18617,10 +18616,10 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w / 2",
 	        "c.h - pwt34/2",
-	        "(w / 2)"
+	        "w / -2"
 	      ],
 	      "demensions": [
-	        "(c.t - pback.t) * .2",
+	        "(c.t - BACK.t) * .2",
 	        "innerWidth",
 	        "pwt34"
 	      ],
@@ -18629,7 +18628,7 @@ function (require, exports, module) {
 	        90,
 	        0
 	      ],
-	
+	      "id": "23jhkbo"
 	    },
 	    {
 	      "name": "Top2",
@@ -18638,10 +18637,10 @@ function (require, exports, module) {
 	      "center": [
 	        "c.w / 2",
 	        "c.h - pwt34/2",
-	        "c.t - pback.t - (w / 2)"
+	        "-(c.t - BACK.t - (w / 2))"
 	      ],
 	      "demensions": [
-	        "(c.t - pback.t) * .2",
+	        "(c.t - BACK.t) * .2",
 	        "innerWidth",
 	        "pwt34"
 	      ],
@@ -18650,14 +18649,14 @@ function (require, exports, module) {
 	        90,
 	        0
 	      ],
-	
+	      "id": "xurl216"
 	    },
 	    {
 	      "type": "Panel",
 	      "center": [
 	        "blindDepth + 2*2.54 - bms.w/2",
 	        "tkh + B.t + bms.h/2",
-	        "bms.t/2"
+	        "bms.t/-2"
 	      ],
 	      "demensions": [
 	        "6*2.54",
@@ -18669,9 +18668,9 @@ function (require, exports, module) {
 	        0,
 	        0
 	      ],
-	
 	      "name": "Panel.Blind.MiddleSupport",
-	      "code": "bms"
+	      "code": "bms",
+	      "id": "xu3co3t"
 	    }
 	  ],
 	  "joints": [
@@ -18682,7 +18681,7 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "-x",
-	
+	      "id": "5iua8fj"
 	    },
 	    {
 	      "malePartCode": "T",
@@ -18691,7 +18690,7 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "+x",
-	
+	      "id": "tdgb6kj"
 	    },
 	    {
 	      "malePartCode": "pt2",
@@ -18700,7 +18699,7 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "-x",
-	
+	      "id": "omdnri7"
 	    },
 	    {
 	      "malePartCode": "pt2",
@@ -18709,25 +18708,25 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "+x",
-	
+	      "id": "kkh5047"
 	    },
 	    {
-	      "malePartCode": "pback",
+	      "malePartCode": "BACK",
 	      "femalePartCode": "L",
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "-x",
-	
+	      "id": "xe729tv"
 	    },
 	    {
-	      "malePartCode": "pback",
+	      "malePartCode": "BACK",
 	      "femalePartCode": "R",
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "+x",
-	
+	      "id": "x653in7"
 	    },
 	    {
 	      "malePartCode": "tkb",
@@ -18736,7 +18735,7 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "-x",
-	
+	      "id": "juufon2"
 	    },
 	    {
 	      "malePartCode": "tkb",
@@ -18745,7 +18744,7 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "+x",
-	
+	      "id": "4sd9jd8"
 	    },
 	    {
 	      "malePartCode": "B",
@@ -18754,7 +18753,7 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "-x",
-	
+	      "id": "navlp2j"
 	    },
 	    {
 	      "malePartCode": "B",
@@ -18763,7 +18762,7 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
 	      "centerAxis": "+x",
-	
+	      "id": "iw7sb6w"
 	    },
 	    {
 	      "malePartCode": "tkb",
@@ -18772,12 +18771,17 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "x",
 	      "centerAxis": "+y",
+	      "id": "wsui626"
 	    }
 	  ],
 	  "dividerJoint": {
 	    "type": "Dado",
 	    "maleOffset": 0.9525
 	  },
+	  "shape": "square",
+	  "width": 121.92,
+	  "height": 86.36,
+	  "thickness": 60.96,
 	  "openings": [
 	    {
 	      "_Type": "location",
@@ -18789,7 +18793,7 @@ function (require, exports, module) {
 	      "coordinates": {
 	        "inner": [
 	          {
-	            "x": "R.t",
+	            "x": "bms.c.x + bms.d.x/2",
 	            "y": "T.c.y - T.t/2",
 	            "z": "0"
 	          },
@@ -18804,14 +18808,14 @@ function (require, exports, module) {
 	            "z": "0"
 	          },
 	          {
-	            "x": "R.t",
+	            "x": "bms.c.x + bms.d.x/2",
 	            "y": "B.c.y + B.t/2",
 	            "z": "0"
 	          }
-	                ],
+	        ],
 	        "outer": [
 	          {
-	            "x": "0",
+	            "x": "bms.c.x + bms.d.x/2 - R.t",
 	            "y": "c.h",
 	            "z": "0"
 	          },
@@ -18826,7 +18830,7 @@ function (require, exports, module) {
 	            "z": "0"
 	          },
 	          {
-	            "x": "0",
+	            "x": "bms.c.x + bms.d.x/2 - R.t",
 	            "y": "B.c.y - B.t/2",
 	            "z": "0"
 	          }
@@ -18838,9 +18842,496 @@ function (require, exports, module) {
 	        "xOyOz": "z"
 	      },
 	      "id": "hofivl0"
+	    },
+	    {
+	
+	      "_Type": "location",
+	      "zRotation": 0,
+	      "inner": {
+	        "top": {
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        },
+	        "bottom": {
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        }
+	      },
+	      "outer": {
+	        "top": {
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        },
+	        "bottom": {
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        }
+	      },
+	      "coordinates": {
+	        "inner": [
+	          {
+	            "x": "R.t",
+	            "y": "T.c.y - T.t/2",
+	            "z": "0"
+	          },
+	          {
+	            "x": "bms.c.x - bms.d.x/2",
+	            "y": "T.c.y - T.t/2",
+	            "z": "0"
+	          },
+	          {
+	            "x": "bms.c.x - bms.d.x/2",
+	            "y": "B.c.y + B.t/2",
+	            "z": "0"
+	          },
+	          {
+	            "x": "R.t",
+	            "y": "B.c.y + B.t/2",
+	            "z": "0"
+	          }
+	        ],
+	        "outer": [
+	          {
+	            "x": "0",
+	            "y": "c.h",
+	            "z": "0"
+	          },
+	          {
+	            "x": "bms.c.x - bms.d.x/2 + L.t",
+	            "y": "c.h",
+	            "z": "0"
+	          },
+	          {
+	            "x": "bms.c.x - bms.d.x/2 + L.t",
+	            "y": "B.c.y - B.t/2",
+	            "z": "0"
+	          },
+	          {
+	            "x": "0",
+	            "y": "B.c.y - B.t/2",
+	            "z": "0"
+	          }
+	        ]
+	      }
 	    }
 	  ]
 	},
+	  "corner-triangle": {
+	  "_TYPE": "CabinetTemplate",
+	
+	  "ID_ATTRIBUTE": "id",
+	  "type": "corner-triangle",
+	  "values": [
+	    {
+	      "key": "innerWidth",
+	      "eqn": "c.w - pwt34 * 2",
+	      "id": "r1am35q"
+	    },
+	    {
+	      "key": "innerWidthCenter",
+	      "eqn": "innerWidth + pwt34",
+	      "id": "zrglub8"
+	    },
+	    {
+	      "key": "frontHype",
+	      "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)",
+	      "id": "r01pswe"
+	    },
+	    {
+	      "key": "frontCenterX",
+	      "eqn": "frontHype/2 * Math.cos(frontLeftTheta)",
+	      "id": "u5ycphk"
+	    },
+	    {
+	      "key": "frontCenterZ",
+	      "eqn": "-frontHype/2 * Math.cos(frontRightTheta)",
+	      "id": "dnca3mh"
+	    },
+	    {
+	      "key": "frontLeftTheta",
+	      "eqn": "Math.atan(c.t/c.w)",
+	      "id": "b16j601"
+	    },
+	    {
+	      "key": "frontRightTheta",
+	      "eqn": "Math.PI/2  - frontLeftTheta",
+	      "id": "61umfwr"
+	    },
+	    {
+	      "key": "toeKickBackerLen",
+	      "eqn": "Math.sqrt((c.w-tkd-tkb.t)*(c.w-tkd-tkb.t)+(c.t-tkd-tkb.t)*(c.t-tkd-tkb.t))",
+	      "id": "6d7a07i"
+	    }
+	  ],
+	  "subassemblies": [
+	    {
+	      "name": "ToeKickBacker",
+	      "type": "Panel",
+	      "code": "tkb",
+	      "center": [
+	        "frontCenterX + (tkd + tkb.t/2)*Math.cos(frontLeftTheta)",
+	        "w / 2",
+	        "frontCenterZ - (tkd+tkb.t/2)*Math.sin(frontRightTheta)"
+	      ],
+	      "demensions": [
+	        "tkh",
+	        "toeKickBackerLen",
+	        "tkbw"
+	      ],
+	      "rotation": [
+	        "90+Math.toDegrees(frontRightTheta)",
+	        "0",
+	        90
+	      ],
+	      "id": "zojblha"
+	    },
+	    {
+	      "name": "Panel.Right",
+	      "type": "Panel",
+	      "code": "R",
+	      "center": [
+	        "c.w - (R.t / 2)",
+	        "R.l / 2",
+	        "(w / -2)"
+	      ],
+	      "demensions": [
+	        "c.t",
+	        "c.l",
+	        "pwt34"
+	      ],
+	      "rotation": [
+	        0,
+	        90,
+	        0
+	      ],
+	      "id": "i27zjxi"
+	    },
+	    {
+	      "name": "Panel.Left",
+	      "type": "Panel",
+	      "code": "L",
+	      "center": [
+	        "L.w/2",
+	        "L.l / 2",
+	        "-(c.t - L.t/2)"
+	      ],
+	      "demensions": [
+	        "c.w - R.t",
+	        "c.l",
+	        "pwt34"
+	      ],
+	      "rotation": [
+	        0,
+	        "0",
+	        0
+	      ],
+	      "id": "ly1lmzs"
+	    },
+	    {
+	      "name": "Bottom",
+	      "type": "Panel",
+	      "code": "B",
+	      "center": [
+	        "c.w / 2",
+	        "tkh + (t/2)",
+	        "w / -2"
+	      ],
+	      "demensions": [
+	        "c.t",
+	        "innerWidth",
+	        "pwt34"
+	      ],
+	      "rotation": [
+	        90,
+	        90,
+	        0
+	      ],
+	      "id": "dx1l40m"
+	    },
+	    {
+	      "name": "Top",
+	      "type": "Panel",
+	      "code": "T",
+	      "center": [
+	        "c.w / 2",
+	        "c.h - pwt34/2",
+	        "(w / -2)"
+	      ],
+	      "demensions": [
+	        "c.t",
+	        "innerWidth",
+	        "pwt34"
+	      ],
+	      "rotation": [
+	        90,
+	        90,
+	        0
+	      ],
+	      "id": "lcj2axc"
+	    },
+	    {
+	      "type": "Cutter",
+	      "center": [
+	        "frontCenterX - fc.t/2*Math.sin(frontLeftTheta)",
+	        "c.h/2",
+	        "frontCenterZ + fc.t/2*Math.sin(frontRightTheta)"
+	      ],
+	      "demensions": [
+	        "frontHype",
+	        "c.h",
+	        "frontHype"
+	      ],
+	      "rotation": [
+	        0,
+	        "Math.toDegrees(frontRightTheta)",
+	        0
+	      ],
+	      "include": "All",
+	      "name": "frontCutter",
+	      "code": "fc",
+	      "id": "uzqg2vs"
+	    }
+	  ],
+	  "joints": [
+	    {
+	      "malePartCode": "T",
+	      "femalePartCode": "R",
+	      "type": "Dado",
+	      "maleOffset": 0.9525,
+	      "demensionAxis": "y",
+	      "centerAxis": "-x",
+	      "id": "7whh25x"
+	    },
+	    {
+	      "malePartCode": "T",
+	      "femalePartCode": "L",
+	      "type": "Dado",
+	      "maleOffset": "0.9525",
+	      "demensionAxis": "y",
+	      "centerAxis": "+z",
+	      "id": "w3lyip6"
+	    },
+	    {
+	      "malePartCode": "tkb",
+	      "femalePartCode": "R",
+	      "type": "Dado",
+	      "maleOffset": 0.9525,
+	      "demensionAxis": "y",
+	      "centerAxis": "-x",
+	      "id": "5ay7hu7"
+	    },
+	    {
+	      "malePartCode": "tkb",
+	      "femalePartCode": "L",
+	      "type": "Dado",
+	      "maleOffset": 0.9525,
+	      "demensionAxis": "y",
+	      "centerAxis": "+x",
+	      "id": "modbdha"
+	    },
+	    {
+	      "malePartCode": "B",
+	      "femalePartCode": "R",
+	      "type": "Dado",
+	      "maleOffset": 0.9525,
+	      "demensionAxis": "y",
+	      "centerAxis": "-x",
+	      "id": "eetmyfu"
+	    },
+	    {
+	      "malePartCode": "B",
+	      "femalePartCode": "L",
+	      "type": "Dado",
+	      "maleOffset": 0.9525,
+	      "demensionAxis": "y",
+	      "centerAxis": "+x",
+	      "id": "z8sqwwt"
+	    },
+	    {
+	      "malePartCode": "tkb",
+	      "femalePartCode": "B",
+	      "type": "Dado",
+	      "maleOffset": 0.9525,
+	      "demensionAxis": "x",
+	      "centerAxis": "+y",
+	      "id": "84e6woh"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "fc",
+	      "femalePartCode": "T",
+	      "id": "i2h32py"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "fc",
+	      "femalePartCode": "R",
+	      "id": "5h7i27p"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "fc",
+	      "femalePartCode": "L",
+	      "id": "on59hxn"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "fc",
+	      "femalePartCode": "B",
+	      "id": "kxec5xg"
+	    }
+	  ],
+	  "dividerJoint": {
+	    "type": "Dado",
+	    "maleOffset": 0.9525
+	  },
+	  "shape": "square",
+	  "width": 45.72,
+	  "height": 86.36,
+	  "thickness": 60.96,
+	  "openings": [
+	    {
+	      "top": "T",
+	      "bottom": "B",
+	      "left": "L",
+	      "right": "R",
+	      "back": "BACK",
+	      "_Type": "location",
+	      "zRotation": 0,
+	      "inner": {
+	        "top": {
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        },
+	        "bottom": {
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        }
+	      },
+	      "outer": {
+	        "top": {
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        },
+	        "bottom": {
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        }
+	      },
+	      "coordinates": {
+	        "inner": [
+	          {
+	            "x": "R.t",
+	            "y": "T.c.y - T.t/2",
+	            "z": "L.c.z + L.t/2"
+	          },
+	          {
+	            "x": "c.w - L.t",
+	            "y": "T.c.y - T.t/2",
+	            "z": "R.t/-2"
+	          },
+	          {
+	            "x": "c.w - L.t",
+	            "y": "B.c.y + B.t/2",
+	            "z": "R.t/-2"
+	          },
+	          {
+	            "x": "R.t",
+	            "y": "B.c.y + B.t/2",
+	            "z": "L.c.z + L.t/2"
+	          }
+	        ],
+	        "outer": [
+	          {
+	            "x": "0",
+	            "y": "c.h",
+	            "z": "L.c.z - L.t/2"
+	          },
+	          {
+	            "x": "c.w",
+	            "y": "c.h",
+	            "z": "0"
+	          },
+	          {
+	            "x": "c.w",
+	            "y": "B.c.y - B.t/2",
+	            "z": "0"
+	          },
+	          {
+	            "x": "0",
+	            "y": "B.c.y - B.t/2",
+	            "z": "L.c.z - L.t/2"
+	          }
+	        ]
+	      },
+	      "id": "4fdqq24"
+	    }
+	  ]
+	}
 	}
 	
 });
@@ -24999,10 +25490,10 @@ function (require, exports, module) {
 	
 	        const topMax = top.position().centerAdjust('y', '+z');
 	        const topMin = top.position().centerAdjust('y', '-z');
-	        const leftMax = left.position().centerAdjust('x', '-z');
-	        const leftMin = left.position().centerAdjust('x', '+z');
-	        const rightMin = right.position().centerAdjust('x', '+z');
-	        const rightMax = right.position().centerAdjust('x', '-z');
+	        const leftMax = left.position().centerAdjust('x', '+z');
+	        const leftMin = left.position().centerAdjust('x', '-z');
+	        const rightMin = right.position().centerAdjust('x', '-z');
+	        const rightMax = right.position().centerAdjust('x', '+z');
 	        const bottomMin = bottom.position().centerAdjust('y', '-z');
 	        const bottomMax = bottom.position().centerAdjust('y', '+z');
 	
@@ -25526,7 +26017,7 @@ const Vertex3D = require('./objects/vertex');
 	        const topPoly = Polygon3D.from2D(topPoly2d);
 	        topPoly.rotate({x:90,y:0,z:0});
 	        silhouette = BiPolygon.fromPolygon(topPoly, 0, height);
-	        silhouette.center(this.center());
+	        if (silhouette) silhouette.center(this.center());
 	      }
 	      return silhouette;
 	    }
@@ -25638,9 +26129,13 @@ const Vertex3D = require('./objects/vertex');
 	
 	    this.complexModel = (model) => {
 	      if (model !== undefined) {
-	        addComplexModelAttrs(model);
-	        complexModel = model;
-	        this.topviewSnap();
+	        try {
+	          addComplexModelAttrs(model);
+	          complexModel = model;
+	          this.topviewSnap();
+	        } catch (e) {
+	          console.warn(e);
+	        }
 	      }
 	      return complexModel;
 	    }
@@ -25919,7 +26414,7 @@ function (require, exports, module) {
 	        let displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
 	        console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
 	        // centerModel(displayModel);
-	        extraObjects.forEach(obj => displayModel = displayModel.union(obj));
+	        extraObjects.forEach(obj => displayModel.polygons.concatInPlace(obj.polygons));
 	        displayModel = displayModel.union(CSG.axis());
 	        viewer.mesh = displayModel.toMesh();
 	        viewer.gl.ondraw();
@@ -27765,6 +28260,8 @@ function (require, exports, module) {
 	
 	let template;
 	let modifyingOpening = false;
+	
+	let lastOpening;
 	const sectionState = {
 	  style: 'Overlay',
 	  vertical: false,
@@ -27772,16 +28269,47 @@ function (require, exports, module) {
 	  xOyOz: 'x',
 	  index: 0,
 	  count: 0,
+	  opening: (elem) => {
+	    if (elem) lastOpening = ExpandableList.get(elem);
+	    return lastOpening;
+	  },
+	  valueObject: () => {
+	    const innerOouter = sectionState.innerOouter === 'true' ? 'inner' : 'outer';
+	    return sectionState.opening().coordinates[innerOouter][sectionState.index];
+	  },
+	  value: (val) => {
+	    const target = sectionState.valueObject();
+	    if (val !== undefined) {
+	      target[sectionState.xOyOz] = val;
+	    }
+	    return target[sectionState.xOyOz];
+	  },
+	  updateInput: (elem) => {
+	    const coordinateInput = du.find.closest("[name='opening-coordinate-value']", elem);
+	    coordinateInput.value = sectionState.value();
+	    updateOpenLocationDisplay(sectionState.opening(elem), elem);
+	  }
 	};
+	
+	const defalutCustomCoords = () => ({"inner": [{"x": "R.t","y": "T.c.y - T.t/2","z": "0"},
+	          {"x": "c.w - L.t","y": "T.c.y - T.t/2","z": "0"},
+	          {"x": "c.w - L.t","y": "B.c.y + B.t/2","z": "0"},
+	          {"x": "R.t","y": "B.c.y + B.t/2","z": "0"}],
+	"outer": [{"x": "0","y": "c.h","z": "0"},
+	          {"x": "c.w","y": "c.h","z": "0"},
+	          {"x": "c.w","y": "B.c.y - B.t/2","z": "0"},
+	          {"x": "0","y": "B.c.y - B.t/2","z": "0"}]});
 	
 	const openingSketch = new OpeningSketch('opening-sketch-cnt');
 	const faceSketch = new FaceSketch('front-sketch');
 	function updateState(elem) {
 	  const opening = ExpandableList.get(elem);
 	  sectionState.id = opening.id;
+	  sectionState.opening(elem);
 	  const attr = elem.name.replace(/(.*?)-.*/, '$1');
 	  if (attr === 'index') sectionState[attr] = Number.parseInt(elem.value);
-	  else sectionState[attr] = elem.value;
+	  else if (attr !== 'opening') sectionState[attr] = elem.value;
+	  sectionState.updateInput(elem);
 	}
 	
 	function updateConfig(elem) {
@@ -27812,41 +28340,42 @@ function (require, exports, module) {
 	function applyTestConfiguration(cabinet) {
 	  cabinet.width(60*2.54);
 	
-	  const opening = cabinet.openings[0];
-	  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
-	  opening.divide(2);
-	  const left = opening.sections[0];
-	  const center = opening.sections[1];
-	  const right = opening.sections[2];
-	  const a = 6*2.54
+	  cabinet.openings.forEach((opening) => {
+	    opening.sectionProperties().pattern('bab').value('a', 30*2.54);
+	    opening.divide(2);
+	    const left = opening.sections[0];
+	    const center = opening.sections[1];
+	    const right = opening.sections[2];
+	    const a = 6*2.54
 	
-	  left.divide(2);
-	  left.vertical(false);
-	  left.sections[0].setSection("DrawerSection");
-	  left.sections[1].setSection("DrawerSection");
-	  left.sections[2].setSection("DrawerSection");
-	  left.pattern('abb').value('a', a*2);
+	    left.divide(2);
+	    left.vertical(false);
+	    left.sections[0].setSection("DrawerSection");
+	    left.sections[1].setSection("DrawerSection");
+	    left.sections[2].setSection("DrawerSection");
+	    left.pattern('abb').value('a', a*2);
 	
-	  center.divide(1);
-	  center.vertical(false);
-	  center.sections[1].setSection('DualDoorSection');
-	  center.pattern('ab').value('a', a);
-	  const centerTop = center.sections[0];
+	    center.divide(1);
+	    center.vertical(false);
+	    center.sections[1].setSection('DualDoorSection');
+	    center.pattern('ab').value('a', a);
+	    const centerTop = center.sections[0];
 	
-	  centerTop.divide(2);
-	  centerTop.sections[0].setSection("DoorSection");
-	  centerTop.sections[1].setSection("FalseFrontSection");
-	  centerTop.sections[2].setSection("DoorSection");
-	  centerTop.pattern('ztz').value('t', 15*2.54);
-	  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
-	  centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
+	    centerTop.divide(2);
+	    centerTop.sections[0].setSection("DoorSection");
+	    centerTop.sections[1].setSection("FalseFrontSection");
+	    centerTop.sections[2].setSection("DoorSection");
+	    centerTop.pattern('ztz').value('t', 15*2.54);
+	    centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+	    centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
 	
-	  right.divide(2);
-	  right.vertical(false);
-	  right.sections[0].setSection("DrawerSection");
-	  right.sections[1].setSection("DrawerSection");
-	  right.sections[2].setSection("DrawerSection");
-	  right.pattern('abb').value('a', a);
+	    right.divide(2);
+	    right.vertical(false);
+	    right.sections[0].setSection("DrawerSection");
+	    right.sections[1].setSection("DrawerSection");
+	    right.sections[2].setSection("DrawerSection");
+	    right.pattern('abb').value('a', a);
+	  });
 	}
 	
 	function getDemPosElems () {
@@ -28050,6 +28579,7 @@ function (require, exports, module) {
 	
 	function updateOpenLocationDisplay (opening, elem) {
 	  const state = sectionState;
+	  state.opening(elem);
 	
 	  const io = state.innerOouter === 'true' ? 'inner' : 'outer';
 	  const i = state.index;
@@ -28062,7 +28592,7 @@ function (require, exports, module) {
 	    du.find.closest('[name="opening-coordinate-value"]', elem).value = eqnPoint[state.xOyOz];
 	
 	  const cabinet = getCabinet(elem);
-	  const coords = cabinet.openings[0].update();
+	  const coords = cabinet.openings[ExpandableList.getIdAndKey(elem).key].update();
 	
 	
 	  const html = openingPointTemplate.render({display: vertexToDisplay, coords, target: target(io, i)});
@@ -28070,18 +28600,6 @@ function (require, exports, module) {
 	}
 	
 	const openingPointTemplate = new $t('managers/template/openings/points');
-	
-	function onOpeningLocationChange(elem) {
-	  const opening = ExpandableList.get(elem);
-	  // const state = opening.state;
-	  // let value = elem.value;
-	  // if (value === 'true') value = true;
-	  // else if (value === 'false') value = false;
-	  // const attr = elem.name.replace(/(.*?)-.*/, '$1');
-	  // state[attr] = value;
-	
-	  updateOpenLocationDisplay(opening, elem);
-	}
 	
 	function onOpeningTypeChange(elem) {
 	  const opening = ExpandableList.get(elem);
@@ -28091,12 +28609,14 @@ function (require, exports, module) {
 	    const def = CabinetTemplate[defaultFunc]();
 	    Object.merge(opening, def, true);
 	    opening._Type = isLocation ? 'location' : undefined;
+	    if (opening._Type === 'location' && opening.coordinates === undefined)
+	      opening.coordinates = defalutCustomCoords();
+	
 	    du.find.closest('.border-location-cnt', elem).hidden = !isLocation;
 	    updateOpeningPartCode(du.find.closest('select', elem));
 	  }
 	}
 	
-	du.on.match('change', '.border-location-cnt>input,.border-location-cnt>span>input', onOpeningLocationChange);
 	du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
 	
 	function updateOpeningPoints(template, cabinet) {
@@ -28415,14 +28935,18 @@ function (require, exports, module) {
 	
 	      function updateShapeSketches(elem, model) {
 	        if (model) {
-	          frontView = model.frontView();
-	          const center = Vertex2d.center(Line2d.vertices(frontView));
-	          panz.centerOn(center.x(), center.y());
-	          topSnap = model.topviewSnap();
-	          const centerT = Vertex2d.center(Line2d.vertices(topSnap));
-	          panzT.centerOn(centerT.x(), centerT.y());
-	          renderTop();
-	          renderFront();
+	          try {
+	            frontView = model.frontView();
+	            const center = Vertex2d.center(Line2d.vertices(frontView));
+	            panz.centerOn(center.x(), center.y());
+	            topSnap = model.topviewSnap();
+	            const centerT = Vertex2d.center(Line2d.vertices(topSnap));
+	            panzT.centerOn(centerT.x(), centerT.y());
+	            renderTop();
+	            renderFront();
+	          } catch (e) {
+	            console.warn(e);
+	          }
 	        }
 	      }
 	
@@ -28471,12 +28995,13 @@ function (require, exports, module) {
 	  const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
 	  const opening = ExpandableList.get(coordinateInput);
 	  if (opening && opening._Type === 'location') {
-	    const state = opening.state;
-	    const io = state.innerOouter ? 'inner' : 'outer';
-	    coordinateInput.value = opening.coordinates[io][state.index][state.xOyOz];
+	    updateState(coordinateInput);
+	    sectionState.value(coordinateInput.value);
 	  }
+	});
 	
-	  console.log(opening);
+	du.on.match('focusout,enter', '[name="opening-coordinate-value"]', (elem) => {
+	  sectionState.value(elem.value || undefined);
 	});
 	
 	TemplateManager.inputTree = () => {
@@ -34513,8 +35038,8 @@ function (require, exports, module) {
 	    cabinet.addJoints(joint);
 	  });
 	
-	  config.openings.forEach((config) => {
-	    const sectionProperties = new SectionProperties(config);
+	  config.openings.forEach((config, i) => {
+	    const sectionProperties = new SectionProperties(config, i);
 	    const cabOpenCoords = new CabinetOpeningCorrdinates(cabinet, sectionProperties);
 	    cabinet.openings.push(cabOpenCoords);
 	    cabinet.addSubAssembly(sectionProperties);
@@ -35224,7 +35749,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	
 	    this.divideRight = () =>
 	      this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
-	    this.partCode = () => 'S';
+	    this.partCode = () => 'S' + index;
 	    this.partName = () => {
 	      const orientation = this.vertical() ? 'V' : 'H';
 	      if (!(this.parentAssembly() instanceof SectionProperties)) return orientation;
@@ -35266,9 +35791,8 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	
 	    this.innerDepth = () => {
 	      const cabinet = this.getCabinet();
-	      if (cabinet && (config.rotation === undefined || config._Type === 'part-code'))
-	        return Math.abs(cabinet.getAssembly(config.back).position().centerAdjust('z', '+z'));
-	      // TODO: access Variable.
+	      const back = cabinet.getAssembly(config.back);
+	      if (back) return Math.abs(back.position().centerAdjust('z', '+z'));
 	      return 4*2.54;
 	    };
 	
@@ -35600,7 +36124,7 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      const bumperThickness = 3 * 2.54 / 16;
 	      if (propConfig.isInset()) {
 	        coords = this.coordinates().inner;
-	        offset = propConfig('Inset').is.value() * 2;
+	        offset = propConfig('Inset').is.value() * -2;
 	        const projection = 3 * 2.54/64;
 	        frontOffset = projection;
 	        backOffset = projection - doorThickness;
@@ -35616,6 +36140,8 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	        backOffset = bumperThickness;
 	      }
 	
+	      frontOffset *= -1;
+	      backOffset *= -1;
 	      const offsetObj = {x: offset, y: offset};
 	      biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
 	      return {biPolygon, frontOffset, backOffset};
@@ -36103,7 +36629,7 @@ function (require, exports, module) {
 	      const coverInfo = sectionProps().coverInfo();
 	      const biPoly = front.biPolygon();
 	      const depth = getDrawerDepth(sectionProps().innerDepth);
-	      const offsetVect = biPoly.normal().scale(coverInfo.backOffset);
+	      const offsetVect = biPoly.normal().scale(-coverInfo.backOffset);
 	      const sideOffset = props.dbsos.value();
 	      const topOffset = props.dbtos.value();
 	      const bottomOffset = props.dbbos.value();

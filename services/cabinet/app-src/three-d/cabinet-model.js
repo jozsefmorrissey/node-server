@@ -90,7 +90,7 @@ class CabinetModel {
         const topPoly = Polygon3D.from2D(topPoly2d);
         topPoly.rotate({x:90,y:0,z:0});
         silhouette = BiPolygon.fromPolygon(topPoly, 0, height);
-        silhouette.center(this.center());
+        if (silhouette) silhouette.center(this.center());
       }
       return silhouette;
     }
@@ -202,9 +202,13 @@ class CabinetModel {
 
     this.complexModel = (model) => {
       if (model !== undefined) {
-        addComplexModelAttrs(model);
-        complexModel = model;
-        this.topviewSnap();
+        try {
+          addComplexModelAttrs(model);
+          complexModel = model;
+          this.topviewSnap();
+        } catch (e) {
+          console.warn(e);
+        }
       }
       return complexModel;
     }

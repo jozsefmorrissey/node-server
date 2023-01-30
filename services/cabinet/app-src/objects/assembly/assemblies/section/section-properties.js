@@ -33,7 +33,7 @@ class SectionProperties extends KeyValue{
 
     this.divideRight = () =>
       this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
-    this.partCode = () => 'S';
+    this.partCode = () => 'S' + index;
     this.partName = () => {
       const orientation = this.vertical() ? 'V' : 'H';
       if (!(this.parentAssembly() instanceof SectionProperties)) return orientation;
@@ -75,9 +75,8 @@ class SectionProperties extends KeyValue{
 
     this.innerDepth = () => {
       const cabinet = this.getCabinet();
-      if (cabinet && (config.rotation === undefined || config._Type === 'part-code'))
-        return Math.abs(cabinet.getAssembly(config.back).position().centerAdjust('z', '+z'));
-      // TODO: access Variable.
+      const back = cabinet.getAssembly(config.back);
+      if (back) return Math.abs(back.position().centerAdjust('z', '+z'));
       return 4*2.54;
     };
 
@@ -409,7 +408,7 @@ class SectionProperties extends KeyValue{
       const bumperThickness = 3 * 2.54 / 16;
       if (propConfig.isInset()) {
         coords = this.coordinates().inner;
-        offset = propConfig('Inset').is.value() * 2;
+        offset = propConfig('Inset').is.value() * -2;
         const projection = 3 * 2.54/64;
         frontOffset = projection;
         backOffset = projection - doorThickness;
@@ -425,6 +424,8 @@ class SectionProperties extends KeyValue{
         backOffset = bumperThickness;
       }
 
+      frontOffset *= -1;
+      backOffset *= -1;
       const offsetObj = {x: offset, y: offset};
       biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
       return {biPolygon, frontOffset, backOffset};

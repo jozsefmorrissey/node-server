@@ -58,7 +58,7 @@ class Expandable {
     Expandable.lists[props.id] = this;
     this.inputTree = () => props.inputTree;
     this.parentSelector = () => props.parentSelector;
-    
+
     this.errorCntId = () => props.ERROR_CNT_ID;
     function setErrorMsg(msg) {
         du.id(props.ERROR_CNT_ID).innerHTML = msg;
@@ -177,7 +177,7 @@ class Expandable {
         const key = target.getAttribute('key');
         this.activeKey(key);
         if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
-        if (props.removeButton) target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
+        if (props.removeButton !== false) target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
         target.className += ' active' + (this.hasBody() ? '' : ' no-body');
         afterRenderEvent.trigger();
         // du.scroll.intoView(target.parentElement, 3, 25, document.body);

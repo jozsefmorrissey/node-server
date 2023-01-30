@@ -172,7 +172,7 @@ function Viewer(csg, width, height, depth) {
         rotationOffset[2] += rotationUnit.y[2]/dir;
       }
       if (e.deltaX) {
-        const dir = e.deltaX < 0 ? -speed : speed;
+        const dir = e.deltaX < 0 ? speed : -speed;
         rotationOffset[0] += rotationUnit.x[0]/dir;
         rotationOffset[1] += rotationUnit.x[1]/dir;
         rotationOffset[2] += rotationUnit.x[2]/dir;

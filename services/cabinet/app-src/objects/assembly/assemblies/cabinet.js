@@ -214,8 +214,8 @@ Cabinet.build = (type, group, config) => {
     cabinet.addJoints(joint);
   });
 
-  config.openings.forEach((config) => {
-    const sectionProperties = new SectionProperties(config);
+  config.openings.forEach((config, i) => {
+    const sectionProperties = new SectionProperties(config, i);
     const cabOpenCoords = new CabinetOpeningCorrdinates(cabinet, sectionProperties);
     cabinet.openings.push(cabOpenCoords);
     cabinet.addSubAssembly(sectionProperties);

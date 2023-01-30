@@ -261,7 +261,7 @@ class ThreeDModel {
         let displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         // centerModel(displayModel);
-        extraObjects.forEach(obj => displayModel = displayModel.union(obj));
+        extraObjects.forEach(obj => displayModel.polygons.concatInPlace(obj.polygons));
         displayModel = displayModel.union(CSG.axis());
         viewer.mesh = displayModel.toMesh();
         viewer.gl.ondraw();

@@ -37,6 +37,8 @@ const PanZoom = require('../../two-d/pan-zoom.js');
 
 let template;
 let modifyingOpening = false;
+
+let lastOpening;
 const sectionState = {
   style: 'Overlay',
   vertical: false,
@@ -44,16 +46,47 @@ const sectionState = {
   xOyOz: 'x',
   index: 0,
   count: 0,
+  opening: (elem) => {
+    if (elem) lastOpening = ExpandableList.get(elem);
+    return lastOpening;
+  },
+  valueObject: () => {
+    const innerOouter = sectionState.innerOouter === 'true' ? 'inner' : 'outer';
+    return sectionState.opening().coordinates[innerOouter][sectionState.index];
+  },
+  value: (val) => {
+    const target = sectionState.valueObject();
+    if (val !== undefined) {
+      target[sectionState.xOyOz] = val;
+    }
+    return target[sectionState.xOyOz];
+  },
+  updateInput: (elem) => {
+    const coordinateInput = du.find.closest("[name='opening-coordinate-value']", elem);
+    coordinateInput.value = sectionState.value();
+    updateOpenLocationDisplay(sectionState.opening(elem), elem);
+  }
 };
+
+const defalutCustomCoords = () => ({"inner": [{"x": "R.t","y": "T.c.y - T.t/2","z": "0"},
+          {"x": "c.w - L.t","y": "T.c.y - T.t/2","z": "0"},
+          {"x": "c.w - L.t","y": "B.c.y + B.t/2","z": "0"},
+          {"x": "R.t","y": "B.c.y + B.t/2","z": "0"}],
+"outer": [{"x": "0","y": "c.h","z": "0"},
+          {"x": "c.w","y": "c.h","z": "0"},
+          {"x": "c.w","y": "B.c.y - B.t/2","z": "0"},
+          {"x": "0","y": "B.c.y - B.t/2","z": "0"}]});
 
 const openingSketch = new OpeningSketch('opening-sketch-cnt');
 const faceSketch = new FaceSketch('front-sketch');
 function updateState(elem) {
   const opening = ExpandableList.get(elem);
   sectionState.id = opening.id;
+  sectionState.opening(elem);
   const attr = elem.name.replace(/(.*?)-.*/, '$1');
   if (attr === 'index') sectionState[attr] = Number.parseInt(elem.value);
-  else sectionState[attr] = elem.value;
+  else if (attr !== 'opening') sectionState[attr] = elem.value;
+  sectionState.updateInput(elem);
 }
 
 function updateConfig(elem) {
@@ -84,41 +117,42 @@ function applyDividers(cabinet) {
 function applyTestConfiguration(cabinet) {
   cabinet.width(60*2.54);
 
-  const opening = cabinet.openings[0];
-  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
-  opening.divide(2);
-  const left = opening.sections[0];
-  const center = opening.sections[1];
-  const right = opening.sections[2];
-  const a = 6*2.54
+  cabinet.openings.forEach((opening) => {
+    opening.sectionProperties().pattern('bab').value('a', 30*2.54);
+    opening.divide(2);
+    const left = opening.sections[0];
+    const center = opening.sections[1];
+    const right = opening.sections[2];
+    const a = 6*2.54
 
-  left.divide(2);
-  left.vertical(false);
-  left.sections[0].setSection("DrawerSection");
-  left.sections[1].setSection("DrawerSection");
-  left.sections[2].setSection("DrawerSection");
-  left.pattern('abb').value('a', a*2);
+    left.divide(2);
+    left.vertical(false);
+    left.sections[0].setSection("DrawerSection");
+    left.sections[1].setSection("DrawerSection");
+    left.sections[2].setSection("DrawerSection");
+    left.pattern('abb').value('a', a*2);
 
-  center.divide(1);
-  center.vertical(false);
-  center.sections[1].setSection('DualDoorSection');
-  center.pattern('ab').value('a', a);
-  const centerTop = center.sections[0];
+    center.divide(1);
+    center.vertical(false);
+    center.sections[1].setSection('DualDoorSection');
+    center.pattern('ab').value('a', a);
+    const centerTop = center.sections[0];
 
-  centerTop.divide(2);
-  centerTop.sections[0].setSection("DoorSection");
-  centerTop.sections[1].setSection("FalseFrontSection");
-  centerTop.sections[2].setSection("DoorSection");
-  centerTop.pattern('ztz').value('t', 15*2.54);
-  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
-  centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
+    centerTop.divide(2);
+    centerTop.sections[0].setSection("DoorSection");
+    centerTop.sections[1].setSection("FalseFrontSection");
+    centerTop.sections[2].setSection("DoorSection");
+    centerTop.pattern('ztz').value('t', 15*2.54);
+    centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+    centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
 
-  right.divide(2);
-  right.vertical(false);
-  right.sections[0].setSection("DrawerSection");
-  right.sections[1].setSection("DrawerSection");
-  right.sections[2].setSection("DrawerSection");
-  right.pattern('abb').value('a', a);
+    right.divide(2);
+    right.vertical(false);
+    right.sections[0].setSection("DrawerSection");
+    right.sections[1].setSection("DrawerSection");
+    right.sections[2].setSection("DrawerSection");
+    right.pattern('abb').value('a', a);
+  });
 }
 
 function getDemPosElems () {
@@ -322,6 +356,7 @@ function target(io, i) {
 
 function updateOpenLocationDisplay (opening, elem) {
   const state = sectionState;
+  state.opening(elem);
 
   const io = state.innerOouter === 'true' ? 'inner' : 'outer';
   const i = state.index;
@@ -334,7 +369,7 @@ function updateOpenLocationDisplay (opening, elem) {
     du.find.closest('[name="opening-coordinate-value"]', elem).value = eqnPoint[state.xOyOz];
 
   const cabinet = getCabinet(elem);
-  const coords = cabinet.openings[0].update();
+  const coords = cabinet.openings[ExpandableList.getIdAndKey(elem).key].update();
 
 
   const html = openingPointTemplate.render({display: vertexToDisplay, coords, target: target(io, i)});
@@ -342,18 +377,6 @@ function updateOpenLocationDisplay (opening, elem) {
 }
 
 const openingPointTemplate = new $t('managers/template/openings/points');
-
-function onOpeningLocationChange(elem) {
-  const opening = ExpandableList.get(elem);
-  // const state = opening.state;
-  // let value = elem.value;
-  // if (value === 'true') value = true;
-  // else if (value === 'false') value = false;
-  // const attr = elem.name.replace(/(.*?)-.*/, '$1');
-  // state[attr] = value;
-
-  updateOpenLocationDisplay(opening, elem);
-}
 
 function onOpeningTypeChange(elem) {
   const opening = ExpandableList.get(elem);
@@ -363,12 +386,14 @@ function onOpeningTypeChange(elem) {
     const def = CabinetTemplate[defaultFunc]();
     Object.merge(opening, def, true);
     opening._Type = isLocation ? 'location' : undefined;
+    if (opening._Type === 'location' && opening.coordinates === undefined)
+      opening.coordinates = defalutCustomCoords();
+
     du.find.closest('.border-location-cnt', elem).hidden = !isLocation;
     updateOpeningPartCode(du.find.closest('select', elem));
   }
 }
 
-du.on.match('change', '.border-location-cnt>input,.border-location-cnt>span>input', onOpeningLocationChange);
 du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
 
 function updateOpeningPoints(template, cabinet) {
@@ -687,14 +712,18 @@ class TemplateManager extends Lookup {
 
       function updateShapeSketches(elem, model) {
         if (model) {
-          frontView = model.frontView();
-          const center = Vertex2d.center(Line2d.vertices(frontView));
-          panz.centerOn(center.x(), center.y());
-          topSnap = model.topviewSnap();
-          const centerT = Vertex2d.center(Line2d.vertices(topSnap));
-          panzT.centerOn(centerT.x(), centerT.y());
-          renderTop();
-          renderFront();
+          try {
+            frontView = model.frontView();
+            const center = Vertex2d.center(Line2d.vertices(frontView));
+            panz.centerOn(center.x(), center.y());
+            topSnap = model.topviewSnap();
+            const centerT = Vertex2d.center(Line2d.vertices(topSnap));
+            panzT.centerOn(centerT.x(), centerT.y());
+            renderTop();
+            renderFront();
+          } catch (e) {
+            console.warn(e);
+          }
         }
       }
 
@@ -743,12 +772,13 @@ radioDisplay.afterSwitch(function (header){
   const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
   const opening = ExpandableList.get(coordinateInput);
   if (opening && opening._Type === 'location') {
-    const state = opening.state;
-    const io = state.innerOouter ? 'inner' : 'outer';
-    coordinateInput.value = opening.coordinates[io][state.index][state.xOyOz];
+    updateState(coordinateInput);
+    sectionState.value(coordinateInput.value);
   }
+});
 
-  console.log(opening);
+du.on.match('focusout,enter', '[name="opening-coordinate-value"]', (elem) => {
+  sectionState.value(elem.value || undefined);
 });
 
 TemplateManager.inputTree = () => {
