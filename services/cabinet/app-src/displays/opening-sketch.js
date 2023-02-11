@@ -1,10 +1,10 @@
 
 const du = require('../../../../public/js/utils/dom-utils.js');
-const Draw2D = require('../two-d/draw.js');
-const Line2d = require('../two-d/objects/line.js');
-const Vertex2d = require('../two-d/objects/vertex.js');
-const PanZoom = require('../two-d/pan-zoom.js');
-const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
+const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');
+const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
+const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
 
 
 class OpeningSketch {

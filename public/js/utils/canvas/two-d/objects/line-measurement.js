@@ -2,10 +2,10 @@
 const Circle2d = require('circle');
 const Vertex2d = require('vertex');
 const Line2d = require('line');
-const Lookup = require('../../../../../public/js/utils/object/lookup');
-const Measurement = require('../../../../../public/js/utils/measurement.js');
-const approximate = require('../../../../../public/js/utils/approximate.js');
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const Lookup = require('../../../object/lookup');
+const Measurement = require('../../../measurement.js');
+const approximate = require('../../../approximate.js');
+const ToleranceMap = require('../../../tolerance-map.js');
 
 class LineMeasurement2d {
   constructor(line, center, layer, modificationFunction) {

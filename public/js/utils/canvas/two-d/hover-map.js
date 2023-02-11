@@ -2,6 +2,7 @@
 const Line2d = require('./objects/line')
 class HoverMap2d {
   constructor(lineOrVertex, tolerance) {
+    tolerance ||= 2;
     const toleranceFunction = (typeof tolerance) === 'function';
     const targetFunction = (typeof lineOrVertex) === 'function';
     function getTolerence() {
@@ -33,6 +34,8 @@ class HoverMap2d {
         return xValue + tol > hv.x() && xValue - tol < hv.x();
       }
     }
+
+    this.target = () => lineOrVertex;
 
     this.hovering = (hoverVertex) => {
       const lov = targetFunction ? lineOrVertex() : lineOrVertex;

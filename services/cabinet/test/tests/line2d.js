@@ -1,8 +1,8 @@
 
 const Test = require('../../../../public/js/utils/test/test').Test;
-const Line2d = require('../../app-src/two-d/objects/line.js');
-const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
-const Polygon2d = require('../../app-src/two-d/objects/polygon.js');
+const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 
 
 const vertices = [
@@ -56,7 +56,7 @@ Test.add('Line2d parimeter',(ts) => {
 Test.add('Line2d parimeterArea',(ts) => {
   let p = Polygon2d.toParimeter(parimeter.lines(), undefined, true);
   ts.assertEquals(p.area(), 13);
-  ts.assertTrue(p.equal(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
+  ts.assertTrue(p.equals(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
   let keepGoing = false;
   while (keepGoing) {
     noise.shuffle();
@@ -66,7 +66,7 @@ Test.add('Line2d parimeterArea',(ts) => {
     p = Polygon2d.toParimeter(lines);
     try {
       ts.assertEquals(p.area(), 13);
-      ts.assertTrue(p.equal(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
+      ts.assertTrue(p.equals(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
     } catch (e) {
       console.log('error');
       Polygon2d.toParimeter(lines, undefined, true);

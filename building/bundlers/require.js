@@ -204,7 +204,9 @@ class RequireJS {
       const fileName = wrongPath.replace(nameReg, '$2');
       Object.keys(scripts).forEach((path) => {
         const name = path.replace(nameReg, '$2');
-        if (name === fileName) guesses.push(determinRelitivePath(currFile, path));
+        if (name === fileName) {
+          guesses.push(determinRelitivePath(currFile, path));
+        }
       });
       return guesses;
     }

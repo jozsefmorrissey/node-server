@@ -9,9 +9,9 @@ const SectionProperties = require('./section/section-properties.js');
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
 const PropertyConfig = require('../../../config/property/config.js');
 const Group = require('../../group');
-const Line2d = require('../../../two-d/objects/line');
-const Vertex2d = require('../../../two-d/objects/vertex');
-const Vertex3D = require('../../../three-d/objects/vertex');
+const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line');
+const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex');
+const Vertex3D = require('../../../three-d/objects/vertex.js');
 const CSG = require('../../../../public/js/3d-modeling/csg.js');
 
 const OVERLAY = {};

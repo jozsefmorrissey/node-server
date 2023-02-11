@@ -1,8 +1,8 @@
-const Line2d = require('../objects/line.js');
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const OnWall = require('./on-wall');
 const Door2D = require('./door');
 const Window2D = require('./window');
-const HoverMap2d = require('../hover-map')
+const HoverMap2d = require('../../../../../public/js/utils/canvas/two-d/hover-map')
 
 function modifyVertex(vertex) {
   return (props) => {

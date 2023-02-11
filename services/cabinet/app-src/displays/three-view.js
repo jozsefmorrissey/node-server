@@ -5,13 +5,13 @@ const du = require('../../../../public/js/utils/dom-utils');
 const pull = require('../three-d/models/pull.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const Layout2D = require('../two-d/layout/layout.js')
-const Draw2D = require('../two-d/draw.js');
-const Polygon2d = require('../two-d/objects/polygon.js');
+const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');
+const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 const Polygon3D = require('../three-d/objects/polygon.js');
 const BiPolygon = require('../three-d/objects/bi-polygon.js');
-const Line2d = require('../two-d/objects/line.js');
-const LineMeasurement2d = require('../two-d/objects/line-measurement.js');
-const PanZoom = require('../two-d/pan-zoom.js');
+const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
+const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
+const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 
 const CSG = require('../../public/js/3d-modeling/csg');
 
@@ -54,12 +54,12 @@ class ThreeView extends Lookup {
       if (model === undefined) return;
       const twoDmap = (typeof model.threeView) === 'function' ? model.threeView() : model.threeView;
       if (twoDmap.measurments === undefined) {
-        const allLines = twoDmap.front.concat(twoDmap.right.concat(twoDmap.top));
+        const allLines = twoDmap.parimeter().allLines();
         twoDmap.measurments = LineMeasurement2d.measurements(allLines);
       }
-      draw(twoDmap.front, color, width);
-      draw(twoDmap.right, color, width);
-      draw(twoDmap.top, color, width);
+      draw(twoDmap.parimeter().front(), color, width);
+      draw(twoDmap.parimeter().right(), color, width);
+      draw(twoDmap.parimeter().top(), color, width);
       draw(twoDmap.measurments, 'grey');
     }
 

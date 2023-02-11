@@ -1,8 +1,8 @@
 
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 const Vertex3D = require('../../three-d/objects/vertex.js');
-const Vertex2d = require('../../two-d/objects/vertex.js');
-const SnapSquare = require('../../two-d/objects/snap/square.js');
+const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const SnapSquare = require('../../../../../public/js/utils/canvas/two-d/objects/snap/square.js');
 
 class Bridge2dTo3D {
   constructor(obj3D, xCoord, xDem, yCoord, yDem, axis) {

@@ -1,8 +1,8 @@
 
-const approximate10 = require('../../../../../public/js/utils/approximate.js').new(10);
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-const tol = .01;
+const approximate10 = require('../../../approximate.js').new(10);
+const ToleranceMap = require('../../../tolerance-map.js');
+const Tolerance = require('../../../tolerance.js');
+const tol = .00001;
 const within = Tolerance.within(tol);
 
 
@@ -12,6 +12,8 @@ class Vertex2d {
     if (Array.isArray(point)) point = {x: point[0], y: point[1]};
     if (point instanceof Vertex2d) return point;
     let modificationFunction;
+    let id = String.random();
+    this.id = () => id;
     point = point || {x:0,y:0};
     Object.getSet(this, {point});
     this.layer = point.layer;
@@ -57,7 +59,7 @@ class Vertex2d {
       return modificationFunction;
     }
 
-    this.equal = (other) => within(other.x(), this.x()) && within(other.y(), this.y());
+    this.equals = (other) => other instanceof Vertex2d && within(other.x(), this.x()) && within(other.y(), this.y());
     this.x = (val) => {
       if ((typeof val) === 'number') point.x = val;
       return this.point().x;
@@ -183,10 +185,21 @@ Vertex2d.centerOn = (newCenter, vertices) => {
   newCenter = new Vertex2d(newCenter);
   const center = Vertex2d.center(...vertices);
   const diff = newCenter.copy().differance(center);
-  for (let index = 0; index < polys.length; index++) {
+  for (let index = 0; index < vertices.length; index++) {
     const vert = vertices[index];
     vert.translate(diff.x(), diff.y());
   }
+}
+
+Vertex2d.scale = (scaleX, scaleY, vertices) => {
+  const center = Vertex2d.center(vertices);
+  Vertex2d.centerOn(new Vertex2d(0,0), vertices);
+  for (let index = 0; index < vertices.length; index++) {
+    const vert = vertices[index];
+    vert.x(vert.x() * 1);
+    vert.y(vert.y() * -1);
+  }
+  Vertex2d.centerOn(center, vertices);
 }
 
 Vertex2d.toleranceMap = (tolerance, vertices) => {

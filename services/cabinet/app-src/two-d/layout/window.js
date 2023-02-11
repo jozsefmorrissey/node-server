@@ -1,6 +1,6 @@
 
 const OnWall = require('./on-wall');
-const HoverMap2d = require('../hover-map.js');
+const HoverMap2d = require('../../../../../public/js/utils/canvas/two-d/hover-map.js');
 
 class Window2D extends OnWall {
   constructor(wall, fromPreviousWall, fromFloor, height, width) {

@@ -1,7 +1,7 @@
 const Object3D = require('../object');
 const Vertex3D = require('../../objects/vertex.js');
 const Assembly = require('../../../objects/assembly/assembly.js');
-const SnapPolygon = require('../../../two-d/objects/snap/polygon.js');
+const SnapPolygon = require('../../../../../../public/js/utils/canvas/two-d/objects/snap/polygon.js');
 
 class Assembly3D extends Object3D {
   constructor(assembly) {

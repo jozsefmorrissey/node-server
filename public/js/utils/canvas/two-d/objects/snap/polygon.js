@@ -4,7 +4,7 @@ const Square2d = require('../square');
 const Polygon2d = require('../polygon');
 const SnapLocation2d = require('../snap-location');
 const Vertex2d = require('../vertex');
-const ToleranceMap = require('../../../../../../public/js/utils/tolerance-map.js');
+const ToleranceMap = require('../../../../tolerance-map.js');
 
 class SnapPolygon extends Snap2d {
   constructor(parent, polygon, tolerance) {

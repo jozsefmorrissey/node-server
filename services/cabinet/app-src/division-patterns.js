@@ -40,7 +40,7 @@ class Pattern {
     }
     const uniqueStr = Object.keys(unique).join('');
     this.unique = () => uniqueStr;
-    this.equal = this.unique.length === 1;
+    this.equals = this.unique.length === 1;
 
     this.clone = (str) => {
       const clone = new Pattern(str, updateOrder, changeEvent);

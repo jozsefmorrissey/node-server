@@ -1,6 +1,5 @@
 
-const Polygon2D = require('../../two-d/objects/polygon.js');
-const Line2D = require('../../two-d/objects/line.js');
+const Polygon2D = require('../../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 const Line3D = require('./line');
 const Vertex3D = require('./vertex');
 const Vector3D = require('./vector');
@@ -245,7 +244,7 @@ class Polygon3D {
         if (endLine) endline.endVertex = verts[0];
       }
       this.lineMap(true);
-      this.removeLoops();
+      // this.removeLoops();
     }
 
     this.rebuild = (newVertices) => {
@@ -439,11 +438,7 @@ Polygon3D.mostInformation = (polygons) => {
         (diff.y < diff.z ? ['x', 'z'] : ['x', 'y']);
 }
 
-// const include = (axis1, axis2, axis3) => !(Math.abs(axis1) === 1 || Math.abs(axis2) === 1);
-// const include = (axis1, axis2, axis3) => axis3 !== 0 && axis1 === 0 && axis2 === 0;
-const include = (n1, n2) => ((n1[0] * n2[0]) + (n1[1] * n2[1]) + (n1[2] * n2[2])) !== 0;
 const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
-const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
 Polygon3D.toTwoD = (polygons, vector, axis) => {
   const view = Polygon3D.viewFromVector(polygons, vector, true);
   axis ||= Polygon3D.mostInformation(view);
@@ -454,41 +449,8 @@ Polygon3D.toTwoD = (polygons, vector, axis) => {
 }
 
 Polygon3D.toThreeView = (polygons, normals, gap) => {
-  normals ||= defaultNormals;
-  gap ||= 10;
-  const frontView = Polygon3D.viewFromVector(polygons, normals.front);
-  const rightView = Polygon3D.viewFromVector(polygons, normals.right);
-  const topview = Polygon3D.viewFromVector(polygons, normals.top);
-
-  const axis = {};
-  axis.front = Polygon3D.mostInformation(frontView);
-  axis.right = Polygon3D.mostInformation(rightView);
-  axis.top = Polygon3D.mostInformation(topview);
-
-  if (axis.front.indexOf('y') === 0) axis.front.reverse();
-  if (axis.top.indexOf(axis.right[1]) !== -1) axis.right.reverse();
-  if (axis.front.indexOf(axis.top[1]) !== -1) axis.top.reverse();
-
-  const front2D = frontView.map(to2D(axis.front));
-  const right2D = rightView.map(to2D(axis.right));
-  const top2D = topview.map(to2D(axis.top));
-
-  Polygon2D.centerOn({x:0,y:0}, front2D);
-
-  const frontMinMax = Polygon2D.minMax(...front2D);
-  const rightMinMax = Polygon2D.minMax(...right2D);
-  const topMinMax = Polygon2D.minMax(...top2D);
-  const rightCenterOffset = frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2;
-  const topCenterOffset = frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2;
-
-  Polygon2D.centerOn({x:rightCenterOffset, y:0}, right2D);
-  Polygon2D.centerOn({x:0,y:topCenterOffset}, top2D);
-
-  const front = Polygon2D.lines(front2D);
-  const right = Polygon2D.lines(right2D);
-  const top = Polygon2D.lines(top2D);
-
-  return {front, right, top, axis}
+  const ThreeView = require('../../../../../public/js/utils/canvas/two-d/objects/three-view.js');
+  return new ThreeView(polygons, normals, gap);
 }
 
 Polygon3D.fromCSG = (polys) => {
@@ -547,30 +509,12 @@ for (let index = 0; index < 10000; index++) {
   const vector = new Vector3D(randValue(), randValue(), randValue());
 }
 
-// let inverseSignCheck = (v) => v.positive() === v.inverse().positive() && console.log('failed', v.toString());
-// inverseSignCheck(new Vector3D(0,0,0));
-// inverseSignCheck(new Vector3D(4,0,0));
-// inverseSignCheck(new Vector3D(0,5,0));
-// inverseSignCheck(new Vector3D(0,0,6));
-// inverseSignCheck(new Vector3D(-3,0,0));
-// inverseSignCheck(new Vector3D(0,-44,0));
-// inverseSignCheck(new Vector3D(0,0,-.0000001));
-
 Polygon3D.viewFromVector = (polygons, vector) => {
   const orthoPolys = [];
-  const negitive = !vector.positive();
   for (let p = 0; p < polygons.length; p++) {
     const vertices = polygons[p].vertices();
-    const vertLocs = {};
-    let valid = true;
-    const perpendicularCheck = (orthogonal) => {
-      const accStr = orthogonal.toString();
-      if (vertLocs[accStr]) valid = false;
-      else vertLocs[accStr] = true;
-      return true;
-    }
-    const orthoVerts = Vertex3D.viewFromVector(vertices, vector, perpendicularCheck);
-    if (valid) orthoPolys.push(new Polygon3D(orthoVerts));
+    const orthoVerts = Vertex3D.viewFromVector(vertices, vector);
+    orthoPolys.push(new Polygon3D(orthoVerts));
   }
   return orthoPolys;
 }

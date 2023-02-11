@@ -62,17 +62,17 @@ du.on.match('click', '.model-state', (target) => {
         label.nextElementSibling.getAttribute('prefix');
   const cabinet = lastRendered;
   const tdm = ThreeDModel.get(cabinet);
-  let partCode = target.getAttribute('part-code');
+  let partName = target.getAttribute('part-name');
   let partId = target.getAttribute('part-id');
   if (partId) {
     if (!has) {
       tdm.inclusiveTarget(type, partId);
-      threeView.isolatePart(partCode, cabinet);
+      threeView.isolatePart(partName, cabinet);
     }
   } else {
     tdm.inclusiveTarget(type, has ? undefined : value);
     const elem = du.find.closest('[part-code]', target);
-    partCode = elem.getAttribute('part-code');
+    const partCode = elem.getAttribute('part-code');
     threeView.isolatePart(partCode, cabinet);
   }
   tdm.render();
@@ -122,21 +122,14 @@ function focusControls(target) {
     active[index].hidden = false;
     const siblings = active[index].parentElement.children;
     for (let s = 0; s < siblings.length; s++) {
-      if (siblings[s].matches(toggleClassStr)) siblings[s].hidden = false;
+      let sibTarget = du.find.down(toggleClassStr, siblings[s]);
+      if (sibTarget) sibTarget.hidden = false;
     }
   }
 }
 
 du.on.match('click', '.prefix-switch', (target, event) => {
   focusControls(target);
-  // const eventTarg = event.target;
-  //
-  //
-  // const active = du.find.upAll('.model-selector', target);
-  // active.push(target.parentElement.parentElement);
-  // const all = document.querySelectorAll('.prefix-body');
-  // all.forEach((pb) => pb.hidden = true);
-  // active.forEach((ms) => ms.children[2].hidden = false);
 });
 
 du.on.match('change', '.prefix-checkbox', (target) => {

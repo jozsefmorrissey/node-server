@@ -1,7 +1,7 @@
 
 const Circle2d = require('./objects/circle');
-const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
-const du = require('../../../../public/js/utils/dom-utils.js');
+const ToleranceMap = require('../../tolerance-map.js');
+const du = require('../../dom-utils.js');
 const tol = .1;
 let vertLocTolMap;
 
@@ -249,6 +249,7 @@ class Draw2d {
 
     draw.snap = (snap, color, width) => {
       draw(snap.object(), color, width);
+      draw(snap.object().normals());
     }
 
     return draw;

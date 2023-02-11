@@ -133,7 +133,8 @@ fs.writeFile(`./generated/EPNTS.js`, ENPTSTemplate, () => {});
 
 const { JsBundler } = require('../../building/bundlers/js.js');
 const jsDumpLoc = './public/js/index';
-const jsBundler = new JsBundler(jsDumpLoc, [], {main: 'app-src/init.js'});
+// const jsBundler = new JsBundler(jsDumpLoc, [], {main: 'app-src/init.js'});
+const jsBundler = new JsBundler(jsDumpLoc, [], {main: './services/cabinet/app-src/init.js', projectDir: '../../'});
 
 const jsWatcher = new Watcher(jsBundler.change, jsBundler.write)
         .add('./globals/')

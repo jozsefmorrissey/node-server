@@ -1,7 +1,7 @@
 
 const Vector3D = require('./vector');
 const Vertex3D = require('./vertex');
-const Line2d = require('../../two-d/objects/line');
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
 const Plane = require('./plane');
 
 class Line3D {
@@ -159,6 +159,12 @@ Line3D.to2D = (lines, x, y) => {
     lines2d.push(new Line2d(startV, endV));
   }
   return lines2d;
+}
+
+Line3D.fromVector = (vector, rotation) => {
+  const line = new Line3D(new Vertex3D(), new Vertex3D(vector));
+  line.rotate(rotation);
+  return line;
 }
 
 Line3D.reverse = (list) => {

@@ -2,8 +2,8 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 const Vector3D = require('vector');
 const Vertex3D = require('vertex');
 const Matrix = require('matrix');
-const Line2d = require('../../two-d/objects/line.js');
-const Vertex2d = require('../../two-d/objects/vertex.js');
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
 const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
 

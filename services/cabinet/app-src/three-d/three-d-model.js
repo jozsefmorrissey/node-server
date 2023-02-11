@@ -8,9 +8,9 @@ const FunctionCache = require('../../../../public/js/utils/services/function-cac
 
 const Polygon3D = require('./objects/polygon');
 const BiPolygon = require('./objects/bi-polygon');
-const Polygon2d = require('../two-d/objects/polygon');
-const Line2d = require('../two-d/objects/line');
-const Vertex2d = require('../two-d/objects/vertex');
+const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon');
+const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line');
+const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex');
 const Vertex3D = require('./objects/vertex');
 const Vector3D = require('./objects/vector');
 const Line3D = require('./objects/line');
@@ -68,7 +68,8 @@ class ThreeDModel {
     let targetPartName;
     let lastRendered;
     let rootAssembly = assembly.getRoot();
-    this.setTargetPartName = (id) => targetPartName = id;
+    this.setTargetPartName = (id) =>
+      targetPartName = id;
     this.getLastRendered = () => lastRendered;
 
     this.assembly = (a) => {
@@ -240,9 +241,9 @@ class ThreeDModel {
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
+        const b = buildObject(assem);
+        cabinetModel.add(assem, b);
         if (!hidden(assem)) {
-          const b = buildObject(assem);
-          cabinetModel.add(assem, b);
           // const c = assem.position().center();
           // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
           if (a === undefined) a = b;
@@ -262,7 +263,7 @@ class ThreeDModel {
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         // centerModel(displayModel);
         extraObjects.forEach(obj => displayModel.polygons.concatInPlace(obj.polygons));
-        displayModel = displayModel.union(CSG.axis());
+        // displayModel = displayModel.union(CSG.axis());
         viewer.mesh = displayModel.toMesh();
         viewer.gl.ondraw();
         lastRendered = cabinetModel;

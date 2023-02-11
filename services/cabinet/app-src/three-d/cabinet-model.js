@@ -5,10 +5,12 @@ const Vector3D = require('./objects/vector');
 const Polygon3D = require('./objects/polygon');
 const BiPolygon = require('./objects/bi-polygon');
 const Plane = require('./objects/plane');
-const Polygon2d = require('../two-d/objects/polygon');
-const Vertex2d = require('../two-d/objects/vertex');
-const Line2d = require('../two-d/objects/line');
-const SnapPolygon = require('../two-d/objects/snap/polygon');
+const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon');
+const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex');
+const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line');
+const SnapPolygon = require('../../../../public/js/utils/canvas/two-d/objects/snap/polygon');
+const StarLineMap = require('../../../../public/js/utils/canvas/two-d/maps/star-line-map');
+const EscapeMap = require('../../../../public/js/utils/canvas/two-d/maps/escape');
 
 
 class CabinetModel {
@@ -21,6 +23,7 @@ class CabinetModel {
     cabinet.view = {};
 
     this.cabinet = () => cabinet;
+    this.rotation = () => (cabinet && cabinet.position().rotation()) || {x:0, y:0, z:0};
     this.add = (assembly, csg) => {
       if (assembly && assembly.inElivation) {
         assemblies.push(assembly);
@@ -65,39 +68,45 @@ class CabinetModel {
       if (!threeView) {
         const polys = Polygon3D.fromCSG(cabinetCSG.polygons);
         threeView = Polygon3D.toThreeView(polys);
-        threeView.front = Polygon2d.toParimeter(threeView.front).lines();
-        threeView.right = Polygon2d.toParimeter(threeView.right).lines();
-        const topPoly2d = Polygon2d.toParimeter(threeView.top);
-        threeView.top = topPoly2d.lines();
       }
       return threeView;
     }
 
+    function silhouetteFrom2d(parimeter, length, rotation) {
+      rotation ||= {x: 0, y: 0, z:0};
+      const cabRotation = instance.rotation();
+      rotation.x += cabRotation.x;
+      rotation.y += cabRotation.y;
+      rotation.z += cabRotation.z;
+      const poly = Polygon3D.from2D(parimeter);
+      poly.rotate(rotation);
+      const silhouette = BiPolygon.fromPolygon(poly, 0, length);
+      if (silhouette) {
+        silhouette.center(instance.center());
+      }
+      return silhouette;
+    }
+
     this.cabinetSilhouette = () => {
       if (!silhouette) {
-        let polygons = cabinetCSG.polygons;
-        const polys = Polygon3D.fromCSG(polygons);
-        const threeView = Polygon3D.toThreeView(polys);
-        threeView.front = Polygon2d.toParimeter(threeView.front).lines();
-        threeView.right = Polygon2d.toParimeter(threeView.right).lines();
-        const topPoly2d = Polygon2d.toParimeter(threeView.top);
-        threeView.top = topPoly2d.lines();
+        const threeView = this.threeView();
 
-        const frontMinMax = Vertex2d.minMax(Line2d.vertices(threeView.front));
+        const frontMinMax = Vertex2d.minMax(Line2d.vertices(threeView.front()));
         const height = frontMinMax.diff.y();
         const width = frontMinMax.diff.x();
-        const depth = Vertex2d.minMax(Line2d.vertices(threeView.right)).diff.x();
-        const topPoly = Polygon3D.from2D(topPoly2d);
-        topPoly.rotate({x:90,y:0,z:0});
-        silhouette = BiPolygon.fromPolygon(topPoly, 0, height);
-        if (silhouette) silhouette.center(this.center());
+        const depth = Vertex2d.minMax(Line2d.vertices(threeView.right())).diff.x();
+
+        silhouette = {};
+        silhouette.front = silhouetteFrom2d(threeView.parimeter().front(), depth);
+        silhouette.right = silhouetteFrom2d(threeView.parimeter().right(), width, {x: 0, y: 90, z: 0});
+        silhouette.top = silhouetteFrom2d(threeView.parimeter().top(), height, {x:90,y:0,z:0});
       }
       return silhouette;
     }
 
     this.toModel = (simpler, centerOn) => {
       const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
-      let model = this.cabinetSilhouette().toModel();
+      let model = this.cabinetSilhouette().top.toModel();
       model.translate(offset);
       for (let index = 0; !simpler && index < assemblies.length; index++) {
         const csg = assemblies[index].toModel(true);
@@ -113,7 +122,7 @@ class CabinetModel {
       if (in2D) {
         output = Polygon3D.toTwoD(output.toPolygons(), vector, axis);
         axis ||= output.axis;
-        output = Polygon2d.toParimeter(output).lines();
+        // output = Polygon2d.toParimeter(output).lines();
       } else {
         output = output.toModel();
       }
@@ -132,18 +141,18 @@ class CabinetModel {
 
     function build() {
       const c = cabinet;
-      const polys = instance.cabinetSilhouette().toPolygons();
-      const threeView = Polygon3D.toThreeView(polys);
-      let topview = Polygon2d.toParimeter(threeView.top);
+      const threeView = instance.threeView();
+      let topview = threeView.parimeter().top();
       const layout = c.group().room().layout();
       const normals = c.normals();
       const dist = c.width() > c.thickness() ? c.width() : c.thickness();
       const lines = topview.lines();
       const topCenter = Vertex2d.center(Line2d.vertices(lines));
       const normalLines = normals.map((n) => {
-        const searchLine = Line3D.startAndVector(instance.center(), n.scale(dist));
-        const searchLine2d = searchLine.to2D(threeView.axis.top[0], threeView.axis.top[1]);
-        searchLine2d.translate(new Line2d(searchLine2d.startVertex(), topCenter));
+        const searchLine = Line3D.startAndVector(instance.center().copy(), n.scale(dist));
+        const searchLine2d = searchLine.to2D(threeView.axis().top[0], threeView.axis().top[1]);
+        searchLine2d.translate(new Line2d(searchLine2d.startVertex().copy(), topCenter.copy()));
+        // Vertex2d.scale(0,-1, [searchLine2d.startVertex(), searchLine2d.endVertex()]);
         return searchLine2d;
       });
       const faceIndecies = normalLines.map((normalLine) => {
@@ -213,7 +222,12 @@ class CabinetModel {
       return complexModel;
     }
 
+    this.topVector = () => Line3D.fromVector(this.normal(), {x:90,y:0,z:0}).vector();
+    this.rightVector = () => Line3D.fromVector(this.normal(), {x:0,y:90,z:0}).vector();
+
     this.frontView = () => this.viewFromVector(this.normal(), true);
+    this.topView = () => this.viewFromVector(this.topVector(), true);
+    this.rightView = () => this.viewFromVector(this.rightVector(), true);
   }
 }
 

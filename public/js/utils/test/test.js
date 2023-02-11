@@ -132,7 +132,7 @@ class TestStatus {
     }
     function assert(b) {
       assertT++;
-      if (b) {
+      if (b === true) {
         assertC++;
         TestStatus.successAssertions++;
         return true;
@@ -148,7 +148,7 @@ class TestStatus {
 
     this.assertTrue = (b, msg) => !assert(b) &&
                             possiblyFail(`${msg}\n\t\t'${b}' should be true`);
-    this.assertFalse = (b, msg) => !assert(!b) &&
+    this.assertFalse = (b, msg) => !assert(b === false) &&
                             possiblyFail(`${msg}\n\t\t'${b}' should be false`);
     this.assertEquals = (a, b, msg, acc) => !assert(round(a, acc) === round(b, acc)) &&
                             possiblyFail(`${msg}\n\t\t'${a}' === '${b}' should be true`);

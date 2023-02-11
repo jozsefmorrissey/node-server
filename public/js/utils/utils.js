@@ -374,8 +374,7 @@ Function.safeStdLibAddition(Array, 'equalIndexOf', function (elem, startIndex, e
     startIndex =  startIndex > -1 ? startIndex : 0;
     endIndex = endIndex < this.length ? endIndex : this.length;
     for (let index = startIndex; index < endIndex; index += 1) {
-      if (elem && ((typeof elem.equals) === 'function' && elem.equals(this[index])
-          || (typeof elem.equal) === 'function' && elem.equal(this[index]))) {
+      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
         return index;
       } else if (elem === this[index]) {
         return index;
@@ -392,7 +391,7 @@ Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endInd
     for (let index = startIndex; equal && index < endIndex; index += 1) {
       const elem = this[index];
       if (elem && (typeof elem.equals) === 'function') {
-        if (!elem.equals(this[index])) {
+        if (!elem.equals(other[index])) {
           return index;
         }
       } else if (elem !== other[index]) {
@@ -521,6 +520,7 @@ Function.safeStdLibAddition(Array, 'copy', function (arr) {
     const key = newKeys[index];
     this[key] = arr[key];
   }
+  return this;
 });
 
 Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
@@ -779,6 +779,14 @@ Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isR
   return json;
 });
 
+const colors = [
+  'indianred', 'gray', 'fuchsia', 'lime', 'black', 'lightsalmon', 'red',
+  'maroon', 'yellow', 'olive', 'lightcoral', 'green', 'aqua', 'white',
+  'teal', 'darksalmon', 'blue', 'navy', 'salmon', 'silver', 'purple'
+];
+let colorIndex = 0;
+Function.safeStdLibAddition(String, 'nextColor', () => colors[index++ % colors.length], true);
+
 Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
   const attrs = path.split('.');
   const lastIndex = attrs.length - 1;
@@ -825,7 +833,7 @@ Function.safeStdLibAddition(Array, 'inverse', function (doNotModify) {
 const MSI = Number.MAX_SAFE_INTEGER;
 const msi = Number.MIN_SAFE_INTEGER;
 Function.safeStdLibAddition(Math, 'minMax', function (items, targetAttrs) {
-  let min,max, total, count;
+  let min,max, total;
   if (!targetAttrs) {
     max = msi;
     min = MSI;
@@ -848,7 +856,6 @@ Function.safeStdLibAddition(Math, 'minMax', function (items, targetAttrs) {
         if (maxMinObject[key].max < value) maxMinObject[key].max = value;
         if (maxMinObject[key].min > value) maxMinObject[key].min = value;
         maxMinObject[key].total += value;
-        maxMinObject[key].count++;
       }
     }
   }

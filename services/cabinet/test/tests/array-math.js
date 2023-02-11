@@ -1,8 +1,8 @@
 const Test = require('../../../../public/js/utils/test/test').Test;
 const Matrix = require('../../app-src/three-d/objects/matrix.js');
 const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
-const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
-const Line2d = require('../../app-src/two-d/objects/line.js');
+const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const approximate = require('../../../../public/js/utils/approximate.js');
 
 const CSG = require('../../public/js/3d-modeling/csg');

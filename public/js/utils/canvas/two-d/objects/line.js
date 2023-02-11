@@ -1,9 +1,9 @@
 
 const Vertex2d = require('./vertex');
 const Circle2d = require('./circle');
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-const tol = .001;
+const ToleranceMap = require('../../../tolerance-map.js');
+const Tolerance = require('../../../tolerance.js');
+const tol = .01;
 const withinTol = Tolerance.within(tol);
 
 class Line2d {
@@ -51,7 +51,7 @@ class Line2d {
       const rise = this.rise();
       const run = this.run();
       if (withinLimit && this.withinSegmentBounds(point)) return true;
-      const offsetPoint = {x: point.x() + run, y: point.y() + rise};
+      const offsetPoint = Line2d.startAndTheta(point, this.radians(), .0000001).endVertex();
       if (this.startVertex().distance(point) > this.startVertex().distance(offsetPoint)) return false;
       return withinLimit;
     }
@@ -263,6 +263,34 @@ class Line2d {
       return sv.distance(vertex) > ev.distance(vertex) ? sv : ev;
     }
 
+    const leftRightTol = .000001;
+    function rightLeftInfo(vertex) {
+      const closestPoint = instance.closestPointOnLine(vertex);
+      const perp = instance.perpendicular(vertex.distance(closestPoint)/2, closestPoint, true);
+      const distStart = vertex.distance(perp.startVertex());
+      const distEnd = vertex.distance(perp.endVertex());
+      return {distStart, distEnd, inconclusive: Math.abs(distStart - distEnd) < leftRightTol};
+    }
+    function isRight(info) {
+      return !info.inconclusive && info.distStart < info.distEnd;
+    }
+    this.isRight = (vertex) => isRight(rightLeftInfo(vertex));
+    this.isLeft = (vertex) => {
+      const info = rightLeftInfo(vertex);
+      return !info.inconclusive && info.distStart > info.distEnd;
+    }
+    this.direction = (vertOline) => {
+      if (vertOline instanceof Vertex2d) {
+        const info = rightLeftInfo(vertOline);
+        return info.inconclusive ? 'on' : (isRight(info) ? 'right' : 'left');
+      } else if (vertOline instanceof Line2d) {
+        const startDir = this.direction(vertOline.startVertex());
+        const endDir = this.direction(vertOline.endVertex());
+        if (startDir === 'on' || endDir === 'on' || startDir !== endDir) return 'across';
+        return startDir;
+      }
+    }
+
     this.inverseX = (y) => this.slope()*y + this.yIntercept();
     this.inverseY = (x) => (x-this.yIntercept())/this.slope();
     this.perpendicular = (distance, vertex, center) => {
@@ -273,10 +301,9 @@ class Line2d {
         distance = Math.abs(distance);
         const left = Line2d.startAndTheta(mp, rotated.negitive().radians(), distance/2);
         const right = Line2d.startAndTheta(mp, rotated.radians(), distance/2);
-        if (right.combine(left) === undefined) {
-          console.log('here');
-        }
-        return right.combine(left);
+        // return new Line2d(right.endVertex(), left.endVertex());
+        return new Line2d(left.endVertex(), right.endVertex());
+        // return right.combine(left);
       }
       return Line2d.startAndTheta(mp, rotated.radians(), distance);
     }
@@ -300,19 +327,21 @@ class Line2d {
 
     this.vertical = () => this.slope() === Infinity;
 
+
+    const consideredInfinity = 1000000000;
+    const NaNfinity = (x,y) => Number.NaNfinity(x,y) ||
+                                Math.abs(x) > consideredInfinity ||
+                                Math.abs(y) > consideredInfinity;
     this.findIntersection = (line) => {
       if (this.slope() === 0 && line.slope() === 0) {
         if (this.yIntercept() === line.yIntercept()) return Infinity;
         return false;
       }
-      if (this.slope() === 0) return line.findIntersection(this);
 
       if (this.vertical() && line.vertical()) {
         if (this.startVertex().x() === line.startVertex().x()) return Infinity;
         return false;
       }
-      if (this.slope() === 0) return line.findIntersection(this);
-
 
       if (withinTol(line.radians(), this.radians()) &&
               withinTol(line.yIntercept(), this.yIntercept())) {
@@ -327,11 +356,21 @@ class Line2d {
       } else if (!Number.isFinite(lineSlope)) {
         x = line.startVertex().x();
         y = this.y(x);
+      } else if (slope === 0) {
+        y = this.startVertex().y();
+        x = line.x(y);
+      } else if (lineSlope === 0) {
+        y = line.startVertex().y();
+        x = this.x(y);
       } else {
         x = newX(slope, lineSlope, this.yIntercept(), line.yIntercept());
         y = this.y(x);
       }
-      if (Number.NaNfinity(x,y)) return false;
+      if (NaNfinity(x,y)) return false;
+      if (this.toString() === '"(9, 10) => (9.000000000000005, -90)"' && this.toString() === '(20, 40) => (20, 15)') {
+        console.log('wtf');
+      }
+      // if (!Line2d.withinLineBounds(new Vertex2d(x,y), this, line)) return false;
 
       return new Vertex2d({x,y});
     }
@@ -380,6 +419,13 @@ class Line2d {
                         this.startVertex().x() : this.endVertex().x();
     this.maxY = () => this.startVertex().y() > this.endVertex().y() ?
                         this.startVertex().y() : this.endVertex().y();
+    this.withinLineBounds = (vertex) => {
+      if (this.slope() > consideredInfinity)
+        return vertex.x() > this.startVertex().x() - tol && vertex.x() < this.startVertex().x() + tol;
+      if (this.slope() === 0)
+        return vertex.y() > this.startVertex().y() - tol && vertex.y() < this.startVertex().y() + tol;
+      return true;
+    }
     this.angle = () => {
       return Math.toDegrees(this.radians());
     }
@@ -424,17 +470,20 @@ class Line2d {
     this.equals = (other) => {
       if (!(other instanceof Line2d)) return false;
       if (other === this) return true;
-      const forwardEq = this.startVertex().equal(other.startVertex()) && this.endVertex().equal(other.endVertex());
-      const backwardEq = this.startVertex().equal(other.endVertex()) && this.endVertex().equal(other.startVertex());
+      const forwardEq = this.startVertex().equals(other.startVertex()) && this.endVertex().equals(other.endVertex());
+      const backwardEq = this.startVertex().equals(other.endVertex()) && this.endVertex().equals(other.startVertex());
       return forwardEq || backwardEq;
     }
 
 
+    this.isPoint = () => withinTol(this.length(), 0);
     this.clean = (other) => {
       if (!(other instanceof Line2d)) return;
-      if (other.startVertex().equal(other.endVertex())) return this;
-      if (this.startVertex().equal(this.endVertex())) return other;
+      if (other.startVertex().equals(other.endVertex())) return this;
+      if (this.startVertex().equals(this.endVertex())) return other;
       if (this.toString() === other.toString() || this.toString() === other.toNegitiveString()) return this;
+      if (this.isPoint()) return other;
+      if (other.isPoint()) return this;
     }
 
     this.copy = () => new Line2d(this.startVertex().copy(), this.endVertex().copy());
@@ -464,6 +513,42 @@ class Line2d {
       const vs = Vertex2d.sortByMax([v1, v2, ov1, ov2]);
       const combined = new Line2d(vs[0], vs[vs.length - 1]);
       return withinTol(this.radians(), combined.radians()) ? combined : combined.negitive();
+    }
+
+    this.isEndpoint = (vertex) => this.startVertex().equals(vertex) || this.endVertex().equals(vertex);
+    this.sortVerticies = (vertices) =>
+      vertices.sort((v1,v2) => this.startVertex().distance(v1) - this.startVertex().distance(v2))
+
+    this.slice = (lines) => {
+      if (this.isPoint()) return null;
+      const intersections = {};
+      for (let index = 0; index < lines.length; index++) {
+        if (!lines[index].equals(this)) {
+          const intersect = this.findSegmentIntersection(lines[index], true);
+          if (intersect && !this.isEndpoint(intersect)) {
+            intersections[intersect.toString()] = intersect;
+          }
+        }
+      }
+
+      const list = Object.values(intersections);
+      this.sortVerticies(list);
+      if (list.length === 0) return null;
+      const fractured = [];
+      let prevVert = this.startVertex().copy();
+      for (let index = 0; index < list.length; index++) {
+        const currVert = list[index];
+        const line = new Line2d(prevVert, currVert);
+        if (!line.isPoint()) {
+          fractured.push(line);
+          prevVert = currVert;
+        } else {
+          console.log('point?');
+        }
+      }
+      const lastLine = new Line2d(prevVert, this.endVertex().copy());
+      if (!lastLine.isPoint()) fractured.push(lastLine);
+      return fractured;
     }
 
     this.trimmed = (distance, both) => {
@@ -583,8 +668,8 @@ Line2d.vertices = (lines) => {
     const line = lines[index];
     const sv = line.startVertex();
     const ev = line.endVertex();
-    verts[sv.toString()] = sv;
-    verts[ev.toString()] = ev;
+    verts[sv.id()] = sv;
+    verts[ev.id()] = ev;
   }
   return Object.values(verts);
 }
@@ -593,11 +678,13 @@ Line2d.consolidate = (...lines) => {
   const tolMap = new ToleranceMap({'slope': tol});
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
-    if (Number.isNaN(lines[index].slope())) {
-      console.log('here');
-      lines[index].slope();
+    if (!lines[index].isPoint()) {
+      if (Number.isNaN(lines[index].slope())) {
+        console.log('here');
+        lines[index].slope();
+      }
+      tolMap.add(lines[index]);
     }
-    tolMap.add(lines[index]);
   }
   let minList = [];
   const combinedKeys = {};
@@ -645,6 +732,13 @@ Line2d.favored = (trendLine,lines) => {
   return best.line;
 }
 
+Line2d.withinLineBounds = (vertex, ...lines) => {
+  for (let index = 0; index < lines.length; index++) {
+    if (!lines[index].withinLineBounds(vertex)) return false;
+  }
+  return true;
+}
+
 const distLine = (line, vertex, index) => {
   return {line, distance: line.distance(vertex), index};
 }
@@ -688,6 +782,70 @@ Line2d.toleranceMap = (tol, startEndBoth, lines) => {
     if (!both) map.add(lines[index].negitive());
   }
   return map;
+}
+
+Line2d.sliceAll = (lines) => {
+  const fractured = [];
+  for (let index = 0; index < lines.length; index++) {
+    const sliced = lines[index].slice(lines);
+    if (sliced) fractured.concatInPlace(sliced);
+    else fractured.push(lines[index]);
+  }
+  return fractured;
+}
+
+Line2d.toDrawString = (lines, color) => {
+  color ||= '';
+  let str = '';
+  lines.forEach((l) => str += `${color}[${l.startVertex().approxToString()},${l.endVertex().approxToString()}],`);
+  return str.substr(0, str.length - 1);
+}
+
+Line2d.toString = (lines) => {
+  let str = '';
+  for (let index = 0; index < lines.length; index++) {
+    str += `[${lines[index].startVertex().toString()}, ${lines[index].endVertex().toString()}],`;
+  }
+  return str.substring(0, str.length - 1);
+}
+
+const pathReg = /\[.*?\]/g;
+const vertRegStr = "\\(([0-9]*(\\.[0-9]*|)),\\s*([0-9]*(\\.[0-9]*|))\\)";
+const vertReg = new RegExp(vertRegStr);
+const vertRegG = new RegExp(vertRegStr, 'g');
+
+function sectionFromString(str, lines) {
+  const vertStrs = str.match(vertRegG);
+  let prevVert;
+  const verts = vertStrs.map((str) => {
+    const match = str.match(vertReg);
+    const currVert = new Vertex2d(Number.parseFloat(match[1]), Number.parseFloat(match[3]));
+    if (prevVert) lines.push(new Line2d(prevVert, currVert));
+    prevVert = currVert;
+  });
+  return prevVert;
+}
+
+Line2d.fromString = (str) => {
+  const lines = [];
+  const sections = str.match(pathReg) || [str];
+  let prevVert;
+  for (let index = 0; index < sections.length; index++) {
+    prevVert = sectionFromString(sections[index], lines);
+  }
+  return lines;
+}
+
+Line2d.mirror = (lines) => {
+  return Vertex2d.mirror(Line2d.vertices(lines));
+}
+
+Line2d.distanceSort = (target) => (l1,l2) => {
+  const ds1 = target.distance(l1.startVertex());
+  const ds2 = target.distance(l2.startVertex());
+  const de1 = target.distance(l1.endVertex());
+  const de2 = target.distance(l2.endVertex());
+  return (ds1 < de1 ? ds1 : de1) - (ds2 < de2 ? ds2 : de2);
 }
 
 new Line2d();

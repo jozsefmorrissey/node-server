@@ -111,7 +111,7 @@ class ToleranceMap {
     this.matches = (elem) => matches(elem);
 
     this.add = (elem) => {
-      let matchArr = getSet(elem, true);
+      let matchArr = getSet(elem);
       matchArr.push(elem);
       matchArr.sort(finalAttrSort);
     }
@@ -124,10 +124,26 @@ class ToleranceMap {
       }
     }
 
+    this.filter = (elem, filter) => {
+      const matchArr = matches(elem);
+      const filtered = filter(Array.from(matchArr), elem);
+      const returnedArr = new Array(matchArr.length);
+      for (let index = 0; index < filtered.length; index++) {
+        const filElem = filtered[index];
+        const origIndex = matchArr.indexOf(filElem);
+        if (origIndex !== -1) returnedArr[origIndex] = filElem;
+        else this.add(filElem);
+      }
+      let rmElemIndex = 0;
+      while(-1 !== (rmElemIndex = returnedArr.indexOf(undefined, rmElemIndex))) {
+        this.remove(matchArr[rmElemIndex]);
+      }
+    }
+
     this.addAll = (list) => {
       for (let index = 0; index < list.length; index++) {
         const elem = list[index];
-        let matchArr = getSet(elem, true);
+        let matchArr = getSet(elem);
         matchArr.push(elem);
       }
       matchArr.sort(finalAttrSort);

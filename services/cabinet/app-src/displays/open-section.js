@@ -212,7 +212,7 @@ OpenSectionDisplay.onPatternChange = (target) => {
     ThreeDMain.update(cabinet);
   }
   if (inputCnt !== null) {
-    inputCnt.hidden = opening.pattern().equal;
+    inputCnt.hidden = opening.pattern().equals;
   }
 }
 

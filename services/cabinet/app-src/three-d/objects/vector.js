@@ -7,6 +7,13 @@ function isZero(val) {
   return Vector3D.tolerance.bounds.i.within(val, 0);
 }
 
+function isZeros() {
+  for (let index = 0; index < arguments.length; index++) {
+    if (!isZero(arguments[index])) return false;
+  }
+  return true;
+}
+
 
 class Vector3D {
   constructor(i, j, k) {
@@ -80,9 +87,10 @@ class Vector3D {
       const magnitude = Math.sqrt(i*i+j*j+k*k);
       return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
     }
+
     this.positive = () =>
-      i > 0 || (i === 0 && j > 0) || (i === 0 && j === 0 && k > 0) ||
-      (i === 0 && j === 0 && k === 0);
+      i > 0 || (isZero(i) && j > 0) || (isZeros(i,j) && k > 0) ||
+      isZeros(i, j, k);
     this.equals = (vector) => Vector.tolerance.within(vector, this);
     this.toString = () => `<${i},  ${j},  ${k}>`;
   }

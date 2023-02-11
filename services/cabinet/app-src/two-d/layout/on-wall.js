@@ -1,7 +1,7 @@
 
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-const Vertex2d = require('../objects/vertex.js');
-const Line2d = require('../objects/line.js');
+const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 
 class OnWall extends Lookup {
   constructor(wall, fromPreviousWall, fromFloor, height, width) {

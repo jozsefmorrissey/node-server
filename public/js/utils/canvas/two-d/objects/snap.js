@@ -3,8 +3,8 @@ const Vertex2d = require('vertex');
 const Line2d = require('line');
 const SnapLocation2d = require('snap-location');
 const HoverMap2d = require('../hover-map');
-const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+const Tolerance = require('../../../tolerance.js');
+const Lookup = require('../../../object/lookup.js');
 const withinTol = Tolerance.within(.1);
 
 class Snap2d extends Lookup {
@@ -198,7 +198,7 @@ class Snap2d extends Lookup {
     this.snapLocations.byLocation = (name) => getSnapLocations((loc) => loc.location() === name);
     this.snapLocations.at = (vertex) => {
       for (let index = 0; index < snapLocations.length; index++)
-        if (snapLocations[index].center().equal(vertex)) return snapLocations[index];
+        if (snapLocations[index].center().equals(vertex)) return snapLocations[index];
       return null;
     }
     this.snapLocations.resetCourting = () => {

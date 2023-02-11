@@ -1,9 +1,9 @@
 
 const Test = require('../../../../public/js/utils/test/test').Test;
-const Polygon2d = require('../../app-src/two-d/objects/polygon.js');
-const Line2d = require('../../app-src/two-d/objects/line.js');
+const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
+const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Line3D = require('../../app-src/three-d/objects/line.js');
-const Vertex2d = require('../../app-src/two-d/objects/vertex.js');
+const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const approximate = require('../../../../public/js/utils/approximate.js');
 
 const extraLinePoly = new Polygon2d([[0,0],[0,1],[0,2],[0,3],
@@ -31,14 +31,14 @@ Test.add('Line2d: perpendicular', (ts) => {
   let perp = line.perpendicular(1, null, true);
   let expectedMidpoint = new Vertex2d({x: .5, y: 0});
   let expectedLine = new Line2d({x: .5, y: .5}, {x: .5, y: -.5});
-  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(perp.equals(expectedLine),
         `Line not equal: ${perp} !== ${expectedLine}`);
 
   perp = line.perpendicular(-2, null, true);
   expectedLine = new Line2d({x: .5, y: 1}, {x: .5, y: -1});
-  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(perp.equals(expectedLine),
         `Line not equal: ${perp} !== ${expectedLine}`);
@@ -46,7 +46,7 @@ Test.add('Line2d: perpendicular', (ts) => {
   perp = line.perpendicular(1);
   expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 1});
   expectedMidpoint = new Vertex2d({x: .5, y: .5});
-  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(perp.equals(expectedLine),
         `Line not equal: ${perp} !== ${expectedLine}`);
@@ -54,7 +54,7 @@ Test.add('Line2d: perpendicular', (ts) => {
   perp = line.perpendicular(-2);
   expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -2});
   expectedMidpoint = new Vertex2d({x: .5, y: -1});
-  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(perp.equals(expectedLine),
         `Line not equal: ${perp} !== ${expectedLine}`);
@@ -62,7 +62,7 @@ Test.add('Line2d: perpendicular', (ts) => {
   perp = line.perpendicular(-1);
   expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -1});
   expectedMidpoint = new Vertex2d({x: .5, y: -.5});
-  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(perp.equals(expectedLine),
         `Line not equal: ${perp} !== ${expectedLine}`);
@@ -70,7 +70,7 @@ Test.add('Line2d: perpendicular', (ts) => {
   perp = line.perpendicular(2);
   expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 2});
   expectedMidpoint = new Vertex2d({x: .5, y: 1});
-  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(perp.equals(expectedLine),
         `Line not equal: ${perp} !== ${expectedLine}`);
@@ -79,7 +79,7 @@ Test.add('Line2d: perpendicular', (ts) => {
   perp = line.perpendicular(root2);
   expectedLine = new Line2d({x: 1, y: 1}, {x: 0, y: 2});
   expectedMidpoint = new Vertex2d({x: .5, y: 1.5});
-  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(perp.equals(expectedLine),
         `Line not equal: ${perp} !== ${expectedLine}`);
@@ -88,7 +88,7 @@ Test.add('Line2d: perpendicular', (ts) => {
   perp = line.perpendicular(-1 * root2);
   expectedLine = new Line2d({x: 1, y: 1}, {x: 2, y: 0});
   expectedMidpoint = new Vertex2d({x: 1.5, y: .5});
-  ts.assertTrue(perp.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(perp.equals(expectedLine),
         `Line not equal: ${perp} !== ${expectedLine}`);
@@ -101,7 +101,7 @@ Test.add('Line2d: parrelle', (ts) => {
   let expectedLine = new Line2d({x: -1, y: 1}, {x: 1, y: 3});
   let expectedMidpoint = new Vertex2d({x: 0, y: 2});
   let parrelle = line.parrelle(-1 * root2);
-  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(parrelle.equals(expectedLine),
         `Line not equal: ${parrelle} !== ${expectedLine}`);
@@ -109,7 +109,7 @@ Test.add('Line2d: parrelle', (ts) => {
   expectedLine = new Line2d({x: 1, y: -1}, {x: 3, y: 1});
   expectedMidpoint = new Vertex2d({x: 2, y: 0});
   parrelle = line.parrelle(root2);
-  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(parrelle.equals(expectedLine),
         `Line not equal: ${parrelle} !== ${expectedLine}`);
@@ -118,7 +118,7 @@ Test.add('Line2d: parrelle', (ts) => {
   expectedLine = new Line2d({x: 1, y: 3}, {x: -1, y: 1});
   expectedMidpoint = new Vertex2d({x: 0, y: 2});
   parrelle = line.parrelle(root2);
-  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(parrelle.equals(expectedLine),
         `Line not equal: ${parrelle} !== ${expectedLine}`);
@@ -126,7 +126,7 @@ Test.add('Line2d: parrelle', (ts) => {
   expectedLine = new Line2d({x: 3, y: 1}, {x: 1, y: -1});
   expectedMidpoint = new Vertex2d({x: 2, y: 0});
   parrelle = line.parrelle(-1 * root2);
-  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(parrelle.equals(expectedLine),
         `Line not equal: ${parrelle} !== ${expectedLine}`);
@@ -135,7 +135,7 @@ Test.add('Line2d: parrelle', (ts) => {
   expectedMidpoint = new Vertex2d({x: -.5, y: 12.5});
   expectedLine = new Line2d({x: -3, y: 11}, {x: 2, y: 14});
   parrelle = line.parrelle(-1 * expectedMidpoint.distance(line.midpoint()));
-  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(parrelle.equals(expectedLine),
         `Line not equal: ${parrelle} !== ${expectedLine}`);
@@ -143,7 +143,7 @@ Test.add('Line2d: parrelle', (ts) => {
   expectedMidpoint = new Vertex2d({x: 11.5, y: -7.5});
   expectedLine = new Line2d({x: 9, y: -9}, {x: 14, y: -6});
   parrelle = line.parrelle(expectedMidpoint.distance(line.midpoint()));
-  ts.assertTrue(parrelle.midpoint().equal(expectedMidpoint),
+  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
         `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
   ts.assertTrue(parrelle.equals(expectedLine),
         `Line not equal: ${parrelle} !== ${expectedLine}`);

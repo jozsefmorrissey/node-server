@@ -21,10 +21,10 @@ const Measurement = require('../../../../../public/js/utils/measurement.js');
 const ThreeView = require('../three-view.js');
 const ThreeDModel = require('../../three-d/three-d-model.js');
 const Layout2D = require('../../two-d/layout/layout.js');
-const Draw2D = require('../../two-d/draw.js');
-const Vertex2d = require('../../two-d/objects/vertex');
-const Line2d = require('../../two-d/objects/line');
-const Snap2d = require('../../two-d/objects/snap');
+const Draw2D = require('../../../../../public/js/utils/canvas/two-d/draw.js');
+const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex');
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
+const Snap2d = require('../../../../../public/js/utils/canvas/two-d/objects/snap');
 const PropertyConfig = require('../../config/property/config.js');
 const cabinetBuildConfig = require('../../../public/json/cabinets.json');
 const Pattern = require('../../division-patterns.js');
@@ -33,7 +33,7 @@ const OpeningSketch = require('../opening-sketch');
 const FaceSketch = require('../face-sketch');
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 const approximate = require('../../../../../public/js/utils/approximate').new(10);
-const PanZoom = require('../../two-d/pan-zoom.js');
+const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 
 let template;
 let modifyingOpening = false;
@@ -691,11 +691,11 @@ class TemplateManager extends Lookup {
       let drawFront, drawTop, lastModel, frontView, topSnap, panz, panzT;
       const renderFront = () => {
         if (drawFront === undefined) return;
-        drawFront(frontView, null, 2);
+        drawFront(frontView, null, .5);
       }
       const renderTop = () => {
         if (drawFront === undefined) return;
-        drawTop(topSnap, null, 2);
+        drawTop(topSnap, null, .5);
       }
       const templateBody = du.find('.template-body');
       const frontCanvas = du.find.down('.front-sketch', templateBody);

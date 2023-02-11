@@ -139,6 +139,16 @@ class Polygon2d {
       return faceIndecies;
     }
     this.faces = () => this.lines().filter((l, i) => faceIndecies.indexOf(i) !== -1);
+    this.normals = () => {
+      let normals = [];
+      let center = this.center();
+      for (let index = 0; index < faceIndecies.length; index++) {
+        const line = lines[faceIndecies[index]];
+        if (line)
+          normals.push(new Line2d(center.copy(), line.midpoint()));
+      }
+      return normals;
+    }
 
     this.lines = () => lines;
     this.startLine = () => lines[0];
@@ -150,17 +160,17 @@ class Polygon2d {
       if (lines.length === 0) return {};
       map = {};
       let lastEnd;
-      if (!lines[0].startVertex().equal(lines[lines.length - 1].endVertex())) throw new Error('Broken Polygon');
+      if (!lines[0].startVertex().equals(lines[lines.length - 1].endVertex())) throw new Error('Broken Polygon');
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
-        if (lastEnd && !line.startVertex().equal(lastEnd)) throw new Error('Broken Polygon');
+        if (lastEnd && !line.startVertex().equals(lastEnd)) throw new Error('Broken Polygon');
         lastEnd = line.endVertex();
         map[line.toString()] = line;
       }
       return map;
     }
 
-    this.equal = (other) => {
+    this.equals = (other) => {
       if (!(other instanceof Polygon2d)) return false;
       const verts = this.vertices();
       const otherVerts = other.vertices();
@@ -172,15 +182,15 @@ class Polygon2d {
         if (otherIndex === undefined) {
           if (index > verts.length) {
             return false
-          } if(verts[index].equal(otherVerts[0])) {
+          } if(verts[index].equals(otherVerts[0])) {
             otherIndex = otherVerts.length * 2;
           }
         } else if (otherIndex === otherVerts.length * 2) {
-          if (verts[vIndex].equal(otherVerts[1])) direction = 1;
-          else if(verts[vIndex].equal(otherVerts[otherVerts.length - 1])) direction = -1;
+          if (verts[vIndex].equals(otherVerts[1])) direction = 1;
+          else if(verts[vIndex].equals(otherVerts[otherVerts.length - 1])) direction = -1;
           else return false;
           otherIndex += direction * 2;
-        } else if (!verts[vIndex].equal(otherVerts[otherIndex % otherVerts.length])) {
+        } else if (!verts[vIndex].equals(otherVerts[otherIndex % otherVerts.length])) {
           return false;
         } else {
           otherIndex += direction;
@@ -203,16 +213,16 @@ class Polygon2d {
         const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
         const curr = lines[index];
         if (subSection.length === 0) {
-          if (startVertex.equal(!reverse ? curr.startVertex() : curr.endVertex())) {
+          if (startVertex.equals(!reverse ? curr.startVertex() : curr.endVertex())) {
             subSection.push(!reverse ? curr : curr.negitive());
-            if (endVertex.equal(reverse ? curr.startVertex() : curr.endVertex())) {
+            if (endVertex.equals(reverse ? curr.startVertex() : curr.endVertex())) {
               completed = true;
               break;
             }
           }
         } else {
           subSection.push(!reverse ? curr : curr.negitive());
-          if (endVertex.equal(reverse ? curr.startVertex() : curr.endVertex())) {
+          if (endVertex.equals(reverse ? curr.startVertex() : curr.endVertex())) {
             completed = true;
             break;
           }
@@ -250,7 +260,6 @@ class Polygon2d {
 
     this.addVertices = (list) => {
       if (list === undefined) return;
-      if ((lines.length === 0) && list.length < 3) return;//console.error('A Polygon Must be initialized with 3 vertices');
       const verts = [];
       const endLine = this.endLine();
       for (let index = 0; index < list.length + 1; index += 1) {
@@ -267,6 +276,22 @@ class Polygon2d {
       }
       // this.removeLoops();
       this.lineMap(true);
+    }
+
+    this.addBest = (lineList) => {
+      if (lineList.length > 100) throw new Error('This algorythum is slow: you should either find a way to speed it up or use a different method');
+      const lastLine = lines[lines.length - 2];
+      const endVert = lastLine.endVertex();
+      lineList.sort(Line2d.distanceSort(endVert));
+      const nextLine = lineList[0].acquiescent(lastLine);
+      const connectLine = new Line2d(endVert, nextLine.startVertex());
+      endVert.translate(connectLine.run()/2, connectLine.rise()/2);
+      lines.splice(lines.length - 1, 1);
+      const newLastLine = new Line2d(endVert, nextLine.endVertex());
+      const newConnectLine = new Line2d(nextLine.endVertex(), lines[0].startVertex());
+      lines.push(newLastLine);
+      if (!newConnectLine.isPoint()) lines.push(newConnectLine);
+      lineList.splice(0,1);
     }
 
     this.path = (offset) => {
@@ -338,17 +363,28 @@ Polygon2d.centerOn = (newCenter, polys) => {
   }
 }
 
+Polygon2d.build = (lines) => {
+  const start = lines[0].startVertex().copy();
+  const end = lines[0].endVertex().copy();
+  lines.splice(0, 1);
+  const poly = new Polygon2d([start, end]);
+  while (lines.length > 0) {
+    poly.addBest(lines);
+  }
+  return poly;
+}
+
 Polygon2d.fromLines = (lines) => {
   if (lines === undefined || lines.length === 0) return null;
   let lastLine = lines[0];
   const verts = [lastLine.startVertex()];
   for (let index = 1; index < lines.length; index++) {
     let line = lines[index].acquiescent(lastLine);
-    if (!line.startVertex().equal(verts[verts.length - 1])) {
+    if (!line.startVertex().equals(verts[verts.length - 1])) {
       verts.push(line.startVertex());
     }
-    if (!line.endVertex().equal(verts[verts.length - 1])) {
-      if (index !== lines.length - 1 || !line.endVertex().equal(verts[0]))
+    if (!line.endVertex().equals(verts[verts.length - 1])) {
+      if (index !== lines.length - 1 || !line.endVertex().equals(verts[0]))
         verts.push(line.endVertex());
     }
     lastLine = line;
@@ -393,7 +429,21 @@ Polygon2d.lines = (...polys) => {
 }
 
 
-const tol = .000001;
+
+const vertRegStr = "\\(([0-9]*(\\.[0-9]*|))\\s*,\\s*([0-9]*(\\.[0-9]*|))\\)";
+const vertReg = new RegExp(vertRegStr);
+const vertRegG = new RegExp(vertRegStr, 'g');
+
+Polygon2d.fromString = (str) => {
+  const vertStrs = str.match(vertRegG);
+  const verts = vertStrs.map((str) => {
+    const match = str.match(vertReg);
+    return new Vertex2d(Number.parseFloat(match[1]), Number.parseFloat(match[3]));
+  });
+  return new Polygon2d(verts);
+}
+
+const tol = .1;
 Polygon2d.toParimeter = (lines, recurseObj) => {
   if (lines.length < 2) throw new Error('Not enough lines to create a parimeter');
   let lineMap, splitMap, parimeter;
@@ -419,7 +469,7 @@ Polygon2d.toParimeter = (lines, recurseObj) => {
   const alreadyVisitedStart = splitMap.matches(sv).length !== 0;
   const alreadyVisitedEnd = splitMap.matches(ev).length !== 0;
   if (alreadyVisitedEnd || alreadyVisitedStart) return null;
-  const madeItAround = parimeter.length > 1 && sv.equal(ev);
+  const madeItAround = parimeter.length > 1 && sv.equals(ev);
   if (madeItAround) return Polygon2d.fromLines(parimeter);
 
   const startLine = parimeter[0];
