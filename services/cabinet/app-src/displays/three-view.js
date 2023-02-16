@@ -50,17 +50,30 @@ class ThreeView extends Lookup {
     function drawView (refresh) {
       Layout2D.release(`three-view`);
       let model = instance.lastModel();
-      model ||= instance.lastRendered();
-      if (model === undefined) return;
-      const twoDmap = (typeof model.threeView) === 'function' ? model.threeView() : model.threeView;
-      if (twoDmap.measurments === undefined) {
-        const allLines = twoDmap.parimeter().allLines();
-        twoDmap.measurments = LineMeasurement2d.measurements(allLines);
+      let toDraw = {};
+      if (model) {
+        const threeView = model.threeView;
+        if (threeView.measurments === undefined) {
+          const allLines = threeView.top().concat(threeView.right().concat(threeView.front()));
+          threeView.measurments = LineMeasurement2d.measurements(allLines);
+        }
+        draw(threeView.front(), color, width);
+        draw(threeView.right(), color, width);
+        draw(threeView.top(), color, width);
+        draw(threeView.measurments, 'grey');
+      } else {
+        model ||= instance.lastRendered();
+        if (model === undefined) return;
+        const threeView = model.threeView();
+        if (threeView.measurments === undefined) {
+          const allLines = threeView.parimeter().allLines();
+          threeView.measurments = LineMeasurement2d.measurements(allLines);
+        }
+        draw(threeView.parimeter().front(), color, width);
+        draw(threeView.parimeter().right(), color, width);
+        draw(threeView.parimeter().top(), color, width);
+        draw(threeView.measurments, 'grey');
       }
-      draw(twoDmap.parimeter().front(), color, width);
-      draw(twoDmap.parimeter().right(), color, width);
-      draw(twoDmap.parimeter().top(), color, width);
-      draw(twoDmap.measurments, 'grey');
     }
 
     function onPartSelect(elem) {

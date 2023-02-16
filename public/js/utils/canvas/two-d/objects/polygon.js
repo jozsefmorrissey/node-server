@@ -23,8 +23,21 @@ class Polygon2d {
         for (let i = before; i < before + after + 1; i += 1) vertices.push(fullList[i]);
         return vertices;
       } else return fullList;
+    }
 
-      return vertices;
+    this.reverse = () => {
+      const verts = instance.vertices();
+      for (let index = lines.length - 1; index > -1; index--) {
+        const line = lines[index];
+        const startVert = index === lines.length - 1 ? verts[0] : verts[index + 1];
+        const endVert = verts[index];
+        line.startVertex(startVert);
+        line.endVertex(endVert);
+      }
+      lines = lines.reverse();
+      faceIndecies.forEach((index, i) => {
+          faceIndecies[i] = lines.length - index - 1;
+      });
     }
 
     this.verticesAndMidpoints = (target, before, after) => {
@@ -330,6 +343,13 @@ class Polygon2d {
       }
       return sum >= 0;
     }
+
+    function ensure(antiClockWise) {
+      if (instance.clockWise() === !antiClockWise) return;
+      instance.reverse();
+    }
+    this.ensureClockWise = () => ensure();
+    this.ensureAntiClockWise = () => ensure(true);
 
     this.removeLoops = () => {
       const map = {}

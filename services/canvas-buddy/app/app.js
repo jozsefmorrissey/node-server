@@ -14,28 +14,34 @@ function reportError(msg) {
 }
 
 let verts;
-let hoverMaps;
+let hoverMap = new HoverMap();
 const popUp = new PopUp({resize: false});
+
+function addVertex(x, y) {
+  const vert = new Vertex2d(x,y);
+  hoverMap.add(vert);
+  verts.push(vert);
+  return vert;
+}
 
 function polyDrawFunc() {
   let points = [];
   return (x,y) => {
-    points.push(drawVertex(x,y));
+    points.push(addVertex(x,y));
     verts.push(points[points.length - 1]);
     if (points.length > 1) {
       const line = new Line2d(points[points.length - 2], points[points.length - 1]);
-      hoverMaps.push(new HoverMap(line));
+      hoverMap.add(line);
+      if (line.startVertex().equals(hovering)) drawVertex(line.startVertex());
+      if (line.endVertex().equals(hovering)) drawVertex(line.endVertex());
       draw(line, color(line), .1);
     }
   }
 }
-
+// (circle, lineColor, fillColor, lineWidth)
 function drawVertex(x, y) {
-  const vert = new Vertex2d(x,y);
-  hoverMaps.push(new HoverMap(vert));
-  verts.push(vert);
-  // draw.circle(new Circle2d(.2, vert), null, color(vert));
-  return vert;
+  const vert = x instanceof Vertex2d ? x : addVertex(x,y);
+  draw.circle(new Circle2d(.2, vert), null, color(vert), 0);
 }
 
 let colors = {};
@@ -109,7 +115,7 @@ function splitLocationData(str) {
 function drawFunc() {
   colors = {};
   verts = [];
-  hoverMaps = [];
+  hoverMap.clear();
   const lines  = input.value.split('\n');
   lines.forEach((line) =>  {
     line =  line.replace(commentReg, '');
@@ -139,15 +145,7 @@ input.onkeyup = (event) => {
 let hovering;
 panZ.onMove((event) => {
   const vertex = new Vertex2d(event.imageX, -1*event.imageY);
-  hovering = null;
-  for (let index = 0; index < hoverMaps.length; index++) {
-    const hoverMap = hoverMaps[index];
-    if (hoverMap.hovering(vertex)) {
-      hovering = hoverMap.target();
-      break;
-    }
-  }
-  console.log(hovering && hovering.toString())
+  hovering = hoverMap.hovering(event.imageX, -1*event.imageY);
 });
 
 panZ.onMouseup((event) => {

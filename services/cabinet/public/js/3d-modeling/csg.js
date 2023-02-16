@@ -211,6 +211,16 @@ CSG.prototype = {
       return new CSG.Vertex(newPos, vertex.normal);
     }));
   },
+  reverseRotate: function (rotation) {
+    rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
+    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+      let newPos = vertex.pos;
+      newPos = ArbitraryRotate(newPos, rotation.z, {x: 0, y:0, z:1});
+      newPos = ArbitraryRotate(newPos, rotation.y, {x: 0, y:1, z:0});
+      newPos = ArbitraryRotate(newPos, rotation.x, {x: 1, y:0, z:0});
+      return new CSG.Vertex(newPos, vertex.normal);
+    }));
+  },
 
   translate: function (offset) {
     this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {

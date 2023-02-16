@@ -2,7 +2,7 @@
 const approximate10 = require('../../../approximate.js').new(10);
 const ToleranceMap = require('../../../tolerance-map.js');
 const Tolerance = require('../../../tolerance.js');
-const tol = .00001;
+const tol = .001;
 const within = Tolerance.within(tol);
 
 
@@ -59,7 +59,11 @@ class Vertex2d {
       return modificationFunction;
     }
 
-    this.equals = (other) => other instanceof Vertex2d && within(other.x(), this.x()) && within(other.y(), this.y());
+    this.equals = (other, tol) => {
+      if (!(other instanceof Vertex2d)) return false;
+      const wi = tol ? Tolerance.within(tol) : within;
+      return wi(other.x(), this.x()) && wi(other.y(), this.y());
+    }
     this.x = (val) => {
       if ((typeof val) === 'number') point.x = val;
       return this.point().x;

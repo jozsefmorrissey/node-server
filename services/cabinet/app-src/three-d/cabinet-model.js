@@ -155,6 +155,7 @@ class CabinetModel {
         // Vertex2d.scale(0,-1, [searchLine2d.startVertex(), searchLine2d.endVertex()]);
         return searchLine2d;
       });
+      topview.ensureClockWise();
       const faceIndecies = normalLines.map((normalLine) => {
         for (let index = 0; index < lines.length; index++) {
           if (lines[index].findSegmentIntersection(normalLine, true))
@@ -171,13 +172,16 @@ class CabinetModel {
         c.thickness() !== c.snapObject.thickness;
       if (shouldBuild)  {
         const topview = build();
+        console.log('topview clockwise?', topview.clockWise());
         c.view.top =  topview;
+        console.log('topview lines: ', topview.lines())
         if (!c.snap3d  || c.snap3d.snap2d.top === undefined) {
           const layout = c.group().room().layout();
           const layoutObject = layout.addObject(c.id(), c, c.partName(), topview);
           c.snap3d = layoutObject;
         } else {
           const polygon = c.snap3d.snap2d.top().object();
+          console.log('polylines: ', polygon.lines());
           topview.centerOn(polygon.center());
           topview.radians(polygon.radians())
           const lines = polygon.lines();

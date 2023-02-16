@@ -32,9 +32,6 @@ class EscapeGroup {
           console.warn('Conflicting escape values???');
       }
       this.type(type);
-      if (ce === true && this.type() !== 'independent') {
-        console.log.subtle('gotcha', 1000);
-      }
       if (ce === true) canEscape = true;
       return canEscape;
     }
@@ -132,8 +129,8 @@ class EscapeMap {
         const dirObj = closest[dir];
         if (dirObj.line) {
           const dirState = getState(dirObj.line);
-          let dirOfEndpoint = dirObj.line.direction(dirObj.runner.endVertex());
-          let escapeBretheran = dirOfEndpoint === 'left' ? dirState.escape.right.group() : dirState.escape.left.group();
+          let dirOfEndpoint = dirObj.line.direction(dirObj.runner.startVertex());
+          let escapeBretheran = dirOfEndpoint === 'right' ? dirState.escape.right.group() : dirState.escape.left.group();
           obj.escape[dir].connected(escapeBretheran);
           dirState.escape.updateReference();
           if (obj.escape[dir]()) dirObj.successful = true;
@@ -148,44 +145,74 @@ class EscapeMap {
         return obj;
       }
 
+      const toDrawString = (key) => () => {
+        const state = escapeObj.states[key];
+        const sRight = state.closest.startVertex.right;
+        const sLeft = state.closest.startVertex.left;
+        const eRight = state.closest.endVertex.right;
+        const eLeft = state.closest.endVertex.left;
+        Line2d.toDrawString([state.line,sRight, eRight,sLeft,eLeft],
+                              'green', 'red', 'red', 'blue', 'blue');
+      }
       const initEscape = (line, index) => {
-        if (getState(line) === undefined)
-          escapeObj.states[line.toString()] = {index, line, closest: {}, escape: new Escape(line)};
+        if (getState(line) !== undefined) return;
+        const key = line.toString();
+        escapeObj.states[key] = {index, line, closest: {}, runners: {},
+                escape: new Escape(line),
+                toDrawString: toDrawString(key)};
       };
 
-      const isClosest = (origin, curr, prospective) => prospective instanceof Vertex2d &&
-                    (!curr || prospective.distance(origin) < curr.distance(origin));
+      const isClosest = (origin, curr, prospective, originToEndDist) => {
+        if (!prospective instanceof Vertex2d) return false;
+        const prospectDist = prospective.distance(origin) - originToEndDist;
+        // const validDistance = prospectDist > 0 || withinTol(prospectDist, 0);
+        // if (!validDistance) return false;
+        if (!curr) return true;
+        const currDist = curr.distance(origin) - originToEndDist;
+        return Math.abs(currDist) > Math.abs(prospectDist);
+      }
 
-      function runners(line, funcName, radians) {
+      const intersectsPoint = (target, line1, line2) => {
+        const intersection = line1.findDirectionalIntersection(line2);
+        return intersection instanceof Vertex2d &&
+                  (target.equals(intersection, .1) ||
+                   intersection.distance(line2.startVertex()) >
+                   target.distance(line2.startVertex()));
+      }
+
+      function runners(line, targetFuncName, startPointFuncName, radians) {
         const state = getState(line);
-        const vertex = line[funcName]();
-        const perp = line.perpendicular(perpDist, vertex, true);
-        const rightOrigin = Line2d.startAndTheta(perp.startVertex(), radians - Math.PI, .1).endVertex();
+        const vertex = line[targetFuncName]();
+        const perp = line.perpendicular(perpDist, line[startPointFuncName](), true);
+        const originToEndDist = line.midpoint().distance(line.startVertex());
+        const rightOrigin = perp.startVertex();
         const right = Line2d.startAndTheta(rightOrigin, radians, 1000000000);
-        const leftOrigin = Line2d.startAndTheta(perp.endVertex(), radians - Math.PI, .1).endVertex();
+        const leftOrigin = perp.endVertex();
         const left = Line2d.startAndTheta(leftOrigin, radians, 100000000);
-        escapeObj.runners.right.push(right);
-        escapeObj.runners.left.push(left);
-        state.closest[funcName] = {right: {}, left:{}};
-        let closest = state.closest[funcName];
+        const center = Line2d.startAndTheta(line[startPointFuncName](), radians, 100000000);
+        state.runners[radians] = {right, left};
+        state.closest[targetFuncName] = {right: {}, left:{}};
+        let closest = state.closest[targetFuncName];
         let escapedLeft = true;
         let escapedRight = true;
         for (let index = 0; index < lines.length; index++) {
           const other = lines[index];
-          const leftIntersection = left.findDirectionalIntersection(other);
-          if (other.withinSegmentBounds(leftIntersection)) {
-            escapedLeft = false;
-            if (isClosest(leftOrigin, closest.left.intersection, leftIntersection)) {
-              const escapeLine = new Line2d(left.startVertex(), leftIntersection);
-              closest.left = {intersection: leftIntersection, line: other, escapeLine, runner: left};
+          if (intersectsPoint(vertex, other, center)) {
+            const leftIntersection = left.findDirectionalIntersection(other);
+            if (other.withinSegmentBounds(leftIntersection)) {
+              if (isClosest(leftOrigin, closest.left.intersection, leftIntersection, originToEndDist)) {
+                escapedLeft = false;
+                const escapeLine = new Line2d(left.startVertex(), leftIntersection);
+                closest.left = {intersection: leftIntersection, line: other, escapeLine, runner: left};
+              }
             }
-          }
-          const rightIntersection = right.findDirectionalIntersection(other);
-          if (other.withinSegmentBounds(rightIntersection)) {
-            escapedRight = false;
-            if (isClosest(rightOrigin, closest.right.intersection, rightIntersection)) {
-              const escapeLine = new Line2d(right.startVertex(), rightIntersection);
-              closest.right = {intersection: rightIntersection, line: other, escapeLine, runner: right};
+            const rightIntersection = right.findDirectionalIntersection(other);
+            if (other.withinSegmentBounds(rightIntersection)) {
+              if (isClosest(rightOrigin, closest.right.intersection, rightIntersection, originToEndDist)) {
+                escapedRight = false;
+                const escapeLine = new Line2d(right.startVertex(), rightIntersection);
+                closest.right = {intersection: rightIntersection, line: other, escapeLine, runner: right};
+              }
             }
           }
         }
@@ -202,8 +229,8 @@ class EscapeMap {
         for (let index = 0; index < lines.length; index++) {
           const line = lines[index];
           initEscape(line, index);
-          runners(line, 'startVertex', line.radians() - Math.PI);
-          runners(line, 'endVertex', line.radians());
+          runners(line, 'startVertex', 'endVertex', line.radians() - Math.PI);
+          runners(line, 'endVertex', 'startVertex', line.radians());
         }
       }
 
@@ -277,8 +304,6 @@ class EscapeMap {
 
     this.toDrawString = () => {
       let str = Line2d.toDrawString(lines);
-      // str += '\n\n//Right Runners\n' + Line2d.toDrawString(escapeObj.runners.right, 'red');
-      // str += '\n\n//Left Runners\n' + Line2d.toDrawString(escapeObj.runners.left, 'lavender');
       str += '\n\n//Independed Escapers\n' + Line2d.toDrawString(this.independent(), 'green');
       str += '\n\n//Dependent Escapers\n' + Line2d.toDrawString(this.dependent(), 'lightgreen');
       // str += '\n\n//Successful Escapes\n' + Line2d.toDrawString(this.escapeAttempts(true), 'blue');
@@ -307,7 +332,6 @@ EscapeMap.parimeter = (lines) => {
   const breakdown = Line2d.sliceAll(escaped);
   const parimeter = new EscapeMap(breakdown).escaped();
   const poly = Polygon2d.build(parimeter);
-  console.log(escapeObj.toDrawString());
   return poly;
 }
 

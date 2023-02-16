@@ -46,7 +46,7 @@ class ThreeView {
     const right = Polygon2d.lines(right2D);
     const top = Polygon2d.lines(top2D);
     // Line2d.mirror(top);
-    // Vertex2d.scale(1, -1, Line2d.vertices(top));
+    Vertex2d.scale(1, -1, Line2d.vertices(top));
 
     let parimeter;
     this.parimeter = () => {

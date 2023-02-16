@@ -1,6 +1,7 @@
 
 const Line2d = require('./objects/line')
-class HoverMap2d {
+const Vertex2d = require('./objects/vertex')
+class HoverObject2d {
   constructor(lineOrVertex, tolerance) {
     tolerance ||= 2;
     const toleranceFunction = (typeof tolerance) === 'function';
@@ -10,7 +11,8 @@ class HoverMap2d {
       return tolerance;
     }
     function vertexHovered(targetVertex, hoverVertex) {
-      return targetVertex.distance(hoverVertex) < getTolerence();
+      if(targetVertex.distance(hoverVertex) < getTolerence())
+        return targetVertex.distance(hoverVertex);
     }
 
     function lineHovered(targetLine, hoverVertex) {
@@ -18,21 +20,30 @@ class HoverMap2d {
       const hv = hoverVertex;
       const sv = targetLine.startVertex();
       const ev = targetLine.endVertex();
+      let toleranceAcceptible = false;
       if (targetLine.isVertical()) {
-        return Math.abs(sv.x() - hv.x()) < tol &&
+        toleranceAcceptible = Math.abs(sv.x() - hv.x()) < tol &&
               ((sv.y() > hv.y() && ev.y() < hv.y()) ||
               (sv.y() < hv.y() && ev.y() > hv.y()));
       } else if (targetLine.isHorizontal()) {
-        return Math.abs(sv.y() - hv.y()) < tol &&
+        toleranceAcceptible = Math.abs(sv.y() - hv.y()) < tol &&
               ((sv.x() > hv.x() && ev.x() < hv.x()) ||
               (sv.x() < hv.x() && ev.x() > hv.x()));
       } else if (Math.abs(sv.y() - ev.y()) < Math.abs(sv.x() - ev.x())) {
         const yValue = targetLine.y(hv.x());
-        return yValue + tol > hv.y() && yValue - tol < hv.y();
+        toleranceAcceptible = yValue + tol > hv.y() && yValue - tol < hv.y();
       } else {
         const xValue = targetLine.x(hv.y());
-        return xValue + tol > hv.x() && xValue - tol < hv.x();
+        toleranceAcceptible = xValue + tol > hv.x() && xValue - tol < hv.x();
       }
+
+      if (toleranceAcceptible) {
+        const closestPoint = targetLine.closestPointOnLine(hoverVertex);
+        if (targetLine.withinSegmentBounds(closestPoint)) {
+          return closestPoint.distance(hoverVertex) + .1;
+        }
+      }
+      return false;
     }
 
     this.target = () => lineOrVertex;
@@ -42,6 +53,30 @@ class HoverMap2d {
       if (lov instanceof Line2d)
         return lineHovered(lov, hoverVertex);
       return vertexHovered(lov, hoverVertex);
+    }
+  }
+}
+
+class HoverMap2d {
+  constructor() {
+    let hoverObjects = [];
+
+    this.clear = () => hoverObjects = [] || true;
+    this.add = (object) => hoverObjects.push(new HoverObject2d(object));
+    this.hovering = (x, y) => {
+      const vertex = x instanceof Vertex2d ? x : new Vertex2d(x, y);
+      let hoveringObj = null;
+      for (let index = 0; index < hoverObjects.length; index++) {
+        const hoverObj = hoverObjects[index];
+        const distance = hoverObj.hovering(vertex);
+        if (distance) {
+          const target = hoverObj.target();
+          if (hoveringObj === null || distance < hoveringObj.distance) {
+            hoveringObj = {target, distance};
+          }
+        }
+      }
+      return hoveringObj && hoveringObj.target;
     }
   }
 }

@@ -176,6 +176,24 @@ exports['2055573719'] = (get, $t) =>
 exports['auto-save'] = (get, $t) => 
 		`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
 
+exports['expandable/input-repeat'] = (get, $t) => 
+		`<div> ` +
+		$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
+		` <button ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' class='expandable-list-add-btn' ` +
+		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+		`> Add ` +
+		$t.clean(get("listElemLable")()) +
+		` here </button> <div class='error' id='` +
+		$t.clean(get("ERROR_CNT_ID")) +
+		`'></div> </div> `
+
+exports['-1921787246'] = (get, $t) => 
+		`<option value="` +
+		$t.clean(get("option")) +
+		`" ></option>`
+
 exports['expandable/list'] = (get, $t) => 
 		` <div class="expandable-list ` +
 		$t.clean(get("type")()) +
@@ -248,6 +266,58 @@ exports['expandable/top-add-list'] = (get, $t) =>
 		$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 		` </div> `
 
+exports['input/data-list'] = (get, $t) => 
+		`` +
+		$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+		` `
+
+exports['-994603408'] = (get, $t) => 
+		`<option value="` +
+		$t.clean(get("item")) +
+		`" ></option>`
+
+exports['expandable/sidebar'] = (get, $t) => 
+		` <div class="expandable-list ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`'> <div class="expand-list-cnt ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`'> ` +
+		$t.clean( new $t('-688234735').render(get("list")(), 'key, item', get)) +
+		` <div class='expand-input-cnt' hidden>` +
+		$t.clean(get("inputHtml")()) +
+		`</div> <div class='input-open-cnt'><button>Add ` +
+		$t.clean(get("listElemLable")()) +
+		`</button></div> </div> <div> </div> <div class="expand-body ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("key")) +
+		`'> Hello World! </div> </div> `
+
+exports['-688234735'] = (get, $t) => 
+		`<div class="expandable-list-body" key='` +
+		$t.clean(get("key")) +
+		`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("key")) +
+		`'>X</button> </div> <div class="expand-header ` +
+		$t.clean(get("type")()) +
+		` ` +
+		$t.clean(get("activeKey")() === get("key") ? ' active' : '') +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`' key='` +
+		$t.clean(get("key")) +
+		`'> ` +
+		$t.clean(get("getHeader")(get("item"), get("key"))) +
+		` </div> </div> </div>`
+
 exports['input/decision/decision'] = (get, $t) => 
 		` <span class='decision-input-cnt' node-id='` +
 		$t.clean(get("_nodeId")) +
@@ -258,24 +328,6 @@ exports['input/decision/decision'] = (get, $t) =>
 		`'> ` +
 		$t.clean( new $t('101748844').render(get("inputArray"), 'input', get)) +
 		` </span> </span> `
-
-exports['expandable/input-repeat'] = (get, $t) => 
-		`<div> ` +
-		$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
-		` <button ex-list-id='` +
-		$t.clean(get("id")()) +
-		`' class='expandable-list-add-btn' ` +
-		$t.clean(get("hideAddBtn") ? 'hidden' : '') +
-		`> Add ` +
-		$t.clean(get("listElemLable")()) +
-		` here </button> <div class='error' id='` +
-		$t.clean(get("ERROR_CNT_ID")) +
-		`'></div> </div> `
-
-exports['-1921787246'] = (get, $t) => 
-		`<option value="` +
-		$t.clean(get("option")) +
-		`" ></option>`
 
 exports['input/decision/decisionTree'] = (get, $t) => 
 		`<div class='` +
@@ -326,11 +378,6 @@ exports['input/input'] = (get, $t) =>
 		`</div> </` +
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		`> `
-
-exports['-994603408'] = (get, $t) => 
-		`<option value="` +
-		$t.clean(get("item")) +
-		`" ></option>`
 
 exports['input/measurement'] = (get, $t) => 
 		`<div class='fit input-cnt'` +
@@ -412,29 +459,6 @@ exports['2d/pop-up/line-measurement-2d'] = (get, $t) =>
 		$t.clean(get("target").display()) +
 		`'> </div> `
 
-exports['2d/pop-up/snap-2d'] = (get, $t) => 
-		`<div type-2d='` +
-		$t.clean(get("target").parent().constructor.name) +
-		`' id='` +
-		$t.clean(get("target").parent().id()) +
-		`' x='` +
-		$t.clean(get("lastImagePoint").x) +
-		`' y='` +
-		$t.clean(get("lastImagePoint").y) +
-		`'> <label>Name</label> <input class='value-2d' member='object' type="text" key="name" value="` +
-		$t.clean(get("target").parent().name()) +
-		`"> <br><br> <label>Width</label> <input class='value-2d' member='cabinet' type="text" key="width" value="` +
-		$t.clean(get("display")(get("target").width())) +
-		`"> <br> <label>Depth</label> <input class='value-2d' member='cabinet' type="text" key="thickness" value="` +
-		$t.clean(get("display")(get("target").height())) +
-		`"> <br> <label>Angle</label> <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="` +
-		$t.clean(get("target").angle()) +
-		`"> <br> <label>X</label> <input class='value-2d' member='snap' type="text" key="x" value="` +
-		$t.clean(get("display")(get("target").x())) +
-		`"> <br> <label>Y</label> <input class='value-2d' member='snap' type="text" key="y" value="` +
-		$t.clean(get("display")(get("target").y())) +
-		`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
-
 exports['2d/pop-up/snap-location-2d'] = (get, $t) => 
 		`<div type-2d='` +
 		$t.clean(get("target").parent().constructor.name) +
@@ -466,17 +490,6 @@ exports['2d/pop-up/snap-location-2d'] = (get, $t) =>
 		$t.clean(!get("scope").snapPartner() ? '' : ' hidden') +
 		`> <label>Fix</label> <input member='snap-loc' type="checkbox" name="fix" value=""> </span> </div> `
 
-exports['2d/pop-up/wall-2d'] = (get, $t) => 
-		`<div type-2d='` +
-		$t.clean(get("target").constructor.name) +
-		`' id='` +
-		$t.clean(get("target").id()) +
-		`' x='` +
-		$t.clean(get("lastImagePoint").x) +
-		`' y='` +
-		$t.clean(get("lastImagePoint").y) +
-		`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
-
 exports['2d/pop-up/vertex-2d'] = (get, $t) => 
 		`<div type-2d='` +
 		$t.clean(get("target").constructor.name) +
@@ -491,6 +504,17 @@ exports['2d/pop-up/vertex-2d'] = (get, $t) =>
 		`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='value-2d' key='y' value='` +
 		$t.clean(get("display")(get("target").y())) +
 		`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d transparent'>Remove</button></td> </tr> <tr> </table> </div> `
+
+exports['2d/pop-up/wall-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").constructor.name) +
+		`' id='` +
+		$t.clean(get("target").id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
 
 exports['2d/pop-up/window-2d'] = (get, $t) => 
 		`<div type-2d='` +
@@ -527,6 +551,29 @@ exports['-970877277'] = (get, $t) =>
 		$t.clean(get("showType").name) +
 		`</option>`
 
+exports['2d/pop-up/snap-2d'] = (get, $t) => 
+		`<div type-2d='` +
+		$t.clean(get("target").parent().constructor.name) +
+		`' id='` +
+		$t.clean(get("target").parent().id()) +
+		`' x='` +
+		$t.clean(get("lastImagePoint").x) +
+		`' y='` +
+		$t.clean(get("lastImagePoint").y) +
+		`'> <label>Name</label> <input class='value-2d' member='object' type="text" key="name" value="` +
+		$t.clean(get("target").parent().name()) +
+		`"> <br><br> <label>Width</label> <input class='value-2d' member='cabinet' type="text" key="width" value="` +
+		$t.clean(get("display")(get("target").width())) +
+		`"> <br> <label>Depth</label> <input class='value-2d' member='cabinet' type="text" key="thickness" value="` +
+		$t.clean(get("display")(get("target").height())) +
+		`"> <br> <label>Angle</label> <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="` +
+		$t.clean(get("target").angle()) +
+		`"> <br> <label>X</label> <input class='value-2d' member='snap' type="text" key="x" value="` +
+		$t.clean(get("display")(get("target").x())) +
+		`"> <br> <label>Y</label> <input class='value-2d' member='snap' type="text" key="y" value="` +
+		$t.clean(get("display")(get("target").y())) +
+		`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+
 exports['cabinet/head'] = (get, $t) => 
 		`<div class='cabinet-header' cabinet-id='` +
 		$t.clean(get("cabinet").id()) +
@@ -562,6 +609,13 @@ exports['cabinet/head'] = (get, $t) =>
 		$t.clean(get("displayValue")(get("cabinet").thickness())) +
 		`'> </div> </div> `
 
+exports['divide/body'] = (get, $t) => 
+		`<h2>` +
+		$t.clean(get("list").activeKey()) +
+		`</h2> val: ` +
+		$t.clean(get("list").value()('selected')) +
+		` `
+
 exports['display-manager'] = (get, $t) => 
 		`<div class='display-manager' id='` +
 		$t.clean(get("id")) +
@@ -579,18 +633,6 @@ exports['-533097724'] = (get, $t) =>
 		`'>` +
 		$t.clean(get("item").name) +
 		`</button> </span>`
-
-exports['divide/body'] = (get, $t) => 
-		`<h2>` +
-		$t.clean(get("list").activeKey()) +
-		`</h2> val: ` +
-		$t.clean(get("list").value()('selected')) +
-		` `
-
-exports['divide/head'] = (get, $t) => 
-		`<div> <div class='open-divider-select` +
-		$t.clean(get("sections").length === 0 ? '' : ' hidden') +
-		`'> S </div> </div> `
 
 exports['divider-controls'] = (get, $t) => 
 		`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
@@ -624,6 +666,11 @@ exports['divider-controls'] = (get, $t) =>
 		`> ` +
 		$t.clean(get("patternInputHtml")) +
 		` </div> </div> `
+
+exports['divide/head'] = (get, $t) => 
+		`<div> <div class='open-divider-select` +
+		$t.clean(get("sections").length === 0 ? '' : ' hidden') +
+		`'> S </div> </div> `
 
 exports['feature'] = (get, $t) => 
 		`<h3>Feature Display</h3> `
@@ -675,15 +722,15 @@ exports['index'] = (get, $t) =>
 		$t.clean(get("id") !== 'home' ? "link='/cabinet/pattern'" : '') +
 		` hidden>Pat Man</div> </div> <div id='property-select-cnt'></div> </body> </html> `
 
-exports['login/confirmation-message'] = (get, $t) => 
-		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
-
 exports['login/create-account'] = (get, $t) => 
 		`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
 		$t.clean(get("email")) +
 		`'> <input type='password' placeholder="password" name='password' value='` +
 		$t.clean(get("password")) +
 		`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
+
+exports['login/confirmation-message'] = (get, $t) => 
+		`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
 
 exports['login/login'] = (get, $t) => 
 		`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -710,13 +757,6 @@ exports['managers/abstract-manager'] = (get, $t) =>
 		$t.clean(get("bodyId")) +
 		`"></div> </div> `
 
-exports['managers/cost/body'] = (get, $t) => 
-		`<div hidden> <div> <span> ` +
-		$t.clean(get("CostManager").nodeInputHtml()) +
-		` <button>Add Cost</button> <button>Add Node</button> </span> <span> Cost Display </span> </div> ` +
-		$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
-		` </div> `
-
 exports['managers/cost/head'] = (get, $t) => 
 		`<div class='expand-header' node-id='` +
 		$t.clean(get("node").nodeId()) +
@@ -727,6 +767,13 @@ exports['managers/cost/head'] = (get, $t) =>
 		` </b> <ul> ` +
 		$t.clean( new $t('1417643187').render(get("node").payload().requiredProperties, 'property', get)) +
 		` </ul> </div> `
+
+exports['managers/cost/body'] = (get, $t) => 
+		`<div hidden> <div> <span> ` +
+		$t.clean(get("CostManager").nodeInputHtml()) +
+		` <button>Add Cost</button> <button>Add Node</button> </span> <span> Cost Display </span> </div> ` +
+		$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
+		` </div> `
 
 exports['managers/cost/main'] = (get, $t) => 
 		`<div> <div class="center"> <h2 id='cost-manager-header'> Cost Tree Manager </h2> </div> ` +
@@ -1267,47 +1314,10 @@ exports['room/body'] = (get, $t) =>
 		$t.clean(get("room").id()) +
 		`'>Add Group</button> </div> </div> `
 
-exports['expandable/sidebar'] = (get, $t) => 
-		` <div class="expandable-list ` +
-		$t.clean(get("type")()) +
-		`" ex-list-id='` +
-		$t.clean(get("id")()) +
-		`'> <div class="expand-list-cnt ` +
-		$t.clean(get("type")()) +
-		`" ex-list-id='` +
-		$t.clean(get("id")()) +
-		`'> ` +
-		$t.clean( new $t('-688234735').render(get("list")(), 'key, item', get)) +
-		` <div class='expand-input-cnt' hidden>` +
-		$t.clean(get("inputHtml")()) +
-		`</div> <div class='input-open-cnt'><button>Add ` +
-		$t.clean(get("listElemLable")()) +
-		`</button></div> </div> <div> </div> <div class="expand-body ` +
-		$t.clean(get("type")()) +
-		`" ex-list-id='` +
-		$t.clean(get("id")()) +
-		`' key='` +
-		$t.clean(get("key")) +
-		`'> Hello World! </div> </div> `
-
-exports['-688234735'] = (get, $t) => 
-		`<div class="expandable-list-body" key='` +
-		$t.clean(get("key")) +
-		`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
-		$t.clean(get("id")()) +
-		`' key='` +
-		$t.clean(get("key")) +
-		`'>X</button> </div> <div class="expand-header ` +
-		$t.clean(get("type")()) +
-		` ` +
-		$t.clean(get("activeKey")() === get("key") ? ' active' : '') +
-		`" ex-list-id='` +
-		$t.clean(get("id")()) +
-		`' key='` +
-		$t.clean(get("key")) +
-		`'> ` +
-		$t.clean(get("getHeader")(get("item"), get("key"))) +
-		` </div> </div> </div>`
+exports['room/head'] = (get, $t) => 
+		`<b>` +
+		$t.clean(get("room").name()) +
+		`</b> `
 
 exports['sections/divider'] = (get, $t) => 
 		`<h2>Divider: ` +
@@ -1315,11 +1325,6 @@ exports['sections/divider'] = (get, $t) =>
 		`</h2> <div class='section-feature-ctn'> ` +
 		$t.clean(get("featureDisplay")) +
 		` </div> `
-
-exports['room/head'] = (get, $t) => 
-		`<b>` +
-		$t.clean(get("room").name()) +
-		`</b> `
 
 exports['sections/door'] = (get, $t) => 
 		`<h2>DoorSection(` +
@@ -1368,8 +1373,3 @@ exports['three-view'] = (get, $t) =>
 		`" height="` +
 		$t.clean(get("maxDem")()) +
 		`"></canvas> </span> </div> </div> </div> `
-
-exports['input/data-list'] = (get, $t) => 
-		`` +
-		$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-		` `

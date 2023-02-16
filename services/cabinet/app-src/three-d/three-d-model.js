@@ -252,6 +252,7 @@ class ThreeDModel {
           }
           if (assem.partName() === targetPartName) {
             lm = b.clone();
+            lm.reverseRotate(assem.position().rotation());
             const lastModel = this.lastModel();
             lastModelUpdateEvent.trigger(undefined, lastModel);
           }

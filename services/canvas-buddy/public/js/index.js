@@ -359,28 +359,34 @@ require('../../../public/js/utils/utils');
 	}
 	
 	let verts;
-	let hoverMaps;
+	let hoverMap = new HoverMap();
 	const popUp = new PopUp({resize: false});
+	
+	function addVertex(x, y) {
+	  const vert = new Vertex2d(x,y);
+	  hoverMap.add(vert);
+	  verts.push(vert);
+	  return vert;
+	}
 	
 	function polyDrawFunc() {
 	  let points = [];
 	  return (x,y) => {
-	    points.push(drawVertex(x,y));
+	    points.push(addVertex(x,y));
 	    verts.push(points[points.length - 1]);
 	    if (points.length > 1) {
 	      const line = new Line2d(points[points.length - 2], points[points.length - 1]);
-	      hoverMaps.push(new HoverMap(line));
+	      hoverMap.add(line);
+	      if (line.startVertex().equals(hovering)) drawVertex(line.startVertex());
+	      if (line.endVertex().equals(hovering)) drawVertex(line.endVertex());
 	      draw(line, color(line), .1);
 	    }
 	  }
 	}
-	
+	// (circle, lineColor, fillColor, lineWidth)
 	function drawVertex(x, y) {
-	  const vert = new Vertex2d(x,y);
-	  hoverMaps.push(new HoverMap(vert));
-	  verts.push(vert);
-	  // draw.circle(new Circle2d(.2, vert), null, color(vert));
-	  return vert;
+	  const vert = x instanceof Vertex2d ? x : addVertex(x,y);
+	  draw.circle(new Circle2d(.2, vert), null, color(vert), 0);
 	}
 	
 	let colors = {};
@@ -454,7 +460,7 @@ require('../../../public/js/utils/utils');
 	function drawFunc() {
 	  colors = {};
 	  verts = [];
-	  hoverMaps = [];
+	  hoverMap.clear();
 	  const lines  = input.value.split('\n');
 	  lines.forEach((line) =>  {
 	    line =  line.replace(commentReg, '');
@@ -484,15 +490,7 @@ require('../../../public/js/utils/utils');
 	let hovering;
 	panZ.onMove((event) => {
 	  const vertex = new Vertex2d(event.imageX, -1*event.imageY);
-	  hovering = null;
-	  for (let index = 0; index < hoverMaps.length; index++) {
-	    const hoverMap = hoverMaps[index];
-	    if (hoverMap.hovering(vertex)) {
-	      hovering = hoverMap.target();
-	      break;
-	    }
-	  }
-	  console.log(hovering && hovering.toString())
+	  hovering = hoverMap.hovering(event.imageX, -1*event.imageY);
 	});
 	
 	panZ.onMouseup((event) => {
@@ -4523,7 +4521,8 @@ RequireJS.addFunction('./public/js/utils/canvas/two-d/hover-map.js',
 function (require, exports, module) {
 	
 const Line2d = require('./objects/line')
-	class HoverMap2d {
+	const Vertex2d = require('./objects/vertex')
+	class HoverObject2d {
 	  constructor(lineOrVertex, tolerance) {
 	    tolerance ||= 2;
 	    const toleranceFunction = (typeof tolerance) === 'function';
@@ -4533,7 +4532,8 @@ const Line2d = require('./objects/line')
 	      return tolerance;
 	    }
 	    function vertexHovered(targetVertex, hoverVertex) {
-	      return targetVertex.distance(hoverVertex) < getTolerence();
+	      if(targetVertex.distance(hoverVertex) < getTolerence())
+	        return targetVertex.distance(hoverVertex);
 	    }
 	
 	    function lineHovered(targetLine, hoverVertex) {
@@ -4541,21 +4541,30 @@ const Line2d = require('./objects/line')
 	      const hv = hoverVertex;
 	      const sv = targetLine.startVertex();
 	      const ev = targetLine.endVertex();
+	      let toleranceAcceptible = false;
 	      if (targetLine.isVertical()) {
-	        return Math.abs(sv.x() - hv.x()) < tol &&
+	        toleranceAcceptible = Math.abs(sv.x() - hv.x()) < tol &&
 	              ((sv.y() > hv.y() && ev.y() < hv.y()) ||
 	              (sv.y() < hv.y() && ev.y() > hv.y()));
 	      } else if (targetLine.isHorizontal()) {
-	        return Math.abs(sv.y() - hv.y()) < tol &&
+	        toleranceAcceptible = Math.abs(sv.y() - hv.y()) < tol &&
 	              ((sv.x() > hv.x() && ev.x() < hv.x()) ||
 	              (sv.x() < hv.x() && ev.x() > hv.x()));
 	      } else if (Math.abs(sv.y() - ev.y()) < Math.abs(sv.x() - ev.x())) {
 	        const yValue = targetLine.y(hv.x());
-	        return yValue + tol > hv.y() && yValue - tol < hv.y();
+	        toleranceAcceptible = yValue + tol > hv.y() && yValue - tol < hv.y();
 	      } else {
 	        const xValue = targetLine.x(hv.y());
-	        return xValue + tol > hv.x() && xValue - tol < hv.x();
+	        toleranceAcceptible = xValue + tol > hv.x() && xValue - tol < hv.x();
 	      }
+	
+	      if (toleranceAcceptible) {
+	        const closestPoint = targetLine.closestPointOnLine(hoverVertex);
+	        if (targetLine.withinSegmentBounds(closestPoint)) {
+	          return closestPoint.distance(hoverVertex) + .1;
+	        }
+	      }
+	      return false;
 	    }
 	
 	    this.target = () => lineOrVertex;
@@ -4565,6 +4574,30 @@ const Line2d = require('./objects/line')
 	      if (lov instanceof Line2d)
 	        return lineHovered(lov, hoverVertex);
 	      return vertexHovered(lov, hoverVertex);
+	    }
+	  }
+	}
+	
+	class HoverMap2d {
+	  constructor() {
+	    let hoverObjects = [];
+	
+	    this.clear = () => hoverObjects = [] || true;
+	    this.add = (object) => hoverObjects.push(new HoverObject2d(object));
+	    this.hovering = (x, y) => {
+	      const vertex = x instanceof Vertex2d ? x : new Vertex2d(x, y);
+	      let hoveringObj = null;
+	      for (let index = 0; index < hoverObjects.length; index++) {
+	        const hoverObj = hoverObjects[index];
+	        const distance = hoverObj.hovering(vertex);
+	        if (distance) {
+	          const target = hoverObj.target();
+	          if (hoveringObj === null || distance < hoveringObj.distance) {
+	            hoveringObj = {target, distance};
+	          }
+	        }
+	      }
+	      return hoveringObj && hoveringObj.target;
 	    }
 	  }
 	}
@@ -4952,8 +4985,21 @@ function (require, exports, module) {
 	        for (let i = before; i < before + after + 1; i += 1) vertices.push(fullList[i]);
 	        return vertices;
 	      } else return fullList;
+	    }
 	
-	      return vertices;
+	    this.reverse = () => {
+	      const verts = instance.vertices();
+	      for (let index = lines.length - 1; index > -1; index--) {
+	        const line = lines[index];
+	        const startVert = index === lines.length - 1 ? verts[0] : verts[index + 1];
+	        const endVert = verts[index];
+	        line.startVertex(startVert);
+	        line.endVertex(endVert);
+	      }
+	      lines = lines.reverse();
+	      faceIndecies.forEach((index, i) => {
+	          faceIndecies[i] = lines.length - index - 1;
+	      });
 	    }
 	
 	    this.verticesAndMidpoints = (target, before, after) => {
@@ -5259,6 +5305,13 @@ function (require, exports, module) {
 	      }
 	      return sum >= 0;
 	    }
+	
+	    function ensure(antiClockWise) {
+	      if (instance.clockWise() === !antiClockWise) return;
+	      instance.reverse();
+	    }
+	    this.ensureClockWise = () => ensure();
+	    this.ensureAntiClockWise = () => ensure(true);
 	
 	    this.removeLoops = () => {
 	      const map = {}
@@ -5617,9 +5670,6 @@ const Line2d = require('../objects/line');
 	          console.warn('Conflicting escape values???');
 	      }
 	      this.type(type);
-	      if (ce === true && this.type() !== 'independent') {
-	        console.log.subtle('gotcha', 1000);
-	      }
 	      if (ce === true) canEscape = true;
 	      return canEscape;
 	    }
@@ -5717,8 +5767,8 @@ const Line2d = require('../objects/line');
 	        const dirObj = closest[dir];
 	        if (dirObj.line) {
 	          const dirState = getState(dirObj.line);
-	          let dirOfEndpoint = dirObj.line.direction(dirObj.runner.endVertex());
-	          let escapeBretheran = dirOfEndpoint === 'left' ? dirState.escape.right.group() : dirState.escape.left.group();
+	          let dirOfEndpoint = dirObj.line.direction(dirObj.runner.startVertex());
+	          let escapeBretheran = dirOfEndpoint === 'right' ? dirState.escape.right.group() : dirState.escape.left.group();
 	          obj.escape[dir].connected(escapeBretheran);
 	          dirState.escape.updateReference();
 	          if (obj.escape[dir]()) dirObj.successful = true;
@@ -5733,44 +5783,74 @@ const Line2d = require('../objects/line');
 	        return obj;
 	      }
 	
+	      const toDrawString = (key) => () => {
+	        const state = escapeObj.states[key];
+	        const sRight = state.closest.startVertex.right;
+	        const sLeft = state.closest.startVertex.left;
+	        const eRight = state.closest.endVertex.right;
+	        const eLeft = state.closest.endVertex.left;
+	        Line2d.toDrawString([state.line,sRight, eRight,sLeft,eLeft],
+	                              'green', 'red', 'red', 'blue', 'blue');
+	      }
 	      const initEscape = (line, index) => {
-	        if (getState(line) === undefined)
-	          escapeObj.states[line.toString()] = {index, line, closest: {}, escape: new Escape(line)};
+	        if (getState(line) !== undefined) return;
+	        const key = line.toString();
+	        escapeObj.states[key] = {index, line, closest: {}, runners: {},
+	                escape: new Escape(line),
+	                toDrawString: toDrawString(key)};
 	      };
 	
-	      const isClosest = (origin, curr, prospective) => prospective instanceof Vertex2d &&
-	                    (!curr || prospective.distance(origin) < curr.distance(origin));
+	      const isClosest = (origin, curr, prospective, originToEndDist) => {
+	        if (!prospective instanceof Vertex2d) return false;
+	        const prospectDist = prospective.distance(origin) - originToEndDist;
+	        // const validDistance = prospectDist > 0 || withinTol(prospectDist, 0);
+	        // if (!validDistance) return false;
+	        if (!curr) return true;
+	        const currDist = curr.distance(origin) - originToEndDist;
+	        return Math.abs(currDist) > Math.abs(prospectDist);
+	      }
 	
-	      function runners(line, funcName, radians) {
+	      const intersectsPoint = (target, line1, line2) => {
+	        const intersection = line1.findDirectionalIntersection(line2);
+	        return intersection instanceof Vertex2d &&
+	                  (target.equals(intersection, .1) ||
+	                   intersection.distance(line2.startVertex()) >
+	                   target.distance(line2.startVertex()));
+	      }
+	
+	      function runners(line, targetFuncName, startPointFuncName, radians) {
 	        const state = getState(line);
-	        const vertex = line[funcName]();
-	        const perp = line.perpendicular(perpDist, vertex, true);
-	        const rightOrigin = Line2d.startAndTheta(perp.startVertex(), radians - Math.PI, .1).endVertex();
+	        const vertex = line[targetFuncName]();
+	        const perp = line.perpendicular(perpDist, line[startPointFuncName](), true);
+	        const originToEndDist = line.midpoint().distance(line.startVertex());
+	        const rightOrigin = perp.startVertex();
 	        const right = Line2d.startAndTheta(rightOrigin, radians, 1000000000);
-	        const leftOrigin = Line2d.startAndTheta(perp.endVertex(), radians - Math.PI, .1).endVertex();
+	        const leftOrigin = perp.endVertex();
 	        const left = Line2d.startAndTheta(leftOrigin, radians, 100000000);
-	        escapeObj.runners.right.push(right);
-	        escapeObj.runners.left.push(left);
-	        state.closest[funcName] = {right: {}, left:{}};
-	        let closest = state.closest[funcName];
+	        const center = Line2d.startAndTheta(line[startPointFuncName](), radians, 100000000);
+	        state.runners[radians] = {right, left};
+	        state.closest[targetFuncName] = {right: {}, left:{}};
+	        let closest = state.closest[targetFuncName];
 	        let escapedLeft = true;
 	        let escapedRight = true;
 	        for (let index = 0; index < lines.length; index++) {
 	          const other = lines[index];
-	          const leftIntersection = left.findDirectionalIntersection(other);
-	          if (other.withinSegmentBounds(leftIntersection)) {
-	            escapedLeft = false;
-	            if (isClosest(leftOrigin, closest.left.intersection, leftIntersection)) {
-	              const escapeLine = new Line2d(left.startVertex(), leftIntersection);
-	              closest.left = {intersection: leftIntersection, line: other, escapeLine, runner: left};
+	          if (intersectsPoint(vertex, other, center)) {
+	            const leftIntersection = left.findDirectionalIntersection(other);
+	            if (other.withinSegmentBounds(leftIntersection)) {
+	              if (isClosest(leftOrigin, closest.left.intersection, leftIntersection, originToEndDist)) {
+	                escapedLeft = false;
+	                const escapeLine = new Line2d(left.startVertex(), leftIntersection);
+	                closest.left = {intersection: leftIntersection, line: other, escapeLine, runner: left};
+	              }
 	            }
-	          }
-	          const rightIntersection = right.findDirectionalIntersection(other);
-	          if (other.withinSegmentBounds(rightIntersection)) {
-	            escapedRight = false;
-	            if (isClosest(rightOrigin, closest.right.intersection, rightIntersection)) {
-	              const escapeLine = new Line2d(right.startVertex(), rightIntersection);
-	              closest.right = {intersection: rightIntersection, line: other, escapeLine, runner: right};
+	            const rightIntersection = right.findDirectionalIntersection(other);
+	            if (other.withinSegmentBounds(rightIntersection)) {
+	              if (isClosest(rightOrigin, closest.right.intersection, rightIntersection, originToEndDist)) {
+	                escapedRight = false;
+	                const escapeLine = new Line2d(right.startVertex(), rightIntersection);
+	                closest.right = {intersection: rightIntersection, line: other, escapeLine, runner: right};
+	              }
 	            }
 	          }
 	        }
@@ -5787,8 +5867,8 @@ const Line2d = require('../objects/line');
 	        for (let index = 0; index < lines.length; index++) {
 	          const line = lines[index];
 	          initEscape(line, index);
-	          runners(line, 'startVertex', line.radians() - Math.PI);
-	          runners(line, 'endVertex', line.radians());
+	          runners(line, 'startVertex', 'endVertex', line.radians() - Math.PI);
+	          runners(line, 'endVertex', 'startVertex', line.radians());
 	        }
 	      }
 	
@@ -5862,8 +5942,6 @@ const Line2d = require('../objects/line');
 	
 	    this.toDrawString = () => {
 	      let str = Line2d.toDrawString(lines);
-	      // str += '\n\n//Right Runners\n' + Line2d.toDrawString(escapeObj.runners.right, 'red');
-	      // str += '\n\n//Left Runners\n' + Line2d.toDrawString(escapeObj.runners.left, 'lavender');
 	      str += '\n\n//Independed Escapers\n' + Line2d.toDrawString(this.independent(), 'green');
 	      str += '\n\n//Dependent Escapers\n' + Line2d.toDrawString(this.dependent(), 'lightgreen');
 	      // str += '\n\n//Successful Escapes\n' + Line2d.toDrawString(this.escapeAttempts(true), 'blue');
@@ -5892,7 +5970,6 @@ const Line2d = require('../objects/line');
 	  const breakdown = Line2d.sliceAll(escaped);
 	  const parimeter = new EscapeMap(breakdown).escaped();
 	  const poly = Polygon2d.build(parimeter);
-	  console.log(escapeObj.toDrawString());
 	  return poly;
 	}
 	
@@ -6694,7 +6771,8 @@ const Vertex2d = require('./vertex');
 	    }
 	
 	
-	    this.isPoint = () => withinTol(this.length(), 0);
+	    const withinPointTol = Tolerance.within(.1);
+	    this.isPoint = () => withinPointTol(this.length(), 0);
 	    this.clean = (other) => {
 	      if (!(other instanceof Line2d)) return;
 	      if (other.startVertex().equals(other.endVertex())) return this;
@@ -7012,10 +7090,12 @@ const Vertex2d = require('./vertex');
 	  return fractured;
 	}
 	
-	Line2d.toDrawString = (lines, color) => {
-	  color ||= '';
+	Line2d.toDrawString = (lines, ...colors) => {
 	  let str = '';
-	  lines.forEach((l) => str += `${color}[${l.startVertex().approxToString()},${l.endVertex().approxToString()}],`);
+	  lines.forEach((l,i) => {
+	    color = colors[i%colors.length] || '';
+	    str += `${color}[${l.startVertex().toString()},${l.endVertex().toString()}],`;
+	  });
 	  return str.substr(0, str.length - 1);
 	}
 	
@@ -7128,7 +7208,7 @@ function (require, exports, module) {
 const approximate10 = require('../../../approximate.js').new(10);
 	const ToleranceMap = require('../../../tolerance-map.js');
 	const Tolerance = require('../../../tolerance.js');
-	const tol = .00001;
+	const tol = .001;
 	const within = Tolerance.within(tol);
 	
 	
@@ -7185,7 +7265,11 @@ const approximate10 = require('../../../approximate.js').new(10);
 	      return modificationFunction;
 	    }
 	
-	    this.equals = (other) => other instanceof Vertex2d && within(other.x(), this.x()) && within(other.y(), this.y());
+	    this.equals = (other, tol) => {
+	      if (!(other instanceof Vertex2d)) return false;
+	      const wi = tol ? Tolerance.within(tol) : within;
+	      return wi(other.x(), this.x()) && wi(other.y(), this.y());
+	    }
 	    this.x = (val) => {
 	      if ((typeof val) === 'number') point.x = val;
 	      return this.point().x;
@@ -7987,7 +8071,7 @@ const Polygon3D = require('../../../../../../services/cabinet/app-src/three-d/ob
 	    const right = Polygon2d.lines(right2D);
 	    const top = Polygon2d.lines(top2D);
 	    // Line2d.mirror(top);
-	    // Vertex2d.scale(1, -1, Line2d.vertices(top));
+	    Vertex2d.scale(1, -1, Line2d.vertices(top));
 	
 	    let parimeter;
 	    this.parimeter = () => {

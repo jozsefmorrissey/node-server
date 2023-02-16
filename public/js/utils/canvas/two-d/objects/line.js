@@ -476,7 +476,8 @@ class Line2d {
     }
 
 
-    this.isPoint = () => withinTol(this.length(), 0);
+    const withinPointTol = Tolerance.within(.1);
+    this.isPoint = () => withinPointTol(this.length(), 0);
     this.clean = (other) => {
       if (!(other instanceof Line2d)) return;
       if (other.startVertex().equals(other.endVertex())) return this;
@@ -794,10 +795,12 @@ Line2d.sliceAll = (lines) => {
   return fractured;
 }
 
-Line2d.toDrawString = (lines, color) => {
-  color ||= '';
+Line2d.toDrawString = (lines, ...colors) => {
   let str = '';
-  lines.forEach((l) => str += `${color}[${l.startVertex().approxToString()},${l.endVertex().approxToString()}],`);
+  lines.forEach((l,i) => {
+    color = colors[i%colors.length] || '';
+    str += `${color}[${l.startVertex().toString()},${l.endVertex().toString()}],`;
+  });
   return str.substr(0, str.length - 1);
 }
 
