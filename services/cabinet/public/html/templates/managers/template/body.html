@@ -1,6 +1,6 @@
 <div class='template-body' template-id={{template.id()}}>
   <div class='inline-flex full-width'>
-    <h4>{{template.type())}}</h4>
+    <h4 class='nowrap'>{{template.type())}}</h4>
     <div class='full-width'>
       <button class='copy-template right'>Copy</button>
       <button class='paste-template right'>Paste</button>
@@ -9,12 +9,27 @@
   <div></div>
   <div></div>
 
-  <label>Demensions: </label>
-  <input class='cabinet-input dem' type="text" name="width" value="{{toDisplay(template.width())}}">
-  X
-  <input class='cabinet-input dem' type="text" name="height" value="{{toDisplay(template.height())}}">
-  X
-  <input class='cabinet-input dem' type="text" name="thickness" value="{{toDisplay(template.thickness())}}">
+  <label>Height from floor:</label>
+  <input class='cabinet-input dem' type="text" name="fromFloor" value="{{template.fromFloor()}}">
+  <input class='cabinet-input' type="text" name="fromFloorValue" disabled>
+  <br>
+  <div class='inline-flex'>
+    <label>Demensions: </label>
+    <span>
+      <input class='cabinet-input dem' type="text" name="width" value="{{toDisplay(template.width())}}">
+      X
+      <input class='cabinet-input dem' type="text" name="height" value="{{toDisplay(template.height())}}">
+      X
+      <input class='cabinet-input dem' type="text" name="thickness" value="{{toDisplay(template.thickness())}}">
+      <br>
+      <input class='cabinet-input' type="text" name="widthValue" disabled>
+      X
+      <input class='cabinet-input' type="text" name="heightValue" disabled>
+      X
+      <input class='cabinet-input' type="text" name="thicknessValue" disabled>
+    </span>
+  </div>
+
   <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
     <div class='expand-header'>Values</div>
     <div hidden class="{{containerClasses.values}}"></div>

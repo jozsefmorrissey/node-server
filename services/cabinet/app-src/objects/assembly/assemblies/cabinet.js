@@ -7,7 +7,6 @@ const Joint = require('../../joint/joint.js');
 const CabinetOpeningCorrdinates = require('../../../services/cabinet-opening-coordinates.js');
 const SectionProperties = require('./section/section-properties.js');
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
-const PropertyConfig = require('../../../config/property/config.js');
 const Group = require('../../group');
 const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line');
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex');
@@ -192,6 +191,10 @@ Cabinet.build = (type, group, config) => {
   const cabinet = new Cabinet('c', type);
   cabinet.group(group);
   config ||= cabinetBuildConfig[type];
+  cabinet.length(config.height);
+  cabinet.width(config.width);
+  cabinet.thickness(config.thickness);
+  cabinet.position().setCenter('y', config.fromFloor);
   config.values.forEach((value) => cabinet.value(value.key, value.eqn));
 
   config.subassemblies.forEach((subAssemConfig) => {

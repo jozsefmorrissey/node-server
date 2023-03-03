@@ -2,7 +2,7 @@
 const Vertex2d = require('vertex');
 const Line2d = require('line');
 const Circle2d = require('circle');
-const HoverMap2d = require('../hover-map')
+const HoverObject2d = require('../hover-map').HoverObject2d;
 
 class SnapLocation2d {
   constructor(parent, location, centerFunction) {
@@ -150,7 +150,7 @@ class SnapLocation2d {
 
     this.notPaired = () => pairedWith === null;
 
-    this.hovering = new HoverMap2d(() => this.center(), 12).hovering;
+    this.hovering = new HoverObject2d(() => this.center(), 12).hovering;
 
     this.instString = () => `${parent.id()}:${location}`;
     this.toString = () => pairedWith  instanceof SnapLocation2d ?

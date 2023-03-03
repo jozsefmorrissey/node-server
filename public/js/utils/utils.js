@@ -91,6 +91,12 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     return str.substr(0, len);
 }, true);
 
+const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
+const decimalReg = new RegExp(`^${decimalRegStr}$`);
+Function.safeStdLibAddition(String, 'isNumber', function (len) {
+  return this.trim().match(decimalReg) !== null;
+});
+
 Function.safeStdLibAddition(String, 'number',  function (str) {
   str = new String(str);
   const match = str.match(/([0-9]).([0-9]{1,})e\+([0-9]{2,})/);
@@ -504,12 +510,24 @@ Function.safeStdLibAddition(Array, 'concatInPlace', function (arr, checkForDupli
   }
 });
 
-// const nativeSort = Array.sort;
-// Function.safeStdLibAddition(Array, 'sort', function() {
-//   if ((typeof stringOfunc) === 'string')
-//     return nativeSort.apply(this, [sortByAttr(stringOfunc)]);
-//   return nativeSort.apply(this, arguments);
-// }, true);
+function sortByAttr(attr) {
+  function sort(obj1, obj2) {
+    const val1 = Object.pathValue(obj1, attr);
+    const val2 = Object.pathValue(obj2, attr);
+    if (val2 === val1) {
+      return 0;
+    }
+    return val1 > val2 ? 1 : -1;
+  }
+  return sort;
+}
+
+const nativeSort = Array.sort;
+Function.safeStdLibAddition(Array, 'sortByAttr', function(stringOfunc) {
+  if ((typeof stringOfunc) === 'string')
+    return this.sort.apply(this, [sortByAttr(stringOfunc)]);
+  return this.sort.apply(this, arguments);
+});
 
 Function.safeStdLibAddition(Array, 'copy', function (arr) {
   this.length = 0;

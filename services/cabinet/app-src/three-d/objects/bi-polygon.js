@@ -114,7 +114,7 @@ class BiPolygon {
     }
 
     this.to2D = (vector) => {
-      Polygon3D.toTwoD()
+      return Polygon3D.toTwoD([this.front(), this.back()], vector);
     }
 
 

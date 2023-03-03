@@ -18,3 +18,9 @@
     display: none;
   }
 }
+
+.drag-drop-popup-cnt {
+  background-color: white;
+  padding: 2pt 5pt;
+border-radius: 5pt;
+}

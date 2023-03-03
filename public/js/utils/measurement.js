@@ -78,6 +78,7 @@ class Measurement extends Lookup {
       return ` ${numerator}/${denominator}`;
     }
 
+    //TODO: This could easily be more efficient.... bigger fish.
     function fractionEquivalent(decimalValue, accuracy) {
       accuracy = accuracy || '1/32'
       const fracObj = parseFraction(accuracy);
@@ -94,8 +95,8 @@ class Measurement extends Lookup {
         numerator += fracObj.numerator;
         currRemainder -= fracObj.decimal;
       }
-      const diff1 = decimalValue - ((numerator - fracObj.numerator) / denominator);
-      const diff2 = (numerator / denominator) - decimalValue;
+      const diff1 = Math.abs(decimalValue) - ((numerator - fracObj.numerator) / denominator);
+      const diff2 = (numerator / denominator) - Math.abs(decimalValue);
       numerator -= diff1 < diff2 ? fracObj.numerator : 0;
       const integer = sign * Math.floor(numerator / denominator);
       numerator = numerator % denominator;

@@ -1,9 +1,8 @@
 
 
 
-const Divider = require('../../divider.js');
 const Position = require('../../../../../position.js');
-const PanelModel = require('../../panel.js').Model;
+const Divider = require('../../divider.js');
 const Frame = require('../../frame.js');
 const Assembly = require('../../../assembly.js');
 const Joint = require('../../../../joint/joint');
@@ -33,7 +32,7 @@ class DividerSection extends Assembly {
     const panelPartName = () =>
         `${this.partName()}.Divider.Panel`;
 
-    panel = new PanelModel('dvp', panelPartName, toModel);
+    panel = new Divider('dvp', panelPartName, null, null, null, toModel);
     // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
     panel.parentAssembly(this);
     this.addSubAssembly(panel);

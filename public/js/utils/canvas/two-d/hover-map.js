@@ -2,7 +2,7 @@
 const Line2d = require('./objects/line')
 const Vertex2d = require('./objects/vertex')
 class HoverObject2d {
-  constructor(lineOrVertex, tolerance) {
+  constructor(lineOrVertex, tolerance, target) {
     tolerance ||= 2;
     const toleranceFunction = (typeof tolerance) === 'function';
     const targetFunction = (typeof lineOrVertex) === 'function';
@@ -46,7 +46,7 @@ class HoverObject2d {
       return false;
     }
 
-    this.target = () => lineOrVertex;
+    this.target = () => target || lineOrVertex;
 
     this.hovering = (hoverVertex) => {
       const lov = targetFunction ? lineOrVertex() : lineOrVertex;
@@ -62,7 +62,14 @@ class HoverMap2d {
     let hoverObjects = [];
 
     this.clear = () => hoverObjects = [] || true;
-    this.add = (object) => hoverObjects.push(new HoverObject2d(object));
+    this.add = (object, tolerance, target) => {
+      const hovObj = new HoverObject2d(object, tolerance, target);
+      if (object instanceof Line2d) {
+        hoverObjects.push(hovObj);
+      } else {
+        hoverObjects = [hovObj].concat(hoverObjects);
+      }
+    }
     this.hovering = (x, y) => {
       const vertex = x instanceof Vertex2d ? x : new Vertex2d(x, y);
       let hoveringObj = null;
@@ -81,4 +88,5 @@ class HoverMap2d {
   }
 }
 
+HoverMap2d.HoverObject2d = HoverObject2d;
 module.exports = HoverMap2d;

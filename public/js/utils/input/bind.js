@@ -69,7 +69,7 @@ module.exports = function(selector, objOrFunc, props) {
     }
   }
 
-  du.on.match('change,keyup,enter', selector, update);
+  du.on.match('change:keyup:enter', selector, update);
   du.on.match('click', selector, makeDynamic);
 }
 

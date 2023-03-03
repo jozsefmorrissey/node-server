@@ -174,7 +174,7 @@ function resetOrderAndVersion() {
 let orderChangeInFocus = false;
 
 let processing;
-du.on.match('focusout,enter', '#order-name-input', async () => {
+du.on.match('focusout:enter', '#order-name-input', async () => {
   const newName = orderNameInput.value;
   if (!saveMan.on()) {
     order.name(newName);

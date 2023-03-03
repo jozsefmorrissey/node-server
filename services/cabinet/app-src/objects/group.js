@@ -14,6 +14,32 @@ class Group extends Lookup {
     this.propertyConfig = new PropertyConfig();
     this.objects = [];
     this.room = () => room;
+
+    this.resolve = (one, two, three) => {
+      if (one) {
+        if (one === 'baseh' || one === 'ceilh') {
+          console.log('gotcha bitch');
+        }
+        const layout = room.layout();
+        if (layout && (typeof two) === 'string') {
+          const lower = two.toLowerCase();
+          if(lower === 'ceilh' || 'ceillingheight' === lower) return layout.ceilingHeight(three);
+          if(lower === 'baseh' || 'baseheight' === lower) return layout.baseHeight(three);
+          if(lower === 'wallh' || 'wallheight' === lower) return layout.wallHeight(three);
+          if(lower === 'based' || 'basedepth' === lower) return layout.baseDepth(three);
+          if(lower === 'walld' || 'walldepth' === lower) return layout.wallDepth(three);
+          if(lower === 'walle' || 'wallelevation' === lower) return layout.wallElevation(three);
+          if(lower === 'counterh' || 'counterheight' === lower) return layout.counterHeight(three);
+        }
+        return this.propertyConfig(one, two, three);
+      }
+
+    }
+
+
+
+
+
     this.toJson = () => {
       const json = {objects: [], _TYPE: 'Group'};
       this.objects.forEach((obj) => json.objects.push(obj.toJson()));

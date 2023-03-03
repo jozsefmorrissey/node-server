@@ -7,6 +7,10 @@ input, select {
   margin: 1pt 2pt;
 }
 
+.nowrap {
+  white-space: nowrap;
+}
+
 .bold {
   font-weight: bold;
 }
@@ -273,7 +277,7 @@ a {
   right: 0;
 }
 
-#two-d-model {
+#two-d-model-canvas {
   width: 80vh;
   height: 80vh;
 }
@@ -325,6 +329,10 @@ a {
 
 .cabinet-input[type='id'] {
   margin-right: 30pt;
+}
+
+.cabinet-input {
+  width: 60pt;
 }
 
 .cabinet-dem-cnt {

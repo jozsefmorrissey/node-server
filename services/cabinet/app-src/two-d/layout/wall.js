@@ -2,7 +2,7 @@ const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line
 const OnWall = require('./on-wall');
 const Door2D = require('./door');
 const Window2D = require('./window');
-const HoverMap2d = require('../../../../../public/js/utils/canvas/two-d/hover-map')
+const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map').HoverObject2d;
 
 function modifyVertex(vertex) {
   return (props) => {
@@ -50,9 +50,9 @@ class Wall2D extends Line2d {
         startVertex.nextLine(nextLine);
     }
 
-    const hoveringStart = new HoverMap2d(() => this.startVertex(), 24).hovering;
-    const hoveringEnd = new HoverMap2d(() => this.endVertex(), 24).hovering;
-    const hoveringWall = new HoverMap2d(() => this, 10).hovering;
+    const hoveringStart = new HoverObject2d(() => this.startVertex(), 24).hovering;
+    const hoveringEnd = new HoverObject2d(() => this.endVertex(), 24).hovering;
+    const hoveringWall = new HoverObject2d(() => this, 10).hovering;
     this.hovering = (v) => {
       if (hoveringStart(v)) return this.startVertex();
       if (hoveringEnd(v)) return this.endVertex();

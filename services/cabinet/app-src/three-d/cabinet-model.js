@@ -144,18 +144,21 @@ class CabinetModel {
       const threeView = instance.threeView();
       let topview = threeView.parimeter().top();
       const layout = c.group().room().layout();
-      const normals = c.normals();
+      const normals = instance.normals();
       const dist = c.width() > c.thickness() ? c.width() : c.thickness();
       const lines = topview.lines();
       const topCenter = Vertex2d.center(Line2d.vertices(lines));
+      const cabRotation = instance.rotation();
       const normalLines = normals.map((n) => {
         const searchLine = Line3D.startAndVector(instance.center().copy(), n.scale(dist));
-        const searchLine2d = searchLine.to2D(threeView.axis().top[0], threeView.axis().top[1]);
+        const veiwFromVect = Line3D.viewFromVector([searchLine], threeView.normals.top())[0];
+        const searchLine2d = veiwFromVect.to2D(threeView.axis().top[0], threeView.axis().top[1]);
         searchLine2d.translate(new Line2d(searchLine2d.startVertex().copy(), topCenter.copy()));
-        // Vertex2d.scale(0,-1, [searchLine2d.startVertex(), searchLine2d.endVertex()]);
+        // TODO: I should fix the root cause that requires the x coord to be mirrored;
+        searchLine2d.mirrorX();
+        // searchLine2d.mirrorY();
         return searchLine2d;
       });
-      topview.ensureClockWise();
       const faceIndecies = normalLines.map((normalLine) => {
         for (let index = 0; index < lines.length; index++) {
           if (lines[index].findSegmentIntersection(normalLine, true))
@@ -172,16 +175,14 @@ class CabinetModel {
         c.thickness() !== c.snapObject.thickness;
       if (shouldBuild)  {
         const topview = build();
-        console.log('topview clockwise?', topview.clockWise());
+        topview.mirrorY();
         c.view.top =  topview;
-        console.log('topview lines: ', topview.lines())
         if (!c.snap3d  || c.snap3d.snap2d.top === undefined) {
           const layout = c.group().room().layout();
           const layoutObject = layout.addObject(c.id(), c, c.partName(), topview);
           c.snap3d = layoutObject;
         } else {
-          const polygon = c.snap3d.snap2d.top().object();
-          console.log('polylines: ', polygon.lines());
+          const polygon = c.snap3d.snap2d.top().polygon();
           topview.centerOn(polygon.center());
           topview.radians(polygon.radians())
           const lines = polygon.lines();
@@ -189,7 +190,6 @@ class CabinetModel {
             const startVertex = lines[index].startVertex();
             startVertex.point(topview.vertex(index).point());
           }
-          console.log('merging?');
         }
       }
       return c.snap3d.snap2d.top();

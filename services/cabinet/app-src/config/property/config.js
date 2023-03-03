@@ -18,6 +18,7 @@ class PropertyConfig {
     function isOverlay() {return !isReveal() && !isInset();}
     function overlay() {return props['Overlay'].ov.value()}
     function reveal() {return props['Reveal']};
+    function wallHeight() {return props['baseh'] + props['basewallgap']}
 
     function cabinetStyles() {
       return ['Overlay', 'Inset', 'Reveal'];
@@ -93,7 +94,6 @@ class PropertyConfig {
       if (value !== undefined) return value;
       value = resolveOuterReveal(code, props);
       if (value !== undefined) return value;
-      console.log(code);
       value = resolveStyleStatus(code);
       // if (value !== undefined) return value;
       // value = resolveReveals(code, props);
@@ -122,6 +122,7 @@ class PropertyConfig {
       return json;
     }
 
+    getProperties.wallHeight = wallHeight;
     getProperties.isReveal = isReveal;
     getProperties.isInset = isInset;
     getProperties.overlay = overlay;

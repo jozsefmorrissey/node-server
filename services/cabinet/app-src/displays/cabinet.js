@@ -66,7 +66,7 @@ class CabinetDisplay {
       ThreeDMain.update(cabinet);
     }
 
-    du.on.match('enter,focusout', '.cabinet-id-input.dem[name="width"],.cabinet-id-input.dem[name="thickness"', updateLayout);
+    du.on.match('enter:focusout', '.cabinet-id-input.dem[name="width"],.cabinet-id-input.dem[name="thickness"', updateLayout);
 
     function updateCabValue(cabinet, attr) {
       const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);

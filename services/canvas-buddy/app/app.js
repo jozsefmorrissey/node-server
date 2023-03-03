@@ -1,6 +1,7 @@
 
 require('../../../public/js/utils/utils');
 const du = require('../../../public/js/utils/dom-utils');
+const Measurement = require('../../../public/js/utils/measurement');
 const panZoom = require('../../../public/js/utils/canvas/two-d/pan-zoom');
 const Draw2D = require('../../../public/js/utils/canvas/two-d/draw.js');
 const Circle2d = require('../../../public/js/utils/canvas/two-d/objects/circle.js');
@@ -31,22 +32,29 @@ function polyDrawFunc() {
     verts.push(points[points.length - 1]);
     if (points.length > 1) {
       const line = new Line2d(points[points.length - 2], points[points.length - 1]);
+      const mp = line.midpoint();
+      addVertex(mp.x(), mp.y());
       hoverMap.add(line);
-      if (line.startVertex().equals(hovering)) drawVertex(line.startVertex());
-      if (line.endVertex().equals(hovering)) drawVertex(line.endVertex());
-      draw(line, color(line), .1);
+      if (isIdentified(line.startVertex())) drawVertex(line.startVertex());
+      if (isIdentified(mp)) drawVertex(mp);
+      if (isIdentified(line.endVertex())) drawVertex(line.endVertex());
+      draw(line, color(line), isHovering(line) ? 1 : .5);
     }
   }
 }
 // (circle, lineColor, fillColor, lineWidth)
 function drawVertex(x, y) {
   const vert = x instanceof Vertex2d ? x : addVertex(x,y);
-  draw.circle(new Circle2d(.2, vert), null, color(vert), 0);
+  const radius = isHovering(vert) ? 2 : 1;
+  draw.circle(new Circle2d(radius, vert), null, color(vert), 0);
 }
 
 let colors = {};
+this.isHovering = (obj) => obj && obj.equals(hovering);
+this.isLastClicked = (obj) => obj && obj.equals(lastClicked());
+this.isIdentified = (obj) => isHovering(obj) || isLastClicked(obj);
 function color(lineOvert, color) {
-  if (lineOvert.equals(hovering)) return 'blue';
+  if (isHovering(lineOvert) || isLastClicked(lineOvert)) return 'blue';
   const key = lineOvert.toString();
   if (color) {
     colors[key] = color;
@@ -148,8 +156,18 @@ panZ.onMove((event) => {
   hovering = hoverMap.hovering(event.imageX, -1*event.imageY);
 });
 
+const clickStack = [];
+const lastClicked = () => clickStack[clickStack.length - 1];
 panZ.onMouseup((event) => {
-  if (hovering) popUp.open(hovering.toString(), {x: event.screenX, y: event.screenY});
+  const last = lastClicked();
+  if (last && hovering) {
+    const point = {x: event.screenX, y: event.screenY};
+    if (hovering.equals(last)) popUp.open(hovering.toString(), point);
+    else popUp.open(new Measurement(hovering.distance(last)).display(), point);
+    clickStack.push(undefined);
+  } else {
+    clickStack.push(hovering);
+  }
 });
 
 setTimeout(() => {

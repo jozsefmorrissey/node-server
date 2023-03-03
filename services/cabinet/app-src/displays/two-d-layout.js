@@ -16,8 +16,9 @@ const SnapLocation2d = require('../../../../public/js/utils/canvas/two-d/objects
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement');
 const ThreeDMain = require('three-d-main');
 const ThreeDModel = require('../three-d/three-d-model.js');
+const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
 
-
+const measurmentMap = new HoverMap2d();
 const localEnv = EPNTS.getEnv() === 'local';
 // TODO: Rename
 const TwoDLayout = {};
@@ -25,6 +26,7 @@ const TwoDLayout = {};
 let draw;
 const eval = new StringMathEvaluator({Math}).eval;
 const popUp = new PopUp({resize: false});
+let interactionState = {};
 
 let layout;
 TwoDLayout.set = (l) => {
@@ -40,54 +42,80 @@ let lastImagePoint;
 let hovering;
 let dragging;
 let clickHolding = false;
+let mouseupId = 0;
+let mousedownId = 0;
 let popupOpen = false;
-let measurementModify = false;
 let lastDown = 0;
 const selectTimeBuffer = 200;
 const quickChangeFuncs = {};
 
+function determineObject(id, member) {
+  const referenceObj = Layout2D.get(id);
+  switch (member) {
+    case 'object': return referenceObj.payload();
+    case 'cabinet': return referenceObj.payload();
+    case 'bridge':  return referenceObj.bridge.top();
+    default: return referenceObj;
+  }
+}
+
 function getPopUpAttrs(elem) {
   const cnt =  du.find.up('[type-2d]', elem);
   if (cnt === undefined) return {};
+  const member = elem.getAttribute('member');
   const type = cnt.getAttribute('type-2d');
   const key = elem.getAttribute('key');
-  const raw = elem.type === 'input' ? eval(elem.value) : elem.value;
+  const evaluated = eval(elem.value);
+  const raw = Number.isFinite(evaluated) ? evaluated : elem.value;
   let value, display;
   if (elem.getAttribute('convert') === 'false') {
-    value = raw;
-    display = raw;
+    value = elem.type === 'checkbox' ? elem.checked : raw;
+    display = value;
   } else {
     const measurement = new Measurement(raw, true);
     value = measurement.decimal();
     display = measurement.display();
   }
   const id = cnt.id;
-  return {
-    type,id,key,value,display,raw,
-    obj:  Layout2D.get(id),
-    point: {
-      x: cnt.getAttribute('x'),
-      y: cnt.getAttribute('y')
-    }
-  };
+  const obj = determineObject(id, member);
+  point = {x: cnt.getAttribute('x'), y: cnt.getAttribute('y')};
+  let prevValue, cascade;
+  if (key) prevValue = Object.pathValue(obj, key);
+  const cascadeStr = elem.getAttribute('cascade');
+  if (cascadeStr) cascade = cascadeStr.split(',');
+  return {type,id,key,value,display,raw,obj,prevValue,cascade,point,elem,member};
 }
 
-du.on.match('enter,focusout', '.value-2d', (elem) => {
+function cascadeChanges(props, cascaded) {
+  cascaded ||= [];
+  if (props.cascade) {
+    for (let index = 0; index < props.cascade.length; index++) {
+      const cascadeKey = props.cascade[index];
+      if (cascaded.indexOf(cascadeKey) === -1) {
+        const input = du.find.closest(`[key="${cascadeKey}"]`, props.elem);
+        const currProps = getPopUpAttrs(input);
+        input.value = display(currProps.prevValue);
+        cascadeChanges(currProps, [cascadeKey].concat(cascaded));
+      }
+    }
+  }
+}
+
+du.on.match('enter:focusout', '.value-2d', (elem) => {
   const props = getPopUpAttrs(elem);
-  const member = elem.getAttribute('member');
-  switch (member) {
+  switch (props.member) {
     case 'object':
+      const cab = props.obj;
       props.obj[props.key](props.raw);
-      const cab = props.obj.payload();
       if (cab && cab.constructor.name === 'Cabinet') {
         const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.id()}']`);
         const idInput =  du.find.closest(`Input[name="${props.key}"]`, cabDemCnt);
         idInput.value = props.raw;
       }
-      // panZ.once();
+      panZ.once();
       return;
     case 'cabinet':
-      const cabinet = props.obj.payload();
+      const cabinet = props.obj;
       const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.id()}']`);
       if (cabCnt) {
         const input = du.find.down(`input[name='${props.key}']`, cabCnt);
@@ -97,14 +125,11 @@ du.on.match('enter,focusout', '.value-2d', (elem) => {
       ThreeDMain.update(cabinet)
       return;
   }
-  if (props.obj.payload && props.obj.payload() === 'placeholder') {
-    if (props.key === 'thickness') props.key = 'height';
-    props.obj = props.obj.snap2d.top().object();
-  }
-  props.obj.snap2d.top()[props.key](props.value);
-  elem.value = props.display;
-  // props.obj.snap2d.top().update();
-  // panZ.once();
+
+  if (props.key === 'thickness') props.key = 'height';
+  Object.pathValue(props.obj, props.key, props.value);
+  cascadeChanges(props);
+  panZ.once();
 });
 
 du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
@@ -199,7 +224,11 @@ function onMousedown(event, stdEvent) {
   lastImagePoint = {x: event.imageX, y: event.imageY};
   event.lastImagePoint = new Vertex2d(lastImagePoint);
   if (stdEvent.button == 0) {
-    clickHolding = !popupOpen && (clickHolding || hovering !== undefined);
+    clickHolding = !popupOpen && (clickHolding || hovering);
+    if (clickHolding) {
+      interactionState.mouseupId = undefined;
+      interactionState.mousedownId = ++mousedownId;
+    }
     return clickHolding;
   } else {
     if (hovering && quickChangeFuncs[hovering.constructor.name]) {
@@ -222,10 +251,10 @@ registerQuickChangeFunc('SnapLocation2d', (snapLoc, event) => {
     const possible = layout.atWall(event.lastImagePoint);
     if (possible instanceof Line2d) {
       snapLoc.pairWith(possible);
-      snapLoc.parent().move(event.lastImagePoint);
+      snapLoc.parent().move(event.lastImagePoint, interactionState);
     } else if (possible instanceof Vertex2d) {
       snapLoc.pairWith(possible);
-      snapLoc.move(possible);
+      snapLoc.move(possible, interactionState);
     }
     else snapLoc.pairWith(new Vertex2d(event.lastImagePoint));
   }
@@ -329,7 +358,7 @@ du.on.match('enter', '[member="snap-loc"][name="x"],[member="snap-loc"][name="y"
     selected.disconnect();
     const center = selected.center();
     center[coord](value);
-    selected.move(center);
+    selected.move(center, interactionState);
     hovering = selected;
     snapLoc = null;
     du.find.closest('.which-radio-cnt', elem).hidden = true;
@@ -337,13 +366,14 @@ du.on.match('enter', '[member="snap-loc"][name="x"],[member="snap-loc"][name="y"
   } else {
     const center = snapLoc.center();
     center[coord](value);
-    snapLoc.move(center);
+    snapLoc.move(center, interactionState);
   }
   panZ.once();
 });
 
-function getTemplateScope(cxtrName) {
-  const scope = {display, UNITS: Properties.UNITS, target: hovering, lastImagePoint};
+function getTemplateScope(cxtrName, target) {
+  target ||= hovering;
+  const scope = {display, UNITS: Properties.UNITS, target, lastImagePoint};
   switch (cxtrName) {
     case 'SnapLocation2d':
       hovering.pairWith();
@@ -356,35 +386,38 @@ function getTemplateScope(cxtrName) {
 }
 
 function openPopup(event, stdEvent) {
+  let html;
   if (hovering) {
     popupOpen = true;
-    const msg = `${hovering.constructor.name}: ${hoverId()}`;
     const scope = getTemplateScope(hovering.constructor.name);
-    const html = getTemplate(hovering).render(scope);
-    popUp.open(html, {x: event.screenX, y: event.screenY});
+    html = getTemplate(hovering).render(scope);
+  } else {
+    popupOpen = true;
+    const scope = getTemplateScope(undefined, layout);
+    html = getTemplate(layout).render(scope);
   }
+  popUp.open(html, {x: event.screenX, y: event.screenY});
 }
 
 popUp.onClose((elem, event) => {
   setTimeout(() => popupOpen = false, 200);
   const attrs = getPopUpAttrs(du.find.closest('[type-2d]',popUp.container()));
-  measurementModify = attrs.type === 'LineMeasurement2d';
   lastDown = new Date().getTime();
   clickHolding = false;
+  interactionState.mouseupId = ++mouseupId;
+  interactionState.mousedownId = undefined;
   if (layout) layout.history().newState();
 });
 
 function onMouseup(event, stdEvent) {
   if (stdEvent.button == 0) {
     if (lastDown > new Date().getTime() - selectTimeBuffer) {
-      if (hovering) {
-        setTimeout(() => openPopup(event, stdEvent), 5);
-      } else {
-        measurementModify = !measurementModify;
-      }
+      setTimeout(() => openPopup(event, stdEvent), 5);
     } else {
       const clickWasHolding = clickHolding;
       clickHolding = false;
+      interactionState.mouseupId = ++mouseupId;
+      interactionState.mousedownId = undefined;
       hovering = undefined;
       if (layout) layout.history().newState();
       return clickWasHolding;
@@ -399,14 +432,14 @@ let pending = 0;
 function  drag(event)  {
   const dragging = !popupOpen && clickHolding && hovering;
   if (dragging)
-    hovering.move && hovering.move(new Vertex2d({x: event.imageX, y: event.imageY}), event);
+    hovering.move && hovering.move(new Vertex2d({x: event.imageX, y: event.imageY}), interactionState);
   return dragging;
 }
 
 function hover(event) {
   if (clickHolding) return true;
-  const tuple = {x: event.imageX, y: event.imageY};
-  hovering = layout.at(new Vertex2d(tuple));
+  const vertex = new Vertex2d(event.imageX, event.imageY);
+  hovering = layout.at(new Vertex2d(vertex)) || measurmentMap.hovering(vertex);
   let found = hovering == true;
   return found;
 }
@@ -567,8 +600,10 @@ function measurementValueToDraw(line, midpoint, measurement) {
 function drawMeasurementValues() {
   let values = measurementValues;
   measurementValues = [];
+  measurmentMap.clear();
   for (let index = 0; index < values.length; index += 1) {
     let m = values[index];
+    measurmentMap.add(m.line, 10, m.measurement);
     drawMeasurementValue(m.line, m.midpoint, m.measurement);
   }
 }
@@ -582,13 +617,14 @@ function drawMeasurement(measurement, level, focalVertex)  {
   // }
   const lines = measurementIs[lookupKey];
   const center = layout.vertices(focalVertex, 2, 3);
-  const measurementColor = hoverId() === measurement.toString() ? 'green' : 'grey';
+  const isHovering = hoverId() === measurement.toString();
+  const measurementColor = isHovering ? 'green' : 'grey';
   try {
     draw.beginPath();
     const isWithin = layout.within(lines.furtherLine().midpoint());
     const line = isWithin ? lines.closerLine() : lines.furtherLine();
     const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
-    if (measurementModify || popupOpen) {
+    if (isHovering) {
       draw.line(line.startLine, measurementColor, measurementLineWidth);
       draw.line(line.endLine, measurementColor, measurementLineWidth);
       draw.line(line, measurementColor, measurementLineWidth);
@@ -617,21 +653,14 @@ function measureOnWall(list, level) {
 }
 
 function includeDetails() {
-  return !dragging && (measurementModify || popupOpen)
+  return !dragging && (popupOpen)
 }
 
 function drawWall(wall) {
-  const ctx = draw.ctx();
-  const startpoint = wall.startVertex().point();
-  r =  wall.length();
-  theta = wall.radians();
-  ctx.beginPath();
-  ctx.moveTo(startpoint.x, startpoint.y);
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = hoverId() === wall.toString() ? 'green' : 'black';
+  let color = hoverId() === wall.toString() ? 'green' : 'black';
+  if (wall.endVertex().isFree()) color = 'red';
+  draw.line(wall, color, 4);
   const endpoint = wall.endVertex().point();
-  ctx.lineTo(endpoint.x, endpoint.y);
-  ctx.stroke();
 
   wall.doors().forEach((door) =>
     drawDoor(startpoint, door, wall.radians()));
@@ -651,30 +680,53 @@ function drawWall(wall) {
   return endpoint;
 }
 
-function drawVertex(vertex) {
-  const hovering = hoverId() === vertex.toString();
-  const fillColor = hovering ? 'green' : 'white';
-  const p = vertex.point();
-  const radius = hovering ? 6 : 4;
-  const circle = new Circle2d(radius, p);
-  draw.circle(circle, 'black', fillColor);
+function drawAngle(vertex) {
+  const text = Math.round(vertex.angle() * 10) / 10;
+  const bisector = vertex.bisector(30);
+  const sv = bisector.startVertex();
+  const ev = bisector.endVertex();
+  const point = sv.distance(vertex) < ev.distance(vertex) ? ev : sv;
+  const radians = bisector.perpendicular().radians();
+  draw.text(text, point, {radians, size: 5});
 }
 
-function drawObjects() {
+function vertexColor(vertex) {
+  if (hovering && hovering.constructor.name === 'Wall2D') {
+      if (hovering.startVertex().toString() === vertex.toString()) return 'blue';
+      if (hovering.endVertex().toString() === vertex.toString()) return 'yellow';
+  }
+  const isHovering = hoverId() === vertex.toString();
+  return isHovering ? 'green' : 'white';
+}
+
+function drawVertex(vertex) {
+  const isHovering = hoverId() === vertex.toString();
+  const fillColor = vertexColor(vertex);
+  const p = vertex.point();
+  const radius = isHovering ? 6 : 4;
+  const circle = new Circle2d(radius, p);
+  draw.circle(circle, 'black', fillColor);
+  if (layout.objects().length === 0 || vertex.showAngle) drawAngle(vertex);
+}
+
+function drawObjects(objects, defaultColor, dontDrawSnapLocs) {
+  defaultColor ||= 'black';
   let target;
-  layout.objects().forEach((obj) => {
-    const color = hoverId() === obj.snap2d.top().toString() ? 'green' : 'black';
+  objects.forEach((obj) => {
+    const color = hoverId() === obj.snap2d.top().toString() ? 'green' : defaultColor;
     draw(obj.snap2d.top(), color, 3);
-    obj.snap2d.top().snapLocations().forEach((snapLoc) => {
-      const beingHovered = hoverId() === snapLoc.toString();
-      const identfied = Snap2d.identfied(snapLoc);
-      const snapColor = identfied ? 'red' : (beingHovered ? 'green' :
-            (snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined)));
-      const hasPartner = snapLoc.courting() || snapLoc.pairedWith();
-      const radius = identfied ? 6 : (beingHovered || hasPartner ? 4 : 1.5);
-      if (!beingHovered) draw(snapLoc, snapColor, radius);
-      else target = {radius, color: snapColor};
-    });
+    if (!dontDrawSnapLocs) {
+      obj.snap2d.top().snapLocations().forEach((snapLoc) => {
+        const beingHovered = hoverId() === snapLoc.toString();
+        const identfied = Snap2d.identfied(snapLoc);
+        const snapColor = identfied ? 'red' : (beingHovered ? 'green' :
+        (snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined)));
+        const hasPartner = snapLoc.courting() || snapLoc.pairedWith();
+        const radius = identfied ? 6 : (beingHovered || hasPartner ? 4 : 1.5);
+        if (!beingHovered) draw(snapLoc, snapColor, radius);
+        else target = {radius, color: snapColor};
+      });
+    }
   });
   if (target) draw(hovering, target.color, target.radius);
 }
@@ -697,12 +749,18 @@ function illustrate(canvas) {
   }, true);
   drawVertex(walls[0].startVertex());
   drawMeasurementValues();
-  drawObjects();
+
+  let objects = layout.level();
+  let allObjects = layout.objects();
+  drawObjects(allObjects, '#85858ebd', true);
+  drawObjects(objects);
 }
 
+const Controls2d = require('controls-2d');
 let panZ;
+let controls2d;
 function init() {
-  const canvas = document.getElementById('two-d-model');
+  const canvas = document.getElementById('two-d-model-canvas');
   const height = du.convertCssUnit('80vh');
   canvas.height = height;
   canvas.width = height;
@@ -711,11 +769,16 @@ function init() {
   panZ.onMove(onMove);
   panZ.onMousedown(onMousedown);
   panZ.onMouseup(onMouseup);
+  controls2d = new Controls2d('#two-d-model .orientation-controls', () => layout, panZ);
   // draw(canvas);
   TwoDLayout.panZoom = panZ;
   ThreeDModel.onRenderObjectUpdate(panZ.once);
-  du.on.match('keycombo:Control,z', '*', undo);
-  du.on.match('keycombo:Control,Shift,Z', '*', redo);
+  // du.on.match('keycombo(Control,z)', '*', undo);
+  // du.on.match('keycombo(Control,Shift,Z)', '*', redo);
+  du.on.match('keycombo()', '*', (target, event) => {
+    interactionState.keycombonation = event.keycombonation;
+  });
+  du.on.match('keycombo(Control, )', '*', layout.straightenUp);
 }
 
 TwoDLayout.init = init;

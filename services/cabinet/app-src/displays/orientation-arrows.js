@@ -27,7 +27,7 @@ class OrientationArrows extends Lookup {
 
 OrientationArrows.template = new $t('orientation-arrows');
 
-du.on.match('click', '[dir]', function (target) {
+du.on.match('click', '.orient-arrows>tbody>tr>td[dir]', function (target) {
   const tableElem = du.find.up('[l-id]', target);
   if (!tableElem) return;
   const id = tableElem.getAttribute('l-id');

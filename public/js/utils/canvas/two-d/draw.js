@@ -1,5 +1,7 @@
 
 const Circle2d = require('./objects/circle');
+const Line2d = require('./objects/line');
+const Vertex2d = require('./objects/vertex');
 const ToleranceMap = require('../../tolerance-map.js');
 const du = require('../../dom-utils.js');
 const tol = .1;
@@ -93,16 +95,26 @@ class Draw2d {
       draw.circle(new Circle2d(evRadius * rMultiplier, line.endVertex()), null, ccolor, .01);
     }
 
-    draw.line = (line, color, width, doNotMeasure) => {
+    const midpointFlag = (point, radians) => {
+      ctx().moveTo(point.x(), yCoef * point.y());
+      const ev = Line2d.startAndTheta(point, radians, 15).endVertex();
+      ctx().lineTo(ev.x(), yCoef * ev.y());
+    }
+    function midpointFlags(line) {
+      midpointFlag(line.midpoint(), Math.toRadians(line.degrees() - 135));
+      midpointFlag(line.midpoint(), Math.toRadians(line.degrees() + 135));
+    }
+
+    draw.line = (line, color, width) => {
       if (line === undefined) return;
       color = color ||  'black';
       width = width || 10;
-      const measurePoints = line.measureTo();
       ctx().beginPath();
       ctx().strokeStyle = color;
       ctx().lineWidth = width;
       ctx().moveTo(line.startVertex().x(), yCoef * line.startVertex().y());
       ctx().lineTo(line.endVertex().x(), yCoef * line.endVertex().y());
+      if (Draw2d.debug.showFlags) midpointFlags(line);
       ctx().stroke();
       // identifyVertices(line);
     }
@@ -119,20 +131,20 @@ class Draw2d {
       color = color ||  'black';
       width = width || 1;
       poly.lines().forEach((line) => draw.line(line, color, width));
-      if ((typeof poly.getTextInfo) === 'function') {
-        ctx().save();
-        const info = poly.getTextInfo();
-        ctx().translate(info.center.x(), yCoef * info.center.y());
-        ctx().rotate(info.radians);
-        ctx().beginPath();
-        ctx().lineWidth = 4;
-        ctx().strokeStyle = 'black';
-        ctx().fillStyle =  'black';
-        const text = info.limit === undefined ? info.text : (info.text || '').substring(0, info.limit);
-        ctx().fillText(text, info.x, yCoef * info.y, info.maxWidth);
-        ctx().stroke()
-        ctx().restore();
-      }
+      // if ((typeof poly.getTextInfo) === 'function') {
+      //   ctx().save();
+      //   const info = poly.getTextInfo();
+      //   ctx().translate(info.center.x(), yCoef * info.center.y());
+      //   ctx().rotate(info.radians);
+      //   ctx().beginPath();
+      //   ctx().lineWidth = 4;
+      //   ctx().strokeStyle = color;
+      //   ctx().fillStyle =  color;
+      //   const text = info.limit === undefined ? info.text : (info.text || '').substring(0, info.limit);
+      //   ctx().fillText(text, info.x, yCoef * info.y, info.maxWidth);
+      //   ctx().stroke()
+      //   ctx().restore();
+      // }
     }
 
     draw.square = (square, color, text) => {
@@ -161,16 +173,6 @@ class Draw2d {
       ctx().restore();
     }
 
-    draw.text = (text, center, width, color, maxWidth) => {
-      ctx().beginPath();
-      ctx().lineWidth = width || 4;
-      ctx().strokeStyle = color || 'black';
-      ctx().fillStyle =  color || 'black';
-      ctx().font = width + "px Arial";
-      ctx().fillText(text, center.x, yCoef * center.y, maxWidth);
-      ctx().stroke()
-    }
-
     draw.circle = (circle, lineColor, fillColor, lineWidth) => {
       const center = circle.center();
       ctx().beginPath();
@@ -180,6 +182,36 @@ class Draw2d {
       ctx().arc(center.x(),yCoef * center.y(), circle.radius(),0, 2*Math.PI);
       ctx().stroke();
       ctx().fill();
+    }
+
+    draw.text = (text, point, props) => {
+      props ||= {};
+      point = new Vertex2d(point);
+      text = '' + text;
+      const ctx = draw.ctx();
+
+      ctx.save();
+      ctx.lineWidth = 0;
+      const textLength = text.length;
+      ctx.translate(point.x(), yCoef * point.y());
+      let radians = props.radians || 0;
+      if (yCoef === -1) radians += Math.PI/2;
+      ctx.rotate(props.radians);
+      ctx.beginPath();
+      ctx.fillStyle = props.fillColor || "white";
+      ctx.strokeStyle = props.fillColor || 'white';
+      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.font = `${props.size || '3px'} ${props.font || 'Arial'}`;
+      ctx.lineWidth = .2;
+      ctx.strokeStyle = props.color || 'black';
+      ctx.fillStyle =  props.color || 'black';
+      ctx.fillText(text, props.x || 0, yCoef * (props.y || 0), props.maxWidth);
+      ctx.stroke()
+      ctx.restore();
     }
 
     const blank = 4;
@@ -249,11 +281,15 @@ class Draw2d {
 
     draw.snap = (snap, color, width) => {
       draw(snap.object(), color, width);
-      draw(snap.object().normals());
+      const textInfo = snap.getTextInfo();
+      textInfo.color = color || textInfo.color;
+      draw.text(textInfo.text.substring(0,10), textInfo.center, textInfo);
+      if (Draw2d.debug.showNormals) draw(snap.object().normals());
     }
 
     return draw;
   }
 }
 
+Draw2d.debug = {};
 module.exports = Draw2d;

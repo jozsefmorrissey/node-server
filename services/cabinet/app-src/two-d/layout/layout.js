@@ -6,7 +6,11 @@ const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/ve
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Circle2d = require('../../../../../public/js/utils/canvas/two-d/objects/circle.js');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
+const Property = require('../../config/property.js');
+const Measurement = require('../../../../../public/js/utils/measurement.js');
+const IMPERIAL_US = Measurement.units()[1];
 const Wall2D = require('./wall');
+const Corner2d = require('./corner');
 const Window2D = require('./window');
 const Object3D = require('../../three-d/layout/object.js');
 const Door2D = require('./door');
@@ -66,8 +70,26 @@ class Layout2D extends Lookup {
       }
     }
 
-    function relitiveWall(wall, i) {
-      let position = instance.wallIndex(wall);
+    this.cornerIndex = (cornerOrIndex) => {
+      if (cornerOrIndex instanceof Corner2d) {
+        for (let index = 0; index < walls.length; index += 1) {
+          if (walls[index].startVertex() === cornerOrIndex) return index;
+        }
+        return -1;
+      } else {
+        while(cornerOrIndex < 0) cornerOrIndex += walls.length;
+        return cornerOrIndex % walls.length;
+      }
+    }
+
+    function relitiveWall(wallOcorner, i) {
+      let position
+      if (wallOcorner instanceof Corner2d) {
+        if (i === 0) return null;
+        position = instance.cornerIndex(wallOcorner);
+        if (i >= 0) i--;
+      } else position = instance.wallIndex(wallOcorner);
+
       if (position === undefined) return null;
       const relitiveList = walls.slice(position).concat(walls.slice(0, position));
       return relitiveList[instance.wallIndex(i)];
@@ -128,7 +150,61 @@ class Layout2D extends Lookup {
       return json;
     }
 
+    this.isFreeCorner = (corner) => corner === this.walls()[0].startVertex();
+    this.straightenUp = () => this.walls()[0].startVertex().straightenUp();
+
+    let ceilingHeight = new Property('ceilh', 'Heigth from the floor to the ceiling', {value: 96, notMetric: IMPERIAL_US});
+    this.ceilingHeight = (height) => {
+      if (height) {
+        ceilingHeight.value(height, true);
+      }
+      return ceilingHeight.value();
+    }
+
+    let baseHeight = new Property('baseh', 'Default height for a base cabinet', {value: 34, notMetric: IMPERIAL_US});
+    this.baseHeight = (height) => {
+      if (height) {
+        baseHeight.value(height, true);
+      }
+      return baseHeight.value();
+    }
+
+    let wallHeight = new Property('baseh', 'Default height for a base cabinet', {value: 34, notMetric: IMPERIAL_US});
+    this.wallHeight = (height) => {
+      if (height) {
+        wallHeight.value(height, true);
+      }
+      return wallHeight.value();
+    }
+
+    let baseDepth = new Property('based', 'Default depth for a base cabinet', {value: 24, notMetric: IMPERIAL_US});
+    this.baseDepth = (depth) => {
+      if (depth) {
+        baseDepth.value(depth, true);
+      }
+      return baseDepth.value();
+    }
+
+    let wallDepth = new Property('walld', 'Default depth for a wall cabinet', {value: 12, notMetric: IMPERIAL_US});
+    this.wallDepth = (depth) => {
+      if (depth) {
+        wallDepth.value(depth, true);
+      }
+      return wallDepth.value();
+    }
+
+    let counterHeight = new Property('counterh', 'Distance from baseh to wallHeight', {value: 18, notMetric: IMPERIAL_US});
+    this.counterHeight = (height) => {
+      if (height) {
+        counterHeight.value(height, true);
+      }
+      return counterHeight.value();
+    }
+
+    this.wallElevation = () => this.baseHeight() + this.counterHeight();
+
     this.push = (...points) => {
+      points = points.map(p => new Corner2d(this, p));
       if (this.startLine() === undefined) {
         const walls = this.walls();
         if (points.length < 3) throw Error('Layout must be initialized with atleast three vertices');
@@ -137,14 +213,16 @@ class Layout2D extends Lookup {
       for (let index = 1; index < points.length; index += 1) {
         const endLine = this.endLine();
         const startV = endLine.endVertex();
-        const endV = new Vertex2d(points[(index + 1) % points.length]);
-        walls.push(new Wall2D(startV, endV));
+        const endV = points[(index + 1) % points.length];
+        const currWall = new Wall2D(startV, endV);
+        walls.push(currWall);
       }
     }
 
     this.addObject = (id, payload, name, polygon) => {
       const center = Vertex2d.center.apply(null, this.vertices())
       const obj = Object3D.new(payload, polygon);
+      obj.bridge.top().center(center);
       obj.id(id);
       this.objects().push(obj);
       history.newState();
@@ -206,7 +284,7 @@ class Layout2D extends Lookup {
     }
 
     this.addVertex = (vertex, wall) => {
-      vertex = new Vertex2d(vertex);
+      vertex = new Corner2d(this, vertex);
       let wallIndex = this.wallIndex(wall);
       if (wallIndex === -1) {
         wall = walls[walls.length - 1];
@@ -269,8 +347,13 @@ class Layout2D extends Lookup {
 
       return vertices;
     }
+    this.center = () => Vertex2d.center(...this.vertices());
 
-    this.within = (vertex) => {
+    const record = {within: [], notWithin: []};;
+    this.within = (vertex, doNotCall) => {
+      if (!doNotCall && this.within(vertex, true)) {
+        console.log.subtle('isWithin', 500);
+      }
       vertex = new Vertex2d(vertex);
       const endpoint = {x: 0, y: 0};
       this.vertices().forEach(v => {
@@ -280,7 +363,8 @@ class Layout2D extends Lookup {
         endpoint.x += v.x() * 2;
         endpoint.y += v.y() * 2;
       });
-      const escapeLine = new Line2d(vertex, endpoint);
+      // const escapeLine = new Line2d(vertex, endpoint);
+      const escapeLine = Line2d.startAndTheta(vertex, Math.random()*3.14*2, 10000000);
       const intersections = [];
       let onLine = false;
       const allIntersections = [];
@@ -289,15 +373,20 @@ class Layout2D extends Lookup {
         const intersection = wall.findSegmentIntersection(escapeLine, true);
         allIntersections.push(intersection);
         if (intersection) {
-          // Todo make more accurate
-          const xEqual = approximate.eq(intersection.x(), vertex.x());
-          const yEqual = approximate.eq(intersection.y(), vertex.y());
-          if (xEqual && yEqual) onLine = true;
+          if (intersection.equals(vertex)) onLine = true;
           intersections.push(intersection);
         }
       });
 
-      return onLine || intersections.length % 2 === 1;
+      const isWithin = onLine || intersections.length % 2 === 1;
+      if (!isWithin) {
+        record.notWithin.push(escapeLine);
+        if (record.notWithin.length > 500) record.notWithin = record.notWithin.slice(250);
+      } else {
+        record.within.push(escapeLine);
+        if (record.within.length > 500) record.within = record.within.slice(250);
+      }
+      return isWithin;
     }
 
     this.connected = () => {
@@ -348,8 +437,55 @@ class Layout2D extends Lookup {
       }
     }
 
+    function inRange(min1, max1, min2, max2) {
+      const minWithin = (min1 <= min2 && max1 >= min2);
+      const maxWithin = minWithin || (max1 <= max2 && max1 >= min2);
+      const oneWithin = maxWithin || (max1 < max2 && min1 > min2);
+      return oneWithin;
+    }
+
+    this.levels = () => {
+      const objs = instance.objects().sortByAttr('height');
+
+      const levelList = [];
+      for (let index = 0; index < objs.length; index++) {
+        const obj = objs[index];
+        const bridge = obj.bridge.top();
+        const heightLoc = {min: bridge.fromFloor(), max: bridge.fromFloor() + obj.height()};
+        let found = false;
+        for (let lIndex = 0; lIndex < levelList.length; lIndex++) {
+          const levelObj = levelList[lIndex];
+          const loc = levelObj.heightLoc;
+          if (inRange(loc.min, loc.max, heightLoc.min, heightLoc.max)) {
+            found = true;
+            levelObj.objects.push(obj);
+          }
+        }
+        if (!found) {
+          levelList.push({heightLoc, objects: [obj]});
+        }
+      }
+      const sorted = levelList.sortByAttr('heightLoc.min');
+      return sorted.map(o => o.objects);
+    }
+
+    let savedIndex = 0;
+    this.nextLevel = () => this.level(savedIndex);
+    this.prevLevel = () => this.level(savedIndex - 2);
+    this.level = (index) => {
+      if (Number.isFinite(index)) savedIndex = index + 1;
+      const levels = this.levels();
+      const modIndex = Math.mod(savedIndex, levels.length + 2) - 1;
+      console.log.subtle(500,savedIndex,modIndex);
+      if (modIndex === -1) return [];
+      if (modIndex === levels.length) return this.objects();
+      return levels[modIndex];
+    }
+    this.activeObjects = () => this.level() || this.objects();
+
     // if (!initialized) this.push({x:0, y:0}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
     if (!initialized) this.push({x:1, y:1}, {x:ww+1, y:0}, {x:ww + 1,y:ww + 1}, {x:1,y:ww});
+    // if (!initialized) this.push({x:-250, y:-250}, {x:250, y:-250}, {x:250,y:250}, {x:-250,y:250});
     this.walls = () => walls;
 
     history = new StateHistory(this.toJson, this.fromJson);
@@ -373,11 +509,16 @@ class Layout2D extends Lookup {
     }
 
     this.at = (vertex) => {
-      for (let index = 0; index < this.objects().length; index++) {
-        const hovering = this.objects()[index].snap2d.top().hovering(vertex);
+      const activeObjects = this.level() || this.objects();
+      for (let index = 0; index < activeObjects.length; index++) {
+        const hovering = activeObjects[index].snap2d.top().hovering(vertex);
         if (hovering) return hovering;
       }
       return this.atWall(vertex);
+    }
+
+    this.toDrawString = () => {
+      return Line2d.toDrawString(this.walls());
     }
   }
 }

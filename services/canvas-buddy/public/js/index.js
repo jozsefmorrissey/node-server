@@ -346,6 +346,7 @@ function (require, exports, module) {
 	
 require('../../../public/js/utils/utils');
 	const du = require('../../../public/js/utils/dom-utils');
+	const Measurement = require('../../../public/js/utils/measurement');
 	const panZoom = require('../../../public/js/utils/canvas/two-d/pan-zoom');
 	const Draw2D = require('../../../public/js/utils/canvas/two-d/draw.js');
 	const Circle2d = require('../../../public/js/utils/canvas/two-d/objects/circle.js');
@@ -376,22 +377,29 @@ require('../../../public/js/utils/utils');
 	    verts.push(points[points.length - 1]);
 	    if (points.length > 1) {
 	      const line = new Line2d(points[points.length - 2], points[points.length - 1]);
+	      const mp = line.midpoint();
+	      addVertex(mp.x(), mp.y());
 	      hoverMap.add(line);
-	      if (line.startVertex().equals(hovering)) drawVertex(line.startVertex());
-	      if (line.endVertex().equals(hovering)) drawVertex(line.endVertex());
-	      draw(line, color(line), .1);
+	      if (isIdentified(line.startVertex())) drawVertex(line.startVertex());
+	      if (isIdentified(mp)) drawVertex(mp);
+	      if (isIdentified(line.endVertex())) drawVertex(line.endVertex());
+	      draw(line, color(line), isHovering(line) ? 1 : .5);
 	    }
 	  }
 	}
 	// (circle, lineColor, fillColor, lineWidth)
 	function drawVertex(x, y) {
 	  const vert = x instanceof Vertex2d ? x : addVertex(x,y);
-	  draw.circle(new Circle2d(.2, vert), null, color(vert), 0);
+	  const radius = isHovering(vert) ? 2 : 1;
+	  draw.circle(new Circle2d(radius, vert), null, color(vert), 0);
 	}
 	
 	let colors = {};
+	this.isHovering = (obj) => obj && obj.equals(hovering);
+	this.isLastClicked = (obj) => obj && obj.equals(lastClicked());
+	this.isIdentified = (obj) => isHovering(obj) || isLastClicked(obj);
 	function color(lineOvert, color) {
-	  if (lineOvert.equals(hovering)) return 'blue';
+	  if (isHovering(lineOvert) || isLastClicked(lineOvert)) return 'blue';
 	  const key = lineOvert.toString();
 	  if (color) {
 	    colors[key] = color;
@@ -493,8 +501,18 @@ require('../../../public/js/utils/utils');
 	  hovering = hoverMap.hovering(event.imageX, -1*event.imageY);
 	});
 	
+	const clickStack = [];
+	const lastClicked = () => clickStack[clickStack.length - 1];
 	panZ.onMouseup((event) => {
-	  if (hovering) popUp.open(hovering.toString(), {x: event.screenX, y: event.screenY});
+	  const last = lastClicked();
+	  if (last && hovering) {
+	    const point = {x: event.screenX, y: event.screenY};
+	    if (hovering.equals(last)) popUp.open(hovering.toString(), point);
+	    else popUp.open(new Measurement(hovering.distance(last)).display(), point);
+	    clickStack.push(undefined);
+	  } else {
+	    clickStack.push(hovering);
+	  }
 	});
 	
 	setTimeout(() => {
@@ -862,20 +880,47 @@ const frag = document.createDocumentFragment();
 	  if (du.class.has(target, clazz)) du.class.remove(target, clazz);
 	  else du.class.add(target, clazz);
 	}
-	
+	let lastKeyId;
+	let keyPressId = 0;
 	function onKeycombo(event, func, args) {
 	  const keysDown = {};
+	  const allPressed = () => {
+	    let is = true;
+	    const keys = Object.keys(keysDown);
+	    const minTime = new Date().getTime() - 1000;
+	    for (let index = 0; index < keys.length; index++) {
+	      if (keysDown[keys[index]] < minTime) delete keysDown[keys[index]];
+	    }
+	    for (let index = 0; is && index < args.length; index += 1) {
+	      is = is && keysDown[args[index]];
+	    }
+	    return is;
+	  }
+	  const keysString = () => Object.keys(keysDown).sort().join('/');
+	  const setComboObj = (event) => {
+	    const id = keysString;
+	    const firstCall = lastKeyId !== id;
+	    event.keycombonation = {
+	      allPressed: allPressed(),
+	      keysDown: JSON.clone(keysDown),
+	      keyPressId: firstCall ? ++keyPressId : keyPressId,
+	      firstCall, id
+	    }
+	  }
+	
 	  const keyup = (target, event) => {
-	    keysDown[event.key] = false;
+	    delete keysDown[event.key];
+	    setComboObj(event);
+	    if (event.keycombonation.firstCall && args.length === 0) {
+	      setComboObj(event);
+	      func(target, event);
+	    }
 	  }
 	  const keydown = (target, event) => {
-	    let allPressed = true;
-	    keysDown[event.key] = true;
-	    for (let index = 0; allPressed && index < args.length; index += 1) {
-	      allPressed = allPressed && keysDown[args[index]];
-	    }
-	    if (allPressed) {
-	      console.log('All Pressed!!!');
+	    keysDown[event.key] = new Date().getTime();
+	    setComboObj(event);
+	
+	    if (event.keycombonation.firstCall && event.keycombonation.allPressed) {
 	      func(target, event);
 	    }
 	  }
@@ -885,9 +930,9 @@ const frag = document.createDocumentFragment();
 	
 	const argEventReg = /^(.*?)(|:(.*))$/;
 	function filterCustomEvent(event, func) {
-	  const split = event.split(':');
+	  const split = event.split(/[\(\),]/).filter(str => str);;
 	  event = split[0];
-	  const args = split[1] ? split[1].split(',') : [];
+	  const args = split.slice(1).map((str, i) => str === ' ' ? ' ' : str.trim());
 	  let customEvent = {func, event};
 	  switch (event) {
 	    case 'enter':
@@ -902,7 +947,7 @@ const frag = document.createDocumentFragment();
 	}
 	
 	du.on.match = function(event, selector, func, target) {
-	  const events = event.split(',');
+	  const events = event.split(':');
 	  if (events.length > 1) return events.forEach((e) => du.on.match(e, selector, func, target));
 	  const filter = filterCustomEvent(event, func);
 	  target = target || document;
@@ -1319,6 +1364,12 @@ function (require, exports, module) {
 	    return str.substr(0, len);
 	}, true);
 	
+	const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
+	const decimalReg = new RegExp(`^${decimalRegStr}$`);
+	Function.safeStdLibAddition(String, 'isNumber', function (len) {
+	  return this.trim().match(decimalReg) !== null;
+	});
+	
 	Function.safeStdLibAddition(String, 'number',  function (str) {
 	  str = new String(str);
 	  const match = str.match(/([0-9]).([0-9]{1,})e\+([0-9]{2,})/);
@@ -1732,12 +1783,24 @@ function (require, exports, module) {
 	  }
 	});
 	
-	// const nativeSort = Array.sort;
-	// Function.safeStdLibAddition(Array, 'sort', function() {
-	//   if ((typeof stringOfunc) === 'string')
-	//     return nativeSort.apply(this, [sortByAttr(stringOfunc)]);
-	//   return nativeSort.apply(this, arguments);
-	// }, true);
+	function sortByAttr(attr) {
+	  function sort(obj1, obj2) {
+	    const val1 = Object.pathValue(obj1, attr);
+	    const val2 = Object.pathValue(obj2, attr);
+	    if (val2 === val1) {
+	      return 0;
+	    }
+	    return val1 > val2 ? 1 : -1;
+	  }
+	  return sort;
+	}
+	
+	const nativeSort = Array.sort;
+	Function.safeStdLibAddition(Array, 'sortByAttr', function(stringOfunc) {
+	  if ((typeof stringOfunc) === 'string')
+	    return this.sort.apply(this, [sortByAttr(stringOfunc)]);
+	  return this.sort.apply(this, arguments);
+	});
 	
 	Function.safeStdLibAddition(Array, 'copy', function (arr) {
 	  this.length = 0;
@@ -2120,6 +2183,852 @@ function (require, exports, module) {
 	  }
 	  return meanObject;
 	}, true);
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/measurement.js',
+function (require, exports, module) {
+	
+  try {
+	    Lookup = require('./object/lookup');
+	    StringMathEvaluator = require('./string-math-evaluator');
+	  } catch(e) {}
+	
+	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	let units = [
+	  'Metric',
+	  'Imperial (US)'
+	]
+	let unit = units[1];
+	
+	
+	class Measurement extends Lookup {
+	  constructor(value, notMetric) {
+	    super();
+	    if ((typeof value) === 'string') {
+	      value += ' '; // Hacky fix for regularExpression
+	    }
+	
+	    const determineUnit = () => {
+	      if ((typeof notMetric === 'string')) {
+	        const index = units.indexOf(notMetric);
+	        if (index !== -1) return units[index];
+	      } else if ((typeof notMetric) === 'boolean') {
+	        if (notMetric === true) return unit;
+	      }
+	      return units[0];
+	    }
+	
+	    let decimal = 0;
+	    let nan = value === null || value === undefined;
+	    this.isNaN = () => nan;
+	
+	    const parseFraction = (str) => {
+	      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator');
+	      regObj.integer = Number.parseInt(regObj.integer) || 0;
+	      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	      if(regObj.denominator === 0) {
+	        regObj.numerator = 0;
+	        regObj.denominator = 1;
+	      }
+	      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	      return regObj;
+	    };
+	
+	    function reduce(numerator, denominator) {
+	      let reduced = true;
+	      while (reduced) {
+	        reduced = false;
+	        for (let index = 0; index < Measurement.primes.length; index += 1) {
+	          const prime = Measurement.primes[index];
+	          if (prime >= denominator) break;
+	          if (numerator % prime === 0 && denominator % prime === 0) {
+	            numerator = numerator / prime;
+	            denominator = denominator / prime;
+	            reduced = true;
+	            break;
+	          }
+	        }
+	      }
+	      if (numerator === 0) {
+	        return '';
+	      }
+	      return ` ${numerator}/${denominator}`;
+	    }
+	
+	    //TODO: This could easily be more efficient.... bigger fish.
+	    function fractionEquivalent(decimalValue, accuracy) {
+	      accuracy = accuracy || '1/32'
+	      const fracObj = parseFraction(accuracy);
+	      const denominator = fracObj.denominator;
+	      if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	        throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	      }
+	      let sign = decimalValue > 0 ? 1 : -1;
+	      let remainder = Math.abs(decimalValue);
+	      let currRemainder = remainder;
+	      let value = 0;
+	      let numerator = 0;
+	      while (currRemainder > 0) {
+	        numerator += fracObj.numerator;
+	        currRemainder -= fracObj.decimal;
+	      }
+	      const diff1 = Math.abs(decimalValue) - ((numerator - fracObj.numerator) / denominator);
+	      const diff2 = (numerator / denominator) - Math.abs(decimalValue);
+	      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	      const integer = sign * Math.floor(numerator / denominator);
+	      numerator = numerator % denominator;
+	      return {integer, numerator, denominator};
+	    }
+	
+	    this.fraction = (accuracy, standardDecimal) => {
+	      standardDecimal = standardDecimal || decimal;
+	      if (nan) return NaN;
+	      const obj = fractionEquivalent(standardDecimal, accuracy);
+	      if (obj.integer === 0 && obj.numerator === 0) return '0';
+	      const integer = obj.integer !== 0 ? obj.integer : '';
+	      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
+	    }
+	    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
+	
+	    this.display = (accuracy) => {
+	      switch (unit) {
+	        case units[0]: return new String(this.decimal(10));
+	        case units[1]: return this.standardUS(accuracy);
+	        default:
+	            return this.standardUS(accuracy);
+	      }
+	    }
+	
+	    this.value = (accuracy) => this.decimal(accuracy);
+	
+	    this.decimal = (accuracy) => {
+	      if (nan) return NaN;
+	      accuracy = accuracy % 10 ? accuracy : 10000;
+	      return Math.round(decimal * accuracy) / accuracy;
+	    }
+	
+	    function getDecimalEquivalant(string) {
+	      string = string.trim();
+	      if (string.match(Measurement.decimalReg)) {
+	        return Number.parseFloat(string);
+	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
+	        return parseFraction(string).decimal
+	      }
+	      nan = true;
+	      return NaN;
+	    }
+	
+	    const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
+	    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+	
+	    function standardize(ambiguousDecimal) {
+	      switch (determineUnit()) {
+	        case units[0]:
+	          return ambiguousDecimal;
+	        case units[1]:
+	          return convertUsToMetric(ambiguousDecimal);
+	        default:
+	          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
+	      }
+	    }
+	
+	    if ((typeof value) === 'number') {
+	      decimal = standardize(value);
+	    } else if ((typeof value) === 'string') {
+	      try {
+	        const ambiguousDecimal = getDecimalEquivalant(value);
+	        decimal = standardize(ambiguousDecimal);
+	      } catch (e) {
+	        nan = true;
+	      }
+	    } else {
+	      nan = true;
+	    }
+	  }
+	}
+	
+	Measurement.unit = (newUnit) => {
+	  for (index = 0; index < units.length; index += 1) {
+	    if (newUnit === units[index]) unit = newUnit;
+	  }
+	  return unit
+	};
+	Measurement.units = () => JSON.parse(JSON.stringify(units));
+	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
+	Measurement.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
+	
+	
+	Measurement.validation = function (range) {
+	  const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
+	  let min = obj.min.trim() !== '' ?
+	        new Measurement(obj.min).decimal() : Number.MIN_SAFE_INTEGER;
+	  let max = obj.max.trim() !== '' ?
+	        new Measurement(obj.max).decimal() : Number.MAX_SAFE_INTEGER;
+	  const minCheck = obj.minBound === '(' ? ((val) => val > min) : ((val) => val >= min);
+	  const maxCheck = obj.maxBound === ')' ? ((val) => val < max) : ((val) => val <= max);
+	  return function (value) {
+	    const decimal = new Measurement(value).decimal();
+	    if (decimal === NaN) return false;
+	    return minCheck(decimal) && maxCheck(decimal);
+	  }
+	}
+	
+	Measurement.decimal = (value) => {
+	  return new Measurement(value, true).decimal();
+	}
+	
+	Measurement.round = (value, percision) => {
+	  if (percision)
+	  return new Measurement(value).decimal(percision);
+	  return Math.round(value * 10000000) / 10000000;
+	}
+	
+	try {
+	  module.exports = Measurement;
+	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/object/lookup.js',
+function (require, exports, module) {
+	
+class IdString extends String {
+	  constructor(...ids) {
+	    let id = '';
+	    for (let index = 0; index < ids.length; index++) {
+	      id += `${ids[index]}_`;
+	    }
+	    id = id.substring(0, id.length - 1);
+	    if (id.length === 0) {
+	      console.warn('Not sure if this is a problem');
+	    }
+	    super(id);
+	    this.split = () => {
+	      return id.split('_');
+	    }
+	    this.toJson = () => new String(id);
+	    this.index = (index) => this.split().at(index);
+	    this.equals = (other) => `${this}` ===`${other}`;
+	    this.equivalent = (other, ...indicies) => {
+	      if (indicies.length === 0) return this.equals(other);
+	      const thisSplit = this.split();
+	      const otherSplit = other.split();
+	      for (let index = 0; index < indicies.length; index++) {
+	        const i = indicies[index];
+	        if (thisSplit[i] !== otherSplit[i]) return false;
+	      }
+	      return true;
+	    }
+	  }
+	}
+	
+	
+	
+	class Lookup {
+	  constructor(id, attr, singleton) {
+	    Lookup.convert(this, attr, id, singleton);
+	  }
+	}
+	
+	Lookup.convert = function (obj, attr, id, singleton) {
+	  if (id) {
+	    const decoded = Lookup.decode(id);
+	    if (decoded) {
+	      id = decoded.id;
+	    } else if (id._TYPE !== undefined) {
+	      id = Lookup.decode(id[id[Lookup.ID_ATTRIBUTE]]).id;
+	    }
+	  }
+	
+	  const cxtr = obj.constructor;
+	  const cxtrName = cxtr.name;
+	  id = new IdString(cxtrName, id || String.random());
+	  let group;
+	  if (singleton && cxtr.get(id)) return cxtr.get(id);
+	
+	  let constructedAt = new Date().getTime();
+	  let modificationWindowOpen = true;
+	  attr = attr || 'id';
+	    Object.getSet(obj, attr, Lookup.ID_ATTRIBUTE);
+	  obj.lookupGroup = (g) => {
+	    if (group === undefined && g !== undefined) {
+	      if (Lookup.groups[g] === undefined) Lookup.groups[g] = [];
+	      group = g;
+	      Lookup.groups[g].push(obj);
+	    }
+	    return group;
+	  }
+	
+	  obj.lookupRelease = () => {
+	    if (cxtr.reusable === true) {
+	      if (Lookup.freeAgents[cxtr.name] === undefined) Lookup.freeAgents[cxtr.name] = [];
+	      Lookup.freeAgents[cxtr.name].push(obj);
+	      const index = Lookup.groups[group] ? Lookup.groups[group].indexOf(obj) : -1;
+	      if (index !== -1) Lookup.groups[group].splice(index, 1);
+	    }
+	    delete Lookup.byId[cxtr.name][obj[attr]().index(-1)];
+	  }
+	
+	
+	  obj[Lookup.ID_ATTRIBUTE] = () => attr;
+	  obj[attr] = (idStr) => {
+	    if (modificationWindowOpen) {
+	      if (idStr instanceof IdString) {
+	        let objId = idStr.index(-1);
+	        id = new IdString(cxtrName, objId);
+	        Lookup.byId[cxtr.name][id.index(-1)] = obj;
+	        modificationWindowOpen = false;
+	      } else if (constructedAt < new Date().getTime() - 200) {
+	        modificationWindowOpen = false;
+	      }
+	    }
+	    return id;
+	  }
+	
+	  function registerConstructor() {
+	    if (Lookup.byId[cxtr.name] === undefined) {
+	      Lookup.byId[cxtr.name] = {};
+	      Lookup.constructorMap[cxtr.name] = cxtr;
+	    }
+	  }
+	
+	  function addSelectListFuncToConstructor() {
+	    if(cxtr.selectList === Lookup.selectList) {
+	      cxtr.get = (id) => Lookup.get(id, cxtr);
+	      if (cxtr.instance === undefined) cxtr.instance = () => Lookup.instance(cxtr.name);
+	      Lookup.byId[cxtr.name] = {};
+	      cxtr.selectList = () => Lookup.selectList(cxtr.name);
+	    }
+	  }
+	
+	  registerConstructor();
+	  addSelectListFuncToConstructor();
+	
+	
+	  Lookup.byId[cxtrName][id.index(-1)] = obj;
+	  if (obj.toString === undefined) obj.toString = () => obj[attr]();
+	}
+	
+	Lookup.ID_ATTRIBUTE = 'ID_ATTRIBUTE';
+	Lookup.byId = {Lookup};
+	Lookup.constructorMap = {};
+	Lookup.groups = {};
+	Lookup.freeAgents = {};
+	
+	Lookup.get = (id, cxtr) => {
+	  const decoded = Lookup.decode(id);
+	  let decodedId, decodedCxtr;
+	  if (decoded) {
+	    decodedId = decoded.id;
+	    decodedCxtr = decoded.constructor;
+	  }
+	  id = decodedId || id;
+	  cxtr = cxtr || decodedCxtr || Lookup;
+	  const instance = Lookup.byId[cxtr.name][id] || (decodedCxtr && Lookup.byId[decodedCxtr.name][id]);
+	  return instance;
+	}
+	Lookup.selectList = (className) => {
+	  return Object.keys(Lookup.byId[className]);
+	}
+	Lookup.instance = (cxtrName) => {
+	  const agents = Lookup.freeAgents[cxtrName];
+	  if (!agents || agents.length === 0) {
+	    return new (Lookup.constructorMap[cxtrName])();
+	  }
+	
+	  const index = agents.length - 1;
+	  const agent = agents[index];
+	  agents.splice(index, 1);
+	  return agent;
+	}
+	Lookup.decode = (id) => {
+	  if ((typeof id) === 'string') id = new IdString(id);
+	  if (!(id instanceof IdString)) return;
+	  const cxtrId = id.index(0);
+	  const objId = id.index(-1);
+	  return {
+	    constructor: cxtrId === objId ? undefined : Lookup.constructorMap[cxtrId],
+	    id: objId
+	  };
+	}
+	Lookup.release = (group) => {
+	  const groupList = Lookup.groups[group];
+	  if (groupList === undefined) return;
+	  Lookup.groups[group] = [];
+	  for (let index = 0; index < groupList.length; index += 1) {
+	    groupList[index].release();
+	  }
+	}
+	
+	try {
+	  module.exports = Lookup;
+	} catch (e) {/* TODO: Consider Removing */}
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/services/function-cache.js',
+function (require, exports, module) {
+	
+const cacheState = {};
+	const cacheFuncs = {};
+	
+	class FunctionCache {
+	  constructor(func, context, group, assem) {
+	    if ((typeof func) !== 'function') return func;
+	    let cache = {};
+	    cacheFunc.group = () => {
+	      const gp = (typeof group === 'function') ? group() : group || 'global';
+	      if (cacheFuncs[gp] === undefined) cacheFuncs[gp] = [];
+	      cacheFuncs[gp].push(cacheFunc);
+	      return gp;
+	    }
+	
+	    function cacheFunc() {
+	      if (FunctionCache.isOn(cacheFunc.group())) {
+	        let c = cache;
+	        for (let index = 0; index < arguments.length; index += 1) {
+	          if (c[arguments[index]] === undefined) c[arguments[index]] = {};
+	          c = c[arguments[index]];
+	        }
+	        if (c[arguments[index]] === undefined) c[arguments[index]] = {};
+	
+	        if (c.__FunctionCache === undefined) {
+	          FunctionCache.notCahed++
+	          c.__FunctionCache = func.apply(context, arguments);
+	        } else FunctionCache.cached++;
+	        return c.__FunctionCache;
+	      }
+	      FunctionCache.notCahed++
+	      return func.apply(context, arguments);
+	    }
+	    cacheFunc.clearCache = () => cache = {};
+	    return cacheFunc;
+	  }
+	}
+	
+	FunctionCache.cached = 0;
+	FunctionCache.notCahed = 0;
+	FunctionCache.on = (group) => {
+	  FunctionCache.cached = 0;
+	  FunctionCache.notCahed = 0;
+	  cacheState[group] = true;
+	}
+	FunctionCache.off = (group) => {
+	  const cached = FunctionCache.cached;
+	  const total = FunctionCache.notCahed + cached;
+	  const percent = (cached / total) * 100;
+	  console.log(`FunctionCache report: ${cached}/${total} %${percent}`);
+	  cacheState[group] = false;
+	  cacheFuncs[group].forEach((func) => func.clearCache());
+	}
+	let disabled = false;
+	FunctionCache.isOn = (group) => !disabled && cacheState[group];
+	FunctionCache.disable = () => disabled = true;
+	FunctionCache.enable = () => disabled = false;
+	module.exports = FunctionCache;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/string-math-evaluator.js',
+function (require, exports, module) {
+	let FunctionCache;
+	try {
+	  FunctionCache = require('./services/function-cache.js');
+	} catch(e) {
+	
+	}
+	
+	function regexToObject (str, reg) {
+	  const match = str.match(reg);
+	  if (match === null) return null;
+	  const returnVal = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const attr = arguments[index];
+	    if (attr) returnVal[attr] = match[index - 1];
+	  }
+	  return returnVal;
+	}
+	
+	class StringMathEvaluator {
+	  constructor(globalScope, resolver) {
+	    globalScope = globalScope || {};
+	    const instance = this;
+	    let splitter = '.';
+	
+	    function resolve (path, currObj, globalCheck) {
+	      if (path === '') return currObj;
+	      // TODO: this try is a patch... resolve path/logic needs to be mapped properly
+	      try {
+	        const resolved = !globalCheck && resolver && resolver(path, currObj);
+	        if (Number.isFinite(resolved)) return resolved;
+	      } catch (e) {}
+	      try {
+	        if ((typeof path) === 'string') path = path.split(splitter);
+	        for (let index = 0; index < path.length; index += 1) {
+	          currObj = currObj[path[index]];
+	        }
+	        if (currObj === undefined && !globalCheck) throw Error('try global');
+	        return currObj;
+	      }  catch (e) {
+	        if (!globalCheck) return resolve(path, globalScope, true);
+	      }
+	    }
+	
+	    function multiplyOrDivide (values, operands) {
+	      const op = operands[operands.length - 1];
+	      if (op === StringMathEvaluator.multi || op === StringMathEvaluator.div) {
+	        const len = values.length;
+	        values[len - 2] = op(values[len - 2], values[len - 1])
+	        values.pop();
+	        operands.pop();
+	      }
+	    }
+	
+	    const resolveArguments = (initialChar, func) => {
+	      return function (expr, index, values, operands, scope, path) {
+	        if (expr[index] === initialChar) {
+	          const args = [];
+	          let endIndex = index += 1;
+	          const terminationChar = expr[index - 1] === '(' ? ')' : ']';
+	          let terminate = false;
+	          let openParenCount = 0;
+	          while(!terminate && endIndex < expr.length) {
+	            const currChar = expr[endIndex++];
+	            if (currChar === '(') openParenCount++;
+	            else if (openParenCount > 0 && currChar === ')') openParenCount--;
+	            else if (openParenCount === 0) {
+	              if (currChar === ',') {
+	                args.push(expr.substr(index, endIndex - index - 1));
+	                index = endIndex;
+	              } else if (openParenCount === 0 && currChar === terminationChar) {
+	                args.push(expr.substr(index, endIndex++ - index - 1));
+	                terminate = true;
+	              }
+	            }
+	          }
+	
+	          for (let index = 0; index < args.length; index += 1) {
+	            const stringMatch = args[index].match(StringMathEvaluator.stringReg);
+	            if (stringMatch) {
+	              args[index] = stringMatch[1];
+	            } else {
+	              args[index] =  instance.eval(args[index], scope);
+	            }
+	          }
+	          const state = func(expr, path, scope, args, endIndex);
+	          if (state) {
+	            values.push(state.value);
+	            return state.endIndex;
+	          }
+	        }
+	      }
+	    };
+	
+	    function chainedExpressions(expr, value, endIndex, path) {
+	      if (expr.length === endIndex) return {value, endIndex};
+	      let values = [];
+	      let offsetIndex;
+	      let valueIndex = 0;
+	      let chained = false;
+	      do {
+	        const subStr = expr.substr(endIndex);
+	        const offsetIndex = isolateArray(subStr, 0, values, [], value, path) ||
+	                            isolateFunction(subStr, 0, values, [], value, path) ||
+	                            (subStr[0] === '.' &&
+	                              isolateVar(subStr, 1, values, [], value));
+	        if (Number.isInteger(offsetIndex)) {
+	          value = values[valueIndex];
+	          endIndex += offsetIndex - 1;
+	          chained = true;
+	        }
+	      } while (offsetIndex !== undefined);
+	      return {value, endIndex};
+	    }
+	
+	    const isolateArray = resolveArguments('[',
+	      (expr, path, scope, args, endIndex) => {
+	        endIndex = endIndex - 1;
+	        let value = resolve(path, scope)[args[args.length - 1]];
+	        return chainedExpressions(expr, value, endIndex, '');
+	      });
+	
+	    const isolateFunction = resolveArguments('(',
+	      (expr, path, scope, args, endIndex) =>
+	          chainedExpressions(expr, resolve(path, scope).apply(null, args), endIndex, ''));
+	
+	    function isolateParenthesis(expr, index, values, operands, scope) {
+	      const char = expr[index];
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      if (char === '(') {
+	        let openParenCount = 1;
+	        let endIndex = index + 1;
+	        while(openParenCount > 0 && endIndex < expr.length) {
+	          const currChar = expr[endIndex++];
+	          if (currChar === '(') openParenCount++;
+	          if (currChar === ')') openParenCount--;
+	        }
+	        if (openParenCount > 0) throw new Error('UnClosed parenthesis');
+	        const len = endIndex - index - 2;
+	        values.push(instance.eval(expr.substr(index + 1, len), scope));
+	        multiplyOrDivide(values, operands);
+	        return endIndex;
+	      }
+	    };
+	
+	    function isolateOperand (char, operands) {
+	      if (char === ')') throw new Error('UnExpected closing parenthesis');
+	      switch (char) {
+	        case '*':
+	        operands.push(StringMathEvaluator.multi);
+	        return true;
+	        break;
+	        case '/':
+	        operands.push(StringMathEvaluator.div);
+	        return true;
+	        break;
+	        case '+':
+	        operands.push(StringMathEvaluator.add);
+	        return true;
+	        break;
+	        case '-':
+	        operands.push(StringMathEvaluator.sub);
+	        return true;
+	        break;
+	      }
+	      return false;
+	    }
+	
+	    function isolateValueReg(reg, resolver) {
+	      return function (expr, index, values, operands, scope) {
+	        const match = expr.substr(index).match(reg);
+	        let args;
+	        if (match) {
+	          let endIndex = index + match[0].length;
+	          let value = resolver(match[0], scope);
+	          if (!Number.isFinite(value)) {
+	            const state = chainedExpressions(expr, scope, endIndex, match[0]);
+	            if (state !== undefined) {
+	              value = state.value;
+	              endIndex = state.endIndex;
+	            }
+	          }
+	          values.push(value);
+	          multiplyOrDivide(values, operands);
+	          return endIndex;
+	        }
+	      }
+	    }
+	
+	    function convertFeetInchNotation(expr) {
+	      expr = expr.replace(StringMathEvaluator.footInchReg, '($1*12+$2)') || expr;
+	      expr = expr.replace(StringMathEvaluator.inchReg, '$1') || expr;
+	      expr = expr.replace(StringMathEvaluator.footReg, '($1*12)') || expr;
+	      return expr = expr.replace(StringMathEvaluator.multiMixedNumberReg, '($1+$2)') || expr;
+	    }
+	    function addUnexpressedMultiplicationSigns(expr) {
+	      expr = expr.replace(/([0-9]{1,})(\s*)([a-zA-Z]{1,})/g, '$1*$3');
+	      expr = expr.replace(/([a-zA-Z]{1,})\s{1,}([0-9]{1,})/g, '$1*$2');
+	      expr = expr.replace(/\)([^a-z^A-Z^$^\s^)^+^\-^*^\/])/g, ')*$1');
+	      expr = expr.replace(/-([a-z(])/g, '-1*$1');
+	      return expr.replace(/([^a-z^A-Z^\s^$^(^+^\-^*^\/])\(/g, '$1*(');
+	    }
+	
+	    const isolateNumber = isolateValueReg(StringMathEvaluator.decimalReg, Number.parseFloat);
+	    const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
+	
+	    function evaluate(expr, scope, percision) {
+	      if (Number.isFinite(expr))
+	        return expr;
+	      expr = new String(expr);
+	      expr = addUnexpressedMultiplicationSigns(expr);
+	      expr = convertFeetInchNotation(expr);
+	      scope = scope || globalScope;
+	      const allowVars = (typeof scope) === 'object';
+	      let operands = [];
+	      let values = [];
+	      let prevWasOpperand = true;
+	      for (let index = 0; index < expr.length; index += 1) {
+	        const char = expr[index];
+	        if (prevWasOpperand) {
+	          try {
+	            let newIndex = isolateNumber(expr, index, values, operands, scope);
+	            if (!newIndex && isolateOperand(char, operands))
+	                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
+	            newIndex ||= isolateParenthesis(expr, index, values, operands, scope) ||
+	                (allowVars && isolateVar(expr, index, values, operands, scope));
+	            if (Number.isInteger(newIndex)) {
+	              index = newIndex - 1;
+	              prevWasOpperand = false;
+	            }
+	          } catch (e) {
+	            console.error(e);
+	            return NaN;
+	          }
+	        } else {
+	          prevWasOpperand = isolateOperand(char, operands);
+	        }
+	      }
+	      if (prevWasOpperand) return NaN;
+	
+	      let value = values[0];
+	      for (let index = 0; index < values.length - 1; index += 1) {
+	        value = operands[index](values[index], values[index + 1]);
+	        values[index + 1] = value;
+	      }
+	
+	      if (Number.isFinite(value)) {
+	        value = value;
+	        return value;
+	      }
+	      return NaN;
+	    }
+	
+	    function evalObject(obj, scope) {
+	      const returnObj = Object.forEachConditional(obj, (value, key, object) => {
+	        value = evaluate(value, scope);
+	        if (!Number.isNaN(value)) object[key] = value;
+	      }, (value) => (typeof value) === 'string');
+	      return returnObj;
+	    }
+	
+	    this.eval = FunctionCache ? new FunctionCache(evaluate, this, 'sme') : evaluate;
+	    this.evalObject = FunctionCache ? new FunctionCache(evalObject, this, 'sme') : evalObject;
+	  }
+	}
+	
+	StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
+	
+	const mixNumberRegStr = "([0-9]{1,})\\s{1,}(([0-9]{1,})\\/([0-9]{1,}))";
+	StringMathEvaluator.mixedNumberReg = new RegExp(`^${mixNumberRegStr}$`);
+	StringMathEvaluator.multiMixedNumberReg = new RegExp(mixNumberRegStr, 'g');///([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
+	StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
+	StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
+	StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
+	StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;
+	StringMathEvaluator.evaluateReg = /[-\+*/]|^\s*[0-9]{1,}\s*$/;
+	const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
+	StringMathEvaluator.decimalReg = new RegExp(`^${decimalRegStr}`);///^(-|)(([0-9]{1,}\.[0-9]{1,})|[0-9]{1,}(\.|)|(\.)[0-9]{1,})/;
+	StringMathEvaluator.multiDecimalReg = new RegExp(decimalRegStr, 'g');
+	StringMathEvaluator.varReg = /^((\.|)([$_a-zA-Z][$_a-zA-Z0-9\.]*))/;
+	StringMathEvaluator.stringReg = /\s*['"](.*)['"]\s*/;
+	StringMathEvaluator.multi = (n1, n2) => n1 * n2;
+	StringMathEvaluator.div = (n1, n2) => n1 / n2;
+	StringMathEvaluator.add = (n1, n2) => n1 + n2;
+	StringMathEvaluator.sub = (n1, n2) => n1 - n2;
+	
+	const npf = Number.parseFloat;
+	StringMathEvaluator.convert = {eqn: {}};
+	StringMathEvaluator.convert.metricToImperial = (value) => {
+	  value = npf(value);
+	  return value / 2.54;
+	}
+	
+	StringMathEvaluator.resolveMixedNumber = (value) => {
+	  const match = value.match(StringMathEvaluator.mixedNumberReg);
+	  if (match) {
+	    value = npf(match[1]) + (npf(match[3]) / npf(match[4]));
+	  }
+	  value = npf(value);
+	  return value;
+	}
+	
+	StringMathEvaluator.convert.imperialToMetric = (value) => {
+	  value = npf(value);
+	  return value * 2.54;
+	}
+	
+	StringMathEvaluator.convert.eqn.metricToImperial = (str) =>
+	  str.replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.metricToImperial);
+	
+	StringMathEvaluator.convert.eqn.imperialToMetric = (str) =>
+	  str.replace(StringMathEvaluator.multiMixedNumberReg, StringMathEvaluator.resolveMixedNumber)
+	  .replace(StringMathEvaluator.multiDecimalReg, StringMathEvaluator.convert.imperialToMetric);
+	
+	StringMathEvaluator.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
+	
+	
+	StringMathEvaluator.reduce = function(numerator, denominator) {
+	  let reduced = true;
+	  while (reduced) {
+	    reduced = false;
+	    for (let index = 0; index < StringMathEvaluator.primes.length; index += 1) {
+	      const prime = StringMathEvaluator.primes[index];
+	      if (prime >= denominator) break;
+	      if (numerator % prime === 0 && denominator % prime === 0) {
+	        numerator = numerator / prime;
+	        denominator = denominator / prime;
+	        reduced = true;
+	        break;
+	      }
+	    }
+	  }
+	  if (numerator === 0) {
+	    return '';
+	  }
+	  return `${numerator}/${denominator}`;
+	}
+	
+	StringMathEvaluator.parseFraction = function (str) {
+	  const regObj = regexToObject(str, StringMathEvaluator.regex, null, 'integer', null, 'numerator', 'denominator');
+	  regObj.integer = Number.parseInt(regObj.integer) || 0;
+	  regObj.numerator = Number.parseInt(regObj.numerator) || 0;
+	  regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+	  if(regObj.denominator === 0) {
+	    regObj.numerator = 0;
+	    regObj.denominator = 1;
+	  }
+	  regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+	  return regObj;
+	}
+	
+	StringMathEvaluator.toFraction = function (decimal, accuracy) {
+	  if (decimal === NaN) return NaN;
+	  accuracy = accuracy || '1/1000'
+	  const fracObj = StringMathEvaluator.parseFraction(accuracy);
+	  const denominator = fracObj.denominator;
+	  if (fracObj.decimal === 0 || fracObj.integer > 0 || denominator > 1000) {
+	    throw new Error('Please enter a fraction with a denominator between (0, 1000]')
+	  }
+	  let remainder = decimal;
+	  let currRemainder = remainder;
+	  let value = 0;
+	  let numerator = 0;
+	  while (currRemainder > 0) {
+	    numerator += fracObj.numerator;
+	    currRemainder -= fracObj.decimal;
+	  }
+	  const diff1 = decimal - ((numerator - fracObj.numerator) / denominator);
+	  const diff2 = (numerator / denominator) - decimal;
+	  numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+	  const integer = Math.floor(numerator / denominator);
+	  numerator = numerator % denominator;
+	  const fraction = StringMathEvaluator.reduce(numerator, denominator);
+	  return (integer && fraction ? `${integer} ${fraction}` :
+	            (integer ? `${integer}` : (fraction ? `${fraction}` : '0')));
+	}
+	
+	try {
+	  module.exports = StringMathEvaluator;
+	} catch (e) {/* TODO: Consider Removing */}
 	
 });
 
@@ -2656,7 +3565,7 @@ function (require, exports, module) {
 	    const watchers = [];
 	    this.name = name;
 	
-	    const runFuncs = (elem, detail) => 
+	    const runFuncs = (elem, detail) =>
 	    watchers.forEach((func) => {
 	      try {
 	        func(elem, detail);
@@ -4256,6 +5165,8 @@ RequireJS.addFunction('./public/js/utils/canvas/two-d/draw.js',
 function (require, exports, module) {
 	
 const Circle2d = require('./objects/circle');
+	const Line2d = require('./objects/line');
+	const Vertex2d = require('./objects/vertex');
 	const ToleranceMap = require('../../tolerance-map.js');
 	const du = require('../../dom-utils.js');
 	const tol = .1;
@@ -4349,16 +5260,26 @@ const Circle2d = require('./objects/circle');
 	      draw.circle(new Circle2d(evRadius * rMultiplier, line.endVertex()), null, ccolor, .01);
 	    }
 	
-	    draw.line = (line, color, width, doNotMeasure) => {
+	    const midpointFlag = (point, radians) => {
+	      ctx().moveTo(point.x(), yCoef * point.y());
+	      const ev = Line2d.startAndTheta(point, radians, 15).endVertex();
+	      ctx().lineTo(ev.x(), yCoef * ev.y());
+	    }
+	    function midpointFlags(line) {
+	      midpointFlag(line.midpoint(), Math.toRadians(line.degrees() - 135));
+	      midpointFlag(line.midpoint(), Math.toRadians(line.degrees() + 135));
+	    }
+	
+	    draw.line = (line, color, width) => {
 	      if (line === undefined) return;
 	      color = color ||  'black';
 	      width = width || 10;
-	      const measurePoints = line.measureTo();
 	      ctx().beginPath();
 	      ctx().strokeStyle = color;
 	      ctx().lineWidth = width;
 	      ctx().moveTo(line.startVertex().x(), yCoef * line.startVertex().y());
 	      ctx().lineTo(line.endVertex().x(), yCoef * line.endVertex().y());
+	      if (Draw2d.debug.showFlags) midpointFlags(line);
 	      ctx().stroke();
 	      // identifyVertices(line);
 	    }
@@ -4375,20 +5296,20 @@ const Circle2d = require('./objects/circle');
 	      color = color ||  'black';
 	      width = width || 1;
 	      poly.lines().forEach((line) => draw.line(line, color, width));
-	      if ((typeof poly.getTextInfo) === 'function') {
-	        ctx().save();
-	        const info = poly.getTextInfo();
-	        ctx().translate(info.center.x(), yCoef * info.center.y());
-	        ctx().rotate(info.radians);
-	        ctx().beginPath();
-	        ctx().lineWidth = 4;
-	        ctx().strokeStyle = 'black';
-	        ctx().fillStyle =  'black';
-	        const text = info.limit === undefined ? info.text : (info.text || '').substring(0, info.limit);
-	        ctx().fillText(text, info.x, yCoef * info.y, info.maxWidth);
-	        ctx().stroke()
-	        ctx().restore();
-	      }
+	      // if ((typeof poly.getTextInfo) === 'function') {
+	      //   ctx().save();
+	      //   const info = poly.getTextInfo();
+	      //   ctx().translate(info.center.x(), yCoef * info.center.y());
+	      //   ctx().rotate(info.radians);
+	      //   ctx().beginPath();
+	      //   ctx().lineWidth = 4;
+	      //   ctx().strokeStyle = color;
+	      //   ctx().fillStyle =  color;
+	      //   const text = info.limit === undefined ? info.text : (info.text || '').substring(0, info.limit);
+	      //   ctx().fillText(text, info.x, yCoef * info.y, info.maxWidth);
+	      //   ctx().stroke()
+	      //   ctx().restore();
+	      // }
 	    }
 	
 	    draw.square = (square, color, text) => {
@@ -4417,16 +5338,6 @@ const Circle2d = require('./objects/circle');
 	      ctx().restore();
 	    }
 	
-	    draw.text = (text, center, width, color, maxWidth) => {
-	      ctx().beginPath();
-	      ctx().lineWidth = width || 4;
-	      ctx().strokeStyle = color || 'black';
-	      ctx().fillStyle =  color || 'black';
-	      ctx().font = width + "px Arial";
-	      ctx().fillText(text, center.x, yCoef * center.y, maxWidth);
-	      ctx().stroke()
-	    }
-	
 	    draw.circle = (circle, lineColor, fillColor, lineWidth) => {
 	      const center = circle.center();
 	      ctx().beginPath();
@@ -4436,6 +5347,36 @@ const Circle2d = require('./objects/circle');
 	      ctx().arc(center.x(),yCoef * center.y(), circle.radius(),0, 2*Math.PI);
 	      ctx().stroke();
 	      ctx().fill();
+	    }
+	
+	    draw.text = (text, point, props) => {
+	      props ||= {};
+	      point = new Vertex2d(point);
+	      text = '' + text;
+	      const ctx = draw.ctx();
+	
+	      ctx.save();
+	      ctx.lineWidth = 0;
+	      const textLength = text.length;
+	      ctx.translate(point.x(), yCoef * point.y());
+	      let radians = props.radians || 0;
+	      if (yCoef === -1) radians += Math.PI/2;
+	      ctx.rotate(props.radians);
+	      ctx.beginPath();
+	      ctx.fillStyle = props.fillColor || "white";
+	      ctx.strokeStyle = props.fillColor || 'white';
+	      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
+	      ctx.fill();
+	      ctx.stroke();
+	
+	      ctx.beginPath();
+	      ctx.font = `${props.size || '3px'} ${props.font || 'Arial'}`;
+	      ctx.lineWidth = .2;
+	      ctx.strokeStyle = props.color || 'black';
+	      ctx.fillStyle =  props.color || 'black';
+	      ctx.fillText(text, props.x || 0, yCoef * (props.y || 0), props.maxWidth);
+	      ctx.stroke()
+	      ctx.restore();
 	    }
 	
 	    const blank = 4;
@@ -4505,104 +5446,18 @@ const Circle2d = require('./objects/circle');
 	
 	    draw.snap = (snap, color, width) => {
 	      draw(snap.object(), color, width);
-	      draw(snap.object().normals());
+	      const textInfo = snap.getTextInfo();
+	      textInfo.color = color || textInfo.color;
+	      draw.text(textInfo.text.substring(0,10), textInfo.center, textInfo);
+	      if (Draw2d.debug.showNormals) draw(snap.object().normals());
 	    }
 	
 	    return draw;
 	  }
 	}
 	
+	Draw2d.debug = {};
 	module.exports = Draw2d;
-	
-});
-
-
-RequireJS.addFunction('./public/js/utils/canvas/two-d/hover-map.js',
-function (require, exports, module) {
-	
-const Line2d = require('./objects/line')
-	const Vertex2d = require('./objects/vertex')
-	class HoverObject2d {
-	  constructor(lineOrVertex, tolerance) {
-	    tolerance ||= 2;
-	    const toleranceFunction = (typeof tolerance) === 'function';
-	    const targetFunction = (typeof lineOrVertex) === 'function';
-	    function getTolerence() {
-	      if (toleranceFunction) return tolerance();
-	      return tolerance;
-	    }
-	    function vertexHovered(targetVertex, hoverVertex) {
-	      if(targetVertex.distance(hoverVertex) < getTolerence())
-	        return targetVertex.distance(hoverVertex);
-	    }
-	
-	    function lineHovered(targetLine, hoverVertex) {
-	      const tol = getTolerence();
-	      const hv = hoverVertex;
-	      const sv = targetLine.startVertex();
-	      const ev = targetLine.endVertex();
-	      let toleranceAcceptible = false;
-	      if (targetLine.isVertical()) {
-	        toleranceAcceptible = Math.abs(sv.x() - hv.x()) < tol &&
-	              ((sv.y() > hv.y() && ev.y() < hv.y()) ||
-	              (sv.y() < hv.y() && ev.y() > hv.y()));
-	      } else if (targetLine.isHorizontal()) {
-	        toleranceAcceptible = Math.abs(sv.y() - hv.y()) < tol &&
-	              ((sv.x() > hv.x() && ev.x() < hv.x()) ||
-	              (sv.x() < hv.x() && ev.x() > hv.x()));
-	      } else if (Math.abs(sv.y() - ev.y()) < Math.abs(sv.x() - ev.x())) {
-	        const yValue = targetLine.y(hv.x());
-	        toleranceAcceptible = yValue + tol > hv.y() && yValue - tol < hv.y();
-	      } else {
-	        const xValue = targetLine.x(hv.y());
-	        toleranceAcceptible = xValue + tol > hv.x() && xValue - tol < hv.x();
-	      }
-	
-	      if (toleranceAcceptible) {
-	        const closestPoint = targetLine.closestPointOnLine(hoverVertex);
-	        if (targetLine.withinSegmentBounds(closestPoint)) {
-	          return closestPoint.distance(hoverVertex) + .1;
-	        }
-	      }
-	      return false;
-	    }
-	
-	    this.target = () => lineOrVertex;
-	
-	    this.hovering = (hoverVertex) => {
-	      const lov = targetFunction ? lineOrVertex() : lineOrVertex;
-	      if (lov instanceof Line2d)
-	        return lineHovered(lov, hoverVertex);
-	      return vertexHovered(lov, hoverVertex);
-	    }
-	  }
-	}
-	
-	class HoverMap2d {
-	  constructor() {
-	    let hoverObjects = [];
-	
-	    this.clear = () => hoverObjects = [] || true;
-	    this.add = (object) => hoverObjects.push(new HoverObject2d(object));
-	    this.hovering = (x, y) => {
-	      const vertex = x instanceof Vertex2d ? x : new Vertex2d(x, y);
-	      let hoveringObj = null;
-	      for (let index = 0; index < hoverObjects.length; index++) {
-	        const hoverObj = hoverObjects[index];
-	        const distance = hoverObj.hovering(vertex);
-	        if (distance) {
-	          const target = hoverObj.target();
-	          if (hoveringObj === null || distance < hoveringObj.distance) {
-	            hoveringObj = {target, distance};
-	          }
-	        }
-	      }
-	      return hoveringObj && hoveringObj.target;
-	    }
-	  }
-	}
-	
-	module.exports = HoverMap2d;
 	
 });
 
@@ -4615,6 +5470,7 @@ function (require, exports, module) {
 	  let mrx, mry;
 	  const eventFuncs = [];
 	  const instance = this;
+	  let lastMoveTime = new Date().getTime();
 	
 	  this.on = (eventName) => {
 	    if (eventFuncs[eventName] === undefined) eventFuncs[eventName] = [];
@@ -4624,20 +5480,22 @@ function (require, exports, module) {
 	      }
 	    }
 	  }
-	  let sleeping = null;
+	  let sleeping = false;
 	  let nextUpdateId = 0;
 	  this.sleep = () => sleeping = true;
 	  this.wake = () => {
 	    if (sleeping) {
 	      sleeping = false;
-	      requestAnimationFrame(() => update(nextUpdateId));
+	      requestAnimationFrame(() => update(++nextUpdateId));
 	    }
 	  };
 	  this.once = () => {
-	    requestAnimationFrame(() => update(nextUpdateId, true))
+	    requestAnimationFrame(() => update(++nextUpdateId, true))
 	  };
 	
 	  this.onMove = this.on('move');
+	  this.onTranslate = this.on('translated');
+	  this.onZoom = this.on('zoom');
 	  this.onClick = this.on('click');
 	  this.onMousedown = this.on('mousedown');
 	  this.onMouseup = this.on('mouseup');
@@ -4684,9 +5542,8 @@ function (require, exports, module) {
 	      over : false,
 	      buttons : [1, 2, 4, 6, 5, 3], // masks for setting and clearing button raw bits;
 	  };
-	  let lastMouseMovementId = 0;
 	  function mouseMove(event) {
-	      const mouseMovementId = ++lastMouseMovementId;
+	      lastMoveTime = new Date().getTime();
 	      mouse.x = event.offsetX;
 	      mouse.y = event.offsetY;
 	      if (mouse.x === undefined) {
@@ -4718,9 +5575,6 @@ function (require, exports, module) {
 	         mouse.w = -event.detail;
 	      }
 	      instance.wake();
-	      setTimeout(() => {
-	        if (mouseMovementId === lastMouseMovementId) instance.sleep()
-	      }, 500);
 	  }
 	
 	  function setupMouse(e) {
@@ -4747,8 +5601,27 @@ function (require, exports, module) {
 	      const attr = attrs[index];
 	      str += `${attr}: ${round(displayTransform[attr])} `;
 	    }
+	    console.log(str);
 	  }
-	  this.displayTransform = displayTransform;
+	
+	  function positionEvents() {
+	    const dt = displayTransform;
+	    const dxAbs = Math.abs(dt.dx);
+	    const dyAbs = Math.abs(dt.dy);
+	    const doxAbs = Math.abs(dt.dox);
+	    const doyAbs = Math.abs(dt.doy);
+	    dt.moving = dt.moving || dxAbs > 1 || dyAbs > 1;
+	    dt.scoping = dt.scoping || doxAbs > 1 || doyAbs > 1;
+	    if (dt.moving && dxAbs < .1 && dyAbs < .1) {
+	      dt.moving = false;
+	      runOn('translated', this);
+	    }
+	    if (dt.scoping && doxAbs < .1 && doyAbs < .1) {
+	      dt.scoping = false;
+	      runOn('zoom', this);
+	    }
+	  }
+	
 	  // terms.
 	  // Real space, real, r (prefix) refers to the transformed canvas space.
 	  // c (prefix), chase is the value that chases a requiered value
@@ -4778,11 +5651,17 @@ function (require, exports, module) {
 	      mouseX:0,
 	      mouseY:0,
 	      ctx:ctx,
+	      realPosition: function (x, y) {
+	        var screenX = canvas.width / 2;
+	        var screenY = canvas.height / 2;
+	        x = (screenX * this.invMatrix[0] + screenY * this.invMatrix[2]);
+	        y = (screenX * this.invMatrix[1] + screenY * this.invMatrix[3]);
+	        return {x,y};
+	      },
 	      setTransform:function(){
 	          var m = this.matrix;
 	          var i = 0;
 	          const dt = displayTransform;
-	          print('x', 'y',  'dx', 'dy', 'mouseX', 'mouseY', 'scale');
 	          this.ctx.setTransform(m[i++],m[i++],m[i++],m[i++],m[i++],m[i++]);
 	      },
 	      setHome:function(){
@@ -4812,6 +5691,9 @@ function (require, exports, module) {
 	          this.coy += this.doy;
 	          this.cscale += this.dscale;
 	          this.crotate += this.drotate;
+	
+	          positionEvents(this);
+	
 	
 	          // create the display matrix
 	          this.matrix[0] = Math.cos(this.crotate)*this.cscale;
@@ -4890,14 +5772,17 @@ function (require, exports, module) {
 	
 	      }
 	  }
-	  const min = -.000000000001;
+	  this.displayTransform = displayTransform;
+	
 	  const max = .000000000001;
+	  const min = max*-1;
 	  function hasDelta() {
 	    const dt = displayTransform;
 	    return !((dt.dx > min && dt.dx < max) &&
 	            (dt.dy > min && dt.dy < max) &&
 	            (dt.dox > min && dt.dox < max) &&
-	            (dt.doy > min && dt.doy < max));
+	            (dt.doy > min && dt.doy < max) &&
+	            (dt.drotate > min && dt.drotate < max));
 	  }
 	
 	  // image to show
@@ -4927,14 +5812,29 @@ function (require, exports, module) {
 	         displayTransform.ox = 0;
 	         displayTransform.oy = 0;
 	     }
+	
+	    if (lastMoveTime < new Date().getTime() - 1000) instance.sleep();
 	    if (hasDelta() || sleeping === false) {
 	      if (once) sleeping = true;
-	      setTimeout(() => requestAnimationFrame(() => update(nextUpdateId)), 10);
+	      setTimeout(() => requestAnimationFrame(() => update(++nextUpdateId)), 30);
+	    } else {
+	      sleeping = true;
 	    }
 	  }
-	  update(nextUpdateId); // start it happening
+	  update(++nextUpdateId); // start it happening
+	
+	  this.center = () => {
+	    const x = displayTransform.x + canvas.width/2;
+	    const y = displayTransform.y + canvas.height/2
+	    return {x,y};
+	  }
 	
 	  this.centerOn = function(x, y) {
+	    const hype = Math.sqrt(x*x + y*y);
+	    const pointRads = Math.atan(y/x) || 0;
+	    x = hype*Math.sin(displayTransform.rotate + pointRads);
+	    y = hype*Math.cos(-1*(displayTransform.rotate + pointRads));
+	
 	    displayTransform.scale = 1;
 	    displayTransform.cox = 0;
 	    displayTransform.coy = 0;
@@ -4946,7 +5846,10 @@ function (require, exports, module) {
 	    displayTransform.oy = 0;
 	    displayTransform.x = x - (canvas.width / 2);
 	    displayTransform.y = y - (canvas.height / 2);
+	    displayTransform.rotate = 0;
 	    displayTransform.update();
+	    displayTransform.moving = true;
+	    displayTransform.zooming = true;
 	    this.once();
 	  };
 	
@@ -4958,537 +5861,779 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/polygon.js',
+RequireJS.addFunction('./public/js/utils/canvas/two-d/hover-map.js',
 function (require, exports, module) {
-	const Vertex2d = require('./vertex');
-	const Line2d = require('./line');
 	
-	class Polygon2d {
-	  constructor(initialVertices) {
-	    let lines = [];
+const Line2d = require('./objects/line')
+	const Vertex2d = require('./objects/vertex')
+	class HoverObject2d {
+	  constructor(lineOrVertex, tolerance, target) {
+	    tolerance ||= 2;
+	    const toleranceFunction = (typeof tolerance) === 'function';
+	    const targetFunction = (typeof lineOrVertex) === 'function';
+	    function getTolerence() {
+	      if (toleranceFunction) return tolerance();
+	      return tolerance;
+	    }
+	    function vertexHovered(targetVertex, hoverVertex) {
+	      if(targetVertex.distance(hoverVertex) < getTolerence())
+	        return targetVertex.distance(hoverVertex);
+	    }
+	
+	    function lineHovered(targetLine, hoverVertex) {
+	      const tol = getTolerence();
+	      const hv = hoverVertex;
+	      const sv = targetLine.startVertex();
+	      const ev = targetLine.endVertex();
+	      let toleranceAcceptible = false;
+	      if (targetLine.isVertical()) {
+	        toleranceAcceptible = Math.abs(sv.x() - hv.x()) < tol &&
+	              ((sv.y() > hv.y() && ev.y() < hv.y()) ||
+	              (sv.y() < hv.y() && ev.y() > hv.y()));
+	      } else if (targetLine.isHorizontal()) {
+	        toleranceAcceptible = Math.abs(sv.y() - hv.y()) < tol &&
+	              ((sv.x() > hv.x() && ev.x() < hv.x()) ||
+	              (sv.x() < hv.x() && ev.x() > hv.x()));
+	      } else if (Math.abs(sv.y() - ev.y()) < Math.abs(sv.x() - ev.x())) {
+	        const yValue = targetLine.y(hv.x());
+	        toleranceAcceptible = yValue + tol > hv.y() && yValue - tol < hv.y();
+	      } else {
+	        const xValue = targetLine.x(hv.y());
+	        toleranceAcceptible = xValue + tol > hv.x() && xValue - tol < hv.x();
+	      }
+	
+	      if (toleranceAcceptible) {
+	        const closestPoint = targetLine.closestPointOnLine(hoverVertex);
+	        if (targetLine.withinSegmentBounds(closestPoint)) {
+	          return closestPoint.distance(hoverVertex) + .1;
+	        }
+	      }
+	      return false;
+	    }
+	
+	    this.target = () => target || lineOrVertex;
+	
+	    this.hovering = (hoverVertex) => {
+	      const lov = targetFunction ? lineOrVertex() : lineOrVertex;
+	      if (lov instanceof Line2d)
+	        return lineHovered(lov, hoverVertex);
+	      return vertexHovered(lov, hoverVertex);
+	    }
+	  }
+	}
+	
+	class HoverMap2d {
+	  constructor() {
+	    let hoverObjects = [];
+	
+	    this.clear = () => hoverObjects = [] || true;
+	    this.add = (object, tolerance, target) => {
+	      const hovObj = new HoverObject2d(object, tolerance, target);
+	      if (object instanceof Line2d) {
+	        hoverObjects.push(hovObj);
+	      } else {
+	        hoverObjects = [hovObj].concat(hoverObjects);
+	      }
+	    }
+	    this.hovering = (x, y) => {
+	      const vertex = x instanceof Vertex2d ? x : new Vertex2d(x, y);
+	      let hoveringObj = null;
+	      for (let index = 0; index < hoverObjects.length; index++) {
+	        const hoverObj = hoverObjects[index];
+	        const distance = hoverObj.hovering(vertex);
+	        if (distance) {
+	          const target = hoverObj.target();
+	          if (hoveringObj === null || distance < hoveringObj.distance) {
+	            hoveringObj = {target, distance};
+	          }
+	        }
+	      }
+	      return hoveringObj && hoveringObj.target;
+	    }
+	  }
+	}
+	
+	HoverMap2d.HoverObject2d = HoverObject2d;
+	module.exports = HoverMap2d;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/canvas/two-d/maps/escape.js',
+function (require, exports, module) {
+	
+const Line2d = require('../objects/line');
+	const Vertex2d = require('../objects/vertex');
+	const Polygon2d = require('../objects/polygon');
+	const Tolerance = require('../../../tolerance.js');
+	const ToleranceMap = require('../../../tolerance-map.js');
+	const tol = .0015;
+	const withinTol = Tolerance.within(tol);
+	const nonZero = (val) => !withinTol(val, 0);
+	
+	class EscapeGroup {
+	  constructor(line) {
+	    let canEscape;
+	    const lineMap = {};
+	    const id = String.random();
+	    lineMap[line.toString()] = line;
+	    let reference, type;
+	
+	    this.id = () => id;
+	    this.type = (val) => {
+	      if (val !== undefined) type = val;
+	      return type;
+	    }
+	    this.reference = (other) => {
+	      if (other instanceof EscapeGroup && other !== this)
+	        reference = other;
+	      return reference;
+	    }
+	    this.lines = () => Object.values(lineMap);
+	    this.canEscape = (ce, type) => {
+	      if (ce === true || ce === false) {
+	        if ((canEscape === true && ce === false) || (canEscape === false && ce === true))
+	          console.warn('Conflicting escape values???');
+	      }
+	      this.type(type);
+	      if (ce === true) canEscape = true;
+	      return canEscape;
+	    }
+	    this.connect = (other) => {
+	      if (other === this) return;
+	      const lines = other.lines();
+	      for (let index = 0; index < lines.length; index++) {
+	        const line = lines[index];
+	        lineMap[line.toString()] = line;
+	      }
+	
+	      if (this.canEscape() !== true)
+	        this.canEscape(other.canEscape());
+	    }
+	  }
+	}
+	
+	class Escape {
+	  constructor(line) {
+	    let escapeGroupRight = new EscapeGroup(line);
+	    let escapeGroupLeft = new EscapeGroup(line);
+	    let groupIdMap = {}
+	    groupIdMap[escapeGroupRight.id()] = true;
+	    groupIdMap[escapeGroupLeft.id()] = true;
+	    const updateReference = {
+	      left: () => {
+	        let reference = escapeGroupLeft.reference();
+	        if (reference) {
+	          if (groupIdMap[reference.id()]) {
+	            reference = new EscapeGroup(line);
+	            reference.connect(escapeGroupLeft);
+	          }
+	          groupIdMap[reference.id()] = true;
+	          escapeGroupLeft = reference;
+	          updateReference.left();
+	        }
+	      },
+	      right: () => {
+	        let reference = escapeGroupRight.reference();
+	        if (reference) {
+	          if (groupIdMap[reference.id()]) {
+	            reference = new EscapeGroup(line);
+	            reference.connect(escapeGroupRight);
+	          }
+	          groupIdMap[reference.id()] = true;
+	          escapeGroupRight = reference;
+	          updateReference.right();
+	        }
+	      }
+	    }
+	    this.updateReference = () => updateReference.left() || updateReference.right();
+	    this.right = (ce, type) => {
+	      updateReference.right();
+	      return escapeGroupRight.canEscape(ce, type);
+	    }
+	    this.left = (ce, type) => {
+	      updateReference.left();
+	      return escapeGroupLeft.canEscape(ce, type);
+	    }
+	
+	    this.right.connected = (other) => {
+	      escapeGroupRight.canEscape();
+	      updateReference.right();
+	      escapeGroupRight.connect(other);
+	      other.reference(escapeGroupRight);
+	    }
+	    this.left.connected = (other) => {
+	      escapeGroupLeft.canEscape();
+	      updateReference.left();
+	      escapeGroupLeft.connect(other);
+	      other.reference(escapeGroupLeft);
+	    }
+	
+	    this.right.group = () => this.updateReference() || escapeGroupRight;
+	    this.left.group = () => this.updateReference() || escapeGroupLeft;
+	    this.right.type = (type) => escapeGroupRight.type(type);
+	    this.left.type = (type) => escapeGroupLeft.type(type);
+	  }
+	}
+	
+	class EscapeMap {
+	  constructor(lines, perpindicularDistance) {
+	    perpindicularDistance ||= .05;
 	    const instance = this;
-	    let faceIndecies = [2];
-	    let map
+	    let escapeObj;
 	
-	    this.vertices = (target, before, after) => {
-	      if (lines.length === 0) return [];
-	      const fullList = [];
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        fullList.push(line.startVertex());
-	      }
-	      if (target) {
-	        const vertices = [];
-	        const index = fullList.indexOf(target);
-	        if (index === undefined) return null;
-	        vertices = [];
-	        for (let i = before; i < before + after + 1; i += 1) vertices.push(fullList[i]);
-	        return vertices;
-	      } else return fullList;
-	    }
+	    function escapeLines(lines, perpDist) {
+	      const getState = (lineOstr) =>
+	        escapeObj.states[lineOstr instanceof Line2d ? lineOstr.toString() : lineOstr];
 	
-	    this.reverse = () => {
-	      const verts = instance.vertices();
-	      for (let index = lines.length - 1; index > -1; index--) {
-	        const line = lines[index];
-	        const startVert = index === lines.length - 1 ? verts[0] : verts[index + 1];
-	        const endVert = verts[index];
-	        line.startVertex(startVert);
-	        line.endVertex(endVert);
-	      }
-	      lines = lines.reverse();
-	      faceIndecies.forEach((index, i) => {
-	          faceIndecies[i] = lines.length - index - 1;
-	      });
-	    }
-	
-	    this.verticesAndMidpoints = (target, before, after) => {
-	      const verts = this.vertices();
-	      const both = [];
-	      for (let index = 0; index < verts.length; index++) {
-	        const sv = verts[index];
-	        const ev = verts[index + 1 === verts.length ? 0 : index + 1];
-	        both.push(sv);
-	        both.push(Vertex2d.center(sv, ev));
-	      }
-	      return both;
-	    }
-	
-	    function addNieghborsOfVertexWithinLine(vertex, indicies) {
-	      const list = [];
-	      for (let index = 0; index < indicies.length; index++) {
-	        const i = indicies[index];
-	        let found = false;
-	        for (let index = 0; !found && index < lines.length; index++) {
-	          const line = lines[index];
-	          if (line.withinSegmentBounds(vertex)) {
-	            found = true;
-	            if (i > 0) {
-	              list.push(instance.neighbors(line.endVertex(), i - 1)[0]);
-	            } else if (i < 0) {
-	              list.push(instance.neighbors(line.startVertex(), i + 1)[0]);
-	            } else {
-	              list.push(vertex);
-	            }
-	          }
-	        }
-	        if (!found) list.push(null);
-	      }
-	      return list;
-	    }
-	
-	    this.neighbors = (vertex,...indicies) => {
-	      const verts = this.verticesAndMidpoints();
-	      const targetIndex = verts.equalIndexOf(vertex);
-	      if (targetIndex !== -1) {
-	        const list = [];
-	        for (let index = 0; index < indicies.length; index++) {
-	          const i = indicies[index];
-	          const offsetIndex = Math.mod(targetIndex + i, verts.length);
-	          list.push(verts[offsetIndex]);
-	        }
-	        return list;
-	      }
-	      return addNieghborsOfVertexWithinLine(vertex, indicies);
-	    }
-	
-	    function positionRelitiveToVertex(vertex, moveTo, externalVertex) {
-	      const center = instance.center();
-	      if (moveTo.theta) {
-	        if (externalVertex) vertex.rotate(moveTo.theta, center);
-	        const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
-	        const rotatedCenter = rotatedPoly.center();
-	        const offset = rotatedCenter.differance(vertex);
-	        return moveTo.center.translate(offset.x(), offset.y(), true);
-	      }
-	      const offset = center.differance(vertex);
-	      return moveTo.center.translate(offset.x(), offset.y(), true);
-	    }
-	
-	    function vertexFunction(midpoint) {
-	      const getVertex = midpoint ? (line) => line.midpoint() : (line) => line.startVertex().copy();
-	      return (index, moveTo) => {
-	        const vertex = getVertex(lines[Math.mod(index, lines.length)]);
-	        if (moveTo === undefined) return vertex;
-	        return positionRelitiveToVertex(vertex, moveTo);
-	      }
-	    }
-	
-	    this.relativeToExternalVertex = (vertex, moveTo) => positionRelitiveToVertex(vertex, moveTo, true);
-	    this.vertex = vertexFunction();
-	    this.midpoint = vertexFunction(true);
-	    this.point = (index, moveTo) => {
-	      if (index % 2 === 0) return this.vertex(index/2, moveTo);
-	      else return this.midpoint((index - 1)/2, moveTo);
-	    }
-	
-	    this.midpoints = () => {
-	      const list = [];
-	      for (let index = 0; index < lines.length; index++) {
-	        list.push(this.midpoint(index));
-	      }
-	      return list;
-	    }
-	
-	    this.radians = (rads) => {
-	      const currRads = new Line2d(this.center(), this.faces()[0].midpoint()).radians();
-	      if (Number.isFinite(rads)) {
-	        const radOffset = rads - currRads;
-	        this.rotate(radOffset);
-	        return rads;
-	      }
-	      return currRads;
-	    }
-	    this.angle = (angle) => Math.toDegrees(this.radians(Math.toRadians(angle)));
-	
-	    this.faceIndecies = (indicies) => {
-	      if (indicies) {
-	        if (indicies.length > 1) console.warn('vertex sorting has not been tested for multple faces');
-	        faceIndecies = [0];
-	        const i = indicies[0];
-	        lines = lines.slice(i).concat(lines.slice(0, i));
-	        for (let index = 1; index < lines.length; index++) {
-	          faceIndecies.push(Math.mod(indicies[index] - i, lines.length));
+	      function recursiveEscape(obj) {
+	        const closests = Object.values(obj.closest);
+	        for (let cIndex = 0; cIndex < closests.length; cIndex++) {
+	          setEscapes(obj, closests[cIndex]);
 	        }
 	      }
-	      return faceIndecies;
-	    }
-	    this.faces = () => this.lines().filter((l, i) => faceIndecies.indexOf(i) !== -1);
-	    this.normals = () => {
-	      let normals = [];
-	      let center = this.center();
-	      for (let index = 0; index < faceIndecies.length; index++) {
-	        const line = lines[faceIndecies[index]];
-	        if (line)
-	          normals.push(new Line2d(center.copy(), line.midpoint()));
-	      }
-	      return normals;
-	    }
 	
-	    this.lines = () => lines;
-	    this.startLine = () => lines[0];
-	    this.endLine = () => lines[lines.length - 1];
-	    this.valid = () => lines.length > 2;
-	
-	    this.lineMap = (force) => {
-	      if (!force && map !== undefined) return map;
-	      if (lines.length === 0) return {};
-	      map = {};
-	      let lastEnd;
-	      if (!lines[0].startVertex().equals(lines[lines.length - 1].endVertex())) throw new Error('Broken Polygon');
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
-	        if (lastEnd && !line.startVertex().equals(lastEnd)) throw new Error('Broken Polygon');
-	        lastEnd = line.endVertex();
-	        map[line.toString()] = line;
-	      }
-	      return map;
-	    }
-	
-	    this.equals = (other) => {
-	      if (!(other instanceof Polygon2d)) return false;
-	      const verts = this.vertices();
-	      const otherVerts = other.vertices();
-	      if (verts.length !== otherVerts.length) return false;
-	      let otherIndex = undefined;
-	      let direction;
-	      for (let index = 0; index < verts.length * 2; index += 1) {
-	        const vIndex = index % verts.length;
-	        if (otherIndex === undefined) {
-	          if (index > verts.length) {
-	            return false
-	          } if(verts[index].equals(otherVerts[0])) {
-	            otherIndex = otherVerts.length * 2;
-	          }
-	        } else if (otherIndex === otherVerts.length * 2) {
-	          if (verts[vIndex].equals(otherVerts[1])) direction = 1;
-	          else if(verts[vIndex].equals(otherVerts[otherVerts.length - 1])) direction = -1;
-	          else return false;
-	          otherIndex += direction * 2;
-	        } else if (!verts[vIndex].equals(otherVerts[otherIndex % otherVerts.length])) {
-	          return false;
-	        } else {
-	          otherIndex += direction;
+	      function setEscape(obj, closest, dir) {
+	        const dirObj = closest[dir];
+	        if (dirObj.line) {
+	          const dirState = getState(dirObj.line);
+	          let dirOfEndpoint = dirObj.line.direction(dirObj.runner.startVertex());
+	          let escapeBretheran = dirOfEndpoint === 'right' ? dirState.escape.right.group() : dirState.escape.left.group();
+	          obj.escape[dir].connected(escapeBretheran);
+	          dirState.escape.updateReference();
+	          if (obj.escape[dir]()) dirObj.successful = true;
 	        }
 	      }
-	      return true;
-	    }
 	
-	    function getLine(line) {
-	      const lineMap = this.lineMap();
-	      return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
-	    }
-	
-	    this.getLines = (startVertex, endVertex, reverse) => {
-	      const inc = reverse ? -1 : 1;
-	      const subSection = [];
-	      let completed = false;
-	      const doubleLen = lines.length * 2;
-	      for (let steps = 0; steps < doubleLen; steps += 1) {
-	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
-	        const curr = lines[index];
-	        if (subSection.length === 0) {
-	          if (startVertex.equals(!reverse ? curr.startVertex() : curr.endVertex())) {
-	            subSection.push(!reverse ? curr : curr.negitive());
-	            if (endVertex.equals(reverse ? curr.startVertex() : curr.endVertex())) {
-	              completed = true;
-	              break;
-	            }
-	          }
-	        } else {
-	          subSection.push(!reverse ? curr : curr.negitive());
-	          if (endVertex.equals(reverse ? curr.startVertex() : curr.endVertex())) {
-	            completed = true;
-	            break;
-	          }
+	      const targetLine = new Line2d(new Vertex2d(45, 37.5),
+	                                  new Vertex2d(45, 12.5))
+	      function setEscapes(obj, closest) {
+	        if (obj.escape.right() === true) obj.escape.left(false);
+	        else if (obj.escape.left() === true) obj.escape.right(false);
+	        if (obj.line.equals(targetLine)) {
+	          console.log('gotcha');
 	        }
-	      }
-	      if (completed) return subSection;
-	    }
-	
-	    this.center = () => Vertex2d.center(...this.vertices());
-	
-	    this.translate = (xDiff, yDiff) => {
-	      for (let index = 0; index < lines.length; index++) {
-	        lines[index].startVertex().translate(xDiff, yDiff);
-	      }
-	    }
-	
-	    this.rotate = (theta, pivot, doNotModify) => {
-	      pivot ||= this.center();
-	      const poly = doNotModify ? this.copy() : this;
-	      if (doNotModify) return this.copy().rotate(theta, pivot);
-	      for (let index = 0; index < lines.length; index++) {
-	        lines[index].startVertex().rotate(theta, pivot);
-	      }
-	      return this;
-	    }
-	
-	    this.centerOn = (newCenter) => {
-	      if (newCenter) {
-	        newCenter = new Vertex2d(newCenter);
-	        const center = this.center();
-	        const diff = newCenter.copy().differance(center);
-	        this.translate(diff.x(), diff.y());
-	      }
-	    }
-	
-	    this.addVertices = (list) => {
-	      if (list === undefined) return;
-	      const verts = [];
-	      const endLine = this.endLine();
-	      for (let index = 0; index < list.length + 1; index += 1) {
-	        if (index < list.length) verts[index] = new Vertex2d(list[index]);
-	        if (index > 0) {
-	          const startVertex = verts[index - 1];
-	          const endVertex = verts[index] || this.startLine().startVertex();
-	          const line = new Line2d(startVertex, endVertex);
-	          lines.push(line);
-	        }
-	      }
-	      if (verts.length > 0 && lines.length > 0) {
-	        if (endLine) endline.endVertex(verts[0]);
-	      }
-	      // this.removeLoops();
-	      this.lineMap(true);
-	    }
-	
-	    this.addBest = (lineList) => {
-	      if (lineList.length > 100) throw new Error('This algorythum is slow: you should either find a way to speed it up or use a different method');
-	      const lastLine = lines[lines.length - 2];
-	      const endVert = lastLine.endVertex();
-	      lineList.sort(Line2d.distanceSort(endVert));
-	      const nextLine = lineList[0].acquiescent(lastLine);
-	      const connectLine = new Line2d(endVert, nextLine.startVertex());
-	      endVert.translate(connectLine.run()/2, connectLine.rise()/2);
-	      lines.splice(lines.length - 1, 1);
-	      const newLastLine = new Line2d(endVert, nextLine.endVertex());
-	      const newConnectLine = new Line2d(nextLine.endVertex(), lines[0].startVertex());
-	      lines.push(newLastLine);
-	      if (!newConnectLine.isPoint()) lines.push(newConnectLine);
-	      lineList.splice(0,1);
-	    }
-	
-	    this.path = (offset) => {
-	      offset ||= 0;
-	      let path = '';
-	      const verts = this.vertices();
-	      for (let index = 0; index < verts.length; index++) {
-	        const i = Math.mod(index + offset, verts.length);
-	        path += `${verts[i].toString()} => `
-	      }
-	      return path.substring(0, path.length - 4);
-	    }
-	
-	    this.toString = this.path;
-	    this.area = () => {
-	      let total = 0;
-	      let verts = this.vertices();
-	      for (var i = 0, l = verts.length; i < l; i++) {
-	        var addX = verts[i].x();
-	        var addY = verts[i == verts.length - 1 ? 0 : i + 1].y();
-	        var subX = verts[i == verts.length - 1 ? 0 : i + 1].x();
-	        var subY = verts[i].y();
-	
-	        total += (addX * addY * 0.5);
-	        total -= (subX * subY * 0.5);
+	        setEscape(obj, closest, 'right');
+	        setEscape(obj, closest, 'left');
+	        return obj;
 	      }
 	
-	      return Math.abs(total);
-	    }
-	
-	    this.clockWise = () => {
-	      let sum = 0;
-	      for (let index = 0; index < lines.length; index++) {
-	        const l = lines[index];
-	        sum += (l.endVertex().x() - l.startVertex().x()) * (l.endVertex().y() + l.startVertex().y());
+	      const toDrawString = (key) => () => {
+	        const state = escapeObj.states[key];
+	        const sRight = state.closest.startVertex.right;
+	        const sLeft = state.closest.startVertex.left;
+	        const eRight = state.closest.endVertex.right;
+	        const eLeft = state.closest.endVertex.left;
+	        Line2d.toDrawString([state.line,sRight, eRight,sLeft,eLeft],
+	                              'green', 'red', 'red', 'blue', 'blue');
 	      }
-	      return sum >= 0;
-	    }
-	
-	    function ensure(antiClockWise) {
-	      if (instance.clockWise() === !antiClockWise) return;
-	      instance.reverse();
-	    }
-	    this.ensureClockWise = () => ensure();
-	    this.ensureAntiClockWise = () => ensure(true);
-	
-	    this.removeLoops = () => {
-	      const map = {}
-	      for (let index = 0; index < lines.length; index += 1) {
-	        const line = lines[index];
+	      const initEscape = (line, index) => {
+	        if (getState(line) !== undefined) return;
 	        const key = line.toString();
-	        const negKey = line.toNegitiveString();
-	        if (map[key]) {
-	          lines.splice(map[key].index, index - map[key].index + 1);
-	        } else if (map[negKey]) {
-	          lines.splice(map[negKey].index, index - map[negKey].index + 1);
-	        } else {
-	          map[key] = {line, index};
+	        escapeObj.states[key] = {index, line, closest: {}, runners: {},
+	                escape: new Escape(line),
+	                toDrawString: toDrawString(key)};
+	      };
+	
+	      const isClosest = (origin, curr, prospective, originToEndDist) => {
+	        if (!prospective instanceof Vertex2d) return false;
+	        const prospectDist = prospective.distance(origin) - originToEndDist;
+	        // const validDistance = prospectDist > 0 || withinTol(prospectDist, 0);
+	        // if (!validDistance) return false;
+	        if (!curr) return true;
+	        const currDist = curr.distance(origin) - originToEndDist;
+	        return Math.abs(currDist) > Math.abs(prospectDist);
+	      }
+	
+	      const intersectsPoint = (target, line1, line2) => {
+	        const intersection = line1.findDirectionalIntersection(line2);
+	        return intersection instanceof Vertex2d &&
+	                  (target.equals(intersection, .1) ||
+	                   intersection.distance(line2.startVertex()) >
+	                   target.distance(line2.startVertex()));
+	      }
+	
+	      function runners(line, targetFuncName, startPointFuncName, radians) {
+	        const state = getState(line);
+	        const vertex = line[targetFuncName]();
+	        const perp = line.perpendicular(perpDist, line[startPointFuncName](), true);
+	        const originToEndDist = line.midpoint().distance(line.startVertex());
+	        const rightOrigin = perp.startVertex();
+	        const right = Line2d.startAndTheta(rightOrigin, radians, 1000000000);
+	        const rightPerp = line.perpendicular(-10000000);
+	        const leftOrigin = perp.endVertex();
+	        const left = Line2d.startAndTheta(leftOrigin, radians, 100000000);
+	        const leftPerp = line.perpendicular(10000000);
+	        const center = Line2d.startAndTheta(line[startPointFuncName](), radians, 100000000);
+	        state.runners[radians] = {right, left};
+	        state.closest[targetFuncName] = {right: {}, left:{}};
+	        let closest = state.closest[targetFuncName];
+	        let escapedLeft = true;
+	        let escapedRight = true;
+	        let escapedLeftPerp = true;
+	        let escapedRightPerp = true;
+	        for (let index = 0; index < lines.length; index++) {
+	          const other = lines[index];
+	          if (intersectsPoint(vertex, other, center)) {
+	            const leftIntersection = left.findDirectionalIntersection(other);
+	            if (other.withinSegmentBounds(leftIntersection)) {
+	              if (isClosest(leftOrigin, closest.left.intersection, leftIntersection, originToEndDist)) {
+	                escapedLeft = false;
+	                const escapeLine = new Line2d(left.startVertex(), leftIntersection);
+	                closest.left = {intersection: leftIntersection, line: other, escapeLine, runner: left};
+	              }
+	            }
+	            const rightIntersection = right.findDirectionalIntersection(other);
+	            if (other.withinSegmentBounds(rightIntersection)) {
+	              if (isClosest(rightOrigin, closest.right.intersection, rightIntersection, originToEndDist)) {
+	                escapedRight = false;
+	                const escapeLine = new Line2d(right.startVertex(), rightIntersection);
+	                closest.right = {intersection: rightIntersection, line: other, escapeLine, runner: right};
+	              }
+	            }
+	          }
+	          const rightPerpIntersection = rightPerp.findDirectionalIntersection(other);
+	          if (other.withinSegmentBounds(rightPerpIntersection) && nonZero(line.distance(rightPerpIntersection)))
+	            escapedRightPerp = false;
+	          const leftPerpIntersection = leftPerp.findDirectionalIntersection(other);
+	          if (other.withinSegmentBounds(leftPerpIntersection) && nonZero(line.distance(leftPerpIntersection)))
+	            escapedLeftPerp = false;
+	        }
+	
+	        if (escapedRight || escapedRightPerp)
+	          state.escape.right(true, 'independent');
+	        if (escapedLeft || escapedLeftPerp)
+	          state.escape.left(true, 'independent');
+	        if (escapedRight || escapedLeft) state.type = 'independent';
+	      }
+	
+	      function runAll(lines) {
+	        escapeObj = {states: {}, runners: {right: [], left: []}};
+	        for (let index = 0; index < lines.length; index++) {
+	          const line = lines[index];
+	          initEscape(line, index);
+	          runners(line, 'startVertex', 'endVertex', line.radians() - Math.PI);
+	          runners(line, 'endVertex', 'startVertex', line.radians());
 	        }
 	      }
+	
+	      runAll(lines);
+	
+	      const indStates = instance.states.independent();
+	      const indLines = indStates.map(s => s.line);
+	      for (let index = indStates.length - 1; index > -1; index--) {
+	        const state = indStates[index];
+	        const indLine = state.line;
+	        const sliced = indLine.slice(indLines);
+	        if (sliced) {
+	          lines.splice(state.index, 1);
+	          for (let sIndex = 0; sIndex < sliced.length; sIndex++) {
+	            lines.push(sliced[sIndex]);
+	          }
+	        }
+	      }
+	
+	      // runAll(lines);
+	      //
+	      // const values = Object.values(escapeObj.states);
+	      // for (let index = 0; index < values.length; index++) {
+	      //   recursiveEscape(values[index]);
+	      // }
+	      return escapeObj;
 	    }
 	
-	    this.copy = () => new Polygon2d(this.vertices().map((v) => v.copy()));
+	    this.states = () => escapeObj.states;
+	    this.states.independent = () => Object.values(escapeObj.states)
+	                                .filter(obj => obj.type === 'independent');
+	    this.independent = () => this.states.independent().map(obj => obj.line);
 	
-	    this.addVertices(initialVertices);
+	
+	    this.dependent = () => Object.values(escapeObj.states)
+	                                .filter(obj => (obj.escape.left() || obj.escape.right()) && obj.type !== 'independent')
+	                                .map(obj => obj.line);
+	    this.escaped = () => Object.values(escapeObj.states)
+	                                .filter(obj => obj.escape.left() || obj.escape.right())
+	                                .map(obj => obj.line);
+	
+	    this.groups = () => {
+	      const parents = {};
+	      Object.values(escapeObj.states).forEach((obj) => {
+	        if (parents[obj.escape.right.group().id()] === undefined)
+	          parents[obj.escape.right.group().id()] = obj.escape.right.group();
+	        if (parents[obj.escape.left.group().id()] === undefined)
+	          parents[obj.escape.left.group().id()] = obj.escape.left.group();
+	      })
+	      return Object.values(parents);
+	    }
+	
+	    this.escapeAttempts = (successOfailure) => {
+	      const lines = [];
+	      const add = (obj) =>
+	            (successOfailure === undefined || (successOfailure && obj.successful) || (!successOfailure && !obj.successful)) &&
+	            obj.intersection && lines.push(obj.escapeLine);
+	      const lateBloomers = Object.values(escapeObj.states).filter(obj => obj.type !== 'independent');
+	      for (let index = 0; index < lateBloomers.length; index++) {
+	        const target = lateBloomers[index];
+	        const closests = Object.values(target.closest);
+	        for (let cIndex = 0; cIndex < closests.length; cIndex++) {
+	          add(closests[cIndex].right);
+	          add(closests[cIndex].left);
+	        }
+	      }
+	      return lines;
+	    }
+	
+	
+	
+	    this.toDrawString = () => {
+	      let str = Line2d.toDrawString(lines);
+	      str += '\n\n//Independed Escapers\n' + Line2d.toDrawString(this.independent(), 'green');
+	      str += '\n\n//Dependent Escapers\n' + Line2d.toDrawString(this.dependent(), 'lightgreen');
+	      // str += '\n\n//Successful Escapes\n' + Line2d.toDrawString(this.escapeAttempts(true), 'blue');
+	      // str += '\n\n//Attempted Escapes\n' + Line2d.toDrawString(this.escapeAttempts(false), 'red');
+	      return str;
+	    }
+	
+	    this.groupDrawString = () => {
+	      const groups = this.groups();
+	      let str = '';
+	      for (let index = 0; index < groups.length; index++) {
+	        const group = groups[index];
+	        const lines = group.lines();
+	        str += `\n\n//Group ${index} (${lines.length})\n//${Line2d.toDrawString(lines, 'red')}`;
+	      }
+	      return str;
+	    }
+	
+	    escapeLines(lines, perpindicularDistance);
 	  }
 	}
 	
-	Polygon2d.centerOn = (newCenter, polys) => {
-	  newCenter = new Vertex2d(newCenter);
-	  const center = Polygon2d.center(...polys);
-	  const diff = newCenter.copy().differance(center);
-	  for (let index = 0; index < polys.length; index++) {
-	    const poly = polys[index];
-	    poly.translate(diff.x(), diff.y());
-	  }
-	}
-	
-	Polygon2d.build = (lines) => {
-	  const start = lines[0].startVertex().copy();
-	  const end = lines[0].endVertex().copy();
-	  lines.splice(0, 1);
-	  const poly = new Polygon2d([start, end]);
-	  while (lines.length > 0) {
-	    poly.addBest(lines);
-	  }
+	EscapeMap.parimeter = (lines) => {
+	  const escapeObj = new EscapeMap(lines);
+	  // TODO: need a better/more complete algorythum.
+	  const escaped = escapeObj.independent();
+	  const breakdown = Line2d.sliceAll(escaped);
+	  const breakdownMap = new EscapeMap(breakdown);
+	  const parimeter = Line2d.consolidate(...breakdownMap.escaped());
+	  const poly = Polygon2d.build(parimeter);
 	  return poly;
 	}
 	
-	Polygon2d.fromLines = (lines) => {
-	  if (lines === undefined || lines.length === 0) return null;
-	  let lastLine = lines[0];
-	  const verts = [lastLine.startVertex()];
-	  for (let index = 1; index < lines.length; index++) {
-	    let line = lines[index].acquiescent(lastLine);
-	    if (!line.startVertex().equals(verts[verts.length - 1])) {
-	      verts.push(line.startVertex());
+	module.exports = EscapeMap;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/canvas/two-d/maps/star-line-map.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('../objects/vertex');
+	const Line2d = require('../objects/line');
+	const ExtremeSector = require('./star-sectors/extreme');
+	
+	
+	
+	class StarLineMap {
+	  constructor(type, sectorCount, center) {
+	    type = type.toLowerCase();
+	    let sectors;
+	    let compiled;
+	    const lines = [];
+	    const instance = this;
+	    sectorCount ||= 1000;
+	
+	    this.center = () => center ||= Vertex2d.center(...Line2d.vertices(lines));
+	
+	    function getSector(t) {
+	      const args = Array.from(arguments).slice(1);
+	      t ||= type;
+	      switch (t) {
+	        case 'extreme':
+	          return new ExtremeSector(...args);
+	        default:
+	          throw new Error(`Unknown sector type '${t}'`);
+	      }
 	    }
-	    if (!line.endVertex().equals(verts[verts.length - 1])) {
-	      if (index !== lines.length - 1 || !line.endVertex().equals(verts[0]))
-	        verts.push(line.endVertex());
+	
+	    function buildSectors(type, center, count) {
+	      count ||= sectorCount;
+	      sectors = [];
+	      center ||= instance.center();
+	      const thetaDiff = 2*Math.PI / count;
+	      for (let index = 0; index < count; index++) {
+	        const sector = getSector(type, center, thetaDiff * (index));
+	        sectors.push(sector);
+	        for (let sIndex = 0; sIndex < lines.length; sIndex++) {
+	          sector.add(lines[sIndex]);
+	        }
+	      }
 	    }
-	    lastLine = line;
+	
+	    this.isSupported = (obj) => obj instanceof Line2d;
+	
+	    this.add = (obj) => {
+	      if (!this.isSupported(obj)) throw new Error(`obj of type ${obj.constructor.name} is not supported`);
+	      lines.push(obj);
+	    }
+	
+	    this.addAll = (lines) => {
+	      for(let index = 0; index < lines.length; index++)this.add(lines[index]);
+	    }
+	
+	    this.filter = (type, center, count) => {
+	      buildSectors(type, center, count);
+	      const extremes = {};
+	      for (let index = 0; index < sectors.length; index++) {
+	        sectors[index].filter(extremes);
+	      }
+	      return Object.values(extremes);
+	    }
+	
+	    this.sectorLines = () => buildSectors() || sectors.map((s) => s.line());
+	    this.toDrawString = (sectorCount) => {
+	      buildSectors(null, sectorCount || 24);
+	      const center = this.center();
+	      let str = `//center ${center.approxToString()}`;
+	      str += '\n//lines\n' + Line2d.toDrawString(lines, 'black');
+	      str += '\n\n//Sectors\n';
+	      sectors.forEach(s => str += s.toDrawString(String.nextColor()));
+	      return str;
+	    }
 	  }
-	  return new Polygon2d(verts);
 	}
 	
-	Polygon2d.minMax = (...polys) => {
-	  const centers = [];
+	
+	module.exports = StarLineMap;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/vertex.js',
+function (require, exports, module) {
+	
+const approximate10 = require('../../../approximate.js').new(10);
+	const ToleranceMap = require('../../../tolerance-map.js');
+	const Tolerance = require('../../../tolerance.js');
+	const tol = .001;
+	const within = Tolerance.within(tol);
+	
+	
+	class Vertex2d {
+	  constructor(point) {
+	    if (arguments.length === 2) point = {x:arguments[0], y: arguments[1]};
+	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
+	    if (point instanceof Vertex2d) return point;
+	    let modificationFunction;
+	    let id = String.random();
+	    this.id = () => id;
+	    point = point || {x:0,y:0};
+	    Object.getSet(this, {point});
+	    this.layer = point.layer;
+	    const instance = this;
+	    this.move = (center) => {
+	      this.point(center);
+	      return true;
+	    };
+	
+	    this.translate = (xOffset, yOffset, doNotModify) => {
+	      const vertex = doNotModify ? this.copy() : this;
+	      vertex.point().x += xOffset;
+	      vertex.point().y += yOffset;
+	      return vertex;
+	    }
+	
+	    this.rotate = (radians, pivot, doNotModify) => {
+	      const vertex = doNotModify ? this.copy() : this;
+	      const point = vertex.point();
+	      pivot ||= new Vertex2d(0,0);
+	      const s = Math.sin(radians);
+	      const c = Math.cos(radians);
+	      point.x -= pivot.x();
+	      point.y -= pivot.y();
+	      const newX = point.x * c - point.y * s;
+	      const newY = point.x * s + point.y * c;
+	      point.x = newX + pivot.x();
+	      point.y = newY + pivot.y();
+	      return vertex;
+	    }
+	    this.point = (newPoint) => {
+	      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
+	      if (newPoint) this.x(newPoint.x);
+	      if (newPoint) this.y(newPoint.y);
+	      return point;
+	    }
+	
+	    this.modificationFunction = (func) => {
+	      if ((typeof func) === 'function') {
+	        if ((typeof this.id) !== 'function') Lookup.convert(this);
+	        modificationFunction = func;
+	      }
+	      return modificationFunction;
+	    }
+	
+	    this.equals = (other, tol) => {
+	      if (!(other instanceof Vertex2d)) return false;
+	      const wi = tol ? Tolerance.within(tol) : within;
+	      return wi(other.x(), this.x()) && wi(other.y(), this.y());
+	    }
+	    this.x = (val) => {
+	      if ((typeof val) === 'number') point.x = val;
+	      return this.point().x;
+	    }
+	    this.y = (val) => {
+	      if ((typeof val) === 'number') this.point().y = val;
+	      return this.point().y;
+	    }
+	
+	    const dummyFunc = () => true;
+	    this.forEach = (func, backward) => {
+	      let currVert = this;
+	      let lastVert;
+	      do {
+	        lastVert = currVert;
+	        func(currVert);
+	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
+	      } while (currVert && currVert !== this);
+	      return currVert || lastVert;
+	    }
+	
+	    this.distance = (vertex) => {
+	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
+	      const xDiff = vertex.x() - this.x();
+	      const yDiff = vertex.y() - this.y();
+	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+	    }
+	
+	    const barelyRound = (value) => Math.round(value * 10000000000000) / 10000000000000;
+	    this.toString = () => `(${barelyRound(this.x())}, ${barelyRound(this.y())})`;
+	    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
+	    const parentToJson = this.toJson;
+	
+	    this.offset = (x, y) => {
+	      if (x instanceof Vertex2d) {
+	        y = x.y();
+	        x = x.x();
+	      }
+	      const copy = this.toJson().point;
+	      if (y !== undefined) copy.y += y;
+	      if (x !== undefined) copy.x += x;
+	      return new Vertex2d(copy);
+	    }
+	
+	    this.copy = () => new Vertex2d([this.x(), this.y()]);
+	
+	    this.differance = (x, y) => {
+	      if (x instanceof Vertex2d) {
+	        y = x.y();
+	        x = x.x();
+	      }
+	      return new Vertex2d({x: this.x() - x, y: this.y() - y});
+	    }
+	
+	    this.point(point);
+	  }
+	}
+	
+	Vertex2d.fromJson = (json) => {
+	  return new Vertex2d(json.point);
+	}
+	
+	Vertex2d.minMax = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
 	  const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
 	  const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
-	  for (let index = 0; index < polys.length; index += 1) {
-	    const verts = polys[index].vertices();
-	    for (let vIndex = 0; vIndex < verts.length; vIndex++) {
-	      const vert = verts[vIndex];
-	      if (max.x() < vert.x()) max.x(vert.x());
-	      if (max.y() < vert.y()) max.y(vert.y());
-	      if (min.x() > vert.x()) min.x(vert.x());
-	      if (min.y() > vert.y()) min.y(vert.y());
+	  for (let index = 0; index < vertices.length; index += 1) {
+	    const vert = vertices[index];
+	    if (max.x() < vert.x()) max.x(vert.x());
+	    if (max.y() < vert.y()) max.y(vert.y());
+	    if (min.x() > vert.x()) min.x(vert.x());
+	    if (min.y() > vert.y()) min.y(vert.y());
+	  }
+	  return {min, max, diff: new Vertex2d(max.x() - min.x(), max.y() - min.y())};
+	}
+	
+	Vertex2d.center = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
+	  const minMax = Vertex2d.minMax(...vertices);
+	  const centerX = minMax.min.x() + (minMax.max.x() - minMax.min.x())/2;
+	  const centerY = minMax.min.y() + (minMax.max.y() - minMax.min.y())/2;
+	  return new Vertex2d(centerX, centerY);
+	}
+	
+	Vertex2d.weightedCenter = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
+	  let x = 0;
+	  let y = 0;
+	  let count = 0;
+	  vertices.forEach((vertex) => {
+	    if (Number.isFinite(vertex.x() + vertex.y())) {
+	      count++;
+	      x += vertex.x();
+	      y += vertex.y();
+	    }
+	  });
+	  return new Vertex2d({x: x/count, y: y/count});
+	}
+	
+	// Vertex2d.center = Vertex2d.weightedCenter;
+	
+	Vertex2d.sort = (a, b) =>
+	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
+	
+	const ignoreVerySmall = (v) => Math.abs(v) < .000001 ? 0 : v;
+	Vertex2d.sortByMax = (verts) => {
+	  let max;
+	  const center = Vertex2d.center(verts);
+	  for (let index = 0; index < verts.length; index++) {
+	    let v = verts[index];
+	    let curr = {v, distance: v.distance(center)};
+	    if (max === undefined || max.distance < curr.distance) {
+	      max = curr;
 	    }
 	  }
-	  return {min, max};
-	}
-	
-	Polygon2d.center = (...polys) => {
-	  const minMax = Polygon2d.minMax(...polys);
-	  return Vertex2d.center(minMax.min, minMax.max);
-	}
-	
-	Polygon2d.lines = (...polys) => {
-	  if (Array.isArray(polys[0])) polys = polys[0];
-	  let lines = [];
-	  for (let index = 0; index < polys.length; index += 1) {
-	    lines = lines.concat(polys[index].lines());
-	  }
-	  // return lines;
-	  const consolidated = Line2d.consolidate(...Line2d.consolidate(...lines));
-	  if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
-	    console.error.subtle('Line Consolidation malfunction');
-	  }
-	  return consolidated;
-	}
-	
-	
-	
-	const vertRegStr = "\\(([0-9]*(\\.[0-9]*|))\\s*,\\s*([0-9]*(\\.[0-9]*|))\\)";
-	const vertReg = new RegExp(vertRegStr);
-	const vertRegG = new RegExp(vertRegStr, 'g');
-	
-	Polygon2d.fromString = (str) => {
-	  const vertStrs = str.match(vertRegG);
-	  const verts = vertStrs.map((str) => {
-	    const match = str.match(vertReg);
-	    return new Vertex2d(Number.parseFloat(match[1]), Number.parseFloat(match[3]));
+	  return verts.sort((v1, v2) => {
+	    const d1 = v1.distance(max.v);
+	    const d2 = v2.distance(max.v);
+	    return d2 - d1;
 	  });
-	  return new Polygon2d(verts);
 	}
 	
-	const tol = .1;
-	Polygon2d.toParimeter = (lines, recurseObj) => {
-	  if (lines.length < 2) throw new Error('Not enough lines to create a parimeter');
-	  let lineMap, splitMap, parimeter;
-	  if (recurseObj) {
-	    lineMap = recurseObj.lineMap;
-	    splitMap = recurseObj.splitMap;
-	    parimeter = recurseObj.parimeter;
-	  } else {
-	    lineMap = Line2d.toleranceMap(tol, true, lines);
-	    const center = Vertex2d.center(Line2d.vertices(lines));
-	    const isolate = Line2d.isolateFurthestLine(center, lines);
-	    splitMap = Vertex2d.toleranceMap();
-	    // splitMap.add(isolate.line.startVertex());
-	    parimeter = [isolate.line];
+	Vertex2d.centerOn = (newCenter, vertices) => {
+	  newCenter = new Vertex2d(newCenter);
+	  const center = Vertex2d.center(...vertices);
+	  const diff = newCenter.copy().differance(center);
+	  for (let index = 0; index < vertices.length; index++) {
+	    const vert = vertices[index];
+	    vert.translate(diff.x(), diff.y());
 	  }
-	  parimeter.slice(1).forEach((l) => {
-	    if (splitMap.matches(l.startVertex()).length === 0)
-	      throw new Error('wtf');
-	  });
-	  if (parimeter.length > lines.length) return null;
-	  const sv = parimeter[0].startVertex();
-	  const ev = parimeter[parimeter.length - 1].endVertex();
-	  const alreadyVisitedStart = splitMap.matches(sv).length !== 0;
-	  const alreadyVisitedEnd = splitMap.matches(ev).length !== 0;
-	  if (alreadyVisitedEnd || alreadyVisitedStart) return null;
-	  const madeItAround = parimeter.length > 1 && sv.equals(ev);
-	  if (madeItAround) return Polygon2d.fromLines(parimeter);
-	
-	  const startLine = parimeter[0];
-	  const partialParimeters = []
-	  const lastLine = parimeter[parimeter.length - 1];
-	  let matches = lineMap.matches(lastLine.negitive());
-	  if (matches.length < 2) {
-	    if (parimeter.length === 1) {
-	      lines.remove(lastLine);
-	      return Polygon2d.toParimeter(lines);
-	    } else return null;
-	  }
-	    // throw new Error('A parimeter must exist between lines for function to work');
-	  for (let index = 0; index < matches.length; index++) {
-	    if (splitMap.matches(matches[index].endVertex()).length === 0) {
-	      const newParim = Array.from(parimeter).concat(matches[index]);
-	      const newSplitMap = splitMap.clone();
-	      newSplitMap.add(matches[index].startVertex());
-	      partialParimeters.push({parimeter: newParim, splitMap: newSplitMap, lineMap});
-	    }
-	  }
-	
-	  let biggest = null;
-	  for (let index = 0; index < partialParimeters.length; index ++) {
-	    const recObj = partialParimeters[index];
-	    const searchResult = Polygon2d.toParimeter(lines, recObj);
-	    if (biggest === null || (searchResult !== null && biggest.area() < searchResult.area()))
-	      biggest = searchResult;
-	  }
-	  if (recurseObj === undefined)
-	    biggest = biggest.clockWise() ? biggest : new Polygon2d(biggest.vertices().reverse());
-	  return biggest;
 	}
 	
+	Vertex2d.scale = (scaleX, scaleY, vertices) => {
+	  const center = Vertex2d.center(vertices);
+	  Vertex2d.centerOn(new Vertex2d(0,0), vertices);
+	  for (let index = 0; index < vertices.length; index++) {
+	    const vert = vertices[index];
+	    vert.x(vert.x() * 1);
+	    vert.y(vert.y() * -1);
+	  }
+	  Vertex2d.centerOn(center, vertices);
+	}
 	
-	new Polygon2d();
-	module.exports = Polygon2d;
+	Vertex2d.toleranceMap = (tolerance, vertices) => {
+	  tolerance ||= tol;
+	  vertices = [];
+	  const map = new ToleranceMap({x: tolerance, y: tolerance});
+	  for (let index = 0; index < vertices.length; index++) {
+	    map.add(vertices[index]);
+	  }
+	  return map;
+	}
+	
+	Vertex2d.reusable = true;
+	new Vertex2d();
+	
+	module.exports = Vertex2d;
 	
 });
 
@@ -5634,346 +6779,129 @@ const Vertex2d = require('./vertex');
 });
 
 
-RequireJS.addFunction('./public/js/utils/canvas/two-d/maps/escape.js',
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/corner.js',
 function (require, exports, module) {
-	
-const Line2d = require('../objects/line');
-	const Vertex2d = require('../objects/vertex');
-	const Polygon2d = require('../objects/polygon');
-	const Tolerance = require('../../../tolerance.js');
-	const ToleranceMap = require('../../../tolerance-map.js');
-	const tol = .0015;
-	const withinTol = Tolerance.within(tol);
-	
-	class EscapeGroup {
-	  constructor(line) {
-	    let canEscape;
-	    const lineMap = {};
-	    const id = String.random();
-	    lineMap[line.toString()] = line;
-	    let reference, type;
-	
-	    this.id = () => id;
-	    this.type = (val) => {
-	      if (val !== undefined) type = val;
-	      return type;
-	    }
-	    this.reference = (other) => {
-	      if (other instanceof EscapeGroup && other !== this)
-	        reference = other;
-	      return reference;
-	    }
-	    this.lines = () => Object.values(lineMap);
-	    this.canEscape = (ce, type) => {
-	      if (ce === true || ce === false) {
-	        if ((canEscape === true && ce === false) || (canEscape === false && ce === true))
-	          console.warn('Conflicting escape values???');
-	      }
-	      this.type(type);
-	      if (ce === true) canEscape = true;
-	      return canEscape;
-	    }
-	    this.connect = (other) => {
-	      if (other === this) return;
-	      const lines = other.lines();
-	      for (let index = 0; index < lines.length; index++) {
-	        const line = lines[index];
-	        lineMap[line.toString()] = line;
-	      }
-	      this.canEscape(other.canEscape());
-	    }
-	  }
-	}
-	
-	class Escape {
-	  constructor(line) {
-	    let escapeGroupRight = new EscapeGroup(line);
-	    let escapeGroupLeft = new EscapeGroup(line);
-	    let groupIdMap = {}
-	    groupIdMap[escapeGroupRight.id()] = true;
-	    groupIdMap[escapeGroupLeft.id()] = true;
-	    const updateReference = {
-	      left: () => {
-	        let reference = escapeGroupLeft.reference();
-	        if (reference) {
-	          if (groupIdMap[reference.id()]) {
-	            reference = new EscapeGroup(line);
-	            reference.connect(escapeGroupLeft);
-	          }
-	          groupIdMap[reference.id()] = true;
-	          escapeGroupLeft = reference;
-	          updateReference.left();
-	        }
-	      },
-	      right: () => {
-	        let reference = escapeGroupRight.reference();
-	        if (reference) {
-	          if (groupIdMap[reference.id()]) {
-	            reference = new EscapeGroup(line);
-	            reference.connect(escapeGroupRight);
-	          }
-	          groupIdMap[reference.id()] = true;
-	          escapeGroupRight = reference;
-	          updateReference.right();
-	        }
-	      }
-	    }
-	    this.updateReference = () => updateReference.left() || updateReference.right();
-	    this.right = (ce, type) => {
-	      updateReference.right();
-	      return escapeGroupRight.canEscape(ce, type);
-	    }
-	    this.left = (ce, type) => {
-	      updateReference.left();
-	      return escapeGroupLeft.canEscape(ce, type);
-	    }
-	
-	    this.right.connected = (other) => {
-	      updateReference.right();
-	      escapeGroupRight.connect(other);
-	      other.reference(escapeGroupRight);
-	    }
-	    this.left.connected = (other) => {
-	      updateReference.left();
-	      escapeGroupLeft.connect(other);
-	      other.reference(escapeGroupLeft);
-	    }
-	
-	    this.right.group = () => escapeGroupRight;
-	    this.left.group = () => escapeGroupLeft;
-	    this.right.type = (type) => escapeGroupRight.type(type);
-	    this.left.type = (type) => escapeGroupLeft.type(type);
-	  }
-	}
-	
-	class EscapeMap {
-	  constructor(lines, perpindicularDistance) {
-	    perpindicularDistance ||= .05;
-	    const instance = this;
-	    let escapeObj;
-	
-	    function escapeLines(lines, perpDist) {
-	      const getState = (lineOstr) =>
-	        escapeObj.states[lineOstr instanceof Line2d ? lineOstr.toString() : lineOstr];
-	
-	      function recursiveEscape(obj) {
-	        const closests = Object.values(obj.closest);
-	        for (let cIndex = 0; cIndex < closests.length; cIndex++) {
-	          setEscapes(obj, closests[cIndex]);
-	        }
-	      }
-	
-	      function setEscape(obj, closest, dir) {
-	        const dirObj = closest[dir];
-	        if (dirObj.line) {
-	          const dirState = getState(dirObj.line);
-	          let dirOfEndpoint = dirObj.line.direction(dirObj.runner.startVertex());
-	          let escapeBretheran = dirOfEndpoint === 'right' ? dirState.escape.right.group() : dirState.escape.left.group();
-	          obj.escape[dir].connected(escapeBretheran);
-	          dirState.escape.updateReference();
-	          if (obj.escape[dir]()) dirObj.successful = true;
-	        }
-	      }
-	
-	      function setEscapes(obj, closest) {
-	        if (obj.escape.right() === true) obj.escape.left(false);
-	        else if (obj.escape.left() === true) obj.escape.right(false);
-	        setEscape(obj, closest, 'right');
-	        setEscape(obj, closest, 'left');
-	        return obj;
-	      }
-	
-	      const toDrawString = (key) => () => {
-	        const state = escapeObj.states[key];
-	        const sRight = state.closest.startVertex.right;
-	        const sLeft = state.closest.startVertex.left;
-	        const eRight = state.closest.endVertex.right;
-	        const eLeft = state.closest.endVertex.left;
-	        Line2d.toDrawString([state.line,sRight, eRight,sLeft,eLeft],
-	                              'green', 'red', 'red', 'blue', 'blue');
-	      }
-	      const initEscape = (line, index) => {
-	        if (getState(line) !== undefined) return;
-	        const key = line.toString();
-	        escapeObj.states[key] = {index, line, closest: {}, runners: {},
-	                escape: new Escape(line),
-	                toDrawString: toDrawString(key)};
-	      };
-	
-	      const isClosest = (origin, curr, prospective, originToEndDist) => {
-	        if (!prospective instanceof Vertex2d) return false;
-	        const prospectDist = prospective.distance(origin) - originToEndDist;
-	        // const validDistance = prospectDist > 0 || withinTol(prospectDist, 0);
-	        // if (!validDistance) return false;
-	        if (!curr) return true;
-	        const currDist = curr.distance(origin) - originToEndDist;
-	        return Math.abs(currDist) > Math.abs(prospectDist);
-	      }
-	
-	      const intersectsPoint = (target, line1, line2) => {
-	        const intersection = line1.findDirectionalIntersection(line2);
-	        return intersection instanceof Vertex2d &&
-	                  (target.equals(intersection, .1) ||
-	                   intersection.distance(line2.startVertex()) >
-	                   target.distance(line2.startVertex()));
-	      }
-	
-	      function runners(line, targetFuncName, startPointFuncName, radians) {
-	        const state = getState(line);
-	        const vertex = line[targetFuncName]();
-	        const perp = line.perpendicular(perpDist, line[startPointFuncName](), true);
-	        const originToEndDist = line.midpoint().distance(line.startVertex());
-	        const rightOrigin = perp.startVertex();
-	        const right = Line2d.startAndTheta(rightOrigin, radians, 1000000000);
-	        const leftOrigin = perp.endVertex();
-	        const left = Line2d.startAndTheta(leftOrigin, radians, 100000000);
-	        const center = Line2d.startAndTheta(line[startPointFuncName](), radians, 100000000);
-	        state.runners[radians] = {right, left};
-	        state.closest[targetFuncName] = {right: {}, left:{}};
-	        let closest = state.closest[targetFuncName];
-	        let escapedLeft = true;
-	        let escapedRight = true;
-	        for (let index = 0; index < lines.length; index++) {
-	          const other = lines[index];
-	          if (intersectsPoint(vertex, other, center)) {
-	            const leftIntersection = left.findDirectionalIntersection(other);
-	            if (other.withinSegmentBounds(leftIntersection)) {
-	              if (isClosest(leftOrigin, closest.left.intersection, leftIntersection, originToEndDist)) {
-	                escapedLeft = false;
-	                const escapeLine = new Line2d(left.startVertex(), leftIntersection);
-	                closest.left = {intersection: leftIntersection, line: other, escapeLine, runner: left};
-	              }
-	            }
-	            const rightIntersection = right.findDirectionalIntersection(other);
-	            if (other.withinSegmentBounds(rightIntersection)) {
-	              if (isClosest(rightOrigin, closest.right.intersection, rightIntersection, originToEndDist)) {
-	                escapedRight = false;
-	                const escapeLine = new Line2d(right.startVertex(), rightIntersection);
-	                closest.right = {intersection: rightIntersection, line: other, escapeLine, runner: right};
-	              }
-	            }
-	          }
-	        }
-	
-	        if (escapedRight)
-	          state.escape.right(true, 'independent');
-	        if (escapedLeft)
-	          state.escape.left(true, 'independent');
-	        if (escapedRight || escapedLeft) state.type = 'independent';
-	      }
-	
-	      function runAll(lines) {
-	        escapeObj = {states: {}, runners: {right: [], left: []}};
-	        for (let index = 0; index < lines.length; index++) {
-	          const line = lines[index];
-	          initEscape(line, index);
-	          runners(line, 'startVertex', 'endVertex', line.radians() - Math.PI);
-	          runners(line, 'endVertex', 'startVertex', line.radians());
-	        }
-	      }
-	
-	      runAll(lines);
-	
-	      const indStates = instance.states.independent();
-	      const indLines = indStates.map(s => s.line);
-	      for (let index = indStates.length - 1; index > -1; index--) {
-	        const state = indStates[index];
-	        const indLine = state.line;
-	        const sliced = indLine.slice(indLines);
-	        if (sliced) {
-	          lines.splice(state.index, 1);
-	          for (let sIndex = 0; sIndex < sliced.length; sIndex++) {
-	            lines.push(sliced[sIndex]);
-	          }
-	        }
-	      }
-	
-	      runAll(lines);
-	
-	      const values = Object.values(escapeObj.states);
-	      for (let index = 0; index < values.length; index++) {
-	        recursiveEscape(values[index]);
-	      }
-	      return escapeObj;
-	    }
-	
-	    this.states = () => escapeObj.states;
-	    this.states.independent = () => Object.values(escapeObj.states)
-	                                .filter(obj => obj.type === 'independent');
-	    this.independent = () => this.states.independent().map(obj => obj.line);
-	
-	
-	    this.dependent = () => Object.values(escapeObj.states)
-	                                .filter(obj => (obj.escape.left() || obj.escape.right()) && obj.type !== 'independent')
-	                                .map(obj => obj.line);
-	    this.escaped = () => Object.values(escapeObj.states)
-	                                .filter(obj => obj.escape.left() || obj.escape.right())
-	                                .map(obj => obj.line);
-	
-	    this.groups = () => {
-	      const parents = {};
-	      Object.values(escapeObj.states).forEach((obj) => {
-	        if (parents[obj.escape.right.group().id()] === undefined)
-	          parents[obj.escape.right.group().id()] = obj.escape.right.group();
-	        if (parents[obj.escape.left.group().id()] === undefined)
-	          parents[obj.escape.left.group().id()] = obj.escape.left.group();
-	      })
-	      return Object.values(parents);
-	    }
-	
-	    this.escapeAttempts = (successOfailure) => {
-	      const lines = [];
-	      const add = (obj) =>
-	            (successOfailure === undefined || (successOfailure && obj.successful) || (!successOfailure && !obj.successful)) &&
-	            obj.intersection && lines.push(obj.escapeLine);
-	      const lateBloomers = Object.values(escapeObj.states).filter(obj => obj.type !== 'independent');
-	      for (let index = 0; index < lateBloomers.length; index++) {
-	        const target = lateBloomers[index];
-	        const closests = Object.values(target.closest);
-	        for (let cIndex = 0; cIndex < closests.length; cIndex++) {
-	          add(closests[cIndex].right);
-	          add(closests[cIndex].left);
-	        }
-	      }
-	      return lines;
-	    }
-	
-	
-	
-	    this.toDrawString = () => {
-	      let str = Line2d.toDrawString(lines);
-	      str += '\n\n//Independed Escapers\n' + Line2d.toDrawString(this.independent(), 'green');
-	      str += '\n\n//Dependent Escapers\n' + Line2d.toDrawString(this.dependent(), 'lightgreen');
-	      // str += '\n\n//Successful Escapes\n' + Line2d.toDrawString(this.escapeAttempts(true), 'blue');
-	      // str += '\n\n//Attempted Escapes\n' + Line2d.toDrawString(this.escapeAttempts(false), 'red');
-	      return str;
-	    }
-	
-	    this.groupDrawString = () => {
-	      const groups = this.groups();
-	      let str = '';
-	      for (let index = 0; index < groups.length; index++) {
-	        const group = groups[index];
-	        const lines = group.lines();
-	        str += `\n\n//Group ${index} (${lines.length})\n//${Line2d.toDrawString(lines, 'red')}`;
-	      }
-	      return str;
-	    }
-	
-	    escapeLines(lines, perpindicularDistance);
-	  }
-	}
-	
-	EscapeMap.parimeter = (lines) => {
-	  const escapeObj = new EscapeMap(lines);
-	  const escaped = escapeObj.escaped();
-	  const breakdown = Line2d.sliceAll(escaped);
-	  const parimeter = new EscapeMap(breakdown).escaped();
-	  const poly = Polygon2d.build(parimeter);
-	  return poly;
-	}
-	
-	module.exports = EscapeMap;
+	//
+	// const Vertex2d = require('vertex');
+	//
+	// class Corner {
+	//   constructor(center, height, width, radians) {
+	//     width = width === undefined ? 121.92 : width;
+	//     height = height === undefined ? 60.96 : height;
+	//     radians = radians === undefined ? 0 : radians;
+	//     const instance = this;
+	//     Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
+	//     if ((typeof center) === 'function') this.center = center;
+	//     const startPoint = new Vertex2d(null);
+	//
+	//     const getterHeight = this.height;
+	//     this.height = (v) => {
+	//       notify(getterHeight(), v);
+	//       return getterHeight(v);
+	//     }
+	//     const getterWidth = this.width;
+	//     this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
+	//
+	//     const changeFuncs = [];
+	//     this.onChange = (func) => {
+	//       if ((typeof func) === 'function') {
+	//         changeFuncs.push(func);
+	//       }
+	//     }
+	//
+	//     let lastNotificationId = 0;
+	//     function notify(currentValue, newValue) {
+	//       if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
+	//       if (newValue !== currentValue) {
+	//         const id = ++lastNotificationId;
+	//         setTimeout(() => {
+	//           if (id === lastNotificationId)
+	//             for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
+	//         }, 100);
+	//       }
+	//     }
+	//
+	//     this.radians = (newValue) => {
+	//       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	//         notify(radians, newValue);
+	//         radians = newValue;
+	//       }
+	//       return radians;
+	//     };
+	//     this.startPoint = () => {
+	//       startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+	//       return startPoint;
+	//     }
+	//     this.angle = (value) => {
+	//       if (value !== undefined) this.radians(Math.toRadians(value));
+	//       return Math.toDegrees(this.radians());
+	//     }
+	//
+	//     // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
+	//     // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
+	//     this.x = (val) => {
+	//       if (val !== undefined) this.center().x(val);
+	//       return this.center().x();
+	//     }
+	//     this.y = (val) => {
+	//       if (val !== undefined) this.center().y(val);
+	//       return this.center().y();
+	//     }
+	//     this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	//     this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+	//
+	//     this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	//     this.move = (position, theta) => {
+	//       const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	//       if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	//       if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	//       if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	//       if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	//       this.radians(position.theta);
+	//       this.center().point(center);
+	//       return true;
+	//     };
+	//
+	//     function centerMethod(widthMultiplier, heightMultiplier, position) {
+	//       const center = instance.center();
+	//       const rads = instance.radians();
+	//       const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
+	//                         instance.height() * heightMultiplier * Math.sin(rads);
+	//       const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
+	//                         instance.width() * widthMultiplier * Math.sin(rads);
+	//
+	//       if (position !== undefined) {
+	//         const posCenter = new Vertex2d(position.center);
+	//         return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+	//       }
+	//       const backLeftLocation = {
+	//             x: instance.center().x() - offsetX ,
+	//             y: instance.center().y() - offsetY
+	//       };
+	//       return new Vertex2d(backLeftLocation);
+	//     }
+	//
+	//
+	//     this.frontCenter = (position) => centerMethod(0, -.5, position);
+	//     this.backCenter = (position) => centerMethod(0, .5, position);
+	//     this.leftCenter = (position) => centerMethod(.5, 0, position);
+	//     this.rightCenter = (position) => centerMethod(-.5, 0, position);
+	//
+	//     this.backLeft = (position) => centerMethod(.5, .5, position);
+	//     this.backRight = (position) => centerMethod(-.5, .5, position);
+	//     this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
+	//     this.frontRight = (position) => centerMethod(-.5, -.5, position);
+	//
+	//     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	//     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
+	//
+	//     this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
+	//   }
+	// }
+	//
+	// new Square2d();
+	//
+	// module.exports = Square2d;
 	
 });
 
@@ -6164,133 +7092,6 @@ const Circle2d = require('circle');
 });
 
 
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/corner.js',
-function (require, exports, module) {
-	//
-	// const Vertex2d = require('vertex');
-	//
-	// class Corner {
-	//   constructor(center, height, width, radians) {
-	//     width = width === undefined ? 121.92 : width;
-	//     height = height === undefined ? 60.96 : height;
-	//     radians = radians === undefined ? 0 : radians;
-	//     const instance = this;
-	//     Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
-	//     if ((typeof center) === 'function') this.center = center;
-	//     const startPoint = new Vertex2d(null);
-	//
-	//     const getterHeight = this.height;
-	//     this.height = (v) => {
-	//       notify(getterHeight(), v);
-	//       return getterHeight(v);
-	//     }
-	//     const getterWidth = this.width;
-	//     this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
-	//
-	//     const changeFuncs = [];
-	//     this.onChange = (func) => {
-	//       if ((typeof func) === 'function') {
-	//         changeFuncs.push(func);
-	//       }
-	//     }
-	//
-	//     let lastNotificationId = 0;
-	//     function notify(currentValue, newValue) {
-	//       if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
-	//       if (newValue !== currentValue) {
-	//         const id = ++lastNotificationId;
-	//         setTimeout(() => {
-	//           if (id === lastNotificationId)
-	//             for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
-	//         }, 100);
-	//       }
-	//     }
-	//
-	//     this.radians = (newValue) => {
-	//       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	//         notify(radians, newValue);
-	//         radians = newValue;
-	//       }
-	//       return radians;
-	//     };
-	//     this.startPoint = () => {
-	//       startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
-	//       return startPoint;
-	//     }
-	//     this.angle = (value) => {
-	//       if (value !== undefined) this.radians(Math.toRadians(value));
-	//       return Math.toDegrees(this.radians());
-	//     }
-	//
-	//     // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
-	//     // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
-	//     this.x = (val) => {
-	//       if (val !== undefined) this.center().x(val);
-	//       return this.center().x();
-	//     }
-	//     this.y = (val) => {
-	//       if (val !== undefined) this.center().y(val);
-	//       return this.center().y();
-	//     }
-	//     this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	//     this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	//
-	//     this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	//     this.move = (position, theta) => {
-	//       const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	//       if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	//       if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	//       if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	//       if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	//       this.radians(position.theta);
-	//       this.center().point(center);
-	//       return true;
-	//     };
-	//
-	//     function centerMethod(widthMultiplier, heightMultiplier, position) {
-	//       const center = instance.center();
-	//       const rads = instance.radians();
-	//       const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
-	//                         instance.height() * heightMultiplier * Math.sin(rads);
-	//       const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
-	//                         instance.width() * widthMultiplier * Math.sin(rads);
-	//
-	//       if (position !== undefined) {
-	//         const posCenter = new Vertex2d(position.center);
-	//         return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
-	//       }
-	//       const backLeftLocation = {
-	//             x: instance.center().x() - offsetX ,
-	//             y: instance.center().y() - offsetY
-	//       };
-	//       return new Vertex2d(backLeftLocation);
-	//     }
-	//
-	//
-	//     this.frontCenter = (position) => centerMethod(0, -.5, position);
-	//     this.backCenter = (position) => centerMethod(0, .5, position);
-	//     this.leftCenter = (position) => centerMethod(.5, 0, position);
-	//     this.rightCenter = (position) => centerMethod(-.5, 0, position);
-	//
-	//     this.backLeft = (position) => centerMethod(.5, .5, position);
-	//     this.backRight = (position) => centerMethod(-.5, .5, position);
-	//     this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
-	//     this.frontRight = (position) => centerMethod(-.5, -.5, position);
-	//
-	//     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	//     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	//
-	//     this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
-	//   }
-	// }
-	//
-	// new Square2d();
-	//
-	// module.exports = Square2d;
-	
-});
-
-
 RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/line.js',
 function (require, exports, module) {
 	
@@ -6320,6 +7121,30 @@ const Vertex2d = require('./vertex');
 	        endVertex = newVertex;
 	      }
 	      return endVertex;
+	    }
+	
+	    this.mirrorPoints = (points) => {
+	      for (let index = 0; index < points.length; index++) {
+	        const point = points[index];
+	        const perpLine = this.perpendicular(1000, point);
+	        const closestPoint = this.closestPointOnLine(perpLine.endVertex());
+	        const intersectLine = new Line2d(point, closestPoint);
+	        const dist = intersectLine.length() * 2;
+	        const rads = intersectLine.radians();
+	        const mirrored = Line2d.startAndTheta(point, rads, dist).endVertex();
+	        point.point(mirrored.point());
+	      }
+	    }
+	
+	    this.mirrorX = (points) => {
+	      const endVertex = this.startVertex().translate(0, 10, true);
+	      const mirror = new Line2d(this.startVertex(), endVertex);
+	      mirror.mirrorPoints([this.startVertex(), this.endVertex()]);
+	    }
+	    this.mirrorY = (points) => {
+	      const endVertex = this.startVertex().translate(10, 0, true);
+	      const mirror = new Line2d(this.startVertex(), endVertex);
+	      mirror.mirrorPoints([this.startVertex(), this.endVertex()]);
 	    }
 	
 	    this.rise = () => endVertex.y() - startVertex.y();
@@ -6352,20 +7177,32 @@ const Vertex2d = require('./vertex');
 	    }
 	
 	    this.withinSegmentBounds = (pointOline) => {
+	      let isWithin = false;
+	      let path = -1;
 	      if (pointOline instanceof Line2d) {
 	        const l = pointOline
 	        const slopeEqual = withinTol(this.slope(), l.slope());
 	        const c = l.midpoint();
 	        const xBounded = c.x() < this.maxX() + tol && c.x() > this.minX() - tol;
 	        const yBounded = c.y() < this.maxY() + tol && c.y() > this.minY() - tol;
-	        if (slopeEqual && xBounded && yBounded) return true;
-	        return this.withinSegmentBounds(l.startVertex()) || this.withinSegmentBounds(l.endVertex()) ||
+	        if (slopeEqual && xBounded && yBounded) {
+	          isWithin = true;
+	          path = 0
+	        } else {
+	          path = 1;
+	          isWithin = this.withinSegmentBounds(l.startVertex()) || this.withinSegmentBounds(l.endVertex()) ||
 	                l.withinSegmentBounds(this.startVertex()) || l.withinSegmentBounds(this.endVertex());
+	        }
 	      } else {
+	        path = 2;
 	        let point = new Vertex2d(pointOline);
-	        return this.minX() - tol < point.x() && this.minY() - tol < point.y() &&
+	        isWithin = this.minX() - tol < point.x() && this.minY() - tol < point.y() &&
 	          this.maxX() + tol > point.x() && this.maxY() + tol > point.y();
 	      }
+	      if (isWithin) {
+	        console.log.subtle(500, 'is it within?');
+	      }
+	      return isWithin;
 	    }
 	
 	
@@ -6437,6 +7274,25 @@ const Vertex2d = require('./vertex');
 	      return new Vertex2d({x,y});
 	    }
 	
+	    this.bisector = (other, dist) => {
+	      const intersection = this.findIntersection(other);
+	      if (!intersection) return null;
+	      const negAcquiesed = other.acquiescent(this).negitive();
+	      const radians = (this.radians() + negAcquiesed.radians()) / 2;
+	      const bisector = Line2d.startAndTheta(intersection, radians, dist);
+	      const bev = bisector.endVertex();
+	      const startDist = this.startVertex().distance(intersection);
+	      const endDist = this.endVertex().distance(intersection);
+	      const furthestVertId = startDist > endDist ? 'startVertex' : 'endVertex';
+	
+	      const negBisector = Line2d.startAndTheta(intersection, radians + Math.PI, dist);
+	      const dist1 = bisector.endVertex().distance(this[furthestVertId]()) +
+	                    bisector.endVertex().distance(negAcquiesed[furthestVertId]());
+	      const dist2 = negBisector.endVertex().distance(this[furthestVertId]()) +
+	                    negBisector.endVertex().distance(negAcquiesed[furthestVertId]());
+	      return dist1 < dist2 ? bisector : negBisector;
+	    }
+	
 	    this.closestEnds = (other) => {
 	      const tsv = this.startVertex();
 	      const osv = other.startVertex();
@@ -6479,7 +7335,7 @@ const Vertex2d = require('./vertex');
 	    this.yIntercept = () => getB(this.startVertex().x(), this.startVertex().y(), this.slope());
 	    this.slope = () => getSlope(this.startVertex(), this.endVertex());
 	    this.y = (x) => {
-	      x ||= this.startVertex().x();
+	      if (x === undefined) x = this.startVertex().x();
 	      const slope = this.slope();
 	      if (slope === Infinity) return Infinity;
 	      if (slope === 0) return this.startVertex().y();
@@ -6487,7 +7343,7 @@ const Vertex2d = require('./vertex');
 	    }
 	
 	    this.x = (y) => {
-	      y ||= this.startVertex().y();
+	      if (y === undefined) y = this.startVertex().y();
 	      const slope = this.slope();
 	      if (slope === Infinity) return this.startVertex().x();
 	      if (slope === 0) {
@@ -6729,6 +7585,7 @@ const Vertex2d = require('./vertex');
 	      const deltaY = this.endVertex().y() - this.startVertex().y();
 	      return Math.atan2(deltaY, deltaX);
 	    }
+	    this.degrees = () => Math.toDegrees(this.radians());
 	
 	    // Positive returns right side.
 	    this.parrelle = (distance, midpoint, length) => {
@@ -6790,8 +7647,8 @@ const Vertex2d = require('./vertex');
 	      if (clean) return clean;
 	      if (!withinTol(this.slope(), other.slope())) return;
 	      const otherNeg = other.negitive();
-	      const outputWithinTol = withinTol(this.y(other.x()), other.y()) &&
-	                    withinTol(this.x(other.y()), other.x());
+	      const outputWithinTol = withinTol(this.y(other.x()), other.y(other.x())) &&
+	                    withinTol(this.x(other.y()), other.x(other.y()));
 	      if (!outputWithinTol) return;
 	      const v1 = this.startVertex();
 	      const v2 = this.endVertex();
@@ -6971,6 +7828,7 @@ const Vertex2d = require('./vertex');
 	}
 	
 	Line2d.consolidate = (...lines) => {
+	  // TODO: this should be absSlope...
 	  const tolMap = new ToleranceMap({'slope': tol});
 	  const lineMap = {};
 	  for (let index = 0; index < lines.length; index += 1) {
@@ -6990,28 +7848,33 @@ const Vertex2d = require('./vertex');
 	    const mapId = tolMap.tolerance().boundries(line);
 	    if (!combinedKeys[mapId]) {
 	      combinedKeys[mapId] = true;
+	      let lastIndex;
 	      for (let tIndex = 0; tIndex < matches.length; tIndex += 1) {
 	        let target = matches[tIndex];
+	        let found = false;
 	        for (let mIndex = tIndex + 1; mIndex < matches.length; mIndex += 1) {
-	          if (mIndex !== tIndex) {
-	            const combined = target.combine(matches[mIndex]);
-	            if (combined) {
-	              const lowIndex = mIndex < tIndex ? mIndex : tIndex;
-	              const highIndex = mIndex > tIndex ? mIndex : tIndex;
-	              if (lowIndex == highIndex)
-	                console.log('STF');
-	              matches.splice(highIndex, 1);
-	              matches[lowIndex] = combined;
-	              tIndex--;
-	              break;
-	            }
+	          const combined = target.combine(matches[mIndex]);
+	          if (combined) {
+	            found = true;;
+	            const m = matches[mIndex];
+	            matches.splice(mIndex, 1);
+	            matches[tIndex] = combined;
+	            target = combined;
+	            mIndex = tIndex;
 	          }
 	        }
+	        if (found) tIndex--;
 	      }
 	      minList = minList.concat(matches);
 	    }
 	  }
 	
+	  const strMap = {};
+	  minList = minList.filter((l) => {
+	    const str = l.toString();
+	    if (strMap[str]) return false;
+	    return strMap[str] = true;
+	  });
 	  return minList;
 	}
 	
@@ -7095,6 +7958,15 @@ const Vertex2d = require('./vertex');
 	  lines.forEach((l,i) => {
 	    color = colors[i%colors.length] || '';
 	    str += `${color}[${l.startVertex().toString()},${l.endVertex().toString()}],`;
+	  });
+	  return str.substr(0, str.length - 1);
+	}
+	
+	Line2d.toApproxDrawString = (lines, ...colors) => {
+	  let str = '';
+	  lines.forEach((l,i) => {
+	    color = colors[i%colors.length] || '';
+	    str += `${color}[${l.startVertex().approxToString()},${l.endVertex().approxToString()}],`;
 	  });
 	  return str.substr(0, str.length - 1);
 	}
@@ -7202,230 +8074,409 @@ class Plane2d {
 });
 
 
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/vertex.js',
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/three-view.js',
 function (require, exports, module) {
 	
-const approximate10 = require('../../../approximate.js').new(10);
-	const ToleranceMap = require('../../../tolerance-map.js');
-	const Tolerance = require('../../../tolerance.js');
-	const tol = .001;
-	const within = Tolerance.within(tol);
+const Polygon3D = require('../../../../../../services/cabinet/app-src/three-d/objects/polygon.js');
+	const Vector3D = require('../../../../../../services/cabinet/app-src/three-d/objects/vector.js');
+	const EscapeMap = require('../maps/escape.js');
+	const Polygon2d = require('../objects/polygon');
+	const Line2d = require('../objects/line');
+	const Vertex2d = require('../objects/vertex');
 	
+	const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
 	
-	class Vertex2d {
-	  constructor(point) {
-	    if (arguments.length === 2) point = {x:arguments[0], y: arguments[1]};
-	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
-	    if (point instanceof Vertex2d) return point;
-	    let modificationFunction;
-	    let id = String.random();
-	    this.id = () => id;
-	    point = point || {x:0,y:0};
-	    Object.getSet(this, {point});
-	    this.layer = point.layer;
+	class ThreeView {
+	  constructor(polygons, normals, gap) {
+	    normals ||= defaultNormals;
+	    gap ||= 10;
+	
+	    this.normals = {};
+	    this.normals.front = () => normals.front;
+	    this.normals.right = () => normals.right;
+	    this.normals.top = () => normals.top;
+	
+	    const frontView = Polygon3D.viewFromVector(polygons, normals.front);
+	    const rightView = Polygon3D.viewFromVector(polygons, normals.right);
+	    const topview = Polygon3D.viewFromVector(polygons, normals.top);
+	
+	    const axis = {};
+	    axis.front = Polygon3D.mostInformation(frontView);
+	    axis.right = Polygon3D.mostInformation(rightView);
+	    axis.top = Polygon3D.mostInformation(topview);
+	
+	    // Orient properly
+	    if (axis.front.indexOf('y') === 0) axis.front.reverse();
+	    if (axis.top.indexOf(axis.front[0]) !== 0) axis.top.reverse();
+	    if (axis.right.indexOf(axis.front[1]) !== 1) axis.right.reverse();
+	
+	    const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
+	    const front2D = frontView.map(to2D(axis.front));
+	    const right2D = rightView.map(to2D(axis.right));
+	    const top2D = topview.map(to2D(axis.top));
+	
+	    console.log(Line2d.toDrawString(Polygon2d.lines(top2D)))
+	
+	    Polygon2d.centerOn({x:0,y:0}, front2D);
+	
+	    const frontMinMax = Polygon2d.minMax(...front2D);
+	    const rightMinMax = Polygon2d.minMax(...right2D);
+	    const topMinMax = Polygon2d.minMax(...top2D);
+	    const rightCenterOffset = frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2;
+	    const topCenterOffset = frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2;
+	
+	    Polygon2d.centerOn({x:rightCenterOffset, y:0}, right2D);
+	    Polygon2d.centerOn({x:0,y:topCenterOffset}, top2D);
+	
+	    const front = Polygon2d.lines(front2D);
+	    const right = Polygon2d.lines(right2D);
+	    const top = Polygon2d.lines(top2D);
+	    // Line2d.mirror(top);
+	    Vertex2d.scale(1, -1, Line2d.vertices(top));
+	
+	    let parimeter;
+	    this.parimeter = () => {
+	      if (!parimeter) {
+	        parimeter = {};
+	        parimeter.front = EscapeMap.parimeter(this.front());
+	        parimeter.right = EscapeMap.parimeter(this.right());
+	        parimeter.top = EscapeMap.parimeter(this.top());
+	        parimeter.front.ensureClockWise();
+	        parimeter.right.ensureClockWise();
+	        parimeter.top.ensureClockWise();
+	
+	      }
+	      return {
+	        front: () => parimeter.front.copy(),
+	        right: () => parimeter.right.copy(),
+	        top: () => parimeter.top.copy(),
+	        allLines: () => parimeter.front.lines().concat(parimeter.right.lines().concat(parimeter.top.lines()))
+	      };
+	    }
+	
+	    this.axis = () => axis;
+	    this.front = () => front;
+	    this.right = () => right;
+	    this.top = () => top;
+	    this.toDrawString = () => {
+	      let str = '';
+	      str += '//Front\n' + Line2d.toDrawString(front);
+	      str += '\n//Right\n' + Line2d.toDrawString(right);
+	      str += '\n//Top\n' + Line2d.toDrawString(top);
+	      return str;
+	    }
+	  }
+	}
+	
+	module.exports = ThreeView;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/square.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('vertex');
+	
+	class Square2d {
+	  constructor(center, height, width, radians) {
+	    width = width === undefined ? 121.92 : width;
+	    height = height === undefined ? 60.96 : height;
+	    radians = radians === undefined ? 0 : radians;
+	    const id = String.random();
 	    const instance = this;
-	    this.move = (center) => {
-	      this.point(center);
+	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
+	    if ((typeof center) === 'function') this.center = center;
+	    const startPoint = new Vertex2d(null);
+	
+	
+	    this.radians = (newValue) => {
+	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        radians = newValue;
+	      }
+	      return radians;
+	    };
+	    this.startPoint = () => {
+	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+	      return startPoint;
+	    }
+	    this.angle = (value) => {
+	      if (value !== undefined) this.radians(Math.toRadians(value));
+	      return Math.toDegrees(this.radians());
+	    }
+	
+	    this.x = (val) => {
+	      if (val !== undefined) this.center().x(val);
+	      return this.center().x();
+	    }
+	    this.y = (val) => {
+	      if (val !== undefined) this.center().y(val);
+	      return this.center().y();
+	    }
+	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+	
+	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	    this.move = (position) => {
+	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	      this.radians(position.theta);
+	      this.center().point(center);
 	      return true;
 	    };
 	
-	    this.translate = (xOffset, yOffset, doNotModify) => {
-	      const vertex = doNotModify ? this.copy() : this;
-	      vertex.point().x += xOffset;
-	      vertex.point().y += yOffset;
-	      return vertex;
-	    }
+	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
 	
-	    this.rotate = (radians, pivot, doNotModify) => {
-	      const vertex = doNotModify ? this.copy() : this;
-	      const point = vertex.point();
-	      pivot ||= new Vertex2d(0,0);
-	      const s = Math.sin(radians);
-	      const c = Math.cos(radians);
-	      point.x -= pivot.x();
-	      point.y -= pivot.y();
-	      const newX = point.x * c - point.y * s;
-	      const newY = point.x * s + point.y * c;
-	      point.x = newX + pivot.x();
-	      point.y = newY + pivot.y();
-	      return vertex;
-	    }
-	    this.point = (newPoint) => {
-	      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
-	      if (newPoint) this.x(newPoint.x);
-	      if (newPoint) this.y(newPoint.y);
-	      return point;
-	    }
+	    this.toString = () => `Square2d(${id}): ${this.width()} X ${this.height()}] @ ${this.center()}`
+	  }
+	}
 	
-	    this.modificationFunction = (func) => {
-	      if ((typeof func) === 'function') {
-	        if ((typeof this.id) !== 'function') Lookup.convert(this);
-	        modificationFunction = func;
+	new Square2d();
+	
+	module.exports = Square2d;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/snap-location.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('vertex');
+	const Line2d = require('line');
+	const Circle2d = require('circle');
+	const HoverObject2d = require('../hover-map').HoverObject2d;
+	
+	class SnapLocation2d {
+	  constructor(parent, location, centerFunction) {
+	    Object.getSet(this, {location});
+	    let pairedWith = null;
+	    let courting;
+	    const instance = this;
+	
+	    this.center = () => centerFunction();
+	
+	    // If position is defined and a Vertex2d:
+	    //        returns the position of parents center iff this location was at position
+	    // else
+	    //        returns current postion based off of the parents current center
+	
+	    this.at = (position) => {
+	      return centerFunction(position);
+	    }
+	    this.centerFunction = (lf) => {
+	      if ((typeof lf) === 'function') centerFunction = lf;
+	      return lf;
+	    }
+	    this.circle = (radius) => new Circle2d(radius || 2, centerFunction());
+	    this.eval = () => this.parent().position[location]();
+	    this.parent = () => parent;
+	    this.pairedWith = () => pairedWith;
+	    this.disconnect = () => {
+	      if (pairedWith === null) return false;
+	      const wasPaired = pairedWith;
+	      pairedWith = null;
+	      if (wasPaired instanceof SnapLocation2d) wasPaired.disconnect();
+	      instance.parent().clearIdentifiedConstraints();
+	      return true;
+	    }
+	    this.pairWith = (otherSnapLoc) => {
+	      otherSnapLoc ||= courting;
+	      const alreadyPaired = otherSnapLoc === pairedWith;
+	      if (!alreadyPaired && otherSnapLoc) {
+	        pairedWith = otherSnapLoc;
+	        courting = null;
+	        if (otherSnapLoc instanceof SnapLocation2d) otherSnapLoc.pairWith(this);
 	      }
-	      return modificationFunction;
 	    }
 	
-	    this.equals = (other, tol) => {
-	      if (!(other instanceof Vertex2d)) return false;
-	      const wi = tol ? Tolerance.within(tol) : within;
-	      return wi(other.x(), this.x()) && wi(other.y(), this.y());
-	    }
-	    this.x = (val) => {
-	      if ((typeof val) === 'number') point.x = val;
-	      return this.point().x;
-	    }
-	    this.y = (val) => {
-	      if ((typeof val) === 'number') this.point().y = val;
-	      return this.point().y;
-	    }
+	    // TODO: location should be immutible and so should these;
+	    this.isRight = this.location().indexOf('right') === 0;
+	    this.isLeft = this.location().indexOf('left') === 0;
+	    this.isBack = this.location().indexOf('back') === 0;
+	    this.isCenter = this.location().match(/center$/) !== null;
 	
-	    const dummyFunc = () => true;
-	    this.forEach = (func, backward) => {
-	      let currVert = this;
-	      let lastVert;
-	      do {
-	        lastVert = currVert;
-	        func(currVert);
-	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
-	      } while (currVert && currVert !== this);
-	      return currVert || lastVert;
-	    }
-	
-	    this.distance = (vertex) => {
-	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
-	      const xDiff = vertex.x() - this.x();
-	      const yDiff = vertex.y() - this.y();
-	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
-	    }
-	
-	    this.toString = () => `(${this.x()}, ${this.y()})`;
-	    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
-	    const parentToJson = this.toJson;
-	
-	    this.offset = (x, y) => {
-	      if (x instanceof Vertex2d) {
-	        y = x.y();
-	        x = x.x();
+	    this.courting = (otherSnapLoc) => {
+	      if (courting === otherSnapLoc) return courting;
+	      if (!pairedWith) {
+	        if (otherSnapLoc) {
+	          courting = otherSnapLoc;
+	          if (otherSnapLoc instanceof SnapLocation2d)
+	            otherSnapLoc.courting(this);
+	        } else if (otherSnapLoc === null && courting) {
+	          const tempLocation = courting;
+	          courting = null;
+	          if (tempLocation instanceof SnapLocation2d)
+	            tempLocation.courting(null);
+	        }
+	      } else if (otherSnapLoc) {
+	        throw new Error('You cannot court a location when alreadyPaired');
 	      }
-	      const copy = this.toJson().point;
-	      if (y !== undefined) copy.y += y;
-	      if (x !== undefined) copy.x += x;
-	      return new Vertex2d(copy);
+	      return courting;
 	    }
 	
-	    this.copy = () => new Vertex2d([this.x(), this.y()]);
+	    this.neighbors = (...indicies) => {
+	      const vertexNeighbors = parent.object().neighbors(this.center(), ...indicies);
+	      return vertexNeighbors.map((vert) => parent.snapLocations.at(vert));
+	    }
 	
-	    this.differance = (x, y) => {
-	      if (x instanceof Vertex2d) {
-	        y = x.y();
-	        x = x.x();
+	    this.neighbor = (index) => this.neighbors(index)[0];
+	
+	    this.slope = (offsetIndex) => {
+	      const neighbor = parent.object().neighbors(this.center(), offsetIndex)[0];
+	      const nCenter = neighbor.point();
+	      const center = this.center().point();
+	      if (offsetIndex < 0)
+	        return Line2d.getSlope(nCenter.x, nCenter.y, center.x, center.y);
+	      return Line2d.getSlope(center.x, center.y, nCenter.x, nCenter.y);
+	    }
+	
+	    this.forwardSlope = () => this.slope(1);
+	    this.reverseSlope =  () => this.slope(-1);
+	    this.forwardRadians = () => Math.atan(this.slope(1));
+	    this.reverseRadians = () => Math.atan(this.slope(-1));
+	
+	
+	    this.snapToLocation = (otherSnapLoc) => {
+	      const center = otherSnapLoc.center();
+	      const otherRads = otherSnapLoc.forwardRadians();
+	      const rads = instance.forwardRadians();
+	      const changeInTheta = otherRads - rads;
+	      const position1 = {center: center, theta: changeInTheta};
+	      const position2 = {center: center, theta: changeInTheta - Math.PI};
+	      const newPosition1 = instance.parent().position[location](position1);
+	      const newPosition2 = instance.parent().position[location](position2);
+	      const otherObjectCenter = otherSnapLoc.parent().object().center()
+	      const dist1 = newPosition1.distance(otherObjectCenter);
+	      const dist2 = newPosition2.distance(otherObjectCenter);
+	      const objTheta = instance.parent().radians();
+	      const theta = objTheta - changeInTheta;
+	      if (dist1 > dist2) {
+	        instance.parent().makeMove({center: newPosition1, theta});
+	      } else {
+	        instance.parent().makeMove({center: newPosition2, theta: theta - Math.PI});
 	      }
-	      return new Vertex2d({x: this.x() - x, y: this.y() - y});
 	    }
 	
-	    this.point(point);
-	  }
-	}
-	
-	Vertex2d.fromJson = (json) => {
-	  return new Vertex2d(json.point);
-	}
-	
-	Vertex2d.minMax = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
-	  const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
-	  for (let index = 0; index < vertices.length; index += 1) {
-	    const vert = vertices[index];
-	    if (max.x() < vert.x()) max.x(vert.x());
-	    if (max.y() < vert.y()) max.y(vert.y());
-	    if (min.x() > vert.x()) min.x(vert.x());
-	    if (min.y() > vert.y()) min.y(vert.y());
-	  }
-	  return {min, max, diff: new Vertex2d(max.x() - min.x(), max.y() - min.y())};
-	}
-	
-	Vertex2d.center = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  const minMax = Vertex2d.minMax(...vertices);
-	  const centerX = minMax.min.x() + (minMax.max.x() - minMax.min.x())/2;
-	  const centerY = minMax.min.y() + (minMax.max.y() - minMax.min.y())/2;
-	  return new Vertex2d(centerX, centerY);
-	}
-	
-	Vertex2d.weightedCenter = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  let x = 0;
-	  let y = 0;
-	  let count = 0;
-	  vertices.forEach((vertex) => {
-	    if (Number.isFinite(vertex.x() + vertex.y())) {
-	      count++;
-	      x += vertex.x();
-	      y += vertex.y();
+	    function snapToObject(vertex) {
+	      const otherSnapLoc = parent.otherHoveringSnap(vertex);
+	      if (!otherSnapLoc) return false;
+	      instance.courting(otherSnapLoc);
+	      instance.snapToLocation(otherSnapLoc);
+	      return true;
 	    }
-	  });
-	  return new Vertex2d({x: x/count, y: y/count});
-	}
 	
-	// Vertex2d.center = Vertex2d.weightedCenter;
+	    this.move = (vertex, moveId) => {
+	      if (parent.connected()) return parent.moveConnected(this.at({center: vertex}));
+	      const shouldNotSnap = (typeof moveId) === 'number' || moveId === null;
+	      vertex = new Vertex2d(vertex);
+	      if (shouldNotSnap || !snapToObject(vertex)) {
+	        const thisNewCenterLoc = this.parent().position[location]({center: vertex});
+	        this.parent().makeMove({center: thisNewCenterLoc});
+	      }
+	    }
 	
-	Vertex2d.sort = (a, b) =>
-	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
+	    this.rotateAround = (theta) => {
+	      const startPosition = {center: this.center()};
+	      this.parent().moveConnected(null, theta);
+	      const newCenter = this.at(startPosition);
+	      this.parent().moveConnected(newCenter);
+	    }
 	
-	const ignoreVerySmall = (v) => Math.abs(v) < .000001 ? 0 : v;
-	Vertex2d.sortByMax = (verts) => {
-	  let max;
-	  const center = Vertex2d.center(verts);
-	  for (let index = 0; index < verts.length; index++) {
-	    let v = verts[index];
-	    let curr = {v, distance: v.distance(center)};
-	    if (max === undefined || max.distance < curr.distance) {
-	      max = curr;
+	    this.setRadians = (radians) => {
+	      const startPosition = {center: this.center()};
+	      const theta = radians - parent.radians();
+	      this.parent().moveConnected(null, theta);
+	      const newCenter = this.at(startPosition);
+	      this.parent().moveConnected(newCenter);
+	    }
+	
+	    this.notPaired = () => pairedWith === null;
+	
+	    this.hovering = new HoverObject2d(() => this.center(), 12).hovering;
+	
+	    this.instString = () => `${parent.id()}:${location}`;
+	    this.toString = () => pairedWith  instanceof SnapLocation2d ?
+	                  `${this.instString()}=>${pairedWith && pairedWith.instString()}` :
+	                  `${this.instString()}=>${pairedWith}`;
+	    this.toJson = () => {
+	      const pw = pairedWith;
+	      if (pw === undefined) return;
+	      const json = [{
+	        location, objectId: parent.parent().id()
+	      }];
+	      json[1] = pw instanceof SnapLocation2d ?
+	                  {location: pw.location(), objectId: pw.parent().parent().id()} :
+	                  pw.constructor.name;
+	      const thisStr = this.toString();
+	      const pairStr = pw.toString();
+	      json.view = parent.view();
+	      json.UNIQUE_ID = thisStr < pairStr ? thisStr : pairStr;;
+	      return json;
 	    }
 	  }
-	  return verts.sort((v1, v2) => {
-	    const d1 = v1.distance(max.v);
-	    const d2 = v2.distance(max.v);
-	    return d2 - d1;
-	  });
 	}
 	
-	Vertex2d.centerOn = (newCenter, vertices) => {
-	  newCenter = new Vertex2d(newCenter);
-	  const center = Vertex2d.center(...vertices);
-	  const diff = newCenter.copy().differance(center);
-	  for (let index = 0; index < vertices.length; index++) {
-	    const vert = vertices[index];
-	    vert.translate(diff.x(), diff.y());
+	SnapLocation2d.fromJson = (json) => {
+	  console.log('jsoned it up!')
+	}
+	
+	let activeLocations = [];
+	SnapLocation2d.active = (locs) => {
+	  if (Array.isArray(locs)) activeLocations = activeLocations.concat(locs);
+	  return activeLocations;
+	}
+	SnapLocation2d.clear = () => activeLocations = [];
+	
+	function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
+	  return (position) => {
+	    const xDiff = xDiffFunc();
+	    const yDiff = yDiffFunc();
+	    const vertex = snapLoc.center();
+	    if (xDiff === 0 && yDiff === 0) {
+	      if (position) return snapLoc.parent().parent().center().clone();
+	      vertex.point(snapLoc.parent().parent().center().clone());
+	      return snapLoc;
+	    }
+	    const center = snapLoc.parent().parent().center();
+	    const direction = xDiff >= 0 ? 1 : -1;
+	    const hypeLen = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+	    let rads = Math.atan(yDiff/xDiff);
+	    if (position) {
+	      rads += position.theta === undefined ? snapLoc.parent().radians() : position.theta;
+	      const newPoint = position.center;
+	      return new Vertex2d({
+	        x: newPoint.x() - direction * (hypeLen * Math.cos(rads)),
+	        y: newPoint.y() - direction * (hypeLen * Math.sin(rads))
+	      });
+	    } else {
+	      rads += snapLoc.parent().radians();
+	      vertex.point({
+	        x: center.x() + direction * (hypeLen * Math.cos(rads)),
+	        y: center.y() + direction * (hypeLen * Math.sin(rads))
+	      });
+	      return snapLoc;
+	    }
 	  }
 	}
+	SnapLocation2d.fromToPoint = fromToPoint;
 	
-	Vertex2d.scale = (scaleX, scaleY, vertices) => {
-	  const center = Vertex2d.center(vertices);
-	  Vertex2d.centerOn(new Vertex2d(0,0), vertices);
-	  for (let index = 0; index < vertices.length; index++) {
-	    const vert = vertices[index];
-	    vert.x(vert.x() * 1);
-	    vert.y(vert.y() * -1);
+	const f = (snapLoc, attr, attrM, props) => () => {
+	  let val = snapLoc.parent()[attr]() * attrM;
+	  let keys = Object.keys(props || {});
+	  for (let index = 0; index < keys.length; index += 1) {
+	    const key = keys[index];
+	    val += snapLoc.parent()[key]() * props[key];
 	  }
-	  Vertex2d.centerOn(center, vertices);
-	}
+	  return val;
+	};
 	
-	Vertex2d.toleranceMap = (tolerance, vertices) => {
-	  tolerance ||= tol;
-	  vertices = [];
-	  const map = new ToleranceMap({x: tolerance, y: tolerance});
-	  for (let index = 0; index < vertices.length; index++) {
-	    map.add(vertices[index]);
-	  }
-	  return map;
-	}
+	SnapLocation2d.locationFunction = f;
 	
-	Vertex2d.reusable = true;
-	new Vertex2d();
-	
-	module.exports = Vertex2d;
+	module.exports = SnapLocation2d;
 	
 });
 
@@ -7436,7 +8487,7 @@ function (require, exports, module) {
 const Vertex2d = require('vertex');
 	const Line2d = require('line');
 	const SnapLocation2d = require('snap-location');
-	const HoverMap2d = require('../hover-map');
+	const HoverObject2d = require('../hover-map').HoverObject2d;
 	const Tolerance = require('../../../tolerance.js');
 	const Lookup = require('../../../object/lookup.js');
 	const withinTol = Tolerance.within(.1);
@@ -7457,7 +8508,7 @@ const Vertex2d = require('vertex');
 	    this.dr = () => 24 * 2.54;
 	    this.dol = () => 12;
 	    this.dor = () => 12;
-	    this.toString = () => `SNAP ${this.id()}(${tolerance}):${object}`
+	    this.toString = () => `SNAP ${this.id()}(${tolerance}):${this.object()}`
 	    this.position = {};
 	    this.id = () => id;
 	    this.parent = () => parent;
@@ -7473,13 +8524,16 @@ const Vertex2d = require('vertex');
 	      if (newValue !== undefined ) {
 	        const constraint = this.constraint();
 	        if (constraint === 'fixed') return;
-	        const radians = parent.radians(newValue);
+	        const radians = parent.radians();
 	        const snapAnchor = constraint.snapLoc;
 	        const originalPosition = snapAnchor && snapAnchor.center();
 	        const radianDifference = newValue - radians;
+	        if (newValue !== parent.radians())
+	          console.log('rads', Math.toRadians(newValue), '=>', parent.radians())
 	        this.parent().rotate(radianDifference);
 	        // notify(radians, newValue);
 	        if (snapAnchor) this.parent.center(snapAnchor.at({center: originalPosition}));
+	
 	      }
 	      return parent.radians();
 	    };
@@ -7653,16 +8707,18 @@ const Vertex2d = require('vertex');
 	    }
 	
 	    this.maxRadius = () => {
-	      const center = this.center();
-	      let maxDist = 0;
-	      for (let index = 0; index < snapLocations.length; index++) {
-	        const loc = snapLocations[index].center();
-	        const currDist = center.distance(loc);
-	        if (currDist > maxDist) {
-	          maxDist = currDist;
-	        }
-	      }
-	      return maxDist;
+	      return Math.sqrt(this.width() * this.width() + this.height()*this.height());
+	      // This is more accurate but expensive.
+	      // const center = this.center();
+	      // let maxDist = 0;
+	      // for (let index = 0; index < snapLocations.length; index++) {
+	      //   const loc = snapLocations[index].center();
+	      //   const currDist = center.distance(loc);
+	      //   if (currDist > maxDist) {
+	      //     maxDist = currDist;
+	      //   }
+	      // }
+	      // return maxDist;
 	    }
 	
 	    this.minRadius = () => {
@@ -7678,8 +8734,8 @@ const Vertex2d = require('vertex');
 	      return minDist;
 	    }
 	
-	    const hoveringNear = new HoverMap2d(this.object().center, () => this.maxRadius() + 10).hovering;
-	    const hoveringObject = new HoverMap2d(this.object().center, () => this.minRadius() * 1.3).hovering;
+	    const hoveringNear = new HoverObject2d(this.object().center, () => this.maxRadius() + 10).hovering;
+	    const hoveringObject = new HoverObject2d(this.object().center, () => this.minRadius() * 1.3).hovering;
 	    this.hovering = (vertex) => {
 	      const isNear = hoveringNear(vertex);
 	      if (!isNear) return;
@@ -7740,7 +8796,8 @@ const Vertex2d = require('vertex');
 	          if (moveIsWithin) {
 	            const dist = centerVertex.distance(currentCenter);
 	            if (best === undefined || best.dist > dist) {
-	              best = {center: centerVertex, theta, wall, pairWith: snapLoc};
+	              const absTheta = parent.radians() - theta;
+	              best = {center: centerVertex, theta: absTheta, wall, pairWith: snapLoc};
 	            }
 	          }
 	        }
@@ -7817,17 +8874,21 @@ const Vertex2d = require('vertex');
 	      for (let index = 0; index < snapList.length; index++) {
 	        const snapLoc = snapList[index];
 	        if (snapLoc.parent() !== otherParent) {
-	          const targetMidpoint = snapList[index];
-	          const tm = targetMidpoint;
-	          const radDiff = otherMidpoint.forwardRadians() - targetMidpoint.forwardRadians();
-	          const parrelle = findClosestNeighbor(om, radDiff, tm, ol, c);
-	          const antiParrelle = findClosestNeighbor(om, radDiff - Math.PI, tm, ol, c);
-	          const furthestCenter =
-	          parrelle.centerDist > antiParrelle.centerDist ? parrelle : antiParrelle;
-	          furthestCenter.otherLoc = otherLoc;
-	          if (furthestCenter.radians === 0) return furthestCenter;
-	          if (!closest || closest.dist < furthestCenter.dist) {
-	            closest = furthestCenter;
+	          try {
+	            const targetMidpoint = snapList[index];
+	            const tm = targetMidpoint;
+	            const radDiff = otherMidpoint.forwardRadians() - targetMidpoint.forwardRadians();
+	            const parrelle = findClosestNeighbor(om, radDiff, tm, ol, c);
+	            const antiParrelle = findClosestNeighbor(om, radDiff - Math.PI, tm, ol, c);
+	            const furthestCenter =
+	            parrelle.centerDist > antiParrelle.centerDist ? parrelle : antiParrelle;
+	            furthestCenter.otherLoc = otherLoc;
+	            if (furthestCenter.radians === 0) return furthestCenter;
+	            if (!closest || closest.dist < furthestCenter.dist) {
+	              closest = furthestCenter;
+	            }
+	          } catch (e) {
+	            console.warn('dont know if/how this needs fixed');
 	          }
 	        }
 	      }
@@ -7857,17 +8918,19 @@ const Vertex2d = require('vertex');
 	    const distanceFunc = (center) => (snapLoc) => snapLoc.center().distance(center);// +
 	//          (lastClosestSnapLocation === snapLoc ? -10 : 0);
 	    function findClosestSnapLoc (center) {
-	      const objects = parent.layout().objects();
+	      const objects = parent.layout().activeObjects();
 	      const instObj = instance.object();
 	      const instCenter = instObj.center();
 	      let closest = null;
 	      for (let index = 0; index < objects.length; index++) {
 	        const object = objects[index];
-	        if (object !== parent) {
+	        // TODO: these should be the same object but they are not.... its convoluted.
+	        if (object.id() !== parent.id()) {
 	          const otherSnap = object.snap2d.top();
 	          const combinedRadius = otherSnap.maxRadius() + instance.maxRadius();
 	          const center2centerDist = otherSnap.object().center().distance(instCenter);
 	          if (center2centerDist - 1 < combinedRadius) {
+	            console.log('hit!');
 	            const snapLocs = otherSnap.snapLocations();
 	            closest = snapLocs.min(closest, distanceFunc(center));
 	          }
@@ -7886,7 +8949,9 @@ const Vertex2d = require('vertex');
 	    }
 	
 	    function findObjectSnapLocation(center) {
+	      const start = new Date().getTime();
 	      const closestOtherLoc = findClosestSnapLoc(center);
+	      console.log('took:', new Date().getTime() - start);
 	      if (closestOtherLoc === null) return;
 	      let snapList, midpointOffset;
 	      if (closestOtherLoc.isLeft) {
@@ -7949,17 +9014,25 @@ const Vertex2d = require('vertex');
 	      const pairedSnapLocs = this.snapLocations.paired();
 	      const centerWithin = layout.within(center);
 	      let closest = {};
+	      const runData = {start: new Date().getTime()};
 	      const wallSnapLocation = findWallSnapLocation(center);
+	      runData.wall = new Date().getTime();
 	      if (wallSnapLocation !== undefined) {
 	        this.makeMove(wallSnapLocation);
 	        wallSnapLocation.pairWith.courting(wallSnapLocation.wall);
-	        this.moveConnected(null, wallSnapLocation.theta);
+	        this.moveConnected(null, wallSnapLocation.theta, true);
 	      } else if (centerWithin) {
 	        if (this.connected()) {
 	          this.moveConnected(center);
 	        } else {
 	          this.makeMove({center});
+	          runData.move = new Date().getTime();
 	          findObjectSnapLocation(center);
+	          runData.object = new Date().getTime();
+	          console.log(`wall: ${runData.wall - runData.start}
+	move: ${runData.move - runData.wall}
+	objec: ${runData.object - runData.move}
+	total: ${runData.object - runData.start}`);
 	        }
 	      }
 	    }
@@ -8021,481 +9094,571 @@ const Vertex2d = require('vertex');
 });
 
 
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/three-view.js',
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/polygon.js',
 function (require, exports, module) {
+	const Vertex2d = require('./vertex');
+	const Line2d = require('./line');
 	
-const Polygon3D = require('../../../../../../services/cabinet/app-src/three-d/objects/polygon.js');
-	const Vector3D = require('../../../../../../services/cabinet/app-src/three-d/objects/vector.js');
-	const EscapeMap = require('../maps/escape.js');
-	const Polygon2d = require('../objects/polygon');
-	const Line2d = require('../objects/line');
-	const Vertex2d = require('../objects/vertex');
+	class Polygon2d {
+	  constructor(initialVertices) {
+	    let lines = [];
+	    const instance = this;
+	    let faceIndecies = [2];
+	    let map
 	
-	const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
-	
-	class ThreeView {
-	  constructor(polygons, normals, gap) {
-	    normals ||= defaultNormals;
-	    gap ||= 10;
-	    const frontView = Polygon3D.viewFromVector(polygons, normals.front);
-	    const rightView = Polygon3D.viewFromVector(polygons, normals.right);
-	    const topview = Polygon3D.viewFromVector(polygons, normals.top);
-	
-	    const axis = {};
-	    axis.front = Polygon3D.mostInformation(frontView);
-	    axis.right = Polygon3D.mostInformation(rightView);
-	    axis.top = Polygon3D.mostInformation(topview);
-	
-	    // Orient properly
-	    if (axis.front.indexOf('y') === 0) axis.front.reverse();
-	    if (axis.top.indexOf(axis.front[0]) !== 0) axis.top.reverse();
-	    if (axis.right.indexOf(axis.front[1]) !== 1) axis.right.reverse();
-	
-	    const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
-	    const front2D = frontView.map(to2D(axis.front));
-	    const right2D = rightView.map(to2D(axis.right));
-	    const top2D = topview.map(to2D(axis.top));
-	
-	    Polygon2d.centerOn({x:0,y:0}, front2D);
-	
-	    const frontMinMax = Polygon2d.minMax(...front2D);
-	    const rightMinMax = Polygon2d.minMax(...right2D);
-	    const topMinMax = Polygon2d.minMax(...top2D);
-	    const rightCenterOffset = frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2;
-	    const topCenterOffset = frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2;
-	
-	    Polygon2d.centerOn({x:rightCenterOffset, y:0}, right2D);
-	    Polygon2d.centerOn({x:0,y:topCenterOffset}, top2D);
-	
-	    const front = Polygon2d.lines(front2D);
-	    const right = Polygon2d.lines(right2D);
-	    const top = Polygon2d.lines(top2D);
-	    // Line2d.mirror(top);
-	    Vertex2d.scale(1, -1, Line2d.vertices(top));
-	
-	    let parimeter;
-	    this.parimeter = () => {
-	      if (!parimeter) {
-	        parimeter = {};
-	        parimeter.front = EscapeMap.parimeter(this.front());
-	        parimeter.right = EscapeMap.parimeter(this.right());
-	        parimeter.top = EscapeMap.parimeter(this.top());
+	    this.vertices = (target, before, after) => {
+	      if (lines.length === 0) return [];
+	      const fullList = [];
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        fullList.push(line.startVertex());
 	      }
-	      return {
-	        front: () => parimeter.front.copy(),
-	        right: () => parimeter.right.copy(),
-	        top: () => parimeter.top.copy(),
-	        allLines: () => parimeter.front.lines().concat(parimeter.right.lines().concat(parimeter.top.lines()))
-	      };
+	      if (target) {
+	        const vertices = [];
+	        const index = fullList.indexOf(target);
+	        if (index === undefined) return null;
+	        vertices = [];
+	        for (let i = before; i < before + after + 1; i += 1) vertices.push(fullList[i]);
+	        return vertices;
+	      } else return fullList;
 	    }
 	
-	    this.axis = () => axis;
-	    this.front = () => front;
-	    this.right = () => right;
-	    this.top = () => top;
+	    this.reverse = () => {
+	      const verts = instance.vertices();
+	      for (let index = lines.length - 1; index > -1; index--) {
+	        const line = lines[index];
+	        const startVert = index === lines.length - 1 ? verts[0] : verts[index + 1];
+	        const endVert = verts[index];
+	        line.startVertex(startVert);
+	        line.endVertex(endVert);
+	      }
+	      lines = lines.reverse();
+	      faceIndecies.forEach((index, i) => {
+	          faceIndecies[i] = lines.length - index - 1;
+	      });
+	    }
+	
+	    this.mirrorX = () => {
+	      const start = this.center().copy();
+	      const end = start.translate(0, 10, true);
+	      const mirror = new Line2d(start, end);
+	      mirror.mirrorX(this.vertices());
+	    }
+	    this.mirrorY = () => {
+	      const start = this.center().copy();
+	      const end = start.translate(10, 0, true);
+	      const mirror = new Line2d(start, end);
+	      const verts = this.vertices();
+	      mirror.mirrorPoints(verts);
+	    }
+	
+	    this.verticesAndMidpoints = (target, before, after) => {
+	      const verts = this.vertices();
+	      const both = [];
+	      for (let index = 0; index < verts.length; index++) {
+	        const sv = verts[index];
+	        const ev = verts[index + 1 === verts.length ? 0 : index + 1];
+	        both.push(sv);
+	        both.push(Vertex2d.center(sv, ev));
+	      }
+	      return both;
+	    }
+	
+	    function addNieghborsOfVertexWithinLine(vertex, indicies) {
+	      const list = [];
+	      for (let index = 0; index < indicies.length; index++) {
+	        const i = indicies[index];
+	        let found = false;
+	        for (let index = 0; !found && index < lines.length; index++) {
+	          const line = lines[index];
+	          if (line.withinSegmentBounds(vertex)) {
+	            found = true;
+	            if (i > 0) {
+	              list.push(instance.neighbors(line.endVertex(), i - 1)[0]);
+	            } else if (i < 0) {
+	              list.push(instance.neighbors(line.startVertex(), i + 1)[0]);
+	            } else {
+	              list.push(vertex);
+	            }
+	          }
+	        }
+	        if (!found) list.push(null);
+	      }
+	      return list;
+	    }
+	
+	    this.neighbors = (vertex,...indicies) => {
+	      const verts = this.verticesAndMidpoints();
+	      const targetIndex = verts.equalIndexOf(vertex);
+	      if (targetIndex !== -1) {
+	        const list = [];
+	        for (let index = 0; index < indicies.length; index++) {
+	          const i = indicies[index];
+	          const offsetIndex = Math.mod(targetIndex + i, verts.length);
+	          list.push(verts[offsetIndex]);
+	        }
+	        return list;
+	      }
+	      return addNieghborsOfVertexWithinLine(vertex, indicies);
+	    }
+	
+	    // TODO: this function is rotating should use degrees not theta.
+	    function positionRelitiveToVertex(vertex, moveTo, externalVertex) {
+	      const center = instance.center();
+	      if (moveTo.theta) {
+	        if (externalVertex) {
+	          vertex.rotate(moveTo.theta, center);
+	          throw new Error('is this used?');
+	        }
+	        const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
+	        const rotatedCenter = rotatedPoly.center();
+	        const offset = rotatedCenter.differance(vertex);
+	        return moveTo.center.translate(offset.x(), offset.y(), true);
+	      }
+	      const offset = center.differance(vertex);
+	      return moveTo.center.translate(offset.x(), offset.y(), true);
+	    }
+	
+	    function vertexFunction(midpoint) {
+	      const getVertex = midpoint ? (line) => line.midpoint() : (line) => line.startVertex().copy();
+	      return (index, moveTo) => {
+	        const vertex = getVertex(lines[Math.mod(index, lines.length)]);
+	        if (moveTo === undefined) return vertex;
+	        return positionRelitiveToVertex(vertex, moveTo);
+	      }
+	    }
+	
+	    this.relativeToExternalVertex = (vertex, moveTo) => positionRelitiveToVertex(vertex, moveTo, true);
+	    this.vertex = vertexFunction();
+	    this.midpoint = vertexFunction(true);
+	    this.point = (index, moveTo) => {
+	      if (index % 2 === 0) return this.vertex(index/2, moveTo);
+	      else return this.midpoint((index - 1)/2, moveTo);
+	    }
+	
+	    this.midpoints = () => {
+	      const list = [];
+	      for (let index = 0; index < lines.length; index++) {
+	        list.push(this.midpoint(index));
+	      }
+	      return list;
+	    }
+	
+	    this.radians = (rads) => {
+	      const currRads = new Line2d(this.center(), this.faces()[0].midpoint()).radians();
+	      if (Number.isFinite(rads)) {
+	        const radOffset = rads - currRads;
+	        this.rotate(radOffset);
+	        return rads;
+	      }
+	      return currRads;
+	    }
+	    this.angle = (angle) => Math.toDegrees(this.radians(Math.toRadians(angle)));
+	
+	    this.faceIndecies = (indicies) => {
+	      if (indicies) {
+	        if (indicies.length > 1) console.warn.subtle(500, 'vertex sorting has not been tested for multple faces');
+	        faceIndecies = [0];
+	        const i = indicies[0];
+	        lines = lines.slice(i).concat(lines.slice(0, i));
+	        for (let index = 1; index < lines.length; index++) {
+	          const ind = Math.mod(indicies[index] - i, lines.length);
+	          if (!Number.isNaN(ind)) faceIndecies.push(ind);
+	        }
+	      }
+	      return faceIndecies;
+	    }
+	    this.faces = () => this.lines().filter((l, i) => faceIndecies.indexOf(i) !== -1);
+	    this.normals = () => {
+	      let normals = [];
+	      let center = this.center();
+	      for (let index = 0; index < faceIndecies.length; index++) {
+	        const line = lines[faceIndecies[index]];
+	        if (line)
+	          normals.push(new Line2d(center.copy(), line.midpoint()));
+	      }
+	      return normals;
+	    }
+	
+	    this.lines = () => lines;
+	    this.startLine = () => lines[0];
+	    this.endLine = () => lines[lines.length - 1];
+	    this.valid = () => lines.length > 2;
+	
+	    this.lineMap = (force) => {
+	      if (!force && map !== undefined) return map;
+	      if (lines.length === 0) return {};
+	      map = {};
+	      let lastEnd;
+	      if (!lines[0].startVertex().equals(lines[lines.length - 1].endVertex())) throw new Error('Broken Polygon');
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        if (lastEnd && !line.startVertex().equals(lastEnd)) throw new Error('Broken Polygon');
+	        lastEnd = line.endVertex();
+	        map[line.toString()] = line;
+	      }
+	      return map;
+	    }
+	
+	    this.equals = (other) => {
+	      if (!(other instanceof Polygon2d)) return false;
+	      const verts = this.vertices();
+	      const otherVerts = other.vertices();
+	      if (verts.length !== otherVerts.length) return false;
+	      let otherIndex = undefined;
+	      let direction;
+	      for (let index = 0; index < verts.length * 2; index += 1) {
+	        const vIndex = index % verts.length;
+	        if (otherIndex === undefined) {
+	          if (index > verts.length) {
+	            return false
+	          } if(verts[index].equals(otherVerts[0])) {
+	            otherIndex = otherVerts.length * 2;
+	          }
+	        } else if (otherIndex === otherVerts.length * 2) {
+	          if (verts[vIndex].equals(otherVerts[1])) direction = 1;
+	          else if(verts[vIndex].equals(otherVerts[otherVerts.length - 1])) direction = -1;
+	          else return false;
+	          otherIndex += direction * 2;
+	        } else if (!verts[vIndex].equals(otherVerts[otherIndex % otherVerts.length])) {
+	          return false;
+	        } else {
+	          otherIndex += direction;
+	        }
+	      }
+	      return true;
+	    }
+	
+	    function getLine(line) {
+	      const lineMap = this.lineMap();
+	      return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
+	    }
+	
 	    this.toDrawString = () => {
-	      let str = '';
-	      str += '//Front\n' + Line2d.toDrawString(front);
-	      str += '\n//Right\n' + Line2d.toDrawString(right);
-	      str += '\n//Top\n' + Line2d.toDrawString(top);
-	      return str;
-	    }
-	  }
-	}
-	
-	module.exports = ThreeView;
-	
-});
-
-
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/snap-location.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('vertex');
-	const Line2d = require('line');
-	const Circle2d = require('circle');
-	const HoverMap2d = require('../hover-map')
-	
-	class SnapLocation2d {
-	  constructor(parent, location, centerFunction) {
-	    Object.getSet(this, {location});
-	    let pairedWith = null;
-	    let courting;
-	    const instance = this;
-	
-	    this.center = () => centerFunction();
-	
-	    // If position is defined and a Vertex2d:
-	    //        returns the position of parents center iff this location was at position
-	    // else
-	    //        returns current postion based off of the parents current center
-	
-	    this.at = (position) => {
-	      return centerFunction(position);
-	    }
-	    this.centerFunction = (lf) => {
-	      if ((typeof lf) === 'function') centerFunction = lf;
-	      return lf;
-	    }
-	    this.circle = (radius) => new Circle2d(radius || 2, centerFunction());
-	    this.eval = () => this.parent().position[location]();
-	    this.parent = () => parent;
-	    this.pairedWith = () => pairedWith;
-	    this.disconnect = () => {
-	      if (pairedWith === null) return false;
-	      const wasPaired = pairedWith;
-	      pairedWith = null;
-	      if (wasPaired instanceof SnapLocation2d) wasPaired.disconnect();
-	      instance.parent().clearIdentifiedConstraints();
-	      return true;
-	    }
-	    this.pairWith = (otherSnapLoc) => {
-	      otherSnapLoc ||= courting;
-	      const alreadyPaired = otherSnapLoc === pairedWith;
-	      if (!alreadyPaired && otherSnapLoc) {
-	        pairedWith = otherSnapLoc;
-	        courting = null;
-	        if (otherSnapLoc instanceof SnapLocation2d) otherSnapLoc.pairWith(this);
-	      }
+	      return Line2d.toDrawString(instance.lines()) + '\n' + Line2d.toDrawString(instance.normals(), 'red');
 	    }
 	
-	    // TODO: location should be immutible and so should these;
-	    this.isRight = this.location().indexOf('right') === 0;
-	    this.isLeft = this.location().indexOf('left') === 0;
-	    this.isBack = this.location().indexOf('back') === 0;
-	    this.isCenter = this.location().match(/center$/) !== null;
-	
-	    this.courting = (otherSnapLoc) => {
-	      if (courting === otherSnapLoc) return courting;
-	      if (!pairedWith) {
-	        if (otherSnapLoc) {
-	          courting = otherSnapLoc;
-	          if (otherSnapLoc instanceof SnapLocation2d)
-	            otherSnapLoc.courting(this);
-	        } else if (otherSnapLoc === null && courting) {
-	          const tempLocation = courting;
-	          courting = null;
-	          if (tempLocation instanceof SnapLocation2d)
-	            tempLocation.courting(null);
+	    this.getLines = (startVertex, endVertex, reverse) => {
+	      const inc = reverse ? -1 : 1;
+	      const subSection = [];
+	      let completed = false;
+	      const doubleLen = lines.length * 2;
+	      for (let steps = 0; steps < doubleLen; steps += 1) {
+	        const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
+	        const curr = lines[index];
+	        if (subSection.length === 0) {
+	          if (startVertex.equals(!reverse ? curr.startVertex() : curr.endVertex())) {
+	            subSection.push(!reverse ? curr : curr.negitive());
+	            if (endVertex.equals(reverse ? curr.startVertex() : curr.endVertex())) {
+	              completed = true;
+	              break;
+	            }
+	          }
+	        } else {
+	          subSection.push(!reverse ? curr : curr.negitive());
+	          if (endVertex.equals(reverse ? curr.startVertex() : curr.endVertex())) {
+	            completed = true;
+	            break;
+	          }
 	        }
-	      } else if (otherSnapLoc) {
-	        throw new Error('You cannot court a location when alreadyPaired');
 	      }
-	      return courting;
+	      if (completed) return subSection;
 	    }
 	
-	    this.neighbors = (...indicies) => {
-	      const vertexNeighbors = parent.object().neighbors(this.center(), ...indicies);
-	      return vertexNeighbors.map((vert) => parent.snapLocations.at(vert));
-	    }
-	
-	    this.neighbor = (index) => this.neighbors(index)[0];
-	
-	    this.slope = (offsetIndex) => {
-	      const neighbor = parent.object().neighbors(this.center(), offsetIndex)[0];
-	      const nCenter = neighbor.point();
-	      const center = this.center().point();
-	      if (offsetIndex < 0)
-	        return Line2d.getSlope(nCenter.x, nCenter.y, center.x, center.y);
-	      return Line2d.getSlope(center.x, center.y, nCenter.x, nCenter.y);
-	    }
-	
-	    this.forwardSlope = () => this.slope(1);
-	    this.reverseSlope =  () => this.slope(-1);
-	    this.forwardRadians = () => Math.atan(this.slope(1));
-	    this.reverseRadians = () => Math.atan(this.slope(-1));
-	
-	
-	    this.snapToLocation = (otherSnapLoc) => {
-	      const center = otherSnapLoc.center();
-	      const otherRads = otherSnapLoc.forwardRadians();
-	      const rads = instance.forwardRadians();
-	      const changeInTheta = otherRads - rads;
-	      const position1 = {center: center, theta: changeInTheta};
-	      const position2 = {center: center, theta: changeInTheta - Math.PI};
-	      const newPosition1 = instance.parent().position[location](position1);
-	      const newPosition2 = instance.parent().position[location](position2);
-	      const otherObjectCenter = otherSnapLoc.parent().object().center()
-	      const dist1 = newPosition1.distance(otherObjectCenter);
-	      const dist2 = newPosition2.distance(otherObjectCenter);
-	      const objTheta = instance.parent().radians();
-	      const theta = objTheta - changeInTheta;
-	      if (dist1 > dist2) {
-	        instance.parent().makeMove({center: newPosition1, theta});
-	      } else {
-	        instance.parent().makeMove({center: newPosition2, theta: theta - Math.PI});
+	    this.translate = (xDiff, yDiff) => {
+	      for (let index = 0; index < lines.length; index++) {
+	        lines[index].startVertex().translate(xDiff, yDiff);
 	      }
 	    }
 	
-	    function snapToObject(vertex) {
-	      const otherSnapLoc = parent.otherHoveringSnap(vertex);
-	      if (!otherSnapLoc) return false;
-	      instance.courting(otherSnapLoc);
-	      instance.snapToLocation(otherSnapLoc);
-	      return true;
+	    this.center = (center) => {
+	      const curr = Vertex2d.center(...this.vertices());
+	      if (center !== undefined) {
+	        const diff = center.differance(curr);
+	        this.translate(diff.x(), diff.y());
+	      }
+	      return Vertex2d.center(...this.vertices());
 	    }
 	
-	    this.move = (vertex, moveId) => {
-	      if (parent.connected()) return parent.moveConnected(this.at({center: vertex}));
-	      const shouldNotSnap = (typeof moveId) === 'number' || moveId === null;
-	      vertex = new Vertex2d(vertex);
-	      if (shouldNotSnap || !snapToObject(vertex)) {
-	        const thisNewCenterLoc = this.parent().position[location]({center: vertex});
-	        this.parent().makeMove({center: thisNewCenterLoc});
+	    this.rotate = (theta, pivot, doNotModify) => {
+	      pivot ||= this.center();
+	      const poly = doNotModify ? this.copy() : this;
+	      if (doNotModify) return this.copy().rotate(theta, pivot);
+	      for (let index = 0; index < lines.length; index++) {
+	        lines[index].startVertex().rotate(theta, pivot);
+	      }
+	      return this;
+	    }
+	
+	    this.centerOn = (newCenter) => {
+	      if (newCenter) {
+	        newCenter = new Vertex2d(newCenter);
+	        const center = this.center();
+	        const diff = newCenter.copy().differance(center);
+	        this.translate(diff.x(), diff.y());
 	      }
 	    }
 	
-	    this.rotateAround = (theta) => {
-	      const startPosition = {center: this.center()};
-	      this.parent().moveConnected(null, theta);
-	      const newCenter = this.at(startPosition);
-	      this.parent().moveConnected(newCenter);
-	    }
-	
-	    this.setRadians = (radians) => {
-	      const startPosition = {center: this.center()};
-	      const theta = radians - parent.radians();
-	      this.parent().moveConnected(null, theta);
-	      const newCenter = this.at(startPosition);
-	      this.parent().moveConnected(newCenter);
-	    }
-	
-	    this.notPaired = () => pairedWith === null;
-	
-	    this.hovering = new HoverMap2d(() => this.center(), 12).hovering;
-	
-	    this.instString = () => `${parent.id()}:${location}`;
-	    this.toString = () => pairedWith  instanceof SnapLocation2d ?
-	                  `${this.instString()}=>${pairedWith && pairedWith.instString()}` :
-	                  `${this.instString()}=>${pairedWith}`;
-	    this.toJson = () => {
-	      const pw = pairedWith;
-	      if (pw === undefined) return;
-	      const json = [{
-	        location, objectId: parent.parent().id()
-	      }];
-	      json[1] = pw instanceof SnapLocation2d ?
-	                  {location: pw.location(), objectId: pw.parent().parent().id()} :
-	                  pw.constructor.name;
-	      const thisStr = this.toString();
-	      const pairStr = pw.toString();
-	      json.view = parent.view();
-	      json.UNIQUE_ID = thisStr < pairStr ? thisStr : pairStr;;
-	      return json;
-	    }
-	  }
-	}
-	
-	SnapLocation2d.fromJson = (json) => {
-	  console.log('jsoned it up!')
-	}
-	
-	let activeLocations = [];
-	SnapLocation2d.active = (locs) => {
-	  if (Array.isArray(locs)) activeLocations = activeLocations.concat(locs);
-	  return activeLocations;
-	}
-	SnapLocation2d.clear = () => activeLocations = [];
-	
-	function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
-	  return (position) => {
-	    const xDiff = xDiffFunc();
-	    const yDiff = yDiffFunc();
-	    const vertex = snapLoc.center();
-	    if (xDiff === 0 && yDiff === 0) {
-	      if (position) return snapLoc.parent().parent().center().clone();
-	      vertex.point(snapLoc.parent().parent().center().clone());
-	      return snapLoc;
-	    }
-	    const center = snapLoc.parent().parent().center();
-	    const direction = xDiff >= 0 ? 1 : -1;
-	    const hypeLen = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
-	    let rads = Math.atan(yDiff/xDiff);
-	    if (position) {
-	      rads += position.theta === undefined ? snapLoc.parent().radians() : position.theta;
-	      const newPoint = position.center;
-	      return new Vertex2d({
-	        x: newPoint.x() - direction * (hypeLen * Math.cos(rads)),
-	        y: newPoint.y() - direction * (hypeLen * Math.sin(rads))
-	      });
-	    } else {
-	      rads += snapLoc.parent().radians();
-	      vertex.point({
-	        x: center.x() + direction * (hypeLen * Math.cos(rads)),
-	        y: center.y() + direction * (hypeLen * Math.sin(rads))
-	      });
-	      return snapLoc;
-	    }
-	  }
-	}
-	SnapLocation2d.fromToPoint = fromToPoint;
-	
-	const f = (snapLoc, attr, attrM, props) => () => {
-	  let val = snapLoc.parent()[attr]() * attrM;
-	  let keys = Object.keys(props || {});
-	  for (let index = 0; index < keys.length; index += 1) {
-	    const key = keys[index];
-	    val += snapLoc.parent()[key]() * props[key];
-	  }
-	  return val;
-	};
-	
-	SnapLocation2d.locationFunction = f;
-	
-	module.exports = SnapLocation2d;
-	
-});
-
-
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/square.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('vertex');
-	
-	class Square2d {
-	  constructor(center, height, width, radians) {
-	    width = width === undefined ? 121.92 : width;
-	    height = height === undefined ? 60.96 : height;
-	    radians = radians === undefined ? 0 : radians;
-	    const id = String.random();
-	    const instance = this;
-	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
-	    if ((typeof center) === 'function') this.center = center;
-	    const startPoint = new Vertex2d(null);
-	
-	
-	    this.radians = (newValue) => {
-	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	        radians = newValue;
+	    this.addVertices = (list) => {
+	      if (list === undefined) return;
+	      const verts = [];
+	      const endLine = this.endLine();
+	      for (let index = 0; index < list.length + 1; index += 1) {
+	        if (index < list.length) verts[index] = new Vertex2d(list[index]);
+	        if (index > 0) {
+	          const startVertex = verts[index - 1];
+	          const endVertex = verts[index] || this.startLine().startVertex();
+	          const line = new Line2d(startVertex, endVertex);
+	          lines.push(line);
+	        }
 	      }
-	      return radians;
-	    };
-	    this.startPoint = () => {
-	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
-	      return startPoint;
-	    }
-	    this.angle = (value) => {
-	      if (value !== undefined) this.radians(Math.toRadians(value));
-	      return Math.toDegrees(this.radians());
-	    }
-	
-	    this.x = (val) => {
-	      if (val !== undefined) this.center().x(val);
-	      return this.center().x();
-	    }
-	    this.y = (val) => {
-	      if (val !== undefined) this.center().y(val);
-	      return this.center().y();
-	    }
-	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	
-	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	    this.move = (position, theta) => {
-	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	      this.radians(position.theta);
-	      this.center().point(center);
-	      return true;
-	    };
-	
-	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	
-	    this.toString = () => `Square2d(${id}): ${this.width()} X ${this.height()}] @ ${this.center()}`
-	  }
-	}
-	
-	new Square2d();
-	
-	module.exports = Square2d;
-	
-});
-
-
-RequireJS.addFunction('./public/js/utils/canvas/two-d/maps/star-line-map.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('../objects/vertex');
-	const Line2d = require('../objects/line');
-	const ExtremeSector = require('./star-sectors/extreme');
-	
-	
-	
-	class StarLineMap {
-	  constructor(type, sectorCount, center) {
-	    type = type.toLowerCase();
-	    let sectors;
-	    let compiled;
-	    const lines = [];
-	    const instance = this;
-	    sectorCount ||= 1000;
-	
-	    this.center = () => center ||= Vertex2d.center(...Line2d.vertices(lines));
-	
-	    function getSector(t) {
-	      const args = Array.from(arguments).slice(1);
-	      t ||= type;
-	      switch (t) {
-	        case 'extreme':
-	          return new ExtremeSector(...args);
-	        default:
-	          throw new Error(`Unknown sector type '${t}'`);
+	      if (verts.length > 0 && lines.length > 0) {
+	        if (endLine) endline.endVertex(verts[0]);
 	      }
+	      // this.removeLoops();
+	      this.lineMap(true);
 	    }
 	
-	    function buildSectors(type, center, count) {
-	      count ||= sectorCount;
-	      sectors = [];
-	      center ||= instance.center();
-	      const thetaDiff = 2*Math.PI / count;
-	      for (let index = 0; index < count; index++) {
-	        const sector = getSector(type, center, thetaDiff * (index));
-	        sectors.push(sector);
-	        for (let sIndex = 0; sIndex < lines.length; sIndex++) {
-	          sector.add(lines[sIndex]);
+	    this.addBest = (lineList) => {
+	      if (lineList.length > 100) throw new Error('This algorythum is slow: you should either find a way to speed it up or use a different method');
+	      const lastLine = lines[lines.length - 2];
+	      const endVert = lastLine.endVertex();
+	      lineList.sort(Line2d.distanceSort(endVert));
+	      const nextLine = lineList[0].acquiescent(lastLine);
+	      const connectLine = new Line2d(endVert, nextLine.startVertex());
+	      endVert.translate(connectLine.run()/2, connectLine.rise()/2);
+	      lines.splice(lines.length - 1, 1);
+	      const newLastLine = new Line2d(endVert, nextLine.endVertex());
+	      const newConnectLine = new Line2d(nextLine.endVertex(), lines[0].startVertex());
+	      lines.push(newLastLine);
+	      if (!newConnectLine.isPoint()) lines.push(newConnectLine);
+	      lineList.splice(0,1);
+	    }
+	
+	    this.path = (offset) => {
+	      offset ||= 0;
+	      let path = '';
+	      const verts = this.vertices();
+	      for (let index = 0; index < verts.length; index++) {
+	        const i = Math.mod(index + offset, verts.length);
+	        path += `${verts[i].toString()} => `
+	      }
+	      return path.substring(0, path.length - 4);
+	    }
+	
+	    this.toString = this.path;
+	    this.area = () => {
+	      let total = 0;
+	      let verts = this.vertices();
+	      for (var i = 0, l = verts.length; i < l; i++) {
+	        var addX = verts[i].x();
+	        var addY = verts[i == verts.length - 1 ? 0 : i + 1].y();
+	        var subX = verts[i == verts.length - 1 ? 0 : i + 1].x();
+	        var subY = verts[i].y();
+	
+	        total += (addX * addY * 0.5);
+	        total -= (subX * subY * 0.5);
+	      }
+	
+	      return Math.abs(total);
+	    }
+	
+	    this.clockWise = () => {
+	      let sum = 0;
+	      for (let index = 0; index < lines.length; index++) {
+	        const l = lines[index];
+	        sum += (l.endVertex().x() - l.startVertex().x()) * (l.endVertex().y() + l.startVertex().y());
+	      }
+	      return sum >= 0;
+	    }
+	
+	    function ensure(antiClockWise) {
+	      if (instance.clockWise() === !antiClockWise) return;
+	      instance.reverse();
+	    }
+	    this.ensureClockWise = () => ensure();
+	    this.ensureAntiClockWise = () => ensure(true);
+	
+	    this.removeLoops = () => {
+	      const map = {}
+	      for (let index = 0; index < lines.length; index += 1) {
+	        const line = lines[index];
+	        const key = line.toString();
+	        const negKey = line.toNegitiveString();
+	        if (map[key]) {
+	          lines.splice(map[key].index, index - map[key].index + 1);
+	        } else if (map[negKey]) {
+	          lines.splice(map[negKey].index, index - map[negKey].index + 1);
+	        } else {
+	          map[key] = {line, index};
 	        }
 	      }
 	    }
 	
-	    this.isSupported = (obj) => obj instanceof Line2d;
-	
-	    this.add = (obj) => {
-	      if (!this.isSupported(obj)) throw new Error(`obj of type ${obj.constructor.name} is not supported`);
-	      lines.push(obj);
+	    this.copy = () => {
+	      const copy = new Polygon2d(this.vertices().map((v) => v.copy()));
+	      copy.faceIndecies(this.faceIndecies());
+	      return copy;
 	    }
 	
-	    this.addAll = (lines) => {
-	      for(let index = 0; index < lines.length; index++)this.add(lines[index]);
-	    }
-	
-	    this.filter = (type, center, count) => {
-	      buildSectors(type, center, count);
-	      const extremes = {};
-	      for (let index = 0; index < sectors.length; index++) {
-	        sectors[index].filter(extremes);
-	      }
-	      return Object.values(extremes);
-	    }
-	
-	    this.sectorLines = () => buildSectors() || sectors.map((s) => s.line());
-	    this.toDrawString = (sectorCount) => {
-	      buildSectors(null, sectorCount || 24);
-	      const center = this.center();
-	      let str = `//center ${center.approxToString()}`;
-	      str += '\n//lines\n' + Line2d.toDrawString(lines, 'black');
-	      str += '\n\n//Sectors\n';
-	      sectors.forEach(s => str += s.toDrawString(String.nextColor()));
-	      return str;
-	    }
+	    this.addVertices(initialVertices);
 	  }
 	}
 	
+	Polygon2d.centerOn = (newCenter, polys) => {
+	  newCenter = new Vertex2d(newCenter);
+	  const center = Polygon2d.center(...polys);
+	  const diff = newCenter.copy().differance(center);
+	  for (let index = 0; index < polys.length; index++) {
+	    const poly = polys[index];
+	    poly.translate(diff.x(), diff.y());
+	  }
+	}
 	
-	module.exports = StarLineMap;
+	Polygon2d.build = (lines) => {
+	  const start = lines[0].startVertex().copy();
+	  const end = lines[0].endVertex().copy();
+	  lines.splice(0, 1);
+	  const poly = new Polygon2d([start, end]);
+	  while (lines.length > 0) {
+	    poly.addBest(lines);
+	  }
+	  return poly;
+	}
+	
+	Polygon2d.fromLines = (lines) => {
+	  if (lines === undefined || lines.length === 0) return null;
+	  let lastLine = lines[0];
+	  const verts = [lastLine.startVertex()];
+	  for (let index = 1; index < lines.length; index++) {
+	    let line = lines[index].acquiescent(lastLine);
+	    if (!line.startVertex().equals(verts[verts.length - 1])) {
+	      verts.push(line.startVertex());
+	    }
+	    if (!line.endVertex().equals(verts[verts.length - 1])) {
+	      if (index !== lines.length - 1 || !line.endVertex().equals(verts[0]))
+	        verts.push(line.endVertex());
+	    }
+	    lastLine = line;
+	  }
+	  return new Polygon2d(verts);
+	}
+	
+	Polygon2d.minMax = (...polys) => {
+	  const centers = [];
+	  const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
+	  const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+	  for (let index = 0; index < polys.length; index += 1) {
+	    const verts = polys[index].vertices();
+	    for (let vIndex = 0; vIndex < verts.length; vIndex++) {
+	      const vert = verts[vIndex];
+	      if (max.x() < vert.x()) max.x(vert.x());
+	      if (max.y() < vert.y()) max.y(vert.y());
+	      if (min.x() > vert.x()) min.x(vert.x());
+	      if (min.y() > vert.y()) min.y(vert.y());
+	    }
+	  }
+	  return {min, max};
+	}
+	
+	Polygon2d.center = (...polys) => {
+	  const minMax = Polygon2d.minMax(...polys);
+	  return Vertex2d.center(minMax.min, minMax.max);
+	}
+	
+	Polygon2d.lines = (...polys) => {
+	  if (Array.isArray(polys[0])) polys = polys[0];
+	  let lines = [];
+	  for (let index = 0; index < polys.length; index += 1) {
+	    lines = lines.concat(polys[index].lines());
+	  }
+	  // return lines;
+	  const consolidated = Line2d.consolidate(...lines);
+	  if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
+	    console.error.subtle('Line Consolidation malfunction');
+	  }
+	  return consolidated;
+	}
+	
+	
+	
+	const vertRegStr = "\\(([0-9]*(\\.[0-9]*|))\\s*,\\s*([0-9]*(\\.[0-9]*|))\\)";
+	const vertReg = new RegExp(vertRegStr);
+	const vertRegG = new RegExp(vertRegStr, 'g');
+	
+	Polygon2d.fromString = (str) => {
+	  const vertStrs = str.match(vertRegG);
+	  const verts = vertStrs.map((str) => {
+	    const match = str.match(vertReg);
+	    return new Vertex2d(Number.parseFloat(match[1]), Number.parseFloat(match[3]));
+	  });
+	  return new Polygon2d(verts);
+	}
+	
+	const tol = .1;
+	Polygon2d.toParimeter = (lines, recurseObj) => {
+	  if (lines.length < 2) throw new Error('Not enough lines to create a parimeter');
+	  let lineMap, splitMap, parimeter;
+	  if (recurseObj) {
+	    lineMap = recurseObj.lineMap;
+	    splitMap = recurseObj.splitMap;
+	    parimeter = recurseObj.parimeter;
+	  } else {
+	    lineMap = Line2d.toleranceMap(tol, true, lines);
+	    const center = Vertex2d.center(Line2d.vertices(lines));
+	    const isolate = Line2d.isolateFurthestLine(center, lines);
+	    splitMap = Vertex2d.toleranceMap();
+	    // splitMap.add(isolate.line.startVertex());
+	    parimeter = [isolate.line];
+	  }
+	  parimeter.slice(1).forEach((l) => {
+	    if (splitMap.matches(l.startVertex()).length === 0)
+	      throw new Error('wtf');
+	  });
+	  if (parimeter.length > lines.length) return null;
+	  const sv = parimeter[0].startVertex();
+	  const ev = parimeter[parimeter.length - 1].endVertex();
+	  const alreadyVisitedStart = splitMap.matches(sv).length !== 0;
+	  const alreadyVisitedEnd = splitMap.matches(ev).length !== 0;
+	  if (alreadyVisitedEnd || alreadyVisitedStart) return null;
+	  const madeItAround = parimeter.length > 1 && sv.equals(ev);
+	  if (madeItAround) return Polygon2d.fromLines(parimeter);
+	
+	  const startLine = parimeter[0];
+	  const partialParimeters = []
+	  const lastLine = parimeter[parimeter.length - 1];
+	  let matches = lineMap.matches(lastLine.negitive());
+	  if (matches.length < 2) {
+	    if (parimeter.length === 1) {
+	      lines.remove(lastLine);
+	      return Polygon2d.toParimeter(lines);
+	    } else return null;
+	  }
+	    // throw new Error('A parimeter must exist between lines for function to work');
+	  for (let index = 0; index < matches.length; index++) {
+	    if (splitMap.matches(matches[index].endVertex()).length === 0) {
+	      const newParim = Array.from(parimeter).concat(matches[index]);
+	      const newSplitMap = splitMap.clone();
+	      newSplitMap.add(matches[index].startVertex());
+	      partialParimeters.push({parimeter: newParim, splitMap: newSplitMap, lineMap});
+	    }
+	  }
+	
+	  let biggest = null;
+	  for (let index = 0; index < partialParimeters.length; index ++) {
+	    const recObj = partialParimeters[index];
+	    const searchResult = Polygon2d.toParimeter(lines, recObj);
+	    if (biggest === null || (searchResult !== null && biggest.area() < searchResult.area()))
+	      biggest = searchResult;
+	  }
+	  if (recurseObj === undefined)
+	    biggest = biggest.clockWise() ? biggest : new Polygon2d(biggest.vertices().reverse());
+	  return biggest;
+	}
+	
+	
+	new Polygon2d();
+	module.exports = Polygon2d;
 	
 });
 
@@ -8607,18 +9770,39 @@ function (require, exports, module) {
 	    polygon.centerOn(parent.center());
 	    if (parent === undefined) return this;
 	    const instance = this;
-	    let longestFaceLine;
+	    let longestFaceIndex;
 	
 	    const setOpeningLine = (index) => {
 	      const line = polygon.lines()[index];
-	      if (longestFaceLine === undefined || longestFaceLine.length() < line.length()) {
-	        longestFaceLine = line;
+	      if (longestFaceIndex === undefined || instance.longestFaceLine().length() < line.length()) {
+	        longestFaceIndex = index;
 	      }
 	    }
 	
+	    this.longestFaceLine = () => {
+	      const rotated = this.object();
+	      const lines = rotated.lines();
+	      if (longestFaceIndex) return lines[index];
+	      const longest = lines[0];
+	      for (let index = 1; index < lines.length; index++) {
+	        const line = lines[index];
+	        if (longest.length < line) longest = line;
+	      }
+	      return longest;
+	    }
+	
+	    this.polygon = () => polygon;
+	
+	    this.object = () => {
+	      polygon.center(this.center());
+	      const thetaDiff = polygon.radians() - this.radians();
+	      const rotated = polygon.rotate(this.radians(), null, true);
+	      return rotated;
+	    }
+	
 	    const midpointMap = new ToleranceMap({x: .1, y:.1});
-	    const vertexFunc = (index) => (position) => polygon.vertex(index, position);
-	    const midpointFunc = (index) => (position) => polygon.midpoint(index, position);
+	    const vertexFunc = (index) => (position) => instance.object().vertex(index, position);
+	    const midpointFunc = (index) => (position) => instance.object().midpoint(index, position);
 	    function addLine(index, name, targetName) {
 	      const locFunc = vertexFunc(index + 1);
 	      const snapLoc = new SnapLocation2d(instance, name + locationCount++,  locFunc,  targetName);
@@ -8631,8 +9815,6 @@ function (require, exports, module) {
 	        instance.addLocation(snapLocMidpoint);
 	      }
 	
-	      // snapLoc.wallThetaOffset(0);
-	      // snapLoc.thetaOffset(null, null, 180);
 	      snapLoc.at();
 	    }
 	
@@ -8663,8 +9845,8 @@ function (require, exports, module) {
 	    }
 	
 	    function build() {
-	      const faces = polygon.faces();
-	      const lines = polygon.lines();
+	      const faces = instance.object().faces();
+	      const lines = instance.object().lines();
 	      let prevPrevIsFace = faces.equalIndexOf(lines[lines.length -2]) !== -1;
 	      let prevIsFace = faces.equalIndexOf(lines[lines.length - 1]) !== -1;
 	      for (let index = 0; index < lines.length; index++) {
@@ -8678,22 +9860,21 @@ function (require, exports, module) {
 	      addBacks();
 	    }
 	
-	    function textCenter () {
-	      const center = instance.object().center();
-	      // if (longestFaceLine)
-	      //   return new Line2d(longestFaceLine.midpoint(), center).midpoint();
-	      return center;
-	    }
-	
-	    polygon.getTextInfo = () => ({
-	      text: instance.parent().name(),
-	      center: textCenter(),
-	      radians: longestFaceLine ? longestFaceLine.radians() : 0,
-	      x: 0,
-	      y: instance.height() / 4,
-	      maxWidth: longestFaceLine ? longestFaceLine.length() : instance.width(),
-	      limit: 10
-	    });
+	    this.getTextInfo = () => {
+	      const lfl = this.longestFaceLine();
+	      const dist = instance.height() / 4;
+	      const radians = lfl.radians();
+	      const textLine = lfl.perpendicular(dist/2);
+	      return {
+	        text: instance.parent().name() || 'pooop',
+	        center: textLine.endVertex(),
+	        radians,
+	        x: 0,
+	        y: 0,
+	        size: instance.height() / 4,
+	        maxWidth: lfl ? lfl.length() : instance.width(),
+	        limit: 10
+	      }};
 	
 	    build();
 	  }

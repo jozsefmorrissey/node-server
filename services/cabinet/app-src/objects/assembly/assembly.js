@@ -8,6 +8,11 @@ const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
 
+function maxHeight(a, b, c) {
+  const minSide = a > b ? b : a;
+  return Math.sqrt(c*c - minSide*minSide);
+}
+
 class Assembly extends KeyValue {
   constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
     super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
@@ -66,7 +71,8 @@ class Assembly extends KeyValue {
       const returnVal = Assembly.resolveAttr(obj, attr);
       return returnVal;
     }
-    const sme = new StringMathEvaluator({Math}, getValueSmeFormatter);
+
+    const sme = new StringMathEvaluator({Math, maxHeight}, getValueSmeFormatter);
 
     // KeyValue setup
     const funcReg = /length|width|thickness/;
@@ -82,14 +88,13 @@ class Assembly extends KeyValue {
       return group;
     }
     this.layout = () => this.group().room().layout();
-    this.propertyConfig = (one, two) => {
+    this.propertyConfig = (one, two, three) => {
       const parent = this.parentAssembly();
-      if (parent instanceof Assembly) return parent.propertyConfig(one, two);
+      if (parent instanceof Assembly) return parent.propertyConfig(one, two, tree);
       const group = this.group();
-      if (group) {
-        if (one) return group.propertyConfig(one, two);
-        return group.propertyConfig;
-      }
+      const groupVal = group.resolve(one, two, three);
+      if (groupVal !== undefined) return groupVal;
+      return group.propertyConfig;
     }
 
     this.getAssembly = (partCode, callingAssem) => {
@@ -260,7 +265,14 @@ Assembly.resolveAttr = (assembly, attr) => {
     if (func === 'c' || func === 'center') return assembly.position().center(axis);
     if (func === 'd' || func === 'demension') return assembly.position().demension(axis);
   }
-  return assembly.value(attr);
+
+  let groupVal;
+  if (assembly.parentAssembly() === undefined) {
+    const group = assembly.group();
+    groupVal = group.resolve(assembly, attr);
+  }
+  const assemVal = assembly.value(attr);
+  return Number.isFinite(assemVal) ? assemVal : groupVal;
 }
 Assembly.fromJson = (assemblyJson) => {
   const demensionConfig = assemblyJson.demensionConfig;

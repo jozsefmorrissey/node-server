@@ -63,18 +63,13 @@ class Position {
     // }
 
 
-    const rootAssembly = assembly.getRoot();
-    // TODO: good Idea does not work now that parentAssembly is set programatically after object is built;
-    // if (rootAssembly.constructor.name === 'Cabinet') {
-    //   const cacheId = rootAssembly.id();
-    //   this.rotation = new FunctionCache((attr) => rotation(attr), null, cacheId, assembly);
-    //   this.center = new FunctionCache((attr) => center(attr), null, cacheId, assembly);
-    //   this.demension = new FunctionCache((attr) => demension(attr), null, cacheId, assembly);
-    // } else {
-      this.rotation = (attr) => rotation(attr);
-      this.center = (attr) => center(attr);
-      this.demension = (attr) => demension(attr);
-    // }
+    const group = () => {
+      const rootAssembly = assembly.getRoot();
+      return rootAssembly && rootAssembly.id();
+    }
+    this.rotation = new FunctionCache((attr) => rotation(attr), null, group, assembly);
+    this.center = new FunctionCache((attr) => center(attr), null, group, assembly);
+    this.demension = new FunctionCache((attr) => demension(attr), null, group, assembly);
 
     this.current = () => {
       const position = {

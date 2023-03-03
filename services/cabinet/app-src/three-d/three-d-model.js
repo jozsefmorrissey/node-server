@@ -210,6 +210,7 @@ class ThreeDModel {
       ThreeDModel.lastActive = this;
       const cacheId = rootAssembly.id();
       FunctionCache.on('sme');
+      FunctionCache.on(cacheId);
 
       const startTime = new Date().getTime();
       buildHiddenPrefixReg();
@@ -271,7 +272,7 @@ class ThreeDModel {
         renderObjectUpdateEvent.trigger(undefined, lastRendered);
         console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
       }
-      // FunctionCache.off(cacheId);
+      FunctionCache.off(cacheId);
       FunctionCache.off('sme');
     }
 

@@ -77,7 +77,7 @@ class KeyValue extends Lookup {
           else {
             const defaultFunction = this.value.defaultFunction;
             if (defaultFunction) {
-              value = (typeof this.value.defaultFunction) === 'function' ? this.value.defaultFunction(key) : undefined;
+              value = (typeof this.value.defaultFunction) === 'function' ? this.value.defaultFunction(key, value) : undefined;
               if (value === undefined) throw new Error();
               return value;
             }

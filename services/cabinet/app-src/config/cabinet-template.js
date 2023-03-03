@@ -15,6 +15,7 @@ class CabinetTemplate extends Lookup {
 
       height: 34 * 2.54,
       thickness: 24 * 2.54,
+      fromFloor: 0,
       openings: [CabinetTemplate.defaultPartCodeOpening()]
     };
     Object.getSet(this, initialVals);
@@ -22,9 +23,9 @@ class CabinetTemplate extends Lookup {
 
     function getCabinet(length, width, thickness, pc) {
       const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
-      cabinet.length(length);
-      cabinet.width(width);
-      cabinet.thickness(thickness);
+      cabinet.length(length || this.height());
+      cabinet.width(width || this.width());
+      cabinet.thickness(thickness || this.thickness());
 
       cabinet.propertyConfig(pc instanceof PropertyConfig ? pc : new PropertyConfig());
       return cabinet;

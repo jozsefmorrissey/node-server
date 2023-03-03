@@ -10,8 +10,16 @@
       <td><input class='value-2d' key='y' value='{{display(target.y())}}'></td>
     </tr>
     <tr>
-      <td colspan="2"><button class='remove-btn-2d transparent'>Remove</button></td>
+      <td><label>Angle</label></td>
+      <td><input class='value-2d' key='angle' value='{{target.angle()}}' convert='false'></td>
     </tr>
     <tr>
+      <td><label>Show Angle</label></td>
+      <td><input class='value-2d' key='showAngle' type='checkbox' convert='false'
+        {{target.showAngle ? 'checked' : ''}}></td>
+      </tr>
+    <tr>
+      <td colspan="2"><button class='remove-btn-2d transparent'>Remove</button></td>
+    </tr>
   </table>
 </div>

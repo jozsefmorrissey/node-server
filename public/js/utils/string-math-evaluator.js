@@ -24,8 +24,11 @@ class StringMathEvaluator {
 
     function resolve (path, currObj, globalCheck) {
       if (path === '') return currObj;
-      const resolved = !globalCheck && resolver && resolver(path, currObj);
-      if (Number.isFinite(resolved)) return resolved;
+      // TODO: this try is a patch... resolve path/logic needs to be mapped properly
+      try {
+        const resolved = !globalCheck && resolver && resolver(path, currObj);
+        if (Number.isFinite(resolved)) return resolved;
+      } catch (e) {}
       try {
         if ((typeof path) === 'string') path = path.split(splitter);
         for (let index = 0; index < path.length; index += 1) {

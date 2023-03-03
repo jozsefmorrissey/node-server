@@ -92,7 +92,8 @@ class Vertex2d {
       return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
     }
 
-    this.toString = () => `(${this.x()}, ${this.y()})`;
+    const barelyRound = (value) => Math.round(value * 10000000000000) / 10000000000000;
+    this.toString = () => `(${barelyRound(this.x())}, ${barelyRound(this.y())})`;
     this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
     const parentToJson = this.toJson;
 

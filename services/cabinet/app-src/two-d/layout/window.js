@@ -1,6 +1,6 @@
 
 const OnWall = require('./on-wall');
-const HoverMap2d = require('../../../../../public/js/utils/canvas/two-d/hover-map.js');
+const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map.js').HoverObject2d;
 
 class Window2D extends OnWall {
   constructor(wall, fromPreviousWall, fromFloor, height, width) {
@@ -13,7 +13,7 @@ class Window2D extends OnWall {
     this.remove = () => this.wall().removeWindow(this);
     this.toString = () => `${this.id()}:${this.endpoints2D().toString()}`;
 
-    this.hovering = new HoverMap2d(this.toLine, 5).hovering;
+    this.hovering = new HoverObject2d(this.toLine, 5).hovering;
   }
 }
 

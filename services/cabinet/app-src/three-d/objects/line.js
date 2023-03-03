@@ -167,6 +167,18 @@ Line3D.fromVector = (vector, rotation) => {
   return line;
 }
 
+Line3D.viewFromVector = (lines, vector) => {
+  const orthoLines = [];
+  for (let p = 0; p < lines.length; p++) {
+    const startVert = lines[p].startVertex;
+    const endVert = lines[p].endVertex;
+    const orthoVerts = Vertex3D.viewFromVector([startVert, endVert], vector);
+    orthoLines.push(new Line3D(orthoVerts[0], orthoVerts[1]));
+  }
+  return orthoLines;
+}
+
+
 Line3D.reverse = (list) => {
   let reversed = [];
   for (let index = list.length - 1; index > -1; index--) {

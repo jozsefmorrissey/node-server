@@ -4,6 +4,7 @@ function panZoom(canvas, draw) {
   let mrx, mry;
   const eventFuncs = [];
   const instance = this;
+  let lastMoveTime = new Date().getTime();
 
   this.on = (eventName) => {
     if (eventFuncs[eventName] === undefined) eventFuncs[eventName] = [];
@@ -13,20 +14,22 @@ function panZoom(canvas, draw) {
       }
     }
   }
-  let sleeping = null;
+  let sleeping = false;
   let nextUpdateId = 0;
   this.sleep = () => sleeping = true;
   this.wake = () => {
     if (sleeping) {
       sleeping = false;
-      requestAnimationFrame(() => update(nextUpdateId));
+      requestAnimationFrame(() => update(++nextUpdateId));
     }
   };
   this.once = () => {
-    requestAnimationFrame(() => update(nextUpdateId, true))
+    requestAnimationFrame(() => update(++nextUpdateId, true))
   };
 
   this.onMove = this.on('move');
+  this.onTranslate = this.on('translated');
+  this.onZoom = this.on('zoom');
   this.onClick = this.on('click');
   this.onMousedown = this.on('mousedown');
   this.onMouseup = this.on('mouseup');
@@ -73,9 +76,8 @@ function panZoom(canvas, draw) {
       over : false,
       buttons : [1, 2, 4, 6, 5, 3], // masks for setting and clearing button raw bits;
   };
-  let lastMouseMovementId = 0;
   function mouseMove(event) {
-      const mouseMovementId = ++lastMouseMovementId;
+      lastMoveTime = new Date().getTime();
       mouse.x = event.offsetX;
       mouse.y = event.offsetY;
       if (mouse.x === undefined) {
@@ -107,9 +109,6 @@ function panZoom(canvas, draw) {
          mouse.w = -event.detail;
       }
       instance.wake();
-      setTimeout(() => {
-        if (mouseMovementId === lastMouseMovementId) instance.sleep()
-      }, 500);
   }
 
   function setupMouse(e) {
@@ -136,8 +135,27 @@ function panZoom(canvas, draw) {
       const attr = attrs[index];
       str += `${attr}: ${round(displayTransform[attr])} `;
     }
+    console.log(str);
   }
-  this.displayTransform = displayTransform;
+
+  function positionEvents() {
+    const dt = displayTransform;
+    const dxAbs = Math.abs(dt.dx);
+    const dyAbs = Math.abs(dt.dy);
+    const doxAbs = Math.abs(dt.dox);
+    const doyAbs = Math.abs(dt.doy);
+    dt.moving = dt.moving || dxAbs > 1 || dyAbs > 1;
+    dt.scoping = dt.scoping || doxAbs > 1 || doyAbs > 1;
+    if (dt.moving && dxAbs < .1 && dyAbs < .1) {
+      dt.moving = false;
+      runOn('translated', this);
+    }
+    if (dt.scoping && doxAbs < .1 && doyAbs < .1) {
+      dt.scoping = false;
+      runOn('zoom', this);
+    }
+  }
+
   // terms.
   // Real space, real, r (prefix) refers to the transformed canvas space.
   // c (prefix), chase is the value that chases a requiered value
@@ -167,11 +185,17 @@ function panZoom(canvas, draw) {
       mouseX:0,
       mouseY:0,
       ctx:ctx,
+      realPosition: function (x, y) {
+        var screenX = canvas.width / 2;
+        var screenY = canvas.height / 2;
+        x = (screenX * this.invMatrix[0] + screenY * this.invMatrix[2]);
+        y = (screenX * this.invMatrix[1] + screenY * this.invMatrix[3]);
+        return {x,y};
+      },
       setTransform:function(){
           var m = this.matrix;
           var i = 0;
           const dt = displayTransform;
-          print('x', 'y',  'dx', 'dy', 'mouseX', 'mouseY', 'scale');
           this.ctx.setTransform(m[i++],m[i++],m[i++],m[i++],m[i++],m[i++]);
       },
       setHome:function(){
@@ -201,6 +225,9 @@ function panZoom(canvas, draw) {
           this.coy += this.doy;
           this.cscale += this.dscale;
           this.crotate += this.drotate;
+
+          positionEvents(this);
+
 
           // create the display matrix
           this.matrix[0] = Math.cos(this.crotate)*this.cscale;
@@ -279,14 +306,17 @@ function panZoom(canvas, draw) {
 
       }
   }
-  const min = -.000000000001;
+  this.displayTransform = displayTransform;
+
   const max = .000000000001;
+  const min = max*-1;
   function hasDelta() {
     const dt = displayTransform;
     return !((dt.dx > min && dt.dx < max) &&
             (dt.dy > min && dt.dy < max) &&
             (dt.dox > min && dt.dox < max) &&
-            (dt.doy > min && dt.doy < max));
+            (dt.doy > min && dt.doy < max) &&
+            (dt.drotate > min && dt.drotate < max));
   }
 
   // image to show
@@ -316,14 +346,29 @@ function panZoom(canvas, draw) {
          displayTransform.ox = 0;
          displayTransform.oy = 0;
      }
+
+    if (lastMoveTime < new Date().getTime() - 1000) instance.sleep();
     if (hasDelta() || sleeping === false) {
       if (once) sleeping = true;
-      setTimeout(() => requestAnimationFrame(() => update(nextUpdateId)), 10);
+      setTimeout(() => requestAnimationFrame(() => update(++nextUpdateId)), 30);
+    } else {
+      sleeping = true;
     }
   }
-  update(nextUpdateId); // start it happening
+  update(++nextUpdateId); // start it happening
+
+  this.center = () => {
+    const x = displayTransform.x + canvas.width/2;
+    const y = displayTransform.y + canvas.height/2
+    return {x,y};
+  }
 
   this.centerOn = function(x, y) {
+    const hype = Math.sqrt(x*x + y*y);
+    const pointRads = Math.atan(y/x) || 0;
+    x = hype*Math.sin(displayTransform.rotate + pointRads);
+    y = hype*Math.cos(-1*(displayTransform.rotate + pointRads));
+
     displayTransform.scale = 1;
     displayTransform.cox = 0;
     displayTransform.coy = 0;
@@ -335,7 +380,10 @@ function panZoom(canvas, draw) {
     displayTransform.oy = 0;
     displayTransform.x = x - (canvas.width / 2);
     displayTransform.y = y - (canvas.height / 2);
+    displayTransform.rotate = 0;
     displayTransform.update();
+    displayTransform.moving = true;
+    displayTransform.zooming = true;
     this.once();
   };
 

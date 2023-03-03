@@ -40,6 +40,20 @@ class Polygon2d {
       });
     }
 
+    this.mirrorX = () => {
+      const start = this.center().copy();
+      const end = start.translate(0, 10, true);
+      const mirror = new Line2d(start, end);
+      mirror.mirrorX(this.vertices());
+    }
+    this.mirrorY = () => {
+      const start = this.center().copy();
+      const end = start.translate(10, 0, true);
+      const mirror = new Line2d(start, end);
+      const verts = this.vertices();
+      mirror.mirrorPoints(verts);
+    }
+
     this.verticesAndMidpoints = (target, before, after) => {
       const verts = this.vertices();
       const both = [];
@@ -90,10 +104,14 @@ class Polygon2d {
       return addNieghborsOfVertexWithinLine(vertex, indicies);
     }
 
+    // TODO: this function is rotating should use degrees not theta.
     function positionRelitiveToVertex(vertex, moveTo, externalVertex) {
       const center = instance.center();
       if (moveTo.theta) {
-        if (externalVertex) vertex.rotate(moveTo.theta, center);
+        if (externalVertex) {
+          vertex.rotate(moveTo.theta, center);
+          throw new Error('is this used?');
+        }
         const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
         const rotatedCenter = rotatedPoly.center();
         const offset = rotatedCenter.differance(vertex);
@@ -141,12 +159,13 @@ class Polygon2d {
 
     this.faceIndecies = (indicies) => {
       if (indicies) {
-        if (indicies.length > 1) console.warn('vertex sorting has not been tested for multple faces');
+        if (indicies.length > 1) console.warn.subtle(500, 'vertex sorting has not been tested for multple faces');
         faceIndecies = [0];
         const i = indicies[0];
         lines = lines.slice(i).concat(lines.slice(0, i));
         for (let index = 1; index < lines.length; index++) {
-          faceIndecies.push(Math.mod(indicies[index] - i, lines.length));
+          const ind = Math.mod(indicies[index] - i, lines.length);
+          if (!Number.isNaN(ind)) faceIndecies.push(ind);
         }
       }
       return faceIndecies;
@@ -217,6 +236,10 @@ class Polygon2d {
       return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
     }
 
+    this.toDrawString = () => {
+      return Line2d.toDrawString(instance.lines()) + '\n' + Line2d.toDrawString(instance.normals(), 'red');
+    }
+
     this.getLines = (startVertex, endVertex, reverse) => {
       const inc = reverse ? -1 : 1;
       const subSection = [];
@@ -244,12 +267,19 @@ class Polygon2d {
       if (completed) return subSection;
     }
 
-    this.center = () => Vertex2d.center(...this.vertices());
-
     this.translate = (xDiff, yDiff) => {
       for (let index = 0; index < lines.length; index++) {
         lines[index].startVertex().translate(xDiff, yDiff);
       }
+    }
+
+    this.center = (center) => {
+      const curr = Vertex2d.center(...this.vertices());
+      if (center !== undefined) {
+        const diff = center.differance(curr);
+        this.translate(diff.x(), diff.y());
+      }
+      return Vertex2d.center(...this.vertices());
     }
 
     this.rotate = (theta, pivot, doNotModify) => {
@@ -367,7 +397,11 @@ class Polygon2d {
       }
     }
 
-    this.copy = () => new Polygon2d(this.vertices().map((v) => v.copy()));
+    this.copy = () => {
+      const copy = new Polygon2d(this.vertices().map((v) => v.copy()));
+      copy.faceIndecies(this.faceIndecies());
+      return copy;
+    }
 
     this.addVertices(initialVertices);
   }
@@ -441,7 +475,7 @@ Polygon2d.lines = (...polys) => {
     lines = lines.concat(polys[index].lines());
   }
   // return lines;
-  const consolidated = Line2d.consolidate(...Line2d.consolidate(...lines));
+  const consolidated = Line2d.consolidate(...lines);
   if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
     console.error.subtle('Line Consolidation malfunction');
   }

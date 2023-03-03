@@ -27,6 +27,30 @@ class Line2d {
       return endVertex;
     }
 
+    this.mirrorPoints = (points) => {
+      for (let index = 0; index < points.length; index++) {
+        const point = points[index];
+        const perpLine = this.perpendicular(1000, point);
+        const closestPoint = this.closestPointOnLine(perpLine.endVertex());
+        const intersectLine = new Line2d(point, closestPoint);
+        const dist = intersectLine.length() * 2;
+        const rads = intersectLine.radians();
+        const mirrored = Line2d.startAndTheta(point, rads, dist).endVertex();
+        point.point(mirrored.point());
+      }
+    }
+
+    this.mirrorX = (points) => {
+      const endVertex = this.startVertex().translate(0, 10, true);
+      const mirror = new Line2d(this.startVertex(), endVertex);
+      mirror.mirrorPoints([this.startVertex(), this.endVertex()]);
+    }
+    this.mirrorY = (points) => {
+      const endVertex = this.startVertex().translate(10, 0, true);
+      const mirror = new Line2d(this.startVertex(), endVertex);
+      mirror.mirrorPoints([this.startVertex(), this.endVertex()]);
+    }
+
     this.rise = () => endVertex.y() - startVertex.y();
     this.run = () =>  endVertex.x() - startVertex.x();
 
@@ -57,20 +81,32 @@ class Line2d {
     }
 
     this.withinSegmentBounds = (pointOline) => {
+      let isWithin = false;
+      let path = -1;
       if (pointOline instanceof Line2d) {
         const l = pointOline
         const slopeEqual = withinTol(this.slope(), l.slope());
         const c = l.midpoint();
         const xBounded = c.x() < this.maxX() + tol && c.x() > this.minX() - tol;
         const yBounded = c.y() < this.maxY() + tol && c.y() > this.minY() - tol;
-        if (slopeEqual && xBounded && yBounded) return true;
-        return this.withinSegmentBounds(l.startVertex()) || this.withinSegmentBounds(l.endVertex()) ||
+        if (slopeEqual && xBounded && yBounded) {
+          isWithin = true;
+          path = 0
+        } else {
+          path = 1;
+          isWithin = this.withinSegmentBounds(l.startVertex()) || this.withinSegmentBounds(l.endVertex()) ||
                 l.withinSegmentBounds(this.startVertex()) || l.withinSegmentBounds(this.endVertex());
+        }
       } else {
+        path = 2;
         let point = new Vertex2d(pointOline);
-        return this.minX() - tol < point.x() && this.minY() - tol < point.y() &&
+        isWithin = this.minX() - tol < point.x() && this.minY() - tol < point.y() &&
           this.maxX() + tol > point.x() && this.maxY() + tol > point.y();
       }
+      if (isWithin) {
+        console.log.subtle(500, 'is it within?');
+      }
+      return isWithin;
     }
 
 
@@ -142,6 +178,25 @@ class Line2d {
       return new Vertex2d({x,y});
     }
 
+    this.bisector = (other, dist) => {
+      const intersection = this.findIntersection(other);
+      if (!intersection) return null;
+      const negAcquiesed = other.acquiescent(this).negitive();
+      const radians = (this.radians() + negAcquiesed.radians()) / 2;
+      const bisector = Line2d.startAndTheta(intersection, radians, dist);
+      const bev = bisector.endVertex();
+      const startDist = this.startVertex().distance(intersection);
+      const endDist = this.endVertex().distance(intersection);
+      const furthestVertId = startDist > endDist ? 'startVertex' : 'endVertex';
+
+      const negBisector = Line2d.startAndTheta(intersection, radians + Math.PI, dist);
+      const dist1 = bisector.endVertex().distance(this[furthestVertId]()) +
+                    bisector.endVertex().distance(negAcquiesed[furthestVertId]());
+      const dist2 = negBisector.endVertex().distance(this[furthestVertId]()) +
+                    negBisector.endVertex().distance(negAcquiesed[furthestVertId]());
+      return dist1 < dist2 ? bisector : negBisector;
+    }
+
     this.closestEnds = (other) => {
       const tsv = this.startVertex();
       const osv = other.startVertex();
@@ -184,7 +239,7 @@ class Line2d {
     this.yIntercept = () => getB(this.startVertex().x(), this.startVertex().y(), this.slope());
     this.slope = () => getSlope(this.startVertex(), this.endVertex());
     this.y = (x) => {
-      x ||= this.startVertex().x();
+      if (x === undefined) x = this.startVertex().x();
       const slope = this.slope();
       if (slope === Infinity) return Infinity;
       if (slope === 0) return this.startVertex().y();
@@ -192,7 +247,7 @@ class Line2d {
     }
 
     this.x = (y) => {
-      y ||= this.startVertex().y();
+      if (y === undefined) y = this.startVertex().y();
       const slope = this.slope();
       if (slope === Infinity) return this.startVertex().x();
       if (slope === 0) {
@@ -434,6 +489,7 @@ class Line2d {
       const deltaY = this.endVertex().y() - this.startVertex().y();
       return Math.atan2(deltaY, deltaX);
     }
+    this.degrees = () => Math.toDegrees(this.radians());
 
     // Positive returns right side.
     this.parrelle = (distance, midpoint, length) => {
@@ -495,8 +551,8 @@ class Line2d {
       if (clean) return clean;
       if (!withinTol(this.slope(), other.slope())) return;
       const otherNeg = other.negitive();
-      const outputWithinTol = withinTol(this.y(other.x()), other.y()) &&
-                    withinTol(this.x(other.y()), other.x());
+      const outputWithinTol = withinTol(this.y(other.x()), other.y(other.x())) &&
+                    withinTol(this.x(other.y()), other.x(other.y()));
       if (!outputWithinTol) return;
       const v1 = this.startVertex();
       const v2 = this.endVertex();
@@ -676,6 +732,7 @@ Line2d.vertices = (lines) => {
 }
 
 Line2d.consolidate = (...lines) => {
+  // TODO: this should be absSlope...
   const tolMap = new ToleranceMap({'slope': tol});
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
@@ -695,28 +752,33 @@ Line2d.consolidate = (...lines) => {
     const mapId = tolMap.tolerance().boundries(line);
     if (!combinedKeys[mapId]) {
       combinedKeys[mapId] = true;
+      let lastIndex;
       for (let tIndex = 0; tIndex < matches.length; tIndex += 1) {
         let target = matches[tIndex];
+        let found = false;
         for (let mIndex = tIndex + 1; mIndex < matches.length; mIndex += 1) {
-          if (mIndex !== tIndex) {
-            const combined = target.combine(matches[mIndex]);
-            if (combined) {
-              const lowIndex = mIndex < tIndex ? mIndex : tIndex;
-              const highIndex = mIndex > tIndex ? mIndex : tIndex;
-              if (lowIndex == highIndex)
-                console.log('STF');
-              matches.splice(highIndex, 1);
-              matches[lowIndex] = combined;
-              tIndex--;
-              break;
-            }
+          const combined = target.combine(matches[mIndex]);
+          if (combined) {
+            found = true;;
+            const m = matches[mIndex];
+            matches.splice(mIndex, 1);
+            matches[tIndex] = combined;
+            target = combined;
+            mIndex = tIndex;
           }
         }
+        if (found) tIndex--;
       }
       minList = minList.concat(matches);
     }
   }
 
+  const strMap = {};
+  minList = minList.filter((l) => {
+    const str = l.toString();
+    if (strMap[str]) return false;
+    return strMap[str] = true;
+  });
   return minList;
 }
 
@@ -800,6 +862,15 @@ Line2d.toDrawString = (lines, ...colors) => {
   lines.forEach((l,i) => {
     color = colors[i%colors.length] || '';
     str += `${color}[${l.startVertex().toString()},${l.endVertex().toString()}],`;
+  });
+  return str.substr(0, str.length - 1);
+}
+
+Line2d.toApproxDrawString = (lines, ...colors) => {
+  let str = '';
+  lines.forEach((l,i) => {
+    color = colors[i%colors.length] || '';
+    str += `${color}[${l.startVertex().approxToString()},${l.endVertex().approxToString()}],`;
   });
   return str.substr(0, str.length - 1);
 }

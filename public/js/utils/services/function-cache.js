@@ -5,14 +5,16 @@ const cacheFuncs = {};
 class FunctionCache {
   constructor(func, context, group, assem) {
     if ((typeof func) !== 'function') return func;
-    group ||= 'global';
     let cache = {};
+    cacheFunc.group = () => {
+      const gp = (typeof group === 'function') ? group() : group || 'global';
+      if (cacheFuncs[gp] === undefined) cacheFuncs[gp] = [];
+      cacheFuncs[gp].push(cacheFunc);
+      return gp;
+    }
 
     function cacheFunc() {
-      if (FunctionCache.isOn(group)) {
-        // if (assem.constructor.name === 'DrawerFront') {
-        //   console.log('df mfer');
-        // }
+      if (FunctionCache.isOn(cacheFunc.group())) {
         let c = cache;
         for (let index = 0; index < arguments.length; index += 1) {
           if (c[arguments[index]] === undefined) c[arguments[index]] = {};
@@ -30,8 +32,6 @@ class FunctionCache {
       return func.apply(context, arguments);
     }
     cacheFunc.clearCache = () => cache = {};
-    if (cacheFuncs[group] === undefined) cacheFuncs[group] = [];
-    cacheFuncs[group].push(cacheFunc);
     return cacheFunc;
   }
 }

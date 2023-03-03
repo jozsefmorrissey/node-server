@@ -12,6 +12,12 @@ class ThreeView {
   constructor(polygons, normals, gap) {
     normals ||= defaultNormals;
     gap ||= 10;
+
+    this.normals = {};
+    this.normals.front = () => normals.front;
+    this.normals.right = () => normals.right;
+    this.normals.top = () => normals.top;
+
     const frontView = Polygon3D.viewFromVector(polygons, normals.front);
     const rightView = Polygon3D.viewFromVector(polygons, normals.right);
     const topview = Polygon3D.viewFromVector(polygons, normals.top);
@@ -30,6 +36,8 @@ class ThreeView {
     const front2D = frontView.map(to2D(axis.front));
     const right2D = rightView.map(to2D(axis.right));
     const top2D = topview.map(to2D(axis.top));
+
+    console.log(Line2d.toDrawString(Polygon2d.lines(top2D)))
 
     Polygon2d.centerOn({x:0,y:0}, front2D);
 
@@ -55,6 +63,10 @@ class ThreeView {
         parimeter.front = EscapeMap.parimeter(this.front());
         parimeter.right = EscapeMap.parimeter(this.right());
         parimeter.top = EscapeMap.parimeter(this.top());
+        parimeter.front.ensureClockWise();
+        parimeter.right.ensureClockWise();
+        parimeter.top.ensureClockWise();
+
       }
       return {
         front: () => parimeter.front.copy(),

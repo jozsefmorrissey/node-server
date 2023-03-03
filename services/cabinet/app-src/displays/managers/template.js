@@ -155,24 +155,33 @@ function applyTestConfiguration(cabinet) {
   });
 }
 
-function getDemPosElems () {
+const setShow = (template, templateBody, attr, cabinet) => {
+  if (cabinet) {
+    const display = du.find.closest(`[name="${attr}Value"]`, templateBody);
+    const value = template[attr]();
+    display.value = toDisplay(cabinet.eval(value));
+  } else {
+    const input = du.find.closest(`input[name="${attr}"`, templateBody);
+    if (input.value.isNumber()) template[attr](new Measurement(input.value, true).decimal());
+    else template[attr](input.value);
+  }
+}
+
+function getDemPosElems (template, cabinet) {
   const templateBody = du.find('.template-body');
-  return {
-    width: du.find.closest('input[name="width"', templateBody),
-    height: du.find.closest('input[name="height"', templateBody),
-    depth: du.find.closest('input[name="thickness"', templateBody),
-  };
+  setShow(template, templateBody, 'width', cabinet);
+  setShow(template, templateBody, 'height', cabinet);
+  setShow(template, templateBody, 'thickness', cabinet);
+  setShow(template, templateBody, 'fromFloor', cabinet)
 }
 
 FunctionCache.disable();
 function getCabinet(elem) {
   const templateBody = du.find('.template-body');
   const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
-  const dPElems = getDemPosElems();
-  const width = new Measurement(dPElems.width.value, true).decimal();
-  const height = new Measurement(dPElems.height.value, true).decimal();
-  const thickness = new Measurement(dPElems.depth.value, true).decimal();
-  const cabinet = template.getCabinet(height, width, thickness);
+  getDemPosElems(template);
+  const cabinet = template.getCabinet();
+  getDemPosElems(template, cabinet);
   cabinet.propertyConfig().set(sectionState.style);
 
   if (sectionState.testDividers) applyTestConfiguration(cabinet);
@@ -182,7 +191,12 @@ function getCabinet(elem) {
   return cabinet;
 }
 
-const toDisplay = (value) =>  new Measurement(value).display();
+const toDisplay = (value, notMetric) =>  {
+  if ((typeof value) === 'string' && value.isNumber()) value = Number.parseFloat(value);
+  if ((typeof value) === 'number') return new Measurement(value, notMetric).display();
+  return value;
+}
+
 const centerDisplay = (t) => {
   const x = t.getCabinet().eval(t.x());
   const y = t.getCabinet().eval(t.y());
@@ -438,8 +452,8 @@ function validateOpenTemplate (elem) {
   const subCodeInputs = du.find.downAll('input[attr="subassemblies"][name="code"]', templateBody);
   subCodeInputs.forEach(variableNameCheck);
 
-  const positiveInputs = du.find.downAll('input[name="thickness"],input[name="width"],input[name="height"]', templateBody);
-  positiveInputs.forEach(positiveValueCheck);
+  // const positiveInputs = du.find.downAll('input[name="thickness"],input[name="width"],input[name="height"]', templateBody);
+  // positiveInputs.forEach(positiveValueCheck);
 
   const pcc = partCodeCheck(template);
   const jointMaleInputs = du.find.downAll('input[attr="joints"][name="malePartCode"]', templateBody);
@@ -491,16 +505,19 @@ function getJointInputTree(func, joint, dividerJoint) {
 
   const centerOffsetInput = new Select({
     name: 'centerAxis',
+    label: 'Center Axis',
     list: ['+x', '+y', '+z', '-x', '-y', '-z'],
     value: joint.centerAxis
   });
   const demensionOffsetInput = new Select({
     name: 'demensionAxis',
+    label: 'Demension Axis',
     list: ['x', 'y', 'z'],
     value: joint.demensionAxis
   });
 
   const depthInput = new Input({
+    label: 'Depth',
     name: 'maleOffset',
     value: joint.maleOffset
   });
@@ -702,10 +719,9 @@ class TemplateManager extends Lookup {
       const topCanvas = du.find.down('.top-sketch', templateBody);
       if (frontCanvas !== undefined) {
         drawFront = new Draw2D(frontCanvas);
-        drawTop = new Draw2D(topCanvas);
         panz = new PanZoom(frontCanvas, renderFront);
         panz.centerOn(0, 0);
-        drawTop = new Draw2D(topCanvas);
+        drawTop = new Draw2D(topCanvas, true);
         panzT = new PanZoom(topCanvas, renderTop);
         panzT.centerOn(0,0);
       }
@@ -777,7 +793,7 @@ radioDisplay.afterSwitch(function (header){
   }
 });
 
-du.on.match('focusout,enter', '[name="opening-coordinate-value"]', (elem) => {
+du.on.match('focusout:enter', '[name="opening-coordinate-value"]', (elem) => {
   sectionState.value(elem.value || undefined);
 });
 

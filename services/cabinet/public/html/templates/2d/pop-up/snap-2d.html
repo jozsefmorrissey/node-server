@@ -19,5 +19,11 @@
   <label>Y</label>
   <input class='value-2d' member='snap' type="text" key="y" value="{{display(target.y())}}">
   <br>
+  <label>From Floor</label>
+  <input class='value-2d' member='bridge' type="text" key="fromFloor" cascade='fromCeiling' value="{{display(target.parent().fromFloor())}}">
+  <br>
+  <label>From Ceiling</label>
+  <input class='value-2d' member='bridge' type="text" key="fromCeiling" cascade='fromFloor' value="{{display(target.parent().fromCeiling())}}">
+  <br>
   <button class='remove-btn-2d transparent'>Remove</button>
 </div>

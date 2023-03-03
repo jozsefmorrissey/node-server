@@ -40,7 +40,7 @@ class Square2d {
     this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
 
     this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-    this.move = (position, theta) => {
+    this.move = (position) => {
       const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
       if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
       if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();

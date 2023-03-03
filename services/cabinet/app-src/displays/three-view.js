@@ -47,33 +47,30 @@ class ThreeView extends Lookup {
     const color = 'black';
     const width = .2;
 
-    function drawView (refresh) {
-      Layout2D.release(`three-view`);
+    this.toLines = () => {
       let model = instance.lastModel();
-      let toDraw = {};
       if (model) {
         const threeView = model.threeView;
-        if (threeView.measurments === undefined) {
-          const allLines = threeView.top().concat(threeView.right().concat(threeView.front()));
-          threeView.measurments = LineMeasurement2d.measurements(allLines);
-        }
-        draw(threeView.front(), color, width);
-        draw(threeView.right(), color, width);
-        draw(threeView.top(), color, width);
-        draw(threeView.measurments, 'grey');
+        return threeView.top().concat(threeView.right().concat(threeView.front()));
       } else {
         model ||= instance.lastRendered();
-        if (model === undefined) return;
+        if (model === undefined) return [];
         const threeView = model.threeView();
-        if (threeView.measurments === undefined) {
-          const allLines = threeView.parimeter().allLines();
-          threeView.measurments = LineMeasurement2d.measurements(allLines);
-        }
-        draw(threeView.parimeter().front(), color, width);
-        draw(threeView.parimeter().right(), color, width);
-        draw(threeView.parimeter().top(), color, width);
-        draw(threeView.measurments, 'grey');
+        return threeView.parimeter().allLines();
       }
+    }
+
+    function drawView (refresh) {
+      Layout2D.release(`three-view`);
+      const model = instance.lastModel() || instance.lastRendered();
+      if (model === undefined) return;
+      let allLines = instance.toLines();
+      const threeView = model.threeView;
+      if (threeView.measurments === undefined) {
+        threeView.measurments = LineMeasurement2d.measurements(allLines);
+      }
+      draw(allLines, color, width);
+      draw(threeView.measurments, 'grey');
     }
 
     function onPartSelect(elem) {
@@ -125,6 +122,15 @@ class ThreeView extends Lookup {
     setTimeout(init, 1000);
   }
 }
+
+function copyDrawString(elem) {
+  const id = du.find.up('.three-view-cnt', elem).getAttribute('id');
+  const threeView = ThreeView.get(id);
+  const str = Line2d.toDrawString(threeView.toLines());
+  du.copy(str);
+}
+
+du.on.match('click', '.three-view-draw-string-btn', copyDrawString);
 
 ThreeView.template = new $t('three-view');
 

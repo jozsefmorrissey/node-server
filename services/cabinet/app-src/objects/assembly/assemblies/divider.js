@@ -4,12 +4,16 @@
 const Assembly = require('../assembly.js');
 
 class Divider extends Assembly {
-  constructor(partCode, partName, toModel) {
-    super(partCode, partName);
+  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, toModel) {
+    if (toModel) {
+      super(partCode, partName);
+      this.toModel = toModel;
+      this.partName = partName;
+    } else super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
 
-    this.toModel = toModel;
   }
 }
+
 Divider.count = 0;
 
 Divider.abbriviation = 'dv';

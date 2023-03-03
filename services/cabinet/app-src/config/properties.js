@@ -23,7 +23,7 @@ add('Reveal', [Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl]);
 add('Inset', [Defs.is]);
 add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
                 Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
-                Defs.frw,Defs.frt]);
+                Defs.frw,Defs.frt,Defs.bid,Defs.tid]);
 add('Panel', [Defs.h,Defs.w,Defs.t]);
 add('Guides', [Defs.l,Defs.dbtos,Defs.dbsos,Defs.dbbos]);
 add('DoorAndFront', [Defs.daffrw,Defs.dafip])
@@ -34,6 +34,7 @@ add('Frame', [Defs.h,Defs.w,Defs.t]);
 add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
 add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
 add('Opening', []);
+
 
 function definitionsRequired(group) {
   const required = [];

@@ -6,6 +6,7 @@ const Tolerance = require('../../../tolerance.js');
 const ToleranceMap = require('../../../tolerance-map.js');
 const tol = .0015;
 const withinTol = Tolerance.within(tol);
+const nonZero = (val) => !withinTol(val, 0);
 
 class EscapeGroup {
   constructor(line) {
@@ -42,7 +43,9 @@ class EscapeGroup {
         const line = lines[index];
         lineMap[line.toString()] = line;
       }
-      this.canEscape(other.canEscape());
+
+      if (this.canEscape() !== true)
+        this.canEscape(other.canEscape());
     }
   }
 }
@@ -91,18 +94,20 @@ class Escape {
     }
 
     this.right.connected = (other) => {
+      escapeGroupRight.canEscape();
       updateReference.right();
       escapeGroupRight.connect(other);
       other.reference(escapeGroupRight);
     }
     this.left.connected = (other) => {
+      escapeGroupLeft.canEscape();
       updateReference.left();
       escapeGroupLeft.connect(other);
       other.reference(escapeGroupLeft);
     }
 
-    this.right.group = () => escapeGroupRight;
-    this.left.group = () => escapeGroupLeft;
+    this.right.group = () => this.updateReference() || escapeGroupRight;
+    this.left.group = () => this.updateReference() || escapeGroupLeft;
     this.right.type = (type) => escapeGroupRight.type(type);
     this.left.type = (type) => escapeGroupLeft.type(type);
   }
@@ -137,9 +142,14 @@ class EscapeMap {
         }
       }
 
+      const targetLine = new Line2d(new Vertex2d(45, 37.5),
+                                  new Vertex2d(45, 12.5))
       function setEscapes(obj, closest) {
         if (obj.escape.right() === true) obj.escape.left(false);
         else if (obj.escape.left() === true) obj.escape.right(false);
+        if (obj.line.equals(targetLine)) {
+          console.log('gotcha');
+        }
         setEscape(obj, closest, 'right');
         setEscape(obj, closest, 'left');
         return obj;
@@ -187,14 +197,18 @@ class EscapeMap {
         const originToEndDist = line.midpoint().distance(line.startVertex());
         const rightOrigin = perp.startVertex();
         const right = Line2d.startAndTheta(rightOrigin, radians, 1000000000);
+        const rightPerp = line.perpendicular(-10000000);
         const leftOrigin = perp.endVertex();
         const left = Line2d.startAndTheta(leftOrigin, radians, 100000000);
+        const leftPerp = line.perpendicular(10000000);
         const center = Line2d.startAndTheta(line[startPointFuncName](), radians, 100000000);
         state.runners[radians] = {right, left};
         state.closest[targetFuncName] = {right: {}, left:{}};
         let closest = state.closest[targetFuncName];
         let escapedLeft = true;
         let escapedRight = true;
+        let escapedLeftPerp = true;
+        let escapedRightPerp = true;
         for (let index = 0; index < lines.length; index++) {
           const other = lines[index];
           if (intersectsPoint(vertex, other, center)) {
@@ -215,11 +229,17 @@ class EscapeMap {
               }
             }
           }
+          const rightPerpIntersection = rightPerp.findDirectionalIntersection(other);
+          if (other.withinSegmentBounds(rightPerpIntersection) && nonZero(line.distance(rightPerpIntersection)))
+            escapedRightPerp = false;
+          const leftPerpIntersection = leftPerp.findDirectionalIntersection(other);
+          if (other.withinSegmentBounds(leftPerpIntersection) && nonZero(line.distance(leftPerpIntersection)))
+            escapedLeftPerp = false;
         }
 
-        if (escapedRight)
+        if (escapedRight || escapedRightPerp)
           state.escape.right(true, 'independent');
-        if (escapedLeft)
+        if (escapedLeft || escapedLeftPerp)
           state.escape.left(true, 'independent');
         if (escapedRight || escapedLeft) state.type = 'independent';
       }
@@ -250,12 +270,12 @@ class EscapeMap {
         }
       }
 
-      runAll(lines);
-
-      const values = Object.values(escapeObj.states);
-      for (let index = 0; index < values.length; index++) {
-        recursiveEscape(values[index]);
-      }
+      // runAll(lines);
+      //
+      // const values = Object.values(escapeObj.states);
+      // for (let index = 0; index < values.length; index++) {
+      //   recursiveEscape(values[index]);
+      // }
       return escapeObj;
     }
 
@@ -328,9 +348,11 @@ class EscapeMap {
 
 EscapeMap.parimeter = (lines) => {
   const escapeObj = new EscapeMap(lines);
-  const escaped = escapeObj.escaped();
+  // TODO: need a better/more complete algorythum.
+  const escaped = escapeObj.independent();
   const breakdown = Line2d.sliceAll(escaped);
-  const parimeter = new EscapeMap(breakdown).escaped();
+  const breakdownMap = new EscapeMap(breakdown);
+  const parimeter = Line2d.consolidate(...breakdownMap.escaped());
   const poly = Polygon2d.build(parimeter);
   return poly;
 }

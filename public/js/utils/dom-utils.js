@@ -338,20 +338,47 @@ du.class.toggle = function(target, clazz) {
   if (du.class.has(target, clazz)) du.class.remove(target, clazz);
   else du.class.add(target, clazz);
 }
-
+let lastKeyId;
+let keyPressId = 0;
 function onKeycombo(event, func, args) {
   const keysDown = {};
+  const allPressed = () => {
+    let is = true;
+    const keys = Object.keys(keysDown);
+    const minTime = new Date().getTime() - 1000;
+    for (let index = 0; index < keys.length; index++) {
+      if (keysDown[keys[index]] < minTime) delete keysDown[keys[index]];
+    }
+    for (let index = 0; is && index < args.length; index += 1) {
+      is = is && keysDown[args[index]];
+    }
+    return is;
+  }
+  const keysString = () => Object.keys(keysDown).sort().join('/');
+  const setComboObj = (event) => {
+    const id = keysString;
+    const firstCall = lastKeyId !== id;
+    event.keycombonation = {
+      allPressed: allPressed(),
+      keysDown: JSON.clone(keysDown),
+      keyPressId: firstCall ? ++keyPressId : keyPressId,
+      firstCall, id
+    }
+  }
+
   const keyup = (target, event) => {
-    keysDown[event.key] = false;
+    delete keysDown[event.key];
+    setComboObj(event);
+    if (event.keycombonation.firstCall && args.length === 0) {
+      setComboObj(event);
+      func(target, event);
+    }
   }
   const keydown = (target, event) => {
-    let allPressed = true;
-    keysDown[event.key] = true;
-    for (let index = 0; allPressed && index < args.length; index += 1) {
-      allPressed = allPressed && keysDown[args[index]];
-    }
-    if (allPressed) {
-      console.log('All Pressed!!!');
+    keysDown[event.key] = new Date().getTime();
+    setComboObj(event);
+
+    if (event.keycombonation.firstCall && event.keycombonation.allPressed) {
       func(target, event);
     }
   }
@@ -361,9 +388,9 @@ function onKeycombo(event, func, args) {
 
 const argEventReg = /^(.*?)(|:(.*))$/;
 function filterCustomEvent(event, func) {
-  const split = event.split(':');
+  const split = event.split(/[\(\),]/).filter(str => str);;
   event = split[0];
-  const args = split[1] ? split[1].split(',') : [];
+  const args = split.slice(1).map((str, i) => str === ' ' ? ' ' : str.trim());
   let customEvent = {func, event};
   switch (event) {
     case 'enter':
@@ -378,7 +405,7 @@ function filterCustomEvent(event, func) {
 }
 
 du.on.match = function(event, selector, func, target) {
-  const events = event.split(',');
+  const events = event.split(':');
   if (events.length > 1) return events.forEach((e) => du.on.match(e, selector, func, target));
   const filter = filterCustomEvent(event, func);
   target = target || document;

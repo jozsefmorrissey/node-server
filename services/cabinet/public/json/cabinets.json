@@ -45,7 +45,7 @@ module.exports = {
     },
     {
       "name": "Panel.Right",
-      "type": "Panel",
+      "type": "Divider",
       "code": "R",
       "center": [
         "c.w - (R.t / 2)",
@@ -66,7 +66,7 @@ module.exports = {
     },
     {
       "name": "Panel.Left",
-      "type": "Panel",
+      "type": "Divider",
       "code": "L",
       "center": [
         "(L.t / 2)",
@@ -91,12 +91,12 @@ module.exports = {
       "code": "BACK",
       "center": [
         " w / 2 + R.t",
-        "(h / 2) + tkb.w",
+        "(BACK.h / 2) + tkh",
         " -1*(c.t - (t / 2))"
       ],
       "demensions": [
         "innerWidth",
-        "c.l - tkb.w",
+        "c.l - tkh",
         "pwt34"
       ],
       "rotation": [
@@ -211,18 +211,18 @@ module.exports = {
       "malePartCode": "BACK",
       "femalePartCode": "R",
       "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
+      "maleOffset": "0.9525",
+      "demensionAxis": "x",
+      "centerAxis": "+x",
       "id": "uhxvhb4"
     },
     {
       "malePartCode": "BACK",
       "femalePartCode": "L",
       "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
+      "maleOffset": "0.9525",
+      "demensionAxis": "x",
+      "centerAxis": "-x",
       "id": "ra3enbz"
     },
     {
@@ -277,8 +277,9 @@ module.exports = {
   },
   "shape": "square",
   "width": 45.72,
-  "height": 86.36,
-  "thickness": 60.96,
+  "height": "baseh",
+  "thickness": "based",
+  "fromFloor": 0,
   "openings": [
     {
       "top": "T",
@@ -291,961 +292,232 @@ module.exports = {
   ]
 },
   "corner-wall": {
-  "_TYPE": "CabinetTemplate",
-
-  "ID_ATTRIBUTE": "id",
-  "type": "corner-wall",
-  "values": [
-    {
-      "key": "bo",
-      "eqn": "4*2.54",
-      "id": "pz0usts"
-    },
-    {
-      "key": "fwr",
-      "eqn": "c.w - lw",
-      "id": "v47f8o3"
-    },
-    {
-      "key": "fwl",
-      "eqn": "c.t - rw",
-      "id": "ammy5c5"
-    },
-    {
-      "key": "bottomInsetDepth",
-      "eqn": "0",
-      "id": "h1i4yon"
-    },
-    {
-      "key": "topInsetDepth",
-      "eqn": "0",
-      "id": "r30qsyq"
-    },
-    {
-      "key": "lw",
-      "eqn": "30.48",
-      "id": "r8els3r"
-    },
-    {
-      "key": "rw",
-      "eqn": "30.48",
-      "id": "zoxsnu9"
-    },
-    {
-      "key": "cnrD",
-      "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
-      "id": "vju4ekg"
-    },
-    {
-      "key": "pbw",
-      "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
-      "id": "bg3l1cw"
-    },
-    {
-      "key": "backhyp",
-      "eqn": "Math.sqrt((R.t*R.t)*2)",
-      "id": "zmra3po"
-    },
-    {
-      "key": "frontLeftTheta",
-      "eqn": "Math.atan(fwl/fwr)",
-      "id": "woqnfe1"
-    },
-    {
-      "key": "frontHype",
-      "eqn": "Math.sqrt(fwr*fwr + fwl*fwl)",
-      "id": "u1sgalg"
-    },
-    {
-      "key": "cutWidth",
-      "eqn": "frontHype * 2",
-      "id": "egcyi4x"
-    },
-    {
-      "key": "frontHypeCenterD",
-      "eqn": "fwl/2",
-      "id": "fwll2bq"
-    },
-    {
-      "key": "frontHypeCenterX",
-      "eqn": "fwr/2",
-      "id": "c0gj6ud"
-    },
-    {
-      "key": "cutCenterX",
-      "eqn": "frontHypeCenterX - frontHype * Math.sin(frontLeftTheta)",
-      "id": "otayvu9"
-    },
-    {
-      "key": "cutCenterD",
-      "eqn": "frontHypeCenterD - frontHype * Math.cos(frontLeftTheta)",
-      "id": "ekillpb"
-    },
-    {
-      "key": "backCutterDem",
-      "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))",
-      "id": "nvnsugh"
-    },
-    {
-      "key": "topInnerLimit",
-      "eqn": "c.h - topInsetDepth - T.t",
-      "id": "zj8uuj1"
-    },
-    {
-      "key": "topOuterLimit",
-      "eqn": "c.h",
-      "id": "3liro7c"
-    },
-    {
-      "key": "bottomInnerLimit",
-      "eqn": "bottomInsetDepth + B.t",
-      "id": "ddjl8d0"
-    },
-    {
-      "key": "bottomOuterLimit",
-      "eqn": 0,
-      "id": "0y39vqw"
-    },
-    {
-      "key": "leftInnerLimit",
-      "eqn": "R.t",
-      "id": "oto8hml"
-    },
-    {
-      "key": "leftOuterLimit",
-      "eqn": "0",
-      "id": "s0ynin6"
-    },
-    {
-      "key": "leftCutTheta",
-      "eqn": "Math.PI - frontLeftTheta - Math.PI12",
-      "id": "d91x5l5"
-    },
-    {
-      "key": "leftCutT",
-      "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
-      "id": "c1zmc1s"
-    },
-    {
-      "key": "rightCutTheta",
-      "eqn": "frontLeftTheta",
-      "id": "moxhnw5"
-    },
-    {
-      "key": "rightCutX",
-      "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
-      "id": "476p6b2"
-    },
-    {
-      "key": "rightInnerLimit",
-      "eqn": "fwr - leftCutT",
-      "id": "dnmesi3"
-    },
-    {
-      "key": "rightOuterLimit",
-      "eqn": "fwr",
-      "id": "9syndoq"
-    },
-    {
-      "key": "frontDepthMin",
-      "eqn": 0,
-      "id": "2pfov96"
-    },
-    {
-      "key": "frontDepthMax",
-      "eqn": "fwl",
-      "id": "eflejko"
-    }
-  ],
-  "subassemblies": [
-    {
-      "type": "Panel",
-      "center": [
-        "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
-        "c.h/2",
-        "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
-      ],
-      "demensions": [
-        "pbw",
-        "c.h",
-        "pwt14"
-      ],
-      "rotation": [
-        0,
-        "135",
-        0
-      ],
-      "name": "Panel.Back",
-      "code": "BACK",
-      "id": "ly2p41u"
-    },
-    {
-      "type": "Cutter",
-      "center": [
-        "c.w + bo/4*Math.sin(Math.PI/2)",
-        "c.h/2",
-        "-(c.t + bo/4*Math.sin(Math.PI/2))"
-      ],
-      "demensions": [
-        "bo*2",
-        "c.h",
-        "bo*2"
-      ],
-      "rotation": [
-        0,
-        "135",
-        0
-      ],
-      "name": "Cutter.Back",
-      "code": "cb",
-      "id": "ly2p41z"
-    },
-    {
-      "type": "Panel",
-      "center": [
-        "R.w/2",
-        "c.h / 2",
-        "R.t/-2"
-      ],
-      "demensions": [
-        "c.w",
-        "c.h",
-        "pwt34"
-      ],
-      "rotation": [
-        0,
-        "0",
-        0
-      ],
-      "name": "Panel.Left",
-      "code": "R",
-      "id": "67tkjp5"
-    },
-    {
-      "type": "Panel",
-      "center": [
-        "L.t/2",
-        "c.h/2",
-        "L.w/-2"
-      ],
-      "demensions": [
-        "c.t",
-        "c.h",
-        "pwt34"
-      ],
-      "rotation": [
-        0,
-        "90",
-        0
-      ],
-      "name": "Panel.Right",
-      "code": "L",
-      "id": "kfuwf6d"
-    },
-    {
-      "type": "Panel",
-      "center": [
-        "pbr.w / 2 + R.t ",
-        "c.h/2",
-        "-(c.t - t / 2)"
-      ],
-      "demensions": [
-        "c.w - bo",
-        "c.h",
-        "pwt34"
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "name": "Panel.Back.Right",
-      "code": "pbr",
-      "id": "a1yypp5"
-    },
-    {
-      "type": "Cutter",
-      "center": [
-        "pbl.c.x + cpbl.t",
-        "pbl.c.y",
-        "pbl.c.z"
-      ],
-      "demensions": [
-        "pbl.d.x",
-        "pbl.d.y",
-        "pbl.d.z"
-      ],
-      "rotation": [
-        "pbl.r.x",
-        "pbl.r.y",
-        "pbl.r.z"
-      ],
-      "name": "Cutter.Back.Left",
-      "code": "cpbl",
-      "id": "qnpktr2"
-    },
-    {
-      "type": "Panel",
-      "center": [
-        "c.w - pbr.t/2",
-        "c.h/2",
-        "-(pbl.w/2 + L.t)"
-      ],
-      "demensions": [
-        "c.t - bo",
-        "c.h",
-        "pwt34"
-      ],
-      "rotation": [
-        0,
-        "90",
-        0
-      ],
-      "name": "Panel.Back.Left",
-      "code": "pbl",
-      "id": "qnpktr8"
-    },
-    {
-      "type": "Cutter",
-      "center": [
-        "pbr.c.x",
-        "pbr.c.y",
-        "pbr.c.z - cpbr.t"
-      ],
-      "demensions": [
-        "pbr.d.x",
-        "pbr.d.y",
-        "pbr.d.z"
-      ],
-      "rotation": [
-        "pbr.r.x",
-        "pbr.r.y",
-        "pbr.r.z"
-      ],
-      "name": "Cutter.Back.Right",
-      "code": "cpbr",
-      "id": "qnpktw2"
-    },
-    {
-      "type": "Panel",
-      "center": [
-        "c.w / 2",
-        "c.h - topInsetDepth - T.t / 2",
-        "c.t / -2"
-      ],
-      "demensions": [
-        "c.w - pbr.t - R.t",
-        "c.t - pbl.t - L.t",
-        "pwt34"
-      ],
-      "rotation": [
-        "90",
-        "0",
-        0
-      ],
-      "name": "Panel.Top",
-      "code": "T",
-      "id": "0p8zyq0"
-    },
-    {
-      "type": "Panel",
-      "center": [
-        "c.w / 2",
-        "bottomInsetDepth + B.t / 2",
-        "c.t / -2"
-      ],
-      "demensions": [
-        "c.w - pbr.t - R.t",
-        "c.t - pbl.t - L.t",
-        "pwt34"
-      ],
-      "rotation": [
-        "90",
-        "0",
-        0
-      ],
-      "name": "Panel.Bottom",
-      "code": "B",
-      "id": "uqb7ksc"
-    },
-    {
-      "type": "Cutter",
-      "center": [
-        "cutCenterX",
-        "c.h/2",
-        "-cutCenterD"
-      ],
-      "demensions": [
-        "frontHype * 2",
-        "frontHype*2",
-        "c.h"
-      ],
-      "rotation": [
-        "90",
-        "Math.toDegrees(Math.PI - frontLeftTheta)",
-        0
-      ],
-      "name": "Cutter.Front",
-      "code": "cut",
-      "id": "t2nx210"
-    }
-  ],
-  "joints": [
-    {
-      "malePartCode": "BACK",
-      "femalePartCode": "B",
-      "type": "Butt",
-      "id": "jhdiitu"
-    },
-    {
-      "malePartCode": "BACK",
-      "femalePartCode": "pbr",
-      "type": "Butt",
-      "id": "tfovv9r"
-    },
-    {
-      "malePartCode": "BACK",
-      "femalePartCode": "pbl",
-      "type": "Butt",
-      "id": "i49ifbe"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "B",
-      "femalePartCode": "L",
-      "maleOffset": "L.t / 2",
-      "demensionAxis": "y",
-      "centerAxis": "-z",
-      "id": "0zszlb9"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "B",
-      "femalePartCode": "R",
-      "maleOffset": "R.t/2",
-      "demensionAxis": "x",
-      "centerAxis": "-x",
-      "id": "vbwtc6l"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "B",
-      "femalePartCode": "pbl",
-      "maleOffset": "pbl.t/2",
-      "demensionAxis": "y",
-      "centerAxis": "+z",
-      "id": "x8qno2z"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "B",
-      "femalePartCode": "pbr",
-      "maleOffset": "pbr.t/2",
-      "demensionAxis": "x",
-      "centerAxis": "+x",
-      "id": "3zyqkyg"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "T",
-      "femalePartCode": "L",
-      "maleOffset": "L.t / 2",
-      "demensionAxis": "y",
-      "centerAxis": "-z",
-      "id": "ho44x8c"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "T",
-      "femalePartCode": "R",
-      "maleOffset": "R.t/2",
-      "demensionAxis": "x",
-      "centerAxis": "-x",
-      "id": "f2yqowv"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "T",
-      "femalePartCode": "pbl",
-      "maleOffset": "pbl.t/2",
-      "demensionAxis": "y",
-      "centerAxis": "+z",
-      "id": "xlic9x8"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "T",
-      "femalePartCode": "pbr",
-      "maleOffset": "pbr.t/2",
-      "demensionAxis": "x",
-      "centerAxis": "+x",
-      "id": "dv1u67c"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "pbl",
-      "femalePartCode": "R",
-      "maleOffset": "pbl.t/2",
-      "demensionAxis": "x",
-      "centerAxis": "-z",
-      "id": "861ea5i"
-    },
-    {
-      "type": "Dado",
-      "malePartCode": "pbr",
-      "femalePartCode": "L",
-      "maleOffset": "L.t / 2",
-      "demensionAxis": "x",
-      "centerAxis": "-x",
-      "id": "t0ywrvc"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "BACK",
-      "femalePartCode": "T",
-      "id": "e3z7qur"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cut",
-      "femalePartCode": "T",
-      "id": "k0atwnf"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cut",
-      "femalePartCode": "B",
-      "id": "4ke3jn9"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cut",
-      "femalePartCode": "L",
-      "id": "lr1xqx8"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cut",
-      "femalePartCode": "R",
-      "id": "bk2rjwz"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cb",
-      "femalePartCode": "T",
-      "id": "1l5u1lk"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cb",
-      "femalePartCode": "B",
-      "id": "1zp5rfv"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cb",
-      "femalePartCode": "pbr",
-      "id": "rs2316q"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cb",
-      "femalePartCode": "pbl",
-      "id": "m9e5p7l"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cpbl",
-      "femalePartCode": "BACK",
-      "id": "l85jpd3"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "cpbr",
-      "femalePartCode": "BACK",
-      "id": "h3xmpm4"
-    }
-  ],
-  "dividerJoint": {
-    "type": "Dado",
-    "maleOffset": "33"
-  },
-  "shape": "corner",
-  "width": 50.8,
-  "height": 76.2,
-  "thickness": 91.44,
-  "openings": [
-    {
-      "_Type": "location",
-      "rotation": {
-        "x": 0,
-        "z": 0,
-        "y": "270+ Math.toDegrees(frontLeftTheta)"
-      },
-      "coordinates": {
-        "inner": [
-          {
-            "x": "leftInnerLimit",
-            "y": "topInnerLimit",
-            "z": "-(frontDepthMax - rightCutX)"
-          },
-          {
-            "x": "rightInnerLimit",
-            "y": "topInnerLimit",
-            "z": "-(frontDepthMin + R.t)"
-          },
-          {
-            "x": "rightInnerLimit",
-            "y": "bottomInnerLimit",
-            "z": "-(frontDepthMin + R.t)"
-          },
-          {
-            "x": "leftInnerLimit",
-            "y": "bottomInnerLimit",
-            "z": "-(frontDepthMax - rightCutX)"
-          }
-        ],
-        "outer": [
-          {
-            "x": "leftOuterLimit",
-            "y": "topOuterLimit",
-            "z": "-frontDepthMax"
-          },
-          {
-            "x": "rightOuterLimit",
-            "y": "topOuterLimit",
-            "z": "-frontDepthMin"
-          },
-          {
-            "x": "rightOuterLimit",
-            "y": "bottomOuterLimit",
-            "z": "-frontDepthMin"
-          },
-          {
-            "x": "leftOuterLimit",
-            "y": "bottomOuterLimit",
-            "z": "-frontDepthMax"
-          }
-        ]
-      },
-      "state": {
-        "innerOouter": true,
-        "index": 0,
-        "xOyOz": "z"
-      },
-      "id": "hofivl0"
-    }
-  ]
-  },
-  "ut": {
     "_TYPE": "CabinetTemplate",
-    "width": 60.96,
-    "height": 243.84,
-    "thickness": 60.96,
+
     "ID_ATTRIBUTE": "id",
-    "type": "ut",
+    "type": "corner-wall",
     "values": [
       {
-        "key": "brh",
-        "eqn": "tkb.w + BACK.t + brr",
-
+        "key": "bo",
+        "eqn": "4*2.54",
+        "id": "pz0usts"
       },
       {
-        "key": "innerWidth",
-        "eqn": "c.w - pwt34 * 2",
-
+        "key": "fwr",
+        "eqn": "c.w - lw",
+        "id": "v47f8o3"
       },
       {
-        "key": "innerWidthCenter",
-        "eqn": "innerWidth + pwt34",
-
+        "key": "fwl",
+        "eqn": "c.t - rw",
+        "id": "ammy5c5"
       },
       {
-
-        "key": "insetTop",
-        "eqn": "4*2.54"
+        "key": "lw",
+        "eqn": "30.48",
+        "id": "r8els3r"
+      },
+      {
+        "key": "rw",
+        "eqn": "30.48",
+        "id": "zoxsnu9"
+      },
+      {
+        "key": "cnrD",
+        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
+        "id": "vju4ekg"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+        "id": "bg3l1cw"
+      },
+      {
+        "key": "backhyp",
+        "eqn": "Math.sqrt((R.t*R.t)*2)",
+        "id": "zmra3po"
+      },
+      {
+        "key": "frontLeftTheta",
+        "eqn": "Math.atan(fwl/fwr)",
+        "id": "woqnfe1"
+      },
+      {
+        "key": "frontHype",
+        "eqn": "Math.sqrt(fwr*fwr + fwl*fwl)",
+        "id": "u1sgalg"
+      },
+      {
+        "key": "cutWidth",
+        "eqn": "frontHype * 2",
+        "id": "egcyi4x"
+      },
+      {
+        "key": "frontHypeCenterD",
+        "eqn": "fwl/2",
+        "id": "fwll2bq"
+      },
+      {
+        "key": "frontHypeCenterX",
+        "eqn": "fwr/2",
+        "id": "c0gj6ud"
+      },
+      {
+        "key": "cutCenterX",
+        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontLeftTheta)",
+        "id": "otayvu9"
+      },
+      {
+        "key": "cutCenterD",
+        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontLeftTheta)",
+        "id": "ekillpb"
+      },
+      {
+        "key": "backCutterDem",
+        "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))",
+        "id": "nvnsugh"
+      },
+      {
+        "key": "topInnerLimit",
+        "eqn": "c.h - tid - T.t",
+        "id": "zj8uuj1"
+      },
+      {
+        "key": "topOuterLimit",
+        "eqn": "T.c.y + T.t/2",
+        "id": "3liro7c"
+      },
+      {
+        "key": "bottomInnerLimit",
+        "eqn": "bid + B.t",
+        "id": "ddjl8d0"
+      },
+      {
+        "key": "bottomOuterLimit",
+        "eqn": "B.c.y + T.t/2",
+        "id": "0y39vqw"
+      },
+      {
+        "key": "leftInnerLimit",
+        "eqn": "R.t",
+        "id": "oto8hml"
+      },
+      {
+        "key": "leftOuterLimit",
+        "eqn": "0",
+        "id": "s0ynin6"
+      },
+      {
+        "key": "leftCutTheta",
+        "eqn": "Math.PI - frontLeftTheta - Math.PI12",
+        "id": "d91x5l5"
+      },
+      {
+        "key": "leftCutT",
+        "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
+        "id": "c1zmc1s"
+      },
+      {
+        "key": "rightCutTheta",
+        "eqn": "frontLeftTheta",
+        "id": "moxhnw5"
+      },
+      {
+        "key": "rightCutX",
+        "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
+        "id": "476p6b2"
+      },
+      {
+        "key": "rightInnerLimit",
+        "eqn": "fwr - leftCutT",
+        "id": "dnmesi3"
+      },
+      {
+        "key": "rightOuterLimit",
+        "eqn": "fwr",
+        "id": "9syndoq"
+      },
+      {
+        "key": "frontDepthMin",
+        "eqn": 0,
+        "id": "2pfov96"
+      },
+      {
+        "key": "frontDepthMax",
+        "eqn": "fwl",
+        "id": "eflejko"
       }
     ],
     "subassemblies": [
       {
-        "name": "ToeKickBacker",
         "type": "Panel",
-        "code": "tkb",
         "center": [
-          "c.w / 2",
-          "w / 2",
-          "-(tkd + (t / 2))"
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
         ],
         "demensions": [
-          "tkh",
-          "innerWidth",
-          "tkbw"
+          "pbw",
+          "c.h",
+          "pwt14"
         ],
         "rotation": [
           0,
-          0,
-          90
-        ],
-
-      },
-      {
-        "name": "Right",
-        "type": "Panel",
-        "code": "R",
-        "center": [
-          "c.w - (R.t / 2)",
-          "l / 2",
-          "w / -2"
-        ],
-        "demensions": [
-          "c.t",
-          "c.l",
-          "pwt34"
-        ],
-        "rotation": [
-          0,
-          90,
+          "135",
           0
         ],
-
-      },
-      {
-        "name": "Left",
-        "type": "Panel",
-        "code": "L",
-        "center": [
-          "(t / 2)",
-          " l / 2",
-          "w/-2"
-        ],
-        "demensions": [
-          "c.t",
-          "c.l",
-          "pwt34"
-        ],
-        "rotation": [
-          0,
-          90,
-          0
-        ],
-
-      },
-      {
-        "name": "Back",
-        "type": "Panel",
+        "name": "Panel.Back",
         "code": "BACK",
+        "id": "ly2p41u"
+      },
+      {
+        "type": "Cutter",
         "center": [
-          "l / 2 + L.t",
-          " (w / 2) + tkb.w",
-          "-(c.t - (t / 2))"
+          "c.w + bo/4*Math.sin(Math.PI/2)",
+          "c.h/2",
+          "-(c.t + bo/4*Math.sin(Math.PI/2))"
         ],
         "demensions": [
-          "c.l - tkb.w - T.t - insetTop",
-          "innerWidth",
-          "pwt34"
+          "bo*2",
+          "c.h",
+          "bo*2"
         ],
         "rotation": [
           0,
-          0,
-          90
-        ],
-
-      },
-      {
-        "name": "Bottom",
-        "type": "Panel",
-        "code": "B",
-        "center": [
-          "c.w / 2",
-          "tkh + (t/2)",
-          "w / -2"
-        ],
-        "demensions": [
-          "c.t - BACK.t",
-          "innerWidth",
-          "pwt34"
-        ],
-        "rotation": [
-          90,
-          90,
+          "135",
           0
         ],
-
+        "name": "Cutter.Back",
+        "code": "cb",
+        "id": "ly2p41z"
       },
       {
-        "name": "Top",
-        "type": "Panel",
-        "code": "T",
+        "type": "Divider",
         "center": [
-          "c.w / 2",
-          "c.h - pwt34/2 - insetTop",
-          "w / -2"
+          "R.w/2",
+          "c.h / 2",
+          "R.t/-2"
         ],
         "demensions": [
-          "c.t",
-          "innerWidth",
-          "pwt34"
-        ],
-        "rotation": [
-          90,
-          90,
-          0
-        ],
-
-      },
-      {
-        "type": "Panel",
-        "center": [
-          "L.t + innerWidth/2",
-          "c.h - insetTop/2",
-          "tf.t/-2"
-        ],
-        "demensions": [
-          "insetTop",
-          "innerWidth",
+          "c.w",
+          "c.h",
           "pwt34"
         ],
         "rotation": [
           0,
           "0",
-          "90"
+          0
         ],
-
-        "name": "Panel.Top.Filler",
-        "code": "tf"
-      }
-    ],
-    "joints": [
-      {
-        "malePartCode": "T",
-        "femalePartCode": "L",
-        "type": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-
+        "name": "Panel.Left",
+        "code": "R",
+        "id": "67tkjp5"
       },
       {
-        "malePartCode": "T",
-        "femalePartCode": "R",
-        "type": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-
-      },
-      {
-        "malePartCode": "BACK",
-        "femalePartCode": "L",
-        "type": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-
-      },
-      {
-        "malePartCode": "BACK",
-        "femalePartCode": "R",
-        "type": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-
-      },
-      {
-        "malePartCode": "tkb",
-        "femalePartCode": "L",
-        "type": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-
-      },
-      {
-        "malePartCode": "tkb",
-        "femalePartCode": "R",
-        "type": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-
-      },
-      {
-        "malePartCode": "B",
-        "femalePartCode": "L",
-        "type": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-
-      },
-      {
-        "malePartCode": "B",
-        "femalePartCode": "R",
-        "type": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-
-      },
-      {
-        "malePartCode": "tkb",
-        "femalePartCode": "B",
-        "type": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "x",
-        "centerAxis": "+y",
-
-      },
-      {
-
-        "type": "Dado",
-        "malePartCode": "BACK",
-        "femalePartCode": "T",
-        "maleOffset": "T.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "+y"
-      }
-    ],
-    "dividerJoint": {
-      "type": "Dado",
-      "maleOffset": 0.9525
-    },
-    "openings": [
-      {
-        "top": "T",
-        "bottom": "B",
-        "left": "L",
-        "right": "R",
-        "back": "BACK",
-
-      }
-    ]
-  },
-  "wall": {
-    "_TYPE": "CabinetTemplate",
-    "ID_ATTRIBUTE": "id",
-    "width": 45.72,
-    "height": 76.2,
-    "thickness": 30.48,
-    "type": "wall",
-    "values": [
-      {
-        "key": "bottomInsetDepth",
-        "eqn": "0"
-      },
-      {
-        "key": "topInsetDepth",
-        "eqn": "0"
-      }
-    ],
-    "subassemblies": [
-      {
-        "type": "Panel",
+        "type": "Divider",
         "center": [
-          "c.w - R.t/2",
-          "c.h / 2",
-          "R.w / -2"
+          "L.t/2",
+          "c.h/2",
+          "L.w/-2"
         ],
         "demensions": [
           "c.t",
@@ -1258,10 +530,731 @@ module.exports = {
           0
         ],
         "name": "Panel.Right",
-        "code": "R"
+        "code": "L",
+        "id": "kfuwf6d"
       },
       {
         "type": "Panel",
+        "center": [
+          "pbr.w / 2 + R.t ",
+          "c.h/2",
+          "-(c.t - t / 2)"
+        ],
+        "demensions": [
+          "c.w - bo",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "Panel.Back.Right",
+        "code": "pbr",
+        "id": "a1yypp5"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbl.c.x + cpbl.t",
+          "pbl.c.y",
+          "pbl.c.z"
+        ],
+        "demensions": [
+          "pbl.d.x",
+          "pbl.d.y",
+          "pbl.d.z"
+        ],
+        "rotation": [
+          "pbl.r.x",
+          "pbl.r.y",
+          "pbl.r.z"
+        ],
+        "name": "Cutter.Back.Left",
+        "code": "cpbl",
+        "id": "qnpktr2"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - pbr.t/2",
+          "c.h/2",
+          "-(pbl.w/2 + L.t)"
+        ],
+        "demensions": [
+          "c.t - bo",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Back.Left",
+        "code": "pbl",
+        "id": "qnpktr8"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbr.c.x",
+          "pbr.c.y",
+          "pbr.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "pbr.d.x",
+          "pbr.d.y",
+          "pbr.d.z"
+        ],
+        "rotation": [
+          "pbr.r.x",
+          "pbr.r.y",
+          "pbr.r.z"
+        ],
+        "name": "Cutter.Back.Right",
+        "code": "cpbr",
+        "id": "qnpktw2"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w / 2",
+          "c.h - tid - T.t / 2",
+          "c.t / -2"
+        ],
+        "demensions": [
+          "c.w - pbr.t - R.t",
+          "c.t - pbl.t - L.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panel.Top",
+        "code": "T",
+        "id": "0p8zyq0"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w / 2",
+          "bid + B.t / 2",
+          "c.t / -2"
+        ],
+        "demensions": [
+          "c.w - pbr.t - R.t",
+          "c.t - pbl.t - L.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panel.Bottom",
+        "code": "B",
+        "id": "uqb7ksc"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "cutCenterX",
+          "c.h/2",
+          "-cutCenterD"
+        ],
+        "demensions": [
+          "frontHype * 2",
+          "frontHype*2",
+          "c.h"
+        ],
+        "rotation": [
+          "90",
+          "Math.toDegrees(Math.PI - frontLeftTheta)",
+          0
+        ],
+        "name": "Cutter.Front",
+        "code": "cut",
+        "id": "t2nx210"
+      }
+    ],
+    "joints": [
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "B",
+        "type": "Butt",
+        "id": "jhdiitu"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "pbr",
+        "type": "Butt",
+        "id": "tfovv9r"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "pbl",
+        "type": "Butt",
+        "id": "i49ifbe"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "L",
+        "maleOffset": "L.t / 2",
+        "demensionAxis": "y",
+        "centerAxis": "-z",
+        "id": "0zszlb9"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "R",
+        "maleOffset": "R.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "vbwtc6l"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "pbl",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+z",
+        "id": "x8qno2z"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "pbr",
+        "maleOffset": "pbr.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "3zyqkyg"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "L",
+        "maleOffset": "L.t / 2",
+        "demensionAxis": "y",
+        "centerAxis": "-z",
+        "id": "ho44x8c"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "R",
+        "maleOffset": "R.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "f2yqowv"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "pbl",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+z",
+        "id": "xlic9x8"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "pbr",
+        "maleOffset": "pbr.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "dv1u67c"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbl",
+        "femalePartCode": "R",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-z",
+        "id": "861ea5i"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbr",
+        "femalePartCode": "L",
+        "maleOffset": "L.t / 2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "t0ywrvc"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "BACK",
+        "femalePartCode": "T",
+        "id": "e3z7qur"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "T",
+        "id": "k0atwnf"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "B",
+        "id": "4ke3jn9"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "L",
+        "id": "lr1xqx8"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "R",
+        "id": "bk2rjwz"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "T",
+        "id": "1l5u1lk"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "B",
+        "id": "1zp5rfv"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "pbr",
+        "id": "rs2316q"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "pbl",
+        "id": "m9e5p7l"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbl",
+        "femalePartCode": "BACK",
+        "id": "l85jpd3"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbr",
+        "femalePartCode": "BACK",
+        "id": "h3xmpm4"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": "33"
+    },
+    "shape": "corner",
+    "width": "walld*2",
+    "height": "wallh",
+    "thickness": "walld*2",
+    "fromFloor": "walle",
+    "openings": [
+      {
+        "_Type": "location",
+        "rotation": {
+          "x": 0,
+          "z": 0,
+          "y": "270+ Math.toDegrees(frontLeftTheta)"
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "leftInnerLimit",
+              "y": "topInnerLimit",
+              "z": "-(frontDepthMax - rightCutX)"
+            },
+            {
+              "x": "rightInnerLimit",
+              "y": "topInnerLimit",
+              "z": "-(frontDepthMin + R.t)"
+            },
+            {
+              "x": "rightInnerLimit",
+              "y": "bottomInnerLimit",
+              "z": "-(frontDepthMin + R.t)"
+            },
+            {
+              "x": "leftInnerLimit",
+              "y": "bottomInnerLimit",
+              "z": "-(frontDepthMax - rightCutX)"
+            }
+          ],
+          "outer": [
+            {
+              "x": "leftOuterLimit",
+              "y": "topOuterLimit",
+              "z": "-frontDepthMax"
+            },
+            {
+              "x": "rightOuterLimit",
+              "y": "topOuterLimit",
+              "z": "-frontDepthMin"
+            },
+            {
+              "x": "rightOuterLimit",
+              "y": "bottomOuterLimit",
+              "z": "-frontDepthMin"
+            },
+            {
+              "x": "leftOuterLimit",
+              "y": "bottomOuterLimit",
+              "z": "-frontDepthMax"
+            }
+          ]
+        },
+        "state": {
+          "innerOouter": true,
+          "index": 0,
+          "xOyOz": "z"
+        },
+        "id": "hofivl0"
+      }
+    ]
+  },
+  "corner-base": {
+    "_TYPE": "CabinetTemplate",
+
+    "ID_ATTRIBUTE": "id",
+    "type": "corner-base",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54",
+        "id": "pz0usts"
+      },
+      {
+        "key": "fwl",
+        "eqn": "c.w - lw",
+        "id": "v47f8o3"
+      },
+      {
+        "key": "fwr",
+        "eqn": "c.t - rw",
+        "id": "ammy5c5"
+      },
+      {
+        "key": "lw",
+        "eqn": "30.48",
+        "id": "r8els3r"
+      },
+      {
+        "key": "rw",
+        "eqn": "30.48",
+        "id": "zoxsnu9"
+      },
+      {
+        "key": "cnrD",
+        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
+        "id": "vju4ekg"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+        "id": "bg3l1cw"
+      },
+      {
+        "key": "backhyp",
+        "eqn": "Math.sqrt((R.t*R.t)*2)",
+        "id": "zmra3po"
+      },
+      {
+        "key": "frontLeftTheta",
+        "eqn": "Math.atan(fwl/fwr)",
+        "id": "woqnfe1"
+      },
+      {
+        "key": "frontRightTheta",
+        "eqn": "Math.PI/2  - frontLeftTheta",
+        "id": "woqnfd3"
+      },
+      {
+        "key": "frontHype",
+        "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)",
+        "id": "u1sgalg"
+      },
+      {
+        "key": "cutWidth",
+        "eqn": "frontHype * 2",
+        "id": "egcyi4x"
+      },
+      {
+        "key": "frontHypeCenterD",
+        "eqn": "fwr/2 + R.t",
+        "id": "fwll2bq"
+      },
+      {
+        "key": "frontHypeCenterX",
+        "eqn": "fwl/2 + L.t",
+        "id": "c0gj6ud"
+      },
+      {
+        "key": "cutCenterX",
+        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontRightTheta)",
+        "id": "otayvu9"
+      },
+      {
+        "key": "cutCenterD",
+        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontRightTheta)",
+        "id": "ekillpb"
+      },
+      {
+        "key": "backCutterDem",
+        "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))",
+        "id": "nvnsugh"
+      },
+      {
+        "key": "topInnerLimit",
+        "eqn": "T.c.y - T.t/2",
+        "id": "zj8uuj1"
+      },
+      {
+        "key": "topOuterLimit",
+        "eqn": "T.c.y + T.t/2",
+        "id": "3liro7c"
+      },
+      {
+        "key": "bottomInnerLimit",
+        "eqn": "B.c.y + B.t/2",
+        "id": "ddjl8d0"
+      },
+      {
+        "key": "bottomOuterLimit",
+        "eqn": "B.c.y - B.t/2",
+        "id": "0y39vqw"
+      },
+      {
+        "key": "leftInnerLimit",
+        "eqn": "R.t",
+        "id": "oto8hml"
+      },
+      {
+        "key": "leftOuterLimit",
+        "eqn": "0",
+        "id": "s0ynin6"
+      },
+      {
+        "key": "leftCutTheta",
+        "eqn": "Math.PI - frontRightTheta - Math.PI12",
+        "id": "d91x5l5"
+      },
+      {
+        "key": "leftCutT",
+        "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
+        "id": "c1zmc1s"
+      },
+      {
+        "key": "rightCutTheta",
+        "eqn": "frontRightTheta",
+        "id": "moxhnw5"
+      },
+      {
+        "key": "rightCutX",
+        "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
+        "id": "476p6b2"
+      },
+      {
+        "key": "rightInnerLimit",
+        "eqn": "fwl - leftCutT",
+        "id": "dnmesi3"
+      },
+      {
+        "key": "rightOuterLimit",
+        "eqn": "fwl",
+        "id": "9syndoq"
+      },
+      {
+        "key": "frontDepthMin",
+        "eqn": 0,
+        "id": "2pfov96"
+      },
+      {
+        "key": "frontDepthMax",
+        "eqn": "fwr",
+        "id": "eflejko"
+      },
+      {
+        "key": "tkLeftT",
+        "eqn": ".5/Math.sin(frontRightTheta)",
+        "id": "fi3bwts"
+      },
+      {
+        "key": "tkRightT",
+        "eqn": ".5/Math.sin(frontLeftTheta)",
+        "id": "m0p2fnx"
+      },
+      {
+        "key": "tkLeftD",
+        "eqn": "frontHypeCenterX + (tkd + tkb.t/2)*Math.sin(frontRightTheta)",
+        "id": "xd2g25i"
+      },
+      {
+        "key": "tkRightD",
+        "eqn": "frontHypeCenterD + (tkd + tkb.t/2)*Math.sin(frontLeftTheta)",
+        "id": "e2tcn5p"
+      },
+      {
+        "key": "toeKickBackerLen",
+        "eqn": "2*Math.sqrt((triX+tkb.t/2)*(triX+tkb.t/2)+(triY+tkb.t\\2)*(triY+tkb.t\\2))",
+        "id": "6d7a07i"
+      },
+      {
+        "key": "triX",
+        "eqn": "frontDepthMax +  (tkd + tkb.t/2)/Math.sin(frontLeftTheta)",
+        "id": "9sfgikr"
+      },
+      {
+        "key": "triY",
+        "eqn": "rightInnerLimit + (tkd + tkb.t/2)/Math.sin(frontLeftTheta)",
+        "id": "fcwcnb9"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pwt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Panel.Back",
+        "code": "BACK",
+        "id": "ly2p41u"
+      },
+      {
+        "name": "ToeKickBacker",
+        "type": "Panel",
+        "code": "tkb",
+        "center": [
+          "tkLeftD",
+          "tkb.w / 2",
+          "-1 *(tkRightD)"
+        ],
+        "demensions": [
+          "tkh",
+          "toeKickBackerLen",
+          "tkbw"
+        ],
+        "rotation": [
+          "90+Math.toDegrees(frontLeftTheta)",
+          "0",
+          90
+        ],
+        "id": "zojblha"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "c.w + bo/4*Math.sin(Math.PI/2)",
+          "c.h/2",
+          "-(c.t + bo/4*Math.sin(Math.PI/2))"
+        ],
+        "demensions": [
+          "bo*2",
+          "c.h",
+          "bo*2"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Cutter.Back",
+        "code": "cb",
+        "id": "ly2p41z"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "R.w/2",
+          "c.h / 2",
+          "R.t/-2"
+        ],
+        "demensions": [
+          "c.w",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ],
+        "name": "Panel.Right",
+        "code": "R",
+        "id": "67tkjp5"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "L.c.x - toeKickBackerLen/2",
+          "L.c.y",
+          "L.c.z"
+        ],
+        "demensions": [
+          "L.d.x",
+          "L.d.y + 1",
+          "toeKickBackerLen"
+        ],
+        "rotation": [
+          "L.r.x",
+          "L.r.y",
+          "L.r.z"
+        ],
+        "name": "CutterTBLeft",
+        "code": "ctbl",
+        "id": "67tskke5"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbr.c.x + toeKickBackerLen/2",
+          "pbr.c.y",
+          "pbr.c.z"
+        ],
+        "demensions": [
+          "pbr.d.x",
+          "pbr.d.y + 1",
+          "toeKickBackerLen"
+        ],
+        "rotation": [
+          "pbr.r.x",
+          "pbr.r.y",
+          "pbr.r.z"
+        ],
+        "name": "CutterTBRight",
+        "code": "ctbr",
+        "id": "67tskjp5"
+      },
+      {
+        "type": "Divider",
         "center": [
           "L.t/2",
           "c.h/2",
@@ -1278,18 +1271,19 @@ module.exports = {
           0
         ],
         "name": "Panel.Left",
-        "code": "L"
+        "code": "L",
+        "id": "kfuwf6d"
       },
       {
         "type": "Panel",
         "center": [
-          "L.t + BACK.w/2",
-          "BACK.h/2 + B.t",
-          "-(c.t - BACK.t /2)"
+          "pbr.w / 2 + R.t ",
+          "c.h/2",
+          "-(c.t - t / 2)"
         ],
         "demensions": [
-          "c.w - L.t - R.t",
-          "c.h - B.t -T.t",
+          "c.w - bo",
+          "c.h",
           "pwt34"
         ],
         "rotation": [
@@ -1297,19 +1291,83 @@ module.exports = {
           0,
           0
         ],
-        "name": "Panel.back",
-        "code": "BACK"
+        "name": "Panel.Back.Right",
+        "code": "pbr",
+        "id": "a1yypp5"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbl.c.x + cpbl.t",
+          "pbl.c.y",
+          "pbl.c.z"
+        ],
+        "demensions": [
+          "pbl.d.x",
+          "pbl.d.y",
+          "pbl.d.z"
+        ],
+        "rotation": [
+          "pbl.r.x",
+          "pbl.r.y",
+          "pbl.r.z"
+        ],
+        "name": "Cutter.Back.Left",
+        "code": "cpbl",
+        "id": "qnpktr2"
       },
       {
         "type": "Panel",
         "center": [
-          "L.t + T.w / 2",
-          "c.h - T.t/2",
-          "T.l/-2 "
+          "c.w - pbr.t/2",
+          "c.h/2",
+          "-(pbl.w/2 + L.t)"
         ],
         "demensions": [
-          "c.w - L.t - R.t",
-          "c.t ",
+          "c.t - bo",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Back.Left",
+        "code": "pbl",
+        "id": "qnpktr8"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbr.c.x",
+          "pbr.c.y",
+          "pbr.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "pbr.d.x",
+          "pbr.d.y",
+          "pbr.d.z"
+        ],
+        "rotation": [
+          "pbr.r.x",
+          "pbr.r.y",
+          "pbr.r.z"
+        ],
+        "name": "Cutter.Back.Right",
+        "code": "cpbr",
+        "id": "qnpktw2"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w / 2",
+          "c.h - T.t / 2",
+          "c.t / -2"
+        ],
+        "demensions": [
+          "c.w - pbr.t - R.t",
+          "c.t - pbl.t - L.t",
           "pwt34"
         ],
         "rotation": [
@@ -1318,18 +1376,19 @@ module.exports = {
           0
         ],
         "name": "Panel.Top",
-        "code": "T"
+        "code": "T",
+        "id": "0p8zyq0"
       },
       {
         "type": "Panel",
         "center": [
-          "B.w /2 + L.t",
-          "B.t/2",
-          "B.h / -2"
+          "c.w / 2",
+          "tkh + B.t / 2",
+          "c.t / -2"
         ],
         "demensions": [
-          "c.w - L.t - R.t",
-          "c.t",
+          "c.w - pbr.t - R.t",
+          "c.t - pbl.t - L.t",
           "pwt34"
         ],
         "rotation": [
@@ -1337,88 +1396,1115 @@ module.exports = {
           "0",
           0
         ],
-        "name": "Panal.Bottom",
-        "code": "B"
+        "name": "Panel.Bottom",
+        "code": "B",
+        "id": "uqb7ksc"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "cutCenterX",
+          "c.h/2",
+          "-cutCenterD"
+        ],
+        "demensions": [
+          "frontHype * 2",
+          "frontHype*2",
+          "c.h"
+        ],
+        "rotation": [
+          "90",
+          "Math.toDegrees(Math.PI - frontRightTheta)",
+          0
+        ],
+        "name": "Cutter.Front",
+        "code": "cut",
+        "id": "t2nx210"
       }
     ],
     "joints": [
       {
-        "type": "Dado",
         "malePartCode": "BACK",
-        "femalePartCode": "T",
-        "maleOffset": "T.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "+y"
+        "femalePartCode": "B",
+        "type": "Butt",
+        "id": "jhdiitu"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "pbr",
+        "type": "Butt",
+        "id": "tfovv9r"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "pbl",
+        "type": "Butt",
+        "id": "i49ifbe"
       },
       {
         "type": "Dado",
-        "malePartCode": "BACK",
+        "malePartCode": "B",
+        "femalePartCode": "L",
+        "maleOffset": "L.t / 2",
+        "demensionAxis": "y",
+        "centerAxis": "-z",
+        "id": "0zszlb9"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
         "femalePartCode": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
-        "centerAxis": "+x"
+        "centerAxis": "-x",
+        "id": "vbwtc6l"
       },
       {
         "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "pbl",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+z",
+        "id": "x8qno2z"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "pbr",
+        "maleOffset": "pbr.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "3zyqkyg"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "L",
+        "maleOffset": "L.t / 2",
+        "demensionAxis": "y",
+        "centerAxis": "-z",
+        "id": "ho44x8c"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "R",
+        "maleOffset": "R.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "f2yqowv"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "pbl",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+z",
+        "id": "xlic9x8"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "pbr",
+        "maleOffset": "pbr.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "dv1u67c"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbl",
+        "femalePartCode": "R",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-z",
+        "id": "861ea5i"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbr",
+        "femalePartCode": "L",
+        "maleOffset": "L.t / 2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "t0ywrvc"
+      },
+      {
+        "type": "Butt",
         "malePartCode": "BACK",
+        "femalePartCode": "T",
+        "id": "e3z7qur"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "T",
+        "id": "k0atwnf"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "B",
+        "id": "4ke3jn9"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "L",
+        "id": "lr1xqx8"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "R",
+        "id": "bk2rjwz"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "T",
+        "id": "1l5u1lk"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "B",
+        "id": "1zp5rfv"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "pbr",
+        "id": "rs2316q"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "pbl",
+        "id": "m9e5p7l"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbl",
+        "femalePartCode": "BACK",
+        "id": "l85jpd3"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbr",
+        "femalePartCode": "BACK",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "tkb",
         "femalePartCode": "B",
         "maleOffset": "B.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "-y"
+        "demensionAxis": "x",
+        "centerAxis": "+y",
+        "id": "06h37x8"
       },
       {
-        "type": "Dado",
-        "malePartCode": "BACK",
+        "type": "Butt",
+        "malePartCode": "tkb",
         "femalePartCode": "L",
-        "maleOffset": "L.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "-x"
+        "id": "5pwgans"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "tkb",
+        "femalePartCode": "R",
+        "id": "3s90xye"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "ctbl",
+        "femalePartCode": "tkb",
+        "id": "tdlm7y6"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "ctbr",
+        "femalePartCode": "tkb",
+        "id": "t30gphe"
       }
     ],
     "dividerJoint": {
       "type": "Dado",
       "maleOffset": "33"
     },
+    "shape": "corner",
+    "width": "60 * 2.54",
+    "height": "wallh",
+    "thickness": "walld*2",
+    "fromFloor": "walle",
     "openings": [
       {
-        "top": "T",
-        "bottom": "B",
-        "left": "L",
-        "right": "R",
-        "back": "BACK",
+        "_Type": "location",
+        "rotation": {
+          "x": 0,
+          "z": 0,
+          "y": "270+ Math.toDegrees(frontRightTheta)"
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "leftInnerLimit",
+              "y": "topInnerLimit",
+              "z": "-(frontDepthMax - rightCutX)"
+            },
+            {
+              "x": "rightInnerLimit",
+              "y": "topInnerLimit",
+              "z": "-(frontDepthMin + R.t)"
+            },
+            {
+              "x": "rightInnerLimit",
+              "y": "bottomInnerLimit",
+              "z": "-(frontDepthMin + R.t)"
+            },
+            {
+              "x": "leftInnerLimit",
+              "y": "bottomInnerLimit",
+              "z": "-(frontDepthMax - rightCutX)"
+            }
+          ],
+          "outer": [
+            {
+              "x": "leftOuterLimit",
+              "y": "topOuterLimit",
+              "z": "-frontDepthMax"
+            },
+            {
+              "x": "rightOuterLimit",
+              "y": "topOuterLimit",
+              "z": "-frontDepthMin"
+            },
+            {
+              "x": "rightOuterLimit",
+              "y": "bottomOuterLimit",
+              "z": "-frontDepthMin"
+            },
+            {
+              "x": "leftOuterLimit",
+              "y": "bottomOuterLimit",
+              "z": "-frontDepthMax"
+            }
+          ]
+        },
+        "state": {
+          "innerOouter": true,
+          "index": 0,
+          "xOyOz": "z"
+        },
+        "id": "holektl0"
       }
     ]
   },
-  "corner-base-blind (R)": {
+  "corner-ut": {
+    "_TYPE": "CabinetTemplate",
+
+    "ID_ATTRIBUTE": "id",
+    "type": "corner-ut",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54",
+        "id": "pz0usts"
+      },
+      {
+        "key": "fwl",
+        "eqn": "c.w - lw",
+        "id": "v47f8o3"
+      },
+      {
+        "key": "fwr",
+        "eqn": "c.t - rw",
+        "id": "ammy5c5"
+      },
+      {
+        "key": "lw",
+        "eqn": "30.48",
+        "id": "r8els3r"
+      },
+      {
+        "key": "rw",
+        "eqn": "30.48",
+        "id": "zoxsnu9"
+      },
+      {
+        "key": "cnrD",
+        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
+        "id": "vju4ekg"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+        "id": "bg3l1cw"
+      },
+      {
+        "key": "backhyp",
+        "eqn": "Math.sqrt((R.t*R.t)*2)",
+        "id": "zmra3po"
+      },
+      {
+        "key": "frontLeftTheta",
+        "eqn": "Math.atan(fwl/fwr)",
+        "id": "woqnfe1"
+      },
+      {
+        "key": "frontRightTheta",
+        "eqn": "Math.PI/2  - frontLeftTheta",
+        "id": "woqnfd3"
+      },
+      {
+        "key": "frontHype",
+        "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)",
+        "id": "u1sgalg"
+      },
+      {
+        "key": "cutWidth",
+        "eqn": "frontHype * 2",
+        "id": "egcyi4x"
+      },
+      {
+        "key": "frontHypeCenterD",
+        "eqn": "fwr/2 + R.t",
+        "id": "fwll2bq"
+      },
+      {
+        "key": "frontHypeCenterX",
+        "eqn": "fwl/2 + L.t",
+        "id": "c0gj6ud"
+      },
+      {
+        "key": "cutCenterX",
+        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontRightTheta)",
+        "id": "otayvu9"
+      },
+      {
+        "key": "cutCenterD",
+        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontRightTheta)",
+        "id": "ekillpb"
+      },
+      {
+        "key": "backCutterDem",
+        "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))",
+        "id": "nvnsugh"
+      },
+      {
+        "key": "topInnerLimit",
+        "eqn": "T.c.y - T.t/2",
+        "id": "zj8uuj1"
+      },
+      {
+        "key": "topOuterLimit",
+        "eqn": "T.c.y + T.t/2",
+        "id": "3liro7c"
+      },
+      {
+        "key": "bottomInnerLimit",
+        "eqn": "B.c.y + B.t/2",
+        "id": "ddjl8d0"
+      },
+      {
+        "key": "bottomOuterLimit",
+        "eqn": "B.c.y - B.t/2",
+        "id": "0y39vqw"
+      },
+      {
+        "key": "leftInnerLimit",
+        "eqn": "R.t",
+        "id": "oto8hml"
+      },
+      {
+        "key": "leftOuterLimit",
+        "eqn": "0",
+        "id": "s0ynin6"
+      },
+      {
+        "key": "leftCutTheta",
+        "eqn": "Math.PI - frontRightTheta - Math.PI12",
+        "id": "d91x5l5"
+      },
+      {
+        "key": "leftCutT",
+        "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
+        "id": "c1zmc1s"
+      },
+      {
+        "key": "rightCutTheta",
+        "eqn": "frontRightTheta",
+        "id": "moxhnw5"
+      },
+      {
+        "key": "rightCutX",
+        "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
+        "id": "476p6b2"
+      },
+      {
+        "key": "rightInnerLimit",
+        "eqn": "fwl - leftCutT",
+        "id": "dnmesi3"
+      },
+      {
+        "key": "rightOuterLimit",
+        "eqn": "fwl",
+        "id": "9syndoq"
+      },
+      {
+        "key": "frontDepthMin",
+        "eqn": 0,
+        "id": "2pfov96"
+      },
+      {
+        "key": "frontDepthMax",
+        "eqn": "fwr",
+        "id": "eflejko"
+      },
+      {
+        "key": "tkLeftT",
+        "eqn": ".5/Math.sin(frontRightTheta)",
+        "id": "fi3bwts"
+      },
+      {
+        "key": "tkRightT",
+        "eqn": ".5/Math.sin(frontLeftTheta)",
+        "id": "m0p2fnx"
+      },
+      {
+        "key": "tkLeftD",
+        "eqn": "frontHypeCenterX + (tkd + tkb.t/2)*Math.sin(frontRightTheta)",
+        "id": "xd2g25i"
+      },
+      {
+        "key": "tkRightD",
+        "eqn": "frontHypeCenterD + (tkd + tkb.t/2)*Math.sin(frontLeftTheta)",
+        "id": "e2tcn5p"
+      },
+      {
+        "key": "toeKickBackerLen",
+        "eqn": "2*Math.sqrt((triX+tkb.t/2)*(triX+tkb.t/2)+(triY+tkb.t\\2)*(triY+tkb.t\\2))",
+        "id": "6d7a07i"
+      },
+      {
+        "key": "triX",
+        "eqn": "frontDepthMax +  (tkd + tkb.t/2)/Math.sin(frontLeftTheta)",
+        "id": "9sfgikr"
+      },
+      {
+        "key": "triY",
+        "eqn": "rightInnerLimit + (tkd + tkb.t/2)/Math.sin(frontLeftTheta)",
+        "id": "fcwcnb9"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pwt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Panel.Back",
+        "code": "BACK",
+        "id": "ly2p41u"
+      },
+      {
+        "name": "ToeKickBacker",
+        "type": "Panel",
+        "code": "tkb",
+        "center": [
+          "tkLeftD",
+          "w / 2",
+          "-1 *(tkRightD)"
+        ],
+        "demensions": [
+          "tkh",
+          "toeKickBackerLen",
+          "tkbw"
+        ],
+        "rotation": [
+          "90+Math.toDegrees(frontLeftTheta)",
+          "0",
+          90
+        ],
+        "id": "zojblha"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "c.w + bo/4*Math.sin(Math.PI/2)",
+          "c.h/2",
+          "-(c.t + bo/4*Math.sin(Math.PI/2))"
+        ],
+        "demensions": [
+          "bo*2",
+          "c.h",
+          "bo*2"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Cutter.Back",
+        "code": "cb",
+        "id": "ly2p41z"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "R.w/2",
+          "c.h / 2",
+          "R.t/-2"
+        ],
+        "demensions": [
+          "c.w",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ],
+        "name": "Panel.Right",
+        "code": "R",
+        "id": "67tkjp5"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "L.c.x - toeKickBackerLen/2",
+          "L.c.y",
+          "L.c.z"
+        ],
+        "demensions": [
+          "L.d.x",
+          "L.d.y + 1",
+          "toeKickBackerLen"
+        ],
+        "rotation": [
+          "L.r.x",
+          "L.r.y",
+          "L.r.z"
+        ],
+        "name": "CutterTBLeft",
+        "code": "ctbl",
+        "id": "67tskke5"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbr.c.x + toeKickBackerLen/2",
+          "pbr.c.y",
+          "pbr.c.z"
+        ],
+        "demensions": [
+          "pbr.d.x",
+          "pbr.d.y + 1",
+          "toeKickBackerLen"
+        ],
+        "rotation": [
+          "pbr.r.x",
+          "pbr.r.y",
+          "pbr.r.z"
+        ],
+        "name": "CutterTBRight",
+        "code": "ctbr",
+        "id": "67tskjp5"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "L.t/2",
+          "c.h/2",
+          "L.w/-2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Left",
+        "code": "L",
+        "id": "kfuwf6d"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "pbr.w / 2 + R.t ",
+          "c.h/2",
+          "-(c.t - t / 2)"
+        ],
+        "demensions": [
+          "c.w - bo",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "Panel.Back.Right",
+        "code": "pbr",
+        "id": "a1yypp5"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbl.c.x + cpbl.t",
+          "pbl.c.y",
+          "pbl.c.z"
+        ],
+        "demensions": [
+          "pbl.d.x",
+          "pbl.d.y",
+          "pbl.d.z"
+        ],
+        "rotation": [
+          "pbl.r.x",
+          "pbl.r.y",
+          "pbl.r.z"
+        ],
+        "name": "Cutter.Back.Left",
+        "code": "cpbl",
+        "id": "qnpktr2"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - pbr.t/2",
+          "c.h/2",
+          "-(pbl.w/2 + L.t)"
+        ],
+        "demensions": [
+          "c.t - bo",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Back.Left",
+        "code": "pbl",
+        "id": "qnpktr8"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbr.c.x",
+          "pbr.c.y",
+          "pbr.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "pbr.d.x",
+          "pbr.d.y",
+          "pbr.d.z"
+        ],
+        "rotation": [
+          "pbr.r.x",
+          "pbr.r.y",
+          "pbr.r.z"
+        ],
+        "name": "Cutter.Back.Right",
+        "code": "cpbr",
+        "id": "qnpktw2"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w / 2",
+          "c.h - T.t / 2",
+          "c.t / -2"
+        ],
+        "demensions": [
+          "c.w - pbr.t - R.t",
+          "c.t - pbl.t - L.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panel.Top",
+        "code": "T",
+        "id": "0p8zyq0"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w / 2",
+          "tkh + B.t / 2",
+          "c.t / -2"
+        ],
+        "demensions": [
+          "c.w - pbr.t - R.t",
+          "c.t - pbl.t - L.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panel.Bottom",
+        "code": "B",
+        "id": "uqb7ksc"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "cutCenterX",
+          "c.h/2",
+          "-cutCenterD"
+        ],
+        "demensions": [
+          "frontHype * 2",
+          "frontHype*2",
+          "c.h"
+        ],
+        "rotation": [
+          "90",
+          "Math.toDegrees(Math.PI - frontRightTheta)",
+          0
+        ],
+        "name": "Cutter.Front",
+        "code": "cut",
+        "id": "t2nx210"
+      }
+    ],
+    "joints": [
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "B",
+        "type": "Butt",
+        "id": "jhdiitu"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "pbr",
+        "type": "Butt",
+        "id": "tfovv9r"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "pbl",
+        "type": "Butt",
+        "id": "i49ifbe"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "L",
+        "maleOffset": "L.t / 2",
+        "demensionAxis": "y",
+        "centerAxis": "-z",
+        "id": "0zszlb9"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "R",
+        "maleOffset": "R.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "vbwtc6l"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "pbl",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+z",
+        "id": "x8qno2z"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "B",
+        "femalePartCode": "pbr",
+        "maleOffset": "pbr.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "3zyqkyg"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "L",
+        "maleOffset": "L.t / 2",
+        "demensionAxis": "y",
+        "centerAxis": "-z",
+        "id": "ho44x8c"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "R",
+        "maleOffset": "R.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "f2yqowv"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "pbl",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+z",
+        "id": "xlic9x8"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "T",
+        "femalePartCode": "pbr",
+        "maleOffset": "pbr.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "dv1u67c"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbl",
+        "femalePartCode": "R",
+        "maleOffset": "pbl.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-z",
+        "id": "861ea5i"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "pbr",
+        "femalePartCode": "L",
+        "maleOffset": "L.t / 2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "t0ywrvc"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "BACK",
+        "femalePartCode": "T",
+        "id": "e3z7qur"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "T",
+        "id": "k0atwnf"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "B",
+        "id": "4ke3jn9"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "L",
+        "id": "lr1xqx8"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cut",
+        "femalePartCode": "R",
+        "id": "bk2rjwz"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "T",
+        "id": "1l5u1lk"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "B",
+        "id": "1zp5rfv"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "pbr",
+        "id": "rs2316q"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "pbl",
+        "id": "m9e5p7l"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbl",
+        "femalePartCode": "BACK",
+        "id": "l85jpd3"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbr",
+        "femalePartCode": "BACK",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "tkb",
+        "femalePartCode": "B",
+        "maleOffset": "B.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+y",
+        "id": "06h37x8"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "tkb",
+        "femalePartCode": "L",
+        "maleOffset": ".1",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "5pwgans"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "tkb",
+        "femalePartCode": "R",
+        "id": "3s90xye"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "ctbl",
+        "femalePartCode": "tkb",
+        "id": "fugx5ot"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "ctbr",
+        "femalePartCode": "tkb",
+        "id": "nj279yo"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": "33"
+    },
+    "shape": "corner",
+    "width": "walld*2",
+    "height": "maxHeight(c.w,c.t,ceilh)",
+    "thickness": "walld*2",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "_Type": "location",
+        "rotation": {
+          "x": 0,
+          "z": 0,
+          "y": "270+ Math.toDegrees(frontRightTheta)"
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "leftInnerLimit",
+              "y": "topInnerLimit",
+              "z": "-(frontDepthMax - rightCutX)"
+            },
+            {
+              "x": "rightInnerLimit",
+              "y": "topInnerLimit",
+              "z": "-(frontDepthMin + R.t)"
+            },
+            {
+              "x": "rightInnerLimit",
+              "y": "bottomInnerLimit",
+              "z": "-(frontDepthMin + R.t)"
+            },
+            {
+              "x": "leftInnerLimit",
+              "y": "bottomInnerLimit",
+              "z": "-(frontDepthMax - rightCutX)"
+            }
+          ],
+          "outer": [
+            {
+              "x": "leftOuterLimit",
+              "y": "topOuterLimit",
+              "z": "-frontDepthMax"
+            },
+            {
+              "x": "rightOuterLimit",
+              "y": "topOuterLimit",
+              "z": "-frontDepthMin"
+            },
+            {
+              "x": "rightOuterLimit",
+              "y": "bottomOuterLimit",
+              "z": "-frontDepthMin"
+            },
+            {
+              "x": "leftOuterLimit",
+              "y": "bottomOuterLimit",
+              "z": "-frontDepthMax"
+            }
+          ]
+        },
+        "state": {
+          "innerOouter": true,
+          "index": 0,
+          "xOyOz": "z"
+        },
+        "id": "hoeigtl0"
+      }
+    ]
+  },
+  "ut": {
   "_TYPE": "CabinetTemplate",
 
   "ID_ATTRIBUTE": "id",
-  "type": "corner-base-blind",
+  "type": "ut",
   "values": [
     {
       "key": "brh",
       "eqn": "tkb.w + BACK.t + brr",
-      "id": "rytasvx"
+      "id": "buu70v5"
     },
     {
       "key": "innerWidth",
       "eqn": "c.w - pwt34 * 2",
-      "id": "eirxtek"
+      "id": "v0rrgn4"
     },
     {
       "key": "innerWidthCenter",
       "eqn": "innerWidth + pwt34",
-      "id": "j4e8h6b"
+      "id": "9ahavm9"
     },
     {
-      "key": "blindDepth",
-      "eqn": "24*2.54",
-      "id": "efbkt8b"
-    },
-    {
-      "key": "innerHeight",
-      "eqn": "c.h - tkh - B.t",
-      "id": "m8ntul7"
+      "key": "insetTop",
+      "eqn": "4*2.54",
+      "id": "89whzbr"
     }
   ],
   "subassemblies": [
@@ -1441,7 +2527,7 @@ module.exports = {
         0,
         90
       ],
-      "id": "a5qdqn0"
+      "id": "hy0mb2f"
     },
     {
       "name": "Right",
@@ -1462,7 +2548,7 @@ module.exports = {
         90,
         0
       ],
-      "id": "92ph35l"
+      "id": "1gadqgr"
     },
     {
       "name": "Left",
@@ -1483,7 +2569,7 @@ module.exports = {
         90,
         0
       ],
-      "id": "m3qw835"
+      "id": "u9vq149"
     },
     {
       "name": "Back",
@@ -1495,7 +2581,7 @@ module.exports = {
         "-(c.t - (t / 2))"
       ],
       "demensions": [
-        "c.l - tkb.w",
+        "c.l - tkb.w - T.t - insetTop",
         "innerWidth",
         "pwt34"
       ],
@@ -1504,7 +2590,7 @@ module.exports = {
         0,
         90
       ],
-      "id": "xtnagor"
+      "id": "czc2oh9"
     },
     {
       "name": "Bottom",
@@ -1525,7 +2611,7 @@ module.exports = {
         90,
         0
       ],
-      "id": "hqd66l3"
+      "id": "dghshql"
     },
     {
       "name": "Top",
@@ -1533,457 +2619,7 @@ module.exports = {
       "code": "T",
       "center": [
         "c.w / 2",
-        "c.h - pwt34/2",
-        "w / -2"
-      ],
-      "demensions": [
-        "(c.t - BACK.t) * .2",
-        "innerWidth",
-        "pwt34"
-      ],
-      "rotation": [
-        90,
-        90,
-        0
-      ],
-      "id": "23jhkbo"
-    },
-    {
-      "name": "Top2",
-      "type": "Panel",
-      "code": "pt2",
-      "center": [
-        "c.w / 2",
-        "c.h - pwt34/2",
-        "-(c.t - BACK.t - (w / 2))"
-      ],
-      "demensions": [
-        "(c.t - BACK.t) * .2",
-        "innerWidth",
-        "pwt34"
-      ],
-      "rotation": [
-        90,
-        90,
-        0
-      ],
-      "id": "xurl216"
-    },
-    {
-      "type": "Panel",
-      "center": [
-        "blindDepth + 2*2.54 - bms.w/2",
-        "tkh + B.t + bms.h/2",
-        "bms.t/-2"
-      ],
-      "demensions": [
-        "6*2.54",
-        "innerHeight",
-        "pwt34"
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "name": "Panel.Blind.MiddleSupport",
-      "code": "bms",
-      "id": "xu3co3t"
-    }
-  ],
-  "joints": [
-    {
-      "malePartCode": "T",
-      "femalePartCode": "L",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "id": "5iua8fj"
-    },
-    {
-      "malePartCode": "T",
-      "femalePartCode": "R",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "id": "tdgb6kj"
-    },
-    {
-      "malePartCode": "pt2",
-      "femalePartCode": "L",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "id": "omdnri7"
-    },
-    {
-      "malePartCode": "pt2",
-      "femalePartCode": "R",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "id": "kkh5047"
-    },
-    {
-      "malePartCode": "BACK",
-      "femalePartCode": "L",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "id": "xe729tv"
-    },
-    {
-      "malePartCode": "BACK",
-      "femalePartCode": "R",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "id": "x653in7"
-    },
-    {
-      "malePartCode": "tkb",
-      "femalePartCode": "L",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "id": "juufon2"
-    },
-    {
-      "malePartCode": "tkb",
-      "femalePartCode": "R",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "id": "4sd9jd8"
-    },
-    {
-      "malePartCode": "B",
-      "femalePartCode": "L",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "id": "navlp2j"
-    },
-    {
-      "malePartCode": "B",
-      "femalePartCode": "R",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "id": "iw7sb6w"
-    },
-    {
-      "malePartCode": "tkb",
-      "femalePartCode": "B",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "x",
-      "centerAxis": "+y",
-      "id": "wsui626"
-    }
-  ],
-  "dividerJoint": {
-    "type": "Dado",
-    "maleOffset": 0.9525
-  },
-  "shape": "square",
-  "width": 121.92,
-  "height": 86.36,
-  "thickness": 60.96,
-  "openings": [
-    {
-      "_Type": "location",
-      "rotation": {
-        "x": 0,
-        "z": 0,
-        "y": 0
-      },
-      "coordinates": {
-        "inner": [
-          {
-            "x": "bms.c.x + bms.d.x/2",
-            "y": "T.c.y - T.t/2",
-            "z": "0"
-          },
-          {
-            "x": "c.w - L.t",
-            "y": "T.c.y - T.t/2",
-            "z": "0"
-          },
-          {
-            "x": "c.w - L.t",
-            "y": "B.c.y + B.t/2",
-            "z": "0"
-          },
-          {
-            "x": "bms.c.x + bms.d.x/2",
-            "y": "B.c.y + B.t/2",
-            "z": "0"
-          }
-        ],
-        "outer": [
-          {
-            "x": "bms.c.x + bms.d.x/2 - R.t",
-            "y": "c.h",
-            "z": "0"
-          },
-          {
-            "x": "c.w",
-            "y": "c.h",
-            "z": "0"
-          },
-          {
-            "x": "c.w",
-            "y": "B.c.y - B.t/2",
-            "z": "0"
-          },
-          {
-            "x": "bms.c.x + bms.d.x/2 - R.t",
-            "y": "B.c.y - B.t/2",
-            "z": "0"
-          }
-        ]
-      },
-      "state": {
-        "innerOouter": true,
-        "index": 0,
-        "xOyOz": "z"
-      },
-      "id": "hofivl0"
-    },
-    {
-
-      "_Type": "location",
-      "zRotation": 0,
-      "inner": {
-        "top": {
-          "left": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "right": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          }
-        },
-        "bottom": {
-          "right": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "left": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          }
-        }
-      },
-      "outer": {
-        "top": {
-          "left": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "right": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          }
-        },
-        "bottom": {
-          "right": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "left": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          }
-        }
-      },
-      "coordinates": {
-        "inner": [
-          {
-            "x": "R.t",
-            "y": "T.c.y - T.t/2",
-            "z": "0"
-          },
-          {
-            "x": "bms.c.x - bms.d.x/2",
-            "y": "T.c.y - T.t/2",
-            "z": "0"
-          },
-          {
-            "x": "bms.c.x - bms.d.x/2",
-            "y": "B.c.y + B.t/2",
-            "z": "0"
-          },
-          {
-            "x": "R.t",
-            "y": "B.c.y + B.t/2",
-            "z": "0"
-          }
-        ],
-        "outer": [
-          {
-            "x": "0",
-            "y": "c.h",
-            "z": "0"
-          },
-          {
-            "x": "bms.c.x - bms.d.x/2 + L.t",
-            "y": "c.h",
-            "z": "0"
-          },
-          {
-            "x": "bms.c.x - bms.d.x/2 + L.t",
-            "y": "B.c.y - B.t/2",
-            "z": "0"
-          },
-          {
-            "x": "0",
-            "y": "B.c.y - B.t/2",
-            "z": "0"
-          }
-        ]
-      }
-    }
-  ]
-},
-  "corner-triangle": {
-  "_TYPE": "CabinetTemplate",
-
-  "ID_ATTRIBUTE": "id",
-  "type": "corner-triangle",
-  "values": [
-    {
-      "key": "innerWidth",
-      "eqn": "c.w - pwt34 * 2",
-      "id": "r1am35q"
-    },
-    {
-      "key": "innerWidthCenter",
-      "eqn": "innerWidth + pwt34",
-      "id": "zrglub8"
-    },
-    {
-      "key": "frontHype",
-      "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)",
-      "id": "r01pswe"
-    },
-    {
-      "key": "frontCenterX",
-      "eqn": "frontHype/2 * Math.cos(frontLeftTheta)",
-      "id": "u5ycphk"
-    },
-    {
-      "key": "frontCenterZ",
-      "eqn": "-frontHype/2 * Math.cos(frontRightTheta)",
-      "id": "dnca3mh"
-    },
-    {
-      "key": "frontLeftTheta",
-      "eqn": "Math.atan(c.t/c.w)",
-      "id": "b16j601"
-    },
-    {
-      "key": "frontRightTheta",
-      "eqn": "Math.PI/2  - frontLeftTheta",
-      "id": "61umfwr"
-    },
-    {
-      "key": "toeKickBackerLen",
-      "eqn": "Math.sqrt((c.w-tkd-tkb.t)*(c.w-tkd-tkb.t)+(c.t-tkd-tkb.t)*(c.t-tkd-tkb.t))",
-      "id": "6d7a07i"
-    }
-  ],
-  "subassemblies": [
-    {
-      "name": "ToeKickBacker",
-      "type": "Panel",
-      "code": "tkb",
-      "center": [
-        "frontCenterX + (tkd + tkb.t/2)*Math.cos(frontLeftTheta)",
-        "w / 2",
-        "frontCenterZ - (tkd+tkb.t/2)*Math.sin(frontRightTheta)"
-      ],
-      "demensions": [
-        "tkh",
-        "toeKickBackerLen",
-        "tkbw"
-      ],
-      "rotation": [
-        "90+Math.toDegrees(frontRightTheta)",
-        "0",
-        90
-      ],
-      "id": "zojblha"
-    },
-    {
-      "name": "Panel.Right",
-      "type": "Panel",
-      "code": "R",
-      "center": [
-        "c.w - (R.t / 2)",
-        "R.l / 2",
-        "(w / -2)"
-      ],
-      "demensions": [
-        "c.t",
-        "c.l",
-        "pwt34"
-      ],
-      "rotation": [
-        0,
-        90,
-        0
-      ],
-      "id": "i27zjxi"
-    },
-    {
-      "name": "Panel.Left",
-      "type": "Panel",
-      "code": "L",
-      "center": [
-        "L.w/2",
-        "L.l / 2",
-        "-(c.t - L.t/2)"
-      ],
-      "demensions": [
-        "c.w - R.t",
-        "c.l",
-        "pwt34"
-      ],
-      "rotation": [
-        0,
-        "0",
-        0
-      ],
-      "id": "ly1lmzs"
-    },
-    {
-      "name": "Bottom",
-      "type": "Panel",
-      "code": "B",
-      "center": [
-        "c.w / 2",
-        "tkh + (t/2)",
+        "c.h - pwt34/2 - insetTop",
         "w / -2"
       ],
       "demensions": [
@@ -1996,70 +2632,75 @@ module.exports = {
         90,
         0
       ],
-      "id": "dx1l40m"
+      "id": "m1duwg6"
     },
     {
-      "name": "Top",
       "type": "Panel",
-      "code": "T",
       "center": [
-        "c.w / 2",
-        "c.h - pwt34/2",
-        "(w / -2)"
+        "L.t + innerWidth/2",
+        "c.h - insetTop/2",
+        "tf.t/-2"
       ],
       "demensions": [
-        "c.t",
+        "insetTop",
         "innerWidth",
         "pwt34"
       ],
       "rotation": [
-        90,
-        90,
-        0
-      ],
-      "id": "lcj2axc"
-    },
-    {
-      "type": "Cutter",
-      "center": [
-        "frontCenterX - fc.t/2*Math.sin(frontLeftTheta)",
-        "c.h/2",
-        "frontCenterZ + fc.t/2*Math.sin(frontRightTheta)"
-      ],
-      "demensions": [
-        "frontHype",
-        "c.h",
-        "frontHype"
-      ],
-      "rotation": [
         0,
-        "Math.toDegrees(frontRightTheta)",
-        0
+        "0",
+        "90"
       ],
-      "include": "All",
-      "name": "frontCutter",
-      "code": "fc",
-      "id": "uzqg2vs"
+      "name": "Panel.Top.Filler",
+      "code": "tf",
+      "id": "jg9xsbp"
     }
   ],
   "joints": [
     {
       "malePartCode": "T",
-      "femalePartCode": "R",
+      "femalePartCode": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x",
-      "id": "7whh25x"
+      "id": "p7vfvh8"
     },
     {
       "malePartCode": "T",
+      "femalePartCode": "R",
+      "type": "Dado",
+      "maleOffset": 0.9525,
+      "demensionAxis": "y",
+      "centerAxis": "+x",
+      "id": "b5qazbk"
+    },
+    {
+      "malePartCode": "BACK",
       "femalePartCode": "L",
       "type": "Dado",
-      "maleOffset": "0.9525",
+      "maleOffset": 0.9525,
       "demensionAxis": "y",
-      "centerAxis": "+z",
-      "id": "w3lyip6"
+      "centerAxis": "-x",
+      "id": "06o0nvb"
+    },
+    {
+      "malePartCode": "BACK",
+      "femalePartCode": "R",
+      "type": "Dado",
+      "maleOffset": 0.9525,
+      "demensionAxis": "y",
+      "centerAxis": "+x",
+      "id": "85go7cv"
+    },
+    {
+      "malePartCode": "tkb",
+      "femalePartCode": "L",
+      "type": "Dado",
+      "maleOffset": 0.9525,
+      "demensionAxis": "y",
+      "centerAxis": "-x",
+      "id": "pk88j7o"
     },
     {
       "malePartCode": "tkb",
@@ -2067,17 +2708,17 @@ module.exports = {
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
-      "centerAxis": "-x",
-      "id": "5ay7hu7"
+      "centerAxis": "+x",
+      "id": "oygww1d"
     },
     {
-      "malePartCode": "tkb",
+      "malePartCode": "B",
       "femalePartCode": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
-      "centerAxis": "+x",
-      "id": "modbdha"
+      "centerAxis": "-x",
+      "id": "70b26qf"
     },
     {
       "malePartCode": "B",
@@ -2085,17 +2726,8 @@ module.exports = {
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
-      "centerAxis": "-x",
-      "id": "eetmyfu"
-    },
-    {
-      "malePartCode": "B",
-      "femalePartCode": "L",
-      "type": "Dado",
-      "maleOffset": 0.9525,
-      "demensionAxis": "y",
       "centerAxis": "+x",
-      "id": "z8sqwwt"
+      "id": "v2ic7qf"
     },
     {
       "malePartCode": "tkb",
@@ -2104,31 +2736,16 @@ module.exports = {
       "maleOffset": 0.9525,
       "demensionAxis": "x",
       "centerAxis": "+y",
-      "id": "84e6woh"
+      "id": "y0kns4a"
     },
     {
-      "type": "Butt",
-      "malePartCode": "fc",
+      "type": "Dado",
+      "malePartCode": "BACK",
       "femalePartCode": "T",
-      "id": "i2h32py"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "fc",
-      "femalePartCode": "R",
-      "id": "5h7i27p"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "fc",
-      "femalePartCode": "L",
-      "id": "on59hxn"
-    },
-    {
-      "type": "Butt",
-      "malePartCode": "fc",
-      "femalePartCode": "B",
-      "id": "kxec5xg"
+      "maleOffset": "T.t/2",
+      "demensionAxis": "x",
+      "centerAxis": "+y",
+      "id": "f31dvhq"
     }
   ],
   "dividerJoint": {
@@ -2136,9 +2753,10 @@ module.exports = {
     "maleOffset": 0.9525
   },
   "shape": "square",
-  "width": 45.72,
-  "height": 86.36,
-  "thickness": 60.96,
+  "width": 60.96,
+  "height": "maxHeight(c.w,c.t,ceilh)",
+  "thickness": "based",
+  "fromFloor": 0,
   "openings": [
     {
       "top": "T",
@@ -2146,108 +2764,2834 @@ module.exports = {
       "left": "L",
       "right": "R",
       "back": "BACK",
-      "_Type": "location",
-      "zRotation": 0,
-      "inner": {
-        "top": {
-          "left": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "right": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          }
-        },
-        "bottom": {
-          "right": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "left": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          }
-        }
-      },
-      "outer": {
-        "top": {
-          "left": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "right": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          }
-        },
-        "bottom": {
-          "right": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "left": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          }
-        }
-      },
-      "coordinates": {
-        "inner": [
-          {
-            "x": "R.t",
-            "y": "T.c.y - T.t/2",
-            "z": "L.c.z + L.t/2"
-          },
-          {
-            "x": "c.w - L.t",
-            "y": "T.c.y - T.t/2",
-            "z": "R.t/-2"
-          },
-          {
-            "x": "c.w - L.t",
-            "y": "B.c.y + B.t/2",
-            "z": "R.t/-2"
-          },
-          {
-            "x": "R.t",
-            "y": "B.c.y + B.t/2",
-            "z": "L.c.z + L.t/2"
-          }
-        ],
-        "outer": [
-          {
-            "x": "0",
-            "y": "c.h",
-            "z": "L.c.z - L.t/2"
-          },
-          {
-            "x": "c.w",
-            "y": "c.h",
-            "z": "0"
-          },
-          {
-            "x": "c.w",
-            "y": "B.c.y - B.t/2",
-            "z": "0"
-          },
-          {
-            "x": "0",
-            "y": "B.c.y - B.t/2",
-            "z": "L.c.z - L.t/2"
-          }
-        ]
-      },
-      "id": "4fdqq24"
+      "id": "z57re4i"
     }
   ]
-}
+},
+  "wall": {
+    "_TYPE": "CabinetTemplate",
+
+    "ID_ATTRIBUTE": "id",
+    "type": "wall",
+    "values": [],
+    "subassemblies": [
+      {
+        "type": "Divider",
+        "center": [
+          "c.w - R.t/2",
+          "c.h / 2",
+          "R.w / -2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Right",
+        "code": "R",
+        "id": "ulybhe4"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "L.t/2",
+          "c.h/2",
+          "L.w/-2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "Panel.Left",
+        "code": "L",
+        "id": "c491atd"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "L.t + BACK.w/2",
+          "BACK.h/2 + B.t",
+          "-(c.t - BACK.t /2)"
+        ],
+        "demensions": [
+          "c.w - L.t - R.t",
+          "c.h - B.t -T.t",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "Panel.back",
+        "code": "BACK",
+        "id": "1w1qwce"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "L.t + T.w / 2",
+          "c.h - tid - T.t/2",
+          "T.l/-2 "
+        ],
+        "demensions": [
+          "c.w - L.t - R.t",
+          "c.t ",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panel.Top",
+        "code": "T",
+        "id": "sllmw58"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "B.w /2 + L.t",
+          "bid + B.t/2",
+          "B.h / -2"
+        ],
+        "demensions": [
+          "c.w - L.t - R.t",
+          "c.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "Panal.Bottom",
+        "code": "B",
+        "id": "5qr8v9c"
+      }
+    ],
+    "joints": [
+      {
+        "type": "Dado",
+        "malePartCode": "BACK",
+        "femalePartCode": "T",
+        "maleOffset": "T.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "+y",
+        "id": "vrku9a3"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "BACK",
+        "femalePartCode": "R",
+        "maleOffset": "R.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "id": "j8wjpdy"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "BACK",
+        "femalePartCode": "B",
+        "maleOffset": "B.t/2",
+        "demensionAxis": "y",
+        "centerAxis": "-y",
+        "id": "6ig0rph"
+      },
+      {
+        "type": "Dado",
+        "malePartCode": "BACK",
+        "femalePartCode": "L",
+        "maleOffset": "L.t/2",
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "id": "d2mneq5"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": "33"
+    },
+    "shape": "square",
+    "width": 45.72,
+    "height": "wallh",
+    "thickness": "walld",
+    "fromFloor": "walle",
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "id": "e3jma2l"
+      }
+    ]
+  },
+  "corner-base-blind": {
+    "_TYPE": "CabinetTemplate",
+
+    "ID_ATTRIBUTE": "id",
+    "type": "corner-base-blind",
+    "values": [
+      {
+        "key": "brh",
+        "eqn": "tkb.w + BACK.t + brr",
+        "id": "rytasvx"
+      },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - pwt34 * 2",
+        "id": "eirxtek"
+      },
+      {
+        "key": "innerWidthCenter",
+        "eqn": "innerWidth + pwt34",
+        "id": "j4e8h6b"
+      },
+      {
+        "key": "blindDepth",
+        "eqn": "24*2.54",
+        "id": "efbkt8b"
+      },
+      {
+        "key": "innerHeight",
+        "eqn": "c.h - tkh - B.t",
+        "id": "m8ntul7"
+      }
+    ],
+    "subassemblies": [
+      {
+        "name": "ToeKickBacker",
+        "type": "Panel",
+        "code": "tkb",
+        "center": [
+          "c.w / 2",
+          "w / 2",
+          "-(tkd + (t / 2))"
+        ],
+        "demensions": [
+          "tkh",
+          "innerWidth",
+          "tkbw"
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ],
+        "id": "a5qdqn0"
+      },
+      {
+        "name": "Right",
+        "type": "Panel",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "l / 2",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "92ph35l"
+      },
+      {
+        "name": "Left",
+        "type": "Panel",
+        "code": "L",
+        "center": [
+          "(t / 2)",
+          " l / 2",
+          "w/-2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "m3qw835"
+      },
+      {
+        "name": "Back",
+        "type": "Panel",
+        "code": "BACK",
+        "center": [
+          "l / 2 + L.t",
+          " (w / 2) + tkb.w",
+          "-(c.t - (t / 2))"
+        ],
+        "demensions": [
+          "c.l - tkb.w",
+          "innerWidth",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ],
+        "id": "xtnagor"
+      },
+      {
+        "name": "Bottom",
+        "type": "Panel",
+        "code": "B",
+        "center": [
+          "c.w / 2",
+          "tkh + (t/2)",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t - BACK.t",
+          "innerWidth",
+          "pwt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "hqd66l3"
+      },
+      {
+        "name": "Top",
+        "type": "Panel",
+        "code": "T",
+        "center": [
+          "c.w / 2",
+          "c.h - pwt34/2",
+          "w / -2"
+        ],
+        "demensions": [
+          "(c.t - BACK.t) * .2",
+          "innerWidth",
+          "pwt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "23jhkbo"
+      },
+      {
+        "name": "Top2",
+        "type": "Panel",
+        "code": "pt2",
+        "center": [
+          "c.w / 2",
+          "c.h - pwt34/2",
+          "-(c.t - BACK.t - (w / 2))"
+        ],
+        "demensions": [
+          "(c.t - BACK.t) * .2",
+          "innerWidth",
+          "pwt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "xurl216"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "blindDepth + 2*2.54 - bms.w/2",
+          "tkh + B.t + bms.h/2",
+          "bms.t/-2"
+        ],
+        "demensions": [
+          "6*2.54",
+          "innerHeight",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "Panel.Blind.MiddleSupport",
+        "code": "bms",
+        "id": "xu3co3t"
+      }
+    ],
+    "joints": [
+      {
+        "malePartCode": "T",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "5iua8fj"
+      },
+      {
+        "malePartCode": "T",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "tdgb6kj"
+      },
+      {
+        "malePartCode": "pt2",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "omdnri7"
+      },
+      {
+        "malePartCode": "pt2",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "kkh5047"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "xe729tv"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "x653in7"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "juufon2"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "4sd9jd8"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "navlp2j"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "iw7sb6w"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "B",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "x",
+        "centerAxis": "+y",
+        "id": "wsui626"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": 0.9525
+    },
+    "shape": "square",
+    "width": 121.92,
+    "height": "baseh",
+    "thickness": "based",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "_Type": "location",
+        "rotation": {
+          "x": 0,
+          "z": 0,
+          "y": 0
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "bms.c.x + bms.d.x/2",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x + bms.d.x/2",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            }
+          ],
+          "outer": [
+            {
+              "x": "bms.c.x + bms.d.x/2 - R.t",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x + bms.d.x/2 - R.t",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            }
+          ]
+        },
+        "state": {
+          "innerOouter": true,
+          "index": 0,
+          "xOyOz": "z"
+        },
+        "id": "hofivl0"
+      },
+      {
+        "_Type": "location",
+        "zRotation": 0,
+        "inner": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "outer": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "R.t",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "R.t",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            }
+          ],
+          "outer": [
+            {
+              "x": "0",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2 + L.t",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2 + L.t",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            }
+          ]
+        },
+        "id": "zt9qh07"
+      }
+    ]
+  },
+  "corner-wall-blind": {
+    "_TYPE": "CabinetTemplate",
+
+    "ID_ATTRIBUTE": "id",
+    "type": "corner-wall-blind",
+    "values": [
+      {
+        "key": "brh",
+        "eqn": "tkb.w + BACK.t + brr",
+        "id": "rytasvx"
+      },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - pwt34 * 2",
+        "id": "eirxtek"
+      },
+      {
+        "key": "innerWidthCenter",
+        "eqn": "innerWidth + pwt34",
+        "id": "j4e8h6b"
+      },
+      {
+        "key": "blindDepth",
+        "eqn": "24*2.54",
+        "id": "efbkt8b"
+      },
+      {
+        "key": "innerHeight",
+        "eqn": "c.h - tkh - B.t",
+        "id": "m8ntul7"
+      }
+    ],
+    "subassemblies": [
+      {
+        "name": "ToeKickBacker",
+        "type": "Panel",
+        "code": "tkb",
+        "center": [
+          "c.w / 2",
+          "w / 2",
+          "-(tkd + (t / 2))"
+        ],
+        "demensions": [
+          "tkh",
+          "innerWidth",
+          "tkbw"
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ],
+        "id": "a5qdqn0"
+      },
+      {
+        "name": "Right",
+        "type": "Panel",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "l / 2",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "92ph35l"
+      },
+      {
+        "name": "Left",
+        "type": "Panel",
+        "code": "L",
+        "center": [
+          "(t / 2)",
+          " l / 2",
+          "w/-2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "m3qw835"
+      },
+      {
+        "name": "Back",
+        "type": "Panel",
+        "code": "BACK",
+        "center": [
+          "l / 2 + L.t",
+          " (w / 2) + tkb.w",
+          "-(c.t - (t / 2))"
+        ],
+        "demensions": [
+          "c.l - tkb.w",
+          "innerWidth",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ],
+        "id": "xtnagor"
+      },
+      {
+        "name": "Bottom",
+        "type": "Panel",
+        "code": "B",
+        "center": [
+          "c.w / 2",
+          "tkh + (t/2)",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t - BACK.t",
+          "innerWidth",
+          "pwt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "hqd66l3"
+      },
+      {
+        "name": "Top",
+        "type": "Panel",
+        "code": "T",
+        "center": [
+          "c.w / 2",
+          "c.h - pwt34/2",
+          "w / -2"
+        ],
+        "demensions": [
+          "(c.t - BACK.t) * .2",
+          "innerWidth",
+          "pwt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "23jhkbo"
+      },
+      {
+        "name": "Top2",
+        "type": "Panel",
+        "code": "pt2",
+        "center": [
+          "c.w / 2",
+          "c.h - pwt34/2",
+          "-(c.t - BACK.t - (w / 2))"
+        ],
+        "demensions": [
+          "(c.t - BACK.t) * .2",
+          "innerWidth",
+          "pwt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "xurl216"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "blindDepth + 2*2.54 - bms.w/2",
+          "tkh + B.t + bms.h/2",
+          "bms.t/-2"
+        ],
+        "demensions": [
+          "6*2.54",
+          "innerHeight",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "Panel.Blind.MiddleSupport",
+        "code": "bms",
+        "id": "xu3co3t"
+      }
+    ],
+    "joints": [
+      {
+        "malePartCode": "T",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "5iua8fj"
+      },
+      {
+        "malePartCode": "T",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "tdgb6kj"
+      },
+      {
+        "malePartCode": "pt2",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "omdnri7"
+      },
+      {
+        "malePartCode": "pt2",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "kkh5047"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "xe729tv"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "x653in7"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "juufon2"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "4sd9jd8"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "navlp2j"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "iw7sb6w"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "B",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "x",
+        "centerAxis": "+y",
+        "id": "wsui626"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": 0.9525
+    },
+    "shape": "square",
+    "width": 121.92,
+    "height": "baseh",
+    "thickness": "based",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "_Type": "location",
+        "rotation": {
+          "x": 0,
+          "z": 0,
+          "y": 0
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "bms.c.x + bms.d.x/2",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x + bms.d.x/2",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            }
+          ],
+          "outer": [
+            {
+              "x": "bms.c.x + bms.d.x/2 - R.t",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x + bms.d.x/2 - R.t",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            }
+          ]
+        },
+        "state": {
+          "innerOouter": true,
+          "index": 0,
+          "xOyOz": "z"
+        },
+        "id": "hofivl0"
+      },
+      {
+        "_Type": "location",
+        "zRotation": 0,
+        "inner": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "outer": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "R.t",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "R.t",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            }
+          ],
+          "outer": [
+            {
+              "x": "0",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2 + L.t",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2 + L.t",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            }
+          ]
+        },
+        "id": "zt3jh07"
+      }
+    ]
+  },
+  "corner-base-triangle":{
+    "_TYPE": "CabinetTemplate",
+
+    "ID_ATTRIBUTE": "id",
+    "type": "corner-base-triangle",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54",
+        "id": "pz0usts"
+      },
+      {
+        "key": "cnrD",
+        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
+        "id": "vju4ekg"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+        "id": "bg3l1cw"
+      },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - R.t",
+        "id": "r1am35q"
+      },
+      {
+        "key": "innerWidthCenter",
+        "eqn": "innerWidth + pwt34",
+        "id": "zrglub8"
+      },
+      {
+        "key": "frontHype",
+        "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)",
+        "id": "r01pswe"
+      },
+      {
+        "key": "frontCenterX",
+        "eqn": "frontHype/2 * Math.cos(frontLeftTheta)",
+        "id": "u5ycphk"
+      },
+      {
+        "key": "frontCenterZ",
+        "eqn": "-frontHype/2 * Math.cos(frontRightTheta)",
+        "id": "dnca3mh"
+      },
+      {
+        "key": "frontLeftTheta",
+        "eqn": "Math.atan(c.t/c.w)",
+        "id": "b16j601"
+      },
+      {
+        "key": "frontRightTheta",
+        "eqn": "Math.PI/2  - frontLeftTheta",
+        "id": "61umfwr"
+      },
+      {
+        "key": "toeKickBackerLen",
+        "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))",
+        "id": "6d7a07i"
+      },
+      {
+        "key": "innerDepth",
+        "eqn": "c.t - L.t",
+        "id": "c89p2y8"
+      },
+      {
+        "key": "tkLeftT",
+        "eqn": ".5/Math.sin(frontLeftTheta)",
+        "id": "fi3bwts"
+      },
+      {
+        "key": "tkRightT",
+        "eqn": ".5/Math.sin(frontRightTheta)",
+        "id": "m0p2fnx"
+      },
+      {
+        "key": "tkLeftD",
+        "eqn": "tkd/Math.sin(frontLeftTheta)",
+        "id": "xd2g25i"
+      },
+      {
+        "key": "tkRightD",
+        "eqn": "tkd/Math.sin(frontRightTheta)",
+        "id": "e2tcn5p"
+      },
+      {
+        "key": "triX",
+        "eqn": "c.w - tkLeftD - tkLeftT/2",
+        "id": "9sfgikr"
+      },
+      {
+        "key": "triY",
+        "eqn": "c.t - tkRightD - tkRightT/2",
+        "id": "fcwcnb9"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pwt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Panel.Back",
+        "code": "BACK",
+        "id": "ly2p41u"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "c.w + bo/4*Math.sin(Math.PI/2)",
+          "c.h/2",
+          "-(c.t + bo/4*Math.sin(Math.PI/2))"
+        ],
+        "demensions": [
+          "bo*2",
+          "c.h",
+          "bo*2"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Cutter.Back",
+        "code": "cb",
+        "id": "ly2p41z"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "R.c.x + R.t",
+          "R.c.y",
+          "R.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "R.d.x",
+          "R.d.y",
+          "R.d.z"
+        ],
+        "rotation": [
+          "R.r.x",
+          "R.r.y",
+          "R.r.z"
+        ],
+        "name": "Cutter.Back.Right",
+        "code": "cpbr",
+        "id": "qnpktw2"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "L.c.x + cpbl.t",
+          "L.c.y",
+          "L.c.z - L.t"
+        ],
+        "demensions": [
+          "L.d.x",
+          "L.d.y",
+          "L.d.z"
+        ],
+        "rotation": [
+          "L.r.x",
+          "L.r.y",
+          "L.r.z"
+        ],
+        "name": "Cutter.Back.Left",
+        "code": "cpbl",
+        "id": "qnpktr2"
+      },
+      {
+        "name": "ToeKickBacker",
+        "type": "Panel",
+        "code": "tkb",
+        "center": [
+          "c.w - triX/2",
+          "w / 2",
+          "-1 *(c.t - triY/2)"
+        ],
+        "demensions": [
+          "tkh",
+          "toeKickBackerLen",
+          "tkbw"
+        ],
+        "rotation": [
+          "90+Math.toDegrees(frontRightTheta)",
+          "0",
+          90
+        ],
+        "id": "zojblha"
+      },
+      {
+        "name": "Panel.Right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "R.l / 2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "i27zjxi"
+      },
+      {
+        "name": "Panel.Left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "L.w/2",
+          "L.l / 2",
+          "-(c.t - L.t/2)"
+        ],
+        "demensions": [
+          "c.w - R.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ],
+        "id": "ly1lmzs"
+      },
+      {
+        "name": "Bottom",
+        "type": "Panel",
+        "code": "B",
+        "center": [
+          "B.w / 2",
+          "tkh + (t/2)",
+          "B.h / -2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "id": "dx1l40m"
+      },
+      {
+        "name": "Top",
+        "type": "Panel",
+        "code": "T",
+        "center": [
+          "T.w / 2",
+          "c.h - pwt34/2",
+          "T.h /-2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pwt34"
+        ],
+        "rotation": [
+          90,
+          "0",
+          0
+        ],
+        "id": "lcj2axc"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "frontCenterX - fc.t/2*Math.sin(frontLeftTheta)",
+          "c.h/2",
+          "frontCenterZ + fc.t/2*Math.sin(frontRightTheta)"
+        ],
+        "demensions": [
+          "frontHype",
+          "c.h",
+          "frontHype"
+        ],
+        "rotation": [
+          0,
+          "Math.toDegrees(frontRightTheta)",
+          0
+        ],
+        "include": "All",
+        "name": "frontCutter",
+        "code": "fc",
+        "id": "uzqg2vs"
+      }
+    ],
+    "joints": [
+      {
+        "malePartCode": "T",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": "0.9525",
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "7whh25x"
+      },
+      {
+        "malePartCode": "T",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": "0.9525",
+        "demensionAxis": "x",
+        "centerAxis": "-z",
+        "id": "w3lyip6"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "R",
+        "type": "Butt",
+        "maleOffset": "0.9525",
+        "id": "5ay7hu7"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "L",
+        "type": "Butt",
+        "maleOffset": "0.9525",
+        "id": "modbdha"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "eetmyfu"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "z8sqwwt"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "B",
+        "type": "Dado",
+        "maleOffset": "0.9525",
+        "demensionAxis": "x",
+        "centerAxis": "+y",
+        "id": "84e6woh"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "T",
+        "id": "i2h32py"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "R",
+        "id": "5h7i27p"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "L",
+        "id": "on59hxn"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "B",
+        "id": "kxec5xg"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "BACK",
+        "femalePartCode": "T",
+        "id": "e3z7qur"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "B",
+        "type": "Butt",
+        "id": "jhdiitu"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbr",
+        "femalePartCode": "BACK",
+        "id": "l85jpd3"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "BACK",
+        "femalePartCode": "R",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbl",
+        "femalePartCode": "L",
+        "id": "l85jpd3"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbr",
+        "femalePartCode": "BACK",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbl",
+        "femalePartCode": "BACK",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "R",
+        "id": "rs2316q"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "L",
+        "id": "m9e5p7l"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "T",
+        "id": "oydpp1n"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "B",
+        "id": "j0y7z5u"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": 0.9525
+    },
+    "shape": "square",
+    "width": "based",
+    "height": "baseh",
+    "thickness": "based",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "_Type": "location",
+        "zRotation": 0,
+        "inner": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "outer": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "R.t",
+              "y": "T.c.y - T.t/2",
+              "z": "L.c.z + L.t/2"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "T.c.y - T.t/2",
+              "z": "R.t/-2"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "B.c.y + B.t/2",
+              "z": "R.t/-2"
+            },
+            {
+              "x": "R.t",
+              "y": "B.c.y + B.t/2",
+              "z": "L.c.z + L.t/2"
+            }
+          ],
+          "outer": [
+            {
+              "x": "0",
+              "y": "c.h",
+              "z": "L.c.z - L.t/2"
+            },
+            {
+              "x": "c.w",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "B.c.y - B.t/2",
+              "z": "L.c.z - L.t/2"
+            }
+          ]
+        },
+        "id": "4fdqq24"
+      }
+    ]
+  },
+  "corner-wall-triangle": {
+    "_TYPE": "CabinetTemplate",
+
+    "ID_ATTRIBUTE": "id",
+    "type": "corner-wall-triangle",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54",
+        "id": "pz0usts"
+      },
+      {
+        "key": "cnrD",
+        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
+        "id": "vju4ekg"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+        "id": "bg3l1cw"
+      },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - R.t",
+        "id": "r1am35q"
+      },
+      {
+        "key": "innerWidthCenter",
+        "eqn": "innerWidth + pwt34",
+        "id": "zrglub8"
+      },
+      {
+        "key": "frontHype",
+        "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)",
+        "id": "r01pswe"
+      },
+      {
+        "key": "frontCenterX",
+        "eqn": "frontHype/2 * Math.cos(frontLeftTheta)",
+        "id": "u5ycphk"
+      },
+      {
+        "key": "frontCenterZ",
+        "eqn": "-frontHype/2 * Math.cos(frontRightTheta)",
+        "id": "dnca3mh"
+      },
+      {
+        "key": "frontLeftTheta",
+        "eqn": "Math.atan(c.t/c.w)",
+        "id": "b16j601"
+      },
+      {
+        "key": "frontRightTheta",
+        "eqn": "Math.PI/2  - frontLeftTheta",
+        "id": "61umfwr"
+      },
+      {
+        "key": "toeKickBackerLen",
+        "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))",
+        "id": "6d7a07i"
+      },
+      {
+        "key": "innerDepth",
+        "eqn": "c.t - L.t",
+        "id": "c89p2y8"
+      },
+      {
+        "key": "tkLeftT",
+        "eqn": ".5/Math.sin(frontLeftTheta)",
+        "id": "fi3bwts"
+      },
+      {
+        "key": "tkRightT",
+        "eqn": ".5/Math.sin(frontRightTheta)",
+        "id": "m0p2fnx"
+      },
+      {
+        "key": "tkLeftD",
+        "eqn": "tkd/Math.sin(frontLeftTheta)",
+        "id": "xd2g25i"
+      },
+      {
+        "key": "tkRightD",
+        "eqn": "tkd/Math.sin(frontRightTheta)",
+        "id": "e2tcn5p"
+      },
+      {
+        "key": "triX",
+        "eqn": "c.w - tkLeftD - tkLeftT/2",
+        "id": "9sfgikr"
+      },
+      {
+        "key": "triY",
+        "eqn": "c.t - tkRightD - tkRightT/2",
+        "id": "fcwcnb9"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pwt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Panel.Back",
+        "code": "BACK",
+        "id": "ly2p41u"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "c.w + bo/4*Math.sin(Math.PI/2)",
+          "c.h/2",
+          "-(c.t + bo/4*Math.sin(Math.PI/2))"
+        ],
+        "demensions": [
+          "bo*2",
+          "c.h",
+          "bo*2"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Cutter.Back",
+        "code": "cb",
+        "id": "ly2p41z"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "R.c.x + R.t",
+          "R.c.y",
+          "R.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "R.d.x",
+          "R.d.y",
+          "R.d.z"
+        ],
+        "rotation": [
+          "R.r.x",
+          "R.r.y",
+          "R.r.z"
+        ],
+        "name": "Cutter.Back.Right",
+        "code": "cpbr",
+        "id": "qnpktw2"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "L.c.x + cpbl.t",
+          "L.c.y",
+          "L.c.z - L.t"
+        ],
+        "demensions": [
+          "L.d.x",
+          "L.d.y",
+          "L.d.z"
+        ],
+        "rotation": [
+          "L.r.x",
+          "L.r.y",
+          "L.r.z"
+        ],
+        "name": "Cutter.Back.Left",
+        "code": "cpbl",
+        "id": "qnpktr2"
+      },
+      {
+        "name": "Panel.Right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "R.l / 2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "i27zjxi"
+      },
+      {
+        "name": "Panel.Left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "L.w/2",
+          "L.l / 2",
+          "-(c.t - L.t/2)"
+        ],
+        "demensions": [
+          "c.w - R.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ],
+        "id": "ly1lmzs"
+      },
+      {
+        "name": "Bottom",
+        "type": "Panel",
+        "code": "B",
+        "center": [
+          "B.w / 2",
+          "bid + (t/2)",
+          "B.h / -2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "id": "dx1l40m"
+      },
+      {
+        "name": "Top",
+        "type": "Panel",
+        "code": "T",
+        "center": [
+          "T.w / 2",
+          "c.h - tid - pwt34/2",
+          "T.h /-2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pwt34"
+        ],
+        "rotation": [
+          90,
+          "0",
+          0
+        ],
+        "id": "lcj2axc"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "frontCenterX - fc.t/2*Math.sin(frontLeftTheta)",
+          "c.h/2",
+          "frontCenterZ + fc.t/2*Math.sin(frontRightTheta)"
+        ],
+        "demensions": [
+          "frontHype",
+          "c.h",
+          "frontHype"
+        ],
+        "rotation": [
+          0,
+          "Math.toDegrees(frontRightTheta)",
+          0
+        ],
+        "include": "All",
+        "name": "frontCutter",
+        "code": "fc",
+        "id": "uzqg2vs"
+      }
+    ],
+    "joints": [
+      {
+        "malePartCode": "T",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": "0.9525",
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "7whh25x"
+      },
+      {
+        "malePartCode": "T",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": "0.9525",
+        "demensionAxis": "x",
+        "centerAxis": "-z",
+        "id": "w3lyip6"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "eetmyfu"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "z8sqwwt"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "T",
+        "id": "i2h32py"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "R",
+        "id": "5h7i27p"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "L",
+        "id": "on59hxn"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "B",
+        "id": "kxec5xg"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "BACK",
+        "femalePartCode": "T",
+        "id": "e3z7qur"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "B",
+        "type": "Butt",
+        "id": "jhdiitu"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbr",
+        "femalePartCode": "BACK",
+        "id": "l85jpd3"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "BACK",
+        "femalePartCode": "R",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbl",
+        "femalePartCode": "L",
+        "id": "l85jpd3"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbr",
+        "femalePartCode": "BACK",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbl",
+        "femalePartCode": "BACK",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "R",
+        "id": "rs2316q"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "L",
+        "id": "m9e5p7l"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "T",
+        "id": "oydpp1n"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "B",
+        "id": "j0y7z5u"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": 0.9525
+    },
+    "shape": "square",
+    "width": "based",
+    "height": "baseh",
+    "thickness": "based",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "_Type": "location",
+        "zRotation": 0,
+        "inner": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "outer": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "R.t",
+              "y": "T.c.y - T.t/2",
+              "z": "L.c.z + L.t/2"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "T.c.y - T.t/2",
+              "z": "R.t/-2"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "B.c.y + B.t/2",
+              "z": "R.t/-2"
+            },
+            {
+              "x": "R.t",
+              "y": "B.c.y + B.t/2",
+              "z": "L.c.z + L.t/2"
+            }
+          ],
+          "outer": [
+            {
+              "x": "0",
+              "y": "c.h",
+              "z": "L.c.z - L.t/2"
+            },
+            {
+              "x": "c.w",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "B.c.y - B.t/2",
+              "z": "L.c.z - L.t/2"
+            }
+          ]
+        },
+        "id": "4fdqq24"
+      }
+    ]
+  },
+  "corner-ut-triangle": {
+    "_TYPE": "CabinetTemplate",
+
+    "ID_ATTRIBUTE": "id",
+    "type": "corner-ut-triangle",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54",
+        "id": "pz0usts"
+      },
+      {
+        "key": "cnrD",
+        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
+        "id": "vju4ekg"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+        "id": "bg3l1cw"
+      },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - R.t",
+        "id": "r1am35q"
+      },
+      {
+        "key": "innerWidthCenter",
+        "eqn": "innerWidth + pwt34",
+        "id": "zrglub8"
+      },
+      {
+        "key": "frontHype",
+        "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)",
+        "id": "r01pswe"
+      },
+      {
+        "key": "frontCenterX",
+        "eqn": "frontHype/2 * Math.cos(frontLeftTheta)",
+        "id": "u5ycphk"
+      },
+      {
+        "key": "frontCenterZ",
+        "eqn": "-frontHype/2 * Math.cos(frontRightTheta)",
+        "id": "dnca3mh"
+      },
+      {
+        "key": "frontLeftTheta",
+        "eqn": "Math.atan(c.t/c.w)",
+        "id": "b16j601"
+      },
+      {
+        "key": "frontRightTheta",
+        "eqn": "Math.PI/2  - frontLeftTheta",
+        "id": "61umfwr"
+      },
+      {
+        "key": "toeKickBackerLen",
+        "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))",
+        "id": "6d7a07i"
+      },
+      {
+        "key": "innerDepth",
+        "eqn": "c.t - L.t",
+        "id": "c89p2y8"
+      },
+      {
+        "key": "tkLeftT",
+        "eqn": ".5/Math.sin(frontLeftTheta)",
+        "id": "fi3bwts"
+      },
+      {
+        "key": "tkRightT",
+        "eqn": ".5/Math.sin(frontRightTheta)",
+        "id": "m0p2fnx"
+      },
+      {
+        "key": "tkLeftD",
+        "eqn": "tkd/Math.sin(frontLeftTheta)",
+        "id": "xd2g25i"
+      },
+      {
+        "key": "tkRightD",
+        "eqn": "tkd/Math.sin(frontRightTheta)",
+        "id": "e2tcn5p"
+      },
+      {
+        "key": "triX",
+        "eqn": "c.w - tkLeftD - tkLeftT/2",
+        "id": "9sfgikr"
+      },
+      {
+        "key": "triY",
+        "eqn": "c.t - tkRightD - tkRightT/2",
+        "id": "fcwcnb9"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pwt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Panel.Back",
+        "code": "BACK",
+        "id": "ly2p41u"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "c.w + bo/4*Math.sin(Math.PI/2)",
+          "c.h/2",
+          "-(c.t + bo/4*Math.sin(Math.PI/2))"
+        ],
+        "demensions": [
+          "bo*2",
+          "c.h",
+          "bo*2"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "Cutter.Back",
+        "code": "cb",
+        "id": "ly2p41z"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "R.c.x + R.t",
+          "R.c.y",
+          "R.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "R.d.x",
+          "R.d.y",
+          "R.d.z"
+        ],
+        "rotation": [
+          "R.r.x",
+          "R.r.y",
+          "R.r.z"
+        ],
+        "name": "Cutter.Back.Right",
+        "code": "cpbr",
+        "id": "qnpktw2"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "L.c.x + cpbl.t",
+          "L.c.y",
+          "L.c.z - L.t"
+        ],
+        "demensions": [
+          "L.d.x",
+          "L.d.y",
+          "L.d.z"
+        ],
+        "rotation": [
+          "L.r.x",
+          "L.r.y",
+          "L.r.z"
+        ],
+        "name": "Cutter.Back.Left",
+        "code": "cpbl",
+        "id": "qnpktr2"
+      },
+      {
+        "name": "ToeKickBacker",
+        "type": "Panel",
+        "code": "tkb",
+        "center": [
+          "c.w - triX/2",
+          "w / 2",
+          "-1 *(c.t - triY/2)"
+        ],
+        "demensions": [
+          "tkh",
+          "toeKickBackerLen",
+          "tkbw"
+        ],
+        "rotation": [
+          "90+Math.toDegrees(frontRightTheta)",
+          "0",
+          90
+        ],
+        "id": "zojblha"
+      },
+      {
+        "name": "Panel.Right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "R.l / 2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "i27zjxi"
+      },
+      {
+        "name": "Panel.Left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "L.w/2",
+          "L.l / 2",
+          "-(c.t - L.t/2)"
+        ],
+        "demensions": [
+          "c.w - R.t",
+          "c.l",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ],
+        "id": "ly1lmzs"
+      },
+      {
+        "name": "Bottom",
+        "type": "Panel",
+        "code": "B",
+        "center": [
+          "B.w / 2",
+          "tkh + (t/2)",
+          "B.h / -2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "id": "dx1l40m"
+      },
+      {
+        "name": "Top",
+        "type": "Panel",
+        "code": "T",
+        "center": [
+          "T.w / 2",
+          "c.h - tid - pwt34/2",
+          "T.h /-2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pwt34"
+        ],
+        "rotation": [
+          90,
+          "0",
+          0
+        ],
+        "id": "lcj2axc"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "frontCenterX - fc.t/2*Math.sin(frontLeftTheta)",
+          "c.h/2",
+          "frontCenterZ + fc.t/2*Math.sin(frontRightTheta)"
+        ],
+        "demensions": [
+          "frontHype",
+          "c.h",
+          "frontHype"
+        ],
+        "rotation": [
+          0,
+          "Math.toDegrees(frontRightTheta)",
+          0
+        ],
+        "include": "All",
+        "name": "frontCutter",
+        "code": "fc",
+        "id": "uzqg2vs"
+      }
+    ],
+    "joints": [
+      {
+        "malePartCode": "T",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": "0.9525",
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "7whh25x"
+      },
+      {
+        "malePartCode": "T",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": "0.9525",
+        "demensionAxis": "x",
+        "centerAxis": "-z",
+        "id": "w3lyip6"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "R",
+        "type": "Butt",
+        "maleOffset": "0.9525",
+        "id": "5ay7hu7"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "L",
+        "type": "Butt",
+        "maleOffset": "0.9525",
+        "id": "modbdha"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "R",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "-x",
+        "id": "eetmyfu"
+      },
+      {
+        "malePartCode": "B",
+        "femalePartCode": "L",
+        "type": "Dado",
+        "maleOffset": 0.9525,
+        "demensionAxis": "y",
+        "centerAxis": "+x",
+        "id": "z8sqwwt"
+      },
+      {
+        "malePartCode": "tkb",
+        "femalePartCode": "B",
+        "type": "Dado",
+        "maleOffset": "0.9525",
+        "demensionAxis": "x",
+        "centerAxis": "+y",
+        "id": "84e6woh"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "T",
+        "id": "i2h32py"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "R",
+        "id": "5h7i27p"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "L",
+        "id": "on59hxn"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "fc",
+        "femalePartCode": "B",
+        "id": "kxec5xg"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "BACK",
+        "femalePartCode": "T",
+        "id": "e3z7qur"
+      },
+      {
+        "malePartCode": "BACK",
+        "femalePartCode": "B",
+        "type": "Butt",
+        "id": "jhdiitu"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbr",
+        "femalePartCode": "BACK",
+        "id": "l85jpd3"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "BACK",
+        "femalePartCode": "R",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbl",
+        "femalePartCode": "L",
+        "id": "l85jpd3"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbr",
+        "femalePartCode": "BACK",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cpbl",
+        "femalePartCode": "BACK",
+        "id": "h3xmpm4"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "R",
+        "id": "rs2316q"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "L",
+        "id": "m9e5p7l"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "T",
+        "id": "oydpp1n"
+      },
+      {
+        "type": "Butt",
+        "malePartCode": "cb",
+        "femalePartCode": "B",
+        "id": "j0y7z5u"
+      }
+    ],
+    "dividerJoint": {
+      "type": "Dado",
+      "maleOffset": 0.9525
+    },
+    "shape": "square",
+    "width": "based",
+    "height": "maxHeight(c.w,c.t,ceilh)",
+    "thickness": "based",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "_Type": "location",
+        "zRotation": 0,
+        "inner": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "outer": {
+          "top": {
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          "bottom": {
+            "right": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "left": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        "coordinates": {
+          "inner": [
+            {
+              "x": "R.t",
+              "y": "T.c.y - T.t/2",
+              "z": "L.c.z + L.t/2"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "T.c.y - T.t/2",
+              "z": "R.t/-2"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "B.c.y + B.t/2",
+              "z": "R.t/-2"
+            },
+            {
+              "x": "R.t",
+              "y": "B.c.y + B.t/2",
+              "z": "L.c.z + L.t/2"
+            }
+          ],
+          "outer": [
+            {
+              "x": "0",
+              "y": "c.h",
+              "z": "L.c.z - L.t/2"
+            },
+            {
+              "x": "c.w",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "B.c.y - B.t/2",
+              "z": "L.c.z - L.t/2"
+            }
+          ]
+        },
+        "id": "4fdqq24"
+      }
+    ]
+  }
 }
